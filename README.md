@@ -12,3 +12,5 @@ Its my attempt at a Real Time pathtracer built from scratch in Unity using Compu
 <li>Realtime ability to update material properties</li>
 <li>Basic Atrous denoiser</li>
 </ul>
+
+![](/Images/Sponza-Diffuse.png)
