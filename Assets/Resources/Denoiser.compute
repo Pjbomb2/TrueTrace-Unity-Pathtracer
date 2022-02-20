@@ -1,0 +1,73 @@
+// Each #kernel tells which function to compile; you can have many kernels
+Texture2D<float4> ResultIn;
+RWTexture2D<float4> Result;
+Texture2D<float4> NormTex;
+Texture2D<float4> PosTex;
+Texture2D<float4> AlbedoTex;
+
+int KernelSize;
+
+uint screen_width;
+uint screen_height;
+float c_phi;
+float n_phi;
+float p_phi;
+int step_width;
+
+const static float kernel[] = {3.f / 8.f, 1.f / 4.f, 1.f / 16.f};
+#pragma kernel Atrous
+
+[numthreads(256,1,1)]
+void Atrous (uint3 id : SV_DispatchThreadID) {
+
+  if(id.x >= screen_width || id.y >= screen_height) return;
+  
+  float3 cval = ResultIn[id.xy].xyz;
+  float3 nval = NormTex[id.xy].xyz;
+  float3 pval = PosTex[id.xy].xyz;
+
+  float3 sum = float3(0.0f, 0.0f, 0.0f);
+
+  float cum_w = 0.0;
+  [unroll]
+  for (int dy = -2; dy <= 2; ++dy) {
+  [unroll] 
+    for (int dx = -2; dx <= 2; ++dx) {
+      int u = max(min(id.x + dx * step_width, screen_width - 1), 0);
+      int v = max(min(id.y + dy * step_width, screen_height - 1), 0);
+      int2 temp_index;
+      temp_index.x = u;
+      temp_index.y = v;
+
+      const float3 ctemp = ResultIn[temp_index].xyz;
+      float3 t = cval - ctemp;
+      float dist2 = dot(t, t);
+      const float c_w = min(exp(-dist2 / c_phi), 1.0f);
+
+      const float3 ntemp = NormTex[temp_index].xyz;
+      t = nval - ntemp;
+      dist2 = max(dot(t, t) / (float)(step_width * step_width), 0.0f);
+      const float n_w = min(exp(-dist2 / n_phi), 1.0f);
+
+      const float3 ptmp = PosTex[temp_index].xyz;
+      t = pval - ptmp;
+      dist2 = dot(t, t);
+      const float p_w = min(exp(-dist2 / p_phi), 1.0f);
+
+      float weight = c_w * n_w * p_w;
+
+      const int kernel_index = min(abs(dx), abs(dy));
+      sum += ctemp * weight * kernel[kernel_index];
+      cum_w += weight * kernel[kernel_index];
+    }
+  }
+  if(cum_w == 0.0f) {cum_w = 1.0f;}
+
+  Result[id.xy] = float4(sum / cum_w, 1.0f);
+  if(step_width >= KernelSize) {
+    Result[id.xy] *= float4(AlbedoTex[id.xy].xyz * 1.5f, 1.0f);
+  }
+}
+
+
+
