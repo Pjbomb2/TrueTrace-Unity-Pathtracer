@@ -13,9 +13,15 @@ Its my attempt at a Real Time pathtracer built from scratch in Unity using Compu
 <li>Basic Atrous denoiser</li>
   <li>Multithreaded BVH Building for many meshes at once(not for single meshes)</li>
 <li>Compressed Wide Bounding Volume Hierarchy as the Acceleration Structure</li>
+  <li>Textures(just apply them to the GameObjects material)</li>
 </ul>
 
 If you have any questions, or suggestions, etc. let me know! I am always looking for more stuff to add, and more ways to make it more user friendly or appealing for others to use
+
+## Notes:
+Let me know if you use this for anything, I would be excited to see any use of this!
+</br>
+If you do use it for anything, give me a bit of credit please as well, thank you!
 
 ## Instructions:
 You can either use the UnityPackage which includes a small demo scene with the stuff you need to add already set up, or the code raw, but I would reccomend the package as it already comes with a scene with the camera set up.
@@ -39,7 +45,17 @@ BVH Options Description
   
   </ul>
   
+ ## Materials
+ <ul>
+  <li>Emission - Pretty self explanatory, the higher it is, the bright the object is</li>
+  <li>Roughness - Applys to Conductors and Dielectrics - Higher roughness makes objects more rough</li>
+  <li>Eta - idk what this does really but a few things to note - For Conductors it just adds to the material definition, but for Dielectrics, only the x component is used, and that X component is the Dielectrics IOR</li>
+  <li>Base Color - So this will be automatically set to whatever the material of the objects color is, and it will also be overridden by textures, but its there so you can manually change it, works for all material types</li>
+  <li>Mat Type - 0 is diffuse(if you comment out the UsePretty in the RayTracingShader.compute, otherwise this is glossy) - 1 is Conductor(Metallic) - 2 is Dielectric(so transparent/glassy materials) - and 3 is glossy(if you comment out the UsePretty)</li>
+  <li>Dynamic - Only applies when doing the Aggregated BVH Build, but will mark objects to not be joined into the aggregated mesh(and thus be able to move independently from other objects; this behavior is default when doing the standard BVH build)</li>
+</ul>
   
+# Sample Images(Taken from various stages of development)
 
 ![](/Images/Sponza-Diffuse.png)
 ![](/Images/Another-Sponza.png)
