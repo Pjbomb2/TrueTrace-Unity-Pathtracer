@@ -161,9 +161,9 @@ public class AssetManager : MonoBehaviour {
                 TempPrim.V1 = Verticies[Indices[i]];
                 TempPrim.V2 = Verticies[Indices[i+2]];
                 TempPrim.V3 = Verticies[Indices[i+1]];
-                TempPrim.Norm1 = Vector3.Normalize(Transform * Normals[Indices[i]]);
-                TempPrim.Norm2 = Vector3.Normalize(Transform * Normals[Indices[i+2]]);
-                TempPrim.Norm3 = Vector3.Normalize(Transform * Normals[Indices[i+1]]);
+                TempPrim.Norm1 = Vector3.Normalize(Normals[Indices[i]]);
+                TempPrim.Norm2 = Vector3.Normalize(Normals[Indices[i+2]]);
+                TempPrim.Norm3 = Vector3.Normalize(Normals[Indices[i+1]]);
                 TempPrim.tex1 = Uv[Indices[i]];
                 TempPrim.tex2 = Uv[Indices[i+2]];
                 TempPrim.tex3 = Uv[Indices[i+1]];
