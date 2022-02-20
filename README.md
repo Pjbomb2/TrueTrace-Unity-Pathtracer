@@ -25,14 +25,14 @@ If you do use it for anything, give me a bit of credit please as well, thank you
 
 ## Instructions:
 You can either use the UnityPackage which includes a small demo scene with the stuff you need to add already set up, or the code raw, but I would reccomend the package as it already comes with a scene with the camera set up.
-</br>
+</br></br>
 For each mesh that you want to add to the render, you need to add a RayTracingObject script to it in the inspector
-</br>
+</br></br>
 Whenever you add or remove an item from the list of objects to render(simply by activating it, deactivating it, or adding or removing the RayTracingObject script), you need to rebuild the acceleration structure
-</br>
+</br></br>
 To do this, you need to open the EditorWindow.  Basically, up at the top of the Unity window, there will be a tab called Window.  Click on that tab, and click on the item in the dropdown called "BVH Options"
-</br>
-BVH Options Description
+</br></br>
+BVH Options Description - 
 <ul>
   <li>Construct BVH's - Normal construction of acceleration structure, one click and wait for the Total Construction Time message to appear in console, then your ready to play</li>
   <li>Update TLAS - In case you need to manually update the Top Level Acceleration Structure</li>
