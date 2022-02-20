@@ -53,6 +53,13 @@ BVH Options Description
 ![](/Images/Material-Testing.png)
 
 
+# Credits(will continue to expand when I have time)
+Biggest thanks to Zuen who helped me a huge amount with the new BVH and traversal, thanks to them I got to where I am now, and I am very thankful to them for their help and patience
+</br>
+Their github is at Jan Van Bergen
 
+
+
+</br></br>
 # REMINDER FOR SELF
 Need to add a way to turn off the automatic update of the TLAS thats easier than going into code and commenting out 3 lines in RayTracingMaster(the UpdateTLAS and the 2 lines below it)
