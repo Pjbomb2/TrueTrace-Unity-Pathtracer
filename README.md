@@ -24,6 +24,10 @@ Let me know if you use this for anything, I would be excited to see any use of t
 If you do use it for anything, give me a bit of credit please as well, thank you!
 
 ## Instructions:
+So first thing, you need to set the color space to Linear.  To do this, you need to go to edit on the top right, Project Settings -> Player -> Other Settings -> Color Space, and set that to linear
+</br>
+Also preferably set the Graphics API for Windows to DirectX12, and put it at the top.  This is not require but it gives a slight performance bump(Need to confirm yet)
+</br></br>
 You can either use the UnityPackage which includes a small demo scene with the stuff you need to add already set up, or the code raw, but I would reccomend the package as it already comes with a scene with the camera set up.
 </br></br>
 For each mesh that you want to add to the render, you need to add a RayTracingObject script to it in the inspector
