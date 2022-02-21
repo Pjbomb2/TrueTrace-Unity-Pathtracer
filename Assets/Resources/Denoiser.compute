@@ -65,7 +65,13 @@ void Atrous (uint3 id : SV_DispatchThreadID) {
 
   Result[id.xy] = float4(sum / cum_w, 1.0f);
   if(step_width >= KernelSize) {
-    Result[id.xy] *= float4(AlbedoTex[id.xy].xyz * 1.5f, 1.0f);
+    float3 TexCol;
+    if(any(AlbedoTex[id.xy].xyz) > 1.0f) {
+      TexCol = normalize(AlbedoTex[id.xy].xyz) * 1.5f;
+    } else {
+      TexCol = AlbedoTex[id.xy].xyz * 1.5f;
+    }
+    Result[id.xy] = float4((Result[id.xy].xyz * TexCol), 1.0f);
   }
 }
 

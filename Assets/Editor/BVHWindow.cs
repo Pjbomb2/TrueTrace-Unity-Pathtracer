@@ -4,7 +4,9 @@ using System.Runtime.InteropServices;
  using UnityEngine;
  using UnityEditor;
 using CommonVars;
- 
+ using System.Xml;
+
+
 public class EditModeFunctions : EditorWindow {
      [MenuItem("Window/BVH Options")]
      public static void ShowWindow() {
@@ -30,9 +32,14 @@ public class EditModeFunctions : EditorWindow {
       public int BounceCount = 24;
       public bool UseRussianRoulette = true;
       private RayTracingMaster RayMaster;
-
+      private bool ShowAssetSelection = false;
+      string[] folders;
+      List<string> SceneIds = new List<string>();
+      private List<string> FolderNames = new List<string>();
+      int XmlSelection;
       private void OnGUI() {
          RayMaster = Camera.main.GetComponent<RayTracingMaster>();
+         Rect TestingButton = new Rect((position.width - 10) / 2 + 10,10, (position.width - 10) / 2 - 10, 20);
          Rect ConstructionButton = new Rect(10,10,(position.width - 10) / 2, 20);
          Rect TLASButton =         new Rect(10,35,(position.width - 10) / 2, 20);
          Rect CombinedBuilderButton = new Rect(10,60,(position.width - 10) / 2, 20);
@@ -42,7 +49,63 @@ public class EditModeFunctions : EditorWindow {
          Rect BounceCountLabel =   new Rect(10, 135, Mathf.Max((position.width - 10) / 4,145), 20);
          Rect RussianRouletteToggle = new Rect(10, 160, (position.width - 10) / 2, 20);
          Rect AtrousToggle =       new Rect(10, 185, (position.width - 10) / 2, 20);
+         Rect XMLSelectionGrid = new Rect((position.width - 10) / 2 + 10,35, (position.width - 10) / 2 - 10, 175);
          int AtrousVertOffset = 210;
+         if (GUI.Button(TestingButton, "Button to test stuff")) {
+            SceneIds.Clear();
+            if(ShowAssetSelection) {ShowAssetSelection = false;} else {ShowAssetSelection = true;}
+            folders = AssetDatabase.GetSubFolders("Assets/Models");
+            foreach(var folder in folders) {
+
+               SceneIds.Add(AssetDatabase.GUIDToAssetPath(AssetDatabase.FindAssets("scene", new[] {folder})[0]));
+            }
+            FolderNames = new List<string>();
+            for(int i = 0; i < SceneIds.Count; i++) {
+               string Name = SceneIds[i].Replace("Assets/", "");
+               Name = Name.Replace("Models/", "");
+               Name = Name.Replace("/scene.xml", "");
+               FolderNames.Add(Name);
+            }
+
+         }
+         if(ShowAssetSelection) {
+            int i = 0;
+            GUI.BeginGroup(XMLSelectionGrid);
+            for(i = 0; i < FolderNames.Count; i++) {
+                  if(GUI.Button(new Rect(0, i * 25, (position.width - 10) / 2 - 10, 20), FolderNames[i])) {
+                     XmlSelection = i;
+                     ShowAssetSelection = false;
+                     break;
+                  }
+            }
+            GUI.EndGroup();
+            if(i != FolderNames.Count) {
+               GameObject TargetObject = FindObjectsOfType<XMLParser>()[0].gameObject;
+               int ChildCount = TargetObject.transform.childCount;
+               List<GameObject> DeletedObjects = new List<GameObject>();
+               foreach(Transform child in TargetObject.transform) {
+                     DeletedObjects.Add(child.gameObject);
+               }
+               if(ChildCount != 0) {
+                  for(int i3 = ChildCount - 1; i3 >= 0; i3--) {
+                     GameObject child = DeletedObjects[i3];
+                     child.SetActive(false);
+                    DestroyImmediate(child, true);
+                  }
+               }
+
+               string NewPath = SceneIds[XmlSelection];
+               NewPath = NewPath.Replace("scene.xml", "models");
+               var MeshesToLoad = AssetDatabase.FindAssets("t:Object", new[] {NewPath});
+               foreach(var TargetMesh in MeshesToLoad) {
+                  Instantiate(AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(TargetMesh), typeof(Object)), TargetObject.transform);
+               }
+               Debug.Log(SceneIds[XmlSelection]);
+               EditorUtility.SetDirty(TargetObject.GetComponent<XMLParser>());
+               TargetObject.GetComponent<XMLParser>().LoadXml(SceneIds[XmlSelection]);
+            }
+
+         }
          if (GUI.Button(ConstructionButton, "Construct BVH's")) {  
             OnStartAsync();
          }
@@ -56,11 +119,6 @@ public class EditModeFunctions : EditorWindow {
          if (GUI.Button(MatUpdateButton, "Update Materials")) {
             EditorUtility.SetDirty(Camera.main.GetComponent<AssetManager>());
             Camera.main.GetComponent<AssetManager>().UpdateMaterials();
-         }
-         if (GUI.Button(XMLParse, "Setup")) {
-            GameObject Parent = GameObject.Find("ParentXML");
-            EditorUtility.SetDirty(Parent.GetComponent<XMLParser>());
-            Parent.GetComponent<XMLParser>().LoadXml("scene");
          }
          GUI.Label(BounceCountLabel, "Max Bounces");
          BounceCount = EditorGUI.IntField(BounceCountInput, BounceCount);

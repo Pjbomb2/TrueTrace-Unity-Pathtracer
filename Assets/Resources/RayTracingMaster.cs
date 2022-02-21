@@ -207,9 +207,14 @@ public class RayTracingMaster : MonoBehaviour {
 
     }
 
-    private void CreateRenderTexture(ref RenderTexture ThisTex) {
+    private void CreateRenderTexture(ref RenderTexture ThisTex, bool SRGB) {
+        if(SRGB) {
+        ThisTex = new RenderTexture(Screen.width, Screen.height, 0,
+            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+        } else {
         ThisTex = new RenderTexture(Screen.width, Screen.height, 0,
             RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+        }
         ThisTex.enableRandomWrite = true;
         ThisTex.Create();
     }
@@ -226,12 +231,13 @@ public class RayTracingMaster : MonoBehaviour {
                 _Albedo.Release();
             }
 
-         CreateRenderTexture(ref _target);
-         CreateRenderTexture(ref _converged);
-         CreateRenderTexture(ref _NormTex);
-         CreateRenderTexture(ref _PosTex);
-         CreateRenderTexture(ref _Intermediate);
-         CreateRenderTexture(ref _Albedo);
+         CreateRenderTexture(ref _target, true);
+         CreateRenderTexture(ref _converged, true);
+         CreateRenderTexture(ref _NormTex, false);
+         CreateRenderTexture(ref _PosTex, false);
+         CreateRenderTexture(ref _Intermediate, true);
+         CreateRenderTexture(ref _Albedo, true);
+         Debug.Log("SRGB: " + _converged.sRGB);
             // Reset sampling
             _currentSample = 0;
         }

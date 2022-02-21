@@ -1,4 +1,4 @@
-//#define UseSkyBox//Comment out to have no skybox and just a solid color
+#define UseSkyBox//Comment out to have no skybox and just a solid color
 //#define UsePretty//UsePretty makes all diffuse objects glossy
 
 float4x4 _CameraToWorld;
@@ -703,7 +703,10 @@ bool sample_dielectric(inout float3 throughput, HitMat material, float3 omega_i,
 
     return true;
 }
-
+float SmoothnessToPhongAlpha(float s)
+{
+    return pow(1000.0f, s * s);
+}
 
 void calcFinalColor(inout Ray ray, inout float3 throughput, const HitMat hitDat, const RayHit hit, uint2 Uv, inout bool terminated) {//main function
 
@@ -717,7 +720,7 @@ void calcFinalColor(inout Ray ray, inout float3 throughput, const HitMat hitDat,
     if(CurBounce == 0) {
         TempNormTex[Uv] = float4(norm, 1.0f);
         TempPosTex[Uv] = float4(pos, 1.0f);
-        if(hitDat.MatType != 2) {//Glass albedo should not be used in the albedo, as it can go over 1 for any component
+        if(hitDat.MatType != 2 && hitDat.MatType != 1) {//Glass albedo should not be used in the albedo, as it can go over 1 for any component
             TempAlbedoTex[Uv] = float4(hitDat.surfaceColor, 1.0f);
         } else {
             TempAlbedoTex[Uv] = float4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -744,7 +747,7 @@ void calcFinalColor(inout Ray ray, inout float3 throughput, const HitMat hitDat,
              eta = rcp(eta);
                 norm = -norm;
             } else {
-                throughput *= exp(-hitDat.surfaceColor * hit.t * 100.0f);//Beers law, heavily boosted for prettyness
+                throughput *= exp(-hitDat.surfaceColor * hit.t);//Beers law, heavily boosted for prettyness
             }
             valid = sample_dielectric(throughput, hitDat, mul(GetTangentSpace(-norm), -ray.direction), tempraydir, eta);
             ray.direction = normalize(mul(tempraydir, GetTangentSpace(-norm)));
@@ -756,7 +759,7 @@ void calcFinalColor(inout Ray ray, inout float3 throughput, const HitMat hitDat,
         break;
         #else
         case 3:
-            ray.direction = normalize(mul(sample(), GetTangentSpace(norm)) + reflect(ray.direction, norm));
+            ray.direction = normalize(mul(sample(), GetTangentSpace(norm)) * hitDat.roughness + reflect(ray.direction, norm));
             throughput *= hitDat.surfaceColor;
         break;
         #endif
@@ -808,8 +811,9 @@ void kernel_shade () {
             float3 sky = _SkyboxTexture.SampleLevel(sampler_SkyboxTexture, float2(phi, theta), 0).xyz;
             throughput *= sky;
         #else
-            throughput *= float3(0.0f, 0.0f, 0.0f);
+            throughput *= float3(5.0f, 5.0f, 5.0f);
         #endif
+            if(CurBounce == 0) TempAlbedoTex[TempUv] = float4(throughput, 1.0f);
         Result[TempUv] = float4(throughput, 1.0f);
         return;
     }
