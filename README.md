@@ -26,6 +26,8 @@ If you do use it for anything, give me a bit of credit please as well, thank you
 ## Instructions:
 So first thing, you need to set the color space to Linear.  To do this, you need to go to edit on the top right, Project Settings -> Player -> Other Settings -> Color Space, and set that to linear
 </br>
+Aside from this, you need to make sure all textures you use are Read/Write enabled(do this by selecting all the textures you will be using, then on the right click Read/Write enabled
+</br>
 Also preferably set the Graphics API for Windows to DirectX12, and put it at the top.  This is not require but it gives a slight performance bump(Need to confirm yet)
 </br></br>
 You can either use the UnityPackage which includes a small demo scene with the stuff you need to add already set up, or the code raw, but I would reccomend the package as it already comes with a scene with the camera set up.
