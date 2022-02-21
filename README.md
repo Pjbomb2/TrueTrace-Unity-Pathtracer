@@ -12,11 +12,15 @@ Its my attempt at a Real Time pathtracer built from scratch in Unity using Compu
 <li>Realtime ability to update material properties</li>
 <li>Basic Atrous denoiser</li>
   <li>Multithreaded BVH Building for many meshes at once(not for single meshes)</li>
-<li>Compressed Wide Bounding Volume Hierarchy as the Acceleration Structure</li>
+<li>Compressed Wide Bounding Volume Hierarchy as the Acceleration Structure (See Ylitie et al. 2017 below)</li>
   <li>Textures(just apply them to the GameObjects material)</li>
 </ul>
 
+[Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
+</br>
+
 If you have any questions, or suggestions, etc. let me know! I am always looking for more stuff to add, and more ways to make it more user friendly or appealing for others to use
+
 
 ## Notes:
 Let me know if you use this for anything, I would be excited to see any use of this!
