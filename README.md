@@ -77,7 +77,6 @@ BVH Options Description -
 ![](/Images/living-room.png)
 ![](/Images/PrettyScene.png)
 ![](/Images/Sponza.png)
-![](/Images/Sponza.png)
 ![](/Images/SpaceShip.png)
 ![](/Images/Material-Testing.png)
 
