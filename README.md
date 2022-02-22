@@ -36,6 +36,8 @@ Also preferably set the Graphics API for Windows to DirectX12, and put it at the
 </br></br>
 You can either use the UnityPackage which includes a small demo scene with the stuff you need to add already set up, or the code raw, but I would reccomend the package as it already comes with a scene with the camera set up.
 </br></br>
+Camera Controls: WASD, Mouse, and press T to freeze the camera
+</br></br>
 For each mesh that you want to add to the render, you need to add a RayTracingObject script to it in the inspector
 </br></br>
 Whenever you add or remove an item from the list of objects to render(simply by activating it, deactivating it, or adding or removing the RayTracingObject script), you need to rebuild the acceleration structure
