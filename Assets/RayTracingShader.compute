@@ -1,0 +1,848 @@
+#define UseSkyBox//Comment out to have no skybox and just a solid color
+//#define UsePretty//UsePretty makes all diffuse objects glossy
+
+float4x4 _CameraToWorld;
+float4x4 _CameraInverseProjection;
+int frames_accumulated;
+int CurBounce;
+int MaxBounce;
+
+uint screen_width;
+uint screen_height;
+
+int pixel_index;
+
+bool UseRussianRoulette;
+
+
+struct BufferSizeData {   
+    int tracerays;
+    int rays_retired;
+    int shade_rays;
+};
+
+
+struct RayData {
+    float3 origin;
+    float3 direction;
+
+    uint4 hits;
+    uint2 TempUv;
+};
+
+struct CudaTriangle {
+    float3 pos0;
+    float3 posedge1;
+    float3 posedge2;
+
+    float3 norm0;
+    float3 normedge1;
+    float3 normedge2;
+
+    float2 tex0;
+    float2 texedge1;
+    float2 texedge2;
+
+    uint MatDat;
+};
+
+struct Ray {
+    float3 origin;
+    float3 direction;
+    float3 direction_inv;
+};
+
+struct RayHit {
+    float t;
+    float u, v;
+    int mesh_id;
+    int triangle_id;
+};
+
+RWTexture2D<float4> Result;
+
+RWStructuredBuffer<RayData> GlobalRays1;
+RWStructuredBuffer<RayData> GlobalRays2;
+RWStructuredBuffer<float3> GlobalColors;
+RWStructuredBuffer<BufferSizeData> BufferSizes;
+
+StructuredBuffer<CudaTriangle> AggTris;
+
+Ray CreateRay(float3 origin, float3 direction) {
+    Ray ray;
+    ray.origin = origin;
+    ray.direction = direction;
+    return ray;
+}
+
+RayHit CreateRayHit() {
+    RayHit hit;
+    hit.t = 100000000;
+    hit.u = 0;
+    hit.v = 0;
+    hit.mesh_id = 0;
+    hit.triangle_id = 0;
+    return hit;
+}
+
+void set(int index, const RayHit ray_hit) {
+    uint uv = (int)(ray_hit.u * 65535.0f) | ((int)(ray_hit.v * 65535.0f) << 16);
+
+    GlobalRays1[index].hits = uint4(ray_hit.mesh_id, ray_hit.triangle_id, asuint(ray_hit.t), uv);
+}
+
+RayHit get(int index) {
+    uint4 hit = GlobalRays1[index].hits;
+
+    RayHit ray_hit;
+
+    ray_hit.mesh_id = hit.x;
+    ray_hit.triangle_id = hit.y;
+
+    ray_hit.t = asfloat(hit.z);
+
+    ray_hit.u = (float)(hit.w & 0xffff) / 65535.0f;
+    ray_hit.v = (float)(hit.w >> 16) / 65535.0f;
+
+    return ray_hit;
+}
+
+inline void set2(int index, const RayHit ray_hit) {
+    uint uv = (int)(ray_hit.u * 65535.0f) | ((int)(ray_hit.v * 65535.0f) << 16);
+
+    GlobalRays2[index].hits = uint4(ray_hit.mesh_id, ray_hit.triangle_id, asuint(ray_hit.t), uv);
+}
+
+inline RayHit get2(int index) {
+    uint4 hit = GlobalRays2[index].hits;
+
+    RayHit ray_hit;
+
+    ray_hit.mesh_id = hit.x;
+    ray_hit.triangle_id = hit.y;
+
+    ray_hit.t = asfloat(hit.z);
+
+    ray_hit.u = (float)(hit.w & 0xffff) / 65535.0f;
+    ray_hit.v = (float)(hit.w >> 16) / 65535.0f;
+
+    return ray_hit;
+}
+
+
+uint hash_with(uint seed, uint hash) {
+    // Wang hash
+    seed = (seed ^ 61) ^ hash;
+    seed += seed << 3;
+    seed ^= seed >> 4;
+    seed *= 0x27d4eb2d;
+    return seed;
+}
+uint pcg_hash(uint seed) {
+    uint state = seed * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return (word >> 22u) ^ word;
+}
+float2 random(uint samdim) {
+    uint hash = pcg_hash((pixel_index * (uint)6 + samdim) * MaxBounce + CurBounce);
+
+    const static float one_over_max_unsigned = asfloat(0x2f7fffff);
+
+    float x = hash_with(frames_accumulated, hash) * one_over_max_unsigned;
+    float y = hash_with(frames_accumulated + 0xdeadbeef, hash) * one_over_max_unsigned;
+
+    return float2(x,y);
+}
+
+
+#pragma kernel Generate 
+
+
+Ray CreateCameraRay(float2 uv) {
+    // Transform the camera origin to world space
+    float3 origin = mul(_CameraToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
+    
+    // Invert the perspective projection of the view-space position
+    float3 direction = mul(_CameraInverseProjection, float4(uv, 0.0f, 1.0f)).xyz;
+    // Transform the direction from camera to world space and normalize
+    direction = mul(_CameraToWorld, float4(direction, 0.0f)).xyz;
+    direction = normalize(direction);
+
+    return CreateRay(origin, direction);
+}
+
+
+[numthreads(256,1,1)]
+void Generate (uint3 id : SV_DispatchThreadID) {
+    
+    if(id.x >= screen_width || id.y >= screen_height) return;
+    pixel_index = id.y * screen_width + id.x;
+    float2 jitter = random(1) - 0.5f;
+    float2 uv = float2((id.xy + jitter) / float2(screen_width, screen_height) * 2.0f - 1.0f);
+    Ray ray = CreateCameraRay(uv);
+
+    const static RayHit tempray = CreateRayHit();
+
+    set(pixel_index, tempray);
+    GlobalRays1[pixel_index].origin = ray.origin;
+    GlobalRays1[pixel_index].direction = ray.direction;
+    GlobalRays1[pixel_index].TempUv = id.xy;
+    GlobalColors[pixel_index] = float3(1.0f, 1.0f, 1.0f);
+}
+
+
+#pragma kernel kernel_trace 
+
+    static const float PI = 3.14159265f;
+    static const float EPSILON = 1e-8;
+
+    struct MyMeshDataCompacted {
+        int mesh_data_bvh_offsets;
+        float4x4 Transform;
+    };
+
+    struct BVHNode8Data {
+        float3 node_0xyz;
+        uint node_0w;
+        uint4 node_1;
+        uint4 node_2;
+        uint4 node_3;
+        uint4 node_4;
+    };
+
+    StructuredBuffer<BVHNode8Data> cwbvh_nodes;
+    StructuredBuffer<MyMeshDataCompacted> _MeshData;
+
+
+    struct TrianglePos {
+        float3 pos0;
+        float3 posedge1;
+        float3 posedge2;
+    };
+
+    TrianglePos triangle_get_positions(int ID) {
+        TrianglePos tri;
+        tri.pos0 = AggTris[ID].pos0;
+        tri.posedge1 = AggTris[ID].posedge1;
+        tri.posedge2 = AggTris[ID].posedge2;
+        return tri;
+    }
+    void IntersectTriangle(int mesh_id, int tri_id, const Ray ray, inout RayHit ray_hit) {
+
+        TrianglePos tri = triangle_get_positions(tri_id);
+
+        float3 h = cross(ray.direction, tri.posedge2);
+        float  a = dot(tri.posedge1, h);
+
+        float  f = rcp(a);
+        float3 s = ray.origin - tri.pos0;
+        float  u = f * dot(s, h);
+
+        if (u >= 0.0f && u <= 1.0f) {
+            float3 q = cross(s, tri.posedge1);
+            float  v = f * dot(ray.direction, q);
+
+            if (v >= 0.0f && u + v <= 1.0f) {
+                float t = f * dot(tri.posedge2, q);
+
+                if (t > 0.0f && t < ray_hit.t) {
+                    ray_hit.t = t;
+                    ray_hit.u = u;
+                    ray_hit.v = v;
+                    ray_hit.mesh_id     = mesh_id;
+                    ray_hit.triangle_id = tri_id;
+                }
+            }
+        }
+    }
+
+    uint cwbvh_node_intersect(const Ray ray, int oct_inv4, float max_distance, float3 node_0, uint node_0w, uint4 node_1, uint4 node_2, uint4 node_3, uint4 node_4) {
+        float3 p = node_0;
+
+        uint e_imask = node_0w;
+
+        uint e_x = (e_imask >> (0 * 8)) & 0xff;
+        uint e_y = (e_imask >> (1 * 8)) & 0xff;
+        uint e_z = (e_imask >> (2 * 8)) & 0xff;
+
+        float3 adjusted_ray_direction_inv = float3(
+            asfloat(e_x << 23) * ray.direction_inv.x,
+            asfloat(e_y << 23) * ray.direction_inv.y,
+            asfloat(e_z << 23) * ray.direction_inv.z
+            );
+        float3 adjusted_ray_origin = ray.direction_inv * (p - ray.origin);
+                
+        uint hit_mask = 0;
+
+        for(int i = 0; i < 2; i++) {
+            uint meta4 = asuint(i == 0 ? node_1.z : node_1.w);
+
+            uint is_inner4   = (meta4 & (meta4 << 1)) & 0x10101010;
+            uint inner_mask4 = (((is_inner4 << 3) >> 7) & 0x01010101) * 0xff;
+            uint bit_index4  = (meta4 ^ (oct_inv4 & inner_mask4)) & 0x1f1f1f1f;
+            uint child_bits4 = (meta4 >> 5) & 0x07070707;
+
+            uint q_lo_x = asuint(i == 0 ? node_2.x : node_2.y);
+            uint q_hi_x = asuint(i == 0 ? node_2.z : node_2.w);
+
+            uint q_lo_y = asuint(i == 0 ? node_3.x : node_3.y);
+            uint q_hi_y = asuint(i == 0 ? node_3.z : node_3.w);
+
+            uint q_lo_z = asuint(i == 0 ? node_4.x : node_4.y);
+            uint q_hi_z = asuint(i == 0 ? node_4.z : node_4.w);
+
+            uint x_min = ray.direction.x < 0.0f ? q_hi_x : q_lo_x;
+            uint x_max = ray.direction.x < 0.0f ? q_lo_x : q_hi_x;
+
+            uint y_min = ray.direction.y < 0.0f ? q_hi_y : q_lo_y;
+            uint y_max = ray.direction.y < 0.0f ? q_lo_y : q_hi_y;
+
+            uint z_min = ray.direction.z < 0.0f ? q_hi_z : q_lo_z;
+            uint z_max = ray.direction.z < 0.0f ? q_lo_z : q_hi_z;
+            [unroll]
+            for(int j = 0; j < 4; j++) {
+
+                float3 tmin3 = float3((float)((x_min >> (j * 8)) & 0xff), (float)((y_min >> (j * 8)) & 0xff), (float)((z_min >> (j * 8)) & 0xff));
+                float3 tmax3 = float3((float)((x_max >> (j * 8)) & 0xff), (float)((y_max >> (j * 8)) & 0xff), (float)((z_max >> (j * 8)) & 0xff));
+
+                tmin3 = tmin3 * adjusted_ray_direction_inv + adjusted_ray_origin;
+                tmax3 = tmax3 * adjusted_ray_direction_inv + adjusted_ray_origin;
+
+                float tmin = max(max(tmin3.x, tmin3.y), max(tmin3.z, EPSILON));
+                float tmax = min(min(tmax3.x, tmax3.y), min(tmax3.z, max_distance));
+                
+                bool intersected = tmin < tmax;
+                [branch]
+                if (intersected) {
+                    uint child_bits = (child_bits4 >> (j * 8)) & 0xff;
+                    uint bit_index  = (bit_index4 >> (j * 8)) & 0xff;
+
+                    hit_mask |= child_bits << bit_index;
+                }
+            }
+        }
+        return hit_mask;
+    }
+
+inline uint ray_get_octant_inv4(const float3 ray_direction) {
+    return
+        (ray_direction.x < 0.0f ? 0 : 0x04040404) |
+        (ray_direction.y < 0.0f ? 0 : 0x02020202) |
+        (ray_direction.z < 0.0f ? 0 : 0x01010101);
+}
+
+
+void IntersectBVH() {
+    RayHit bestHit;
+    Ray ray;
+
+    uint2 stack[24];
+    int stack_size = 0;
+    uint ray_index;
+    uint2 current_group;
+
+    uint oct_inv4;
+    int tlas_stack_size;
+    int mesh_id;
+    Ray ray2;
+
+    while(true) {
+        bool inactive = stack_size == 0 && current_group.y == 0;
+
+        if (inactive) {//Revive dead threads(persistent threads, need Shader Model 6 to take true advantage of)
+            InterlockedAdd(BufferSizes[CurBounce].rays_retired, 1, ray_index);
+            if(ray_index >= (uint)BufferSizes[CurBounce].tracerays) return;
+            ray.origin = GlobalRays1[ray_index].origin;
+            ray.direction = GlobalRays1[ray_index].direction;
+            ray.direction_inv = rcp(ray.direction);
+            ray2 = ray;
+           
+            oct_inv4 = ray_get_octant_inv4(ray.direction);
+
+            current_group.x = (uint)0;
+            current_group.y = (uint)0x80000000;
+            bestHit = CreateRayHit();
+
+            tlas_stack_size = -1;
+        }
+
+        while(true) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
+            uint2 triangle_group;
+            if(current_group.y & 0xff000000) {
+                uint hits_imask = current_group.y;
+                uint child_index_offset = firstbithigh(hits_imask);
+                uint child_index_base = current_group.x;
+
+                current_group.y &= ~(1 << child_index_offset);
+
+                if(current_group.y & 0xff000000) {
+                    stack[stack_size++] = current_group;
+                }
+                uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
+                uint relative_index = countbits(hits_imask & ~(0xffffffff << slot_index));
+                uint child_node_index = child_index_base + relative_index;
+
+                float3 node_0 = cwbvh_nodes[child_node_index].node_0xyz;
+                uint node_0w = cwbvh_nodes[child_node_index].node_0w;
+                
+                uint4 node_1 = cwbvh_nodes[child_node_index].node_1;
+                uint4 node_2 = cwbvh_nodes[child_node_index].node_2;
+                uint4 node_3 = cwbvh_nodes[child_node_index].node_3;
+                uint4 node_4 = cwbvh_nodes[child_node_index].node_4;
+
+                uint hitmask = cwbvh_node_intersect(ray, oct_inv4, bestHit.t, node_0, node_0w, node_1, node_2, node_3, node_4);
+
+                uint imask = (node_0w >> (3 * 8)) & 0xff;
+
+                current_group.x = asuint(node_1.x);
+                triangle_group.x = asuint(node_1.y);
+
+                current_group .y = (hitmask & 0xff000000) | (uint)(imask);
+                triangle_group.y = (hitmask & 0x00ffffff);
+            }
+            else {
+                triangle_group.x = current_group.x;
+                triangle_group.y = current_group.y;
+                current_group.x = (uint)0;
+                current_group.y = (uint)0;
+            }
+
+            while(triangle_group.y != 0) { 
+                if(tlas_stack_size == -1) {//Transfer from Top Level Accelleration Structure to Bottom Level Accelleration Structure
+                    uint mesh_offset = firstbithigh(triangle_group.y);
+                    triangle_group.y &= ~(1 << mesh_offset);
+
+                    mesh_id = triangle_group.x + mesh_offset;
+
+                    if(triangle_group.y != 0) {
+                        stack[stack_size++] = triangle_group;
+                    }
+
+                    if(current_group.y & 0xff000000) {
+                        stack[stack_size++] = current_group;
+                    }
+                    tlas_stack_size = stack_size;
+
+                    int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
+
+                    ray.direction = (mul(_MeshData[mesh_id].Transform, float4(ray.direction, 0))).xyz;
+                    ray.origin = (mul(_MeshData[mesh_id].Transform, float4(ray.origin, 1))).xyz;
+                    ray.direction_inv = rcp(ray.direction);
+                   
+                    oct_inv4 = ray_get_octant_inv4(ray.direction);
+
+                    current_group.x = (uint)root_index;
+                    current_group.y = (uint)0x80000000;
+
+                    break;
+                }
+                else {
+                    uint triangle_index =  firstbithigh(triangle_group.y);
+                    triangle_group.y &= ~(1 << triangle_index);
+
+                    IntersectTriangle(mesh_id, triangle_group.x + triangle_index, ray, bestHit);//Intersect Mesh Triangles
+                }
+            }
+
+            if((current_group.y & 0xff000000) == 0) {
+                if(stack_size == 0) {//thread has finished traversing
+                    GlobalRays2[ray_index] = GlobalRays1[ray_index];
+                    set2(ray_index, bestHit);
+                    current_group.y = 0;
+
+                    break;
+                }
+
+                if(stack_size == tlas_stack_size) {
+                    tlas_stack_size = -1;
+                    ray = ray2;
+                    oct_inv4 = ray_get_octant_inv4(ray.direction);
+                }
+                current_group = stack[--stack_size];
+            }
+        }
+    }
+}
+
+
+[numthreads(16,16,1)]
+void kernel_trace () {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
+    IntersectBVH();
+}
+
+#pragma kernel kernel_shade
+
+
+struct MaterialData {
+    float3 BaseColor;
+    float2 TexMax;
+    float2 TexMin;
+    float emmissive;
+    float roughness;
+    int HasTextures;
+    int MatType;
+    float3 eta;
+};
+StructuredBuffer<MaterialData> _Materials;
+
+Texture2D<float4> _SkyboxTexture;
+SamplerState sampler_SkyboxTexture;
+
+Texture2D<float4> _TextureAtlas;
+SamplerState sampler_TextureAtlas;
+
+//These are here purely for the Atrous
+RWTexture2D<float4> TempNormTex;
+RWTexture2D<float4> TempPosTex;
+RWTexture2D<float4> TempAlbedoTex;
+
+
+struct HitMat {
+    float3 surfaceColor;
+    float emmis;
+    float roughness;
+    uint MatType;
+    float3 eta;
+};
+
+HitMat CreateHitMat() {
+    HitMat hit;
+    hit.surfaceColor  = float3(0.0f, 0.0f, 0.0f);
+    hit.emmis = 0.0f;
+    hit.roughness = 0.0f;
+    hit.MatType = 0;
+    hit.eta = float3(0.0f, 0.0f, 0.0f);
+    return hit;
+}
+
+float2 sample_disc(float u1, float u2) {
+    float a = 2.0f * u1 - 1.0f;
+    float b = 2.0f * u2 - 1.0f;
+    if(a == 0.0f) a = 0.00001;
+    if(b == 0.0f) b = 0.00001;
+
+    float phi, r;
+    if(a*a > b*b) {
+        r = a;
+        phi = (0.25f * PI) * (b/a);
+    } else {
+        r = b;
+        phi = (0.25f * PI) * (a/b) + (0.5f * PI);
+    }
+
+    float sin_phi, cos_phi;
+    sincos(phi, sin_phi, cos_phi);
+    
+    return float2(r * cos_phi, r * sin_phi);
+}
+
+float3 sample_cosine_weighted_direction(float u1, float u2) {
+    float2 d = sample_disc(u1, u2);
+    return float3(d.x, d.y, sqrt(abs(1.0f - dot(d, d))));
+}
+
+float3 sample() {//Diffuse
+    float2 rando = random(5);
+    return sample_cosine_weighted_direction(rando.x, rando.y);
+}
+
+float3x3 GetTangentSpace(float3 normal) {
+    // Choose a helper vector for the cross product
+    float3 helper = float3(1, 0, 0);
+    if (abs(normal.x) > 0.99f)
+        helper = float3(0, 0, 1);
+
+    // Generate vectors
+    float3 tangent = normalize(cross(normal, helper));
+    float3 binormal = cross(normal, tangent);
+    
+    return float3x3(tangent, binormal, normal);
+}
+
+float3 sample_visible_normals_ggx(float3 omega, float alpha_x, float alpha_y, float u1, float u2) {
+    float3 v = normalize(float3(alpha_x * omega.x, alpha_y * omega.y, omega.z));
+
+    float length_squared = v.x*v.x + v.y*v.y;
+    float3 axis_1 = (length_squared > 0.0f) ? float3(-v.y, v.x, 0.0f) / sqrt(length_squared) : float3(1.0f, 0.0f, 0.0f);
+    float3 axis_2 = cross(v, axis_1);
+
+    float2 d = sample_disc(u1, u2);
+    float t1 = d.x;
+    float t2 = d.y;
+
+    float s = 0.5f * (1.0f + v.z);
+    t2 = (1.0f - s) * sqrt(max(1.0f - t1 * t1, 0.0f)) + s*t2;
+
+    float3 n_h = t1*axis_1 + t2*axis_2 + sqrt(max(0.0f, 1.0f - t1*t1 - t2*t2)) * v;
+
+    return normalize(float3(alpha_x * n_h.x, alpha_y * n_h.y, n_h.z));
+}
+
+float3 fresnel_conductor(float cos_theta_i, const float3 eta, const float3 k) {
+    float cos_theta_i2 = cos_theta_i * cos_theta_i;
+
+    float3 t1 = eta*eta + k*k;
+    float3 t0 = t1 * cos_theta_i;
+
+    float3 p2 = (t0 - (eta * (2.0f * cos_theta_i)) + float3(1.0f, 1.0f, 1.0f)) / (t0 + (eta * (2.0f * cos_theta_i)) + float3(1.0f, 1.0f, 1.0f));
+    float3 s2 = (t1 - (eta * (2.0f * cos_theta_i)) + float3(cos_theta_i2, cos_theta_i2, cos_theta_i2)) / (t1 + (eta * (2.0f * cos_theta_i)) + float3(cos_theta_i2, cos_theta_i2, cos_theta_i2));
+
+    return 0.5f * (p2 + s2);
+}
+
+float ggx_D(const float3 micro_normal, float alpha_x, float alpha_y) {
+    float sx = -micro_normal.x / (micro_normal.z * alpha_x);
+    float sy = -micro_normal.y / (micro_normal.z * alpha_y);
+
+    float s1 = 1.0f + sx * sx + sy * sy;
+
+    float cos_theta_2 = micro_normal.z * micro_normal.z;
+    float cos_theta_4 = cos_theta_2 * cos_theta_2;
+
+    return 1.0f / (s1 * s1 * PI * alpha_x * alpha_y * cos_theta_4);
+}
+
+float ggx_lambda(const float3 omega, float alpha_x, float alpha_y) {
+    return 0.5f * (sqrt(1.0f + ((alpha_x * omega.x) * (alpha_x * omega.x) + (alpha_y * omega.y) * (alpha_y * omega.y)) / (omega.z * omega.z)) - 1.0f);
+}
+float ggx_G1(const float3 omega, float alpha_x, float alpha_y) {
+    return 1.0f / (1.0f + ggx_lambda(omega, alpha_x, alpha_y));
+}
+
+float ggx_G2(const float3 omega_o, const float3 omega_i, const float3 omega_m, float alpha_x, float alpha_y) {
+    bool omega_i_backfacing = dot(omega_i, omega_m) * omega_i.z <= 0.0f;
+    bool omega_o_backfacing = dot(omega_o, omega_m) * omega_o.z <= 0.0f;
+
+    if(omega_i_backfacing || omega_o_backfacing) {
+        return 0.0f;
+    } else {
+        return 1.0f / (1.0f + ggx_lambda(omega_o, alpha_x, alpha_y) + ggx_lambda(omega_i, alpha_x, alpha_y));
+    }
+}
+
+bool sample_conductor(inout float3 throughput, HitMat material, float3 omega_i, inout float3 direction_out) {//Metal
+    float2 rand_brdf = random(5);
+    float alpha_x = material.roughness;
+    float alpha_y = material.roughness;
+    float3 omega_m = sample_visible_normals_ggx(omega_i, alpha_x, alpha_y, rand_brdf.x, rand_brdf.y);
+
+    float3 omega_o = reflect(-omega_i, omega_m);
+
+    float o_dot_m = dot(omega_o, omega_m);
+    if(o_dot_m <= 0.0f) false;
+
+    float3 F = fresnel_conductor(o_dot_m, material.eta, material.surfaceColor * 1.0f);
+
+    float D = ggx_D(omega_m, alpha_x, alpha_y);
+    float G1 = ggx_G1(omega_i, alpha_x, alpha_y);
+
+    float G2 = ggx_G2(omega_o, omega_i, omega_m, alpha_x, alpha_y);
+
+    throughput *= F * G2 / G1;
+
+    direction_out = omega_o;
+    return true;
+}
+
+
+float fresnel_dielectric(float cos_theta_i, float eta) {
+    float sin_theta_o2 = eta * eta * (1.0f - cos_theta_i*cos_theta_i);
+    if(sin_theta_o2 >= 1.0f) {
+        return 1.0f;
+    }
+
+    float cos_theta_o = sqrt(max(1.0f - sin_theta_o2, 0.0f));
+
+    float s = (cos_theta_i - eta * cos_theta_o) / (eta * cos_theta_o + cos_theta_i);
+    float p = (eta * cos_theta_i - cos_theta_o) / (eta * cos_theta_i + cos_theta_o);
+
+    return 0.5f * (p*p + s*s);
+}
+
+
+
+bool sample_dielectric(inout float3 throughput, HitMat material, float3 omega_i, inout float3 direction_out, float eta) {//Glass
+    float rand_fresnel = random(2).y;
+    float2 rand_brdf = random(5);
+
+    float alpha_x = material.roughness;
+    float alpha_y = material.roughness;
+
+    float3 omega_m = sample_visible_normals_ggx(omega_i, alpha_x, alpha_y, rand_brdf.x, rand_brdf.y);
+
+    float F = fresnel_dielectric(abs(dot(omega_i, omega_m)), eta);
+
+    bool reflected = rand_fresnel < F;
+
+    float3 omega_o;
+    if(reflected) {
+        omega_o = 2.0f * dot(omega_i, omega_m) * omega_m - omega_i;
+    } else {
+        float k = 1.0f - eta*eta * (1.0f - (dot(omega_i, omega_m) * dot(omega_i, omega_m)));
+        omega_o = (eta * abs(dot(omega_i, omega_m)) - sqrt(max(k, 0.0f))) * omega_m - eta * omega_i;
+    }
+
+    direction_out = omega_o;
+
+    if(reflected ^ (omega_o.z >= 0.0f)) return true;
+
+    float D = ggx_D(omega_m, alpha_x, alpha_y);
+    float G1 = ggx_G1(omega_i, alpha_x, alpha_y);
+    float G2 = ggx_G2(omega_o, omega_i, omega_m, alpha_x, alpha_y);
+
+    float i_dot_m = abs(dot(omega_i, omega_m));
+    float o_dot_m = abs(dot(omega_o, omega_m));
+
+    if(!reflected) {
+        throughput *= eta*eta;
+    }
+
+    throughput *= G2 / G1;
+
+    direction_out = omega_o;
+
+    return true;
+}
+float SmoothnessToPhongAlpha(float s)
+{
+    return pow(1000.0f, s * s);
+}
+
+void calcFinalColor(inout Ray ray, inout float3 throughput, const HitMat hitDat, const RayHit hit, uint2 Uv, inout bool terminated) {//main function
+
+    if(CurBounce == MaxBounce)//We have reached the maximum allowed bounce count
+        return;
+
+    float3 pos = ray.direction * hit.t + ray.origin;
+
+    uint index = hit.triangle_id;
+    float3 norm = normalize(mul(float4(AggTris[index].norm0 + hit.u * AggTris[index].normedge1 + hit.v * AggTris[index].normedge2, 0.0f), _MeshData[hit.mesh_id].Transform).xyz);
+    if(CurBounce == 0) {//Setting textures for denosier to use
+        TempNormTex[Uv] = float4(norm, 1.0f);
+        TempPosTex[Uv] = float4(pos, 1.0f);
+        if(hitDat.MatType != 2 && hitDat.MatType != 1) {
+            TempAlbedoTex[Uv] = float4(hitDat.surfaceColor, 1.0f);
+        } else {
+            TempAlbedoTex[Uv] = float4(1.0f, 1.0f, 1.0f, 1.0f);
+        }
+    }
+    if(hitDat.emmis > 0.0f) {//if we hit a light, this ray is done
+        throughput *= (hitDat.emmis) * hitDat.surfaceColor;
+        return;
+    }
+
+    float3 tempraydir = float3(0.0f, 0.0f, 0.0f);
+    bool valid = true;
+    [branch]switch(hitDat.MatType) {//Switch between different materials
+        case 1:
+            if(dot(ray.direction, norm) >= 0.0f) {
+                norm = -norm;
+            }
+            valid = sample_conductor(throughput, hitDat, mul(GetTangentSpace(norm), -ray.direction), tempraydir);
+            ray.direction = normalize(mul(tempraydir, GetTangentSpace(norm)));    
+        break;
+        case 2:
+            float eta = hitDat.eta.x;
+            if(dot(ray.direction, norm) < 0.0f) {
+             eta = rcp(eta);
+                norm = -norm;
+            } else {
+                throughput *= exp(-hitDat.surfaceColor * hit.t);//Beers law, heavily boosted for prettyness
+            }
+            valid = sample_dielectric(throughput, hitDat, mul(GetTangentSpace(-norm), -ray.direction), tempraydir, eta);
+            ray.direction = normalize(mul(tempraydir, GetTangentSpace(-norm)));
+        break;
+        #ifdef UsePretty
+        case 0://Change this to 3 to get glossy materials selectively, and let diffuse materials be diffuse
+            ray.direction = normalize(mul(sample(), GetTangentSpace(norm)) + reflect(ray.direction, norm));
+            throughput *= hitDat.surfaceColor;
+        break;
+        #else
+        case 3:
+            ray.direction = normalize(mul(sample(), GetTangentSpace(norm)) * hitDat.roughness + reflect(ray.direction, norm));
+            throughput *= hitDat.surfaceColor;
+        break;
+        #endif
+        default:
+            ray.direction = mul(sample(), GetTangentSpace(norm));
+            throughput *= hitDat.surfaceColor;
+        break;
+    }
+    if(!valid) return;//If the ray failed, we have no choice but to terminate this path
+    
+    ray.origin = norm * 0.001f + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
+    if(UseRussianRoulette) {
+       float p = saturate(max(throughput.x, max(throughput.y, throughput.z)));
+       if(random(2).x > p && CurBounce > 0)//Simple Russian Roulette
+         return;
+       if(CurBounce > 0)
+           throughput *= rcp(p);//rcp is a slightly faster but less accurate version of 1 / p, I decided the inaccuracy was worth the performance bump
+   }
+
+    uint index2;//Congrats, the ray will continue its path
+    InterlockedAdd(BufferSizes[CurBounce + 1].tracerays, 1, index2);
+    GlobalRays1[index2].origin = ray.origin;
+    GlobalRays1[index2].direction = ray.direction;
+    GlobalRays1[index2].TempUv = Uv;
+    set(index2, hit);
+    terminated = false;//identifier so we dont write to output before the ray ends
+    }
+
+[numthreads(256,1,1)]
+void kernel_shade () {
+
+    uint index;
+    InterlockedAdd(BufferSizes[CurBounce].shade_rays, 1, index);
+    if(BufferSizes[CurBounce].shade_rays >= BufferSizes[CurBounce].tracerays) return;
+    uint2 TempUv = GlobalRays2[index].TempUv;
+    pixel_index = TempUv.y * screen_width + TempUv.x;//TempUv is the origional screen coordinates of the ray
+
+    RayHit bestHit = get2(index);
+    Ray ray;
+    ray.origin = GlobalRays2[index].origin;
+    ray.direction = GlobalRays2[index].direction;
+    ray.direction_inv = float3(0.0f, 0.0f, 0.0f);//We dont need to calculate this, but we do need to give it some value or Unity complains
+
+    float3 throughput = GlobalColors[pixel_index];
+    if( bestHit.t > 1000000.0 ) {//if ray goes into the void, sample skybox
+        #ifdef UseSkyBox
+            float theta = acos(ray.direction.y) / -PI;
+            float phi = atan2(ray.direction.x, -ray.direction.z) / -PI * 0.5f;
+            float3 sky = _SkyboxTexture.SampleLevel(sampler_SkyboxTexture, float2(phi, theta), 0).xyz;
+            throughput *= sky;
+        #else
+            throughput *= float3(5.0f, 5.0f, 5.0f);
+        #endif
+            if(CurBounce == 0) TempAlbedoTex[TempUv] = float4(throughput, 1.0f);
+        Result[TempUv] = float4(throughput, 1.0f);
+        return;
+    }
+
+    float2 Uv = AggTris[bestHit.triangle_id].tex0 * (1.0f - bestHit.u - bestHit.v) + AggTris[bestHit.triangle_id].texedge1 * bestHit.u + AggTris[bestHit.triangle_id].texedge2 * bestHit.v;
+    Uv = fmod(Uv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[AggTris[bestHit.triangle_id].MatDat].TexMax - _Materials[AggTris[bestHit.triangle_id].MatDat].TexMin) + _Materials[AggTris[bestHit.triangle_id].MatDat].TexMin;
+    //I need to redo the UV so it aligns nicely to the Atlas texture, and the "+100.0f" is there because I got tired of meshes having UV's greater than 1, and this fixes it basically
+
+    HitMat hitmat = CreateHitMat();//Transfer Material properties
+    MaterialData TempMat = _Materials[AggTris[bestHit.triangle_id].MatDat];
+    hitmat.surfaceColor = (TempMat.HasTextures != 0) ? _TextureAtlas.SampleLevel(sampler_TextureAtlas, Uv, 1).xyz : float4(TempMat.BaseColor, 1.0f).xyz;
+    hitmat.emmis = TempMat.emmissive;
+    hitmat.roughness = TempMat.roughness;
+    hitmat.MatType = TempMat.MatType;
+    hitmat.eta = TempMat.eta;
+
+    bool DidTerminate = true;//Identifier marking whether we have terminated the ray or if it will continue
+    calcFinalColor(ray, throughput, hitmat, bestHit, TempUv, DidTerminate);
+
+    if(DidTerminate) {
+        [branch]if(hitmat.emmis == 0.0f && bestHit.t < 1000000.0 ) {
+            throughput = float3(0.0f, 0.0f, 0.0f);
+        }
+        Result[TempUv]  = float4(throughput, 1.0f);//Final color output
+        return;
+    }
+
+    GlobalColors[pixel_index] = throughput;
+}
+
+
+
