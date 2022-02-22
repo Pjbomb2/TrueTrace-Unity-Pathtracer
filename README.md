@@ -54,7 +54,9 @@ BVH Options Description -
   <li>Max Bounces - Sets the maximum number of bounces a ray can achieve</li>
   <li>Use Russian Roulette - Highly reccomended to leave this on, kills rays that may not contribute much early, and thus greatly increases performance</li>
   <li>Use Atrous Denoiser - Enables or dissables the Atrous denoiser, the settings below it are values to play with until you get a desired result</li>
-  <li>Button To Test Stuff - honestly forgot to name it, but heres what it does, it replaces the way that XML's are loaded allowing their folders to be placed in the assets folder in a folder called "Models".  Pressing that will give you a list of possible Mitsuba scenes to load(again, only sees ones that are in the assets folder, inside another folder called "Models".  Clicking on one of the options will load the mesh structure and associated materials to the hierarchy(yay no more manually needing to do that) under the Gameobject named ParentXML(see DemoScene for that) (I will replace this paragraph soon)</li>
+  <li>Allow Image Accumulation - Allows the image to accumulate while the camera is not moving</li>
+  <li>Enable Object Moving - Recomputes the TLAS every frame, allowing objects to moved while running</li>
+  <li>Load Xml - replaces the way that XML's are loaded allowing their folders to be placed in the assets folder in a folder called "Models".  Pressing that will give you a list of possible Mitsuba scenes to load(again, only sees ones that are in the assets folder, inside another folder called "Models").  Clicking on one of the options will load the mesh structure and associated materials to the hierarchy(yay no more manually needing to do that) under the Gameobject named ParentXML(see DemoScene for that) (I will replace this paragraph soon)</li>
   </ul>
   
  ## Materials
