@@ -101,6 +101,3 @@ Scenes From:
 </ul>
 
 
-</br></br>
-# REMINDER FOR SELF
-Need to add a way to turn off the automatic update of the TLAS thats easier than going into code and commenting out 3 lines in RayTracingMaster(the UpdateTLAS and the 2 lines below it)
