@@ -16,7 +16,6 @@ namespace CommonVars {
         public Vector3 eta;
     }
 
-    [System.Serializable]
     public struct BVHNode2Data {
         public Vector3 BBMax;
         public Vector3 BBMin;
@@ -94,9 +93,9 @@ namespace CommonVars {
         public Vector3 BBMax;
         public Vector3 BBMin;
 
-        public void Extend(Vector3 InMax, Vector3 InMin) {
-            this.BBMax = Vector3.Max(this.BBMax, InMax);
-            this.BBMin = Vector3.Min(this.BBMin, InMin);
+        public void Extend(in Vector3 InMax, in Vector3 InMin) {
+            this.BBMax = new Vector3(Mathf.Max(BBMax.x, InMax.x), Mathf.Max(BBMax.y, InMax.y), Mathf.Max(BBMax.z, InMax.z));// Vector3.Max(this.BBMax, InMax);
+            this.BBMin = new Vector3(Mathf.Min(BBMin.x, InMin.x), Mathf.Min(BBMin.y, InMin.y), Mathf.Min(BBMin.z, InMin.z));//Vector3.Min(this.BBMin, InMin);
         }
         public void init() {
             BBMax = new Vector3(float.MinValue, float.MinValue, float.MinValue);

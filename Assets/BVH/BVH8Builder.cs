@@ -369,6 +369,8 @@ public class BVH8Builder {
         calculate_cost(0, BVH2.BVH2Nodes);
 
         collapse(BVH2.BVH2Nodes, BVH2.DimensionedIndices[0], 0, 0);
+        this.decisions.Clear();
+        this.decisions.Capacity = 0;
     }
 
     public BVH8Builder(BVH2Builder BVH2, ref List<MyMeshDataCompacted> Meshes) {//Top Level CWBVH Builder
@@ -413,5 +415,7 @@ public class BVH8Builder {
         for(int i = 0; i < cwbvh_indices.Count; ++i) {
             Meshes.Add(TempCompressed[cwbvh_indices[i]]);
         }
+        this.decisions.Clear();
+        this.decisions.Capacity = 0;
     }
 }

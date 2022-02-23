@@ -36,10 +36,11 @@ public class BVH2Builder {
         split.aabb_right.init();
         int CurIndex;
 
+        AABB aabb_left = new AABB();
+        AABB aabb_right = new AABB();
         for(int dimension = 0; dimension < 3; dimension++) {
-            AABB aabb_left = new AABB();
+
             aabb_left.init();
-            AABB aabb_right = new AABB();
             aabb_right.init();
 
             for(int i = 1; i < index_count; i++) {
@@ -113,9 +114,9 @@ public class BVH2Builder {
       
             Assert.IsTrue(left == split.index - first_index);
             Assert.IsTrue(right == index_count);
-      
-            DimensionedIndices[dim].RemoveRange(first_index, index_count);
-            DimensionedIndices[dim].InsertRange(first_index, temp.GetRange(0,index_count));
+            for(int index = 0; index < index_count; index++) {
+                DimensionedIndices[dim][index + first_index] = temp[index];    
+            }
         }
         node.left = node_index;
         node.count = 0;
@@ -140,7 +141,7 @@ public class BVH2Builder {
         BuildRecursive(node.left + 1, ref node_index,first_index + num_left,num_right);
     }
 
-    float surface_area(Vector3 BBMax, Vector3 BBMin) {
+    float surface_area(in Vector3 BBMax, in Vector3 BBMin) {
         Vector3 sizes = BBMax - BBMin;
         return 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z)); 
     }

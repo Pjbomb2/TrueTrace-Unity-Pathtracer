@@ -26,7 +26,6 @@ public class Mesh_Data {
     public async Task Construct() {
         BVH2Builder BVH2 = new BVH2Builder(this.triangles, progressId);//Binary BVH Builder, and also the component that takes the longest to build
         this.BVH = new BVH8Builder(BVH2);
-        BVH2 = null;
         BVH.BVH8Nodes.RemoveRange(BVH.cwbvhnode_count, BVH.BVH8Nodes.Count - BVH.cwbvhnode_count);
     }
 
