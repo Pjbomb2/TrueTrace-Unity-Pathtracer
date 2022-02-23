@@ -92,7 +92,7 @@ BVH Options Description -
 # Credits(will continue to expand when I have time)
 Biggest thanks to Zuen who helped me a huge amount with the new BVH and traversal, thanks to them I got to where I am now, and I am very thankful to them for their help and patience
 </br>
-Their github is at Jan Van Bergen
+https://github.com/jan-van-bergen
 </br></br>
 Scenes From:
 <ul>
