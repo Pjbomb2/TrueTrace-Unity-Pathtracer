@@ -101,3 +101,6 @@ Scenes From:
 </ul>
 
 
+
+## Ideas/Reminders for later
+    See if any performance beenfit can be gotten by allowing mesh instancing, so for meshes that are the exact same(possibly have the user define this), simple put their Root node in the list, but only have one reference
