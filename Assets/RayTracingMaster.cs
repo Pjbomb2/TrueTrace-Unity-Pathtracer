@@ -45,6 +45,7 @@ public class RayTracingMaster : MonoBehaviour {
     private int threadGroupsX;
     private int threadGroupsY;
 
+
     [System.Serializable]
     public struct BufferSizeData {
         public int tracerays;
@@ -190,8 +191,7 @@ public class RayTracingMaster : MonoBehaviour {
             RayTracingShader.SetInt("screen_height", Screen.height);
             Denoiser.SetInt("screen_width", Screen.width);
             Denoiser.SetInt("screen_height", Screen.height);
-            SetComputeBuffer(2, "_Materials", _MaterialDataBuffer);
-            
+            SetComputeBuffer(2, "_Materials", _MaterialDataBuffer); 
             SetComputeBuffer(0, "GlobalRays1", _RayBuffer1);
             SetComputeBuffer(1  , "GlobalRays1", _RayBuffer1);
             SetComputeBuffer(2  , "GlobalRays1", _RayBuffer1);

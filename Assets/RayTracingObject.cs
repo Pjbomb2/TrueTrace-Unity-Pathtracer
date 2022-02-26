@@ -20,8 +20,13 @@ public class RayTracingObject : MonoBehaviour {
 			eta = new Vector3[SubMeshCount];
 			MatType = new int[SubMeshCount];
 			BaseColor = new Vector3[SubMeshCount];
-			for(int i = 0 ; i < SubMeshCount; i++) {
-				BaseColor[i] = (GetComponent<Renderer>().sharedMaterials[i].mainTexture == null) ? ((GetComponent<Renderer>().sharedMaterials[i].HasProperty("_Color")) ? new Vector3(GetComponent<Renderer>().sharedMaterials[i].color.r, GetComponent<Renderer>().sharedMaterials[i].color.g, GetComponent<Renderer>().sharedMaterials[i].color.b) : new Vector3(0.78f, 0.14f, 0.69f)) : new Vector3(0.78f, 0.14f, 0.69f);
+			Material[] SharedMaterials = GetComponent<Renderer>().sharedMaterials;
+			for(int i = 0; i < SubMeshCount; i++) {
+				if(SharedMaterials[i].GetFloat("_Mode") == 3.0f) {
+					MatType[i] = 2;
+					eta[i].x = 1.33f;
+				}
+				BaseColor[i] = (SharedMaterials[i].mainTexture == null) ? ((SharedMaterials[i].HasProperty("_Color")) ? new Vector3(SharedMaterials[i].color.r, SharedMaterials[i].color.g, SharedMaterials[i].color.b) : new Vector3(0.78f, 0.14f, 0.69f)) : new Vector3(0.78f, 0.14f, 0.69f);
 			}
 			ObjectGroup = -1;
 		}

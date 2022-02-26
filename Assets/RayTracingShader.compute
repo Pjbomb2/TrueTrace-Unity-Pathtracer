@@ -1,4 +1,4 @@
-#define UseSkyBox//Comment out to have no skybox and just a solid color
+//#define UseSkyBox//Comment out to have no skybox and just a solid color
 //#define UsePretty//UsePretty makes all diffuse objects glossy
 
 float4x4 _CameraToWorld;
@@ -13,7 +13,6 @@ uint screen_height;
 int pixel_index;
 
 bool UseRussianRoulette;
-
 
 struct BufferSizeData {   
     int tracerays;
@@ -496,7 +495,6 @@ RWTexture2D<float4> TempNormTex;
 RWTexture2D<float4> TempPosTex;
 RWTexture2D<float4> TempAlbedoTex;
 
-
 struct HitMat {
     float3 surfaceColor;
     float emmis;
@@ -703,10 +701,6 @@ bool sample_dielectric(inout float3 throughput, HitMat material, float3 omega_i,
 
     return true;
 }
-float SmoothnessToPhongAlpha(float s)
-{
-    return pow(1000.0f, s * s);
-}
 
 void calcFinalColor(inout Ray ray, inout float3 throughput, const HitMat hitDat, const RayHit hit, uint2 Uv, inout bool terminated) {//main function
 
@@ -726,6 +720,7 @@ void calcFinalColor(inout Ray ray, inout float3 throughput, const HitMat hitDat,
             TempAlbedoTex[Uv] = float4(1.0f, 1.0f, 1.0f, 1.0f);
         }
     }
+
     if(hitDat.emmis > 0.0f) {//if we hit a light, this ray is done
         throughput *= (hitDat.emmis) * hitDat.surfaceColor;
         return;
@@ -747,7 +742,7 @@ void calcFinalColor(inout Ray ray, inout float3 throughput, const HitMat hitDat,
              eta = rcp(eta);
                 norm = -norm;
             } else {
-                throughput *= exp(-hitDat.surfaceColor * hit.t);//Beers law, heavily boosted for prettyness
+                throughput *= exp(-hitDat.surfaceColor * hit.t * 12.0f);//Beers law
             }
             valid = sample_dielectric(throughput, hitDat, mul(GetTangentSpace(-norm), -ray.direction), tempraydir, eta);
             ray.direction = normalize(mul(tempraydir, GetTangentSpace(-norm)));
@@ -764,12 +759,14 @@ void calcFinalColor(inout Ray ray, inout float3 throughput, const HitMat hitDat,
         break;
         #endif
         default:
-            ray.direction = mul(sample(), GetTangentSpace(norm));
+            ray.direction = normalize(mul(sample(), GetTangentSpace(norm)));
             throughput *= hitDat.surfaceColor;
         break;
     }
     if(!valid) return;//If the ray failed, we have no choice but to terminate this path
     
+
+
     ray.origin = norm * 0.001f + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
     if(UseRussianRoulette) {
        float p = saturate(max(throughput.x, max(throughput.y, throughput.z)));
@@ -811,7 +808,7 @@ void kernel_shade () {
             float3 sky = _SkyboxTexture.SampleLevel(sampler_SkyboxTexture, float2(phi, theta), 0).xyz;
             throughput *= sky;
         #else
-            throughput *= float3(5.0f, 5.0f, 5.0f);
+            throughput *= float3(0.0f, 0.0f, 0.0f);
         #endif
             if(CurBounce == 0) TempAlbedoTex[TempUv] = float4(throughput, 1.0f);
         Result[TempUv] = float4(throughput, 1.0f);
