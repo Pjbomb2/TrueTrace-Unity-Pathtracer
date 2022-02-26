@@ -25,8 +25,8 @@ public class AssetManager : MonoBehaviour {
     public List<ProgReportData> ProgIds;
     
     private List<Task> tasks;
-    
-    private int TLASSpace;
+
+    public int TLASSpace;
 
     public struct objtextureindices {
         public int textureindexstart;
@@ -34,7 +34,7 @@ public class AssetManager : MonoBehaviour {
     }
 
     public void CreateAtlas() {//Creates texture atlas
-        _Materials.Clear();
+        _Materials = new List<MaterialData>();
         List<objtextureindices> ObjectTextures = new List<objtextureindices>();
         List<Texture2D> TempTexs = new List<Texture2D>();
         List<int> texindex = new List<int>();
@@ -210,6 +210,8 @@ public class AssetManager : MonoBehaviour {
                     mesh_datas[i].BVH.BVH8Nodes[n] = TempNode2;
                 }
                 mesh_datas[i].Aggregate();
+                mesh_datas[i].BVH.BVH8Nodes.Clear();
+                mesh_datas[i].BVH.BVH8Nodes.Capacity = 0;
                 BVH8StaticAggregated.AddRange(mesh_datas[i].Aggregated_BVH_Nodes);
 
                 for(int i2 = 0; i2 < mesh_datas[i].triangles.Count; ++i2) {//This constructs the list of triangles that actually get sent to the GPU
@@ -231,6 +233,7 @@ public class AssetManager : MonoBehaviour {
 
                     TempTri.MatDat = (uint)triangle.MatDat;
                     aggregated_triangles.Add(TempTri);
+
                  }
                 aggregated_bvh_node_count += mesh_datas[i].BVH.cwbvhnode_count;
                 aggregated_index_count += mesh_datas[i].BVH.cwbvhindex_count;
@@ -240,22 +243,31 @@ public class AssetManager : MonoBehaviour {
     }
 
     private async void UpdateTLASAsync() { 
-         BVH8Aggregated = new List<BVHNode8DataCompressed>();
+
+        BVH8Aggregated = new List<BVHNode8DataCompressed>();
         int aggregated_bvh_node_count = 2 * mesh_datas.Length;
         MyMeshesCompacted.Clear();
+        AABB[] MeshAABBs = new AABB[mesh_datas.Length];
         for(int i = 0; i < mesh_datas.Length; i++) {
              MyMeshesCompacted.Add(new MyMeshDataCompacted() {
                 mesh_data_bvh_offsets = aggregated_bvh_node_count,
                 Transform =  mesh_datas[i].Transform.inverse
               });
              mesh_datas[i].UpdateAABB();
+            MeshAABBs[i] = mesh_datas[i].aabb;
             aggregated_bvh_node_count += mesh_datas[i].BVH.cwbvhnode_count;
         }
-        BVH2Builder BVH2 = new BVH2Builder(mesh_datas);
-        BVH8Builder BVH8 = new BVH8Builder(BVH2, ref MyMeshesCompacted);
+        BVH2Builder BVH2 = new BVH2Builder(MeshAABBs);
+        BVH8Builder BVH8 = new BVH8Builder(ref BVH2, ref MyMeshesCompacted);
 
-        Aggregate(BVH8);
+        TLASSpace = BVH8.BVH8Nodes.Count;
+        for(int i = 0; i < TLASSpace; i++) {
+            BVH8Aggregated.Add(new BVHNode8DataCompressed() {});
+        }
+        Aggregate(ref BVH8);
         BVH8Aggregated.AddRange(BVH8StaticAggregated);
+        BVH8StaticAggregated.Clear();
+        BVH8StaticAggregated.Capacity = 0;
         GlobalStopWatch.Stop(); ts = GlobalStopWatch.Elapsed; writetime("Total Construction Time: ", ts);//Tells me how long total construction has taken
     }
 
@@ -451,7 +463,7 @@ public class AssetManager : MonoBehaviour {
 
     }
 
-	void Aggregate(BVH8Builder BVH8) {//BVH aggregation/BVH compression
+	void Aggregate(ref BVH8Builder BVH8) {//BVH aggregation/BVH compression
         for(int i = 0; i < BVH8.BVH8Nodes.Count; ++i) {
             BVHNode8Data TempNode = BVH8.BVH8Nodes[i];
             byte[] tempbyte = new byte[4];
@@ -531,35 +543,33 @@ public class AssetManager : MonoBehaviour {
             maxzsecond[1] = TempNode.quantized_max_z[5];
             maxzsecond[2] = TempNode.quantized_max_z[6];
             maxzsecond[3] = TempNode.quantized_max_z[7];
-            BVH8Aggregated.Add(new BVHNode8DataCompressed() {
-                node_0xyz = new Vector3(TempNode.p.x, TempNode.p.y, TempNode.p.z),
-                node_0w = System.BitConverter.ToUInt32(tempbyte, 0),
-                node_1x = TempNode.base_index_child,
-                node_1y = TempNode.base_index_triangle,
-                node_1z = System.BitConverter.ToUInt32(metafirst, 0),
-                node_1w = System.BitConverter.ToUInt32(metasecond, 0),
-                node_2x = System.BitConverter.ToUInt32(minxfirst, 0),
-                node_2y = System.BitConverter.ToUInt32(minxsecond, 0),
-                node_2z = System.BitConverter.ToUInt32(maxxfirst, 0),
-                node_2w = System.BitConverter.ToUInt32(maxxsecond, 0),
-                node_3x = System.BitConverter.ToUInt32(minyfirst, 0),
-                node_3y = System.BitConverter.ToUInt32(minysecond, 0),
-                node_3z = System.BitConverter.ToUInt32(maxyfirst, 0),
-                node_3w = System.BitConverter.ToUInt32(maxysecond, 0),
-                node_4x = System.BitConverter.ToUInt32(minzfirst, 0),
-                node_4y = System.BitConverter.ToUInt32(minzsecond, 0),
-                node_4z = System.BitConverter.ToUInt32(maxzfirst, 0),
-                node_4w = System.BitConverter.ToUInt32(maxzsecond, 0)
-
-            });
+            BVHNode8DataCompressed TempNodeComp;
+                TempNodeComp.node_0xyz = new Vector3(TempNode.p.x, TempNode.p.y, TempNode.p.z);
+                TempNodeComp.node_0w = System.BitConverter.ToUInt32(tempbyte, 0);
+                TempNodeComp.node_1x = TempNode.base_index_child;
+                TempNodeComp.node_1y = TempNode.base_index_triangle;
+                TempNodeComp.node_1z = System.BitConverter.ToUInt32(metafirst, 0);
+                TempNodeComp.node_1w = System.BitConverter.ToUInt32(metasecond, 0);
+                TempNodeComp.node_2x = System.BitConverter.ToUInt32(minxfirst, 0);
+                TempNodeComp.node_2y = System.BitConverter.ToUInt32(minxsecond, 0);
+                TempNodeComp.node_2z = System.BitConverter.ToUInt32(maxxfirst, 0);
+                TempNodeComp.node_2w = System.BitConverter.ToUInt32(maxxsecond, 0);
+                TempNodeComp.node_3x = System.BitConverter.ToUInt32(minyfirst, 0);
+                TempNodeComp.node_3y = System.BitConverter.ToUInt32(minysecond, 0);
+                TempNodeComp.node_3z = System.BitConverter.ToUInt32(maxyfirst, 0);
+                TempNodeComp.node_3w = System.BitConverter.ToUInt32(maxysecond, 0);
+                TempNodeComp.node_4x = System.BitConverter.ToUInt32(minzfirst, 0);
+                TempNodeComp.node_4y = System.BitConverter.ToUInt32(minzsecond, 0);
+                TempNodeComp.node_4z = System.BitConverter.ToUInt32(maxzfirst, 0);
+                TempNodeComp.node_4w = System.BitConverter.ToUInt32(maxzsecond, 0);
+                BVH8Aggregated[i] = TempNodeComp;
 	    }
 	}
 
     public void UpdateTLAS() {	//Allows for objects to be moved in the scene or animated while playing
-        BVH8Aggregated = new List<BVHNode8DataCompressed>();
         int aggregated_bvh_node_count = 2 * mesh_datas.Length;
         MyMeshesCompacted.Clear();
-
+        AABB[] MeshAABBs = new AABB[mesh_datas.Length];
         for(int i = 0; i < mesh_datas.Length; i++) {
             mesh_datas[i].Transform = RelevantTransforms[i].transform.worldToLocalMatrix.inverse;
             mesh_datas[i].Position = RelevantTransforms[i].transform.position;
@@ -568,15 +578,12 @@ public class AssetManager : MonoBehaviour {
                 Transform =  RelevantTransforms[i].transform.worldToLocalMatrix
               });
              mesh_datas[i].UpdateAABB();
-
-
+            MeshAABBs[i] = mesh_datas[i].aabb;
             aggregated_bvh_node_count += mesh_datas[i].BVH.cwbvhnode_count;
         }
-        BVH2Builder BVH2 = new BVH2Builder(mesh_datas);
-        BVH8Builder BVH8 = new BVH8Builder(BVH2, ref MyMeshesCompacted);
-
-        Aggregate(BVH8);
-        BVH8Aggregated.AddRange(BVH8StaticAggregated);
+        BVH2Builder BVH2 = new BVH2Builder(MeshAABBs);
+        BVH8Builder BVH8 = new BVH8Builder(ref BVH2, ref MyMeshesCompacted);
+        Aggregate(ref BVH8);
 	}
 
 	public void UpdateMaterials() {//Allows for live updating of material properties of any object
@@ -596,5 +603,4 @@ public class AssetManager : MonoBehaviour {
 			}
 		}
 	}
-
 }

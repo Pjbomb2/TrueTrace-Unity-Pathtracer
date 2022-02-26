@@ -20,7 +20,7 @@ public class BVH8Builder {
         public int dist_right;
     }
 
-    int calculate_cost(int node_index, List<BVHNode2Data> nodes) {
+    int calculate_cost(int node_index, ref List<BVHNode2Data> nodes) {
         Decision dectemp;
         BVHNode2Data node = nodes[node_index];
         int num_primitives;
@@ -42,8 +42,8 @@ public class BVH8Builder {
             }
         } else {
             num_primitives = 
-                calculate_cost(node.left, nodes) +
-                calculate_cost(node.left + 1, nodes);
+                calculate_cost(node.left, ref nodes) +
+                calculate_cost(node.left + 1, ref nodes);
                     {
                         float cost_leaf = num_primitives <= 3 ? (float)num_primitives * surface_area(node.BBMax, node.BBMin) : float.MaxValue;
 
@@ -121,7 +121,7 @@ public class BVH8Builder {
     }
 
 
-    void get_children(int node_index, List<BVHNode2Data> nodes, int i, ref int child_count, ref int[] children) {
+    void get_children(int node_index, ref List<BVHNode2Data> nodes, int i, ref int child_count, ref int[] children) {
         BVHNode2Data node = nodes[node_index];
 
         if(node.count > 0) {
@@ -138,19 +138,19 @@ public class BVH8Builder {
         Assert.IsTrue(child_count < 8);
 
         if(decisions[node.left * 7 + dist_left].Type == 2) {
-            get_children(node.left, nodes, dist_left, ref child_count, ref children);
+            get_children(node.left, ref nodes, dist_left, ref child_count, ref children);
         } else {
             children[child_count++] = node.left;
         }
 
         if(decisions[(node.left + 1) * 7 + dist_right].Type == 2) {
-            get_children(node.left + 1, nodes, dist_right, ref child_count, ref children);   
+            get_children(node.left + 1, ref nodes, dist_right, ref child_count, ref children);   
         } else {
             children[child_count++] = node.left + 1;
         }
     }
 
-    void order_children(int node_index, List<BVHNode2Data> nodes, ref int[] children, int child_count) {
+    void order_children(int node_index, ref List<BVHNode2Data> nodes, ref int[] children, int child_count) {
         Vector3 p = (nodes[node_index].BBMax + nodes[node_index].BBMin) / 2.0f;
 
         float[,] cost = new float[8,8];
@@ -166,7 +166,7 @@ public class BVH8Builder {
             }
         }
 
-        int[] assignment = new int[8]{-1, -1, -1, -1, -1, -1, -1, -1};
+        int[] assignment = {-1, -1, -1, -1, -1, -1, -1, -1};
         bool[] slot_filled = new bool[8];
 
         while(true) {
@@ -207,7 +207,7 @@ public class BVH8Builder {
         }
     }
 
-    int count_primitives(int node_index, List<BVHNode2Data> nodes, List<int> indices) {
+    int count_primitives(int node_index, ref List<BVHNode2Data> nodes, ref int[] indices) {
         BVHNode2Data node = nodes[node_index];
 
         if(node.count > 0) {
@@ -217,9 +217,9 @@ public class BVH8Builder {
             }
             return (int)node.count;
         }
-        return count_primitives(node.left, nodes, indices) + count_primitives(node.left + 1, nodes, indices);
+        return count_primitives(node.left, ref nodes, ref indices) + count_primitives(node.left + 1, ref nodes, ref indices);
     }
-    void collapse(List<BVHNode2Data> nodes_bvh, List<int> indices_bvh, int node_index_cwbvh, int node_index_bvh) {
+    void collapse(ref List<BVHNode2Data> nodes_bvh, ref int[] indices_bvh, int node_index_cwbvh, int node_index_bvh) {
       BVHNode8Data node = BVH8Nodes[node_index_cwbvh];
       AABB aabb = new AABB();
       aabb.BBMax = nodes_bvh[node_index_bvh].BBMax;
@@ -255,13 +255,13 @@ public class BVH8Builder {
       node.e[2] = System.Convert.ToByte(u_ez >> 23);
 
       int child_count = 0;
-      int[] children = new int[8]{-1, -1, -1, -1, -1, -1, -1, -1};
+      int[] children = {-1, -1, -1, -1, -1, -1, -1, -1};
 
-      get_children(node_index_bvh, nodes_bvh, 0, ref child_count, ref children);
+      get_children(node_index_bvh, ref nodes_bvh, 0, ref child_count, ref children);
 
       Assert.IsTrue(child_count <= 8);
 
-      order_children(node_index_bvh, nodes_bvh, ref children, child_count);
+      order_children(node_index_bvh, ref nodes_bvh, ref children, child_count);
 
       node.imask = 0;
 
@@ -289,7 +289,7 @@ public class BVH8Builder {
 
       switch(decisions[child_index * 7].Type) {
         case 0: {
-            int triangle_count = count_primitives(child_index, nodes_bvh, indices_bvh);
+            int triangle_count = count_primitives(child_index, ref nodes_bvh, ref indices_bvh);
             Assert.IsTrue(triangle_count > 0 && triangle_count <= 3);
 
             for(int j = 0; j < triangle_count; j++) {
@@ -323,7 +323,7 @@ public class BVH8Builder {
         if(child_index == -1) continue;
 
         if(decisions[child_index * 7].Type == 1) {
-            collapse(nodes_bvh, indices_bvh, (int)node.base_index_child + (node.meta[i] & 31) - 24, child_index);
+            collapse(ref nodes_bvh, ref indices_bvh, (int)node.base_index_child + (node.meta[i] & 31) - 24, child_index);
         }
       }
     }
@@ -333,25 +333,28 @@ public class BVH8Builder {
         return 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z)); 
     }
 
-    public BVH8Builder(BVH2Builder BVH2) {//Bottom Level CWBVH Builder
-        cost = new List<float>(BVH2.BVH2Nodes.Count * 7);
-        decisions = new List<Decision>();
-        BVH8Nodes = new List<BVHNode8Data>();
-        cwbvh_indices = new List<int>();
+    public BVH8Builder(ref BVH2Builder BVH2) {//Bottom Level CWBVH Builder
+        int BVH2NodesCount = BVH2.BVH2Nodes.Count;
+        int BVH2IndicesCount = BVH2.FinalIndices.Length;
 
-        for(int i = 0; i < BVH2.BVH2Nodes.Count * 7; ++i) {
+        cost = new List<float>(BVH2NodesCount * 7);
+        decisions = new List<Decision>(BVH2NodesCount * 7);
+        BVH8Nodes = new List<BVHNode8Data>(BVH2NodesCount);
+        BVH8Nodes.Capacity = BVH2NodesCount;
+        cwbvh_indices = new List<int>(BVH2IndicesCount);
+
+        for(int i = 0; i < BVH2NodesCount * 7; ++i) {
             cost.Add(0.0f);
-
             decisions.Add(new Decision() {
                 Type = 0,
                 dist_left = 0,
                 dist_right = 0
                 });
         }
-        for(int i = 0; i < BVH2.DimensionedIndices[0].Count; ++i) {
+        for(int i = 0; i < BVH2IndicesCount; ++i) {
             cwbvh_indices.Add(0);
         }
-        for(int i = 0; i < BVH2.BVH2Nodes.Count; ++i) {
+        for(int i = 0; i < BVH2NodesCount; ++i) {
             BVH8Nodes.Add(new BVHNode8Data () {
                 e = new byte[3],
                 meta = new byte[8],
@@ -366,20 +369,23 @@ public class BVH8Builder {
         cwbvhindex_count = 0;
         cwbvhnode_count = 1;
 
-        calculate_cost(0, BVH2.BVH2Nodes);
+        calculate_cost(0, ref BVH2.BVH2Nodes);
 
-        collapse(BVH2.BVH2Nodes, BVH2.DimensionedIndices[0], 0, 0);
+        collapse(ref BVH2.BVH2Nodes, ref BVH2.FinalIndices, 0, 0);
         this.decisions.Clear();
         this.decisions.Capacity = 0;
     }
 
-    public BVH8Builder(BVH2Builder BVH2, ref List<MyMeshDataCompacted> Meshes) {//Top Level CWBVH Builder
-        cost = new List<float>(BVH2.BVH2Nodes.Count * 7);
-        decisions = new List<Decision>();
-        BVH8Nodes = new List<BVHNode8Data>();
-        cwbvh_indices = new List<int>();
+    public BVH8Builder(ref BVH2Builder BVH2, ref List<MyMeshDataCompacted> Meshes) {//Top Level CWBVH Builder
+        int BVH2NodesCount = BVH2.BVH2Nodes.Count;
+        int BVH2IndicesCount = BVH2.FinalIndices.Length;
 
-        for(int i = 0; i < BVH2.BVH2Nodes.Count * 7; ++i) {
+        cost = new List<float>(BVH2NodesCount * 7);
+        decisions = new List<Decision>(BVH2NodesCount * 7);
+        BVH8Nodes = new List<BVHNode8Data>(BVH2NodesCount);
+        cwbvh_indices = new List<int>(BVH2IndicesCount);
+
+        for(int i = 0; i < BVH2NodesCount * 7; ++i) {
             cost.Add(0.0f);
 
             decisions.Add(new Decision() {
@@ -388,10 +394,10 @@ public class BVH8Builder {
                 dist_right = 0
                 });
         }
-        for(int i = 0; i < BVH2.DimensionedIndices[0].Count; ++i) {
+        for(int i = 0; i < BVH2IndicesCount; ++i) {
             cwbvh_indices.Add(0);
         }
-        for(int i = 0; i < BVH2.BVH2Nodes.Count; ++i) {
+        for(int i = 0; i < BVH2NodesCount; ++i) {
             BVH8Nodes.Add(new BVHNode8Data () {
                 e = new byte[3],
                 meta = new byte[8],
@@ -406,15 +412,16 @@ public class BVH8Builder {
         cwbvhindex_count = 0;
         cwbvhnode_count = 1;
 
-        calculate_cost(0, BVH2.BVH2Nodes);
+        calculate_cost(0, ref BVH2.BVH2Nodes);
 
-        collapse(BVH2.BVH2Nodes, BVH2.DimensionedIndices[0], 0, 0);
+        collapse(ref BVH2.BVH2Nodes, ref BVH2.FinalIndices, 0, 0);
 
         List<MyMeshDataCompacted> TempCompressed = new List<MyMeshDataCompacted>(Meshes);
         Meshes.Clear();
         for(int i = 0; i < cwbvh_indices.Count; ++i) {
             Meshes.Add(TempCompressed[cwbvh_indices[i]]);
         }
+        TempCompressed.Clear();
         this.decisions.Clear();
         this.decisions.Capacity = 0;
     }

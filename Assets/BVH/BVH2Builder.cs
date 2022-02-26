@@ -7,16 +7,14 @@ using CommonVars;
 public class BVH2Builder {
 
     public List<BVHNode2Data> BVH2Nodes;
-    private List<int> IndicesX;
-    private List<int> IndicesY;
-    private List<int> IndicesZ;
-    public List<int>[] DimensionedIndices;
+    private List<int>[] DimensionedIndices;
     private bool[] indices_going_left;
     private List<Vector3> Centers;
     private List<int> temp;
     private PrimitiveData[] Primitives;
     public int PrimCount;
     private int ProgId;
+    public int[] FinalIndices;
 
     public struct ObjectSplit {
         public int index;
@@ -56,7 +54,7 @@ public class BVH2Builder {
 
                 float cost = sah[i] + surface_area(aabb_right.BBMax, aabb_right.BBMin) * (float)(index_count - i);
 
-                if(cost < split.cost) {
+                if(cost <= split.cost) {
                     split.cost = cost;
                     split.index = first_index + i;
                     split.dimension = dimension;
@@ -149,12 +147,12 @@ public class BVH2Builder {
     public BVH2Builder(List<PrimitiveData> Triangles, int progressId) {//Bottom Level Acceleration Structure Builder
         ProgId = progressId;
         PrimCount = Triangles.Count;
-        IndicesX = new List<int>(PrimCount);
-        IndicesY = new List<int>(PrimCount);             
-        IndicesZ = new List<int>(PrimCount);
+        DimensionedIndices = new List<int>[3];
+        DimensionedIndices[0] = new List<int>(PrimCount);
+        DimensionedIndices[1] = new List<int>(PrimCount);             
+        DimensionedIndices[2] = new List<int>(PrimCount);
         Centers = new List<Vector3>(PrimCount);
         BVH2Nodes = new List<BVHNode2Data>(PrimCount);
-        DimensionedIndices = new List<int>[3];
         temp = new List<int>();
         Primitives = new PrimitiveData[PrimCount];    
         indices_going_left = new bool[PrimCount];
@@ -162,9 +160,9 @@ public class BVH2Builder {
         AABB RootBB = new AABB();
         RootBB.init();
         for(int i = 0; i < PrimCount; i++) {
-            IndicesX.Add(i);
-            IndicesY.Add(i);
-            IndicesZ.Add(i);
+            DimensionedIndices[0].Add(i);
+            DimensionedIndices[1].Add(i);
+            DimensionedIndices[2].Add(i);
             indices_going_left[i] = false;
             Centers.Add(Triangles[i].Center);
             Primitives[i] = Triangles[i];
@@ -186,12 +184,9 @@ public class BVH2Builder {
             });
          }
 
-        IndicesX.Sort((s1,s2) => Centers[s1].x.CompareTo(Centers[s2].x));
-        IndicesY.Sort((s1,s2) => Centers[s1].y.CompareTo(Centers[s2].y));
-        IndicesZ.Sort((s1,s2) => Centers[s1].z.CompareTo(Centers[s2].z));
-        DimensionedIndices[0] = IndicesX;
-        DimensionedIndices[1] = IndicesY;
-        DimensionedIndices[2] = IndicesZ;
+        DimensionedIndices[0].Sort((s1,s2) => Centers[s1].x.CompareTo(Centers[s2].x));
+        DimensionedIndices[1].Sort((s1,s2) => Centers[s1].y.CompareTo(Centers[s2].y));
+        DimensionedIndices[2].Sort((s1,s2) => Centers[s1].z.CompareTo(Centers[s2].z));
 
         int nodeIndex = 2;
 
@@ -209,30 +204,34 @@ public class BVH2Builder {
 
             BVH2Nodes[i] = TempNode;
         }
+        FinalIndices = DimensionedIndices[0].ToArray();
+        DimensionedIndices = null;
+
         UnityEditor.Progress.Report(ProgId, 1.0f);
     }
+//28 ms
 
 
-
-    public BVH2Builder(Mesh_Data[] Meshes) {//Top Level Acceleration Structure
-        IndicesX = new List<int>();
-        IndicesY = new List<int>();             
-        IndicesZ = new List<int>();
+    public BVH2Builder(AABB[] MeshAABBs) {//Top Level Acceleration Structure
+        int MeshCount = MeshAABBs.Length;
+        DimensionedIndices = new List<int>[3];
+        DimensionedIndices[0] = new List<int>(MeshCount);
+        DimensionedIndices[1] = new List<int>(MeshCount);             
+        DimensionedIndices[2] = new List<int>(MeshCount);
         Centers = new List<Vector3>();
         BVH2Nodes = new List<BVHNode2Data>();
-        DimensionedIndices = new List<int>[3];
         temp = new List<int>();
-        Primitives = new PrimitiveData[Meshes.Length];
-        indices_going_left = new bool[Meshes.Length];  
+        Primitives = new PrimitiveData[MeshCount];
+        indices_going_left = new bool[MeshCount];  
         AABB RootBB = new AABB();
         RootBB.init();
-        for(int i = 0; i < Meshes.Length; i++) {//Treat Bottom Level BVH Root Nodes as triangles
-            IndicesX.Add(i);
-            IndicesY.Add(i);
-            IndicesZ.Add(i);
-            Primitives[i].BBMax = Meshes[i].aabb.BBMax;
-            Primitives[i].BBMin = Meshes[i].aabb.BBMin;
-            Primitives[i].Center = ((Meshes[i].aabb.BBMax - Meshes[i].aabb.BBMin)/2.0f + Meshes[i].aabb.BBMin);
+        for(int i = 0; i < MeshCount; i++) {//Treat Bottom Level BVH Root Nodes as triangles
+            DimensionedIndices[0].Add(i);
+            DimensionedIndices[1].Add(i);
+            DimensionedIndices[2].Add(i);
+            Primitives[i].BBMax = MeshAABBs[i].BBMax;
+            Primitives[i].BBMin = MeshAABBs[i].BBMin;
+            Primitives[i].Center = ((MeshAABBs[i].BBMax - MeshAABBs[i].BBMin)/2.0f + MeshAABBs[i].BBMin);
 
             Centers.Add(Primitives[i].Center);
             indices_going_left[i] = false;
@@ -245,7 +244,7 @@ public class BVH2Builder {
             BBMax = RootBB.BBMax
         });
 
-         for(int i = 1; i < Meshes.Length * 2; ++i) {
+         for(int i = 1; i < MeshCount * 2; ++i) {
             BVH2Nodes.Add(new BVHNode2Data() {
                 BBMin = new Vector3(float.MaxValue,float.MaxValue,float.MaxValue),
                 BBMax = new Vector3(float.MinValue,float.MinValue,float.MinValue),
@@ -254,18 +253,15 @@ public class BVH2Builder {
             });
          }
 
-        IndicesX.Sort((s1,s2) => Centers[s1].x.CompareTo(Centers[s2].x));
-        IndicesY.Sort((s1,s2) => Centers[s1].y.CompareTo(Centers[s2].y));
-        IndicesZ.Sort((s1,s2) => Centers[s1].z.CompareTo(Centers[s2].z));
-        DimensionedIndices[0] = IndicesX;
-        DimensionedIndices[1] = IndicesY;
-        DimensionedIndices[2] = IndicesZ;
+        DimensionedIndices[0].Sort((s1,s2) => Centers[s1].x.CompareTo(Centers[s2].x));
+        DimensionedIndices[1].Sort((s1,s2) => Centers[s1].y.CompareTo(Centers[s2].y));
+        DimensionedIndices[2].Sort((s1,s2) => Centers[s1].z.CompareTo(Centers[s2].z));
 
         int nodeIndex = 2;
 
-        BuildRecursive(0, ref nodeIndex,0,Meshes.Length);
+        BuildRecursive(0, ref nodeIndex,0,MeshCount);
 
-        Assert.IsTrue(nodeIndex <= 2 * Meshes.Length);
+        Assert.IsTrue(nodeIndex <= 2 * MeshCount);
 
         for(int i = 0; i < BVH2Nodes.Count; ++i) {
             BVHNode2Data TempNode = BVH2Nodes[i];
@@ -276,5 +272,7 @@ public class BVH2Builder {
             }
             BVH2Nodes[i] = TempNode;
         }
+        FinalIndices = DimensionedIndices[0].ToArray();
+        DimensionedIndices = null;
     }
 }
