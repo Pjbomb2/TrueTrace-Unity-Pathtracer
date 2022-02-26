@@ -48,7 +48,7 @@ BVH Options Description -
 <ul>
   <li>Construct BVH's - Normal construction of acceleration structure, one click and wait for the Total Construction Time message to appear in console, then your ready to play</li>
   <li>Update TLAS - In case you need to manually update the Top Level Acceleration Structure</li>
-  <li>Build Aggregated BVH - Will aggregate all non static meshes(which you determine by putting a 1 or a 0 in the Dynamic section of the RayTracingObject) into one mesh, then build the BVH for them.  This gives a decent enough performance bump for me to add it</li>
+  <li>Build Aggregated BVH - Will aggregate all meshes into their defined groupings(which you determine by putting a number in the Object Group section of the RayTracingObject) into larger single meshes, then builds the new BVHs for them.  This gives a pretty large performance improvement, but takes a bit longer to build</li>
   <li>Update Materials - In case you need to manually update the materials</li>
   <li>Setup - Currently used for the XML Parser, will add a description for how to use that later</li>
   <li>Max Bounces - Sets the maximum number of bounces a ray can achieve</li>
