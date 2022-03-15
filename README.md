@@ -1,3 +1,25 @@
+Notes:</br>
+Currently working on:
+<ul>
+  <li>Precomputed multiple scattering atmosphere(struggling a lot)</li>
+  <li>GOOD Volumetrics</li>
+  <li>Next event estimation(worried about how much this will kill performance)</li>
+</ul>
+Currrently Have Done(though not clean enough to upload):
+<ul>
+  <li>Precomputed single scattering atmosphere</li>
+  <li>Basic global(and shitty) volumetrics</li>
+  <li>Working shadow rays(dont like how much performance drops with just 1 shadow ray pass though)</li>
+</ul>
+Currently needs to be done but havent started:
+<ul>
+    <li>Redo the entirety of the way data is stored and classes are organized(havent done yet as I dont know what exactly would be a better way to structure everything, though the current way I do things is infuriating enough for this to start becoming a real issue to my sanity)</li>
+</ul>
+Currently want to do but havent started:
+<ul>
+    <li>Add native support for voxels(havent started as I dont know a good way to structure it or what acceleration structure would be good, or a good data format, that supports preferably both solid and volumetric voxels)</li>
+</ul>
+
 # Compute Shader Based Fast Unity PathTracer
 A passion projects that has been going on for awhile, finally at a place where I feel comfortable tentatively uploading it to Github for others to use
 What is it?
@@ -103,4 +125,4 @@ Scenes From:
 
 
 ## Ideas/Reminders for later
-    See if any performance beenfit can be gotten by allowing mesh instancing, so for meshes that are the exact same(possibly have the user define this), simple put their Root node in the list, but only have one reference
+    See if any performance beenfit can be gotten by allowing mesh instancing, so for meshes that are the exact same(possibly have the user define this, or see if I can have it be automatic), simple put their Root node in the list, but only have one reference, reducing memory consumption(how much of an impact would this actually have though?)
