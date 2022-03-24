@@ -42,6 +42,8 @@ If you have any questions, or suggestions, etc. let me know either through githu
 Let me know if you use this for anything, I would be excited to see any use of this!  Just please give some credit somewhere if you use it, thank you!
 
 ## Instructions:
+REQUIRES UNITY 2020 OR HIGHER
+</br>
 So first thing, you need to set the color space to Linear.  To do this, you need to go to edit on the top right, Project Settings -> Player -> Other Settings -> Color Space, and set that to linear
 </br>
 Aside from this, you need to make sure all textures you use are Read/Write enabled(do this by selecting all the textures you will be using, then on the right click Read/Write enabled
