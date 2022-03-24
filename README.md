@@ -3,17 +3,10 @@ Currently working on:
 <ul>
   <li>Precomputed multiple scattering atmosphere(struggling a lot)</li>
   <li>GOOD Volumetrics</li>
-  <li>Next event estimation(worried about how much this will kill performance)</li>
-</ul>
-Currrently Have Done(though not clean enough to upload):
-<ul>
-  <li>Precomputed single scattering atmosphere</li>
-  <li>Basic global(and shitty) volumetrics</li>
-  <li>Working shadow rays(dont like how much performance drops with just 1 shadow ray pass though)</li>
 </ul>
 Currently needs to be done but havent started:
 <ul>
-    <li>Redo the entirety of the way data is stored and classes are organized(havent done yet as I dont know what exactly would be a better way to structure everything, though the current way I do things is infuriating enough for this to start becoming a real issue to my sanity)</li>
+    <li>Find a way to allow for objects to be added and removed easily during running(I have this technically done but its way too janky feeling for me to actually incorperate it)</li>
 </ul>
 Currently want to do but havent started:
 <ul>
@@ -28,33 +21,32 @@ Its my attempt at a Real Time pathtracer built from scratch in Unity using Compu
 <ul>
   
 <li>Relatively fast Compute Shader based path tracing</li>
-<li>Diffuse, Glossy(sorta), Dielectric, Conductor</li>
+<li>Diffuse, Glossy(sorta), Dielectric, Conductor, Diffuse Transmission</li>
 <li>Loose but technically there Mitsuba XML file loader</li>
-<li>Ability to move objects while running</li>
-<li>Realtime ability to update material properties</li>
+<li>Ability to move objects during play</li>
+<li>Ability to update material properties on the fly during play</li>
 <li>Basic Atrous denoiser</li>
-  <li>Multithreaded BVH Building for many meshes at once(not for single meshes)</li>
+<li>Multithreaded BVH Building for many meshes at once(not for single meshes)</li>
 <li>Compressed Wide Bounding Volume Hierarchy as the Acceleration Structure (See Ylitie et al. 2017 below)</li>
-  <li>Textures(just apply them to the GameObjects material)</li>
+<li>Textures(just apply them to the GameObjects material)</li>
+<li>Next Event Estimation with Multiple Importance Sampling for Explicit Light Sampling</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
 </br>
 
-If you have any questions, or suggestions, etc. let me know! I am always looking for more stuff to add, and more ways to make it more user friendly or appealing for others to use
+If you have any questions, or suggestions, etc. let me know either through github issues or something else! I am always looking for more stuff to add, and more ways to make it more user friendly or appealing for others to use, and ways to improve this overall
 
 
 ## Notes:
-Let me know if you use this for anything, I would be excited to see any use of this!
-</br>
-If you do use it for anything, give me a bit of credit please as well, thank you!
+Let me know if you use this for anything, I would be excited to see any use of this!  Just please give some credit somewhere if you use it, thank you!
 
 ## Instructions:
 So first thing, you need to set the color space to Linear.  To do this, you need to go to edit on the top right, Project Settings -> Player -> Other Settings -> Color Space, and set that to linear
 </br>
 Aside from this, you need to make sure all textures you use are Read/Write enabled(do this by selecting all the textures you will be using, then on the right click Read/Write enabled
 </br>
-Also preferably set the Graphics API for Windows to DirectX12, and put it at the top.  This is not require but it gives a large performance increase
+Also preferably set the Graphics API for Windows to DirectX12, and put it at the top of the rendering API's.  This is not require but it gives a large performance increase
 </br></br>
 You can either use the UnityPackage which includes a small demo scene with the stuff you need to add already set up, or the code raw, but I would reccomend the package as it already comes with a scene with the camera set up.
 </br></br>
@@ -68,17 +60,13 @@ To do this, you need to open the EditorWindow.  Basically, up at the top of the 
 </br></br>
 BVH Options Description - 
 <ul>
-  <li>Construct BVH's - Normal construction of acceleration structure, one click and wait for the Total Construction Time message to appear in console, then your ready to play</li>
-  <li>Update TLAS - In case you need to manually update the Top Level Acceleration Structure</li>
-  <li>Build Aggregated BVH - Will aggregate all meshes into their defined groupings(which you determine by putting a number in the Object Group section of the RayTracingObject) into larger single meshes, then builds the new BVHs for them.  This gives a pretty large performance improvement, but takes a bit longer to build</li>
-  <li>Update Materials - In case you need to manually update the materials</li>
-  <li>Setup - Currently used for the XML Parser, will add a description for how to use that later</li>
+  <li>Build Aggregated BVH - Will aggregate all meshes into their defined groupings(which you determine by putting a number in the Object Group section of the RayTracingObject) into larger single meshes, then builds the new BVHs for them.</li>
   <li>Max Bounces - Sets the maximum number of bounces a ray can achieve</li>
   <li>Use Russian Roulette - Highly reccomended to leave this on, kills rays that may not contribute much early, and thus greatly increases performance</li>
   <li>Use Atrous Denoiser - Enables or dissables the Atrous denoiser, the settings below it are values to play with until you get a desired result</li>
   <li>Allow Image Accumulation - Allows the image to accumulate while the camera is not moving</li>
   <li>Enable Object Moving - Recomputes the TLAS every frame, allowing objects to moved while running</li>
-  <li>Load Xml - replaces the way that XML's are loaded allowing their folders to be placed in the assets folder in a folder called "Models".  Pressing that will give you a list of possible Mitsuba scenes to load(again, only sees ones that are in the assets folder, inside another folder called "Models").  Clicking on one of the options will load the mesh structure and associated materials to the hierarchy(yay no more manually needing to do that) under the Gameobject named ParentXML(see DemoScene for that) (I will replace this paragraph soon)</li>
+  <li>Load Xml - replaces the way that XML's are loaded allowing their folders to be placed in the assets folder in a folder called "Models".  Pressing that will give you a list of possible Mitsuba scenes to load(again, only sees ones that are in the assets folder, inside another folder called "Models").  Clicking on one of the options will load the mesh structure and associated materials to the hierarchy(yay no more manually needing to do that) under the Gameobject named ParentXML(see DemoScene for that) (I will replace this paragraph soon... or when I get around to it I suppose)</li>
   </ul>
   
  ## Materials
@@ -87,8 +75,8 @@ BVH Options Description -
   <li>Roughness - Applys to Conductors and Dielectrics - Higher roughness makes objects more rough</li>
   <li>Eta - idk what this does really but a few things to note - For Conductors it just adds to the material definition, but for Dielectrics, only the x component is used, and that X component is the Dielectrics IOR</li>
   <li>Base Color - So this will be automatically set to whatever the material of the objects color is, and it will also be overridden by textures, but its there so you can manually change it, works for all material types</li>
-  <li>Mat Type - 0 is diffuse(if you comment out the UsePretty in the RayTracingShader.compute, otherwise this is glossy) - 1 is Conductor(Metallic) - 2 is Dielectric(so transparent/glassy materials) - and 3 is glossy(if you comment out the UsePretty)</li>
-  <li>Dynamic - Only applies when doing the Aggregated BVH Build, but will mark objects to not be joined into the aggregated mesh(and thus be able to move independently from other objects; this behavior is default when doing the standard BVH build)</li>
+  <li>Mat Type - 0 is diffuse(if you comment out the UsePretty in the RayTracingShader.compute, otherwise this is glossy) - 1 is Conductor(Metallic) - 2 is Dielectric(so transparent/glassy materials) - 3 is glossy - 4 is mask(but is not used yet technically) - 5 is a "Volumetric" material(not very good yet though) - and 6 is Diffuse Transmission, with roughness defining how close to the origional direction the new ray will go</li>
+  <li>IsParent - Allows you to explicitly define which object in a group should be the parent, allowing for animations to be done with less hassel</li>
 </ul>
   
 # Sample Images(Taken from various stages of development)
