@@ -3,24 +3,33 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 
-[RequireComponent(typeof(MeshRenderer))]
-[RequireComponent(typeof(MeshFilter))]
+
 [ExecuteInEditMode]
 public class RayTracingObject : MonoBehaviour {
 	public float[] emmission, Roughness;
 	public Vector3[] eta, BaseColor;
 	public int[] MatType;
 	public int ObjectGroup;
+	[HideInInspector]
+	public int[] MaterialIndex;
+	public bool IsParent = false;
 
 	public void matfill() {
-		if(emmission == null || emmission.Length != this.GetComponent<MeshFilter>().sharedMesh.subMeshCount) {
-			int SubMeshCount = GetComponent<MeshFilter>().sharedMesh.subMeshCount;
+		 Mesh mesh = new Mesh();
+		 if(GetComponent<MeshFilter>() != null) { 
+		 	mesh = GetComponent<MeshFilter>().sharedMesh;
+	 	} else {
+	 		GetComponent<SkinnedMeshRenderer>().BakeMesh(mesh);
+	 	}
+		if(emmission == null || emmission.Length != mesh.subMeshCount) {
+			int SubMeshCount = mesh.subMeshCount;
 			emmission = new float[SubMeshCount];
 			Roughness = new float[SubMeshCount];
 			eta = new Vector3[SubMeshCount];
 			MatType = new int[SubMeshCount];
 			BaseColor = new Vector3[SubMeshCount];
-			Material[] SharedMaterials = GetComponent<Renderer>().sharedMaterials;
+			MaterialIndex = new int[SubMeshCount];
+			Material[] SharedMaterials = (GetComponent<Renderer>() != null) ? GetComponent<Renderer>().sharedMaterials : GetComponent<SkinnedMeshRenderer>().sharedMaterials;
 			for(int i = 0; i < SubMeshCount; i++) {
 				if(SharedMaterials[i].GetFloat("_Mode") == 3.0f) {
 					MatType[i] = 2;
@@ -28,8 +37,9 @@ public class RayTracingObject : MonoBehaviour {
 				}
 				BaseColor[i] = (SharedMaterials[i].mainTexture == null) ? ((SharedMaterials[i].HasProperty("_Color")) ? new Vector3(SharedMaterials[i].color.r, SharedMaterials[i].color.g, SharedMaterials[i].color.b) : new Vector3(0.78f, 0.14f, 0.69f)) : new Vector3(0.78f, 0.14f, 0.69f);
 			}
-			ObjectGroup = -1;
+			ObjectGroup = 0;
 		}
+		mesh = null;
 	}
 
 	public void ResetData() {

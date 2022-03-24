@@ -271,11 +271,11 @@ public class BVH8Builder {
       int node_internal_count = 0;
       int node_triangle_count = 0;
 
+      AABB child_aabb = new AABB();
       for(int i = 0; i < 8; i++) {
         int child_index = children[i];
         if(child_index == -1) continue;
 
-        AABB child_aabb = new AABB();
         child_aabb.BBMax = nodes_bvh[child_index].BBMax;
         child_aabb.BBMin = nodes_bvh[child_index].BBMin;
 
@@ -376,7 +376,7 @@ public class BVH8Builder {
         this.decisions.Capacity = 0;
     }
 
-    public BVH8Builder(ref BVH2Builder BVH2, ref List<MyMeshDataCompacted> Meshes) {//Top Level CWBVH Builder
+    public BVH8Builder(BVH2Builder BVH2, ref List<MyMeshDataCompacted> Meshes) {//Top Level CWBVH Builder
         int BVH2NodesCount = BVH2.BVH2Nodes.Count;
         int BVH2IndicesCount = BVH2.FinalIndices.Length;
 

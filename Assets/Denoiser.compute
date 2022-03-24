@@ -1,4 +1,5 @@
 // Each #kernel tells which function to compile; you can have many kernels
+#include "UnityCG.cginc"
 Texture2D<float4> ResultIn;
 RWTexture2D<float4> Result;
 Texture2D<float4> NormTex;
@@ -6,6 +7,7 @@ Texture2D<float4> PosTex;
 Texture2D<float4> AlbedoTex;
 
 int KernelSize;
+float4x4 _CameraToWorld;
 
 uint screen_width;
 uint screen_height;
@@ -22,6 +24,8 @@ void Atrous (uint3 id : SV_DispatchThreadID) {
 
   if(id.x >= screen_width || id.y >= screen_height) return;
   
+  float depth;
+  float3 norm;
   float3 cval = ResultIn[id.xy].xyz;
   float3 nval = NormTex[id.xy].xyz;
   float3 pval = PosTex[id.xy].xyz;
@@ -43,8 +47,8 @@ void Atrous (uint3 id : SV_DispatchThreadID) {
       float3 t = cval - ctemp;
       float dist2 = dot(t, t);
       const float c_w = min(exp(-dist2 / c_phi), 1.0f);
-
-      const float3 ntemp = NormTex[temp_index].xyz;
+      DecodeDepthNormal(NormTex[id.xy], depth, norm);
+      const float3 ntemp = normalize(mul(_CameraToWorld, float4(norm, 0.0f)).xyz);
       t = nval - ntemp;
       dist2 = max(dot(t, t) / (float)(step_width * step_width), 0.0f);
       const float n_w = min(exp(-dist2 / n_phi), 1.0f);

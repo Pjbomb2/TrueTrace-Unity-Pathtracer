@@ -4,6 +4,35 @@ using UnityEngine;
 
 namespace CommonVars {
 
+    public struct MeshDat {
+        public List<int> Indices;
+        public List<Vector3> Verticies;
+        public List<Vector3> Normals;
+        public List<Vector2> UVs;
+        public List<int> MatDat;
+
+        public void SetUvZero() {
+            int Count = this.Verticies.Count;
+            for(int i = 0; i < Count; i++) {
+                UVs.Add(new Vector2(0.0f, 0.0f));
+            }
+        }
+        public void init() {
+            this.MatDat = new List<int>();
+            this.UVs = new List<Vector2>();
+            this.Verticies = new List<Vector3>();
+            this.Normals = new List<Vector3>();
+            this.Indices = new List<int>();
+        }
+        public void Clear() {
+            this.MatDat.Clear();
+            this.UVs.Clear();
+            this.Verticies.Clear();
+            this.Normals.Clear();
+            this.Indices.Clear();
+        }
+    }
+
     [System.Serializable]
     public struct MaterialData {
         public Vector3 BaseColor;
@@ -16,6 +45,7 @@ namespace CommonVars {
         public Vector3 eta;
     }
 
+    [System.Serializable]
     public struct BVHNode2Data {
         public Vector3 BBMax;
         public Vector3 BBMin;
@@ -70,7 +100,6 @@ namespace CommonVars {
         }
     }
 
-    [System.Serializable]
     public struct ProgReportData {
         public int Id;
         public string Name;
@@ -86,6 +115,8 @@ namespace CommonVars {
     public struct MyMeshDataCompacted {
         public int mesh_data_bvh_offsets;
         public Matrix4x4 Transform;
+        public Matrix4x4 Inverse;
+        public Vector3 Center;
     }
 
     [System.Serializable]
@@ -94,8 +125,8 @@ namespace CommonVars {
         public Vector3 BBMin;
 
         public void Extend(in Vector3 InMax, in Vector3 InMin) {
-            this.BBMax = new Vector3(Mathf.Max(BBMax.x, InMax.x), Mathf.Max(BBMax.y, InMax.y), Mathf.Max(BBMax.z, InMax.z));// Vector3.Max(this.BBMax, InMax);
-            this.BBMin = new Vector3(Mathf.Min(BBMin.x, InMin.x), Mathf.Min(BBMin.y, InMin.y), Mathf.Min(BBMin.z, InMin.z));//Vector3.Min(this.BBMin, InMin);
+            this.BBMax = new Vector3(Mathf.Max(BBMax.x, InMax.x), Mathf.Max(BBMax.y, InMax.y), Mathf.Max(BBMax.z, InMax.z));
+            this.BBMin = new Vector3(Mathf.Min(BBMin.x, InMin.x), Mathf.Min(BBMin.y, InMin.y), Mathf.Min(BBMin.z, InMin.z));
         }
         public void init() {
             BBMax = new Vector3(float.MinValue, float.MinValue, float.MinValue);
@@ -140,6 +171,21 @@ namespace CommonVars {
         public Vector2 texedge2;
 
         public uint MatDat;
+    }
+
+    [System.Serializable]
+    public struct CudaLightTriangle {
+        public Vector3 pos0;
+        public Vector3 posedge1;
+        public Vector3 posedge2;
+        public Vector3 Norm;
+
+        public Vector3 radiance;
+        public float sumEnergy;
+        public float energy;
+        public float area;
+
+        public uint MeshIndexTie;
     }
     
 }

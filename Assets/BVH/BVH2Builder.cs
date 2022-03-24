@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.Assertions;
 using CommonVars;
 
+[System.Serializable]
 public class BVH2Builder {
 
     public List<BVHNode2Data> BVH2Nodes;
@@ -153,10 +154,9 @@ public class BVH2Builder {
         DimensionedIndices[2] = new List<int>(PrimCount);
         Centers = new List<Vector3>(PrimCount);
         BVH2Nodes = new List<BVHNode2Data>(PrimCount);
-        temp = new List<int>();
-        Primitives = new PrimitiveData[PrimCount];    
+        temp = new List<int>(); 
         indices_going_left = new bool[PrimCount];
-
+        Primitives = Triangles.ToArray();
         AABB RootBB = new AABB();
         RootBB.init();
         for(int i = 0; i < PrimCount; i++) {
@@ -164,8 +164,7 @@ public class BVH2Builder {
             DimensionedIndices[1].Add(i);
             DimensionedIndices[2].Add(i);
             indices_going_left[i] = false;
-            Centers.Add(Triangles[i].Center);
-            Primitives[i] = Triangles[i];
+            Centers.Add(Primitives[i].Center);
             temp.Add(0);
             RootBB.Extend(Primitives[i].BBMax, Primitives[i].BBMin);
         }
@@ -193,9 +192,10 @@ public class BVH2Builder {
         BuildRecursive(0, ref nodeIndex,0,PrimCount);
 
         Assert.IsTrue(nodeIndex <= 2 * PrimCount);
-
-        for(int i = 0; i < BVH2Nodes.Count; ++i) {
-            BVHNode2Data TempNode = BVH2Nodes[i];
+        int BVHNodeCount = BVH2Nodes.Count;
+        BVHNode2Data TempNode;
+        for(int i = 0; i < BVHNodeCount; ++i) {
+            TempNode = BVH2Nodes[i];
             if(BVH2Nodes[i].count != 0) {
                 TempNode.left = BVH2Nodes[i].first;
             } else {
@@ -262,9 +262,10 @@ public class BVH2Builder {
         BuildRecursive(0, ref nodeIndex,0,MeshCount);
 
         Assert.IsTrue(nodeIndex <= 2 * MeshCount);
-
-        for(int i = 0; i < BVH2Nodes.Count; ++i) {
-            BVHNode2Data TempNode = BVH2Nodes[i];
+        int BVHNodeCount = BVH2Nodes.Count;
+        BVHNode2Data TempNode;
+        for(int i = 0; i < BVHNodeCount; ++i) {
+            TempNode = BVH2Nodes[i];
             if(BVH2Nodes[i].count != 0) {
                 TempNode.left = BVH2Nodes[i].first;
             } else {

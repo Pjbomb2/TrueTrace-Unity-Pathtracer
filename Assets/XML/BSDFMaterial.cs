@@ -16,4 +16,6 @@ public class BSDFMaterial
     public Vector3 k;
     public float int_IOR;
     public int MatIndex;
+    public float emissive = 0.0f;
+    public bool HasBeenModified = false;
 }

@@ -9,18 +9,46 @@ public class Mesh_Data {
     public string Name;
     public AABB aabb_untransformed;
     public AABB aabb;
-    public Vector3 Position;
-    public Matrix4x4 Transform;
     public List<PrimitiveData> triangles;
+    public List<CudaLightTriangle> LightTriangles;
     public BVH8Builder BVH;
     public List<BVHNode8DataCompressed> Aggregated_BVH_Nodes;
     public int ObjectGroup;
-    public int progressId = 0;
+    private int progressId = 0;
+    public Transform Transform;
+    public Matrix4x4 CachedTransform;
+    public Vector3 CachedPosition;
 
-    public Mesh_Data(string Name, List<PrimitiveData> triangles, int progressId) {
+
+    public Mesh_Data(string Name, ref MeshDat CurMeshData, int progressId, List<MaterialData> _Materials, Transform Transform) {
         this.Name = Name;
-        this.triangles = triangles;
+        this.triangles = new List<PrimitiveData>();
+        this.LightTriangles = new List<CudaLightTriangle>();
         this.progressId = progressId;
+        this.Transform = Transform;
+        this.CachedTransform = Transform.transform.worldToLocalMatrix.inverse;
+        this.CachedPosition = Transform.transform.position;
+        int Index1, Index2, Index3;
+        int IndexCount = CurMeshData.Indices.Count;
+        PrimitiveData TempPrim = new PrimitiveData();
+        for(int i = 0; i < IndexCount; i += 3) {//Create my own primitive from each mesh triangle
+            Index1 = CurMeshData.Indices[i];
+            Index2 = CurMeshData.Indices[i+2];
+            Index3 = CurMeshData.Indices[i+1];
+            TempPrim.V1 = CurMeshData.Verticies[Index1];
+            TempPrim.V2 = CurMeshData.Verticies[Index2];
+            TempPrim.V3 = CurMeshData.Verticies[Index3];
+            TempPrim.Norm1 = Vector3.Normalize(CurMeshData.Normals[Index1]);
+            TempPrim.Norm2 = Vector3.Normalize(CurMeshData.Normals[Index2]);
+            TempPrim.Norm3 = Vector3.Normalize(CurMeshData.Normals[Index3]);
+            TempPrim.tex1 = CurMeshData.UVs[Index1];
+            TempPrim.tex2 = CurMeshData.UVs[Index2];
+            TempPrim.tex3 = CurMeshData.UVs[Index3];
+            TempPrim.MatDat = CurMeshData.MatDat[i / 3];
+            TempPrim.Reconstruct();
+            triangles.Add(TempPrim);
+        }
+
     }
 
     public async Task Construct() {
@@ -31,28 +59,38 @@ public class Mesh_Data {
         BVH.BVH8Nodes.Capacity = BVH.BVH8Nodes.Count;
     }
 
+    //Better Bounding Box Transformation by Zuex(I got it from Zuen)
+    private Vector3 transform_position(Matrix4x4 matrix, Vector3 position) {
+        return new Vector3(
+            matrix[0, 0] * position.x + matrix[0, 1] * position.y + matrix[0, 2] * position.z + matrix[0, 3],
+            matrix[1, 0] * position.x + matrix[1, 1] * position.y + matrix[1, 2] * position.z + matrix[1, 3],
+            matrix[2, 0] * position.x + matrix[2, 1] * position.y + matrix[2, 2] * position.z + matrix[2, 3]
+        );
+    }
+    private Vector3 transform_direction(Matrix4x4 matrix, Vector3 direction) {
+        return new Vector3(
+            matrix[0, 0] * direction.x + matrix[0, 1] * direction.y + matrix[0, 2] * direction.z,
+            matrix[1, 0] * direction.x + matrix[1, 1] * direction.y + matrix[1, 2] * direction.z,
+            matrix[2, 0] * direction.x + matrix[2, 1] * direction.y + matrix[2, 2] * direction.z
+        );
+    }
+    private Matrix4x4 abs(Matrix4x4 matrix) {
+        Matrix4x4 result = new Matrix4x4();
+        for (int i = 0; i < 4; i++) {
+            for (int i2 = 0; i2 < 4; i2++) result[i,i2] = Mathf.Abs(matrix[i,i2]);
+        }
+        return result;
+    }
+
     public void UpdateAABB() {//Update the Transformed AABB by getting the new Max/Min of the untransformed AABB after transforming it
-        Bounds TempBound = new Bounds();
-        TempBound.max = aabb_untransformed.BBMax;
-        TempBound.min = aabb_untransformed.BBMin;
-        List<Vector3> Points = new List<Vector3>();
-            Points.Add(Transform * (new Vector3(TempBound.center.x + TempBound.extents.x, TempBound.center.y + TempBound.extents.y, TempBound.center.z + TempBound.extents.z)));
-            Points.Add(Transform * (new Vector3(TempBound.center.x + TempBound.extents.x, TempBound.center.y + TempBound.extents.y, TempBound.center.z - TempBound.extents.z)));
-            Points.Add(Transform * (new Vector3(TempBound.center.x + TempBound.extents.x, TempBound.center.y - TempBound.extents.y, TempBound.center.z + TempBound.extents.z)));
-            Points.Add(Transform * (new Vector3(TempBound.center.x + TempBound.extents.x, TempBound.center.y - TempBound.extents.y, TempBound.center.z - TempBound.extents.z)));
-            Points.Add(Transform * (new Vector3(TempBound.center.x - TempBound.extents.x, TempBound.center.y + TempBound.extents.y, TempBound.center.z + TempBound.extents.z)));
-            Points.Add(Transform * (new Vector3(TempBound.center.x - TempBound.extents.x, TempBound.center.y + TempBound.extents.y, TempBound.center.z - TempBound.extents.z)));
-            Points.Add(Transform * (new Vector3(TempBound.center.x - TempBound.extents.x, TempBound.center.y - TempBound.extents.y, TempBound.center.z + TempBound.extents.z)));
-            Points.Add(Transform * (new Vector3(TempBound.center.x - TempBound.extents.x, TempBound.center.y - TempBound.extents.y, TempBound.center.z - TempBound.extents.z)));
-            
-            Vector3 BBMAX = Points[0] + Position;
-            Vector3 BBMIN = Points[0] + Position;
-            for(int i2 = 1; i2 < Points.Count; ++i2) {
-                BBMAX = Vector3.Max(BBMAX, (Points[i2] + Position));
-                BBMIN = Vector3.Min(BBMIN, (Points[i2] + Position));
-            }
-        aabb.BBMax = BBMAX;
-        aabb.BBMin = BBMIN;
+        Vector3 center = 0.5f * (aabb_untransformed.BBMin + aabb_untransformed.BBMax);
+        Vector3 extent = 0.5f * (aabb_untransformed.BBMax - aabb_untransformed.BBMin);
+
+        Vector3 new_center = transform_position (Transform.transform.worldToLocalMatrix.inverse, center);
+        Vector3 new_extent = transform_direction(abs(Transform.transform.worldToLocalMatrix.inverse), extent);
+
+        aabb.BBMin = new_center - new_extent;
+        aabb.BBMax = new_center + new_extent;
     }
 
     public void ConstructAABB() {

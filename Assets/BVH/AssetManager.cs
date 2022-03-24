@@ -6,34 +6,41 @@ using System.Threading.Tasks;
 
 public class AssetManager : MonoBehaviour {
     public Texture2D atlas;
-	public Mesh_Data[] mesh_datas;
-
+	[HideInInspector]
+    public Mesh_Data[] mesh_datas;
+    [HideInInspector]
 	public List<MaterialData> _Materials;
     [HideInInspector]
     public List<CudaTriangle> aggregated_triangles;
     [HideInInspector]
-    public Transform[] RelevantTransforms;
-    [HideInInspector]
     public RayTracingObject[] RelevantMaterials;   
-    [HideInInspector]
-    public List<BVHNode8DataCompressed> BVH8StaticAggregated;
     [HideInInspector]
     public List<BVHNode8DataCompressed> BVH8Aggregated;
     [HideInInspector]
     public List<MyMeshDataCompacted> MyMeshesCompacted;
     [HideInInspector]
     public List<ProgReportData> ProgIds;
+    [HideInInspector]
+    public List<RayTracingObject>[] NodeGroups;
+    [HideInInspector]
+    public List<CudaLightTriangle> AggLightTriangles;
+    [HideInInspector]
+    public List<int> LightTriangleIndices;
+    [HideInInspector]
+    public AABB[] MeshAABBs;
+    [HideInInspector]
+    public int TLASSpace;
     
     private List<Task> tasks;
+    private List<BVHNode8DataCompressed> BVH8StaticAggregated;
 
-    public int TLASSpace;
 
     public struct objtextureindices {
         public int textureindexstart;
         public int textureindexcount;
     }
 
-    public void CreateAtlas() {//Creates texture atlas
+    private void CreateAtlas() {//Creates texture atlas
         _Materials = new List<MaterialData>();
         List<objtextureindices> ObjectTextures = new List<objtextureindices>();
         List<Texture2D> TempTexs = new List<Texture2D>();
@@ -41,8 +48,14 @@ public class AssetManager : MonoBehaviour {
         int texcount = 0;
         foreach(RayTracingObject obj in RayTracingMaster._rayTracingObjects) {
             int texturestart = texindex.Count;
-            for(int i = 0; i < obj.GetComponent<MeshFilter>().sharedMesh.subMeshCount; ++i) {
-                if(obj.GetComponent<Renderer>().sharedMaterials[i].mainTexture != null) {
+            Mesh mesh = new Mesh();
+            if(obj.GetComponent<MeshFilter>() != null) { 
+                mesh = obj.GetComponent<MeshFilter>().sharedMesh;
+            }else {
+                obj.GetComponent<SkinnedMeshRenderer>().BakeMesh(mesh);
+            }
+            for(int i = 0; i < mesh.subMeshCount; ++i) {
+                if((obj.GetComponent<Renderer>() != null) ? obj.GetComponent<Renderer>().sharedMaterials[i].mainTexture : obj.GetComponent<SkinnedMeshRenderer>().sharedMaterials[i].mainTexture != null) {
                     texindex.Add(i);
                     TempTexs.Add((Texture2D)obj.GetComponent<Renderer>().sharedMaterials[i].mainTexture);
                     texcount += 1;
@@ -58,8 +71,15 @@ public class AssetManager : MonoBehaviour {
         TempTexs.Clear();
         int curobj2 = 0;
         texcount = 0;
+        int curMat = 0;
         foreach (RayTracingObject obj in RayTracingMaster._rayTracingObjects) {
-            int SubMeshCount = obj.GetComponent<MeshFilter>().sharedMesh.subMeshCount; 
+            Mesh mesh = new Mesh();
+            if(obj.GetComponent<MeshFilter>() != null) { 
+                mesh = obj.GetComponent<MeshFilter>().sharedMesh;
+            }else {
+                obj.GetComponent<SkinnedMeshRenderer>().BakeMesh(mesh);
+            }
+            int SubMeshCount = mesh.subMeshCount; 
             for(int CurSubMesh = 0; CurSubMesh < SubMeshCount; ++CurSubMesh) {
                 int contains = 0;
                 int num = 0;
@@ -71,7 +91,9 @@ public class AssetManager : MonoBehaviour {
                         break;
                     }
                 }
-                RayTracingObject TargetObject = obj.GetComponent<RayTracingObject>();
+                RayTracingObject TargetObject = obj;
+                TargetObject.MaterialIndex[CurSubMesh] = curMat;
+                curMat++;
                 int MatType = TargetObject.MatType[CurSubMesh];
                 if(MatType == 0 && TargetObject.eta[CurSubMesh].x != 0.0) {
                     MatType = 1;
@@ -102,109 +124,37 @@ public class AssetManager : MonoBehaviour {
         Debug.Log(section + elapsedTime);
     }
 
-        System.TimeSpan ts;
-        System.Diagnostics.Stopwatch GlobalStopWatch = new System.Diagnostics.Stopwatch();
-        System.Diagnostics.Stopwatch LocalStopWatch = new System.Diagnostics.Stopwatch();
-	public void Begin() {
-        int ObjCount = RayTracingMaster._rayTracingObjects.Count;
+    private void init() {
         ProgIds = new List<ProgReportData>();
-        GlobalStopWatch = System.Diagnostics.Stopwatch.StartNew();
-		MyMeshesCompacted = new List<MyMeshDataCompacted>();
-		mesh_datas = new Mesh_Data[ObjCount];
-		RelevantTransforms = new Transform[ObjCount];
-		RelevantMaterials = new RayTracingObject[ObjCount];
+        MyMeshesCompacted = new List<MyMeshDataCompacted>();
+        RelevantMaterials = new RayTracingObject[RayTracingMaster._rayTracingObjects.Count];
         BVH8StaticAggregated = new List<BVHNode8DataCompressed>();
         aggregated_triangles = new List<CudaTriangle>();
-		int MatRep = 0;
-        int RepCount = 0;
-        int Reps = 0;
-        int totPrims = 0;
-		foreach(RayTracingObject obj in RayTracingMaster._rayTracingObjects) {
-			RelevantMaterials[MatRep] = obj.GetComponent<RayTracingObject>();
-			MatRep++;
-		}
-		CreateAtlas();
-		foreach(RayTracingObject obj in RayTracingMaster._rayTracingObjects) {
-            Mesh mesh = obj.GetComponent<MeshFilter>().sharedMesh;
-			RelevantTransforms[Reps] = obj.GetComponent<Transform>();
-            List<Vector3> Verticies = new List<Vector3>(mesh.vertices);
-            List<PrimitiveData> Primitives = new List<PrimitiveData>();
-            int submeshcount = mesh.subMeshCount;
-            List<int> MatDat = new List<int>();
-            List<int> Indices = new List<int>();
-            List<Vector2> Uv = new List<Vector2>();
-            List<Vector3> Normals = new List<Vector3>();
-            mesh.GetNormals(Normals);
-
-            if(mesh.uv.Length != 0) {
-                Uv.AddRange(mesh.uv);
-            } else {
-                for(int i = 0; i < Verticies.Count; ++i) {//Fallback incase the mesh has no UV's
-                    Uv.Add(new Vector2(0.0f,0.0f));
-                }
-            }
-            for(int i = 0; i < submeshcount; ++i) {//Add together all the submeshes in the mesh to consider it as one object
-                int PrevLength = Indices.Count;
-                Indices.AddRange(mesh.GetIndices(i));
-                int IndiceLength = (Indices.Count - PrevLength) / 3;
-                for(int i2 = 0; i2 < IndiceLength; ++i2) {
-                    MatDat.Add(i + RepCount);
-                }
-             }
-
-             RepCount += submeshcount;
-             AABB RootBB = new AABB();
-             RootBB.init();
-             Matrix4x4 Transform = RelevantTransforms[Reps].transform.worldToLocalMatrix;
-
-             for(int i = 0; i < Indices.Count; i += 3) {//Create my own primitive from each mesh triangle
-	            PrimitiveData TempPrim = new PrimitiveData();
-                TempPrim.V1 = Verticies[Indices[i]];
-                TempPrim.V2 = Verticies[Indices[i+2]];
-                TempPrim.V3 = Verticies[Indices[i+1]];
-                TempPrim.Norm1 = Vector3.Normalize(Normals[Indices[i]]);
-                TempPrim.Norm2 = Vector3.Normalize(Normals[Indices[i+2]]);
-                TempPrim.Norm3 = Vector3.Normalize(Normals[Indices[i+1]]);
-                TempPrim.tex1 = Uv[Indices[i]];
-                TempPrim.tex2 = Uv[Indices[i+2]];
-                TempPrim.tex3 = Uv[Indices[i+1]];
-                TempPrim.MatDat = MatDat[i / 3];
-                TempPrim.Reconstruct();
-                RootBB.Extend(TempPrim.BBMax, TempPrim.BBMin);
-                Primitives.Add(TempPrim);
-             }
-
-            totPrims += Primitives.Count;
-            string objName = obj.name;
-            int progressId = UnityEditor.Progress.Start(objName, "", UnityEditor.Progress.Options.Managed, -1);//These progress bits allow me to display estimated time left/progress bars for each mesh construction
-            mesh_datas[Reps] = new Mesh_Data(objName, Primitives, progressId);
-            ProgReportData TempProgDat = new ProgReportData();
-            TempProgDat.init(progressId, objName, Primitives.Count);
-            ProgIds.Add(TempProgDat);
-            mesh_datas[Reps].Transform = Transform.inverse;
-            mesh_datas[Reps].Position = RelevantTransforms[Reps].transform.position;
-            mesh_datas[Reps].ConstructAABB();
-			Reps++;
-        }
-
-        Task t1 = Task.Run(() => RunThreads());//Multithreads so that many BVH's can be constructed at once, and makes it so that it doesnt freeze unity
-        Debug.Log("TOTAL TRIANGLES: " + totPrims);
+        BVH8Aggregated = new List<BVHNode8DataCompressed>();
+        AggLightTriangles = new List<CudaLightTriangle>();
+        LightTriangleIndices = new List<int>();
     }
+
+    System.TimeSpan ts;
+    System.Diagnostics.Stopwatch GlobalStopWatch = new System.Diagnostics.Stopwatch();
 
     public async Task RunThreads() {
         tasks = new List<Task>();
-        for(int i = 0; i < mesh_datas.Length; i++) {
+        int MeshLength = mesh_datas.Length;
+        for(int i = 0; i < MeshLength; i++) {
             var currentRep = i;
             Task t1 = Task.Run(() => mesh_datas[currentRep].Construct());
             tasks.Add(t1);
         }
         Task.WaitAll(tasks.ToArray());
-
-        int aggregated_bvh_node_count = 2 * mesh_datas.Length;
+        int aggregated_bvh_node_count = 2 * MeshLength;
         int aggregated_index_count = 0;
-            for(int i = 0; i < mesh_datas.Length; i++) {
-                for(int n = 0; n < mesh_datas[i].BVH.cwbvhnode_count; n++) {
-                    BVHNode8Data TempNode2 = mesh_datas[i].BVH.BVH8Nodes[n];
+        CudaTriangle TempTri = new CudaTriangle();
+            for(int i = 0; i < MeshLength; i++) {
+                BVHNode8Data TempNode2;
+                int CWBVHNodeCount = mesh_datas[i].BVH.cwbvhnode_count;
+                for(int n = 0; n < CWBVHNodeCount; n++) {
+                    TempNode2 = mesh_datas[i].BVH.BVH8Nodes[n];
                     TempNode2.base_index_triangle += (uint)aggregated_index_count;
                     TempNode2.base_index_child += (uint)aggregated_bvh_node_count;
                     mesh_datas[i].BVH.BVH8Nodes[n] = TempNode2;
@@ -213,11 +163,10 @@ public class AssetManager : MonoBehaviour {
                 mesh_datas[i].BVH.BVH8Nodes.Clear();
                 mesh_datas[i].BVH.BVH8Nodes.Capacity = 0;
                 BVH8StaticAggregated.AddRange(mesh_datas[i].Aggregated_BVH_Nodes);
-
-                for(int i2 = 0; i2 < mesh_datas[i].triangles.Count; ++i2) {//This constructs the list of triangles that actually get sent to the GPU
-                    int index = mesh_datas[i].BVH.cwbvh_indices[i2];
-                    PrimitiveData triangle = mesh_datas[i].triangles[index];
-                    CudaTriangle TempTri = new CudaTriangle();
+                int TriCount = mesh_datas[i].triangles.Count;
+                PrimitiveData triangle;
+                for(int i2 = 0; i2 < TriCount; ++i2) {//This constructs the list of triangles that actually get sent to the GPU
+                    triangle = mesh_datas[i].triangles[mesh_datas[i].BVH.cwbvh_indices[i2]];
                     TempTri.pos0 = triangle.V1;
 
                     TempTri.posedge1 = triangle.V2 - triangle.V1;
@@ -233,234 +182,276 @@ public class AssetManager : MonoBehaviour {
 
                     TempTri.MatDat = (uint)triangle.MatDat;
                     aggregated_triangles.Add(TempTri);
-
                  }
+
                 aggregated_bvh_node_count += mesh_datas[i].BVH.cwbvhnode_count;
                 aggregated_index_count += mesh_datas[i].BVH.cwbvhindex_count;
             }
-            
+           
             Task.Run(() => UpdateTLASAsync());//Async functions dont like to call non async functions, so it needs its own TLAS builder seperate from the one the RayTracingMaster uses
     }
 
     private async void UpdateTLASAsync() { 
-
-        BVH8Aggregated = new List<BVHNode8DataCompressed>();
         int aggregated_bvh_node_count = 2 * mesh_datas.Length;
         MyMeshesCompacted.Clear();
-        AABB[] MeshAABBs = new AABB[mesh_datas.Length];
-        for(int i = 0; i < mesh_datas.Length; i++) {
+        int MeshDataCount = mesh_datas.Length;
+        MeshAABBs = new AABB[MeshDataCount];
+        LightTriangleIndices = new List<int>();
+        for(int i = 0; i < MeshDataCount; i++) {
              MyMeshesCompacted.Add(new MyMeshDataCompacted() {
                 mesh_data_bvh_offsets = aggregated_bvh_node_count,
-                Transform =  mesh_datas[i].Transform.inverse
+                Transform =  mesh_datas[i].CachedTransform.inverse,
+                Inverse = mesh_datas[i].CachedTransform,
+                Center = mesh_datas[i].CachedPosition
               });
-             mesh_datas[i].UpdateAABB();
             MeshAABBs[i] = mesh_datas[i].aabb;
             aggregated_bvh_node_count += mesh_datas[i].BVH.cwbvhnode_count;
+            AggLightTriangles.AddRange(mesh_datas[i].LightTriangles);
         }
-        BVH2Builder BVH2 = new BVH2Builder(MeshAABBs);
-        BVH8Builder BVH8 = new BVH8Builder(ref BVH2, ref MyMeshesCompacted);
+        if(AggLightTriangles.Count == 0) {AggLightTriangles.Add(new CudaLightTriangle() {});}//Fallback so we still initialize the list for the compute shader
+        AggLightTriangles.Sort((s1, s2) => s1.sumEnergy.CompareTo(s2.sumEnergy));
+        BVH8Builder TLASBVH8 = new BVH8Builder(new BVH2Builder(MeshAABBs), ref MyMeshesCompacted);
 
-        TLASSpace = BVH8.BVH8Nodes.Count;
+       for(int i = 0; i < TLASBVH8.cwbvh_indices.Count; i++) {
+            LightTriangleIndices.Add(i);
+        }
+        LightTriangleIndices.Sort((s1, s2) => TLASBVH8.cwbvh_indices[s1].CompareTo(TLASBVH8.cwbvh_indices[s2]));
+
+        TLASSpace = TLASBVH8.BVH8Nodes.Count;
         for(int i = 0; i < TLASSpace; i++) {
             BVH8Aggregated.Add(new BVHNode8DataCompressed() {});
         }
-        Aggregate(ref BVH8);
+        Aggregate(ref TLASBVH8);
         BVH8Aggregated.AddRange(BVH8StaticAggregated);
-        BVH8StaticAggregated.Clear();
-        BVH8StaticAggregated.Capacity = 0;
+        BVH8StaticAggregated = null;
         GlobalStopWatch.Stop(); ts = GlobalStopWatch.Elapsed; writetime("Total Construction Time: ", ts);//Tells me how long total construction has taken
     }
 
-    public struct Parent {
-        public List<Mesh_Data> RelevantMesh;
-        public List<RayTracingObject> RelevantObject;
-    }
 
-    public void BuildCombined() {//Seperate function! It aggregates all non dynamic meshes(user defined which are dynamic) into 1 mesh to build a BVH from 
-                                 //results in performance improvements but can greatly increase build times
-        List<Parent> Parents = new List<Parent>();
-        int ObjCount = RayTracingMaster._rayTracingObjects.Count;
-        ProgIds = new List<ProgReportData>();
+
+  private float AreaOfTriangle(Vector3 pt1, Vector3 pt2, Vector3 pt3) {
+    float a = Vector3.Distance(pt1, pt2);
+    float b = Vector3.Distance(pt2, pt3);
+    float c = Vector3.Distance(pt3, pt1);
+    float s = (a + b + c) / 2.0f;
+    return Mathf.Sqrt(s * (s-a) * (s-b) * (s-c));
+  }
+
+    public void BuildCombined() {//Replaced other build function with this, as this can do the job of both and do it better
         GlobalStopWatch = System.Diagnostics.Stopwatch.StartNew();
-        MyMeshesCompacted = new List<MyMeshDataCompacted>();
-		mesh_datas = new Mesh_Data[ObjCount];
-		Transform[] RelevantTransformsOverall = new Transform[ObjCount];
-        RelevantTransforms = new Transform[ObjCount];
-		RelevantMaterials = new RayTracingObject[ObjCount];
-		List<Mesh_Data> StaticMeshes = new List<Mesh_Data>();
-        List<Mesh_Data> DynamicMeshes = new List<Mesh_Data>();
-		List<RayTracingObject> RelevantStatics = new List<RayTracingObject>();
-		List<RayTracingObject> RelevantDynamics = new List<RayTracingObject>();;
-        BVH8StaticAggregated = new List<BVHNode8DataCompressed>();
-        aggregated_triangles = new List<CudaTriangle>();
-        List<Parent> AloneParents = new List<Parent>();
+        List<int> AloneNodes = new List<int>();
+        int TotalObjectGroups = 0;
+        init();
         int MatRep = 0;
+        for(int i = 0; i < RayTracingMaster._rayTracingObjects.Count; i++) {
+            RelevantMaterials[MatRep] = RayTracingMaster._rayTracingObjects[i];
+            MatRep++;
+            if(RayTracingMaster._rayTracingObjects[i].ObjectGroup != -1)
+                TotalObjectGroups = Mathf.Max(TotalObjectGroups, RayTracingMaster._rayTracingObjects[i].ObjectGroup + 1);
+            else 
+                AloneNodes.Add(0);
+        }
+        CreateAtlas();
+        int PreAloneNodeLength = TotalObjectGroups;
+        TotalObjectGroups += AloneNodes.Count;
+        NodeGroups = new List<RayTracingObject>[TotalObjectGroups];
+        for(int i = 0; i < TotalObjectGroups; i++) {
+            NodeGroups[i] = new List<RayTracingObject>();
+        }
+        int AloneCounter = 0;
+        foreach(RayTracingObject obj in RayTracingMaster._rayTracingObjects) {
+            int ObjectGroup = obj.ObjectGroup;
+            if(ObjectGroup == -1) {
+                NodeGroups[AloneCounter + PreAloneNodeLength].Add(obj);
+                AloneCounter++;
+            } else {
+                if(obj.IsParent) {
+                    NodeGroups[ObjectGroup].Insert(0, obj);
+                } else {
+                    NodeGroups[ObjectGroup].Add(obj);
+                }
+            }
+        }
+
+        MeshDat CurMeshData;
+        Mesh mesh = new Mesh();
+        RayTracingObject ParentObject, ChildObject;
+        int submeshcount = 0;
         int RepCount = 0;
-        int Reps = 0;
+        Vector3 V1, V2, V3, Norm1, Norm2, Norm3;
+        int MatIndex = 0;
+        PrimitiveData TempPrim = new PrimitiveData();
+        mesh_datas = new Mesh_Data[TotalObjectGroups];
+        float totalEnergy = 0;
         int totPrims = 0;
-		foreach(RayTracingObject obj in RayTracingMaster._rayTracingObjects) {
-			RelevantMaterials[MatRep] = obj.GetComponent<RayTracingObject>();
-			MatRep++;
-		}
-		CreateAtlas();
-		foreach(RayTracingObject obj in RayTracingMaster._rayTracingObjects) {
-            Mesh mesh = obj.GetComponent<MeshFilter>().sharedMesh;
-			RelevantTransformsOverall[Reps] = obj.GetComponent<Transform>();
-            List<Vector3> Verticies = new List<Vector3>(mesh.vertices);
-            List<PrimitiveData> Primitives = new List<PrimitiveData>();
-            int submeshcount = mesh.subMeshCount;
-            List<int> MatDat = new List<int>();
-            List<int> Indices = new List<int>();
-            List<Vector2> Uv = new List<Vector2>();
-            List<Vector3> Normals = new List<Vector3>();
-            mesh.GetNormals(Normals);
+        Mesh_Data CurentMesh;
+        CurMeshData = new MeshDat();
+        CurMeshData.init();
+        for(int i = 0; i < TotalObjectGroups; i++) {
+            ParentObject = NodeGroups[i][0];
+            mesh = new Mesh();
+            if(ParentObject.GetComponent<MeshFilter>() != null) {//Allows us to also render posed skinned meshes 
+                mesh = ParentObject.GetComponent<MeshFilter>().sharedMesh;
+            }else {
+                ParentObject.GetComponent<SkinnedMeshRenderer>().BakeMesh(mesh, true);
+            }
+            submeshcount = mesh.subMeshCount;
+            CurMeshData.Clear();
+            mesh.GetNormals(CurMeshData.Normals);
+            CurMeshData.Verticies.AddRange(mesh.vertices);
             if(mesh.uv.Length != 0) {
-                Uv.AddRange(mesh.uv);
+                CurMeshData.UVs.AddRange(mesh.uv);
             } else {
-                for(int i = 0; i < Verticies.Count; ++i) {
-                    Uv.Add(new Vector2(0.0f,0.0f));
+                Debug.Log("NO UV's: " + ParentObject.gameObject.name);
+                CurMeshData.SetUvZero();
+            }
+            for(int i3 = 0; i3 < submeshcount; ++i3) {//Add together all the submeshes in the mesh to consider it as one object
+                int PrevLength = CurMeshData.Indices.Count;
+                MatIndex = ParentObject.MaterialIndex[i3];
+                CurMeshData.Indices.AddRange(mesh.GetIndices(i3));
+                int IndiceLength = (CurMeshData.Indices.Count - PrevLength) / 3;
+                for(int i4 = 0; i4 < IndiceLength; ++i4) {
+                    CurMeshData.MatDat.Add(MatIndex);
                 }
             }
-            for(int i = 0; i < submeshcount; ++i) {
-                int PrevLength = Indices.Count;
-                Indices.AddRange(mesh.GetIndices(i));
-                int IndiceLength = (Indices.Count - PrevLength) / 3;
-                for(int i2 = 0; i2 < IndiceLength; ++i2) {
-                    MatDat.Add(i + RepCount);
-                }
-             }
-             RepCount += submeshcount;
-             AABB RootBB = new AABB();
-             RootBB.init();
-             Matrix4x4 Transform = RelevantTransformsOverall[Reps].transform.worldToLocalMatrix;
-
-             for(int i = 0; i < Indices.Count; i += 3) {
-                PrimitiveData TempPrim = new PrimitiveData();
-                TempPrim.V1 = Verticies[Indices[i]];
-                TempPrim.V2 = Verticies[Indices[i+2]];
-                TempPrim.V3 = Verticies[Indices[i+1]];
-                TempPrim.Norm1 = Vector3.Normalize(Normals[Indices[i]]);
-                TempPrim.Norm2 = Vector3.Normalize(Normals[Indices[i+2]]);
-                TempPrim.Norm3 = Vector3.Normalize(Normals[Indices[i+1]]);
-                TempPrim.tex1 = Uv[Indices[i]];
-                TempPrim.tex2 = Uv[Indices[i+2]];
-                TempPrim.tex3 = Uv[Indices[i+1]];
-                TempPrim.MatDat = MatDat[i / 3];
+            RepCount += submeshcount;
+            Matrix4x4 ParentMat = ParentObject.transform.worldToLocalMatrix.inverse;
+            Matrix4x4 ParentMatInv = ParentObject.transform.worldToLocalMatrix;
+            int progressId = UnityEditor.Progress.Start(ParentObject.name, "", UnityEditor.Progress.Options.Managed, -1);
+            CurentMesh = new Mesh_Data(ParentObject.name, ref CurMeshData, progressId, _Materials, ParentObject.gameObject.transform);
+            for(int i2 = 0; i2 < CurentMesh.triangles.Count; ++i2) {
+                TempPrim = CurentMesh.triangles[i2];
+                Vector3 TempVert1 = TempPrim.V1;
+                Vector3 TempVert2 = TempPrim.V2;
+                Vector3 TempVert3 = TempPrim.V3;
+                
                 TempPrim.Reconstruct();
-                RootBB.Extend(TempPrim.BBMax, TempPrim.BBMin);
-                Primitives.Add(TempPrim);
-             }
+                if(_Materials[TempPrim.MatDat].emmissive > 0.0f) {
+                    V1 = TempPrim.V1;
+                    V2 = TempPrim.V2;
+                    V3 = TempPrim.V3;
+                    float radiance = _Materials[TempPrim.MatDat].emmissive * _Materials[TempPrim.MatDat].BaseColor.x + 
+                                    _Materials[TempPrim.MatDat].emmissive * _Materials[TempPrim.MatDat].BaseColor.y +
+                                    _Materials[TempPrim.MatDat].emmissive * _Materials[TempPrim.MatDat].BaseColor.z;
+                    float area = AreaOfTriangle(ParentMat * V1, ParentMat * V2, ParentMat * V3);
+                    float e = radiance * area;
+                    totalEnergy += e;
 
-             totPrims += Primitives.Count;
-
-             mesh_datas[Reps] = new Mesh_Data(obj.name, Primitives, -1);
-
-            mesh_datas[Reps].Transform = Transform.inverse;
-            mesh_datas[Reps].Position = RelevantTransformsOverall[Reps].transform.position;
-            mesh_datas[Reps].ConstructAABB();
-            mesh_datas[Reps].ObjectGroup = obj.GetComponent<RayTracingObject>().ObjectGroup;
-            mesh_datas[Reps].UpdateAABB();
-
-            if((mesh_datas[Reps].ObjectGroup >= Parents.Count) && mesh_datas[Reps].ObjectGroup != -1) {
-                int ParCount = Parents.Count;
-                if(Parents.Count == 0) {
-                    for(int i = 0; i < mesh_datas[Reps].ObjectGroup + 1; i++) {
-                        Parents.Add(new Parent() {
-                            RelevantMesh = new List<Mesh_Data>(),
-                            RelevantObject = new List<RayTracingObject>()
+                    CurentMesh.LightTriangles.Add(new CudaLightTriangle() {
+                        pos0 = V1,
+                        posedge1 = V2 - V1,
+                        posedge2 = V3 - V1,
+                        Norm = (TempPrim.Norm1 + TempPrim.Norm2 + TempPrim.Norm3) / 3.0f,
+                        radiance = _Materials[TempPrim.MatDat].emmissive * _Materials[TempPrim.MatDat].BaseColor,
+                        sumEnergy = totalEnergy,
+                        energy = e,
+                        area = area,
+                        MeshIndexTie = (uint)i
                         });
-                    }
+                }
+            }
+
+            for(int i2 = 1; i2 < NodeGroups[i].Count; i2++) {
+                ChildObject = NodeGroups[i][i2];
+                mesh = new Mesh();
+                if(ChildObject.GetComponent<MeshFilter>() != null) { 
+                    mesh = ChildObject.GetComponent<MeshFilter>().sharedMesh;
+                }else {
+                    ChildObject.GetComponent<SkinnedMeshRenderer>().BakeMesh(mesh, true);
+                }
+                submeshcount = mesh.subMeshCount;
+                CurMeshData.Clear();
+                mesh.GetNormals(CurMeshData.Normals);
+                CurMeshData.Verticies.AddRange(mesh.vertices);
+                if(mesh.uv.Length != 0) {
+                    CurMeshData.UVs.AddRange(mesh.uv);
                 } else {
-                    for(int i = 0; i < mesh_datas[Reps].ObjectGroup - ParCount + 1; i++) {
-                        Parents.Add(new Parent() {
-                            RelevantMesh = new List<Mesh_Data>(),
-                            RelevantObject = new List<RayTracingObject>()
-                        });
+                    Debug.Log("NO UV's: " + ChildObject.gameObject.name);
+                    CurMeshData.SetUvZero();
+                }
+                for(int i3 = 0; i3 < submeshcount; ++i3) {//Add together all the submeshes in the mesh to consider it as one object
+                    int PrevLength = CurMeshData.Indices.Count;
+                    CurMeshData.Indices.AddRange(mesh.GetIndices(i3));
+                    int IndiceLength = (CurMeshData.Indices.Count - PrevLength) / 3;
+                    MatIndex = ChildObject.MaterialIndex[i3];
+                    for(int i4 = 0; i4 < IndiceLength; ++i4) {
+                        CurMeshData.MatDat.Add(MatIndex);
                     }
                 }
-                Parents[mesh_datas[Reps].ObjectGroup].RelevantMesh.Add(mesh_datas[Reps]);
-                Parents[mesh_datas[Reps].ObjectGroup].RelevantObject.Add(obj);
+                RepCount += submeshcount;
+                Matrix4x4 ChildMat = ChildObject.transform.worldToLocalMatrix.inverse;
+                Matrix4x4 TransMat = ParentMatInv * ChildMat;
+                Vector3 Ofst = ChildObject.transform.worldToLocalMatrix * ChildObject.transform.position;
+                Vector3 Ofst2 = ParentMatInv * ParentObject.transform.position;
+                for(int i3 = 0; i3 < CurMeshData.Indices.Count; i3 += 3) {//Transforming child meshes into the space of their parent
+                    int Index1 = CurMeshData.Indices[i3];
+                    int Index2 = CurMeshData.Indices[i3 + 2];
+                    int Index3 = CurMeshData.Indices[i3 + 1];
+                    V1 = CurMeshData.Verticies[Index1] + Ofst;
+                    V2 = CurMeshData.Verticies[Index2] + Ofst;
+                    V3 = CurMeshData.Verticies[Index3] + Ofst;
+                    V1 = TransMat * V1;
+                    V2 = TransMat * V2;
+                    V3 = TransMat * V3;
+                    TempPrim.V1 = V1 - Ofst2;
+                    TempPrim.V2 = V2 - Ofst2;
+                    TempPrim.V3 = V3 - Ofst2;
 
-            } else {
-                if(mesh_datas[Reps].ObjectGroup == -1) {
-                    AloneParents.Add(new Parent() {
-                        RelevantMesh = new List<Mesh_Data>(),
-                        RelevantObject = new List<RayTracingObject>()
-                        });
-                    AloneParents[AloneParents.Count - 1].RelevantMesh.Add(mesh_datas[Reps]);
-                    AloneParents[AloneParents.Count - 1].RelevantObject.Add(obj);
-                } else {
-                    Parents[mesh_datas[Reps].ObjectGroup].RelevantMesh.Add(mesh_datas[Reps]);
-                    Parents[mesh_datas[Reps].ObjectGroup].RelevantObject.Add(obj);
-                }
-            }
+                    Norm1 = ChildMat * CurMeshData.Normals[Index1];
+                    Norm2 = ChildMat * CurMeshData.Normals[Index2];
+                    Norm3 = ChildMat * CurMeshData.Normals[Index3];
+                    TempPrim.Norm1 = ParentMatInv * Norm1;
+                    TempPrim.Norm2 = ParentMatInv * Norm2;
+                    TempPrim.Norm3 = ParentMatInv * Norm3;
+                    
+                    TempPrim.tex1 = CurMeshData.UVs[Index1];
+                    TempPrim.tex2 = CurMeshData.UVs[Index2];
+                    TempPrim.tex3 = CurMeshData.UVs[Index3];
 
-			Reps++;
-            }
+                    TempPrim.MatDat = CurMeshData.MatDat[i3 / 3];
 
-            Parents.AddRange(AloneParents);
-            AloneParents.Clear();
-            Debug.Log(Parents.Count);
-            mesh_datas = new Mesh_Data[Parents.Count];
-            RelevantTransforms = new Transform[Parents.Count];
-            for(int CurParent = 0; CurParent < Parents.Count; CurParent++) {
-                Mesh_Data MeshRoot = Parents[CurParent].RelevantMesh[0];
-                RelevantTransforms[CurParent] = Parents[CurParent].RelevantObject[0].transform;
-                int ChildCount = Parents[CurParent].RelevantMesh.Count - 1;
-                bool DeleteChild = (Parents[CurParent].RelevantMesh.Count == 1) ? false : true;
-                int LowerBound = (DeleteChild) ? 0 : -1;
-                for(int i = ChildCount; i > 0; i--) {
-                    Mesh_Data TargetChild = Parents[CurParent].RelevantMesh[i];
-                    List<PrimitiveData> TempPrims = new List<PrimitiveData>();
+                    TempPrim.Reconstruct();
+                    CurentMesh.triangles.Add(TempPrim);
+                    if(_Materials[TempPrim.MatDat].emmissive > 0.0f) {
+                        V1 = TempPrim.V1;
+                        V2 = TempPrim.V2;
+                        V3 = TempPrim.V3;
+                        float radiance = _Materials[TempPrim.MatDat].emmissive * _Materials[TempPrim.MatDat].BaseColor.x + 
+                                        _Materials[TempPrim.MatDat].emmissive * _Materials[TempPrim.MatDat].BaseColor.y +
+                                        _Materials[TempPrim.MatDat].emmissive * _Materials[TempPrim.MatDat].BaseColor.z;
+                        float area = AreaOfTriangle(ParentMat * V1, ParentMat * V2, ParentMat * V3);
+                        float e = radiance * area;
+                        totalEnergy += e;
 
-                    Matrix4x4 TransMat = MeshRoot.Transform.inverse * TargetChild.Transform;
-                    Matrix4x4 TransMat2 = TargetChild.Transform.inverse * MeshRoot.Transform;
-                    Vector3 Ofst = TargetChild.Transform.inverse * TargetChild.Position;
-                    Vector3 Ofst2 = MeshRoot.Transform.inverse * MeshRoot.Position;
-                    for(int i2 = 0; i2 < TargetChild.triangles.Count; ++i2) {//transforms every meshes triangles so they can be combined into 1 mesh without 1 transform
-                        PrimitiveData TempTempPrim = TargetChild.triangles[i2];
-                        Vector3 TempVert1 = TempTempPrim.V1 + Ofst;
-                        Vector3 TempVert2 = TempTempPrim.V2 + Ofst;
-                        Vector3 TempVert3 = TempTempPrim.V3 + Ofst;
-                        TempVert1 = TransMat * TempVert1;
-                        TempVert2 = TransMat * TempVert2;
-                        TempVert3 = TransMat * TempVert3;
-                        
-                        TempTempPrim.V1 = TempVert1 - Ofst2;
-                        TempTempPrim.V2 = TempVert2 - Ofst2;
-                        TempTempPrim.V3 = TempVert3 - Ofst2;
-
-                        TempTempPrim.Norm1 = TransMat * TempTempPrim.Norm1;
-                        TempTempPrim.Norm2 = TransMat * TempTempPrim.Norm2;
-                        TempTempPrim.Norm3 = TransMat * TempTempPrim.Norm3;
-                        
-                        TempTempPrim.Reconstruct();
-                        
-                        TempPrims.Add(TempTempPrim);
+                        CurentMesh.LightTriangles.Add(new CudaLightTriangle() {
+                            pos0 = V1,
+                            posedge1 = V2 - V1,
+                            posedge2 = V3 - V1,
+                            Norm = (TempPrim.Norm1 + TempPrim.Norm2 + TempPrim.Norm3) / 3.0f,
+                            radiance = _Materials[TempPrim.MatDat].emmissive * _Materials[TempPrim.MatDat].BaseColor,
+                            sumEnergy = totalEnergy,
+                            energy = e,
+                            area = area,
+                            MeshIndexTie = (uint)i
+                            });
                     }
-                 MeshRoot.triangles.AddRange(TempPrims);
-                 if(DeleteChild) {
-                     Parents[CurParent].RelevantMesh.RemoveAt(i);
-                     Parents[CurParent].RelevantObject.RemoveAt(i);
-                 }
                 }
-                MeshRoot.ConstructAABB();
-                MeshRoot.UpdateAABB();
-
-                int progressId = UnityEditor.Progress.Start(MeshRoot.Name, "", UnityEditor.Progress.Options.Managed, -1);
-                MeshRoot.progressId = progressId;
-                mesh_datas[CurParent] = MeshRoot;
-                if(MeshRoot.ObjectGroup != -1) {
-                    Debug.Log("Origin GameObject Transform: " + MeshRoot.Name);
-                }
-                ProgReportData TempProgDat = new ProgReportData();
-                TempProgDat.init(progressId, MeshRoot.Name, MeshRoot.triangles.Count);
-                ProgIds.Add(TempProgDat);
             }
+            Debug.Log("Parent Object: " + ParentObject.name);
+            ProgReportData TempProgDat = new ProgReportData();
+            TempProgDat.init(progressId, ParentObject.name, CurentMesh.triangles.Count);
+            ProgIds.Add(TempProgDat);
+            totPrims += CurentMesh.triangles.Count;
+            CurentMesh.ConstructAABB();
+            CurentMesh.UpdateAABB();
+            mesh_datas[i] = CurentMesh;
+        }
 
-            Task t1 = Task.Run(() => RunThreads());
-            Debug.Log("TOTAL TRIANGLES: " + totPrims);
+        NodeGroups = null;
+        CurentMesh = null;
 
+        Task t1 = Task.Run(() => RunThreads());
+        Debug.Log("TOTAL TRIANGLES: " + totPrims);
     }
 
 	void Aggregate(ref BVH8Builder BVH8) {//BVH aggregation/BVH compression
@@ -566,30 +557,37 @@ public class AssetManager : MonoBehaviour {
 	    }
 	}
 
-    public void UpdateTLAS() {	//Allows for objects to be moved in the scene or animated while playing
-        int aggregated_bvh_node_count = 2 * mesh_datas.Length;
-        MyMeshesCompacted.Clear();
-        AABB[] MeshAABBs = new AABB[mesh_datas.Length];
-        for(int i = 0; i < mesh_datas.Length; i++) {
-            mesh_datas[i].Transform = RelevantTransforms[i].transform.worldToLocalMatrix.inverse;
-            mesh_datas[i].Position = RelevantTransforms[i].transform.position;
+    public void UpdateTLAS() {	//Allows for objects to be moved in the scene or animated while playing 
+
+        MyMeshesCompacted.Clear();     
+        int MeshDataCount =  mesh_datas.Length;
+        int aggregated_bvh_node_count = 2 * MeshDataCount;
+        for(int i = 0; i < MeshDataCount; i++) {
              MyMeshesCompacted.Add(new MyMeshDataCompacted() {
                 mesh_data_bvh_offsets = aggregated_bvh_node_count,
-                Transform =  RelevantTransforms[i].transform.worldToLocalMatrix
+                Transform =  mesh_datas[i].Transform.transform.worldToLocalMatrix,
+                Inverse = mesh_datas[i].Transform.transform.worldToLocalMatrix.inverse,
+                Center = mesh_datas[i].Transform.transform.position
               });
              mesh_datas[i].UpdateAABB();
             MeshAABBs[i] = mesh_datas[i].aabb;
             aggregated_bvh_node_count += mesh_datas[i].BVH.cwbvhnode_count;
         }
-        BVH2Builder BVH2 = new BVH2Builder(MeshAABBs);
-        BVH8Builder BVH8 = new BVH8Builder(ref BVH2, ref MyMeshesCompacted);
-        Aggregate(ref BVH8);
+        BVH8Builder TLASBVH8 = new BVH8Builder(new BVH2Builder(MeshAABBs), ref MyMeshesCompacted);
+       LightTriangleIndices = new List<int>();
+       for(int i = 0; i < TLASBVH8.cwbvh_indices.Count; i++) {
+            LightTriangleIndices.Add(i);
+        }
+        LightTriangleIndices.Sort((s1, s2) => TLASBVH8.cwbvh_indices[s1].CompareTo(TLASBVH8.cwbvh_indices[s2]));
+        Aggregate(ref TLASBVH8);
 	}
 
 	public void UpdateMaterials() {//Allows for live updating of material properties of any object
 		int curmat = 0;
-		for(int i = 0; i < RayTracingMaster._rayTracingObjects.Count; i++) {
-			for(int i2 = 0; i2 < RelevantMaterials[i].MatType.Length; i2++) {
+        int RayObjectCount = RayTracingMaster._rayTracingObjects.Count;
+		for(int i = 0; i < RayObjectCount; i++) {
+            int MaterialCount = RelevantMaterials[i].MatType.Length;
+			for(int i2 = 0; i2 < MaterialCount; i2++) {
 				MaterialData TempMat = _Materials[curmat];
 				if(TempMat.HasTextures == 0) {
 					TempMat.BaseColor = RelevantMaterials[i].BaseColor[i2];
@@ -603,4 +601,7 @@ public class AssetManager : MonoBehaviour {
 			}
 		}
 	}
+
+
+    
 }
