@@ -135,4 +135,4 @@ Scenes From:
 
 
 ## Ideas/Reminders for later
-ReSTIR, ReGIR, Optimized Atlas Creation, Volumetrics, Reduce memory consumption, add support for Emission, Roughness, and Normal atlas's
+ReSTIR, ReGIR, Optimized Atlas Creation, Volumetrics, Reduce memory consumption, add support for Emission, Roughness, and Normal atlas's, work on adding back in Mitsuba scene support
