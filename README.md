@@ -136,7 +136,7 @@ https://github.com/jan-van-bergen
 Scenes From:
 <ul>
   <li>https://benedikt-bitterli.me/resources/</li>
-  <li>https://casual-effects.com/data/</li
+  <li>https://casual-effects.com/data/</li>
   <li>https://www.intel.com/content/www/us/en/developer/topic-technology/graphics-research/samples.html</li>
 </ul>
 
