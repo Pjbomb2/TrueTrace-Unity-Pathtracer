@@ -7,7 +7,6 @@ Currently working on:
 Currently needs to be done but havent started:
 <ul>
     <li>Reduce Memory Use</li>
-    <li>Optimize SVGF/Make sure its working correctly</li>
     <li>Improve Direct Light Sampling for meshes(look into ReSTIR or ReGIR?)</li>
 </ul>
 Currently want to do but havent started:
@@ -32,6 +31,7 @@ Its my attempt at a Real Time pathtracer built from scratch in Unity using Compu
 <li>Next Event Estimation with Multiple Importance Sampling for Explicit Light Sampling</li>
 <li>Objects are loaded as gameobject meshes(most common way of having meshes in unity)</li>
 <li>Support for default unity lights which interact via NEE(Supports Directional, Point, and Spot lights)</li>
+<li>Support for Normal maps and Emission masks</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
@@ -74,6 +74,8 @@ First note, GameObjects with the parent script attached can have children that a
 Second note, You can now add, remove, and move objects at will during run, they will just take some time to appear.  Nothing special should need to be done to do this, just do it how you normally would(if this ends up not being this easy, let me know so I can take it into account)
 </br></br>
 Third note, if you change the emissiveness of an object, you need to dissable and re-enable its parent(basically reloading it) if you want to take advantage of NEE correctly sampling it
+</br></br>
+One last thing, in the event that you use normal maps, they need to be in unity normal map format, and emissive masks for now need to have at least 1 component be red as thats what I use to determin what parsts should be emissive(it will use the albedo tex as surface color)
 </br></br>
 </br></br>
 ## Editor Window Guide
