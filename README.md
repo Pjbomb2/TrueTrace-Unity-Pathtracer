@@ -1,3 +1,9 @@
+Upcoming Update(As soon as I figure out some stuff, should have already been released but having issues with transforms):
+</br>
+PERFORMANT SKINNED MESH ANIMATIONS/BVH REFITTING
+</br>
+
+
 Notes:</br>
 Currently working on:
 <ul>
