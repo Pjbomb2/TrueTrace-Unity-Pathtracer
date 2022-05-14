@@ -521,18 +521,13 @@ public void Construct() {
 
         for(int i = 0; i < NodePair.Count; i++) {
             Layer ForwardStackNode = new Layer();
-            ForwardStackNode.Children = IntArray(ForwardStack[i].Children);
-            ForwardStackNode.Leaf = IntArray(ForwardStack[i].Leaf);
-            if(NodePair[i].IsLeaf == 0) {
-                for(int i2 = 0; i2 < NodePair.Count; i2++) {
-                    if(NodePair[i2].PreviousNode == i) {
-                        ForwardStackNode.Children[NodePair[i2].InNodeOffset] = i2;
-                        ForwardStackNode.Leaf[NodePair[i2].InNodeOffset] = 0;
-                    }
-                }
-            }
-            ForwardStack[i] = ForwardStackNode;
+            ForwardStackNode.Children = IntArray(ForwardStack[NodePair[i].PreviousNode].Children);
+            ForwardStackNode.Leaf = IntArray(ForwardStack[NodePair[i].PreviousNode].Leaf);
+            ForwardStackNode.Children[NodePair[i].InNodeOffset] = i;
+            ForwardStackNode.Leaf[NodePair[i].InNodeOffset] = 0;
+            ForwardStack[NodePair[i].PreviousNode] = ForwardStackNode;
         }
+        
         LayerStack = new Layer2[MaxRecur];
         for(int i = 0; i < MaxRecur; i++) {
            Layer2 TempSlab = new Layer2();
