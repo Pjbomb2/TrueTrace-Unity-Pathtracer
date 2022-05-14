@@ -14,10 +14,10 @@ Currently want to do but havent started:
     <li>Add native support for voxels(havent started as I dont know a good way to structure it or what acceleration structure would be good, or a good data format, that supports preferably both solid and volumetric voxels)</li>
 </ul>
 
-# Compute Shader Based Fast Unity PathTracer
+# Compute Shader Based Unity PathTracer
 A passion projects that has been going on for awhile, finally at a place where I feel comfortable tentatively uploading it to Github for others to use
 What is it?
-Its my attempt at a Real Time pathtracer built from scratch in Unity using Compute Shaders
+Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compute Shaders
 ## Features: 
 <ul>
 <li>Relatively fast Compute Shader based path tracing</li>
