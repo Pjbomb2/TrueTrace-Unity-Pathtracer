@@ -1,0 +1,388 @@
+#define KernelRatio 256
+
+#pragma kernel Construct
+
+
+struct TriangleData {
+    float3 V1, V2, V3;
+    float3 Norm1, Norm2, Norm3;
+};
+
+StructuredBuffer<TriangleData> VertexsIn;
+RWStructuredBuffer<TriangleData> VertexsOut;
+
+StructuredBuffer<int> CWBVHIndices;
+
+RWByteAddressBuffer bufVertices;
+
+RWByteAddressBuffer bufIndexes;
+
+int gVertexCount;
+
+int VertOffset;
+
+float4x4 Transform;
+float4x4 Transform2;
+float4x4 Transform3;
+
+float3 Offset;
+
+float3 Scale;
+
+[numthreads(KernelRatio,1,1)]
+void Construct (uint3 id : SV_DispatchThreadID)
+{
+    int idx = id.x;
+    if (idx >= gVertexCount)
+        return;
+    idx = idx;
+
+    uint3 vidx = uint3(bufIndexes.Load(idx * 12), bufIndexes.Load(idx * 12 + 8), bufIndexes.Load(idx  * 12+ 4)) * 10;
+
+    uint3 praw = bufVertices.Load3((vidx.x)<<2);
+    float3 p = asfloat(praw);
+
+    praw = bufVertices.Load3((vidx.y)<<2);
+    float3 p2 = asfloat(praw);
+
+    praw = bufVertices.Load3((vidx.z)<<2);
+    float3 p3 = asfloat(praw);
+
+    praw = bufVertices.Load3((vidx.x + 3)<<2);
+    float3 n1 = asfloat(praw);
+
+    praw = bufVertices.Load3((vidx.y + 3)<<2);
+    float3 n2 = asfloat(praw);
+
+    praw = bufVertices.Load3((vidx.z + 3)<<2);
+    float3 n3 = asfloat(praw);
+    int VertOfst = VertOffset + idx;
+    float3 Offset2 = mul(Transform3, float4(Offset, 0));//
+    p /= Scale;
+    p2 /= Scale;
+    p3 /= Scale;
+    p = mul(float4(p,0), Transform).xyz;
+    p2 = mul(float4(p2,0), Transform).xyz;
+    p3 = mul(float4(p3,0), Transform).xyz;
+
+    p = mul(float4(p,0), Transform2).xyz;
+    p2 = mul(float4(p2,0), Transform2).xyz;
+    p3 = mul(float4(p3,0), Transform2).xyz;
+
+    VertexsOut[VertOfst].V1 = p + Offset2;
+    VertexsOut[VertOfst].V2 = p2 + Offset2;
+    VertexsOut[VertOfst].V3 = p3 + Offset2;
+
+    VertexsOut[VertOfst].Norm1 = n1;
+    VertexsOut[VertOfst].Norm2 = n2;
+    VertexsOut[VertOfst].Norm3 = n3;
+}
+
+
+#pragma kernel Remesh
+
+struct AdvancedTriangle {
+    float3 BBMax;//12
+    float3 BBMin;//24
+    float3 V1, V2, V3;//60
+    float3 Norm1, Norm2, Norm3;//96
+};
+
+RWStructuredBuffer<AdvancedTriangle> AdvancedTriangles;
+
+
+
+[numthreads(KernelRatio,1,1)]
+void Remesh (uint3 id : SV_DispatchThreadID)
+{
+    int idx = id.x;
+    if (idx >= gVertexCount)
+        return;
+    const TriangleData Tri = VertexsIn[CWBVHIndices[idx]];
+    float3 BBMax = max(max(Tri.V1, Tri.V2), Tri.V3);
+    float3 BBMin = min(min(Tri.V1, Tri.V2), Tri.V3);
+    for(int i2 = 0; i2 < 3; i2++) {
+        if(BBMax[i2] - BBMin[i2] < 0.001f) {
+            BBMin[i2] -= 0.001f;
+            BBMax[i2] += 0.001f;
+        }
+    }
+    AdvancedTriangles[id.x].BBMax = BBMax;
+    AdvancedTriangles[id.x].BBMin = BBMin;
+    AdvancedTriangles[id.x].V1 = Tri.V1;
+    AdvancedTriangles[id.x].V2 = Tri.V2 - Tri.V1;
+    AdvancedTriangles[id.x].V3 = Tri.V3 - Tri.V1;
+
+    AdvancedTriangles[id.x].Norm1 = Tri.Norm1;
+    AdvancedTriangles[id.x].Norm2 = Tri.Norm2 - Tri.Norm1;
+    AdvancedTriangles[id.x].Norm3 = Tri.Norm3 - Tri.Norm1;
+
+}
+
+
+
+struct NodeIndexPairData {
+    int PreviousNode;//4
+    int BVHNode;//8
+    int Node;//12
+    float3 BBMax;//24
+    float3 BBMin;//36
+    int InNodeOffset;//40
+    int isLeaf;
+    int RecursionCount;
+};
+
+RWStructuredBuffer<NodeIndexPairData> AllNodes;
+
+StructuredBuffer<int2> TriPair;
+
+
+#pragma kernel RefitLayer;
+
+
+
+struct Layer{
+    int Children[8];
+    int Leaf[8];
+};
+
+StructuredBuffer<Layer> ChildrenNodes;
+
+RWStructuredBuffer<int> NodesToWork;
+int NodeCount;
+
+StructuredBuffer<Layer> ReverseStack;
+
+
+[numthreads(KernelRatio,1,1)]
+void RefitLayer (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x > NodeCount)
+        return;
+    int CurrentParent = NodesToWork[id.x];
+
+    float3 RunningMax = AllNodes[CurrentParent].BBMax;
+    float3 RunningMin = AllNodes[CurrentParent].BBMin;
+    
+    for(int i = 0; i < 8; i++) {
+        if(ReverseStack[CurrentParent].Leaf[i] == 0) {
+            RunningMax = max(RunningMax, AllNodes[ReverseStack[CurrentParent].Children[i]].BBMax);
+            RunningMin = min(RunningMin, AllNodes[ReverseStack[CurrentParent].Children[i]].BBMin);
+        } else if(ReverseStack[CurrentParent].Leaf[i] > 0) {
+            for(int i4 = ReverseStack[CurrentParent].Leaf[i] - 1; i4 < ReverseStack[CurrentParent].Children[i] + ReverseStack[CurrentParent].Leaf[i] - 1; i4++) {
+                RunningMax = max(RunningMax, AdvancedTriangles[i4].BBMax);
+                RunningMin = min(RunningMin, AdvancedTriangles[i4].BBMin);
+            }
+
+        }
+    }
+
+    AllNodes[CurrentParent].BBMax = RunningMax;
+    AllNodes[CurrentParent].BBMin = RunningMin;
+
+}
+
+
+
+
+#pragma kernel TriFormatConvert
+
+struct CudaTriangle {
+    float3 pos0;
+    float3 posedge1;
+    float3 posedge2;
+
+    float3 norm0;
+    float3 normedge1;
+    float3 normedge2;
+
+    float3 tan0;
+    float3 tanedge1;
+    float3 tanedge2;
+
+    float2 tex0;
+    float2 texedge1;
+    float2 texedge2;
+
+    uint MatDat;
+};
+
+RWStructuredBuffer<CudaTriangle> CudaTriArray;
+
+
+[numthreads(KernelRatio,1,1)]
+void TriFormatConvert (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x > NodeCount)
+        return;
+
+        CudaTriangle TempTri = CudaTriArray[id.x];
+        AdvancedTriangle tri = AdvancedTriangles[id.x];
+        TempTri.pos0 = tri.V1;
+
+        TempTri.posedge1 = tri.V2;
+        TempTri.posedge2 = tri.V3;
+
+        TempTri.norm0 = tri.Norm1;
+
+        TempTri.normedge1 = tri.Norm2;
+        TempTri.normedge2 = tri.Norm3;
+        CudaTriArray[id.x] = TempTri;
+
+}
+
+
+#pragma kernel NodeUpdate
+
+    struct BVHNode8Data {
+        float3 p;//12
+        uint e[3];//24
+        uint imask;//28    
+        uint base_index_child;//32;
+        uint base_index_triangle;//36;
+        uint meta[8];
+        uint quantized_min_x[8];
+        uint quantized_max_x[8];
+        uint quantized_min_y[8];
+        uint quantized_max_y[8];
+        uint quantized_min_z[8];
+        uint quantized_max_z[8];//2
+    };
+
+    StructuredBuffer<int> ToBVHIndex;
+
+    RWStructuredBuffer<BVHNode8Data> BVHNodes;
+
+
+[numthreads(KernelRatio,1,1)]
+void NodeUpdate (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x >= NodeCount || id.x == 0)
+        return;
+      NodeIndexPairData TempNode = AllNodes[id.x];
+      int NodeLink = ToBVHIndex[AllNodes[id.x].BVHNode];
+      BVHNode8Data TempBVHNode = BVHNodes[TempNode.BVHNode];
+      float3 BBMax = AllNodes[NodeLink].BBMax;
+      float3 BBMin = AllNodes[NodeLink].BBMin;
+    if(AllNodes[id.x].BBMax.x < -10000.0f) {
+        AllNodes[id.x].BBMax = BBMin;
+        AllNodes[id.x].BBMin = BBMin;
+        TempNode = AllNodes[id.x];
+    }
+    const uint BVHNodeOffset = TempNode.BVHNode;
+      float3 e = pow(2,ceil(log2((BBMax - BBMin) * 0.003921569f)));
+      float3 p = BBMin;
+      BVHNodes[BVHNodeOffset].p = p;
+        uint u_ex = asuint(e.x);
+        uint u_ey = asuint(e.y);
+        uint u_ez = asuint(e.z);
+        const uint NodeOffset = TempNode.InNodeOffset;
+        BVHNodes[BVHNodeOffset].e[0] = u_ex >> 23;
+        BVHNodes[BVHNodeOffset].e[1] = u_ey >> 23;
+        BVHNodes[BVHNodeOffset].e[2] = u_ez >> 23;
+        BVHNodes[BVHNodeOffset].quantized_max_x[NodeOffset] = (uint)ceil((TempNode.BBMax.x - p.x) / e.x);
+        BVHNodes[BVHNodeOffset].quantized_max_y[NodeOffset] = (uint)ceil((TempNode.BBMax.y - p.y) / e.y);
+        BVHNodes[BVHNodeOffset].quantized_max_z[NodeOffset] = (uint)ceil((TempNode.BBMax.z - p.z) / e.z);
+        BVHNodes[BVHNodeOffset].quantized_min_x[NodeOffset] = (uint)floor((TempNode.BBMin.x - p.x) / e.x);
+        BVHNodes[BVHNodeOffset].quantized_min_y[NodeOffset] = (uint)floor((TempNode.BBMin.y - p.y) / e.y);
+        BVHNodes[BVHNodeOffset].quantized_min_z[NodeOffset] = (uint)floor((TempNode.BBMin.z - p.z) / e.z);
+
+
+
+}
+
+
+
+
+
+#pragma kernel NodeCompress
+
+
+
+    struct BVHNode8DataCompressed {
+        float3 node_0xyz;
+        uint node_0w;
+        uint node_1x;
+        uint node_1y;
+        uint node_1z;
+        uint node_1w;
+        uint node_2x;
+        uint node_2y;
+        uint node_2z;
+        uint node_2w;
+        uint node_3x;
+        uint node_3y;
+        uint node_3z;
+        uint node_3w;
+        uint node_4x;
+        uint node_4y;
+        uint node_4z;
+        uint node_4w;
+    };
+
+RWStructuredBuffer<BVHNode8DataCompressed> AggNodes;
+
+
+
+[numthreads(KernelRatio,1,1)]
+void NodeCompress (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x > NodeCount)
+        return;
+            BVHNode8Data TempNode = BVHNodes[id.x];
+            uint tempbyte = (TempNode.e[0] | (TempNode.e[1] << 8) | (TempNode.e[2] << 16) | (TempNode.imask << 24));
+            uint metafirst = (TempNode.meta[0] | (TempNode.meta[1] << 8) | (TempNode.meta[2] << 16) | (TempNode.meta[3] << 24));
+            uint metasecond = (TempNode.meta[4] | (TempNode.meta[5] << 8) | (TempNode.meta[6] << 16) | (TempNode.meta[7] << 24));
+            uint minxfirst = (TempNode.quantized_min_x[0] | (TempNode.quantized_min_x[1] << 8) | (TempNode.quantized_min_x[2] << 16) | (TempNode.quantized_min_x[3] << 24));
+            uint minxsecond = (TempNode.quantized_min_x[4] | (TempNode.quantized_min_x[5] << 8) | (TempNode.quantized_min_x[6] << 16) | (TempNode.quantized_min_x[7] << 24));
+            uint maxxfirst = (TempNode.quantized_max_x[0] | (TempNode.quantized_max_x[1] << 8) | (TempNode.quantized_max_x[2] << 16) | (TempNode.quantized_max_x[3] << 24));
+            uint maxxsecond = (TempNode.quantized_max_x[4] | (TempNode.quantized_max_x[5] << 8) | (TempNode.quantized_max_x[6] << 16) | (TempNode.quantized_max_x[7] << 24));
+            uint minyfirst = (TempNode.quantized_min_y[0] | (TempNode.quantized_min_y[1] << 8) | (TempNode.quantized_min_y[2] << 16) | (TempNode.quantized_min_y[3] << 24));
+            uint minysecond = (TempNode.quantized_min_y[4] | (TempNode.quantized_min_y[5] << 8) | (TempNode.quantized_min_y[6] << 16) | (TempNode.quantized_min_y[7] << 24));
+            uint maxyfirst = (TempNode.quantized_max_y[0] | (TempNode.quantized_max_y[1] << 8) | (TempNode.quantized_max_y[2] << 16) | (TempNode.quantized_max_y[3] << 24));
+            uint maxysecond = (TempNode.quantized_max_y[4] | (TempNode.quantized_max_y[5] << 8) | (TempNode.quantized_max_y[6] << 16) | (TempNode.quantized_max_y[7] << 24));
+            uint minzfirst = (TempNode.quantized_min_z[0] | (TempNode.quantized_min_z[1] << 8) | (TempNode.quantized_min_z[2] << 16) | (TempNode.quantized_min_z[3] << 24));
+            uint minzsecond = (TempNode.quantized_min_z[4] | (TempNode.quantized_min_z[5] << 8) | (TempNode.quantized_min_z[6] << 16) | (TempNode.quantized_min_z[7] << 24));
+            uint maxzfirst = (TempNode.quantized_max_z[0] | (TempNode.quantized_max_z[1] << 8) | (TempNode.quantized_max_z[2] << 16) | (TempNode.quantized_max_z[3] << 24));
+            uint maxzsecond = (TempNode.quantized_max_z[4] | (TempNode.quantized_max_z[5] << 8) | (TempNode.quantized_max_z[6] << 16) | (TempNode.quantized_max_z[7] << 24));
+
+            AggNodes[id.x].node_0xyz = float3(TempNode.p.x, TempNode.p.y, TempNode.p.z);
+            AggNodes[id.x].node_0w = tempbyte;
+            AggNodes[id.x].node_1x = TempNode.base_index_child;
+            AggNodes[id.x].node_1y = TempNode.base_index_triangle;
+            AggNodes[id.x].node_1z = metafirst;
+            AggNodes[id.x].node_1w = metasecond;
+            AggNodes[id.x].node_2x = minxfirst;
+            AggNodes[id.x].node_2y = minxsecond;
+            AggNodes[id.x].node_2z = maxxfirst;
+            AggNodes[id.x].node_2w = maxxsecond;
+            AggNodes[id.x].node_3x = minyfirst;
+            AggNodes[id.x].node_3y = minysecond;
+            AggNodes[id.x].node_3z = maxyfirst;
+            AggNodes[id.x].node_3w = maxysecond;
+            AggNodes[id.x].node_4x = minzfirst;
+            AggNodes[id.x].node_4y = minzsecond;
+            AggNodes[id.x].node_4z = maxzfirst;
+            AggNodes[id.x].node_4w = maxzsecond;
+
+        }
+
+
+
+
+
+#pragma kernel NodeInitializer
+
+
+
+[numthreads(KernelRatio,1,1)]
+void NodeInitializer (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x > NodeCount)
+        return;
+
+        AllNodes[id.x].BBMax = -9999999999.0f;
+        AllNodes[id.x].BBMin = 9999999999.0f;
+
+
+}
