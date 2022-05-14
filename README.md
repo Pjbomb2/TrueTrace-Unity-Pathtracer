@@ -45,7 +45,7 @@ You can contact me easiest through my discord: Pjbomb2#6129
 Let me know if you use this for anything, I would be excited to see any use of this!  Just please give some credit somewhere if you use it, thank you!
 
 ## Instructions:
-REQUIRES UNITY 2020 OR HIGHER
+REQUIRES UNITY 2021 OR HIGHER
 </br>
 So first thing, you need to set the color space to Linear.  To do this, you need to go to edit on the top right, Project Settings -> Player -> Other Settings -> Color Space, and set that to linear
 </br>
