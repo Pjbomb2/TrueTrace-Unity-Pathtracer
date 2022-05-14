@@ -109,6 +109,7 @@ BVH Options Description -
   
 # Sample Images(Taken from various stages of development)
 
+![](/Images/FurryGif1.gif)
 ![](/Images/FurryRender.png)
 ![](/Images/NewSponza3.png)
 ![](/Images/NewSponza2.png)
