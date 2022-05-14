@@ -38,6 +38,7 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 </br>
 
 If you have any questions, or suggestions, etc. let me know either through github issues or something else! I am always looking for more stuff to add, and more ways to make it more user friendly or appealing for others to use, and ways to improve this overall
+You can contact me easiest through my discord: Pjbomb2#6129
 
 
 ## Notes:
