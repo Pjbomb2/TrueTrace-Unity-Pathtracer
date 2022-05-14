@@ -1,9 +1,3 @@
-Upcoming Update(As soon as I figure out some stuff, should have already been released but having issues with transforms):
-</br>
-PERFORMANT SKINNED MESH ANIMATIONS/BVH REFITTING
-</br>
-
-
 Notes:</br>
 Currently working on:
 <ul>
@@ -60,6 +54,8 @@ Finally you need to make sure all textures you use are Read/Write enabled(do thi
 </br></br>
 You can either use the UnityPackage which includes a small demo scene with the stuff you need to add already set up, or the code raw, but I would reccomend the package as it already comes with a scene with the camera set up.
 </br></br>
+For Skinnedmeshes, you need to set their index format to 32 bit, do this by clicking the skinned mesh in the project bar(contains everything in the project), then find IndexFormat in the inspector(usually set to auto, near the bottom of the Model tab), and set it to 32 bits
+</br></br>
 Camera Controls: WASD, Mouse, and press T to freeze the camera
 </br></br>
 ## Setting up your scene(will make a video for this eventually)
@@ -95,6 +91,7 @@ BVH Options Description -
   <li>Enable Object Moving - Allows objects to be moved during play, and allows for added objects to spawn in when they are done building</li>
   <li>Allow Image Accumulation - Allows the image to accumulate while the camera is not moving</li>
   <li>Use Next Event Estimation - Enables shadow rays, NEE, and MIS for direct light sampling</li>
+  <li>Allow Mesh Skinning - Turns on the ability for skinned meshes to be animated or deformed with respect to their armeture</li>
   <li>Use SVGF Denoiser - Turns on the SVGF denoiser</li>
   <li>(If SVGF Denosier is on)Atrous Kernel Size - The amount of times the SVGF denoiser runs through the Atrous kernel</li>
   </ul>
