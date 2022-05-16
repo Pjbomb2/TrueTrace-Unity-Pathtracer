@@ -34,7 +34,7 @@ struct RayData {//128 bit aligned
 
     uint4 hits;
     uint PixelIndex;//need to bump this back down to uint1
-    float last_pdf;//need to shave off 4 bits
+    bool InMedium;//need to shave off 4 bits
 };
 
 struct ShadowRayData {
@@ -43,6 +43,7 @@ struct ShadowRayData {
     float3 illumination;
     uint PixelIndex;
     float t;
+    float2 ThroughputModifier;
 };
 
 struct LightTriangleData {
@@ -226,7 +227,7 @@ void Generate (uint3 id : SV_DispatchThreadID) {
     GlobalRays1[pixel_index].origin = ray.origin;
     GlobalRays1[pixel_index].direction = ray.direction;
     GlobalRays1[pixel_index].PixelIndex = id.x + id.y * screen_width;
-    GlobalRays1[pixel_index].last_pdf = 0.0f;
+    GlobalRays1[pixel_index].InMedium = true;
     GlobalColors[pixel_index].throughput = float3(1.0f, 1.0f, 1.0f);
     GlobalColors[pixel_index].Direct = float3(0.0f, 0.0f, 0.0f);
     GlobalColors[pixel_index].Indirect = float3(0.0f, 0.0f, 0.0f);
@@ -687,16 +688,19 @@ void IntersectBVHShadow() {
             if(hit) {
                 stack_size = 0;
                 current_group.y = 0;
+                int pixel_index = ShadowRaysBuffer[ray_index].PixelIndex;
+                GlobalColors[pixel_index].throughput /= ShadowRaysBuffer[ray_index].ThroughputModifier.y;
                 break;
             }
 
             if((current_group.y & 0xff000000) == 0) {
                 if(stack_size == 0) {//thread has finished traversing
                     int pixel_index = ShadowRaysBuffer[ray_index].PixelIndex;
+                    GlobalColors[pixel_index].throughput /= ShadowRaysBuffer[ray_index].ThroughputModifier.x;
                     if(CurBounce == 0) {
-                        GlobalColors[pixel_index].Direct += ShadowRaysBuffer[ray_index].illumination;
+                        GlobalColors[pixel_index].Direct += GlobalColors[pixel_index].throughput * ShadowRaysBuffer[ray_index].illumination;
                     } else {
-                        GlobalColors[pixel_index].Indirect += ShadowRaysBuffer[ray_index].illumination;
+                        GlobalColors[pixel_index].Indirect += GlobalColors[pixel_index].throughput * ShadowRaysBuffer[ray_index].illumination;
                     }
                     current_group.y = 0;
                     break;
@@ -1355,10 +1359,30 @@ inline float luminance(const float r, const float g, const float b) {
     return 0.299f * r + 0.587f * g + 0.114f * b;
 }
 
+void sampleEquiAngular( float u, float maxDistance, float3 rOrigin, float3 rDirection, float3 lightPos, inout float dist, inout float pdf )
+{
+    // get coord of closest point to light along (infinite) ray
+    float delta = dot(lightPos - rOrigin, rDirection);
+    
+    // get distance this point is from light
+    float D = distance(rOrigin + delta * rDirection, lightPos);
+
+    // get angle of endpoints
+    float thetaA = atan((0.0 - delta) / D);
+    float thetaB = atan((maxDistance - delta) / D);
+
+    // take sample
+    float t = D * tan( lerp(thetaA, thetaB, u) );
+    dist = delta + t;
+    pdf = D / ( (thetaB - thetaA) * (D * D + t * t) );
+}
+
 
 void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, const RayHit hit, uint2 Uv, inout bool terminated, float2 NormalUV) {//main function
 
     float3 pos = ray.direction * hit.t + ray.origin;
+    float3 PrevRayOrigin = ray.origin;
+    float3 PrevRayDirection = ray.direction;
 
     const uint index = hit.triangle_id;
     float3 Geomnorm = normalize(mul(_MeshData[hit.mesh_id].Inverse, float4(AggTris[index].norm0 + hit.u * AggTris[index].normedge1 + hit.v * AggTris[index].normedge2, 0.0f)).xyz);
@@ -1400,6 +1424,18 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, con
         return;
     }
     float3 throughput = Color.throughput;
+
+
+
+
+
+
+
+
+
+
+
+
 
     float3 tempraydir = float3(0.0f, 0.0f, 0.0f);
     bool valid = true;
@@ -1570,7 +1606,13 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, con
                     ShadowRaysBuffer[index3].t = (IsDirectional) ? 10000.0f : distance_to_light - 2.0f * EPSILON;
                     ShadowRaysBuffer[index3].illumination = Illum * rcp(saturate(maxillum));
                     ShadowRaysBuffer[index3].PixelIndex = Uv.y * screen_width + Uv.x;
+                    ShadowRaysBuffer[index3].ThroughputModifier = float2(1,1);
                 }
+
+
+
+
+
             }
         }
     }
@@ -1627,14 +1669,15 @@ void kernel_shade () {
             SkyColAcc = Color.throughput * sky;
         #else
             float3 SkyBoxCol = CalculateSkyBox(ray.origin, ray.direction, bestHit);
+            float Sun = (ray.direction.y >= 0) ? pow(max(dot(-SunDir, -ray.direction), 0.0f), 140.0f) : 0.0f;
             if(CurBounce == 0) {//Seperated into direct and indirect channels
-                Color.Direct = ((SkyBoxCol * 12.0f) + pow(max(dot(-SunDir, -ray.direction), 0.0f), 140.0f));
+                Color.Direct = (SkyBoxCol * 12.0f) + Sun;
             } else if(CurBounce == 1) {
-                Color.Direct += ((SkyBoxCol * 12.0f) + pow(max(dot(-SunDir, -ray.direction), 0.0f), 140.0f));
+                Color.Direct += (SkyBoxCol * 12.0f) + Sun;
             } else {
-                Color.Indirect += Color.throughput * ((SkyBoxCol * 12.0f) + pow(max(dot(-SunDir, -ray.direction), 0.0f), 140.0f));
+                Color.Indirect += Color.throughput * (SkyBoxCol * 12.0f) + Sun;
             }
-            SkyColAcc = Color.throughput * ((SkyBoxCol * 12.0f) + pow(max(dot(-SunDir, -ray.direction), 0.0f), 140.0f)) ;
+            SkyColAcc = Color.throughput * (SkyBoxCol * 12.0f) + Sun;
         #endif
         GlobalColors[pixel_index] = Color;
         if(CurBounce == 0) {
@@ -1661,8 +1704,8 @@ void kernel_shade () {
         float2 EmissionUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].EmissiveTex.xy - _Materials[MaterialIndex].EmissiveTex.zw) + _Materials[MaterialIndex].EmissiveTex.zw;
         float3 EmissCol = _EmissiveAtlas.SampleLevel(sampler_EmissiveAtlas, EmissionUV, 0).xyz;
         if(EmissCol.x > 0.001f) {
-            hitmat.surfaceColor = EmissCol;
-            hitmat.emmis = 1.0f;
+           // hitmat.surfaceColor = EmissCol;
+            hitmat.emmis = EmissCol;
         }
     }
     bool DidTerminate = true;//Identifier marking whether we have terminated the ray or if it will continue

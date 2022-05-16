@@ -55,18 +55,30 @@ public class AssetManager : MonoBehaviour {
         ParentObject[] ChildrenObjects = this.GetComponentsInChildren<ParentObject>();
         foreach(ParentObject obj in ChildrenObjects)
             obj.ClearAll();
-        _Materials.Clear();
-        _Materials.TrimExcess();
-        LightTransforms.Clear();
-        LightTransforms.TrimExcess();
-        LightMeshes.Clear();
-        LightMeshes.TrimExcess();
-        MyMeshesCompacted.Clear();
-        MyMeshesCompacted.TrimExcess();
-        AggLightTriangles.Clear();
-        AggLightTriangles.TrimExcess();
-        UnityLights.Clear();
-        UnityLights.TrimExcess();
+        if(_Materials != null) {
+            _Materials.Clear();
+            _Materials.TrimExcess();
+        }
+        if(LightTransforms != null) {
+            LightTransforms.Clear();
+            LightTransforms.TrimExcess();
+        }
+        if(LightMeshes != null) {
+            LightMeshes.Clear();
+            LightMeshes.TrimExcess();
+        }
+        if(MyMeshesCompacted != null) {
+            MyMeshesCompacted.Clear();
+            MyMeshesCompacted.TrimExcess();
+        }
+        if(AggLightTriangles != null) {
+            AggLightTriangles.Clear();
+            AggLightTriangles.TrimExcess();
+        }
+        if(UnityLights != null) {
+            UnityLights.Clear();
+            UnityLights.TrimExcess();
+        }
         DestroyImmediate(AlbedoAtlas);
         DestroyImmediate(NormalAtlas);
         DestroyImmediate(EmissiveAtlas);  
@@ -357,7 +369,7 @@ public class AssetManager : MonoBehaviour {
 
     void Aggregate(ref BVH8Builder BVH8) {//BVH aggregation/BVH compression
         List<BVHNode8DataCompressed> TempBVHArray = new List<BVHNode8DataCompressed>();
-        for(int i = 0; i < BVH8.BVH8Nodes.Count; ++i) {
+        for(int i = 0; i < BVH8.BVH8Nodes.Length; ++i) {
             BVHNode8Data TempNode = BVH8.BVH8Nodes[i];
             uint tempbyte = (TempNode.e[0] | (TempNode.e[1] << 8) | (TempNode.e[2] << 16) | (TempNode.imask << 24));
             uint metafirst = (TempNode.meta[0] | (TempNode.meta[1] << 8) | (TempNode.meta[2] << 16) | (TempNode.meta[3] << 24));

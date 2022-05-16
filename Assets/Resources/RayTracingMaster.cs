@@ -14,7 +14,6 @@ public class RayTracingMaster : MonoBehaviour {
     private RenderTexture _Albedo;
     private RenderTexture _NormTex;
 
-
     private Denoiser Denoisers;
     private AtmosphereGenerator Atmo;
 
@@ -193,7 +192,7 @@ public class RayTracingMaster : MonoBehaviour {
         CreateComputeBuffer(ref _LightTriangles, Assets.AggLightTriangles, 68);
 
         CreateDynamicBuffer(ref _RayBuffer1, 48);
-        CreateDynamicBuffer(ref _ShadowBuffer, 44);
+        if(_ShadowBuffer == null) _ShadowBuffer = new ComputeBuffer(Screen.width * Screen.height * 2, 52);
         CreateDynamicBuffer(ref _RayBuffer2, 48);
         CreateDynamicBuffer(ref _ColorBuffer, 36);
         CreateDynamicBuffer(ref _BufferSizes, 20);

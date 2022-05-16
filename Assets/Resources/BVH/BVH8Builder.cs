@@ -9,11 +9,10 @@ public class BVH8Builder {
 
     private List<float> cost;
     private List<Decision> decisions;
-    public List<int> cwbvh_indices;
-    public List<BVHNode8Data> BVH8Nodes;
+    public int[] cwbvh_indices;
+    public BVHNode8Data[] BVH8Nodes;
     public int cwbvhindex_count;
     public int cwbvhnode_count;
-    public AABB[] TempAABBs = new AABB[8];
 
     public struct Decision {
         public int Type;//Types: 0 is LEAF, 1 is INTERNAL, 2 is DISTRIBUTE
@@ -34,7 +33,7 @@ public class BVH8Builder {
                 return -1;
             }
             //SAH Cost
-            float cost_leaf = surface_area(node.BBMax, node.BBMin) * (float)num_primitives;
+            float cost_leaf = surface_area(ref node.aabb) * (float)num_primitives;
             for(int i = 0; i < 7; i++) {
                 cost[node_index * 7 + i] = cost_leaf;
                 dectemp = decisions[node_index * 7 + i];
@@ -46,7 +45,7 @@ public class BVH8Builder {
                 calculate_cost(node.left, ref nodes) +
                 calculate_cost(node.left + 1, ref nodes);
                     {
-                        float cost_leaf = num_primitives <= 3 ? (float)num_primitives * surface_area(node.BBMax, node.BBMin) : float.MaxValue;
+                        float cost_leaf = num_primitives <= 3 ? (float)num_primitives * surface_area(ref node.aabb) : float.MaxValue;
 
                         float cost_distribute = float.MaxValue;
 
@@ -66,7 +65,7 @@ public class BVH8Builder {
                             }
                         }
 
-                        float cost_internal = cost_distribute + surface_area(node.BBMax, node.BBMin);
+                        float cost_internal = cost_distribute + surface_area(ref node.aabb);
                         if(cost_leaf < cost_internal) {
                             cost[node_index * 7] = cost_leaf;
 
@@ -152,7 +151,7 @@ public class BVH8Builder {
     }
 
     void order_children(int node_index, ref List<BVHNode2Data> nodes, ref int[] children, int child_count) {
-        Vector3 p = (nodes[node_index].BBMax + nodes[node_index].BBMin) / 2.0f;
+        Vector3 p = (nodes[node_index].aabb.BBMax + nodes[node_index].aabb.BBMin) / 2.0f;
 
         float[,] cost = new float[8,8];
 
@@ -163,7 +162,7 @@ public class BVH8Builder {
                     (System.Convert.ToBoolean(s & 0b010)) ? -1.0f : 1.0f,
                     (System.Convert.ToBoolean(s & 0b001)) ? -1.0f : 1.0f
                     );
-                cost[c,s] = Vector3.Dot((nodes[children[c]].BBMax + nodes[children[c]].BBMin) / 2.0f - p, direction);
+                cost[c,s] = Vector3.Dot((nodes[children[c]].aabb.BBMax + nodes[children[c]].aabb.BBMin) / 2.0f - p, direction);
             }
         }
 
@@ -223,9 +222,8 @@ public class BVH8Builder {
     void collapse(ref List<BVHNode2Data> nodes_bvh, ref int[] indices_bvh, int node_index_cwbvh, int node_index_bvh) {
       BVHNode8Data node = BVH8Nodes[node_index_cwbvh];
       AABB aabb = new AABB();
-      aabb.BBMax = nodes_bvh[node_index_bvh].BBMax;
-      aabb.BBMin = nodes_bvh[node_index_bvh].BBMin;
-
+      aabb = nodes_bvh[node_index_bvh].aabb;
+      
       node.p = aabb.BBMin;
 
       int Nq = 8;
@@ -279,8 +277,7 @@ public class BVH8Builder {
         int child_index = children[i];
         if(child_index == -1) continue;
 
-        child_aabb.BBMax = nodes_bvh[child_index].BBMax;
-        child_aabb.BBMin = nodes_bvh[child_index].BBMin;
+        child_aabb = nodes_bvh[child_index].aabb;
 
         node.quantized_min_x[i] = (uint)Mathf.Floor((child_aabb.BBMin.x - node.p.x) * one_over_e.x);
         node.quantized_min_y[i] = (uint)Mathf.Floor((child_aabb.BBMin.y - node.p.y) * one_over_e.y);
@@ -330,8 +327,8 @@ public class BVH8Builder {
       }
     }
 
-    float surface_area(Vector3 BBMax, Vector3 BBMin) {
-        Vector3 sizes = BBMax - BBMin;
+    float surface_area(ref AABB aabb) {
+        Vector3 sizes = aabb.BBMax - aabb.BBMin;
         return 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z)); 
     }
 
@@ -341,9 +338,8 @@ public class BVH8Builder {
 
         cost = new List<float>(BVH2NodesCount * 7);
         decisions = new List<Decision>(BVH2NodesCount * 7);
-        BVH8Nodes = new List<BVHNode8Data>(BVH2NodesCount);
-        BVH8Nodes.Capacity = BVH2NodesCount;
-        cwbvh_indices = new List<int>(BVH2IndicesCount);
+        BVH8Nodes = new BVHNode8Data[BVH2NodesCount];
+        cwbvh_indices = new int[BVH2IndicesCount];
 
         for(int i = 0; i < BVH2NodesCount * 7; ++i) {
             cost.Add(0.0f);
@@ -353,20 +349,18 @@ public class BVH8Builder {
                 dist_right = 0
                 });
         }
-        for(int i = 0; i < BVH2IndicesCount; ++i) {
-            cwbvh_indices.Add(0);
-        }
+        BVHNode8Data TempNode;
         for(int i = 0; i < BVH2NodesCount; ++i) {
-            BVH8Nodes.Add(new BVHNode8Data () {
-                e = new uint[3],
-                meta = new uint[8],
-                quantized_min_x = new uint[8],
-                quantized_max_x = new uint[8],
-                quantized_min_y = new uint[8],
-                quantized_max_y = new uint[8],
-                quantized_min_z = new uint[8],
-                quantized_max_z = new uint[8],
-                });
+            TempNode = new BVHNode8Data();
+            TempNode.e = new uint[3];
+            TempNode.meta = new uint[8];
+            TempNode.quantized_min_x = new uint[8];
+            TempNode.quantized_max_x = new uint[8];
+            TempNode.quantized_min_y = new uint[8];
+            TempNode.quantized_max_y = new uint[8];
+            TempNode.quantized_min_z = new uint[8];
+            TempNode.quantized_max_z = new uint[8];
+            BVH8Nodes[i] = TempNode;
         }
         cwbvhindex_count = 0;
         cwbvhnode_count = 1;
@@ -384,8 +378,8 @@ public class BVH8Builder {
 
         cost = new List<float>(BVH2NodesCount * 7);
         decisions = new List<Decision>(BVH2NodesCount * 7);
-        BVH8Nodes = new List<BVHNode8Data>(BVH2NodesCount);
-        cwbvh_indices = new List<int>(BVH2IndicesCount);
+        BVH8Nodes = new BVHNode8Data[BVH2NodesCount];
+        cwbvh_indices = new int[BVH2IndicesCount];
 
         for(int i = 0; i < BVH2NodesCount * 7; ++i) {
             cost.Add(0.0f);
@@ -396,20 +390,18 @@ public class BVH8Builder {
                 dist_right = 0
                 });
         }
-        for(int i = 0; i < BVH2IndicesCount; ++i) {
-            cwbvh_indices.Add(0);
-        }
+        BVHNode8Data TempNode;
         for(int i = 0; i < BVH2NodesCount; ++i) {
-            BVH8Nodes.Add(new BVHNode8Data () {
-                e = new uint[3],
-                meta = new uint[8],
-                quantized_min_x = new uint[8],
-                quantized_max_x = new uint[8],
-                quantized_min_y = new uint[8],
-                quantized_max_y = new uint[8],
-                quantized_min_z = new uint[8],
-                quantized_max_z = new uint[8],
-                });
+            TempNode = new BVHNode8Data();
+            TempNode.e = new uint[3];
+            TempNode.meta = new uint[8];
+            TempNode.quantized_min_x = new uint[8];
+            TempNode.quantized_max_x = new uint[8];
+            TempNode.quantized_min_y = new uint[8];
+            TempNode.quantized_max_y = new uint[8];
+            TempNode.quantized_min_z = new uint[8];
+            TempNode.quantized_max_z = new uint[8];
+            BVH8Nodes[i] = TempNode;
         }
         cwbvhindex_count = 0;
         cwbvhnode_count = 1;
@@ -420,7 +412,7 @@ public class BVH8Builder {
 
         List<MyMeshDataCompacted> TempCompressed = new List<MyMeshDataCompacted>(Meshes);
         Meshes.Clear();
-        for(int i = 0; i < cwbvh_indices.Count; ++i) {
+        for(int i = 0; i < cwbvh_indices.Length; ++i) {
             Meshes.Add(TempCompressed[cwbvh_indices[i]]);
         }
         TempCompressed.Clear();

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 [System.Serializable]
 public class ParentObject : MonoBehaviour {
 
-
+//264329, 792987, 264329
 public ComputeBuffer TriBuffer;
 public ComputeBuffer BVHBuffer;
 public string Name;
@@ -17,7 +17,7 @@ public Texture2D NormalAtlas;
 public Texture2D EmissiveAtlas;
 [HideInInspector] public RayTracingObject[] ChildObjects;
 [HideInInspector] public bool MeshCountChanged;
-[HideInInspector] public List<PrimitiveData> Triangles;
+[HideInInspector] public PrimitiveData[] Triangles;
 [HideInInspector] public CudaTriangle[] AggTriangles;
 [HideInInspector] public List<CudaLightTriangle> LightTriangles;
 [HideInInspector] public BVH8Builder BVH;
@@ -75,7 +75,6 @@ public ComputeBuffer CWBVHIndicesBuffer;
 [HideInInspector] public bool started = false;
 
 [HideInInspector] public List<NodeIndexPairData> NodePair;
-[HideInInspector] public List<TriNodePairData> TriPair;
 [HideInInspector] public int MaxRecur = 0;
 [HideInInspector] public int[] ToBVHIndex;
 
@@ -105,18 +104,38 @@ public List<PerMatTextureData> MatTexData;
 
 
 public void ClearAll() {
-    Debug.Log("CLEAR");
-    Triangles.Clear();
-    Triangles.TrimExcess();
-    LightTriangles.Clear();
-    LightTriangles.TrimExcess();
+    Triangles = null;
+
+    if(LightTriangles != null) {
+        LightTriangles.Clear();
+        LightTriangles.TrimExcess();
+    }
     BVH = null;
-    _Materials.Clear();
-    _Materials.TrimExcess();
+    if(_Materials != null) {
+        _Materials.Clear();
+        _Materials.TrimExcess();
+    }
     CurMeshData.Clear();
     TransformIndexes = null;
     MeshCountChanged = true;
     HasCompleted = false;
+    LayerStack = null;
+    if(NodePair != null) {
+        NodePair.Clear();
+        NodePair.TrimExcess();
+    }
+    ToBVHIndex = null;
+    if(SplitForwardStack != null) {
+        SplitForwardStack.Clear();
+        SplitForwardStack.TrimExcess();
+    }
+    AggTriangles = null;
+    AggNodes = null;
+    if(ForwardStack != null) {
+        ForwardStack.Clear();
+        ForwardStack.TrimExcess();
+    }
+
     DestroyImmediate(AlbedoAtlas);
     DestroyImmediate(NormalAtlas);
     DestroyImmediate(EmissiveAtlas); 
@@ -127,7 +146,6 @@ public void init() {
     Name = this.name;
     TransformIndexes = new List<MeshTransformVertexs>();
     _Materials = new List<MaterialData>();
-    Triangles = new List<PrimitiveData>();
     LightTriangles = new List<CudaLightTriangle>();
     MeshCountChanged = true;
     ObjectOrderHasChanged = false;
@@ -292,7 +310,6 @@ public void LoadData() {
     TotEnergy = 0;
     LightCount = 0;
     init();
-    Triangles.Clear();
     CurMeshData = new MeshDat();
     CurMeshData.init();
     List<RayTracingObject> TempObjects = new List<RayTracingObject>();
@@ -401,7 +418,7 @@ int NumberOfSetBits(int i)
     return (((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
 }
 
-
+private AABB tempAABB;
 public void DocumentNodes(int CurrentNode, int ParentNode, int NextNode, int NextBVH8Node, bool IsLeafRecur, int CurRecur) {
     NodeIndexPairData CurrentPair = NodePair[CurrentNode];
     MaxRecur = Mathf.Max(MaxRecur, CurRecur);
@@ -427,19 +444,13 @@ public void DocumentNodes(int CurrentNode, int ParentNode, int NextNode, int Nex
             float AABBPos2x = node.quantized_min_x[i] * e.x + node.p.x;
             float AABBPos2y = node.quantized_min_y[i] * e.y + node.p.y;
             float AABBPos2z = node.quantized_min_z[i] * e.z + node.p.z;
+            tempAABB.BBMax = new Vector3(AABBPos1x, AABBPos1y, AABBPos1z);
+            tempAABB.BBMin = new Vector3(AABBPos2x, AABBPos2y, AABBPos2z);
             IndexPair.AABB.init();
-            IndexPair.AABB.Extend(new Vector3(AABBPos1x, AABBPos1y, AABBPos1z), new Vector3(AABBPos2x, AABBPos2y, AABBPos2z));
+            IndexPair.AABB.Extend(ref tempAABB);
             IndexPair.InNodeOffset = i;
             bool IsLeaf = (node.meta[i] & 0b11111) < 24;
            if(IsLeaf) {
-                int first_triangle = (byte)node.meta[i] & 0b11111;
-                int NumBits = NumberOfSetBits((byte)node.meta[i] >> 5);
-                for (int j = 0; j < NumBits; j++) {
-                    TriPair.Add(new TriNodePairData() {
-                        TriIndex = (int)node.base_index_triangle + first_triangle + j,
-                        NodeIndex = NodePair.Count
-                        });
-                }
                 IndexPair.BVHNode = NextBVH8Node;
                 NodePair.Add(IndexPair);
                 NextNode++;
@@ -462,13 +473,6 @@ public void DocumentNodes(int CurrentNode, int ParentNode, int NextNode, int Nex
 }
 
 
-private string IntListToString(ref List<int> a) {
-string Out = "";
-for(int i = 0; i < a.Count; i++) {
-    Out += a[i] + ", ";
-}
-return Out;
-}
 
 private int[] IntArray(int[] a) {
 return (new List<int>(a)).ToArray();
@@ -477,19 +481,18 @@ return (new List<int>(a)).ToArray();
 
 
 public void Construct() {
+    tempAABB = new AABB();
     MaxRecur = 0;
     started = false;
     SplitForwardStack = new List<SplitLayer>();
-    BVH2Builder BVH2 = new BVH2Builder(Triangles);//Binary BVH Builder, and also the component that takes the longest to build
+    BVH2Builder BVH2 = new BVH2Builder(ref Triangles);//Binary BVH Builder, and also the component that takes the longest to build
     this.BVH = new BVH8Builder(ref BVH2);
     BVH2 = null;
-    BVH.BVH8Nodes.RemoveRange(BVH.cwbvhnode_count, BVH.BVH8Nodes.Count - BVH.cwbvhnode_count);
-    BVH.BVH8Nodes.Capacity = BVH.BVH8Nodes.Count;
-    ToBVHIndex = new int[BVH.BVH8Nodes.Count];
+    System.Array.Resize(ref BVH.BVH8Nodes, BVH.cwbvhnode_count);
+    ToBVHIndex = new int[BVH.cwbvhnode_count];
     
     if(IsSkinnedGroup) {
         NodePair = new List<NodeIndexPairData>();
-        TriPair = new List<TriNodePairData>();
         NodePair.Add(new NodeIndexPairData());
         DocumentNodes(0, 0, 1, 0, false, 0);
         MaxRecur++;
@@ -527,20 +530,18 @@ public void Construct() {
             ForwardStackNode.Leaf[NodePair[i].InNodeOffset] = 0;
             ForwardStack[NodePair[i].PreviousNode] = ForwardStackNode;
         }
-        
+
         LayerStack = new Layer2[MaxRecur];
         for(int i = 0; i < MaxRecur; i++) {
            Layer2 TempSlab = new Layer2();
             TempSlab.Slab = new List<int>();
             LayerStack[i] = TempSlab;
         }
-        Debug.Log("Done Stage 1");
         for(int i = 0; i < NodePair.Count; i++) {
             var TempLayer = LayerStack[NodePair[i].RecursionCount];
             TempLayer.Slab.Add(i);
             LayerStack[NodePair[i].RecursionCount] = TempLayer;
         }
-        Debug.Log("Done Stage 2");
 
         SplitForwardStack = new List<SplitLayer>();
         for(int i = 0; i < ForwardStack.Count; i++) {
@@ -578,7 +579,7 @@ private void ConvertToSplitNodes() {
 BVHNode8DataFixed NewNode = new BVHNode8DataFixed();
 SplitNodes = new List<BVHNode8DataFixed>();
 BVHNode8Data SourceNode;
-for(int i = 0; i < BVH.BVH8Nodes.Count; i++) {
+for(int i = 0; i < BVH.BVH8Nodes.Length; i++) {
     SourceNode = BVH.BVH8Nodes[i];
     NewNode.p = SourceNode.p;
     NewNode.e1 = SourceNode.e[0];
@@ -655,12 +656,15 @@ public void RefitMesh() {
     int KernelRatio = 256;
 
     AABB OverAABB = new AABB();
+    tempAABB = new AABB();
     OverAABB.init();
     for(int i = 0; i < SkinnedMeshes.Length; i++) {
-        Vector3 V2 = SkinnedMeshes[i].bounds.center + SkinnedMeshes[i].bounds.size / 2.0f;
-        Vector3 V3 = SkinnedMeshes[i].bounds.center - SkinnedMeshes[i].bounds.size / 2.0f;
-        OverAABB.Extend(V2, V3);
+        Vector3 Scale = new Vector3(Mathf.Sqrt(this.transform.lossyScale.x), Mathf.Sqrt(this.transform.lossyScale.y), Mathf.Sqrt(this.transform.lossyScale.z));
+        tempAABB.BBMax = SkinnedMeshes[i].bounds.center + Vector3.Scale(SkinnedMeshes[i].bounds.size, Scale) / 2.0f;
+        tempAABB.BBMin = SkinnedMeshes[i].bounds.center - Vector3.Scale(SkinnedMeshes[i].bounds.size, Scale) / 2.0f;
+        OverAABB.Extend(ref tempAABB);
     }
+
 
     aabb = OverAABB;
     if(!HasStarted) {
@@ -670,8 +674,8 @@ public void RefitMesh() {
         VertexBufferOut = new ComputeBuffer(TotalTriangles, 72);
         StackBuffer = new ComputeBuffer(ForwardStack.Count, 64);
         StackBuffer.SetData(SplitForwardStack);
-        CWBVHIndicesBuffer = new ComputeBuffer(BVH.cwbvh_indices.Count, 4);
-        CWBVHIndicesBuffer.SetData(BVH.cwbvh_indices.ToArray()); 
+        CWBVHIndicesBuffer = new ComputeBuffer(BVH.cwbvh_indices.Length, 4);
+        CWBVHIndicesBuffer.SetData(BVH.cwbvh_indices); 
         BVHDataBuffer = new ComputeBuffer(AggNodes.Length, 260);
         BVHDataBuffer.SetData(SplitNodes); 
         ToBVHIndexBuffer = new ComputeBuffer(ToBVHIndex.Length, 4);
@@ -693,8 +697,9 @@ public void RefitMesh() {
         FinalMeshBuffer = SkinnedMeshes[i].GetVertexBuffer();
         MeshRefit.SetMatrix("Transform", SkinnedMeshes[i].bones[0].transform.worldToLocalMatrix);
         MeshRefit.SetMatrix("Transform2", this.transform.worldToLocalMatrix.inverse);
-        MeshRefit.SetMatrix("Transform3", this.transform.worldToLocalMatrix);
+        MeshRefit.SetMatrix("Transform3", this.transform.worldToLocalMatrix);       
         MeshRefit.SetVector("Scale", this.transform.lossyScale);
+        MeshRefit.SetVector("ArmetureScale", SkinnedMeshes[i].bones[0].parent.lossyScale);
         MeshRefit.SetVector("Offset", SkinnedMeshes[i].bones[0].parent.transform.worldToLocalMatrix.inverse * SkinnedMeshes[i].bones[0].localPosition);
       if(FinalMeshBuffer != null)   MeshRefit.SetBuffer(ConstructKernel, "bufVertices", FinalMeshBuffer);
         MeshRefit.SetBuffer(ConstructKernel, "bufIndexes", IndexBuffer2);
@@ -739,7 +744,7 @@ public void RefitMesh() {
     MeshRefit.SetBuffer(NodeUpdateKernel, "ToBVHIndex", ToBVHIndexBuffer);
     MeshRefit.Dispatch(NodeUpdateKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
 
-    MeshRefit.SetInt("NodeCount", BVH.BVH8Nodes.Count);
+    MeshRefit.SetInt("NodeCount", BVH.BVH8Nodes.Length);
     MeshRefit.SetBuffer(NodeCompressKernel, "BVHNodes", BVHDataBuffer);
     MeshRefit.SetBuffer(NodeCompressKernel, "AggNodes", BVHBuffer);
     MeshRefit.Dispatch(NodeCompressKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
@@ -760,11 +765,13 @@ return 0.299f * r + 0.587f * g + 0.114f * b;
 
 
 public async Task BuildTotal() {
+
     Matrix4x4 ParentMat = CachedTransforms[0].WTL.inverse;
     Matrix4x4 ParentMatInv = CachedTransforms[0].WTL;
     Vector3 V1, V2, V3, Norm1, Norm2, Norm3, Tan1, Tan2, Tan3;
     PrimitiveData TempPrim = new PrimitiveData();
     float TotalEnergy = 0.0f;
+    Triangles = new PrimitiveData[(TransformIndexes[TransformIndexes.Count - 1].VertexStart + TransformIndexes[TransformIndexes.Count - 1].VertexCount) / 3];
 for(int i = 0; i < TotalObjects; i++) {
 
     Matrix4x4 ChildMat = CachedTransforms[i + 1].WTL.inverse;
@@ -808,7 +815,7 @@ for(int i = 0; i < TotalObjects; i++) {
             TempPrim.MatDat = CurMeshData.MatDat[i3 / 3];
 
             TempPrim.Reconstruct();
-            Triangles.Add(TempPrim);
+            Triangles[i3 / 3] = TempPrim;
             if(_Materials[TempPrim.MatDat].emmissive > 0.0f) {
                 V1 = TempPrim.V1;
                 V2 = TempPrim.V2;
@@ -864,9 +871,9 @@ public void UpdateData(ref int a, ref int b, ref int ReturnOffset, ref int Mater
 }
 
 public void CompileTriangles() {
-    AggTriangles = new CudaTriangle[Triangles.Count];
+    AggTriangles = new CudaTriangle[Triangles.Length];
     CudaTriangle TempTri = new CudaTriangle();
-            int TriCount = Triangles.Count;
+            int TriCount = Triangles.Length;
             PrimitiveData triangle;
             for(int i2 = 0; i2 < TriCount; ++i2) {//This constructs the list of triangles that actually get sent to the GPU
                 triangle = Triangles[BVH.cwbvh_indices[i2]];
@@ -932,8 +939,8 @@ public void UpdateAABB() {//Update the Transformed AABB by getting the new Max/M
 private void ConstructAABB() {
     aabb_untransformed = new AABB();
     aabb_untransformed.init();
-    for(int i = 0; i < Triangles.Count; i++) {
-        aabb_untransformed.Extend(Triangles[i].BBMax, Triangles[i].BBMin);
+    for(int i = 0; i < Triangles.Length; i++) {
+        aabb_untransformed.Extend(ref Triangles[i].aabb);
     }
 }
 
@@ -941,9 +948,9 @@ private void ConstructAABB() {
 
 
 public void Aggregate() {//Compress the CWBVH
-    AggNodes = new BVHNode8DataCompressed[BVH.BVH8Nodes.Count];
+    AggNodes = new BVHNode8DataCompressed[BVH.BVH8Nodes.Length];
     BVHNode8DataCompressed TempBVHNode = new BVHNode8DataCompressed();
-    for(int i = 0; i < BVH.BVH8Nodes.Count; ++i) {
+    for(int i = 0; i < BVH.BVH8Nodes.Length; ++i) {
         BVHNode8Data TempNode = BVH.BVH8Nodes[i];
         uint tempbyte = (TempNode.e[0] | (TempNode.e[1] << 8) | (TempNode.e[2] << 16) | (TempNode.imask << 24));
         uint metafirst = (TempNode.meta[0] | (TempNode.meta[1] << 8) | (TempNode.meta[2] << 16) | (TempNode.meta[3] << 24));

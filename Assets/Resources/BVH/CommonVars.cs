@@ -48,12 +48,14 @@ namespace CommonVars {
             this.Indices = new List<int>();
         }
         public void Clear() {
+            if(Tangents != null) {
             this.Tangents.Clear();
             this.MatDat.Clear();
             this.UVs.Clear();
             this.Verticies.Clear();
             this.Normals.Clear();
             this.Indices.Clear();
+        }
         }
     }
 
@@ -75,8 +77,7 @@ namespace CommonVars {
 
     [System.Serializable]
     public struct BVHNode2Data {
-        public Vector3 BBMax;
-        public Vector3 BBMin;
+        public AABB aabb;
         public int left;    
         public int first;
         public uint count;
@@ -170,8 +171,7 @@ namespace CommonVars {
 
     [System.Serializable]
     public struct PrimitiveData {
-        public Vector3 BBMin;
-        public Vector3 BBMax;
+        public AABB aabb;
         public Vector3 Center;
         public Vector3 V1;
         public Vector3 V2;
@@ -188,8 +188,8 @@ namespace CommonVars {
         public int MatDat;
 
         public void Reconstruct() {
-            BBMin = Vector3.Min(Vector3.Min(V1,V2),V3);
-            BBMax = Vector3.Max(Vector3.Max(V1,V2),V3);
+            Vector3 BBMin = Vector3.Min(Vector3.Min(V1,V2),V3);
+            Vector3 BBMax = Vector3.Max(Vector3.Max(V1,V2),V3);
             for(int i2 = 0; i2 < 3; i2++) {
                 if(BBMax[i2] - BBMin[i2] < 0.001f) {
                     BBMin[i2] -= 0.001f;
@@ -197,6 +197,8 @@ namespace CommonVars {
                 }
             }
             Center = (V1 + V2 + V3) / 3.0f;
+            aabb.BBMax = BBMax;
+            aabb.BBMin = BBMin;
         }
     }
 
@@ -228,9 +230,9 @@ namespace CommonVars {
         public Vector3 BBMax;
         public Vector3 BBMin;
 
-        public void Extend(in Vector3 InMax, in Vector3 InMin) {
-            this.BBMax = new Vector3(Mathf.Max(BBMax.x, InMax.x), Mathf.Max(BBMax.y, InMax.y), Mathf.Max(BBMax.z, InMax.z));
-            this.BBMin = new Vector3(Mathf.Min(BBMin.x, InMin.x), Mathf.Min(BBMin.y, InMin.y), Mathf.Min(BBMin.z, InMin.z));
+        public void Extend(ref AABB aabb) {
+            this.BBMax = new Vector3(Mathf.Max(BBMax.x, aabb.BBMax.x), Mathf.Max(BBMax.y, aabb.BBMax.y), Mathf.Max(BBMax.z, aabb.BBMax.z));
+            this.BBMin = new Vector3(Mathf.Min(BBMin.x, aabb.BBMin.x), Mathf.Min(BBMin.y, aabb.BBMin.y), Mathf.Min(BBMin.z, aabb.BBMin.z));
         }
         public void init() {
             BBMax = new Vector3(float.MinValue, float.MinValue, float.MinValue);
