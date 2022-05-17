@@ -111,7 +111,7 @@ BVH Options Description -
 
 
 ![](/Images/VolumeScene2.png)
-![](/Images/VolumeScene1png)
+![](/Images/VolumeScene1.png)
 ![](/Images/FurryGif1.gif)
 ![](/Images/FurryRender.png)
 ![](/Images/NewSponza3.png)
