@@ -146,6 +146,7 @@ Scenes From:
   <li>https://benedikt-bitterli.me/resources/</li>
   <li>https://casual-effects.com/data/</li>
   <li>https://www.intel.com/content/www/us/en/developer/topic-technology/graphics-research/samples.html</li>
+  <li>https://sketchfab.com/3d-models/tallers-de-la-fundacio-llorenc-artigas-22-5224b721b0854998a1808fcea3cff924</li>
 </ul>
 
 
