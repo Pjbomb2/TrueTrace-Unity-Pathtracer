@@ -1,11 +1,11 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>Precomputed multiple scattering atmosphere(struggling a lot)</li>
-  <li>GOOD Volumetrics</li>
+  <li>Better Volumetrics</li>
 </ul>
 Currently needs to be done but havent started:
 <ul>
+    <li>Precomputed multiple scattering atmosphere(struggling a lot)</li>
     <li>Reduce Memory Use</li>
     <li>Improve Direct Light Sampling for meshes(look into ReSTIR or ReGIR?)</li>
 </ul>
@@ -32,6 +32,8 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 <li>Objects are loaded as gameobject meshes(most common way of having meshes in unity)</li>
 <li>Support for default unity lights which interact via NEE(Supports Directional, Point, and Spot lights)</li>
 <li>Support for Normal maps and Emission masks</li>
+<li>Global homogenous fog with adjustable density</li>
+<li>Taking Full Resolution Screenshots</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
@@ -92,9 +94,14 @@ BVH Options Description -
   <li>Enable Object Moving - Allows objects to be moved during play, and allows for added objects to spawn in when they are done building</li>
   <li>Allow Image Accumulation - Allows the image to accumulate while the camera is not moving</li>
   <li>Use Next Event Estimation - Enables shadow rays, NEE, and MIS for direct light sampling</li>
+  <li>Allow Volumetrics - Turns on pathtracing of global volumetric homogenous fog</li>
+  <li>(If Allow Volumetrics is on) Volume Density - Adjusts density of the global fog</li>  
   <li>Allow Mesh Skinning - Turns on the ability for skinned meshes to be animated or deformed with respect to their armeture</li>
   <li>Use SVGF Denoiser - Turns on the SVGF denoiser</li>
   <li>(If SVGF Denosier is on)Atrous Kernel Size - The amount of times the SVGF denoiser runs through the Atrous kernel</li>
+  <li>Use Atrous Denoiser - Turns on the Atrous denoiser(can be combined with SVGF)</li>
+  <li>Current Samples - Shows how many samples have currently been accumulated</li>
+  <li>Take Screenshot - Takes a screenshot at game view resolution and saves it to Assets/ScreenShots(You need to create this folder)</li>
   </ul>
   
  ## Materials
@@ -109,6 +116,7 @@ BVH Options Description -
   
 # Sample Images(Taken from various stages of development)
 
+![](/Images/NewFog.png)
 ![](/Images/Sunset1.png)
 ![](/Images/VolumeScene2.png)
 ![](/Images/VolumeScene1.png)
