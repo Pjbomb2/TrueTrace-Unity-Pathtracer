@@ -185,7 +185,7 @@ public class Denoiser {
             SVGF.SetInt("step_size", step2);
             SVGF.Dispatch(SVGFAtrousKernel, threadGroupsX, threadGroupsY, 1);
         }
-
+        SVGF.SetBuffer(FinalizeKernel, "PerPixelRadiance", _ColorBuffer);
         SVGF.SetTexture(FinalizeKernel, "ColorDirectIn", (OddAtrousIteration) ? _ColorDirectOut : _ColorDirectIn);
         SVGF.SetTexture(FinalizeKernel, "ColorDirectOut", (OddAtrousIteration) ? _ColorDirectIn : _ColorDirectOut);
         SVGF.SetTexture(FinalizeKernel, "NormalAndDepth", _NormalDepth);

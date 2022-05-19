@@ -7,11 +7,10 @@ using CommonVars;
 [System.Serializable]
 public class BVH2Builder {
 
-    public List<BVHNode2Data> BVH2Nodes;
+    public BVHNode2Data[] BVH2Nodes;
     private List<int>[] DimensionedIndices;
     private bool[] indices_going_left;
     private List<int> temp;
-    private PrimitiveData[] Primitives;
     public int PrimCount;
     public int[] FinalIndices;
 
@@ -23,7 +22,7 @@ public class BVH2Builder {
         public AABB aabb_right;
     }
 
-    ObjectSplit partition_sah(int first_index, int index_count, ref float[] sah) {
+    ObjectSplit partition_sah(int first_index, int index_count, ref float[] sah, ref PrimitiveData[] Primitives) {
 
         ObjectSplit split = new ObjectSplit();
         split.cost = float.MaxValue;
@@ -71,18 +70,16 @@ public class BVH2Builder {
         return split;
     }
 
-    void BuildRecursive(int nodesi, ref int node_index, int first_index, int index_count) {
-        BVHNode2Data node = BVH2Nodes[nodesi];
+    void BuildRecursive(int nodesi, ref int node_index, int first_index, int index_count, ref PrimitiveData[] Primitives) {
         if(index_count == 1) {
-            node.first = first_index;
-            node.count = (uint)index_count;
-            BVH2Nodes[nodesi] = node;
+            BVH2Nodes[nodesi].first = first_index;
+            BVH2Nodes[nodesi].count = (uint)index_count;
             return;
         }
         
         float[] SAH = new float[index_count];
         
-        ObjectSplit split = partition_sah(first_index, index_count, ref SAH);
+        ObjectSplit split = partition_sah(first_index, index_count, ref SAH, ref Primitives);
 
         for(int i = first_index; i < split.index; i++) indices_going_left[DimensionedIndices[split.dimension][i]] = true;
         for(int i = split.index; i < first_index + index_count; i++) indices_going_left[DimensionedIndices[split.dimension][i]] = false;
@@ -112,24 +109,19 @@ public class BVH2Builder {
                 DimensionedIndices[dim][index + first_index] = temp[index];    
             }
         }
-        node.left = node_index;
-        node.count = 0;
-        node.axis = (uint)split.dimension;
+        BVH2Nodes[nodesi].left = node_index;
+        BVH2Nodes[nodesi].count = 0;
+        BVH2Nodes[nodesi].axis = (uint)split.dimension;
 
-        BVHNode2Data TempNodeLeft = BVH2Nodes[node.left];
-        TempNodeLeft.aabb = split.aabb_left;
-        BVH2Nodes[node.left] = TempNodeLeft;
-        BVHNode2Data TempNodeRight = BVH2Nodes[node.left + 1];
-        TempNodeRight.aabb = split.aabb_right;
-        BVH2Nodes[node.left + 1] = TempNodeRight;
+        BVH2Nodes[BVH2Nodes[nodesi].left].aabb = split.aabb_left;
+        BVH2Nodes[BVH2Nodes[nodesi].left + 1].aabb = split.aabb_right;
 
         node_index += 2;
         int num_left = split.index - first_index;
         int num_right = first_index + index_count - split.index;
 
-        BVH2Nodes[nodesi] = node;
-        BuildRecursive(node.left, ref node_index,first_index,num_left);
-        BuildRecursive(node.left + 1, ref node_index,first_index + num_left,num_right);
+        BuildRecursive(BVH2Nodes[nodesi].left, ref node_index,first_index,num_left, ref Primitives);
+        BuildRecursive(BVH2Nodes[nodesi].left + 1, ref node_index,first_index + num_left,num_right, ref Primitives);
     }
 
     float surface_area(ref AABB aabb) {
@@ -143,10 +135,9 @@ public class BVH2Builder {
         DimensionedIndices[0] = new List<int>(PrimCount);
         DimensionedIndices[1] = new List<int>(PrimCount);             
         DimensionedIndices[2] = new List<int>(PrimCount);
-        BVH2Nodes = new List<BVHNode2Data>(PrimCount);
+        BVH2Nodes = new BVHNode2Data[PrimCount * 2];
         temp = new List<int>(); 
         indices_going_left = new bool[PrimCount];
-        Primitives = Triangles;
         AABB RootBB = new AABB();
         RootBB.init();
         float[] CentersX = new float[PrimCount];
@@ -158,26 +149,22 @@ public class BVH2Builder {
             DimensionedIndices[1].Add(i);
             DimensionedIndices[2].Add(i);
             indices_going_left[i] = false;
-            Center = Primitives[i].Center;
+            Center = Triangles[i].Center;
             CentersX[i] = Center.x;
             CentersY[i] = Center.y;
             CentersZ[i] = Center.z;
             temp.Add(0);
-            RootBB.Extend(ref Primitives[i].aabb);
+            RootBB.Extend(ref Triangles[i].aabb);
         }
 
-        BVH2Nodes.Add(new BVHNode2Data() {
-            aabb = RootBB
-        });
+        BVH2Nodes[0].aabb = RootBB;
         AABB tempAABB = new AABB();
         tempAABB.init();
-         for(int i = 1; i < PrimCount * 2; ++i) {
-            BVH2Nodes.Add(new BVHNode2Data() {
-                aabb = tempAABB,
-                count = 30,
-                axis = 2
-            });
-         }
+        for(int i = 1; i < PrimCount * 2; ++i) {
+            BVH2Nodes[i].aabb = tempAABB;
+            BVH2Nodes[i].count = 30;
+            BVH2Nodes[i].axis = 2;
+        }
 
         DimensionedIndices[0].Sort((s1,s2) => CentersX[s1].CompareTo(CentersX[s2]));
         DimensionedIndices[1].Sort((s1,s2) => CentersY[s1].CompareTo(CentersY[s2]));
@@ -185,10 +172,10 @@ public class BVH2Builder {
 
         int nodeIndex = 2;
 
-        BuildRecursive(0, ref nodeIndex,0,PrimCount);
+        BuildRecursive(0, ref nodeIndex,0,PrimCount, ref Triangles);
 
         Assert.IsTrue(nodeIndex <= 2 * PrimCount);
-        int BVHNodeCount = BVH2Nodes.Count;
+        int BVHNodeCount = BVH2Nodes.Length;
         BVHNode2Data TempNode;
         for(int i = 0; i < BVHNodeCount; ++i) {
             TempNode = BVH2Nodes[i];
@@ -213,9 +200,9 @@ public class BVH2Builder {
         DimensionedIndices[0] = new List<int>(MeshCount);
         DimensionedIndices[1] = new List<int>(MeshCount);             
         DimensionedIndices[2] = new List<int>(MeshCount);
-        BVH2Nodes = new List<BVHNode2Data>();
+        BVH2Nodes = new BVHNode2Data[MeshCount * 2];
         temp = new List<int>();
-        Primitives = new PrimitiveData[MeshCount];
+        PrimitiveData[] Primitives = new PrimitiveData[MeshCount];
         indices_going_left = new bool[MeshCount];  
         AABB RootBB = new AABB();
         RootBB.init();
@@ -240,19 +227,15 @@ public class BVH2Builder {
             RootBB.Extend(ref Primitives[i].aabb);
         }
 
-        BVH2Nodes.Add(new BVHNode2Data() {
-            aabb = RootBB
-        });
+        BVH2Nodes[0].aabb = RootBB;
 
-         for(int i = 1; i < MeshCount * 2; ++i) {
-        AABB tempAABB = new AABB();
-        tempAABB.init();
-            BVH2Nodes.Add(new BVHNode2Data() {
-                aabb = tempAABB,
-                count = 30,
-                axis = 2
-            });
-         }
+        for(int i = 1; i < MeshCount * 2; ++i) {
+            AABB tempAABB = new AABB();
+            tempAABB.init();
+            BVH2Nodes[i].aabb = tempAABB;
+            BVH2Nodes[i].count = 30;
+            BVH2Nodes[i].axis = 2;
+        }
 
         DimensionedIndices[0].Sort((s1,s2) => CentersX[s1].CompareTo(CentersX[s2]));
         DimensionedIndices[1].Sort((s1,s2) => CentersY[s1].CompareTo(CentersY[s2]));
@@ -260,10 +243,10 @@ public class BVH2Builder {
 
         int nodeIndex = 2;
 
-        BuildRecursive(0, ref nodeIndex,0,MeshCount);
+        BuildRecursive(0, ref nodeIndex,0,MeshCount, ref Primitives);
 
         Assert.IsTrue(nodeIndex <= 2 * MeshCount);
-        int BVHNodeCount = BVH2Nodes.Count;
+        int BVHNodeCount = BVH2Nodes.Length;
         BVHNode2Data TempNode;
         for(int i = 0; i < BVHNodeCount; ++i) {
             TempNode = BVH2Nodes[i];

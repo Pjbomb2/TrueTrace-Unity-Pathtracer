@@ -10,6 +10,7 @@ struct ColData {
     float3 throughput;
     float3 Direct;
     float3 Indirect;
+    float3 Fog;
 };
 StructuredBuffer<ColData> PerPixelRadiance;
 
@@ -556,12 +557,12 @@ void kernel_atrous (int3 id : SV_DispatchThreadID)
 void kernel_finalize (int3 id : SV_DispatchThreadID)
 {
     if (id.x >= screen_width || id.y >= screen_height) return;
-
+    int pixel_index = id.y * screen_width + id.x;
 
     float4 direct   = ColorDirectIn  [id.xy];
     float4 indirect = ColorIndirectIn[id.xy];
 
-    float4 colour = (direct + indirect) * _Albedo[id.xy];
+    float4 colour = (direct + indirect) * _Albedo[id.xy] + float4(PerPixelRadiance[pixel_index].Fog, 0);
     Result[id.xy] = colour;
 
 

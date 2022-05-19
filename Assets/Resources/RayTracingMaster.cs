@@ -36,6 +36,7 @@ public class RayTracingMaster : MonoBehaviour {
     private ComputeBuffer _UnityLights;
     private ComputeBuffer _LightMeshes;
     [HideInInspector] public BufferSizeData[] BufferSizes;
+    public int SampleCount;
 
     public float SunZOff;
 
@@ -48,12 +49,14 @@ public class RayTracingMaster : MonoBehaviour {
     [HideInInspector] public bool UseAtrous = false;
     [HideInInspector] public bool UseRussianRoulette = true;
     [HideInInspector] public bool UseNEE = true;
+    [HideInInspector] public bool AllowVolumetrics = false;
     [HideInInspector] public bool DoTLASUpdates = true;
     [HideInInspector] public bool AllowConverge = true;
     [HideInInspector] public int SVGFAtrousKernelSizes = 6;
     [HideInInspector] public int AtrousKernelSizes = 6;
     [HideInInspector] public int LightTrianglesCount;
     [HideInInspector] public float SunDirFloat = 0.0f;
+    [HideInInspector] public float VolumeDensity = 0.0001f;
     private int threadGroupsX;
     private int threadGroupsY;
     private int threadGroupsX2;
@@ -130,6 +133,7 @@ public class RayTracingMaster : MonoBehaviour {
 
         RayTracingShader.SetVector("SunDir", SunDirection);
         if(!AllowConverge) {
+            SampleCount = 0;
             FramesSinceStart = 0;
         }
 
@@ -140,6 +144,7 @@ public class RayTracingMaster : MonoBehaviour {
 
         foreach (Transform t in _transformsToWatch) {
             if (t.hasChanged) {
+                SampleCount = 0;
                 FramesSinceStart = 0;
                 t.hasChanged = false;
             }
@@ -192,9 +197,10 @@ public class RayTracingMaster : MonoBehaviour {
         CreateComputeBuffer(ref _LightTriangles, Assets.AggLightTriangles, 68);
 
         CreateDynamicBuffer(ref _RayBuffer1, 48);
-        if(_ShadowBuffer == null) _ShadowBuffer = new ComputeBuffer(Screen.width * Screen.height * 2, 52);
+//        CreateDynamicBuffer(ref _ShadowBuffer, 44);
+        if(_ShadowBuffer == null) _ShadowBuffer = new ComputeBuffer(Screen.width * Screen.height * 2, 56);
         CreateDynamicBuffer(ref _RayBuffer2, 48);
-        CreateDynamicBuffer(ref _ColorBuffer, 36);
+        CreateDynamicBuffer(ref _ColorBuffer, 48);
         CreateDynamicBuffer(ref _BufferSizes, 20);
     }
 
@@ -243,6 +249,8 @@ public class RayTracingMaster : MonoBehaviour {
         SetComputeBuffer(ShadeKernel, "BufferSizes", _BufferSizes);  
         RayTracingShader.SetBool("UseRussianRoulette", UseRussianRoulette);  
         RayTracingShader.SetBool("UseNEE", UseNEE);  
+        RayTracingShader.SetBool("AllowVolumetrics", AllowVolumetrics); 
+        RayTracingShader.SetFloat("VolumeDensity", VolumeDensity * VolumeDensity);
         if(uFirstFrame == 1) {
             if(SkyboxTexture != null) {
                 RayTracingShader.SetTexture(ShadeKernel, "_SkyboxTexture", SkyboxTexture);
@@ -339,7 +347,7 @@ public class RayTracingMaster : MonoBehaviour {
             RayTracingShader.SetInt("CurBounce", bouncebounce);
             RayTracingShader.Dispatch(TraceKernel, 768, 1, 1);
             RayTracingShader.Dispatch(ShadeKernel, threadGroupsX2, threadGroupsY2, 1);
-            if(UseNEE) RayTracingShader.Dispatch(ShadowKernel, 768, 1, 1);
+            if(UseNEE || AllowVolumetrics) RayTracingShader.Dispatch(ShadowKernel, 768, 1, 1);
         }   
         //I could try to optimize it by using a structured buffer that contains normals, colors, and positions, making it float3, float3, float2(compressed normal) to conserve a single float
         if(!UseSVGF) {
@@ -348,7 +356,9 @@ public class RayTracingMaster : MonoBehaviour {
             RayTracingShader.SetBuffer(FinalizeKernel, "GlobalColors", _ColorBuffer);
             RayTracingShader.Dispatch(FinalizeKernel, Mathf.CeilToInt(Screen.width / 16.0f), Mathf.CeilToInt(Screen.height / 16.0f), 1);
             CurrentSample = 1.0f / (FramesSinceStart + 1.0f);
+            SampleCount++;
         } else {
+            SampleCount = 0;
             Denoisers.ExecuteSVGF(_currentSample, SVGFAtrousKernelSizes, ref _ColorBuffer, ref _PosTex, ref _target, ref _Albedo, ref _NormTex);
             CurrentSample = 1;
         }

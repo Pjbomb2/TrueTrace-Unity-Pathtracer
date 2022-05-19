@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 [System.Serializable]
 public class ParentObject : MonoBehaviour {
 
-//264329, 792987, 264329
 public ComputeBuffer TriBuffer;
 public ComputeBuffer BVHBuffer;
 public string Name;
@@ -228,8 +227,8 @@ private void CreateAtlas() {//Creates texture atlas
     Rect[] NormalRects;
     Rect[] EmmissiveRects;
     if(AlbedoTexs.Count != 0) {
-        AlbedoAtlas = new Texture2D(8192, 8192);
-        AlbedoRects = AlbedoAtlas.PackTextures(AlbedoTexs.ToArray(), 2, 8192);
+        AlbedoAtlas = new Texture2D(1, 1);
+        AlbedoRects = AlbedoAtlas.PackTextures(AlbedoTexs.ToArray(), 2, 16384);
         HasAlbedoAtlas = true;
     } else {
         HasAlbedoAtlas = false;
@@ -237,8 +236,8 @@ private void CreateAtlas() {//Creates texture atlas
         AlbedoRects = new Rect[0];
     }
     if(NormalTexs.Count != 0) {
-        NormalAtlas = new Texture2D(8192, 8192);
-        NormalRects = NormalAtlas.PackTextures(NormalTexs.ToArray(), 0, 8192);
+        NormalAtlas = new Texture2D(1, 1);
+        NormalRects = NormalAtlas.PackTextures(NormalTexs.ToArray(), 0, 16384);
         HasNormalAtlas = true;
     } else {
         HasNormalAtlas = false;
@@ -246,8 +245,8 @@ private void CreateAtlas() {//Creates texture atlas
         NormalRects = new Rect[0];
     }
     if(EmissiveTexs.Count != 0) {
-        EmissiveAtlas = new Texture2D(2048, 2048);
-        EmmissiveRects = EmissiveAtlas.PackTextures(EmissiveTexs.ToArray(), 2, 2048);
+        EmissiveAtlas = new Texture2D(1, 1);
+        EmmissiveRects = EmissiveAtlas.PackTextures(EmissiveTexs.ToArray(), 2, 16384);
         HasEmissiveAtlas = true;
     } else {
         HasEmissiveAtlas = false;

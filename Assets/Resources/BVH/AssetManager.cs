@@ -90,6 +90,9 @@ public class AssetManager : MonoBehaviour {
             AggTriBuffer.Release();
             AggTriBuffer = null;    
         }
+
+        Resources.UnloadUnusedAssets();
+        System.GC.Collect();
     }
 
 
@@ -122,22 +125,22 @@ public class AssetManager : MonoBehaviour {
         }
         Rect[] AlbedoRects, NormalRects, EmmissiveRects;
         if(AlbedoTexs.Count != 0) {
-            AlbedoAtlas = new Texture2D(8192, 8192);
-            AlbedoRects = AlbedoAtlas.PackTextures(AlbedoTexs.ToArray(), 2, 8192);
+            AlbedoAtlas = new Texture2D(1, 1);
+            AlbedoRects = AlbedoAtlas.PackTextures(AlbedoTexs.ToArray(), 2, 16384);
         } else {
             AlbedoAtlas = new Texture2D(1,1);
             AlbedoRects = new Rect[0];
         }
         if(NormalTexs.Count != 0) {
-            NormalAtlas = new Texture2D(8192, 8192);
-            NormalRects = NormalAtlas.PackTextures(NormalTexs.ToArray(), 2, 8192);
+            NormalAtlas = new Texture2D(1, 1);
+            NormalRects = NormalAtlas.PackTextures(NormalTexs.ToArray(), 2, 16384);
         } else {
             NormalAtlas = new Texture2D(1,1);
             NormalRects = new Rect[0];
         }
         if(EmissiveTexs.Count != 0) {
-            EmissiveAtlas = new Texture2D(2048, 2048);
-            EmmissiveRects = EmissiveAtlas.PackTextures(EmissiveTexs.ToArray(), 2, 2048);
+            EmissiveAtlas = new Texture2D(1, 1);
+            EmmissiveRects = EmissiveAtlas.PackTextures(EmissiveTexs.ToArray(), 2, 16384);
         } else {
             EmissiveAtlas = new Texture2D(1,1);
             EmmissiveRects = new Rect[0];
@@ -177,7 +180,8 @@ public class AssetManager : MonoBehaviour {
         NormalTexs.Clear();
         NormalTexs.TrimExcess();
         EmissiveTexs.Clear();
-        EmissiveTexs.TrimExcess();       
+        EmissiveTexs.TrimExcess();  
+
     }
 
     private void init() {
