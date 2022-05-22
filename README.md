@@ -53,6 +53,8 @@ So first thing, you need to set the color space to Linear.  To do this, you need
 </br>
 Next set the Graphics API for Windows to DirectX12, and put it at the top of the rendering API's.  This is not require but it gives a large performance increase(Edit tab on top left -> Project Settings -> Player -> Other Settings -> untoggle "Auto Graphics API for Windows" -> Click the new + button that appears -> click Direct3D12 -> drag the new Direct3D12 (Experimental) to the top of the list)
 </br>
+Next, you need to enable Unsafe Code(Despite its name, I only use it to explicitely define array sizes in a struct, MASSIVELY reduces memory use).  To do this, go to Edit -> Project Settings -> Player -> Other Settings -> "Allow 'unsafe' Code" (near the bottom)
+</br>
 Finally you need to make sure all textures you use are Read/Write enabled(do this by selecting all the textures you will be using, then on the right click Read/Write enabled
 </br></br>
 You can either use the UnityPackage which includes a small demo scene with the stuff you need to add already set up, or the code raw, but I would reccomend the package as it already comes with a scene with the camera set up.
