@@ -84,20 +84,20 @@ namespace CommonVars {
         public uint axis;
     }
     
-    [System.Serializable]
-    public struct BVHNode8Data {
-        public Vector3 p;
-        public uint[] e;
-        public uint imask;    
-        public uint base_index_child;
-        public uint base_index_triangle;
-        public uint[] meta;
-        public uint[] quantized_min_x;
-        public uint[] quantized_max_x;
-        public uint[] quantized_min_y;
-        public uint[] quantized_max_y;
-        public uint[] quantized_min_z;
-        public uint[] quantized_max_z;
+    [System.Serializable][System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
+    unsafe public struct BVHNode8Data {
+        [System.Runtime.InteropServices.FieldOffset(0)]public fixed uint e[3];
+        [System.Runtime.InteropServices.FieldOffset(12)]public uint imask;    
+        [System.Runtime.InteropServices.FieldOffset(16)]public uint base_index_child;
+        [System.Runtime.InteropServices.FieldOffset(20)]public uint base_index_triangle;
+        [System.Runtime.InteropServices.FieldOffset(24)]public fixed byte meta[8];
+        [System.Runtime.InteropServices.FieldOffset(32)]public fixed byte quantized_min_x[8];
+        [System.Runtime.InteropServices.FieldOffset(40)]public fixed byte quantized_max_x[8];
+        [System.Runtime.InteropServices.FieldOffset(48)]public fixed byte quantized_min_y[8];
+        [System.Runtime.InteropServices.FieldOffset(56)]public fixed byte quantized_max_y[8];
+        [System.Runtime.InteropServices.FieldOffset(64)]public fixed byte quantized_min_z[8];
+        [System.Runtime.InteropServices.FieldOffset(72)]public fixed byte quantized_max_z[8];
+        [System.Runtime.InteropServices.FieldOffset(84)]public Vector3 p;
     }
 
     [System.Serializable]

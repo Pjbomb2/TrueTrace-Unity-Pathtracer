@@ -5,10 +5,10 @@ using UnityEngine.Assertions;
 using CommonVars;
 
 [System.Serializable]
-public class BVH8Builder {
+unsafe public class BVH8Builder {
 
-    private List<float> cost;
-    private List<Decision> decisions;
+    private float[] cost;
+    private Decision[] decisions;
     public int[] cwbvh_indices;
     public BVHNode8Data[] BVH8Nodes;
     public int cwbvhindex_count;
@@ -280,13 +280,13 @@ public class BVH8Builder {
 
         child_aabb = nodes_bvh[child_index].aabb;
 
-        node.quantized_min_x[i] = (uint)Mathf.Floor((child_aabb.BBMin.x - node.p.x) * one_over_e.x);
-        node.quantized_min_y[i] = (uint)Mathf.Floor((child_aabb.BBMin.y - node.p.y) * one_over_e.y);
-        node.quantized_min_z[i] = (uint)Mathf.Floor((child_aabb.BBMin.z - node.p.z) * one_over_e.z);
+        node.quantized_min_x[i] = (byte)(uint)Mathf.Floor((child_aabb.BBMin.x - node.p.x) * one_over_e.x);
+        node.quantized_min_y[i] = (byte)(uint)Mathf.Floor((child_aabb.BBMin.y - node.p.y) * one_over_e.y);
+        node.quantized_min_z[i] = (byte)(uint)Mathf.Floor((child_aabb.BBMin.z - node.p.z) * one_over_e.z);
 
-        node.quantized_max_x[i] = (uint)Mathf.Ceil((child_aabb.BBMax.x - node.p.x) * one_over_e.x);
-        node.quantized_max_y[i] = (uint)Mathf.Ceil((child_aabb.BBMax.y - node.p.y) * one_over_e.y);
-        node.quantized_max_z[i] = (uint)Mathf.Ceil((child_aabb.BBMax.z - node.p.z) * one_over_e.z);
+        node.quantized_max_x[i] = (byte)(uint)Mathf.Ceil((child_aabb.BBMax.x - node.p.x) * one_over_e.x);
+        node.quantized_max_y[i] = (byte)(uint)Mathf.Ceil((child_aabb.BBMax.y - node.p.y) * one_over_e.y);
+        node.quantized_max_z[i] = (byte)(uint)Mathf.Ceil((child_aabb.BBMax.z - node.p.z) * one_over_e.z);
       switch(decisions[child_index * 7].Type) {
         case 0: {
             int triangle_count = count_primitives(child_index, ref nodes_bvh, ref indices_bvh);
@@ -338,37 +338,17 @@ public class BVH8Builder {
         int BVH2IndicesCount = BVH2.FinalIndices.Length;
         cost2 = new float[8,8];
         costpreset = new float[8,8];
-        cost = new List<float>(BVH2NodesCount * 7);
-        decisions = new List<Decision>(BVH2NodesCount * 7);
+        cost = new float[BVH2NodesCount * 7];
+        decisions = new Decision[BVH2NodesCount * 7];
         BVH8Nodes = new BVHNode8Data[BVH2NodesCount];
         cwbvh_indices = new int[BVH2IndicesCount];
 
-        for(int i = 0; i < BVH2NodesCount * 7; ++i) {
-            cost.Add(0.0f);
-            decisions.Add(new Decision() {
-                Type = 0,
-                dist_left = 0,
-                dist_right = 0
-                });
-        }
-        for(int i = 0; i < BVH2NodesCount; ++i) {
-            BVH8Nodes[i].e = new uint[3];
-            BVH8Nodes[i].meta = new uint[8];
-            BVH8Nodes[i].quantized_min_x = new uint[8];
-            BVH8Nodes[i].quantized_max_x = new uint[8];
-            BVH8Nodes[i].quantized_min_y = new uint[8];
-            BVH8Nodes[i].quantized_max_y = new uint[8];
-            BVH8Nodes[i].quantized_min_z = new uint[8];
-            BVH8Nodes[i].quantized_max_z = new uint[8];
-        }
         cwbvhindex_count = 0;
         cwbvhnode_count = 1;
-
         calculate_cost(0, ref BVH2.BVH2Nodes);
 
         collapse(ref BVH2.BVH2Nodes, ref BVH2.FinalIndices, 0, 0);
-        this.decisions.Clear();
-        this.decisions.Capacity = 0;
+        decisions = null;
     }
 
     public BVH8Builder(BVH2Builder BVH2, ref List<MyMeshDataCompacted> Meshes) {//Top Level CWBVH Builder
@@ -376,30 +356,12 @@ public class BVH8Builder {
         int BVH2IndicesCount = BVH2.FinalIndices.Length;
         cost2 = new float[8,8];
         costpreset = new float[8,8];
-        cost = new List<float>(BVH2NodesCount * 7);
-        decisions = new List<Decision>(BVH2NodesCount * 7);
+        cost = new float[BVH2NodesCount * 7];
+        decisions = new Decision[BVH2NodesCount * 7];
         BVH8Nodes = new BVHNode8Data[BVH2NodesCount];
         cwbvh_indices = new int[BVH2IndicesCount];
 
-        for(int i = 0; i < BVH2NodesCount * 7; ++i) {
-            cost.Add(0.0f);
 
-            decisions.Add(new Decision() {
-                Type = 0,
-                dist_left = 0,
-                dist_right = 0
-                });
-        }
-        for(int i = 0; i < BVH2NodesCount; ++i) {
-            BVH8Nodes[i].e = new uint[3];
-            BVH8Nodes[i].meta = new uint[8];
-            BVH8Nodes[i].quantized_min_x = new uint[8];
-            BVH8Nodes[i].quantized_max_x = new uint[8];
-            BVH8Nodes[i].quantized_min_y = new uint[8];
-            BVH8Nodes[i].quantized_max_y = new uint[8];
-            BVH8Nodes[i].quantized_min_z = new uint[8];
-            BVH8Nodes[i].quantized_max_z = new uint[8];
-        }
         cwbvhindex_count = 0;
         cwbvhnode_count = 1;
 
@@ -413,7 +375,6 @@ public class BVH8Builder {
             Meshes.Add(TempCompressed[cwbvh_indices[i]]);
         }
         TempCompressed.Clear();
-        this.decisions.Clear();
-        this.decisions.Capacity = 0;
+        decisions = null;
     }
 }

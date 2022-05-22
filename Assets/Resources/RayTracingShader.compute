@@ -1757,7 +1757,7 @@ void kernel_shade () {
         float2 EmissionUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].EmissiveTex.xy - _Materials[MaterialIndex].EmissiveTex.zw) + _Materials[MaterialIndex].EmissiveTex.zw;
         float3 EmissCol = _EmissiveAtlas.SampleLevel(sampler_EmissiveAtlas, EmissionUV, 0).xyz;
         if(EmissCol.x > 0.001f) {
-            hitmat.emmis = EmissCol;
+            hitmat.emmis = 1.0f + EmissCol;
         }
     }
     bool DidTerminate = true;//Identifier marking whether we have terminated the ray or if it will continue

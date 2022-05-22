@@ -32,9 +32,6 @@ public class RayTracingObject : MonoBehaviour {
 			MaterialIndex = new int[SubMeshCount];
 			Material[] SharedMaterials = (GetComponent<Renderer>() != null) ? GetComponent<Renderer>().sharedMaterials : GetComponent<SkinnedMeshRenderer>().sharedMaterials;
 			for(int i = 0; i < SubMeshCount; i++) {
-				if(SharedMaterials[i].GetTexture("_EmissionMap") != null) {
-	 				emmission[i] = 1200.0f;
-	 			}
 				if(SharedMaterials[i].GetFloat("_Mode") == 3.0f) {
 					MatType[i] = 2;
 					eta[i].x = 1.33f;

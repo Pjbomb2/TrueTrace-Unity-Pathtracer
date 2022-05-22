@@ -26,6 +26,8 @@ float4x4 Transform2;
 float4x4 Transform3;
 
 float3 Offset;
+float3 OverallOffset;
+float3 ArmetureOffset;
 
 float3 Scale;
 
@@ -39,7 +41,7 @@ void Construct (uint3 id : SV_DispatchThreadID)
         return;
     idx = idx;
 
-    uint3 vidx = uint3(bufIndexes.Load(idx * 12), bufIndexes.Load(idx * 12 + 8), bufIndexes.Load(idx  * 12+ 4)) * 10;
+    uint3 vidx = uint3(bufIndexes.Load(idx * 12), bufIndexes.Load(idx * 12 + 8), bufIndexes.Load(idx * 12 + 4)) * 10;
 
     uint3 praw = bufVertices.Load3((vidx.x)<<2);
     float3 p = asfloat(praw);
@@ -59,7 +61,7 @@ void Construct (uint3 id : SV_DispatchThreadID)
     praw = bufVertices.Load3((vidx.z + 3)<<2);
     float3 n3 = asfloat(praw);
     int VertOfst = VertOffset + idx;
-    float3 Offset2 = mul(Transform3, float4(Offset, 0));//
+    float3 Offset3 = mul(Transform3, float4(Offset, 0)) + mul(Transform3, float4(OverallOffset, 0)) + mul(Transform3, float4(ArmetureOffset, 0));
     p *= ArmetureScale;
     p2 *= ArmetureScale;
     p3 *= ArmetureScale;
@@ -74,13 +76,13 @@ void Construct (uint3 id : SV_DispatchThreadID)
     p2 = mul(float4(p2,0), Transform2).xyz;
     p3 = mul(float4(p3,0), Transform2).xyz;
 
-    VertexsOut[VertOfst].V1 = p + Offset2;
-    VertexsOut[VertOfst].V2 = p2 + Offset2;
-    VertexsOut[VertOfst].V3 = p3 + Offset2;
+    VertexsOut[VertOfst].V1 = (p + Offset3);
+    VertexsOut[VertOfst].V2 = (p2 + Offset3);
+    VertexsOut[VertOfst].V3 = (p3 + Offset3);
 
-    VertexsOut[VertOfst].Norm1 = n1;
-    VertexsOut[VertOfst].Norm2 = n2;
-    VertexsOut[VertOfst].Norm3 = n3;
+    VertexsOut[VertOfst].Norm1 = mul(float4(mul(float4(n1,0), Transform).xyz,0), Transform2);
+    VertexsOut[VertOfst].Norm2 = mul(float4(mul(float4(n2,0), Transform).xyz,0), Transform2);
+    VertexsOut[VertOfst].Norm3 = mul(float4(mul(float4(n3,0), Transform).xyz,0), Transform2);
 }
 
 

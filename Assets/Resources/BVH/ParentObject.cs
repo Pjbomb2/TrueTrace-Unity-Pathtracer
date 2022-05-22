@@ -14,6 +14,8 @@ public string Name;
 public Texture2D AlbedoAtlas;
 public Texture2D NormalAtlas;
 public Texture2D EmissiveAtlas;
+public GraphicsBuffer[] VertexBuffers;
+public GraphicsBuffer[] IndexBuffers;
 [HideInInspector] public RayTracingObject[] ChildObjects;
 [HideInInspector] public bool MeshCountChanged;
 [HideInInspector] public PrimitiveData[] Triangles;
@@ -22,12 +24,13 @@ public Texture2D EmissiveAtlas;
 [HideInInspector] public BVH8Builder BVH;
 [HideInInspector] public SkinnedMeshRenderer[] SkinnedMeshes;
 [HideInInspector] public int[] IndexCounts;
-public GraphicsBuffer FinalMeshBuffer;
 [HideInInspector] public ComputeShader MeshRefit;
 [HideInInspector] public bool HasStarted;
 [HideInInspector] public BVHNode8DataCompressed[] AggNodes;
 public AABB aabb_untransformed;
 public AABB aabb;
+[HideInInspector] public bool AllFull;
+[HideInInspector] public Transform Hips;
 [HideInInspector] public int AggIndexCount;
 [HideInInspector] public int AggBVHNodeCount;
 [HideInInspector] public int StaticBVHOffset;
@@ -37,7 +40,7 @@ public AABB aabb;
 [HideInInspector] public int InstanceID;
 [HideInInspector] public StorableTransform[] CachedTransforms;
 [HideInInspector] public MeshDat CurMeshData;
-[HideInInspector] public int TotalObjects;
+public int TotalObjects;
 [HideInInspector] public List<MeshTransformVertexs> TransformIndexes;
 [HideInInspector] public bool HasCompleted;
 [HideInInspector] public float TotEnergy;
@@ -67,6 +70,9 @@ public ComputeBuffer VertexBufferOut;
 public ComputeBuffer BVHDataBuffer;
 public ComputeBuffer ToBVHIndexBuffer;
 public ComputeBuffer CWBVHIndicesBuffer;
+
+public ComputeBuffer WorkingBuffer;
+public int AtlasSize;
 
 [HideInInspector] public List<Layer> ForwardStack;
 [HideInInspector] public Layer2[] LayerStack;
@@ -103,6 +109,7 @@ public List<PerMatTextureData> MatTexData;
 
 
 public void ClearAll() {
+
     Triangles = null;
 
     if(LightTriangles != null) {
@@ -135,6 +142,8 @@ public void ClearAll() {
         ForwardStack.TrimExcess();
     }
 
+
+
     DestroyImmediate(AlbedoAtlas);
     DestroyImmediate(NormalAtlas);
     DestroyImmediate(EmissiveAtlas); 
@@ -157,6 +166,7 @@ public void init() {
     NodeUpdateKernel = MeshRefit.FindKernel("NodeUpdate");
     NodeCompressKernel = MeshRefit.FindKernel("NodeCompress");
     NodeInitializerKernel = MeshRefit.FindKernel("NodeInitializer");
+    AtlasSize = 4096;
 
 }
 public void SetUpBuffers() {
@@ -178,12 +188,13 @@ private void CreateAtlas() {//Creates texture atlas
     List<Texture2D> AlbedoTexs = new List<Texture2D>();
     List<Texture2D> NormalTexs = new List<Texture2D>();
     List<Texture2D> EmissiveTexs = new List<Texture2D>();
-    AlbedoAtlas = null;
-    NormalAtlas = null;
-    EmissiveAtlas = null;
+    AlbedoAtlas = new Texture2D(1, 1);
+    NormalAtlas = new Texture2D(1, 1);
+    EmissiveAtlas = new Texture2D(1, 1);
     Mesh mesh = new Mesh();
     PerMatTextureData CurrentTexDat = new PerMatTextureData();
     foreach(RayTracingObject obj in ChildObjects) {
+        obj.matfill();
         if(obj.GetComponent<MeshFilter>() != null) { 
             mesh = obj.GetComponent<MeshFilter>().sharedMesh;
         }else {
@@ -217,7 +228,6 @@ private void CreateAtlas() {//Creates texture atlas
             }
             MatTexData.Add(CurrentTexDat);
 
-
         }
     }
     int AlbedoCount = 0;
@@ -227,30 +237,24 @@ private void CreateAtlas() {//Creates texture atlas
     Rect[] NormalRects;
     Rect[] EmmissiveRects;
     if(AlbedoTexs.Count != 0) {
-        AlbedoAtlas = new Texture2D(1, 1);
-        AlbedoRects = AlbedoAtlas.PackTextures(AlbedoTexs.ToArray(), 2, 16384);
+        AlbedoRects = AlbedoAtlas.PackTextures(AlbedoTexs.ToArray(), 1, AtlasSize);//2048);
         HasAlbedoAtlas = true;
     } else {
         HasAlbedoAtlas = false;
-        AlbedoAtlas = new Texture2D(1,1);
         AlbedoRects = new Rect[0];
     }
     if(NormalTexs.Count != 0) {
-        NormalAtlas = new Texture2D(1, 1);
-        NormalRects = NormalAtlas.PackTextures(NormalTexs.ToArray(), 0, 16384);
+        NormalRects = NormalAtlas.PackTextures(NormalTexs.ToArray(), 1, AtlasSize);//2048);
         HasNormalAtlas = true;
     } else {
         HasNormalAtlas = false;
-        NormalAtlas = new Texture2D(1,1);
         NormalRects = new Rect[0];
     }
     if(EmissiveTexs.Count != 0) {
-        EmissiveAtlas = new Texture2D(1, 1);
-        EmmissiveRects = EmissiveAtlas.PackTextures(EmissiveTexs.ToArray(), 2, 16384);
+        EmmissiveRects = EmissiveAtlas.PackTextures(EmissiveTexs.ToArray(), 1, AtlasSize);//2048);
         HasEmissiveAtlas = true;
     } else {
         HasEmissiveAtlas = false;
-        EmissiveAtlas = new Texture2D(1,1);
         EmmissiveRects = new Rect[0];
     }
     AlbedoTexs.Clear();
@@ -305,7 +309,10 @@ private void CreateAtlas() {//Creates texture atlas
 }
 
 
+
+
 public void LoadData() {
+    AllFull = false;
     TotEnergy = 0;
     LightCount = 0;
     init();
@@ -316,10 +323,22 @@ public void LoadData() {
     TempObjectTransforms.Add(this.transform);
     IsSkinnedGroup = false;
     for(int i = 0; i < this.transform.childCount; i++) {
-        if(this.transform.GetChild(i).gameObject.GetComponent<RayTracingObject>() != null && this.transform.GetChild(i).gameObject.activeInHierarchy) {
-            TempObjectTransforms.Add(this.transform.GetChild(i));
-            TempObjects.Add(this.transform.GetChild(i).gameObject.GetComponent<RayTracingObject>());
-            if(this.transform.GetChild(i).gameObject.GetComponent<SkinnedMeshRenderer>() != null) IsSkinnedGroup = true;
+        if(IsSkinnedGroup) break;
+        if(this.transform.GetChild(i).gameObject.GetComponent<SkinnedMeshRenderer>() != null) IsSkinnedGroup = true;
+    }
+    if(!IsSkinnedGroup) {
+        for(int i = 0; i < this.transform.childCount; i++) {
+            if(this.transform.GetChild(i).gameObject.GetComponent<RayTracingObject>() != null && this.transform.GetChild(i).gameObject.activeInHierarchy) {
+                TempObjectTransforms.Add(this.transform.GetChild(i));
+                TempObjects.Add(this.transform.GetChild(i).gameObject.GetComponent<RayTracingObject>());
+                if(this.transform.GetChild(i).gameObject.GetComponent<SkinnedMeshRenderer>() != null) IsSkinnedGroup = true;
+            }
+        }
+    } else {
+        var TempObjects2 = GetComponentsInChildren<RayTracingObject>();
+        TempObjects = new List<RayTracingObject>(TempObjects2);
+        for(int i = 0; i < TempObjects.Count; i++) {
+                TempObjectTransforms.Add(TempObjects[i].gameObject.transform);
         }
     }
     Transform[] TempTransforms = TempObjectTransforms.ToArray();
@@ -365,7 +384,7 @@ public void LoadData() {
             if(CurrentObject.GetComponent<MeshFilter>() != null) { 
                 mesh = CurrentObject.GetComponent<MeshFilter>().sharedMesh;
             }else {
-                CurrentObject.GetComponent<SkinnedMeshRenderer>().BakeMesh(mesh, true);
+                CurrentObject.GetComponent<SkinnedMeshRenderer>().BakeMesh(mesh, false);
             }
             submeshcount = mesh.subMeshCount;
             
@@ -418,7 +437,7 @@ int NumberOfSetBits(int i)
 }
 
 private AABB tempAABB;
-public void DocumentNodes(int CurrentNode, int ParentNode, int NextNode, int NextBVH8Node, bool IsLeafRecur, int CurRecur) {
+unsafe public void DocumentNodes(int CurrentNode, int ParentNode, int NextNode, int NextBVH8Node, bool IsLeafRecur, int CurRecur) {
     NodeIndexPairData CurrentPair = NodePair[CurrentNode];
     MaxRecur = Mathf.Max(MaxRecur, CurRecur);
     CurrentPair.PreviousNode = ParentNode;
@@ -479,7 +498,7 @@ return (new List<int>(a)).ToArray();
 
 
 
-public void Construct() {
+unsafe public void Construct() {
     tempAABB = new AABB();
     MaxRecur = 0;
     started = false;
@@ -574,7 +593,7 @@ public void Construct() {
 
 
 public List<BVHNode8DataFixed> SplitNodes;
-private void ConvertToSplitNodes() {
+unsafe private void ConvertToSplitNodes() {
 BVHNode8DataFixed NewNode = new BVHNode8DataFixed();
 SplitNodes = new List<BVHNode8DataFixed>();
 BVHNode8Data SourceNode;
@@ -587,64 +606,64 @@ for(int i = 0; i < BVH.BVH8Nodes.Length; i++) {
     NewNode.imask = SourceNode.imask;
     NewNode.base_index_child = SourceNode.base_index_child;
     NewNode.base_index_triangle = SourceNode.base_index_triangle;
-    NewNode.meta1 = SourceNode.meta[0];
-    NewNode.meta2 = SourceNode.meta[1];
-    NewNode.meta3 = SourceNode.meta[2];
-    NewNode.meta4 = SourceNode.meta[3];
-    NewNode.meta5 = SourceNode.meta[4];
-    NewNode.meta6 = SourceNode.meta[5];
-    NewNode.meta7 = SourceNode.meta[6];
-    NewNode.meta8 = SourceNode.meta[7];
-    NewNode.quantized_min_x1 = SourceNode.quantized_min_x[0];
-    NewNode.quantized_min_x2 = SourceNode.quantized_min_x[1];
-    NewNode.quantized_min_x3 = SourceNode.quantized_min_x[2];
-    NewNode.quantized_min_x4 = SourceNode.quantized_min_x[3];
-    NewNode.quantized_min_x5 = SourceNode.quantized_min_x[4];
-    NewNode.quantized_min_x6 = SourceNode.quantized_min_x[5];
-    NewNode.quantized_min_x7 = SourceNode.quantized_min_x[6];
-    NewNode.quantized_min_x8 = SourceNode.quantized_min_x[7];
-    NewNode.quantized_max_x1 = SourceNode.quantized_max_x[0];
-    NewNode.quantized_max_x2 = SourceNode.quantized_max_x[1];
-    NewNode.quantized_max_x3 = SourceNode.quantized_max_x[2];
-    NewNode.quantized_max_x4 = SourceNode.quantized_max_x[3];
-    NewNode.quantized_max_x5 = SourceNode.quantized_max_x[4];
-    NewNode.quantized_max_x6 = SourceNode.quantized_max_x[5];
-    NewNode.quantized_max_x7 = SourceNode.quantized_max_x[6];
-    NewNode.quantized_max_x8 = SourceNode.quantized_max_x[7];
+    NewNode.meta1 = (uint)SourceNode.meta[0];
+    NewNode.meta2 = (uint)SourceNode.meta[1];
+    NewNode.meta3 = (uint)SourceNode.meta[2];
+    NewNode.meta4 = (uint)SourceNode.meta[3];
+    NewNode.meta5 = (uint)SourceNode.meta[4];
+    NewNode.meta6 = (uint)SourceNode.meta[5];
+    NewNode.meta7 = (uint)SourceNode.meta[6];
+    NewNode.meta8 = (uint)SourceNode.meta[7];
+    NewNode.quantized_min_x1 = (uint)SourceNode.quantized_min_x[0];
+    NewNode.quantized_min_x2 = (uint)SourceNode.quantized_min_x[1];
+    NewNode.quantized_min_x3 = (uint)SourceNode.quantized_min_x[2];
+    NewNode.quantized_min_x4 = (uint)SourceNode.quantized_min_x[3];
+    NewNode.quantized_min_x5 = (uint)SourceNode.quantized_min_x[4];
+    NewNode.quantized_min_x6 = (uint)SourceNode.quantized_min_x[5];
+    NewNode.quantized_min_x7 = (uint)SourceNode.quantized_min_x[6];
+    NewNode.quantized_min_x8 = (uint)SourceNode.quantized_min_x[7];
+    NewNode.quantized_max_x1 = (uint)SourceNode.quantized_max_x[0];
+    NewNode.quantized_max_x2 = (uint)SourceNode.quantized_max_x[1];
+    NewNode.quantized_max_x3 = (uint)SourceNode.quantized_max_x[2];
+    NewNode.quantized_max_x4 = (uint)SourceNode.quantized_max_x[3];
+    NewNode.quantized_max_x5 = (uint)SourceNode.quantized_max_x[4];
+    NewNode.quantized_max_x6 = (uint)SourceNode.quantized_max_x[5];
+    NewNode.quantized_max_x7 = (uint)SourceNode.quantized_max_x[6];
+    NewNode.quantized_max_x8 = (uint)SourceNode.quantized_max_x[7];
 
-    NewNode.quantized_min_y1 = SourceNode.quantized_min_y[0];
-    NewNode.quantized_min_y2 = SourceNode.quantized_min_y[1];
-    NewNode.quantized_min_y3 = SourceNode.quantized_min_y[2];
-    NewNode.quantized_min_y4 = SourceNode.quantized_min_y[3];
-    NewNode.quantized_min_y5 = SourceNode.quantized_min_y[4];
-    NewNode.quantized_min_y6 = SourceNode.quantized_min_y[5];
-    NewNode.quantized_min_y7 = SourceNode.quantized_min_y[6];
-    NewNode.quantized_min_y8 = SourceNode.quantized_min_y[7];
-    NewNode.quantized_max_y1 = SourceNode.quantized_max_y[0];
-    NewNode.quantized_max_y2 = SourceNode.quantized_max_y[1];
-    NewNode.quantized_max_y3 = SourceNode.quantized_max_y[2];
-    NewNode.quantized_max_y4 = SourceNode.quantized_max_y[3];
-    NewNode.quantized_max_y5 = SourceNode.quantized_max_y[4];
-    NewNode.quantized_max_y6 = SourceNode.quantized_max_y[5];
-    NewNode.quantized_max_y7 = SourceNode.quantized_max_y[6];
-    NewNode.quantized_max_y8 = SourceNode.quantized_max_y[7];
+    NewNode.quantized_min_y1 = (uint)SourceNode.quantized_min_y[0];
+    NewNode.quantized_min_y2 = (uint)SourceNode.quantized_min_y[1];
+    NewNode.quantized_min_y3 = (uint)SourceNode.quantized_min_y[2];
+    NewNode.quantized_min_y4 = (uint)SourceNode.quantized_min_y[3];
+    NewNode.quantized_min_y5 = (uint)SourceNode.quantized_min_y[4];
+    NewNode.quantized_min_y6 = (uint)SourceNode.quantized_min_y[5];
+    NewNode.quantized_min_y7 = (uint)SourceNode.quantized_min_y[6];
+    NewNode.quantized_min_y8 = (uint)SourceNode.quantized_min_y[7];
+    NewNode.quantized_max_y1 = (uint)SourceNode.quantized_max_y[0];
+    NewNode.quantized_max_y2 = (uint)SourceNode.quantized_max_y[1];
+    NewNode.quantized_max_y3 = (uint)SourceNode.quantized_max_y[2];
+    NewNode.quantized_max_y4 = (uint)SourceNode.quantized_max_y[3];
+    NewNode.quantized_max_y5 = (uint)SourceNode.quantized_max_y[4];
+    NewNode.quantized_max_y6 = (uint)SourceNode.quantized_max_y[5];
+    NewNode.quantized_max_y7 = (uint)SourceNode.quantized_max_y[6];
+    NewNode.quantized_max_y8 = (uint)SourceNode.quantized_max_y[7];
 
-    NewNode.quantized_min_z1 = SourceNode.quantized_min_z[0];
-    NewNode.quantized_min_z2 = SourceNode.quantized_min_z[1];
-    NewNode.quantized_min_z3 = SourceNode.quantized_min_z[2];
-    NewNode.quantized_min_z4 = SourceNode.quantized_min_z[3];
-    NewNode.quantized_min_z5 = SourceNode.quantized_min_z[4];
-    NewNode.quantized_min_z6 = SourceNode.quantized_min_z[5];
-    NewNode.quantized_min_z7 = SourceNode.quantized_min_z[6];
-    NewNode.quantized_min_z8 = SourceNode.quantized_min_z[7];
-    NewNode.quantized_max_z1 = SourceNode.quantized_max_z[0];
-    NewNode.quantized_max_z2 = SourceNode.quantized_max_z[1];
-    NewNode.quantized_max_z3 = SourceNode.quantized_max_z[2];
-    NewNode.quantized_max_z4 = SourceNode.quantized_max_z[3];
-    NewNode.quantized_max_z5 = SourceNode.quantized_max_z[4];
-    NewNode.quantized_max_z6 = SourceNode.quantized_max_z[5];
-    NewNode.quantized_max_z7 = SourceNode.quantized_max_z[6];
-    NewNode.quantized_max_z8 = SourceNode.quantized_max_z[7];
+    NewNode.quantized_min_z1 = (uint)SourceNode.quantized_min_z[0];
+    NewNode.quantized_min_z2 = (uint)SourceNode.quantized_min_z[1];
+    NewNode.quantized_min_z3 = (uint)SourceNode.quantized_min_z[2];
+    NewNode.quantized_min_z4 = (uint)SourceNode.quantized_min_z[3];
+    NewNode.quantized_min_z5 = (uint)SourceNode.quantized_min_z[4];
+    NewNode.quantized_min_z6 = (uint)SourceNode.quantized_min_z[5];
+    NewNode.quantized_min_z7 = (uint)SourceNode.quantized_min_z[6];
+    NewNode.quantized_min_z8 = (uint)SourceNode.quantized_min_z[7];
+    NewNode.quantized_max_z1 = (uint)SourceNode.quantized_max_z[0];
+    NewNode.quantized_max_z2 = (uint)SourceNode.quantized_max_z[1];
+    NewNode.quantized_max_z3 = (uint)SourceNode.quantized_max_z[2];
+    NewNode.quantized_max_z4 = (uint)SourceNode.quantized_max_z[3];
+    NewNode.quantized_max_z5 = (uint)SourceNode.quantized_max_z[4];
+    NewNode.quantized_max_z6 = (uint)SourceNode.quantized_max_z[5];
+    NewNode.quantized_max_z7 = (uint)SourceNode.quantized_max_z[6];
+    NewNode.quantized_max_z8 = (uint)SourceNode.quantized_max_z[7];
 
     SplitNodes.Add(NewNode);
 }
@@ -664,9 +683,10 @@ public void RefitMesh() {
         OverAABB.Extend(ref tempAABB);
     }
 
-
     aabb = OverAABB;
     if(!HasStarted) {
+        VertexBuffers = new GraphicsBuffer[SkinnedMeshes.Length];
+        IndexBuffers = new GraphicsBuffer[SkinnedMeshes.Length];
         NodeBuffer = new ComputeBuffer(NodePair.Count, 48);
         NodeBuffer.SetData(NodePair);
         AdvancedTriangleBuffer = new ComputeBuffer(TotalTriangles, 96);
@@ -677,37 +697,39 @@ public void RefitMesh() {
         CWBVHIndicesBuffer.SetData(BVH.cwbvh_indices); 
         BVHDataBuffer = new ComputeBuffer(AggNodes.Length, 260);
         BVHDataBuffer.SetData(SplitNodes); 
+        SplitNodes.Clear();
+        SplitNodes.TrimExcess();
         ToBVHIndexBuffer = new ComputeBuffer(ToBVHIndex.Length, 4);
         ToBVHIndexBuffer.SetData(ToBVHIndex);     
         HasStarted = true;
-        Debug.Log("STARTED");
-    } else {
+        Hips = this.transform.GetChild(0).GetChild(0);
+        int MaxLength = 0;
+        for(int i = 0; i < LayerStack.Length; i++) {
+            MaxLength = Mathf.Max(MaxLength, LayerStack[i].Slab.Count);
+        }
+        WorkingBuffer = new ComputeBuffer(MaxLength, 4);
+    } else if(AllFull) {
         MeshRefit.SetBuffer(RefitLayerKernel, "ReverseStack", StackBuffer);
 
-     int CurVertOffset = 0;
-     for(int i = 0; i < TotalObjects; i++) {
-        var TempOffset = CurVertOffset;
+    int CurVertOffset = 0;
+    for(int i = 0; i < TotalObjects; i++) {
+        var SkinnedRootBone = SkinnedMeshes[i].bones[0];
         int IndexCount = IndexCounts[i];
-        MeshRefit.SetInt("VertOffset", TempOffset);
+        MeshRefit.SetInt("VertOffset", CurVertOffset);
         MeshRefit.SetInt("gVertexCount", IndexCount);
-        SkinnedMeshes[i].sharedMesh.indexBufferTarget |= GraphicsBuffer.Target.Raw;
-        GraphicsBuffer IndexBuffer2 = SkinnedMeshes[i].sharedMesh.GetIndexBuffer();
-        SkinnedMeshes[i].vertexBufferTarget |= GraphicsBuffer.Target.Raw;
-        FinalMeshBuffer = SkinnedMeshes[i].GetVertexBuffer();
-        MeshRefit.SetMatrix("Transform", SkinnedMeshes[i].bones[0].transform.worldToLocalMatrix);
-        MeshRefit.SetMatrix("Transform2", this.transform.worldToLocalMatrix.inverse);
-        MeshRefit.SetMatrix("Transform3", this.transform.worldToLocalMatrix);       
+        MeshRefit.SetMatrix("Transform", SkinnedRootBone.worldToLocalMatrix);
+        MeshRefit.SetMatrix("Transform2", this.transform.localToWorldMatrix);  
+        MeshRefit.SetMatrix("Transform3", this.transform.worldToLocalMatrix);      
         MeshRefit.SetVector("Scale", this.transform.lossyScale);
-        MeshRefit.SetVector("ArmetureScale", SkinnedMeshes[i].bones[0].parent.lossyScale);
-        MeshRefit.SetVector("Offset", SkinnedMeshes[i].bones[0].parent.transform.worldToLocalMatrix.inverse * SkinnedMeshes[i].bones[0].localPosition);
-      if(FinalMeshBuffer != null)   MeshRefit.SetBuffer(ConstructKernel, "bufVertices", FinalMeshBuffer);
-        MeshRefit.SetBuffer(ConstructKernel, "bufIndexes", IndexBuffer2);
+        MeshRefit.SetVector("ArmetureScale", SkinnedRootBone.parent.lossyScale);
+        MeshRefit.SetVector("Offset", SkinnedRootBone.position - Hips.position);
+        MeshRefit.SetVector("OverallOffset", Hips.parent.localToWorldMatrix * Hips.localPosition);
+        MeshRefit.SetVector("ArmetureOffset", this.transform.localToWorldMatrix * Hips.parent.localPosition);
+        MeshRefit.SetBuffer(ConstructKernel, "bufVertices", VertexBuffers[i]);
+        MeshRefit.SetBuffer(ConstructKernel, "bufIndexes", IndexBuffers[i]);
         MeshRefit.SetBuffer(ConstructKernel, "VertexsOut", VertexBufferOut);
-      if(FinalMeshBuffer != null)   MeshRefit.Dispatch(ConstructKernel, (int)Mathf.Ceil(IndexCount / (float)KernelRatio),1,1);
+        MeshRefit.Dispatch(ConstructKernel, (int)Mathf.Ceil(IndexCount / (float)KernelRatio),1,1);
         CurVertOffset += IndexCount;
-        if(FinalMeshBuffer != null) FinalMeshBuffer.Dispose();
-        IndexBuffer2.Dispose();
-
     }
 
     MeshRefit.SetInt("gVertexCount", TotalTriangles);
@@ -728,13 +750,11 @@ public void RefitMesh() {
     MeshRefit.SetBuffer(RefitLayerKernel, "AdvancedTriangles", AdvancedTriangleBuffer);
     for(int i = MaxRecur - 1; i >= 0; i--) {
         var NodeCount2 = LayerStack[i].Slab.Count;
-        ComputeBuffer WorkingBuffer = new ComputeBuffer(LayerStack[i].Slab.Count, 4);
-        WorkingBuffer.SetData(LayerStack[i].Slab);
+        WorkingBuffer.SetData(LayerStack[i].Slab, 0, 0, NodeCount2);
         MeshRefit.SetInt("NodeCount", NodeCount2);
         MeshRefit.SetBuffer(RefitLayerKernel, "AllNodes", NodeBuffer);
         MeshRefit.SetBuffer(RefitLayerKernel, "NodesToWork", WorkingBuffer);        
         MeshRefit.Dispatch(RefitLayerKernel, (int)Mathf.Ceil(WorkingBuffer.count / (float)KernelRatio), 1, 1);
-        WorkingBuffer.Dispose();
     }
 
     MeshRefit.SetInt("NodeCount", NodePair.Count);
@@ -747,7 +767,19 @@ public void RefitMesh() {
     MeshRefit.SetBuffer(NodeCompressKernel, "BVHNodes", BVHDataBuffer);
     MeshRefit.SetBuffer(NodeCompressKernel, "AggNodes", BVHBuffer);
     MeshRefit.Dispatch(NodeCompressKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
-    }   
+    }  
+
+    if(!AllFull) {
+        for(int i = 0; i < VertexBuffers.Length; i++) {
+            SkinnedMeshes[i].vertexBufferTarget |= GraphicsBuffer.Target.Raw;
+            VertexBuffers[i] = SkinnedMeshes[i].GetVertexBuffer();
+        }
+        for(int i = 0; i < IndexBuffers.Length; i++) {
+            SkinnedMeshes[i].sharedMesh.indexBufferTarget |= GraphicsBuffer.Target.Raw;
+            IndexBuffers[i] = SkinnedMeshes[i].sharedMesh.GetIndexBuffer();
+        }
+        if(!((new List<GraphicsBuffer>(VertexBuffers)).Contains(null)) && !((new List<GraphicsBuffer>(IndexBuffers)).Contains(null))) AllFull = true;
+    } 
 }
 
 
@@ -946,46 +978,29 @@ private void ConstructAABB() {
 
 
 
-public void Aggregate() {//Compress the CWBVH
+unsafe public void Aggregate() {//Compress the CWBVH
     AggNodes = new BVHNode8DataCompressed[BVH.BVH8Nodes.Length];
     BVHNode8DataCompressed TempBVHNode = new BVHNode8DataCompressed();
     for(int i = 0; i < BVH.BVH8Nodes.Length; ++i) {
-        BVHNode8Data TempNode = BVH.BVH8Nodes[i];
-        uint tempbyte = (TempNode.e[0] | (TempNode.e[1] << 8) | (TempNode.e[2] << 16) | (TempNode.imask << 24));
-        uint metafirst = (TempNode.meta[0] | (TempNode.meta[1] << 8) | (TempNode.meta[2] << 16) | (TempNode.meta[3] << 24));
-        uint metasecond = (TempNode.meta[4] | (TempNode.meta[5] << 8) | (TempNode.meta[6] << 16) | (TempNode.meta[7] << 24));
-        uint minxfirst = (TempNode.quantized_min_x[0] | (TempNode.quantized_min_x[1] << 8) | (TempNode.quantized_min_x[2] << 16) | (TempNode.quantized_min_x[3] << 24));
-        uint minxsecond = (TempNode.quantized_min_x[4] | (TempNode.quantized_min_x[5] << 8) | (TempNode.quantized_min_x[6] << 16) | (TempNode.quantized_min_x[7] << 24));
-        uint maxxfirst = (TempNode.quantized_max_x[0] | (TempNode.quantized_max_x[1] << 8) | (TempNode.quantized_max_x[2] << 16) | (TempNode.quantized_max_x[3] << 24));
-        uint maxxsecond = (TempNode.quantized_max_x[4] | (TempNode.quantized_max_x[5] << 8) | (TempNode.quantized_max_x[6] << 16) | (TempNode.quantized_max_x[7] << 24));
-        uint minyfirst = (TempNode.quantized_min_y[0] | (TempNode.quantized_min_y[1] << 8) | (TempNode.quantized_min_y[2] << 16) | (TempNode.quantized_min_y[3] << 24));
-        uint minysecond = (TempNode.quantized_min_y[4] | (TempNode.quantized_min_y[5] << 8) | (TempNode.quantized_min_y[6] << 16) | (TempNode.quantized_min_y[7] << 24));
-        uint maxyfirst = (TempNode.quantized_max_y[0] | (TempNode.quantized_max_y[1] << 8) | (TempNode.quantized_max_y[2] << 16) | (TempNode.quantized_max_y[3] << 24));
-        uint maxysecond = (TempNode.quantized_max_y[4] | (TempNode.quantized_max_y[5] << 8) | (TempNode.quantized_max_y[6] << 16) | (TempNode.quantized_max_y[7] << 24));
-        uint minzfirst = (TempNode.quantized_min_z[0] | (TempNode.quantized_min_z[1] << 8) | (TempNode.quantized_min_z[2] << 16) | (TempNode.quantized_min_z[3] << 24));
-        uint minzsecond = (TempNode.quantized_min_z[4] | (TempNode.quantized_min_z[5] << 8) | (TempNode.quantized_min_z[6] << 16) | (TempNode.quantized_min_z[7] << 24));
-        uint maxzfirst = (TempNode.quantized_max_z[0] | (TempNode.quantized_max_z[1] << 8) | (TempNode.quantized_max_z[2] << 16) | (TempNode.quantized_max_z[3] << 24));
-        uint maxzsecond = (TempNode.quantized_max_z[4] | (TempNode.quantized_max_z[5] << 8) | (TempNode.quantized_max_z[6] << 16) | (TempNode.quantized_max_z[7] << 24));
-
-            TempBVHNode.node_0xyz = new Vector3(TempNode.p.x, TempNode.p.y, TempNode.p.z);
-            TempBVHNode.node_0w = tempbyte;
-            TempBVHNode.node_1x = TempNode.base_index_child;
-            TempBVHNode.node_1y = TempNode.base_index_triangle;
-            TempBVHNode.node_1z = metafirst;
-            TempBVHNode.node_1w = metasecond;
-            TempBVHNode.node_2x = minxfirst;
-            TempBVHNode.node_2y = minxsecond;
-            TempBVHNode.node_2z = maxxfirst;
-            TempBVHNode.node_2w = maxxsecond;
-            TempBVHNode.node_3x = minyfirst;
-            TempBVHNode.node_3y = minysecond;
-            TempBVHNode.node_3z = maxyfirst;
-            TempBVHNode.node_3w = maxysecond;
-            TempBVHNode.node_4x = minzfirst;
-            TempBVHNode.node_4y = minzsecond;
-            TempBVHNode.node_4z = maxzfirst;
-            TempBVHNode.node_4w = maxzsecond;
-
+            BVHNode8Data TempNode = BVH.BVH8Nodes[i];
+                TempBVHNode.node_0xyz = new Vector3(TempNode.p.x, TempNode.p.y, TempNode.p.z);
+                TempBVHNode.node_0w = (TempNode.e[0] | (TempNode.e[1] << 8) | (TempNode.e[2] << 16) | (TempNode.imask << 24));
+                TempBVHNode.node_1x = TempNode.base_index_child;
+                TempBVHNode.node_1y = TempNode.base_index_triangle;
+                TempBVHNode.node_1z = (uint)(TempNode.meta[0] | (TempNode.meta[1] << 8) | (TempNode.meta[2] << 16) | (TempNode.meta[3] << 24));
+                TempBVHNode.node_1w = (uint)(TempNode.meta[4] | (TempNode.meta[5] << 8) | (TempNode.meta[6] << 16) | (TempNode.meta[7] << 24));
+                TempBVHNode.node_2x = (uint)(TempNode.quantized_min_x[0] | (TempNode.quantized_min_x[1] << 8) | (TempNode.quantized_min_x[2] << 16) | (TempNode.quantized_min_x[3] << 24));
+                TempBVHNode.node_2y = (uint)(TempNode.quantized_min_x[4] | (TempNode.quantized_min_x[5] << 8) | (TempNode.quantized_min_x[6] << 16) | (TempNode.quantized_min_x[7] << 24));
+                TempBVHNode.node_2z = (uint)(TempNode.quantized_max_x[0] | (TempNode.quantized_max_x[1] << 8) | (TempNode.quantized_max_x[2] << 16) | (TempNode.quantized_max_x[3] << 24));
+                TempBVHNode.node_2w = (uint)(TempNode.quantized_max_x[4] | (TempNode.quantized_max_x[5] << 8) | (TempNode.quantized_max_x[6] << 16) | (TempNode.quantized_max_x[7] << 24));
+                TempBVHNode.node_3x = (uint)(TempNode.quantized_min_y[0] | (TempNode.quantized_min_y[1] << 8) | (TempNode.quantized_min_y[2] << 16) | (TempNode.quantized_min_y[3] << 24));
+                TempBVHNode.node_3y = (uint)(TempNode.quantized_min_y[4] | (TempNode.quantized_min_y[5] << 8) | (TempNode.quantized_min_y[6] << 16) | (TempNode.quantized_min_y[7] << 24));
+                TempBVHNode.node_3z = (uint)(TempNode.quantized_max_y[0] | (TempNode.quantized_max_y[1] << 8) | (TempNode.quantized_max_y[2] << 16) | (TempNode.quantized_max_y[3] << 24));
+                TempBVHNode.node_3w = (uint)(TempNode.quantized_max_y[4] | (TempNode.quantized_max_y[5] << 8) | (TempNode.quantized_max_y[6] << 16) | (TempNode.quantized_max_y[7] << 24));
+                TempBVHNode.node_4x = (uint)(TempNode.quantized_min_z[0] | (TempNode.quantized_min_z[1] << 8) | (TempNode.quantized_min_z[2] << 16) | (TempNode.quantized_min_z[3] << 24));
+                TempBVHNode.node_4y = (uint)(TempNode.quantized_min_z[4] | (TempNode.quantized_min_z[5] << 8) | (TempNode.quantized_min_z[6] << 16) | (TempNode.quantized_min_z[7] << 24));
+                TempBVHNode.node_4z = (uint)(TempNode.quantized_max_z[0] | (TempNode.quantized_max_z[1] << 8) | (TempNode.quantized_max_z[2] << 16) | (TempNode.quantized_max_z[3] << 24));
+                TempBVHNode.node_4w = (uint)(TempNode.quantized_max_z[4] | (TempNode.quantized_max_z[5] << 8) | (TempNode.quantized_max_z[6] << 16) | (TempNode.quantized_max_z[7] << 24));
             AggNodes[i] = TempBVHNode;
     }
     MeshCountChanged = false;

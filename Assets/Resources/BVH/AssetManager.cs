@@ -9,6 +9,7 @@ using System.Threading;
 [System.Serializable]
 public class AssetManager : MonoBehaviour {
     public Texture2D AlbedoAtlas;
+    public List<Texture2D> Albedos;
     public Texture2D NormalAtlas;
     public Texture2D EmissiveAtlas;
 
@@ -104,13 +105,14 @@ public class AssetManager : MonoBehaviour {
         return new Vector4(Max.x, Max.y, Min.x, Min.y);
     }
     private void CreateAtlas() {//Creates texture atlas
+
         _Materials = new List<MaterialData>();
         List<Texture2D> AlbedoTexs = new List<Texture2D>();
         List<Texture2D> NormalTexs = new List<Texture2D>();
         List<Texture2D> EmissiveTexs = new List<Texture2D>();
-        AlbedoAtlas = null;
-        NormalAtlas = null;
-        EmissiveAtlas = null;
+        AlbedoAtlas = new Texture2D(1,1);
+        NormalAtlas = new Texture2D(1, 1);
+        EmissiveAtlas = new Texture2D(1, 1);
         int AlbedoCount, NormalCount, EmissiveCount = 0;
         foreach(ParentObject Obj in RenderQue) {
             if(Obj.HasAlbedoAtlas) {
@@ -125,24 +127,18 @@ public class AssetManager : MonoBehaviour {
         }
         Rect[] AlbedoRects, NormalRects, EmmissiveRects;
         if(AlbedoTexs.Count != 0) {
-            AlbedoAtlas = new Texture2D(1, 1);
-            AlbedoRects = AlbedoAtlas.PackTextures(AlbedoTexs.ToArray(), 2, 16384);
+            AlbedoRects = AlbedoAtlas.PackTextures(AlbedoTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392));//4096);
         } else {
-            AlbedoAtlas = new Texture2D(1,1);
             AlbedoRects = new Rect[0];
         }
         if(NormalTexs.Count != 0) {
-            NormalAtlas = new Texture2D(1, 1);
-            NormalRects = NormalAtlas.PackTextures(NormalTexs.ToArray(), 2, 16384);
+            NormalRects = NormalAtlas.PackTextures(NormalTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392));//4096);
         } else {
-            NormalAtlas = new Texture2D(1,1);
             NormalRects = new Rect[0];
         }
         if(EmissiveTexs.Count != 0) {
-            EmissiveAtlas = new Texture2D(1, 1);
-            EmmissiveRects = EmissiveAtlas.PackTextures(EmissiveTexs.ToArray(), 2, 16384);
+            EmmissiveRects = EmissiveAtlas.PackTextures(EmissiveTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392));//4096);
         } else {
-            EmissiveAtlas = new Texture2D(1,1);
             EmmissiveRects = new Rect[0];
         }
         AlbedoCount = NormalCount = EmissiveCount = 0;
@@ -236,7 +232,6 @@ public class AssetManager : MonoBehaviour {
             MeshAABBs = new AABB[RenderQue.Count];
         }
     }
-
     public void EditorBuild() {
         ClearAll();
         init();
@@ -371,45 +366,30 @@ public class AssetManager : MonoBehaviour {
         }
     }
 
-    void Aggregate(ref BVH8Builder BVH8) {//BVH aggregation/BVH compression
+    unsafe void Aggregate(ref BVH8Builder BVH8) {//BVH aggregation/BVH compression
         List<BVHNode8DataCompressed> TempBVHArray = new List<BVHNode8DataCompressed>();
         for(int i = 0; i < BVH8.BVH8Nodes.Length; ++i) {
             BVHNode8Data TempNode = BVH8.BVH8Nodes[i];
-            uint tempbyte = (TempNode.e[0] | (TempNode.e[1] << 8) | (TempNode.e[2] << 16) | (TempNode.imask << 24));
-            uint metafirst = (TempNode.meta[0] | (TempNode.meta[1] << 8) | (TempNode.meta[2] << 16) | (TempNode.meta[3] << 24));
-            uint metasecond = (TempNode.meta[4] | (TempNode.meta[5] << 8) | (TempNode.meta[6] << 16) | (TempNode.meta[7] << 24));
-            uint minxfirst = (TempNode.quantized_min_x[0] | (TempNode.quantized_min_x[1] << 8) | (TempNode.quantized_min_x[2] << 16) | (TempNode.quantized_min_x[3] << 24));
-            uint minxsecond = (TempNode.quantized_min_x[4] | (TempNode.quantized_min_x[5] << 8) | (TempNode.quantized_min_x[6] << 16) | (TempNode.quantized_min_x[7] << 24));
-            uint maxxfirst = (TempNode.quantized_max_x[0] | (TempNode.quantized_max_x[1] << 8) | (TempNode.quantized_max_x[2] << 16) | (TempNode.quantized_max_x[3] << 24));
-            uint maxxsecond = (TempNode.quantized_max_x[4] | (TempNode.quantized_max_x[5] << 8) | (TempNode.quantized_max_x[6] << 16) | (TempNode.quantized_max_x[7] << 24));
-            uint minyfirst = (TempNode.quantized_min_y[0] | (TempNode.quantized_min_y[1] << 8) | (TempNode.quantized_min_y[2] << 16) | (TempNode.quantized_min_y[3] << 24));
-            uint minysecond = (TempNode.quantized_min_y[4] | (TempNode.quantized_min_y[5] << 8) | (TempNode.quantized_min_y[6] << 16) | (TempNode.quantized_min_y[7] << 24));
-            uint maxyfirst = (TempNode.quantized_max_y[0] | (TempNode.quantized_max_y[1] << 8) | (TempNode.quantized_max_y[2] << 16) | (TempNode.quantized_max_y[3] << 24));
-            uint maxysecond = (TempNode.quantized_max_y[4] | (TempNode.quantized_max_y[5] << 8) | (TempNode.quantized_max_y[6] << 16) | (TempNode.quantized_max_y[7] << 24));
-            uint minzfirst = (TempNode.quantized_min_z[0] | (TempNode.quantized_min_z[1] << 8) | (TempNode.quantized_min_z[2] << 16) | (TempNode.quantized_min_z[3] << 24));
-            uint minzsecond = (TempNode.quantized_min_z[4] | (TempNode.quantized_min_z[5] << 8) | (TempNode.quantized_min_z[6] << 16) | (TempNode.quantized_min_z[7] << 24));
-            uint maxzfirst = (TempNode.quantized_max_z[0] | (TempNode.quantized_max_z[1] << 8) | (TempNode.quantized_max_z[2] << 16) | (TempNode.quantized_max_z[3] << 24));
-            uint maxzsecond = (TempNode.quantized_max_z[4] | (TempNode.quantized_max_z[5] << 8) | (TempNode.quantized_max_z[6] << 16) | (TempNode.quantized_max_z[7] << 24));
 
             TempBVHArray.Add(new BVHNode8DataCompressed() {
                 node_0xyz = new Vector3(TempNode.p.x, TempNode.p.y, TempNode.p.z),
-                node_0w = tempbyte,
+                node_0w = (TempNode.e[0] | (TempNode.e[1] << 8) | (TempNode.e[2] << 16) | (TempNode.imask << 24)),
                 node_1x = TempNode.base_index_child,
                 node_1y = TempNode.base_index_triangle,
-                node_1z = metafirst,
-                node_1w = metasecond,
-                node_2x = minxfirst,
-                node_2y = minxsecond,
-                node_2z = maxxfirst,
-                node_2w = maxxsecond,
-                node_3x = minyfirst,
-                node_3y = minysecond,
-                node_3z = maxyfirst,
-                node_3w = maxysecond,
-                node_4x = minzfirst,
-                node_4y = minzsecond,
-                node_4z = maxzfirst,
-                node_4w = maxzsecond
+                node_1z = (uint)(TempNode.meta[0] | (TempNode.meta[1] << 8) | (TempNode.meta[2] << 16) | (TempNode.meta[3] << 24)),
+                node_1w = (uint)(TempNode.meta[4] | (TempNode.meta[5] << 8) | (TempNode.meta[6] << 16) | (TempNode.meta[7] << 24)),
+                node_2x = (uint)(TempNode.quantized_min_x[0] | (TempNode.quantized_min_x[1] << 8) | (TempNode.quantized_min_x[2] << 16) | (TempNode.quantized_min_x[3] << 24)),
+                node_2y = (uint)(TempNode.quantized_min_x[4] | (TempNode.quantized_min_x[5] << 8) | (TempNode.quantized_min_x[6] << 16) | (TempNode.quantized_min_x[7] << 24)),
+                node_2z = (uint)(TempNode.quantized_max_x[0] | (TempNode.quantized_max_x[1] << 8) | (TempNode.quantized_max_x[2] << 16) | (TempNode.quantized_max_x[3] << 24)),
+                node_2w = (uint)(TempNode.quantized_max_x[4] | (TempNode.quantized_max_x[5] << 8) | (TempNode.quantized_max_x[6] << 16) | (TempNode.quantized_max_x[7] << 24)),
+                node_3x = (uint)(TempNode.quantized_min_y[0] | (TempNode.quantized_min_y[1] << 8) | (TempNode.quantized_min_y[2] << 16) | (TempNode.quantized_min_y[3] << 24)),
+                node_3y = (uint)(TempNode.quantized_min_y[4] | (TempNode.quantized_min_y[5] << 8) | (TempNode.quantized_min_y[6] << 16) | (TempNode.quantized_min_y[7] << 24)),
+                node_3z = (uint)(TempNode.quantized_max_y[0] | (TempNode.quantized_max_y[1] << 8) | (TempNode.quantized_max_y[2] << 16) | (TempNode.quantized_max_y[3] << 24)),
+                node_3w = (uint)(TempNode.quantized_max_y[4] | (TempNode.quantized_max_y[5] << 8) | (TempNode.quantized_max_y[6] << 16) | (TempNode.quantized_max_y[7] << 24)),
+                node_4x = (uint)(TempNode.quantized_min_z[0] | (TempNode.quantized_min_z[1] << 8) | (TempNode.quantized_min_z[2] << 16) | (TempNode.quantized_min_z[3] << 24)),
+                node_4y = (uint)(TempNode.quantized_min_z[4] | (TempNode.quantized_min_z[5] << 8) | (TempNode.quantized_min_z[6] << 16) | (TempNode.quantized_min_z[7] << 24)),
+                node_4z = (uint)(TempNode.quantized_max_z[0] | (TempNode.quantized_max_z[1] << 8) | (TempNode.quantized_max_z[2] << 16) | (TempNode.quantized_max_z[3] << 24)),
+                node_4w = (uint)(TempNode.quantized_max_z[4] | (TempNode.quantized_max_z[5] << 8) | (TempNode.quantized_max_z[6] << 16) | (TempNode.quantized_max_z[7] << 24))
 
             });
         }

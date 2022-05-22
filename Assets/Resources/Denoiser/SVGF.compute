@@ -562,7 +562,7 @@ void kernel_finalize (int3 id : SV_DispatchThreadID)
     float4 direct   = ColorDirectIn  [id.xy];
     float4 indirect = ColorIndirectIn[id.xy];
 
-    float4 colour = (direct + indirect) * _Albedo[id.xy] + float4(PerPixelRadiance[pixel_index].Fog, 0);
+    float4 colour = (direct + indirect) * _Albedo[id.xy] + float4(PerPixelRadiance[pixel_index].Fog, 1);
     Result[id.xy] = colour;
 
 

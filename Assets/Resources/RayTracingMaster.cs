@@ -384,7 +384,7 @@ public class RayTracingMaster : MonoBehaviour {
             Render(destination);
             uFirstFrame = 0;
         } else {
-            bool throwawayBool = Assets.UpdateTLAS();
+            try {bool throwawayBool = Assets.UpdateTLAS();} catch(System.IndexOutOfRangeException){}
         }
     }
 
