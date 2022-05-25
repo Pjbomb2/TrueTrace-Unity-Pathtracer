@@ -1,7 +1,7 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>None</li>
+  <li>None, Need Ideas</li>
 </ul>
 Currently needs to be done but havent started:
 <ul>
