@@ -65,9 +65,13 @@ namespace CommonVars {
         public Vector4 AlbedoTex;
         public Vector4 NormalTex;
         public Vector4 EmissiveTex;
+        public Vector4 MetallicTex;
+        public Vector4 RoughnessTex;
         public int HasAlbedoTex;
         public int HasNormalTex;
         public int HasEmissiveTex;
+        public int HasMetallicTex;
+        public int HasRoughnessTex;
         public Vector3 BaseColor;
         public float emmissive;
         public float Roughness;
@@ -321,8 +325,8 @@ namespace CommonVars {
 
     [System.Serializable]
     public struct Layer {
-        public int[] Children;
-        public int[] Leaf;
+        unsafe public fixed int Children[8];
+        unsafe public fixed int Leaf[8];
 
     }
 

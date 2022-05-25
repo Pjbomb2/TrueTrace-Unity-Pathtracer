@@ -52,14 +52,19 @@ public class RayTracingObject : MonoBehaviour {
 	
     private void OnEnable() {
     	if(gameObject.scene.isLoaded && this.transform.parent.GetComponent<ParentObject>() != null) {
-    	matfill();
+    		matfill();
 	    	this.transform.parent.GetComponent<ParentObject>().MeshCountChanged = true;
+    	} else if(gameObject.scene.isLoaded && this.transform.GetComponent<ParentObject>() != null) {
+    		matfill();
+	    	this.transform.GetComponent<ParentObject>().MeshCountChanged = true;
     	}
     }
 
     private void OnDisable() {
     	if(gameObject.scene.isLoaded && this.transform.parent.GetComponent<ParentObject>() != null) {
     		this.transform.parent.GetComponent<ParentObject>().MeshCountChanged = true;
+    	} else if(gameObject.scene.isLoaded && this.transform.GetComponent<ParentObject>() != null) {
+	    	this.transform.GetComponent<ParentObject>().MeshCountChanged = true;
     	}
     }
 }

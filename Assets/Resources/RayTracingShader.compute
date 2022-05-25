@@ -762,14 +762,18 @@ struct MaterialData {//56
     float4 AlbedoTex;//16
     float4 NormalTex;//32
     float4 EmissiveTex;//48
-    int HasAlbedoTex;//49
-    int HasNormalTex;//50
-    int HasEmissiveTex;//51
-    float3 BaseColor;//63
-    float emmissive;//67
-    float roughness;//71
-    int MatType;//75
-    float3 eta;//87
+    float4 MetallicTex;//64
+    float4 RoughnessTex;//80
+    int HasAlbedoTex;//81
+    int HasNormalTex;//82
+    int HasEmissiveTex;//83
+    int HasMetallicTex;//84
+    int HasRoughnessTex;//85
+    float3 BaseColor;//97
+    float emmissive;//101
+    float roughness;//105
+    int MatType;//109
+    float3 eta;//121
 };
 
 
@@ -786,6 +790,12 @@ SamplerState sampler_NormalAtlas;
 
 Texture2D<float4> _EmissiveAtlas;
 SamplerState sampler_EmissiveAtlas;
+
+Texture2D<float4> _MetallicAtlas;
+SamplerState sampler_MetallicAtlas;
+
+Texture2D<float4> _RoughnessAtlas;
+SamplerState sampler_RoughnessAtlas;
 
 //These are here purely for the Atrous
 RWTexture2D<float4> TempPosTex;
@@ -1753,16 +1763,29 @@ void kernel_shade () {
     hitmat.roughness = TempMat.roughness;
     hitmat.MatType = TempMat.MatType;
     hitmat.eta = TempMat.eta;
+
+    if(TempMat.HasMetallicTex == 1 && hitmat.MatType != 2) {
+        float2 MetallicUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].MetallicTex.xy - _Materials[MaterialIndex].MetallicTex.zw) + _Materials[MaterialIndex].MetallicTex.zw;
+        float3 MetallicCol = _MetallicAtlas.SampleLevel(sampler_MetallicAtlas, MetallicUV, 0).xyz;
+        if(MetallicCol.x > 0.001f) {
+            hitmat.surfaceColor += 0.001f;
+            hitmat.MatType = 1;
+        }
+    }
+    if(TempMat.HasRoughnessTex == 1) {
+        float2 RoughnessUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].RoughnessTex.xy - _Materials[MaterialIndex].RoughnessTex.zw) + _Materials[MaterialIndex].RoughnessTex.zw;
+        float3 RoughnessCol = _RoughnessAtlas.SampleLevel(sampler_RoughnessAtlas, RoughnessUV, 0).xyz;
+        hitmat.roughness = pow(RoughnessCol.x * RoughnessCol.x, 0.4545f);
+    }
     if(TempMat.HasEmissiveTex == 1) {
         float2 EmissionUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].EmissiveTex.xy - _Materials[MaterialIndex].EmissiveTex.zw) + _Materials[MaterialIndex].EmissiveTex.zw;
         float3 EmissCol = _EmissiveAtlas.SampleLevel(sampler_EmissiveAtlas, EmissionUV, 0).xyz;
         if(EmissCol.x > 0.001f) {
-            hitmat.emmis = 1.0f + EmissCol;
+            hitmat.emmis = 1.0f + EmissCol.x;
         }
     }
     bool DidTerminate = true;//Identifier marking whether we have terminated the ray or if it will continue
     calcFinalColor(ray, Color, hitmat, bestHit, TempUv, DidTerminate, NormalUV);
-
     GlobalColors[pixel_index] = Color;
 }
 

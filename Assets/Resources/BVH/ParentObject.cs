@@ -14,6 +14,8 @@ public string Name;
 public Texture2D AlbedoAtlas;
 public Texture2D NormalAtlas;
 public Texture2D EmissiveAtlas;
+public Texture2D RoughnessAtlas;
+public Texture2D MetallicAtlas;
 public GraphicsBuffer[] VertexBuffers;
 public GraphicsBuffer[] IndexBuffers;
 [HideInInspector] public RayTracingObject[] ChildObjects;
@@ -55,9 +57,11 @@ public int TotalObjects;
 [HideInInspector] public int NodeInitializerKernel;
 
 
-[HideInInspector] public bool HasAlbedoAtlas;
-[HideInInspector] public bool HasNormalAtlas;
-[HideInInspector] public bool HasEmissiveAtlas;
+public bool HasAlbedoAtlas;
+public bool HasNormalAtlas;
+public bool HasEmissiveAtlas;
+public bool HasMetallicAtlas;
+public bool HasRoughnessAtlas;
 
 [HideInInspector] public int TotalTriangles;
 [HideInInspector] public bool IsSkinnedGroup;
@@ -74,7 +78,7 @@ public ComputeBuffer CWBVHIndicesBuffer;
 public ComputeBuffer WorkingBuffer;
 public int AtlasSize;
 
-[HideInInspector] public List<Layer> ForwardStack;
+[HideInInspector] public Layer[] ForwardStack;
 [HideInInspector] public Layer2[] LayerStack;
 [HideInInspector] public List<SplitLayer> SplitForwardStack;
 [HideInInspector] public bool started = false;
@@ -103,6 +107,8 @@ public struct PerMatTextureData {
     public bool HasAlbedoMap;
     public bool HasNormalMap;
     public bool HasEmissiveMap;
+    public bool HasMetallicMap;
+    public bool HasRoughnessMap;
     public RayTracingObject MaterialObject;
 }
 public List<PerMatTextureData> MatTexData;
@@ -137,13 +143,7 @@ public void ClearAll() {
     }
     AggTriangles = null;
     AggNodes = null;
-    if(ForwardStack != null) {
-        ForwardStack.Clear();
-        ForwardStack.TrimExcess();
-    }
-
-
-
+    ForwardStack = null;
     DestroyImmediate(AlbedoAtlas);
     DestroyImmediate(NormalAtlas);
     DestroyImmediate(EmissiveAtlas); 
@@ -166,7 +166,7 @@ public void init() {
     NodeUpdateKernel = MeshRefit.FindKernel("NodeUpdate");
     NodeCompressKernel = MeshRefit.FindKernel("NodeCompress");
     NodeInitializerKernel = MeshRefit.FindKernel("NodeInitializer");
-    AtlasSize = 4096;
+    AtlasSize = 8192;
 
 }
 public void SetUpBuffers() {
@@ -188,9 +188,13 @@ private void CreateAtlas() {//Creates texture atlas
     List<Texture2D> AlbedoTexs = new List<Texture2D>();
     List<Texture2D> NormalTexs = new List<Texture2D>();
     List<Texture2D> EmissiveTexs = new List<Texture2D>();
+    List<Texture2D> MetallicTexs = new List<Texture2D>();
+    List<Texture2D> RoughnessTexs = new List<Texture2D>();
     AlbedoAtlas = new Texture2D(1, 1);
     NormalAtlas = new Texture2D(1, 1);
     EmissiveAtlas = new Texture2D(1, 1);
+    MetallicAtlas = new Texture2D(1, 1);
+    RoughnessAtlas = new Texture2D(1, 1);
     Mesh mesh = new Mesh();
     PerMatTextureData CurrentTexDat = new PerMatTextureData();
     foreach(RayTracingObject obj in ChildObjects) {
@@ -226,6 +230,18 @@ private void CreateAtlas() {//Creates texture atlas
             } else {
                 CurrentTexDat.HasEmissiveMap = false;
             }
+            if(SharedMaterials[i].GetTexture("_MetallicGlossMap") != null) {
+                MetallicTexs.Add((Texture2D)SharedMaterials[i].GetTexture("_MetallicGlossMap"));
+                CurrentTexDat.HasMetallicMap = true;
+            } else {
+                CurrentTexDat.HasMetallicMap = false;
+            }
+            if(SharedMaterials[i].GetTexture("_OcclusionMap") != null) {
+                RoughnessTexs.Add((Texture2D)SharedMaterials[i].GetTexture("_OcclusionMap"));
+                CurrentTexDat.HasRoughnessMap = true;
+            } else {
+                CurrentTexDat.HasRoughnessMap = false;
+            }
             MatTexData.Add(CurrentTexDat);
 
         }
@@ -233,9 +249,13 @@ private void CreateAtlas() {//Creates texture atlas
     int AlbedoCount = 0;
     int NormalCount = 0;
     int EmissiveCount = 0;
+    int MetallicCount = 0;
+    int RoughnessCount = 0;
     Rect[] AlbedoRects;
     Rect[] NormalRects;
     Rect[] EmmissiveRects;
+    Rect[] MetallicRects;
+    Rect[] RoughnessRects;
     if(AlbedoTexs.Count != 0) {
         AlbedoRects = AlbedoAtlas.PackTextures(AlbedoTexs.ToArray(), 1, AtlasSize);//2048);
         HasAlbedoAtlas = true;
@@ -257,17 +277,37 @@ private void CreateAtlas() {//Creates texture atlas
         HasEmissiveAtlas = false;
         EmmissiveRects = new Rect[0];
     }
+    if(MetallicTexs.Count != 0) {
+        MetallicRects = MetallicAtlas.PackTextures(MetallicTexs.ToArray(), 1, AtlasSize);//2048);
+        HasMetallicAtlas = true;
+    } else {
+        HasMetallicAtlas = false;
+        MetallicRects = new Rect[0];
+    }
+    if(MetallicTexs.Count != 0) {
+        RoughnessRects = RoughnessAtlas.PackTextures(RoughnessTexs.ToArray(), 1, AtlasSize);//2048);
+        HasRoughnessAtlas = true;
+    } else {
+        HasRoughnessAtlas = false;
+        RoughnessRects = new Rect[0];
+    }
     AlbedoTexs.Clear();
     AlbedoTexs.TrimExcess();
     NormalTexs.Clear();
     NormalTexs.TrimExcess();
     EmissiveTexs.Clear();
     EmissiveTexs.TrimExcess();
+    MetallicTexs.Clear();
+    MetallicTexs.TrimExcess();
+    RoughnessTexs.Clear();
+    RoughnessTexs.TrimExcess();
     RayTracingObject PreviousObject = MatTexData[0].MaterialObject;
     int CurrentObjectOffset = -1;
     Vector4 AlbedoTex = new Vector4(0,0,0,0);
     Vector4 NormalTex = new Vector4(0,0,0,0);
     Vector4 EmissiveTex = new Vector4(0,0,0,0);
+    Vector4 MetallicTex = new Vector4(0,0,0,0);
+    Vector4 RoughnessTex = new Vector4(0,0,0,0);
     int CurMat = 0;
     foreach(PerMatTextureData Obj in MatTexData) {
         if(PreviousObject.Equals(Obj.MaterialObject)) {
@@ -287,13 +327,25 @@ private void CreateAtlas() {//Creates texture atlas
             EmissiveTex = new Vector4(EmmissiveRects[EmissiveCount].xMax, EmmissiveRects[EmissiveCount].yMax, EmmissiveRects[EmissiveCount].xMin, EmmissiveRects[EmissiveCount].yMin);
             EmissiveCount++;
         }
+        if(Obj.HasMetallicMap) {
+            MetallicTex = new Vector4(MetallicRects[MetallicCount].xMax, MetallicRects[MetallicCount].yMax, MetallicRects[MetallicCount].xMin, MetallicRects[MetallicCount].yMin);
+            MetallicCount++;
+        }
+        if(Obj.HasRoughnessMap) {
+            RoughnessTex = new Vector4(RoughnessRects[RoughnessCount].xMax, RoughnessRects[RoughnessCount].yMax, RoughnessRects[RoughnessCount].xMin, RoughnessRects[RoughnessCount].yMin);
+            RoughnessCount++;
+        }
         _Materials.Add(new MaterialData() {
             AlbedoTex = AlbedoTex,
             NormalTex = NormalTex,
             EmissiveTex = EmissiveTex,
+            MetallicTex = MetallicTex,
+            RoughnessTex = RoughnessTex,
             HasAlbedoTex = (Obj.HasAlbedoMap) ? 1 : 0,
             HasNormalTex = (Obj.HasNormalMap) ? 1 : 0,
             HasEmissiveTex = (Obj.HasEmissiveMap) ? 1 : 0,
+            HasMetallicTex = (Obj.HasMetallicMap) ? 1 : 0,
+            HasRoughnessTex = (Obj.HasRoughnessMap) ? 1 : 0,
             BaseColor = Obj.MaterialObject.BaseColor[CurrentObjectOffset],
             emmissive = Obj.MaterialObject.emmission[CurrentObjectOffset],
             Roughness = Obj.MaterialObject.Roughness[CurrentObjectOffset],
@@ -340,6 +392,16 @@ public void LoadData() {
         for(int i = 0; i < TempObjects.Count; i++) {
                 TempObjectTransforms.Add(TempObjects[i].gameObject.transform);
         }
+    }
+    if(TempObjects == null || TempObjects.Count == 0) {
+        if(this.gameObject.GetComponent<RayTracingObject>() != null) {
+            TempObjects = new List<RayTracingObject>();
+            TempObjects.Add(this.gameObject.GetComponent<RayTracingObject>());
+            TempObjectTransforms.Add(this.transform);
+        } else {
+            Debug.Log("NO RAYTRACINGOBJECT CHILDREN AT NODE: " + Name);
+        }
+    
     }
     Transform[] TempTransforms = TempObjectTransforms.ToArray();
     CachedTransforms = new StorableTransform[TempTransforms.Length];
@@ -515,39 +577,30 @@ unsafe public void Construct() {
         DocumentNodes(0, 0, 1, 0, false, 0);
         MaxRecur++;
         int NodeCount = NodePair.Count;
-        Layer ForwardStackNodeT = new Layer();
-        ForwardStack = new List<Layer>();
-        ForwardStackNodeT.Children = new int[]{-1,-1,-1,-1,-1,-1,-1,-1};
-        ForwardStackNodeT.Leaf = new int[]{-1,-1,-1,-1,-1,-1,-1,-1};
+        ForwardStack = new Layer[NodeCount];
         for(int i = 0; i < NodePair.Count; i++) {
-            ForwardStack.Add(ForwardStackNodeT);
+            for(int i2 = 0; i2 < 8; i2++) {
+                ForwardStack[i].Children[i2] = -1;
+                ForwardStack[i].Leaf[i2] = -1;
+            }
         }
 
         for(int i = 0; i < NodePair.Count; i++) {
-            Layer ForwardStackNode = new Layer();
-            ForwardStackNode.Children = IntArray(ForwardStack[i].Children);
-            ForwardStackNode.Leaf = IntArray(ForwardStack[i].Leaf);
             if(NodePair[i].IsLeaf == 1) {
                 int first_triangle = (byte)BVH.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] & 0b11111;
                 int NumBits = NumberOfSetBits((byte)BVH.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] >> 5);
-                ForwardStackNode.Children[NodePair[i].InNodeOffset] = NumBits;
-                ForwardStackNode.Leaf[NodePair[i].InNodeOffset] = (int)BVH.BVH8Nodes[NodePair[i].BVHNode].base_index_triangle + first_triangle + 1; 
+                ForwardStack[i].Children[NodePair[i].InNodeOffset] = NumBits;
+                ForwardStack[i].Leaf[NodePair[i].InNodeOffset] = (int)BVH.BVH8Nodes[NodePair[i].BVHNode].base_index_triangle + first_triangle + 1; 
             } else {
-                ForwardStackNode.Children[NodePair[i].InNodeOffset] = i;
-                ForwardStackNode.Leaf[NodePair[i].InNodeOffset] = 0;
+                ForwardStack[i].Children[NodePair[i].InNodeOffset] = i;
+                ForwardStack[i].Leaf[NodePair[i].InNodeOffset] = 0;
             }
-            ForwardStack[i] = ForwardStackNode;
+            ForwardStack[NodePair[i].PreviousNode].Children[NodePair[i].InNodeOffset] = i;
+            ForwardStack[NodePair[i].PreviousNode].Leaf[NodePair[i].InNodeOffset] = 0;
         }
 
 
-        for(int i = 0; i < NodePair.Count; i++) {
-            Layer ForwardStackNode = new Layer();
-            ForwardStackNode.Children = IntArray(ForwardStack[NodePair[i].PreviousNode].Children);
-            ForwardStackNode.Leaf = IntArray(ForwardStack[NodePair[i].PreviousNode].Leaf);
-            ForwardStackNode.Children[NodePair[i].InNodeOffset] = i;
-            ForwardStackNode.Leaf[NodePair[i].InNodeOffset] = 0;
-            ForwardStack[NodePair[i].PreviousNode] = ForwardStackNode;
-        }
+
 
         LayerStack = new Layer2[MaxRecur];
         for(int i = 0; i < MaxRecur; i++) {
@@ -559,30 +612,6 @@ unsafe public void Construct() {
             var TempLayer = LayerStack[NodePair[i].RecursionCount];
             TempLayer.Slab.Add(i);
             LayerStack[NodePair[i].RecursionCount] = TempLayer;
-        }
-
-        SplitForwardStack = new List<SplitLayer>();
-        for(int i = 0; i < ForwardStack.Count; i++) {
-            SplitLayer TempSplit = new SplitLayer();
-            TempSplit.Child1 = ForwardStack[i].Children[0];
-            TempSplit.Child2 = ForwardStack[i].Children[1];
-            TempSplit.Child3 = ForwardStack[i].Children[2];
-            TempSplit.Child4 = ForwardStack[i].Children[3];
-            TempSplit.Child5 = ForwardStack[i].Children[4];
-            TempSplit.Child6 = ForwardStack[i].Children[5];
-            TempSplit.Child7 = ForwardStack[i].Children[6];
-            TempSplit.Child8 = ForwardStack[i].Children[7];
-            
-            TempSplit.Leaf1 = ForwardStack[i].Leaf[0];
-            TempSplit.Leaf2 = ForwardStack[i].Leaf[1];
-            TempSplit.Leaf3 = ForwardStack[i].Leaf[2];
-            TempSplit.Leaf4 = ForwardStack[i].Leaf[3];
-            TempSplit.Leaf5 = ForwardStack[i].Leaf[4];
-            TempSplit.Leaf6 = ForwardStack[i].Leaf[5];
-            TempSplit.Leaf7 = ForwardStack[i].Leaf[6];
-            TempSplit.Leaf8 = ForwardStack[i].Leaf[7];
-
-            SplitForwardStack.Add(TempSplit);
         }
         ConvertToSplitNodes();
     }
@@ -670,7 +699,7 @@ for(int i = 0; i < BVH.BVH8Nodes.Length; i++) {
 }
 
 
-public void RefitMesh() {
+public void RefitMesh(ref ComputeBuffer RealizedAggNodes) {
     int KernelRatio = 256;
 
     AABB OverAABB = new AABB();
@@ -691,8 +720,8 @@ public void RefitMesh() {
         NodeBuffer.SetData(NodePair);
         AdvancedTriangleBuffer = new ComputeBuffer(TotalTriangles, 96);
         VertexBufferOut = new ComputeBuffer(TotalTriangles, 72);
-        StackBuffer = new ComputeBuffer(ForwardStack.Count, 64);
-        StackBuffer.SetData(SplitForwardStack);
+        StackBuffer = new ComputeBuffer(ForwardStack.Length, 64);
+        StackBuffer.SetData(ForwardStack);
         CWBVHIndicesBuffer = new ComputeBuffer(BVH.cwbvh_indices.Length, 4);
         CWBVHIndicesBuffer.SetData(BVH.cwbvh_indices); 
         BVHDataBuffer = new ComputeBuffer(AggNodes.Length, 260);
@@ -709,6 +738,14 @@ public void RefitMesh() {
         }
         WorkingBuffer = new ComputeBuffer(MaxLength, 4);
     } else if(AllFull) {
+        for(int i = 0; i < VertexBuffers.Length; i++) {
+            VertexBuffers[i].Dispose();
+            IndexBuffers[i].Dispose();
+            SkinnedMeshes[i].vertexBufferTarget |= GraphicsBuffer.Target.Raw;
+            VertexBuffers[i] = SkinnedMeshes[i].GetVertexBuffer();
+            SkinnedMeshes[i].sharedMesh.indexBufferTarget |= GraphicsBuffer.Target.Raw;
+            IndexBuffers[i] = SkinnedMeshes[i].sharedMesh.GetIndexBuffer();
+        }
         MeshRefit.SetBuffer(RefitLayerKernel, "ReverseStack", StackBuffer);
 
     int CurVertOffset = 0;
@@ -764,8 +801,9 @@ public void RefitMesh() {
     MeshRefit.Dispatch(NodeUpdateKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
 
     MeshRefit.SetInt("NodeCount", BVH.BVH8Nodes.Length);
+    MeshRefit.SetInt("NodeOffset", NodeOffset);
     MeshRefit.SetBuffer(NodeCompressKernel, "BVHNodes", BVHDataBuffer);
-    MeshRefit.SetBuffer(NodeCompressKernel, "AggNodes", BVHBuffer);
+    MeshRefit.SetBuffer(NodeCompressKernel, "AggNodes", RealizedAggNodes);
     MeshRefit.Dispatch(NodeCompressKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
     }  
 
@@ -773,8 +811,6 @@ public void RefitMesh() {
         for(int i = 0; i < VertexBuffers.Length; i++) {
             SkinnedMeshes[i].vertexBufferTarget |= GraphicsBuffer.Target.Raw;
             VertexBuffers[i] = SkinnedMeshes[i].GetVertexBuffer();
-        }
-        for(int i = 0; i < IndexBuffers.Length; i++) {
             SkinnedMeshes[i].sharedMesh.indexBufferTarget |= GraphicsBuffer.Target.Raw;
             IndexBuffers[i] = SkinnedMeshes[i].sharedMesh.GetIndexBuffer();
         }
@@ -1023,6 +1059,7 @@ private void OnEnable() {
 private void OnDisable() {
     HasStarted = false;
     if(gameObject.scene.isLoaded) {
+        ClearAll();
         this.GetComponentInParent<AssetManager>().RemoveQue.Add(this);
         this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
         HasCompleted = false;

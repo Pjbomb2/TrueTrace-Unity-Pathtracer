@@ -1,0 +1,124 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel Downsample
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+int screen_width;
+int screen_height;
+int TargetWidth;
+int TargetHeight;
+Texture2D<float4> InputTex;
+SamplerState sampler_InputTex;
+Texture2D<float4> OrigTex;
+SamplerState sampler_OrigTex;
+RWTexture2D<float4> OutputTex;
+
+[numthreads(16,16,1)]
+void Downsample (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x > (uint)TargetWidth || id.y > (uint)TargetHeight) return;
+    static float2 texel = 1.0f / float2(screen_width, screen_height);
+    float2 UV = ((float2)id.xy + 0.5f) / float2(TargetWidth, TargetHeight);
+    float3 filterSum = 0;
+    static float3 TexRatios = float3(1.0f, 2.0f, 4.0f) / 32.0f;
+    filterSum += InputTex.SampleLevel(sampler_InputTex, UV, 0).xyz * TexRatios.z;
+    filterSum += InputTex.SampleLevel(sampler_InputTex, UV + int2(1,0) * texel , 0).xyz * TexRatios.z;
+    filterSum += InputTex.SampleLevel(sampler_InputTex, UV + int2(0,1) * texel , 0).xyz * TexRatios.z;
+    filterSum += InputTex.SampleLevel(sampler_InputTex, UV + int2(-1,0) * texel , 0).xyz * TexRatios.z;
+    filterSum += InputTex.SampleLevel(sampler_InputTex, UV + int2(0,-1) * texel , 0).xyz * TexRatios.z;    
+    filterSum += InputTex.SampleLevel(sampler_InputTex, UV + int2(2,0) * texel , 0).xyz * TexRatios.y;
+    filterSum += InputTex.SampleLevel(sampler_InputTex, UV + int2(2,2) * texel , 0).xyz * TexRatios.x;
+    filterSum += InputTex.SampleLevel(sampler_InputTex, UV + int2(0,2) * texel , 0).xyz * TexRatios.y;
+    filterSum += InputTex.SampleLevel(sampler_InputTex, UV + int2(-2,2) * texel , 0).xyz * TexRatios.x;
+    filterSum += InputTex.SampleLevel(sampler_InputTex, UV + int2(-2,0) * texel , 0).xyz * TexRatios.y;
+    filterSum += InputTex.SampleLevel(sampler_InputTex, UV + int2(-2,-2) * texel , 0).xyz * TexRatios.x;
+    filterSum += InputTex.SampleLevel(sampler_InputTex, UV + int2(0,-2) * texel , 0).xyz * TexRatios.y;
+    filterSum += InputTex.SampleLevel(sampler_InputTex, UV + int2(2,-2) * texel , 0).xyz * TexRatios.x;
+    OutputTex[id.xy] = float4(filterSum, 1);
+}
+
+
+
+
+#pragma kernel LowPass
+
+float luminance(float3 c)
+{
+  return dot(c, float3(0.299, 0.587, 0.114));
+}
+
+float3 karisAverage(float3 c1, float3 c2, float3 c3, float3 c4)
+{
+  float w1 = 1.0 / (luminance(c1.rgb) + 1.0);
+  float w2 = 1.0 / (luminance(c2.rgb) + 1.0);
+  float w3 = 1.0 / (luminance(c3.rgb) + 1.0);
+  float w4 = 1.0 / (luminance(c4.rgb) + 1.0);
+
+  return (c1 * w1 + c2 * w2 + c3 * w3 + c4 * w4) / (w1 + w2 + w3 + w4); 
+}
+
+
+[numthreads(16,16,1)]
+void LowPass (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x > (uint)TargetWidth || id.y > (uint)TargetHeight) return;
+    static float2 texel = 1.0f / float2(TargetWidth, TargetHeight);
+    float2 UV = ((float2)id.xy + 0.5f) * texel;
+
+    float3 samples[13];
+    samples[0] = InputTex.SampleLevel(sampler_InputTex, UV + int2(-2,-2) * texel, 0).xyz;
+    samples[1] = InputTex.SampleLevel(sampler_InputTex, UV + int2(0,-2) * texel, 0).xyz;
+    samples[2] = InputTex.SampleLevel(sampler_InputTex, UV + int2(2,-2) * texel, 0).xyz;
+    samples[3] = InputTex.SampleLevel(sampler_InputTex, UV + int2(-1,-1) * texel, 0).xyz;
+    samples[4] = InputTex.SampleLevel(sampler_InputTex, UV + int2(1,-1) * texel, 0).xyz;
+    samples[5] = InputTex.SampleLevel(sampler_InputTex, UV + int2(-2,0) * texel, 0).xyz;
+    samples[6] = InputTex.SampleLevel(sampler_InputTex, UV, 0).xyz;
+    samples[7] = InputTex.SampleLevel(sampler_InputTex, UV + int2(2,0) * texel, 0).xyz;
+    samples[8] = InputTex.SampleLevel(sampler_InputTex, UV + int2(-1,1) * texel, 0).xyz;
+    samples[9] = InputTex.SampleLevel(sampler_InputTex, UV + int2(1,1) * texel, 0).xyz;
+    samples[10] = InputTex.SampleLevel(sampler_InputTex, UV + int2(-2,2) * texel, 0).xyz;
+    samples[11] = InputTex.SampleLevel(sampler_InputTex, UV + int2(0,2) * texel, 0).xyz;
+    samples[12] = InputTex.SampleLevel(sampler_InputTex, UV + int2(2,2) * texel, 0).xyz;
+
+
+    float3 filterSum = 0;
+    filterSum += karisAverage(samples[3], samples[4], samples[8 ], samples[9 ]) * 0.5;
+    filterSum += karisAverage(samples[0], samples[1], samples[5 ], samples[6 ]) * 0.125;
+    filterSum += karisAverage(samples[1], samples[2], samples[6 ], samples[7 ]) * 0.125;
+    filterSum += karisAverage(samples[5], samples[6], samples[10], samples[11]) * 0.125;
+    filterSum += karisAverage(samples[6], samples[7], samples[11], samples[12]) * 0.125;
+
+
+    OutputTex[id.xy] = float4(filterSum, 1);
+
+}
+
+
+#pragma kernel Upsample
+bool IsFinal;
+
+[numthreads(16,16,1)]
+void Upsample (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x > (uint)TargetWidth || id.y > (uint)TargetHeight) return;
+    static float2 texel = 1.0f / float2(TargetWidth, TargetHeight);
+    float2 UV = ((float2)id.xy + 0.5f) * texel;
+
+    float4 rgba =  OrigTex.SampleLevel(sampler_OrigTex, UV, 0);
+    static const float3 TexRatios = float3(1.0f, 2.0f, 4.0f) / 16.0f;
+    float4 blurSum = 0;
+    blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(-1, -1) * texel, 0) * TexRatios.x;
+    blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(0, -1)  * texel, 0) * TexRatios.y;
+    blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(1, -1)  * texel, 0) * TexRatios.x;
+    blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(-1, 0)  * texel, 0) * TexRatios.y;
+    blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(0, 0)   * texel, 0) * TexRatios.z;
+    blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(1, 0)   * texel, 0) * TexRatios.y;
+    blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(-1, 1)  * texel, 0) * TexRatios.x;
+    blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(0, 1)   * texel, 0) * TexRatios.y;
+    blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(1, 1)   * texel, 0) * TexRatios.x;
+    rgba += blurSum * rcp(32.0f);
+
+
+    OutputTex[id.xy] = float4(rgba.xyz, 1);
+
+}

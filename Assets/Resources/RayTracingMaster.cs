@@ -52,6 +52,7 @@ public class RayTracingMaster : MonoBehaviour {
     [HideInInspector] public bool AllowVolumetrics = false;
     [HideInInspector] public bool DoTLASUpdates = true;
     [HideInInspector] public bool AllowConverge = true;
+    [HideInInspector] public bool AllowBloom = false;
     [HideInInspector] public int SVGFAtrousKernelSizes = 6;
     [HideInInspector] public int AtrousKernelSizes = 6;
     [HideInInspector] public int LightTrianglesCount;
@@ -169,7 +170,7 @@ public class RayTracingMaster : MonoBehaviour {
                 if(Assets.UpdateTLAS()) {
                     CreateComputeBuffer(ref _CompactedMeshData, Assets.MyMeshesCompacted, 156);
                     CreateComputeBuffer(ref _LightTriangles, Assets.AggLightTriangles, 68);
-                    CreateComputeBuffer(ref _MaterialDataBuffer, Assets._Materials, 96);
+                    CreateComputeBuffer(ref _MaterialDataBuffer, Assets._Materials, 136);
                     CreateComputeBuffer(ref _UnityLights, Assets.UnityLights, 56);
                     CreateComputeBuffer(ref _LightMeshes, Assets.LightMeshes, 92);
                     uFirstFrame = 1;
@@ -192,7 +193,7 @@ public class RayTracingMaster : MonoBehaviour {
 
         CreateComputeBuffer(ref _LightMeshes, Assets.LightMeshes, 92);
         
-        CreateComputeBuffer(ref _MaterialDataBuffer, Assets._Materials, 96);
+        CreateComputeBuffer(ref _MaterialDataBuffer, Assets._Materials, 136);
         CreateComputeBuffer(ref _CompactedMeshData, Assets.MyMeshesCompacted, 156);
         CreateComputeBuffer(ref _LightTriangles, Assets.AggLightTriangles, 68);
 
@@ -260,6 +261,8 @@ public class RayTracingMaster : MonoBehaviour {
             RayTracingShader.SetTexture(ShadeKernel, "_TextureAtlas", Assets.AlbedoAtlas);
             RayTracingShader.SetTexture(ShadeKernel, "_EmissiveAtlas", Assets.EmissiveAtlas);
             RayTracingShader.SetTexture(ShadeKernel, "_NormalAtlas", Assets.NormalAtlas);
+            RayTracingShader.SetTexture(ShadeKernel, "_MetallicAtlas", Assets.MetallicAtlas);
+            RayTracingShader.SetTexture(ShadeKernel, "_RoughnessAtlas", Assets.RoughnessAtlas);
             RayTracingShader.SetInt("lighttricount", Assets.LightTriCount);
             RayTracingShader.SetInt("screen_width", Screen.width);
             RayTracingShader.SetInt("screen_height", Screen.height);
@@ -368,11 +371,10 @@ public class RayTracingMaster : MonoBehaviour {
         _addMaterial.SetFloat("_Sample", CurrentSample);
         Graphics.Blit(_target, _converged, _addMaterial);
 
-        if(UseAtrous) {
-            Denoisers.ExecuteAtrous(AtrousKernelSizes, n_phiGlob, p_phiGlob, c_phiGlob, ref _PosTex, ref _target, ref _Albedo, ref _converged, ref _NormTex);
-        }
+        if(UseAtrous)  Denoisers.ExecuteAtrous(AtrousKernelSizes, n_phiGlob, p_phiGlob, c_phiGlob, ref _PosTex, ref _target, ref _Albedo, ref _converged, ref _NormTex);
+        if(AllowBloom) Denoisers.ExecuteBloom(ref _target, ref _converged);
 
-        Graphics.Blit((UseAtrous) ? _target : _converged, destination);
+        Graphics.Blit((UseAtrous || AllowBloom) ? _target : _converged, destination);
         _currentSample++; 
         FramesSinceStart++;  
     }

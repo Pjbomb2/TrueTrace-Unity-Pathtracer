@@ -238,7 +238,6 @@ void TriFormatConvert (uint3 id : SV_DispatchThreadID)
         TempTri.normedge1 = tri.Norm2;
         TempTri.normedge2 = tri.Norm3;
         CudaTriArray[id.x] = TempTri;
-
 }
 
 
@@ -270,18 +269,19 @@ void NodeUpdate (uint3 id : SV_DispatchThreadID)
     if(id.x >= NodeCount || id.x == 0)
         return;
       NodeIndexPairData TempNode = AllNodes[id.x];
-      int NodeLink = ToBVHIndex[AllNodes[id.x].BVHNode];
+      int NodeLink = ToBVHIndex[TempNode.BVHNode];
       BVHNode8Data TempBVHNode = BVHNodes[TempNode.BVHNode];
       float3 BBMax = AllNodes[NodeLink].BBMax;
       float3 BBMin = AllNodes[NodeLink].BBMin;
-    if(AllNodes[id.x].BBMax.x < -10000.0f) {
-        AllNodes[id.x].BBMax = BBMin;
-        AllNodes[id.x].BBMin = BBMin;
-        TempNode = AllNodes[id.x];
+    [branch]if(TempNode.BBMax.x < -10000.0f) {
+        TempNode.BBMax = BBMin;
+        TempNode.BBMin = BBMin;
     }
     const uint BVHNodeOffset = TempNode.BVHNode;
       float3 e = pow(2,ceil(log2((BBMax - BBMin) * 0.003921569f)));
       float3 p = BBMin;
+      const uint3 Max = ceil((TempNode.BBMax - p) / e);
+      const uint3 Min = floor((TempNode.BBMin - p) / e);
       BVHNodes[BVHNodeOffset].p = p;
         uint u_ex = asuint(e.x);
         uint u_ey = asuint(e.y);
@@ -290,12 +290,12 @@ void NodeUpdate (uint3 id : SV_DispatchThreadID)
         BVHNodes[BVHNodeOffset].e[0] = u_ex >> 23;
         BVHNodes[BVHNodeOffset].e[1] = u_ey >> 23;
         BVHNodes[BVHNodeOffset].e[2] = u_ez >> 23;
-        BVHNodes[BVHNodeOffset].quantized_max_x[NodeOffset] = (uint)ceil((TempNode.BBMax.x - p.x) / e.x);
-        BVHNodes[BVHNodeOffset].quantized_max_y[NodeOffset] = (uint)ceil((TempNode.BBMax.y - p.y) / e.y);
-        BVHNodes[BVHNodeOffset].quantized_max_z[NodeOffset] = (uint)ceil((TempNode.BBMax.z - p.z) / e.z);
-        BVHNodes[BVHNodeOffset].quantized_min_x[NodeOffset] = (uint)floor((TempNode.BBMin.x - p.x) / e.x);
-        BVHNodes[BVHNodeOffset].quantized_min_y[NodeOffset] = (uint)floor((TempNode.BBMin.y - p.y) / e.y);
-        BVHNodes[BVHNodeOffset].quantized_min_z[NodeOffset] = (uint)floor((TempNode.BBMin.z - p.z) / e.z);
+        BVHNodes[BVHNodeOffset].quantized_max_x[NodeOffset] = Max.x;
+        BVHNodes[BVHNodeOffset].quantized_max_y[NodeOffset] = Max.y;
+        BVHNodes[BVHNodeOffset].quantized_max_z[NodeOffset] = Max.z;
+        BVHNodes[BVHNodeOffset].quantized_min_x[NodeOffset] = Min.x;
+        BVHNodes[BVHNodeOffset].quantized_min_y[NodeOffset] = Min.y;
+        BVHNodes[BVHNodeOffset].quantized_min_z[NodeOffset] = Min.z;
 
 
 
@@ -333,14 +333,14 @@ void NodeUpdate (uint3 id : SV_DispatchThreadID)
 RWStructuredBuffer<BVHNode8DataCompressed> AggNodes;
 
 
-
+int NodeOffset;
 [numthreads(KernelRatio,1,1)]
 void NodeCompress (uint3 id : SV_DispatchThreadID)
 {
     if(id.x > NodeCount)
         return;
             const BVHNode8Data TempNode = BVHNodes[id.x];
-            BVHNode8DataCompressed TempBVHNode = AggNodes[id.x];
+            BVHNode8DataCompressed TempBVHNode = AggNodes[id.x + NodeOffset];
 
             TempBVHNode.node_0xyz = float3(TempNode.p.x, TempNode.p.y, TempNode.p.z);
             TempBVHNode.node_0w = (TempNode.e[0] | (TempNode.e[1] << 8) | (TempNode.e[2] << 16) | (TempNode.imask << 24));
@@ -360,7 +360,7 @@ void NodeCompress (uint3 id : SV_DispatchThreadID)
             TempBVHNode.node_4y = (TempNode.quantized_min_z[4] | (TempNode.quantized_min_z[5] << 8) | (TempNode.quantized_min_z[6] << 16) | (TempNode.quantized_min_z[7] << 24));
             TempBVHNode.node_4z = (TempNode.quantized_max_z[0] | (TempNode.quantized_max_z[1] << 8) | (TempNode.quantized_max_z[2] << 16) | (TempNode.quantized_max_z[3] << 24));
             TempBVHNode.node_4w = (TempNode.quantized_max_z[4] | (TempNode.quantized_max_z[5] << 8) | (TempNode.quantized_max_z[6] << 16) | (TempNode.quantized_max_z[7] << 24));
-            AggNodes[id.x] = TempBVHNode;
+            AggNodes[id.x + NodeOffset] = TempBVHNode;
         }
 
 

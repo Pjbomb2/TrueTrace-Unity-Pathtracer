@@ -9,11 +9,12 @@ using System.Threading;
 [System.Serializable]
 public class AssetManager : MonoBehaviour {
     public Texture2D AlbedoAtlas;
-    public List<Texture2D> Albedos;
     public Texture2D NormalAtlas;
     public Texture2D EmissiveAtlas;
+    public Texture2D MetallicAtlas;
+    public Texture2D RoughnessAtlas;
 
-    [HideInInspector] public List<MaterialData> _Materials;
+    public List<MaterialData> _Materials;
     [HideInInspector] public ComputeBuffer BVH8AggregatedBuffer;
     [HideInInspector] public ComputeBuffer AggTriBuffer;
     [HideInInspector] public List<MyMeshDataCompacted> MyMeshesCompacted;
@@ -110,10 +111,14 @@ public class AssetManager : MonoBehaviour {
         List<Texture2D> AlbedoTexs = new List<Texture2D>();
         List<Texture2D> NormalTexs = new List<Texture2D>();
         List<Texture2D> EmissiveTexs = new List<Texture2D>();
+        List<Texture2D> MetallicTexs = new List<Texture2D>();
+        List<Texture2D> RoughnessTexs = new List<Texture2D>();
         AlbedoAtlas = new Texture2D(1,1);
         NormalAtlas = new Texture2D(1, 1);
         EmissiveAtlas = new Texture2D(1, 1);
-        int AlbedoCount, NormalCount, EmissiveCount = 0;
+        MetallicAtlas = new Texture2D(1, 1);
+        RoughnessAtlas = new Texture2D(1, 1);
+        int AlbedoCount, NormalCount, EmissiveCount, MetallicCount, RoughnessCount = 0;
         foreach(ParentObject Obj in RenderQue) {
             if(Obj.HasAlbedoAtlas) {
                 AlbedoTexs.Add((Texture2D)Obj.AlbedoAtlas);
@@ -124,8 +129,14 @@ public class AssetManager : MonoBehaviour {
             if(Obj.HasEmissiveAtlas) {
                 EmissiveTexs.Add((Texture2D)Obj.EmissiveAtlas);
             }
+            if(Obj.HasMetallicAtlas) {
+                MetallicTexs.Add((Texture2D)Obj.MetallicAtlas);
+            }
+            if(Obj.HasRoughnessAtlas) {
+                RoughnessTexs.Add((Texture2D)Obj.RoughnessAtlas);
+            }
         }
-        Rect[] AlbedoRects, NormalRects, EmmissiveRects;
+        Rect[] AlbedoRects, NormalRects, EmmissiveRects, MetallicRects, RoughnessRects;
         if(AlbedoTexs.Count != 0) {
             AlbedoRects = AlbedoAtlas.PackTextures(AlbedoTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392));//4096);
         } else {
@@ -141,7 +152,17 @@ public class AssetManager : MonoBehaviour {
         } else {
             EmmissiveRects = new Rect[0];
         }
-        AlbedoCount = NormalCount = EmissiveCount = 0;
+        if(MetallicTexs.Count != 0) {
+            MetallicRects = MetallicAtlas.PackTextures(MetallicTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392));//4096);
+        } else {
+            MetallicRects = new Rect[0];
+        }
+        if(RoughnessTexs.Count != 0) {
+            RoughnessRects = RoughnessAtlas.PackTextures(RoughnessTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392));//4096);
+        } else {
+            RoughnessRects = new Rect[0];
+        }
+        AlbedoCount = NormalCount = EmissiveCount = MetallicCount = RoughnessCount =  0;
          int MatCount = 0;
         foreach(ParentObject Obj in RenderQue) {
             foreach(RayTracingObject Obj2 in Obj.ChildObjects) {
@@ -163,12 +184,20 @@ public class AssetManager : MonoBehaviour {
                 if(TempMat.HasEmissiveTex == 1) {
                     TempMat.EmissiveTex = ResizeRect(TempMat.EmissiveTex, EmmissiveRects[EmissiveCount]);
                 }
+                if(TempMat.HasMetallicTex == 1) {
+                    TempMat.MetallicTex = ResizeRect(TempMat.MetallicTex, MetallicRects[MetallicCount]);
+                }
+                if(TempMat.HasRoughnessTex == 1) {
+                    TempMat.RoughnessTex = ResizeRect(TempMat.RoughnessTex, RoughnessRects[RoughnessCount]);
+                }
                 _Materials.Add(TempMat);
                 MatCount++;
             }
             if(Obj.HasAlbedoAtlas) AlbedoCount++;
             if(Obj.HasNormalAtlas) NormalCount++;
             if(Obj.HasEmissiveAtlas) EmissiveCount++;
+            if(Obj.HasMetallicAtlas) MetallicCount++;
+            if(Obj.HasRoughnessAtlas) RoughnessCount++;
 
         }
         AlbedoTexs.Clear();
@@ -176,7 +205,11 @@ public class AssetManager : MonoBehaviour {
         NormalTexs.Clear();
         NormalTexs.TrimExcess();
         EmissiveTexs.Clear();
-        EmissiveTexs.TrimExcess();  
+        EmissiveTexs.TrimExcess(); 
+        MetallicTexs.Clear();
+        MetallicTexs.TrimExcess(); 
+        RoughnessTexs.Clear();
+        RoughnessTexs.TrimExcess();  
 
     }
 
@@ -206,8 +239,10 @@ public class AssetManager : MonoBehaviour {
         int RenderQueCount = RenderQue.Count;
         for(int i = RenderQueCount - 1; i >= 0; i--) {//Demotes from Render Que to Build Que in case mesh has changed
             if(RenderQue[i].MeshCountChanged) {
+                RenderQue[i].ClearAll();
                 RenderQue[i].LoadData();
-                BuildQue.Add(RenderQue[i]);
+                BuildQue.Add(new ParentObject());
+                BuildQue[BuildQue.Count - 1] = RenderQue[i];
                 var TempBuildQueCount = BuildQue.Count - 1;
                 Task t1 = Task.Run(() => BuildQue[TempBuildQueCount].BuildTotal());
                 CurrentlyActiveTasks.Add(t1);
@@ -221,7 +256,8 @@ public class AssetManager : MonoBehaviour {
                 Debug.Log(CurrentlyActiveTasks[i].Exception);
             }
             if(CurrentlyActiveTasks[i].Status == TaskStatus.RanToCompletion) {
-                RenderQue.Add(BuildQue[i]);
+                RenderQue.Add(new ParentObject());
+                RenderQue[RenderQue.Count - 1] = BuildQue[i];
                 CurrentlyActiveTasks.RemoveAt(i);
                 BuildQue.RemoveAt(i);
                 RenderQue[RenderQue.Count - 1].SetUpBuffers();
@@ -352,15 +388,11 @@ public class AssetManager : MonoBehaviour {
         if(UseSkinning && didstart) { 
             for(int i = 0; i < ParentsLength; i++) {
                 if(RenderQue[i].IsSkinnedGroup) {
-                    RenderQue[i].RefitMesh();
+                    RenderQue[i].RefitMesh(ref BVH8AggregatedBuffer);
                     MeshFunctions.SetInt("Offset", RenderQue[i].TriOffset);
                     MeshFunctions.SetInt("Count", RenderQue[i].TriBuffer.count);
                     MeshFunctions.SetBuffer(TriangleBufferKernel, "InCudaTriArray", RenderQue[i].TriBuffer);
                     MeshFunctions.Dispatch(TriangleBufferKernel, (int)Mathf.Ceil(RenderQue[i].TriBuffer.count / 248.0f), 1, 1);
-                    MeshFunctions.SetInt("Offset", RenderQue[i].NodeOffset);
-                    MeshFunctions.SetInt("Count", RenderQue[i].BVHBuffer.count);
-                    MeshFunctions.SetBuffer(NodeBufferKernel, "InAggNodes", RenderQue[i].BVHBuffer);
-                    MeshFunctions.Dispatch(NodeBufferKernel, (int)Mathf.Ceil(RenderQue[i].BVHBuffer.count / 248.0f), 1, 1);
                 }
             }
         }

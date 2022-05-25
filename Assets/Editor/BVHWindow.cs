@@ -33,6 +33,7 @@ public class EditModeFunctions : EditorWindow {
       public float Atrous_PW = 0.1f;
       public bool AllowSkinning = true;
       public bool AllowVolumetrics = false;
+      public bool AllowBloom = false;
       public float VolumeDensity = 0.001f;
       public AssetManager Assets;
       private void OnGUI() {
@@ -53,16 +54,19 @@ public class EditModeFunctions : EditorWindow {
          Rect VolumetricsDensityLabel =       new Rect(10 + (position.width - 10) / 2, 210, (position.width - 10) / 4, 20);
          Rect VolumetricsDensityInput =       new Rect(10 + (position.width - 10) / 2 + (position.width - 10) / 4, 210, (position.width - 10) / 4 - 10, 20);
          Rect SkinnedHandlingToggle =       new Rect(10, 235, (position.width - 10) / 2, 20);
-         Rect SVGFToggle =       new Rect(10, 260, (position.width - 10) / 2, 20);
-         int SVGFVertOffset = 285;
+         Rect AllowBloomToggle =       new Rect(10, 260, (position.width - 10) / 2, 20);
+         Rect SVGFToggle =       new Rect(10, 285, (position.width - 10) / 2, 20);
+         int SVGFVertOffset = 310;
          
          AllowConverge = GUI.Toggle(AllowConvergeToggle, AllowConverge, "Allow Image Accumulation");
          DynamicTLAS = GUI.Toggle(DynamicTLASToggle, DynamicTLAS, "Enable Object Moving");
          UseNEE = GUI.Toggle(UseNEEToggle, UseNEE, "Use Next Event Estimation");
          AllowVolumetrics = GUI.Toggle(AllowVolumetricsToggle, AllowVolumetrics, "Allow Volumetrics");
          AllowSkinning = GUI.Toggle(SkinnedHandlingToggle, AllowSkinning, "Allow Mesh Skinning");
+         AllowBloom = GUI.Toggle(AllowBloomToggle, AllowBloom, "Allow Bloom");
          Assets.UseSkinning = AllowSkinning;
          RayMaster.AllowVolumetrics = AllowVolumetrics;
+         RayMaster.AllowBloom = AllowBloom;
          RayMaster.DoTLASUpdates = DynamicTLAS;
          RayMaster.AllowConverge = AllowConverge;
          RayMaster.UseNEE = UseNEE;
