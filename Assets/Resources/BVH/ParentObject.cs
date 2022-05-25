@@ -284,7 +284,7 @@ private void CreateAtlas() {//Creates texture atlas
         HasMetallicAtlas = false;
         MetallicRects = new Rect[0];
     }
-    if(MetallicTexs.Count != 0) {
+    if(RoughnessTexs.Count != 0) {
         RoughnessRects = RoughnessAtlas.PackTextures(RoughnessTexs.ToArray(), 1, AtlasSize);//2048);
         HasRoughnessAtlas = true;
     } else {
