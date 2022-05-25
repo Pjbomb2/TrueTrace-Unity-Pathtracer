@@ -446,7 +446,7 @@ public void LoadData() {
             if(CurrentObject.GetComponent<MeshFilter>() != null) { 
                 mesh = CurrentObject.GetComponent<MeshFilter>().sharedMesh;
             }else {
-                CurrentObject.GetComponent<SkinnedMeshRenderer>().BakeMesh(mesh, false);
+                CurrentObject.GetComponent<SkinnedMeshRenderer>().BakeMesh(mesh, true);
             }
             submeshcount = mesh.subMeshCount;
             

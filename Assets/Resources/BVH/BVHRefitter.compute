@@ -337,7 +337,7 @@ int NodeOffset;
 [numthreads(KernelRatio,1,1)]
 void NodeCompress (uint3 id : SV_DispatchThreadID)
 {
-    if(id.x > NodeCount)
+    if(id.x >= NodeCount)
         return;
             const BVHNode8Data TempNode = BVHNodes[id.x];
             BVHNode8DataCompressed TempBVHNode = AggNodes[id.x + NodeOffset];

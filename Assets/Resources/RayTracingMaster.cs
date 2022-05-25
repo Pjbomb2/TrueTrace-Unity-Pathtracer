@@ -377,7 +377,7 @@ public class RayTracingMaster : MonoBehaviour {
         if(UseAtrous) {
             Denoisers.ExecuteAtrous(AtrousKernelSizes, n_phiGlob, p_phiGlob, c_phiGlob, ref _PosTex, ref _target, ref _Albedo, ref _converged, ref _NormTex);
             Graphics.CopyTexture(_target, _IntemediateTex);
-        } else {
+        } else if(AllowBloom){
             Graphics.CopyTexture(_converged, _IntemediateTex);
         }
         if(AllowBloom) Denoisers.ExecuteBloom(ref _target, ref _IntemediateTex);

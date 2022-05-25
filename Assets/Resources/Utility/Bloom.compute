@@ -104,19 +104,19 @@ void Upsample (uint3 id : SV_DispatchThreadID)
     static float2 texel = 1.0f / float2(TargetWidth, TargetHeight);
     float2 UV = ((float2)id.xy + 0.5f) * texel;
 
-    float4 rgba =  OrigTex.SampleLevel(sampler_OrigTex, UV, 0);
-    static const float3 TexRatios = float3(1.0f, 2.0f, 4.0f) / 16.0f;
-    float4 blurSum = 0;
-    blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(-1, -1) * texel, 0) * TexRatios.x;
-    blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(0, -1)  * texel, 0) * TexRatios.y;
-    blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(1, -1)  * texel, 0) * TexRatios.x;
-    blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(-1, 0)  * texel, 0) * TexRatios.y;
-    blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(0, 0)   * texel, 0) * TexRatios.z;
-    blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(1, 0)   * texel, 0) * TexRatios.y;
-    blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(-1, 1)  * texel, 0) * TexRatios.x;
-    blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(0, 1)   * texel, 0) * TexRatios.y;
-    blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(1, 1)   * texel, 0) * TexRatios.x;
-    rgba += blurSum * rcp(32.0f);
+ float4 rgba =  OrigTex.SampleLevel(sampler_OrigTex, UV, 0);
+
+float4 blurSum = 0;
+blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(-1, -1) * texel, 0) * 1.0 / 16.0;
+blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(0, -1)  * texel, 0) * 2.0 / 16.0;
+blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(1, -1)  * texel, 0) * 1.0 / 16.0;
+blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(-1, 0)  * texel, 0) * 2.0 / 16.0;
+blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(0, 0)   * texel, 0) * 4.0 / 16.0;
+blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(1, 0)   * texel, 0) * 2.0 / 16.0;
+blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(-1, 1)  * texel, 0) * 1.0 / 16.0;
+blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(0, 1)   * texel, 0) * 2.0 / 16.0;
+blurSum += InputTex.SampleLevel(sampler_InputTex, UV + float2(1, 1)   * texel, 0) * 1.0 / 16.0;
+rgba += blurSum * rcp(32.0f);
 
 
     OutputTex[id.xy] = float4(rgba.xyz, 1);
