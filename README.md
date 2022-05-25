@@ -1,12 +1,12 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>Better Volumetrics</li>
+  <li>None</li>
 </ul>
 Currently needs to be done but havent started:
 <ul>
     <li>Precomputed multiple scattering atmosphere(struggling a lot)</li>
-    <li>Reduce Memory Use</li>
+    <li>Reduce Memory Spike on Start</li>
     <li>Improve Direct Light Sampling for meshes(look into ReSTIR or ReGIR?)</li>
 </ul>
 Currently want to do but havent started:
@@ -34,6 +34,8 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 <li>Support for Normal maps and Emission masks</li>
 <li>Global homogenous fog with adjustable density</li>
 <li>Taking Full Resolution Screenshots</li>
+<li>Bloom</li>
+<li>PBR Texture Support</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
@@ -85,6 +87,9 @@ Third note, if you change the emissiveness of an object, you need to dissable an
 One last thing, in the event that you use normal maps, they need to be in unity normal map format, and emissive masks for now need to have at least 1 component be red as thats what I use to determin what parsts should be emissive(it will use the albedo tex as surface color)
 </br></br>
 </br></br>
+Finally, to set up PBR, all textures go into their proper names, but Roughness goes into the Occlusion texture(Since path tracing calculates ambient occlusion by default, this texture is not normally needed, and there being no proper place for a Roughness texture in the default material, I have decided this was a good compromise)
+</br></br>
+</br></br>
 ## Editor Window Guide
 BVH Options Description - 
 <ul>
@@ -99,6 +104,7 @@ BVH Options Description -
   <li>Allow Volumetrics - Turns on pathtracing of global volumetric homogenous fog</li>
   <li>(If Allow Volumetrics is on) Volume Density - Adjusts density of the global fog</li>  
   <li>Allow Mesh Skinning - Turns on the ability for skinned meshes to be animated or deformed with respect to their armeture</li>
+  <li>Allow Bloom - Turns on or off Bloom</li>
   <li>Use SVGF Denoiser - Turns on the SVGF denoiser</li>
   <li>(If SVGF Denosier is on)Atrous Kernel Size - The amount of times the SVGF denoiser runs through the Atrous kernel</li>
   <li>Use Atrous Denoiser - Turns on the Atrous denoiser(can be combined with SVGF)</li>
