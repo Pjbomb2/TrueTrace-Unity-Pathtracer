@@ -13,6 +13,7 @@ public class RayTracingMaster : MonoBehaviour {
     private RenderTexture _PosTex;
     private RenderTexture _Albedo;
     private RenderTexture _NormTex;
+    private RenderTexture _IntemediateTex;
 
     private Denoiser Denoisers;
     private AtmosphereGenerator Atmo;
@@ -326,8 +327,10 @@ public class RayTracingMaster : MonoBehaviour {
                 _PosTex.Release();
                 _Albedo.Release();
                 _NormTex.Release();
+                _IntemediateTex.Release();
             }
 
+         CreateRenderTexture(ref _IntemediateTex, true);
          CreateRenderTexture(ref _target, true);
          CreateRenderTexture(ref _NormTex, false);
          CreateRenderTexture(ref _converged, true);
@@ -371,8 +374,13 @@ public class RayTracingMaster : MonoBehaviour {
         _addMaterial.SetFloat("_Sample", CurrentSample);
         Graphics.Blit(_target, _converged, _addMaterial);
 
-        if(UseAtrous)  Denoisers.ExecuteAtrous(AtrousKernelSizes, n_phiGlob, p_phiGlob, c_phiGlob, ref _PosTex, ref _target, ref _Albedo, ref _converged, ref _NormTex);
-        if(AllowBloom) Denoisers.ExecuteBloom(ref _target, ref _converged);
+        if(UseAtrous) {
+            Denoisers.ExecuteAtrous(AtrousKernelSizes, n_phiGlob, p_phiGlob, c_phiGlob, ref _PosTex, ref _target, ref _Albedo, ref _converged, ref _NormTex);
+            Graphics.CopyTexture(_target, _IntemediateTex);
+        } else {
+            Graphics.CopyTexture(_converged, _IntemediateTex);
+        }
+        if(AllowBloom) Denoisers.ExecuteBloom(ref _target, ref _IntemediateTex);
 
         Graphics.Blit((UseAtrous || AllowBloom) ? _target : _converged, destination);
         _currentSample++; 
