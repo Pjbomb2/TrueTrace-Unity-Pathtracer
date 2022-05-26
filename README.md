@@ -48,48 +48,47 @@ You can contact me easiest through my discord: Pjbomb2#6129
 ## Notes:
 Let me know if you use this for anything, I would be excited to see any use of this!  Just please give some credit somewhere if you use it, thank you!
 
-## Instructions:
-REQUIRES UNITY 2021 OR HIGHER
+# Requires Unity 2021 or higher
+# Instructions:
+## Required Settings Changes:
+<ul>
+  <li>Set the Color Space to Linear through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Color Space, and change from Gamma to Linear</li>
+  <li>Change the Graphics Api for Windows to DirectX12 through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Untoggle "Auto Graphics API For Windows", then click the little + that appears, select "Direct3D12(Experimental)", and drag that to the top.  A restart of the editor is required</li>
+  <li>Enable Unsafe Code(Its for memory management) through Edit -> Project Settings -> Player -> Other Settings -> "Allow 'unsafe' Code" (near the bottom)</li>
+</ul>
 </br>
-So first thing, you need to set the color space to Linear.  To do this, you need to go to edit on the top right, Project Settings -> Player -> Other Settings -> Color Space, and set that to linear
+## Additional Requirements:
+<ul>
+  <li>You need to make sure that all textures have Read/Write enabled in their import settings(click on a texture in the Project menu, look at its options in the inspector, turning on Read/Write, and clicking apply at the bottom).  I would also reccomend turning off MipMapping</li>
+  <li>For Skinned Meshes, their index format needs to be set to 32 bits, and their mesh to Read/Write enabled.  This can be found by clicking on the imported fbx, going to it in the inspector, going to the Model tab, turning on Read/Write, changing the Index Format from Auto to 32 Bit, and clicking Apply at the bottom</li>
+</ul>
 </br>
-Next set the Graphics API for Windows to DirectX12, and put it at the top of the rendering API's.  This is not require but it gives a large performance increase(Edit tab on top left -> Project Settings -> Player -> Other Settings -> untoggle "Auto Graphics API for Windows" -> Click the new + button that appears -> click Direct3D12 -> drag the new Direct3D12 (Experimental) to the top of the list)
+## General Setup
+<ul>
+  <li>Download and import the UnityPackage provided</li>
+  <li>For quick setup, make sure you have a Main Camera(there by unity default), just open the BVH options menu under the Windows tab, it will reorganize the Hierarchy a bit, and give everything their required scripts  If you dont want it to do this, and do it manually read below</li>
+</ul>
 </br>
-Next, you need to enable Unsafe Code(Despite its name, I only use it to explicitely define array sizes in a struct, MASSIVELY reduces memory use).  To do this, go to Edit -> Project Settings -> Player -> Other Settings -> "Allow 'unsafe' Code" (near the bottom)
-</br>
-Finally you need to make sure all textures you use are Read/Write enabled(do this by selecting all the textures you will be using, then on the right click Read/Write enabled
-</br></br>
-You can either use the UnityPackage which includes a small demo scene with the stuff you need to add already set up, or the code raw, but I would reccomend the package as it already comes with a scene with the camera set up.
-</br></br>
-For Skinnedmeshes, you need to set their index format to 32 bit, do this by clicking the skinned mesh in the project bar(contains everything in the project), then find IndexFormat in the inspector(usually set to auto, near the bottom of the Model tab), and set it to 32 bits
-</br></br>
+## Setting it up manually
+<ul>
+  <li>You need to do the below before opening the BVH window or else it will do its autosetup.  Additionally, you can study the provided DemoScene's hierarchy, as it provides basically all common variations of objects and their relations</li>
+  <li>First, you need a main camera, which unity automatically provides.  This camera will need attatched to it the RayTracingMaster script, under Assets/Resources, and should have the FlyCamera Script attatched(Under Assets/Resources/Utility)</li>
+  <li>Next, you need a GameObject called Scene, and this will be the gameobject that all others except the camera will be parented to(It will be the root object). This gameobject will need the AssetManager script attatched to it, found under Assets/Resources/BVH</li>
+  <li>Next, all objects you want to trace will need a parent.  This parent can either be themselves for individual objects, or will need to be nested under another gameobject to be grouped(for increasing performance, group wherever you can).  These Parents need to have a ParentObject attatched, as this defines groups, with its children all being seen as one group(Located under Assets/Resources/BVH)</li>
+  <li>Finally, all meshes and skinned meshes you want to trace need a RayTracingObject script attatched to them, as this defines what should be and should not be pathtraced(Located under Assets/Resources)</li>
+  <li>One last note, if your using Unity lights as well, each one of these needs a RayTracingLights script attatched to it(Located under Assets/Resources)</li>
+</ul>
+## General Use/Notes
+<ul>
+  <li>Objects can be added and removed at will simply by toggling them on/off in the hierarchy(dont click them if they are complex objects), but they will take time to appear</li>
+  <li>If you change the emissiveness of an object, you need to dissable and re-enable its parent(basically reloading it) if you want to take advantage of NEE correctly sampling it</li>
+  <li>If you use normal maps, they need to be in unity normal map format, and emissive masks need to have at least 1 component be red as thats what I use to determin what parsts should be emissive(it will use the albedo tex as surface color)</li>
+  <li>To set up PBR, all textures go into their proper names, but Roughness goes into the Occlusion texture(Since path tracing calculates ambient occlusion by default, this texture is not normally needed, and there being no proper place for a Roughness texture in the default material, I have decided this was a good compromise)</li>
+</ul>
+
+## Controls:
 Camera Controls: WASD, Mouse, and press T to freeze the camera
-</br></br>
-## Setting up your scene(will make a video for this eventually)
-First, I highly reccomend you look at the demo scene provided by the package for this, but heres how the hierarchy needs to be configured
-</br></br>
-First, you need a main camera, and attatched to this main camera, you need to attach the RayTracingMaster script located in Resources(and the Fly Camera script located in Resources -> Utility)
-</br></br>
-Next, all default unity lights you want to use need a RayTracingLights script(located in Resources).  These can go anywhere in the hierarchy
-</br></br>
-Next, you need a gameobject, preferably at the top layer of the hierarchy(so it itself is not contained as a child to any other gameobject) called Scene, and give this the AssetManager script(located in Resources -> BVH).  All mesh objects and such should have this as a top parent
-</br></br>
-Next, you need to create groups of gameobjects(so aka, any objects that should have a single BVH built over(so objects that are either static or move all at once together)).  These are defined as gameobjects with the ParentObject script attatched to them, which is located in (Resources -> BVH).  These objects will not have meshes, but will have gameobjects with meshes as their children.
-</br></br>
-Finally, all gameobjects that are meshes that you wish to trace will have to be a child of one of the gameobjects with a parent script.  You attach the RayTracingObject script to each of these(located in Resources).
-</br></br>
-First note, GameObjects with the parent script attached can have children that are themselves also gameobjects with ParentObject scripts, allowing for different groups to be still nested(and thus can inherit transforms).
-</br></br>
-Second note, You can now add, remove, and move objects at will during run, they will just take some time to appear.  Nothing special should need to be done to do this, just do it how you normally would(if this ends up not being this easy, let me know so I can take it into account)
-</br></br>
-Third note, if you change the emissiveness of an object, you need to dissable and re-enable its parent(basically reloading it) if you want to take advantage of NEE correctly sampling it
-</br></br>
-One last thing, in the event that you use normal maps, they need to be in unity normal map format, and emissive masks for now need to have at least 1 component be red as thats what I use to determin what parsts should be emissive(it will use the albedo tex as surface color)
-</br></br>
-</br></br>
-Finally, to set up PBR, all textures go into their proper names, but Roughness goes into the Occlusion texture(Since path tracing calculates ambient occlusion by default, this texture is not normally needed, and there being no proper place for a Roughness texture in the default material, I have decided this was a good compromise)
-</br></br>
-</br></br>
+</br>
 ## Editor Window Guide
 BVH Options Description - 
 <ul>
