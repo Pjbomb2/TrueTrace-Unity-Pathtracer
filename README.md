@@ -36,6 +36,7 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 <li>Taking Full Resolution Screenshots</li>
 <li>Bloom</li>
 <li>PBR Texture Support</li>
+<li>No specific GPU vendor needed(this will run on integrated graphics if you so wish it, aka no RTX cores)</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
