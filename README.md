@@ -110,6 +110,7 @@ BVH Options Description -
   <li>Use Atrous Denoiser - Turns on the Atrous denoiser(can be combined with SVGF)</li>
   <li>Current Samples - Shows how many samples have currently been accumulated</li>
   <li>Take Screenshot - Takes a screenshot at game view resolution and saves it to Assets/ScreenShots(You need to create this folder)</li>
+  <li>QuickStart - Will attempt to automatially assign RayTracingObjects and ParentObjects to all child under the GameObject named "Scene" with an AssetManager attatched</li>
   </ul>
   
  ## Materials
