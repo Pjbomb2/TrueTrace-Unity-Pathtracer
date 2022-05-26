@@ -15,7 +15,7 @@ Currently want to do but havent started:
 </ul>
 
 # Compute Shader Based Unity PathTracer
-A passion projects that has been going on for awhile, finally at a place where I feel comfortable tentatively uploading it to Github for others to use
+A passion projects that has been going on for awhile(about a year in unity, with my earliest version I can find being version 30(whereas I am now on version 256), which was made on 5-7-2021), finally at a place where I feel comfortable tentatively uploading it to Github for others to use
 What is it?
 Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compute Shaders
 ## Features: 
