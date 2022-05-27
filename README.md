@@ -1,7 +1,8 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>None, Need Ideas</li>
+  <li>Massive rewrite of how objects are handled(gonna make it harder to use but will make loading much more efficient and allow instancing)</li>
+  <li>Need More Ideas</li>
 </ul>
 Currently needs to be done but havent started:
 <ul>
