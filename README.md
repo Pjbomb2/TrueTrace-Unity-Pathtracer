@@ -1,7 +1,7 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>~~Massive rewrite of how objects are handled(gonna make it harder to use but will make loading much more efficient and allow instancing)~~ Much too complicated for others to use and so so many bugs</li>
+  <li>Adding Voxels</li>
   <li>Need More Ideas</li>
 </ul>
 Currently needs to be done but havent started:
@@ -12,7 +12,7 @@ Currently needs to be done but havent started:
 </ul>
 Currently want to do but havent started:
 <ul>
-    <li>Add native support for voxels(havent started as I dont know a good way to structure it or what acceleration structure would be good, or a good data format, that supports preferably both solid and volumetric voxels)</li>
+    <li>None, need more Ideas</li>
 </ul>
 
 # Compute Shader Based Unity PathTracer
