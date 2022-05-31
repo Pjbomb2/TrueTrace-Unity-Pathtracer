@@ -1,7 +1,7 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>Adding Voxels</li>
+  <li>Adding Voxels(so far from fast, not adding it yet)</li>
   <li>Need More Ideas</li>
 </ul>
 Currently needs to be done but havent started:
