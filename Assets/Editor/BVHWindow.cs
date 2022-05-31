@@ -165,7 +165,6 @@ public class EditModeFunctions : EditorWindow {
 
          if (GUI.Button(EasySetupButton, "QuickStart")) {
             QuickStart();
-
          }
 
 
@@ -251,7 +250,3 @@ void OnInspectorUpdate() {
 
 
 }
- 
-
-
- 

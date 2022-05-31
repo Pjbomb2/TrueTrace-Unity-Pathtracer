@@ -231,8 +231,8 @@ void Generate (uint3 id : SV_DispatchThreadID) {
     GlobalRays1[pixel_index].origin = ray.origin;
     GlobalRays1[pixel_index].direction = ray.direction;
     GlobalRays1[pixel_index].PixelIndex = id.x + id.y * screen_width;
-    GlobalRays1[pixel_index].InMedium = true;
     GlobalColors[pixel_index].throughput = float3(1.0f, 1.0f, 1.0f);
+    GlobalRays1[pixel_index].InMedium = true;
     GlobalColors[pixel_index].Direct = float3(0.0f, 0.0f, 0.0f);
     GlobalColors[pixel_index].Indirect = float3(0.0f, 0.0f, 0.0f);
     GlobalColors[pixel_index].Fog = float3(0.0f, 0.0f, 0.0f);
@@ -282,6 +282,7 @@ void Generate (uint3 id : SV_DispatchThreadID) {
         return tri;
     }
 
+
     inline void IntersectTriangle(int mesh_id, int tri_id, const Ray ray, inout RayHit ray_hit) {
 
         TrianglePos tri = triangle_get_positions(tri_id);
@@ -310,6 +311,10 @@ void Generate (uint3 id : SV_DispatchThreadID) {
             }
         }
     }
+
+
+
+
 
     inline uint cwbvh_node_intersect(const Ray ray, int oct_inv4, float max_distance, float3 node_0, uint node_0w, uint4 node_1, uint4 node_2, uint4 node_3, uint4 node_4) {
 
@@ -392,8 +397,6 @@ void IntersectBVH() {
     RayHit bestHit;
     Ray ray;
 
-    int TrisChecked;
-
     uint2 stack[24];
     int stack_size = 0;
     uint ray_index;
@@ -424,7 +427,6 @@ void IntersectBVH() {
             bestHit = CreateRayHit();
 
             tlas_stack_size = -1;
-            TrisChecked = 0;
         }
 
         while(true) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
@@ -452,7 +454,6 @@ void IntersectBVH() {
                 uint4 node_4 = cwbvh_nodes[child_node_index].node_4;
 
                 uint hitmask = cwbvh_node_intersect(ray, oct_inv4, bestHit.t, node_0, node_0w, node_1, node_2, node_3, node_4);
-                TrisChecked++;
                 uint imask = (node_0w >> (3 * 8)) & 0xff;
 
                 current_group.x = asuint(node_1.x) + ((tlas_stack_size == -1) ? 0 : NodeOffset);
@@ -501,7 +502,6 @@ void IntersectBVH() {
                 else {
                     uint triangle_index =  firstbithigh(triangle_group.y);
                     triangle_group.y &= ~(1 << triangle_index);
-                  //  TrisChecked++;
                     IntersectTriangle(mesh_id, triangle_group.x + triangle_index, ray, bestHit);//Intersect Mesh Triangles
                 }
             }
@@ -530,8 +530,6 @@ void IntersectBVH() {
 void kernel_trace () {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
     IntersectBVH();
 }
-
-
 
 
 #pragma kernel kernel_shadow
@@ -1415,6 +1413,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, con
         Geomnorm *= -1;
         GotFlipped = true;
     }
+
     float3 norm = Geomnorm;
     [branch]if(NormalUV.x != -1) {
          float3 LocalTan = normalize(mul(_MeshData[hit.mesh_id].Inverse, float4(AggTris[index].tan0 + hit.u * AggTris[index].tanedge1 + hit.v * AggTris[index].tanedge2, 0.0f)).xyz);

@@ -17,8 +17,8 @@ public class AssetManager : MonoBehaviour {
     public List<MaterialData> _Materials;
     [HideInInspector] public ComputeBuffer BVH8AggregatedBuffer;
     [HideInInspector] public ComputeBuffer AggTriBuffer;
-    [HideInInspector] public List<MyMeshDataCompacted> MyMeshesCompacted;
-    [HideInInspector] public List<CudaLightTriangle> AggLightTriangles;
+    public List<MyMeshDataCompacted> MyMeshesCompacted;
+     public List<CudaLightTriangle> AggLightTriangles;
     [HideInInspector] public List<LightData> UnityLights;
 
     public ComputeShader MeshFunctions;
@@ -33,13 +33,11 @@ public class AssetManager : MonoBehaviour {
     [HideInInspector] public List<Transform> LightTransforms;
     [HideInInspector] public List<Task> CurrentlyActiveTasks;
 
-    [HideInInspector] public List<LightMeshData> LightMeshes;
+    public List<LightMeshData> LightMeshes;
 
     [HideInInspector] public AABB[] MeshAABBs;
 
     [HideInInspector] public bool ParentCountHasChanged;    
-    private bool NeedsToUpdate = false;
-    private bool ActuallyNeedsToUpdate = false;
     
     [HideInInspector] public int TLASSpace;
     [HideInInspector] public int LightTriCount;
@@ -52,6 +50,7 @@ public class AssetManager : MonoBehaviour {
     [HideInInspector] public bool UseSkinning = true;
     [HideInInspector] public bool HasStart = false;
     [HideInInspector] public bool didstart = false;
+    public bool ChildrenUpdated;
 
     public void ClearAll() {//My attempt at clearing memory
         ParentObject[] ChildrenObjects = this.GetComponentsInChildren<ParentObject>();
@@ -84,8 +83,6 @@ public class AssetManager : MonoBehaviour {
         DestroyImmediate(AlbedoAtlas);
         DestroyImmediate(NormalAtlas);
         DestroyImmediate(EmissiveAtlas);  
-        NeedsToUpdate = true;
-        ActuallyNeedsToUpdate = true;
         if(BVH8AggregatedBuffer != null) {
             BVH8AggregatedBuffer.Release();
             BVH8AggregatedBuffer = null;    
@@ -214,6 +211,11 @@ public class AssetManager : MonoBehaviour {
     }
 
     private void init() {
+        AddQue = new List<ParentObject>();
+        RemoveQue = new List<ParentObject>();
+        RenderQue = new List<ParentObject>();
+        CurrentlyActiveTasks = new List<Task>();
+        BuildQue = new List<ParentObject>();
         MyMeshesCompacted = new List<MyMeshDataCompacted>();
         AggLightTriangles = new List<CudaLightTriangle>();
         CurrentlyActiveTasks = new List<Task>();
@@ -235,38 +237,53 @@ public class AssetManager : MonoBehaviour {
     }
 
     private void UpdateRenderAndBuildQues() {
-        NeedsToUpdate = false;
-        int RenderQueCount = RenderQue.Count;
-        for(int i = RenderQueCount - 1; i >= 0; i--) {//Demotes from Render Que to Build Que in case mesh has changed
-            if(RenderQue[i].MeshCountChanged) {
+        ChildrenUpdated = false;
+
+        int AddQueCount = AddQue.Count - 1;
+        int RemoveQueCount = RemoveQue.Count - 1;
+        for(int i = AddQueCount; i >= 0; i--) {
+            var CurrentRep = BuildQue.Count;
+            BuildQue.Add(AddQue[i]);
+            AddQue.RemoveAt(i);
+            BuildQue[CurrentRep].LoadData();
+            CurrentlyActiveTasks.Add(Task.Run(() => BuildQue[CurrentRep].BuildTotal()));
+            ChildrenUpdated = true;
+        }
+        for(int i = RemoveQueCount; i >= 0; i--) {
+            if(RenderQue.Contains(RemoveQue[i]))
+                RenderQue.Remove(RemoveQue[i]);
+            else if(BuildQue.Contains(RemoveQue[i])) {
+                CurrentlyActiveTasks.RemoveAt(BuildQue.IndexOf(RemoveQue[i]));
+                BuildQue.Remove(RemoveQue[i]);
+            } else
+                Debug.Log("REMOVE QUE NOT FOUND");
+            ChildrenUpdated = true;
+            RemoveQue.RemoveAt(i); 
+        }
+        int RenderQueCount = RenderQue.Count - 1;
+        for(int i = RenderQueCount; i >= 0; i--) {//Demotes from Render Que to Build Que in case mesh has changed
+            if(RenderQue[i].NeedsToUpdate) {
                 RenderQue[i].ClearAll();
                 RenderQue[i].LoadData();
-                BuildQue.Add(new ParentObject());
-                BuildQue[BuildQue.Count - 1] = RenderQue[i];
-                var TempBuildQueCount = BuildQue.Count - 1;
-                Task t1 = Task.Run(() => BuildQue[TempBuildQueCount].BuildTotal());
-                CurrentlyActiveTasks.Add(t1);
+                BuildQue.Add(RenderQue[i]);
                 RenderQue.RemoveAt(i);
-                NeedsToUpdate = true;
+                var TempBuildQueCount = BuildQue.Count - 1;
+                CurrentlyActiveTasks.Add(Task.Run(() => BuildQue[TempBuildQueCount].BuildTotal()));
+                ChildrenUpdated = true;
             }
         }
-        int BuildQueCount = BuildQue.Count;
-        for(int i = BuildQueCount - 1; i >= 0; i--) {//Promotes from Build Que to Render Que
-            if(CurrentlyActiveTasks[i].IsFaulted) {//Fuck, something fucked up
-                Debug.Log(CurrentlyActiveTasks[i].Exception);
-            }
+        int BuildQueCount = BuildQue.Count - 1;
+        for(int i = BuildQueCount; i >= 0; i--) {//Promotes from Build Que to Render Que
+            if(CurrentlyActiveTasks[i].IsFaulted) Debug.Log(CurrentlyActiveTasks[i].Exception);//Fuck, something fucked up
             if(CurrentlyActiveTasks[i].Status == TaskStatus.RanToCompletion) {
-                RenderQue.Add(new ParentObject());
-                RenderQue[RenderQue.Count - 1] = BuildQue[i];
-                CurrentlyActiveTasks.RemoveAt(i);
+                BuildQue[i].SetUpBuffers();
+                RenderQue.Add(BuildQue[i]);
                 BuildQue.RemoveAt(i);
-                RenderQue[RenderQue.Count - 1].SetUpBuffers();
-                NeedsToUpdate = true;
+                CurrentlyActiveTasks.RemoveAt(i);
+                ChildrenUpdated = true;
             }
         }
-        if(NeedsToUpdate) {
-            MeshAABBs = new AABB[RenderQue.Count];
-        }
+        if(ChildrenUpdated || ParentCountHasChanged) MeshAABBs = new AABB[RenderQue.Count];
     }
     public void EditorBuild() {
         ClearAll();
@@ -289,24 +306,17 @@ public class AssetManager : MonoBehaviour {
     public void BuildCombined() {
         HasToDo = false;
         init();
-        AddQue = new List<ParentObject>();
-        RemoveQue = new List<ParentObject>();
-        RenderQue = new List<ParentObject>();
-        CurrentlyActiveTasks = new List<Task>();
-        BuildQue = new List<ParentObject>();
         List<ParentObject> TempQue = new List<ParentObject>(GetComponentsInChildren<ParentObject>());
         for(int i = 0; i < TempQue.Count; i++) {
-            if(TempQue[i].HasCompleted && !TempQue[i].MeshCountChanged) {
+            if(TempQue[i].HasCompleted && !TempQue[i].NeedsToUpdate)
                 RenderQue.Add(TempQue[i]);
-            } else {
+            else
                 BuildQue.Add(TempQue[i]);
-            }
         }
         for(int i = 0; i < BuildQue.Count; i++) {
             var CurrentRep = i;
             BuildQue[CurrentRep].LoadData();
-            Task t1 = Task.Run(() => BuildQue[CurrentRep].BuildTotal());
-            CurrentlyActiveTasks.Add(t1);
+            CurrentlyActiveTasks.Add(Task.Run(() => BuildQue[CurrentRep].BuildTotal()));
         }
         MeshAABBs = new AABB[RenderQue.Count];
         ParentCountHasChanged = true;
@@ -320,71 +330,70 @@ public class AssetManager : MonoBehaviour {
         int ParentsLength = RenderQue.Count;
         TLASSpace = 2 * ParentsLength;
         int nodes = TLASSpace;
-        int b = 0;
         int BVHOffset = 0;
         int MaterialOffset = 0;
-        if(NeedsToUpdate || ActuallyNeedsToUpdate) {
+        if(ChildrenUpdated || ParentCountHasChanged) {
             HasToDo = false;
+            int CurNodeOffset = TLASSpace;
+            int CurTriOffset = 0;
             LightMeshCount = 0;
             LightMeshes.Clear();
             AggLightTriangles.Clear();
+            LightTransforms.Clear();
+            float TotalEnergy = 0;
             int AggTriCount = 0;
-            int AggNodeCount = TLASSpace;//removed - 1
+            int AggNodeCount = TLASSpace;
+            if(BVH8AggregatedBuffer != null) {
+                BVH8AggregatedBuffer.Release();    
+                AggTriBuffer.Release();  
+            }
             for(int i = 0; i < ParentsLength; i++) {
                 AggNodeCount += RenderQue[i].AggNodes.Length;
                 AggTriCount += RenderQue[i].AggTriangles.Length;
             }
-            float TotalEnergy = 0;
-            LightTransforms.Clear();
-            if(BVH8AggregatedBuffer != null) {
-                BVH8AggregatedBuffer.Release();
-                BVH8AggregatedBuffer = null;    
-                AggTriBuffer.Release();
-                AggTriBuffer = null;    
-            }
-            BVH8AggregatedBuffer = new ComputeBuffer(AggNodeCount, 80);
-            AggTriBuffer = new ComputeBuffer(AggTriCount, 136);
-            MeshFunctions.SetBuffer(TriangleBufferKernel, "OutCudaTriArray", AggTriBuffer);
-            MeshFunctions.SetBuffer(NodeBufferKernel, "OutAggNodes", BVH8AggregatedBuffer);
-            int CurNodeOffset = TLASSpace;
-            int CurTriOffset = 0;
-            for(int i = 0; i < ParentsLength; i++) {
-                RenderQue[i].SetUpBuffers();
-                RenderQue[i].UpdateData(ref b, ref nodes, ref BVHOffset, ref MaterialOffset);
-                MeshFunctions.SetInt("Offset", CurTriOffset);
-                MeshFunctions.SetInt("Count", RenderQue[i].TriBuffer.count);
-                MeshFunctions.SetBuffer(TriangleBufferKernel, "InCudaTriArray", RenderQue[i].TriBuffer);
-                MeshFunctions.Dispatch(TriangleBufferKernel, (int)Mathf.Ceil(RenderQue[i].TriBuffer.count / 248.0f), 1, 1);
+            if(AggNodeCount != 0) {
+                BVH8AggregatedBuffer = new ComputeBuffer(AggNodeCount, 80);
+                AggTriBuffer = new ComputeBuffer(AggTriCount, 136);
+                MeshFunctions.SetBuffer(TriangleBufferKernel, "OutCudaTriArray", AggTriBuffer);
+                MeshFunctions.SetBuffer(NodeBufferKernel, "OutAggNodes", BVH8AggregatedBuffer);
+                for(int i = 0; i < ParentsLength; i++) {
+                    RenderQue[i].UpdateData(ref BVHOffset, ref MaterialOffset);
+                    RenderQue[i].SetUpBuffers();
+                    MeshFunctions.SetInt("Offset", CurTriOffset);
+                    MeshFunctions.SetInt("Count", RenderQue[i].TriBuffer.count);
+                    MeshFunctions.SetBuffer(TriangleBufferKernel, "InCudaTriArray", RenderQue[i].TriBuffer);
+                    MeshFunctions.Dispatch(TriangleBufferKernel, (int)Mathf.Ceil(RenderQue[i].TriBuffer.count / 248.0f), 1, 1);
 
-                MeshFunctions.SetInt("Offset", CurNodeOffset);
-                MeshFunctions.SetInt("Count", RenderQue[i].BVHBuffer.count);
-                MeshFunctions.SetBuffer(NodeBufferKernel, "InAggNodes", RenderQue[i].BVHBuffer);
-                MeshFunctions.Dispatch(NodeBufferKernel, (int)Mathf.Ceil(RenderQue[i].BVHBuffer.count / 248.0f), 1, 1);
+                    MeshFunctions.SetInt("Offset", CurNodeOffset);
+                    MeshFunctions.SetInt("Count", RenderQue[i].BVHBuffer.count);
+                    MeshFunctions.SetBuffer(NodeBufferKernel, "InAggNodes", RenderQue[i].BVHBuffer);
+                    MeshFunctions.Dispatch(NodeBufferKernel, (int)Mathf.Ceil(RenderQue[i].BVHBuffer.count / 248.0f), 1, 1);
+                    if(!RenderQue[i].IsSkinnedGroup) RenderQue[i].Release();
 
-                RenderQue[i].NodeOffset = CurNodeOffset;
-                RenderQue[i].TriOffset = CurTriOffset;
-                CurNodeOffset += RenderQue[i].AggNodes.Length;
-                CurTriOffset += RenderQue[i].AggTriangles.Length;
+                    RenderQue[i].NodeOffset = CurNodeOffset;
+                    RenderQue[i].TriOffset = CurTriOffset;
+                    CurNodeOffset += RenderQue[i].AggNodes.Length;
+                    CurTriOffset += RenderQue[i].AggTriangles.Length;
 
-                if(RenderQue[i].LightCount != 0) {
-                    LightMeshCount++;
-                    TotalEnergy += RenderQue[i].TotEnergy;
-                    LightTransforms.Add(RenderQue[i].transform);
-                    LightMeshes.Add(new LightMeshData() {
-                        energy = RenderQue[i].TotEnergy,
-                        TotalEnergy = TotalEnergy,
-                        StartIndex = AggLightTriangles.Count,
-                        IndexEnd = RenderQue[i].LightCount + AggLightTriangles.Count     
-                      });
-                    AggLightTriangles.AddRange(RenderQue[i].LightTriangles);
+                    if(RenderQue[i].LightCount != 0) {
+                        LightMeshCount++;
+                        TotalEnergy += RenderQue[i].TotEnergy;
+                        LightTransforms.Add(RenderQue[i].transform);
+                        LightMeshes.Add(new LightMeshData() {
+                            energy = RenderQue[i].TotEnergy,
+                            TotalEnergy = TotalEnergy,
+                            StartIndex = AggLightTriangles.Count,
+                            IndexEnd = RenderQue[i].LightCount + AggLightTriangles.Count     
+                          });
+                        AggLightTriangles.AddRange(RenderQue[i].LightTriangles);
+                    }
                 }
             }
             if(LightMeshCount == 0) {LightMeshes.Add(new LightMeshData() {});}
             if(AggLightTriangles.Count == 0) {AggLightTriangles.Add(new CudaLightTriangle() {}); LightTriCount = 0;} else {LightTriCount = AggLightTriangles.Count;}
-           NeedsToUpdate = true;
-           ActuallyNeedsToUpdate = true;
            CreateAtlas();
         }
+        ParentCountHasChanged = false;
         if(UseSkinning && didstart) { 
             for(int i = 0; i < ParentsLength; i++) {
                 if(RenderQue[i].IsSkinnedGroup) {
@@ -429,33 +438,8 @@ public class AssetManager : MonoBehaviour {
     }
 
     public bool UpdateTLAS() {  //Allows for objects to be moved in the scene or animated while playing 
-        ActuallyNeedsToUpdate = false;
+        
         bool LightsHaveUpdated = false;
-        if(ParentCountHasChanged) {
-            int AddQueCount = AddQue.Count;
-            int RemoveQueCount = RemoveQue.Count;
-            for(int i = AddQueCount - 1; i >= 0; i--) {
-                var CurrentRep = BuildQue.Count;
-                BuildQue.Add(AddQue[i]);
-                BuildQue[CurrentRep].LoadData();
-                Task t1 = Task.Run(() => BuildQue[CurrentRep].BuildTotal());
-                CurrentlyActiveTasks.Add(t1);
-                AddQue.RemoveAt(i);
-            }
-            for(int i = RemoveQueCount - 1; i >= 0; i--) {
-                if(RenderQue.Contains(RemoveQue[i])) {
-                    RenderQue.Remove(RemoveQue[i]);
-                    RemoveQue.RemoveAt(i);
-                }
-            }
-            MeshAABBs = new AABB[RenderQue.Count];
-            TLASSpace = 2 * RenderQue.Count;
-            ParentCountHasChanged = false;
-            ActuallyNeedsToUpdate = true;
-        }
-        if(!didstart) {
-            Thread.Sleep(10);
-        }
         TempBuild();
         if(!didstart) {
             didstart = true;
@@ -517,7 +501,7 @@ public class AssetManager : MonoBehaviour {
         BVH2 = new BVH2Builder(MeshAABBs);
         BVH8Builder TLASBVH8 = new BVH8Builder(BVH2, ref MyMeshesCompacted);
         Aggregate(ref TLASBVH8);
-        return (NeedsToUpdate || ActuallyNeedsToUpdate || LightsHaveUpdated);//The issue is that all light triangle indices start at 0, and thus might not get correctly sorted for indices
+        return (LightsHaveUpdated || ChildrenUpdated);//The issue is that all light triangle indices start at 0, and thus might not get correctly sorted for indices
     }
 
     public void UpdateMaterials() {//Allows for live updating of material properties of any object
@@ -540,11 +524,6 @@ public class AssetManager : MonoBehaviour {
                     _Materials[CurrentMaterial.MaterialIndex[i3]] = TempMat;
                 }
             }
-        }
-    }
-    void OnDrawGizmos() {
-        for(int i = 0; i < RenderQue.Count; i++) {
-            Gizmos.DrawWireCube((RenderQue[i].aabb.BBMax - RenderQue[i].aabb.BBMin) / 2.0f + RenderQue[i].aabb.BBMin, (RenderQue[i].aabb.BBMax - RenderQue[i].aabb.BBMin));
         }
     }
 

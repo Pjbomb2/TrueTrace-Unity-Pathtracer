@@ -24,13 +24,58 @@ namespace CommonVars {
     }
 
 
+    [System.Serializable]
+    public struct Voxel {
+        public int Index;
+        public int Material;
+        public int InArrayIndex;
+    }
+
+    [System.Serializable][System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
+    public unsafe struct OctreeNode {
+        [System.Runtime.InteropServices.FieldOffset(0)] public fixed int ChildNode[8];
+        [System.Runtime.InteropServices.FieldOffset(32)] public fixed bool IsChild[8];
+        [System.Runtime.InteropServices.FieldOffset(40)] public Vector3 BBMax;
+        [System.Runtime.InteropServices.FieldOffset(52)]public Vector3 BBMin;
+        [System.Runtime.InteropServices.FieldOffset(64)]public Vector3 Center;
+        [System.Runtime.InteropServices.FieldOffset(76)]public Vector3 Extent;
+        [System.Runtime.InteropServices.FieldOffset(88)]public int InArrayIndex;
+    }
+
+    [System.Serializable][System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
+    unsafe public struct CompressedOctreeNode {
+        [System.Runtime.InteropServices.FieldOffset(0)]public uint imask;    
+        [System.Runtime.InteropServices.FieldOffset(4)]public uint base_index_child;
+        [System.Runtime.InteropServices.FieldOffset(8)]public uint base_index_triangle;
+        [System.Runtime.InteropServices.FieldOffset(12)]public uint Max;
+        [System.Runtime.InteropServices.FieldOffset(16)]public uint Min;
+        [System.Runtime.InteropServices.FieldOffset(20)]public fixed byte meta[8];//might be able to pack in material data as well so I could have it ignore glass!
+
+    }
+
+    [System.Serializable]
+    unsafe public struct GPUOctreeNode {
+        public uint node_0w;
+        public uint node_1x;
+        public uint node_1y;
+        public fixed uint meta[8];
+        public uint Max;
+        public uint Min;
+    }
+
+    [System.Serializable]
+    public struct GPUVoxel {
+        public int Index;
+        public int Material;
+    }
+
 
     [System.Serializable]
     public struct MeshDat {
         public List<int> Indices;
         public List<Vector3> Verticies;
         public List<Vector3> Normals;
-        public List<Vector3> Tangents;
+        public List<Vector4> Tangents;
         public List<Vector2> UVs;
         public List<int> MatDat;
 
@@ -40,7 +85,7 @@ namespace CommonVars {
             }
         }
         public void init() {
-            this.Tangents = new List<Vector3>();
+            this.Tangents = new List<Vector4>();
             this.MatDat = new List<int>();
             this.UVs = new List<Vector2>();
             this.Verticies = new List<Vector3>();

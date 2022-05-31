@@ -84,6 +84,7 @@ public class RayTracingMaster : MonoBehaviour {
     void Start() {
         if(RayTracingShader == null) {RayTracingShader = Resources.Load<ComputeShader>("RayTracingShader");}
         if(AtmosphereGeneratorShader == null) {AtmosphereGeneratorShader = Resources.Load<ComputeShader>("Utility/AtmosphereLUTGenerator");}
+
         
         _meshObjectsNeedRebuilding = true;
         Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
@@ -199,7 +200,6 @@ public class RayTracingMaster : MonoBehaviour {
         CreateComputeBuffer(ref _LightTriangles, Assets.AggLightTriangles, 68);
 
         CreateDynamicBuffer(ref _RayBuffer1, 48);
-//        CreateDynamicBuffer(ref _ShadowBuffer, 44);
         if(_ShadowBuffer == null) _ShadowBuffer = new ComputeBuffer(Screen.width * Screen.height * 2, 56);
         CreateDynamicBuffer(ref _RayBuffer2, 48);
         CreateDynamicBuffer(ref _ColorBuffer, 48);
@@ -281,7 +281,7 @@ public class RayTracingMaster : MonoBehaviour {
             SetComputeBuffer(GenKernel, "GlobalRays2", _RayBuffer2);
             SetComputeBuffer(TraceKernel, "GlobalRays2", _RayBuffer2);
             SetComputeBuffer(ShadeKernel, "GlobalRays2", _RayBuffer2);
-            
+
             SetComputeBuffer(GenKernel, "GlobalColors", _ColorBuffer);
             SetComputeBuffer(ShadowKernel, "GlobalColors", _ColorBuffer);
             SetComputeBuffer(ShadeKernel, "GlobalColors", _ColorBuffer);
