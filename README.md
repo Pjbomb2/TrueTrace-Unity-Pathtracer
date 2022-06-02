@@ -22,7 +22,7 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 ## Features: 
 <ul>
 <li>Relatively fast Compute Shader based path tracing</li>
-<li>Diffuse, Glossy(kinda), Dielectric(think of glass), Conductor(metal), Diffuse Transmission</li>
+<li>Diffuse, Glossy(kinda), Dielectric(think of glass), Conductor(metal), Diffuse Transmission, Emissive</li>
 <li>Ability to move, add, and remove objects during play</li>
 <li>Ability to update material properties on the fly during play</li>
 <li>SVGF Denoiser(not sure its working 100% correctly)</li>
