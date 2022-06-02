@@ -1,7 +1,7 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>Adding Voxels(so far from fast, not adding it yet)</li>
+  <li>Adding Voxels(not performant enough to add(only 30 fps for 160k voxels at 2 bounces) unless I get contacted by someone seriously wanting it)</li>
   <li>Need More Ideas</li>
 </ul>
 Currently needs to be done but havent started:
@@ -126,6 +126,7 @@ BVH Options Description -
   
 # Sample Images(Taken from various stages of development)
 
+![](/Images/Voxels1.png)
 ![](/Images/PBRTest1.png)
 ![](/Images/NewFog.png)
 ![](/Images/Sunset1.png)
