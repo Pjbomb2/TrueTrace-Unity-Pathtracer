@@ -1,7 +1,7 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>Adding Voxels(not performant enough to add(only 30 fps for 160k voxels at 2 bounces) unless I get contacted by someone seriously wanting it)</li>
+  <li>Adding Voxels(performance is improving but its still not enough)</li>
   <li>Need More Ideas</li>
 </ul>
 Currently needs to be done but havent started:
