@@ -1,7 +1,7 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>Adding Voxels(performance is improving but its still not enough)</li>
+  <li>Adding Voxels(performance is improving but its still not enough unless again someone wants it)</li>
   <li>Need More Ideas</li>
 </ul>
 Currently needs to be done but havent started:
@@ -126,7 +126,9 @@ BVH Options Description -
   
 # Sample Images(Taken from various stages of development)
 
-
+![](/Images/VoxelsWithMesh2.png)
+![](/Images/VoxelsWithMesh1.png)
+![](/Images/Voxels2.png)
 ![](/Images/DragoonInAScene.png)
 ![](/Images/Voxels1.png)
 ![](/Images/PBRTest1.png)
