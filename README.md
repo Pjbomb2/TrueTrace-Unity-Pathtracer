@@ -1,7 +1,6 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>Adding Voxels(performance is improving but its still not enough unless again someone wants it)</li>
   <li>Need More Ideas</li>
 </ul>
 Currently needs to be done but havent started:
@@ -9,6 +8,8 @@ Currently needs to be done but havent started:
     <li>Precomputed multiple scattering atmosphere(struggling a lot)</li>
     <li>Reduce Memory Spike on Start</li>
     <li>Improve Direct Light Sampling for meshes(look into ReSTIR or ReGIR?)</li>
+    <li>Fix NEE cuz rn its shit</li>
+    <li>Make Voxels able to be volumetric</li>
 </ul>
 Currently want to do but havent started:
 <ul>
@@ -38,6 +39,8 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 <li>Bloom</li>
 <li>PBR Texture Support</li>
 <li>No specific GPU vendor needed(this will run on integrated graphics if you so wish it, aka no RTX cores)</li>
+<li>Basic MagicaVoxel support</li>
+<li>Ability to pathtrace voxels and triangle scenes at the same time seamlessly</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
@@ -87,7 +90,14 @@ Let me know if you use this for anything, I would be excited to see any use of t
   <li>If you use normal maps, they need to be in unity normal map format, and emissive masks need to have at least 1 component be red as thats what I use to determin what parsts should be emissive(it will use the albedo tex as surface color)</li>
   <li>To set up PBR, all textures go into their proper names, but Roughness goes into the Occlusion texture(Since path tracing calculates ambient occlusion by default, this texture is not normally needed, and there being no proper place for a Roughness texture in the default material, I have decided this was a good compromise)</li>
 </ul>
-
+## MagicaVoxel Usage
+<ul>
+  <li>Firstly, you still need to have a gameobject under the scene gameobject to attatch your voxel model to</li>
+  <li>Second, you need to attatch a VoxelObject to that gameobject(Located under Assets->Resources->BVH->VoxelObject)</li>
+  <li>Next you need to attatch the voxel model to this script, by dragging your voxel model asset in the project tab to the VoxelRef space in the VoxelObject script</li>
+  <li>That should be it, it will get grouped into the building along with meshes, and having at least 1 voxel object in the scene will turn on its inclusion.  Removing or turning off all voxel related gameobjects will turn it back off</li>
+    
+    
 ## Controls:
 Camera Controls: WASD, Mouse, and press T to freeze the camera
 </br>
@@ -177,4 +187,4 @@ Scenes From:
 
 
 ## Ideas/Reminders for later
-ReSTIR, ReGIR, Optimized Atlas Creation, Reduce memory consumption, add support for Roughness/Metallic atlas, work on adding back in Mitsuba scene support
+ReSTIR, ReGIR, Find an alternative to atlas's, Reduce memory consumption, work on adding back in Mitsuba scene support, work on improving voxel performance
