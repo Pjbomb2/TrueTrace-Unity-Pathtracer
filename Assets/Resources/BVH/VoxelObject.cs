@@ -80,9 +80,7 @@ VoxLoader Vox;
             Vector3 BaseColor = (Vector3)Vox.palette[Vox.CurrentMaterials[i]] / 255.0f;
             if(BaseColor.Equals(new Vector3(0,0,0))) BaseColor = new Vector3(0.1f,0.1f,0.1f);
             _Materials.Add(new MaterialData() {
-                BaseColor = BaseColor,
-                MatType = (Vox.palette[Vox.CurrentMaterials[i]].w != 255) ? 2 : 0,
-                eta = (Vox.palette[Vox.CurrentMaterials[i]].w != 255) ? new Vector3(1.33f,0,0) : new Vector3(0,0,0)
+                BaseColor = BaseColor
                 });
         }
         LargestAxis = (int)Mathf.Max(Mathf.Max(Size.x, Size.y), Size.z);
