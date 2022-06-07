@@ -974,7 +974,7 @@ for(int i = 0; i < TotalObjects; i++) {
                     posedge1 = V2 - V1,
                     posedge2 = V3 - V1,
                     Norm = (TempPrim.Norm1 + TempPrim.Norm2 + TempPrim.Norm3) / 3.0f,
-                    radiance = _Materials[TempPrim.MatDat].emmissive * _Materials[TempPrim.MatDat].BaseColor * area,
+                    radiance = _Materials[TempPrim.MatDat].emmissive * _Materials[TempPrim.MatDat].BaseColor,
                     sumEnergy = TotalEnergy,
                     energy = e
                     });

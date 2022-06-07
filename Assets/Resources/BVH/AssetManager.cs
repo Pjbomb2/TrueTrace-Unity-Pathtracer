@@ -567,7 +567,7 @@ public class AssetManager : MonoBehaviour {
        
         
         UnityLights.Clear();
-        float TotalEnergy = (LightMeshes.Count != 0) ? LightMeshes[LightMeshes.Count - 1].TotalEnergy : 0.0f;
+        float TotalEnergy = 0.0f;//(LightMeshes.Count != 0) ? LightMeshes[LightMeshes.Count - 1].TotalEnergy : 0.0f;
         UnityLightCount = 0;
         RayTracingMaster._rayTracingLights.Sort((s1,s2) => s1.Energy.CompareTo(s2.Energy));
         foreach(RayTracingLights RayLight in RayTracingMaster._rayTracingLights) {

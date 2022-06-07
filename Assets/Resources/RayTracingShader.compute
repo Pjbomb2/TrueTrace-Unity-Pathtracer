@@ -1216,6 +1216,7 @@ void IntersectShadowOctree() {
         while(true) {
             InterlockedAdd(BufferSizes[CurBounce].octree_shadow_rays_retired, 1, ray_index);
             if(ray_index >= (uint)BufferSizes[CurBounce].shadow_rays) return;
+            if(ShadowRaysBuffer[ray_index].HitMesh) continue;
             int pixel_index = ShadowRaysBuffer[ray_index].PixelIndex;
             if(ShadowRaysBuffer[ray_index].IsNotFog) {
                 if(CurBounce == 0) {
@@ -2015,7 +2016,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
             if(random(10).x > 0.5f) {
                     norm = -norm;
                     Geomnorm = -Geomnorm;
-                     throughput *= hitDat.surfaceColor;
+                    // throughput *= hitDat.surfaceColor;
                 } else {
                     throughput *= exp(-hitDat.surfaceColor * hit.t);//Beers law
                 }
@@ -2031,7 +2032,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
     ray.origin = Geomnorm * 0.001f + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
 
     [branch]if(UseNEE || AllowVolumetrics) {//Next event estimation
-        bool UseUnityLight = (unitylightcount != 0) ? (LightMeshCount != 0) ? (random(11).x <= 1.0f - (_LightMeshes[LightMeshCount - 1].TotalEnergy / _UnityLights[unitylightcount - 1].TotalEnergy)) : true : false;//Choose whether to sample unity lights or mesh lights based off which is more powerful
+        bool UseUnityLight = (unitylightcount != 0) ? (LightMeshCount != 0) ? (random(11).x <= (_UnityLights[unitylightcount - 1].TotalEnergy / (_UnityLights[unitylightcount - 1].TotalEnergy + _LightMeshes[LightMeshCount - 1].TotalEnergy))) : true : false;//Choose whether to sample unity lights or mesh lights based off which is more powerful
         float3 pos2;
         float3 LightNorm;
         int triindex;
@@ -2058,6 +2059,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                     IsAboveHorizon = false;
                 break;
             }
+            MeshChance = (_UnityLights[triindex].energy / (_UnityLights[unitylightcount - 1].TotalEnergy + _LightMeshes[LightMeshCount - 1].TotalEnergy));
         } else {
             int MeshIndex = SelectLightMesh();
             triindex = SelectLight(MeshIndex);
@@ -2066,7 +2068,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
             float2 CurUv = sample_triangle(rand_triangle.x, rand_triangle.y);
             pos2 = mul(_LightMeshes[MeshIndex].Inverse, float4(CurTri.pos0 + CurUv.x * CurTri.posedge1 + CurUv.y * CurTri.posedge2, 0.0f)).xyz + _LightMeshes[MeshIndex].Center;
             LightNorm = normalize(mul(_LightMeshes[MeshIndex].Inverse, float4(LightTriangles[triindex].Norm, 0.0f)).xyz);
-            MeshChance = _LightMeshes[MeshIndex].energy / _LightMeshes[LightMeshCount - 1].TotalEnergy;//unused, needs more testing
+            MeshChance = (LightTriangles[triindex].energy / (_UnityLights[unitylightcount - 1].TotalEnergy + _LightMeshes[LightMeshCount - 1].TotalEnergy));//unused, needs more testing
         }
         float3 to_light = pos2 - ray.origin;
 
@@ -2117,12 +2119,13 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                 float light_pdf;
                 float3 Radiance;
                 if(UseUnityLight) {
-                    Radiance = _UnityLights[triindex].Radiance;
-                    light_pdf = luminance(Radiance.x, Radiance.y, Radiance.z) * distance_to_light_squared / (cos_theta_light * (_UnityLights[unitylightcount - 1].TotalEnergy - _LightMeshes[LightMeshCount - 1].TotalEnergy));
-                    Radiance *= rcp(1.0f - (_LightMeshes[LightMeshCount - 1].TotalEnergy / _UnityLights[unitylightcount - 1].TotalEnergy));
+                    Radiance = _UnityLights[triindex].Radiance / MeshChance;
+                    light_pdf = luminance(Radiance.x, Radiance.y, Radiance.z) * distance_to_light_squared / (cos_theta_light * (_UnityLights[unitylightcount - 1].TotalEnergy));
+                    Radiance /= (_UnityLights[unitylightcount - 1].TotalEnergy / (_UnityLights[unitylightcount - 1].TotalEnergy + _LightMeshes[LightMeshCount - 1].TotalEnergy));
                 } else {
-                    Radiance = LightTriangles[triindex].radiance;
+                    Radiance = LightTriangles[triindex].radiance / MeshChance;
                     light_pdf = luminance(Radiance.x, Radiance.y, Radiance.z) * distance_to_light_squared / (cos_theta_light * _LightMeshes[LightMeshCount - 1].TotalEnergy);
+                    Radiance /= (_LightMeshes[LightMeshCount - 1].TotalEnergy / (_UnityLights[unitylightcount - 1].TotalEnergy + _LightMeshes[LightMeshCount - 1].TotalEnergy));
                 }
 
                 float w = power_heuristic(light_pdf, bsdf_pdf);//For some reason 1 works way better for point lights
@@ -2149,12 +2152,12 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
             float3 to_light;
             float3 Radiance;
             if(UseUnityLight) { 
-                Radiance = _UnityLights[triindex].Radiance;
+                Radiance = _UnityLights[triindex].Radiance / MeshChance;
                 LightData Light = _UnityLights[triindex];
                 pos2 = (IsDirectional) ? PrevOrigin - Light.Direction * 15000.0f : Light.Position;
                 LightNorm = Light.Direction;
             } else {
-                Radiance = LightTriangles[triindex].radiance;
+                Radiance = LightTriangles[triindex].radiance / MeshChance;
             }
 
             float dist;
@@ -2167,7 +2170,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                 light_pdf = luminance(Radiance.x, Radiance.y, Radiance.z) * distance_to_light_squared / (cos_theta_light * _LightMeshes[LightMeshCount - 1].TotalEnergy);
             } else {
                 Radiance *= rcp(1.0f - (_LightMeshes[LightMeshCount - 1].TotalEnergy / _UnityLights[unitylightcount - 1].TotalEnergy));
-                light_pdf = luminance(Radiance.x, Radiance.y, Radiance.z) * distance_to_light_squared / (cos_theta_light * (_UnityLights[unitylightcount - 1].TotalEnergy - _LightMeshes[LightMeshCount - 1].TotalEnergy));
+                light_pdf = luminance(Radiance.x, Radiance.y, Radiance.z) * distance_to_light_squared / (cos_theta_light * (_UnityLights[unitylightcount - 1].TotalEnergy));
                 to_light = (IsDirectional) ? (SamplePoint - LightNorm * 2.0f) - SamplePoint : pos2 - SamplePoint;
             }
              float distance_to_light_squared = dot(to_light, to_light);
