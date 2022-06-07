@@ -1,7 +1,6 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>Sorta fixing NEE</li>
   <li>Sorta converting to ASVGF</li>
   <li>Need More Ideas</li>
 </ul>
@@ -10,12 +9,12 @@ Currently needs to be done but havent started:
     <li>Precomputed multiple scattering atmosphere(struggling a lot)</li>
     <li>Reduce Memory Spike on Start</li>
     <li>Improve Direct Light Sampling for meshes(look into ReSTIR or ReGIR?)</li>
-    <li>Fix NEE cuz rn its shit</li>
     <li>Make Voxels able to be volumetric</li>
 </ul>
 Currently want to do but havent started:
 <ul>
-    <li>None, need more Ideas</li>
+    <li>ReSTIR</li>
+    <li>Need More Ideas</li>
 </ul>
 
 # Compute Shader Based Unity PathTracer
