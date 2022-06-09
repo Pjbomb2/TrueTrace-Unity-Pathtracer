@@ -72,12 +72,12 @@ Let me know if you use this for anything, I would be excited to see any use of t
 ## General Setup
 <ul>
   <li>Download and import the UnityPackage provided</li>
-  <li>For quick setup, make sure you have a Main Camera(there by unity default), just open the BVH options menu under the Windows tab, it will reorganize the Hierarchy a bit, and give everything their required scripts  If you dont want it to do this, and do it manually read below</li>
+  <li>For quick setup, make sure you have a Main Camera(there by unity default), just open the Pathtracer Settings menu under the Pathtracer tab, it will reorganize the Hierarchy a bit, and give everything their required scripts  If you dont want it to do this, and do it manually read below</li>
 </ul>
 </br>
 ## Setting it up manually
 <ul>
-  <li>You need to do the below before opening the BVH window or else it will do its autosetup.  Additionally, you can study the provided DemoScene's hierarchy, as it provides basically all common variations of objects and their relations</li>
+  <li>You need to do the below before opening the Pathtracer settings window or else it will do its autosetup.  Additionally, you can study the provided DemoScene's hierarchy, as it provides basically all common variations of objects and their relations</li>
   <li>First, you need a main camera, which unity automatically provides.  This camera will need attatched to it the RayTracingMaster script, under Assets/Resources, and should have the FlyCamera Script attatched(Under Assets/Resources/Utility)</li>
   <li>Next, you need a GameObject called Scene, and this will be the gameobject that all others except the camera will be parented to(It will be the root object). This gameobject will need the AssetManager script attatched to it, found under Assets/Resources/BVH</li>
   <li>Next, all objects you want to trace will need a parent.  This parent can either be themselves for individual objects, or will need to be nested under another gameobject to be grouped(for increasing performance, group wherever you can).  These Parents need to have a ParentObject attatched, as this defines groups, with its children all being seen as one group(Located under Assets/Resources/BVH)</li>
@@ -117,6 +117,7 @@ BVH Options Description -
   <li>(If Allow Volumetrics is on) Volume Density - Adjusts density of the global fog</li>  
   <li>Allow Mesh Skinning - Turns on the ability for skinned meshes to be animated or deformed with respect to their armeture</li>
   <li>Allow Bloom - Turns on or off Bloom</li>
+  <li>Use DoF - Turns on or off Depth of Field, and its associated settings</li>
   <li>Use SVGF Denoiser - Turns on the SVGF denoiser</li>
   <li>(If SVGF Denosier is on)Atrous Kernel Size - The amount of times the SVGF denoiser runs through the Atrous kernel</li>
   <li>Use Atrous Denoiser - Turns on the Atrous denoiser(can be combined with SVGF)</li>
@@ -137,6 +138,7 @@ BVH Options Description -
   
 # Sample Images(Taken from various stages of development)
 
+![](/Images/DoF1.png)
 ![](/Images/VoxelsWithMesh2.png)
 ![](/Images/VoxelsWithMesh1.png)
 ![](/Images/Voxels2.png)
