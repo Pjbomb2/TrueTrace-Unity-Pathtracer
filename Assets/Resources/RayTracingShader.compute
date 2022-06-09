@@ -2,6 +2,7 @@
 
 float4x4 _CameraToWorld;
 float4x4 _CameraInverseProjection;
+float4x4 ViewMatrix;
 int frames_accumulated;
 uniform int CurBounce;
 uniform int MaxBounce;
@@ -18,11 +19,19 @@ int unitylightcount;
 bool UseRussianRoulette;
 bool UseNEE;
 bool AllowVolumetrics;
+bool UseDoF;
 
 float VolumeDensity;
 
 bool DoVoxels;
 int VoxelOffset;
+
+
+float3 Up;
+float3 Right;
+float3 Forward;
+float focal_distance;
+float AperatureRadius;
 
 struct BufferSizeData {   
     int tracerays;
@@ -205,7 +214,7 @@ float2 random(uint samdim) {
 
 
 #pragma kernel Generate 
-
+    static const float PI = 3.14159265f;
 
 Ray CreateCameraRay(float2 uv) {
     // Transform the camera origin to world space
@@ -215,7 +224,37 @@ Ray CreateCameraRay(float2 uv) {
     float3 direction = mul(_CameraInverseProjection, float4(uv, 0.0f, 1.0f)).xyz;
     // Transform the direction from camera to world space and normalize
     direction = mul(_CameraToWorld, float4(direction, 0.0f)).xyz;
-    direction = normalize(direction);
+    direction = normalize(direction);   
+    [branch]if(UseDoF) {
+        float3 cameraForward = mul(_CameraInverseProjection, float4(0,0, 0.0f, 1.0f)).xyz;
+        // Transform the direction from camera to world space and normalize
+        float4 sensorPlane;
+        sensorPlane.xyz = cameraForward;
+        sensorPlane.w = -dot(cameraForward, (origin - cameraForward));
+            
+        float t = -(dot(origin, sensorPlane.xyz) + sensorPlane.w) / dot(direction, sensorPlane.xyz);
+        float3 sensorPos = origin + direction  * t;
+
+        float3 cameraSpaceSensorPos = mul(ViewMatrix, float4(sensorPos, 1.0f)).xyz;
+         
+        // elongate z by the focal length
+        cameraSpaceSensorPos.z *= focal_distance;
+         
+        // convert back into world space
+        sensorPos = mul(_CameraToWorld, float4(cameraSpaceSensorPos, 1.0f)).xyz;
+
+        float angle = random(6).x * 2.0f * PI;
+        float radius = sqrt(random(6).y);
+        float2 offset = float2(cos(angle), sin(angle)) * radius * AperatureRadius;
+
+        float3 p = origin + direction * (focal_distance);
+
+        float3 aperturePos = origin + Right * offset.x + Up * offset.y;
+
+        origin = aperturePos;
+        direction = normalize(p - origin);
+    }
+
 
     return CreateRay(origin, direction);
 }
@@ -246,7 +285,6 @@ void Generate (uint3 id : SV_DispatchThreadID) {
 
 #pragma kernel kernel_trace 
 
-    static const float PI = 3.14159265f;
     static const float ONE_OVER_PI = 0.318309886548;
     static const float EPSILON = 1e-8;
 
@@ -631,7 +669,8 @@ inline bool TraceOctree(const float3 ray_orig, const float3 ray_dir_inv, inout R
     int TriangleID = 0;
     OctreeData node;
     float3 BBMin, BBMax;
-    while(stack_size != 0) {
+    Reps = 0;
+    while(stack_size != 0 && Reps < 2500) {
         Reps++;
         int2 stackindex = stack[--stack_size];
         node = Octree[stackindex.x];
@@ -1027,7 +1066,9 @@ inline bool TraceShadowOctree(const float3 ray_orig, const float3 ray_dir_inv, f
     OctreeData node;
     float3 BBMax, BBMin;
     bool DidHit = false;
-    while(stack_size != 0) {
+    Reps = 0;
+    while(stack_size != 0 && Reps < 2500) {
+        Reps++;
         int2 stackindex = stack[--stack_size];
         node = Octree[stackindex.x];
         [unroll]for(int i = 7; i >= 0; i--) {
@@ -1059,7 +1100,7 @@ inline bool TraceShadowOctree(const float3 ray_orig, const float3 ray_dir_inv, f
 void IntersectVoxelTLASShadow() {
     Ray ray;
 
-    uint2 stack[24];
+    uint2 stack[8];
     int stack_size = 0;
     uint ray_index;
     uint2 current_group;

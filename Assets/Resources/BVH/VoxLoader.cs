@@ -68,8 +68,7 @@ public struct VoxPart
 {
    public Vector3 size;
 
-   public int[] voxels;
-   public Vector3[] Location;
+   public List<Vector4> voxels;
 }
 uint[] default_palette = new uint[]{
     0x00000000, 0xffffffff, 0xffccffff, 0xff99ffff, 0xff66ffff, 0xff33ffff, 0xff00ffff, 0xffffccff, 0xffccccff, 0xff99ccff, 0xff66ccff, 0xff33ccff, 0xff00ccff, 0xffff99ff, 0xffcc99ff, 0xff9999ff,
@@ -162,9 +161,7 @@ public List<VoxPart> parts;
                     }
                     MaterialCount = 0;
                     CurrentMaterials = new List<int>();
-                    part.Location = new Vector3[(int)(part.size.x * part.size.y * part.size.z)];
-                    part.voxels = new int[(int)(part.size.x * part.size.y * part.size.z)];
-                    System.Array.Fill(part.voxels, -1);
+                    part.voxels = new List<Vector4>();
                     for (int i = 0; i < numVoxels; i++)
                     {
                         byte x = second.content[i * 4 + 4];
@@ -175,8 +172,7 @@ public List<VoxPart> parts;
                             CurrentMaterials.Add(color);
                             MaterialCount++;
                         }
-                        part.Location[(int)(x + y * part.size.x + z * part.size.x * part.size.y)] = new Vector3((float)System.Convert.ToInt32(x), (float)System.Convert.ToInt32(y), (float)System.Convert.ToInt32(z));
-                        part.voxels[(int)(x + y * part.size.x + z * part.size.x * part.size.y)] = CurrentMaterials.IndexOf(color);
+                        part.voxels.Add(new Vector4((float)System.Convert.ToInt32(x), (float)System.Convert.ToInt32(y), (float)System.Convert.ToInt32(z), CurrentMaterials.IndexOf(color)));
                     }
                     parts.Add(part);
 
@@ -189,8 +185,6 @@ public List<VoxPart> parts;
 
                     for (int i = 0; i < 256; i++)
                     {
-
-//                        Debug.Log(first.content[i * 4] + ", " + first.content[i * 4 + 1] + ", " + first.content[i * 4 + 2] + ", " + first.content[i * 4 + 3]);
                         palette[i].x = first.content[i * 4];
                         palette[i].y = first.content[i * 4 + 1];
                         palette[i].z = first.content[i * 4 + 2];

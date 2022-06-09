@@ -1122,7 +1122,6 @@ unsafe public void Aggregate() {//Compress the CWBVH
 
 
 private void OnEnable() {
-    Debug.Log("EEEE");
     HasStarted = false;
     if(gameObject.scene.isLoaded) {
         this.GetComponentInParent<AssetManager>().AddQue.Add(this);

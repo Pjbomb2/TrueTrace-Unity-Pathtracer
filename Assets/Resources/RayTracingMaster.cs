@@ -57,6 +57,9 @@ public class RayTracingMaster : MonoBehaviour {
     [HideInInspector] public bool DoTLASUpdates = true;
     [HideInInspector] public bool AllowConverge = true;
     [HideInInspector] public bool AllowBloom = false;
+    [HideInInspector] public bool AllowDoF = false;
+    [HideInInspector] public float DoFAperature = 0.2f;
+    [HideInInspector] public float DoFFocal = 0.2f;
     public bool DoVoxels = false;
 
     [HideInInspector] public int SVGFAtrousKernelSizes = 6;
@@ -208,7 +211,7 @@ public class RayTracingMaster : MonoBehaviour {
         FramesSinceStart = 0;
         CreateComputeBuffer(ref _OctreeBuffer, Assets.GPUOctree, 28);
         CreateComputeBuffer(ref _UnityLights, Assets.UnityLights, 56);
-CreateComputeBuffer(ref _VoxelTLAS, Assets.VoxelTLAS, 80);
+        CreateComputeBuffer(ref _VoxelTLAS, Assets.VoxelTLAS, 80);
         CreateComputeBuffer(ref _LightMeshes, Assets.LightMeshes, 92);
         
         CreateComputeBuffer(ref _MaterialDataBuffer, Assets._Materials, 136);
@@ -280,6 +283,12 @@ CreateComputeBuffer(ref _VoxelTLAS, Assets.VoxelTLAS, 80);
         RayTracingShader.SetMatrix("_CameraToWorld", _camera.cameraToWorldMatrix);
         RayTracingShader.SetMatrix("_CameraInverseProjection", _camera.projectionMatrix.inverse);
         
+        RayTracingShader.SetVector("Up", _camera.transform.up);
+        RayTracingShader.SetVector("Right", _camera.transform.right);
+        RayTracingShader.SetVector("Forward", _camera.transform.forward);
+
+        RayTracingShader.SetFloat("VolumeDensity", VolumeDensity * VolumeDensity);
+
         RayTracingShader.SetMatrix("ViewMatrix", _camera.worldToCameraMatrix);
         RayTracingShader.SetMatrix("InverseViewMatrix", _camera.worldToCameraMatrix.inverse);
         RayTracingShader.SetInt("MaxBounce", bouncecount - 1);
@@ -295,7 +304,10 @@ CreateComputeBuffer(ref _VoxelTLAS, Assets.VoxelTLAS, 80);
         RayTracingShader.SetBool("UseNEE", UseNEE);  
         RayTracingShader.SetBool("DoVoxels", Assets.UseVoxels);  
         RayTracingShader.SetBool("AllowVolumetrics", AllowVolumetrics); 
+        RayTracingShader.SetBool("UseDoF", AllowDoF); 
         RayTracingShader.SetFloat("VolumeDensity", VolumeDensity * VolumeDensity);
+        RayTracingShader.SetFloat("focal_distance", DoFFocal);
+        RayTracingShader.SetFloat("AperatureRadius", DoFAperature);
         if(uFirstFrame == 1) {
             if(SkyboxTexture != null) {
                 RayTracingShader.SetTexture(ShadeKernel, "_SkyboxTexture", SkyboxTexture);

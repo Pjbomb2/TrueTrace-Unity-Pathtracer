@@ -65,6 +65,7 @@ public class Denoiser {
             RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
         }
         ThisTex.enableRandomWrite = true;
+        ThisTex.useMipMap = false;
         ThisTex.Create();
     }
 
@@ -158,7 +159,7 @@ public class Denoiser {
 
         SVGF.SetInt("AtrousIterations", AtrousKernelSize);
         bool OddAtrousIteration = (AtrousKernelSize % 2 == 1);
-
+        UnityEngine.Profiling.Profiler.BeginSample("SVGFCopy");
         SVGF.SetBuffer(CopyKernel, "PerPixelRadiance", _ColorBuffer);
         SVGF.SetTexture(CopyKernel, "PosTex", _PosTex);
         SVGF.SetTexture(CopyKernel, "RWHistoryNormalAndDepth", _HistoryNormalDepth);
@@ -169,7 +170,9 @@ public class Denoiser {
         SVGF.SetTexture(CopyKernel, "ColorIndirectOut", _ColorIndirectOut);
         SVGF.SetTexture(CopyKernel, "_CameraNormalDepthTex", _NormTex);
         SVGF.Dispatch(CopyKernel, threadGroupsX, threadGroupsY, 1);
+        UnityEngine.Profiling.Profiler.EndSample();
 
+        UnityEngine.Profiling.Profiler.BeginSample("SVGFReproject");
         SVGF.SetTexture(ReprojectKernel, "NormalAndDepth", _NormalDepth);
         SVGF.SetTexture(ReprojectKernel, "HistoryNormalAndDepth", _HistoryNormalDepth);
         SVGF.SetTexture(ReprojectKernel, "HistoryDirectTex", _HistoryDirect);
@@ -183,7 +186,9 @@ public class Denoiser {
         SVGF.SetTexture(ReprojectKernel, "ColorIndirectOut", _ColorIndirectIn);
         SVGF.SetTexture(ReprojectKernel, "FrameBufferMoment", _FrameMoment);
         SVGF.Dispatch(ReprojectKernel, threadGroupsX, threadGroupsY, 1);
+        UnityEngine.Profiling.Profiler.EndSample();
 
+        UnityEngine.Profiling.Profiler.BeginSample("SVGFVariance");
         SVGF.SetTexture(VarianceKernel, "ColorDirectOut", _ColorDirectOut);
         SVGF.SetTexture(VarianceKernel, "ColorIndirectOut", _ColorIndirectOut);
         SVGF.SetTexture(VarianceKernel, "ColorDirectIn", _ColorDirectIn);
@@ -192,7 +197,9 @@ public class Denoiser {
         SVGF.SetTexture(VarianceKernel, "FrameBufferMoment", _FrameMoment);
         SVGF.SetTexture(VarianceKernel, "HistoryTex", _History);
         SVGF.Dispatch(VarianceKernel, threadGroupsX, threadGroupsY, 1);
+        UnityEngine.Profiling.Profiler.EndSample();
 
+        UnityEngine.Profiling.Profiler.BeginSample("SVGFAtrous");
         SVGF.SetTexture(SVGFAtrousKernel, "NormalAndDepth", _NormalDepth);
         SVGF.SetTexture(SVGFAtrousKernel, "HistoryDirectTex", _HistoryDirect);
         SVGF.SetTexture(SVGFAtrousKernel, "HistoryIndirectTex", _HistoryIndirect);
@@ -207,6 +214,9 @@ public class Denoiser {
             SVGF.SetInt("step_size", step2);
             SVGF.Dispatch(SVGFAtrousKernel, threadGroupsX, threadGroupsY, 1);
         }
+        UnityEngine.Profiling.Profiler.EndSample();
+
+        UnityEngine.Profiling.Profiler.BeginSample("SVGFFinalize");
         SVGF.SetBuffer(FinalizeKernel, "PerPixelRadiance", _ColorBuffer);
         SVGF.SetTexture(FinalizeKernel, "ColorDirectIn", (OddAtrousIteration) ? _ColorDirectOut : _ColorDirectIn);
         SVGF.SetTexture(FinalizeKernel, "ColorDirectOut", (OddAtrousIteration) ? _ColorDirectIn : _ColorDirectOut);
@@ -221,17 +231,22 @@ public class Denoiser {
         SVGF.SetTexture(FinalizeKernel, "_Albedo", _Albedo);
         SVGF.SetTexture(FinalizeKernel, "FrameBufferMoment", _FrameMoment);
         SVGF.Dispatch(FinalizeKernel, threadGroupsX, threadGroupsY, 1);
+        UnityEngine.Profiling.Profiler.EndSample();
 
+        UnityEngine.Profiling.Profiler.BeginSample("TAAKernel");
         SVGF.SetTexture(TAAKernel, "Result", (OddAtrousIteration) ? _ColorDirectIn : _ColorDirectOut);
         SVGF.SetTexture(TAAKernel, "ScreenPosPrev", _ScreenPosPrev);
         SVGF.SetTexture(TAAKernel, "TAAPrev", _TAAPrev);
         SVGF.SetTexture(TAAKernel, "ColorDirectOut", (OddAtrousIteration) ? _ColorDirectOut : _ColorDirectIn);
         SVGF.Dispatch(TAAKernel, threadGroupsX, threadGroupsY, 1);
+        UnityEngine.Profiling.Profiler.EndSample();
 
+        UnityEngine.Profiling.Profiler.BeginSample("TAAFinalize");
         SVGF.SetTexture(TAAFinalizeKernel, "TAAPrev", _TAAPrev);
         SVGF.SetTexture(TAAFinalizeKernel, "Result", _target);
         SVGF.SetTexture(TAAFinalizeKernel, "ColorDirectIn", (OddAtrousIteration) ? _ColorDirectOut : _ColorDirectIn);
         SVGF.Dispatch(TAAFinalizeKernel, threadGroupsX, threadGroupsY, 1);
+        UnityEngine.Profiling.Profiler.EndSample();
 
         Graphics.CopyTexture(_PosTex, _PrevPosTex);
 

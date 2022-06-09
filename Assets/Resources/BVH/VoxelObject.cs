@@ -62,15 +62,14 @@ VoxLoader Vox;
         Voxels = new List<Voxel>();
         for(int i = 0; i < Vox.parts.Count; i++) {
             Size = Vox.parts[i].size;
-            for(int i2 = 0; i2 < Vox.parts[i].voxels.Length; i2++) {
-                if(Vox.parts[i].voxels[i2] != -1) {
+            for(int i2 = 0; i2 < Vox.parts[i].voxels.Count; i2++) {
                     Voxels.Add(new Voxel() {
-                        Index = (int)(Vox.parts[i].Location[i2].x + Size.x * Vox.parts[i].Location[i2].y + Size.x * Size.y * Vox.parts[i].Location[i2].z),
-                        Material = Vox.parts[i].voxels[i2]
+                        Index = (int)(Vox.parts[i].voxels[i2].x + Size.x * Vox.parts[i].voxels[i2].y + Size.x * Size.y * Vox.parts[i].voxels[i2].z),
+                        Material = (int)Vox.parts[i].voxels[i2].w
                     });
-                }
             }
         }
+        Debug.Log(Voxels.Count + " Voxels Loaded");
         aabb_untransformed = new AABB();
         aabb_untransformed.BBMax = Size;
         aabb_untransformed.BBMin = new Vector3(0,0,0);
@@ -80,7 +79,9 @@ VoxLoader Vox;
             Vector3 BaseColor = (Vector3)Vox.palette[Vox.CurrentMaterials[i]] / 255.0f;
             if(BaseColor.Equals(new Vector3(0,0,0))) BaseColor = new Vector3(0.1f,0.1f,0.1f);
             _Materials.Add(new MaterialData() {
-                BaseColor = BaseColor
+                BaseColor = BaseColor,
+                MatType = (Vox.palette[Vox.CurrentMaterials[i]].w != 255) ? 2 : 0,
+                eta = (Vox.palette[Vox.CurrentMaterials[i]].w != 255) ? new Vector3(1.33f,0,0) : new Vector3(0,0,0)
                 });
         }
         LargestAxis = (int)Mathf.Max(Mathf.Max(Size.x, Size.y), Size.z);
@@ -115,7 +116,7 @@ VoxLoader Vox;
             TempBVHNode.Center = Octree.Octree[i].Center;
             GPUOctree[i] = TempBVHNode;
         }
-        for(int i  = Octree.CompressedOctree.Length; i < Octree.CompressedOctree.Length + Octree.OrderedVoxels.Count; i++) {
+        for(int i  = Octree.CompressedOctree.Length; i < Octree.CompressedOctree.Length + Voxels.Count; i++) {
             GPUOctree[i].node_1x = (uint)Octree.OrderedVoxels[i - Octree.CompressedOctree.Length].Material;
             GPUOctree[i].Center = GetPosition(Octree.OrderedVoxels[i - Octree.CompressedOctree.Length].Index);
         }

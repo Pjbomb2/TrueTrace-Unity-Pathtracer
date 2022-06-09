@@ -8,9 +8,9 @@ using CommonVars;
 
 
 public class EditModeFunctions : EditorWindow {
-     [MenuItem("Window/BVH Options")]
+     [MenuItem("PathTracer/Pathtracer Settings")]
      public static void ShowWindow() {
-         GetWindow<EditModeFunctions>("BVH Rebuild");
+         GetWindow<EditModeFunctions>("Pathtracing Settings");
      }
 
       private void OnStartAsyncCombined() {
@@ -80,6 +80,9 @@ public class EditModeFunctions : EditorWindow {
       public bool UseAtrous = false;
       public bool UseSVGF = false;
       public bool UseNEE = false;
+      public bool UseDoF = false;
+      public float DoFAperature = 0.2f;
+      public float DoFFocal = 1.0f;
       public int SVGF_Atrous_Kernel_Sizes = 6;
       public int Atrous_Kernel_Sizes = 6;
       public int BounceCount = 24;
@@ -139,9 +142,29 @@ public class EditModeFunctions : EditorWindow {
          Rect VolumetricsDensityInput =       new Rect(10 + (position.width - 10) / 2 + (position.width - 10) / 4, 210, (position.width - 10) / 4 - 10, 20);
          Rect SkinnedHandlingToggle =       new Rect(10, 235, (position.width - 10) / 2, 20);
          Rect AllowBloomToggle =       new Rect(10, 260, (position.width - 10) / 2, 20);
-         Rect SVGFToggle =       new Rect(10, 285, (position.width - 10) / 2, 20);
+         Rect DoFToggle =       new Rect(10, 285, (position.width - 10) / 2, 20);
          int SVGFVertOffset = 310;
-         
+         UseDoF = GUI.Toggle(DoFToggle, UseDoF, "Use DoF");
+         if(UseDoF) {
+            Rect DoF_Aperature_Input = new Rect(Mathf.Max((position.width - 10) / 4,145), SVGFVertOffset, (position.width - 10) / 4, 20);
+            Rect DoF_Aperature_Lable = new Rect(10, SVGFVertOffset, Mathf.Max((position.width - 10) / 4,145), 20);
+            GUI.Label(DoF_Aperature_Lable, "Aperature Size");
+            DoFAperature = GUI.HorizontalSlider(DoF_Aperature_Input, DoFAperature, 0.0f, 1.0f);
+            SVGFVertOffset += 25;
+            Rect DoF_Focal_Input = new Rect(Mathf.Max((position.width - 10) / 4,145), SVGFVertOffset, (position.width - 10) / 4, 20);
+            Rect DoF_Focal_Lable = new Rect(10, SVGFVertOffset, Mathf.Max((position.width - 10) / 4,145), 20);
+            GUI.Label(DoF_Focal_Lable, "Focal Length");
+            DoFFocal = GUI.HorizontalSlider(DoF_Focal_Input, DoFFocal, 0.0f, 60.0f);
+            SVGFVertOffset += 25;
+            RayMaster.DoFAperature = DoFAperature;
+            RayMaster.DoFFocal = DoFFocal;
+         }
+         RayMaster.AllowDoF = UseDoF;
+
+
+
+         Rect SVGFToggle =       new Rect(10, SVGFVertOffset, (position.width - 10) / 2, 20);
+         SVGFVertOffset += 25;
          AllowConverge = GUI.Toggle(AllowConvergeToggle, AllowConverge, "Allow Image Accumulation");
          DynamicTLAS = GUI.Toggle(DynamicTLASToggle, DynamicTLAS, "Enable Object Moving");
          UseNEE = GUI.Toggle(UseNEEToggle, UseNEE, "Use Next Event Estimation");

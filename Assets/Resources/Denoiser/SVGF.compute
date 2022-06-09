@@ -350,12 +350,12 @@ void kernel_variance (int3 id : SV_DispatchThreadID)
 
 
     int2 tap_index;
-    for (int j = -3; j <= 3; j++) {
+    [unroll]for (int j = -3; j <= 3; j++) {
         int tap_y = id.y + j;
 
         if (tap_y < 0 || tap_y >= screen_height) continue;
 
-        for (int i = -3; i <= 3; i++) {
+        [unroll]for (int i = -3; i <= 3; i++) {
             int tap_x = id.x + i;
 
             if (tap_x < 0 || tap_x >= screen_width) continue;
@@ -452,7 +452,7 @@ void kernel_atrous (int3 id : SV_DispatchThreadID)
     }
 
 // Precompute denominators that are loop invariant
-    float luminance_denom_direct   = rsqrt(sigma_l_square * max(0.0f, variance_blurred_direct)   + epsilon);
+    const float luminance_denom_direct   = rsqrt(sigma_l_square * max(0.0f, variance_blurred_direct)   + epsilon);
     float luminance_denom_indirect = rsqrt(sigma_l_square * max(0.0f, variance_blurred_indirect) + epsilon);
 
     const float4 center_colour_direct   = ColorDirectIn  [id.xy];
@@ -559,31 +559,19 @@ void kernel_finalize (int3 id : SV_DispatchThreadID)
     if (id.x >= screen_width || id.y >= screen_height) return;
     int pixel_index = id.y * screen_width + id.x;
 
-    float4 direct   = ColorDirectIn  [id.xy];
-    float4 indirect = ColorIndirectIn[id.xy];
-
-    float4 colour = (direct + indirect) * _Albedo[id.xy] + float4(PerPixelRadiance[pixel_index].Fog, 1);
-    Result[id.xy] = colour;
+    float3 colour = (ColorDirectIn[id.xy].xyz + ColorIndirectIn[id.xy].xyz) * _Albedo[id.xy].xyz + PerPixelRadiance[pixel_index].Fog;
+    Result[id.xy] = float4(colour,1);
 
 
     colour = colour / (1.0f + luminance(colour.x, colour.y, colour.z));
 
     // Convert to gamma space
-    colour.x = sqrt(max(0.0f, colour.x));
-    colour.y = sqrt(max(0.0f, colour.y));
-    colour.z = sqrt(max(0.0f, colour.z));
+    colour = sqrt(max(0.0f, colour));
 
-    ColorDirectOut[id.xy] = colour;
-
-    if (AtrousIterations <= feedback_iteration) {
-        // Normally the à-trous filter copies the illumination history,
-        // but in case the filter was skipped we need to do this here
-        HistoryDirectTex  [id.xy] = direct;
-        HistoryIndirectTex[id.xy] = indirect;
-    }
+    ColorDirectOut[id.xy] = float4(colour,1);
 
 
-    HistoryMomentTex          [id.xy] = FrameBufferMoment[id.xy];
+    HistoryMomentTex[id.xy] = FrameBufferMoment[id.xy];
     RWHistoryNormalAndDepth[id.xy] = NormalAndDepth[id.xy];
 }
 
