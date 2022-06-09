@@ -42,6 +42,7 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 <li>No specific GPU vendor needed(this will run on integrated graphics if you so wish it, aka no RTX cores)</li>
 <li>Basic MagicaVoxel support</li>
 <li>Ability to pathtrace voxels and triangle scenes at the same time seamlessly</li>
+<li>Depth of Field</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
@@ -138,7 +139,7 @@ BVH Options Description -
   
 # Sample Images(Taken from various stages of development)
 
-![](/Images/DoF1.png)
+![](/Images/DoF2.png)
 ![](/Images/VoxelsWithMesh2.png)
 ![](/Images/VoxelsWithMesh1.png)
 ![](/Images/Voxels2.png)
