@@ -44,7 +44,7 @@ VoxLoader Vox;
         Octree = new OctreeBuilder();
         init();
         Name = VoxelRef.name;
-        Vox = new VoxLoader(AssetDatabase.GetAssetPath(VoxelRef));
+        Vox = new VoxLoader("Object");//AssetDatabase.GetAssetPath(VoxelRef));
        
         //12 minutes
     }

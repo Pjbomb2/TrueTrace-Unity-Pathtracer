@@ -1,5 +1,5 @@
 //#define UseSkyBox//Comment out to have no skybox and use precomputed atmosphere
-
+#pragma enable_d3d11_debug_symbols
 float4x4 _CameraToWorld;
 float4x4 _CameraInverseProjection;
 float4x4 ViewMatrix;
@@ -371,19 +371,19 @@ void Generate (uint3 id : SV_DispatchThreadID) {
 
 
 
-
-    inline uint cwbvh_node_intersect(const Ray ray, int oct_inv4, float max_distance, float3 node_0, uint node_0w, uint4 node_1, uint4 node_2, uint4 node_3, uint4 node_4) {
-
-        uint e_x = (node_0w >> (0 * 8)) & 0xff;
-        uint e_y = (node_0w >> (1 * 8)) & 0xff;
-        uint e_z = (node_0w >> (2 * 8)) & 0xff;
+    int Reps;
+    inline uint cwbvh_node_intersect(const Ray ray, int oct_inv4, float max_distance, const float3 node_0, uint node_0w, const uint4 node_1, const uint4 node_2, const uint4 node_3, const uint4 node_4) {
+Reps++;
+        uint e_x = (node_0w) & 0xff;
+        uint e_y = (node_0w >> (8)) & 0xff;
+        uint e_z = (node_0w >> (16)) & 0xff;
 
         const float3 adjusted_ray_direction_inv = float3(
             asfloat(e_x << 23) * ray.direction_inv.x,
             asfloat(e_y << 23) * ray.direction_inv.y,
             asfloat(e_z << 23) * ray.direction_inv.z
             );
-        float3 adjusted_ray_origin = ray.direction_inv * (node_0 - ray.origin);
+        const float3 adjusted_ray_origin = ray.direction_inv * (node_0 - ray.origin);
                 
         uint hit_mask = 0;
         float3 tmin3;
@@ -448,7 +448,6 @@ inline uint ray_get_octant_inv4(const float3 ray_direction) {
         (ray_direction.z < 0.0f ? 0 : 0x01010101);
 }
 
-    int Reps;
     RWTexture2D<float4> _DebugTex;
 void IntersectBVH() {
     RayHit bestHit;
@@ -505,18 +504,18 @@ void IntersectBVH() {
                 uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
                 uint relative_index = countbits(hits_imask & ~(0xffffffff << slot_index));
                 uint child_node_index = child_index_base + relative_index;
-
-                float3 node_0 = cwbvh_nodes[child_node_index].node_0xyz;
-                uint node_0w = cwbvh_nodes[child_node_index].node_0w;
+                const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
+                float3 node_0 = TempNode.node_0xyz;
+                uint node_0w = TempNode.node_0w;
                 
-                uint4 node_1 = cwbvh_nodes[child_node_index].node_1;
-                uint4 node_2 = cwbvh_nodes[child_node_index].node_2;
-                uint4 node_3 = cwbvh_nodes[child_node_index].node_3;
-                uint4 node_4 = cwbvh_nodes[child_node_index].node_4;
+                uint4 node_1 = TempNode.node_1;
+                uint4 node_2 = TempNode.node_2;
+                uint4 node_3 = TempNode.node_3;
+                uint4 node_4 = TempNode.node_4;
 
                 uint hitmask = cwbvh_node_intersect(ray, oct_inv4, bestHit.t, node_0, node_0w, node_1, node_2, node_3, node_4);
                 TrisChecked++;
-                uint imask = (node_0w >> (3 * 8)) & 0xff;
+                uint imask = (node_0w >> (24)) & 0xff;
 
                 current_group.x = asuint(node_1.x) + ((tlas_stack_size == -1) ? 0 : NodeOffset);
                 triangle_group.x = asuint(node_1.y) + ((tlas_stack_size == -1) ? 0 : TriOffset);
@@ -570,16 +569,15 @@ void IntersectBVH() {
                     IntersectTriangle(mesh_id, triangle_group.x + triangle_index, ray, bestHit);//Intersect Mesh Triangles
                 }
             }
-            if((current_group.y & 0xff000000) != 0) {                Reps++;}
             if((current_group.y & 0xff000000) == 0) {
                 if(stack_size == 0) {//thread has finished traversing
                                     Reps++;
                     GlobalRays2[ray_index] = GlobalRays1[ray_index];
                     set2(ray_index, bestHit);
-                    current_group.y = 0;
                     int PixIndex = GlobalRays2[ray_index].PixelIndex;
                     uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
                     _DebugTex[TempUv] = float4((Reps) / 45.0f,0,0,1);
+                    current_group.y = 0;
                     break;
                 }
 
