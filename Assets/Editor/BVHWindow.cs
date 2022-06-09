@@ -99,16 +99,12 @@ public class EditModeFunctions : EditorWindow {
       public bool AllowBloom = false;
       public float VolumeDensity = 0.001f;
       public AssetManager Assets;
-      public TestingCompression CompressTest;
       private void OnGUI() {
          if(RayMaster == null) {
             Camera TempCam = Camera.main;
             if(TempCam.GetComponent<RayTracingMaster>() == null) TempCam.gameObject.AddComponent(typeof(RayTracingMaster));
             if(TempCam.GetComponent<FlyCamera>() == null) TempCam.gameObject.AddComponent(typeof(FlyCamera));
             RayMaster = Camera.main.GetComponent<RayTracingMaster>();
-         }
-         if(CompressTest == null) {
-           // CompressTest = GameObject.Find("CompressionTester").GetComponent<TestingCompression>();
          }
          if(Assets == null) {
             if(GameObject.Find("Scene") == null) {
