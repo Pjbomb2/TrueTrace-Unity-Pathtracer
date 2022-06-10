@@ -139,6 +139,7 @@ BVH Options Description -
   
 # Sample Images(Taken from various stages of development)
 
+![](/Images/AutoExpose1.png)
 ![](/Images/DoF2.png)
 ![](/Images/VoxelsWithMesh2.png)
 ![](/Images/VoxelsWithMesh1.png)
