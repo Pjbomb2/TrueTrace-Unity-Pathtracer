@@ -2363,8 +2363,6 @@ void kernel_shade () {
         }
     }
 
-    if(TempUv.x < screen_width / 2.0f) hitmat.MatType = 0;
-
 
     bool DidTerminate = true;//Identifier marking whether we have terminated the ray or if it will continue
     calcFinalColor(ray, Color, hitmat, bestHit, TempUv, DidTerminate, NormalUV, GlobalRays2[index].HitVoxel);
