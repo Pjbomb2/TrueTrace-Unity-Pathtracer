@@ -6,6 +6,7 @@ public class Denoiser {
     private ComputeShader SVGF;
     private ComputeShader AtrousDenoiser;
     private ComputeShader Bloom;
+    private ComputeShader AutoExpose;
 
     private RenderTexture _ColorDirectIn;
     private RenderTexture _ColorIndirectIn;
@@ -24,6 +25,9 @@ public class Denoiser {
     private RenderTexture Intermediate;
     private RenderTexture TempTex;
     private RenderTexture SuperIntermediate;
+
+    private ComputeBuffer A;
+    public ComputeBuffer B;
 
     private int ScreenWidth;
     private int ScreenHeight;
@@ -55,6 +59,11 @@ public class Denoiser {
     private int ComputeHistogramKernel;
     private int CalcAverageKernel;
     private int ToneMapKernel;
+
+    private int AutoExposeKernel;
+    private int AutoExposeFinalizeKernel;
+
+
 
     private void CreateRenderTexture(ref RenderTexture ThisTex, bool SRGB) {
         if(SRGB) {
@@ -111,6 +120,7 @@ public class Denoiser {
         _camera = Cam;
         if(SVGF == null) {SVGF = Resources.Load<ComputeShader>("Denoiser/SVGF");}
         if(AtrousDenoiser == null) {AtrousDenoiser = Resources.Load<ComputeShader>("Denoiser/Atrous");}
+        if(AutoExpose == null) {AutoExpose = Resources.Load<ComputeShader>("Denoiser/AutoExpose");}
         if(Bloom == null) {Bloom = Resources.Load<ComputeShader>("Utility/Bloom");}
 
         VarianceKernel = SVGF.FindKernel("kernel_variance");
@@ -128,6 +138,11 @@ public class Denoiser {
         BloomLowPassKernel = Bloom.FindKernel("LowPass");
         BloomUpsampleKernel = Bloom.FindKernel("Upsample");
 
+        AutoExposeKernel = AutoExpose.FindKernel("AutoExpose");
+        AutoExposeFinalizeKernel = AutoExpose.FindKernel("AutoExposeFinalize");
+        List<float> TestBuffer = new List<float>();
+        TestBuffer.Add(1);
+        if(A == null) {A = new ComputeBuffer(1, sizeof(float)); A.SetData(TestBuffer);}
         SVGF.SetInt("screen_width", Screen.width);
         SVGF.SetInt("screen_height", Screen.height);
 
@@ -136,6 +151,11 @@ public class Denoiser {
 
         AtrousDenoiser.SetInt("screen_width", Screen.width);
         AtrousDenoiser.SetInt("screen_height", Screen.height);
+
+        AutoExpose.SetInt("screen_width", Screen.width);
+        AutoExpose.SetInt("screen_height", Screen.height);
+        AutoExpose.SetBuffer(AutoExposeKernel, "A", A);
+        AutoExpose.SetBuffer(AutoExposeFinalizeKernel, "A", A);
 
 
         threadGroupsX = Mathf.CeilToInt(Screen.width / 16.0f);
@@ -251,7 +271,6 @@ public class Denoiser {
         Graphics.CopyTexture(_PosTex, _PrevPosTex);
 
     }
-
     public void ExecuteAtrous(int AtrousKernelSize, float n_phi, float p_phi, float c_phi, ref RenderTexture _PosTex, ref RenderTexture _target, ref RenderTexture _Albedo, ref RenderTexture _converged, ref RenderTexture _NormTex) {
         InitRenderTexture();
         Matrix4x4 viewprojmatrix = _camera.projectionMatrix * _camera.worldToCameraMatrix;
@@ -285,7 +304,6 @@ public class Denoiser {
             AtrousDenoiser.SetTexture(AtrousFinalizeKernel, "_Albedo", _Albedo);
             AtrousDenoiser.SetTexture(AtrousFinalizeKernel, "Result", _target);
             AtrousDenoiser.Dispatch(AtrousFinalizeKernel, threadGroupsX, threadGroupsY, 1);
-
     }
 
 
@@ -369,8 +387,21 @@ public class Denoiser {
         Bloom.SetTexture(BloomUpsampleKernel, "InputTex", Intermediate);
         Bloom.SetTexture(BloomUpsampleKernel, "OutputTex", _target);
         Bloom.Dispatch(BloomUpsampleKernel, (int)Mathf.Ceil(Screen.width / 16.0f), (int)Mathf.Ceil(Screen.height / 16.0f), 1);
+    
+
         SuperIntermediate.Release();
         Intermediate.Release();
+
+
+    }
+
+
+    public void ExecuteAutoExpose(ref RenderTexture _target, ref RenderTexture _converged) {//need to fix this so it doesnt create new textures every time
+        AutoExpose.SetTexture(AutoExposeKernel, "InTex", _converged);
+        AutoExpose.Dispatch(AutoExposeKernel, 1, 1, 1);
+        AutoExpose.SetTexture(AutoExposeFinalizeKernel, "InTex", _converged);
+        AutoExpose.SetTexture(AutoExposeFinalizeKernel, "OutTex", _target);
+        AutoExpose.Dispatch(AutoExposeFinalizeKernel, (int)Mathf.Ceil(Screen.width / 16.0f), (int)Mathf.Ceil(Screen.height / 16.0f), 1);
 
 
     }

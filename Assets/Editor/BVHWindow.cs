@@ -97,6 +97,7 @@ public class EditModeFunctions : EditorWindow {
       public bool AllowSkinning = true;
       public bool AllowVolumetrics = false;
       public bool AllowBloom = false;
+      public bool UseAutoExpose = false;
       public float VolumeDensity = 0.001f;
       public AssetManager Assets;
       private void OnGUI() {
@@ -139,7 +140,8 @@ public class EditModeFunctions : EditorWindow {
          Rect SkinnedHandlingToggle =       new Rect(10, 235, (position.width - 10) / 2, 20);
          Rect AllowBloomToggle =       new Rect(10, 260, (position.width - 10) / 2, 20);
          Rect DoFToggle =       new Rect(10, 285, (position.width - 10) / 2, 20);
-         int SVGFVertOffset = 310;
+         Rect AutoExposeToggle =       new Rect(10, 310, (position.width - 10) / 2, 20);
+         int SVGFVertOffset = 335;
          UseDoF = GUI.Toggle(DoFToggle, UseDoF, "Use DoF");
          if(UseDoF) {
             Rect DoF_Aperature_Input = new Rect(Mathf.Max((position.width - 10) / 4,145), SVGFVertOffset, (position.width - 10) / 4, 20);
@@ -157,6 +159,8 @@ public class EditModeFunctions : EditorWindow {
          }
          RayMaster.AllowDoF = UseDoF;
 
+         UseAutoExpose = GUI.Toggle(AutoExposeToggle, UseAutoExpose, "Use Auto Exposure");
+         RayMaster.AllowAutoExpose = UseAutoExpose;
 
 
          Rect SVGFToggle =       new Rect(10, SVGFVertOffset, (position.width - 10) / 2, 20);

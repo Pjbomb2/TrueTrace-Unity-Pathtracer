@@ -8,12 +8,12 @@ public class RayTracingMaster : MonoBehaviour {
     
     private Camera _camera;
     private float _lastFieldOfView;
-    private RenderTexture _target;
+    public RenderTexture _target;
     private RenderTexture _converged;
     private RenderTexture _PosTex;
     private RenderTexture _Albedo;
     private RenderTexture _NormTex;
-    private RenderTexture _IntemediateTex;
+    private RenderTexture _IntermediateTex;
     private RenderTexture _DebugTex;
 
     private Denoiser Denoisers;
@@ -58,6 +58,7 @@ public class RayTracingMaster : MonoBehaviour {
     [HideInInspector] public bool AllowConverge = true;
     [HideInInspector] public bool AllowBloom = false;
     [HideInInspector] public bool AllowDoF = false;
+    [HideInInspector] public bool AllowAutoExpose = false;
     [HideInInspector] public float DoFAperature = 0.2f;
     [HideInInspector] public float DoFFocal = 0.2f;
     public bool DoVoxels = false;
@@ -182,6 +183,7 @@ public class RayTracingMaster : MonoBehaviour {
     private void CreateDynamicBuffer(ref ComputeBuffer TargetBuffer, int Stride) {
         if(TargetBuffer == null) TargetBuffer = new ComputeBuffer(Screen.width * Screen.height, Stride);
     }
+    public float[] TempData;
     public void RebuildMeshObjectBuffers() {
         if(uFirstFrame != 1) {
             if(DoTLASUpdates) {
@@ -381,6 +383,21 @@ public class RayTracingMaster : MonoBehaviour {
         ThisTex.enableRandomWrite = true;
         ThisTex.Create();
     }
+    private void CreateRenderTexture(ref RenderTexture ThisTex, bool SRGB, bool istarget) {
+        if(SRGB) {
+        ThisTex = new RenderTexture(Screen.width, Screen.height, 0,
+            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+        } else {
+        ThisTex = new RenderTexture(Screen.width, Screen.height, 0,
+            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+        }
+        if(istarget) {
+            ThisTex.useMipMap = true;
+            ThisTex.autoGenerateMips = false;
+        }
+        ThisTex.enableRandomWrite = true;
+        ThisTex.Create();
+    }
 
     private void InitRenderTexture() {
         if (_target == null || _target.width != Screen.width || _target.height != Screen.height) {
@@ -391,12 +408,12 @@ public class RayTracingMaster : MonoBehaviour {
                 _PosTex.Release();
                 _Albedo.Release();
                 _NormTex.Release();
-                _IntemediateTex.Release();
+                _IntermediateTex.Release();
                 _DebugTex.Release();
             }
 
          CreateRenderTexture(ref _DebugTex, true);
-         CreateRenderTexture(ref _IntemediateTex, true);
+         CreateRenderTexture(ref _IntermediateTex, true, true);
          CreateRenderTexture(ref _target, true);
          CreateRenderTexture(ref _NormTex, false);
          CreateRenderTexture(ref _converged, true);
@@ -452,13 +469,27 @@ public class RayTracingMaster : MonoBehaviour {
 
         if(UseAtrous) {
             Denoisers.ExecuteAtrous(AtrousKernelSizes, n_phiGlob, p_phiGlob, c_phiGlob, ref _PosTex, ref _target, ref _Albedo, ref _converged, ref _NormTex);
-            Graphics.CopyTexture(_target, _IntemediateTex);
+            Graphics.CopyTexture(_target, 0, 0, _IntermediateTex, 0, 0);
         } else if(AllowBloom){
-            Graphics.CopyTexture(_converged, _IntemediateTex);
+            Graphics.CopyTexture(_converged, 0, 0, _IntermediateTex, 0, 0);
         }
-        if(AllowBloom) Denoisers.ExecuteBloom(ref _target, ref _IntemediateTex);
+        if(AllowBloom) {
+            Denoisers.ExecuteBloom(ref _target, ref _IntermediateTex);
+        }
+        if(AllowAutoExpose) {
+            if(AllowBloom) {
+                Graphics.CopyTexture(_target, 0, 0, _IntermediateTex, 0, 0);
+                _IntermediateTex.GenerateMips();
+                Denoisers.ExecuteAutoExpose(ref _target, ref _IntermediateTex);
+            } else {
+                Graphics.CopyTexture(_converged, 0, 0, _IntermediateTex, 0, 0);
+                _IntermediateTex.GenerateMips();
+                Denoisers.ExecuteAutoExpose(ref _target, ref _IntermediateTex);
 
-        Graphics.Blit((UseAtrous || AllowBloom) ? _target : _converged, destination);
+            }
+        }
+
+        Graphics.Blit((UseAtrous || AllowBloom || AllowAutoExpose) ? _target : _converged, destination);
         ClearOutRenderTexture(_DebugTex);
         _currentSample++; 
         FramesSinceStart++;  
