@@ -43,6 +43,7 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 <li>Basic MagicaVoxel support</li>
 <li>Ability to pathtrace voxels and triangle scenes at the same time seamlessly</li>
 <li>Depth of Field</li>
+<li>AutoExposure</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
@@ -94,6 +95,7 @@ Let me know if you use this for anything, I would be excited to see any use of t
 </ul>
 ## MagicaVoxel Usage
 <ul>
+  <li>Before anything, the files need to be in .txt format, to do this, go to the file in file explorer, and rename the .vox to .txt and change the format</li>
   <li>Firstly, you still need to have a gameobject under the scene gameobject to attatch your voxel model to</li>
   <li>Second, you need to attatch a VoxelObject to that gameobject(Located under Assets->Resources->BVH->VoxelObject)</li>
   <li>Next you need to attatch the voxel model to this script, by dragging your voxel model asset in the project tab to the VoxelRef space in the VoxelObject script</li>
@@ -119,6 +121,7 @@ BVH Options Description -
   <li>Allow Mesh Skinning - Turns on the ability for skinned meshes to be animated or deformed with respect to their armeture</li>
   <li>Allow Bloom - Turns on or off Bloom</li>
   <li>Use DoF - Turns on or off Depth of Field, and its associated settings</li>
+  <li>Use Auto Exposure - Turns on or off Auto Exposure(impacts a lot more than I thought it would)</li>
   <li>Use SVGF Denoiser - Turns on the SVGF denoiser</li>
   <li>(If SVGF Denosier is on)Atrous Kernel Size - The amount of times the SVGF denoiser runs through the Atrous kernel</li>
   <li>Use Atrous Denoiser - Turns on the Atrous denoiser(can be combined with SVGF)</li>
@@ -130,11 +133,10 @@ BVH Options Description -
  ## Materials
  <ul>
   <li>Emission - Pretty self explanatory, the higher it is, the bright the object is(and the higher chance it will be sampled for NEE)</li>
-  <li>Roughness - Applys to Conductors and Dielectrics - Higher roughness makes objects more rough</li>
-  <li>Eta - idk what this does really but a few things to note - For Conductors it just adds to the material definition, but for Dielectrics, only the x component is used, and that X component is the Dielectrics IOR</li>
+  <li>Roughness - Applys to Conductors and Dielectrics - Higher roughness makes objects more rough, but in Diffuse Transmission it basically represents how clear the material is</li>
+  <li>Eta - For Conductors it changes the color of reflected light, but inverted, but for Dielectrics, only the x component is used, and that X component is the Dielectrics IOR(Index of Refraction, with 1 being air), and for SSS(see below), it is used the same as for conductors</li>
   <li>Base Color - So this will be automatically set to whatever the material of the objects color is, and it will also be overridden by textures, but its there so you can manually change it, works for all material types</li>
-  <li>Mat Type - 0 is diffuse(if you comment out the UsePretty in the RayTracingShader.compute, otherwise this is glossy) - 1 is Conductor(Metallic) - 2 is Dielectric(so transparent/glassy materials) - 3 is glossy - 4 is mask(but is not used yet due to performance things) - 5 is a "Volumetric" material(not very good yet though) - and 6 is Diffuse Transmission, with roughness defining how close to the origional direction the new ray will go</li>
-  <li>IsParent - Allows you to explicitly define which object in a group should be the parent, allowing for animations to be done with less hassel</li>
+  <li>Mat Type - 0 is diffuse(if you comment out the UsePretty in the RayTracingShader.compute, otherwise this is glossy) - 1 is Conductor(Metallic) - 2 is Dielectric(so transparent/glassy materials) - 3 is glossy - 4 is mask(but is not used yet due to performance things) - 5 is a "Volumetric" material(not very good yet though) - 6 is hacked together "SubSurface Scattering"(SSS) - and 7 is Diffuse Transmission, with roughness defining how close to the origional direction the new ray will go</li>
 </ul>
   
 # Sample Images(Taken from various stages of development)
@@ -192,4 +194,4 @@ Scenes From:
 
 
 ## Ideas/Reminders for later
-ReSTIR, ReGIR, Find an alternative to atlas's, Reduce memory consumption, work on adding back in Mitsuba scene support, work on improving voxel performance
+ReSTIR, ReGIR, Find an alternative to atlas's, Reduce memory consumption, work on adding back in Mitsuba scene support
