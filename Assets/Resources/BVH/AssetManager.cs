@@ -4,7 +4,6 @@ using UnityEngine;
 using CommonVars;
 using System.Threading.Tasks;
 using System.Threading;
-using Siccity.GLTFUtility;
 
 [System.Serializable]
 public class AssetManager : MonoBehaviour {
