@@ -23,6 +23,7 @@ public class VoxelObject : MonoBehaviour
     public GPUVoxel[] GPUVoxels;
     public bool HasCompleted;
     public Object VoxelRef;
+    public string CachedString;
 
     public void init() {
         Voxels = new List<Voxel>();
@@ -44,7 +45,10 @@ VoxLoader Vox;
         Octree = new OctreeBuilder();
         init();
         Name = VoxelRef.name;
-        Vox = new VoxLoader("Object");//AssetDatabase.GetAssetPath(VoxelRef));
+        #if UNITY_EDITOR
+        CachedString = AssetDatabase.GetAssetPath(VoxelRef);
+        #endif
+        Vox = new VoxLoader(CachedString);//AssetDatabase.GetAssetPath(VoxelRef));
        
         //12 minutes
     }

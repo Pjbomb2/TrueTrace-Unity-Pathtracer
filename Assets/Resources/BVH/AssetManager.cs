@@ -4,7 +4,7 @@ using UnityEngine;
 using CommonVars;
 using System.Threading.Tasks;
 using System.Threading;
-
+using Siccity.GLTFUtility;
 
 [System.Serializable]
 public class AssetManager : MonoBehaviour {
@@ -13,6 +13,7 @@ public class AssetManager : MonoBehaviour {
     public Texture2D EmissiveAtlas;
     public Texture2D MetallicAtlas;
     public Texture2D RoughnessAtlas;
+
 
     public List<MaterialData> _Materials;
     [HideInInspector] public ComputeBuffer BVH8AggregatedBuffer;
@@ -112,7 +113,7 @@ public class AssetManager : MonoBehaviour {
         Vector2 Min = new Vector2(In.z, In.w) * Difference + new Vector2(InRect.xMin, InRect.yMin);
         return new Vector4(Max.x, Max.y, Min.x, Min.y);
     }
-    private void CreateAtlas() {//Creates texture atlas
+   private void CreateAtlas() {//Creates texture atlas
 
         _Materials = new List<MaterialData>();
         List<Texture2D> AlbedoTexs = new List<Texture2D>();
@@ -224,6 +225,7 @@ public class AssetManager : MonoBehaviour {
         } 
 
     }
+
 
     private void init() {
         AddQue = new List<ParentObject>();
@@ -688,5 +690,19 @@ public class AssetManager : MonoBehaviour {
             }
         }
     }
+
+    /*
+        public void OnDrawGizmos() {
+        for(int i = 0; i < TempData.Length; i++) {
+            Vector3 V1 = TempData[i].pos0;
+            Vector3 V2 = V1 + TempData[i].posedge1;
+            Vector3 V3 = V1 + TempData[i].posedge2;
+            
+            Gizmos.DrawLine(V1, V2);
+            Gizmos.DrawLine(V1, V3);
+            Gizmos.DrawLine(V3, V2);
+        }
+    }
+*/
 
 }

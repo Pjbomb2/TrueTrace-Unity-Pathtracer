@@ -15,8 +15,9 @@ public class RayTracingMaster : MonoBehaviour {
     private RenderTexture _NormTex;
     private RenderTexture _IntermediateTex;
     private RenderTexture _DebugTex;
+    private RenderTexture _FinalTex;
 
-    private Denoiser Denoisers;
+    public Denoiser Denoisers;
     private AtmosphereGenerator Atmo;
 
     private AssetManager Assets;
@@ -59,6 +60,7 @@ public class RayTracingMaster : MonoBehaviour {
     [HideInInspector] public bool AllowBloom = false;
     [HideInInspector] public bool AllowDoF = false;
     [HideInInspector] public bool AllowAutoExpose = false;
+    [HideInInspector] public bool AllowTAA = false;
     [HideInInspector] public float DoFAperature = 0.2f;
     [HideInInspector] public float DoFFocal = 0.2f;
     public bool DoVoxels = false;
@@ -81,6 +83,10 @@ public class RayTracingMaster : MonoBehaviour {
     private int OctreeShadowKernel;
     private int FramesSinceStart;
     private Matrix4x4 PrevViewProjection;
+    private int TargetWidth;
+    private int TargetHeight;
+    private int SourceWidth;
+    private int SourceHeight;
 
 
     [System.Serializable]
@@ -97,7 +103,10 @@ public class RayTracingMaster : MonoBehaviour {
     void Start() {
         if(RayTracingShader == null) {RayTracingShader = Resources.Load<ComputeShader>("RayTracingShader");}
         if(AtmosphereGeneratorShader == null) {AtmosphereGeneratorShader = Resources.Load<ComputeShader>("Utility/AtmosphereLUTGenerator");}
-
+        SourceWidth = Screen.width;
+        SourceHeight = Screen.height;
+        TargetWidth = Screen.width;
+        TargetHeight = Screen.height;
         
         _meshObjectsNeedRebuilding = true;
         Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
@@ -105,10 +114,10 @@ public class RayTracingMaster : MonoBehaviour {
         LightTrianglesCount = Assets.AggLightTriangles.Count;
         uFirstFrame = 1;
         FramesSinceStart = 0;
-        threadGroupsX = Mathf.CeilToInt(Screen.width / 256.0f);
-        threadGroupsY = Mathf.CeilToInt(Screen.height / 1.0f);
-        threadGroupsX2 = Mathf.CeilToInt(Screen.width / 8.0f);
-        threadGroupsY2 = Mathf.CeilToInt(Screen.height / 8.0f);
+        threadGroupsX = Mathf.CeilToInt(SourceWidth / 256.0f);
+        threadGroupsY = Mathf.CeilToInt(SourceHeight / 1.0f);
+        threadGroupsX2 = Mathf.CeilToInt(SourceWidth / 8.0f);
+        threadGroupsY2 = Mathf.CeilToInt(SourceHeight / 8.0f);
         GenKernel = RayTracingShader.FindKernel("Generate");
         TraceKernel = RayTracingShader.FindKernel("kernel_trace");
         ShadowKernel = RayTracingShader.FindKernel("kernel_shadow");
@@ -119,7 +128,7 @@ public class RayTracingMaster : MonoBehaviour {
 
         Atmo = new AtmosphereGenerator(AtmosphereGeneratorShader, 6371.0f, 6403.0f);
 
-        Denoisers = new Denoiser(_camera);
+        Denoisers = new Denoiser(_camera, SourceWidth, SourceHeight);
         HasStarted = true;
     }
 
@@ -181,7 +190,7 @@ public class RayTracingMaster : MonoBehaviour {
     }   
 
     private void CreateDynamicBuffer(ref ComputeBuffer TargetBuffer, int Stride) {
-        if(TargetBuffer == null) TargetBuffer = new ComputeBuffer(Screen.width * Screen.height, Stride);
+        if(TargetBuffer == null) TargetBuffer = new ComputeBuffer(SourceWidth * SourceHeight, Stride);
     }
     public float[] TempData;
     public void RebuildMeshObjectBuffers() {
@@ -222,7 +231,7 @@ public class RayTracingMaster : MonoBehaviour {
 
         CreateDynamicBuffer(ref _RayBuffer1, 48);
 //        CreateDynamicBuffer(ref _ShadowBuffer, 44);
-        if(_ShadowBuffer == null) _ShadowBuffer = new ComputeBuffer(Screen.width * Screen.height * 2, 54);
+        if(_ShadowBuffer == null) _ShadowBuffer = new ComputeBuffer(SourceWidth * SourceHeight * 2, 54);
         CreateDynamicBuffer(ref _RayBuffer2, 48);
         CreateDynamicBuffer(ref _ColorBuffer, 48);
         CreateDynamicBuffer(ref _BufferSizes, 28);
@@ -280,7 +289,7 @@ public class RayTracingMaster : MonoBehaviour {
 
     private void SetShaderParameters() {
         BufferSizes = new BufferSizeData[bouncecount];
-        BufferSizes[0].tracerays = Screen.width * Screen.height;
+        BufferSizes[0].tracerays = SourceWidth * SourceHeight;
         _BufferSizes.SetData(BufferSizes);
         RayTracingShader.SetMatrix("_CameraToWorld", _camera.cameraToWorldMatrix);
         RayTracingShader.SetMatrix("_CameraInverseProjection", _camera.projectionMatrix.inverse);
@@ -327,8 +336,8 @@ public class RayTracingMaster : MonoBehaviour {
             RayTracingShader.SetTexture(ShadeKernel, "_MetallicAtlas", Assets.MetallicAtlas);
             RayTracingShader.SetTexture(ShadeKernel, "_RoughnessAtlas", Assets.RoughnessAtlas);
             RayTracingShader.SetInt("lighttricount", Assets.LightTriCount);
-            RayTracingShader.SetInt("screen_width", Screen.width);
-            RayTracingShader.SetInt("screen_height", Screen.height);
+            RayTracingShader.SetInt("screen_width", SourceWidth);
+            RayTracingShader.SetInt("screen_height", SourceHeight);
             SetComputeBuffer(ShadeKernel, "_LightMeshes", _LightMeshes);
             SetComputeBuffer(ShadeKernel, "_Materials", _MaterialDataBuffer); 
             SetComputeBuffer(GenKernel, "GlobalRays1", _RayBuffer1);
@@ -372,23 +381,23 @@ public class RayTracingMaster : MonoBehaviour {
 
     }
 
-    private void CreateRenderTexture(ref RenderTexture ThisTex, bool SRGB) {
+    private void CreateRenderTexture(ref RenderTexture ThisTex, bool SRGB, bool Res) {
         if(SRGB) {
-        ThisTex = new RenderTexture(Screen.width, Screen.height, 0,
+        ThisTex = new RenderTexture((Res) ? TargetWidth : SourceWidth, (Res) ? TargetHeight : SourceHeight, 0,
             RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
         } else {
-        ThisTex = new RenderTexture(Screen.width, Screen.height, 0,
+        ThisTex = new RenderTexture((Res) ? TargetWidth : SourceWidth, (Res) ? TargetHeight : SourceHeight, 0,
             RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
         }
         ThisTex.enableRandomWrite = true;
         ThisTex.Create();
     }
-    private void CreateRenderTexture(ref RenderTexture ThisTex, bool SRGB, bool istarget) {
+    private void CreateRenderTexture(ref RenderTexture ThisTex, bool SRGB, bool istarget, bool Res) {
         if(SRGB) {
-        ThisTex = new RenderTexture(Screen.width, Screen.height, 0,
+        ThisTex = new RenderTexture((Res) ? TargetWidth : SourceWidth, (Res) ? TargetHeight : SourceHeight, 0,
             RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
         } else {
-        ThisTex = new RenderTexture(Screen.width, Screen.height, 0,
+        ThisTex = new RenderTexture((Res) ? TargetWidth : SourceWidth, (Res) ? TargetHeight : SourceHeight, 0,
             RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
         }
         if(istarget) {
@@ -400,7 +409,7 @@ public class RayTracingMaster : MonoBehaviour {
     }
 
     private void InitRenderTexture() {
-        if (_target == null || _target.width != Screen.width || _target.height != Screen.height) {
+        if (_target == null || _target.width != SourceWidth || _target.height != SourceHeight) {
             // Release render texture if we already have one
             if (_target != null) {
                 _target.Release();
@@ -412,13 +421,14 @@ public class RayTracingMaster : MonoBehaviour {
                 _DebugTex.Release();
             }
 
-         CreateRenderTexture(ref _DebugTex, true);
-         CreateRenderTexture(ref _IntermediateTex, true, true);
-         CreateRenderTexture(ref _target, true);
-         CreateRenderTexture(ref _NormTex, false);
-         CreateRenderTexture(ref _converged, true);
-         CreateRenderTexture(ref _PosTex, false);
-         CreateRenderTexture(ref _Albedo, true);
+         CreateRenderTexture(ref _DebugTex, true, false);
+         CreateRenderTexture(ref _FinalTex, true, true);
+         CreateRenderTexture(ref _IntermediateTex, true, true, false);
+         CreateRenderTexture(ref _target, true, false);
+         CreateRenderTexture(ref _NormTex, false, false);
+         CreateRenderTexture(ref _converged, true, false);
+         CreateRenderTexture(ref _PosTex, false, false);
+         CreateRenderTexture(ref _Albedo, true, false);
             // Reset sampling
             _currentSample = 0;
         }
@@ -437,6 +447,7 @@ public class RayTracingMaster : MonoBehaviour {
         RayTracingShader.SetTexture(ShadeKernel, "TempNormTex", _NormTex);
         RayTracingShader.SetTexture(ShadeKernel, "TempAlbedoTex", _Albedo);
         RayTracingShader.SetTexture(OctreeKernel, "_DebugTex", _DebugTex);
+        RayTracingShader.SetTexture(ShadeKernel, "_DebugTex", _DebugTex);
         RayTracingShader.SetTexture(TraceKernel, "_DebugTex", _DebugTex);
         RayTracingShader.Dispatch(GenKernel, threadGroupsX, threadGroupsY, 1);
         for(int i = 0; i < bouncecount; i++) {
@@ -453,7 +464,7 @@ public class RayTracingMaster : MonoBehaviour {
             RayTracingShader.SetTexture(FinalizeKernel, "Result", _target);
             RayTracingShader.SetTexture(FinalizeKernel, "TempAlbedoTex", _Albedo);
             RayTracingShader.SetBuffer(FinalizeKernel, "GlobalColors", _ColorBuffer);
-            RayTracingShader.Dispatch(FinalizeKernel, Mathf.CeilToInt(Screen.width / 16.0f), Mathf.CeilToInt(Screen.height / 16.0f), 1);
+            RayTracingShader.Dispatch(FinalizeKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
             CurrentSample = 1.0f / (FramesSinceStart + 1.0f);
             SampleCount++;
         } else {
@@ -466,30 +477,27 @@ public class RayTracingMaster : MonoBehaviour {
             _addMaterial = new Material(Shader.Find("Hidden/Accumulate"));
         _addMaterial.SetFloat("_Sample", CurrentSample);
         Graphics.Blit(_target, _converged, _addMaterial);
-
+        Graphics.CopyTexture(_converged, 0, 0, _IntermediateTex, 0, 0);
+        _IntermediateTex.GenerateMips();
         if(UseAtrous) {
-            Denoisers.ExecuteAtrous(AtrousKernelSizes, n_phiGlob, p_phiGlob, c_phiGlob, ref _PosTex, ref _target, ref _Albedo, ref _converged, ref _NormTex);
+            Denoisers.ExecuteAtrous(AtrousKernelSizes, n_phiGlob, p_phiGlob, c_phiGlob, ref _PosTex, ref _target, ref _Albedo, ref _IntermediateTex, ref _NormTex);
             Graphics.CopyTexture(_target, 0, 0, _IntermediateTex, 0, 0);
-        } else if(AllowBloom){
-            Graphics.CopyTexture(_converged, 0, 0, _IntermediateTex, 0, 0);
+        }
+        if(AllowAutoExpose) {
+            Denoisers.ExecuteAutoExpose(ref _target, ref _IntermediateTex);
+            Graphics.CopyTexture(_target, 0, 0, _IntermediateTex, 0, 0);
         }
         if(AllowBloom) {
             Denoisers.ExecuteBloom(ref _target, ref _IntermediateTex);
+            Graphics.CopyTexture(_target, 0, 0, _IntermediateTex, 0, 0);
         }
-        if(AllowAutoExpose) {
-            if(AllowBloom) {
-                Graphics.CopyTexture(_target, 0, 0, _IntermediateTex, 0, 0);
-                _IntermediateTex.GenerateMips();
-                Denoisers.ExecuteAutoExpose(ref _target, ref _IntermediateTex);
-            } else {
-                Graphics.CopyTexture(_converged, 0, 0, _IntermediateTex, 0, 0);
-                _IntermediateTex.GenerateMips();
-                Denoisers.ExecuteAutoExpose(ref _target, ref _IntermediateTex);
-
-            }
+        if(_IntermediateTex.width == _FinalTex.width) Graphics.CopyTexture(_IntermediateTex, 0, 0, _FinalTex, 0, 0);
+        if(AllowTAA || (SourceHeight != TargetHeight)) {
+            Graphics.CopyTexture(_IntermediateTex, 0, 0, _target, 0, 0);
+            Denoisers.ExecuteTAA(ref _target, ref _IntermediateTex, ref _PosTex, ref _FinalTex, _currentSample);
         }
 
-        Graphics.Blit((UseAtrous || AllowBloom || AllowAutoExpose) ? _target : _converged, destination);
+        Graphics.Blit(_FinalTex, destination);
         ClearOutRenderTexture(_DebugTex);
         _currentSample++; 
         FramesSinceStart++;  

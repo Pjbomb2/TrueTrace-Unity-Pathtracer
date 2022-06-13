@@ -5,7 +5,9 @@ using System.Runtime.InteropServices;
  using UnityEditor;
 using CommonVars;
  using System.Xml;
-
+ using System.IO;
+         using Siccity.GLTFUtility;
+         using System.Threading;
 
 public class EditModeFunctions : EditorWindow {
      [MenuItem("PathTracer/Pathtracer Settings")]
@@ -97,6 +99,7 @@ public class EditModeFunctions : EditorWindow {
       public bool AllowSkinning = true;
       public bool AllowVolumetrics = false;
       public bool AllowBloom = false;
+      public bool AllowTAA = false;
       public bool UseAutoExpose = false;
       public float VolumeDensity = 0.001f;
       public AssetManager Assets;
@@ -141,7 +144,8 @@ public class EditModeFunctions : EditorWindow {
          Rect AllowBloomToggle =       new Rect(10, 260, (position.width - 10) / 2, 20);
          Rect DoFToggle =       new Rect(10, 285, (position.width - 10) / 2, 20);
          Rect AutoExposeToggle =       new Rect(10, 310, (position.width - 10) / 2, 20);
-         int SVGFVertOffset = 335;
+         Rect TAAToggle =       new Rect(10, 335, (position.width - 10) / 2, 20);
+         int SVGFVertOffset = 360;
          UseDoF = GUI.Toggle(DoFToggle, UseDoF, "Use DoF");
          if(UseDoF) {
             Rect DoF_Aperature_Input = new Rect(Mathf.Max((position.width - 10) / 4,145), SVGFVertOffset, (position.width - 10) / 4, 20);
@@ -161,6 +165,8 @@ public class EditModeFunctions : EditorWindow {
 
          UseAutoExpose = GUI.Toggle(AutoExposeToggle, UseAutoExpose, "Use Auto Exposure");
          RayMaster.AllowAutoExpose = UseAutoExpose;
+         AllowTAA = GUI.Toggle(TAAToggle, AllowTAA, "Use Temporal Antialiasing");
+         RayMaster.AllowTAA = AllowTAA;
 
 
          Rect SVGFToggle =       new Rect(10, SVGFVertOffset, (position.width - 10) / 2, 20);
@@ -179,13 +185,23 @@ public class EditModeFunctions : EditorWindow {
          RayMaster.UseNEE = UseNEE;
          
          if (GUI.Button(ScreenShotButton, "Take ScreenShot")) {
-            string dirPath = Application.dataPath + "/../Assets/ScreenShots";
+
+         // Single thread
+          DirectoryInfo d = new DirectoryInfo("C:/Users/payto/Downloads/Camera");
+          Debug.Log(d);
+          foreach(var file in d.GetFiles("*.gltf")) {
+            Debug.Log(file);
+          }
+
+            Importer.ImportGLTFAsync("C:/Users/payto/Downloads/m1887_free_fire/scene.gltf", new ImportSettings(), OnFinishAsync);
+           // GameObject result = new GameObject();
+            /*string dirPath = Application.dataPath + "/../Assets/ScreenShots";
             if(!System.IO.Directory.Exists(dirPath)) {
                Debug.Log("No Folder Named ScreenShots in Assets");
             } else {
                ScreenCapture.CaptureScreenshot(dirPath + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayMaster.SampleCount + " Samples.png");
                UnityEditor.AssetDatabase.Refresh();
-            }
+            }*/
 
          }
 
@@ -270,5 +286,8 @@ void OnInspectorUpdate() {
    Repaint();
 }
 
+            void OnFinishAsync(GameObject result, AnimationClip[] A) {
+                 Debug.Log("Finished importing " + result.name);
+            }
 
 }

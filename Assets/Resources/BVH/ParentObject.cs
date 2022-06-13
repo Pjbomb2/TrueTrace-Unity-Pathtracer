@@ -368,83 +368,6 @@ private void CreateAtlas() {//Creates texture atlas
 
 }
 
-
-/*public void LoadData() {
-    init();
-    CurMeshData = new MeshDat();
-    CurMeshData.init();
-    List<RayTracingObject> TempObjects = new List<RayTracingObject>();
-    List<Transform> TempObjectTransforms = new List<Transform>(this.transform);
-    IsSkinnedGroup = false;
-    for(int i = 0; i < this.transform.childCount; i++)  
-        if(this.transform.GetChild(i).gameObject.GetComponent<SkinnedMeshRenderer>() != null) {IsSkinnedGroup = true; break;}
-    
-    if(!IsSkinnedGroup) {
-        for(int i = 0; i < this.transform.childCount; i++) {
-            if(this.transform.GetChild(i).gameObject.GetComponent<RayTracingObject>() != null && this.transform.GetChild(i).gameObject.activeInHierarchy) {
-                TempObjectTransforms.Add(this.transform.GetChild(i));
-                TempObjects.Add(this.transform.GetChild(i).gameObject.GetComponent<RayTracingObject>());
-            }
-        }
-    } else {
-        TempObjects = new List<RayTracingObject>(GetComponentsInChildren<RayTracingObject>());
-        int TempObjectCount = TempObjects.Count;
-        for(int i = TempObjectCount - 1; i >= 0; i--) {
-            if(TempObjects[i].gameObject.GetComponent<SkinnedMeshRenderer>() != null)
-                TempObjectTransforms.Add(TempObjects[i].gameObject.transform);
-            else
-                TempObjects.RemoveAt(i);
-        }
-    }
-    if(TempObjects.Count == 0) {
-        if(this.gameObject.GetComponent<RayTracingObject>() != null) {
-            TempObjects = new List<RayTracingObject>();
-            TempObjects.Add(this.gameObject.GetComponent<RayTracingObject>());
-            TempObjectTransforms.Add(this.transform);
-        } else Debug.Log("NO RAYTRACINGOBJECT CHILDREN AT GAMEOBJECT: " + Name);
-    }
-
-    CachedTransforms = new StorableTransform[TempObjectTransforms.Count];
-    for(int i = 0; i < CachedTransforms.Length; i++) {
-        CachedTransforms[i].WTL = TempObjectTransforms[i].worldToLocalMatrix;
-        CachedTransforms[i].Position = TempObjectTransforms[i].position;
-    }
-    ChildObjects = TempObjects.ToArray();
-    TotalObjects = ChildObjects.Length;
-    if(IsSkinnedGroup) {
-        SkinnedMeshes = new SkinnedMeshRenderer[TotalObjects];
-        TotalTriangles = 0;
-        IndexCounts = new int[TotalObjects];
-        for(int i = 0; i < TotalObjects; i++) {
-            SkinnedMeshes[i] = ChildObjects[i].GetComponent<SkinnedMeshRenderer>();
-            SkinnedMeshes[i].updateWhenOffscreen = true;
-            int CurrentTriangleCount = 0;
-            for(int i2 = 0; i2 < SkinnedMeshes[i].sharedMesh.subMeshCount; i2++)
-                CurrentTriangleCount += SkinnedMeshes[i].sharedMesh.GetIndices(i2).Length / 3;
-            TotalTriangles += CurrentTriangleCount;
-            SkinnedMeshes[i].sharedMesh.indexBufferTarget |= GraphicsBuffer.Target.Raw;
-            SkinnedMeshes[i].vertexBufferTarget |= GraphicsBuffer.Target.Raw;
-            IndexCounts[i] = (int)Mathf.Ceil(CurrentTriangleCount);
-        }
-    }
-    Mesh mesh;
-    RayTracingObject CurrentObject;
-    int MatIndex = 0;
-    int RepCount = 0;
-    this.MatOffset = _Materials.Count;
-    for(int i = 0; i < TotalObjects; i++) {
-        CurrentObject = ChildObjects[i];
-        mesh = new Mesh();
-        if(CurrentObject.GetComponent<MeshFilter>() != null) mesh = CurrentObject.GetComponent<MeshFilter>().sharedMesh;
-        else CurrentObject.GetComponent<SkinnedMeshRenderer>().BakeMesh(mesh, true);
-
-        submeshcount = mesh.subMeshCount;
-    }
-}*/
-
-
-
-
 public void LoadData() {
     AllFull = false;
     TotEnergy = 0;
@@ -913,6 +836,7 @@ public async Task BuildTotal() {
     PrimitiveData TempPrim = new PrimitiveData();
     float TotalEnergy = 0.0f;
     Triangles = new PrimitiveData[(TransformIndexes[TransformIndexes.Count - 1].VertexStart + TransformIndexes[TransformIndexes.Count - 1].VertexCount) / 3];
+  //  List<PrimitiveData> TempTris = new List<PrimitiveData>();
 for(int i = 0; i < TotalObjects; i++) {
 
     Matrix4x4 ChildMat = CachedTransforms[i + 1].WTL.inverse;
@@ -957,6 +881,7 @@ for(int i = 0; i < TotalObjects; i++) {
             TempPrim.MatDat = CurMeshData.MatDat[i3 / 3];
 
             TempPrim.Reconstruct();
+           // if(_Materials[CurMeshData.MatDat[i3 / 3]].MatType != 2) TempTris.Add(TempPrim);
             Triangles[i3 / 3] = TempPrim;
             if(_Materials[TempPrim.MatDat].emmissive > 0.0f) {
                 V1 = TempPrim.V1;
@@ -982,6 +907,7 @@ for(int i = 0; i < TotalObjects; i++) {
         }
     
 }
+//Triangles = TempTris.ToArray();
 LightTriangles.Sort((s1,s2) => s1.energy.CompareTo(s2.energy));
 TotalEnergy = 0.0f;
 int LightTriCount = LightTriangles.Count;

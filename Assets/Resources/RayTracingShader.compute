@@ -1472,6 +1472,13 @@ float3 sample(inout float pdf) {//Diffuse
     return omega_o;
 }
 
+float3 sample(inout float pdf, int rand) {//Diffuse
+    float2 rando = random(rand);
+    float3 omega_o = sample_cosine_weighted_direction(rando.x, rando.y);
+    pdf = omega_o.z * ONE_OVER_PI;
+    return omega_o;
+}
+
 float3x3 GetTangentSpace(float3 normal) {
     // Choose a helper vector for the cross product
     float3 helper = float3(1, 0, 0);
@@ -1981,8 +1988,9 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
         float3 LocalNormIN = float3((2.0f * InputNormal.xy - 1.0f),0.0f);
         LocalNormIN.z = 1.0 - 0.5 * dot(LocalNormIN, LocalNormIN );
         norm = normalize(mul(normalize(LocalNormIN), float3x3(LocalTan, LocalBinorm, Geomnorm)));
+        norm = clamp(norm, -1, 1);
+        if(abs(norm.x) == abs(norm.y) == abs(norm.z)) norm = Geomnorm;
     }
-
 
     if(CurBounce == 0) {//Setting textures for denosier to use
         TempPosTex[Uv] = float4(pos, 1.0f);
@@ -2055,13 +2063,14 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                 if(GotFlipped) {
                     norm = -norm;
                     Geomnorm = -Geomnorm;
-                    float tempdist = hit.t * 12.0f;
+                    float tempdist = hit.t * 24.0f;
                     throughput *= exp(-hitDat.eta * tempdist * tempdist * tempdist * 2.0f);//Beers law
                 } else {
                     pos -= Geomnorm  * 0.005f;
                     throughput *= hitDat.surfaceColor;
                 }
-                ray.direction = normalize(normalize(mul(sample(pdf), GetTangentSpace(norm))));
+                float3 modifier = 0.5f * normalize(mul(sample(pdf, 14), GetTangentSpace(-norm)));
+                ray.direction = normalize(normalize(mul(sample(pdf), GetTangentSpace(norm))) + ( modifier));
 
         break;
         case 7://DiffTrans
@@ -2071,7 +2080,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                      throughput *= hitDat.surfaceColor;
                 } else {
                      throughput *= hitDat.surfaceColor * 2.0f;
-                    throughput *= exp(-hitDat.surfaceColor * hit.t);//Beers law
+                    if(GotFlipped) throughput *= exp(-hitDat.surfaceColor * hit.t);//Beers law
                 }
                 ray.direction = normalize(normalize(mul(sample(pdf), GetTangentSpace(norm))) * (1.0f - hitDat.roughness) + hitDat.roughness * ray.direction);
         break;
@@ -2082,7 +2091,8 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
     }
     if(!valid) return;//If the ray failed, we have no choice but to terminate this path
     ray.origin = Geomnorm * 0.001f + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
-
+   // _DebugTex[Uv] = float4(ray.direction,1);
+   // return;
     [branch]if(UseNEE || AllowVolumetrics) {//Next event estimation
         bool UseUnityLight = (unitylightcount != 0) ? (LightMeshCount != 0) ? (random(11).x <= (_UnityLights[unitylightcount - 1].TotalEnergy / (_UnityLights[unitylightcount - 1].TotalEnergy + _LightMeshes[LightMeshCount - 1].TotalEnergy))) : true : false;//Choose whether to sample unity lights or mesh lights based off which is more powerful
         float3 pos2;
@@ -2335,14 +2345,14 @@ void kernel_shade () {
     float2 NormalUV = (_Materials[MaterialIndex].HasNormalTex == 1) ? fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].NormalTex.xy - _Materials[MaterialIndex].NormalTex.zw) + _Materials[MaterialIndex].NormalTex.zw : float2(-1,-1);
     HitMat hitmat = CreateHitMat();//Transfer Material properties
     MaterialData TempMat = _Materials[MaterialIndex];
-    float4 BaseCol = (TempMat.HasAlbedoTex == 1) ? _TextureAtlas.SampleLevel(sampler_TextureAtlas, Uv, 0) : float4(TempMat.BaseColor, 1.0f);
+    float4 BaseCol = (TempMat.HasAlbedoTex > 0) ? _TextureAtlas.SampleLevel(sampler_TextureAtlas, Uv, 0) : float4(TempMat.BaseColor, 1.0f);
     hitmat.surfaceColor = BaseCol.xyz;
     hitmat.emmis = TempMat.emmissive;
     hitmat.roughness = TempMat.roughness;
     hitmat.MatType = TempMat.MatType;
     hitmat.eta = TempMat.eta;
 
-    if(TempMat.HasMetallicTex == 1 && hitmat.MatType != 2) {
+    if(TempMat.HasMetallicTex > 0 && hitmat.MatType != 2) {
         float2 MetallicUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].MetallicTex.xy - _Materials[MaterialIndex].MetallicTex.zw) + _Materials[MaterialIndex].MetallicTex.zw;
         float3 MetallicCol = _MetallicAtlas.SampleLevel(sampler_MetallicAtlas, MetallicUV, 0).xyz;
         if(MetallicCol.x > 0.001f) {
@@ -2350,19 +2360,18 @@ void kernel_shade () {
             hitmat.MatType = 1;
         }
     }
-    if(TempMat.HasRoughnessTex == 1) {
+    if(TempMat.HasRoughnessTex > 0) {
         float2 RoughnessUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].RoughnessTex.xy - _Materials[MaterialIndex].RoughnessTex.zw) + _Materials[MaterialIndex].RoughnessTex.zw;
         float3 RoughnessCol = _RoughnessAtlas.SampleLevel(sampler_RoughnessAtlas, RoughnessUV, 0).xyz;
         hitmat.roughness = pow(RoughnessCol.x * RoughnessCol.x, 0.4545f);
     }
-    if(TempMat.HasEmissiveTex == 1) {
+    if(TempMat.HasEmissiveTex > 0) {
         float2 EmissionUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].EmissiveTex.xy - _Materials[MaterialIndex].EmissiveTex.zw) + _Materials[MaterialIndex].EmissiveTex.zw;
         float3 EmissCol = _EmissiveAtlas.SampleLevel(sampler_EmissiveAtlas, EmissionUV, 0).xyz;
         if(EmissCol.x > 0.001f) {
             hitmat.emmis = 1.0f + EmissCol.x;
         }
     }
-
 
     bool DidTerminate = true;//Identifier marking whether we have terminated the ray or if it will continue
     calcFinalColor(ray, Color, hitmat, bestHit, TempUv, DidTerminate, NormalUV, GlobalRays2[index].HitVoxel);

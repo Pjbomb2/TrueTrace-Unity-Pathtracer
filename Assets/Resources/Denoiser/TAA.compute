@@ -1,0 +1,266 @@
+Texture2D<float4> ColorIn;
+SamplerState sampler_ColorIn;
+
+RWTexture2D<float4> ColorOut;
+RWTexture2D<float4> RWScreenPosPrev;
+
+Texture2D<float4> ScreenPosPrev;
+SamplerState sampler_ScreenPosPrev;
+
+Texture2D<float4> PosTex;
+
+int screen_width;
+int screen_height;
+
+float4x4 viewprojection;
+float4x4 prevviewprojection;
+
+
+#pragma kernel kernel_taa_prepare
+inline float luminance(const float r, const float g, const float b) {
+    return 0.299f * r + 0.587f * g + 0.114f * b;
+}
+
+int Samples_Accumulated;
+[numthreads(16,16,1)]
+void kernel_taa_prepare (int3 id : SV_DispatchThreadID)
+{
+if (id.x >= screen_width || id.y >= screen_height) return;
+//in = Result
+//out = ColorDirectOut
+    float4 PrevPos = mul(prevviewprojection, float4(PosTex[id.xy].xyz, 1));
+    float4 CurPos = mul(viewprojection, float4(PosTex[id.xy].xyz, 1));
+    RWScreenPosPrev[id.xy] =  float4(float2(PrevPos.x, PrevPos.y) / PrevPos.w, 0.0f, 1.0f);
+
+
+    float3 colour = ColorIn[id.xy].xyz;
+
+    colour = colour / (1.0f + luminance(colour.x, colour.y, colour.z));
+
+    // Convert to gamma space
+    colour = sqrt(max(0.0f, colour));
+
+    ColorOut[id.xy] = float4(colour,1);
+}
+
+
+#pragma kernel kernel_taa
+
+RWTexture2D<float4> TAAPrev;
+
+inline float3 rgb_to_ycocg(const float3 colour) {
+    return float3(
+         0.25f * colour.x + 0.5f * colour.y + 0.25f * colour.z,
+         0.5f  * colour.x                   - 0.5f  * colour.z,
+        -0.25f * colour.x + 0.5f * colour.y - 0.25f * colour.z
+    );
+}
+
+inline float3 ycocg_to_rgb(const float3 colour) {
+    return float3(
+        saturate(colour.x + colour.y - colour.z),
+        saturate(colour.x            + colour.z),
+        saturate(colour.x - colour.y - colour.z)
+    );
+}
+
+float mitchell_netravali(float x) {
+    const static float B = 1.0f / 3.0f;
+    const static float C = 1.0f / 3.0f;
+
+    x = abs(x);
+    float x2 = x  * x;
+    float x3 = x2 * x;
+
+    if (x < 1.0f) {
+        return (1.0f / 6.0f) * ((12.0f - 9.0f * B - 6.0f * C) * x3 + (-18.0f + 12.0f * B + 6.0f  * C) * x2 + (6.0f - 2.0f * B));
+    } else if (x < 2.0f) {
+        return (1.0f / 6.0f) * (              (-B - 6.0f * C) * x3 +           (6.0f * B + 30.0f * C) * x2 + (-12.0f * B - 48.0f * C) * x + (8.0f * B + 24.0f * C));
+    } else {
+        return 0.0f;
+    }
+}
+
+[numthreads(16,16,1)]
+void kernel_taa (int3 id : SV_DispatchThreadID)
+{
+if (id.x >= screen_width || id.y >= screen_height) return;
+//in = Result
+//out = ColorDirectOut
+    float4 colour = ColorIn[id.xy];
+
+    if (Samples_Accumulated == 0) {
+        // On the first frame the history buffer will be black,
+        // in this case we don't perform temporal accumulation
+        ColorOut[id.xy] = colour;
+        return;
+    }
+
+    float2 screen_position_prev = RWScreenPosPrev[id.xy].xy;
+
+    // Convert from [-1, 1] to [0, 1]
+    float u_prev = 0.5f + 0.5f * screen_position_prev.x;
+    float v_prev = 0.5f + 0.5f * screen_position_prev.y;
+
+    float s_prev = u_prev * (float)(screen_width);
+    float t_prev = v_prev * (float)(screen_height);
+
+    int x_prev = (int)(s_prev);
+    int y_prev = (int)(t_prev);
+
+    float  sum_weight = 0.0f;
+    float4 sum = float4(0.0f, 0.0f, 0.0f, 0.0f);
+
+    for (int j = y_prev - 2; j < y_prev + 2; j++) {
+        if (j < 0 || j >= screen_height) continue;
+
+        for (int i = x_prev - 2; i < x_prev + 2; i++) {
+            if (i < 0 || i >= screen_width) continue;
+
+            float weight =
+                mitchell_netravali((float)(i) - s_prev) *
+                mitchell_netravali((float)(j) - t_prev);
+
+            sum_weight += weight;
+            sum        += weight * TAAPrev[int2(i, j)];
+        }
+    }
+
+    if (sum_weight > 0.0f) {
+        float3 colour_curr = rgb_to_ycocg(float3(colour.xyz));
+        float3 colour_prev = rgb_to_ycocg(float3(sum.xyz / sum_weight));
+
+        float3 colour_avg = colour_curr;
+        float3 colour_var = colour_curr * colour_curr;
+
+        if (id.x >= 1) {
+            if (id.y >= 1) {
+                float3 f = rgb_to_ycocg(float3(ColorIn[int2(id.x - 1, id.y - 1)].xyz));
+
+                colour_avg += f;
+                colour_var += f * f;
+            }
+
+            float3 f = rgb_to_ycocg(float3(ColorIn[int2(id.x - 1, id.y)].xyz));
+
+            colour_avg += f;
+            colour_var += f * f;
+
+            if (id.y < screen_height - 1) {
+                float3 f = rgb_to_ycocg(float3(ColorIn[int2(id.x - 1, id.y + 1)].xyz));
+
+                colour_avg += f;
+                colour_var += f * f;
+            }
+        }
+
+        if (id.y >= 1) {
+            float3 f = rgb_to_ycocg(float3(ColorIn[int2(id.x, id.y - 1)].xyz));
+
+            colour_avg += f;
+            colour_var += f * f;
+        }
+
+        if (id.y < screen_height - 1) {
+            float3 f = rgb_to_ycocg(float3(ColorIn[int2(id.x, id.y + 1)].xyz));
+
+            colour_avg += f;
+            colour_var += f * f;
+        }
+
+        if (id.x < screen_width - 1) {
+            if (id.y >= 1) {
+                float3 f = rgb_to_ycocg(float3(ColorIn[int2(id.x + 1, id.y - 1)].xyz));
+
+                colour_avg += f;
+                colour_var += f * f;
+            }
+
+            float3 f = rgb_to_ycocg(float3(ColorIn[int2(id.x + 1, id.y)].xyz));
+
+            colour_avg += f;
+            colour_var += f * f;
+
+            if (id.y < screen_height - 1) {
+                float3 f = rgb_to_ycocg(float3(ColorIn[int2(id.x + 1, id.y + 1)].xyz));
+
+                colour_avg += f;
+                colour_var += f * f;
+            }
+        }
+
+        // Normalize the 9 taps
+        colour_avg *= 1.0f / 9.0f;
+        colour_var *= 1.0f / 9.0f;
+
+        // Compute variance and standard deviation
+        float3 sigma2 = colour_var - colour_avg * colour_avg;
+        float3 sigma = float3(
+            sqrt(max(0.0f, sigma2.x)),
+            sqrt(max(0.0f, sigma2.y)),
+            sqrt(max(0.0f, sigma2.z))
+        );
+
+        // Clamp based on average and standard deviation
+        float3 colour_min = colour_avg - 1.25f * sigma;
+        float3 colour_max = colour_avg + 1.25f * sigma;
+
+        colour_prev = clamp(colour_prev, colour_min, colour_max);
+
+//      float contrast = length(colour_curr - colour_avg);
+
+        // Integrate temporally
+        float ALPHA = 0.1f;
+        float3 integrated = ycocg_to_rgb(lerp(colour_prev, colour_curr, ALPHA));
+
+        colour.x = integrated.x;
+        colour.y = integrated.y;
+        colour.z = integrated.z;
+    }
+
+    ColorOut[id.xy] = colour;
+
+
+
+}
+
+
+#pragma kernel kernel_taa_finalize
+
+
+
+[numthreads(16,16,1)]
+void kernel_taa_finalize (int3 id : SV_DispatchThreadID)
+{
+    if (id.x >= screen_width || id.y >= screen_height) return;
+    
+    float4 color = ColorIn[id.xy];
+
+    TAAPrev[id.xy] = color;
+
+    color = color * color;
+
+    color = color / (1.0f - luminance(color.x, color.y, color.z));
+
+    ColorOut[id.xy] = color;
+
+
+}
+
+
+
+#pragma kernel kernel_taa_upsample
+
+int target_height;
+int target_width;
+
+[numthreads(16,16,1)]
+void kernel_taa_upsample (int3 id : SV_DispatchThreadID)
+{
+    if (id.x >= target_width || id.y >= target_height) return;
+    
+    float2 UV = float2(id.xy) / float2(target_width, target_height);
+    float2 newUV = ScreenPosPrev.SampleLevel(sampler_ScreenPosPrev, (UV + 1.0f) * 0.5f, 0).xy;
+    ColorOut[id.xy] = float4(lerp(ColorOut[id.xy].xyz, ((newUV.x <= 1.0f && newUV.y <= 1.0f && newUV.x >= 0.0f && newUV.y >= 0.0f) ? ColorIn.SampleLevel(sampler_ColorIn, newUV, 0).xyz : float3(0,0,0)), 0.1f), 1.0f);
+
+}
