@@ -44,6 +44,7 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 <li>Ability to pathtrace voxels and triangle scenes at the same time seamlessly</li>
 <li>Depth of Field</li>
 <li>AutoExposure</li>
+<li>Temporal Anti-Aliasing</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
