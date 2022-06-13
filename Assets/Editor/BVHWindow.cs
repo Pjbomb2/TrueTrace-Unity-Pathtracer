@@ -6,8 +6,6 @@ using System.Runtime.InteropServices;
 using CommonVars;
  using System.Xml;
  using System.IO;
-         using Siccity.GLTFUtility;
-         using System.Threading;
 
 public class EditModeFunctions : EditorWindow {
      [MenuItem("PathTracer/Pathtracer Settings")]
