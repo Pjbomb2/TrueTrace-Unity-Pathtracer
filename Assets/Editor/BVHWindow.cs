@@ -185,23 +185,14 @@ public class EditModeFunctions : EditorWindow {
          RayMaster.UseNEE = UseNEE;
          
          if (GUI.Button(ScreenShotButton, "Take ScreenShot")) {
-
-         // Single thread
-          DirectoryInfo d = new DirectoryInfo("C:/Users/payto/Downloads/Camera");
-          Debug.Log(d);
-          foreach(var file in d.GetFiles("*.gltf")) {
-            Debug.Log(file);
-          }
-
-            Importer.ImportGLTFAsync("C:/Users/payto/Downloads/m1887_free_fire/scene.gltf", new ImportSettings(), OnFinishAsync);
-           // GameObject result = new GameObject();
-            /*string dirPath = Application.dataPath + "/../Assets/ScreenShots";
+            GameObject result = new GameObject();
+            string dirPath = Application.dataPath + "/../Assets/ScreenShots";
             if(!System.IO.Directory.Exists(dirPath)) {
                Debug.Log("No Folder Named ScreenShots in Assets");
             } else {
                ScreenCapture.CaptureScreenshot(dirPath + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayMaster.SampleCount + " Samples.png");
                UnityEditor.AssetDatabase.Refresh();
-            }*/
+            }
 
          }
 
