@@ -142,6 +142,8 @@ BVH Options Description -
   
 # Sample Images(Taken from various stages of development)
 
+![](/Images/ReSTIR1.png)
+![](/Images/ReSTIR2.png)
 ![](/Images/SSS1.png)
 ![](/Images/AutoExpose1.png)
 ![](/Images/DoF2.png)
@@ -191,9 +193,10 @@ Scenes From:
   <li>https://www.intel.com/content/www/us/en/developer/topic-technology/graphics-research/samples.html</li>
   <li>https://sketchfab.com/3d-models/tallers-de-la-fundacio-llorenc-artigas-22-5224b721b0854998a1808fcea3cff924</li>
   <li>https://sketchfab.com/3d-models/dae-bilora-bella-46-camera-game-ready-asset-eeb9d9f0627f4783b5d16a8732f0d1a4</li>
+  <li>https://www.unrealengine.com/marketplace/en-US/product/victorian-train-station-and-railroad-modular-set</li>
 </ul>
 
 
 
 ## Ideas/Reminders for later
-ReSTIR, ReGIR, Find an alternative to atlas's, Reduce memory consumption, work on adding back in Mitsuba scene support
+ReGIR, Find an alternative to atlas's, Reduce memory consumption, work on adding back in Mitsuba scene support
