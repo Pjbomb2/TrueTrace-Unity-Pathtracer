@@ -145,7 +145,7 @@ BVH Options Description -
 
 ![](/Images/ReSTIR1.png)
 ![](/Images/ReSTIR2.png)
-![](/Images/ReSTIR3.png)
+![](/Images/Restir3.png)
 ![](/Images/SSS1.png)
 ![](/Images/AutoExpose1.png)
 ![](/Images/DoF2.png)
