@@ -142,8 +142,10 @@ BVH Options Description -
   
 # Sample Images(Taken from various stages of development)
 
+
 ![](/Images/ReSTIR1.png)
 ![](/Images/ReSTIR2.png)
+![](/Images/ReSTIR3.png)
 ![](/Images/SSS1.png)
 ![](/Images/AutoExpose1.png)
 ![](/Images/DoF2.png)
