@@ -21,7 +21,7 @@ public class RayTracingLights : MonoBehaviour {
         if(ThisLight == null) {ThisLight = this.GetComponent<Light>();}
         Position = this.transform.position;
         Color col = ThisLight.color; 
-        Emission = new Vector3(col[0], col[1], col[2]) * ThisLight.intensity / 1000.0f;
+        Emission = new Vector3(col[0], col[1], col[2]) * ThisLight.intensity;
         Direction = (ThisLight.type == LightType.Directional) ? -this.transform.forward : (ThisLight.type == LightType.Spot) ? Vector3.Normalize(this.transform.forward) : new Vector3(0.0f, 0.0f, 0.0f);
         Type = (ThisLight.type == LightType.Point) ? 0 : (ThisLight.type == LightType.Directional) ? 1 : 2; //this.transform.TransformDirection(Vector3.forward)
         SpotAngle = (ThisLight.type == LightType.Spot) ? (new Vector2(ThisLight.spotAngle, ThisLight.innerSpotAngle) * (3.14159f / 180.0f) * 0.15f) : new Vector2(0.0f, 0.0f);
