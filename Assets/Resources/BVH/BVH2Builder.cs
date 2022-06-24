@@ -22,7 +22,7 @@ public class BVH2Builder {
         public AABB aabb_right;
     }
 
-    ObjectSplit partition_sah(int first_index, int index_count, ref float[] sah, ref PrimitiveData[] Primitives) {
+    ObjectSplit partition_sah(int first_index, int index_count, ref float[] sah, ref AABB[] Primitives) {
 
         ObjectSplit split = new ObjectSplit();
         split.cost = float.MaxValue;
@@ -41,14 +41,14 @@ public class BVH2Builder {
 
             for(int i = 1; i < index_count; i++) {
                 CurIndex = DimensionedIndices[dimension][first_index + i - 1];
-                aabb_left.Extend(ref Primitives[CurIndex].aabb);
+                aabb_left.Extend(ref Primitives[CurIndex]);
 
                 sah[i] = surface_area(ref aabb_left) * (float)i;
             }
 
             for(int i = index_count - 1; i > 0; i--) {
                 CurIndex = DimensionedIndices[dimension][first_index + i];
-                aabb_right.Extend(ref Primitives[CurIndex].aabb);
+                aabb_right.Extend(ref Primitives[CurIndex]);
 
                 float cost = sah[i] + surface_area(ref aabb_right) * (float)(index_count - i);
 
@@ -65,12 +65,12 @@ public class BVH2Builder {
 
         for(int i = first_index; i < split.index; i++) {
             CurIndex = DimensionedIndices[split.dimension][i];
-            split.aabb_left.Extend(ref Primitives[CurIndex].aabb);
+            split.aabb_left.Extend(ref Primitives[CurIndex]);
         }
         return split;
     }
 
-    void BuildRecursive(int nodesi, ref int node_index, int first_index, int index_count, ref PrimitiveData[] Primitives) {
+    void BuildRecursive(int nodesi, ref int node_index, int first_index, int index_count, ref AABB[] Primitives) {
         if(index_count == 1) {
             BVH2Nodes[nodesi].first = first_index;
             BVH2Nodes[nodesi].count = (uint)index_count;
@@ -129,7 +129,7 @@ public class BVH2Builder {
         return 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z)); 
     }
 
-    public BVH2Builder(ref PrimitiveData[] Triangles) {//Bottom Level Acceleration Structure Builder
+    public BVH2Builder(ref AABB[] Triangles) {//Bottom Level Acceleration Structure Builder
         PrimCount = Triangles.Length;
         DimensionedIndices = new List<int>[3];
         DimensionedIndices[0] = new List<int>(PrimCount);
@@ -149,12 +149,12 @@ public class BVH2Builder {
             DimensionedIndices[1].Add(i);
             DimensionedIndices[2].Add(i);
             indices_going_left[i] = false;
-            Center = Triangles[i].Center;
+            Center = (Triangles[i].BBMax - Triangles[i].BBMin) / 2.0f + Triangles[i].BBMin;
             CentersX[i] = Center.x;
             CentersY[i] = Center.y;
             CentersZ[i] = Center.z;
             temp.Add(0);
-            RootBB.Extend(ref Triangles[i].aabb);
+            RootBB.Extend(ref Triangles[i]);
         }
 
         BVH2Nodes[0].aabb = RootBB;
@@ -202,7 +202,7 @@ public class BVH2Builder {
         DimensionedIndices[2] = new List<int>(MeshCount);
         BVH2Nodes = new BVHNode2Data[MeshCount * 2];
         temp = new List<int>();
-        PrimitiveData[] Primitives = new PrimitiveData[MeshCount];
+        AABB[] Primitives = new AABB[MeshCount];
         indices_going_left = new bool[MeshCount];  
         AABB RootBB = new AABB();
         RootBB.init();
@@ -214,17 +214,18 @@ public class BVH2Builder {
             DimensionedIndices[0].Add(i);
             DimensionedIndices[1].Add(i);
             DimensionedIndices[2].Add(i);
-            Primitives[i].aabb.BBMax = MeshAABBs[i].BBMax;
-            Primitives[i].aabb.BBMin = MeshAABBs[i].BBMin;
+            Primitives[i].BBMax = MeshAABBs[i].BBMax;
+            Primitives[i].BBMin = MeshAABBs[i].BBMin;
             Center = ((MeshAABBs[i].BBMax - MeshAABBs[i].BBMin)/2.0f + MeshAABBs[i].BBMin);
-            Primitives[i].Center = Center;
+            Primitives[i].BBMax = MeshAABBs[i].BBMax;
+            Primitives[i].BBMin = MeshAABBs[i].BBMin;
 
             CentersX[i] = Center.x;
             CentersY[i] = Center.y;
             CentersZ[i] = Center.z;
             indices_going_left[i] = false;
             temp.Add(0);
-            RootBB.Extend(ref Primitives[i].aabb);
+            RootBB.Extend(ref Primitives[i]);
         }
 
         BVH2Nodes[0].aabb = RootBB;

@@ -20,8 +20,8 @@ public GraphicsBuffer[] VertexBuffers;
 public GraphicsBuffer[] IndexBuffers;
 [HideInInspector] public RayTracingObject[] ChildObjects;
 [HideInInspector] public bool MeshCountChanged;
-[HideInInspector] public PrimitiveData[] Triangles;
-[HideInInspector] public CudaTriangle[] AggTriangles;
+public AABB[] Triangles;
+public CudaTriangle[] AggTriangles;
 [HideInInspector] public List<CudaLightTriangle> LightTriangles;
 [HideInInspector] public BVH8Builder BVH;
 [HideInInspector] public SkinnedMeshRenderer[] SkinnedMeshes;
@@ -835,8 +835,10 @@ public async Task BuildTotal() {
     Vector3 V1, V2, V3, Norm1, Norm2, Norm3, Tan1, Tan2, Tan3;
     PrimitiveData TempPrim = new PrimitiveData();
     float TotalEnergy = 0.0f;
-    Triangles = new PrimitiveData[(TransformIndexes[TransformIndexes.Count - 1].VertexStart + TransformIndexes[TransformIndexes.Count - 1].VertexCount) / 3];
   //  List<PrimitiveData> TempTris = new List<PrimitiveData>();
+    Triangles = new AABB[(TransformIndexes[TransformIndexes.Count - 1].VertexStart + TransformIndexes[TransformIndexes.Count - 1].VertexCount) / 3];
+    AggTriangles = new CudaTriangle[(TransformIndexes[TransformIndexes.Count - 1].VertexStart + TransformIndexes[TransformIndexes.Count - 1].VertexCount) / 3];
+    CudaTriangle TempTri = new CudaTriangle();
 for(int i = 0; i < TotalObjects; i++) {
 
     Matrix4x4 ChildMat = CachedTransforms[i + 1].WTL.inverse;
@@ -882,7 +884,27 @@ for(int i = 0; i < TotalObjects; i++) {
 
             TempPrim.Reconstruct();
            // if(_Materials[CurMeshData.MatDat[i3 / 3]].MatType != 2) TempTris.Add(TempPrim);
-            Triangles[i3 / 3] = TempPrim;
+            TempTri.pos0 = TempPrim.V1;
+
+            TempTri.posedge1 = TempPrim.V2 - TempPrim.V1;
+            TempTri.posedge2 = TempPrim.V3 - TempPrim.V1;
+
+            TempTri.norm0 = TempPrim.Norm1;
+            TempTri.normedge1 = TempPrim.Norm2 - TempPrim.Norm1;
+            TempTri.normedge2 = TempPrim.Norm3 - TempPrim.Norm1;
+
+            TempTri.tan0 = TempPrim.Tan1;
+            TempTri.tanedge1 = TempPrim.Tan2 - TempPrim.Tan1;
+            TempTri.tanedge2 = TempPrim.Tan3 - TempPrim.Tan1;
+
+            TempTri.tex0 = TempPrim.tex1;
+            TempTri.texedge1 = TempPrim.tex2;
+            TempTri.texedge2 = TempPrim.tex3;
+
+            TempTri.MatDat = (uint)TempPrim.MatDat;
+            AggTriangles[i3 / 3] = TempTri;
+            Triangles[i3 / 3] = TempPrim.aabb;
+
             if(_Materials[TempPrim.MatDat].emmissive > 0.0f) {
                 V1 = TempPrim.V1;
                 V2 = TempPrim.V2;
@@ -896,12 +918,13 @@ for(int i = 0; i < TotalObjects; i++) {
 
                 LightTriangles.Add(new CudaLightTriangle() {
                     pos0 = V1,
-                    posedge1 = V2 - V1,
-                    posedge2 = V3 - V1,
-                    Norm = (TempPrim.Norm1 + TempPrim.Norm2 + TempPrim.Norm3) / 3.0f,
+                    posedge1 = (V2 - V1),
+                    posedge2 = (V3 - V1),
+                    Norm = ((TempPrim.Norm1 + TempPrim.Norm2 + TempPrim.Norm3) / 3.0f),
                     radiance = _Materials[TempPrim.MatDat].emmissive * _Materials[TempPrim.MatDat].BaseColor,
                     sumEnergy = TotalEnergy,
-                    energy = e
+                    energy = e,
+                    area = area
                     });
             }
         }
@@ -911,11 +934,12 @@ for(int i = 0; i < TotalObjects; i++) {
 LightTriangles.Sort((s1,s2) => s1.energy.CompareTo(s2.energy));
 TotalEnergy = 0.0f;
 int LightTriCount = LightTriangles.Count;
+CudaLightTriangle TempTri2;
 for(int i = 0; i < LightTriCount; i++) {
-    CudaLightTriangle TempTri = LightTriangles[i];
-    TotalEnergy += TempTri.energy;
-    TempTri.sumEnergy = TotalEnergy;
-    LightTriangles[i] = TempTri; 
+    TempTri2 = LightTriangles[i];
+    TotalEnergy += TempTri2.energy;
+    TempTri2.sumEnergy = TotalEnergy;
+    LightTriangles[i] = TempTri2; 
 }
 LightCount = LightTriangles.Count;
 ConstructAABB();
@@ -938,33 +962,13 @@ public void UpdateData(ref int ReturnOffset, ref int MaterialOffset) {
 }
 
 public void CompileTriangles() {
-    AggTriangles = new CudaTriangle[Triangles.Length];
-    CudaTriangle TempTri = new CudaTriangle();
-            int TriCount = Triangles.Length;
-            PrimitiveData triangle;
-            for(int i2 = 0; i2 < TriCount; ++i2) {//This constructs the list of triangles that actually get sent to the GPU
-                triangle = Triangles[BVH.cwbvh_indices[i2]];
-                TempTri.pos0 = triangle.V1;
-
-                TempTri.posedge1 = triangle.V2 - triangle.V1;
-                TempTri.posedge2 = triangle.V3 - triangle.V1;
-
-                TempTri.norm0 = triangle.Norm1;
-                TempTri.normedge1 = triangle.Norm2 - triangle.Norm1;
-                TempTri.normedge2 = triangle.Norm3 - triangle.Norm1;
-
-                TempTri.tan0 = triangle.Tan1;
-                TempTri.tanedge1 = triangle.Tan2 - triangle.Tan1;
-                TempTri.tanedge2 = triangle.Tan3 - triangle.Tan1;
-
-                TempTri.tex0 = triangle.tex1;
-                TempTri.texedge1 = triangle.tex2;
-                TempTri.texedge2 = triangle.tex3;
-
-                TempTri.MatDat = (uint)triangle.MatDat;
-                AggTriangles[i2] = TempTri;
-             }
-       
+    CudaTriangle[] TempArray = new CudaTriangle[AggTriangles.Length];
+    System.Array.Copy(AggTriangles, TempArray, TempArray.Length);
+    CudaTriangle Temp;
+    for(int i = 0; i < AggTriangles.Length; i++) {
+        AggTriangles[i] = TempArray[BVH.cwbvh_indices[i]];
+    }
+    TempArray = null;
 }
 
 
@@ -1007,7 +1011,7 @@ private void ConstructAABB() {
     aabb_untransformed = new AABB();
     aabb_untransformed.init();
     for(int i = 0; i < Triangles.Length; i++) {
-        aabb_untransformed.Extend(ref Triangles[i].aabb);
+        aabb_untransformed.Extend(ref Triangles[i]);
     }
 }
 

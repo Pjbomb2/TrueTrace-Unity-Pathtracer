@@ -219,7 +219,6 @@ public class Denoiser {
         SVGF.SetMatrix("_CameraToWorld", _camera.cameraToWorldMatrix);
         SVGF.SetInt("Samples_Accumulated", CurrentSamples);
         PrevViewProjection = viewprojmatrix;
-
         SVGF.SetInt("AtrousIterations", AtrousKernelSize);
         bool OddAtrousIteration = (AtrousKernelSize % 2 == 1);
         UnityEngine.Profiling.Profiler.BeginSample("SVGFCopy");
@@ -291,7 +290,9 @@ public class Denoiser {
         SVGF.SetTexture(FinalizeKernel, "RWHistoryNormalAndDepth", _HistoryNormalDepth);
         SVGF.SetTexture(FinalizeKernel, "Result", _target);
         SVGF.SetTexture(FinalizeKernel, "HistoryTex", _History);
+        SVGF.SetTexture(FinalizeKernel, "PosTex", _PosTex);
         SVGF.SetTexture(FinalizeKernel, "_Albedo", _Albedo);
+        
         SVGF.SetTexture(FinalizeKernel, "FrameBufferMoment", _FrameMoment);
         SVGF.Dispatch(FinalizeKernel, threadGroupsX, threadGroupsY, 1);
         UnityEngine.Profiling.Profiler.EndSample();
@@ -300,7 +301,7 @@ public class Denoiser {
         Graphics.CopyTexture(_PosTex, _PrevPosTex);
 
     }
-    public void ExecuteAtrous(int AtrousKernelSize, float n_phi, float p_phi, float c_phi, ref RenderTexture _PosTex, ref RenderTexture _target, ref RenderTexture _Albedo, ref RenderTexture _converged, ref RenderTexture _NormTex) {
+    public void ExecuteAtrous(int AtrousKernelSize, float n_phi, float p_phi, float c_phi, ref RenderTexture _PosTex, ref RenderTexture _target, ref RenderTexture _converged, ref RenderTexture _Albedo, ref RenderTexture _NormTex) {
         InitRenderTexture();
         Matrix4x4 viewprojmatrix = _camera.projectionMatrix * _camera.worldToCameraMatrix;
         AtrousDenoiser.SetMatrix("viewprojection", viewprojmatrix);
@@ -383,7 +384,7 @@ public class Denoiser {
 
         UnityEngine.Profiling.Profiler.BeginSample("TAAKernel");
         TAA.SetTexture(TAAKernel, "ColorIn", TempTex);
-        TAA.SetTexture(TAAKernel, "RWScreenPosPrev", _ScreenPosPrev);
+        TAA.SetTexture(TAAKernel, "ScreenPosPrev", _ScreenPosPrev);
         TAA.SetTexture(TAAKernel, "TAAPrev", _TAAPrev);
         TAA.SetTexture(TAAKernel, "ColorOut", TempTex2);
         TAA.Dispatch(TAAKernel, threadGroupsX, threadGroupsY, 1);
@@ -398,6 +399,9 @@ public class Denoiser {
 
         if(_target.width != _Final.width) {
             UnityEngine.Profiling.Profiler.BeginSample("TAAU");
+            TAA.SetTextureFromGlobal(TAAUpsampleKernel, "Albedo", "_CameraGBufferTexture0");
+            TAA.SetTextureFromGlobal(TAAUpsampleKernel, "DepthTex", "_CameraDepthTexture");
+            TAA.SetTextureFromGlobal(TAAUpsampleKernel, "NormalTex", "_CameraGBufferTexture2");
             TAA.SetInt("target_width", _Final.width);
             TAA.SetInt("target_height", _Final.height);
             TAA.SetTexture(TAAUpsampleKernel, "ScreenPosPrev", _ScreenPosPrev);

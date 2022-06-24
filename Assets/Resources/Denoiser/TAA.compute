@@ -12,6 +12,10 @@ Texture2D<float4> PosTex;
 int screen_width;
 int screen_height;
 
+int target_width;
+int target_height;
+
+
 float4x4 viewprojection;
 float4x4 prevviewprojection;
 
@@ -96,7 +100,7 @@ if (id.x >= screen_width || id.y >= screen_height) return;
         return;
     }
 
-    float2 screen_position_prev = RWScreenPosPrev[id.xy].xy;
+    float2 screen_position_prev = ScreenPosPrev[id.xy].xy;
 
     // Convert from [-1, 1] to [0, 1]
     float u_prev = 0.5f + 0.5f * screen_position_prev.x;
@@ -251,8 +255,19 @@ void kernel_taa_finalize (int3 id : SV_DispatchThreadID)
 
 #pragma kernel kernel_taa_upsample
 
-int target_height;
-int target_width;
+Texture2D<float4> NormalTex;
+SamplerState sampler_NormalTex; 
+Texture2D<float4> DepthTex;
+SamplerState sampler_DepthTex; 
+Texture2D<float4> Albedo;
+
+bool IsValid(float CenterDepth, float3 CenterNormal, float2 Uv) {
+    if(Uv.x > 1.0f || Uv.y > 1.0f || Uv.x < 0 || Uv.y < 0) return false;
+    bool DT = abs(CenterDepth - DepthTex.SampleLevel(sampler_DepthTex, Uv, 0).x) < 0.1f;
+    bool NT = dot(CenterNormal, NormalTex.SampleLevel(sampler_NormalTex, Uv, 0).xyz * 2.0f - 1.0f) < 0.99999f;
+
+    return DT && NT;
+}
 
 [numthreads(16,16,1)]
 void kernel_taa_upsample (int3 id : SV_DispatchThreadID)
@@ -260,7 +275,23 @@ void kernel_taa_upsample (int3 id : SV_DispatchThreadID)
     if (id.x >= target_width || id.y >= target_height) return;
     
     float2 UV = float2(id.xy) / float2(target_width, target_height);
-    float2 newUV = ScreenPosPrev.SampleLevel(sampler_ScreenPosPrev, (UV + 1.0f) * 0.5f, 0).xy;
-    ColorOut[id.xy] = float4(lerp(ColorOut[id.xy].xyz, ((newUV.x <= 1.0f && newUV.y <= 1.0f && newUV.x >= 0.0f && newUV.y >= 0.0f) ? ColorIn.SampleLevel(sampler_ColorIn, newUV, 0).xyz : float3(0,0,0)), 0.1f), 1.0f);
+    float2 texel = 1.0f / float2(target_width, target_height);
+    float2 texel2 = 1.0f / float2(screen_width, screen_height);
+    float2 newUV = UV;//ScreenPosPrev.SampleLevel(sampler_ScreenPosPrev, ((id.xy / float2(target_width - 1.5f, target_height - 1.5f)) + 1.0f) * 0.5f, 0).xy;
+    float CenterDepth = DepthTex.SampleLevel(sampler_DepthTex, newUV, 0).x;
+    float3 CenterNormal = NormalTex.SampleLevel(sampler_NormalTex, newUV, 0).xyz * 2.0f - 1.0f;
+    float3 TotalChange = float3(0,0,0);
+    int ConfirmedSamples = 0;
 
+    for(int i = -1; i <= 1; i++) {
+        [unroll]for(int j = -1; j <= 1; j++) {
+            if(i == 0 && j == 0) continue;
+            [branch]if(IsValid(CenterDepth, CenterNormal, newUV + float2(texel2.x * i, texel2.y * j))) {
+                TotalChange += ColorIn.SampleLevel(sampler_ColorIn, newUV + float2(texel2.x, 0), 0).xyz;
+                ConfirmedSamples++;
+            }
+        }
+    }
+    if(CenterDepth == 0) ColorOut[id.xy] = float4(ColorIn.SampleLevel(sampler_ColorIn, newUV, 0).xyz, 1.0f);
+    else ColorOut[id.xy] = float4((ColorIn.SampleLevel(sampler_ColorIn, newUV, 0).xyz + TotalChange / max(ConfirmedSamples,1)) * Albedo[id.xy].xyz * 2.0f,1.0f);
 }

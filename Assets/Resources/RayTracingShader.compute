@@ -20,6 +20,8 @@ bool UseRussianRoulette;
 bool UseNEE;
 bool AllowVolumetrics;
 bool UseDoF;
+bool UseRestir;
+bool UseTAA;
 
 float VolumeDensity;
 
@@ -72,6 +74,7 @@ struct LightTriangleData {
     float3 radiance;
     float sumEnergy;
     float energy;
+    float area;
 };
 
 StructuredBuffer<LightTriangleData> LightTriangles;
@@ -116,6 +119,7 @@ struct ColData {
     float3 Fog;
 };
 
+int curframe;
 RWTexture2D<float4> Result;
 
 RWStructuredBuffer<ShadowRayData> ShadowRaysBuffer;
@@ -125,6 +129,7 @@ RWStructuredBuffer<ColData> GlobalColors;
 RWStructuredBuffer<BufferSizeData> BufferSizes;
 
 StructuredBuffer<CudaTriangle> AggTris;
+
 
 Ray CreateRay(float3 origin, float3 direction) {
     Ray ray;
@@ -202,7 +207,7 @@ uint pcg_hash(uint seed) {
     return (word >> 22u) ^ word;
 }
 float2 random(uint samdim) {
-    uint hash = pcg_hash((pixel_index * (uint)6 + samdim) * (MaxBounce + 1) + CurBounce);
+    uint hash = pcg_hash((pixel_index * (uint)112 + samdim) * (MaxBounce + 1) + CurBounce);
 
     const static float one_over_max_unsigned = asfloat(0x2f7fffff);
 
@@ -211,6 +216,25 @@ float2 random(uint samdim) {
 
     return float2(x,y);
 }
+
+uint rng_state;
+
+uint rand_lcg()
+{
+    // LCG values from Numerical Recipes
+    rng_state = 1664525 * rng_state + 1013904223;
+    return rng_state;
+}
+
+uint rand_xorshift()
+{
+    // Xorshift algorithm from George Marsaglia's paper
+    rng_state ^= (rng_state << 13);
+    rng_state ^= (rng_state >> 17);
+    rng_state ^= (rng_state << 5);
+    return rng_state;
+}
+
 
 
 #pragma kernel Generate 
@@ -266,7 +290,7 @@ void Generate (uint3 id : SV_DispatchThreadID) {
     if(id.x >= screen_width || id.y >= screen_height) return;
     pixel_index = id.y * screen_width + id.x;
     float2 jitter = random(1) - 0.5f;
-    float2 uv = float2((id.xy + jitter) / float2(screen_width, screen_height) * 2.0f - 1.0f);
+    float2 uv = float2((id.xy + ((!UseTAA) ? jitter : 0.0f)) / float2(screen_width, screen_height) * 2.0f - 1.0f);
     Ray ray = CreateCameraRay(uv);
 
     const static RayHit tempray = CreateRayHit();
@@ -282,6 +306,25 @@ void Generate (uint3 id : SV_DispatchThreadID) {
     GlobalColors[pixel_index].Fog = float3(0.0f, 0.0f, 0.0f);
 }
 
+
+#pragma kernel kernel_depth_copy
+RWTexture2D<float4> TempPosTex;
+Texture2D<float4> NormalTex;
+SamplerState sampler_NormalTex;
+Texture2D<float4> AlbedoTex;
+SamplerState sampler_AlbedoTex;
+RWTexture2D<float4> TempNormTex;
+RWTexture2D<float4>TempAlbedoTex;
+[numthreads(16,16,1)]
+void kernel_depth_copy (uint3 id : SV_DispatchThreadID) {
+    
+    if(id.x >= screen_width || id.y >= screen_height) return;
+    pixel_index = id.y * screen_width + id.x;
+    float2 Uv = id.xy / float2(screen_width, screen_height);
+    TempNormTex[id.xy] = NormalTex.SampleLevel(sampler_NormalTex, Uv, 0);
+    TempAlbedoTex[id.xy] = AlbedoTex.SampleLevel(sampler_AlbedoTex, Uv, 0);
+    TempPosTex[id.xy] = float4(asfloat(GlobalRays2[pixel_index].hits.z) * GlobalRays2[pixel_index].direction + GlobalRays2[pixel_index].origin,1);
+}
 
 #pragma kernel kernel_trace 
 
@@ -573,9 +616,6 @@ void IntersectBVH() {
                 if(stack_size == 0) {//thread has finished traversing
                     GlobalRays2[ray_index] = GlobalRays1[ray_index];
                     set2(ray_index, bestHit);
-                    int PixIndex = GlobalRays2[ray_index].PixelIndex;
-                    uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
-                    _DebugTex[TempUv] = float4((Reps) / 45.0f,0,0,1);
                     current_group.y = 0;
                     break;
                 }
@@ -853,7 +893,22 @@ void kernel_octree_trace () {//If I move the function contents into here, unity 
 
 
 
+struct Reservoir {
+    float y;
+    float wsum;
+    float M;
+    float W;
+    uint WasSuccessful;
+    float3 Position;
+    float3 Norm;
+    float MeshIndex;
+    float3 PrevWorld;
+    float3 PrevNorm;
+    float3 PrevAlbedo;
+};
 
+RWStructuredBuffer<Reservoir> CurrentReservoir;
+RWStructuredBuffer<Reservoir> PreviousReservoir;
 
 
 #pragma kernel kernel_shadow
@@ -1218,12 +1273,14 @@ void IntersectVoxelTLASShadow() {
             if((current_group.y & 0xff000000) == 0 || DidHit) {
                 if(DidHit) {
                     stack_size = 0;
+                    if(CurBounce == 0 && ShadowRaysBuffer[ray_index].IsNotFog) CurrentReservoir[ShadowRaysBuffer[ray_index].PixelIndex].WasSuccessful = 0;
                     break;
                 }
                 if(stack_size == 0) {//thread has finished traversing
                     int pixel_index = ShadowRaysBuffer[ray_index].PixelIndex;
                     if(ShadowRaysBuffer[ray_index].IsNotFog) {
                         if(CurBounce == 0) {
+                            CurrentReservoir[ShadowRaysBuffer[ray_index].PixelIndex].WasSuccessful = 1;
                             GlobalColors[pixel_index].Direct += ShadowRaysBuffer[ray_index].illumination;
                         } else {
                             GlobalColors[pixel_index].Indirect +=ShadowRaysBuffer[ray_index].illumination;
@@ -1254,10 +1311,11 @@ void IntersectShadowOctree() {
         while(true) {
             InterlockedAdd(BufferSizes[CurBounce].octree_shadow_rays_retired, 1, ray_index);
             if(ray_index >= (uint)BufferSizes[CurBounce].shadow_rays) return;
-            if(ShadowRaysBuffer[ray_index].HitMesh) continue;
+            if(ShadowRaysBuffer[ray_index].HitMesh) { if(CurBounce == 0 && ShadowRaysBuffer[ray_index].IsNotFog) CurrentReservoir[ShadowRaysBuffer[ray_index].PixelIndex].WasSuccessful = 0; continue;}
             int pixel_index = ShadowRaysBuffer[ray_index].PixelIndex;
             if(ShadowRaysBuffer[ray_index].IsNotFog) {
                 if(CurBounce == 0) {
+                    CurrentReservoir[pixel_index].WasSuccessful = 1;    
                     GlobalColors[pixel_index].Direct += ShadowRaysBuffer[ray_index].illumination;
                 } else {
                     GlobalColors[pixel_index].Indirect +=ShadowRaysBuffer[ray_index].illumination;
@@ -1285,7 +1343,7 @@ struct LightMeshData {
     float4x4 Inverse;
     float3 Center;
     float energy;
-    float TotalEnergy;
+    float CDF;
     int StartIndex;
     int IndexEnd;
 };
@@ -1296,7 +1354,7 @@ struct LightData {
     float3 Position;
     float3 Direction;
     float energy;
-    float TotalEnergy;
+    float CDF;
     int Type;
     float2 SpotAngle;
 };
@@ -1343,9 +1401,7 @@ Texture2D<float4> _RoughnessAtlas;
 SamplerState sampler_RoughnessAtlas;
 
 //These are here purely for the Atrous
-RWTexture2D<float4> TempPosTex;
-RWTexture2D<float4> TempNormTex;
-RWTexture2D<float4> TempAlbedoTex;
+
 
 struct HitMat {
     float3 surfaceColor;
@@ -1368,17 +1424,17 @@ HitMat CreateHitMat() {
 int SelectUnityLight() {
     if(unitylightcount == 1) return 0;
     const float2 rand_light = random(5);
-    float e = _UnityLights[unitylightcount - 1].TotalEnergy * rand_light.x + _UnityLights[0].TotalEnergy;
+    float e = _UnityLights[unitylightcount - 1].CDF * rand_light.x + _UnityLights[0].CDF;
     int low = 0;
     int high = unitylightcount - 1;
-    if(e > _UnityLights[high - 1].energy + _UnityLights[high - 1].TotalEnergy) return high;
+    if(e > _UnityLights[high - 1].energy + _UnityLights[high - 1].CDF) return high;
     int mid = -1;
     while(low < high) {
         int mid = (low + high) >> 1;
         LightData thislight = _UnityLights[mid];
-        if(e < thislight.TotalEnergy)
+        if(e < thislight.CDF)
             high = mid;
-        else if(e > thislight.TotalEnergy + thislight.energy)
+        else if(e > thislight.CDF + thislight.energy)
             low = mid + 1;
         else
             return mid;
@@ -1409,7 +1465,7 @@ int SelectLight(int MeshIndex) {//Need to check these to make sure they arnt sim
         else
             return mid;
     }
-    return mid;
+  //  return mid;
     // Failed to find a light using importance sampling, pick a random one from the array
     // NOTE: this is a failsafe, we should never get here!
     return clamp((rand_light.y * (IndexEnd - StartIndex)), StartIndex, IndexEnd - 1);
@@ -1418,17 +1474,17 @@ int SelectLight(int MeshIndex) {//Need to check these to make sure they arnt sim
 int SelectLightMesh() {//Select mesh to sample light from
     if(LightMeshCount == 1) return 0;
     const float2 rand_mesh = random(4);
-    float e = _LightMeshes[LightMeshCount - 1].TotalEnergy * rand_mesh.x + _LightMeshes[0].energy;
+    float e = _LightMeshes[LightMeshCount - 1].CDF * rand_mesh.x + _LightMeshes[0].energy;
     int low = 0;
     int high = LightMeshCount - 1;
-    if(e > _LightMeshes[high - 1].energy + _LightMeshes[high - 1].TotalEnergy) return high;
+    if(e > _LightMeshes[high - 1].energy + _LightMeshes[high - 1].CDF) return high;
     int mid = -1;
     while(low < high) {
         int mid = (low + high) >> 1;
         LightMeshData mesh = _LightMeshes[mid];
-        if(e < mesh.TotalEnergy)
+        if(e < mesh.CDF)
             high = mid;
-        else if(e > mesh.TotalEnergy + mesh.energy)
+        else if(e > mesh.CDF + mesh.energy)
             low = mid + 1;
         else
             return mid;
@@ -1948,6 +2004,9 @@ void sampleEquiAngular( float u, float maxDistance, float3 rOrigin, float3 rDire
 }
 
 
+
+static const int NumSamples = 8;
+
 void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, RayHit hit, uint2 Uv, inout bool terminated, float2 NormalUV, bool HitVoxel) {//main function
 
     float3 pos = ray.direction * hit.t + ray.origin;
@@ -1980,26 +2039,22 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
     }
 
     float3 norm = Geomnorm;
-    [branch]if(NormalUV.x != -1) {
-         float3 LocalTan = normalize(mul(_MeshData[hit.mesh_id].Inverse, float4(AggTris[index].tan0 + hit.u * AggTris[index].tanedge1 + hit.v * AggTris[index].tanedge2, 0.0f)).xyz);
-        float3 LocalBinorm = normalize(cross(Geomnorm, LocalTan));
-        float2 InputNormal = _NormalAtlas.SampleLevel(sampler_NormalAtlas, NormalUV,0).ag;
-        InputNormal.y = pow(InputNormal.y, 0.4545f);
-        float3 LocalNormIN = float3((2.0f * InputNormal.xy - 1.0f),0.0f);
-        LocalNormIN.z = 1.0 - 0.5 * dot(LocalNormIN, LocalNormIN );
-        norm = normalize(mul(normalize(LocalNormIN), float3x3(LocalTan, LocalBinorm, Geomnorm)));
-        norm = clamp(norm, -1, 1);
-        if(abs(norm.x) == abs(norm.y) == abs(norm.z)) norm = Geomnorm;
-    }
+     [branch]if(NormalUV.x != -1) {
+          float3 LocalTan = normalize(mul(_MeshData[hit.mesh_id].Inverse, float4(AggTris[index].tan0 + hit.u * AggTris[index].tanedge1 + hit.v * AggTris[index].tanedge2, 0.0f)).xyz);
+         float3 LocalBinorm = normalize(cross(Geomnorm, LocalTan));
+         float2 InputNormal = _NormalAtlas.SampleLevel(sampler_NormalAtlas, NormalUV,0).ag;
+         InputNormal.y = pow(InputNormal.y, 0.4545f);
+         float3 LocalNormIN = float3((2.0f * InputNormal.xy - 1.0f),0.0f);
+         LocalNormIN.z = 1.0 - 0.5 * dot(LocalNormIN, LocalNormIN );
+         norm = normalize(mul(normalize(LocalNormIN), float3x3(LocalTan, LocalBinorm, Geomnorm)));
+         norm = clamp(norm, -1, 1);
+         if(abs(norm.x) == abs(norm.y) == abs(norm.z)) norm = Geomnorm;
+     }
 
     if(CurBounce == 0) {//Setting textures for denosier to use
-        TempPosTex[Uv] = float4(pos, 1.0f);
-        TempNormTex[Uv] = float4(norm, 1.0f);
-        if(hitDat.MatType != 2) {
-            TempAlbedoTex[Uv] = float4((AllowVolumetrics ? PrevThroughput : 1.0f) * hitDat.surfaceColor, 1.0f);
-        } else {
-            TempAlbedoTex[Uv] = float4(1.0f, 1.0f, 1.0f, 1.0f);
-        }
+        TempAlbedoTex[Uv] = float4((hitDat.MatType == 2) ? float3(1,1,1) : hitDat.surfaceColor,1);
+        TempNormTex[Uv] = float4(norm, 1);
+        TempPosTex[Uv] = float4(pos, (hitDat.MatType == 2) ? -1.0f : 1.0f);
     }
 
     [branch]if(hitDat.emmis > 0.0f) {//if we hit a light, this ray is done
@@ -2091,46 +2146,77 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
     }
     if(!valid) return;//If the ray failed, we have no choice but to terminate this path
     ray.origin = Geomnorm * 0.001f + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
-   // _DebugTex[Uv] = float4(ray.direction,1);
-   // return;
+
     [branch]if(UseNEE || AllowVolumetrics) {//Next event estimation
-        bool UseUnityLight = (unitylightcount != 0) ? (LightMeshCount != 0) ? (random(11).x <= (_UnityLights[unitylightcount - 1].TotalEnergy / (_UnityLights[unitylightcount - 1].TotalEnergy + _LightMeshes[LightMeshCount - 1].TotalEnergy))) : true : false;//Choose whether to sample unity lights or mesh lights based off which is more powerful
-        float3 pos2;
-        float3 LightNorm;
-        int triindex;
-        bool IsAboveHorizon = true;
-        bool IsDirectional = false;
-        float MeshChance = 0.0f;
-        if(UseUnityLight) {
-            triindex = SelectUnityLight();
-            LightData Light = _UnityLights[triindex];
-            [branch]switch(Light.Type) {
-                default:
-                    pos2 = Light.Position;
-                    LightNorm = normalize(ray.origin - pos2);
-                break;
-                case 1:
-                    pos2 = ray.origin - Light.Direction;
-                    LightNorm = Light.Direction;
-                    IsAboveHorizon = (LightNorm.y <= 0.0f);
-                    IsDirectional = true;
-                break;
-                case 2:
-                    pos2 = Light.Position;
-                    LightNorm = Light.Direction;
-                    IsAboveHorizon = false;
-                break;
+            float3 pos2;
+            float3 LightNorm;
+            int triindex;
+            bool IsAboveHorizon = true;
+            bool IsDirectional = false;
+            float MeshChance = 0.0f;
+            bool UseUnityLight;
+        [branch]if(UseRestir) {
+             Reservoir CurRes = CurrentReservoir[Uv.x + Uv.y * screen_width];
+            UseUnityLight = CurRes.MeshIndex == -1;//(unitylightcount != 0) ? (LightMeshCount != 0) ? (random(11).x <= (_UnityLights[unitylightcount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF))) : true : false;//Choose whether to sample unity lights or mesh lights based off which is more powerful
+            if(UseUnityLight) {
+                triindex = CurRes.y;
+                [branch]switch(_UnityLights[triindex].Type) {
+                    default:
+                        pos2 = CurRes.Position;
+                        LightNorm = CurRes.Norm;
+                    break;
+                    case 1:
+                        pos2 = ray.origin + _UnityLights[triindex].Direction;
+                        LightNorm = -_UnityLights[triindex].Direction;
+                        IsAboveHorizon = (LightNorm.y <= 0.0f);
+                        IsDirectional = true;
+                    break;
+                    case 2:
+                        pos2 = CurRes.Position;
+                        LightNorm = CurRes.Norm;
+                        IsAboveHorizon = false;
+                    break;
+                }
+                MeshChance = _UnityLights[triindex].energy / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF);
+            } else {
+               triindex = CurRes.y;
+                pos2 = CurRes.Position;
+                LightNorm = CurRes.Norm;
+                MeshChance = (LightTriangles[triindex].energy / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));//unused, needs more testing
             }
-            MeshChance = (_UnityLights[triindex].energy / (_UnityLights[unitylightcount - 1].TotalEnergy + _LightMeshes[LightMeshCount - 1].TotalEnergy));
         } else {
-            int MeshIndex = SelectLightMesh();
-            triindex = SelectLight(MeshIndex);
-            TrianglePos CurTri = triangle_get_positions2(triindex);
-            float2 rand_triangle = random(4);
-            float2 CurUv = sample_triangle(rand_triangle.x, rand_triangle.y);
-            pos2 = mul(_LightMeshes[MeshIndex].Inverse, float4(CurTri.pos0 + CurUv.x * CurTri.posedge1 + CurUv.y * CurTri.posedge2, 0.0f)).xyz + _LightMeshes[MeshIndex].Center;
-            LightNorm = normalize(mul(_LightMeshes[MeshIndex].Inverse, float4(LightTriangles[triindex].Norm, 0.0f)).xyz);
-            MeshChance = (LightTriangles[triindex].energy / (_UnityLights[unitylightcount - 1].TotalEnergy + _LightMeshes[LightMeshCount - 1].TotalEnergy));//unused, needs more testing
+            UseUnityLight = (unitylightcount != 0) ? (LightMeshCount != 0) ? (random(11).x <= (_UnityLights[unitylightcount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF))) : true : false;//Choose whether to sample unity lights or mesh lights based off which is more powerful
+            if(UseUnityLight) {
+                triindex = SelectUnityLight();
+                LightData Light = _UnityLights[triindex];
+                [branch]switch(Light.Type) {
+                    default:
+                        pos2 = Light.Position;
+                        LightNorm = normalize(ray.origin - pos2);
+                    break;
+                    case 1:
+                        pos2 = ray.origin + Light.Direction;
+                        LightNorm = -Light.Direction;
+                        IsAboveHorizon = (LightNorm.y <= 0.0f);
+                        IsDirectional = true;
+                    break;
+                    case 2:
+                        pos2 = Light.Position;
+                        LightNorm = Light.Direction;
+                        IsAboveHorizon = false;
+                    break;
+                }
+                MeshChance = (_UnityLights[triindex].energy / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
+            } else {
+                int MeshIndex = SelectLightMesh();
+                triindex = SelectLight(MeshIndex);
+                TrianglePos CurTri = triangle_get_positions2(triindex);
+                float2 rand_triangle = random(4);
+                float2 CurUv = sample_triangle(rand_triangle.x, rand_triangle.y);
+                pos2 = mul(_LightMeshes[MeshIndex].Inverse, float4(CurTri.pos0 + CurUv.x * CurTri.posedge1 + CurUv.y * CurTri.posedge2, 0.0f)).xyz + _LightMeshes[MeshIndex].Center;
+                LightNorm = normalize(mul(_LightMeshes[MeshIndex].Inverse, float4(LightTriangles[triindex].Norm, 0.0f)).xyz);
+                MeshChance = (LightTriangles[triindex].energy / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));//unused, needs more testing
+            }
         }
         float3 to_light = pos2 - ray.origin;
 
@@ -2185,16 +2271,17 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                 float3 Radiance;
                 if(UseUnityLight) {
                     Radiance = _UnityLights[triindex].Radiance / MeshChance;
-                    light_pdf = luminance(Radiance.x, Radiance.y, Radiance.z) * distance_to_light_squared / (cos_theta_light * (_UnityLights[unitylightcount - 1].TotalEnergy));
-                    Radiance /= (_UnityLights[unitylightcount - 1].TotalEnergy / (_UnityLights[unitylightcount - 1].TotalEnergy + _LightMeshes[LightMeshCount - 1].TotalEnergy));
+                    light_pdf = luminance(Radiance.x, Radiance.y, Radiance.z) * distance_to_light_squared / (cos_theta_light * (_UnityLights[unitylightcount - 1].CDF));
+                    //Radiance *= (screen_width / 2 > Uv.x) ? 100.0f : 1.0f;
+                  //  Radiance /= (_UnityLights[unitylightcount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
                 } else {
                     Radiance = LightTriangles[triindex].radiance / MeshChance;
-                    light_pdf = luminance(Radiance.x, Radiance.y, Radiance.z) * distance_to_light_squared / (cos_theta_light * _LightMeshes[LightMeshCount - 1].TotalEnergy);
-                    Radiance /= (_LightMeshes[LightMeshCount - 1].TotalEnergy / (_UnityLights[unitylightcount - 1].TotalEnergy + _LightMeshes[LightMeshCount - 1].TotalEnergy));
+                    light_pdf = luminance(Radiance.x, Radiance.y, Radiance.z) * distance_to_light_squared / (cos_theta_light * _LightMeshes[LightMeshCount - 1].CDF);
+                    //Radiance /= (_LightMeshes[LightMeshCount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
                 }
 
                 float w = power_heuristic(light_pdf, bsdf_pdf);//For some reason 1 works way better for point lights
-                float3 Illum = ((CurBounce == 0) ? PrevThroughput : throughput) * Radiance  * bsdf_value * w / light_pdf;//throughput * G * ((Radiance * w * bsdf_value) / light_pdf) * Attenuation;
+                float3 Illum = (((CurBounce == 0) ? PrevThroughput : throughput) * Radiance  * bsdf_value * w / light_pdf);//throughput * G * ((Radiance * w * bsdf_value) / light_pdf) * Attenuation;
                 float maxillum = max(max(Illum.x, Illum.y), Illum.z);
                 if(maxillum > random(9).y) {//NEE russian roulette, massively improves performance while giivng the same result
                     uint index3;//Congrats we shoot a shadow ray for NEE
@@ -2232,10 +2319,10 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
             float light_pdf;
             if(!UseUnityLight)  {
                 to_light = pos2 - SamplePoint;
-                light_pdf = luminance(Radiance.x, Radiance.y, Radiance.z) * distance_to_light_squared / (cos_theta_light * _LightMeshes[LightMeshCount - 1].TotalEnergy);
+                light_pdf = luminance(Radiance.x, Radiance.y, Radiance.z) * distance_to_light_squared / (cos_theta_light * _LightMeshes[LightMeshCount - 1].CDF);
             } else {
-                Radiance *= rcp(1.0f - (_LightMeshes[LightMeshCount - 1].TotalEnergy / _UnityLights[unitylightcount - 1].TotalEnergy));
-                light_pdf = luminance(Radiance.x, Radiance.y, Radiance.z) * distance_to_light_squared / (cos_theta_light * (_UnityLights[unitylightcount - 1].TotalEnergy));
+                Radiance *= rcp(1.0f - (_LightMeshes[LightMeshCount - 1].CDF / _UnityLights[unitylightcount - 1].CDF));
+                light_pdf = luminance(Radiance.x, Radiance.y, Radiance.z) * distance_to_light_squared / (cos_theta_light * (_UnityLights[unitylightcount - 1].CDF));
                 to_light = (IsDirectional) ? (SamplePoint - LightNorm * 2.0f) - SamplePoint : pos2 - SamplePoint;
             }
              float distance_to_light_squared = dot(to_light, to_light);
@@ -2330,11 +2417,12 @@ void kernel_shade () {
             }
             SkyColAcc = Color.throughput * (SkyBoxCol * 12.0f) + Sun;
         #endif
-        GlobalColors[pixel_index] = Color;
         if(CurBounce == 0) {
-            TempAlbedoTex[TempUv] = float4(SkyColAcc, 1.0f);
-            TempPosTex[TempUv] = float4(0.0f, 0.0f, 0.0f, 0.0f);
+            TempAlbedoTex[TempUv] = float4(SkyColAcc,1);
+            Color.Direct = SkyColAcc;
+            TempPosTex[TempUv] = float4(0.0f, 0.0f, 0.0f, -1.0f);
         }
+        GlobalColors[pixel_index] = Color;
         return;
     }
 
@@ -2369,6 +2457,7 @@ void kernel_shade () {
         float2 EmissionUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].EmissiveTex.xy - _Materials[MaterialIndex].EmissiveTex.zw) + _Materials[MaterialIndex].EmissiveTex.zw;
         float3 EmissCol = _EmissiveAtlas.SampleLevel(sampler_EmissiveAtlas, EmissionUV, 0).xyz;
         if(EmissCol.x > 0.001f) {
+            //hitmat.surfaceColor = EmissCol;
             hitmat.emmis = 1.0f + EmissCol.x;
         }
     }
@@ -2388,5 +2477,379 @@ void kernel_finalize (uint3 id : SV_DispatchThreadID) {//Moved final accumulatio
     if(id.x >= screen_width || id.y >= screen_height) return;
     int final_pixel_index = id.y * screen_width + id.x;
 
-    Result[id.xy] = float4((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect) * TempAlbedoTex[id.xy].xyz + GlobalColors[final_pixel_index].Fog, 1.0f);
+    Result[id.xy] = float4((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect) * AlbedoTex[id.xy].xyz + GlobalColors[final_pixel_index].Fog, 1.0f);
+
+}
+
+
+
+
+#pragma kernel kernel_reservoir
+bool UseRestirPrecomputedSamples;
+
+
+float4x4 viewprojection;
+float4x4 prevviewprojection;
+
+void UpdateReservoir(inout Reservoir r, float x, float w, float rndnum, float m, float3 Pos, float3 Norm)
+{
+    r.wsum += w;
+    r.M += 1;
+    if (rndnum < (w/r.wsum)) {
+        r.y = x;
+        r.MeshIndex = m;
+        r.Position = Pos;
+        r.Norm = Norm;
+    }
+
+}
+
+
+void UpdateReservoir(inout Reservoir r, float x, float w, float rndnum, float m, float3 Pos, float3 Norm, Reservoir V)
+{
+    r.wsum += w;
+    r.M += 1;
+    if (rndnum < (w/r.wsum)) {
+        r.y = x;
+        r.MeshIndex = m;
+        r.Position = Pos;
+        r.Norm = Norm;
+        r.PrevWorld = V.PrevWorld;
+        r.PrevNorm = V.PrevNorm;
+        r.PrevAlbedo = V.PrevAlbedo;
+        r.WasSuccessful = V.WasSuccessful;
+    }
+
+}
+
+float RadicalInverse_VdC(uint bits)
+{
+    bits = (bits << 16u) | (bits >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    return float(bits) * 2.3283064365386963e-10; // / 0x100000000
+}
+
+//function to generate a hammersly low discrepency sequence for importance sampling
+float2 Hammersley(uint i, uint N)
+{
+    return float2(float(i) / float(N), RadicalInverse_VdC(i));
+}
+
+struct LightBlockData {
+    float3 Pos;
+    float3 Norm;
+    float3 Rad;
+    float3 Misc;
+};
+
+
+StructuredBuffer<LightBlockData> Blocks;
+
+float3 camPos;
+
+static const float MultiplyData = (1.0 / 4294967296.0);
+bool UseRestirTemporal;
+
+[numthreads(8,8,1)]
+void kernel_reservoir (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID, uint3 id3 : SV_GroupID) {//Moved final accumulation into its own kernel, improves performance
+
+    if(id.x >= screen_width || id.y >= screen_height) return;
+    rng_state = (id3.x + id3.y * screen_width / 8);
+    pixel_index = rng_state;
+    uint BlockIndex = floor(min(random(1).x * 128, 127));
+    pixel_index = id.y * screen_width + id.x;
+    rng_state = pixel_index * curframe;
+    const float2 UV = id.xy / float2(screen_width, screen_height);
+
+    float3 Norm = NormalTex.SampleLevel(sampler_NormalTex, UV, 0).xyz * 2.0f - 1.0f;
+    float3 Albedo = AlbedoTex.SampleLevel(sampler_AlbedoTex, UV, 0).xyz;
+    float3 WorldPosition =  TempPosTex[id.xy].xyz;
+
+    Reservoir prevReservoir = {0,0,0,0,0,0,0,0,0,0,0,-1,0,0,0,0,0,0,0,0,0};
+    float4 PrevPos = mul(prevviewprojection, float4(WorldPosition, 1));
+    float2 PrevUV =  float2(PrevPos.x, PrevPos.y) / PrevPos.w;
+
+    uint2 prevIndex = (int2)((PrevUV * 0.5f + 0.5f) * float2(screen_width, screen_height) + 0.5f);
+    if (prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height)
+    {
+        if(PreviousReservoir[prevIndex.y * screen_width + prevIndex.x].WasSuccessful == 0) {
+            PreviousReservoir[prevIndex.y * screen_width + prevIndex.x].W = 0;
+        }
+        prevReservoir = PreviousReservoir[prevIndex.y * screen_width + prevIndex.x];
+    }
+    Reservoir reservoir = {0,0,0,0,0,0,0,0,0,0,0,-1,0,0,0,0,0,0,0,0,0};
+    if(UseRestirPrecomputedSamples) {
+        float3 LightPos;
+        for(int i = 0; i < 32; i++) {
+            float Rand = floor(min(random(i).x * 1024, 1023));
+            LightBlockData Block = Blocks[Rand + BlockIndex];
+            LightPos = Block.Pos;
+            float3 L = (LightPos - WorldPosition);
+            float Dist = dot(L, L);
+            L /= sqrt(Dist);
+            float LdotN = saturate(dot(Norm, L));
+            UpdateReservoir(reservoir, Block.Misc.y, length(Albedo.xyz / PI * Block.Rad * LdotN / (Dist)), random(i).y, Block.Misc.x, LightPos, (Block.Misc.z == 2) ? -Block.Norm : -L);
+        }   
+    } else {
+        int LightCount = unitylightcount;
+        for(int i = 0; i < min(LightCount, 32); i++) {
+            int lighttosample;
+            float w;
+            int LightMesh = 0;
+            float3 LightNorm;
+            float3 lightPos;
+            lighttosample = floor(min(random(i).x * LightCount, LightCount - 1));
+            LightData light = _UnityLights[lighttosample];
+            lightPos = (light.Type == 1) ? (WorldPosition - light.Direction) : light.Position;
+            float3 L = (lightPos - WorldPosition);
+            float Dist = dot(L, L);
+            L /= sqrt(Dist);
+            float LdotN = saturate(dot(Norm, L));
+            LightNorm = -L;
+            w = length(Albedo.xyz / PI * light.Radiance * LdotN / Dist);
+            LightMesh = -1;
+
+            UpdateReservoir(reservoir, lighttosample, w, random(i).y, LightMesh, lightPos, (light.Type == 2) ? light.Direction : LightNorm);
+
+        }
+        LightCount = lighttricount;
+        const float MultiplyData = (1.0 / 4294967296.0);
+        for(int i = 0; i < min(LightCount, 32); i++) {//Look through light triangles
+            int lighttosample;
+            float w;
+            float3 LightNorm;
+            float3 lightPos;
+            const uint LightMeshIndex = floor(min(random(i).x * LightMeshCount, LightMeshCount - 1));
+            const LightMeshData LightMesh = _LightMeshes[LightMeshIndex];
+            const int StartIndex = LightMesh.StartIndex;
+            const int IndexEnd = LightMesh.IndexEnd;
+            lighttosample = clamp((random(i).y * (IndexEnd - StartIndex)) + StartIndex, StartIndex, IndexEnd - 1);
+            const LightTriangleData Light = LightTriangles[lighttosample];
+            float2 rand = random(i + 32);
+            float2 CurUv = sample_triangle(rand.x, rand.y);
+            lightPos = mul(LightMesh.Inverse, float4(Light.pos0 + CurUv.x * Light.posedge1 + CurUv.y * Light.posedge2,1)).xyz;
+            LightNorm = normalize(mul(LightMesh.Inverse, float4(Light.Norm, 0.0f)).xyz);
+            float3 L = lightPos - WorldPosition;
+            float Dist = abs(dot(L, L));
+            L /= sqrt(Dist);
+            float LdotN = saturate(dot(Norm, L));
+            w = length(Albedo.xyz / PI * (Light.radiance) * LdotN / (Dist));
+
+            UpdateReservoir(reservoir, lighttosample, w, random(i + 64).x, LightMeshIndex, lightPos, LightNorm);
+
+        }
+
+    }
+    if(UseRestirTemporal) {
+        float3 positionDif = TempPosTex[prevIndex].xyz - prevReservoir.PrevWorld;
+        if(dot(positionDif, positionDif) < 0.01f) {
+            float3 AlbedoDif = Albedo - prevReservoir.PrevAlbedo;
+            if(dot(AlbedoDif, AlbedoDif) < 0.01f) {
+                float normalDot = dot(Norm, prevReservoir.PrevNorm);
+                if(normalDot < 1.5f) {
+                    prevReservoir.M = min(prevReservoir.M, 1 * reservoir.M);
+                    float3 lightPos;
+                    float p_hat;
+                    if(prevReservoir.MeshIndex != -1) {
+                        lightPos = prevReservoir.Position;
+                        float3 L = lightPos - prevReservoir.PrevWorld;
+                        float Dist = dot(L, L);
+                        L /= sqrt(Dist);
+                        float LdotN = saturate(dot(prevReservoir.PrevNorm, L));
+                        p_hat = length(prevReservoir.PrevAlbedo / PI * LightTriangles[reservoir.y].radiance * LdotN / (Dist));
+                    } else {
+                        LightData light = _UnityLights[prevReservoir.y];
+                        lightPos = prevReservoir.Position;
+                        float3 L = lightPos - prevReservoir.PrevWorld;
+                        float Dist = dot(L, L);
+                        L /= sqrt(Dist);
+                        float LdotN = saturate(dot(prevReservoir.PrevNorm, L));
+                        p_hat = length(prevReservoir.PrevAlbedo / PI * light.Radiance * LdotN / (Dist));
+                    }
+                    prevReservoir.wsum /= prevReservoir.M;
+                    prevReservoir.M = min(prevReservoir.M, 20);
+                    prevReservoir.wsum *= prevReservoir.M;
+                    prevReservoir.W = (1.0f / max(p_hat, 0.00001f)) * (prevReservoir.wsum / max(prevReservoir.M, 0.0000001f));
+                    if(prevReservoir.WasSuccessful == 1) UpdateReservoir(reservoir, prevReservoir.y, p_hat * prevReservoir.W * prevReservoir.M, float(rand_xorshift()) * (1.0 / 4294967296.0), prevReservoir.MeshIndex, prevReservoir.Position, prevReservoir.Norm, prevReservoir);
+                    reservoir.M = prevReservoir.M + reservoir.M;
+                    if(reservoir.MeshIndex != -1) {
+                        lightPos = reservoir.Position;
+                        float3 L = lightPos - reservoir.PrevWorld;
+                        float Dist = dot(L, L);
+                        L /= sqrt(Dist);
+                        float LdotN = saturate(dot(reservoir.PrevNorm, L));
+                        p_hat = length(reservoir.PrevAlbedo / PI * LightTriangles[reservoir.y].radiance * LdotN / (Dist));
+                    } else {
+                        LightData light = _UnityLights[reservoir.y];
+                        lightPos = reservoir.Position;
+                        float3 L = lightPos - reservoir.PrevWorld;
+                        float Dist = dot(L, L);
+                        L /= sqrt(Dist);
+                        float LdotN = saturate(dot(reservoir.PrevNorm, L));
+                        p_hat = length(reservoir.PrevAlbedo / PI * light.Radiance * LdotN / (Dist));
+                    }
+                    reservoir.W = (1.0f / max(p_hat, 0.00001f)) * (reservoir.wsum / max(reservoir.M, 0.0000001f));
+                }
+            }
+        }
+    }
+
+    reservoir.PrevWorld = WorldPosition;
+    reservoir.PrevNorm = Norm;
+    reservoir.PrevAlbedo = Albedo;
+    CurrentReservoir[id.y * screen_width + id.x] = reservoir;
+
+}
+
+
+
+
+
+
+
+#pragma kernel kernel_reservoir_spatial
+
+
+
+[numthreads(16,16,1)]
+void kernel_reservoir_spatial (uint3 id : SV_DispatchThreadID) {//Moved final accumulation into its own kernel, improves performance
+
+    if(id.x >= screen_width || id.y >= screen_height) return;
+    pixel_index = id.y * screen_width + id.x;
+    rng_state = pixel_index * 2 * curframe;
+
+    float3 Norm = NormalTex.SampleLevel(sampler_NormalTex, id.xy / float2(screen_width, screen_height), 0).xyz * 2.0f - 1.0f;
+    float3 Albedo = AlbedoTex.SampleLevel(sampler_AlbedoTex, id.xy / float2(screen_width, screen_height), 0).xyz;
+    float3 WorldPosition = TempPosTex[id.xy];
+
+    Reservoir r = CurrentReservoir[pixel_index];
+
+    float4 PrevPos = mul(prevviewprojection, float4(WorldPosition, 1));
+    float2 PrevUV =  float2(PrevPos.x, PrevPos.y) / PrevPos.w;
+    int2 CenterIndex = (int2)((PrevUV * 0.5f + 0.5f) * float2(screen_width, screen_height) + 1.0f);
+
+    uint2 neighborOffset;
+    uint2 neighborIndex;
+    float WorldDepth = length(WorldPosition - camPos);
+    [unroll]for (int i = 0; i < 15;i++) {
+        
+        float2 xi = Hammersley(i, 15);
+        
+        float radius = 5 * random(i).x;
+        float angle = 2.0f * PI * random(i).y;
+        
+        int2 neighborIndex = CenterIndex + radius * float2(cos(angle), sin(angle));
+        
+                 
+        if (neighborIndex.x < 0 || neighborIndex.x >= screen_width || neighborIndex.y < 0 || neighborIndex.y >= screen_width)
+        {
+            continue;
+        }
+        Reservoir neighborRes = PreviousReservoir[neighborIndex.y * uint(screen_width) + neighborIndex.x];        
+        r.M = r.M + neighborRes.M;     
+
+         float Depth = length(neighborRes.PrevWorld - camPos);
+        if (
+            neighborRes.WasSuccessful == 0 ||
+            abs(Depth - WorldDepth) > 0.1f * WorldDepth ||
+            dot(neighborRes.PrevNorm, Norm) < cos(radians(35))
+        ) {
+            continue;
+        }
+        float p_hat;
+        if(neighborRes.MeshIndex != -1) {
+            float3 lightPos = neighborRes.Position;
+            float3 L = lightPos - neighborRes.PrevWorld;
+            float Dist = dot(L, L);
+            L /= sqrt(Dist);
+            float LdotN = saturate(dot(neighborRes.PrevNorm, L));
+            p_hat = length(neighborRes.PrevAlbedo.xyz / PI * LightTriangles[neighborRes.y].radiance * LdotN / (Dist));
+        } else {
+            LightData light = _UnityLights[neighborRes.y];
+            float3 L = neighborRes.Position - neighborRes.PrevWorld;
+            float Dist = dot(L, L);
+            L /= sqrt(Dist);
+            float LdotN = saturate(dot(neighborRes.PrevNorm, L));
+            p_hat = length(neighborRes.PrevAlbedo.xyz / PI * light.Radiance * LdotN / (Dist));
+        }
+        neighborRes.W = (1.0f / max(p_hat, 0.00001f)) * (neighborRes.wsum / max(neighborRes.M, 1.0f));
+        UpdateReservoir(r, neighborRes.y, p_hat * neighborRes.M * neighborRes.W, random(i + 16).x, neighborRes.MeshIndex, neighborRes.Position, neighborRes.Norm, neighborRes);  
+
+    }
+    r.wsum /= r.M;
+    r.M = min(r.M, 20);
+    r.wsum *= r.M;
+    float p_hat;
+        if(r.MeshIndex != -1) {
+            float3 lightPos = r.Position;
+            float3 L = lightPos - r.PrevWorld;
+            float Dist = dot(L, L);
+            L /= sqrt(Dist);
+            float LdotN = saturate(dot(r.PrevNorm, L));
+            p_hat = length(r.PrevAlbedo / PI * LightTriangles[r.y].radiance * LdotN / (Dist));
+        } else {
+            LightData light = _UnityLights[r.y];
+            float3 lightPos = r.Position;
+            float3 L = lightPos - r.PrevWorld;
+            float Dist = dot(L, L);
+            L /= sqrt(Dist);
+            float LdotN = saturate(dot(r.PrevNorm, L));
+            p_hat = length(r.PrevAlbedo / PI * light.Radiance * LdotN / (Dist));
+        }
+        r.W = (1.0f / max(p_hat, 0.00001f)) * (r.wsum / max(r.M, 1.0f));
+
+    CurrentReservoir[pixel_index] = r;
+    
+}
+
+RWStructuredBuffer<LightBlockData> WriteBlocks;
+
+
+#pragma kernel kernel_reservoir_precompute
+
+[numthreads(64,1,1)]
+void kernel_reservoir_precompute (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID, uint3 id3 : SV_GroupID) {//Moved final accumulation into its own kernel, improves performance
+    rng_state = (id.x + id.y * screen_width);
+    pixel_index = rng_state;
+    for(int i = 0; i < 16; i++) {
+        bool UseUnityLight = (unitylightcount != 0) ? (LightMeshCount != 0) ? (random(i).x <= (_UnityLights[unitylightcount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF))) : true : false;//Choose whether to sample unity lights or mesh lights based off which is more powerful
+        int lighttosample;
+        float w;
+        int LightMesh = 0;
+        float3 LightNorm;
+        float3 lightPos;
+        int LightMeshIndex;
+        float3 Radiance;
+        int LightType = -1;
+        if(UseUnityLight) {
+            lighttosample = floor(min(random(i).y * unitylightcount, unitylightcount - 1));
+            LightData light = _UnityLights[lighttosample];
+            lightPos = light.Position;
+            LightNorm = -light.Direction;
+            Radiance = light.Radiance;
+            LightMeshIndex = -1;
+            LightType = light.Type;
+        } else {
+            LightMeshIndex = floor(min(random(i + 16).x * LightMeshCount, LightMeshCount - 1));
+            const LightMeshData LightMesh = _LightMeshes[LightMeshIndex];
+            const int StartIndex = LightMesh.StartIndex;
+            const int IndexEnd = LightMesh.IndexEnd;
+            lighttosample = clamp((random(i + 16).y * (IndexEnd - StartIndex)) + StartIndex, StartIndex, IndexEnd - 1);
+            const LightTriangleData Light = LightTriangles[lighttosample];
+            float2 CurUv = sample_triangle(random(i + 32).x, random(i + 32).y);
+            lightPos = mul(LightMesh.Inverse, float4(Light.pos0 + CurUv.x * Light.posedge1 + CurUv.y * Light.posedge2,0)).xyz + LightMesh.Center;
+            LightNorm = normalize(mul(LightMesh.Inverse, float4(Light.Norm, 0.0f)).xyz);
+            Radiance = Light.radiance;
+        }
+        WriteBlocks[id2.x * 16 + i + id3.x * 1024].Pos = lightPos;
+        WriteBlocks[id2.x * 16 + i + id3.x * 1024].Norm = LightNorm;
+        WriteBlocks[id2.x * 16 + i + id3.x * 1024].Rad = Radiance;
+        WriteBlocks[id2.x * 16 + i + id3.x * 1024].Misc = float3(LightMeshIndex, lighttosample, LightType);
+    }
+
+
+
 }

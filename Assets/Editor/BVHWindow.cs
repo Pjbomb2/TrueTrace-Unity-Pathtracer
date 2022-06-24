@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using CommonVars;
  using System.Xml;
  using System.IO;
+         using System.Threading;
 
 public class EditModeFunctions : EditorWindow {
      [MenuItem("PathTracer/Pathtracer Settings")]
@@ -99,6 +100,11 @@ public class EditModeFunctions : EditorWindow {
       public bool AllowBloom = false;
       public bool AllowTAA = false;
       public bool UseAutoExpose = false;
+      public bool UseReSTIR = false;
+      public bool AllowReSTIRTemporal = true;
+      public bool AllowReSTIRSpatial = true;
+      public bool AllowSampleRegeneration = false;
+      public bool AllowPrecomputedSampling = true;
       public float VolumeDensity = 0.001f;
       public AssetManager Assets;
       private void OnGUI() {
@@ -127,23 +133,19 @@ public class EditModeFunctions : EditorWindow {
          Rect EasySetupButton = new Rect(10 + (position.width - 10) / 2,35,(position.width - 10) / 2 - 10, 20);
          Rect CombinedBuilderButton = new Rect(10,10,(position.width - 10) / 2, 20);
          Rect ClearParentData = new Rect(10,35,(position.width - 10) / 2, 20);
-         Rect SunDirLabel   =         new Rect(10,60,(position.width - 10) / 2, 20);
-         Rect Sun_Dir_Slider = new Rect(Mathf.Max((position.width - 10) / 4,145), 60, (position.width - 10) / 4, 20);
-         Rect BounceCountInput =   new Rect(Mathf.Max((position.width - 10) / 4,145), 85, (position.width - 10) / 4, 20);
-         Rect BounceCountLabel =   new Rect(10, 85, Mathf.Max((position.width - 10) / 4,145), 20);
-         Rect RussianRouletteToggle = new Rect(10, 110, (position.width - 10) / 2, 20);
-         Rect DynamicTLASToggle =       new Rect(10, 135, (position.width - 10) / 2, 20);
-         Rect AllowConvergeToggle =       new Rect(10, 160, (position.width - 10) / 2, 20);
-         Rect UseNEEToggle =       new Rect(10, 185, (position.width - 10) / 2, 20);
-         Rect AllowVolumetricsToggle =       new Rect(10, 210, (position.width - 10) / 2, 20);
-         Rect VolumetricsDensityLabel =       new Rect(10 + (position.width - 10) / 2, 210, (position.width - 10) / 4, 20);
-         Rect VolumetricsDensityInput =       new Rect(10 + (position.width - 10) / 2 + (position.width - 10) / 4, 210, (position.width - 10) / 4 - 10, 20);
-         Rect SkinnedHandlingToggle =       new Rect(10, 235, (position.width - 10) / 2, 20);
-         Rect AllowBloomToggle =       new Rect(10, 260, (position.width - 10) / 2, 20);
-         Rect DoFToggle =       new Rect(10, 285, (position.width - 10) / 2, 20);
-         Rect AutoExposeToggle =       new Rect(10, 310, (position.width - 10) / 2, 20);
-         Rect TAAToggle =       new Rect(10, 335, (position.width - 10) / 2, 20);
-         int SVGFVertOffset = 360;
+         Rect BounceCountInput =   new Rect(Mathf.Max((position.width - 10) / 4,145), 60, (position.width - 10) / 4, 20);
+         Rect BounceCountLabel =   new Rect(10, 60, Mathf.Max((position.width - 10) / 4,145), 20);
+         Rect RussianRouletteToggle = new Rect(10, 85, (position.width - 10) / 2, 20);
+         Rect DynamicTLASToggle =       new Rect(10, 110, (position.width - 10) / 2, 20);
+         Rect AllowConvergeToggle =       new Rect(10, 135, (position.width - 10) / 2, 20);
+         Rect UseNEEToggle =       new Rect(10, 160, (position.width - 10) / 2, 20);
+         Rect AllowVolumetricsToggle =       new Rect(10, 185, (position.width - 10) / 2, 20);
+         Rect VolumetricsDensityLabel =       new Rect(10 + (position.width - 10) / 2, 185, (position.width - 10) / 4, 20);
+         Rect VolumetricsDensityInput =       new Rect(10 + (position.width - 10) / 2 + (position.width - 10) / 4, 185, (position.width - 10) / 4 - 10, 20);
+         Rect SkinnedHandlingToggle =       new Rect(10, 210, (position.width - 10) / 2, 20);
+         Rect AllowBloomToggle =       new Rect(10, 235, (position.width - 10) / 2, 20);
+         Rect DoFToggle =       new Rect(10, 260, (position.width - 10) / 2, 20);
+         int SVGFVertOffset = 285;
          UseDoF = GUI.Toggle(DoFToggle, UseDoF, "Use DoF");
          if(UseDoF) {
             Rect DoF_Aperature_Input = new Rect(Mathf.Max((position.width - 10) / 4,145), SVGFVertOffset, (position.width - 10) / 4, 20);
@@ -161,11 +163,36 @@ public class EditModeFunctions : EditorWindow {
          }
          RayMaster.AllowDoF = UseDoF;
 
+         Rect AutoExposeToggle =       new Rect(10, SVGFVertOffset, (position.width - 10) / 2, 20);
+         SVGFVertOffset += 25;
+         Rect ReSTIRToggle =       new Rect(10, SVGFVertOffset, 90, 20);
+         SVGFVertOffset += 25;
+
          UseAutoExpose = GUI.Toggle(AutoExposeToggle, UseAutoExpose, "Use Auto Exposure");
          RayMaster.AllowAutoExpose = UseAutoExpose;
+         UseReSTIR = GUI.Toggle(ReSTIRToggle, UseReSTIR, "Use ReSTIR");
+         RayMaster.AllowReSTIR = UseReSTIR;
+         if(UseReSTIR) {
+            Rect ReSTIRRegenerationToggle = new Rect(100, SVGFVertOffset - 25, 230, 20);
+            AllowSampleRegeneration = GUI.Toggle(ReSTIRRegenerationToggle, AllowSampleRegeneration, "Allow ReSTIR Sample Regeneration");
+            Rect ReSTIRSamplingToggle = new Rect(330, SVGFVertOffset - 25, 240, 20);
+            AllowPrecomputedSampling = GUI.Toggle(ReSTIRSamplingToggle, AllowPrecomputedSampling, "Allow ReSTIR Precomputed Sampling");
+            Rect ReSTIRTemporalToggle = new Rect(20, SVGFVertOffset, 160, 20);
+            SVGFVertOffset += 25;
+            AllowReSTIRTemporal = GUI.Toggle(ReSTIRTemporalToggle, AllowReSTIRTemporal, "Allow ReSTIR Temporal");
+            Rect ReSTIRSpatialToggle = new Rect(20, SVGFVertOffset, 150, 20);
+            SVGFVertOffset += 25;
+            AllowReSTIRSpatial = GUI.Toggle(ReSTIRSpatialToggle, AllowReSTIRSpatial, "Allow ReSTIR Spatial");
+         }
+         RayMaster.AllowReSTIRSpatial = AllowReSTIRSpatial;
+         RayMaster.AllowReSTIRTemporal = AllowReSTIRTemporal;
+         RayMaster.AllowReSTIRRegeneration = AllowSampleRegeneration;
+         RayMaster.AllowReSTIRPrecomputedSamples = AllowPrecomputedSampling;
+
+         Rect TAAToggle = new Rect(10, SVGFVertOffset, (position.width - 10) / 2, 20);
          AllowTAA = GUI.Toggle(TAAToggle, AllowTAA, "Use Temporal Antialiasing");
          RayMaster.AllowTAA = AllowTAA;
-
+         SVGFVertOffset += 25;
 
          Rect SVGFToggle =       new Rect(10, SVGFVertOffset, (position.width - 10) / 2, 20);
          SVGFVertOffset += 25;
@@ -209,9 +236,6 @@ public class EditModeFunctions : EditorWindow {
          }
          
          GUI.Label(BounceCountLabel, "Max Bounces");
-         GUI.Label(SunDirLabel, "Sun Position");
-         SunDir = GUI.HorizontalSlider(Sun_Dir_Slider, SunDir, 0.0f, 3.14159f * 2.0f);
-         RayMaster.SunDirFloat = SunDir;
          BounceCount = EditorGUI.IntField(BounceCountInput, BounceCount);
          //Debug.Log(885720 % BounceCount);
          RayMaster.bouncecount = BounceCount;

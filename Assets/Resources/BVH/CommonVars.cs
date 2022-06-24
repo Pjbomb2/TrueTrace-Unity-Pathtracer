@@ -10,7 +10,7 @@ namespace CommonVars {
         public Vector3 Position;
         public Vector3 Direction;
         public float energy;
-        public float TotalEnergy;
+        public float CDF;
         public int Type;
         public Vector2 SpotAngle;
     }
@@ -359,6 +359,7 @@ namespace CommonVars {
         public Vector3 radiance;
         public float sumEnergy;
         public float energy;
+        public float area;
     }
 
     [System.Serializable]
@@ -366,7 +367,7 @@ namespace CommonVars {
         public Matrix4x4 Inverse;
         public Vector3 Center;
         public float energy;
-        public float TotalEnergy;
+        public float CDF;
         public int StartIndex;
         public int IndexEnd;
     }

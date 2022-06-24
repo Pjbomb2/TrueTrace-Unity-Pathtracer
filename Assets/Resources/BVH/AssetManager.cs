@@ -21,6 +21,7 @@ public class AssetManager : MonoBehaviour {
     public List<MyMeshDataCompacted> MyMeshesCompacted;
      public List<CudaLightTriangle> AggLightTriangles;
     [HideInInspector] public List<LightData> UnityLights;
+    public List<Light> Lights;
 
     public ComputeShader MeshFunctions;
     private int TriangleBufferKernel;
@@ -61,6 +62,8 @@ public class AssetManager : MonoBehaviour {
     [HideInInspector] public bool didstart = false;
     public bool UseVoxels;
     public bool ChildrenUpdated;
+
+    public Vector3 SunDirection;
 
     public void ClearAll() {//My attempt at clearing memory
         ParentObject[] ChildrenObjects = this.GetComponentsInChildren<ParentObject>();
@@ -145,27 +148,27 @@ public class AssetManager : MonoBehaviour {
         }
         Rect[] AlbedoRects, NormalRects, EmmissiveRects, MetallicRects, RoughnessRects;
         if(AlbedoTexs.Count != 0) {
-            AlbedoRects = AlbedoAtlas.PackTextures(AlbedoTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392));//4096);
+            AlbedoRects = AlbedoAtlas.PackTextures(AlbedoTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392), true);//4096);
         } else {
             AlbedoRects = new Rect[0];
         }
         if(NormalTexs.Count != 0) {
-            NormalRects = NormalAtlas.PackTextures(NormalTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392));//4096);
+            NormalRects = NormalAtlas.PackTextures(NormalTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392), true);//4096);
         } else {
             NormalRects = new Rect[0];
         }
         if(EmissiveTexs.Count != 0) {
-            EmmissiveRects = EmissiveAtlas.PackTextures(EmissiveTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392));//4096);
+            EmmissiveRects = EmissiveAtlas.PackTextures(EmissiveTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392), true);//4096);
         } else {
             EmmissiveRects = new Rect[0];
         }
         if(MetallicTexs.Count != 0) {
-            MetallicRects = MetallicAtlas.PackTextures(MetallicTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392));//4096);
+            MetallicRects = MetallicAtlas.PackTextures(MetallicTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392), true);//4096);
         } else {
             MetallicRects = new Rect[0];
         }
         if(RoughnessTexs.Count != 0) {
-            RoughnessRects = RoughnessAtlas.PackTextures(RoughnessTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392));//4096);
+            RoughnessRects = RoughnessAtlas.PackTextures(RoughnessTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392), true);//4096);
         } else {
             RoughnessRects = new Rect[0];
         }
@@ -227,6 +230,7 @@ public class AssetManager : MonoBehaviour {
 
 
     private void init() {
+        SunDirection = new Vector3(0,-1,0);
         AddQue = new List<ParentObject>();
         RemoveQue = new List<ParentObject>();
         RenderQue = new List<ParentObject>();
@@ -243,6 +247,7 @@ public class AssetManager : MonoBehaviour {
         UnityLights = new List<LightData>();
         LightMeshes = new List<LightMeshData>();
         LightTransforms = new List<Transform>();
+        Lights = new List<Light>();
         LightMeshCount = 0;
         UnityLightCount = 0;
         LightTriCount = 0;
@@ -367,8 +372,9 @@ public class AssetManager : MonoBehaviour {
         if(AggLightTriangles.Count == 0) {AggLightTriangles.Add(new CudaLightTriangle() {});}
         didstart = false;
     }
-
+    int Counter;
     public void BuildCombined() {
+        Counter = 0;
         HasToDo = false;
         init();
         CurrentlyActiveVoxelTasks = new List<Task>();
@@ -419,7 +425,7 @@ public class AssetManager : MonoBehaviour {
             LightMeshes.Clear();
             AggLightTriangles.Clear();
             LightTransforms.Clear();
-            float TotalEnergy = 0;
+            float CDF = 0;
             int AggTriCount = 0;
             int AggNodeCount = TLASSpace;
             if(BVH8AggregatedBuffer != null) {
@@ -456,11 +462,11 @@ public class AssetManager : MonoBehaviour {
 
                     if(RenderQue[i].LightCount != 0) {
                         LightMeshCount++;
-                        TotalEnergy += RenderQue[i].TotEnergy;
+                        CDF += RenderQue[i].TotEnergy;
                         LightTransforms.Add(RenderQue[i].transform);
                         LightMeshes.Add(new LightMeshData() {
                             energy = RenderQue[i].TotEnergy,
-                            TotalEnergy = TotalEnergy,
+                            CDF = CDF,
                             StartIndex = AggLightTriangles.Count,
                             IndexEnd = RenderQue[i].LightCount + AggLightTriangles.Count     
                           });
@@ -564,23 +570,23 @@ public class AssetManager : MonoBehaviour {
         TempBuild();
         if(!didstart) {
             didstart = true;
+
         }
-       
-        
+
         UnityLights.Clear();
-        float TotalEnergy = 0.0f;//(LightMeshes.Count != 0) ? LightMeshes[LightMeshes.Count - 1].TotalEnergy : 0.0f;
+        float CDF = 0.0f;//(LightMeshes.Count != 0) ? LightMeshes[LightMeshes.Count - 1].CDF : 0.0f;
         UnityLightCount = 0;
-        RayTracingMaster._rayTracingLights.Sort((s1,s2) => s1.Energy.CompareTo(s2.Energy));
         foreach(RayTracingLights RayLight in RayTracingMaster._rayTracingLights) {
             UnityLightCount++;
             RayLight.UpdateLight();
-            TotalEnergy += RayLight.Energy;
+            CDF += RayLight.Energy;
+            if(RayLight.Type == 1) SunDirection = RayLight.Direction;
             UnityLights.Add(new LightData() {
                 Radiance = RayLight.Emission,
                 Position = RayLight.Position,
                 Direction = RayLight.Direction,
                 energy = RayLight.Energy,
-                TotalEnergy = TotalEnergy,
+                CDF = CDF,
                 Type = RayLight.Type,
                 SpotAngle = RayLight.SpotAngle
                 });
@@ -588,7 +594,7 @@ public class AssetManager : MonoBehaviour {
         if(UnityLights.Count == 0) {UnityLights.Add(new LightData() {});}
         if(PrevLightCount != RayTracingMaster._rayTracingLights.Count) LightsHaveUpdated = true;
         PrevLightCount = RayTracingMaster._rayTracingLights.Count;
-
+       
         MyMeshesCompacted.Clear();     
         int MeshDataCount =  RenderQue.Count;
         int aggregated_bvh_node_count = 2 * MeshDataCount;
@@ -664,19 +670,21 @@ public class AssetManager : MonoBehaviour {
             VoxelTLAS = new List<BVHNode8DataCompressed>();
             VoxelTLAS.Add(new BVHNode8DataCompressed());
         }
+
         return (LightsHaveUpdated || ChildrenUpdated);//The issue is that all light triangle indices start at 0, and thus might not get correctly sorted for indices
     }
 
     public void UpdateMaterials() {//Allows for live updating of material properties of any object
         int ParentCount = RenderQue.Count;
         RayTracingObject CurrentMaterial;
+        MaterialData TempMat;
         for(int i = 0; i < ParentCount; i++) {
             int ChildCount = RenderQue[i].ChildObjects.Length;
             for(int i2 = 0; i2 < ChildCount; i2++) {
                 CurrentMaterial = RenderQue[i].ChildObjects[i2];
                 int MaterialCount = CurrentMaterial.MaterialIndex.Length;
                 for(int i3 = 0; i3 < MaterialCount; i3++) {
-                    MaterialData TempMat = _Materials[CurrentMaterial.MaterialIndex[i3]];
+                    TempMat = _Materials[CurrentMaterial.MaterialIndex[i3]];
                     if(TempMat.HasAlbedoTex != 1) {
                         TempMat.BaseColor = CurrentMaterial.BaseColor[i3];
                     }
@@ -690,18 +698,29 @@ public class AssetManager : MonoBehaviour {
         }
     }
 
-    /*
-        public void OnDrawGizmos() {
-        for(int i = 0; i < TempData.Length; i++) {
-            Vector3 V1 = TempData[i].pos0;
-            Vector3 V2 = V1 + TempData[i].posedge1;
-            Vector3 V3 = V1 + TempData[i].posedge2;
-            
-            Gizmos.DrawLine(V1, V2);
-            Gizmos.DrawLine(V1, V3);
-            Gizmos.DrawLine(V3, V2);
-        }
-    }
-*/
+     /*    int Time = 0;
+         public void OnDrawGizmos() {
+             Time += 1;
+             if(Time > 125) Time = 0;
+         for(int i = 0; i < 1024; i++) {
+         //    Debug.Log(RayTracingMaster.TempData[i].Misc.y);
+            Vector3 Point = LightMeshes[(int)RayTracingMaster.TempData[i].Misc.x].Inverse * RayTracingMaster.TempData[i].Pos;
+            Gizmos.DrawSphere(Point + LightMeshes[(int)RayTracingMaster.TempData[i].Misc.x].Center, 0.05f);
+             CudaLightTriangle TempTri = AggLightTriangles[(int)RayTracingMaster.TempData[i].Misc.y];
+             Vector3 V1 = TempTri.pos0;
+             Vector3 V2 = V1 + TempTri.posedge1;
+             Vector3 V3 = V1 + TempTri.posedge2;
+            V1 = LightMeshes[(int)RayTracingMaster.TempData[i].Misc.x].Inverse * V1;
+            V2 = LightMeshes[(int)RayTracingMaster.TempData[i].Misc.x].Inverse * V2;
+            V3 = LightMeshes[(int)RayTracingMaster.TempData[i].Misc.x].Inverse * V3;
+            V1 += LightMeshes[(int)RayTracingMaster.TempData[i].Misc.x].Center;
+            V2 += LightMeshes[(int)RayTracingMaster.TempData[i].Misc.x].Center;
+            V3 += LightMeshes[(int)RayTracingMaster.TempData[i].Misc.x].Center;
+             Gizmos.DrawLine(V1, V2);
+             Gizmos.DrawLine(V1, V3);
+             Gizmos.DrawLine(V3, V2);
+         }
+     }*/
+
 
 }

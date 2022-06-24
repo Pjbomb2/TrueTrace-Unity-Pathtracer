@@ -25,6 +25,7 @@ RWTexture2D<float4> ColorIndirectOut;
 RWTexture2D<float4> Result;
 
 Texture2D<float4> _Albedo;
+SamplerState sampler_Albedo;
 
 RWTexture2D<float4> RWScreenPosPrev;
 Texture2D<float4> ScreenPosPrev;
@@ -32,6 +33,7 @@ Texture2D<float4> PosTex;
 Texture2D<float4> PrevPosTex;
 RWTexture2D<float4> HistoryTex;
 Texture2D<float4> _CameraNormalDepthTex;
+SamplerState sampler_CameraNormalDepthTex;
 
 RWTexture2D<float4> FrameBufferMoment;
 
@@ -78,7 +80,7 @@ void kernel_copy (int3 id : SV_DispatchThreadID)
     if(PosTex[id.xy].z == 0.0f) {
         CurPos.z = 0.0f;
     }
-    RWNormalAndDepth[id.xy] = float4(oct_encode_normal(_CameraNormalDepthTex[id.xy].xyz), CurPos.z, PrevPos.z);
+    RWNormalAndDepth[id.xy] = float4(oct_encode_normal(_CameraNormalDepthTex[id.xy].xyz * 2.0f - 1.0f), CurPos.z, PrevPos.z);
 }
 
 
@@ -558,8 +560,7 @@ void kernel_finalize (int3 id : SV_DispatchThreadID)
 {
     if (id.x >= screen_width || id.y >= screen_height) return;
     int pixel_index = id.y * screen_width + id.x;
-
-    float3 colour = (ColorDirectIn[id.xy].xyz + ColorIndirectIn[id.xy].xyz) * _Albedo[id.xy].xyz + PerPixelRadiance[pixel_index].Fog;
+    float3 colour = (ColorDirectIn[id.xy].xyz + ColorIndirectIn[id.xy].xyz) * ((PosTex[id.xy].w == 1) ? _Albedo.SampleLevel(sampler_Albedo, id.xy / float2(screen_width, screen_height), 0).xyz : 1.0f) + PerPixelRadiance[pixel_index].Fog;
     Result[id.xy] = float4(colour,1);
 
 
