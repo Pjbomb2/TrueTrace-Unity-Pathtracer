@@ -7,8 +7,8 @@ Currently needs to be done but havent started:
 <ul>
     <li>Precomputed multiple scattering atmosphere(struggling a lot)</li>
     <li>Reduce Memory Spike on Start</li>
-    <li>Improve Direct Light Sampling for meshes(look into ReSTIR or ReGIR?)</li>
     <li>Make Voxels able to be volumetric</li>
+    <li>Add a plasticy or whatever the blender default material is</li>
 </ul>
 Currently want to do but havent started:
 <ul>
