@@ -1,7 +1,6 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>ReSTIR</li>
   <li>Need More Ideas</li>
 </ul>
 Currently needs to be done but havent started:
@@ -13,12 +12,11 @@ Currently needs to be done but havent started:
 </ul>
 Currently want to do but havent started:
 <ul>
-    <li>ReSTIR</li>
     <li>Need More Ideas</li>
 </ul>
 
 # Compute Shader Based Unity PathTracer
-A passion projects that has been going on for awhile(about a year in unity, with my earliest version I can find being version 30(whereas I am now on version 256), which was made on 5-7-2021), finally at a place where I feel comfortable tentatively uploading it to Github for others to use
+A passion projects that has been going on for awhile(about a year in unity, with my earliest version I can find being version 30(whereas I am now on version 263), which was made on 5-7-2021), finally at a place where I feel comfortable tentatively uploading it to Github for others to use
 What is it?
 Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compute Shaders
 ## Features: 
@@ -45,6 +43,7 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 <li>Depth of Field</li>
 <li>AutoExposure</li>
 <li>Temporal Anti-Aliasing</li>
+<li>ReSTIR for better sampling of many lights</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
@@ -111,7 +110,7 @@ BVH Options Description -
 <ul>
   <li>Build Aggregated BVH - Allows you to pre-build objects BVH's before running so you dont have to wait every time you go into play mode for it to build.  To know when its done building, the Object Parent Name will appear in the console telling you its complete(and thus wont need to be rebuilt every time you hit play)</li>
   <li>Clear Parent Data - Clears the data stored in parent gameobjects, allowing you to actually click them without crashing or lagging(but will then require the BVH to be rebuilt)</li>
-  <li>Sun Position - Affects the sun position from the Precompute Atmospheric Scattering, and if you have a directional light, it will affect this as well(for NEE)</li>
+  <li>Sun Position - REMOVED, so now the sun can be anywhere, not just in a disk</li>
   <li>Max Bounces - Sets the maximum number of bounces a ray can achieve</li>
   <li>Use Russian Roulette - Highly reccomended to leave this on, kills rays that may not contribute much early, and thus greatly increases performance</li>
   <li>Enable Object Moving - Allows objects to be moved during play, and allows for added objects to spawn in when they are done building</li>
@@ -123,6 +122,12 @@ BVH Options Description -
   <li>Allow Bloom - Turns on or off Bloom</li>
   <li>Use DoF - Turns on or off Depth of Field, and its associated settings</li>
   <li>Use Auto Exposure - Turns on or off Auto Exposure(impacts a lot more than I thought it would)</li>
+  <li>Use ReSTIR - Enables the much better sampling for lots of lights</li>
+  <li>Allow ReSTIR Sample Regeneration - Applies if Precomputed Sampling is on, Regenerates the light samples every frame</li>
+  <li>Allow ReSTIR Precomputed Sampling - Samples lights in a more efficient way but introduces artifacts due to sample correlation</li>
+  <li>Allow ReSTIR Temporal - Enables the Temporal pass of ReSTIR(allows samples to travel across time</li>
+  <li>Allow ReSTIR Spatial - Enables the Spatial pass of ReSTIR(Allows pixels to choose to use the neighboring pixels sample instead)</li>
+  <li>Use Temporal Antialiasing - Enables Temporal Antialiasing(TAA)</li>
   <li>Use SVGF Denoiser - Turns on the SVGF denoiser</li>
   <li>(If SVGF Denosier is on)Atrous Kernel Size - The amount of times the SVGF denoiser runs through the Atrous kernel</li>
   <li>Use Atrous Denoiser - Turns on the Atrous denoiser(can be combined with SVGF)</li>
