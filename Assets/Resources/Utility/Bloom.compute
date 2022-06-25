@@ -70,7 +70,7 @@ void Bloom (uint3 id : SV_DispatchThreadID)
      rgba += float4(clamp(calculateBloom(), 0.0, 65535.0) * rcp(32.0f),0);
 
 
-    OutputTex[id.xy] = float4(rgba.xyz, 1);
+    OutputTex[id.xy] = float4(rgba.xyz / 2.0f, 1);
 
 }
 

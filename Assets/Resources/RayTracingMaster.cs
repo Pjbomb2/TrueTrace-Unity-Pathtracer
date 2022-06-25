@@ -162,6 +162,8 @@ public class RayTracingMaster : MonoBehaviour {
         Denoisers = new Denoiser(_camera, SourceWidth, SourceHeight);
         HasStarted = true;
         _camera.renderingPath = RenderingPath.DeferredShading;
+        _camera.depthTextureMode |= DepthTextureMode.MotionVectors;
+
     }
 
     private void Awake() {
@@ -440,7 +442,7 @@ public class RayTracingMaster : MonoBehaviour {
             RayTracingShader.SetTexture(ShadeKernel, "ScatterTex", Atmo._RayleighTex);
             RayTracingShader.SetTexture(ShadeKernel, "MieTex", Atmo._MieTex);
 
-        _PrecomputedBlocks = new ComputeBuffer(128 * 1024, 48);
+        _PrecomputedBlocks = new ComputeBuffer(128 * 512, 48);
        // TempData = new TempDataData[128 * 1024];
         SetComputeBuffer(ReservoirPrecomputeKernel, "WriteBlocks", _PrecomputedBlocks);
         SetComputeBuffer(ReservoirPrecomputeKernel, "_LightMeshes", _LightMeshes);
@@ -502,7 +504,7 @@ public class RayTracingMaster : MonoBehaviour {
 
          CreateRenderTexture(ref _DebugTex, true, false);
          CreateRenderTexture(ref _FinalTex, true, true);
-         CreateRenderTexture(ref _IntermediateTex, true, true, false);
+         CreateRenderTexture(ref _IntermediateTex, true, true, true);
          CreateRenderTexture(ref _target, true, false);
          CreateRenderTexture(ref _NormTex, false, false);
          CreateRenderTexture(ref _converged, true, false);
@@ -523,11 +525,11 @@ public class RayTracingMaster : MonoBehaviour {
         float CurrentSample;
         InitRenderTexture();      
         RayTracingShader.SetInt("curframe", FramesSinceStart2); 
-        RayTracingShader.SetTexture(ShadeKernel, "TempPosTex", _PosTex);
-        RayTracingShader.SetTexture(FinalizeKernel, "TempPosTex", _PosTex);
         RayTracingShader.SetTexture(ReservoirKernel, "TempPosTex", _PosTex);
         RayTracingShader.SetTexture(DepthCopyKernel, "TempAlbedoTex", _Albedo);
         RayTracingShader.SetTexture(DepthCopyKernel, "TempNormTex", _NormTex);
+        RayTracingShader.SetTextureFromGlobal(ReservoirSpatialKernel, "MotionVectors", "_CameraMotionVectorsTexture");
+        RayTracingShader.SetTextureFromGlobal(ReservoirKernel, "MotionVectors", "_CameraMotionVectorsTexture");
         RayTracingShader.SetTexture(ReservoirSpatialKernel, "TempPosTex", _PosTex);
         RayTracingShader.SetTexture(ShadeKernel, "TempNormalTex", _NormTex);
         RayTracingShader.SetTexture(ShadeKernel, "TempAlbedoTex", _Albedo);
@@ -535,6 +537,7 @@ public class RayTracingMaster : MonoBehaviour {
         RayTracingShader.SetTextureFromGlobal(DepthCopyKernel, "NormalTex", "_CameraGBufferTexture2");
         RayTracingShader.SetTextureFromGlobal(DepthCopyKernel, "AlbedoTex", "_CameraGBufferTexture0");
         RayTracingShader.SetTexture(DepthCopyKernel, "TempPosTex", _PosTex);
+        RayTracingShader.SetTexture(TraceKernel, "_DebugTex", _DebugTex);
         SetComputeBuffer(OctreeShadowKernel, "CurrentReservoir", (FramesSinceStart2 % 2 == 0) ? _CurrentReservoir : _PreviousReservoir);
         SetComputeBuffer(ReservoirKernel, "CurrentReservoir", (FramesSinceStart2 % 2 == 0) ? _CurrentReservoir : _PreviousReservoir);
         SetComputeBuffer(ReservoirKernel, "PreviousReservoir", (FramesSinceStart2 % 2 == 0) ? _PreviousReservoir : _CurrentReservoir);
@@ -576,7 +579,6 @@ public class RayTracingMaster : MonoBehaviour {
 
 
 
-
         if(!UseSVGF) {
             RayTracingShader.SetTexture(FinalizeKernel, "Result", _target);
             RayTracingShader.SetTexture(FinalizeKernel, "AlbedoTex", _Albedo);
@@ -586,36 +588,41 @@ public class RayTracingMaster : MonoBehaviour {
             SampleCount++;
         } else {
             SampleCount = 0;
-            Denoisers.ExecuteSVGF(_currentSample, SVGFAtrousKernelSizes, ref _ColorBuffer, ref _PosTex, ref _target, ref _Albedo, ref _NormTex);
+            Denoisers.ExecuteSVGF(_currentSample, SVGFAtrousKernelSizes, ref _ColorBuffer, ref _target, ref _Albedo, ref _NormTex);
             CurrentSample = 1;
         }
-
-
-
 
         if (_addMaterial == null)
             _addMaterial = new Material(Shader.Find("Hidden/Accumulate"));
         _addMaterial.SetFloat("_Sample", CurrentSample);
         Graphics.Blit(_target, _converged, _addMaterial);
-        Graphics.CopyTexture(_converged, 0, 0, _IntermediateTex, 0, 0);
-        _IntermediateTex.GenerateMips();
-        if(UseAtrous) {
-            Denoisers.ExecuteAtrous(AtrousKernelSizes, n_phiGlob, p_phiGlob, c_phiGlob, ref _PosTex, ref _target, ref _IntermediateTex, ref _Albedo, ref _NormTex);
-            Graphics.CopyTexture(_target, 0, 0, _IntermediateTex, 0, 0);
+
+        if(SourceWidth != Screen.width) {
+            Denoisers.ExecuteUpsample(ref _converged, ref _FinalTex);//This is a postprocessing pass, but im treating it like its not one, need to move it to after the accumulation
+            Graphics.CopyTexture(_FinalTex,0,0,_IntermediateTex,0,0);
+        } else {
+            Graphics.CopyTexture(_converged, _FinalTex);
+            Graphics.CopyTexture(_FinalTex,0,0,_IntermediateTex,0,0);
+
         }
-        if(AllowAutoExpose) {
-            Denoisers.ExecuteAutoExpose(ref _target, ref _IntermediateTex);
-            Graphics.CopyTexture(_target, 0, 0, _IntermediateTex, 0, 0);
-        }
-        if(AllowBloom) {
-            Denoisers.ExecuteBloom(ref _target, ref _IntermediateTex);
-            Graphics.CopyTexture(_target, 0, 0, _IntermediateTex, 0, 0);
-        }
-        if(_IntermediateTex.width == _FinalTex.width) Graphics.CopyTexture(_IntermediateTex, 0, 0, _FinalTex, 0, 0);
-        if(AllowTAA || (SourceHeight != TargetHeight)) {
-            Graphics.CopyTexture(_IntermediateTex, 0, 0, _target, 0, 0);
-            Denoisers.ExecuteTAA(ref _target, ref _IntermediateTex, ref _PosTex, ref _FinalTex, _currentSample);
-        }
+
+         _IntermediateTex.GenerateMips();
+         if(UseAtrous) {
+             Denoisers.ExecuteAtrous(AtrousKernelSizes, n_phiGlob, p_phiGlob, c_phiGlob, ref _PosTex, ref _FinalTex, ref _IntermediateTex, ref _Albedo, ref _NormTex);
+             Graphics.CopyTexture(_FinalTex, 0, 0, _IntermediateTex, 0, 0);
+         }
+         if(AllowAutoExpose) {
+             Denoisers.ExecuteAutoExpose(ref _FinalTex, ref _IntermediateTex);
+             Graphics.CopyTexture(_FinalTex, 0, 0, _IntermediateTex, 0, 0);
+         }
+         if(AllowBloom) {
+             Denoisers.ExecuteBloom(ref _FinalTex, ref _IntermediateTex);
+             Graphics.CopyTexture(_FinalTex, 0, 0, _IntermediateTex, 0, 0);
+         }
+         if(AllowTAA) {
+             Graphics.CopyTexture(_IntermediateTex, 0, 0, _FinalTex, 0, 0);
+             Denoisers.ExecuteTAA(ref _IntermediateTex, ref _FinalTex, _currentSample);
+         }
 
         Graphics.Blit(_FinalTex, destination);
         ClearOutRenderTexture(_DebugTex);

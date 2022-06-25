@@ -300,7 +300,7 @@ public class AssetManager : MonoBehaviour {
         }
         int BuildQueCount = BuildQue.Count - 1;
         for(int i = BuildQueCount; i >= 0; i--) {//Promotes from Build Que to Render Que
-            if(CurrentlyActiveTasks[i].IsFaulted) Debug.Log(CurrentlyActiveTasks[i].Exception);//Fuck, something fucked up
+            if(CurrentlyActiveTasks[i].IsFaulted) Debug.Log(CurrentlyActiveTasks[i].Exception + ", " + BuildQue[i].Name);//Fuck, something fucked up
             if(CurrentlyActiveTasks[i].Status == TaskStatus.RanToCompletion) {
                 BuildQue[i].SetUpBuffers();
                 RenderQue.Add(BuildQue[i]);
