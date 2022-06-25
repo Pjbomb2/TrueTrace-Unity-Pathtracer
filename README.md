@@ -149,7 +149,7 @@ BVH Options Description -
 
 ![](/Images/Blender1.png)
 ![](/Images/Blender2.png)
-![](/Images/ReSTIR4.png)
+![](/Images/ReSTIR5.png)
 ![](/Images/ReSTIR2.png)
 ![](/Images/Restir3.png)
 ![](/Images/SSS1.png)
