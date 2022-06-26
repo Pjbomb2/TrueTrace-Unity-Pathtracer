@@ -358,7 +358,7 @@ private void CreateAtlas() {//Creates texture atlas
             BaseColor = Obj.MaterialObject.BaseColor[CurrentObjectOffset],
             emmissive = Obj.MaterialObject.emmission[CurrentObjectOffset],
             Roughness = Obj.MaterialObject.Roughness[CurrentObjectOffset],
-            MatType = Obj.MaterialObject.MatType[CurrentObjectOffset],
+            MatType = (int)Obj.MaterialObject.MaterialOptions[CurrentObjectOffset],
             eta = Obj.MaterialObject.eta[CurrentObjectOffset]
         });
         Obj.MaterialObject.MaterialIndex[CurrentObjectOffset] = CurMat;

@@ -5,9 +5,10 @@ using System.Collections.Generic;
 
 [ExecuteInEditMode][System.Serializable]
 public class RayTracingObject : MonoBehaviour {
+	public enum Options {Diffuse, Metallic, Glass, Glossy, Unused, Volumetric, SubSurfaceScattering, DiffuseTransmission, Plastic};
+	public Options[] MaterialOptions;
 	public float[] emmission, Roughness;
 	public Vector3[] eta, BaseColor;
-	public int[] MatType;
 	public int[] MaterialIndex;
 	public int[] LocalMaterialIndex;
 
@@ -19,19 +20,18 @@ public class RayTracingObject : MonoBehaviour {
 	 		GetComponent<SkinnedMeshRenderer>().BakeMesh(mesh);
 	 	}
 
-
-
 		if(emmission == null || emmission.Length != mesh.subMeshCount) {
 			int SubMeshCount = mesh.subMeshCount;
+			MaterialOptions = new Options[SubMeshCount];
 			LocalMaterialIndex = new int[mesh.subMeshCount];
 			emmission = new float[SubMeshCount];
 			Roughness = new float[SubMeshCount];
 			eta = new Vector3[SubMeshCount];
-			MatType = new int[SubMeshCount];
 			BaseColor = new Vector3[SubMeshCount];
 			MaterialIndex = new int[SubMeshCount];
 			Material[] SharedMaterials = (GetComponent<Renderer>() != null) ? GetComponent<Renderer>().sharedMaterials : GetComponent<SkinnedMeshRenderer>().sharedMaterials;
 			for(int i = 0; i < SubMeshCount; i++) {
+				MaterialOptions[i] = Options.Diffuse;
 				bool EmissionColored = false;
 				if(SharedMaterials[i].GetTexture("_EmissionMap") != null) {
 					//emmission[i] = 12.0f;
@@ -40,7 +40,7 @@ public class RayTracingObject : MonoBehaviour {
 						EmissionColored = true;
 				}
 				if(SharedMaterials[i].GetFloat("_Mode") == 3.0f) {
-					MatType[i] = 2;
+					MaterialOptions[i] = Options.Glass;
 					eta[i].x = 1.33f;
 				}
 				if(!EmissionColored) BaseColor[i] = (SharedMaterials[i].mainTexture == null) ? ((SharedMaterials[i].HasProperty("_Color")) ? new Vector3(SharedMaterials[i].color.r, SharedMaterials[i].color.g, SharedMaterials[i].color.b) : new Vector3(0.78f, 0.14f, 0.69f)) : new Vector3(0.78f, 0.14f, 0.69f);
@@ -53,7 +53,7 @@ public class RayTracingObject : MonoBehaviour {
 		emmission = null;
 		Roughness = null;
 		eta = null;
-		MatType = null;
+		MaterialOptions = null;
 		BaseColor = null;
 	}
 	
