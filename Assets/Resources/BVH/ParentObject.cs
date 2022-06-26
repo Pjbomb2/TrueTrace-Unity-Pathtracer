@@ -22,6 +22,7 @@ public GraphicsBuffer[] IndexBuffers;
 [HideInInspector] public bool MeshCountChanged;
 public AABB[] Triangles;
 public CudaTriangle[] AggTriangles;
+public Vector3 ParentScale;
 [HideInInspector] public List<CudaLightTriangle> LightTriangles;
 [HideInInspector] public BVH8Builder BVH;
 [HideInInspector] public SkinnedMeshRenderer[] SkinnedMeshes;
@@ -375,6 +376,7 @@ public void LoadData() {
     init();
     CurMeshData = new MeshDat();
     CurMeshData.init();
+    ParentScale = this.transform.lossyScale;
     List<RayTracingObject> TempObjects = new List<RayTracingObject>();
     List<Transform> TempObjectTransforms = new List<Transform>();
     TempObjectTransforms.Add(this.transform);
@@ -882,7 +884,7 @@ for(int i = 0; i < TotalObjects; i++) {
 
             TempPrim.MatDat = CurMeshData.MatDat[i3 / 3];
 
-            TempPrim.Reconstruct();
+            TempPrim.Reconstruct(ParentScale);
            // if(_Materials[CurMeshData.MatDat[i3 / 3]].MatType != 2) TempTris.Add(TempPrim);
             TempTri.pos0 = TempPrim.V1;
 
@@ -921,7 +923,7 @@ for(int i = 0; i < TotalObjects; i++) {
                     posedge1 = (V2 - V1),
                     posedge2 = (V3 - V1),
                     Norm = ((TempPrim.Norm1 + TempPrim.Norm2 + TempPrim.Norm3) / 3.0f),
-                    radiance = _Materials[TempPrim.MatDat].emmissive * _Materials[TempPrim.MatDat].BaseColor,
+                    radiance = _Materials[TempPrim.MatDat].emmissive * _Materials[TempPrim.MatDat].BaseColor * area,
                     sumEnergy = TotalEnergy,
                     energy = e,
                     area = area

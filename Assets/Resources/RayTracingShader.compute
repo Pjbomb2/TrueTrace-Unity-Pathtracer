@@ -1570,14 +1570,21 @@ float3 sample_visible_normals_ggx(float3 omega, float alpha_x, float alpha_y, fl
     return normalize(float3(alpha_x * n_h.x, alpha_y * n_h.y, n_h.z));
 }
 
-float3 fresnel_conductor(float cos_theta_i, const float3 eta, const float3 k) {
+
+inline float3 divide_difference_by_sum(float3 a, float3 b) {
+    return (a - b) / (a + b);
+}
+
+inline float3 fresnel_conductor(float cos_theta_i, const float3 eta, const float3 k) {
     float cos_theta_i2 = cos_theta_i * cos_theta_i;
+    float sin_theta_i2 = 1.0f - cos_theta_i2;
 
-    float3 t1 = eta*eta + k*k;
-    float3 t0 = t1 * cos_theta_i;
+    float3 inner      = eta*eta - k*k - sin_theta_i2;
+    float3 a2_plus_b2 = sqrt(max(inner*inner + 4.0f * k*k * eta*eta,0.000001f));
+    float3 a          = sqrt(max(0.5f * (a2_plus_b2 + inner),0.0000001f));
 
-    float3 p2 = (t0 - (eta * (2.0f * cos_theta_i)) + float3(1.0f, 1.0f, 1.0f)) / (t0 + (eta * (2.0f * cos_theta_i)) + float3(1.0f, 1.0f, 1.0f));
-    float3 s2 = (t1 - (eta * (2.0f * cos_theta_i)) + float3(cos_theta_i2, cos_theta_i2, cos_theta_i2)) / (t1 + (eta * (2.0f * cos_theta_i)) + float3(cos_theta_i2, cos_theta_i2, cos_theta_i2));
+    float3 s2 = divide_difference_by_sum(a2_plus_b2 + cos_theta_i2,                        2.0f * a * cos_theta_i);
+    float3 p2 = divide_difference_by_sum(a2_plus_b2 * cos_theta_i2 + sin_theta_i2 * sin_theta_i2, 2.0f * a * cos_theta_i * sin_theta_i2) * s2;
 
     return 0.5f * (p2 + s2);
 }
@@ -2379,7 +2386,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                 }
 
                 float w = power_heuristic(light_pdf, bsdf_pdf);//For some reason 1 works way better for point lights
-                float3 Illum = (((CurBounce == 0) ? PrevThroughput : throughput) * Radiance  * bsdf_value * w / light_pdf);//throughput * G * ((Radiance * w * bsdf_value) / light_pdf) * Attenuation;
+                float3 Illum = (throughput * Radiance  * bsdf_value * w / light_pdf);//throughput * G * ((Radiance * w * bsdf_value) / light_pdf) * Attenuation;
                 float maxillum = max(max(Illum.x, Illum.y), Illum.z);
                 if(maxillum > random(9).y) {//NEE russian roulette, massively improves performance while giivng the same result
                     uint index3;//Congrats we shoot a shadow ray for NEE
@@ -2684,13 +2691,10 @@ void kernel_reservoir (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThrea
     uint2 prevIndex = (int2)((PrevUV * 0.5f + 0.5f) * float2(screen_width, screen_height) + 0.5f);
     if (prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height)
     {
-        if(PreviousReservoir[prevIndex.y * screen_width + prevIndex.x].WasSuccessful == 0) {
-            PreviousReservoir[prevIndex.y * screen_width + prevIndex.x].W = 0;
-        }
         prevReservoir = PreviousReservoir[prevIndex.y * screen_width + prevIndex.x];
     }
     Reservoir reservoir = {0,0,0,0,0,0,0,0,0,0,0,-1,0,0,0,0,0,0,0,0,0};
-    if(UseRestirPrecomputedSamples) {
+    [branch]if(UseRestirPrecomputedSamples) {
         float3 LightPos;
         for(i = 0; i < 32; i++) {
             float Rand = floor(min(float(rand_xorshift()) * MultiplyData * 512, 511));
@@ -2725,7 +2729,7 @@ void kernel_reservoir (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThrea
 
         }
         LightCount = lighttricount;
-        const float MultiplyData = (1.0 / 4294967296.0);
+    
         for(i = 0; i < min(LightCount, 32); i++) {//Look through light triangles
             int lighttosample;
             float w;
@@ -2755,9 +2759,9 @@ void kernel_reservoir (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThrea
     
     if(UseRestirTemporal) {
         float3 positionDif = TempPosTex[prevIndex].xyz - prevReservoir.PrevWorld;
-        if(dot(positionDif, positionDif) < 0.01f) {
+        if(dot(positionDif, positionDif) < 0.1f) {
             float3 AlbedoDif = Albedo - prevReservoir.PrevAlbedo;
-            if(dot(AlbedoDif, AlbedoDif) < 0.01f) {
+            if(dot(AlbedoDif, AlbedoDif) < 0.1f) {
                 float normalDot = dot(Norm, prevReservoir.PrevNorm);
                 if(normalDot < 1.5f) {
                     prevReservoir.M = min(prevReservoir.M, 1 * reservoir.M);
@@ -2779,9 +2783,6 @@ void kernel_reservoir (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThrea
                         float LdotN = saturate(dot(prevReservoir.PrevNorm, L));
                         p_hat = length(prevReservoir.PrevAlbedo / PI * light.Radiance * LdotN / (Dist));
                     }
-                    prevReservoir.wsum /= prevReservoir.M;
-                    prevReservoir.M = min(prevReservoir.M, 20);
-                    prevReservoir.wsum *= prevReservoir.M;
                     prevReservoir.W = (1.0f / max(p_hat, 0.00001f)) * (prevReservoir.wsum / max(prevReservoir.M, 0.0000001f));
                     if(prevReservoir.WasSuccessful == 1) UpdateReservoir(reservoir, prevReservoir.y, p_hat * prevReservoir.W * prevReservoir.M, float(rand_xorshift()) * (1.0 / 4294967296.0), prevReservoir.MeshIndex, prevReservoir.Position, prevReservoir.Norm, prevReservoir);
                     reservoir.M = prevReservoir.M + reservoir.M;
@@ -2801,6 +2802,9 @@ void kernel_reservoir (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThrea
                         float LdotN = saturate(dot(reservoir.PrevNorm, L));
                         p_hat = length(reservoir.PrevAlbedo / PI * light.Radiance * LdotN / (Dist));
                     }
+                    reservoir.wsum /= reservoir.M;
+                    reservoir.M = min(reservoir.M, 20);
+                    reservoir.wsum *= reservoir.M;
                     reservoir.W = (1.0f / max(p_hat, 0.00001f)) * (reservoir.wsum / max(reservoir.M, 0.0000001f));
                 }
             }
@@ -2838,14 +2842,14 @@ void kernel_reservoir_spatial (uint3 id : SV_DispatchThreadID) {//Moved final ac
     Reservoir r = CurrentReservoir[pixel_index];
 
     float2 PrevUV =  (id.xy / float2(screen_width, screen_height) - MotionVectors.SampleLevel(sampler_MotionVectors, id.xy / float2(screen_width, screen_height), 0).xy) * 2.0f - 1.0f;
-    int2 CenterIndex = (int2)((PrevUV * 0.5f + 0.5f) * float2(screen_width, screen_height) + 1.0f);
+    int2 CenterIndex = (int2)floor((PrevUV * 0.5f + 0.5f) * float2(screen_width, screen_height) + 1.0f);
 
     uint2 neighborOffset;
     uint2 neighborIndex;
     float WorldDepth = length(WorldPosition - camPos);
     [unroll]for (int i = 0; i < 15;i++) {
         
-        float radius = 5 * random(i).x;
+        float radius = 2 * random(i).x;
         float angle = 2.0f * PI * random(i).y;
         
         int2 neighborIndex = CenterIndex + radius * float2(cos(angle), sin(angle));

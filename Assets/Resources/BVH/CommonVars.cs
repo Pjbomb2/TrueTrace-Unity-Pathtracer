@@ -247,6 +247,19 @@ namespace CommonVars {
             aabb.BBMax = BBMax;
             aabb.BBMin = BBMin;
         }
+        public void Reconstruct(Vector3 Scale) {
+            Vector3 BBMin = Vector3.Min(Vector3.Min(V1,V2),V3);
+            Vector3 BBMax = Vector3.Max(Vector3.Max(V1,V2),V3);
+            for(int i2 = 0; i2 < 3; i2++) {
+                if(BBMax[i2] - BBMin[i2] < 0.001f / Scale[i2]) {
+                    BBMin[i2] -= 0.001f / Scale[i2];
+                    BBMax[i2] += 0.001f / Scale[i2];
+                }
+            }
+            Center = (V1 + V2 + V3) / 3.0f;
+            aabb.BBMax = BBMax;
+            aabb.BBMin = BBMin;
+        }
     }
 
     public struct ProgReportData {

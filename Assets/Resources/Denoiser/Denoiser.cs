@@ -25,8 +25,6 @@ public class Denoiser {
     private RenderTexture _FrameMoment;
     private RenderTexture _History;
     private RenderTexture _TAAPrev;
-    public RenderTexture[] BloomChainDown;
-    public RenderTexture[] BloomChainUp;
     private RenderTexture Intermediate;
     private RenderTexture SuperIntermediate;
 
@@ -186,44 +184,29 @@ public class Denoiser {
         if(A == null) {A = new ComputeBuffer(1, sizeof(float)); A.SetData(TestBuffer);}
         SVGF.SetInt("screen_width", SourceWidth);
         SVGF.SetInt("screen_height", SourceHeight);
+        SVGF.SetInt("TargetWidth", Screen.width);
+        SVGF.SetInt("TargetHeight", Screen.height);
 
-        Bloom.SetInt("screen_width", SourceWidth);
-        Bloom.SetInt("screen_width", SourceHeight);
+        Bloom.SetInt("screen_width", Screen.width);
+        Bloom.SetInt("screen_width", Screen.height);
 
-        AtrousDenoiser.SetInt("screen_width", SourceWidth);
-        AtrousDenoiser.SetInt("screen_height", SourceHeight);
+        AtrousDenoiser.SetInt("screen_width", Screen.width);
+        AtrousDenoiser.SetInt("screen_height", Screen.height);
 
-        AutoExpose.SetInt("screen_width", SourceWidth);
-        AutoExpose.SetInt("screen_height", SourceHeight);
+        AutoExpose.SetInt("screen_width", Screen.width);
+        AutoExpose.SetInt("screen_height", Screen.height);
         AutoExpose.SetBuffer(AutoExposeKernel, "A", A);
         AutoExpose.SetBuffer(AutoExposeFinalizeKernel, "A", A);
 
-        TAA.SetInt("screen_width", SourceWidth);
-        TAA.SetInt("screen_height", SourceHeight);
+        TAA.SetInt("screen_width", Screen.width);
+        TAA.SetInt("screen_height", Screen.height);
 
         threadGroupsX = Mathf.CeilToInt(SourceWidth / 16.0f);
         threadGroupsY = Mathf.CeilToInt(SourceHeight / 16.0f);
 
-        threadGroupsX2 = Mathf.CeilToInt(SourceWidth / 8.0f);
-        threadGroupsY2 = Mathf.CeilToInt(SourceHeight / 8.0f);
+        threadGroupsX2 = Mathf.CeilToInt(Screen.width / 16.0f);
+        threadGroupsY2 = Mathf.CeilToInt(Screen.height / 16.0f);
 
-
-        BloomChainDown = new RenderTexture[6];
-        BloomChainUp = new RenderTexture[5];
-        int TargetWidth = SourceWidth;
-        int TargetHeight = SourceHeight;
-        for(int i = 0; i < 6; i++) {
-            TargetWidth = TargetWidth / 2;
-            TargetHeight = TargetHeight / 2;
-            CreateRenderTexture(ref BloomChainDown[i], false, TargetWidth, TargetHeight);
-
-        }
-        for(int i = 0; i < 5; i++) {
-            TargetWidth = TargetWidth * 2;
-            TargetHeight = TargetHeight * 2;
-            CreateRenderTexture(ref BloomChainUp[i], false, TargetWidth, TargetHeight);
-
-        }
 
         InitRenderTexture();
     }
@@ -316,9 +299,6 @@ public class Denoiser {
         SVGF.Dispatch(FinalizeKernel, threadGroupsX, threadGroupsY, 1);
         UnityEngine.Profiling.Profiler.EndSample();
 
-
-     //   Graphics.CopyTexture(_PosTex, _PrevPosTex);
-
     }
     public void ExecuteAtrous(int AtrousKernelSize, float n_phi, float p_phi, float c_phi, ref RenderTexture _PosTex, ref RenderTexture _target, ref RenderTexture _converged, ref RenderTexture _Albedo, ref RenderTexture _NormTex) {
         InitRenderTexture();
@@ -328,7 +308,7 @@ public class Denoiser {
         AtrousDenoiser.SetTexture(AtrousCopyKernel, "PosTex", _PosTex);
         AtrousDenoiser.SetTexture(AtrousCopyKernel, "RWNormalAndDepth", _NormalDepth);
         AtrousDenoiser.SetTexture(AtrousCopyKernel, "_CameraNormalDepthTex", _NormTex);
-        AtrousDenoiser.Dispatch(AtrousCopyKernel, threadGroupsX, threadGroupsY, 1);
+        AtrousDenoiser.Dispatch(AtrousCopyKernel, threadGroupsX2, threadGroupsY2, 1);
 
         Graphics.CopyTexture(_converged, 0, 0, _ColorDirectIn, 0, 0);
             AtrousDenoiser.SetFloat("n_phi", n_phi);
@@ -346,23 +326,23 @@ public class Denoiser {
                 AtrousDenoiser.SetTexture(AtrousKernel, "Result", (UseFlipped) ? _ColorDirectIn : _ColorDirectOut);
                 AtrousDenoiser.SetFloat("c_phi", c_phi2);
                 AtrousDenoiser.SetInt("step_width", step_size);
-                AtrousDenoiser.Dispatch(AtrousKernel, threadGroupsX, threadGroupsY, 1);
+                AtrousDenoiser.Dispatch(AtrousKernel, threadGroupsX2, threadGroupsY2, 1);
                 c_phi /= 2.0f;
             }
             AtrousDenoiser.SetTexture(AtrousFinalizeKernel, "ResultIn", (CurrentIteration % 2 == 1) ? _ColorDirectIn : _ColorDirectOut);
             AtrousDenoiser.SetTexture(AtrousFinalizeKernel, "_Albedo", _Albedo);
             AtrousDenoiser.SetTexture(AtrousFinalizeKernel, "Result", _target);
-            AtrousDenoiser.Dispatch(AtrousFinalizeKernel, threadGroupsX, threadGroupsY, 1);
+            AtrousDenoiser.Dispatch(AtrousFinalizeKernel, threadGroupsX2, threadGroupsY2, 1);
     }
 
     public void ExecuteBloom(ref RenderTexture _target, ref RenderTexture _converged) {//need to fix this so it doesnt create new textures every time
 
-        Bloom.SetInt("screen_width", SourceWidth);
-        Bloom.SetInt("screen_height", SourceHeight);
+        Bloom.SetInt("screen_width", Screen.width);
+        Bloom.SetInt("screen_height", Screen.height);
         Bloom.SetTexture(BloomKernel, "OrigTex", _converged);
         Bloom.SetTexture(BloomKernel, "InputTex", _converged);
         Bloom.SetTexture(BloomKernel, "OutputTex", _target);
-        Bloom.Dispatch(BloomKernel, (int)Mathf.Ceil(SourceWidth / 16.0f), (int)Mathf.Ceil(SourceHeight / 16.0f), 1);
+        Bloom.Dispatch(BloomKernel, threadGroupsX2, threadGroupsY2, 1);
 
 
 
@@ -374,7 +354,7 @@ public class Denoiser {
         AutoExpose.Dispatch(AutoExposeKernel, 1, 1, 1);
         AutoExpose.SetTexture(AutoExposeFinalizeKernel, "InTex", _converged);
         AutoExpose.SetTexture(AutoExposeFinalizeKernel, "OutTex", _target);
-        AutoExpose.Dispatch(AutoExposeFinalizeKernel, (int)Mathf.Ceil(SourceWidth / 16.0f), (int)Mathf.Ceil(SourceHeight / 16.0f), 1);
+        AutoExpose.Dispatch(AutoExposeFinalizeKernel, threadGroupsX2, threadGroupsY2, 1);
 
 
     }
@@ -392,7 +372,7 @@ public class Denoiser {
         TAA.SetTextureFromGlobal(TAAPrepareKernel, "DepthTex", "_CameraDepthTexture");
         TAA.SetTexture(TAAPrepareKernel, "ColorIn", Input);
         TAA.SetTexture(TAAPrepareKernel, "ColorOut", TempTex);
-        TAA.Dispatch(TAAPrepareKernel, threadGroupsX, threadGroupsY, 1);
+        TAA.Dispatch(TAAPrepareKernel, threadGroupsX2, threadGroupsY2, 1);
         UnityEngine.Profiling.Profiler.EndSample();
 
 
@@ -401,14 +381,14 @@ public class Denoiser {
         TAA.SetTextureFromGlobal(TAAKernel, "MotionVectors", "_CameraMotionVectorsTexture");
         TAA.SetTexture(TAAKernel, "TAAPrev", _TAAPrev);
         TAA.SetTexture(TAAKernel, "ColorOut", TempTex2);
-        TAA.Dispatch(TAAKernel, threadGroupsX, threadGroupsY, 1);
+        TAA.Dispatch(TAAKernel, threadGroupsX2, threadGroupsY2, 1);
         UnityEngine.Profiling.Profiler.EndSample();
 
         UnityEngine.Profiling.Profiler.BeginSample("TAAFinalize");
         TAA.SetTexture(TAAFinalizeKernel, "TAAPrev", _TAAPrev);
         TAA.SetTexture(TAAFinalizeKernel, "ColorOut", _Final);
         TAA.SetTexture(TAAFinalizeKernel, "ColorIn", TempTex2);
-        TAA.Dispatch(TAAFinalizeKernel, threadGroupsX, threadGroupsY, 1);
+        TAA.Dispatch(TAAFinalizeKernel, threadGroupsX2, threadGroupsY2, 1);
         UnityEngine.Profiling.Profiler.EndSample();
 
         RenderTexture.ReleaseTemporary(TempTex);
@@ -432,7 +412,7 @@ public class Denoiser {
         Upscaler.SetTexture(UpsampleKernel, "Input", Input);
         Upscaler.SetTexture(UpsampleKernel, "Output", Output);
 
-        Upscaler.Dispatch(UpsampleKernel, (int)Mathf.Ceil(Output.width / 16.0f), (int)Mathf.Ceil(Output.height / 16)+ 1, 1);
+        Upscaler.Dispatch(UpsampleKernel, threadGroupsX2, threadGroupsY2+ 1, 1);
         UnityEngine.Profiling.Profiler.EndSample();
 
     }

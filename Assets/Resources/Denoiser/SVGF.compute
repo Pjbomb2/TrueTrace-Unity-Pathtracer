@@ -66,8 +66,11 @@ inline float2 oct_encode_normal(float3 n) {
 
 
 #define THRESHOLD_NORMAL 0.95f;
-#define THRESHOLD_DEPTH 2.0f;
+#define THRESHOLD_DEPTH 1.0f;
 #pragma kernel kernel_copy
+
+int TargetWidth;
+int TargetHeight;
 
 
 Texture2D<float4> DepthTex;
@@ -81,10 +84,12 @@ void kernel_copy (int3 id : SV_DispatchThreadID)
 {//Reprojects and moves the color data from the array to textures
     if(id.x >= screen_width || id.y >= screen_height) return;
     int pixel_index = id.y * screen_width + id.x;
+    float2 UV = id.xy / float2(screen_width, screen_height);
+    uint2 NewSample = floor(UV * float2(TargetWidth, TargetHeight));
     ColorDirectOut[id.xy] = float4(PerPixelRadiance[pixel_index].Direct, 1.0f);
     ColorIndirectOut[id.xy] = float4(PerPixelRadiance[pixel_index].Indirect, 1.0f);
-    RWScreenPosPrev[id.xy] =  float4(((id.xy / float2(screen_width, screen_height)) - MotionVectors[id.xy].xy) * 2.0f - 1.0f, 0.0f, 1.0f);
-    RWNormalAndDepth[id.xy] = float4(oct_encode_normal(_CameraNormalDepthTex[id.xy].xyz * 2.0f - 1.0f), Linear01Depth(DepthTex[id.xy].x) * FarPlane, Linear01Depth(PrevDepthTex[id.xy].x) * FarPlane);
+    RWScreenPosPrev[id.xy] =  float4(((UV) - MotionVectors.SampleLevel(sampler_MotionVectors, UV, 0).xy) * 2.0f - 1.0f, 0.0f, 1.0f);
+    RWNormalAndDepth[id.xy] = float4(oct_encode_normal(_CameraNormalDepthTex[id.xy].xyz * 2.0f - 1.0f), Linear01Depth(DepthTex[NewSample].x) * FarPlane, Linear01Depth(PrevDepthTex[NewSample].x) * FarPlane);
 
 }
 

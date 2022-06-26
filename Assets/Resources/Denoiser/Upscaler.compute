@@ -8,7 +8,7 @@ int target_width;
 int target_height;
 
 Texture2D<float4> Input;
-SamplerState sampler_Input;
+SamplerState sampler_Input_trilinear_clamp;
 RWTexture2D<float4> Output;
 
 
@@ -37,20 +37,21 @@ void kernel_upsample (int3 id : SV_DispatchThreadID)
     float2 texel = 1.0f / float2(target_width, target_height);
     float2 texel2 = 1.0f / float2(source_width, source_height);
     float2 newUV = UV - MotionVectors[id.xy].xy;
+    newUV.y += texel2;
     float CenterDepth = DepthTex.SampleLevel(sampler_DepthTex, newUV, 0).x;
     float3 CenterNormal = NormalTex.SampleLevel(sampler_NormalTex, newUV, 0).xyz * 2.0f - 1.0f;
-    float3 TotalChange = Input.SampleLevel(sampler_Input, newUV, 0).xyz;
+    float3 TotalChange = Input.SampleLevel(sampler_Input_trilinear_clamp, UV, 0).xyz;
     int ConfirmedSamples = 0;
 
     for(int i = -1; i <= 1; i++) {
         [unroll]for(int j = -1; j <= 1; j++) {
             if(i == 0 && j == 0) continue;
-            [branch]if(IsValid(CenterDepth, CenterNormal, newUV + float2(texel2.x * i, texel2.y * j))) {
-                TotalChange += Input.SampleLevel(sampler_Input, newUV + texel2 * float2(i,j), 0).xyz;
+            [branch]if(IsValid(CenterDepth, CenterNormal, newUV + float2(texel.x * i, texel.y * j))) {
+                TotalChange += Input.SampleLevel(sampler_Input_trilinear_clamp, newUV + texel * float2(i,j), 0).xyz;
                 ConfirmedSamples++;
             }
         }
     }
-    if(CenterDepth == 0) Output[id.xy] = float4(Input.SampleLevel(sampler_Input, newUV, 0).xyz, 1.0f);
-    else Output[id.xy] = float4((TotalChange / (ConfirmedSamples + 1)) * Albedo[id.xy].xyz * 2.0f,1.0f);
+    if(CenterDepth == 0 || IsValid(CenterDepth, CenterNormal, newUV)) Output[id.xy] = float4(Input.SampleLevel(sampler_Input_trilinear_clamp, UV, 0).xyz, 1.0f);
+    else Output[id.xy] = lerp(Output[id.xy], float4((TotalChange / (ConfirmedSamples + 1)) * Albedo[id.xy].xyz * 2.0f,1.0f), 0.9f);
 }

@@ -162,7 +162,7 @@ public class RayTracingMaster : MonoBehaviour {
         Denoisers = new Denoiser(_camera, SourceWidth, SourceHeight);
         HasStarted = true;
         _camera.renderingPath = RenderingPath.DeferredShading;
-        _camera.depthTextureMode |= DepthTextureMode.MotionVectors;
+        _camera.depthTextureMode |= DepthTextureMode.MotionVectors | DepthTextureMode.Depth;
 
     }
 
@@ -606,23 +606,24 @@ public class RayTracingMaster : MonoBehaviour {
 
         }
 
-         _IntermediateTex.GenerateMips();
          if(UseAtrous) {
              Denoisers.ExecuteAtrous(AtrousKernelSizes, n_phiGlob, p_phiGlob, c_phiGlob, ref _PosTex, ref _FinalTex, ref _IntermediateTex, ref _Albedo, ref _NormTex);
              Graphics.CopyTexture(_FinalTex, 0, 0, _IntermediateTex, 0, 0);
          }
          if(AllowAutoExpose) {
+            _IntermediateTex.GenerateMips();
              Denoisers.ExecuteAutoExpose(ref _FinalTex, ref _IntermediateTex);
              Graphics.CopyTexture(_FinalTex, 0, 0, _IntermediateTex, 0, 0);
          }
          if(AllowBloom) {
+             _IntermediateTex.GenerateMips();
              Denoisers.ExecuteBloom(ref _FinalTex, ref _IntermediateTex);
              Graphics.CopyTexture(_FinalTex, 0, 0, _IntermediateTex, 0, 0);
          }
          if(AllowTAA) {
-             Graphics.CopyTexture(_IntermediateTex, 0, 0, _FinalTex, 0, 0);
-             Denoisers.ExecuteTAA(ref _IntermediateTex, ref _FinalTex, _currentSample);
+             Denoisers.ExecuteTAA(ref _FinalTex, ref _IntermediateTex, _currentSample);
          }
+            Graphics.CopyTexture(_IntermediateTex, 0, 0, _FinalTex, 0, 0);
 
         Graphics.Blit(_FinalTex, destination);
         ClearOutRenderTexture(_DebugTex);
