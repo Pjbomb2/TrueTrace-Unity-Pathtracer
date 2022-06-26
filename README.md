@@ -22,7 +22,7 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 ## Features: 
 <ul>
 <li>Relatively fast Compute Shader based path tracing</li>
-<li>Diffuse, Glossy(kinda), Dielectric(think of glass), Conductor(metal), Diffuse Transmission, Emissive</li>
+<li>Diffuse, Glossy(kinda), Dielectric(think of glass), Conductor(metal), Diffuse Transmission, Emissive, and Plastic materials</li>
 <li>Ability to move, add, and remove objects during play</li>
 <li>Ability to update material properties on the fly during play</li>
 <li>SVGF Denoiser and Atrous Denoiser</li>
@@ -139,10 +139,9 @@ BVH Options Description -
  ## Materials
  <ul>
   <li>Emission - Pretty self explanatory, the higher it is, the bright the object is(and the higher chance it will be sampled for NEE)</li>
-  <li>Roughness - Applys to Conductors and Dielectrics - Higher roughness makes objects more rough, but in Diffuse Transmission it basically represents how clear the material is</li>
-  <li>Eta - For Conductors it changes the color of reflected light, but inverted, but for Dielectrics, only the x component is used, and that X component is the Dielectrics IOR(Index of Refraction, with 1 being air), and for SSS(see below), it is used the same as for conductors</li>
+  <li>Roughness - Applys to Conductors, Dielectrics, glossy, Diffuse Transmission, and plastics - Higher roughness makes objects more rough, but in Diffuse Transmission it basically represents how clear the material is</li>
+  <li>Eta - For Conductors it changes the color of reflected light, but inverted, but for Dielectrics, only the x component is used, and that X component is the Dielectrics IOR(Index of Refraction, with 1 being air), and for Subsurface Scattering, it is used the same as for conductors, and the same for Plastic materials</li>
   <li>Base Color - So this will be automatically set to whatever the material of the objects color is, and it will also be overridden by textures, but its there so you can manually change it, works for all material types</li>
-  <li>Mat Type - 0 is diffuse(if you comment out the UsePretty in the RayTracingShader.compute, otherwise this is glossy) - 1 is Conductor(Metallic) - 2 is Dielectric(so transparent/glassy materials) - 3 is glossy - 4 is mask(but is not used yet due to performance things) - 5 is a "Volumetric" material(not very good yet though) - 6 is hacked together "SubSurface Scattering"(SSS) - and 7 is Diffuse Transmission, with roughness defining how close to the origional direction the new ray will go</li>
 </ul>
   
 # Sample Images(Taken from various stages of development)
