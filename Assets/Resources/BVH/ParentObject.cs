@@ -153,6 +153,26 @@ public void ClearAll() {
     DestroyImmediate(EmissiveAtlas); 
 }
 
+public void OnApplicationQuit() {
+    if(VertexBuffers != null) {
+        for(int i = 0; i < SkinnedMeshes.Length; i++) {
+            VertexBuffers[i].Dispose();
+            IndexBuffers[i].Dispose();
+            NodeBuffer.Dispose();
+            AdvancedTriangleBuffer.Dispose();
+            VertexBufferOut.Dispose();
+            StackBuffer.Dispose();
+            CWBVHIndicesBuffer.Dispose();
+            BVHDataBuffer.Dispose();
+            ToBVHIndexBuffer.Dispose();
+            WorkingBuffer.Dispose();
+        }
+    }
+    if(TriBuffer != null) {
+        TriBuffer.Dispose();
+        BVHBuffer.Dispose();
+    }
+}
 public void init() {
     InstanceID = this.GetInstanceID();
     Name = this.name;
