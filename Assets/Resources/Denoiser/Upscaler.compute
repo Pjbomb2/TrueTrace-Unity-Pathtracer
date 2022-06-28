@@ -1,5 +1,5 @@
 #pragma kernel kernel_upsample
-
+#include "UnityCG.cginc"
 
 int source_width;
 int source_height;
@@ -19,12 +19,49 @@ SamplerState sampler_DepthTex;
 Texture2D<float4> Albedo;
 Texture2D<float4> MotionVectors;
 
-bool IsValid(float CenterDepth, float3 CenterNormal, float2 Uv) {
-    if(Uv.x > 1.0f || Uv.y > 1.0f || Uv.x < 0 || Uv.y < 0) return false;
-    bool DT = abs(CenterDepth - DepthTex.SampleLevel(sampler_DepthTex, Uv, 0).x) < 0.001f;
-    bool NT = dot(CenterNormal, NormalTex.SampleLevel(sampler_NormalTex, Uv, 0).xyz * 2.0f - 1.0f) < 0.99f;
+Texture2D<float4> PosTex;
 
-    return DT && NT;
+float3 CamPos;
+float FarPlane;
+
+uint pixel_index;
+
+uint curframe;
+uint cursam;
+
+uint hash_with(uint seed, uint hash) {
+    // Wang hash
+    seed = (seed ^ 61) ^ hash;
+    seed += seed << 3;
+    seed ^= seed >> 4;
+    seed *= 0x27d4eb2d;
+    return seed;
+}
+uint pcg_hash(uint seed) {
+    uint state = seed * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return (word >> 22u) ^ word;
+}
+float2 random(uint samdim) {
+    uint hash = pcg_hash((pixel_index * (uint)112 + samdim) * (24 + 1) + curframe);
+
+    const static float one_over_max_unsigned = asfloat(0x2f7fffff);
+
+    float x = hash_with(cursam, hash) * one_over_max_unsigned;
+    float y = hash_with(cursam + 0xdeadbeef, hash) * one_over_max_unsigned;
+
+    return float2(x,y);
+}
+
+
+
+
+bool IsValid(float CenterDepth, float3 CenterNormal, float2 Uv) {
+   // if(Uv.x > 1.0f || Uv.y > 1.0f || Uv.x < 0 || Uv.y < 0) return false;
+    bool DT = abs(CenterDepth - Linear01Depth(DepthTex.SampleLevel(sampler_DepthTex, Uv, 0).x) * FarPlane) < 0.1f * CenterDepth;
+    bool NT = dot(CenterNormal, NormalTex.SampleLevel(sampler_NormalTex, Uv, 0).xyz * 2.0f - 1.0f) < 0.9f;
+
+    return DT && true;
 }
 
 [numthreads(16,16,1)]
@@ -32,26 +69,36 @@ void kernel_upsample (int3 id : SV_DispatchThreadID)
 {
     if (id.x >= target_width || id.y >= target_height) return;
     
-
-    float2 UV = float2(id.xy) / float2(target_width, target_height);
+ pixel_index = id.y * target_width + id.x;
+    float2 jitter = random(1) - 0.5f;
+    float2 UV = float2(id.xy+jitter) / float2(target_width, target_height);
     float2 texel = 1.0f / float2(target_width, target_height);
     float2 texel2 = 1.0f / float2(source_width, source_height);
-    float2 newUV = UV - MotionVectors[id.xy].xy;
-    newUV.y += texel2;
-    float CenterDepth = DepthTex.SampleLevel(sampler_DepthTex, newUV, 0).x;
-    float3 CenterNormal = NormalTex.SampleLevel(sampler_NormalTex, newUV, 0).xyz * 2.0f - 1.0f;
-    float3 TotalChange = Input.SampleLevel(sampler_Input_trilinear_clamp, UV, 0).xyz;
-    int ConfirmedSamples = 0;
+    float2 newUV = UV + MotionVectors[id.xy].xy;
 
+    uint2 newID = ((newUV) * float2(source_width, source_height));
+    float2 newUV2 = (newID) / float2(source_width, source_height);
+ //   newUV += texel2 / 2.0f;
+ uint2 newID2 = (newUV + texel2) * float2(target_width, target_height) - 0.5f;
+ newUV = newID2 / float2(target_width, target_height);
+    float CenterDepth =  Linear01Depth(DepthTex[newID2].x) * FarPlane;
+    float3 CenterNormal = NormalTex.SampleLevel(sampler_NormalTex, newUV, 0).xyz * 2.0f - 1.0f;
+    float3 TotalChange = 0.0f;//Input.SampleLevel(sampler_Input_trilinear_clamp, newUV, 0).xyz;
+    int ConfirmedSamples = 0;
+//    float3 OrigDepth = length(, CamPos);
+
+    float closestdist = 10000000.0f;
     for(int i = -1; i <= 1; i++) {
         [unroll]for(int j = -1; j <= 1; j++) {
-            if(i == 0 && j == 0) continue;
+           // if(i == 0 && j == 0) continue;
             [branch]if(IsValid(CenterDepth, CenterNormal, newUV + float2(texel.x * i, texel.y * j))) {
                 TotalChange += Input.SampleLevel(sampler_Input_trilinear_clamp, newUV + texel * float2(i,j), 0).xyz;
                 ConfirmedSamples++;
+                if(closestdist > abs(CenterDepth - Linear01Depth(DepthTex.SampleLevel(sampler_DepthTex, newUV + texel * float2(i,j), 0).x) * FarPlane)) {
+                    closestdist = Linear01Depth(DepthTex.SampleLevel(sampler_DepthTex, newUV + texel * float2(i,j), 0).x) * FarPlane;
+                }
             }
         }
     }
-    if(CenterDepth == 0 || IsValid(CenterDepth, CenterNormal, newUV)) Output[id.xy] = float4(Input.SampleLevel(sampler_Input_trilinear_clamp, UV, 0).xyz, 1.0f);
-    else Output[id.xy] = lerp(Output[id.xy], float4((TotalChange / (ConfirmedSamples + 1)) * Albedo[id.xy].xyz * 2.0f,1.0f), 0.9f);
+    Output[id.xy] = lerp(Output[id.xy] * Albedo[id.xy].xyzw, float4((TotalChange / (ConfirmedSamples + 1)) * Albedo[newID2].xyz,1.0f), 0.5f);
 }

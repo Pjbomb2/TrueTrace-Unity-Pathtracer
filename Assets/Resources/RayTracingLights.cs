@@ -24,7 +24,14 @@ public class RayTracingLights : MonoBehaviour {
         Emission = new Vector3(col[0], col[1], col[2]) * ThisLight.intensity;
         Direction = (ThisLight.type == LightType.Directional) ? -this.transform.forward : (ThisLight.type == LightType.Spot) ? Vector3.Normalize(this.transform.forward) : new Vector3(0.0f, 0.0f, 0.0f);
         Type = (ThisLight.type == LightType.Point) ? 0 : (ThisLight.type == LightType.Directional) ? 1 : 2; //this.transform.TransformDirection(Vector3.forward)
-        SpotAngle = (ThisLight.type == LightType.Spot) ? (new Vector2(ThisLight.spotAngle, ThisLight.innerSpotAngle) * (3.14159f / 180.0f) * 0.15f) : new Vector2(0.0f, 0.0f);
+        if(ThisLight.type == LightType.Spot) {
+            float innerCos = Mathf.Cos(Mathf.Deg2Rad * 0.5f * ThisLight.innerSpotAngle);
+            float outerCos = Mathf.Cos(Mathf.Deg2Rad * 0.5f * ThisLight.spotAngle);
+            float angleRangeInv = 1.0f / Mathf.Max(innerCos - outerCos, 0.001f);
+            SpotAngle = new Vector2(angleRangeInv, -outerCos * angleRangeInv);
+        } else {
+            SpotAngle = new Vector2(0.0f, 0.0f);
+        }
         Energy = luminance(Emission.x, Emission.y, Emission.z);
     }
 

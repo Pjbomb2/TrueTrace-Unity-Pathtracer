@@ -397,13 +397,17 @@ public class Denoiser {
 
 
 
-    public void ExecuteUpsample(ref RenderTexture Input, ref RenderTexture Output) {//need to fix this so it doesnt create new textures every time
+    public void ExecuteUpsample(ref RenderTexture Input, ref RenderTexture Output, ref RenderTexture OrigPos, int curframe, int cursample) {//need to fix this so it doesnt create new textures every time
         UnityEngine.Profiling.Profiler.BeginSample("Upscale");
+        Upscaler.SetInt("curframe", curframe);
+        Upscaler.SetInt("cursam", cursample);
         Upscaler.SetInt("source_width", Input.width);
         Upscaler.SetInt("source_height", Input.height);
         Upscaler.SetInt("target_width", Output.width);
         Upscaler.SetInt("target_height", Output.height);
-
+        Upscaler.SetTexture(UpsampleKernel, "PosTex", OrigPos);
+        Upscaler.SetVector("CamPos", _camera.transform.position);
+        Upscaler.SetFloat("FarPlane", _camera.farClipPlane);
         Upscaler.SetTextureFromGlobal(UpsampleKernel, "Albedo", "_CameraGBufferTexture0");
         Upscaler.SetTextureFromGlobal(UpsampleKernel, "DepthTex", "_CameraDepthTexture");
         Upscaler.SetTextureFromGlobal(UpsampleKernel, "NormalTex", "_CameraGBufferTexture2");

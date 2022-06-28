@@ -2106,7 +2106,7 @@ inline float average_fresnel(float ior) {
 
 static const int NumSamples = 8;
 
-void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, RayHit hit, uint2 Uv, inout bool terminated, float2 NormalUV, bool HitVoxel) {//main function
+void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, RayHit hit, uint2 Uv, inout bool terminated, float2 NormalUV, bool HitVoxel, bool IsEmissiveTex) {//main function
 
     float3 pos = ray.direction * hit.t + ray.origin;
     float3 PrevDirection = ray.direction;
@@ -2163,7 +2163,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
         } else {
             Color.Indirect += Color.throughput * hitDat.emmis * hitDat.surfaceColor;
         }
-        return;
+        if(IsEmissiveTex) return;
     }
     float3 throughput = Color.throughput;
 
@@ -2193,7 +2193,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
             ray.direction = normalize(mul(tempraydir, GetTangentSpace(-norm)));
         break;
         case 3://"Glossy" material
-            ray.direction = normalize(mul(sample(pdf), GetTangentSpace(norm)) * hitDat.roughness + reflect(ray.direction, norm));
+            ray.direction = normalize(mul(sample(pdf), GetTangentSpace(norm)) * hitDat.roughness + reflect(ray.direction, norm) * (1.0f - hitDat.roughness));
             throughput *= hitDat.surfaceColor;
         break;
         case 4://mask material
@@ -2329,11 +2329,8 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
         float Attenuation = 1.0f;
         if(!IsDirectional && !IsAboveHorizon) {
             float theta = dot(to_light, -LightNorm);
-            if(theta > _UnityLights[triindex].SpotAngle.x) {
+                max(Attenuation = saturate(dot(to_light, -LightNorm) * _UnityLights[triindex].SpotAngle.x + _UnityLights[triindex].SpotAngle.y),0.0001f);
                 IsAboveHorizon = true;
-                float epsilon = _UnityLights[triindex].SpotAngle.x - _UnityLights[triindex].SpotAngle.y;
-                Attenuation = clamp((theta - _UnityLights[triindex].SpotAngle.x) / epsilon, 0.0f, 1.0f);
-            }
         }
         
         bool validbsdf = false;
@@ -2386,7 +2383,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                 }
 
                 float w = power_heuristic(light_pdf, bsdf_pdf);//For some reason 1 works way better for point lights
-                float3 Illum = (throughput * Radiance  * bsdf_value * w / light_pdf);//throughput * G * ((Radiance * w * bsdf_value) / light_pdf) * Attenuation;
+                float3 Illum = (((CurBounce == 0) ? PrevThroughput : throughput) * Radiance  * bsdf_value * w / light_pdf) * Attenuation;//throughput * G * ((Radiance * w * bsdf_value) / light_pdf) * Attenuation;
                 float maxillum = max(max(Illum.x, Illum.y), Illum.z);
                 if(maxillum > random(9).y) {//NEE russian roulette, massively improves performance while giivng the same result
                     uint index3;//Congrats we shoot a shadow ray for NEE
@@ -2557,17 +2554,19 @@ void kernel_shade () {
         float3 RoughnessCol = _RoughnessAtlas.SampleLevel(sampler_RoughnessAtlas, RoughnessUV, 0).xyz;
         hitmat.roughness = pow(RoughnessCol.x * RoughnessCol.x, 0.4545f);
     }
+    bool IsEmissiveTex = false;
     if(TempMat.HasEmissiveTex > 0) {
         float2 EmissionUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].EmissiveTex.xy - _Materials[MaterialIndex].EmissiveTex.zw) + _Materials[MaterialIndex].EmissiveTex.zw;
         float3 EmissCol = _EmissiveAtlas.SampleLevel(sampler_EmissiveAtlas, EmissionUV, 0).xyz;
         if(EmissCol.x > 0.001f) {
+            IsEmissiveTex = true;
             //hitmat.surfaceColor = EmissCol;
-            hitmat.emmis = 1.0f + EmissCol.x;
+            hitmat.emmis = EmissCol.x;
         }
     }
 
     bool DidTerminate = true;//Identifier marking whether we have terminated the ray or if it will continue
-    calcFinalColor(ray, Color, hitmat, bestHit, TempUv, DidTerminate, NormalUV, GlobalRays2[index].HitVoxel);
+    calcFinalColor(ray, Color, hitmat, bestHit, TempUv, DidTerminate, NormalUV, GlobalRays2[index].HitVoxel, IsEmissiveTex);
     GlobalColors[pixel_index] = Color;
 }
 
@@ -2764,7 +2763,7 @@ void kernel_reservoir (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThrea
             if(dot(AlbedoDif, AlbedoDif) < 0.1f) {
                 float normalDot = dot(Norm, prevReservoir.PrevNorm);
                 if(normalDot < 1.5f) {
-                    prevReservoir.M = min(prevReservoir.M, 1 * reservoir.M);
+                    prevReservoir.M = min(prevReservoir.M, 0.25f * reservoir.M);
                     float3 lightPos;
                     float p_hat;
                     if(prevReservoir.MeshIndex != -1) {
@@ -2842,20 +2841,19 @@ void kernel_reservoir_spatial (uint3 id : SV_DispatchThreadID) {//Moved final ac
     Reservoir r = CurrentReservoir[pixel_index];
 
     float2 PrevUV =  (id.xy / float2(screen_width, screen_height) - MotionVectors.SampleLevel(sampler_MotionVectors, id.xy / float2(screen_width, screen_height), 0).xy) * 2.0f - 1.0f;
-    int2 CenterIndex = (int2)floor((PrevUV * 0.5f + 0.5f) * float2(screen_width, screen_height) + 1.0f);
+    int2 CenterIndex = (int2)floor((PrevUV * 0.5f + 0.5f) * float2(screen_width, screen_height));
 
     uint2 neighborOffset;
     uint2 neighborIndex;
     float WorldDepth = length(WorldPosition - camPos);
-    [unroll]for (int i = 0; i < 15;i++) {
-        
-        float radius = 2 * random(i).x;
+        [unroll]for (int i = 0; i < 15;i++) {
+        float radius = 6 * random(i).x;
         float angle = 2.0f * PI * random(i).y;
         
-        int2 neighborIndex = CenterIndex + radius * float2(cos(angle), sin(angle));
+        int2 neighborIndex = round(CenterIndex + radius * float2(cos(angle), sin(angle)));
         
                  
-        if (neighborIndex.x < 0 || neighborIndex.x >= (int)screen_width || neighborIndex.y < 0 || neighborIndex.y >= (int)screen_width)
+        if (neighborIndex.x < 0 || neighborIndex.x >= (int)screen_width || neighborIndex.y < 0 || neighborIndex.y >= (int)screen_height)
         {
             continue;
         }
@@ -2890,9 +2888,6 @@ void kernel_reservoir_spatial (uint3 id : SV_DispatchThreadID) {//Moved final ac
         UpdateReservoir(r, neighborRes.y, p_hat * neighborRes.M * neighborRes.W, random(i + 16).x, neighborRes.MeshIndex, neighborRes.Position, neighborRes.Norm, neighborRes);  
 
     }
-    r.wsum /= r.M;
-    r.M = min(r.M, 20);
-    r.wsum *= r.M;
     float p_hat;
         if(r.MeshIndex != -1) {
             float3 lightPos = r.Position;
@@ -2910,10 +2905,15 @@ void kernel_reservoir_spatial (uint3 id : SV_DispatchThreadID) {//Moved final ac
             float LdotN = saturate(dot(r.PrevNorm, L));
             p_hat = length(r.PrevAlbedo / PI * light.Radiance * LdotN / (Dist));
         }
+        r.wsum /= r.M;
+        r.M = min(r.M, 20);
+        r.wsum *= r.M;
         r.W = (1.0f / max(p_hat, 0.00001f)) * (r.wsum / max(r.M, 1.0f));
 
+    r.WasSuccessful = 0;
     CurrentReservoir[pixel_index] = r;
     
+
 }
 
 RWStructuredBuffer<LightBlockData> WriteBlocks;

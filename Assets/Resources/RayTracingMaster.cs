@@ -598,7 +598,7 @@ public class RayTracingMaster : MonoBehaviour {
         Graphics.Blit(_target, _converged, _addMaterial);
 
         if(SourceWidth != Screen.width) {
-            Denoisers.ExecuteUpsample(ref _converged, ref _FinalTex);//This is a postprocessing pass, but im treating it like its not one, need to move it to after the accumulation
+            Denoisers.ExecuteUpsample(ref _converged, ref _FinalTex, ref _PosTex, FramesSinceStart2, _currentSample);//This is a postprocessing pass, but im treating it like its not one, need to move it to after the accumulation
             Graphics.CopyTexture(_FinalTex,0,0,_IntermediateTex,0,0);
         } else {
             Graphics.CopyTexture(_converged, _FinalTex);
