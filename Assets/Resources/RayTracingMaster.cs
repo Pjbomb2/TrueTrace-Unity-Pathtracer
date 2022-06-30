@@ -537,7 +537,9 @@ public class RayTracingMaster : MonoBehaviour {
         RayTracingShader.SetTextureFromGlobal(DepthCopyKernel, "NormalTex", "_CameraGBufferTexture2");
         RayTracingShader.SetTextureFromGlobal(DepthCopyKernel, "AlbedoTex", "_CameraGBufferTexture0");
         RayTracingShader.SetTexture(DepthCopyKernel, "TempPosTex", _PosTex);
+        RayTracingShader.SetTexture(ShadeKernel, "TempPosTex", _PosTex);
         RayTracingShader.SetTexture(TraceKernel, "_DebugTex", _DebugTex);
+        RayTracingShader.SetTexture(ShadeKernel, "_DebugTex", _DebugTex);
         SetComputeBuffer(OctreeShadowKernel, "CurrentReservoir", (FramesSinceStart2 % 2 == 0) ? _CurrentReservoir : _PreviousReservoir);
         SetComputeBuffer(ReservoirKernel, "CurrentReservoir", (FramesSinceStart2 % 2 == 0) ? _CurrentReservoir : _PreviousReservoir);
         SetComputeBuffer(ReservoirKernel, "PreviousReservoir", (FramesSinceStart2 % 2 == 0) ? _PreviousReservoir : _CurrentReservoir);
@@ -606,10 +608,10 @@ public class RayTracingMaster : MonoBehaviour {
 
         }
 
-         if(UseAtrous) {
-             Denoisers.ExecuteAtrous(AtrousKernelSizes, n_phiGlob, p_phiGlob, c_phiGlob, ref _PosTex, ref _FinalTex, ref _IntermediateTex, ref _Albedo, ref _NormTex);
-             Graphics.CopyTexture(_FinalTex, 0, 0, _IntermediateTex, 0, 0);
-         }
+          if(UseAtrous) {
+              Denoisers.ExecuteAtrous(AtrousKernelSizes, n_phiGlob, p_phiGlob, c_phiGlob, ref _PosTex, ref _FinalTex, ref _IntermediateTex, ref _Albedo, ref _NormTex);
+              Graphics.CopyTexture(_FinalTex, 0, 0, _IntermediateTex, 0, 0);
+          }
          if(AllowAutoExpose) {
             _IntermediateTex.GenerateMips();
              Denoisers.ExecuteAutoExpose(ref _FinalTex, ref _IntermediateTex);

@@ -416,7 +416,7 @@ public class Denoiser {
         Upscaler.SetTexture(UpsampleKernel, "Input", Input);
         Upscaler.SetTexture(UpsampleKernel, "Output", Output);
 
-        Upscaler.Dispatch(UpsampleKernel, threadGroupsX2, threadGroupsY2+ 1, 1);
+        Upscaler.Dispatch(UpsampleKernel, threadGroupsX2, threadGroupsY2, 1);
         UnityEngine.Profiling.Profiler.EndSample();
 
     }

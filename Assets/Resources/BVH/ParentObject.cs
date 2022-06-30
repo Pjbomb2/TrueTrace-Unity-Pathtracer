@@ -937,17 +937,17 @@ for(int i = 0; i < TotalObjects; i++) {
                 float radiance = luminance(Radiance.x, Radiance.y, Radiance.z);
                 float area = AreaOfTriangle(ParentMat * V1, ParentMat * V2, ParentMat * V3);
                 float e = radiance * area;
-                TotalEnergy += e;
-                TotEnergy += e;
+                TotalEnergy += area;
+                TotEnergy += area;
 
                 LightTriangles.Add(new CudaLightTriangle() {
                     pos0 = V1,
                     posedge1 = (V2 - V1),
                     posedge2 = (V3 - V1),
                     Norm = ((TempPrim.Norm1 + TempPrim.Norm2 + TempPrim.Norm3) / 3.0f),
-                    radiance = _Materials[TempPrim.MatDat].emmissive * _Materials[TempPrim.MatDat].BaseColor * area,
+                    radiance = _Materials[TempPrim.MatDat].emmissive * _Materials[TempPrim.MatDat].BaseColor,
                     sumEnergy = TotalEnergy,
-                    energy = e,
+                    energy = area,
                     area = area
                     });
             }

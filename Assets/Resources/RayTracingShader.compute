@@ -73,7 +73,7 @@ struct LightTriangleData {
 
     float3 radiance;
     float sumEnergy;
-    float energy;
+    float pdf;
     float area;
 };
 
@@ -1345,7 +1345,7 @@ int LightMeshCount;
 struct LightMeshData {
     float4x4 Inverse;
     float3 Center;
-    float energy;
+    float pdf;
     float CDF;
     int StartIndex;
     int IndexEnd;
@@ -1356,7 +1356,7 @@ struct LightData {
     float3 Radiance;
     float3 Position;
     float3 Direction;
-    float energy;
+    float pdf;
     float CDF;
     int Type;
     float2 SpotAngle;
@@ -1430,14 +1430,14 @@ int SelectUnityLight() {
     float e = _UnityLights[unitylightcount - 1].CDF * rand_light.x + _UnityLights[0].CDF;
     int low = 0;
     int high = unitylightcount - 1;
-    if(e > _UnityLights[high - 1].energy + _UnityLights[high - 1].CDF) return high;
+    if(e > _UnityLights[high - 1].pdf + _UnityLights[high - 1].CDF) return high;
     int mid = -1;
     while(low < high) {
         int mid = (low + high) >> 1;
         LightData thislight = _UnityLights[mid];
         if(e < thislight.CDF)
             high = mid;
-        else if(e > thislight.CDF + thislight.energy)
+        else if(e > thislight.CDF + thislight.pdf)
             low = mid + 1;
         else
             return mid;
@@ -1453,17 +1453,17 @@ int SelectLight(int MeshIndex) {//Need to check these to make sure they arnt sim
     const float2 rand_light = random(3);
     const int StartIndex = _LightMeshes[MeshIndex].StartIndex;
     const int IndexEnd = _LightMeshes[MeshIndex].IndexEnd;
-    float e = LightTriangles[IndexEnd - 1].sumEnergy * rand_light.x + LightTriangles[StartIndex].energy;
+    float e = LightTriangles[IndexEnd - 1].sumEnergy * rand_light.x + LightTriangles[StartIndex].pdf;
     int low = StartIndex;
     int high = IndexEnd - 1;
-    if(e > LightTriangles[high - 1].energy + LightTriangles[high - 1].sumEnergy) return high;
+    if(e > LightTriangles[high - 1].pdf + LightTriangles[high - 1].sumEnergy) return high;
     int mid = -1;
     while(low < high) {
         int mid = (low + high) >> 1;
         LightTriangleData tri = LightTriangles[mid];
         if(e < tri.sumEnergy)
             high = mid;
-        else if(e > tri.sumEnergy + tri.energy)
+        else if(e > tri.sumEnergy + tri.pdf)
             low = mid + 1;
         else
             return mid;
@@ -1477,17 +1477,17 @@ int SelectLight(int MeshIndex) {//Need to check these to make sure they arnt sim
 int SelectLightMesh() {//Select mesh to sample light from
     if(LightMeshCount == 1) return 0;
     const float2 rand_mesh = random(4);
-    float e = _LightMeshes[LightMeshCount - 1].CDF * rand_mesh.x + _LightMeshes[0].energy;
+    float e = _LightMeshes[LightMeshCount - 1].CDF * rand_mesh.x + _LightMeshes[0].pdf;
     int low = 0;
     int high = LightMeshCount - 1;
-    if(e > _LightMeshes[high - 1].energy + _LightMeshes[high - 1].CDF) return high;
+    if(e > _LightMeshes[high - 1].pdf + _LightMeshes[high - 1].CDF) return high;
     int mid = -1;
     while(low < high) {
         int mid = (low + high) >> 1;
         LightMeshData mesh = _LightMeshes[mid];
         if(e < mesh.CDF)
             high = mid;
-        else if(e > mesh.CDF + mesh.energy)
+        else if(e > mesh.CDF + mesh.pdf)
             low = mid + 1;
         else
             return mid;
@@ -2150,9 +2150,11 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
          if(abs(norm.x) == abs(norm.y) == abs(norm.z)) norm = Geomnorm;
      }
 
-    if(CurBounce == 0) {//Setting textures for denosier to use
-        TempAlbedoTex[Uv] = float4((hitDat.MatType == 2) ? float3(1,1,1) : hitDat.surfaceColor,1);
+    [branch]if(CurBounce == 0 || TempAlbedoTex[Uv].w == -1) {//Setting textures for denosier to use
+        TempAlbedoTex[Uv] = ((hitDat.MatType == 2) ? float4(1,1,1,-1) : float4(hitDat.surfaceColor,1));
         TempNormTex[Uv] = float4(norm, 1);
+        TempPosTex[Uv] = float4(pos,1);
+
     }
 
     [branch]if(hitDat.emmis > 0.0f) {//if we hit a light, this ray is done
@@ -2249,13 +2251,13 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
     if(!valid) return;//If the ray failed, we have no choice but to terminate this path
     ray.origin = Geomnorm * 0.001f + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
 
-    [branch]if(UseNEE || AllowVolumetrics) {//Next event estimation
+    [branch]if((UseNEE || AllowVolumetrics)) {//Next event estimation
             float3 pos2;
             float3 LightNorm;
             int triindex;
             bool IsAboveHorizon = true;
             bool IsDirectional = false;
-            float MeshChance = 0.0f;
+            float LightProbability = 0.0f;
             bool UseUnityLight;
         [branch]if(UseRestir && CurBounce == 0) {
              Reservoir CurRes = CurrentReservoir[Uv.x + Uv.y * screen_width];
@@ -2279,12 +2281,12 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                         IsAboveHorizon = false;
                     break;
                 }
-                MeshChance = _UnityLights[triindex].energy / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF);
+                LightProbability = 1.0f;//_UnityLights[triindex].pdf / (_LightMeshes[LightMeshCount - 1].CDF);
             } else {
                triindex = CurRes.y;
                 pos2 = CurRes.Position;
                 LightNorm = CurRes.Norm;
-                MeshChance = (LightTriangles[triindex].energy / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));//unused, needs more testing
+                LightProbability = (LightTriangles[triindex].pdf / (_LightMeshes[LightMeshCount - 1].CDF));//unused, needs more testing
             }
         } else {
             UseUnityLight = (unitylightcount != 0) ? (LightMeshCount != 0) ? (random(11).x <= (_UnityLights[unitylightcount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF))) : true : false;//Choose whether to sample unity lights or mesh lights based off which is more powerful
@@ -2308,7 +2310,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                         IsAboveHorizon = false;
                     break;
                 }
-                MeshChance = (_UnityLights[triindex].energy / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
+                LightProbability = (_UnityLights[triindex].pdf / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
             } else {
                 int MeshIndex = SelectLightMesh();
                 triindex = SelectLight(MeshIndex);
@@ -2317,7 +2319,8 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                 float2 CurUv = sample_triangle(rand_triangle.x, rand_triangle.y);
                 pos2 = mul(_LightMeshes[MeshIndex].Inverse, float4(CurTri.pos0 + CurUv.x * CurTri.posedge1 + CurUv.y * CurTri.posedge2, 0.0f)).xyz + _LightMeshes[MeshIndex].Center;
                 LightNorm = normalize(mul(_LightMeshes[MeshIndex].Inverse, float4(LightTriangles[triindex].Norm, 0.0f)).xyz);
-                MeshChance = (LightTriangles[triindex].energy / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));//unused, needs more testing
+                LightProbability = (LightTriangles[triindex].pdf / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));//unused, needs more testing
+           
             }
         }
         float3 to_light = pos2 - ray.origin;
@@ -2329,7 +2332,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
         float Attenuation = 1.0f;
         if(!IsDirectional && !IsAboveHorizon) {
             float theta = dot(to_light, -LightNorm);
-                max(Attenuation = saturate(dot(to_light, -LightNorm) * _UnityLights[triindex].SpotAngle.x + _UnityLights[triindex].SpotAngle.y),0.0001f);
+                Attenuation = max(saturate(dot(to_light, -LightNorm) * _UnityLights[triindex].SpotAngle.x + _UnityLights[triindex].SpotAngle.y),0.0001f);
                 IsAboveHorizon = true;
         }
         
@@ -2367,23 +2370,18 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
         }
 
         if(validbsdf && IsAboveHorizon && UseNEE) {
-            float G = max(0.0, dot(norm, to_light)) * max(0.0, -dot(to_light, LightNorm)) / distance_to_light_squared;
-            if(G > 0.0f) {
                 float light_pdf;
                 float3 Radiance;
                 if(UseUnityLight) {
-                    Radiance = _UnityLights[triindex].Radiance / MeshChance;
-                    light_pdf = luminance(Radiance.x, Radiance.y, Radiance.z) * distance_to_light_squared / (cos_theta_light * (_UnityLights[unitylightcount - 1].CDF));
-                    //Radiance *= (screen_width / 2 > Uv.x) ? 100.0f : 1.0f;
-                  //  Radiance /= (_UnityLights[unitylightcount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
+                    Radiance = _UnityLights[triindex].Radiance;
+                    light_pdf = distance_to_light_squared / (cos_theta_light * 3.14159f);
                 } else {
-                    Radiance = LightTriangles[triindex].radiance / MeshChance;
-                    light_pdf = luminance(Radiance.x, Radiance.y, Radiance.z) * distance_to_light_squared / (cos_theta_light * _LightMeshes[LightMeshCount - 1].CDF);
-                    //Radiance /= (_LightMeshes[LightMeshCount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
+                    Radiance = LightTriangles[triindex].radiance;
+                    light_pdf = distance_to_light_squared / (cos_theta_light * LightTriangles[triindex].area);
                 }
 
-                float w = power_heuristic(light_pdf, bsdf_pdf);//For some reason 1 works way better for point lights
-                float3 Illum = (((CurBounce == 0) ? PrevThroughput : throughput) * Radiance  * bsdf_value * w / light_pdf) * Attenuation;//throughput * G * ((Radiance * w * bsdf_value) / light_pdf) * Attenuation;
+                float w = power_heuristic(light_pdf, bsdf_pdf);
+                float3 Illum = (PrevThroughput * Radiance * bsdf_value * w  / light_pdf) * Attenuation / LightProbability;//throughput * G * ((Radiance * w * bsdf_value) / light_pdf) * Attenuation;
                 float maxillum = max(max(Illum.x, Illum.y), Illum.z);
                 if(maxillum > random(9).y) {//NEE russian roulette, massively improves performance while giivng the same result
                     uint index3;//Congrats we shoot a shadow ray for NEE
@@ -2398,20 +2396,22 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                     ShadowRaysBuffer[index3].HitMesh = true;
                 }
 
-            }
         }
+
+
+
         [branch]if(AllowVolumetrics) {
 
 
             float3 to_light;
             float3 Radiance;
             if(UseUnityLight) { 
-                Radiance = _UnityLights[triindex].Radiance / MeshChance;
+                Radiance = _UnityLights[triindex].Radiance / LightProbability;
                 LightData Light = _UnityLights[triindex];
                 pos2 = (IsDirectional) ? PrevOrigin + Light.Direction * 15000.0f : Light.Position;
                 LightNorm = -Light.Direction;
             } else {
-                Radiance = LightTriangles[triindex].radiance / MeshChance;
+                Radiance = LightTriangles[triindex].radiance / LightProbability;
             }
 
             float dist;
@@ -2579,7 +2579,6 @@ void kernel_finalize (uint3 id : SV_DispatchThreadID) {//Moved final accumulatio
     
     if(id.x >= screen_width || id.y >= screen_height) return;
     int final_pixel_index = id.y * screen_width + id.x;
-
     Result[id.xy] = float4((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect) * AlbedoTex[id.xy].xyz + GlobalColors[final_pixel_index].Fog, 1.0f);
 
 }
