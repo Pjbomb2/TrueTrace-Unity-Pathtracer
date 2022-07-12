@@ -1,7 +1,7 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>Need More Ideas</li>
+  <li>Reducing ReSTIR Time</li>
 </ul>
 Currently needs to be done but havent started:
 <ul>
@@ -145,6 +145,8 @@ BVH Options Description -
   
 # Sample Images(Taken from various stages of development)
 
+![](/Images/RealisticSponza.png)
+![](/Images/AnotherRestir.png)
 ![](/Images/Blender1.png)
 ![](/Images/Blender2.png)
 ![](/Images/ReSTIR5.png)
