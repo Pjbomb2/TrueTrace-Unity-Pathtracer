@@ -2713,7 +2713,7 @@ void kernel_finalize (uint3 id : SV_DispatchThreadID) {//Moved final accumulatio
     if(id.x >= screen_width || id.y >= screen_height) return;
 //     bool cb = (int(id.x)/64 + int(id.y)/64)%2==0;
     int final_pixel_index = id.y * screen_width + id.x;
-    Result[id.xy] = float4((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect) * ((DiffRes) ? AlbedoTex[id.xy].xyz : AlbedoTex[id.xy].xyz) + GlobalColors[final_pixel_index].Fog, 1.0f);
+    Result[id.xy] = float4((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect) * ((DiffRes) ? 1.0f : AlbedoTex[id.xy].xyz) + GlobalColors[final_pixel_index].Fog, 1.0f);
 }
 
 

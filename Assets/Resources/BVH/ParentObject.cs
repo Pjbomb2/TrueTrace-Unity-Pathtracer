@@ -19,6 +19,7 @@ public Texture2D RoughnessAtlas;
 public Texture2D MetallicAtlas;
 public GraphicsBuffer[] VertexBuffers;
 public GraphicsBuffer[] IndexBuffers;
+public int[] CWBVHIndicesBufferInverted;
 [HideInInspector] public RayTracingObject[] ChildObjects;
 [HideInInspector] public bool MeshCountChanged;
 public AABB[] Triangles;
@@ -51,9 +52,7 @@ public int TotalObjects;
 [HideInInspector] public int LightCount;
 
 [HideInInspector] public int ConstructKernel;
-[HideInInspector] public int RemeshKernel;
 [HideInInspector] public int RefitLayerKernel;
-[HideInInspector] public int TriConvertKernel;
 [HideInInspector] public int NodeUpdateKernel;
 [HideInInspector] public int NodeCompressKernel;
 [HideInInspector] public int NodeInitializerKernel;
@@ -188,9 +187,7 @@ public void init() {
     HasCompleted = false;
     MeshRefit =  Resources.Load<ComputeShader>("BVH/BVHRefitter");
     ConstructKernel = MeshRefit.FindKernel("Construct");
-    RemeshKernel = MeshRefit.FindKernel("Remesh");
     RefitLayerKernel = MeshRefit.FindKernel("RefitLayer");
-    TriConvertKernel = MeshRefit.FindKernel("TriFormatConvert");
     NodeUpdateKernel = MeshRefit.FindKernel("NodeUpdate");
     NodeCompressKernel = MeshRefit.FindKernel("NodeCompress");
     NodeInitializerKernel = MeshRefit.FindKernel("NodeInitializer");
@@ -382,8 +379,7 @@ private void CreateAtlas() {//Creates texture atlas
             BaseColor = Obj.MaterialObject.BaseColor[CurrentObjectOffset],
             emmissive = Obj.MaterialObject.emmission[CurrentObjectOffset],
             Roughness = Obj.MaterialObject.Roughness[CurrentObjectOffset],
-            MatType = (int)Obj.MaterialObject.MaterialOptions[CurrentObjectOffset],
-            eta = Obj.MaterialObject.eta[CurrentObjectOffset]
+            MatType = (int)Obj.MaterialObject.MaterialOptions[CurrentObjectOffset]
         });
         Obj.MaterialObject.MaterialIndex[CurrentObjectOffset] = CurMat;
         Obj.MaterialObject.LocalMaterialIndex[CurrentObjectOffset] = CurMat;
@@ -595,6 +591,11 @@ unsafe public void Construct() {
     ToBVHIndex = new int[BVH.cwbvhnode_count];
     
     if(IsSkinnedGroup) {
+        CWBVHIndicesBufferInverted = new int[BVH.cwbvh_indices.Length];
+        int CWBVHIndicesBufferCount = CWBVHIndicesBufferInverted.Length;
+        for(int i = 0; i < CWBVHIndicesBufferCount; i++) {
+            CWBVHIndicesBufferInverted[BVH.cwbvh_indices[i]] = i;
+        }
         NodePair = new List<NodeIndexPairData>();
         NodePair.Add(new NodeIndexPairData());
         DocumentNodes(0, 0, 1, 0, false, 0);
@@ -747,7 +748,7 @@ public void RefitMesh(ref ComputeBuffer RealizedAggNodes) {
         StackBuffer = new ComputeBuffer(ForwardStack.Length, 64);
         StackBuffer.SetData(ForwardStack);
         CWBVHIndicesBuffer = new ComputeBuffer(BVH.cwbvh_indices.Length, 4);
-        CWBVHIndicesBuffer.SetData(BVH.cwbvh_indices); 
+        CWBVHIndicesBuffer.SetData(CWBVHIndicesBufferInverted); 
         BVHDataBuffer = new ComputeBuffer(AggNodes.Length, 260);
         BVHDataBuffer.SetData(SplitNodes); 
         SplitNodes.Clear();
@@ -776,6 +777,11 @@ public void RefitMesh(ref ComputeBuffer RealizedAggNodes) {
         UnityEngine.Profiling.Profiler.EndSample();
     int CurVertOffset = 0;
     UnityEngine.Profiling.Profiler.BeginSample("ReMesh Aggregate");
+    MeshRefit.SetBuffer(ConstructKernel, "AdvancedTriangles", AdvancedTriangleBuffer);
+    MeshRefit.SetBuffer(ConstructKernel, "CudaTriArray", TriBuffer);
+    MeshRefit.SetBuffer(ConstructKernel, "CWBVHIndices", CWBVHIndicesBuffer);
+    MeshRefit.SetBuffer(ConstructKernel, "VertexsIn", VertexBufferOut);
+    MeshRefit.SetBuffer(ConstructKernel, "AdvancedTriangles", AdvancedTriangleBuffer);
     for(int i = 0; i < TotalObjects; i++) {
         var SkinnedRootBone = SkinnedMeshes[i].bones[0];
         int IndexCount = IndexCounts[i];
@@ -795,21 +801,6 @@ public void RefitMesh(ref ComputeBuffer RealizedAggNodes) {
         MeshRefit.Dispatch(ConstructKernel, (int)Mathf.Ceil(IndexCount / (float)KernelRatio),1,1);
         CurVertOffset += IndexCount;
     }
-    UnityEngine.Profiling.Profiler.EndSample();
-
-    UnityEngine.Profiling.Profiler.BeginSample("ReMesh ReMesh");
-    MeshRefit.SetInt("gVertexCount", TotalTriangles);
-    MeshRefit.SetBuffer(RemeshKernel, "CWBVHIndices", CWBVHIndicesBuffer);
-    MeshRefit.SetBuffer(RemeshKernel, "VertexsIn", VertexBufferOut);
-    MeshRefit.SetBuffer(RemeshKernel, "AdvancedTriangles", AdvancedTriangleBuffer);
-    MeshRefit.Dispatch(RemeshKernel, (int)Mathf.Ceil(TotalTriangles / (float)KernelRatio),1,1);
-    UnityEngine.Profiling.Profiler.EndSample();
-
-    UnityEngine.Profiling.Profiler.BeginSample("ReMesh TriConvert");
-    MeshRefit.SetInt("NodeCount", TotalTriangles);
-    MeshRefit.SetBuffer(TriConvertKernel, "AdvancedTriangles", AdvancedTriangleBuffer);
-    MeshRefit.SetBuffer(TriConvertKernel, "CudaTriArray", TriBuffer);
-    MeshRefit.Dispatch(TriConvertKernel, (int)Mathf.Ceil(TotalTriangles / (float)KernelRatio),1,1);
     UnityEngine.Profiling.Profiler.EndSample();
 
     UnityEngine.Profiling.Profiler.BeginSample("ReMesh NodeInit");

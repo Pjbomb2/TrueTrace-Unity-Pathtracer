@@ -33,6 +33,37 @@ float3 Scale;
 
 float ArmetureScale;
 
+struct AdvancedTriangle {
+    float3 BBMax;//12
+    float3 BBMin;//24
+    float3 V1, V2, V3;//60
+    float3 Norm1, Norm2, Norm3;//96
+};
+
+RWStructuredBuffer<AdvancedTriangle> AdvancedTriangles;
+
+struct CudaTriangle {
+    float3 pos0;
+    float3 posedge1;
+    float3 posedge2;
+
+    float3 norm0;
+    float3 normedge1;
+    float3 normedge2;
+
+    float3 tan0;
+    float3 tanedge1;
+    float3 tanedge2;
+
+    float2 tex0;
+    float2 texedge1;
+    float2 texedge2;
+
+    uint MatDat;
+};
+
+RWStructuredBuffer<CudaTriangle> CudaTriArray;
+
 [numthreads(KernelRatio,1,1)]
 void Construct (uint3 id : SV_DispatchThreadID)
 {
@@ -80,22 +111,55 @@ void Construct (uint3 id : SV_DispatchThreadID)
     VertexsOut[VertOfst].V2 = (p2 + Offset3);
     VertexsOut[VertOfst].V3 = (p3 + Offset3);
 
-    VertexsOut[VertOfst].Norm1 = mul(float4(mul(float4(n1,0), Transform).xyz,0), Transform2);
-    VertexsOut[VertOfst].Norm2 = mul(float4(mul(float4(n2,0), Transform).xyz,0), Transform2);
-    VertexsOut[VertOfst].Norm3 = mul(float4(mul(float4(n3,0), Transform).xyz,0), Transform2);
+    float3 Norm1 = mul(float4(mul(float4(n1,0), Transform).xyz,0), Transform2);
+    float3 Norm2 = mul(float4(mul(float4(n2,0), Transform).xyz,0), Transform2);
+    float3 Norm3 = mul(float4(mul(float4(n3,0), Transform).xyz,0), Transform2);
+    VertexsOut[VertOfst].Norm1 = Norm1;
+    VertexsOut[VertOfst].Norm2 = Norm2;
+    VertexsOut[VertOfst].Norm3 = Norm3;
+
+
+    const TriangleData Tri = VertexsIn[CWBVHIndices[VertOfst]];
+    float3 BBMax = max(max((p + Offset3), (p2 + Offset3)), (p3 + Offset3));
+    float3 BBMin = min(min((p + Offset3), (p2 + Offset3)), (p3 + Offset3));
+    [unroll]for(int i2 = 0; i2 < 3; i2++) {
+        if(BBMax[i2] - BBMin[i2] < 0.001f) {
+            BBMin[i2] -= 0.001f;
+            BBMax[i2] += 0.001f;
+        }
+    }
+    p += Offset3;
+    p2 += Offset3;
+    p3 += Offset3;
+    AdvancedTriangle TempAdvTri = AdvancedTriangles[CWBVHIndices[VertOfst]];
+    TempAdvTri.BBMax = BBMax;
+    TempAdvTri.BBMin = BBMin;
+    TempAdvTri.V1 = p;
+    TempAdvTri.V2 = p2 - p;
+    TempAdvTri.V3 = p3 - p;
+
+    TempAdvTri.Norm1 = Norm1;
+    TempAdvTri.Norm2 = Norm2 - Norm1;
+    TempAdvTri.Norm3 = Norm3 - Norm1;
+
+    AdvancedTriangles[CWBVHIndices[VertOfst]] = TempAdvTri;
+
+    CudaTriangle TempTri = CudaTriArray[CWBVHIndices[VertOfst]];
+    TempTri.pos0 = TempAdvTri.V1;
+
+    TempTri.posedge1 = TempAdvTri.V2;
+    TempTri.posedge2 = TempAdvTri.V3;
+
+    TempTri.norm0 = TempAdvTri.Norm1;
+
+    TempTri.normedge1 = TempAdvTri.Norm2;
+    TempTri.normedge2 = TempAdvTri.Norm3;
+    CudaTriArray[CWBVHIndices[VertOfst]] = TempTri;
 }
 
 
 #pragma kernel Remesh
 
-struct AdvancedTriangle {
-    float3 BBMax;//12
-    float3 BBMin;//24
-    float3 V1, V2, V3;//60
-    float3 Norm1, Norm2, Norm3;//96
-};
-
-RWStructuredBuffer<AdvancedTriangle> AdvancedTriangles;
 
 
 
@@ -125,6 +189,20 @@ void Remesh (uint3 id : SV_DispatchThreadID)
     TempAdvTri.Norm3 = Tri.Norm3 - Tri.Norm1;
 
     AdvancedTriangles[id.x] = TempAdvTri;
+
+    CudaTriangle TempTri = CudaTriArray[id.x];
+    TempTri.pos0 = TempAdvTri.V1;
+
+    TempTri.posedge1 = TempAdvTri.V2;
+    TempTri.posedge2 = TempAdvTri.V3;
+
+    TempTri.norm0 = TempAdvTri.Norm1;
+
+    TempTri.normedge1 = TempAdvTri.Norm2;
+    TempTri.normedge2 = TempAdvTri.Norm3;
+    CudaTriArray[id.x] = TempTri;
+
+
 
 }
 
@@ -190,54 +268,6 @@ void RefitLayer (uint3 id : SV_DispatchThreadID)
     AllNodes[CurrentParent].BBMax = RunningMax;
     AllNodes[CurrentParent].BBMin = RunningMin;
 
-}
-
-
-
-
-#pragma kernel TriFormatConvert
-
-struct CudaTriangle {
-    float3 pos0;
-    float3 posedge1;
-    float3 posedge2;
-
-    float3 norm0;
-    float3 normedge1;
-    float3 normedge2;
-
-    float3 tan0;
-    float3 tanedge1;
-    float3 tanedge2;
-
-    float2 tex0;
-    float2 texedge1;
-    float2 texedge2;
-
-    uint MatDat;
-};
-
-RWStructuredBuffer<CudaTriangle> CudaTriArray;
-
-
-[numthreads(KernelRatio,1,1)]
-void TriFormatConvert (uint3 id : SV_DispatchThreadID)
-{
-    if(id.x > NodeCount)
-        return;
-
-        CudaTriangle TempTri = CudaTriArray[id.x];
-        AdvancedTriangle tri = AdvancedTriangles[id.x];
-        TempTri.pos0 = tri.V1;
-
-        TempTri.posedge1 = tri.V2;
-        TempTri.posedge2 = tri.V3;
-
-        TempTri.norm0 = tri.Norm1;
-
-        TempTri.normedge1 = tri.Norm2;
-        TempTri.normedge2 = tri.Norm3;
-        CudaTriArray[id.x] = TempTri;
 }
 
 

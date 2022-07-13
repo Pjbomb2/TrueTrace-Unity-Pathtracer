@@ -572,7 +572,7 @@ void kernel_finalize (int3 id : SV_DispatchThreadID)
 {
     if (id.x >= screen_width || id.y >= screen_height) return;
     int pixel_index = id.y * screen_width + id.x;
-    float3 colour = (ColorDirectIn[id.xy].xyz + ColorIndirectIn[id.xy].xyz) * ((DiffRes) ? _Albedo.SampleLevel(sampler_Albedo, id.xy / float2(screen_width, screen_height), 0).xyz : _Albedo.SampleLevel(sampler_Albedo, id.xy / float2(screen_width, screen_height), 0).xyz) + PerPixelRadiance[pixel_index].Fog;
+    float3 colour = (ColorDirectIn[id.xy].xyz + ColorIndirectIn[id.xy].xyz) * ((DiffRes) ? 1.0f : _Albedo.SampleLevel(sampler_Albedo, id.xy / float2(screen_width, screen_height), 0).xyz) + PerPixelRadiance[pixel_index].Fog;
     Result[id.xy] = float4(colour,1);
 
 

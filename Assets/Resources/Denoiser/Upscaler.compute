@@ -8,7 +8,7 @@ int target_width;
 int target_height;
 
 Texture2D<float4> Input;
-SamplerState sampler_Input_point_clamp;
+SamplerState sampler_Input_trilinear_clamp;
 RWTexture2D<float4> Output;
 Texture2D<float4> PrevOutput;
 
@@ -34,6 +34,43 @@ uint curframe;
 uint cursam;
 
 
+float3 Sample(float2 UV) {
+        float3 col = Input.SampleLevel(sampler_Input_trilinear_clamp, UV, 0).xyz;
+
+    // CAS algorithm
+    float max_g = col.y;
+    float min_g = col.y;
+    float4 uvoff = float4(1,0,1,-1)/float4(source_width, source_width, source_height, source_height);
+    float3 colw;
+    float3 col1 = Input.SampleLevel(sampler_Input_trilinear_clamp, UV+uvoff.yw, 0).xyz;
+    max_g = max(max_g, col1.y);
+    min_g = min(min_g, col1.y);
+    colw = col1;
+    col1 = Input.SampleLevel(sampler_Input_trilinear_clamp, UV+uvoff.xy, 0).xyz;
+    max_g = max(max_g, col1.y);
+    min_g = min(min_g, col1.y);
+    colw += col1;
+    col1 = Input.SampleLevel(sampler_Input_trilinear_clamp, UV+uvoff.yz, 0).xyz;
+    max_g = max(max_g, col1.y);
+    min_g = min(min_g, col1.y);
+    colw += col1;
+    col1 = Input.SampleLevel(sampler_Input_trilinear_clamp, UV-uvoff.xy, 0).xyz;
+    max_g = max(max_g, col1.y);
+    min_g = min(min_g, col1.y);
+    colw += col1;
+    float d_min_g = min_g;
+    float d_max_g = 1.-max_g;
+    float A;
+    max_g = max(0., max_g);
+    if (d_max_g < d_min_g) {
+        A = d_max_g / max_g;
+    } else {
+        A = d_min_g / max_g;
+    }
+    A = sqrt(max(0., A));
+    A *= lerp(-.125, -.2, 0.9);
+    return (col + colw * A) / (1.+4.*A);
+}
 
 
 
@@ -51,8 +88,8 @@ void kernel_upsample (int3 id : SV_DispatchThreadID)
     float CurDepth2 = Linear01Depth(DepthTex.SampleLevel(sampler_DepthTex, newUV2, 0).x) * FarPlane;
     float ReprojDepth2 = PrevDepthTex.SampleLevel(sampler_PrevDepthTex, UV, 0).x;
     bool Disocluded = abs(CurDepth - ReprojDepth) > 0.1f * CurDepth || abs(CurDepth2 - ReprojDepth2) > 0.1f * CurDepth2 ;
-    float3 CurrentColor = Input.SampleLevel(sampler_Input_point_clamp, UV, 0).xyz;
-    if(Disocluded || (newUV.x > 1 || newUV.x < 0 || newUV.y > 1 || newUV.y < 0)) Output[id.xy] = float4(CurrentColor,1);
-    else Output[id.xy] = float4(lerp(PrevOutput[newUV * float2(target_width, target_height)], CurrentColor, 0.5f),1);
+    float3 CurrentColor = Input.SampleLevel(sampler_Input_trilinear_clamp, UV, 0).xyz;
+    if(Disocluded || (newUV.x > 1 || newUV.x < 0 || newUV.y > 1 || newUV.y < 0)) Output[id.xy] = float4(CurrentColor * Albedo.SampleLevel(sampler_Input_trilinear_clamp, UV, 0).xyz,1);
+    else Output[id.xy] = float4(lerp(PrevOutput[newUV * float2(target_width, target_height)].xyz, CurrentColor * Albedo.SampleLevel(sampler_Input_trilinear_clamp, UV, 0).xyz, 0.5f),1);
     PrevDepthTexWrite[id.xy] = float4(CurDepth, 0, 0, 1);
 }
