@@ -126,7 +126,7 @@ public int MaxRecursions = 0;
         Octree.Add(TempNode);
         RecursiveBuild(Voxels, OrigionalSize, new Vector3(0,0,0), 0, 0, 0, ref TempNode);
         Octree.RemoveAt(0);
-
+        Debug.Log("3");
         for(int i = 0; i < Octree.Count; i++) {//Ordering the voxels
             var TempVox = Octree[i];
             for(int i2 = 0; i2 < 8; i2++) {
@@ -137,7 +137,7 @@ public int MaxRecursions = 0;
             }
             Octree[i] = TempVox;
         }
-
+        Debug.Log("4");
         OrderedList = new List<OctreeNode>();
         List<OctreeNode> WorkGroup = new List<OctreeNode>();
         List<int> OldIndex = new List<int>();
@@ -146,7 +146,7 @@ public int MaxRecursions = 0;
         OrderedList.Add(Octree[0]);
         OldIndex.Add(0); int Reps = 0;
         OctreeNode[] OrderedOctree = new OctreeNode[Octree.Count];
-        while(WorkGroup.Count != 0 && Reps < 2400000) {//Re-organizing the octree so that the 8 child node come after the parent node every time
+        while(WorkGroup.Count != 0) {//Re-organizing the octree so that the 8 child node come after the parent node every time
             Reps++;
             TempNode = WorkGroup[0];
             int Index = OldIndex[0];
@@ -163,6 +163,7 @@ public int MaxRecursions = 0;
             OrderedList[Index] = TempNode;
 
         }
+                Debug.Log("5");
 
         Octree = new List<OctreeNode>(OrderedList);
         OrderedList.Clear();
@@ -202,5 +203,6 @@ public int MaxRecursions = 0;
                 }
             }
         }
+                Debug.Log("6");
     }
 }

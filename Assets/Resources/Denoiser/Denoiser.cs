@@ -27,6 +27,8 @@ public class Denoiser {
     private RenderTexture _TAAPrev;
     private RenderTexture Intermediate;
     private RenderTexture SuperIntermediate;
+    private RenderTexture PrevDepthTex;
+    private RenderTexture PrevOutputTex;
 
     private ComputeBuffer A;
     public ComputeBuffer B;
@@ -129,6 +131,7 @@ public class Denoiser {
                 _FrameMoment.Release();
                 _History.Release();
                 _TAAPrev.Release();
+                PrevOutputTex.Release();
             }
 
          CreateRenderTexture(ref _ColorDirectIn, false);
@@ -145,6 +148,8 @@ public class Denoiser {
          CreateRenderTexture(ref _FrameMoment, false);
          CreateRenderTexture(ref _History, false);
          CreateRenderTexture2(ref _TAAPrev, false);
+         CreateRenderTexture2(ref PrevDepthTex, false);
+         CreateRenderTexture2(ref PrevOutputTex, false);
         }
     }
     
@@ -211,8 +216,9 @@ public class Denoiser {
         InitRenderTexture();
     }
 
-    public void ExecuteSVGF(int CurrentSamples, int AtrousKernelSize, ref ComputeBuffer _ColorBuffer, ref RenderTexture _target, ref RenderTexture _Albedo, ref RenderTexture _NormTex) {
+    public void ExecuteSVGF(int CurrentSamples, int AtrousKernelSize, ref ComputeBuffer _ColorBuffer, ref RenderTexture _target, ref RenderTexture _Albedo, ref RenderTexture _NormTex, bool DiffRes) {
         InitRenderTexture();
+        SVGF.SetBool("DiffRes", DiffRes);
         Matrix4x4 viewprojmatrix = _camera.projectionMatrix * _camera.worldToCameraMatrix;
         var PrevMatrix = PrevViewProjection;
         SVGF.SetMatrix("viewprojection", viewprojmatrix);
@@ -410,14 +416,23 @@ public class Denoiser {
         Upscaler.SetFloat("FarPlane", _camera.farClipPlane);
         Upscaler.SetTextureFromGlobal(UpsampleKernel, "Albedo", "_CameraGBufferTexture0");
         Upscaler.SetTextureFromGlobal(UpsampleKernel, "DepthTex", "_CameraDepthTexture");
+       // Upscaler.SetTextureFromGlobal(UpsampleKernel, "PrevDepthTex", "_LastCameraDepthTexture");
+        Upscaler.SetTexture(UpsampleKernel, "PrevDepthTex", PrevDepthTex);
         Upscaler.SetTextureFromGlobal(UpsampleKernel, "NormalTex", "_CameraGBufferTexture2");
         Upscaler.SetTextureFromGlobal(UpsampleKernel, "MotionVectors", "_CameraMotionVectorsTexture");
-
+        RenderTexture TempTex = RenderTexture.GetTemporary(Output.descriptor);
+        RenderTexture TempTex2 = RenderTexture.GetTemporary(Output.descriptor);
         Upscaler.SetTexture(UpsampleKernel, "Input", Input);
         Upscaler.SetTexture(UpsampleKernel, "Output", Output);
-
+        Upscaler.SetTexture(UpsampleKernel, "PrevOutput", PrevOutputTex);
+        Upscaler.SetTexture(UpsampleKernel, "PrevDepthTexWrite", TempTex);
         Upscaler.Dispatch(UpsampleKernel, threadGroupsX2, threadGroupsY2, 1);
         UnityEngine.Profiling.Profiler.EndSample();
+        Graphics.CopyTexture(TempTex, PrevDepthTex);
+        Graphics.CopyTexture(Output, PrevOutputTex);
+        RenderTexture.ReleaseTemporary(TempTex);
+        RenderTexture.ReleaseTemporary(TempTex2);
+//PrevDepthTex = Shader.GetGlobalTexture("_LastCameraDepthTexture");
 
     }
 

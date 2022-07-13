@@ -82,6 +82,7 @@ public class EditModeFunctions : EditorWindow {
       public bool UseSVGF = false;
       public bool UseNEE = false;
       public bool UseDoF = false;
+      public float RenderScale = 1.0f;
       public float DoFAperature = 0.2f;
       public float DoFFocal = 1.0f;
       public int SVGF_Atrous_Kernel_Sizes = 6;
@@ -135,6 +136,8 @@ public class EditModeFunctions : EditorWindow {
          Rect ClearParentData = new Rect(10,35,(position.width - 10) / 2, 20);
          Rect BounceCountInput =   new Rect(Mathf.Max((position.width - 10) / 4,145), 60, (position.width - 10) / 4, 20);
          Rect BounceCountLabel =   new Rect(10, 60, Mathf.Max((position.width - 10) / 4,145), 20);
+         Rect RenderScaleLabel =   new Rect(10 + (position.width - 10) / 2 +  + (position.width - 10) / 16, 60, Mathf.Max((position.width - 10) / 4,145), 20);
+         Rect RenderScaleInput =   new Rect(10 + (position.width - 10) / 2 + (position.width - 10) / 4, 60, Mathf.Max((position.width - 10) / 4,145), 20);
          Rect RussianRouletteToggle = new Rect(10, 85, (position.width - 10) / 2, 20);
          Rect DynamicTLASToggle =       new Rect(10, 110, (position.width - 10) / 2, 20);
          Rect AllowConvergeToggle =       new Rect(10, 135, (position.width - 10) / 2, 20);
@@ -146,6 +149,9 @@ public class EditModeFunctions : EditorWindow {
          Rect AllowBloomToggle =       new Rect(10, 235, (position.width - 10) / 2, 20);
          Rect DoFToggle =       new Rect(10, 260, (position.width - 10) / 2, 20);
          int SVGFVertOffset = 285;
+         GUI.Label(RenderScaleLabel, "Render Scale");
+         RenderScale = EditorGUI.FloatField(RenderScaleInput, RenderScale);
+         RayMaster.RenderScale = RenderScale;
          UseDoF = GUI.Toggle(DoFToggle, UseDoF, "Use DoF");
          if(UseDoF) {
             Rect DoF_Aperature_Input = new Rect(Mathf.Max((position.width - 10) / 4,145), SVGFVertOffset, (position.width - 10) / 4, 20);

@@ -20,6 +20,7 @@ public class AssetManager : MonoBehaviour {
     public List<BVHNode8DataCompressed> VoxelTLAS;
     public List<MyMeshDataCompacted> MyMeshesCompacted;
      public List<CudaLightTriangle> AggLightTriangles;
+     public List<int> ToIllumTriBuffer;
     [HideInInspector] public List<LightData> UnityLights;
     public List<Light> Lights;
 
@@ -230,6 +231,7 @@ public class AssetManager : MonoBehaviour {
 
 
     private void init() {
+        ToIllumTriBuffer = new List<int>();
         SunDirection = new Vector3(0,-1,0);
         AddQue = new List<ParentObject>();
         RemoveQue = new List<ParentObject>();
@@ -454,6 +456,7 @@ public class AssetManager : MonoBehaviour {
                     MeshFunctions.SetBuffer(NodeBufferKernel, "InAggNodes", RenderQue[i].BVHBuffer);
                     MeshFunctions.Dispatch(NodeBufferKernel, (int)Mathf.Ceil(RenderQue[i].BVHBuffer.count / 248.0f), 1, 1);
                     if(!RenderQue[i].IsSkinnedGroup) RenderQue[i].Release();
+                    ToIllumTriBuffer.AddRange(RenderQue[i].ToIllumTriBuffer);
 
                     RenderQue[i].NodeOffset = CurNodeOffset;
                     RenderQue[i].TriOffset = CurTriOffset;

@@ -20,7 +20,8 @@ public class RayTracingObject : MonoBehaviour {
 	 		GetComponent<SkinnedMeshRenderer>().BakeMesh(mesh);
 	 	}
 
-		if(emmission == null || emmission.Length != mesh.subMeshCount) {
+		try {
+			if(emmission == null || emmission.Length != mesh.subMeshCount) {
 			int SubMeshCount = mesh.subMeshCount;
 			MaterialOptions = new Options[SubMeshCount];
 			LocalMaterialIndex = new int[mesh.subMeshCount];
@@ -33,10 +34,15 @@ public class RayTracingObject : MonoBehaviour {
 			for(int i = 0; i < SubMeshCount; i++) {
 				MaterialOptions[i] = Options.Diffuse;
 				bool EmissionColored = false;
-				if(SharedMaterials[i].GetTexture("_EmissionMap") != null) {
-					//emmission[i] = 12.0f;
-						//Color Col = ((Texture2D)SharedMaterials[i].GetTexture("_EmissionMap")).GetPixel(8,8,0);
-						//BaseColor[i] = new Vector3(Col.r, Col.g, Col.b);
+				if(SharedMaterials[i].GetTexture("_EmissionMap") != null && SharedMaterials[i].GetTexture("_EmissionMap").width < 32) {
+					emmission[i] = 4.0f;
+					if(SharedMaterials[i].GetTexture("_EmissionMap") != null) {
+						Color Col = ((Texture2D)SharedMaterials[i].GetTexture("_EmissionMap")).GetPixel(8,8,0);
+						BaseColor[i] = new Vector3(Col.r, Col.g, Col.b);
+					} else {
+						Color Col = SharedMaterials[i].GetColor("_EmissionColor");
+						BaseColor[i] = new Vector3(Col.r, Col.g, Col.b).normalized;
+					}
 						EmissionColored = true;
 				}
 				if(SharedMaterials[i].GetFloat("_Mode") == 3.0f) {
@@ -45,6 +51,9 @@ public class RayTracingObject : MonoBehaviour {
 				}
 				if(!EmissionColored) BaseColor[i] = (SharedMaterials[i].mainTexture == null) ? ((SharedMaterials[i].HasProperty("_Color")) ? new Vector3(SharedMaterials[i].color.r, SharedMaterials[i].color.g, SharedMaterials[i].color.b) : new Vector3(0.78f, 0.14f, 0.69f)) : new Vector3(0.78f, 0.14f, 0.69f);
 			}
+		}
+		} catch(System.Exception e) {
+			Debug.Log("ERROR AT: " + this.gameObject.name);
 		}
 		mesh = null;
 	}

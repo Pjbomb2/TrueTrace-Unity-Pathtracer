@@ -289,7 +289,7 @@ void Generate (uint3 id : SV_DispatchThreadID) {
     
     if(id.x >= screen_width || id.y >= screen_height) return;
     pixel_index = id.y * screen_width + id.x;
-    float2 jitter = random(1) - 0.5f;
+    float2 jitter = (random(1) - 0.5f) * float2(screen_width, screen_height) / float2(1920, 1080);
     float2 uv = float2((id.xy + jitter) / float2(screen_width, screen_height) * 2.0f - 1.0f);
     Ray ray = CreateCameraRay(uv);
 
@@ -319,11 +319,11 @@ RWTexture2D<float4>TempAlbedoTex;
 void kernel_depth_copy (uint3 id : SV_DispatchThreadID) {
     
     if(id.x >= screen_width || id.y >= screen_height) return;
-    pixel_index = id.y * screen_width + id.x;
-    float2 Uv = id.xy / float2(screen_width, screen_height);
+    const int this_pixel_index = id.y * screen_width + id.x;
+    const float2 Uv = id.xy / float2(screen_width, screen_height);
     TempNormTex[id.xy] = NormalTex.SampleLevel(sampler_NormalTex, Uv, 0);
     TempAlbedoTex[id.xy] = AlbedoTex.SampleLevel(sampler_AlbedoTex, Uv, 0);
-    TempPosTex[id.xy] = float4(asfloat(GlobalRays2[pixel_index].hits.z) * GlobalRays2[pixel_index].direction + GlobalRays2[pixel_index].origin,1);
+    TempPosTex[id.xy] = float4(asfloat(GlobalRays2[this_pixel_index].hits.z) * GlobalRays2[this_pixel_index].direction + GlobalRays2[this_pixel_index].origin,1);
 }
 
 #pragma kernel kernel_trace 
@@ -660,23 +660,7 @@ int NodesTraversed;
     }
 
     inline uint DecodeUint(const uint data, const uint selection) {
-        switch(selection) {
-            case 0:
-                return (data) & 0xff;
-            break;
-            case 1:
-                return (data >>  8) & 0xff;
-            break;
-            case 2:
-                return (data >> 16) & 0xff;
-            break;
-            case 3:
-                return (data >> 24) & 0xff;
-            break;
-            default:
-                return 0;
-            break;
-        }
+        return (data >> (8 * selection)) & 0xff;
     }
 inline bool rayBoxIntersection(const float3 ray_orig, const float3 inv_dir, const float3 Min, const float3 Max, float tMax, inout float t0) {
     const float3 tmp_min = (Min - ray_orig) * inv_dir;
@@ -912,7 +896,7 @@ struct Reservoir {
 
 RWStructuredBuffer<Reservoir> CurrentReservoir;
 RWStructuredBuffer<Reservoir> PreviousReservoir;
-
+RWStructuredBuffer<Reservoir> SpatialReservoir;
 
 #pragma kernel kernel_shadow
 
@@ -1314,11 +1298,11 @@ void IntersectShadowOctree() {
         while(true) {
             InterlockedAdd(BufferSizes[CurBounce].octree_shadow_rays_retired, 1, ray_index);
             if(ray_index >= (uint)BufferSizes[CurBounce].shadow_rays) return;
-            if(ShadowRaysBuffer[ray_index].HitMesh) { if(CurBounce == 0 && ShadowRaysBuffer[ray_index].IsNotFog) CurrentReservoir[ShadowRaysBuffer[ray_index].PixelIndex].WasSuccessful = 0; continue;}
+            if(ShadowRaysBuffer[ray_index].HitMesh) { if(CurBounce == 0 && ShadowRaysBuffer[ray_index].IsNotFog) CurrentReservoir[ShadowRaysBuffer[ray_index].PixelIndex].W = 0; continue;}
             int pixel_index = ShadowRaysBuffer[ray_index].PixelIndex;
             if(ShadowRaysBuffer[ray_index].IsNotFog) {
-                if(CurBounce == 0) {
-                    CurrentReservoir[pixel_index].WasSuccessful = 1;    
+                if(CurBounce == 0) {    
+//                    CurrentReservoir[ShadowRaysBuffer[ray_index].PixelIndex].WasSuccessful = 1;
                     GlobalColors[pixel_index].Direct += ShadowRaysBuffer[ray_index].illumination;
                 } else {
                     GlobalColors[pixel_index].Indirect +=ShadowRaysBuffer[ray_index].illumination;
@@ -1427,6 +1411,7 @@ HitMat CreateHitMat() {
 int SelectUnityLight() {
     if(unitylightcount == 1) return 0;
     const float2 rand_light = random(5);
+    return clamp((rand_light.y * unitylightcount), 0, unitylightcount - 1);
     float e = _UnityLights[unitylightcount - 1].CDF * rand_light.x + _UnityLights[0].CDF;
     int low = 0;
     int high = unitylightcount - 1;
@@ -1453,6 +1438,7 @@ int SelectLight(int MeshIndex) {//Need to check these to make sure they arnt sim
     const float2 rand_light = random(3);
     const int StartIndex = _LightMeshes[MeshIndex].StartIndex;
     const int IndexEnd = _LightMeshes[MeshIndex].IndexEnd;
+    return clamp((rand_light.y * (IndexEnd - StartIndex)), StartIndex, IndexEnd - 1);
     float e = LightTriangles[IndexEnd - 1].sumEnergy * rand_light.x + LightTriangles[StartIndex].pdf;
     int low = StartIndex;
     int high = IndexEnd - 1;
@@ -1477,6 +1463,7 @@ int SelectLight(int MeshIndex) {//Need to check these to make sure they arnt sim
 int SelectLightMesh() {//Select mesh to sample light from
     if(LightMeshCount == 1) return 0;
     const float2 rand_mesh = random(4);
+return clamp((rand_mesh.y * LightMeshCount), 0, LightMeshCount - 1);
     float e = _LightMeshes[LightMeshCount - 1].CDF * rand_mesh.x + _LightMeshes[0].pdf;
     int low = 0;
     int high = LightMeshCount - 1;
@@ -2103,6 +2090,140 @@ inline float average_fresnel(float ior) {
     }
 
 
+bool VisabilityCheck(Ray ray, float dist) {
+
+    uint2 stack[24];
+    int stack_size = 0;
+    uint ray_index;
+    uint2 current_group;
+
+    uint oct_inv4;
+    int tlas_stack_size;
+    int mesh_id;
+    float max_distance;
+    Ray ray2;
+
+    while(true) {
+        bool inactive = stack_size == 0 && current_group.y == 0;
+
+            ray.direction_inv = rcp(ray.direction);
+            ray2 = ray;
+           
+            oct_inv4 = ray_get_octant_inv4(ray.direction);
+
+            current_group.x = (uint)0;
+            current_group.y = (uint)0x80000000;
+
+            max_distance = dist;
+
+            tlas_stack_size = -1;
+
+        while(true) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
+            uint2 triangle_group;
+            if(current_group.y & 0xff000000) {
+                uint hits_imask = current_group.y;
+                uint child_index_offset = firstbithigh(hits_imask);
+                uint child_index_base = current_group.x;
+
+                current_group.y &= ~(1 << child_index_offset);
+
+                if(current_group.y & 0xff000000) {
+                    stack[stack_size++] = current_group;
+                }
+                uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
+                uint relative_index = countbits(hits_imask & ~(0xffffffff << slot_index));
+                uint child_node_index = child_index_base + relative_index;
+
+                float3 node_0 = cwbvh_nodes[child_node_index].node_0xyz;
+                uint node_0w = cwbvh_nodes[child_node_index].node_0w;
+                
+                uint4 node_1 = cwbvh_nodes[child_node_index].node_1;
+                uint4 node_2 = cwbvh_nodes[child_node_index].node_2;
+                uint4 node_3 = cwbvh_nodes[child_node_index].node_3;
+                uint4 node_4 = cwbvh_nodes[child_node_index].node_4;
+
+                uint hitmask = cwbvh_node_intersect(ray, oct_inv4, max_distance, node_0, node_0w, node_1, node_2, node_3, node_4);
+
+                uint imask = (node_0w >> (3 * 8)) & 0xff;
+
+                current_group.x = asuint(node_1.x) + ((tlas_stack_size == -1) ? 0 : _MeshData[mesh_id].NodeOffset);
+                triangle_group.x = asuint(node_1.y) + ((tlas_stack_size == -1) ? 0 : _MeshData[mesh_id].TriOffset);
+
+                current_group .y = (hitmask & 0xff000000) | (uint)(imask);
+                triangle_group.y = (hitmask & 0x00ffffff);
+            }
+            else {
+                triangle_group.x = current_group.x;
+                triangle_group.y = current_group.y;
+                current_group.x = (uint)0;
+                current_group.y = (uint)0;
+            }
+
+            bool hit = false;
+
+            while(triangle_group.y != 0) { 
+                if(tlas_stack_size == -1) {//Transfer from Top Level Accelleration Structure to Bottom Level Accelleration Structure
+                    uint mesh_offset = firstbithigh(triangle_group.y);
+                    triangle_group.y &= ~(1 << mesh_offset);
+
+                    mesh_id = triangle_group.x + mesh_offset;
+
+                    if(triangle_group.y != 0) {
+                        stack[stack_size++] = triangle_group;
+                    }
+
+                    if(current_group.y & 0xff000000) {
+                        stack[stack_size++] = current_group;
+                    }
+                    tlas_stack_size = stack_size;
+
+                    int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
+
+                    ray.direction = (mul(_MeshData[mesh_id].Transform, float4(ray.direction, 0))).xyz;
+                    ray.origin = (mul(_MeshData[mesh_id].Transform, float4(ray.origin, 1))).xyz;
+                    ray.direction_inv = rcp(ray.direction);
+                   
+                    oct_inv4 = ray_get_octant_inv4(ray.direction);
+
+                    current_group.x = (uint)root_index;
+                    current_group.y = (uint)0x80000000;
+
+                    break;
+                }
+                else {
+                    uint triangle_index =  firstbithigh(triangle_group.y);
+                    triangle_group.y &= ~(1 << triangle_index);
+
+                    if(triangle_intersect_shadow(triangle_group.x + triangle_index, ray, max_distance)) {
+                        hit = true;
+                        break;
+                    }
+                }
+            }
+
+            if(hit) {
+                return false;
+            }
+
+            if((current_group.y & 0xff000000) == 0) {
+                if(stack_size == 0) {//thread has finished traversing
+                    return true;
+                }
+
+                if(stack_size == tlas_stack_size) {
+                    tlas_stack_size = -1;
+                    ray = ray2;
+                    oct_inv4 = ray_get_octant_inv4(ray.direction);
+                }
+                current_group = stack[--stack_size];
+            }
+        }
+    }
+}
+
+
+
+StructuredBuffer<int> ToIllumTriBuffer;
 
 static const int NumSamples = 8;
 
@@ -2154,7 +2275,6 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
         TempAlbedoTex[Uv] = ((hitDat.MatType == 2) ? float4(1,1,1,-1) : float4(hitDat.surfaceColor,1));
         TempNormTex[Uv] = float4(norm, 1);
         TempPosTex[Uv] = float4(pos,1);
-
     }
 
     [branch]if(hitDat.emmis > 0.0f) {//if we hit a light, this ray is done
@@ -2165,7 +2285,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
         } else {
             Color.Indirect += Color.throughput * hitDat.emmis * hitDat.surfaceColor;
         }
-        if(IsEmissiveTex) return;
+        return;
     }
     float3 throughput = Color.throughput;
 
@@ -2250,8 +2370,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
     }
     if(!valid) return;//If the ray failed, we have no choice but to terminate this path
     ray.origin = Geomnorm * 0.001f + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
-
-    [branch]if((UseNEE || AllowVolumetrics)) {//Next event estimation
+    [branch]if((UseNEE || AllowVolumetrics) && CurBounce < MaxBounce) {//Next event estimation
             float3 pos2;
             float3 LightNorm;
             int triindex;
@@ -2259,6 +2378,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
             bool IsDirectional = false;
             float LightProbability = 0.0f;
             bool UseUnityLight;
+            int TriCount = 0;
         [branch]if(UseRestir && CurBounce == 0) {
              Reservoir CurRes = CurrentReservoir[Uv.x + Uv.y * screen_width];
             UseUnityLight = CurRes.MeshIndex == -1;//(unitylightcount != 0) ? (LightMeshCount != 0) ? (random(11).x <= (_UnityLights[unitylightcount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF))) : true : false;//Choose whether to sample unity lights or mesh lights based off which is more powerful
@@ -2281,12 +2401,13 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                         IsAboveHorizon = false;
                     break;
                 }
-                LightProbability = 1.0f;//_UnityLights[triindex].pdf / (_LightMeshes[LightMeshCount - 1].CDF);
+                LightProbability =  1.0f;//(max(_UnityLights[triindex].pdf,0.00000001f) / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));//_UnityLights[triindex].pdf / (_LightMeshes[LightMeshCount - 1].CDF);
             } else {
                triindex = CurRes.y;
                 pos2 = CurRes.Position;
                 LightNorm = CurRes.Norm;
-                LightProbability = (LightTriangles[triindex].pdf / (_LightMeshes[LightMeshCount - 1].CDF));//unused, needs more testing
+                LightProbability = (_LightMeshes[LightMeshCount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));//(_LightMeshes[LightMeshCount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));//unused, needs more testing
+                TriCount = (_LightMeshes[CurRes.MeshIndex].IndexEnd - _LightMeshes[CurRes.MeshIndex].StartIndex);
             }
         } else {
             UseUnityLight = (unitylightcount != 0) ? (LightMeshCount != 0) ? (random(11).x <= (_UnityLights[unitylightcount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF))) : true : false;//Choose whether to sample unity lights or mesh lights based off which is more powerful
@@ -2310,7 +2431,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                         IsAboveHorizon = false;
                     break;
                 }
-                LightProbability = (_UnityLights[triindex].pdf / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
+                LightProbability = (max(_UnityLights[triindex].pdf,0.00000001f) / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
             } else {
                 int MeshIndex = SelectLightMesh();
                 triindex = SelectLight(MeshIndex);
@@ -2320,7 +2441,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                 pos2 = mul(_LightMeshes[MeshIndex].Inverse, float4(CurTri.pos0 + CurUv.x * CurTri.posedge1 + CurUv.y * CurTri.posedge2, 0.0f)).xyz + _LightMeshes[MeshIndex].Center;
                 LightNorm = normalize(mul(_LightMeshes[MeshIndex].Inverse, float4(LightTriangles[triindex].Norm, 0.0f)).xyz);
                 LightProbability = (LightTriangles[triindex].pdf / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));//unused, needs more testing
-           
+                TriCount = _LightMeshes[MeshIndex].IndexEnd - _LightMeshes[MeshIndex].StartIndex;
             }
         }
         float3 to_light = pos2 - ray.origin;
@@ -2331,7 +2452,6 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
         to_light = to_light / distance_to_light;
         float Attenuation = 1.0f;
         if(!IsDirectional && !IsAboveHorizon) {
-            float theta = dot(to_light, -LightNorm);
                 Attenuation = max(saturate(dot(to_light, -LightNorm) * _UnityLights[triindex].SpotAngle.x + _UnityLights[triindex].SpotAngle.y),0.0001f);
                 IsAboveHorizon = true;
         }
@@ -2370,34 +2490,42 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
         }
 
         if(validbsdf && IsAboveHorizon && UseNEE) {
+            //float G = max(0.0, dot(norm, to_light)) * max(0.0, -dot(to_light, LightNorm)) / distance_to_light_squared;
+          //   if(G > 0.0f) {
                 float light_pdf;
                 float3 Radiance;
+                float G = abs(dot(to_light, LightNorm)) / distance_to_light_squared;
                 if(UseUnityLight) {
                     Radiance = _UnityLights[triindex].Radiance;
-                    light_pdf = distance_to_light_squared / (cos_theta_light * 3.14159f);
+                    light_pdf = 1.0f / (unitylightcount);
                 } else {
                     Radiance = LightTriangles[triindex].radiance;
-                    light_pdf = distance_to_light_squared / (cos_theta_light * LightTriangles[triindex].area);
+                    light_pdf = 1.0f / (LightTriangles[triindex].area * TriCount);
                 }
+               // float3 brdf = hitDat.surfaceColor / PI;
+                //bsdf_pdf = 1.0 / PI;
 
                 float w = power_heuristic(light_pdf, bsdf_pdf);
-                float3 Illum = (PrevThroughput * Radiance * bsdf_value * w  / light_pdf) * Attenuation / LightProbability;//throughput * G * ((Radiance * w * bsdf_value) / light_pdf) * Attenuation;
+                float3 Illum = ((CurBounce == 0) ? PrevThroughput : throughput) * Radiance * bsdf_value * G /  light_pdf * Attenuation;// / LightProbability;
                 float maxillum = max(max(Illum.x, Illum.y), Illum.z);
                 if(maxillum > random(9).y) {//NEE russian roulette, massively improves performance while giivng the same result
                     uint index3;//Congrats we shoot a shadow ray for NEE
                   InterlockedAdd(BufferSizes[CurBounce].shadow_rays, 1, index3);
-
                     ShadowRaysBuffer[index3].origin = ray.origin;
                     ShadowRaysBuffer[index3].direction = to_light;
-                    ShadowRaysBuffer[index3].t = (IsDirectional) ? 10000.0f : distance_to_light - 2.0f * EPSILON;
+                    ShadowRaysBuffer[index3].t = (IsDirectional) ? 10000.0f : distance_to_light - 0.000001f;//2.0f * EPSILON;
                     ShadowRaysBuffer[index3].illumination = Illum * rcp(saturate(maxillum));
                     ShadowRaysBuffer[index3].PixelIndex = Uv.y * screen_width + Uv.x;
                     ShadowRaysBuffer[index3].IsNotFog = true;
                     ShadowRaysBuffer[index3].HitMesh = true;
+                } else if(UseRestir && CurBounce == 0) {
+                    CurrentReservoir[Uv.y * screen_width + Uv.x].W = 0;
                 }
 
-        }
 
+        } else if(UseRestir && CurBounce == 0) {
+            CurrentReservoir[Uv.y * screen_width + Uv.x].W = 0;
+        }
 
 
         [branch]if(AllowVolumetrics) {
@@ -2426,20 +2554,24 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                 Radiance *= rcp(1.0f - (_LightMeshes[LightMeshCount - 1].CDF / _UnityLights[unitylightcount - 1].CDF));
                 light_pdf = luminance(Radiance.x, Radiance.y, Radiance.z) * distance_to_light_squared / (cos_theta_light * (_UnityLights[unitylightcount - 1].CDF));
                 to_light = (IsDirectional) ? (SamplePoint - LightNorm * 2.0f) - SamplePoint : pos2 - SamplePoint;
+               // if(_UnityLights[triindex].Type == 2) IsAboveHorizon = false;
             }
              float distance_to_light_squared = dot(to_light, to_light);
              float distance_to_light = sqrt(max(dot(to_light, to_light),0.0001f));
              to_light = to_light / distance_to_light;
 
-             if(!IsDirectional) LightNorm = -normalize(SamplePoint - pos2);
+             if(!IsDirectional && _UnityLights[triindex].Type != 2) LightNorm = -normalize(SamplePoint - pos2);
 
             float cos_theta_light = abs(dot(to_light, -normalize(SamplePoint - pos2)));
             float cos_theta_hit = dot(to_light, -LightNorm);
-
+        if(_UnityLights[triindex].Type == 2) {
+                Attenuation = max(saturate(dot(to_light, LightNorm) * _UnityLights[triindex].SpotAngle.x + _UnityLights[triindex].SpotAngle.y),0.0001f);
+                IsAboveHorizon = true;
+        }
             float3 transmittance = exp( -((distance_to_light + dist) * sigma_t) );
             float geomTerm = 1.0f / (distance_to_light_squared);
             float w = power_heuristic(light_pdf, pdf);
-            float3 Illum = PrevThroughput * w * Radiance * geomTerm * transmittance / (light_pdf) * VolumeDensity;// * (exp( -((hit.t) * hitDat.surfaceColor) ))
+            float3 Illum = PrevThroughput * w * Radiance * geomTerm * transmittance / (light_pdf) * VolumeDensity * Attenuation;// * (exp( -((hit.t) * hitDat.surfaceColor) ))
             float maxillum = max(max(Illum.x, Illum.y), Illum.z);
             if(maxillum > random(9).y) {//NEE russian roulette, massively improves performance while giivng the same result
                 uint index4;//Congrats we shoot a shadow ray for NEE
@@ -2560,7 +2692,7 @@ void kernel_shade () {
         float3 EmissCol = _EmissiveAtlas.SampleLevel(sampler_EmissiveAtlas, EmissionUV, 0).xyz;
         if(EmissCol.x > 0.001f) {
             IsEmissiveTex = true;
-            //hitmat.surfaceColor = EmissCol;
+            hitmat.surfaceColor += EmissCol * hitmat.surfaceColor;
             hitmat.emmis = EmissCol.x;
         }
     }
@@ -2574,13 +2706,14 @@ void kernel_shade () {
 
 #pragma kernel kernel_finalize
 
+bool DiffRes;
 [numthreads(16,16,1)]
 void kernel_finalize (uint3 id : SV_DispatchThreadID) {//Moved final accumulation into its own kernel, improves performance
     
     if(id.x >= screen_width || id.y >= screen_height) return;
+//     bool cb = (int(id.x)/64 + int(id.y)/64)%2==0;
     int final_pixel_index = id.y * screen_width + id.x;
-    Result[id.xy] = float4((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect) * AlbedoTex[id.xy].xyz + GlobalColors[final_pixel_index].Fog, 1.0f);
-
+    Result[id.xy] = float4((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect) * ((DiffRes) ? AlbedoTex[id.xy].xyz : AlbedoTex[id.xy].xyz) + GlobalColors[final_pixel_index].Fog, 1.0f);
 }
 
 
@@ -2660,6 +2793,8 @@ bool UseRestirTemporal;
 
 groupshared LightBlockData tileBlock[512];
 
+uniform bool UseSpatial;
+
 [numthreads(8,8,1)]
 void kernel_reservoir (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID, uint3 id3 : SV_GroupID) {//Moved final accumulation into its own kernel, improves performance
 
@@ -2679,13 +2814,12 @@ void kernel_reservoir (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThrea
     rng_state = pixel_index * curframe;
     const float2 UV = id.xy / float2(screen_width, screen_height);
 
-    const float3 Norm = NormalTex.SampleLevel(sampler_NormalTex, UV, 0).xyz * 2.0f - 1.0f;
-    float3 Albedo = AlbedoTex.SampleLevel(sampler_AlbedoTex, UV, 0).xyz;
-    float3 WorldPosition =  TempPosTex[id.xy].xyz;
+    const float3 Norm = NormalTex.SampleLevel(sampler_NormalTex, UV, 0).xyz;
+    const float3 Albedo = AlbedoTex.SampleLevel(sampler_AlbedoTex, UV, 0).xyz;
+    const float3 WorldPosition =  TempPosTex[id.xy].xyz;
 
     Reservoir prevReservoir = {0,0,0,0,0,0,0,0,0,0,0,-1,0,0,0,0,0,0,0,0,0};
     float2 PrevUV =  (UV - MotionVectors.SampleLevel(sampler_MotionVectors, UV, 0).xy) * 2.0f - 1.0f;
-
     uint2 prevIndex = (int2)((PrevUV * 0.5f + 0.5f) * float2(screen_width, screen_height) + 0.5f);
     if (prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height)
     {
@@ -2694,14 +2828,14 @@ void kernel_reservoir (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThrea
     Reservoir reservoir = {0,0,0,0,0,0,0,0,0,0,0,-1,0,0,0,0,0,0,0,0,0};
     [branch]if(UseRestirPrecomputedSamples) {
         float3 LightPos;
-        for(i = 0; i < 32; i++) {
-            float Rand = floor(min(float(rand_xorshift()) * MultiplyData * 512, 511));
-            LightPos = tileBlock[Rand].Pos;
+        [unroll]for(i = 0; i < 32; i++) {
+            const float Rand = floor(min(float(rand_xorshift()) * MultiplyData * 512, 511));
+            LightPos = (tileBlock[Rand].Misc.z == 1) ? (WorldPosition - tileBlock[Rand].Norm * 120.0f) : tileBlock[Rand].Pos;
             float3 L = (LightPos - WorldPosition);
-            float Dist = dot(L, L);
+            const float Dist = dot(L, L);
             L /= sqrt(Dist);
-            float LdotN = saturate(dot(Norm, L));
-            UpdateReservoir(reservoir, tileBlock[Rand].Misc.y, length(Albedo.xyz / PI * tileBlock[Rand].Rad * LdotN / (Dist)), float(rand_xorshift()) * MultiplyData, tileBlock[Rand].Misc.x, LightPos, (tileBlock[Rand].Misc.z == 2) ? -tileBlock[Rand].Norm : -L);
+            float LdotN = dot(Norm, L);
+            UpdateReservoir(reservoir, tileBlock[Rand].Misc.y, length(tileBlock[Rand].Rad * LdotN / (Dist)), float(rand_xorshift()) * MultiplyData, tileBlock[Rand].Misc.x, LightPos, (tileBlock[Rand].Misc.z == 2) ? -tileBlock[Rand].Norm : -L);
         }   
 
             } else {
@@ -2712,18 +2846,18 @@ void kernel_reservoir (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThrea
             int LightMesh = 0;
             float3 LightNorm;
             float3 lightPos;
-            lighttosample = floor(min(random(i).x * LightCount, LightCount - 1));
+            lighttosample = floor(min(float(rand_xorshift()) * MultiplyData * LightCount, LightCount - 1));
             LightData light = _UnityLights[lighttosample];
             lightPos = (light.Type == 1) ? (WorldPosition - light.Direction) : light.Position;
             float3 L = (lightPos - WorldPosition);
             float Dist = dot(L, L);
             L /= sqrt(Dist);
-            float LdotN = saturate(dot(Norm, L));
+            float LdotN = abs(dot(Norm, L));
             LightNorm = -L;
-            w = length(Albedo.xyz / PI * light.Radiance * LdotN / Dist);
+            w = length(light.Radiance * LdotN / Dist);
             LightMesh = -1;
 
-            UpdateReservoir(reservoir, lighttosample, w, random(i).y, LightMesh, lightPos, (light.Type == 2) ? light.Direction : LightNorm);
+            UpdateReservoir(reservoir, lighttosample, w, float(rand_xorshift()) * MultiplyData, LightMesh, lightPos, (light.Type == 2) ? light.Direction : LightNorm);
 
         }
         LightCount = lighttricount;
@@ -2733,86 +2867,103 @@ void kernel_reservoir (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThrea
             float w;
             float3 LightNorm;
             float3 lightPos;
-            const uint LightMeshIndex = floor(min(random(i).x * LightMeshCount, LightMeshCount - 1));
+            const uint LightMeshIndex = floor(min(float(rand_xorshift()) * MultiplyData * LightMeshCount, LightMeshCount - 1));
             const LightMeshData LightMesh = _LightMeshes[LightMeshIndex];
             const int StartIndex = LightMesh.StartIndex;
             const int IndexEnd = LightMesh.IndexEnd;
-            lighttosample = clamp((random(i).y * (IndexEnd - StartIndex)) + StartIndex, StartIndex, IndexEnd - 1);
+            lighttosample = clamp((float(rand_xorshift()) * MultiplyData * (IndexEnd - StartIndex)) + StartIndex, StartIndex, IndexEnd - 1);
             const LightTriangleData Light = LightTriangles[lighttosample];
-            float2 rand = random(i + 32);
+            float2 rand = float(rand_xorshift()) * MultiplyData;
             float2 CurUv = sample_triangle(rand.x, rand.y);
             lightPos = mul(LightMesh.Inverse, float4(Light.pos0 + CurUv.x * Light.posedge1 + CurUv.y * Light.posedge2,1)).xyz;
             LightNorm = normalize(mul(LightMesh.Inverse, float4(Light.Norm, 0.0f)).xyz);
             float3 L = lightPos - WorldPosition;
             float Dist = abs(dot(L, L));
             L /= sqrt(Dist);
-            float LdotN = saturate(dot(Norm, L));
-            w = length(Albedo.xyz / PI * (Light.radiance) * LdotN / (Dist));
+            float LdotN = abs(dot(Norm, L));
+            w = length((Light.radiance) * LightTriangles[lighttosample].area * LdotN / (Dist));
 
-            UpdateReservoir(reservoir, lighttosample, w, random(i + 64).x, LightMeshIndex, lightPos, LightNorm);
+            UpdateReservoir(reservoir, lighttosample, w, float(rand_xorshift()) * MultiplyData, LightMeshIndex, lightPos, LightNorm);
 
         }
 
     }
-    
+
+float p_hat;
+    if(reservoir.MeshIndex != -1) {
+        float3 lightPos = reservoir.Position;
+        float3 L = lightPos - WorldPosition;
+        float Dist = dot(L, L);
+        L /= sqrt(Dist);
+        float LdotN = abs(dot(Norm, L));
+        p_hat = length(LightTriangles[reservoir.y].radiance * LightTriangles[reservoir.y].area * LdotN / (Dist));
+    } else {
+        LightData light = _UnityLights[reservoir.y];
+        float3 lightPos = reservoir.Position;
+        float3 L = lightPos - WorldPosition;
+        float Dist = dot(L, L);
+        L /= sqrt(Dist);
+        float LdotN = abs(dot(Norm, L));
+        p_hat = length(light.Radiance * LdotN / (Dist));
+    }
+    reservoir.W = (1.0f / max(p_hat, 0.00001f)) * (reservoir.wsum / max(reservoir.M, 0.0000001f));
+
+
     if(UseRestirTemporal) {
-        float3 positionDif = TempPosTex[prevIndex].xyz - prevReservoir.PrevWorld;
+        float3 positionDif = WorldPosition - prevReservoir.PrevWorld;
         if(dot(positionDif, positionDif) < 0.1f) {
             float3 AlbedoDif = Albedo - prevReservoir.PrevAlbedo;
             if(dot(AlbedoDif, AlbedoDif) < 0.1f) {
                 float normalDot = dot(Norm, prevReservoir.PrevNorm);
                 if(normalDot < 1.5f) {
-                    prevReservoir.M = min(prevReservoir.M, 0.25f * reservoir.M);
                     float3 lightPos;
                     float p_hat;
+                   // prevReservoir.M = min(prevReservoir.M, 20.0f * reservoir.M);
                     if(prevReservoir.MeshIndex != -1) {
                         lightPos = prevReservoir.Position;
-                        float3 L = lightPos - prevReservoir.PrevWorld;
+                        float3 L = lightPos - WorldPosition;
                         float Dist = dot(L, L);
                         L /= sqrt(Dist);
-                        float LdotN = saturate(dot(prevReservoir.PrevNorm, L));
-                        p_hat = length(prevReservoir.PrevAlbedo / PI * LightTriangles[reservoir.y].radiance * LdotN / (Dist));
+                        float LdotN = abs(dot(Norm, L));
+                        p_hat = length(LightTriangles[prevReservoir.y].radiance * LightTriangles[prevReservoir.y].area * LdotN / (Dist));
                     } else {
                         LightData light = _UnityLights[prevReservoir.y];
                         lightPos = prevReservoir.Position;
-                        float3 L = lightPos - prevReservoir.PrevWorld;
+                        float3 L = lightPos - WorldPosition;
                         float Dist = dot(L, L);
                         L /= sqrt(Dist);
-                        float LdotN = saturate(dot(prevReservoir.PrevNorm, L));
-                        p_hat = length(prevReservoir.PrevAlbedo / PI * light.Radiance * LdotN / (Dist));
+                        float LdotN = abs(dot(Norm, L));
+                        p_hat = length(light.Radiance * LdotN / (Dist));
                     }
-                    prevReservoir.W = (1.0f / max(p_hat, 0.00001f)) * (prevReservoir.wsum / max(prevReservoir.M, 0.0000001f));
-                    if(prevReservoir.WasSuccessful == 1) UpdateReservoir(reservoir, prevReservoir.y, p_hat * prevReservoir.W * prevReservoir.M, float(rand_xorshift()) * (1.0 / 4294967296.0), prevReservoir.MeshIndex, prevReservoir.Position, prevReservoir.Norm, prevReservoir);
+                    UpdateReservoir(reservoir, prevReservoir.y, p_hat * prevReservoir.W * prevReservoir.M, float(rand_xorshift()) * (1.0 / 4294967296.0), prevReservoir.MeshIndex, prevReservoir.Position, prevReservoir.Norm, prevReservoir);
                     reservoir.M = prevReservoir.M + reservoir.M;
+            
                     if(reservoir.MeshIndex != -1) {
                         lightPos = reservoir.Position;
-                        float3 L = lightPos - reservoir.PrevWorld;
+                        float3 L = lightPos - WorldPosition;
                         float Dist = dot(L, L);
                         L /= sqrt(Dist);
-                        float LdotN = saturate(dot(reservoir.PrevNorm, L));
-                        p_hat = length(reservoir.PrevAlbedo / PI * LightTriangles[reservoir.y].radiance * LdotN / (Dist));
+                        float LdotN = abs(dot(Norm, L));
+                        p_hat = length(LightTriangles[reservoir.y].radiance * LightTriangles[reservoir.y].area * LdotN / (Dist));
                     } else {
                         LightData light = _UnityLights[reservoir.y];
                         lightPos = reservoir.Position;
-                        float3 L = lightPos - reservoir.PrevWorld;
+                        float3 L = lightPos - WorldPosition;
                         float Dist = dot(L, L);
                         L /= sqrt(Dist);
-                        float LdotN = saturate(dot(reservoir.PrevNorm, L));
-                        p_hat = length(reservoir.PrevAlbedo / PI * light.Radiance * LdotN / (Dist));
+                        float LdotN = abs(dot(Norm, L));
+                        p_hat = length(light.Radiance * LdotN / (Dist));
                     }
-                    reservoir.wsum /= reservoir.M;
-                    reservoir.M = min(reservoir.M, 20);
-                    reservoir.wsum *= reservoir.M;
                     reservoir.W = (1.0f / max(p_hat, 0.00001f)) * (reservoir.wsum / max(reservoir.M, 0.0000001f));
-                }
-            }
-        }
+                 }
+             }
+         }
     }
-
-    reservoir.PrevWorld = WorldPosition;
+        reservoir.PrevWorld = WorldPosition;
     reservoir.PrevNorm = Norm;
     reservoir.PrevAlbedo = Albedo;
     CurrentReservoir[id.y * screen_width + id.x] = reservoir;
+
 
 }
 
@@ -2829,89 +2980,91 @@ void kernel_reservoir (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThrea
 [numthreads(16,16,1)]
 void kernel_reservoir_spatial (uint3 id : SV_DispatchThreadID) {//Moved final accumulation into its own kernel, improves performance
 
+
     if(id.x >= screen_width || id.y >= screen_height) return;
     pixel_index = id.y * screen_width + id.x;
     rng_state = pixel_index * 2 * curframe;
 
-    float3 Norm = NormalTex.SampleLevel(sampler_NormalTex, id.xy / float2(screen_width, screen_height), 0).xyz * 2.0f - 1.0f;
+    float3 Norm = NormalTex.SampleLevel(sampler_NormalTex, id.xy / float2(screen_width, screen_height), 0).xyz;
     float3 Albedo = AlbedoTex.SampleLevel(sampler_AlbedoTex, id.xy / float2(screen_width, screen_height), 0).xyz;
     float3 WorldPosition = TempPosTex[id.xy].xyz;
 
     Reservoir r = CurrentReservoir[pixel_index];
 
     float2 PrevUV =  (id.xy / float2(screen_width, screen_height) - MotionVectors.SampleLevel(sampler_MotionVectors, id.xy / float2(screen_width, screen_height), 0).xy) * 2.0f - 1.0f;
-    int2 CenterIndex = (int2)floor((PrevUV * 0.5f + 0.5f) * float2(screen_width, screen_height));
+    int2 CenterIndex = id.xy;//(int2)floor((PrevUV * 0.5f + 0.5f) * float2(screen_width, screen_height));
 
     uint2 neighborOffset;
     uint2 neighborIndex;
     float WorldDepth = length(WorldPosition - camPos);
-        [unroll]for (int i = 0; i < 15;i++) {
-        float radius = 6 * random(i).x;
+    int OrigM = r.M;
+        [unroll]for (int i = 0; i < 5;i++) {
+        float radius = 30 * random(i).x;
         float angle = 2.0f * PI * random(i).y;
         
         int2 neighborIndex = round(CenterIndex + radius * float2(cos(angle), sin(angle)));
-        
+       // if(neighborIndex.x == CenterIndex.x && neighborIndex.y == CenterIndex.y) continue;
                  
         if (neighborIndex.x < 0 || neighborIndex.x >= (int)screen_width || neighborIndex.y < 0 || neighborIndex.y >= (int)screen_height)
         {
             continue;
         }
-        Reservoir neighborRes = PreviousReservoir[neighborIndex.y * uint(screen_width) + neighborIndex.x];        
-        r.M = r.M + neighborRes.M;     
-
+        Reservoir neighborRes = PreviousReservoir[neighborIndex.y * uint(screen_width) + neighborIndex.x];           
+       //   r.M = r.M + neighborRes.M;  //      r.M++;
          float Depth = length(neighborRes.PrevWorld - camPos);
         if (
-            neighborRes.WasSuccessful == 0 ||
+            neighborRes.W == 0 ||
             abs(Depth - WorldDepth) > 0.1f * WorldDepth ||
             dot(neighborRes.PrevNorm, Norm) < cos(radians(35))
         ) {
             continue;
         }
+        //neighborRes.M = min(r.M, 0.5f * neighborRes.M);
+      //  neighborRes.M = min(neighborRes.M, 20.0f * OrigM);
+        r.M = r.M + neighborRes.M;  
         float p_hat;
         if(neighborRes.MeshIndex != -1) {
             float3 lightPos = neighborRes.Position;
-            float3 L = lightPos - neighborRes.PrevWorld;
+            float3 L = lightPos - WorldPosition;
             float Dist = dot(L, L);
             L /= sqrt(Dist);
-            float LdotN = saturate(dot(neighborRes.PrevNorm, L));
-            p_hat = length(neighborRes.PrevAlbedo.xyz / PI * LightTriangles[neighborRes.y].radiance * LdotN / (Dist));
+            float LdotN = saturate(dot(Norm, L));
+            p_hat = length(LightTriangles[neighborRes.y].radiance * LightTriangles[neighborRes.y].area * LdotN / (Dist));
         } else {
             LightData light = _UnityLights[neighborRes.y];
-            float3 L = neighborRes.Position - neighborRes.PrevWorld;
+            float3 L = neighborRes.Position - WorldPosition;
             float Dist = dot(L, L);
             L /= sqrt(Dist);
-            float LdotN = saturate(dot(neighborRes.PrevNorm, L));
-            p_hat = length(neighborRes.PrevAlbedo.xyz / PI * light.Radiance * LdotN / (Dist));
+            float LdotN = saturate(dot(Norm, L));
+            p_hat = length(light.Radiance * LdotN / (Dist));
         }
-        neighborRes.W = (1.0f / max(p_hat, 0.00001f)) * (neighborRes.wsum / max(neighborRes.M, 1.0f));
+//        neighborRes.W = (1.0f / max(p_hat, 0.00001f)) * (neighborRes.wsum / max(neighborRes.M, 1.0f));
         UpdateReservoir(r, neighborRes.y, p_hat * neighborRes.M * neighborRes.W, random(i + 16).x, neighborRes.MeshIndex, neighborRes.Position, neighborRes.Norm, neighborRes);  
 
     }
     float p_hat;
         if(r.MeshIndex != -1) {
             float3 lightPos = r.Position;
-            float3 L = lightPos - r.PrevWorld;
+            float3 L = lightPos - WorldPosition;
             float Dist = dot(L, L);
             L /= sqrt(Dist);
-            float LdotN = saturate(dot(r.PrevNorm, L));
-            p_hat = length(r.PrevAlbedo / PI * LightTriangles[r.y].radiance * LdotN / (Dist));
+            float LdotN = saturate(dot(Norm, L));
+            p_hat = length(LightTriangles[r.y].radiance * LightTriangles[r.y].area * LdotN / (Dist));
         } else {
             LightData light = _UnityLights[r.y];
             float3 lightPos = r.Position;
-            float3 L = lightPos - r.PrevWorld;
+            float3 L = lightPos - WorldPosition;
             float Dist = dot(L, L);
             L /= sqrt(Dist);
-            float LdotN = saturate(dot(r.PrevNorm, L));
-            p_hat = length(r.PrevAlbedo / PI * light.Radiance * LdotN / (Dist));
+            float LdotN = saturate(dot(Norm, L));
+            p_hat = length(light.Radiance * LdotN / (Dist));
         }
-        r.wsum /= r.M;
-        r.M = min(r.M, 20);
-        r.wsum *= r.M;
-        r.W = (1.0f / max(p_hat, 0.00001f)) * (r.wsum / max(r.M, 1.0f));
+        r.W = (1.0f / max(p_hat, 0.00001f)) * (r.wsum / max(r.M, 0.00000001f));
 
     r.WasSuccessful = 0;
-    CurrentReservoir[pixel_index] = r;
+    SpatialReservoir[pixel_index] = r;
     
+
 
 }
 
@@ -2939,7 +3092,7 @@ void kernel_reservoir_precompute (uint3 id : SV_DispatchThreadID, uint3 id2 : SV
             LightData light = _UnityLights[lighttosample];
             lightPos = light.Position;
             LightNorm = -light.Direction;
-            Radiance = light.Radiance;
+            Radiance = light.Radiance / PI;
             LightMeshIndex = -1;
             LightType = light.Type;
         } else {
@@ -2952,7 +3105,7 @@ void kernel_reservoir_precompute (uint3 id : SV_DispatchThreadID, uint3 id2 : SV
             float2 CurUv = sample_triangle(random(i + 32).x, random(i + 32).y);
             lightPos = mul(LightMesh.Inverse, float4(Light.pos0 + CurUv.x * Light.posedge1 + CurUv.y * Light.posedge2,0)).xyz + LightMesh.Center;
             LightNorm = normalize(mul(LightMesh.Inverse, float4(Light.Norm, 0.0f)).xyz);
-            Radiance = Light.radiance;
+            Radiance = Light.radiance * Light.area;
         }
         WriteBlocks[id2.x * 8 + i + id3.x * 512].Pos = lightPos;
         WriteBlocks[id2.x * 8 + i + id3.x * 512].Norm = LightNorm;
@@ -2961,5 +3114,21 @@ void kernel_reservoir_precompute (uint3 id : SV_DispatchThreadID, uint3 id2 : SV
     }
 
 
+
+}
+
+#pragma kernel kernel_reservoir_copy
+
+[numthreads(16,16,1)]
+void kernel_reservoir_copy (uint3 id : SV_DispatchThreadID) {
+    Reservoir reservoir = CurrentReservoir[id.x + id.y * screen_width];
+    float3 lightPos = reservoir.Position;
+    float3 L = lightPos - reservoir.PrevWorld;
+    float Dist = dot(L, L);
+    L /= sqrt(Dist);
+    Ray ray = CreateRay(reservoir.PrevWorld + reservoir.PrevNorm * 0.00001f, L);
+    if(!VisabilityCheck(ray, sqrt(Dist) - 0.01f)) reservoir.W = 0;  
+    CurrentReservoir[id.x + id.y * screen_width] = reservoir;
+    PreviousReservoir[id.x + id.y * screen_width] = reservoir;
 
 }

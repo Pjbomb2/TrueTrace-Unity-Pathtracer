@@ -8,14 +8,18 @@ int target_width;
 int target_height;
 
 Texture2D<float4> Input;
-SamplerState sampler_Input_trilinear_clamp;
+SamplerState sampler_Input_point_clamp;
 RWTexture2D<float4> Output;
+Texture2D<float4> PrevOutput;
 
 
 Texture2D<float4> NormalTex;
 SamplerState sampler_NormalTex; 
 Texture2D<float4> DepthTex;
-SamplerState sampler_DepthTex_point_clamp; 
+SamplerState sampler_DepthTex; 
+Texture2D<float4> PrevDepthTex;
+SamplerState sampler_PrevDepthTex; 
+RWTexture2D<float4> PrevDepthTexWrite;
 Texture2D<float4> Albedo;
 Texture2D<float4> MotionVectors;
 
@@ -29,76 +33,26 @@ uint pixel_index;
 uint curframe;
 uint cursam;
 
-uint hash_with(uint seed, uint hash) {
-    // Wang hash
-    seed = (seed ^ 61) ^ hash;
-    seed += seed << 3;
-    seed ^= seed >> 4;
-    seed *= 0x27d4eb2d;
-    return seed;
-}
-uint pcg_hash(uint seed) {
-    uint state = seed * 747796405u + 2891336453u;
-    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
-    return (word >> 22u) ^ word;
-}
-float2 random(uint samdim) {
-    uint hash = pcg_hash((pixel_index * (uint)112 + samdim) * (24 + 1) + curframe);
-
-    const static float one_over_max_unsigned = asfloat(0x2f7fffff);
-
-    float x = hash_with(cursam, hash) * one_over_max_unsigned;
-    float y = hash_with(cursam + 0xdeadbeef, hash) * one_over_max_unsigned;
-
-    return float2(x,y);
-}
 
 
 
-
-bool IsValid(float CenterDepth, float3 CenterNormal, float2 Uv) {
-   // if(Uv.x > 1.0f || Uv.y > 1.0f || Uv.x < 0 || Uv.y < 0) return false;
-    bool DT = abs(CenterDepth - Linear01Depth(DepthTex.SampleLevel(sampler_DepthTex_point_clamp, Uv, 0).x) * FarPlane) < 0.1f * CenterDepth;
-    bool NT = dot(CenterNormal, NormalTex.SampleLevel(sampler_NormalTex, Uv, 0).xyz * 2.0f - 1.0f) < 0.999f;
-
-    return DT && NT;
-}
 
 [numthreads(16,16,1)]
 void kernel_upsample (int3 id : SV_DispatchThreadID)
 {
     if (id.x >= target_width || id.y >= target_height) return;
     
- pixel_index = id.y * target_width + id.x;
-    float2 jitter = random(1) - 0.5f;
+    pixel_index = id.y * target_width + id.x;
     float2 UV = float2(id.xy) / float2(target_width, target_height);
-    float2 texel = 1.0f / float2(target_width, target_height);
-    float2 texel2 = 1.0f / float2(source_width, source_height);
-    float2 newUV = UV + MotionVectors[id.xy].xy;
-
-    uint2 newID = ((newUV) * float2(source_width, source_height));
-    float2 newUV2 = (newID) / float2(source_width, source_height);
- uint2 newID2 = (newUV + texel2) * float2(target_width, target_height) - 0.5f;
- newUV = newID2 / float2(target_width, target_height);
-   // newUV -= texel * 40.0f;
-    float CenterDepth =  Linear01Depth(DepthTex.SampleLevel(sampler_DepthTex_point_clamp, newUV,0).x) * FarPlane;
-    float3 CenterNormal = NormalTex.SampleLevel(sampler_NormalTex, newUV, 0).xyz * 2.0f - 1.0f;
-    float3 TotalChange = Input.SampleLevel(sampler_Input_trilinear_clamp, newUV, 0).xyz;
-    int ConfirmedSamples = 0;
-//    float3 OrigDepth = length(, CamPos);
-
-    float closestdist = 10000000.0f;
-    for(int i = -4; i <= 4; i++) {
-        [unroll]for(int j = -4; j <= 4; j++) {
-            if(i == 0 && j == 0) continue;
-            [branch]if(IsValid(CenterDepth, CenterNormal, newUV + float2(texel.x * i, texel.y * j))) {
-                TotalChange = lerp(TotalChange, Input.SampleLevel(sampler_Input_trilinear_clamp, newUV + texel * float2(i,j), 0).xyz, length(float2(texel.x * i, texel.y * j)));
-                ConfirmedSamples++;
-                if(closestdist > abs(CenterDepth - Linear01Depth(DepthTex.SampleLevel(sampler_DepthTex_point_clamp, newUV + texel * float2(i,j), 0).x) * FarPlane)) {
-                    closestdist = Linear01Depth(DepthTex.SampleLevel(sampler_DepthTex_point_clamp, newUV + texel * float2(i,j), 0).x) * FarPlane;
-                }
-            }
-        }
-    }
-    Output[id.xy] = float4(TotalChange,1.0f);
+    float2 newUV = UV - MotionVectors[id.xy].xy;
+    float2 newUV2 = UV + MotionVectors[id.xy].xy;
+    float CurDepth = Linear01Depth(DepthTex.SampleLevel(sampler_DepthTex, UV, 0).x) * FarPlane;
+    float ReprojDepth = PrevDepthTex.SampleLevel(sampler_PrevDepthTex, newUV, 0).x;
+    float CurDepth2 = Linear01Depth(DepthTex.SampleLevel(sampler_DepthTex, newUV2, 0).x) * FarPlane;
+    float ReprojDepth2 = PrevDepthTex.SampleLevel(sampler_PrevDepthTex, UV, 0).x;
+    bool Disocluded = abs(CurDepth - ReprojDepth) > 0.1f * CurDepth || abs(CurDepth2 - ReprojDepth2) > 0.1f * CurDepth2 ;
+    float3 CurrentColor = Input.SampleLevel(sampler_Input_point_clamp, UV, 0).xyz;
+    if(Disocluded || (newUV.x > 1 || newUV.x < 0 || newUV.y > 1 || newUV.y < 0)) Output[id.xy] = float4(CurrentColor,1);
+    else Output[id.xy] = float4(lerp(PrevOutput[newUV * float2(target_width, target_height)], CurrentColor, 0.5f),1);
+    PrevDepthTexWrite[id.xy] = float4(CurDepth, 0, 0, 1);
 }

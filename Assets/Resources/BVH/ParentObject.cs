@@ -10,6 +10,7 @@ public class ParentObject : MonoBehaviour {
 
 public ComputeBuffer TriBuffer;
 public ComputeBuffer BVHBuffer;
+public List<int> ToIllumTriBuffer;
 public string Name;
 public Texture2D AlbedoAtlas;
 public Texture2D NormalAtlas;
@@ -176,6 +177,7 @@ public void OnApplicationQuit() {
 
 
 public void init() {
+    ToIllumTriBuffer = new List<int>();
     InstanceID = this.GetInstanceID();
     Name = this.name;
     TransformIndexes = new List<MeshTransformVertexs>();
@@ -735,6 +737,7 @@ public void RefitMesh(ref ComputeBuffer RealizedAggNodes) {
 
     aabb = OverAABB;
     if(!HasStarted) {
+        UnityEngine.Profiling.Profiler.BeginSample("ReMesh Init");
         VertexBuffers = new GraphicsBuffer[SkinnedMeshes.Length];
         IndexBuffers = new GraphicsBuffer[SkinnedMeshes.Length];
         NodeBuffer = new ComputeBuffer(NodePair.Count, 48);
@@ -758,7 +761,9 @@ public void RefitMesh(ref ComputeBuffer RealizedAggNodes) {
             MaxLength = Mathf.Max(MaxLength, LayerStack[i].Slab.Count);
         }
         WorkingBuffer = new ComputeBuffer(MaxLength, 4);
+        UnityEngine.Profiling.Profiler.EndSample();
     } else if(AllFull) {
+        UnityEngine.Profiling.Profiler.BeginSample("ReMesh Fill");
         for(int i = 0; i < VertexBuffers.Length; i++) {
             VertexBuffers[i].Dispose();
             IndexBuffers[i].Dispose();
@@ -768,8 +773,9 @@ public void RefitMesh(ref ComputeBuffer RealizedAggNodes) {
             IndexBuffers[i] = SkinnedMeshes[i].sharedMesh.GetIndexBuffer();
         }
         MeshRefit.SetBuffer(RefitLayerKernel, "ReverseStack", StackBuffer);
-
+        UnityEngine.Profiling.Profiler.EndSample();
     int CurVertOffset = 0;
+    UnityEngine.Profiling.Profiler.BeginSample("ReMesh Aggregate");
     for(int i = 0; i < TotalObjects; i++) {
         var SkinnedRootBone = SkinnedMeshes[i].bones[0];
         int IndexCount = IndexCounts[i];
@@ -789,22 +795,30 @@ public void RefitMesh(ref ComputeBuffer RealizedAggNodes) {
         MeshRefit.Dispatch(ConstructKernel, (int)Mathf.Ceil(IndexCount / (float)KernelRatio),1,1);
         CurVertOffset += IndexCount;
     }
+    UnityEngine.Profiling.Profiler.EndSample();
 
+    UnityEngine.Profiling.Profiler.BeginSample("ReMesh ReMesh");
     MeshRefit.SetInt("gVertexCount", TotalTriangles);
     MeshRefit.SetBuffer(RemeshKernel, "CWBVHIndices", CWBVHIndicesBuffer);
     MeshRefit.SetBuffer(RemeshKernel, "VertexsIn", VertexBufferOut);
     MeshRefit.SetBuffer(RemeshKernel, "AdvancedTriangles", AdvancedTriangleBuffer);
     MeshRefit.Dispatch(RemeshKernel, (int)Mathf.Ceil(TotalTriangles / (float)KernelRatio),1,1);
+    UnityEngine.Profiling.Profiler.EndSample();
 
+    UnityEngine.Profiling.Profiler.BeginSample("ReMesh TriConvert");
     MeshRefit.SetInt("NodeCount", TotalTriangles);
     MeshRefit.SetBuffer(TriConvertKernel, "AdvancedTriangles", AdvancedTriangleBuffer);
     MeshRefit.SetBuffer(TriConvertKernel, "CudaTriArray", TriBuffer);
     MeshRefit.Dispatch(TriConvertKernel, (int)Mathf.Ceil(TotalTriangles / (float)KernelRatio),1,1);
+    UnityEngine.Profiling.Profiler.EndSample();
 
+    UnityEngine.Profiling.Profiler.BeginSample("ReMesh NodeInit");
     MeshRefit.SetInt("NodeCount", NodePair.Count);
     MeshRefit.SetBuffer(NodeInitializerKernel, "AllNodes", NodeBuffer);
     MeshRefit.Dispatch(NodeInitializerKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
+    UnityEngine.Profiling.Profiler.EndSample();
 
+    UnityEngine.Profiling.Profiler.BeginSample("ReMesh Layer Solve");
     MeshRefit.SetBuffer(RefitLayerKernel, "AdvancedTriangles", AdvancedTriangleBuffer);
     for(int i = MaxRecur - 1; i >= 0; i--) {
         var NodeCount2 = LayerStack[i].Slab.Count;
@@ -814,20 +828,26 @@ public void RefitMesh(ref ComputeBuffer RealizedAggNodes) {
         MeshRefit.SetBuffer(RefitLayerKernel, "NodesToWork", WorkingBuffer);        
         MeshRefit.Dispatch(RefitLayerKernel, (int)Mathf.Ceil(WorkingBuffer.count / (float)KernelRatio), 1, 1);
     }
+    UnityEngine.Profiling.Profiler.EndSample();
 
+    UnityEngine.Profiling.Profiler.BeginSample("ReMesh Solve");
     MeshRefit.SetInt("NodeCount", NodePair.Count);
     MeshRefit.SetBuffer(NodeUpdateKernel, "AllNodes", NodeBuffer);
     MeshRefit.SetBuffer(NodeUpdateKernel, "BVHNodes", BVHDataBuffer);
     MeshRefit.SetBuffer(NodeUpdateKernel, "ToBVHIndex", ToBVHIndexBuffer);
     MeshRefit.Dispatch(NodeUpdateKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
+    UnityEngine.Profiling.Profiler.EndSample();
 
+    UnityEngine.Profiling.Profiler.BeginSample("ReMesh Compress");
     MeshRefit.SetInt("NodeCount", BVH.BVH8Nodes.Length);
     MeshRefit.SetInt("NodeOffset", NodeOffset);
     MeshRefit.SetBuffer(NodeCompressKernel, "BVHNodes", BVHDataBuffer);
     MeshRefit.SetBuffer(NodeCompressKernel, "AggNodes", RealizedAggNodes);
     MeshRefit.Dispatch(NodeCompressKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
+    UnityEngine.Profiling.Profiler.EndSample();
     }  
 
+    UnityEngine.Profiling.Profiler.BeginSample("ReMesh Buffer Refresh");
     if(!AllFull) {
         for(int i = 0; i < VertexBuffers.Length; i++) {
             SkinnedMeshes[i].vertexBufferTarget |= GraphicsBuffer.Target.Raw;
@@ -837,6 +857,7 @@ public void RefitMesh(ref ComputeBuffer RealizedAggNodes) {
         }
         if(!((new List<GraphicsBuffer>(VertexBuffers)).Contains(null)) && !((new List<GraphicsBuffer>(IndexBuffers)).Contains(null))) AllFull = true;
     } 
+    UnityEngine.Profiling.Profiler.EndSample();
 }
 
 
@@ -863,6 +884,7 @@ public async Task BuildTotal() {
     Triangles = new AABB[(TransformIndexes[TransformIndexes.Count - 1].VertexStart + TransformIndexes[TransformIndexes.Count - 1].VertexCount) / 3];
     AggTriangles = new CudaTriangle[(TransformIndexes[TransformIndexes.Count - 1].VertexStart + TransformIndexes[TransformIndexes.Count - 1].VertexCount) / 3];
     CudaTriangle TempTri = new CudaTriangle();
+    int IllumTriCount = 0;
 for(int i = 0; i < TotalObjects; i++) {
 
     Matrix4x4 ChildMat = CachedTransforms[i + 1].WTL.inverse;
@@ -950,7 +972,9 @@ for(int i = 0; i < TotalObjects; i++) {
                     energy = area,
                     area = area
                     });
+                IllumTriCount++;
             }
+            ToIllumTriBuffer.Add(IllumTriCount--);
         }
     
 }

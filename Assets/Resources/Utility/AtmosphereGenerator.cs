@@ -2,15 +2,21 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[System.Serializable]
 public class AtmosphereGenerator {
     
     private RenderTexture _TransmittanceLUT;
     public RenderTexture _RayleighTex;
     public RenderTexture _MieTex;
+    public RenderTexture _MultiScatterTex;
+    public RenderTexture _SkyViewTex;
 
+    public ComputeShader Atmosphere;
     private ComputeBuffer rayleigh_densityC;
     private ComputeBuffer mie_densityC;
     private ComputeBuffer absorption_densityC;
+
+    private int SkyViewKernel;
 
     public struct DensityProfileLayer {
         public float width;
@@ -45,6 +51,7 @@ public class AtmosphereGenerator {
 
     public AtmosphereGenerator(ComputeShader Atmosphere, float BottomRadius, float TopRadius) {
 
+        this.Atmosphere = Atmosphere;
         List<DensityProfileLayer> rayleigh_density = new List<DensityProfileLayer>();
         List<DensityProfileLayer> mie_density = new List<DensityProfileLayer>();
         List<DensityProfileLayer> absorption_density = new List<DensityProfileLayer>();
@@ -107,6 +114,8 @@ public class AtmosphereGenerator {
 
         int TransmittanceKernel = Atmosphere.FindKernel("Transmittance_Kernel");
         int SingleScatterKernel = Atmosphere.FindKernel("SingleScatter_Kernel");
+        int MultiScatKernel = Atmosphere.FindKernel("NewMultiScattCS_kernel");
+        SkyViewKernel = Atmosphere.FindKernel("SkyView_Kernel");
 
         CreateComputeBuffer(ref rayleigh_densityC, rayleigh_density, 20);
         CreateComputeBuffer(ref mie_densityC, mie_density, 20);
@@ -125,6 +134,9 @@ public class AtmosphereGenerator {
         Atmosphere.SetBuffer(SingleScatterKernel, "rayleigh_density", rayleigh_densityC);
         Atmosphere.SetBuffer(SingleScatterKernel, "mie_density", mie_densityC);
         Atmosphere.SetBuffer(SingleScatterKernel, "absorption_density", absorption_densityC);
+        Atmosphere.SetBuffer(MultiScatKernel, "rayleigh_density", rayleigh_densityC);
+        Atmosphere.SetBuffer(MultiScatKernel, "mie_density", mie_densityC);
+        Atmosphere.SetBuffer(MultiScatKernel, "absorption_density", absorption_densityC);
         Atmosphere.SetFloat("sun_angular_radius", 0.05f);
         Atmosphere.SetFloat("bottom_radius", BottomRadius);
         Atmosphere.SetFloat("top_radius", TopRadius);
@@ -146,6 +158,19 @@ public class AtmosphereGenerator {
         _MieTex.enableRandomWrite = true;
         _MieTex.Create();
 
+        _MultiScatterTex = new RenderTexture(32, 32, 0,
+        RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+        _MultiScatterTex.enableRandomWrite = true;
+        _MultiScatterTex.Create();
+
+        _SkyViewTex = new RenderTexture(192, 108, 0,
+        RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+        _SkyViewTex.enableRandomWrite = true;
+        _SkyViewTex.Create();
+
+        Atmosphere.SetTexture(SkyViewKernel, "SkyViewTex", _SkyViewTex);
+
+
         Atmosphere.SetTexture(TransmittanceKernel, "TransmittanceTex", _TransmittanceLUT);
         Atmosphere.Dispatch(TransmittanceKernel, 256, 64, 1);
         Atmosphere.SetTexture(SingleScatterKernel, "TransmittanceTex", _TransmittanceLUT);
@@ -153,10 +178,24 @@ public class AtmosphereGenerator {
         Atmosphere.SetTexture(SingleScatterKernel, "MieTex", _MieTex);
         Atmosphere.Dispatch(SingleScatterKernel, 256, 128, 32);
 
+        Atmosphere.SetTexture(SkyViewKernel, "TransmittanceTexRead", _TransmittanceLUT);
+
+        Atmosphere.SetTexture(MultiScatKernel, "TransmittanceTexRead", _TransmittanceLUT);
+        Atmosphere.SetTexture(MultiScatKernel, "MultiScatTex", _MultiScatterTex);
+        Atmosphere.Dispatch(MultiScatKernel, 32,32,1);
+
         rayleigh_densityC?.Release();
         mie_densityC?.Release();
         absorption_densityC?.Release();
         _TransmittanceLUT.Release();
+    }
+
+    public void UpdateSky(Vector3 SunDir) {
+        Atmosphere.SetMatrix("InvViewProjMat", (Camera.main.projectionMatrix * Camera.main.worldToCameraMatrix).inverse);
+        Atmosphere.SetVector("camPos", Camera.main.transform.position);
+        Atmosphere.SetVector("UpVector", new Vector3(0,1,0));
+        Atmosphere.SetVector("sun_direction", SunDir);
+        Atmosphere.Dispatch(SkyViewKernel, (int)Mathf.Ceil(192.0f / 16.0f), (int)Mathf.Ceil(108.0f / 16.0f), 1);
     }
 
     private void OnDisable() {
