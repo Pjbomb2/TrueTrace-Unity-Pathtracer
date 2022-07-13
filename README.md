@@ -20,7 +20,7 @@ What is it?
 Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compute Shaders
 ## Features: 
 <ul>
-<li>Relatively fast Compute Shader based path tracing</li>
+<li>Somewhat fast Compute Shader based path tracing</li>
 <li>Diffuse, Glossy(kinda), Dielectric(think of glass), Conductor(metal), Diffuse Transmission, Emissive, and Plastic materials</li>
 <li>Ability to move, add, and remove objects during play</li>
 <li>Ability to update material properties on the fly during play</li>
@@ -43,6 +43,7 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 <li>AutoExposure</li>
 <li>Temporal Anti-Aliasing</li>
 <li>ReSTIR for better sampling of many lights</li>
+<li>Explicit light sampling for faster convergence</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
@@ -114,7 +115,7 @@ BVH Options Description -
   <li>Use Russian Roulette - Highly reccomended to leave this on, kills rays that may not contribute much early, and thus greatly increases performance</li>
   <li>Enable Object Moving - Allows objects to be moved during play, and allows for added objects to spawn in when they are done building</li>
   <li>Allow Image Accumulation - Allows the image to accumulate while the camera is not moving</li>
-  <li>Use Next Event Estimation - Enables shadow rays, NEE, and MIS for direct light sampling</li>
+  <li>Use Next Event Estimation - Enables shadow rays/NEE for direct light sampling</li>
   <li>Allow Volumetrics - Turns on pathtracing of global volumetric homogenous fog</li>
   <li>(If Allow Volumetrics is on) Volume Density - Adjusts density of the global fog</li>  
   <li>Allow Mesh Skinning - Turns on the ability for skinned meshes to be animated or deformed with respect to their armeture</li>
