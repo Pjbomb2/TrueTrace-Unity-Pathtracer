@@ -146,6 +146,7 @@ BVH Options Description -
   
 # Sample Images(Taken from various stages of development)
 
+![](/Images/Bloom.png)
 ![](/Images/ReSTIR4.png)
 ![](/Images/RealisticSponza.png)
 ![](/Images/AnotherRestir.png)
