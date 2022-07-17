@@ -88,14 +88,12 @@ VoxLoader Vox;
                 eta = (Vox.palette[Vox.CurrentMaterials[i]].w != 255) ? new Vector3(1.33f,0,0) : new Vector3(0,0,0)
                 });
         }
-        Debug.Log("1");
         LargestAxis = (int)Mathf.Max(Mathf.Max(Size.x, Size.y), Size.z);
         for(int i = 0; i < Voxels.Count; i++) {
             var TempVox = Voxels[i];
             TempVox.InArrayIndex = i;
             Voxels[i] = TempVox;
         }
-        Debug.Log("2");
         int A = 1;
         LargestAxis =(int)Mathf.Max(Mathf.Max(Size.x, Size.y), Size.z);
         while(A < LargestAxis) {
@@ -110,7 +108,7 @@ VoxLoader Vox;
             GPUVoxels[i].Index = Octree.OrderedVoxels[i].Index;
             GPUVoxels[i].Material = Octree.OrderedVoxels[i].Material;
 
-        }        Debug.Log("7");
+        }
 
         GPUOctreeNode TempBVHNode = new GPUOctreeNode();
         for(int i = 0; i < Octree.CompressedOctree.Length; ++i) {//Could I store the entire voxel inside the first node? I dont need to send it then, if its just a material index
@@ -122,12 +120,10 @@ VoxLoader Vox;
             TempBVHNode.Center = Octree.Octree[i].Center;
             GPUOctree[i] = TempBVHNode;
         }
-                Debug.Log("8");
         for(int i  = Octree.CompressedOctree.Length; i < Octree.CompressedOctree.Length + Voxels.Count; i++) {
             GPUOctree[i].node_1x = (uint)Octree.OrderedVoxels[i - Octree.CompressedOctree.Length].Material;
             GPUOctree[i].Center = GetPosition(Octree.OrderedVoxels[i - Octree.CompressedOctree.Length].Index);
         }
-                Debug.Log("9");
         LargestAxis = A;
         HasCompleted = true;
         Debug.Log("Voxel Object " + Name + " Completed With " + Voxels.Count + " Voxels With Depth Of " + Octree.TotalDepth);

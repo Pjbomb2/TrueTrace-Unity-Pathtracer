@@ -242,7 +242,7 @@ public class RayTracingMaster : MonoBehaviour {
                 if(Assets.UpdateTLAS()) {
                     CreateComputeBuffer(ref _CompactedMeshData, Assets.MyMeshesCompacted, 176);
                     CreateComputeBuffer(ref _LightTriangles, Assets.AggLightTriangles, 72);
-                    CreateComputeBuffer(ref _MaterialDataBuffer, Assets._Materials, 136);
+                    CreateComputeBuffer(ref _MaterialDataBuffer, Assets._Materials, 148);
                     CreateComputeBuffer(ref _UnityLights, Assets.UnityLights, 56);
                     CreateComputeBuffer(ref _LightMeshes, Assets.LightMeshes, 92);
                     CreateComputeBuffer(ref _OctreeBuffer, Assets.GPUOctree, 28);
@@ -268,7 +268,7 @@ public class RayTracingMaster : MonoBehaviour {
         CreateComputeBuffer(ref _VoxelTLAS, Assets.VoxelTLAS, 80);
         CreateComputeBuffer(ref _LightMeshes, Assets.LightMeshes, 92);
         
-        CreateComputeBuffer(ref _MaterialDataBuffer, Assets._Materials, 136);
+        CreateComputeBuffer(ref _MaterialDataBuffer, Assets._Materials, 148);
         CreateComputeBuffer(ref _CompactedMeshData, Assets.MyMeshesCompacted, 176);
         CreateComputeBuffer(ref _LightTriangles, Assets.AggLightTriangles, 72);
         CreateComputeBuffer(ref _IllumTriBuffer, Assets.ToIllumTriBuffer, 4);
@@ -588,6 +588,10 @@ public class RayTracingMaster : MonoBehaviour {
         RayTracingShader.Dispatch(TraceKernel, 768, 1, 1);
         UnityEngine.Profiling.Profiler.EndSample();
 
+        UnityEngine.Profiling.Profiler.BeginSample("First Trace For Octree");
+        if(Assets.UseVoxels) RayTracingShader.Dispatch(OctreeKernel, 768, 1, 1);
+        UnityEngine.Profiling.Profiler.EndSample();
+
         UnityEngine.Profiling.Profiler.BeginSample("Rest Of Trace");
         if(AllowReSTIR) {//Required to be down here so that prevpostex is correct
             //RayTracingShader.Dispatch(DepthCopyKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
@@ -608,14 +612,23 @@ public class RayTracingMaster : MonoBehaviour {
         }
 
         for(int i = 0; i < bouncecount; i++) {
+            UnityEngine.Profiling.Profiler.BeginSample("TraceKernel For Bounce: " + i);
             var bouncebounce = i;
             RayTracingShader.SetInt("CurBounce", bouncebounce);
             if(i != 0) RayTracingShader.Dispatch(TraceKernel, 768, 1, 1);
-            if(Assets.UseVoxels) RayTracingShader.Dispatch(OctreeKernel, 768, 1, 1);
+            UnityEngine.Profiling.Profiler.EndSample();
+            UnityEngine.Profiling.Profiler.BeginSample("TraceKernel For Octree: " + i);
+            if(Assets.UseVoxels && i != 0) RayTracingShader.Dispatch(OctreeKernel, 768, 1, 1);
+            UnityEngine.Profiling.Profiler.EndSample();
+            UnityEngine.Profiling.Profiler.BeginSample("Shade Kernel: " + i);
             RayTracingShader.Dispatch(ShadeKernel, threadGroupsX2, threadGroupsY2, 1);
+            UnityEngine.Profiling.Profiler.EndSample();
+            UnityEngine.Profiling.Profiler.BeginSample("Shadow Kernel: " + i);
             if(UseNEE || AllowVolumetrics) RayTracingShader.Dispatch(ShadowKernel, 768, 1, 1);
+            UnityEngine.Profiling.Profiler.EndSample();
+            UnityEngine.Profiling.Profiler.BeginSample("Octree Shadow Kernel: " + i);
             if(UseNEE || AllowVolumetrics) RayTracingShader.Dispatch(OctreeShadowKernel, 768, 1, 1);
-
+            UnityEngine.Profiling.Profiler.EndSample();
         }
         UnityEngine.Profiling.Profiler.EndSample();
 

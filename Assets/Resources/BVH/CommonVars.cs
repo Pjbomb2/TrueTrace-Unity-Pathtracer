@@ -30,6 +30,12 @@ namespace CommonVars {
         public int InArrayIndex;
     }
 
+    [System.Serializable]
+    public struct VolumetricVoxelData {
+        public float Density;
+        public int Index;
+    }
+
     [System.Serializable][System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
     public unsafe struct OctreeNode {
         [System.Runtime.InteropServices.FieldOffset(0)] public fixed int ChildNode[8];
@@ -120,6 +126,7 @@ namespace CommonVars {
         public float Roughness;
         public int MatType;
         public Vector3 eta;
+        public Vector3 EmissionColor;
     }
 
     [System.Serializable]

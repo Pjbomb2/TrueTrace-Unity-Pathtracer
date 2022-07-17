@@ -7,7 +7,9 @@ using System.Collections.Generic;
 public class RayTracingObject : MonoBehaviour {
 	public enum Options {Diffuse, Metallic, Glass, Glossy, Unused, Volumetric, SubSurfaceScattering, DiffuseTransmission, Plastic};
 	public Options[] MaterialOptions;
-	public float[] emmission, Roughness;
+	public float[] emmission; 
+	public Vector3[] EmissionColor;
+	public float[] Roughness;
 	public Vector3[] eta, BaseColor;
 	public int[] MaterialIndex;
 	public int[] LocalMaterialIndex;
@@ -19,10 +21,10 @@ public class RayTracingObject : MonoBehaviour {
 	 	} else {
 	 		GetComponent<SkinnedMeshRenderer>().BakeMesh(mesh);
 	 	}
-
+			int SubMeshCount = mesh.subMeshCount;
+			if(EmissionColor == null || EmissionColor.Length != SubMeshCount) EmissionColor = new Vector3[SubMeshCount];
 		try {
 			if(emmission == null || emmission.Length != mesh.subMeshCount) {
-			int SubMeshCount = mesh.subMeshCount;
 			MaterialOptions = new Options[SubMeshCount];
 			LocalMaterialIndex = new int[mesh.subMeshCount];
 			emmission = new float[SubMeshCount];
@@ -41,9 +43,8 @@ public class RayTracingObject : MonoBehaviour {
 						BaseColor[i] = new Vector3(Col.r, Col.g, Col.b);
 					} else {
 						Color Col = SharedMaterials[i].GetColor("_EmissionColor");
-						BaseColor[i] = new Vector3(Col.r, Col.g, Col.b).normalized;
+						EmissionColor[i] = new Vector3(Col.r, Col.g, Col.b).normalized;
 					}
-						EmissionColored = true;
 				}
 				if(SharedMaterials[i].GetFloat("_Mode") == 3.0f) {
 					MaterialOptions[i] = Options.Glass;

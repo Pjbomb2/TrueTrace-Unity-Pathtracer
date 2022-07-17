@@ -2,7 +2,7 @@
 int screen_width;
 int screen_height;
 Texture2D<float4> InputTex;
-SamplerState samplerInputTex;
+SamplerState sampler_InputTex_trilinear_clamp;
 Texture2D<float4> OrigTex;
 SamplerState samplerOrigTex;
 RWTexture2D<float4> OutputTex;
@@ -35,7 +35,7 @@ inline float3 calculateBloomTile(const float lod, const float2 offset) {
         for (int x = -2; x <= 2; x++) {
             float weight  = clamp(1.0 - length(float2(x, y)) / 4.0, 0.0, 1.0);
                   weight *= weight;
-            bloom += InputTex.SampleLevel(samplerInputTex, UV + float2(x, y) * scale, lod).rgb * weight;
+            bloom += InputTex.SampleLevel(sampler_InputTex_trilinear_clamp, UV + float2(x, y) * scale, lod).rgb * weight;
             totalWeight += weight;
         }
     }

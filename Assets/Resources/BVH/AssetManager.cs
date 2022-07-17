@@ -695,6 +695,7 @@ public class AssetManager : MonoBehaviour {
                     TempMat.Roughness = ((int)CurrentMaterial.MaterialOptions[i3] != 1) ? CurrentMaterial.Roughness[i3] : Mathf.Max(CurrentMaterial.Roughness[i3], 0.000001f);
                     TempMat.eta = CurrentMaterial.eta[i3];
                     TempMat.MatType = (int)CurrentMaterial.MaterialOptions[i3];
+                    TempMat.EmissionColor = CurrentMaterial.EmissionColor[i3];
                     _Materials[CurrentMaterial.MaterialIndex[i3]] = TempMat;
                 }
             }

@@ -442,14 +442,14 @@ Reps++;
             uint bit_index4  = (meta4 ^ (oct_inv4 & inner_mask4)) & 0x1f1f1f1f;
             uint child_bits4 = (meta4 >> 5) & 0x07070707;
 
-            uint q_lo_x = asuint(i == 0 ? node_2.x : node_2.y);
-            uint q_hi_x = asuint(i == 0 ? node_2.z : node_2.w);
+            uint q_lo_x = (i == 0 ? node_2.x : node_2.y);
+            uint q_hi_x = (i == 0 ? node_2.z : node_2.w);
 
-            uint q_lo_y = asuint(i == 0 ? node_3.x : node_3.y);
-            uint q_hi_y = asuint(i == 0 ? node_3.z : node_3.w);
+            uint q_lo_y = (i == 0 ? node_3.x : node_3.y);
+            uint q_hi_y = (i == 0 ? node_3.z : node_3.w);
 
-            uint q_lo_z = asuint(i == 0 ? node_4.x : node_4.y);
-            uint q_hi_z = asuint(i == 0 ? node_4.z : node_4.w);
+            uint q_lo_z = (i == 0 ? node_4.x : node_4.y);
+            uint q_hi_z = (i == 0 ? node_4.z : node_4.w);
 
             uint x_min = ray.direction.x < 0.0f ? q_hi_x : q_lo_x;
             uint x_max = ray.direction.x < 0.0f ? q_lo_x : q_hi_x;
@@ -1298,8 +1298,14 @@ void IntersectShadowOctree() {
         while(true) {
             InterlockedAdd(BufferSizes[CurBounce].octree_shadow_rays_retired, 1, ray_index);
             if(ray_index >= (uint)BufferSizes[CurBounce].shadow_rays) return;
-            if(ShadowRaysBuffer[ray_index].HitMesh) { if(CurBounce == 0 && ShadowRaysBuffer[ray_index].IsNotFog) CurrentReservoir[ShadowRaysBuffer[ray_index].PixelIndex].W = 0; continue;}
             int pixel_index = ShadowRaysBuffer[ray_index].PixelIndex;
+            if(ShadowRaysBuffer[ray_index].HitMesh) { 
+                if(CurBounce == 0 && ShadowRaysBuffer[ray_index].IsNotFog) 
+                    CurrentReservoir[ShadowRaysBuffer[ray_index].PixelIndex].W = 0; 
+                if(!ShadowRaysBuffer[ray_index].IsNotFog)
+                    GlobalColors[pixel_index].Fog -= ShadowRaysBuffer[ray_index].illumination;
+                continue;
+            }
             if(ShadowRaysBuffer[ray_index].IsNotFog) {
                 if(CurBounce == 0) {    
 //                    CurrentReservoir[ShadowRaysBuffer[ray_index].PixelIndex].WasSuccessful = 1;
@@ -1320,6 +1326,10 @@ void kernel_shadow_octree () {//If I move the function contents into here, unity
 
     IntersectShadowOctree();
 }
+
+
+
+
 
 
 #pragma kernel kernel_shade
@@ -1364,6 +1374,7 @@ struct MaterialData {//56
     float roughness;//105
     int MatType;//109
     float3 eta;//121
+    float3 EmissionColor;
 };
 
 
@@ -2279,11 +2290,11 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
 
     [branch]if(hitDat.emmis > 0.0f) {//if we hit a light, this ray is done
         [flatten]if(CurBounce == 0) {
-            Color.Direct = hitDat.emmis;
+            Color.Direct = hitDat.emmis * (exp( -((hit.t) * sigma_t) ));
         } else if(CurBounce == 1) {
-            Color.Direct += hitDat.surfaceColor * (hitDat.emmis);
+            Color.Direct += hitDat.surfaceColor * (hitDat.emmis) * (exp( -((hit.t) * sigma_t) ));
         } else {
-            Color.Indirect += Color.throughput * hitDat.emmis * hitDat.surfaceColor;
+            Color.Indirect += Color.throughput * hitDat.emmis * hitDat.surfaceColor * (exp( -((hit.t) * sigma_t) ));
         }
         return;
     }
@@ -2370,7 +2381,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
     }
     if(!valid) return;//If the ray failed, we have no choice but to terminate this path
     ray.origin = Geomnorm * 0.001f + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
-    [branch]if((UseNEE || AllowVolumetrics) && CurBounce < MaxBounce) {//Next event estimation
+    [branch]if((UseNEE || AllowVolumetrics)) {//Next event estimation
             float3 pos2;
             float3 LightNorm;
             int triindex;
@@ -2571,7 +2582,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
             float3 transmittance = exp( -((distance_to_light + dist) * sigma_t) );
             float geomTerm = 1.0f / (distance_to_light_squared);
             float w = power_heuristic(light_pdf, pdf);
-            float3 Illum = PrevThroughput * w * Radiance * geomTerm * transmittance / (light_pdf) * VolumeDensity * Attenuation;// * (exp( -((hit.t) * hitDat.surfaceColor) ))
+            float3 Illum = PrevThroughput * Radiance * geomTerm * transmittance / (light_pdf) * VolumeDensity * Attenuation;// * (exp( -((hit.t) * hitDat.surfaceColor) ))
             float maxillum = max(max(Illum.x, Illum.y), Illum.z);
             if(maxillum > random(9).y) {//NEE russian roulette, massively improves performance while giivng the same result
                 uint index4;//Congrats we shoot a shadow ray for NEE
@@ -2607,6 +2618,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
     set(index2, hit);
     terminated = false;//identifier so we dont write to output before the ray ends
 }
+
 
 [numthreads(8,8,1)]
 void kernel_shade () {
@@ -2689,12 +2701,19 @@ void kernel_shade () {
     bool IsEmissiveTex = false;
     if(TempMat.HasEmissiveTex > 0) {
         float2 EmissionUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].EmissiveTex.xy - _Materials[MaterialIndex].EmissiveTex.zw) + _Materials[MaterialIndex].EmissiveTex.zw;
-        float3 EmissCol = _EmissiveAtlas.SampleLevel(sampler_EmissiveAtlas, EmissionUV, 0).xyz;
-        if(EmissCol.x > 0.001f) {
+        float3 EmissCol = _Materials[MaterialIndex].EmissionColor;
+        bool IsMask = !(EmissCol.x == 0 && EmissCol.y == 0 && EmissCol.z == 0);
+        if(!IsMask) EmissCol = _EmissiveAtlas.SampleLevel(sampler_EmissiveAtlas, EmissionUV, 0).xyz;
+        else EmissCol *= _EmissiveAtlas.SampleLevel(sampler_EmissiveAtlas, EmissionUV, 0).xyz;
+        if(dot(EmissCol,EmissCol) > 0.001f) {
             IsEmissiveTex = true;
-            hitmat.surfaceColor += EmissCol * hitmat.surfaceColor;
-            hitmat.emmis = EmissCol.x;
+            hitmat.surfaceColor += EmissCol * (IsMask ? 1.0f : hitmat.surfaceColor);
+            hitmat.emmis = sqrt(dot(EmissCol,EmissCol));
+        } else {
+            hitmat.emmis = 0;
         }
+    } else if(_Materials[MaterialIndex].EmissionColor.x != 0 || _Materials[MaterialIndex].EmissionColor.y != 0 || _Materials[MaterialIndex].EmissionColor.z != 0) {
+        hitmat.surfaceColor += _Materials[MaterialIndex].EmissionColor * hitmat.surfaceColor;
     }
 
     bool DidTerminate = true;//Identifier marking whether we have terminated the ray or if it will continue

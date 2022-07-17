@@ -34,7 +34,7 @@ unsafe public class OctreeBuilder
         return location + new Vector3(0.5f,0.5f,0.5f);
     }
     public List<Voxel>LastNodes;
-public int MaxDepth = 12;
+public int MaxDepth = 24;
 public int MaxRecursions = 0;
     public int TotalDepth;
     public void RecursiveBuild(Voxel[] ChildrenIn, Vector3 BBMax, Vector3 BBMin, int PrevNode, int PrevOffset, int CurDepth, ref OctreeNode PrevNode2) {
@@ -126,7 +126,6 @@ public int MaxRecursions = 0;
         Octree.Add(TempNode);
         RecursiveBuild(Voxels, OrigionalSize, new Vector3(0,0,0), 0, 0, 0, ref TempNode);
         Octree.RemoveAt(0);
-        Debug.Log("3");
         for(int i = 0; i < Octree.Count; i++) {//Ordering the voxels
             var TempVox = Octree[i];
             for(int i2 = 0; i2 < 8; i2++) {
@@ -137,33 +136,30 @@ public int MaxRecursions = 0;
             }
             Octree[i] = TempVox;
         }
-        Debug.Log("4");
         OrderedList = new List<OctreeNode>();
-        List<OctreeNode> WorkGroup = new List<OctreeNode>();
-        List<int> OldIndex = new List<int>();
+        Queue<OctreeNode> WorkGroup = new Queue<OctreeNode>();
+        Queue<int> OldIndex = new Queue<int>();
         OctreeNode TempOrderedNode;
-        WorkGroup.Add(Octree[0]);
+        WorkGroup.Enqueue(Octree[0]);
         OrderedList.Add(Octree[0]);
-        OldIndex.Add(0); int Reps = 0;
+        OldIndex.Enqueue(0); int Reps = 0;
         OctreeNode[] OrderedOctree = new OctreeNode[Octree.Count];
+        int CurLength = 0;
         while(WorkGroup.Count != 0) {//Re-organizing the octree so that the 8 child node come after the parent node every time
             Reps++;
-            TempNode = WorkGroup[0];
-            int Index = OldIndex[0];
-            WorkGroup.RemoveAt(0);
-            OldIndex.RemoveAt(0);
+            TempNode = WorkGroup.Dequeue();
+            int Index = OldIndex.Dequeue();
             for(int i = 0; i < 8; i++) {
                 if(!TempNode.IsChild[i] && !(TempNode.ChildNode[i] == -1)) {
                     OrderedList.Add(Octree[TempNode.ChildNode[i]]);
-                    OldIndex.Add(OrderedList.Count - 1);
-                    WorkGroup.Add(Octree[TempNode.ChildNode[i]]);
+                    OldIndex.Enqueue(OrderedList.Count - 1);
+                    WorkGroup.Enqueue(Octree[TempNode.ChildNode[i]]);
                     TempNode.ChildNode[i] = OrderedList.Count - 1;
                 }
             }
             OrderedList[Index] = TempNode;
 
         }
-                Debug.Log("5");
 
         Octree = new List<OctreeNode>(OrderedList);
         OrderedList.Clear();
@@ -203,6 +199,5 @@ public int MaxRecursions = 0;
                 }
             }
         }
-                Debug.Log("6");
     }
 }
