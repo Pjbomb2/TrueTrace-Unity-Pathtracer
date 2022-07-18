@@ -3,11 +3,11 @@ Currently working on:
 <ul>
   <li>Need More Ideas</li>
 </ul>
-Currently needs to be done but havent started:
+Currently needs to be done but havent implemented fully:
 <ul>
-    <li>Precomputed multiple scattering atmosphere(struggling a lot)</li>
     <li>Reduce Memory Spike on Start</li>
     <li>Make Voxels able to be volumetric</li>
+    <li>User friendly way of instancing(already have a working demo, but its not user friendly)</li>
 </ul>
 Currently want to do but havent started:
 <ul>
@@ -44,9 +44,11 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 <li>Temporal Anti-Aliasing</li>
 <li>ReSTIR for better sampling of many lights</li>
 <li>Explicit light sampling for faster convergence</li>
+<li>Precomputed Multiple Atmospheric Scattering for dynamic and realtime sky(from ebruneton below)</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
+</br>[ebruneton](https://ebruneton.github.io/precomputed_atmospheric_scattering/)
 </br>
 
 If you have any questions, or suggestions, etc. let me know either through github issues or something else! I am always looking for more stuff to add, and more ways to make it more user friendly or appealing for others to use, and ways to improve this overall
@@ -139,6 +141,7 @@ BVH Options Description -
  ## Materials
  <ul>
   <li>Emission - Pretty self explanatory, the higher it is, the bright the object is(and the higher chance it will be sampled for NEE)</li>
+  <li>Emission Color - Only used for emission masks, if you have an emission mask, make this non-zero to color the emission from the mask, otherwise keep it at 0</li>
   <li>Roughness - Applys to Conductors, Dielectrics, glossy, Diffuse Transmission, and plastics - Higher roughness makes objects more rough, but in Diffuse Transmission it basically represents how clear the material is</li>
   <li>Eta - For Conductors it changes the color of reflected light, but inverted, but for Dielectrics, only the x component is used, and that X component is the Dielectrics IOR(Index of Refraction, with 1 being air), and for Subsurface Scattering, it is used the same as for conductors, and the same for Plastic materials</li>
   <li>Base Color - So this will be automatically set to whatever the material of the objects color is, and it will also be overridden by textures, but its there so you can manually change it, works for all material types</li>
