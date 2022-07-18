@@ -8,6 +8,14 @@ static uint ScatteringTexMUSize = 128;
 static uint ScatteringTexMUSSize = 32;
 static uint ScatteringTexNUSize = 8;
 
+static uint IrradianceTexWidth = 64;
+static uint IrradianceTexHeight = 16;
+
+static uint ScatteringTexWidth = ScatteringTexNUSize * ScatteringTexMUSSize;
+static uint ScatteringTexHeight = ScatteringTexMUSize;
+static uint ScatteringTexDepth = ScatteringTexRSize;
+
+
 static uint MultiScatteringLUTRes = 32;
 
 static const float PI = 3.14159265f;
@@ -17,9 +25,25 @@ RWTexture3D<float4> RayleighTex;
 RWTexture3D<float4> MieTex;
 RWTexture2D<float4> MultiScatTex;
 
+Texture3D<float4> RayleighTexRead;
+Texture3D<float4> MieTexRead;
+
 Texture2D<float4> TransmittanceTexRead;
 
 SamplerState linearClampSampler;
+
+RWTexture2D<float4> DeltaIrradianceTex;
+RWTexture2D<float4> IrradianceTex;
+
+Texture2D<float4> IrradianceTexRead;
+
+RWTexture3D<float4> ScatteringTex;
+RWTexture3D<float4> ScatteringDensityTex;
+
+Texture3D<float4> ScatteringDensityTexRead;
+
+RWTexture3D<float4> MultipleScatteringTex;
+Texture3D<float4> MultipleScatteringTexRead;
 
 
 
@@ -56,7 +80,13 @@ bool RayIntersectsGround(float r, float mu) {
     return (mu < 0.0f && r * r * (mu * mu - 1.0f) + bottom_radius * bottom_radius >= 0.0f);
 }
 
+float ClampCosine(float mu) {
+  return clamp(mu, -1.0f, 1.0f);
+}
 
+float ClampRadius(float r) {
+  return clamp(r, bottom_radius, top_radius);
+}
 
 float DistanceToTopAtmosphereBoundary(float r, float mu) {
     float discriminant = r * r * (mu * mu - 1.0f) + top_radius * top_radius;
@@ -77,7 +107,7 @@ float GetProfileDensity(DensityProfileLayer DensProf[2], float altitude) {
     return (altitude < DensProf[0].width) ? GetLayerDensity(DensProf[0], altitude) : GetLayerDensity(DensProf[1], altitude);
 }
 
-float ComputeOpticalLengthToTopAtmosphereBoundary(DensityProfileLayer DensProf1, DensityProfileLayer DensProf2, float r, float mu) {
+float ComputeOpticalfloatToTopAtmosphereBoundary(DensityProfileLayer DensProf1, DensityProfileLayer DensProf2, float r, float mu) {
     DensityProfileLayer DensProf[2] = {DensProf1, DensProf2};
     const int SAMPLE_COUNT = 80;
     float dx = DistanceToTopAtmosphereBoundary(r, mu) / (float)SAMPLE_COUNT;
@@ -98,11 +128,11 @@ float ComputeOpticalLengthToTopAtmosphereBoundary(DensityProfileLayer DensProf1,
 float3 ComputeTransmittanceToTopAtmosphereBoundary(float r, float mu) {
     return exp(-(
         rayleigh_scattering * 
-        ComputeOpticalLengthToTopAtmosphereBoundary(rayleigh_density[0], rayleigh_density[1], r, mu) + 
+        ComputeOpticalfloatToTopAtmosphereBoundary(rayleigh_density[0], rayleigh_density[1], r, mu) + 
         mie_extinction * 
-        ComputeOpticalLengthToTopAtmosphereBoundary(mie_density[0], mie_density[1], r, mu) + 
+        ComputeOpticalfloatToTopAtmosphereBoundary(mie_density[0], mie_density[1], r, mu) + 
         absorption_extinction * 
-        ComputeOpticalLengthToTopAtmosphereBoundary(absorption_density[0], absorption_density[1], r, mu)
+        ComputeOpticalfloatToTopAtmosphereBoundary(absorption_density[0], absorption_density[1], r, mu)
         ));
 }
 
@@ -352,6 +382,10 @@ float3 GetTransmittanceToSun(float r, float mu_s) {
                  mu_s - cos_theta_h);
 }
 
+
+static float4x4 LuminanceFromRadiance = float4x4(1.0f,0.0f,0.0f,0.0f, 0.0f,1.0f,0.0f,0.0f, 0.0f,0.0f,1.0f,0.0f, 0.0f,0.0f,0.0f,1.0f);
+
+
 [numthreads(1,1,1)]
 void SingleScatter_Kernel (uint3 id : SV_DispatchThreadID)
 {
@@ -363,10 +397,257 @@ void SingleScatter_Kernel (uint3 id : SV_DispatchThreadID)
 
     RayleighTex[id.xyz] = float4(rayleigh, 1.0f);
     MieTex[id.xyz] = float4(mie, 1.0f);
+    rayleigh = mul(LuminanceFromRadiance, float4(rayleigh,0));
+    float mie2 = mul(LuminanceFromRadiance, float4(mie,0));
+    ScatteringTex[id.xyz] = float4(rayleigh, mie2);
 }
 
 
-#pragma kernel NewMultiScattCS_kernel
+#pragma kernel DirectIrradiance_Kernel
+
+float3 ComputeDirectIrradiance(float r, float mu_s) {
+
+  float alpha_s = sun_angular_radius;
+  // Approximate average of the cosine factor mu_s over the visible fraction of
+  // the Sun disc.
+  float average_cosine_factor =
+    mu_s < -alpha_s ? 0.0 : (mu_s > alpha_s ? mu_s :
+        (mu_s + alpha_s) * (mu_s + alpha_s) / (4.0 * alpha_s));
+
+  return solar_irradiance *
+      GetTransmittanceToTopAtmosphereBoundary(
+          r, mu_s) * average_cosine_factor;
+
+}
+
+void GetRMuSFromIrradianceTextureUv(float2 uv, inout float r, inout float mu_s) {
+  float x_mu_s = GetUnitRangeFromTextureCoord(uv.x, IrradianceTexWidth);
+  float x_r = GetUnitRangeFromTextureCoord(uv.y, IrradianceTexHeight);
+  r = bottom_radius +
+      x_r * (top_radius - bottom_radius);
+  mu_s = ClampCosine(2.0 * x_mu_s - 1.0);
+}
+
+float3 ComputeDirectIrradianceTexture(
+    float2 frag_coord) {
+  float r;
+  float mu_s;
+  GetRMuSFromIrradianceTextureUv(frag_coord / float2(IrradianceTexWidth, IrradianceTexHeight), r, mu_s);
+  return ComputeDirectIrradiance(r, mu_s);
+}
+
+
+
+[numthreads(1,1,1)]
+void DirectIrradiance_Kernel (uint3 id : SV_DispatchThreadID)
+{
+
+    float3 DeltaIrradiance = ComputeDirectIrradianceTexture(id.xy);
+    DeltaIrradianceTex[id.xy] = float4(DeltaIrradiance, 0);
+    IrradianceTex[id.xy] = 0;
+}
+
+#pragma kernel IndirectIrradiance_Kernel
+
+float3 GetScattering2(Texture3D Tex, float r, float mu, float mu_s, float nu, bool ray_r_mu_intersects_ground) {
+  float4 uvwz = GetScatteringTextureUvwzFromRMuMuSNu(r, mu, mu_s, nu, ray_r_mu_intersects_ground);
+  float tex_coord_x = uvwz.x * (float)(ScatteringTexNUSize - 1);
+  float tex_x = floor(tex_coord_x);
+  float lerp2 = tex_coord_x - tex_x;
+  float3 uvw0 = float3((tex_x + uvwz.y) / (float)ScatteringTexNUSize,
+      uvwz.z, uvwz.w);
+  float3 uvw1 = float3((tex_x + 1.0 + uvwz.y) / (float)ScatteringTexNUSize,
+      uvwz.z, uvwz.w);
+  return float3(Tex.SampleLevel(linearClampSampler, uvw0, 0).xyz * (1.0 - lerp2) + Tex.SampleLevel(linearClampSampler, uvw1, 0).xyz * lerp2);
+}
+
+float3 GetScattering(float r, float mu, float mu_s, float nu, bool ray_r_mu_intersects_ground, int scattering_order) {
+    if(scattering_order == 1) {
+        float3 rayleigh = GetScattering2(RayleighTexRead, r, mu, mu_s, nu, ray_r_mu_intersects_ground);
+        float3 mie = GetScattering2(MieTexRead, r, mu, mu_s, nu, ray_r_mu_intersects_ground);
+        return rayleigh * RayleighPhaseFunction(nu) + mie * MiePhaseFunction(-0.8f, nu);
+    } else {
+        return GetScattering2(MultipleScatteringTexRead, r, mu, mu_s, nu, ray_r_mu_intersects_ground);
+    }
+}
+
+float3 ComputeIndirectIrradiance(
+    float r, float mu_s, int scattering_order) {
+
+  const int SAMPLE_COUNT = 32;
+  const float dphi = 3.14159 / float(SAMPLE_COUNT);
+  const float dtheta = 3.14159 / float(SAMPLE_COUNT);
+
+  float3 result = 0.0;
+  float3 omega_s = float3(sqrt(1.0 - mu_s * mu_s), 0.0, mu_s);
+  for (int j = 0; j < SAMPLE_COUNT / 2; ++j) {
+    float theta = (float(j) + 0.5) * dtheta;
+    for (int i = 0; i < 2 * SAMPLE_COUNT; ++i) {
+      float phi = (float(i) + 0.5) * dphi;
+      float3 omega =
+          float3(cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta));
+      float domega = (dtheta) * (dphi) * sin(theta);
+
+      float nu = dot(omega, omega_s);
+      result += GetScattering(r, omega.z, mu_s, nu, false, scattering_order) * omega.z * domega;
+    }
+  }
+  return result;
+}
+
+
+float3 ComputeIndirectIrradianceTexture(
+    float2 frag_coord, int scattering_order) {
+  float r;
+  float mu_s;
+  GetRMuSFromIrradianceTextureUv(frag_coord / float2(IrradianceTexWidth, IrradianceTexHeight), r, mu_s);
+  return ComputeIndirectIrradiance(r, mu_s, scattering_order);
+}
+
+
+int ScatteringOrder;
+[numthreads(1,1,1)]
+void IndirectIrradiance_Kernel (uint3 id : SV_DispatchThreadID)
+{
+
+    float3 DeltaIrradiance = ComputeIndirectIrradianceTexture(
+        id.xy, ScatteringOrder);
+    DeltaIrradianceTex[id.xy] = float4(DeltaIrradiance, 0);
+    IrradianceTex[id.xy] = (float4(mul(LuminanceFromRadiance, float4(DeltaIrradiance,0)).xyz, 0) + IrradianceTex[id.xy]) / 2.0f;
+}
+
+
+#pragma kernel ScatteringDensity_kernel
+
+
+float2 GetIrradianceTextureUvFromRMuS(float r, float mu_s) {
+  float x_r = (r - bottom_radius) /
+      (top_radius - bottom_radius);
+  float x_mu_s = mu_s * 0.5 + 0.5;
+  return float2(GetTextureCoordFromUnitRange(x_mu_s, IrradianceTexWidth),
+              GetTextureCoordFromUnitRange(x_r, IrradianceTexHeight));
+}
+
+float3 GetIrradiance(float r, float mu_s) {
+  float2 uv = GetIrradianceTextureUvFromRMuS(r, mu_s);
+  return IrradianceTexRead.SampleLevel(linearClampSampler, uv, 0).xyz;
+}
+
+
+float3 ComputeScatteringDensity(
+    float r, float mu, float mu_s, float nu, int scattering_order) {
+
+  // Compute unit direction vectors for the zenith, the view direction omega and
+  // and the sun direction omega_s, such that the cosine of the view-zenith
+  // angle is mu, the cosine of the sun-zenith angle is mu_s, and the cosine of
+  // the view-sun angle is nu. The goal is to simplify computations below.
+  float3 zenith_direction = float3(0.0, 0.0, 1.0);
+  float3 omega = float3(sqrt(1.0 - mu * mu), 0.0, mu);
+  float sun_dir_x = omega.x == 0.0 ? 0.0 : (nu - mu * mu_s) / omega.x;
+  float sun_dir_y = sqrt(max(1.0 - sun_dir_x * sun_dir_x - mu_s * mu_s, 0.0));
+  float3 omega_s = float3(sun_dir_x, sun_dir_y, mu_s);
+
+  const int SAMPLE_COUNT = 16;
+  const float dphi = 3.14159 / float(SAMPLE_COUNT);
+  const float dtheta = 3.14159 / float(SAMPLE_COUNT);
+  float3 rayleigh_mie = 0.0;// RadianceDensitySpectrum(0.0 * watt_per_cubic_meter_per_sr_per_nm);
+
+  // Nested loops for the integral over all the incident directions omega_i.
+  for (int l = 0; l < SAMPLE_COUNT; ++l) {
+    float theta = (float(l) + 0.5) * dtheta;
+    float cos_theta = cos(theta);
+    float sin_theta = sin(theta);
+    bool ray_r_theta_intersects_ground =
+        RayIntersectsGround(r, cos_theta);
+
+    // The distance and transmittance to the ground only depend on theta, so we
+    // can compute them in the outer loop for efficiency.
+    float distance_to_ground = 0.0f;
+    float3 transmittance_to_ground = float3(0.0, 0.0, 0.0);
+    float3 ground_albedo = float3(0.0, 0.0, 0.0);
+    if (ray_r_theta_intersects_ground) {
+      distance_to_ground =
+          DistanceToBottomAtmosphereBoundary(r, cos_theta);
+      transmittance_to_ground =
+          GetTransmittance(r, cos_theta,
+              distance_to_ground, true /* ray_intersects_ground */);
+      ground_albedo = ground_albedo;
+    }
+
+    for (int sample = 0; sample < 2 * SAMPLE_COUNT; ++sample) {
+      float phi = (float(sample) + 0.5) * dphi;
+      float3 omega_i =
+          float3(cos(phi) * sin_theta, sin(phi) * sin_theta, cos_theta);
+      float domega_i = (dtheta) * (dphi) * sin(theta);
+
+      // The radiance L_i arriving from direction omega_i after n-1 bounces is
+      // the sum of a term given by the precomputed scattering texture for the
+      // (n-1)-th order:
+      float nu1 = dot(omega_s, omega_i);
+      float3 incident_radiance = GetScattering(r, omega_i.z, mu_s, nu1,
+          ray_r_theta_intersects_ground, scattering_order - 1);
+
+      // and of the contribution from the light paths with n-1 bounces and whose
+      // last bounce is on the ground. This contribution is the product of the
+      // transmittance to the ground, the ground albedo, the ground BRDF, and
+      // the irradiance received on the ground after n-2 bounces.
+      float3 ground_normal =
+          normalize(zenith_direction * r + omega_i * distance_to_ground);
+      float3 ground_irradiance = GetIrradiance(
+          bottom_radius,
+          dot(ground_normal, omega_s));
+      incident_radiance += transmittance_to_ground *
+          ground_albedo * (1.0 / (PI)) * ground_irradiance;
+
+      // The radiance finally scattered from direction omega_i towards direction
+      // -omega is the product of the incident radiance, the scattering
+      // coefficient, and the phase function for directions omega and omega_i
+      // (all this summed over all particle types, i.e. Rayleigh and Mie).
+      float nu2 = dot(omega, omega_i);
+    DensityProfileLayer DensProf[2] = {rayleigh_density[0], rayleigh_density[1]};
+      float rayleigh_density = GetProfileDensity(
+          DensProf, r - bottom_radius);
+      DensProf[0] = mie_density[0];
+      DensProf[1] = mie_density[1];
+      float mie_density = GetProfileDensity(
+          DensProf, r - bottom_radius);
+      rayleigh_mie += incident_radiance * (
+          rayleigh_scattering * rayleigh_density *
+              RayleighPhaseFunction(nu2) +
+          mie_scattering * mie_density *
+              MiePhaseFunction(-0.8f, nu2)) *
+          domega_i;
+    }
+  }
+  return rayleigh_mie;
+}
+
+float3 ComputeScatteringDensityTexture(
+    float3 frag_coord, int scattering_order) {
+  float r;
+  float mu;
+  float mu_s;
+  float nu;
+  bool ray_r_mu_intersects_ground;
+  GetRMuMuSNuFromScatteringTextureFragCoord(frag_coord,
+      r, mu, mu_s, nu, ray_r_mu_intersects_ground);
+  return ComputeScatteringDensity(r, mu, mu_s, nu,
+      scattering_order);
+}
+
+RWTexture2D<float4> DebugTex;
+
+[numthreads(1,1,1)]
+void ScatteringDensity_kernel (uint3 id : SV_DispatchThreadID)
+{
+    float3 ScatteringDensity = ComputeScatteringDensityTexture(float3(id.xy, id.z + 0.5f), ScatteringOrder);
+    ScatteringDensityTex[id.xyz] = float4(ScatteringDensity,1);
+    if(id.z == 30) DebugTex[id.xy] = float4(ScatteringDensity,1);
+
+}
+
+
+#pragma kernel MultiScatter_kernel
 
 
 float raySphereIntersectNearest(float3 r0, float3 rd, float3 s0, float sR)
@@ -398,584 +679,66 @@ float raySphereIntersectNearest(float3 r0, float3 rd, float3 s0, float sR)
 }
 
 
+RWTexture3D<float4> DeltaMultipleScattering;
 
-struct SingleScatteringResult
-{
-    float3 L;                       // Scattered light (luminance)
-    float3 OpticalDepth;            // Optical depth (1/m)
-    float3 Transmittance;           // Transmittance in [0,1] (unitless)
-    float3 MultiScatAs1;
+float3 ComputeMultipleScattering(
+    float r, float mu, float mu_s, float nu,
+    bool ray_r_mu_intersects_ground) {
 
-    float3 NewMultiScatStep0Out;
-    float3 NewMultiScatStep1Out;
-};
+  // Number of intervals for the numerical integration.
+  const int SAMPLE_COUNT = 50;
+  // The integration step, i.e. the length of each integration interval.
+  float dx =
+      DistanceToNearestAtmosphereBoundary(r, mu, ray_r_mu_intersects_ground) / float(SAMPLE_COUNT);
+  // Integration loop.
+  float3 rayleigh_mie_sum = 0;
+  for (int i = 0; i <= SAMPLE_COUNT; ++i) {
+    float d_i = float(i) * dx;
 
+    // The r, mu and mu_s parameters at the current integration point (see the
+    // single scattering section for a detailed explanation).
+    float r_i =
+        ClampRadius(sqrt(d_i * d_i + 2.0 * r * mu * d_i + r * r));
+    float mu_i = ClampCosine((r * mu + d_i) / r_i);
+    float mu_s_i = ClampCosine((r * mu_s + d_i * nu) / r_i);
 
-struct MediumSampleRGB
-{
-    float3 scattering;
-    float3 absorption;
-    float3 extinction;
-
-    float3 scatteringMie;
-    float3 absorptionMie;
-    float3 extinctionMie;
-
-    float3 scatteringRay;
-    float3 absorptionRay;
-    float3 extinctionRay;
-
-    float3 scatteringOzo;
-    float3 absorptionOzo;
-    float3 extinctionOzo;
-
-    float3 albedo;
-};
-
-float3 getAlbedo(float3 scattering, float3 extinction)
-{
-    return scattering / max(0.001, extinction);
+    // The Rayleigh and Mie multiple scattering at the current sample point.
+    float3 rayleigh_mie_i =
+        GetScattering2(ScatteringDensityTexRead,
+            r_i, mu_i, mu_s_i, nu,
+            ray_r_mu_intersects_ground) *
+        GetTransmittance(
+            r, mu, d_i,
+            ray_r_mu_intersects_ground) *
+        dx;
+    // Sample weight (from the trapezoidal rule).
+    float weight_i = (i == 0 || i == SAMPLE_COUNT) ? 0.5 : 1.0;
+    rayleigh_mie_sum += rayleigh_mie_i * weight_i;
+  }
+  return rayleigh_mie_sum;
 }
 
-MediumSampleRGB sampleMediumRGB(float3 WorldPos)
-{
-    const float viewHeight = length(WorldPos) - bottom_radius;
-
-    const float densityMie = exp(mie_density[1].exp_scale * viewHeight);
-    const float densityRay = exp(rayleigh_density[1].exp_scale * viewHeight);
-    const float densityOzo = saturate(viewHeight < absorption_density[0].width ?
-        absorption_density[0].linear_term * viewHeight + absorption_density[0].constant_term :
-        absorption_density[1].linear_term * viewHeight + absorption_density[1].constant_term);
-
-    MediumSampleRGB s;
-
-    s.scatteringMie = mie_scattering;
-    s.absorptionMie = mie_extinction - mie_scattering;
-    s.extinctionMie = mie_extinction;
-
-    s.scatteringRay = rayleigh_scattering;// densityRay * Atmosphere.RayleighScattering;
-    s.absorptionRay = 0.0f;
-    s.extinctionRay = s.scatteringRay + s.absorptionRay;
-
-    s.scatteringOzo = 0.0;
-    s.absorptionOzo = absorption_extinction;// densityOzo * Atmosphere.AbsorptionExtinction;
-    s.extinctionOzo = s.scatteringOzo + s.absorptionOzo;
-
-    s.scattering = s.scatteringMie + s.scatteringRay + s.scatteringOzo;
-    s.absorption = s.absorptionMie + s.absorptionRay + s.absorptionOzo;
-    s.extinction = s.extinctionMie + s.extinctionRay + s.extinctionOzo;
-    s.albedo = getAlbedo(s.scattering, s.extinction);
-
-    return s;
+float3 ComputeMultipleScatteringTexture(
+    float3 frag_coord, inout float nu) {
+  float r;
+  float mu;
+  float mu_s;
+  bool ray_r_mu_intersects_ground;
+  GetRMuMuSNuFromScatteringTextureFragCoord(frag_coord,
+      r, mu, mu_s, nu, ray_r_mu_intersects_ground);
+  return ComputeMultipleScattering(r, mu, mu_s, nu,
+      ray_r_mu_intersects_ground);
 }
 
-void LutTransmittanceParamsToUv(float viewHeight, float viewZenithCosAngle, inout float2 uv)
+int Layer;
+RWTexture3D<float4> MultiScatterTex;
+[numthreads(1,1,1)]
+void MultiScatter_kernel (uint3 id : SV_DispatchThreadID)
 {
-    float H = sqrt(max(0.0f, top_radius * top_radius - bottom_radius * bottom_radius));
-    float rho = sqrt(max(0.0f, viewHeight * viewHeight - bottom_radius * bottom_radius));
+    float nu = 0.0f;
+    float3 MultipleScatterDelta = ComputeMultipleScatteringTexture(float3(id.xy, id.z + 0.5f), nu);
+    DeltaMultipleScattering[id.xyz] = float4(MultipleScatterDelta, 1);
+    MultiScatterTex[id.xyz] = (float4(mul(LuminanceFromRadiance, float4(MultipleScatterDelta.xyz / RayleighPhaseFunction(nu),0)).xyz,0.0f) + MultiScatterTex[id.xyz]);
+  //  if(id.z == 3) DebugTex[id.xy] = float4(mul(LuminanceFromRadiance, float4(MultipleScatterDelta.xyz / RayleighPhaseFunction(nu),0)).xyz,1);
 
-    float discriminant = viewHeight * viewHeight * (viewZenithCosAngle * viewZenithCosAngle - 1.0) + top_radius * top_radius;
-    float d = max(0.0, (-viewHeight * viewZenithCosAngle + sqrt(discriminant))); // Distance to atmosphere boundary
-
-    float d_min = top_radius - viewHeight;
-    float d_max = rho + H;
-    float x_mu = (d - d_min) / (d_max - d_min);
-    float x_r = rho / H;
-
-    uv = float2(x_mu, x_r);
-    //uv = float2(fromUnitToSubUvs(uv.x, TRANSMITTANCE_TEXTURE_WIDTH), fromUnitToSubUvs(uv.y, TRANSMITTANCE_TEXTURE_HEIGHT)); // No real impact so off
 }
-
-float hgPhase(float g, float cosTheta)
-{
-#ifdef USE_CornetteShanks
-    return CornetteShanksMiePhaseFunction(g, cosTheta);
-#else
-    // Reference implementation (i.e. not schlick approximation). 
-    // See http://www.pbr-book.org/3ed-2018/Volume_Scattering/Phase_Functions.html
-    float numer = 1.0f - g * g;
-    float denom = 1.0f + g * g + 2.0f * g * cosTheta;
-    return numer / (4.0f * PI * denom * sqrt(denom));
-#endif
-}
-
-float RayleighPhase(float cosTheta)
-{
-    float factor = 3.0f / (16.0f * PI);
-    return factor * (1.0f + cosTheta * cosTheta);
-}
-
-SingleScatteringResult IntegrateScatteredLuminance(
-    float2 pixPos, float3 WorldPos, float3 WorldDir, float3 SunDir,
-    bool ground, float SampleCountIni, float DepthBufferValue, bool VariableSampleCount,
-    bool MieRayPhase, float tMaxMax = 9000000.0f)
-{
-    const bool debugEnabled = false;
-    SingleScatteringResult result = (SingleScatteringResult)0;
-
-    // Compute next intersection with atmosphere or ground 
-    float3 earthO = float3(0.0f, 0.0f, 0.0f);
-    float tBottom = raySphereIntersectNearest(WorldPos, WorldDir, earthO, bottom_radius);
-    float tTop = raySphereIntersectNearest(WorldPos, WorldDir, earthO, top_radius);
-    float tMax = 0.0f;
-    if (tBottom < 0.0f)
-    {
-        if (tTop < 0.0f)
-        {
-            tMax = 0.0f; // No intersection with earth nor atmosphere: stop right away  
-            return result;
-        }
-        else
-        {
-            tMax = tTop;
-        }
-    }
-    else
-    {
-        if (tTop > 0.0f)
-        {
-            tMax = min(tTop, tBottom);
-        }
-    }
-
-    tMax = min(tMax, tMaxMax);
-
-    // Sample count 
-    float SampleCount = SampleCountIni;
-    float SampleCountFloor = SampleCountIni;
-    float tMaxFloor = tMax;
-    if (VariableSampleCount)
-    {
-        SampleCount = lerp(10, 30, saturate(tMax*0.01));//both 10 and 30 can go between 0 and 30, with the secon dnumber higher than the first
-        SampleCountFloor = floor(SampleCount);
-        tMaxFloor = tMax * SampleCountFloor / SampleCount;  // rescale tMax to map to the last entire step segment.
-    }
-    float dt = tMax / SampleCount;
-
-    // Phase functions
-    const float uniformPhase = 1.0 / (4.0 * PI);
-    const float3 wi = SunDir;
-    const float3 wo = WorldDir;
-    float cosTheta = dot(wi, wo);
-    float MiePhaseValue = hgPhase(0.35, -cosTheta); // mnegate cosTheta because due to WorldDir being a "in" direction.//0.35 can go between 0 and 0.999 
-    float RayleighPhaseValue = RayleighPhase(cosTheta);
-
-
-    // When building the scattering factor, we assume light illuminance is 1 to compute a transfert function relative to identity illuminance of 1.
-    // This make the scattering factor independent of the light. It is now only linked to the atmosphere properties.
-    float3 globalL = 1.0f;
-
-    // Ray march the atmosphere to integrate optical depth
-    float3 L = 0.0f;
-    float3 throughput = 1.0;
-    float3 OpticalDepth = 0.0;
-    float t = 0.0f;
-    float tPrev = 0.0;
-    const float SampleSegmentT = 0.3f;
-    for (float s = 0.0f; s < SampleCount; s += 1.0f)
-    {
-        if (VariableSampleCount)
-        {
-            // More expenssive but artefact free
-            float t0 = (s) / SampleCountFloor;
-            float t1 = (s + 1.0f) / SampleCountFloor;
-            // Non linear distribution of sample within the range.
-            t0 = t0 * t0;
-            t1 = t1 * t1;
-            // Make t0 and t1 world space distances.
-            t0 = tMaxFloor * t0;
-            if (t1 > 1.0)
-            {
-                t1 = tMax;
-                //  t1 = tMaxFloor; // this reveal depth slices
-            }
-            else
-            {
-                t1 = tMaxFloor * t1;
-            }
-            //t = t0 + (t1 - t0) * (whangHashNoise(pixPos.x, pixPos.y, gFrameId * 1920 * 1080)); // With dithering required to hide some sampling artefact relying on TAA later? This may even allow volumetric shadow?
-            t = t0 + (t1 - t0)*SampleSegmentT;
-            dt = t1 - t0;
-        }
-        else
-        {
-            //t = tMax * (s + SampleSegmentT) / SampleCount;
-            // Exact difference, important for accuracy of multiple scattering
-            float NewT = tMax * (s + SampleSegmentT) / SampleCount;
-            dt = NewT - t;
-            t = NewT;
-        }
-        float3 P = WorldPos + t * WorldDir;
-
-
-
-        MediumSampleRGB medium = sampleMediumRGB(P);
-        const float3 SampleOpticalDepth = medium.extinction * dt;
-        const float3 SampleTransmittance = exp(-SampleOpticalDepth);
-        OpticalDepth += SampleOpticalDepth;
-
-        float pHeight = length(P);
-        const float3 UpVector = P / pHeight;
-        float SunZenithCosAngle = dot(SunDir, UpVector);
-        float2 uv;
-        LutTransmittanceParamsToUv(pHeight, SunZenithCosAngle, uv);
-        float3 TransmittanceToSun = TransmittanceTexRead.SampleLevel(linearClampSampler, uv, 0).rgb;
-
-        float3 PhaseTimesScattering;
-        if (MieRayPhase)
-        {
-            PhaseTimesScattering = medium.scatteringMie * MiePhaseValue + medium.scatteringRay * RayleighPhaseValue;
-        }
-        else
-        {
-            PhaseTimesScattering = medium.scattering * uniformPhase;
-        }
-
-        // Earth shadow 
-        float tEarth = raySphereIntersectNearest(P, SunDir, earthO + 0.01f * UpVector, bottom_radius);
-        float earthShadow = tEarth >= 0.0f ? 0.0f : 1.0f;
-
-        // Dual scattering for multi scattering 
-
-        float3 multiScatteredLuminance = 0.0f;
-#if MULTISCATAPPROX_ENABLED
-        multiScatteredLuminance = GetMultipleScattering(Atmosphere, medium.scattering, medium.extinction, P, SunZenithCosAngle);
-#endif
-
-        float shadow = 1.0f;
-#if SHADOWMAP_ENABLED
-        // First evaluate opaque shadow
-        shadow = getShadow(Atmosphere, P);
-#endif
-
-        float3 S = globalL * (earthShadow * shadow * TransmittanceToSun * PhaseTimesScattering + multiScatteredLuminance * medium.scattering);
-
-        // When using the power serie to accumulate all sattering order, serie r must be <1 for a serie to converge.
-        // Under extreme coefficient, MultiScatAs1 can grow larger and thus result in broken visuals.
-        // The way to fix that is to use a proper analytical integration as proposed in slide 28 of http://www.frostbite.com/2015/08/physically-based-unified-volumetric-rendering-in-frostbite/
-        // However, it is possible to disable as it can also work using simple power serie sum unroll up to 5th order. The rest of the orders has a really low contribution.
-#define MULTI_SCATTERING_POWER_SERIE 1
-
-#if MULTI_SCATTERING_POWER_SERIE==0
-        // 1 is the integration of luminance over the 4pi of a sphere, and assuming an isotropic phase function of 1.0/(4*PI)
-        result.MultiScatAs1 += throughput * medium.scattering * 1 * dt;
-#else
-        float3 MS = medium.scattering * 1;
-        float3 MSint = (MS - MS * SampleTransmittance) / medium.extinction;
-        result.MultiScatAs1 += throughput * MSint;
-#endif
-
-        // Evaluate input to multi scattering 
-        {
-            float3 newMS;
-
-            newMS = earthShadow * TransmittanceToSun * medium.scattering * uniformPhase * 1;
-            result.NewMultiScatStep0Out += throughput * (newMS - newMS * SampleTransmittance) / medium.extinction;
-            //  result.NewMultiScatStep0Out += SampleTransmittance * throughput * newMS * dt;
-
-            newMS = medium.scattering * uniformPhase * multiScatteredLuminance;
-            result.NewMultiScatStep1Out += throughput * (newMS - newMS * SampleTransmittance) / medium.extinction;
-            //  result.NewMultiScatStep1Out += SampleTransmittance * throughput * newMS * dt;
-        }
-
-#if 0
-        L += throughput * S * dt;
-        throughput *= SampleTransmittance;
-#else
-        // See slide 28 at http://www.frostbite.com/2015/08/physically-based-unified-volumetric-rendering-in-frostbite/ 
-        float3 Sint = (S - S * SampleTransmittance) / medium.extinction;    // integrate along the current step segment 
-        L += throughput * Sint;                                                     // accumulate and also take into account the transmittance from previous steps
-        throughput *= SampleTransmittance;
-#endif
-
-        tPrev = t;
-    }
-
-    if (ground && tMax == tBottom && tBottom > 0.0)
-    {
-        // Account for bounced light off the earth
-        float3 P = WorldPos + tBottom * WorldDir;
-        float pHeight = length(P);
-
-        const float3 UpVector = P / pHeight;
-        float SunZenithCosAngle = dot(SunDir, UpVector);
-        float2 uv;
-        LutTransmittanceParamsToUv(pHeight, SunZenithCosAngle, uv);
-        float3 TransmittanceToSun = TransmittanceTexRead.SampleLevel(linearClampSampler, uv, 0).rgb;
-
-        const float NdotL = saturate(dot(normalize(UpVector), normalize(SunDir)));
-        L += globalL * TransmittanceToSun * throughput * NdotL * ground_albedo / PI;
-    }
-
-    result.L = L;
-    result.OpticalDepth = OpticalDepth;
-    result.Transmittance = throughput;
-    return result;
-}
-
-float fromUnitToSubUvs(float u, float resolution) { return (u + 0.5f / resolution) * (resolution / (resolution + 1.0f)); }
-float fromSubUvsToUnit(float u, float resolution) { return (u - 0.5f / resolution) * (resolution / (resolution - 1.0f)); }
-
-groupshared float3 MultiScatAs1SharedMem[64];
-groupshared float3 LSharedMem[64];
-
-[numthreads(1, 1, 64)]
-void NewMultiScattCS_kernel(uint3 ThreadId : SV_DispatchThreadID)
-{
-    float2 pixPos = float2(ThreadId.xy) + 0.5f;
-    float2 uv = pixPos / MultiScatteringLUTRes;
-
-
-    uv = float2(fromSubUvsToUnit(uv.x, MultiScatteringLUTRes), fromSubUvsToUnit(uv.y, MultiScatteringLUTRes));
-
-    float cosSunZenithAngle = uv.x * 2.0 - 1.0;
-    float3 sunDir = float3(0.0, sqrt(saturate(1.0 - cosSunZenithAngle * cosSunZenithAngle)), cosSunZenithAngle);
-    // We adjust again viewHeight according to 0.01f to be in a valid range.
-    float viewHeight = bottom_radius + saturate(uv.y + 0.01f) * (top_radius - bottom_radius - 0.01f);
-
-    float3 WorldPos = float3(0.0f, 0.0f, viewHeight);
-    float3 WorldDir = float3(0.0f, 0.0f, 1.0f);
-
-
-    const bool ground = true;
-    const float SampleCountIni = 20;// a minimum set of step is required for accuracy unfortunately
-    const float DepthBufferValue = -1.0;
-    const bool VariableSampleCount = false;
-    const bool MieRayPhase = false;
-
-    const float SphereSolidAngle = 4.0 * PI;
-    const float IsotropicPhase = 1.0 / SphereSolidAngle;
-
-
-    // Reference. Since there are many sample, it requires MULTI_SCATTERING_POWER_SERIE to be true for accuracy and to avoid divergences (see declaration for explanations)
-#define SQRTSAMPLECOUNT 8
-    const float sqrtSample = float(SQRTSAMPLECOUNT);
-    float i = 0.5f + float(ThreadId.z / SQRTSAMPLECOUNT);
-    float j = 0.5f + float(ThreadId.z - float((ThreadId.z / SQRTSAMPLECOUNT)*SQRTSAMPLECOUNT));
-    {
-        float randA = i / sqrtSample;
-        float randB = j / sqrtSample;
-        float theta = 2.0f * PI * randA;
-        float phi = acos(1.0f - 2.0f * randB);  // uniform distribution https://mathworld.wolfram.com/SpherePointPicking.html
-        //phi = PI * randB;                     // bad non uniform
-        float cosPhi = cos(phi);
-        float sinPhi = sin(phi);
-        float cosTheta = cos(theta);
-        float sinTheta = sin(theta);
-        WorldDir.x = cosTheta * sinPhi;
-        WorldDir.y = sinTheta * sinPhi;
-        WorldDir.z = cosPhi;
-        SingleScatteringResult result = IntegrateScatteredLuminance(pixPos, WorldPos, WorldDir, sunDir, ground, SampleCountIni, DepthBufferValue, VariableSampleCount, MieRayPhase);
-
-        MultiScatAs1SharedMem[ThreadId.z] = result.MultiScatAs1 * SphereSolidAngle / (sqrtSample * sqrtSample);
-        LSharedMem[ThreadId.z] = result.L * SphereSolidAngle / (sqrtSample * sqrtSample);
-    }
-#undef SQRTSAMPLECOUNT
-
-    GroupMemoryBarrierWithGroupSync();
-
-    // 64 to 32
-    if (ThreadId.z < 32)
-    {
-        MultiScatAs1SharedMem[ThreadId.z] += MultiScatAs1SharedMem[ThreadId.z + 32];
-        LSharedMem[ThreadId.z] += LSharedMem[ThreadId.z + 32];
-    }
-    GroupMemoryBarrierWithGroupSync();
-
-    // 32 to 16
-    if (ThreadId.z < 16)
-    {
-        MultiScatAs1SharedMem[ThreadId.z] += MultiScatAs1SharedMem[ThreadId.z + 16];
-        LSharedMem[ThreadId.z] += LSharedMem[ThreadId.z + 16];
-    }
-    GroupMemoryBarrierWithGroupSync();
-
-    // 16 to 8 (16 is thread group min hardware size with intel, no sync required from there)
-    if (ThreadId.z < 8)
-    {
-        MultiScatAs1SharedMem[ThreadId.z] += MultiScatAs1SharedMem[ThreadId.z + 8];
-        LSharedMem[ThreadId.z] += LSharedMem[ThreadId.z + 8];
-    }
-    GroupMemoryBarrierWithGroupSync();
-    if (ThreadId.z < 4)
-    {
-        MultiScatAs1SharedMem[ThreadId.z] += MultiScatAs1SharedMem[ThreadId.z + 4];
-        LSharedMem[ThreadId.z] += LSharedMem[ThreadId.z + 4];
-    }
-    GroupMemoryBarrierWithGroupSync();
-    if (ThreadId.z < 2)
-    {
-        MultiScatAs1SharedMem[ThreadId.z] += MultiScatAs1SharedMem[ThreadId.z + 2];
-        LSharedMem[ThreadId.z] += LSharedMem[ThreadId.z + 2];
-    }
-    GroupMemoryBarrierWithGroupSync();
-    if (ThreadId.z < 1)
-    {
-        MultiScatAs1SharedMem[ThreadId.z] += MultiScatAs1SharedMem[ThreadId.z + 1];
-        LSharedMem[ThreadId.z] += LSharedMem[ThreadId.z + 1];
-    }
-    GroupMemoryBarrierWithGroupSync();
-    if (ThreadId.z > 0)
-        return;
-
-    float3 MultiScatAs1         = MultiScatAs1SharedMem[0] * IsotropicPhase;    // Equation 7 f_ms
-    float3 InScatteredLuminance = LSharedMem[0] * IsotropicPhase;               // Equation 5 L_2ndOrder
-
-    // MultiScatAs1 represents the amount of luminance scattered as if the integral of scattered luminance over the sphere would be 1.
-    //  - 1st order of scattering: one can ray-march a straight path as usual over the sphere. That is InScatteredLuminance.
-    //  - 2nd order of scattering: the inscattered luminance is InScatteredLuminance at each of samples of fist order integration. Assuming a uniform phase function that is represented by MultiScatAs1,
-    //  - 3nd order of scattering: the inscattered luminance is (InScatteredLuminance * MultiScatAs1 * MultiScatAs1)
-    //  - etc.
-#if MULTI_SCATTERING_POWER_SERIE==0
-    float3 MultiScatAs1SQR = MultiScatAs1 * MultiScatAs1;
-    float3 L = InScatteredLuminance * (1.0 + MultiScatAs1 + MultiScatAs1SQR + MultiScatAs1 * MultiScatAs1SQR + MultiScatAs1SQR * MultiScatAs1SQR);
-#else
-    // For a serie, sum_{n=0}^{n=+inf} = 1 + r + r^2 + r^3 + ... + r^n = 1 / (1.0 - r), see https://en.wikipedia.org/wiki/Geometric_series 
-    const float3 r = MultiScatAs1;
-    const float3 SumOfAllMultiScatteringEventsContribution = 1.0f / (1.0 - r);
-    float3 L = InScatteredLuminance * SumOfAllMultiScatteringEventsContribution;// Equation 10 Psi_ms
-#endif
-
-    MultiScatTex[ThreadId.xy] = float4(L.xyz, 1.0f);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-#pragma kernel SkyView_Kernel
-
-void UvToSkyViewLutParams(inout float viewZenithCosAngle, inout float lightViewCosAngle, float viewHeight, float2 uv)
-{
-    // Constrain uvs to valid sub texel range (avoid zenith derivative issue making LUT usage visible)
-    uv = float2(fromSubUvsToUnit(uv.x, 192.0f), fromSubUvsToUnit(uv.y, 108.0f));
-
-    float Vhorizon = sqrt(viewHeight * viewHeight - bottom_radius * bottom_radius);
-    float CosBeta = Vhorizon / viewHeight;              // GroundToHorizonCos
-    float Beta = acos(CosBeta);
-    float ZenithHorizonAngle = PI - Beta;
-
-    if (uv.y < 0.5f)
-    {
-        float coord = 2.0*uv.y;
-        coord = 1.0 - coord;
-
-        coord *= coord;
-
-        coord = 1.0 - coord;
-        viewZenithCosAngle = cos(ZenithHorizonAngle * coord);
-    }
-    else
-    {
-        float coord = uv.y*2.0 - 1.0;
-
-        coord *= coord;
-
-        viewZenithCosAngle = cos(ZenithHorizonAngle + Beta * coord);
-    }
-
-    float coord = uv.x;
-    coord *= coord;
-    lightViewCosAngle = -(coord*2.0 - 1.0);
-}
-
-float4x4 InvViewProjMat;
-
-
-float3 camPos;
-
-float3 sun_direction;
-
-bool MoveToTopAtmosphere(inout float3 WorldPos, in float3 WorldDir, in float AtmosphereTopRadius)
-{
-    float viewHeight = length(WorldPos);
-    if (viewHeight > AtmosphereTopRadius)
-    {
-        float tTop = raySphereIntersectNearest(WorldPos, WorldDir, float3(0.0f, 0.0f, 0.0f), AtmosphereTopRadius);
-        if (tTop >= 0.0f)
-        {
-            float3 UpVector = WorldPos / viewHeight;
-            float3 UpOffset = UpVector * -0.01f;
-            WorldPos = WorldPos + WorldDir * tTop + UpOffset;
-        }
-        else
-        {
-            // Ray is not intersecting the atmosphere
-            return false;
-        }
-    }
-    return true; // ok to start tracing
-}
-
-RWTexture2D<float4> SkyViewTex;
-
-[numthreads(16, 16, 1)]//192, 108
-void SkyView_Kernel(uint3 id : SV_DispatchThreadID)
-{
-    if(id.x + id.y * 192 > 192 * 108) return;
-    float2 pixPos = id.xy;
-
-    float3 ClipSpace = float3((pixPos / float2(192.0,108.0))*float2(2.0, -2.0) - float2(1.0, -1.0), 1.0);
-    float4 HPos = mul(InvViewProjMat, float4(ClipSpace, 1.0));
-
-    float3 WorldDir = normalize(HPos.xyz / HPos.w - camPos);
-    float3 WorldPos = camPos + float3(0, bottom_radius, 0);
-
-
-    float2 uv = pixPos / float2(192.0, 108.0);
-
-    float viewHeight = length(WorldPos);
-
-    float viewZenithCosAngle;
-    float lightViewCosAngle;
-    UvToSkyViewLutParams(viewZenithCosAngle, lightViewCosAngle, viewHeight, uv);
-
-
-    float3 SunDir;
-    {
-        float3 UpVector = WorldPos / viewHeight;
-        float sunZenithCosAngle = dot(UpVector, sun_direction);
-        SunDir = normalize(float3(sqrt(1.0 - sunZenithCosAngle * sunZenithCosAngle), 0.0, sunZenithCosAngle));
-    }
-
-
-
-    WorldPos = float3(0.0f, 0.0f, viewHeight);
-
-    float viewZenithSinAngle = sqrt(1 - viewZenithCosAngle * viewZenithCosAngle);
-    WorldDir = float3(
-        viewZenithSinAngle * lightViewCosAngle,
-        viewZenithSinAngle * sqrt(1.0 - lightViewCosAngle * lightViewCosAngle),
-        viewZenithCosAngle);
-
-
-    // Move to top atmospehre
-    if (!MoveToTopAtmosphere(WorldPos, WorldDir, top_radius))
-    {
-        // Ray is not intersecting the atmosphere
-        SkyViewTex[id.xy] = float4(0, 0, 0, 1);
-        return;
-    }
-
-    const bool ground = false;
-    const float SampleCountIni = 30;
-    const float DepthBufferValue = -1.0;
-    const bool VariableSampleCount = true;
-    const bool MieRayPhase = true;
-    SingleScatteringResult ss = IntegrateScatteredLuminance(pixPos, WorldPos, WorldDir, SunDir, ground, SampleCountIni, DepthBufferValue, VariableSampleCount, MieRayPhase);
-
-    float3 L = ss.L;
-
-    SkyViewTex[id.xy] = float4(L, 1);
-}
-
-
-
-

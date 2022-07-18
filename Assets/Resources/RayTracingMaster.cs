@@ -465,6 +465,8 @@ public class RayTracingMaster : MonoBehaviour {
             SetComputeBuffer(ReservoirSpatialKernel, "_UnityLights", _UnityLights);
 
             RayTracingShader.SetFloat("sun_angular_radius", 0.05f);
+            RayTracingShader.SetTexture(ShadeKernel, "scattering_texture", Atmo.MultiScatterTex);
+            RayTracingShader.SetTexture(ShadeKernel, "TransmittanceTex", Atmo._TransmittanceLUT);
             RayTracingShader.SetTexture(ShadeKernel, "ScatterTex", Atmo._RayleighTex);
             RayTracingShader.SetTexture(ShadeKernel, "MieTex", Atmo._MieTex);
 

@@ -5,11 +5,21 @@ using UnityEngine;
 [System.Serializable]
 public class AtmosphereGenerator {
     
-    private RenderTexture _TransmittanceLUT;
+    public RenderTexture _TransmittanceLUT;
     public RenderTexture _RayleighTex;
     public RenderTexture _MieTex;
-    public RenderTexture _MultiScatterTex;
-    public RenderTexture _SkyViewTex;
+    public RenderTexture MultiScatterTex;
+
+    public RenderTexture DeltaIrradianceTex;
+    public RenderTexture IrradianceTex;
+
+    public RenderTexture ScatteringTex;
+
+    public RenderTexture DeltaScatteringTex;
+
+    public RenderTexture DeltaMultiScatterTex;  
+    public RenderTexture DebugTex;  
+
 
     public ComputeShader Atmosphere;
     private ComputeBuffer rayleigh_densityC;
@@ -60,7 +70,7 @@ public class AtmosphereGenerator {
         float ozone_scale_height    = 15000.0f;
         float ozone_height          = 25000.0f;
         float density = 0.001f;
-        Vector3 ray_s = new Vector3(5.802f, 13.558f, 33.1f) * density;
+        Vector3 ray_s = new Vector3(5.5f, 13.0f, 22.4f) * density;
         Vector3 ray_a = new Vector3(0.0f, 0.0f, 0.0f);
         Vector3 ray_e = ray_s + ray_a;
         Vector3 mie_s = new Vector3(3.996f, 3.996f, 3.996f) * density;
@@ -114,15 +124,17 @@ public class AtmosphereGenerator {
 
         int TransmittanceKernel = Atmosphere.FindKernel("Transmittance_Kernel");
         int SingleScatterKernel = Atmosphere.FindKernel("SingleScatter_Kernel");
-        int MultiScatKernel = Atmosphere.FindKernel("NewMultiScattCS_kernel");
-        SkyViewKernel = Atmosphere.FindKernel("SkyView_Kernel");
+        int DirectIrradianceKernel = Atmosphere.FindKernel("DirectIrradiance_Kernel");
+        int IndirectIrradianceKernel = Atmosphere.FindKernel("IndirectIrradiance_Kernel");
+        int ScatteringDensityKernel = Atmosphere.FindKernel("ScatteringDensity_kernel");
+        int MultipleScatteringKernel = Atmosphere.FindKernel("MultiScatter_kernel");
 
         CreateComputeBuffer(ref rayleigh_densityC, rayleigh_density, 20);
         CreateComputeBuffer(ref mie_densityC, mie_density, 20);
         CreateComputeBuffer(ref absorption_densityC, absorption_density, 20);
 
         Atmosphere.SetVector("rayleigh_scattering", ray_e);
-        Atmosphere.SetVector("solar_irradiance", new Vector3(1.5f, 1.5f, 1.5f));
+        Atmosphere.SetVector("solar_irradiance", new Vector3(1,1,1));
         Atmosphere.SetVector("absorption_extinction", ozo_e);
         Atmosphere.SetVector("mie_extinction", mie_e);
         Atmosphere.SetVector("mie_scattering", mie_s);
@@ -134,9 +146,9 @@ public class AtmosphereGenerator {
         Atmosphere.SetBuffer(SingleScatterKernel, "rayleigh_density", rayleigh_densityC);
         Atmosphere.SetBuffer(SingleScatterKernel, "mie_density", mie_densityC);
         Atmosphere.SetBuffer(SingleScatterKernel, "absorption_density", absorption_densityC);
-        Atmosphere.SetBuffer(MultiScatKernel, "rayleigh_density", rayleigh_densityC);
-        Atmosphere.SetBuffer(MultiScatKernel, "mie_density", mie_densityC);
-        Atmosphere.SetBuffer(MultiScatKernel, "absorption_density", absorption_densityC);
+        Atmosphere.SetBuffer(ScatteringDensityKernel, "rayleigh_density", rayleigh_densityC);
+        Atmosphere.SetBuffer(ScatteringDensityKernel, "mie_density", mie_densityC);
+        Atmosphere.SetBuffer(ScatteringDensityKernel, "absorption_density", absorption_densityC);
         Atmosphere.SetFloat("sun_angular_radius", 0.05f);
         Atmosphere.SetFloat("bottom_radius", BottomRadius);
         Atmosphere.SetFloat("top_radius", TopRadius);
@@ -158,44 +170,101 @@ public class AtmosphereGenerator {
         _MieTex.enableRandomWrite = true;
         _MieTex.Create();
 
-        _MultiScatterTex = new RenderTexture(32, 32, 0,
+        DeltaIrradianceTex = new RenderTexture(64, 16, 0,
         RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-        _MultiScatterTex.enableRandomWrite = true;
-        _MultiScatterTex.Create();
+        DeltaIrradianceTex.enableRandomWrite = true;
+        DeltaIrradianceTex.Create();
 
-        _SkyViewTex = new RenderTexture(192, 108, 0,
+        IrradianceTex = new RenderTexture(64, 16, 0,
         RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-        _SkyViewTex.enableRandomWrite = true;
-        _SkyViewTex.Create();
+        IrradianceTex.enableRandomWrite = true;
+        IrradianceTex.Create();
 
-        Atmosphere.SetTexture(SkyViewKernel, "SkyViewTex", _SkyViewTex);
+        ScatteringTex = new RenderTexture(8 * 32, 128, 0,
+        RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+        ScatteringTex.volumeDepth = 32;
+        ScatteringTex.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+        ScatteringTex.enableRandomWrite = true;
+        ScatteringTex.Create();
 
+        DebugTex = new RenderTexture(8 * 32, 128, 0,
+        RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+        DebugTex.enableRandomWrite = true;
+        DebugTex.Create();
 
+        DeltaScatteringTex = new RenderTexture(8 * 32, 128, 0,
+        RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+        DeltaScatteringTex.volumeDepth = 32;
+        DeltaScatteringTex.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+        DeltaScatteringTex.enableRandomWrite = true;
+        DeltaScatteringTex.Create();
+
+        DeltaMultiScatterTex = new RenderTexture(8 * 32, 128, 0,
+        RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+        DeltaMultiScatterTex.volumeDepth = 32;
+        DeltaMultiScatterTex.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+        DeltaMultiScatterTex.enableRandomWrite = true;
+        DeltaMultiScatterTex.Create();
+
+        MultiScatterTex = new RenderTexture(8 * 32, 128, 0,
+        RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+        MultiScatterTex.volumeDepth = 32;
+        MultiScatterTex.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+        MultiScatterTex.enableRandomWrite = true;
+        MultiScatterTex.Create();
+
+            Atmosphere.SetTexture(SingleScatterKernel, "DebugTex", DebugTex);
         Atmosphere.SetTexture(TransmittanceKernel, "TransmittanceTex", _TransmittanceLUT);
         Atmosphere.Dispatch(TransmittanceKernel, 256, 64, 1);
         Atmosphere.SetTexture(SingleScatterKernel, "TransmittanceTex", _TransmittanceLUT);
         Atmosphere.SetTexture(SingleScatterKernel, "RayleighTex", _RayleighTex);
         Atmosphere.SetTexture(SingleScatterKernel, "MieTex", _MieTex);
+        Atmosphere.SetTexture(SingleScatterKernel, "ScatteringTex", ScatteringTex);
         Atmosphere.Dispatch(SingleScatterKernel, 256, 128, 32);
 
-        Atmosphere.SetTexture(SkyViewKernel, "TransmittanceTexRead", _TransmittanceLUT);
+        Atmosphere.SetInt("ScatteringOrder", 1); 
+        int NumScatteringOrder = 4;
+        Atmosphere.SetTexture(DirectIrradianceKernel, "DeltaIrradianceTex", DeltaIrradianceTex);
+        Atmosphere.SetTexture(DirectIrradianceKernel, "IrradianceTex", IrradianceTex);
+        Atmosphere.SetTexture(DirectIrradianceKernel, "TransmittanceTex", _TransmittanceLUT);
+        Atmosphere.Dispatch(DirectIrradianceKernel, 64, 16, 1); 
 
-        Atmosphere.SetTexture(MultiScatKernel, "TransmittanceTexRead", _TransmittanceLUT);
-        Atmosphere.SetTexture(MultiScatKernel, "MultiScatTex", _MultiScatterTex);
-        Atmosphere.Dispatch(MultiScatKernel, 32,32,1);
+        Graphics.CopyTexture(ScatteringTex, MultiScatterTex);
+        for(int ScatteringOrder = 2; ScatteringOrder <= NumScatteringOrder; ++ScatteringOrder) {
+            var TempScatOrder = ScatteringOrder;
+            Atmosphere.SetInt("ScatteringOrder", TempScatOrder); 
+            Atmosphere.SetTexture(ScatteringDensityKernel, "DebugTex", DebugTex);
+            Atmosphere.SetTexture(ScatteringDensityKernel, "IrradianceTexRead", DeltaIrradianceTex);
+            Atmosphere.SetTexture(ScatteringDensityKernel, "TransmittanceTex", _TransmittanceLUT);
+            Atmosphere.SetTexture(ScatteringDensityKernel, "RayleighTexRead", _RayleighTex);
+            Atmosphere.SetTexture(ScatteringDensityKernel, "MieTexRead", _MieTex);
+            Atmosphere.SetTexture(ScatteringDensityKernel, "MultipleScatteringTexRead", DeltaMultiScatterTex);
+            Atmosphere.SetTexture(ScatteringDensityKernel, "ScatteringDensityTex", DeltaScatteringTex);
+            Atmosphere.Dispatch(ScatteringDensityKernel, 256, 128, 32);
 
-        rayleigh_densityC?.Release();
-        mie_densityC?.Release();
-        absorption_densityC?.Release();
-        _TransmittanceLUT.Release();
-    }
+            var TempScatOrder2 = ScatteringOrder - 1;
+            Atmosphere.SetInt("ScatteringOrder", TempScatOrder2); 
+            Atmosphere.SetTexture(IndirectIrradianceKernel, "IrradianceTex", IrradianceTex);
+            Atmosphere.SetTexture(IndirectIrradianceKernel, "DeltaIrradianceTex", DeltaIrradianceTex);
+            Atmosphere.SetTexture(IndirectIrradianceKernel, "RayleighTexRead", _RayleighTex);
+            Atmosphere.SetTexture(IndirectIrradianceKernel, "MieTexRead", _MieTex);
+            Atmosphere.SetTexture(IndirectIrradianceKernel, "MultipleScatteringTexRead", DeltaMultiScatterTex);
+            Atmosphere.Dispatch(IndirectIrradianceKernel, 64, 16, 1);
 
-    public void UpdateSky(Vector3 SunDir) {
-        Atmosphere.SetMatrix("InvViewProjMat", (Camera.main.projectionMatrix * Camera.main.worldToCameraMatrix).inverse);
-        Atmosphere.SetVector("camPos", Camera.main.transform.position);
-        Atmosphere.SetVector("UpVector", new Vector3(0,1,0));
-        Atmosphere.SetVector("sun_direction", SunDir);
-        Atmosphere.Dispatch(SkyViewKernel, (int)Mathf.Ceil(192.0f / 16.0f), (int)Mathf.Ceil(108.0f / 16.0f), 1);
+            Atmosphere.SetInt("ScatteringOrder", TempScatOrder);
+            Atmosphere.SetTexture(MultipleScatteringKernel, "DebugTex", DebugTex);
+            Atmosphere.SetTexture(MultipleScatteringKernel, "DeltaMultipleScattering", DeltaMultiScatterTex);
+            Atmosphere.SetTexture(MultipleScatteringKernel, "MultiScatterTex", MultiScatterTex);
+            Atmosphere.SetTexture(MultipleScatteringKernel, "ScatteringDensityTexRead", DeltaScatteringTex);
+            Atmosphere.SetTexture(MultipleScatteringKernel, "TransmittanceTex", _TransmittanceLUT);
+            Atmosphere.Dispatch(MultipleScatteringKernel, 256, 128, 32);
+
+            
+        }      
+
+
+
+       
     }
 
     private void OnDisable() {

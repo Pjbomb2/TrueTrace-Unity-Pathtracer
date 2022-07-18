@@ -289,7 +289,7 @@ void Generate (uint3 id : SV_DispatchThreadID) {
     
     if(id.x >= screen_width || id.y >= screen_height) return;
     pixel_index = id.y * screen_width + id.x;
-    float2 jitter = (random(1) - 0.5f) * float2(screen_width, screen_height) / float2(1920, 1080);
+    float2 jitter = (random(1) - 0.5f);
     float2 uv = float2((id.xy + jitter) / float2(screen_width, screen_height) * 2.0f - 1.0f);
     Ray ray = CreateCameraRay(uv);
 
@@ -719,10 +719,7 @@ inline bool TraceOctree(const float3 ray_orig, const float3 ray_dir_inv, inout R
                     TriangleID = ChildIndex;
                 }
             }
-
         }
-
-     
     }
     [branch]if(prevdist == tmax) return false;
     else {
@@ -872,7 +869,7 @@ void IntersectVoxelTLAS() {
 }
 
 
-[numthreads(128,1,1)]
+[numthreads(64,1,1)]
 void kernel_octree_trace () {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
 
     IntersectVoxelTLAS();
@@ -1302,8 +1299,6 @@ void IntersectShadowOctree() {
             if(ShadowRaysBuffer[ray_index].HitMesh) { 
                 if(CurBounce == 0 && ShadowRaysBuffer[ray_index].IsNotFog) 
                     CurrentReservoir[ShadowRaysBuffer[ray_index].PixelIndex].W = 0; 
-                if(!ShadowRaysBuffer[ray_index].IsNotFog)
-                    GlobalColors[pixel_index].Fog -= ShadowRaysBuffer[ray_index].illumination;
                 continue;
             }
             if(ShadowRaysBuffer[ray_index].IsNotFog) {
@@ -1810,16 +1805,14 @@ bool VolumetricScatter(inout float3 throughput, RayHit hit, inout Ray ray, inout
 
 float3 SunDir;
 
-Texture3D ScatterTex;
-Texture3D MieTex;
-SamplerState linearClampSampler;
-
 static uint ScatteringTexRSize = 32;
 static uint ScatteringTexMUSize = 128;
 static uint ScatteringTexMUSSize = 32;
 static uint ScatteringTexNUSize = 8;
 static float bottom_radius = 6371.0f;
 static float top_radius = 6403.0f;
+static uint TransmittanceTexWidth = 256;
+static uint TransmittanceTexHeight = 64;
 
 float RayleighPhaseFunction(float nu) {
   float k = 3.0 / (16.0 * PI);
@@ -1867,7 +1860,7 @@ float4 GetScatteringTextureUvwzFromRMuMuSNu(float r, float mu, float mu_s, float
     float d_min = top_radius - bottom_radius;
     float d_max = H;
     float a = (d - d_min) / (d_max - d_min);
-    float D = DistanceToTopAtmosphereBoundary(bottom_radius, -0.2f);
+    float D = DistanceToTopAtmosphereBoundary(bottom_radius, -0.8f);
     float A = (D - d_min) / (d_max - d_min);
 
     float u_mu_s = GetTextureCoordFromUnitRange(max(1.0f - a / A, 0.0f) / (1.0f + a), ScatteringTexMUSSize);
@@ -1876,32 +1869,7 @@ float4 GetScatteringTextureUvwzFromRMuMuSNu(float r, float mu, float mu_s, float
     return float4(u_nu, u_mu_s, u_mu, u_r);
 }
 
-float3 GetScattering(Texture3D Tex, float r, float mu, float mu_s, float nu, bool ray_r_mu_intersects_ground) {
-  float4 uvwz = GetScatteringTextureUvwzFromRMuMuSNu(r, mu, mu_s, nu, ray_r_mu_intersects_ground);
-  float tex_coord_x = uvwz.x * (float)(ScatteringTexNUSize - 1);
-  float tex_x = floor(tex_coord_x);
-  float lerp2 = tex_coord_x - tex_x;
-  float3 uvw0 = float3((tex_x + uvwz.y) / (float)ScatteringTexNUSize,
-      uvwz.z, uvwz.w);
-  float3 uvw1 = float3((tex_x + 1.0 + uvwz.y) / (float)ScatteringTexNUSize,
-      uvwz.z, uvwz.w);
-  return float3(Tex.SampleLevel(linearClampSampler, uvw0, 0).xyz * (1.0 - lerp2) + Tex.SampleLevel(linearClampSampler, uvw1, 0).xyz * lerp2);
-}
 
-float3 GetScattering(float r, float mu, float mu_s, float nu, bool ray_r_mu_intersects_ground) {
-    float3 rayleigh = GetScattering(ScatterTex, r, mu, mu_s, nu, ray_r_mu_intersects_ground);
-    float3 mie = GetScattering(MieTex, r, mu, mu_s, nu, ray_r_mu_intersects_ground);
-    return rayleigh * RayleighPhaseFunction(nu) + mie * MiePhaseFunction(-0.2f, nu);
-}
-
-float3 CalculateSkyBox(float3 rayOrig, float3 rayDir, RayHit hit) {
-    rayOrig /= 1000.0f;
-    rayOrig.y += bottom_radius;
-    float muStartPos = dot(rayOrig, rayDir) / rayOrig.y;
-    float nuStartPos = dot(rayDir, normalize(SunDir));
-    float musStartPos = dot(rayOrig, normalize(SunDir)) / rayOrig.y;
-    return GetScattering(rayOrig.y, muStartPos, musStartPos, nuStartPos, false);
-}
 
 float2 sample_triangle(float u1, float u2) {
     if (u2 > u1) {
@@ -2237,6 +2205,153 @@ bool VisabilityCheck(Ray ray, float dist) {
 StructuredBuffer<int> ToIllumTriBuffer;
 
 static const int NumSamples = 8;
+
+Texture3D<float4> scattering_texture;
+Texture2D<float4> TransmittanceTex;
+SamplerState linearClampSampler;
+
+static float3 rayleigh_scattering = float3(5.5f, 13.0f, 22.4f) * 0.001f;
+static float3 mie_scattering = 3.996f * 0.001f;
+
+float ClampCosine(float mu) {
+  return clamp(mu, -1.0f, 1.0f);
+}
+
+float ClampRadius(float r) {
+  return clamp(r, bottom_radius, top_radius);
+}
+
+
+float3 GetExtrapolatedSingleMieScattering(
+    float4 scattering) {
+  if (scattering.r == 0.0) {
+    return 0;
+  }
+  return scattering.rgb * scattering.a / scattering.r *
+        (rayleigh_scattering.r / mie_scattering.r) *
+        (mie_scattering / rayleigh_scattering);
+}
+
+float3 GetCombinedScattering(
+    float r, float mu, float mu_s, float nu,
+    bool ray_r_mu_intersects_ground,
+    inout float3 single_mie_scattering) {
+  float4 uvwz = GetScatteringTextureUvwzFromRMuMuSNu(r, mu, mu_s, nu, ray_r_mu_intersects_ground);
+  float tex_coord_x = uvwz.x * float(ScatteringTexNUSize - 1);
+  float tex_x = floor(tex_coord_x);
+  float lerp2 = tex_coord_x - tex_x;
+  float3 uvw0 = float3((tex_x + uvwz.y) / float(ScatteringTexNUSize),
+      uvwz.z, uvwz.w);
+  float3 uvw1 = float3((tex_x + 1.0 + uvwz.y) / float(ScatteringTexNUSize),
+      uvwz.z, uvwz.w);
+  float4 combined_scattering =
+      scattering_texture.SampleLevel(linearClampSampler, uvw0, 0) * (1.0 - lerp2) +
+      scattering_texture.SampleLevel(linearClampSampler, uvw1, 0) * lerp2;
+  float3 scattering = float3(combined_scattering.rgb);
+  single_mie_scattering =
+      GetExtrapolatedSingleMieScattering(combined_scattering);
+  return scattering;
+}
+
+bool RayIntersectsGround(float r, float mu) {
+    return (mu < 0.0f && r * r * (mu * mu - 1.0f) + bottom_radius * bottom_radius >= 0.0f);
+}
+
+float2 GetTransmittanceTextureUvFromRMu(float r, float mu) {
+    float H = sqrt(top_radius * top_radius - bottom_radius * bottom_radius);
+
+    float rho = sqrt(max(r * r - bottom_radius * bottom_radius, 0.0f));
+
+    float d = DistanceToTopAtmosphereBoundary(r, mu);
+    float d_min = top_radius - r;
+    float d_max = rho + H;
+    float x_mu = (d - d_min) / (d_max - d_min);
+    float x_r = rho / H;
+    return float2(GetTextureCoordFromUnitRange(x_mu, TransmittanceTexWidth), GetTextureCoordFromUnitRange(x_mu, TransmittanceTexHeight));
+}
+
+float3 GetTransmittanceToTopAtmosphereBoundary(float r, float mu) {
+    float2 uv = GetTransmittanceTextureUvFromRMu(r, mu) * float2(TransmittanceTexWidth, TransmittanceTexHeight);
+    return float3(TransmittanceTex[(int2)uv].xyz);
+}
+
+float3 GetTransmittance(float r, float mu, float d, bool ray_r_mu_intersects_ground) {
+
+    float r_d = clamp(sqrt(d * d + 2.0f * r * mu * d * r * r), 6371.0f, 6403.0f);
+    float mu_d = clamp((r * mu + d) / r_d, -1.0f, 1.0f);
+    if(ray_r_mu_intersects_ground) {
+        return min(GetTransmittanceToTopAtmosphereBoundary(r_d, -mu_d) / 
+            GetTransmittanceToTopAtmosphereBoundary(r, -mu), 
+            float3(1.0f, 1.0f, 1.0f));
+
+    } else {
+        return min(GetTransmittanceToTopAtmosphereBoundary(r, mu) / 
+            GetTransmittanceToTopAtmosphereBoundary(r_d, mu_d), 
+            float3(1.0f, 1.0f, 1.0f));
+    }
+}   
+
+float3 GetSkyRadiance(
+    float3 camera, float3 view_ray, float shadow_length,
+    float3 sun_direction, inout float3 transmittance, inout bool ray_r_mu_intersects_ground) {
+    camera /= 10.0f;
+    camera.y += bottom_radius;
+    camera.y = max(camera.y, bottom_radius + 1);
+
+  // Compute the distance to the top atmosphere boundary along the view ray,
+  // assuming the viewer is in space (or NaN if the view ray does not intersect
+  // the atmosphere).
+  float r = length(camera);
+  float rmu = dot(camera, view_ray);
+  float distance_to_top_atmosphere_boundary = -rmu -
+      sqrt(rmu * rmu - r * r + top_radius * top_radius);
+  // If the viewer is in space and the view ray intersects the atmosphere, move
+  // the viewer to the top atmosphere boundary (along the view ray):
+  if (distance_to_top_atmosphere_boundary > 0.0) {
+    camera = camera + view_ray * distance_to_top_atmosphere_boundary;
+    r = top_radius;
+    rmu += distance_to_top_atmosphere_boundary;
+  } else if (r > top_radius) {
+    // If the view ray does not intersect the atmosphere, simply return 0.
+    transmittance = 1;
+    return 0;
+  }
+  // Compute the r, mu, mu_s and nu parameters needed for the texture lookups.
+  float mu = rmu / r;
+  float mu_s = dot(camera, sun_direction) / r;
+  float nu = -dot(view_ray, sun_direction);
+  ray_r_mu_intersects_ground = RayIntersectsGround(r, mu);
+
+  transmittance = ray_r_mu_intersects_ground ? 0.0 :
+      GetTransmittanceToTopAtmosphereBoundary(r, mu);
+  float3 single_mie_scattering;
+  float3 scattering;
+  if (shadow_length == 0.0) {
+    scattering = GetCombinedScattering(
+        r, mu, mu_s, nu, ray_r_mu_intersects_ground,
+        single_mie_scattering);
+  } else {
+    // Case of light shafts (shadow_length is the total length noted l in our
+    // paper): we omit the scattering between the camera and the point at
+    // distance l, by implementing Eq. (18) of the paper (shadow_transmittance
+    // is the T(x,x_s) term, scattering is the S|x_s=x+lv term).
+    float d = shadow_length;
+    float r_p =
+        ClampRadius(sqrt(d * d + 2.0 * r * mu * d + r * r));
+    float mu_p = (r * mu + d) / r_p;
+    float mu_s_p = (r * mu_s + d * nu) / r_p;
+
+    scattering = GetCombinedScattering(
+        r_p, mu_p, mu_s_p, nu, ray_r_mu_intersects_ground,
+        single_mie_scattering);
+    float3 shadow_transmittance =
+        GetTransmittance(r, mu, shadow_length, ray_r_mu_intersects_ground);
+    scattering = scattering * shadow_transmittance;
+    single_mie_scattering = single_mie_scattering * shadow_transmittance;
+  }
+  return scattering * RayleighPhaseFunction(nu) + single_mie_scattering *
+      MiePhaseFunction(-0.8f, nu);
+}
 
 void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, RayHit hit, uint2 Uv, inout bool terminated, float2 NormalUV, bool HitVoxel, bool IsEmissiveTex) {//main function
 
@@ -2649,19 +2764,22 @@ void kernel_shade () {
                 Color.Direct += sky;
             } else {
                 Color.Indirect += Color.throughput * sky;
-            }
+            }t
             SkyColAcc = Color.throughput * sky;
         #else
-            float3 SkyBoxCol = CalculateSkyBox(ray.origin, ray.direction, bestHit);
-            float Sun = (ray.direction.y >= 0) ? pow(max(dot(-SunDir, -ray.direction), 0.0f), 140.0f) : 0.0f;
+            float3 transmittance = 0;
+            bool IntersectsGround = false;
+            float3 Radiance = GetSkyRadiance(ray.origin, ray.direction, 0, SunDir, transmittance, IntersectsGround);
+            float3 SkyBoxCol = Radiance;//TempUv.x < screen_width / 2 ? CalculateSkyBox(ray.origin, ray.direction, bestHit) : Radiance;
+            float Sun = exp(-acos(max(dot(-SunDir, -ray.direction), 0.0f))* 20.0f) * transmittance;
             if(CurBounce == 0) {//Seperated into direct and indirect channels
-                Color.Direct = (SkyBoxCol * 12.0f) + Sun;
+                Color.Direct = (SkyBoxCol * 14.0f) + Sun;
             } else if(CurBounce == 1) {
-                Color.Direct += (SkyBoxCol * 12.0f) + Sun;
+                Color.Direct += (SkyBoxCol * 14.0f) + Sun;
             } else {
-                Color.Indirect += Color.throughput * (SkyBoxCol * 12.0f) + Sun;
+                Color.Indirect += Color.throughput * (SkyBoxCol * 14.0f) + Sun;
             }
-            SkyColAcc = Color.throughput * (SkyBoxCol * 12.0f) + Sun;
+            SkyColAcc = Color.throughput * (SkyBoxCol * 14.0f) + Sun;
         #endif
         if(CurBounce == 0) {
             TempAlbedoTex[TempUv] = float4(SkyColAcc,1);
