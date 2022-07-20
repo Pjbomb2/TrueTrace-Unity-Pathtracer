@@ -1,13 +1,12 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>Need More Ideas</li>
+  <li>Adding Instancing</li>
 </ul>
 Currently needs to be done but havent implemented fully:
 <ul>
     <li>Reduce Memory Spike on Start</li>
-    <li>Make Voxels able to be volumetric</li>
-    <li>User friendly way of instancing(already have a working demo, but its not user friendly)</li>
+    <li>Make Voxels able to be volumetric(havent figured out a way to make it fast)</li>
 </ul>
 Currently want to do but havent started:
 <ul>
