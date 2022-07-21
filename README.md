@@ -1,7 +1,7 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>Adding Instancing</li>
+  <li>Nothing, Need More Ideas</li>
 </ul>
 Currently needs to be done but havent implemented fully:
 <ul>
@@ -44,6 +44,7 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 <li>ReSTIR for better sampling of many lights</li>
 <li>Explicit light sampling for faster convergence</li>
 <li>Precomputed Multiple Atmospheric Scattering for dynamic and realtime sky(from ebruneton below)</li>
+<li>Object Instancing</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
@@ -66,7 +67,7 @@ Let me know if you use this for anything, I would be excited to see any use of t
   <li>Enable Unsafe Code(Its for memory management) through Edit -> Project Settings -> Player -> Other Settings -> "Allow 'unsafe' Code" (near the bottom)</li>
 </ul>
 </br>
-## Additional Requirements:
+## Additional Requirements
 <ul>
   <li>You need to make sure that all textures have Read/Write enabled in their import settings(click on a texture in the Project menu, look at its options in the inspector, turning on Read/Write, and clicking apply at the bottom).  I would also reccomend turning off MipMapping</li>
   <li>For Skinned Meshes, their index format needs to be set to 32 bits, and their mesh to Read/Write enabled.  This can be found by clicking on the imported fbx, going to it in the inspector, going to the Model tab, turning on Read/Write, changing the Index Format from Auto to 32 Bit, and clicking Apply at the bottom</li>
@@ -91,8 +92,8 @@ Let me know if you use this for anything, I would be excited to see any use of t
 <ul>
   <li>Objects can be added and removed at will simply by toggling them on/off in the hierarchy(dont click them if they are complex objects), but they will take time to appear</li>
   <li>If you change the emissiveness of an object, you need to dissable and re-enable its parent(basically reloading it) if you want to take advantage of NEE correctly sampling it</li>
-  <li>If you use normal maps, they need to be in unity normal map format, and emissive masks need to have at least 1 component be red as thats what I use to determin what parsts should be emissive(it will use the albedo tex as surface color)</li>
-  <li>To set up PBR, all textures go into their proper names, but Roughness goes into the Occlusion texture(Since path tracing calculates ambient occlusion by default, this texture is not normally needed, and there being no proper place for a Roughness texture in the default material, I have decided this was a good compromise)</li>
+  <li>If you use normal maps, they need to be in unity normal map format</li>
+  <li>To set up PBR, all textures go into their proper names, but Roughness goes into the Occlusion texture(Since path tracing gets ambient occlusion by default, this texture is not normally needed, and there being no proper place for a Roughness texture in the default material, I have decided this was a good compromise)</li>
 </ul>
 ## MagicaVoxel Usage
 <ul>
@@ -101,8 +102,15 @@ Let me know if you use this for anything, I would be excited to see any use of t
   <li>Second, you need to attatch a VoxelObject to that gameobject(Located under Assets->Resources->BVH->VoxelObject)</li>
   <li>Next you need to attatch the voxel model to this script, by dragging your voxel model asset in the project tab to the VoxelRef space in the VoxelObject script</li>
   <li>That should be it, it will get grouped into the building along with meshes, and having at least 1 voxel object in the scene will turn on its inclusion.  Removing or turning off all voxel related gameobjects will turn it back off</li>
-    
-    
+</ul>
+</br>
+## Using Instancing
+<ul>
+  <li>First, there needs to be a gameobject called InstancedStorage in the scene with the InstanceManager attatched to it</li>
+  <li>Second, all objects that will be the source of instanced objects will need to go under the InstancedStorage and can be arranged like normal objects(with their layout of parentobject to raytracingobjects)</li>
+  <li>Finally, to instance the objects, you just need empty gameobjects with the InstanceObject script attatched to them under the Scene gameobject, and then drag the desired object instance from the hierarchy to the Instance Parent slot in the InstanceObject script(all of this is displayed in the demoscene)</li>
+</ul>
+
 ## Controls:
 Camera Controls: WASD, Mouse, and press T to freeze the camera
 </br>
