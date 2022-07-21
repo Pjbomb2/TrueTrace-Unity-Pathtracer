@@ -57,6 +57,8 @@ public int TotalObjects;
 [HideInInspector] public int NodeCompressKernel;
 [HideInInspector] public int NodeInitializerKernel;
 
+public int InstanceReferences;
+
 public bool NeedsToUpdate;
 
 
@@ -195,6 +197,10 @@ public void init() {
 
 }
 public void SetUpBuffers() {
+    if(TriBuffer != null) {
+        TriBuffer.Release();
+        BVHBuffer.Release();
+    }
     TriBuffer = new ComputeBuffer(AggTriangles.Length, 136);
     BVHBuffer = new ComputeBuffer(AggNodes.Length, 80);
     TriBuffer.SetData(AggTriangles);
@@ -1046,6 +1052,16 @@ public void UpdateAABB() {//Update the Transformed AABB by getting the new Max/M
     aabb.BBMin = new_center - new_extent;
     aabb.BBMax = new_center + new_extent;
 }
+public void UpdateAABB(Transform transform) {//Update the Transformed AABB by getting the new Max/Min of the untransformed AABB after transforming it
+    Vector3 center = 0.5f * (aabb_untransformed.BBMin + aabb_untransformed.BBMax);
+    Vector3 extent = 0.5f * (aabb_untransformed.BBMax - aabb_untransformed.BBMin);
+
+    Vector3 new_center = transform_position (transform.worldToLocalMatrix.inverse, center);
+    Vector3 new_extent = transform_direction(abs(transform.worldToLocalMatrix.inverse), extent);
+
+    aabb.BBMin = new_center - new_extent;
+    aabb.BBMax = new_center + new_extent;
+}
 
 private void ConstructAABB() {
     aabb_untransformed = new AABB();
@@ -1094,8 +1110,13 @@ unsafe public void Aggregate() {//Compress the CWBVH
 private void OnEnable() {
     HasStarted = false;
     if(gameObject.scene.isLoaded) {
-        this.GetComponentInParent<AssetManager>().AddQue.Add(this);
-        this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
+        if(this.GetComponentInParent<InstancedManager>() != null) {
+            this.GetComponentInParent<InstancedManager>().AddQue.Add(this);
+            this.GetComponentInParent<InstancedManager>().ParentCountHasChanged = true;            
+        } else {
+            this.GetComponentInParent<AssetManager>().AddQue.Add(this);
+            this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
+        }
         HasCompleted = false;
     }
 }
@@ -1104,8 +1125,13 @@ private void OnDisable() {
     HasStarted = false;
     if(gameObject.scene.isLoaded) {
         ClearAll();
-        this.GetComponentInParent<AssetManager>().RemoveQue.Add(this);
-        this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
+        if(this.GetComponentInParent<InstancedManager>() != null) {
+            this.GetComponentInParent<InstancedManager>().RemoveQue.Add(this);
+            this.GetComponentInParent<InstancedManager>().ParentCountHasChanged = true;            
+        } else {
+            this.GetComponentInParent<AssetManager>().RemoveQue.Add(this);
+            this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
+        }
         HasCompleted = false;
     }
 }

@@ -23,7 +23,7 @@ public class RayTracingLights : MonoBehaviour {
         Color col = ThisLight.color; 
         Emission = new Vector3(col[0], col[1], col[2]) * ThisLight.intensity;
         Direction = (ThisLight.type == LightType.Directional) ? -this.transform.forward : (ThisLight.type == LightType.Spot) ? Vector3.Normalize(this.transform.forward) : new Vector3(0.0f, 0.0f, 0.0f);
-        Type = (ThisLight.type == LightType.Point) ? 0 : (ThisLight.type == LightType.Directional) ? 1 : 2; //this.transform.TransformDirection(Vector3.forward)
+        Type = (ThisLight.type == LightType.Point) ? 0 : (ThisLight.type == LightType.Directional) ? 1 : 2;
         if(ThisLight.type == LightType.Spot) {
             float innerCos = Mathf.Cos(Mathf.Deg2Rad * 0.5f * ThisLight.innerSpotAngle);
             float outerCos = Mathf.Cos(Mathf.Deg2Rad * 0.5f * ThisLight.spotAngle);

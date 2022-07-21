@@ -120,9 +120,11 @@ VoxLoader Vox;
             TempBVHNode.Center = Octree.Octree[i].Center;
             GPUOctree[i] = TempBVHNode;
         }
-        for(int i  = Octree.CompressedOctree.Length; i < Octree.CompressedOctree.Length + Voxels.Count; i++) {
-            GPUOctree[i].node_1x = (uint)Octree.OrderedVoxels[i - Octree.CompressedOctree.Length].Material;
-            GPUOctree[i].Center = GetPosition(Octree.OrderedVoxels[i - Octree.CompressedOctree.Length].Index);
+                int OctreeLength = Octree.CompressedOctree.Length;
+                int VoxelLength = OctreeLength + Voxels.Count;
+        for(int i  = OctreeLength; i < VoxelLength; i++) {
+            GPUOctree[i].node_1x = (uint)Octree.OrderedVoxels[i - OctreeLength].Material;
+            GPUOctree[i].Center = GetPosition(Octree.OrderedVoxels[i - OctreeLength].Index);
         }
         LargestAxis = A;
         HasCompleted = true;

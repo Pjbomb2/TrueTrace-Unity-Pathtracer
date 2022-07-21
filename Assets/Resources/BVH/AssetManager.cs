@@ -23,6 +23,8 @@ public class AssetManager : MonoBehaviour {
      public List<int> ToIllumTriBuffer;
     [HideInInspector] public List<LightData> UnityLights;
     public List<Light> Lights;
+    public InstancedManager InstanceData;
+    public List<InstancedObject> Instances;
 
     public ComputeShader MeshFunctions;
     private int TriangleBufferKernel;
@@ -32,11 +34,15 @@ public class AssetManager : MonoBehaviour {
     public List<ParentObject> BuildQue;
     public List<ParentObject> AddQue;
     public List<ParentObject> RemoveQue;
+    public List<InstancedObject> InstanceRenderQue;
+    public List<InstancedObject> InstanceBuildQue;
+    public List<InstancedObject> InstanceAddQue;
+    public List<InstancedObject> InstanceRemoveQue;
     public List<VoxelObject> VoxelBuildQue;
     public List<VoxelObject> VoxelRenderQue;
     public List<VoxelObject> VoxelAddQue;
     public List<VoxelObject> VoxelRemoveQue;
-
+    private bool OnlyInstanceUpdated;
     [HideInInspector] public List<Transform> LightTransforms;
     [HideInInspector] public List<Task> CurrentlyActiveTasks;
     [HideInInspector] public List<Task> CurrentlyActiveVoxelTasks;
@@ -147,6 +153,23 @@ public class AssetManager : MonoBehaviour {
                 RoughnessTexs.Add((Texture2D)Obj.RoughnessAtlas);
             }
         }
+        foreach(ParentObject Obj in InstanceData.RenderQue) {
+            if(Obj.HasAlbedoAtlas) {
+                AlbedoTexs.Add((Texture2D)Obj.AlbedoAtlas);
+            }
+            if(Obj.HasNormalAtlas) {
+                NormalTexs.Add((Texture2D)Obj.NormalAtlas);
+            }
+            if(Obj.HasEmissiveAtlas) {
+                EmissiveTexs.Add((Texture2D)Obj.EmissiveAtlas);
+            }
+            if(Obj.HasMetallicAtlas) {
+                MetallicTexs.Add((Texture2D)Obj.MetallicAtlas);
+            }
+            if(Obj.HasRoughnessAtlas) {
+                RoughnessTexs.Add((Texture2D)Obj.RoughnessAtlas);
+            }
+        }
         Rect[] AlbedoRects, NormalRects, EmmissiveRects, MetallicRects, RoughnessRects;
         if(AlbedoTexs.Count != 0) {
             AlbedoRects = AlbedoAtlas.PackTextures(AlbedoTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392), true);//4096);
@@ -211,6 +234,42 @@ public class AssetManager : MonoBehaviour {
             if(Obj.HasRoughnessAtlas) RoughnessCount++;
 
         }
+        foreach(ParentObject Obj in InstanceData.RenderQue) {
+            foreach(RayTracingObject Obj2 in Obj.ChildObjects) {
+                for(int i = 0; i < Obj2.MaterialIndex.Length; i++) {
+                    Obj2.MaterialIndex[i] = Obj2.LocalMaterialIndex[i] + MatCount;
+                }
+            }
+            foreach(MaterialData Mat in Obj._Materials) {
+                MaterialData TempMat = Mat;
+                if(TempMat.MatType == 1) {
+                    TempMat.Roughness = Mathf.Max(TempMat.Roughness, 0.000001f);
+                }
+                if(TempMat.HasAlbedoTex == 1) {
+                    TempMat.AlbedoTex = ResizeRect(TempMat.AlbedoTex, AlbedoRects[AlbedoCount]);
+                }
+                if(TempMat.HasNormalTex == 1) {
+                    TempMat.NormalTex = ResizeRect(TempMat.NormalTex, NormalRects[NormalCount]);
+                }
+                if(TempMat.HasEmissiveTex == 1) {
+                    TempMat.EmissiveTex = ResizeRect(TempMat.EmissiveTex, EmmissiveRects[EmissiveCount]);
+                }
+                if(TempMat.HasMetallicTex == 1) {
+                    TempMat.MetallicTex = ResizeRect(TempMat.MetallicTex, MetallicRects[MetallicCount]);
+                }
+                if(TempMat.HasRoughnessTex == 1) {
+                    TempMat.RoughnessTex = ResizeRect(TempMat.RoughnessTex, RoughnessRects[RoughnessCount]);
+                }
+                _Materials.Add(TempMat);
+                MatCount++;
+            }
+            if(Obj.HasAlbedoAtlas) AlbedoCount++;
+            if(Obj.HasNormalAtlas) NormalCount++;
+            if(Obj.HasEmissiveAtlas) EmissiveCount++;
+            if(Obj.HasMetallicAtlas) MetallicCount++;
+            if(Obj.HasRoughnessAtlas) RoughnessCount++;
+
+        }
         AlbedoTexs.Clear();
         AlbedoTexs.TrimExcess();
         NormalTexs.Clear();
@@ -228,9 +287,18 @@ public class AssetManager : MonoBehaviour {
         } 
 
     }
-
+    public void OnApplicationQuit() {
+        if(BVH8AggregatedBuffer != null) {
+            BVH8AggregatedBuffer.Release();
+            BVH8AggregatedBuffer = null;    
+            AggTriBuffer.Release();
+            AggTriBuffer = null;    
+        }
+    }
 
     private void init() {
+        InstanceData = GameObject.Find("InstancedStorage").GetComponent<InstancedManager>();
+        Instances = new List<InstancedObject>();
         ToIllumTriBuffer = new List<int>();
         SunDirection = new Vector3(0,-1,0);
         AddQue = new List<ParentObject>();
@@ -266,6 +334,7 @@ public class AssetManager : MonoBehaviour {
 
     private void UpdateRenderAndBuildQues() {
         ChildrenUpdated = false;
+        OnlyInstanceUpdated = false;
 
         int AddQueCount = AddQue.Count - 1;
         int RemoveQueCount = RemoveQue.Count - 1;
@@ -311,6 +380,42 @@ public class AssetManager : MonoBehaviour {
                 ChildrenUpdated = true;
             }
         }
+        InstanceData.UpdateRenderAndBuildQues(ref ChildrenUpdated);
+        AddQueCount = InstanceAddQue.Count - 1;
+        RemoveQueCount = InstanceRemoveQue.Count - 1;
+        for(int i = AddQueCount; i >= 0; i--) {
+            if(InstanceAddQue[i].InstanceParent != null) {
+                InstanceBuildQue.Add(InstanceAddQue[i]);
+                InstanceAddQue.RemoveAt(i);
+            }
+        }
+        for(int i = RemoveQueCount; i >= 0; i--) {
+            if(InstanceRenderQue.Contains(InstanceRemoveQue[i]))
+                InstanceRenderQue.Remove(InstanceRemoveQue[i]);
+            else if(InstanceBuildQue.Contains(InstanceRemoveQue[i])) {
+                InstanceBuildQue.Remove(InstanceRemoveQue[i]);
+            } else
+                Debug.Log("REMOVE QUE NOT FOUND");
+            OnlyInstanceUpdated = true;
+            InstanceRemoveQue.RemoveAt(i); 
+        }
+        RenderQueCount = InstanceRenderQue.Count - 1;
+        for(int i = RenderQueCount; i >= 0; i--) {//Demotes from Render Que to Build Que in case mesh has changed
+            InstanceRenderQue[i].UpdateInstance();
+            if(InstanceRenderQue[i].InstanceParent == null || InstanceRenderQue[i].InstanceParent.gameObject.activeInHierarchy == false || InstanceRenderQue[i].InstanceParent.HasCompleted == false) {
+                InstanceBuildQue.Add(InstanceRenderQue[i]);
+                InstanceRenderQue.RemoveAt(i);
+                OnlyInstanceUpdated = true;
+            }
+        }
+        BuildQueCount = InstanceBuildQue.Count - 1;
+        for(int i = BuildQueCount; i >= 0; i--) {//Promotes from Build Que to Render Que
+            if(InstanceBuildQue[i].InstanceParent.HasCompleted == true) {
+                InstanceRenderQue.Add(InstanceBuildQue[i]);
+                InstanceBuildQue.RemoveAt(i);
+                OnlyInstanceUpdated = true;
+            }
+        }
 
         AddQueCount = VoxelAddQue.Count - 1;
         RemoveQueCount = VoxelRemoveQue.Count - 1;
@@ -346,7 +451,12 @@ public class AssetManager : MonoBehaviour {
                 ChildrenUpdated = true;
             }
         }
-        if(ChildrenUpdated || ParentCountHasChanged) MeshAABBs = new AABB[RenderQue.Count];
+        if(OnlyInstanceUpdated && !ChildrenUpdated) {
+            ChildrenUpdated = true;
+        } else {
+            OnlyInstanceUpdated = false;
+        }
+        if(ChildrenUpdated || ParentCountHasChanged) MeshAABBs = new AABB[RenderQue.Count + InstanceRenderQue.Count];
         if(ChildrenUpdated || ParentCountHasChanged) VoxelAABBs = new AABB[VoxelRenderQue.Count];
     }
     public void EditorBuild() {
@@ -358,7 +468,9 @@ public class AssetManager : MonoBehaviour {
         CurrentlyActiveTasks = new List<Task>();
         CurrentlyActiveVoxelTasks = new List<Task>();
         BuildQue = new List<ParentObject>(GetComponentsInChildren<ParentObject>());
+        //InstanceAddQue = new List<InstancedObject>(GetComponentsInChildren<InstancedObject>());
         VoxelBuildQue = new List<VoxelObject>(GetComponentsInChildren<VoxelObject>());
+        InstanceData.EditorBuild();
         for(int i = 0; i < BuildQue.Count; i++) {
             var CurrentRep = i;
             BuildQue[CurrentRep].LoadData();
@@ -381,6 +493,8 @@ public class AssetManager : MonoBehaviour {
         init();
         CurrentlyActiveVoxelTasks = new List<Task>();
         List<ParentObject> TempQue = new List<ParentObject>(GetComponentsInChildren<ParentObject>());
+        InstanceAddQue = new List<InstancedObject>(GetComponentsInChildren<InstancedObject>());
+        InstanceData.BuildCombined();
         List<VoxelObject> TempVoxelQue = new List<VoxelObject>(GetComponentsInChildren<VoxelObject>());
         for(int i = 0; i < TempQue.Count; i++) {
             if(TempQue[i].HasCompleted && !TempQue[i].NeedsToUpdate)
@@ -404,7 +518,7 @@ public class AssetManager : MonoBehaviour {
             VoxelBuildQue[CurrentRep].LoadData();
             CurrentlyActiveVoxelTasks.Add(Task.Run(() => VoxelBuildQue[CurrentRep].BuildOctree()));
         }
-        MeshAABBs = new AABB[RenderQue.Count];
+        MeshAABBs = new AABB[RenderQue.Count + InstanceRenderQue.Count];
         VoxelAABBs = new AABB[VoxelRenderQue.Count];
         ParentCountHasChanged = true;
         if(AggLightTriangles.Count == 0) {AggLightTriangles.Add(new CudaLightTriangle() {});}
@@ -415,7 +529,7 @@ public class AssetManager : MonoBehaviour {
     private void TempBuild() {
         UpdateRenderAndBuildQues();
         int ParentsLength = RenderQue.Count;
-        TLASSpace = 2 * ParentsLength;
+        TLASSpace = 2 * (ParentsLength + InstanceRenderQue.Count);
         int nodes = TLASSpace;
         int BVHOffset = 0;
         int MaterialOffset = 0;
@@ -437,6 +551,10 @@ public class AssetManager : MonoBehaviour {
             for(int i = 0; i < ParentsLength; i++) {
                 AggNodeCount += RenderQue[i].AggNodes.Length;
                 AggTriCount += RenderQue[i].AggTriangles.Length;
+            }
+            for(int i = 0; i < InstanceData.RenderQue.Count; i++) {
+                AggNodeCount += InstanceData.RenderQue[i].AggNodes.Length;
+                AggTriCount += InstanceData.RenderQue[i].AggTriangles.Length;
             }
             if(AggNodeCount != 0) {
                 BVH8AggregatedBuffer = new ComputeBuffer(AggNodeCount, 80);
@@ -476,6 +594,40 @@ public class AssetManager : MonoBehaviour {
                         AggLightTriangles.AddRange(RenderQue[i].LightTriangles);
                     }
                 }
+                for(int i = 0; i < InstanceData.RenderQue.Count; i++) {
+                    InstanceData.RenderQue[i].UpdateData(ref BVHOffset, ref MaterialOffset);
+                    InstanceData.RenderQue[i].SetUpBuffers();
+                    MeshFunctions.SetInt("Offset", CurTriOffset);
+                    MeshFunctions.SetInt("Count", InstanceData.RenderQue[i].TriBuffer.count);
+                    MeshFunctions.SetBuffer(TriangleBufferKernel, "InCudaTriArray", InstanceData.RenderQue[i].TriBuffer);
+                    MeshFunctions.Dispatch(TriangleBufferKernel, (int)Mathf.Ceil(InstanceData.RenderQue[i].TriBuffer.count / 248.0f), 1, 1);
+
+                    MeshFunctions.SetInt("Offset", CurNodeOffset);
+                    MeshFunctions.SetInt("Count", InstanceData.RenderQue[i].BVHBuffer.count);
+                    MeshFunctions.SetBuffer(NodeBufferKernel, "InAggNodes", InstanceData.RenderQue[i].BVHBuffer);
+                    MeshFunctions.Dispatch(NodeBufferKernel, (int)Mathf.Ceil(InstanceData.RenderQue[i].BVHBuffer.count / 248.0f), 1, 1);
+                    if(!InstanceData.RenderQue[i].IsSkinnedGroup) InstanceData.RenderQue[i].Release();
+                    ToIllumTriBuffer.AddRange(InstanceData.RenderQue[i].ToIllumTriBuffer);
+
+                    InstanceData.RenderQue[i].NodeOffset = CurNodeOffset;
+                    InstanceData.RenderQue[i].TriOffset = CurTriOffset;
+                    CurNodeOffset += InstanceData.RenderQue[i].AggNodes.Length;
+                    CurTriOffset += InstanceData.RenderQue[i].AggTriangles.Length;
+                }
+                for(int i = 0; i < InstanceRenderQue.Count; i++) {
+                    if(InstanceRenderQue[i].InstanceParent.LightCount != 0) {
+                        LightMeshCount++;
+                        CDF += InstanceRenderQue[i].InstanceParent.TotEnergy;
+                        LightTransforms.Add(InstanceRenderQue[i].transform);
+                        LightMeshes.Add(new LightMeshData() {
+                            energy = InstanceRenderQue[i].InstanceParent.TotEnergy,
+                            CDF = CDF,
+                            StartIndex = AggLightTriangles.Count,
+                            IndexEnd = InstanceRenderQue[i].InstanceParent.LightCount + AggLightTriangles.Count     
+                          });
+                        AggLightTriangles.AddRange(InstanceRenderQue[i].InstanceParent.LightTriangles);
+                    }
+                }
             }
             GPUOctree = new List<GPUOctreeNode>();
             for(int i = 0; i < VoxelRenderQue.Count; i++) {
@@ -491,7 +643,7 @@ public class AssetManager : MonoBehaviour {
             if(AggLightTriangles.Count == 0) {AggLightTriangles.Add(new CudaLightTriangle() {}); LightTriCount = 0;} else {LightTriCount = AggLightTriangles.Count;}
 
 
-           CreateAtlas();
+           if(!OnlyInstanceUpdated || _Materials.Count == 0) CreateAtlas();
         }
         ParentCountHasChanged = false;
         if(UseSkinning && didstart) { 
@@ -566,6 +718,47 @@ public class AssetManager : MonoBehaviour {
         }
 
     }
+    public struct AggData {
+        public int AggIndexCount;
+        public int AggNodeCount;
+        public int MaterialOffset;
+        public int mesh_data_bvh_offsets;
+    }
+
+//Better Bounding Box Transformation by Zuex(I got it from Zuen)
+private Vector3 transform_position(Matrix4x4 matrix, Vector3 position) {
+    return new Vector3(
+        matrix[0, 0] * position.x + matrix[0, 1] * position.y + matrix[0, 2] * position.z + matrix[0, 3],
+        matrix[1, 0] * position.x + matrix[1, 1] * position.y + matrix[1, 2] * position.z + matrix[1, 3],
+        matrix[2, 0] * position.x + matrix[2, 1] * position.y + matrix[2, 2] * position.z + matrix[2, 3]
+    );
+}
+private Vector3 transform_direction(Matrix4x4 matrix, Vector3 direction) {
+    return new Vector3(
+        matrix[0, 0] * direction.x + matrix[0, 1] * direction.y + matrix[0, 2] * direction.z,
+        matrix[1, 0] * direction.x + matrix[1, 1] * direction.y + matrix[1, 2] * direction.z,
+        matrix[2, 0] * direction.x + matrix[2, 1] * direction.y + matrix[2, 2] * direction.z
+    );
+}
+private Matrix4x4 abs(Matrix4x4 matrix) {
+    Matrix4x4 result = new Matrix4x4();
+    for (int i = 0; i < 4; i++) {
+        for (int i2 = 0; i2 < 4; i2++) result[i,i2] = Mathf.Abs(matrix[i,i2]);
+    }
+    return result;
+}
+
+
+public void CreateAABB(Transform transform, ref AABB aabb) {//Update the Transformed AABB by getting the new Max/Min of the untransformed AABB after transforming it
+    Vector3 center = 0.5f * (aabb.BBMin + aabb.BBMax);
+    Vector3 extent = 0.5f * (aabb.BBMax - aabb.BBMin);
+
+    Vector3 new_center = transform_position (transform.worldToLocalMatrix.inverse, center);
+    Vector3 new_extent = transform_direction(abs(transform.worldToLocalMatrix.inverse), extent);
+
+    aabb.BBMin = new_center - new_extent;
+    aabb.BBMax = new_center + new_extent;
+}
 
     public bool UpdateTLAS() {  //Allows for objects to be moved in the scene or animated while playing 
         
@@ -600,7 +793,8 @@ public class AssetManager : MonoBehaviour {
        
         MyMeshesCompacted.Clear();     
         int MeshDataCount =  RenderQue.Count;
-        int aggregated_bvh_node_count = 2 * MeshDataCount;
+        AggData[] Aggs = new AggData[InstanceData.RenderQue.Count];
+        int aggregated_bvh_node_count = 2 * (MeshDataCount + InstanceRenderQue.Count);
         int AggNodeCount = aggregated_bvh_node_count;
         int AggTriCount = 0;
         int MatOffset = 0;
@@ -624,6 +818,35 @@ public class AssetManager : MonoBehaviour {
             AggNodeCount += RenderQue[i].AggBVHNodeCount;//Can I replace this with just using aggregated_bvh_node_count below?
             AggTriCount += RenderQue[i].AggIndexCount;
             aggregated_bvh_node_count += RenderQue[i].BVH.cwbvhnode_count;
+        }
+        for(int i = 0; i < InstanceData.RenderQue.Count; i++) {
+             Aggs[i].AggIndexCount = AggTriCount;
+             Aggs[i].AggNodeCount = AggNodeCount;
+             Aggs[i].MaterialOffset = MatOffset;
+             Aggs[i].mesh_data_bvh_offsets = aggregated_bvh_node_count;
+            MatOffset += InstanceData.RenderQue[i].MatOffset;
+            AggNodeCount += InstanceData.RenderQue[i].AggBVHNodeCount;//Can I replace this with just using aggregated_bvh_node_count below?
+            AggTriCount += InstanceData.RenderQue[i].AggIndexCount;
+            aggregated_bvh_node_count += InstanceData.RenderQue[i].BVH.cwbvhnode_count;            
+        }
+        for(int i = 0; i < InstanceRenderQue.Count; i++) {
+             int Index = InstanceData.RenderQue.IndexOf(InstanceRenderQue[i].InstanceParent);
+             MyMeshesCompacted.Add(new MyMeshDataCompacted() {
+                mesh_data_bvh_offsets = Aggs[Index].mesh_data_bvh_offsets,
+                Transform = InstanceRenderQue[i].transform.worldToLocalMatrix,
+                Inverse = InstanceRenderQue[i].transform.worldToLocalMatrix.inverse,
+                Center = InstanceRenderQue[i].transform.position,
+                AggIndexCount = Aggs[Index].AggIndexCount,
+                AggNodeCount = Aggs[Index].AggNodeCount,
+                MaterialOffset = Aggs[Index].MaterialOffset,
+                IsVoxel = 0,
+                SizeX = 0,
+                SizeY = 0,
+                SizeZ = 0,
+              });
+             AABB aabb = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
+             CreateAABB(InstanceRenderQue[i].transform, ref aabb);
+            MeshAABBs[RenderQue.Count + i] = aabb;
         }
         LightMeshData CurLightMesh;
         for(int i = 0; i < LightMeshCount; i++) {
@@ -685,6 +908,26 @@ public class AssetManager : MonoBehaviour {
             int ChildCount = RenderQue[i].ChildObjects.Length;
             for(int i2 = 0; i2 < ChildCount; i2++) {
                 CurrentMaterial = RenderQue[i].ChildObjects[i2];
+                int MaterialCount = CurrentMaterial.MaterialIndex.Length;
+                for(int i3 = 0; i3 < MaterialCount; i3++) {
+                    TempMat = _Materials[CurrentMaterial.MaterialIndex[i3]];
+                    if(TempMat.HasAlbedoTex != 1) {
+                        TempMat.BaseColor = CurrentMaterial.BaseColor[i3];
+                    }
+                    TempMat.emmissive = CurrentMaterial.emmission[i3];
+                    TempMat.Roughness = ((int)CurrentMaterial.MaterialOptions[i3] != 1) ? CurrentMaterial.Roughness[i3] : Mathf.Max(CurrentMaterial.Roughness[i3], 0.000001f);
+                    TempMat.eta = CurrentMaterial.eta[i3];
+                    TempMat.MatType = (int)CurrentMaterial.MaterialOptions[i3];
+                    TempMat.EmissionColor = CurrentMaterial.EmissionColor[i3];
+                    _Materials[CurrentMaterial.MaterialIndex[i3]] = TempMat;
+                }
+            }
+        }
+        ParentCount = InstanceData.RenderQue.Count;
+        for(int i = 0; i < ParentCount; i++) {
+            int ChildCount = InstanceData.RenderQue[i].ChildObjects.Length;
+            for(int i2 = 0; i2 < ChildCount; i2++) {
+                CurrentMaterial = InstanceData.RenderQue[i].ChildObjects[i2];
                 int MaterialCount = CurrentMaterial.MaterialIndex.Length;
                 for(int i3 = 0; i3 < MaterialCount; i3++) {
                     TempMat = _Materials[CurrentMaterial.MaterialIndex[i3]];

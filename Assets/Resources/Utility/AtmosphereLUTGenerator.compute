@@ -465,7 +465,7 @@ float3 GetScattering(float r, float mu, float mu_s, float nu, bool ray_r_mu_inte
     if(scattering_order == 1) {
         float3 rayleigh = GetScattering2(RayleighTexRead, r, mu, mu_s, nu, ray_r_mu_intersects_ground);
         float3 mie = GetScattering2(MieTexRead, r, mu, mu_s, nu, ray_r_mu_intersects_ground);
-        return rayleigh * RayleighPhaseFunction(nu) + mie * MiePhaseFunction(-0.8f, nu);
+        return rayleigh * RayleighPhaseFunction(nu) + mie * MiePhaseFunction(-0.6f, nu);
     } else {
         return GetScattering2(MultipleScatteringTexRead, r, mu, mu_s, nu, ray_r_mu_intersects_ground);
     }
@@ -615,7 +615,7 @@ float3 ComputeScatteringDensity(
           rayleigh_scattering * rayleigh_density *
               RayleighPhaseFunction(nu2) +
           mie_scattering * mie_density *
-              MiePhaseFunction(-0.8f, nu2)) *
+              MiePhaseFunction(-0.6f, nu2)) *
           domega_i;
     }
   }

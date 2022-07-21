@@ -2293,7 +2293,7 @@ float3 GetTransmittance(float r, float mu, float d, bool ray_r_mu_intersects_gro
 
 float3 GetSkyRadiance(
     float3 camera, float3 view_ray, float shadow_length,
-    float3 sun_direction, inout float3 transmittance, inout bool ray_r_mu_intersects_ground) {
+    float3 sun_direction, inout float3 transmittance) {
     camera /= 10.0f;
     camera.y += bottom_radius;
     camera.y = max(camera.y, bottom_radius + 1);
@@ -2320,7 +2320,7 @@ float3 GetSkyRadiance(
   float mu = rmu / r;
   float mu_s = dot(camera, sun_direction) / r;
   float nu = -dot(view_ray, sun_direction);
-  ray_r_mu_intersects_ground = RayIntersectsGround(r, mu);
+  bool ray_r_mu_intersects_ground = RayIntersectsGround(r, mu);
 
   transmittance = ray_r_mu_intersects_ground ? 0.0 :
       GetTransmittanceToTopAtmosphereBoundary(r, mu);
@@ -2768,10 +2768,9 @@ void kernel_shade () {
             SkyColAcc = Color.throughput * sky;
         #else
             float3 transmittance = 0;
-            bool IntersectsGround = false;
-            float3 Radiance = GetSkyRadiance(ray.origin, ray.direction, 0, SunDir, transmittance, IntersectsGround);
+            float3 Radiance = GetSkyRadiance(ray.origin, ray.direction, 0, SunDir, transmittance);
             float3 SkyBoxCol = Radiance;//TempUv.x < screen_width / 2 ? CalculateSkyBox(ray.origin, ray.direction, bestHit) : Radiance;
-            float Sun = exp(-acos(max(dot(-SunDir, -ray.direction), 0.0f))* 20.0f) * transmittance;
+            float Sun = max(min(exp(-acos(max(dot(-SunDir, -ray.direction), 0.0f))* 60.0f),12.0f),0) * transmittance;
             if(CurBounce == 0) {//Seperated into direct and indirect channels
                 Color.Direct = (SkyBoxCol * 14.0f) + Sun;
             } else if(CurBounce == 1) {

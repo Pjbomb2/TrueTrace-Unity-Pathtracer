@@ -126,6 +126,11 @@ public class EditModeFunctions : EditorWindow {
                }
             }
             }
+            if(GameObject.Find("InstancedStorage") == null) {
+               GameObject InstanceObject = new GameObject("InstancedStorage", typeof(InstancedManager));
+
+            }
+
             Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
             QuickStart();
 
@@ -219,7 +224,7 @@ public class EditModeFunctions : EditorWindow {
             GameObject result = new GameObject();
             string dirPath = Application.dataPath + "/../Assets/ScreenShots";
             if(!System.IO.Directory.Exists(dirPath)) {
-               Debug.Log("No Folder Named ScreenShots in Assets");
+               Debug.Log("No Folder Named ScreenShots in Assets Folder.  Please Create One");
             } else {
                ScreenCapture.CaptureScreenshot(dirPath + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayMaster.SampleCount + " Samples.png");
                UnityEditor.AssetDatabase.Refresh();
@@ -239,6 +244,9 @@ public class EditModeFunctions : EditorWindow {
          if (GUI.Button(ClearParentData, "Clear Parent Data")) {
             EditorUtility.SetDirty(Assets);
             Assets.ClearAll();
+            InstancedManager Instanced = GameObject.Find("InstancedStorage").GetComponent<InstancedManager>();
+            EditorUtility.SetDirty(Instanced);
+            Instanced.ClearAll();
          }
          
          GUI.Label(BounceCountLabel, "Max Bounces");

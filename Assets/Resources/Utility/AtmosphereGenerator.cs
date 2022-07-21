@@ -223,7 +223,7 @@ public class AtmosphereGenerator {
         Atmosphere.Dispatch(SingleScatterKernel, 256, 128, 32);
 
         Atmosphere.SetInt("ScatteringOrder", 1); 
-        int NumScatteringOrder = 4;
+        int NumScatteringOrder = 12;
         Atmosphere.SetTexture(DirectIrradianceKernel, "DeltaIrradianceTex", DeltaIrradianceTex);
         Atmosphere.SetTexture(DirectIrradianceKernel, "IrradianceTex", IrradianceTex);
         Atmosphere.SetTexture(DirectIrradianceKernel, "TransmittanceTex", _TransmittanceLUT);
@@ -262,14 +262,10 @@ public class AtmosphereGenerator {
             
         }      
 
-
-
-       
+        rayleigh_densityC.Release();
+        mie_densityC.Release();
+        absorption_densityC.Release();
     }
 
-    private void OnDisable() {
-        _RayleighTex.Release();
-        _MieTex.Release();
-    }
 
 }

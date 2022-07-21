@@ -470,7 +470,7 @@ public class RayTracingMaster : MonoBehaviour {
             RayTracingShader.SetTexture(ShadeKernel, "ScatterTex", Atmo._RayleighTex);
             RayTracingShader.SetTexture(ShadeKernel, "MieTex", Atmo._MieTex);
 
-        _PrecomputedBlocks = new ComputeBuffer(128 * 512, 48);
+        if(_PrecomputedBlocks == null) _PrecomputedBlocks = new ComputeBuffer(128 * 512, 48);
        // TempData = new TempDataData[128 * 1024];
         SetComputeBuffer(ReservoirPrecomputeKernel, "WriteBlocks", _PrecomputedBlocks);
         SetComputeBuffer(ReservoirPrecomputeKernel, "_LightMeshes", _LightMeshes);
