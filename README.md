@@ -1,12 +1,12 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>Nothing, Need More Ideas</li>
+  <li>Volumetric Clouds(struggling)</li>
 </ul>
 Currently needs to be done but havent implemented fully:
 <ul>
     <li>Reduce Memory Spike on Start</li>
-    <li>Make Voxels able to be volumetric(havent figured out a way to make it fast)</li>
+    <li>Make Voxels able to be volumetric(havent figured out a way to make it fast, got it down to 200ms for 128x128x128)</li>
 </ul>
 Currently want to do but havent started:
 <ul>
