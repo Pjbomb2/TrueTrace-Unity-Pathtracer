@@ -2,6 +2,7 @@ Notes:</br>
 Currently working on:
 <ul>
   <li>Volumetric Clouds(struggling)</li>
+  <li>Volumetric Voxels(Struggling to make it fast, have so far tried sparse voxel octrees, DDA, and now brickmaps)</li>
 </ul>
 Currently needs to be done but havent implemented fully:
 <ul>
