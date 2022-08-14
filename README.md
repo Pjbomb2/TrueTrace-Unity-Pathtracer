@@ -1,7 +1,7 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>Multiple voxel objects per magicavoxel file(pain in the ass)</li>
+  <li>Nothing, any ideas welcome</li>
 </ul>
 Currently needs to be done but havent implemented fully:
 <ul>
@@ -38,7 +38,7 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 <li>Bloom</li>
 <li>PBR Texture Support</li>
 <li>No specific GPU vendor needed(this will run on integrated graphics if you so wish it, aka no RTX cores)</li>
-<li>Basic MagicaVoxel support</li>
+<li>MagicaVoxel support</li>
 <li>Ability to pathtrace voxels and triangle scenes at the same time seamlessly</li>
 <li>Depth of Field</li>
 <li>AutoExposure</li>
