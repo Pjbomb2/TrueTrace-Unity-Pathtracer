@@ -392,27 +392,27 @@ public class AtmosphereGenerator {
         }     
 
 
-        GPUPerlinNoise(1);
-        LoadPermTable2D();
-        LoadGradient3D();
-        Atmosphere.SetTexture(FirstCloudKernel, "CloudTex1", CloudTex1);
-        Atmosphere.SetTexture(FirstCloudKernel, "_PermTable2D", PermutationTable2D);
-        Atmosphere.SetTexture(FirstCloudKernel, "_Gradient3D", Gradient3D);
-        Atmosphere.SetFloat("frequency", 1.0f);
-        Atmosphere.SetFloat("TargetSize", CloudTexSize);
-        Atmosphere.Dispatch(FirstCloudKernel, CloudTexSize,CloudTexSize,CloudTexSize);
+        // GPUPerlinNoise(1);
+        // LoadPermTable2D();
+        // LoadGradient3D();
+        // Atmosphere.SetTexture(FirstCloudKernel, "CloudTex1", CloudTex1);
+        // Atmosphere.SetTexture(FirstCloudKernel, "_PermTable2D", PermutationTable2D);
+        // Atmosphere.SetTexture(FirstCloudKernel, "_Gradient3D", Gradient3D);
+        // Atmosphere.SetFloat("frequency", 1.0f);
+        // Atmosphere.SetFloat("TargetSize", CloudTexSize);
+        // Atmosphere.Dispatch(FirstCloudKernel, CloudTexSize,CloudTexSize,CloudTexSize);
 
-        Atmosphere.SetTexture(SecondCloudKernel, "CloudTex2", CloudTex2);
-        Atmosphere.SetTexture(SecondCloudKernel, "CloudTex3", CloudTex3);
-        Atmosphere.SetFloat("TargetSize", 32);
-        Atmosphere.Dispatch(SecondCloudKernel, 32,32,32);
+        // Atmosphere.SetTexture(SecondCloudKernel, "CloudTex2", CloudTex2);
+        // Atmosphere.SetTexture(SecondCloudKernel, "CloudTex3", CloudTex3);
+        // Atmosphere.SetFloat("TargetSize", 32);
+        // Atmosphere.Dispatch(SecondCloudKernel, 32,32,32);
 
-        Atmosphere.SetTexture(ThirdCloudKernel, "_PermTable2D", PermutationTable2D);
-        Atmosphere.SetTexture(ThirdCloudKernel, "_Gradient3D", Gradient3D);
-        Atmosphere.SetTexture(ThirdCloudKernel, "CloudTex3", CloudTex3);
-        Atmosphere.SetTexture(ThirdCloudKernel, "CloudTex1", CloudTex1);
-        Atmosphere.SetFloat("TargetSize", 128);
-        Atmosphere.Dispatch(ThirdCloudKernel, 128,128,1);
+        // Atmosphere.SetTexture(ThirdCloudKernel, "_PermTable2D", PermutationTable2D);
+        // Atmosphere.SetTexture(ThirdCloudKernel, "_Gradient3D", Gradient3D);
+        // Atmosphere.SetTexture(ThirdCloudKernel, "CloudTex3", CloudTex3);
+        // Atmosphere.SetTexture(ThirdCloudKernel, "CloudTex1", CloudTex1);
+        // Atmosphere.SetFloat("TargetSize", 128);
+        // Atmosphere.Dispatch(ThirdCloudKernel, 128,128,1);
 
 
 

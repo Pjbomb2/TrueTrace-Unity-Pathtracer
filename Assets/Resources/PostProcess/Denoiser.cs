@@ -30,6 +30,7 @@ public class Denoiser {
     private RenderTexture PrevDepthTex;
     private RenderTexture PrevOutputTex;
     private RenderTexture PrevUpscalerTAA;
+    private RenderTexture UpScalerLightingDataTexture;
 
 
     private ComputeBuffer A;
@@ -154,6 +155,7 @@ public class Denoiser {
          CreateRenderTexture2(ref PrevDepthTex, false);
          CreateRenderTexture2(ref PrevOutputTex, false);
          CreateRenderTexture2(ref PrevUpscalerTAA, false);
+         CreateRenderTexture2(ref UpScalerLightingDataTexture, false);
         }
     }
     
@@ -406,7 +408,8 @@ public class Denoiser {
         RenderTexture.ReleaseTemporary(TempTex2);
     }
 
-
+    Matrix4x4 PreviousCameraMatrix;
+    Matrix4x4 PreviousCameraInverseMatrix;
 
     public void ExecuteUpsample(ref RenderTexture Input, ref RenderTexture Output, ref RenderTexture OrigPos, int curframe, int cursample) {//need to fix this so it doesnt create new textures every time
         UnityEngine.Profiling.Profiler.BeginSample("Upscale");
@@ -416,6 +419,10 @@ public class Denoiser {
         Upscaler.SetInt("source_height", Input.height);
         Upscaler.SetInt("target_width", Output.width);
         Upscaler.SetInt("target_height", Output.height);
+        Upscaler.SetMatrix("_CameraToWorld", _camera.cameraToWorldMatrix);
+        Upscaler.SetMatrix("_CameraInverseProjection", _camera.projectionMatrix.inverse);
+        Upscaler.SetMatrix("_PrevCameraToWorld", PreviousCameraMatrix);
+        Upscaler.SetMatrix("_PrevCameraInverseProjection", PreviousCameraInverseMatrix);
         Upscaler.SetTexture(UpsampleKernel, "PosTex", OrigPos);
         Upscaler.SetVector("CamPos", _camera.transform.position);
         Upscaler.SetMatrix("ViewProjectionMatrix",  _camera.projectionMatrix * _camera.worldToCameraMatrix);
@@ -430,7 +437,8 @@ public class Denoiser {
         RenderTexture TempTex2 = RenderTexture.GetTemporary(Output.descriptor);
         RenderTexture TempTex3 = RenderTexture.GetTemporary(Output.descriptor);
         Upscaler.SetTexture(UpsampleKernel, "Input", Input);
-        Upscaler.SetTexture(UpsampleKernel, "Output", Output);
+        Upscaler.SetTexture(UpsampleKernel, "Output", UpScalerLightingDataTexture);
+        Upscaler.SetTexture(UpsampleKernel, "FinalOutput", Output);
         Upscaler.SetTexture(UpsampleKernel, "PrevOutput", PrevOutputTex);
         Upscaler.SetTexture(UpsampleKernel, "PrevDepthTexWrite", TempTex);
         Upscaler.SetTexture(UpsampleKernel, "TAAPrev", PrevUpscalerTAA);
@@ -438,11 +446,13 @@ public class Denoiser {
         Upscaler.Dispatch(UpsampleKernel, threadGroupsX2, threadGroupsY2, 1);
         UnityEngine.Profiling.Profiler.EndSample();
         Graphics.CopyTexture(TempTex, PrevDepthTex);
-        Graphics.CopyTexture(Output, PrevOutputTex);
+        Graphics.CopyTexture(UpScalerLightingDataTexture, PrevOutputTex);
         Graphics.CopyTexture(TempTex3, PrevUpscalerTAA);
         RenderTexture.ReleaseTemporary(TempTex);
         RenderTexture.ReleaseTemporary(TempTex2);
         RenderTexture.ReleaseTemporary(TempTex3);
+        PreviousCameraMatrix = _camera.cameraToWorldMatrix;
+        PreviousCameraInverseMatrix = _camera.projectionMatrix.inverse;
 //PrevDepthTex = Shader.GetGlobalTexture("_LastCameraDepthTexture");
 
     }

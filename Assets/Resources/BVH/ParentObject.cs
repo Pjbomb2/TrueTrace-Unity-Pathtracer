@@ -870,9 +870,12 @@ public async Task BuildTotal() {
             V1 = TransMat * V1;
             V2 = TransMat * V2;
             V3 = TransMat * V3;
-            TempPrim.V1 = V1 - Ofst2;
-            TempPrim.V2 = V2 - Ofst2;
-            TempPrim.V3 = V3 - Ofst2;
+            V1 = V1 - Ofst2;
+            V2 = V2 - Ofst2;
+            V3 = V3 - Ofst2;
+            TempPrim.V1 = V1;
+            TempPrim.V2 = V2;
+            TempPrim.V3 = V3;
             Norm1 = ChildMat * CurMeshData.Normals[Index1];
             Norm2 = ChildMat * CurMeshData.Normals[Index2];
             Norm3 = ChildMat * CurMeshData.Normals[Index3];
@@ -940,7 +943,7 @@ public async Task BuildTotal() {
                     });
                 IllumTriCount++;
             }
-            ToIllumTriBuffer.Add(IllumTriCount--);
+            ToIllumTriBuffer.Add(IllumTriCount);
         }  
     }
     LightTriangles.Sort((s1,s2) => s1.energy.CompareTo(s2.energy));

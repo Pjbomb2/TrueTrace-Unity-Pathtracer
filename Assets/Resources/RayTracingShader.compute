@@ -2352,6 +2352,9 @@ bool VisabilityCheck(Ray ray, float dist) {
     }
 }
 
+
+
+
 void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, RayHit hit, uint2 Uv, inout bool terminated, float2 NormalUV, bool HitVoxel, bool IsEmissiveTex) {//main function
 
     float3 pos = ray.direction * hit.t + ray.origin;
@@ -2401,14 +2404,13 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
         TempNormTex[Uv] = float4(norm, 1);
         TempPosTex[Uv] = float4(pos,1);
     }
-
     [branch]if(hitDat.emmis > 0.0f) {//if we hit a light, this ray is done
         [flatten]if(CurBounce == 0) {
-            Color.Direct = hitDat.emmis * (exp( -((hit.t) * sigma_t) ));
+            Color.Direct = hitDat.emmis;
         } else if(CurBounce == 1) {
-            Color.Direct += hitDat.surfaceColor * (hitDat.emmis) * (exp( -((hit.t) * sigma_t) ));
+            Color.Direct += hitDat.surfaceColor * (hitDat.emmis);
         } else {
-            Color.Indirect += Color.throughput * hitDat.emmis * hitDat.surfaceColor * (exp( -((hit.t) * sigma_t) ));
+            Color.Indirect += Color.throughput * hitDat.emmis * hitDat.surfaceColor;
         }
         return;
     }
@@ -2495,7 +2497,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
     }
     if(!valid) return;//If the ray failed, we have no choice but to terminate this path
     ray.origin = Geomnorm * 0.001f + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
-    [branch]if((UseNEE || AllowVolumetrics)) {//Next event estimation
+    [branch]if((UseNEE || AllowVolumetrics) && CurBounce < MaxBounce) {//Next event estimation
             float3 pos2;
             float3 LightNorm;
             int triindex;
@@ -2563,7 +2565,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                 TrianglePos CurTri = triangle_get_positions2(triindex);
                 float2 rand_triangle = random(curframe);
                 float2 CurUv = sample_triangle(rand_triangle.x, rand_triangle.y);
-                pos2 = mul(_LightMeshes[MeshIndex].Inverse, float4(CurTri.pos0 + CurUv.x * CurTri.posedge1 + CurUv.y * CurTri.posedge2, 0.0f)).xyz + _LightMeshes[MeshIndex].Center;
+                pos2 = mul(_LightMeshes[MeshIndex].Inverse, float4(CurTri.pos0 + CurUv.x * CurTri.posedge1 + CurUv.y * CurTri.posedge2, 1.0f)).xyz;
                 LightNorm = normalize(mul(_LightMeshes[MeshIndex].Inverse, float4(LightTriangles[triindex].Norm, 0.0f)).xyz);
                 LightProbability = (LightTriangles[triindex].pdf / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));//unused, needs more testing
                 TriCount = _LightMeshes[MeshIndex].IndexEnd - _LightMeshes[MeshIndex].StartIndex;
@@ -2615,30 +2617,28 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
         }
 
         if(validbsdf && IsAboveHorizon && UseNEE) {
-            //float G = max(0.0, dot(norm, to_light)) * max(0.0, -dot(to_light, LightNorm)) / distance_to_light_squared;
           //   if(G > 0.0f) {
                 float light_pdf;
                 float3 Radiance;
-                float G = abs(dot(to_light, LightNorm)) / distance_to_light_squared;
+                float SA = abs(dot(to_light, LightNorm)) * LightTriangles[triindex].area / distance_to_light_squared;
                 if(UseUnityLight) {
                     Radiance = _UnityLights[triindex].Radiance;
                     light_pdf = 1.0f / (unitylightcount);
                 } else {
                     Radiance = LightTriangles[triindex].radiance;
-                    light_pdf = 1.0f / (LightTriangles[triindex].area * TriCount);
+                    light_pdf = 1.0f / (SA) * ((LightTriangles[triindex].area) / _LightMeshes[LightMeshCount - 1].CDF);
+                    // light_pdf = light_pdf * (abs(dot(to_light, LightNorm)) / distance_to_light_squared);
                 }
-               // float3 brdf = hitDat.surfaceColor / PI;
-                //bsdf_pdf = 1.0 / PI;
 
                 float w = power_heuristic(light_pdf, bsdf_pdf);
-                float3 Illum = ((CurBounce == 0) ? PrevThroughput : throughput) * Radiance * bsdf_value * G /  light_pdf * Attenuation;// / LightProbability;
+                float3 Illum = Radiance * ((CurBounce == 0) ? 1 : throughput) * bsdf_value/  light_pdf * Attenuation;// / LightProbability;
                 float maxillum = max(max(Illum.x, Illum.y), Illum.z);
                 if(maxillum > random(9).y) {//NEE russian roulette, massively improves performance while giivng the same result
                     uint index3;//Congrats we shoot a shadow ray for NEE
                   InterlockedAdd(BufferSizes[CurBounce].shadow_rays, 1, index3);
                     ShadowRaysBuffer[index3].origin = ray.origin;
                     ShadowRaysBuffer[index3].direction = to_light;
-                    ShadowRaysBuffer[index3].t = (IsDirectional) ? 10000.0f : distance_to_light - 0.000001f;//2.0f * EPSILON;
+                    ShadowRaysBuffer[index3].t = (IsDirectional) ? 10000.0f : distance_to_light - 0.01f;//2.0f * EPSILON;
                     ShadowRaysBuffer[index3].illumination = Illum * rcp(saturate(maxillum));
                     ShadowRaysBuffer[index3].PixelIndex = Uv.y * screen_width + Uv.x;
                     ShadowRaysBuffer[index3].IsNotFog = true;
@@ -2679,7 +2679,6 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                 Radiance *= rcp(1.0f - (_LightMeshes[LightMeshCount - 1].CDF / _UnityLights[unitylightcount - 1].CDF));
                 light_pdf = luminance(Radiance.x, Radiance.y, Radiance.z) * distance_to_light_squared / (cos_theta_light * (_UnityLights[unitylightcount - 1].CDF));
                 to_light = (IsDirectional) ? (SamplePoint - LightNorm * 2.0f) - SamplePoint : pos2 - SamplePoint;
-               // if(_UnityLights[triindex].Type == 2) IsAboveHorizon = false;
             }
              float distance_to_light_squared = dot(to_light, to_light);
              float distance_to_light = sqrt(max(dot(to_light, to_light),0.0001f));
@@ -2742,7 +2741,6 @@ void kernel_shade () {
     int PixIndex = GlobalRays2[index].PixelIndex;
     uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
     pixel_index = PixIndex;//TempUv is the origional screen coordinates of the ray
-
     Ray ray;
     RayHit bestHit = get2(index);
     ray.origin = GlobalRays2[index].origin;
@@ -2765,12 +2763,9 @@ void kernel_shade () {
             }t
             SkyColAcc = Color.throughput * sky;
         #else
-        int Steps = 0;
-         float3 trans2 = 1;
             float3 transmittance = 0;
             float3 Radiance = GetSkyRadiance(ray.origin, ray.direction, 0, SunDir, transmittance);
-          //  _DebugTex[TempUv] = float4(Clouds, 1);
-            float3 SkyBoxCol = saturate(Radiance);//TempUv.x < screen_width / 2 ? CalculateSkyBox(ray.origin, ray.direction, bestHit) : Radiance;
+            float3 SkyBoxCol = saturate(Radiance);
             float3 Sun = (saturate(max(min(exp(-acos(max(dot(-SunDir, -ray.direction), 0.0f))* 60.0f),12.0f),0) * transmittance));
             if(CurBounce == 0) {//Seperated into direct and indirect channels
                 Color.Direct = (SkyBoxCol * 14.0f) + Sun;
@@ -2848,7 +2843,7 @@ bool DiffRes;
 void kernel_finalize (uint3 id : SV_DispatchThreadID) {//Moved final accumulation into its own kernel, improves performance
     
     if(id.x >= screen_width || id.y >= screen_height) return;
-//     bool cb = (int(id.x)/64 + int(id.y)/64)%2==0;
+     // bool cb = (int(id.x)/64 + int(id.y)/64)%2==0;
     int final_pixel_index = id.y * screen_width + id.x;
     Result[id.xy] = float4((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect) * ((DiffRes) ? 1.0f : AlbedoTex[id.xy].xyz) + GlobalColors[final_pixel_index].Fog, 1.0f);
 }

@@ -10,6 +10,7 @@ int target_height;
 Texture2D<float4> Input;
 SamplerState sampler_Input_point_clamp;
 RWTexture2D<float4> Output;
+RWTexture2D<float4> FinalOutput;
 Texture2D<float4> PrevOutput;
 
 float4x4 ViewProjectionMatrix;
@@ -175,6 +176,36 @@ float4 super_sample(float2 base_uv, float4 frag, float2 pixel) {
     return color;
 }
 
+float4x4 _CameraToWorld;
+float4x4 _CameraInverseProjection;
+float4x4 _PrevCameraToWorld;
+float4x4 _PrevCameraInverseProjection;
+
+float3 CreateCameraRay(float2 uv, float Distance) {
+    // Transform the camera origin to world space
+    float3 origin = mul(_CameraToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
+    
+    // Invert the perspective projection of the view-space position
+    float3 direction = mul(_CameraInverseProjection, float4(uv, 0.0f, 1.0f)).xyz;
+    // Transform the direction from camera to world space and normalize
+    direction = mul(_CameraToWorld, float4(direction, 0.0f)).xyz;
+    direction = normalize(direction);   
+
+    return origin + direction * Distance;
+}
+
+float3 CreatePreviousCameraRay(float2 uv, float Distance) {
+    // Transform the camera origin to world space
+    float3 origin = mul(_PrevCameraToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
+    
+    // Invert the perspective projection of the view-space position
+    float3 direction = mul(_PrevCameraInverseProjection, float4(uv, 0.0f, 1.0f)).xyz;
+    // Transform the direction from camera to world space and normalize
+    direction = mul(_PrevCameraToWorld, float4(direction, 0.0f)).xyz;
+    direction = normalize(direction);   
+
+    return origin + direction * Distance;
+}
 
 
 
@@ -194,7 +225,9 @@ void kernel_upsample (int3 id : SV_DispatchThreadID)
     float ReprojDepth = PrevDepthTex.SampleLevel(sampler_PrevDepthTex, newUV, 0).x;
     float CurDepth2 = Linear01Depth(DepthTex.SampleLevel(sampler_DepthTex, newUV2, 0).x) * FarPlane;
     float ReprojDepth2 = PrevDepthTex.SampleLevel(sampler_PrevDepthTex, UV, 0).x;
-    bool Disocluded = length(PosTex[newUV * float2(source_width, source_height)] - PosTex[UV * float2(source_width, source_height)]) > 0.25f;
+    float3 CurrentWorldPosition = CreateCameraRay(UV, CurDepth);
+    float3 PreviousWorldPosition = CreatePreviousCameraRay(newUV, ReprojDepth);
+    bool Disocluded = length(CurrentWorldPosition - PreviousWorldPosition) > 0.05f * CurDepth;
     float3 CurrentColor = Input.SampleLevel(sampler_Input_point_clamp, OrigUV, 0).xyz;
     // if(Disocluded || (newUV.x > 1 || newUV.x < 0 || newUV.y > 1 || newUV.y < 0)) Output[id.xy] = float4(CurrentColor * Albedo.SampleLevel(sampler_Input_point_clamp, UV, 0).xyz,1);
     // else Output[id.xy] = float4(lerp(PrevOutput[newUV * float2(target_width, target_height)].xyz, CurrentColor * Albedo.SampleLevel(sampler_Input_point_clamp, UV, 0).xyz, 0.5f),1);
@@ -218,7 +251,7 @@ void kernel_upsample (int3 id : SV_DispatchThreadID)
         float4 dir_avg = directional_average();
         float4 super = super_sample(UV, id.xyxy / float2(target_width, target_height).xyxy, view_pixel_size);
         if(Disocluded || (newUV.x > 1 || newUV.x < 0 || newUV.y > 1 || newUV.y < 0)) Output[id.xy] = float4(lerp(dir_avg.xyz, super.xyz, 0.5f),1);
-        else Output[id.xy] = float4(lerp(PrevOutput[newUV * float2(target_width, target_height)].xyz, lerp(dir_avg.xyz, super.xyz, 0.5f), max(saturate(length(dir_avg.xyz - super.xyz)),0.05f)),1);
-
+        else Output[id.xy] = float4(lerp(PrevOutput[newUV * float2(target_width, target_height)].xyz, lerp(dir_avg.xyz, super.xyz, 0.5f), max(1.0f / PrevOutput[newUV * float2(target_width, target_height)].w,0.01f)),PrevOutput[newUV * float2(target_width, target_height)].w + 1);
+    FinalOutput[id.xy] = float4(Output[id.xy].xyz * Albedo[id.xy].xyz, 1);
     PrevDepthTexWrite[id.xy] = float4(CurDepth, 0, 0, 1);
 }

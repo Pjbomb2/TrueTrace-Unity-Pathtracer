@@ -25,7 +25,7 @@ namespace CommonVars {
 
     [System.Serializable]
     public struct Voxel {
-        public int Index;
+        public uint Index;
         public int Material;
         public int InArrayIndex;
     }
@@ -35,6 +35,16 @@ namespace CommonVars {
         public float Density;
         public int InArrayIndex;
         public int Index;
+        public Vector3 Location;
+    }
+
+    [System.Serializable]
+    public struct Brick {
+        public int StartingIndex;
+        public int IndexCount;
+        public Vector3 BBMax;
+        public Vector3 BBMin;
+        public int Depth;
     }
 
     [System.Serializable][System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
@@ -259,6 +269,12 @@ namespace CommonVars {
     }
 
 
+    public struct VoxelObjectData {
+        public byte[] colors;
+        public Vector3 Size;
+        public Vector3 Translation;
+        public Matrix4x4 Rotation;
+    }
 
     [System.Serializable]
     public struct PrimitiveData {

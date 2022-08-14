@@ -39,7 +39,6 @@ public class VoxelObject : MonoBehaviour
     }
 
     unsafe public void LoadData() {
-        Debug.Log("VoxelStart");
         HasCompleted = false;
         Octree = new OctreeBuilder();
         init();
@@ -52,23 +51,64 @@ public class VoxelObject : MonoBehaviour
     }
     public int MaxRecur = 0;
 
-    private Vector3 GetPosition(int Index) {
+    private Vector3 GetPosition(uint Index) {
         Vector3 location = new Vector3(0,0,0);
-        location.x = (float)Index % Size.x;
-        location.y = (float)(((Index - location.x) / Size.x) % Size.y);
-        location.z = (float)(((Index - location.x - Size.x * location.y) / (Size.y * Size.x)));
+        location.x = Mathf.Floor((float)(Index % (uint)Size.x));
+        location.y = Mathf.Floor((float)(((Index - (uint)location.x) / (uint)Size.x) % (uint)Size.y));
+        location.z = Mathf.Floor(((float)(((Index - (uint)location.x - (uint)Size.x * (uint)location.y) / ((uint)Size.y * (uint)Size.x)))));
         return location;
     }
-
+public Vector3 BBMin;
+public Vector3 BBMax;
     unsafe public async void BuildOctree() {
+        BBMax = new Vector3(-9999.0f,-9999.0f,-9999.0f);
+        BBMin = new Vector3(9999.0f,9999.0f,9999.0f);
+        for(int i = 0; i < Vox.VoxelObjects.Count; i++) {
+            BBMax = Vector3.Max(BBMax, Vox.VoxelObjects[i].Size / 2.0f + Vox.VoxelObjects[i].Translation);
+            BBMin = Vector3.Min(BBMin, -Vox.VoxelObjects[i].Size / 2.0f + Vox.VoxelObjects[i].Translation);
+        }
+        Vector3 GlobalOffset = BBMin;
+        BBMax -= BBMin;
+        BBMin -= BBMin;
+        BBMax = new Vector3(Mathf.Ceil(BBMax.x),Mathf.Ceil(BBMax.y),Mathf.Ceil(BBMax.z));
+        Size = BBMax - BBMin;
         Voxels = new List<Voxel>();
-        for(int i = 0; i < Vox.parts.Count; i++) {
-            Size = Vox.parts[i].size;
-            for(int i2 = 0; i2 < Vox.parts[i].voxels.Count; i2++) {
-                    Voxels.Add(new Voxel() {
-                        Index = (int)(Vox.parts[i].voxels[i2].x + Size.x * Vox.parts[i].voxels[i2].y + Size.x * Size.y * Vox.parts[i].voxels[i2].z),
-                        Material = (int)Vox.parts[i].voxels[i2].w
-                    });
+        bool[] Occupied = new bool[(uint)((uint)Size.x * (uint)Size.y * (uint)Size.z)];
+        int MaterialCount = 0;
+        List<int> Materials = new List<int>();
+        int VoxCount = 0;
+        Size = BBMax - BBMin;
+        BBMax = Size;
+        for(int i = 0; i < Vox.VoxelObjects.Count; i++) {
+            Vector3 Temp = Vox.VoxelObjects[i].Size / 2.0f - (new Vector3(((Vox.VoxelObjects[i].Size.x % 2 == 1) ? 1 : 0.5f),((Vox.VoxelObjects[i].Size.y % 2 == 1) ? 1 : 0.5f),((Vox.VoxelObjects[i].Size.z % 2 == 1) ? 1 : 0.5f)));
+            Matrix4x4 rotation = Vox.VoxelObjects[i].Rotation;
+            uint VoxLength = (uint)Vox.VoxelObjects[i].Size.x * (uint)Vox.VoxelObjects[i].Size.y * (uint)Vox.VoxelObjects[i].Size.z;
+            for(uint i2 = 0; i2 < VoxLength; i2++) {
+                if(Vox.VoxelObjects[i].colors[i2] != 0) {
+                    Vector3 location = new Vector3(0,0,0);
+                    location.x = (float)((uint)i2 % (uint)Vox.VoxelObjects[i].Size.x);
+                    location.y = (float)((((uint)i2 - (uint)location.x) / (uint)Vox.VoxelObjects[i].Size.x) % (uint)Vox.VoxelObjects[i].Size.y);
+                    location.z = (float)((((uint)i2 - (uint)location.x - (uint)Vox.VoxelObjects[i].Size.x * (uint)location.y) / ((uint)Vox.VoxelObjects[i].Size.y * (uint)Vox.VoxelObjects[i].Size.x)));
+                    location -= Temp;
+                    location = rotation * location;
+                    location += Vox.VoxelObjects[i].Translation - GlobalOffset;
+                    uint Index = (uint)((uint)location.x + (uint)Size.x * (uint)location.y + (uint)Size.x * (uint)Size.y * (uint)location.z);
+                    try{
+                        if(!Occupied[Index]) {
+                            Occupied[Index] = true;
+                            if(!Materials.Contains(Vox.VoxelObjects[i].colors[i2])) {
+                                Materials.Add((int)Vox.VoxelObjects[i].colors[i2]);
+                            }
+                            Voxels.Add(new Voxel() {
+                                Index = Index,
+                                Material = Materials.IndexOf((int)Vox.VoxelObjects[i].colors[i2]),
+                            });
+                        }
+                    }catch(System.Exception e) {
+                        Debug.LogError("Overall Model Too Big, Please split into multiple models");
+                        return;
+                    }
+                }
             }
         }
         Debug.Log(Voxels.Count + " Voxels Loaded");
@@ -76,13 +116,13 @@ public class VoxelObject : MonoBehaviour
         aabb_untransformed.BBMax = Size;
         aabb_untransformed.BBMin = new Vector3(0,0,0);
 
-        for(int i = 0; i < Vox.MaterialCount; i++) {
-            Vector3 BaseColor = (Vector3)Vox.palette[Vox.CurrentMaterials[i]] / 255.0f;
+        for(int i = 0; i < Materials.Count; i++) {
+            Vector3 BaseColor = new Vector3(Vox.palette[Materials[i]].r, Vox.palette[Materials[i]].g, Vox.palette[Materials[i]].b);
             if(BaseColor.Equals(new Vector3(0,0,0))) BaseColor = new Vector3(0.1f,0.1f,0.1f);
             _Materials.Add(new MaterialData() {
                 BaseColor = BaseColor,
-                MatType = (Vox.palette[Vox.CurrentMaterials[i]].w != 255) ? 2 : 0,
-                eta = (Vox.palette[Vox.CurrentMaterials[i]].w != 255) ? new Vector3(1.33f,0,0) : new Vector3(0,0,0)
+                MatType = 0,
+                eta = new Vector3(0,0,0)
                 });
         }
         LargestAxis = (int)Mathf.Max(Mathf.Max(Size.x, Size.y), Size.z);
@@ -99,10 +139,9 @@ public class VoxelObject : MonoBehaviour
         Octree.NaiveConstruct(Voxels.ToArray(), A, Size);
         GPUOctree = new GPUOctreeNode[Octree.CompressedOctree.Length + Voxels.Count];
         GPUVoxels = new GPUVoxel[Octree.OrderedVoxels.Count];
-
         GPUVoxel TempVoxel = new GPUVoxel();
         for(int i = 0; i < GPUVoxels.Length; i++) {
-            GPUVoxels[i].Index = Octree.OrderedVoxels[i].Index;
+            GPUVoxels[i].Index = (int)Octree.OrderedVoxels[i].Index;
             GPUVoxels[i].Material = Octree.OrderedVoxels[i].Material;
         }
 
@@ -154,5 +193,7 @@ public class VoxelObject : MonoBehaviour
             this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
         }
     }
+
+ 
 
 }

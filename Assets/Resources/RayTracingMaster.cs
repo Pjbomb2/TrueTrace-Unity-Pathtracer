@@ -395,7 +395,7 @@ public class RayTracingMaster : MonoBehaviour {
             RayTracingShader.SetTexture(ShadeKernel, "_NormalAtlas", Assets.NormalAtlas);
             RayTracingShader.SetTexture(ShadeKernel, "_MetallicAtlas", Assets.MetallicAtlas);
             RayTracingShader.SetTexture(ShadeKernel, "_RoughnessAtlas", Assets.RoughnessAtlas);
-            RayTracingShader.SetInt("lighttricount", Assets.LightTriCount);
+            RayTracingShader.SetInt("lighttricount", Assets.LightTriCount); 
             RayTracingShader.SetInt("screen_width", SourceWidth);
             RayTracingShader.SetInt("screen_height", SourceHeight);
 

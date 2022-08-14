@@ -18,24 +18,24 @@ unsafe public class OctreeBuilder
 
     public List<OctreeNode> Octree = new List<OctreeNode>();
     public List<Voxel> OrderedVoxels;
-    private Vector3 GetPosition(int Index) {
+    private Vector3 GetPosition(uint Index) {
         Vector3 location = new Vector3(0,0,0);
-        location.x = (float)Index % Size.x;
-        location.y = (float)(((Index - location.x) / Size.x) % Size.y);
-        location.z = (float)(((Index - location.x - Size.x * location.y) / (Size.y * Size.x)));
+        location.x = Mathf.Floor((float)(Index % (uint)Size.x));
+        location.y = Mathf.Floor((float)(((Index - (uint)location.x) / (uint)Size.x) % (uint)Size.y));
+        location.z = Mathf.Floor((float)(((Index - (uint)location.x - (uint)Size.x * (uint)location.y) / ((uint)Size.y * (uint)Size.x))));
         return location + new Vector3(0.5f, 0.5f, 0.5f);
     }
 
     private Vector3 GetPositionOrig(int Index) {
         Vector3 location;
-        location.x = (float)Index % OrigOrigSize.x;
-        location.y = (float)(((Index - location.x) / OrigOrigSize.x) % OrigOrigSize.y);
-        location.z = (float)(((Index - location.x - OrigOrigSize.x * location.y) / (OrigOrigSize.y * OrigOrigSize.x)));
+        location.x = Mathf.Floor((float)(Index % (int)OrigOrigSize.x));
+        location.y = Mathf.Floor((float)(((Index - (int)location.x) / (int)OrigOrigSize.x) % (int)OrigOrigSize.y));
+        location.z = Mathf.Floor((float)(((Index - (int)location.x - (int)OrigOrigSize.x * (int)location.y) / ((int)OrigOrigSize.y * (int)OrigOrigSize.x))));
         return location + new Vector3(0.5f,0.5f,0.5f);
     }
 
     public List<Voxel>LastNodes;
-    public int MaxDepth = 24;
+    public int MaxDepth = 75;
     public int MaxRecursions = 0;
     public int TotalDepth;
     public void RecursiveBuild(Voxel[] ChildrenIn, Vector3 BBMax, Vector3 BBMin, int PrevNode, int PrevOffset, int CurDepth, ref OctreeNode PrevNode2) {
@@ -101,14 +101,6 @@ unsafe public class OctreeBuilder
         TempNode.InArrayIndex = CurrentCount - 2;
         Octree[CurrentCount - 1] = TempNode;
     }
-
-    Vector3 Decode(int Index, int Size) {
-    Vector3 location;
-    location.x = (float)Index % Size;
-    location.y = (float)(((Index - location.x) / Size) % Size);
-    location.z = (float)(((Index - location.x - Size * location.y) / (Size * Size)));
-    return location;
-}
 
 
     public List<OctreeNode> OrderedList;
