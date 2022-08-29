@@ -1,0 +1,69 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+Texture2D<float4> Input;
+RWTexture2D<float4> Result;
+
+int width;
+
+static float gamma = 2.2;
+float3 lumaBasedReinhardToneMapping(float3 color)
+{
+   // color = pow(color, gamma);
+    float luma = dot(color, float3(0.2126, 0.7152, 0.0722));
+    float toneMappedLuma = luma / (1. + luma);
+    color *= toneMappedLuma / luma;
+    //color = pow(color, 1. / gamma);
+    return color;
+}
+float3 RomBinDaHouseToneMapping(float3 color)
+{
+    //color = pow(color, gamma);
+    color = exp( -1.0 / ( 2.72*color + 0.15 ) );
+    //color = pow(color, 1. / gamma);
+    return color;
+}
+float3 simpleReinhardToneMapping(float3 color)
+{
+    float exposure = 1.5;
+    color *= exposure/(1. + color / exposure);
+    color = pow(color, 1. / gamma);
+    return color;
+}
+
+float3 Uncharted2ToneMapping(float3 color)
+{
+    float A = 0.15;
+    float B = 0.50;
+    float C = 0.10;
+    float D = 0.20;
+    float E = 0.02;
+    float F = 0.30;
+    float W = 11.2;
+    float exposure = 2.;
+    color *= exposure;
+    color = ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - E / F;
+    float white = ((W * (A * W + C * B) + D * E) / (W * (A * W + B) + D * F)) - E / F;
+    color /= white;
+    //color = pow(color, float3(1. / gamma));
+    return color;
+}
+
+float3 filmicToneMapping(float3 color)
+{
+    color = max(0., color - 0.004);
+    color = (color * (6.2 * color + .5)) / (color * (6.2 * color + 1.7) + 0.06);
+    color = pow(color, gamma);
+    return color;
+}
+
+
+[numthreads(16,16,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    // TODO: insert actual code here!
+    float3 result = filmicToneMapping(Result[id.xy].xyz);
+    Result[id.xy] = float4(result, 1.0);
+}
