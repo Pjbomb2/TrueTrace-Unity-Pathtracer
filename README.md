@@ -45,6 +45,7 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 <li>Explicit light sampling for faster convergence</li>
 <li>Precomputed Multiple Atmospheric Scattering for dynamic and realtime sky(from ebruneton below)</li>
 <li>Object Instancing</li>
+<li>Multiple Importance Sampling for helping NEE converge much faster</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
@@ -140,6 +141,7 @@ BVH Options Description -
   <li>Use SVGF Denoiser - Turns on the SVGF denoiser</li>
   <li>(If SVGF Denosier is on)Atrous Kernel Size - The amount of times the SVGF denoiser runs through the Atrous kernel</li>
   <li>Use Atrous Denoiser - Turns on the Atrous denoiser(can be combined with SVGF)</li>
+  <li>Enable Tonemapping - Turns on Filmic Tonemapping</li>
   <li>Current Samples - Shows how many samples have currently been accumulated</li>
   <li>Take Screenshot - Takes a screenshot at game view resolution and saves it to Assets/ScreenShots(You need to create this folder)</li>
   <li>QuickStart - Will attempt to automatially assign RayTracingObjects and ParentObjects to all child under the GameObject named "Scene" with an AssetManager attatched</li>
