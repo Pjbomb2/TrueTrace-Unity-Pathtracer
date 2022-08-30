@@ -345,6 +345,7 @@ void kernel_depth_copy (uint3 id : SV_DispatchThreadID) {
         uint IsVoxel;
         int3 Size;
         int LightTriCount;
+        float LightPDF;
     };
 
     struct BVHNode8Data {
@@ -1458,12 +1459,12 @@ int SelectUnityLight() {
     return clamp((rand_light.y * unitylightcount), 0, unitylightcount - 1);
 }
 
-int SelectLight(int MeshIndex) {//Need to check these to make sure they arnt simply doing uniform sampling
+int SelectLight(int MeshIndex, bool DoSimple) {//Need to check these to make sure they arnt simply doing uniform sampling
 
     const float2 rand_light = random(3);
     const int StartIndex = _LightMeshes[MeshIndex].StartIndex;
     const int IndexEnd = _LightMeshes[MeshIndex].IndexEnd;
-    return clamp((rand_light.y * (IndexEnd - StartIndex) + StartIndex), StartIndex, IndexEnd - 1);
+   // if(DoSimple) return clamp((rand_light.y * (IndexEnd - StartIndex) + StartIndex), StartIndex, IndexEnd - 1);
     float e = LightTriangles[IndexEnd - 1].sumEnergy * rand_light.x + LightTriangles[StartIndex].pdf;
     int low = StartIndex;
     int high = IndexEnd - 1;
@@ -1482,31 +1483,12 @@ int SelectLight(int MeshIndex) {//Need to check these to make sure they arnt sim
   //  return mid;
     // Failed to find a light using importance sampling, pick a random one from the array
     // NOTE: this is a failsafe, we should never get here!
-    return clamp((rand_light.y * (IndexEnd - StartIndex)), StartIndex, IndexEnd - 1);
+    return clamp((rand_light.y * (IndexEnd - StartIndex) + StartIndex), StartIndex, IndexEnd - 1);
 }
 
 int SelectLightMesh() {//Select mesh to sample light from
     if(LightMeshCount == 1) return 0;
     const float2 rand_mesh = random(4);
-return clamp((rand_mesh.y * LightMeshCount), 0, LightMeshCount - 1);
-    float e = _LightMeshes[LightMeshCount - 1].CDF * rand_mesh.x + _LightMeshes[0].pdf;
-    int low = 0;
-    int high = LightMeshCount - 1;
-    if(e > _LightMeshes[high - 1].pdf + _LightMeshes[high - 1].CDF) return high;
-    int mid = -1;
-    while(low < high) {
-        int mid = (low + high) >> 1;
-        LightMeshData mesh = _LightMeshes[mid];
-        if(e < mesh.CDF)
-            high = mid;
-        else if(e > mesh.CDF + mesh.pdf)
-            low = mid + 1;
-        else
-            return mid;
-    }
-    return mid;
-    // Failed to find a light using importance sampling, pick a random one from the array
-    // NOTE: this is a failsafe, we should never get here!
     return clamp((rand_mesh.y * LightMeshCount), 0, LightMeshCount - 1);
 }
 
@@ -2381,7 +2363,7 @@ float AreaOfTriangle(float3 pt1, float3 pt2, float3 pt3) {
 }
 
 void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, RayHit hit, uint2 Uv, inout bool terminated, float2 NormalUV, bool HitVoxel, bool IsEmissiveTex, RayData RayDat) {//main function
-//bool cb = (int(Uv.x)/64 + int(Uv.y)/64)%2==0;
+bool cb = (int(Uv.x)/64 + int(Uv.y)/64)%2==0;
     float3 pos = ray.direction * hit.t + ray.origin;
     float3 PrevDirection = ray.direction;
     float3 PrevOrigin = ray.origin;
@@ -2444,7 +2426,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
 
             float a = AreaOfTriangle(a0, a1, a2);
             float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
-            float light_pdf = 1.0f / (_MeshData[hit.mesh_id].LightTriCount * SA * LightMeshCount) * ((_LightMeshes[LightMeshCount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF)));
+            float light_pdf = 1.0f / (SA * LightMeshCount) * ((_LightMeshes[LightMeshCount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF))) * (a / _MeshData[hit.mesh_id].LightPDF);
             float w = power_heuristic(RayDat.last_pdf, light_pdf);
             [flatten]if(CurBounce == 0) {
                 Color.Direct = hitDat.emmis;
@@ -2545,9 +2527,10 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
             int triindex;
             bool IsAboveHorizon = true;
             bool IsDirectional = false;
-            float LightProbability = 0.0f;
+            float LightPDF = 0.0f;
             bool UseUnityLight;
             int TriCount = 0;
+            int MeshIndex = 0;
         [branch]if(UseRestir && CurBounce == 0) {
              Reservoir CurRes = CurrentReservoir[Uv.x + Uv.y * screen_width];
             UseUnityLight = CurRes.MeshIndex == -1;//(unitylightcount != 0) ? (LightMeshCount != 0) ? (random(11).x <= (_UnityLights[unitylightcount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF))) : true : false;//Choose whether to sample unity lights or mesh lights based off which is more powerful
@@ -2570,13 +2553,13 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                         IsAboveHorizon = false;
                     break;
                 }
-                LightProbability =  1.0f;//(max(_UnityLights[triindex].pdf,0.00000001f) / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));//_UnityLights[triindex].pdf / (_LightMeshes[LightMeshCount - 1].CDF);
             } else {
                triindex = CurRes.y;
                 pos2 = CurRes.Position;
                 LightNorm = CurRes.Norm;
-                LightProbability = (_LightMeshes[LightMeshCount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));//(_LightMeshes[LightMeshCount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));//unused, needs more testing
+                LightPDF = CurRes.wsum;
                 TriCount = (_LightMeshes[CurRes.MeshIndex].IndexEnd - _LightMeshes[CurRes.MeshIndex].StartIndex);
+                
             }
         } else {
             UseUnityLight = (unitylightcount != 0) ? (LightMeshCount != 0) ? (random(11).x <= (_UnityLights[unitylightcount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF))) : true : false;//Choose whether to sample unity lights or mesh lights based off which is more powerful
@@ -2600,10 +2583,9 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
                         IsAboveHorizon = false;
                     break;
                 }
-                LightProbability = (max(_UnityLights[triindex].pdf,0.00000001f) / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
             } else {
-                int MeshIndex = SelectLightMesh();
-                triindex = SelectLight(MeshIndex);
+                MeshIndex = SelectLightMesh();
+                triindex = SelectLight(MeshIndex, false);
                 TrianglePos CurTri = triangle_get_positions2(triindex);
                 float2 rand_triangle = random(curframe);
                 float2 CurUv = sample_triangle(rand_triangle.x, rand_triangle.y);
@@ -2678,11 +2660,12 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
             float NEE_pdf;
             if(UseUnityLight) {
                 Radiance = _UnityLights[triindex].Radiance;
-                NEE_pdf = 1.0f / (unitylightcount) * (_UnityLights[unitylightcount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
+                NEE_pdf = distance_to_light_squared * LightCos / (unitylightcount) * (_UnityLights[unitylightcount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
             } else {
                 float SA = LightCos * LightTriangles[triindex].area / distance_to_light_squared;
-                NEE_pdf = (1.0f / (TriCount * LightMeshCount * SA)) * ((_LightMeshes[LightMeshCount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF)));
+                NEE_pdf = (1.0f / (LightMeshCount * SA)) * (LightTriangles[triindex].pdf / _LightMeshes[MeshIndex].pdf);
                 Radiance = LightTriangles[triindex].radiance;
+               if(UseRestir) NEE_pdf = LightPDF;
             }
             float NEEMISWeight = power_heuristic(NEE_pdf, bsdf_pdf);
             float3 Illum = ((CurBounce == 0) ? 1 : throughput) * (Radiance * bsdf_pdf * NEEMISWeight) /  NEE_pdf * Attenuation;
@@ -2711,12 +2694,12 @@ void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, Ray
             float3 to_light;
             float3 Radiance;
             if(UseUnityLight) { 
-                Radiance = _UnityLights[triindex].Radiance / LightProbability;
+                Radiance = _UnityLights[triindex].Radiance;
                 LightData Light = _UnityLights[triindex];
                 pos2 = (IsDirectional) ? PrevOrigin + Light.Direction * 15000.0f : Light.Position;
                 LightNorm = -Light.Direction;
             } else {
-                Radiance = LightTriangles[triindex].radiance / LightProbability;
+                Radiance = LightTriangles[triindex].radiance;
             }
 
             float dist;
@@ -3023,7 +3006,7 @@ void kernel_reservoir (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThrea
             float3 L = (LightPos - WorldPosition);
             const float Dist = dot(L, L);
             L /= sqrt(Dist);
-            float LdotN = dot(Norm, L);
+            float LdotN = dot((tileBlock[Rand].Misc.z == 2) ? -tileBlock[Rand].Norm : -L, L);
             UpdateReservoir(reservoir, tileBlock[Rand].Misc.y, length(tileBlock[Rand].Rad * LdotN / (Dist)), float(rand_xorshift()) * MultiplyData, tileBlock[Rand].Misc.x, LightPos, (tileBlock[Rand].Misc.z == 2) ? -tileBlock[Rand].Norm : -L);
         }   
 
@@ -3041,7 +3024,7 @@ void kernel_reservoir (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThrea
             float3 L = (lightPos - WorldPosition);
             float Dist = dot(L, L);
             L /= sqrt(Dist);
-            float LdotN = abs(dot(Norm, L));
+            float LdotN = abs(dot(-L, L));
             LightNorm = -L;
             w = length(light.Radiance * LdotN / Dist);
             LightMesh = -1;
@@ -3069,7 +3052,7 @@ void kernel_reservoir (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThrea
             float3 L = lightPos - WorldPosition;
             float Dist = abs(dot(L, L));
             L /= sqrt(Dist);
-            float LdotN = abs(dot(Norm, L));
+            float LdotN = abs(dot(LightNorm, L));
             w = length((Light.radiance) * LightTriangles[lighttosample].area * LdotN / (Dist));
 
             UpdateReservoir(reservoir, lighttosample, w, float(rand_xorshift()) * MultiplyData, LightMeshIndex, lightPos, LightNorm);
@@ -3084,7 +3067,7 @@ float p_hat;
         float3 L = lightPos - WorldPosition;
         float Dist = dot(L, L);
         L /= sqrt(Dist);
-        float LdotN = abs(dot(Norm, L));
+        float LdotN = abs(dot(reservoir.Norm, L));
         p_hat = length(LightTriangles[reservoir.y].radiance * LightTriangles[reservoir.y].area * LdotN / (Dist));
     } else {
         LightData light = _UnityLights[reservoir.y];
@@ -3092,7 +3075,7 @@ float p_hat;
         float3 L = lightPos - WorldPosition;
         float Dist = dot(L, L);
         L /= sqrt(Dist);
-        float LdotN = abs(dot(Norm, L));
+        float LdotN = abs(dot(reservoir.Norm, L));
         p_hat = length(light.Radiance * LdotN / (Dist));
     }
     reservoir.W = (1.0f / max(p_hat, 0.00001f)) * (reservoir.wsum / max(reservoir.M, 0.0000001f));

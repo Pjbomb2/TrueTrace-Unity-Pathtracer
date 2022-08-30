@@ -68,31 +68,34 @@ public class VoxelObject : MonoBehaviour
         int VoxCount = 0;
         Size = BBMax - BBMin;
         BBMax = Size;
+      //  Debug.Log("A");
         for(int i = 0; i < Vox.VoxelObjects.Count; i++) {
             Vector3 Temp = Vox.VoxelObjects[i].Size / 2.0f - (new Vector3(((Vox.VoxelObjects[i].Size.x % 2 == 1) ? 1 : 0.5f),((Vox.VoxelObjects[i].Size.y % 2 == 1) ? 1 : 0.5f),((Vox.VoxelObjects[i].Size.z % 2 == 1) ? 1 : 0.5f)));
             Matrix4x4 rotation = Vox.VoxelObjects[i].Rotation;
             uint VoxLength = (uint)Vox.VoxelObjects[i].Size.x * (uint)Vox.VoxelObjects[i].Size.y * (uint)Vox.VoxelObjects[i].Size.z;
+            Vector3 Translation = Vox.VoxelObjects[i].Translation - new Vector3(1,1,1);
+            Vector3 ThisSize = Vox.VoxelObjects[i].Size;
+            var Colors = Vox.VoxelObjects[i].colors;
             for(uint i2 = 0; i2 < VoxLength; i2++) {
-                if(Vox.VoxelObjects[i].colors[i2] != 0) {
+                if(Colors[i2] != 0) {
                     Vector3 location = new Vector3(0,0,0);
-                    location.x = (float)((uint)i2 % (uint)Vox.VoxelObjects[i].Size.x);
-                    location.y = (float)((((uint)i2 - (uint)location.x) / (uint)Vox.VoxelObjects[i].Size.x) % (uint)Vox.VoxelObjects[i].Size.y);
-                    location.z = (float)((((uint)i2 - (uint)location.x - (uint)Vox.VoxelObjects[i].Size.x * (uint)location.y) / ((uint)Vox.VoxelObjects[i].Size.y * (uint)Vox.VoxelObjects[i].Size.x)));
+                    location.x = (float)((uint)i2 % (uint)ThisSize.x);
+                    location.y = (float)((((uint)i2 - (uint)location.x) / (uint)ThisSize.x) % (uint)ThisSize.y);
+                    location.z = (float)((((uint)i2 - (uint)location.x - (uint)ThisSize.x * (uint)location.y) / ((uint)ThisSize.y * (uint)ThisSize.x)));
                     location -= Temp;
                     location = rotation * location;
-                    location += Vox.VoxelObjects[i].Translation - GlobalOffset;
-                    location -= new Vector3(1,1,1);
+                    location += Translation - GlobalOffset;
                     location = new Vector3(Mathf.Ceil(location.x),Mathf.Ceil(location.y),Mathf.Ceil(location.z));
                     uint Index = (uint)((uint)location.x + (uint)Size.x * (uint)location.y + (uint)Size.x * (uint)Size.y * (uint)location.z);
                     try{
                         if(!Occupied[Index]) {
                             Occupied[Index] = true;
-                            if(!Materials.Contains(Vox.VoxelObjects[i].colors[i2])) {
-                                Materials.Add((int)Vox.VoxelObjects[i].colors[i2]);
+                            if(!Materials.Contains(Colors[i2])) {
+                                Materials.Add((int)Colors[i2]);
                             }
                             Voxels.Add(new Voxel() {
                                 Index = Index,
-                                Material = Materials.IndexOf((int)Vox.VoxelObjects[i].colors[i2]),
+                                Material = Materials.IndexOf((int)Colors[i2]),
                             });
                         }
                     }catch(System.Exception e) {
@@ -104,7 +107,7 @@ public class VoxelObject : MonoBehaviour
         }
         Debug.Log(Voxels.Count + " Voxels Loaded");
         aabb_untransformed = new AABB();
-
+       // return;
         for(int i = 0; i < Materials.Count; i++) {
             Vector3 BaseColor = new Vector3(Vox.palette[Materials[i]].r, Vox.palette[Materials[i]].g, Vox.palette[Materials[i]].b);
             if(BaseColor.Equals(new Vector3(0,0,0))) BaseColor = new Vector3(0.1f,0.1f,0.1f);

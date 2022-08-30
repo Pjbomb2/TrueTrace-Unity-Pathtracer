@@ -64,22 +64,21 @@ unsafe public class BrickMapBuilder
         Vector3 BBMax = new Vector3(FinalSize,FinalSize,FinalSize);
         Vector3 BBMin = new Vector3(0,0,0);
         Vector3 Size = BBMax - BBMin;
-        List<Voxel> AliveVoxels = new List<Voxel>(Voxels);
-        // Debug.Log(Size + ", " + LargestAxis);
-        bool[] AlreadySeen = new bool[AliveVoxels.Count];
-
+        List<Voxel> AliveVoxels = new List<Voxel>();
         List<Voxel>[] VoxelBins = new List<Voxel>[BrickSize * BrickSize * BrickSize];
         for(int i = 0; i < BrickSize * BrickSize * BrickSize; i++) {
             VoxelBins[i] = new List<Voxel>();
         }
-        for(int i2 = 0; i2 < AliveVoxels.Count; i2++) {
+        int VoxCount = Voxels.Length;
+        for(int i2 = 0; i2 < VoxCount; i2++) {
             Vector3 location2 = new Vector3(0,0,0);
-            location2.x = Mathf.Floor((float)((uint)AliveVoxels[i2].Index % (uint)OrigionalSize.x));
-            location2.y = Mathf.Floor((float)((((uint)AliveVoxels[i2].Index - (uint)location2.x) / (uint)OrigionalSize.x) % (uint)OrigionalSize.y));
-            location2.z = Mathf.Floor((float)((((uint)AliveVoxels[i2].Index - (uint)location2.x - (uint)OrigionalSize.x * (uint)location2.y) / ((uint)OrigionalSize.x * (uint)OrigionalSize.y))));
+            uint Index = (uint)Voxels[i2].Index;
+            location2.x = ((float)(Index % (uint)OrigionalSize.x));
+            location2.y = ((float)(((Index - (uint)location2.x) / (uint)OrigionalSize.x) % (uint)OrigionalSize.y));
+            location2.z = ((float)(((Index - (uint)location2.x - (uint)OrigionalSize.x * (uint)location2.y) / ((uint)OrigionalSize.x * (uint)OrigionalSize.y))));
             location2 = location2 / (FinalSize / BrickSize);
             location2 = new Vector3(Mathf.Floor(location2.x), Mathf.Floor(location2.y), Mathf.Floor(location2.z));
-            VoxelBins[(uint)location2.x + (uint)BrickSize * (uint)location2.y + (uint)BrickSize * (uint)BrickSize * (uint)location2.z].Add(AliveVoxels[i2]);
+            VoxelBins[(uint)location2.x + (uint)BrickSize * (uint)location2.y + (uint)BrickSize * (uint)BrickSize * (uint)location2.z].Add(Voxels[i2]);
         }
 
      //   Debug.Log("A");
@@ -122,17 +121,16 @@ unsafe public class BrickMapBuilder
             while(TempWorkGroup.Count > 0 && Size.x > VoxelSize) {
                 NewBrick CurrentBrick = TempWorkGroup[TempWorkGroup.Count - 1];
                 AliveVoxels = TempWorkGroup[TempWorkGroup.Count - 1].BrickVoxels;
-                AlreadySeen = new bool[AliveVoxels.Count];
                 for(int i = 0; i < BrickSize * BrickSize * BrickSize; i++) {
                     VoxelBins[i] = new List<Voxel>();
                 }
-
-                for(int i2 = 0; i2 < AliveVoxels.Count; i2++) {
-                    if(AlreadySeen[i2]) continue;
+                int AliveVoxCount = AliveVoxels.Count;
+                for(int i2 = 0; i2 < AliveVoxCount; i2++) {
+                    uint Index = (uint)AliveVoxels[i2].Index;
                     Vector3 location2 = new Vector3(0,0,0);
-                    location2.x = Mathf.Floor((float)((uint)AliveVoxels[i2].Index % (uint)OrigionalSize.x));
-                    location2.y = Mathf.Floor((float)((((uint)AliveVoxels[i2].Index - (uint)location2.x) / (uint)OrigionalSize.x) % (uint)OrigionalSize.y));
-                    location2.z = Mathf.Floor((float)((((uint)AliveVoxels[i2].Index - (uint)location2.x - (uint)OrigionalSize.x * (uint)location2.y) / ((uint)OrigionalSize.x * (uint)OrigionalSize.y))));
+                    location2.x = ((float)(Index % (uint)OrigionalSize.x));
+                    location2.y = ((float)(((Index - (uint)location2.x) / (uint)OrigionalSize.x) % (uint)OrigionalSize.y));
+                    location2.z = ((float)(((Index - (uint)location2.x - (uint)OrigionalSize.x * (uint)location2.y) / ((uint)OrigionalSize.x * (uint)OrigionalSize.y))));
                     location2 = (location2 - CurrentBrick.BBMin) * BrickSize / (CurrentBrick.BBMax.x - CurrentBrick.BBMin.x);
                     location2 = new Vector3(Mathf.Floor(location2.x), Mathf.Floor(location2.y), Mathf.Floor(location2.z));
                     VoxelBins[(uint)location2.x + (uint)BrickSize * (uint)location2.y + (uint)BrickSize * (uint)BrickSize * (uint)location2.z].Add(AliveVoxels[i2]);
@@ -147,11 +145,11 @@ unsafe public class BrickMapBuilder
                         BrickMap[InArrayIndex] = TempBrick; 
                     }
                     Vector3 location = new Vector3(0,0,0);
-                    location.x = Mathf.Floor((float)((uint)i % (uint)BrickSize));
-                    location.y = Mathf.Floor((float)((((uint)i - (uint)location.x) / (uint)BrickSize) % (uint)BrickSize));
-                    location.z = Mathf.Floor((float)((((uint)i - (uint)location.x - (uint)BrickSize * (uint)location.y) / ((uint)BrickSize * (uint)BrickSize))));
+                    location.x = ((float)((uint)i % (uint)BrickSize));
+                    location.y = ((float)((((uint)i - (uint)location.x) / (uint)BrickSize) % (uint)BrickSize));
+                    location.z = ((float)((((uint)i - (uint)location.x - (uint)BrickSize * (uint)location.y) / ((uint)BrickSize * (uint)BrickSize))));
                     location *= (Size.x / (BrickSize));
-                    location += TempWorkGroup[TempWorkGroup.Count - 1].BBMin;
+                    location += CurrentBrick.BBMin;
                     Vector3 ThisBBMax = location + Size / BrickSize;
                     Vector3 ThisBBMin = location;
                     if(VoxelBins[i].Count != 0) {
@@ -176,21 +174,21 @@ unsafe public class BrickMapBuilder
             int PublicOffset = 0;
             if(Size.x <= VoxelSize) {
                 TempWorkGroup.Reverse();
+                int[] BrickVox = new int[VoxelSize * VoxelSize * VoxelSize];
                 for(int i = 0; i < TempWorkGroup.Count; i++) {
                     var TempBrick = BrickMap[TempWorkGroup[i].StartingIndex];
                     TempBrick.StartingIndex = BrickMap.Count + OrderedVoxels.Count;
                     BrickMap[TempWorkGroup[i].StartingIndex] = TempBrick;
-                    int[] BrickVox = new int[VoxelSize * VoxelSize * VoxelSize];
                     System.Array.Fill(BrickVox, -1);
                     int BrickVoxCount = TempBrick.BrickVoxels.Count;
                     for(int i2 = 0; i2 < BrickVoxCount; i2++) {
                         Vector3 location2 = new Vector3(0,0,0);
-                        location2.x = Mathf.Floor((float)((uint)TempBrick.BrickVoxels[i2].Index % (uint)OrigionalSize.x));
-                        location2.y = Mathf.Floor((float)((((uint)TempBrick.BrickVoxels[i2].Index - (uint)location2.x) / (uint)OrigionalSize.x) % (uint)OrigionalSize.y));
-                        location2.z = Mathf.Floor((float)((((uint)TempBrick.BrickVoxels[i2].Index - (uint)location2.x - (uint)OrigionalSize.x * (uint)location2.y) / ((uint)OrigionalSize.x * (uint)OrigionalSize.y))));
-                        location2 -= TempBrick.BBMin;
-                        uint Index = (uint)location2.x + (uint)location2.y * (uint)VoxelSize + (uint)location2.z * (uint)VoxelSize * (uint)VoxelSize; 
-                        BrickVox[Index] = TempBrick.BrickVoxels[i2].Material;
+                        uint Index = (uint)TempBrick.BrickVoxels[i2].Index;
+                        location2.x = Mathf.Floor((float)(Index % (uint)OrigionalSize.x));
+                        location2.y = Mathf.Floor((float)(((Index - (uint)location2.x) / (uint)OrigionalSize.x) % (uint)OrigionalSize.y));
+                        location2.z = Mathf.Floor((float)(((Index - (uint)location2.x - (uint)OrigionalSize.x * (uint)location2.y) / ((uint)OrigionalSize.x * (uint)OrigionalSize.y))));
+                        location2 -= TempBrick.BBMin; 
+                        BrickVox[(uint)location2.x + (uint)location2.y * (uint)VoxelSize + (uint)location2.z * (uint)VoxelSize * (uint)VoxelSize] = TempBrick.BrickVoxels[i2].Material;
                     }
                     PublicOffset += VoxelSize * VoxelSize * VoxelSize;
                     OrderedVoxels.AddRange(BrickVox);
@@ -198,6 +196,7 @@ unsafe public class BrickMapBuilder
             }
             TempWorkGroup.AddRange(TempWorkGroup2);
             TotalDepth++;
+
         }
 
 

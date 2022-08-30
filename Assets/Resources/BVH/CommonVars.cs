@@ -368,6 +368,7 @@ namespace CommonVars {
         public int SizeY;
         public int SizeZ;
         public int LightTriCount;
+        public float LightPDF;
         //I do have the space to store 1 more int and 1 more other value to align to 128 bits
     }
 

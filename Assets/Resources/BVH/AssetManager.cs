@@ -734,7 +734,8 @@ public void CreateAABB(Transform transform, ref AABB aabb) {//Update the Transfo
                 AggNodeCount = AggNodeCount,
                 MaterialOffset = MatOffset,
                 IsVoxel = 0, SizeX = 0, SizeY = 0, SizeZ = 0,
-                LightTriCount = RenderQue[i].LightTriangles.Count
+                LightTriCount = RenderQue[i].LightTriangles.Count,
+                LightPDF = RenderQue[i].TotEnergy
             });
             MatOffset += RenderQue[i].MatOffset;
             MeshAABBs[i] = RenderQue[i].aabb;

@@ -241,7 +241,7 @@ public class RayTracingMaster : MonoBehaviour {
         if(uFirstFrame != 1) {
             if(DoTLASUpdates) {
                 if(Assets.UpdateTLAS()) {
-                    CreateComputeBuffer(ref _CompactedMeshData, Assets.MyMeshesCompacted, 176);
+                    CreateComputeBuffer(ref _CompactedMeshData, Assets.MyMeshesCompacted, 180);
                     CreateComputeBuffer(ref _LightTriangles, Assets.AggLightTriangles, 72);
                     CreateComputeBuffer(ref _MaterialDataBuffer, Assets._Materials, 148);
                     CreateComputeBuffer(ref _UnityLights, Assets.UnityLights, 56);
@@ -271,7 +271,7 @@ public class RayTracingMaster : MonoBehaviour {
         CreateComputeBuffer(ref _VoxelPositionBuffer, Assets.VoxelPositions, 16);
         
         CreateComputeBuffer(ref _MaterialDataBuffer, Assets._Materials, 148);
-        CreateComputeBuffer(ref _CompactedMeshData, Assets.MyMeshesCompacted, 176);
+        CreateComputeBuffer(ref _CompactedMeshData, Assets.MyMeshesCompacted, 180);
         CreateComputeBuffer(ref _LightTriangles, Assets.AggLightTriangles, 72);
         CreateComputeBuffer(ref _IllumTriBuffer, Assets.ToIllumTriBuffer, 4);
 
