@@ -1,7 +1,7 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>Nothing, any ideas welcome</li>
+  <li>Fixin shit, almost done for new update presenting much higher quality</li>
 </ul>
 Currently needs to be done but havent implemented fully:
 <ul>
@@ -158,6 +158,9 @@ BVH Options Description -
   
 # Sample Images(Taken from various stages of development)
 
+
+![](/Images/NewBlender.png)
+![](/Images/Lego.png)
 ![](/Images/Bloom.png)
 ![](/Images/ReSTIR4.png)
 ![](/Images/RealisticSponza.png)
