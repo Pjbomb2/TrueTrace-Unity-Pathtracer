@@ -250,6 +250,7 @@ void kernel_upsample (int3 id : SV_DispatchThreadID)
         south_west_pixel = center_pixel + south + west;
         float4 dir_avg = directional_average();
         float4 super = super_sample(UV, id.xyxy / float2(target_width, target_height).xyxy, view_pixel_size);
+// Disocluded = Disocluded || abs(dot(lerp(dir_avg.xyz, super.xyz, 0.5f), float3(0.299f, 0.587f, 0.114f)) - dot(PrevOutput[newUV * float2(target_width, target_height)].xyz, float3(0.299f, 0.587f, 0.114f))) > 0.1f;
         if(Disocluded || (newUV.x > 1 || newUV.x < 0 || newUV.y > 1 || newUV.y < 0)) Output[id.xy] = float4(lerp(dir_avg.xyz, super.xyz, 0.5f),1);
         else Output[id.xy] = float4(lerp(PrevOutput[newUV * float2(target_width, target_height)].xyz, lerp(dir_avg.xyz, super.xyz, 0.5f), max(1.0f / PrevOutput[newUV * float2(target_width, target_height)].w,0.01f)),PrevOutput[newUV * float2(target_width, target_height)].w + 1);
     FinalOutput[id.xy] = float4(Output[id.xy].xyz * Albedo[id.xy].xyz, 1);

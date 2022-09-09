@@ -11,11 +11,11 @@ int width;
 static float gamma = 2.2;
 float3 lumaBasedReinhardToneMapping(float3 color)
 {
-   // color = pow(color, gamma);
+    color = pow(color, gamma);
     float luma = dot(color, float3(0.2126, 0.7152, 0.0722));
     float toneMappedLuma = luma / (1. + luma);
     color *= toneMappedLuma / luma;
-    //color = pow(color, 1. / gamma);
+    color = pow(color, 1. / gamma);
     return color;
 }
 float3 RomBinDaHouseToneMapping(float3 color)
@@ -27,9 +27,9 @@ float3 RomBinDaHouseToneMapping(float3 color)
 }
 float3 simpleReinhardToneMapping(float3 color)
 {
-    float exposure = 1.5;
+    float exposure = 1.0;
     color *= exposure/(1. + color / exposure);
-    color = pow(color, 1. / gamma);
+    //color = pow(color, 1. / gamma);
     return color;
 }
 
@@ -57,6 +57,16 @@ float3 filmicToneMapping(float3 color)
     color = (color * (6.2 * color + .5)) / (color * (6.2 * color + 1.7) + 0.06);
     color = pow(color, gamma);
     return color;
+}
+
+
+float3 ACESFilmicTonemap(float3 x) {
+    float a = 2.51;
+    float b = 0.03;
+    float c = 2.43;
+    float d = 0.59;
+    float e = 0.14;
+    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
 }
 
 

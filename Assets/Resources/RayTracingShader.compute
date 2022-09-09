@@ -1390,6 +1390,19 @@ struct MaterialData {//56
     int MatType;//109
     float3 eta;//121
     float3 EmissionColor;
+
+
+
+    float metallic;
+    float subsurface;
+    float specularTint;
+    float sheen;
+    float sheenTint;
+    float clearcoat;
+    float clearcoatRoughness;
+    float specTrans;
+    float IOR;
+    float3 extinction;
 };
 
 
@@ -2362,7 +2375,419 @@ float AreaOfTriangle(float3 pt1, float3 pt2, float3 pt3) {
     return sqrt(s * (s-a) * (s-b) * (s-c));
 }
 
-void calcFinalColor(inout Ray ray, inout ColData Color, const HitMat hitDat, RayHit hit, uint2 Uv, inout bool terminated, float2 NormalUV, bool HitVoxel, bool IsEmissiveTex, RayData RayDat) {//main function
+float Luminance(float3 c)
+{
+    return 0.212671 * c.x + 0.715160 * c.y + 0.072169 * c.z;
+}
+
+float GTR1(float NDotH, float a)
+{
+    if (a >= 1.0)
+        return rcp(PI);
+    float a2 = a * a;
+    float t = 1.0 + (a2 - 1.0) * NDotH * NDotH;
+    return (a2 - 1.0) / (PI * log(a2) * t);
+}
+
+float3 SampleGTR1(float rgh, float r1, float r2)
+{
+    float a = max(0.001, rgh);
+    float a2 = a * a;
+
+    float phi = r1 * (2 * PI);
+
+    float cosTheta = sqrt((1.0 - pow(a2, 1.0 - r1)) / (1.0 - a2));
+    float sinTheta = clamp(sqrt(1.0 - (cosTheta * cosTheta)), 0.0, 1.0);
+    float sinPhi = sin(phi);
+    float cosPhi = cos(phi);
+
+    return float3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
+}
+
+float GTR2(float NDotH, float a)
+{
+    float a2 = a * a;
+    float t = 1.0 + (a2 - 1.0) * NDotH * NDotH;
+    return a2 / (PI * t * t);
+}
+
+float3 SampleGTR2(float rgh, float r1, float r2)
+{
+    float a = max(0.001, rgh);
+
+    float phi = r1 * (2 * PI);
+
+    float cosTheta = sqrt((1.0 - r2) / (1.0 + (a * a - 1.0) * r2));
+    float sinTheta = clamp(sqrt(1.0 - (cosTheta * cosTheta)), 0.0, 1.0);
+    float sinPhi = sin(phi);
+    float cosPhi = cos(phi);
+
+    return float3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
+}
+
+float3 SampleGGXVNDF(float3 V, float rgh, float r1, float r2)
+{
+    float3 Vh = normalize(float3(rgh * V.x, rgh * V.y, V.z));
+
+    float lensq = Vh.x * Vh.x + Vh.y * Vh.y;
+    float3 T1 = lensq > 0.0 ? float3(-Vh.y, Vh.x, 0.0) * rcp(sqrt(lensq)) : float3(1, 0, 0);
+    float3 T2 = cross(Vh, T1);
+
+    float r = sqrt(r1);
+    float phi = 2.0 * PI * r2;
+    float t1 = r * cos(phi);
+    float t2 = r * sin(phi);
+    float s = 0.5 * (1.0 + Vh.z);
+    t2 = (1.0 - s) * sqrt(1.0 - t1 * t1) + s * t2;
+
+    float3 Nh = t1 * T1 + t2 * T2 + sqrt(max(0.0, 1.0 - t1 * t1 - t2 * t2)) * Vh;
+
+    return normalize(float3(rgh * Nh.x, rgh * Nh.y, max(0.0, Nh.z)));
+}
+
+float GTR2Aniso(float NDotH, float HDotX, float HDotY, float ax, float ay)
+{
+    float a = HDotX / ax;
+    float b = HDotY / ay;
+    float c = a * a + b * b + NDotH * NDotH;
+    return 1.0 / (PI * ax * ay * c * c);
+}
+
+float3 SampleGTR2Aniso(float ax, float ay, float r1, float r2)
+{
+    float phi = r1 * (2 * PI);
+
+    float sinPhi = ay * sin(phi);
+    float cosPhi = ax * cos(phi);
+    float tanTheta = sqrt(r2 / (1.0 - r2));
+
+    return float3(tanTheta * cosPhi, tanTheta * sinPhi, 1.0);
+}
+
+float SmithG(float NDotV, float alphaG)
+{
+    float a = alphaG * alphaG;
+    float b = NDotV * NDotV;
+    return (2.0 * NDotV) / (NDotV + sqrt(a + b - a * b));
+}
+
+float SmithGAniso(float NDotV, float VDotX, float VDotY, float ax, float ay)
+{
+    float a = VDotX * ax;
+    float b = VDotY * ay;
+    float c = NDotV;
+    return 1.0 / (NDotV + sqrt(a * a + b * b + c * c));
+}
+
+float SchlickFresnel(float u)
+{
+    float m = clamp(1.0 - u, 0.0, 1.0);
+    float m2 = m * m;
+    return m2 * m2 * m;
+}
+
+float DielectricFresnel(float cosThetaI, float eta)
+{
+    float sinThetaTSq = eta * eta * (1.0f - cosThetaI * cosThetaI);
+
+    // Total internal reflection
+    if (sinThetaTSq > 1.0)
+        return 1.0;
+
+    float cosThetaT = sqrt(max(1.0 - sinThetaTSq, 0.0));
+
+    float rs = (eta * cosThetaT - cosThetaI) / (eta * cosThetaT + cosThetaI);
+    float rp = (eta * cosThetaI - cosThetaT) / (eta * cosThetaI + cosThetaT);
+
+    return 0.5f * (rs * rs + rp * rp);
+}
+
+float Fresnellerp(MaterialData mat, float eta, float VDotH)
+{
+    float metallicFresnel = SchlickFresnel(VDotH);
+    float dielectricFresnel = DielectricFresnel(VDotH, eta);
+    return lerp(dielectricFresnel, metallicFresnel, mat.metallic);
+}
+
+
+float3 EvalDiffuse(MaterialData mat, float3 Csheen, float3 V, float3 L, float3 H, out float pdf, HitMat hitDat)
+{
+    pdf = 0.0;
+    if (L.z <= 0.0)
+        return 0.0;
+
+    // Diffuse
+    float FL = SchlickFresnel(L.z);
+    float FV = SchlickFresnel(V.z);
+    float FH = SchlickFresnel(dot(L, H));
+    float Fd90 = 0.5 + 2.0 * dot(L, H) * dot(L, H) * mat.roughness;
+    float Fd = lerp(1.0, Fd90, FL) * lerp(1.0, Fd90, FV);
+
+    // Fake Subsurface TODO: Replace with volumetric scattering
+    float Fss90 = dot(L, H) * dot(L, H) * mat.roughness;
+    float Fss = lerp(1.0, Fss90, FL) * lerp(1.0, Fss90, FV);
+    float ss = 1.25 * (Fss * (1.0 / (L.z + V.z) - 0.5) + 0.5);
+
+    // Sheen
+    float3 Fsheen = FH * mat.sheen * Csheen;
+
+    pdf = L.z * rcp(PI);
+    return (rcp(PI) * lerp(Fd, ss, mat.subsurface) * hitDat.surfaceColor + Fsheen) * (1.0 - mat.metallic) * (1.0 - mat.specTrans);
+}
+
+float3 EvalSpecReflection(MaterialData mat, float eta, float3 specCol, float3 V, float3 L, float3 H, out float pdf)
+{
+    pdf = 0.0;
+    if (L.z <= 0.0)
+        return 0.0;
+
+    float FM = Fresnellerp(mat, eta, dot(L, H));
+    float3 F = lerp(specCol, 1.0, FM);
+    float D = GTR2(H.z, mat.roughness);
+    float G1 = SmithG(abs(V.z), mat.roughness);
+    float G2 = G1 * SmithG(abs(L.z), mat.roughness);
+    float jacobian = 1.0 / (4.0 * dot(V, H));
+
+    pdf = G1 * max(0.0, dot(V, H)) * D * jacobian / V.z;
+    return F * D * G2 / (4.0 * L.z * V.z);
+}
+
+float3 EvalSpecRefraction(MaterialData mat, float eta, float3 V, float3 L, float3 H, out float pdf, HitMat hitDat)
+{
+    pdf = 0.0;
+    if (L.z >= 0.0)
+        return 0.0;
+
+    float F = DielectricFresnel(abs(dot(V, H)), eta);
+    float D = GTR2(H.z, mat.roughness);
+    float denom = dot(L, H) + dot(V, H) * eta;
+    denom *= denom;
+    float G1 = SmithG(abs(V.z), mat.roughness);
+    float G2 = G1 * SmithG(abs(L.z), mat.roughness);
+    float jacobian = abs(dot(L, H)) / denom;
+
+    pdf = G1 * max(0.0, dot(V, H)) * D * jacobian / V.z;
+
+    float3 specColor = pow(hitDat.surfaceColor, 0.5);
+    return specColor * (1.0 - mat.metallic) * mat.specTrans * (1.0 - F) * D * G2 * abs(dot(V, H)) * abs(dot(L, H)) * eta * eta / (denom * abs(L.z) * abs(V.z));
+}
+
+float3 EvalClearcoat(MaterialData mat, float3 V, float3 L, float3 H, out float pdf)
+{
+    pdf = 0.0;
+    if (L.z <= 0.0)
+        return (0.0);
+
+    float FH = DielectricFresnel(dot(V, H), 1.0 / 1.5);
+    float F = lerp(0.04, 1.0, FH);
+    float D = GTR1(H.z, mat.clearcoatRoughness);
+    float G = SmithG(L.z, 0.25)
+        * SmithG(V.z, 0.25);
+    float jacobian = 1.0 / (4.0 * dot(V, H));
+
+    pdf = D * H.z * jacobian;
+    return (0.25) * mat.clearcoat * F * D * G / (4.0 * L.z * V.z);
+}
+
+void GetSpecColor(MaterialData mat, float eta, out float3 specCol, out float3 sheenCol, HitMat hitDat)
+{
+    float lum = Luminance(hitDat.surfaceColor);
+    float3 ctint = lum > 0.0 ? hitDat.surfaceColor / lum : (1.0f);
+    float F0 = (1.0 - eta) / (1.0 + eta);
+    specCol = lerp(F0 * F0 * lerp((1.0), ctint, mat.specularTint),hitDat.surfaceColor, mat.metallic);
+    sheenCol = lerp((1.0), ctint, mat.sheenTint);
+}
+
+void GetLobeProbabilities(MaterialData mat, float eta, float3 specCol, float approxFresnel, out float diffuseWt, out float specReflectWt, out float specRefractWt, out float clearcoatWt, HitMat hitDat)
+{
+    diffuseWt = Luminance(hitDat.surfaceColor) * (1.0 - mat.metallic) * (1.0 - mat.specTrans);
+    specReflectWt = Luminance(lerp(specCol, (1.0), approxFresnel));
+    specRefractWt = (1.0 - approxFresnel) * (1.0 - mat.metallic) * mat.specTrans * Luminance(hitDat.surfaceColor);
+    clearcoatWt = mat.clearcoat * (1.0 - mat.metallic);
+    float totalWt = diffuseWt + specReflectWt + specRefractWt + clearcoatWt;
+
+    diffuseWt /= totalWt;
+    specReflectWt /= totalWt;
+    specRefractWt /= totalWt;
+    clearcoatWt /= totalWt;
+}
+
+void Onb(in float3 N, inout float3 T, inout float3 B)
+{
+    float3 up = abs(N.z) < 0.999 ? float3(0, 0, 1) : float3(1, 0, 0);
+    T = normalize(cross(up, N));
+    B = cross(N, T);
+}
+
+float3 ToWorld(float3 X, float3 Y, float3 Z, float3 V)
+{
+    return V.x * X + V.y * Y + V.z * Z;
+}
+
+float3 ToLocal(float3 X, float3 Y, float3 Z, float3 V)
+{
+    return float3(dot(V, X), dot(V, Y), dot(V, Z));
+}
+
+float3 CosineSampleHemisphere(float r1, float r2)
+{
+    float3 dir;
+    float r = sqrt(r1);
+    float phi = (2 * PI) * r2;
+    dir.x = r * cos(phi);
+    dir.y = r * sin(phi);
+    dir.z = sqrt(max(0.0, 1.0 - dir.x * dir.x - dir.y * dir.y));
+    return dir;
+}
+
+float3 DisneySample(MaterialData mat, float3 V, float3 N, out float3 L, out float pdf, HitMat hitDat, out bool refracted)
+{
+    pdf = 0.0;
+    float3 f = (0.0);
+
+    float r1 = random(43).x;
+    float r2 = random(43).y;
+
+    float3 T, B;
+    Onb(N, T, B);
+    V = ToLocal(T, B, N, V); // NDotL = L.z; NDotV = V.z; NDotH = H.z
+
+    // Specular and sheen color
+    float3 specCol, sheenCol;
+    GetSpecColor(mat, hitDat.eta.x, specCol, sheenCol, hitDat);
+
+    // Lobe weights
+    float diffuseWt, specReflectWt, specRefractWt, clearcoatWt;
+    // TODO: Recheck fresnel. Not sure if correct. VDotN produces fireflies with rough dielectric.
+    // VDotH matches Mitsuba and gets rid of all fireflies but H isn't available at this stage
+    float approxFresnel = Fresnellerp(mat, hitDat.eta.x, V.z);
+    GetLobeProbabilities(mat, hitDat.eta.x, specCol, approxFresnel, diffuseWt, specReflectWt, specRefractWt, clearcoatWt, hitDat);
+
+    // CDF for picking a lobe
+    float cdf[4];
+    cdf[0] = diffuseWt;
+    cdf[1] = cdf[0] + specReflectWt;
+    cdf[2] = cdf[1] + specRefractWt;
+    cdf[3] = cdf[2] + clearcoatWt;
+    refracted = false;
+    if (r1 < cdf[0]) // Diffuse Reflection Lobe
+    {
+        r1 /= cdf[0];
+        L = CosineSampleHemisphere(r1, r2);
+
+        float3 H = normalize(L + V);
+
+        f = EvalDiffuse(mat, sheenCol, V, L, H, pdf, hitDat);
+        pdf *= diffuseWt;
+    }
+    else if (r1 < cdf[1]) // Specular Reflection Lobe
+    {
+        r1 = (r1 - cdf[0]) / (cdf[1] - cdf[0]);
+        float3 H = SampleGGXVNDF(V, mat.roughness, r1, r2);
+
+        if (H.z < 0.0)
+            H = -H;
+
+        L = normalize(reflect(-V, H));
+
+        f = EvalSpecReflection(mat, hitDat.eta, specCol, V, L, H, pdf);
+        pdf *= specReflectWt;
+    }
+    else if (r1 < cdf[2]) // Specular Refraction Lobe
+    {
+        r1 = (r1 - cdf[1]) / (cdf[2] - cdf[1]);
+        float3 H = SampleGGXVNDF(V, mat.roughness, r1, r2);
+
+        if (H.z < 0.0)
+            H = -H;
+
+        L = normalize(refract(-V, H, hitDat.eta));
+
+        f = EvalSpecRefraction(mat, hitDat.eta, V, L, H, pdf, hitDat);
+        pdf *= specRefractWt;
+        refracted = true;
+    }
+    else // Clearcoat Lobe
+    {
+        r1 = (r1 - cdf[2]) / (1.0 - cdf[2]);
+        float3 H = SampleGTR1(mat.clearcoatRoughness, r1, r2);
+
+        if (H.z < 0.0)
+            H = -H;
+
+        L = normalize(reflect(-V, H));
+
+        f = EvalClearcoat(mat, V, L, H, pdf);
+        pdf *= clearcoatWt;
+    }
+
+    L = ToWorld(T, B, N, L);
+    return f * abs(dot(N, L));
+}
+
+float3 DisneyEval(MaterialData mat, float3 V, float3 N, float3 L, out float bsdfPdf, HitMat hitDat)
+{
+    bsdfPdf = 0.0;
+    float3 f = (0.0);
+
+    float3 T, B;
+    Onb(N, T, B);
+    V = ToLocal(T, B, N, V); // NDotL = L.z; NDotV = V.z; NDotH = H.z
+    L = ToLocal(T, B, N, L);
+
+    float3 H;
+    if (L.z > 0.0)
+        H = normalize(L + V);
+    else
+        H = normalize(L + V * hitDat.eta);
+
+    if (H.z < 0.0)
+        H = -H;
+
+    // Specular and sheen color
+    float3 specCol, sheenCol;
+    GetSpecColor(mat, hitDat.eta, specCol, sheenCol, hitDat);
+
+    // Lobe weights
+    float diffuseWt, specReflectWt, specRefractWt, clearcoatWt;
+    float fresnel = Fresnellerp(mat, hitDat.eta, dot(V, H));
+    GetLobeProbabilities(mat, hitDat.eta, specCol, fresnel, diffuseWt, specReflectWt, specRefractWt, clearcoatWt, hitDat);
+
+    float pdf;
+
+    // Diffuse
+    if (diffuseWt > 0.0 && L.z > 0.0)
+    {
+        f += EvalDiffuse(mat, sheenCol, V, L, H, pdf, hitDat);
+        bsdfPdf += pdf * diffuseWt;
+    }
+
+    // Specular Reflection
+    if (specReflectWt > 0.0 && L.z > 0.0 && V.z > 0.0)
+    {
+        f += EvalSpecReflection(mat, hitDat.eta, specCol, V, L, H, pdf);
+        bsdfPdf += pdf * specReflectWt;
+    }
+
+    // Specular Refraction
+    if (specRefractWt > 0.0 && L.z < 0.0)
+    {
+        f += EvalSpecRefraction(mat, hitDat.eta, V, L, H, pdf, hitDat);
+        bsdfPdf += pdf * specRefractWt;
+    }
+
+    // Clearcoat
+    if (clearcoatWt > 0.0 && L.z > 0.0 && V.z > 0.0)
+    {
+        f += EvalClearcoat(mat, V, L, H, pdf);
+        bsdfPdf += pdf * clearcoatWt;
+    }
+
+    return f * abs(L.z);
+}
+
+
+void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit hit, uint2 Uv, inout bool terminated, float2 NormalUV, bool HitVoxel, bool IsEmissiveTex, RayData RayDat, MaterialData mat) {//main function
 bool cb = (int(Uv.x)/64 + int(Uv.y)/64)%2==0;
     float3 pos = ray.direction * hit.t + ray.origin;
     float3 PrevDirection = ray.direction;
@@ -2405,15 +2830,13 @@ bool cb = (int(Uv.x)/64 + int(Uv.y)/64)%2==0;
          if(abs(norm.x) == abs(norm.y) == abs(norm.z)) norm = Geomnorm;
      }
 
-    [branch]if(CurBounce == 0 || TempAlbedoTex[Uv].w == -1) {//Setting textures for denosier to use
-        TempAlbedoTex[Uv] = ((hitDat.MatType == 2) ? float4(1,1,1,-1) : float4(hitDat.surfaceColor,1));
-        TempNormTex[Uv] = float4(norm, 1);
-        TempPosTex[Uv] = float4(pos,1);
-    }
     [branch]if(hitDat.emmis > 0.0f) {//if we hit a light, this ray is done
         if(!UseNEE || IsEmissiveTex) {
-            [flatten]if(CurBounce == 0) {
+            if(CurBounce == 0) {
                 Color.Direct = hitDat.emmis;
+                TempAlbedoTex[Uv] = float4(hitDat.surfaceColor,1);
+                TempNormTex[Uv] = float4(norm, 1);
+                TempPosTex[Uv] = float4(pos,1);
             } else if(CurBounce == 1) {
                 Color.Direct += hitDat.surfaceColor * (hitDat.emmis);
             } else {
@@ -2428,8 +2851,11 @@ bool cb = (int(Uv.x)/64 + int(Uv.y)/64)%2==0;
             float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
             float light_pdf = 1.0f / (SA * LightMeshCount) * ((_LightMeshes[LightMeshCount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF))) * (a / _MeshData[hit.mesh_id].LightPDF);
             float w = power_heuristic(RayDat.last_pdf, light_pdf);
-            [flatten]if(CurBounce == 0) {
+            if(CurBounce == 0) {
                 Color.Direct = hitDat.emmis;
+                TempAlbedoTex[Uv] = float4(hitDat.surfaceColor,1);
+                TempNormTex[Uv] = float4(norm, 1);
+                TempPosTex[Uv] = float4(pos,1);
             } else if(CurBounce == 1) {
                 Color.Direct += (hitDat.surfaceColor * hitDat.emmis) * w;
             } else {
@@ -2516,10 +2942,31 @@ bool cb = (int(Uv.x)/64 + int(Uv.y)/64)%2==0;
         break;
         default:
             ray.direction = normalize(mul(sample(pdf), GetTangentSpace(norm)));
+            valid = pdf > 0;
             throughput *= hitDat.surfaceColor;
+        break;      
+        case 9:
+            if(!GotFlipped) {
+                hitDat.eta = rcp(hitDat.eta);
+            }
+            bool temp;
+            float3 through = DisneySample(mat, -ray.direction, norm, tempraydir, pdf, hitDat, temp);
+            if(pdf > 0) {
+                throughput *= through / pdf;
+            }
+            valid = pdf > 0;
+            if(temp) Geomnorm *= -1;
+            ray.direction = tempraydir;    
         break;
     }
     if(!valid) return;//If the ray failed, we have no choice but to terminate this path
+    
+    [branch]if(CurBounce == 0 || TempAlbedoTex[Uv].w == -1) {//Setting textures for denosier to use
+        TempAlbedoTex[Uv] = ((hitDat.MatType == 2) ? float4(1,1,1,-1) : float4(throughput,1));
+        TempNormTex[Uv] = float4(norm, 1);
+        TempPosTex[Uv] = float4(pos,1);
+        if(CurBounce == 0) throughput = 1;
+    }
     ray.origin = Geomnorm * 0.001f + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
     [branch]if((UseNEE || AllowVolumetrics) && CurBounce < MaxBounce) {//Next event estimation
             float3 pos2;
@@ -2651,6 +3098,11 @@ bool cb = (int(Uv.x)/64 + int(Uv.y)/64)%2==0;
             case 8:
                 validbsdf = evalplastic(hitDat, mul(GetTangentSpace(norm), to_light), cos_theta_hit, bsdf_value, bsdf_pdf, omega_i);
             break;
+            case 9:
+                bsdf_value = DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
+                validbsdf = bsdf_pdf > 0;
+            break;
+
         }
 
         float LightCos = abs(dot(to_light, LightNorm));
@@ -2768,7 +3220,6 @@ bool cb = (int(Uv.x)/64 + int(Uv.y)/64)%2==0;
     terminated = false;//identifier so we dont write to output before the ray ends
 }
 
-
 [numthreads(8,8,1)]
 void kernel_shade () {
 
@@ -2807,15 +3258,15 @@ void kernel_shade () {
             if(CurBounce == 0) {//Seperated into direct and indirect channels
                 Color.Direct = (SkyBoxCol * 14.0f) + Sun;
             } else if(CurBounce == 1) {
-                Color.Direct += Color.throughput * (SkyBoxCol * 14.0f) + Sun;
+                Color.Direct += Color.throughput * (SkyBoxCol * 120.0f) + Sun;
             } else {
-                Color.Indirect += Color.throughput * (SkyBoxCol * 14.0f) + Sun;
+                Color.Indirect += Color.throughput * (SkyBoxCol * 120.0f) + Sun;
             }
-            SkyColAcc = (Color.throughput * (SkyBoxCol * 12.0f) + Sun);
+            SkyColAcc = (Color.throughput * (SkyBoxCol * 14.0f) + Sun);
         #endif
         if(CurBounce == 0) {
-            TempAlbedoTex[TempUv] = float4(SkyColAcc,1);
-            Color.Direct = SkyColAcc;
+            TempAlbedoTex[TempUv] = 1;//float4(SkyColAcc,1);
+          //  Color.Direct = SkyColAcc;
         }
         GlobalColors[pixel_index] = Color;
         return;
@@ -2831,7 +3282,7 @@ void kernel_shade () {
     float4 BaseCol = (TempMat.HasAlbedoTex > 0) ? _TextureAtlas.SampleLevel(sampler_TextureAtlas, Uv, 0) : float4(TempMat.BaseColor, 1.0f);
     hitmat.surfaceColor = BaseCol.xyz;
     hitmat.emmis = TempMat.emmissive;
-    hitmat.roughness = max(TempMat.roughness,0.00001f);
+    hitmat.roughness = max(TempMat.roughness,0.001f);
     hitmat.MatType = TempMat.MatType;
     hitmat.eta = TempMat.eta;
 
@@ -2843,10 +3294,12 @@ void kernel_shade () {
             hitmat.MatType = 1;
         }
     }
+    _DebugTex[TempUv] = 1;
     if(TempMat.HasRoughnessTex > 0) {
         float2 RoughnessUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].RoughnessTex.xy - _Materials[MaterialIndex].RoughnessTex.zw) + _Materials[MaterialIndex].RoughnessTex.zw;
         float3 RoughnessCol = _RoughnessAtlas.SampleLevel(sampler_RoughnessAtlas, RoughnessUV, 0).xyz;
-        hitmat.roughness = pow(RoughnessCol.x * RoughnessCol.x * 3.0f, 0.4545f);
+        hitmat.roughness = saturate(pow(pow(RoughnessCol.x, 0.4545f),2));
+        _DebugTex[TempUv] = hitmat.roughness;
     }
     bool IsEmissiveTex = false;
     if(TempMat.HasEmissiveTex > 0) {
@@ -2867,7 +3320,7 @@ void kernel_shade () {
     }
 
     bool DidTerminate = true;//Identifier marking whether we have terminated the ray or if it will continue
-    calcFinalColor(ray, Color, hitmat, bestHit, TempUv, DidTerminate, NormalUV, GlobalRays2[index].HitVoxel, IsEmissiveTex, GlobalRays2[index]);
+    calcFinalColor(ray, Color, hitmat, bestHit, TempUv, DidTerminate, NormalUV, GlobalRays2[index].HitVoxel, IsEmissiveTex, GlobalRays2[index], TempMat);
     GlobalColors[pixel_index] = Color;
 }
 

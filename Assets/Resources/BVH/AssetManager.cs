@@ -843,6 +843,16 @@ public void CreateAABB(Transform transform, ref AABB aabb) {//Update the Transfo
                     TempMat.eta = CurrentMaterial.eta[i3];
                     TempMat.MatType = (int)CurrentMaterial.MaterialOptions[i3];
                     TempMat.EmissionColor = CurrentMaterial.EmissionColor[i3];
+                    TempMat.metallic = CurrentMaterial.Metallic[i3];
+                    TempMat.subsurface = CurrentMaterial.SubSurface[i3];
+                    TempMat.specularTint = CurrentMaterial.SpecularTint[i3];
+                    TempMat.sheen = CurrentMaterial.Sheen[i3];
+                    TempMat.sheenTint = CurrentMaterial.SheenTint[i3];
+                    TempMat.clearcoat = CurrentMaterial.ClearCoat[i3];
+                    TempMat.clearcoatRoughness = CurrentMaterial.ClearCoatRoughness[i3];
+                    TempMat.specTrans = CurrentMaterial.SpecTrans[i3];
+                    TempMat.IOR = CurrentMaterial.IOR[i3];
+                    TempMat.extinction = CurrentMaterial.Extinction[i3];
                     _Materials[CurrentMaterial.MaterialIndex[i3]] = TempMat;
                 }
             }

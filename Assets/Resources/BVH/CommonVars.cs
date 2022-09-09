@@ -15,6 +15,11 @@ namespace CommonVars {
         public Vector2 SpotAngle;
     }
 
+    [System.Serializable]
+    public struct VolumetricVoxelDat {
+        public float Density;
+        public int Index;
+    }    
 
 
     [System.Serializable]
@@ -53,6 +58,14 @@ namespace CommonVars {
         public Vector3 BBMax;
         public Vector3 BBMin;
         public List<Voxel> BrickVoxels;
+    }
+    [System.Serializable]
+    public struct NewVolumeBrick {
+        public int StartingIndex;
+        public Vector3 BBMax;
+        public Vector3 BBMin;
+        public List<VolumetricVoxelDat> BrickVoxels;
+        public float Density;
     }
     [System.Serializable]
     public struct GPUBrick {
@@ -195,6 +208,19 @@ namespace CommonVars {
         public int MatType;
         public Vector3 eta;
         public Vector3 EmissionColor;
+
+
+        public float metallic;
+        public float subsurface;
+        public float specularTint;
+        public float sheen;
+        public float sheenTint;
+        public float clearcoat;
+        public float clearcoatRoughness;
+        public float specTrans;
+        public float IOR;
+        public Vector3 extinction;
+
     }
 
     [System.Serializable]

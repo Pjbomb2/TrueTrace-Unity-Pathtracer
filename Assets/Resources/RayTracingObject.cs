@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 [ExecuteInEditMode][System.Serializable]
 public class RayTracingObject : MonoBehaviour {
-	public enum Options {Diffuse, Metallic, Glass, Glossy, Unused, Volumetric, SubSurfaceScattering, DiffuseTransmission, Plastic};
+	public enum Options {Diffuse, Metallic, Glass, Glossy, Unused, Volumetric, SubSurfaceScattering, DiffuseTransmission, Plastic, Disney};
 	public Options[] MaterialOptions;
 	public float[] emmission; 
 	public Vector3[] EmissionColor;
@@ -13,6 +13,18 @@ public class RayTracingObject : MonoBehaviour {
 	public Vector3[] eta, BaseColor;
 	public int[] MaterialIndex;
 	public int[] LocalMaterialIndex;
+
+
+	public float[] Metallic;
+	public float[] SubSurface;
+	public float[] SpecularTint;
+	public float[] Sheen;
+	public float[] SheenTint;
+	public float[] ClearCoat;
+	public float[] ClearCoatRoughness;
+	public float[] SpecTrans;
+	public float[] IOR;
+	public Vector3[] Extinction;
 
 	public void matfill() {
 		 Mesh mesh = new Mesh();
@@ -23,6 +35,21 @@ public class RayTracingObject : MonoBehaviour {
 	 	}
 			int SubMeshCount = mesh.subMeshCount;
 			if(EmissionColor == null || EmissionColor.Length != SubMeshCount) EmissionColor = new Vector3[SubMeshCount];
+		
+			if(Metallic == null || Metallic.Length != mesh.subMeshCount) {
+				Metallic = new float[SubMeshCount];
+				SubSurface = new float[SubMeshCount];
+				SpecularTint = new float[SubMeshCount];
+				Sheen = new float[SubMeshCount];
+				SheenTint = new float[SubMeshCount];
+				ClearCoat = new float[SubMeshCount];
+				ClearCoatRoughness = new float[SubMeshCount];
+				SpecTrans = new float[SubMeshCount];
+				IOR = new float[SubMeshCount];
+				Extinction = new Vector3[SubMeshCount];
+			}
+
+
 		try {
 			if(emmission == null || emmission.Length != mesh.subMeshCount) {
 			MaterialOptions = new Options[SubMeshCount];
