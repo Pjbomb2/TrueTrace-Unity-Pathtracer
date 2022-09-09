@@ -1,7 +1,7 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>Fixin shit, almost done for new update presenting much higher quality</li>
+  <li>Need Ideas, father has passed away so work will either slow down or speed up</li>
 </ul>
 Currently needs to be done but havent implemented fully:
 <ul>
