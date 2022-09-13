@@ -20,7 +20,7 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 ## Features: 
 <ul>
 <li>Somewhat fast Compute Shader based path tracing</li>
-<li>Diffuse, Glossy(kinda), Dielectric(think of glass), Conductor(metal), Diffuse Transmission, Emissive, and Plastic materials</li>
+<li>Diffuse, Glossy(kinda), Dielectric(think of glass), Conductor(metal), Diffuse Transmission, Emissive, Plastic, and Disney BSDF materials</li>
 <li>Ability to move, add, and remove objects during play</li>
 <li>Ability to update material properties on the fly during play</li>
 <li>SVGF Denoiser and Atrous Denoiser</li>
@@ -158,7 +158,7 @@ BVH Options Description -
   
 # Sample Images(Taken from various stages of development)
 
-
+![](/Images/Room.png)
 ![](/Images/NewBlender.png)
 ![](/Images/Lego.png)
 ![](/Images/Bloom.png)
@@ -221,6 +221,8 @@ Scenes From:
   <li>https://sketchfab.com/3d-models/dae-bilora-bella-46-camera-game-ready-asset-eeb9d9f0627f4783b5d16a8732f0d1a4</li>
   <li>https://www.unrealengine.com/marketplace/en-US/product/victorian-train-station-and-railroad-modular-set</li>
 </ul>
+</br>
+Disney BSDF from: https://www.shadertoy.com/view/sltXRl
 
 
 
