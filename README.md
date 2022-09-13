@@ -95,6 +95,7 @@ Let me know if you use this for anything, I would be excited to see any use of t
   <li>If you change the emissiveness of an object, you need to dissable and re-enable its parent(basically reloading it) if you want to take advantage of NEE correctly sampling it</li>
   <li>If you use normal maps, they need to be in unity normal map format</li>
   <li>To set up PBR, all textures go into their proper names, but Roughness goes into the Occlusion texture(Since path tracing gets ambient occlusion by default, this texture is not normally needed, and there being no proper place for a Roughness texture in the default material, I have decided this was a good compromise)</li>
+  <li>If you are using blendshapes to change geometry of a skinned mesh, you may need to go to the import settings of it(in the inspector), turn off Legacy Blendshape Normals, and make sure all normals are imported, not calculated</li>
 </ul>
 ## MagicaVoxel Usage
 <ul>
