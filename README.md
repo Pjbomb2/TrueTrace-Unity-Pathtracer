@@ -158,6 +158,7 @@ BVH Options Description -
   
 # Sample Images(Taken from various stages of development)
 
+![](/Images/BistroUpdated.png)
 ![](/Images/Room.png)
 ![](/Images/NewBlender.png)
 ![](/Images/Lego.png)
