@@ -693,7 +693,7 @@ inline bool TraceOctree(float3 ray_orig, const float3 ray_direction, const float
                 SideDist = (raystep * (MapPos - updatedPos / A) + (raystep * 0.5f) + 0.5f) * deltaDist;
             } else {
                 [branch]if(A == 1 && BrickMap[(uint)CurrentOffset + (uint)LocalPos.x + (uint)LocalPos.y * (uint)CurrentSize + (uint)LocalPos.z * (uint)CurrentSize * (uint)CurrentSize] != -1) {
-                    if(length(OrigionalPosition - (ray_orig + ray_direction * ((min(min(LastSideDist.x, LastSideDist.y), LastSideDist.z)) * A))) + Dist < bestHit.t) {
+                    if(length(OrigionalPosition - (ray_orig + ray_direction * ((min(min(LastSideDist.x, LastSideDist.y), LastSideDist.z)) * A))*Scale) + Dist < bestHit.t) {
                         bestHit.t = length(OrigionalPosition - (ray_orig + ray_direction * ((min(min(LastSideDist.x, LastSideDist.y), LastSideDist.z)) * A))*Scale) + Dist;
                         bestHit.triangle_id = BrickMap[(uint)CurrentOffset + (uint)LocalPos.x + (uint)LocalPos.y * (uint)CurrentSize + (uint)LocalPos.z * (uint)CurrentSize * (uint)CurrentSize];
                         bestHit.mesh_id = MeshIndex;
@@ -765,9 +765,6 @@ void IntersectVoxelTLAS() {
             ray.origin = GlobalRays2[ray_index].origin;
             ray.direction = GlobalRays2[ray_index].direction;
             ray.direction_inv = rcp(ray.direction);
-            int PixIndex = GlobalRays2[ray_index].PixelIndex;
-            TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
-            _DebugTex[TempUv] = 0;
             bestHit = get2(ray_index);
             ray2 = ray;
            
@@ -1401,8 +1398,6 @@ struct MaterialData {//56
     float clearcoat;
     float clearcoatRoughness;
     float specTrans;
-    float IOR;
-    float3 extinction;
 };
 
 
@@ -2690,7 +2685,7 @@ float3 DisneySample(MaterialData mat, float3 V, float3 N, out float3 L, out floa
 
         L = normalize(reflect(-V, H));
 
-        f = EvalSpecReflection(mat, hitDat.eta, specCol, V, L, H, pdf);
+        f = EvalSpecReflection(mat, hitDat.eta.x, specCol, V, L, H, pdf);
         pdf *= specReflectWt;
     }
     else if (r1 < cdf[2]) // Specular Refraction Lobe
@@ -2701,9 +2696,9 @@ float3 DisneySample(MaterialData mat, float3 V, float3 N, out float3 L, out floa
         if (H.z < 0.0)
             H = -H;
 
-        L = normalize(refract(-V, H, hitDat.eta));
+        L = normalize(refract(-V, H, hitDat.eta.x));
 
-        f = EvalSpecRefraction(mat, hitDat.eta, V, L, H, pdf, hitDat);
+        f = EvalSpecRefraction(mat, hitDat.eta.x, V, L, H, pdf, hitDat);
         pdf *= specRefractWt;
         refracted = true;
     }
@@ -2739,19 +2734,19 @@ float3 DisneyEval(MaterialData mat, float3 V, float3 N, float3 L, out float bsdf
     if (L.z > 0.0)
         H = normalize(L + V);
     else
-        H = normalize(L + V * hitDat.eta);
+        H = normalize(L + V * hitDat.eta.x);
 
     if (H.z < 0.0)
         H = -H;
 
     // Specular and sheen color
     float3 specCol, sheenCol;
-    GetSpecColor(mat, hitDat.eta, specCol, sheenCol, hitDat);
+    GetSpecColor(mat, hitDat.eta.x, specCol, sheenCol, hitDat);
 
     // Lobe weights
     float diffuseWt, specReflectWt, specRefractWt, clearcoatWt;
-    float fresnel = Fresnellerp(mat, hitDat.eta, dot(V, H));
-    GetLobeProbabilities(mat, hitDat.eta, specCol, fresnel, diffuseWt, specReflectWt, specRefractWt, clearcoatWt, hitDat);
+    float fresnel = Fresnellerp(mat, hitDat.eta.x, dot(V, H));
+    GetLobeProbabilities(mat, hitDat.eta.x, specCol, fresnel, diffuseWt, specReflectWt, specRefractWt, clearcoatWt, hitDat);
 
     float pdf;
 
@@ -2765,14 +2760,14 @@ float3 DisneyEval(MaterialData mat, float3 V, float3 N, float3 L, out float bsdf
     // Specular Reflection
     if (specReflectWt > 0.0 && L.z > 0.0 && V.z > 0.0)
     {
-        f += EvalSpecReflection(mat, hitDat.eta, specCol, V, L, H, pdf);
+        f += EvalSpecReflection(mat, hitDat.eta.x, specCol, V, L, H, pdf);
         bsdfPdf += pdf * specReflectWt;
     }
 
     // Specular Refraction
     if (specRefractWt > 0.0 && L.z < 0.0)
     {
-        f += EvalSpecRefraction(mat, hitDat.eta, V, L, H, pdf, hitDat);
+        f += EvalSpecRefraction(mat, hitDat.eta.x, V, L, H, pdf, hitDat);
         bsdfPdf += pdf * specRefractWt;
     }
 
@@ -2788,7 +2783,7 @@ float3 DisneyEval(MaterialData mat, float3 V, float3 N, float3 L, out float bsdf
 
 
 void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit hit, uint2 Uv, inout bool terminated, float2 NormalUV, bool HitVoxel, bool IsEmissiveTex, RayData RayDat, MaterialData mat) {//main function
-bool cb = (int(Uv.x)/64 + int(Uv.y)/64)%2==0;
+// bool cb = (int(Uv.x)/64 + int(Uv.y)/64)%2==0;
     float3 pos = ray.direction * hit.t + ray.origin;
     float3 PrevDirection = ray.direction;
     float3 PrevOrigin = ray.origin;
@@ -2803,7 +2798,7 @@ bool cb = (int(Uv.x)/64 + int(Uv.y)/64)%2==0;
     float3 Geomnorm = (DoVoxels || !HitVoxel) ? normalize(mul(_MeshData[hit.mesh_id].Inverse, float4(AggTris[index].norm0 + hit.u * AggTris[index].normedge1 + hit.v * AggTris[index].normedge2, 0.0f)).xyz) : float3(0,0,0);
     if(DoVoxels && HitVoxel) {
         Geomnorm = float3(1,0,0);
-        float3 VoxPos = floor(mul(_MeshData[hit.mesh_id].Transform, float4(ray.origin + ray.direction * hit.t,1))) + 0.5f;
+        float3 VoxPos = floor(mul(_MeshData[hit.mesh_id].Transform, float4(ray.origin + ray.direction * hit.t,1)).xyz) + 0.5f;
         float3 initdiff = mul(_MeshData[hit.mesh_id].Transform, float4(pos, 1)).xyz - VoxPos;
         float Greatest = max(max(abs(initdiff.x), abs(initdiff.y)), abs(initdiff.z));
         if(Greatest == abs(initdiff.y)) Geomnorm = float3(0,1,0);
@@ -2821,11 +2816,19 @@ bool cb = (int(Uv.x)/64 + int(Uv.y)/64)%2==0;
      [branch]if(NormalUV.x != -1) {
           float3 LocalTan = normalize(mul(_MeshData[hit.mesh_id].Inverse, float4(AggTris[index].tan0 + hit.u * AggTris[index].tanedge1 + hit.v * AggTris[index].tanedge2, 0.0f)).xyz);
          float3 LocalBinorm = normalize(cross(Geomnorm, LocalTan));
-         float2 InputNormal = _NormalAtlas.SampleLevel(sampler_NormalAtlas, NormalUV,0).ag;
-         InputNormal.y = pow(InputNormal.y, 0.4545f);
+         float4 Norm = _NormalAtlas.SampleLevel(sampler_NormalAtlas, NormalUV,0);
+        float2 InputNormal;
+       [branch]if(Norm.r == 1) {
+            InputNormal = Norm.ag;
+            InputNormal.y = pow(InputNormal.y, 0.4545f);
+        } else {
+            InputNormal = Norm.rg;
+            InputNormal.xy = pow(InputNormal.xy, 0.4545f);
+        }
+
          float3 LocalNormIN = float3((2.0f * InputNormal.xy - 1.0f),0.0f);
          LocalNormIN.z = 1.0 - 0.5 * dot(LocalNormIN, LocalNormIN );
-         norm = normalize(mul(normalize(LocalNormIN), float3x3(LocalTan, LocalBinorm, Geomnorm)));
+         norm = normalize(mul(normalize(LocalNormIN), float3x3(LocalTan, LocalBinorm, Geomnorm)).xyz);
          norm = clamp(norm, -1, 1);
          if(abs(norm.x) == abs(norm.y) == abs(norm.z)) norm = Geomnorm;
      }
@@ -3117,7 +3120,7 @@ bool cb = (int(Uv.x)/64 + int(Uv.y)/64)%2==0;
                 float SA = LightCos * LightTriangles[triindex].area / distance_to_light_squared;
                 NEE_pdf = (1.0f / (LightMeshCount * SA)) * (LightTriangles[triindex].pdf / _LightMeshes[MeshIndex].pdf);
                 Radiance = LightTriangles[triindex].radiance;
-               if(UseRestir) NEE_pdf = LightPDF;
+            //   if(UseRestir) NEE_pdf = LightPDF;
             }
             float NEEMISWeight = power_heuristic(NEE_pdf, bsdf_pdf);
             float3 Illum = ((CurBounce == 0) ? 1 : throughput) * (Radiance * bsdf_pdf * NEEMISWeight) /  NEE_pdf * Attenuation;

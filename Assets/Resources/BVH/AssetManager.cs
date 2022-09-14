@@ -851,8 +851,6 @@ public void CreateAABB(Transform transform, ref AABB aabb) {//Update the Transfo
                     TempMat.clearcoat = CurrentMaterial.ClearCoat[i3];
                     TempMat.clearcoatRoughness = CurrentMaterial.ClearCoatRoughness[i3];
                     TempMat.specTrans = CurrentMaterial.SpecTrans[i3];
-                    TempMat.IOR = CurrentMaterial.IOR[i3];
-                    TempMat.extinction = CurrentMaterial.Extinction[i3];
                     _Materials[CurrentMaterial.MaterialIndex[i3]] = TempMat;
                 }
             }

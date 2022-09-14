@@ -406,8 +406,8 @@ void SingleScatter_Kernel (uint3 id : SV_DispatchThreadID)
     float3 throwaway = 0;
     ComputeSingleScatteringTexture(id.xyz + 0.5f, throwaway, mie);
     MieTex[id.xyz] = float4(mie, 1.0f);
-    rayleigh = mul(LuminanceFromRadiance, float4(rayleigh,0));
-    float mie2 = mul(LuminanceFromRadiance, float4(mie,0));
+    rayleigh = mul(LuminanceFromRadiance, float4(rayleigh,0)).xyz;
+    float mie2 = mul(LuminanceFromRadiance, float4(mie,0)).x;
     ScatteringTex[id.xyz] = float4(rayleigh, mie2);
 }
 

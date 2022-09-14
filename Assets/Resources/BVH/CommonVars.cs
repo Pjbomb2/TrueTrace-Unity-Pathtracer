@@ -218,8 +218,6 @@ namespace CommonVars {
         public float clearcoat;
         public float clearcoatRoughness;
         public float specTrans;
-        public float IOR;
-        public Vector3 extinction;
 
     }
 

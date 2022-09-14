@@ -11,8 +11,8 @@ public class RayTracingObject : MonoBehaviour {
 	public Vector3[] EmissionColor;
 	public float[] Roughness;
 	public Vector3[] eta, BaseColor;
-	public int[] MaterialIndex;
-	public int[] LocalMaterialIndex;
+	[HideInInspector] public int[] MaterialIndex;
+	[HideInInspector] public int[] LocalMaterialIndex;
 
 
 	public float[] Metallic;
@@ -23,8 +23,6 @@ public class RayTracingObject : MonoBehaviour {
 	public float[] ClearCoat;
 	public float[] ClearCoatRoughness;
 	public float[] SpecTrans;
-	public float[] IOR;
-	public Vector3[] Extinction;
 
 	public void matfill() {
 		 Mesh mesh = new Mesh();
@@ -45,8 +43,6 @@ public class RayTracingObject : MonoBehaviour {
 				ClearCoat = new float[SubMeshCount];
 				ClearCoatRoughness = new float[SubMeshCount];
 				SpecTrans = new float[SubMeshCount];
-				IOR = new float[SubMeshCount];
-				Extinction = new Vector3[SubMeshCount];
 			}
 
 
@@ -57,6 +53,7 @@ public class RayTracingObject : MonoBehaviour {
 			emmission = new float[SubMeshCount];
 			Roughness = new float[SubMeshCount];
 			eta = new Vector3[SubMeshCount];
+			System.Array.Fill(eta, new Vector3(1,1,1));
 			BaseColor = new Vector3[SubMeshCount];
 			MaterialIndex = new int[SubMeshCount];
 			Material[] SharedMaterials = (GetComponent<Renderer>() != null) ? GetComponent<Renderer>().sharedMaterials : GetComponent<SkinnedMeshRenderer>().sharedMaterials;
