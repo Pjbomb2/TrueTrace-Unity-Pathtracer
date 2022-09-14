@@ -172,6 +172,8 @@ BVH Options Description -
 ![](/Images/Room.png)
 ![](/Images/NewBlender.png)
 ![](/Images/Lego.png)
+![](/Images/PhotoGam1V2.png)
+![](/Images/PhotoGam2V2.png)
 ![](/Images/Bloom.png)
 ![](/Images/RealisticSponza.png)
 ![](/Images/AnotherRestir.png)
