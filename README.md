@@ -162,6 +162,7 @@ BVH Options Description -
 ![](/Images/NewSponza3V2.png)
 ![](/Images/NewSponza1V2.png)
 ![](/Images/NewSponza2V2.png)
+![](/Images/Cornell.png)
 ![](/Images/ReSTIR1V2.png)
 ![](/Images/SanMiguel1.png)
 ![](/Images/SanMiguel2.png)
