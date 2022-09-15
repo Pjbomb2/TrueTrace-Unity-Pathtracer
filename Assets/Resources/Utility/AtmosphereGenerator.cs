@@ -352,7 +352,7 @@ public class AtmosphereGenerator {
         Atmosphere.Dispatch(SingleScatterKernel, 256, 128, 32);
 
         Atmosphere.SetInt("ScatteringOrder", 1); 
-        int NumScatteringOrder = 12;
+        int NumScatteringOrder = 4;
         Atmosphere.SetTexture(DirectIrradianceKernel, "DeltaIrradianceTex", DeltaIrradianceTex);
         Atmosphere.SetTexture(DirectIrradianceKernel, "IrradianceTex", IrradianceTex);
         Atmosphere.SetTexture(DirectIrradianceKernel, "TransmittanceTex", _TransmittanceLUT);
