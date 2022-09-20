@@ -143,6 +143,7 @@ BVH Options Description -
   <li>(If SVGF Denosier is on)Atrous Kernel Size - The amount of times the SVGF denoiser runs through the Atrous kernel</li>
   <li>Use Atrous Denoiser - Turns on the Atrous denoiser(can be combined with SVGF)</li>
   <li>Enable Tonemapping - Turns on Filmic Tonemapping</li>
+  <li>Atmospheric Scatter Samples - Lower this to 1 if you keep crashing on entering game mode(controls how many atmospheric samples are precomputed)</li>
   <li>Current Samples - Shows how many samples have currently been accumulated</li>
   <li>Take Screenshot - Takes a screenshot at game view resolution and saves it to Assets/ScreenShots(You need to create this folder)</li>
   <li>QuickStart - Will attempt to automatially assign RayTracingObjects and ParentObjects to all child under the GameObject named "Scene" with an AssetManager attatched</li>
