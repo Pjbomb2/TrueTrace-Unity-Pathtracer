@@ -161,6 +161,7 @@ BVH Options Description -
   
 # Sample Images(Taken from various stages of development)
 
+![](/Images/NewReSTIRV2.png)
 ![](/Images/NewSponza3V2.png)
 ![](/Images/NewSponza1V2.png)
 ![](/Images/NewSponza2V2.png)
