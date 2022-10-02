@@ -1,8 +1,8 @@
 Notes:</br>
 Currently working on:
 <ul>
+  <li>Trying to replace SVGF with ASVGF, but having trouble with gradients...</li>
   <li>Looking desperately for optimizations(let me know if you have any ideas)</li>
-  <li>Need Ideas, father has passed away so work will either slow down or speed up</li>
 </ul>
 Currently needs to be done but havent implemented fully:
 <ul>
