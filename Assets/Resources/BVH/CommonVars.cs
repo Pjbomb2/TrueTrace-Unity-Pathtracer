@@ -169,6 +169,11 @@ namespace CommonVars {
                 UVs.Add(new Vector2(0.0f, 0.0f));
             }
         }
+        public void SetTansZero(int Count) {
+            for(int i = 0; i < Count; i++) {
+                Tangents.Add(new Vector4(0.0f, 0.0f, 0.0f, 0.0f));
+            }
+        }
         public void init() {
             this.Tangents = new List<Vector4>();
             this.MatDat = new List<int>();

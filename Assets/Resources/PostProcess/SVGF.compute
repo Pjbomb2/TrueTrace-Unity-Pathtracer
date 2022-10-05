@@ -119,7 +119,7 @@ inline bool is_tap_consistent(int x, int y, const float3 normal, float depth) {
     float  prev_depth  = prev_normal_and_depth.z;
 
     bool consistent_normal = dot(normal, prev_normal)  > THRESHOLD_NORMAL;
-    bool consistent_depth  = abs(depth - prev_depth) < THRESHOLD_DEPTH;
+    bool consistent_depth  = abs(depth - prev_depth) / abs(depth) < THRESHOLD_DEPTH;
 
     return consistent_normal && consistent_depth;
 }
@@ -308,7 +308,7 @@ inline float2 edge_stopping_weights(
         center_depth_gradient.x * (float)delta_x +
         center_depth_gradient.y * (float)delta_y;
 
-    float ln_w_z = abs(center_depth - depth) / (sigma_z * abs(d) + epsilon);
+    float ln_w_z = abs(center_depth - depth) / abs(center_depth) / (sigma_z * abs(d) + epsilon);
 
     float w_n = pow(max(0.0f, dot(center_normal, normal)), sigma_n);
 

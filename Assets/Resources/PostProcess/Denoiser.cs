@@ -76,6 +76,7 @@ public class Denoiser {
     private int SourceWidth;
     private int SourceHeight;
 
+
     private void CreateRenderTexture(ref RenderTexture ThisTex, bool SRGB) {
         if(SRGB) {
         ThisTex = new RenderTexture(SourceWidth, SourceHeight, 0,
@@ -164,6 +165,7 @@ public class Denoiser {
         this.SourceWidth = SourceWidth;
         this.SourceHeight = SourceHeight;
         _camera = Cam;
+
         if(SVGF == null) {SVGF = Resources.Load<ComputeShader>("PostProcess/SVGF");}
         if(AtrousDenoiser == null) {AtrousDenoiser = Resources.Load<ComputeShader>("PostProcess/Atrous");}
         if(AutoExpose == null) {AutoExpose = Resources.Load<ComputeShader>("PostProcess/AutoExpose");}
@@ -225,6 +227,7 @@ public class Denoiser {
     }
 
     public void ExecuteSVGF(int CurrentSamples, int AtrousKernelSize, ref ComputeBuffer _ColorBuffer, ref RenderTexture _target, ref RenderTexture _Albedo, ref RenderTexture _NormTex, bool DiffRes) {
+
         InitRenderTexture();
         SVGF.SetBool("DiffRes", DiffRes);
         Matrix4x4 viewprojmatrix = _camera.projectionMatrix * _camera.worldToCameraMatrix;

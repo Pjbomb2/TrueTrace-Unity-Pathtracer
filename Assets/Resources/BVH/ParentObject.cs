@@ -572,6 +572,15 @@ unsafe public void DocumentNodes(int CurrentNode, int ParentNode, int NextNode, 
     NodePair[CurrentNode] = CurrentPair;
 }
 
+
+
+public struct TriangleData {
+    public Vector3 V1, V2, V3;
+    public Vector3 N1, N2, N3;
+}
+public TriangleData[] Tris1;
+public TriangleData[] Tris2;
+
 unsafe public void Construct() {
     tempAABB = new AABB();
     MaxRecur = 0;
@@ -704,6 +713,8 @@ unsafe private void ConvertToSplitNodes() {
     }
 }
 
+public int OffsetFirst;
+
 
 public void RefitMesh(ref ComputeBuffer RealizedAggNodes) {
     int KernelRatio = 256;
@@ -773,7 +784,7 @@ public void RefitMesh(ref ComputeBuffer RealizedAggNodes) {
         int CurVertOffset = 0;
         UnityEngine.Profiling.Profiler.BeginSample("ReMesh Aggregate");
         for(int i = 0; i < TotalObjects; i++) {
-            var SkinnedRootBone = SkinnedMeshes[i].bones[0];
+            var SkinnedRootBone = SkinnedMeshes[i].rootBone;
             int IndexCount = IndexCounts[i];
             MeshRefit.SetInt("VertOffset", CurVertOffset);
             MeshRefit.SetInt("gVertexCount", IndexCount);

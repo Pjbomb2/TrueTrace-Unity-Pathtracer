@@ -85,6 +85,7 @@ public class EditModeFunctions : EditorWindow {
       public float RenderScale = 1.0f;
       public float DoFAperature = 0.2f;
       public float DoFFocal = 1.0f;
+      public int MultiscatterIterations = 4;
       public int SVGF_Atrous_Kernel_Sizes = 6;
       public int Atrous_Kernel_Sizes = 6;
       public int BounceCount = 24;
@@ -107,9 +108,12 @@ public class EditModeFunctions : EditorWindow {
       public bool AllowSampleRegeneration = false;
       public bool AllowPrecomputedSampling = true;
       public bool AllowToneMap = true;
+      public bool UseASVGF = false;
       public float VolumeDensity = 0.001f;
       public int RISSampleCount = 32;
       public int SpatialSampleCount = 5;
+      public int MaxIterations = 4;
+
       public float BloomStrength = 32.0f;
       public AssetManager Assets;
       private void OnGUI() {
@@ -289,6 +293,23 @@ public class EditModeFunctions : EditorWindow {
             SVGFVertOffset += 25;
             RayMaster.SVGFAtrousKernelSizes = SVGF_Atrous_Kernel_Sizes;
          }
+
+         Rect ASVGFToggle = new Rect(10, SVGFVertOffset, (position.width - 10) / 2, 20);
+         UseASVGF = GUI.Toggle(ASVGFToggle, UseASVGF, "Use A-SVGF Denoiser");
+         RayMaster.UseASVGF = UseASVGF;
+         SVGFVertOffset += 25;
+         if(UseASVGF) {
+            Rect ASVGFAtrousSize = new Rect(Mathf.Max((position.width - 10) / 4,145), SVGFVertOffset, (position.width - 10) / 4, 20);
+            Rect ASVGFAtrousSizeLabel = new Rect(10, SVGFVertOffset, Mathf.Max((position.width - 10) / 4,145), 20);
+            GUI.Label(ASVGFAtrousSizeLabel, "ASVGF Atrous Kernel Size");
+            MaxIterations = EditorGUI.IntField(ASVGFAtrousSize, MaxIterations);
+            MaxIterations = Mathf.Max(MaxIterations, 4);
+            MaxIterations = Mathf.Min(MaxIterations, 6);
+            RayMaster.MaxIterations = MaxIterations;
+            SVGFVertOffset += 25;
+
+         }
+
          RayMaster.UseSVGF = UseSVGF;
          Rect AtrousToggle = new Rect(10,  SVGFVertOffset, (position.width - 10) / 2, 20);
          UseAtrous = GUI.Toggle(AtrousToggle, UseAtrous, "Use Atrous Denoiser");
@@ -322,6 +343,14 @@ public class EditModeFunctions : EditorWindow {
          AllowToneMap = GUI.Toggle(ToneMapToggle, AllowToneMap, "Enable Tonemapping");
          SVGFVertOffset += 25;
          RayMaster.AllowToneMap = AllowToneMap;
+
+         Rect AtmoCountLabel = new Rect(10, SVGFVertOffset + 25, Mathf.Max((position.width - 10) / 4,145), 20);
+         Rect AtmoCountRect = new Rect(Mathf.Max((position.width - 10) / 4,145), SVGFVertOffset + 25, (position.width - 10) / 4, 20);
+         GUI.Label(AtmoCountLabel, "Atmospheric Scatter Samples");
+         MultiscatterIterations = EditorGUI.IntField(AtmoCountRect, MultiscatterIterations);
+         RayMaster.AtmoNumLayers = MultiscatterIterations;
+
+         SVGFVertOffset += 25;
 
          Rect SampleCountLabel =   new Rect(10, SVGFVertOffset + 25, Mathf.Max((position.width - 10) / 4,145), 20);
          Rect SampleCountIndicator = new Rect(Mathf.Max((position.width - 10) / 4,145), SVGFVertOffset + 25, (position.width - 10) / 4, 20);

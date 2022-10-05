@@ -92,6 +92,7 @@ public class RayTracingObject : MonoBehaviour {
 	}
 	
     private void OnEnable() {
+    	// if(this.gameObject.GetComponent<SkinnedMeshRenderer>() != null) this.gameObject.GetComponent<SkinnedMeshRenderer>().sharedMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
     	if(gameObject.scene.isLoaded && this.transform.parent.GetComponent<ParentObject>() != null) {
     		matfill();
 	    	this.transform.parent.GetComponent<ParentObject>().NeedsToUpdate = true;
