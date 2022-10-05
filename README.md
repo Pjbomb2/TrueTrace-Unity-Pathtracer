@@ -23,7 +23,7 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 <li>Diffuse, Glossy(kinda), Dielectric(think of glass), Conductor(metal), Diffuse Transmission, Emissive, Plastic, and Disney BSDF materials</li>
 <li>Ability to move, add, and remove objects during play</li>
 <li>Ability to update material properties on the fly during play</li>
-<li>SVGF Denoiser and Atrous Denoiser</li>
+<li>ASVGF, SVGF, and Atrous Denoiser</li>
 <li>BVH Building off of main thread for loading objects, allows objects to be spawned, and then built without lagging the main thread, and appearing when its done(All lag from spawning objects actually comes from remaking the texture atlas, lower res atlas's remove all lag, still investigating different ways of loading textures because of this)</li>
 <li>Compressed Wide Bounding Volume Hierarchy as the Acceleration Structure (See Ylitie et al. 2017 below)</li>
 <li>Albedo Textures(just apply them to the GameObjects material)</li>
@@ -141,6 +141,8 @@ BVH Options Description -
   <li>Use Temporal Antialiasing - Enables Temporal Antialiasing(TAA)</li>
   <li>Use SVGF Denoiser - Turns on the SVGF denoiser</li>
   <li>(If SVGF Denosier is on)Atrous Kernel Size - The amount of times the SVGF denoiser runs through the Atrous kernel</li>
+  <li>Use ASVGF Denoiser - Turns on the ASVGF denoiser</li>
+  <li>(If ASVGF Denoiser is on)ASVGF Atrous Kernel Size - The amount of iterations the final ASVGF atrous goes through, limited to 4, 5, and 6</li>
   <li>Use Atrous Denoiser - Turns on the Atrous denoiser(can be combined with SVGF)</li>
   <li>Enable Tonemapping - Turns on Filmic Tonemapping</li>
   <li>Atmospheric Scatter Samples - Lower this to 1 if you keep crashing on entering game mode(controls how many atmospheric samples are precomputed)</li>
