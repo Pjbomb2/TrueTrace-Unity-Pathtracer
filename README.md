@@ -138,6 +138,7 @@ BVH Options Description -
   <li>Allow ReSTIR Precomputed Sampling - Samples lights in a more efficient way but introduces artifacts due to sample correlation</li>
   <li>Allow ReSTIR Temporal - Enables the Temporal pass of ReSTIR(allows samples to travel across time</li>
   <li>Allow ReSTIR Spatial - Enables the Spatial pass of ReSTIR(Allows pixels to choose to use the neighboring pixels sample instead)</li>
+  <li>ReSTIR Spatial M-Cap - Tuneable parameter, increase this if you have lots of lights(standard values would be between 32 and 640 for reference, but going higher or lower is needed at times)</li>
   <li>Use Temporal Antialiasing - Enables Temporal Antialiasing(TAA)</li>
   <li>Use SVGF Denoiser - Turns on the SVGF denoiser</li>
   <li>(If SVGF Denosier is on)Atrous Kernel Size - The amount of times the SVGF denoiser runs through the Atrous kernel</li>
@@ -163,7 +164,7 @@ BVH Options Description -
 # Sample Images(Taken from various stages of development)
 
 
-
+![](/Images/Portal2.png)
 https://user-images.githubusercontent.com/31225585/194152525-e77ad1d2-546d-4a91-8069-91897b1a7130.mp4
 ![](/Images/NewReSTIRV2.png)
 ![](/Images/NewSponza3V2.png)
