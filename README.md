@@ -2,6 +2,7 @@ Notes:</br>
 Currently working on:
 <ul>
   <li>Looking desperately for optimizations(let me know if you have any ideas)</li>
+  <li>ReSTIR GI(VERY VERY cool thing that makes scenes converge much much faster than before, just needs a bit more work)</li>
 </ul>
 Currently needs to be done but havent implemented fully:
 <ul>
