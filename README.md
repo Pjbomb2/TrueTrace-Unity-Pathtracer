@@ -2,7 +2,6 @@ Notes:</br>
 Currently working on:
 <ul>
   <li>Looking desperately for optimizations(let me know if you have any ideas)</li>
-  <li>ReSTIR GI(VERY VERY cool thing that makes scenes converge much much faster than before, just needs a bit more work)</li>
 </ul>
 Currently needs to be done but havent implemented fully:
 <ul>
@@ -47,6 +46,7 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 <li>Precomputed Multiple Atmospheric Scattering for dynamic and realtime sky(from ebruneton below)</li>
 <li>Object Instancing</li>
 <li>Multiple Importance Sampling for helping NEE converge much faster</li>
+<li>ReSTIR GI for faster convergence in complex scenes and more complete images in scenes with changing lighting</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
@@ -152,6 +152,17 @@ BVH Options Description -
   <li>Take Screenshot - Takes a screenshot at game view resolution and saves it to Assets/ScreenShots(You need to create this folder)</li>
   <li>QuickStart - Will attempt to automatially assign RayTracingObjects and ParentObjects to all child under the GameObject named "Scene" with an AssetManager attatched</li>
   </ul>
+  ## ReSTIR GI Settings
+  <ul>
+ <li>Do Sample Connection Validation - Makes shadows sharper by confirming connection points, reduces performance though due to the 2 shadow rays(hence why its an option</li>
+ <li>ReSTIR GI Update Rate - Controls how fast temporal samples are thrown away, setting it to 0 means images will be much cleaner over time, but wont react to lighting, while for scenes with changing lighting, I have found that a value around 12 is an acceptable midpoint</li>
+ <li>Use ReSTIR GI Temporal - Just turns on or off the ability for samples to be temporally reprojected(re-used from previous frames)</li>
+ <li>ReSTIR GI Temporal M Cap - Similar to Update Rate, and goes hand in hand and should be used together with it, 12 is an acceptable midpoint, and 0 allows it to accumulate forever(produces much cleaner image  but doesnt react to lighting or object changes)</li>
+ <li>Use ReSTIR GI Spatial - Allows samples to draw from neighbors to try and find a better path</li>
+ <li>ReSTIR GI Spatial Sample Count - The number of neighbors a sample is allowed to sample</li>
+ <li>Enable Spatial Stabalizer - Allows low sample count samples to be re-fed into temporal, useful if you have a fast moving object, reduces trailing noise by a lot, but can introduce some artifacts</li>
+ 
+ </ul>
   
  ## Materials
  <ul>
@@ -226,4 +237,4 @@ Disney BSDF from: https://www.shadertoy.com/view/sltXRl
 
 
 ## Ideas/Reminders for later
-ReGIR, Find an alternative to atlas's, Reduce memory consumption, work on adding back in Mitsuba scene support
+Find an alternative to atlas's, Reduce memory consumption, work on adding back in Mitsuba scene support
