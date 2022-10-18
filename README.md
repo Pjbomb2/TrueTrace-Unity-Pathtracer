@@ -155,7 +155,7 @@ BVH Options Description -
   ## ReSTIR GI Settings
   <ul>
  <li>Do Sample Connection Validation - Makes shadows sharper by confirming connection points, reduces performance though due to the 2 shadow rays(hence why its an option</li>
- <li>ReSTIR GI Update Rate - Controls how fast temporal samples are thrown away, setting it to 0 means images will be much cleaner over time, but wont react to lighting, while for scenes with changing lighting, I have found that a value around 12 is an acceptable midpoint</li>
+ <li>ReSTIR GI Update Rate - Controls how fast temporal samples are thrown away, setting it to 0 means images will be much cleaner over time, but wont react to lighting, while for scenes with changing lighting, I have found that a value around 9 is an acceptable midpoint</li>
  <li>Use ReSTIR GI Temporal - Just turns on or off the ability for samples to be temporally reprojected(re-used from previous frames)</li>
  <li>ReSTIR GI Temporal M Cap - Similar to Update Rate, and goes hand in hand and should be used together with it, 12 is an acceptable midpoint, and 0 allows it to accumulate forever(produces much cleaner image  but doesnt react to lighting or object changes)</li>
  <li>Use ReSTIR GI Spatial - Allows samples to draw from neighbors to try and find a better path</li>
