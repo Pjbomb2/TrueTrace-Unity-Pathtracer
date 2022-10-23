@@ -5,55 +5,68 @@ using System.Collections.Generic;
 
 [ExecuteInEditMode][System.Serializable]
 public class RayTracingObject : MonoBehaviour {
-	public enum Options {Diffuse, Metallic, Glass, Glossy, Unused, Volumetric, SubSurfaceScattering, DiffuseTransmission, Plastic, Disney};
+	public enum Options {Diffuse, Disney, Glossy, Cutout, Volumetric, SubSurfaceScattering, DiffuseTransmission, Plastic};
 	public Options[] MaterialOptions;
+	public Vector3[] TransmissionColor, BaseColor;
 	public float[] emmission; 
 	public Vector3[] EmissionColor;
 	public float[] Roughness;
-	public Vector3[] eta, BaseColor;
-	[HideInInspector] public int[] MaterialIndex;
-	[HideInInspector] public int[] LocalMaterialIndex;
+	public float[] IOR;
 
 
 	public float[] Metallic;
-	public float[] SubSurface;
 	public float[] SpecularTint;
 	public float[] Sheen;
 	public float[] SheenTint;
 	public float[] ClearCoat;
-	public float[] ClearCoatRoughness;
+	public float[] ClearCoatGloss;
+	public float[] Anisotropic;
+	public float[] Flatness;
+	public float[] DiffTrans;
 	public float[] SpecTrans;
+	public int[] Thin;
 
+	[HideInInspector] public int[] MaterialIndex;
+	[HideInInspector] public int[] LocalMaterialIndex;
 	public void matfill() {
 		 Mesh mesh = new Mesh();
+		 			int SubMeshCount;
 		 if(GetComponent<MeshFilter>() != null) { 
 		 	mesh = GetComponent<MeshFilter>().sharedMesh;
+		 	SubMeshCount = (GetComponent<MeshRenderer>().sharedMaterials).Length;
 	 	} else {
 	 		GetComponent<SkinnedMeshRenderer>().BakeMesh(mesh);
+			SubMeshCount = (GetComponent<SkinnedMeshRenderer>().sharedMaterials).Length;
 	 	}
-			int SubMeshCount = mesh.subMeshCount;
+	 	if(mesh == null) {
+	 		DestroyImmediate(this);
+	 	}
 			if(EmissionColor == null || EmissionColor.Length != SubMeshCount) EmissionColor = new Vector3[SubMeshCount];
 		
-			if(Metallic == null || Metallic.Length != mesh.subMeshCount) {
+			if(Thin == null || Thin.Length != SubMeshCount) {
+				TransmissionColor = new Vector3[SubMeshCount];
+				IOR = new float[SubMeshCount];
 				Metallic = new float[SubMeshCount];
-				SubSurface = new float[SubMeshCount];
 				SpecularTint = new float[SubMeshCount];
 				Sheen = new float[SubMeshCount];
 				SheenTint = new float[SubMeshCount];
 				ClearCoat = new float[SubMeshCount];
-				ClearCoatRoughness = new float[SubMeshCount];
+				ClearCoatGloss = new float[SubMeshCount];
+				Anisotropic = new float[SubMeshCount];
+				Flatness = new float[SubMeshCount];
+				DiffTrans = new float[SubMeshCount];
 				SpecTrans = new float[SubMeshCount];
+				Thin = new int[SubMeshCount];
 			}
 
 
 		try {
 			if(emmission == null || emmission.Length != mesh.subMeshCount) {
 			MaterialOptions = new Options[SubMeshCount];
-			LocalMaterialIndex = new int[mesh.subMeshCount];
+			LocalMaterialIndex = new int[SubMeshCount];
 			emmission = new float[SubMeshCount];
 			Roughness = new float[SubMeshCount];
-			eta = new Vector3[SubMeshCount];
-			System.Array.Fill(eta, new Vector3(1,1,1));
+			System.Array.Fill(IOR, 1);
 			BaseColor = new Vector3[SubMeshCount];
 			MaterialIndex = new int[SubMeshCount];
 			Material[] SharedMaterials = (GetComponent<Renderer>() != null) ? GetComponent<Renderer>().sharedMaterials : GetComponent<SkinnedMeshRenderer>().sharedMaterials;
@@ -71,8 +84,13 @@ public class RayTracingObject : MonoBehaviour {
 					}
 				}
 				if(SharedMaterials[i].GetFloat("_Mode") == 3.0f) {
-					MaterialOptions[i] = Options.Glass;
-					eta[i].x = 1.33f;
+					MaterialOptions[i] = Options.Disney;
+					IOR[i] = 1.33f;
+					SpecTrans[i] = 1;
+
+				}
+				if(SharedMaterials[i].GetFloat("_Mode") == 1.0f) {
+					MaterialOptions[i] = Options.Cutout;
 				}
 				if(!EmissionColored) BaseColor[i] = (SharedMaterials[i].mainTexture == null) ? ((SharedMaterials[i].HasProperty("_Color")) ? new Vector3(SharedMaterials[i].color.r, SharedMaterials[i].color.g, SharedMaterials[i].color.b) : new Vector3(0.78f, 0.14f, 0.69f)) : new Vector3(0.78f, 0.14f, 0.69f);
 			}
@@ -86,7 +104,7 @@ public class RayTracingObject : MonoBehaviour {
 	public void ResetData() {
 		emmission = null;
 		Roughness = null;
-		eta = null;
+		TransmissionColor = null;
 		MaterialOptions = null;
 		BaseColor = null;
 	}

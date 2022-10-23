@@ -11,6 +11,8 @@ public class Denoiser {
     private ComputeShader TAA;
     private ComputeShader Upscaler;
     private ComputeShader ToneMapper;
+    private ComputeShader TAAU;
+
 
     private RenderTexture _ColorDirectIn;
     private RenderTexture _ColorIndirectIn;
@@ -32,6 +34,10 @@ public class Denoiser {
     private RenderTexture PrevOutputTex;
     private RenderTexture PrevUpscalerTAA;
     private RenderTexture UpScalerLightingDataTexture;
+
+    private RenderTexture TAAA;
+    private RenderTexture TAAB;
+
 
 
     private ComputeBuffer A;
@@ -70,6 +76,11 @@ public class Denoiser {
     private int TAAKernel;
     private int TAAFinalizeKernel;
     private int TAAPrepareKernel;
+
+    private int TAAUKernel;
+    private int TAAUCopyKernel;
+
+
 
     private int UpsampleKernel;
 
@@ -138,6 +149,8 @@ public class Denoiser {
                 _TAAPrev.Release();
                 PrevOutputTex.Release();
                 PrevUpscalerTAA.Release();
+                TAAA.Release();
+                TAAB.Release();
             }
 
          CreateRenderTexture(ref _ColorDirectIn, false);
@@ -158,6 +171,8 @@ public class Denoiser {
          CreateRenderTexture2(ref PrevOutputTex, false);
          CreateRenderTexture2(ref PrevUpscalerTAA, false);
          CreateRenderTexture2(ref UpScalerLightingDataTexture, false);
+         CreateRenderTexture2(ref TAAA, false);
+         CreateRenderTexture2(ref TAAB, false);
         }
     }
     
@@ -173,6 +188,7 @@ public class Denoiser {
         if(TAA == null) {TAA = Resources.Load<ComputeShader>("PostProcess/TAA");}
         if(Upscaler == null) {Upscaler = Resources.Load<ComputeShader>("PostProcess/Upscaler");}
         if(ToneMapper == null) {ToneMapper = Resources.Load<ComputeShader>("PostProcess/ToneMap");}
+        if(TAAU == null) {TAAU = Resources.Load<ComputeShader>("PostProcess/TAAU");}
 
         VarianceKernel = SVGF.FindKernel("kernel_variance");
         CopyKernel = SVGF.FindKernel("kernel_copy");
@@ -182,6 +198,10 @@ public class Denoiser {
         AtrousKernel = AtrousDenoiser.FindKernel("Atrous");
         AtrousCopyKernel = AtrousDenoiser.FindKernel("kernel_copy");
         AtrousFinalizeKernel = AtrousDenoiser.FindKernel("kernel_finalize");
+
+        TAAUKernel = TAAU.FindKernel("TAAU");
+        TAAUCopyKernel = TAAU.FindKernel("Copy");
+
 
         BloomKernel = Bloom.FindKernel("Bloom");
 
@@ -226,7 +246,7 @@ public class Denoiser {
         InitRenderTexture();
     }
 
-    public void ExecuteSVGF(int CurrentSamples, int AtrousKernelSize, ref ComputeBuffer _ColorBuffer, ref RenderTexture _target, ref RenderTexture _Albedo, ref RenderTexture _NormTex, bool DiffRes) {
+    public void ExecuteSVGF(int CurrentSamples, int AtrousKernelSize, ref ComputeBuffer _ColorBuffer, ref RenderTexture _target, ref RenderTexture _Albedo, ref RenderTexture _NormTex, bool DiffRes, ref RenderTexture PrevDepthTexMain, ref RenderTexture PrevNormalTex) {
 
         InitRenderTexture();
         SVGF.SetBool("DiffRes", DiffRes);
@@ -251,6 +271,7 @@ public class Denoiser {
         SVGF.SetTextureFromGlobal(CopyKernel, "DepthTex", "_CameraDepthTexture");
         SVGF.SetTextureFromGlobal(CopyKernel, "PrevDepthTex", "_LastCameraDepthTexture");
         SVGF.SetTexture(CopyKernel, "_CameraNormalDepthTex", _NormTex);
+        SVGF.SetTexture(CopyKernel, "PrevDepthTexMain", PrevDepthTexMain);
         SVGF.Dispatch(CopyKernel, threadGroupsX, threadGroupsY, 1);
         UnityEngine.Profiling.Profiler.EndSample();
 
@@ -311,13 +332,14 @@ public class Denoiser {
         SVGF.SetTexture(FinalizeKernel, "Result", _target);
         SVGF.SetTexture(FinalizeKernel, "HistoryTex", _History);
         SVGF.SetTexture(FinalizeKernel, "_Albedo", _Albedo);
+        SVGF.SetTexture(FinalizeKernel, "PrevNormTex", PrevNormalTex);
         
         SVGF.SetTexture(FinalizeKernel, "FrameBufferMoment", _FrameMoment);
         SVGF.Dispatch(FinalizeKernel, threadGroupsX, threadGroupsY, 1);
         UnityEngine.Profiling.Profiler.EndSample();
 
     }
-    public void ExecuteAtrous(int AtrousKernelSize, float n_phi, float p_phi, float c_phi, ref RenderTexture _PosTex, ref RenderTexture _target, ref RenderTexture _converged, ref RenderTexture _Albedo, ref RenderTexture _NormTex) {
+    public void ExecuteAtrous(int AtrousKernelSize, float n_phi, float p_phi, float c_phi, ref RenderTexture _PosTex, ref RenderTexture _target, ref RenderTexture _converged, ref RenderTexture _Albedo, ref RenderTexture _NormTex, int curframe) {
         InitRenderTexture();
         Matrix4x4 viewprojmatrix = _camera.projectionMatrix * _camera.worldToCameraMatrix;
         AtrousDenoiser.SetMatrix("viewprojection", viewprojmatrix);
@@ -325,16 +347,20 @@ public class Denoiser {
         AtrousDenoiser.SetTexture(AtrousCopyKernel, "PosTex", _PosTex);
         AtrousDenoiser.SetTexture(AtrousCopyKernel, "RWNormalAndDepth", _NormalDepth);
         AtrousDenoiser.SetTexture(AtrousCopyKernel, "_CameraNormalDepthTex", _NormTex);
+        AtrousDenoiser.SetTextureFromGlobal(AtrousCopyKernel, "NormalTex", "_CameraGBufferTexture2");
         AtrousDenoiser.Dispatch(AtrousCopyKernel, threadGroupsX2, threadGroupsY2, 1);
 
         Graphics.CopyTexture(_converged, 0, 0, _ColorDirectIn, 0, 0);
             AtrousDenoiser.SetFloat("n_phi", n_phi);
             AtrousDenoiser.SetFloat("p_phi", p_phi);
             AtrousDenoiser.SetInt("KernelSize", AtrousKernelSize);
+            AtrousDenoiser.SetFloat("CurFrame", curframe);
             AtrousDenoiser.SetTexture(AtrousKernel, "PosTex", _PosTex);
             AtrousDenoiser.SetTexture(AtrousKernel, "NormalAndDepth", _NormalDepth);
             int CurrentIteration = 0;
-            for(int i = 1; i <= AtrousKernelSize; i *= 2) {
+            AtrousDenoiser.SetTexture(AtrousKernel, "_Albedo", _Albedo);
+
+            for(int i = 1; i <= AtrousKernelSize; i++) {
                 var step_size = i;
                 var c_phi2 = c_phi;
                 bool UseFlipped = (CurrentIteration % 2 == 1);
@@ -346,7 +372,7 @@ public class Denoiser {
                 AtrousDenoiser.Dispatch(AtrousKernel, threadGroupsX2, threadGroupsY2, 1);
                 c_phi /= 2.0f;
             }
-            AtrousDenoiser.SetTexture(AtrousFinalizeKernel, "ResultIn", (CurrentIteration % 2 == 1) ? _ColorDirectIn : _ColorDirectOut);
+            AtrousDenoiser.SetTexture(AtrousFinalizeKernel, "ResultIn", AtrousKernelSize == 0 ? _target : (CurrentIteration % 2 == 1) ? _ColorDirectIn : _ColorDirectOut);
             AtrousDenoiser.SetTexture(AtrousFinalizeKernel, "_Albedo", _Albedo);
             AtrousDenoiser.SetTexture(AtrousFinalizeKernel, "Result", _target);
             AtrousDenoiser.Dispatch(AtrousFinalizeKernel, threadGroupsX2, threadGroupsY2, 1);
@@ -468,6 +494,21 @@ public class Denoiser {
         ToneMapper.SetInt("height", Output.height);
         ToneMapper.SetTexture(0, "Result", Output);
         ToneMapper.Dispatch(0,threadGroupsX2,threadGroupsY2,1);
+    }
+
+    public void ExecuteTAAU(ref RenderTexture Output, ref RenderTexture Input) {//need to fix this so it doesnt create new textures every time
+        TAAU.SetInt("source_width", SourceWidth);
+        TAAU.SetInt("source_height", SourceHeight);
+        TAAU.SetInt("target_width", Output.width);
+        TAAU.SetInt("target_height", Output.height);
+        TAAU.SetTexture(TAAUKernel, "IMG_ASVGF_TAA_A", TAAA);
+        TAAU.SetTexture(TAAUKernel, "TEX_ASVGF_TAA_B", TAAB);
+        TAAU.SetTexture(TAAUKernel, "TEX_FLAT_COLOR", Input);
+        TAAU.SetTexture(TAAUKernel, "IMG_TAA_OUTPUT", Output);
+        TAAU.SetTextureFromGlobal(TAAUKernel, "Albedo", "_CameraGBufferTexture0");
+        TAAU.SetTextureFromGlobal(TAAUKernel, "TEX_FLAT_MOTION", "_CameraMotionVectorsTexture");
+        TAAU.Dispatch(TAAUKernel,threadGroupsX2,threadGroupsY2,1);
+        Graphics.CopyTexture(TAAA, TAAB);
     }
 
 }

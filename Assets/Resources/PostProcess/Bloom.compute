@@ -42,7 +42,7 @@ inline float3 calculateBloomTile(const float lod, const float2 offset) {
         }
     }
     
-    return bloom / totalWeight;
+    return bloom / max(totalWeight,0.0001f);
 }
 
 float3 calculateBloom() {

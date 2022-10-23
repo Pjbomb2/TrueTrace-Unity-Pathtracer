@@ -374,6 +374,7 @@ public class AssetManager : MonoBehaviour {//This handels all the data
             RenderQueCount = RenderQue.Count - 1;
             for(int i = RenderQueCount; i >= 0; i--) {//Demotes from Render Que to Build Que in case mesh has changed
                 if(RenderQue[i].NeedsToUpdate) {
+                    RenderQue[i].ClearAll();
                     RenderQue[i].LoadData();
                     BuildQue.Add(RenderQue[i]);
                     RenderQue.RemoveAt(i);
@@ -840,17 +841,21 @@ public void CreateAABB(Transform transform, ref AABB aabb) {//Update the Transfo
                     if(TempMat.HasAlbedoTex != 1)  TempMat.BaseColor = CurrentMaterial.BaseColor[i3];
                     TempMat.emmissive = CurrentMaterial.emmission[i3];
                     TempMat.Roughness = ((int)CurrentMaterial.MaterialOptions[i3] != 1) ? CurrentMaterial.Roughness[i3] : Mathf.Max(CurrentMaterial.Roughness[i3], 0.000001f);
-                    TempMat.eta = CurrentMaterial.eta[i3];
+                    TempMat.TransmittanceColor = CurrentMaterial.TransmissionColor[i3];
                     TempMat.MatType = (int)CurrentMaterial.MaterialOptions[i3];
                     TempMat.EmissionColor = CurrentMaterial.EmissionColor[i3];
                     TempMat.metallic = CurrentMaterial.Metallic[i3];
-                    TempMat.subsurface = CurrentMaterial.SubSurface[i3];
                     TempMat.specularTint = CurrentMaterial.SpecularTint[i3];
                     TempMat.sheen = CurrentMaterial.Sheen[i3];
                     TempMat.sheenTint = CurrentMaterial.SheenTint[i3];
                     TempMat.clearcoat = CurrentMaterial.ClearCoat[i3];
-                    TempMat.clearcoatRoughness = CurrentMaterial.ClearCoatRoughness[i3];
+                    TempMat.IOR = CurrentMaterial.IOR[i3];
+                    TempMat.Thin = CurrentMaterial.Thin[i3];
+                    TempMat.clearcoatGloss = CurrentMaterial.ClearCoatGloss[i3];
                     TempMat.specTrans = CurrentMaterial.SpecTrans[i3];
+                    TempMat.anisotropic = CurrentMaterial.Anisotropic[i3];
+                    TempMat.diffTrans = CurrentMaterial.DiffTrans[i3];
+                    TempMat.flatness = CurrentMaterial.Flatness[i3];
                     _Materials[CurrentMaterial.MaterialIndex[i3]] = TempMat;
                 }
             }
@@ -866,9 +871,21 @@ public void CreateAABB(Transform transform, ref AABB aabb) {//Update the Transfo
                     if(TempMat.HasAlbedoTex != 1) TempMat.BaseColor = CurrentMaterial.BaseColor[i3];
                     TempMat.emmissive = CurrentMaterial.emmission[i3];
                     TempMat.Roughness = ((int)CurrentMaterial.MaterialOptions[i3] != 1) ? CurrentMaterial.Roughness[i3] : Mathf.Max(CurrentMaterial.Roughness[i3], 0.000001f);
-                    TempMat.eta = CurrentMaterial.eta[i3];
+                    TempMat.TransmittanceColor = CurrentMaterial.TransmissionColor[i3];
                     TempMat.MatType = (int)CurrentMaterial.MaterialOptions[i3];
                     TempMat.EmissionColor = CurrentMaterial.EmissionColor[i3];
+                    TempMat.metallic = CurrentMaterial.Metallic[i3];
+                    TempMat.specularTint = CurrentMaterial.SpecularTint[i3];
+                    TempMat.sheen = CurrentMaterial.Sheen[i3];
+                    TempMat.sheenTint = CurrentMaterial.SheenTint[i3];
+                    TempMat.clearcoat = CurrentMaterial.ClearCoat[i3];
+                    TempMat.IOR = CurrentMaterial.IOR[i3];
+                    TempMat.Thin = CurrentMaterial.Thin[i3];
+                    TempMat.clearcoatGloss = CurrentMaterial.ClearCoatGloss[i3];
+                    TempMat.specTrans = CurrentMaterial.SpecTrans[i3];
+                    TempMat.anisotropic = CurrentMaterial.Anisotropic[i3];
+                    TempMat.diffTrans = CurrentMaterial.DiffTrans[i3];
+                    TempMat.flatness = CurrentMaterial.Flatness[i3];
                     _Materials[CurrentMaterial.MaterialIndex[i3]] = TempMat;
                 }
             }

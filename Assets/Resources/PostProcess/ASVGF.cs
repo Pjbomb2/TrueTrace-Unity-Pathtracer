@@ -8,7 +8,6 @@ public class ASVGF
 
     public RenderTexture ASVGF_HIST_COLOR_HF;
     public RenderTexture TEX_PT_VIEW_DEPTH_A;
-    public RenderTexture TEX_PT_VIEW_DEPTH_B;
     public RenderTexture ASVGF_ATROUS_PING_LF_SH;
     public RenderTexture ASVGF_ATROUS_PONG_LF_SH;
     public RenderTexture ASVGF_ATROUS_PING_LF_COCG;
@@ -26,7 +25,8 @@ public class ASVGF
     public RenderTexture ASVGF_GRAD_HF_SPEC_PONG;
     public RenderTexture PT_VIEW_DIRECTION;
     public RenderTexture TEX_PT_MOTION;
-    public RenderTexture PT_GEO_NORMAL;
+    public RenderTexture PT_GEO_NORMAL_A;
+    public RenderTexture PT_GEO_NORMAL_B;
     public RenderTexture ASVGF_FILTERED_SPEC_A;
     public RenderTexture ASVGF_FILTERED_SPEC_B;
     public RenderTexture ASVGF_HIST_MOMENTS_HF_A;
@@ -38,13 +38,13 @@ public class ASVGF
     public RenderTexture ASVGF_GRAD_SMPL_POS_A;
     public RenderTexture ASVGF_GRAD_SMPL_POS_B;
     public RenderTexture TEX_PT_NORMAL_A;
-    public RenderTexture TEX_PT_NORMAL_B;
     public RenderTexture RNGTexB;
 
     public RenderTexture PT_LF1;
     public RenderTexture PT_LF2;
 
     public RenderTexture TEX_PT_COLOR_HF;
+    public RenderTexture TEX_PT_COLOR_SPEC;
 
     public RenderTexture DebugTex;
 
@@ -72,7 +72,6 @@ public class ASVGF
         RayB?.Release();
         ASVGF_HIST_COLOR_HF.Release();
         TEX_PT_VIEW_DEPTH_A.Release();
-        TEX_PT_VIEW_DEPTH_B.Release();
         ASVGF_ATROUS_PING_LF_SH.Release();
         ASVGF_ATROUS_PONG_LF_SH.Release();
         ASVGF_ATROUS_PING_LF_COCG.Release();
@@ -91,7 +90,8 @@ public class ASVGF
         ASVGF_GRAD_HF_SPEC_PONG.Release();
         PT_VIEW_DIRECTION.Release();
         TEX_PT_MOTION.Release();
-        PT_GEO_NORMAL.Release();
+        PT_GEO_NORMAL_A.Release();
+        PT_GEO_NORMAL_B.Release();
         ASVGF_FILTERED_SPEC_A.Release();
         ASVGF_FILTERED_SPEC_B.Release();
         ASVGF_HIST_MOMENTS_HF_A.Release();
@@ -107,6 +107,7 @@ public class ASVGF
         PT_LF2.Release();
         TEX_PT_COLOR_HF.Release();
         DebugTex.Release();
+        TEX_PT_COLOR_SPEC.Release();
     }
 
     
@@ -149,7 +150,7 @@ public class ASVGF
         ThisTex.Create();
     }
 
-    private int iter;
+    public int iter;
     public void init(int ScreenWidth, int ScreenHeight, Camera camera) {
         this.ScreenWidth = ScreenWidth;
         this.ScreenHeight = ScreenHeight;
@@ -173,9 +174,7 @@ public class ASVGF
 
         CreateRenderTexture(ref ASVGF_HIST_COLOR_HF);
         CreateRenderTexture(ref TEX_PT_VIEW_DEPTH_A);
-        CreateRenderTexture(ref TEX_PT_VIEW_DEPTH_B);
         CreateRenderTexture(ref TEX_PT_NORMAL_A);
-        CreateRenderTexture(ref TEX_PT_NORMAL_B);
 
 
         CreateRenderTextureGrad(ref ASVGF_ATROUS_PING_LF_SH);
@@ -196,7 +195,8 @@ public class ASVGF
         CreateRenderTextureGrad(ref ASVGF_GRAD_HF_SPEC_PING);
         CreateRenderTextureGrad(ref ASVGF_GRAD_HF_SPEC_PONG);
         CreateRenderTexture(ref PT_VIEW_DIRECTION);
-        CreateRenderTexture(ref PT_GEO_NORMAL);
+        CreateRenderTexture(ref PT_GEO_NORMAL_A);
+        CreateRenderTexture(ref PT_GEO_NORMAL_B);
         CreateRenderTexture(ref ASVGF_FILTERED_SPEC_A);
         CreateRenderTexture(ref ASVGF_FILTERED_SPEC_B);
         CreateRenderTexture(ref ASVGF_HIST_MOMENTS_HF_A);
@@ -211,9 +211,10 @@ public class ASVGF
         CreateRenderTexture(ref TEX_PT_COLOR_HF);
         CreateRenderTexture(ref DebugTex);
         CreateRenderTexture(ref RNGTexB);
+        CreateRenderTexture(ref TEX_PT_COLOR_SPEC);
     }
 
-    public void DoRNG(ref RenderTexture RNGTex, int CurFrame, ref ComputeBuffer GlobalRays) {
+    public void DoRNG(ref RenderTexture RNGTex, int CurFrame, ref ComputeBuffer GlobalRays, ref RenderTexture TEX_PT_VIEW_DEPTH_B, ref RenderTexture TEX_PT_NORMAL_B) {
 UnityEngine.Profiling.Profiler.BeginSample("Init RNG");
         shader.SetMatrix("_CameraToWorld", camera.cameraToWorldMatrix);
         shader.SetMatrix("_CameraInverseProjection", camera.projectionMatrix.inverse);
@@ -233,6 +234,7 @@ UnityEngine.Profiling.Profiler.BeginSample("Init RNG");
         shader.SetBuffer(CopyRadiance, "RayA", RayA);
         shader.SetBuffer(CopyRadiance, "RayB", RayB);
         shader.SetBuffer(CopyRadiance, "GlobalRays", GlobalRays);
+        shader.SetTexture(CopyRadiance, "TEX_PT_GEO_NORMAL_A", PT_GEO_NORMAL_A);
         
         shader.Dispatch(CopyRadiance, Mathf.CeilToInt(ScreenWidth / 16.0f), Mathf.CeilToInt(ScreenHeight /16.0f), 1);
  UnityEngine.Profiling.Profiler.EndSample();
@@ -242,14 +244,14 @@ UnityEngine.Profiling.Profiler.BeginSample("Grad Reproject");
         shader.SetTexture(Reproject, "TEX_PT_MOTION", TEX_PT_MOTION);
         shader.SetTexture(Reproject, "TEX_PT_VIEW_DEPTH_A", TEX_PT_VIEW_DEPTH_A);
         shader.SetTexture(Reproject, "TEX_PT_VIEW_DEPTH_B", TEX_PT_VIEW_DEPTH_B);        
-        shader.SetTexture(Reproject, "TEX_PT_GEO_NORMAL_A", TEX_PT_NORMAL_A);
+        shader.SetTexture(Reproject, "TEX_PT_GEO_NORMAL_A", PT_GEO_NORMAL_A);
         shader.SetTexture(Reproject, "TEX_PT_NORMAL_A", TEX_PT_NORMAL_A);
         shader.SetTexture(Reproject, "TEX_PT_NORMAL_B", TEX_PT_NORMAL_B);
-        shader.SetTexture(Reproject, "TEX_PT_GEO_NORMAL_B", TEX_PT_NORMAL_B);
+        shader.SetTexture(Reproject, "TEX_PT_GEO_NORMAL_B", PT_GEO_NORMAL_B);
         shader.SetTexture(Reproject, "IMG_ASVGF_GRAD_SMPL_POS_A", ASVGF_GRAD_SMPL_POS_A);
         shader.SetTexture(Reproject, "IMG_ASVGF_GRAD_HF_SPEC_PING", ASVGF_GRAD_HF_SPEC_PING);
         shader.SetTexture(Reproject, "TEX_PT_COLOR_HF", TEX_PT_COLOR_HF);
-        shader.SetTexture(Reproject, "TEX_PT_COLOR_SPEC", ASVGF_ATROUS_PING_SPEC);
+        shader.SetTexture(Reproject, "TEX_PT_COLOR_SPEC", TEX_PT_COLOR_SPEC);
         shader.SetTexture(Reproject, "TEX_ASVGF_GRAD_SMPL_POS_B", ASVGF_GRAD_SMPL_POS_B);
         shader.SetTexture(Reproject, "TEX_ASVGF_GRAD_SMPL_POS_A", ASVGF_GRAD_SMPL_POS_A);
         shader.SetTexture(Reproject, "RNGTexA", RNGTex);
@@ -267,7 +269,7 @@ UnityEngine.Profiling.Profiler.BeginSample("Grad Reproject");
     }
 
 
-    public void Do(ref ComputeBuffer _ColorBuffer, ref RenderTexture NormalTex, ref RenderTexture Albedo, ref RenderTexture Output, ref RenderTexture RNGTex, ref ComputeBuffer SHBuff, int MaxIterations, bool DiffRes) {
+    public void Do(ref ComputeBuffer _ColorBuffer, ref RenderTexture NormalTex, ref RenderTexture Albedo, ref RenderTexture Output, ref RenderTexture RNGTex, ref ComputeBuffer SHBuff, int MaxIterations, bool DiffRes, ref RenderTexture TEX_PT_VIEW_DEPTH_B, ref RenderTexture TEX_PT_NORMAL_B) {
 UnityEngine.Profiling.Profiler.BeginSample("Init Colors");
 
 shader.SetInt("MaxIterations", MaxIterations);
@@ -278,11 +280,11 @@ shader.SetInt("MaxIterations", MaxIterations);
         shader.SetTexture(CopyData, "TEX_PT_COLOR_LF_SH", PT_LF1);
         shader.SetTexture(CopyData, "TEX_PT_COLOR_LF_COCG", PT_LF2);
         shader.SetTexture(CopyData, "TEX_PT_COLOR_HF", TEX_PT_COLOR_HF);
-        shader.SetTexture(CopyData, "TEX_PT_COLOR_SPEC", ASVGF_ATROUS_PING_SPEC);
+        shader.SetTexture(CopyData, "TEX_PT_COLOR_SPEC", TEX_PT_COLOR_SPEC);
         shader.SetTexture(CopyData, "Normal", NormalTex);
         shader.SetTexture(CopyData, "TEX_PT_MOTION", TEX_PT_MOTION);
 
-        shader.SetTexture(CopyData, "TEX_PT_NORMAL_A", TEX_PT_NORMAL_A);
+        shader.SetTexture(CopyData, "TEX_PT_GEO_NORMAL_A", PT_GEO_NORMAL_A);
         shader.SetTexture(CopyData, "DebugTex", DebugTex);
 
 
@@ -330,6 +332,8 @@ UnityEngine.Profiling.Profiler.BeginSample("Temporal");
         shader.SetTexture(Temporal, "TEX_PT_VIEW_DEPTH_B", TEX_PT_VIEW_DEPTH_B);
         shader.SetTexture(Temporal, "TEX_PT_NORMAL_A", TEX_PT_NORMAL_A);
         shader.SetTexture(Temporal, "TEX_PT_NORMAL_B", TEX_PT_NORMAL_B);
+        shader.SetTexture(Temporal, "TEX_PT_GEO_NORMAL_A", PT_GEO_NORMAL_A);
+        shader.SetTexture(Temporal, "TEX_PT_GEO_NORMAL_B", PT_GEO_NORMAL_B);
         shader.SetTexture(Temporal, "TEX_PT_COLOR_HF", TEX_PT_COLOR_HF);
         shader.SetTexture(Temporal, "TEX_PT_MOTION", TEX_PT_MOTION);
         shader.SetTexture(Temporal, "TEX_ASVGF_HIST_COLOR_LF_SH_B", ASVGF_HIST_COLOR_LF_SH_B);
@@ -360,7 +364,7 @@ shader.SetBool("DiffRes", DiffRes);
         for(int i = 0; i < MaxIterations; i++) {
             var e = i;
             shader.SetInt("iteration", e);
-            shader.SetTexture(Atrous_LF, "TEX_PT_GEO_NORMAL_A", TEX_PT_NORMAL_A);
+            shader.SetTexture(Atrous_LF, "TEX_PT_GEO_NORMAL_A", PT_GEO_NORMAL_A);
             shader.SetTexture(Atrous_LF, "TEX_PT_VIEW_DEPTH_A", TEX_PT_VIEW_DEPTH_A);
             shader.SetTexture(Atrous_LF, "TEX_PT_MOTION", TEX_PT_MOTION);
 
@@ -381,7 +385,7 @@ shader.SetBool("DiffRes", DiffRes);
             shader.SetTexture(Atrous, "TEX_PT_VIEW_DEPTH_A", TEX_PT_VIEW_DEPTH_A);
             shader.SetTexture(Atrous, "TEX_PT_MOTION", TEX_PT_MOTION);
             shader.SetTexture(Atrous, "TEX_ASVGF_HIST_MOMENTS_HF_A", ASVGF_HIST_MOMENTS_HF_A);
-            shader.SetTexture(Atrous, "TEX_PT_GEO_NORMAL_A", TEX_PT_NORMAL_A);
+            shader.SetTexture(Atrous, "TEX_PT_GEO_NORMAL_A", PT_GEO_NORMAL_A);
             shader.SetTexture(Atrous, "TEX_ASVGF_HIST_COLOR_LF_SH_A", ASVGF_HIST_COLOR_LF_SH_A);
             shader.SetTexture(Atrous, "TEX_ASVGF_HIST_COLOR_LF_COCG_A", ASVGF_HIST_COLOR_LF_COCG_A);
             shader.SetTexture(Atrous, "TEX_ASVGF_ATROUS_PING_HF", ASVGF_ATROUS_PING_HF);
@@ -440,8 +444,12 @@ UnityEngine.Profiling.Profiler.BeginSample("Finalize");
         shader.SetBuffer(Finalize, "RayA", RayA);
         shader.SetBuffer(Finalize, "RayB", RayB);
 
+        shader.SetTexture(Finalize, "TEX_PT_GEO_NORMAL_B", PT_GEO_NORMAL_B);
+        shader.SetTexture(Finalize, "TEX_PT_GEO_NORMAL_A", PT_GEO_NORMAL_A);
+
 
         shader.Dispatch(Finalize, Mathf.CeilToInt(ScreenWidth / 16.0f), Mathf.CeilToInt(ScreenHeight / 16.0f), 1);
+        // Graphics.CopyTexture(DebugTex, Output);
  UnityEngine.Profiling.Profiler.EndSample();
 
 

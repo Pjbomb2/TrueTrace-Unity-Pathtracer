@@ -113,8 +113,7 @@ public class VoxelObject : MonoBehaviour
             if(BaseColor.Equals(new Vector3(0,0,0))) BaseColor = new Vector3(0.1f,0.1f,0.1f);
             _Materials.Add(new MaterialData() {
                 BaseColor = BaseColor,
-                MatType = 0,
-                eta = new Vector3(0,0,0)
+                MatType = 0
                 });
         }
         LargestAxis = (int)Mathf.Max(Mathf.Max(Size.x, Size.y), Size.z);

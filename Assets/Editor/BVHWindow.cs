@@ -109,10 +109,20 @@ public class EditModeFunctions : EditorWindow {
       public bool AllowPrecomputedSampling = true;
       public bool AllowToneMap = true;
       public bool UseASVGF = false;
+      public int ReSTIRSpatialMCap = 32;
       public float VolumeDensity = 0.001f;
       public int RISSampleCount = 32;
       public int SpatialSampleCount = 5;
       public int MaxIterations = 4;
+      public bool UseTAAU = true;
+      public bool UseReSTIRGI = false;
+      public bool UseReSTIRGITemporal = true;
+      public bool UseReSTIRGISpatial = true;
+      public bool DoReSTIRGIConnectionValidation = true;
+      public int ReSTIRGISpatialCount = 5;
+      public int ReSTIRGIUpdateRate = 9;
+      public int ReSTIRGITemporalMCap = 12;
+      public bool ReSTIRSpatialStabalizer = false;
 
       public float BloomStrength = 32.0f;
       public AssetManager Assets;
@@ -210,6 +220,11 @@ public class EditModeFunctions : EditorWindow {
                SpatialSampleCount = EditorGUI.IntField(SpatialSampleCountRect, SpatialSampleCount);
                Rect SpatialSampleCountRectLabel = new Rect(190, SVGFVertOffset, 210, 20);
                GUI.Label(SpatialSampleCountRectLabel, "ReSTIR Spatial Sample Count");
+               Rect ReSTIRSpatialMCapRect = new Rect(375, SVGFVertOffset, 25, 20);
+               Rect ReSTIRSpatialMCapRectLabel = new Rect(400, SVGFVertOffset, 200, 20);
+               GUI.Label(ReSTIRSpatialMCapRectLabel, "ReSTIR Spatial M-Cap");
+               ReSTIRSpatialMCap = EditorGUI.IntField(ReSTIRSpatialMCapRect, ReSTIRSpatialMCap);
+               RayMaster.SpatialMCap = ReSTIRSpatialMCap;
             }
             SVGFVertOffset += 25;
          }
@@ -219,6 +234,45 @@ public class EditModeFunctions : EditorWindow {
          RayMaster.AllowReSTIRTemporal = AllowReSTIRTemporal;
          RayMaster.AllowReSTIRRegeneration = AllowSampleRegeneration;
          RayMaster.AllowReSTIRPrecomputedSamples = AllowPrecomputedSampling;
+
+         Rect ReSTIRGIToggle = new Rect(10, SVGFVertOffset, 110, 20);
+         UseReSTIRGI = GUI.Toggle(ReSTIRGIToggle, UseReSTIRGI, "Use ReSTIR GI");
+         SVGFVertOffset += 25;
+         if(UseReSTIRGI) {
+            Rect ReSTIRGIConnectionValidationToggle = new Rect(120, SVGFVertOffset - 25, 220, 20);
+            Rect ReSTIRGIUpdateRateRect = new Rect(340, SVGFVertOffset - 25, 20, 20);
+            Rect ReSTIRGIUpdateRateLabel = new Rect(360, SVGFVertOffset - 25, 200, 20);
+            ReSTIRGIUpdateRate = EditorGUI.IntField(ReSTIRGIUpdateRateRect, ReSTIRGIUpdateRate);
+             GUI.Label(ReSTIRGIUpdateRateLabel, "ReSTIR GI Update Rate(0 is off)");
+             DoReSTIRGIConnectionValidation = GUI.Toggle(ReSTIRGIConnectionValidationToggle, DoReSTIRGIConnectionValidation, "Do Sample Connection Validation");
+             Rect ReSTIRGITemporalToggle = new Rect(20, SVGFVertOffset, 200, 20);
+             SVGFVertOffset += 25;
+             Rect ReSTIRGISpatialToggle = new Rect(20, SVGFVertOffset, 200, 20);
+            Rect SpatialSampleCountRect = new Rect(170, SVGFVertOffset, 20, 20);
+            ReSTIRGISpatialCount = EditorGUI.IntField(SpatialSampleCountRect, ReSTIRGISpatialCount);
+            Rect SpatialSampleCountRectLabel = new Rect(190, SVGFVertOffset, 210, 20);
+             GUI.Label(SpatialSampleCountRectLabel, "ReSTIR GI Spatial Sample Count");
+
+            Rect TemporalMCapRect = new Rect(190, SVGFVertOffset - 25, 20, 20);
+            ReSTIRGITemporalMCap = EditorGUI.IntField(TemporalMCapRect, ReSTIRGITemporalMCap);
+            Rect TemporalMCapRectLabel = new Rect(210, SVGFVertOffset - 25, 310, 20);
+             GUI.Label(TemporalMCapRectLabel, "ReSTIR GI Temporal M Cap(0 for unlimited)");
+
+             Rect ReSTIRGISpatialStabalizerToggle = new Rect(390, SVGFVertOffset, 200, 20);
+             ReSTIRSpatialStabalizer = GUI.Toggle(ReSTIRGISpatialStabalizerToggle, ReSTIRSpatialStabalizer, "Enable Spatial Stabalizer");
+
+             SVGFVertOffset += 25;
+             UseReSTIRGITemporal = GUI.Toggle(ReSTIRGITemporalToggle, UseReSTIRGITemporal, "Use ReSTIR GI Temporal");
+             UseReSTIRGISpatial = GUI.Toggle(ReSTIRGISpatialToggle, UseReSTIRGISpatial, "Use ReSTIR GI Spatial");
+         }
+         RayMaster.UseReSTIRGITemporal = UseReSTIRGITemporal;
+         RayMaster.UseReSTIRGISpatial = UseReSTIRGISpatial;
+         RayMaster.ReSTIRGISpatialCount = ReSTIRGISpatialCount;
+         RayMaster.UseReSTIRGI = UseReSTIRGI;
+         RayMaster.DoReSTIRGIConnectionValidation = DoReSTIRGIConnectionValidation;
+         RayMaster.ReSTIRGIUpdateRate = ReSTIRGIUpdateRate;
+         RayMaster.ReSTIRGITemporalMCap = ReSTIRGITemporalMCap;
+         RayMaster.ReSTIRGISpatialStabalizer = ReSTIRSpatialStabalizer;
 
          Rect TAAToggle = new Rect(10, SVGFVertOffset, (position.width - 10) / 2, 20);
          AllowTAA = GUI.Toggle(TAAToggle, AllowTAA, "Use Temporal Antialiasing");
@@ -350,6 +404,11 @@ public class EditModeFunctions : EditorWindow {
          MultiscatterIterations = EditorGUI.IntField(AtmoCountRect, MultiscatterIterations);
          RayMaster.AtmoNumLayers = MultiscatterIterations;
 
+         SVGFVertOffset += 25;
+
+         Rect UseTAAUToggle = new Rect(10, SVGFVertOffset + 25, Mathf.Max((position.width - 10) / 4,145), 20);
+         UseTAAU = GUI.Toggle(UseTAAUToggle, UseTAAU, "Enable TAAU");
+         RayMaster.UseTAAU = UseTAAU;
          SVGFVertOffset += 25;
 
          Rect SampleCountLabel =   new Rect(10, SVGFVertOffset + 25, Mathf.Max((position.width - 10) / 4,145), 20);

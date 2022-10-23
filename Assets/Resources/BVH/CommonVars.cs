@@ -209,20 +209,23 @@ namespace CommonVars {
         public int HasRoughnessTex;
         public Vector3 BaseColor;
         public float emmissive;
+        public Vector3 EmissionColor;
         public float Roughness;
         public int MatType;
-        public Vector3 eta;
-        public Vector3 EmissionColor;
-
-
+        public Vector3 TransmittanceColor;
+        public float IOR;
         public float metallic;
-        public float subsurface;
-        public float specularTint;
         public float sheen;
         public float sheenTint;
+        public float specularTint;
         public float clearcoat;
-        public float clearcoatRoughness;
+        public float clearcoatGloss;
+        public float anisotropic;
+        public float flatness;
+        public float diffTrans;
         public float specTrans;
+        public int Thin;
+
 
     }
 

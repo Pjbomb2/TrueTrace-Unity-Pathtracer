@@ -151,6 +151,24 @@ public void ClearAll() {
     DestroyImmediate(AlbedoAtlas);
     DestroyImmediate(NormalAtlas);
     DestroyImmediate(EmissiveAtlas); 
+    if(VertexBuffers != null) {
+        for(int i = 0; i < SkinnedMeshes.Length; i++) {
+            VertexBuffers[i].Dispose();
+            IndexBuffers[i].Dispose();
+            NodeBuffer.Dispose();
+            AdvancedTriangleBuffer.Dispose();
+            VertexBufferOut.Dispose();
+            StackBuffer.Dispose();
+            CWBVHIndicesBuffer.Dispose();
+            BVHDataBuffer.Dispose();
+            ToBVHIndexBuffer.Dispose();
+            WorkingBuffer.Dispose();
+        }
+    }
+    if(TriBuffer != null) {
+        TriBuffer.Dispose();
+        BVHBuffer.Dispose();
+    }
 }
 
 public void OnApplicationQuit() {
@@ -240,42 +258,56 @@ private void CreateAtlas() {//Creates texture atlas
         }
         Material[] SharedMaterials = (obj.GetComponent<Renderer>() != null) ? obj.GetComponent<Renderer>().sharedMaterials : obj.GetComponent<SkinnedMeshRenderer>().sharedMaterials;       
         int SharedMatLength = SharedMaterials.Length;
+                    List<string> PropertyNames = new List<string>();
         for(int i = 0; i < SharedMatLength; ++i) {
             CurrentTexDat.MaterialObject = obj;
             if(SharedMaterials[Mathf.Min(i, SharedMatLength - 1)] == null) {
                 i--;
                 SharedMatLength--;
             }
-            if(SharedMaterials[i].mainTexture != null) {
-                AlbedoTexs.Add((Texture2D)SharedMaterials[i].mainTexture);
-                CurrentTexDat.HasAlbedoMap = true;
-            } else {
-                CurrentTexDat.HasAlbedoMap = false;
-            }
-            if(SharedMaterials[i].GetTexture("_BumpMap") != null) {
-                NormalTexs.Add((Texture2D)SharedMaterials[i].GetTexture("_BumpMap"));
-                CurrentTexDat.HasNormalMap = true;
-            } else {
-                CurrentTexDat.HasNormalMap = false;
-            }
-            if(SharedMaterials[i].GetTexture("_EmissionMap") != null) {
-                EmissiveTexs.Add((Texture2D)SharedMaterials[i].GetTexture("_EmissionMap"));
-                CurrentTexDat.HasEmissiveMap = true;
-            } else {
-                CurrentTexDat.HasEmissiveMap = false;
-            }
-            if(SharedMaterials[i].GetTexture("_MetallicGlossMap") != null) {
-                MetallicTexs.Add((Texture2D)SharedMaterials[i].GetTexture("_MetallicGlossMap"));
-                CurrentTexDat.HasMetallicMap = true;
-            } else {
-                CurrentTexDat.HasMetallicMap = false;
-            }
-            if(SharedMaterials[i].GetTexture("_OcclusionMap") != null) {
-                RoughnessTexs.Add((Texture2D)SharedMaterials[i].GetTexture("_OcclusionMap"));
-                CurrentTexDat.HasRoughnessMap = true;
-            } else {
-                CurrentTexDat.HasRoughnessMap = false;
-            }
+                    CurrentTexDat.HasRoughnessMap = false;
+                    CurrentTexDat.HasAlbedoMap = false;
+                    CurrentTexDat.HasNormalMap = false;
+                    CurrentTexDat.HasEmissiveMap = false;
+                    CurrentTexDat.HasMetallicMap = false;
+                if(SharedMaterials[i].mainTexture != null) {
+                    AlbedoTexs.Add((Texture2D)SharedMaterials[i].mainTexture);
+                    CurrentTexDat.HasAlbedoMap = true;
+                } else {
+                    CurrentTexDat.HasAlbedoMap = false;
+                }
+                if(SharedMaterials[i].GetTexture("_BumpMap") != null) {
+                    NormalTexs.Add((Texture2D)SharedMaterials[i].GetTexture("_BumpMap"));
+                    CurrentTexDat.HasNormalMap = true;
+                } else {
+                    CurrentTexDat.HasNormalMap = false;
+                }
+                if(SharedMaterials[i].GetTexture("_EmissionMap") != null) {
+                    EmissiveTexs.Add((Texture2D)SharedMaterials[i].GetTexture("_EmissionMap"));
+                    CurrentTexDat.HasEmissiveMap = true;
+                } else {
+                    CurrentTexDat.HasEmissiveMap = false;
+                }
+                if(SharedMaterials[i].GetTexture("_MetallicGlossMap") != null) {
+                    MetallicTexs.Add((Texture2D)SharedMaterials[i].GetTexture("_MetallicGlossMap"));
+                    CurrentTexDat.HasMetallicMap = true;
+                } else {
+                    CurrentTexDat.HasMetallicMap = false;
+                }
+                if(SharedMaterials[i].GetTexture("_OcclusionMap") != null) {
+                    RoughnessTexs.Add((Texture2D)SharedMaterials[i].GetTexture("_OcclusionMap"));
+                    CurrentTexDat.HasRoughnessMap = true;
+                } else {
+                    CurrentTexDat.HasRoughnessMap = false;
+                }
+                // if(SharedMaterials[i].GetFloat("_Mode") == 3.0f) {
+                //  obj.MaterialOptions[i] = RayTracingObject.Options.Glass;
+                //  obj.eta[i].x = 1.33f;
+                // }
+                // if(SharedMaterials[i].GetFloat("_Mode") == 1.0f) {
+                //  obj.MaterialOptions[i] = RayTracingObject.Options.Cutout;
+                // }
+
             MatTexData.Add(CurrentTexDat);
 
         }
@@ -406,7 +438,7 @@ public void LoadData() {
     List<Transform> TempObjectTransforms = new List<Transform>();
     TempObjectTransforms.Add(this.transform);
     IsSkinnedGroup = false;
-    for(int i = 0; i < this.transform.childCount; i++) if(this.transform.GetChild(i).gameObject.GetComponent<SkinnedMeshRenderer>() != null) {IsSkinnedGroup = true; break;}
+    for(int i = 0; i < this.transform.childCount; i++) if(this.transform.GetChild(i).gameObject.GetComponent<SkinnedMeshRenderer>() != null && this.transform.GetChild(i).gameObject.activeInHierarchy ) {IsSkinnedGroup = true; break;}
     
     if(!IsSkinnedGroup) {
         for(int i = 0; i < this.transform.childCount; i++) {
@@ -757,6 +789,7 @@ public void RefitMesh(ref ComputeBuffer RealizedAggNodes) {
         WorkingBuffer = new ComputeBuffer(MaxLength, 4);
         UnityEngine.Profiling.Profiler.EndSample();
     } else if(AllFull) {
+        if(Hips == null) Hips = this.transform;
         UnityEngine.Profiling.Profiler.BeginSample("ReMesh Fill");
         MeshRefit.SetMatrix("Transform2", this.transform.localToWorldMatrix);  
         MeshRefit.SetMatrix("Transform3", this.transform.worldToLocalMatrix);      
@@ -928,9 +961,8 @@ public async Task BuildTotal() {
             TempTri.texedge2 = TempPrim.tex3;
 
             TempTri.MatDat = (uint)TempPrim.MatDat;
-            AggTriangles[i3 / 3] = TempTri;
-            Triangles[i3 / 3] = TempPrim.aabb;
-
+                AggTriangles[i3 / 3] = TempTri;
+                Triangles[i3 / 3] = TempPrim.aabb;
             if(_Materials[TempPrim.MatDat].emmissive > 0.0f) {
                 V1 = TempPrim.V1;
                 V2 = TempPrim.V2;
