@@ -3,7 +3,6 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>Almost done implementing full disney BSDF</li>
   <li>Looking desperately for optimizations(let me know if you have any ideas)</li>
 </ul>
 Currently needs to be done but havent implemented fully:
@@ -23,13 +22,13 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 ## Features: 
 <ul>
 <li>Somewhat fast Compute Shader based path tracing</li>
-<li>Diffuse, Glossy(kinda), Dielectric(think of glass), Conductor(metal), Diffuse Transmission, Emissive, Plastic, and Disney BSDF materials</li>
+<li>Diffuse, Glossy(kinda), Diffuse Transmission, Emissive, Plastic, and Disney BSDF materials</li>
 <li>Ability to move, add, and remove objects during play</li>
 <li>Ability to update material properties on the fly during play</li>
 <li>ASVGF, SVGF, and Atrous Denoiser</li>
 <li>BVH Building off of main thread for loading objects, allows objects to be spawned, and then built without lagging the main thread, and appearing when its done(All lag from spawning objects actually comes from remaking the texture atlas, lower res atlas's remove all lag, still investigating different ways of loading textures because of this)</li>
 <li>Compressed Wide Bounding Volume Hierarchy as the Acceleration Structure (See Ylitie et al. 2017 below)</li>
-<li>Albedo Textures(just apply them to the GameObjects material)</li>
+<li>PBR Textures(just apply them to the GameObjects material)</li>
 <li>Next Event Estimation with Multiple Importance Sampling for Explicit Light Sampling</li>
 <li>Objects are loaded as gameobject meshes(most common way of having meshes in unity)</li>
 <li>Support for default unity lights which interact via NEE(Supports Directional, Point, and Spot lights)</li>
@@ -37,7 +36,6 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 <li>Global homogenous fog with adjustable density</li>
 <li>Taking Full Resolution Screenshots</li>
 <li>Bloom</li>
-<li>PBR Texture Support</li>
 <li>No specific GPU vendor needed(this will run on integrated graphics if you so wish it, aka no RTX cores)</li>
 <li>MagicaVoxel support</li>
 <li>Ability to pathtrace voxels and triangle scenes at the same time seamlessly</li>
@@ -81,22 +79,20 @@ Let me know if you use this for anything, I would be excited to see any use of t
 ## General Setup
 <ul>
   <li>Download and import the UnityPackage provided</li>
-  <li>For quick setup, make sure you have a Main Camera(there by unity default), just open the Pathtracer Settings menu under the Pathtracer tab, it will reorganize the Hierarchy a bit, and give everything their required scripts  If you dont want it to do this, and do it manually read below</li>
+  <li>For quick setup, make sure you have a Main Camera(there by unity default), just open the Pathtracer Settings menu under the Pathtracer tab, it will reorganize the Hierarchy a bit, and give everything their required scripts</li>
 </ul>
 </br>
-## Setting it up manually
+## Basic script structure breakdown:
 <ul>
-  <li>You need to do the below before opening the Pathtracer settings window or else it will do its autosetup.  Additionally, you can study the provided DemoScene's hierarchy, as it provides basically all common variations of objects and their relations</li>
-  <li>First, you need a main camera, which unity automatically provides.  This camera will need attatched to it the RayTracingMaster script, under Assets/Resources, and should have the FlyCamera Script attatched(Under Assets/Resources/Utility)</li>
-  <li>Next, you need a GameObject called Scene, and this will be the gameobject that all others except the camera will be parented to(It will be the root object). This gameobject will need the AssetManager script attatched to it, found under Assets/Resources/BVH</li>
-  <li>Next, all objects you want to trace will need a parent.  This parent can either be themselves for individual objects, or will need to be nested under another gameobject to be grouped(for increasing performance, group wherever you can).  These Parents need to have a ParentObject attatched, as this defines groups, with its children all being seen as one group(Located under Assets/Resources/BVH)</li>
-  <li>Finally, all meshes and skinned meshes you want to trace need a RayTracingObject script attatched to them, as this defines what should be and should not be pathtraced(Located under Assets/Resources)</li>
-  <li>One last note, if your using Unity lights as well, each one of these needs a RayTracingLights script attatched to it(Located under Assets/Resources)</li>
+  <li>Top Level is a gameobject called Scene with an AssetManager script attatched</li>
+  <li>Second Level: Parent Object Script - Attatch this to all objects that will have children with meshes you want to raytrace(can be a child to any gameobject as long as its eventual parent is the AssetManager script)</li>
+  <li>Third Level: RayTracingObject Script - This defines what meshes get raytraced, must either be a direct child of a gameobject with the ParentObject Script, or in the same gameobject as the ParentObject Script</li>
+  <li>Misc Level: Unity Lights - Must have a RayTracingLight script attatched to be considered(and UseNEE needs to be on), can be ANYWHERE in the hierarchy, only supports Point, Spotlight, and 1 Directional</li>
 </ul>
 ## General Use/Notes
 <ul>
-  <li>Objects can be added and removed at will simply by toggling them on/off in the hierarchy(dont click them if they are complex objects), but they will take time to appear</li>
-  <li>If you change the emissiveness of an object, you need to dissable and re-enable its parent(basically reloading it) if you want to take advantage of NEE correctly sampling it</li>
+  <li>Objects can be added and removed at will simply by toggling the associated gameobject with a ParentObject script on/off in the hierarchy(dont click them if they are complex objects), but they will take time to appear as the acceleration structure needs to  be rebuilt</li>
+  <li>If you change the emissiveness of an object, you need to dissable and re-enable its parent(basically reloading it) if you want to take advantage of NEE correctly sampling it(Does not need to be reloaded for Naive tracing)</li>
   <li>If you use normal maps, they need to be in unity normal map format</li>
   <li>To set up PBR, all textures go into their proper names, but Roughness goes into the Occlusion texture(Since path tracing gets ambient occlusion by default, this texture is not normally needed, and there being no proper place for a Roughness texture in the default material, I have decided this was a good compromise)</li>
   <li>If you are using blendshapes to change geometry of a skinned mesh, you may need to go to the import settings of it(in the inspector), turn off Legacy Blendshape Normals, and make sure all normals are imported, not calculated</li>
@@ -112,13 +108,13 @@ Let me know if you use this for anything, I would be excited to see any use of t
 </br>
 ## Using Instancing
 <ul>
-  <li>First, there needs to be a gameobject called InstancedStorage in the scene with the InstanceManager attatched to it</li>
-  <li>Second, all objects that will be the source of instanced objects will need to go under the InstancedStorage and can be arranged like normal objects(with their layout of parentobject to raytracingobjects)</li>
+  <li>First, there needs to be a gameobject called InstancedStorage in the scene with the InstanceManager attatched to it as a sibling object of the Scene gameobject</li>
+  <li>Second, all objects that will be the source of instanced objects will need to go under the InstancedStorage and can be arranged like normal objects(with regards to the layout of parentobject to raytracingobjects)</li>
   <li>Finally, to instance the objects, you just need empty gameobjects with the InstanceObject script attatched to them under the Scene gameobject, and then drag the desired object instance from the hierarchy to the Instance Parent slot in the InstanceObject script(all of this is displayed in the demoscene)</li>
 </ul>
 
 ## Controls:
-Camera Controls: WASD, Mouse, and press T to freeze the camera
+Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera starts frozen)
 </br>
 ## Editor Window Guide
 BVH Options Description - 
@@ -163,17 +159,28 @@ BVH Options Description -
  <li>ReSTIR GI Temporal M Cap - Similar to Update Rate, and goes hand in hand and should be used together with it, 12 is an acceptable midpoint, and 0 allows it to accumulate forever(produces much cleaner image  but doesnt react to lighting or object changes)</li>
  <li>Use ReSTIR GI Spatial - Allows samples to draw from neighbors to try and find a better path</li>
  <li>ReSTIR GI Spatial Sample Count - The number of neighbors a sample is allowed to sample</li>
- <li>Enable Spatial Stabalizer - Allows low sample count samples to be re-fed into temporal, useful if you have a fast moving object, reduces trailing noise by a lot, but can introduce some artifacts</li>
- 
+ <li>Enable Spatial Stabalizer - Allows low sample count samples to be re-fed into temporal, useful if you have a fast moving object, reduces trailing noise by a lot, but can introduce artifacts</li>
  </ul>
   
- ## Materials
+ ## Materials(RayTracingObject script)
  <ul>
-  <li>Emission - Pretty self explanatory, the higher it is, the bright the object is(and the higher chance it will be sampled for NEE)</li>
-  <li>Emission Color - Only used for emission masks, if you have an emission mask, make this non-zero to color the emission from the mask, otherwise keep it at 0</li>
-  <li>Roughness - Applys to Conductors, Dielectrics, glossy, Diffuse Transmission, and plastics - Higher roughness makes objects more rough, but in Diffuse Transmission it basically represents how clear the material is</li>
-  <li>Eta - For Conductors it changes the color of reflected light, but inverted, but for Dielectrics, only the x component is used, and that X component is the Dielectrics IOR(Index of Refraction, with 1 being air), and for Subsurface Scattering, it is used the same as for conductors, and the same for Plastic materials</li>
-  <li>Base Color - So this will be automatically set to whatever the material of the objects color is, and it will also be overridden by textures, but its there so you can manually change it, works for all material types</li>
+  <li>Material Options - Select your type of material you want</li>
+  <li>BaseColor - If theres no Albedo Texture, this is the color the object will be</li>
+  <li>Emission - The emittance of an object</li>
+  <li>Emission Color - Changes the color of emissive objects, most useful when you have an emission mask on an object</li>
+  <li>Roughness - Roughness of the object</li>
+  <li>IOR - Index of Refraction of an object</li>
+  <li>Metallic - How metallic an object is.  Affects only Disney BSDF</li>
+  <li>Specular Tint - Affects color of specular materials.  Affects only Disney BSDF</li>
+  <li>Sheen - Adds Sheen to objects.  Affects only Disney BSDF</li>
+  <li>SheenTint - Allows you to choose if an objects sheen is white or is that objects base color.  Affects only Disney BSDF</li>
+  <li>ClearCoat - Adds a Clearcoat effect to the object.  Affects only Disney BSDF</li>
+  <li>ClearCoatGloss - Influences the Clearcoat.  Affects only Disney BSDF</li>
+  <li>Anisotropic - Makes the material(mostly metallic) anisotropic.  Affects only Disney BSDF</li>
+  <li>Flatness - Affects Thin objects.  Affects only Disney BSDF</li>
+  <li>DiffTrans - Makes an object Diffuse but Transmissive(transluscent).  Affects only Disney BSDF</li>
+  <li>SpecTrans - Makes an object more or less like glass.  Affects only Disney BSDF(Play with the IOR for this)</li>
+  <li>Thin - Marks an object as thing so it can be better handled by the BSDF.  Affects only Disney BSDF</li>
 </ul>
   
 # Sample Images(Taken from various stages of development)
