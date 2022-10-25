@@ -182,7 +182,14 @@ BVH Options Description -
   <li>SpecTrans - Makes an object more or less like glass.  Affects only Disney BSDF(Play with the IOR for this)</li>
   <li>Thin - Marks an object as thing so it can be better handled by the BSDF.  Affects only Disney BSDF</li>
 </ul>
-  
+</br>  
+# Known Bugs:
+</br>
+<ul>
+  <li>Error that RayTracingShader is using too many UAV's.  This isnt really a bug, but happens because you cant dissable DX11 which doesnt allow more than 8(whereas DX12, what is actually used, allows a lot more)</li>
+</ul>
+
+
 # Sample Images(Taken from various stages of development)
 
 ![](/Images/Home2.png)
