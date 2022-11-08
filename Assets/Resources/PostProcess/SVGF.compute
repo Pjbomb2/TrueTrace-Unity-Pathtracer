@@ -31,7 +31,7 @@ RWTexture2D<float4> RWScreenPosPrev;
 Texture2D<float4> ScreenPosPrev;
 Texture2D<float4> PosTex;
 RWTexture2D<float4> PrevPosTex;
-RWTexture2D<float4> HistoryTex;
+RWTexture2D<int> HistoryTex;
 Texture2D<float4> _CameraNormalDepthTex;
 SamplerState sampler_CameraNormalDepthTex;
 
@@ -49,6 +49,8 @@ Texture2D<float4> NormalAndDepth;
 
 Texture2D<float4> MotionVectors;
 SamplerState sampler_MotionVectors;
+
+RWTexture2D<int> PrevNormTex;
 
 
 
@@ -79,6 +81,29 @@ Texture2D<float4> PrevDepthTex;
 SamplerState sampler_PrevDepthTex;
 float FarPlane;
 RWTexture2D<float4> PrevDepthTexMain;
+Texture2D<float4> NormalTex;
+SamplerState sampler_NormalTex;
+
+uint packUnormArb(const float3 data2) {
+    const uint4 bits = uint4(10,10,10,0);
+    const float4 data = float4(data2, 0);
+    float4 mull = exp2(float4(bits)) - 1.0;
+
+    uint4 shift = uint4(0, bits.x, bits.x + bits.y, bits.x + bits.y + bits.z);
+    uint4 shifted = uint4(data * mull + 0.5) << shift;
+
+    return shifted.x | shifted.y | shifted.z | shifted.w;
+}
+
+float3 unpackUnormArb(const uint pack) {
+    const uint4 bits = uint4(10,10,10,0);
+    uint4 maxValue  = uint4(exp2(bits) - 1);
+    uint4 shift     = uint4(0, bits.x, bits.x + bits.y, bits.x + bits.y + bits.z);
+    uint4 unshifted = pack >> shift;
+          unshifted = unshifted & maxValue;
+
+    return normalize((float4(unshifted).xyz * 1.0 / float4(maxValue).xyz).xyz * 2.0f - 1.0f);
+}
 
 [numthreads(16,16,1)]
 void kernel_copy (int3 id : SV_DispatchThreadID)
@@ -92,6 +117,7 @@ void kernel_copy (int3 id : SV_DispatchThreadID)
     RWScreenPosPrev[id.xy] =  float4(((UV) - MotionVectors.SampleLevel(sampler_MotionVectors, UV, 0).xy) * 2.0f - 1.0f, 0.0f, 1.0f);
     RWNormalAndDepth[id.xy] = float4(oct_encode_normal(_CameraNormalDepthTex[id.xy].xyz * 2.0f - 1.0f), Linear01Depth(DepthTex[NewSample].x) * FarPlane, Linear01Depth(PrevDepthTex[NewSample].x) * FarPlane);
     PrevDepthTexMain[id.xy] = float4(Linear01Depth(DepthTex[NewSample].x) * FarPlane,0,0,1);
+    PrevNormTex[id.xy] = packUnormArb(NormalTex.SampleLevel(sampler_NormalTex, UV, 0).xyz);
 }
 
 
@@ -246,7 +272,7 @@ void kernel_reproject (int3 id : SV_DispatchThreadID)
         prev_indirect /= consistent_weights_sum;
         prev_moment   /= consistent_weights_sum;
         int history = HistoryTex[id.xy].x + 1; // Increase History Length by 1 step
-        HistoryTex[id.xy] = float4(HistoryTex[id.xy].x + 1.0f, 0.0f, 0.0f, 1.0f);
+        HistoryTex[id.xy] = history;
 
 
         float inv_history = rcp((float)(history));
@@ -266,7 +292,7 @@ void kernel_reproject (int3 id : SV_DispatchThreadID)
             indirect.w = variance_indirect;
         }
     } else {
-        HistoryTex[id.xy] = float4(0,0,0,1); // Reset History Length
+        HistoryTex[id.xy] = 0; // Reset History Length
 
         direct.w   = 1.0f;
         indirect.w = 1.0f;
@@ -568,8 +594,6 @@ void kernel_atrous (int3 id : SV_DispatchThreadID)
 
 bool DiffRes;
 
-RWTexture2D<float4> PrevNormTex;
-
 [numthreads(16,16,1)]
 void kernel_finalize (int3 id : SV_DispatchThreadID)
 {
@@ -578,7 +602,6 @@ void kernel_finalize (int3 id : SV_DispatchThreadID)
     float3 colour = (ColorDirectIn[id.xy].xyz + ColorIndirectIn[id.xy].xyz) * ((DiffRes) ? 1.0f : _Albedo.SampleLevel(sampler_Albedo, id.xy / float2(screen_width, screen_height), 0).xyz) + PerPixelRadiance[pixel_index].Fog;
     Result[id.xy] = float4(colour,1);
 
-    PrevNormTex[id.xy] = float4(NormalAndDepth[id.xy].xyz, 1);
     HistoryMomentTex[id.xy] = FrameBufferMoment[id.xy];
     RWHistoryNormalAndDepth[id.xy] = NormalAndDepth[id.xy];
 }

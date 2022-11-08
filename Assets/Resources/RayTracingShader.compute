@@ -70,10 +70,10 @@ struct ShadowRayData {
     float3 origin;
     float3 direction;
     float3 illumination;
+    float RadianceIncomming;
     uint PixelIndex;
     float t;
     bool IsNotFog;
-    bool HitMesh;
 };
 
 struct LightTriangleData {
@@ -140,13 +140,13 @@ struct GIReservoir {
     float W;
     float3 RadianceIndirect;
     float M;
-    float3 PrimaryHitPosition;
-    float wsum;
     float3 SecondaryHitPosition;
     float3 SecondaryHitDirectionOut;
     int HistoricFrame;
-    float3 SecondaryHitNorm;
     int HistoricID;
+    float3 BaseColor;
+    int MaterialIndex;
+    float RadianceIncomming;
 };
 RWStructuredBuffer<GIReservoir> CurrentReservoirGI;
 RWStructuredBuffer<GIReservoir> PreviousReservoirGI;
@@ -361,7 +361,7 @@ uint rand_xorshift()
 }
 
 
-Texture2D<float4> MotionVectors;
+Texture2D<float2> MotionVectors;
 SamplerState sampler_MotionVectors;
 
 
@@ -438,6 +438,7 @@ void GenerateASVGF (uint3 id : SV_DispatchThreadID) {
     GlobalColors[pixel_index].Direct = float3(0.0f, 0.0f, 0.0f);
     GlobalColors[pixel_index].Indirect = float3(0.0f, 0.0f, 0.0f);
     GlobalColors[pixel_index].Fog = float3(0.0f, 0.0f, 0.0f);
+    // GlobalColors[pixel_index].RadianceIncomming = 0;
     SH[pixel_index] = init_SH();
 }
 
@@ -466,10 +467,12 @@ void Generate (uint3 id : SV_DispatchThreadID) {
     GlobalColors[pixel_index].Direct = float3(0.0f, 0.0f, 0.0f);
     GlobalColors[pixel_index].Indirect = float3(0.0f, 0.0f, 0.0f);
     GlobalColors[pixel_index].Fog = float3(0.0f, 0.0f, 0.0f);
+    // GlobalColors[pixel_index].RadianceIncomming = 0;
+    
 }
 
 RWTexture2D<float4> TempPosTex;
-Texture2D<float4> NormalTex;
+Texture2D<float3> NormalTex;
 SamplerState sampler_NormalTex;
 Texture2D<float4> AlbedoTex;
 SamplerState sampler_AlbedoTex;
@@ -1183,6 +1186,7 @@ void IntersectBVHShadow(const int localid) {
 
                     if(triangle_intersect_shadow(triangle_group.x + triangle_index, ray, max_distance)) {
                         hit = true;
+                    ShadowRaysBuffer[ray_index].t = -1;
                         break;
                     }
                 }
@@ -1196,7 +1200,6 @@ void IntersectBVHShadow(const int localid) {
 
             if((current_group.y & 0xff000000) == 0) {
                 if(stack_size == 0) {//thread has finished traversing
-                    ShadowRaysBuffer[ray_index].HitMesh = false;
                     current_group.y = 0;
                     break;
                 }
@@ -1322,7 +1325,7 @@ void IntersectVoxelTLASShadow() {
         if (inactive) {//Revive dead threads(persistent threads, need Shader Model 6 to take true advantage of)
             InterlockedAdd(BufferSizes[CurBounce].octree_shadow_rays_retired, 1, ray_index);
             if(ray_index >= (uint)BufferSizes[CurBounce].shadow_rays) return;
-            if(ShadowRaysBuffer[ray_index].HitMesh) continue;
+            if(ShadowRaysBuffer[ray_index].t == -1) continue;
             max_distance = ShadowRaysBuffer[ray_index].t;
             ray.origin = ShadowRaysBuffer[ray_index].origin;
             ray.direction = ShadowRaysBuffer[ray_index].direction;
@@ -1453,13 +1456,14 @@ void IntersectShadowOctree() {
             InterlockedAdd(BufferSizes[CurBounce].octree_shadow_rays_retired, 1, ray_index);
             if(ray_index >= (uint)BufferSizes[CurBounce].shadow_rays) return;
             int pixel_index = ShadowRaysBuffer[ray_index].PixelIndex;
-            if(ShadowRaysBuffer[ray_index].HitMesh) { 
+            if(ShadowRaysBuffer[ray_index].t == -1) { 
                 if(CurBounce == 0 && ShadowRaysBuffer[ray_index].IsNotFog) 
                     CurrentReservoir[ShadowRaysBuffer[ray_index].PixelIndex].W = 0; 
                     CurrentReservoir[ShadowRaysBuffer[ray_index].PixelIndex].wsum = 0; 
                 continue;
             }
             if(ShadowRaysBuffer[ray_index].IsNotFog) {
+                CurrentReservoirGI[pixel_index].RadianceIncomming += ShadowRaysBuffer[ray_index].RadianceIncomming;
                 if(CurBounce == 0) {   
                     GlobalColors[pixel_index].Direct += ShadowRaysBuffer[ray_index].illumination;
                 } else {
@@ -2947,7 +2951,7 @@ static void CalculateLobePdfs(const HitMat hitDat,
     float specularBSDF   = (1.0f - hitDat.metallic) * hitDat.specTrans;
     float dielectricBRDF = (1.0f - hitDat.specTrans) * (1.0f - hitDat.metallic);
 
-    float specularWeight     = metallicBRDF + dielectricBRDF;
+    float specularWeight     = metallicBRDF;
     float transmissionWeight = specularBSDF;
     float diffuseWeight      = dielectricBRDF;
     float clearcoatWeight    = 1.0f * saturate(hitDat.clearcoat); 
@@ -3014,7 +3018,7 @@ float3 EvaluateDisney(const HitMat hitDat, float3 V, float3 L, bool thin,
 
         float3 sheen = EvaluateSheen(hitDat, wo, wm, wi);
 
-        reflectance += diffuseWeight * (diffuse * hitDat.surfaceColor + sheen * PI);
+        reflectance += diffuseWeight * (diffuse + sheen * PI);
 
         forwardPdf += pDiffuse * forwardDiffusePdfW;
         reversePdf += pDiffuse * reverseDiffusePdfW;
@@ -3453,11 +3457,41 @@ bool2 SampleDisney(const HitMat hitDat, float3 v, bool thin, inout BsdfSample sa
         return bool2(success, refracted);
     }
 
+static const float sigma_s = 0.09, sigma_a = 0.06, sigma_t = sigma_s+sigma_a;
+
+inline float3 sampleHG(float g, float e1, float e2) {
+    //double s=2.0*e1-1.0, f = (1.0-g*g)/(1.0+g*s), cost = 0.5*(1.0/g)*(1.0+g*g-f*f), sint = sqrt(1.0-cost*cost);
+    float s = 1.0-2.0*e1, cost = (s + 2.0*g*g*g * (-1.0 + e1) * e1 + g*g*s + 2.0*g*(1.0 - e1+e1*e1))/((1.0+g*s)*(1.0+g*s)), sint = sqrt(1.0-cost*cost);
+    return float3(cos(2.0 * PI * e2) * sint, sin(2.0 * PI * e2) * sint, cost);
+}
+
+inline float sampleSegment(float epsilon, float sigma, float smax) {
+    return -log(1.0 - epsilon * (1.0 - exp(-sigma * smax))) / sigma;
+}
 
 
+inline void generateOrthoBasis(inout float3 u, inout float3 v, float3 w) {
+    float3 coVec = w;
+    if (abs(w.x) <= abs(w.y)) {
+        if (abs(w.x) <= abs(w.z)) coVec = float3(0,-w.z,w.y);
+        else coVec = float3(-w.y,w.x,0);
+    }else if (abs(w.y) <= abs(w.z)) {coVec = float3(-w.z,0,w.x);
+    }else coVec = float3(-w.y,w.x,0);
+    coVec *= 1/sqrt(dot(coVec, coVec));
+    u = w%coVec,
+    v = w%u;
+}
 
-
-
+inline float scatter(const Ray r, inout float3 dir, inout float dist, float tin, float tout, float3x3 TanNorm) {
+    dist = sampleSegment(random(23).x, sigma_s, tout - tin);
+    //Vec dir = sampleSphere(XORShift::frand(), XORShift::frand()); //Sample a direction ~ uniform phase function
+    dir = sampleHG(-0.5,random(95).x, random(95).y); //Sample a direction ~ Henyey-Greenstein's phase function
+    float3 u, v = 0;
+    // GetTangentSpace
+    // generateOrthoBasis(u, v, r.direction);
+    dir = ToWorld(TanNorm, dir);
+    return (1.0 - exp(-sigma_s * (tout - tin)));
+}
 
 
 void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit hit, uint2 Uv, float2 NormalUV, bool HitVoxel, bool IsEmissiveTex, RayData RayDat, MaterialData mat, int prevIndex) {//main function
@@ -3484,16 +3518,16 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
         Geomnorm = normalize(mul(_MeshData[hit.mesh_id].Inverse, float4(Geomnorm, 0)).xyz);
     }
 
+    // _DebugTex[Uv] = float4(hit.u, hit.v, 0, 1);
     bool GotFlipped = false;
     [branch]if(dot(ray.direction, Geomnorm) >= 0.0f) {
         Geomnorm *= -1;
         GotFlipped = true;
     }
-    float3 LocalTan = normalize(mul(_MeshData[hit.mesh_id].Inverse, float4(AggTris[index].tan0 + hit.u * AggTris[index].tanedge1 + hit.v * AggTris[index].tanedge2, 0.0f)).xyz);
-     float3 LocalBinorm = normalize(cross(Geomnorm, LocalTan));
-    float3x3 TruTangentMat = transpose(float3x3(LocalTan, Geomnorm, LocalBinorm));
     float3 norm = Geomnorm;
      [branch]if(NormalUV.x != -1) {
+    float3 LocalTan = normalize(mul(_MeshData[hit.mesh_id].Inverse, float4(AggTris[index].tan0 + hit.u * AggTris[index].tanedge1 + hit.v * AggTris[index].tanedge2, 0.0f)).xyz);
+     float3 LocalBinorm = normalize(cross(Geomnorm, LocalTan));
          float4 Norm = _NormalAtlas.SampleLevel(sampler_NormalAtlas, NormalUV,0);
         float2 InputNormal;
        [branch]if(Norm.r == 1) {
@@ -3506,7 +3540,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
 
          float3 LocalNormIN = float3((2.0f * InputNormal.xy - 1.0f),0.0f);
          LocalNormIN.z = 1.0 - 0.5 * dot(LocalNormIN, LocalNormIN );
-         norm = normalize(mul(normalize(LocalNormIN), float3x3(LocalTan, Geomnorm, LocalBinorm)).xyz);
+         norm = normalize(mul(normalize(LocalNormIN), float3x3(LocalTan, LocalBinorm, Geomnorm)).xyz);
          norm = clamp(norm, -1, 1);
          if(abs(norm.x) == abs(norm.y) == abs(norm.z)) norm = Geomnorm;
      }
@@ -3514,13 +3548,12 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
     [branch]if(UseReSTIRGI && CurBounce == 0) {
         GIReservoir CurrentRes = CurrentReservoirGI[Index];
         CurrentRes.W = 0;
-        CurrentRes.wsum = 0;
         CurrentRes.M = 0;
         CurrentRes.HistoricFrame = (ReSTIRGIUpdateRate != 0) ? RandomNums[Uv].x : curframe;
         CurrentRes.HistoricID = (ReSTIRGIUpdateRate != 0) ? RandomNums[Uv].y : (Uv.x + Uv.y * screen_width);
-        CurrentRes.PrimaryHitPosition = pos + Geomnorm * 0.001f;
         CurrentRes.SecondaryHitDirectionOut = PreviousReservoirGI[prevIndex].SecondaryHitDirectionOut;
         CurrentRes.SecondaryHitPosition = pos;
+        CurrentRes.RadianceIncomming = 0;
         CurrentReservoirGI[Index] = CurrentRes;
     }
 
@@ -3528,18 +3561,23 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
         if(!UseNEE || IsEmissiveTex) {
             if(CurBounce == 0) {
                 Color.Direct = hitDat.emmis;
+                CurrentReservoirGI[Index].RadianceIncomming = luminance(hitDat.emmis);
+
                 TempAlbedoTex[Uv] = float4(hitDat.surfaceColor,1);
                 TempNormTex[Uv] = float4(norm, 1);
                 TempPosTex[Uv] = float4(pos,1);
                 RenderMaskTex[Uv] = 0;
             } else if(CurBounce == 1) {
                 Color.Direct += hitDat.surfaceColor * (hitDat.emmis);
+                CurrentReservoirGI[Index].RadianceIncomming += luminance(hitDat.surfaceColor * (hitDat.emmis));
+
                 CurrentReservoirGI[Index].SecondaryHitPosition = pos;
             } else {
                 SHData ThisSH = SH[Index];
                 accumulate_SH(ThisSH, irradiance_to_SH(Color.throughput * hitDat.emmis * hitDat.surfaceColor * 1024, Rays[Uv.x + Uv.y * screen_width].direction), 1.0f);
                 SH[Index] = ThisSH;
                 Color.Indirect += Color.throughput * hitDat.emmis * hitDat.surfaceColor;
+                CurrentReservoirGI[Index].RadianceIncomming += luminance(Color.throughput * hitDat.surfaceColor * hitDat.emmis);
             }
         } else if(CurBounce != 1 || !UseRestir) {
             float3 a0 = mul(_MeshData[hit.mesh_id].Inverse, float4(AggTris[index].pos0, 1)).xyz;
@@ -3556,15 +3594,17 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
                 TempNormTex[Uv] = float4(norm, 1);
                 TempPosTex[Uv] = float4(pos,1);
                 RenderMaskTex[Uv] = 0;
+                CurrentReservoirGI[Index].RadianceIncomming = luminance(hitDat.emmis);
             } else if(CurBounce == 1) {
                 Color.Direct += (hitDat.surfaceColor * hitDat.emmis) * w;
                 CurrentReservoirGI[Uv.x + Uv.y * screen_width].SecondaryHitPosition = pos;
-
+                CurrentReservoirGI[Index].RadianceIncomming += luminance((hitDat.surfaceColor * hitDat.emmis));
             } else {
                 SHData ThisSH = SH[Uv.x + Uv.y * screen_width];
                 accumulate_SH(ThisSH, irradiance_to_SH(Color.throughput * hitDat.emmis * hitDat.surfaceColor * w * 1024, Rays[Uv.x + Uv.y * screen_width].direction), 1.0f);
                 SH[Uv.x + Uv.y * screen_width] = ThisSH;
                 Color.Indirect += Color.throughput * hitDat.surfaceColor * hitDat.emmis * w; 
+                CurrentReservoirGI[Index].RadianceIncomming += luminance(Color.throughput * hitDat.surfaceColor * hitDat.emmis * w);
             }
         }
         return;
@@ -3595,13 +3635,15 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
             float cos_theta_hit = dot(ray.direction, norm);
             validbsdf = evaldiffuse(ray.direction, cos_theta_hit, bsdf_value, bsdf_pdf);
             throughput *= hitDat.surfaceColor;
+            pdf = bsdf_pdf;
         } else if(CurBounce == 1) {
             ray.direction = PreviousReservoirGI[prevIndex].SecondaryHitDirectionOut;
             float cos_theta_hit = dot(ray.direction, norm);
             validbsdf = evaldiffuse(ray.direction, cos_theta_hit, bsdf_value, bsdf_pdf);
             throughput *= hitDat.surfaceColor;
+            pdf = bsdf_pdf;
         }
-    } else {
+    } else {//if(random(92).x < 0.5f) {
         [branch]switch(hitDat.MatType) {//Switch between different materials
             case 1://Disney BSDF
                 BsdfSample Thissample = initbsdf();
@@ -3613,7 +3655,9 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
                 ray.direction = Thissample.wi;
                 pdf = Thissample.forwardPdfW;
                 throughput *= Thissample.reflectance;
-                if(tempvalid.y) Geomnorm *= -1;
+                if(tempvalid.y) {
+                    Geomnorm *= -1; norm *= -1;
+                }
             break;
             case 2://"Glossy" material
                 ray.direction = normalize(mul(sample(pdf), GetTangentSpace(norm)) * hitDat.roughness + reflect(ray.direction, norm) * (1.0f - hitDat.roughness));
@@ -3678,12 +3722,15 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
             break;      
         }
         if(!valid) return;//If the ray failed, we have no choice but to terminate this path
-}
+ }// else {
+//     float dist = 0;
+//     float3 tempdir = 0;
+//     throughput *= scatter(ray, tempdir, dist, 0, hit.t, GetTangentSpace(ray.direction)) * (2);
+//     pos = dist * ray.direction + ray.origin;
+//     ray.direction = tempdir;
+// }
   ray.origin = Geomnorm * 0.001f + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
-      [branch]if(UseReSTIRGI && CurBounce == 0) {
-        GIReservoir CurrentRes = CurrentReservoirGI[Index];
-        CurrentReservoirGI[Index] = CurrentRes;
-    }
+
     if(CurBounce == 0) {
         Rays[Index].direction = ray.direction;
     }
@@ -3691,13 +3738,13 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
     [branch]if(UseReSTIRGI && CurBounce == 1) {
         GIReservoir CurrentRes = CurrentReservoirGI[Index];
         CurrentRes.SecondaryHitDirectionOut = ray.direction;
-        CurrentRes.SecondaryHitPosition = ray.origin;
-        CurrentRes.SecondaryHitNorm = norm;
+        CurrentRes.SecondaryHitPosition = pos;
         CurrentReservoirGI[Index] = CurrentRes;
     }
 
     [branch]if(CurBounce == 0 || TempAlbedoTex[Uv].w == -1) {//Setting textures for denosier to use
-        TempAlbedoTex[Uv] = ((hitDat.MatType == 2) ? float4(1,1,1,-1) : float4(throughput,1));
+        TempAlbedoTex[Uv] = ((hitDat.MatType == 1 && hitDat.specTrans == 1) ? float4(1,1,1,-1) : float4(throughput,1));
+        CurrentReservoirGI[Index].BaseColor = throughput;
         TempNormTex[Uv] = float4(Geomnorm, 1);
         if(CurBounce == 0) TempPosTex[Uv] = float4(pos,hit.t);
         if(CurBounce == 0) throughput = 1;
@@ -3817,19 +3864,19 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
                 bsdf_value = EvaluateDisney(hitDat, -PrevDirection, to_light, hitDat.Thin == 1, bsdf_pdf, throwaway, GetTangentSpace2(norm));// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
                 validbsdf = bsdf_pdf > 0;
             break;
-            case 4:
+            case 3:
                 validbsdf = false;
             break;
-            case 5:
+            case 4:
                 validbsdf = true;
+            break;
+            case 5:
+                validbsdf = evaldiffuse(to_light, cos_theta_hit, bsdf_value, bsdf_pdf);
             break;
             case 6:
                 validbsdf = evaldiffuse(to_light, cos_theta_hit, bsdf_value, bsdf_pdf);
             break;
             case 7:
-                validbsdf = evaldiffuse(to_light, cos_theta_hit, bsdf_value, bsdf_pdf);
-            break;
-            case 8:
                 validbsdf = evalplastic(hitDat, mul(GetTangentSpace(norm), to_light), cos_theta_hit, bsdf_value, bsdf_pdf, omega_i);
             break;
 
@@ -3841,19 +3888,22 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
             float3 Radiance;
             float NEE_pdf;
             float3 Illum;
+            float RadianceIncomming;
             if(UseUnityLight) {
                 float3 transmittance = 1;
                 if(IsDirectional) {
                     float3 Radiance = GetSkyRadiance(ray.origin, to_light, 0, SunDir, transmittance);
                 }
+                RadianceIncomming = luminance(_UnityLights[triindex].Radiance);
                 Radiance = _UnityLights[triindex].Radiance * transmittance;
                 NEE_pdf = distance_to_light_squared * LightCos / (unitylightcount) * (_UnityLights[unitylightcount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
                 float NEEMISWeight = power_heuristic(NEE_pdf, bsdf_pdf);
-                Illum = ((CurBounce == 0) ? 1 : throughput) * (Radiance * bsdf_pdf) /  NEE_pdf * Attenuation * ((UseRestir && CurBounce == 0 && (CurRes.W > 0 || CurRes.W < 0 || CurRes.W == 0)) ? CurRes.W : 1);
+                Illum = ((CurBounce == 0) ? 1 : throughput) * (Radiance * bsdf_value) /  NEE_pdf * Attenuation * ((UseRestir && CurBounce == 0 && (CurRes.W > 0 || CurRes.W < 0 || CurRes.W == 0)) ? CurRes.W : 1);
             } else {
                 float SA = LightCos * LightTriangles[triindex].area / distance_to_light_squared;
-                NEE_pdf = (1.0f / (LightMeshCount * SA)) * (LightTriangles[triindex].pdf / _LightMeshes[MeshIndex].pdf);
+                NEE_pdf = (1.0f / (LightMeshCount * SA)) * (LightTriangles[triindex].pdf / _LightMeshes[MeshIndex].pdf) * (_LightMeshes[LightMeshCount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
                 Radiance = LightTriangles[triindex].radiance;
+                RadianceIncomming = luminance(Radiance);
                  float NEEMISWeight = power_heuristic(NEE_pdf, bsdf_pdf);
                 Illum = ((CurBounce == 0) ? 1 : throughput) * (Radiance * bsdf_value) /  NEE_pdf * Attenuation * ((UseRestir && CurBounce == 0 && (CurRes.W > 0 || CurRes.W < 0 || CurRes.W == 0)) ? CurRes.W : NEEMISWeight);
 
@@ -3868,9 +3918,9 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
                 ShadowRaysBuffer[index3].direction = to_light;
                 ShadowRaysBuffer[index3].t = (IsDirectional) ? 10000.0f : distance_to_light - 0.00001f;//2.0f * EPSILON;
                 ShadowRaysBuffer[index3].illumination = Illum * ((DoNEERR) ? 1 : rcp(saturate(maxillum)));
+                ShadowRaysBuffer[index3].RadianceIncomming = RadianceIncomming;
                 ShadowRaysBuffer[index3].PixelIndex = Uv.y * screen_width + Uv.x;
                 ShadowRaysBuffer[index3].IsNotFog = true;
-                ShadowRaysBuffer[index3].HitMesh = true;
             } else if(UseRestir && CurBounce == 0) {
                 CurrentReservoir[Uv.y * screen_width + Uv.x].W = 0;
                 CurrentReservoir[Uv.y * screen_width + Uv.x].wsum = 0;
@@ -3887,7 +3937,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
             if(UseUnityLight) { 
                 Radiance = _UnityLights[triindex].Radiance;
                 LightData Light = _UnityLights[triindex];
-                pos2 = (IsDirectional) ? PrevOrigin + Light.Direction * 15000.0f : Light.Position;
+                pos2 = (IsDirectional) ? PrevOrigin + Light.Direction * 1500.0f : Light.Position;
                 LightNorm = -Light.Direction;
             } else {
                 Radiance = LightTriangles[triindex].radiance;
@@ -3898,11 +3948,11 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
             sampleEquiAngular(random(14).x, hit.t, PrevOrigin, PrevDirection, pos2, dist, pdf );
             float3 SamplePoint = PrevOrigin + dist * PrevDirection;
             to_light = pos2 - SamplePoint;
+            if(IsDirectional) to_light = normalize(to_light) * 4.0f;
              float distance_to_light_squared = dot(to_light, to_light);
-             float distance_to_light = sqrt(max(dot(to_light, to_light),0.0001f));
+             float distance_to_light = sqrt(max(distance_to_light_squared,0.0001f));
              to_light = to_light / distance_to_light;
-            cos_theta_light = abs(dot(to_light, LightNorm));
-            cos_theta_hit = dot(to_light, -to_light);
+            cos_theta_hit = dot(to_light, to_light);
 
 
             float light_pdf;
@@ -3910,10 +3960,9 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
                 float SA = LightCos * LightTriangles[triindex].area / distance_to_light_squared;
                 light_pdf = (1.0f / (LightMeshCount * SA)) * (LightTriangles[triindex].pdf / _LightMeshes[MeshIndex].pdf);
             } else {
-                light_pdf = distance_to_light_squared * LightCos / (unitylightcount);
-                to_light = (IsDirectional) ? (SamplePoint - LightNorm * 2.0f) - SamplePoint : pos2 - SamplePoint;
+                light_pdf = distance_to_light_squared * cos_theta_hit / (unitylightcount);
             }
-             if(!IsDirectional && _UnityLights[triindex].Type != 2) LightNorm = -normalize(SamplePoint - pos2);
+             if(!IsDirectional && _UnityLights[triindex].Type != 2) LightNorm = -normalize(pos2 - SamplePoint);
 
             if(UseUnityLight && _UnityLights[triindex].Type == 2) {
                     Attenuation = saturate(dot(to_light, LightNorm) * _UnityLights[triindex].SpotAngle.x + _UnityLights[triindex].SpotAngle.y);
@@ -3934,13 +3983,12 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
                 ShadowRaysBuffer[index4].illumination =  Illum * rcp(saturate(maxillum));// * (CurBounce == 0) ? rcp(TempAlbedoTex[Uv].xyz) : 1.0f;
                 ShadowRaysBuffer[index4].PixelIndex = Uv.y * screen_width + Uv.x;
                 ShadowRaysBuffer[index4].IsNotFog = false;
-                ShadowRaysBuffer[index4].HitMesh = true;
             }
 
         }
     }
     if(UseRussianRoulette) {
-        float3 AdjustedCol = throughput * TempAlbedoTex[Uv].xyz;
+        float3 AdjustedCol = throughput * ((UseReSTIRGI && ReSTIRGIUpdateRate != 0 && RandomNums[Uv].z == 1) ? PreviousReservoirGI[prevIndex].BaseColor : TempAlbedoTex[Uv].xyz);
         float p = saturate(max(AdjustedCol.x, max(AdjustedCol.y, AdjustedCol.z)));
        if(random(2).x > p && CurBounce > 0)//Simple Russian Roulette
          return;
@@ -3953,6 +4001,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
     GlobalRays1[index2].origin = ray.origin;
     GlobalRays1[index2].direction = ray.direction;
     GlobalRays1[index2].PixelIndex = Uv.x + Uv.y * screen_width;
+    GlobalRays1[index2].PrevIndex = prevIndex;
     GlobalRays1[index2].last_pdf = pdf;
     set(index2, hit);
 }
@@ -3975,7 +4024,7 @@ void kernel_shade () {
 
     ColData Color = GlobalColors[PixIndex];
     if(CurBounce == 0) RenderMaskTex[TempUv] = 1;
-    if(bestHit.t > 1000000.0) {//if ray goes into the void, sample skybox
+    if(bestHit.t > 1000.0) {//if ray goes into the void, sample skybox
         float3 SkyColAcc;
         #ifdef UseSkyBox
             float theta = acos(ray.direction.y) / -PI;
@@ -3997,35 +4046,41 @@ void kernel_shade () {
             float3 SkyBoxCol = saturate(Radiance);
             float3 Sun = 0;//(saturate(max(min(exp(-acos(max(dot(-SunDir, -ray.direction), 0.0f))* 60.0f),12.0f),0) * transmittance));
             if(dot(ray.direction, SunDir) > cos(0.0235f / 2.0f)) {
-                Sun = saturate(Radiance + transmittance * (1.5f / (PI * (0.0235f / 2.0f) * (0.0235f / 2.0f)))) * 120.0f;
+                Sun = saturate(Radiance + transmittance * (1.5f / (PI * (0.0235f / 2.0f) * (0.0235f / 2.0f))));
             }
             if(all(SkyBoxCol > 0 || SkyBoxCol < 0 || SkyBoxCol == 0)) {
                 if(CurBounce == 0) {//Seperated into direct and indirect channels
                     RenderMaskTex[TempUv] = 0;
                     Color.Direct = (SkyBoxCol) + Sun;
+                    // CurrentReservoirGI[TempUv.x + TempUv.y * screen_width].RadianceIncomming = luminance((SkyBoxCol) + Sun);
+
                 } else if(CurBounce == 1) {
                     Color.Direct += Color.throughput * (SkyBoxCol) + Sun;
                     CurrentReservoirGI[TempUv.x + TempUv.y * screen_width].SecondaryHitPosition = ray.origin + ray.direction * 12.0f;
+                    // CurrentReservoirGI[TempUv.x + TempUv.y * screen_width].RadianceIncomming += luminance(Color.throughput * (SkyBoxCol) + Sun);
                 } else {
                     SHData ThisSH = SH[TempUv.x + TempUv.y * screen_width];
                     accumulate_SH(ThisSH, irradiance_to_SH((Color.throughput * (SkyBoxCol) + Sun) * 1024, ray.direction), 1.0f);
                     SH[TempUv.x + TempUv.y * screen_width] = ThisSH;
                     Color.Indirect += Color.throughput * (SkyBoxCol) + Sun;
+                    // CurrentReservoirGI[TempUv.x + TempUv.y * screen_width].RadianceIncomming += luminance(Color.throughput * (SkyBoxCol) + Sun);
+
                 }
             }
         #endif
-                // if(CurBounce == 0) {//Seperated into direct and indirect channels
-                //     RenderMaskTex[TempUv] = 0;
-                //     Color.Direct = 0.051f;
-                // } else if(CurBounce == 1) {
-                //     Color.Direct += Color.throughput * 0.051f;
-                //     CurrentReservoirGI[TempUv.x + TempUv.y * screen_width].SecondaryHitPosition = ray.origin + ray.direction * 12.0f;
-                // } else {
-                //     SHData ThisSH = SH[TempUv.x + TempUv.y * screen_width];
-                //     accumulate_SH(ThisSH, irradiance_to_SH((Color.throughput * 0.051f) * 1024, ray.direction), 1.0f);
-                //     SH[TempUv.x + TempUv.y * screen_width] = ThisSH;
-                //     Color.Indirect += Color.throughput * 0.051f;
-                // }
+        // float3 col = 0.051f;//float3(0.972549, 0.9568627, 0.9294118);
+        //         if(CurBounce == 0) {//Seperated into direct and indirect channels
+        //             RenderMaskTex[TempUv] = 0;
+        //             Color.Direct = col;
+        //         } else if(CurBounce == 1) {
+        //             Color.Direct += Color.throughput * col;
+        //             CurrentReservoirGI[TempUv.x + TempUv.y * screen_width].SecondaryHitPosition = ray.origin + ray.direction * 12.0f;
+        //         } else {
+        //             SHData ThisSH = SH[TempUv.x + TempUv.y * screen_width];
+        //             accumulate_SH(ThisSH, irradiance_to_SH((Color.throughput * 0.051f) * 1024, ray.direction), 1.0f);
+        //             SH[TempUv.x + TempUv.y * screen_width] = ThisSH;
+        //             Color.Indirect += Color.throughput * col;
+        //         }
         if(CurBounce == 0) {
             TempAlbedoTex[TempUv] = 1;
         }
@@ -4063,31 +4118,38 @@ void kernel_shade () {
     hitmat.extinction = 0;
     hitmat.relativeIOR = TempMat.ior;
     hitmat.Thin = TempMat.Thin;
-    hitmat.scatterDistance = bestHit.t;
+    hitmat.scatterDistance = 0.5f;//bestHit.t;
 
+    if(CurBounce == 0) {
+        CurrentReservoirGI[PixIndex].MaterialIndex = MaterialIndex;
+        CurrentReservoirGI[PixIndex].BaseColor = BaseCol.xyz;
+    }
 
-    if(TempMat.MatType == 4) {
+    if(TempMat.MatType == 3) {
         if(BaseCol.a == 0) {
             hitmat.DoesPassThrough = true;
         }
     }
 
-    if(TempMat.HasMetallicTex > 0 && hitmat.MatType != 2) {
+    if(TempMat.HasMetallicTex > 0 && hitmat.specTrans != 1) {
         float2 MetallicUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].MetallicTex.xy - _Materials[MaterialIndex].MetallicTex.zw) + _Materials[MaterialIndex].MetallicTex.zw;
         float4 MetallicCol = _MetallicAtlas.SampleLevel(sampler_MetallicAtlas, MetallicUV, 0);
-        if(MetallicCol.a > 0.001f) {
-            // hitmat.MatType = 8;
-            // hitmatt.x = 1 + MetallicCol.a;
+        // hitmat.roughness = saturate(1 - pow(MetallicCol.g, 0.4545f));
+        if(MetallicCol.b > 0.001f) {
+            hitmat.metallic = pow(MetallicCol.b, 0.4545f);
+            // hitmat.MatType = 1;
             // hitmat.roughness = MetallicCol.b;
             // TempMat.roughness = MetallicCol.b;
-            // TempMat.metallic = MetallicCol.a;
+        }
+        if(MetallicCol.g > 0.001f) {
+            hitmat.clearcoat = pow(MetallicCol.g, 0.4545f);
         }
     }
-    // if(TempMat.HasRoughnessTex > 0) {
-    //     float2 RoughnessUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].RoughnessTex.xy - _Materials[MaterialIndex].RoughnessTex.zw) + _Materials[MaterialIndex].RoughnessTex.zw;
-    //     float3 RoughnessCol = _RoughnessAtlas.SampleLevel(sampler_RoughnessAtlas, RoughnessUV, 0).xyz;
-    //     hitmat.roughness = saturate(pow(pow(RoughnessCol.x, 0.4545f),2));
-    // }
+    if(TempMat.HasRoughnessTex > 0) {
+        float2 RoughnessUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].RoughnessTex.xy - _Materials[MaterialIndex].RoughnessTex.zw) + _Materials[MaterialIndex].RoughnessTex.zw;
+        float3 RoughnessCol = _RoughnessAtlas.SampleLevel(sampler_RoughnessAtlas, RoughnessUV, 0).xyz;
+        hitmat.roughness = saturate(pow(RoughnessCol.x, 0.4545f));
+    }
     bool IsEmissiveTex = false;
     if(TempMat.HasEmissiveTex > 0) {
         float2 EmissionUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].EmissiveTex.xy - _Materials[MaterialIndex].EmissiveTex.zw) + _Materials[MaterialIndex].EmissiveTex.zw;
@@ -4115,13 +4177,35 @@ void kernel_shade () {
 #pragma kernel kernel_finalize
 
 
-Texture2D<float4> Depth;
+Texture2D<float> Depth;
 SamplerState my_linear_clamp_sampler;
-RWTexture2D<float4> PrevDepthTex;
+RWTexture2D<float> PrevDepthTex;
 bool UseAtrous;
 bool DiffRes;
 float FarPlane;
-RWTexture2D<float4> PrevNormalTex;
+RWTexture2D<int> PrevNormalTex;
+
+uint packUnormArb(const float3 data2) {
+    const uint4 bits = uint4(10,10,10,0);
+    const float4 data = float4(data2, 0);
+    float4 mull = exp2(float4(bits)) - 1.0;
+
+    uint4 shift = uint4(0, bits.x, bits.x + bits.y, bits.x + bits.y + bits.z);
+    uint4 shifted = uint4(data * mull + 0.5) << shift;
+
+    return shifted.x | shifted.y | shifted.z | shifted.w;
+}
+
+float3 unpackUnormArb(const uint pack) {
+    const uint4 bits = uint4(10,10,10,0);
+    uint4 maxValue  = uint4(exp2(bits) - 1);
+    uint4 shift     = uint4(0, bits.x, bits.x + bits.y, bits.x + bits.y + bits.z);
+    uint4 unshifted = pack >> shift;
+          unshifted = unshifted & maxValue;
+
+    return normalize((float4(unshifted).xyz * 1.0 / float4(maxValue).xyz).xyz * 2.0f - 1.0f);
+}
+
 [numthreads(16,16,1)]
 void kernel_finalize (uint3 id : SV_DispatchThreadID) {//Moved final accumulation into its own kernel, improves performance
     
@@ -4129,9 +4213,9 @@ void kernel_finalize (uint3 id : SV_DispatchThreadID) {//Moved final accumulatio
     int final_pixel_index = id.y * screen_width + id.x;
     float2 Uv = id.xy / float2(screen_width, screen_height);
     if(UseReSTIRGI) PrevDepthTex[id.xy] = Linear01Depth(Depth.SampleLevel(my_linear_clamp_sampler, Uv, 0).x) * FarPlane;
-    if(UseReSTIRGI) PrevNormalTex[id.xy] = float4(normalize(NormalTex.SampleLevel(sampler_NormalTex, Uv, 0).xyz * 2.0f - 1.0f), 1);
+    if(UseReSTIRGI) PrevNormalTex[id.xy] = packUnormArb(NormalTex.SampleLevel(sampler_NormalTex, Uv, 0).xyz);
     float3 res = (GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect) * ((DiffRes || UseAtrous) ? 1.0f : AlbedoTex[id.xy]) + GlobalColors[final_pixel_index].Fog;
-    // if(all(res > 100)) res = 0;
+    if(!all(res < 100)) res = 0;
     Result[id.xy] = float4(res, 1.0f);
 }
 
@@ -4511,7 +4595,6 @@ void kernel_reservoir (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThrea
         }
         reservoir.W = (1.0f / max(reservoir.M,0.00001f)) * reservoir.wsum / p_hat; //reservoir.wsum / (p_hat * reservoir.M);
     }
-    // reservoir.M = min(reservoir.M, 10.0f);
         if(reservoir.y == -1 || !(reservoir.W > 0 || reservoir.W < 0 || reservoir.W == 0)) {
             reservoir.y = -1;
             reservoir.W = 0;
@@ -4582,17 +4665,18 @@ void kernel_reservoir_precompute (uint3 id : SV_DispatchThreadID, uint3 id2 : SV
 
 #pragma kernel kernel_GI_Reserviour
 
-void UpdateReservoir(inout GIReservoir A, GIReservoir B, float w, float rndnum) {
+void UpdateReservoir(inout GIReservoir A, GIReservoir B, float w, float rndnum, inout float wsum) {
     A.M += B.M + 1;
-    A.wsum += w;
-    if (rndnum < (w/A.wsum)) {
+    wsum += w;
+    if (rndnum < (w/wsum)) {
         A.SecondaryHitPosition = B.SecondaryHitPosition;
-        A.SecondaryHitNorm = B.SecondaryHitNorm;
         A.HistoricID = B.HistoricID;
         A.HistoricFrame = B.HistoricFrame;
         A.RadianceDirect = B.RadianceDirect;
         A.RadianceIndirect = B.RadianceIndirect;
         A.SecondaryHitDirectionOut = B.SecondaryHitDirectionOut;
+        A.RadianceIncomming = B.RadianceIncomming;
+        A.BaseColor = B.BaseColor;
     }
 
 }
@@ -4604,6 +4688,42 @@ bool DoReSTIRGIConnectionValidation;
 bool AbandonSamples;
 int ReSTIRGITemporalMCap;
 bool SpatialStabalizer;
+float3 PrevCamPos;
+float3 CamPos;
+
+inline bool EvaluateBsdf(const HitMat hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, out float PDF) {
+    float throwaway = 0;
+    float3 bsdf_value = 0;
+    bool validbsdf = false;
+    float cos_theta_hit = dot(DirectionOut, Normal);
+    [branch]switch(hitDat.MatType) {//Switch between different materials
+        default:
+            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
+        break;
+        case 1:
+            bsdf_value = EvaluateDisney(hitDat, -DirectionIn, DirectionOut, hitDat.Thin == 1, PDF, throwaway, GetTangentSpace2(Normal));// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
+            validbsdf = PDF > 0;
+        break;
+        case 3:
+            validbsdf = false;
+        break;
+        case 4:
+            validbsdf = true;
+        break;
+        case 5:
+            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
+        break;
+        case 6:
+            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
+        break;
+        case 7:
+            validbsdf = evalplastic(hitDat, mul(GetTangentSpace(Normal), DirectionOut), cos_theta_hit, bsdf_value, PDF,  mul(GetTangentSpace(Normal), -DirectionIn));
+        break;
+
+    }
+    return validbsdf;
+} 
+
 
 [numthreads(16,16,1)]
 void kernel_GI_Reserviour (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID, uint3 id3 : SV_GroupID, uint id4 : SV_GroupIndex) {
@@ -4611,37 +4731,71 @@ void kernel_GI_Reserviour (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupT
     int index = id.x + id.y * screen_width;
     pixel_index = index;
     GIReservoir CurrentRes = CurrentReservoirGI[index];
+    float3 PrimaryHitPosition = TempPosTex[id.xy].xyz;
     if(ReSTIRGIUpdateRate == 0) {
         CurrentRes.RadianceDirect = GlobalColors[id.x + id.y * screen_width].Direct;
         CurrentRes.RadianceIndirect = GlobalColors[id.x + id.y * screen_width].Indirect;
     }
-    GIReservoir prevReservoir = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    GIReservoir prevReservoir = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+    MaterialData TempMat = _Materials[(int)CurrentRes.MaterialIndex.x];
+    HitMat hitmat;
+    hitmat.surfaceColor = CurrentRes.BaseColor;
+    hitmat.emmis = TempMat.emmissive;
+    hitmat.roughness = max(TempMat.roughness,0.001f);
+    hitmat.MatType = TempMat.MatType;
+    hitmat.transmittanceColor = TempMat.transmittanceColor;
+    hitmat.metallic = TempMat.metallic;
+    hitmat.ior = TempMat.ior;
+    hitmat.specTrans = TempMat.specTrans;
+    hitmat.specularTint = TempMat.specularTint;
+    hitmat.clearcoat = TempMat.clearcoat;
+    hitmat.clearcoatGloss = TempMat.clearcoatGloss;
+    hitmat.diffTrans = TempMat.diffTrans;
+    hitmat.sheen = TempMat.sheen;
+    hitmat.sheenTint = TempMat.sheenTint;
+    hitmat.anisotropic = TempMat.anisotropic;
+    hitmat.flatness = TempMat.flatness;
+    hitmat.transmittanceColor = TempMat.transmittanceColor;    
+    hitmat.phaseFunction = 0;
+    hitmat.extinction = 0;
+    hitmat.relativeIOR = TempMat.ior;
+    hitmat.Thin = TempMat.Thin;
+    hitmat.scatterDistance = 0;
+
     bool ActuallyRender = (RenderMaskTex[id.xy] == 1);
     float2 UV = id.xy / float2(screen_width, screen_height);
     const float3 Norm = normalize(NormalTex.SampleLevel(sampler_NormalTex, UV, 0).xyz * 2.0f - 1.0f);
     bool SuccessfullyReprojected = false;
-    uint2 prevIndex = int2(floor(((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height))- MotionVectors.SampleLevel(sampler_MotionVectors, UV, 0).xy) * float2(screen_width, screen_height)));
+    float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, UV, 0).xy;
+    uint2 prevIndex = int2(floor(((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height))- MotionVector) * float2(screen_width, screen_height)));
     if (prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height) {
         prevReservoir = PreviousReservoirGI[prevIndex.y * screen_width + prevIndex.x];
         SuccessfullyReprojected = true;
     }
     if(ActuallyRender) {
+    const float3 RayDir = normalize(PrimaryHitPosition - CamPos);
     float CurDist = Linear01Depth(Depth.SampleLevel(my_linear_clamp_sampler, UV, 0).x) * FarPlane;
     float p_q;
+        float fpdf;
+        float wsum = 0;
+        bool Valid = EvaluateBsdf(hitmat, RayDir, normalize(CurrentRes.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf);
+        p_q = luminance(CurrentRes.RadianceDirect + CurrentRes.RadianceIndirect) * step(0, fpdf);
+        wsum = p_q;
     if(ReSTIRGIUpdateRate == 0 || RandomNums[id.xy].z != 1) {
-        p_q = luminance(CurrentRes.RadianceDirect+CurrentRes.RadianceIndirect) * step(0, dot(normalize(CurrentRes.SecondaryHitPosition - CurrentRes.PrimaryHitPosition), Norm));
-        CurrentRes.wsum = p_q;
         float PrevDist = PrevDepthTex[prevIndex].x;
-        float DistDiff = (abs(CurDist - PrevDist) / CurDist);
+        float DistDiff = ((abs(CurDist - PrevDist) - length(CamPos - PrevCamPos)) / CurDist);
 
-        bool DoTemporal = DistDiff < 0.2f && (dot(PrevNormalTex[prevIndex].xyz, Norm) > 0.9f);
+        bool DoTemporal = DistDiff < 0.1f && (dot(unpackUnormArb(PrevNormalTex[prevIndex]), Norm) > 0.9f);
         if(DoTemporal && UseReSTIRGITemporal) {
             if(ReSTIRGITemporalMCap != 0) prevReservoir.M = min(prevReservoir.M, ReSTIRGITemporalMCap);
-            float Prev_p_q = luminance(prevReservoir.RadianceDirect+prevReservoir.RadianceIndirect) * step(0, dot(normalize(prevReservoir.SecondaryHitPosition - CurrentRes.PrimaryHitPosition), Norm));
-            UpdateReservoir(CurrentRes, prevReservoir, Prev_p_q * prevReservoir.M * prevReservoir.W, random(23).x);
+            Valid = EvaluateBsdf(hitmat, RayDir, normalize(prevReservoir.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf);
+            float Prev_p_q = luminance(prevReservoir.RadianceDirect + prevReservoir.RadianceIndirect) * step(0, fpdf);
+            UpdateReservoir(CurrentRes, prevReservoir, Prev_p_q * prevReservoir.M * prevReservoir.W, random(23).x, wsum);
         }
-        p_q = luminance(CurrentRes.RadianceDirect+CurrentRes.RadianceIndirect) * step(0, dot(normalize(CurrentRes.SecondaryHitPosition - CurrentRes.PrimaryHitPosition), Norm));
-        CurrentRes.W = (1.0f / max(CurrentRes.M, 0.0001f)) * CurrentRes.wsum / max(p_q,0.00001f);
+        Valid = EvaluateBsdf(hitmat, RayDir, normalize(CurrentRes.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf);
+        p_q = luminance(CurrentRes.RadianceDirect + CurrentRes.RadianceIndirect) * step(0, fpdf);
+        CurrentRes.W = wsum / max((CurrentRes.M * p_q),0.00001f);
     }
     int PrevM = CurrentRes.M;
     if(CurrentRes.W > 10) {
@@ -4649,7 +4803,7 @@ void kernel_GI_Reserviour (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupT
     }
      CurrentReservoirGI[index] = CurrentRes;
 
-     if(UseReSTIRGISpatial) {
+     if(UseReSTIRGISpatial && !(SpatialStabalizer && RandomNums[id.xy].z == 1)) {
         uint2 CenterIndex = prevIndex;
         uint2 neighborOffset;
         uint2 neighborIndex;
@@ -4664,48 +4818,41 @@ void kernel_GI_Reserviour (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupT
             float DistDiff = (abs(CurDist - PrevDist) / CurDist);
             if (
                 DistDiff >= 0.1f || 
-                dot(PrevNormalTex[neighborIndex].xyz, Norm) < 0.9f
+                dot(unpackUnormArb(PrevNormalTex[neighborIndex]), Norm) < 0.9f
             ) {
                 continue;
             }
-            float3 x2 = neighborRes.SecondaryHitPosition;
-            float3 y1 = CurrentRes.PrimaryHitPosition;
-            float3 x1 = neighborRes.PrimaryHitPosition;
-            float3 n2 = neighborRes.SecondaryHitNorm;
-            float G1 = -dot(normalize(x2 - y1), n2) / dot((x2 - y1), (x2 - y1));
-            float G2 = dot((x2 - x1), (x2 - x1)) / -dot(normalize(x2 - x1), n2);
-            float Jacobian = max(G1 * G2,0);
-            Jacobian = sqrt(Jacobian);
-
-            if(Jacobian <= 0.0f || Jacobian > 10) continue;
-             p_q = luminance(neighborRes.RadianceDirect+neighborRes.RadianceIndirect) * step(0, dot(normalize(neighborRes.SecondaryHitPosition - CurrentRes.PrimaryHitPosition), Norm))   ;
-            UpdateReservoir(CurrentRes, neighborRes, p_q * neighborRes.M * neighborRes.W * Jacobian, random(i + 16).x);  
+            Valid = EvaluateBsdf(hitmat, RayDir, normalize(neighborRes.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf);
+            if(!Valid) continue;
+            if(SpatialStabalizer) {neighborRes.M = min(neighborRes.M, 12); CurrentRes.M--;}
+             p_q = luminance(neighborRes.RadianceDirect + neighborRes.RadianceIndirect) * step(0, fpdf);
+            UpdateReservoir(CurrentRes, neighborRes, p_q * neighborRes.M * neighborRes.W, random(i + 16).x, wsum);  
         }
-
-        p_q = luminance(CurrentRes.RadianceDirect+CurrentRes.RadianceIndirect) * step(0, dot(normalize(CurrentRes.SecondaryHitPosition - CurrentRes.PrimaryHitPosition), Norm));
-        CurrentRes.W =(1.0f / max(CurrentRes.M,0.00001f)) * CurrentRes.wsum / max(p_q,1e-6);
+        Valid = EvaluateBsdf(hitmat, RayDir, normalize(CurrentRes.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf);
+        p_q = luminance(CurrentRes.RadianceDirect + CurrentRes.RadianceIndirect) * step(0, fpdf);
+        CurrentRes.W = wsum / max((CurrentRes.M * p_q),0.00001f);
     }
 
-    if(p_q == 0 || CurrentRes.M == 0 || CurrentRes.W > 10) {
+    if((p_q == 0 || CurrentRes.M == 0 || CurrentRes.W > 10)) {
         CurrentRes.W = 0;
-        CurrentRes.M = 0;
+        // CurrentRes.M = 0;
     }
 
     if(DoReSTIRGIConnectionValidation) {
-        float Distance = length(CurrentRes.PrimaryHitPosition - (CurrentRes.SecondaryHitPosition)) - 0.001f;
-        Ray ray = CreateRay(CurrentRes.PrimaryHitPosition + Norm * 0.0001f,normalize(((CurrentRes.SecondaryHitPosition) - CurrentRes.PrimaryHitPosition)));
+        float Distance = length(PrimaryHitPosition - (CurrentRes.SecondaryHitPosition)) - 0.001f;
+        Ray ray = CreateRay(PrimaryHitPosition + Norm * 0.0001f,normalize(((CurrentRes.SecondaryHitPosition) - PrimaryHitPosition)));
 
         bool ConnectedlyVisable = VisabilityCheck(ray, Distance);
-        if(!ConnectedlyVisable) {CurrentRes.W = 0; CurrentRes.M = 0; CurrentRes.RadianceDirect = 0; CurrentRes.RadianceIndirect = 0; CurrentRes.wsum = 0;} 
+        if(!ConnectedlyVisable) {CurrentRes.W = 0; CurrentRes.M = 0;} 
     }
 
-    if(SpatialStabalizer && PrevM < 8) CurrentReservoirGI[index] = CurrentRes;
+    if(SpatialStabalizer) CurrentReservoirGI[index] = CurrentRes;
+    // if(CurrentRes.W > 10) CurrentRes.W = 0;
     CurrentRes.W = clamp(CurrentRes.W, 0, 1);
-    // if(all(CurrentRes.RadianceDirect > 100) || all(CurrentRes.RadianceIndirect > 100)) continue;
     if(SuccessfullyReprojected) {
         GlobalColors[id.x + id.y * screen_width].Direct = CurrentRes.RadianceDirect * CurrentRes.W; GlobalColors[id.x + id.y * screen_width].Indirect = CurrentRes.RadianceIndirect * CurrentRes.W;
         SHData ThisSH = init_SH();
-        accumulate_SH(ThisSH, irradiance_to_SH(CurrentRes.RadianceIndirect * CurrentRes.W * 1024, clamp(normalize(CurrentRes.SecondaryHitPosition - CurrentRes.PrimaryHitPosition),-1,1)), 1.0f);
+        accumulate_SH(ThisSH, irradiance_to_SH(CurrentRes.RadianceIndirect * CurrentRes.W * 1024, clamp(normalize(CurrentRes.SecondaryHitPosition - PrimaryHitPosition),-1,1)), 1.0f);
         SH[id.x + id.y * screen_width] = ThisSH;
     }
 } else {
@@ -4723,6 +4870,7 @@ void kernel_GI_Reserviour (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupT
 [numthreads(16,16,1)]
 void forwardprojectionkernel (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID, uint3 id3 : SV_GroupID, uint id4 : SV_GroupIndex) {
 
+if(RandomNums[id.xy].w == 1 && !AbandonSamples) return;
 RandomNums[id.xy] = float4(curframe, id.x + id.y * screen_width, 0, 0);
 float2 uv = float2((id.xy) / float2(screen_width, screen_height) * 2.0f - 1.0f);
 Ray ray = CreateCameraRay(uv);
@@ -4760,20 +4908,19 @@ float2 uv = id.xy / float2(screen_width, screen_height);
     if (prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height)
     {
         GIReservoir prevReservoir = PreviousReservoirGI[prevIndex.y * screen_width + prevIndex.x];
-            // _DebugTex[id.xy] = abs(luminance(CurrentRes.RadianceDirect + CurrentRes.RadianceIndirect) - luminance(prevReservoir.RadianceDirect + prevReservoir.RadianceIndirect)) * 1000.0f;
-        if(abs(luminance(CurrentRes.RadianceDirect + CurrentRes.RadianceIndirect) - luminance(prevReservoir.RadianceDirect + prevReservoir.RadianceIndirect)) > 0.001f) {
+            // _DebugTex[id.xy] = abs(CurrentRes.RadianceIncomming - prevReservoir.RadianceIncomming) * 1000.0f;
+        if(abs(CurrentRes.RadianceIncomming - prevReservoir.RadianceIncomming) > 0.001f) {
             // _DebugTex[id.xy] = 1;
             prevReservoir.RadianceDirect = 0; 
             prevReservoir.RadianceIndirect = 0;
             prevReservoir.M = 0; 
+            prevReservoir.W = 0;
+            _DebugTex[id.xy] = 1;
             PreviousReservoirGI[prevIndex.y * screen_width + prevIndex.x] = prevReservoir;
         } else {
             CurrentRes.M = prevReservoir.M;
             CurrentRes.W = prevReservoir.W;
-            CurrentRes.SecondaryHitDirectionOut = prevReservoir.SecondaryHitDirectionOut;
-            CurrentRes.SecondaryHitPosition = prevReservoir.SecondaryHitPosition;
-            CurrentRes.SecondaryHitNorm = prevReservoir.SecondaryHitNorm;
-            CurrentRes.wsum = prevReservoir.wsum;
+            CurrentRes.BaseColor = prevReservoir.BaseColor;
         }
 
     }

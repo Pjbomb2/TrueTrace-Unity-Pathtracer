@@ -113,6 +113,8 @@ public class AssetManager : MonoBehaviour {//This handels all the data
         DestroyImmediate(AlbedoAtlas);
         DestroyImmediate(NormalAtlas);
         DestroyImmediate(EmissiveAtlas);  
+        DestroyImmediate(RoughnessAtlas);  
+        DestroyImmediate(MetallicAtlas);  
         if(BVH8AggregatedBuffer != null) {
             BVH8AggregatedBuffer.Release();
             BVH8AggregatedBuffer = null;    
@@ -124,125 +126,122 @@ public class AssetManager : MonoBehaviour {//This handels all the data
         System.GC.Collect();
     }
 
+    private List<Texture2D> AlbedoTexs;
+    private List<RayObjects> AlbedoIndexes;
+    private List<Texture2D> NormalTexs;
+    private List<RayObjects> NormalIndexes;
+    private List<Texture2D> MetallicTexs;
+    private List<RayObjects> MetallicIndexes;
+    private List<Texture2D> RoughnessTexs;
+    private List<RayObjects> RoughnessIndexes;
+    private List<Texture2D> EmissiveTexs;
+    private List<RayObjects> EmissiveIndexes;
 
-
-    private Vector4 ResizeRect(Vector4 In, Rect InRect) {
-        Vector2 Difference = new Vector2(InRect.xMax - InRect.xMin, InRect.yMax - InRect.yMin);
-        Vector2 Max = new Vector2(In.x, In.y) * Difference + new Vector2(InRect.xMin, InRect.yMin);
-        Vector2 Min = new Vector2(In.z, In.w) * Difference + new Vector2(InRect.xMin, InRect.yMin);
-        return new Vector4(Max.x, Max.y, Min.x, Min.y);
+    private void AddTextures(ref List<Texture2D> Texs, ref List<RayObjects> Indexes, ref List<RayObjects> ObjIndexes, ref List<Texture> ObjTexs) {
+        int NewLength = ObjTexs.Count;
+        int PrevLength = Texs.Count;
+        for(int i = 0; i < NewLength; i++) {
+            int Index = Texs.IndexOf((Texture2D)ObjTexs[i], 0, PrevLength);
+            if(Index == -1) {
+                Texs.Add((Texture2D)ObjTexs[i]);
+                Indexes.Add(ObjIndexes[i]);
+            } else {
+                Indexes[Index].RayObjectList.AddRange(ObjIndexes[i].RayObjectList);
+            }
+        }
     }
+
+    private void ModifyTextureBounds(ref Rect[] Rects, int TexLength, ref List<RayObjects> Indexes, int TargetTex) {
+            for(int i = 0; i < TexLength; i++) {
+                int SecondaryLength = Indexes[i].RayObjectList.Count;
+                for(int i2 = 0; i2 < SecondaryLength; i2++) {
+                    MaterialData TempMat = _Materials[Indexes[i].RayObjectList[i2].Obj.MaterialIndex[Indexes[i].RayObjectList[i2].ObjIndex]];
+                    switch(TargetTex) {
+                        case 0: 
+                            TempMat.AlbedoTex = new Vector4(Rects[i].xMax, Rects[i].yMax, Rects[i].xMin, Rects[i].yMin);
+                            TempMat.HasAlbedoTex = 1;
+                        break;
+                        case 1: 
+                            TempMat.NormalTex = new Vector4(Rects[i].xMax, Rects[i].yMax, Rects[i].xMin, Rects[i].yMin);
+                            TempMat.HasNormalTex = 1;
+                        break;
+                        case 2: 
+                            TempMat.MetallicTex = new Vector4(Rects[i].xMax, Rects[i].yMax, Rects[i].xMin, Rects[i].yMin);
+                            TempMat.HasMetallicTex = 1;
+                        break;
+                        case 3: 
+                            TempMat.RoughnessTex = new Vector4(Rects[i].xMax, Rects[i].yMax, Rects[i].xMin, Rects[i].yMin);
+                            TempMat.HasRoughnessTex = 1;
+                        break;
+                        case 4: 
+                            TempMat.EmissiveTex = new Vector4(Rects[i].xMax, Rects[i].yMax, Rects[i].xMin, Rects[i].yMin);
+                            TempMat.HasEmissiveTex = 1;
+                        break;
+                        default:
+                            Debug.Log("EEEEE");
+                        break;
+                    }
+                    _Materials[Indexes[i].RayObjectList[i2].Obj.MaterialIndex[Indexes[i].RayObjectList[i2].ObjIndex]] = TempMat;
+                }
+            }
+    }
+
    private void CreateAtlas() {//Creates texture atlas
 
         _Materials = new List<MaterialData>();
-        List<Texture2D> AlbedoTexs = new List<Texture2D>();
-        List<Texture2D> NormalTexs = new List<Texture2D>();
-        List<Texture2D> EmissiveTexs = new List<Texture2D>();
-        List<Texture2D> MetallicTexs = new List<Texture2D>();
-        List<Texture2D> RoughnessTexs = new List<Texture2D>();
+        AlbedoIndexes = new List<RayObjects>();
+        AlbedoTexs = new List<Texture2D>();
+        NormalTexs = new List<Texture2D>();
+        NormalIndexes = new List<RayObjects>();
+        MetallicTexs = new List<Texture2D>();
+        MetallicIndexes = new List<RayObjects>();
+        RoughnessTexs = new List<Texture2D>();
+        RoughnessIndexes = new List<RayObjects>();
+        EmissiveTexs = new List<Texture2D>();
+        EmissiveIndexes = new List<RayObjects>();
         AlbedoAtlas = new Texture2D(1,1);
         NormalAtlas = new Texture2D(1, 1);
         EmissiveAtlas = new Texture2D(1, 1);
         MetallicAtlas = new Texture2D(1, 1);
         RoughnessAtlas = new Texture2D(1, 1);
-        int AlbedoCount, NormalCount, EmissiveCount, MetallicCount, RoughnessCount = 0;
+        int CurCount = RenderQue[0].AlbedoTexs.Count;
+        int CurLength;
         foreach(ParentObject Obj in RenderQue) {
-            if(Obj.HasAlbedoAtlas) {
-                AlbedoTexs.Add((Texture2D)Obj.AlbedoAtlas);
-            }
-            if(Obj.HasNormalAtlas) {
-                NormalTexs.Add((Texture2D)Obj.NormalAtlas);
-            }
-            if(Obj.HasEmissiveAtlas) {
-                EmissiveTexs.Add((Texture2D)Obj.EmissiveAtlas);
-            }
-            if(Obj.HasMetallicAtlas) {
-                MetallicTexs.Add((Texture2D)Obj.MetallicAtlas);
-            }
-            if(Obj.HasRoughnessAtlas) {
-                RoughnessTexs.Add((Texture2D)Obj.RoughnessAtlas);
-            }
+            AddTextures(ref AlbedoTexs, ref AlbedoIndexes, ref Obj.AlbedoIndexes, ref Obj.AlbedoTexs);
+            AddTextures(ref NormalTexs, ref NormalIndexes, ref Obj.NormalIndexes, ref Obj.NormalTexs);
+            AddTextures(ref MetallicTexs, ref MetallicIndexes, ref Obj.MetallicIndexes, ref Obj.MetallicTexs);
+            AddTextures(ref RoughnessTexs, ref RoughnessIndexes, ref Obj.RoughnessIndexes, ref Obj.RoughnessTexs);
+            AddTextures(ref EmissiveTexs, ref EmissiveIndexes, ref Obj.EmissionIndexes, ref Obj.EmissionTexs);
         }
         foreach(ParentObject Obj in InstanceData.RenderQue) {
-            if(Obj.HasAlbedoAtlas) {
-                AlbedoTexs.Add((Texture2D)Obj.AlbedoAtlas);
-            }
-            if(Obj.HasNormalAtlas) {
-                NormalTexs.Add((Texture2D)Obj.NormalAtlas);
-            }
-            if(Obj.HasEmissiveAtlas) {
-                EmissiveTexs.Add((Texture2D)Obj.EmissiveAtlas);
-            }
-            if(Obj.HasMetallicAtlas) {
-                MetallicTexs.Add((Texture2D)Obj.MetallicAtlas);
-            }
-            if(Obj.HasRoughnessAtlas) {
-                RoughnessTexs.Add((Texture2D)Obj.RoughnessAtlas);
-            }
+            AddTextures(ref AlbedoTexs, ref AlbedoIndexes, ref Obj.AlbedoIndexes, ref Obj.AlbedoTexs);
+            AddTextures(ref NormalTexs, ref NormalIndexes, ref Obj.NormalIndexes, ref Obj.NormalTexs);
+            AddTextures(ref MetallicTexs, ref MetallicIndexes, ref Obj.MetallicIndexes, ref Obj.MetallicTexs);
+            AddTextures(ref RoughnessTexs, ref RoughnessIndexes, ref Obj.RoughnessIndexes, ref Obj.RoughnessTexs);
+            AddTextures(ref EmissiveTexs, ref EmissiveIndexes, ref Obj.EmissionIndexes, ref Obj.EmissionTexs);
         }
-        Rect[] AlbedoRects, NormalRects, EmmissiveRects, MetallicRects, RoughnessRects;
-        if(AlbedoTexs.Count != 0) {
-            AlbedoRects = AlbedoAtlas.PackTextures(AlbedoTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392), true);//4096);
-        } else {
-            AlbedoRects = new Rect[0];
-        }
-        if(NormalTexs.Count != 0) {
-            NormalRects = NormalAtlas.PackTextures(NormalTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392), true);//4096);
-        } else {
-            NormalRects = new Rect[0];
-        }
-        if(EmissiveTexs.Count != 0) {
-            EmmissiveRects = EmissiveAtlas.PackTextures(EmissiveTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392), true);//4096);
-        } else {
-            EmmissiveRects = new Rect[0];
-        }
-        if(MetallicTexs.Count != 0) {
-            MetallicRects = MetallicAtlas.PackTextures(MetallicTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392), true);//4096);
-        } else {
-            MetallicRects = new Rect[0];
-        }
-        if(RoughnessTexs.Count != 0) {
-            RoughnessRects = RoughnessAtlas.PackTextures(RoughnessTexs.ToArray(), 1, Mathf.Min((int)Mathf.Ceil(Mathf.Sqrt(RenderQue.Count)) * RenderQue[0].AtlasSize, 16392), true);//4096);
-        } else {
-            RoughnessRects = new Rect[0];
-        }
-        AlbedoCount = NormalCount = EmissiveCount = MetallicCount = RoughnessCount =  0;
-         int MatCount = 0;
+        Rect[] AlbedoRects, NormalRects, EmissiveRects, MetallicRects, RoughnessRects;
+        if(AlbedoTexs.Count != 0) AlbedoRects = AlbedoAtlas.PackTextures(AlbedoTexs.ToArray(), 1, 16392, true);//4096);
+        else AlbedoRects = new Rect[0];
+        if(NormalTexs.Count != 0) NormalRects = NormalAtlas.PackTextures(NormalTexs.ToArray(), 1, 16392, true);//4096);
+        else NormalRects = new Rect[0];
+        if(MetallicTexs.Count != 0) MetallicRects = MetallicAtlas.PackTextures(MetallicTexs.ToArray(), 1, 16392, true);//4096);
+        else MetallicRects = new Rect[0];
+        if(RoughnessTexs.Count != 0) RoughnessRects = RoughnessAtlas.PackTextures(RoughnessTexs.ToArray(), 1, 16392, true);//4096);
+        else RoughnessRects = new Rect[0];
+        if(EmissiveTexs.Count != 0) EmissiveRects = EmissiveAtlas.PackTextures(EmissiveTexs.ToArray(), 1, 16392, true);//4096);
+        else EmissiveRects = new Rect[0];
+
+        int MatCount = 0;
+
         foreach(ParentObject Obj in RenderQue) {
             foreach(RayTracingObject Obj2 in Obj.ChildObjects) {
                 for(int i = 0; i < Obj2.MaterialIndex.Length; i++) {
                     Obj2.MaterialIndex[i] = Obj2.LocalMaterialIndex[i] + MatCount;
                 }
             }
-            foreach(MaterialData Mat in Obj._Materials) {
-                MaterialData TempMat = Mat;
-                if(TempMat.MatType == 1) {
-                    TempMat.Roughness = Mathf.Max(TempMat.Roughness, 0.000001f);
-                }
-                if(TempMat.HasAlbedoTex == 1) {
-                    TempMat.AlbedoTex = ResizeRect(TempMat.AlbedoTex, AlbedoRects[AlbedoCount]);
-                }
-                if(TempMat.HasNormalTex == 1) {
-                    TempMat.NormalTex = ResizeRect(TempMat.NormalTex, NormalRects[NormalCount]);
-                }
-                if(TempMat.HasEmissiveTex == 1) {
-                    TempMat.EmissiveTex = ResizeRect(TempMat.EmissiveTex, EmmissiveRects[EmissiveCount]);
-                }
-                if(TempMat.HasMetallicTex == 1) {
-                    TempMat.MetallicTex = ResizeRect(TempMat.MetallicTex, MetallicRects[MetallicCount]);
-                }
-                if(TempMat.HasRoughnessTex == 1) {
-                    TempMat.RoughnessTex = ResizeRect(TempMat.RoughnessTex, RoughnessRects[RoughnessCount]);
-                }
-                _Materials.Add(TempMat);
-                MatCount++;
-            }
-            if(Obj.HasAlbedoAtlas) AlbedoCount++;
-            if(Obj.HasNormalAtlas) NormalCount++;
-            if(Obj.HasEmissiveAtlas) EmissiveCount++;
-            if(Obj.HasMetallicAtlas) MetallicCount++;
-            if(Obj.HasRoughnessAtlas) RoughnessCount++;
-
+            _Materials.AddRange(Obj._Materials);
+            MatCount += Obj._Materials.Count;
         }
         foreach(ParentObject Obj in InstanceData.RenderQue) {
             foreach(RayTracingObject Obj2 in Obj.ChildObjects) {
@@ -250,46 +249,26 @@ public class AssetManager : MonoBehaviour {//This handels all the data
                     Obj2.MaterialIndex[i] = Obj2.LocalMaterialIndex[i] + MatCount;
                 }
             }
-            foreach(MaterialData Mat in Obj._Materials) {
-                MaterialData TempMat = Mat;
-                if(TempMat.MatType == 1) {
-                    TempMat.Roughness = Mathf.Max(TempMat.Roughness, 0.000001f);
-                }
-                if(TempMat.HasAlbedoTex == 1) {
-                    TempMat.AlbedoTex = ResizeRect(TempMat.AlbedoTex, AlbedoRects[AlbedoCount]);
-                }
-                if(TempMat.HasNormalTex == 1) {
-                    TempMat.NormalTex = ResizeRect(TempMat.NormalTex, NormalRects[NormalCount]);
-                }
-                if(TempMat.HasEmissiveTex == 1) {
-                    TempMat.EmissiveTex = ResizeRect(TempMat.EmissiveTex, EmmissiveRects[EmissiveCount]);
-                }
-                if(TempMat.HasMetallicTex == 1) {
-                    TempMat.MetallicTex = ResizeRect(TempMat.MetallicTex, MetallicRects[MetallicCount]);
-                }
-                if(TempMat.HasRoughnessTex == 1) {
-                    TempMat.RoughnessTex = ResizeRect(TempMat.RoughnessTex, RoughnessRects[RoughnessCount]);
-                }
-                _Materials.Add(TempMat);
-                MatCount++;
-            }
-            if(Obj.HasAlbedoAtlas) AlbedoCount++;
-            if(Obj.HasNormalAtlas) NormalCount++;
-            if(Obj.HasEmissiveAtlas) EmissiveCount++;
-            if(Obj.HasMetallicAtlas) MetallicCount++;
-            if(Obj.HasRoughnessAtlas) RoughnessCount++;
-
+            _Materials.AddRange(Obj._Materials);
+            MatCount += Obj._Materials.Count;
         }
+
+        ModifyTextureBounds(ref AlbedoRects, AlbedoTexs.Count, ref AlbedoIndexes, 0);
+        ModifyTextureBounds(ref NormalRects, NormalTexs.Count, ref NormalIndexes, 1);
+        ModifyTextureBounds(ref MetallicRects, MetallicTexs.Count, ref MetallicIndexes, 2);
+        ModifyTextureBounds(ref RoughnessRects, RoughnessTexs.Count, ref RoughnessIndexes, 3);
+        ModifyTextureBounds(ref EmissiveRects, EmissiveTexs.Count, ref EmissiveIndexes, 4);
+
         AlbedoTexs.Clear();
         AlbedoTexs.TrimExcess();
         NormalTexs.Clear();
         NormalTexs.TrimExcess();
-        EmissiveTexs.Clear();
-        EmissiveTexs.TrimExcess(); 
         MetallicTexs.Clear();
-        MetallicTexs.TrimExcess(); 
+        MetallicTexs.TrimExcess();
         RoughnessTexs.Clear();
-        RoughnessTexs.TrimExcess(); 
+        RoughnessTexs.TrimExcess();
+        EmissiveTexs.Clear();
+        EmissiveTexs.TrimExcess();
         foreach(VoxelObject Vox in VoxelRenderQue) {
             foreach(MaterialData Mat in Vox._Materials) {
                 _Materials.Add(Mat);
@@ -564,6 +543,7 @@ public class AssetManager : MonoBehaviour {//This handels all the data
                 AggNodeCount += InstanceData.RenderQue[i].AggNodes.Length;
                 AggTriCount += InstanceData.RenderQue[i].AggTriangles.Length;
             }
+            Debug.Log("Total Tri Count: " + AggTriCount);
             if(AggNodeCount != 0) {//Accumulate the BVH nodes and triangles for all normal models
                 BVH8AggregatedBuffer = new ComputeBuffer(AggNodeCount, 80);
                 AggTriBuffer = new ComputeBuffer(AggTriCount, 136);

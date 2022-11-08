@@ -12,8 +12,6 @@ public class RayTracingObject : MonoBehaviour {
 	public Vector3[] EmissionColor;
 	public float[] Roughness;
 	public float[] IOR;
-
-
 	public float[] Metallic;
 	public float[] SpecularTint;
 	public float[] Sheen;
@@ -25,12 +23,13 @@ public class RayTracingObject : MonoBehaviour {
 	public float[] DiffTrans;
 	public float[] SpecTrans;
 	public int[] Thin;
+	public string[] Names;
 
 	[HideInInspector] public int[] MaterialIndex;
 	[HideInInspector] public int[] LocalMaterialIndex;
 	public void matfill() {
 		 Mesh mesh = new Mesh();
-		 			int SubMeshCount;
+		 int SubMeshCount;
 		 if(GetComponent<MeshFilter>() != null) { 
 		 	mesh = GetComponent<MeshFilter>().sharedMesh;
 		 	SubMeshCount = (GetComponent<MeshRenderer>().sharedMaterials).Length;
@@ -41,10 +40,12 @@ public class RayTracingObject : MonoBehaviour {
 	 	if(mesh == null) {
 	 		DestroyImmediate(this);
 	 	}
-			if(EmissionColor == null || EmissionColor.Length != SubMeshCount) EmissionColor = new Vector3[SubMeshCount];
-		
-			if(Thin == null || Thin.Length != SubMeshCount) {
+
+		try {
+			if(Names == null || Names.Length != SubMeshCount) {
+				Names = new string[SubMeshCount];
 				TransmissionColor = new Vector3[SubMeshCount];
+				EmissionColor = new Vector3[SubMeshCount];				
 				IOR = new float[SubMeshCount];
 				Metallic = new float[SubMeshCount];
 				SpecularTint = new float[SubMeshCount];
@@ -57,44 +58,53 @@ public class RayTracingObject : MonoBehaviour {
 				DiffTrans = new float[SubMeshCount];
 				SpecTrans = new float[SubMeshCount];
 				Thin = new int[SubMeshCount];
-			}
-
-
-		try {
-			if(emmission == null || emmission.Length != mesh.subMeshCount) {
-			MaterialOptions = new Options[SubMeshCount];
-			LocalMaterialIndex = new int[SubMeshCount];
-			emmission = new float[SubMeshCount];
-			Roughness = new float[SubMeshCount];
-			System.Array.Fill(IOR, 1);
-			BaseColor = new Vector3[SubMeshCount];
-			MaterialIndex = new int[SubMeshCount];
-			Material[] SharedMaterials = (GetComponent<Renderer>() != null) ? GetComponent<Renderer>().sharedMaterials : GetComponent<SkinnedMeshRenderer>().sharedMaterials;
-			for(int i = 0; i < SubMeshCount; i++) {
-				MaterialOptions[i] = Options.Diffuse;
-				bool EmissionColored = false;
-				if(SharedMaterials[i].GetTexture("_EmissionMap") != null && SharedMaterials[i].GetTexture("_EmissionMap").width < 32) {
-					emmission[i] = 4.0f;
-					if(SharedMaterials[i].GetTexture("_EmissionMap") != null) {
-						Color Col = ((Texture2D)SharedMaterials[i].GetTexture("_EmissionMap")).GetPixel(8,8,0);
-						BaseColor[i] = new Vector3(Col.r, Col.g, Col.b);
-					} else {
-						Color Col = SharedMaterials[i].GetColor("_EmissionColor");
-						EmissionColor[i] = new Vector3(Col.r, Col.g, Col.b).normalized;
+				MaterialOptions = new Options[SubMeshCount];
+				LocalMaterialIndex = new int[SubMeshCount];
+				emmission = new float[SubMeshCount];
+				Roughness = new float[SubMeshCount];
+				System.Array.Fill(IOR, 1);
+				BaseColor = new Vector3[SubMeshCount];
+				MaterialIndex = new int[SubMeshCount];
+				Material[] SharedMaterials = (GetComponent<Renderer>() != null) ? GetComponent<Renderer>().sharedMaterials : GetComponent<SkinnedMeshRenderer>().sharedMaterials;
+				List<string> PropertyNames = new List<string>();
+				for(int i = 0; i < SubMeshCount; i++) {
+					MaterialOptions[i] = Options.Diffuse;
+					Names[i] = SharedMaterials[i].name;
+					bool EmissionColored = false;
+		            SharedMaterials[i].GetTexturePropertyNames(PropertyNames);
+					if(PropertyNames.Contains("_Metallic")) {
+						Metallic[i] = SharedMaterials[i].GetFloat("_Metallic");
 					}
-				}
-				if(SharedMaterials[i].GetFloat("_Mode") == 3.0f) {
-					MaterialOptions[i] = Options.Disney;
-					IOR[i] = 1.33f;
-					SpecTrans[i] = 1;
+					if(PropertyNames.Contains("_Roughness")) {
+						Roughness[i] = SharedMaterials[i].GetFloat("_Roughness");
+					}
 
+					if(SharedMaterials[i].GetTexture("_EmissionMap") != null && SharedMaterials[i].GetTexture("_EmissionMap").width < 32) {
+						emmission[i] = 4.0f;
+						if(SharedMaterials[i].GetTexture("_EmissionMap") != null) {
+							Color Col = ((Texture2D)SharedMaterials[i].GetTexture("_EmissionMap")).GetPixel(8,8,0);
+							BaseColor[i] = new Vector3(Col.r, Col.g, Col.b);
+						} else {
+							Color Col = SharedMaterials[i].GetColor("_EmissionColor");
+							EmissionColor[i] = new Vector3(Col.r, Col.g, Col.b).normalized;
+						}
+					}
+					if(SharedMaterials[i].GetFloat("_Mode") == 3.0f) {
+						MaterialOptions[i] = Options.Disney;
+						IOR[i] = 1.33f;
+						SpecTrans[i] = 1;
+
+					}
+					if(SharedMaterials[i].GetFloat("_Mode") == 1.0f) {
+						MaterialOptions[i] = Options.Cutout;
+					}
+					if(!EmissionColored) BaseColor[i] = (SharedMaterials[i].mainTexture == null) ? ((SharedMaterials[i].HasProperty("_Color")) ? new Vector3(SharedMaterials[i].color.r, SharedMaterials[i].color.g, SharedMaterials[i].color.b) : new Vector3(0.78f, 0.14f, 0.69f)) : new Vector3(0.78f, 0.14f, 0.69f);
 				}
-				if(SharedMaterials[i].GetFloat("_Mode") == 1.0f) {
-					MaterialOptions[i] = Options.Cutout;
-				}
-				if(!EmissionColored) BaseColor[i] = (SharedMaterials[i].mainTexture == null) ? ((SharedMaterials[i].HasProperty("_Color")) ? new Vector3(SharedMaterials[i].color.r, SharedMaterials[i].color.g, SharedMaterials[i].color.b) : new Vector3(0.78f, 0.14f, 0.69f)) : new Vector3(0.78f, 0.14f, 0.69f);
 			}
-		}
+	 	for(int i = 0; i < SubMeshCount; i++) {
+	 		MaterialOptions[i] = Options.Disney;
+	 		ClearCoat[i] = 0;
+	 	}
 		} catch(System.Exception e) {
 			Debug.Log("ERROR AT: " + this.gameObject.name);
 		}

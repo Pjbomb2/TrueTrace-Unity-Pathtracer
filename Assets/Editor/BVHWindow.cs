@@ -19,6 +19,104 @@ public class EditModeFunctions : EditorWindow {
          GameObject.Find("Scene").GetComponent<AssetManager>().EditorBuild();
       }
 
+      List<List<GameObject>> Objects;
+      List<Mesh> SourceMeshes;
+
+      List<Transform> ChildObjects;
+      private void GrabChildren(Transform Parent) {
+         ChildObjects.Add(Parent);
+         int ChildCount = Parent.childCount;
+         for(int i = 0; i < ChildCount; i++) {
+            if(Parent.GetChild(i).gameObject.activeInHierarchy) GrabChildren(Parent.GetChild(i));
+         }
+      }
+
+      private void ConstructInstances() {
+         SourceMeshes = new List<Mesh>();
+         Objects = new List<List<GameObject>>();
+         ChildObjects = new List<Transform>();
+         Transform Source = GameObject.Find("Scene").transform;
+         Transform InstanceStorage = GameObject.Find("InstancedStorage").transform;
+         int ChildrenLeft = Source.childCount;
+         int CurrentChild = 0;
+         while(CurrentChild < ChildrenLeft) {
+            Transform CurrentObject = Source.GetChild(CurrentChild++);
+            if(CurrentObject.gameObject.activeInHierarchy) GrabChildren(CurrentObject); 
+         }
+
+         int ChildCount = ChildObjects.Count;
+         for(int i = ChildCount - 1; i >= 0; i--) {
+            if(ChildObjects[i].GetComponent<ParentObject>() != null || ChildObjects[i].GetComponent<InstancedObject>() != null) {
+               continue;
+            }
+            if(ChildObjects[i].GetComponent<RayTracingObject>() != null) {
+                  var mesh = ChildObjects[i].GetComponent<MeshFilter>().sharedMesh;
+                  if(SourceMeshes.Contains(mesh)) {
+                     int Index = SourceMeshes.IndexOf(mesh);
+                     Objects[Index].Add(ChildObjects[i].gameObject);
+                  } else {
+                     SourceMeshes.Add(mesh);
+                     Objects.Add(new List<GameObject>());
+                     Objects[Objects.Count - 1].Add(ChildObjects[i].gameObject);
+                  }
+            }
+         }
+         int UniqueMeshCounts = SourceMeshes.Count;
+         for(int i = 0; i < UniqueMeshCounts; i++) {
+            if(Objects[i].Count > 1) {
+               int Count = Objects[i].Count;
+               GameObject InstancedParent = Instantiate(Objects[i][0], new Vector3(0,-100,0), Quaternion.identity, InstanceStorage);
+               InstancedParent.AddComponent<ParentObject>();
+               for(int i2 = Count - 1; i2 >= 0; i2--) {
+                  DestroyImmediate(Objects[i][i2].GetComponent<RayTracingObject>());
+                  Objects[i][i2].AddComponent<InstancedObject>();
+                  Objects[i][i2].GetComponent<InstancedObject>().InstanceParent = InstancedParent.GetComponent<ParentObject>();;
+               }
+            }
+         }
+      }
+
+
+      private void OptimizeForStatic() {
+         ChildObjects = new List<Transform>();
+         Transform Source = GameObject.Find("Scene").transform;
+         int ChildrenLeft = Source.childCount;
+         Transform Parent;
+         if(GameObject.Find("Static Objects") == null) {
+            GameObject TempObject = new GameObject("Static Objects", typeof(ParentObject));
+            Parent = TempObject.transform;
+         }
+         else Parent = GameObject.Find("Static Objects").transform;
+         Parent.parent = Source;
+         int CurrentChild = 0;
+         while(CurrentChild < ChildrenLeft) {
+            Transform CurrentObject = Source.GetChild(CurrentChild++);
+            if(CurrentObject.gameObject.activeInHierarchy && !CurrentObject.gameObject.name.Equals("Static Objects")) GrabChildren(CurrentObject); 
+         }
+         CurrentChild = 0;
+         ChildrenLeft = Parent.childCount;
+         while(CurrentChild < ChildrenLeft) {
+            Transform CurrentObject = Parent.GetChild(CurrentChild++);
+            if(CurrentObject.gameObject.activeInHierarchy && !CurrentObject.gameObject.name.Equals("Static Objects")) GrabChildren(CurrentObject); 
+         }
+         int ChildCount = ChildObjects.Count;
+         for(int i = ChildCount - 1; i >= 0; i--) {
+            if(ChildObjects[i].GetComponent<ParentObject>() != null) {
+               DestroyImmediate(ChildObjects[i].GetComponent<ParentObject>());
+            }
+            if(ChildObjects[i].GetComponent<Light>() != null) {
+               continue;
+            } else if(ChildObjects[i].GetComponent<MeshFilter>() != null) {
+               ChildObjects[i].parent = Parent;
+            } else if(ChildObjects[i].GetComponent<InstancedObject>() != null) {
+               ChildObjects[i].parent = Source;
+            } else {
+               ChildObjects[i].parent = null;
+            }
+         }
+
+      }
+
       private void QuickStart() {
          List<Transform> Children = new List<Transform>();
             for(int i = 0; i < Assets.transform.childCount; i++) {
@@ -28,6 +126,7 @@ public class EditModeFunctions : EditorWindow {
             while(Children.Count != 0) {
                Transform Child = Children[Children.Count - 1];//its much faster to read and remove from the end than the beginning
                Children.RemoveAt(Children.Count - 1);
+               if(Child.GetComponent<InstancedObject>() != null) continue;
                if(Child.GetComponent<Light>() != null && Child.GetComponent<RayTracingLights>() == null) Child.gameObject.AddComponent<RayTracingLights>(); 
                if(!Child.gameObject.activeInHierarchy && !(Child.GetComponent<SkinnedMeshRenderer>() != null || Child.GetComponent<MeshFilter>() != null)) continue;
                if(Child.parent.GetComponent<ParentObject>() == null) {
@@ -153,10 +252,12 @@ public class EditModeFunctions : EditorWindow {
             Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
 
             }
-         Rect ScreenShotButton = new Rect(10 + (position.width - 10) / 2,10,(position.width - 10) / 2 - 10, 20);
-         Rect EasySetupButton = new Rect(10 + (position.width - 10) / 2,35,(position.width - 10) / 2 - 10, 20);
-         Rect CombinedBuilderButton = new Rect(10,10,(position.width - 10) / 2, 20);
-         Rect ClearParentData = new Rect(10,35,(position.width - 10) / 2, 20);
+         Rect ScreenShotButton = new Rect(10 + (position.width - 10) / 3,10,(position.width - 10) / 3, 20);
+         Rect EasySetupButton = new Rect(10 + (position.width - 10) / 3,35,(position.width - 10) / 3, 20);
+         Rect MakeStaticOptimizedButton = new Rect(10 + (position.width - 10) / 3 * 2,10,(position.width - 10) / 3 - 10, 20);
+         Rect SetupInstancesButton = new Rect(10 + (position.width - 10) / 3 * 2,35,(position.width - 10) / 3 - 10, 20);
+         Rect CombinedBuilderButton = new Rect(10,10,(position.width - 10) / 3, 20);
+         Rect ClearParentData = new Rect(10,35,(position.width - 10) / 3, 20);
          Rect BounceCountInput =   new Rect(Mathf.Max((position.width - 10) / 4,145), 60, (position.width - 10) / 4, 20);
          Rect BounceCountLabel =   new Rect(10, 60, Mathf.Max((position.width - 10) / 4,145), 20);
          Rect RenderScaleLabel =   new Rect(10 + (position.width - 10) / 2 +  + (position.width - 10) / 16, 60, Mathf.Max((position.width - 10) / 4,145), 20);
@@ -300,6 +401,13 @@ public class EditModeFunctions : EditorWindow {
          RayMaster.DoTLASUpdates = DynamicTLAS;
          RayMaster.AllowConverge = AllowConverge;
          RayMaster.UseNEE = UseNEE;
+
+         if (GUI.Button(MakeStaticOptimizedButton, "Make All Static")) {
+            OptimizeForStatic();
+         }
+         if (GUI.Button(SetupInstancesButton, "Force Instances")) {
+            ConstructInstances();
+         }
          
          if (GUI.Button(ScreenShotButton, "Take ScreenShot")) {
             GameObject result = new GameObject();

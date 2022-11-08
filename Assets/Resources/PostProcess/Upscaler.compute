@@ -24,6 +24,7 @@ SamplerState sampler_PrevDepthTex;
 RWTexture2D<float4> PrevDepthTexWrite;
 Texture2D<float4> Albedo;
 Texture2D<float4> MotionVectors;
+SamplerState sampler_MotionVectors;
 
 Texture2D<float4> PosTex;
 
@@ -217,7 +218,7 @@ void kernel_upsample (int3 id : SV_DispatchThreadID)
     pixel_index = id.y * target_width + id.x;
     float2 UV = float2(id.xy) / float2(target_width, target_height);
     float2 texel = 0.5f / float2(target_width, target_height);
-    float2 newUV = UV - MotionVectors[id.xy].xy + texel;
+    float2 newUV = UV - MotionVectors.SampleLevel(sampler_MotionVectors, UV, 0).xy + texel;
     float CurDepth = Linear01Depth(DepthTex.SampleLevel(sampler_DepthTex, UV, 0).x) * FarPlane;
     float ReprojDepth = PrevDepthTex.SampleLevel(sampler_PrevDepthTex, newUV, 0).x;
     float3 CurrentWorldPosition = CreateCameraRay(UV, CurDepth);
@@ -247,7 +248,7 @@ void kernel_upsample (int3 id : SV_DispatchThreadID)
         float4 super = super_sample(UV, id.xyxy / float2(target_width, target_height).xyxy, view_pixel_size);
 // Disocluded = Disocluded || abs(dot(lerp(dir_avg.xyz, super.xyz, 0.5f), float3(0.299f, 0.587f, 0.114f)) - dot(PrevOutput[newUV * float2(target_width, target_height)].xyz, float3(0.299f, 0.587f, 0.114f))) > 0.1f;
         if(Disocluded || (newUV.x > 1 || newUV.x < 0 || newUV.y > 1 || newUV.y < 0)) Output[id.xy] = float4(lerp(dir_avg.xyz, super.xyz, 0.5f),1);
-        else Output[id.xy] = float4(lerp(PrevOutput[newUV * float2(target_width, target_height)].xyz, lerp(dir_avg.xyz, super.xyz, 0.5f), max(1.0f / PrevOutput[newUV * float2(target_width, target_height)].w,0.1f)),PrevOutput[newUV * float2(target_width, target_height)].w + 1);
+        else Output[id.xy] = float4(lerp(PrevOutput[newUV * float2(target_width, target_height)].xyz, lerp(dir_avg.xyz, super.xyz, 0.5f), max(1.0f / PrevOutput[newUV * float2(target_width, target_height)].w,0.01f)),PrevOutput[newUV * float2(target_width, target_height)].w + 1);
     FinalOutput[id.xy] = float4(Output[id.xy].xyz * Albedo[id.xy].xyz, 1);
     PrevDepthTexWrite[id.xy] = float4(CurDepth, 0, 0, 1);
 }

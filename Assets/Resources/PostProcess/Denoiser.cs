@@ -127,6 +127,25 @@ public class Denoiser {
         ThisTex.useMipMap = false;
         ThisTex.Create();
     }
+    private void CreateRenderTextureInt(ref RenderTexture ThisTex) {
+        ThisTex = new RenderTexture(SourceWidth, SourceHeight, 0,
+            RenderTextureFormat.RInt, RenderTextureReadWrite.Linear);
+        ThisTex.enableRandomWrite = true;
+        ThisTex.Create();
+    }
+    private void CreateRenderTextureDouble(ref RenderTexture ThisTex) {
+        ThisTex = new RenderTexture(SourceWidth, SourceHeight, 0,
+            RenderTextureFormat.RGFloat, RenderTextureReadWrite.Linear);
+        ThisTex.enableRandomWrite = true;
+        ThisTex.Create();
+    }
+
+    private void CreateRenderTextureSingle(ref RenderTexture ThisTex) {
+        ThisTex = new RenderTexture(SourceWidth, SourceHeight, 0,
+            RenderTextureFormat.RFloat, RenderTextureReadWrite.Linear);
+        ThisTex.enableRandomWrite = true;
+        ThisTex.Create();
+    }
 
 
     private void InitRenderTexture() {
@@ -165,7 +184,7 @@ public class Denoiser {
          CreateRenderTexture(ref _HistoryNormalDepth, false);
          CreateRenderTexture(ref _NormalDepth, false);
          CreateRenderTexture(ref _FrameMoment, false);
-         CreateRenderTexture(ref _History, false);
+         CreateRenderTextureInt(ref _History);
          CreateRenderTexture2(ref _TAAPrev, false);
          CreateRenderTexture2(ref PrevDepthTex, false);
          CreateRenderTexture2(ref PrevOutputTex, false);
@@ -272,6 +291,8 @@ public class Denoiser {
         SVGF.SetTextureFromGlobal(CopyKernel, "PrevDepthTex", "_LastCameraDepthTexture");
         SVGF.SetTexture(CopyKernel, "_CameraNormalDepthTex", _NormTex);
         SVGF.SetTexture(CopyKernel, "PrevDepthTexMain", PrevDepthTexMain);
+        SVGF.SetTextureFromGlobal(CopyKernel, "NormalTex", "_CameraGBufferTexture2");
+        SVGF.SetTexture(CopyKernel, "PrevNormTex", PrevNormalTex);
         SVGF.Dispatch(CopyKernel, threadGroupsX, threadGroupsY, 1);
         UnityEngine.Profiling.Profiler.EndSample();
 
@@ -332,7 +353,6 @@ public class Denoiser {
         SVGF.SetTexture(FinalizeKernel, "Result", _target);
         SVGF.SetTexture(FinalizeKernel, "HistoryTex", _History);
         SVGF.SetTexture(FinalizeKernel, "_Albedo", _Albedo);
-        SVGF.SetTexture(FinalizeKernel, "PrevNormTex", PrevNormalTex);
         
         SVGF.SetTexture(FinalizeKernel, "FrameBufferMoment", _FrameMoment);
         SVGF.Dispatch(FinalizeKernel, threadGroupsX, threadGroupsY, 1);

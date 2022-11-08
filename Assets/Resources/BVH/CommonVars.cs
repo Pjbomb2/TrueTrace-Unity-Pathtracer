@@ -533,6 +533,17 @@ namespace CommonVars {
     public struct Layer2 {
         public List<int> Slab;
     }
+
+        [System.Serializable]
+        public struct RayObjectTextureIndex {
+            public RayTracingObject Obj;
+            public int ObjIndex;
+        }
+    
+    [System.Serializable]
+    public class RayObjects {
+        public List<RayObjectTextureIndex> RayObjectList = new List<RayObjectTextureIndex>();
+    }
     
 
 public static class CommonFunctions {

@@ -19,6 +19,7 @@ public class RayTracingMaster : MonoBehaviour {
     private RenderTexture PrevDistanceTex;
     private RenderTexture MaskTex;
     private RenderTexture PrevNormalTex;
+    private RenderTexture PrevPosTex;
 
     public RenderTexture _RandomNums;
 
@@ -311,14 +312,14 @@ public class RayTracingMaster : MonoBehaviour {
         CreateComputeBuffer(ref _IllumTriBuffer, Assets.ToIllumTriBuffer, 4);
 
         CreateDynamicBuffer(ref _RayBuffer1, 56);
-        if(_ShadowBuffer == null) _ShadowBuffer = new ComputeBuffer(SourceWidth * SourceHeight * 2, 54);
+        if(_ShadowBuffer == null) _ShadowBuffer = new ComputeBuffer(SourceWidth * SourceHeight * 2, 52);
         CreateDynamicBuffer(ref _RayBuffer2, 56);
-        CreateDynamicBuffer(ref _ColorBuffer, 48);
+        CreateDynamicBuffer(ref _ColorBuffer, 52);
         CreateDynamicBuffer(ref _BufferSizes, 28);
         CreateDynamicBuffer(ref _CurrentReservoir, 92);
         CreateDynamicBuffer(ref _PreviousReservoir, 92);
-        CreateDynamicBuffer(ref GIReservoirCurrent, 92);
-        CreateDynamicBuffer(ref GIReservoirPrevious, 92);
+        CreateDynamicBuffer(ref GIReservoirCurrent, 84);
+        CreateDynamicBuffer(ref GIReservoirPrevious, 84);
         CreateDynamicBuffer(ref _SHBuffer, 24);
         RaysBuffer = new ComputeBuffer(SourceWidth * SourceHeight, 36);
         RayTracingShader.SetBuffer(GenASVGFKernel, "Rays", RaysBuffer);
@@ -380,6 +381,7 @@ public class RayTracingMaster : MonoBehaviour {
         _BufferSizes.SetData(BufferSizes);
         RayTracingShader.SetMatrix("_CameraToWorld", _camera.cameraToWorldMatrix);
         RayTracingShader.SetMatrix("_CameraInverseProjection", _camera.projectionMatrix.inverse);
+        RayTracingShader.SetVector("CamDir", _camera.transform.forward);
         
         RayTracingShader.SetVector("Up", _camera.transform.up);
         RayTracingShader.SetVector("Right", _camera.transform.right);
@@ -484,6 +486,7 @@ public class RayTracingMaster : MonoBehaviour {
             SetComputeBuffer(ShadeKernel, "_LightMeshes", _LightMeshes);
             SetComputeBuffer(ReservoirKernel, "_LightMeshes", _LightMeshes);
             SetComputeBuffer(ShadeKernel, "_Materials", _MaterialDataBuffer); 
+            SetComputeBuffer(GIReSTIRKernel, "_Materials", _MaterialDataBuffer); 
             SetComputeBuffer(GenASVGFKernel, "GlobalRays1", _RayBuffer1);
             SetComputeBuffer(GenKernel, "GlobalRays1", _RayBuffer1);
             SetComputeBuffer(TraceKernel, "GlobalRays1", _RayBuffer1);
@@ -597,6 +600,18 @@ public class RayTracingMaster : MonoBehaviour {
         ThisTex.enableRandomWrite = true;
         ThisTex.Create();
     }
+    private void CreateRenderTextureSingle(ref RenderTexture ThisTex, bool Res) {
+        ThisTex = new RenderTexture((Res) ? TargetWidth : SourceWidth, (Res) ? TargetHeight : SourceHeight, 0,
+            RenderTextureFormat.RFloat, RenderTextureReadWrite.Linear);
+        ThisTex.enableRandomWrite = true;
+        ThisTex.Create();
+    }
+    private void CreateRenderTextureDouble(ref RenderTexture ThisTex, bool Res) {
+        ThisTex = new RenderTexture((Res) ? TargetWidth : SourceWidth, (Res) ? TargetHeight : SourceHeight, 0,
+            RenderTextureFormat.RGFloat, RenderTextureReadWrite.Linear);
+        ThisTex.enableRandomWrite = true;
+        ThisTex.Create();
+    }
 
     private void InitRenderTexture() {
         if (_target == null || _target.width != SourceWidth || _target.height != SourceHeight) {
@@ -612,6 +627,7 @@ public class RayTracingMaster : MonoBehaviour {
                 PrevDistanceTex.Release();
                 MaskTex.Release();
                 PrevNormalTex.Release();
+                PrevPosTex.Release();
             }
 
          CreateRenderTexture(ref _DebugTex, true, false);
@@ -621,9 +637,10 @@ public class RayTracingMaster : MonoBehaviour {
          CreateRenderTexture(ref _NormTex, false, false);
          CreateRenderTexture(ref _converged, true, false);
          CreateRenderTexture(ref _PosTex, false, false);
+         CreateRenderTexture(ref PrevPosTex, false, false);
          CreateRenderTexture(ref _Albedo, true, false);
-         CreateRenderTexture(ref PrevDistanceTex, true, false);
-         CreateRenderTexture(ref PrevNormalTex, true, false);
+         CreateRenderTextureSingle(ref PrevDistanceTex, false);
+         CreateRenderTexture(ref PrevNormalTex, false, false);
          CreateRenderTextureMask(ref MaskTex, false);
             // Reset sampling
             _currentSample = 0;
@@ -642,6 +659,9 @@ public class RayTracingMaster : MonoBehaviour {
         RayTracingShader.SetVector("camPos", _camera.transform.position);
         RayTracingShader.SetInt("curframe", FramesSinceStart2); 
         RayTracingShader.SetTexture(ReservoirKernel, "TempPosTex", _PosTex);
+        RayTracingShader.SetTexture(GIReSTIRKernel, "PrevPosTex", PrevPosTex);
+        RayTracingShader.SetTexture(GIReSTIRKernel, "TempPosTex", _PosTex);
+        RayTracingShader.SetTexture(FinalizeKernel, "TempPosTex", _PosTex);
         RayTracingShader.SetTextureFromGlobal(ReservoirKernel, "MotionVectors", "_CameraMotionVectorsTexture");
         RayTracingShader.SetTextureFromGlobal(ShadeKernel, "MotionVectors", "_CameraMotionVectorsTexture");
         RayTracingShader.SetTextureFromGlobal(GIReSTIRKernel, "MotionVectors", "_CameraMotionVectorsTexture");
@@ -652,6 +672,7 @@ public class RayTracingMaster : MonoBehaviour {
         RayTracingShader.SetTexture(ShadeKernel, "TempNormalTex", _NormTex);
         RayTracingShader.SetTexture(ShadeKernel, "TempAlbedoTex", _Albedo);
         RayTracingShader.SetTexture(ShadeKernel, "TempNormTex", _NormTex);
+        RayTracingShader.SetTexture(GIReSTIRKernel, "TempNormTex", _NormTex);
         RayTracingShader.SetTexture(ShadeKernel, "TempPosTex", _PosTex);
         RayTracingShader.SetTexture(TraceKernel, "_DebugTex", _DebugTex);
         RayTracingShader.SetTexture(GenKernel, "_DebugTex", _DebugTex);
@@ -830,6 +851,7 @@ public class RayTracingMaster : MonoBehaviour {
         if(AllowToneMap) Denoisers.ExecuteToneMap(ref _FinalTex);
 
         Graphics.Blit(_FinalTex, destination);
+        Graphics.CopyTexture(_PosTex, PrevPosTex);
         ClearOutRenderTexture(_DebugTex);
         UnityEngine.Profiling.Profiler.EndSample();
          _currentSample++; 

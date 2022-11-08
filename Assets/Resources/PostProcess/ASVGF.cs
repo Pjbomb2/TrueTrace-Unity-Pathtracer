@@ -66,6 +66,7 @@ public class ASVGF
     private int Atrous_LF;
     private int Finalize;
     private int Atrous;
+    private Vector3 PrevCamPos;
 
     public void ClearAll() {
         RayA?.Release();
@@ -149,6 +150,45 @@ public class ASVGF
         ThisTex.useMipMap = false;
         ThisTex.Create();
     }
+    private void CreateRenderTextureGradDouble(ref RenderTexture ThisTex) {
+        ThisTex = new RenderTexture(ScreenWidth / 3, ScreenHeight / 3, 0,
+            RenderTextureFormat.RGFloat, RenderTextureReadWrite.Linear);
+        ThisTex.enableRandomWrite = true;
+        ThisTex.useMipMap = false;
+        ThisTex.Create();
+    }
+    private void CreateRenderTextureGradInt(ref RenderTexture ThisTex) {
+        ThisTex = new RenderTexture(ScreenWidth / 3, ScreenHeight / 3, 0,
+            RenderTextureFormat.RInt, RenderTextureReadWrite.Linear);
+        ThisTex.enableRandomWrite = true;
+        ThisTex.useMipMap = false;
+        ThisTex.Create();
+    }
+    private void CreateRenderTextureInt(ref RenderTexture ThisTex) {
+        ThisTex = new RenderTexture(ScreenWidth, ScreenHeight, 0,
+            RenderTextureFormat.RInt, RenderTextureReadWrite.Linear);
+        ThisTex.enableRandomWrite = true;
+        ThisTex.Create();
+    }
+    private void CreateRenderTextureDouble(ref RenderTexture ThisTex) {
+        ThisTex = new RenderTexture(ScreenWidth, ScreenHeight, 0,
+            RenderTextureFormat.RGFloat, RenderTextureReadWrite.Linear);
+        ThisTex.enableRandomWrite = true;
+        ThisTex.Create();
+    }
+    private void CreateRenderTextureGradSingle(ref RenderTexture ThisTex) {
+        ThisTex = new RenderTexture(ScreenWidth / 3, ScreenHeight / 3, 0,
+            RenderTextureFormat.RFloat, RenderTextureReadWrite.Linear);
+        ThisTex.enableRandomWrite = true;
+        ThisTex.Create();
+    }
+
+    private void CreateRenderTextureSingle(ref RenderTexture ThisTex) {
+        ThisTex = new RenderTexture(ScreenWidth, ScreenHeight, 0,
+            RenderTextureFormat.RFloat, RenderTextureReadWrite.Linear);
+        ThisTex.enableRandomWrite = true;
+        ThisTex.Create();
+    }
 
     public int iter;
     public void init(int ScreenWidth, int ScreenHeight, Camera camera) {
@@ -173,40 +213,40 @@ public class ASVGF
         RayB = new ComputeBuffer(ScreenWidth * ScreenHeight, 36);
 
         CreateRenderTexture(ref ASVGF_HIST_COLOR_HF);
-        CreateRenderTexture(ref TEX_PT_VIEW_DEPTH_A);
-        CreateRenderTexture(ref TEX_PT_NORMAL_A);
+        CreateRenderTextureSingle(ref TEX_PT_VIEW_DEPTH_A);
+        CreateRenderTextureInt(ref TEX_PT_NORMAL_A);
 
 
         CreateRenderTextureGrad(ref ASVGF_ATROUS_PING_LF_SH);
         CreateRenderTextureGrad(ref ASVGF_ATROUS_PONG_LF_SH);
-        CreateRenderTextureGrad(ref ASVGF_ATROUS_PING_LF_COCG);
-        CreateRenderTextureGrad(ref ASVGF_ATROUS_PONG_LF_COCG);
+        CreateRenderTextureGradDouble(ref ASVGF_ATROUS_PING_LF_COCG);
+        CreateRenderTextureGradDouble(ref ASVGF_ATROUS_PONG_LF_COCG);
         CreateRenderTexture(ref PT_LF1);
-        CreateRenderTexture(ref PT_LF2);
+        CreateRenderTextureDouble(ref PT_LF2);
         CreateRenderTexture(ref ASVGF_ATROUS_PING_HF);
         CreateRenderTexture(ref ASVGF_ATROUS_PONG_HF);
         CreateRenderTexture(ref ASVGF_ATROUS_PING_SPEC);
         CreateRenderTexture(ref ASVGF_ATROUS_PONG_SPEC);
-        CreateRenderTexture(ref ASVGF_ATROUS_PING_MOMENTS);
-        CreateRenderTexture(ref ASVGF_ATROUS_PONG_MOMENTS);
+        CreateRenderTextureDouble(ref ASVGF_ATROUS_PING_MOMENTS);
+        CreateRenderTextureDouble(ref ASVGF_ATROUS_PONG_MOMENTS);
         CreateRenderTexture(ref ASVGF_COLOR);
-        CreateRenderTextureGrad(ref ASVGF_GRAD_LF_PING);
-        CreateRenderTextureGrad(ref ASVGF_GRAD_LF_PONG);
-        CreateRenderTextureGrad(ref ASVGF_GRAD_HF_SPEC_PING);
-        CreateRenderTextureGrad(ref ASVGF_GRAD_HF_SPEC_PONG);
+        CreateRenderTextureGradDouble(ref ASVGF_GRAD_LF_PING);
+        CreateRenderTextureGradDouble(ref ASVGF_GRAD_LF_PONG);
+        CreateRenderTextureGradDouble(ref ASVGF_GRAD_HF_SPEC_PING);
+        CreateRenderTextureGradDouble(ref ASVGF_GRAD_HF_SPEC_PONG);
         CreateRenderTexture(ref PT_VIEW_DIRECTION);
-        CreateRenderTexture(ref PT_GEO_NORMAL_A);
-        CreateRenderTexture(ref PT_GEO_NORMAL_B);
+        CreateRenderTextureInt(ref PT_GEO_NORMAL_A);
+        CreateRenderTextureInt(ref PT_GEO_NORMAL_B);
         CreateRenderTexture(ref ASVGF_FILTERED_SPEC_A);
         CreateRenderTexture(ref ASVGF_FILTERED_SPEC_B);
         CreateRenderTexture(ref ASVGF_HIST_MOMENTS_HF_A);
         CreateRenderTexture(ref ASVGF_HIST_MOMENTS_HF_B);
         CreateRenderTexture(ref ASVGF_HIST_COLOR_LF_SH_A);
         CreateRenderTexture(ref ASVGF_HIST_COLOR_LF_SH_B);
-        CreateRenderTexture(ref ASVGF_HIST_COLOR_LF_COCG_A);
-        CreateRenderTexture(ref ASVGF_HIST_COLOR_LF_COCG_B);
-        CreateRenderTextureGrad(ref ASVGF_GRAD_SMPL_POS_A);
-        CreateRenderTextureGrad(ref ASVGF_GRAD_SMPL_POS_B);
+        CreateRenderTextureDouble(ref ASVGF_HIST_COLOR_LF_COCG_A);
+        CreateRenderTextureDouble(ref ASVGF_HIST_COLOR_LF_COCG_B);
+        CreateRenderTextureGradSingle(ref ASVGF_GRAD_SMPL_POS_A);
+        CreateRenderTextureGradSingle(ref ASVGF_GRAD_SMPL_POS_B);
         CreateRenderTexture(ref TEX_PT_MOTION);
         CreateRenderTexture(ref TEX_PT_COLOR_HF);
         CreateRenderTexture(ref DebugTex);
@@ -215,6 +255,7 @@ public class ASVGF
     }
 
     public void DoRNG(ref RenderTexture RNGTex, int CurFrame, ref ComputeBuffer GlobalRays, ref RenderTexture TEX_PT_VIEW_DEPTH_B, ref RenderTexture TEX_PT_NORMAL_B) {
+        shader.SetFloat("CameraDist", Vector3.Distance(camera.transform.position, PrevCamPos));
 UnityEngine.Profiling.Profiler.BeginSample("Init RNG");
         shader.SetMatrix("_CameraToWorld", camera.cameraToWorldMatrix);
         shader.SetMatrix("_CameraInverseProjection", camera.projectionMatrix.inverse);
@@ -454,6 +495,8 @@ UnityEngine.Profiling.Profiler.BeginSample("Finalize");
 
 
         iter++;
+
+        PrevCamPos = camera.transform.position;
 
 
 
