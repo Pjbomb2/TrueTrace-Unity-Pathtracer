@@ -164,35 +164,46 @@ BVH Options Description -
   
  ## Materials(RayTracingObject script)
  <ul>
-  <li>Material Options - Select your type of material you want</li>
-  <li>BaseColor - If theres no Albedo Texture, this is the color the object will be</li>
-  <li>Emission - The emittance of an object</li>
+  <li>Selected Material - Selects which material you want to edit on the mesh</li>
+  <li>Material Type - Select your type of material you want(You usually want Disney, its the most versatile)</li>
+  <li>Base Color - If theres no Albedo Texture, this is the color the object will be</li>
+  <li>Emission - The emittance of an object(how much light it gives off)</li>
   <li>Emission Color - Changes the color of emissive objects, most useful when you have an emission mask on an object</li>
   <li>Roughness - Roughness of the object</li>
-  <li>IOR - Index of Refraction of an object</li>
+</ul>
+## Disney BSDF Only Properties
+<ul>
+  <li>IOR - Index of Refraction of an object.  Affects only Disney BSDF</li>
   <li>Metallic - How metallic an object is.  Affects only Disney BSDF</li>
-  <li>Specular Tint - Affects color of specular materials.  Affects only Disney BSDF</li>
+  <li>Specular - Adds specular reflection to an object, use in conjunction with Roughness and IOR.  Affects only Disney BSDF</li>
+  <li>Specular Tint - Weights color more towards the objects color for specular reflections.  Affects only Disney BSDF</li>
   <li>Sheen - Adds Sheen to objects.  Affects only Disney BSDF</li>
   <li>SheenTint - Allows you to choose if an objects sheen is white or is that objects base color.  Affects only Disney BSDF</li>
   <li>ClearCoat - Adds a Clearcoat effect to the object.  Affects only Disney BSDF</li>
   <li>ClearCoatGloss - Influences the Clearcoat.  Affects only Disney BSDF</li>
-  <li>Anisotropic - Makes the material(mostly metallic) anisotropic.  Affects only Disney BSDF</li>
+  <li>Anisotropic - Makes the material(mostly metallic and specular) anisotropic.  Affects only Disney BSDF</li>
+  <li>Specular Transmission - Makes an object more or less like glass.  Affects only Disney BSDF(Play with the IOR for this)</li>
+  <li>Diffuse Transmission - Makes an object Diffuse but Transmissive(transluscent).  Affects only Disney BSDF</li>
+  <li>Transmission Color - Doesnt do anything for now, used for volumetric disney bsdf(which is not yet implemented)</li>
   <li>Flatness - Affects Thin objects.  Affects only Disney BSDF</li>
-  <li>DiffTrans - Makes an object Diffuse but Transmissive(transluscent).  Affects only Disney BSDF</li>
-  <li>SpecTrans - Makes an object more or less like glass.  Affects only Disney BSDF(Play with the IOR for this)</li>
-  <li>Thin - Marks an object as thing so it can be better handled by the BSDF.  Affects only Disney BSDF</li>
-</ul>
+  <li>Thin - Marks an object as thing so it can be better handled by the BSDF.  Affects only Disney BSDF, can be either 0 or 1</li>
+ </ul>
 </br>  
 # Known Bugs:
 </br>
 <ul>
-  <li>Error that RayTracingShader is using too many UAV's.  This isnt really a bug, but happens because you cant dissable DX11 which doesnt allow more than 8(whereas DX12, what is actually used, allows a lot more)</li>
+  <li>Error that RayTracingShader is using too many UAV's.  This isnt really a bug, but happens because you cant disable DX11 which doesnt allow more than 8(whereas DX12, what is actually used, allows a lot more), so it yells at you for a non-issue</li>
 </ul>
 
 
 # Sample Images(Taken from various stages of development)
 
-![](/Images/Home2.png)
+![](/Images/Mall1.png)
+![](/Images/Mall2.png)
+![](/Images/Mall3.png)
+![](/Images/Loft1.png)
+![](/Images/Loft2.png)
+![](/Images/Furry2.png)
 ![](/Images/Portal2.png)
 https://user-images.githubusercontent.com/31225585/194152525-e77ad1d2-546d-4a91-8069-91897b1a7130.mp4
 ![](/Images/NewReSTIRV2.png)
