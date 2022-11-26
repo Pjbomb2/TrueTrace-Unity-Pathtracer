@@ -24,6 +24,8 @@ public class RayTracingObject : MonoBehaviour {
 	public float[] SpecTrans;
 	public int[] Thin;
 	public string[] Names;
+	public float[] Specular;
+	public int[] Indexes;
 
 	[HideInInspector] public int[] MaterialIndex;
 	[HideInInspector] public int[] LocalMaterialIndex;
@@ -40,7 +42,11 @@ public class RayTracingObject : MonoBehaviour {
 	 	if(mesh == null) {
 	 		DestroyImmediate(this);
 	 	}
-
+	 	Material[] SharedMaterials = (GetComponent<Renderer>() != null) ? GetComponent<Renderer>().sharedMaterials : GetComponent<SkinnedMeshRenderer>().sharedMaterials;
+		List<string> PropertyNames = new List<string>();
+		SubMeshCount = Mathf.Min(mesh.subMeshCount, SubMeshCount);
+	 	if(Indexes == null || Indexes.Length != mesh.subMeshCount) Indexes = new int[Mathf.Max(mesh.subMeshCount, SubMeshCount)];
+	 	if(Specular == null || Specular.Length != SubMeshCount) Specular = new float[SubMeshCount];
 		try {
 			if(Names == null || Names.Length != SubMeshCount) {
 				Names = new string[SubMeshCount];
@@ -65,10 +71,8 @@ public class RayTracingObject : MonoBehaviour {
 				System.Array.Fill(IOR, 1);
 				BaseColor = new Vector3[SubMeshCount];
 				MaterialIndex = new int[SubMeshCount];
-				Material[] SharedMaterials = (GetComponent<Renderer>() != null) ? GetComponent<Renderer>().sharedMaterials : GetComponent<SkinnedMeshRenderer>().sharedMaterials;
-				List<string> PropertyNames = new List<string>();
 				for(int i = 0; i < SubMeshCount; i++) {
-					MaterialOptions[i] = Options.Diffuse;
+					MaterialOptions[i] = Options.Disney;
 					Names[i] = SharedMaterials[i].name;
 					bool EmissionColored = false;
 		            SharedMaterials[i].GetTexturePropertyNames(PropertyNames);
@@ -101,12 +105,28 @@ public class RayTracingObject : MonoBehaviour {
 					if(!EmissionColored) BaseColor[i] = (SharedMaterials[i].mainTexture == null) ? ((SharedMaterials[i].HasProperty("_Color")) ? new Vector3(SharedMaterials[i].color.r, SharedMaterials[i].color.g, SharedMaterials[i].color.b) : new Vector3(0.78f, 0.14f, 0.69f)) : new Vector3(0.78f, 0.14f, 0.69f);
 				}
 			}
-	 	for(int i = 0; i < SubMeshCount; i++) {
-	 		MaterialOptions[i] = Options.Disney;
-	 		ClearCoat[i] = 0;
-	 	}
 		} catch(System.Exception e) {
 			Debug.Log("ERROR AT: " + this.gameObject.name);
+		}
+		for(int i = 0; i < SubMeshCount; i++) {
+			SharedMaterials[i].GetTexturePropertyNames(PropertyNames);
+					// if(SharedMaterials[i].GetFloat("_Mode") == 1.0f) {
+					// 	MaterialOptions[i] = Options.Cutout;
+					// }
+				if(MaterialOptions[i] != Options.Cutout) MaterialOptions[i] = Options.Disney;
+			// Specular[i] = 0;
+			if(PropertyNames.Contains("_Metallic")) {
+				MaterialOptions[i] = Options.Disney;
+				IOR[i] = 1;
+				Metallic[i] = SharedMaterials[i].GetFloat("_Metallic");
+
+			}
+			if(PropertyNames.Contains("_Roughness")) {
+				MaterialOptions[i] = Options.Disney;
+				// IOR[i] = 1.33f;
+				Roughness[i] = SharedMaterials[i].GetFloat("_Roughness");
+
+			}
 		}
 		mesh = null;
 	}

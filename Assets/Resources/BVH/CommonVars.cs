@@ -225,7 +225,7 @@ namespace CommonVars {
         public float diffTrans;
         public float specTrans;
         public int Thin;
-
+        public float Specular;
 
     }
 
@@ -534,11 +534,11 @@ namespace CommonVars {
         public List<int> Slab;
     }
 
-        [System.Serializable]
-        public struct RayObjectTextureIndex {
-            public RayTracingObject Obj;
-            public int ObjIndex;
-        }
+    [System.Serializable]
+    public struct RayObjectTextureIndex {
+        public RayTracingObject Obj;
+        public int ObjIndex;
+    }
     
     [System.Serializable]
     public class RayObjects {

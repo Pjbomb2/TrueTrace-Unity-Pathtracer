@@ -28,7 +28,6 @@ bool UseNEE;
 bool AllowVolumetrics;
 bool UseDoF;
 bool UseRestir;
-bool UseTAA;
 
 float VolumeDensity;
 
@@ -47,11 +46,11 @@ RWTexture2D<float4> RandomNums;
 struct BufferSizeData {   
     int tracerays;
     int rays_retired;
-    int octree_rays_retired;
+    int brickmap_rays_retired;
     int shade_rays;
     int shadow_rays;
     int shadow_rays_retired;
-    int octree_shadow_rays_retired;
+    int brickmap_shadow_rays_retired;
 };
 
 
@@ -147,9 +146,21 @@ struct GIReservoir {
     float3 BaseColor;
     int MaterialIndex;
     float RadianceIncomming;
+    int2 ThisCase;
 };
 RWStructuredBuffer<GIReservoir> CurrentReservoirGI;
 RWStructuredBuffer<GIReservoir> PreviousReservoirGI;
+
+struct PerMatInfo {
+    float Specular;
+    float Roughness;
+    float Clearcoat;
+    float ClearCoatGloss;
+    float Metallic;
+    float3 Albedo;
+};
+RWStructuredBuffer<PerMatInfo> MatModifiers;
+RWStructuredBuffer<PerMatInfo> MatModifiersPrev;
 
 RWStructuredBuffer<SHData> SH;
 
@@ -314,6 +325,28 @@ uint pcg_hash(uint seed) {
     return (word >> 22u) ^ word;
 }
 
+
+uint packUnormArb(const float3 data2) {
+    const uint4 bits = uint4(10,10,10,0);
+    const float4 data = float4(data2, 0);
+    float4 mull = exp2(float4(bits)) - 1.0;
+
+    uint4 shift = uint4(0, bits.x, bits.x + bits.y, bits.x + bits.y + bits.z);
+    uint4 shifted = uint4(data * mull + 0.5) << shift;
+
+    return shifted.x | shifted.y | shifted.z | shifted.w;
+}
+
+float3 unpackUnormArb(const uint pack) {
+    const uint4 bits = uint4(10,10,10,0);
+    uint4 maxValue  = uint4(exp2(bits) - 1);
+    uint4 shift     = uint4(0, bits.x, bits.x + bits.y, bits.x + bits.y + bits.z);
+    uint4 unshifted = pack >> shift;
+          unshifted = unshifted & maxValue;
+
+    return normalize((float4(unshifted).xyz * 1.0 / float4(maxValue).xyz).xyz * 2.0f - 1.0f);
+}
+
 uniform bool UseASVGF;
 bool UseReSTIRGI;
 
@@ -330,7 +363,7 @@ float2 random(uint samdim) {
 
         return float2(x,y);
     } else {
-        uint hash = pcg_hash((pixel_index * (uint)112 + samdim) * (MaxBounce + 1) + CurBounce);
+        uint hash = pcg_hash((pixel_index * (uint)204 + samdim) * (MaxBounce + 1) + CurBounce);
 
         const static float one_over_max_unsigned = asfloat(0x2f7fffff);
 
@@ -476,7 +509,7 @@ Texture2D<float3> NormalTex;
 SamplerState sampler_NormalTex;
 Texture2D<float4> AlbedoTex;
 SamplerState sampler_AlbedoTex;
-RWTexture2D<float4> TempNormTex;
+RWTexture2D<int> TempNormTex;
 RWTexture2D<float4>TempAlbedoTex;
 
 RWTexture2D<int> RenderMaskTex;
@@ -657,7 +690,10 @@ void IntersectBVH(const int localid) {
     while(true) {
             //Revive dead threads(persistent threads, need Shader Model 6 to take true advantage of)
             InterlockedAdd(BufferSizes[CurBounce].rays_retired, 1, ray_index);
-            if(ray_index >= (uint)BufferSizes[CurBounce].tracerays) return;
+            if(ray_index >= (uint)BufferSizes[CurBounce].tracerays) {
+                // InterlockedAdd(BufferSizes[CurBounce].rays_retired, -1, ray_index);
+                return;
+            }
             ray.origin = GlobalRays1[ray_index].origin;
             ray.direction = GlobalRays1[ray_index].direction;
             ray.direction_inv = rcp(ray.direction);
@@ -778,7 +814,7 @@ void kernel_trace (uint id : SV_GroupIndex) {//If I move the function contents i
     IntersectBVH(id * 6);
 }
 
-#pragma kernel kernel_octree_trace
+#pragma kernel kernel_brickmap_trace
 StructuredBuffer<int> BrickMap;
 
 
@@ -794,7 +830,7 @@ inline bool rayBoxIntersection(const float3 ray_orig, const float3 inv_dir, cons
 
 
 
-inline bool TraceOctree(float3 ray_orig, const float3 ray_direction, const float3 inv, inout RayHit bestHit, const int MeshIndex, const int GridSize, const int VoxelSize, const int BrickSize, const uint Offset, const float3 Scale) {
+inline bool TraceBrickmap(float3 ray_orig, const float3 ray_direction, const float3 inv, inout RayHit bestHit, const int MeshIndex, const int GridSize, const int VoxelSize, const int BrickSize, const uint Offset, const float3 Scale) {
     float Dist = 1.0f;
     float Dist2 = 1.0f;
     if(rayBoxIntersection(ray_orig, inv, 0, GridSize + 0.0001f,bestHit.t, Dist, Dist2)) {
@@ -904,7 +940,7 @@ void IntersectVoxelTLAS() {
         bool inactive = stack_size == 0 && current_group.y == 0;
 
         if (inactive) {//Revive dead threads(persistent threads, need Shader Model 6 to take true advantage of)
-            InterlockedAdd(BufferSizes[CurBounce].octree_rays_retired, 1, ray_index);
+            InterlockedAdd(BufferSizes[CurBounce].brickmap_rays_retired, 1, ray_index);
             if(ray_index >= (uint)BufferSizes[CurBounce].tracerays) return;
             ray.origin = GlobalRays2[ray_index].origin;
             ray.direction = GlobalRays2[ray_index].direction;
@@ -988,7 +1024,7 @@ void IntersectVoxelTLAS() {
                     oct_inv4 = ray_get_octant_inv4(ray.direction);
 
                     current_group.y = (uint)0x80000000;
-                    if(TraceOctree(ray.origin, ray.direction, ray.direction_inv, bestHit, mesh_id, _MeshData[mesh_id].Size.x, _MeshData[mesh_id].Size.y, _MeshData[mesh_id].Size.z, _MeshData[mesh_id].NodeOffset, GetScale(_MeshData[mesh_id].Inverse))) {GlobalRays2[ray_index].HitVoxel = true; set2(ray_index, bestHit);}
+                    if(TraceBrickmap(ray.origin, ray.direction, ray.direction_inv, bestHit, mesh_id, _MeshData[mesh_id].Size.x, _MeshData[mesh_id].Size.y, _MeshData[mesh_id].Size.z, _MeshData[mesh_id].NodeOffset, GetScale(_MeshData[mesh_id].Inverse))) {GlobalRays2[ray_index].HitVoxel = true; set2(ray_index, bestHit);}
                     break;
                 }
                 else {
@@ -1016,7 +1052,7 @@ void IntersectVoxelTLAS() {
 
 
 [numthreads(64,1,1)]
-void kernel_octree_trace () {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
+void kernel_brickmap_trace () {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
 
     IntersectVoxelTLAS();
 }
@@ -1223,7 +1259,7 @@ void kernel_shadow (uint id : SV_GroupIndex) {//If I move the function contents 
 
 
 
-#pragma kernel kernel_shadow_octree
+#pragma kernel kernel_shadow_brickmap
 
 inline bool TraceShadowBrickmap(float3 ray_orig, const float3 ray_direction, const float3 inv, const int MeshIndex, const float Distance, const int GridSize, const int VoxelSize, const int BrickSize, const uint Offset, const float3 Scale) {
     float Dist = 1.0f;
@@ -1323,7 +1359,7 @@ void IntersectVoxelTLASShadow() {
         bool inactive = stack_size == 0 && current_group.y == 0;
 
         if (inactive) {//Revive dead threads(persistent threads, need Shader Model 6 to take true advantage of)
-            InterlockedAdd(BufferSizes[CurBounce].octree_shadow_rays_retired, 1, ray_index);
+            InterlockedAdd(BufferSizes[CurBounce].brickmap_shadow_rays_retired, 1, ray_index);
             if(ray_index >= (uint)BufferSizes[CurBounce].shadow_rays) return;
             if(ShadowRaysBuffer[ray_index].t == -1) continue;
             max_distance = ShadowRaysBuffer[ray_index].t;
@@ -1447,13 +1483,13 @@ void IntersectVoxelTLASShadow() {
     }
 }
 
-void IntersectShadowOctree() {
+void IntersectShadowBrickmap() {
     uint ray_index;
     if(DoVoxels) {
         IntersectVoxelTLASShadow();
     } else {
         while(true) {
-            InterlockedAdd(BufferSizes[CurBounce].octree_shadow_rays_retired, 1, ray_index);
+            InterlockedAdd(BufferSizes[CurBounce].brickmap_shadow_rays_retired, 1, ray_index);
             if(ray_index >= (uint)BufferSizes[CurBounce].shadow_rays) return;
             int pixel_index = ShadowRaysBuffer[ray_index].PixelIndex;
             if(ShadowRaysBuffer[ray_index].t == -1) { 
@@ -1481,9 +1517,9 @@ void IntersectShadowOctree() {
 
 
 [numthreads(64,1,1)]
-void kernel_shadow_octree () {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
+void kernel_shadow_brickmap () {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
 
-    IntersectShadowOctree();
+    IntersectShadowBrickmap();
 }
 
 
@@ -1542,6 +1578,7 @@ struct MaterialData {//56
     float diffTrans;
     float specTrans;
     int Thin;
+    float Specular;
 };
 
 
@@ -1590,6 +1627,7 @@ struct HitMat {
     float sheen;
     float sheenTint;
     int Thin;
+    float Specular;
 
     bool DoesPassThrough;
 };
@@ -1959,8 +1997,8 @@ static uint ScatteringTexMUSize = 128;
 static uint ScatteringTexMUSSize = 32;
 static uint ScatteringTexNUSize = 8;
 
-static float bottom_radius = 6360.0f;
-static float top_radius = 6420.0f;
+static float bottom_radius = 6360000.0f;
+static float top_radius = 6420000.0f;
 static uint TransmittanceTexWidth = 256;
 static uint TransmittanceTexHeight = 64;
 
@@ -2717,9 +2755,9 @@ static float EvaluateDisneyClearcoat(float clearcoat, float alpha, const float3 
     float FH = SchlickWeight(dotHL);
     float Fr = lerp(0.04f, 1.0f, FH);
     float Gr = SeparableSmithGGXG1(wi, 0.25f) * SeparableSmithGGXG1(wo, 0.25f);
-    fPdfW = 0.25f * clearcoat * Fr * Gr * Dr;
+    fPdfW = Dr / (4.0f * abs(dot(wo, wm)));
     rPdfW = fPdfW;
-    return fPdfW;
+    return clearcoat * Fr * Gr * Dr * PI;
 }
 
 
@@ -2741,7 +2779,7 @@ float SeparableSmithGGXG1(const float3 w, const float3 wm, float ax, float ay)
 
 
     float absTanTheta = abs(TanTheta(w));
-    if(isinf(absTanTheta)) {
+    if(!(absTanTheta < 0 || absTanTheta > 0 || absTanTheta == 0)) {
         return 0.0f;
     }
 
@@ -2755,8 +2793,8 @@ float SeparableSmithGGXG1(const float3 w, const float3 wm, float ax, float ay)
 static void CalculateAnisotropicParams(float roughness, float anisotropic, inout float ax, inout float ay)
 {
     float aspect = sqrt(1.0f - 0.9f * anisotropic);
-    ax = max(0.001f, (roughness*roughness) / aspect);
-    ay = max(0.001f, (roughness*roughness) * aspect);
+    ax = max(0.005f, (roughness*roughness) / aspect);
+    ay = max(0.005f, (roughness*roughness) * aspect);
 }
 
 void GgxVndfAnisotropicPdf(const float3 wi, const float3 wm, const float3 wo, float ax, float ay,
@@ -2843,19 +2881,22 @@ static float3 EvaluateDisneyBRDF(const HitMat hitDat, const float3 wo, const flo
     }
 
     float ax, ay;
-    CalculateAnisotropicParams(hitDat.roughness, hitDat.anisotropic, ay, ax);
+    CalculateAnisotropicParams(hitDat.roughness, hitDat.anisotropic, ax, ay);
 
     float d = GgxAnisotropicD(wm, ax, ay);
     float gl = SeparableSmithGGXG1(wi, wm, ax, ay);
     float gv = SeparableSmithGGXG1(wo, wm, ax, ay);
-
     float3 f = DisneyFresnel(hitDat, wo, wm, wi);
+
+    // fPdf = gv * max(dot(wi, wm), 0.0) * d * (rcp(4.0f * (dot(wi, wm)))) / dotNL;
+
+
 
     GgxVndfAnisotropicPdf(wi, wm, wo, ax, ay, fPdf, rPdf);
     fPdf *= (1.0f / (4 * abs(dot(wo, wm))));
-    rPdf *= (1.0f / (4 * abs(dot(wi, wm))));
-
-    return d * gl * gv * f / (4.0f * dotNL * dotNV);
+    // rPdf *= (1.0f / (4 * abs(dot(wi, wm))));
+    // _DebugTex[int2(pixel_index % screen_width, pixel_index / screen_width)] = float4(d * gl * gv * f/ (4.0f * dotNL * dotNV),1);
+    return d * gl * gv * f / (4.0f * dotNL * dotNV); 
 }
 
 
@@ -2951,7 +2992,7 @@ static void CalculateLobePdfs(const HitMat hitDat,
     float specularBSDF   = (1.0f - hitDat.metallic) * hitDat.specTrans;
     float dielectricBRDF = (1.0f - hitDat.specTrans) * (1.0f - hitDat.metallic);
 
-    float specularWeight     = metallicBRDF;
+    float specularWeight     = metallicBRDF + hitDat.Specular;
     float transmissionWeight = specularBSDF;
     float diffuseWeight      = dielectricBRDF;
     float clearcoatWeight    = 1.0f * saturate(hitDat.clearcoat); 
@@ -2964,14 +3005,14 @@ static void CalculateLobePdfs(const HitMat hitDat,
     pClearcoat = clearcoatWeight    * norm;
 }
 
-float3 EvaluateDisney(const HitMat hitDat, float3 V, float3 L, bool thin,
+float3 EvaluateDisney(HitMat hitDat, float3 V, float3 L, bool thin,
                       inout float forwardPdf, inout float reversePdf, float3x3 TruTan)
 {
 
 
     float3 wo = ToLocal(TruTan, V); // NDotL = L.z; NDotV = V.z; NDotH = H.z
     float3 wi = ToLocal(TruTan, L); // NDotL = L.z; NDotV = V.z; NDotH = H.z
-
+// hitDat.surfaceColor *= PI;
     float3 wm = normalize(wo + wi);
 
     float dotNV = CosTheta(wo);
@@ -3018,7 +3059,7 @@ float3 EvaluateDisney(const HitMat hitDat, float3 V, float3 L, bool thin,
 
         float3 sheen = EvaluateSheen(hitDat, wo, wm, wi);
 
-        reflectance += diffuseWeight * (diffuse + sheen * PI);
+        reflectance += (diffuse * hitDat.surfaceColor + sheen);
 
         forwardPdf += pDiffuse * forwardDiffusePdfW;
         reversePdf += pDiffuse * reverseDiffusePdfW;
@@ -3049,14 +3090,16 @@ float3 EvaluateDisney(const HitMat hitDat, float3 V, float3 L, bool thin,
     if(upperHemisphere) {
         float forwardMetallicPdfW;
         float reverseMetallicPdfW;
+        hitDat.surfaceColor *= PI;
         float3 specular = EvaluateDisneyBRDF(hitDat, wo, wm, wi, forwardMetallicPdfW, reverseMetallicPdfW);
         
-        reflectance += specular;
+        reflectance +=  specular;// * (abs(dot(wi, wm)));
         forwardPdf += pBRDF * forwardMetallicPdfW / (4 * abs(dot(wo, wm)));
         reversePdf += pBRDF * reverseMetallicPdfW / (4 * abs(dot(wi, wm)));
     }
 
     reflectance = reflectance * abs(dotNL);
+        // _DebugTex[int2(pixel_index % screen_width, pixel_index / screen_width)] = float4(reflectance,1);
 
     return reflectance;
 }
@@ -3299,7 +3342,7 @@ static bool SampleDisneyDiffuse(const HitMat hitDat, float3 v, bool thin,
     float3 sheen = EvaluateSheen(hitDat, wo, wm, wi);
 
     float diffuse = EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin);
-    sample.reflectance = (sheen + color * (diffuse / pdf)) * PI;
+    sample.reflectance = (sheen + color * (diffuse / pdf));
     sample.wi = normalize(ToWorld(TruTan, wi));
     sample.forwardPdfW = abs(dotNL) * pdf;
     sample.reversePdfW = abs(dotNV) * pdf;
@@ -3356,7 +3399,7 @@ static bool SampleDisneyClearcoat(const HitMat hitDat, const float3 v,
     float gloss = lerp(0.1f, 0.001f, hitDat.clearcoatGloss);
     float3 wo = ToLocal(TruTan, v); // NDotL = L.z; NDotV = V.z; NDotH = H.z
 
-    float a = gloss * gloss;
+    float a = gloss;
     float a2 = a * a;
 
     float r0 = random(102).x;
@@ -3411,12 +3454,13 @@ void GetLobeProbabilities(out float diffuseWt, out float specReflectWt, out floa
 }
 
 
-bool2 SampleDisney(const HitMat hitDat, float3 v, bool thin, inout BsdfSample sample, float3x3 TruTanMat)
+bool2 SampleDisney(HitMat hitDat, float3 v, bool thin, inout BsdfSample sample, float3x3 TruTanMat, out int Case)
     {
         float pSpecular;
         float pDiffuse;
         float pClearcoat;
         float pTransmission;
+        hitDat.surfaceColor *= PI;
         CalculateLobePdfs(hitDat, pSpecular, pDiffuse, pClearcoat, pTransmission);
         // GetLobeProbabilities(pDiffuse, pSpecular, pTransmission, pClearcoat, hitDat);
 
@@ -3428,24 +3472,30 @@ bool2 SampleDisney(const HitMat hitDat, float3 v, bool thin, inout BsdfSample sa
         if(p <= pSpecular) {
             success = SampleDisneyBRDF(hitDat, v, sample, TruTanMat);
             pLobe = pSpecular;
+            Case = 0;
         }
         else if(p > pSpecular && p <= (pSpecular + pClearcoat)) {
             success = SampleDisneyClearcoat(hitDat, v, sample, TruTanMat);
             pLobe = pClearcoat;
+            Case = 1;
         }
         else if(p > pSpecular + pClearcoat && p <= (pSpecular + pClearcoat + pDiffuse)) {
             success = SampleDisneyDiffuse(hitDat, v, thin, sample, TruTanMat, refracted);
             pLobe = pDiffuse;
+            Case = 2;
         }
         else if(pTransmission >= 0.0f) {
+            hitDat.surfaceColor /= PI;
             success = SampleDisneySpecTransmission(hitDat, v, thin, sample, TruTanMat, refracted);
             pLobe = pTransmission;
+            Case = 3;
         }
         else {
             // -- Make sure we notice if this is occurring.
             sample.reflectance = float3(1000000.0f, 0.0f, 0.0f);
             sample.forwardPdfW = 0.000000001f;
             sample.reversePdfW = 0.000000001f;
+            Case = 4;
         }
 
         if(pLobe > 0.0f) {
@@ -3457,6 +3507,133 @@ bool2 SampleDisney(const HitMat hitDat, float3 v, bool thin, inout BsdfSample sa
         return bool2(success, refracted);
     }
 
+static float3 ReconstructDisneyBRDF(const HitMat hitDat, const float3 wo, float3 wm,
+                                 const float3 wi, inout float fPdf, inout float rPdf, inout bool Success)
+{
+    fPdf = 0.0f;
+    rPdf = 0.0f;
+
+    float dotNL = CosTheta(wi);
+    float dotNV = CosTheta(wo);
+    if(CosTheta(wi) <= 0.0f) {
+        Success = false;
+        return 0;
+    }
+
+    float ax, ay;
+    CalculateAnisotropicParams(hitDat.roughness, hitDat.anisotropic, ax, ay);
+
+        //     float r0 = random(203).x;
+        // float r1 = random(203).y;
+        // wm = SampleGgxVndfAnisotropic(wo, ay, ax, r1, r0);
+
+    float3 f = DisneyFresnel(hitDat, wo, wm, wi);
+
+    GgxVndfAnisotropicPdf(wi, wm, wo, ay, ax, fPdf, rPdf);
+    fPdf *= 1.0f / (4 * abs(dot(wo, wm)));
+    rPdf *= (1.0f / (4 * abs(dot(wi, wm))));
+
+        float G1v = SeparableSmithGGXG1(wo, wm, ay, ax);
+        float3 specular = G1v * f;
+        Success = true;
+    // _DebugTex[int2(pixel_index % screen_width, pixel_index / screen_width)] = float4(d * gl * gv * f/ (4.0f * dotNL * dotNV),1);
+    return specular;//d * gl * gv * f / (4.0f * dotNL * dotNV); 
+}
+static float ReconstructDisneyClearcoat(float clearcoat, float alpha, const float3 wo, const float3 wm,
+                                     const float3 wi, inout float fPdfW, inout float rPdfW)
+{
+    if(clearcoat <= 0.0f) {
+        return 0.0f;
+    }
+    float absDotNH = AbsCosTheta(wm);
+    float dotHL = dot(wm, wi);
+
+    float gloss = lerp(.1,.001,alpha);
+    float Dr = GTR1(absDotNH, gloss);
+    float FH = SchlickWeight(dotHL);
+    float Fr = lerp(0.04f, 1.0f, FH);
+    float Gr = SeparableSmithGGXG1(wi, 0.25f) * SeparableSmithGGXG1(wo, 0.25f);
+    fPdfW = Dr / (4.0f * abs(dot(wo, wm)));
+    rPdfW = fPdfW;
+    return 0.25f * clearcoat * Fr * Gr * Dr;
+}
+float3 EvaluateDisney(HitMat hitDat, float3 V, float3 L, bool thin,
+                      inout float forwardPdf, float3x3 TruTan, int Case, float3 Norm, inout bool Success)
+{
+
+    float reversePdf;
+    float3 wo = ToLocal(TruTan, V); // NDotL = L.z; NDotV = V.z; NDotH = H.z
+    float3 wi = ToLocal(TruTan, L); // NDotL = L.z; NDotV = V.z; NDotH = H.z
+hitDat.surfaceColor *= PI;
+    float3 wm =normalize(wo + wi);
+
+    float dotNV = CosTheta(wo);
+    float dotNL = CosTheta(wi);
+
+    float3 reflectance = 0;
+    forwardPdf = 0.0f;
+    reversePdf = 0.0f;
+
+    float pBRDF, pDiffuse, pClearcoat, pSpecTrans;
+    CalculateLobePdfs(hitDat, pBRDF, pDiffuse, pClearcoat, pSpecTrans);
+
+    float3 baseColor = hitDat.surfaceColor;
+    float metallic = hitDat.metallic;
+    float specTrans = hitDat.specTrans;
+    float roughness = hitDat.roughness;
+
+    // calculate all of the anisotropic params
+    float ax, ay;
+    CalculateAnisotropicParams(hitDat.roughness, hitDat.anisotropic, ax, ay);
+
+    float diffuseWeight = (1.0f - metallic) * (1.0f - specTrans);
+    float transWeight   = (1.0f - metallic) * specTrans;
+
+
+    Success = true;
+    switch(Case) {
+        case 0:
+            float forwardMetallicPdfW;
+            float reverseMetallicPdfW;
+            float3 specular = ReconstructDisneyBRDF(hitDat, wo, wm, wi, forwardMetallicPdfW, reverseMetallicPdfW, Success);
+            
+            reflectance =  rcp(pBRDF) * specular;// / forwardMetallicPdfW * abs(dotNL);
+            forwardPdf = pBRDF * forwardMetallicPdfW;// / (4 * abs(dot(wo, wm)));
+        break;
+        case 2:
+            float forwardDiffusePdfW = AbsCosTheta(wi);
+            float reverseDiffusePdfW = AbsCosTheta(wo);
+            float diffuse = EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin);
+
+            float3 sheen = EvaluateSheen(hitDat, wo, wm, wi);
+
+            reflectance = rcp(pDiffuse) * (diffuse * hitDat.surfaceColor + sheen);
+
+            forwardPdf = pDiffuse * forwardDiffusePdfW;
+            Success = true;//forwardPdf > 0;
+        break;
+        case 1:    
+            float forwardClearcoatPdfW;
+            float reverseClearcoatPdfW;
+
+            float clearcoat = ReconstructDisneyClearcoat(hitDat.clearcoat, hitDat.clearcoatGloss, wo, wm, wi,
+                                                      forwardClearcoatPdfW, reverseClearcoatPdfW);
+            reflectance = rcp(pClearcoat) * clearcoat / (forwardClearcoatPdfW);
+            forwardPdf = pClearcoat * forwardClearcoatPdfW;
+            Success = forwardPdf > 0;
+        break;
+        default:
+            reflectance = 0;
+            forwardPdf = 0;
+        break;
+
+    }
+
+    reflectance = reflectance;// * abs(dotNL);
+        // _DebugTex[int2(pixel_index % screen_width, pixel_index / screen_width)] = float4(reflectance,1);
+
+    return reflectance;
+}
 static const float sigma_s = 0.09, sigma_a = 0.06, sigma_t = sigma_s+sigma_a;
 
 inline float3 sampleHG(float g, float e1, float e2) {
@@ -3492,6 +3669,101 @@ inline float scatter(const Ray r, inout float3 dir, inout float dist, float tin,
     dir = ToWorld(TanNorm, dir);
     return (1.0 - exp(-sigma_s * (tout - tin)));
 }
+
+inline bool EvaluateBsdf(const HitMat hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, out float PDF) {
+    float throwaway = 0;
+    float3 bsdf_value = 0;
+    bool validbsdf = false;
+    float cos_theta_hit = dot(DirectionOut, Normal);
+    [branch]switch(hitDat.MatType) {//Switch between different materials
+        default:
+            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
+        break;
+        case 1:
+            bsdf_value = EvaluateDisney(hitDat, -DirectionIn, DirectionOut, hitDat.Thin == 1, PDF, throwaway, GetTangentSpace2(Normal));// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
+            validbsdf = PDF > 0;
+        break;
+        case 3:
+            validbsdf = false;
+        break;
+        case 4:
+            validbsdf = true;
+        break;
+        case 5:
+            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
+        break;
+        case 6:
+            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
+        break;
+        case 7:
+            validbsdf = evalplastic(hitDat, mul(GetTangentSpace(Normal), DirectionOut), cos_theta_hit, bsdf_value, PDF,  mul(GetTangentSpace(Normal), -DirectionIn));
+        break;
+
+    }
+    return validbsdf;
+} 
+inline bool EvaluateBsdf(const HitMat hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, out float PDF, out float3 bsdf_value) {
+    float throwaway = 0;
+    bool validbsdf = false;
+    float cos_theta_hit = dot(DirectionOut, Normal);
+    [branch]switch(hitDat.MatType) {//Switch between different materials
+        default:
+            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
+        break;
+        case 1:
+            bsdf_value = EvaluateDisney(hitDat, -DirectionIn, DirectionOut, hitDat.Thin == 1, PDF, throwaway, GetTangentSpace2(Normal));// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
+            validbsdf = PDF > 0;
+        break;
+        case 3:
+            validbsdf = false;
+        break;
+        case 4:
+            validbsdf = true;
+        break;
+        case 5:
+            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
+        break;
+        case 6:
+            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
+        break;
+        case 7:
+            validbsdf = evalplastic(hitDat, mul(GetTangentSpace(Normal), DirectionOut), cos_theta_hit, bsdf_value, PDF,  mul(GetTangentSpace(Normal), -DirectionIn));
+        break;
+
+    }
+    return validbsdf;
+} 
+inline bool ReconstructBsdf(const HitMat hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, out float PDF, out float3 bsdf_value, int Case) {
+    float throwaway = 0;
+    bool validbsdf = false;
+    float cos_theta_hit = dot(DirectionOut, Normal);
+    [branch]switch(hitDat.MatType) {//Switch between different materials
+        default:
+            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
+            bsdf_value = hitDat.surfaceColor;
+        break;
+        case 1:
+            bsdf_value = EvaluateDisney(hitDat, -DirectionIn, DirectionOut, false, PDF, GetTangentSpace2(Normal), Case, Normal, validbsdf);
+        break;
+        case 3:
+            validbsdf = false;
+        break;
+        case 4:
+            validbsdf = true;
+        break;
+        case 5:
+            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
+        break;
+        case 6:
+            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
+        break;
+        case 7:
+            validbsdf = evalplastic(hitDat, mul(GetTangentSpace(Normal), DirectionOut), cos_theta_hit, bsdf_value, PDF,  mul(GetTangentSpace(Normal), -DirectionIn));
+        break;
+
+    }
+    return validbsdf;
+} 
 
 
 void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit hit, uint2 Uv, float2 NormalUV, bool HitVoxel, bool IsEmissiveTex, RayData RayDat, MaterialData mat, int prevIndex) {//main function
@@ -3554,6 +3826,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
         CurrentRes.SecondaryHitDirectionOut = PreviousReservoirGI[prevIndex].SecondaryHitDirectionOut;
         CurrentRes.SecondaryHitPosition = pos;
         CurrentRes.RadianceIncomming = 0;
+        CurrentRes.ThisCase = 0;
         CurrentReservoirGI[Index] = CurrentRes;
     }
 
@@ -3564,12 +3837,12 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
                 CurrentReservoirGI[Index].RadianceIncomming = luminance(hitDat.emmis);
 
                 TempAlbedoTex[Uv] = float4(hitDat.surfaceColor,1);
-                TempNormTex[Uv] = float4(norm, 1);
+                TempNormTex[Uv] = packUnormArb(norm);
                 TempPosTex[Uv] = float4(pos,1);
                 RenderMaskTex[Uv] = 0;
             } else if(CurBounce == 1) {
                 Color.Direct += hitDat.surfaceColor * (hitDat.emmis);
-                CurrentReservoirGI[Index].RadianceIncomming += luminance(hitDat.surfaceColor * (hitDat.emmis));
+                CurrentReservoirGI[Index].RadianceIncomming +=  luminance(hitDat.surfaceColor * hitDat.emmis);
 
                 CurrentReservoirGI[Index].SecondaryHitPosition = pos;
             } else {
@@ -3591,7 +3864,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
             if(CurBounce == 0) {
                 Color.Direct = hitDat.emmis;
                 TempAlbedoTex[Uv] = float4(hitDat.surfaceColor,1);
-                TempNormTex[Uv] = float4(norm, 1);
+                TempNormTex[Uv] = packUnormArb(norm);
                 TempPosTex[Uv] = float4(pos,1);
                 RenderMaskTex[Uv] = 0;
                 CurrentReservoirGI[Index].RadianceIncomming = luminance(hitDat.emmis);
@@ -3604,7 +3877,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
                 accumulate_SH(ThisSH, irradiance_to_SH(Color.throughput * hitDat.emmis * hitDat.surfaceColor * w * 1024, Rays[Uv.x + Uv.y * screen_width].direction), 1.0f);
                 SH[Uv.x + Uv.y * screen_width] = ThisSH;
                 Color.Indirect += Color.throughput * hitDat.surfaceColor * hitDat.emmis * w; 
-                CurrentReservoirGI[Index].RadianceIncomming += luminance(Color.throughput * hitDat.surfaceColor * hitDat.emmis * w);
+                CurrentReservoirGI[Index].RadianceIncomming += luminance(Color.throughput * hitDat.surfaceColor * hitDat.emmis);
             }
         }
         return;
@@ -3625,7 +3898,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
         RayDiff = PreviousReservoirGI[pp.x + pp.y * screen_width].SecondaryHitPosition - (Geomnorm * 0.001f + pos);
         if(all(RayDiff == 0)) RandomNums[Uv] = float4(RandomNums[Uv].xy, 0, 1);
     }
-
+                int Case = 2;
     if(CurBounce < 2 && ReSTIRGIUpdateRate != 0 &&UseReSTIRGI && RandomNums[Uv].z == 1) {
         float3 bsdf_value;
         float bsdf_pdf;
@@ -3633,14 +3906,22 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
         if(CurBounce == 0) {
             ray.direction = normalize(PreviousReservoirGI[prevIndex].SecondaryHitPosition - (pos + Geomnorm * 0.001f));
             float cos_theta_hit = dot(ray.direction, norm);
-            validbsdf = evaldiffuse(ray.direction, cos_theta_hit, bsdf_value, bsdf_pdf);
-            throughput *= hitDat.surfaceColor;
+            validbsdf = ReconstructBsdf(hitDat, PrevDirection, ray.direction, norm, bsdf_pdf, bsdf_value, PreviousReservoirGI[prevIndex].ThisCase.x);// evaldiffuse(ray.direction, cos_theta_hit, bsdf_value, bsdf_pdf);
+            // float3 bsdf_value = EvaluateDisney(hitDat, -PrevDirection, ray.direction, false, pdf, GetTangentSpace2(norm), PreviousReservoirGI[prevIndex].ThisCase, norm);
+                CurrentReservoirGI[Index].ThisCase = PreviousReservoirGI[prevIndex].ThisCase;
+            valid = validbsdf && all(bsdf_value < 0 || bsdf_value > 0 || bsdf_value == 0) && luminance(bsdf_value) < 100.0f;
+            // validbsdf = evaldiffuse(ray.direction, cos_theta_hit, bsdf_value, bsdf_pdf);
+            throughput *= bsdf_value;
             pdf = bsdf_pdf;
         } else if(CurBounce == 1) {
             ray.direction = PreviousReservoirGI[prevIndex].SecondaryHitDirectionOut;
             float cos_theta_hit = dot(ray.direction, norm);
-            validbsdf = evaldiffuse(ray.direction, cos_theta_hit, bsdf_value, bsdf_pdf);
-            throughput *= hitDat.surfaceColor;
+            validbsdf = ReconstructBsdf(hitDat, PrevDirection, ray.direction, norm, bsdf_pdf, bsdf_value, PreviousReservoirGI[prevIndex].ThisCase.y);// evaldiffuse(ray.direction, cos_theta_hit, bsdf_value, bsdf_pdf);
+            valid = validbsdf && all(bsdf_value < 0 || bsdf_value > 0 || bsdf_value == 0) && luminance(bsdf_value) < 100.0f;
+            
+            // validbsdf = EvaluateBsdf(hitDat, PrevDirection, ray.direction, norm, bsdf_pdf, bsdf_value);// evaldiffuse(ray.direction, cos_theta_hit, bsdf_value, bsdf_pdf);
+            // validbsdf = evaldiffuse(ray.direction, cos_theta_hit, bsdf_value, bsdf_pdf);
+            throughput *= bsdf_value;
             pdf = bsdf_pdf;
         }
     } else {//if(random(92).x < 0.5f) {
@@ -3650,11 +3931,14 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
                 if(!GotFlipped) {
                     hitDat.relativeIOR = rcp(hitDat.ior);
                 }
-                bool2 tempvalid = SampleDisney(hitDat, -ray.direction, hitDat.Thin == 1, Thissample, GetTangentSpace2(norm));
+                bool2 tempvalid = SampleDisney(hitDat, -ray.direction, hitDat.Thin == 1, Thissample, GetTangentSpace2(norm), Case);
                 valid = tempvalid.x;
                 ray.direction = Thissample.wi;
                 pdf = Thissample.forwardPdfW;
-                throughput *= Thissample.reflectance;
+                throughput *= max(Thissample.reflectance,0.000001f);
+                if(CurBounce < 2) CurrentReservoirGI[Index].ThisCase[CurBounce == 1] = Case;
+                // valid = valid && all(Thissample.reflectance < 0 || Thissample.reflectance > 0 || Thissample.reflectance == 0) && all(Thissample.forwardPdfW <= 1);
+                
                 if(tempvalid.y) {
                     Geomnorm *= -1; norm *= -1;
                 }
@@ -3729,6 +4013,13 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
 //     pos = dist * ray.direction + ray.origin;
 //     ray.direction = tempdir;
 // }
+
+                // float throws = 0;
+                // float3 bsdf_val = 0; 
+                // bool thr = ReconstructBsdf(hitDat, PrevDirection, ray.direction, norm, throws, bsdf_val, Case);
+                // _DebugTex[Uv] = float4(abs(bsdf_val - throughput), 1);
+            // _DebugTex[Uv] = float4(throughput, 1);
+
   ray.origin = Geomnorm * 0.001f + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
 
     if(CurBounce == 0) {
@@ -3742,10 +4033,12 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
         CurrentReservoirGI[Index] = CurrentRes;
     }
 
-    [branch]if(CurBounce == 0 || TempAlbedoTex[Uv].w == -1) {//Setting textures for denosier to use
-        TempAlbedoTex[Uv] = ((hitDat.MatType == 1 && hitDat.specTrans == 1) ? float4(1,1,1,-1) : float4(throughput,1));
-        CurrentReservoirGI[Index].BaseColor = throughput;
-        TempNormTex[Uv] = float4(Geomnorm, 1);
+    [branch]if(CurBounce == 0) {//Setting textures for denosier to use
+        // _DebugTex[int2(pixel_index % screen_width, pixel_index / screen_width)] = float4(throughput,1);
+        // throughput = (luminance(throughput > 100000.0f) || !(throughput < 0 || throughput > 0 || throughput == 0)) ? 0 : throughput;
+        TempAlbedoTex[Uv] = float4(max(throughput, 0.00001f),pdf);
+        CurrentReservoirGI[Index].BaseColor = max(throughput, 0.00001f);
+        TempNormTex[Uv] = packUnormArb(Geomnorm);
         if(CurBounce == 0) TempPosTex[Uv] = float4(pos,hit.t);
         if(CurBounce == 0) throughput = 1;
     }
@@ -3859,6 +4152,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
         [branch]switch(hitDat.MatType) {//Switch between different materials
             default:
                 validbsdf = evaldiffuse(to_light, cos_theta_hit, bsdf_value, bsdf_pdf);
+                bsdf_value *= hitDat.surfaceColor;
             break;
             case 1:
                 bsdf_value = EvaluateDisney(hitDat, -PrevDirection, to_light, hitDat.Thin == 1, bsdf_pdf, throwaway, GetTangentSpace2(norm));// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
@@ -3898,16 +4192,16 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
                 Radiance = _UnityLights[triindex].Radiance * transmittance;
                 NEE_pdf = distance_to_light_squared * LightCos / (unitylightcount) * (_UnityLights[unitylightcount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
                 float NEEMISWeight = power_heuristic(NEE_pdf, bsdf_pdf);
-                Illum = ((CurBounce == 0) ? 1 : throughput) * (Radiance * bsdf_value) /  NEE_pdf * Attenuation * ((UseRestir && CurBounce == 0 && (CurRes.W > 0 || CurRes.W < 0 || CurRes.W == 0)) ? CurRes.W : 1);
+                Illum = PrevThroughput * (Radiance * bsdf_value) /  NEE_pdf * Attenuation * ((UseRestir && CurBounce == 0 && (CurRes.W > 0 || CurRes.W < 0 || CurRes.W == 0)) ? CurRes.W : 1);
             } else {
                 float SA = LightCos * LightTriangles[triindex].area / distance_to_light_squared;
                 NEE_pdf = (1.0f / (LightMeshCount * SA)) * (LightTriangles[triindex].pdf / _LightMeshes[MeshIndex].pdf) * (_LightMeshes[LightMeshCount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
                 Radiance = LightTriangles[triindex].radiance;
                 RadianceIncomming = luminance(Radiance);
                  float NEEMISWeight = power_heuristic(NEE_pdf, bsdf_pdf);
-                Illum = ((CurBounce == 0) ? 1 : throughput) * (Radiance * bsdf_value) /  NEE_pdf * Attenuation * ((UseRestir && CurBounce == 0 && (CurRes.W > 0 || CurRes.W < 0 || CurRes.W == 0)) ? CurRes.W : NEEMISWeight);
-
+                Illum = PrevThroughput * (Radiance * bsdf_value) /  NEE_pdf * Attenuation * ((UseRestir && CurBounce == 0 && (CurRes.W > 0 || CurRes.W < 0 || CurRes.W == 0)) ? CurRes.W : NEEMISWeight) / max(hitDat.surfaceColor,0.0000001f);
             }
+
             bool DoNEERR = (CurBounce == 0 && UseRestir);
             float maxillum = max(max(Illum.x, Illum.y), Illum.z);
             if((DoNEERR || maxillum > random(9).y) && (CurRes.W != 0 || !UseRestir || CurBounce != 0)) {//NEE russian roulette, massively improves performance while giivng the same result
@@ -3917,7 +4211,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
                 ShadowRaysBuffer[index3].origin = ray.origin;
                 ShadowRaysBuffer[index3].direction = to_light;
                 ShadowRaysBuffer[index3].t = (IsDirectional) ? 10000.0f : distance_to_light - 0.00001f;//2.0f * EPSILON;
-                ShadowRaysBuffer[index3].illumination = Illum * ((DoNEERR) ? 1 : rcp(saturate(maxillum)));
+                ShadowRaysBuffer[index3].illumination = Illum * ((DoNEERR) ? 1 : rcp(saturate(maxillum))) / (CurBounce == 0 && TempAlbedoTex[Uv].xyz != 0.00001f ? TempAlbedoTex[Uv].xyz : 1) * max(hitDat.surfaceColor,0.0000001f);
                 ShadowRaysBuffer[index3].RadianceIncomming = RadianceIncomming;
                 ShadowRaysBuffer[index3].PixelIndex = Uv.y * screen_width + Uv.x;
                 ShadowRaysBuffer[index3].IsNotFog = true;
@@ -3995,6 +4289,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color,  HitMat hitDat, RayHit h
        if(CurBounce > 0)
            throughput *= rcp(p);//rcp is a slightly faster but less accurate version of 1 / p, I decided the inaccuracy was worth the performance bump
     }
+    if(any(throughput > 10000.0f)) return;
     Color.throughput = throughput;
     uint index2;//Congrats, the ray will continue its path
     InterlockedAdd(BufferSizes[CurBounce + 1].tracerays, 1, index2);
@@ -4037,7 +4332,7 @@ void kernel_shade () {
                 Color.Direct += sky;
             } else {
                 Color.Indirect += Color.throughput * sky;
-            }t
+            }
             SkyColAcc = Color.throughput * sky;
         #else
             float3 transmittance = 0;
@@ -4119,11 +4414,8 @@ void kernel_shade () {
     hitmat.relativeIOR = TempMat.ior;
     hitmat.Thin = TempMat.Thin;
     hitmat.scatterDistance = 0.5f;//bestHit.t;
+    hitmat.Specular = TempMat.Specular;//bestHit.t;
 
-    if(CurBounce == 0) {
-        CurrentReservoirGI[PixIndex].MaterialIndex = MaterialIndex;
-        CurrentReservoirGI[PixIndex].BaseColor = BaseCol.xyz;
-    }
 
     if(TempMat.MatType == 3) {
         if(BaseCol.a == 0) {
@@ -4132,23 +4424,34 @@ void kernel_shade () {
     }
 
     if(TempMat.HasMetallicTex > 0 && hitmat.specTrans != 1) {
+        // hitmat.clearcoat = 1;
+        // hitmat.ior = 1.33;
         float2 MetallicUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].MetallicTex.xy - _Materials[MaterialIndex].MetallicTex.zw) + _Materials[MaterialIndex].MetallicTex.zw;
         float4 MetallicCol = _MetallicAtlas.SampleLevel(sampler_MetallicAtlas, MetallicUV, 0);
         // hitmat.roughness = saturate(1 - pow(MetallicCol.g, 0.4545f));
-        if(MetallicCol.b > 0.001f) {
-            hitmat.metallic = pow(MetallicCol.b, 0.4545f);
+        if(MetallicCol.r > 0.001f) {
+            hitmat.metallic = pow(MetallicCol.r, 0.4545f);
+            // hitmat.Specular = pow(MetallicCol.g, 0.4545f);
             // hitmat.MatType = 1;
             // hitmat.roughness = MetallicCol.b;
             // TempMat.roughness = MetallicCol.b;
         }
         if(MetallicCol.g > 0.001f) {
-            hitmat.clearcoat = pow(MetallicCol.g, 0.4545f);
+            // hitmat.roughness = MetallicCol.a;
+            // hitmat.Specular = pow(MetallicCol.g, 0.4545f);
+            // hitmat.ior = 1.33;
+//            hitmat.clearcoatGloss = pow(MetallicCol.g, 0.4545f);
+        }
+        if(MetallicCol.a > 0.001f) {
+            // hitmat.roughness = max(MetallicCol.a,0.0001f);
+            // hitmat.roughness = pow(MetallicCol.a, 0.4545f);
+//            hitmat.clearcoatGloss = pow(MetallicCol.g, 0.4545f);
         }
     }
     if(TempMat.HasRoughnessTex > 0) {
         float2 RoughnessUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].RoughnessTex.xy - _Materials[MaterialIndex].RoughnessTex.zw) + _Materials[MaterialIndex].RoughnessTex.zw;
         float3 RoughnessCol = _RoughnessAtlas.SampleLevel(sampler_RoughnessAtlas, RoughnessUV, 0).xyz;
-        hitmat.roughness = saturate(pow(RoughnessCol.x, 0.4545f));
+        // hitmat.roughness = saturate(pow(RoughnessCol.x, 0.4545f));
     }
     bool IsEmissiveTex = false;
     if(TempMat.HasEmissiveTex > 0) {
@@ -4166,6 +4469,11 @@ void kernel_shade () {
         }
     } else if(_Materials[MaterialIndex].EmissionColor.x != 0 || _Materials[MaterialIndex].EmissionColor.y != 0 || _Materials[MaterialIndex].EmissionColor.z != 0) {
         hitmat.surfaceColor += _Materials[MaterialIndex].EmissionColor * hitmat.surfaceColor;
+    }
+    if(CurBounce == 0) {
+        CurrentReservoirGI[PixIndex].MaterialIndex = MaterialIndex;
+        PerMatInfo TempMatModifier = {hitmat.Specular, hitmat.roughness, hitmat.clearcoat, hitmat.clearcoatGloss, hitmat.metallic, BaseCol.xyz};
+        MatModifiers[PixIndex] = TempMatModifier;
     }
 
     calcFinalColor(ray, Color, hitmat, bestHit, TempUv, NormalUV, GlobalRays2[index].HitVoxel, IsEmissiveTex, GlobalRays2[index], TempMat, GlobalRays2[index].PrevIndex);
@@ -4185,27 +4493,6 @@ bool DiffRes;
 float FarPlane;
 RWTexture2D<int> PrevNormalTex;
 
-uint packUnormArb(const float3 data2) {
-    const uint4 bits = uint4(10,10,10,0);
-    const float4 data = float4(data2, 0);
-    float4 mull = exp2(float4(bits)) - 1.0;
-
-    uint4 shift = uint4(0, bits.x, bits.x + bits.y, bits.x + bits.y + bits.z);
-    uint4 shifted = uint4(data * mull + 0.5) << shift;
-
-    return shifted.x | shifted.y | shifted.z | shifted.w;
-}
-
-float3 unpackUnormArb(const uint pack) {
-    const uint4 bits = uint4(10,10,10,0);
-    uint4 maxValue  = uint4(exp2(bits) - 1);
-    uint4 shift     = uint4(0, bits.x, bits.x + bits.y, bits.x + bits.y + bits.z);
-    uint4 unshifted = pack >> shift;
-          unshifted = unshifted & maxValue;
-
-    return normalize((float4(unshifted).xyz * 1.0 / float4(maxValue).xyz).xyz * 2.0f - 1.0f);
-}
-
 [numthreads(16,16,1)]
 void kernel_finalize (uint3 id : SV_DispatchThreadID) {//Moved final accumulation into its own kernel, improves performance
     
@@ -4214,8 +4501,9 @@ void kernel_finalize (uint3 id : SV_DispatchThreadID) {//Moved final accumulatio
     float2 Uv = id.xy / float2(screen_width, screen_height);
     if(UseReSTIRGI) PrevDepthTex[id.xy] = Linear01Depth(Depth.SampleLevel(my_linear_clamp_sampler, Uv, 0).x) * FarPlane;
     if(UseReSTIRGI) PrevNormalTex[id.xy] = packUnormArb(NormalTex.SampleLevel(sampler_NormalTex, Uv, 0).xyz);
-    float3 res = (GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect) * ((DiffRes || UseAtrous) ? 1.0f : AlbedoTex[id.xy]) + GlobalColors[final_pixel_index].Fog;
-    if(!all(res < 100)) res = 0;
+    float3 res = (GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect) * ((DiffRes || UseAtrous) ? 1.0f : AlbedoTex[id.xy].xyz) + GlobalColors[final_pixel_index].Fog;
+    if(!all(res < 100000)) res = 0;
+    // MatModifiersPrev[id.x + id.y * screen_width] = MatModifiers[id.x + id.y * screen_width];
     Result[id.xy] = float4(res, 1.0f);
 }
 
@@ -4320,7 +4608,7 @@ void kernel_reservoir (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThrea
     rng_state = pixel_index * curframe;
     const float2 UV = id.xy / float2(screen_width, screen_height);
 
-    const float3 Norm = NormalTex.SampleLevel(sampler_NormalTex, UV, 0).xyz;
+    const float3 Norm = unpackUnormArb(TempNormTex[id.xy]);//.SampleLevel(sampler_NormalTex, UV, 0).xyz;
     const float3 WorldPosition =  TempPosTex[id.xy].xyz;
     const float LightPDFAddtion = (_UnityLights[unitylightcount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
     const float LightTriPDFAddtion = (_LightMeshes[LightMeshCount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
@@ -4677,9 +4965,28 @@ void UpdateReservoir(inout GIReservoir A, GIReservoir B, float w, float rndnum, 
         A.SecondaryHitDirectionOut = B.SecondaryHitDirectionOut;
         A.RadianceIncomming = B.RadianceIncomming;
         A.BaseColor = B.BaseColor;
+        A.ThisCase = B.ThisCase;
     }
 
 }
+
+void UpdateReservoir2(inout GIReservoir A, GIReservoir B, float w, float rndnum, inout float wsum) {
+    A.M += B.M + 1;
+    wsum += w;
+    if (rndnum < (w/wsum)) {
+        A.SecondaryHitPosition = B.SecondaryHitPosition;
+        A.HistoricID = B.HistoricID;
+        A.HistoricFrame = B.HistoricFrame;
+        A.RadianceDirect = B.RadianceDirect;
+        A.RadianceIndirect = B.RadianceIndirect;
+        A.SecondaryHitDirectionOut = B.SecondaryHitDirectionOut;
+        A.RadianceIncomming = B.RadianceIncomming;
+        A.BaseColor = B.BaseColor;
+        // A.ThisCase = B.ThisCase;
+    }
+
+}
+
 
 bool UseReSTIRGISpatial;
 bool UseReSTIRGITemporal;
@@ -4690,40 +4997,6 @@ int ReSTIRGITemporalMCap;
 bool SpatialStabalizer;
 float3 PrevCamPos;
 float3 CamPos;
-
-inline bool EvaluateBsdf(const HitMat hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, out float PDF) {
-    float throwaway = 0;
-    float3 bsdf_value = 0;
-    bool validbsdf = false;
-    float cos_theta_hit = dot(DirectionOut, Normal);
-    [branch]switch(hitDat.MatType) {//Switch between different materials
-        default:
-            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
-        break;
-        case 1:
-            bsdf_value = EvaluateDisney(hitDat, -DirectionIn, DirectionOut, hitDat.Thin == 1, PDF, throwaway, GetTangentSpace2(Normal));// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
-            validbsdf = PDF > 0;
-        break;
-        case 3:
-            validbsdf = false;
-        break;
-        case 4:
-            validbsdf = true;
-        break;
-        case 5:
-            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
-        break;
-        case 6:
-            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
-        break;
-        case 7:
-            validbsdf = evalplastic(hitDat, mul(GetTangentSpace(Normal), DirectionOut), cos_theta_hit, bsdf_value, PDF,  mul(GetTangentSpace(Normal), -DirectionIn));
-        break;
-
-    }
-    return validbsdf;
-} 
-
 
 [numthreads(16,16,1)]
 void kernel_GI_Reserviour (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID, uint3 id3 : SV_GroupID, uint id4 : SV_GroupIndex) {
@@ -4736,21 +5009,21 @@ void kernel_GI_Reserviour (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupT
         CurrentRes.RadianceDirect = GlobalColors[id.x + id.y * screen_width].Direct;
         CurrentRes.RadianceIndirect = GlobalColors[id.x + id.y * screen_width].Indirect;
     }
-    GIReservoir prevReservoir = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    GIReservoir prevReservoir = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
     MaterialData TempMat = _Materials[(int)CurrentRes.MaterialIndex.x];
+    const PerMatInfo MatModifier = MatModifiers[index];
     HitMat hitmat;
-    hitmat.surfaceColor = CurrentRes.BaseColor;
+    hitmat.surfaceColor = MatModifier.Albedo;
     hitmat.emmis = TempMat.emmissive;
-    hitmat.roughness = max(TempMat.roughness,0.001f);
+    hitmat.roughness = MatModifier.Roughness;
     hitmat.MatType = TempMat.MatType;
-    hitmat.transmittanceColor = TempMat.transmittanceColor;
-    hitmat.metallic = TempMat.metallic;
+    hitmat.metallic = MatModifier.Metallic;
     hitmat.ior = TempMat.ior;
     hitmat.specTrans = TempMat.specTrans;
     hitmat.specularTint = TempMat.specularTint;
-    hitmat.clearcoat = TempMat.clearcoat;
-    hitmat.clearcoatGloss = TempMat.clearcoatGloss;
+    hitmat.clearcoat = MatModifier.Clearcoat;
+    hitmat.clearcoatGloss = MatModifier.ClearCoatGloss;
     hitmat.diffTrans = TempMat.diffTrans;
     hitmat.sheen = TempMat.sheen;
     hitmat.sheenTint = TempMat.sheenTint;
@@ -4762,10 +5035,12 @@ void kernel_GI_Reserviour (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupT
     hitmat.relativeIOR = TempMat.ior;
     hitmat.Thin = TempMat.Thin;
     hitmat.scatterDistance = 0;
+    hitmat.Specular = MatModifier.Specular;
 
     bool ActuallyRender = (RenderMaskTex[id.xy] == 1);
     float2 UV = id.xy / float2(screen_width, screen_height);
     const float3 Norm = normalize(NormalTex.SampleLevel(sampler_NormalTex, UV, 0).xyz * 2.0f - 1.0f);
+    const float3 GeomNorm = unpackUnormArb(TempNormTex[id.xy]);
     bool SuccessfullyReprojected = false;
     float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, UV, 0).xy;
     uint2 prevIndex = int2(floor(((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height))- MotionVector) * float2(screen_width, screen_height)));
@@ -4773,32 +5048,65 @@ void kernel_GI_Reserviour (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupT
         prevReservoir = PreviousReservoirGI[prevIndex.y * screen_width + prevIndex.x];
         SuccessfullyReprojected = true;
     }
+    // float3 minCol = 9999.0f;
+    // float3 maxCol = -9999.0f;
+
+    // [unroll]for(int x = 0; x <= 0; ++x) {
+    //     [unroll]for(int y = 0; y <= 0; ++y) {
+    //         int2 OffsetIndex = id.xy + int2(x,y);
+    //         float3 color = CurrentReservoirGI[OffsetIndex.x + OffsetIndex.y * screen_width].BaseColor;
+    //         minCol = min(minCol, color);
+    //         maxCol = max(maxCol, color);
+    //     }
+    // }
+    // if(!all(prevReservoir.BaseColor >= minCol && prevReservoir.BaseColor <= maxCol)) {prevReservoir.M = 0;}
+// _DebugTex[id.xy] = float4(abs(prevReservoir.BaseColor - CurrentRes.BaseColor), 1);
+
     if(ActuallyRender) {
+        float3 bsdf_value;
     const float3 RayDir = normalize(PrimaryHitPosition - CamPos);
     float CurDist = Linear01Depth(Depth.SampleLevel(my_linear_clamp_sampler, UV, 0).x) * FarPlane;
     float p_q;
         float fpdf;
         float wsum = 0;
-        bool Valid = EvaluateBsdf(hitmat, RayDir, normalize(CurrentRes.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf);
-        p_q = luminance(CurrentRes.RadianceDirect + CurrentRes.RadianceIndirect) * step(0, fpdf);
-        wsum = p_q;
+        bool Valid = ReconstructBsdf(hitmat, RayDir, normalize(CurrentRes.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf, bsdf_value, CurrentRes.ThisCase.x);
+        // bool Valid = EvaluateBsdf(hitmat, RayDir, normalize(CurrentRes.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf, bsdf_value);
+        // Valid = Valid && fpdf < 100000.0f;
+        p_q = luminance((CurrentRes.RadianceDirect + CurrentRes.RadianceIndirect) * bsdf_value);// * step(0, fpdf);
+
+       if(ReSTIRGIUpdateRate != 0 && RandomNums[id.xy].z == 1) wsum = CurrentRes.W * CurrentRes.M;
+       else wsum = p_q;
+        if(!Valid) wsum = 0;
     if(ReSTIRGIUpdateRate == 0 || RandomNums[id.xy].z != 1) {
         float PrevDist = PrevDepthTex[prevIndex].x;
-        float DistDiff = ((abs(CurDist - PrevDist) - length(CamPos - PrevCamPos)) / CurDist);
+        float DistDiff = ((abs(CurDist - PrevDist) - length(CamPos - PrevCamPos))) / CurDist;
 
         bool DoTemporal = DistDiff < 0.1f && (dot(unpackUnormArb(PrevNormalTex[prevIndex]), Norm) > 0.9f);
         if(DoTemporal && UseReSTIRGITemporal) {
             if(ReSTIRGITemporalMCap != 0) prevReservoir.M = min(prevReservoir.M, ReSTIRGITemporalMCap);
-            Valid = EvaluateBsdf(hitmat, RayDir, normalize(prevReservoir.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf);
-            float Prev_p_q = luminance(prevReservoir.RadianceDirect + prevReservoir.RadianceIndirect) * step(0, fpdf);
-            UpdateReservoir(CurrentRes, prevReservoir, Prev_p_q * prevReservoir.M * prevReservoir.W, random(23).x, wsum);
+            // Valid = EvaluateBsdf(hitmat, RayDir, normalize(prevReservoir.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf, bsdf_value);
+            Valid = ReconstructBsdf(hitmat, RayDir, normalize(prevReservoir.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf, bsdf_value, prevReservoir.ThisCase.x);
+            // Valid = EvaluateBsdf(hitmat, RayDir, normalize(prevReservoir.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf, bsdf_value);
+
+        Valid = all(bsdf_value < 0 || bsdf_value > 0 || bsdf_value == 0) && luminance(bsdf_value) < 100000.0f;
+            frames_accumulated++;
+            float Prev_p_q = luminance((prevReservoir.RadianceDirect + prevReservoir.RadianceIndirect) * bsdf_value);// * step(0, fpdf);
+            UpdateReservoir(CurrentRes, prevReservoir, max(Prev_p_q * prevReservoir.M * prevReservoir.W * Valid,0), random(23).x, wsum);
+        } else {
+            CurrentRes.M++;
         }
-        Valid = EvaluateBsdf(hitmat, RayDir, normalize(CurrentRes.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf);
-        p_q = luminance(CurrentRes.RadianceDirect + CurrentRes.RadianceIndirect) * step(0, fpdf);
+        // Valid = EvaluateBsdf(hitmat, RayDir, normalize(CurrentRes.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf, bsdf_value);
+
+        Valid = ReconstructBsdf(hitmat, RayDir, normalize(CurrentRes.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf, bsdf_value, CurrentRes.ThisCase.x);
+          Valid = all(bsdf_value < 0 || bsdf_value > 0 || bsdf_value == 0) && luminance(bsdf_value) < 100000.0f;
+
+        if(!Valid) return;
+
+        p_q = luminance((CurrentRes.RadianceDirect + CurrentRes.RadianceIndirect) * bsdf_value);// * step(0, fpdf);
         CurrentRes.W = wsum / max((CurrentRes.M * p_q),0.00001f);
     }
     int PrevM = CurrentRes.M;
-    if(CurrentRes.W > 10) {
+    if((CurrentRes.W > 10)) {
         CurrentRes.W = 0;
     }
      CurrentReservoirGI[index] = CurrentRes;
@@ -4808,39 +5116,45 @@ void kernel_GI_Reserviour (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupT
         uint2 neighborOffset;
         uint2 neighborIndex;
         for (int i = 0; i < ReSTIRGISpatialCount;i++) {
-            float radius = 30 * random(i).x;
+            float radius = random(i).x * 30;
             float angle = 2.0f * PI * random(i).y;
             
             int2 neighborIndex = round(CenterIndex + radius * float2(cos(angle), sin(angle)));
             if (neighborIndex.x < 0 || neighborIndex.x >= (int)screen_width || neighborIndex.y < 0 || neighborIndex.y >= (int)screen_height) continue;
             GIReservoir neighborRes = PreviousReservoirGI[neighborIndex.y * uint(screen_width) + neighborIndex.x];   
             float PrevDist = PrevDepthTex[neighborIndex].x;        
-            float DistDiff = (abs(CurDist - PrevDist) / CurDist);
+            float DistDiff = (abs(CurDist - PrevDist)) / CurDist;
             if (
                 DistDiff >= 0.1f || 
-                dot(unpackUnormArb(PrevNormalTex[neighborIndex]), Norm) < 0.9f
+                dot(unpackUnormArb(PrevNormalTex[neighborIndex]), Norm) < 0.9f// || abs(MatModifiersPrev[neighborIndex.x + neighborIndex.y * screen_width].Metallic - MatModifier.Metallic) > 0.1f
             ) {
                 continue;
             }
-            Valid = EvaluateBsdf(hitmat, RayDir, normalize(neighborRes.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf);
+            frames_accumulated++;
+           Valid = ReconstructBsdf(hitmat, RayDir, normalize(neighborRes.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf, bsdf_value, CurrentRes.ThisCase.x);
+           Valid = all(bsdf_value < 0 || bsdf_value > 0 || bsdf_value == 0) && luminance(bsdf_value) < 100000.0f;
             if(!Valid) continue;
             if(SpatialStabalizer) {neighborRes.M = min(neighborRes.M, 12); CurrentRes.M--;}
-             p_q = luminance(neighborRes.RadianceDirect + neighborRes.RadianceIndirect) * step(0, fpdf);
-            UpdateReservoir(CurrentRes, neighborRes, p_q * neighborRes.M * neighborRes.W, random(i + 16).x, wsum);  
+             p_q = luminance((neighborRes.RadianceDirect + neighborRes.RadianceIndirect)) * step(0, fpdf);
+            UpdateReservoir(CurrentRes, neighborRes, max(p_q * neighborRes.M * neighborRes.W,0), random(i + 16).x, wsum);  
         }
-        Valid = EvaluateBsdf(hitmat, RayDir, normalize(CurrentRes.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf);
-        p_q = luminance(CurrentRes.RadianceDirect + CurrentRes.RadianceIndirect) * step(0, fpdf);
+
+        Valid = ReconstructBsdf(hitmat, RayDir, normalize(CurrentRes.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf, bsdf_value, CurrentRes.ThisCase.x);
+       Valid = all(bsdf_value < 0 || bsdf_value > 0 || bsdf_value == 0) && luminance(bsdf_value) < 100000.0f;
+       if(!Valid) return;
+        p_q = luminance((CurrentRes.RadianceDirect + CurrentRes.RadianceIndirect)) * step(0, fpdf);
+
         CurrentRes.W = wsum / max((CurrentRes.M * p_q),0.00001f);
     }
 
-    if((p_q == 0 || CurrentRes.M == 0 || CurrentRes.W > 10)) {
+    if((p_q == 0 || CurrentRes.M == 0) || CurrentRes.W > 10) {
         CurrentRes.W = 0;
         // CurrentRes.M = 0;
     }
 
     if(DoReSTIRGIConnectionValidation) {
         float Distance = length(PrimaryHitPosition - (CurrentRes.SecondaryHitPosition)) - 0.001f;
-        Ray ray = CreateRay(PrimaryHitPosition + Norm * 0.0001f,normalize(((CurrentRes.SecondaryHitPosition) - PrimaryHitPosition)));
+        Ray ray = CreateRay(PrimaryHitPosition + GeomNorm * 0.0001f,normalize(((CurrentRes.SecondaryHitPosition) - PrimaryHitPosition)));
 
         bool ConnectedlyVisable = VisabilityCheck(ray, Distance);
         if(!ConnectedlyVisable) {CurrentRes.W = 0; CurrentRes.M = 0;} 
@@ -4850,6 +5164,9 @@ void kernel_GI_Reserviour (uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupT
     // if(CurrentRes.W > 10) CurrentRes.W = 0;
     CurrentRes.W = clamp(CurrentRes.W, 0, 1);
     if(SuccessfullyReprojected) {
+        Valid = ReconstructBsdf(hitmat, RayDir, normalize(CurrentRes.SecondaryHitPosition - PrimaryHitPosition), Norm, fpdf, bsdf_value, CurrentRes.ThisCase.x);
+        // Valid = Valid && all(bsdf_value < 0 || bsdf_value > 0 || bsdf_value == 0) && luminance(bsdf_value) < 100000.0f;
+        if(Valid) TempAlbedoTex[id.xy] = float4(abs(bsdf_value),1);
         GlobalColors[id.x + id.y * screen_width].Direct = CurrentRes.RadianceDirect * CurrentRes.W; GlobalColors[id.x + id.y * screen_width].Indirect = CurrentRes.RadianceIndirect * CurrentRes.W;
         SHData ThisSH = init_SH();
         accumulate_SH(ThisSH, irradiance_to_SH(CurrentRes.RadianceIndirect * CurrentRes.W * 1024, clamp(normalize(CurrentRes.SecondaryHitPosition - PrimaryHitPosition),-1,1)), 1.0f);
@@ -4915,12 +5232,13 @@ float2 uv = id.xy / float2(screen_width, screen_height);
             prevReservoir.RadianceIndirect = 0;
             prevReservoir.M = 0; 
             prevReservoir.W = 0;
-            _DebugTex[id.xy] = 1;
+            // _DebugTex[id.xy] = 1;
             PreviousReservoirGI[prevIndex.y * screen_width + prevIndex.x] = prevReservoir;
         } else {
             CurrentRes.M = prevReservoir.M;
             CurrentRes.W = prevReservoir.W;
             CurrentRes.BaseColor = prevReservoir.BaseColor;
+            CurrentRes.ThisCase = prevReservoir.ThisCase;
         }
 
     }

@@ -32,6 +32,7 @@ public class RayTracingObjectEditor : Editor
         t.Roughness[Selected] = EditorGUILayout.Slider("Roughness: ", t.Roughness[Selected], 0, 1);
         t.IOR[Selected] = EditorGUILayout.Slider("IOR: ", t.IOR[Selected], 0, 10);
         t.Metallic[Selected] = EditorGUILayout.Slider("Metallic: ", t.Metallic[Selected], 0, 1);
+        t.Specular[Selected] = EditorGUILayout.Slider("Specular: ", t.Specular[Selected], 0, 1);
         t.SpecularTint[Selected] = EditorGUILayout.Slider("Specular Tint: ", t.SpecularTint[Selected], 0, 1);
         t.Sheen[Selected] = EditorGUILayout.Slider("Sheen: ", t.Sheen[Selected], 0, 10);
         t.SheenTint[Selected] = EditorGUILayout.Slider("Sheen Tint: ", t.SheenTint[Selected], 0, 1);

@@ -164,7 +164,7 @@ inline void store_SH(RWTexture2D<float4> img_shY, RWTexture2D<float2> img_CoCg, 
 
 Texture2D<float2> MotionVectors;
 Texture2D<float> Depth;
-Texture2D<float4> Normal;
+Texture2D<int> Normal;
 RWTexture2D<float4> Throughput;
 
 float FarPlane;
@@ -182,7 +182,7 @@ void CopyData (uint3 id : SV_DispatchThreadID)
     STORE_SH(TEX_PT_COLOR_LF_SH, TEX_PT_COLOR_LF_COCG, id.xy, SHStruct[pixel_index]);
     TEX_PT_COLOR_HF[id.xy] = float4(PerPixelRadiance[pixel_index].Direct,0);
     TEX_PT_COLOR_SPEC[id.xy] = 0;
-    TEX_PT_GEO_NORMAL_A[id.xy] = packUnormArb(Normal[id.xy].xyz * 0.5f + 0.5f);
+    TEX_PT_GEO_NORMAL_A[id.xy] = Normal[id.xy];
 
 
 

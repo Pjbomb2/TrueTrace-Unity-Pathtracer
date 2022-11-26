@@ -32,7 +32,7 @@ Texture2D<float4> ScreenPosPrev;
 Texture2D<float4> PosTex;
 RWTexture2D<float4> PrevPosTex;
 RWTexture2D<int> HistoryTex;
-Texture2D<float4> _CameraNormalDepthTex;
+Texture2D<int> _CameraNormalDepthTex;
 SamplerState sampler_CameraNormalDepthTex;
 
 RWTexture2D<float4> FrameBufferMoment;
@@ -115,8 +115,8 @@ void kernel_copy (int3 id : SV_DispatchThreadID)
     ColorDirectOut[id.xy] = float4(PerPixelRadiance[pixel_index].Direct, 1.0f);
     ColorIndirectOut[id.xy] = float4(PerPixelRadiance[pixel_index].Indirect, 1.0f);
     RWScreenPosPrev[id.xy] =  float4(((UV) - MotionVectors.SampleLevel(sampler_MotionVectors, UV, 0).xy) * 2.0f - 1.0f, 0.0f, 1.0f);
-    RWNormalAndDepth[id.xy] = float4(oct_encode_normal(_CameraNormalDepthTex[id.xy].xyz * 2.0f - 1.0f), Linear01Depth(DepthTex[NewSample].x) * FarPlane, Linear01Depth(PrevDepthTex[NewSample].x) * FarPlane);
-    PrevDepthTexMain[id.xy] = float4(Linear01Depth(DepthTex[NewSample].x) * FarPlane,0,0,1);
+    RWNormalAndDepth[id.xy] = float4(oct_encode_normal(unpackUnormArb(_CameraNormalDepthTex[id.xy]) * 2.0f - 1.0f), Linear01Depth(DepthTex[NewSample].x) * FarPlane, Linear01Depth(PrevDepthTex[NewSample].x) * FarPlane);
+    PrevDepthTexMain[id.xy] = float4(LinearEyeDepth(DepthTex[NewSample].x),0,0,1);
     PrevNormTex[id.xy] = packUnormArb(NormalTex.SampleLevel(sampler_NormalTex, UV, 0).xyz);
 }
 
@@ -276,7 +276,7 @@ void kernel_reproject (int3 id : SV_DispatchThreadID)
 
 
         float inv_history = rcp((float)(history));
-        float alpha_colour = max(0.2f, inv_history);
+        float alpha_colour = max(0.05f, inv_history);
         float alpha_moment = max(0.2f, inv_history);
 
         // Integrate using exponential moving average
@@ -594,13 +594,17 @@ void kernel_atrous (int3 id : SV_DispatchThreadID)
 
 bool DiffRes;
 
+inline float luminance(const float3 a) {
+    return dot(float3(0.299f, 0.587f, 0.114f), a);
+}
+
 [numthreads(16,16,1)]
 void kernel_finalize (int3 id : SV_DispatchThreadID)
 {
     if (id.x >= screen_width || id.y >= screen_height) return;
     int pixel_index = id.y * screen_width + id.x;
     float3 colour = (ColorDirectIn[id.xy].xyz + ColorIndirectIn[id.xy].xyz) * ((DiffRes) ? 1.0f : _Albedo.SampleLevel(sampler_Albedo, id.xy / float2(screen_width, screen_height), 0).xyz) + PerPixelRadiance[pixel_index].Fog;
-    Result[id.xy] = float4(colour,1);
+    if(luminance(colour) < 10000) Result[id.xy] = float4(colour,1);
 
     HistoryMomentTex[id.xy] = FrameBufferMoment[id.xy];
     RWHistoryNormalAndDepth[id.xy] = NormalAndDepth[id.xy];

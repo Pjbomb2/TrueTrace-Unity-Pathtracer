@@ -37,6 +37,7 @@ public class Denoiser {
 
     private RenderTexture TAAA;
     private RenderTexture TAAB;
+    private RenderTexture[] BloomSamples;
 
 
 
@@ -64,7 +65,9 @@ public class Denoiser {
     private int AtrousCopyKernel;
     private int AtrousFinalizeKernel;
 
-    private int BloomKernel;
+    private int BloomDownsampleKernel;
+    private int BloomLowPassKernel;
+    private int BloomUpsampleKernel;
 
     private int ComputeHistogramKernel;
     private int CalcAverageKernel;
@@ -86,6 +89,8 @@ public class Denoiser {
 
     private int SourceWidth;
     private int SourceHeight;
+    private int[] BloomWidths;
+    private int[] BloomHeights;
 
 
     private void CreateRenderTexture(ref RenderTexture ThisTex, bool SRGB) {
@@ -192,6 +197,18 @@ public class Denoiser {
          CreateRenderTexture2(ref UpScalerLightingDataTexture, false);
          CreateRenderTexture2(ref TAAA, false);
          CreateRenderTexture2(ref TAAB, false);
+         BloomSamples = new RenderTexture[8];
+         int BloomWidth = Screen.width / 2;
+         int BloomHeight = Screen.height / 2;
+         BloomWidths = new int[8];
+         BloomHeights = new int[8];
+         for(int i = 0; i < 8; i++) {
+            CreateRenderTexture(ref BloomSamples[i], false, BloomWidth, BloomHeight);
+            BloomWidths[i] = BloomWidth;
+            BloomHeights[i] = BloomHeight;
+            BloomWidth /= 2;
+            BloomHeight /= 2;
+         }
         }
     }
     
@@ -222,7 +239,9 @@ public class Denoiser {
         TAAUCopyKernel = TAAU.FindKernel("Copy");
 
 
-        BloomKernel = Bloom.FindKernel("Bloom");
+        BloomDownsampleKernel = Bloom.FindKernel("Downsample");
+        BloomLowPassKernel = Bloom.FindKernel("LowPass");
+        BloomUpsampleKernel = Bloom.FindKernel("Upsample");
 
         TAAKernel = TAA.FindKernel("kernel_taa");
         TAAFinalizeKernel = TAA.FindKernel("kernel_taa_finalize");
@@ -403,10 +422,43 @@ public class Denoiser {
         Bloom.SetFloat("strength", BloomStrength);
         Bloom.SetInt("screen_width", Screen.width);
         Bloom.SetInt("screen_height", Screen.height);
-        Bloom.SetTexture(BloomKernel, "OrigTex", _converged);
-        Bloom.SetTexture(BloomKernel, "InputTex", _converged);
-        Bloom.SetTexture(BloomKernel, "OutputTex", _target);
-        Bloom.Dispatch(BloomKernel, threadGroupsX2, threadGroupsY2, 1);
+            Bloom.SetInt("TargetWidth", BloomWidths[0]);
+            Bloom.SetInt("TargetHeight", BloomHeights[0]);
+        Bloom.SetTexture(BloomLowPassKernel, "InputTex", _converged);
+        Bloom.SetTexture(BloomLowPassKernel, "OutputTex", BloomSamples[0]);
+        Bloom.Dispatch(BloomLowPassKernel, (int)Mathf.Ceil(BloomWidths[0] / 16.0f), (int)Mathf.Ceil(BloomHeights[0] / 16.0f), 1);
+        for(int i = 1; i < 6; i++) {
+            // Debug.Log(BloomWidths[i]);
+            Bloom.SetInt("TargetWidth", BloomWidths[i]);
+            Bloom.SetInt("TargetHeight", BloomHeights[i]);
+            Bloom.SetInt("screen_width", BloomWidths[i - 1]);
+            Bloom.SetInt("screen_height", BloomHeights[i - 1]);
+            Bloom.SetTexture(BloomDownsampleKernel, "InputTex", BloomSamples[i - 1]);
+            Bloom.SetTexture(BloomDownsampleKernel, "OutputTex", BloomSamples[i]);
+            Bloom.Dispatch(BloomDownsampleKernel, (int)Mathf.Ceil(BloomWidths[i - 1] / 16.0f), (int)Mathf.Ceil(BloomHeights[i - 1] / 16.0f), 1);
+        }
+            Bloom.SetBool("IsFinal", false);
+
+        for(int i = 5; i > 0; i--) {
+            Bloom.SetInt("TargetWidth", BloomWidths[i - 1]);
+            Bloom.SetInt("TargetHeight", BloomHeights[i - 1]);
+            Bloom.SetInt("screen_width", BloomWidths[i]);
+            Bloom.SetInt("screen_height", BloomHeights[i]);
+            Bloom.SetTexture(BloomUpsampleKernel, "InputTex", BloomSamples[i]);
+            Bloom.SetTexture(BloomUpsampleKernel, "OutputTex", BloomSamples[i - 1]);
+            Bloom.SetTexture(BloomUpsampleKernel, "OrigTex", BloomSamples[i - 1]);
+
+            Bloom.Dispatch(BloomUpsampleKernel, (int)Mathf.Ceil(BloomWidths[i - 1] / 16.0f), (int)Mathf.Ceil(BloomHeights[i - 1] / 16.0f), 1);
+        }
+        Bloom.SetInt("TargetWidth", Screen.width);
+        Bloom.SetInt("TargetHeight", Screen.height);
+        Bloom.SetInt("screen_width", BloomWidths[0]);
+        Bloom.SetInt("screen_height", BloomHeights[0]);
+        Bloom.SetBool("IsFinal", true);
+        Bloom.SetTexture(BloomUpsampleKernel, "OrigTex", _converged);
+        Bloom.SetTexture(BloomUpsampleKernel, "InputTex", BloomSamples[0]);
+        Bloom.SetTexture(BloomUpsampleKernel, "OutputTex", _target);
+        Bloom.Dispatch(BloomUpsampleKernel, (int)Mathf.Ceil(Screen.width / 16.0f), (int)Mathf.Ceil(Screen.height / 16.0f), 1);
 
 
 

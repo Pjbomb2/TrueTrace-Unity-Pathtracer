@@ -106,6 +106,7 @@ public struct PerMatTextureData {
     public bool HasMetallicMap;
     public bool HasRoughnessMap;
     public RayTracingObject MaterialObject;
+    public int Offset;
 }
 public List<PerMatTextureData> MatTexData;
 
@@ -247,6 +248,7 @@ public void CreateAtlas() {//Creates texture atlas
     Mesh mesh = new Mesh();
     PerMatTextureData CurrentTexDat = new PerMatTextureData();
     foreach(RayTracingObject obj in ChildObjects) {
+        List<Material> DoneMats = new List<Material>();
         obj.matfill();
         if(obj.GetComponent<MeshFilter>() != null) { 
             mesh = obj.GetComponent<MeshFilter>().sharedMesh;
@@ -254,14 +256,19 @@ public void CreateAtlas() {//Creates texture atlas
             mesh = obj.GetComponent<SkinnedMeshRenderer>().sharedMesh;
         }
         Material[] SharedMaterials = (obj.GetComponent<Renderer>() != null) ? obj.GetComponent<Renderer>().sharedMaterials : obj.GetComponent<SkinnedMeshRenderer>().sharedMaterials;       
-        int SharedMatLength = SharedMaterials.Length;
+        int SharedMatLength = obj.Indexes.Length;
                     List<string> PropertyNames = new List<string>();
+        int Offset = 0;
         for(int i = 0; i < SharedMatLength; ++i) {
-            CurrentTexDat.MaterialObject = obj;
-            if(SharedMaterials[Mathf.Min(i, SharedMatLength - 1)] == null) {
-                i--;
-                SharedMatLength--;
+            if(DoneMats.IndexOf(SharedMaterials[i]) != -1) {
+                CurrentTexDat.Offset = DoneMats.IndexOf(SharedMaterials[i]);
+                Offset++;
+            } else {
+                CurrentTexDat.Offset = Offset;
+                Offset++;
+                DoneMats.Add(SharedMaterials[i]);
             }
+            CurrentTexDat.MaterialObject = obj;
             SharedMaterials[i].GetTexturePropertyNames(PropertyNames);
                     CurrentTexDat.HasRoughnessMap = false;
                     CurrentTexDat.HasAlbedoMap = false;
@@ -271,52 +278,117 @@ public void CreateAtlas() {//Creates texture atlas
                     RayObjectTextureIndex TempObj = new RayObjectTextureIndex();
                     TempObj.Obj = obj;
                     TempObj.ObjIndex = i;
-                if(SharedMaterials[i].mainTexture != null) {
-                    if(AlbedoTexs.Contains(SharedMaterials[i].mainTexture)) {
-                        AlbedoIndexes[AlbedoTexs.IndexOf(SharedMaterials[i].mainTexture)].RayObjectList.Add(TempObj);
+                    if(PropertyNames.Contains("_Albedo1")) {
+                        if(SharedMaterials[i].GetTexture("_Albedo1") != null) {
+                            if(AlbedoTexs.Contains(SharedMaterials[i].GetTexture("_Albedo1"))) {
+                                AlbedoIndexes[AlbedoTexs.IndexOf(SharedMaterials[i].GetTexture("_Albedo1"))].RayObjectList.Add(TempObj);
+                            } else {
+                                AlbedoIndexes.Add(new RayObjects());
+                                AlbedoIndexes[AlbedoIndexes.Count - 1].RayObjectList.Add(TempObj);
+                                AlbedoTexs.Add(SharedMaterials[i].GetTexture("_Albedo1"));
+                            }
+                        }
+                        if(SharedMaterials[i].GetTexture("_Metallic1") != null) {
+                            if(MetallicTexs.Contains(SharedMaterials[i].GetTexture("_Metallic1"))) {
+                                MetallicIndexes[MetallicTexs.IndexOf(SharedMaterials[i].GetTexture("_Metallic1"))].RayObjectList.Add(TempObj);
+                            } else {
+                                MetallicIndexes.Add(new RayObjects());
+                                MetallicIndexes[MetallicIndexes.Count - 1].RayObjectList.Add(TempObj);
+                                MetallicTexs.Add(SharedMaterials[i].GetTexture("_Metallic1"));
+                            }
+                        }
+                        if(SharedMaterials[i].GetTexture("_Normal1") != null) {
+                            if(NormalTexs.Contains(SharedMaterials[i].GetTexture("_Normal1"))) {
+                                NormalIndexes[NormalTexs.IndexOf(SharedMaterials[i].GetTexture("_Normal1"))].RayObjectList.Add(TempObj);
+                            } else {
+                                NormalIndexes.Add(new RayObjects());
+                                NormalIndexes[NormalIndexes.Count - 1].RayObjectList.Add(TempObj);
+                                NormalTexs.Add(SharedMaterials[i].GetTexture("_Normal1"));
+                            }
+                        }
+                    } else { 
+                    if(PropertyNames.Contains("_Albedo")) {
+                        if(SharedMaterials[i].GetTexture("_Albedo") != null) {
+                            if(AlbedoTexs.Contains(SharedMaterials[i].GetTexture("_Albedo"))) {
+                                AlbedoIndexes[AlbedoTexs.IndexOf(SharedMaterials[i].GetTexture("_Albedo"))].RayObjectList.Add(TempObj);
+                            } else {
+                                AlbedoIndexes.Add(new RayObjects());
+                                AlbedoIndexes[AlbedoIndexes.Count - 1].RayObjectList.Add(TempObj);
+                                AlbedoTexs.Add(SharedMaterials[i].GetTexture("_Albedo"));
+                            }
+                        }                        
                     } else {
-                        AlbedoIndexes.Add(new RayObjects());
-                        AlbedoIndexes[AlbedoIndexes.Count - 1].RayObjectList.Add(TempObj);
-                        AlbedoTexs.Add(SharedMaterials[i].mainTexture);
+                        if(SharedMaterials[i].mainTexture != null) {
+                            if(AlbedoTexs.Contains(SharedMaterials[i].mainTexture)) {
+                                AlbedoIndexes[AlbedoTexs.IndexOf(SharedMaterials[i].mainTexture)].RayObjectList.Add(TempObj);
+                            } else {
+                                AlbedoIndexes.Add(new RayObjects());
+                                AlbedoIndexes[AlbedoIndexes.Count - 1].RayObjectList.Add(TempObj);
+                                AlbedoTexs.Add(SharedMaterials[i].mainTexture);
+                            }
+                        }
+                    }
+                    if(PropertyNames.Contains("_Normals")) {
+                        if(SharedMaterials[i].GetTexture("_Normals") != null) {
+                            if(NormalTexs.Contains(SharedMaterials[i].GetTexture("_Normals"))) {
+                                NormalIndexes[NormalTexs.IndexOf(SharedMaterials[i].GetTexture("_Normals"))].RayObjectList.Add(TempObj);
+                            } else {
+                                NormalIndexes.Add(new RayObjects());
+                                NormalIndexes[NormalIndexes.Count - 1].RayObjectList.Add(TempObj);
+                                NormalTexs.Add(SharedMaterials[i].GetTexture("_Normals"));
+                            }
+                        }                        
+                    } else {
+                        if(SharedMaterials[i].GetTexture("_BumpMap") != null) {
+                            if(NormalTexs.Contains(SharedMaterials[i].GetTexture("_BumpMap"))) {
+                                NormalIndexes[NormalTexs.IndexOf(SharedMaterials[i].GetTexture("_BumpMap"))].RayObjectList.Add(TempObj);
+                            } else {
+                                NormalIndexes.Add(new RayObjects());
+                                NormalIndexes[NormalIndexes.Count - 1].RayObjectList.Add(TempObj);
+                                NormalTexs.Add(SharedMaterials[i].GetTexture("_BumpMap"));
+                            }
+                        }
+                    }
+                    if(SharedMaterials[i].GetTexture("_EmissionMap") != null) {
+                        if(EmissionTexs.Contains(SharedMaterials[i].GetTexture("_EmissionMap"))) {
+                            EmissionIndexes[EmissionTexs.IndexOf(SharedMaterials[i].GetTexture("_EmissionMap"))].RayObjectList.Add(TempObj);
+                        } else {
+                            EmissionIndexes.Add(new RayObjects());
+                            EmissionIndexes[EmissionIndexes.Count - 1].RayObjectList.Add(TempObj);
+                            EmissionTexs.Add(SharedMaterials[i].GetTexture("_EmissionMap"));
+                        }
+                    }
+                    if(!PropertyNames.Contains("_Metallic")) {
+                        if(SharedMaterials[i].GetTexture("_MetallicGlossMap") != null) {
+                            if(MetallicTexs.Contains(SharedMaterials[i].GetTexture("_MetallicGlossMap"))) {
+                                MetallicIndexes[MetallicTexs.IndexOf(SharedMaterials[i].GetTexture("_MetallicGlossMap"))].RayObjectList.Add(TempObj);
+                            } else {
+                                MetallicIndexes.Add(new RayObjects());
+                                MetallicIndexes[MetallicIndexes.Count - 1].RayObjectList.Add(TempObj);
+                                MetallicTexs.Add(SharedMaterials[i].GetTexture("_MetallicGlossMap"));
+                            }
+                        }
+                    } else {
+                        if(SharedMaterials[i].GetTexture("_Metallic") != null) {
+                            if(MetallicTexs.Contains(SharedMaterials[i].GetTexture("_Metallic"))) {
+                                MetallicIndexes[MetallicTexs.IndexOf(SharedMaterials[i].GetTexture("_Metallic"))].RayObjectList.Add(TempObj);
+                            } else {
+                                MetallicIndexes.Add(new RayObjects());
+                                MetallicIndexes[MetallicIndexes.Count - 1].RayObjectList.Add(TempObj);
+                                MetallicTexs.Add(SharedMaterials[i].GetTexture("_Metallic"));
+                            }
+                        }
+                    }
+                    if(SharedMaterials[i].GetTexture("_OcclusionMap") != null) {
+                        if(RoughnessTexs.Contains(SharedMaterials[i].GetTexture("_OcclusionMap"))) {
+                            RoughnessIndexes[RoughnessTexs.IndexOf(SharedMaterials[i].GetTexture("_OcclusionMap"))].RayObjectList.Add(TempObj);
+                        } else {
+                            RoughnessIndexes.Add(new RayObjects());
+                            RoughnessIndexes[RoughnessIndexes.Count - 1].RayObjectList.Add(TempObj);
+                            RoughnessTexs.Add(SharedMaterials[i].GetTexture("_OcclusionMap"));
+                        }
                     }
                 }
-                if(SharedMaterials[i].GetTexture("_BumpMap") != null) {
-                    if(NormalTexs.Contains(SharedMaterials[i].GetTexture("_BumpMap"))) {
-                        NormalIndexes[NormalTexs.IndexOf(SharedMaterials[i].GetTexture("_BumpMap"))].RayObjectList.Add(TempObj);
-                    } else {
-                        NormalIndexes.Add(new RayObjects());
-                        NormalIndexes[NormalIndexes.Count - 1].RayObjectList.Add(TempObj);
-                        NormalTexs.Add(SharedMaterials[i].GetTexture("_BumpMap"));
-                    }
-                }
-                if(SharedMaterials[i].GetTexture("_EmissionMap") != null) {
-                    if(EmissionTexs.Contains(SharedMaterials[i].GetTexture("_EmissionMap"))) {
-                        EmissionIndexes[EmissionTexs.IndexOf(SharedMaterials[i].GetTexture("_EmissionMap"))].RayObjectList.Add(TempObj);
-                    } else {
-                        EmissionIndexes.Add(new RayObjects());
-                        EmissionIndexes[EmissionIndexes.Count - 1].RayObjectList.Add(TempObj);
-                        EmissionTexs.Add(SharedMaterials[i].GetTexture("_EmissionMap"));
-                    }
-                }
-                if(SharedMaterials[i].GetTexture("_MetallicGlossMap") != null) {
-                    if(MetallicTexs.Contains(SharedMaterials[i].GetTexture("_MetallicGlossMap"))) {
-                        MetallicIndexes[MetallicTexs.IndexOf(SharedMaterials[i].GetTexture("_MetallicGlossMap"))].RayObjectList.Add(TempObj);
-                    } else {
-                        MetallicIndexes.Add(new RayObjects());
-                        MetallicIndexes[MetallicIndexes.Count - 1].RayObjectList.Add(TempObj);
-                        MetallicTexs.Add(SharedMaterials[i].GetTexture("_MetallicGlossMap"));
-                    }
-                }
-                if(SharedMaterials[i].GetTexture("_OcclusionMap") != null) {
-                    if(RoughnessTexs.Contains(SharedMaterials[i].GetTexture("_OcclusionMap"))) {
-                        RoughnessIndexes[RoughnessTexs.IndexOf(SharedMaterials[i].GetTexture("_OcclusionMap"))].RayObjectList.Add(TempObj);
-                    } else {
-                        RoughnessIndexes.Add(new RayObjects());
-                        RoughnessIndexes[RoughnessIndexes.Count - 1].RayObjectList.Add(TempObj);
-                        RoughnessTexs.Add(SharedMaterials[i].GetTexture("_OcclusionMap"));
-                    }
-                }
-
 
             MatTexData.Add(CurrentTexDat);
 
@@ -338,6 +410,8 @@ public void CreateAtlas() {//Creates texture atlas
             MatType = (int)Obj.MaterialObject.MaterialOptions[CurrentObjectOffset],
             EmissionColor = Obj.MaterialObject.EmissionColor[CurrentObjectOffset]
         });
+        // Debug.Log(Obj.MaterialObject.Indexes.Length + ", " + Obj.MaterialObject.MaterialIndex.Length);
+        Obj.MaterialObject.Indexes[CurrentObjectOffset] = Obj.Offset;
         Obj.MaterialObject.MaterialIndex[CurrentObjectOffset] = CurMat;
         Obj.MaterialObject.LocalMaterialIndex[CurrentObjectOffset] = CurMat;
         PreviousObject = Obj.MaterialObject;
@@ -380,16 +454,14 @@ public void LoadData() {
             }
         }
     }
-    if(TempObjects == null || TempObjects.Count == 0) {
-        if(this.gameObject.GetComponent<RayTracingObject>() != null) {
-            TempObjects = new List<RayTracingObject>();
-            TempObjects.Add(this.gameObject.GetComponent<RayTracingObject>());
-            TempObjectTransforms.Add(this.transform);
-        } else {
-            Debug.Log("NO RAYTRACINGOBJECT CHILDREN AT GAMEOBJECT: " + Name);
-        }
-    
+    if(this.gameObject.GetComponent<RayTracingObject>() != null) {
+        TempObjects = new List<RayTracingObject>();
+        TempObjects.Add(this.gameObject.GetComponent<RayTracingObject>());
+        TempObjectTransforms.Add(this.transform);
+    } else if(TempObjects == null || TempObjects.Count == 0) {
+        Debug.Log("NO RAYTRACINGOBJECT CHILDREN AT GAMEOBJECT: " + Name);
     }
+    
     Transform[] TempTransforms = TempObjectTransforms.ToArray();
     CachedTransforms = new StorableTransform[TempTransforms.Length];
     for(int i = 0; i < TempTransforms.Length; i++) {
