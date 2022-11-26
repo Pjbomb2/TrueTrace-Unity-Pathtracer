@@ -262,9 +262,12 @@ Scenes From:
   <li>https://www.unrealengine.com/marketplace/en-US/product/victorian-train-station-and-railroad-modular-set</li>
 </ul>
 </br>
-Disney BSDF from: https://www.shadertoy.com/view/sltXRl
+Disney BSDF from: https://schuttejoe.github.io/post/disneybsdf/
 
-
+This project uses:
+Crytek Sponza
+CC BY 3.0
+© 2010 Frank Meinl, Crytek
 
 ## Ideas/Reminders for later
 Find an alternative to atlas's, Reduce memory consumption, work on adding back in Mitsuba scene support
