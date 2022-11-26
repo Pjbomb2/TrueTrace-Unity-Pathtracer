@@ -16,7 +16,7 @@ Currently want to do but havent started:
 </ul>
 
 # Compute Shader Based Unity PathTracer
-A passion projects that has been going on for awhile(about a year in unity, with my earliest version I can find being version 30(whereas I am now on version 263), which was made on 5-7-2021), finally at a place where I feel comfortable tentatively uploading it to Github for others to use
+A passion projects that has been going on for awhile(about a year in unity, with my earliest version I can find being version 30(whereas I am now on version 271), which was made on 5-7-2021), finally at a place where I feel comfortable tentatively uploading it to Github for others to use
 What is it?
 Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compute Shaders
 ## Features: 
@@ -91,6 +91,7 @@ Let me know if you use this for anything, I would be excited to see any use of t
 </ul>
 ## General Use/Notes
 <ul>
+  <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building</li>
   <li>Objects can be added and removed at will simply by toggling the associated gameobject with a ParentObject script on/off in the hierarchy(dont click them if they are complex objects), but they will take time to appear as the acceleration structure needs to  be rebuilt</li>
   <li>If you change the emissiveness of an object, you need to dissable and re-enable its parent(basically reloading it) if you want to take advantage of NEE correctly sampling it(Does not need to be reloaded for Naive tracing)</li>
   <li>If you use normal maps, they need to be in unity normal map format</li>
