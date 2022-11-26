@@ -1,4 +1,4 @@
-![](/Images/Home1.png)
+![](/Images/Loft1.png)
 
 Notes:</br>
 Currently working on:
@@ -198,6 +198,8 @@ BVH Options Description -
 
 # Sample Images(Taken from various stages of development)
 
+![](/Images/Loft2.png)
+![](/Images/Home1.png)
 ![](/Images/Mall1.png)
 ![](/Images/Mall2.png)
 ![](/Images/Mall3.png)
