@@ -7,6 +7,7 @@ using UnityEditor;
 [CanEditMultipleObjects]
 public class RayTracingObjectEditor : Editor
 {
+
     SerializedProperty Names;
     int Selected = 0;
     string[] TheseNames;
@@ -22,9 +23,9 @@ public class RayTracingObjectEditor : Editor
         for(int i = 0; i < Names.arraySize; i++) {
             TheseNames[i] = Names.GetArrayElementAtIndex(i).stringValue;
         }
+        var t = (target as RayTracingObject);
         Selected = EditorGUILayout.Popup("Selected Material:", Selected, TheseNames);
         EditorGUILayout.Space();
-        var t = (target as RayTracingObject);
         t.MaterialOptions[Selected] = (RayTracingObject.Options)EditorGUILayout.EnumPopup("MaterialType: ", t.MaterialOptions[Selected]);
         t.BaseColor[Selected] = EditorGUILayout.Vector3Field("Base Color: ", t.BaseColor[Selected]);
         t.emmission[Selected] = EditorGUILayout.FloatField("Emission: ", t.emmission[Selected]);
@@ -44,6 +45,7 @@ public class RayTracingObjectEditor : Editor
         t.TransmissionColor[Selected] = EditorGUILayout.Vector3Field("Transmission Color: ", t.TransmissionColor[Selected]);
         t.Flatness[Selected] = EditorGUILayout.Slider("Flatness: ", t.Flatness[Selected], 0, 1);
         t.Thin[Selected] = EditorGUILayout.IntField("Thin: ", t.Thin[Selected]);
+        if(GUI.changed) t.CallMaterialEdited();
 
     }
 

@@ -12,6 +12,7 @@ public class Denoiser {
     private ComputeShader Upscaler;
     private ComputeShader ToneMapper;
     private ComputeShader TAAU;
+    private ComputeShader SpecularDenoiser;
 
 
     private RenderTexture _ColorDirectIn;
@@ -34,6 +35,12 @@ public class Denoiser {
     private RenderTexture PrevOutputTex;
     private RenderTexture PrevUpscalerTAA;
     private RenderTexture UpScalerLightingDataTexture;
+
+    private RenderTexture SpecularIn;
+    private RenderTexture SpecularOut;
+
+
+
 
     private RenderTexture TAAA;
     private RenderTexture TAAB;
@@ -82,6 +89,10 @@ public class Denoiser {
 
     private int TAAUKernel;
     private int TAAUCopyKernel;
+
+    private int SpecularCopyKernel;
+    private int SpecularSpatialKernel;
+
 
 
 
@@ -152,32 +163,25 @@ public class Denoiser {
         ThisTex.Create();
     }
 
-
-    private void InitRenderTexture() {
-        if (_ColorDirectIn == null || _ColorDirectIn.width != SourceWidth || _ColorDirectIn.height != SourceHeight) {
-            // Release render texture if we already have one
-            if (_ColorDirectIn != null) {
-                _ColorDirectIn.Release();
-                _ColorIndirectIn.Release();
-                _ColorDirectOut.Release();
-                _ColorIndirectOut.Release();
-                _ScreenPosPrev.Release();
-                _PrevPosTex.Release();
-                _HistoryDirect.Release();
-                _HistoryIndirect.Release();
-                _HistoryMoment.Release();
-                _HistoryNormalDepth.Release();
-                _NormalDepth.Release();
-                _FrameMoment.Release();
-                _History.Release();
-                _TAAPrev.Release();
-                PrevOutputTex.Release();
-                PrevUpscalerTAA.Release();
-                TAAA.Release();
-                TAAB.Release();
-            }
-
-         CreateRenderTexture(ref _ColorDirectIn, false);
+    public bool SVGFInitialized;
+    public void ClearSVGF() {
+        _ColorDirectIn.Release();
+        _ColorIndirectIn.Release();
+        _ColorDirectOut.Release();
+        _ColorIndirectOut.Release();
+        _ScreenPosPrev.Release();
+        _PrevPosTex.Release();
+        _HistoryDirect.Release();
+        _HistoryIndirect.Release();
+        _HistoryMoment.Release();
+        _HistoryNormalDepth.Release();
+        _NormalDepth.Release();
+        _FrameMoment.Release();
+        _History.Release();
+        SVGFInitialized = false;
+    }
+    public void InitSVGF() {
+        CreateRenderTexture(ref _ColorDirectIn, false);
          CreateRenderTexture(ref _ColorIndirectIn, false);
          CreateRenderTexture(ref _ColorDirectOut, false);
          CreateRenderTexture(ref _ColorIndirectOut, false);
@@ -190,6 +194,21 @@ public class Denoiser {
          CreateRenderTexture(ref _NormalDepth, false);
          CreateRenderTexture(ref _FrameMoment, false);
          CreateRenderTextureInt(ref _History);
+         SVGFInitialized = true;
+    }
+    private void InitRenderTexture() {
+        if (_ColorDirectIn == null || _ColorDirectIn.width != SourceWidth || _ColorDirectIn.height != SourceHeight) {
+            // Release render texture if we already have one
+            if (_ColorDirectIn != null) {
+                _TAAPrev.Release();
+                PrevOutputTex.Release();
+                PrevUpscalerTAA.Release();
+                TAAA.Release();
+                TAAB.Release();
+                // SpecularIn.Release();
+                // SpecularOut.Release();
+            }
+
          CreateRenderTexture2(ref _TAAPrev, false);
          CreateRenderTexture2(ref PrevDepthTex, false);
          CreateRenderTexture2(ref PrevOutputTex, false);
@@ -197,6 +216,8 @@ public class Denoiser {
          CreateRenderTexture2(ref UpScalerLightingDataTexture, false);
          CreateRenderTexture2(ref TAAA, false);
          CreateRenderTexture2(ref TAAB, false);
+         // CreateRenderTexture(ref SpecularIn, false);
+         // CreateRenderTexture(ref SpecularOut, false);
          BloomSamples = new RenderTexture[8];
          int BloomWidth = Screen.width / 2;
          int BloomHeight = Screen.height / 2;
@@ -216,6 +237,7 @@ public class Denoiser {
         this.SourceWidth = SourceWidth;
         this.SourceHeight = SourceHeight;
         _camera = Cam;
+        SVGFInitialized = false;
 
         if(SVGF == null) {SVGF = Resources.Load<ComputeShader>("PostProcess/SVGF");}
         if(AtrousDenoiser == null) {AtrousDenoiser = Resources.Load<ComputeShader>("PostProcess/Atrous");}
@@ -225,6 +247,8 @@ public class Denoiser {
         if(Upscaler == null) {Upscaler = Resources.Load<ComputeShader>("PostProcess/Upscaler");}
         if(ToneMapper == null) {ToneMapper = Resources.Load<ComputeShader>("PostProcess/ToneMap");}
         if(TAAU == null) {TAAU = Resources.Load<ComputeShader>("PostProcess/TAAU");}
+        if(SpecularDenoiser == null) {SpecularDenoiser = Resources.Load<ComputeShader>("PostProcess/SpecularDenoiser");}
+
 
         VarianceKernel = SVGF.FindKernel("kernel_variance");
         CopyKernel = SVGF.FindKernel("kernel_copy");
@@ -248,6 +272,9 @@ public class Denoiser {
         TAAPrepareKernel = TAA.FindKernel("kernel_taa_prepare");
         
         UpsampleKernel = Upscaler.FindKernel("kernel_upsample");
+
+        SpecularCopyKernel = SpecularDenoiser.FindKernel("Copy");
+        SpecularSpatialKernel = SpecularDenoiser.FindKernel("Spatial");
 
 
         AutoExposeKernel = AutoExpose.FindKernel("AutoExpose");
@@ -273,6 +300,9 @@ public class Denoiser {
 
         TAA.SetInt("screen_width", Screen.width);
         TAA.SetInt("screen_height", Screen.height);
+
+        SpecularDenoiser.SetInt("screen_width", Screen.width);
+        SpecularDenoiser.SetInt("screen_height", Screen.height);
 
         threadGroupsX = Mathf.CeilToInt(SourceWidth / 16.0f);
         threadGroupsY = Mathf.CeilToInt(SourceHeight / 16.0f);
@@ -303,6 +333,7 @@ public class Denoiser {
         SVGF.SetTexture(CopyKernel, "RWNormalAndDepth", _NormalDepth);
         SVGF.SetTexture(CopyKernel, "RWScreenPosPrev", _ScreenPosPrev);
         SVGF.SetTexture(CopyKernel, "ColorDirectOut", _ColorDirectOut);
+        SVGF.SetTexture(CopyKernel, "_Albedo", _Albedo);
         SVGF.SetTexture(CopyKernel, "ColorIndirectOut", _ColorIndirectOut);
         SVGF.SetFloat("FarPlane", _camera.farClipPlane);
         SVGF.SetTextureFromGlobal(CopyKernel, "MotionVectors", "_CameraMotionVectorsTexture");
@@ -358,7 +389,7 @@ public class Denoiser {
             SVGF.Dispatch(SVGFAtrousKernel, threadGroupsX, threadGroupsY, 1);
         }
         UnityEngine.Profiling.Profiler.EndSample();
-
+        // DenoiseSpecular(ref _ColorBuffer, ref _NormTex, ref DirectionRoughnessTex);
         UnityEngine.Profiling.Profiler.BeginSample("SVGFFinalize");
         SVGF.SetBuffer(FinalizeKernel, "PerPixelRadiance", _ColorBuffer);
         SVGF.SetTexture(FinalizeKernel, "ColorDirectIn", (OddAtrousIteration) ? _ColorDirectOut : _ColorDirectIn);
@@ -366,6 +397,7 @@ public class Denoiser {
         SVGF.SetTexture(FinalizeKernel, "NormalAndDepth", _NormalDepth);
         SVGF.SetTexture(FinalizeKernel, "ColorIndirectIn", (OddAtrousIteration) ? _ColorIndirectOut : _ColorIndirectIn);
         SVGF.SetTexture(FinalizeKernel, "HistoryDirectTex", _HistoryDirect);
+        // SVGF.SetTexture(FinalizeKernel, "Specular", SpecularOut);
         SVGF.SetTexture(FinalizeKernel, "HistoryIndirectTex", _HistoryIndirect);
         SVGF.SetTexture(FinalizeKernel, "HistoryMomentTex", _HistoryMoment);
         SVGF.SetTexture(FinalizeKernel, "RWHistoryNormalAndDepth", _HistoryNormalDepth);
@@ -378,6 +410,31 @@ public class Denoiser {
         UnityEngine.Profiling.Profiler.EndSample();
 
     }
+
+
+
+
+    public void DenoiseSpecular(ref ComputeBuffer ColorBuffer, ref RenderTexture Normals, ref RenderTexture DirectionRoughnessTex) {
+        SpecularDenoiser.SetBuffer(SpecularCopyKernel, "PerPixelRadiance", ColorBuffer);
+        SpecularDenoiser.SetTexture(SpecularCopyKernel, "SpecularOut", SpecularOut);
+        SpecularDenoiser.Dispatch(SpecularCopyKernel, threadGroupsX, threadGroupsY, 1);
+            SpecularDenoiser.SetMatrix("UNITY_MAXTRIX_VP", _camera.projectionMatrix * _camera.worldToCameraMatrix);
+
+        for(int i = 0; i < 8; i++) {
+            var tempstep = i << 1;
+            SpecularDenoiser.SetInt("step_size", tempstep);
+            SpecularDenoiser.SetTextureFromGlobal(SpecularSpatialKernel, "DepthTex", "_CameraDepthTexture");
+            SpecularDenoiser.SetTexture(SpecularSpatialKernel, "Normals", Normals);
+            SpecularDenoiser.SetTexture(SpecularSpatialKernel, "DirectionRoughness", DirectionRoughnessTex);
+            SpecularDenoiser.SetTexture(SpecularSpatialKernel, "SpecularIn", (i % 2 == 0) ? SpecularOut : SpecularIn);
+            SpecularDenoiser.SetTexture(SpecularSpatialKernel, "SpecularOut", (i % 2 == 0) ? SpecularIn : SpecularOut);
+            SpecularDenoiser.Dispatch(SpecularSpatialKernel, threadGroupsX, threadGroupsY, 1);
+        }
+    }
+
+
+
+
     public void ExecuteAtrous(int AtrousKernelSize, float n_phi, float p_phi, float c_phi, ref RenderTexture _PosTex, ref RenderTexture _target, ref RenderTexture _converged, ref RenderTexture _Albedo, ref RenderTexture _NormTex, int curframe) {
         InitRenderTexture();
         Matrix4x4 viewprojmatrix = _camera.projectionMatrix * _camera.worldToCameraMatrix;
@@ -465,8 +522,9 @@ public class Denoiser {
     }
 
 
-    public void ExecuteAutoExpose(ref RenderTexture _target, ref RenderTexture _converged) {//need to fix this so it doesnt create new textures every time
+    public void ExecuteAutoExpose(ref RenderTexture _target, ref RenderTexture _converged, float Exposure) {//need to fix this so it doesnt create new textures every time
         AutoExpose.SetTexture(AutoExposeKernel, "InTex", _converged);
+        AutoExpose.SetFloat("Exposure", Exposure);
         AutoExpose.Dispatch(AutoExposeKernel, 1, 1, 1);
         AutoExpose.SetTexture(AutoExposeFinalizeKernel, "InTex", _converged);
         AutoExpose.SetTexture(AutoExposeFinalizeKernel, "OutTex", _target);
@@ -513,6 +571,7 @@ public class Denoiser {
 
     Matrix4x4 PreviousCameraMatrix;
     Matrix4x4 PreviousCameraInverseMatrix;
+    Matrix4x4 PrevProjInv;
 
     public void ExecuteUpsample(ref RenderTexture Input, ref RenderTexture Output, ref RenderTexture OrigPos, int curframe, int cursample) {//need to fix this so it doesnt create new textures every time
         UnityEngine.Profiling.Profiler.BeginSample("Upscale");
@@ -526,6 +585,9 @@ public class Denoiser {
         Upscaler.SetMatrix("_CameraInverseProjection", _camera.projectionMatrix.inverse);
         Upscaler.SetMatrix("_PrevCameraToWorld", PreviousCameraMatrix);
         Upscaler.SetMatrix("_PrevCameraInverseProjection", PreviousCameraInverseMatrix);
+        Upscaler.SetMatrix("_CameraInverseProjection", _camera.projectionMatrix.inverse);
+        Upscaler.SetMatrix("_PrevCameraInverseProjection", PrevProjInv);
+        Upscaler.SetVector("Forward", _camera.transform.forward);
         Upscaler.SetTexture(UpsampleKernel, "PosTex", OrigPos);
         Upscaler.SetVector("CamPos", _camera.transform.position);
         Upscaler.SetMatrix("ViewProjectionMatrix",  _camera.projectionMatrix * _camera.worldToCameraMatrix);
@@ -557,7 +619,7 @@ public class Denoiser {
         PreviousCameraMatrix = _camera.cameraToWorldMatrix;
         PreviousCameraInverseMatrix = _camera.projectionMatrix.inverse;
 //PrevDepthTex = Shader.GetGlobalTexture("_LastCameraDepthTexture");
-
+        PrevProjInv = _camera.projectionMatrix.inverse;
     }
 
 

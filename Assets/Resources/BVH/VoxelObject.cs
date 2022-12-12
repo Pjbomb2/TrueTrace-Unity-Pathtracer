@@ -147,9 +147,10 @@ public class VoxelObject : MonoBehaviour
     public void UpdateAABB() {//Update the Transformed AABB by getting the new Max/Min of the untransformed AABB after transforming it
         Vector3 center = 0.5f * (aabb_untransformed.BBMin + aabb_untransformed.BBMax);
         Vector3 extent = 0.5f * (aabb_untransformed.BBMax - aabb_untransformed.BBMin);
-
-        Vector3 new_center = CommonFunctions.transform_position (this.transform.worldToLocalMatrix.inverse, center);
-        Vector3 new_extent = CommonFunctions.transform_direction(CommonFunctions.abs(this.transform.worldToLocalMatrix.inverse), extent);
+        Matrix4x4 Mat = this.transform.localToWorldMatrix;
+        Vector3 new_center = CommonFunctions.transform_position (Mat, center);
+        CommonFunctions.abs(ref Mat);
+        Vector3 new_extent = CommonFunctions.transform_direction(Mat, extent);
 
         aabb.BBMin = new_center - new_extent;
         aabb.BBMax = new_center + new_extent;

@@ -5,6 +5,7 @@ public class RayTracingMaster : MonoBehaviour {
     private ComputeShader RayTracingShader;
     private ComputeShader AtmosphereGeneratorShader;
     public Texture SkyboxTexture;
+    public RenderTexture BlueNoise;
     
     private Camera _camera;
     private float _lastFieldOfView;
@@ -104,11 +105,13 @@ public class RayTracingMaster : MonoBehaviour {
     [HideInInspector] public bool UseReSTIRGITemporal = true;
     [HideInInspector] public bool UseReSTIRGISpatial = true;
     [HideInInspector] public bool UseReSTIRGI = false;
+    [HideInInspector] public bool ReSTIRGIPermutedSamples = false;
     [HideInInspector] public int ReSTIRGISpatialCount = 5;
     [HideInInspector] public int ReSTIRGIUpdateRate = 0;
     [HideInInspector] public int ReSTIRGITemporalMCap = 0;
     [HideInInspector] public bool DoReSTIRGIConnectionValidation = true;
     [HideInInspector] public bool ReSTIRGISpatialStabalizer = false;
+    [HideInInspector] public float Exposure = 1;
 
     public bool DoVoxels = false;
 
@@ -139,6 +142,7 @@ public class RayTracingMaster : MonoBehaviour {
     private int GIReSTIRKernel;
     private int GIForwardProjectKernel;
     private int ValidateReSTIRGIKernel;
+    private int HeightmapKernel;
     private Matrix4x4 PrevViewProjection;
     private int TargetWidth;
     private int TargetHeight;
@@ -157,6 +161,7 @@ public class RayTracingMaster : MonoBehaviour {
         public int shadow_rays;
         public int retired_shadow_rays;
         public int retired_brickmap_shadow_rays;
+        public int heightmap_rays_retired;
     }
     public bool HasStarted = false;
         public SVGF2 SecondSVGF;
@@ -176,8 +181,7 @@ public class RayTracingMaster : MonoBehaviour {
             SourceWidth = TargetWidth;
             SourceHeight = TargetHeight;
         }
-        ASVGFCode.init(SourceWidth, SourceHeight, _camera);   
-        SecondSVGF.Start(TargetWidth, TargetHeight);
+        SecondSVGF.Start(TargetWidth, TargetHeight, _camera);
         
         _meshObjectsNeedRebuilding = true;
         Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
@@ -204,6 +208,9 @@ public class RayTracingMaster : MonoBehaviour {
         GIReSTIRKernel = RayTracingShader.FindKernel("kernel_GI_Reserviour");    
         GIForwardProjectKernel = RayTracingShader.FindKernel("forwardprojectionkernel");    
         ValidateReSTIRGIKernel = RayTracingShader.FindKernel("ValidateGI");    
+        HeightmapKernel = RayTracingShader.FindKernel("kernel_heightmap");    
+
+        ASVGFCode.Initialized = false;
 
         Atmo = new AtmosphereGenerator(AtmosphereGeneratorShader, 6360000.0f / 1000.0f, 6420000.0f / 1000.0f, AtmoNumLayers);
         FramesSinceStart2 = 0;
@@ -212,6 +219,19 @@ public class RayTracingMaster : MonoBehaviour {
         HasStarted = true;
         _camera.renderingPath = RenderingPath.DeferredShading;
         _camera.depthTextureMode |= DepthTextureMode.MotionVectors | DepthTextureMode.Depth;
+        // Object[] Textures = Resources.LoadAll("BlueNoise");
+        // BlueNoise = new RenderTexture(128, 128, 0,
+        // RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+        // BlueNoise.volumeDepth = 64;
+        // BlueNoise.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+        // BlueNoise.enableRandomWrite = true;
+        // BlueNoise.Create();
+        // int CurDepth = 0;
+        // foreach(var Tex in Textures) {
+        //     Graphics.CopyTexture(Tex as Texture2D, 0, 0, BlueNoise, CurDepth, 0);
+        //     CurDepth++;
+        // }
+
 
     }
 
@@ -288,10 +308,11 @@ public class RayTracingMaster : MonoBehaviour {
         if(TargetBuffer == null) TargetBuffer = new ComputeBuffer(SourceWidth * SourceHeight, Stride);
     }
     public void RebuildMeshObjectBuffers() {
+        UnityEngine.Profiling.Profiler.BeginSample("Full Update");
         if(uFirstFrame != 1) {
             if(DoTLASUpdates) {
                 if(Assets.UpdateTLAS()) {
-                    CreateComputeBuffer(ref _CompactedMeshData, Assets.MyMeshesCompacted, 180);
+                    CreateComputeBuffer(ref _CompactedMeshData, Assets.MyMeshesCompacted, 168);
                     CreateComputeBuffer(ref _LightTriangles, Assets.AggLightTriangles, 72);
                     CreateComputeBuffer(ref _MaterialDataBuffer, Assets._Materials, 200);
                     CreateComputeBuffer(ref _UnityLights, Assets.UnityLights, 56);
@@ -300,15 +321,18 @@ public class RayTracingMaster : MonoBehaviour {
                     CreateComputeBuffer(ref _BrickmapBuffer, Assets.GPUBrickmap, 4);
                     uFirstFrame = 1;
                 } else {
+                    UnityEngine.Profiling.Profiler.BeginSample("Update Materials");
                     _CompactedMeshData.SetData(Assets.MyMeshesCompacted);
                     if(Assets.LightMeshCount != 0) _LightMeshes.SetData(Assets.LightMeshes);
                     if(Assets.UnityLightCount != 0) _UnityLights.SetData(Assets.UnityLights);
                     Assets.UpdateMaterials();
                     _MaterialDataBuffer.SetData(Assets._Materials);
                     if(Assets.UseVoxels) _VoxelTLAS.SetData(Assets.VoxelTLAS);
+                    UnityEngine.Profiling.Profiler.EndSample();
                 }
             }
         }
+        UnityEngine.Profiling.Profiler.EndSample();
 
         if (!_meshObjectsNeedRebuilding) return;
 
@@ -321,21 +345,21 @@ public class RayTracingMaster : MonoBehaviour {
         CreateComputeBuffer(ref _VoxelPositionBuffer, Assets.VoxelPositions, 16);
         
         CreateComputeBuffer(ref _MaterialDataBuffer, Assets._Materials, 200);
-        CreateComputeBuffer(ref _CompactedMeshData, Assets.MyMeshesCompacted, 180);
+        CreateComputeBuffer(ref _CompactedMeshData, Assets.MyMeshesCompacted, 168);
         CreateComputeBuffer(ref _LightTriangles, Assets.AggLightTriangles, 72);
         CreateComputeBuffer(ref _IllumTriBuffer, Assets.ToIllumTriBuffer, 4);
 
         CreateDynamicBuffer(ref _RayBuffer1, 56);
-        if(_ShadowBuffer == null) _ShadowBuffer = new ComputeBuffer(SourceWidth * SourceHeight * 2, 52);
+        if(_ShadowBuffer == null) _ShadowBuffer = new ComputeBuffer(SourceWidth * SourceHeight * 2, 64);
         CreateDynamicBuffer(ref _RayBuffer2, 56);
         CreateDynamicBuffer(ref _ColorBuffer, 52);
         CreateDynamicBuffer(ref MatModifierBuffer, 32);
         CreateDynamicBuffer(ref MatModifierBufferPrev, 32);
-        CreateDynamicBuffer(ref _BufferSizes, 28);
+        CreateDynamicBuffer(ref _BufferSizes, 32);
         CreateDynamicBuffer(ref _CurrentReservoir, 92);
         CreateDynamicBuffer(ref _PreviousReservoir, 92);
-        CreateDynamicBuffer(ref GIReservoirCurrent, 92);
-        CreateDynamicBuffer(ref GIReservoirPrevious, 92);
+        CreateDynamicBuffer(ref GIReservoirCurrent, 120);
+        CreateDynamicBuffer(ref GIReservoirPrevious, 120);
         CreateDynamicBuffer(ref _SHBuffer, 24);
         RaysBuffer = new ComputeBuffer(SourceWidth * SourceHeight, 36);
         RayTracingShader.SetBuffer(GenASVGFKernel, "Rays", RaysBuffer);
@@ -390,8 +414,15 @@ public class RayTracingMaster : MonoBehaviour {
     private void SetComputeBuffer(int kernel, string name, ComputeBuffer buffer) {
         if (buffer != null) RayTracingShader.SetBuffer(kernel, name, buffer);
     }
-
+    Matrix4x4 prevView;
     private void SetShaderParameters() {
+        if(UseASVGF && !ASVGFCode.Initialized) ASVGFCode.init(SourceWidth, SourceHeight, _camera);   
+        else if(!UseASVGF && ASVGFCode.Initialized) ASVGFCode.ClearAll();
+        if(UseSVGF && !Denoisers.SVGFInitialized && !AlternateSVGF && !UseASVGF) Denoisers.InitSVGF();   
+        else if((UseASVGF || AlternateSVGF || !UseSVGF) && Denoisers.SVGFInitialized) Denoisers.ClearSVGF();
+        if(UseSVGF && !SecondSVGF.Initialized && AlternateSVGF && !UseASVGF) SecondSVGF.InitSVGF();   
+        else if((UseASVGF || !AlternateSVGF || !UseSVGF) && SecondSVGF.Initialized) SecondSVGF.ClearSVGF();
+
         Matrix4x4 viewprojmatrix = _camera.projectionMatrix * _camera.worldToCameraMatrix;
         var PrevMatrix = PrevViewProjection;
         BufferSizes = new BufferSizeData[bouncecount];
@@ -404,6 +435,7 @@ public class RayTracingMaster : MonoBehaviour {
         SetComputeBuffer(ShadeKernel, "BufferSizes", _BufferSizes);  
         SetComputeBuffer(BrickmapKernel, "BufferSizes", _BufferSizes);
         SetComputeBuffer(BrickmapShadowKernel, "BufferSizes", _BufferSizes);
+        SetComputeBuffer(HeightmapKernel, "BufferSizes", _BufferSizes);
 
         RayTracingShader.SetMatrix("_CameraToWorld", _camera.cameraToWorldMatrix);
         RayTracingShader.SetMatrix("_CameraInverseProjection", _camera.projectionMatrix.inverse);
@@ -456,6 +488,7 @@ public class RayTracingMaster : MonoBehaviour {
         RayTracingShader.SetBool("UseAtrous", UseAtrous);
         RayTracingShader.SetBool("AbandonSamples", UseASVGF != PrevASVGF);
         RayTracingShader.SetBool("SpatialStabalizer", ReSTIRGISpatialStabalizer);
+        RayTracingShader.SetBool("UsePermutatedSamples", ReSTIRGIPermutedSamples);
 
         SetComputeBuffer(BrickmapShadowKernel, "CurrentReservoirGI", ((FramesSinceStart2 % 2 == 0) ? GIReservoirCurrent : GIReservoirPrevious));
         SetComputeBuffer(GIReSTIRKernel, "CurrentReservoirGI", ((FramesSinceStart2 % 2 == 0) ? GIReservoirCurrent : GIReservoirPrevious));
@@ -492,12 +525,27 @@ public class RayTracingMaster : MonoBehaviour {
         SetComputeBuffer(FinalizeKernel, "MatModifiers", ((FramesSinceStart2 % 2 == 0) ? MatModifierBuffer : MatModifierBufferPrev));
         SetComputeBuffer(FinalizeKernel, "MatModifiersPrev", ((FramesSinceStart2 % 2 == 0) ? MatModifierBufferPrev : MatModifierBuffer));
         SetComputeBuffer(GIReSTIRKernel, "MatModifiersPrev", ((FramesSinceStart2 % 2 == 0) ? MatModifierBufferPrev : MatModifierBuffer));
-
+        SetComputeBuffer(GIReSTIRKernel, "MatModifiers", ((FramesSinceStart2 % 2 == 0) ? MatModifierBuffer : MatModifierBufferPrev));
+        RayTracingShader.SetBool("TerrainExists", Assets.Terrains.Count != 0);
+        RayTracingShader.SetInt("TerrainCount", Assets.Terrains.Count);
         PrevViewProjection = viewprojmatrix;
+            SetComputeBuffer(HeightmapKernel, "Terrains", Assets.TerrainBuffer);
+            SetComputeBuffer(ShadeKernel, "Terrains", Assets.TerrainBuffer);
+            SetComputeBuffer(BrickmapShadowKernel, "Terrains", Assets.TerrainBuffer);
+            RayTracingShader.SetMatrix("inverseview", _camera.worldToCameraMatrix.inverse);
+            var Temp = prevView;
+            RayTracingShader.SetMatrix("prevviewmatrix", Temp);
+            prevView = _camera.worldToCameraMatrix;
         if(uFirstFrame == 1) {
             if(SkyboxTexture != null) {
                 RayTracingShader.SetTexture(ShadeKernel, "_SkyboxTexture", SkyboxTexture);
             }
+            RayTracingShader.SetTexture(HeightmapKernel, "Heightmap", Assets.HeightMap);
+            RayTracingShader.SetTexture(ShadeKernel, "Heightmap", Assets.HeightMap);
+            RayTracingShader.SetTexture(BrickmapShadowKernel, "Heightmap", Assets.HeightMap);
+            RayTracingShader.SetTexture(ShadeKernel, "TerrainAlphaMap", Assets.AlphaMap);
+            RayTracingShader.SetInt("MaterialCount", Assets.MatCount);
+            SetComputeBuffer(HeightmapKernel, "GlobalRays2", _RayBuffer2);
             
             RayTracingShader.SetBool("DiffRes", RenderScale != 1.0f);
             
@@ -507,7 +555,7 @@ public class RayTracingMaster : MonoBehaviour {
             RayTracingShader.SetInt("screen_width", SourceWidth);
             RayTracingShader.SetInt("screen_height", SourceHeight);
 
-            CreateRenderTexture(ref _RandomNums, false, false);
+            if(_RandomNums == null) CreateRenderTexture(ref _RandomNums, false, false);
 
             RayTracingShader.SetTexture(GenASVGFKernel, "RandomNums", _RandomNums);
             SetComputeBuffer(GenASVGFKernel, "SH", _SHBuffer);
@@ -554,10 +602,12 @@ public class RayTracingMaster : MonoBehaviour {
             RayTracingShader.SetTexture(ShadeKernel, "scattering_texture", Atmo.MultiScatterTex);
             RayTracingShader.SetTexture(ShadeKernel, "TransmittanceTex", Atmo._TransmittanceLUT);
             RayTracingShader.SetTexture(ShadeKernel, "ScatterTex", Atmo._RayleighTex);
+            RayTracingShader.SetTexture(ShadeKernel, "CloudTex", Atmo.CloudTex1);
             RayTracingShader.SetTexture(ShadeKernel, "MieTex", Atmo._MieTex);
             RayTracingShader.SetTexture(ShadeKernel, "TempAlbedoTex", _Albedo);
             RayTracingShader.SetTexture(ShadeKernel, "TempNormTex", _NormTex);
             RayTracingShader.SetTexture(ShadeKernel, "TempPosTex", _PosTex);
+            RayTracingShader.SetTexture(GIForwardProjectKernel, "TempPosTex", _PosTex);
             SetComputeBuffer(ShadeKernel, "SH", _SHBuffer);
             SetComputeBuffer(ShadeKernel, "_LightMeshes", _LightMeshes);
             SetComputeBuffer(ShadeKernel, "_Materials", _MaterialDataBuffer);             
@@ -610,7 +660,6 @@ public class RayTracingMaster : MonoBehaviour {
             SetComputeBuffer(GIReSTIRKernel, "cwbvh_nodes", Assets.BVH8AggregatedBuffer);
             SetComputeBuffer(GIReSTIRKernel, "_MeshData", _CompactedMeshData);
             SetComputeBuffer(GIReSTIRKernel, "SH", _SHBuffer);
-            SetComputeBuffer(GIReSTIRKernel, "MatModifiers", MatModifierBuffer);
 
             RayTracingShader.SetTexture(GIForwardProjectKernel, "RenderMaskTex", MaskTex);
             RayTracingShader.SetTexture(GIForwardProjectKernel, "RandomNums", _RandomNums);
@@ -627,6 +676,7 @@ public class RayTracingMaster : MonoBehaviour {
             RayTracingShader.SetTexture(FinalizeKernel, "_DebugTex", _DebugTex);
             RayTracingShader.SetTexture(GIReSTIRKernel, "_DebugTex", _DebugTex);
             RayTracingShader.SetTexture(ValidateReSTIRGIKernel, "_DebugTex", _DebugTex);
+            RayTracingShader.SetTexture(HeightmapKernel, "_DebugTex", _DebugTex);
 
         if(_PrecomputedBlocks == null) _PrecomputedBlocks = new ComputeBuffer(128 * 512, 56);
             SetComputeBuffer(ReservoirPrecomputeKernel, "WriteBlocks", _PrecomputedBlocks);
@@ -708,6 +758,7 @@ public class RayTracingMaster : MonoBehaviour {
                 MaskTex.Release();
                 PrevNormalTex.Release();
                 PrevPosTex.Release();
+                _FinalTex.Release();
             }
 
          CreateRenderTexture(ref _DebugTex, true, false);
@@ -780,6 +831,9 @@ public class RayTracingMaster : MonoBehaviour {
             UnityEngine.Profiling.Profiler.BeginSample("TraceKernel For Brickmap: " + i);
             if(Assets.UseVoxels && i != 0) RayTracingShader.Dispatch(BrickmapKernel, 768, 1, 1);
             UnityEngine.Profiling.Profiler.EndSample();
+            
+            if(Assets.Terrains.Count != 0) RayTracingShader.Dispatch(HeightmapKernel, 768, 1, 1);
+
             UnityEngine.Profiling.Profiler.BeginSample("Shade Kernel: " + i);
             RayTracingShader.Dispatch(ShadeKernel, threadGroupsX2, threadGroupsY2, 1);
             UnityEngine.Profiling.Profiler.EndSample();
@@ -795,6 +849,7 @@ public class RayTracingMaster : MonoBehaviour {
         if(ReSTIRGIUpdateRate != 0 && UseReSTIRGI) RayTracingShader.Dispatch(ValidateReSTIRGIKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
 
         UnityEngine.Profiling.Profiler.BeginSample("ReSTIRGI Pass"); 
+                    RayTracingShader.SetInt("CurBounce", 0);
         if(UseReSTIRGI) RayTracingShader.Dispatch(GIReSTIRKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
         UnityEngine.Profiling.Profiler.EndSample();
 
@@ -842,7 +897,7 @@ public class RayTracingMaster : MonoBehaviour {
         }
         if(AllowAutoExpose) {
             _IntermediateTex.GenerateMips();
-            Denoisers.ExecuteAutoExpose(ref _FinalTex, ref _IntermediateTex);
+            Denoisers.ExecuteAutoExpose(ref _FinalTex, ref _IntermediateTex, Exposure);
             Graphics.CopyTexture(_FinalTex, 0, 0, _IntermediateTex, 0, 0);
         }
         if(AllowBloom) {
@@ -861,7 +916,7 @@ public class RayTracingMaster : MonoBehaviour {
         //     OIDN.OnRenderImage2(_IntermediateTex, ref _FinalTex);
         //     }
         // if(UseTAAU) SecondSVGF.Denoise(ref _FinalTex, _IntermediateTex, _Albedo);
-        Graphics.Blit(_FinalTex, destination);
+        Graphics.Blit(_FinalTex  , destination);
         Graphics.CopyTexture(_PosTex, PrevPosTex);
         ClearOutRenderTexture(_DebugTex);
         UnityEngine.Profiling.Profiler.EndSample();

@@ -9,6 +9,7 @@ using System.Threading;
 public class InstancedObject : MonoBehaviour {
     private ParentObject PreviousInstance;
     public ParentObject InstanceParent;
+    public int CompactedMeshData;
 
     public void UpdateInstance() {
         if(PreviousInstance != null) {

@@ -8,7 +8,7 @@ int target_width;
 int target_height;
 
 Texture2D<float4> Input;
-SamplerState sampler_Input_point_clamp;
+SamplerState sampler_Input_trilinear_clamp;
 RWTexture2D<float4> Output;
 RWTexture2D<float4> FinalOutput;
 Texture2D<float4> PrevOutput;
@@ -24,7 +24,7 @@ SamplerState sampler_PrevDepthTex;
 RWTexture2D<float4> PrevDepthTexWrite;
 Texture2D<float4> Albedo;
 Texture2D<float4> MotionVectors;
-SamplerState sampler_MotionVectors;
+SamplerState sampler_trilinear_clamp;
 
 Texture2D<float4> PosTex;
 
@@ -72,15 +72,15 @@ float4 color_average(float4 color_a, float4 color_b) {
 // take 9 samples and perform a directional average
 float4 directional_average() {
     // get the colors of all 9 pixels in the 3x3 grid
-    float4 pixel_0 = Input.SampleLevel(sampler_Input_point_clamp, center_pixel, 0.0); // center pixel
-    float4 pixel_1 = Input.SampleLevel(sampler_Input_point_clamp, north_pixel, 0.0); // north pixel
-    float4 pixel_2 = Input.SampleLevel(sampler_Input_point_clamp, south_pixel, 0.0); // south pixel
-    float4 pixel_3 = Input.SampleLevel(sampler_Input_point_clamp, east_pixel, 0.0); // east pixel
-    float4 pixel_4 = Input.SampleLevel(sampler_Input_point_clamp, west_pixel, 0.0); // west pixel
-    float4 pixel_5 = Input.SampleLevel(sampler_Input_point_clamp, north_east_pixel, 0.0); // north-east pixel
-    float4 pixel_6 = Input.SampleLevel(sampler_Input_point_clamp, north_west_pixel, 0.0); // north-west pixel
-    float4 pixel_7 = Input.SampleLevel(sampler_Input_point_clamp, south_east_pixel, 0.0); // south-east pixel
-    float4 pixel_8 = Input.SampleLevel(sampler_Input_point_clamp, south_west_pixel, 0.0); // south-west pixel
+    float4 pixel_0 = Input.SampleLevel(sampler_Input_trilinear_clamp, center_pixel, 0.0); // center pixel
+    float4 pixel_1 = Input.SampleLevel(sampler_Input_trilinear_clamp, north_pixel, 0.0); // north pixel
+    float4 pixel_2 = Input.SampleLevel(sampler_Input_trilinear_clamp, south_pixel, 0.0); // south pixel
+    float4 pixel_3 = Input.SampleLevel(sampler_Input_trilinear_clamp, east_pixel, 0.0); // east pixel
+    float4 pixel_4 = Input.SampleLevel(sampler_Input_trilinear_clamp, west_pixel, 0.0); // west pixel
+    float4 pixel_5 = Input.SampleLevel(sampler_Input_trilinear_clamp, north_east_pixel, 0.0); // north-east pixel
+    float4 pixel_6 = Input.SampleLevel(sampler_Input_trilinear_clamp, north_west_pixel, 0.0); // north-west pixel
+    float4 pixel_7 = Input.SampleLevel(sampler_Input_trilinear_clamp, south_east_pixel, 0.0); // south-east pixel
+    float4 pixel_8 = Input.SampleLevel(sampler_Input_trilinear_clamp, south_west_pixel, 0.0); // south-west pixel
     
     // find the maximum color difference for each of 12 directions
     float dir_1 = color_diff(pixel_0, pixel_1); // center to north
@@ -166,13 +166,13 @@ float4 super_sample(float2 base_uv, float4 frag, float2 pixel) {
     float2 uv = 0.0;
     float4 color = 0.0;
     uv = base_uv + offset_uv.x * dx + offset_uv.y * dy;
-    color += Input.SampleLevel(sampler_Input_point_clamp, uv, 0.0);
+    color += Input.SampleLevel(sampler_Input_trilinear_clamp, uv, 0.0);
     uv = base_uv - offset_uv.x * dx - offset_uv.y * dy;
-    color += Input.SampleLevel(sampler_Input_point_clamp, uv, 0.0);
+    color += Input.SampleLevel(sampler_Input_trilinear_clamp, uv, 0.0);
     uv = base_uv + offset_uv.y * dx - offset_uv.x * dy;
-    color += Input.SampleLevel(sampler_Input_point_clamp, uv, 0.0);
+    color += Input.SampleLevel(sampler_Input_trilinear_clamp, uv, 0.0);
     uv = base_uv - offset_uv.y * dx + offset_uv.x * dy;
-    color += Input.SampleLevel(sampler_Input_point_clamp, uv, 0.0);
+    color += Input.SampleLevel(sampler_Input_trilinear_clamp, uv, 0.0);
     color *= 0.25;
     return color;
 }
@@ -182,32 +182,29 @@ float4x4 _CameraInverseProjection;
 float4x4 _PrevCameraToWorld;
 float4x4 _PrevCameraInverseProjection;
 
-float3 CreateCameraRay(float2 uv, float Distance) {
-    // Transform the camera origin to world space
-    float3 origin = mul(_CameraToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
-    
-    // Invert the perspective projection of the view-space position
-    float3 direction = mul(_CameraInverseProjection, float4(uv, 0.0f, 1.0f)).xyz;
-    // Transform the direction from camera to world space and normalize
-    direction = mul(_CameraToWorld, float4(direction, 0.0f)).xyz;
-    direction = normalize(direction);   
+float3 Forward;
+float3 PrevCamPos;
 
-    return origin + direction * Distance;
-}
-
-float3 CreatePreviousCameraRay(float2 uv, float Distance) {
-    // Transform the camera origin to world space
+float3 CreateCameraRayPrev(float2 uv, float depth) {
     float3 origin = mul(_PrevCameraToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
-    
     // Invert the perspective projection of the view-space position
     float3 direction = mul(_PrevCameraInverseProjection, float4(uv, 0.0f, 1.0f)).xyz;
     // Transform the direction from camera to world space and normalize
     direction = mul(_PrevCameraToWorld, float4(direction, 0.0f)).xyz;
-    direction = normalize(direction);   
+    direction = normalize(direction);
+    return origin + direction * depth;
+}   
 
-    return origin + direction * Distance;
-}
-
+float3 CreateCameraRay(float2 uv, out float depth) {
+    float3 origin = mul(unity_CameraToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
+    // Invert the perspective projection of the view-space position
+    float3 direction = mul(_CameraInverseProjection, float4(uv, 0.0f, 1.0f)).xyz;
+    // Transform the direction from camera to world space and normalize
+    direction = mul(unity_CameraToWorld, float4(direction, 0.0f)).xyz;
+    direction = normalize(direction);
+    depth = length(direction / dot(direction, Forward) * LinearEyeDepth(DepthTex.SampleLevel(sampler_DepthTex, uv, 0).x));
+    return origin + direction * depth;
+}   
 
 
 [numthreads(16,16,1)]
@@ -218,15 +215,31 @@ void kernel_upsample (int3 id : SV_DispatchThreadID)
     pixel_index = id.y * target_width + id.x;
     float2 UV = float2(id.xy) / float2(target_width, target_height);
     float2 texel = 0.5f / float2(target_width, target_height);
-    float2 newUV = UV - MotionVectors.SampleLevel(sampler_MotionVectors, UV, 0).xy + texel;
-    float CurDepth = Linear01Depth(DepthTex.SampleLevel(sampler_DepthTex, UV, 0).x) * FarPlane;
-    float ReprojDepth = PrevDepthTex.SampleLevel(sampler_PrevDepthTex, newUV, 0).x;
-    float3 CurrentWorldPosition = CreateCameraRay(UV, CurDepth);
-    float3 PreviousWorldPosition = CreatePreviousCameraRay(newUV, ReprojDepth);
-    bool Disocluded = length(CurrentWorldPosition - PreviousWorldPosition) / CurDepth > 0.1;
-    float3 CurrentColor = Input.SampleLevel(sampler_Input_point_clamp, UV, 0).xyz;
-    // if(Disocluded || (newUV.x > 1 || newUV.x < 0 || newUV.y > 1 || newUV.y < 0)) Output[id.xy] = float4(CurrentColor * Albedo.SampleLevel(sampler_Input_point_clamp, UV, 0).xyz,1);
-    // else Output[id.xy] = float4(lerp(PrevOutput[newUV * float2(target_width, target_height)].xyz, CurrentColor * Albedo.SampleLevel(sampler_Input_point_clamp, UV, 0).xyz, 0.5f),1);
+    float2 motion = MotionVectors.SampleLevel(sampler_trilinear_clamp, UV, 0).xy;
+    float2 newUV = int2((UV * float2(target_width, target_height) - motion * float2(target_width, target_height) + 0.5f)) / float2(target_width, target_height);//UV - MotionVectors.SampleLevel(sampler_trilinear_clamp, UV, 0).xy + texel;
+    float3 minCol = 9999.0f;
+    float3 maxCol = -9999.0f;
+    float Depth;
+    float3 WorldPos = CreateCameraRay(UV, Depth);
+    float3 PreviousWorldPosition = CreateCameraRayPrev(newUV, PrevDepthTex.SampleLevel(sampler_PrevDepthTex, newUV, 0).x);
+    float MinDepth = 9999;
+
+    [unroll]for(int x = -1; x <= 1; ++x) {
+        [unroll]for(int y = -1; y <= 1; ++y) {
+            int2 OffsetIndex = newUV * float2(target_width, target_height) + int2(x,y);
+            if(any(OffsetIndex > int2(target_width, target_height)) || any(OffsetIndex < 0)) continue;
+            float3 color = PrevOutput[OffsetIndex].xyz;
+            minCol = min(minCol, color);
+            maxCol = max(maxCol, color);
+        }
+    }
+    PrevDepthTexWrite[id.xy] = float4(Depth, 0, 0, 1);
+    float3 CurrentColor = Input.SampleLevel(sampler_Input_trilinear_clamp, UV, 0).xyz;
+    bool Disocluded = length(WorldPos - PreviousWorldPosition) / Depth > 0.01;
+    if(!all(CurrentColor >= minCol - 0.05f && CurrentColor <= maxCol + 0.05f)) {Disocluded = true;}
+
+    // if(Disocluded || (newUV.x > 1 || newUV.x < 0 || newUV.y > 1 || newUV.y < 0)) Output[id.xy] = float4(CurrentColor * Albedo.SampleLevel(sampler_Input_trilinear_clamp, UV, 0).xyz,1);
+    // else Output[id.xy] = float4(lerp(PrevOutput[newUV * float2(target_width, target_height)].xyz, CurrentColor * Albedo.SampleLevel(sampler_Input_trilinear_clamp, UV, 0).xyz, 0.5f),1);
 
         float2 view_pixel_size = 1.0 / float2(source_width, source_height);
         
@@ -250,5 +263,4 @@ void kernel_upsample (int3 id : SV_DispatchThreadID)
         if(Disocluded || (newUV.x > 1 || newUV.x < 0 || newUV.y > 1 || newUV.y < 0)) Output[id.xy] = float4(lerp(dir_avg.xyz, super.xyz, 0.5f),1);
         else Output[id.xy] = float4(lerp(PrevOutput[newUV * float2(target_width, target_height)].xyz, lerp(dir_avg.xyz, super.xyz, 0.5f), max(1.0f / PrevOutput[newUV * float2(target_width, target_height)].w,0.01f)),PrevOutput[newUV * float2(target_width, target_height)].w + 1);
     FinalOutput[id.xy] = float4(Output[id.xy].xyz * Albedo[id.xy].xyz, 1);
-    PrevDepthTexWrite[id.xy] = float4(CurDepth, 0, 0, 1);
 }

@@ -48,6 +48,7 @@ Shader "Hidden/SVGFReproject"
     uniform Texture2D   gLinearZAndNormal;
     uniform Texture2D   gPrevLinearZAndNormal;
     uniform Texture2D   gPrevHistoryLength;
+            sampler2D _CameraGBufferTexture2;
     sampler2D _CameraMotionVectorsTexture;
 
     float       gAlpha;
@@ -86,7 +87,9 @@ bool loadPrevData(float2 posH, out float4 prevIllum, out float2 prevMoments, out
     const int2 imageDim = screenSize;
 
     const float2 motion = tex2D(_CameraMotionVectorsTexture, ipos / float2(imageDim)).xy;
-    const float normalFwidth = 0.2f;//gPositionNormalFwidth[ipos].y;
+    
+    float3 gNormal = tex2D(_CameraGBufferTexture2, ipos / float2(imageDim)).xyz * 2.0f - 1.0f;
+    const float normalFwidth = length(fwidth(gNormal));//gPositionNormalFwidth[ipos].y;
 
     // +0.5 to account for texel center offset
     const int2 iposPrev = int2(float2(ipos) - motion.xy * imageDim + float2(0.5,0.5));

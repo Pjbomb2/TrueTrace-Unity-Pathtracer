@@ -13,8 +13,13 @@ public class AssetManager : MonoBehaviour {//This handels all the data
     public Texture2D MetallicAtlas;
     public Texture2D RoughnessAtlas;
     public List<Vector4> VoxelPositions;
+    private ComputeShader Refitter;
+    private int RefitLayer;
+    private int NodeUpdater;
+    private int NodeCompress;
+    private int NodeInitializerKernel;
 
-
+    public List<RayTracingObject> MaterialsChanged;
     public List<MaterialData> _Materials;
     [HideInInspector] public ComputeBuffer BVH8AggregatedBuffer;
     [HideInInspector] public ComputeBuffer AggTriBuffer;
@@ -27,6 +32,13 @@ public class AssetManager : MonoBehaviour {//This handels all the data
     public InstancedManager InstanceData;
     public List<InstancedObject> Instances;
 
+    public List<TerrainObject> Terrains;
+    public List<TerrainDat> TerrainInfos;
+    public ComputeBuffer TerrainBuffer;
+    public Texture2D HeightMap;
+    public Texture2D AlphaMap;
+
+
     public ComputeShader MeshFunctions;
     private int TriangleBufferKernel;
     private int NodeBufferKernel;
@@ -35,6 +47,7 @@ public class AssetManager : MonoBehaviour {//This handels all the data
     public List<ParentObject> BuildQue;
     public List<ParentObject> AddQue;
     public List<ParentObject> RemoveQue;
+    public List<ParentObject> UpdateQue;
 
     public List<InstancedObject> InstanceRenderQue;
     public List<InstancedObject> InstanceBuildQue;
@@ -49,6 +62,8 @@ public class AssetManager : MonoBehaviour {//This handels all the data
     [HideInInspector] public List<Transform> LightTransforms;
     [HideInInspector] public List<Task> CurrentlyActiveTasks;
     [HideInInspector] public List<Task> CurrentlyActiveVoxelTasks;
+
+    public int MatCount;
 
     public List<LightMeshData> LightMeshes;
 
@@ -66,7 +81,6 @@ public class AssetManager : MonoBehaviour {//This handels all the data
     [HideInInspector] public List<int> GPUBrickmap;
     [HideInInspector] public int VoxOffset;
     private int PrevLightCount;
-
     [HideInInspector] public BVH2Builder BVH2;
 
     [HideInInspector] public bool UseSkinning = true;
@@ -79,6 +93,7 @@ public class AssetManager : MonoBehaviour {//This handels all the data
 
     private BVHNode8DataCompressed[] TempBVHArray;
 
+    [SerializeField] public int RunningTasks;
     public void ClearAll() {//My attempt at clearing memory
         ParentObject[] ChildrenObjects = this.GetComponentsInChildren<ParentObject>();
         foreach(ParentObject obj in ChildrenObjects)
@@ -127,7 +142,7 @@ public class AssetManager : MonoBehaviour {//This handels all the data
     }
 
     private List<Texture2D> AlbedoTexs;
-    private List<RayObjects> AlbedoIndexes;
+    public List<RayObjects> AlbedoIndexes;
     private List<Texture2D> NormalTexs;
     private List<RayObjects> NormalIndexes;
     private List<Texture2D> MetallicTexs;
@@ -152,10 +167,13 @@ public class AssetManager : MonoBehaviour {//This handels all the data
     }
 
     private void ModifyTextureBounds(ref Rect[] Rects, int TexLength, ref List<RayObjects> Indexes, int TargetTex) {
+            int TerrainIndexOffset = 0;
             for(int i = 0; i < TexLength; i++) {
                 int SecondaryLength = Indexes[i].RayObjectList.Count;
                 for(int i2 = 0; i2 < SecondaryLength; i2++) {
-                    MaterialData TempMat = _Materials[Indexes[i].RayObjectList[i2].Obj.MaterialIndex[Indexes[i].RayObjectList[i2].ObjIndex]];
+                    MaterialData TempMat = Indexes[i].RayObjectList[i2].Obj == null ? 
+                    _Materials[Indexes[i].RayObjectList[i2].Terrain.MaterialIndex[Indexes[i].RayObjectList[i2].ObjIndex] + MatCount + TerrainIndexOffset]
+                    : _Materials[Indexes[i].RayObjectList[i2].Obj.MaterialIndex[Indexes[i].RayObjectList[i2].ObjIndex]];
                     switch(TargetTex) {
                         case 0: 
                             TempMat.AlbedoTex = new Vector4(Rects[i].xMax, Rects[i].yMax, Rects[i].xMin, Rects[i].yMin);
@@ -181,11 +199,10 @@ public class AssetManager : MonoBehaviour {//This handels all the data
                             Debug.Log("EEEEE");
                         break;
                     }
-                    _Materials[Indexes[i].RayObjectList[i2].Obj.MaterialIndex[Indexes[i].RayObjectList[i2].ObjIndex]] = TempMat;
+                    _Materials[Indexes[i].RayObjectList[i2].Obj == null ? (Indexes[i].RayObjectList[i2].Terrain.MaterialIndex[Indexes[i].RayObjectList[i2].ObjIndex] + MatCount + TerrainIndexOffset) : Indexes[i].RayObjectList[i2].Obj.MaterialIndex[Indexes[i].RayObjectList[i2].ObjIndex]] = TempMat;
                 }
             }
     }
-
    private void CreateAtlas() {//Creates texture atlas
 
         _Materials = new List<MaterialData>();
@@ -199,11 +216,61 @@ public class AssetManager : MonoBehaviour {//This handels all the data
         RoughnessIndexes = new List<RayObjects>();
         EmissiveTexs = new List<Texture2D>();
         EmissiveIndexes = new List<RayObjects>();
-        AlbedoAtlas = new Texture2D(1,1);
-        NormalAtlas = new Texture2D(1, 1);
-        EmissiveAtlas = new Texture2D(1, 1);
-        MetallicAtlas = new Texture2D(1, 1);
-        RoughnessAtlas = new Texture2D(1, 1);
+        if(AlbedoAtlas != null) AlbedoAtlas.Reinitialize(4,4);
+        else AlbedoAtlas = new Texture2D(4,4);
+        if(NormalAtlas != null) NormalAtlas.Reinitialize(4,4);
+        else NormalAtlas = new Texture2D(4, 4);
+        if(MetallicAtlas != null) MetallicAtlas.Reinitialize(4,4);
+        else MetallicAtlas = new Texture2D(4, 4);
+        if(RoughnessAtlas != null) RoughnessAtlas.Reinitialize(4,4);
+        else RoughnessAtlas = new Texture2D(4, 4);
+        if(EmissiveAtlas != null) EmissiveAtlas.Reinitialize(4,4);
+        else EmissiveAtlas = new Texture2D(4, 4);
+        List<Texture2D> HeightMaps = new List<Texture2D>();
+        List<Texture2D> AlphaMaps = new List<Texture2D>();
+
+        int TerrainCount = Terrains.Count;
+        int MaterialOffset = 0;
+        List<Vector2> Sizes = new List<Vector2>();
+        TerrainInfos = new List<TerrainDat>();
+        for(int i = 0; i < TerrainCount; i++) {
+            TerrainDat TempTerrain = new TerrainDat();
+            TempTerrain.PositionOffset = Terrains[i].transform.position;
+            AlphaMaps.Add(Terrains[i].AlphaMap);
+            HeightMaps.Add(Terrains[i].HeightMap);
+            Sizes.Add(new Vector2(Terrains[i].HeightMap.width, Terrains[i].HeightMap.height));
+            TempTerrain.TerrainDim = Terrains[i].TerrainDim;
+            TempTerrain.HeightScale = Terrains[i].HeightScale;
+            TempTerrain.MatOffset = MaterialOffset;
+            MaterialOffset += Terrains[i].Materials.Count;
+            TerrainInfos.Add(TempTerrain);
+        }
+        if(TerrainCount != 0) {
+            Rect[] AlphaRects;
+            List<Rect> HeightRects = new List<Rect>();
+            float MinX = 0;
+            float MinY = 0;
+            for(int i = 0;i < Sizes.Count; i++) {
+                MinX = Mathf.Max(Sizes[i].x, MinX);
+                MinY += Sizes[i].y * 2;
+            } 
+            int Size = (int)Mathf.Min((MinY) / Mathf.Ceil(Mathf.Sqrt(Sizes.Count)), 16384);
+
+            Texture2D.GenerateAtlas(Sizes.ToArray(), 0, Size, HeightRects);
+            HeightMap = new Texture2D(Size, Size,  UnityEngine.Experimental.Rendering.GraphicsFormat.R16_UNorm, UnityEngine.Experimental.Rendering.TextureCreationFlags.None);
+            Color32[] Colors = HeightMap.GetPixels32(0);
+            System.Array.Fill(Colors, Color.black);
+            HeightMap.SetPixels32(Colors);
+            HeightMap.Apply();
+            AlphaRects = AlphaMap.PackTextures(AlphaMaps.ToArray(), 1, 16392, true);
+            for(int i = 0; i < TerrainCount; i++) {
+                Graphics.CopyTexture(HeightMaps[i], 0, 0, 0, 0, HeightMaps[i].width, HeightMaps[i].height, HeightMap, 0, 0, (int)HeightRects[i].xMin, (int)HeightRects[i].yMin);
+                TerrainDat TempTerrain = TerrainInfos[i];
+                TempTerrain.HeightMap = new Vector4(HeightRects[i].xMax / Size, HeightRects[i].yMax / Size, HeightRects[i].xMin / Size, HeightRects[i].yMin / Size);
+                TempTerrain.AlphaMap = new Vector4(AlphaRects[i].xMax, AlphaRects[i].yMax, AlphaRects[i].xMin, AlphaRects[i].yMin);
+                TerrainInfos[i] = TempTerrain;
+            }
+        }
         int CurCount = RenderQue[0].AlbedoTexs.Count;
         int CurLength;
         foreach(ParentObject Obj in RenderQue) {
@@ -220,22 +287,32 @@ public class AssetManager : MonoBehaviour {//This handels all the data
             AddTextures(ref RoughnessTexs, ref RoughnessIndexes, ref Obj.RoughnessIndexes, ref Obj.RoughnessTexs);
             AddTextures(ref EmissiveTexs, ref EmissiveIndexes, ref Obj.EmissionIndexes, ref Obj.EmissionTexs);
         }
+
+        if(TerrainCount != 0) {
+            for(int i = 0; i < TerrainCount; i++) {
+                AddTextures(ref AlbedoTexs, ref AlbedoIndexes, ref Terrains[i].AlbedoIndexes, ref Terrains[i].AlbedoTexs);
+                AddTextures(ref NormalTexs, ref NormalIndexes, ref Terrains[i].NormalIndexes, ref Terrains[i].NormalTexs);
+                AddTextures(ref MetallicTexs, ref MetallicIndexes, ref Terrains[i].MetallicIndexes, ref Terrains[i].MetallicTexs);
+            }
+        }
+
         Rect[] AlbedoRects, NormalRects, EmissiveRects, MetallicRects, RoughnessRects;
-        if(AlbedoTexs.Count != 0) AlbedoRects = AlbedoAtlas.PackTextures(AlbedoTexs.ToArray(), 1, 16392, true);//4096);
+        if(AlbedoTexs.Count != 0) AlbedoRects = AlbedoAtlas.PackTextures(AlbedoTexs.ToArray(), 1, 16392, false);//4096);
         else AlbedoRects = new Rect[0];
-        if(NormalTexs.Count != 0) NormalRects = NormalAtlas.PackTextures(NormalTexs.ToArray(), 1, 16392, true);//4096);
+        if(NormalTexs.Count != 0) NormalRects = NormalAtlas.PackTextures(NormalTexs.ToArray(), 1, 16392, false);//4096);
         else NormalRects = new Rect[0];
-        if(MetallicTexs.Count != 0) MetallicRects = MetallicAtlas.PackTextures(MetallicTexs.ToArray(), 1, 16392, true);//4096);
+        if(MetallicTexs.Count != 0) MetallicRects = MetallicAtlas.PackTextures(MetallicTexs.ToArray(), 1, 16392, false);//4096);
         else MetallicRects = new Rect[0];
-        if(RoughnessTexs.Count != 0) RoughnessRects = RoughnessAtlas.PackTextures(RoughnessTexs.ToArray(), 1, 16392, true);//4096);
+        if(RoughnessTexs.Count != 0) RoughnessRects = RoughnessAtlas.PackTextures(RoughnessTexs.ToArray(), 1, 16392, false);//4096);
         else RoughnessRects = new Rect[0];
-        if(EmissiveTexs.Count != 0) EmissiveRects = EmissiveAtlas.PackTextures(EmissiveTexs.ToArray(), 1, 16392, true);//4096);
+        if(EmissiveTexs.Count != 0) EmissiveRects = EmissiveAtlas.PackTextures(EmissiveTexs.ToArray(), 1, 16392, false);//4096);
         else EmissiveRects = new Rect[0];
 
-        int MatCount = 0;
+        MatCount = 0;
 
         foreach(ParentObject Obj in RenderQue) {
             foreach(RayTracingObject Obj2 in Obj.ChildObjects) {
+                MaterialsChanged.Add(Obj2);
                 for(int i = 0; i < Obj2.MaterialIndex.Length; i++) {
                     Obj2.MaterialIndex[i] = Obj2.LocalMaterialIndex[i] + MatCount;
                 }
@@ -245,12 +322,23 @@ public class AssetManager : MonoBehaviour {//This handels all the data
         }
         foreach(ParentObject Obj in InstanceData.RenderQue) {
             foreach(RayTracingObject Obj2 in Obj.ChildObjects) {
+                MaterialsChanged.Add(Obj2);
                 for(int i = 0; i < Obj2.MaterialIndex.Length; i++) {
                     Obj2.MaterialIndex[i] = Obj2.LocalMaterialIndex[i] + MatCount;
                 }
             }
             _Materials.AddRange(Obj._Materials);
             MatCount += Obj._Materials.Count;
+        }
+        int TerrainMaterials = 0;
+        if(TerrainCount != 0) {
+            foreach(TerrainObject Obj2 in Terrains) {
+                for(int i = 0; i < Obj2.MaterialIndex.Length; i++) {
+                    Obj2.MaterialIndex[i] += TerrainMaterials;
+                }
+                _Materials.AddRange(Obj2.Materials);
+                TerrainMaterials += Obj2.Materials.Count;
+            }
         }
 
         ModifyTextureBounds(ref AlbedoRects, AlbedoTexs.Count, ref AlbedoIndexes, 0);
@@ -269,6 +357,13 @@ public class AssetManager : MonoBehaviour {//This handels all the data
         RoughnessTexs.TrimExcess();
         EmissiveTexs.Clear();
         EmissiveTexs.TrimExcess();
+
+        if(TerrainCount != 0) {
+            if(TerrainBuffer != null) TerrainBuffer.Release();
+            TerrainBuffer = new ComputeBuffer(TerrainCount, 56);
+            TerrainBuffer.SetData(TerrainInfos);
+        }
+
         foreach(VoxelObject Vox in VoxelRenderQue) {
             foreach(MaterialData Mat in Vox._Materials) {
                 _Materials.Add(Mat);
@@ -286,6 +381,13 @@ public class AssetManager : MonoBehaviour {//This handels all the data
     }
 
     private void init() {
+        Refitter =  Resources.Load<ComputeShader>("BVH/BVHRefitter");
+        RefitLayer = Refitter.FindKernel("RefitBVHLayer");
+        NodeUpdater = Refitter.FindKernel("NodeUpdate");
+        NodeCompress = Refitter.FindKernel("NodeCompress");
+        NodeInitializerKernel = Refitter.FindKernel("NodeInitializer");
+
+        MaterialsChanged = new List<RayTracingObject>();
         InstanceData = GameObject.Find("InstancedStorage").GetComponent<InstancedManager>();
         Instances = new List<InstancedObject>();
         ToIllumTriBuffer = new List<int>();
@@ -293,6 +395,7 @@ public class AssetManager : MonoBehaviour {//This handels all the data
         AddQue = new List<ParentObject>();
         RemoveQue = new List<ParentObject>();
         RenderQue = new List<ParentObject>();
+        UpdateQue = new List<ParentObject>();
         VoxelAddQue = new List<VoxelObject>();
         VoxelRemoveQue = new List<VoxelObject>();
         VoxelRenderQue = new List<VoxelObject>();
@@ -310,6 +413,7 @@ public class AssetManager : MonoBehaviour {//This handels all the data
         LightMeshCount = 0;
         UnityLightCount = 0;
         LightTriCount = 0;
+        TerrainInfos = new List<TerrainDat>();
         if(BVH8AggregatedBuffer != null) {
             BVH8AggregatedBuffer.Release();
             BVH8AggregatedBuffer = null;    
@@ -319,6 +423,12 @@ public class AssetManager : MonoBehaviour {//This handels all the data
         MeshFunctions = Resources.Load<ComputeShader>("Utility/GeneralMeshFunctions");
         TriangleBufferKernel = MeshFunctions.FindKernel("CombineTriBuffers");
         NodeBufferKernel = MeshFunctions.FindKernel("CombineNodeBuffers");
+        AlphaMap = Texture2D.blackTexture;
+        HeightMap = Texture2D.blackTexture;
+        if(TerrainBuffer != null) TerrainBuffer.Release();
+        TerrainBuffer = new ComputeBuffer(1, 56);
+
+        if(Terrains.Count != 0) for(int i = 0; i < Terrains.Count; i++) Terrains[i].Load();
     }
 
     private void UpdateRenderAndBuildQues() {
@@ -350,26 +460,38 @@ public class AssetManager : MonoBehaviour {//This handels all the data
                 RemoveQue.RemoveAt(i); 
             }
             BuildQueCount = BuildQue.Count - 1;
-            RenderQueCount = RenderQue.Count - 1;
+            RenderQueCount = UpdateQue.Count - 1;
             for(int i = RenderQueCount; i >= 0; i--) {//Demotes from Render Que to Build Que in case mesh has changed
-                if(RenderQue[i].NeedsToUpdate) {
-                    RenderQue[i].ClearAll();
-                    RenderQue[i].LoadData();
-                    BuildQue.Add(RenderQue[i]);
-                    RenderQue.RemoveAt(i);
+                    UpdateQue[i].ClearAll();
+                    UpdateQue[i].LoadData();
+                    BuildQue.Add(UpdateQue[i]);
+                    if(RenderQue.Contains(UpdateQue[i])) RenderQue.Remove(UpdateQue[i]);
+                    UpdateQue.RemoveAt(i);
                     var TempBuildQueCount = BuildQue.Count - 1;
                     CurrentlyActiveTasks.Add(Task.Run(() => BuildQue[TempBuildQueCount].BuildTotal()));
                     ChildrenUpdated = true;
-                }
             }
             for(int i = BuildQueCount; i >= 0; i--) {//Promotes from Build Que to Render Que
-                if(CurrentlyActiveTasks[i].IsFaulted) Debug.Log(CurrentlyActiveTasks[i].Exception + ", " + BuildQue[i].Name);//Fuck, something fucked up
-                if(CurrentlyActiveTasks[i].Status == TaskStatus.RanToCompletion) {
-                    BuildQue[i].SetUpBuffers();
-                    RenderQue.Add(BuildQue[i]);
-                    BuildQue.RemoveAt(i);
+                if(CurrentlyActiveTasks[i].IsFaulted) {//Fuck, something fucked up
+                    Debug.Log(CurrentlyActiveTasks[i].Exception + ", " + BuildQue[i].Name);
                     CurrentlyActiveTasks.RemoveAt(i);
-                    ChildrenUpdated = true;
+                    AddQue.Add(BuildQue[i]);
+                    BuildQue.RemoveAt(i);
+
+                } else {
+                    if(CurrentlyActiveTasks[i].Status == TaskStatus.RanToCompletion) {
+                        if(BuildQue[i].AggTriangles == null) {
+                            CurrentlyActiveTasks.RemoveAt(i);
+                            AddQue.Add(BuildQue[i]);
+                            BuildQue.RemoveAt(i);
+                        } else {
+                            BuildQue[i].SetUpBuffers();
+                            RenderQue.Add(BuildQue[i]);
+                            BuildQue.RemoveAt(i);
+                            CurrentlyActiveTasks.RemoveAt(i);
+                            ChildrenUpdated = true;
+                        }
+                    }
                 }
             }
         }
@@ -396,8 +518,9 @@ public class AssetManager : MonoBehaviour {//This handels all the data
             RenderQueCount = InstanceRenderQue.Count - 1;
             BuildQueCount = InstanceBuildQue.Count - 1;
             for(int i = RenderQueCount; i >= 0; i--) {//Demotes from Render Que to Build Que in case mesh has changed
-                InstanceRenderQue[i].UpdateInstance();
-                if(InstanceRenderQue[i].InstanceParent == null || InstanceRenderQue[i].InstanceParent.gameObject.activeInHierarchy == false || InstanceRenderQue[i].InstanceParent.HasCompleted == false) {
+                // InstanceRenderQue[i].UpdateInstance();
+                ParentObject InstanceParent = InstanceRenderQue[i].InstanceParent;
+                if(InstanceParent == null || InstanceParent.gameObject.activeInHierarchy == false || InstanceParent.HasCompleted == false) {
                     InstanceBuildQue.Add(InstanceRenderQue[i]);
                     InstanceRenderQue.RemoveAt(i);
                     OnlyInstanceUpdated = true;
@@ -444,6 +567,8 @@ public class AssetManager : MonoBehaviour {//This handels all the data
                 }
             }
         }
+
+
         if(OnlyInstanceUpdated && !ChildrenUpdated) {
             ChildrenUpdated = true;
         } else {
@@ -454,6 +579,8 @@ public class AssetManager : MonoBehaviour {//This handels all the data
     }
     public void EditorBuild() {//Forces all to rebuild
         ClearAll();
+        Terrains = new List<TerrainObject>();
+        Terrains = new List<TerrainObject>(GetComponentsInChildren<TerrainObject>());
         init();
         AddQue = new List<ParentObject>();
         RemoveQue = new List<ParentObject>();
@@ -462,11 +589,13 @@ public class AssetManager : MonoBehaviour {//This handels all the data
         CurrentlyActiveVoxelTasks = new List<Task>();
         BuildQue = new List<ParentObject>(GetComponentsInChildren<ParentObject>());
         VoxelBuildQue = new List<VoxelObject>(GetComponentsInChildren<VoxelObject>());
+        RunningTasks = 0;
         InstanceData.EditorBuild();
         for(int i = 0; i < BuildQue.Count; i++) {
             var CurrentRep = i;
             BuildQue[CurrentRep].LoadData();
-            Task t1 = Task.Run(() => BuildQue[CurrentRep].BuildTotal());
+            Task t1 = Task.Run(() => {BuildQue[CurrentRep].BuildTotal(); RunningTasks--;});
+            RunningTasks++;
             CurrentlyActiveTasks.Add(t1);
         }
         for(int i = 0; i < VoxelBuildQue.Count; i++) {
@@ -483,6 +612,7 @@ public class AssetManager : MonoBehaviour {//This handels all the data
     public void BuildCombined() {//Only has unbuilt be built
         Counter = 0;
         HasToDo = false;
+        Terrains = new List<TerrainObject>(GetComponentsInChildren<TerrainObject>());
         init();
         CurrentlyActiveVoxelTasks = new List<Task>();
         List<ParentObject> TempQue = new List<ParentObject>(GetComponentsInChildren<ParentObject>());
@@ -514,7 +644,10 @@ public class AssetManager : MonoBehaviour {//This handels all the data
     public bool HasToDo;
 
     private void AccumulateData() {
+        UnityEngine.Profiling.Profiler.BeginSample("Update Object Lists");
         UpdateRenderAndBuildQues();
+        UnityEngine.Profiling.Profiler.EndSample();
+
         int ParentsLength = RenderQue.Count;
         TLASSpace = 2 * (ParentsLength + InstanceRenderQue.Count);
         int nodes = TLASSpace;
@@ -661,148 +794,519 @@ public class AssetManager : MonoBehaviour {//This handels all the data
 public void CreateAABB(Transform transform, ref AABB aabb) {//Update the Transformed AABB by getting the new Max/Min of the untransformed AABB after transforming it
     Vector3 center = 0.5f * (aabb.BBMin + aabb.BBMax);
     Vector3 extent = 0.5f * (aabb.BBMax - aabb.BBMin);
-
-    Vector3 new_center = CommonFunctions.transform_position (transform.worldToLocalMatrix.inverse, center);
-    Vector3 new_extent = CommonFunctions.transform_direction(CommonFunctions.abs(transform.worldToLocalMatrix.inverse), extent);
+    Matrix4x4 Mat = transform.localToWorldMatrix;
+    Vector3 new_center = CommonFunctions.transform_position (Mat, center);
+    CommonFunctions.abs(ref Mat);
+    Vector3 new_extent = CommonFunctions.transform_direction(Mat, extent);
 
     aabb.BBMin = new_center - new_extent;
     aabb.BBMax = new_center + new_extent;
 }
 
+AABB tempAABB;
+int[] ToBVHIndex;
+public BVH8Builder TLASBVH8;
+
+
+unsafe public void DocumentNodes(int CurrentNode, int ParentNode, int NextNode, int NextBVH8Node, bool IsLeafRecur, int CurRecur) {
+    NodeIndexPairData CurrentPair = NodePair[CurrentNode];
+    MaxRecur = Mathf.Max(MaxRecur, CurRecur);
+    CurrentPair.PreviousNode = ParentNode;
+    CurrentPair.Node = CurrentNode;
+    CurrentPair.RecursionCount = CurRecur;
+    if(!IsLeafRecur) {
+        ToBVHIndex[NextBVH8Node] = CurrentNode;
+        CurrentPair.IsLeaf = 0;
+        BVHNode8Data node = TLASBVH8.BVH8Nodes[NextBVH8Node];
+        NodeIndexPairData IndexPair = new NodeIndexPairData();
+
+        IndexPair.AABB = new AABB();
+        float ex = (float)System.Convert.ToSingle((int)(System.Convert.ToUInt32(node.e[0]) << 23));
+        float ey = (float)System.Convert.ToSingle((int)(System.Convert.ToUInt32(node.e[1]) << 23));
+        float ez = (float)System.Convert.ToSingle((int)(System.Convert.ToUInt32(node.e[2]) << 23));
+        Vector3 e = new Vector3(ex, ey, ez);
+        for(int i = 0; i < 8; i++) {
+            IndexPair.InNodeOffset = i;
+            float AABBPos1x = node.quantized_max_x[i] * e.x + node.p.x;
+            float AABBPos1y = node.quantized_max_y[i] * e.y + node.p.y;
+            float AABBPos1z = node.quantized_max_z[i] * e.z + node.p.z;
+            float AABBPos2x = node.quantized_min_x[i] * e.x + node.p.x;
+            float AABBPos2y = node.quantized_min_y[i] * e.y + node.p.y;
+            float AABBPos2z = node.quantized_min_z[i] * e.z + node.p.z;
+            tempAABB.BBMax = new Vector3(AABBPos1x, AABBPos1y, AABBPos1z);
+            tempAABB.BBMin = new Vector3(AABBPos2x, AABBPos2y, AABBPos2z);
+            IndexPair.AABB.init();
+            IndexPair.AABB.Extend(ref tempAABB);
+            IndexPair.InNodeOffset = i;
+            bool IsLeaf = (node.meta[i] & 0b11111) < 24;
+            if(IsLeaf) {
+                IndexPair.BVHNode = NextBVH8Node;
+                NodePair.Add(IndexPair);
+                NextNode++;
+                DocumentNodes(NodePair.Count - 1, CurrentNode, NextNode, -1, true, CurRecur + 1);
+            } else {
+                int child_offset = (byte)node.meta[i] & 0b11111;
+                int child_index  = (int)node.base_index_child + child_offset - 24;
+                
+                IndexPair.BVHNode = NextBVH8Node;
+                NodePair.Add(IndexPair);
+                NextNode++;
+                DocumentNodes(NodePair.Count - 1, CurrentNode, NextNode, child_index, false, CurRecur + 1);
+            }
+        }
+    } else {
+        CurrentPair.IsLeaf = 1;
+    }
+    NodePair[CurrentNode] = CurrentPair;
+}
+List<BVHNode8DataFixed> SplitNodes; 
+List<NodeIndexPairData> NodePair;
+Layer[] ForwardStack;
+Layer2[] LayerStack;
+int MaxRecur = 0;
+int[] CWBVHIndicesBufferInverted;
+ComputeBuffer WorkingBuffer;
+ComputeBuffer NodeBuffer;
+ComputeBuffer StackBuffer;
+ComputeBuffer ToBVHIndexBuffer;
+ComputeBuffer BVHDataBuffer;
+ComputeBuffer BVHBuffer;
+
+int NumberOfSetBits(int i)
+{
+    i = i - ((i >> 1) & 0x55555555);
+    i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
+    return (((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
+}
+unsafe public void ConstructNewTLAS() {
+
+        BVH2Builder BVH = new BVH2Builder(MeshAABBs);
+        TLASBVH8 = new BVH8Builder(BVH, ref MyMeshesCompacted);
+        for(int i = 0; i < TLASBVH8.cwbvh_indices.Length; i++) {
+            if(TLASBVH8.cwbvh_indices[i] >= RenderQue.Count) {
+                InstanceRenderQue[TLASBVH8.cwbvh_indices[i] - RenderQue.Count].CompactedMeshData = i;
+            } else RenderQue[TLASBVH8.cwbvh_indices[i]].CompactedMeshData = i;
+        }         
+        System.Array.Resize(ref TLASBVH8.BVH8Nodes, TLASBVH8.cwbvhnode_count);
+        ToBVHIndex = new int[TLASBVH8.cwbvhnode_count];
+        if(TempBVHArray == null || TLASBVH8.BVH8Nodes.Length != TempBVHArray.Length) TempBVHArray = new BVHNode8DataCompressed[TLASBVH8.BVH8Nodes.Length];
+        CommonFunctions.Aggregate(ref TempBVHArray, ref TLASBVH8.BVH8Nodes);
+
+            CWBVHIndicesBufferInverted = new int[TLASBVH8.cwbvh_indices.Length];
+        int CWBVHIndicesBufferCount = CWBVHIndicesBufferInverted.Length;
+        for(int i = 0; i < CWBVHIndicesBufferCount; i++) CWBVHIndicesBufferInverted[TLASBVH8.cwbvh_indices[i]] = i;
+        NodePair = new List<NodeIndexPairData>();
+        NodePair.Add(new NodeIndexPairData());
+        DocumentNodes(0, 0, 1, 0, false, 0);
+        MaxRecur++;
+        int NodeCount = NodePair.Count;
+        ForwardStack = new Layer[NodeCount];
+        for(int i = 0; i < NodePair.Count; i++) {
+            for(int i2 = 0; i2 < 8; i2++) {
+                ForwardStack[i].Children[i2] = -1;
+                ForwardStack[i].Leaf[i2] = -1;
+            }
+        }
+
+        for(int i = 0; i < NodePair.Count; i++) {
+            if(NodePair[i].IsLeaf == 1) {
+                int first_triangle = (byte)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] & 0b11111;
+                int NumBits = NumberOfSetBits((byte)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] >> 5);
+                ForwardStack[i].Children[NodePair[i].InNodeOffset] = NumBits;
+                ForwardStack[i].Leaf[NodePair[i].InNodeOffset] = (int)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].base_index_triangle + first_triangle + 1; 
+            } else {
+                ForwardStack[i].Children[NodePair[i].InNodeOffset] = i;
+                ForwardStack[i].Leaf[NodePair[i].InNodeOffset] = 0;
+            }
+            ForwardStack[NodePair[i].PreviousNode].Children[NodePair[i].InNodeOffset] = i;
+            ForwardStack[NodePair[i].PreviousNode].Leaf[NodePair[i].InNodeOffset] = 0;
+        }
+
+        LayerStack = new Layer2[MaxRecur];
+        for(int i = 0; i < MaxRecur; i++) {
+            Layer2 TempSlab = new Layer2();
+            TempSlab.Slab = new List<int>();
+            LayerStack[i] = TempSlab;
+        }
+        for(int i = 0; i < NodePair.Count; i++) {
+            var TempLayer = LayerStack[NodePair[i].RecursionCount];
+            TempLayer.Slab.Add(i);
+            LayerStack[NodePair[i].RecursionCount] = TempLayer;
+        }
+        ConvertToSplitNodes(TLASBVH8);
+        int MaxLength = 0;
+        for(int i = 0; i < LayerStack.Length; i++) {
+            MaxLength = Mathf.Max(MaxLength, LayerStack[i].Slab.Count);
+        }
+        WorkingBuffer = new ComputeBuffer(MaxLength, 4);
+        NodeBuffer = new ComputeBuffer(NodePair.Count, 48);
+        NodeBuffer.SetData(NodePair);
+        StackBuffer = new ComputeBuffer(ForwardStack.Length, 64);
+        StackBuffer.SetData(ForwardStack);
+        ToBVHIndexBuffer = new ComputeBuffer(ToBVHIndex.Length, 4);
+        ToBVHIndexBuffer.SetData(ToBVHIndex);     
+        BVHDataBuffer = new ComputeBuffer(TempBVHArray.Length, 260);
+        BVHDataBuffer.SetData(SplitNodes); 
+        BVHBuffer = new ComputeBuffer(TempBVHArray.Length, 80);
+        BVHBuffer.SetData(TempBVHArray);
+        BoxesBuffer = new ComputeBuffer(MeshAABBs.Length, 24);
+    }
+
+    unsafe private void ConvertToSplitNodes(BVH8Builder BVH) {
+    BVHNode8DataFixed NewNode = new BVHNode8DataFixed();
+    SplitNodes = new List<BVHNode8DataFixed>();
+    BVHNode8Data SourceNode;
+    for(int i = 0; i < BVH.BVH8Nodes.Length; i++) {
+        SourceNode = BVH.BVH8Nodes[i];
+        NewNode.p = SourceNode.p;
+        NewNode.e1 = SourceNode.e[0];
+        NewNode.e2 = SourceNode.e[1];
+        NewNode.e3 = SourceNode.e[2];
+        NewNode.imask = SourceNode.imask;
+        NewNode.base_index_child = SourceNode.base_index_child;
+        NewNode.base_index_triangle = SourceNode.base_index_triangle;
+        NewNode.meta1 = (uint)SourceNode.meta[0];
+        NewNode.meta2 = (uint)SourceNode.meta[1];
+        NewNode.meta3 = (uint)SourceNode.meta[2];
+        NewNode.meta4 = (uint)SourceNode.meta[3];
+        NewNode.meta5 = (uint)SourceNode.meta[4];
+        NewNode.meta6 = (uint)SourceNode.meta[5];
+        NewNode.meta7 = (uint)SourceNode.meta[6];
+        NewNode.meta8 = (uint)SourceNode.meta[7];
+        NewNode.quantized_min_x1 = (uint)SourceNode.quantized_min_x[0];
+        NewNode.quantized_min_x2 = (uint)SourceNode.quantized_min_x[1];
+        NewNode.quantized_min_x3 = (uint)SourceNode.quantized_min_x[2];
+        NewNode.quantized_min_x4 = (uint)SourceNode.quantized_min_x[3];
+        NewNode.quantized_min_x5 = (uint)SourceNode.quantized_min_x[4];
+        NewNode.quantized_min_x6 = (uint)SourceNode.quantized_min_x[5];
+        NewNode.quantized_min_x7 = (uint)SourceNode.quantized_min_x[6];
+        NewNode.quantized_min_x8 = (uint)SourceNode.quantized_min_x[7];
+        NewNode.quantized_max_x1 = (uint)SourceNode.quantized_max_x[0];
+        NewNode.quantized_max_x2 = (uint)SourceNode.quantized_max_x[1];
+        NewNode.quantized_max_x3 = (uint)SourceNode.quantized_max_x[2];
+        NewNode.quantized_max_x4 = (uint)SourceNode.quantized_max_x[3];
+        NewNode.quantized_max_x5 = (uint)SourceNode.quantized_max_x[4];
+        NewNode.quantized_max_x6 = (uint)SourceNode.quantized_max_x[5];
+        NewNode.quantized_max_x7 = (uint)SourceNode.quantized_max_x[6];
+        NewNode.quantized_max_x8 = (uint)SourceNode.quantized_max_x[7];
+
+        NewNode.quantized_min_y1 = (uint)SourceNode.quantized_min_y[0];
+        NewNode.quantized_min_y2 = (uint)SourceNode.quantized_min_y[1];
+        NewNode.quantized_min_y3 = (uint)SourceNode.quantized_min_y[2];
+        NewNode.quantized_min_y4 = (uint)SourceNode.quantized_min_y[3];
+        NewNode.quantized_min_y5 = (uint)SourceNode.quantized_min_y[4];
+        NewNode.quantized_min_y6 = (uint)SourceNode.quantized_min_y[5];
+        NewNode.quantized_min_y7 = (uint)SourceNode.quantized_min_y[6];
+        NewNode.quantized_min_y8 = (uint)SourceNode.quantized_min_y[7];
+        NewNode.quantized_max_y1 = (uint)SourceNode.quantized_max_y[0];
+        NewNode.quantized_max_y2 = (uint)SourceNode.quantized_max_y[1];
+        NewNode.quantized_max_y3 = (uint)SourceNode.quantized_max_y[2];
+        NewNode.quantized_max_y4 = (uint)SourceNode.quantized_max_y[3];
+        NewNode.quantized_max_y5 = (uint)SourceNode.quantized_max_y[4];
+        NewNode.quantized_max_y6 = (uint)SourceNode.quantized_max_y[5];
+        NewNode.quantized_max_y7 = (uint)SourceNode.quantized_max_y[6];
+        NewNode.quantized_max_y8 = (uint)SourceNode.quantized_max_y[7];
+
+        NewNode.quantized_min_z1 = (uint)SourceNode.quantized_min_z[0];
+        NewNode.quantized_min_z2 = (uint)SourceNode.quantized_min_z[1];
+        NewNode.quantized_min_z3 = (uint)SourceNode.quantized_min_z[2];
+        NewNode.quantized_min_z4 = (uint)SourceNode.quantized_min_z[3];
+        NewNode.quantized_min_z5 = (uint)SourceNode.quantized_min_z[4];
+        NewNode.quantized_min_z6 = (uint)SourceNode.quantized_min_z[5];
+        NewNode.quantized_min_z7 = (uint)SourceNode.quantized_min_z[6];
+        NewNode.quantized_min_z8 = (uint)SourceNode.quantized_min_z[7];
+        NewNode.quantized_max_z1 = (uint)SourceNode.quantized_max_z[0];
+        NewNode.quantized_max_z2 = (uint)SourceNode.quantized_max_z[1];
+        NewNode.quantized_max_z3 = (uint)SourceNode.quantized_max_z[2];
+        NewNode.quantized_max_z4 = (uint)SourceNode.quantized_max_z[3];
+        NewNode.quantized_max_z5 = (uint)SourceNode.quantized_max_z[4];
+        NewNode.quantized_max_z6 = (uint)SourceNode.quantized_max_z[5];
+        NewNode.quantized_max_z7 = (uint)SourceNode.quantized_max_z[6];
+        NewNode.quantized_max_z8 = (uint)SourceNode.quantized_max_z[7];
+
+        SplitNodes.Add(NewNode);
+    }
+}
+
+ComputeBuffer BoxesBuffer;
+public void RefitTLAS(AABB[] Boxes) {
+        Refitter.SetInt("NodeCount", NodePair.Count);
+        Refitter.SetBuffer(NodeInitializerKernel, "AllNodes", NodeBuffer);
+
+        Refitter.Dispatch(NodeInitializerKernel, (int)Mathf.Ceil(NodePair.Count / (float)256), 1, 1);
+        
+        BoxesBuffer.SetData(Boxes);
+        Refitter.SetBuffer(RefitLayer, "Boxs", BoxesBuffer);
+        Refitter.SetBuffer(RefitLayer, "ReverseStack", StackBuffer);
+        Refitter.SetBuffer(RefitLayer, "AllNodes", NodeBuffer);
+        Refitter.SetBuffer(NodeInitializerKernel, "AllNodes", NodeBuffer);
+        for(int i = MaxRecur - 1; i >= 0; i--) {
+            var NodeCount2 = LayerStack[i].Slab.Count;
+            WorkingBuffer.SetData(LayerStack[i].Slab, 0, 0, NodeCount2);
+            Refitter.SetInt("NodeCount", NodeCount2);
+            Refitter.SetBuffer(RefitLayer, "NodesToWork", WorkingBuffer);        
+            Refitter.Dispatch(RefitLayer, (int)Mathf.Ceil(WorkingBuffer.count / (float)256), 1, 1);
+        }
+        Refitter.SetInt("NodeCount", NodePair.Count);
+        Refitter.SetBuffer(NodeUpdater, "AllNodes", NodeBuffer);
+        Refitter.SetBuffer(NodeUpdater, "BVHNodes", BVHDataBuffer);
+        Refitter.SetBuffer(NodeUpdater, "ToBVHIndex", ToBVHIndexBuffer);
+        Refitter.Dispatch(NodeUpdater, (int)Mathf.Ceil(NodePair.Count / (float)256), 1, 1);
+
+        Refitter.SetInt("NodeCount", TLASBVH8.BVH8Nodes.Length);
+        Refitter.SetInt("NodeOffset", 0);
+        Refitter.SetBuffer(NodeCompress, "BVHNodes", BVHDataBuffer);
+        Refitter.SetBuffer(NodeCompress, "AggNodes", BVH8AggregatedBuffer);
+        Refitter.Dispatch(NodeCompress, (int)Mathf.Ceil(NodePair.Count / (float)256), 1, 1);
+}
+
+int PreVoxelMeshCount;
+
+
     public bool UpdateTLAS() {  //Allows for objects to be moved in the scene or animated while playing 
         
         bool LightsHaveUpdated = false;
         AccumulateData();
-        if(!didstart) didstart = true;
 
-        UnityLights.Clear();
         float CDF = 0.0f;//(LightMeshes.Count != 0) ? LightMeshes[LightMeshes.Count - 1].CDF : 0.0f;
-        UnityLightCount = 0;
-        foreach(RayTracingLights RayLight in RayTracingMaster._rayTracingLights) {
-            UnityLightCount++;
-            RayLight.UpdateLight();
-            CDF += RayLight.Energy;
-            if(RayLight.Type == 1) SunDirection = RayLight.Direction;
-            UnityLights.Add(new LightData() {
-                Radiance = RayLight.Emission,
-                Position = RayLight.Position,
-                Direction = RayLight.Direction,
-                energy = RayLight.Energy,
-                CDF = CDF,
-                Type = RayLight.Type,
-                SpotAngle = RayLight.SpotAngle
-            });
+        if(!didstart || PrevLightCount != RayTracingMaster._rayTracingLights.Count) {
+            UnityLights.Clear();
+            UnityLightCount = 0;
+            foreach(RayTracingLights RayLight in RayTracingMaster._rayTracingLights) {
+                UnityLightCount++;
+                RayLight.UpdateLight();
+                CDF += RayLight.Energy;
+                if(RayLight.Type == 1) SunDirection = RayLight.Direction;
+                RayLight.ArrayIndex = UnityLights.Count;
+                UnityLights.Add(new LightData() {
+                    Radiance = RayLight.Emission,
+                    Position = RayLight.Position,
+                    Direction = RayLight.Direction,
+                    energy = RayLight.Energy,
+                    CDF = CDF,
+                    Type = RayLight.Type,
+                    SpotAngle = RayLight.SpotAngle
+                });
+            }
+            if(UnityLights.Count == 0) {UnityLights.Add(new LightData() {});}
+            if(PrevLightCount != RayTracingMaster._rayTracingLights.Count) LightsHaveUpdated = true;
+            PrevLightCount = RayTracingMaster._rayTracingLights.Count;
+        } else {
+            int LightCount = RayTracingMaster._rayTracingLights.Count;
+            LightData UnityLight;
+            RayTracingLights RayLight;
+            for(int i = 0; i < LightCount; i++) {
+                RayLight = RayTracingMaster._rayTracingLights[i];
+                CDF += RayLight.Energy;
+                if(RayLight.Type == 1) SunDirection = RayLight.Direction;
+                RayLight.UpdateLight();
+                UnityLight = UnityLights[RayLight.ArrayIndex];
+                UnityLight.Radiance = RayLight.Emission;
+                UnityLight.Position = RayLight.Position;
+                UnityLight.Direction = RayLight.Direction;
+                UnityLight.energy = RayLight.Energy;
+                UnityLight.CDF = CDF;
+                UnityLight.Type = RayLight.Type;
+                UnityLight.SpotAngle = RayLight.SpotAngle;
+                UnityLights[RayLight.ArrayIndex] = UnityLight;
+            }
         }
-        if(UnityLights.Count == 0) {UnityLights.Add(new LightData() {});}
-        if(PrevLightCount != RayTracingMaster._rayTracingLights.Count) LightsHaveUpdated = true;
-        PrevLightCount = RayTracingMaster._rayTracingLights.Count;
        
-        MyMeshesCompacted.Clear();     
-        int MeshDataCount =  RenderQue.Count;
-        AggData[] Aggs = new AggData[InstanceData.RenderQue.Count];
-        int aggregated_bvh_node_count = 2 * (MeshDataCount + InstanceRenderQue.Count);
-        int AggNodeCount = aggregated_bvh_node_count;
-        int AggTriCount = 0;
-        int MatOffset = 0;
-        for(int i = 0; i < MeshDataCount; i++) {
-            if(!RenderQue[i].IsSkinnedGroup) RenderQue[i].UpdateAABB(RenderQue[i].transform);
-             MyMeshesCompacted.Add(new MyMeshDataCompacted() {
-                mesh_data_bvh_offsets = aggregated_bvh_node_count,
-                Transform = RenderQue[i].transform.worldToLocalMatrix,
-                Inverse = RenderQue[i].transform.worldToLocalMatrix.inverse,
-                Center = RenderQue[i].transform.position,
-                AggIndexCount = AggTriCount,
-                AggNodeCount = AggNodeCount,
-                MaterialOffset = MatOffset,
-                IsVoxel = 0, SizeX = 0, SizeY = 0, SizeZ = 0,
-                LightTriCount = RenderQue[i].LightTriangles.Count,
-                LightPDF = RenderQue[i].TotEnergy
-            });
-            MatOffset += RenderQue[i].MatOffset;
-            MeshAABBs[i] = RenderQue[i].aabb;
-            AggNodeCount += RenderQue[i].AggBVHNodeCount;//Can I replace this with just using aggregated_bvh_node_count below?
-            AggTriCount += RenderQue[i].AggIndexCount;
-            aggregated_bvh_node_count += RenderQue[i].BVH.cwbvhnode_count;
-        }
-        for(int i = 0; i < InstanceData.RenderQue.Count; i++) {
-            Aggs[i].AggIndexCount = AggTriCount;
-            Aggs[i].AggNodeCount = AggNodeCount;
-            Aggs[i].MaterialOffset = MatOffset;
-            Aggs[i].mesh_data_bvh_offsets = aggregated_bvh_node_count;
-            Aggs[i].LightTriCount = InstanceData.RenderQue[i].LightTriangles.Count;
-            MatOffset += InstanceData.RenderQue[i].MatOffset;
-            AggNodeCount += InstanceData.RenderQue[i].AggBVHNodeCount;//Can I replace this with just using aggregated_bvh_node_count below?
-            AggTriCount += InstanceData.RenderQue[i].AggIndexCount;
-            aggregated_bvh_node_count += InstanceData.RenderQue[i].BVH.cwbvhnode_count;            
-        }
-        for(int i = 0; i < InstanceRenderQue.Count; i++) {
-             int Index = InstanceData.RenderQue.IndexOf(InstanceRenderQue[i].InstanceParent);
-             MyMeshesCompacted.Add(new MyMeshDataCompacted() {
-                mesh_data_bvh_offsets = Aggs[Index].mesh_data_bvh_offsets,
-                Transform = InstanceRenderQue[i].transform.worldToLocalMatrix,
-                Inverse = InstanceRenderQue[i].transform.worldToLocalMatrix.inverse,
-                Center = InstanceRenderQue[i].transform.position,
-                AggIndexCount = Aggs[Index].AggIndexCount,
-                AggNodeCount = Aggs[Index].AggNodeCount,
-                MaterialOffset = Aggs[Index].MaterialOffset,
-                IsVoxel = 0, SizeX = 0, SizeY = 0, SizeZ = 0,
-                LightTriCount = Aggs[Index].LightTriCount
-              });
-             AABB aabb = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
-             CreateAABB(InstanceRenderQue[i].transform, ref aabb);
-            MeshAABBs[RenderQue.Count + i] = aabb;
+            int MatOffset = 0;
+            int MeshDataCount =  RenderQue.Count;
+            int aggregated_bvh_node_count = 2 * (MeshDataCount + InstanceRenderQue.Count);
+            int AggNodeCount = aggregated_bvh_node_count;
+            int AggTriCount = 0;
+        if(ChildrenUpdated || !didstart) {
+            MyMeshesCompacted.Clear();     
+            AggData[] Aggs = new AggData[InstanceData.RenderQue.Count];
+            for(int i = 0; i < MeshDataCount; i++) {
+                RenderQue[i].UpdateAABB(RenderQue[i].transform);
+                 MyMeshesCompacted.Add(new MyMeshDataCompacted() {
+                    mesh_data_bvh_offsets = aggregated_bvh_node_count,
+                    Transform = RenderQue[i].transform.worldToLocalMatrix,
+                    Inverse = RenderQue[i].transform.worldToLocalMatrix.inverse,
+                    AggIndexCount = AggTriCount,
+                    AggNodeCount = AggNodeCount,
+                    MaterialOffset = MatOffset,
+                    IsVoxel = 0, SizeX = 0, SizeY = 0, SizeZ = 0,
+                    LightTriCount = RenderQue[i].LightTriangles.Count,
+                    LightPDF = RenderQue[i].TotEnergy
+                });
+                RenderQue[i].CompactedMeshData = MyMeshesCompacted.Count - 1;
+                MatOffset += RenderQue[i].MatOffset;
+                MeshAABBs[i] = RenderQue[i].aabb;
+                AggNodeCount += RenderQue[i].AggBVHNodeCount;//Can I replace this with just using aggregated_bvh_node_count below?
+                AggTriCount += RenderQue[i].AggIndexCount;
+                aggregated_bvh_node_count += RenderQue[i].BVH.cwbvhnode_count;
+            }
+            for(int i = 0; i < InstanceData.RenderQue.Count; i++) {
+                Aggs[i].AggIndexCount = AggTriCount;
+                Aggs[i].AggNodeCount = AggNodeCount;
+                Aggs[i].MaterialOffset = MatOffset;
+                Aggs[i].mesh_data_bvh_offsets = aggregated_bvh_node_count;
+                Aggs[i].LightTriCount = InstanceData.RenderQue[i].LightTriangles.Count;
+                MatOffset += InstanceData.RenderQue[i].MatOffset;
+                AggNodeCount += InstanceData.RenderQue[i].AggBVHNodeCount;//Can I replace this with just using aggregated_bvh_node_count below?
+                AggTriCount += InstanceData.RenderQue[i].AggIndexCount;
+                aggregated_bvh_node_count += InstanceData.RenderQue[i].BVH.cwbvhnode_count;            
+            }
+            for(int i = 0; i < InstanceRenderQue.Count; i++) {
+                 int Index = InstanceData.RenderQue.IndexOf(InstanceRenderQue[i].InstanceParent);
+                 MyMeshesCompacted.Add(new MyMeshDataCompacted() {
+                    mesh_data_bvh_offsets = Aggs[Index].mesh_data_bvh_offsets,
+                    Transform = InstanceRenderQue[i].transform.worldToLocalMatrix,
+                    Inverse = InstanceRenderQue[i].transform.localToWorldMatrix,
+                    AggIndexCount = Aggs[Index].AggIndexCount,
+                    AggNodeCount = Aggs[Index].AggNodeCount,
+                    MaterialOffset = Aggs[Index].MaterialOffset,
+                    IsVoxel = 0, SizeX = 0, SizeY = 0, SizeZ = 0,
+                    LightTriCount = Aggs[Index].LightTriCount
+                  });
+                 AABB aabb = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
+                 CreateAABB(InstanceRenderQue[i].transform, ref aabb);
+                MeshAABBs[RenderQue.Count + i] = aabb;
+            }
+            PreVoxelMeshCount = MyMeshesCompacted.Count;
+            List<MyMeshDataCompacted> TempMeshCompacted = new List<MyMeshDataCompacted>();
+            for(int i = 0; i < VoxelRenderQue.Count; i++) {
+                 TempMeshCompacted.Add(new MyMeshDataCompacted() {
+                    mesh_data_bvh_offsets = 0,
+                    Transform = VoxelRenderQue[i].transform.worldToLocalMatrix,
+                    Inverse = VoxelRenderQue[i].transform.worldToLocalMatrix.inverse,
+                    AggIndexCount = AggTriCount,
+                    AggNodeCount = AggNodeCount,
+                    MaterialOffset = MatOffset,
+                    IsVoxel = 1,
+                    SizeX = (int)VoxelRenderQue[i].Builder.FinalSize,
+                    SizeY = (int)VoxelRenderQue[i].Builder.VoxelSize,
+                    SizeZ = (int)VoxelRenderQue[i].Builder.BrickSize
+                  });
+                 AggTriCount += VoxelRenderQue[i].BrickmapTraverse.Count;
+                 AggNodeCount += VoxelRenderQue[i].BrickmapTraverse.Count;
+                 MatOffset += VoxelRenderQue[i]._Materials.Count;
+                 VoxelRenderQue[i].UpdateAABB();
+                 VoxelAABBs[i] = VoxelRenderQue[i].aabb;
+
+            }
+            if(VoxelRenderQue.Count != 0) {
+                BVH2Builder BVH2 = new BVH2Builder(VoxelAABBs);
+                BVH8Builder TLASBVH8 = new BVH8Builder(BVH2, ref TempMeshCompacted);
+                MyMeshesCompacted.AddRange(TempMeshCompacted);
+                if(VoxelTLAS == null || VoxelTLAS.Length != TLASBVH8.BVH8Nodes.Length) VoxelTLAS = new BVHNode8DataCompressed[TLASBVH8.BVH8Nodes.Length];
+                CommonFunctions.Aggregate(ref VoxelTLAS, ref TLASBVH8.BVH8Nodes);
+            } else {
+                if(VoxelTLAS == null || VoxelTLAS.Length != 1) VoxelTLAS = new BVHNode8DataCompressed[1];
+            }
+
+
+            Debug.Log("Total Object Count: " + MeshAABBs.Length);
+            UpdateMaterials();
+        } else {
+            UnityEngine.Profiling.Profiler.BeginSample("Refit TLAS");
+            UnityEngine.Profiling.Profiler.BeginSample("Update Transforms");
+            Transform transform;
+            ParentObject TargetParent;
+            for(int i = 0; i < MeshDataCount; i++) {
+                TargetParent = RenderQue[i];
+                transform = TargetParent.ThisTransform;
+                if(transform.hasChanged) {
+                    TargetParent.UpdateAABB(transform);            
+                    MyMeshDataCompacted TempMesh = MyMeshesCompacted[TargetParent.CompactedMeshData];
+                    TempMesh.Transform = transform.worldToLocalMatrix;
+                    TempMesh.Inverse = transform.localToWorldMatrix;
+                    MyMeshesCompacted[TargetParent.CompactedMeshData] = TempMesh;
+                    transform.hasChanged = false;
+                }
+                MeshAABBs[TargetParent.CompactedMeshData] = TargetParent.aabb;
+                MatOffset += TargetParent.MatOffset;
+                AggNodeCount += TargetParent.AggBVHNodeCount;//Can I replace this with just using aggregated_bvh_node_count below?
+                AggTriCount += TargetParent.AggIndexCount;
+                aggregated_bvh_node_count += TargetParent.BVH.cwbvhnode_count;
+            }
+            UnityEngine.Profiling.Profiler.EndSample();
+
+            for(int i = 0; i < InstanceRenderQue.Count; i++) {
+                transform = InstanceRenderQue[i].transform;
+                if(transform.hasChanged) {
+                    MyMeshDataCompacted TempMesh = MyMeshesCompacted[InstanceRenderQue[i].CompactedMeshData];
+                    TempMesh.Transform = transform.worldToLocalMatrix;
+                    TempMesh.Inverse = transform.localToWorldMatrix;
+                    MyMeshesCompacted[InstanceRenderQue[i].CompactedMeshData] = TempMesh;
+                    transform.hasChanged = false;
+                    AABB aabb = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
+                    CreateAABB(transform, ref aabb);
+                    MeshAABBs[InstanceRenderQue[i].CompactedMeshData] = aabb;
+                }
+             }
+            for(int i = 0; i < InstanceData.RenderQue.Count; i++) {
+                MatOffset += InstanceData.RenderQue[i]._Materials.Count;
+            }
+             AggNodeCount = 0;
+            for(int i = 0; i < VoxelRenderQue.Count; i++) {
+                MyMeshDataCompacted TempMesh = MyMeshesCompacted[i + PreVoxelMeshCount];
+                    // if(VoxelRenderQue[i].transform.hasChanged) {
+                        TempMesh.Transform = VoxelRenderQue[i].transform.worldToLocalMatrix;
+                        TempMesh.Inverse = VoxelRenderQue[i].transform.localToWorldMatrix;
+                        TempMesh.AggIndexCount = AggTriCount;
+                        TempMesh.AggNodeCount = AggNodeCount;
+                        TempMesh.MaterialOffset = MatOffset;
+                        TempMesh.IsVoxel = 1;
+                        TempMesh.SizeX = (int)VoxelRenderQue[i].Builder.FinalSize;
+                        TempMesh.SizeY = (int)VoxelRenderQue[i].Builder.VoxelSize;
+                        TempMesh.SizeZ = (int)VoxelRenderQue[i].Builder.BrickSize;
+                        VoxelRenderQue[i].transform.hasChanged = false;
+                    // }
+                    MyMeshesCompacted[i + PreVoxelMeshCount] = TempMesh;
+                 AggTriCount += VoxelRenderQue[i].BrickmapTraverse.Count;
+                 AggNodeCount += VoxelRenderQue[i].BrickmapTraverse.Count;
+                 MatOffset += VoxelRenderQue[i]._Materials.Count;
+                 VoxelRenderQue[i].UpdateAABB();
+                 VoxelAABBs[i] = VoxelRenderQue[i].aabb;
+
+            }
+            if(VoxelRenderQue.Count != 0) {
+                BVH2Builder BVH22 = new BVH2Builder(VoxelAABBs);
+                List<MyMeshDataCompacted> TempMeshCompacted = new List<MyMeshDataCompacted>();
+                for(int i = PreVoxelMeshCount; i < MyMeshesCompacted.Count; i++) {
+                    TempMeshCompacted.Add(MyMeshesCompacted[i]);
+                }
+                BVH8Builder TLASBVH82 = new BVH8Builder(BVH22, ref TempMeshCompacted);
+                for(int i = PreVoxelMeshCount; i < MyMeshesCompacted.Count; i++) {
+                    MyMeshesCompacted[i] = TempMeshCompacted[i - PreVoxelMeshCount];
+                }
+                if(VoxelTLAS == null || VoxelTLAS.Length != TLASBVH82.BVH8Nodes.Length) VoxelTLAS = new BVHNode8DataCompressed[TLASBVH82.BVH8Nodes.Length];
+                CommonFunctions.Aggregate(ref VoxelTLAS, ref TLASBVH82.BVH8Nodes);
+            } else {
+                if(VoxelTLAS == null || VoxelTLAS.Length != 1) VoxelTLAS = new BVHNode8DataCompressed[1];
+            }
+            UnityEngine.Profiling.Profiler.EndSample();
+
         }
         LightMeshData CurLightMesh;
         for(int i = 0; i < LightMeshCount; i++) {
             CurLightMesh = LightMeshes[i];
-            CurLightMesh.Inverse = LightTransforms[i].worldToLocalMatrix.inverse;
+            CurLightMesh.Inverse = LightTransforms[i].localToWorldMatrix;
             CurLightMesh.Center = LightTransforms[i].position;
             LightMeshes[i] = CurLightMesh;
         }
-        BVH2 = new BVH2Builder(MeshAABBs);
-        BVH8Builder TLASBVH8 = new BVH8Builder(BVH2, ref MyMeshesCompacted);
+        if(ChildrenUpdated || !didstart) {
+            ConstructNewTLAS();
+            BVH8AggregatedBuffer.SetData(TempBVHArray,0,0,TempBVHArray.Length);
+        } else {
+            UnityEngine.Profiling.Profiler.BeginSample("TLAS Refitting");
+            RefitTLAS(MeshAABBs);
+            UnityEngine.Profiling.Profiler.EndSample();
+        }
+        if(!didstart) didstart = true;
         
-        if(TempBVHArray == null || TLASBVH8.BVH8Nodes.Length != TempBVHArray.Length) TempBVHArray = new BVHNode8DataCompressed[TLASBVH8.BVH8Nodes.Length];
-        CommonFunctions.Aggregate(ref TempBVHArray, ref TLASBVH8.BVH8Nodes);
-        BVH8AggregatedBuffer.SetData(TempBVHArray,0,0,TempBVHArray.Length);
-        
-        VoxOffset = MyMeshesCompacted.Count;
+        VoxOffset = PreVoxelMeshCount;
         AggNodeCount = 0;
         if(VoxelRenderQue.Count != 0) 
             UseVoxels = true;
         else 
             UseVoxels = false;
-        List<MyMeshDataCompacted> TempMeshCompacted = new List<MyMeshDataCompacted>();
-        for(int i = 0; i < VoxelRenderQue.Count; i++) {
-             TempMeshCompacted.Add(new MyMeshDataCompacted() {
-                mesh_data_bvh_offsets = 0,
-                Transform = VoxelRenderQue[i].transform.worldToLocalMatrix,
-                Inverse = VoxelRenderQue[i].transform.worldToLocalMatrix.inverse,
-                Center = VoxelRenderQue[i].transform.position,
-                AggIndexCount = AggTriCount,
-                AggNodeCount = AggNodeCount,
-                MaterialOffset = MatOffset,
-                IsVoxel = 1,
-                SizeX = (int)VoxelRenderQue[i].Builder.FinalSize,
-                SizeY = (int)VoxelRenderQue[i].Builder.VoxelSize,
-                SizeZ = (int)VoxelRenderQue[i].Builder.BrickSize
-              });
-             AggTriCount += VoxelRenderQue[i].BrickmapTraverse.Count;
-             AggNodeCount += VoxelRenderQue[i].BrickmapTraverse.Count;
-             MatOffset += VoxelRenderQue[i]._Materials.Count;
-             VoxelRenderQue[i].UpdateAABB();
-             VoxelAABBs[i] = VoxelRenderQue[i].aabb;
 
-        }
-        if(VoxelRenderQue.Count != 0) {
-            BVH2 = new BVH2Builder(VoxelAABBs);
-            TLASBVH8 = new BVH8Builder(BVH2, ref TempMeshCompacted);
-            MyMeshesCompacted.AddRange(TempMeshCompacted);
-            if(VoxelTLAS == null || VoxelTLAS.Length != TLASBVH8.BVH8Nodes.Length) VoxelTLAS = new BVHNode8DataCompressed[TLASBVH8.BVH8Nodes.Length];
-            CommonFunctions.Aggregate(ref VoxelTLAS, ref TLASBVH8.BVH8Nodes);
-        } else {
-            if(VoxelTLAS == null || VoxelTLAS.Length != 1) VoxelTLAS = new BVHNode8DataCompressed[1];
-        }
 
         return (LightsHaveUpdated || ChildrenUpdated);//The issue is that all light triangle indices start at 0, and thus might not get correctly sorted for indices
     }
@@ -811,66 +1315,69 @@ public void CreateAABB(Transform transform, ref AABB aabb) {//Update the Transfo
         int ParentCount = RenderQue.Count;
         RayTracingObject CurrentMaterial;
         MaterialData TempMat;
-        for(int i = 0; i < ParentCount; i++) {
-            int ChildCount = RenderQue[i].ChildObjects.Length;
-            for(int i2 = 0; i2 < ChildCount; i2++) {
-                CurrentMaterial = RenderQue[i].ChildObjects[i2];
-                int MaterialCount = CurrentMaterial.MaterialIndex.Length;
-                for(int i3 = 0; i3 < MaterialCount; i3++) {
-                    int Index = CurrentMaterial.Indexes[i3];
-                    TempMat = _Materials[CurrentMaterial.MaterialIndex[i3]];
-                    if(TempMat.HasAlbedoTex != 1)  TempMat.BaseColor = CurrentMaterial.BaseColor[Index];
-                    TempMat.emmissive = CurrentMaterial.emmission[Index];
-                    TempMat.Roughness = ((int)CurrentMaterial.MaterialOptions[Index] != 1) ? CurrentMaterial.Roughness[Index] : Mathf.Max(CurrentMaterial.Roughness[Index], 0.000001f);
-                    TempMat.TransmittanceColor = CurrentMaterial.TransmissionColor[Index];
-                    TempMat.MatType = (int)CurrentMaterial.MaterialOptions[Index];
-                    TempMat.EmissionColor = CurrentMaterial.EmissionColor[Index];
-                    TempMat.metallic = CurrentMaterial.Metallic[Index];
-                    TempMat.specularTint = CurrentMaterial.SpecularTint[Index];
-                    TempMat.sheen = CurrentMaterial.Sheen[Index];
-                    TempMat.sheenTint = CurrentMaterial.SheenTint[Index];
-                    TempMat.clearcoat = CurrentMaterial.ClearCoat[Index];
-                    TempMat.IOR = CurrentMaterial.IOR[Index];
-                    TempMat.Thin = CurrentMaterial.Thin[Index];
-                    TempMat.clearcoatGloss = CurrentMaterial.ClearCoatGloss[Index];
-                    TempMat.specTrans = CurrentMaterial.SpecTrans[Index];
-                    TempMat.anisotropic = CurrentMaterial.Anisotropic[Index];
-                    TempMat.diffTrans = CurrentMaterial.DiffTrans[Index];
-                    TempMat.flatness = CurrentMaterial.Flatness[Index];
-                    TempMat.Specular = CurrentMaterial.Specular[Index];
-                    _Materials[CurrentMaterial.MaterialIndex[i3]] = TempMat;
-                }
+        int ChangedMaterialCount = MaterialsChanged.Count;
+        for(int i = 0; i < ChangedMaterialCount; i++) {
+            CurrentMaterial = MaterialsChanged[i];
+            int MaterialCount = CurrentMaterial.MaterialIndex.Length;
+            for(int i3 = 0; i3 < MaterialCount; i3++) {
+                int Index = CurrentMaterial.Indexes[i3];
+                TempMat = _Materials[CurrentMaterial.MaterialIndex[i3]];
+                if(TempMat.HasAlbedoTex != 1)  TempMat.BaseColor = CurrentMaterial.BaseColor[Index];
+                TempMat.emmissive = CurrentMaterial.emmission[Index];
+                TempMat.Roughness = ((int)CurrentMaterial.MaterialOptions[Index] != 1) ? CurrentMaterial.Roughness[Index] : Mathf.Max(CurrentMaterial.Roughness[Index], 0.000001f);
+                TempMat.TransmittanceColor = CurrentMaterial.TransmissionColor[Index];
+                TempMat.MatType = (int)CurrentMaterial.MaterialOptions[Index];
+                TempMat.EmissionColor = CurrentMaterial.EmissionColor[Index];
+                TempMat.metallic = CurrentMaterial.Metallic[Index];
+                TempMat.specularTint = CurrentMaterial.SpecularTint[Index];
+                TempMat.sheen = CurrentMaterial.Sheen[Index];
+                TempMat.sheenTint = CurrentMaterial.SheenTint[Index];
+                TempMat.clearcoat = CurrentMaterial.ClearCoat[Index];
+                TempMat.IOR = CurrentMaterial.IOR[Index];
+                TempMat.Thin = CurrentMaterial.Thin[Index];
+                TempMat.clearcoatGloss = CurrentMaterial.ClearCoatGloss[Index];
+                TempMat.specTrans = CurrentMaterial.SpecTrans[Index];
+                TempMat.anisotropic = CurrentMaterial.Anisotropic[Index];
+                TempMat.diffTrans = CurrentMaterial.DiffTrans[Index];
+                TempMat.flatness = CurrentMaterial.Flatness[Index];
+                TempMat.Specular = CurrentMaterial.Specular[Index];
+                _Materials[CurrentMaterial.MaterialIndex[i3]] = TempMat;
             }
+            CurrentMaterial.NeedsToUpdate = false;
         }
+        MaterialsChanged.Clear();
+
         ParentCount = InstanceData.RenderQue.Count;
         for(int i = 0; i < ParentCount; i++) {
             int ChildCount = InstanceData.RenderQue[i].ChildObjects.Length;
             for(int i2 = 0; i2 < ChildCount; i2++) {
                 CurrentMaterial = InstanceData.RenderQue[i].ChildObjects[i2];
-                int MaterialCount = CurrentMaterial.MaterialIndex.Length;
-                for(int i3 = 0; i3 < MaterialCount; i3++) {
-                    int Index = CurrentMaterial.Indexes[i3];
-                    TempMat = _Materials[CurrentMaterial.MaterialIndex[i3]];
-                    if(TempMat.HasAlbedoTex != 1)  TempMat.BaseColor = CurrentMaterial.BaseColor[Index];
-                    TempMat.emmissive = CurrentMaterial.emmission[Index];
-                    TempMat.Roughness = ((int)CurrentMaterial.MaterialOptions[Index] != 1) ? CurrentMaterial.Roughness[Index] : Mathf.Max(CurrentMaterial.Roughness[Index], 0.000001f);
-                    TempMat.TransmittanceColor = CurrentMaterial.TransmissionColor[Index];
-                    TempMat.MatType = (int)CurrentMaterial.MaterialOptions[Index];
-                    TempMat.EmissionColor = CurrentMaterial.EmissionColor[Index];
-                    TempMat.metallic = CurrentMaterial.Metallic[Index];
-                    TempMat.specularTint = CurrentMaterial.SpecularTint[Index];
-                    TempMat.sheen = CurrentMaterial.Sheen[Index];
-                    TempMat.sheenTint = CurrentMaterial.SheenTint[Index];
-                    TempMat.clearcoat = CurrentMaterial.ClearCoat[Index];
-                    TempMat.IOR = CurrentMaterial.IOR[Index];
-                    TempMat.Thin = CurrentMaterial.Thin[Index];
-                    TempMat.clearcoatGloss = CurrentMaterial.ClearCoatGloss[Index];
-                    TempMat.specTrans = CurrentMaterial.SpecTrans[Index];
-                    TempMat.anisotropic = CurrentMaterial.Anisotropic[Index];
-                    TempMat.diffTrans = CurrentMaterial.DiffTrans[Index];
-                    TempMat.flatness = CurrentMaterial.Flatness[Index];
-                    TempMat.Specular = CurrentMaterial.Specular[Index];
-                    _Materials[CurrentMaterial.MaterialIndex[i3]] = TempMat;
+                if(CurrentMaterial.NeedsToUpdate || !didstart) {
+                    int MaterialCount = CurrentMaterial.MaterialIndex.Length;
+                    for(int i3 = 0; i3 < MaterialCount; i3++) {
+                        int Index = CurrentMaterial.Indexes[i3];
+                        TempMat = _Materials[CurrentMaterial.MaterialIndex[i3]];
+                        if(TempMat.HasAlbedoTex != 1)  TempMat.BaseColor = CurrentMaterial.BaseColor[Index];
+                        TempMat.emmissive = CurrentMaterial.emmission[Index];
+                        TempMat.Roughness = ((int)CurrentMaterial.MaterialOptions[Index] != 1) ? CurrentMaterial.Roughness[Index] : Mathf.Max(CurrentMaterial.Roughness[Index], 0.000001f);
+                        TempMat.TransmittanceColor = CurrentMaterial.TransmissionColor[Index];
+                        TempMat.MatType = (int)CurrentMaterial.MaterialOptions[Index];
+                        TempMat.EmissionColor = CurrentMaterial.EmissionColor[Index];
+                        TempMat.metallic = CurrentMaterial.Metallic[Index];
+                        TempMat.specularTint = CurrentMaterial.SpecularTint[Index];
+                        TempMat.sheen = CurrentMaterial.Sheen[Index];
+                        TempMat.sheenTint = CurrentMaterial.SheenTint[Index];
+                        TempMat.clearcoat = CurrentMaterial.ClearCoat[Index];
+                        TempMat.IOR = CurrentMaterial.IOR[Index];
+                        TempMat.Thin = CurrentMaterial.Thin[Index];
+                        TempMat.clearcoatGloss = CurrentMaterial.ClearCoatGloss[Index];
+                        TempMat.specTrans = CurrentMaterial.SpecTrans[Index];
+                        TempMat.anisotropic = CurrentMaterial.Anisotropic[Index];
+                        TempMat.diffTrans = CurrentMaterial.DiffTrans[Index];
+                        TempMat.flatness = CurrentMaterial.Flatness[Index];
+                        TempMat.Specular = CurrentMaterial.Specular[Index];
+                        _Materials[CurrentMaterial.MaterialIndex[i3]] = TempMat;
+                    }
                 }
             }
         }

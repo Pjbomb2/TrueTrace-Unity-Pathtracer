@@ -7,29 +7,37 @@ using System.Collections.Generic;
 public class RayTracingObject : MonoBehaviour {
 	public enum Options {Diffuse, Disney, Glossy, Cutout, Volumetric, SubSurfaceScattering, DiffuseTransmission, Plastic};
 	public Options[] MaterialOptions;
-	public Vector3[] TransmissionColor, BaseColor;
-	public float[] emmission; 
-	public Vector3[] EmissionColor;
-	public float[] Roughness;
-	public float[] IOR;
-	public float[] Metallic;
-	public float[] SpecularTint;
-	public float[] Sheen;
-	public float[] SheenTint;
-	public float[] ClearCoat;
-	public float[] ClearCoatGloss;
-	public float[] Anisotropic;
-	public float[] Flatness;
-	public float[] DiffTrans;
-	public float[] SpecTrans;
-	public int[] Thin;
-	public string[] Names;
-	public float[] Specular;
+	[SerializeField] public Vector3[] TransmissionColor, BaseColor;
+	[SerializeField] public float[] emmission; 
+	[SerializeField] public Vector3[] EmissionColor;
+	[SerializeField] public float[] Roughness;
+	[SerializeField] public float[] IOR;
+	[SerializeField] public float[] Metallic;
+	[SerializeField] public float[] SpecularTint;
+	[SerializeField] public float[] Sheen;
+	[SerializeField] public float[] SheenTint;
+	[SerializeField] public float[] ClearCoat;
+	[SerializeField] public float[] ClearCoatGloss;
+	[SerializeField] public float[] Anisotropic;
+	[SerializeField] public float[] Flatness;
+	[SerializeField] public float[] DiffTrans;
+	[SerializeField] public float[] SpecTrans;
+	[SerializeField] public int[] Thin;
+	[SerializeField] public string[] Names;
+	[SerializeField] public float[] Specular;
+	[SerializeField] public int Selected;
 	public int[] Indexes;
+	public bool NeedsToUpdate;
 
 	[HideInInspector] public int[] MaterialIndex;
 	[HideInInspector] public int[] LocalMaterialIndex;
+	AssetManager Assets;
+	public void CallMaterialEdited() {
+		Assets.MaterialsChanged.Add(this);
+	}
+
 	public void matfill() {
+		Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
 		 Mesh mesh = new Mesh();
 		 int SubMeshCount;
 		 if(GetComponent<MeshFilter>() != null) { 
@@ -92,6 +100,9 @@ public class RayTracingObject : MonoBehaviour {
 							Color Col = SharedMaterials[i].GetColor("_EmissionColor");
 							EmissionColor[i] = new Vector3(Col.r, Col.g, Col.b).normalized;
 						}
+					} else if(SharedMaterials[i].GetTexture("_EmissionMap") != null) {
+						BaseColor[i] = new Vector3(1, 1, 1);
+						emmission[i] = 12.0f;
 					}
 					if(SharedMaterials[i].GetFloat("_Mode") == 3.0f) {
 						MaterialOptions[i] = Options.Disney;
@@ -102,32 +113,13 @@ public class RayTracingObject : MonoBehaviour {
 					if(SharedMaterials[i].GetFloat("_Mode") == 1.0f) {
 						MaterialOptions[i] = Options.Cutout;
 					}
-					if(!EmissionColored) BaseColor[i] = (SharedMaterials[i].mainTexture == null) ? ((SharedMaterials[i].HasProperty("_Color")) ? new Vector3(SharedMaterials[i].color.r, SharedMaterials[i].color.g, SharedMaterials[i].color.b) : new Vector3(0.78f, 0.14f, 0.69f)) : new Vector3(0.78f, 0.14f, 0.69f);
+					if(!EmissionColored) BaseColor[i] = (SharedMaterials[i].mainTexture == null) ? ((SharedMaterials[i].HasProperty("_Color")) ? new Vector3(SharedMaterials[i].color.r, SharedMaterials[i].color.g, SharedMaterials[i].color.b) : new Vector3(1,1,1)) : new Vector3(1,1,1);
 				}
 			}
 		} catch(System.Exception e) {
 			Debug.Log("ERROR AT: " + this.gameObject.name);
 		}
-		for(int i = 0; i < SubMeshCount; i++) {
-			SharedMaterials[i].GetTexturePropertyNames(PropertyNames);
-					// if(SharedMaterials[i].GetFloat("_Mode") == 1.0f) {
-					// 	MaterialOptions[i] = Options.Cutout;
-					// }
-				if(MaterialOptions[i] != Options.Cutout) MaterialOptions[i] = Options.Disney;
-			// Specular[i] = 0;
-			if(PropertyNames.Contains("_Metallic")) {
-				MaterialOptions[i] = Options.Disney;
-				IOR[i] = 1;
-				Metallic[i] = SharedMaterials[i].GetFloat("_Metallic");
-
-			}
-			if(PropertyNames.Contains("_Roughness")) {
-				MaterialOptions[i] = Options.Disney;
-				// IOR[i] = 1.33f;
-				Roughness[i] = SharedMaterials[i].GetFloat("_Roughness");
-
-			}
-		}
+		
 		mesh = null;
 	}
 
@@ -153,8 +145,10 @@ public class RayTracingObject : MonoBehaviour {
     private void OnDisable() {
     	if(gameObject.scene.isLoaded && this.transform.parent.GetComponent<ParentObject>() != null) {
     		this.transform.parent.GetComponent<ParentObject>().NeedsToUpdate = true;
+    		if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
     	} else if(gameObject.scene.isLoaded && this.transform.GetComponent<ParentObject>() != null) {
 	    	this.transform.GetComponent<ParentObject>().NeedsToUpdate = true;
     	}
     }
+
 }

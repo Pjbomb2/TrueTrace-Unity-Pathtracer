@@ -175,12 +175,14 @@ int CurFrame;
 
 RWStructuredBuffer<SH> SHStruct;
 
+Texture2D<float4> TEX_PT_BASE_COLOR_A;
+
 [numthreads(16,16,1)]
 void CopyData (uint3 id : SV_DispatchThreadID)
 {
     int pixel_index = id.y * screen_width + id.x;
     STORE_SH(TEX_PT_COLOR_LF_SH, TEX_PT_COLOR_LF_COCG, id.xy, SHStruct[pixel_index]);
-    TEX_PT_COLOR_HF[id.xy] = float4(PerPixelRadiance[pixel_index].Direct,0);
+    TEX_PT_COLOR_HF[id.xy] = float4(PerPixelRadiance[pixel_index].Direct + PerPixelRadiance[pixel_index].Fog / ((TEX_PT_BASE_COLOR_A[id.xy].xyz != 0) ? TEX_PT_BASE_COLOR_A[id.xy].xyz : 1),0);
     TEX_PT_COLOR_SPEC[id.xy] = 0;
     TEX_PT_GEO_NORMAL_A[id.xy] = Normal[id.xy];
 
@@ -1279,7 +1281,6 @@ RWTexture2D<float4> IMG_ASVGF_HIST_COLOR_HF;
 RWTexture2D<float4> IMG_ASVGF_ATROUS_PONG_SPEC;
 RWTexture2D<float2> IMG_ASVGF_ATROUS_PONG_MOMENTS;
 RWTexture2D<float4> IMG_ASVGF_ATROUS_PONG_HF;
-Texture2D<float4> TEX_PT_BASE_COLOR_A;
 RWTexture2D<float4> IMG_ASVGF_COLOR;
 [numthreads(16,16,1)]
 void Atrous (uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGroupID : SV_GroupID, uint gl_LocalInvocationIndex : SV_GroupIndex, uint3 gl_LocalInvocationID : SV_GroupThreadID)
@@ -1349,7 +1350,7 @@ void Atrous (uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGro
             // final_color.r += gradient_lf;
 
 
-        IMG_ASVGF_COLOR[ipos] = float4(final_color, 0);
+        IMG_ASVGF_COLOR[ipos] = float4(saturate(final_color), 0);
     }
 }
 

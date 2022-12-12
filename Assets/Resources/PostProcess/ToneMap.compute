@@ -69,11 +69,37 @@ float3 ACESFilmicTonemap(float3 x) {
     return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
 }
 
+float3 TonemapUchimura ( float3 v ) {
+    const float P = 1.0f;  // max display brightness
+    const float a = 1.0f;  // contrast
+    const float m = 0.22f; // linear section start
+    const float l = 0.4f;  // linear section length
+    const float c = 1.33f; // black
+    const float b = 0.0f;  // pedestal
+
+    float l0 = ( ( P - m ) * l ) / a;
+    float L0 = m - m / a;
+    float L1 = m + ( 1.0f - m ) / a;
+    float S0 = m + l0;
+    float S1 = m + a * l0;
+    float C2 = ( a * P ) / ( P - S1 );
+    float CP = -C2 / P;
+
+    float3 w0 = 1.0f - smoothstep( 0.0f, m, v );
+    float3 w2 = step( m + l0, v );
+    float3 w1 = 1.0f - w0 - w2;
+
+    float3 T = m * pow( v / m, c ) + b;
+    float3 S = P - ( P - S1 ) * exp( CP * ( v - S0 ) );
+    float3 L = m + a * ( v - m );
+
+    return T * w0 + L * w1 + S * w2;
+}
 
 [numthreads(16,16,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     // TODO: insert actual code here!
-    float3 result = filmicToneMapping(Result[id.xy].xyz);
+    float3 result = TonemapUchimura(Result[id.xy].xyz);
     Result[id.xy] = float4(result, 1.0);
 }

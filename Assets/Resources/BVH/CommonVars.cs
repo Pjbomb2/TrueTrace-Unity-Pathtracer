@@ -237,6 +237,16 @@ namespace CommonVars {
         public uint count;
         public uint axis;
     }
+
+    [System.Serializable]
+    public struct TerrainDat {
+        public Vector3 PositionOffset;
+        public float HeightScale;
+        public float TerrainDim;
+        public Vector4 AlphaMap;
+        public Vector4 HeightMap;
+        public int MatOffset;
+    }
     
     [System.Serializable][System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
     unsafe public struct BVHNode8Data {
@@ -390,7 +400,6 @@ namespace CommonVars {
     public struct MyMeshDataCompacted {
         public Matrix4x4 Transform;
         public Matrix4x4 Inverse;
-        public Vector3 Center;
         public int AggIndexCount;
         public int AggNodeCount;
         public int MaterialOffset;
@@ -537,6 +546,7 @@ namespace CommonVars {
     [System.Serializable]
     public struct RayObjectTextureIndex {
         public RayTracingObject Obj;
+        public TerrainObject Terrain;
         public int ObjIndex;
     }
     
@@ -588,12 +598,10 @@ public static class CommonFunctions {
             matrix[2, 0] * direction.x + matrix[2, 1] * direction.y + matrix[2, 2] * direction.z
         );
     }
-    public static Matrix4x4 abs(Matrix4x4 matrix) {
-        Matrix4x4 result = new Matrix4x4();
+    public static void abs(ref Matrix4x4 matrix) {
         for (int i = 0; i < 4; i++) {
-            for (int i2 = 0; i2 < 4; i2++) result[i,i2] = Mathf.Abs(matrix[i,i2]);
+            for (int i2 = 0; i2 < 4; i2++) matrix[i,i2] = Mathf.Abs(matrix[i,i2]);
         }
-        return result;
     }
 
 }

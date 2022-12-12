@@ -371,8 +371,13 @@ unsafe public class BVH8Builder {
 
         List<MyMeshDataCompacted> TempCompressed = new List<MyMeshDataCompacted>(Meshes);
         Meshes.Clear();
+        int MaxVal = 0;
         for(int i = 0; i < cwbvh_indices.Length; ++i) {
             Meshes.Add(TempCompressed[cwbvh_indices[i]]);
+            MaxVal = Mathf.Max(cwbvh_indices[i], MaxVal);
+        }
+        for(int i = MaxVal + 1; i < TempCompressed.Count; i++) {
+            Meshes.Add(TempCompressed[i]);
         }
         TempCompressed.Clear();
         decisions = null;

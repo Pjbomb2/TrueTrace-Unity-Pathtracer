@@ -39,12 +39,13 @@ public Transform Hips;
 [HideInInspector] public int MatOffset;
 [HideInInspector] public int InstanceID;
 [HideInInspector] public StorableTransform[] CachedTransforms;
-public MeshDat CurMeshData;
+[HideInInspector] public MeshDat CurMeshData;
 public int TotalObjects;
 [HideInInspector] public List<MeshTransformVertexs> TransformIndexes;
 [HideInInspector] public bool HasCompleted;
 [HideInInspector] public float TotEnergy;
 [HideInInspector] public int LightCount;
+[HideInInspector] public Transform ThisTransform;
 
 [HideInInspector] public int ConstructKernel;
 [HideInInspector] public int RefitLayerKernel;
@@ -52,9 +53,13 @@ public int TotalObjects;
 [HideInInspector] public int NodeCompressKernel;
 [HideInInspector] public int NodeInitializerKernel;
 
+[HideInInspector] public int CompactedMeshData;
+
 [HideInInspector]public int InstanceReferences;
 
 [HideInInspector]public bool NeedsToUpdate;
+
+public AssetManager Assets;
 
 public int TotalTriangles;
 [HideInInspector]public bool IsSkinnedGroup;
@@ -110,6 +115,11 @@ public struct PerMatTextureData {
 }
 public List<PerMatTextureData> MatTexData;
 
+public void CallUpdate() {
+    if(!Assets.UpdateQue.Contains(this)) {
+        Assets.UpdateQue.Add(this);
+    }
+}
 
 public void ClearAll() {
 
@@ -183,6 +193,7 @@ public void init() {
     ToIllumTriBuffer = new List<int>();
     InstanceID = this.GetInstanceID();
     Name = this.name;
+    ThisTransform = this.transform;
     TransformIndexes = new List<MeshTransformVertexs>();
     _Materials = new List<MaterialData>();
     LightTriangles = new List<CudaLightTriangle>();
@@ -196,6 +207,9 @@ public void init() {
     NodeCompressKernel = MeshRefit.FindKernel("NodeCompress");
     NodeInitializerKernel = MeshRefit.FindKernel("NodeInitializer");
     AtlasSize = 8192;
+    if(this.GetComponentInParent<InstancedManager>() == null) {
+        Assets = this.GetComponentInParent<AssetManager>();
+    }
 }
 
 public void SetUpBuffers() {
@@ -256,7 +270,7 @@ public void CreateAtlas() {//Creates texture atlas
             mesh = obj.GetComponent<SkinnedMeshRenderer>().sharedMesh;
         }
         Material[] SharedMaterials = (obj.GetComponent<Renderer>() != null) ? obj.GetComponent<Renderer>().sharedMaterials : obj.GetComponent<SkinnedMeshRenderer>().sharedMaterials;       
-        int SharedMatLength = obj.Indexes.Length;
+        int SharedMatLength = Mathf.Min(obj.Indexes.Length, SharedMaterials.Length);
                     List<string> PropertyNames = new List<string>();
         int Offset = 0;
         for(int i = 0; i < SharedMatLength; ++i) {
@@ -433,7 +447,7 @@ public void LoadData() {
     List<Transform> TempObjectTransforms = new List<Transform>();
     TempObjectTransforms.Add(this.transform);
     IsSkinnedGroup = false;
-    for(int i = 0; i < this.transform.childCount; i++) if(this.transform.GetChild(i).gameObject.GetComponent<SkinnedMeshRenderer>() != null && this.transform.GetChild(i).gameObject.activeInHierarchy ) {IsSkinnedGroup = true; break;}
+    if(this.gameObject.GetComponent<MeshFilter>() == null)    for(int i = 0; i < this.transform.childCount; i++) if(this.transform.GetChild(i).gameObject.GetComponent<SkinnedMeshRenderer>() != null && this.transform.GetChild(i).gameObject.GetComponent<ParentObject>() == null && this.transform.GetChild(i).gameObject.activeInHierarchy ) {IsSkinnedGroup = true; break;}
     
     if(!IsSkinnedGroup) {
         for(int i = 0; i < this.transform.childCount; i++) {
@@ -455,7 +469,7 @@ public void LoadData() {
         }
     }
     if(this.gameObject.GetComponent<RayTracingObject>() != null) {
-        TempObjects = new List<RayTracingObject>();
+        if(TempObjects == null) TempObjects = new List<RayTracingObject>();
         TempObjects.Add(this.gameObject.GetComponent<RayTracingObject>());
         TempObjectTransforms.Add(this.transform);
     } else if(TempObjects == null || TempObjects.Count == 0) {
@@ -519,6 +533,7 @@ public void LoadData() {
                 MatIndex = i2 + RepCount;
                 var SubMesh = new int[IndiceLength];
                 System.Array.Fill(SubMesh, MatIndex);
+                // if(_Materials[MatIndex].SpecularTransmission != 1) 
                 CurMeshData.MatDat.AddRange(SubMesh);
             }
             if(IsSkinnedGroup) {
@@ -774,7 +789,8 @@ public void RefitMesh(ref ComputeBuffer RealizedAggNodes) {
         ToBVHIndexBuffer = new ComputeBuffer(ToBVHIndex.Length, 4);
         ToBVHIndexBuffer.SetData(ToBVHIndex);     
         HasStarted = true;
-        if(Hips == null && this.transform.GetChild(0).GetChild(0) != null) Hips = this.transform.GetChild(0).GetChild(0);
+        // if(Hips == null && this.transform.childCount != 0 && this.transform.GetChild(0).childCount != 0 && this.transform.GetChild(0).GetChild(0) != null) Hips = this.transform.GetChild(0).GetChild(0);
+        // else Hips = this.transform;
         int MaxLength = 0;
         for(int i = 0; i < LayerStack.Length; i++) {
             MaxLength = Mathf.Max(MaxLength, LayerStack[i].Slab.Count);
@@ -782,7 +798,7 @@ public void RefitMesh(ref ComputeBuffer RealizedAggNodes) {
         WorkingBuffer = new ComputeBuffer(MaxLength, 4);
         UnityEngine.Profiling.Profiler.EndSample();
     } else if(AllFull) {
-        if(Hips == null) Hips = this.transform;
+        if(Hips == null) Hips = SkinnedMeshes[0].rootBone;
         UnityEngine.Profiling.Profiler.BeginSample("ReMesh Fill");
         MeshRefit.SetMatrix("Transform2", this.transform.localToWorldMatrix);  
         MeshRefit.SetMatrix("Transform3", this.transform.worldToLocalMatrix);      
@@ -1011,6 +1027,7 @@ public async Task BuildTotal() {
     MeshCountChanged = false;
     HasCompleted = true;
     NeedsToUpdate = false;
+
     Debug.Log(Name + " Has Completed Building with " + AggTriangles.Length + " triangles");
 }
 
@@ -1025,12 +1042,14 @@ public void UpdateData() {
 public void UpdateAABB(Transform transform) {//Update the Transformed AABB by getting the new Max/Min of the untransformed AABB after transforming it
     Vector3 center = 0.5f * (aabb_untransformed.BBMin + aabb_untransformed.BBMax);
     Vector3 extent = 0.5f * (aabb_untransformed.BBMax - aabb_untransformed.BBMin);
-
-    Vector3 new_center = CommonFunctions.transform_position (transform.worldToLocalMatrix.inverse, center);
-    Vector3 new_extent = CommonFunctions.transform_direction(CommonFunctions.abs(transform.worldToLocalMatrix.inverse), extent);
+    Matrix4x4 Mat = transform.localToWorldMatrix;
+    Vector3 new_center = CommonFunctions.transform_position (Mat, center);
+    CommonFunctions.abs(ref Mat);
+    Vector3 new_extent = CommonFunctions.transform_direction(Mat, extent);
 
     aabb.BBMin = new_center - new_extent;
     aabb.BBMax = new_center + new_extent;
+    transform.hasChanged = false;
 }
 
 private void ConstructAABB() {

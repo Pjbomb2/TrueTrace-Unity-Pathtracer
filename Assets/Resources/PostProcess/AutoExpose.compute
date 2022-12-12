@@ -80,13 +80,13 @@ float calculateAverageLuminance() {
     return lerp(eCurrent, eTarget, speed * 2.0 * EXPOSURE_SPEED * (frameTime / 0.033));
 }
 
-
+float Exposure;
 [numthreads(1,1,1)]
 void AutoExpose (uint3 id : SV_DispatchThreadID)
 {
     // TODO: insert actual code here!
 
-    A[0] = calculateAverageLuminance();
+    A[0] = ((Exposure == 1) ? calculateAverageLuminance() : Exposure);
 }
 
 

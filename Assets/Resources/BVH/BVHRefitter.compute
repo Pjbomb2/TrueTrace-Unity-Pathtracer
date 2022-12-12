@@ -270,6 +270,42 @@ void RefitLayer (uint3 id : SV_DispatchThreadID)
 
 }
 
+#pragma kernel RefitBVHLayer
+
+struct BoundingBox {
+    float3 BBMax;
+    float3 BBMin;
+};
+StructuredBuffer<BoundingBox> Boxs;
+[numthreads(KernelRatio,1,1)]
+void RefitBVHLayer (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x > NodeCount)
+        return;
+    const int CurrentParent = NodesToWork[id.x];
+
+    float3 RunningMax = AllNodes[CurrentParent].BBMax;
+    float3 RunningMin = AllNodes[CurrentParent].BBMin;
+    
+    [unroll]
+    for(int i = 0; i < 8; i++) {
+        [branch]if(ReverseStack[CurrentParent].Leaf[i] == 0) {
+            RunningMax = max(RunningMax, AllNodes[ReverseStack[CurrentParent].Children[i]].BBMax);
+            RunningMin = min(RunningMin, AllNodes[ReverseStack[CurrentParent].Children[i]].BBMin);
+        } else if(ReverseStack[CurrentParent].Leaf[i] > 0) {
+            for(int i4 = ReverseStack[CurrentParent].Leaf[i] - 1; i4 < ReverseStack[CurrentParent].Children[i] + ReverseStack[CurrentParent].Leaf[i] - 1; i4++) {
+                RunningMax = max(RunningMax, Boxs[i4].BBMax);
+                RunningMin = min(RunningMin, Boxs[i4].BBMin);
+            }
+
+        }
+    }
+
+    AllNodes[CurrentParent].BBMax = RunningMax;
+    AllNodes[CurrentParent].BBMin = RunningMin;
+
+}
+
 
 #pragma kernel NodeUpdate
 

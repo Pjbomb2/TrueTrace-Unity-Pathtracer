@@ -45,13 +45,26 @@ Shader "Hidden/SVGFPack"
             sampler2D _CameraDepthTexture;
             int width;
             int height;
+            float3 Forward;
+            float4x4 _CameraInverseProjection;
+
+            float3 CreateCameraRay(float2 uv) {
+                // Invert the perspective projection of the view-space position
+                float3 direction = mul(_CameraInverseProjection, float4(uv, 0.0f, 1.0f)).xyz;
+                // Transform the direction from camera to world space and normalize
+                direction = mul(unity_CameraToWorld, float4(direction, 0.0f)).xyz;
+                direction = normalize(direction);
+                return direction;
+            }   
 
             fixed4 frag (v2f i) : SV_Target
             {
                 int2 screenSize = int2(width, height);
                const int2 ipos       = i.uv * screenSize;
+               float3 Dir = CreateCameraRay(i.uv * 2.0f - 1.0f);
                 const float2 nPacked = ndir_to_oct_snorm(tex2D(_CameraGBufferTexture2, i.uv).xyz * 2.0f - 1.0f);
-                return float4(LinearEyeDepth(tex2D(_CameraDepthTexture, i.uv).x), max(abs(ddx(LinearEyeDepth(tex2D(_CameraDepthTexture, i.uv).x))), abs(ddy(LinearEyeDepth(tex2D(_CameraDepthTexture, i.uv).x)))), nPacked.x, nPacked.y);
+                float Depth = length(Dir / dot(Dir, Forward) * LinearEyeDepth(tex2D(_CameraDepthTexture, i.uv).x));
+                return float4(Depth, max(abs(ddx(Depth)), abs(ddy(Depth))), nPacked.x, nPacked.y);
             }
             ENDCG
         }

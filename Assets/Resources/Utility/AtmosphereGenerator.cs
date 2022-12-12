@@ -321,9 +321,9 @@ public class AtmosphereGenerator {
         MultiScatterTex.enableRandomWrite = true;
         MultiScatterTex.Create();
 
-        CloudTex1 = new RenderTexture(CloudTexSize, CloudTexSize, 0,
+        CloudTex1 = new RenderTexture(32, 32, 0,
         RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-        CloudTex1.volumeDepth = CloudTexSize;
+        CloudTex1.volumeDepth = 64;
         CloudTex1.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
         CloudTex1.enableRandomWrite = true;
         CloudTex1.useMipMap = true;
@@ -392,6 +392,10 @@ public class AtmosphereGenerator {
         }     
 
 
+        Atmosphere.SetTexture(FirstCloudKernel, "CloudTex1", CloudTex1);
+        Atmosphere.SetFloat("numCells", 2);
+        Atmosphere.SetFloat("TargetSize", 32);
+        Atmosphere.Dispatch(FirstCloudKernel, 32,32,64);
 
         rayleigh_densityC.Release();
         mie_densityC.Release();

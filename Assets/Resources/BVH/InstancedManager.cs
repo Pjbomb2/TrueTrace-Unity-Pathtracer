@@ -28,7 +28,7 @@ public class InstancedManager : MonoBehaviour {
         foreach(ParentObject obj in ChildrenObjects)
             obj.ClearAll();
 	}
-
+    public int RunningTasks;
     public void EditorBuild() {
         init();
         AddQue = new List<ParentObject>();
@@ -36,10 +36,12 @@ public class InstancedManager : MonoBehaviour {
         RenderQue = new List<ParentObject>();
         CurrentlyActiveTasks = new List<Task>();
         BuildQue = new List<ParentObject>(GetComponentsInChildren<ParentObject>());
+        RunningTasks = 0; 
         for(int i = 0; i < BuildQue.Count; i++) {
             var CurrentRep = i;
             BuildQue[CurrentRep].LoadData();
-            Task t1 = Task.Run(() => BuildQue[CurrentRep].BuildTotal());
+            Task t1 = Task.Run(() => {BuildQue[CurrentRep].BuildTotal(); RunningTasks--;});
+            RunningTasks++;
             CurrentlyActiveTasks.Add(t1);
         }
     }
