@@ -264,6 +264,7 @@ Scenes From:
 </ul>
 </br>
 Disney BSDF from: https://schuttejoe.github.io/post/disneybsdf/
+Rectangle packer for faster atlas creation from here: https://github.com/ThomasMiz/RectpackSharp/tree/main/RectpackSharp
 
 This project uses:
 Crytek Sponza
@@ -271,4 +272,4 @@ CC BY 3.0
 © 2010 Frank Meinl, Crytek
 
 ## Ideas/Reminders for later
-Find an alternative to atlas's, Reduce memory consumption, work on adding back in Mitsuba scene support
+Reduce memory consumption, work on adding back in Mitsuba scene support
