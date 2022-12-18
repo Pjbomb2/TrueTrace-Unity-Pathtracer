@@ -89,7 +89,7 @@ float3 TonemapUchimura ( float3 v ) {
     float3 w2 = step( m + l0, v );
     float3 w1 = 1.0f - w0 - w2;
 
-    float3 T = m * pow( v / m, c ) + b;
+    float3 T = m * pow(abs(v / m), c ) + b;
     float3 S = P - ( P - S1 ) * exp( CP * ( v - S0 ) );
     float3 L = m + a * ( v - m );
 

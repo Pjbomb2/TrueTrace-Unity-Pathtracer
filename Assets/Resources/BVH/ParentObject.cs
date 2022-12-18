@@ -78,7 +78,6 @@ public int AtlasSize;
 
 [HideInInspector] public Layer[] ForwardStack;
 [HideInInspector] public Layer2[] LayerStack;
-private bool started = false;
 
 [HideInInspector] public List<NodeIndexPairData> NodePair;
 [HideInInspector] public int MaxRecur = 0;
@@ -417,12 +416,14 @@ public void CreateAtlas() {//Creates texture atlas
         } else {
             CurrentObjectOffset = 0;
         }
+        RayTracingObject MaterialObject = Obj.MaterialObject;
         _Materials.Add(new MaterialData() {
-            BaseColor = Obj.MaterialObject.BaseColor[CurrentObjectOffset],
-            emmissive = Obj.MaterialObject.emmission[CurrentObjectOffset],
-            Roughness = Obj.MaterialObject.Roughness[CurrentObjectOffset],
-            MatType = (int)Obj.MaterialObject.MaterialOptions[CurrentObjectOffset],
-            EmissionColor = Obj.MaterialObject.EmissionColor[CurrentObjectOffset]
+            BaseColor = MaterialObject.BaseColor[CurrentObjectOffset],
+            emmissive = MaterialObject.emmission[CurrentObjectOffset],
+            Roughness = MaterialObject.Roughness[CurrentObjectOffset],
+            MatType = (int)MaterialObject.MaterialOptions[CurrentObjectOffset],
+            EmissionColor = MaterialObject.EmissionColor[CurrentObjectOffset],
+            specTrans = MaterialObject.SpecTrans[CurrentObjectOffset]
         });
         // Debug.Log(Obj.MaterialObject.Indexes.Length + ", " + Obj.MaterialObject.MaterialIndex.Length);
         Obj.MaterialObject.Indexes[CurrentObjectOffset] = Obj.Offset;
@@ -468,6 +469,7 @@ public void LoadData() {
             }
         }
     }
+    if(this.gameObject.GetComponent<SkinnedMeshRenderer>() != null) IsSkinnedGroup = true;    
     if(this.gameObject.GetComponent<RayTracingObject>() != null) {
         if(TempObjects == null) TempObjects = new List<RayTracingObject>();
         TempObjects.Add(this.gameObject.GetComponent<RayTracingObject>());
@@ -529,11 +531,10 @@ public void LoadData() {
             int TotalIndexLength = 0;
             for(int i2 = 0; i2 < submeshcount; ++i2) {//Add together all the submeshes in the mesh to consider it as one object
                 int IndiceLength = (int)mesh.GetIndexCount(i2) / 3;
-                TotalIndexLength += IndiceLength;
                 MatIndex = i2 + RepCount;
+                TotalIndexLength += IndiceLength;
                 var SubMesh = new int[IndiceLength];
                 System.Array.Fill(SubMesh, MatIndex);
-                // if(_Materials[MatIndex].SpecularTransmission != 1) 
                 CurMeshData.MatDat.AddRange(SubMesh);
             }
             if(IsSkinnedGroup) {
@@ -624,7 +625,6 @@ public TriangleData[] Tris2;
 unsafe public void Construct() {
     tempAABB = new AABB();
     MaxRecur = 0;
-    started = false;
     BVH2Builder BVH2 = new BVH2Builder(ref Triangles);//Binary BVH Builder, and also the component that takes the longest to build
     this.BVH = new BVH8Builder(ref BVH2);
     BVH2 = null;
@@ -763,7 +763,7 @@ public void RefitMesh(ref ComputeBuffer RealizedAggNodes) {
     tempAABB = new AABB();
     OverAABB.init();
     for(int i = 0; i < SkinnedMeshes.Length; i++) {
-        Vector3 Scale = new Vector3(1,1,1);//new Vector3(Mathf.Sqrt(this.transform.lossyScale.x), Mathf.Sqrt(this.transform.lossyScale.y), Mathf.Sqrt(this.transform.lossyScale.z));
+        Vector3 Scale = new Vector3(1,1,1);
         tempAABB.BBMax = SkinnedMeshes[i].bounds.center + Vector3.Scale(SkinnedMeshes[i].bounds.size, Scale) / 2.0f;
         tempAABB.BBMin = SkinnedMeshes[i].bounds.center - Vector3.Scale(SkinnedMeshes[i].bounds.size, Scale) / 2.0f;
         OverAABB.Extend(ref tempAABB);
@@ -789,8 +789,7 @@ public void RefitMesh(ref ComputeBuffer RealizedAggNodes) {
         ToBVHIndexBuffer = new ComputeBuffer(ToBVHIndex.Length, 4);
         ToBVHIndexBuffer.SetData(ToBVHIndex);     
         HasStarted = true;
-        // if(Hips == null && this.transform.childCount != 0 && this.transform.GetChild(0).childCount != 0 && this.transform.GetChild(0).GetChild(0) != null) Hips = this.transform.GetChild(0).GetChild(0);
-        // else Hips = this.transform;
+        if(Hips == null && this.transform.childCount != 0 && this.transform.GetChild(0).childCount != 0 && this.transform.GetChild(0).GetChild(0) != null) Hips = this.transform.GetChild(0).GetChild(0);
         int MaxLength = 0;
         for(int i = 0; i < LayerStack.Length; i++) {
             MaxLength = Mathf.Max(MaxLength, LayerStack[i].Slab.Count);
@@ -798,7 +797,7 @@ public void RefitMesh(ref ComputeBuffer RealizedAggNodes) {
         WorkingBuffer = new ComputeBuffer(MaxLength, 4);
         UnityEngine.Profiling.Profiler.EndSample();
     } else if(AllFull) {
-        if(Hips == null) Hips = SkinnedMeshes[0].rootBone;
+        if(Hips == null) Hips = SkinnedMeshes[0].rootBone;//transform;
         UnityEngine.Profiling.Profiler.BeginSample("ReMesh Fill");
         MeshRefit.SetMatrix("Transform2", this.transform.localToWorldMatrix);  
         MeshRefit.SetMatrix("Transform3", this.transform.worldToLocalMatrix);      

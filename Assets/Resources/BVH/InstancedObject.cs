@@ -26,6 +26,7 @@ public class InstancedObject : MonoBehaviour {
 
     private void OnEnable() {
         if(gameObject.scene.isLoaded) {
+            this.transform.hasChanged = true;
             this.GetComponentInParent<AssetManager>().InstanceAddQue.Add(this);
             this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
         }

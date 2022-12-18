@@ -25,6 +25,12 @@ public class RayTracingLights : MonoBehaviour {
         ThisTransform = this.transform;
         HasChanged = true;
     }
+    void Awake() {
+        ThisLight = this.GetComponent<Light>();
+        ThisTransform = this.transform;
+        HasChanged = true;
+        ThisLight.shadows = LightShadows.None;
+    }
     public void UpdateLight() {
         if(ThisTransform.hasChanged || HasChanged) {
             Position = ThisTransform.position;

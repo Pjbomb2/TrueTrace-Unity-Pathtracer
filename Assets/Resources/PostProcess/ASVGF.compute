@@ -1357,6 +1357,32 @@ void Atrous (uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGro
 RWTexture2D<int> IMG_PT_NORMAL_B;
 RWTexture2D<float4> IMG_ASVGF_HIST_COLOR_LF_SH_B;
 RWTexture2D<float2> IMG_ASVGF_HIST_COLOR_LF_COCG_B;
+RWTexture2D<float4> Output;
+
+float3 RCRS(int2 CenterID) {
+    if(CenterID.x > screen_width / 2) return IMG_ASVGF_COLOR[CenterID].xyz;
+    float CenterLum = luminance(IMG_ASVGF_COLOR[CenterID].xyz);
+    float3 MinLum = 999;
+    float3 MaxLum = -999;
+
+    for(int i = -1; i <= 1; i++) {
+        for(int j = -1; j <= 1; j++) {
+            if(i == 0 && j == 0) continue;
+            float Lum = luminance(IMG_ASVGF_COLOR[CenterID + int2(i, j)].xyz);
+            if(MaxLum.x < Lum) MaxLum = float3(Lum, i, j);
+            if(MinLum.x > Lum) MinLum = float3(Lum, i, j);
+        }
+    }
+    if(CenterLum > MinLum.x && CenterLum < MaxLum.x) {
+        return IMG_ASVGF_COLOR[CenterID].xyz;
+    } else if(CenterLum > MaxLum.x) {
+        return IMG_ASVGF_COLOR[CenterID + int2(MaxLum.yz)].xyz;
+    } else {
+        return IMG_ASVGF_COLOR[CenterID + int2(MinLum.yz)].xyz;
+
+    }
+
+}
 
 #pragma kernel Finalize
 [numthreads(16,16,1)]
@@ -1372,6 +1398,7 @@ void Finalize (uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
     TEX_ASVGF_GRAD_SMPL_POS_B[gl_GlobalInvocationID.xy] = TEX_ASVGF_GRAD_SMPL_POS_A[gl_GlobalInvocationID.xy];
     TEX_PT_GEO_NORMAL_B[gl_GlobalInvocationID.xy] = TEX_PT_GEO_NORMAL_A[gl_GlobalInvocationID.xy];
     RayB[gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * screen_width] = RayA[gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * screen_width];
+    Output[gl_GlobalInvocationID.xy] = float4(RCRS(gl_GlobalInvocationID.xy),1);
     // IMG_ASVGF_GRAD_HF_SPEC_PING[gl_GlobalInvocationID.xy] = IMG_ASVGF_GRAD_HF_SPEC_PONG[gl_GlobalInvocationID.xy];
     // IMG_PT_BASE_COLOR_B[gl_GlobalInvocationID.xy] = TEX_PT_BASE_COLOR_A[gl_GlobalInvocationID.xy];
 

@@ -73,8 +73,7 @@ public class EditModeFunctions : EditorWindow {
       [SerializeField] public bool ShowFPS = true;
       [SerializeField] public bool ReSTIRGIPermutedSamples = true;
       [SerializeField] public float Exposure = 0;
-
-      private string SavePath = "Assets/Resources";
+      [SerializeField] public int AtlasSize = 4096;
 
       void OnEnable() {
          if(EditorPrefs.GetString("EditModeFunctions", JsonUtility.ToJson(this, false)) != null) {
@@ -104,6 +103,7 @@ public class EditModeFunctions : EditorWindow {
             if(Parent.GetChild(i).gameObject.activeInHierarchy) GrabChildren(Parent.GetChild(i));
          }
       }
+
 
       private void ConstructInstances() {
          SourceMeshes = new List<Mesh>();
@@ -200,6 +200,61 @@ public class EditModeFunctions : EditorWindow {
          }
 
       }
+      public struct ParentData {
+         public Transform This;
+         public List<ParentData> Children;
+      }
+
+      private ParentData GrabChildren2(Transform Parent) {
+         ParentData Parents = new ParentData();
+         Parents.Children = new List<ParentData>();
+         Parents.This = Parent;
+         int ChildCount = Parent.childCount;
+         for(int i = 0; i < ChildCount; i++) {
+            if(Parent.GetChild(i).gameObject.activeInHierarchy) Parents.Children.Add(GrabChildren2(Parent.GetChild(i)));
+
+         }
+         return Parents;
+      }
+
+      private void SolveChildren(ParentData Parent) {
+         int ChildLength = Parent.Children.Count;
+         for(int i = 0; i < ChildLength; i++) {
+            SolveChildren(Parent.Children[i]);
+         }
+         if(((Parent.This.gameObject.GetComponent<MeshFilter>() != null && Parent.This.gameObject.GetComponent<MeshFilter>().sharedMesh != null) || (Parent.This.gameObject.GetComponent<SkinnedMeshRenderer>() != null && Parent.This.gameObject.GetComponent<SkinnedMeshRenderer>().sharedMesh != null)) && Parent.This.gameObject.GetComponent<InstancedObject>() == null) {
+            if(Parent.This.gameObject.GetComponent<RayTracingObject>() == null) Parent.This.gameObject.AddComponent<RayTracingObject>();
+         }
+         int RayTracingObjectChildCount = 0;
+         bool HasSkinnedMeshAsChild = false;
+         bool HasNormalMeshAsChild = false;
+         for(int i = 0; i < ChildLength; i++) {
+            if(Parent.Children[i].This.gameObject.GetComponent<RayTracingObject>() != null && Parent.Children[i].This.gameObject.GetComponent<ParentObject>() == null) RayTracingObjectChildCount++;
+            if(Parent.Children[i].This.gameObject.GetComponent<MeshFilter>() != null && Parent.Children[i].This.gameObject.GetComponent<ParentObject>() == null) HasNormalMeshAsChild = true;
+            if(Parent.Children[i].This.gameObject.GetComponent<SkinnedMeshRenderer>() != null && Parent.Children[i].This.gameObject.GetComponent<ParentObject>() == null) HasSkinnedMeshAsChild = true;
+            if(Parent.Children[i].This.gameObject.GetComponent<Light>() != null && Parent.Children[i].This.gameObject.GetComponent<RayTracingLights>() == null) Parent.Children[i].This.gameObject.AddComponent<RayTracingLights>(); 
+         }
+         if(RayTracingObjectChildCount > 0) {
+            if(Parent.This.gameObject.GetComponent<AssetManager>() == null) {if(Parent.This.gameObject.GetComponent<ParentObject>() == null) Parent.This.gameObject.AddComponent<ParentObject>();}
+            else {
+               for(int i = 0; i < ChildLength; i++) {
+                  if(Parent.Children[i].This.gameObject.GetComponent<RayTracingObject>() != null && Parent.Children[i].This.gameObject.GetComponent<ParentObject>() == null) Parent.Children[i].This.gameObject.AddComponent<ParentObject>();
+               }               
+            }
+         } else {
+            for(int i = 0; i < ChildLength; i++) {
+               if(Parent.Children[i].This.gameObject.GetComponent<RayTracingObject>() != null && Parent.Children[i].This.gameObject.GetComponent<ParentObject>() == null && Parent.This.gameObject.GetComponent<ParentObject>() == null) Parent.This.gameObject.AddComponent<ParentObject>();
+            }
+         }
+         if(HasNormalMeshAsChild && HasSkinnedMeshAsChild) {
+            for(int i = 0; i < ChildLength; i++) {
+               if(Parent.Children[i].This.gameObject.GetComponent<SkinnedMeshRenderer>() != null && Parent.Children[i].This.gameObject.GetComponent<ParentObject>() == null && Parent.Children[i].This.gameObject.GetComponent<ParentObject>() == null) Parent.Children[i].This.gameObject.AddComponent<ParentObject>();
+            }  
+         }
+
+
+      }
+
 
       private void QuickStart() {
          // RayTracingObject[] TempObjects = GameObject.FindObjectsOfType<RayTracingObject>();
@@ -211,78 +266,11 @@ public class EditModeFunctions : EditorWindow {
          //    DestroyImmediate(a);
          // }
 
-         List<Transform> Children = new List<Transform>();
-            for(int i = 0; i < Assets.transform.childCount; i++) {
-                  Children.Add(Assets.transform.GetChild(i));   
-               }
-            List<Transform> Parents = new List<Transform>();
-            while(Children.Count != 0) {
-               Transform Child = Children[Children.Count - 1];//its much faster to read and remove from the end than the beginning
-               Children.RemoveAt(Children.Count - 1);
-               if(Child.GetComponent<InstancedObject>() != null) continue;
-               if(Child.GetComponent<Light>() != null && Child.GetComponent<RayTracingLights>() == null) Child.gameObject.AddComponent<RayTracingLights>(); 
-               if(!Child.gameObject.activeInHierarchy && !(Child.GetComponent<SkinnedMeshRenderer>() != null || Child.GetComponent<MeshFilter>() != null && Child.GetComponent<MeshFilter>().sharedMesh != null)) continue;
-               if(Child.parent.GetComponent<ParentObject>() == null) {
-                  if((Child.GetComponent<SkinnedMeshRenderer>() != null || Child.GetComponent<MeshFilter>() != null && Child.GetComponent<MeshFilter>().sharedMesh != null) && Child.GetComponent<ParentObject>() == null) {
-                     if(Child.GetComponent<SkinnedMeshRenderer>() != null) {
-                        bool AlreadyIsParented = false;
-                        for(int i2 = 0; i2 < Parents.Count; i2++) {
-                           if(Child.IsChildOf(Parents[i2])) {AlreadyIsParented = true;}                        
-                        }
-                        if(!AlreadyIsParented) {
-                           Parents.Add(Child);
-                           Child.gameObject.AddComponent<ParentObject>();
-                        }
-                     } else {
-                        Child.gameObject.AddComponent<ParentObject>(); 
-                     }
-                  }
-                  if((Child.GetComponent<SkinnedMeshRenderer>() != null || Child.GetComponent<MeshFilter>() != null && Child.GetComponent<MeshFilter>().sharedMesh != null)  && Child.GetComponent<RayTracingObject>() == null) {
-                     Child.gameObject.AddComponent<RayTracingObject>(); 
-                  }
-               } else {
-                  if((Child.GetComponent<SkinnedMeshRenderer>() != null || Child.GetComponent<MeshFilter>() != null && Child.GetComponent<MeshFilter>().sharedMesh != null)  && Child.GetComponent<RayTracingObject>() == null) {
-                     Child.gameObject.AddComponent<RayTracingObject>();
-                  }
-               }
+         ParentData SourceParent = GrabChildren2(Assets.transform);
 
-               bool HasChildrenMesh = false;
-               for(int i = 0; i < Child.childCount; i++) {
-                  Children.Add(Child.GetChild(i));   
-                  if((Child.GetChild(i).GetComponent<MeshFilter>() != null && Child.GetChild(i).GetComponent<MeshFilter>().sharedMesh != null) && Child.GetComponent<ParentObject>() == null && Child.GetChild(i).GetComponent<ParentObject>() == null && Child.GetChild(i).gameObject.activeInHierarchy) {
-                     Child.gameObject.AddComponent<ParentObject>();
-                           // Debug.Log(Child.gameObject.name);
-                  }
-                  if((Child.GetChild(i).GetComponent<SkinnedMeshRenderer>() != null) && Child.GetComponent<ParentObject>() == null) {
-                     bool AlreadyIsParented = false;
-                     bool A = true;
-                     for(int i2 = 0; i2 < Parents.Count; i2++) {
-                        for(int i3 = 0; i3 < Parents[i2].childCount; i3++) {
-                           if(Parents[i2].GetChild(i3).GetComponent<MeshFilter>() != null && Parents[i2].GetChild(i3).GetComponent<ParentObject>() == null) {A = false; break;}}
-                        if(Child.IsChildOf(Parents[i2]) && A) AlreadyIsParented = true;                        
-                     }
-                     if(!AlreadyIsParented) {
-                        Parents.Add(Child);
-                        Child.gameObject.AddComponent<ParentObject>();
-                     }
-                  } else if(Child.GetComponent<ParentObject>() != null) {
-                     Parents.Add(Child);
-                  }
-               }
-            }
-            // GameObject NewObject;
-            // if(GameObject.Find("SkinnedMeshes") == null) {
-            //    NewObject = new GameObject();
-            //    NewObject.name = "SkinnedMeshes";
-            // } else {
-            //    NewObject = GameObject.Find("SkinnedMeshes");
-            // }
-            // if(NewObject.GetComponent<ParentObject>() == null) NewObject.AddComponent<ParentObject>();
-            // NewObject.transform.parent = GameObject.Find("Scene").transform;
-            SkinnedMeshRenderer[] Skins = GameObject.FindObjectsOfType<SkinnedMeshRenderer>();
-            foreach(var Skin in Skins) {
-               if(Skin.GetComponent<ParentObject>() == null) Skin.gameObject.AddComponent<ParentObject>();
-            }
+         SolveChildren(SourceParent);
+
+
             Terrain[] Terrains = GameObject.FindObjectsOfType<Terrain>();
             foreach(var TerrainComponent in Terrains) {
                if(TerrainComponent.gameObject.GetComponentInParent<AssetManager>() == null) {
@@ -290,9 +278,6 @@ public class EditModeFunctions : EditorWindow {
                }
                if(TerrainComponent.gameObject.GetComponent<TerrainObject>() == null) TerrainComponent.gameObject.AddComponent<TerrainObject>();
             }
-            Parents.Clear();
-            Parents.TrimExcess();
-            Children.TrimExcess();
       }
    IntegerField RemainingObjectsField;
    IntegerField SampleCountField;
@@ -334,8 +319,6 @@ public class EditModeFunctions : EditorWindow {
         RayMaster.DoTLASUpdates = Moving;
         RayMaster.AllowConverge = Accumulate;
         RayMaster.UseNEE = NEE;
-        RayMaster.AllowVolumetrics = Volumetrics;
-        RayMaster.VolumeDensity = VolumDens;
         Assets.UseSkinning = MeshSkin;
         RayMaster.AllowBloom = Bloom;
         RayMaster.BloomStrength = BloomStrength * 128.0f;
@@ -370,6 +353,7 @@ public class EditModeFunctions : EditorWindow {
         RayMaster.AtmoNumLayers = AtmoScatter;
         RayMaster.ReSTIRGIPermutedSamples = ReSTIRGIPermutedSamples;
         RayMaster.Exposure = 100 * Exposure + 1;
+        Assets.DesiredRes = AtlasSize;
 
 
 
@@ -402,6 +386,11 @@ public class EditModeFunctions : EditorWindow {
         QuickStartButton.style.minWidth = 111;
         ForceInstancesButton = new Button(() => ConstructInstances()) {text = "Force Instances"};
 
+        IntegerField AtlasField = new IntegerField() {value = AtlasSize, label = "Atlas Size"};
+        AtlasField.RegisterValueChangedCallback(evt => {AtlasSize = evt.newValue; AtlasSize = Mathf.Min(AtlasSize, 16380); AtlasSize = Mathf.Max(AtlasSize, 32); Assets.DesiredRes = AtlasSize;});
+            AtlasField.ElementAt(0).style.minWidth = 65;
+            AtlasField.ElementAt(1).style.width = 45;
+
         Box ButtonField1 = new Box();
         ButtonField1.style.flexDirection = FlexDirection.Row;
         ButtonField1.Add(BVHBuild);
@@ -429,6 +418,7 @@ public class EditModeFunctions : EditorWindow {
             ResField.ElementAt(1).style.width = 25;
             TopEnclosingBox.Add(ResField);
             ResField.RegisterValueChangedCallback(evt => {RenderRes = evt.newValue; RayMaster.RenderScale = RenderRes;});        
+            TopEnclosingBox.Add(AtlasField);
         rootVisualElement.Add(TopEnclosingBox);
 
         Toggle RRToggle = new Toggle() {value = RR, text = "Use Russian Roulette"};
@@ -447,20 +437,6 @@ public class EditModeFunctions : EditorWindow {
         NEEToggle = new Toggle() {value = NEE, text = "Use Next Event Estimation"};
         rootVisualElement.Add(NEEToggle);
         NEEToggle.RegisterValueChangedCallback(evt => {NEE = evt.newValue; RayMaster.UseNEE = NEE;});
-
-        VisualElement VolumetricBox = new VisualElement();
-            Label VolumetricLabel = new Label("Volumetric Density");
-            Slider VolumetricSlider = new Slider() {value = VolumDens, highValue = 1, lowValue = 0};
-            VolumetricSlider.style.width = 100;
-            Toggle VolumetricToggle = new Toggle() {value = Volumetrics, text = "Allow Volumetrics"};
-            rootVisualElement.Add(VolumetricToggle);
-            VolumetricToggle.RegisterValueChangedCallback(evt => {Volumetrics = evt.newValue; RayMaster.AllowVolumetrics = Volumetrics; if(evt.newValue) rootVisualElement.Insert(rootVisualElement.IndexOf(VolumetricToggle) + 1, VolumetricBox); else rootVisualElement.Remove(VolumetricBox);});        
-            VolumetricSlider.RegisterValueChangedCallback(evt => {VolumDens = evt.newValue; RayMaster.VolumeDensity = VolumDens;});
-            VolumetricBox.Add(VolumetricLabel);
-            VolumetricBox.Add(VolumetricSlider);
-            VolumetricBox.style.flexDirection = FlexDirection.Row;
-        if(Volumetrics) rootVisualElement.Add(VolumetricBox);
-        
     
         Toggle SkinToggle = new Toggle() {value = MeshSkin, text = "Allow Mesh Skinning"};
         rootVisualElement.Add(SkinToggle);
@@ -693,15 +669,10 @@ public class EditModeFunctions : EditorWindow {
             EnclosingBox.Add(ReadyBox);
          rootVisualElement.Add(EnclosingBox);
 
-         // GameObject VolumeObject = GameObject.Find("VolumeConverter");
-         // Button VolumeButton = new Button(() => VolumeObject.GetComponent<DICOMToVoxel>().BuildBrickMap());
-         // rootVisualElement.Add(VolumeButton);
-
      }
      void Update() {
-         RemainingObjectsField.value = Assets.RunningTasks + Instancer.RunningTasks;
-         SampleCountField.value = RayMaster.SampleCount;
-      // Debug.Log(SP.intValue);
+         if(Assets != null && Instancer != null) RemainingObjectsField.value = Assets.RunningTasks + Instancer.RunningTasks;
+         if(RayMaster != null) SampleCountField.value = RayMaster.SampleCount;
      }
 
 }
