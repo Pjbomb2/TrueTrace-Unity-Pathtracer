@@ -79,6 +79,7 @@ Let me know if you use this for anything, I would be excited to see any use of t
 ## General Setup
 <ul>
   <li>Download and import the UnityPackage provided and open the new Pathtracer Settings at the top of the screen(This WILL re-arrange your hierarchy a bit)</li>
+  <li>Whenever you add a new object(or tree of objects), you need to add it to under the gameobject named Scene, and its reccomended you press quickstart to automatically assign the needed scripts to it</li>
 </ul>
 </br>
 ## Basic script structure breakdown:
