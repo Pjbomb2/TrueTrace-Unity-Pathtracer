@@ -3,6 +3,7 @@
 Notes:</br>
 Currently working on:
 <ul>
+  <li>Polishing it as much as I can, plan to upload to asset store</li>
   <li>Looking desperately for optimizations(let me know if you have any ideas)</li>
 </ul>
 Currently needs to be done but havent implemented fully:
