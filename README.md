@@ -23,31 +23,24 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 ## Features: 
 <ul>
 <li>Somewhat fast Compute Shader based path tracing</li>
-<li>Diffuse, Glossy(kinda), Diffuse Transmission, Emissive, Plastic, and Disney BSDF materials</li>
+<li>Diffuse, Diffuse Transmission, Emissive, Plastic, and Disney BSDF materials</li>
 <li>Ability to move, add, and remove objects during play</li>
 <li>Ability to update material properties on the fly during play</li>
-<li>ASVGF, SVGF, and Atrous Denoiser</li>
-<li>BVH Building off of main thread for loading objects, allows objects to be spawned, and then built without lagging the main thread, and appearing when its done(All lag from spawning objects actually comes from remaking the texture atlas, lower res atlas's remove all lag, still investigating different ways of loading textures because of this)</li>
+<li>ASVGF, and SVGF Denoiser</li>
 <li>Compressed Wide Bounding Volume Hierarchy as the Acceleration Structure (See Ylitie et al. 2017 below)</li>
-<li>PBR Textures(just apply them to the GameObjects material)</li>
+<li>PBR Texture Support(just apply them to the GameObjects material)</li>
 <li>Next Event Estimation with Multiple Importance Sampling for Explicit Light Sampling</li>
-<li>Objects are loaded as gameobject meshes(most common way of having meshes in unity)</li>
 <li>Support for default unity lights which interact via NEE(Supports Directional, Point, and Spot lights)</li>
-<li>Support for Normal maps and Emission masks</li>
-<li>Global homogenous fog with adjustable density</li>
-<li>Taking Full Resolution Screenshots</li>
 <li>Bloom</li>
 <li>No specific GPU vendor needed(this will run on integrated graphics if you so wish it, aka no RTX cores)</li>
 <li>MagicaVoxel support</li>
-<li>Ability to pathtrace voxels and triangle scenes at the same time seamlessly</li>
+<li>Ability to pathtrace voxels and triangle scenes at the same time</li>
 <li>Depth of Field</li>
 <li>AutoExposure</li>
 <li>Temporal Anti-Aliasing</li>
 <li>ReSTIR for better sampling of many lights</li>
-<li>Explicit light sampling for faster convergence</li>
 <li>Precomputed Multiple Atmospheric Scattering for dynamic and realtime sky(from ebruneton below)</li>
 <li>Object Instancing</li>
-<li>Multiple Importance Sampling for helping NEE converge much faster</li>
 <li>ReSTIR GI for faster convergence in complex scenes and more complete images in scenes with changing lighting</li>
 </ul>
 
