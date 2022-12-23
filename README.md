@@ -64,11 +64,6 @@ Let me know if you use this for anything, I would be excited to see any use of t
   <li>Change the Graphics Api for Windows to DirectX12 through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Untoggle "Auto Graphics API For Windows", then click the little + that appears, select "Direct3D12(Experimental)", and drag that to the top.  A restart of the editor is required</li>
 </ul>
 </br>
-## Additional Requirements
-<ul>
-  <li>For Skinned Meshes, their index format needs to be set to 32 bits, and their mesh to Read/Write enabled.  This can be found by clicking on the imported fbx, going to it in the inspector, going to the Model tab, turning on Read/Write, changing the Index Format from Auto to 32 Bit, and clicking Apply at the bottom</li>
-</ul>
-</br>
 ## General Setup
 <ul>
   <li>Download and import the UnityPackage provided and open the new Pathtracer Settings at the top of the screen(This WILL re-arrange your hierarchy a bit)</li>
