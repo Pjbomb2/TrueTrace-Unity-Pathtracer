@@ -12,7 +12,6 @@ public class Denoiser {
     private ComputeShader Upscaler;
     private ComputeShader ToneMapper;
     private ComputeShader TAAU;
-    private ComputeShader SpecularDenoiser;
 
 
     private RenderTexture _ColorDirectIn;
@@ -36,8 +35,6 @@ public class Denoiser {
     private RenderTexture PrevUpscalerTAA;
     private RenderTexture UpScalerLightingDataTexture;
 
-    private RenderTexture SpecularIn;
-    private RenderTexture SpecularOut;
 
 
 
@@ -89,9 +86,6 @@ public class Denoiser {
 
     private int TAAUKernel;
     private int TAAUCopyKernel;
-
-    private int SpecularCopyKernel;
-    private int SpecularSpatialKernel;
 
 
 
@@ -232,7 +226,10 @@ public class Denoiser {
          }
         }
     }
-    
+    void OnApplicationQuit() {
+        if(A != null) A.Release();
+    }
+
     public Denoiser(Camera Cam, int SourceWidth, int SourceHeight) {
         this.SourceWidth = SourceWidth;
         this.SourceHeight = SourceHeight;
@@ -247,7 +244,6 @@ public class Denoiser {
         if(Upscaler == null) {Upscaler = Resources.Load<ComputeShader>("PostProcess/Upscaler");}
         if(ToneMapper == null) {ToneMapper = Resources.Load<ComputeShader>("PostProcess/ToneMap");}
         if(TAAU == null) {TAAU = Resources.Load<ComputeShader>("PostProcess/TAAU");}
-        if(SpecularDenoiser == null) {SpecularDenoiser = Resources.Load<ComputeShader>("PostProcess/SpecularDenoiser");}
 
 
         VarianceKernel = SVGF.FindKernel("kernel_variance");
@@ -273,10 +269,6 @@ public class Denoiser {
         
         UpsampleKernel = Upscaler.FindKernel("kernel_upsample");
 
-        SpecularCopyKernel = SpecularDenoiser.FindKernel("Copy");
-        SpecularSpatialKernel = SpecularDenoiser.FindKernel("Spatial");
-
-
         AutoExposeKernel = AutoExpose.FindKernel("AutoExpose");
         AutoExposeFinalizeKernel = AutoExpose.FindKernel("AutoExposeFinalize");
         List<float> TestBuffer = new List<float>();
@@ -300,9 +292,6 @@ public class Denoiser {
 
         TAA.SetInt("screen_width", Screen.width);
         TAA.SetInt("screen_height", Screen.height);
-
-        SpecularDenoiser.SetInt("screen_width", Screen.width);
-        SpecularDenoiser.SetInt("screen_height", Screen.height);
 
         threadGroupsX = Mathf.CeilToInt(SourceWidth / 16.0f);
         threadGroupsY = Mathf.CeilToInt(SourceHeight / 16.0f);
@@ -389,7 +378,6 @@ public class Denoiser {
             SVGF.Dispatch(SVGFAtrousKernel, threadGroupsX, threadGroupsY, 1);
         }
         UnityEngine.Profiling.Profiler.EndSample();
-        // DenoiseSpecular(ref _ColorBuffer, ref _NormTex, ref DirectionRoughnessTex);
         UnityEngine.Profiling.Profiler.BeginSample("SVGFFinalize");
         SVGF.SetBuffer(FinalizeKernel, "PerPixelRadiance", _ColorBuffer);
         SVGF.SetTexture(FinalizeKernel, "ColorDirectIn", (OddAtrousIteration) ? _ColorDirectOut : _ColorDirectIn);
@@ -397,7 +385,6 @@ public class Denoiser {
         SVGF.SetTexture(FinalizeKernel, "NormalAndDepth", _NormalDepth);
         SVGF.SetTexture(FinalizeKernel, "ColorIndirectIn", (OddAtrousIteration) ? _ColorIndirectOut : _ColorIndirectIn);
         SVGF.SetTexture(FinalizeKernel, "HistoryDirectTex", _HistoryDirect);
-        // SVGF.SetTexture(FinalizeKernel, "Specular", SpecularOut);
         SVGF.SetTexture(FinalizeKernel, "HistoryIndirectTex", _HistoryIndirect);
         SVGF.SetTexture(FinalizeKernel, "HistoryMomentTex", _HistoryMoment);
         SVGF.SetTexture(FinalizeKernel, "RWHistoryNormalAndDepth", _HistoryNormalDepth);
@@ -411,26 +398,6 @@ public class Denoiser {
 
     }
 
-
-
-
-    public void DenoiseSpecular(ref ComputeBuffer ColorBuffer, ref RenderTexture Normals, ref RenderTexture DirectionRoughnessTex) {
-        SpecularDenoiser.SetBuffer(SpecularCopyKernel, "PerPixelRadiance", ColorBuffer);
-        SpecularDenoiser.SetTexture(SpecularCopyKernel, "SpecularOut", SpecularOut);
-        SpecularDenoiser.Dispatch(SpecularCopyKernel, threadGroupsX, threadGroupsY, 1);
-            SpecularDenoiser.SetMatrix("UNITY_MAXTRIX_VP", _camera.projectionMatrix * _camera.worldToCameraMatrix);
-
-        for(int i = 0; i < 8; i++) {
-            var tempstep = i << 1;
-            SpecularDenoiser.SetInt("step_size", tempstep);
-            SpecularDenoiser.SetTextureFromGlobal(SpecularSpatialKernel, "DepthTex", "_CameraDepthTexture");
-            SpecularDenoiser.SetTexture(SpecularSpatialKernel, "Normals", Normals);
-            SpecularDenoiser.SetTexture(SpecularSpatialKernel, "DirectionRoughness", DirectionRoughnessTex);
-            SpecularDenoiser.SetTexture(SpecularSpatialKernel, "SpecularIn", (i % 2 == 0) ? SpecularOut : SpecularIn);
-            SpecularDenoiser.SetTexture(SpecularSpatialKernel, "SpecularOut", (i % 2 == 0) ? SpecularIn : SpecularOut);
-            SpecularDenoiser.Dispatch(SpecularSpatialKernel, threadGroupsX, threadGroupsY, 1);
-        }
-    }
 
 
 

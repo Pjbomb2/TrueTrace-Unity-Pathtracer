@@ -28,6 +28,7 @@ public class RayTracingObject : MonoBehaviour {
 	[SerializeField] public int Selected;
 	public int[] Indexes;
 	public bool NeedsToUpdate;
+	[SerializeField] public bool IsReady = false;
 
 	[HideInInspector] public int[] MaterialIndex;
 	[HideInInspector] public int[] LocalMaterialIndex;
@@ -44,8 +45,13 @@ public class RayTracingObject : MonoBehaviour {
 		 	mesh = GetComponent<MeshFilter>().sharedMesh;
 		 	SubMeshCount = (GetComponent<MeshRenderer>().sharedMaterials).Length;
 	 	} else {
+	 		Debug.Log(gameObject.name);
+	 		if(this.GetComponent<SkinnedMeshRenderer>() == null) DestroyImmediate(this);
 	 		GetComponent<SkinnedMeshRenderer>().BakeMesh(mesh);
 			SubMeshCount = (GetComponent<SkinnedMeshRenderer>().sharedMaterials).Length;
+			this.transform.localScale = new Vector3(1,1,1);
+			this.transform.position = new Vector3(0,0,0);
+			this.transform.eulerAngles = new Vector3(0,0,0);
 	 	}
 	 	if(mesh == null) {
 	 		DestroyImmediate(this);
@@ -102,7 +108,7 @@ public class RayTracingObject : MonoBehaviour {
 						}
 					} else if(SharedMaterials[i].GetTexture("_EmissionMap") != null) {
 						BaseColor[i] = new Vector3(1, 1, 1);
-						emmission[i] = 12.0f;
+						// emmission[i] = 12.0f;
 					}
 					if(SharedMaterials[i].GetFloat("_Mode") == 3.0f) {
 						MaterialOptions[i] = Options.Disney;
@@ -119,7 +125,7 @@ public class RayTracingObject : MonoBehaviour {
 		} catch(System.Exception e) {
 			Debug.Log("ERROR AT: " + this.gameObject.name);
 		}
-		
+		IsReady = true;
 		mesh = null;
 	}
 
@@ -136,8 +142,10 @@ public class RayTracingObject : MonoBehaviour {
     	if(gameObject.scene.isLoaded && this.transform.parent.GetComponent<ParentObject>() != null) {
     		matfill();
 	    	this.transform.parent.GetComponent<ParentObject>().NeedsToUpdate = true;
+			if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
     	} else if(gameObject.scene.isLoaded && this.transform.GetComponent<ParentObject>() != null) {
     		matfill();
+			if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
 	    	this.transform.GetComponent<ParentObject>().NeedsToUpdate = true;
     	}
     }

@@ -38,6 +38,7 @@ public class ASVGF
     public RenderTexture ASVGF_GRAD_SMPL_POS_A;
     public RenderTexture ASVGF_GRAD_SMPL_POS_B;
     public RenderTexture TEX_PT_NORMAL_A;
+    public RenderTexture IMG_ASVGF_COLOR;
     public RenderTexture RNGTexB;
 
     public RenderTexture PT_LF1;
@@ -110,6 +111,7 @@ public class ASVGF
             TEX_PT_COLOR_HF.Release();
             DebugTex.Release();
             TEX_PT_COLOR_SPEC.Release();
+            IMG_ASVGF_COLOR.Release();
         }
         Initialized = false;
     }
@@ -255,6 +257,7 @@ public class ASVGF
         CreateRenderTexture(ref DebugTex);
         CreateRenderTexture(ref RNGTexB);
         CreateRenderTexture(ref TEX_PT_COLOR_SPEC);
+        CreateRenderTexture(ref IMG_ASVGF_COLOR);
         Initialized = true;
     }
 
@@ -453,7 +456,7 @@ shader.SetBool("DiffRes", DiffRes);
             shader.SetTexture(Atrous, "TEX_ASVGF_ATROUS_PING_LF_SH", ASVGF_ATROUS_PING_LF_SH);
             shader.SetTexture(Atrous, "TEX_ASVGF_ATROUS_PING_LF_COCG", ASVGF_ATROUS_PING_LF_COCG);
             shader.SetTexture(Atrous, "TEX_PT_BASE_COLOR_A", Albedo);
-            shader.SetTexture(Atrous, "IMG_ASVGF_COLOR", Output);
+            shader.SetTexture(Atrous, "IMG_ASVGF_COLOR", IMG_ASVGF_COLOR);
             shader.SetTexture(Atrous, "TEX_ASVGF_GRAD_LF_PONG", ASVGF_GRAD_LF_PONG);
             shader.SetTexture(Atrous, "TEX_ASVGF_GRAD_HF_SPEC_PONG", ASVGF_GRAD_HF_SPEC_PONG);
             shader.SetTexture(Atrous, "DebugTex", DebugTex);
@@ -480,6 +483,9 @@ UnityEngine.Profiling.Profiler.BeginSample("Finalize");
 
         shader.SetTexture(Finalize, "TEX_ASVGF_GRAD_SMPL_POS_A", ASVGF_GRAD_SMPL_POS_A);
         shader.SetTexture(Finalize, "TEX_ASVGF_GRAD_SMPL_POS_B", ASVGF_GRAD_SMPL_POS_B);
+        
+        shader.SetTexture(Finalize, "IMG_ASVGF_COLOR", IMG_ASVGF_COLOR);
+        shader.SetTexture(Finalize, "Output", Output);
 
         shader.SetTexture(Finalize, "RNGTexB", RNGTexB);
         shader.SetTexture(Finalize, "RNGTexA", RNGTex);

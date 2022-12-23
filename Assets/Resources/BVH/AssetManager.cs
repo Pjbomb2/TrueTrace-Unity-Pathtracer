@@ -4,20 +4,23 @@ using UnityEngine;
 using CommonVars;
 using System.Threading.Tasks;
 using System.Threading;
+using RectpackSharp;
 
 [System.Serializable]
 public class AssetManager : MonoBehaviour {//This handels all the data
-    public Texture2D AlbedoAtlas;
-    public Texture2D NormalAtlas;
-    public Texture2D EmissiveAtlas;
-    public Texture2D MetallicAtlas;
-    public Texture2D RoughnessAtlas;
+    public RenderTexture AlbedoAtlas;
+    public RenderTexture NormalAtlas;
+    public RenderTexture EmissiveAtlas;
+    public RenderTexture MetalAlphaRoughnessAtlas;
     public List<Vector4> VoxelPositions;
     private ComputeShader Refitter;
     private int RefitLayer;
     private int NodeUpdater;
     private int NodeCompress;
     private int NodeInitializerKernel;
+
+    private Material Copymaterial;
+    private ComputeShader CopyShader;
 
     public List<RayTracingObject> MaterialsChanged;
     public List<MaterialData> _Materials;
@@ -62,6 +65,7 @@ public class AssetManager : MonoBehaviour {//This handels all the data
     [HideInInspector] public List<Transform> LightTransforms;
     [HideInInspector] public List<Task> CurrentlyActiveTasks;
     [HideInInspector] public List<Task> CurrentlyActiveVoxelTasks;
+    [HideInInspector] public int DesiredRes = 4096;
 
     public int MatCount;
 
@@ -125,17 +129,18 @@ public class AssetManager : MonoBehaviour {//This handels all the data
             UnityLights.Clear();
             UnityLights.TrimExcess();
         }
+
         DestroyImmediate(AlbedoAtlas);
         DestroyImmediate(NormalAtlas);
         DestroyImmediate(EmissiveAtlas);  
-        DestroyImmediate(RoughnessAtlas);  
-        DestroyImmediate(MetallicAtlas);  
+        DestroyImmediate(MetalAlphaRoughnessAtlas);  
         if(BVH8AggregatedBuffer != null) {
             BVH8AggregatedBuffer.Release();
             BVH8AggregatedBuffer = null;    
             AggTriBuffer.Release();
             AggTriBuffer = null;    
         }
+
 
         Resources.UnloadUnusedAssets();
         System.GC.Collect();
@@ -203,6 +208,87 @@ public class AssetManager : MonoBehaviour {//This handels all the data
                 }
             }
     }
+
+    private void ConstructAtlas(List<Texture2D> Texs, ref RenderTexture Atlas, out Rect[] Rects, int DesiredRes, bool IsNormalMap) {
+            PackingRectangle[] rectangles = new PackingRectangle[Texs.Count];
+            for(int i = 0; i < Texs.Count; i++) {
+                rectangles[i].Width = (uint)Texs[i].width;
+                rectangles[i].Height = (uint)Texs[i].height;
+                rectangles[i].Id = i;
+            }   
+            PackingRectangle BoundRects;
+            RectanglePacker.Pack(rectangles, out BoundRects);
+            DesiredRes = (int)Mathf.Min(Mathf.Max(BoundRects.Width, BoundRects.Height), DesiredRes);
+            CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes);
+            Rects = new Rect[Texs.Count];
+            for(int i = 0; i < Texs.Count; i++) {
+                Rects[rectangles[i].Id].width = rectangles[i].Width;
+                Rects[rectangles[i].Id].height = rectangles[i].Height;
+                Rects[rectangles[i].Id].x = rectangles[i].X;
+                Rects[rectangles[i].Id].y = rectangles[i].Y;
+            }   
+
+            Vector2 Scale = new Vector2(Mathf.Min((float)DesiredRes / BoundRects.Width, 1),Mathf.Min((float)DesiredRes / BoundRects.Height, 1));
+            CopyShader.SetBool("IsNormalMap", IsNormalMap);
+            for(int i = 0; i < Texs.Count; i++) {
+                CopyShader.SetVector("InputSize", new Vector2(Rects[i].width, Rects[i].height));
+                CopyShader.SetVector("OutputSize", new Vector2(Atlas.width, Atlas.height));
+                CopyShader.SetVector("Scale", Scale);
+                CopyShader.SetVector("Offset", new Vector2(Rects[i].x, Rects[i].y));
+                CopyShader.SetTexture(0, "AdditionTex", Texs[i]);
+                CopyShader.SetTexture(0, "Result", Atlas);
+                CopyShader.Dispatch(0, (int)Mathf.CeilToInt(Rects[i].width * Scale.x / 32.0f), (int)Mathf.CeilToInt(Rects[i].height * Scale.y / 32.0f), 1);
+
+                Rects[i].width = Mathf.Floor(Rects[i].width * Scale.x) / Atlas.width;
+                Rects[i].x = Mathf.Floor(Rects[i].x * Scale.x) / Atlas.width;
+                Rects[i].height = Mathf.Floor(Rects[i].height * Scale.y) / Atlas.height;
+                Rects[i].y = Mathf.Floor(Rects[i].y * Scale.y) / Atlas.height;
+            }
+    }
+
+    private void AddToAtlas(List<Texture2D> Texs, ref RenderTexture Atlas, out Rect[] Rects, int DesiredRes, int ReadIndex, int WriteIndex) {
+            PackingRectangle[] rectangles = new PackingRectangle[Texs.Count];
+            for(int i = 0; i < Texs.Count; i++) {
+                rectangles[i].Width = (uint)Texs[i].width;
+                rectangles[i].Height = (uint)Texs[i].height;
+                rectangles[i].Id = i;
+            }   
+            PackingRectangle BoundRects;
+            RectanglePacker.Pack(rectangles, out BoundRects);
+            if(Atlas.width == 1) CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes);
+            Rects = new Rect[Texs.Count];
+            for(int i = 0; i < Texs.Count; i++) {
+                Rects[rectangles[i].Id].width = rectangles[i].Width;
+                Rects[rectangles[i].Id].height = rectangles[i].Height;
+                Rects[rectangles[i].Id].x = rectangles[i].X;
+                Rects[rectangles[i].Id].y = rectangles[i].Y;
+            }   
+
+            Vector2 Scale = new Vector2(Mathf.Min((float)DesiredRes / BoundRects.Width, 1),Mathf.Min((float)DesiredRes / BoundRects.Height, 1));
+            CopyShader.SetInt("OutputRead", ReadIndex);
+            CopyShader.SetInt("OutputWrite", WriteIndex);
+            for(int i = 0; i < Texs.Count; i++) {
+                CopyShader.SetVector("InputSize", new Vector2(Rects[i].width, Rects[i].height));
+                CopyShader.SetVector("OutputSize", new Vector2(Atlas.width, Atlas.height));
+                CopyShader.SetVector("Scale", Scale);
+                CopyShader.SetVector("Offset", new Vector2(Rects[i].x, Rects[i].y));
+                CopyShader.SetTexture(1, "AdditionTex", Texs[i]);
+                CopyShader.SetTexture(1, "Result", Atlas);
+                CopyShader.Dispatch(1, (int)Mathf.CeilToInt(Rects[i].width * Scale.x / 32.0f), (int)Mathf.CeilToInt(Rects[i].height * Scale.y / 32.0f), 1);
+
+                Rects[i].width = Mathf.Floor(Rects[i].width * Scale.x) / Atlas.width;
+                Rects[i].x = Mathf.Floor(Rects[i].x * Scale.x) / Atlas.width;
+                Rects[i].height = Mathf.Floor(Rects[i].height * Scale.y) / Atlas.height;
+                Rects[i].y = Mathf.Floor(Rects[i].y * Scale.y) / Atlas.height;
+            }
+    }
+
+    private void CreateRenderTexture(ref RenderTexture ThisTex, int Width, int Height) {
+        ThisTex = new RenderTexture(Width, Height, 0,
+            RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+        ThisTex.enableRandomWrite = true;
+        ThisTex.Create();
+    }
    private void CreateAtlas() {//Creates texture atlas
 
         _Materials = new List<MaterialData>();
@@ -216,16 +302,6 @@ public class AssetManager : MonoBehaviour {//This handels all the data
         RoughnessIndexes = new List<RayObjects>();
         EmissiveTexs = new List<Texture2D>();
         EmissiveIndexes = new List<RayObjects>();
-        if(AlbedoAtlas != null) AlbedoAtlas.Reinitialize(4,4);
-        else AlbedoAtlas = new Texture2D(4,4);
-        if(NormalAtlas != null) NormalAtlas.Reinitialize(4,4);
-        else NormalAtlas = new Texture2D(4, 4);
-        if(MetallicAtlas != null) MetallicAtlas.Reinitialize(4,4);
-        else MetallicAtlas = new Texture2D(4, 4);
-        if(RoughnessAtlas != null) RoughnessAtlas.Reinitialize(4,4);
-        else RoughnessAtlas = new Texture2D(4, 4);
-        if(EmissiveAtlas != null) EmissiveAtlas.Reinitialize(4,4);
-        else EmissiveAtlas = new Texture2D(4, 4);
         List<Texture2D> HeightMaps = new List<Texture2D>();
         List<Texture2D> AlphaMaps = new List<Texture2D>();
 
@@ -254,7 +330,7 @@ public class AssetManager : MonoBehaviour {//This handels all the data
                 MinX = Mathf.Max(Sizes[i].x, MinX);
                 MinY += Sizes[i].y * 2;
             } 
-            int Size = (int)Mathf.Min((MinY) / Mathf.Ceil(Mathf.Sqrt(Sizes.Count)), 16384);
+            int Size = (int)Mathf.Min((MinY) / Mathf.Ceil(Mathf.Sqrt(Sizes.Count)), 16380);
 
             Texture2D.GenerateAtlas(Sizes.ToArray(), 0, Size, HeightRects);
             HeightMap = new Texture2D(Size, Size,  UnityEngine.Experimental.Rendering.GraphicsFormat.R16_UNorm, UnityEngine.Experimental.Rendering.TextureCreationFlags.None);
@@ -262,7 +338,7 @@ public class AssetManager : MonoBehaviour {//This handels all the data
             System.Array.Fill(Colors, Color.black);
             HeightMap.SetPixels32(Colors);
             HeightMap.Apply();
-            AlphaRects = AlphaMap.PackTextures(AlphaMaps.ToArray(), 1, 16392, true);
+            AlphaRects = AlphaMap.PackTextures(AlphaMaps.ToArray(), 1, 16380, true);
             for(int i = 0; i < TerrainCount; i++) {
                 Graphics.CopyTexture(HeightMaps[i], 0, 0, 0, 0, HeightMaps[i].width, HeightMaps[i].height, HeightMap, 0, 0, (int)HeightRects[i].xMin, (int)HeightRects[i].yMin);
                 TerrainDat TempTerrain = TerrainInfos[i];
@@ -297,16 +373,25 @@ public class AssetManager : MonoBehaviour {//This handels all the data
         }
 
         Rect[] AlbedoRects, NormalRects, EmissiveRects, MetallicRects, RoughnessRects;
-        if(AlbedoTexs.Count != 0) AlbedoRects = AlbedoAtlas.PackTextures(AlbedoTexs.ToArray(), 1, 16392, false);//4096);
-        else AlbedoRects = new Rect[0];
-        if(NormalTexs.Count != 0) NormalRects = NormalAtlas.PackTextures(NormalTexs.ToArray(), 1, 16392, false);//4096);
-        else NormalRects = new Rect[0];
-        if(MetallicTexs.Count != 0) MetallicRects = MetallicAtlas.PackTextures(MetallicTexs.ToArray(), 1, 16392, false);//4096);
-        else MetallicRects = new Rect[0];
-        if(RoughnessTexs.Count != 0) RoughnessRects = RoughnessAtlas.PackTextures(RoughnessTexs.ToArray(), 1, 16392, false);//4096);
-        else RoughnessRects = new Rect[0];
-        if(EmissiveTexs.Count != 0) EmissiveRects = EmissiveAtlas.PackTextures(EmissiveTexs.ToArray(), 1, 16392, false);//4096);
-        else EmissiveRects = new Rect[0];
+        if(CopyShader == null) CopyShader = Resources.Load<ComputeShader>("Utility/CopyTextureShader");
+
+        if(AlbedoAtlas != null) AlbedoAtlas.Release();
+        if(NormalAtlas != null) NormalAtlas.Release();
+        if(MetalAlphaRoughnessAtlas != null) MetalAlphaRoughnessAtlas.Release();
+        if(EmissiveAtlas != null) EmissiveAtlas.Release();
+        if(AlbedoTexs.Count != 0) ConstructAtlas(AlbedoTexs, ref AlbedoAtlas, out AlbedoRects, DesiredRes, false);
+        else {AlbedoRects = new Rect[0]; CreateRenderTexture(ref AlbedoAtlas, 1, 1);}
+        if(NormalTexs.Count != 0) ConstructAtlas(NormalTexs, ref NormalAtlas, out NormalRects, DesiredRes, true);
+        else {NormalRects = new Rect[0]; CreateRenderTexture(ref NormalAtlas, 1, 1);}
+        if(EmissiveTexs.Count != 0) ConstructAtlas(EmissiveTexs, ref EmissiveAtlas, out EmissiveRects, DesiredRes, false);
+        else {EmissiveRects = new Rect[0]; CreateRenderTexture(ref EmissiveAtlas, 1, 1);}
+        CreateRenderTexture(ref MetalAlphaRoughnessAtlas, 1, 1);
+        if(MetallicTexs.Count != 0) AddToAtlas(MetallicTexs, ref MetalAlphaRoughnessAtlas, out MetallicRects, AlbedoAtlas.width, 0, 0);
+        else {MetallicRects = new Rect[0];}
+        if(AlbedoTexs.Count != 0) AddToAtlas(AlbedoTexs, ref MetalAlphaRoughnessAtlas, out AlbedoRects, AlbedoAtlas.width, 3, 1);
+        else {AlbedoRects = new Rect[0];}
+        if(RoughnessTexs.Count != 0) AddToAtlas(RoughnessTexs, ref MetalAlphaRoughnessAtlas, out RoughnessRects, AlbedoAtlas.width, 0, 2);
+        else {RoughnessRects = new Rect[0];}
 
         MatCount = 0;
 
@@ -378,6 +463,14 @@ public class AssetManager : MonoBehaviour {//This handels all the data
             AggTriBuffer.Release();
             AggTriBuffer = null;    
         }
+        if(WorkingBuffer != null) WorkingBuffer.Release();
+        if(NodeBuffer != null) NodeBuffer.Release();
+        if(StackBuffer != null) StackBuffer.Release();
+        if(ToBVHIndexBuffer != null) ToBVHIndexBuffer.Release();
+        if(BVHDataBuffer != null) BVHDataBuffer.Release();
+        if(BVHBuffer != null) BVHBuffer.Release();
+        if(BoxesBuffer != null) BoxesBuffer.Release();
+        if(TerrainBuffer != null) TerrainBuffer.Release();
     }
 
     private void init() {
@@ -440,6 +533,22 @@ public class AssetManager : MonoBehaviour {//This handels all the data
         int RenderQueCount = 0;
         int BuildQueCount = 0;
         {//Main Object Data Handling
+            for(int i = RemoveQueCount; i >= 0; i--) {
+                if(RenderQue.Contains(RemoveQue[i]))
+                    RenderQue.Remove(RemoveQue[i]);
+                if(BuildQue.Contains(RemoveQue[i])) {
+                    CurrentlyActiveTasks.RemoveAt(BuildQue.IndexOf(RemoveQue[i]));
+                    BuildQue.Remove(RemoveQue[i]);
+                } 
+                if(UpdateQue.Contains(RemoveQue[i])) {
+                    UpdateQue.Remove(RemoveQue[i]);
+                } 
+                if(AddQue.Contains(RemoveQue[i])) {
+                    AddQue.Remove(RemoveQue[i]);
+                }
+                ChildrenUpdated = true;
+                RemoveQue.RemoveAt(i); 
+            }
             for(int i = AddQueCount; i >= 0; i--) {
                 var CurrentRep = BuildQue.Count;
                 BuildQue.Add(AddQue[i]);
@@ -448,29 +557,8 @@ public class AssetManager : MonoBehaviour {//This handels all the data
                 CurrentlyActiveTasks.Add(Task.Run(() => BuildQue[CurrentRep].BuildTotal()));
                 ChildrenUpdated = true;
             }
-            for(int i = RemoveQueCount; i >= 0; i--) {
-                if(RenderQue.Contains(RemoveQue[i]))
-                    RenderQue.Remove(RemoveQue[i]);
-                else if(BuildQue.Contains(RemoveQue[i])) {
-                    CurrentlyActiveTasks.RemoveAt(BuildQue.IndexOf(RemoveQue[i]));
-                    BuildQue.Remove(RemoveQue[i]);
-                } else
-                    Debug.Log("REMOVE QUE NOT FOUND");
-                ChildrenUpdated = true;
-                RemoveQue.RemoveAt(i); 
-            }
             BuildQueCount = BuildQue.Count - 1;
             RenderQueCount = UpdateQue.Count - 1;
-            for(int i = RenderQueCount; i >= 0; i--) {//Demotes from Render Que to Build Que in case mesh has changed
-                    UpdateQue[i].ClearAll();
-                    UpdateQue[i].LoadData();
-                    BuildQue.Add(UpdateQue[i]);
-                    if(RenderQue.Contains(UpdateQue[i])) RenderQue.Remove(UpdateQue[i]);
-                    UpdateQue.RemoveAt(i);
-                    var TempBuildQueCount = BuildQue.Count - 1;
-                    CurrentlyActiveTasks.Add(Task.Run(() => BuildQue[TempBuildQueCount].BuildTotal()));
-                    ChildrenUpdated = true;
-            }
             for(int i = BuildQueCount; i >= 0; i--) {//Promotes from Build Que to Render Que
                 if(CurrentlyActiveTasks[i].IsFaulted) {//Fuck, something fucked up
                     Debug.Log(CurrentlyActiveTasks[i].Exception + ", " + BuildQue[i].Name);
@@ -493,6 +581,22 @@ public class AssetManager : MonoBehaviour {//This handels all the data
                         }
                     }
                 }
+            }
+        }
+        for(int i = RenderQueCount; i >= 0; i--) {//Demotes from Render Que to Build Que in case mesh has changed
+            if(UpdateQue[i] != null && UpdateQue[i].gameObject.activeInHierarchy) {
+                UpdateQue[i].ClearAll();
+                UpdateQue[i].LoadData();
+                if(!BuildQue.Contains(UpdateQue[i])) {
+                    BuildQue.Add(UpdateQue[i]);
+                    if(RenderQue.Contains(UpdateQue[i])) RenderQue.Remove(UpdateQue[i]);
+                    var TempBuildQueCount = BuildQue.Count - 1;
+                    CurrentlyActiveTasks.Add(Task.Run(() => BuildQue[TempBuildQueCount].BuildTotal()));
+                }
+                UpdateQue.RemoveAt(i);
+                ChildrenUpdated = true;
+            } else {
+                UpdateQue.RemoveAt(i);
             }
         }
         AddQueCount = InstanceAddQue.Count - 1;
@@ -608,9 +712,7 @@ public class AssetManager : MonoBehaviour {//This handels all the data
         if(AggLightTriangles.Count == 0) {AggLightTriangles.Add(new CudaLightTriangle() {});}
         didstart = false;
     }
-    int Counter;
     public void BuildCombined() {//Only has unbuilt be built
-        Counter = 0;
         HasToDo = false;
         Terrains = new List<TerrainObject>(GetComponentsInChildren<TerrainObject>());
         init();
@@ -938,6 +1040,14 @@ unsafe public void ConstructNewTLAS() {
         for(int i = 0; i < LayerStack.Length; i++) {
             MaxLength = Mathf.Max(MaxLength, LayerStack[i].Slab.Count);
         }
+
+        if(WorkingBuffer != null) WorkingBuffer.Release();
+        if(NodeBuffer != null) NodeBuffer.Release();
+        if(StackBuffer != null) StackBuffer.Release();
+        if(ToBVHIndexBuffer != null) ToBVHIndexBuffer.Release();
+        if(BVHDataBuffer != null) BVHDataBuffer.Release();
+        if(BVHBuffer != null) BVHBuffer.Release();
+        if(BoxesBuffer != null) BoxesBuffer.Release();
         WorkingBuffer = new ComputeBuffer(MaxLength, 4);
         NodeBuffer = new ComputeBuffer(NodePair.Count, 48);
         NodeBuffer.SetData(NodePair);
@@ -1062,6 +1172,8 @@ public void RefitTLAS(AABB[] Boxes) {
 
 int PreVoxelMeshCount;
 
+private bool ChangedLastFrame = true;
+
 
     public bool UpdateTLAS() {  //Allows for objects to be moved in the scene or animated while playing 
         
@@ -1117,7 +1229,7 @@ int PreVoxelMeshCount;
             int aggregated_bvh_node_count = 2 * (MeshDataCount + InstanceRenderQue.Count);
             int AggNodeCount = aggregated_bvh_node_count;
             int AggTriCount = 0;
-        if(ChildrenUpdated || !didstart) {
+        if(ChildrenUpdated || !didstart || OnlyInstanceUpdated) {
             MyMeshesCompacted.Clear();     
             AggData[] Aggs = new AggData[InstanceData.RenderQue.Count];
             for(int i = 0; i < MeshDataCount; i++) {
@@ -1125,7 +1237,7 @@ int PreVoxelMeshCount;
                  MyMeshesCompacted.Add(new MyMeshDataCompacted() {
                     mesh_data_bvh_offsets = aggregated_bvh_node_count,
                     Transform = RenderQue[i].transform.worldToLocalMatrix,
-                    Inverse = RenderQue[i].transform.worldToLocalMatrix.inverse,
+                    Inverse = RenderQue[i].transform.localToWorldMatrix,
                     AggIndexCount = AggTriCount,
                     AggNodeCount = AggNodeCount,
                     MaterialOffset = MatOffset,
@@ -1163,6 +1275,7 @@ int PreVoxelMeshCount;
                     IsVoxel = 0, SizeX = 0, SizeY = 0, SizeZ = 0,
                     LightTriCount = Aggs[Index].LightTriCount
                   });
+                 InstanceRenderQue[i].CompactedMeshData = MyMeshesCompacted.Count - 1;
                  AABB aabb = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
                  CreateAABB(InstanceRenderQue[i].transform, ref aabb);
                 MeshAABBs[RenderQue.Count + i] = aabb;
@@ -1211,7 +1324,7 @@ int PreVoxelMeshCount;
                 TargetParent = RenderQue[i];
                 transform = TargetParent.ThisTransform;
                 if(transform.hasChanged) {
-                    TargetParent.UpdateAABB(transform);            
+                    if(!TargetParent.IsSkinnedGroup) TargetParent.UpdateAABB(transform);            
                     MyMeshDataCompacted TempMesh = MyMeshesCompacted[TargetParent.CompactedMeshData];
                     TempMesh.Transform = transform.worldToLocalMatrix;
                     TempMesh.Inverse = transform.localToWorldMatrix;
@@ -1228,7 +1341,7 @@ int PreVoxelMeshCount;
 
             for(int i = 0; i < InstanceRenderQue.Count; i++) {
                 transform = InstanceRenderQue[i].transform;
-                if(transform.hasChanged) {
+                if(transform.hasChanged || ChangedLastFrame) {
                     MyMeshDataCompacted TempMesh = MyMeshesCompacted[InstanceRenderQue[i].CompactedMeshData];
                     TempMesh.Transform = transform.worldToLocalMatrix;
                     TempMesh.Inverse = transform.localToWorldMatrix;
@@ -1290,7 +1403,7 @@ int PreVoxelMeshCount;
             CurLightMesh.Center = LightTransforms[i].position;
             LightMeshes[i] = CurLightMesh;
         }
-        if(ChildrenUpdated || !didstart) {
+        if(ChildrenUpdated || !didstart || OnlyInstanceUpdated) {
             ConstructNewTLAS();
             BVH8AggregatedBuffer.SetData(TempBVHArray,0,0,TempBVHArray.Length);
         } else {
@@ -1307,7 +1420,7 @@ int PreVoxelMeshCount;
         else 
             UseVoxels = false;
 
-
+            ChangedLastFrame = ChildrenUpdated;
         return (LightsHaveUpdated || ChildrenUpdated);//The issue is that all light triangle indices start at 0, and thus might not get correctly sorted for indices
     }
 

@@ -1,0 +1,77 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel SingleInputPass
+Texture2D<float4> AdditionTex;
+SamplerState sampler_trilinear_clamp;
+
+RWTexture2D<float4> Result;
+
+float2 InputSize;
+float2 Scale;
+float2 Offset;
+float2 OutputSize;
+bool IsNormalMap;
+
+float4 EncodeRGBM(float3 rgb )
+{
+    float maxRGB = max(rgb.x,max(rgb.g,rgb.b));
+    float M =      maxRGB / 1.0f;
+    M =            ceil(M * 255.0) / 255.0;
+    return float4(rgb / (M * 1), M);
+}
+
+
+[numthreads(32,32,1)]
+void SingleInputPass (uint3 id : SV_DispatchThreadID)
+{
+    if(any(id.xy >= (uint2)floor((InputSize) * Scale))) return;
+    float4 Col = AdditionTex.SampleLevel(sampler_trilinear_clamp, (id.xy) / InputSize / Scale, 0);
+    if(IsNormalMap) {
+        float2 InputNormal;
+        [branch]if(Col.r == 1) {
+            InputNormal = Col.ag;
+            InputNormal.y = InputNormal.y;
+        } else {
+            InputNormal = Col.rg;
+            InputNormal.xy = InputNormal.xy;
+        }
+        InputNormal.y = 1.0f - InputNormal.y;
+        Col = float4(InputNormal, 0, 0);
+    }
+
+    Col = EncodeRGBM(Col.xyz);
+
+
+    Result[id.xy + floor(Offset * Scale)] = float4(pow(Col.xyz, 0.4545f), Col.w);
+
+
+}
+
+#pragma kernel AddInputPass
+uniform int OutputRead;
+uniform int OutputWrite;
+[numthreads(32,32,1)]
+void AddInputPass (uint3 id : SV_DispatchThreadID)
+{
+    if(any(id.xy >= (uint2)floor((InputSize) * Scale))) return;
+    float4 Col = Result[id.xy + floor(Offset * Scale)];
+    Col.xyz = pow(Col.xyz, 2.2f) * Col.w;
+    float A = AdditionTex.SampleLevel(sampler_trilinear_clamp, (id.xy) / InputSize / Scale, 0)[OutputRead];
+
+    switch(OutputWrite) {
+        case 0:
+            Col.x = A;
+        break;
+        case 1:
+            Col.y = A;
+        break;
+        case 2:
+            Col.z = A;
+        break;
+    }
+
+    Col = EncodeRGBM(Col.xyz);
+
+    Result[id.xy + floor(Offset * Scale)] = float4(pow(Col.xyz, 0.4545f), Col.w);
+
+
+}
