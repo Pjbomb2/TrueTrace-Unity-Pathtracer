@@ -1,0 +1,305 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel TAAU
+
+int source_width;
+int source_height;
+
+int target_width;
+int target_height;
+
+#define GROUP_SIZE 16
+#define FILTER_RADIUS 1 
+#define SHARED_SIZE (GROUP_SIZE + FILTER_RADIUS * 3)
+
+groupshared float4 s_color_pq[SHARED_SIZE][SHARED_SIZE];
+groupshared float2 s_motion[SHARED_SIZE][SHARED_SIZE];
+
+Texture2D<float4> TEX_FLAT_COLOR;
+Texture2D<float4> TEX_FLAT_MOTION;
+Texture2D<float4> Albedo;
+
+Texture2D<float4> TEX_ASVGF_TAA_B;
+SamplerState my_linear_clamp_sampler;
+
+RWTexture2D<float4> IMG_ASVGF_TAA_A;
+RWTexture2D<float4> IMG_TAA_OUTPUT;
+
+const static float pq_m1 = 0.1593017578125;
+const static float pq_m2 = 78.84375;
+const static float pq_c1 = 0.8359375;
+const static float pq_c2 = 18.8515625;
+const static float pq_c3 = 18.6875;
+const static float pq_C = 10000.0;
+
+float3 PQDecode(float3 image)
+{
+	float3 Np = pow(max(image, 0.0), 1.0 / pq_m2);
+	float3 L = Np - pq_c1;
+	L = L / (pq_c2 - pq_c3 * Np);
+	L = pow(max(L, 0.0), 1.0 / pq_m1);
+
+	return L * pq_C; // returns cd/m^2
+}
+
+float3 PQEncode(float3 image)
+{
+	float3 L = image / pq_C;
+	float3 Lm = pow(max(L, 0.0), pq_m1);
+	float3 N = (pq_c1 + pq_c2 * Lm) / (1.0 + pq_c3 * Lm);
+	image = pow(N, pq_m2);
+
+	return clamp(image, 0, 1);
+}
+
+// Preload the color data into shared memory, convert to PQ space
+// Also preload the 2D motion vectors
+void preload(int2 group_base, int2 group_size, int gl_LocalInvocationIndex)
+{
+	int2 preload_size = min(group_size + FILTER_RADIUS * 3, SHARED_SIZE);
+
+	for (uint linear_idx = gl_LocalInvocationIndex; linear_idx < preload_size.x * preload_size.y; linear_idx += GROUP_SIZE * GROUP_SIZE)
+	{
+		// Convert the linear index to 2D index in a (preload_size x preload_size) virtual group
+		float t = (float(linear_idx) + 0.5) / float(preload_size.x);
+		int xx = int(floor(frac(t) * float(preload_size.x)));
+		int yy = int(floor(t));
+
+		// Load
+		int2 ipos = group_base + int2(xx, yy) - FILTER_RADIUS;
+		ipos = clamp(ipos, 0, int2(source_width - 1, source_height - 1));
+		float4 color = TEX_FLAT_COLOR[ipos];
+		ipos = (float2)ipos * float2(rcp(source_width), rcp(source_height)) * float2(target_width, target_height);
+		float3 color_pq = PQEncode(color.rgb);
+		float2 motion = TEX_FLAT_MOTION[ipos].xy;
+
+		// Store
+		s_color_pq[yy][xx] = float4(color_pq, color.a);
+		s_motion[yy][xx] = -motion;
+	}
+}
+
+void get_shared_color(int2 pos, int2 group_base, out float3 color_pq, out int checkerboard_flags)
+{
+	int2 addr = pos - group_base + FILTER_RADIUS;
+
+	float4 data = s_color_pq[addr.y][addr.x];
+
+	color_pq = data.rgb;
+	checkerboard_flags = int(data.a);
+}
+
+float2 get_shared_motion(int2 pos, int2 group_base)
+{
+	int2 addr = pos - group_base + FILTER_RADIUS;
+
+	return s_motion[addr.y][addr.x];
+}
+
+void get_moments(int2 pos, int2 group_base, int r, out float3 mom1, out float3 mom2)
+{
+	mom1 = 0.0;
+	mom2 = 0.0;
+
+	for (int yy = -r; yy <= r; yy++)
+	{
+		for (int xx = -r; xx <= r; xx++)
+		{
+			if (xx == 0 && yy == 0)
+				continue;
+
+			int2 p = pos + int2(xx, yy);
+			float3 c;
+			int checkerboard_flags;
+			get_shared_color(p, group_base, c, checkerboard_flags);
+
+			mom1 += c.rgb;
+			mom2 += c.rgb * c.rgb;
+		}
+	}
+}
+
+float get_sample_weight(float2 delta, float scale)
+{
+	return clamp(1 - scale * dot(delta, delta), 0, 1);
+}
+
+float2 hires_to_lores(int2 ipos)
+{
+	float2 input_size = float2(source_width, source_height);
+	float2 output_size = float2(target_width, target_height);
+
+	return (float2(ipos)+0.5) * (input_size / output_size) - 0.5 - 0;
+}
+
+void BicubicCatmullRom(float2 UV, float2 texSize, out float2 Sample[3], out float2 Weight[3])
+{
+	const float2 invTexSize = 1.0 / texSize;
+
+	float2 tc = floor(UV - 0.5) + 0.5;
+	float2 f = UV - tc;
+	float2 f2 = f * f;
+	float2 f3 = f2 * f;
+
+	float2 w0 = f2 - 0.5 * (f3 + f);
+	float2 w1 = 1.5 * f3 - 2.5 * f2 + 1;
+	float2 w3 = 0.5 * (f3 - f2);
+	float2 w2 = 1 - w0 - w1 - w3;
+
+	Weight[0] = w0;
+	Weight[1] = w1 + w2;
+	Weight[2] = w3;
+
+	Sample[0] = tc - 1;
+	Sample[1] = tc + w2 / Weight[1];
+	Sample[2] = tc + 2;
+
+	Sample[0] *= invTexSize;
+	Sample[1] *= invTexSize;
+	Sample[2] *= invTexSize;
+}
+
+/* uv is in pixel coordinates */
+float4 sample_texture_catmull_rom(Texture2D<float4> tex, float2 uv)
+{
+	float4 sum = 0;
+	float2 sampleLoc[3], sampleWeight[3];
+	BicubicCatmullRom(uv, float2(target_width, target_height), sampleLoc, sampleWeight);
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			float2 uv = float2(sampleLoc[j].x, sampleLoc[i].y);
+			float4 c = tex.SampleLevel(my_linear_clamp_sampler, uv, 0);
+			sum += c * sampleWeight[j].x * sampleWeight[i].y;
+		}
+	}
+	return sum;
+}
+
+
+[numthreads(GROUP_SIZE, GROUP_SIZE, 1)]
+void TAAU(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGroupID : SV_GroupID, uint gl_LocalInvocationIndex : SV_GroupIndex, uint3 gl_LocalInvocationID : SV_GroupThreadID)
+{
+	int2 ipos = int2(gl_GlobalInvocationID.xy);
+
+	int2 group_base_hires = int2(gl_WorkGroupID.xy) * GROUP_SIZE;
+	int2 group_base_lores = int2(hires_to_lores(group_base_hires));
+	int2 group_bottomright_hires = int2(gl_WorkGroupID.xy) * GROUP_SIZE + GROUP_SIZE - 1;
+	int2 group_bottomright_lores = int2(hires_to_lores(group_bottomright_hires));
+
+	preload(group_base_lores, group_bottomright_lores - group_base_lores + 1, gl_LocalInvocationIndex);
+	AllMemoryBarrierWithGroupSync();
+
+	if (ipos.x >= target_width || ipos.y >= target_height)
+	{
+		IMG_TAA_OUTPUT[ipos] = 0;
+		return;
+	}
+
+	// Calculate position in the render buffer (at the lower render resolution)
+	float2 nearest_render_pos = hires_to_lores(ipos);
+	int2 int_render_pos = int2(round(nearest_render_pos.x), round(nearest_render_pos.y));
+	int_render_pos = clamp(int_render_pos, 0, int2(source_width - 1, source_height - 1));
+
+	float3 color_center;
+	int checkerboard_flags;
+	get_shared_color(int_render_pos, group_base_lores, color_center, checkerboard_flags);
+
+	float3 color_output = color_center;
+	float3 linear_color_output;
+
+	// Regular TAA/TAAU mode
+
+	float3 mom1;
+	float3 mom2;
+
+	int num_pix;
+
+	// Obtain the color moments for the surrounding pixels.
+	get_moments(int_render_pos, group_base_lores, FILTER_RADIUS, mom1, mom2);
+	num_pix = 9;
+
+	// Remove or reduce sparkles by clamping the color of the center pixel to its surroundings
+	if (0.25f > 0)
+	{
+		// Custom curve to make perceived blurriness depend on the cvar in a roughly linear way
+		float scale = pow(min(1.0, 0.25f), -0.25);
+
+		color_center = min(color_center, scale * mom1 / (num_pix - 1));
+	}
+
+	mom1 += color_center;
+	mom2 += color_center * color_center;
+
+	mom1 /= float(num_pix);
+	mom2 /= float(num_pix);
+
+	// Find the longest motion vector in a 3x3 window
+	float2 motion;
+	{
+		float len = -1;
+		const int r = 1;
+		for (int yy = -r; yy <= r; yy++) {
+			for (int xx = -r; xx <= r; xx++) {
+				int2 p = int_render_pos + int2(xx, yy);
+				float2 m = get_shared_motion(p, group_base_lores);
+				float l = dot(m, m);
+				if (l > len) {
+					len = l;
+					motion = m;
+				}
+
+			}
+		}
+	}
+
+	// Calculate the previous position, taking into account that the previous frame output can have different size from the current frame
+	float2 pos_prev = ((float2(ipos)+0.5) / float2(target_width, target_height) + motion.xy)
+		* float2(target_width, target_height);
+
+	// Scale the motion for the weight calculation below
+	motion *= float2(target_width, target_height);
+
+	if (all((int2(pos_prev) >= 1))
+		&& all((int2(pos_prev) < int2(target_width, target_height) - 1)))
+	{
+		// Motion vector was valid - sample the previous frame
+		float3 color_prev = sample_texture_catmull_rom(TEX_ASVGF_TAA_B, pos_prev).rgb;
+
+		if (!any(isnan(color_prev)))
+		{
+			// If enabled, apply neighbourhood color clamping (NCC)
+			if (1.0f > 0)
+			{
+				float variance_scale = 1.0f;
+
+
+				float3 sigma = sqrt(max(0, mom2 - mom1 * mom1));
+				float3 mi = mom1 - sigma * variance_scale;
+				float3 ma = mom1 + sigma * variance_scale;
+
+				color_prev = clamp(color_prev, mi, ma);
+			}
+
+			// Mix the new color with the clamped previous color
+			float motion_weight = smoothstep(0, 1.0f, sqrt(dot(motion, motion)));
+			float sample_weight = get_sample_weight(nearest_render_pos - int_render_pos, target_width * rcp(source_width));
+			float pixel_weight = max(motion_weight, sample_weight) * 0.1f;
+			pixel_weight = clamp(pixel_weight, 0, 1);
+			color_output = lerp(color_prev, color_center, pixel_weight);
+		}
+	}
+
+	linear_color_output = PQDecode(color_output);
+
+	IMG_ASVGF_TAA_A[ipos] = float4(color_output, 0);
+	IMG_TAA_OUTPUT[ipos] = float4(linear_color_output * Albedo[ipos].xyz, 1);
+}
+
+
+#pragma kernel Copy
+[numthreads(GROUP_SIZE, GROUP_SIZE, 1)]
+void Copy(uint3 id : SV_DispatchThreadID)
+{
+
+	IMG_ASVGF_TAA_A[id.xy] = TEX_ASVGF_TAA_B[id.xy];
+
+}

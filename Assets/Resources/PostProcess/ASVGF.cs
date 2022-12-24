@@ -40,6 +40,8 @@ public class ASVGF
     public RenderTexture TEX_PT_NORMAL_A;
     public RenderTexture IMG_ASVGF_COLOR;
     public RenderTexture RNGTexB;
+    public RenderTexture MetallicA;
+    public RenderTexture MetallicB;
 
     public RenderTexture PT_LF1;
     public RenderTexture PT_LF2;
@@ -69,8 +71,10 @@ public class ASVGF
     private int Atrous;
     private Vector3 PrevCamPos;
 
-    public void ClearAll() {
-        if(ASVGF_HIST_COLOR_HF != null) {
+    public void ClearAll()
+    {
+        if (ASVGF_HIST_COLOR_HF != null)
+        {
             RayA?.Release();
             RayB?.Release();
             ASVGF_HIST_COLOR_HF.Release();
@@ -112,27 +116,33 @@ public class ASVGF
             DebugTex.Release();
             TEX_PT_COLOR_SPEC.Release();
             IMG_ASVGF_COLOR.Release();
+            MetallicA.Release();
+            MetallicB.Release();
         }
         Initialized = false;
     }
 
-    
+
     private void CreateComputeBuffer<T>(ref ComputeBuffer buffer, T[] data, int stride)
         where T : struct
     {
         // Do we already have a compute buffer?
-        if (buffer != null) {
+        if (buffer != null)
+        {
             // If no data or buffer doesn't match the given criteria, release it
-            if (data.Length == 0 || buffer.count != data.Length || buffer.stride != stride) {
+            if (data.Length == 0 || buffer.count != data.Length || buffer.stride != stride)
+            {
                 buffer.Release();
                 buffer = null;
             }
         }
 
-        if (data.Length != 0) {
+        if (data.Length != 0)
+        {
             // If the buffer has been released or wasn't there to
             // begin with, create it
-            if (buffer == null) {
+            if (buffer == null)
+            {
                 buffer = new ComputeBuffer(data.Length, stride);
             }
             // Set data on the buffer
@@ -140,7 +150,8 @@ public class ASVGF
         }
     }
 
-    private void CreateRenderTexture(ref RenderTexture ThisTex) {
+    private void CreateRenderTexture(ref RenderTexture ThisTex)
+    {
         ThisTex = new RenderTexture(ScreenWidth, ScreenHeight, 0,
             RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
         ThisTex.enableRandomWrite = true;
@@ -148,47 +159,54 @@ public class ASVGF
         ThisTex.Create();
     }
 
-    private void CreateRenderTextureGrad(ref RenderTexture ThisTex) {
+    private void CreateRenderTextureGrad(ref RenderTexture ThisTex)
+    {
         ThisTex = new RenderTexture(ScreenWidth / 3, ScreenHeight / 3, 0,
             RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
         ThisTex.enableRandomWrite = true;
         ThisTex.useMipMap = false;
         ThisTex.Create();
     }
-    private void CreateRenderTextureGradDouble(ref RenderTexture ThisTex) {
+    private void CreateRenderTextureGradDouble(ref RenderTexture ThisTex)
+    {
         ThisTex = new RenderTexture(ScreenWidth / 3, ScreenHeight / 3, 0,
             RenderTextureFormat.RGFloat, RenderTextureReadWrite.Linear);
         ThisTex.enableRandomWrite = true;
         ThisTex.useMipMap = false;
         ThisTex.Create();
     }
-    private void CreateRenderTextureGradInt(ref RenderTexture ThisTex) {
+    private void CreateRenderTextureGradInt(ref RenderTexture ThisTex)
+    {
         ThisTex = new RenderTexture(ScreenWidth / 3, ScreenHeight / 3, 0,
             RenderTextureFormat.RInt, RenderTextureReadWrite.Linear);
         ThisTex.enableRandomWrite = true;
         ThisTex.useMipMap = false;
         ThisTex.Create();
     }
-    private void CreateRenderTextureInt(ref RenderTexture ThisTex) {
+    private void CreateRenderTextureInt(ref RenderTexture ThisTex)
+    {
         ThisTex = new RenderTexture(ScreenWidth, ScreenHeight, 0,
             RenderTextureFormat.RInt, RenderTextureReadWrite.Linear);
         ThisTex.enableRandomWrite = true;
         ThisTex.Create();
     }
-    private void CreateRenderTextureDouble(ref RenderTexture ThisTex) {
+    private void CreateRenderTextureDouble(ref RenderTexture ThisTex)
+    {
         ThisTex = new RenderTexture(ScreenWidth, ScreenHeight, 0,
             RenderTextureFormat.RGFloat, RenderTextureReadWrite.Linear);
         ThisTex.enableRandomWrite = true;
         ThisTex.Create();
     }
-    private void CreateRenderTextureGradSingle(ref RenderTexture ThisTex) {
+    private void CreateRenderTextureGradSingle(ref RenderTexture ThisTex)
+    {
         ThisTex = new RenderTexture(ScreenWidth / 3, ScreenHeight / 3, 0,
             RenderTextureFormat.RFloat, RenderTextureReadWrite.Linear);
         ThisTex.enableRandomWrite = true;
         ThisTex.Create();
     }
 
-    private void CreateRenderTextureSingle(ref RenderTexture ThisTex) {
+    private void CreateRenderTextureSingle(ref RenderTexture ThisTex)
+    {
         ThisTex = new RenderTexture(ScreenWidth, ScreenHeight, 0,
             RenderTextureFormat.RFloat, RenderTextureReadWrite.Linear);
         ThisTex.enableRandomWrite = true;
@@ -196,12 +214,13 @@ public class ASVGF
     }
 
     public int iter;
-    public void init(int ScreenWidth, int ScreenHeight, Camera camera) {
+    public void init(int ScreenWidth, int ScreenHeight, Camera camera)
+    {
         this.ScreenWidth = ScreenWidth;
         this.ScreenHeight = ScreenHeight;
         this.camera = camera;
         iter = 0;
-        if(shader == null) {shader = Resources.Load<ComputeShader>("PostProcess/ASVGF");} 
+        if (shader == null) { shader = Resources.Load<ComputeShader>("PostProcess/ASVGF"); }
         CopyData = shader.FindKernel("CopyData");
         CopyRadiance = shader.FindKernel("CopyRadiance");
         Reproject = shader.FindKernel("Reproject");
@@ -258,12 +277,15 @@ public class ASVGF
         CreateRenderTexture(ref RNGTexB);
         CreateRenderTexture(ref TEX_PT_COLOR_SPEC);
         CreateRenderTexture(ref IMG_ASVGF_COLOR);
+        CreateRenderTextureDouble(ref MetallicA);
+        CreateRenderTextureDouble(ref MetallicB);
         Initialized = true;
     }
 
-    public void DoRNG(ref RenderTexture RNGTex, int CurFrame, ref ComputeBuffer GlobalRays, ref RenderTexture TEX_PT_VIEW_DEPTH_B, ref RenderTexture TEX_PT_NORMAL_B) {
+    public void DoRNG(ref RenderTexture RNGTex, int CurFrame, ref ComputeBuffer GlobalRays, ref RenderTexture TEX_PT_VIEW_DEPTH_B, ref RenderTexture TEX_PT_NORMAL_B)
+    {
         shader.SetFloat("CameraDist", Vector3.Distance(camera.transform.position, PrevCamPos));
-UnityEngine.Profiling.Profiler.BeginSample("Init RNG");
+        UnityEngine.Profiling.Profiler.BeginSample("Init RNG");
         shader.SetMatrix("_CameraToWorld", camera.cameraToWorldMatrix);
         shader.SetMatrix("_CameraInverseProjection", camera.projectionMatrix.inverse);
         shader.SetTextureFromGlobal(CopyRadiance, "NormalTex", "_CameraGBufferTexture2");
@@ -275,6 +297,7 @@ UnityEngine.Profiling.Profiler.BeginSample("Init RNG");
         shader.SetTexture(CopyRadiance, "TEX_PT_NORMAL_A", TEX_PT_NORMAL_A);
         shader.SetTexture(CopyRadiance, "TEX_PT_VIEW_DEPTH_B", TEX_PT_VIEW_DEPTH_B);
         shader.SetInt("CurFrame", CurFrame);
+        shader.SetVector("Forward", camera.transform.forward);
         shader.SetInt("iter", iter);
         shader.SetTexture(CopyRadiance, "RNGTexA", RNGTex);
         shader.SetTexture(CopyRadiance, "RNGTexB", RNGTexB);
@@ -283,15 +306,15 @@ UnityEngine.Profiling.Profiler.BeginSample("Init RNG");
         shader.SetBuffer(CopyRadiance, "RayB", RayB);
         shader.SetBuffer(CopyRadiance, "GlobalRays", GlobalRays);
         shader.SetTexture(CopyRadiance, "TEX_PT_GEO_NORMAL_A", PT_GEO_NORMAL_A);
-        
-        shader.Dispatch(CopyRadiance, Mathf.CeilToInt(ScreenWidth / 16.0f), Mathf.CeilToInt(ScreenHeight /16.0f), 1);
- UnityEngine.Profiling.Profiler.EndSample();
 
-UnityEngine.Profiling.Profiler.BeginSample("Grad Reproject");
+        shader.Dispatch(CopyRadiance, Mathf.CeilToInt(ScreenWidth / 16.0f), Mathf.CeilToInt(ScreenHeight / 16.0f), 1);
+        UnityEngine.Profiling.Profiler.EndSample();
+
+        UnityEngine.Profiling.Profiler.BeginSample("Grad Reproject");
 
         shader.SetTexture(Reproject, "TEX_PT_MOTION", TEX_PT_MOTION);
         shader.SetTexture(Reproject, "TEX_PT_VIEW_DEPTH_A", TEX_PT_VIEW_DEPTH_A);
-        shader.SetTexture(Reproject, "TEX_PT_VIEW_DEPTH_B", TEX_PT_VIEW_DEPTH_B);        
+        shader.SetTexture(Reproject, "TEX_PT_VIEW_DEPTH_B", TEX_PT_VIEW_DEPTH_B);
         shader.SetTexture(Reproject, "TEX_PT_GEO_NORMAL_A", PT_GEO_NORMAL_A);
         shader.SetTexture(Reproject, "TEX_PT_NORMAL_A", TEX_PT_NORMAL_A);
         shader.SetTexture(Reproject, "TEX_PT_NORMAL_B", TEX_PT_NORMAL_B);
@@ -305,22 +328,26 @@ UnityEngine.Profiling.Profiler.BeginSample("Grad Reproject");
         shader.SetTexture(Reproject, "RNGTexA", RNGTex);
         shader.SetTexture(Reproject, "RNGTexB", RNGTexB);
         shader.SetTexture(Reproject, "DebugTex", DebugTex);
+        shader.SetTexture(Reproject, "MetallicA", MetallicA);
+        shader.SetTexture(Reproject, "MetallicB", MetallicB);
         shader.SetBuffer(Reproject, "RayA", RayA);
         shader.SetBuffer(Reproject, "RayB", RayB);
         shader.SetBuffer(Reproject, "GlobalRays", GlobalRays);
 
 
 
+
         shader.Dispatch(Reproject, Mathf.CeilToInt((ScreenWidth) / 24.0f), Mathf.CeilToInt((ScreenHeight) / 24.0f), 1);
- UnityEngine.Profiling.Profiler.EndSample();
+        UnityEngine.Profiling.Profiler.EndSample();
 
     }
 
 
-    public void Do(ref ComputeBuffer _ColorBuffer, ref RenderTexture NormalTex, ref RenderTexture Albedo, ref RenderTexture Output, ref RenderTexture RNGTex, ref ComputeBuffer SHBuff, int MaxIterations, bool DiffRes, ref RenderTexture TEX_PT_VIEW_DEPTH_B, ref RenderTexture TEX_PT_NORMAL_B) {
-UnityEngine.Profiling.Profiler.BeginSample("Init Colors");
+    public void Do(ref ComputeBuffer _ColorBuffer, ref RenderTexture NormalTex, ref RenderTexture Albedo, ref RenderTexture Output, ref RenderTexture RNGTex, ref ComputeBuffer SHBuff, int MaxIterations, bool DiffRes, ref RenderTexture TEX_PT_VIEW_DEPTH_B, ref RenderTexture TEX_PT_NORMAL_B)
+    {
+        UnityEngine.Profiling.Profiler.BeginSample("Init Colors");
 
-shader.SetInt("MaxIterations", MaxIterations);
+        shader.SetInt("MaxIterations", MaxIterations);
         shader.SetBuffer(CopyData, "PerPixelRadiance", _ColorBuffer);
         shader.SetBuffer(CopyData, "SHStruct", SHBuff);
         shader.SetTextureFromGlobal(CopyData, "MotionVectors", "_CameraMotionVectorsTexture");
@@ -332,32 +359,34 @@ shader.SetInt("MaxIterations", MaxIterations);
         shader.SetTexture(CopyData, "Normal", NormalTex);
         shader.SetTexture(CopyData, "TEX_PT_MOTION", TEX_PT_MOTION);
         shader.SetTexture(CopyData, "TEX_PT_BASE_COLOR_A", Albedo);
+        shader.SetTexture(CopyData, "MetallicA", MetallicA);
 
         shader.SetTexture(CopyData, "TEX_PT_GEO_NORMAL_A", PT_GEO_NORMAL_A);
         shader.SetTexture(CopyData, "DebugTex", DebugTex);
 
 
         shader.Dispatch(CopyData, Mathf.CeilToInt(ScreenWidth / 16.0f), Mathf.CeilToInt(ScreenHeight / 16.0f), 1);
- UnityEngine.Profiling.Profiler.EndSample();
+        UnityEngine.Profiling.Profiler.EndSample();
 
-UnityEngine.Profiling.Profiler.BeginSample("Grad IMG");
+        UnityEngine.Profiling.Profiler.BeginSample("Grad IMG");
 
         shader.SetTexture(Gradient_Img, "TEX_PT_MOTION", TEX_PT_MOTION);
         shader.SetTexture(Gradient_Img, "TEX_ASVGF_GRAD_SMPL_POS_A", ASVGF_GRAD_SMPL_POS_A);
         shader.SetTexture(Gradient_Img, "IMG_ASVGF_GRAD_LF_PING", ASVGF_GRAD_LF_PING);
         shader.SetTexture(Gradient_Img, "IMG_ASVGF_GRAD_HF_SPEC_PING", ASVGF_GRAD_HF_SPEC_PING);
         shader.SetTexture(Gradient_Img, "TEX_PT_COLOR_HF", TEX_PT_COLOR_HF);
-        shader.SetTexture(Gradient_Img, "TEX_PT_COLOR_SPEC", ASVGF_ATROUS_PING_SPEC);
+        shader.SetTexture(Gradient_Img, "TEX_PT_COLOR_SPEC", TEX_PT_COLOR_SPEC);
         shader.SetTexture(Gradient_Img, "TEX_PT_COLOR_LF_SH", PT_LF1);
         shader.SetTexture(Gradient_Img, "TEX_ASVGF_HIST_COLOR_LF_SH_B", ASVGF_HIST_COLOR_LF_SH_B);
         shader.SetTexture(Gradient_Img, "DebugTex", DebugTex);
 
-        
-        shader.Dispatch(Gradient_Img, Mathf.CeilToInt((ScreenWidth / 3.0f + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight / 3.0f + 15) / 16.0f), 1);
- UnityEngine.Profiling.Profiler.EndSample();
-UnityEngine.Profiling.Profiler.BeginSample("Grad Atrous");
 
-        for(int i = 0; i < 7; i++) {
+        shader.Dispatch(Gradient_Img, Mathf.CeilToInt((ScreenWidth / 3.0f + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight / 3.0f + 15) / 16.0f), 1);
+        UnityEngine.Profiling.Profiler.EndSample();
+        UnityEngine.Profiling.Profiler.BeginSample("Grad Atrous");
+
+        for (int i = 0; i < 7; i++)
+        {
             var e = i;
             shader.SetInt("iteration", e);
             shader.SetTexture(Gradient_Atrous, "TEX_ASVGF_GRAD_LF_PING", ASVGF_GRAD_LF_PING);
@@ -374,8 +403,8 @@ UnityEngine.Profiling.Profiler.BeginSample("Grad Atrous");
 
             shader.Dispatch(Gradient_Atrous, Mathf.CeilToInt((ScreenWidth / 3.0f + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight / 3.0f + 15) / 16.0f), 1);
         }
- UnityEngine.Profiling.Profiler.EndSample();
-UnityEngine.Profiling.Profiler.BeginSample("Temporal");
+        UnityEngine.Profiling.Profiler.EndSample();
+        UnityEngine.Profiling.Profiler.BeginSample("Temporal");
 
         shader.SetTexture(Temporal, "TEX_PT_VIEW_DEPTH_A", TEX_PT_VIEW_DEPTH_A);
         shader.SetTexture(Temporal, "TEX_PT_VIEW_DEPTH_B", TEX_PT_VIEW_DEPTH_B);
@@ -389,10 +418,11 @@ UnityEngine.Profiling.Profiler.BeginSample("Temporal");
         shader.SetTexture(Temporal, "TEX_ASVGF_HIST_COLOR_LF_COCG_B", ASVGF_HIST_COLOR_LF_COCG_B);
         shader.SetTexture(Temporal, "TEX_ASVGF_HIST_COLOR_HF", ASVGF_HIST_COLOR_HF);
         shader.SetTexture(Temporal, "TEX_ASVGF_FILTERED_SPEC_B", ASVGF_FILTERED_SPEC_B);
+        shader.SetTexture(Temporal, "IMG_ASVGF_FILTERED_SPEC_A", ASVGF_FILTERED_SPEC_A);
         shader.SetTexture(Temporal, "TEX_ASVGF_HIST_MOMENTS_HF_B", ASVGF_HIST_MOMENTS_HF_B);
         shader.SetTexture(Temporal, "TEX_PT_COLOR_LF_SH", PT_LF1);
         shader.SetTexture(Temporal, "TEX_PT_COLOR_LF_COCG", PT_LF2);
-        shader.SetTexture(Temporal, "TEX_PT_COLOR_SPEC", ASVGF_ATROUS_PING_SPEC);
+        shader.SetTexture(Temporal, "TEX_PT_COLOR_SPEC", TEX_PT_COLOR_SPEC);
         shader.SetTexture(Temporal, "TEX_ASVGF_GRAD_LF_PONG", ASVGF_GRAD_LF_PONG);
         shader.SetTexture(Temporal, "TEX_ASVGF_GRAD_HF_SPEC_PONG", ASVGF_GRAD_HF_SPEC_PONG);
         shader.SetTexture(Temporal, "IMG_ASVGF_HIST_MOMENTS_HF_A", ASVGF_HIST_MOMENTS_HF_A);
@@ -401,16 +431,16 @@ UnityEngine.Profiling.Profiler.BeginSample("Temporal");
         shader.SetTexture(Temporal, "IMG_ASVGF_ATROUS_PING_HF", ASVGF_ATROUS_PING_HF);
         shader.SetTexture(Temporal, "IMG_ASVGF_ATROUS_PING_SPEC", ASVGF_ATROUS_PING_SPEC);
         shader.SetTexture(Temporal, "IMG_ASVGF_ATROUS_PING_MOMENTS", ASVGF_ATROUS_PING_MOMENTS);
-        shader.SetTexture(Temporal, "IMG_ASVGF_FILTERED_SPEC_A", ASVGF_FILTERED_SPEC_A);
         shader.SetTexture(Temporal, "IMG_ASVGF_ATROUS_PING_LF_SH", ASVGF_ATROUS_PING_LF_SH);
         shader.SetTexture(Temporal, "IMG_ASVGF_ATROUS_PING_LF_COCG", ASVGF_ATROUS_PING_LF_COCG);
         shader.SetTexture(Temporal, "DebugTex", DebugTex);
         shader.Dispatch(Temporal, Mathf.CeilToInt((ScreenWidth + 14) / 15.0f), Mathf.CeilToInt((ScreenHeight + 14) / 15.0f), 1);
- UnityEngine.Profiling.Profiler.EndSample();
-UnityEngine.Profiling.Profiler.BeginSample("Atrous");
-shader.SetBool("DiffRes", DiffRes);
+        UnityEngine.Profiling.Profiler.EndSample();
+        UnityEngine.Profiling.Profiler.BeginSample("Atrous");
+        shader.SetBool("DiffRes", DiffRes);
 
-        for(int i = 0; i < MaxIterations; i++) {
+        for (int i = 0; i < MaxIterations; i++)
+        {
             var e = i;
             shader.SetInt("iteration", e);
             shader.SetTexture(Atrous_LF, "TEX_PT_GEO_NORMAL_A", PT_GEO_NORMAL_A);
@@ -430,7 +460,7 @@ shader.SetBool("DiffRes", DiffRes);
             shader.Dispatch(Atrous_LF, Mathf.CeilToInt((ScreenWidth / 3.0f + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight / 3.0f + 15) / 16.0f), 1);
 
             shader.SetInt("spec_iteration", e);
-            shader.SetTexture(Atrous, "TEX_PT_NORMAL_A", TEX_PT_NORMAL_A);
+            shader.SetTexture(Atrous, "TEX_PT_NORMAL_A", PT_GEO_NORMAL_A);
             shader.SetTexture(Atrous, "TEX_PT_VIEW_DEPTH_A", TEX_PT_VIEW_DEPTH_A);
             shader.SetTexture(Atrous, "TEX_PT_MOTION", TEX_PT_MOTION);
             shader.SetTexture(Atrous, "TEX_ASVGF_HIST_MOMENTS_HF_A", ASVGF_HIST_MOMENTS_HF_A);
@@ -460,11 +490,13 @@ shader.SetBool("DiffRes", DiffRes);
             shader.SetTexture(Atrous, "TEX_ASVGF_GRAD_LF_PONG", ASVGF_GRAD_LF_PONG);
             shader.SetTexture(Atrous, "TEX_ASVGF_GRAD_HF_SPEC_PONG", ASVGF_GRAD_HF_SPEC_PONG);
             shader.SetTexture(Atrous, "DebugTex", DebugTex);
-            shader.Dispatch(Atrous, Mathf.CeilToInt((ScreenWidth + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight + 15) / 16.0f), 1);  
+            shader.SetTexture(Atrous, "MetallicA", MetallicA);
+            shader.SetTexture(Atrous, "MetallicB", MetallicB);
+            shader.Dispatch(Atrous, Mathf.CeilToInt((ScreenWidth + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight + 15) / 16.0f), 1);
 
         }
- UnityEngine.Profiling.Profiler.EndSample();
-UnityEngine.Profiling.Profiler.BeginSample("Finalize");
+        UnityEngine.Profiling.Profiler.EndSample();
+        UnityEngine.Profiling.Profiler.BeginSample("Finalize");
 
         shader.SetTexture(Finalize, "IMG_PT_NORMAL_A", TEX_PT_NORMAL_A);
         shader.SetTexture(Finalize, "IMG_PT_NORMAL_B", TEX_PT_NORMAL_B);
@@ -483,7 +515,7 @@ UnityEngine.Profiling.Profiler.BeginSample("Finalize");
 
         shader.SetTexture(Finalize, "TEX_ASVGF_GRAD_SMPL_POS_A", ASVGF_GRAD_SMPL_POS_A);
         shader.SetTexture(Finalize, "TEX_ASVGF_GRAD_SMPL_POS_B", ASVGF_GRAD_SMPL_POS_B);
-        
+
         shader.SetTexture(Finalize, "IMG_ASVGF_COLOR", IMG_ASVGF_COLOR);
         shader.SetTexture(Finalize, "Output", Output);
 
@@ -492,6 +524,11 @@ UnityEngine.Profiling.Profiler.BeginSample("Finalize");
 
         shader.SetTexture(Finalize, "DebugTex", DebugTex);
 
+        shader.SetTexture(Finalize, "MetallicA", MetallicA);
+        shader.SetTexture(Finalize, "MetallicB", MetallicB);
+
+        shader.SetTexture(Finalize, "TEX_ASVGF_FILTERED_SPEC_B", ASVGF_FILTERED_SPEC_B);
+        shader.SetTexture(Finalize, "IMG_ASVGF_FILTERED_SPEC_A", ASVGF_FILTERED_SPEC_A);
 
         shader.SetBuffer(Finalize, "RayA", RayA);
         shader.SetBuffer(Finalize, "RayB", RayB);
@@ -502,7 +539,7 @@ UnityEngine.Profiling.Profiler.BeginSample("Finalize");
 
         shader.Dispatch(Finalize, Mathf.CeilToInt(ScreenWidth / 16.0f), Mathf.CeilToInt(ScreenHeight / 16.0f), 1);
         // Graphics.CopyTexture(DebugTex, Output);
- UnityEngine.Profiling.Profiler.EndSample();
+        UnityEngine.Profiling.Profiler.EndSample();
 
 
         iter++;
@@ -511,6 +548,6 @@ UnityEngine.Profiling.Profiler.BeginSample("Finalize");
 
 
 
-    } 
+    }
 
 }

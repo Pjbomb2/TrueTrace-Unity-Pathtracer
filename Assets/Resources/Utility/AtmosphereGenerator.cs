@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [System.Serializable]
-public class AtmosphereGenerator {
-    
+public class AtmosphereGenerator
+{
+
     public RenderTexture _TransmittanceLUT;
     public RenderTexture _RayleighTex;
     public RenderTexture _MieTex;
@@ -17,8 +18,8 @@ public class AtmosphereGenerator {
 
     public RenderTexture DeltaScatteringTex;
 
-    public RenderTexture DeltaMultiScatterTex;  
-    public RenderTexture DebugTex;  
+    public RenderTexture DeltaMultiScatterTex;
+    public RenderTexture DebugTex;
 
     public RenderTexture CloudTex1;
     public RenderTexture CloudTex2;
@@ -31,7 +32,8 @@ public class AtmosphereGenerator {
 
     private int SkyViewKernel;
 
-    public struct DensityProfileLayer {
+    public struct DensityProfileLayer
+    {
         public float width;
         public float exp_term;
         public float exp_scale;
@@ -46,18 +48,22 @@ public class AtmosphereGenerator {
         where T : struct
     {
         // Do we already have a compute buffer?
-        if (buffer != null) {
+        if (buffer != null)
+        {
             // If no data or buffer doesn't match the given criteria, release it
-            if (data.Count == 0 || buffer.count != data.Count || buffer.stride != stride) {
+            if (data.Count == 0 || buffer.count != data.Count || buffer.stride != stride)
+            {
                 buffer.Release();
                 buffer = null;
             }
         }
 
-        if (data.Count != 0) {
+        if (data.Count != 0)
+        {
             // If the buffer has been released or wasn't there to
             // begin with, create it
-            if (buffer == null) {
+            if (buffer == null)
+            {
                 buffer = new ComputeBuffer(data.Count, stride);
             }
             // Set data on the buffer
@@ -122,8 +128,8 @@ public class AtmosphereGenerator {
 
         PermutationTable2D.Apply();
     }
-        private static float[] GRADIENT3 = new float[]
-        {
+    private static float[] GRADIENT3 = new float[]
+    {
         1,1,0,
         -1,1,0,
         1,-1,0,
@@ -140,7 +146,7 @@ public class AtmosphereGenerator {
         0,-1,1,
         -1,1,0,
         0,-1,-1,
-        };
+    };
     private void LoadGradient3D()
     {
         if (Gradient3D) return;
@@ -164,16 +170,17 @@ public class AtmosphereGenerator {
 
     }
 
-    public AtmosphereGenerator(ComputeShader Atmosphere, float BottomRadius, float TopRadius, int MultiScatterIterations) {
+    public AtmosphereGenerator(ComputeShader Atmosphere, float BottomRadius, float TopRadius, int MultiScatterIterations)
+    {
 
         this.Atmosphere = Atmosphere;
         List<DensityProfileLayer> rayleigh_density = new List<DensityProfileLayer>();
         List<DensityProfileLayer> mie_density = new List<DensityProfileLayer>();
         List<DensityProfileLayer> absorption_density = new List<DensityProfileLayer>();
         float rayleigh_scale_height = 8000.0f;
-        float mie_scale_height      = 1200.0f;
-        float ozone_scale_height    = 15000.0f;
-        float ozone_height          = 25000.0f;
+        float mie_scale_height = 1200.0f;
+        float ozone_scale_height = 15000.0f;
+        float ozone_height = 25000.0f;
         float density = 0.001f;
         Vector3 ray_s = new Vector3(5.85f, 13.558f, 33.10f) * density;
         Vector3 ray_a = new Vector3(0.0f, 0.0f, 0.0f);
@@ -184,48 +191,54 @@ public class AtmosphereGenerator {
         Vector3 ozo_s = new Vector3(0.0f, 0.0f, 0.0f);
         Vector3 ozo_a = new Vector3(0.65f, 1.881f, 0.085f) * density;
         Vector3 ozo_e = ozo_s + ozo_a;
-        rayleigh_density.Add(new DensityProfileLayer() {
+        rayleigh_density.Add(new DensityProfileLayer()
+        {
             width = 0.0f,
             exp_term = 0.0f,
             exp_scale = 0.0f,
             linear_term = 0.0f,
             constant_term = 0.0f
-            });
-        rayleigh_density.Add(new DensityProfileLayer() {
+        });
+        rayleigh_density.Add(new DensityProfileLayer()
+        {
             width = 0.0f,
             exp_term = 1.0f,
             exp_scale = -1.0f / rayleigh_scale_height * 1000.0f,
             linear_term = 0.0f,
             constant_term = 0.0f
-            });
-        mie_density.Add(new DensityProfileLayer() {
+        });
+        mie_density.Add(new DensityProfileLayer()
+        {
             width = 0.0f,
             exp_term = 0.0f,
             exp_scale = 0.0f,
             linear_term = 0.0f,
             constant_term = 0.0f
-            });
-        mie_density.Add(new DensityProfileLayer() {
+        });
+        mie_density.Add(new DensityProfileLayer()
+        {
             width = 0.0f,
             exp_term = 1.0f,
             exp_scale = -1.0f / mie_scale_height * 1000.0f,
             linear_term = 0.0f,
             constant_term = 0.0f
-            });
-        absorption_density.Add(new DensityProfileLayer() {
+        });
+        absorption_density.Add(new DensityProfileLayer()
+        {
             width = ozone_height / 1000.0f,
             exp_term = 0.0f,
             exp_scale = 0.0f,
             linear_term = 1.0f / ozone_scale_height * 1000.0f,
             constant_term = -2.0f / 3.0f
-            });
-        absorption_density.Add(new DensityProfileLayer() {
+        });
+        absorption_density.Add(new DensityProfileLayer()
+        {
             width = 0.0f,
             exp_term = 0.0f,
             exp_scale = 0.0f,
             linear_term = -1.0f / ozone_scale_height * 1000.0f,
             constant_term = 8.0f / 3.0f
-            });
+        });
 
         int TransmittanceKernel = Atmosphere.FindKernel("Transmittance_Kernel");
         int SingleScatterKernel = Atmosphere.FindKernel("SingleScatter_Kernel");
@@ -246,8 +259,8 @@ public class AtmosphereGenerator {
         Atmosphere.SetVector("absorption_extinction", ozo_e);
         Atmosphere.SetVector("mie_extinction", mie_e);
         Atmosphere.SetVector("mie_scattering", mie_s);
-        Atmosphere.SetFloat("mu_s_min",  (float)Mathf.Cos(120.0f / 180.0f * Mathf.PI));
-    
+        Atmosphere.SetFloat("mu_s_min", (float)Mathf.Cos(120.0f / 180.0f * Mathf.PI));
+
         Atmosphere.SetBuffer(TransmittanceKernel, "rayleigh_density", rayleigh_densityC);
         Atmosphere.SetBuffer(TransmittanceKernel, "mie_density", mie_densityC);
         Atmosphere.SetBuffer(TransmittanceKernel, "absorption_density", absorption_densityC);
@@ -342,7 +355,7 @@ public class AtmosphereGenerator {
         CloudTex3.enableRandomWrite = true;
         CloudTex3.Create();
 
-            Atmosphere.SetTexture(SingleScatterKernel, "DebugTex", DebugTex);
+        Atmosphere.SetTexture(SingleScatterKernel, "DebugTex", DebugTex);
         Atmosphere.SetTexture(TransmittanceKernel, "TransmittanceTex", _TransmittanceLUT);
         Atmosphere.Dispatch(TransmittanceKernel, 256, 64, 1);
         Atmosphere.SetTexture(SingleScatterKernel, "TransmittanceTexRead", _TransmittanceLUT);
@@ -351,17 +364,18 @@ public class AtmosphereGenerator {
         Atmosphere.SetTexture(SingleScatterKernel, "ScatteringTex", ScatteringTex);
         Atmosphere.Dispatch(SingleScatterKernel, 256, 128, 32);
 
-        Atmosphere.SetInt("ScatteringOrder", 1); 
+        Atmosphere.SetInt("ScatteringOrder", 1);
         int NumScatteringOrder = MultiScatterIterations;
         Atmosphere.SetTexture(DirectIrradianceKernel, "DeltaIrradianceTex", DeltaIrradianceTex);
         Atmosphere.SetTexture(DirectIrradianceKernel, "IrradianceTex", IrradianceTex);
         Atmosphere.SetTexture(DirectIrradianceKernel, "TransmittanceTexRead", _TransmittanceLUT);
-        Atmosphere.Dispatch(DirectIrradianceKernel, 64, 16, 1); 
+        Atmosphere.Dispatch(DirectIrradianceKernel, 64, 16, 1);
 
         Graphics.CopyTexture(ScatteringTex, MultiScatterTex);
-        for(int ScatteringOrder = 2; ScatteringOrder <= NumScatteringOrder; ++ScatteringOrder) {
+        for (int ScatteringOrder = 2; ScatteringOrder <= NumScatteringOrder; ++ScatteringOrder)
+        {
             var TempScatOrder = ScatteringOrder;
-            Atmosphere.SetInt("ScatteringOrder", TempScatOrder); 
+            Atmosphere.SetInt("ScatteringOrder", TempScatOrder);
             Atmosphere.SetTexture(ScatteringDensityKernel, "DebugTex", DebugTex);
             Atmosphere.SetTexture(ScatteringDensityKernel, "IrradianceTexRead", DeltaIrradianceTex);
             Atmosphere.SetTexture(ScatteringDensityKernel, "TransmittanceTexRead", _TransmittanceLUT);
@@ -372,7 +386,7 @@ public class AtmosphereGenerator {
             Atmosphere.Dispatch(ScatteringDensityKernel, 256, 128, 32);
 
             var TempScatOrder2 = ScatteringOrder - 1;
-            Atmosphere.SetInt("ScatteringOrder", TempScatOrder2); 
+            Atmosphere.SetInt("ScatteringOrder", TempScatOrder2);
             Atmosphere.SetTexture(IndirectIrradianceKernel, "IrradianceTex", IrradianceTex);
             Atmosphere.SetTexture(IndirectIrradianceKernel, "DeltaIrradianceTex", DeltaIrradianceTex);
             Atmosphere.SetTexture(IndirectIrradianceKernel, "RayleighTexRead", _RayleighTex);
@@ -388,14 +402,14 @@ public class AtmosphereGenerator {
             Atmosphere.SetTexture(MultipleScatteringKernel, "TransmittanceTexRead", _TransmittanceLUT);
             Atmosphere.Dispatch(MultipleScatteringKernel, 256, 128, 32);
 
-            
-        }     
+
+        }
 
 
         Atmosphere.SetTexture(FirstCloudKernel, "CloudTex1", CloudTex1);
         Atmosphere.SetFloat("numCells", 2);
         Atmosphere.SetFloat("TargetSize", 32);
-        Atmosphere.Dispatch(FirstCloudKernel, 32,32,64);
+        Atmosphere.Dispatch(FirstCloudKernel, 32, 32, 64);
 
         rayleigh_densityC.Release();
         mie_densityC.Release();

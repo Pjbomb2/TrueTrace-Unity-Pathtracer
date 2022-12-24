@@ -123,10 +123,8 @@ using CommonVars;
         int ReversedIndex = 0;
             int ID = chunks[Index].id;
          var toVox = Quaternion.Inverse(toUnity);
-        Vector3 Scale;
         Vector3 Translation = new Vector3(0,0,0);
         Matrix4x4 ModifiedRotation = Matrix4x4.identity;
-        int Case = 0;
         int SecondaryIndex = Index;
         if(chunks[Index].Type == NodeType.Transform) {
             for(int i2 = 0; i2 < transformNodeChunks.Count; i2++) {
@@ -136,7 +134,6 @@ using CommonVars;
             Translation.z = -Translation.z;
             ModifiedRotation = ReadRotationVector((byte)transformNodeChunks[ReversedIndex].RotationAt(0));
             TraverseTransforms(transformNodeChunks[ReversedIndex].childId, Offsets + Translation, (ModifiedRotation), transformNodeChunks[ReversedIndex].childId); 
-            Case = 0;
         } else if(chunks[Index].Type == NodeType.Group){
             for(int i2 = 0; i2 < groupNodeChunks.Count; i2++) {
                 if(ID == transformNodeChunks[i2].id) ReversedIndex = i2;
@@ -144,7 +141,6 @@ using CommonVars;
             foreach (var childId in groupNodeChunks[ReversedIndex].childIds) {
                 TraverseTransforms(childId, Offsets, Rotation, childId);
             }
-            Case = 1;
         } else if(chunks[Index].Type == NodeType.Shape) {
             for(int i2 = 0; i2 < shapeNodeChunks.Count; i2++) {
                 if(ID == shapeNodeChunks[i2].id) ReversedIndex = i2;
@@ -163,7 +159,6 @@ using CommonVars;
                 voxelFrames[sm.modelId] = tempdata;
             }
             SecondaryIndex -= transformNodeChunks.Count + groupNodeChunks.Count;
-            Case = 2;
         } else {
             Debug.Log("FUCK");
         }
@@ -184,7 +179,6 @@ using CommonVars;
 
         public bool LoadModel(string absolutePath) {
             var name = Path.GetFileNameWithoutExtension(absolutePath);
-            Debug.Log("load: " + name);
             //Load the whole file
             using (var reader = new BinaryReader(new MemoryStream(File.ReadAllBytes(absolutePath)))) {
                 var head = new string(reader.ReadChars(4));

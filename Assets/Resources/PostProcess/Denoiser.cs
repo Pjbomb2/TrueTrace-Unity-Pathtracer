@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [System.Serializable]
-public class Denoiser {
+public class Denoiser
+{
     private ComputeShader SVGF;
-    private ComputeShader AtrousDenoiser;
     private ComputeShader Bloom;
     private ComputeShader AutoExpose;
     private ComputeShader TAA;
@@ -65,9 +65,6 @@ public class Denoiser {
     private int ReprojectKernel;
     private int FinalizeKernel;
     private int SVGFAtrousKernel;
-    private int AtrousKernel;
-    private int AtrousCopyKernel;
-    private int AtrousFinalizeKernel;
 
     private int BloomDownsampleKernel;
     private int BloomLowPassKernel;
@@ -98,13 +95,17 @@ public class Denoiser {
     private int[] BloomHeights;
 
 
-    private void CreateRenderTexture(ref RenderTexture ThisTex, bool SRGB) {
-        if(SRGB) {
-        ThisTex = new RenderTexture(SourceWidth, SourceHeight, 0,
-            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-        } else {
-        ThisTex = new RenderTexture(SourceWidth, SourceHeight, 0,
-            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+    private void CreateRenderTexture(ref RenderTexture ThisTex, bool SRGB)
+    {
+        if (SRGB)
+        {
+            ThisTex = new RenderTexture(SourceWidth, SourceHeight, 0,
+                RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+        }
+        else
+        {
+            ThisTex = new RenderTexture(SourceWidth, SourceHeight, 0,
+                RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
         }
         ThisTex.enableRandomWrite = true;
         ThisTex.useMipMap = false;
@@ -112,45 +113,56 @@ public class Denoiser {
     }
 
 
-    private void CreateRenderTexture(ref RenderTexture ThisTex, bool SRGB, int Width, int Height) {
-        if(SRGB) {
-        ThisTex = new RenderTexture(Width, Height, 0,
-            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-        } else {
-        ThisTex = new RenderTexture(Width, Height, 0,
-            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+    private void CreateRenderTexture(ref RenderTexture ThisTex, bool SRGB, int Width, int Height)
+    {
+        if (SRGB)
+        {
+            ThisTex = new RenderTexture(Width, Height, 0,
+                RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+        }
+        else
+        {
+            ThisTex = new RenderTexture(Width, Height, 0,
+                RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
         }
         ThisTex.enableRandomWrite = true;
         ThisTex.useMipMap = false;
         ThisTex.Create();
     }
 
-    private void CreateRenderTexture2(ref RenderTexture ThisTex, bool SRGB) {
-        if(SRGB) {
-        ThisTex = new RenderTexture(Screen.width, Screen.height, 0,
-            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-        } else {
-        ThisTex = new RenderTexture(Screen.width, Screen.height, 0,
-            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+    private void CreateRenderTexture2(ref RenderTexture ThisTex, bool SRGB)
+    {
+        if (SRGB)
+        {
+            ThisTex = new RenderTexture(Screen.width, Screen.height, 0,
+                RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+        }
+        else
+        {
+            ThisTex = new RenderTexture(Screen.width, Screen.height, 0,
+                RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
         }
         ThisTex.enableRandomWrite = true;
         ThisTex.useMipMap = false;
         ThisTex.Create();
     }
-    private void CreateRenderTextureInt(ref RenderTexture ThisTex) {
+    private void CreateRenderTextureInt(ref RenderTexture ThisTex)
+    {
         ThisTex = new RenderTexture(SourceWidth, SourceHeight, 0,
             RenderTextureFormat.RInt, RenderTextureReadWrite.Linear);
         ThisTex.enableRandomWrite = true;
         ThisTex.Create();
     }
-    private void CreateRenderTextureDouble(ref RenderTexture ThisTex) {
+    private void CreateRenderTextureDouble(ref RenderTexture ThisTex)
+    {
         ThisTex = new RenderTexture(SourceWidth, SourceHeight, 0,
             RenderTextureFormat.RGFloat, RenderTextureReadWrite.Linear);
         ThisTex.enableRandomWrite = true;
         ThisTex.Create();
     }
 
-    private void CreateRenderTextureSingle(ref RenderTexture ThisTex) {
+    private void CreateRenderTextureSingle(ref RenderTexture ThisTex)
+    {
         ThisTex = new RenderTexture(SourceWidth, SourceHeight, 0,
             RenderTextureFormat.RFloat, RenderTextureReadWrite.Linear);
         ThisTex.enableRandomWrite = true;
@@ -158,7 +170,8 @@ public class Denoiser {
     }
 
     public bool SVGFInitialized;
-    public void ClearSVGF() {
+    public void ClearSVGF()
+    {
         _ColorDirectIn.Release();
         _ColorIndirectIn.Release();
         _ColorDirectOut.Release();
@@ -174,26 +187,30 @@ public class Denoiser {
         _History.Release();
         SVGFInitialized = false;
     }
-    public void InitSVGF() {
+    public void InitSVGF()
+    {
         CreateRenderTexture(ref _ColorDirectIn, false);
-         CreateRenderTexture(ref _ColorIndirectIn, false);
-         CreateRenderTexture(ref _ColorDirectOut, false);
-         CreateRenderTexture(ref _ColorIndirectOut, false);
-         CreateRenderTexture(ref _ScreenPosPrev, false);
-         CreateRenderTexture(ref _PrevPosTex, false);
-         CreateRenderTexture(ref _HistoryDirect, false);
-         CreateRenderTexture(ref _HistoryIndirect, false);
-         CreateRenderTexture(ref _HistoryMoment, false);
-         CreateRenderTexture(ref _HistoryNormalDepth, false);
-         CreateRenderTexture(ref _NormalDepth, false);
-         CreateRenderTexture(ref _FrameMoment, false);
-         CreateRenderTextureInt(ref _History);
-         SVGFInitialized = true;
+        CreateRenderTexture(ref _ColorIndirectIn, false);
+        CreateRenderTexture(ref _ColorDirectOut, false);
+        CreateRenderTexture(ref _ColorIndirectOut, false);
+        CreateRenderTexture(ref _ScreenPosPrev, false);
+        CreateRenderTexture(ref _PrevPosTex, false);
+        CreateRenderTexture(ref _HistoryDirect, false);
+        CreateRenderTexture(ref _HistoryIndirect, false);
+        CreateRenderTexture(ref _HistoryMoment, false);
+        CreateRenderTexture(ref _HistoryNormalDepth, false);
+        CreateRenderTexture(ref _NormalDepth, false);
+        CreateRenderTexture(ref _FrameMoment, false);
+        CreateRenderTextureInt(ref _History);
+        SVGFInitialized = true;
     }
-    private void InitRenderTexture() {
-        if (_ColorDirectIn == null || _ColorDirectIn.width != SourceWidth || _ColorDirectIn.height != SourceHeight) {
+    private void InitRenderTexture()
+    {
+        if (_ColorDirectIn == null || _ColorDirectIn.width != SourceWidth || _ColorDirectIn.height != SourceHeight)
+        {
             // Release render texture if we already have one
-            if (_ColorDirectIn != null) {
+            if (_ColorDirectIn != null)
+            {
                 _TAAPrev.Release();
                 PrevOutputTex.Release();
                 PrevUpscalerTAA.Release();
@@ -203,47 +220,49 @@ public class Denoiser {
                 // SpecularOut.Release();
             }
 
-         CreateRenderTexture2(ref _TAAPrev, false);
-         CreateRenderTexture2(ref PrevDepthTex, false);
-         CreateRenderTexture2(ref PrevOutputTex, false);
-         CreateRenderTexture2(ref PrevUpscalerTAA, false);
-         CreateRenderTexture2(ref UpScalerLightingDataTexture, false);
-         CreateRenderTexture2(ref TAAA, false);
-         CreateRenderTexture2(ref TAAB, false);
-         // CreateRenderTexture(ref SpecularIn, false);
-         // CreateRenderTexture(ref SpecularOut, false);
-         BloomSamples = new RenderTexture[8];
-         int BloomWidth = Screen.width / 2;
-         int BloomHeight = Screen.height / 2;
-         BloomWidths = new int[8];
-         BloomHeights = new int[8];
-         for(int i = 0; i < 8; i++) {
-            CreateRenderTexture(ref BloomSamples[i], false, BloomWidth, BloomHeight);
-            BloomWidths[i] = BloomWidth;
-            BloomHeights[i] = BloomHeight;
-            BloomWidth /= 2;
-            BloomHeight /= 2;
-         }
+            CreateRenderTexture2(ref _TAAPrev, false);
+            CreateRenderTexture2(ref PrevDepthTex, false);
+            CreateRenderTexture2(ref PrevOutputTex, false);
+            CreateRenderTexture2(ref PrevUpscalerTAA, false);
+            CreateRenderTexture2(ref UpScalerLightingDataTexture, false);
+            CreateRenderTexture2(ref TAAA, false);
+            CreateRenderTexture2(ref TAAB, false);
+            // CreateRenderTexture(ref SpecularIn, false);
+            // CreateRenderTexture(ref SpecularOut, false);
+            BloomSamples = new RenderTexture[8];
+            int BloomWidth = Screen.width / 2;
+            int BloomHeight = Screen.height / 2;
+            BloomWidths = new int[8];
+            BloomHeights = new int[8];
+            for (int i = 0; i < 8; i++)
+            {
+                CreateRenderTexture(ref BloomSamples[i], false, BloomWidth, BloomHeight);
+                BloomWidths[i] = BloomWidth;
+                BloomHeights[i] = BloomHeight;
+                BloomWidth /= 2;
+                BloomHeight /= 2;
+            }
         }
     }
-    void OnApplicationQuit() {
-        if(A != null) A.Release();
+    void OnApplicationQuit()
+    {
+        if (A != null) A.Release();
     }
 
-    public Denoiser(Camera Cam, int SourceWidth, int SourceHeight) {
+    public Denoiser(Camera Cam, int SourceWidth, int SourceHeight)
+    {
         this.SourceWidth = SourceWidth;
         this.SourceHeight = SourceHeight;
         _camera = Cam;
         SVGFInitialized = false;
 
-        if(SVGF == null) {SVGF = Resources.Load<ComputeShader>("PostProcess/SVGF");}
-        if(AtrousDenoiser == null) {AtrousDenoiser = Resources.Load<ComputeShader>("PostProcess/Atrous");}
-        if(AutoExpose == null) {AutoExpose = Resources.Load<ComputeShader>("PostProcess/AutoExpose");}
-        if(Bloom == null) {Bloom = Resources.Load<ComputeShader>("PostProcess/Bloom");}
-        if(TAA == null) {TAA = Resources.Load<ComputeShader>("PostProcess/TAA");}
-        if(Upscaler == null) {Upscaler = Resources.Load<ComputeShader>("PostProcess/Upscaler");}
-        if(ToneMapper == null) {ToneMapper = Resources.Load<ComputeShader>("PostProcess/ToneMap");}
-        if(TAAU == null) {TAAU = Resources.Load<ComputeShader>("PostProcess/TAAU");}
+        if (SVGF == null) { SVGF = Resources.Load<ComputeShader>("PostProcess/Compute/SVGF"); }
+        if (AutoExpose == null) { AutoExpose = Resources.Load<ComputeShader>("PostProcess/Compute/AutoExpose"); }
+        if (Bloom == null) { Bloom = Resources.Load<ComputeShader>("PostProcess/Compute/Bloom"); }
+        if (TAA == null) { TAA = Resources.Load<ComputeShader>("PostProcess/Compute/TAA"); }
+        if (Upscaler == null) { Upscaler = Resources.Load<ComputeShader>("PostProcess/Compute/Upscaler"); }
+        if (ToneMapper == null) { ToneMapper = Resources.Load<ComputeShader>("PostProcess/Compute/ToneMap"); }
+        if (TAAU == null) { TAAU = Resources.Load<ComputeShader>("PostProcess/Compute/TAAU"); }
 
 
         VarianceKernel = SVGF.FindKernel("kernel_variance");
@@ -251,9 +270,6 @@ public class Denoiser {
         ReprojectKernel = SVGF.FindKernel("kernel_reproject");
         FinalizeKernel = SVGF.FindKernel("kernel_finalize");
         SVGFAtrousKernel = SVGF.FindKernel("kernel_atrous");
-        AtrousKernel = AtrousDenoiser.FindKernel("Atrous");
-        AtrousCopyKernel = AtrousDenoiser.FindKernel("kernel_copy");
-        AtrousFinalizeKernel = AtrousDenoiser.FindKernel("kernel_finalize");
 
         TAAUKernel = TAAU.FindKernel("TAAU");
         TAAUCopyKernel = TAAU.FindKernel("Copy");
@@ -266,14 +282,14 @@ public class Denoiser {
         TAAKernel = TAA.FindKernel("kernel_taa");
         TAAFinalizeKernel = TAA.FindKernel("kernel_taa_finalize");
         TAAPrepareKernel = TAA.FindKernel("kernel_taa_prepare");
-        
+
         UpsampleKernel = Upscaler.FindKernel("kernel_upsample");
 
         AutoExposeKernel = AutoExpose.FindKernel("AutoExpose");
         AutoExposeFinalizeKernel = AutoExpose.FindKernel("AutoExposeFinalize");
         List<float> TestBuffer = new List<float>();
         TestBuffer.Add(1);
-        if(A == null) {A = new ComputeBuffer(1, sizeof(float)); A.SetData(TestBuffer);}
+        if (A == null) { A = new ComputeBuffer(1, sizeof(float)); A.SetData(TestBuffer); }
         SVGF.SetInt("screen_width", SourceWidth);
         SVGF.SetInt("screen_height", SourceHeight);
         SVGF.SetInt("TargetWidth", Screen.width);
@@ -281,9 +297,6 @@ public class Denoiser {
 
         Bloom.SetInt("screen_width", Screen.width);
         Bloom.SetInt("screen_width", Screen.height);
-
-        AtrousDenoiser.SetInt("screen_width", Screen.width);
-        AtrousDenoiser.SetInt("screen_height", Screen.height);
 
         AutoExpose.SetInt("screen_width", Screen.width);
         AutoExpose.SetInt("screen_height", Screen.height);
@@ -303,7 +316,8 @@ public class Denoiser {
         InitRenderTexture();
     }
 
-    public void ExecuteSVGF(int CurrentSamples, int AtrousKernelSize, ref ComputeBuffer _ColorBuffer, ref RenderTexture _target, ref RenderTexture _Albedo, ref RenderTexture _NormTex, bool DiffRes, ref RenderTexture PrevDepthTexMain, ref RenderTexture PrevNormalTex) {
+    public void ExecuteSVGF(int CurrentSamples, int AtrousKernelSize, ref ComputeBuffer _ColorBuffer, ref RenderTexture _target, ref RenderTexture _Albedo, ref RenderTexture _NormTex, bool DiffRes, ref RenderTexture PrevDepthTexMain, ref RenderTexture PrevNormalTex)
+    {
 
         InitRenderTexture();
         SVGF.SetBool("DiffRes", DiffRes);
@@ -366,7 +380,8 @@ public class Denoiser {
         SVGF.SetTexture(SVGFAtrousKernel, "NormalAndDepth", _NormalDepth);
         SVGF.SetTexture(SVGFAtrousKernel, "HistoryDirectTex", _HistoryDirect);
         SVGF.SetTexture(SVGFAtrousKernel, "HistoryIndirectTex", _HistoryIndirect);
-        for (int i = 0; i < AtrousKernelSize; i++) {
+        for (int i = 0; i < AtrousKernelSize; i++)
+        {
             int step_size = 1 << i;
             bool UseFlipped = (i % 2 == 1);
             SVGF.SetTexture(SVGFAtrousKernel, "ColorDirectOut", (UseFlipped) ? _ColorDirectIn : _ColorDirectOut);
@@ -391,67 +406,26 @@ public class Denoiser {
         SVGF.SetTexture(FinalizeKernel, "Result", _target);
         SVGF.SetTexture(FinalizeKernel, "HistoryTex", _History);
         SVGF.SetTexture(FinalizeKernel, "_Albedo", _Albedo);
-        
+
         SVGF.SetTexture(FinalizeKernel, "FrameBufferMoment", _FrameMoment);
         SVGF.Dispatch(FinalizeKernel, threadGroupsX, threadGroupsY, 1);
         UnityEngine.Profiling.Profiler.EndSample();
 
     }
 
-
-
-
-
-    public void ExecuteAtrous(int AtrousKernelSize, float n_phi, float p_phi, float c_phi, ref RenderTexture _PosTex, ref RenderTexture _target, ref RenderTexture _converged, ref RenderTexture _Albedo, ref RenderTexture _NormTex, int curframe) {
-        InitRenderTexture();
-        Matrix4x4 viewprojmatrix = _camera.projectionMatrix * _camera.worldToCameraMatrix;
-        AtrousDenoiser.SetMatrix("viewprojection", viewprojmatrix);
-        AtrousDenoiser.SetMatrix("_CameraToWorld", _camera.cameraToWorldMatrix);
-        AtrousDenoiser.SetTexture(AtrousCopyKernel, "PosTex", _PosTex);
-        AtrousDenoiser.SetTexture(AtrousCopyKernel, "RWNormalAndDepth", _NormalDepth);
-        AtrousDenoiser.SetTexture(AtrousCopyKernel, "_CameraNormalDepthTex", _NormTex);
-        AtrousDenoiser.SetTextureFromGlobal(AtrousCopyKernel, "NormalTex", "_CameraGBufferTexture2");
-        AtrousDenoiser.Dispatch(AtrousCopyKernel, threadGroupsX2, threadGroupsY2, 1);
-
-        Graphics.CopyTexture(_converged, 0, 0, _ColorDirectIn, 0, 0);
-            AtrousDenoiser.SetFloat("n_phi", n_phi);
-            AtrousDenoiser.SetFloat("p_phi", p_phi);
-            AtrousDenoiser.SetInt("KernelSize", AtrousKernelSize);
-            AtrousDenoiser.SetFloat("CurFrame", curframe);
-            AtrousDenoiser.SetTexture(AtrousKernel, "PosTex", _PosTex);
-            AtrousDenoiser.SetTexture(AtrousKernel, "NormalAndDepth", _NormalDepth);
-            int CurrentIteration = 0;
-            AtrousDenoiser.SetTexture(AtrousKernel, "_Albedo", _Albedo);
-
-            for(int i = 1; i <= AtrousKernelSize; i++) {
-                var step_size = i;
-                var c_phi2 = c_phi;
-                bool UseFlipped = (CurrentIteration % 2 == 1);
-                CurrentIteration++;
-                AtrousDenoiser.SetTexture(AtrousKernel, "ResultIn", (UseFlipped) ? _ColorDirectOut : _ColorDirectIn);
-                AtrousDenoiser.SetTexture(AtrousKernel, "Result", (UseFlipped) ? _ColorDirectIn : _ColorDirectOut);
-                AtrousDenoiser.SetFloat("c_phi", c_phi2);
-                AtrousDenoiser.SetInt("step_width", step_size);
-                AtrousDenoiser.Dispatch(AtrousKernel, threadGroupsX2, threadGroupsY2, 1);
-                c_phi /= 2.0f;
-            }
-            AtrousDenoiser.SetTexture(AtrousFinalizeKernel, "ResultIn", AtrousKernelSize == 0 ? _target : (CurrentIteration % 2 == 1) ? _ColorDirectIn : _ColorDirectOut);
-            AtrousDenoiser.SetTexture(AtrousFinalizeKernel, "_Albedo", _Albedo);
-            AtrousDenoiser.SetTexture(AtrousFinalizeKernel, "Result", _target);
-            AtrousDenoiser.Dispatch(AtrousFinalizeKernel, threadGroupsX2, threadGroupsY2, 1);
-    }
-
-    public void ExecuteBloom(ref RenderTexture _target, ref RenderTexture _converged, float BloomStrength) {//need to fix this so it doesnt create new textures every time
+    public void ExecuteBloom(ref RenderTexture _target, ref RenderTexture _converged, float BloomStrength)
+    {//need to fix this so it doesnt create new textures every time
 
         Bloom.SetFloat("strength", BloomStrength);
         Bloom.SetInt("screen_width", Screen.width);
         Bloom.SetInt("screen_height", Screen.height);
-            Bloom.SetInt("TargetWidth", BloomWidths[0]);
-            Bloom.SetInt("TargetHeight", BloomHeights[0]);
+        Bloom.SetInt("TargetWidth", BloomWidths[0]);
+        Bloom.SetInt("TargetHeight", BloomHeights[0]);
         Bloom.SetTexture(BloomLowPassKernel, "InputTex", _converged);
         Bloom.SetTexture(BloomLowPassKernel, "OutputTex", BloomSamples[0]);
         Bloom.Dispatch(BloomLowPassKernel, (int)Mathf.Ceil(BloomWidths[0] / 16.0f), (int)Mathf.Ceil(BloomHeights[0] / 16.0f), 1);
-        for(int i = 1; i < 6; i++) {
+        for (int i = 1; i < 6; i++)
+        {
             // Debug.Log(BloomWidths[i]);
             Bloom.SetInt("TargetWidth", BloomWidths[i]);
             Bloom.SetInt("TargetHeight", BloomHeights[i]);
@@ -461,9 +435,10 @@ public class Denoiser {
             Bloom.SetTexture(BloomDownsampleKernel, "OutputTex", BloomSamples[i]);
             Bloom.Dispatch(BloomDownsampleKernel, (int)Mathf.Ceil(BloomWidths[i - 1] / 16.0f), (int)Mathf.Ceil(BloomHeights[i - 1] / 16.0f), 1);
         }
-            Bloom.SetBool("IsFinal", false);
+        Bloom.SetBool("IsFinal", false);
 
-        for(int i = 5; i > 0; i--) {
+        for (int i = 5; i > 0; i--)
+        {
             Bloom.SetInt("TargetWidth", BloomWidths[i - 1]);
             Bloom.SetInt("TargetHeight", BloomHeights[i - 1]);
             Bloom.SetInt("screen_width", BloomWidths[i]);
@@ -489,7 +464,8 @@ public class Denoiser {
     }
 
 
-    public void ExecuteAutoExpose(ref RenderTexture _target, ref RenderTexture _converged, float Exposure) {//need to fix this so it doesnt create new textures every time
+    public void ExecuteAutoExpose(ref RenderTexture _target, ref RenderTexture _converged, float Exposure)
+    {//need to fix this so it doesnt create new textures every time
         AutoExpose.SetTexture(AutoExposeKernel, "InTex", _converged);
         AutoExpose.SetFloat("Exposure", Exposure);
         AutoExpose.Dispatch(AutoExposeKernel, 1, 1, 1);
@@ -500,8 +476,9 @@ public class Denoiser {
 
     }
 
-    public void ExecuteTAA(ref RenderTexture Input, ref RenderTexture _Final, int CurrentSamples) {//need to fix this so it doesnt create new textures every time
-        
+    public void ExecuteTAA(ref RenderTexture Input, ref RenderTexture _Final, int CurrentSamples)
+    {//need to fix this so it doesnt create new textures every time
+
         TAA.SetInt("Samples_Accumulated", CurrentSamples);
 
         RenderTexture TempTex = RenderTexture.GetTemporary(Input.descriptor);
@@ -540,7 +517,8 @@ public class Denoiser {
     Matrix4x4 PreviousCameraInverseMatrix;
     Matrix4x4 PrevProjInv;
 
-    public void ExecuteUpsample(ref RenderTexture Input, ref RenderTexture Output, ref RenderTexture OrigPos, int curframe, int cursample) {//need to fix this so it doesnt create new textures every time
+    public void ExecuteUpsample(ref RenderTexture Input, ref RenderTexture Output, ref RenderTexture OrigPos, int curframe, int cursample)
+    {//need to fix this so it doesnt create new textures every time
         UnityEngine.Profiling.Profiler.BeginSample("Upscale");
         Upscaler.SetInt("curframe", curframe);
         Upscaler.SetInt("cursam", cursample);
@@ -557,11 +535,11 @@ public class Denoiser {
         Upscaler.SetVector("Forward", _camera.transform.forward);
         Upscaler.SetTexture(UpsampleKernel, "PosTex", OrigPos);
         Upscaler.SetVector("CamPos", _camera.transform.position);
-        Upscaler.SetMatrix("ViewProjectionMatrix",  _camera.projectionMatrix * _camera.worldToCameraMatrix);
+        Upscaler.SetMatrix("ViewProjectionMatrix", _camera.projectionMatrix * _camera.worldToCameraMatrix);
         Upscaler.SetFloat("FarPlane", _camera.farClipPlane);
         Upscaler.SetTextureFromGlobal(UpsampleKernel, "Albedo", "_CameraGBufferTexture0");
         Upscaler.SetTextureFromGlobal(UpsampleKernel, "DepthTex", "_CameraDepthTexture");
-       // Upscaler.SetTextureFromGlobal(UpsampleKernel, "PrevDepthTex", "_LastCameraDepthTexture");
+        // Upscaler.SetTextureFromGlobal(UpsampleKernel, "PrevDepthTex", "_LastCameraDepthTexture");
         Upscaler.SetTexture(UpsampleKernel, "PrevDepthTex", PrevDepthTex);
         Upscaler.SetTextureFromGlobal(UpsampleKernel, "NormalTex", "_CameraGBufferTexture2");
         Upscaler.SetTextureFromGlobal(UpsampleKernel, "MotionVectors", "_CameraMotionVectorsTexture");
@@ -585,19 +563,21 @@ public class Denoiser {
         RenderTexture.ReleaseTemporary(TempTex3);
         PreviousCameraMatrix = _camera.cameraToWorldMatrix;
         PreviousCameraInverseMatrix = _camera.projectionMatrix.inverse;
-//PrevDepthTex = Shader.GetGlobalTexture("_LastCameraDepthTexture");
+        //PrevDepthTex = Shader.GetGlobalTexture("_LastCameraDepthTexture");
         PrevProjInv = _camera.projectionMatrix.inverse;
     }
 
 
-    public void ExecuteToneMap(ref RenderTexture Output) {//need to fix this so it doesnt create new textures every time
+    public void ExecuteToneMap(ref RenderTexture Output)
+    {//need to fix this so it doesnt create new textures every time
         ToneMapper.SetInt("width", Output.width);
         ToneMapper.SetInt("height", Output.height);
         ToneMapper.SetTexture(0, "Result", Output);
-        ToneMapper.Dispatch(0,threadGroupsX2,threadGroupsY2,1);
+        ToneMapper.Dispatch(0, threadGroupsX2, threadGroupsY2, 1);
     }
 
-    public void ExecuteTAAU(ref RenderTexture Output, ref RenderTexture Input) {//need to fix this so it doesnt create new textures every time
+    public void ExecuteTAAU(ref RenderTexture Output, ref RenderTexture Input)
+    {//need to fix this so it doesnt create new textures every time
         TAAU.SetInt("source_width", SourceWidth);
         TAAU.SetInt("source_height", SourceHeight);
         TAAU.SetInt("target_width", Output.width);
@@ -608,7 +588,7 @@ public class Denoiser {
         TAAU.SetTexture(TAAUKernel, "IMG_TAA_OUTPUT", Output);
         TAAU.SetTextureFromGlobal(TAAUKernel, "Albedo", "_CameraGBufferTexture0");
         TAAU.SetTextureFromGlobal(TAAUKernel, "TEX_FLAT_MOTION", "_CameraMotionVectorsTexture");
-        TAAU.Dispatch(TAAUKernel,threadGroupsX2,threadGroupsY2,1);
+        TAAU.Dispatch(TAAUKernel, threadGroupsX2, threadGroupsY2, 1);
         Graphics.CopyTexture(TAAA, TAAB);
     }
 
