@@ -3,7 +3,6 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>Polishing it as much as I can, plan to upload to asset store</li>
   <li>Looking desperately for optimizations(let me know if you have any ideas)</li>
 </ul>
 Currently needs to be done but havent implemented fully:
@@ -14,23 +13,22 @@ Currently needs to be done but havent implemented fully:
 Currently want to do but havent started:
 <ul>
     <li>Need More Ideas</li>
+    <li>NanoVDB/VDB supprt</li>
 </ul>
 
 # Compute Shader Based Unity PathTracer
-A passion projects that has been going on for awhile(about a year in unity, with my earliest version I can find being version 30(whereas I am now on version 276), which was made on 5-7-2021), finally at a place where I feel comfortable uploading it to Github for others to use
-What is it?
-Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compute Shaders
+A passion projects that has been going on for awhile with the goal of bringing at least interactive pathtracing to everyone in unity, regardless of their hardware
 ## Features: 
 <ul>
-<li>Somewhat fast Compute Shader based path tracing</li>
+<li>Fast Compute Shader based path tracing</li>
 <li>Diffuse, Diffuse Transmission, Emissive, Plastic, and Disney BSDF materials</li>
 <li>Ability to move, add, and remove objects during play</li>
 <li>Ability to update material properties on the fly during play</li>
-<li>ASVGF, and SVGF Denoiser</li>
+<li>ASVGF and SVGF Denoiser</li>
 <li>Compressed Wide Bounding Volume Hierarchy as the Acceleration Structure (See Ylitie et al. 2017 below)</li>
-<li>PBR Texture Support(just apply them to the GameObjects material)</li>
+<li>PBR Texture Support</li>
 <li>Next Event Estimation with Multiple Importance Sampling for Explicit Light Sampling</li>
-<li>Support for default unity lights which interact via NEE(Supports Directional, Point, and Spot lights)</li>
+<li>Support for default unity lights which interact via NEE(Supports Directional, Point Spot, and Area lights)</li>
 <li>Bloom</li>
 <li>No specific GPU vendor needed(this will run on integrated graphics if you so wish it, aka no RTX cores)</li>
 <li>MagicaVoxel support</li>
@@ -48,7 +46,7 @@ Its my attempt at a Real-Time pathtracer built from scratch in Unity using Compu
 </br>[ebruneton](https://ebruneton.github.io/precomputed_atmospheric_scattering/)
 </br>
 
-If you have any questions, or suggestions, etc. let me know either through github issues or something else! I am always looking for more stuff to add, and more ways to make it more user friendly or appealing for others to use, and ways to improve this overall
+If you have any questions, or suggestions, etc. let me know either through github issues or my twitter or my discord! I am always looking for more stuff to add, and more ways to make it more user friendly or appealing for others to use
 ## You can contact me easiest through my discord: Pjbomb2#6129, or my Twitter: https://twitter.com/Pjbomb2
 
 
@@ -68,7 +66,7 @@ Let me know if you use this for anything, I would be excited to see any use of t
 <ul>
   <li>Download and import the UnityPackage provided and open the new Pathtracer Settings at the top of the screen(This WILL re-arrange your hierarchy a bit)</li>
   <li>Whenever you add a new object(or tree of objects), you need to add it to under the gameobject named Scene, and its reccomended you press quickstart to automatically assign the needed scripts to it</li>
-  <li>I highly reccomend you use 1920x1080 or higher, dont use free res</li>
+  <li>I highly reccomend you use 1920x1080 or higher, dont use free resolution</li>
 </ul>
 </br>
 ## Basic script structure breakdown:
@@ -82,9 +80,9 @@ Let me know if you use this for anything, I would be excited to see any use of t
 <ul>
   <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building</li>
   <li>Objects can be added and removed at will simply by toggling the associated gameobject with a ParentObject script on/off in the hierarchy(clicking on parent objects with complex objects for children will lag), but they will take time to appear as the acceleration structure needs to  be rebuilt for them</li>
-  <li>If you change the emissiveness of an object, you need to dissable and re-enable its parent(basically reloading it) if you want to take advantage of NEE correctly sampling it(Does not need to be reloaded for Naive tracing)</li>
+  <li>If you change the emissiveness of an object, you need to disable and re-enable its parent(basically reloading it) if you want to take advantage of NEE correctly sampling it(Does not need to be reloaded for Naive tracing)</li>
   <li>If you use normal maps, they need to be in unity normal map format</li>
-  <li>To set up PBR, all textures go into their proper names, but Roughness goes into the Occlusion texture(Since path tracing gets ambient occlusion by default, this texture is not normally needed, and there being no proper place for a Roughness texture in the default material, I have thought this was a good compromise instead of creating a custom material)</li>
+  <li>To set up PBR with the default material, all textures go into their proper names, but Roughness goes into the Occlusion texture(Since path tracing gets ambient occlusion by default)</li>
   <li>If you are using blendshapes to change geometry of a skinned mesh, you may need to go to the import settings of it(in the inspector), turn off Legacy Blendshape Normals, and make sure all normals are imported, not calculated, otherwise the normals for blendshapes might be wrong</li>
 </ul>
 ## MagicaVoxel Usage

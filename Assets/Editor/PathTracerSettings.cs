@@ -8,6 +8,7 @@ using CommonVars;
  using UnityEngine.UIElements;
  using UnityEngine.Profiling;
 using UnityEditor.UIElements;
+using System.Xml.Serialization;
 
 public class EditModeFunctions : EditorWindow {
      [MenuItem("PathTracer/Pathtracer Settings")]
@@ -22,9 +23,6 @@ public class EditModeFunctions : EditorWindow {
      public Button ClearButton;
      public Button QuickStartButton;
      public Button ForceInstancesButton;
-
-     // public FloatField BounceField;
-     // public FloatField ResField;
 
      public RayTracingMaster RayMaster;
      public AssetManager Assets;
@@ -265,7 +263,12 @@ public class EditModeFunctions : EditorWindow {
          // foreach(var a in TempObjects2) {
          //    DestroyImmediate(a);
          // }
-
+        UnityEngine.Video.VideoPlayer[] VideoObjects = GameObject.FindObjectsOfType<UnityEngine.Video.VideoPlayer>();
+        if(VideoObjects.Length != 0) {
+            if(VideoObjects[0].gameObject.GetComponent<VideoObject>() == null) {
+               VideoObjects[0].gameObject.AddComponent<VideoObject>();
+            }
+        }
          ParentData SourceParent = GrabChildren2(Assets.transform);
 
          SolveChildren(SourceParent);
@@ -494,7 +497,6 @@ public class EditModeFunctions : EditorWindow {
         DoExposureToggle.RegisterValueChangedCallback(evt => {DoExposure = evt.newValue; RayMaster.AllowAutoExpose = DoExposure;if(evt.newValue) rootVisualElement.Insert(rootVisualElement.IndexOf(DoExposureToggle) + 1, ExposureElement); else rootVisualElement.Remove(ExposureElement);});
         ExposureSlider.RegisterValueChangedCallback(evt => {Exposure = evt.newValue; RayMaster.Exposure = Exposure * 100 + 1;});
          if(DoExposure) rootVisualElement.Add(ExposureElement);
-         DoFToggle.RegisterValueChangedCallback(evt => {DoExposure = evt.newValue; RayMaster.AllowDoF = DoF;if(evt.newValue) rootVisualElement.Insert(rootVisualElement.IndexOf(DoFToggle) + 1, DoFFoldout); else rootVisualElement.Remove(DoFFoldout);});        
 
 
 
@@ -673,6 +675,13 @@ public class EditModeFunctions : EditorWindow {
      void Update() {
          if(Assets != null && Instancer != null) RemainingObjectsField.value = Assets.RunningTasks + Instancer.RunningTasks;
          if(RayMaster != null) SampleCountField.value = RayMaster.SampleCount;
+         if(Assets.NeedsToUpdateXML) {
+            using(StreamWriter writer = new StreamWriter(Application.dataPath + "/Resources/Utility/MaterialMappings.xml")) {
+               var serializer = new XmlSerializer(typeof(Materials));
+               serializer.Serialize(writer.BaseStream, AssetManager.data);
+            }
+            Assets.NeedsToUpdateXML = false;
+         }
      }
 
 }

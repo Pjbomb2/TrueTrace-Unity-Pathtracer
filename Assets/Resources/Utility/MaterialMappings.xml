@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<Materials xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <MaterialShader>
+    <Name>Standard</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>_BumpMap</NormalTex>
+    <EmissionTex>_EmissionMap</EmissionTex>
+    <MetallicTex>_MetallicGlossMap</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <RoughnessTex>_OcclusionMap</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>GLTFUtility/Standard (Metallic)</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>_BumpMap</NormalTex>
+    <EmissionTex>_EmissionMap</EmissionTex>
+    <MetallicTex>_MetallicGlossMap</MetallicTex>
+    <MetallicTexChannel>2</MetallicTexChannel>
+    <RoughnessTex>_MetallicGlossMap</RoughnessTex>
+    <RoughnessTexChannel>1</RoughnessTexChannel>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>GLTFUtility/Standard Transparent (Metallic)</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Xiexe/Toon2.0/XSToon2.0_Outlined</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+  </MaterialShader>
+</Materials>

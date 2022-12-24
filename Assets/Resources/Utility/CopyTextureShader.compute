@@ -41,7 +41,7 @@ void SingleInputPass (uint3 id : SV_DispatchThreadID)
     Col = EncodeRGBM(Col.xyz);
 
 
-    Result[id.xy + floor(Offset * Scale)] = float4(pow(Col.xyz, 0.4545f), Col.w);
+    Result[id.xy + floor(Offset * Scale)] = float4(pow(abs(Col.xyz), 0.4545f), Col.w);
 
 
 }
