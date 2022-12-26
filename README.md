@@ -1,5 +1,5 @@
 ![](/Images/Loft1.png)
-## If you like what I do and want to support me and this project, consider becoming a Github Sponsor!
+## If you like what I do and want to support me and this project(as this takes a LOT of my time), consider becoming a Github Sponsor!
 Notes:</br>
 Currently working on:
 <ul>
@@ -98,6 +98,16 @@ Let me know if you use this for anything, I would be excited to see any use of t
   <li>First, there needs to be a gameobject called InstancedStorage in the scene with the InstanceManager attatched to it as a sibling object of the Scene gameobject(this is automatically created on initial start of the scene and pathtracing settings)</li>
   <li>Second, all objects that will be the source of instanced objects will need to go under the InstancedStorage and can be arranged like normal objects(with regards to the layout of parentobject to raytracingobjects)</li>
   <li>Finally, to instance the objects, you just need gameobjects with the InstanceObject script attatched to them under the Scene gameobject, and then drag the desired object instance from the hierarchy to the Instance Parent slot in the InstanceObject script(all of this is displayed in the demoscene)</li>
+</ul>
+## Linking your own Materials
+<ul>
+  <li>So this isnt how to use your own materials, this is how to take your material, and have the textures assign properly</li>
+  <li>Firstly, all material links are defined under Resources -> Utility -> MaterialMappings; On the first time running with a new material, a basic definition for it will be created at the bottom of this file</li>
+  <li>Secondly, all data that you need for this is gotten from clicking on the material you want to add support for in unity, going to the inspector, pressing the 3 dots in the top right, and then Select Shader</li>
+  <li>Then, you need to expand the arrow called "Properties", and the names on the left side will be the names you need to enter into the MaterialMappings file</li>
+  <li>From here, you need to look at the names on the right side of the list under the properties dropdown, and match what the variable is doing to the texture/range name on the left</li>
+  <li>For example, for the Standard Shader/Material, if on the right theres an entry called "Metallic (Range)", you know this is the metallic float variable, so you take the name on the left of this, which in this case is "_Metallic".  Copy the "_Metallic", go to the MaterialMappings xml file, find your material by its shader name, find the corropsponding variable (in this case we are looking for MetallicRange), and replace the "null" with "_Metallic"</li>
+  <li>Doing this will indicate that the slider property "Metallic" in the materials UI(the slider you directly interact in unity if you click the material) is actually the Metallic property in my own material, and should be set to the same value</li>
 </ul>
 
 ## Controls:
