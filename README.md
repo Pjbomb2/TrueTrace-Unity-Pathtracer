@@ -61,14 +61,14 @@ Let me know if you use this for anything, I would be excited to see any use of t
   <li>Enable Unsafe Code(Its for memory management) through Edit -> Project Settings -> Player -> Other Settings -> "Allow 'unsafe' Code" (near the bottom)</li>
   <li>Change the Graphics Api for Windows to DirectX12 through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Untoggle "Auto Graphics API For Windows", then click the little + that appears, select "Direct3D12(Experimental)", and drag that to the top.  A restart of the editor is required</li>
 </ul>
-</br>
+
 ## General Setup
 <ul>
   <li>Download and import the UnityPackage provided and open the new Pathtracer Settings at the top of the screen(This WILL re-arrange your hierarchy a bit)</li>
   <li>Whenever you add a new object(or tree of objects), you need to add it to under the gameobject named Scene, and its reccomended you press quickstart to automatically assign the needed scripts to it</li>
   <li>I highly reccomend you use 1920x1080 or higher, dont use free resolution</li>
 </ul>
-</br>
+
 ## Basic script structure breakdown:
 <ul>
   <li>Top Level is a gameobject called Scene with an AssetManager script attatched</li>
@@ -76,6 +76,7 @@ Let me know if you use this for anything, I would be excited to see any use of t
   <li>Third Level: RayTracingObject Script - This defines what meshes get raytraced, must either be a direct child of a gameobject with the ParentObject Script, or in the same gameobject as the ParentObject Script</li>
   <li>Misc Level: Unity Lights - Must have a RayTracingLight script attatched to be considered(and UseNEE needs to be on), can be ANYWHERE in the hierarchy, only supports Point, Spotlight, and 1 Directional</li>
 </ul>
+
 ## General Use/Notes
 <ul>
   <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building</li>
@@ -85,6 +86,7 @@ Let me know if you use this for anything, I would be excited to see any use of t
   <li>To set up PBR with the default material, all textures go into their proper names, but Roughness goes into the Occlusion texture(Since path tracing gets ambient occlusion by default)</li>
   <li>If you are using blendshapes to change geometry of a skinned mesh, you may need to go to the import settings of it(in the inspector), turn off Legacy Blendshape Normals, and make sure all normals are imported, not calculated, otherwise the normals for blendshapes might be wrong</li>
 </ul>
+
 ## MagicaVoxel Usage
 <ul>
   <li>Before anything, the files need to be in .txt format, to do this, go to the file in file explorer, and rename the .vox to .txt and change the format</li>
@@ -92,13 +94,14 @@ Let me know if you use this for anything, I would be excited to see any use of t
   <li>Second, you need to attatch a VoxelObject to that gameobject(Located under Assets->Resources->BVH->VoxelObject)</li>
   <li>Next you need to attatch the voxel model to this script, by dragging your voxel model asset in the project tab to the VoxelRef space in the VoxelObject script</li>
 </ul>
-</br>
+
 ## Using Instancing
 <ul>
   <li>First, there needs to be a gameobject called InstancedStorage in the scene with the InstanceManager attatched to it as a sibling object of the Scene gameobject(this is automatically created on initial start of the scene and pathtracing settings)</li>
   <li>Second, all objects that will be the source of instanced objects will need to go under the InstancedStorage and can be arranged like normal objects(with regards to the layout of parentobject to raytracingobjects)</li>
   <li>Finally, to instance the objects, you just need gameobjects with the InstanceObject script attatched to them under the Scene gameobject, and then drag the desired object instance from the hierarchy to the Instance Parent slot in the InstanceObject script(all of this is displayed in the demoscene)</li>
 </ul>
+
 ## Linking your own Materials
 <ul>
   <li>So this isnt how to use your own materials, this is how to take your material, and have the textures assign properly</li>
@@ -112,7 +115,7 @@ Let me know if you use this for anything, I would be excited to see any use of t
 
 ## Controls:
 Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera starts frozen), and shift increases speed
-</br>
+
 ## Editor Window Guide
 BVH Options Description - 
 <ul>
@@ -159,8 +162,8 @@ BVH Options Description -
   <li>Atmospheric Scatter Samples - Lower this to 1 if you keep crashing on entering play mode(controls how many atmospheric samples are precomputed)</li>
   <li>Current Samples - Shows how many samples have currently been accumulated</li>
   </ul>
-  
- ## Materials(RayTracingObject script)
+
+## Materials(RayTracingObject script)
  <ul>
   <li>Selected Material - Selects which material you want to edit on the mesh</li>
   <li>Material Type - Select your type of material you want(You usually want Disney, its the most versatile)</li>
@@ -169,6 +172,7 @@ BVH Options Description -
   <li>Emission Color - Changes the color of emissive objects, most useful when you have an emission mask on an object</li>
   <li>Roughness - Roughness of the object</li>
 </ul>
+
 ## Disney BSDF Only Properties
 <ul>
   <li>IOR - Index of Refraction of an object.  Affects only Disney BSDF</li>
@@ -186,7 +190,7 @@ BVH Options Description -
   <li>Flatness - Affects Thin objects.  Affects only Disney BSDF</li>
   <li>Thin - Marks an object as thing so it can be better handled by the BSDF.  Affects only Disney BSDF, can be either 0 or 1</li>
  </ul>
-</br>  
+
 # Known Bugs:
 </br>
 <ul>
