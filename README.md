@@ -3,17 +3,16 @@
 Notes:</br>
 Currently working on:
 <ul>
+  <li>Volumetric voxels, looking for ways to make it faster or be able to precompute individual light contributions</LI>
   <li>Looking desperately for optimizations(let me know if you have any ideas)</li>
 </ul>
 Currently needs to be done but havent implemented fully:
 <ul>
     <li>Volumetric Clouds(struggling, they look garbage)</li>
-    <li>Volumetric Voxels(Struggling to make it fast enough, have so far tried sparse voxel octrees, DDA, and now brickmaps, but its not fast enough, any advice is welcome)</li>
 </ul>
 Currently want to do but havent started:
 <ul>
     <li>Need More Ideas</li>
-    <li>NanoVDB/VDB supprt</li>
 </ul>
 
 # Compute Shader Based Unity PathTracer
