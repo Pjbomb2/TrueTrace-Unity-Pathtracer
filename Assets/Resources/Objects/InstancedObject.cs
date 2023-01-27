@@ -5,47 +5,49 @@ using CommonVars;
 using System.Threading.Tasks;
 using System.Threading;
 
-[System.Serializable]
-public class InstancedObject : MonoBehaviour
-{
-    private ParentObject PreviousInstance;
-    public ParentObject InstanceParent;
-    public int CompactedMeshData;
-
-    public void UpdateInstance()
+namespace TrueTrace {
+    [System.Serializable]
+    public class InstancedObject : MonoBehaviour
     {
-        if (PreviousInstance != null)
+        private ParentObject PreviousInstance;
+        public ParentObject InstanceParent;
+        public int CompactedMeshData;
+
+        public void UpdateInstance()
         {
-            if (!PreviousInstance.Equals(InstanceParent))
+            if (PreviousInstance != null)
             {
-                PreviousInstance.InstanceReferences--;
+                if (!PreviousInstance.Equals(InstanceParent))
+                {
+                    PreviousInstance.InstanceReferences--;
+                    InstanceParent.InstanceReferences++;
+                    PreviousInstance = InstanceParent;
+                }
+            }
+            else
+            {
                 InstanceParent.InstanceReferences++;
                 PreviousInstance = InstanceParent;
             }
         }
-        else
-        {
-            InstanceParent.InstanceReferences++;
-            PreviousInstance = InstanceParent;
-        }
-    }
 
-    private void OnEnable()
-    {
-        if (gameObject.scene.isLoaded)
+        private void OnEnable()
         {
-            this.transform.hasChanged = true;
-            this.GetComponentInParent<AssetManager>().InstanceAddQue.Add(this);
-            this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
+            if (gameObject.scene.isLoaded)
+            {
+                this.transform.hasChanged = true;
+                this.GetComponentInParent<AssetManager>().InstanceAddQue.Add(this);
+                this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
+            }
         }
-    }
 
-    private void OnDisable()
-    {
-        if (gameObject.scene.isLoaded)
+        private void OnDisable()
         {
-            this.GetComponentInParent<AssetManager>().InstanceRemoveQue.Add(this);
-            this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
+            if (gameObject.scene.isLoaded)
+            {
+                this.GetComponentInParent<AssetManager>().InstanceRemoveQue.Add(this);
+                this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
+            }
         }
     }
 }

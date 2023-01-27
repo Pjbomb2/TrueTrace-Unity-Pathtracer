@@ -25,8 +25,8 @@ RWStructuredBuffer<CudaTriangle> OutCudaTriArray;
 
 StructuredBuffer<CudaTriangle> InCudaTriArray;
 
-int Offset;
-int Count;
+uint Offset;
+uint Count;
 
 [numthreads(248, 1, 1)]
 void CombineTriBuffers(uint3 id : SV_DispatchThreadID)

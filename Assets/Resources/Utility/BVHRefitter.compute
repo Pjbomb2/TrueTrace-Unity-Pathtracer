@@ -15,9 +15,9 @@ StructuredBuffer<int> CWBVHIndices;
 
 RWByteAddressBuffer bufVertices;
 
-RWByteAddressBuffer bufIndexes;
+ByteAddressBuffer bufIndexes;
 
-int gVertexCount;
+uint gVertexCount;
 
 int VertOffset;
 
@@ -67,10 +67,9 @@ RWStructuredBuffer<CudaTriangle> CudaTriArray;
 [numthreads(KernelRatio, 1, 1)]
 void Construct(uint3 id : SV_DispatchThreadID)
 {
-	int idx = id.x;
+	uint idx = id.x;
 	if (idx >= gVertexCount)
 		return;
-	idx = idx;
 
 	uint3 vidx = uint3(bufIndexes.Load(idx * 12), bufIndexes.Load(idx * 12 + 8), bufIndexes.Load(idx * 12 + 4)) * 10;
 
@@ -92,7 +91,7 @@ void Construct(uint3 id : SV_DispatchThreadID)
 	praw = bufVertices.Load3((vidx.z + 3) << 2);
 	float3 n3 = asfloat(praw);
 	int VertOfst = VertOffset + idx;
-	float3 Offset3 = mul(Transform3, float4(Offset, 0)) + mul(Transform3, float4(OverallOffset, 0)) + mul(Transform3, float4(ArmetureOffset, 0));
+	float3 Offset3 = mul(Transform3, float4(Offset, 0)).xyz + mul(Transform3, float4(OverallOffset, 0)).xyz + mul(Transform3, float4(ArmetureOffset, 0)).xyz;
 	p *= ArmetureScale;
 	p2 *= ArmetureScale;
 	p3 *= ArmetureScale;
@@ -111,9 +110,9 @@ void Construct(uint3 id : SV_DispatchThreadID)
 	VertexsOut[VertOfst].V2 = (p2 + Offset3);
 	VertexsOut[VertOfst].V3 = (p3 + Offset3);
 
-	float3 Norm1 = mul(float4(mul(float4(n1, 0), Transform).xyz, 0), Transform2);
-	float3 Norm2 = mul(float4(mul(float4(n2, 0), Transform).xyz, 0), Transform2);
-	float3 Norm3 = mul(float4(mul(float4(n3, 0), Transform).xyz, 0), Transform2);
+	float3 Norm1 = mul(float4(mul(float4(n1, 0), Transform).xyz, 0), Transform2).xyz;
+	float3 Norm2 = mul(float4(mul(float4(n2, 0), Transform).xyz, 0), Transform2).xyz;
+	float3 Norm3 = mul(float4(mul(float4(n3, 0), Transform).xyz, 0), Transform2).xyz;
 	VertexsOut[VertOfst].Norm1 = Norm1;
 	VertexsOut[VertOfst].Norm2 = Norm2;
 	VertexsOut[VertOfst].Norm3 = Norm3;
@@ -123,9 +122,9 @@ void Construct(uint3 id : SV_DispatchThreadID)
 	float3 BBMax = max(max((p + Offset3), (p2 + Offset3)), (p3 + Offset3));
 	float3 BBMin = min(min((p + Offset3), (p2 + Offset3)), (p3 + Offset3));
 	[unroll] for (int i2 = 0; i2 < 3; i2++) {
-		if (BBMax[i2] - BBMin[i2] < 0.001f) {
-			BBMin[i2] -= 0.001f;
-			BBMax[i2] += 0.001f;
+		if (BBMax[i2] - BBMin[i2] < 0.0001f) {
+			BBMin[i2] -= 0.0001f;
+			BBMax[i2] += 0.0001f;
 		}
 	}
 	p += Offset3;
@@ -236,7 +235,7 @@ struct Layer {
 StructuredBuffer<Layer> ChildrenNodes;
 
 StructuredBuffer<int> NodesToWork;
-int NodeCount;
+uint NodeCount;
 
 StructuredBuffer<Layer> ReverseStack;
 

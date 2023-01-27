@@ -120,6 +120,19 @@ float3 unpackRGBE(uint x)
 	return v;
 }
 
+float4x4 _CameraInverseProjection;
+float3 Forward;
+
+inline float3 CreateCameraRay(float2 uv) {
+	// Invert the perspective projection of the view-space position
+	float3 direction = mul(_CameraInverseProjection, float4(uv, 0.0f, 1.0f)).xyz;
+	// Transform the direction from camera to world space and normalize
+	direction = mul(_CameraToWorld, float4(direction, 0.0f)).xyz;
+	direction = normalize(direction);
+
+	return direction;
+}
+
 [numthreads(16, 16, 1)]
 void kernel_copy(int3 id : SV_DispatchThreadID)
 {//Reprojects and moves the color data from the array to textures
@@ -128,11 +141,12 @@ void kernel_copy(int3 id : SV_DispatchThreadID)
 	float2 UV = id.xy / float2(screen_width, screen_height);
 	uint2 NewSample = floor(UV * float2(TargetWidth, TargetHeight));
 	float3 Albedo = _Albedo.SampleLevel(sampler_Albedo, id.xy / float2(screen_width, screen_height), 0).xyz;
+	float3 Dir = CreateCameraRay(UV * 2.0f - 1.0f);
 	ColorDirectOut[id.xy] = float4(PerPixelRadiance[pixel_index].Direct + ((Albedo == 0) ? 0 : unpackRGBE(PerPixelRadiance[pixel_index].PrimaryNEERay) / Albedo), 1.0f);
 	ColorIndirectOut[id.xy] = float4(PerPixelRadiance[pixel_index].Indirect, 1.0f);
 	RWScreenPosPrev[id.xy] = float4(((UV)-MotionVectors.SampleLevel(sampler_MotionVectors, UV, 0).xy) * 2.0f - 1.0f, 0.0f, 1.0f);
-	RWNormalAndDepth[id.xy] = float4(oct_encode_normal(NormalTex[id.xy]), Linear01Depth(DepthTex[NewSample].x) * FarPlane, Linear01Depth(PrevDepthTex[NewSample].x) * FarPlane);
-	PrevDepthTexMain[id.xy] = float4(LinearEyeDepth(DepthTex[NewSample].x), 0, 0, 1);
+	RWNormalAndDepth[id.xy] = float4(oct_encode_normal(NormalTex[NewSample]), Linear01Depth(DepthTex[NewSample].x) * FarPlane, Linear01Depth(PrevDepthTex[NewSample].x) * FarPlane);
+	PrevDepthTexMain[id.xy] = float4(length(Dir / dot(Dir, Forward) * LinearEyeDepth(DepthTex[NewSample].x)), 0, 0, 1);
 	PrevNormTex[id.xy] = packUnormArb(NormalTex.SampleLevel(sampler_NormalTex, UV, 0).xyz);
 }
 

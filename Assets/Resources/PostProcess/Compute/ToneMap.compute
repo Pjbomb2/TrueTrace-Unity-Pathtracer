@@ -103,3 +103,117 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     float3 result = TonemapUchimura(Result[id.xy].xyz);
     Result[id.xy] = float4(result, 1.0);
 }
+
+
+
+
+#pragma kernel LuminanceShader
+RWTexture2D<float4> LuminanceTex;
+
+[numthreads(16,16,1)]
+void LuminanceShader (uint3 id : SV_DispatchThreadID)
+{
+        float3 inpColor = Result[id.xy].xyz;
+        float highlights = sqrt(dot(clamp(ACESFilmicTonemap(inpColor * 2.0f), 0.0, 1.0), float3(0.1,0.7,0.2)));
+        float midtones = sqrt(dot(clamp(ACESFilmicTonemap(inpColor), 0.0, 1.0), float3(0.1,0.7,0.2)));
+        float shadows = sqrt(dot(clamp(ACESFilmicTonemap(inpColor * 0.5f), 0.0, 1.0), float3(0.1,0.7,0.2)));
+        LuminanceTex[id.xy] = float4(highlights, midtones, shadows, 1);
+
+
+}
+
+
+
+#pragma kernel ExposureWeightShader
+Texture2D<float4> DiffuseTex;
+Texture2D<float4> tWeights;
+Texture2D<float4> tExposures;
+SamplerState my_trilinear_clamp_sampler;
+int ScreenWidth;
+int ScreenHeight;
+
+[numthreads(16,16,1)]
+void ExposureWeightShader (uint3 id : SV_DispatchThreadID)
+{
+    float3 diff = DiffuseTex.SampleLevel(my_trilinear_clamp_sampler, id.xy / float2(ScreenWidth, ScreenHeight), 0).xyz - 0.5f;
+    float3 weights = exp(-0.5 * diff * diff * 1000.0f);
+    weights /= dot(weights, 1.0) + 0.00001;
+        Result[id.xy] = float4(weights, 1);
+}
+
+
+#pragma kernel BlendShader
+
+[numthreads(16, 16, 1)]
+void BlendShader(uint3 id : SV_DispatchThreadID)
+{
+    // Blend the exposures based on the blend weights.
+    float3 weights = tWeights.SampleLevel(my_trilinear_clamp_sampler, id.xy / float2(ScreenWidth, ScreenHeight), 0).xyz;
+    float3 exposures = tExposures.SampleLevel(my_trilinear_clamp_sampler, id.xy / float2(ScreenWidth, ScreenHeight), 0).xyz;
+    weights /= dot(weights, 1.0) + 0.0001;
+    Result[id.xy] = float4(dot(exposures * weights, 1.0).xxx, 1.0);
+}
+
+
+#pragma kernel BlendLapLaceShader
+Texture2D<float4> tExposuresCoarser;
+Texture2D<float4> tAccumSoFar;
+
+[numthreads(16, 16, 1)]
+void BlendLapLaceShader(uint3 id : SV_DispatchThreadID)
+{
+    float boostLocalContrast = 1;
+    float accumSoFar = tAccumSoFar.SampleLevel(my_trilinear_clamp_sampler, id.xy / float2(ScreenWidth, ScreenHeight), 0).x;
+    float3 laplacians = tExposures.SampleLevel(my_trilinear_clamp_sampler, id.xy / float2(ScreenWidth, ScreenHeight), 0).xyz - tExposuresCoarser.SampleLevel(my_trilinear_clamp_sampler, id.xy / float2(ScreenWidth, ScreenHeight), 0).xyz;
+    float3 weights = tWeights.SampleLevel(my_trilinear_clamp_sampler, id.xy / float2(ScreenWidth, ScreenHeight), 0).xyz * (boostLocalContrast > 0.0 ? abs(laplacians) + 0.00001 : 1.0);
+    weights /= dot(weights, 1.0) + 0.00001;
+    float laplac = dot(laplacians, 1.0);
+    Result[id.xy] = float4((accumSoFar + laplac).xxx, 1.0);
+}
+
+#pragma kernel FinalCombine
+Texture2D<float4> tOrigionalMip;
+Texture2D<float4> tOrigional;
+
+[numthreads(16, 16, 1)]
+void FinalCombine(uint3 id : SV_DispatchThreadID)
+{
+    float exposure = 1.0f;
+    float momentX = 0.0;
+    float momentY = 0.0;
+    float momentX2 = 0.0;
+    float momentXY = 0.0;
+    float ws = 0.0;
+    for (int dy = -1; dy <= 1; dy += 1) {
+        for (int dx = -1; dx <= 1; dx += 1) {
+            float x = tOrigionalMip.SampleLevel(my_trilinear_clamp_sampler, (id.xy + float2(dx, dy)) / float2(ScreenWidth, ScreenHeight), 0).y;
+            float y = DiffuseTex.SampleLevel(my_trilinear_clamp_sampler, (id.xy + float2(dx, dy)) / float2(ScreenWidth, ScreenHeight), 0).x;
+            float w = exp(-0.5 * float(dx * dx + dy * dy) / (0.7 * 0.7));
+            momentX += x * w;
+            momentY += y * w;
+            momentX2 += x * x * w;
+            momentXY += x * y * w;
+            ws += w;
+        }
+    }
+    momentX /= ws;
+    momentY /= ws;
+    momentX2 /= ws;
+    momentXY /= ws;
+    float A = (momentXY - momentX * momentY) / (max(momentX2 - momentX * momentX, 0.0) + 0.00001);
+    float B = momentY - A * momentX;
+
+    // Apply local exposure adjustment as a crude multiplier on all RGB channels.
+    // This is... generally pretty wrong, but enough for the demo purpose.
+    float3 texel = DiffuseTex.SampleLevel(my_trilinear_clamp_sampler,  (id.xy) / float2(ScreenWidth, ScreenHeight), 0).xyz;
+    float3 texelOriginal = sqrt(max(ACESFilmicTonemap(tOrigional.SampleLevel(my_trilinear_clamp_sampler, (id.xy) / float2(ScreenWidth, ScreenHeight), 0).xyz * exposure), 0.0));
+    float luminance = dot(texelOriginal.xyz, float3(0.1, 0.7, 0.2)) + 0.00001;
+    float finalMultiplier = max(A * luminance + B, 0.0) / luminance;
+    // This is a hack to prevent super dark pixels getting boosted by a lot and showing compression artifacts.
+    float lerpToUnityThreshold = 0.007;
+    finalMultiplier = luminance > lerpToUnityThreshold ? finalMultiplier :
+        lerp(1.0, finalMultiplier, (luminance / lerpToUnityThreshold) * (luminance / lerpToUnityThreshold));
+    float3 texelFinal = sqrt(max(ACESFilmicTonemap(tOrigional.SampleLevel(my_trilinear_clamp_sampler, (id.xy) / float2(ScreenWidth, ScreenHeight), 0).xyz * exposure * finalMultiplier), 0.0));
+    Result[id.xy] = float4(texelFinal, 1.0);
+
+}

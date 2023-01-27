@@ -291,7 +291,7 @@ void TAAU(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGroupI
 	linear_color_output = PQDecode(color_output);
 
 	IMG_ASVGF_TAA_A[ipos] = float4(color_output, 0);
-	IMG_TAA_OUTPUT[ipos] = float4(linear_color_output * Albedo[ipos].xyz, 1);
+	IMG_TAA_OUTPUT[ipos] = float4(linear_color_output * ((all(Albedo[ipos].xyz == 0) ? 1 : (Albedo[ipos].xyz))), 1);
 }
 
 

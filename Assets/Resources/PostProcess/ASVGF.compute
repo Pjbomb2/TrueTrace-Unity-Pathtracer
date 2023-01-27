@@ -225,13 +225,13 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 	MetallicA[id.xy] = float2((Input >> 16) / 65535.0f, (Input & 0xFFFF) / 65535.0f);
 	if (PerPixelRadiance[pixel_index].IsSpecular == 0 || MetallicA[id.xy].y >= 0.18f) {
 		STORE_SH(TEX_PT_COLOR_LF_SH, TEX_PT_COLOR_LF_COCG, id.xy, SHStruct[pixel_index]);
-		TEX_PT_COLOR_HF[id.xy] = float4(PerPixelRadiance[pixel_index].Direct + unpackRGBE(PerPixelRadiance[pixel_index].Fog), 0);
+		TEX_PT_COLOR_HF[id.xy] = float4(PerPixelRadiance[pixel_index].Direct + unpackRGBE(PerPixelRadiance[pixel_index].Fog) / ((TEX_PT_BASE_COLOR_A[id.xy].xyz != 0) ? TEX_PT_BASE_COLOR_A[id.xy].xyz : 1), 0);
 		TEX_PT_COLOR_SPEC[id.xy] = 0;
 	}
 	else {
 		SH TempSH = { 0,0,0,0,0,0 };
 		STORE_SH(TEX_PT_COLOR_LF_SH, TEX_PT_COLOR_LF_COCG, id.xy, TempSH);
-		TEX_PT_COLOR_SPEC[id.xy] = float4(PerPixelRadiance[pixel_index].Direct + PerPixelRadiance[pixel_index].Indirect + unpackRGBE(PerPixelRadiance[pixel_index].Fog), 0);
+		TEX_PT_COLOR_SPEC[id.xy] = float4(PerPixelRadiance[pixel_index].Direct + PerPixelRadiance[pixel_index].Indirect + unpackRGBE(PerPixelRadiance[pixel_index].Fog) / ((TEX_PT_BASE_COLOR_A[id.xy].xyz != 0) ? TEX_PT_BASE_COLOR_A[id.xy].xyz : 1), 0);
 		TEX_PT_COLOR_HF[id.xy] = 0;
 	}
 	TEX_PT_GEO_NORMAL_A[id.xy] = Normal[id.xy];
@@ -1221,7 +1221,7 @@ inline void filter_image(
 	normal_weight_spec = clamp(normal_weight_spec, 8, 1024);
 	normal_weight_spec *= normal_weight_scale;
 
-	const int step_size = int(1u << spec_iteration);
+	const int step_size = int(1u << (spec_iteration % 3));
 
 	float3 sum_color_hf = color_center_hf.rgb;
 	float3 sum_color_spec = color_center_spec.rgb;
@@ -1231,7 +1231,7 @@ inline void filter_image(
 	float sum_w_spec = 1.0;
 
 	// Add some jitter to sample positions to hide the a-trous filter aliasing patterns
-	int2 jitter = int2((random(23, gl_GlobalInvocationID.xy) - 0.5) * float(step_size));
+	int2 jitter = int2((random(23, gl_GlobalInvocationID.xy) - 0.5) * float(step_size * step_size));
 
 	float spec_filter_width_scale = clamp(roughness_center * 100 - spec_iteration, 0, 1);
 
@@ -1240,7 +1240,7 @@ inline void filter_image(
 	const int r = 1;
 	for (int yy = -r; yy <= r; yy++) {
 		for (int xx = -r; xx <= r; xx++) {
-			int2 p = ipos + int2(xx, yy) * step_size + jitter;
+			int2 p = ipos + int2(xx, yy) * step_size * step_size + jitter;
 
 			if (xx == 0 && yy == 0)
 				continue;
@@ -1254,7 +1254,7 @@ inline void filter_image(
 			float roughness = MetallicA[p].y;
 
 			float dist_z = abs(depth_center - depth) * fwidth_depth * 0.5f;
-			w *= exp(-dist_z / float(step_size));
+			w *= exp(-dist_z / float(step_size * step_size));
 			w *= wavelet_kernel[abs(xx)][abs(yy)];
 
 			float w_hf = w;

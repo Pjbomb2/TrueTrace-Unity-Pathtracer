@@ -1,3 +1,4 @@
+// #define DoLightMapping
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -188,12 +189,37 @@ namespace CommonVars
         public List<Vector4> Tangents;
         public List<Vector2> UVs;
         public List<int> MatDat;
+        public List<Vector2> LightMapUvs;
+        public List<int> LightMapTexIndexes;
+
+        public void FillMapIndexes(int Count, int Index)
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                LightMapTexIndexes.Add(Index);
+            }
+        }
+
+        public void FillMapUVsScaled(Vector2[] Uvs, Vector4 Scale)
+        {
+            for (int i = 0; i < Uvs.Length; i++)
+            {
+                LightMapUvs.Add(Uvs[i] * Scale.x + new Vector2(Scale.z, Scale.w));
+            }
+        }
 
         public void SetUvZero(int Count)
         {
             for (int i = 0; i < Count; i++)
             {
                 UVs.Add(new Vector2(0.0f, 0.0f));
+            }
+        }
+        public void SetLightMapUvZero(int Count)
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                LightMapUvs.Add(new Vector2(0.0f, 0.0f));
             }
         }
         public void SetTansZero(int Count)
@@ -211,6 +237,8 @@ namespace CommonVars
             this.Verticies = new List<Vector3>();
             this.Normals = new List<Vector3>();
             this.Indices = new List<int>();
+            this.LightMapUvs = new List<Vector2>();
+            this.LightMapTexIndexes = new List<int>();
         }
         public void Clear()
         {
@@ -222,6 +250,9 @@ namespace CommonVars
                 this.Verticies.Clear();
                 this.Normals.Clear();
                 this.Indices.Clear();
+                this.LightMapUvs.Clear();
+                this.LightMapTexIndexes.Clear();
+
             }
         }
     }
@@ -463,6 +494,31 @@ namespace CommonVars
     }
 
     [System.Serializable]
+    public struct LightmapMeshDataCompacted
+    {
+        public Matrix4x4 Transform;
+        public Matrix4x4 Inverse;
+        public int AggTriCount;
+        public int AggTriOffset;
+    }
+    [System.Serializable]
+    public struct LightMapTriangle
+    {
+        public Vector3 pos0;
+        public Vector3 posedge1;
+        public Vector3 posedge2;
+
+        public Vector3 norm;
+
+        public Vector2 UV0;
+        public Vector2 UV1;
+        public Vector2 UV2;
+
+        public int LightMapIndex;
+        public Vector2 WH;
+    }
+
+    [System.Serializable]
     public struct AABB
     {
         public Vector3 BBMax;
@@ -610,8 +666,8 @@ namespace CommonVars
     [System.Serializable]
     public struct RayObjectTextureIndex
     {
-        public RayTracingObject Obj;
-        public TerrainObject Terrain;
+        public TrueTrace.RayTracingObject Obj;
+        public TrueTrace.TerrainObject Terrain;
         public int ObjIndex;
     }
 
@@ -630,8 +686,13 @@ namespace CommonVars
         public string EmissionTex;
         public string MetallicTex;
         public int MetallicTexChannel;
+        public string MetallicRange;
         public string RoughnessTex;
         public int RoughnessTexChannel;
+        public string RoughnessRange;
+        public bool IsGlass;
+        public bool IsCutout;
+        public string BaseColorValue;
     }
     [System.Serializable]
     public class Materials
@@ -642,6 +703,37 @@ namespace CommonVars
 
     public static class CommonFunctions
     {
+        public static void CreateDynamicBuffer(ref ComputeBuffer TargetBuffer, int Count, int Stride)
+        {
+            if (TargetBuffer == null) TargetBuffer = new ComputeBuffer(Count, Stride);
+        }
+        public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, List<T> data, int stride)
+            where T : struct
+        {
+            // Do we already have a compute buffer?
+            if (buffer != null)
+            {
+                // If no data or buffer doesn't match the given criteria, release it
+                if (data.Count == 0 || buffer.count != data.Count || buffer.stride != stride)
+                {
+                    buffer.Release();
+                    buffer = null;
+                }
+            }
+
+            if (data.Count != 0)
+            {
+                // If the buffer has been released or wasn't there to
+                // begin with, create it
+                if (buffer == null)
+                {
+                    buffer = new ComputeBuffer(data.Count, stride);
+                }
+                // Set data on the buffer
+                buffer.SetData(data);
+            }
+        }
+
         unsafe public static void Aggregate(ref BVHNode8DataCompressed[] AggNodes, ref BVHNode8Data[] BVH8Nodes)
         {//Compress the CWBVH
             BVHNode8DataCompressed TempBVHNode = new BVHNode8DataCompressed();
@@ -693,6 +785,10 @@ namespace CommonVars
             {
                 for (int i2 = 0; i2 < 4; i2++) matrix[i, i2] = Mathf.Abs(matrix[i, i2]);
             }
+        }
+        public static void SetComputeBuffer(this ComputeShader Shader, int kernel, string name, ComputeBuffer buffer)
+        {
+            if (buffer != null) Shader.SetBuffer(kernel, name, buffer);
         }
 
     }

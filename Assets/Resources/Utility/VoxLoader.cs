@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEngine;
 using CommonVars;
 
+namespace TrueTrace {
     public sealed class VoxLoader {
         #region Chunk names
         private const string HEADER = "VOX ";
@@ -769,3 +770,4 @@ LoadDefaultPalette();
         #endregion
     }
     }
+}

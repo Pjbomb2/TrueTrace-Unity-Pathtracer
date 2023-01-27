@@ -75,3 +75,47 @@ void AddInputPass (uint3 id : SV_DispatchThreadID)
 
 
 }
+
+#pragma kernel SingleOutputPass
+
+uint packUnormArb(float3 data2) {
+    data2 = data2 * 0.5f + 0.5f;
+    const uint4 bits = uint4(10, 10, 10, 0);
+    const float4 data = float4(data2, 0);
+    float4 mull = exp2(float4(bits)) - 1.0;
+
+    uint4 shift = uint4(0, bits.x, bits.x + bits.y, bits.x + bits.y + bits.z);
+    uint4 shifted = uint4(data * mull + 0.5) << shift;
+
+    return shifted.x | shifted.y | shifted.z | shifted.w;
+}
+
+RWTexture2D<float> ResultSingle;
+[numthreads(32,32,1)]
+void SingleOutputPass (uint3 id : SV_DispatchThreadID)
+{
+    if(any(id.xy >= (uint2)floor((InputSize) * Scale))) return;
+    float A = AdditionTex.SampleLevel(sampler_trilinear_clamp, (id.xy) / InputSize / Scale, 0)[OutputRead];
+    ResultSingle[id.xy + floor(Offset * Scale)] = pow(abs(A), 0.4545f);
+
+
+}
+#pragma kernel DoubleOutputPass
+RWTexture2D<float2> ResultDouble;
+[numthreads(32,32,1)]
+void DoubleOutputPass (uint3 id : SV_DispatchThreadID)
+{
+    if(any(id.xy >= (uint2)floor((InputSize) * Scale))) return;
+        float4 Col = AdditionTex.SampleLevel(sampler_trilinear_clamp, (id.xy) / InputSize / Scale, 0);
+        float2 InputNormal;
+        [branch]if(Col.r == 1) {
+            InputNormal = Col.ag;
+        } else {
+            InputNormal = Col.rg;
+        }
+            InputNormal.y = 1.0f - InputNormal.y;
+        // InputNormal.y = 1.0f - InputNormal.y;
+        ResultDouble[id.xy + floor(Offset * Scale)] = InputNormal;
+
+
+}
