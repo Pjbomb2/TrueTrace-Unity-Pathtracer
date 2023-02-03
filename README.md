@@ -1,4 +1,4 @@
-![](/Images/Loft1.png)
+![](/Images/ArchViz3.png)
 ## If you like what I do and want to support me and this project(as this takes a LOT of my time), consider becoming a Github Sponsor or a Patron at patreon.com/Pjbomb2!  This allows me to keep this free!
 ## Demo:  https://drive.google.com/file/d/11j8a-7S_fbJsKLKMpmd86aIAcnFq9ZA8/view?usp=sharing
 Notes:</br>
@@ -200,6 +200,9 @@ BVH Options Description -
 
 # Sample Images(Taken from various stages of development)
 
+![](/Images/ArchViz1.png)
+![](/Images/ArchViz2.png)
+![](/Images/Loft1.png)
 ![](/Images/Portal.png)
 ![](/Images/Loft.png)
 ![](/Images/Minecraft.png)
