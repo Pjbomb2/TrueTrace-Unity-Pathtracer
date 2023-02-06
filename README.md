@@ -1,5 +1,5 @@
 ![](/Images/ArchViz3.png)
-# If you like what I do and want to support me and this project(as this takes a LOT of my time), consider becoming a Github Sponsor or a Patron at patreon.com/Pjbomb2!  This allows me to keep this free!
+# If you like what I do and want to support me and this project(as this takes a LOT of my time), Please consider becoming a Github Sponsor or a Patron at patreon.com/Pjbomb2!  This allows me to keep this free for everyone!
 ## Demo:  https://drive.google.com/file/d/11j8a-7S_fbJsKLKMpmd86aIAcnFq9ZA8/view?usp=sharing
 Notes:</br>
 Currently working on:
@@ -62,16 +62,19 @@ Let me know if you use this for anything, I would be excited to see any use of t
   <li>Change the Graphics Api for Windows to DirectX12 through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Untoggle "Auto Graphics API For Windows", then click the little + that appears, select "Direct3D12(Experimental)", and drag that to the top.  A restart of the editor is required</li>
 </ul>
 
+## Controls:
+Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera starts frozen), and shift increases speed
+
 ## General Setup
 <ul>
   <li>Download and import the UnityPackage provided and open the new Pathtracer Settings at the top of the screen(This WILL re-arrange your hierarchy a bit)</li>
   <li>Whenever you add a new object(or tree of objects), you need to add it to under the gameobject named Scene, and its reccomended you press quickstart to automatically assign the needed scripts to it</li>
-  <li>I highly reccomend you use 1920x1080 or higher, dont use free resolution</li>
+  <li>Dont use free resolution</li>
 </ul>
 
 ## Basic script structure breakdown:
 <ul>
-  <li>Top Level is a gameobject called Scene with an AssetManager script attatched</li>
+  <li>Top Level is a gameobject called Scene with an AssetManager and RayTracingMaster script attatched</li>
   <li>Second Level: Parent Object Script - Attatch this to all objects that will have children with meshes you want to raytrace(can be a child to any gameobject as long as its eventual parent is the AssetManager script)</li>
   <li>Third Level: RayTracingObject Script - This defines what meshes get raytraced, must either be a direct child of a gameobject with the ParentObject Script, or in the same gameobject as the ParentObject Script</li>
   <li>Misc Level: Unity Lights - Must have a RayTracingLight script attatched to be considered(and UseNEE needs to be on), can be ANYWHERE in the hierarchy, only supports Point, Spotlight, and 1 Directional</li>
@@ -79,6 +82,7 @@ Let me know if you use this for anything, I would be excited to see any use of t
 
 ## General Use/Notes
 <ul>
+  <li>The camera you want to render from, you attatch the RenderHandler script to</li>
   <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building</li>
   <li>Objects can be added and removed at will simply by toggling the associated gameobject with a ParentObject script on/off in the hierarchy(clicking on parent objects with complex objects for children will lag), but they will take time to appear as the acceleration structure needs to  be rebuilt for them</li>
   <li>If you change the emissiveness of an object, you need to disable and re-enable its parent(basically reloading it) if you want to take advantage of NEE correctly sampling it(Does not need to be reloaded for Naive tracing)</li>
@@ -113,9 +117,6 @@ Let me know if you use this for anything, I would be excited to see any use of t
   <li>Doing this will indicate that the slider property "Metallic" in the materials UI(the slider you directly interact in unity if you click the material) is actually the Metallic property in my own material, and should be set to the same value</li>
 </ul>
 
-## Controls:
-Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera starts frozen), and shift increases speed
-
 ## Editor Window Guide
 BVH Options Description - 
 <ul>
@@ -145,7 +146,7 @@ BVH Options Description -
   <li>ReSTIR Spatial M-Cap - Tuneable parameter, increase this if you have lots of lights(standard values would be between 32 and 640 for reference, but going higher or lower is needed at times)</li>
   <li>Use ReSTIR GI - Enables ReSTIR GI which is usually much higher quality</li>
   <li>Do Sample Connection Validation - Confirms that two samples are mutually visable and throws it away if they are not</li>
-  <li>Update Rate - How many pixels per frame get re-traced to ensure they are still valid paths</li>
+  <li>Update Rate - How many pixels per frame get re-traced to ensure they are still valid paths(7 is a good number to aim for here)</li>
   <li>Enable Temporal - Enables the Temporal pass of ReSTIR GI(allows samples to travel across time</li>
   <li>Temporal M Cap - How long a sample may live for, lower means lighting updates faster(until 0 which is the opposite) but more noise(reccomended either 0 or around 12, but can be played with)</li>
   <li>Permute Temporal Samples - Turns on permutation sampling, can lead to much higher quality much faster, but a lower M cap is reccomended(around 3-12)</li>
@@ -159,6 +160,9 @@ BVH Options Description -
   <li>(If ASVGF Denoiser is on)ASVGF Atrous Kernel Size - The amount of iterations the final ASVGF atrous goes through, limited to 4, 5, and 6</li>
   <li>Enable Tonemapping - Turns on Uchimura Tonemapping</li>
   <li>Enable TAAU - Use TAAU for upscaling(if off, you use my semi custom upscaler instead)</li>
+  <li>Use Altered Throughput Pipelien - Calculates throughput differently, helps with semi metallic surfaces for ASVGF</li>
+  <li>Use Checkerboarding - Only traces half the indirect rays, so quality is sightly decreased for a slight increase in performance</li>
+  <li>Use AntiFirefly - Enables RCRS filter for getting rid of those single bright pixels</li>
   <li>Atmospheric Scatter Samples - Lower this to 1 if you keep crashing on entering play mode(controls how many atmospheric samples are precomputed)</li>
   <li>Current Samples - Shows how many samples have currently been accumulated</li>
   </ul>
@@ -194,7 +198,7 @@ BVH Options Description -
 # Known Bugs:
 </br>
 <ul>
-  <li>Error that RayTracingShader is using too many UAV's.  This isnt really a bug, but happens because you cant disable DX11 which doesnt allow more than 8(whereas DX12, which is actually used, allows a lot more), so it yells at you for a non-issue</li>
+  <li>Report any you find! There WILL be bugs, I just dont know what they are</li>
 </ul>
 
 
