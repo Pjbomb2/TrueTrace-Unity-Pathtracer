@@ -4,7 +4,8 @@
 Notes:</br>
 Currently working on:
 <ul>
-  <li>Volumetric voxels, looking for ways to make it faster or be able to precompute individual light contributions</LI>
+  <li>Volumetric voxels, looking for ways to make it faster or be able to precompute individual light contributions</li>
+  <li>HDRP Support</li>
   <li>Looking desperately for optimizations(let me know if you have any ideas)</li>
 </ul>
 Currently needs to be done but havent implemented fully:
