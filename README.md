@@ -202,6 +202,11 @@ BVH Options Description -
   <li>Report any you find! There WILL be bugs, I just dont know what they are</li>
 </ul>
 
+# Huge thanks to these people for being sponsors/patrons:
+<ul>
+  <li>Launemax</li>
+  <li>mgear</li>
+</ul>
 
 # Sample Images(Taken from various stages of development)
 
