@@ -1,0 +1,262 @@
+#include "CommonData.cginc"
+#pragma use_dxc
+
+
+#pragma kernel GenerateASVGF 
+
+[numthreads(256, 1, 1)]
+void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
+
+    if (id.x >= screen_width || id.y >= screen_height) return;
+    const uint pixel_index = id.y * screen_width + id.x;
+    // float2 jitter = (random(1, pixel_index) - 0.5f);
+    // float2 uv = float2((id.xy) / float2(screen_width, screen_height) * 2.0f - 1.0f);
+    // Ray ray = CreateCameraRay(uv);
+    #ifdef HDRP
+        float2 pos_prev = ((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVectors[int3(id.xy,0)].xy * float2(screen_width, screen_height));
+    #else
+        float2 pos_prev = ((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVectors.SampleLevel(sampler_MotionVectors, id.xy / float2(screen_width, screen_height), 0).xy) * float2(screen_width, screen_height);
+    #endif
+    int2 pp = int2(floor(pos_prev));
+
+    const static RayHit tempray = CreateRayHit();
+    static const ColData InitCol = { 1,1,1,0,0,0,0,0,0,0,0,0 };
+    set(pixel_index, tempray);
+    GlobalRays1[pixel_index].origin = Rays[pixel_index].origin;
+    GlobalRays1[pixel_index].direction = Rays[pixel_index].direction;
+    GlobalRays1[pixel_index].PixelIndex = id.x + id.y * screen_width;
+    GlobalRays1[pixel_index].HitVoxel = 0;
+    GlobalRays1[pixel_index].last_pdf = 0;
+    GlobalRays1[pixel_index].PrevIndex = pp.x + pp.y * screen_width;
+    GlobalColors[pixel_index] = InitCol;
+    SH[pixel_index] = init_SH();
+    InterlockedAdd(BufferSizes[0].tracerays, 1);
+
+}
+
+#pragma kernel Generate
+const static RayHit tempray = CreateRayHit();
+static const ColData InitCol = { 1,1,1,0,0,0,0,0,0,0,0,0 };
+[numthreads(256, 1, 1)]
+void Generate(uint3 id : SV_DispatchThreadID) {
+
+    if (id.x >= screen_width || id.y >= screen_height) return;
+    const uint pixel_index = id.y * screen_width + id.x;
+    float2 jitter = (normalize((random(1, pixel_index) - 0.5f) * 2.0f));
+    float2 uv = float2((id.xy + jitter) / float2(screen_width, screen_height) * 2.0f - 1.0f);
+
+    Ray ray = CreateCameraRay(uv, pixel_index);
+
+    if (UseReSTIRGI) {
+    #ifdef HDRP
+        float2 pos_prev = ((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVectors[int3(id.xy,0)].xy * float2(screen_width, screen_height));
+    #else
+        float2 pos_prev = ((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVectors.SampleLevel(sampler_MotionVectors, id.xy / float2(screen_width, screen_height), 0).xy) * float2(screen_width, screen_height);
+    #endif
+        int2 pp = int2(floor(pos_prev));
+        GlobalRays1[pixel_index].PrevIndex = pp.x + pp.y * screen_width;
+    }
+
+    set(pixel_index, tempray);
+    GlobalRays1[pixel_index].origin = ray.origin;
+    GlobalRays1[pixel_index].direction = ray.direction;
+    GlobalRays1[pixel_index].PixelIndex = id.x + id.y * screen_width;
+    GlobalRays1[pixel_index].HitVoxel = 0;
+    GlobalRays1[pixel_index].last_pdf = 0;
+    GlobalColors[pixel_index] = InitCol;
+    InterlockedAdd(BufferSizes[0].tracerays, 1);
+
+}
+
+#pragma kernel GenerateLightMaps
+
+RWTexture2D<float4> LightMapTexture;
+
+struct LightMapTriangle
+{
+    float3 pos0;
+    float3 posedge1;
+    float3 posedge2;
+
+    float3 norm;
+
+    float2 UV0;
+    float2 UV1;
+    float2 UV2;
+
+    int LightMapIndex;
+    float2 WH;
+};
+
+StructuredBuffer<LightMapTriangle> LightMapTris;
+
+float det(float2 a, float2 b) {
+    return a.x * b.y - a.y * b.x;
+}
+bool IsInside(float2 p, float2 a, float2 b, float2 c, out float u, out float v) {
+    float2 v0 = c - a;
+float2 v1 = b - a;
+float2 v2 = p - a;
+
+float dot00 = dot(v0, v0);
+float dot01 = dot(v0, v1);
+float dot02 = dot(v0, v2);
+float dot11 = dot(v1, v1);
+float dot12 = dot(v1, v2);
+
+float invDenom = 1.0 / (dot00 * dot11 - dot01 * dot01);
+u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+
+// Check if point is in triangle
+return (u >= -0.2f) && (v >= -0.2f) && (u + v < 1.2);
+}
+
+bool TriPointOverlap(float2 triangleA, float2 triangleB, float2 triangleC, float2 centerRect, out float u2, out float v2) {
+    float w;
+    float dot00 = dot(triangleA - triangleB, triangleA - triangleB);
+    float dot01 = dot(triangleA - triangleB, triangleC - triangleB);
+    float dot02 = dot(triangleA - triangleB, centerRect - triangleB);
+    float dot11 = dot(triangleC - triangleB, triangleC - triangleB);
+    float dot12 = dot(triangleC - triangleB, centerRect - triangleB);
+
+    // Calculate the barycentric coordinates
+    float denom = dot00 * dot11 - dot01 * dot01;
+    u2 = (dot11 * dot02 - dot01 * dot12) / denom;
+    v2 = (dot00 * dot12 - dot01 * dot02) / denom;
+    w = 1.0 - u2 - v2;
+
+    // Check if the point is inside the triangle
+    return (u2 >= 0 && v2 >= 0 && w >= 0);
+}
+
+bool IsOverlapping(float2 triangleA, float2 triangleB, float2 triangleC, float2 boxMin, float2 boxMax, out float u, out float v) {
+float2 closestUVPoint;
+// Get the center of the triangle
+float2 centerTriangle = (triangleA + triangleB + triangleC) * 0.3333;
+
+// Get the center of the rectangle
+float2 centerRect = (boxMin + boxMax) * 0.5;
+
+float2 corner1 = float2(boxMin.x, boxMin.y);
+float2 corner2 = float2(boxMax.x, boxMin.y);
+float2 corner3 = float2(boxMin.x, boxMax.y);
+float2 corner4 = float2(boxMax.x, boxMax.y);
+// Check if the point is inside the triangle
+if (TriPointOverlap(triangleA, triangleB, triangleC, centerRect, u, v) ||
+    TriPointOverlap(triangleA, triangleB, triangleC, corner1, u, v) ||
+    TriPointOverlap(triangleA, triangleB, triangleC, corner2, u, v) ||
+    TriPointOverlap(triangleA, triangleB, triangleC, corner3, u, v) ||
+    TriPointOverlap(triangleA, triangleB, triangleC, corner4, u, v))
+{
+    // Calculate the intersection of the triangle and the rectangle
+    float2 intersection;
+    intersection.x = min(max(triangleA.x, max(triangleB.x, triangleC.x)), boxMax.x) - max(min(triangleA.x, min(triangleB.x, triangleC.x)), boxMin.x);
+    intersection.y = min(max(triangleA.y, max(triangleB.y, triangleC.y)), boxMax.y) - max(min(triangleA.y, min(triangleB.y, triangleC.y)), boxMin.y);
+
+    // Calculate the closest UV point
+    float2 v0 = triangleC - triangleA;
+float2 v1 = triangleB - triangleA;
+float2 v2 = boxMin - triangleA;
+float2 v3 = boxMax - triangleA;
+
+float dot00 = dot(v0, v0);
+float dot01 = dot(v0, v1);
+float dot02 = dot(v0, v2);
+float dot03 = dot(v0, v3);
+float dot11 = dot(v1, v1);
+float dot12 = dot(v1, v2);
+float dot13 = dot(v1, v3);
+
+float invDenom = 1.0 / (dot00 * dot11 - dot01 * dot01);
+u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+
+    // Return true if the triangle and the rectangle are overlapping
+    if (intersection.x >= 0 && intersection.y >= 0)
+        return true;
+    else
+        return false;
+}
+else {
+    u = 0;
+    v = 0;
+    return false;
+}
+}
+
+float3 CalculateNormal(float3 pos1, float3 pos2, float3 pos3)
+{
+    float3 v1 = pos1 - pos2;
+    float3 v2 = pos2 - pos3;
+    float3 normal = normalize(cross(v1, v2));
+    return normal;
+}
+
+
+Texture2D<float4> SourceTex;
+[numthreads(12, 12, 1)]
+void GenerateLightMaps(uint3 id : SV_DispatchThreadID) {
+/*    LightMapTriangle LightTri = LightMapTris[id.x];
+    LightTri.UV0 *= 128.0f;
+    LightTri.UV1 *= 128.0f;
+    LightTri.UV2 *= 128.0f;
+    float MaxX = max(max(LightTri.UV0.x, LightTri.UV1.x), LightTri.UV2.x);
+    float MinX = min(min(LightTri.UV0.x, LightTri.UV1.x), LightTri.UV2.x);
+    float MaxY = max(max(LightTri.UV0.y, LightTri.UV1.y), LightTri.UV2.y);
+    float MinY = min(min(LightTri.UV0.y, LightTri.UV1.y), LightTri.UV2.y);*/
+
+    const static RayHit tempray = CreateRayHit();
+    int pixel_index;
+    if(all(SourceTex[id.xy].xyz != 0)) {
+        float3 Direction = CalculateNormal(SourceTex[id.xy].xyz, SourceTex[id.xy + int2(0,1)].xyz, SourceTex[id.xy + int2(1,0)].xyz);
+        float3 Origin = SourceTex[id.xy].xyz;
+        InterlockedAdd(BufferSizes[0].tracerays, 1, pixel_index);
+        GlobalRays1[pixel_index].origin = Origin - Direction * 0.0001f;
+        GlobalRays1[pixel_index].direction = Direction;
+        GlobalRays1[pixel_index].PixelIndex = id.x + id.y * screen_width;
+        GlobalRays1[pixel_index].HitVoxel = 0;
+        GlobalRays1[pixel_index].last_pdf = 0;        
+    }
+    GlobalColors[id.x + id.y * screen_width] = InitCol;
+
+    // for(float i = floor(MinX); i < ceil(MaxX); i++) {
+    //     for(float j = floor(MinY); j < ceil(MaxY); j++) {
+    //         uint pixel_index = 0;
+    //         float2 IJ = float2(i, j);
+    //         float u, v;
+
+    //         if(IsOverlapping(LightTri.UV0, LightTri.UV1, LightTri.UV2, floor(IJ), ceil(IJ + 0.0001f), u, v)) {
+    //             if(GlobalColors[floor(i) + floor(j) * screen_width].throughput.z != 0) continue;
+    //             GlobalColors[floor(i) + floor(j) * screen_width] = InitCol;
+    //             InterlockedAdd(BufferSizes[0].tracerays, 1, pixel_index);
+    //             set(pixel_index, tempray);
+    //             float3 tangent0 = cross(LightTri.norm, float3(0, 1, 0));
+    //                 if (dot(tangent0, tangent0) < 0.001f) tangent0 = cross(LightTri.norm, float3(1, 0, 0));
+    //                 tangent0 = normalize(tangent0);
+    //                 float3 tangent1 = normalize(cross(LightTri.norm, tangent0));
+    //                 float3x3 rotationmatrix = { tangent0, tangent1, LightTri.norm };
+    //                 float3 Temp1 = mul(LightTri.posedge2, rotationmatrix);
+    //                 float3 Temp2 = mul(LightTri.posedge1, rotationmatrix);
+    //             float3 randVector = float3(LightTri.WH.x / (MaxX - MinX), LightTri.WH.y / (MaxY - MinY), 0);
+    //                 float3 Length = length(randVector);
+    //             GlobalRays1[pixel_index].origin = (LightTri.pos0 + LightTri.posedge2 * min(max(u,0.05),0.95) + LightTri.posedge1 * min(max(v,0.05),0.95)) + LightTri.norm * 0.01f  + mul(normalize(float3(random(14, pixel_index).x - 0.5f, random(14, pixel_index).y - 0.5f, 0)),rotationmatrix) / 100.0f;//+ mul(normalize(randVector), rotationmatrix) * Length / 2.0f;
+    //             GlobalRays1[pixel_index].direction = -normalize(LightTri.norm + mul(normalize(float3(random(23, pixel_index).x - 0.5f, random(23, pixel_index).y - 0.5f, 0)),rotationmatrix) / 1000.0f);
+    //             GlobalRays1[pixel_index].PixelIndex = i + j * screen_width;
+    //             GlobalRays1[pixel_index].HitVoxel = 0;
+    //             GlobalRays1[pixel_index].last_pdf = 0;
+    //             // GlobalColors[floor(i) + floor(j) * screen_width].Direct = float3(u,v,0);
+    //         }
+    //     }
+    // }
+}
+
+#pragma kernel InitializeColors
+
+[numthreads(256, 1, 1)]
+void InitializeColors(uint3 id : SV_DispatchThreadID) {
+    if (id.x >= screen_width || id.y >= screen_height) return;
+    uint pixel_index = id.y * screen_width + id.x;
+    ColData InitCol2 = { 1,1,0,0,0,0,0,0,0,0,0,0 };
+    GlobalColors[pixel_index] = InitCol2;
+}

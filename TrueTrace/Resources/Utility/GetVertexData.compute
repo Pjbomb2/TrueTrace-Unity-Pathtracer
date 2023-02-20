@@ -1,0 +1,90 @@
+// Each #kernel tells which function to compile; you can have many kernels
+ByteAddressBuffer GraphicsBuffer;
+
+uint AttributeOffset;
+uint Count;
+uint Stride;
+
+#pragma kernel ReturnInt
+
+RWStructuredBuffer<int> Output1;
+bool Is16Bit;
+
+[numthreads(1023,1,1)]
+void ReturnInt (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x > Count) return;
+    uint A;
+    if(Is16Bit) {
+        A = GraphicsBuffer.Load(floor(id.x / 2) * 4);
+        if(id.x % 2 == 1) {
+            A = A >> 16;
+        } else {
+            A =  A & 0x0000FFFF;
+        }
+    } else {
+        A = GraphicsBuffer.Load(id.x * 4);
+    }
+    Output1[id.x] = A;
+}
+
+
+#pragma kernel ReturnFloat2
+
+RWStructuredBuffer<float2> Output2;
+
+[numthreads(1023,1,1)]
+void ReturnFloat2 (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x > Count) return;
+    uint A;
+    float2 B;
+    if(Is16Bit) {
+        A = GraphicsBuffer.Load(floor(id.x) * Stride + AttributeOffset);
+        B.x = asfloat(A >> 16);
+        B.y =  asfloat(A & 0x0000FFFF);
+    } else {
+        B = asfloat(GraphicsBuffer.Load2(id.x * Stride + AttributeOffset));
+    }
+    Output2[id.x] = B;
+}
+
+#pragma kernel ReturnFloat3
+
+RWStructuredBuffer<float3> Output3;
+
+[numthreads(1023,1,1)]
+void ReturnFloat3 (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x > Count) return;
+    uint A;
+    uint B;
+    float3 C;
+    if(Is16Bit) {
+        A = GraphicsBuffer.Load(floor(id.x * 1.5) * Stride + AttributeOffset);
+        B = GraphicsBuffer.Load((floor(id.x * 1.5) + 1) * Stride + AttributeOffset);
+        if(id.x % 2 == 1) {
+            C.x = asfloat(A >> 16);
+            C.y = asfloat(A & 0x0000FFFF);
+            C.z = asfloat(B >> 16);
+        } else {
+            C.x = asfloat(A & 0x0000FFFF);
+            C.y = asfloat(B >> 16);
+            C.z = asfloat(B & 0x0000FFFF);
+        }
+    } else {
+        C = asfloat(GraphicsBuffer.Load3(id.x * Stride + AttributeOffset));
+    }
+    Output3[id.x] = C;
+}
+
+#pragma kernel ReturnFloat4
+
+RWStructuredBuffer<float4> Output4;
+
+[numthreads(1023,1,1)]
+void ReturnFloat4 (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x > Count) return;
+    Output4[id.x] = asfloat(GraphicsBuffer.Load4((id.x) * Stride + AttributeOffset));
+}
