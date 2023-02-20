@@ -1,5 +1,6 @@
 ![](/Images/ArchViz3.png)
 # If you like what I do and want to support me and this project(as this takes a LOT of my time), Please consider becoming a Github Sponsor or a Patron at patreon.com/Pjbomb2!  This allows me to keep this free for everyone!
+# Discord Server: https://discord.gg/4Yh7AZuhcD
 ## Demo:  https://drive.google.com/file/d/11j8a-7S_fbJsKLKMpmd86aIAcnFq9ZA8/view?usp=sharing
 Notes:</br>
 Currently working on:
@@ -48,7 +49,7 @@ A passion projects that has been going on for awhile with the goal of bringing a
 </br>
 
 If you have any questions, or suggestions, etc. let me know either through github issues or my twitter or my discord! I am always looking for more stuff to add, and more ways to make it more user friendly or appealing for others to use
-## You can contact me easiest through my discord: Pjbomb2#6129, or my Twitter: https://twitter.com/Pjbomb2
+## You can contact me easiest through my discord server or my twitter: https://twitter.com/Pjbomb2
 
 
 ## Notes:
