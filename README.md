@@ -6,16 +6,15 @@ Notes:</br>
 Currently working on:
 <ul>
   <li>Volumetric voxels, looking for ways to make it faster or be able to precompute individual light contributions</li>
-  <li>HDRP Support</li>
   <li>Looking desperately for optimizations(let me know if you have any ideas)</li>
 </ul>
 Currently needs to be done but havent implemented fully:
 <ul>
-    <li>Volumetric Clouds(struggling, they look garbage)</li>
-</ul>
-Currently want to do but havent started:
-<ul>
     <li>Need More Ideas</li>
+</ul>
+Currently want to do but havent really started:
+<ul>
+    <li>Volumetric Clouds(back to square one)</li>
 </ul>
 
 # Compute Shader Based Unity PathTracer
@@ -23,7 +22,7 @@ A passion projects that has been going on for awhile with the goal of bringing a
 ## Features: 
 <ul>
 <li>Fast Compute Shader based path tracing</li>
-<li>Diffuse, Diffuse Transmission, Emissive, Plastic, and Disney BSDF materials</li>
+<li>Emissive, Video Player, and Disney BSDF for materials</li>
 <li>Ability to move, add, and remove objects during play</li>
 <li>Ability to update material properties on the fly during play</li>
 <li>ASVGF and SVGF Denoiser</li>
@@ -31,17 +30,17 @@ A passion projects that has been going on for awhile with the goal of bringing a
 <li>PBR Texture Support</li>
 <li>Next Event Estimation with Multiple Importance Sampling for Explicit Light Sampling</li>
 <li>Support for default unity lights which interact via NEE(Supports Directional, Point Spot, and Area lights)</li>
-<li>Bloom</li>
+<li>Bloom, Depth of Field, AutoExposure, TAA</li>
 <li>No specific GPU vendor needed(this will run on integrated graphics if you so wish it, aka no RTX cores)</li>
 <li>MagicaVoxel support</li>
 <li>Ability to pathtrace voxels and triangle scenes at the same time</li>
-<li>Depth of Field</li>
-<li>AutoExposure</li>
-<li>Temporal Anti-Aliasing</li>
-<li>ReSTIR for better sampling of many lights</li>
 <li>Precomputed Multiple Atmospheric Scattering for dynamic and realtime sky(from ebruneton below)</li>
 <li>Object Instancing</li>
 <li>ReSTIR GI for faster convergence in complex scenes and more complete images in scenes with changing lighting</li>
+<li>Simple upscaling ability for performance increase</li>
+<li>Hardware RT Support for modern Nvidia Cards</li>
+<li>Supports Built-in, HDRP, and URP</li>
+<li>Full skinned mesh support for animated skinned meshes</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
@@ -70,7 +69,7 @@ Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera s
 ## General Setup
 <ul>
   <li>Download and import the UnityPackage provided and open the new Pathtracer Settings at the top of the screen(This WILL re-arrange your hierarchy a bit)</li>
-  <li>Whenever you add a new object(or tree of objects), you need to add it to under the gameobject named Scene, and its reccomended you press quickstart to automatically assign the needed scripts to it</li>
+  <li>Whenever you add a new object(or tree of objects), you need to add it to under the gameobject named Scene, and its reccomended you press "Auto Assign Scripts" to automatically assign the needed scripts to the new objects</li>
   <li>Dont use free resolution</li>
 </ul>
 
@@ -84,7 +83,7 @@ Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera s
 
 ## General Use/Notes
 <ul>
-  <li>The camera you want to render from, you attatch the RenderHandler script to</li>
+  <li>The camera you want to render from, you attatch the RenderHandler script to(if you have a camera tagged MainCamera, this will be done automatically)</li>
   <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building</li>
   <li>Objects can be added and removed at will simply by toggling the associated gameobject with a ParentObject script on/off in the hierarchy(clicking on parent objects with complex objects for children will lag), but they will take time to appear as the acceleration structure needs to  be rebuilt for them</li>
   <li>If you change the emissiveness of an object, you need to disable and re-enable its parent(basically reloading it) if you want to take advantage of NEE correctly sampling it(Does not need to be reloaded for Naive tracing)</li>
@@ -125,7 +124,7 @@ BVH Options Description -
   <li>Build Aggregated BVH(Recommended to do any time you change objects in edit mode)- Allows you to pre-build objects BVH's before running so you dont have to wait every time you go into play mode for it to build.</li>
   <li>Clear Parent Data - Clears the data stored in parent gameobjects, allowing you to actually click them without lagging(but will then require the BVH to be rebuilt)</li>
   <li>Take Screenshot - Requires a folder called Screenshots under the asset folder, takes a screenshot</li>
-  <li>QuickStart - Assigns all required scripts to all objects under the Scene gameobject, best way to add objects</li>
+  <li>Auto Assign Scripts - Assigns all required scripts to all objects under the Scene gameobject, best way to add objects</li>
   <li>Make All Static - Utility button that takes all objects in the scene and puts them under one parent object, not reccomended for general use</li>
   <li>Force Instances - Looks at all meshes in the scene, sees what objects have the same meshes, and makes them into instances, keep in mind instances use the same material and textures</li>
   <li>Remaining Objects - Objects still being processed</li>
@@ -136,34 +135,30 @@ BVH Options Description -
   <li>Enable Object Moving - Allows objects to be moved during play, and allows for added objects to spawn in when they are done building</li>
   <li>Allow Image Accumulation - Allows the image to accumulate while the camera is not moving</li>
   <li>Use Next Event Estimation - Enables shadow rays/NEE for direct light sampling</li>
+  <li>RIS Count - Number of RIS passes done for default unity lights(select the best light out of X number of lights)</li>
   <li>Allow Mesh Skinning - Turns on the ability for skinned meshes to be animated or deformed with respect to their armeture</li>
   <li>Allow Bloom - Turns on or off Bloom</li>
   <li>Enable DoF - Turns on or off Depth of Field, and its associated settings</li>
   <li>Enable Auto/Manual Exposure - Turns on or off Auto Exposure(impacts a lot more than I thought it would)</li>
-  <li>Use ReSTIR - Enables the much better sampling for lots of lights</li>
-  <li>Allow ReSTIR Sample Regeneration - Applies if Precomputed Sampling is on, Regenerates the light samples every frame</li>
-  <li>Allow ReSTIR Precomputed Sampling - Samples lights in a more efficient way but introduces artifacts due to sample correlation</li>
-  <li>Allow ReSTIR Temporal - Enables the Temporal pass of ReSTIR(allows samples to travel across time</li>
-  <li>Allow ReSTIR Spatial - Enables the Spatial pass of ReSTIR(Allows pixels to choose to use the neighboring pixels sample instead)</li>
-  <li>ReSTIR Spatial M-Cap - Tuneable parameter, increase this if you have lots of lights(standard values would be between 32 and 640 for reference, but going higher or lower is needed at times)</li>
   <li>Use ReSTIR GI - Enables ReSTIR GI which is usually much higher quality</li>
   <li>Do Sample Connection Validation - Confirms that two samples are mutually visable and throws it away if they are not</li>
   <li>Update Rate - How many pixels per frame get re-traced to ensure they are still valid paths(7 is a good number to aim for here)</li>
+  <li>Enable Indirect Clamping - Can improve splotchyness when Permutation Samples is on</li>
   <li>Enable Temporal - Enables the Temporal pass of ReSTIR GI(allows samples to travel across time</li>
   <li>Temporal M Cap - How long a sample may live for, lower means lighting updates faster(until 0 which is the opposite) but more noise(reccomended either 0 or around 12, but can be played with)</li>
   <li>Permute Temporal Samples - Turns on permutation sampling, can lead to much higher quality much faster, but a lower M cap is reccomended(around 3-12)</li>
   <li>Enable Spatial - Enables the Spatial pass of ReSTIR GI(Allows pixels to choose to use the neighboring pixels sample instead)</li>
-  <li>Spatial Sample Count - How many neighboring pixels are looked at</li>
-  <li>Enable Spatial Stabalizer - Rarely useful, but turns spatial into spatiotemporal</li>
+  <li>Spatial Sample Count - How many neighboring pixels are looked at(turn to 0 to make it adapative to sample count)</li>
+  <li>Enable Edge Filling - Replaces the black edges when moving the camera to a smear, up to personal preference</li>
+  <li>Minimum Spatial Radius - The minimum radius the spatial pass can sample from</li>
   <li>Use Temporal Antialiasing - Enables Temporal Antialiasing(TAA)</li>
-  <li>Use SVGF Denoiser - Turns on the SVGF denoiser</li>
+  <li>Enable SVGF - Turns on the SVGF denoiser</li>
   <li>(If SVGF Denosier is on)Atrous Kernel Size - The amount of times the SVGF denoiser runs through the Atrous kernel</li>
-  <li>Use ASVGF Denoiser - Turns on the ASVGF denoiser</li>
-  <li>(If ASVGF Denoiser is on)ASVGF Atrous Kernel Size - The amount of iterations the final ASVGF atrous goes through, limited to 4, 5, and 6</li>
+  <li>Enable ASVGF - Turns on the ASVGF denoiser(ReSTIR GI needs to be off)</li>
   <li>Enable Tonemapping - Turns on Uchimura Tonemapping</li>
   <li>Enable TAAU - Use TAAU for upscaling(if off, you use my semi custom upscaler instead)</li>
-  <li>Use Altered Throughput Pipelien - Calculates throughput differently, helps with semi metallic surfaces for ASVGF</li>
-  <li>Use Checkerboarding - Only traces half the indirect rays, so quality is sightly decreased for a slight increase in performance</li>
+  <li>Use Altered Throughput Pipeline - Calculates throughput differently, helps with semi metallic surfaces for ASVGF</li>
+  <li>Use Checkerboarding - Only traces half the indirect rays, so quality is sightly decreased(not really noticeable) for a slight increase in performance</li>
   <li>Use AntiFirefly - Enables RCRS filter for getting rid of those single bright pixels</li>
   <li>Atmospheric Scatter Samples - Lower this to 1 if you keep crashing on entering play mode(controls how many atmospheric samples are precomputed)</li>
   <li>Current Samples - Shows how many samples have currently been accumulated</li>
@@ -205,7 +200,7 @@ BVH Options Description -
 
 # Huge thanks to these people for being sponsors/patrons:
 <ul>
-  <li>Launemax</li>
+  <li>jhintringer</li>
   <li>mgear</li>
 </ul>
 
@@ -250,7 +245,7 @@ BVH Options Description -
 
 
 # Credits(will continue to expand when I have time)
-Biggest thanks to Zuen who helped me a huge amount with the new BVH and traversal, thanks to them I got to where I am now, and I am very thankful to them for their help and patience
+Biggest thanks to Zuen(R.I.P. You will be missed) who helped me a huge amount with the new BVH and traversal, thanks to them I got to where I am now, and I am very thankful to them for their help and patience
 </br>
 https://github.com/jan-van-bergen
 </br></br>
