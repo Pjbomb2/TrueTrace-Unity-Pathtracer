@@ -118,6 +118,22 @@ Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera s
   <li>Doing this will indicate that the slider property "Metallic" in the materials UI(the slider you directly interact in unity if you click the material) is actually the Metallic property in my own material, and should be set to the same value</li>
 </ul>
 
+## Using HDRP
+<ul>
+  <li>All you need to do is to use it like normal, but go into TrueTrace -> Resources -> GlobalDefines.cginc, and uncomment the #define HDRP</li>
+</ul>
+
+## Using Hardware RT
+<ul>
+  <li>First off, this REQUIRES unity 2023 or higher and REQUIRES an Nvidia GPU of 20 series or higher</li>
+  <li>All you need to do is uncomment the #define HardwareRT in the following files:</li>
+  <li>TrueTrace -> Resources -> GlobalDefines.cginc</li>
+  <li>TrueTrace -> Resources -> AssetManager.cs</li>
+  <li>TrueTrace -> Resources -> RayTracingMaster.cs</li>
+  <li>TrueTrace -> Resources -> Objects -> ParentObject.cs</li>
+  <li>Then just use like normal</li>
+</ul>
+
 ## Editor Window Guide
 BVH Options Description - 
 <ul>
