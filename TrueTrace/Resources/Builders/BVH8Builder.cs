@@ -159,10 +159,9 @@ namespace TrueTrace {
             for(int c = 0; c < child_count; c++) {
                 for(int s = 0; s < 8; s++) {
                     Vector3 direction = new Vector3(
-                        (System.Convert.ToBoolean(s & 0b100)) ? -1.0f : 1.0f,
-                        (System.Convert.ToBoolean(s & 0b010)) ? -1.0f : 1.0f,
-                        (System.Convert.ToBoolean(s & 0b001)) ? -1.0f : 1.0f
-                        );
+                        (((s >> 2) & 1) == 1) ? -1.0f : 1.0f,
+                    (((s >> 1) & 1) == 1) ? -1.0f : 1.0f,
+                    (((s >> 0) & 1) == 1) ? -1.0f : 1.0f);
                     cost2[c,s] = Vector3.Dot((nodes[children[c]].aabb.BBMax + nodes[children[c]].aabb.BBMin) / 2.0f - p, direction);
                 }
             }

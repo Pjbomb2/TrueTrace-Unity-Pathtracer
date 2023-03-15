@@ -1,4 +1,5 @@
 // #define DoLightMapping
+// #define HardwareRT
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -13,7 +14,6 @@ namespace TrueTrace {
 
         [HideInInspector] public ComputeBuffer TriBuffer;
         [HideInInspector] public ComputeBuffer BVHBuffer;
-        public ComputeShader GetVertData;
         [HideInInspector] public List<LightMapTriangle> LightMapTris;
         public string Name;
         [HideInInspector] public GraphicsBuffer[] VertexBuffers;
@@ -72,13 +72,12 @@ namespace TrueTrace {
         private ComputeBuffer NodeBuffer;
         private ComputeBuffer AdvancedTriangleBuffer;
         private ComputeBuffer StackBuffer;
-        private ComputeBuffer VertexBufferOut;
 
         private ComputeBuffer BVHDataBuffer;
         private ComputeBuffer ToBVHIndexBuffer;
         private ComputeBuffer CWBVHIndicesBuffer;
 
-        private ComputeBuffer WorkingBuffer;
+        private ComputeBuffer[] WorkingBuffer;
 
         [HideInInspector] public Layer[] ForwardStack;
         [HideInInspector] public Layer2[] LayerStack;
@@ -92,6 +91,11 @@ namespace TrueTrace {
         [HideInInspector] public int NodeOffset;
         [HideInInspector] public int TriOffset;
         [HideInInspector] public List<BVHNode8DataFixed> SplitNodes;
+
+        #if HardwareRT
+            public List<int> HWRTIndex;
+            public Renderer[] Renderers;
+        #endif
 
         [System.Serializable]
         public struct StorableTransform
@@ -124,6 +128,8 @@ namespace TrueTrace {
             public float SpecTransRange;
             public bool IsCutout;
             public Color BaseColorValue;
+            public Vector2 TextureScale;
+            public Vector2 TextureOffset;
         }
         public List<PerMatTextureData> MatTexData;
 
@@ -173,12 +179,11 @@ namespace TrueTrace {
                     IndexBuffers[i].Dispose();
                     NodeBuffer.Dispose();
                     AdvancedTriangleBuffer.Dispose();
-                    VertexBufferOut.Dispose();
                     StackBuffer.Dispose();
                     CWBVHIndicesBuffer.Dispose();
                     BVHDataBuffer.Dispose();
                     ToBVHIndexBuffer.Dispose();
-                    WorkingBuffer.Dispose();
+                    for(int i2 = 0; i2 < WorkingBuffer.Length; i2++) WorkingBuffer[i2].Dispose();
                 }
             }
             if (TriBuffer != null)
@@ -198,12 +203,11 @@ namespace TrueTrace {
                     IndexBuffers[i].Dispose();
                     NodeBuffer.Dispose();
                     AdvancedTriangleBuffer.Dispose();
-                    VertexBufferOut.Dispose();
                     StackBuffer.Dispose();
                     CWBVHIndicesBuffer.Dispose();
                     BVHDataBuffer.Dispose();
                     ToBVHIndexBuffer.Dispose();
-                    WorkingBuffer.Dispose();
+                    for(int i2 = 0; i2 < WorkingBuffer.Length; i2++) WorkingBuffer[i2].Dispose();
                 }
             }
             if (TriBuffer != null)
@@ -227,7 +231,6 @@ namespace TrueTrace {
             ObjectOrderHasChanged = false;
             HasCompleted = false;
             MeshRefit = Resources.Load<ComputeShader>("Utility/BVHRefitter");
-            GetVertData = Resources.Load<ComputeShader>("Utility/GetVertexData");
             ConstructKernel = MeshRefit.FindKernel("Construct");
             RefitLayerKernel = MeshRefit.FindKernel("RefitLayer");
             NodeUpdateKernel = MeshRefit.FindKernel("NodeUpdate");
@@ -245,7 +248,7 @@ namespace TrueTrace {
             {
                 if (TriBuffer != null) TriBuffer.Release();
                 if (BVHBuffer != null) BVHBuffer.Release();
-                TriBuffer = new ComputeBuffer(AggTriangles.Length, 136);
+                TriBuffer = new ComputeBuffer(AggTriangles.Length, 88);
                 BVHBuffer = new ComputeBuffer(AggNodes.Length, 80);
                 TriBuffer.SetData(AggTriangles);
                 BVHBuffer.SetData(AggNodes);
@@ -349,7 +352,6 @@ namespace TrueTrace {
                                 AlbedoTexs.Add(SharedMaterials[i].mainTexture);
                             }
                         }
-                        Debug.Log(Assets);
                         Assets.AddMaterial(SharedMaterials[i].shader.name, "_MainTex");
                         Index = AssetManager.ShaderNames.IndexOf(SharedMaterials[i].shader.name);
                     }
@@ -369,11 +371,13 @@ namespace TrueTrace {
                         CurrentTexDat.IORRange = 1.0f;
                         CurrentTexDat.SpecTransRange = 1f;
                     }
-                    if(RelevantMat.IsCutout || (SharedMaterials[i].GetFloat("_Mode") == 1)) {
+                    if(RelevantMat.IsCutout) {// || (SharedMaterials[i].GetFloat("_Mode") == 1)) {
                         CurrentTexDat.IsCutout = true;
                     }
                     if (SharedMaterials[i].GetTexture(RelevantMat.BaseColorTex) != null)
                     {
+                        CurrentTexDat.TextureScale = SharedMaterials[i].GetTextureScale(RelevantMat.BaseColorTex);
+                        CurrentTexDat.TextureOffset = SharedMaterials[i].GetTextureOffset(RelevantMat.BaseColorTex);
                         if (AlbedoTexs.Contains(SharedMaterials[i].GetTexture(RelevantMat.BaseColorTex)))
                         {
                             AlbedoIndexes[AlbedoTexs.IndexOf(SharedMaterials[i].GetTexture(RelevantMat.BaseColorTex))].RayObjectList.Add(TempObj);
@@ -487,7 +491,9 @@ namespace TrueTrace {
                     Roughness = MaterialObject.Roughness[CurrentObjectOffset],
                     MatType = (int)MaterialObject.MaterialOptions[CurrentObjectOffset],
                     EmissionColor = MaterialObject.EmissionColor[CurrentObjectOffset],
-                    specTrans = MaterialObject.SpecTrans[CurrentObjectOffset]
+                    specTrans = MaterialObject.SpecTrans[CurrentObjectOffset],
+                    TextureScale = Obj.TextureScale,
+                    TextureOffset = Obj.TextureOffset,
                 });
                 Obj.MaterialObject.Indexes[CurrentObjectOffset] = Obj.Offset;
                 Obj.MaterialObject.MaterialIndex[CurrentObjectOffset] = CurMat;
@@ -589,6 +595,9 @@ namespace TrueTrace {
             int MatIndex = 0;
             int RepCount = 0;
             this.MatOffset = _Materials.Count;
+            #if HardwareRT
+                Renderers = new Renderer[TotalObjects];
+            #endif
             for (int i = 0; i < TotalObjects; i++)
             {
                 CurrentObject = ChildObjects[i];
@@ -599,7 +608,9 @@ namespace TrueTrace {
                     mesh = CurrentObject.GetComponent<SkinnedMeshRenderer>().sharedMesh;
 
                 submeshcount = mesh.subMeshCount;
-
+                #if HardwareRT
+                    Renderers[i] = CurrentObject.GetComponent<Renderer>();
+                #endif
                 var Tans = new List<Vector4>();
                 mesh.GetTangents(Tans);
                 if (Tans.Count != 0) CurMeshData.Tangents.AddRange(Tans);
@@ -736,7 +747,11 @@ namespace TrueTrace {
             {
                 CWBVHIndicesBufferInverted = new int[BVH.cwbvh_indices.Length];
                 int CWBVHIndicesBufferCount = CWBVHIndicesBufferInverted.Length;
-                for (int i = 0; i < CWBVHIndicesBufferCount; i++) CWBVHIndicesBufferInverted[BVH.cwbvh_indices[i]] = i;
+                #if !HardwareRT
+                    for (int i = 0; i < CWBVHIndicesBufferCount; i++) CWBVHIndicesBufferInverted[BVH.cwbvh_indices[i]] = i;
+                #else
+                    for (int i = 0; i < CWBVHIndicesBufferCount; i++) CWBVHIndicesBufferInverted[i] = i;
+                #endif
                 NodePair = new List<NodeIndexPairData>();
                 NodePair.Add(new NodeIndexPairData());
                 DocumentNodes(0, 0, 1, 0, false, 0);
@@ -758,7 +773,7 @@ namespace TrueTrace {
                     {
                         int first_triangle = (byte)BVH.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] & 0b11111;
                         int NumBits = NumberOfSetBits((byte)BVH.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] >> 5);
-                        ForwardStack[i].Children[NodePair[i].InNodeOffset] = NumBits;
+                        ForwardStack[i].Children[NodePair[i].InNodeOffset] = NumBits + (int)BVH.BVH8Nodes[NodePair[i].BVHNode].base_index_triangle + first_triangle;
                         ForwardStack[i].Leaf[NodePair[i].InNodeOffset] = (int)BVH.BVH8Nodes[NodePair[i].BVHNode].base_index_triangle + first_triangle + 1;
                     }
                     else
@@ -870,6 +885,11 @@ namespace TrueTrace {
 
         public void RefitMesh(ref ComputeBuffer RealizedAggNodes)
         {
+            #if HardwareRT
+                for(int i = 0; i < Renderers.Length; i++) {
+                    Assets.AccelStruct.UpdateInstanceTransform(Renderers[i]);
+                }
+            #endif
             int KernelRatio = 256;
 
             AABB OverAABB = new AABB();
@@ -891,8 +911,7 @@ namespace TrueTrace {
                 IndexBuffers = new ComputeBuffer[SkinnedMeshes.Length];
                 NodeBuffer = new ComputeBuffer(NodePair.Count, 48);
                 NodeBuffer.SetData(NodePair);
-                AdvancedTriangleBuffer = new ComputeBuffer(TotalTriangles, 96);
-                VertexBufferOut = new ComputeBuffer(TotalTriangles, 72);
+                AdvancedTriangleBuffer = new ComputeBuffer(TotalTriangles, 24);
                 StackBuffer = new ComputeBuffer(ForwardStack.Length, 64);
                 StackBuffer.SetData(ForwardStack);
                 CWBVHIndicesBuffer = new ComputeBuffer(BVH.cwbvh_indices.Length, 4);
@@ -906,11 +925,13 @@ namespace TrueTrace {
                 HasStarted = true;
                 if (Hips == null && this.transform.childCount != 0 && this.transform.GetChild(0).childCount != 0 && this.transform.GetChild(0).GetChild(0) != null) Hips = this.transform.GetChild(0).GetChild(0);
                 int MaxLength = 0;
+                WorkingBuffer = new ComputeBuffer[LayerStack.Length];//(MaxLength, 4);
                 for (int i = 0; i < LayerStack.Length; i++)
                 {
+                    WorkingBuffer[i] = new ComputeBuffer(LayerStack[i].Slab.Count, 4);
+                    WorkingBuffer[i].SetData(LayerStack[i].Slab);
                     MaxLength = Mathf.Max(MaxLength, LayerStack[i].Slab.Count);
                 }
-                WorkingBuffer = new ComputeBuffer(MaxLength, 4);
                 for (int i = 0; i < VertexBuffers.Length; i++)
                 {
                     if (IndexBuffers[i] != null) IndexBuffers[i].Release();
@@ -930,21 +951,13 @@ namespace TrueTrace {
                 MeshRefit.SetVector("Scale", this.transform.lossyScale);
                 MeshRefit.SetVector("OverallOffset", Hips.parent.localToWorldMatrix * Hips.localPosition);
                 MeshRefit.SetVector("ArmetureOffset", this.transform.localToWorldMatrix * Hips.parent.localPosition);
-                MeshRefit.SetBuffer(ConstructKernel, "VertexsOut", VertexBufferOut);
                 MeshRefit.SetBuffer(RefitLayerKernel, "ReverseStack", StackBuffer);
                 MeshRefit.SetBuffer(ConstructKernel, "AdvancedTriangles", AdvancedTriangleBuffer);
                 MeshRefit.SetBuffer(ConstructKernel, "CudaTriArray", TriBuffer);
                 MeshRefit.SetBuffer(ConstructKernel, "CWBVHIndices", CWBVHIndicesBuffer);
-                MeshRefit.SetBuffer(ConstructKernel, "VertexsIn", VertexBufferOut);
                 MeshRefit.SetBuffer(ConstructKernel, "AdvancedTriangles", AdvancedTriangleBuffer);
                 MeshRefit.SetBuffer(NodeInitializerKernel, "AllNodes", NodeBuffer);
                 MeshRefit.SetBuffer(RefitLayerKernel, "AllNodes", NodeBuffer);
-                for (int i = 0; i < VertexBuffers.Length; i++)
-                {
-                    VertexBuffers[i].Dispose();
-                    SkinnedMeshes[i].vertexBufferTarget |= GraphicsBuffer.Target.Raw;
-                    VertexBuffers[i] = SkinnedMeshes[i].GetVertexBuffer();
-                }
                 UnityEngine.Profiling.Profiler.EndSample();
                 int CurVertOffset = 0;
                 UnityEngine.Profiling.Profiler.BeginSample("ReMesh Aggregate");
@@ -974,10 +987,9 @@ namespace TrueTrace {
                 for (int i = MaxRecur - 1; i >= 0; i--)
                 {
                     var NodeCount2 = LayerStack[i].Slab.Count;
-                    WorkingBuffer.SetData(LayerStack[i].Slab, 0, 0, NodeCount2);
                     MeshRefit.SetInt("NodeCount", NodeCount2);
-                    MeshRefit.SetBuffer(RefitLayerKernel, "NodesToWork", WorkingBuffer);
-                    MeshRefit.Dispatch(RefitLayerKernel, (int)Mathf.Ceil(WorkingBuffer.count / (float)KernelRatio), 1, 1);
+                    MeshRefit.SetBuffer(RefitLayerKernel, "NodesToWork", WorkingBuffer[i]);
+                    MeshRefit.Dispatch(RefitLayerKernel, (int)Mathf.Ceil(WorkingBuffer[i].count / (float)KernelRatio), 1, 1);
                 }
                 UnityEngine.Profiling.Profiler.EndSample();
 
@@ -996,6 +1008,7 @@ namespace TrueTrace {
                 MeshRefit.SetBuffer(NodeCompressKernel, "AggNodes", RealizedAggNodes);
                 MeshRefit.Dispatch(NodeCompressKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
                 UnityEngine.Profiling.Profiler.EndSample();
+            } else {
             }
 
             UnityEngine.Profiling.Profiler.BeginSample("ReMesh Buffer Refresh");
@@ -1008,6 +1021,12 @@ namespace TrueTrace {
                 }
                 if (!((new List<GraphicsBuffer>(VertexBuffers)).Contains(null))) AllFull = true;
             }
+                for (int i = 0; i < VertexBuffers.Length; i++)
+                {
+                    VertexBuffers[i].Dispose();
+                    SkinnedMeshes[i].vertexBufferTarget |= GraphicsBuffer.Target.Raw;
+                    VertexBuffers[i] = SkinnedMeshes[i].GetVertexBuffer();
+                }
             UnityEngine.Profiling.Profiler.EndSample();
         }
 
@@ -1106,13 +1125,13 @@ namespace TrueTrace {
                     TempTri.posedge1 = TempPrim.V2 - TempPrim.V1;
                     TempTri.posedge2 = TempPrim.V3 - TempPrim.V1;
 
-                    TempTri.norm0 = TempPrim.Norm1;
-                    TempTri.normedge1 = TempPrim.Norm2 - TempPrim.Norm1;
-                    TempTri.normedge2 = TempPrim.Norm3 - TempPrim.Norm1;
+                    TempTri.norm0 = CommonFunctions.PackOctahedral(TempPrim.Norm1);
+                    TempTri.norm1 = CommonFunctions.PackOctahedral(TempPrim.Norm2);
+                    TempTri.norm2 = CommonFunctions.PackOctahedral(TempPrim.Norm3);
 
-                    TempTri.tan0 = TempPrim.Tan1;
-                    TempTri.tanedge1 = TempPrim.Tan2 - TempPrim.Tan1;
-                    TempTri.tanedge2 = TempPrim.Tan3 - TempPrim.Tan1;
+                    TempTri.tan0 = CommonFunctions.PackOctahedral(TempPrim.Tan1);
+                    TempTri.tan1 = CommonFunctions.PackOctahedral(TempPrim.Tan2);
+                    TempTri.tan2 = CommonFunctions.PackOctahedral(TempPrim.Tan3);
 
                     TempTri.tex0 = TempPrim.tex1;
                     TempTri.texedge1 = TempPrim.tex2;
@@ -1183,21 +1202,43 @@ namespace TrueTrace {
                 LightTriangles[i] = TempTri2;
             }
             LightCount = LightTriangles.Count;
-            ConstructAABB();
-            Construct();
+            #if !HardwareRT
+                ConstructAABB();
+                Construct();
 
-            {//Compile Triangles
-                CudaTriangle[] Vector3Array = new CudaTriangle[AggTriangles.Length];
-                System.Array.Copy(AggTriangles, Vector3Array, Vector3Array.Length);
-                for (int i = 0; i < AggTriangles.Length; i++)
-                {
-                    AggTriangles[i] = Vector3Array[BVH.cwbvh_indices[i]];
+                {//Compile Triangles
+                        CudaTriangle[] Vector3Array = new CudaTriangle[AggTriangles.Length];
+                        System.Array.Copy(AggTriangles, Vector3Array, Vector3Array.Length);
+                        for (int i = 0; i < AggTriangles.Length; i++)
+                        {
+                            AggTriangles[i] = Vector3Array[BVH.cwbvh_indices[i]];
+                        }
+                        Vector3Array = null;
                 }
-                Vector3Array = null;
-            }
 
-            AggNodes = new BVHNode8DataCompressed[BVH.BVH8Nodes.Length];
-            CommonFunctions.Aggregate(ref AggNodes, ref BVH.BVH8Nodes);
+                AggNodes = new BVHNode8DataCompressed[BVH.BVH8Nodes.Length];
+                CommonFunctions.Aggregate(ref AggNodes, ref BVH.BVH8Nodes);
+            #else 
+                if(IsSkinnedGroup) {
+                    ConstructAABB();
+                    Construct();
+
+                    {//Compile Triangles
+                        #if !HardwareRT
+                            CudaTriangle[] Vector3Array = new CudaTriangle[AggTriangles.Length];
+                            System.Array.Copy(AggTriangles, Vector3Array, Vector3Array.Length);
+                            for (int i = 0; i < AggTriangles.Length; i++)
+                            {
+                                AggTriangles[i] = Vector3Array[BVH.cwbvh_indices[i]];
+                            }
+                            Vector3Array = null;
+                        #endif
+                    }
+
+                    AggNodes = new BVHNode8DataCompressed[BVH.BVH8Nodes.Length];
+                    CommonFunctions.Aggregate(ref AggNodes, ref BVH.BVH8Nodes);
+                }else AggNodes = new BVHNode8DataCompressed[1];
+            #endif
             MeshCountChanged = false;
             HasCompleted = true;
             NeedsToUpdate = false;
@@ -1208,25 +1249,35 @@ namespace TrueTrace {
 
         public void UpdateData()
         {
-            AggIndexCount = BVH.cwbvhindex_count;
-            AggBVHNodeCount = BVH.cwbvhnode_count;
+            #if !HardwareRT
+                AggIndexCount = BVH.cwbvhindex_count;
+                AggBVHNodeCount = BVH.cwbvhnode_count;
+            #else 
+                AggIndexCount = 1;
+                AggBVHNodeCount = 1;
+            #endif
             UpdateAABB(this.transform);
             SetUpBuffers();
             NeedsToResetBuffers = false;
         }
+        public Vector3 center;
+        public Vector3 extent;
 
         public void UpdateAABB(Transform transform)
         {//Update the Transformed AABB by getting the new Max/Min of the untransformed AABB after transforming it
-            Vector3 center = 0.5f * (aabb_untransformed.BBMin + aabb_untransformed.BBMax);
-            Vector3 extent = 0.5f * (aabb_untransformed.BBMax - aabb_untransformed.BBMin);
             Matrix4x4 Mat = transform.localToWorldMatrix;
             Vector3 new_center = CommonFunctions.transform_position(Mat, center);
-            CommonFunctions.abs(ref Mat);
+            // CommonFunctions.abs(ref Mat);
             Vector3 new_extent = CommonFunctions.transform_direction(Mat, extent);
 
             aabb.BBMin = new_center - new_extent;
             aabb.BBMax = new_center + new_extent;
             transform.hasChanged = false;
+            #if HardwareRT
+                for(int i = 0; i < Renderers.Length; i++) {
+                    Assets.AccelStruct.UpdateInstanceTransform(Renderers[i]);
+                }
+            #endif
         }
 
         private void ConstructAABB()
@@ -1237,6 +1288,8 @@ namespace TrueTrace {
             {
                 aabb_untransformed.Extend(ref Triangles[i]);
             }
+            center = 0.5f * (aabb_untransformed.BBMin + aabb_untransformed.BBMax);
+            extent = 0.5f * (aabb_untransformed.BBMax - aabb_untransformed.BBMin);
         }
 
         private void OnEnable()

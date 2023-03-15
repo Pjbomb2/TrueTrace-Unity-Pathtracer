@@ -1,11 +1,12 @@
-#define AdvancedAlphaMapped
+// #define AdvancedAlphaMapped
+// #define VideoIncludedInAlphaMapping
 // #define UseSkyBox//Comment out to have no skybox and use precomputed atmosphere
 // #define UseReflectionReproject
 #define ExtraSampleValidation
-#define IgnoreGlassShadow
+// #define IgnoreGlassShadow
 // #define IgnoreGlassMain
 // #define HDRP
-
+// #define HardwareRT
 
 
 #define DiffuseIndex 0

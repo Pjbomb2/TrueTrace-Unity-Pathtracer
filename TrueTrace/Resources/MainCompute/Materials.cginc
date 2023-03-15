@@ -795,7 +795,7 @@ static float3 ReconstructDisneyBRDF(const HitMat hitDat, const float3 wo, float3
 
     float G1v = SeparableSmithGGXG1(wo, wm, ay, ax);
     float3 specular = G1v * f;
-    Success = (fPdf > 0.00025f);
+    Success = (fPdf > 0);//0.00025f * hitDat.roughness);
     // _DebugTex[int2(pixel_index % screen_width, pixel_index / screen_width)] = float4(d * gl * gv * f/ (4.0f * dotNL * dotNV),1);
     return specular;//d * gl * gv * f / (4.0f * dotNL * dotNV); 
 }

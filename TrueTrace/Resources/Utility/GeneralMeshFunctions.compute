@@ -6,13 +6,9 @@ struct CudaTriangle {
 	float3 posedge1;
 	float3 posedge2;
 
-	float3 norm0;
-	float3 normedge1;
-	float3 normedge2;
+	uint3 norms;
 
-	float3 tan0;
-	float3 tanedge1;
-	float3 tanedge2;
+	uint3 tans;
 
 	float2 tex0;
 	float2 texedge1;

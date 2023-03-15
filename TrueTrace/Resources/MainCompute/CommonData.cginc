@@ -35,6 +35,14 @@ float3 Forward;
 float focal_distance;
 float AperatureRadius;
 
+RWStructuredBuffer<uint3> BufferData;
+
+RWTexture2D<float> CorrectedDepthTex;
+
+#ifdef HardwareRT
+	StructuredBuffer<int> SubMeshOffsets;
+	StructuredBuffer<float2> MeshOffsets;
+#endif
 
 struct BufferSizeData {
 	int tracerays;
@@ -55,13 +63,9 @@ struct CudaTriangle {
 	float3 posedge1;
 	float3 posedge2;
 
-	float3 norm0;
-	float3 normedge1;
-	float3 normedge2;
+	uint3 norms;
 
-	float3 tan0;
-	float3 tanedge1;
-	float3 tanedge2;
+	uint3 tans;
 
 	float2 tex0;
 	float2 texedge1;
@@ -140,23 +144,19 @@ struct SHData {
 };
 
 struct GIReservoir {
-	float3 RadianceDirect;
 	float W;
-	float3 RadianceIndirect;
-	float M;
+	int M;
 	float3 SecondaryHitPosition;
 	uint BaseColor;
-	float3 NEERay;
 	int HistoricFrame;
-	int HistoricID;
 	int MaterialIndex;
 	int ThisCase;
+	int HistoricID;
 	float LuminanceIncomming;
 	float3 NEEPosition;
 	uint PrimaryNormal;
 };
 RWStructuredBuffer<GIReservoir> CurrentReservoirGI;
-RWStructuredBuffer<GIReservoir> SpatialReservoirGI;
 StructuredBuffer<GIReservoir> PreviousReservoirGI;
 
 struct ScreenSpaceData {
@@ -172,6 +172,7 @@ struct ScreenSpaceData {
 	float t;
 	float3 InitialRayDirection;
 	int NormNormal;
+	float ReflectedT;
 };
 RWStructuredBuffer<ScreenSpaceData> ScreenSpaceInfo;
 RWStructuredBuffer<ScreenSpaceData> MatModifiersPrev;
@@ -184,10 +185,10 @@ RWTexture2D<float4> Result;
 RWStructuredBuffer<ShadowRayData> ShadowRaysBuffer;
 RWStructuredBuffer<RayData> GlobalRays1;
 RWStructuredBuffer<ColData> GlobalColors;
+StructuredBuffer<ColData> GlobalColors2;
+RWStructuredBuffer<ColData> GlobalColors3;
 RWStructuredBuffer<Ray> Rays;
 
-
-RWTexture2D<float4> TempPosTex;
 #ifdef HDRP
 Texture2DArray<float2> MotionVectors;
 Texture2DArray<float3> NormalTex;
@@ -285,6 +286,8 @@ struct MaterialData {//56
 	float specTrans;
 	int Thin;
 	float Specular;
+	float2 TextureScale;
+	float2 TextureOffset;
 };
 
 
@@ -607,6 +610,8 @@ float GetHeight(float3 CurrentPos, const TerrainData Terrain) {
     return q.y;//length(q);
 }
 
+Texture2D<float4> VideoTex;
+SamplerState sampler_VideoTex;
 
 inline uint ray_get_octant_inv4(const float3 ray_direction) {
     return
@@ -638,6 +643,12 @@ inline bool triangle_intersect_shadow(int tri_id, const Ray ray, float max_dista
                     float2 Uv = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].AlbedoTex.xy - _Materials[MaterialIndex].AlbedoTex.zw) + _Materials[MaterialIndex].AlbedoTex.zw;
                     if(AlphaAtlas.SampleLevel(sampler_clamp_point, Uv, 0) < 0.0001f) return false;
                 }
+	            #ifdef VideoIncludedInAlphaMapping
+	                if(_Materials[MaterialIndex].MatType == VideoIndex) {
+	                    float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - u - v) + AggTris[tri_id].texedge1 * u + AggTris[tri_id].texedge2 * v;
+	                    if(VideoTex.SampleLevel(sampler_VideoTex, BaseUv, 0).w < 0.1f) return false;
+	                }
+	            #endif
             #endif
             #ifdef IgnoreGlassShadow
                 if(_Materials[MaterialIndex].specTrans == 1) return false;
@@ -650,74 +661,73 @@ inline bool triangle_intersect_shadow(int tri_id, const Ray ray, float max_dista
 }
 
 
-inline uint cwbvh_node_intersect(const Ray ray, int oct_inv4, float max_distance, const float3 node_0, uint node_0w, const uint4 node_1, const uint4 node_2, const uint4 node_3, const uint4 node_4) {
-    uint e_x = (node_0w) & 0xff;
-    uint e_y = (node_0w >> (8)) & 0xff;
-    uint e_z = (node_0w >> (16)) & 0xff;
+    inline uint cwbvh_node_intersect(const Ray ray, int oct_inv4, float max_distance, const float3 node_0, uint node_0w, const uint4 node_1, const uint4 node_2, const uint4 node_3, const uint4 node_4) {
+        uint e_x = (node_0w) & 0xff;
+        uint e_y = (node_0w >> (8)) & 0xff;
+        uint e_z = (node_0w >> (16)) & 0xff;
 
-    const float3 adjusted_ray_direction_inv = float3(
-        asfloat(e_x << 23) * ray.direction_inv.x,
-        asfloat(e_y << 23) * ray.direction_inv.y,
-        asfloat(e_z << 23) * ray.direction_inv.z
-        );
-    const float3 adjusted_ray_origin = ray.direction_inv * (node_0 - ray.origin);
-
-    uint hit_mask = 0;
-    float3 tmin3;
-    float3 tmax3;
-    uint child_bits;
-    uint bit_index;
-    [unroll]
-    for (int i = 0; i < 2; i++) {
-        uint meta4 = asuint(i == 0 ? node_1.z : node_1.w);
-
-        uint is_inner4 = (meta4 & (meta4 << 1)) & 0x10101010;
-        uint inner_mask4 = (((is_inner4 << 3) >> 7) & 0x01010101) * 0xff;
-        uint bit_index4 = (meta4 ^ (oct_inv4 & inner_mask4)) & 0x1f1f1f1f;
-        uint child_bits4 = (meta4 >> 5) & 0x07070707;
-
-        uint q_lo_x = (i == 0 ? node_2.x : node_2.y);
-        uint q_hi_x = (i == 0 ? node_2.z : node_2.w);
-
-        uint q_lo_y = (i == 0 ? node_3.x : node_3.y);
-        uint q_hi_y = (i == 0 ? node_3.z : node_3.w);
-
-        uint q_lo_z = (i == 0 ? node_4.x : node_4.y);
-        uint q_hi_z = (i == 0 ? node_4.z : node_4.w);
-
-        uint x_min = ray.direction.x < 0.0f ? q_hi_x : q_lo_x;
-        uint x_max = ray.direction.x < 0.0f ? q_lo_x : q_hi_x;
-
-        uint y_min = ray.direction.y < 0.0f ? q_hi_y : q_lo_y;
-        uint y_max = ray.direction.y < 0.0f ? q_lo_y : q_hi_y;
-
-        uint z_min = ray.direction.z < 0.0f ? q_hi_z : q_lo_z;
-        uint z_max = ray.direction.z < 0.0f ? q_lo_z : q_hi_z;
+        const float3 adjusted_ray_direction_inv = float3(
+            asfloat(e_x << 23) * ray.direction_inv.x,
+            asfloat(e_y << 23) * ray.direction_inv.y,
+            asfloat(e_z << 23) * ray.direction_inv.z
+            );
+        const float3 adjusted_ray_origin = ray.direction_inv * (node_0 - ray.origin);
+                
+        uint hit_mask = 0;
+        float3 tmin3;
+        float3 tmax3;
+        uint child_bits;
+        uint bit_index;
         [unroll]
-        for (int j = 0; j < 4; j++) {
+        for(int i = 0; i < 2; i++) {
+            uint meta4 = asuint(i == 0 ? node_1.z : node_1.w);
 
-            tmin3 = float3((float)((x_min >> (j * 8)) & 0xff), (float)((y_min >> (j * 8)) & 0xff), (float)((z_min >> (j * 8)) & 0xff));
-            tmax3 = float3((float)((x_max >> (j * 8)) & 0xff), (float)((y_max >> (j * 8)) & 0xff), (float)((z_max >> (j * 8)) & 0xff));
+            uint is_inner4   = (meta4 & (meta4 << 1)) & 0x10101010;
+            uint inner_mask4 = (((is_inner4 << 3) >> 7) & 0x01010101) * 0xff;
+            uint bit_index4  = (meta4 ^ (oct_inv4 & inner_mask4)) & 0x1f1f1f1f;
+            uint child_bits4 = (meta4 >> 5) & 0x07070707;
 
-            tmin3 = tmin3 * adjusted_ray_direction_inv + adjusted_ray_origin;
-            tmax3 = tmax3 * adjusted_ray_direction_inv + adjusted_ray_origin;
+            uint q_lo_x = (i == 0 ? node_2.x : node_2.y);
+            uint q_hi_x = (i == 0 ? node_2.z : node_2.w);
 
-            float tmin = max(max(tmin3.x, tmin3.y), max(tmin3.z, EPSILON));
-            float tmax = min(min(tmax3.x, tmax3.y), min(tmax3.z, max_distance));
+            uint q_lo_y = (i == 0 ? node_3.x : node_3.y);
+            uint q_hi_y = (i == 0 ? node_3.z : node_3.w);
 
-            bool intersected = tmin < tmax;
-            [branch]
-            if (intersected) {
-                child_bits = (child_bits4 >> (j * 8)) & 0xff;
-                bit_index = (bit_index4 >> (j * 8)) & 0xff;
+            uint q_lo_z = (i == 0 ? node_4.x : node_4.y);
+            uint q_hi_z = (i == 0 ? node_4.z : node_4.w);
 
-                hit_mask |= child_bits << bit_index;
+            uint x_min = ray.direction.x < 0.0f ? q_hi_x : q_lo_x;
+            uint x_max = ray.direction.x < 0.0f ? q_lo_x : q_hi_x;
+
+            uint y_min = ray.direction.y < 0.0f ? q_hi_y : q_lo_y;
+            uint y_max = ray.direction.y < 0.0f ? q_lo_y : q_hi_y;
+
+            uint z_min = ray.direction.z < 0.0f ? q_hi_z : q_lo_z;
+            uint z_max = ray.direction.z < 0.0f ? q_lo_z : q_hi_z;
+            [unroll]
+            for(int j = 0; j < 4; j++) {
+
+                tmin3 = float3((float)((x_min >> (j * 8)) & 0xff), (float)((y_min >> (j * 8)) & 0xff), (float)((z_min >> (j * 8)) & 0xff));
+                tmax3 = float3((float)((x_max >> (j * 8)) & 0xff), (float)((y_max >> (j * 8)) & 0xff), (float)((z_max >> (j * 8)) & 0xff));
+
+                tmin3 = tmin3 * adjusted_ray_direction_inv + adjusted_ray_origin;
+                tmax3 = tmax3 * adjusted_ray_direction_inv + adjusted_ray_origin;
+
+                float tmin = max(max(tmin3.x, tmin3.y), max(tmin3.z, EPSILON));
+                float tmax = min(min(tmax3.x, tmax3.y), min(tmax3.z, max_distance));
+                
+                bool intersected = tmin < tmax;
+                [branch]
+                if (intersected) {
+                    child_bits = (child_bits4 >> (j * 8)) & 0xff;
+                    bit_index  = (bit_index4 >> (j * 8)) & 0xff;
+
+                    hit_mask |= child_bits << bit_index;
+                }
             }
         }
+        return hit_mask;
     }
-    return hit_mask;
-}
-
 bool VisabilityCheck(Ray ray, float dist) {
 
 	uint2 stack[24];

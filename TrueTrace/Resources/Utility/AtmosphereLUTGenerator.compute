@@ -759,7 +759,7 @@ void MultiScatter_kernel(uint3 id : SV_DispatchThreadID)
 
 
 
-#pragma kernel FirstCloudKernel;
+#pragma kernel FirstCloudKernel
 
 
 

@@ -32,8 +32,6 @@ SamplerState sampler_trilinear_clamp;
 Texture2D<float4> PrevWorldPos;
 RWTexture2D<float4> PrevWorldPosWrite;
 
-Texture2D<float4> PosTex;
-
 float3 CamPos;
 float FarPlane;
 

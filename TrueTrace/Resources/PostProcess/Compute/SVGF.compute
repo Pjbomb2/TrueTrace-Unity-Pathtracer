@@ -50,7 +50,6 @@ Texture2D<float4> HistoryNormalAndDepth;
 Texture2D<float4> NormalAndDepth;
 
 
-RWTexture2D<int> PrevNormTex;
 
 
 
@@ -78,16 +77,14 @@ int TargetHeight;
 float FarPlane;
 RWTexture2D<float4> PrevDepthTexMain;
 #ifdef HDRP
-	Texture2DArray<float4> DepthTex;
-	Texture2DArray<float4> PrevDepthTex;
 	Texture2DArray<float4> NormalTex;
 	Texture2DArray<float4> MotionVectors;
 #else
 	Texture2D<float4> MotionVectors;
-	Texture2D<float4> DepthTex;
-	Texture2D<float4> PrevDepthTex;
 	Texture2D<float4> NormalTex;
 #endif
+Texture2D<float> PrevDepthTex;
+Texture2D<float> DepthTex;
 SamplerState sampler_MotionVectors;
 SamplerState sampler_DepthTex;
 SamplerState sampler_PrevDepthTex;
@@ -153,14 +150,10 @@ void kernel_copy(int3 id : SV_DispatchThreadID)
 	ColorIndirectOut[id.xy] = float4(PerPixelRadiance[pixel_index].Indirect, 1.0f);
 	#ifdef HDRP
 		RWScreenPosPrev[id.xy] = float4(((UV)-MotionVectors[int3(NewSample, 0)].xy) * 2.0f - 1.0f, 0.0f, 1.0f);
-		RWNormalAndDepth[id.xy] = float4(oct_encode_normal(NormalTex[int3(NewSample,0)]), Linear01Depth(DepthTex[int3(NewSample,0)].x) * FarPlane, Linear01Depth(PrevDepthTex[int3(NewSample,0)].x) * FarPlane);
-		PrevDepthTexMain[id.xy] = float4(length(Dir / dot(Dir, Forward) * LinearEyeDepth(DepthTex[int3(NewSample,0)].x)), 0, 0, 1);
-		PrevNormTex[id.xy] = packUnormArb(NormalTex[int3(NewSample,0)].xyz);
+		RWNormalAndDepth[id.xy] = float4(oct_encode_normal(NormalTex[int3(NewSample,0)]), DepthTex[id.xy], PrevDepthTex[id.xy]);
 	#else
 		RWScreenPosPrev[id.xy] = float4(((UV)-MotionVectors.SampleLevel(sampler_MotionVectors, UV, 0).xy) * 2.0f - 1.0f, 0.0f, 1.0f);
-		RWNormalAndDepth[id.xy] = float4(oct_encode_normal(NormalTex[NewSample]), Linear01Depth(DepthTex[NewSample].x) * FarPlane, Linear01Depth(PrevDepthTex[NewSample].x) * FarPlane);
-		PrevDepthTexMain[id.xy] = float4(length(Dir / dot(Dir, Forward) * LinearEyeDepth(DepthTex[NewSample].x)), 0, 0, 1);
-		PrevNormTex[id.xy] = packUnormArb(NormalTex.SampleLevel(sampler_NormalTex, UV, 0).xyz);
+		RWNormalAndDepth[id.xy] = float4(oct_encode_normal(NormalTex[NewSample]), DepthTex[id.xy], PrevDepthTex[id.xy].x);
 	#endif
 }
 
@@ -317,7 +310,8 @@ void kernel_reproject(int3 id : SV_DispatchThreadID)
 		prev_direct /= consistent_weights_sum;
 		prev_indirect /= consistent_weights_sum;
 		prev_moment /= consistent_weights_sum;
-		int history = HistoryTex[id.xy].x + 1; // Increase History Length by 1 step
+		int history = HistoryTex[int2(x_prev, y_prev)].x + 1; // Increase History Length by 1 step
+		history = min(history,6);
 		HistoryTex[id.xy] = history;
 
 
@@ -628,9 +622,9 @@ void kernel_atrous(int3 id : SV_DispatchThreadID)
 	ColorDirectOut[id.xy] = sum_colour_direct;
 	ColorIndirectOut[id.xy] = sum_colour_indirect;
 
-	if (step_size == (1 << feedback_iteration)) {
-		HistoryDirectTex[id.xy] = sum_colour_direct;
-		HistoryIndirectTex[id.xy] = sum_colour_indirect;
+	if (step_size == 1) {
+		HistoryDirectTex[id.xy] = ColorDirectIn[id.xy];
+		HistoryIndirectTex[id.xy] = ColorIndirectIn[id.xy];
 	}
 
 }

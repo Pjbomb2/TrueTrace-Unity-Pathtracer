@@ -29,7 +29,6 @@ void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
     GlobalRays1[pixel_index].last_pdf = 0;
     GlobalRays1[pixel_index].PrevIndex = pp.x + pp.y * screen_width;
     GlobalColors[pixel_index] = InitCol;
-    SH[pixel_index] = init_SH();
     InterlockedAdd(BufferSizes[0].tracerays, 1);
 
 }
@@ -42,7 +41,7 @@ void Generate(uint3 id : SV_DispatchThreadID) {
 
     if (id.x >= screen_width || id.y >= screen_height) return;
     const uint pixel_index = id.y * screen_width + id.x;
-    float2 jitter = (normalize((random(1, pixel_index) - 0.5f) * 2.0f));
+    float2 jitter = ((random(1, pixel_index) - 0.5f));
     float2 uv = float2((id.xy + jitter) / float2(screen_width, screen_height) * 2.0f - 1.0f);
 
     Ray ray = CreateCameraRay(uv, pixel_index);
@@ -58,7 +57,7 @@ void Generate(uint3 id : SV_DispatchThreadID) {
     }
 
     set(pixel_index, tempray);
-    GlobalRays1[pixel_index].origin = ray.origin;
+    GlobalRays1[pixel_index].origin = ray.origin;// + length(ray.direction / dot(ray.direction, Forward) * LinearEyeDepth(Depth.SampleLevel(sampler_MotionVectors, id.xy / float2(screen_width, screen_height), 0).x)) * ray.direction * 0.99f;
     GlobalRays1[pixel_index].direction = ray.direction;
     GlobalRays1[pixel_index].PixelIndex = id.x + id.y * screen_width;
     GlobalRays1[pixel_index].HitVoxel = 0;

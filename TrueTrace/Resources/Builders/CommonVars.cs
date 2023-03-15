@@ -298,6 +298,8 @@ namespace CommonVars
         public float specTrans;
         public int Thin;
         public float Specular;
+        public Vector2 TextureScale;
+        public Vector2 TextureOffset;
 
     }
 
@@ -564,6 +566,15 @@ namespace CommonVars
         public int IsLeaf;
         public int RecursionCount;
     }
+    [System.Serializable]
+    public struct NodeIndexPairDataSmaller
+    {
+        public int BVHNode;
+        public int Node;
+        public CommonVars.AABB AABB;
+        public int InNodeOffset;
+        public int IsLeaf;
+    }
 
     [System.Serializable]
     public struct BVHNode8DataCompressed
@@ -598,13 +609,13 @@ namespace CommonVars
         public Vector3 posedge1;
         public Vector3 posedge2;
 
-        public Vector3 norm0;
-        public Vector3 normedge1;
-        public Vector3 normedge2;
+        public uint norm0;
+        public uint norm1;
+        public uint norm2;
 
-        public Vector3 tan0;
-        public Vector3 tanedge1;
-        public Vector3 tanedge2;
+        public uint tan0;
+        public uint tan1;
+        public uint tan2;
 
         public Vector2 tex0;
         public Vector2 texedge1;
@@ -875,9 +886,9 @@ namespace CommonVars
         public static Vector3 transform_direction(Matrix4x4 matrix, Vector3 direction)
         {
             return new Vector3(
-                matrix[0, 0] * direction.x + matrix[0, 1] * direction.y + matrix[0, 2] * direction.z,
-                matrix[1, 0] * direction.x + matrix[1, 1] * direction.y + matrix[1, 2] * direction.z,
-                matrix[2, 0] * direction.x + matrix[2, 1] * direction.y + matrix[2, 2] * direction.z
+                Mathf.Abs(matrix[0, 0]) * direction.x + Mathf.Abs(matrix[0, 1]) * direction.y + Mathf.Abs(matrix[0, 2]) * direction.z,
+                Mathf.Abs(matrix[1, 0]) * direction.x + Mathf.Abs(matrix[1, 1]) * direction.y + Mathf.Abs(matrix[1, 2]) * direction.z,
+                Mathf.Abs(matrix[2, 0]) * direction.x + Mathf.Abs(matrix[2, 1]) * direction.y + Mathf.Abs(matrix[2, 2]) * direction.z
             );
         }
         public static void abs(ref Matrix4x4 matrix)
@@ -890,6 +901,23 @@ namespace CommonVars
         public static void SetComputeBuffer(this ComputeShader Shader, int kernel, string name, ComputeBuffer buffer)
         {
             if (buffer != null) Shader.SetBuffer(kernel, name, buffer);
+        }
+        static Vector2 msign( Vector2 v )
+        {
+            return new Vector2( (v.x>=0.0f) ? 1.0f : -1.0f, 
+                         (v.y>=0.0f) ? 1.0f : -1.0f );
+        }
+
+        public static uint PackOctahedral(Vector3 nor)
+        {
+            float Tot = ( Mathf.Abs( nor.x ) + Mathf.Abs( nor.y ) + Mathf.Abs( nor.z ) );
+            nor = new Vector3(nor.x / Tot, nor.y / Tot, nor.z);
+            
+            Vector2 temp = (nor.z >= 0.0) ? new Vector2(nor.x, nor.y) : Vector2.Scale(new Vector2(1.0f-Mathf.Abs(nor.y),(1.0f-Mathf.Abs(nor.x))), msign(new Vector2(nor.x, nor.y)));
+            nor = new Vector3(temp.x, temp.y, nor.z);
+            //return packSnorm2x16(nor.xy);
+            Vector2 d = new Vector2((Mathf.Round(32767.5f + nor.x*32767.5f)), (Mathf.Round(32767.5f + nor.y*32767.5f)));  
+            return (uint)d.x|((uint)d.y<<16);
         }
 
     }

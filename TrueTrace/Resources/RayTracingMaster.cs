@@ -1,4 +1,5 @@
 // #define DoLightMapping
+// #define HardwareRT
 using System.Collections.Generic;
 using UnityEngine;
 using CommonVars;
@@ -13,41 +14,37 @@ namespace TrueTrace {
         private ComputeShader GenerateShader;
         private ComputeShader AtmosphereGeneratorShader;
         public Texture SkyboxTexture;
-        private Texture2D LightMapTex;
-        private Object LightMapDat;
+        // private Texture2D LightMapTex;
+        // private Object LightMapDat;
         private Camera _camera;
         private float _lastFieldOfView;
         private RenderTexture _target;
         private RenderTexture _converged;
-        private RenderTexture _PosTex;
         private RenderTexture _Albedo;
         private RenderTexture _NormTex;
         private RenderTexture _IntermediateTex;
         private RenderTexture _DebugTex;
         private RenderTexture _FinalTex;
         private RenderTexture PrevDistanceTex;
-        private RenderTexture MaskTex;
-        private RenderTexture PrevNormalTex;
-        private RenderTexture PrevPosTex;
-
+        private RenderTexture CorrectedDistanceTex;
         private RenderTexture _RandomNums;
 
         private Denoiser Denoisers;
         private AtmosphereGenerator Atmo;
-
-        public AssetManager Assets;
+        [HideInInspector] public AssetManager Assets;
 
         private Material _addMaterial;
         private Material _FireFlyMaterial;
         private int _currentSample = 0;
-        public List<Transform> _transformsToWatch = new List<Transform>();
+        [HideInInspector] public List<Transform> _transformsToWatch = new List<Transform>();
         private static bool _meshObjectsNeedRebuilding = false;
         public static List<RayTracingLights> _rayTracingLights = new List<RayTracingLights>();
-        private ComputeBuffer _meshObjectBuffer;
         private ComputeBuffer _MaterialDataBuffer;
         private ComputeBuffer _CompactedMeshData;
         private ComputeBuffer _RayBuffer1;
         private ComputeBuffer _ColorBuffer;
+        private ComputeBuffer _ColorBuffer2;
+        private ComputeBuffer _ColorBuffer3;
         private ComputeBuffer _BufferSizes;
         private ComputeBuffer _ShadowBuffer;
         private ComputeBuffer _LightTriangles;
@@ -55,34 +52,17 @@ namespace TrueTrace {
         private ComputeBuffer _LightMeshes;
         private ComputeBuffer _BrickmapBuffer;
         private ComputeBuffer _VoxelTLAS;
-        private ComputeBuffer _CurrentReservoir;
-        private ComputeBuffer _PreviousReservoir;
-        private ComputeBuffer _PrecomputedBlocks;
-        private ComputeBuffer _VoxelPositionBuffer;
-        private ComputeBuffer _SHBuffer;
         private ComputeBuffer RaysBuffer;
         private ComputeBuffer GIReservoirCurrent;
         private ComputeBuffer GIReservoirPrevious;
-        private ComputeBuffer GIReservoirSpatial;
         private ComputeBuffer MatModifierBuffer;
         private ComputeBuffer MatModifierBufferPrev;
+        private ComputeBuffer CurBounceInfoBuffer;
+        #if HardwareRT
+            private ComputeBuffer MeshIndexOffsets;
+            private ComputeBuffer SubMeshOffsetsBuffer;
+        #endif
         // private ComputeBuffer LightMapTriBuffer;
-        private bool PreviousAtrous;
-
-    public struct RayData {//128 bit aligned
-        public Vector3 origin;
-        public Vector3 direction;
-
-        public uint hits1;
-        public uint hits2;
-        public uint hits3;
-        public uint hits4;
-        public uint PixelIndex;//need to bump this back down to uint1
-        public int HitVoxel;//need to shave off 4 bits
-        public float last_pdf;
-        public int PrevIndex;//Need for padding, slightly increases performance
-    }
-    public RayData[] Rays;
 
         private ASVGF ASVGFCode;
 
@@ -92,9 +72,9 @@ namespace TrueTrace {
         public int SampleCount;
 
         private int uFirstFrame = 1;
+        public float IndirectBoost = 1;
         [HideInInspector] public int bouncecount = 24;
         [HideInInspector] public bool UseSVGF = false;
-        [HideInInspector] public bool UseAtrous = false;
         [HideInInspector] public bool UseRussianRoulette = true;
         [HideInInspector] public bool UseNEE = true;
         [HideInInspector] public bool DoTLASUpdates = true;
@@ -102,11 +82,6 @@ namespace TrueTrace {
         [HideInInspector] public bool AllowBloom = false;
         [HideInInspector] public bool AllowDoF = false;
         [HideInInspector] public bool AllowAutoExpose = false;
-        [HideInInspector] public bool AllowReSTIR = false;
-        [HideInInspector] public bool AllowReSTIRTemporal = false;
-        [HideInInspector] public bool AllowReSTIRSpatial = false;
-        [HideInInspector] public bool AllowReSTIRRegeneration = false;
-        [HideInInspector] public bool AllowReSTIRPrecomputedSamples = false;
         [HideInInspector] public bool AllowToneMap = true;
         [HideInInspector] public bool AllowTAA = false;
         [HideInInspector] public float DoFAperature = 0.2f;
@@ -114,13 +89,9 @@ namespace TrueTrace {
         [HideInInspector] public float RenderScale = 1.0f;
         [HideInInspector] public float BloomStrength = 32.0f;
         [HideInInspector] public float MinSpatialSize = 10.0f;
-        [HideInInspector] public int RISSampleCount = 32;
-        [HideInInspector] public int SpatialSamples = 5;
         [HideInInspector] public int ReSTIRGIUpdateRate = 0;
         [HideInInspector] public bool UseASVGF = false;
         [HideInInspector] public bool UseTAAU = true;
-        [HideInInspector] public int SpatialMCap = 32;
-        [HideInInspector] public int MaxIterations = 4;
         [HideInInspector] public bool UseReSTIRGITemporal = true;
         [HideInInspector] public bool UseReSTIRGISpatial = true;
         [HideInInspector] public bool UseReSTIRGI = false;
@@ -140,11 +111,8 @@ namespace TrueTrace {
         [HideInInspector] public bool DoVoxels = false;
 
         [HideInInspector] public int SVGFAtrousKernelSizes = 6;
-        [HideInInspector] public int AtrousKernelSizes = 6;
         [HideInInspector] public int LightTrianglesCount;
-        [HideInInspector] public float SunDirFloat = 0.0f;
         [HideInInspector] public int AtmoNumLayers = 4;
-        [HideInInspector] public bool AlternateSVGF = true;
         [HideInInspector] public bool UseAlteredPipeline = false;
         private int threadGroupsX;
         private int threadGroupsY;
@@ -160,13 +128,13 @@ namespace TrueTrace {
         private int FinalizeKernel;
         private int BrickmapKernel;
         private int BrickmapShadowKernel;
-        private int ReservoirKernel;
-        private int ReservoirPrecomputeKernel;
         private int FramesSinceStart;
         private int GIReSTIRKernel;
         private int HeightmapKernel;
         private int LightMapGenKernel;
         private int GIReTraceKernel;
+        private int TransferKernel;
+        private int CorrectedDistanceKernel;
         private Matrix4x4 PrevViewProjection;
         private int TargetWidth;
         private int TargetHeight;
@@ -237,12 +205,12 @@ namespace TrueTrace {
             FinalizeKernel = RayTracingShader.FindKernel("kernel_finalize");
             BrickmapKernel = IntersectionShader.FindKernel("kernel_brickmap_trace");
             BrickmapShadowKernel = IntersectionShader.FindKernel("kernel_shadow_brickmap");
-            ReservoirKernel = RayTracingShader.FindKernel("kernel_reservoir");
-            ReservoirPrecomputeKernel = RayTracingShader.FindKernel("kernel_reservoir_precompute");
             GIReSTIRKernel = RayTracingShader.FindKernel("kernel_GI_Reserviour");
             HeightmapKernel = IntersectionShader.FindKernel("kernel_heightmap");
             LightMapGenKernel = GenerateShader.FindKernel("GenerateLightMaps");
             GIReTraceKernel = RayTracingShader.FindKernel("GIReTraceKernel");
+            TransferKernel = RayTracingShader.FindKernel("TransferKernel");
+            CorrectedDistanceKernel = RayTracingShader.FindKernel("DepthCopyKernel");
 
             ASVGFCode.Initialized = false;
 
@@ -261,11 +229,12 @@ namespace TrueTrace {
         }
         public void OnDisable()
         {
-            _meshObjectBuffer?.Release();
             _MaterialDataBuffer?.Release();
             _CompactedMeshData?.Release();
             _RayBuffer1?.Release();
             _ColorBuffer?.Release();
+            _ColorBuffer2?.Release();
+            _ColorBuffer3?.Release();
             _BufferSizes?.Release();
             _ShadowBuffer?.Release();
             _LightTriangles?.Release();
@@ -273,20 +242,19 @@ namespace TrueTrace {
             _LightMeshes?.Release();
             _BrickmapBuffer?.Release();
             _VoxelTLAS?.Release();
-            _CurrentReservoir?.Release();
-            _PreviousReservoir?.Release();
-            _PrecomputedBlocks?.Release();
             _BrickmapBuffer?.Release();
-            _VoxelPositionBuffer?.Release();
-            _SHBuffer?.Release();
             RaysBuffer?.Release();
             ASVGFCode.ClearAll();
             if (RaysBuffer != null) RaysBuffer.Release();
             if(GIReservoirCurrent != null) GIReservoirCurrent.Release();
             if(GIReservoirPrevious != null) GIReservoirPrevious.Release();
-            if(GIReservoirSpatial != null) GIReservoirSpatial.Release();
             if(MatModifierBuffer != null) MatModifierBuffer.Release();
             if(MatModifierBufferPrev != null) MatModifierBufferPrev.Release();
+            #if HardwareRT
+                MeshIndexOffsets?.Release();
+                SubMeshOffsetsBuffer?.Release();
+            #endif
+            CurBounceInfoBuffer?.Release();
         }
         public static Vector3 SunDirection;
         private void RunUpdate()
@@ -294,7 +262,7 @@ namespace TrueTrace {
             SunDirection = Assets.SunDirection;
 
             RayTracingShader.SetVector("SunDir", SunDirection);
-            if (!AllowConverge || (PreviousAtrous != UseAtrous))
+            if (!AllowConverge)
             {
                 SampleCount = 0;
                 FramesSinceStart = 0;
@@ -334,21 +302,28 @@ namespace TrueTrace {
         }
         public void RebuildMeshObjectBuffers(CommandBuffer cmd)
         {
+            UnityEngine.Rendering.GlobalKeyword HDRP_ON = UnityEngine.Rendering.GlobalKeyword.Create("HDRP_ON");
+            GenerateShader.EnableKeyword("HDRP_ON");
+            RayTracingShader.EnableKeyword("HDRP_ON");
             cmd.BeginSample("Full Update");
             if (uFirstFrame != 1)
             {
                 if (DoTLASUpdates)
                 {
-                    if (Assets.UpdateTLAS())
+                    if (Assets.UpdateTLAS(cmd))
                     {
                         CreateComputeBuffer(ref _CompactedMeshData, Assets.MyMeshesCompacted, 168);
                         CreateComputeBuffer(ref _LightTriangles, Assets.AggLightTriangles, 100);
-                        CreateComputeBuffer(ref _MaterialDataBuffer, Assets._Materials, 200);
+                        CreateComputeBuffer(ref _MaterialDataBuffer, Assets._Materials, 216);
                         CreateComputeBuffer(ref _UnityLights, Assets.UnityLights, 60);
                         CreateComputeBuffer(ref _LightMeshes, Assets.LightMeshes, 96);
                         CreateComputeBuffer(ref _VoxelTLAS, Assets.VoxelTLAS, 80);
                         CreateComputeBuffer(ref _BrickmapBuffer, Assets.GPUBrickmap, 4);
                         // CreateComputeBuffer(ref LightMapTriBuffer, Assets.LightMapTris, 84);
+                        #if HardwareRT
+                            CreateComputeBuffer(ref MeshIndexOffsets, Assets.MeshOffsets, 8);
+                            CreateComputeBuffer(ref SubMeshOffsetsBuffer, Assets.SubMeshOffsets, 4);
+                        #endif
                         uFirstFrame = 1;
                     }
                     else
@@ -375,24 +350,26 @@ namespace TrueTrace {
             CreateComputeBuffer(ref _UnityLights, Assets.UnityLights, 60);
             CreateComputeBuffer(ref _VoxelTLAS, Assets.VoxelTLAS, 80);
             CreateComputeBuffer(ref _LightMeshes, Assets.LightMeshes, 96);
-            CreateComputeBuffer(ref _VoxelPositionBuffer, Assets.VoxelPositions, 16);
 
-            CreateComputeBuffer(ref _MaterialDataBuffer, Assets._Materials, 200);
+            CreateComputeBuffer(ref _MaterialDataBuffer, Assets._Materials, 216);
             CreateComputeBuffer(ref _CompactedMeshData, Assets.MyMeshesCompacted, 168);
             CreateComputeBuffer(ref _LightTriangles, Assets.AggLightTriangles, 100);
 
+            #if HardwareRT
+                CreateComputeBuffer(ref MeshIndexOffsets, Assets.MeshOffsets, 8);
+                CreateComputeBuffer(ref SubMeshOffsetsBuffer, Assets.SubMeshOffsets, 4);
+            #endif
+
             CreateDynamicBuffer(ref _RayBuffer1, 56);
-            if (_ShadowBuffer == null) _ShadowBuffer = new ComputeBuffer(SourceWidth * SourceHeight * 2, 64);
-            CreateDynamicBuffer(ref _ColorBuffer, 52);
-            CreateDynamicBuffer(ref MatModifierBuffer, 72);
-            CreateDynamicBuffer(ref MatModifierBufferPrev, 72);
-            CreateDynamicBuffer(ref _BufferSizes, 32);
-            CreateDynamicBuffer(ref _CurrentReservoir, 92);
-            CreateDynamicBuffer(ref _PreviousReservoir, 92);
-            CreateDynamicBuffer(ref GIReservoirCurrent, 96);
-            CreateDynamicBuffer(ref GIReservoirPrevious, 96);
-            CreateDynamicBuffer(ref GIReservoirSpatial, 96);
-            CreateDynamicBuffer(ref _SHBuffer, 24);
+            if (_ShadowBuffer == null) _ShadowBuffer = new ComputeBuffer(SourceWidth * SourceHeight, 64);
+            CreateDynamicBuffer(ref _ColorBuffer, 48);
+            CreateDynamicBuffer(ref _ColorBuffer2, 48);
+            CreateDynamicBuffer(ref _ColorBuffer3, 48);
+            CreateDynamicBuffer(ref MatModifierBuffer, 76);
+            CreateDynamicBuffer(ref MatModifierBufferPrev, 76);
+            CreateDynamicBuffer(ref GIReservoirCurrent, 60);
+            CreateDynamicBuffer(ref GIReservoirPrevious, 60);
+            CurBounceInfoBuffer = new ComputeBuffer(8, 12);
             RaysBuffer = new ComputeBuffer(SourceWidth * SourceHeight, 36);
             GenerateShader.SetBuffer(GenASVGFKernel, "Rays", RaysBuffer);
         }
@@ -485,19 +462,28 @@ namespace TrueTrace {
         {
             if (UseASVGF && !ASVGFCode.Initialized) ASVGFCode.init(SourceWidth, SourceHeight, _camera);
             else if (!UseASVGF && ASVGFCode.Initialized) ASVGFCode.ClearAll();
-            if (UseSVGF && !Denoisers.SVGFInitialized && !AlternateSVGF && !UseASVGF) Denoisers.InitSVGF();
-            else if ((UseASVGF || AlternateSVGF || !UseSVGF) && Denoisers.SVGFInitialized) Denoisers.ClearSVGF();
+            if (UseSVGF && !Denoisers.SVGFInitialized && !UseASVGF) Denoisers.InitSVGF();
+            else if ((UseASVGF || !UseSVGF) && Denoisers.SVGFInitialized) Denoisers.ClearSVGF();
 
             Matrix4x4 viewprojmatrix = _camera.projectionMatrix * _camera.worldToCameraMatrix;
             var PrevMatrix = PrevViewProjection;
             BufferSizes = new BufferSizeData[bouncecount + 1];
             BufferSizes[0].tracerays = 0;
+            if(_BufferSizes == null) {
+                _BufferSizes = new ComputeBuffer(bouncecount + 1, 32);
+            }
+            if(_BufferSizes.count != bouncecount + 1) {
+                _BufferSizes.Release();
+                _BufferSizes = new ComputeBuffer(bouncecount + 1, 32);
+            }
             _BufferSizes.SetData(BufferSizes);
             GenerateShader.SetComputeBuffer(GenKernel, "BufferSizes", _BufferSizes);
             GenerateShader.SetComputeBuffer(GenASVGFKernel, "BufferSizes", _BufferSizes);
             IntersectionShader.SetComputeBuffer(TraceKernel, "BufferSizes", _BufferSizes);
             IntersectionShader.SetComputeBuffer(ShadowKernel, "BufferSizes", _BufferSizes);
             RayTracingShader.SetComputeBuffer(ShadeKernel, "BufferSizes", _BufferSizes);
+            RayTracingShader.SetComputeBuffer(TransferKernel, "BufferSizes", _BufferSizes);
+            RayTracingShader.SetComputeBuffer(TransferKernel, "BufferData", CurBounceInfoBuffer);
             IntersectionShader.SetComputeBuffer(BrickmapKernel, "BufferSizes", _BufferSizes);
             IntersectionShader.SetComputeBuffer(BrickmapShadowKernel, "BufferSizes", _BufferSizes);
             IntersectionShader.SetComputeBuffer(HeightmapKernel, "BufferSizes", _BufferSizes);
@@ -524,14 +510,12 @@ namespace TrueTrace {
             SetFloat("AperatureRadius", DoFAperature);
             SetFloat("MinSpatialSize", MinSpatialSize);
             SetFloat("sun_angular_radius", 0.1f);
+            SetFloat("IndirectBoost", IndirectBoost);
 
             SetInt("MaxBounce", bouncecount - 1, cmd);
             SetInt("frames_accumulated", _currentSample, cmd);
             SetInt("VoxelOffset", Assets.VoxOffset, cmd);
-            SetInt("lightsamplecount", RISSampleCount, cmd);
-            SetInt("spatialsamplecount", SpatialSamples, cmd);
             SetInt("ReSTIRGISpatialCount", ReSTIRGISpatialCount, cmd);
-            SetInt("SpatialMCap", SpatialMCap, cmd);
             SetInt("ReSTIRGITemporalMCap", ReSTIRGITemporalMCap, cmd);
             SetInt("curframe", FramesSinceStart2, cmd);
             SetInt("TerrainCount", Assets.Terrains.Count, cmd);
@@ -542,7 +526,6 @@ namespace TrueTrace {
 
 
             SetBool("UseRussianRoulette", UseRussianRoulette);
-            SetBool("UseSpatial", AllowReSTIRSpatial);
             SetBool("UseNEE", UseNEE);
             SetBool("DoVoxels", Assets.UseVoxels);
             SetBool("UseDoF", AllowDoF);
@@ -550,11 +533,7 @@ namespace TrueTrace {
             SetBool("UseReSTIRGITemporal", UseReSTIRGITemporal);
             SetBool("UseReSTIRGISpatial", UseReSTIRGISpatial);
             SetBool("DoReSTIRGIConnectionValidation", DoReSTIRGIConnectionValidation);
-            SetBool("UseRestir", AllowReSTIR);
-            SetBool("UseRestirTemporal", AllowReSTIRTemporal);
-            SetBool("UseRestirPrecomputedSamples", AllowReSTIRPrecomputedSamples);
             SetBool("UseASVGF", UseASVGF);
-            SetBool("UseAtrous", UseAtrous);
             SetBool("AbandonSamples", UseASVGF != PrevASVGF || UseReSTIRGI != PrevReSTIRGI);
             SetBool("SpatialStabalizer", ReSTIRGISpatialStabalizer);
             SetBool("UsePermutatedSamples", ReSTIRGIPermutedSamples);
@@ -578,38 +557,28 @@ namespace TrueTrace {
             RayTracingShader.SetComputeBuffer(GIReSTIRKernel, "CurrentReservoirGI", ((FramesSinceStart2 % 2 == 0) ? GIReservoirCurrent : GIReservoirPrevious));
             RayTracingShader.SetComputeBuffer(GIReTraceKernel, "CurrentReservoirGI", ((FramesSinceStart2 % 2 == 0) ? GIReservoirPrevious : GIReservoirCurrent));
             RayTracingShader.SetComputeBuffer(GIReSTIRKernel, "PreviousReservoirGI", ((FramesSinceStart2 % 2 == 0) ? GIReservoirPrevious : GIReservoirCurrent));
-            RayTracingShader.SetComputeBuffer(GIReSTIRKernel, "SpatialReservoirGI", GIReservoirSpatial);
             RayTracingShader.SetComputeBuffer(ShadeKernel, "CurrentReservoirGI", ((FramesSinceStart2 % 2 == 0) ? GIReservoirCurrent : GIReservoirPrevious));
             RayTracingShader.SetComputeBuffer(ShadeKernel, "PreviousReservoirGI", ((FramesSinceStart2 % 2 == 0) ? GIReservoirPrevious : GIReservoirCurrent));
             RayTracingShader.SetComputeBuffer(FinalizeKernel, "CurrentReservoirGI", ((FramesSinceStart2 % 2 == 0) ? GIReservoirCurrent : GIReservoirPrevious));
             RayTracingShader.SetComputeBuffer(FinalizeKernel, "PreviousReservoirGI", ((FramesSinceStart2 % 2 == 0) ? GIReservoirPrevious : GIReservoirCurrent));
             GenerateShader.SetComputeBuffer(GenKernel, "CurrentReservoirGI", ((FramesSinceStart2 % 2 == 0) ? GIReservoirCurrent : GIReservoirPrevious));
             GenerateShader.SetComputeBuffer(GenKernel, "PreviousReservoirGI", ((FramesSinceStart2 % 2 == 0) ? GIReservoirPrevious : GIReservoirCurrent));
-
-            IntersectionShader.SetComputeBuffer(BrickmapShadowKernel, "CurrentReservoir", ((FramesSinceStart2 % 2 == 0) ? _CurrentReservoir : _PreviousReservoir));
-            RayTracingShader.SetComputeBuffer(ReservoirKernel, "CurrentReservoir", (FramesSinceStart2 % 2 == 0) ? _CurrentReservoir : _PreviousReservoir);
-            RayTracingShader.SetComputeBuffer(ReservoirKernel, "PreviousReservoir", (FramesSinceStart2 % 2 == 0) ? _PreviousReservoir : _CurrentReservoir);
-            RayTracingShader.SetComputeBuffer(ShadeKernel, "CurrentReservoir", ((FramesSinceStart2 % 2 == 0) ? _CurrentReservoir : _PreviousReservoir));
-            RayTracingShader.SetComputeBuffer(ShadeKernel, "PreviousReservoir", (FramesSinceStart2 % 2 == 0) ? _PreviousReservoir : _CurrentReservoir);
             
             RayTracingShader.SetTextureFromGlobal(FinalizeKernel, "Depth", "_CameraDepthTexture");
+            RayTracingShader.SetTextureFromGlobal(CorrectedDistanceKernel, "Depth", "_CameraDepthTexture");
             RayTracingShader.SetTextureFromGlobal(FinalizeKernel, "NormalTex", "_CameraGBufferTexture2");
-            RayTracingShader.SetTextureFromGlobal(ReservoirKernel, "NormalTex", "_CameraGBufferTexture2");
-            RayTracingShader.SetTextureFromGlobal(ReservoirKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             RayTracingShader.SetTextureFromGlobal(GIReTraceKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             RayTracingShader.SetTextureFromGlobal(GIReSTIRKernel, "Depth", "_CameraDepthTexture");
-            RayTracingShader.SetTextureFromGlobal(ReservoirKernel, "Depth", "_CameraDepthTexture");
             RayTracingShader.SetTextureFromGlobal(GIReSTIRKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             RayTracingShader.SetTextureFromGlobal(GIReSTIRKernel, "NormalTex", "_CameraGBufferTexture2");
             RayTracingShader.SetTextureFromGlobal(ShadeKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             GenerateShader.SetTextureFromGlobal(GenKernel, "MotionVectors", "_CameraMotionVectorsTexture");
+            GenerateShader.SetTextureFromGlobal(GenKernel, "Depth", "_CameraDepthTexture");
             GenerateShader.SetTextureFromGlobal(GenASVGFKernel, "MotionVectors", "_CameraMotionVectorsTexture");
 
             RayTracingShader.SetComputeBuffer(ShadeKernel, "ScreenSpaceInfo", ((FramesSinceStart2 % 2 == 0) ? MatModifierBuffer : MatModifierBufferPrev));
-            RayTracingShader.SetComputeBuffer(ReservoirKernel, "ScreenSpaceInfo", ((FramesSinceStart2 % 2 == 0) ? MatModifierBuffer : MatModifierBufferPrev));
             RayTracingShader.SetComputeBuffer(FinalizeKernel, "ScreenSpaceInfo", ((FramesSinceStart2 % 2 == 0) ? MatModifierBuffer : MatModifierBufferPrev));
             RayTracingShader.SetComputeBuffer(FinalizeKernel, "MatModifiersPrev", ((FramesSinceStart2 % 2 == 0) ? MatModifierBufferPrev : MatModifierBuffer));
-            RayTracingShader.SetComputeBuffer(ReservoirKernel, "MatModifiersPrev", ((FramesSinceStart2 % 2 == 0) ? MatModifierBufferPrev : MatModifierBuffer));
             RayTracingShader.SetComputeBuffer(GIReSTIRKernel, "MatModifiersPrev", ((FramesSinceStart2 % 2 == 0) ? MatModifierBufferPrev : MatModifierBuffer));
             RayTracingShader.SetComputeBuffer(GIReSTIRKernel, "ScreenSpaceInfo", ((FramesSinceStart2 % 2 == 0) ? MatModifierBuffer : MatModifierBufferPrev));
             IntersectionShader.SetComputeBuffer(BrickmapShadowKernel, "ScreenSpaceInfo", ((FramesSinceStart2 % 2 == 0) ? MatModifierBuffer : MatModifierBufferPrev));
@@ -620,11 +589,17 @@ namespace TrueTrace {
             var Temp = prevView;
             RayTracingShader.SetMatrix("prevviewmatrix", Temp);
             prevView = _camera.worldToCameraMatrix;
+                RayTracingShader.SetComputeBuffer(GIReSTIRKernel, "GlobalColors2", (FramesSinceStart2 % 2 == 0) ? _ColorBuffer2 : _ColorBuffer3);
+                RayTracingShader.SetComputeBuffer(GIReSTIRKernel, "GlobalColors3", (FramesSinceStart2 % 2 == 0) ? _ColorBuffer3 : _ColorBuffer2);
             #if DoLightMapping
                 SetBool("DiffRes", true);
                 GenerateShader.SetBuffer(LightMapGenKernel, "LightMapTris", LightMapTriBuffer);
             #else
                 SetBool("DiffRes", RenderScale != 1.0f);
+            #endif
+            #if HardwareRT
+                IntersectionShader.SetRayTracingAccelerationStructure(TraceKernel, "myAccelerationStructure", Assets.AccelStruct);
+                IntersectionShader.SetRayTracingAccelerationStructure(2, "myAccelerationStructure", Assets.AccelStruct);
             #endif
             if (true)
             {
@@ -639,6 +614,7 @@ namespace TrueTrace {
                 RayTracingShader.SetTexture(ShadeKernel, "TerrainAlphaMap", Assets.AlphaMap);
                 SetInt("MaterialCount", Assets.MatCount, cmd);
 
+                RayTracingShader.SetTexture(CorrectedDistanceKernel, "CorrectedDepthTex", CorrectedDistanceTex);
 
                 SetInt("LightMeshCount", Assets.LightMeshCount, cmd);
                 SetInt("unitylightcount", Assets.UnityLightCount, cmd);
@@ -649,7 +625,6 @@ namespace TrueTrace {
                 if (_RandomNums == null) CreateRenderTexture(ref _RandomNums, false, false);
 
                 GenerateShader.SetTexture(GenASVGFKernel, "RandomNums", _RandomNums);
-                GenerateShader.SetComputeBuffer(GenASVGFKernel, "SH", _SHBuffer);
                 GenerateShader.SetComputeBuffer(GenASVGFKernel, "GlobalRays1", _RayBuffer1);
                 GenerateShader.SetComputeBuffer(GenASVGFKernel, "GlobalColors", _ColorBuffer);
                 GenerateShader.SetComputeBuffer(GenASVGFKernel, "BufferSizes", _BufferSizes);
@@ -685,7 +660,6 @@ namespace TrueTrace {
                 IntersectionShader.SetComputeBuffer(BrickmapKernel, "VoxelTLAS", _VoxelTLAS);
                 IntersectionShader.SetComputeBuffer(BrickmapKernel, "_MeshData", _CompactedMeshData);
 
-                IntersectionShader.SetComputeBuffer(BrickmapShadowKernel, "SH", _SHBuffer);
                 IntersectionShader.SetComputeBuffer(BrickmapShadowKernel, "BrickMap", _BrickmapBuffer);
                 IntersectionShader.SetComputeBuffer(BrickmapShadowKernel, "VoxelTLAS", _VoxelTLAS);
                 IntersectionShader.SetComputeBuffer(BrickmapShadowKernel, "ShadowRaysBuffer", _ShadowBuffer);
@@ -694,6 +668,10 @@ namespace TrueTrace {
                 IntersectionShader.SetBuffer(BrickmapShadowKernel, "Rays", RaysBuffer);
                 RayTracingShader.SetBuffer(GIReTraceKernel, "Rays", RaysBuffer);
 
+                #if HardwareRT
+                    RayTracingShader.SetBuffer(ShadeKernel, "MeshOffsets", MeshIndexOffsets);
+                    RayTracingShader.SetBuffer(ShadeKernel, "SubMeshOffsets", SubMeshOffsetsBuffer);
+                #endif
                 RayTracingShader.SetTexture(ShadeKernel, "MetallicTex", Assets.MetallicAtlas);
                 RayTracingShader.SetTexture(ShadeKernel, "RoughnessTex", Assets.RoughnessAtlas);
                 RayTracingShader.SetTexture(ShadeKernel, "RandomNums", _RandomNums);
@@ -703,17 +681,16 @@ namespace TrueTrace {
                 RayTracingShader.SetTexture(ShadeKernel, "_EmissiveAtlas", Assets.EmissiveAtlas);
                 RayTracingShader.SetTexture(ShadeKernel, "_NormalAtlas", Assets.NormalAtlas);
                 RayTracingShader.SetTexture(ShadeKernel, "AlphaAtlas", Assets.AlphaAtlas);
-                RayTracingShader.SetTexture(ShadeKernel, "RenderMaskTex", MaskTex);
                 RayTracingShader.SetTexture(ShadeKernel, "scattering_texture", Atmo.MultiScatterTex);
                 RayTracingShader.SetTexture(ShadeKernel, "TransmittanceTex", Atmo._TransmittanceLUT);
                 RayTracingShader.SetTexture(ShadeKernel, "ScatterTex", Atmo._RayleighTex);
-                RayTracingShader.SetTexture(ShadeKernel, "CloudTex", Atmo.CloudTex1);
                 RayTracingShader.SetTexture(ShadeKernel, "MieTex", Atmo._MieTex);
                 RayTracingShader.SetTexture(ShadeKernel, "TempAlbedoTex", _Albedo);
                 RayTracingShader.SetTexture(ShadeKernel, "TempNormTex", _NormTex);
-                RayTracingShader.SetTexture(ShadeKernel, "TempPosTex", _PosTex);
                 RayTracingShader.SetTexture(ShadeKernel, "VideoTex", Assets.VideoTexture);
-                RayTracingShader.SetComputeBuffer(ShadeKernel, "SH", _SHBuffer);
+                RayTracingShader.SetTexture(GIReSTIRKernel, "VideoTex", Assets.VideoTexture);
+                IntersectionShader.SetTexture(0, "VideoTex", Assets.VideoTexture);
+                IntersectionShader.SetTexture(ShadowKernel, "VideoTex", Assets.VideoTexture);
                 RayTracingShader.SetComputeBuffer(ShadeKernel, "_LightMeshes", _LightMeshes);
                 RayTracingShader.SetComputeBuffer(ShadeKernel, "_Materials", _MaterialDataBuffer);
                 RayTracingShader.SetComputeBuffer(ShadeKernel, "GlobalRays1", _RayBuffer1);
@@ -727,49 +704,25 @@ namespace TrueTrace {
                 RayTracingShader.SetBuffer(ShadeKernel, "Rays", RaysBuffer);
 
                 RayTracingShader.SetTexture(FinalizeKernel, "RandomNums", _RandomNums);
-                RayTracingShader.SetTexture(FinalizeKernel, "TempPosTex", _PosTex);
                 RayTracingShader.SetTexture(FinalizeKernel, "PrevDepthTex", PrevDistanceTex);
                 RayTracingShader.SetTexture(FinalizeKernel, "Result", _target);
                 RayTracingShader.SetTexture(FinalizeKernel, "AlbedoTex", _Albedo);
-                RayTracingShader.SetTexture(FinalizeKernel, "PrevNormalTexWrite", PrevNormalTex);
                 RayTracingShader.SetBuffer(FinalizeKernel, "GlobalColors", _ColorBuffer);
 
-                RayTracingShader.SetTexture(ReservoirKernel, "RandomNums", _RandomNums);
-                RayTracingShader.SetTexture(ReservoirKernel, "TempPosTex", _PosTex);
-                RayTracingShader.SetTexture(ReservoirKernel, "AlbedoTex", _Albedo);
-                RayTracingShader.SetTexture(ReservoirKernel, "TempNormTex", _NormTex);
-                RayTracingShader.SetComputeBuffer(ReservoirKernel, "CurrentReservoir", _CurrentReservoir);
-                RayTracingShader.SetComputeBuffer(ReservoirKernel, "PreviousReservoir", _PreviousReservoir);
-                RayTracingShader.SetComputeBuffer(ReservoirKernel, "_LightMeshes", _LightMeshes);
-                RayTracingShader.SetComputeBuffer(ReservoirKernel, "LightTriangles", _LightTriangles);
-                RayTracingShader.SetComputeBuffer(ReservoirKernel, "AggTris", Assets.AggTriBuffer);
-                RayTracingShader.SetComputeBuffer(ReservoirKernel, "cwbvh_nodes", Assets.BVH8AggregatedBuffer);
-                RayTracingShader.SetComputeBuffer(ReservoirKernel, "_MeshData", _CompactedMeshData);
-                RayTracingShader.SetComputeBuffer(ReservoirKernel, "_UnityLights", _UnityLights);
-                RayTracingShader.SetComputeBuffer(ReservoirKernel, "_Materials", _MaterialDataBuffer);
 
-                RayTracingShader.SetTexture(ReservoirPrecomputeKernel, "RandomNums", _RandomNums);
-
-
-                RayTracingShader.SetTexture(FinalizeKernel, "RenderMaskTex", MaskTex);
 
 
                 RayTracingShader.SetTexture(GIReSTIRKernel, "TempAlbedoTex", _Albedo);
                 RayTracingShader.SetTexture(GIReSTIRKernel, "AlphaAtlas", Assets.AlphaAtlas);
                 RayTracingShader.SetTexture(GIReSTIRKernel, "RandomNums", _RandomNums);
-                RayTracingShader.SetTexture(GIReSTIRKernel, "RenderMaskTex", MaskTex);
-                RayTracingShader.SetTexture(GIReSTIRKernel, "PrevPosTex", PrevPosTex);
-                RayTracingShader.SetTexture(GIReSTIRKernel, "TempPosTex", _PosTex);
                 RayTracingShader.SetTexture(GIReSTIRKernel, "TempNormTex", _NormTex);
                 RayTracingShader.SetTexture(GIReSTIRKernel, "PrevDepthTex", PrevDistanceTex);
-                RayTracingShader.SetTexture(GIReSTIRKernel, "PrevNormalTex", PrevNormalTex);
                 RayTracingShader.SetTexture(GIReSTIRKernel, "AlbedoTexRead", _Albedo);
                 RayTracingShader.SetComputeBuffer(GIReSTIRKernel, "_Materials", _MaterialDataBuffer);
                 RayTracingShader.SetComputeBuffer(GIReSTIRKernel, "GlobalColors", _ColorBuffer);
                 RayTracingShader.SetComputeBuffer(GIReSTIRKernel, "AggTris", Assets.AggTriBuffer);
                 RayTracingShader.SetComputeBuffer(GIReSTIRKernel, "cwbvh_nodes", Assets.BVH8AggregatedBuffer);
                 RayTracingShader.SetComputeBuffer(GIReSTIRKernel, "_MeshData", _CompactedMeshData);
-                RayTracingShader.SetComputeBuffer(GIReSTIRKernel, "SH", _SHBuffer);
                 RayTracingShader.SetTexture(GIReSTIRKernel, "RandomNums", _RandomNums);
 
                 GenerateShader.SetTexture(LightMapGenKernel, "RandomNums", _RandomNums);
@@ -777,31 +730,11 @@ namespace TrueTrace {
                 GenerateShader.SetTexture(GenKernel, "_DebugTex", _DebugTex);
                 GenerateShader.SetTexture(LightMapGenKernel, "_DebugTex", _DebugTex);
                 RayTracingShader.SetTexture(ShadeKernel, "_DebugTex", _DebugTex);
-                RayTracingShader.SetTexture(ReservoirKernel, "_DebugTex", _DebugTex);
                 IntersectionShader.SetTexture(BrickmapKernel, "_DebugTex", _DebugTex);
                 IntersectionShader.SetTexture(TraceKernel, "_DebugTex", _DebugTex);
                 RayTracingShader.SetTexture(FinalizeKernel, "_DebugTex", _DebugTex);
                 RayTracingShader.SetTexture(GIReSTIRKernel, "_DebugTex", _DebugTex);
                 IntersectionShader.SetTexture(HeightmapKernel, "_DebugTex", _DebugTex);
-
-                if (_PrecomputedBlocks == null) _PrecomputedBlocks = new ComputeBuffer(128 * 512, 56);
-                RayTracingShader.SetComputeBuffer(ReservoirPrecomputeKernel, "WriteBlocks", _PrecomputedBlocks);
-                RayTracingShader.SetComputeBuffer(ReservoirPrecomputeKernel, "_LightMeshes", _LightMeshes);
-                RayTracingShader.SetComputeBuffer(ReservoirPrecomputeKernel, "LightTriangles", _LightTriangles);
-                RayTracingShader.SetComputeBuffer(ReservoirPrecomputeKernel, "_UnityLights", _UnityLights);
-                cmd.DispatchCompute(RayTracingShader, ReservoirPrecomputeKernel, 128, 1, 1);
-                RayTracingShader.SetComputeBuffer(ReservoirKernel, "Blocks", _PrecomputedBlocks);
-                RayTracingShader.SetComputeBuffer(ShadeKernel, "Blocks", _PrecomputedBlocks);
-            }
-            else if (AllowReSTIRRegeneration)
-            {
-                RayTracingShader.SetComputeBuffer(ReservoirPrecomputeKernel, "WriteBlocks", _PrecomputedBlocks);
-                RayTracingShader.SetComputeBuffer(ReservoirPrecomputeKernel, "_LightMeshes", _LightMeshes);
-                RayTracingShader.SetComputeBuffer(ReservoirPrecomputeKernel, "LightTriangles", _LightTriangles);
-                RayTracingShader.SetComputeBuffer(ReservoirPrecomputeKernel, "_UnityLights", _UnityLights);
-                cmd.DispatchCompute(RayTracingShader, ReservoirPrecomputeKernel, 128, 1, 1);
-                RayTracingShader.SetComputeBuffer(ShadeKernel, "Blocks", _PrecomputedBlocks);
-                RayTracingShader.SetComputeBuffer(ReservoirKernel, "Blocks", _PrecomputedBlocks);
             }
 
         }
@@ -874,16 +807,13 @@ namespace TrueTrace {
                 {
                     _target.Release();
                     _converged.Release();
-                    _PosTex.Release();
                     _Albedo.Release();
                     _NormTex.Release();
                     _IntermediateTex.Release();
                     _DebugTex.Release();
                     PrevDistanceTex.Release();
-                    MaskTex.Release();
-                    PrevNormalTex.Release();
-                    PrevPosTex.Release();
                     _FinalTex.Release();
+                    CorrectedDistanceTex.Release();
                 }
 
                 CreateRenderTexture(ref _DebugTex, true, false);
@@ -892,12 +822,9 @@ namespace TrueTrace {
                 CreateRenderTexture(ref _target, true, false);
                 CreateRenderTextureMask(ref _NormTex, false);
                 CreateRenderTexture(ref _converged, true, false);
-                CreateRenderTexture(ref _PosTex, false, false);
-                CreateRenderTexture(ref PrevPosTex, false, false);
                 CreateRenderTexture(ref _Albedo, true, false);
                 CreateRenderTextureSingle(ref PrevDistanceTex, false);
-                CreateRenderTexture(ref PrevNormalTex, false, false);
-                CreateRenderTextureMask(ref MaskTex, false);
+                CreateRenderTextureSingle(ref CorrectedDistanceTex, false);
                 // Reset sampling
                 _currentSample = 0;
             }
@@ -917,14 +844,15 @@ namespace TrueTrace {
         private void Render(RenderTexture destination, CommandBuffer cmd)
         {
             float CurrentSample;
-
+            cmd.BeginSample("Depth Correct And Copy");
+            cmd.DispatchCompute(RayTracingShader, CorrectedDistanceKernel, Mathf.CeilToInt(SourceWidth / 32.0f), Mathf.CeilToInt(SourceHeight / 32.0f), 1);
+            cmd.EndSample("Depth Correct And Copy");
+            
             if (UseASVGF)
             {
                 cmd.BeginSample("ASVGF Reproject Pass");
-                ASVGFCode.shader.SetBuffer(ASVGFCode.Reproject, "CurrentReservoirGI", GIReservoirSpatial);
-                ASVGFCode.shader.SetBuffer(ASVGFCode.Gradient_Img, "CurrentReservoirGI", GIReservoirSpatial);
                 ASVGFCode.shader.SetBool("ReSTIRGI", UseReSTIRGI);
-                ASVGFCode.DoRNG(ref _RandomNums, FramesSinceStart2, ref RaysBuffer, ref PrevDistanceTex, ref PrevNormalTex, cmd);
+                ASVGFCode.DoRNG(ref _RandomNums, FramesSinceStart2, ref RaysBuffer, ref PrevDistanceTex, cmd, ref CorrectedDistanceTex);
                 GenerateShader.SetBuffer(GenASVGFKernel, "Rays", RaysBuffer);
                 cmd.EndSample("ASVGF Reproject Pass");
             }
@@ -954,18 +882,13 @@ namespace TrueTrace {
             cmd.EndSample("First Trace For Brickmap");
 
             cmd.BeginSample("Rest Of Trace");
-            if (AllowReSTIR)
-            {//Required to be down here so that prevpostex is correct
-                cmd.BeginSample("ReSTIR Reproject");
-                cmd.DispatchCompute(RayTracingShader, ReservoirKernel, Mathf.CeilToInt(SourceWidth / 8.0f), Mathf.CeilToInt(SourceHeight / 8.0f), 1);
-                cmd.EndSample("ReSTIR Reproject");
-            }
 
             for (int i = 0; i < bouncecount; i++)
             {
                 cmd.BeginSample("TraceKernel For Bounce: " + i);
                 var bouncebounce = i;
                 SetInt("CurBounce", bouncebounce, cmd);
+                cmd.DispatchCompute(RayTracingShader, TransferKernel, 1, 1, 1);
                 if (i != 0) cmd.DispatchCompute(IntersectionShader, TraceKernel, 768, 1, 1);
                 cmd.EndSample("TraceKernel For Bounce: " + i);
                 cmd.BeginSample("TraceKernel For Brickmap: " + i);
@@ -975,7 +898,7 @@ namespace TrueTrace {
                 if (Assets.Terrains.Count != 0) cmd.DispatchCompute(IntersectionShader, HeightmapKernel, 768, 1, 1);
 
                 cmd.BeginSample("Shade Kernel: " + i);
-                cmd.DispatchCompute(RayTracingShader, ShadeKernel, threadGroupsX2, threadGroupsY2, 1);
+                cmd.DispatchCompute(RayTracingShader, ShadeKernel, CurBounceInfoBuffer, 0);
                 cmd.EndSample("Shade Kernel: " + i);
                 cmd.BeginSample("Shadow Kernel: " + i);
                 if (UseNEE) cmd.DispatchCompute(IntersectionShader, ShadowKernel, 768, 1, 1);
@@ -993,47 +916,50 @@ namespace TrueTrace {
             cmd.EndSample("ReSTIRGI Pass");
 
 
-            cmd.BeginSample("Finalize");
             if (!UseSVGF && !UseASVGF)
             {
+                cmd.BeginSample("Finalize");
                 cmd.DispatchCompute(RayTracingShader, FinalizeKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 CurrentSample = 1.0f / (FramesSinceStart + 1.0f);
                 SampleCount++;
+                cmd.EndSample("Finalize");
             }
             else if (!UseASVGF)
             {
                 SampleCount = 0;
-                Denoisers.ExecuteSVGF(_currentSample, SVGFAtrousKernelSizes, ref _ColorBuffer, ref _target, ref _Albedo, ref _NormTex, RenderScale != 1.0f, ref PrevDistanceTex, ref PrevNormalTex, cmd);
+
+                Denoisers.ExecuteSVGF(_currentSample, SVGFAtrousKernelSizes, ref _ColorBuffer, ref _target, ref _Albedo, ref _NormTex, RenderScale != 1.0f, ref PrevDistanceTex, cmd, ref CorrectedDistanceTex);
                 CurrentSample = 1;
             }
             else
             {
                 SampleCount = 0;
-                ASVGFCode.Do(ref _ColorBuffer, ref _NormTex, ref _Albedo, ref _target, ref _RandomNums, ref _SHBuffer, MaxIterations, RenderScale != 1.0f, ref PrevDistanceTex, ref PrevNormalTex, ((FramesSinceStart2 % 2 == 0) ? MatModifierBuffer : MatModifierBufferPrev), cmd);
+                ASVGFCode.Do(ref _ColorBuffer, ref _NormTex, ref _Albedo, ref _target, ref _RandomNums, RenderScale != 1.0f, ref PrevDistanceTex, ((FramesSinceStart2 % 2 == 0) ? MatModifierBuffer : MatModifierBufferPrev), cmd, ref CorrectedDistanceTex, ref RaysBuffer);
                 CurrentSample = 1;
             }
-
+            cmd.BeginSample("Final Blit");
             if (_FireFlyMaterial == null)
                 _FireFlyMaterial = new Material(Shader.Find("Hidden/FireFlyPass"));
             if (_addMaterial == null)
                 _addMaterial = new Material(Shader.Find("Hidden/Accumulate"));
             _addMaterial.SetFloat("_Sample", CurrentSample);
             cmd.Blit(_target, _converged, _addMaterial);
-            cmd.EndSample("Finalize");
 
             if(DoFirefly) cmd.Blit(_converged, _target, _FireFlyMaterial);
             if(DoFirefly) cmd.Blit(_target, _converged);
+            cmd.EndSample("Final Blit");
+
             cmd.BeginSample("Post Processing");
             if (SourceWidth != TargetWidth)
             {
                 if (UseTAAU) Denoisers.ExecuteTAAU(ref _FinalTex, ref _converged, ref _Albedo, cmd);
-                else Denoisers.ExecuteUpsample(ref _converged, ref _FinalTex, ref _PosTex, FramesSinceStart2, _currentSample, ref _Albedo, cmd);//This is a postprocessing pass, but im treating it like its not one, need to move it to after the accumulation
+                else Denoisers.ExecuteUpsample(ref _converged, ref _FinalTex, FramesSinceStart2, _currentSample, ref _Albedo, cmd);//This is a postprocessing pass, but im treating it like its not one, need to move it to after the accumulation
                 cmd.CopyTexture(_FinalTex, 0, 0, _IntermediateTex, 0, 0);
             }
             else
             {
                 cmd.CopyTexture(_converged, _FinalTex);
-                if (UseAtrous || AllowAutoExpose || AllowBloom || AllowTAA)
+                if (AllowAutoExpose || AllowBloom || AllowTAA)
                 {
                     cmd.CopyTexture(_FinalTex, 0, 0, _IntermediateTex, 0, 0);
                 }
@@ -1055,7 +981,7 @@ namespace TrueTrace {
                 Denoisers.ExecuteTAA(ref _FinalTex, ref _IntermediateTex, _currentSample, cmd);
             }
 
-            if (UseAtrous || AllowAutoExpose || AllowBloom || AllowTAA) cmd.CopyTexture(_IntermediateTex, 0, 0, _FinalTex, 0, 0);
+            if (AllowAutoExpose || AllowBloom || AllowTAA) cmd.CopyTexture(_IntermediateTex, 0, 0, _FinalTex, 0, 0);
 
             if(AllowToneMap) Denoisers.ExecuteToneMap(ref _FinalTex, cmd);
 
@@ -1065,7 +991,6 @@ namespace TrueTrace {
             _currentSample++;
             FramesSinceStart++;
             FramesSinceStart2++;
-            PreviousAtrous = UseAtrous;
             PrevCamPosition = _camera.transform.position;
             PrevASVGF = UseASVGF;
             PrevReSTIRGI = UseReSTIRGI;
@@ -1088,7 +1013,6 @@ namespace TrueTrace {
                     SampleCount = 0;
                 }
             #endif
-            // _BufferSizes.GetData(BufferSizes);
         }
 
         public void RenderImage(RenderTexture destination, CommandBuffer cmd)
@@ -1104,8 +1028,12 @@ namespace TrueTrace {
             }
             else
             {
-                try { bool throwawayBool = Assets.UpdateTLAS(); } catch (System.IndexOutOfRangeException) { }
+                try { bool throwawayBool = Assets.UpdateTLAS(cmd); } catch (System.IndexOutOfRangeException) { }
             }
+
+
+
+
         }
     }
 }

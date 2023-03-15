@@ -240,8 +240,6 @@ namespace TrueTrace {
                     TempTex2.Release();
                     PrevNormalUpscalerTex.Release();
                     PrevNormalUpscalerTexWrite.Release();
-                    // SpecularIn.Release();
-                    // SpecularOut.Release();
                 }
 
                 CreateRenderTexture2(ref _TAAPrev, false);
@@ -257,8 +255,6 @@ namespace TrueTrace {
                 CreateRenderTexture2(ref PrevNormalUpscalerTexWrite, false);
                 CreateRenderTexture2(ref PrevWorldPos, false);
                 CreateRenderTexture2(ref PrevWorldPosWrite, false);
-                // CreateRenderTexture(ref SpecularIn, false);
-                // CreateRenderTexture(ref SpecularOut, false);
                 BloomSamples = new RenderTexture[8];
                 int BloomWidth = Screen.width / 2;
                 int BloomHeight = Screen.height / 2;
@@ -272,26 +268,6 @@ namespace TrueTrace {
                     BloomWidth /= 2;
                     BloomHeight /= 2;
                 }
-                // int w = Screen.width;
-                // int h = Screen.height;
-                // int mipCount = 0;
-                // while(w > 1 && h > 1) {
-                //     mipCount++;
-                //     w /= 2;
-                //     h /= 2;
-                // }
-                // w = Screen.width;
-                // h = Screen.height;
-                // mips = new RenderTexture[mipCount + 1];
-                // mipsWeights = new RenderTexture[mipCount + 1];
-                // mipsAssemble = new RenderTexture[mipCount + 1];
-                // for(int i = 0; i <= mipCount; i++) {
-                //     CreateRenderTexture(ref mips[i], false, w, h);
-                //     CreateRenderTexture(ref mipsWeights[i], false, w, h);
-                //     CreateRenderTexture(ref mipsAssemble[i], false, w, h);
-                //     w /= 2;
-                //     h /= 2;
-                // }
             }
         }
         void OnApplicationQuit()
@@ -375,7 +351,7 @@ namespace TrueTrace {
             InitRenderTexture();
         }
 
-        public void ExecuteSVGF(int CurrentSamples, int AtrousKernelSize, ref ComputeBuffer _ColorBuffer, ref RenderTexture _target, ref RenderTexture _Albedo, ref RenderTexture _NormTex, bool DiffRes, ref RenderTexture PrevDepthTexMain, ref RenderTexture PrevNormalTex, CommandBuffer cmd)
+        public void ExecuteSVGF(int CurrentSamples, int AtrousKernelSize, ref ComputeBuffer _ColorBuffer, ref RenderTexture _target, ref RenderTexture _Albedo, ref RenderTexture _NormTex, bool DiffRes, ref RenderTexture PrevDepthTexMain, CommandBuffer cmd, ref RenderTexture CorrectedDepthTex)
         {
 
             InitRenderTexture();
@@ -401,12 +377,10 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(SVGF, CopyKernel, "ColorIndirectOut", _ColorIndirectOut);
             SVGF.SetFloat("FarPlane", _camera.farClipPlane);
             SVGF.SetTextureFromGlobal(CopyKernel, "MotionVectors", "_CameraMotionVectorsTexture");
-            SVGF.SetTextureFromGlobal(CopyKernel, "DepthTex", "_CameraDepthTexture");
-            SVGF.SetTextureFromGlobal(CopyKernel, "PrevDepthTex", "_LastCameraDepthTexture");
+            cmd.SetComputeTextureParam(SVGF,CopyKernel, "DepthTex", CorrectedDepthTex);
+            cmd.SetComputeTextureParam(SVGF,CopyKernel, "PrevDepthTex", PrevDepthTexMain);
             cmd.SetComputeTextureParam(SVGF, CopyKernel, "_CameraNormalDepthTex", _NormTex);
-            cmd.SetComputeTextureParam(SVGF, CopyKernel, "PrevDepthTexMain", PrevDepthTexMain);
             SVGF.SetTextureFromGlobal(CopyKernel, "NormalTex", "_CameraGBufferTexture2");
-            cmd.SetComputeTextureParam(SVGF, CopyKernel, "PrevNormTex", PrevNormalTex);
             cmd.DispatchCompute(SVGF, CopyKernel, threadGroupsX, threadGroupsY, 1);
             UnityEngine.Profiling.Profiler.EndSample();
 
@@ -471,6 +445,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "FrameBufferMoment", _FrameMoment);
             cmd.DispatchCompute(SVGF, FinalizeKernel, threadGroupsX, threadGroupsY, 1);
             UnityEngine.Profiling.Profiler.EndSample();
+            cmd.CopyTexture(CorrectedDepthTex, PrevDepthTexMain);
 
         }
 
@@ -573,7 +548,7 @@ namespace TrueTrace {
         Matrix4x4 PreviousCameraInverseMatrix;
         Matrix4x4 PrevProjInv;
 
-        public void ExecuteUpsample(ref RenderTexture Input, ref RenderTexture Output, ref RenderTexture OrigPos, int curframe, int cursample, ref RenderTexture ThroughputTex, CommandBuffer cmd)
+        public void ExecuteUpsample(ref RenderTexture Input, ref RenderTexture Output, int curframe, int cursample, ref RenderTexture ThroughputTex, CommandBuffer cmd)
         {//need to fix this so it doesnt create new textures every time
             UnityEngine.Profiling.Profiler.BeginSample("Upscale");
             cmd.SetComputeIntParam(Upscaler,"curframe", curframe);
@@ -589,7 +564,6 @@ namespace TrueTrace {
             Upscaler.SetMatrix("_CameraInverseProjection", _camera.projectionMatrix.inverse);
             Upscaler.SetMatrix("_PrevCameraInverseProjection", PrevProjInv);
             Upscaler.SetVector("Forward", _camera.transform.forward);
-            cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "PosTex", OrigPos);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "PrevNormalTex", PrevNormalUpscalerTex);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "PrevNormalTexWrite", PrevNormalUpscalerTexWrite);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "PrevWorldPos", PrevWorldPos);

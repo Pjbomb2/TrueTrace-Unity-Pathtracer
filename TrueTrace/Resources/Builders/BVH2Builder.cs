@@ -260,7 +260,7 @@ namespace TrueTrace {
                 BVH2Nodes[i] = TempNode;
             }
             FinalIndices = DimensionedIndices[0].ToArray();
-            DimensionedIndices = null;
+            // DimensionedIndices = null;
         }
     }
 }

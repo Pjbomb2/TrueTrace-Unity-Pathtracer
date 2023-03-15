@@ -72,105 +72,6 @@ namespace TrueTrace {
             }
         }
 
-
-        private const int CloudTexSize = 128;
-        private const int SIZE = 256;
-
-        private int[] m_perm = new int[SIZE + SIZE];
-
-        public void GPUPerlinNoise(int seed)
-        {
-            Random.InitState(seed);
-
-            int i, j, k;
-            for (i = 0; i < SIZE; i++)
-            {
-                m_perm[i] = i;
-            }
-
-            while (--i != 0)
-            {
-                k = m_perm[i];
-                j = Random.Range(0, SIZE);
-                m_perm[i] = m_perm[j];
-                m_perm[j] = k;
-            }
-
-            for (i = 0; i < SIZE; i++)
-            {
-                m_perm[SIZE + i] = m_perm[i];
-            }
-
-        }
-
-        private void LoadPermTable2D()
-        {
-            if (PermutationTable2D) return;
-
-            PermutationTable2D = new Texture2D(SIZE, SIZE, TextureFormat.ARGB32, false, true);
-            PermutationTable2D.filterMode = FilterMode.Point;
-            PermutationTable2D.wrapMode = TextureWrapMode.Repeat;
-
-            for (int x = 0; x < SIZE; x++)
-            {
-                for (int y = 0; y < SIZE; y++)
-                {
-                    int A = m_perm[x] + y;
-                    int AA = m_perm[A];
-                    int AB = m_perm[A + 1];
-
-                    int B = m_perm[x + 1] + y;
-                    int BA = m_perm[B];
-                    int BB = m_perm[B + 1];
-
-                    PermutationTable2D.SetPixel(x, y, new Color((float)AA / 255.0f, (float)AB / 255.0f, (float)BA / 255.0f, (float)BB / 255.0f));
-                }
-            }
-
-            PermutationTable2D.Apply();
-        }
-        private static float[] GRADIENT3 = new float[]
-        {
-            1,1,0,
-            -1,1,0,
-            1,-1,0,
-            -1,-1,0,
-            1,0,1,
-            -1,0,1,
-            1,0,-1,
-            -1,0,-1,
-            0,1,1,
-            0,-1,1,
-            0,1,-1,
-            0,-1,-1,
-            1,1,0,
-            0,-1,1,
-            -1,1,0,
-            0,-1,-1,
-        };
-        private void LoadGradient3D()
-        {
-            if (Gradient3D) return;
-
-            Gradient3D = new Texture2D(SIZE, 1, TextureFormat.RGB24, false, true);
-            Gradient3D.filterMode = FilterMode.Point;
-            Gradient3D.wrapMode = TextureWrapMode.Repeat;
-
-            for (int i = 0; i < SIZE; i++)
-            {
-                int idx = m_perm[i] % 16;
-
-                float R = (GRADIENT3[idx * 3 + 0] + 1.0f) * 0.5f;
-                float G = (GRADIENT3[idx * 3 + 1] + 1.0f) * 0.5f;
-                float B = (GRADIENT3[idx * 3 + 2] + 1.0f) * 0.5f;
-
-                Gradient3D.SetPixel(i, 0, new Color(R, G, B, 1));
-            }
-
-            Gradient3D.Apply();
-
-        }
-
         public AtmosphereGenerator(ComputeShader Atmosphere, float BottomRadius, float TopRadius, int MultiScatterIterations)
         {
 
@@ -335,26 +236,26 @@ namespace TrueTrace {
             MultiScatterTex.enableRandomWrite = true;
             MultiScatterTex.Create();
 
-            CloudTex1 = new RenderTexture(32, 32, 0,
-            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-            CloudTex1.volumeDepth = 64;
-            CloudTex1.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-            CloudTex1.enableRandomWrite = true;
-            CloudTex1.useMipMap = true;
-            CloudTex1.Create();
+            // CloudTex1 = new RenderTexture(32, 32, 0,
+            // RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+            // CloudTex1.volumeDepth = 64;
+            // CloudTex1.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+            // CloudTex1.enableRandomWrite = true;
+            // CloudTex1.useMipMap = true;
+            // CloudTex1.Create();
 
-            CloudTex2 = new RenderTexture(32, 32, 0,
-            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-            CloudTex2.volumeDepth = 32;
-            CloudTex2.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-            CloudTex2.enableRandomWrite = true;
-            CloudTex2.useMipMap = true;
-            CloudTex2.Create();
+            // CloudTex2 = new RenderTexture(32, 32, 0,
+            // RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+            // CloudTex2.volumeDepth = 32;
+            // CloudTex2.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+            // CloudTex2.enableRandomWrite = true;
+            // CloudTex2.useMipMap = true;
+            // CloudTex2.Create();
 
-            CloudTex3 = new RenderTexture(128, 128, 0,
-            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-            CloudTex3.enableRandomWrite = true;
-            CloudTex3.Create();
+            // CloudTex3 = new RenderTexture(128, 128, 0,
+            // RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+            // CloudTex3.enableRandomWrite = true;
+            // CloudTex3.Create();
 
             Atmosphere.SetTexture(SingleScatterKernel, "DebugTex", DebugTex);
             Atmosphere.SetTexture(TransmittanceKernel, "TransmittanceTex", _TransmittanceLUT);
@@ -407,14 +308,25 @@ namespace TrueTrace {
             }
 
 
-            Atmosphere.SetTexture(FirstCloudKernel, "CloudTex1", CloudTex1);
-            Atmosphere.SetFloat("numCells", 2);
-            Atmosphere.SetFloat("TargetSize", 32);
-            Atmosphere.Dispatch(FirstCloudKernel, 32, 32, 64);
+            // Atmosphere.SetTexture(FirstCloudKernel, "CloudTex1", CloudTex1);
+            // Atmosphere.SetFloat("numCells", 2);
+            // Atmosphere.SetFloat("TargetSize", 32);
+            // Atmosphere.Dispatch(FirstCloudKernel, 32, 32, 64);
 
             rayleigh_densityC.Release();
             mie_densityC.Release();
             absorption_densityC.Release();
+
+            // Material SkyBoxMaterial;
+            // SkyBoxMaterial = RenderSettings.skybox;
+            // Texture2D FirstTex = SkyBoxMaterial.GetTexture("_FrontTex") as Texture2D;
+            // Skybox = new Cubemap(FirstTex.width, FirstTex.format, false);
+            // Skybox.SetPixels(FirstTex.GetPixels(0), CubemapFace.PositiveZ,0);
+            // Skybox.SetPixels((SkyBoxMaterial.GetTexture("_BackTex") as Texture2D).GetPixels(0), CubemapFace.NegativeZ,0);
+            // Skybox.SetPixels((SkyBoxMaterial.GetTexture("_RightTex") as Texture2D).GetPixels(0), CubemapFace.PositiveX,0);
+            // Skybox.SetPixels((SkyBoxMaterial.GetTexture("_LeftTex") as Texture2D).GetPixels(0), CubemapFace.NegativeX,0);
+            // Skybox.SetPixels((SkyBoxMaterial.GetTexture("_UpTex") as Texture2D).GetPixels(0), CubemapFace.PositiveY,0);
+            // Skybox.SetPixels((SkyBoxMaterial.GetTexture("_DownTex") as Texture2D).GetPixels(0), CubemapFace.NegativeY,0);
         }
 
 

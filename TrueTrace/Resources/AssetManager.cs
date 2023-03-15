@@ -1,4 +1,5 @@
-// #define DoLightMapping
+// #define DoLightMapping\
+// #define HardwareRT
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -10,13 +11,14 @@ using System.IO;
 using System.Xml.Serialization;
 using System.Linq;
 using UnityEngine.SceneManagement;
+using UnityEngine.Rendering;
 #pragma warning disable 4014
 
 namespace TrueTrace {
     [System.Serializable]
     public class AssetManager : MonoBehaviour
     {//This handels all the data
-
+        public int TotalParentObjectSize;
         public float LightEnergyScale = 1.0f;
         public Texture2D AlbedoAtlas;
         public RenderTexture NormalAtlas;
@@ -25,7 +27,6 @@ namespace TrueTrace {
         public RenderTexture MetallicAtlas;
         public RenderTexture RoughnessAtlas;
         [HideInInspector] public RenderTexture TempTex;
-        [HideInInspector] public List<Vector4> VoxelPositions;
         private ComputeShader Refitter;
         private int RefitLayer;
         private int NodeUpdater;
@@ -90,6 +91,7 @@ namespace TrueTrace {
         [HideInInspector] public List<LightMeshData> LightMeshes;
 
         [HideInInspector] public AABB[] MeshAABBs;
+        [HideInInspector] public AABB[] UnsortedAABBs;
         [HideInInspector] public AABB[] VoxelAABBs;
 
         [HideInInspector] public bool ParentCountHasChanged;
@@ -116,6 +118,11 @@ namespace TrueTrace {
         private BVHNode8DataCompressed[] TempBVHArray;
 
         [SerializeField] public int RunningTasks;
+        #if HardwareRT
+            public List<Vector2> MeshOffsets;
+            public List<int> SubMeshOffsets;
+            public UnityEngine.Rendering.RayTracingAccelerationStructure AccelStruct;
+        #endif
         public void ClearAll()
         {//My attempt at clearing memory
             RunningTasks = 0;
@@ -198,7 +205,9 @@ namespace TrueTrace {
                 if (Index == -1)
                 {
                     Texs.Add((Texture2D)ObjTexs[i]);
-                    Indexes.Add(ObjIndexes[i]);
+                    var E = new RayObjects();
+                    E.RayObjectList = new List<RayObjectTextureIndex>(ObjIndexes[i].RayObjectList);
+                    Indexes.Add(E);
                 }
                 else
                 {
@@ -217,7 +226,9 @@ namespace TrueTrace {
                 {
                     Texs.Add((Texture2D)ObjTexs[i]);
                     ReadIndex.Add(ObjReadIndex[i]);
-                    Indexes.Add(ObjIndexes[i]);
+                    var E = new RayObjects();
+                    E.RayObjectList = new List<RayObjectTextureIndex>(ObjIndexes[i].RayObjectList);
+                    Indexes.Add(E);
                 }
                 else
                 {
@@ -641,6 +652,9 @@ namespace TrueTrace {
         {
             RunningTasks = 0;
             CurrentlyActiveTasks.Clear();
+            #if HardwareRT
+                AccelStruct.Release();
+            #endif
             if (BVH8AggregatedBuffer != null)
             {
                 BVH8AggregatedBuffer.Release();
@@ -648,7 +662,7 @@ namespace TrueTrace {
                 AggTriBuffer.Release();
                 AggTriBuffer = null;
             }
-            if (WorkingBuffer != null) WorkingBuffer.Release();
+            for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
             if (NodeBuffer != null) NodeBuffer.Release();
             if (StackBuffer != null) StackBuffer.Release();
             if (ToBVHIndexBuffer != null) ToBVHIndexBuffer.Release();
@@ -707,6 +721,9 @@ namespace TrueTrace {
 
         private void init()
         {
+            #if HardwareRT
+                AccelStruct = new UnityEngine.Rendering.RayTracingAccelerationStructure();
+            #endif
             DesiredRes = 16300;
             if(AlbedoAtlas == null || AlbedoAtlas.width != DesiredRes) AlbedoAtlas = new Texture2D(DesiredRes,DesiredRes, TextureFormat.RGBA32, false);
             UpdateMaterialDefinition();
@@ -985,6 +1002,7 @@ namespace TrueTrace {
                 OnlyInstanceUpdated = false;
             }
             if (ChildrenUpdated || ParentCountHasChanged) MeshAABBs = new AABB[RenderQue.Count + InstanceRenderQue.Count];
+            if (ChildrenUpdated || ParentCountHasChanged) UnsortedAABBs = new AABB[RenderQue.Count + InstanceRenderQue.Count];
             if (ChildrenUpdated || ParentCountHasChanged) VoxelAABBs = new AABB[VoxelRenderQue.Count];
         }
         public void EditorBuild()
@@ -1032,9 +1050,13 @@ namespace TrueTrace {
             InstanceData.BuildCombined();
             List<VoxelObject> TempVoxelQue = new List<VoxelObject>(GetComponentsInChildren<VoxelObject>());
             RunningTasks = 0;
+            int TotLength = 0;
+            int MeshOffset = 0;
             for (int i = 0; i < TempQue.Count; i++)
             {
-                if (TempQue[i].HasCompleted && !TempQue[i].NeedsToUpdate) RenderQue.Add(TempQue[i]);
+                if (TempQue[i].HasCompleted && !TempQue[i].NeedsToUpdate) {
+                    RenderQue.Add(TempQue[i]);
+                }
                 else {BuildQue.Add(TempQue[i]); RunningTasks++;}
             }
             for (int i = 0; i < TempVoxelQue.Count; i++)
@@ -1056,7 +1078,9 @@ namespace TrueTrace {
             }
             ParentCountHasChanged = true;
             if (AggLightTriangles.Count == 0) { AggLightTriangles.Add(new CudaLightTriangle() { }); }
-            if (RenderQue.Count != 0) { bool throwaway = UpdateTLAS(); }
+            if (RenderQue.Count != 0) {CommandBuffer cmd = new CommandBuffer(); bool throwaway = UpdateTLAS(cmd);  Graphics.ExecuteCommandBuffer(cmd);
+        cmd.Clear();
+        cmd.Release();}
         }
         [HideInInspector] public bool HasToDo;
 
@@ -1071,6 +1095,7 @@ namespace TrueTrace {
             int nodes = TLASSpace;
             if (ChildrenUpdated || ParentCountHasChanged)
             {
+                TotalParentObjectSize = 0;
                 HasToDo = false;
                 int CurNodeOffset = TLASSpace;
                 int CurTriOffset = 0;
@@ -1100,7 +1125,7 @@ namespace TrueTrace {
                 if (AggNodeCount != 0)
                 {//Accumulate the BVH nodes and triangles for all normal models
                     BVH8AggregatedBuffer = new ComputeBuffer(AggNodeCount, 80);
-                    AggTriBuffer = new ComputeBuffer(AggTriCount, 136);
+                    AggTriBuffer = new ComputeBuffer(AggTriCount, 88);
                     MeshFunctions.SetBuffer(TriangleBufferKernel, "OutCudaTriArray", AggTriBuffer);
                     MeshFunctions.SetBuffer(NodeBufferKernel, "OutAggNodes", BVH8AggregatedBuffer);
                     int MatOffset = 0;
@@ -1117,7 +1142,8 @@ namespace TrueTrace {
                         MeshFunctions.SetInt("Count", RenderQue[i].BVHBuffer.count);
                         MeshFunctions.SetBuffer(NodeBufferKernel, "InAggNodes", RenderQue[i].BVHBuffer);
                         MeshFunctions.Dispatch(NodeBufferKernel, (int)Mathf.Ceil(RenderQue[i].BVHBuffer.count / 248.0f), 1, 1);
-
+                        TotalParentObjectSize += RenderQue[i].TriBuffer.count * RenderQue[i].TriBuffer.stride;
+                        TotalParentObjectSize += RenderQue[i].BVHBuffer.count * RenderQue[i].BVHBuffer.stride;
                         RenderQue[i].NodeOffset = CurNodeOffset;
                         RenderQue[i].TriOffset = CurTriOffset;
                         CurNodeOffset += RenderQue[i].AggNodes.Length;
@@ -1249,11 +1275,11 @@ namespace TrueTrace {
         int[] ToBVHIndex;
         [HideInInspector] public BVH8Builder TLASBVH8;
 
-
+        int TempRecur = 0;
         unsafe public void DocumentNodes(int CurrentNode, int ParentNode, int NextNode, int NextBVH8Node, bool IsLeafRecur, int CurRecur)
         {
             NodeIndexPairData CurrentPair = NodePair[CurrentNode];
-            MaxRecur = Mathf.Max(MaxRecur, CurRecur);
+            TempRecur = Mathf.Max(TempRecur, CurRecur);
             CurrentPair.PreviousNode = ParentNode;
             CurrentPair.Node = CurrentNode;
             CurrentPair.RecursionCount = CurRecur;
@@ -1315,7 +1341,7 @@ namespace TrueTrace {
         Layer2[] LayerStack;
         int MaxRecur = 0;
         int[] CWBVHIndicesBufferInverted;
-        ComputeBuffer WorkingBuffer;
+        ComputeBuffer[] WorkingBuffer;
         ComputeBuffer NodeBuffer;
         ComputeBuffer StackBuffer;
         ComputeBuffer ToBVHIndexBuffer;
@@ -1325,123 +1351,295 @@ namespace TrueTrace {
         unsafe public void ConstructNewTLAS()
         {
 
-            BVH2Builder BVH = new BVH2Builder(MeshAABBs);
-            TLASBVH8 = new BVH8Builder(BVH, ref MyMeshesCompacted);
-            for (int i = 0; i < TLASBVH8.cwbvh_indices.Length; i++) {
-                if (TLASBVH8.cwbvh_indices[i] >= RenderQue.Count) {
-                    InstanceRenderQue[TLASBVH8.cwbvh_indices[i] - RenderQue.Count].CompactedMeshData = i;
-                }
-                else RenderQue[TLASBVH8.cwbvh_indices[i]].CompactedMeshData = i;
-            }
-            System.Array.Resize(ref TLASBVH8.BVH8Nodes, TLASBVH8.cwbvhnode_count);
-            ToBVHIndex = new int[TLASBVH8.cwbvhnode_count];
-            if (TempBVHArray == null || TLASBVH8.BVH8Nodes.Length != TempBVHArray.Length) TempBVHArray = new BVHNode8DataCompressed[TLASBVH8.BVH8Nodes.Length];
-            CommonFunctions.Aggregate(ref TempBVHArray, ref TLASBVH8.BVH8Nodes);
+            #if HardwareRT
+                int TotLength = 0;
+                int MeshOffset = 0;
+                SubMeshOffsets = new List<int>();
+                MeshOffsets = new List<Vector2>();
 
-            CWBVHIndicesBufferInverted = new int[TLASBVH8.cwbvh_indices.Length];
-            int CWBVHIndicesBufferCount = CWBVHIndicesBufferInverted.Length;
-            for (int i = 0; i < CWBVHIndicesBufferCount; i++) CWBVHIndicesBufferInverted[TLASBVH8.cwbvh_indices[i]] = i;
-            NodePair = new List<NodeIndexPairData>();
-            NodePair.Add(new NodeIndexPairData());
-            DocumentNodes(0, 0, 1, 0, false, 0);
-            MaxRecur++;
-            int NodeCount = NodePair.Count;
-            ForwardStack = new Layer[NodeCount];
-            for (int i = 0; i < NodePair.Count; i++) {
-                for (int i2 = 0; i2 < 8; i2++) {
-                    ForwardStack[i].Children[i2] = -1;
-                    ForwardStack[i].Leaf[i2] = -1;
+                for(int i = 0; i < RenderQue.Count; i++) {
+                    RenderQue[i].HWRTIndex = new List<int>();
+                    foreach(var A in RenderQue[i].Renderers) {
+                        MeshOffsets.Add(new Vector2(SubMeshOffsets.Count, i));
+                        Mesh mesh = ((A.gameObject.GetComponent<MeshFilter>() != null) ? A.gameObject.GetComponent<MeshFilter>().sharedMesh : A.gameObject.GetComponent<SkinnedMeshRenderer>().sharedMesh);
+                        for (int i2 = 0; i2 < mesh.subMeshCount; ++i2)
+                        {//Add together all the submeshes in the mesh to consider it as one object
+                            SubMeshOffsets.Add(TotLength);
+                            int IndiceLength = (int)mesh.GetIndexCount(i2) / 3;
+                            TotLength += IndiceLength;
+                        }
+                        RayTracingSubMeshFlags[] B = new RayTracingSubMeshFlags[mesh.subMeshCount];
+                        for(int i2 = 0; i2 < B.Length; i2++) {
+                            B[i2] = RayTracingSubMeshFlags.Enabled;
+                        }
+                        AccelStruct.AddInstance(A, B, true, false, 0xff, (uint)MeshOffset);
+                        MeshOffset++;
+                    }
                 }
-            }
-
-            for (int i = 0; i < NodePair.Count; i++) {
-                if (NodePair[i].IsLeaf == 1) {
-                    int first_triangle = (byte)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] & 0b11111;
-                    int NumBits = CommonFunctions.NumberOfSetBits((byte)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] >> 5);
-                    ForwardStack[i].Children[NodePair[i].InNodeOffset] = NumBits;
-                    ForwardStack[i].Leaf[NodePair[i].InNodeOffset] = (int)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].base_index_triangle + first_triangle + 1;
+            AccelStruct.Build();
+            #else
+                TLASTask = null;
+                BVH2Builder BVH = new BVH2Builder(MeshAABBs);
+                TLASBVH8 = new BVH8Builder(BVH, ref MyMeshesCompacted);
+                for (int i = 0; i < TLASBVH8.cwbvh_indices.Length; i++) {
+                    if (TLASBVH8.cwbvh_indices[i] >= RenderQue.Count) {
+                        InstanceRenderQue[TLASBVH8.cwbvh_indices[i] - RenderQue.Count].CompactedMeshData = i;
+                    }
+                    else RenderQue[TLASBVH8.cwbvh_indices[i]].CompactedMeshData = i;
                 }
-                else {
-                    ForwardStack[i].Children[NodePair[i].InNodeOffset] = i;
-                    ForwardStack[i].Leaf[NodePair[i].InNodeOffset] = 0;
+                System.Array.Resize(ref TLASBVH8.BVH8Nodes, TLASBVH8.cwbvhnode_count);
+                ToBVHIndex = new int[TLASBVH8.cwbvhnode_count];
+                if (TempBVHArray == null || TLASBVH8.BVH8Nodes.Length != TempBVHArray.Length) TempBVHArray = new BVHNode8DataCompressed[TLASBVH8.BVH8Nodes.Length];
+                CommonFunctions.Aggregate(ref TempBVHArray, ref TLASBVH8.BVH8Nodes);
+
+                CWBVHIndicesBufferInverted = new int[TLASBVH8.cwbvh_indices.Length];
+                int CWBVHIndicesBufferCount = CWBVHIndicesBufferInverted.Length;
+                for (int i = 0; i < CWBVHIndicesBufferCount; i++) CWBVHIndicesBufferInverted[TLASBVH8.cwbvh_indices[i]] = i;
+                NodePair = new List<NodeIndexPairData>();
+                NodePair.Add(new NodeIndexPairData());
+                DocumentNodes(0, 0, 1, 0, false, 0);
+                TempRecur++;
+                MaxRecur = TempRecur;
+                int NodeCount = NodePair.Count;
+                ForwardStack = new Layer[NodeCount];
+                for (int i = 0; i < NodePair.Count; i++) {
+                    for (int i2 = 0; i2 < 8; i2++) {
+                        ForwardStack[i].Children[i2] = -1;
+                        ForwardStack[i].Leaf[i2] = -1;
+                    }
                 }
-                ForwardStack[NodePair[i].PreviousNode].Children[NodePair[i].InNodeOffset] = i;
-                ForwardStack[NodePair[i].PreviousNode].Leaf[NodePair[i].InNodeOffset] = 0;
-            }
 
-            LayerStack = new Layer2[MaxRecur];
-            for (int i = 0; i < MaxRecur; i++) {
-                Layer2 TempSlab = new Layer2();
-                TempSlab.Slab = new List<int>();
-                LayerStack[i] = TempSlab;
-            }
-            for (int i = 0; i < NodePair.Count; i++) {
-                var TempLayer = LayerStack[NodePair[i].RecursionCount];
-                TempLayer.Slab.Add(i);
-                LayerStack[NodePair[i].RecursionCount] = TempLayer;
-            }
-            CommonFunctions.ConvertToSplitNodes(TLASBVH8, ref SplitNodes);
-            int MaxLength = 0;
-            for (int i = 0; i < LayerStack.Length; i++) {
-                MaxLength = Mathf.Max(MaxLength, LayerStack[i].Slab.Count);
-            }
+                for (int i = 0; i < NodePair.Count; i++) {
+                    if (NodePair[i].IsLeaf == 1) {
+                        int first_triangle = (byte)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] & 0b11111;
+                        int NumBits = CommonFunctions.NumberOfSetBits((byte)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] >> 5);
+                        ForwardStack[i].Children[NodePair[i].InNodeOffset] = NumBits;
+                        ForwardStack[i].Leaf[NodePair[i].InNodeOffset] = (int)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].base_index_triangle + first_triangle + 1;
+                    }
+                    else {
+                        ForwardStack[i].Children[NodePair[i].InNodeOffset] = i;
+                        ForwardStack[i].Leaf[NodePair[i].InNodeOffset] = 0;
+                    }
+                    ForwardStack[NodePair[i].PreviousNode].Children[NodePair[i].InNodeOffset] = i;
+                    ForwardStack[NodePair[i].PreviousNode].Leaf[NodePair[i].InNodeOffset] = 0;
+                }
 
-            if (WorkingBuffer != null) WorkingBuffer.Release();
-            if (NodeBuffer != null) NodeBuffer.Release();
-            if (StackBuffer != null) StackBuffer.Release();
-            if (ToBVHIndexBuffer != null) ToBVHIndexBuffer.Release();
-            if (BVHDataBuffer != null) BVHDataBuffer.Release();
-            if (BVHBuffer != null) BVHBuffer.Release();
-            if (BoxesBuffer != null) BoxesBuffer.Release();
-            WorkingBuffer = new ComputeBuffer(MaxLength, 4);
-            NodeBuffer = new ComputeBuffer(NodePair.Count, 48);
-            NodeBuffer.SetData(NodePair);
-            StackBuffer = new ComputeBuffer(ForwardStack.Length, 64);
-            StackBuffer.SetData(ForwardStack);
-            ToBVHIndexBuffer = new ComputeBuffer(ToBVHIndex.Length, 4);
-            ToBVHIndexBuffer.SetData(ToBVHIndex);
-            BVHDataBuffer = new ComputeBuffer(TempBVHArray.Length, 260);
-            BVHDataBuffer.SetData(SplitNodes);
-            BVHBuffer = new ComputeBuffer(TempBVHArray.Length, 80);
-            BVHBuffer.SetData(TempBVHArray);
-            BoxesBuffer = new ComputeBuffer(MeshAABBs.Length, 24);
+                LayerStack = new Layer2[MaxRecur];
+                for (int i = 0; i < MaxRecur; i++) {
+                    Layer2 TempSlab = new Layer2();
+                    TempSlab.Slab = new List<int>();
+                    LayerStack[i] = TempSlab;
+                }
+                for (int i = 0; i < NodePair.Count; i++) {
+                    var TempLayer = LayerStack[NodePair[i].RecursionCount];
+                    TempLayer.Slab.Add(i);
+                    LayerStack[NodePair[i].RecursionCount] = TempLayer;
+                }
+                CommonFunctions.ConvertToSplitNodes(TLASBVH8, ref SplitNodes);
+                int MaxLength = 0;
+                List<Layer2> TempStack = new List<Layer2>();
+                for (int i = 0; i < LayerStack.Length; i++) 
+                {  
+                    if(LayerStack[i].Slab.Count != 0) {
+                        TempStack.Add(LayerStack[i]);
+                    }
+                }
+                MaxRecur = TempStack.Count;
+                LayerStack = TempStack.ToArray();
+
+                if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
+                if (NodeBuffer != null) NodeBuffer.Release();
+                if (StackBuffer != null) StackBuffer.Release();
+                if (ToBVHIndexBuffer != null) ToBVHIndexBuffer.Release();
+                if (BVHDataBuffer != null) BVHDataBuffer.Release();
+                if (BVHBuffer != null) BVHBuffer.Release();
+                if (BoxesBuffer != null) BoxesBuffer.Release();
+                WorkingBuffer = new ComputeBuffer[LayerStack.Length];
+                for (int i = 0; i < MaxRecur; i++)
+                {
+                    WorkingBuffer[i] = new ComputeBuffer(LayerStack[i].Slab.Count, 4);
+                    WorkingBuffer[i].SetData(LayerStack[i].Slab);
+                }
+                NodeBuffer = new ComputeBuffer(NodePair.Count, 48);
+                NodeBuffer.SetData(NodePair);
+                StackBuffer = new ComputeBuffer(ForwardStack.Length, 64);
+                StackBuffer.SetData(ForwardStack);
+                ToBVHIndexBuffer = new ComputeBuffer(ToBVHIndex.Length, 4);
+                ToBVHIndexBuffer.SetData(ToBVHIndex);
+                BVHDataBuffer = new ComputeBuffer(TempBVHArray.Length, 260);
+                BVHDataBuffer.SetData(SplitNodes);
+                BVHBuffer = new ComputeBuffer(TempBVHArray.Length, 80);
+                BVHBuffer.SetData(TempBVHArray);
+                BoxesBuffer = new ComputeBuffer(MeshAABBs.Length, 24);
+            #endif
         }
+        List<MyMeshDataCompacted> BackupMeshesCompacted;
+        List<MyMeshDataCompacted> OGBackupMeshesCompacted;
+        Task TLASTask;
+        unsafe async void CorrectRefit(AABB[] Boxes) {
+            TempRecur = 0;
+            BackupMeshesCompacted = new List<MyMeshDataCompacted>(OGBackupMeshesCompacted);
+            BVH2Builder BVH = new BVH2Builder(Boxes);
+            TLASBVH8 = new BVH8Builder(BVH, ref BackupMeshesCompacted);
+ System.Array.Resize(ref TLASBVH8.BVH8Nodes, TLASBVH8.cwbvhnode_count);
+                ToBVHIndex = new int[TLASBVH8.cwbvhnode_count];
+                if (TempBVHArray == null || TLASBVH8.BVH8Nodes.Length != TempBVHArray.Length) TempBVHArray = new BVHNode8DataCompressed[TLASBVH8.BVH8Nodes.Length];
+                CommonFunctions.Aggregate(ref TempBVHArray, ref TLASBVH8.BVH8Nodes);
 
+                CWBVHIndicesBufferInverted = new int[TLASBVH8.cwbvh_indices.Length];
+                int CWBVHIndicesBufferCount = CWBVHIndicesBufferInverted.Length;
+                for (int i = 0; i < CWBVHIndicesBufferCount; i++) CWBVHIndicesBufferInverted[TLASBVH8.cwbvh_indices[i]] = i;
+                NodePair = new List<NodeIndexPairData>();
+                NodePair.Add(new NodeIndexPairData());
+                DocumentNodes(0, 0, 1, 0, false, 0);
+                TempRecur++;
+                int NodeCount = NodePair.Count;
+                ForwardStack = new Layer[NodeCount];
+                for (int i = 0; i < NodePair.Count; i++) {
+                    for (int i2 = 0; i2 < 8; i2++) {
+                        ForwardStack[i].Children[i2] = -1;
+                        ForwardStack[i].Leaf[i2] = -1;
+                    }
+                }
+
+                for (int i = 0; i < NodePair.Count; i++) {
+                    if (NodePair[i].IsLeaf == 1) {
+                        int first_triangle = (byte)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] & 0b11111;
+                        int NumBits = CommonFunctions.NumberOfSetBits((byte)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] >> 5);
+                        ForwardStack[i].Children[NodePair[i].InNodeOffset] = NumBits;
+                        ForwardStack[i].Leaf[NodePair[i].InNodeOffset] = (int)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].base_index_triangle + first_triangle + 1;
+                    }
+                    else {
+                        ForwardStack[i].Children[NodePair[i].InNodeOffset] = i;
+                        ForwardStack[i].Leaf[NodePair[i].InNodeOffset] = 0;
+                    }
+                    ForwardStack[NodePair[i].PreviousNode].Children[NodePair[i].InNodeOffset] = i;
+                    ForwardStack[NodePair[i].PreviousNode].Leaf[NodePair[i].InNodeOffset] = 0;
+                }
+                LayerStack = new Layer2[TempRecur];
+                for (int i = 0; i < TempRecur; i++) {
+                    Layer2 TempSlab = new Layer2();
+                    TempSlab.Slab = new List<int>();
+                    LayerStack[i] = TempSlab;
+                }
+                for (int i = 0; i < NodePair.Count; i++) {
+                    var TempLayer = LayerStack[NodePair[i].RecursionCount];
+                    TempLayer.Slab.Add(i);
+                    LayerStack[NodePair[i].RecursionCount] = TempLayer;
+                }
+                CommonFunctions.ConvertToSplitNodes(TLASBVH8, ref SplitNodes);
+                int MaxLength = 0;
+                List<Layer2> TempStack = new List<Layer2>();
+                for (int i = 0; i < LayerStack.Length; i++) 
+                {  
+                    if(LayerStack[i].Slab.Count != 0) {
+                        TempStack.Add(LayerStack[i]);
+                    }
+                }
+                TempRecur = TempStack.Count;
+                LayerStack = TempStack.ToArray();
+            return;
+        }
         ComputeBuffer BoxesBuffer;
-        public void RefitTLAS(AABB[] Boxes)
+        int CurFrame = 0;
+        int BVHNodeCount = 0;
+        public bool DoQualityCorrection = true;
+        public unsafe void RefitTLAS(AABB[] Boxes, CommandBuffer cmd, AABB[] Boxes2)
         {
-            Refitter.SetInt("NodeCount", NodePair.Count);
-            Refitter.SetBuffer(NodeInitializerKernel, "AllNodes", NodeBuffer);
-
-            Refitter.Dispatch(NodeInitializerKernel, (int)Mathf.Ceil(NodePair.Count / (float)256), 1, 1);
-
-            BoxesBuffer.SetData(Boxes);
-            Refitter.SetBuffer(RefitLayer, "Boxs", BoxesBuffer);
-            Refitter.SetBuffer(RefitLayer, "ReverseStack", StackBuffer);
-            Refitter.SetBuffer(RefitLayer, "AllNodes", NodeBuffer);
-            Refitter.SetBuffer(NodeInitializerKernel, "AllNodes", NodeBuffer);
-            for (int i = MaxRecur - 1; i >= 0; i--)
-            {
-                var NodeCount2 = LayerStack[i].Slab.Count;
-                WorkingBuffer.SetData(LayerStack[i].Slab, 0, 0, NodeCount2);
-                Refitter.SetInt("NodeCount", NodeCount2);
-                Refitter.SetBuffer(RefitLayer, "NodesToWork", WorkingBuffer);
-                Refitter.Dispatch(RefitLayer, (int)Mathf.Ceil(WorkingBuffer.count / (float)256), 1, 1);
+            #if !HardwareRT
+            if(TLASTask == null) {
+                TLASTask = Task.Run(() => CorrectRefit(Boxes2));
             }
-            Refitter.SetInt("NodeCount", NodePair.Count);
-            Refitter.SetBuffer(NodeUpdater, "AllNodes", NodeBuffer);
-            Refitter.SetBuffer(NodeUpdater, "BVHNodes", BVHDataBuffer);
-            Refitter.SetBuffer(NodeUpdater, "ToBVHIndex", ToBVHIndexBuffer);
-            Refitter.Dispatch(NodeUpdater, (int)Mathf.Ceil(NodePair.Count / (float)256), 1, 1);
+            CurFrame++;
+             if(TLASTask.Status == TaskStatus.RanToCompletion && DoQualityCorrection && CurFrame % 25 == 1) {
+                                MaxRecur = TempRecur; 
+                List<MyMeshDataCompacted> TempCompressed = new List<MyMeshDataCompacted>(MyMeshesCompacted);
+                MyMeshesCompacted.Clear();
+                int MaxVal = 0;
+                for(int i = 0; i < TLASBVH8.cwbvh_indices.Length; ++i) {
+                    MyMeshesCompacted.Add(TempCompressed[RenderQue[TLASBVH8.cwbvh_indices[i]].CompactedMeshData]);
+                    MaxVal = Mathf.Max(TLASBVH8.cwbvh_indices[i], MaxVal);
+                }
+                for(int i = MaxVal + 1; i < TempCompressed.Count; i++) {
+                    MyMeshesCompacted.Add(TempCompressed[RenderQue[i].CompactedMeshData]);
+                }
+                TempCompressed.Clear();
+                for (int i = 0; i < TLASBVH8.cwbvh_indices.Length; i++) {
+                    if (TLASBVH8.cwbvh_indices[i] >= RenderQue.Count) {
+                        InstanceRenderQue[TLASBVH8.cwbvh_indices[i] - RenderQue.Count].CompactedMeshData = i;
+                    }
+                    else RenderQue[TLASBVH8.cwbvh_indices[i]].CompactedMeshData = i;
+                }
 
-            Refitter.SetInt("NodeCount", TLASBVH8.BVH8Nodes.Length);
-            Refitter.SetInt("NodeOffset", 0);
-            Refitter.SetBuffer(NodeCompress, "BVHNodes", BVHDataBuffer);
-            try {
-                Refitter.SetBuffer(NodeCompress, "AggNodes", BVH8AggregatedBuffer);
-            } catch(System.Exception E) {
+                if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
+                if (NodeBuffer != null) NodeBuffer.Release();
+                if (StackBuffer != null) StackBuffer.Release();
+                if (ToBVHIndexBuffer != null) ToBVHIndexBuffer.Release();
+                if (BVHDataBuffer != null) BVHDataBuffer.Release();
+                if (BVHBuffer != null) BVHBuffer.Release();
+                if (BoxesBuffer != null) BoxesBuffer.Release();
+                WorkingBuffer = new ComputeBuffer[LayerStack.Length];
+                for (int i = 0; i < MaxRecur; i++)
+                {
+                    WorkingBuffer[i] = new ComputeBuffer(LayerStack[i].Slab.Count, 4);
+                    WorkingBuffer[i].SetData(LayerStack[i].Slab);
+                }
+                NodeBuffer = new ComputeBuffer(NodePair.Count, 48);
+                NodeBuffer.SetData(NodePair);
+                StackBuffer = new ComputeBuffer(ForwardStack.Length, 64);
+                StackBuffer.SetData(ForwardStack);
+                ToBVHIndexBuffer = new ComputeBuffer(ToBVHIndex.Length, 4);
+                ToBVHIndexBuffer.SetData(ToBVHIndex);
+                BVHDataBuffer = new ComputeBuffer(TempBVHArray.Length, 260);
+                BVHDataBuffer.SetData(SplitNodes);
+                BVHBuffer = new ComputeBuffer(TempBVHArray.Length, 80);
+                BVHBuffer.SetData(TempBVHArray);
+                BoxesBuffer = new ComputeBuffer(MeshAABBs.Length, 24);
+                 for (int i = 0; i < RenderQue.Count; i++)
+                {
+                    ParentObject TargetParent = RenderQue[i];
+                    MeshAABBs[TargetParent.CompactedMeshData] = TargetParent.aabb;
+                }
+                Boxes = MeshAABBs;
+                #if !HardwareRT
+                    BVH8AggregatedBuffer.SetData(TempBVHArray, 0, 0, TempBVHArray.Length);
+                #endif
+                    BVHNodeCount = TLASBVH8.BVH8Nodes.Length;
+                TLASTask = Task.Run(() => CorrectRefit(Boxes2));
+                // Debug.Log("EEE");
             }
-            Refitter.Dispatch(NodeCompress, (int)Mathf.Ceil(NodePair.Count / (float)256), 1, 1);
+                cmd.SetComputeIntParam(Refitter, "NodeCount", NodeBuffer.count);
+                cmd.SetComputeBufferParam(Refitter, NodeInitializerKernel, "AllNodes", NodeBuffer);
+
+                cmd.DispatchCompute(Refitter, NodeInitializerKernel, (int)Mathf.Ceil(NodeBuffer.count / (float)256), 1, 1);
+
+                BoxesBuffer.SetData(Boxes);
+                cmd.SetComputeBufferParam(Refitter, RefitLayer, "Boxs", BoxesBuffer);
+                cmd.SetComputeBufferParam(Refitter, RefitLayer, "ReverseStack", StackBuffer);
+                cmd.SetComputeBufferParam(Refitter, RefitLayer, "AllNodes", NodeBuffer);
+                cmd.SetComputeBufferParam(Refitter, NodeInitializerKernel, "AllNodes", NodeBuffer);
+                for (int i = MaxRecur - 1; i >= 0; i--)
+                {
+                    var NodeCount2 = WorkingBuffer[i].count;
+                    cmd.SetComputeIntParam(Refitter, "NodeCount", NodeCount2);
+                    cmd.SetComputeBufferParam(Refitter, RefitLayer, "NodesToWork", WorkingBuffer[i]);
+                    cmd.DispatchCompute(Refitter, RefitLayer, (int)Mathf.Ceil(WorkingBuffer[i].count / (float)256), 1, 1);
+                }
+                cmd.SetComputeIntParam(Refitter, "NodeCount", NodeBuffer.count);
+                cmd.SetComputeBufferParam(Refitter, NodeUpdater, "AllNodes", NodeBuffer);
+                cmd.SetComputeBufferParam(Refitter, NodeUpdater, "BVHNodes", BVHDataBuffer);
+                cmd.SetComputeBufferParam(Refitter, NodeUpdater, "ToBVHIndex", ToBVHIndexBuffer);
+                cmd.DispatchCompute(Refitter, NodeUpdater, (int)Mathf.Ceil(NodeBuffer.count / (float)256), 1, 1);
+
+                cmd.SetComputeIntParam(Refitter, "NodeCount", BVHNodeCount);
+                cmd.SetComputeIntParam(Refitter, "NodeOffset", 0);
+                cmd.SetComputeBufferParam(Refitter, NodeCompress, "BVHNodes", BVHDataBuffer);
+                try {
+                    cmd.SetComputeBufferParam(Refitter, NodeCompress, "AggNodes", BVH8AggregatedBuffer);
+                } catch(System.Exception E) {
+                }
+                cmd.DispatchCompute(Refitter, NodeCompress, (int)Mathf.Ceil(NodeBuffer.count / (float)256), 1, 1);
+            #endif
         }
 
         int PreVoxelMeshCount;
@@ -1449,7 +1647,7 @@ namespace TrueTrace {
         private bool ChangedLastFrame = true;
 
 
-        public bool UpdateTLAS()
+        public bool UpdateTLAS(CommandBuffer cmd)
         {  //Allows for objects to be moved in the scene or animated while playing 
 
             bool LightsHaveUpdated = false;
@@ -1537,9 +1735,12 @@ namespace TrueTrace {
                     RenderQue[i].CompactedMeshData = MyMeshesCompacted.Count - 1;
                     MatOffset += RenderQue[i].MatOffset;
                     MeshAABBs[i] = RenderQue[i].aabb;
+                    UnsortedAABBs[i] = RenderQue[i].aabb;
                     AggNodeCount += RenderQue[i].AggBVHNodeCount;//Can I replace this with just using aggregated_bvh_node_count below?
                     AggTriCount += RenderQue[i].AggIndexCount;
-                    aggregated_bvh_node_count += RenderQue[i].BVH.cwbvhnode_count;
+                    #if !HardwareRT
+                        aggregated_bvh_node_count += RenderQue[i].BVH.cwbvhnode_count;
+                    #endif
                 }
                 for (int i = 0; i < InstanceData.RenderQue.Count; i++)
                 {
@@ -1574,6 +1775,7 @@ namespace TrueTrace {
                     AABB aabb = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
                     CreateAABB(InstanceRenderQue[i].transform, ref aabb);
                     MeshAABBs[RenderQue.Count + i] = aabb;
+                    UnsortedAABBs[RenderQue.Count + i] = aabb;
                 }
                 PreVoxelMeshCount = MyMeshesCompacted.Count;
                 List<MyMeshDataCompacted> TempMeshCompacted = new List<MyMeshDataCompacted>();
@@ -1615,6 +1817,7 @@ namespace TrueTrace {
 
                 Debug.Log("Total Object Count: " + MeshAABBs.Length);
                 UpdateMaterials();
+                OGBackupMeshesCompacted = new List<MyMeshDataCompacted>(MyMeshesCompacted);
             }
             else
             {
@@ -1637,7 +1840,9 @@ namespace TrueTrace {
                         MyMeshesCompacted[TargetParent.CompactedMeshData] = TempMesh;
                         transform.hasChanged = false;
                     }
+                    OGBackupMeshesCompacted[i] = MyMeshesCompacted[TargetParent.CompactedMeshData];
                     MeshAABBs[TargetParent.CompactedMeshData] = TargetParent.aabb;
+                    UnsortedAABBs[i] = TargetParent.aabb;
                     MatOffset += TargetParent.MatOffset;
                     AggNodeCount += TargetParent.AggBVHNodeCount;//Can I replace this with just using aggregated_bvh_node_count below?
                     AggTriCount += TargetParent.AggIndexCount;
@@ -1710,7 +1915,9 @@ namespace TrueTrace {
                     if (VoxelTLAS == null || VoxelTLAS.Length != 1) VoxelTLAS = new BVHNode8DataCompressed[1];
                 }
                 UnityEngine.Profiling.Profiler.EndSample();
-
+                #if HardwareRT
+                    AccelStruct.Build();
+                #endif
             }
             LightMeshData CurLightMesh;
             for (int i = 0; i < LightMeshCount; i++)
@@ -1723,12 +1930,14 @@ namespace TrueTrace {
             if (ChildrenUpdated || !didstart || OnlyInstanceUpdated || NodePair == null)
             {
                 ConstructNewTLAS();
-                BVH8AggregatedBuffer.SetData(TempBVHArray, 0, 0, TempBVHArray.Length);
+                #if !HardwareRT
+                    BVH8AggregatedBuffer.SetData(TempBVHArray, 0, 0, TempBVHArray.Length);
+                #endif
             }
             else
             {
                 UnityEngine.Profiling.Profiler.BeginSample("TLAS Refitting");
-                RefitTLAS(MeshAABBs);
+                RefitTLAS(MeshAABBs, cmd, UnsortedAABBs);
                 UnityEngine.Profiling.Profiler.EndSample();
             }
             if (!didstart) didstart = true;
