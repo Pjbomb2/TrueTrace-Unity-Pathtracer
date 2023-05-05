@@ -506,7 +506,6 @@ namespace TrueTrace {
                     TerrainInfos[i] = TempTerrain;
                 }
             }
-            int CurCount = RenderQue[0].AlbedoTexs.Count;
             foreach (ParentObject Obj in RenderQue)
             {
                 AddTextures(ref AlbedoTexs, ref AlbedoIndexes, ref Obj.AlbedoIndexes, ref Obj.AlbedoTexs);

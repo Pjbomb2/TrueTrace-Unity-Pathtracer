@@ -887,7 +887,8 @@ VisualElement RearrangeElement;
                RayMaster.UseASVGF = false;
             }
             if(Assets != null && Assets.NeedsToUpdateXML) {
-               using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialMappings.xml")) {
+                var materialMappingsPath = Application.temporaryCachePath + "/MaterialMappings.xml";
+                using (StreamWriter writer = File.CreateText(materialMappingsPath)) {
                   var serializer = new XmlSerializer(typeof(Materials));
                   serializer.Serialize(writer.BaseStream, AssetManager.data);
                }
