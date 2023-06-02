@@ -1,4 +1,4 @@
-![](/Images/ArchViz3.png)
+![](/Images/ArchRender0.png)
 # If you like what I do and want to support me and this project(as this takes a LOT of my time), Please consider becoming a Github Sponsor or a Patron at patreon.com/Pjbomb2!  This allows me to keep this free for everyone!
 # Discord Server: https://discord.gg/4Yh7AZuhcD
 ## Demo:  https://drive.google.com/file/d/11j8a-7S_fbJsKLKMpmd86aIAcnFq9ZA8/view?usp=sharing
@@ -176,6 +176,9 @@ BVH Options Description -
   <li>Use Altered Throughput Pipeline - Calculates throughput differently, helps with semi metallic surfaces for ASVGF</li>
   <li>Use Checkerboarding - Only traces half the indirect rays, so quality is sightly decreased(not really noticeable) for a slight increase in performance</li>
   <li>Use AntiFirefly - Enables RCRS filter for getting rid of those single bright pixels</li>
+  <li>Enable Median Filter - This needs to be on from the start of the render if you intend to use it(requires a slightly different pipeline)</li>
+  <li>Use Median Filter - Turns on the median filter(is rather intensive so its more of a postprocessing step)</li>
+  <li>Enable Median Filter Accumulation - Sometimes the median filter can produce some noise, this is a seperate accumulation pass to get rid of those</li>
   <li>Atmospheric Scatter Samples - Lower this to 1 if you keep crashing on entering play mode(controls how many atmospheric samples are precomputed)</li>
   <li>Current Samples - Shows how many samples have currently been accumulated</li>
   </ul>
@@ -217,11 +220,15 @@ BVH Options Description -
 # Huge thanks to these people for being sponsors/patrons:
 <ul>
   <li>jhintringer</li>
-  <li>mgear</li>
 </ul>
 
 # Sample Images(Taken from various stages of development)
 
+![](/Images/ArchRender1.png)
+![](/Images/ArchRender2.png)
+![](/Images/ArchRender3.png)
+![](/Images/ArchRender4.png)
+![](/Images/ArchViz3.png)
 ![](/Images/ArchViz1.png)
 ![](/Images/ArchViz2.png)
 ![](/Images/Loft1.png)
@@ -267,6 +274,9 @@ https://github.com/jan-van-bergen
 </br></br>
 Scenes From:
 <ul>
+  <li>https://www.blendermarket.com/products/blender-eevee-modern-villa</li>
+  <li>https://sketchfab.com/3d-models/bali-villa-modern-barn-house-scandinavian-barn-145684ac3b9b457f88ff2798acdb4306</li>
+  <li>https://sketchfab.com/3d-models/bali-villa-a-frame-house-mid-century-modern-c57267678a924eacad51414afd3ade24</li>
   <li>https://benedikt-bitterli.me/resources/</li>
   <li>https://casual-effects.com/data/</li>
   <li>https://www.intel.com/content/www/us/en/developer/topic-technology/graphics-research/samples.html</li>
