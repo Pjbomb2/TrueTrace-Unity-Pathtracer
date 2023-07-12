@@ -22,16 +22,16 @@ A passion projects that has been going on for awhile with the goal of bringing a
 ## Features: 
 <ul>
 <li>Fast Compute Shader based path tracing</li>
-<li>Emissive, Video Player, and Disney BSDF for materials</li>
+<li>Disney BSDF for materials with support for emissive meshes and Video Player meshes</li>
 <li>Ability to move, add, and remove objects during play</li>
 <li>Ability to update material properties on the fly during play</li>
-<li>ASVGF and SVGF Denoiser</li>
+<li>ASVGF and SVGF Denoisers</li>
 <li>Compressed Wide Bounding Volume Hierarchy as the Acceleration Structure (See Ylitie et al. 2017 below)</li>
 <li>PBR Texture Support</li>
 <li>Next Event Estimation with Multiple Importance Sampling for Explicit Light Sampling</li>
-<li>Support for default unity lights which interact via NEE(Supports Directional, Point Spot, and Area lights)</li>
+<li>Support for all default unity lights which interact via NEE</li>
 <li>Bloom, Depth of Field, AutoExposure, TAA</li>
-<li>No specific GPU vendor needed(this will run on integrated graphics if you so wish it, aka no RTX cores)</li>
+<li>No specific GPU vendor needed(this will run on integrated graphics if you so wish it, aka no RTX cores needed)</li>
 <li>MagicaVoxel support</li>
 <li>Ability to pathtrace voxels and triangle scenes at the same time</li>
 <li>Precomputed Multiple Atmospheric Scattering for dynamic and realtime sky(from ebruneton below)</li>
@@ -68,9 +68,8 @@ Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera s
 
 ## General Setup
 <ul>
-  <li>Download and import the UnityPackage provided and open the new Pathtracer Settings at the top of the screen(This WILL re-arrange your hierarchy a bit)</li>
+  <li>Download and import the UnityPackage provided and open the new Pathtracer Settings at the top of the screen(This WILL re-arrange your hierarchy)</li>
   <li>Whenever you add a new object(or tree of objects), you need to add it to under the gameobject named Scene, and its reccomended you press "Auto Assign Scripts" to automatically assign the needed scripts to the new objects</li>
-  <li>Dont use free resolution</li>
 </ul>
 
 ## Basic script structure breakdown:
@@ -86,7 +85,7 @@ Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera s
   <li>The camera you want to render from, you attatch the RenderHandler script to(if you have a camera tagged MainCamera, this will be done automatically)</li>
   <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building</li>
   <li>Objects can be added and removed at will simply by toggling the associated gameobject with a ParentObject script on/off in the hierarchy(clicking on parent objects with complex objects for children will lag), but they will take time to appear as the acceleration structure needs to  be rebuilt for them</li>
-  <li>If you change the emissiveness of an object, you need to disable and re-enable its parent(basically reloading it) if you want to take advantage of NEE correctly sampling it(Does not need to be reloaded for Naive tracing)</li>
+  <li>If you change the emissiveness of a mesh, you need to disable and re-enable its parent(basically reloading it) if you want to take advantage of NEE correctly sampling it(Does not need to be reloaded for Naive tracing)</li>
   <li>If you use normal maps, they need to be in unity normal map format</li>
   <li>To set up PBR with the default material, all textures go into their proper names, but Roughness goes into the Occlusion texture(Since path tracing gets ambient occlusion by default)</li>
   <li>If you are using blendshapes to change geometry of a skinned mesh, you may need to go to the import settings of it(in the inspector), turn off Legacy Blendshape Normals, and make sure all normals are imported, not calculated, otherwise the normals for blendshapes might be wrong</li>
@@ -109,18 +108,18 @@ Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera s
 
 ## Linking your own Materials
 <ul>
-  <li>So this isnt how to use your own materials, this is how to take your material, and have the textures assign properly</li>
-  <li>Firstly, all material links are defined under Resources -> Utility -> MaterialMappings; On the first time running with a new material, a basic definition for it will be created at the bottom of this file</li>
-  <li>Secondly, all data that you need for this is gotten from clicking on the material you want to add support for in unity, going to the inspector, pressing the 3 dots in the top right, and then Select Shader</li>
-  <li>Then, you need to expand the arrow called "Properties", and the names on the left side will be the names you need to enter into the MaterialMappings file</li>
-  <li>From here, you need to look at the names on the right side of the list under the properties dropdown, and match what the variable is doing to the texture/range name on the left</li>
-  <li>For example, for the Standard Shader/Material, if on the right theres an entry called "Metallic (Range)", you know this is the metallic float variable, so you take the name on the left of this, which in this case is "_Metallic".  Copy the "_Metallic", go to the MaterialMappings xml file, find your material by its shader name, find the corropsponding variable (in this case we are looking for MetallicRange), and replace the "null" with "_Metallic"</li>
-  <li>Doing this will indicate that the slider property "Metallic" in the materials UI(the slider you directly interact in unity if you click the material) is actually the Metallic property in my own material, and should be set to the same value</li>
+  <li>This is how to take your material, and have the textures assign properly, meaning you dont need to use a specific material</li>
+  <li>In the PathTracingSettings, click the tab called "Material Pair Options"</li>
+  <li>Drag any material that has the shader you want to pair into the material slot that appears</li>
+  <li>From here, you need to select each dropdown that appears and select the property that is associated with the text to the left of the dropdown</li>
+  <li>If the names in the dropdown make no sense, you will have to navigate to the shader itself in the inspector(select the material in the project folder, click the 3 dots in the inspector, and click select shader), this should display the names along with what they mean to unity</li>
+  <li>Once this is done, click "Apply Material Links" and rebuild the BVH in the "Main Options" tab to update the objects in the scene</li>
 </ul>
 
 ## Using HDRP
 <ul>
-  <li>All you need to do is to use it like normal, but go into TrueTrace -> Resources -> GlobalDefines.cginc, and uncomment the #define HDRP</li>
+  <li>Go into TrueTrace -> Resources -> GlobalDefines.cginc, and uncomment the #define HDRP</li>
+  <li>This is used by attatching it to a custom pass, so create a new custom pass(Hierarchy -> Volume -> Custom Pass) and add the custom pass in the inspector called "HDRP Compatability"</li>
 </ul>
 
 ## Using Hardware RT
@@ -159,10 +158,9 @@ BVH Options Description -
   <li>Use ReSTIR GI - Enables ReSTIR GI which is usually much higher quality</li>
   <li>Do Sample Connection Validation - Confirms that two samples are mutually visable and throws it away if they are not</li>
   <li>Update Rate - How many pixels per frame get re-traced to ensure they are still valid paths(7 is a good number to aim for here)</li>
-  <li>Enable Indirect Clamping - Can improve splotchyness when Permutation Samples is on</li>
+  <li>Enable Indirect Clamping - Reduces fireflies</li>
   <li>Enable Temporal - Enables the Temporal pass of ReSTIR GI(allows samples to travel across time</li>
   <li>Temporal M Cap - How long a sample may live for, lower means lighting updates faster(until 0 which is the opposite) but more noise(reccomended either 0 or around 12, but can be played with)</li>
-  <li>Permute Temporal Samples - Turns on permutation sampling, can lead to much higher quality much faster, but a lower M cap is reccomended(around 3-12)</li>
   <li>Enable Spatial - Enables the Spatial pass of ReSTIR GI(Allows pixels to choose to use the neighboring pixels sample instead)</li>
   <li>Spatial Sample Count - How many neighboring pixels are looked at(turn to 0 to make it adapative to sample count)</li>
   <li>Enable Edge Filling - Replaces the black edges when moving the camera to a smear, up to personal preference</li>
@@ -176,9 +174,6 @@ BVH Options Description -
   <li>Use Altered Throughput Pipeline - Calculates throughput differently, helps with semi metallic surfaces for ASVGF</li>
   <li>Use Checkerboarding - Only traces half the indirect rays, so quality is sightly decreased(not really noticeable) for a slight increase in performance</li>
   <li>Use AntiFirefly - Enables RCRS filter for getting rid of those single bright pixels</li>
-  <li>Enable Median Filter - This needs to be on from the start of the render if you intend to use it(requires a slightly different pipeline)</li>
-  <li>Use Median Filter - Turns on the median filter(is rather intensive so its more of a postprocessing step)</li>
-  <li>Enable Median Filter Accumulation - Sometimes the median filter can produce some noise, this is a seperate accumulation pass to get rid of those</li>
   <li>Atmospheric Scatter Samples - Lower this to 1 if you keep crashing on entering play mode(controls how many atmospheric samples are precomputed)</li>
   <li>Current Samples - Shows how many samples have currently been accumulated</li>
   </ul>
@@ -208,7 +203,7 @@ BVH Options Description -
   <li>Diffuse Transmission - Makes an object Diffuse but Transmissive(transluscent).  Affects only Disney BSDF</li>
   <li>Transmission Color - Doesnt do anything for now, used for volumetric disney bsdf(which is not yet implemented)</li>
   <li>Flatness - Affects Thin objects.  Affects only Disney BSDF</li>
-  <li>Thin - Marks an object as thing so it can be better handled by the BSDF.  Affects only Disney BSDF, can be either 0 or 1</li>
+  <li>Thin - Marks an object as thin so it can be better handled by the BSDF.  Affects only Disney BSDF, can be either 0 or 1</li>
  </ul>
 
 # Known Bugs:
@@ -220,6 +215,7 @@ BVH Options Description -
 # Huge thanks to these people for being sponsors/patrons:
 <ul>
   <li>jhintringer</li>
+  <li>Duong Nguyen</li>
 </ul>
 
 # Sample Images(Taken from various stages of development)
