@@ -380,7 +380,7 @@ namespace TrueTrace {
                         CurrentTexDat.IsCutout = true;
                     }
                     if(RelevantMat.Name.Equals("Standard") && SharedMaterials[i].GetFloat("_Mode") == 1) CurrentTexDat.IsCutout = true;
-                    if (SharedMaterials[i].GetTexture(RelevantMat.BaseColorTex) as Texture2D != null)
+                    if (SharedMaterials[i].HasProperty(RelevantMat.BaseColorTex) && SharedMaterials[i].GetTexture(RelevantMat.BaseColorTex) as Texture2D != null)
                     {
                         CurrentTexDat.AlbedoTextureScale = new Vector4(SharedMaterials[i].GetTextureScale(RelevantMat.BaseColorTex).x, SharedMaterials[i].GetTextureScale(RelevantMat.BaseColorTex).y, SharedMaterials[i].GetTextureOffset(RelevantMat.BaseColorTex).x, SharedMaterials[i].GetTextureOffset(RelevantMat.BaseColorTex).y);
                         if (AlbedoTexs.Contains(SharedMaterials[i].GetTexture(RelevantMat.BaseColorTex)))
