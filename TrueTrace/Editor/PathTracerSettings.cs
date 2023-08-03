@@ -9,6 +9,9 @@ using CommonVars;
  using UnityEngine.Profiling;
 using UnityEditor.UIElements;
 using System.Xml.Serialization;
+using UnityEngine.Rendering;
+using UnityEditor.SceneManagement;
+using UnityEngine.SceneManagement;
 
 namespace TrueTrace {
    public class EditModeFunctions : EditorWindow {
@@ -30,7 +33,7 @@ namespace TrueTrace {
         public InstancedManager Instancer;
          [SerializeField] public Camera SelectedCamera;
          [SerializeField] public ObjectField CameraField;
-         [SerializeField] public int BounceCount = 24;
+         [SerializeField] public int BounceCount = 7;
          [SerializeField] public float RenderRes = 1;
          [SerializeField] public bool NEE = false;
          [SerializeField] public bool Accumulate = true;
@@ -47,7 +50,7 @@ namespace TrueTrace {
          [SerializeField] public bool DoExposure = false;
          [SerializeField] public bool ReSTIRGI = false;
          [SerializeField] public bool SampleValid = false;
-         [SerializeField] public int UpdateRate = 9;
+         [SerializeField] public int UpdateRate = 7;
          [SerializeField] public bool GITemporal = true;
          [SerializeField] public int GITemporalMCap = 12;
          [SerializeField] public bool GISpatial = true;
@@ -62,17 +65,17 @@ namespace TrueTrace {
          [SerializeField] public bool TAAU = true;
          [SerializeField] public int AtmoScatter = 4;
          [SerializeField] public bool ShowFPS = true;
-         [SerializeField] public bool ReSTIRGIPermutedSamples = true;
          [SerializeField] public float Exposure = 0;
-         [SerializeField] public int AtlasSize = 4096;
+         [SerializeField] public int AtlasSize = 16300;
          [SerializeField] public bool UseAlteredPipeline = false;
          [SerializeField] public bool DoCheckerboarding = false;
          [SerializeField] public bool DoFirefly = false;
          [SerializeField] public bool DoIndirectClamping = true;
          [SerializeField] public float MinSpatialSize = 10;
          [SerializeField] public int RISCount = 5;
-
+         private bool IsInMainField = false;
          void OnEnable() {
+            EditorSceneManager.activeSceneChangedInEditMode += EvaluateScene;
             if(EditorPrefs.GetString("EditModeFunctions", JsonUtility.ToJson(this, false)) != null) {
                var data = EditorPrefs.GetString("EditModeFunctions", JsonUtility.ToJson(this, false));
                JsonUtility.FromJsonOverwrite(data, this);
@@ -260,13 +263,14 @@ namespace TrueTrace {
             }
             bool ReductionNeeded = false;
             for(int i = 0; i < ChildLength; i++) {
-               if(Parent.Children[i].This.gameObject.GetComponent<SkinnedMeshRenderer>() != null) {
+               if(Parent.Children[i].This.gameObject.GetComponent<SkinnedMeshRenderer>() != null && Parent.This.gameObject.GetComponent<MeshFilter>() == null) {
                   ReductionNeeded = true;
                }
             }
             if(ReductionNeeded) ReduceChildren(Parent);
             if(RayTracingObjectChildCount > 0) {
-               if(Parent.This.gameObject.GetComponent<AssetManager>() == null) {if(Parent.This.gameObject.GetComponent<ParentObject>() == null) {
+               if(Parent.This.gameObject.GetComponent<AssetManager>() == null) {
+                  if(Parent.This.gameObject.GetComponent<ParentObject>() == null) {
                      Parent.This.gameObject.AddComponent<ParentObject>();
                   }
                }
@@ -386,7 +390,6 @@ Toggle GIToggle;
 FloatField GIUpdateRateField;
 FloatField TeporalGIMCapField;
 FloatField MinSpatialSizeField;
-Toggle PermuteGIToggle;
 Toggle TemporalGIToggle;
 Toggle SpatialGIToggle;
 Toggle TAAToggle;
@@ -397,21 +400,66 @@ Toggle SampleValidToggle;
 Toggle IndirectClampingToggle;
 FloatField RISCountField;
 
+
+private void StandardSet() {
+         BounceCount = 7;
+         RenderRes = 1;
+         NEE = false;
+         Accumulate = true;
+         RR = true;
+         Moving = true;
+         Volumetrics = false;
+         VolumDens = 0;
+         MeshSkin = true;
+         Bloom = false;
+         BloomStrength = 0.5f;
+         DoF = false;
+         DoFAperature = 0.1f;
+         DoFFocal = 0.1f;
+         DoExposure = false;
+         ReSTIRGI = false;
+         SampleValid = false;
+         UpdateRate = 7;
+         GITemporal = true;
+         GITemporalMCap = 488;
+         GISpatial = true;
+         GISpatialSampleCount = 12;
+         SpatialStabalizer = false;
+         TAA = false;
+         SVGF = false;
+         SVGFSize = 4;
+         ASVGF = false;
+         ASVGFSize = 4;
+         ToneMap = false;
+         TAAU = true;
+         AtmoScatter = 4;
+         ShowFPS = true;
+         Exposure = 0;
+         AtlasSize = 16300;
+         UseAlteredPipeline = false;
+         DoCheckerboarding = false;
+         DoFirefly = false;
+         DoIndirectClamping = true;
+         MinSpatialSize = 30;
+         RISCount = 12;
+}
+
       private void LowSettingsAssign() {
+         StandardSet();
          RRToggle.value = true;
-         ResField.value = 0.5f;
+         ResField.value = 0.25f;
          MovingToggle.value = true;
          NEEToggle.value = true;
          AccumToggle.value = true;
          SkinToggle.value = true;
          BloomToggle.value = false;
-         SVGFToggle.value = true;
+         SVGFToggle.value = false;
          SVGFSizeField.value = 6;
-         ASVGFToggle.value = false;
+         ASVGFToggle.value = true;
          TAAUToggle.value = true;
          AtmoScatterField.value = 1;
          GIToggle.value = false;
-         DoCheckerboardingToggle.value = true;
+         DoCheckerboardingToggle.value = false;
       }
 
       private void HighSettingsAssign() {
@@ -423,12 +471,10 @@ FloatField RISCountField;
          SkinToggle.value = true;
          BloomToggle.value = false;
          SVGFToggle.value = false;
-         ASVGFToggle.value = false;
-         TAAUToggle.value = false;
+         ASVGFToggle.value = true;
+         TAAUToggle.value = true;
          AtmoScatterField.value = 4;
          GIToggle.value = false;
-         TAAToggle.value = true;
-         ASVGFToggle.value = true;
       }
 
       private void QualityRenderPreview() {
@@ -445,9 +491,8 @@ FloatField RISCountField;
          AtmoScatterField.value = 4;
          GIToggle.value = true;
          TAAToggle.value = true;
-         TeporalGIMCapField.value = 122;
-         GIUpdateRateField.value = 0;
-         PermuteGIToggle.value = false;
+         TeporalGIMCapField.value = 488;
+         GIUpdateRateField.value = 7;
          TemporalGIToggle.value = true;
          SpatialGIToggle.value = true;
          SpatialGIToggle.value = true;
@@ -470,7 +515,6 @@ FloatField RISCountField;
          TAAToggle.value = true;
          TeporalGIMCapField.value = 122;
          GIUpdateRateField.value = 7;
-         PermuteGIToggle.value = false;
          TemporalGIToggle.value = true;
          SpatialGIToggle.value = true;
          SpatialGIToggle.value = true;
@@ -494,7 +538,6 @@ FloatField RISCountField;
          TAAToggle.value = true;
          TeporalGIMCapField.value = 12;
          GIUpdateRateField.value = 0;
-         PermuteGIToggle.value = true;
          TemporalGIToggle.value = true;
          SpatialGIToggle.value = true;
          SpatialGIToggle.value = true;
@@ -503,6 +546,7 @@ FloatField RISCountField;
 
 VisualElement MainSource;
 VisualElement RearrangeElement;
+Toolbar toolbar;
       void OnGUI() {
          Event e = Event.current;
          if(e.commandName == "ConfirmedButton") ConfirmPopup();  
@@ -510,27 +554,244 @@ VisualElement RearrangeElement;
       public void ConfirmPopup() {
          ReArrangeHierarchy();  
          OnFocus(); 
+         if(Camera.main.gameObject.GetComponent<FlyCamera>() == null) Camera.main.gameObject.AddComponent<FlyCamera>();
          rootVisualElement.Remove(RearrangeElement); 
          rootVisualElement.Add(MainSource); 
          Assets.UpdateMaterialDefinition();
+         IsInMainField = true;
+      }
+
+      VisualElement SceneSettingsMenu;
+      PopupField<string> BackgroundSettingsField;
+      ObjectField InputHDRIField;
+      ColorField BackgroundColorField;
+      FloatField BackgroundIntensityField;
+      FloatField UnityLightModifierField;
+      FloatField IndirectBoostField;
+
+
+      void AddNormalSettings() {
+         List<string> BackgroundSettings = new List<string>();
+         BackgroundSettings.Add("Atmosphere");
+         BackgroundSettings.Add("HDRI");
+         BackgroundSettings.Add("Solid Color");
+
+         VisualElement BlankElement = new VisualElement();
+
+         InputHDRIField = new ObjectField();
+         InputHDRIField.objectType = typeof(Texture);
+         InputHDRIField.label = "Drag your skybox here ->";
+         if(RayMaster.SkyboxTexture != null) InputHDRIField.value = RayMaster.SkyboxTexture;
+         InputHDRIField.RegisterValueChangedCallback(evt => RayMaster.SkyboxTexture = evt.newValue as Texture);
+         BackgroundColorField = new ColorField();
+         BackgroundColorField.value = new Color(RayMaster.SceneBackgroundColor.x, RayMaster.SceneBackgroundColor.y, RayMaster.SceneBackgroundColor.z, 1);
+         BackgroundColorField.RegisterValueChangedCallback(evt => RayMaster.SceneBackgroundColor = new Vector3(evt.newValue.r,evt.newValue.g,evt.newValue.b));
+
+         BackgroundSettingsField = new PopupField<string>("Background Type");
+         BackgroundSettingsField.choices = BackgroundSettings;
+         BackgroundSettingsField.index = RayMaster.BackgroundType;
+         switch(BackgroundSettingsField.index) {
+            case 0:
+               BackgroundSettingsField.Add(BlankElement);
+            break;
+            case 1:
+               BackgroundSettingsField.Add(InputHDRIField);
+            break;
+            case 2:
+               BackgroundSettingsField.Add(BackgroundColorField);
+            break;
+         }
+
+         SceneSettingsMenu.Add(BackgroundSettingsField);
+         BackgroundSettingsField.RegisterValueChangedCallback(evt => {
+            RayMaster.BackgroundType = BackgroundSettingsField.index;
+            switch(BackgroundSettingsField.index) {
+               case 0:
+                  BackgroundSettingsField.Add(BlankElement);
+               break;
+               case 1:
+                  BackgroundSettingsField.Add(InputHDRIField);
+               break;
+               case 2:
+                  BackgroundSettingsField.Add(BackgroundColorField);
+               break;
+            }
+            BackgroundSettingsField.RemoveAt(2);
+
+            });
+      
+      BackgroundIntensityField = new FloatField() {value = RayMaster.BackgroundIntensity, label = "Background Intensity"};
+      BackgroundIntensityField.RegisterValueChangedCallback(evt => RayMaster.BackgroundIntensity = evt.newValue);
+      SceneSettingsMenu.Add(BackgroundIntensityField);
+
+      UnityLightModifierField = new FloatField() {value = Assets.LightEnergyScale, label = "Unity Light Intensity Modifier"};
+      UnityLightModifierField.RegisterValueChangedCallback(evt => Assets.LightEnergyScale = evt.newValue);
+      SceneSettingsMenu.Add(UnityLightModifierField);
+
+      IndirectBoostField = new FloatField() {value = RayMaster.IndirectBoost, label = "Indirect Lighting Boost"};
+      IndirectBoostField.RegisterValueChangedCallback(evt => RayMaster.IndirectBoost = evt.newValue);
+      SceneSettingsMenu.Add(IndirectBoostField);
+
+
       }
 
 
+      VisualElement MaterialPairingMenu;
+      ObjectField InputMaterialField;
+      PopupField<string> BaseColorField;
+      PopupField<string> BaseColorTextureField;
+      PopupField<string> NormalTextureField;
+      PopupField<string> EmissionTextureField;
+      PopupField<string> MetallicRangeField;
+      PopupField<string> MetallicTextureField;
+      PopupField<string> MetallicChannelField;
+      PopupField<string> RoughnessRangeField;
+      PopupField<string> RoughnessTextureField;
+      PopupField<string> RoughnessChannelField;
+      Toggle GlassToggle;
+      Toggle CutoutToggle;
+      MaterialShader MatShader;
+      int Index;
+      void ConfirmMats() {
+         MatShader.BaseColorTex = BaseColorTextureField.value;
+         MatShader.BaseColorValue = BaseColorField.value;
+         MatShader.NormalTex = NormalTextureField.value;
+         MatShader.EmissionTex = EmissionTextureField.value;
+         MatShader.MetallicTex = MetallicTextureField.value;
+         MatShader.MetallicRange = MetallicRangeField.value;
+         MatShader.MetallicTexChannel = MetallicChannelField.index;
+         MatShader.RoughnessTex = RoughnessTextureField.value;
+         MatShader.RoughnessRange = RoughnessRangeField.value;
+         MatShader.RoughnessTexChannel = RoughnessChannelField.index;
+         MatShader.IsGlass = GlassToggle.value;
+         MatShader.IsCutout = CutoutToggle.value;
+         AssetManager.data.Material[Index] = MatShader;
+         using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialMappings.xml")) {
+            var serializer = new XmlSerializer(typeof(Materials));
+            serializer.Serialize(writer.BaseStream, AssetManager.data);
+         }
+      }
+      void AddAssetsToMenu() {
+         Shader shader = (InputMaterialField.value as Material).shader;
+         List<string> FloatProperties = new List<string>();
+         List<string> ColorProperties = new List<string>();
+         List<string> TextureProperties = new List<string>();
+         List<string> ChannelProperties = new List<string>();
+         int PropCount = shader.GetPropertyCount();
+         ColorProperties.Add("null");
+         FloatProperties.Add("null");
+         TextureProperties.Add("null");
+         ChannelProperties.Add("R");
+         ChannelProperties.Add("G");
+         ChannelProperties.Add("B");
+         ChannelProperties.Add("A");
+         for(int i = 0; i < PropCount; i++) {
+            if(shader.GetPropertyType(i) == ShaderPropertyType.Texture) TextureProperties.Add(shader.GetPropertyName(i));
+            if(shader.GetPropertyType(i) == ShaderPropertyType.Color) ColorProperties.Add(shader.GetPropertyName(i));
+            if(shader.GetPropertyType(i) == ShaderPropertyType.Range) FloatProperties.Add(shader.GetPropertyName(i));
+         }
+         MatShader = AssetManager.data.Material.Find((s1) => s1.Name.Equals(shader.name));
+         Index = AssetManager.data.Material.IndexOf(MatShader);
+         VisualElement BaseColorRow = new VisualElement();
+         BaseColorRow.style.flexDirection = FlexDirection.Row;
+            BaseColorField = new PopupField<string>("Base Color ->");
+            BaseColorField.choices = ColorProperties;
+            BaseColorField.index = ColorProperties.IndexOf(MatShader.BaseColorValue);
+            BaseColorRow.Add(BaseColorField);
+            BaseColorTextureField = new PopupField<string>("Base Color Texture ->");
+            BaseColorTextureField.choices = TextureProperties;
+            BaseColorTextureField.index = TextureProperties.IndexOf(MatShader.BaseColorTex);
+            BaseColorRow.Add(BaseColorTextureField);
+         MaterialPairingMenu.Add(BaseColorRow);
+
+         NormalTextureField = new PopupField<string>("Normal Texture ->");
+         NormalTextureField.choices = TextureProperties;
+         NormalTextureField.index = TextureProperties.IndexOf(MatShader.NormalTex);
+         MaterialPairingMenu.Add(NormalTextureField);
+         EmissionTextureField = new PopupField<string>("Emission Texture ->");
+         EmissionTextureField.choices = TextureProperties;
+         EmissionTextureField.index = TextureProperties.IndexOf(MatShader.EmissionTex);
+         MaterialPairingMenu.Add(EmissionTextureField);
+         VisualElement MetallicRow = new VisualElement();
+         MetallicRow.style.flexDirection = FlexDirection.Row;
+            MetallicRangeField = new PopupField<string>("Metallic Float ->");
+            MetallicRangeField.choices = FloatProperties;
+            MetallicRangeField.index = FloatProperties.IndexOf(MatShader.MetallicRange);
+            MetallicRow.Add(MetallicRangeField);
+            MetallicTextureField = new PopupField<string>("Metallic Texture ->");
+            MetallicTextureField.choices = TextureProperties;
+            MetallicTextureField.index = TextureProperties.IndexOf(MatShader.MetallicTex);
+            MetallicRow.Add(MetallicTextureField);
+            MetallicChannelField = new PopupField<string>("Texture Channel Of Metallic ->");
+            MetallicChannelField.choices = ChannelProperties;
+            MetallicChannelField.index = MatShader.MetallicTexChannel;
+            MetallicRow.Add(MetallicChannelField);
+         MaterialPairingMenu.Add(MetallicRow);
+
+         VisualElement RoughnessRow = new VisualElement();
+         RoughnessRow.style.flexDirection = FlexDirection.Row;
+            RoughnessRangeField = new PopupField<string>("Roughness Float ->");
+            RoughnessRangeField.choices = FloatProperties;
+            RoughnessRangeField.index = FloatProperties.IndexOf(MatShader.RoughnessRange);
+            RoughnessRow.Add(RoughnessRangeField);
+            RoughnessTextureField = new PopupField<string>("Roughness Texture ->");
+            RoughnessTextureField.choices = TextureProperties;
+            RoughnessTextureField.index = TextureProperties.IndexOf(MatShader.RoughnessTex);
+            RoughnessRow.Add(RoughnessTextureField);
+            RoughnessChannelField = new PopupField<string>("Texture Channel Of Roughness ->");
+            RoughnessChannelField.choices = ChannelProperties;
+            RoughnessChannelField.index = MatShader.RoughnessTexChannel;
+            RoughnessRow.Add(RoughnessChannelField);
+         MaterialPairingMenu.Add(RoughnessRow);
+
+         GlassToggle = new Toggle() {value = MatShader.IsGlass, text = "Force Glass On All Objects With This Material"};
+         MaterialPairingMenu.Add(GlassToggle);
+         CutoutToggle = new Toggle() {value = MatShader.IsCutout, text = "Force All Objects With This Material To Be Cutout"};
+         MaterialPairingMenu.Add(CutoutToggle);
+
+         Button ConfirmMaterialButton = new Button(() => ConfirmMats()) {text = "Apply Material Links"};
+         MaterialPairingMenu.Add(ConfirmMaterialButton);
+      }
+
+         void EvaluateScene(Scene Current, Scene Next) {
+            rootVisualElement.Clear();
+            MainSource.Clear();
+            CreateGUI();
+         }
         public void CreateGUI() {
             OnFocus();
             MainSource = new VisualElement();
+            MaterialPairingMenu = new VisualElement();
+            SceneSettingsMenu = new VisualElement();
+            InputMaterialField = new ObjectField();
+            InputMaterialField.objectType = typeof(Material);
+            InputMaterialField.label = "Drag a material with the desired shader here ->";
+            InputMaterialField.RegisterValueChangedCallback(evt => {MaterialPairingMenu.Clear(); MaterialPairingMenu.Add(InputMaterialField); AddAssetsToMenu();});
+            MaterialPairingMenu.Add(InputMaterialField);
+            toolbar = new Toolbar();
+            rootVisualElement.Add(toolbar);
             if(Assets == null) {
+               IsInMainField = false;
                RearrangeElement = new VisualElement();
                Button RearrangeButton = new Button(() => {UnityEditor.PopupWindow.Show(new Rect(0,0,10,10), new PopupWarningWindow());}) {text="Arrange Hierarchy"};
                RearrangeElement.Add(RearrangeButton);
                rootVisualElement.Add(RearrangeElement);
             } else {
-               rootVisualElement.Add(MainSource);
+               {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();}
                Assets.UpdateMaterialDefinition();
             }
-
+            Button MainSourceButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();});
+            Button MaterialPairButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); InputMaterialField.value = null; MaterialPairingMenu.Add(InputMaterialField); rootVisualElement.Add(MaterialPairingMenu);});
+            Button SceneSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(SceneSettingsMenu);});
+            toolbar.Add(MainSourceButton);
+            toolbar.Add(MaterialPairButton);
+            toolbar.Add(SceneSettingsButton);
+            MainSourceButton.text = "Main Options";
+            MaterialPairButton.text = "Material Pair Options";
+            SceneSettingsButton.text = "Scene Settings";
 
             if(RayMaster != null && Assets != null) {
+            AddNormalSettings();
            RayMaster.bouncecount = BounceCount;
            RayMaster.RenderScale = RenderRes;
            RayMaster.UseRussianRoulette = RR;
@@ -559,7 +820,6 @@ VisualElement RearrangeElement;
            RayMaster.AllowToneMap = ToneMap;
            RayMaster.UseTAAU = TAAU;
            RayMaster.AtmoNumLayers = AtmoScatter;
-           RayMaster.ReSTIRGIPermutedSamples = ReSTIRGIPermutedSamples;
            RayMaster.Exposure = 100 * Exposure + 1;
            Assets.DesiredRes = AtlasSize;
            RayMaster.UseAlteredPipeline = UseAlteredPipeline;
@@ -569,7 +829,6 @@ VisualElement RearrangeElement;
            RayMaster.RISCount = RISCount;
            RayMaster.DoIndirectClamping = DoIndirectClamping;
          }
-
 
 
            BVHBuild = new Button(() => OnStartAsyncCombined()) {text = "Build Aggregated BVH"};
@@ -601,7 +860,7 @@ VisualElement RearrangeElement;
            ForceInstancesButton = new Button(() => {if(!Application.isPlaying) ConstructInstances(); else Debug.Log("Cant Do This In Editor");}) {text = "Force Instances"};
 
            IntegerField AtlasField = new IntegerField() {value = AtlasSize, label = "Atlas Size"};
-           AtlasField.RegisterValueChangedCallback(evt => {if(!Application.isPlaying) {AtlasSize = evt.newValue; AtlasSize = Mathf.Min(AtlasSize, 16380); AtlasSize = Mathf.Max(AtlasSize, 32); Assets.DesiredRes = AtlasSize;} else AtlasField.value = AtlasSize;});
+           AtlasField.RegisterValueChangedCallback(evt => {if(!Application.isPlaying) {AtlasSize = evt.newValue; AtlasSize = Mathf.Min(AtlasSize, 16384); AtlasSize = Mathf.Max(AtlasSize, 32); Assets.DesiredRes = AtlasSize;} else AtlasField.value = AtlasSize;});
                AtlasField.ElementAt(0).style.minWidth = 65;
                AtlasField.ElementAt(1).style.width = 45;
 
@@ -639,7 +898,7 @@ VisualElement RearrangeElement;
                BounceField.RegisterValueChangedCallback(evt => {BounceCount = (int)evt.newValue; RayMaster.bouncecount = BounceCount;});        
                ResField = new FloatField("Render Scale") {value = RenderRes};
                ResField.ElementAt(0).style.minWidth = 75;
-               ResField.ElementAt(1).style.width = 25;
+               ResField.ElementAt(1).style.width = 35;
                TopEnclosingBox.Add(ResField);
                ResField.RegisterValueChangedCallback(evt => {if(!Application.isPlaying) {RenderRes = evt.newValue; RayMaster.RenderScale = RenderRes;} else ResField.value = RenderRes;});        
                TopEnclosingBox.Add(AtlasField);
@@ -753,18 +1012,14 @@ VisualElement RearrangeElement;
                Box TemporalGI = new Box();
                    TemporalGI.style.flexDirection = FlexDirection.Row;
                    TemporalGIToggle = new Toggle() {value = GITemporal, text = "Enable Temporal"};
-                   PermuteGIToggle = new Toggle() {value = ReSTIRGIPermutedSamples, text = "Permute Temporal Samples"};
                    Label TemporalGIMCapLabel = new Label("Temporal M Cap(0 is off)");
                    TemporalGIMCapLabel.tooltip = "Controls how long a sample is valid for, lower numbers update more quickly but have more noise, good for quickly changing scenes/lighting";
-                   PermuteGIToggle.tooltip = "Needs a much lower M Cap, around 2-12 for fast updating";
                    TeporalGIMCapField = new FloatField() {value = GITemporalMCap};
-                   PermuteGIToggle.RegisterValueChangedCallback(evt => {ReSTIRGIPermutedSamples = evt.newValue; RayMaster.ReSTIRGIPermutedSamples = ReSTIRGIPermutedSamples;});
                    TemporalGIToggle.RegisterValueChangedCallback(evt => {GITemporal = evt.newValue; RayMaster.UseReSTIRGITemporal = GITemporal;});
                    TeporalGIMCapField.RegisterValueChangedCallback(evt => {GITemporalMCap = (int)evt.newValue; RayMaster.ReSTIRGITemporalMCap = GITemporalMCap;});
                    TemporalGI.Add(TemporalGIToggle);
                    TemporalGI.Add(TeporalGIMCapField);
                    TemporalGI.Add(TemporalGIMCapLabel);
-                   TemporalGI.Add(PermuteGIToggle);
                EnclosingGI.Add(TemporalGI);
                Box SpatialGI = new Box();
                    SpatialGI.style.flexDirection = FlexDirection.Row;
@@ -792,6 +1047,7 @@ VisualElement RearrangeElement;
            GIToggle.RegisterValueChangedCallback(evt => {ReSTIRGI = evt.newValue; RayMaster.UseReSTIRGI = ReSTIRGI;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(GIToggle) + 1, GIFoldout); else MainSource.Remove(GIFoldout);});
            if(ReSTIRGI) MainSource.Add(GIFoldout);
        
+
            TAAToggle = new Toggle() {value = TAA, text = "Enable TAA"};
            MainSource.Add(TAAToggle);
            TAAToggle.RegisterValueChangedCallback(evt => {TAA = evt.newValue; RayMaster.AllowTAA = TAA;});
@@ -855,7 +1111,9 @@ VisualElement RearrangeElement;
 
            Rect WindowRect = MainSource.layout;
            Box EnclosingBox = new Box();
-               EnclosingBox.style.position = Position.Absolute;
+               try {
+                  EnclosingBox.style.position = Position.Absolute;
+               } catch(System.Exception e) {}
                EnclosingBox.style.top = 70;
                EnclosingBox.style.width = 110;
                EnclosingBox.style.height = 55;
@@ -887,8 +1145,7 @@ VisualElement RearrangeElement;
                RayMaster.UseASVGF = false;
             }
             if(Assets != null && Assets.NeedsToUpdateXML) {
-                var materialMappingsPath = Application.temporaryCachePath + "/MaterialMappings.xml";
-                using (StreamWriter writer = File.CreateText(materialMappingsPath)) {
+               using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialMappings.xml")) {
                   var serializer = new XmlSerializer(typeof(Materials));
                   serializer.Serialize(writer.BaseStream, AssetManager.data);
                }

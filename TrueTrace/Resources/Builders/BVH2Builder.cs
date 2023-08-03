@@ -60,7 +60,7 @@ namespace TrueTrace {
                         split.aabb_right = aabb_right;
                     }
                 }
-                Assert.IsTrue(aabb_left.BBMax != new Vector3(float.MinValue, float.MinValue, float.MinValue));
+                // Assert.IsTrue(aabb_left.BBMax != new Vector3(float.MinValue, float.MinValue, float.MinValue));
 
             }
 
@@ -70,7 +70,7 @@ namespace TrueTrace {
             }
             return split;
         }
-
+        float[] SAH;
         void BuildRecursive(int nodesi, ref int node_index, int first_index, int index_count, ref AABB[] Primitives) {
             if(index_count == 1) {
                 BVH2Nodes[nodesi].first = first_index;
@@ -78,12 +78,9 @@ namespace TrueTrace {
                 return;
             }
             
-            float[] SAH = new float[index_count];
-            
             ObjectSplit split = partition_sah(first_index, index_count, ref SAH, ref Primitives);
 
-            for(int i = first_index; i < split.index; i++) indices_going_left[DimensionedIndices[split.dimension][i]] = true;
-            for(int i = split.index; i < first_index + index_count; i++) indices_going_left[DimensionedIndices[split.dimension][i]] = false;
+            for(int i = first_index; i < first_index + index_count; i++) indices_going_left[DimensionedIndices[split.dimension][i]] = i < split.index;
 
             for(int dim = 0; dim < 3; dim++) {
                 if(dim == split.dimension) continue;
@@ -104,8 +101,7 @@ namespace TrueTrace {
                     }
                 }
           
-                Assert.IsTrue(left == split.index - first_index);
-                Assert.IsTrue(right == index_count);
+
                 for(int index = 0; index < index_count; index++) {
                     DimensionedIndices[dim][index + first_index] = temp[index];    
                 }
@@ -172,9 +168,8 @@ namespace TrueTrace {
             DimensionedIndices[2].Sort((s1,s2) => CentersZ[s1].CompareTo(CentersZ[s2]));
 
             int nodeIndex = 2;
-
+            SAH = new float[PrimCount];
             BuildRecursive(0, ref nodeIndex,0,PrimCount, ref Triangles);
-
             Assert.IsTrue(nodeIndex <= 2 * PrimCount);
             int BVHNodeCount = BVH2Nodes.Length;
             BVHNode2Data TempNode;
@@ -244,7 +239,7 @@ namespace TrueTrace {
             DimensionedIndices[2].Sort((s1,s2) => CentersZ[s1].CompareTo(CentersZ[s2]));
 
             int nodeIndex = 2;
-
+SAH = new float[MeshCount];
             BuildRecursive(0, ref nodeIndex,0,MeshCount, ref Primitives);
 
             Assert.IsTrue(nodeIndex <= 2 * MeshCount);

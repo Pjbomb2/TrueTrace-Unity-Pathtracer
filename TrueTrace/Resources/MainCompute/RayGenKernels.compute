@@ -1,6 +1,15 @@
 #include "CommonData.cginc"
 #pragma use_dxc
 
+#ifdef HDRP
+Texture2DArray<float2> MotionVectors;
+Texture2DArray<float3> NormalTex;
+Texture2DArray<float> Depth;
+#else
+Texture2D<float2> MotionVectors;
+Texture2D<float3> NormalTex;
+Texture2D<float> Depth;
+#endif
 
 #pragma kernel GenerateASVGF 
 
@@ -41,12 +50,12 @@ void Generate(uint3 id : SV_DispatchThreadID) {
 
     if (id.x >= screen_width || id.y >= screen_height) return;
     const uint pixel_index = id.y * screen_width + id.x;
-    float2 jitter = ((random(1, pixel_index) - 0.5f));
+    float2 jitter = ((random(1, pixel_index) - 0.5));
     float2 uv = float2((id.xy + jitter) / float2(screen_width, screen_height) * 2.0f - 1.0f);
 
     Ray ray = CreateCameraRay(uv, pixel_index);
 
-    if (UseReSTIRGI) {
+    // if (UseReSTIRGI) {
     #ifdef HDRP
         float2 pos_prev = ((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVectors[int3(id.xy,0)].xy * float2(screen_width, screen_height));
     #else
@@ -54,7 +63,7 @@ void Generate(uint3 id : SV_DispatchThreadID) {
     #endif
         int2 pp = int2(floor(pos_prev));
         GlobalRays1[pixel_index].PrevIndex = pp.x + pp.y * screen_width;
-    }
+    // }
 
     set(pixel_index, tempray);
     GlobalRays1[pixel_index].origin = ray.origin;// + length(ray.direction / dot(ray.direction, Forward) * LinearEyeDepth(Depth.SampleLevel(sampler_MotionVectors, id.xy / float2(screen_width, screen_height), 0).x)) * ray.direction * 0.99f;

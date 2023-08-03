@@ -117,6 +117,7 @@ namespace TrueTrace {
 
         private void CreateRenderTexture(ref RenderTexture ThisTex, bool SRGB)
         {
+            ThisTex?.Release();
             if (SRGB)
             {
                 ThisTex = new RenderTexture(SourceWidth, SourceHeight, 0,
@@ -135,6 +136,7 @@ namespace TrueTrace {
 
         private void CreateRenderTexture(ref RenderTexture ThisTex, bool SRGB, int Width, int Height)
         {
+            ThisTex?.Release();
             if (SRGB)
             {
                 ThisTex = new RenderTexture(Width, Height, 0,
@@ -152,6 +154,7 @@ namespace TrueTrace {
 
         private void CreateRenderTexture2(ref RenderTexture ThisTex, bool SRGB)
         {
+            ThisTex?.Release();
             if (SRGB)
             {
                 ThisTex = new RenderTexture(Screen.width, Screen.height, 0,
@@ -168,6 +171,7 @@ namespace TrueTrace {
         }
         private void CreateRenderTextureInt(ref RenderTexture ThisTex)
         {
+            ThisTex?.Release();
             ThisTex = new RenderTexture(SourceWidth, SourceHeight, 0,
                 RenderTextureFormat.RInt, RenderTextureReadWrite.Linear);
             ThisTex.enableRandomWrite = true;
@@ -175,6 +179,7 @@ namespace TrueTrace {
         }
         private void CreateRenderTextureDouble(ref RenderTexture ThisTex)
         {
+            ThisTex?.Release();
             ThisTex = new RenderTexture(SourceWidth, SourceHeight, 0,
                 RenderTextureFormat.RGFloat, RenderTextureReadWrite.Linear);
             ThisTex.enableRandomWrite = true;
@@ -183,6 +188,7 @@ namespace TrueTrace {
 
         private void CreateRenderTextureSingle(ref RenderTexture ThisTex)
         {
+            ThisTex?.Release();
             ThisTex = new RenderTexture(SourceWidth, SourceHeight, 0,
                 RenderTextureFormat.RFloat, RenderTextureReadWrite.Linear);
             ThisTex.enableRandomWrite = true;
@@ -224,9 +230,9 @@ namespace TrueTrace {
             CreateRenderTextureInt(ref _History);
             SVGFInitialized = true;
         }
-        private void InitRenderTexture()
+        private void InitRenderTexture(bool Force = false)
         {
-            if (_ColorDirectIn == null || _ColorDirectIn.width != SourceWidth || _ColorDirectIn.height != SourceHeight)
+            if (Force || _ColorDirectIn == null || _ColorDirectIn.width != SourceWidth || _ColorDirectIn.height != SourceHeight)
             {
                 // Release render texture if we already have one
                 if (_ColorDirectIn != null)
@@ -318,7 +324,7 @@ namespace TrueTrace {
             AutoExposeFinalizeKernel = AutoExpose.FindKernel("AutoExposeFinalize");
             List<float> TestBuffer = new List<float>();
             TestBuffer.Add(1);
-            if (A == null) { A = new ComputeBuffer(1, sizeof(float)); A.SetData(TestBuffer); }
+            A?.Dispose(); A = new ComputeBuffer(1, sizeof(float)); A.SetData(TestBuffer);
             SVGF.SetInt("screen_width", SourceWidth);
             SVGF.SetInt("screen_height", SourceHeight);
             SVGF.SetInt("TargetWidth", Screen.width);
@@ -351,9 +357,44 @@ namespace TrueTrace {
             InitRenderTexture();
         }
 
-        public void ExecuteSVGF(int CurrentSamples, int AtrousKernelSize, ref ComputeBuffer _ColorBuffer, ref RenderTexture _target, ref RenderTexture _Albedo, ref RenderTexture _NormTex, bool DiffRes, ref RenderTexture PrevDepthTexMain, CommandBuffer cmd, ref RenderTexture CorrectedDepthTex)
+        public void Reinit(Camera Cam, int SourceWidth, int SourceHeight)
         {
+            this.SourceWidth = SourceWidth;
+            this.SourceHeight = SourceHeight;
+            _camera = Cam;
 
+            List<float> TestBuffer = new List<float>();
+            TestBuffer.Add(1);
+            A?.Dispose(); A = new ComputeBuffer(1, sizeof(float)); A.SetData(TestBuffer);
+            SVGF.SetInt("screen_width", SourceWidth);
+            SVGF.SetInt("screen_height", SourceHeight);
+            SVGF.SetInt("TargetWidth", Screen.width);
+            SVGF.SetInt("TargetHeight", Screen.height);
+
+            Bloom.SetInt("screen_width", Screen.width);
+            Bloom.SetInt("screen_width", Screen.height);
+
+            AutoExpose.SetInt("screen_width", Screen.width);
+            AutoExpose.SetInt("screen_height", Screen.height);
+            AutoExpose.SetBuffer(AutoExposeKernel, "A", A);
+            AutoExpose.SetBuffer(AutoExposeFinalizeKernel, "A", A);
+
+            TAA.SetInt("screen_width", Screen.width);
+            TAA.SetInt("screen_height", Screen.height);
+
+            threadGroupsX = Mathf.CeilToInt(SourceWidth / 16.0f);
+            threadGroupsY = Mathf.CeilToInt(SourceHeight / 16.0f);
+
+            threadGroupsX2 = Mathf.CeilToInt(Screen.width / 16.0f);
+            threadGroupsY2 = Mathf.CeilToInt(Screen.height / 16.0f);
+
+
+            InitRenderTexture(true);
+        }
+
+        public void ExecuteSVGF(int CurrentSamples, int AtrousKernelSize, ref ComputeBuffer _ColorBuffer, ref RenderTexture _target, ref RenderTexture _Albedo, ref RenderTexture _NormTex, bool DiffRes, ref RenderTexture PrevDepthTexMain, CommandBuffer cmd, ref RenderTexture CorrectedDepthTex, bool UseReSTIRGI)
+        {
+            SVGF.SetBool("UseReSTIRGI", UseReSTIRGI);
             InitRenderTexture();
             SVGF.SetBool("DiffRes", DiffRes);
             Matrix4x4 viewprojmatrix = _camera.projectionMatrix * _camera.worldToCameraMatrix;
@@ -381,7 +422,9 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(SVGF,CopyKernel, "PrevDepthTex", PrevDepthTexMain);
             cmd.SetComputeTextureParam(SVGF, CopyKernel, "_CameraNormalDepthTex", _NormTex);
             SVGF.SetTextureFromGlobal(CopyKernel, "NormalTex", "_CameraGBufferTexture2");
+             cmd.BeginSample("SVGF Copy");
             cmd.DispatchCompute(SVGF, CopyKernel, threadGroupsX, threadGroupsY, 1);
+             cmd.EndSample("SVGF Copy");
             UnityEngine.Profiling.Profiler.EndSample();
 
             UnityEngine.Profiling.Profiler.BeginSample("SVGFReproject");
@@ -397,7 +440,9 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "ColorDirectOut", _ColorDirectIn);
             cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "ColorIndirectOut", _ColorIndirectIn);
             cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "FrameBufferMoment", _FrameMoment);
+             cmd.BeginSample("SVGF Reproject");
             cmd.DispatchCompute(SVGF, ReprojectKernel, threadGroupsX, threadGroupsY, 1);
+             cmd.EndSample("SVGF Reproject");
             UnityEngine.Profiling.Profiler.EndSample();
 
             UnityEngine.Profiling.Profiler.BeginSample("SVGFVariance");
@@ -408,7 +453,9 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(SVGF, VarianceKernel, "NormalAndDepth", _NormalDepth);
             cmd.SetComputeTextureParam(SVGF, VarianceKernel, "FrameBufferMoment", _FrameMoment);
             cmd.SetComputeTextureParam(SVGF, VarianceKernel, "HistoryTex", _History);
+             cmd.BeginSample("SVGF Var");
             cmd.DispatchCompute(SVGF, VarianceKernel, threadGroupsX, threadGroupsY, 1);
+             cmd.EndSample("SVGF Var");
             UnityEngine.Profiling.Profiler.EndSample();
 
             UnityEngine.Profiling.Profiler.BeginSample("SVGFAtrous");
@@ -425,11 +472,16 @@ namespace TrueTrace {
                 cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "ColorIndirectIn", (UseFlipped) ? _ColorIndirectOut : _ColorIndirectIn);
                 var step2 = step_size;
                 cmd.SetComputeIntParam(SVGF, "step_size", step2);
+                cmd.SetComputeIntParam(SVGF, "iteration", i);
+                cmd.BeginSample("SVGF Atrous: " + i);
                 cmd.DispatchCompute(SVGF, SVGFAtrousKernel, threadGroupsX, threadGroupsY, 1);
+                cmd.EndSample("SVGF Atrous: " + i);
             }
             UnityEngine.Profiling.Profiler.EndSample();
             UnityEngine.Profiling.Profiler.BeginSample("SVGFFinalize");
             SVGF.SetBuffer(FinalizeKernel, "PerPixelRadiance", _ColorBuffer);
+            SVGF.SetTextureFromGlobal(FinalizeKernel, "DiffuseGBuffer", "_CameraGBufferTexture0");
+            SVGF.SetTextureFromGlobal(FinalizeKernel, "SpecularGBuffer", "_CameraGBufferTexture1");
             cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "ColorDirectIn", (OddAtrousIteration) ? _ColorDirectOut : _ColorDirectIn);
             cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "ColorDirectOut", (OddAtrousIteration) ? _ColorDirectIn : _ColorDirectOut);
             cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "NormalAndDepth", _NormalDepth);
@@ -443,7 +495,9 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "_Albedo", _Albedo);
 
             cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "FrameBufferMoment", _FrameMoment);
+                cmd.BeginSample("SVGF Finalize");
             cmd.DispatchCompute(SVGF, FinalizeKernel, threadGroupsX, threadGroupsY, 1);
+                cmd.EndSample("SVGF Finalize");
             UnityEngine.Profiling.Profiler.EndSample();
             cmd.CopyTexture(CorrectedDepthTex, PrevDepthTexMain);
 
@@ -652,22 +706,24 @@ namespace TrueTrace {
             // ToneMapper.Dispatch(ToneMapCombineKernel, (int)Mathf.Ceil(Output.width / 16.0f), (int)Mathf.Ceil(Output.height / 16.0f), 1);
         }
 
-        public void ExecuteTAAU(ref RenderTexture Output, ref RenderTexture Input, ref RenderTexture ThroughputTex, CommandBuffer cmd)
+        public void ExecuteTAAU(ref RenderTexture Output, ref RenderTexture Input, ref RenderTexture ThroughputTex, CommandBuffer cmd, int CurFrame, ref RenderTexture CorrectedDepthTex)
         {//need to fix this so it doesnt create new textures every time
+            bool IsEven = CurFrame % 2 == 0;
             cmd.SetComputeIntParam(TAAU,"source_width", SourceWidth);
             cmd.SetComputeIntParam(TAAU,"source_height", SourceHeight);
             cmd.SetComputeIntParam(TAAU,"target_width", Output.width);
             cmd.SetComputeIntParam(TAAU,"target_height", Output.height);
-            cmd.SetComputeTextureParam(TAAU, TAAUKernel, "IMG_ASVGF_TAA_A", TAAA);
-            cmd.SetComputeTextureParam(TAAU, TAAUKernel, "TEX_ASVGF_TAA_B", TAAB);
+            cmd.SetComputeIntParam(TAAU,"CurFrame", CurFrame);
+            cmd.SetComputeTextureParam(TAAU, TAAUKernel, "IMG_ASVGF_TAA_A", IsEven ? TAAA : TAAB);
+            cmd.SetComputeTextureParam(TAAU, TAAUKernel, "TEX_ASVGF_TAA_B", !IsEven ? TAAA : TAAB);
             cmd.SetComputeTextureParam(TAAU, TAAUKernel, "TEX_FLAT_COLOR", Input);
             cmd.SetComputeTextureParam(TAAU, TAAUKernel, "ThroughputTex", ThroughputTex);
             cmd.SetComputeTextureParam(TAAU, TAAUKernel, "IMG_TAA_OUTPUT", Output);
+            cmd.SetComputeTextureParam(TAAU, TAAUKernel, "CorrectedDepthTex", CorrectedDepthTex);
             TAAU.SetTextureFromGlobal(TAAUKernel, "Albedo", "_CameraGBufferTexture0");
             TAAU.SetTextureFromGlobal(TAAUKernel, "Albedo2", "_CameraGBufferTexture1");
             TAAU.SetTextureFromGlobal(TAAUKernel, "TEX_FLAT_MOTION", "_CameraMotionVectorsTexture");
             cmd.DispatchCompute(TAAU, TAAUKernel, threadGroupsX2, threadGroupsY2, 1);
-            cmd.CopyTexture(TAAA, TAAB);
         }
 
     }

@@ -324,11 +324,11 @@ int SampleCount = min(PrevOutput[newUV * float2(target_width, target_height)].w,
     #else
         float3 SpecularAlbedo = Albedo2[id.xy].xyz;
     #endif
-    if(SpecularAlbedo.x == SpecularAlbedo.y && SpecularAlbedo.y == SpecularAlbedo.z) SpecularAlbedo = 0;
+    // if(SpecularAlbedo.x == SpecularAlbedo.y && SpecularAlbedo.y == SpecularAlbedo.z) SpecularAlbedo = 0;
 if(Disocluded) SampleCount *= clamp(dot(PrevNormalTex[newUV * float2(target_width, target_height)].xyz * 2.0 - 1.0f, NormalTex[id.xy].xyz * 2.0 - 1.0f),0,1.0f) * 0.1f;
     // Output[id.xy] = float4(lerp((o_rgba.rgb / o_rgba.w), PrevOutput[newUV * float2(target_width, target_height)].xyz, 0.25f),1);// * (Albedo[id.xy].xyz),1);
         Output[id.xy] = float4(lerp(PrevOutput[newUV * float2(target_width, target_height)].xyz, (o_rgba.rgb / o_rgba.w), rcp(SampleCount + 1)),SampleCount + 1);
-    FinalOutput[id.xy] = float4(Output[id.xy] * ((all((Albedo[id.xy].xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo[id.xy].xyz + SpecularAlbedo)))), 1);;
+    FinalOutput[id.xy] = float4(Output[id.xy] * ((all((Albedo[id.xy].xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo[id.xy].xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
 //     return o_rgba.rgb / o_rgba.w;
 
 

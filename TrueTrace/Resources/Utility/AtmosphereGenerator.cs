@@ -24,7 +24,6 @@ namespace TrueTrace {
 
         public RenderTexture CloudTex1;
         public RenderTexture CloudTex2;
-        public RenderTexture CloudTex3;
 
         public ComputeShader Atmosphere;
         private ComputeBuffer rayleigh_densityC;
@@ -88,7 +87,7 @@ namespace TrueTrace {
             Vector3 ray_a = new Vector3(0.0f, 0.0f, 0.0f);
             Vector3 ray_e = ray_s + ray_a;
             Vector3 mie_s = new Vector3(3.996f, 3.996f, 3.996f) * density;
-            Vector3 mie_a = new Vector3(1.0f, 2.0f, 4.4f) * density;
+            Vector3 mie_a = new Vector3(4.4f, 4.4f, 4.4f) * density;
             Vector3 mie_e = mie_s + mie_a;
             Vector3 ozo_s = new Vector3(0.0f, 0.0f, 0.0f);
             Vector3 ozo_a = new Vector3(0.65f, 1.881f, 0.085f) * density;
@@ -105,7 +104,7 @@ namespace TrueTrace {
             {
                 width = 0.0f,
                 exp_term = 1.0f,
-                exp_scale = -1.0f / rayleigh_scale_height * 1000.0f,
+                exp_scale = -0.125f,
                 linear_term = 0.0f,
                 constant_term = 0.0f
             });
@@ -121,25 +120,25 @@ namespace TrueTrace {
             {
                 width = 0.0f,
                 exp_term = 1.0f,
-                exp_scale = -1.0f / mie_scale_height * 1000.0f,
+                exp_scale = -0.833333333333333f,
                 linear_term = 0.0f,
                 constant_term = 0.0f
             });
             absorption_density.Add(new DensityProfileLayer()
             {
-                width = ozone_height / 1000.0f,
+                width = 25,
                 exp_term = 0.0f,
                 exp_scale = 0.0f,
-                linear_term = 1.0f / ozone_scale_height * 1000.0f,
-                constant_term = -2.0f / 3.0f
+                linear_term = 0.0666666666666667f,
+                constant_term = -0.666666666666667f
             });
             absorption_density.Add(new DensityProfileLayer()
             {
                 width = 0.0f,
                 exp_term = 0.0f,
                 exp_scale = 0.0f,
-                linear_term = -1.0f / ozone_scale_height * 1000.0f,
-                constant_term = 8.0f / 3.0f
+                linear_term = -0.0666666666666667f,
+                constant_term = 2.66666666666667f
             });
 
             int TransmittanceKernel = Atmosphere.FindKernel("Transmittance_Kernel");
@@ -150,7 +149,6 @@ namespace TrueTrace {
             int MultipleScatteringKernel = Atmosphere.FindKernel("MultiScatter_kernel");
             int FirstCloudKernel = Atmosphere.FindKernel("FirstCloudKernel");
             int SecondCloudKernel = Atmosphere.FindKernel("SecondCloudKernel");
-            int ThirdCloudKernel = Atmosphere.FindKernel("ThirdCloudKernel");
 
             CreateComputeBuffer(ref rayleigh_densityC, rayleigh_density, 20);
             CreateComputeBuffer(ref mie_densityC, mie_density, 20);
@@ -161,7 +159,7 @@ namespace TrueTrace {
             Atmosphere.SetVector("absorption_extinction", ozo_e);
             Atmosphere.SetVector("mie_extinction", mie_e);
             Atmosphere.SetVector("mie_scattering", mie_s);
-            Atmosphere.SetFloat("mu_s_min", (float)Mathf.Cos(120.0f / 180.0f * Mathf.PI));
+            Atmosphere.SetFloat("mu_s_min", -0.207911690817759f);
 
             Atmosphere.SetBuffer(TransmittanceKernel, "rayleigh_density", rayleigh_densityC);
             Atmosphere.SetBuffer(TransmittanceKernel, "mie_density", mie_densityC);
@@ -236,26 +234,21 @@ namespace TrueTrace {
             MultiScatterTex.enableRandomWrite = true;
             MultiScatterTex.Create();
 
-            // CloudTex1 = new RenderTexture(32, 32, 0,
-            // RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-            // CloudTex1.volumeDepth = 64;
-            // CloudTex1.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-            // CloudTex1.enableRandomWrite = true;
-            // CloudTex1.useMipMap = true;
-            // CloudTex1.Create();
+            CloudTex1 = new RenderTexture(128, 128, 0,
+            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+            CloudTex1.volumeDepth = 128;
+            CloudTex1.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+            CloudTex1.enableRandomWrite = true;
+            CloudTex1.useMipMap = true;
+            CloudTex1.Create();
 
-            // CloudTex2 = new RenderTexture(32, 32, 0,
-            // RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-            // CloudTex2.volumeDepth = 32;
-            // CloudTex2.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-            // CloudTex2.enableRandomWrite = true;
-            // CloudTex2.useMipMap = true;
-            // CloudTex2.Create();
-
-            // CloudTex3 = new RenderTexture(128, 128, 0,
-            // RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-            // CloudTex3.enableRandomWrite = true;
-            // CloudTex3.Create();
+            CloudTex2 = new RenderTexture(32, 32, 0,
+            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+            CloudTex2.volumeDepth = 32;
+            CloudTex2.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+            CloudTex2.enableRandomWrite = true;
+            CloudTex2.useMipMap = true;
+            CloudTex2.Create();
 
             Atmosphere.SetTexture(SingleScatterKernel, "DebugTex", DebugTex);
             Atmosphere.SetTexture(TransmittanceKernel, "TransmittanceTex", _TransmittanceLUT);
@@ -309,9 +302,13 @@ namespace TrueTrace {
 
 
             // Atmosphere.SetTexture(FirstCloudKernel, "CloudTex1", CloudTex1);
-            // Atmosphere.SetFloat("numCells", 2);
-            // Atmosphere.SetFloat("TargetSize", 32);
-            // Atmosphere.Dispatch(FirstCloudKernel, 32, 32, 64);
+            // Atmosphere.SetInt("u_size", 128);
+            // Atmosphere.Dispatch(FirstCloudKernel, 128, 128, 128);
+
+
+            // Atmosphere.SetTexture(SecondCloudKernel, "CloudTex2", CloudTex2);
+            // Atmosphere.SetInt("u_size", 32);
+            // Atmosphere.Dispatch(SecondCloudKernel, 32, 32, 32);
 
             rayleigh_densityC.Release();
             mie_densityC.Release();

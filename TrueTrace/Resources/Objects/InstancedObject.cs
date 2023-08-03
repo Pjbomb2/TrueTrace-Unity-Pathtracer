@@ -10,7 +10,7 @@ namespace TrueTrace {
     public class InstancedObject : MonoBehaviour
     {
         private ParentObject PreviousInstance;
-        [HideInInspector] public ParentObject InstanceParent;
+        public ParentObject InstanceParent;
         [HideInInspector] public int CompactedMeshData;
 
         public void UpdateInstance()
@@ -35,6 +35,10 @@ namespace TrueTrace {
         {
             if (gameObject.scene.isLoaded)
             {
+                if(InstanceParent == null) {
+                    Destroy(this);
+                    return;
+                }
                 this.transform.hasChanged = true;
                 this.GetComponentInParent<AssetManager>().InstanceAddQue.Add(this);
                 this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
@@ -45,6 +49,10 @@ namespace TrueTrace {
         {
             if (gameObject.scene.isLoaded)
             {
+                if(InstanceParent == null) {
+                    Destroy(this);
+                    return;
+                }
                 this.GetComponentInParent<AssetManager>().InstanceRemoveQue.Add(this);
                 this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
             }

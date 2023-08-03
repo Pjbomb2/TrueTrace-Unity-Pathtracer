@@ -129,7 +129,7 @@ float ComputeOpticalfloatToTopAtmosphereBoundary(DensityProfileLayer DensProf1, 
 
 float3 ComputeTransmittanceToTopAtmosphereBoundary(float r, float mu) {
 
-	return exp(-(
+	return (-(
 		rayleigh_scattering *
 		ComputeOpticalfloatToTopAtmosphereBoundary(rayleigh_density[0], rayleigh_density[1], r, mu) +
 		mie_extinction *
@@ -204,14 +204,14 @@ float3 GetTransmittance(float r, float mu, float d, bool ray_r_mu_intersects_gro
 	float r_d = clamp(sqrt(d * d + 2.0f * r * mu * d + r * r), bottom_radius, top_radius);
 	float mu_d = clamp((r * mu + d) / r_d, -1.0f, 1.0f);
 	if (ray_r_mu_intersects_ground) {
-		return min(GetTransmittanceToTopAtmosphereBoundary(r_d, -mu_d) /
-			GetTransmittanceToTopAtmosphereBoundary(r, -mu),
+		return min(exp(GetTransmittanceToTopAtmosphereBoundary(r_d, -mu_d) -
+			GetTransmittanceToTopAtmosphereBoundary(r, -mu)),
 			float3(1.0f, 1.0f, 1.0f));
 
 	}
 	else {
-		return min(GetTransmittanceToTopAtmosphereBoundary(r, mu) /
-			GetTransmittanceToTopAtmosphereBoundary(r_d, mu_d),
+		return min(exp(GetTransmittanceToTopAtmosphereBoundary(r, mu) -
+			GetTransmittanceToTopAtmosphereBoundary(r_d, mu_d)),
 			float3(1.0f, 1.0f, 1.0f));
 	}
 }
@@ -221,7 +221,7 @@ float3 GetTransmittance(float r, float mu, float d, bool ray_r_mu_intersects_gro
 float3 GetTransmissionToSun(float r, float mu_s) {
 	float sin_theta_h = bottom_radius / r;
 	float cos_theta_h = -sqrt(max(1.0f - sin_theta_h * sin_theta_h, 0.0f));
-	return GetTransmittanceToTopAtmosphereBoundary(r, mu_s) *
+	return exp(GetTransmittanceToTopAtmosphereBoundary(r, mu_s)) *
 		smoothstep(-sin_theta_h * sun_angular_radius, sin_theta_h * sun_angular_radius, mu_s - cos_theta_h);
 }
 
@@ -387,7 +387,7 @@ float MiePhaseFunction(float g, float nu) {
 float3 GetTransmittanceToSun(float r, float mu_s) {
 	float sin_theta_h = bottom_radius / r;
 	float cos_theta_h = -sqrt(max(1.0f - sin_theta_h * sin_theta_h, 0.0f));
-	return GetTransmittanceToTopAtmosphereBoundary(r, mu_s) *
+	return exp(GetTransmittanceToTopAtmosphereBoundary(r, mu_s)) *
 		smoothstep(-sin_theta_h * sun_angular_radius / 1.0f,
 			sin_theta_h * sun_angular_radius / 1.0f,
 			mu_s - cos_theta_h);
@@ -406,8 +406,6 @@ void SingleScatter_Kernel(uint3 id : SV_DispatchThreadID)
 	float3 mie;
 	ComputeSingleScatteringTexture(id.xyz + 0.5f, rayleigh, mie);
 
-	float3 throwaway = 0;
-	ComputeSingleScatteringTexture(id.xyz + 0.5f, throwaway, mie);
 	RayleighTex[id.xyz] = float4(rayleigh, 1.0f);
 	MieTex[id.xyz] = float4(mie, 1.0f);
 	rayleigh = mul(LuminanceFromRadiance, float4(rayleigh, 1)).xyz;
@@ -428,8 +426,8 @@ float3 ComputeDirectIrradiance(float r, float mu_s) {
 			(mu_s + alpha_s) * (mu_s + alpha_s) / (4.0 * alpha_s));
 
 	return solar_irradiance *
-		GetTransmittanceToTopAtmosphereBoundary(
-			r, mu_s) * average_cosine_factor;
+		exp(GetTransmittanceToTopAtmosphereBoundary(
+			r, mu_s)) * average_cosine_factor;
 
 }
 
@@ -478,7 +476,7 @@ float3 GetScattering(float r, float mu, float mu_s, float nu, bool ray_r_mu_inte
 	if (scattering_order == 1) {
 		float3 rayleigh = GetScattering2(RayleighTexRead, r, mu, mu_s, nu, ray_r_mu_intersects_ground);
 		float3 mie = GetScattering2(MieTexRead, r, mu, mu_s, nu, ray_r_mu_intersects_ground);
-		return rayleigh * RayleighPhaseFunction(nu) + mie * MiePhaseFunction(-0.8f, nu);
+		return rayleigh * RayleighPhaseFunction(nu) + mie * MiePhaseFunction(0.8f, nu);
 	}
 	else {
 		return GetScattering2(MultipleScatteringTexRead, r, mu, mu_s, nu, ray_r_mu_intersects_ground);
@@ -578,7 +576,7 @@ float3 ComputeScatteringDensity(
 		// can compute them in the outer loop for efficiency.
 		float distance_to_ground = 0.0f;
 		float3 transmittance_to_ground = float3(0.0, 0.0, 0.0);
-		float3 ground_albedo = float3(0.0, 0.0, 0.0);
+		float3 ground_albedo = float3(0.1, 0.1, 0.1);
 		if (ray_r_theta_intersects_ground) {
 			distance_to_ground =
 				DistanceToBottomAtmosphereBoundary(r, cos_theta);
@@ -629,7 +627,7 @@ float3 ComputeScatteringDensity(
 				rayleigh_scattering * rayleigh_density *
 				RayleighPhaseFunction(nu2) +
 				mie_scattering * mie_density *
-				MiePhaseFunction(-0.8f, nu2)) *
+				MiePhaseFunction(0.8f, nu2)) *
 				domega_i;
 		}
 	}
@@ -752,7 +750,7 @@ void MultiScatter_kernel(uint3 id : SV_DispatchThreadID)
 	float nu = 0.0f;
 	float3 MultipleScatterDelta = ComputeMultipleScatteringTexture(float3(id.xy + 0.5f, id.z + 0.5f), nu);
 	DeltaMultipleScattering[id.xyz] = float4(MultipleScatterDelta, 1);
-	MultiScatterTex[id.xyz] = (MultiScatterTex[id.xyz] + float4(mul(LuminanceFromRadiance, float4(MultipleScatterDelta.xyz / RayleighPhaseFunction(nu), 0)).xyz, 0.0f));
+	MultiScatterTex[id.xyz] = (MultiScatterTex[id.xyz] + float4(mul(LuminanceFromRadiance, float4(MultipleScatterDelta.xyz / RayleighPhaseFunction(nu), 1)).xyz, 0.0f));
 	//  if(id.z == 3) DebugTex[id.xy] = float4(mul(LuminanceFromRadiance, float4(MultipleScatterDelta.xyz / RayleighPhaseFunction(nu),0)).xyz,1);
 
 }
@@ -764,222 +762,170 @@ void MultiScatter_kernel(uint3 id : SV_DispatchThreadID)
 
 
 RWTexture3D<float4> CloudTex1;
-RWTexture3D<float4> CloudTex2;
-RWTexture2D<float4> CloudTex3;
 
-Texture2D<float4> _PermTable2D;
-SamplerState sampler_PermTable2D_point_repeat;
-Texture2D<float4> _Gradient3D;
-SamplerState sampler_Gradient3D_point_repeat;
-float frequency;
+#define UI0 1597334673U
+#define UI1 3812015801U
+#define UI2 uint2(UI0, UI1)
+#define UI3 uint3(UI0, UI1, 2798796415U)
+#define UIF (1.0 / float(0xffffffffU))
 
-float TargetSize;
-float zLevel;
-float numCells;
-float2 vUvs;
-
-float3 hash3(float2 p) {
-	float3 p3 = float3(dot(p, float2(127.1, 311.7)),
-		dot(p, float2(269.5, 183.3)),
-		dot(p, float2(113.5, 271.9)));
-
-	return -1.0 + 2.0 * frac(sin(p3) * 43758.5453123);
+float3 mod(float3 x, float3 y) {
+	return x - y * floor(x / y);
 }
 
-float3 hash3(float3 p) // replace this by something better
+float3 hash_33(float3 p)
 {
-	p = float3(dot(p, float3(127.1, 311.7, 74.7)),
-		dot(p, float3(269.5, 183.3, 246.1)),
-		dot(p, float3(113.5, 271.9, 124.6)));
-
-	return -1.0 + 2.0 * frac(sin(p) * 43758.5453123);
+	uint3 q = uint3(int3(p)) * UI3;
+	q = (q.x ^ q.y ^ q.z)*UI3;
+	return -1. + 2. * float3(q) * UIF;
 }
 
-float3 hash3(float4 p) // replace this by something better
+float remap(float x, float a, float b, float c, float d)
 {
-	float3 r = float3(
-		dot(p, float4(127.1, 311.7, 74.7, 93.124)),
-		dot(p, float4(269.5, 183.3, 246.1, 55.432)),
-		dot(p, float4(113.5, 271.9, 124.6, 6.823)));
-
-	return -1.0 + 2.0 * frac(sin(r) * 43758.5453123);
+    return (((x - a) / (b - a)) * (d - c)) + c;
 }
 
+// Gradient noise by iq (modified to be tileable)
+float gradient_noise(float3 x, float freq)
+{
+    // grid
+    float3 p = floor(x);
+    float3 w = frac(x);
+    
+    // quintic interpolant
+    float3 u = w * w * w * (w * (w * 6. - 15.) + 10.);
 
-float3 hash3_New(float3 p, float tileLength) {
-	p = (p % tileLength);
-	p = float3(
-		dot(p, float3(127.1, 311.7, 74.7)),
-		dot(p, float3(269.5, 183.3, 246.1)),
-		dot(p, float3(113.5, 271.9, 124.6)));
-
-	return -1.0 + 2.0 * frac(sin(p) * 43758.5453123);
-}
-float inverseLerp(float minValue, float maxValue, float v) {
-	return (v - minValue) / (maxValue - minValue);
-}
-
-
-float voronoiSlow(float maxOffset, float cellsMult, float seed) {
-	float3 coords = float3(vUvs * cellsMult, zLevel);
-	float3 seedHash = hash3(float3(seed, seed * seed * 3.14159, seed * 1.17421));
-
-	float3 gridBasePosition = floor(coords);
-	float3 gridCoordOffset = frac(coords);
-	float maxCellSearch = ceil(maxOffset) + 1.0;
-
-	float closest = 1.0;
-	for (float y = -maxCellSearch; y <= maxCellSearch; y += 1.0) {
-		for (float x = -maxCellSearch; x <= maxCellSearch; x += 1.0) {
-			for (float z = -maxCellSearch; z <= maxCellSearch; z += 1.0) {
-				float3 neighbourCellPosition = float3(x, y, z);
-				float3 cellWorldPosition = gridBasePosition + neighbourCellPosition;
-				cellWorldPosition.xy = (cellWorldPosition.xy % cellsMult);
-
-				float3 cellOffset = hash3(cellWorldPosition + seedHash);
-				cellOffset *= maxOffset;
-
-				float distToNeighbour = length(
-					neighbourCellPosition + cellOffset - gridCoordOffset);
-				closest = min(closest, distToNeighbour);
-			}
-		}
-	}
-
-	return saturate(closest);
+    // gradients
+    float3 ga = hash_33(mod(p + float3(0., 0., 0.), freq));
+    float3 gb = hash_33(mod(p + float3(1., 0., 0.), freq));
+    float3 gc = hash_33(mod(p + float3(0., 1., 0.), freq));
+    float3 gd = hash_33(mod(p + float3(1., 1., 0.), freq));
+    float3 ge = hash_33(mod(p + float3(0., 0., 1.), freq));
+    float3 gf = hash_33(mod(p + float3(1., 0., 1.), freq));
+    float3 gg = hash_33(mod(p + float3(0., 1., 1.), freq));
+    float3 gh = hash_33(mod(p + float3(1., 1., 1.), freq));
+    
+    // projections
+    float va = dot(ga, w - float3(0., 0., 0.));
+    float vb = dot(gb, w - float3(1., 0., 0.));
+    float vc = dot(gc, w - float3(0., 1., 0.));
+    float vd = dot(gd, w - float3(1., 1., 0.));
+    float ve = dot(ge, w - float3(0., 0., 1.));
+    float vf = dot(gf, w - float3(1., 0., 1.));
+    float vg = dot(gg, w - float3(0., 1., 1.));
+    float vh = dot(gh, w - float3(1., 1., 1.));
+	
+    // interpolation
+    return va + 
+           u.x * (vb - va) + 
+           u.y * (vc - va) + 
+           u.z * (ve - va) + 
+           u.x * u.y * (va - vb - vc + vd) + 
+           u.y * u.z * (va - vc - ve + vg) + 
+           u.z * u.x * (va - vb - ve + vf) + 
+           u.x * u.y * u.z * (-va + vb + vc - vd + ve - vf - vg + vh);
 }
 
-float remap(float v, float inMin, float inMax, float outMin, float outMax) {
-	float t = inverseLerp(inMin, inMax, v);
-	return lerp(outMin, outMax, t);
+int u_size;
+
+// Tileable 3D worley noise
+float worley_noise(float3 uv, float freq)
+{    
+	// uv *= u_size;
+    float3 id = floor(uv);
+    float3 p = frac(uv);
+    
+    float min_dist = 10000.;
+    for (float x = -1.; x <= 1.; ++x)
+    {
+        for(float y = -1.; y <= 1.; ++y)
+        {
+            for(float z = -1.; z <= 1.; ++z)
+            {
+                float3 offset = float3(x, y, z);
+            	float3 h = hash_33(mod(id + offset, freq)) * .5 + .5;
+    			h += offset;
+            	float3 d = p - h;
+           		min_dist = min(min_dist, dot(d, d));
+            }
+        }
+    }
+    
+    // inverted worley noise
+    return 1. - min_dist;
 }
 
-float smootherstep(float edge0, float edge1, float x) {
-	x = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
-	return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
+// Fbm for Perlin noise based on iq's blog
+float perlin_fbm(float3 p, float freq, int octaves)
+{
+    float G = exp2(-.85);
+    float amp = 1.;
+    float noise = 0.;
+    for (int i = 0; i < octaves; ++i)
+    {
+        noise += amp * gradient_noise(p * freq, freq);
+        freq *= 2.;
+        amp *= G;
+    }
+    
+    return noise;
 }
 
-float2 smootherstep2(float2 edge0, float2 edge1, float2 x) {
-	x = clamp((x - edge0) / (edge1 - edge0), 0, 1);
-	return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
-}
-
-float3 smootherstep3(float3 edge0, float3 edge1, float3 x) {
-	x = clamp((x - edge0) / (edge1 - edge0), 0, 1);
-	return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
-}
-
-
-float gradientNoise(float3 p, float tileLength) {
-	float3 i = floor(p);
-	float3 f = frac(p);
-
-	float3 u = smootherstep3(0, 1, f);
-
-	/*
-	* For 1D, the gradient of slope g at vertex u has the form h(x) = g * (x - u), where u
-	* is an integer and g is in [-1, 1]. This is the equation for a line with slope g which
-	* intersects the x-axis at u.
-	* For N dimensional noise, use dot product instead of multiplication, and do
-	* component-wise interpolation (for 3D, trilinear)
-	*/
-	return lerp(lerp(lerp(dot(hash3_New(i + float3(0.0, 0.0, 0.0), tileLength), f - float3(0.0, 0.0, 0.0)),
-		dot(hash3_New(i + float3(1.0, 0.0, 0.0), tileLength), f - float3(1.0, 0.0, 0.0)), u.x),
-		lerp(dot(hash3_New(i + float3(0.0, 1.0, 0.0), tileLength), f - float3(0.0, 1.0, 0.0)),
-			dot(hash3_New(i + float3(1.0, 1.0, 0.0), tileLength), f - float3(1.0, 1.0, 0.0)), u.x), u.y),
-		lerp(lerp(dot(hash3_New(i + float3(0.0, 0.0, 1.0), tileLength), f - float3(0.0, 0.0, 1.0)),
-			dot(hash3_New(i + float3(1.0, 0.0, 1.0), tileLength), f - float3(1.0, 0.0, 1.0)), u.x),
-			lerp(dot(hash3_New(i + float3(0.0, 1.0, 1.0), tileLength), f - float3(0.0, 1.0, 1.0)),
-				dot(hash3_New(i + float3(1.0, 1.0, 1.0), tileLength), f - float3(1.0, 1.0, 1.0)), u.x), u.y), u.z);
-}
-
-// https://github.com/sebh/TileableVolumeNoise/blob/master/TileableVolumeNoise.cpp
-float tileableFBM(float3 p, float tileLength) {
-	const float persistence = 0.5;
-	const float lacunarity = 2.0;
-	const int octaves = 8;
-
-	float amplitude = 0.5;
-	float total = 0.0;
-	float normalization = 0.0;
-
-	for (int i = 0; i < octaves; ++i) {
-		float noiseValue = gradientNoise(p, tileLength * lacunarity * 0.5) * 0.5 + 0.5;
-		total += noiseValue * amplitude;
-		normalization += amplitude;
-		amplitude *= persistence;
-		p = p * lacunarity;
-	}
-
-	total /= normalization;
-	total = smootherstep(0.0, 1.0, total);
-
-	return total;
-}
-
-// https://github.com/sebh/TileableVolumeNoise/blob/master/main.cpp
-float4 PerlinWorleyDetails(float CELL_RANGE, float numCells, float mult) {
-	float perlinWorley = 0.0;
-	{
-		float worley0 = 1.0 - voronoiSlow(CELL_RANGE, numCells * 2.0 * mult, 1.0);
-		float worley1 = 1.0 - voronoiSlow(CELL_RANGE, numCells * 8.0 * mult, 2.0);
-		float worley2 = 1.0 - voronoiSlow(CELL_RANGE, numCells * 16.0 * mult, 3.0);
-		float worleyFBM = worley0 * 0.625 + worley1 * 0.25 + worley2 * 0.125;
-
-		float tileLength = 8.0;
-		float fbm0 = tileableFBM(float3(vUvs * tileLength, zLevel) * mult, tileLength);
-
-		perlinWorley = remap(fbm0, 0.0, 1.0, worleyFBM, 1.0);
-	}
-
-	float worley0 = 1.0 - voronoiSlow(CELL_RANGE, numCells * 1.0 * mult, 4.0);
-	float worley1 = 1.0 - voronoiSlow(CELL_RANGE, numCells * 2.0 * mult, 5.0);
-	float worley2 = 1.0 - voronoiSlow(CELL_RANGE, numCells * 4.0 * mult, 6.0);
-	float worley3 = 1.0 - voronoiSlow(CELL_RANGE, numCells * 8.0 * mult, 7.0);
-	float worley4 = 1.0 - voronoiSlow(CELL_RANGE, numCells * 16.0 * mult, 8.0);
-	float worley5 = 1.0 - voronoiSlow(CELL_RANGE, numCells * 32.0 * mult, 9.0);
-
-	float worleyFBM0 = worley1 * 0.625 + worley2 * 0.25 + worley3 * 0.125;
-	float worleyFBM1 = worley2 * 0.625 + worley3 * 0.25 + worley4 * 0.125;
-	float worleyFBM2 = worley3 * 0.625 + worley4 * 0.25 + worley5 * 0.125;
-
-	float lowFreqFBM = worleyFBM0 * 0.625 + worleyFBM1 * 0.25 + worleyFBM2 * 0.125;
-
-	float tileLength = 8.0;
-	float perlinWorleyDetail = remap(perlinWorley, lowFreqFBM, 1.0, 0.0, 1.0);
-
-	return float4(perlinWorley, perlinWorleyDetail, 0.0, 0.0);
+// Tileable Worley fbm inspired by Andrew Schneider's Real-Time Volumetric Cloudscapes
+// chapter in GPU Pro 7.
+float worley_fbm(float3 p, float freq)
+{
+    return worley_noise(p*freq, freq) * .625; +
+           worley_noise(p*freq*2., freq*2.) * .25 +
+           worley_noise(p*freq*4., freq*4.) * .125;
 }
 
 
 [numthreads(1, 1, 1)]
 void FirstCloudKernel(uint3 id : SV_DispatchThreadID)
 {
-	vUvs = id.xy / TargetSize;
-	zLevel = id.z / 4.0f;
+	float3 vUvs = id.xyz / (float)u_size;
 
-	CloudTex1[id.xyz] = PerlinWorleyDetails(1, numCells, 1.0);
+	float perlin = lerp(1.0f, perlin_fbm(vUvs, 4.0f, 7), 0.5f);
+    perlin = abs(perlin * 2. - 1.); // billowy perlin noise
+    float freq = 4.0f;
+
+    float worley0 = worley_fbm(vUvs, freq * 2.0f);
+    float worley1 = worley_fbm(vUvs, freq * 4.0f);
+    float worley2 = worley_fbm(vUvs, freq * 8.0f);
+ 	// perlin = worley_fbm(vUvs, freq);
+    perlin = remap(perlin, 0.0f, 1.0f, worley0, 1.0f); // perlin-worley
+    // perlin *= 0.7f;
+    // perlin += 0.15f;
+ 	perlin *= 0.75f;
+ 	perlin += worley0 * 0.75f * 0.75f;
+ 	perlin += worley1 * pow(0.75f, 3);
+ 	perlin += worley2 * pow(0.75f, 4);
+    float4 cloud = float4(perlin, perlin, perlin, 1);
+
+	CloudTex1[id.xyz] = cloud;
 
 
 }
 
 #pragma kernel SecondCloudKernel
+RWTexture3D<float4> CloudTex2;
 
 
 [numthreads(1, 1, 1)]
 void SecondCloudKernel(uint3 id : SV_DispatchThreadID)
 {
+	float3 vUvs = id.xyz / (float)u_size;
+	float freq = 8.0f;
 
-}
+    float worley0 = worley_fbm(vUvs, freq);
+    float worley1 = worley_fbm(vUvs, freq * 2.0f);
+    float worley2 = worley_fbm(vUvs, freq * 4.0f);
+ 	worley0 *= 0.5;
+ 	worley0 += worley1 * 0.25;
+ 	worley0 += worley2 * 0.13;
 
-
-#pragma kernel ThirdCloudKernel
-
-
-[numthreads(1, 1, 1)]
-void ThirdCloudKernel(uint3 id : SV_DispatchThreadID)
-{
-
-	// if(id.z == 32) CloudTex2[id.xy] *= float4(1.0f - fBm_F0(id.xyz / TargetSize * 2.0f + 31.4f, 2), 0, 0, 1);
-
+    float4 worley = float4(worley0, worley0, worley0, 1.0f); 
+    
+    CloudTex2[id] = worley;
 }

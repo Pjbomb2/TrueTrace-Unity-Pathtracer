@@ -5,13 +5,15 @@ using System.Collections.Generic;
 using UnityEngine;
 using CommonVars;
 using System.Threading.Tasks;
+using UnityEngine.Rendering;
 #pragma warning disable 1998
 
 namespace TrueTrace {
     [System.Serializable]
     public class ParentObject : MonoBehaviour
     {
-
+        public Task AsyncTask;
+        public int ExistsInQue = -1;
         [HideInInspector] public ComputeBuffer TriBuffer;
         [HideInInspector] public ComputeBuffer BVHBuffer;
         [HideInInspector] public List<LightMapTriangle> LightMapTris;
@@ -67,7 +69,7 @@ namespace TrueTrace {
         public AssetManager Assets;
 
         public int TotalTriangles;
-        [HideInInspector] public bool IsSkinnedGroup;
+        public bool IsSkinnedGroup;
 
         private ComputeBuffer NodeBuffer;
         private ComputeBuffer AdvancedTriangleBuffer;
@@ -128,8 +130,11 @@ namespace TrueTrace {
             public float SpecTransRange;
             public bool IsCutout;
             public Color BaseColorValue;
-            public Vector2 TextureScale;
-            public Vector2 TextureOffset;
+            public Vector4 AlbedoTextureScale;
+            public Vector4 NormalTextureScale;
+            public Vector4 MetallicTextureScale;
+            public Vector4 RoughnessTextureScale;
+            public Vector4 EmissiveTextureScale;
         }
         public List<PerMatTextureData> MatTexData;
 
@@ -175,21 +180,21 @@ namespace TrueTrace {
             {
                 for (int i = 0; i < VertexBuffers.Length; i++)
                 {
-                    VertexBuffers[i].Dispose();
-                    IndexBuffers[i].Dispose();
-                    NodeBuffer.Dispose();
-                    AdvancedTriangleBuffer.Dispose();
-                    StackBuffer.Dispose();
-                    CWBVHIndicesBuffer.Dispose();
-                    BVHDataBuffer.Dispose();
-                    ToBVHIndexBuffer.Dispose();
-                    for(int i2 = 0; i2 < WorkingBuffer.Length; i2++) WorkingBuffer[i2].Dispose();
+                    VertexBuffers[i]?.Dispose();
+                    IndexBuffers[i]?.Dispose();
                 }
+                NodeBuffer?.Dispose();
+                AdvancedTriangleBuffer?.Dispose();
+                StackBuffer?.Dispose();
+                CWBVHIndicesBuffer?.Dispose();
+                BVHDataBuffer?.Dispose();
+                ToBVHIndexBuffer?.Dispose();
+                for(int i2 = 0; i2 < WorkingBuffer.Length; i2++) WorkingBuffer[i2]?.Dispose();
             }
             if (TriBuffer != null)
             {
-                TriBuffer.Dispose();
-                BVHBuffer.Dispose();
+                TriBuffer?.Dispose();
+                BVHBuffer?.Dispose();
             }
         }
 
@@ -352,7 +357,7 @@ namespace TrueTrace {
                                 AlbedoTexs.Add(SharedMaterials[i].mainTexture);
                             }
                         }
-                        Assets.AddMaterial(SharedMaterials[i].shader.name, "_MainTex");
+                        Assets.AddMaterial(SharedMaterials[i].shader);
                         Index = AssetManager.ShaderNames.IndexOf(SharedMaterials[i].shader.name);
                     }
                     MaterialShader RelevantMat = AssetManager.data.Material[Index];
@@ -374,10 +379,10 @@ namespace TrueTrace {
                     if(RelevantMat.IsCutout) {// || (SharedMaterials[i].GetFloat("_Mode") == 1)) {
                         CurrentTexDat.IsCutout = true;
                     }
-                    if (SharedMaterials[i].GetTexture(RelevantMat.BaseColorTex) != null)
+                    if(RelevantMat.Name.Equals("Standard") && SharedMaterials[i].GetFloat("_Mode") == 1) CurrentTexDat.IsCutout = true;
+                    if (SharedMaterials[i].GetTexture(RelevantMat.BaseColorTex) as Texture2D != null)
                     {
-                        CurrentTexDat.TextureScale = SharedMaterials[i].GetTextureScale(RelevantMat.BaseColorTex);
-                        CurrentTexDat.TextureOffset = SharedMaterials[i].GetTextureOffset(RelevantMat.BaseColorTex);
+                        CurrentTexDat.AlbedoTextureScale = new Vector4(SharedMaterials[i].GetTextureScale(RelevantMat.BaseColorTex).x, SharedMaterials[i].GetTextureScale(RelevantMat.BaseColorTex).y, SharedMaterials[i].GetTextureOffset(RelevantMat.BaseColorTex).x, SharedMaterials[i].GetTextureOffset(RelevantMat.BaseColorTex).y);
                         if (AlbedoTexs.Contains(SharedMaterials[i].GetTexture(RelevantMat.BaseColorTex)))
                         {
                             AlbedoIndexes[AlbedoTexs.IndexOf(SharedMaterials[i].GetTexture(RelevantMat.BaseColorTex))].RayObjectList.Add(TempObj);
@@ -389,8 +394,9 @@ namespace TrueTrace {
                             AlbedoTexs.Add(SharedMaterials[i].GetTexture(RelevantMat.BaseColorTex));
                         }
                     }
-                    if (!RelevantMat.NormalTex.Equals("null") && SharedMaterials[i].GetTexture(RelevantMat.NormalTex) != null)
+                    if (!RelevantMat.NormalTex.Equals("null") && SharedMaterials[i].GetTexture(RelevantMat.NormalTex) as Texture2D != null)
                     {
+                        CurrentTexDat.NormalTextureScale = new Vector4(SharedMaterials[i].GetTextureScale(RelevantMat.NormalTex).x, SharedMaterials[i].GetTextureScale(RelevantMat.NormalTex).y, SharedMaterials[i].GetTextureOffset(RelevantMat.NormalTex).x, SharedMaterials[i].GetTextureOffset(RelevantMat.NormalTex).y);
                         if (NormalTexs.Contains(SharedMaterials[i].GetTexture(RelevantMat.NormalTex)))
                         {
                             NormalIndexes[NormalTexs.IndexOf(SharedMaterials[i].GetTexture(RelevantMat.NormalTex))].RayObjectList.Add(TempObj);
@@ -402,9 +408,10 @@ namespace TrueTrace {
                             NormalTexs.Add(SharedMaterials[i].GetTexture(RelevantMat.NormalTex));
                         }
                     }
-                    if (!RelevantMat.EmissionTex.Equals("null") && SharedMaterials[i].GetTexture(RelevantMat.EmissionTex) != null)
+                    if (!RelevantMat.EmissionTex.Equals("null") && SharedMaterials[i].GetTexture(RelevantMat.EmissionTex) as Texture2D != null)
                     {
-                         CurrentTexDat.HasEmissiveMap = true;
+                        CurrentTexDat.EmissiveTextureScale = new Vector4(SharedMaterials[i].GetTextureScale(RelevantMat.EmissionTex).x, SharedMaterials[i].GetTextureScale(RelevantMat.EmissionTex).y, SharedMaterials[i].GetTextureOffset(RelevantMat.EmissionTex).x, SharedMaterials[i].GetTextureOffset(RelevantMat.EmissionTex).y);
+                        CurrentTexDat.HasEmissiveMap = true;
                         if (EmissionTexs.Contains(SharedMaterials[i].GetTexture(RelevantMat.EmissionTex)))
                         {
                             EmissionIndexes[EmissionTexs.IndexOf(SharedMaterials[i].GetTexture(RelevantMat.EmissionTex))].RayObjectList.Add(TempObj);
@@ -416,8 +423,9 @@ namespace TrueTrace {
                             EmissionTexs.Add(SharedMaterials[i].GetTexture(RelevantMat.EmissionTex));
                         }
                     }
-                    if (!RelevantMat.MetallicTex.Equals("null") && SharedMaterials[i].GetTexture(RelevantMat.MetallicTex) != null)
+                    if (!RelevantMat.MetallicTex.Equals("null") && SharedMaterials[i].GetTexture(RelevantMat.MetallicTex) as Texture2D != null)
                     {
+                        CurrentTexDat.MetallicTextureScale = new Vector4(SharedMaterials[i].GetTextureScale(RelevantMat.MetallicTex).x, SharedMaterials[i].GetTextureScale(RelevantMat.MetallicTex).y, SharedMaterials[i].GetTextureOffset(RelevantMat.MetallicTex).x, SharedMaterials[i].GetTextureOffset(RelevantMat.MetallicTex).y);
                         if (MetallicTexs.Contains(SharedMaterials[i].GetTexture(RelevantMat.MetallicTex)))
                         {
                             MetallicIndexes[MetallicTexs.IndexOf(SharedMaterials[i].GetTexture(RelevantMat.MetallicTex))].RayObjectList.Add(TempObj);
@@ -430,8 +438,9 @@ namespace TrueTrace {
                             MetallicTexChannelIndex.Add(RelevantMat.MetallicTexChannel);
                         }
                     }
-                    if (!RelevantMat.RoughnessTex.Equals("null") && SharedMaterials[i].GetTexture(RelevantMat.RoughnessTex) != null)
+                    if (!RelevantMat.RoughnessTex.Equals("null") && SharedMaterials[i].GetTexture(RelevantMat.RoughnessTex) as Texture2D != null)
                     {
+                        CurrentTexDat.RoughnessTextureScale = new Vector4(SharedMaterials[i].GetTextureScale(RelevantMat.RoughnessTex).x, SharedMaterials[i].GetTextureScale(RelevantMat.RoughnessTex).y, SharedMaterials[i].GetTextureOffset(RelevantMat.RoughnessTex).x, SharedMaterials[i].GetTextureOffset(RelevantMat.RoughnessTex).y);
                         if (RoughnessTexs.Contains(SharedMaterials[i].GetTexture(RelevantMat.RoughnessTex)))
                         {
                             RoughnessIndexes[RoughnessTexs.IndexOf(SharedMaterials[i].GetTexture(RelevantMat.RoughnessTex))].RayObjectList.Add(TempObj);
@@ -463,13 +472,14 @@ namespace TrueTrace {
                     CurrentObjectOffset = 0;
                 }
                 RayTracingObject MaterialObject = Obj.MaterialObject;
-                if(MaterialObject.Metallic[CurrentObjectOffset] == 0 && Obj.MetallicRange != -1 && MaterialObject.JustCreated) {
+                MaterialObject.JustCreated = MaterialObject.JustCreated || MaterialObject.FollowMaterial[CurrentObjectOffset];
+                if(Obj.MetallicRange != -1 && MaterialObject.JustCreated) {
                     MaterialObject.Metallic[CurrentObjectOffset] = Obj.MetallicRange;
                 }
                 if(Obj.IsCutout) {
                     MaterialObject.MaterialOptions[CurrentObjectOffset] = RayTracingObject.Options.Cutout;
                 }
-                if(MaterialObject.Roughness[CurrentObjectOffset] == 0 && Obj.RoughnessRange != -1 && MaterialObject.JustCreated) {
+                if(Obj.RoughnessRange != -1 && MaterialObject.JustCreated) {
                     MaterialObject.Roughness[CurrentObjectOffset] = Obj.RoughnessRange;
                 }
                 if(MaterialObject.SpecTrans[CurrentObjectOffset] == 0 && Obj.SpecTransRange != -1 && MaterialObject.JustCreated) {
@@ -492,8 +502,11 @@ namespace TrueTrace {
                     MatType = (int)MaterialObject.MaterialOptions[CurrentObjectOffset],
                     EmissionColor = MaterialObject.EmissionColor[CurrentObjectOffset],
                     specTrans = MaterialObject.SpecTrans[CurrentObjectOffset],
-                    TextureScale = Obj.TextureScale,
-                    TextureOffset = Obj.TextureOffset,
+                    AlbedoTextureScale = Obj.AlbedoTextureScale,
+                    NormalTextureScale = Obj.NormalTextureScale,
+                    MetallicTextureScale = Obj.MetallicTextureScale,
+                    RoughnessTextureScale = Obj.RoughnessTextureScale,
+                    EmissiveTextureScale = Obj.EmissiveTextureScale,
                 });
                 Obj.MaterialObject.Indexes[CurrentObjectOffset] = Obj.Offset;
                 Obj.MaterialObject.MaterialIndex[CurrentObjectOffset] = CurMat;
@@ -542,7 +555,7 @@ namespace TrueTrace {
                 int TempObjectCount = TempObjects.Count;
                 for (int i = TempObjectCount - 1; i >= 0; i--)
                 {
-                    if (TempObjects[i].gameObject.GetComponent<SkinnedMeshRenderer>() != null)
+                    if (TempObjects[i].gameObject.GetComponent<SkinnedMeshRenderer>() != null && TempObjects[i].gameObject.activeInHierarchy)
                     {
                         TempObjectTransforms.Add(TempObjects[i].gameObject.transform);
                     }
@@ -743,15 +756,15 @@ namespace TrueTrace {
             System.Array.Resize(ref BVH.BVH8Nodes, BVH.cwbvhnode_count);
             ToBVHIndex = new int[BVH.cwbvhnode_count];
 
+            CWBVHIndicesBufferInverted = new int[BVH.cwbvh_indices.Length];
+            int CWBVHIndicesBufferCount = CWBVHIndicesBufferInverted.Length;
+            #if !HardwareRT
+                for (int i = 0; i < CWBVHIndicesBufferCount; i++) CWBVHIndicesBufferInverted[BVH.cwbvh_indices[i]] = i;
+            #else
+                for (int i = 0; i < CWBVHIndicesBufferCount; i++) CWBVHIndicesBufferInverted[i] = i;
+            #endif
             if (IsSkinnedGroup)
             {
-                CWBVHIndicesBufferInverted = new int[BVH.cwbvh_indices.Length];
-                int CWBVHIndicesBufferCount = CWBVHIndicesBufferInverted.Length;
-                #if !HardwareRT
-                    for (int i = 0; i < CWBVHIndicesBufferCount; i++) CWBVHIndicesBufferInverted[BVH.cwbvh_indices[i]] = i;
-                #else
-                    for (int i = 0; i < CWBVHIndicesBufferCount; i++) CWBVHIndicesBufferInverted[i] = i;
-                #endif
                 NodePair = new List<NodeIndexPairData>();
                 NodePair.Add(new NodeIndexPairData());
                 DocumentNodes(0, 0, 1, 0, false, 0);
@@ -799,6 +812,11 @@ namespace TrueTrace {
                     LayerStack[NodePair[i].RecursionCount] = TempLayer;
                 }
                 ConvertToSplitNodes();
+            }
+            for(int i = 0; i < LightTriangles.Count; i++) {
+                var A = LightTriangles[i];
+                A.TriIndex = CWBVHIndicesBufferInverted[A.TriIndex];
+                LightTriangles[i] = A;
             }
         }
 
@@ -883,7 +901,7 @@ namespace TrueTrace {
         public int OffsetFirst;
 
 
-        public void RefitMesh(ref ComputeBuffer RealizedAggNodes)
+        public void RefitMesh(ref ComputeBuffer RealizedAggNodes, ref ComputeBuffer RealizedTriBuffer, CommandBuffer cmd)
         {
             #if HardwareRT
                 for(int i = 0; i < Renderers.Length; i++) {
@@ -943,21 +961,28 @@ namespace TrueTrace {
             }
             else if (AllFull)
             {
+                for (int i = 0; i < VertexBuffers.Length; i++)
+                {
+                    VertexBuffers[i].Dispose();
+                    SkinnedMeshes[i].vertexBufferTarget |= GraphicsBuffer.Target.Raw;
+                    VertexBuffers[i] = SkinnedMeshes[i].GetVertexBuffer();
+                }
                 if (Hips == null) Hips = SkinnedMeshes[0].rootBone;//transform;
                 if(Hips == null) return;
                 UnityEngine.Profiling.Profiler.BeginSample("ReMesh Fill");
-                MeshRefit.SetMatrix("Transform2", this.transform.localToWorldMatrix);
-                MeshRefit.SetMatrix("Transform3", this.transform.worldToLocalMatrix);
-                MeshRefit.SetVector("Scale", this.transform.lossyScale);
-                MeshRefit.SetVector("OverallOffset", Hips.parent.localToWorldMatrix * Hips.localPosition);
-                MeshRefit.SetVector("ArmetureOffset", this.transform.localToWorldMatrix * Hips.parent.localPosition);
-                MeshRefit.SetBuffer(RefitLayerKernel, "ReverseStack", StackBuffer);
-                MeshRefit.SetBuffer(ConstructKernel, "AdvancedTriangles", AdvancedTriangleBuffer);
-                MeshRefit.SetBuffer(ConstructKernel, "CudaTriArray", TriBuffer);
-                MeshRefit.SetBuffer(ConstructKernel, "CWBVHIndices", CWBVHIndicesBuffer);
-                MeshRefit.SetBuffer(ConstructKernel, "AdvancedTriangles", AdvancedTriangleBuffer);
-                MeshRefit.SetBuffer(NodeInitializerKernel, "AllNodes", NodeBuffer);
-                MeshRefit.SetBuffer(RefitLayerKernel, "AllNodes", NodeBuffer);
+                cmd.SetComputeMatrixParam(MeshRefit, "Transform2", this.transform.localToWorldMatrix);
+                cmd.SetComputeMatrixParam(MeshRefit, "Transform3", this.transform.worldToLocalMatrix);
+                cmd.SetComputeVectorParam(MeshRefit, "Scale", this.transform.lossyScale);
+                cmd.SetComputeVectorParam(MeshRefit, "OverallOffset", Hips.parent.localToWorldMatrix * Hips.localPosition);
+                cmd.SetComputeVectorParam(MeshRefit, "ArmetureOffset", this.transform.localToWorldMatrix * Hips.parent.localPosition);
+                cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "ReverseStack", StackBuffer);
+                cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "AdvancedTriangles", AdvancedTriangleBuffer);
+                cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "CudaTriArrayIN", TriBuffer);
+                cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "CudaTriArray", RealizedTriBuffer);
+                cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "CWBVHIndices", CWBVHIndicesBuffer);
+                cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "AdvancedTriangles", AdvancedTriangleBuffer);
+                cmd.SetComputeBufferParam(MeshRefit, NodeInitializerKernel, "AllNodes", NodeBuffer);
+                cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "AllNodes", NodeBuffer);
                 UnityEngine.Profiling.Profiler.EndSample();
                 int CurVertOffset = 0;
                 UnityEngine.Profiling.Profiler.BeginSample("ReMesh Aggregate");
@@ -965,50 +990,49 @@ namespace TrueTrace {
                 {
                     var SkinnedRootBone = SkinnedMeshes[i].rootBone;
                     int IndexCount = IndexCounts[i];
-                    MeshRefit.SetInt("VertOffset", CurVertOffset);
-                    MeshRefit.SetInt("gVertexCount", IndexCount);
-                    MeshRefit.SetMatrix("Transform", SkinnedRootBone.worldToLocalMatrix);
-                    MeshRefit.SetVector("ArmetureScale", SkinnedRootBone.parent.lossyScale);
-                    MeshRefit.SetVector("Offset", SkinnedRootBone.position - Hips.position);
-                    MeshRefit.SetBuffer(ConstructKernel, "bufVertices", VertexBuffers[i]);
-                    MeshRefit.SetBuffer(ConstructKernel, "bufIndexes", IndexBuffers[i]);
-                    MeshRefit.Dispatch(ConstructKernel, (int)Mathf.Ceil(IndexCount / (float)KernelRatio), 1, 1);
+                    cmd.SetComputeIntParam(MeshRefit, "VertOffset", CurVertOffset);
+                    cmd.SetComputeIntParam(MeshRefit, "gVertexCount", IndexCount);
+                    cmd.SetComputeMatrixParam(MeshRefit, "Transform", SkinnedRootBone.worldToLocalMatrix);
+                    cmd.SetComputeVectorParam(MeshRefit, "ArmetureScale", SkinnedRootBone.parent.lossyScale);
+                    cmd.SetComputeVectorParam(MeshRefit, "Offset", SkinnedRootBone.position - Hips.position);
+                    cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "bufVertices", VertexBuffers[i]);
+                    cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "bufIndexes", IndexBuffers[i]);
+                    cmd.DispatchCompute(MeshRefit, ConstructKernel, (int)Mathf.Ceil(IndexCount / (float)KernelRatio), 1, 1);
                     CurVertOffset += IndexCount;
                 }
                 UnityEngine.Profiling.Profiler.EndSample();
 
                 UnityEngine.Profiling.Profiler.BeginSample("ReMesh NodeInit");
-                MeshRefit.SetInt("NodeCount", NodePair.Count);
-                MeshRefit.Dispatch(NodeInitializerKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
+                cmd.SetComputeIntParam(MeshRefit, "NodeCount", NodePair.Count);
+                cmd.DispatchCompute(MeshRefit, NodeInitializerKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
                 UnityEngine.Profiling.Profiler.EndSample();
 
                 UnityEngine.Profiling.Profiler.BeginSample("ReMesh Layer Solve");
-                MeshRefit.SetBuffer(RefitLayerKernel, "AdvancedTriangles", AdvancedTriangleBuffer);
+                cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "AdvancedTriangles", AdvancedTriangleBuffer);
                 for (int i = MaxRecur - 1; i >= 0; i--)
                 {
                     var NodeCount2 = LayerStack[i].Slab.Count;
-                    MeshRefit.SetInt("NodeCount", NodeCount2);
-                    MeshRefit.SetBuffer(RefitLayerKernel, "NodesToWork", WorkingBuffer[i]);
-                    MeshRefit.Dispatch(RefitLayerKernel, (int)Mathf.Ceil(WorkingBuffer[i].count / (float)KernelRatio), 1, 1);
+                    cmd.SetComputeIntParam(MeshRefit, "NodeCount", NodeCount2);
+                    cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "NodesToWork", WorkingBuffer[i]);
+                    cmd.DispatchCompute(MeshRefit, RefitLayerKernel, (int)Mathf.Ceil(WorkingBuffer[i].count / (float)KernelRatio), 1, 1);
                 }
                 UnityEngine.Profiling.Profiler.EndSample();
 
                 UnityEngine.Profiling.Profiler.BeginSample("ReMesh Solve");
-                MeshRefit.SetInt("NodeCount", NodePair.Count);
-                MeshRefit.SetBuffer(NodeUpdateKernel, "AllNodes", NodeBuffer);
-                MeshRefit.SetBuffer(NodeUpdateKernel, "BVHNodes", BVHDataBuffer);
-                MeshRefit.SetBuffer(NodeUpdateKernel, "ToBVHIndex", ToBVHIndexBuffer);
-                MeshRefit.Dispatch(NodeUpdateKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
+                cmd.SetComputeIntParam(MeshRefit, "NodeCount", NodePair.Count);
+                cmd.SetComputeBufferParam(MeshRefit, NodeUpdateKernel, "AllNodes", NodeBuffer);
+                cmd.SetComputeBufferParam(MeshRefit, NodeUpdateKernel, "BVHNodes", BVHDataBuffer);
+                cmd.SetComputeBufferParam(MeshRefit, NodeUpdateKernel, "ToBVHIndex", ToBVHIndexBuffer);
+                cmd.DispatchCompute(MeshRefit, NodeUpdateKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
                 UnityEngine.Profiling.Profiler.EndSample();
 
                 UnityEngine.Profiling.Profiler.BeginSample("ReMesh Compress");
-                MeshRefit.SetInt("NodeCount", BVH.BVH8Nodes.Length);
-                MeshRefit.SetInt("NodeOffset", NodeOffset);
-                MeshRefit.SetBuffer(NodeCompressKernel, "BVHNodes", BVHDataBuffer);
-                MeshRefit.SetBuffer(NodeCompressKernel, "AggNodes", RealizedAggNodes);
-                MeshRefit.Dispatch(NodeCompressKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
+                cmd.SetComputeIntParam(MeshRefit, "NodeCount", BVH.BVH8Nodes.Length);
+                cmd.SetComputeIntParam(MeshRefit, "NodeOffset", NodeOffset);
+                cmd.SetComputeBufferParam(MeshRefit, NodeCompressKernel, "BVHNodes", BVHDataBuffer);
+                cmd.SetComputeBufferParam(MeshRefit, NodeCompressKernel, "AggNodes", RealizedAggNodes);
+                cmd.DispatchCompute(MeshRefit, NodeCompressKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
                 UnityEngine.Profiling.Profiler.EndSample();
-            } else {
             }
 
             UnityEngine.Profiling.Profiler.BeginSample("ReMesh Buffer Refresh");
@@ -1021,12 +1045,6 @@ namespace TrueTrace {
                 }
                 if (!((new List<GraphicsBuffer>(VertexBuffers)).Contains(null))) AllFull = true;
             }
-                for (int i = 0; i < VertexBuffers.Length; i++)
-                {
-                    VertexBuffers[i].Dispose();
-                    SkinnedMeshes[i].vertexBufferTarget |= GraphicsBuffer.Target.Raw;
-                    VertexBuffers[i] = SkinnedMeshes[i].GetVertexBuffer();
-                }
             UnityEngine.Profiling.Profiler.EndSample();
         }
 
@@ -1167,14 +1185,13 @@ namespace TrueTrace {
                         float radiance = luminance(Radiance.x, Radiance.y, Radiance.z);
                         float area = AreaOfTriangle(ParentMat * V1, ParentMat * V2, ParentMat * V3);
                         float e = radiance * area;
+                        if(System.Double.IsNaN(area)) continue;
                         TotalEnergy += area;
                         TotEnergy += area;
 
                         LightTriangles.Add(new CudaLightTriangle()
                         {
-                            pos0 = V1,
-                            posedge1 = (V2 - V1),
-                            posedge2 = (V3 - V1),
+                            TriIndex = i3 / 3,
                             Norm = ((TempPrim.Norm1 + TempPrim.Norm2 + TempPrim.Norm3) / 3.0f),
                             UV1 = TempPrim.tex1,
                             UV2 = TempPrim.tex2,
@@ -1265,19 +1282,19 @@ namespace TrueTrace {
 
         public void UpdateAABB(Transform transform)
         {//Update the Transformed AABB by getting the new Max/Min of the untransformed AABB after transforming it
-            Matrix4x4 Mat = transform.localToWorldMatrix;
-            Vector3 new_center = CommonFunctions.transform_position(Mat, center);
-            // CommonFunctions.abs(ref Mat);
-            Vector3 new_extent = CommonFunctions.transform_direction(Mat, extent);
-
-            aabb.BBMin = new_center - new_extent;
-            aabb.BBMax = new_center + new_extent;
-            transform.hasChanged = false;
             #if HardwareRT
                 for(int i = 0; i < Renderers.Length; i++) {
                     Assets.AccelStruct.UpdateInstanceTransform(Renderers[i]);
                 }
-            #endif
+            #else
+                Matrix4x4 Mat = transform.localToWorldMatrix;
+                Vector3 new_center = CommonFunctions.transform_position(Mat, center);
+                Vector3 new_extent = CommonFunctions.transform_direction(Mat, extent);
+
+                aabb.BBMin = new_center - new_extent;
+                aabb.BBMax = new_center + new_extent;
+            #endif    
+            transform.hasChanged = false;
         }
 
         private void ConstructAABB()
@@ -1305,6 +1322,7 @@ namespace TrueTrace {
                 else
                 {
                     this.GetComponentInParent<AssetManager>().AddQue.Add(this);
+                    ExistsInQue = 3;
                     this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
                 }
                 HasCompleted = false;
@@ -1324,8 +1342,8 @@ namespace TrueTrace {
                 }
                 else
                 {
-                    this.GetComponentInParent<AssetManager>().RemoveQue.Add(this);
-                    this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
+                    Assets.RemoveQue.Add(this);
+                    Assets.ParentCountHasChanged = true;
                 }
                 HasCompleted = false;
             }
@@ -1378,11 +1396,20 @@ namespace TrueTrace {
     //         }
 
     // }
-    //             void Start() {}
-    //         void OnDrawGizmos() {
-    //             // Debug.Log("EEE");
-    //             RecurseDown(GameObject.Find("FoundPoint").transform.position, 0, false, 0);
-    //         }
+                // void Start() {}
+            // void OnDrawGizmos() {
+            //     // Debug.Log("EEE");
+            //     // RecurseDown(GameObject.Find("FoundPoint").transform.position, 0, false, 0);
+            //     for(int i = 0; i < AggTriangles.Length; i++) {
+            //         Vector3 V1 = this.transform.localToWorldMatrix * AggTriangles[i].pos0;
+            //         Vector3 V2 = this.transform.localToWorldMatrix * (AggTriangles[i].pos0 + AggTriangles[i].posedge1);
+            //         Vector3 V3 = this.transform.localToWorldMatrix * (AggTriangles[i].pos0 + AggTriangles[i].posedge2);
+            //         Gizmos.DrawLine(V1, V2);
+            //         Gizmos.DrawLine(V1, V3);
+            //         Gizmos.DrawLine(V3, V2);
+
+            //     }
+            // }
 
 
 
