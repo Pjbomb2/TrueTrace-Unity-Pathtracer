@@ -503,6 +503,8 @@ namespace TrueTrace {
                     TerrainInfos[i] = TempTerrain;
                 }
             }
+            if (!RenderQue.Any())
+                return;
             int CurCount = RenderQue[0].AlbedoTexs.Count;
             foreach (ParentObject Obj in RenderQue)
             {
