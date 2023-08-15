@@ -5,6 +5,16 @@
     RaytracingAccelerationStructure myAccelerationStructure;
 #endif
 
+#ifdef HDRP
+Texture2DArray<float2> MotionVectors;
+Texture2DArray<float3> NormalTex;
+Texture2DArray<float> Depth;
+#else
+Texture2D<float2> MotionVectors;
+Texture2D<float3> NormalTex;
+Texture2D<float> Depth;
+#endif
+
 #pragma kernel kernel_trace 
 
 inline void IntersectTriangle(int mesh_id, int tri_id, const Ray ray, inout RayHit ray_hit) {
@@ -25,12 +35,12 @@ inline void IntersectTriangle(int mesh_id, int tri_id, const Ray ray, inout RayH
         if (v >= 0.0f && u + v <= 1.0f) {
             float t = f * dot(tri.posedge2, q);
 
-            if (t > 0.0f && t < ray_hit.t) {
+            if (t > 0.000f && t < ray_hit.t && tri_id != ray_hit.triangle_id) {
                 #ifdef AdvancedAlphaMapped
                     int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTris[tri_id].MatDat);
                     if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                         float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - u - v) + AggTris[tri_id].texedge1 * u + AggTris[tri_id].texedge2 * v;
-                        BaseUv = BaseUv * _Materials[MaterialIndex].TextureScale + _Materials[MaterialIndex].TextureOffset;
+                        BaseUv = BaseUv * _Materials[MaterialIndex].AlbedoTexScale.xy + _Materials[MaterialIndex].AlbedoTexScale.zw;
                         float2 Uv = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].AlbedoTex.xy - _Materials[MaterialIndex].AlbedoTex.zw) + _Materials[MaterialIndex].AlbedoTex.zw;
                         if(AlphaAtlas.SampleLevel(sampler_clamp_point, Uv, 0) < 0.0001f) return;
                     }
@@ -55,12 +65,10 @@ inline void IntersectTriangle(int mesh_id, int tri_id, const Ray ray, inout RayH
 }
 
 
-int Pack2To1(int A, int B) {
-    return A | (B << 16);
-}
+
 
 void IntersectBVH() {
-int Reps;
+    int Reps;
     RayHit bestHit;
     Ray ray;
 
@@ -150,7 +158,7 @@ int Reps;
 
                     current_group.y = (hitmask & 0xff000000) | ((node_0w >> 24) & 0xff);
                     triangle_group.y = (hitmask & 0x00ffffff);
-                    Reps++;
+                    // Reps++;
                 }
                 else {
                     triangle_group.x = current_group.x;
@@ -191,6 +199,8 @@ int Reps;
                         break;
                     }
                     else {
+                    // Reps++;
+                        
                         uint triangle_index = firstbithigh(triangle_group.y);
                         triangle_group.y &= ~(1 << triangle_index);
                         IntersectTriangle(mesh_id, triangle_group.x + triangle_index, ray, bestHit);//Intersect Mesh Triangles
@@ -200,9 +210,9 @@ int Reps;
                     if (stack_size == 0) {//thread has finished traversing
                         // GlobalRays1[ray_index] = GlobalRays1[ray_index];
                         set(ray_index, bestHit);
-                        int PixIndex = GlobalRays1[ray_index].PixelIndex;
-                        uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
-                        _DebugTex[TempUv] = float4((Reps) / 42.0f,Reps > 80,0,1);
+                        // int PixIndex = GlobalRays1[ray_index].PixelIndex;
+                        // uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
+                        // _DebugTex[TempUv] = float4((Reps) / 42.0f,Reps > 80,0,1);
                         current_group.y = 0;
                         break;
                     }
@@ -224,251 +234,6 @@ int Reps;
 void kernel_trace() {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
     IntersectBVH();
 }
-
-#pragma kernel kernel_brickmap_trace
-StructuredBuffer<int> BrickMap;
-
-
-inline bool rayBoxIntersection(const float3 ray_orig, const float3 inv_dir, const float3 Min, const float3 Max, float tMax, inout float t0, inout float t1) {
-    const float3 tmp_min = (Min - ray_orig) * inv_dir;
-    const float3 tmp_max = (Max - ray_orig) * inv_dir;
-    const float3 tmin = min(tmp_min, tmp_max);
-    const float3 tmax = max(tmp_min, tmp_max);
-    t0 = max(tmin.x, max(tmin.y, max(tmin.z, 0))); // Usually ray_tmin = 0
-    t1 = min(tmax.x, min(tmax.y, min(tmax.z, tMax)));
-    return (t0 <= t1);
-}
-
-
-
-inline bool TraceBrickmap(float3 ray_orig, const float3 ray_direction, const float3 inv, inout RayHit bestHit, const int MeshIndex, const int GridSize, const int VoxelSize, const int BrickSize, const uint Offset, const float3 Scale) {
-    float Dist = 1.0f;
-    float Dist2 = 1.0f;
-    if (rayBoxIntersection(ray_orig, inv, 0, GridSize + 0.0001f, bestHit.t, Dist, Dist2)) {
-        ray_orig += ray_direction * Dist;
-
-        const int InitialSize = GridSize / (float)BrickSize;
-        int A = InitialSize;
-        const int3 raystep = sign(ray_direction);
-        int3 MapPos = floor((ray_orig + raystep * 0.001f) / A);
-        const float3 deltaDist = abs(inv);
-
-
-        float3 SideDist = (raystep * (MapPos - (ray_orig) / A) + (raystep * 0.5f) + 0.5f) * deltaDist;
-
-        bool3 mask;
-
-        const int MaxSteps = 10000;
-        int CurrentPositionIndex = 0;
-        float3 LastSideDist = 0;
-        float3 BBMax = GridSize;
-        float3 BBMin = 0;
-        int Layer = 0;
-        uint CurrentOffsetArray[10];
-        uint CurrentOffset = Offset;
-        CurrentOffsetArray[0] = Offset;
-        int CurrentSize = BrickSize;
-        const float3 OrigionalPosition = ray_orig * Scale;
-        for (int i = 0; i < MaxSteps; i++) {
-            const float3 LocalPos = fmod(MapPos, CurrentSize);
-            [branch] if ((any(MapPos * A >= BBMax) || any(MapPos * A < BBMin)) && A < InitialSize) {
-                float3 updatedPos = ray_orig + ray_direction * ((min(min(LastSideDist.x, LastSideDist.y), LastSideDist.z)) * A);
-                CurrentOffset = CurrentOffsetArray[--Layer];
-                A *= CurrentSize;
-                if (A == VoxelSize) CurrentSize = BrickSize;
-                BBMax = MapPos * A + A;
-                BBMin = MapPos * A;
-                ray_orig = updatedPos;
-                LastSideDist = 0;
-                MapPos = floor((updatedPos + raystep * 0.001f) / A);
-                SideDist = (raystep * (MapPos - updatedPos / A) + (raystep * 0.5f) + 0.5f) * deltaDist;
-            }
-            else {
-                [branch] if (A == 1 && BrickMap[(uint)CurrentOffset + (uint)LocalPos.x + (uint)LocalPos.y * (uint)CurrentSize + (uint)LocalPos.z * (uint)CurrentSize * (uint)CurrentSize] != -1) {
-                    if (length(OrigionalPosition - (ray_orig + ray_direction * ((min(min(LastSideDist.x, LastSideDist.y), LastSideDist.z)) * A)) * Scale) + Dist < bestHit.t) {
-                        bestHit.t = length(OrigionalPosition - (ray_orig + ray_direction * ((min(min(LastSideDist.x, LastSideDist.y), LastSideDist.z)) * A)) * Scale) + Dist;
-                        bestHit.triangle_id = BrickMap[(uint)CurrentOffset + (uint)LocalPos.x + (uint)LocalPos.y * (uint)CurrentSize + (uint)LocalPos.z * (uint)CurrentSize * (uint)CurrentSize];
-                        bestHit.mesh_id = MeshIndex;
-                        return true;
-                    }
-                    break;
-                }
-                [branch]if (BrickMap[CurrentOffset + LocalPos.x + LocalPos.y * CurrentSize + LocalPos.z * CurrentSize * CurrentSize] != -1 && A > 1) {
-                    float3 updatedPos = ray_orig + ray_direction * ((min(min(LastSideDist.x, LastSideDist.y), LastSideDist.z)) * A);
-                    CurrentOffsetArray[Layer++] = CurrentOffset;
-                    CurrentOffset = BrickMap[CurrentOffset + LocalPos.x + LocalPos.y * CurrentSize + LocalPos.z * CurrentSize * CurrentSize] + Offset;
-                    BBMax = MapPos * A + A;
-                    BBMin = MapPos * A;
-                    if (A == VoxelSize) CurrentSize = VoxelSize;
-                    A /= (uint)CurrentSize;
-                    ray_orig = updatedPos;
-                    LastSideDist = 0;
-                    MapPos = floor((updatedPos + raystep * 0.001f) / A);
-                    SideDist = (raystep * (MapPos - updatedPos / A) + (raystep * 0.5f) + 0.5f) * deltaDist;
-                }
-                else {
-                    mask = (SideDist.xyz <= min(SideDist.yzx, SideDist.zxy));
-                    LastSideDist = SideDist;
-                    SideDist += mask * deltaDist;
-                    MapPos += mask * raystep;
-                }
-            }
-
-
-            if (any(MapPos * A >= GridSize) || any(MapPos * A < 0)) break;
-        }
-    }
-    return false;
-}
-
-
-
-float3 GetScale(float4x4 m)
-{
-    return float3(
-        length(float3(m._m00, m._m10, m._m20)),
-        length(float3(m._m01, m._m11, m._m21)),
-        length(float3(m._m02, m._m12, m._m22))
-        );
-}
-
-
-void IntersectVoxelTLAS() {
-    RayHit bestHit;
-    Ray ray;
-
-    uint2 stack[8];
-    int stack_size = 0;
-    uint ray_index;
-    uint2 current_group;
-
-    uint oct_inv4;
-    int tlas_stack_size;
-    int mesh_id = VoxelOffset;
-    int NodeOffset = 0;
-    int TriOffset = 0;
-    Ray ray2;
-    uint2 TempUv;
-    while (true) {
-        bool inactive = stack_size == 0 && current_group.y == 0;
-
-        if (inactive) {//Revive dead threads(persistent threads, need Shader Model 6 to take true advantage of)
-            InterlockedAdd(BufferSizes[CurBounce].brickmap_rays_retired, 1, ray_index);
-            if (ray_index >= (uint)BufferSizes[CurBounce].tracerays) return;
-            ray.origin = GlobalRays1[ray_index].origin;
-            ray.direction = GlobalRays1[ray_index].direction;
-            ray.direction_inv = rcp(ray.direction);
-            bestHit = get(ray_index);
-            ray2 = ray;
-
-            oct_inv4 = ray_get_octant_inv4(ray.direction);
-
-            current_group.x = (uint)0;
-            current_group.y = (uint)0x80000000;
-
-            tlas_stack_size = -1;
-        }
-
-        while (true) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)           
-            uint2 triangle_group;
-            if (current_group.y & 0xff000000) {
-                uint hits_imask = current_group.y;
-                uint child_index_offset = firstbithigh(hits_imask);
-                uint child_index_base = current_group.x;
-
-                current_group.y &= ~(1 << child_index_offset);
-
-                if (current_group.y & 0xff000000) {
-                    stack[stack_size++] = current_group;
-                }
-                uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
-                uint relative_index = countbits(hits_imask & ~(0xffffffff << slot_index));
-                uint child_node_index = child_index_base + relative_index;
-
-                float3 node_0 = VoxelTLAS[child_node_index].node_0xyz;
-                uint node_0w = VoxelTLAS[child_node_index].node_0w;
-
-                uint4 node_1 = VoxelTLAS[child_node_index].node_1;
-                uint4 node_2 = VoxelTLAS[child_node_index].node_2;
-                uint4 node_3 = VoxelTLAS[child_node_index].node_3;
-                uint4 node_4 = VoxelTLAS[child_node_index].node_4;
-
-                uint hitmask = cwbvh_node_intersect(ray, oct_inv4, bestHit.t, node_0, node_0w, node_1, node_2, node_3, node_4);
-                uint imask = (node_0w >> (3 * 8)) & 0xff;
-
-                current_group.x = asuint(node_1.x) + ((tlas_stack_size == -1) ? 0 : NodeOffset);
-                triangle_group.x = asuint(node_1.y) + ((tlas_stack_size == -1) ? 0 : TriOffset);
-
-                current_group.y = (hitmask & 0xff000000) | (imask);
-                triangle_group.y = (hitmask & 0x00ffffff);
-            }
-            else {
-                triangle_group.x = current_group.x;
-                triangle_group.y = current_group.y;
-                current_group.x = (uint)0;
-                current_group.y = (uint)0;
-            }
-
-            while (triangle_group.y != 0) {
-                if (tlas_stack_size == -1) {//Transfer from Top Level Accelleration Structure to Bottom Level Accelleration Structure
-                    uint mesh_offset = firstbithigh(triangle_group.y);
-                    triangle_group.y &= ~(1 << mesh_offset);
-
-                    mesh_id = triangle_group.x + mesh_offset + VoxelOffset;
-                    NodeOffset = _MeshData[mesh_id].NodeOffset;
-                    TriOffset = _MeshData[mesh_id].TriOffset;
-                    if (triangle_group.y != 0) {
-                        stack[stack_size++] = triangle_group;
-                    }
-
-                    if (current_group.y & 0xff000000) {
-                        stack[stack_size++] = current_group;
-                    }
-                    tlas_stack_size = stack_size;
-
-                    int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
-
-                    ray.direction = (mul(_MeshData[mesh_id].Transform, float4(ray.direction, 0))).xyz;
-                    ray.origin = (mul(_MeshData[mesh_id].Transform, float4(ray.origin, 1))).xyz;
-                    ray.direction_inv = rcp(ray.direction);
-
-                    oct_inv4 = ray_get_octant_inv4(ray.direction);
-
-                    current_group.y = (uint)0x80000000;
-                    if (TraceBrickmap(ray.origin, ray.direction, ray.direction_inv, bestHit, mesh_id, _MeshData[mesh_id].Size.x, _MeshData[mesh_id].Size.y, _MeshData[mesh_id].Size.z, _MeshData[mesh_id].NodeOffset, GetScale(_MeshData[mesh_id].Inverse))) { GlobalRays1[ray_index].HitVoxel = 1; set(ray_index, bestHit); }
-                    break;
-                }
-                else {
-                    uint triangle_index = firstbithigh(triangle_group.y);
-                    triangle_group.y &= ~(1 << triangle_index);
-                }
-            }
-            if ((current_group.y & 0xff000000) == 0) {
-                if (stack_size == 0) {//thread has finished traversing
-                    set(ray_index, bestHit);
-                    break;
-                }
-
-                if (stack_size == tlas_stack_size) {
-
-                    tlas_stack_size = -1;
-                    ray = ray2;
-                    oct_inv4 = ray_get_octant_inv4(ray.direction);
-                }
-                current_group = stack[--stack_size];
-            }
-        }
-    }
-}
-
-
-[numthreads(64, 1, 1)]
-void kernel_brickmap_trace() {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
-
-    IntersectVoxelTLAS();
-}
-
-
 
 #pragma kernel kernel_shadow
 
@@ -494,6 +259,7 @@ void IntersectBVHShadow(const int localid) {
         ray.direction = ShadowRaysBuffer[ray_index].direction;
         ray.direction_inv = rcp(ray.direction);
         ray2 = ray;
+        float3 throughput = 1;
 
         oct_inv4 = ray_get_octant_inv4(ray.direction);
 
@@ -517,8 +283,7 @@ void IntersectBVHShadow(const int localid) {
 
             if(q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) ShadowRaysBuffer[ray_index].t = -1;
              else {
-                if(!DoVoxels || DoHeightmap) {
-                    CurrentReservoirGI[ShadowRaysBuffer[ray_index].PixelIndex].LuminanceIncomming += ShadowRaysBuffer[ray_index].LuminanceIncomming;// * ((CurBounce == 0) ? 10.0f : 1.0f);
+                    CurrentReservoirGI[ShadowRaysBuffer[ray_index].PixelIndex].LuminanceIncommingM = Pack2To1((Unpack1To2(CurrentReservoirGI[ShadowRaysBuffer[ray_index].PixelIndex].LuminanceIncommingM).y / 1000.0f + ShadowRaysBuffer[ray_index].LuminanceIncomming) * 1000.0f, 0);// * ((CurBounce == 0) ? 10.0f : 1.0f);
                     if (ShadowRaysBuffer[ray_index].PrimaryNEERay) {
                         if (CurBounce == 0) {
                             GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].Direct += ShadowRaysBuffer[ray_index].illumination;
@@ -530,7 +295,6 @@ void IntersectBVHShadow(const int localid) {
                     else {
                         GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].PrimaryNEERay += packRGBE(UseReSTIRGI ? ShadowRaysBuffer[ray_index].RadianceIncomming : ShadowRaysBuffer[ray_index].illumination);
                     }
-                }
             }
         #else
             while (true) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
@@ -608,7 +372,7 @@ void IntersectBVHShadow(const int localid) {
                         uint triangle_index = firstbithigh(triangle_group.y);
                         triangle_group.y &= ~(1 << triangle_index);
 
-                        if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, max_distance, mesh_id)) {
+                        if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, max_distance, mesh_id, throughput)) {
                             hit = true;
                             ShadowRaysBuffer[ray_index].t = -1;
                             break;
@@ -625,20 +389,20 @@ void IntersectBVHShadow(const int localid) {
                 if ((current_group.y & 0xff000000) == 0) {
                     if (stack_size == 0) {//thread has finished traversing
                         current_group.y = 0;
-                        if(!DoVoxels || DoHeightmap) {
-                                CurrentReservoirGI[ShadowRaysBuffer[ray_index].PixelIndex].LuminanceIncomming += ShadowRaysBuffer[ray_index].LuminanceIncomming;// * ((CurBounce == 0) ? 10.0f : 1.0f);
+                                CurrentReservoirGI[ShadowRaysBuffer[ray_index].PixelIndex].LuminanceIncommingM = Pack2To1((Unpack1To2(CurrentReservoirGI[ShadowRaysBuffer[ray_index].PixelIndex].LuminanceIncommingM).y / 1000.0f + ShadowRaysBuffer[ray_index].LuminanceIncomming) * 1000.0f, 0);
                             if (ShadowRaysBuffer[ray_index].PrimaryNEERay) {
                                 if (CurBounce == 0) {
-                                    GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].Direct += ShadowRaysBuffer[ray_index].illumination;
+
+                                    GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].Direct += ShadowRaysBuffer[ray_index].illumination * throughput;
                                 }
                                 else {
-                                    GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;
+                                    GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination * throughput;
                                 }
                             }
                             else {
-                                GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].PrimaryNEERay = packRGBE(unpackRGBE(GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].PrimaryNEERay) + (UseReSTIRGI ? ShadowRaysBuffer[ray_index].RadianceIncomming : ShadowRaysBuffer[ray_index].illumination));
+                                    // _DebugTex[int2(ShadowRaysBuffer[ray_index].PixelIndex % screen_width, ShadowRaysBuffer[ray_index].PixelIndex / screen_width)] = float4(normalize(OutputDIBuffer[ShadowRaysBuffer[ray_index].PixelIndex].AvgDir),1);
+                                GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].PrimaryNEERay = packRGBE(unpackRGBE(GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].PrimaryNEERay) + (UseReSTIRGI ? ShadowRaysBuffer[ray_index].RadianceIncomming : ShadowRaysBuffer[ray_index].illumination) * throughput);
                             }
-                        }
                         break;
                     }
 
@@ -664,230 +428,6 @@ void kernel_shadow(uint id : SV_GroupIndex) {//If I move the function contents i
 
 #pragma kernel kernel_shadow_brickmap
 
-inline bool TraceShadowBrickmap(float3 ray_orig, const float3 ray_direction, const float3 inv, const int MeshIndex, const float Distance, const int GridSize, const int VoxelSize, const int BrickSize, const uint Offset, const float3 Scale) {
-    float Dist = 1.0f;
-    float Dist2 = 1.0f;
-    if (rayBoxIntersection(ray_orig, inv, 0, GridSize + 0.0001f, Distance, Dist, Dist2)) {
-        ray_orig += ray_direction * Dist;
-
-        const int InitialSize = (uint)GridSize / (uint)BrickSize;
-        int A = InitialSize;
-        const int3 raystep = sign(ray_direction);
-        int3 MapPos = floor((ray_orig + raystep * 0.001f) / A);
-        const float3 deltaDist = abs(inv);
-
-
-        float3 SideDist = (raystep * (MapPos - (ray_orig) / A) + (raystep * 0.5f) + 0.5f) * deltaDist;
-
-        bool3 mask;
-
-        const int MaxSteps = 10000;
-        int CurrentPositionIndex = 0;
-        float3 LastSideDist = 0;
-        float3 BBMax = GridSize;
-        float3 BBMin = 0;
-        int Layer = 0;
-        int CurrentOffsetArray[10];
-        int CurrentOffset = Offset;
-        int CurrentSize = BrickSize;
-        const float3 OrigionalPosition = ray_orig * Scale;
-        for (int i = 0; i < MaxSteps; i++) {
-            const float3 LocalPos = fmod(MapPos, CurrentSize);
-            [branch] if ((any(MapPos * A >= BBMax) || any(MapPos * A < BBMin)) && A < InitialSize) {
-                float3 updatedPos = ray_orig + ray_direction * ((min(min(LastSideDist.x, LastSideDist.y), LastSideDist.z)) * A);
-                CurrentOffset = CurrentOffsetArray[--Layer];
-                A *= CurrentSize;
-                if (A == VoxelSize) CurrentSize = BrickSize;
-                BBMax = MapPos * A + A;
-                BBMin = MapPos * A;
-                ray_orig = updatedPos;
-                LastSideDist = 0;
-                MapPos = floor((updatedPos + raystep * 0.001f) / A);
-                SideDist = (raystep * (MapPos - updatedPos / A) + (raystep * 0.5f) + 0.5f) * deltaDist;
-            }
-            else {
-                [branch] if (A == 1 && BrickMap[(uint)CurrentOffset + (uint)LocalPos.x + (uint)LocalPos.y * (uint)CurrentSize + (uint)LocalPos.z * (uint)CurrentSize * (uint)CurrentSize] != -1) {
-                    if (length(OrigionalPosition - (ray_orig + ray_direction * ((min(min(LastSideDist.x, LastSideDist.y), LastSideDist.z)) * A)) * Scale) + Dist < Distance) {
-                        return true;
-                    }
-                    break;
-                }
-                [branch]if (BrickMap[CurrentOffset + LocalPos.x + LocalPos.y * CurrentSize + LocalPos.z * CurrentSize * CurrentSize] != -1 && A > 1) {
-                    float3 updatedPos = ray_orig + ray_direction * ((min(min(LastSideDist.x, LastSideDist.y), LastSideDist.z)) * A);
-                    CurrentOffsetArray[Layer++] = CurrentOffset;
-                    CurrentOffset = BrickMap[CurrentOffset + LocalPos.x + LocalPos.y * CurrentSize + LocalPos.z * CurrentSize * CurrentSize] + Offset;
-                    BBMax = MapPos * A + A;
-                    BBMin = MapPos * A;
-                    if (A == VoxelSize) CurrentSize = VoxelSize;
-                    A /= (uint)CurrentSize;
-                    ray_orig = updatedPos;
-                    LastSideDist = 0;
-                    MapPos = floor((updatedPos + raystep * 0.001f) / A);
-                    SideDist = (raystep * (MapPos - updatedPos / A) + (raystep * 0.5f) + 0.5f) * deltaDist;
-                }
-                else {
-                    mask = (SideDist.xyz <= min(SideDist.yzx, SideDist.zxy));
-                    LastSideDist = SideDist;
-                    SideDist += mask * deltaDist;
-                    MapPos += mask * raystep;
-                }
-            }
-
-
-            if (any(MapPos * A >= GridSize) || any(MapPos * A < 0)) break;
-        }
-    }
-    return false;
-
-
-
-}
-
-
-void IntersectVoxelTLASShadow() {
-    Ray ray;
-
-    uint2 stack[8];
-    int stack_size = 0;
-    uint ray_index;
-    uint2 current_group;
-
-    uint oct_inv4;
-    int tlas_stack_size;
-    int mesh_id = VoxelOffset;
-    int NodeOffset = 0;
-    int TriOffset = 0;
-    float max_distance;
-    Ray ray2;
-    bool DidHit = false;
-    while (true) {
-        bool inactive = stack_size == 0 && current_group.y == 0;
-
-        if (inactive) {//Revive dead threads(persistent threads, need Shader Model 6 to take true advantage of)
-            InterlockedAdd(BufferSizes[CurBounce].brickmap_shadow_rays_retired, 1, ray_index);
-            if (ray_index >= (uint)BufferSizes[CurBounce].shadow_rays) return;
-            if (ShadowRaysBuffer[ray_index].t == -1) continue;
-            max_distance = ShadowRaysBuffer[ray_index].t;
-            ray.origin = ShadowRaysBuffer[ray_index].origin;
-            ray.direction = ShadowRaysBuffer[ray_index].direction;
-            ray.direction_inv = rcp(ray.direction);
-            ray2 = ray;
-            DidHit = false;
-
-            oct_inv4 = ray_get_octant_inv4(ray.direction);
-
-            current_group.x = (uint)0;
-            current_group.y = (uint)0x80000000;
-
-            tlas_stack_size = -1;
-        }
-
-        while (true) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)          
-            uint2 triangle_group;
-            if (current_group.y & 0xff000000) {
-                uint hits_imask = current_group.y;
-                uint child_index_offset = firstbithigh(hits_imask);
-                uint child_index_base = current_group.x;
-
-                current_group.y &= ~(1 << child_index_offset);
-
-                if (current_group.y & 0xff000000) {
-                    stack[stack_size++] = current_group;
-                }
-                uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
-                uint relative_index = countbits(hits_imask & ~(0xffffffff << slot_index));
-                uint child_node_index = child_index_base + relative_index;
-
-                float3 node_0 = VoxelTLAS[child_node_index].node_0xyz;
-                uint node_0w = VoxelTLAS[child_node_index].node_0w;
-
-                uint4 node_1 = VoxelTLAS[child_node_index].node_1;
-                uint4 node_2 = VoxelTLAS[child_node_index].node_2;
-                uint4 node_3 = VoxelTLAS[child_node_index].node_3;
-                uint4 node_4 = VoxelTLAS[child_node_index].node_4;
-
-                uint hitmask = cwbvh_node_intersect(ray, oct_inv4, max_distance, node_0, node_0w, node_1, node_2, node_3, node_4);
-                uint imask = (node_0w >> (3 * 8)) & 0xff;
-
-                current_group.x = asuint(node_1.x) + ((tlas_stack_size == -1) ? 0 : NodeOffset);
-                triangle_group.x = asuint(node_1.y) + ((tlas_stack_size == -1) ? 0 : TriOffset);
-
-                current_group.y = (hitmask & 0xff000000) | (imask);
-                triangle_group.y = (hitmask & 0x00ffffff);
-            }
-            else {
-                triangle_group.x = current_group.x;
-                triangle_group.y = current_group.y;
-                current_group.x = (uint)0;
-                current_group.y = (uint)0;
-            }
-
-            while (triangle_group.y != 0) {
-                if (tlas_stack_size == -1) {//Transfer from Top Level Accelleration Structure to Bottom Level Accelleration Structure
-                    uint mesh_offset = firstbithigh(triangle_group.y);
-                    triangle_group.y &= ~(1 << mesh_offset);
-
-                    mesh_id = triangle_group.x + mesh_offset + VoxelOffset;
-                    NodeOffset = _MeshData[mesh_id].NodeOffset;
-                    TriOffset = _MeshData[mesh_id].TriOffset;
-                    if (triangle_group.y != 0) {
-                        stack[stack_size++] = triangle_group;
-                    }
-
-                    if (current_group.y & 0xff000000) {
-                        stack[stack_size++] = current_group;
-                    }
-                    tlas_stack_size = stack_size;
-
-                    int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
-
-                    ray.direction = (mul(_MeshData[mesh_id].Transform, float4(ray.direction, 0))).xyz;
-                    ray.origin = (mul(_MeshData[mesh_id].Transform, float4(ray.origin, 1))).xyz;
-                    ray.direction_inv = rcp(ray.direction);
-
-                    oct_inv4 = ray_get_octant_inv4(ray.direction);
-
-                    current_group.y = (uint)0x80000000;
-                    DidHit = TraceShadowBrickmap(ray.origin, ray.direction, ray.direction_inv, mesh_id, max_distance, _MeshData[mesh_id].Size.x, _MeshData[mesh_id].Size.y, _MeshData[mesh_id].Size.z, _MeshData[mesh_id].NodeOffset, GetScale(_MeshData[mesh_id].Inverse));
-                    break;
-                }
-                else {
-                    uint triangle_index = firstbithigh(triangle_group.y);
-                    triangle_group.y &= ~(1 << triangle_index);
-                }
-            }
-            if ((current_group.y & 0xff000000) == 0 || DidHit) {
-                if (DidHit) {
-                    stack_size = 0;
-                    break;
-                }
-                if (stack_size == 0) {//thread has finished traversing
-                    int pixel_index = ShadowRaysBuffer[ray_index].PixelIndex;
-                    if (ShadowRaysBuffer[ray_index].PrimaryNEERay) {
-                        if (CurBounce == 0) {
-                            GlobalColors[pixel_index].Direct += ShadowRaysBuffer[ray_index].illumination;
-                        }
-                        else {
-                            GlobalColors[pixel_index].Indirect += ShadowRaysBuffer[ray_index].illumination;
-                        }
-                    }
-                    else {
-                        GlobalColors[pixel_index].PrimaryNEERay = packRGBE(unpackRGBE(GlobalColors[pixel_index].PrimaryNEERay) + ((UseReSTIRGI ? ShadowRaysBuffer[ray_index].RadianceIncomming : ShadowRaysBuffer[ray_index].illumination)));
-                    }
-                    break;
-                }
-
-                if (stack_size == tlas_stack_size) {
-
-                    tlas_stack_size = -1;
-                    ray = ray2;
-                    oct_inv4 = ray_get_octant_inv4(ray.direction);
-                }
-                current_group = stack[--stack_size];
-            }
-        }
-    }
-}
 
 static float g = sin(atan(1.0f / 2.0f));
 
@@ -942,10 +482,6 @@ bool IntersectHeightMapShadow(Ray ray, float MaxDist) {
 
 void IntersectShadowBrickmap() {
     uint ray_index;
-    if (DoVoxels) {
-        IntersectVoxelTLASShadow();
-    }
-    else {
         while (true) {
             InterlockedAdd(BufferSizes[CurBounce].brickmap_shadow_rays_retired, 1, ray_index);
             if (ray_index >= (uint)BufferSizes[CurBounce].shadow_rays) return;
@@ -970,7 +506,6 @@ void IntersectShadowBrickmap() {
                 }
             }
         }
-    }
 }
 
 
@@ -982,7 +517,7 @@ void kernel_shadow_brickmap() {//If I move the function contents into here, unit
 #pragma kernel kernel_heightmap
 
 bool GetDist(float3 CurrentPos, out float2 uv, out float dist, const TerrainData Terrain) {
-    float3 b = float3(Terrain.TerrainDim, 0.1f, Terrain.TerrainDim);
+    float3 b = float3(Terrain.TerrainDim, 0.01f, Terrain.TerrainDim);
     float3 q = (abs(CurrentPos) - b);
     q.x /= Terrain.TerrainDim;
     q.z /= Terrain.TerrainDim;

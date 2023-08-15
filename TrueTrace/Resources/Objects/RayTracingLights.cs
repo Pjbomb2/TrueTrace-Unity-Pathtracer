@@ -5,18 +5,19 @@ using UnityEngine;
 namespace TrueTrace {
     [ExecuteInEditMode][System.Serializable]
     public class RayTracingLights : MonoBehaviour {
-        public Vector3 Emission;
-        public Vector3 Direction;
-        public Vector3 Position;
-        public int Type;
-        [HideInInspector]
-        public Light ThisLight;
-        public Vector2 SpotAngle;
-        public float Energy;
-        public int ArrayIndex;
-        public Transform ThisTransform;
-        private bool HasChanged;
-        public float ZAxisRotation;
+        [HideInInspector] public Vector3 Emission;
+        [HideInInspector] public Vector3 Direction;
+        [HideInInspector] public Vector3 Position;
+        [HideInInspector] public int Type;
+        [HideInInspector] public Light ThisLight;
+        [HideInInspector] public Vector2 SpotAngle;
+        [HideInInspector] public float Energy;
+        [HideInInspector] public int ArrayIndex;
+        [HideInInspector] public Transform ThisTransform;
+        [HideInInspector] private bool HasChanged;
+        [HideInInspector] public float ZAxisRotation;
+        [Range(0,10)]
+        public float SunSoftness = 1.0f;
 
         private float luminance(float r, float g, float b) {
             return 0.299f * r + 0.587f * g + 0.114f * b;
@@ -34,7 +35,7 @@ namespace TrueTrace {
         }
         public void UpdateLight() {
             if(ThisTransform.hasChanged || HasChanged) {
-                Position = ThisTransform.position;
+                Position = ThisTransform.position;// + ThisTransform.forward * 0.1f;
                 Direction = (ThisLight.type == LightType.Directional) ? -ThisTransform.forward : (ThisLight.type == LightType.Spot) ? Vector3.Normalize(ThisTransform.forward) : ThisTransform.forward;
                 HasChanged = false;
                 ZAxisRotation = ThisTransform.localEulerAngles.z;
@@ -52,6 +53,8 @@ namespace TrueTrace {
                 #if UNITY_EDITOR
                     SpotAngle = ThisLight.areaSize;
                 #endif
+            } else if(ThisLight.type == LightType.Directional) {
+                SpotAngle = new Vector2(SunSoftness, 0.0f);
             } else {
                 SpotAngle = new Vector2(0.0f, 0.0f);
             }

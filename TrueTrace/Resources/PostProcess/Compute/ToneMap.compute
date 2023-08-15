@@ -4,9 +4,24 @@
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
 Texture2D<float4> Input;
+Texture3D<float4> LUT;
 RWTexture2D<float4> Result;
+SamplerState sampler_linear_clamp;
 
 int width;
+
+float3 tony_mc_mapface(float3 stimulus) {
+    // Apply a non-linear transform that the LUT is encoded with.
+    const float3 encoded = stimulus / (stimulus + 1.0);
+
+    // Align the encoded range to texel centers.
+    const float LUT_DIMS = 48.0;
+    const float3 uv = encoded * ((LUT_DIMS - 1.0) / LUT_DIMS) + 0.5 / LUT_DIMS;
+
+    // Note: for OpenGL, do `uv.y = 1.0 - uv.y`
+
+    return LUT.SampleLevel(sampler_linear_clamp, uv, 0);
+}
 
 static float gamma = 2.2;
 float3 lumaBasedReinhardToneMapping(float3 color)
@@ -107,7 +122,7 @@ float3 HejlBurgess(float3 texColor) {
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     // TODO: insert actual code here!
-    float3 result = pow(TonemapUchimura(pow(Result[id.xy].xyz, (1. / gamma))),gamma);
+    float3 result = tony_mc_mapface(Result[id.xy].xyz);//pow(TonemapUchimura(pow(Result[id.xy].xyz, (1. / gamma))),gamma);
     Result[id.xy] = float4(result, 1.0);
 }
 

@@ -274,11 +274,6 @@ namespace CommonVars
         public Vector4 EmissiveTex;
         public Vector4 MetallicTex;
         public Vector4 RoughnessTex;
-        public int HasAlbedoTex;
-        public int HasNormalTex;
-        public int HasEmissiveTex;
-        public int HasMetallicTex;
-        public int HasRoughnessTex;
         public Vector3 BaseColor;
         public float emmissive;
         public Vector3 EmissionColor;
@@ -298,9 +293,13 @@ namespace CommonVars
         public float specTrans;
         public int Thin;
         public float Specular;
-        public Vector2 TextureScale;
-        public Vector2 TextureOffset;
-
+        public float relativeIOR;
+        public float scatterDistance;
+        public Vector4 AlbedoTextureScale;
+        public Vector4 NormalTextureScale;
+        public Vector4 MetallicTextureScale;
+        public Vector4 RoughnessTextureScale;
+        public Vector4 EmissiveTextureScale;
     }
 
     [System.Serializable]
@@ -440,8 +439,8 @@ namespace CommonVars
 
         public void Reconstruct()
         {
-            Vector3 BBMin = Vector3.Min(Vector3.Min(V1, V2), V3);
-            Vector3 BBMax = Vector3.Max(Vector3.Max(V1, V2), V3);
+            Vector3 BBMin = new Vector3(System.Math.Min(V1.x, System.Math.Min(V2.x,V3.x)), System.Math.Min(V1.y, System.Math.Min(V2.y,V3.y)), System.Math.Min(V1.z, System.Math.Min(V2.z,V3.z)));// Vector3.Min(Vector3.Min(V1, V2), V3);
+            Vector3 BBMax = new Vector3(System.Math.Max(V1.x, System.Math.Max(V2.x,V3.x)), System.Math.Max(V1.y, System.Math.Max(V2.y,V3.y)), System.Math.Max(V1.z, System.Math.Max(V2.z,V3.z)));
             for (int i2 = 0; i2 < 3; i2++)
             {
                 if (BBMax[i2] - BBMin[i2] < 0.001f)
@@ -456,8 +455,8 @@ namespace CommonVars
         }
         public void Reconstruct(Vector3 Scale)
         {
-            Vector3 BBMin = Vector3.Min(Vector3.Min(V1, V2), V3);
-            Vector3 BBMax = Vector3.Max(Vector3.Max(V1, V2), V3);
+            Vector3 BBMin = new Vector3(System.Math.Min(V1.x, System.Math.Min(V2.x,V3.x)), System.Math.Min(V1.y, System.Math.Min(V2.y,V3.y)), System.Math.Min(V1.z, System.Math.Min(V2.z,V3.z)));// Vector3.Min(Vector3.Min(V1, V2), V3);
+            Vector3 BBMax = new Vector3(System.Math.Max(V1.x, System.Math.Max(V2.x,V3.x)), System.Math.Max(V1.y, System.Math.Max(V2.y,V3.y)), System.Math.Max(V1.z, System.Math.Max(V2.z,V3.z)));
             for (int i2 = 0; i2 < 3; i2++)
             {
                 if (BBMax[i2] - BBMin[i2] < 0.001f / Scale[i2])
@@ -536,17 +535,46 @@ namespace CommonVars
 
         public void Create(Vector3 A, Vector3 B)
         {
-            this.BBMax = new Vector3(Mathf.Max(A.x, B.x), Mathf.Max(A.y, B.y), Mathf.Max(A.z, B.z));
-            this.BBMin = new Vector3(Mathf.Min(A.x, B.x), Mathf.Min(A.y, B.y), Mathf.Min(A.z, B.z));
+            this.BBMax = new Vector3(System.Math.Max(A.x, B.x), System.Math.Max(A.y, B.y), System.Math.Max(A.z, B.z));
+            this.BBMin = new Vector3(System.Math.Min(A.x, B.x), System.Math.Min(A.y, B.y), System.Math.Min(A.z, B.z));
         }
         public float ComputeVolume() {
-            return Mathf.Max((BBMax.x - BBMin.x),0.00001f) * Mathf.Max((BBMax.y - BBMin.y),0.00001f) * Mathf.Max((BBMax.z - BBMin.z),0.00001f);
+            return System.Math.Max((BBMax.x - BBMin.x),0.00001f) * System.Math.Max((BBMax.y - BBMin.y),0.00001f) * System.Math.Max((BBMax.z - BBMin.z),0.00001f);
         }
 
         public void Extend(ref AABB aabb)
         {
-            this.BBMax = new Vector3(Mathf.Max(BBMax.x, aabb.BBMax.x), Mathf.Max(BBMax.y, aabb.BBMax.y), Mathf.Max(BBMax.z, aabb.BBMax.z));
-            this.BBMin = new Vector3(Mathf.Min(BBMin.x, aabb.BBMin.x), Mathf.Min(BBMin.y, aabb.BBMin.y), Mathf.Min(BBMin.z, aabb.BBMin.z));
+
+            if (aabb.BBMin.x < BBMin.x)
+                BBMin.x = aabb.BBMin.x;
+            if (aabb.BBMin.y < BBMin.y)
+                BBMin.y = aabb.BBMin.y;
+            if (aabb.BBMin.z < BBMin.z)
+                BBMin.z = aabb.BBMin.z;
+
+            if (aabb.BBMax.x > BBMax.x)
+                BBMax.x = aabb.BBMax.x;
+            if (aabb.BBMax.y > BBMax.y)
+                BBMax.y = aabb.BBMax.y;
+            if (aabb.BBMax.z > BBMax.z)
+                BBMax.z = aabb.BBMax.z;
+        }
+        public void Extend(Vector3 P)
+        {
+
+            if (P.x < BBMin.x)
+                BBMin.x = P.x;
+            if (P.y < BBMin.y)
+                BBMin.y = P.y;
+            if (P.z < BBMin.z)
+                BBMin.z = P.z;
+
+            if (P.x > BBMax.x)
+                BBMax.x = P.x;
+            if (P.y > BBMax.y)
+                BBMax.y = P.y;
+            if (P.z > BBMax.z)
+                BBMax.z = P.z;
         }
         public void init()
         {
@@ -627,9 +655,7 @@ namespace CommonVars
     [System.Serializable]
     public struct CudaLightTriangle
     {
-        public Vector3 pos0;
-        public Vector3 posedge1;
-        public Vector3 posedge2;
+        public int TriIndex;
         public Vector3 Norm;
         public Vector2 UV1;
         public Vector2 UV2;
@@ -651,6 +677,8 @@ namespace CommonVars
         public int StartIndex;
         public int IndexEnd;
         public int MatOffset;
+        public int OrigionalMesh;
+        public int LockedMeshIndex;
     }
 
     [System.Serializable]

@@ -21,6 +21,7 @@ namespace TrueTrace {
                 TheseNames = t.Names;
                 Selected = EditorGUILayout.Popup("Selected Material:", Selected, TheseNames);
                 EditorGUILayout.Space();
+                EditorGUI.BeginChangeCheck();
                 t.MaterialOptions[Selected] = (RayTracingObject.Options)EditorGUILayout.EnumPopup("MaterialType: ", t.MaterialOptions[Selected]);
                 Color BaseCol = EditorGUILayout.ColorField("Base Color", new Color(t.BaseColor[Selected].x, t.BaseColor[Selected].y, t.BaseColor[Selected].z, 1));
                 serializedObject.FindProperty("BaseColor").GetArrayElementAtIndex(Selected).vector3Value = new Vector3(BaseCol.r, BaseCol.g, BaseCol.b);
@@ -41,11 +42,22 @@ namespace TrueTrace {
                 serializedObject.FindProperty("TransmissionColor").GetArrayElementAtIndex(Selected).vector3Value = EditorGUILayout.Vector3Field("Transmission Color: ", t.TransmissionColor[Selected]);
                 serializedObject.FindProperty("Flatness").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Flatness: ", t.Flatness[Selected], 0, 1);
                 serializedObject.FindProperty("Thin").GetArrayElementAtIndex(Selected).intValue = EditorGUILayout.IntField("Thin: ", t.Thin[Selected]);
-                for(int i = 0; i < t1.Length; i++) {
-                    (t1[i] as RayTracingObject).CallMaterialEdited();
-                }
-                serializedObject.ApplyModifiedProperties();
+                serializedObject.FindProperty("ScatterDist").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Scatter Distance: ", t.ScatterDist[Selected], 0, 5);
+                if(EditorGUI.EndChangeCheck()) {
+                    for(int i = 0; i < t1.Length; i++) {
+                        (t1[i] as RayTracingObject).CallMaterialEdited();
 
-    }
+                    }
+                }
+                // for(int i = 0; i < t1.Length; i++) {
+                    // (t1[i] as RayTracingObject).CallMaterialOverride();
+                    
+                // }
+                serializedObject.FindProperty("FollowMaterial").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Link Mat To Unity Material: ", t.FollowMaterial[Selected]);
+                serializedObject.ApplyModifiedProperties();
+                if(GUILayout.Button("Force Update Materials")) {
+                    t.CallMaterialEdited();
+                }
+        }
     }
 }

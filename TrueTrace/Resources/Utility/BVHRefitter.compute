@@ -54,6 +54,7 @@ struct CudaTriangle {
 	uint MatDat;
 };
 
+StructuredBuffer<CudaTriangle> CudaTriArrayIN;
 RWStructuredBuffer<CudaTriangle> CudaTriArray;
 
 float2 msign( float2 v )
@@ -69,7 +70,7 @@ uint octahedral_32( in float3 nor )
     //return packSnorm2x16(nor.xy);
     uint2 d = uint2(round(32767.5 + nor.xy*32767.5));  return d.x|(d.y<<16u);
 }
-
+int TriBuffOffset;
 [numthreads(KernelRatio, 1, 1)]
 void Construct(uint3 id : SV_DispatchThreadID)
 {
@@ -98,7 +99,7 @@ void Construct(uint3 id : SV_DispatchThreadID)
 	int VertOfst = VertOffset + id.x;
 
 	AdvancedTriangle TempAdvTri = AdvancedTriangles[CWBVHIndices[VertOfst]];
-	CudaTriangle TempTri = CudaTriArray[CWBVHIndices[VertOfst]];
+	CudaTriangle TempTri = CudaTriArrayIN[CWBVHIndices[VertOfst]];
 	
 	float3 Offset3 = mul(Transform3, float4(Offset, 0)).xyz + mul(Transform3, float4(OverallOffset, 0)).xyz + mul(Transform3, float4(ArmetureOffset, 0)).xyz;
 	p *= ArmetureScale;
@@ -126,9 +127,9 @@ void Construct(uint3 id : SV_DispatchThreadID)
 	float3 BBMax = max(max(p, p2), p3);
 	float3 BBMin = min(min(p, p2), p3);
 	[unroll] for (int i2 = 0; i2 < 3; i2++) {
-		if (BBMax[i2] - BBMin[i2] < 0.0001f) {
-			BBMin[i2] -= 0.0001f;
-			BBMax[i2] += 0.0001f;
+		if (BBMax[i2] - BBMin[i2] < 0.0000001f) {
+			BBMin[i2] -= 0.0000001f;
+			BBMax[i2] += 0.0000001f;
 		}
 	}
 	TempAdvTri.BBMax = BBMax;
@@ -144,7 +145,7 @@ void Construct(uint3 id : SV_DispatchThreadID)
 
 	TempTri.norms.y = octahedral_32(Norm2);
 	TempTri.norms.z = octahedral_32(Norm3);
-	CudaTriArray[CWBVHIndices[VertOfst]] = TempTri;
+	CudaTriArray[CWBVHIndices[VertOfst] + TriBuffOffset] = TempTri;
 }
 
 

@@ -35,10 +35,11 @@ void Downsample(uint3 id : SV_DispatchThreadID)
 	float3 k = InputTex.SampleLevel(sampler_InputTex, float2(UV.x + x, UV.y + y), 0).rgb;
 	float3 l = InputTex.SampleLevel(sampler_InputTex, float2(UV.x - x, UV.y - y), 0).rgb;
 	float3 m = InputTex.SampleLevel(sampler_InputTex, float2(UV.x + x, UV.y - y), 0).rgb;
-	float3 downsample = e * 0.125;
-	downsample += (a + c + g + i) * 0.03125;
-	downsample += (b + d + f + h) * 0.0625;
-	downsample += (j + k + l + m) * 0.125;
+
+	float3 downsample = e * 0.173633;
+	downsample += (a + c + g + i) * 0.0991668;
+	downsample += (b + d + f + h) * 0.0744867;
+	downsample += (j + k + l + m) * 0.0329382;
 	OutputTex[id.xy] = float4(downsample, 1);
 }
 #pragma kernel LowPass

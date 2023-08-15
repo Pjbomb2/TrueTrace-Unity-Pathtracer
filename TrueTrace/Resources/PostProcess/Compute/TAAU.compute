@@ -32,6 +32,35 @@ SamplerState my_linear_clamp_sampler;
 RWTexture2D<float4> IMG_ASVGF_TAA_A;
 RWTexture2D<float4> IMG_TAA_OUTPUT;
 
+int CurFrame;
+
+uint hash_with(uint seed, uint hash) {
+	// Wang hash
+	seed = (seed ^ 61) ^ hash;
+	seed += seed << 3;
+	seed ^= seed >> 4;
+	seed *= 0x27d4eb2d;
+	return seed;
+}
+uint pcg_hash(uint seed) {
+	uint state = seed * 747796405u + 2891336453u;
+	uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+	return (word >> 22u) ^ word;
+}
+
+float2 random(uint samdim, int2 id) {
+	uint hash = pcg_hash(((id.x + id.y * target_width) * (uint)112 + samdim));
+
+	const static float one_over_max_unsigned = asfloat(0x2f7fffff);
+
+
+	float x = hash_with(CurFrame, hash) * one_over_max_unsigned;
+	float y = hash_with(CurFrame + 0xdeadbeef, hash) * one_over_max_unsigned;
+
+	return float2(x, y);
+
+}
+
 const static float pq_m1 = 0.1593017578125;
 const static float pq_m2 = 78.84375;
 const static float pq_c1 = 0.8359375;
@@ -74,7 +103,7 @@ void preload(int2 group_base, int2 group_size, int gl_LocalInvocationIndex)
 
 		// Load
 		int2 ipos = group_base + int2(xx, yy) - FILTER_RADIUS;
-		ipos = clamp(ipos, 0, int2(source_width - 1, source_height - 1));
+		ipos = clamp(ipos + random(45, ipos) - 0.5f, 0, int2(source_width - 1, source_height - 1));
 		float4 color = TEX_FLAT_COLOR[ipos];
 		ipos = (float2)ipos * float2(rcp(source_width), rcp(source_height)) * float2(target_width, target_height);
 		float3 color_pq = PQEncode(color.rgb);
@@ -106,11 +135,13 @@ float2 get_shared_motion(int2 pos, int2 group_base)
 	return s_motion[addr.y][addr.x];
 }
 
+Texture2D<float> CorrectedDepthTex;
+
 void get_moments(int2 pos, int2 group_base, int r, out float3 mom1, out float3 mom2)
 {
 	mom1 = 0.0;
 	mom2 = 0.0;
-
+	// float Depth = CorrectedDepthTex.SampleLevel(my_linear_clamp_sampler, pos / float2(source_width, source_height), 0).x;
 	for (int yy = -r; yy <= r; yy++)
 	{
 		for (int xx = -r; xx <= r; xx++)
@@ -122,7 +153,8 @@ void get_moments(int2 pos, int2 group_base, int r, out float3 mom1, out float3 m
 			float3 c;
 			int checkerboard_flags;
 			get_shared_color(p, group_base, c, checkerboard_flags);
-
+			// float Depth2 = CorrectedDepthTex.SampleLevel(my_linear_clamp_sampler, p / float2(source_width, source_height), 0).x;
+			// if(abs(Depth - Depth2) > 0.3f) continue;
 			mom1 += c.rgb;
 			mom2 += c.rgb * c.rgb;
 		}
@@ -184,6 +216,7 @@ float4 sample_texture_catmull_rom(Texture2D<float4> tex, float2 uv)
 	}
 	return sum;
 }
+
 
 
 [numthreads(GROUP_SIZE, GROUP_SIZE, 1)]
@@ -307,11 +340,11 @@ void TAAU(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGroupI
     #else
     	float3 SpecularAlbedo = Albedo2[ipos].xyz;
     #endif
-    if(SpecularAlbedo.x == SpecularAlbedo.y && SpecularAlbedo.y == SpecularAlbedo.z) SpecularAlbedo = 0;
+    // if(SpecularAlbedo.x == SpecularAlbedo.y && SpecularAlbedo.y == SpecularAlbedo.z) SpecularAlbedo = 0;
     #ifdef HDRP
-		IMG_TAA_OUTPUT[ipos] = float4(linear_color_output * ((all((Albedo[int3(ipos,0)].xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo[int3(ipos,0)].xyz + SpecularAlbedo)))), 1);
+		IMG_TAA_OUTPUT[ipos] = float4(linear_color_output * ((all((Albedo[int3(ipos,0)].xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo[int3(ipos,0)].xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
 	#else
-		IMG_TAA_OUTPUT[ipos] = float4(linear_color_output * ((all((Albedo[ipos].xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo[ipos].xyz + SpecularAlbedo)))), 1);
+		IMG_TAA_OUTPUT[ipos] = float4(linear_color_output * ((all((Albedo[ipos].xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo[ipos].xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
 	#endif
 }
 

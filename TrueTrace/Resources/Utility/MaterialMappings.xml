@@ -1738,7 +1738,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
-    <BaseColorValue>null</BaseColorValue>
+    <BaseColorValue>_Color</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
     <Name>TearsTop</Name>
@@ -1982,6 +1982,111 @@
   </MaterialShader>
   <MaterialShader>
     <Name>Legacy Shaders/Specular</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Standard-DoubleSided</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Unlit/Color</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>GLTFUtility/Standard (Specular)</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>GLTFUtility/Standard Transparent (Specular)</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Rollthered/Fire</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/.poiyomi/• Poiyomi Toon •/Body M 2-Body M 2</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Shader Forge/Crystal Shader</Name>
     <BaseColorTex>_MainTex</BaseColorTex>
     <NormalTex>null</NormalTex>
     <EmissionTex>null</EmissionTex>

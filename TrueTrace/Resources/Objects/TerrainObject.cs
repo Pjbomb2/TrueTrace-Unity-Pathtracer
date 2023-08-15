@@ -202,7 +202,12 @@ namespace TrueTrace {
                     IOR = TerrainTile.terrainData.terrainLayers[i].smoothness != 0 ? 1.33f : 1,
                     BaseColor = new Vector3(TerrainTile.terrainData.size.x / TerrainTile.terrainData.terrainLayers[i].tileSize.x, TerrainTile.terrainData.size.z / TerrainTile.terrainData.terrainLayers[i].tileSize.y, 0),
                     TransmittanceColor = new Vector3(TerrainTile.terrainData.terrainLayers[i].tileOffset.x / TerrainTile.terrainData.terrainLayers[i].tileSize.x, TerrainTile.terrainData.terrainLayers[i].tileOffset.y / TerrainTile.terrainData.terrainLayers[i].tileSize.y, 0),
-                    MatType = 1
+                    MatType = 1,
+                    AlbedoTextureScale = new Vector4(1,1,0,0),
+                    NormalTextureScale = new Vector4(1,1,0,0),
+                    MetallicTextureScale = new Vector4(1,1,0,0),
+                    RoughnessTextureScale = new Vector4(1,1,0,0),
+                    EmissiveTextureScale = new Vector4(1,1,0,0),
                 });
 
                 MaterialIndex[i] = i;
