@@ -962,7 +962,7 @@ Toolbar toolbar;
            Slider AperatureSlider = new Slider() {value = DoFAperature, highValue = 1, lowValue = 0};
            AperatureSlider.style.width = 100;
            Label FocalLabel = new Label("Focal Length");
-           Slider FocalSlider = new Slider() {value = DoFFocal, highValue = 1, lowValue = 0};
+           Slider FocalSlider = new Slider() {value = DoFFocal, highValue = 1, lowValue = 0.001f};
            FocalSlider.style.width = 100;
            Box AperatureBox = new Box();
            AperatureBox.Add(AperatureLabel);
@@ -1166,9 +1166,7 @@ Toolbar toolbar;
                RayMaster.UseASVGF = false;
             }
             if(Assets != null && Assets.NeedsToUpdateXML) {
-                 var materialMappingsPath = Application.temporaryCachePath + "/MaterialMappings.xml";
-                using (StreamWriter writer = File.CreateText(materialMappingsPath))
-                {
+                using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialMappings.xml")) {
                   var serializer = new XmlSerializer(typeof(Materials));
                   serializer.Serialize(writer.BaseStream, AssetManager.data);
                }

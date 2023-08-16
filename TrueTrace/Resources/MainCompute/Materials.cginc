@@ -978,9 +978,27 @@ bool2 SampleDisney(MaterialData hitDat, float3 v, bool thin, inout BsdfSample sa
     // GetLobeProbabilities(pDiffuse, pSpecular, pTransmission, pClearcoat, hitDat);
 
     bool success = false;
-
-    float pLobe = 0.0f;
+    float3 Reflection = 0;
+    float PDF = 0;
+    hitDat.surfaceColor /= PI;
     bool refracted = false;
+    if(pSpecular > 0) {
+        success = SampleDisneyBRDF(hitDat, v, sample, TruTanMat, pixel_index);
+        Reflection += sample.reflectance * pSpecular;
+        PDF +=  sample.forwardPdfW * pSpecular;
+    }
+hitDat.surfaceColor *= PI;
+    if(pClearcoat > 0) {
+        success = SampleDisneyClearcoat(hitDat, v, sample, TruTanMat, pixel_index);
+        Reflection += sample.reflectance * pClearcoat;
+            PDF +=  sample.forwardPdfW * pClearcoat;
+    }
+    if(pDiffuse > 0) {
+        success = SampleDisneyDiffuse(hitDat, v, thin, sample, TruTanMat, refracted, pixel_index);
+        Reflection += sample.reflectance * pDiffuse;
+            PDF +=  sample.forwardPdfW * pDiffuse;
+    }
+    float pLobe = 0.0f;
     float p = random(194, pixel_index).x;
     if (p <= pSpecular) {
         hitDat.surfaceColor /= PI;
@@ -1012,11 +1030,11 @@ bool2 SampleDisney(MaterialData hitDat, float3 v, bool thin, inout BsdfSample sa
         Case = 4;
     }
 
-    if (pLobe > 0.0f) {
-        sample.reflectance = sample.reflectance * (1.0f / pLobe);
-        sample.forwardPdfW *= pLobe;
-        sample.reversePdfW *= pLobe;
-    }
+    // if (pLobe > 0.0f) {
+        sample.reflectance = Reflection;
+        sample.forwardPdfW = PDF;
+        // sample.reversePdfW *= pLobe;
+    // }
 
     return bool2(success, refracted);
 }

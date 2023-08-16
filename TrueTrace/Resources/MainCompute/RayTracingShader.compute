@@ -759,7 +759,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
                         NEE_pdf = (1.0f / (LightMeshCount * SA)) * (LightTriangles[triindex].pdf / _LightMeshes[MeshIndex].pdf) * (_LightMeshes[LightMeshCount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
                         Radiance = LightTriangles[triindex].radiance;
                         int MaterialIndex = LightTriangles[triindex].MatIndex + _LightMeshes[MeshIndex].MatOffset;
-                        if (_Materials[MaterialIndex].MatType == VideoIndex || _Materials[MaterialIndex].EmissiveTex.x > 0) {
+                        if (_Materials[MaterialIndex].MatType == VideoIndex || (_Materials[MaterialIndex].EmissiveTex.x > 0 && _Materials[MaterialIndex].emmissive >= 0)) {
                             float2 BaseUv = LightTriangles[triindex].UV1 * (1.0f - CurUv.x - CurUv.y) + LightTriangles[triindex].UV2 * CurUv.x + LightTriangles[triindex].UV3 * CurUv.y;
                             if (_Materials[MaterialIndex].MatType == VideoIndex) {
                                 Radiance *= VideoTex.SampleLevel(sampler_VideoTex, BaseUv, 0).xyz;
@@ -936,29 +936,31 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     }
     if (TempMat.RoughnessTex.x > 0) {
         float2 RoughnessUV = fmod((BaseUv * TempMat.RoughnessTexScale.xy + TempMat.RoughnessTexScale.zw) + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].RoughnessTex.xy - _Materials[MaterialIndex].RoughnessTex.zw) + _Materials[MaterialIndex].RoughnessTex.zw;
-        TempMat.roughness = saturate(RoughnessTex.SampleLevel(my_point_clamp_sampler, StochasticBilinear(RoughnessUV * AtlasSize, random(54, pixel_index).x) / AtlasSize, max(CurBounce, 0)));
+        TempMat.roughness = 1.0f - 0.7f * saturate(RoughnessTex.SampleLevel(my_point_clamp_sampler, StochasticBilinear(RoughnessUV * AtlasSize, random(54, pixel_index).x) / AtlasSize, max(CurBounce, 0)));
     }
     // if(TempMat.metallic != 0) TempMat.roughness = 1;//max(CurBounce / (float)MaxBounce,0);
 
     if(AlbedoTexData.w != -1) TempMat.roughness = min(TempMat.roughness + max(CurBounce / (float)MaxBounce,0),1);
     bool IsEmissiveTex = false;
-    if (TempMat.EmissiveTex.x > 0) {
-        float2 EmissionUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].EmissiveTex.xy - _Materials[MaterialIndex].EmissiveTex.zw) + _Materials[MaterialIndex].EmissiveTex.zw;
-        float3 EmissCol = _Materials[MaterialIndex].EmissionColor;
-        bool IsMask = !(EmissCol.x == 0 && EmissCol.y == 0 && EmissCol.z == 0);
-        float4 EmissTexture = _EmissiveAtlas[StochasticBilinear(EmissionUV * EmissiveSize, random(54, pixel_index).x)];
-        if (!IsMask) EmissCol = EmissTexture.xyz * EmissTexture.w;
-        else EmissCol *= EmissTexture.xyz * EmissTexture.w;
-        if (dot(EmissCol, EmissCol) > 0.001f) {
-            IsEmissiveTex = true;
-            TempMat.surfaceColor = EmissCol;// * (IsMask ? TempMat.surfaceColor : TempMat.surfaceColor);
+    if(TempMat.emmissive >= 0) {
+        if (TempMat.EmissiveTex.x > 0) {
+            float2 EmissionUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].EmissiveTex.xy - _Materials[MaterialIndex].EmissiveTex.zw) + _Materials[MaterialIndex].EmissiveTex.zw;
+            float3 EmissCol = _Materials[MaterialIndex].EmissionColor;
+            bool IsMask = !(EmissCol.x == 0 && EmissCol.y == 0 && EmissCol.z == 0);
+            float4 EmissTexture = _EmissiveAtlas[StochasticBilinear(EmissionUV * EmissiveSize, random(54, pixel_index).x)];
+            if (!IsMask) EmissCol = EmissTexture.xyz * EmissTexture.w;
+            else EmissCol *= EmissTexture.xyz * EmissTexture.w;
+            if (dot(EmissCol, EmissCol) > 0.001f) {
+                IsEmissiveTex = true;
+                TempMat.surfaceColor = EmissCol;// * (IsMask ? TempMat.surfaceColor : TempMat.surfaceColor);
+            }
+            else {
+                TempMat.emmissive = 0;
+            }
         }
-        else {
-            TempMat.emmissive = 0;
+        else if (_Materials[MaterialIndex].EmissionColor.x != 0 || _Materials[MaterialIndex].EmissionColor.y != 0 || _Materials[MaterialIndex].EmissionColor.z != 0) {
+            TempMat.surfaceColor += _Materials[MaterialIndex].EmissionColor * TempMat.surfaceColor;
         }
-    }
-    else if (_Materials[MaterialIndex].EmissionColor.x != 0 || _Materials[MaterialIndex].EmissionColor.y != 0 || _Materials[MaterialIndex].EmissionColor.z != 0) {
-        TempMat.surfaceColor += _Materials[MaterialIndex].EmissionColor * TempMat.surfaceColor;
     }
     if(UseReSTIRGI && CurBounce == 0 && TempMat.emmissive == 0 && ReSTIRGIUpdateRate != 0 && RandomNums[TempUv.xy].z == 1) {
         TempMat.surfaceColor = unpackRGBE(PreviousReservoirGI[prevIndex].BaseColor);  

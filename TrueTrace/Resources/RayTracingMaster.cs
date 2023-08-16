@@ -35,9 +35,8 @@ namespace TrueTrace {
         private RenderTexture _RandomNumsB;
         private RenderTexture _BaseColorTex;
         // public Texture2D CurlTexture;
-        public Camera ParticleCamera;
 
-        public ReCurDenoiser ReCurDen;
+        private ReCurDenoiser ReCurDen;
 
         private Denoiser Denoisers;
         [HideInInspector] public AtmosphereGenerator Atmo;
@@ -77,7 +76,7 @@ namespace TrueTrace {
         #endif
         // private ComputeBuffer LightMapTriBuffer;
 
-        public ASVGF ASVGFCode;
+        private ASVGF ASVGFCode;
 
         private int FramesSinceStart2;
         private BufferSizeData[] BufferSizes;
