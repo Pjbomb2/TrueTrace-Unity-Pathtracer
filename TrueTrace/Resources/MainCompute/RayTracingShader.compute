@@ -936,7 +936,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     }
     if (TempMat.RoughnessTex.x > 0) {
         float2 RoughnessUV = fmod((BaseUv * TempMat.RoughnessTexScale.xy + TempMat.RoughnessTexScale.zw) + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].RoughnessTex.xy - _Materials[MaterialIndex].RoughnessTex.zw) + _Materials[MaterialIndex].RoughnessTex.zw;
-        TempMat.roughness = 1.0f - 0.7f * saturate(RoughnessTex.SampleLevel(my_point_clamp_sampler, StochasticBilinear(RoughnessUV * AtlasSize, random(54, pixel_index).x) / AtlasSize, max(CurBounce, 0)));
+        TempMat.roughness = saturate(RoughnessTex.SampleLevel(my_point_clamp_sampler, StochasticBilinear(RoughnessUV * AtlasSize, random(54, pixel_index).x) / AtlasSize, max(CurBounce, 0)));
     }
     // if(TempMat.metallic != 0) TempMat.roughness = 1;//max(CurBounce / (float)MaxBounce,0);
 
