@@ -27,7 +27,6 @@ namespace TrueTrace {
         public Button ClearButton;
         public Button QuickStartButton;
         public Button ForceInstancesButton;
-        public Toggle AlteredPipelineToggle;
         public RayTracingMaster RayMaster;
         public AssetManager Assets;
         public InstancedManager Instancer;
@@ -55,7 +54,6 @@ namespace TrueTrace {
          [SerializeField] public int GITemporalMCap = 12;
          [SerializeField] public bool GISpatial = true;
          [SerializeField] public int GISpatialSampleCount = 6;
-         [SerializeField] public bool SpatialStabalizer = false;
          [SerializeField] public bool TAA = false;
          [SerializeField] public bool SVGF = false;
          [SerializeField] public int SVGFSize = 4;
@@ -67,10 +65,9 @@ namespace TrueTrace {
          [SerializeField] public bool ShowFPS = true;
          [SerializeField] public float Exposure = 0;
          [SerializeField] public int AtlasSize = 16300;
-         [SerializeField] public bool UseAlteredPipeline = false;
-         [SerializeField] public bool DoCheckerboarding = false;
+         [SerializeField] public bool DoPartialRendering = false;
+         [SerializeField] public int PartialRenderingFactor = 1;
          [SerializeField] public bool DoFirefly = false;
-         [SerializeField] public bool DoIndirectClamping = true;
          [SerializeField] public bool UseReCur = true;
          [SerializeField] public float MinSpatialSize = 10;
          [SerializeField] public float ReCurBlurRadius = 30;
@@ -395,7 +392,7 @@ FloatField MinSpatialSizeField;
 Toggle TemporalGIToggle;
 Toggle SpatialGIToggle;
 Toggle TAAToggle;
-Toggle DoCheckerboardingToggle;
+Toggle DoPartialRenderingToggle;
 Toggle DoFireflyToggle;
 FloatField SVGFSizeField;
 Toggle SampleValidToggle;
@@ -403,6 +400,7 @@ Toggle IndirectClampingToggle;
 FloatField RISCountField;
 Toggle ReCurToggle;
 FloatField ReCurBlurField;
+FloatField FocalSlider;
 
 
 private void StandardSet() {
@@ -428,7 +426,6 @@ private void StandardSet() {
          GITemporalMCap = 488;
          GISpatial = true;
          GISpatialSampleCount = 12;
-         SpatialStabalizer = false;
          TAA = false;
          SVGF = false;
          SVGFSize = 4;
@@ -440,10 +437,8 @@ private void StandardSet() {
          ShowFPS = true;
          Exposure = 0;
          AtlasSize = 16300;
-         UseAlteredPipeline = false;
-         DoCheckerboarding = false;
+         DoPartialRendering = false;
          DoFirefly = false;
-         DoIndirectClamping = true;
          MinSpatialSize = 30;
          RISCount = 12;
          UseReCur = true;
@@ -465,7 +460,7 @@ private void StandardSet() {
          TAAUToggle.value = true;
          AtmoScatterField.value = 1;
          GIToggle.value = false;
-         DoCheckerboardingToggle.value = false;
+         DoPartialRenderingToggle.value = false;
       }
 
       private void HighSettingsAssign() {
@@ -656,6 +651,7 @@ Toolbar toolbar;
       PopupField<string> RoughnessChannelField;
       Toggle GlassToggle;
       Toggle CutoutToggle;
+      Toggle SmoothnessToggle;
       MaterialShader MatShader;
       int Index;
       void ConfirmMats() {
@@ -671,6 +667,7 @@ Toolbar toolbar;
          MatShader.RoughnessTexChannel = RoughnessChannelField.index;
          MatShader.IsGlass = GlassToggle.value;
          MatShader.IsCutout = CutoutToggle.value;
+         MatShader.UsesSmoothness = SmoothnessToggle.value;
          AssetManager.data.Material[Index] = MatShader;
          using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialMappings.xml")) {
             var serializer = new XmlSerializer(typeof(Materials));
@@ -754,9 +751,22 @@ Toolbar toolbar;
          MaterialPairingMenu.Add(GlassToggle);
          CutoutToggle = new Toggle() {value = MatShader.IsCutout, text = "Force All Objects With This Material To Be Cutout"};
          MaterialPairingMenu.Add(CutoutToggle);
+         SmoothnessToggle = new Toggle() {value = MatShader.UsesSmoothness, text = "Does this Material use Smoothness(True) or Roughness(False)"};
+         MaterialPairingMenu.Add(SmoothnessToggle);
 
          Button ConfirmMaterialButton = new Button(() => ConfirmMats()) {text = "Apply Material Links"};
          MaterialPairingMenu.Add(ConfirmMaterialButton);
+      }
+      public struct CustomGBufferData {
+         public uint GeomNorm;
+         public uint SurfNorm;
+         public float t;
+         public uint MatIndex;
+      }
+      private void GetFocalLength() {
+         CustomGBufferData[] GBuff = new CustomGBufferData[RayMaster.SourceWidth * RayMaster.SourceHeight];
+         RayMaster.ScreenSpaceBuffer.GetData(GBuff);
+         FocalSlider.value = GBuff[RayMaster.SourceWidth / 2 + RayMaster.SourceHeight * RayMaster.SourceWidth / 2].t;
       }
 
          void EvaluateScene(Scene Current, Scene Next) {
@@ -818,7 +828,6 @@ Toolbar toolbar;
            RayMaster.ReSTIRGIUpdateRate = UpdateRate;
            RayMaster.ReSTIRGITemporalMCap = GITemporalMCap;
            RayMaster.ReSTIRGISpatialCount = GISpatialSampleCount;
-           RayMaster.ReSTIRGISpatialStabalizer = SpatialStabalizer;
            RayMaster.AllowTAA = TAA;
            RayMaster.UseSVGF = SVGF;
            RayMaster.SVGFAtrousKernelSizes = SVGFSize;
@@ -828,12 +837,11 @@ Toolbar toolbar;
            RayMaster.AtmoNumLayers = AtmoScatter;
            RayMaster.Exposure = 100 * Exposure + 1;
            Assets.DesiredRes = AtlasSize;
-           RayMaster.UseAlteredPipeline = UseAlteredPipeline;
-           RayMaster.DoCheckerboarding = DoCheckerboarding;
+           RayMaster.DoPartialRendering = DoPartialRendering;
+           RayMaster.PartialRenderingFactor = PartialRenderingFactor;
            RayMaster.DoFirefly = DoFirefly;
            RayMaster.MinSpatialSize = MinSpatialSize;
            RayMaster.RISCount = RISCount;
-           RayMaster.DoIndirectClamping = DoIndirectClamping;
            RayMaster.UseReCur = UseReCur;
            RayMaster.ReCurBlurRadius = ReCurBlurRadius;
          }
@@ -868,7 +876,7 @@ Toolbar toolbar;
            ForceInstancesButton = new Button(() => {if(!Application.isPlaying) ConstructInstances(); else Debug.Log("Cant Do This In Editor");}) {text = "Force Instances"};
 
            IntegerField AtlasField = new IntegerField() {value = AtlasSize, label = "Atlas Size"};
-           AtlasField.RegisterValueChangedCallback(evt => {if(!Application.isPlaying) {AtlasSize = evt.newValue; AtlasSize = Mathf.Min(AtlasSize, 16384); AtlasSize = Mathf.Max(AtlasSize, 32); Assets.DesiredRes = AtlasSize;} else AtlasField.value = AtlasSize;});
+           AtlasField.RegisterValueChangedCallback(evt => {if(!Application.isPlaying) {AtlasSize = evt.newValue; AtlasSize = Mathf.Min(AtlasSize, 16300); AtlasSize = Mathf.Max(AtlasSize, 32); Assets.DesiredRes = AtlasSize;} else AtlasField.value = AtlasSize;});
                AtlasField.ElementAt(0).style.minWidth = 65;
                AtlasField.ElementAt(1).style.width = 45;
 
@@ -962,8 +970,9 @@ Toolbar toolbar;
            Slider AperatureSlider = new Slider() {value = DoFAperature, highValue = 1, lowValue = 0};
            AperatureSlider.style.width = 100;
            Label FocalLabel = new Label("Focal Length");
-           Slider FocalSlider = new Slider() {value = DoFFocal, highValue = 1, lowValue = 0.001f};
+           FocalSlider = new FloatField() {value = DoFFocal};
            FocalSlider.style.width = 100;
+           Button AutofocusButton = new Button(() => GetFocalLength()) {text = "Autofocus DoF"};
            Box AperatureBox = new Box();
            AperatureBox.Add(AperatureLabel);
            AperatureBox.Add(AperatureSlider);
@@ -971,6 +980,7 @@ Toolbar toolbar;
            Box FocalBox = new Box();
            FocalBox.Add(FocalLabel);
            FocalBox.Add(FocalSlider);
+           FocalBox.Add(AutofocusButton);
            FocalBox.style.flexDirection = FlexDirection.Row;
 
            Toggle DoFToggle = new Toggle() {value = DoF, text = "Enable DoF"};
@@ -980,7 +990,7 @@ Toolbar toolbar;
            MainSource.Add(DoFToggle);
            DoFToggle.RegisterValueChangedCallback(evt => {DoF = evt.newValue; RayMaster.AllowDoF = DoF;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(DoFToggle) + 1, DoFFoldout); else MainSource.Remove(DoFFoldout);});        
            AperatureSlider.RegisterValueChangedCallback(evt => {DoFAperature = evt.newValue; RayMaster.DoFAperature = DoFAperature;});
-           FocalSlider.RegisterValueChangedCallback(evt => {DoFFocal = evt.newValue; RayMaster.DoFFocal = DoFFocal * 60.0f;});
+           FocalSlider.RegisterValueChangedCallback(evt => {DoFFocal = Mathf.Max(0.001f, evt.newValue); RayMaster.DoFFocal = DoFFocal;});
            if(DoF) MainSource.Add(DoFFoldout);
            Toggle DoExposureToggle = new Toggle() {value = DoExposure, text = "Enable Auto/Manual Exposure"};
            MainSource.Add(DoExposureToggle);
@@ -1010,12 +1020,9 @@ Toolbar toolbar;
                    GIUpdateRateField = new FloatField() {value = UpdateRate};
                    SampleValidToggle.RegisterValueChangedCallback(evt => {SampleValid = evt.newValue; RayMaster.DoReSTIRGIConnectionValidation = SampleValid;});
                    GIUpdateRateField.RegisterValueChangedCallback(evt => {UpdateRate = (int)evt.newValue; RayMaster.ReSTIRGIUpdateRate = UpdateRate;});
-                    IndirectClampingToggle = new Toggle() {value = DoIndirectClamping, text = "Enable Indirect Clamping"};
-                    IndirectClampingToggle.RegisterValueChangedCallback(evt => {DoIndirectClamping = evt.newValue; RayMaster.DoIndirectClamping = DoIndirectClamping;});
                    TopGI.Add(SampleValidToggle);
                    TopGI.Add(GIUpdateRateField);
                    TopGI.Add(GIUpdateRateLabel);
-                   TopGI.Add(IndirectClampingToggle);
                EnclosingGI.Add(TopGI);
                Box TemporalGI = new Box();
                    TemporalGI.style.flexDirection = FlexDirection.Row;
@@ -1037,16 +1044,12 @@ Toolbar toolbar;
                    SpatialGISampleCountLabel.tooltip = "How many neighbors are sampled, tradeoff between performance and quality";
                    FloatField SpatialGISampleCountField = new FloatField() {value = GISpatialSampleCount};
                    FloatField MinSpatialSizeField = new FloatField() {value = MinSpatialSize};
-                   Toggle StabalizerToggle = new Toggle() {value = SpatialStabalizer, text = "Enable Edge Filling"};
-                   StabalizerToggle.tooltip = "Replaces black edges of the screen with blurred info";
                    SpatialGIToggle.RegisterValueChangedCallback(evt => {GISpatial = evt.newValue; RayMaster.UseReSTIRGISpatial = GISpatial;});
                    SpatialGISampleCountField.RegisterValueChangedCallback(evt => {GISpatialSampleCount = (int)evt.newValue; RayMaster.ReSTIRGISpatialCount = GISpatialSampleCount;});
                    MinSpatialSizeField.RegisterValueChangedCallback(evt => {MinSpatialSize = (int)evt.newValue; RayMaster.MinSpatialSize = MinSpatialSize;});
-                   StabalizerToggle.RegisterValueChangedCallback(evt => {SpatialStabalizer = evt.newValue; RayMaster.ReSTIRGISpatialStabalizer = SpatialStabalizer;});
                    SpatialGI.Add(SpatialGIToggle);
                    SpatialGI.Add(SpatialGISampleCountField);
                    SpatialGI.Add(SpatialGISampleCountLabel);
-                   SpatialGI.Add(StabalizerToggle);
                    SpatialGI.Add(MinSpatialSizeField);
                    SpatialGI.Add(MinSpatialSizeLabel);
                EnclosingGI.Add(SpatialGI);
@@ -1084,13 +1087,17 @@ Toolbar toolbar;
            MainSource.Add(TAAUToggle);
            TAAUToggle.RegisterValueChangedCallback(evt => {TAAU = evt.newValue; RayMaster.UseTAAU = TAAU;});
 
-           AlteredPipelineToggle = new Toggle() {value = UseAlteredPipeline, text = "Use Altered Throughput Pipeline"};
-           AlteredPipelineToggle.RegisterValueChangedCallback(evt => {UseAlteredPipeline = evt.newValue; RayMaster.UseAlteredPipeline = UseAlteredPipeline;});
-           MainSource.Add(AlteredPipelineToggle);
 
-           DoCheckerboardingToggle = new Toggle() {value = DoCheckerboarding, text = "Use Checkerboarding"};
-           DoCheckerboardingToggle.RegisterValueChangedCallback(evt => {DoCheckerboarding = evt.newValue; RayMaster.DoCheckerboarding = DoCheckerboarding;});
-           MainSource.Add(DoCheckerboardingToggle);
+
+            VisualElement PartialRenderingFoldout = new VisualElement() {};
+               PartialRenderingFoldout.style.flexDirection = FlexDirection.Row;
+               IntegerField PartialRenderingField = new IntegerField() {value = PartialRenderingFactor, label = "Partial Factor"};
+               PartialRenderingField.RegisterValueChangedCallback(evt => {PartialRenderingFactor = evt.newValue; PartialRenderingFactor = Mathf.Max(PartialRenderingFactor, 1); RayMaster.PartialRenderingFactor = PartialRenderingFactor;});
+               PartialRenderingFoldout.Add(PartialRenderingField);
+           DoPartialRenderingToggle = new Toggle() {value = DoPartialRendering, text = "Use Partial Rendering"};
+           MainSource.Add(DoPartialRenderingToggle);
+           DoPartialRenderingToggle.RegisterValueChangedCallback(evt => {DoPartialRendering = evt.newValue; RayMaster.DoPartialRendering = DoPartialRendering;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(DoPartialRenderingToggle) + 1, PartialRenderingFoldout); else MainSource.Remove(PartialRenderingFoldout);});
+           if(DoPartialRendering) MainSource.Add(PartialRenderingFoldout);
 
            DoFireflyToggle = new Toggle() {value = DoFirefly, text = "Enable AntiFirefly"};
            DoFireflyToggle.RegisterValueChangedCallback(evt => {DoFirefly = evt.newValue; RayMaster.DoFirefly = DoFirefly;});

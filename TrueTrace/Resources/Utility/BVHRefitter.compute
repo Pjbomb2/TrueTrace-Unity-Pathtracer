@@ -20,23 +20,17 @@ uint gVertexCount;
 int VertOffset;
 
 float4x4 Transform;
-float4x4 Transform2;
-float4x4 Transform3;
 
 float3 Offset;
-float3 OverallOffset;
-float3 ArmetureOffset;
 
 float3 Scale;
 
-float ArmetureScale;
 
-struct AdvancedTriangle {
-	float3 BBMax;//12
-	float3 BBMin;//24
+struct BoundingBox {
+	float3 BBMax;
+	float3 BBMin;
 };
-
-RWStructuredBuffer<AdvancedTriangle> AdvancedTriangles;
+RWStructuredBuffer<BoundingBox> Boxs;
 
 struct CudaTriangle {
 	float3 pos0;
@@ -98,31 +92,24 @@ void Construct(uint3 id : SV_DispatchThreadID)
 	float3 n3 = asfloat(praw);
 	int VertOfst = VertOffset + id.x;
 
-	AdvancedTriangle TempAdvTri = AdvancedTriangles[CWBVHIndices[VertOfst]];
+	BoundingBox TempAdvTri = Boxs[CWBVHIndices[VertOfst]];
 	CudaTriangle TempTri = CudaTriArrayIN[CWBVHIndices[VertOfst]];
 	
-	float3 Offset3 = mul(Transform3, float4(Offset, 0)).xyz + mul(Transform3, float4(OverallOffset, 0)).xyz + mul(Transform3, float4(ArmetureOffset, 0)).xyz;
-	p *= ArmetureScale;
-	p2 *= ArmetureScale;
-	p3 *= ArmetureScale;
-	p /= Scale * Scale;
-	p2 /= Scale * Scale;
-	p3 /= Scale * Scale;
+	p *= Scale;
+	p2 *= Scale;
+	p3 *= Scale;
+	
 	p = mul(float4(p, 0), Transform).xyz;
 	p2 = mul(float4(p2, 0), Transform).xyz;
 	p3 = mul(float4(p3, 0), Transform).xyz;
 
-	p = mul(float4(p, 0), Transform2).xyz;
-	p2 = mul(float4(p2, 0), Transform2).xyz;
-	p3 = mul(float4(p3, 0), Transform2).xyz;
+	p += Offset;
+	p2 += Offset;
+	p3 += Offset;
 
-	p += Offset3;
-	p2 += Offset3;
-	p3 += Offset3;
-
-	float3 Norm1 = mul(float4(mul(float4(n1, 0), Transform).xyz, 0), Transform2).xyz;
-	float3 Norm2 = mul(float4(mul(float4(n2, 0), Transform).xyz, 0), Transform2).xyz;
-	float3 Norm3 = mul(float4(mul(float4(n3, 0), Transform).xyz, 0), Transform2).xyz;
+	float3 Norm1 = mul(float4(n1, 0), Transform).xyz;
+	float3 Norm2 = mul(float4(n2, 0), Transform).xyz;
+	float3 Norm3 = mul(float4(n3, 0), Transform).xyz;
 
 	float3 BBMax = max(max(p, p2), p3);
 	float3 BBMin = min(min(p, p2), p3);
@@ -135,7 +122,7 @@ void Construct(uint3 id : SV_DispatchThreadID)
 	TempAdvTri.BBMax = BBMax;
 	TempAdvTri.BBMin = BBMin;
 
-	AdvancedTriangles[CWBVHIndices[VertOfst]] = TempAdvTri;
+	Boxs[CWBVHIndices[VertOfst]] = TempAdvTri;
 
 	TempTri.pos0 = p;
 	TempTri.posedge1 = p2 - p;
@@ -176,11 +163,11 @@ struct Layer {
 	int Children[8];
 	int Leaf[8];
 };
+StructuredBuffer<Layer> ReverseStack;
 
 StructuredBuffer<int> NodesToWork;
 uint NodeCount;
 
-StructuredBuffer<Layer> ReverseStack;
 
 
 [numthreads(KernelRatio, 1, 1)]
@@ -202,8 +189,8 @@ void RefitLayer(uint3 id : SV_DispatchThreadID)
 		else if (CurrentLayer.Leaf[i] > 0) {
 			int Max = CurrentLayer.Children[i];
 			for (int i4 = CurrentLayer.Leaf[i] - 1; i4 < Max; i4++) {
-				RunningMax = max(RunningMax, AdvancedTriangles[i4].BBMax);
-				RunningMin = min(RunningMin, AdvancedTriangles[i4].BBMin);
+				RunningMax = max(RunningMax, Boxs[i4].BBMax);
+				RunningMin = min(RunningMin, Boxs[i4].BBMin);
 			}
 
 		}
@@ -215,12 +202,7 @@ void RefitLayer(uint3 id : SV_DispatchThreadID)
 }
 
 #pragma kernel RefitBVHLayer
-
-struct BoundingBox {
-	float3 BBMax;
-	float3 BBMin;
-};
-StructuredBuffer<BoundingBox> Boxs;
+StructuredBuffer<int> TLASCWBVHIndices;
 [numthreads(KernelRatio, 1, 1)]
 void RefitBVHLayer(uint3 id : SV_DispatchThreadID)
 {
@@ -239,8 +221,8 @@ void RefitBVHLayer(uint3 id : SV_DispatchThreadID)
 		}
 		else if (CurrentLayer.Leaf[i] > 0) {
 			for (int i4 = CurrentLayer.Leaf[i] - 1; i4 < CurrentLayer.Children[i] + CurrentLayer.Leaf[i] - 1; i4++) {
-				RunningMax = max(RunningMax, Boxs[i4].BBMax);
-				RunningMin = min(RunningMin, Boxs[i4].BBMin);
+				RunningMax = max(RunningMax, Boxs[TLASCWBVHIndices[i4]].BBMax);
+				RunningMin = min(RunningMin, Boxs[TLASCWBVHIndices[i4]].BBMin);
 			}
 
 		}

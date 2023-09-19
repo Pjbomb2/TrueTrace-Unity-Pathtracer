@@ -95,5 +95,5 @@ void AutoExposeFinalize(uint3 id : SV_DispatchThreadID)
 {
 	// TODO: insert actual code here!
 	if (id.x > screen_width || id.y > screen_height) return;
-	OutTex[id.xy] = InTex[id.xy] * A[0];
+	OutTex[id.xy] = OutTex[id.xy] * A[0];
 }

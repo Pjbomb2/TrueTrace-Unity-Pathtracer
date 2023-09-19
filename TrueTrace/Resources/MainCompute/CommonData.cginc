@@ -1,51 +1,57 @@
 #include "UnityCG.cginc"
 #include "../GlobalDefines.cginc"
 
-float4x4 _CameraInverseProjection;
-float4x4 _CameraProjection;
-float4x4 ViewMatrix;
-int frames_accumulated;
-uniform int CurBounce;
-uniform int MaxBounce;
+#define ONE_OVER_PI 0.318309886548f
+#define PI 3.14159265f
+#define EPSILON 1e-8
 
-static const float PI = 3.14159265f;
+
+float4x4 CamToWorld;
+float4x4 CamInvProj;
+
+float4x4 ViewMatrix;
+uniform int MaxBounce;
+uniform int CurBounce;
+
 uint screen_width;
 uint screen_height;
 uint TargetWidth;
 uint TargetHeight;
-uniform bool UseAlteredPipeline;
+int frames_accumulated;
+int curframe;//might be able to get rid of this
+
+
 uniform bool DoHeightmap;
+uniform bool UseReCur;
 bool DiffRes;
-
-float3 CamPos;
-
-int lighttricount;
+bool UseRussianRoulette;
+bool UseNEE;
+bool DoPartialRendering;
+int PartialRenderingFactor;
 
 int unitylightcount;
 
-bool UseRussianRoulette;
-bool UseNEE;
-bool UseDoF;
-bool UseRestir;
-bool UsePermutatedSamples;
-bool DoCheckerboarding;
-bool DoMedianFilter;
-
-float3 Up;
-float3 Right;
+//Cam Info
 float3 Forward;
+float3 Right;
+float3 Up;
+float3 CamPos;
+
+//DoF
+bool UseDoF;
 float focal_distance;
 float AperatureRadius;
+
 
 RWStructuredBuffer<uint3> BufferData;
 
 RWTexture2D<half> CorrectedDepthTex;
-bool UseReSTIRDI;
 
 #ifdef HardwareRT
 	StructuredBuffer<int> SubMeshOffsets;
 	StructuredBuffer<float2> MeshOffsets;
 #endif
+
 
 struct BufferSizeData {
 	int tracerays;
@@ -53,7 +59,7 @@ struct BufferSizeData {
 	int shade_rays;
 	int shadow_rays;
 	int shadow_rays_retired;
-	int brickmap_shadow_rays_retired;
+	int heightmap_shadow_rays_retired;
 	int heighmap_rays_retired;
 };
 
@@ -93,41 +99,32 @@ struct RayHit {
 
 struct RayData {//128 bit aligned
 	float3 origin;
-	float3 direction;
-
-	uint4 hits;
 	uint PixelIndex;//need to bump this back down to uint1
-	int HitVoxel;//need to shave off 4 bits
+	float3 direction;
 	float last_pdf;
-	int PrevIndex;//Need for padding, slightly increases performance
+	uint4 hits;
 };
+
+RWStructuredBuffer<RayData> GlobalRays;
+
+struct ScreenSpaceData {//I could make this into a texture now if I want
+	uint GeomNorm;
+	uint SurfNorm;//albedo is already stored in the texture WorldSpaceInfo
+	float t;
+	int MatIndex;
+};
+RWStructuredBuffer<ScreenSpaceData> ScreenSpaceInfo;
+RWStructuredBuffer<ScreenSpaceData> PrevScreenSpaceInfo;
 
 struct ShadowRayData {
 	float3 origin;
-	float3 direction;
-	float3 illumination;
-	float3 RadianceIncomming;
 	uint PixelIndex;
-	uint PrevPixelIndex;
+	float3 direction;
 	float t;
-	bool PrimaryNEERay;
+	float3 illumination;
 	float LuminanceIncomming;
 };
-
-struct LightTriangleData {
-	int TriangleIndex;
-	float3 Norm;
-	float2 UV1;
-	float2 UV2;
-	float2 UV3;
-	int MatIndex;
-	float3 radiance;
-	float sumEnergy;
-	float pdf;
-	float area;
-};
-
-StructuredBuffer<LightTriangleData> LightTriangles;
+RWStructuredBuffer<ShadowRayData> ShadowRaysBuffer;
 
 
 struct ColData {
@@ -139,80 +136,41 @@ struct ColData {
 	float pad;
 };
 
-struct SHData {
-	float4 shY;
-	float2 CoCg;
-};
+RWStructuredBuffer<ColData> GlobalColors;
+StructuredBuffer<ColData> PrevGlobalColorsA;
+RWStructuredBuffer<ColData> PrevGlobalColorsB;
 
 
 
-struct GIReservoir {
-	float3 SecondaryHitPosition;
-	float W;
-	float3 NEEPosition;
-	int LuminanceIncommingM;
-	uint PrimaryNormal;
-	uint BaseColor;
-	int HistoricFrameThisCase;
-	int HistoricID;
-};
-RWStructuredBuffer<GIReservoir> CurrentReservoirGI;
-RWStructuredBuffer<GIReservoir> SpatialOverwriteGI;
-StructuredBuffer<GIReservoir> PreviousReservoirGI;
+RWTexture2D<half4> ReservoirA;
+Texture2D<half4> ReservoirC;
+Texture2D<half4> ReservoirB;
 
-struct ScreenSpaceData {
-	int InitialRayDirection;
-	float Roughness;
-	int Normal;
-	int NormNormal;
-	float3 Albedo;
-	float Metallic;
-	float3 Position;
-	float t;
-	int MatIndex;
-};
-RWStructuredBuffer<ScreenSpaceData> ScreenSpaceInfo;
-RWStructuredBuffer<ScreenSpaceData> MatModifiersPrev;
+RWTexture2D<uint4> WorldPosA;
+Texture2D<uint4> WorldPosB;
+Texture2D<uint4> WorldPosC;
 
-RWStructuredBuffer<SHData> SH;
+RWTexture2D<half4> NEEPosA;
+Texture2D<half4> NEEPosB;
+Texture2D<half4> NEEPosC;
 
-int curframe;
 RWTexture2D<float4> Result;
 
-RWStructuredBuffer<ShadowRayData> ShadowRaysBuffer;
-RWStructuredBuffer<RayData> GlobalRays1;
-RWStructuredBuffer<ColData> GlobalColors;
-StructuredBuffer<ColData> GlobalColors2;
-RWStructuredBuffer<ColData> GlobalColors3;
-RWStructuredBuffer<ColData> SpatialOverwriteColors;
 RWStructuredBuffer<Ray> Rays;
 
-SamplerState sampler_NormalTex;
-Texture2D<float4> AlbedoTex;
-SamplerState sampler_AlbedoTex;
-RWTexture2D<int> TempNormTex;
-RWTexture2D<half4>TempAlbedoTex;
-RWTexture2D<float4> RandomNumsWrite;
-Texture2D<float4> RandomNums;
-RWTexture2D<int> RenderMaskTex;
-SamplerState sampler_MotionVectors;
-RWTexture2D<float4> _DebugTex;
-
-static const float ONE_OVER_PI = 0.318309886548;
-static const float EPSILON = 1e-8;
+RWStructuredBuffer<uint> _RayBinResult;
 
 struct MyMeshDataCompacted {
 	float4x4 Transform;
-	float4x4 Inverse;
 	int TriOffset;
 	int NodeOffset;
 	int MaterialOffset;
 	int mesh_data_bvh_offsets;//could I convert this an int4?
-	uint IsVoxel;
-	int3 Size;
 	int LightTriCount;
-	float LightPDF;
 };
+
+StructuredBuffer<MyMeshDataCompacted> _MeshData;
+
 
 struct BVHNode8Data {
 	float3 node_0xyz;
@@ -224,7 +182,6 @@ struct BVHNode8Data {
 };
 
 StructuredBuffer<BVHNode8Data> cwbvh_nodes;
-StructuredBuffer<MyMeshDataCompacted> _MeshData;
 
 
 struct TrianglePos {
@@ -240,9 +197,6 @@ inline TrianglePos triangle_get_positions(const int ID) {
 	tri.posedge2 = AggTris[ID].posedge2;
 	return tri;
 }
-
-Texture2D<float> AlphaAtlas;
-SamplerState sampler_clamp_point;
 
 struct MaterialData {//56
 	float4 AlbedoTex;//16
@@ -269,8 +223,8 @@ struct MaterialData {//56
 	float specTrans;
 	int Thin;
 	float Specular;
-	float relativeIOR;
 	float scatterDistance;
+	int IsSmoothness;
 	float4 AlbedoTexScale;
 	float4 NormalTexScale;
 	float4 MetallicTexScale;
@@ -278,34 +232,35 @@ struct MaterialData {//56
 	float4 EmissiveTexScale;
 };
 
-
 StructuredBuffer<MaterialData> _Materials;
 
-struct Reservoir {
-    float y;
-    float wsum;
-    float M;
-    float W;
-    float3 Radiance;
-    float3 Position;
-    float3 Norm;
-    float MeshIndex;
-    float3 PrevWorld;
-    float3 PrevNorm;
-    float3 FirstBounceHitPosition;
-};
-
-Texture2D<float> MetallicTex;
-Texture2D<float> RoughnessTex;
-
-RWStructuredBuffer<Reservoir> CurrentReservoir;
-RWStructuredBuffer<Reservoir> PreviousReservoir;
-
-Texture2D<half> Heightmap;
-SamplerState sampler_trilinear_clamp;
+float AtlasSize;
 
 SamplerState my_linear_clamp_sampler;
+SamplerState sampler_trilinear_clamp;
+SamplerState my_point_clamp_sampler;
+
+Texture2D<half> MetallicTex;
+Texture2D<half> RoughnessTex;
+Texture2D<float4> AlbedoTex;
+RWTexture2D<half4> TempAlbedoTex;
+RWTexture2D<float4> RandomNumsWrite;
+Texture2D<float4> RandomNums;
+RWTexture2D<float4> _DebugTex;
+
+Texture2D<half> AlphaAtlas;
+
+Texture2D<float4> VideoTex;
+SamplerState sampler_VideoTex;
+Texture2D<float4> _TextureAtlas;
+
+
+Texture2D<float2> _NormalAtlas;
+Texture2D<float4> _EmissiveAtlas;
+
 RWTexture2D<half> PrevDepthTex;
+
+Texture2D<half> Heightmap;
 
 struct TerrainData {
     float3 PositionOffset;
@@ -316,15 +271,23 @@ struct TerrainData {
     int MatOffset;
 };
 
-float AtlasSize;
-
 StructuredBuffer<TerrainData> Terrains;
 
 int TerrainCount;
 uniform bool TerrainExists;
-uniform bool DoWRS;
-inline float luminance(const float3 a) {
-    return dot(float3(0.299f, 0.587f, 0.114f), a);
+
+float GetHeight(float3 CurrentPos, const TerrainData Terrain) {
+    CurrentPos -= Terrain.PositionOffset;
+    float3 b = float3(Terrain.TerrainDim, 0.1f, Terrain.TerrainDim);
+    float3 q = (abs(CurrentPos) - b);
+    q.x /= Terrain.TerrainDim;
+    q.z /= Terrain.TerrainDim;
+    float2 uv = float2(min(CurrentPos.x / Terrain.TerrainDim, b.x / Terrain.TerrainDim), min(CurrentPos.z / Terrain.TerrainDim, b.z / Terrain.TerrainDim));
+    float h = Heightmap.SampleLevel(sampler_trilinear_clamp, uv * (Terrain.HeightMap.xy - Terrain.HeightMap.zw) + Terrain.HeightMap.zw, 0).x;
+    h *= Terrain.HeightScale * 2;
+    q.y -= h;
+    // q = max(0,q);
+    return q.y;//length(q);
 }
 
 float3x3 GetTangentSpace2(float3 normal) {
@@ -340,11 +303,7 @@ float3x3 GetTangentSpace2(float3 normal) {
     return float3x3(tangent, normal, binormal);
 }
 
-float3x3 GetTangentSpace3(float3 normal, float3 tangent) {
-    float3 binormal = cross(normal, tangent);
 
-    return float3x3(tangent, normal, binormal);
-}
 
 float FarPlane;
 
@@ -378,29 +337,6 @@ uint pcg_hash(uint seed) {
 	uint state = seed * 747796405u + 2891336453u;
 	uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
 	return (word >> 22u) ^ word;
-}
-
-
-uint packUnormArb(float3 data2) {
-	data2 = (data2 + 1.0f) * 0.5f;
-	const uint4 bits = uint4(10, 10, 10, 0);
-	const float4 data = float4(data2, 0);
-	float4 mull = exp2(float4(bits)) - 1.0;
-
-	uint4 shift = uint4(0, bits.x, bits.x + bits.y, bits.x + bits.y + bits.z);
-	uint4 shifted = uint4(data * mull + 0.5) << shift;
-
-	return shifted.x | shifted.y | shifted.z | shifted.w;
-}
-
-float3 unpackUnormArb(const uint pack) {
-	const uint4 bits = uint4(10, 10, 10, 0);
-	uint4 maxValue = uint4(exp2(bits) - 1);
-	uint4 shift = uint4(0, bits.x, bits.x + bits.y, bits.x + bits.y + bits.z);
-	uint4 unshifted = pack >> shift;
-	unshifted = unshifted & maxValue;
-
-	return normalize((float4(unshifted).xyz * 1.0 / float4(maxValue).xyz).xyz * 2.0f - 1.0f);
 }
 
 uniform bool UseASVGF;
@@ -446,16 +382,14 @@ float2 random(uint samdim, uint pixel_index) {
 	}
 }
 
-
-
 void set(int index, const RayHit ray_hit) {
 	uint uv = (int)(ray_hit.u * 65535.0f) | ((int)(ray_hit.v * 65535.0f) << 16);
 
-	GlobalRays1[index].hits = uint4(ray_hit.mesh_id, ray_hit.triangle_id, asuint(ray_hit.t), uv);
+	GlobalRays[index].hits = uint4(ray_hit.mesh_id, ray_hit.triangle_id, asuint(ray_hit.t), uv);
 }
 
 RayHit get(int index) {
-	const uint4 hit = GlobalRays1[index].hits;
+	const uint4 hit = GlobalRays[index].hits;
 
 	RayHit ray_hit;
 
@@ -476,13 +410,11 @@ uint packRGBE(float3 v)
 {
 	float3 va = max(0, v);
 	float max_abs = max(va.r, max(va.g, va.b));
-	if (max_abs == 0)
-		return 0;
+	if (max_abs == 0) return 0;
 
 	float exponent = floor(log2(max_abs));
 
-	uint result;
-	result = uint(clamp(exponent + 20, 0, 31)) << 27;
+	uint result = uint(clamp(exponent + 20, 0, 31)) << 27;
 
 	float scale = pow(2, -exponent) * 256.0;
 	uint3 vu = min(511, round(va * scale));
@@ -495,99 +427,28 @@ uint packRGBE(float3 v)
 
 float3 unpackRGBE(uint x)
 {
-	int exponent = int(x >> 27) - 20;
-	float scale = pow(2, exponent) / 256.0;
+    int exponent = int(x >> 27) - 20;
+    float scale = pow(2, exponent) / 256.0;
 
-	float3 v;
-	v.r = float(x & 0x1ff) * scale;
-	v.g = float((x >> 9) & 0x1ff) * scale;
-	v.b = float((x >> 18) & 0x1ff) * scale;
+    float3 v;
+    v.r = float(x & 0x1ff) * scale;
+    v.g = float((x >> 9) & 0x1ff) * scale;
+    v.b = float((x >> 18) & 0x1ff) * scale;
 
-	return v;
-}
-
-float3 project_SH_irradiance(SHData sh, float3 N)
-{
-	float d = dot(sh.shY.xyz, N);
-	float Y = 2.0 * (1.023326 * d + 0.886226 * sh.shY.w);
-	Y = max(Y, 0.0);
-
-	sh.CoCg *= Y * 0.282095 / (sh.shY.w + 1e-6);
-
-	float   T = Y - sh.CoCg.y * 0.5;
-	float   G = sh.CoCg.y + T;
-	float   B = T - sh.CoCg.x * 0.5;
-	float   R = B + sh.CoCg.x;
-
-	return max(float3(R, G, B), 0.0);
-}
-
-SHData irradiance_to_SH(float3 color, float3 dir)
-{
-	SHData result;
-
-	float   Co = color.r - color.b;
-	float   t = color.b + Co * 0.5;
-	float   Cg = color.g - t;
-	float   Y = max(t + Cg * 0.5, 0.0);
-
-	result.CoCg = float2(Co, Cg);
-
-	float   L00 = 0.282095;
-	float   L1_1 = 0.488603 * dir.y;
-	float   L10 = 0.488603 * dir.z;
-	float   L11 = 0.488603 * dir.x;
-
-	result.shY = float4 (L11, L1_1, L10, L00) * Y;
-
-	return result;
-}
-
-float3 SH_to_irradiance(SHData sh)
-{
-	float   Y = sh.shY.w / 0.282095;
-
-	float   T = Y - sh.CoCg.y * 0.5;
-	float   G = sh.CoCg.y + T;
-	float   B = T - sh.CoCg.x * 0.5;
-	float   R = B + sh.CoCg.x;
-
-	return max(float3(R, G, B), 0.0);
-}
-
-SHData init_SH()
-{
-	SHData result;
-	result.shY = 0;
-	result.CoCg = 0;
-	return result;
-}
-
-void accumulate_SH(inout SHData accum, SHData b, float scale)
-{
-	accum.shY += b.shY * scale;
-	accum.CoCg += b.CoCg * scale;
-}
-
-SHData mix_SH(SHData a, SHData b, float s)
-{
-	SHData result;
-	result.shY = lerp(a.shY, b.shY, s);
-	result.CoCg = lerp(a.CoCg, b.CoCg, s);
-	return result;
+    return v;
 }
 
 Ray CreateCameraRay(float2 uv, uint pixel_index) {
 	// Transform the camera origin to world space
-	float3 origin = mul(unity_CameraToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
+	float3 origin = mul(CamToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
 
 	// Invert the perspective projection of the view-space position
-	float3 direction = mul(_CameraInverseProjection, float4(uv, 0.0f, 1.0f)).xyz;
+	float3 direction = mul(CamInvProj, float4(uv, 0.0f, 1.0f)).xyz;
 	// Transform the direction from camera to world space and normalize
-	direction = mul(unity_CameraToWorld, float4(direction, 0.0f)).xyz;
+	direction = mul(CamToWorld, float4(direction, 0.0f)).xyz;
 	direction = normalize(direction);
-	[branch] if (UseDoF) {
-		float3 cameraForward = mul(_CameraInverseProjection, float4(0, 0, 0.0f, 1.0f)).xyz;
+	[branch] if (UseDoF && pixel_index != (screen_width / 2 + screen_width * screen_height / 2)) {
+		float3 cameraForward = mul(CamInvProj, float4(0, 0, 0.0f, 1.0f)).xyz;
 		// Transform the direction from camera to world space and normalize
 		float4 sensorPlane;
 		sensorPlane.xyz = cameraForward;
@@ -621,30 +482,12 @@ Ray CreateCameraRay(float2 uv, uint pixel_index) {
 }
 
 
-float GetHeight(float3 CurrentPos, const TerrainData Terrain) {
-    CurrentPos -= Terrain.PositionOffset;
-    float3 b = float3(Terrain.TerrainDim, 0.1f, Terrain.TerrainDim);
-    float3 q = (abs(CurrentPos) - b);
-    q.x /= Terrain.TerrainDim;
-    q.z /= Terrain.TerrainDim;
-    float2 uv = float2(min(CurrentPos.x / Terrain.TerrainDim, b.x / Terrain.TerrainDim), min(CurrentPos.z / Terrain.TerrainDim, b.z / Terrain.TerrainDim));
-    float h = Heightmap.SampleLevel(sampler_trilinear_clamp, uv * (Terrain.HeightMap.xy - Terrain.HeightMap.zw) + Terrain.HeightMap.zw, 0).x;
-    h *= Terrain.HeightScale * 2;
-    q.y -= h;
-    // q = max(0,q);
-    return q.y;//length(q);
-}
-
-Texture2D<float4> VideoTex;
-SamplerState sampler_VideoTex;
-
 inline uint ray_get_octant_inv4(const float3 ray_direction) {
     return
         (ray_direction.x < 0.0f ? 0 : 0x04040404) |
         (ray_direction.y < 0.0f ? 0 : 0x02020202) |
         (ray_direction.z < 0.0f ? 0 : 0x01010101);
 }
-Texture2D<float4> _TextureAtlas;
 inline bool triangle_intersect_shadow(int tri_id, const Ray ray, float max_distance, int mesh_id, inout float3 throughput) {
     TrianglePos tri = triangle_get_positions(tri_id);
 
@@ -666,7 +509,7 @@ inline bool triangle_intersect_shadow(int tri_id, const Ray ray, float max_dista
                 if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                     float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - u - v) + AggTris[tri_id].texedge1 * u + AggTris[tri_id].texedge2 * v;
                     float2 Uv = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].AlbedoTex.xy - _Materials[MaterialIndex].AlbedoTex.zw) + _Materials[MaterialIndex].AlbedoTex.zw;
-                    if(AlphaAtlas.SampleLevel(sampler_clamp_point, Uv, 0) < 0.0001f) return false;
+                    if(AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < 0.0001f) return false;
                 }
 	            #ifdef VideoIncludedInAlphaMapping
 	                if(_Materials[MaterialIndex].MatType == VideoIndex) {
@@ -686,7 +529,7 @@ inline bool triangle_intersect_shadow(int tri_id, const Ray ray, float max_dista
 					int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTris[tri_id].MatDat);
 	                    float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - u - v) + AggTris[tri_id].texedge1 * u + AggTris[tri_id].texedge2 * v;
 	                    float2 Uv = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].AlbedoTex.xy - _Materials[MaterialIndex].AlbedoTex.zw) + _Materials[MaterialIndex].AlbedoTex.zw;
-	                    float4 BaseCol = _TextureAtlas.SampleLevel(sampler_clamp_point, Uv, 0);
+	                    float4 BaseCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0);
 	                    throughput *= (BaseCol.xyz * BaseCol.w + 2.0f) / 3.0f;
 
 	                	return false;}
@@ -700,83 +543,73 @@ inline bool triangle_intersect_shadow(int tri_id, const Ray ray, float max_dista
     return false;
 }
 
-struct LightBlockData {
-	float3 Pos;
-	float3 Norm;
-	float3 Misc;
-	float2 PDFArea;
-	float Rad;
-};
+inline uint cwbvh_node_intersect(const Ray ray, int oct_inv4, float max_distance, const float3 node_0, uint node_0w, const uint4 node_1, const uint4 node_2, const uint4 node_3, const uint4 node_4) {
+    uint e_x = (node_0w) & 0xff;
+    uint e_y = (node_0w >> (8)) & 0xff;
+    uint e_z = (node_0w >> (16)) & 0xff;
 
-StructuredBuffer<LightBlockData> Blocks;
+    const float3 adjusted_ray_direction_inv = float3(
+        asfloat(e_x << 23) * ray.direction_inv.x,
+        asfloat(e_y << 23) * ray.direction_inv.y,
+        asfloat(e_z << 23) * ray.direction_inv.z
+        );
+    const float3 adjusted_ray_origin = ray.direction_inv * (node_0 - ray.origin);
+            
+    uint hit_mask = 0;
+    float3 tmin3;
+    float3 tmax3;
+    uint child_bits;
+    uint bit_index;
+    [unroll]
+    for(int i = 0; i < 2; i++) {
+        uint meta4 = (i == 0 ? node_1.z : node_1.w);
 
-    inline uint cwbvh_node_intersect(const Ray ray, int oct_inv4, float max_distance, const float3 node_0, uint node_0w, const uint4 node_1, const uint4 node_2, const uint4 node_3, const uint4 node_4) {
-        uint e_x = (node_0w) & 0xff;
-        uint e_y = (node_0w >> (8)) & 0xff;
-        uint e_z = (node_0w >> (16)) & 0xff;
+        uint is_inner4   = (meta4 & (meta4 << 1)) & 0x10101010;
+        uint inner_mask4 = (((is_inner4 << 3) >> 7) & 0x01010101) * 0xff;
+        uint bit_index4  = (meta4 ^ (oct_inv4 & inner_mask4)) & 0x1f1f1f1f;
+        uint child_bits4 = (meta4 >> 5) & 0x07070707;
 
-        const float3 adjusted_ray_direction_inv = float3(
-            asfloat(e_x << 23) * ray.direction_inv.x,
-            asfloat(e_y << 23) * ray.direction_inv.y,
-            asfloat(e_z << 23) * ray.direction_inv.z
-            );
-        const float3 adjusted_ray_origin = ray.direction_inv * (node_0 - ray.origin);
-                
-        uint hit_mask = 0;
-        float3 tmin3;
-        float3 tmax3;
-        uint child_bits;
-        uint bit_index;
+        uint q_lo_x = (i == 0 ? node_2.x : node_2.y);
+        uint q_hi_x = (i == 0 ? node_2.z : node_2.w);
+
+        uint q_lo_y = (i == 0 ? node_3.x : node_3.y);
+        uint q_hi_y = (i == 0 ? node_3.z : node_3.w);
+
+        uint q_lo_z = (i == 0 ? node_4.x : node_4.y);
+        uint q_hi_z = (i == 0 ? node_4.z : node_4.w);
+
+        uint x_min = ray.direction.x < 0.0f ? q_hi_x : q_lo_x;
+        uint x_max = ray.direction.x < 0.0f ? q_lo_x : q_hi_x;
+
+        uint y_min = ray.direction.y < 0.0f ? q_hi_y : q_lo_y;
+        uint y_max = ray.direction.y < 0.0f ? q_lo_y : q_hi_y;
+
+        uint z_min = ray.direction.z < 0.0f ? q_hi_z : q_lo_z;
+        uint z_max = ray.direction.z < 0.0f ? q_lo_z : q_hi_z;
         [unroll]
-        for(int i = 0; i < 2; i++) {
-            uint meta4 = asuint(i == 0 ? node_1.z : node_1.w);
+        for(int j = 0; j < 4; j++) {
 
-            uint is_inner4   = (meta4 & (meta4 << 1)) & 0x10101010;
-            uint inner_mask4 = (((is_inner4 << 3) >> 7) & 0x01010101) * 0xff;
-            uint bit_index4  = (meta4 ^ (oct_inv4 & inner_mask4)) & 0x1f1f1f1f;
-            uint child_bits4 = (meta4 >> 5) & 0x07070707;
+            tmin3 = float3((float)((x_min >> (j * 8)) & 0xff), (float)((y_min >> (j * 8)) & 0xff), (float)((z_min >> (j * 8)) & 0xff));
+            tmax3 = float3((float)((x_max >> (j * 8)) & 0xff), (float)((y_max >> (j * 8)) & 0xff), (float)((z_max >> (j * 8)) & 0xff));
 
-            uint q_lo_x = (i == 0 ? node_2.x : node_2.y);
-            uint q_hi_x = (i == 0 ? node_2.z : node_2.w);
+            tmin3 = mad(tmin3, adjusted_ray_direction_inv, adjusted_ray_origin);
+            tmax3 = mad(tmax3, adjusted_ray_direction_inv, adjusted_ray_origin);
 
-            uint q_lo_y = (i == 0 ? node_3.x : node_3.y);
-            uint q_hi_y = (i == 0 ? node_3.z : node_3.w);
+            float tmin = max(max(tmin3.x, tmin3.y), max(tmin3.z, EPSILON));
+            float tmax = min(min(tmax3.x, tmax3.y), min(tmax3.z, max_distance));
+            
+            bool intersected = tmin < tmax;
+            [branch]
+            if (intersected) {
+                child_bits = (child_bits4 >> (j * 8)) & 0xff;
+                bit_index  = (bit_index4 >> (j * 8)) & 0xff;
 
-            uint q_lo_z = (i == 0 ? node_4.x : node_4.y);
-            uint q_hi_z = (i == 0 ? node_4.z : node_4.w);
-
-            uint x_min = ray.direction.x < 0.0f ? q_hi_x : q_lo_x;
-            uint x_max = ray.direction.x < 0.0f ? q_lo_x : q_hi_x;
-
-            uint y_min = ray.direction.y < 0.0f ? q_hi_y : q_lo_y;
-            uint y_max = ray.direction.y < 0.0f ? q_lo_y : q_hi_y;
-
-            uint z_min = ray.direction.z < 0.0f ? q_hi_z : q_lo_z;
-            uint z_max = ray.direction.z < 0.0f ? q_lo_z : q_hi_z;
-            [unroll]
-            for(int j = 0; j < 4; j++) {
-
-                tmin3 = float3((float)((x_min >> (j * 8)) & 0xff), (float)((y_min >> (j * 8)) & 0xff), (float)((z_min >> (j * 8)) & 0xff));
-                tmax3 = float3((float)((x_max >> (j * 8)) & 0xff), (float)((y_max >> (j * 8)) & 0xff), (float)((z_max >> (j * 8)) & 0xff));
-
-                tmin3 = mad(tmin3, adjusted_ray_direction_inv, adjusted_ray_origin);
-                tmax3 = mad(tmax3, adjusted_ray_direction_inv, adjusted_ray_origin);
-
-                float tmin = max(max(tmin3.x, tmin3.y), max(tmin3.z, EPSILON));
-                float tmax = min(min(tmax3.x, tmax3.y), min(tmax3.z, max_distance));
-                
-                bool intersected = tmin < tmax;
-                [branch]
-                if (intersected) {
-                    child_bits = (child_bits4 >> (j * 8)) & 0xff;
-                    bit_index  = (bit_index4 >> (j * 8)) & 0xff;
-
-                    hit_mask |= child_bits << bit_index;
-                }
+                hit_mask |= child_bits << bit_index;
             }
         }
-        return hit_mask;
     }
+    return hit_mask;
+}
 
 
 
@@ -786,24 +619,26 @@ float2 sample_triangle(float u1, float u2) {
 	if (u2 > u1) {
 		u1 *= 0.5f;
 		u2 -= u1;
-	}
-	else {
+	} else {
 		u2 *= 0.5f;
 		u1 -= u2;
 	}
 	return float2(u1, u2);
 }
 
+struct LightTriData {
+	float3 pos0;
+	float3 posedge1;
+	float3 posedge2;
+	uint TriTarget;
+};
 
-
+StructuredBuffer<LightTriData> LightTriangles;
 
 int LightMeshCount;
 
-struct LightMeshData {
-	float4x4 Inverse;
+struct LightMeshData {//remove 74 bytes
 	float3 Center;
-	float pdf;
-	float CDF;
 	int StartIndex;
 	int IndexEnd;
 	int MatOffset;
@@ -832,81 +667,34 @@ int2 Unpack1To2(int A) {
     return int2(A >> 16, A & 0x0000FFFF);
 }
 
-bool evaldiffuse(const float3 to_light, float cos_theta_o, inout float3 bsdf, inout float pdf) {
-	if (cos_theta_o <= 0.0f) return false;
-
-	bsdf = float3(cos_theta_o * ONE_OVER_PI, cos_theta_o * ONE_OVER_PI, cos_theta_o * ONE_OVER_PI);
-	pdf = cos_theta_o * ONE_OVER_PI;
-
-	return (pdf > 0 || pdf < 0 || pdf == 0);
-}
-
 inline float power_heuristic(float pdf_f, float pdf_g) {
     return (pdf_f * pdf_f) / (pdf_f * pdf_f + pdf_g * pdf_g); // Power of 2 hardcoded, best empirical results according to Veach
 }
 
-float3 i_octahedral_32( uint data )
-{
-    //vec2 v = unpackSnorm2x16(data);
-    uint2 iv = uint2( data, data>>16u ) & 65535u; float2 v = float2(iv)/32767.5 - 1.0;
-    float3 nor = float3(v, 1.0 - abs(v.x) - abs(v.y)); // Rune Stubbe's version,
+inline float2 msign(float2 v) {
+    return (v>=0.0) ? 1.0 : -1.0; 
+}
+
+uint octahedral_32(float3 nor) {
+    nor.xy /= ( abs( nor.x ) + abs( nor.y ) + abs( nor.z ) );
+    nor.xy  = (nor.z >= 0.0) ? nor.xy : (1.0-abs(nor.yx))*msign(nor.xy);
+    uint2 d = uint2(round(32767.5 + nor.xy*32767.5));  
+    return d.x|(d.y<<16u);
+}
+
+float3 i_octahedral_32( uint data ) {
+    uint2 iv = uint2( data, data>>16u ) & 65535u; 
+    float2 v = float2(iv)/32767.5f - 1.0f;
+    float3 nor = float3(v, 1.0f - abs(v.x) - abs(v.y)); // Rune Stubbe's version,
     float t = max(-nor.z,0.0);                     // much faster than original
     nor.x += (nor.x>0.0)?-t:t;                     // implementation of this
     nor.y += (nor.y>0.0)?-t:t;                     // technique
     return normalize( nor );
 }
 
-int SelectLight(int MeshIndex, bool DoSimple, uint pixel_index) {//Need to check these to make sure they arnt simply doing uniform sampling
+int RISCount;
 
-	const float2 rand_light = random(3, pixel_index);
-	const int StartIndex = _LightMeshes[MeshIndex].StartIndex;
-	const int IndexEnd = _LightMeshes[MeshIndex].IndexEnd;
-	// if(DoSimple) return clamp((rand_light.y * (IndexEnd - StartIndex) + StartIndex), StartIndex, IndexEnd - 1);
-	float e = LightTriangles[IndexEnd - 1].sumEnergy * rand_light.x + LightTriangles[StartIndex].pdf;
-	int low = StartIndex;
-	int high = IndexEnd - 1;
-	if (e > LightTriangles[high - 1].pdf + LightTriangles[high - 1].sumEnergy) return high;
-	int mid = -1;
-	while (low < high) {
-		int mid = (low + high) >> 1;
-		LightTriangleData tri = LightTriangles[mid];
-		if (e < tri.sumEnergy)
-			high = mid;
-		else if (e > tri.sumEnergy + tri.pdf)
-			low = mid + 1;
-		else
-			return mid;
-	}
-	//  return mid;
-	  // Failed to find a light using importance sampling, pick a random one from the array
-	  // NOTE: this is a failsafe, we should never get here!
-	return clamp((rand_light.y * (IndexEnd - StartIndex) + StartIndex), StartIndex, IndexEnd - 1);
-}
-int SelectLight(int MeshIndex, float2 rand_light) {//Need to check these to make sure they arnt simply doing uniform sampling
 
-	const int StartIndex = _LightMeshes[MeshIndex].StartIndex;
-	const int IndexEnd = _LightMeshes[MeshIndex].IndexEnd;
-	// if(DoSimple) return clamp((rand_light.y * (IndexEnd - StartIndex) + StartIndex), StartIndex, IndexEnd - 1);
-	float e = LightTriangles[IndexEnd - 1].sumEnergy * rand_light.x + LightTriangles[StartIndex].pdf;
-	int low = StartIndex;
-	int high = IndexEnd - 1;
-	if (e > LightTriangles[high - 1].pdf + LightTriangles[high - 1].sumEnergy) return high;
-	int mid = -1;
-	while (low < high) {
-		int mid = (low + high) >> 1;
-		LightTriangleData tri = LightTriangles[mid];
-		if (e < tri.sumEnergy)
-			high = mid;
-		else if (e > tri.sumEnergy + tri.pdf)
-			low = mid + 1;
-		else
-			return mid;
-	}
-	//  return mid;
-	  // Failed to find a light using importance sampling, pick a random one from the array
-	  // NOTE: this is a failsafe, we should never get here!
-	return clamp((rand_light.y * (IndexEnd - StartIndex) + StartIndex), StartIndex, IndexEnd - 1);
-}
 
 int SelectLightMesh(uint pixel_index) {//Select mesh to sample light from
 	if (LightMeshCount == 1) return 0;
@@ -915,13 +703,11 @@ int SelectLightMesh(uint pixel_index) {//Select mesh to sample light from
 }
 
 
-float3 ToWorld(float3x3 X, float3 V)
-{
-	return normalize(mul(V, X));//V.x * X + V.y * Y + V.z * Z;
+float3 ToWorld(float3x3 X, float3 V) {
+	return normalize(mul(V, X));//V.x * + StartIndex X + V.y * StartIndex + IndexEnd.z * Z;
 }
 
-float3 ToLocal(float3x3 X, float3 V)
-{
+float3 ToLocal(float3x3 X, float3 V) {
 	return normalize(mul(X, V));
 }
 
@@ -1061,27 +847,19 @@ float2 GetTransmittanceTextureUvFromRMu(float r, float mu) {
 
 SamplerState _LinearClamp;
 
-float4 TEX2D(Texture2D<float4> tex, float2 uv)
-{
-	return tex.SampleLevel(_LinearClamp, uv, 0);
-}
-
 float3 GetTransmittanceToTopAtmosphereBoundary(float r, float mu) {
 	float2 uv = GetTransmittanceTextureUvFromRMu(r, mu);
-	return TEX2D(TransmittanceTex, uv).rgb;
+	return TransmittanceTex.SampleLevel(_LinearClamp, uv, 0).rgb;
 }
 
 float3 GetTransmittance(float r, float mu, float d, bool ray_r_mu_intersects_ground) {
-
 	float r_d = clamp(sqrt(d * d + 2.0f * r * mu * d + r * r), bottom_radius, top_radius);
 	float mu_d = clamp((r * mu + d) / r_d, -1.0f, 1.0f);
 	if (ray_r_mu_intersects_ground) {
 		return min(exp(GetTransmittanceToTopAtmosphereBoundary(r_d, -mu_d) -
 			GetTransmittanceToTopAtmosphereBoundary(r, -mu)),
 			float3(1.0f, 1.0f, 1.0f));
-
-	}
-	else {
+	} else {
 		return min(exp(GetTransmittanceToTopAtmosphereBoundary(r, mu) -
 			GetTransmittanceToTopAtmosphereBoundary(r_d, mu_d)),
 			float3(1.0f, 1.0f, 1.0f));
@@ -1093,7 +871,6 @@ float3 GetSkyRadiance(
 	float3 sun_direction, inout float3 transmittance) {
 	camera /= 2048.0f;
 	camera.y += bottom_radius;
-	// camera.y = max(camera.y, bottom_radius + 1);
 
 	// Compute the distance to the top atmosphere boundary along the view ray,
 	// assuming the viewer is in space (or NaN if the view ray does not intersect
@@ -1108,8 +885,7 @@ float3 GetSkyRadiance(
 		camera = camera + view_ray * distance_to_top_atmosphere_boundary;
 		r = top_radius;
 		rmu += distance_to_top_atmosphere_boundary;
-	}
-	else if (r >= top_radius) {
+	} else if (r >= top_radius) {
 		// If the view ray does not intersect the atmosphere, simply return 0.
 		transmittance = 1;
 		return 0;
@@ -1128,8 +904,7 @@ float3 GetSkyRadiance(
 		scattering = GetCombinedScattering(
 			r, mu, mu_s, nu, ray_r_mu_intersects_ground,
 			single_mie_scattering);
-	}
-	else {
+	} else {
 		// Case of light shafts (shadow_length is the total length noted l in our
 		// paper): we omit the scattering between the camera and the point at
 		// distance l, by implementing Eq. (18) of the paper (shadow_transmittance
@@ -1152,15 +927,6 @@ float3 GetSkyRadiance(
 		MiePhaseFunction(0.8f, nu);
 }
 
-
-float Luminance(float3 c)
-{
-	return 0.212671 * c.x + 0.715160 * c.y + 0.072169 * c.z;
-}
-
-
-
-
 bool VisabilityCheckCompute(Ray ray, float dist) {
         uint2 stack[24];
         int stack_size = 0;
@@ -1172,8 +938,6 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
         int mesh_id;
         float max_distance;
         Ray ray2;
-
-        bool inactive = stack_size == 0 && current_group.y == 0;
 
         ray.direction_inv = rcp(ray.direction);
         ray2 = ray;
@@ -1196,9 +960,8 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
 
                 current_group.y &= ~(1 << child_index_offset);
 
-                if (current_group.y & 0xff000000) {
-                    stack[stack_size++] = current_group;
-                }
+                if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
+
                 uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
                 uint relative_index = countbits(hits_imask & ~(0xffffffff << slot_index));
                 uint child_node_index = child_index_base + relative_index;
@@ -1220,8 +983,7 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
 
                 current_group.y = (hitmask & 0xff000000) | (uint)(imask);
                 triangle_group.y = (hitmask & 0x00ffffff);
-            }
-            else {
+            } else {
                 triangle_group.x = current_group.x;
                 triangle_group.y = current_group.y;
                 current_group.x = (uint)0;
@@ -1237,13 +999,10 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
 
                     mesh_id = triangle_group.x + mesh_offset;
 
-                    if (triangle_group.y != 0) {
-                        stack[stack_size++] = triangle_group;
-                    }
+                    if (triangle_group.y != 0) stack[stack_size++] = triangle_group;
 
-                    if (current_group.y & 0xff000000) {
-                        stack[stack_size++] = current_group;
-                    }
+                    if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
+
                     tlas_stack_size = stack_size;
 
                     int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
@@ -1270,9 +1029,7 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
                 }
             }
 
-            if (hit) {
-                return false;
-            }
+            if (hit) return false;
 
             if ((current_group.y & 0xff000000) == 0) {
                 if (stack_size == 0) {//thread has finished traversing
@@ -1289,168 +1046,6 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
         }
 }
 
-
-
-
-
-#ifdef UseReSTIRDI
-
- if(Reservoir.W != 0) {
-            UseUnityLight = Reservoir.W < 0;
-            LightWeight = abs(Reservoir.W);
-                if (UseUnityLight) {
-                    triindex = clamp((DIRand(Reservoir.RandomSeed, Unpack1To2(Reservoir.FramesM).y).x * unitylightcount), 0, unitylightcount - 1);
-                    LightData Light = _UnityLights[triindex];
-                    [branch] switch (Light.Type) {
-                    default:
-                        pos2 = Light.Position;
-                        LightNorm = normalize(ray.origin - pos2);
-                        break;
-                    case 1:
-                        pos2 = ray.origin + Light.Direction;
-                        LightNorm = -Light.Direction;
-                        IsAboveHorizon = (LightNorm.y <= 0.0f);
-                        IsDirectional = true;
-                        break;
-                    case 2:
-                        pos2 = Light.Position;
-                        LightNorm = Light.Direction;
-                        IsAboveHorizon = false;
-                        IsSpecialized = true;
-                        break;
-                    case 3:
-                        IsSpecialized = true;
-                        float3 randVector = (float3(random(43, pixel_index).x * Light.SpotAngle.x, random(43, pixel_index).y * Light.SpotAngle.y, 0)) - float3(Light.SpotAngle.x, Light.SpotAngle.y, 0) / 2;
-                        float3 oldRand = randVector;
-                        Light.ZAxisRotation *= PI / 180.0f;
-                        randVector = float3(oldRand.x * cos(Light.ZAxisRotation) - oldRand.y * sin(Light.ZAxisRotation), oldRand.y * cos(Light.ZAxisRotation) + oldRand.x * sin(Light.ZAxisRotation), 0);
-                        float3 tangent0 = cross(Light.Direction, float3(0, 1, 0));
-                        if (dot(tangent0, tangent0) < 0.001f) tangent0 = cross(Light.Direction, float3(1, 0, 0));
-                        tangent0 = normalize(tangent0);
-                        float3 tangent1 = normalize(cross(Light.Direction, tangent0));
-                        float3x3 rotationmatrix = { tangent0, tangent1, Light.Direction };
-                        float3 Length = length(randVector);
-                        pos2 = Light.Position + mul(normalize(randVector), rotationmatrix) * Length;// - float3(Light.SpotAngle.x, 0, Light.SpotAngle.y) / 2;
-                        LightNorm = Light.Direction;
-                        break;
-                    }
-                }
-                else {
-                    float2 RandSelection = DIRand(Reservoir.RandomSeed, Unpack1To2(Reservoir.FramesM).y);
-                    MeshIndex = clamp((RandSelection.x * LightMeshCount), 0, LightMeshCount - 1);
-                    int StartIndex =_LightMeshes[MeshIndex].StartIndex;
-                    int IndexEnd =_LightMeshes[MeshIndex].IndexEnd;
-                    triindex = clamp((RandSelection.y * (IndexEnd - StartIndex) + StartIndex), StartIndex, IndexEnd - 1);
-                    TrianglePos CurTri = triangle_get_positions(LightTriangles[triindex].TriangleIndex + _MeshData[_LightMeshes[MeshIndex].OrigionalMesh].TriOffset);
-                    float2 rand_triangle = DIRand(Reservoir.RandomSeed, Unpack1To2(Reservoir.FramesM).y * 1.3f);
-                    CurUv = sample_triangle(rand_triangle.x, rand_triangle.y);
-                    pos2 = mul(_LightMeshes[MeshIndex].Inverse, float4(CurTri.pos0 + CurUv.x * CurTri.posedge1 + CurUv.y * CurTri.posedge2, 1.0f)).xyz;
-                    float3 LightNormsx = i_octahedral_32(AggTris[LightTriangles[triindex].TriangleIndex + _MeshData[_LightMeshes[MeshIndex].OrigionalMesh].TriOffset].norms.x);
-                    LightNorm = normalize(mul(_LightMeshes[MeshIndex].Inverse, float4(LightNormsx + CurUv.x * (i_octahedral_32(AggTris[LightTriangles[triindex].TriangleIndex + _MeshData[_LightMeshes[MeshIndex].OrigionalMesh].TriOffset].norms.y) - LightNormsx) + CurUv.y * (i_octahedral_32(AggTris[LightTriangles[triindex].TriangleIndex + _MeshData[_LightMeshes[MeshIndex].OrigionalMesh].TriOffset].norms.z) - LightNormsx), 0.0f)).xyz);
-                    TriCount = (_LightMeshes[MeshIndex].IndexEnd - _LightMeshes[MeshIndex].StartIndex);
-                }
-                if (IsDirectional) {
-                    float3 DirectionAdjustment = (float3(random(23, pixel_index), random(62, pixel_index).x) - 0.5f) * _UnityLights[triindex].SpotAngle.x * 0.01f;
-                    pos2 += DirectionAdjustment;
-                }
-                float3 to_light = pos2 - ray.origin;
-
-                float distance_to_light_squared = dot(to_light, to_light);
-                float distance_to_light = sqrt(max(distance_to_light_squared, 0.0f));
-
-                to_light = to_light / distance_to_light;
-                Attenuation = (IsSpecialized) ? saturate(dot(to_light, -LightNorm)) : 1;
-                if (!IsDirectional && !IsAboveHorizon) {
-                    Attenuation = saturate(Attenuation * _UnityLights[triindex].SpotAngle.x + _UnityLights[triindex].SpotAngle.y);
-                    IsAboveHorizon = true;
-                }
-
-                bool validbsdf = false;
-                float3 bsdf_value = 0.0f;
-                float bsdf_pdf = 0.0f;
-                float throwaway = 0;
-
-                float cos_theta_light = abs(dot(to_light, LightNorm));
-                float cos_theta_hit = dot(to_light, norm);
-                [branch] switch (hitDat.MatType) {//Switch between different materials
-                    default:
-                        validbsdf = evaldiffuse(to_light, cos_theta_hit, bsdf_value, bsdf_pdf);
-                        bsdf_value *= hitDat.surfaceColor;
-                    break;
-                    case DisneyIndex:
-                        bsdf_value = EvaluateDisney(hitDat, -PrevDirection, to_light, hitDat.Thin == 1, bsdf_pdf, throwaway, GetTangentSpace2(norm), pixel_index);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
-                        validbsdf = bsdf_pdf > 0;
-                    break;
-                    case CutoutIndex:
-                        bsdf_value = EvaluateDisney(hitDat, -PrevDirection, to_light, hitDat.Thin == 1, bsdf_pdf, throwaway, GetTangentSpace2(norm), pixel_index);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
-                        validbsdf = bsdf_pdf > 0;
-                    break;
-                    case VolumetricIndex:
-                        validbsdf = true;
-                    break;
-                }
-
-                float LightCos = abs(dot(to_light, LightNorm));
-                float SurfaceCos = dot(to_light, norm);
-                if (SurfaceCos > 0 && LightWeight < 10000.0f) {
-                    float3 Radiance;
-                    float NEE_pdf;
-                    float3 Illum;
-                    float RadianceIncomming;
-                    if (UseUnityLight) {
-                        float3 transmittance = 1;
-                        if (IsDirectional) {
-                            float3 Radiance = GetSkyRadiance(ray.origin, to_light, 0, SunDir, transmittance);
-                        }
-                        RadianceIncomming = luminance(_UnityLights[triindex].Radiance);
-                        Radiance = _UnityLights[triindex].Radiance * transmittance;
-                        NEE_pdf = distance_to_light_squared * LightCos / (unitylightcount);
-                        Illum = PrevThroughput * (Radiance * bsdf_value) / NEE_pdf * Attenuation * LightWeight * 2.0f;// / max(hitDat.surfaceColor, 0.0000001f);
-                    }
-                    else {
-                        float SA = LightCos * LightTriangles[triindex].area / distance_to_light_squared;
-                        NEE_pdf = (1.0f / (LightMeshCount * SA * TriCount));// * (LightTriangles[triindex].pdf / _LightMeshes[MeshIndex].pdf) * (_LightMeshes[LightMeshCount - 1].CDF / (_UnityLights[unitylightcount - 1].CDF + _LightMeshes[LightMeshCount - 1].CDF));
-                        Radiance = LightTriangles[triindex].radiance;
-                        int MaterialIndex = LightTriangles[triindex].MatIndex + _LightMeshes[MeshIndex].MatOffset;
-                        if (_Materials[MaterialIndex].MatType == VideoIndex || _Materials[MaterialIndex].EmissiveTex.x > 0) {
-                            float2 BaseUv = LightTriangles[triindex].UV1 * (1.0f - CurUv.x - CurUv.y) + LightTriangles[triindex].UV2 * CurUv.x + LightTriangles[triindex].UV3 * CurUv.y;
-                            if (_Materials[MaterialIndex].MatType == VideoIndex) {
-                                Radiance *= VideoTex.SampleLevel(sampler_VideoTex, BaseUv, 0).xyz;
-                            }
-                            else {
-                                float2 EmissionUV = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].EmissiveTex.xy - _Materials[MaterialIndex].EmissiveTex.zw) + _Materials[MaterialIndex].EmissiveTex.zw;
-                                Radiance *= _EmissiveAtlas.SampleLevel(sampler_EmissiveAtlas, EmissionUV, 0).xyz * _EmissiveAtlas.SampleLevel(sampler_EmissiveAtlas, EmissionUV, 0).w;
-                            }
-                        }
-                        RadianceIncomming = luminance(Radiance);
-                        float NEEMISWeight = power_heuristic(NEE_pdf, bsdf_pdf);
-                        Illum = PrevThroughput * (Radiance * bsdf_value) / NEE_pdf * Attenuation * LightWeight * 2.0f;// / max(hitDat.surfaceColor, 0.0000001f);
-                    }
-                    if (CurBounce == 0) CurrentReservoirGI[Index].NEEPosition = (IsDirectional) ? (ray.origin + to_light * 10000.0f) : pos2;
-
-                    bool DoNEERR = !UseRussianRoulette;
-                    float maxillum = max(max(Illum.x, Illum.y), Illum.z) * A;
-                    if ((DoNEERR || maxillum > random(9, pixel_index).y)) {//NEE russian roulette, massively improves performance while giivng the same result
-                        uint index3;//Congrats we shoot a shadow ray for NEE
-
-                        InterlockedAdd(BufferSizes[CurBounce].shadow_rays, 1, index3);
-                        ShadowRaysBuffer[index3].origin = ray.origin;
-                        ShadowRaysBuffer[index3].direction = to_light;
-                        ShadowRaysBuffer[index3].t = (IsDirectional) ? 10000.0f : distance_to_light - 0.00001f;//2.0f * EPSILON;
-                        ShadowRaysBuffer[index3].illumination = Illum * ((DoNEERR) ? 1 : rcp(saturate(maxillum)));// / (CurBounce == 0 && TempAlbedoTex[Uv].xyz != 0.00001f ? TempAlbedoTex[Uv].xyz : 1);// * max(hitDat.surfaceColor,0.0000001f);
-                        ShadowRaysBuffer[index3].RadianceIncomming = Illum * ((DoNEERR) ? 1 : rcp(saturate(maxillum))) * ((!UseAlteredPipeline) ? (((bsdf_value == 0) ? 1 : rcp(bsdf_value))) : (((hitDat.surfaceColor == 0) ? 1 : rcp(hitDat.surfaceColor))));
-                        ShadowRaysBuffer[index3].PixelIndex = Uv.y * screen_width + Uv.x;
-                        ShadowRaysBuffer[index3].LuminanceIncomming = luminance(Radiance);
-                        ShadowRaysBuffer[index3].PrimaryNEERay = (CurBounce != AlbedoTexData.w - 1);
-                    } else if(CurBounce == 0) {
-                        // OutputDIBuffer[pixel_index].W = 0;
-                    }
-                } else if(CurBounce == 0) {
-                        // OutputDIBuffer[pixel_index].W = 0;
-                }   
-            }
-
-#endif
 
 
 Texture2D<float4> _WeatherTexture;
@@ -1837,3 +1432,125 @@ SamplerState my_linear_repeat_sampler;
 		fixed4 clouds3D = raymarch(rs, rd * stepSize, steps, 9999.0f, cosAngle); // raymarch volumetric clouds
 		return clouds3D;
 	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+inline float luminance(const float3 a) {
+    return dot(float3(0.299f, 0.587f, 0.114f), a);
+}
+
+inline float2 AlignUV(float2 BaseUV, float4 TexScale, float4 TexDim) {
+	if(TexDim.x <= 0) return -1;
+	return fmod((BaseUV * TexScale.xy + TexScale.zw) + 100.0f, 1.0f) * (TexDim.xy - TexDim.zw) + TexDim.zw;
+}
+
+
+inline float3 GetTriangleNormal(const uint TriIndex, const float2 TriUV, const float3x3 Inverse) {
+	float scalex = length(mul(Inverse, float3(1,0,0)));
+    float scaley = length(mul(Inverse, float3(0,1,0)));
+    float scalez = length(mul(Inverse, float3(0,0,1)));
+    float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
+    float3 Normal0 = i_octahedral_32(AggTris[TriIndex].norms.x);
+    float3 Normal1 = i_octahedral_32(AggTris[TriIndex].norms.y) - Normal0;
+    float3 Normal2 = i_octahedral_32(AggTris[TriIndex].norms.z) - Normal0;
+
+    return normalize(mul(Inverse, normalize(Scale * (Normal0 + TriUV.x * Normal1 + TriUV.y * Normal2))).xyz);
+}
+
+inline float3 GetTriangleTangent(const uint TriIndex, const float2 TriUV, const float3x3 Inverse) {
+	float scalex = length(mul(Inverse, float3(1,0,0)));
+    float scaley = length(mul(Inverse, float3(0,1,0)));
+    float scalez = length(mul(Inverse, float3(0,0,1)));
+    float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
+    float3 Tangent0 = i_octahedral_32(AggTris[TriIndex].tans.x);
+    float3 Tangent1 = i_octahedral_32(AggTris[TriIndex].tans.y) - Tangent0;
+    float3 Tangent2 = i_octahedral_32(AggTris[TriIndex].tans.z) - Tangent0;
+
+    return normalize(mul(Inverse, normalize(Scale * (Tangent0 + TriUV.x * Tangent1 + TriUV.y * Tangent2))).xyz);
+}
+
+inline float3 GetHeightmapNormal(float3 Position, uint TerrainID) {
+	TerrainData CurrentTerrain = Terrains[TerrainID];
+	float3 Geomnorm;
+	static const float2 Offset = float2(0.01f,0);
+    Geomnorm.x = (GetHeight(Position + Offset.xyy, CurrentTerrain) - GetHeight(Position - Offset.xyy, CurrentTerrain));
+    Geomnorm.y = (GetHeight(Position + Offset.yxy, CurrentTerrain) - GetHeight(Position - Offset.yxy, CurrentTerrain));
+    Geomnorm.z = (GetHeight(Position + Offset.yyx, CurrentTerrain) - GetHeight(Position - Offset.yyx, CurrentTerrain));
+    return normalize(Geomnorm);
+}
+
+inline void orthonormal_basis(const float3 normal, inout float3 tangent, inout float3 binormal) {
+    float sign2 = (normal.z >= 0.0f) ? 1.0f : -1.0f;
+    float a = -1.0f / (sign2 + normal.z);
+    float b = normal.x * normal.y * a;
+
+    tangent = float3(1.0f + sign2 * normal.x * normal.x * a, sign2 * b, -sign2 * normal.x);
+    binormal = float3(b, sign2 + normal.y * normal.y * a, -normal.y);
+}
+
+inline float2 vogelDiskSample(int i, int num_samples, float r_offset, float phi_offset) {
+    float r = sqrt((float(i) + 0.07 + r_offset*0.93) / float(num_samples));
+    static const float golden_angle = 2.399963229728;
+    float phi = float(i) * golden_angle + 2.0 * PI * phi_offset;
+
+    return r * float2(cos(phi), sin(phi));
+}
+
+inline float4x4 inverse(float4x4 m) {
+    float n11 = m[0][0], n12 = m[1][0], n13 = m[2][0], n14 = m[3][0];
+    float n21 = m[0][1], n22 = m[1][1], n23 = m[2][1], n24 = m[3][1];
+    float n31 = m[0][2], n32 = m[1][2], n33 = m[2][2], n34 = m[3][2];
+    float n41 = m[0][3], n42 = m[1][3], n43 = m[2][3], n44 = m[3][3];
+
+    float t11 = n23 * n34 * n42 - n24 * n33 * n42 + n24 * n32 * n43 - n22 * n34 * n43 - n23 * n32 * n44 + n22 * n33 * n44;
+    float t12 = n14 * n33 * n42 - n13 * n34 * n42 - n14 * n32 * n43 + n12 * n34 * n43 + n13 * n32 * n44 - n12 * n33 * n44;
+    float t13 = n13 * n24 * n42 - n14 * n23 * n42 + n14 * n22 * n43 - n12 * n24 * n43 - n13 * n22 * n44 + n12 * n23 * n44;
+    float t14 = n14 * n23 * n32 - n13 * n24 * n32 - n14 * n22 * n33 + n12 * n24 * n33 + n13 * n22 * n34 - n12 * n23 * n34;
+
+    float det = n11 * t11 + n21 * t12 + n31 * t13 + n41 * t14;
+    float idet = 1.0f / det;
+
+    float4x4 ret;
+
+    ret[0][0] = t11 * idet;
+    ret[0][1] = (n24 * n33 * n41 - n23 * n34 * n41 - n24 * n31 * n43 + n21 * n34 * n43 + n23 * n31 * n44 - n21 * n33 * n44) * idet;
+    ret[0][2] = (n22 * n34 * n41 - n24 * n32 * n41 + n24 * n31 * n42 - n21 * n34 * n42 - n22 * n31 * n44 + n21 * n32 * n44) * idet;
+    ret[0][3] = (n23 * n32 * n41 - n22 * n33 * n41 - n23 * n31 * n42 + n21 * n33 * n42 + n22 * n31 * n43 - n21 * n32 * n43) * idet;
+
+    ret[1][0] = t12 * idet;
+    ret[1][1] = (n13 * n34 * n41 - n14 * n33 * n41 + n14 * n31 * n43 - n11 * n34 * n43 - n13 * n31 * n44 + n11 * n33 * n44) * idet;
+    ret[1][2] = (n14 * n32 * n41 - n12 * n34 * n41 - n14 * n31 * n42 + n11 * n34 * n42 + n12 * n31 * n44 - n11 * n32 * n44) * idet;
+    ret[1][3] = (n12 * n33 * n41 - n13 * n32 * n41 + n13 * n31 * n42 - n11 * n33 * n42 - n12 * n31 * n43 + n11 * n32 * n43) * idet;
+
+    ret[2][0] = t13 * idet;
+    ret[2][1] = (n14 * n23 * n41 - n13 * n24 * n41 - n14 * n21 * n43 + n11 * n24 * n43 + n13 * n21 * n44 - n11 * n23 * n44) * idet;
+    ret[2][2] = (n12 * n24 * n41 - n14 * n22 * n41 + n14 * n21 * n42 - n11 * n24 * n42 - n12 * n21 * n44 + n11 * n22 * n44) * idet;
+    ret[2][3] = (n13 * n22 * n41 - n12 * n23 * n41 - n13 * n21 * n42 + n11 * n23 * n42 + n12 * n21 * n43 - n11 * n22 * n43) * idet;
+
+    ret[3][0] = t14 * idet;
+    ret[3][1] = (n13 * n24 * n31 - n14 * n23 * n31 + n14 * n21 * n33 - n11 * n24 * n33 - n13 * n21 * n34 + n11 * n23 * n34) * idet;
+    ret[3][2] = (n14 * n22 * n31 - n12 * n24 * n31 - n14 * n21 * n32 + n11 * n24 * n32 + n12 * n21 * n34 - n11 * n22 * n34) * idet;
+    ret[3][3] = (n12 * n23 * n31 - n13 * n22 * n31 + n13 * n21 * n32 - n11 * n23 * n32 - n12 * n21 * n33 + n11 * n22 * n33) * idet;
+
+    return ret;
+}
+
+inline float AreaOfTriangle(float3 pt1, float3 pt2, float3 pt3) {
+    float a = distance(pt1, pt2);
+    float b = distance(pt2, pt3);
+    float c = distance(pt3, pt1);
+    float s = (a + b + c) / 2.0f;
+    return sqrt(s * (s - a) * (s - b) * (s - c));
+}

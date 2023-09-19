@@ -18,26 +18,16 @@ void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
 
     if (id.x >= screen_width || id.y >= screen_height) return;
     const uint pixel_index = id.y * screen_width + id.x;
-    // float2 jitter = (random(1, pixel_index) - 0.5f);
-    // float2 uv = float2((id.xy) / float2(screen_width, screen_height) * 2.0f - 1.0f);
-    // Ray ray = CreateCameraRay(uv);
-    #ifdef HDRP
-        float2 pos_prev = ((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVectors[int3(id.xy,0)].xy * float2(screen_width, screen_height));
-    #else
-        float2 pos_prev = ((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVectors.SampleLevel(sampler_MotionVectors, id.xy / float2(screen_width, screen_height), 0).xy) * float2(screen_width, screen_height);
-    #endif
-    int2 pp = int2(floor(pos_prev));
 
     const static RayHit tempray = CreateRayHit();
     static const ColData InitCol = { 1,1,1,0,0,0,0,0,0,0,0,0 };
     set(pixel_index, tempray);
-    GlobalRays1[pixel_index].origin = Rays[pixel_index].origin;
-    GlobalRays1[pixel_index].direction = Rays[pixel_index].direction;
-    GlobalRays1[pixel_index].PixelIndex = id.x + id.y * screen_width;
-    GlobalRays1[pixel_index].HitVoxel = 0;
-    GlobalRays1[pixel_index].last_pdf = 0;
-    GlobalRays1[pixel_index].PrevIndex = pp.x + pp.y * screen_width;
+    GlobalRays[pixel_index].origin = Rays[pixel_index].origin;
+    GlobalRays[pixel_index].direction = Rays[pixel_index].direction;
+    GlobalRays[pixel_index].PixelIndex = pixel_index;
     GlobalColors[pixel_index] = InitCol;
+    WorldPosA[id.xy] = float4(0,0,0, 0);
+    NEEPosA[id.xy] = float4(0,0,0, 0);
     InterlockedAdd(BufferSizes[0].tracerays, 1);
 
 }
@@ -51,29 +41,16 @@ void Generate(uint3 id : SV_DispatchThreadID) {
     if (id.x >= screen_width || id.y >= screen_height) return;
     const uint pixel_index = id.y * screen_width + id.x;
     float2 jitter = ((random(1, pixel_index) - 0.5));
-    float2 uv = float2((id.xy + jitter) / float2(screen_width, screen_height) * 2.0f - 1.0f);
+    float2 uv = float2((id.xy + (UseReCur ? 0 : jitter)) / float2(screen_width, screen_height) * 2.0f - 1.0f);
 
     Ray ray = CreateCameraRay(uv, pixel_index);
-
-    // if (UseReSTIRGI) {
-    #ifdef HDRP
-        float2 pos_prev = ((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVectors[int3(id.xy,0)].xy * float2(screen_width, screen_height));
-    #else
-        float2 pos_prev = ((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVectors.SampleLevel(sampler_MotionVectors, id.xy / float2(screen_width, screen_height), 0).xy) * float2(screen_width, screen_height);
-    #endif
-        int2 pp = int2(floor(pos_prev));
-        GlobalRays1[pixel_index].PrevIndex = pp.x + pp.y * screen_width;
-    // }
-
     set(pixel_index, tempray);
-    GlobalRays1[pixel_index].origin = ray.origin;// + length(ray.direction / dot(ray.direction, Forward) * LinearEyeDepth(Depth.SampleLevel(sampler_MotionVectors, id.xy / float2(screen_width, screen_height), 0).x)) * ray.direction * 0.99f;
-    GlobalRays1[pixel_index].direction = ray.direction;
-    GlobalRays1[pixel_index].PixelIndex = id.x + id.y * screen_width;
-    GlobalRays1[pixel_index].HitVoxel = 0;
-    GlobalRays1[pixel_index].last_pdf = 0;
+    GlobalRays[pixel_index].origin = ray.origin;
+    GlobalRays[pixel_index].direction = ray.direction;
+    GlobalRays[pixel_index].PixelIndex = pixel_index;
     GlobalColors[pixel_index] = InitCol;
-    InterlockedAdd(BufferSizes[0].tracerays, 1);
 
+    InterlockedAdd(BufferSizes[0].tracerays, 1);
 }
 
 #pragma kernel GenerateLightMaps
@@ -220,11 +197,9 @@ void GenerateLightMaps(uint3 id : SV_DispatchThreadID) {
         float3 Direction = CalculateNormal(SourceTex[id.xy].xyz, SourceTex[id.xy + int2(0,1)].xyz, SourceTex[id.xy + int2(1,0)].xyz);
         float3 Origin = SourceTex[id.xy].xyz;
         InterlockedAdd(BufferSizes[0].tracerays, 1, pixel_index);
-        GlobalRays1[pixel_index].origin = Origin - Direction * 0.0001f;
-        GlobalRays1[pixel_index].direction = Direction;
-        GlobalRays1[pixel_index].PixelIndex = id.x + id.y * screen_width;
-        GlobalRays1[pixel_index].HitVoxel = 0;
-        GlobalRays1[pixel_index].last_pdf = 0;        
+        GlobalRays[pixel_index].origin = Origin - Direction * 0.0001f;
+        GlobalRays[pixel_index].direction = Direction;
+        GlobalRays[pixel_index].PixelIndex = id.x + id.y * screen_width;
     }
     GlobalColors[id.x + id.y * screen_width] = InitCol;
 
@@ -248,11 +223,11 @@ void GenerateLightMaps(uint3 id : SV_DispatchThreadID) {
     //                 float3 Temp2 = mul(LightTri.posedge1, rotationmatrix);
     //             float3 randVector = float3(LightTri.WH.x / (MaxX - MinX), LightTri.WH.y / (MaxY - MinY), 0);
     //                 float3 Length = length(randVector);
-    //             GlobalRays1[pixel_index].origin = (LightTri.pos0 + LightTri.posedge2 * min(max(u,0.05),0.95) + LightTri.posedge1 * min(max(v,0.05),0.95)) + LightTri.norm * 0.01f  + mul(normalize(float3(random(14, pixel_index).x - 0.5f, random(14, pixel_index).y - 0.5f, 0)),rotationmatrix) / 100.0f;//+ mul(normalize(randVector), rotationmatrix) * Length / 2.0f;
-    //             GlobalRays1[pixel_index].direction = -normalize(LightTri.norm + mul(normalize(float3(random(23, pixel_index).x - 0.5f, random(23, pixel_index).y - 0.5f, 0)),rotationmatrix) / 1000.0f);
-    //             GlobalRays1[pixel_index].PixelIndex = i + j * screen_width;
-    //             GlobalRays1[pixel_index].HitVoxel = 0;
-    //             GlobalRays1[pixel_index].last_pdf = 0;
+    //             GlobalRays[pixel_index].origin = (LightTri.pos0 + LightTri.posedge2 * min(max(u,0.05),0.95) + LightTri.posedge1 * min(max(v,0.05),0.95)) + LightTri.norm * 0.01f  + mul(normalize(float3(random(14, pixel_index).x - 0.5f, random(14, pixel_index).y - 0.5f, 0)),rotationmatrix) / 100.0f;//+ mul(normalize(randVector), rotationmatrix) * Length / 2.0f;
+    //             GlobalRays[pixel_index].direction = -normalize(LightTri.norm + mul(normalize(float3(random(23, pixel_index).x - 0.5f, random(23, pixel_index).y - 0.5f, 0)),rotationmatrix) / 1000.0f);
+    //             GlobalRays[pixel_index].PixelIndex = i + j * screen_width;
+    //             GlobalRays[pixel_index].HitVoxel = 0;
+    //             GlobalRays[pixel_index].last_pdf = 0;
     //             // GlobalColors[floor(i) + floor(j) * screen_width].Direct = float3(u,v,0);
     //         }
     //     }

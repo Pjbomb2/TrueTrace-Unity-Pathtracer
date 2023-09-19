@@ -43,6 +43,7 @@ namespace TrueTrace {
                 serializedObject.FindProperty("Flatness").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Flatness: ", t.Flatness[Selected], 0, 1);
                 serializedObject.FindProperty("Thin").GetArrayElementAtIndex(Selected).intValue = EditorGUILayout.IntField("Thin: ", t.Thin[Selected]);
                 serializedObject.FindProperty("ScatterDist").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Scatter Distance: ", t.ScatterDist[Selected], 0, 5);
+                // serializedObject.FindProperty("IsSmoothness").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Use Roughness or Smoothness: ", t.IsSmoothness[Selected]);
                 if(EditorGUI.EndChangeCheck()) {
                     for(int i = 0; i < t1.Length; i++) {
                         (t1[i] as RayTracingObject).CallMaterialEdited();

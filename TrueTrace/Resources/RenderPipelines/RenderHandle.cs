@@ -44,9 +44,11 @@ public class RenderHandle : MonoBehaviour
         // RayMaster.ParticleCamera.Render();
 
         CommandBuffer cmd = new CommandBuffer();
+        cmd.name = "TrueTrace";
         RayMaster.RenderImage(destination, cmd);
+        // cmd.Blit(destination, GITex);
         // OverlayMaterial.SetTexture("GITexture", GITex);
-        // cmd.Blit(RayMaster.ParticleCamera.targetTexture, destination, OverlayMaterial);
+        // cmd.Blit(source, destination, OverlayMaterial);
         Graphics.ExecuteCommandBuffer(cmd);
         cmd.Clear();
         cmd.Release();

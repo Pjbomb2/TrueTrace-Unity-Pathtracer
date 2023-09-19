@@ -112,7 +112,6 @@ namespace TrueTrace {
 
             BVH2Nodes[BVH2Nodes[nodesi].left].aabb = split.aabb_left;
             BVH2Nodes[BVH2Nodes[nodesi].left + 1].aabb = split.aabb_right;
-
             node_index += 2;
             int num_left = split.index - first_index;
             int num_right = first_index + index_count - split.index;
@@ -187,8 +186,6 @@ namespace TrueTrace {
             DimensionedIndices = null;
 
         }
-    //28 ms
-
 
         public BVH2Builder(AABB[] MeshAABBs) {//Top Level Acceleration Structure
             int MeshCount = MeshAABBs.Length;

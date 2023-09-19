@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using CommonVars;
 
 namespace TrueTrace {
     [System.Serializable]
@@ -18,9 +19,16 @@ namespace TrueTrace {
         public RenderTexture HFLAA;
         public RenderTexture HFLAB;//High Frequency Long Accumulation
 
-        public RenderTexture DebugTex;
         public RenderTexture NormA;
         public RenderTexture NormB;
+
+        public RenderTexture MomA;
+        public RenderTexture MomB;
+
+
+        public RenderTexture DepthA;
+        public RenderTexture DepthB;
+
 
         public RenderTexture BlurHints;
 
@@ -34,77 +42,6 @@ namespace TrueTrace {
         Camera camera;
         int ScreenHeight;
         int ScreenWidth;
-
-        private void CreateComputeBuffer<T>(ref ComputeBuffer buffer, T[] data, int stride)
-            where T : struct
-        {
-            // Do we already have a compute buffer?
-            if (buffer != null)
-            {
-                // If no data or buffer doesn't match the given criteria, release it
-                if (data.Length == 0 || buffer.count != data.Length || buffer.stride != stride)
-                {
-                    buffer.Release();
-                    buffer = null;
-                }
-            }
-
-            if (data.Length != 0)
-            {
-                // If the buffer has been released or wasn't there to
-                // begin with, create it
-                if (buffer == null)
-                {
-                    buffer = new ComputeBuffer(data.Length, stride);
-                }
-                // Set data on the buffer
-                buffer.SetData(data);
-            }
-        }
-
-        private void CreateRenderTexture(ref RenderTexture ThisTex)
-        {
-            ThisTex = new RenderTexture(ScreenWidth, ScreenHeight, 0,
-                RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
-            ThisTex.enableRandomWrite = true;
-            ThisTex.useMipMap = false;
-            ThisTex.Create();
-        }
-        private void CreateRenderTexture4(ref RenderTexture ThisTex)
-        {
-            ThisTex = new RenderTexture(ScreenWidth, ScreenHeight, 0,
-                RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
-            ThisTex.enableRandomWrite = true;
-            ThisTex.useMipMap = false;
-            ThisTex.Create();
-        }
-        private void CreateRenderTextureDouble(ref RenderTexture ThisTex)
-        {
-            ThisTex = new RenderTexture(ScreenWidth, ScreenHeight, 0,
-                RenderTextureFormat.RGFloat, RenderTextureReadWrite.Linear);
-            ThisTex.enableRandomWrite = true;
-            ThisTex.useMipMap = false;
-            ThisTex.Create();
-        }
-
-        private void CreateRenderTextureSingle(ref RenderTexture ThisTex)
-        {
-            ThisTex = new RenderTexture(ScreenWidth, ScreenHeight, 0,
-                RenderTextureFormat.RHalf, RenderTextureReadWrite.Linear);
-            ThisTex.enableRandomWrite = true;
-            ThisTex.useMipMap = false;
-            ThisTex.Create();
-        }
-
-        private void CreateRenderTexture2(ref RenderTexture ThisTex)
-        {
-            ThisTex = new RenderTexture(ScreenWidth, ScreenHeight, 0,
-                RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
-            ThisTex.enableRandomWrite = true;
-            ThisTex.useMipMap = true;
-            ThisTex.autoGenerateMips = false;
-            ThisTex.Create();
-        }
 
         public void init(int ScreenWidth, int ScreenHeight, Camera camera)
         {
@@ -121,31 +58,53 @@ namespace TrueTrace {
             SSAOKernel = shader.FindKernel("SSAO");
 
 
-            CreateRenderTextureSingle(ref SSAOTexA);
-            CreateRenderTextureSingle(ref SSAOTexB);
-            CreateRenderTexture2(ref HFA);
-            CreateRenderTexture2(ref HFB);
-            CreateRenderTexture2(ref HFPrev);
-            CreateRenderTexture2(ref HFLAA);
-            CreateRenderTexture2(ref HFLAB);
-            CreateRenderTextureDouble(ref NormA);
-            CreateRenderTextureDouble(ref NormB);
-            CreateRenderTextureSingle(ref BlurHints);
-            CreateRenderTexture4(ref DebugTex);
+            CommonFunctions.CreateRenderTexture(ref MomA, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf2);
+            CommonFunctions.CreateRenderTexture(ref MomB, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf2);
+            CommonFunctions.CreateRenderTexture(ref DepthA, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf1);
+            CommonFunctions.CreateRenderTexture(ref DepthB, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf1);
+            CommonFunctions.CreateRenderTexture(ref SSAOTexA, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf1);
+            CommonFunctions.CreateRenderTexture(ref SSAOTexB, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf1);
+            CommonFunctions.CreateRenderTexture(ref BlurHints, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf1);
+            CommonFunctions.CreateRenderTexture(ref HFA, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref HFB, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref HFPrev, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref HFLAA, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref HFLAB, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref HFLAB, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref NormA, ScreenWidth, ScreenHeight, CommonFunctions.RTFull2);
+            CommonFunctions.CreateRenderTexture(ref NormB, ScreenWidth, ScreenHeight, CommonFunctions.RTFull2);
             shader.SetInt("screen_width", ScreenWidth);
             shader.SetInt("screen_height", ScreenHeight);
         }
+
+
+
         Vector3 PrevCamPos = Vector3.zero;
-        public void Do(ref ComputeBuffer _ColorBuffer, ref RenderTexture Output, RenderTexture TEX_PT_VIEW_DEPTH_B, RenderTexture CorrectedDepthTex, int CurFrame, CommandBuffer cmd, ComputeBuffer ScreenSpaceBuffer, ComputeBuffer ReSTIRBuffer, ComputeBuffer PrevReSTIRBuffer, bool UseReSTIRGI, ref RenderTexture Albedo, float ScaleMultiplier, float BlurRadius) {
+        public void Do(ref RenderTexture Output,
+                        ref RenderTexture Albedo, 
+                        ref ComputeBuffer _ColorBuffer,  
+                            ComputeBuffer ScreenSpaceBuffer, 
+                            RenderTexture TEX_PT_VIEW_DEPTH_B, 
+                            RenderTexture CorrectedDepthTex, 
+                            RenderTexture ReSTIRGIA, 
+                            RenderTexture ReSTIRGIB, 
+                            RenderTexture WorldPosData,
+                            CommandBuffer cmd, 
+                            int CurFrame, 
+                            bool UseReSTIRGI, 
+                            float ScaleMultiplier, 
+                            float BlurRadius, 
+                            int PartialRenderingFactor) {
             bool DoUpscale = ScaleMultiplier != 1;
             shader.SetFloat("CameraDist", Vector3.Distance(camera.transform.position, PrevCamPos));
             shader.SetFloat("gBlurRadius", BlurRadius * ScaleMultiplier);
             cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "Albedo", Albedo);
             cmd.SetComputeTextureParam(shader, CopyColorKernel, "Albedo", Albedo);
+            cmd.SetComputeTextureParam(shader, CopyColorKernel, "WorldPosData", WorldPosData);
             cmd.SetComputeTextureParam(shader, MainBlurKernel, "Albedo", Albedo);
             cmd.SetComputeTextureParam(shader, MainBlurKernel, "SSAORead", SSAOTexB);
-            cmd.BeginSample("ReCur");
             shader.SetInt("CurFrame", CurFrame);
+            shader.SetInt("PartialRenderingFactor", PartialRenderingFactor);
             shader.SetBool("DoUpscale", DoUpscale);
             bool EvenFrame = CurFrame % 2 == 0;
             cmd.BeginSample("ReCur Copy");
@@ -155,6 +114,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, CopyColorKernel, "HintsWrite", BlurHints);
             cmd.SetComputeTextureParam(shader, CopyColorKernel, "HFA",  EvenFrame ? HFA : HFPrev);
             cmd.SetComputeTextureParam(shader, CopyColorKernel, "NormA", EvenFrame ? NormA : NormB);
+            cmd.SetComputeTextureParam(shader, CopyColorKernel, "CurDepthWrite", EvenFrame ? DepthA : DepthB);
             cmd.DispatchCompute(shader, CopyColorKernel, Mathf.CeilToInt(ScreenWidth / 32.0f), Mathf.CeilToInt(ScreenHeight / 32.0f), 1);
             cmd.EndSample("ReCur Copy");
             
@@ -180,37 +140,35 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, MainBlurKernel, "HintsRead", BlurHints);
 
             cmd.BeginSample("ReCur Fast Temporal");
-            if(EvenFrame) {
-                HFPrev.GenerateMips();
-            } else {
-                HFA.GenerateMips();
-            }
             cmd.SetComputeIntParam(shader, "PassNum", 1);
             shader.SetTextureFromGlobal(TemporalFastKernel, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
             shader.SetBool("UseReSTIRGI", UseReSTIRGI);
-            cmd.SetComputeBufferParam(shader, TemporalFastKernel, "CurrentReservoirGI", ReSTIRBuffer);
-            cmd.SetComputeBufferParam(shader, TemporalFastKernel, "PrevReservoirGI", PrevReSTIRBuffer);
-            cmd.SetComputeTextureParam(shader, TemporalFastKernel, "DebugTex", DebugTex);
+            cmd.SetComputeTextureParam(shader, TemporalFastKernel, "ReservoirDataA", ReSTIRGIA);
+            cmd.SetComputeTextureParam(shader, TemporalFastKernel, "ReservoirDataB", ReSTIRGIB);
             cmd.SetComputeTextureParam(shader, TemporalFastKernel, "NormB", (!EvenFrame) ? NormA : NormB);//not an error in order, I use NormB here as NormA because I can samplelevel NormB but not NormA
             cmd.SetComputeTextureParam(shader, TemporalFastKernel, "NormA", (EvenFrame) ? NormA : NormB);
-            cmd.SetComputeTextureParam(shader, TemporalFastKernel, "CurDepth", EvenFrame ? CorrectedDepthTex : TEX_PT_VIEW_DEPTH_B);
-            cmd.SetComputeTextureParam(shader, TemporalFastKernel, "PrevDepth", (!EvenFrame) ? CorrectedDepthTex : TEX_PT_VIEW_DEPTH_B);
+            cmd.SetComputeTextureParam(shader, TemporalFastKernel, "CurDepth", EvenFrame ? DepthA : DepthB);
+            cmd.SetComputeTextureParam(shader, TemporalFastKernel, "PrevDepth", (!EvenFrame) ? DepthA : DepthB);
             cmd.SetComputeTextureParam(shader, TemporalFastKernel, "HFA", EvenFrame ? HFA : HFPrev);
             cmd.SetComputeTextureParam(shader, TemporalFastKernel, "HFPrev", (!EvenFrame) ? HFA : HFPrev);
+            cmd.SetComputeTextureParam(shader, TemporalFastKernel, "MomentsA", (EvenFrame) ? MomA : MomB);
+            cmd.SetComputeTextureParam(shader, TemporalFastKernel, "MomentsB", (!EvenFrame) ? MomA : MomB);
             cmd.DispatchCompute(shader, TemporalFastKernel, Mathf.CeilToInt(ScreenWidth / 8.0f), Mathf.CeilToInt(ScreenHeight / 8.0f), 1);
             cmd.EndSample("ReCur Fast Temporal");
 
             cmd.BeginSample("ReCur Blit");
             cmd.Blit(EvenFrame ? HFA : HFPrev, (!EvenFrame) ? HFA : HFPrev);
+            cmd.Blit(EvenFrame ? MomA : MomB, (!EvenFrame) ? MomA : MomB);
             cmd.EndSample("ReCur Blit");
 
             cmd.BeginSample("ReCur Main Blur");
             cmd.SetComputeIntParam(shader, "PassNum", 2);
             shader.SetTextureFromGlobal(MainBlurKernel, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
-            cmd.SetComputeTextureParam(shader, MainBlurKernel, "DebugTex", DebugTex);
             cmd.SetComputeTextureParam(shader, MainBlurKernel, "NormB", (EvenFrame) ? NormA : NormB);
-            cmd.SetComputeTextureParam(shader, MainBlurKernel, "CurDepth", EvenFrame ? CorrectedDepthTex : TEX_PT_VIEW_DEPTH_B);
-            cmd.SetComputeTextureParam(shader, MainBlurKernel, "PrevDepth", (!EvenFrame) ? CorrectedDepthTex : TEX_PT_VIEW_DEPTH_B);
+            cmd.SetComputeTextureParam(shader, MainBlurKernel, "CurDepth", EvenFrame ? DepthA : DepthB);
+            cmd.SetComputeTextureParam(shader, MainBlurKernel, "PrevDepth", (!EvenFrame) ? DepthA : DepthB);
+            cmd.SetComputeTextureParam(shader, MainBlurKernel, "MomentsA", (EvenFrame) ? MomA : MomB);
+            cmd.SetComputeTextureParam(shader, MainBlurKernel, "MomentsB", (!EvenFrame) ? MomA : MomB);
             cmd.SetComputeTextureParam(shader, MainBlurKernel, "HFA", EvenFrame ? HFA : HFPrev);
             cmd.SetComputeTextureParam(shader, MainBlurKernel, "HFB", (!EvenFrame) ? HFA : HFPrev);
             cmd.DispatchCompute(shader, MainBlurKernel, Mathf.CeilToInt(ScreenWidth / 16.0f), Mathf.CeilToInt(ScreenHeight / 16.0f), 1);
@@ -229,30 +187,23 @@ namespace TrueTrace {
             // cmd.SetComputeTextureParam(shader, MainBlurKernel, "HFB", HFB);
             // cmd.DispatchCompute(shader, MainBlurKernel, Mathf.CeilToInt(ScreenWidth / 16.0f), Mathf.CeilToInt(ScreenHeight / 16.0f), 1);
             // cmd.EndSample("ReCur Edge Clean Blur");
-
-            if(EvenFrame) {
-                HFLAB.GenerateMips();
-            } else {
-                HFLAA.GenerateMips();
-            }
-
             cmd.BeginSample("ReCur Slow Temporal");
             cmd.SetComputeIntParam(shader, "PassNum", 4);
             shader.SetTextureFromGlobal(TemporalSlowKernel, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
+            cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "ReservoirDataA", ReSTIRGIA);
+            cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "ReservoirDataB", ReSTIRGIB);
             cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "NormB", (!EvenFrame) ? NormA : NormB);//not an error in order, I use NormB here as NormA because I can samplelevel NormB but not NormA
             cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "NormA", (EvenFrame) ? NormA : NormB);
-            cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "DebugTex", DebugTex);
             cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "HFA", (EvenFrame) ? HFLAA : HFLAB);
             cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "HFPrev", (!EvenFrame) ? HFLAA : HFLAB);
             cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "HFB", HFB);
-            cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "CurDepth", EvenFrame ? CorrectedDepthTex : TEX_PT_VIEW_DEPTH_B);
-            cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "PrevDepth", (!EvenFrame) ? CorrectedDepthTex : TEX_PT_VIEW_DEPTH_B);
+            cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "CurDepth", EvenFrame ? DepthA : DepthB);
+            cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "PrevDepth", (!EvenFrame) ? DepthA : DepthB);
             cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "Output", Output);
             cmd.DispatchCompute(shader, TemporalSlowKernel, Mathf.CeilToInt(ScreenWidth / 16.0f), Mathf.CeilToInt(ScreenHeight / 16.0f), 1);
             cmd.EndSample("ReCur Slow Temporal");
             PrevCamPos = camera.transform.position;
 
-            cmd.EndSample("ReCur");
         }
     }
 }

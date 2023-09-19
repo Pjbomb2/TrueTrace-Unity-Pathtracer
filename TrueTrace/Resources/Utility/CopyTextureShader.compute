@@ -1,7 +1,7 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel SingleInputPass
 Texture2D<float4> AdditionTex;
-SamplerState sampler_trilinear_clamp;
+SamplerState sampler_point_clamp;
 
 RWTexture2D<float4> Result;
 
@@ -24,7 +24,7 @@ float4 EncodeRGBM(float3 rgb )
 void SingleInputPass (uint3 id : SV_DispatchThreadID)
 {
     if(any(id.xy >= (uint2)floor((InputSize) * Scale))) return;
-    float4 Col = AdditionTex.SampleLevel(sampler_trilinear_clamp, (id.xy) / InputSize / Scale, 0);
+    float4 Col = AdditionTex.SampleLevel(sampler_point_clamp, (id.xy) / InputSize / Scale, 0);
     if(IsNormalMap) {
         float2 InputNormal;
         [branch]if(Col.r == 1) {
@@ -55,7 +55,7 @@ void AddInputPass (uint3 id : SV_DispatchThreadID)
     if(any(id.xy >= (uint2)floor((InputSize) * Scale))) return;
     float4 Col = Result[id.xy + floor(Offset * Scale)];
     Col.xyz = pow(Col.xyz, 2.2f) * Col.w;
-    float A = AdditionTex.SampleLevel(sampler_trilinear_clamp, (id.xy) / InputSize / Scale, 0)[OutputRead];
+    float A = AdditionTex.SampleLevel(sampler_point_clamp, (id.xy) / InputSize / Scale, 0)[OutputRead];
 
     switch(OutputWrite) {
         case 0:
@@ -95,7 +95,7 @@ RWTexture2D<float> ResultSingle;
 void SingleOutputPass (uint3 id : SV_DispatchThreadID)
 {
     if(any(id.xy >= (uint2)floor((InputSize) * Scale))) return;
-    float A = AdditionTex.SampleLevel(sampler_trilinear_clamp, (id.xy) / InputSize / Scale, 0)[OutputRead];
+    float A = AdditionTex.SampleLevel(sampler_point_clamp, (id.xy) / InputSize / Scale, 0)[OutputRead];
     ResultSingle[id.xy + floor(Offset * Scale)] = pow(abs(A), 0.4545f);
 
 
@@ -106,7 +106,7 @@ RWTexture2D<float2> ResultDouble;
 void DoubleOutputPass (uint3 id : SV_DispatchThreadID)
 {
     if(any(id.xy >= (uint2)floor((InputSize) * Scale))) return;
-        float4 Col = AdditionTex.SampleLevel(sampler_trilinear_clamp, (id.xy) / InputSize / Scale, 0);
+        float4 Col = AdditionTex.SampleLevel(sampler_point_clamp, (id.xy) / InputSize / Scale, 0);
         float2 InputNormal;
         [branch]if(Col.r == 1) {
             InputNormal = Col.ag;

@@ -6,6 +6,8 @@ int screen_height;
 
 int AtrousIterations;
 
+int PartialRenderingFactor;
+
 struct ColData {
 	float3 throughput;
 	float3 Direct;
@@ -90,25 +92,25 @@ SamplerState sampler_DepthTex;
 SamplerState sampler_PrevDepthTex;
 SamplerState sampler_NormalTex;
 
-uint packUnormArb(const float3 data2) {
-	const uint4 bits = uint4(10, 10, 10, 0);
-	const float4 data = float4(data2, 0);
-	float4 mull = exp2(float4(bits)) - 1.0;
-
-	uint4 shift = uint4(0, bits.x, bits.x + bits.y, bits.x + bits.y + bits.z);
-	uint4 shifted = uint4(data * mull + 0.5) << shift;
-
-	return shifted.x | shifted.y | shifted.z | shifted.w;
+inline float2 msign(float2 v) {
+    return (v>=0.0) ? 1.0 : -1.0; 
 }
 
-float3 unpackUnormArb(const uint pack) {
-	const uint4 bits = uint4(10, 10, 10, 0);
-	uint4 maxValue = uint4(exp2(bits) - 1);
-	uint4 shift = uint4(0, bits.x, bits.x + bits.y, bits.x + bits.y + bits.z);
-	uint4 unshifted = pack >> shift;
-	unshifted = unshifted & maxValue;
+uint octahedral_32(float3 nor) {
+    nor.xy /= ( abs( nor.x ) + abs( nor.y ) + abs( nor.z ) );
+    nor.xy  = (nor.z >= 0.0) ? nor.xy : (1.0-abs(nor.yx))*msign(nor.xy);
+    uint2 d = uint2(round(32767.5 + nor.xy*32767.5));  
+    return d.x|(d.y<<16u);
+}
 
-	return normalize((float4(unshifted).xyz * 1.0 / float4(maxValue).xyz).xyz * 2.0f - 1.0f);
+float3 i_octahedral_32( uint data ) {
+    uint2 iv = uint2( data, data>>16u ) & 65535u; 
+    float2 v = float2(iv)/32767.5f - 1.0f;
+    float3 nor = float3(v, 1.0f - abs(v.x) - abs(v.y)); // Rune Stubbe's version,
+    float t = max(-nor.z,0.0);                     // much faster than original
+    nor.x += (nor.x>0.0)?-t:t;                     // implementation of this
+    nor.y += (nor.y>0.0)?-t:t;                     // technique
+    return normalize( nor );
 }
 
 float3 unpackRGBE(uint x)
@@ -146,8 +148,8 @@ void kernel_copy(int3 id : SV_DispatchThreadID)
 	uint2 NewSample = floor(UV * float2(TargetWidth, TargetHeight));
 	float3 Albedo = _Albedo.SampleLevel(sampler_Albedo, id.xy / float2(screen_width, screen_height), 0).xyz;
 	float3 Dir = CreateCameraRay(UV * 2.0f - 1.0f);
-	ColorDirectOut[id.xy] = float4(PerPixelRadiance[pixel_index].Direct + ((Albedo == 0) ? 0 : unpackRGBE(PerPixelRadiance[pixel_index].PrimaryNEERay) / Albedo), 1.0f);
-	ColorIndirectOut[id.xy] = float4(PerPixelRadiance[pixel_index].Indirect, 1.0f);
+	ColorDirectOut[id.xy] = float4(PerPixelRadiance[pixel_index].Direct + ((Albedo == 0) ? 0 : unpackRGBE(PerPixelRadiance[pixel_index].PrimaryNEERay) / Albedo) * (float)PartialRenderingFactor, 1.0f);
+	ColorIndirectOut[id.xy] = float4(PerPixelRadiance[pixel_index].Indirect * (float)PartialRenderingFactor, 1.0f);
 	#ifdef HDRP
 		RWScreenPosPrev[id.xy] = float4((MotionVectors[int3(NewSample, 0)].xy), 0.0f, 1.0f);
 		RWNormalAndDepth[id.xy] = float4(oct_encode_normal(NormalTex[int3(NewSample,0)]), DepthTex[id.xy], PrevDepthTex[id.xy]);

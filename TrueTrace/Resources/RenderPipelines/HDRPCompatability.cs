@@ -27,7 +27,7 @@ public class HDRPCompatability : CustomPass
         RayMaster = GameObject.Find("Scene").GetComponent<TrueTrace.RayTracingMaster>();
         Shader.SetGlobalTexture("_CameraGBufferTexture2", Shader.GetGlobalTexture("_GBufferTexture2"));
         RayMaster.TossCamera(Camera.main.gameObject.GetComponent<Camera>());
-        if(RayMaster.RayTracingShader == null) {
+        if(RayMaster.ShadingShader == null) {
             RayMaster.Start2();
             GameObject.Find("Scene").GetComponent<TrueTrace.AssetManager>().Start();
         }

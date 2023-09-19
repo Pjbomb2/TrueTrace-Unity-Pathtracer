@@ -13,6 +13,7 @@
     <RoughnessRange>_Glossiness</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -28,6 +29,7 @@
     <RoughnessRange>_Roughness</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -43,6 +45,7 @@
     <RoughnessRange>_GlossMapScale</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -58,6 +61,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -73,6 +77,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -88,6 +93,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -103,6 +109,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -118,6 +125,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -133,6 +141,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -148,6 +157,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -163,6 +173,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -178,6 +189,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>true</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -193,6 +205,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -208,6 +221,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -223,6 +237,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -238,6 +253,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -253,6 +269,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -268,6 +285,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -283,12 +301,13 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
     <Name>Sun_Temple/Decal_Puddle</Name>
-    <BaseColorTex>_MainTex</BaseColorTex>
-    <NormalTex>null</NormalTex>
+    <BaseColorTex>_Mask</BaseColorTex>
+    <NormalTex>_BumpMap</NormalTex>
     <EmissionTex>null</EmissionTex>
     <MetallicTex>null</MetallicTex>
     <MetallicTexChannel>0</MetallicTexChannel>
@@ -297,8 +316,9 @@
     <RoughnessTexChannel>0</RoughnessTexChannel>
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
-    <IsCutout>false</IsCutout>
-    <BaseColorValue>null</BaseColorValue>
+    <IsCutout>true</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>_Color</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
     <Name>Sun_Temple/Mountains</Name>
@@ -313,6 +333,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -328,6 +349,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -343,6 +365,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -358,6 +381,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -373,6 +397,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -388,6 +413,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -403,6 +429,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -418,6 +445,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -433,6 +461,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -448,6 +477,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -463,6 +493,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -478,6 +509,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -493,6 +525,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -508,6 +541,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -523,6 +557,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -538,6 +573,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -553,6 +589,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -568,6 +605,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -583,6 +621,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -598,6 +637,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -613,6 +653,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -628,6 +669,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -643,6 +685,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -658,6 +701,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -673,6 +717,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -688,6 +733,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -703,6 +749,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -718,6 +765,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -733,6 +781,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -748,6 +797,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -763,6 +813,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -778,6 +829,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -793,6 +845,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -808,6 +861,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -823,6 +877,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -838,6 +893,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -853,6 +909,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -868,6 +925,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -883,6 +941,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -898,6 +957,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -913,6 +973,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -928,6 +989,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -943,6 +1005,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -958,6 +1021,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -973,6 +1037,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -988,6 +1053,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1003,6 +1069,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1018,6 +1085,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1033,6 +1101,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1048,6 +1117,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1063,6 +1133,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1078,6 +1149,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1093,6 +1165,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1108,6 +1181,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1123,6 +1197,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1138,6 +1213,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1153,6 +1229,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1168,6 +1245,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1183,6 +1261,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1198,6 +1277,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1213,6 +1293,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1228,6 +1309,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1243,6 +1325,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1258,6 +1341,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1273,6 +1357,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1288,6 +1373,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1303,6 +1389,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1318,6 +1405,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1333,6 +1421,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1348,6 +1437,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1363,6 +1453,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1378,6 +1469,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1393,6 +1485,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1408,6 +1501,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1423,6 +1517,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1438,6 +1533,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1453,6 +1549,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1468,6 +1565,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1483,6 +1581,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1498,6 +1597,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1513,7 +1613,8 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
-    <BaseColorValue>null</BaseColorValue>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>_Color</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
     <Name>AVP/DoubleSided</Name>
@@ -1528,21 +1629,23 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
     <Name>AVP/POM</Name>
-    <BaseColorTex>_MainTex</BaseColorTex>
-    <NormalTex>null</NormalTex>
+    <BaseColorTex>_Albedo</BaseColorTex>
+    <NormalTex>_Normal</NormalTex>
     <EmissionTex>null</EmissionTex>
-    <MetallicTex>null</MetallicTex>
+    <MetallicTex>_Metallic</MetallicTex>
     <MetallicTexChannel>0</MetallicTexChannel>
     <MetallicRange>null</MetallicRange>
     <RoughnessTex>null</RoughnessTex>
     <RoughnessTexChannel>0</RoughnessTexChannel>
-    <RoughnessRange>null</RoughnessRange>
+    <RoughnessRange>_SmoothnessPower</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1558,22 +1661,24 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
     <Name>AVP/Velvet</Name>
-    <BaseColorTex>_MainTex</BaseColorTex>
-    <NormalTex>null</NormalTex>
-    <EmissionTex>null</EmissionTex>
-    <MetallicTex>null</MetallicTex>
+    <BaseColorTex>_Albedo</BaseColorTex>
+    <NormalTex>_Normals</NormalTex>
+    <EmissionTex>_Emission</EmissionTex>
+    <MetallicTex>_Metallic</MetallicTex>
     <MetallicTexChannel>0</MetallicTexChannel>
     <MetallicRange>null</MetallicRange>
     <RoughnessTex>null</RoughnessTex>
     <RoughnessTexChannel>0</RoughnessTexChannel>
-    <RoughnessRange>null</RoughnessRange>
+    <RoughnessRange>_Smoothness</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
-    <BaseColorValue>null</BaseColorValue>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>_AlbedoColor</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
     <Name>AVP/Glass</Name>
@@ -1588,6 +1693,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1603,6 +1709,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1618,6 +1725,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1633,6 +1741,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1648,6 +1757,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1663,6 +1773,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1678,6 +1789,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1693,6 +1805,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1708,6 +1821,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1723,6 +1837,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1738,6 +1853,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1753,6 +1869,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1768,6 +1885,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1783,6 +1901,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1798,6 +1917,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1813,6 +1933,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1828,6 +1949,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1843,6 +1965,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1858,6 +1981,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1873,6 +1997,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1888,6 +2013,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1903,6 +2029,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1918,6 +2045,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1933,6 +2061,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1948,6 +2077,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1963,6 +2093,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1978,6 +2109,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -1993,6 +2125,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -2008,6 +2141,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -2023,6 +2157,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -2038,6 +2173,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -2053,6 +2189,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -2068,6 +2205,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -2083,6 +2221,7 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -2098,6 +2237,359 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/890d0aa64203fe04bb04780656ffa953</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/42a68ae10d1cdbb468e96322aaf42847</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/a3ff20cf3d5a38a409319309abb769e5</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/58192e3f7e250d24cb4cfecc0db45e24</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/70a215fdc924cbe4caa58ee54783f2ea</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/b9dac6a0021c3234d887d5ef1d684315</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/5d665ebeb9f3dbb44b072b37e1a3fa0c</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/40919f26622ca974cb3def00c7dbde68</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/062ac40ec76c3314987e9aa8ea9e082a</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/d382f86fba49fbf4684164b1423aa97e</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/a6fa995818f17414eb30cd8b8fd9076b</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/b600c433ff8a42e41b7a3d06cfffa4bb</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/0b06d9f5acbf4f8469264f21cbc67831</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/0663f8c35ee69294faf33fb99fbaa829</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/1e7d1819a59585d41864c4c8b9aa33fb</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/eb51a217541fe5f42899e4dd20657b87</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/ec7ca3d895d9318489ae34325fd534f9</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/0e14cc34ac844ae428b0ea0597cdb105</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/ad6aba6e23808184e893eb9393e8385b</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/9a232ceca199c0343968e6879d73d925</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Shader Graphs/MasterMaterial</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Shader Graphs/Foliage</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
   </MaterialShader>
 </Materials>

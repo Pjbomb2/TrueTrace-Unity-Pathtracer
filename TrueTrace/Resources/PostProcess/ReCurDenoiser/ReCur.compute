@@ -2,8 +2,8 @@
 #include "../../GlobalDefines.cginc"
 #include "UnityCG.cginc"
 #define PI 3.14159
-#define PoissonSamples 8
 #define gHistoryFixFrameNum 12
+#define FasterSampling
 
 
 bool DoUpscale;
@@ -13,33 +13,40 @@ int screen_width;
 int screen_height;
 int PassNum;
 int CurFrame;
+int PartialRenderingFactor;
 
 float CameraDist;
 float gBlurRadius;
 
-static const float3 g_Special6[ 6 ] =
-{
-    // https://www.desmos.com/calculator/e5mttzlg6v
-    float3( -0.50 * sqrt(3.0) , -0.50             , exp(-0.66f * 1.0f) ),
-    float3(  0.00             ,  1.00             , exp(-0.66f * 1.0f) ),
-    float3(  0.50 * sqrt(3.0) , -0.50             , exp(-0.66f * 1.0f) ),
-    float3(  0.00             , -0.30             , exp(-0.66f * 0.09f) ),
-    float3(  0.15 * sqrt(3.0) ,  0.15             , exp(-0.66f * 0.09f) ),
-    float3( -0.15 * sqrt(3.0) ,  0.15             , exp(-0.66f * 0.09f) ),
-};
-
-static const float3 g_Special8[ 8 ] =
-{
-    // https://www.desmos.com/calculator/abaqyvswem
-    float3( -1.00             ,  0.00             ,  exp(-0.66f * 1.0f)),
-    float3( -0.25 * sqrt(2.0) ,  0.25 * sqrt(2.0) , exp(-0.66f * 0.25f) ),
-    float3(  0.00             ,  1.00             , exp(-0.66f * 1.0f) ),
-    float3(  0.25 * sqrt(2.0) , -0.25 * sqrt(2.0) , exp(-0.66f * 0.25f) ),
-    float3(  1.00             ,  0.00             , exp(-0.66f * 1.0f)),
-    float3(  0.25 * sqrt(2.0) ,  0.25 * sqrt(2.0) , exp(-0.66f * 0.25f)),
-    float3(  0.00             , -1.00             , exp(-0.66f * 1.0f)),
-    float3( -0.25 * sqrt(2.0) , -0.25 * sqrt(2.0) , exp(-0.66f * 0.25f))
-};
+#ifdef FasterSampling
+    static const float3 SamplePoissionDisk6[ 6 ] =
+    {//From Nvidia ReBLUR
+        // https://www.desmos.com/calculator/e5mttzlg6v
+        float3( -0.50 * sqrt(3.0) , -0.50             , exp(-0.66f * 1.0f) ),
+        float3(  0.00             ,  1.00             , exp(-0.66f * 1.0f) ),
+        float3(  0.50 * sqrt(3.0) , -0.50             , exp(-0.66f * 1.0f) ),
+        float3(  0.00             , -0.30             , exp(-0.66f * 0.09f) ),
+        float3(  0.15 * sqrt(3.0) ,  0.15             , exp(-0.66f * 0.09f) ),
+        float3( -0.15 * sqrt(3.0) ,  0.15             , exp(-0.66f * 0.09f) ),
+    };
+    #define DiskSamples SamplePoissionDisk6
+    #define DiskCount 6
+#else
+    static const float3 SamplePoissionDisk8[ 8 ] =
+    {//From Nvidia ReBLUR
+        // https://www.desmos.com/calculator/abaqyvswem
+        float3( -1.00             ,  0.00             ,  exp(-0.66f * 1.0f)),
+        float3( -0.25 * sqrt(2.0) ,  0.25 * sqrt(2.0) , exp(-0.66f * 0.25f) ),
+        float3(  0.00             ,  1.00             , exp(-0.66f * 1.0f) ),
+        float3(  0.25 * sqrt(2.0) , -0.25 * sqrt(2.0) , exp(-0.66f * 0.25f) ),
+        float3(  1.00             ,  0.00             , exp(-0.66f * 1.0f)),
+        float3(  0.25 * sqrt(2.0) ,  0.25 * sqrt(2.0) , exp(-0.66f * 0.25f)),
+        float3(  0.00             , -1.00             , exp(-0.66f * 1.0f)),
+        float3( -0.25 * sqrt(2.0) , -0.25 * sqrt(2.0) , exp(-0.66f * 0.25f))
+    };
+    #define DiskSamples SamplePoissionDisk8
+    #define DiskCount 8
+#endif
 
 SamplerState my_linear_clamp_sampler;
 
@@ -63,6 +70,7 @@ Texture2D<half4> HFPrev;
 RWTexture2D<half> HintsWrite;
 Texture2D<half> HintsRead;
 
+RWTexture2D<half> CurDepthWrite;
 Texture2D<half> CurDepth;
 Texture2D<half> PrevDepth;
 
@@ -70,18 +78,10 @@ RWTexture2D<float4> Output;
 
 RWTexture2D<float4> DebugTex;
 
-struct GIReservoir {
-    float3 SecondaryHitPosition;
-    float W;
-    float3 NEEPosition;
-    int LuminanceIncommingM;
-    uint PrimaryNormal;
-    uint BaseColor;
-    int HistoricFrameThisCase;
-    int HistoricID;
-};
-StructuredBuffer<GIReservoir> CurrentReservoirGI;
-StructuredBuffer<GIReservoir> PrevReservoirGI;
+Texture2D<uint4> WorldPosData;
+
+Texture2D<half4> ReservoirDataA;
+Texture2D<half4> ReservoirDataB;
 
 struct ColData {
     float3 throughput;
@@ -94,13 +94,8 @@ struct ColData {
 StructuredBuffer<ColData> PerPixelRadiance;
 
 struct ScreenSpaceData {
-  int InitialRayDirection;
-    float Roughness;
-    int Normal;
-    int NormNormal;
-    float3 Albedo;
-    float Metallic;
-    float3 Position;
+    uint GeomNorm;
+    uint SurfNorm;//albedo is already stored in the texture WorldSpaceInfo
     float t;
     int MatIndex;
 };
@@ -119,19 +114,25 @@ float3 unpackRGBE(uint x)
     return v;
 }
 
-inline uint packUnormArb(float3 data2) {
-    data2 = (data2 + 1.0f) * 0.5f;
-
-    uint3 shifted = uint3(data2 * 1023.0f + 0.5) << uint3(0, 10, 20);
-
-    return shifted.x | shifted.y | shifted.z;
+inline float2 msign(float2 v) {
+    return (v>=0.0) ? 1.0 : -1.0; 
 }
 
-inline float3 unpackUnormArb(const uint pack) {
-    uint3 unshifted = pack >> uint3(0, 10, 20);
-    unshifted = unshifted & 1023;
+uint octahedral_32(float3 nor) {
+    nor.xy /= ( abs( nor.x ) + abs( nor.y ) + abs( nor.z ) );
+    nor.xy  = (nor.z >= 0.0) ? nor.xy : (1.0-abs(nor.yx))*msign(nor.xy);
+    uint2 d = uint2(round(32767.5 + nor.xy*32767.5));  
+    return d.x|(d.y<<16u);
+}
 
-    return normalize((float3(unshifted.xyz) * 1.0 / 1023.0f) * 2.0f - 1.0f);
+float3 i_octahedral_32( uint data ) {
+    uint2 iv = uint2( data, data>>16u ) & 65535u; 
+    float2 v = float2(iv)/32767.5f - 1.0f;
+    float3 nor = float3(v, 1.0f - abs(v.x) - abs(v.y)); // Rune Stubbe's version,
+    float t = max(-nor.z,0.0);                     // much faster than original
+    nor.x += (nor.x>0.0)?-t:t;                     // implementation of this
+    nor.y += (nor.y>0.0)?-t:t;                     // technique
+    return normalize( nor );
 }
 
 
@@ -146,13 +147,14 @@ void ColorKernel (uint3 id : SV_DispatchThreadID)
     int pixel_index = id.y * screen_width + id.x;
     const float3 Alb = Albedo[id.xy].xyz;
     const ColData Pixel = PerPixelRadiance[pixel_index];
-    const float3 ScreenSpaceAlb = ScreenSpaceInfo[pixel_index].Albedo;
+    const float3 ScreenSpaceAlb = unpackRGBE(WorldPosData[id.xy].w);
     float3 Col = max((Pixel.Direct + Pixel.Indirect + unpackRGBE(Pixel.Fog) * ((Alb > 0.005f) ? rcp(Alb) : 0))* Alb * ((ScreenSpaceAlb > 0.001f) ? rcp(ScreenSpaceAlb) : 0),0);
     uint Input = asuint(Pixel.Metallic);
     HintsWrite[id.xy] = ((((Input >> 16) / 65535.0f) > 0.1f) ? ((Input & 0xFFFF) / 65535.0f) : 1);
-    NormA[id.xy] = uint2(ScreenSpaceInfo[pixel_index].Normal, ScreenSpaceInfo[pixel_index].NormNormal);
+    NormA[id.xy] = uint2(ScreenSpaceInfo[pixel_index].GeomNorm, ScreenSpaceInfo[pixel_index].SurfNorm);
     if(Albedo[id.xy].w == 0) Col = 0;
     else Albedo[id.xy] = float4(ScreenSpaceAlb, Albedo[id.xy].w);
+    CurDepthWrite[id.xy] = ScreenSpaceInfo[pixel_index].t;
     HFA[id.xy] = float4(clamp(Col,0,999999.0f) ,0);
 }
 
@@ -203,7 +205,7 @@ inline float luminance(in float3 color)
 void BlurKernel (uint3 id : SV_DispatchThreadID)
 {
     float CenterDepth = CurDepth[id.xy];
-    float3 CentNorm = unpackUnormArb(NormB[id.xy].y);
+    float3 CentNorm = i_octahedral_32(NormB[id.xy].y);
     float4 Center = HFB[id.xy];
     int AccumFrames = Center.w;
 
@@ -224,8 +226,9 @@ void BlurKernel (uint3 id : SV_DispatchThreadID)
     }
     const float Hints = HintsRead[id.xy];
     if(Hints == 1) blurRadius *= lerp(0.1f, 1.0f, SSAOAvg);
-    if(Hints > 0.05f && Hints < 0.4f) blurRadius *= Hints;
+    if(Hints > 0.01f && Hints < 0.4f) blurRadius *= Hints;
     // blurRadius /= clamp(CenterDepth / 10.0f,1,3.0f);
+    // blurRadius *= (float)PartialRenderingFactor;
     blurRadius += 1.0;
 
     float2 BlurRadius = blurRadius * rcp(float2(screen_width, screen_height));
@@ -236,8 +239,8 @@ void BlurKernel (uint3 id : SV_DispatchThreadID)
     float2 uv = (id.xy + 0.5f) / (float2(screen_width, screen_height));
     uv += (random(64, id.xy) - 0.5f) * rcp(float2(screen_width, screen_height));
 
-    [unroll]for(int i = 0; i < 8; i++) {
-        float3 offset = g_Special8[i];
+    [unroll]for(int i = 0; i < DiskCount; i++) {
+        float3 offset = DiskSamples[i];
         float w = offset.z;
         float2 uvoffset = mul(rotationMatrix, offset.xy) * BlurRadius;
         
@@ -245,13 +248,13 @@ void BlurKernel (uint3 id : SV_DispatchThreadID)
         if(any(OffsetUV > 1 || OffsetUV < 0)) continue;
 
         float sampleDepth = CurDepth.SampleLevel(my_linear_clamp_sampler, OffsetUV, 0);
-        float3 norm = unpackUnormArb(NormB[OffsetUV * float2(screen_width, screen_height)].y);
+        float3 norm = i_octahedral_32(NormB[OffsetUV * float2(screen_width, screen_height)].y);
         float4 Sample = HFB.SampleLevel(my_linear_clamp_sampler, OffsetUV, 0);
 
-        float DepthFactor = exp2((AccumFrames > 7 ? -100.0f : -10.0f) * abs(1.0f - (CenterDepth / sampleDepth)));
+        float DepthFactor = exp2((AccumFrames > 7 ? -100.0f : -10.0f) * abs(1.0f - (CenterDepth / sampleDepth)));// / (float)PartialRenderingFactor);
         float NormFactor = pow(max(0, dot(CentNorm, norm)),64);
         w *= clamp(NormFactor * DepthFactor,0, 1);
-
+        if(abs(Hints - HintsRead[OffsetUV * float2(screen_width, screen_height)]) > 0.01f) continue;
 
         if(AccumFrames > 4) w *= pow(exp(-abs(CenterLum - luminance(Sample.xyz)) / (PassNum == 2 ? 4.0f : 1.0f)),max((min(Sample.w - 4, 4)) / (1.0f + CenterLum * 4.0f), 1));
         // if(AccumFrames <= 1) w *= luminance(Albedo[OffsetUV * float2(screen_width, screen_height)].xyz);
@@ -284,7 +287,7 @@ void temporal (uint3 id : SV_DispatchThreadID)
 
     float sampleDepth;// = PrevDepth[pos_prev];
 
-    float3 normal_curr = unpackUnormArb(NormA[id.xy].x);
+    float3 normal_curr = i_octahedral_32(NormA[id.xy].x);
 
     bool temporal_sample_valid_diff = false;
     float4 temporal_color_hf = 0;
@@ -310,7 +313,7 @@ void temporal (uint3 id : SV_DispatchThreadID)
             }
 
             float depth_prev =  PrevDepth[p];
-            float3  normal_prev = unpackUnormArb(NormB[p].x);
+            float3  normal_prev = i_octahedral_32(NormB[p].x);
             
 
             float dist_depth = (abs(depth_curr - depth_prev)) / abs(depth_curr);
@@ -347,13 +350,27 @@ void temporal (uint3 id : SV_DispatchThreadID)
     int AccumFrames = min(temporal_color_hf.w,12);
 
     [branch]if(UseReSTIRGI) {
-        if((float)((PrevReservoirGI[pos_prev.x + pos_prev.y * screen_width].LuminanceIncommingM >> 16)+1) / ((CurrentReservoirGI[id.x + id.y * screen_width].LuminanceIncommingM >> 16)+1) > 3.8f) {
+        if((ReservoirDataB[pos_prev].x+1.0f) / (ReservoirDataA[id.xy].x+1) > 3.8f) {
             AccumFrames = 0;
         }
     }
     if(!temporal_sample_valid_diff) AccumFrames = 0;
 
     AccumFrames++;
+
+    // float3 CenterCol = HFA[id.xy].xyz;
+    // int Valids = 1;
+    // for(int i = -PartialRenderingFactor; i <= PartialRenderingFactor; i++) {
+    //     for(int j = -PartialRenderingFactor; j <= PartialRenderingFactor; j++) {
+    //         if(i == 0 && j == 0) continue;
+    //         int2 OffsetID = id.xy + int2(i,j);
+    //         // if(any(HFA[OffsetID].xyz) > 0.001f) {
+    //             CenterCol += HFA[OffsetID].xyz;
+    //             Valids++;
+    //         // }
+    //     }
+    // }
+    // CenterCol /= (float)Valids;
 
     float3 col = lerp(temporal_color_hf, HFA[id.xy].xyz, rcp(AccumFrames));
 
@@ -379,7 +396,7 @@ void secondarytemporal (uint3 id : SV_DispatchThreadID)
 
     float3 Center = HFB[id.xy];
     float depth_curr = CurDepth[id.xy];
-    float3 normal_curr = unpackUnormArb(NormA[id.xy].x);
+    float3 normal_curr = i_octahedral_32(NormA[id.xy].x);
     float3 MaxLum = -9999.0f;
     float3 MinLum = 9999.0f;
     [unroll]for(int i = -1; i <= 1; i++) {
@@ -419,7 +436,7 @@ void secondarytemporal (uint3 id : SV_DispatchThreadID)
                 continue;
 
             float depth_prev =  PrevDepth[p];
-            float3  normal_prev = unpackUnormArb(NormB[p].x);
+            float3  normal_prev = i_octahedral_32(NormB[p].x);
             
 
             float dist_depth = (abs(depth_curr - depth_prev)) / abs(depth_curr);
@@ -459,7 +476,13 @@ void secondarytemporal (uint3 id : SV_DispatchThreadID)
     float AccumFrames = min(HFPrev[pos_prev].w,60);
     if(!temporal_sample_valid_diff || any(pos_prev < 0 || pos_prev > float2(screen_width, screen_height))) AccumFrames = 0;
 
-    if(AccumFrames > 10) AccumFrames *= lerp(0.1f, 1, pow(exp2(-abs(luminance((temporal_color_hf)) - luminance((Center)))),1));
+    [branch]if(UseReSTIRGI) {
+        if((ReservoirDataB[pos_prev].x+1.0f) / (ReservoirDataA[id.xy].x+1) > 3.8f) {
+            AccumFrames = 0;
+        }
+    }
+
+    if(AccumFrames > 30) AccumFrames *= lerp(0.1f, 1, pow(exp2(-abs(luminance((temporal_color_hf)) - luminance((Center)))),1));
     AccumFrames++;
     Center = lerp(temporal_color_hf, Center, min(rcp(AccumFrames),1));
     HFA[id.xy] = float4(Center, AccumFrames);
@@ -528,7 +551,7 @@ float3 CreateCameraRay(float2 uv, out float3 origin) {
 [numthreads(16,16,1)]
 void SSAO (uint3 id : SV_DispatchThreadID)
 {
-    const float3x3 NormTan = GetTangentSpace(unpackUnormArb(NormB[id.xy].x));
+    const float3x3 NormTan = GetTangentSpace(i_octahedral_32(NormB[id.xy].x));
     float3 Origin;
     float2 uv = id.xy / float2(screen_width, screen_height);
     float Depth = CurDepth.SampleLevel(my_linear_clamp_sampler, uv, 0);
@@ -562,7 +585,7 @@ void SSAO (uint3 id : SV_DispatchThreadID)
 [numthreads(8,8,1)]
 void SSAOFilter (uint3 id : SV_DispatchThreadID)
 {
-    float3 CentNorm = unpackUnormArb(NormB[id.xy]);
+    float3 CentNorm = i_octahedral_32(NormB[id.xy]);
     float CentDepth = CurDepth[id.xy];
 
     float SSAOAccum = SSAORead[id.xy];
@@ -572,7 +595,7 @@ void SSAOFilter (uint3 id : SV_DispatchThreadID)
             if(i == 0 && j == 0) continue;
             int2 OffsetIndex = id.xy + int2(i,j) * 2.0f;
             float DepthFactor = exp2(-200.0f * abs(1.0f - (CentDepth / CurDepth[OffsetIndex])));
-            float NormFactor = max(0, dot(CentNorm, unpackUnormArb(NormB[OffsetIndex])));
+            float NormFactor = max(0, dot(CentNorm, i_octahedral_32(NormB[OffsetIndex])));
             NormFactor *= NormFactor;
             NormFactor *= NormFactor;
             float w = DepthFactor * NormFactor;

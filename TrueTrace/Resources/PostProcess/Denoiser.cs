@@ -392,11 +392,12 @@ namespace TrueTrace {
             InitRenderTexture(true);
         }
 
-        public void ExecuteSVGF(int CurrentSamples, int AtrousKernelSize, ref ComputeBuffer _ColorBuffer, ref RenderTexture _target, ref RenderTexture _Albedo, ref RenderTexture _NormTex, bool DiffRes, RenderTexture PrevDepthTexMain, CommandBuffer cmd, RenderTexture CorrectedDepthTex, bool UseReSTIRGI)
+        public void ExecuteSVGF(int CurrentSamples, int AtrousKernelSize, ref ComputeBuffer _ColorBuffer, ref RenderTexture _target, ref RenderTexture _Albedo, ref RenderTexture _NormTex, bool DiffRes, RenderTexture PrevDepthTexMain, CommandBuffer cmd, RenderTexture CorrectedDepthTex, bool UseReSTIRGI, int PartialRenderingFactor)
         {
             SVGF.SetBool("UseReSTIRGI", UseReSTIRGI);
             InitRenderTexture();
             SVGF.SetBool("DiffRes", DiffRes);
+            SVGF.SetInt("PartialRenderingFactor", PartialRenderingFactor);
             Matrix4x4 viewprojmatrix = _camera.projectionMatrix * _camera.worldToCameraMatrix;
             var PrevMatrix = PrevViewProjection;
             SVGF.SetMatrix("viewprojection", viewprojmatrix);
@@ -408,7 +409,6 @@ namespace TrueTrace {
             PrevViewProjection = viewprojmatrix;
             cmd.SetComputeIntParam(SVGF, "AtrousIterations", AtrousKernelSize);
             bool OddAtrousIteration = (AtrousKernelSize % 2 == 1);
-            UnityEngine.Profiling.Profiler.BeginSample("SVGFCopy");
             SVGF.SetBuffer(CopyKernel, "PerPixelRadiance", _ColorBuffer);
             cmd.SetComputeTextureParam(SVGF, CopyKernel, "RWHistoryNormalAndDepth", _HistoryNormalDepth);
             cmd.SetComputeTextureParam(SVGF, CopyKernel, "RWNormalAndDepth", _NormalDepth);
@@ -422,12 +422,10 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(SVGF,CopyKernel, "PrevDepthTex", PrevDepthTexMain);
             cmd.SetComputeTextureParam(SVGF, CopyKernel, "_CameraNormalDepthTex", _NormTex);
             SVGF.SetTextureFromGlobal(CopyKernel, "NormalTex", "_CameraGBufferTexture2");
-             cmd.BeginSample("SVGF Copy");
+             cmd.BeginSample("SVGF Copy Kernel");
             cmd.DispatchCompute(SVGF, CopyKernel, threadGroupsX, threadGroupsY, 1);
-             cmd.EndSample("SVGF Copy");
-            UnityEngine.Profiling.Profiler.EndSample();
+             cmd.EndSample("SVGF Copy Kernel");
 
-            UnityEngine.Profiling.Profiler.BeginSample("SVGFReproject");
             cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "NormalAndDepth", _NormalDepth);
             cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "HistoryNormalAndDepth", _HistoryNormalDepth);
             cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "HistoryDirectTex", _HistoryDirect);
@@ -440,12 +438,10 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "ColorDirectOut", _ColorDirectIn);
             cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "ColorIndirectOut", _ColorIndirectIn);
             cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "FrameBufferMoment", _FrameMoment);
-             cmd.BeginSample("SVGF Reproject");
+            cmd.BeginSample("SVGF Reproject Kernel");
             cmd.DispatchCompute(SVGF, ReprojectKernel, threadGroupsX, threadGroupsY, 1);
-             cmd.EndSample("SVGF Reproject");
-            UnityEngine.Profiling.Profiler.EndSample();
+            cmd.EndSample("SVGF Reproject Kernel");
 
-            UnityEngine.Profiling.Profiler.BeginSample("SVGFVariance");
             cmd.SetComputeTextureParam(SVGF, VarianceKernel, "ColorDirectOut", _ColorDirectOut);
             cmd.SetComputeTextureParam(SVGF, VarianceKernel, "ColorIndirectOut", _ColorIndirectOut);
             cmd.SetComputeTextureParam(SVGF, VarianceKernel, "ColorDirectIn", _ColorDirectIn);
@@ -453,12 +449,10 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(SVGF, VarianceKernel, "NormalAndDepth", _NormalDepth);
             cmd.SetComputeTextureParam(SVGF, VarianceKernel, "FrameBufferMoment", _FrameMoment);
             cmd.SetComputeTextureParam(SVGF, VarianceKernel, "HistoryTex", _History);
-             cmd.BeginSample("SVGF Var");
+            cmd.BeginSample("SVGF Variance Kernel");
             cmd.DispatchCompute(SVGF, VarianceKernel, threadGroupsX, threadGroupsY, 1);
-             cmd.EndSample("SVGF Var");
-            UnityEngine.Profiling.Profiler.EndSample();
+            cmd.EndSample("SVGF Variance Kernel");
 
-            UnityEngine.Profiling.Profiler.BeginSample("SVGFAtrous");
             cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "NormalAndDepth", _NormalDepth);
             cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "HistoryDirectTex", _HistoryDirect);
             cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "HistoryIndirectTex", _HistoryIndirect);
@@ -473,12 +467,11 @@ namespace TrueTrace {
                 var step2 = step_size;
                 cmd.SetComputeIntParam(SVGF, "step_size", step2);
                 cmd.SetComputeIntParam(SVGF, "iteration", i);
-                cmd.BeginSample("SVGF Atrous: " + i);
+                cmd.BeginSample("SVGF Atrous Kernel: " + i);
                 cmd.DispatchCompute(SVGF, SVGFAtrousKernel, threadGroupsX, threadGroupsY, 1);
-                cmd.EndSample("SVGF Atrous: " + i);
+                cmd.EndSample("SVGF Atrous Kernel: " + i);
             }
-            UnityEngine.Profiling.Profiler.EndSample();
-            UnityEngine.Profiling.Profiler.BeginSample("SVGFFinalize");
+
             SVGF.SetBuffer(FinalizeKernel, "PerPixelRadiance", _ColorBuffer);
             SVGF.SetTextureFromGlobal(FinalizeKernel, "DiffuseGBuffer", "_CameraGBufferTexture0");
             SVGF.SetTextureFromGlobal(FinalizeKernel, "SpecularGBuffer", "_CameraGBufferTexture1");
@@ -495,15 +488,14 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "_Albedo", _Albedo);
 
             cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "FrameBufferMoment", _FrameMoment);
-                cmd.BeginSample("SVGF Finalize");
+            cmd.BeginSample("SVGF Finalize Kernel");
             cmd.DispatchCompute(SVGF, FinalizeKernel, threadGroupsX, threadGroupsY, 1);
-                cmd.EndSample("SVGF Finalize");
-            UnityEngine.Profiling.Profiler.EndSample();
+            cmd.EndSample("SVGF Finalize Kernel");
             cmd.CopyTexture(CorrectedDepthTex, PrevDepthTexMain);
 
         }
 
-        public void ExecuteBloom(ref RenderTexture _target, ref RenderTexture _converged, float BloomStrength, CommandBuffer cmd)
+        public void ExecuteBloom(ref RenderTexture _converged, float BloomStrength, CommandBuffer cmd)
         {//need to fix this so it doesnt create new textures every time
 
             Bloom.SetFloat("strength", BloomStrength);
@@ -546,7 +538,7 @@ namespace TrueTrace {
             Bloom.SetBool("IsFinal", true);
             cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OrigTex", _converged);
             cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "InputTex", BloomSamples[0]);
-            cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OutputTex", _target);
+            cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OutputTex", _converged);
             cmd.DispatchCompute(Bloom, BloomUpsampleKernel, (int)Mathf.Ceil(Screen.width / 16.0f), (int)Mathf.Ceil(Screen.height / 16.0f), 1);
 
 
@@ -554,48 +546,47 @@ namespace TrueTrace {
         }
 
 
-        public void ExecuteAutoExpose(ref RenderTexture _target, ref RenderTexture _converged, float Exposure, CommandBuffer cmd)
+        public void ExecuteAutoExpose(ref RenderTexture _converged, float Exposure, CommandBuffer cmd)
         {//need to fix this so it doesnt create new textures every time
             cmd.SetComputeTextureParam(AutoExpose, AutoExposeKernel, "InTex", _converged);
             AutoExpose.SetFloat("Exposure", Exposure);
             AutoExpose.SetFloat("frame_time", Time.deltaTime);
             cmd.DispatchCompute(AutoExpose, AutoExposeKernel, 1, 1, 1);
-            cmd.SetComputeTextureParam(AutoExpose, AutoExposeFinalizeKernel, "InTex", _converged);
-            cmd.SetComputeTextureParam(AutoExpose, AutoExposeFinalizeKernel, "OutTex", _target);
+            cmd.SetComputeTextureParam(AutoExpose, AutoExposeFinalizeKernel, "OutTex", _converged);
             cmd.DispatchCompute(AutoExpose, AutoExposeFinalizeKernel, threadGroupsX2, threadGroupsY2, 1);
 
 
         }
 
-        public void ExecuteTAA(ref RenderTexture Input, ref RenderTexture _Final, int CurrentSamples, CommandBuffer cmd)
+        public void ExecuteTAA(ref RenderTexture _Final, int CurrentSamples, CommandBuffer cmd)
         {//need to fix this so it doesnt create new textures every time
 
             cmd.SetComputeIntParam(TAA,"Samples_Accumulated", CurrentSamples);
 
-            UnityEngine.Profiling.Profiler.BeginSample("TAAKernel Prepare");
             TAA.SetFloat("FarPlane", _camera.farClipPlane);
             TAA.SetTextureFromGlobal(TAAPrepareKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             TAA.SetTextureFromGlobal(TAAPrepareKernel, "DepthTex", "_CameraDepthTexture");
-            cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorIn", Input);
+            cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorIn", _Final);
             cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorOut", TempTex);
+            cmd.BeginSample("TAA Prepare Kernel");
             cmd.DispatchCompute(TAA, TAAPrepareKernel, threadGroupsX2, threadGroupsY2, 1);
-            UnityEngine.Profiling.Profiler.EndSample();
+            cmd.EndSample("TAA Prepare Kernel");
 
 
-            UnityEngine.Profiling.Profiler.BeginSample("TAAKernel");
             cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorIn", TempTex);
             TAA.SetTextureFromGlobal(TAAKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             cmd.SetComputeTextureParam(TAA, TAAKernel, "TAAPrev", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorOut", TempTex2);
+            cmd.BeginSample("TAA Main Kernel");
             cmd.DispatchCompute(TAA, TAAKernel, threadGroupsX2, threadGroupsY2, 1);
-            UnityEngine.Profiling.Profiler.EndSample();
+            cmd.EndSample("TAA Main Kernel");
 
-            UnityEngine.Profiling.Profiler.BeginSample("TAAFinalize");
             cmd.SetComputeTextureParam(TAA, TAAFinalizeKernel, "TAAPrev", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAFinalizeKernel, "ColorOut", _Final);
             cmd.SetComputeTextureParam(TAA, TAAFinalizeKernel, "ColorIn", TempTex2);
+            cmd.BeginSample("TAA Finalize Kernel");
             cmd.DispatchCompute(TAA, TAAFinalizeKernel, threadGroupsX2, threadGroupsY2, 1);
-            UnityEngine.Profiling.Profiler.EndSample();
+            cmd.EndSample("TAA Finalize Kernel");
         }
 
         Matrix4x4 PreviousCameraMatrix;
@@ -604,7 +595,6 @@ namespace TrueTrace {
 
         public void ExecuteUpsample(ref RenderTexture Input, ref RenderTexture Output, int curframe, int cursample, ref RenderTexture ThroughputTex, CommandBuffer cmd)
         {//need to fix this so it doesnt create new textures every time
-            UnityEngine.Profiling.Profiler.BeginSample("Upscale");
             cmd.SetComputeIntParam(Upscaler,"curframe", curframe);
             cmd.SetComputeIntParam(Upscaler,"cursam", cursample);
             cmd.SetComputeIntParam(Upscaler,"source_width", Input.width);
@@ -625,6 +615,7 @@ namespace TrueTrace {
             Upscaler.SetVector("CamPos", _camera.transform.position);
             Upscaler.SetMatrix("ViewProjectionMatrix", _camera.projectionMatrix * _camera.worldToCameraMatrix);
             Upscaler.SetFloat("FarPlane", _camera.farClipPlane);
+            Upscaler.SetInt("CurFrame", curframe);
             Upscaler.SetTextureFromGlobal(UpsampleKernel, "Albedo", "_CameraGBufferTexture0");
             Upscaler.SetTextureFromGlobal(UpsampleKernel, "Albedo2", "_CameraGBufferTexture1");
             Upscaler.SetTextureFromGlobal(UpsampleKernel, "DepthTex", "_CameraDepthTexture");
@@ -640,8 +631,20 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "PrevDepthTexWrite", TempTex);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "TAAPrev", PrevUpscalerTAA);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "TAAPrevWrite", TempTex2);
+            cmd.BeginSample("Upsample Main Kernel");
             cmd.DispatchCompute(Upscaler, UpsampleKernel, threadGroupsX2, threadGroupsY2, 1);
-            UnityEngine.Profiling.Profiler.EndSample();
+            cmd.EndSample("Upsample Main Kernel");
+
+
+            Upscaler.SetTextureFromGlobal(UpsampleKernel + 1, "Albedo", "_CameraGBufferTexture0");
+            Upscaler.SetTextureFromGlobal(UpsampleKernel + 1, "Albedo2", "_CameraGBufferTexture1");
+            cmd.SetComputeTextureParam(Upscaler, UpsampleKernel + 1, "Input", UpScalerLightingDataTexture);
+            cmd.SetComputeTextureParam(Upscaler, UpsampleKernel + 1, "FinalOutput", Output);
+            cmd.BeginSample("Upsample Blur Kernel");
+            cmd.DispatchCompute(Upscaler, UpsampleKernel + 1, threadGroupsX2, threadGroupsY2, 1);
+            cmd.EndSample("Upsample Blur Kernel");
+            
+
             cmd.CopyTexture(TempTex, PrevDepthTex);
             cmd.CopyTexture(UpScalerLightingDataTexture, PrevOutputTex);
             cmd.CopyTexture(TempTex2, PrevUpscalerTAA);

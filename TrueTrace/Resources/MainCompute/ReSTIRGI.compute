@@ -1,16 +1,23 @@
 #pragma use_dxc
+#pragma enable_d3d11_debug_symbols
 #include "CommonData.cginc"
 #include "Materials.cginc"
 
 #ifdef HDRP
-Texture2DArray<float2> MotionVectors;
-Texture2DArray<float3> NormalTex;
-Texture2DArray<float> Depth;
+    Texture2DArray<float2> MotionVectors;
 #else
-Texture2D<float2> MotionVectors;
-Texture2D<float3> NormalTex;
-Texture2D<float> Depth;
+    Texture2D<float2> MotionVectors;
 #endif
+
+inline Ray CreateCameraRayGI(float2 uv, uint pixel_index, float4x4 CamToWorldMat, float4x4 CamInvProjMat) {
+    float3 origin = mul(CamToWorldMat, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
+
+    float3 direction = mul(CamInvProjMat, float4(uv, 0.0f, 1.0f)).xyz;
+
+    direction = normalize(mul(CamToWorldMat, float4(direction, 0.0f)).xyz);
+    return CreateRay(origin, direction);
+}
+
 
 #ifdef HardwareRT
     #include "UnityRayQuery.cginc"
@@ -36,106 +43,74 @@ bool VisabilityCheck(Ray ray, float dist) {
     #endif
 }
 
+#pragma kernel ReSTIRGIKernel
 
-float4x4 viewprojection;
-float4x4 prevviewprojection;
+float4x4 PrevCamToWorld;
+float4x4 PrevCamInvProj;
 
+float3 CamDelta;
+bool AbandonSamples;
+bool UseReSTIRGITemporal;
+bool UseReSTIRGISpatial;
 bool DoIndirectClamping;
+bool DoReSTIRGIConnectionValidation;
+int ReSTIRGISpatialCount;
+int ReSTIRGITemporalMCap;
+float GISpatialRadius;
 
-#pragma kernel GITemporalKernel
-
-inline void UpdateReservoir(inout GIReservoir A, GIReservoir B, float w, float rndnum, inout float wsum, inout ColData Col1, const ColData Col2) {
+inline void UpdateReservoir(inout float4 CurRes, inout float wsum, float4 PrevRes, float rndnum, inout int2 CachedID, int2 ID) {
+    float w = max(PrevRes.x * PrevRes.y * PrevRes.w, 0);
     wsum += w;
     if (rndnum < (w / wsum)) {
-        Col1 = Col2;
-        A.SecondaryHitPosition = B.SecondaryHitPosition;
-        A.HistoricID = B.HistoricID;
-        A.HistoricFrameThisCase = B.HistoricFrameThisCase;
-        A.NEEPosition = B.NEEPosition;
-        A.BaseColor = B.BaseColor;
-        A.LuminanceIncommingM = B.LuminanceIncommingM;
+        CachedID = ID;
+        CurRes.w = PrevRes.w;
+        CurRes.z = PrevRes.z;
     }
-
 }
 
-bool UseReSTIRGISpatial;
-bool UseReSTIRGITemporal;
-int ReSTIRGISpatialCount;
-bool DoReSTIRGIConnectionValidation;
-bool AbandonSamples;
-int ReSTIRGITemporalMCap;
-bool SpatialStabalizer;
-float3 PrevCamPos;
-float3 cameraForward;
 
-inline float EvalPHat(const ColData TargetCol, float3 bsdfVal, float3 NEEbsdfVal, float bsdpdf, float NEEbsdpdf) {
-    return luminance((TargetCol.Direct + TargetCol.Indirect) * ((UseAlteredPipeline) ? 1 : bsdfVal)) * step(0.0f, bsdpdf) + luminance(unpackRGBE(TargetCol.PrimaryNEERay) * ((UseAlteredPipeline) ? 1 : NEEbsdfVal)) * step(0, NEEbsdpdf);
-}
-float EvalPHatIndirect(const ColData TargetCol, float3 bsdfVal, float bsdpdf) {
-    return luminance((TargetCol.Indirect) * ((UseAlteredPipeline) ? 1 : bsdfVal) * step(0, bsdpdf));
-}
-
-Texture2D<float4> AlbedoTexRead;
-float MinSpatialSize;
-float3 CamDelta;
-
-float distToPlane(const float3 worldPos, const float3 neighborWorldPos, const float3 worldNormal) {
-    float3 toCurrent = worldPos - neighborWorldPos;
-    float distToPlane = abs(dot(toCurrent, worldNormal));
-
-    return distToPlane;
-}
-
-inline float2 vogelDiskSample(int i, int num_samples, float r_offset, float phi_offset) {
-    float r = sqrt((float(i) + 0.07 + r_offset*0.93) / float(num_samples));
-    static const float golden_angle = 2.399963229728;
-    float phi = float(i) * golden_angle + 2.0 * PI * phi_offset;
-    float x = r * cos(phi);
-    float y = r * sin(phi);
-
-    return float2(x, y);
-}
-
-// float CalcJacobian(GIReservoir A, GIReservoir Neighbor) {
-//     float3 x1_to_x2 = Neighbor.SecondaryHitPosition - A.PrimaryHitPosition;
-//     float jacobDet = dot(x1_to_x2, x1_to_x2) / max(abs(dot(normalize(x1_to_x2), unpackUnormArb(Neighbor.SecondaryNormal))),1e-4);
-
-//     float3 y1_to_x2 = Neighbor.SecondaryHitPosition -  Neighbor.PrimaryHitPosition;
-//     jacobDet /= max(dot(y1_to_x2, y1_to_x2), 1e-5);
-//     y1_to_x2 = normalize(y1_to_x2);
-//     jacobDet *= abs(dot(y1_to_x2, unpackUnormArb(Neighbor.SecondaryNormal)));
-//     return jacobDet; 
-// }
 
 
 [numthreads(12, 12, 1)]
-void GITemporalKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID, uint3 id3 : SV_GroupID, uint id4 : SV_GroupIndex) {
-    if (id.x >= screen_width || id.x < 0 || id.y >= screen_height || id.x < 0) return;
+void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID, uint3 id3 : SV_GroupID, uint id4 : SV_GroupIndex) {
+
+    if(id.x > screen_width || id.y > screen_height) return;
+    const int pixel_index = id.x + id.y * screen_width;
+
     float2 UV = id.xy / float2(screen_width, screen_height);
-    uint pixel_index = id.x + id.y * screen_width;
-    GIReservoir CurrentRes = CurrentReservoirGI[pixel_index];
-    ColData CurrentCol = GlobalColors[id.x + id.y * screen_width];
-    ColData PrevCol = CurrentCol;
-    GIReservoir prevReservoir = { 0,0,0,0,0,0,0,0,0,0,0,0};
-    Ray ray = CreateCameraRay(UV * 2.0f - 1.0f, pixel_index);
-    const ScreenSpaceData MatModifier = ScreenSpaceInfo[pixel_index];
-    const float3 GeomNorm = unpackUnormArb(MatModifier.Normal);
-    const float3 Norm = unpackUnormArb(MatModifier.NormNormal);
-    const float3x3 NormTangentSpace = GetTangentSpace2(Norm);
-    const float3 PrimaryHitPosition = MatModifier.Position + GeomNorm * NormalOffset;
+    const Ray CameraRay = CreateCameraRayGI(UV * 2.0f - 1.0f, pixel_index, CamToWorld, CamInvProj);
+
+    bool ActuallyRender = (TempAlbedoTex[id.xy].w > 0) && !AbandonSamples;
     
-    MaterialData SurfaceMat = _Materials[MatModifier.MatIndex];
-    SurfaceMat.surfaceColor = MatModifier.Albedo;
-    SurfaceMat.roughness = MatModifier.Roughness;
-    SurfaceMat.metallic = MatModifier.Metallic;
+    const ScreenSpaceData GBuffer = ScreenSpaceInfo[pixel_index];
+    const float3 GeomNorm = i_octahedral_32(GBuffer.GeomNorm);
+    const float3 SurfNorm = i_octahedral_32(GBuffer.SurfNorm);
+    const float3x3 NormTangentSpace = GetTangentSpace2(SurfNorm);
+    float3 PrimaryHitPosition = CameraRay.origin + CameraRay.direction * GBuffer.t;// + GeomNorm * NormalOffset;
+    ColData CenterCol = GlobalColors[pixel_index];
+    // if(DoPartialRendering) {
+    //     CenterCol.Direct *= (float)PartialRenderingFactor;
+    //     CenterCol.Indirect *= (float)PartialRenderingFactor;
+    //     CenterCol.PrimaryNEERay = packRGBE(unpackRGBE(CenterCol.PrimaryNEERay) * (float)PartialRenderingFactor);
+    // }
+    CenterCol.throughput.x = pixel_index;
+    CenterCol.throughput.y = frames_accumulated;
+    uint4 WorldPos = WorldPosC[id.xy];
+    float4 NEEPos = NEEPosC[id.xy];
 
-    bool SuccessfullyReprojected = false;
+    MaterialData SurfaceMat = _Materials[GBuffer.MatIndex];
+    SurfaceMat.surfaceColor = unpackRGBE(WorldPos.w);
+    SurfaceMat.roughness = (asuint(CenterCol.pad) & 0xFFFF) / 65535.0f;
+    SurfaceMat.metallic = (asuint(CenterCol.pad) >> 16) / 65535.0f;
 
-    #ifdef PSR
-        bool ActuallyRender = (AlbedoTexRead[id.xy].w > 0);
-    #else
-        bool ActuallyRender = (AlbedoTexRead[id.xy].w == 1);
-    #endif
+
+    float3 bsdf, NEEbsdf;
+    float pdf, NEEpdf;
+    // CenterCol.Indirect = min(CenterCol.Indirect, 25.0f);//I NEED to find a better way of handling fireflies
+    CenterCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(NEEPos.xyz - PrimaryHitPosition), SurfNorm, NEEpdf, NEEbsdf, pixel_index);
+    bool Valid2 = ReconstructBsdf(SurfaceMat, CameraRay.direction, normalize(asfloat(WorldPos.xyz) - PrimaryHitPosition), SurfNorm, pdf, bsdf, NormTangentSpace, pixel_index);
+    float Lum = luminance(Valid2 * (CenterCol.Direct + CenterCol.Indirect) * bsdf) + luminance(unpackRGBE(CenterCol.PrimaryNEERay) * NEEbsdf);
+    float4 CurrentRes = {0,0,CenterCol.IsSpecular,Lum};
 
     #ifdef HDRP
         float2 MotionVector = MotionVectors[int3(UV * float2(TargetWidth, TargetHeight),0)].xy;
@@ -143,221 +118,156 @@ void GITemporalKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThread
         float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, UV, 0).xy;
     #endif
 
-
     uint2 prevIndex = int2(floor(((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
-    if (prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height) {
-        prevReservoir = PreviousReservoirGI[prevIndex.y * screen_width + prevIndex.x];
-        PrevCol = GlobalColors2[prevIndex.y * screen_width + prevIndex.x];
-    }
-    bool SkipTemporal = false;
-    float wsumIndirect = 0;
 
-    if (ActuallyRender && !AbandonSamples) {
-        GlobalColors[id.x + id.y * screen_width].Direct = 0;
-        GlobalColors[id.x + id.y * screen_width].Indirect = 0;
-        GlobalColors[id.x + id.y * screen_width].PrimaryNEERay = 0;
-        int M = 0;
-        float W = 0;
-        const float3 RayDir = normalize(PrimaryHitPosition - CamPos);
-        float CurDist = MatModifier.t;
-        float PrevDist = MatModifiersPrev[prevIndex.x + prevIndex.y * screen_width].t;
-        float pdf, NEEpdf, p_q, wsum, carried_p_q = 0;
-        float3 bsdf = 0;
-        float3 NEEbsdf = 0;
-        bool SkipSpatial = false;
+    int2 CachedID = -1;
+
+    if(ActuallyRender) {
+        GlobalColors[pixel_index].Direct = 0;
+        GlobalColors[pixel_index].Indirect = 0;
+        GlobalColors[pixel_index].PrimaryNEERay = 0;
+        bool SkipTemporal = false;
         if(ReSTIRGIUpdateRate != 0) {
             if(RandomNums[id.xy].z == 1) {
-                if(abs(Unpack1To2(prevReservoir.LuminanceIncommingM).y / 1000.0f - Unpack1To2(CurrentRes.LuminanceIncommingM).y / 1000.0f) > 0.1f * max(Unpack1To2(prevReservoir.LuminanceIncommingM).y / 1000.0f, Unpack1To2(CurrentRes.LuminanceIncommingM).y / 1000.0f)) {
-                    // SkipSpatial = true;
-                    CurrentCol.PrimaryNEERay = 0;
-                    CurrentCol.Direct = 0;
-                    CurrentCol.Indirect = 0;
-                    M = 1;
-                    W = 1;
-                    // CurrentRes.M = prevReservoir.M;
-                    CurrentRes.HistoricFrameThisCase = Pack2To1(0, Unpack1To2(prevReservoir.HistoricFrameThisCase).x);
+                if(abs(NEEPosB[prevIndex].w - NEEPos.w) > 0.1f * max(max(NEEPosB[prevIndex].w, NEEPos.w),0.1f)) {
+                    CenterCol.PrimaryNEERay = 0;
+                    CenterCol.Direct = 0;
+                    CenterCol.Indirect = 0;
+                    NEEPos.w = 0;
+                    CurrentRes.x = 1;
+                    CurrentRes.y = 1;
                 } else {
-                    // SkipSpatial = true;
-                    CurrentRes.HistoricFrameThisCase = prevReservoir.HistoricFrameThisCase;
-                    W = prevReservoir.W;
-                    M = Unpack1To2(prevReservoir.LuminanceIncommingM).x;
-                    // CurrentRes.BaseColor = prevReservoir.BaseColor;
-                    // CurrentCol = PrevCol;
+                    CenterCol.throughput = PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput;
+                    CurrentRes.xy = ReservoirB[prevIndex].xy;
                 }
                 SkipTemporal = true;
             }
-            // CurrentCol.Direct *= rcp(ReSTIRGIUpdateRate / (ReSTIRGIUpdateRate - 1));
-            // CurrentCol.Indirect *= rcp(ReSTIRGIUpdateRate / (ReSTIRGIUpdateRate - 1));
-            // CurrentCol.PrimaryNEERay = packRGBE(unpackRGBE(CurrentCol.PrimaryNEERay) * rcp(ReSTIRGIUpdateRate / (ReSTIRGIUpdateRate - 1)));
+            // CenterCol.throughput = PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput;
+            // CurrentRes.xy = ReservoirB[prevIndex].xy;
+            // SkipTemporal = true;
         }
-        bool Valid = ReconstructBsdf(SurfaceMat, RayDir, normalize(CurrentRes.SecondaryHitPosition - PrimaryHitPosition), Norm, pdf, bsdf, Unpack1To2(CurrentRes.HistoricFrameThisCase).x, NormTangentSpace, pixel_index);
-        CurrentCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, RayDir, normalize(CurrentRes.NEEPosition - PrimaryHitPosition), Norm, NEEpdf, NEEbsdf, pixel_index);
-        carried_p_q = wsum = p_q = EvalPHat(CurrentCol, bsdf, NEEbsdf, pdf, NEEpdf);
-        wsumIndirect = EvalPHatIndirect(CurrentCol, bsdf, pdf);
-        // CurrentRes.W = 1;//
-        // if (!Valid) wsum = 0;
-        SuccessfullyReprojected = SuccessfullyReprojected || SkipTemporal;
+        float wsum = CurrentRes.w;
+
+        bool SuccessfullyReprojected = SkipTemporal;
         if(!SkipTemporal) {
-                float DistDiff = ((abs(CurDist - PrevDist) - length(CamPos - PrevCamPos))) / CurDist;
+            float DistDiff = ((abs(GBuffer.t - PrevScreenSpaceInfo[prevIndex.x + prevIndex.y * screen_width].t) - length(CamDelta))) / GBuffer.t;
+            bool SurfaceValid = DistDiff < 0.1f && (dot(SurfNorm, i_octahedral_32(PrevScreenSpaceInfo[prevIndex.x + prevIndex.y * screen_width].SurfNorm)) > 0.9f);
+            if (SurfaceValid && UseReSTIRGITemporal) {
+                SuccessfullyReprojected = true;
+                float4 PrevRes = ReservoirB[prevIndex];
 
-                bool DoTemporal = DistDiff < 0.1f && (dot(unpackUnormArb(CurrentRes.PrimaryNormal), unpackUnormArb(prevReservoir.PrimaryNormal)) > 0.9f);
-                if (DoTemporal && UseReSTIRGITemporal) {
-                    SuccessfullyReprojected = true;
-                    int PrevM = min(Unpack1To2(prevReservoir.LuminanceIncommingM).x,ReSTIRGITemporalMCap);
-                    #ifdef ReSTIRParallaxCorrection
-                        float3 V = normalize(CamPos - MatModifier.Position);
-                        float3 Vprev = normalize(CamPos - MatModifiersPrev[prevIndex.x + prevIndex.y * screen_width].Position - CamDelta);
-                        float cosa = abs(dot(V, Vprev));
-                        float parallax = sqrt(1.0f - cosa * cosa) / max(cosa, 1e-6);
-                        parallax *= 60.0f;
-
-                        float acos01sq = 1.0f - dot(unpackUnormArb(CurrentRes.PrimaryNormal), ray.direction);
-
-                        float a = pow(saturate(acos01sq), 1);
-                        float rough = max(SurfaceMat.roughness, 0.05f);
-                        float b = 1.1f + rough * rough;
-                        float parallaxSensitivity = (b + a) / (b - a);
-                        float powerScale = 1.0f + parallax * parallaxSensitivity;
-                        float f = 1.0f - exp2(-200.0f * rough * rough);
-                        f *= pow(saturate(rough), 0.5 * powerScale);
-                        if(Unpack1To2(CurrentRes.HistoricFrameThisCase).x == 0) PrevM = min(ReSTIRGITemporalMCap * f, PrevM);
-                    #endif
-                    PrevM = max(PrevM,1);
-                    // if(length(MotionVector) > 0.01f && prevReservoir.ThisCase == 0) prevReservoir.M = min(prevReservoir.M, 10);
-                    Valid = ReconstructBsdf(SurfaceMat, RayDir, normalize(prevReservoir.SecondaryHitPosition - PrimaryHitPosition), Norm, pdf, bsdf, Unpack1To2(prevReservoir.HistoricFrameThisCase).x, NormTangentSpace, pixel_index);
-                    PrevCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, RayDir, normalize(prevReservoir.NEEPosition - PrimaryHitPosition), Norm, NEEpdf, NEEbsdf, pixel_index);
-
-                    Valid = Valid && all(bsdf < 0 || bsdf > 0 || bsdf == 0) && luminance(bsdf) < 100000.0f;// && (abs(hitmat.roughness - MatModifiersPrev[prevIndex.x + prevIndex.y * screen_width].Roughness) < 0.1f);
-
-                    #ifdef PSR
-                        Valid = Valid || ((Unpack1To2(CurrentRes.HistoricFrameThisCase).x == 3) ? true : false);
-                    #endif
-                    M++;
-                    float Prev_p_q = EvalPHat(PrevCol, bsdf, NEEbsdf, pdf, NEEpdf);
-                    if (Valid)UpdateReservoir(CurrentRes, prevReservoir, max(Prev_p_q * PrevM * prevReservoir.W * Valid, 0), randomNEE(23, pixel_index).x, wsum, CurrentCol, PrevCol);
-                    M += PrevM;
-                    if(Valid) wsumIndirect += EvalPHatIndirect(CurrentCol, bsdf, pdf) * PrevM *  prevReservoir.W;
-                } else M++;
-                Valid = ReconstructBsdf(SurfaceMat, RayDir, normalize(CurrentRes.SecondaryHitPosition - PrimaryHitPosition), Norm, pdf, bsdf, Unpack1To2(CurrentRes.HistoricFrameThisCase).x, NormTangentSpace, pixel_index);
-                CurrentCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, RayDir, normalize(CurrentRes.NEEPosition - PrimaryHitPosition), Norm, NEEpdf, NEEbsdf, pixel_index);
-
-                // if (!Valid) return;
-
-                p_q = EvalPHat(CurrentCol, bsdf, NEEbsdf, pdf, NEEpdf);
-                W = wsum / max((M * p_q), 0.00001f);
+                PrevRes.x = clamp(PrevRes.x,1,ReSTIRGITemporalMCap);
+            
+                UpdateReservoir(CurrentRes, wsum, PrevRes, randomNEE(23, pixel_index).x, CachedID, prevIndex);
+                CurrentRes.x += PrevRes.x;
+            }
+            CurrentRes.x++;
+            CurrentRes.y = wsum / max(CurrentRes.x * CurrentRes.w, 0.0000001f);
         }
         if(!SuccessfullyReprojected) {
-            W = 1;
-            M = 1;
+            CurrentRes.x = 1;
+            CurrentRes.y = 1;
         }
 
-        bool DoReset = wsumIndirect != 0 && (((wsumIndirect) / max((M * EvalPHatIndirect(CurrentCol, bsdf, pdf)), 0.00001f)) * M / (wsumIndirect) < 0.01f) && W < 0.1f;// && lerp(pdf, NEEpdf, clamp(luminance(CurrentRes.NEERay) / luminance(CurrentRes.RadianceDirect + CurrentRes.RadianceIndirect),0,1)) < 0.01f;// && length(PrimaryHitPosition - (CurrentRes.NEEPosition)) > luminance(CurrentRes.NEERay);
-        if (DoReset && DoIndirectClamping || W > 10) W = 0;
-        CurrentRes.W = W;
-        CurrentRes.LuminanceIncommingM = Pack2To1(Unpack1To2(CurrentRes.LuminanceIncommingM).y, M);
-        GlobalColors3[id.x + id.y * screen_width] = CurrentCol;
-        CurrentReservoirGI[pixel_index] = CurrentRes;
-        
-        if (!SkipSpatial && UseReSTIRGISpatial) {
+        if(CurrentRes.y > 10) CurrentRes.y = 0;
+        if(CachedID.x != -1) {
+            ColData TempCol = PrevGlobalColorsA[CachedID.x + CachedID.y * screen_width];
+            uint4 TempWorldPos = WorldPosB[CachedID];
+            float4 TempNEEPos = NEEPosB[CachedID];
+            TempCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(TempNEEPos.xyz - PrimaryHitPosition), SurfNorm, NEEpdf, NEEbsdf, pixel_index);
+            bool Valid4 = ReconstructBsdf(SurfaceMat, CameraRay.direction, normalize(asfloat(TempWorldPos.xyz) - PrimaryHitPosition), SurfNorm, pdf, bsdf, NormTangentSpace, pixel_index);
+            if(Valid4) {
+                CenterCol = TempCol;
+                float Lum = luminance((CenterCol.Direct + CenterCol.Indirect) * bsdf) + luminance(unpackRGBE(CenterCol.PrimaryNEERay) * NEEbsdf);
+                CurrentRes.zw = float2(TempCol.IsSpecular, Lum);
+                WorldPos = TempWorldPos;
+                NEEPos = TempNEEPos;
+            }
+        }
+
+        PrevGlobalColorsB[pixel_index] = CenterCol;
+        ReservoirA[id.xy] = CurrentRes;
+        WorldPosA[id.xy] = WorldPos;
+        NEEPosA[id.xy] = NEEPos;
+
+        if (UseReSTIRGISpatial) {
             uint2 CenterIndex = prevIndex;
-            int2 neighborIndex;
-            int2 neighborOffset;
-            int TempSpatialCount = ReSTIRGISpatialCount;
-            if(!SuccessfullyReprojected) {TempSpatialCount = 21; CenterIndex = id.xy;}
-            for (int i = 0; i < TempSpatialCount; i++) {
+            bool IsMirror = SurfaceMat.metallic == 1 && SurfaceMat.roughness < 0.01f;
+            for (int i = 0; i < ReSTIRGISpatialCount; i++) {
                 float2 RandOffsets = randomNEE(i, pixel_index);
                 float2 RandOffsets2 = randomNEE(i + 23, pixel_index);
 
                 float angle = 2.0f * PI * RandOffsets.x;
-                neighborOffset = vogelDiskSample(i, TempSpatialCount, RandOffsets.y, angle) * MinSpatialSize *RandOffsets2.x;
-                neighborIndex = neighborIndex = CenterIndex + neighborOffset;
-                if (neighborIndex.x < 0 || neighborIndex.x >= (int)screen_width || neighborIndex.y < 0 || neighborIndex.y >= (int)screen_height) continue;
-                prevReservoir = PreviousReservoirGI[neighborIndex.y * uint(screen_width)+neighborIndex.x];
-                PrevCol = GlobalColors2[neighborIndex.y * uint(screen_width)+neighborIndex.x];
-                float PrevDist = MatModifiersPrev[neighborIndex.x + neighborIndex.y * screen_width].t;
-                float DistDiff = (abs(CurDist - PrevDist)) / CurDist;
-                if (
-                    (SuccessfullyReprojected && (DistDiff >= 0.1f || Unpack1To2(prevReservoir.HistoricFrameThisCase).x != Unpack1To2(CurrentRes.HistoricFrameThisCase).x)) ||
-                    dot(unpackUnormArb(prevReservoir.PrimaryNormal), Norm) < 0.8
-                    ) {
-                    continue;
-                }
-                int PrevM = Unpack1To2(prevReservoir.LuminanceIncommingM).x;
-                Valid = ReconstructBsdf(SurfaceMat, RayDir, normalize(prevReservoir.SecondaryHitPosition - PrimaryHitPosition), Norm, pdf, bsdf, Unpack1To2(prevReservoir.HistoricFrameThisCase).x, NormTangentSpace, pixel_index);
-                Valid = Valid && all(bsdf < 0 || bsdf > 0 || bsdf == 0) && luminance(bsdf) < 100000.0f;// && pdf > 0.25f;
-                PrevCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, RayDir, normalize(prevReservoir.NEEPosition - PrimaryHitPosition), Norm, NEEpdf, NEEbsdf, pixel_index);
-                if (!Valid) continue;
+                int2 neighborOffset = vogelDiskSample(i, ReSTIRGISpatialCount, RandOffsets.y, angle) * RandOffsets2.x * GISpatialRadius * (IsMirror ? 0.25f : 1.0f);
+                int2 NeighborIndex = CenterIndex + neighborOffset;
 
-                p_q = EvalPHat(PrevCol, bsdf, NEEbsdf, pdf, NEEpdf);
-                UpdateReservoir(CurrentRes, prevReservoir, max(p_q * PrevM * prevReservoir.W, 0), RandOffsets2.y, wsum, CurrentCol, PrevCol);
-                M += PrevM;
-                wsumIndirect += EvalPHatIndirect(CurrentCol, bsdf, pdf) * PrevM * prevReservoir.W;
+                if (NeighborIndex.x < 0 || NeighborIndex.x >= (int)screen_width || NeighborIndex.y < 0 || NeighborIndex.y >= (int)screen_height) continue;
+
+                float4 PrevRes = ReservoirB[NeighborIndex];
+                ScreenSpaceData PrevGBuffer = PrevScreenSpaceInfo[NeighborIndex.y * screen_width + NeighborIndex.x];
+
+                float DistDiff = (abs(GBuffer.t - PrevGBuffer.t)) / GBuffer.t;
+                if (DistDiff >= 0.1f || dot(i_octahedral_32(PrevGBuffer.SurfNorm), SurfNorm) < 0.8 || CurrentRes.z != PrevRes.z) continue;
+                
+                UpdateReservoir(CurrentRes, wsum, PrevRes, randomNEE(23, pixel_index).x, CachedID, NeighborIndex);
+                CurrentRes.x += PrevRes.x;
             }
-            Valid = ReconstructBsdf(SurfaceMat, RayDir, normalize(CurrentRes.SecondaryHitPosition - PrimaryHitPosition), Norm, pdf, bsdf, Unpack1To2(CurrentRes.HistoricFrameThisCase).x, NormTangentSpace, pixel_index);
-            CurrentCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, RayDir, normalize(CurrentRes.NEEPosition - PrimaryHitPosition), Norm, NEEpdf, NEEbsdf, pixel_index);
 
-            // if (!Valid) return;
-
-            p_q = EvalPHat(CurrentCol, bsdf, NEEbsdf, pdf, NEEpdf);
-            W = wsum / max((M * p_q), 0.00001f);
+            CurrentRes.y = wsum / max(CurrentRes.x * CurrentRes.w, 0.0000001f);
         }
-        if ((p_q == 0 || M == 0) || W > 10) {
-            W = 0;
+
+        if (CurrentRes.y > 10) CurrentRes.y = 0;
+
+        if(CachedID.x != -1) {
+            ColData TempCol = PrevGlobalColorsA[CachedID.x + CachedID.y * screen_width];
+            uint4 TempWorldPos = WorldPosB[CachedID];
+            float4 TempNEEPos = NEEPosB[CachedID];
+            TempCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(TempNEEPos.xyz - PrimaryHitPosition), SurfNorm, NEEpdf, NEEbsdf, pixel_index);
+            bool Valid4 = ReconstructBsdf(SurfaceMat, CameraRay.direction, normalize(asfloat(TempWorldPos.xyz) - PrimaryHitPosition), SurfNorm, pdf, bsdf, NormTangentSpace, pixel_index);
+            if(Valid4) {
+                CenterCol = TempCol;
+                float Lum = luminance((CenterCol.Direct + CenterCol.Indirect) * bsdf) + luminance(unpackRGBE(CenterCol.PrimaryNEERay) * NEEbsdf);
+                CurrentRes.zw = float2(TempCol.IsSpecular, Lum);
+                WorldPos = TempWorldPos;
+                NEEPos = TempNEEPos;
+            } else {
+                return;
+            }
+        } else {
+            CenterCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(NEEPos.xyz - PrimaryHitPosition), SurfNorm, NEEpdf, NEEbsdf, pixel_index);
+            bool Valid4 = ReconstructBsdf(SurfaceMat, CameraRay.direction, normalize(asfloat(WorldPos.xyz) - PrimaryHitPosition), SurfNorm, pdf, bsdf, NormTangentSpace, pixel_index);
+            if(!Valid4) return;
         }
 
         if (DoReSTIRGIConnectionValidation) {
-            float Distance = length(PrimaryHitPosition - (CurrentRes.SecondaryHitPosition)) - 0.025f;
-            Ray ray = CreateRay(PrimaryHitPosition + GeomNorm * NormalOffset, normalize(((CurrentRes.SecondaryHitPosition) - PrimaryHitPosition)));
+            PrimaryHitPosition += GeomNorm * 0.01f;
+            float Distance = length(PrimaryHitPosition - asfloat(WorldPos.xyz)) - 0.025f;
+            Ray ray = CreateRay(PrimaryHitPosition, normalize(asfloat(WorldPos.xyz) - PrimaryHitPosition));
 
             bool ConnectedlyVisable = VisabilityCheck(ray, Distance);
-            if (!ConnectedlyVisable) {CurrentCol.Direct = 0; CurrentCol.Indirect = 0; }
+            if (!ConnectedlyVisable) {CenterCol.Direct = 0; CenterCol.Indirect = 0; }
             #ifdef ExtraSampleValidation
-                if (all(CurrentCol.PrimaryNEERay != 0)) {
-                    Distance = length(PrimaryHitPosition - (CurrentRes.NEEPosition)) - 0.025f;
-                    Ray ray = CreateRay(PrimaryHitPosition + GeomNorm * NormalOffset, normalize(((CurrentRes.NEEPosition) - PrimaryHitPosition)));
+                if (CenterCol.PrimaryNEERay != 0) {
+                    Distance = length(PrimaryHitPosition - NEEPos.xyz) - 0.025f;
+                    Ray ray = CreateRay(PrimaryHitPosition, normalize(NEEPos.xyz - PrimaryHitPosition));
 
                     ConnectedlyVisable = VisabilityCheck(ray, Distance);
-                if (!ConnectedlyVisable) {CurrentCol.PrimaryNEERay = 0; }
+                    if (!ConnectedlyVisable) CenterCol.PrimaryNEERay = 0;
                 }
             #endif
         }
 
+        if (!(CenterCol.IsSpecular == 2 || CenterCol.IsSpecular == 3)) TempAlbedoTex[id.xy] = float4(abs(bsdf), 1);
 
-        DoReset = wsumIndirect != 0 && (((wsumIndirect) / max((M * EvalPHatIndirect(CurrentCol, bsdf, pdf)), 0.00001f)) * M / (wsumIndirect) < 0.01f) && W < 0.1f;
-        if (DoReset && DoIndirectClamping) {
-            W = 0;
-            return;
-        }
-        if (SpatialStabalizer && !SuccessfullyReprojected) {
-            M = 1;
-            CurrentRes.W = W;
-            CurrentRes.LuminanceIncommingM = Pack2To1(Unpack1To2(CurrentRes.LuminanceIncommingM).y, M);
-            CurrentReservoirGI[pixel_index] = CurrentRes;
-            GlobalColors3[pixel_index] = CurrentCol;
-        }
-
-        CurrentCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, RayDir, normalize(CurrentRes.NEEPosition - PrimaryHitPosition), Norm, NEEpdf, NEEbsdf, pixel_index);
-        Valid = ReconstructBsdf(SurfaceMat, RayDir, normalize(CurrentRes.SecondaryHitPosition - PrimaryHitPosition), Norm, pdf, bsdf, Unpack1To2(CurrentRes.HistoricFrameThisCase).x, NormTangentSpace, pixel_index);
-        Valid = Valid && all(bsdf < 0 || bsdf > 0 || bsdf == 0) && luminance(bsdf) < 100000.0f;
-        if(!Valid) return;
-        if (!UseAlteredPipeline && !(CurrentCol.IsSpecular == 2 || CurrentCol.IsSpecular == 3)) TempAlbedoTex[id.xy] = float4(abs(bsdf), 1);
-        bsdf = 1;
-        float3 Col =(unpackRGBE(CurrentCol.PrimaryNEERay) * W * NEEbsdf);
-        GlobalColors[id.x + id.y * screen_width].Direct = CurrentCol.Direct * W * bsdf;
-        GlobalColors[id.x + id.y * screen_width].Indirect = CurrentCol.Indirect * W * bsdf;
-        GlobalColors[id.x + id.y * screen_width].PrimaryNEERay = (UseAlteredPipeline) ? packRGBE(unpackRGBE(CurrentCol.PrimaryNEERay) * W * max(SurfaceMat.surfaceColor, 0.0000001f)) : packRGBE(Col);
-        GlobalColors[id.x + id.y * screen_width].IsSpecular = (Unpack1To2(CurrentRes.HistoricFrameThisCase).x == 0 && MatModifier.Roughness < 0.18f) ? 1 : 0;
+        GlobalColors[pixel_index].Direct = CenterCol.Direct * CurrentRes.y;
+        GlobalColors[pixel_index].Indirect = CenterCol.Indirect * CurrentRes.y;
+        GlobalColors[pixel_index].PrimaryNEERay = packRGBE(unpackRGBE(CenterCol.PrimaryNEERay) * CurrentRes.y * NEEbsdf);
+    } else {
+        PrevGlobalColorsB[pixel_index] = CenterCol;
+        ReservoirA[id.xy] = CurrentRes;
+        WorldPosA[id.xy] = WorldPos;
+        NEEPosA[id.xy] = NEEPos;
     }
-    else {
-        CurrentRes.W = 1;
-        CurrentRes.LuminanceIncommingM = Pack2To1(Unpack1To2(CurrentRes.LuminanceIncommingM).x, 1);
-
-        CurrentReservoirGI[pixel_index] = CurrentRes;
-        GlobalColors3[pixel_index] = CurrentCol;
-    }
-
-
-
 
 }
 

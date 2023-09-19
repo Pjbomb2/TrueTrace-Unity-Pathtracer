@@ -351,7 +351,7 @@ namespace TrueTrace {
             decisions = null;
         }
 
-        public BVH8Builder(BVH2Builder BVH2, ref List<MyMeshDataCompacted> Meshes) {//Top Level CWBVH Builder
+        public BVH8Builder(BVH2Builder BVH2) {//Top Level CWBVH Builder
             int BVH2NodesCount = BVH2.BVH2Nodes.Length;
             int BVH2IndicesCount = BVH2.FinalIndices.Length;
             cost2 = new float[8,8];
@@ -369,17 +369,6 @@ namespace TrueTrace {
 
             collapse(ref BVH2.BVH2Nodes, ref BVH2.FinalIndices, 0, 0);
 
-            List<MyMeshDataCompacted> TempCompressed = new List<MyMeshDataCompacted>(Meshes);
-            Meshes.Clear();
-            int MaxVal = 0;
-            for(int i = 0; i < cwbvh_indices.Length; ++i) {
-                Meshes.Add(TempCompressed[cwbvh_indices[i]]);
-                MaxVal = Mathf.Max(cwbvh_indices[i], MaxVal);
-            }
-            for(int i = MaxVal + 1; i < TempCompressed.Count; i++) {
-                Meshes.Add(TempCompressed[i]);
-            }
-            TempCompressed.Clear();
             decisions = null;
         }
     }

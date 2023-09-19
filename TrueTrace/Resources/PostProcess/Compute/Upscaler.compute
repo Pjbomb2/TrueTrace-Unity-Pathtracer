@@ -40,6 +40,8 @@ uint pixel_index;
 uint curframe;
 uint cursam;
 
+SamplerState my_linear_clamp_sampler;
+
 
 // texture coords for directional sampling
 float2 center_pixel;
@@ -206,7 +208,7 @@ float3 CreateCameraRay(float2 uv, out float depth) {
     // Transform the direction from camera to world space and normalize
     direction = mul(unity_CameraToWorld, float4(direction, 0.0f)).xyz;
     direction = normalize(direction);
-    depth = length(direction / dot(direction, Forward) * LinearEyeDepth(DepthTex.SampleLevel(sampler_DepthTex, uv, 0).x));
+    depth = length(direction / dot(direction, Forward) * LinearEyeDepth(DepthTex.SampleLevel(my_linear_clamp_sampler, uv, 0).x));
     return origin + direction * depth;
 }   
 
@@ -224,7 +226,84 @@ float luminance(float3 c)
     return 0.212671 * c.x + 0.715160 * c.y + 0.072169 * c.z;
 }
 
+int CurFrame;
 
+uint hash_with(uint seed, uint hash) {
+    // Wang hash
+    seed = (seed ^ 61) ^ hash;
+    seed += seed << 3;
+    seed ^= seed >> 4;
+    seed *= 0x27d4eb2d;
+    return seed;
+}
+uint pcg_hash(uint seed) {
+    uint state = seed * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return (word >> 22u) ^ word;
+}
+
+float2 random(uint samdim, int2 id) {
+    uint hash = pcg_hash(((id.x + id.y * target_width) * (uint)112 + samdim));
+
+    const static float one_over_max_unsigned = asfloat(0x2f7fffff);
+
+
+    float x = hash_with(CurFrame, hash) * one_over_max_unsigned;
+    float y = hash_with(CurFrame + 0xdeadbeef, hash) * one_over_max_unsigned;
+
+    return float2(x, y);
+
+}
+
+float4 SampleTextureCatmullRom(in Texture2D<float4> tex, in SamplerState linearSampler, in float2 uv, in float2 texSize)
+{
+    // We're going to sample a a 4x4 grid of texels surrounding the target UV coordinate. We'll do this by rounding
+    // down the sample location to get the exact center of our "starting" texel. The starting texel will be at
+    // location [1, 1] in the grid, where [0, 0] is the top left corner.
+    float2 samplePos = uv * texSize;
+    float2 texPos1 = floor(samplePos - 0.5f) + 0.5f;
+
+    // Compute the fractional offset from our starting texel to our original sample location, which we'll
+    // feed into the Catmull-Rom spline function to get our filter weights.
+    float2 f = samplePos - texPos1;
+
+    // Compute the Catmull-Rom weights using the fractional offset that we calculated earlier.
+    // These equations are pre-expanded based on our knowledge of where the texels will be located,
+    // which lets us avoid having to evaluate a piece-wise function.
+    float2 w0 = f * (-0.5f + f * (1.0f - 0.5f * f));
+    float2 w1 = 1.0f + f * f * (-2.5f + 1.5f * f);
+    float2 w2 = f * (0.5f + f * (2.0f - 1.5f * f));
+    float2 w3 = f * f * (-0.5f + 0.5f * f);
+
+    // Work out weighting factors and sampling offsets that will let us use bilinear filtering to
+    // simultaneously evaluate the middle 2 samples from the 4x4 grid.
+    float2 w12 = w1 + w2;
+    float2 offset12 = w2 / (w1 + w2);
+
+    // Compute the final UV coordinates we'll use for sampling the texture
+    float2 texPos0 = texPos1 - 1;
+    float2 texPos3 = texPos1 + 2;
+    float2 texPos12 = texPos1 + offset12;
+
+    texPos0 /= texSize;
+    texPos3 /= texSize;
+    texPos12 /= texSize;
+
+    float4 result = 0.0f;
+    result += tex.SampleLevel(linearSampler, float2(texPos0.x, texPos0.y), 0.0f) * w0.x * w0.y;
+    result += tex.SampleLevel(linearSampler, float2(texPos12.x, texPos0.y), 0.0f) * w12.x * w0.y;
+    result += tex.SampleLevel(linearSampler, float2(texPos3.x, texPos0.y), 0.0f) * w3.x * w0.y;
+
+    result += tex.SampleLevel(linearSampler, float2(texPos0.x, texPos12.y), 0.0f) * w0.x * w12.y;
+    result += tex.SampleLevel(linearSampler, float2(texPos12.x, texPos12.y), 0.0f) * w12.x * w12.y;
+    result += tex.SampleLevel(linearSampler, float2(texPos3.x, texPos12.y), 0.0f) * w3.x * w12.y;
+
+    result += tex.SampleLevel(linearSampler, float2(texPos0.x, texPos3.y), 0.0f) * w0.x * w3.y;
+    result += tex.SampleLevel(linearSampler, float2(texPos12.x, texPos3.y), 0.0f) * w12.x * w3.y;
+    result += tex.SampleLevel(linearSampler, float2(texPos3.x, texPos3.y), 0.0f) * w3.x * w3.y;
+
+    return result;
+}
 
 [numthreads(16,16,1)]
 void kernel_upsample (int3 id : SV_DispatchThreadID)
@@ -232,10 +311,10 @@ void kernel_upsample (int3 id : SV_DispatchThreadID)
     if (id.x >= target_width || id.y >= target_height) return;
     
     pixel_index = id.y * target_width + id.x;
-    float2 UV2 = float2(id.xy) / float2(target_width, target_height);
+    float2 UV2 = float2((id.xy + (random(32, id) - 0.5f) * 0.0f)) / float2(target_width, target_height);
     float2 texel = 0.5f / float2(target_width, target_height);
     float2 motion = MotionVectors.SampleLevel(sampler_trilinear_clamp, UV2, 0).xy;
-    float2 newUV = int2((UV2 * float2(target_width, target_height) - motion * float2(target_width, target_height) + 0.5f)) / float2(target_width, target_height);//UV - MotionVectors.SampleLevel(sampler_trilinear_clamp, UV, 0).xy + texel;
+    float2 newUV = float2((UV2 * float2(target_width, target_height) - motion * float2(target_width, target_height) + 0.5f)) / float2(target_width, target_height);//UV - MotionVectors.SampleLevel(sampler_trilinear_clamp, UV, 0).xy + texel;
     
 
     float2 UV = id.xy / float2(target_width, target_height) * float2(source_width, source_height);
@@ -272,28 +351,29 @@ void kernel_upsample (int3 id : SV_DispatchThreadID)
 
     float Depth;
     float3 WorldPos = CreateCameraRay(UV2, Depth);
-    float3 PreviousWorldPosition = CreateCameraRayPrev(newUV, PrevDepthTex.SampleLevel(sampler_PrevDepthTex, newUV, 0).x);
+    float3 PreviousWorldPosition = CreateCameraRayPrev(newUV, PrevDepthTex.SampleLevel(my_linear_clamp_sampler, newUV, 0).x);
     PrevDepthTexWrite[id.xy] = float4(Depth, 0, 0, 1);
-    bool Disocluded = length(WorldPos - PrevWorldPos[newUV * float2(target_width, target_height)].xyz) > 0.1 * Depth || dot(PrevNormalTex.SampleLevel(sampler_Input_trilinear_clamp, newUV, 0).xyz * 2.0 - 1.0f, NormalTex[id.xy].xyz * 2.0 - 1.0f) < 0.99f;
+    bool Disocluded = length(WorldPos - PrevWorldPos.SampleLevel(my_linear_clamp_sampler, newUV, 0).xyz) > 0.1 * Depth || dot(PrevNormalTex.SampleLevel(sampler_Input_trilinear_clamp, newUV, 0).xyz * 2.0 - 1.0f, NormalTex[id.xy].xyz * 2.0 - 1.0f) < 0.99f;
         if(any(newUV >= 1) || any(newUV <= 0)) Disocluded = true;
 
 
    float4 o_rgba = 0;
 
     // 5x5 footprint with corners dropped to give 13 texture taps
-    o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[0].x, Sample[2].y), 0).rgb, 1.0) * Weight[0].x * Weight[2].y;
-    o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[1].x, Sample[1].y), 0).rgb, 1.0) * Weight[1].x * Weight[1].y;
-    o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[1].x, Sample[2].y), 0).rgb, 1.0) * Weight[1].x * Weight[2].y;
-    o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[1].x, Sample[3].y), 0).rgb, 1.0) * Weight[1].x * Weight[3].y;
-    o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[2].x, Sample[0].y), 0).rgb, 1.0) * Weight[2].x * Weight[0].y;
-    o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[2].x, Sample[1].y), 0).rgb, 1.0) * Weight[2].x * Weight[1].y;
-    o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[2].x, Sample[2].y), 0).rgb, 1.0) * Weight[2].x * Weight[2].y;
-    o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[2].x, Sample[3].y), 0).rgb, 1.0) * Weight[2].x * Weight[3].y;
-    o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[2].x, Sample[4].y), 0).rgb, 1.0) * Weight[2].x * Weight[4].y;
-    o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[3].x, Sample[1].y), 0).rgb, 1.0) * Weight[3].x * Weight[1].y;
-    o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[3].x, Sample[2].y), 0).rgb, 1.0) * Weight[3].x * Weight[2].y;
-    o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[3].x, Sample[3].y), 0).rgb, 1.0) * Weight[3].x * Weight[3].y;
-    o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[4].x, Sample[2].y), 0).rgb, 1.0) * Weight[4].x * Weight[2].y;
+    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[0].x, Sample[2].y), 0).rgb, 1.0) * Weight[0].x * Weight[2].y;
+    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[1].x, Sample[1].y), 0).rgb, 1.0) * Weight[1].x * Weight[1].y;
+    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[1].x, Sample[2].y), 0).rgb, 1.0) * Weight[1].x * Weight[2].y;
+    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[1].x, Sample[3].y), 0).rgb, 1.0) * Weight[1].x * Weight[3].y;
+    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[2].x, Sample[0].y), 0).rgb, 1.0) * Weight[2].x * Weight[0].y;
+    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[2].x, Sample[1].y), 0).rgb, 1.0) * Weight[2].x * Weight[1].y;
+    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[2].x, Sample[2].y), 0).rgb, 1.0) * Weight[2].x * Weight[2].y;
+    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[2].x, Sample[3].y), 0).rgb, 1.0) * Weight[2].x * Weight[3].y;
+    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[2].x, Sample[4].y), 0).rgb, 1.0) * Weight[2].x * Weight[4].y;
+    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[3].x, Sample[1].y), 0).rgb, 1.0) * Weight[3].x * Weight[1].y;
+    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[3].x, Sample[2].y), 0).rgb, 1.0) * Weight[3].x * Weight[2].y;
+    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[3].x, Sample[3].y), 0).rgb, 1.0) * Weight[3].x * Weight[3].y;
+    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[4].x, Sample[2].y), 0).rgb, 1.0) * Weight[4].x * Weight[2].y;
+    o_rgba += SampleTextureCatmullRom(Input, sampler_Input_trilinear_clamp, UV2, float2(source_width, source_height));
 
 
     float3 minCol = 9999.0f;
@@ -304,19 +384,19 @@ int SampleCount = min(PrevOutput[newUV * float2(target_width, target_height)].w,
         [unroll]for(int y = -1; y <= 1; ++y) {
             int2 OffsetIndex = newUV * float2(target_width, target_height) + int2(x,y);
             if(any(OffsetIndex >= int2(target_width, target_height)) || any(OffsetIndex <= 0)) continue;
-            float3 color = PrevOutput[OffsetIndex].xyz;
+            float3 color = PrevOutput.SampleLevel(my_linear_clamp_sampler, OffsetIndex / float2(target_width, target_height), 0).xyz;
             minCol = min(minCol, color);
             maxCol = max(maxCol, color);
         }
     }
-    float3 CurrentColor = o_rgba.xyz / o_rgba.w;
+    float3 CurrentColor = o_rgba.xyz;
     if(!(luminance(CurrentColor) >= luminance(minCol) && luminance(CurrentColor) <= luminance(maxCol))) {Disocluded = true; SampleCount = 0;}
     if(abs(luminance(CurrentColor - Input.SampleLevel(sampler_Input_trilinear_clamp,UV2, 0).rgb)) > 0.25f) {Disocluded = true; SampleCount = 0;}
 
         PrevNormalTexWrite[id.xy] = NormalTex[id.xy];
         if(Disocluded) PrevWorldPosWrite[id.xy] = float4(WorldPos,1);
         else {
-            PrevWorldPosWrite[id.xy] = PrevWorldPos[newUV * float2(target_width, target_height)];
+            PrevWorldPosWrite[id.xy] = PrevWorldPos.SampleLevel(my_linear_clamp_sampler, newUV, 0);
         }
 
     #ifdef HDRP
@@ -325,10 +405,9 @@ int SampleCount = min(PrevOutput[newUV * float2(target_width, target_height)].w,
         float3 SpecularAlbedo = Albedo2[id.xy].xyz;
     #endif
     // if(SpecularAlbedo.x == SpecularAlbedo.y && SpecularAlbedo.y == SpecularAlbedo.z) SpecularAlbedo = 0;
-if(Disocluded) SampleCount *= clamp(dot(PrevNormalTex[newUV * float2(target_width, target_height)].xyz * 2.0 - 1.0f, NormalTex[id.xy].xyz * 2.0 - 1.0f),0,1.0f) * 0.1f;
+// if(Disocluded) SampleCount *= clamp(dot(PrevNormalTex[newUV * float2(target_width, target_height)].xyz * 2.0 - 1.0f, NormalTex[id.xy].xyz * 2.0 - 1.0f),0,1.0f) * 0.1f;
     // Output[id.xy] = float4(lerp((o_rgba.rgb / o_rgba.w), PrevOutput[newUV * float2(target_width, target_height)].xyz, 0.25f),1);// * (Albedo[id.xy].xyz),1);
-        Output[id.xy] = float4(lerp(PrevOutput[newUV * float2(target_width, target_height)].xyz, (o_rgba.rgb / o_rgba.w), rcp(SampleCount + 1)),SampleCount + 1);
-    FinalOutput[id.xy] = float4(Output[id.xy] * ((all((Albedo[id.xy].xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo[id.xy].xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
+        Output[id.xy] = float4(CurrentColor, 1);//float4(lerp(PrevOutput[newUV * float2(target_width, target_height)].xyz, (o_rgba.rgb / o_rgba.w), rcp(SampleCount + 1)),SampleCount + 1);
 //     return o_rgba.rgb / o_rgba.w;
 
 
@@ -338,4 +417,27 @@ if(Disocluded) SampleCount *= clamp(dot(PrevNormalTex[newUV * float2(target_widt
 //         if(SpecularAlbedo.x == SpecularAlbedo.y && SpecularAlbedo.y == SpecularAlbedo.z) SpecularAlbedo = 0;
 //         if(Disocluded || (newUV.x > 1 || newUV.x < 0 || newUV.y > 1 || newUV.y < 0) || true) Output[id.xy] = float4(lerp(dir_avg.xyz, super.xyz, 0.5f),1);
     // FinalOutput[id.xy] = float4((Output[id.xy].xyz * (Albedo[id.xy].xyz + Albedo2[id.xy].xyz) < 100000) ? ((all(Albedo[id.xy].xyz + SpecularAlbedo == 0) ? Output[id.xy].xyz : (Output[id.xy].xyz * (Albedo[id.xy].xyz + SpecularAlbedo)))) : 0, 1);
+}
+
+#pragma kernel simpleblur
+
+[numthreads(16,16,1)]
+void simpleblur (int3 id : SV_DispatchThreadID)
+{
+    float3 In = Input[id.xy];
+    // for(int i = -1; i <= 1; i++) {
+    //     for(int j = -1; j <= 1; j++) {
+    //         if(i == 0 && j == 0) continue;
+    //         In += Input[id.xy + int2(i,j) * 2.0f];
+    //     }
+    // }
+    // In /= 9.0f;
+
+    #ifdef HDRP
+        float3 SpecularAlbedo = 0;//Albedo2[int3(ipos,0)].xyz;
+    #else
+        float3 SpecularAlbedo = Albedo2[id.xy].xyz;
+    #endif
+
+    FinalOutput[id.xy] = float4(In * ((all((Albedo.SampleLevel(my_linear_clamp_sampler, id.xy / float2(target_width, target_height), 0).xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo.SampleLevel(my_linear_clamp_sampler, id.xy / float2(target_width, target_height), 0).xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
 }

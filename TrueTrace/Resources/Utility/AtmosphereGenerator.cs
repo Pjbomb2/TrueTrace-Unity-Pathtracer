@@ -78,19 +78,19 @@ namespace TrueTrace {
             List<DensityProfileLayer> rayleigh_density = new List<DensityProfileLayer>();
             List<DensityProfileLayer> mie_density = new List<DensityProfileLayer>();
             List<DensityProfileLayer> absorption_density = new List<DensityProfileLayer>();
-            float rayleigh_scale_height = 8000.0f;
+            float rayleigh_scale_height = 8696.45f;
             float mie_scale_height = 1200.0f;
-            float ozone_scale_height = 15000.0f;
-            float ozone_height = 25000.0f;
+            float ozone_scale_height = 22349.90f;
+            float ozone_height = 35660.71f;
             float density = 0.001f;
-            Vector3 ray_s = new Vector3(5.85f, 13.558f, 33.10f) * density;
+            Vector3 ray_s = new Vector3(6.6049f, 12.345f, 29.413f) * density;
             Vector3 ray_a = new Vector3(0.0f, 0.0f, 0.0f);
             Vector3 ray_e = ray_s + ray_a;
             Vector3 mie_s = new Vector3(3.996f, 3.996f, 3.996f) * density;
             Vector3 mie_a = new Vector3(4.4f, 4.4f, 4.4f) * density;
             Vector3 mie_e = mie_s + mie_a;
             Vector3 ozo_s = new Vector3(0.0f, 0.0f, 0.0f);
-            Vector3 ozo_a = new Vector3(0.65f, 1.881f, 0.085f) * density;
+            Vector3 ozo_a = new Vector3(0.22811f, 0.15404f, 0) * density;
             Vector3 ozo_e = ozo_s + ozo_a;
             rayleigh_density.Add(new DensityProfileLayer()
             {
@@ -104,7 +104,7 @@ namespace TrueTrace {
             {
                 width = 0.0f,
                 exp_term = 1.0f,
-                exp_scale = -0.125f,
+                exp_scale = -1.0f / rayleigh_scale_height * 1000.0f,
                 linear_term = 0.0f,
                 constant_term = 0.0f
             });
@@ -120,16 +120,16 @@ namespace TrueTrace {
             {
                 width = 0.0f,
                 exp_term = 1.0f,
-                exp_scale = -0.833333333333333f,
+                exp_scale = -1.0f / mie_scale_height * 1000.0f,
                 linear_term = 0.0f,
                 constant_term = 0.0f
             });
             absorption_density.Add(new DensityProfileLayer()
             {
-                width = 25,
+                width = ozone_height / 1000.0f,
                 exp_term = 0.0f,
                 exp_scale = 0.0f,
-                linear_term = 0.0666666666666667f,
+                linear_term = 1.0f / ozone_scale_height * 1000.0f,
                 constant_term = -0.666666666666667f
             });
             absorption_density.Add(new DensityProfileLayer()
@@ -137,7 +137,7 @@ namespace TrueTrace {
                 width = 0.0f,
                 exp_term = 0.0f,
                 exp_scale = 0.0f,
-                linear_term = -0.0666666666666667f,
+                linear_term = -1.0f / ozone_scale_height * 1000.0f,
                 constant_term = 2.66666666666667f
             });
 

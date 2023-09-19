@@ -21,166 +21,6 @@ namespace CommonVars
     }
 
     [System.Serializable]
-    public struct VolumetricVoxelDat
-    {
-        public float Density;
-        public int Index;
-    }
-
-
-    [System.Serializable]
-    public struct TriNodePairData
-    {
-        public int TriIndex;
-        public int NodeIndex;
-    }
-
-    [System.Serializable]
-    public struct Voxel
-    {
-        public uint Index;
-        public int Material;
-        public int InArrayIndex;
-    }
-
-    [System.Serializable]
-    public struct VolumetricVoxelData
-    {
-        public float Density;
-        public int InArrayIndex;
-        public int Index;
-        public Vector3 Location;
-    }
-
-    [System.Serializable]
-    public struct Brick
-    {
-        public int StartingIndex;
-        public int IndexCount;
-        public Vector3 BBMax;
-        public Vector3 BBMin;
-        public int Depth;
-    }
-
-    [System.Serializable]
-    public struct NewBrick
-    {
-        public int StartingIndex;
-        public Vector3 BBMax;
-        public Vector3 BBMin;
-        public List<Voxel> BrickVoxels;
-    }
-    [System.Serializable]
-    public struct NewVolumeBrick
-    {
-        public int StartingIndex;
-        public Vector3 BBMax;
-        public Vector3 BBMin;
-        public List<VolumetricVoxelDat> BrickVoxels;
-        public float Density;
-    }
-    [System.Serializable]
-    public struct GPUBrick
-    {
-        public int StartingIndex;
-    }
-    [System.Serializable]
-    public struct GPUBrick2
-    {
-        public int StartingIndex;
-        public Vector3 BBMax;
-        public Vector3 BBMin;
-    }
-
-
-
-
-    [System.Serializable]
-    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
-    public unsafe struct OctreeNode
-    {
-        [System.Runtime.InteropServices.FieldOffset(0)] public fixed int ChildNode[8];
-        [System.Runtime.InteropServices.FieldOffset(32)] public fixed bool IsChild[8];
-        [System.Runtime.InteropServices.FieldOffset(40)] public Vector3 BBMax;
-        [System.Runtime.InteropServices.FieldOffset(52)] public Vector3 BBMin;
-        [System.Runtime.InteropServices.FieldOffset(64)] public Vector3 Center;
-        [System.Runtime.InteropServices.FieldOffset(76)] public Vector3 Extent;
-        [System.Runtime.InteropServices.FieldOffset(88)] public int InArrayIndex;
-    }
-
-    [System.Serializable]
-    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
-    public unsafe struct VolumetricOctreeNode
-    {
-        [System.Runtime.InteropServices.FieldOffset(0)] public fixed int ChildNode[8];
-        [System.Runtime.InteropServices.FieldOffset(32)] public fixed bool IsChild[8];
-        [System.Runtime.InteropServices.FieldOffset(40)] public Vector3 BBMax;
-        [System.Runtime.InteropServices.FieldOffset(52)] public Vector3 BBMin;
-        [System.Runtime.InteropServices.FieldOffset(64)] public Vector3 Center;
-        [System.Runtime.InteropServices.FieldOffset(76)] public Vector3 Extent;
-        [System.Runtime.InteropServices.FieldOffset(88)] public int InArrayIndex;
-        [System.Runtime.InteropServices.FieldOffset(92)] public float Density;
-
-    }
-
-    [System.Serializable]
-    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
-    unsafe public struct CompressedOctreeNode
-    {
-        [System.Runtime.InteropServices.FieldOffset(0)] public uint imask;
-        [System.Runtime.InteropServices.FieldOffset(4)] public uint base_index_child;
-        [System.Runtime.InteropServices.FieldOffset(8)] public uint base_index_triangle;
-        [System.Runtime.InteropServices.FieldOffset(12)] public uint Max;
-        [System.Runtime.InteropServices.FieldOffset(16)] public uint Min;
-        [System.Runtime.InteropServices.FieldOffset(20)] public fixed byte meta[8];//might be able to pack in material data as well so I could have it ignore glass!
-
-    }
-
-    [System.Serializable]
-    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
-    unsafe public struct VolumetricCompressedOctreeNode
-    {
-        [System.Runtime.InteropServices.FieldOffset(0)] public uint imask;
-        [System.Runtime.InteropServices.FieldOffset(4)] public uint base_index_child;
-        [System.Runtime.InteropServices.FieldOffset(8)] public uint base_index_triangle;
-        [System.Runtime.InteropServices.FieldOffset(12)] public uint Max;
-        [System.Runtime.InteropServices.FieldOffset(16)] public uint Min;
-        [System.Runtime.InteropServices.FieldOffset(20)] public float Density;
-        [System.Runtime.InteropServices.FieldOffset(24)] public fixed byte meta[8];//might be able to pack in material data as well so I could have it ignore glass!
-
-    }
-
-    [System.Serializable]
-    unsafe public struct GPUOctreeNode
-    {
-        public uint node_1x;
-        public uint node_1y;
-        public uint Meta1;
-        public uint Meta2;
-        public Vector3 Center;
-    }
-
-    [System.Serializable]
-    unsafe public struct VolumetricGPUOctreeNode
-    {
-        public uint node_1x;
-        public uint node_1y;
-        public uint Meta1;
-        public uint Meta2;
-        public float Density;
-        public Vector3 Center;
-
-    }
-
-    [System.Serializable]
-    public struct GPUVoxel
-    {
-        public int Index;
-        public int Material;
-    }
-
-
-    [System.Serializable]
     public struct MeshDat
     {
         public List<int> Indices;
@@ -192,45 +32,24 @@ namespace CommonVars
         public List<Vector2> LightMapUvs;
         public List<int> LightMapTexIndexes;
 
-        public void FillMapIndexes(int Count, int Index)
-        {
-            for (int i = 0; i < Count; i++)
-            {
-                LightMapTexIndexes.Add(Index);
-            }
+        public void FillMapIndexes(int Count, int Index) {
+            for (int i = 0; i < Count; i++) LightMapTexIndexes.Add(Index);
         }
 
-        public void FillMapUVsScaled(Vector2[] Uvs, Vector4 Scale)
-        {
-            for (int i = 0; i < Uvs.Length; i++)
-            {
-                LightMapUvs.Add(Uvs[i] * Scale.x + new Vector2(Scale.z, Scale.w));
-            }
+        public void FillMapUVsScaled(Vector2[] Uvs, Vector4 Scale) {
+            for (int i = 0; i < Uvs.Length; i++) LightMapUvs.Add(Uvs[i] * Scale.x + new Vector2(Scale.z, Scale.w));
         }
 
-        public void SetUvZero(int Count)
-        {
-            for (int i = 0; i < Count; i++)
-            {
-                UVs.Add(new Vector2(0.0f, 0.0f));
-            }
+        public void SetUvZero(int Count) {
+            for (int i = 0; i < Count; i++) UVs.Add(new Vector2(0.0f, 0.0f));
         }
-        public void SetLightMapUvZero(int Count)
-        {
-            for (int i = 0; i < Count; i++)
-            {
-                LightMapUvs.Add(new Vector2(0.0f, 0.0f));
-            }
+        public void SetLightMapUvZero(int Count) {
+            for (int i = 0; i < Count; i++) LightMapUvs.Add(new Vector2(0.0f, 0.0f));
         }
-        public void SetTansZero(int Count)
-        {
-            for (int i = 0; i < Count; i++)
-            {
-                Tangents.Add(new Vector4(0.0f, 0.0f, 0.0f, 0.0f));
-            }
+        public void SetTansZero(int Count) {
+            for (int i = 0; i < Count; i++) Tangents.Add(new Vector4(0.0f, 0.0f, 0.0f, 0.0f));
         }
-        public void init()
-        {
+        public void init() {
             this.Tangents = new List<Vector4>();
             this.MatDat = new List<int>();
             this.UVs = new List<Vector2>();
@@ -240,27 +59,16 @@ namespace CommonVars
             this.LightMapUvs = new List<Vector2>();
             this.LightMapTexIndexes = new List<int>();
         }
-        public void Clear()
-        {
-            if (Tangents != null)
-            {
-                this.Tangents.Clear();
-                this.Tangents.Capacity = 0;
-                this.MatDat.Clear();
-                this.MatDat.Capacity = 0;
-                this.UVs.Clear();
-                this.UVs.Capacity = 0;
-                this.Verticies.Clear();
-                this.Verticies.Capacity = 0;
-                this.Normals.Clear();
-                this.Normals.Capacity = 0;
-                this.Indices.Clear();
-                this.Indices.Capacity = 0;
-                this.LightMapUvs.Clear();
-                this.LightMapUvs.Capacity = 0;
-                this.LightMapTexIndexes.Clear();
-                this.LightMapTexIndexes.Capacity = 0;
-
+        public void Clear() {
+            if (Tangents != null) {
+                CommonFunctions.DeepClean(ref Tangents);
+                CommonFunctions.DeepClean(ref MatDat);
+                CommonFunctions.DeepClean(ref UVs);
+                CommonFunctions.DeepClean(ref Verticies);
+                CommonFunctions.DeepClean(ref Normals);
+                CommonFunctions.DeepClean(ref Indices);
+                CommonFunctions.DeepClean(ref LightMapUvs);
+                CommonFunctions.DeepClean(ref LightMapTexIndexes);
             }
         }
     }
@@ -293,8 +101,8 @@ namespace CommonVars
         public float specTrans;
         public int Thin;
         public float Specular;
-        public float relativeIOR;
         public float scatterDistance;
+        public int IsSmoothness;
         public Vector4 AlbedoTextureScale;
         public Vector4 NormalTextureScale;
         public Vector4 MetallicTextureScale;
@@ -409,97 +217,24 @@ namespace CommonVars
         public uint quantized_max_z8;
     }
 
-
-    public struct VoxelObjectData
-    {
-        public byte[] colors;
-        public Vector3 Size;
-        public Vector3 Translation;
-        public Matrix4x4 Rotation;
-    }
-
-    [System.Serializable]
-    public struct PrimitiveData
-    {
-        public AABB aabb;
-        public Vector3 Center;
-        public Vector3 V1;
-        public Vector3 V2;
-        public Vector3 V3;
-        public Vector3 Norm1;
-        public Vector3 Norm2;
-        public Vector3 Norm3;
-        public Vector3 Tan1;
-        public Vector3 Tan2;
-        public Vector3 Tan3;
-        public Vector2 tex1;
-        public Vector2 tex2;
-        public Vector2 tex3;
-        public int MatDat;
-
-        public void Reconstruct()
-        {
-            Vector3 BBMin = new Vector3(System.Math.Min(V1.x, System.Math.Min(V2.x,V3.x)), System.Math.Min(V1.y, System.Math.Min(V2.y,V3.y)), System.Math.Min(V1.z, System.Math.Min(V2.z,V3.z)));// Vector3.Min(Vector3.Min(V1, V2), V3);
-            Vector3 BBMax = new Vector3(System.Math.Max(V1.x, System.Math.Max(V2.x,V3.x)), System.Math.Max(V1.y, System.Math.Max(V2.y,V3.y)), System.Math.Max(V1.z, System.Math.Max(V2.z,V3.z)));
-            for (int i2 = 0; i2 < 3; i2++)
-            {
-                if (BBMax[i2] - BBMin[i2] < 0.001f)
-                {
-                    BBMin[i2] -= 0.001f;
-                    BBMax[i2] += 0.001f;
-                }
-            }
-            Center = (V1 + V2 + V3) / 3.0f;
-            aabb.BBMax = BBMax;
-            aabb.BBMin = BBMin;
-        }
-        public void Reconstruct(Vector3 Scale)
-        {
-            Vector3 BBMin = new Vector3(System.Math.Min(V1.x, System.Math.Min(V2.x,V3.x)), System.Math.Min(V1.y, System.Math.Min(V2.y,V3.y)), System.Math.Min(V1.z, System.Math.Min(V2.z,V3.z)));// Vector3.Min(Vector3.Min(V1, V2), V3);
-            Vector3 BBMax = new Vector3(System.Math.Max(V1.x, System.Math.Max(V2.x,V3.x)), System.Math.Max(V1.y, System.Math.Max(V2.y,V3.y)), System.Math.Max(V1.z, System.Math.Max(V2.z,V3.z)));
-            for (int i2 = 0; i2 < 3; i2++)
-            {
-                if (BBMax[i2] - BBMin[i2] < 0.001f / Scale[i2])
-                {
-                    BBMin[i2] -= 0.001f / Scale[i2];
-                    BBMax[i2] += 0.001f / Scale[i2];
-                }
-            }
-            Center = (V1 + V2 + V3) / 3.0f;
-            aabb.BBMax = BBMax;
-            aabb.BBMin = BBMin;
-        }
-    }
-
-    public struct ProgReportData
-    {
-        public int Id;
-        public string Name;
-        public int TriCount;
-        public void init(int Id, string Name, int TriCount)
-        {
-            this.Id = Id;
-            this.Name = Name;
-            this.TriCount = TriCount;
-        }
-    }
-
     [System.Serializable]
     public struct MyMeshDataCompacted
     {
         public Matrix4x4 Transform;
-        public Matrix4x4 Inverse;
         public int AggIndexCount;
         public int AggNodeCount;
         public int MaterialOffset;
         public int mesh_data_bvh_offsets;
-        public uint IsVoxel;
-        public int SizeX;
-        public int SizeY;
-        public int SizeZ;
         public int LightTriCount;
-        public float LightPDF;
-        //I do have the space to store 1 more int and 1 more other value to align to 128 bits
+    }
+
+    [System.Serializable]
+    public struct LightTriData
+    {
+        public Vector3 pos0;
+        public Vector3 posedge1;
+        public Vector3 posedge2;
+        public uint TriTarget;
     }
 
     [System.Serializable]
@@ -576,6 +311,19 @@ namespace CommonVars
             if (P.z > BBMax.z)
                 BBMax.z = P.z;
         }
+
+        public void Validate(Vector3 Scale)
+        {
+            for (int i2 = 0; i2 < 3; i2++)
+            {
+                if (BBMax[i2] - BBMin[i2] < 0.001f / Scale[i2])
+                {
+                    BBMin[i2] -= 0.001f / Scale[i2];
+                    BBMax[i2] += 0.001f / Scale[i2];
+                }
+            }
+        }
+
         public void init()
         {
             BBMax = new Vector3(float.MinValue, float.MinValue, float.MinValue);
@@ -593,15 +341,6 @@ namespace CommonVars
         public int InNodeOffset;
         public int IsLeaf;
         public int RecursionCount;
-    }
-    [System.Serializable]
-    public struct NodeIndexPairDataSmaller
-    {
-        public int BVHNode;
-        public int Node;
-        public CommonVars.AABB AABB;
-        public int InNodeOffset;
-        public int IsLeaf;
     }
 
     [System.Serializable]
@@ -627,9 +366,6 @@ namespace CommonVars
         public uint node_4w;
     }
 
-
-
-
     [System.Serializable]
     public struct CudaTriangle
     {
@@ -653,27 +389,9 @@ namespace CommonVars
     }
 
     [System.Serializable]
-    public struct CudaLightTriangle
-    {
-        public int TriIndex;
-        public Vector3 Norm;
-        public Vector2 UV1;
-        public Vector2 UV2;
-        public Vector2 UV3;
-        public int MatIndex;
-        public Vector3 radiance;
-        public float sumEnergy;
-        public float energy;
-        public float area;
-    }
-
-    [System.Serializable]
     public struct LightMeshData
     {
-        public Matrix4x4 Inverse;
         public Vector3 Center;
-        public float energy;
-        public float CDF;
         public int StartIndex;
         public int IndexEnd;
         public int MatOffset;
@@ -687,30 +405,6 @@ namespace CommonVars
         unsafe public fixed int Children[8];
         unsafe public fixed int Leaf[8];
 
-    }
-
-
-    [System.Serializable]
-    public struct SplitLayer
-    {
-        public int Child1;
-        public int Child2;
-        public int Child3;
-        public int Child4;
-        public int Child5;
-        public int Child6;
-        public int Child7;
-        public int Child8;
-
-
-        public int Leaf1;
-        public int Leaf2;
-        public int Leaf3;
-        public int Leaf4;
-        public int Leaf5;
-        public int Leaf6;
-        public int Leaf7;
-        public int Leaf8;
     }
 
     [System.Serializable]
@@ -731,7 +425,7 @@ namespace CommonVars
     public class RayObjects
     {
         public List<RayObjectTextureIndex> RayObjectList = new List<RayObjectTextureIndex>();
-    }
+    }   
 
     [System.Serializable]
     public class MaterialShader
@@ -748,6 +442,7 @@ namespace CommonVars
         public string RoughnessRange;
         public bool IsGlass;
         public bool IsCutout;
+        public bool UsesSmoothness;
         public string BaseColorValue;
     }
     [System.Serializable]
@@ -759,9 +454,22 @@ namespace CommonVars
 
     public static class CommonFunctions
     {
+
+        public static void DeepClean<T>(ref List<T> A) {
+            if(A != null) {
+                A.Clear();
+                A.TrimExcess();
+                A = null;
+            }
+        }
+        public static void DeepClean<T>(ref T[] A) {
+            A = null;
+        }
+
         public static void CreateDynamicBuffer(ref ComputeBuffer TargetBuffer, int Count, int Stride)
         {
-            if (TargetBuffer == null) TargetBuffer = new ComputeBuffer(Count, Stride);
+            if (TargetBuffer != null) TargetBuffer?.Dispose();
+            TargetBuffer = new ComputeBuffer(Count, Stride);
         }
         public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, List<T> data, int stride)
             where T : struct
@@ -943,9 +651,32 @@ namespace CommonVars
             
             Vector2 temp = (nor.z >= 0.0) ? new Vector2(nor.x, nor.y) : Vector2.Scale(new Vector2(1.0f-Mathf.Abs(nor.y),(1.0f-Mathf.Abs(nor.x))), msign(new Vector2(nor.x, nor.y)));
             nor = new Vector3(temp.x, temp.y, nor.z);
-            //return packSnorm2x16(nor.xy);
+
             Vector2 d = new Vector2((Mathf.Round(32767.5f + nor.x*32767.5f)), (Mathf.Round(32767.5f + nor.y*32767.5f)));  
             return (uint)d.x|((uint)d.y<<16);
+        }
+
+        public static readonly RenderTextureFormat RTFull4 = RenderTextureFormat.ARGBFloat;
+        public static readonly RenderTextureFormat RTInt1 = RenderTextureFormat.RInt;
+        public static readonly RenderTextureFormat RTHalf4 = RenderTextureFormat.ARGBHalf;
+        public static readonly RenderTextureFormat RTHalf1 = RenderTextureFormat.RHalf;
+        public static readonly RenderTextureFormat RTFull2 = RenderTextureFormat.RGFloat;
+        public static readonly RenderTextureFormat RTHalf2 = RenderTextureFormat.RGHalf;
+
+        public static void CreateRenderTexture(ref RenderTexture ThisTex, 
+                                                    int Width, int Height, 
+                                                    RenderTextureFormat Form, 
+                                                    RenderTextureReadWrite RendRead = RenderTextureReadWrite.Linear, 
+                                                    bool UseMip = false) {
+            if(ThisTex != null) ThisTex?.Release();
+            ThisTex = new RenderTexture(Width, Height, 0,
+                Form, RendRead);
+            if (UseMip) {
+                ThisTex.useMipMap = true;
+                ThisTex.autoGenerateMips = false;
+            }
+            ThisTex.enableRandomWrite = true;
+            ThisTex.Create();
         }
 
     }

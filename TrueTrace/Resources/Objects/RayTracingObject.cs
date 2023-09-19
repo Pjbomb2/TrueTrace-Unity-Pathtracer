@@ -28,6 +28,7 @@ namespace TrueTrace {
 		[SerializeField] public float[] ScatterDist;
 		public string[] Names;
 		[SerializeField] public float[] Specular;
+		[SerializeField] public bool[] IsSmoothness;
 		[SerializeField] public int Selected;
 		public int[] Indexes;
 		public bool NeedsToUpdate;
@@ -107,11 +108,15 @@ namespace TrueTrace {
 					SharedMaterials[i].shader = Shader.Find("Standard");
 				}
 			}
+			if(IsSmoothness == null || IsSmoothness.Length != SubMeshCount) IsSmoothness = new bool[SubMeshCount];
 			if(ScatterDist == null || ScatterDist.Length != SubMeshCount) ScatterDist = new float[SubMeshCount];
 			List<string> PropertyNames = new List<string>();
 		 	if(Indexes == null || Indexes.Length != Mathf.Max(mesh.subMeshCount, SubMeshCount)) Indexes = new int[Mathf.Max(mesh.subMeshCount, SubMeshCount)];
 		 	if(Specular == null || Specular.Length != SubMeshCount) Specular = new float[SubMeshCount];
 			if(FollowMaterial == null || FollowMaterial.Length != SubMeshCount) {FollowMaterial = new bool[SubMeshCount]; System.Array.Fill(FollowMaterial, true);}
+			for(int i = 0; i < SharedMaterials.Length; i++) {
+				if(SharedMaterials[i].name.Equals("MI_LightWhite")) emmission[i] = 12.0f;
+			}
 			try {
 				if(Names == null || Names.Length == 0) {
 					Names = new string[SubMeshCount];

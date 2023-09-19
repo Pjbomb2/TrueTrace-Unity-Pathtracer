@@ -103,7 +103,7 @@ void preload(int2 group_base, int2 group_size, int gl_LocalInvocationIndex)
 
 		// Load
 		int2 ipos = group_base + int2(xx, yy) - FILTER_RADIUS;
-		ipos = clamp(ipos + random(45, ipos) - 0.5f, 0, int2(source_width - 1, source_height - 1));
+		ipos = clamp(ipos, 0, int2(source_width - 1, source_height - 1));
 		float4 color = TEX_FLAT_COLOR[ipos];
 		ipos = (float2)ipos * float2(rcp(source_width), rcp(source_height)) * float2(target_width, target_height);
 		float3 color_pq = PQEncode(color.rgb);

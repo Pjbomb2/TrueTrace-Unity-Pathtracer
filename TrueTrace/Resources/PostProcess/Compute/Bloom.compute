@@ -59,6 +59,20 @@ float3 karisAverage(float3 c1, float3 c2, float3 c3, float3 c4)
 	return (c1 * w1 + c2 * w2 + c3 * w3 + c4 * w4) / (w1 + w2 + w3 + w4);
 }
 
+float3 QuadraticThreshold(float3 color, float threshold, float3 curve)
+{
+    // Pixel brightness
+    float br = max(color.r, max(color.g, color.b));
+
+    // Under-threshold part
+    float rq = clamp(br - curve.x, 0.0, curve.y);
+    rq = curve.z * rq * rq;
+
+    // Combine and apply the brightness response curve
+    color *= max(rq, br - threshold) / max(br, 1e-4);
+
+    return color;
+}
 
 [numthreads(16, 16, 1)]
 void LowPass(uint3 id : SV_DispatchThreadID)
@@ -90,8 +104,9 @@ void LowPass(uint3 id : SV_DispatchThreadID)
 	filterSum += karisAverage(samples[5], samples[6], samples[10], samples[11]) * 0.125;
 	filterSum += karisAverage(samples[6], samples[7], samples[11], samples[12]) * 0.125;
 
+	float knee = 0.5f;
 
-	OutputTex[id.xy] = float4(filterSum, 1);
+	OutputTex[id.xy] = float4(QuadraticThreshold(filterSum, 1, float3(1.0f - knee, knee * 2.0f, 0.25f / knee)), 1);
 
 }
 
