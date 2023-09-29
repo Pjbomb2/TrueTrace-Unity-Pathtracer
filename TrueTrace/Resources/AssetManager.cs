@@ -20,12 +20,13 @@ namespace TrueTrace {
     {//This handels all the data
         public int TotalParentObjectSize;
         public float LightEnergyScale = 1.0f;
+        //emissive, alpha, metallic, roughness
         [System.NonSerialized] public Texture2D AlbedoAtlas;
         [System.NonSerialized] public RenderTexture NormalAtlas;
         [System.NonSerialized] public RenderTexture EmissiveAtlas;
         [System.NonSerialized] public RenderTexture AlphaAtlas;
-        [System.NonSerialized] public RenderTexture MetallicAtlas;
-        [System.NonSerialized] public RenderTexture RoughnessAtlas;
+        public RenderTexture MetallicAtlas;
+        public RenderTexture RoughnessAtlas;
         [HideInInspector] public RenderTexture TempTex;
         private ComputeShader CopyShader;
         private ComputeShader Refitter;
@@ -135,6 +136,7 @@ namespace TrueTrace {
                 AggTriBuffer.Release();
                 AggTriBuffer = null;
             }
+            if(TLASCWBVHIndexes != null) TLASCWBVHIndexes.Release();
 
             Resources.UnloadUnusedAssets();
             System.GC.Collect();
@@ -463,6 +465,7 @@ namespace TrueTrace {
             if (BVHBuffer != null) BVHBuffer.Release();
             if (BoxesBuffer != null) BoxesBuffer.Release();
             if (TerrainBuffer != null) TerrainBuffer.Release();
+            if(TLASCWBVHIndexes != null) TLASCWBVHIndexes.Release();
         }
 
         void OnDisable() {
@@ -899,17 +902,19 @@ namespace TrueTrace {
                 if (!OnlyInstanceUpdated || _Materials.Count == 0) CreateAtlas();
             }
             ParentCountHasChanged = false;
-            if (UseSkinning && didstart)
-            {
-                for (int i = 0; i < ParentsLength; i++)
-                {//Refit BVH's of skinned meshes
-                    if (RenderQue[i].IsSkinnedGroup)//this can be optimized to operate directly on the triangle buffer instead of needing to copy it
-                    {
-                        cmd.SetComputeIntParam(RenderQue[i].MeshRefit, "TriBuffOffset", RenderQue[i].TriOffset);
-                        RenderQue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBuffer, cmd);
+            #if !HardwareRT
+                if (UseSkinning && didstart)
+                {
+                    for (int i = 0; i < ParentsLength; i++)
+                    {//Refit BVH's of skinned meshes
+                        if (RenderQue[i].IsSkinnedGroup)//this can be optimized to operate directly on the triangle buffer instead of needing to copy it
+                        {
+                            cmd.SetComputeIntParam(RenderQue[i].MeshRefit, "TriBuffOffset", RenderQue[i].TriOffset);
+                            RenderQue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBuffer, cmd);
+                        }
                     }
                 }
-            }
+            #endif
         }
 
         public struct AggData

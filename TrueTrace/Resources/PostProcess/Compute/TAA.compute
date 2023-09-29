@@ -112,6 +112,25 @@ float mitchell_netravali(float x) {
 	}
 }
 
+static const float2 Offsets[] = {
+	float2(0.500000f, 0.333333f),
+	float2(0.250000f, 0.666667f),
+	float2(0.750000f, 0.111111f),
+	float2(0.125000f, 0.444444f),
+	float2(0.625000f, 0.777778f),
+	float2(0.375000f, 0.222222f),
+	float2(0.875000f, 0.555556f),
+	float2(0.062500f, 0.888889f),
+	float2(0.562500f, 0.037037f),
+	float2(0.312500f, 0.370370f),
+	float2(0.812500f, 0.703704f),
+	float2(0.187500f, 0.148148f),
+	float2(0.687500f, 0.481481f),
+	float2(0.437500f, 0.814815f),
+	float2(0.937500f, 0.259259f),
+	float2(0.031250f, 0.592593f)
+};
+
 [numthreads(16, 16, 1)]
 void kernel_taa(int3 id : SV_DispatchThreadID)
 {
@@ -131,6 +150,7 @@ void kernel_taa(int3 id : SV_DispatchThreadID)
 	#else
 		float2 screen_position_prev = (id.xy / float2(screen_width, screen_height) - MotionVectors[id.xy].xy) * 2.0f - 1.0f;
 	#endif
+	screen_position_prev += (Offsets[Samples_Accumulated % 16] - 0.5f) / float2(screen_width, screen_height);
 	// Convert from [-1, 1] to [0, 1]
 	float u_prev = 0.5f + 0.5f * screen_position_prev.x;
 	float v_prev = 0.5f + 0.5f * screen_position_prev.y;

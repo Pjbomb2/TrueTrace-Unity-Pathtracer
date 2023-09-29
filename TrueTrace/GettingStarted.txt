@@ -1,0 +1,47 @@
+Hello and thank you for trying out my pathtracer!
+Needed Changes:
+To get started you need to turn on unsafe code and set yourself to DX12
+
+1. To enable unsafe code go to the Edit tab -> Project Settings -> Player -> Scroll to the bottom -> Tick "Unsafe Code"
+2. To turn on DirectX12, go to the Edit Tab -> Project Settings -> Player -> Untick "Auto Graphics API For Windows" -> Click the little + Button that appears -> DirectX12 -> Drag the new DirectX12 to the top
+
+
+To get started:
+1. After importing the unity package, for a new scene you want to open the PathTracer tab on the top bar, and click "Arrange Hierarchy"(THIS WILL RE-ARRANGE YOUR HIERARCHY)
+2. After doing this, your scene should now be in the format required by the pathtracer
+3. Now you can click "Build Aggregated BVH" to build the acceleration structure for all objects, and just wait for the "All Objects Built" to turn green before entering play mode
+4. After that is done, you can just enter play mode and play as normal
+
+
+Important Notes:
+1. If your camera is not tagged "Main Camera", you need to add the script "RenderHandle" to it manually
+2. Objects cannot be marked with the static tag(this is due to them not being read/writeable when this is done, so I cant use them)
+3. Whenever you add objects to the scene, in order for them to be included in the pathtracer, you need to put them under the GameObject named "Scene", and add the parent object/raytracing object, however I highly reccomend just pressing "Auto Assign Scripts" to automatically assign the scripts for you
+4. Objects that will be spawned/despawned while in play mode(or in builds) that are to be included in the pathtracing must be read/write enabled, otherwise I cant read them at all
+5. Meshes that are to move independantly need to either be a child of a gameobject with the "ParentObject" script or have a "ParentObject" script in the same gameobject
+
+
+Structure Notes:
+1. All objects that are to be raytraced are to be under the Gameobject named "Scene"(Can have as many parents as you want, as long as the very top is a child of this gameobject)
+2. All objects that are to be raytraced must be under a gameobject with the "ParentObject" script or have this script on themselves, think of the parentobject as defining groups of meshes(its children with RayTracingObject scripts)
+3. Meshes with RayTracingObject scripts will be raytraced
+
+
+For an example scene, open up the DemoScene scene
+
+
+
+Changable Defines:
+To access the in script settings, go to the "GlobalDefines.cginc" under the TrueTrace/Resources folder
+This will allow you to toggle some low level settings:
+1. UseSkyBox - uncommenting this will stop the normal atmosphere and instead use the skybox provided under the RayTracingMaster script(Under the Scene Gameobject)
+2. HDRP - This needs to be enabled if you are in HDRP
+3. HardwareRT - Only supported in unity 2023 or higher, and only on nvidia GPUs
+3. PSR - Primary surface replacement, allows for complex glass and reflections to be denoised nicely
+
+
+Pathtracer Settings Of Note:
+Render Scale - Turning this down decreases the resolution we pathtrace at, and then upscales to the correct res(so turning to 0.5 will pathtrace at half resolution then upscale it)
+Atmospheric Scattering Samples - How many passes of atmospheric scatter is computed(for multiple scattering), decrease this to 1 if you end up crashing when you try to play
+
+Chair Scene provided by Mr_TibiT on twitter

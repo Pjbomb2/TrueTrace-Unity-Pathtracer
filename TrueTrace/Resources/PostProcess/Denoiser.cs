@@ -66,7 +66,7 @@ namespace TrueTrace {
 
 
 
-        public ComputeBuffer A;
+        public ComputeBuffer ExposureBuffer;
 
         private int ScreenWidth;
         private int ScreenHeight;
@@ -278,7 +278,7 @@ namespace TrueTrace {
         }
         void OnApplicationQuit()
         {
-            if (A != null) A.Release();
+            if (ExposureBuffer != null) ExposureBuffer.Release();
             for(int i = 0; i < BloomSamples.Length; i++) {
                 BloomSamples[i].Release();
             }
@@ -324,7 +324,7 @@ namespace TrueTrace {
             AutoExposeFinalizeKernel = AutoExpose.FindKernel("AutoExposeFinalize");
             List<float> TestBuffer = new List<float>();
             TestBuffer.Add(1);
-            A?.Dispose(); A = new ComputeBuffer(1, sizeof(float)); A.SetData(TestBuffer);
+            ExposureBuffer?.Dispose(); ExposureBuffer = new ComputeBuffer(1, sizeof(float)); ExposureBuffer.SetData(TestBuffer);
             SVGF.SetInt("screen_width", SourceWidth);
             SVGF.SetInt("screen_height", SourceHeight);
             SVGF.SetInt("TargetWidth", Screen.width);
@@ -335,8 +335,8 @@ namespace TrueTrace {
 
             AutoExpose.SetInt("screen_width", Screen.width);
             AutoExpose.SetInt("screen_height", Screen.height);
-            AutoExpose.SetBuffer(AutoExposeKernel, "A", A);
-            AutoExpose.SetBuffer(AutoExposeFinalizeKernel, "A", A);
+            AutoExpose.SetBuffer(AutoExposeKernel, "A", ExposureBuffer);
+            AutoExpose.SetBuffer(AutoExposeFinalizeKernel, "A", ExposureBuffer);
 
             TAA.SetInt("screen_width", Screen.width);
             TAA.SetInt("screen_height", Screen.height);
@@ -365,7 +365,7 @@ namespace TrueTrace {
 
             List<float> TestBuffer = new List<float>();
             TestBuffer.Add(1);
-            A?.Dispose(); A = new ComputeBuffer(1, sizeof(float)); A.SetData(TestBuffer);
+            ExposureBuffer?.Dispose(); ExposureBuffer = new ComputeBuffer(1, sizeof(float)); ExposureBuffer.SetData(TestBuffer);
             SVGF.SetInt("screen_width", SourceWidth);
             SVGF.SetInt("screen_height", SourceHeight);
             SVGF.SetInt("TargetWidth", Screen.width);
@@ -376,8 +376,8 @@ namespace TrueTrace {
 
             AutoExpose.SetInt("screen_width", Screen.width);
             AutoExpose.SetInt("screen_height", Screen.height);
-            AutoExpose.SetBuffer(AutoExposeKernel, "A", A);
-            AutoExpose.SetBuffer(AutoExposeFinalizeKernel, "A", A);
+            AutoExpose.SetBuffer(AutoExposeKernel, "A", ExposureBuffer);
+            AutoExpose.SetBuffer(AutoExposeFinalizeKernel, "A", ExposureBuffer);
 
             TAA.SetInt("screen_width", Screen.width);
             TAA.SetInt("screen_height", Screen.height);
@@ -498,6 +498,7 @@ namespace TrueTrace {
         public void ExecuteBloom(ref RenderTexture _converged, float BloomStrength, CommandBuffer cmd)
         {//need to fix this so it doesnt create new textures every time
 
+            cmd.BeginSample("Bloom");
             Bloom.SetFloat("strength", BloomStrength);
             cmd.SetComputeIntParam(Bloom, "screen_width", Screen.width);
             cmd.SetComputeIntParam(Bloom, "screen_height", Screen.height);
@@ -540,6 +541,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "InputTex", BloomSamples[0]);
             cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OutputTex", _converged);
             cmd.DispatchCompute(Bloom, BloomUpsampleKernel, (int)Mathf.Ceil(Screen.width / 16.0f), (int)Mathf.Ceil(Screen.height / 16.0f), 1);
+            cmd.EndSample("Bloom");
 
 
 
@@ -548,12 +550,14 @@ namespace TrueTrace {
 
         public void ExecuteAutoExpose(ref RenderTexture _converged, float Exposure, CommandBuffer cmd)
         {//need to fix this so it doesnt create new textures every time
+            cmd.BeginSample("Auto Exposure");
             cmd.SetComputeTextureParam(AutoExpose, AutoExposeKernel, "InTex", _converged);
             AutoExpose.SetFloat("Exposure", Exposure);
             AutoExpose.SetFloat("frame_time", Time.deltaTime);
             cmd.DispatchCompute(AutoExpose, AutoExposeKernel, 1, 1, 1);
             cmd.SetComputeTextureParam(AutoExpose, AutoExposeFinalizeKernel, "OutTex", _converged);
             cmd.DispatchCompute(AutoExpose, AutoExposeFinalizeKernel, threadGroupsX2, threadGroupsY2, 1);
+            cmd.EndSample("Auto Exposure");
 
 
         }
@@ -659,6 +663,7 @@ namespace TrueTrace {
 
         public void ExecuteToneMap(ref RenderTexture Output, CommandBuffer cmd, ref Texture3D LUT)
         {//need to fix this so it doesnt create new textures every time
+            cmd.BeginSample("ToneMap");
             cmd.SetComputeIntParam(ToneMapper,"width", Output.width);
             cmd.SetComputeIntParam(ToneMapper,"height", Output.height);
             cmd.SetComputeIntParam(ToneMapper,"ScreenWidth", Output.width);
@@ -666,6 +671,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(ToneMapper, 0, "Result", Output);
             cmd.SetComputeTextureParam(ToneMapper, 0, "LUT", LUT);
             cmd.DispatchCompute(ToneMapper, 0, threadGroupsX2, threadGroupsY2, 1);
+            cmd.EndSample("ToneMap");
 
             // cmd.// SetComputeTextureParam(ToneMapper, ToneMapLuminanceKernel, "Result", Output);
             // cmd.// SetComputeTextureParam(ToneMapper, ToneMapLuminanceKernel, "LuminanceTex", mips[0]);
@@ -712,6 +718,7 @@ namespace TrueTrace {
 
         public void ExecuteTAAU(ref RenderTexture Output, ref RenderTexture Input, ref RenderTexture ThroughputTex, CommandBuffer cmd, int CurFrame, RenderTexture CorrectedDepthTex)
         {//need to fix this so it doesnt create new textures every time
+            cmd.BeginSample("TAAU");
             bool IsEven = CurFrame % 2 == 0;
             cmd.SetComputeIntParam(TAAU,"source_width", SourceWidth);
             cmd.SetComputeIntParam(TAAU,"source_height", SourceHeight);
@@ -728,6 +735,7 @@ namespace TrueTrace {
             TAAU.SetTextureFromGlobal(TAAUKernel, "Albedo2", "_CameraGBufferTexture1");
             TAAU.SetTextureFromGlobal(TAAUKernel, "TEX_FLAT_MOTION", "_CameraMotionVectorsTexture");
             cmd.DispatchCompute(TAAU, TAAUKernel, threadGroupsX2, threadGroupsY2, 1);
+            cmd.EndSample("TAAU");
         }
 
     }

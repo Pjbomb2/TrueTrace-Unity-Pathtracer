@@ -13,14 +13,15 @@ Texture2D<float> Depth;
 
 #pragma kernel GenerateASVGF 
 
+static const ColData InitCol = { 1,1,1,0,0,0,0,0,0,0,0,0 };
+const static RayHit tempray = CreateRayHit();
+
 [numthreads(256, 1, 1)]
 void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
 
     if (id.x >= screen_width || id.y >= screen_height) return;
     const uint pixel_index = id.y * screen_width + id.x;
 
-    const static RayHit tempray = CreateRayHit();
-    static const ColData InitCol = { 1,1,1,0,0,0,0,0,0,0,0,0 };
     set(pixel_index, tempray);
     GlobalRays[pixel_index].origin = Rays[pixel_index].origin;
     GlobalRays[pixel_index].direction = Rays[pixel_index].direction;
@@ -33,15 +34,13 @@ void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
 }
 
 #pragma kernel Generate
-const static RayHit tempray = CreateRayHit();
-static const ColData InitCol = { 1,1,1,0,0,0,0,0,0,0,0,0 };
 [numthreads(256, 1, 1)]
 void Generate(uint3 id : SV_DispatchThreadID) {
 
     if (id.x >= screen_width || id.y >= screen_height) return;
     const uint pixel_index = id.y * screen_width + id.x;
     float2 jitter = ((random(1, pixel_index) - 0.5));
-    float2 uv = float2((id.xy + (UseReCur ? 0 : jitter)) / float2(screen_width, screen_height) * 2.0f - 1.0f);
+    float2 uv = float2((id.xy + (UseReCur ? 0 : 0)) / float2(screen_width, screen_height) * 2.0f - 1.0f);
 
     Ray ray = CreateCameraRay(uv, pixel_index);
     set(pixel_index, tempray);

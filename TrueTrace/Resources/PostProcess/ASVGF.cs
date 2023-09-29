@@ -75,7 +75,6 @@ namespace TrueTrace {
         private int Gradient_Atrous;
         private int Temporal;
         private int Atrous_LF;
-        private int Finalize;
         private int Atrous;
         private Vector3 PrevCamPos;
 
@@ -260,7 +259,6 @@ namespace TrueTrace {
             Gradient_Atrous = shader.FindKernel("Gradient_Atrous");
             Temporal = shader.FindKernel("Temporal");
             Atrous_LF = shader.FindKernel("Atrous_LF");
-            Finalize = shader.FindKernel("Finalize");
             Atrous = shader.FindKernel("Atrous");
             shader.SetInt("screen_width", ScreenWidth);
             shader.SetInt("screen_height", ScreenHeight);
@@ -314,8 +312,9 @@ namespace TrueTrace {
 
         Vector3 prevEuler;
         Vector3 PrevPos;
-        public void DoRNG(ref RenderTexture RNGTex, ref RenderTexture RNGTexB, int CurFrame, ref ComputeBuffer GlobalRays, ref ComputeBuffer GlobalRaysB, RenderTexture TEX_PT_VIEW_DEPTH_B, CommandBuffer cmd, RenderTexture CorrectedDepthTex, RenderTexture PrimaryTriData, ComputeBuffer Meshes, ComputeBuffer Tris, bool UseBackupPointSelection)
+        public void DoRNG(ref RenderTexture RNGTex, ref RenderTexture RNGTexB, int CurFrame, ref ComputeBuffer GlobalRays, ref ComputeBuffer GlobalRaysB, RenderTexture TEX_PT_VIEW_DEPTH_B, CommandBuffer cmd, RenderTexture CorrectedDepthTex, RenderTexture PrimaryTriData, ComputeBuffer Meshes, ComputeBuffer Tris, bool UseBackupPointSelection, ComputeBuffer MeshIndexes)
         {
+            camera = Camera.current;
             bool EvenFrame = CurFrame % 2 == 0;
             Vector3 Euler = camera.transform.eulerAngles;
             shader.SetMatrix("viewprojection", camera.projectionMatrix * camera.worldToCameraMatrix);
@@ -370,6 +369,7 @@ namespace TrueTrace {
             cmd.SetComputeBufferParam(shader, Reproject, "RayB", (!EvenFrame) ? GlobalRays : GlobalRaysB);
             cmd.SetComputeBufferParam(shader, Reproject, "_MeshData", Meshes);
             cmd.SetComputeBufferParam(shader, Reproject, "AggTris", Tris);
+            cmd.SetComputeBufferParam(shader, Reproject, "MeshIndexes", MeshIndexes);
             shader.SetVector("CamDiff", PrevPos - camera.transform.position);
             cmd.SetComputeBufferParam(shader, Reproject, "GlobalRays", (EvenFrame) ? GlobalRays : GlobalRaysB);
 
@@ -381,7 +381,7 @@ namespace TrueTrace {
         }
 
 
-        public void Do(ref ComputeBuffer _ColorBuffer, ref RenderTexture Albedo, ref RenderTexture Output, bool DiffRes, RenderTexture TEX_PT_VIEW_DEPTH_B, ComputeBuffer ScreenSpaceBuffer, CommandBuffer cmd, RenderTexture CorrectedDepthTex, int CurFrame, ref RenderTexture WorldPosData, int PartialRenderingFactor)
+        public void Do(ref ComputeBuffer _ColorBuffer, ref RenderTexture Albedo, ref RenderTexture Output, bool DiffRes, RenderTexture TEX_PT_VIEW_DEPTH_B, RenderTexture ScreenSpaceInfo, CommandBuffer cmd, RenderTexture CorrectedDepthTex, int CurFrame, ref RenderTexture WorldPosData, int PartialRenderingFactor)
         {
 
             bool EvenFrame = CurFrame % 2 == 0;
@@ -389,7 +389,7 @@ namespace TrueTrace {
             int MaxIterations = 4;
             cmd.SetComputeIntParam(shader, "MaxIterations", MaxIterations);
             shader.SetBuffer(CopyData, "PerPixelRadiance", _ColorBuffer);
-            shader.SetBuffer(CopyData, "ScreenSpaceInfo", ScreenSpaceBuffer);
+            shader.SetTexture(CopyData, "ScreenSpaceInfo", ScreenSpaceInfo);
             shader.SetTextureFromGlobal(CopyData, "MotionVectors", "_CameraMotionVectorsTexture");
             shader.SetInt("PartialRenderingFactor", PartialRenderingFactor);
             cmd.SetComputeTextureParam(shader, CopyData, "WorldPosData", WorldPosData);
@@ -578,7 +578,7 @@ namespace TrueTrace {
                 shader.SetTextureFromGlobal(Atrous, "NormalTex", "_CameraGBufferTexture2");
 
                 cmd.SetComputeTextureParam(shader, Atrous, "AlbedoColorB", (EvenFrame ? AlbedoColorA : AlbedoColorB));
-                shader.SetBuffer(Atrous, "ScreenSpaceInfo", ScreenSpaceBuffer);
+                shader.SetTexture(Atrous, "ScreenSpaceInfo", ScreenSpaceInfo);
                 cmd.DispatchCompute(shader, Atrous, Mathf.CeilToInt((ScreenWidth + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight + 15) / 16.0f), 1);
                 cmd.EndSample("ASVGF Atrous " + e);
 

@@ -107,14 +107,11 @@ struct RayData {//128 bit aligned
 
 RWStructuredBuffer<RayData> GlobalRays;
 
-struct ScreenSpaceData {//I could make this into a texture now if I want
-	uint GeomNorm;
-	uint SurfNorm;//albedo is already stored in the texture WorldSpaceInfo
-	float t;
-	int MatIndex;
-};
-RWStructuredBuffer<ScreenSpaceData> ScreenSpaceInfo;
-RWStructuredBuffer<ScreenSpaceData> PrevScreenSpaceInfo;
+RWTexture2D<float4> ScreenSpaceInfo;
+RWTexture2D<float4> PrevScreenSpaceInfo;
+
+bool DoExposure;
+StructuredBuffer<float> Exposure;
 
 struct ShadowRayData {
 	float3 origin;
@@ -158,7 +155,8 @@ RWTexture2D<float4> Result;
 
 RWStructuredBuffer<Ray> Rays;
 
-RWStructuredBuffer<uint> _RayBinResult;
+Texture2D<uint4> PrimaryTriData;
+StructuredBuffer<int> TLASBVH8Indices;
 
 struct MyMeshDataCompacted {
 	float4x4 Transform;
@@ -192,9 +190,9 @@ struct TrianglePos {
 
 inline TrianglePos triangle_get_positions(const int ID) {
 	TrianglePos tri;
-	tri.pos0 = AggTris[ID].pos0;
-	tri.posedge1 = AggTris[ID].posedge1;
-	tri.posedge2 = AggTris[ID].posedge2;
+	tri.pos0 = AggTris.Load(ID).pos0;
+	tri.posedge1 = AggTris.Load(ID).posedge1;
+	tri.posedge2 = AggTris.Load(ID).posedge2;
 	return tri;
 }
 
@@ -398,8 +396,8 @@ RayHit get(int index) {
 
 	ray_hit.t = asfloat(hit.z);
 
-	ray_hit.u = (float)(hit.w & 0xffff) / 65535.0f;
-	ray_hit.v = (float)(hit.w >> 16) / 65535.0f;
+	ray_hit.u = (hit.w & 0xffff) / 65535.0f;
+	ray_hit.v = (hit.w >> 16) / 65535.0f;
 
 	return ray_hit;
 }
@@ -1553,4 +1551,278 @@ inline float AreaOfTriangle(float3 pt1, float3 pt2, float3 pt3) {
     float c = distance(pt3, pt1);
     float s = (a + b + c) / 2.0f;
     return sqrt(s * (s - a) * (s - b) * (s - c));
+}
+
+
+
+
+
+struct SH {
+	float4 shY;
+	float2 CoCg;
+};
+
+inline SH init_SH()
+{
+	SH result;
+	result.shY = 0;
+	result.CoCg = 0;
+	return result;
+}
+
+inline void accumulate_SH(inout SH accum, SH b, float scale)
+{
+	accum.shY += b.shY * scale;
+	accum.CoCg += b.CoCg * scale;
+}
+
+inline SH mix_SH(SH a, SH b, float s)
+{
+	SH result;
+	result.shY = lerp(a.shY, b.shY, s);
+	result.CoCg = lerp(a.CoCg, b.CoCg, s);
+	return result;
+}
+
+inline SH load_SH(Texture2D<float4> img_shY, Texture2D<float2> img_CoCg, int2 p)
+{
+	SH result;
+	result.shY = img_shY[p];
+	result.CoCg = img_CoCg[p];
+	return result;
+}
+
+inline SH load_SH(RWTexture2D<float4> img_shY, RWTexture2D<float2> img_CoCg, int2 p)
+{
+	SH result;
+	result.shY = img_shY[p];
+	result.CoCg = img_CoCg[p];
+	return result;
+}
+
+// Use a macro to work around the glslangValidator errors about function argument type mismatch
+#define STORE_SH(img_shY, img_CoCg, p, sh) {img_shY[p] = sh.shY; img_CoCg[p] = sh.CoCg; }
+
+inline void store_SH(RWTexture2D<float4> img_shY, RWTexture2D<float2> img_CoCg, int2 p, SH sh)
+{
+	img_shY[p] = sh.shY;
+	img_CoCg[p] = sh.CoCg;
+}
+
+
+SH irradiance_to_SH(float3 color, float3 dir)
+{
+	SH result;
+	color = log(color + 1);
+	float   Co = color.r - color.b;
+	float   t = color.b + Co * 0.5;
+	float   Cg = color.g - t;
+	float   Y = max(t + Cg * 0.5, 0.0);
+
+	result.CoCg = float2(Co, Cg);
+
+	float   L00 = 0.282095;
+	float   L1_1 = 0.488603 * dir.y;
+	float   L10 = 0.488603 * dir.z;
+	float   L11 = 0.488603 * dir.x;
+
+	result.shY = float4 (L11, L1_1, L10, L00) * Y;
+
+	return result;
+}
+
+inline float3 project_SH_irradiance(SH sh, float3 N)
+{
+	float d = dot(sh.shY.xyz, N);
+	float Y = 2.0 * (1.023326 * d + 0.886226 * sh.shY.w);
+	Y = max(Y, 0.0);
+
+	sh.CoCg *= Y * 0.282095 / (sh.shY.w + 1e-6);
+
+	float   T = Y - sh.CoCg.y * 0.5;
+	float   G = sh.CoCg.y + T;
+	float   B = T - sh.CoCg.x * 0.5;
+	float   R = B + sh.CoCg.x;
+
+	return max(exp(float3(R, G, B)) - 1, 0.0);
+}
+
+
+float3 sample_projected_triangle(float3 pt, float3 posA, float3 posB, float3 posC, float2 rnd, out float3 light_normal, out float pdfw, out float2 UVs)
+{
+	light_normal = cross(posB - posA, posC - posA);
+	light_normal = normalize(light_normal);
+
+	// Use surface point as origin
+	posA = posA - pt;
+	posB = posB - pt;
+	posC = posC - pt;
+
+	// Distance of triangle to origin
+	float o = dot(light_normal, posA);
+
+	// Project triangle to unit sphere
+	float3 A = normalize(posA);
+	float3 B = normalize(posB);
+	float3 C = normalize(posC);
+	// Planes passing through two vertices and origin. They'll be used to obtain the angles.
+	float3 norm_AB = normalize(cross(A, B));
+	float3 norm_BC = normalize(cross(B, C));
+	float3 norm_CA = normalize(cross(C, A));
+	// Side of spherical triangle
+	float cos_c = dot(A, B);
+	// Angles at vertices
+	float cos_alpha = dot(norm_AB, -norm_CA);
+	float cos_beta = dot(norm_BC, -norm_AB);
+	float cos_gamma = dot(norm_CA, -norm_BC);
+
+	// Area of spherical triangle. From: "On the Measure of Solid Angles", F. Eriksson, 1990.
+	float area = 2 * atan(abs(dot(A, cross(B, C))) / (1 + dot(A, B) + dot(B, C) + dot(A, C)));
+
+	// Use one random variable to select the new area.
+	float new_area = rnd.x * area;
+
+	float sin_alpha = sqrt(1 - cos_alpha * cos_alpha); // = sin(acos(cos_alpha))
+	float sin_new_area = sin(new_area);
+	float cos_new_area = cos(new_area);
+	// Save the sine and cosine of the angle phi.
+	float p = sin_new_area * cos_alpha - cos_new_area * sin_alpha;
+	float q = cos_new_area * cos_alpha + sin_new_area * sin_alpha;
+
+	// Compute the pair (u, v) that determines new_beta.
+	float u = q - cos_alpha;
+	float v = p + sin_alpha * cos_c;
+
+	// Let cos_b be the cosine of the new edge length new_b.
+	float cos_b = clamp(((v * q - u * p) * cos_alpha - v) / ((v * p + u * q) * sin_alpha), -1, 1);
+
+	// Compute the third vertex of the sub-triangle.
+	float3 new_C = cos_b * A + sqrt(1 - cos_b * cos_b) * normalize(C - dot(C, A) * A);
+
+	// Use the other random variable to select cos(phi).
+	float z = 1 - rnd.y * (1 - dot(new_C, B));
+
+	// Construct the corresponding point on the sphere.
+	float3 direction = z * B + sqrt(1 - z * z) * normalize(new_C - dot(new_C, B) * B);
+	// ...which is also the direction!
+
+	// Line-plane intersection
+	float3 lo = direction * (o / dot(light_normal, direction));
+
+	// Since the solid angle is distributed uniformly, the PDF wrt to solid angle is simply:
+	pdfw = area;
+	UVs = float2(u, v);
+	return pt + lo;
+}
+
+float get_spherical_triangle_pdfw(float3 A, float3 B, float3 C, float3 p)
+{
+	A -= p;
+	B -= p;
+	C -= p;
+	// Project triangle to unit sphere
+	A = normalize(A);
+	B = normalize(B);
+	C = normalize(C);
+	// Planes passing through two vertices and origin. They'll be used to obtain the angles.
+	float3 norm_AB = normalize(cross(A, B));
+	float3 norm_BC = normalize(cross(B, C));
+	float3 norm_CA = normalize(cross(C, A));
+	// Side of spherical triangle
+	float cos_c = dot(A, B);
+	// Angles at vertices
+	float cos_alpha = dot(norm_AB, -norm_CA);
+	float cos_beta = dot(norm_BC, -norm_AB);
+	float cos_gamma = dot(norm_CA, -norm_BC);
+
+	// Area of spherical triangle
+	float area = 2 * atan(abs(dot(A, cross(B, C))) / (1 + dot(A, B) + dot(B, C) + dot(A, C)));
+
+	// Since the solid angle is distributed uniformly, the PDF wrt to solid angle is simply:
+	return 1 / area;
+}
+
+
+static const float starCount = 20000.0;
+static const float flickerSpeed = 6.0;
+
+float randS(float p){
+    p = frac(p * .1031);
+    p *= p + 33.33;
+    p *= p + p;
+    return frac(p);
+}
+
+float randS(float2 co){
+    return frac(sin(dot(co.xy,float2(12.9898,78.233))) * 43758.5453);
+}
+float getGlow(float dist, float radius, float intensity){
+    dist = max(dist, 5e-7);
+	return pow(radius/dist, intensity);	
+}
+
+
+//Get Cartesian coordinates from spherical.
+float3 getStarPosition(float theta, float phi){
+	return normalize(float3(	sin(theta)*cos(phi),
+               				sin(theta)*sin(phi),
+               				cos(theta)));
+}
+
+bool isActiveElevation(float theta, float level){
+    return sin(theta) > randS(float2(theta, level));
+}
+
+float getDistToStar(float3 p, float theta, float phi){
+    float3 starPos = getStarPosition(theta, phi);
+    return 0.5+0.5*dot(starPos, p);
+}
+
+//Get star colour from view direction.
+float StarRender(float3 rayDir){
+    
+    //acos returns a value in the range [0, PI].
+    //The theta of the original view ray.
+    float theta = acos(rayDir.z);
+
+    //Extent of each level.
+    float width = PI/starCount;
+    
+    //The level on which the view ray falls.
+    float level = floor((theta/PI)*starCount);
+    
+    //The theta of the level considered.
+    float theta_;
+    //Random angle of the star on the level.
+    float phi_;
+    
+    float stars = 0.0;
+    float dist;
+    
+    //Variable to keep track of neighbouring levels.
+    float level_;
+    
+    float rnd;
+    
+    //For a set number of layers above and below the view ray one,
+    //accumulate the star colour.
+    for(float l = -10.0; l <= 10.0; l++){
+        
+    	level_ = min(starCount-1.0, max(0.0, level+l));
+        theta_ = (level_+0.5)*width;
+
+        //Uniformly picked latitudes lead to stars concentrating at the poles.
+        //Make the likelyhood of rendering stars a function of sin(theta_)
+        if(!isActiveElevation(theta_, 0.0)){
+            continue;
+        }
+        
+        rnd = randS(PI+theta_);
+        phi_ = PI*2.0f*randS(level_);
+        dist = getDistToStar(rayDir, theta_, phi_);
+        
+        stars += getGlow(1.0-dist, rnd*8e-7, 2.9 + (sin(rand(rnd)*flickerSpeed*frames_accumulated / 0.01f)));
+    }
+    
+    return 0.05*stars;
 }

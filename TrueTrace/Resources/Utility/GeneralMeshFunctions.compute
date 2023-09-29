@@ -24,7 +24,7 @@ StructuredBuffer<CudaTriangle> InCudaTriArray;
 uint Offset;
 uint Count;
 
-[numthreads(248, 1, 1)]
+[numthreads(372, 1, 1)]
 void CombineTriBuffers(uint3 id : SV_DispatchThreadID)
 {
 	if (id.x >= Count)
@@ -63,7 +63,7 @@ RWStructuredBuffer<BVHNode8DataCompressed> OutAggNodes;
 
 StructuredBuffer<BVHNode8DataCompressed> InAggNodes;
 
-[numthreads(248, 1, 1)]
+[numthreads(372, 1, 1)]
 void CombineNodeBuffers(uint3 id : SV_DispatchThreadID)
 {
 	if (id.x >= Count)

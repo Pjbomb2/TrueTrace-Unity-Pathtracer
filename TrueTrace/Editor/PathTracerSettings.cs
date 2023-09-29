@@ -764,9 +764,16 @@ Toolbar toolbar;
          public uint MatIndex;
       }
       private void GetFocalLength() {
-         CustomGBufferData[] GBuff = new CustomGBufferData[RayMaster.SourceWidth * RayMaster.SourceHeight];
-         RayMaster.ScreenSpaceBuffer.GetData(GBuff);
-         FocalSlider.value = GBuff[RayMaster.SourceWidth / 2 + RayMaster.SourceHeight * RayMaster.SourceWidth / 2].t;
+         var old_rt = RenderTexture.active;
+         RenderTexture.active = RayMaster.ScreenSpaceInfo;
+         Texture2D currenttexture = new Texture2D(1, 1, TextureFormat.RGBAFloat, false, true);
+         currenttexture.ReadPixels(new Rect(RayMaster.SourceWidth / 2, RayMaster.SourceHeight / 2, 1, 1), 0, 0);
+         currenttexture.Apply();
+          RenderTexture.active = old_rt;
+         var CenterDistance = currenttexture.GetPixelData<Vector4>(0);
+         FocalSlider.value = CenterDistance[0].z;
+         Destroy(currenttexture);
+         CenterDistance.Dispose();
       }
 
          void EvaluateScene(Scene Current, Scene Next) {

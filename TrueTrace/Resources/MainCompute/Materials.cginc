@@ -220,7 +220,7 @@ static float3 DisneyFresnel(MaterialData hitDat, const float3 wo, const float3 w
 
     // -- See section 3.1 and 3.2 of the 2015 PBR presentation + the Disney BRDF explorer (which does their 2012 remapping
     // -- rather than the SchlickR0FromRelativeIOR seen here but they mentioned the switch in 3.2).
-    float3 R0 = SchlickR0FromRelativeIOR(hitDat.ior) * lerp(1.0f, tint, hitDat.specularTint);
+    float3 R0 = SchlickR0FromRelativeIOR(hitDat.ior) * lerp(1.0f, tint, 1);
     R0 = lerp(R0, hitDat.surfaceColor, hitDat.metallic);
 
     float dielectricFresnel = Dielectric(dotHV, 1.0f, hitDat.ior);
@@ -1087,6 +1087,63 @@ float3 ReconstructDisney(MaterialData hitDat, float3 V, float3 L, bool thin,
 }
 
 
+void SeperateDisney(MaterialData hitDat, float3 V, float3 L, float3x3 TruTan, uint pixel_index, inout float3 SpecBSDF, inout float3 DiffuseBSDF, inout float Diffpdf, inout float Specpdf) {
+
+    float3 wo = ToLocal(TruTan, V); // NDotL = L.z; NDotV = V.z; NDotH = H.z
+    float3 wi = ToLocal(TruTan, L); // NDotL = L.z; NDotV = V.z; NDotH = H.z
+    hitDat.surfaceColor *= PI;
+    float3 wm = normalize(wo + wi);
+
+    float dotNV = CosTheta(wo);
+    float dotNL = CosTheta(wi);
+
+    float3 reflectance = 0;
+
+    float pBRDF, pDiffuse, pClearcoat, pSpecTrans;
+    CalculateLobePdfs(hitDat, pBRDF, pDiffuse, pClearcoat, pSpecTrans);
+
+    float3 baseColor = hitDat.surfaceColor;
+    float metallic = hitDat.metallic;
+    float specTrans = hitDat.specTrans;
+    float roughness = hitDat.roughness;
+
+    // calculate all of the anisotropic params
+
+    float diffuseWeight = (1.0f - metallic) * (1.0f - specTrans);
+    float transWeight = (1.0f - metallic) * specTrans;
+
+    bool TempSuccess;
+    if(pBRDF > 0) {
+        float forwardMetallicPdfW;
+        float3 specular = ReconstructDisneyBRDF(hitDat, wo, wm, wi, forwardMetallicPdfW, TempSuccess);
+        if(TempSuccess) {
+            SpecBSDF += specular / pBRDF;
+            Specpdf += forwardMetallicPdfW;
+        }
+    }
+
+    if(pClearcoat > 0) {
+        float forwardClearcoatPdfW;
+        float clearcoat = ReconstructDisneyClearcoat(hitDat.clearcoat, hitDat.clearcoatGloss, wo, wm, wi,
+            forwardClearcoatPdfW, TempSuccess);
+        if(TempSuccess) {
+            SpecBSDF += pClearcoat * clearcoat / (forwardClearcoatPdfW);
+            Specpdf += forwardClearcoatPdfW;
+        }
+    }
+    if(pDiffuse > 0) {
+        float forwardDiffusePdfW = AbsCosTheta(wi);
+        float diffuse = EvaluateDisneyDiffuse(hitDat, wo, wm, wi, hitDat.Thin == 1);
+
+        float3 sheen = EvaluateSheen(hitDat, wo, wm, wi);
+        if(pDiffuse * forwardDiffusePdfW > 0) {
+            DiffuseBSDF += (diffuse * hitDat.surfaceColor + sheen) / pDiffuse;    
+            Diffpdf += forwardDiffusePdfW;
+        }
+    }
+}
+
+
 inline bool EvaluateBsdf(const MaterialData hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, out float PDF, out float3 bsdf_value, uint pixel_index) {
     bool validbsdf = false;
     float cos_theta_hit = dot(DirectionOut, Normal);
@@ -1132,4 +1189,16 @@ inline bool ReconstructBsdf(const MaterialData hitDat, float3 DirectionIn, float
         break;
     }
     return validbsdf;
+}
+
+
+
+
+inline void SeperateBSDF(const MaterialData hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, out float3 DiffuseBSDF, out float3 SpecBSDF, const float3x3 TangentSpaceNorm, uint pixel_index, out float Diffpdf, out float Specpdf) {
+    SpecBSDF = 0;
+    DiffuseBSDF = 0;
+    float PDF = 0;
+    Diffpdf = 0;
+    Specpdf = 0;
+    SeperateDisney(hitDat, -DirectionIn, DirectionOut, TangentSpaceNorm, pixel_index, SpecBSDF, DiffuseBSDF, Diffpdf, Specpdf);
 }

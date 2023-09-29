@@ -37,6 +37,7 @@ public class RenderHandle : MonoBehaviour
     }
     // [ImageEffectOpaque]
     private void OnRenderImage(RenderTexture source, RenderTexture destination) {
+        if(gameObject.GetComponent<Camera>() != Camera.current) return;
         if(RayMaster == null) {
             Start();
         }

@@ -82,11 +82,11 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
 
     bool ActuallyRender = (TempAlbedoTex[id.xy].w > 0) && !AbandonSamples;
     
-    const ScreenSpaceData GBuffer = ScreenSpaceInfo[pixel_index];
-    const float3 GeomNorm = i_octahedral_32(GBuffer.GeomNorm);
-    const float3 SurfNorm = i_octahedral_32(GBuffer.SurfNorm);
+    const float4 GBuffer = ScreenSpaceInfo[id.xy];
+    const float3 GeomNorm = i_octahedral_32(asuint(GBuffer.x));
+    const float3 SurfNorm = i_octahedral_32(asuint(GBuffer.y));
     const float3x3 NormTangentSpace = GetTangentSpace2(SurfNorm);
-    float3 PrimaryHitPosition = CameraRay.origin + CameraRay.direction * GBuffer.t;// + GeomNorm * NormalOffset;
+    float3 PrimaryHitPosition = CameraRay.origin + CameraRay.direction * GBuffer.z;// + GeomNorm * NormalOffset;
     ColData CenterCol = GlobalColors[pixel_index];
     // if(DoPartialRendering) {
     //     CenterCol.Direct *= (float)PartialRenderingFactor;
@@ -98,7 +98,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     uint4 WorldPos = WorldPosC[id.xy];
     float4 NEEPos = NEEPosC[id.xy];
 
-    MaterialData SurfaceMat = _Materials[GBuffer.MatIndex];
+    MaterialData SurfaceMat = _Materials[GBuffer.w];
     SurfaceMat.surfaceColor = unpackRGBE(WorldPos.w);
     SurfaceMat.roughness = (asuint(CenterCol.pad) & 0xFFFF) / 65535.0f;
     SurfaceMat.metallic = (asuint(CenterCol.pad) >> 16) / 65535.0f;
@@ -110,7 +110,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     CenterCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(NEEPos.xyz - PrimaryHitPosition), SurfNorm, NEEpdf, NEEbsdf, pixel_index);
     bool Valid2 = ReconstructBsdf(SurfaceMat, CameraRay.direction, normalize(asfloat(WorldPos.xyz) - PrimaryHitPosition), SurfNorm, pdf, bsdf, NormTangentSpace, pixel_index);
     float Lum = luminance(Valid2 * (CenterCol.Direct + CenterCol.Indirect) * bsdf) + luminance(unpackRGBE(CenterCol.PrimaryNEERay) * NEEbsdf);
-    float4 CurrentRes = {0,0,CenterCol.IsSpecular,Lum};
+    float4 CurrentRes = {0,0,CenterCol.IsSpecular,clamp(Lum, 0, 30)};
 
     #ifdef HDRP
         float2 MotionVector = MotionVectors[int3(UV * float2(TargetWidth, TargetHeight),0)].xy;
@@ -150,8 +150,8 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
 
         bool SuccessfullyReprojected = SkipTemporal;
         if(!SkipTemporal) {
-            float DistDiff = ((abs(GBuffer.t - PrevScreenSpaceInfo[prevIndex.x + prevIndex.y * screen_width].t) - length(CamDelta))) / GBuffer.t;
-            bool SurfaceValid = DistDiff < 0.1f && (dot(SurfNorm, i_octahedral_32(PrevScreenSpaceInfo[prevIndex.x + prevIndex.y * screen_width].SurfNorm)) > 0.9f);
+            float DistDiff = ((abs(GBuffer.z - PrevScreenSpaceInfo[prevIndex].z) - length(CamDelta))) / GBuffer.z;
+            bool SurfaceValid = DistDiff < 0.1f && (dot(GeomNorm, i_octahedral_32(asuint(PrevScreenSpaceInfo[prevIndex].x))) > 0.9f);
             if (SurfaceValid && UseReSTIRGITemporal) {
                 SuccessfullyReprojected = true;
                 float4 PrevRes = ReservoirB[prevIndex];
@@ -179,7 +179,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
             if(Valid4) {
                 CenterCol = TempCol;
                 float Lum = luminance((CenterCol.Direct + CenterCol.Indirect) * bsdf) + luminance(unpackRGBE(CenterCol.PrimaryNEERay) * NEEbsdf);
-                CurrentRes.zw = float2(TempCol.IsSpecular, Lum);
+                CurrentRes.zw = float2(TempCol.IsSpecular, clamp(Lum,0,30));
                 WorldPos = TempWorldPos;
                 NEEPos = TempNEEPos;
             }
@@ -204,10 +204,10 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
                 if (NeighborIndex.x < 0 || NeighborIndex.x >= (int)screen_width || NeighborIndex.y < 0 || NeighborIndex.y >= (int)screen_height) continue;
 
                 float4 PrevRes = ReservoirB[NeighborIndex];
-                ScreenSpaceData PrevGBuffer = PrevScreenSpaceInfo[NeighborIndex.y * screen_width + NeighborIndex.x];
+                float4 PrevGBuffer = PrevScreenSpaceInfo[NeighborIndex];
 
-                float DistDiff = (abs(GBuffer.t - PrevGBuffer.t)) / GBuffer.t;
-                if (DistDiff >= 0.1f || dot(i_octahedral_32(PrevGBuffer.SurfNorm), SurfNorm) < 0.8 || CurrentRes.z != PrevRes.z) continue;
+                float DistDiff = (abs(GBuffer.z - PrevGBuffer.z));// / GBuffer.z;
+                if (DistDiff >= 0.1f || dot(i_octahedral_32(asuint(PrevGBuffer.x)), GeomNorm) < 0.9 || CurrentRes.z != PrevRes.z) continue;
                 
                 UpdateReservoir(CurrentRes, wsum, PrevRes, randomNEE(23, pixel_index).x, CachedID, NeighborIndex);
                 CurrentRes.x += PrevRes.x;
@@ -249,7 +249,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
             #ifdef ExtraSampleValidation
                 if (CenterCol.PrimaryNEERay != 0) {
                     Distance = length(PrimaryHitPosition - NEEPos.xyz) - 0.025f;
-                    Ray ray = CreateRay(PrimaryHitPosition, normalize(NEEPos.xyz - PrimaryHitPosition));
+                    ray = CreateRay(PrimaryHitPosition, normalize(NEEPos.xyz - PrimaryHitPosition));
 
                     ConnectedlyVisable = VisabilityCheck(ray, Distance);
                     if (!ConnectedlyVisable) CenterCol.PrimaryNEERay = 0;
@@ -259,9 +259,9 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
 
         if (!(CenterCol.IsSpecular == 2 || CenterCol.IsSpecular == 3)) TempAlbedoTex[id.xy] = float4(abs(bsdf), 1);
 
-        GlobalColors[pixel_index].Direct = CenterCol.Direct * CurrentRes.y;
-        GlobalColors[pixel_index].Indirect = CenterCol.Indirect * CurrentRes.y;
-        GlobalColors[pixel_index].PrimaryNEERay = packRGBE(unpackRGBE(CenterCol.PrimaryNEERay) * CurrentRes.y * NEEbsdf);
+        GlobalColors[pixel_index].Direct = CenterCol.Direct * clamp(CurrentRes.y,0,1);
+        GlobalColors[pixel_index].Indirect = CenterCol.Indirect * clamp(CurrentRes.y,0,1);
+        GlobalColors[pixel_index].PrimaryNEERay = packRGBE(unpackRGBE(CenterCol.PrimaryNEERay) * clamp(CurrentRes.y,0,1) * NEEbsdf);
     } else {
         PrevGlobalColorsB[pixel_index] = CenterCol;
         ReservoirA[id.xy] = CurrentRes;

@@ -93,13 +93,8 @@ struct ColData {
 };
 StructuredBuffer<ColData> PerPixelRadiance;
 
-struct ScreenSpaceData {
-    uint GeomNorm;
-    uint SurfNorm;//albedo is already stored in the texture WorldSpaceInfo
-    float t;
-    int MatIndex;
-};
-StructuredBuffer<ScreenSpaceData> ScreenSpaceInfo;
+
+Texture2D<float4> ScreenSpaceInfo;
 
 float3 unpackRGBE(uint x)
 {
@@ -151,10 +146,10 @@ void ColorKernel (uint3 id : SV_DispatchThreadID)
     float3 Col = max((Pixel.Direct + Pixel.Indirect + unpackRGBE(Pixel.Fog) * ((Alb > 0.005f) ? rcp(Alb) : 0))* Alb * ((ScreenSpaceAlb > 0.001f) ? rcp(ScreenSpaceAlb) : 0),0);
     uint Input = asuint(Pixel.Metallic);
     HintsWrite[id.xy] = ((((Input >> 16) / 65535.0f) > 0.1f) ? ((Input & 0xFFFF) / 65535.0f) : 1);
-    NormA[id.xy] = uint2(ScreenSpaceInfo[pixel_index].GeomNorm, ScreenSpaceInfo[pixel_index].SurfNorm);
+    NormA[id.xy] = asuint(ScreenSpaceInfo[id.xy].xy);
     if(Albedo[id.xy].w == 0) Col = 0;
     else Albedo[id.xy] = float4(ScreenSpaceAlb, Albedo[id.xy].w);
-    CurDepthWrite[id.xy] = ScreenSpaceInfo[pixel_index].t;
+    CurDepthWrite[id.xy] = ScreenSpaceInfo[id.xy].z;
     HFA[id.xy] = float4(clamp(Col,0,999999.0f) ,0);
 }
 
@@ -252,7 +247,7 @@ void BlurKernel (uint3 id : SV_DispatchThreadID)
         float4 Sample = HFB.SampleLevel(my_linear_clamp_sampler, OffsetUV, 0);
 
         float DepthFactor = exp2((AccumFrames > 7 ? -100.0f : -10.0f) * abs(1.0f - (CenterDepth / sampleDepth)));// / (float)PartialRenderingFactor);
-        float NormFactor = pow(max(0, dot(CentNorm, norm)),64);
+        float NormFactor = AccumFrames > 3 ? pow(max(0, dot(CentNorm, norm)),64) : 1;
         w *= clamp(NormFactor * DepthFactor,0, 1);
         if(abs(Hints - HintsRead[OffsetUV * float2(screen_width, screen_height)]) > 0.01f) continue;
 
@@ -326,14 +321,14 @@ void temporal (uint3 id : SV_DispatchThreadID)
                     temporal_color_hf += HFPrev[p] * w_diff;
                     temporal_sum_w_diff += w_diff;
                 }
-                //  else {
-                //      float normframe = saturate(HFPrev.SampleLevel(my_linear_clamp_sampler, p / float2(screen_width, screen_height), 0).w / 4.0f);
-                //     if(normframe == 1.0f) continue;
-                //     uint mip_level = 4.0 * (1.0f - normframe);
+                 else {
+                     float normframe = saturate(HFPrev.SampleLevel(my_linear_clamp_sampler, p / float2(screen_width, screen_height), 0).w / 4.0f);
+                    if(normframe == 1.0f) continue;
+                    uint mip_level = 4.0 * (1.0f - normframe);
 
-                //     temporal_color_hf += float4(HFPrev.SampleLevel(my_linear_clamp_sampler, p / float2(screen_width, screen_height), mip_level + 2).xyz * w[i];
-                //     temporal_sum_w_diff += w[i];// * max(dot_normals, 0);
-                // }
+                    temporal_color_hf += HFPrev.SampleLevel(my_linear_clamp_sampler, p / float2(screen_width, screen_height), mip_level + 2) * w[i];
+                    temporal_sum_w_diff += w[i];// * max(dot_normals, 0);
+                }
 
         }
 
@@ -350,7 +345,7 @@ void temporal (uint3 id : SV_DispatchThreadID)
     int AccumFrames = min(temporal_color_hf.w,12);
 
     [branch]if(UseReSTIRGI) {
-        if((ReservoirDataB[pos_prev].x+1.0f) / (ReservoirDataA[id.xy].x+1) > 3.8f) {
+        if((ReservoirDataB[pos_prev].x+1.0f) / (ReservoirDataA[id.xy].x+1) > 1.0f) {
             AccumFrames = 0;
         }
     }
@@ -477,7 +472,7 @@ void secondarytemporal (uint3 id : SV_DispatchThreadID)
     if(!temporal_sample_valid_diff || any(pos_prev < 0 || pos_prev > float2(screen_width, screen_height))) AccumFrames = 0;
 
     [branch]if(UseReSTIRGI) {
-        if((ReservoirDataB[pos_prev].x+1.0f) / (ReservoirDataA[id.xy].x+1) > 3.8f) {
+        if((ReservoirDataB[pos_prev].x+1.0f) / (ReservoirDataA[id.xy].x+1) > 1.0f) {
             AccumFrames = 0;
         }
     }

@@ -29,7 +29,7 @@
     <RoughnessRange>_Roughness</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
-    <UsesSmoothness>false</UsesSmoothness>
+    <UsesSmoothness>true</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
@@ -2163,18 +2163,18 @@
   <MaterialShader>
     <Name>GLTFUtility/Standard (Specular)</Name>
     <BaseColorTex>_MainTex</BaseColorTex>
-    <NormalTex>null</NormalTex>
-    <EmissionTex>null</EmissionTex>
-    <MetallicTex>null</MetallicTex>
+    <NormalTex>_BumpMap</NormalTex>
+    <EmissionTex>_EmissionMap</EmissionTex>
+    <MetallicTex>_SpecGlossMap</MetallicTex>
     <MetallicTexChannel>0</MetallicTexChannel>
-    <MetallicRange>null</MetallicRange>
-    <RoughnessTex>null</RoughnessTex>
-    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <MetallicRange>_GlossyReflections</MetallicRange>
+    <RoughnessTex>_SpecGlossMap</RoughnessTex>
+    <RoughnessTexChannel>1</RoughnessTexChannel>
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
-    <BaseColorValue>null</BaseColorValue>
+    <BaseColorValue>_Color</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
     <Name>GLTFUtility/Standard Transparent (Specular)</Name>
@@ -2578,6 +2578,150 @@
   </MaterialShader>
   <MaterialShader>
     <Name>Shader Graphs/Foliage</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>TsunaMoo/Simple Water FX</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Mochie/Standard</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>_BumpMap</NormalTex>
+    <EmissionTex>_EmissionMap</EmissionTex>
+    <MetallicTex>_MetallicGlossMap</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>_Metallic</MetallicRange>
+    <RoughnessTex>_MetallicGlossMap</RoughnessTex>
+    <RoughnessTexChannel>1</RoughnessTexChannel>
+    <RoughnessRange>_Glossiness</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>true</UsesSmoothness>
+    <BaseColorValue>_Color</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Silent/FakeGlass Rain</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Mochie/Water</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Silent/FakeGlass</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>ArcadeCarPhysics/CheckerBoardGlobal</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>_Color</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>ArcadeCarPhysics/CheckerBoardLocal</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Silent/Volumetric Box</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Lit</Name>
     <BaseColorTex>_MainTex</BaseColorTex>
     <NormalTex>null</NormalTex>
     <EmissionTex>null</EmissionTex>
