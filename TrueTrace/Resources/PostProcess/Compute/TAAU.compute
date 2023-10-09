@@ -110,7 +110,7 @@ void preload(int2 group_base, int2 group_size, int gl_LocalInvocationIndex)
 		#ifdef HDRP
 			float2 motion = TEX_FLAT_MOTION[int3(ipos,0)].xy;
 		#else
-			float2 motion = TEX_FLAT_MOTION[ipos].xy;
+			float2 motion = TEX_FLAT_MOTION.SampleLevel(my_linear_clamp_sampler, ipos / float2(target_width, target_height), 0).xy;
 		#endif
 		// Store
 		s_color_pq[yy][xx] = float4(color_pq, color.a);
@@ -338,13 +338,13 @@ void TAAU(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGroupI
     #ifdef HDRP
     	float3 SpecularAlbedo = 0;//Albedo2[int3(ipos,0)].xyz;
     #else
-    	float3 SpecularAlbedo = Albedo2[ipos].xyz;
+    	float3 SpecularAlbedo = Albedo2.SampleLevel(my_linear_clamp_sampler, ipos / float2(target_width, target_height), 0).xyz;//[ipos].xyz;
     #endif
     // if(SpecularAlbedo.x == SpecularAlbedo.y && SpecularAlbedo.y == SpecularAlbedo.z) SpecularAlbedo = 0;
     #ifdef HDRP
 		IMG_TAA_OUTPUT[ipos] = float4(linear_color_output * ((all((Albedo[int3(ipos,0)].xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo[int3(ipos,0)].xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
 	#else
-		IMG_TAA_OUTPUT[ipos] = float4(linear_color_output * ((all((Albedo[ipos].xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo[ipos].xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
+		IMG_TAA_OUTPUT[ipos] = float4(linear_color_output * ((all((Albedo.SampleLevel(my_linear_clamp_sampler, ipos / float2(target_width, target_height), 0).xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo.SampleLevel(my_linear_clamp_sampler, ipos / float2(target_width, target_height), 0).xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
 	#endif
 }
 

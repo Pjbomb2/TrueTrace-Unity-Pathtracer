@@ -3,41 +3,27 @@
 # Discord Server: https://discord.gg/4Yh7AZuhcD
 ## Demo:  https://drive.google.com/file/d/1vzrRyNftRRVyJ1SVbUvyNhQh0uXQso-N/view?usp=sharing
 Notes:</br>
-Currently working on:
-<ul>
-  <li>Volumetric voxels, looking for ways to make it faster or be able to precompute individual light contributions</li>
-  <li>Looking desperately for optimizations(let me know if you have any ideas)</li>
-</ul>
-Currently needs to be done but havent implemented fully:
-<ul>
-    <li>Need More Ideas</li>
-</ul>
-Currently want to do but havent really started:
-<ul>
-    <li>Volumetric Clouds(back to square one)</li>
-</ul>
 
 # Compute Shader Based Unity PathTracer
 A passion projects that has been going on for awhile with the goal of bringing at least interactive pathtracing to everyone in unity, regardless of their hardware
 ## Features: 
 <ul>
 <li>Fast Compute Shader based path tracing</li>
-<li>Disney BSDF for materials with support for emissive meshes and Video Player meshes</li>
+<li>Disney BSDF for materials with support for emissive meshes and Video Players</li>
 <li>Ability to move, add, and remove objects during play</li>
 <li>Ability to update material properties on the fly during play</li>
-<li>ASVGF and SVGF Denoisers</li>
+<li>ASVGF, SVGF, and my own Recurrent Denoisers</li>
 <li>Compressed Wide Bounding Volume Hierarchy as the Acceleration Structure (See Ylitie et al. 2017 below)</li>
 <li>PBR Texture Support</li>
 <li>Next Event Estimation with Multiple Importance Sampling for Explicit Light Sampling</li>
 <li>Support for all default unity lights which interact via NEE</li>
-<li>Bloom, Depth of Field, AutoExposure, TAA</li>
+<li>Bloom, Depth of Field, AutoExposure, TAA, Tonemappiong</li>
 <li>No specific GPU vendor needed(this will run on integrated graphics if you so wish it, aka no RTX cores needed)</li>
-<li>MagicaVoxel support</li>
 <li>Precomputed Multiple Atmospheric Scattering for dynamic and realtime sky(from ebruneton below)</li>
 <li>Object Instancing</li>
 <li>ReSTIR GI for faster convergence in complex scenes and more complete images in scenes with changing lighting</li>
 <li>Simple upscaling ability for performance increase</li>
-<li>Hardware RT Support for modern Nvidia Cards</li>
+<li>Hardware RT Support for modern cards</li>
 <li>Supports Built-in, HDRP, and URP</li>
 <li>Full skinned mesh support for animated skinned meshes</li>
 </ul>
@@ -47,7 +33,7 @@ A passion projects that has been going on for awhile with the goal of bringing a
 </br>
 
 If you have any questions, or suggestions, etc. let me know either through github issues or my twitter or my discord! I am always looking for more stuff to add, and more ways to make it more user friendly or appealing for others to use
-## You can contact me easiest through my discord server or my twitter: https://twitter.com/Pjbomb2
+## You can contact me easiest through my discord server(above) or my twitter(https://twitter.com/Pjbomb2)
 
 
 ## Notes:
@@ -58,8 +44,7 @@ Let me know if you use this for anything, I would be excited to see any use of t
 ## Required Settings Changes:
 <ul>
   <li>Set the Color Space to Linear through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Color Space, and change from Gamma to Linear</li>
-  <li>Enable Unsafe Code(Its for memory management) through Edit -> Project Settings -> Player -> Other Settings -> "Allow 'unsafe' Code" (near the bottom)</li>
-  <li>Change the Graphics Api for Windows to DirectX12 through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Untoggle "Auto Graphics API For Windows", then click the little + that appears, select "Direct3D12(Experimental)", and drag that to the top.  A restart of the editor is required</li>
+  <li>Change the Graphics Api for Windows to DirectX12 through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Untoggle "Auto Graphics API For Windows", then click the little + that appears, select "Direct3D12(Experimental)", and drag that to the top.  A restart of the editor is required(Not technically needed but raw DX11 is experimental)</li>
 </ul>
 
 ## Controls:
@@ -67,16 +52,16 @@ Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera s
 
 ## General Setup
 <ul>
-  <li>Download and import the UnityPackage provided and open the new Pathtracer Settings at the top of the screen(This WILL re-arrange your hierarchy)</li>
+  <li>Download and import the UnityPackage provided and open the new Pathtracer Settings at the top of the screen, and click "Arrange Hierarchy"(This WILL re-arrange your hierarchy)</li>
   <li>Whenever you add a new object(or tree of objects), you need to add it to under the gameobject named Scene, and its reccomended you press "Auto Assign Scripts" to automatically assign the needed scripts to the new objects</li>
 </ul>
 
 ## Basic script structure breakdown:
 <ul>
   <li>Top Level is a gameobject called Scene with an AssetManager and RayTracingMaster script attatched</li>
-  <li>Second Level: Parent Object Script - Attatch this to all objects that will have children with meshes you want to raytrace(can be a child to any gameobject as long as its eventual parent is the AssetManager script)</li>
+  <li>Second Level: Parent Object Script - Attatch this to all objects that will have children with meshes you want to raytrace</li>
   <li>Third Level: RayTracingObject Script - This defines what meshes get raytraced, must either be a direct child of a gameobject with the ParentObject Script, or in the same gameobject as the ParentObject Script</li>
-  <li>Misc Level: Unity Lights - Must have a RayTracingLight script attatched to be considered(and UseNEE needs to be on), can be ANYWHERE in the hierarchy, only supports Point, Spotlight, and 1 Directional</li>
+  <li>Misc Level: Unity Lights - Must have a RayTracingLight script attatched to be considered(and UseNEE needs to be on)</li>
 </ul>
 
 ## General Use/Notes
@@ -84,25 +69,17 @@ Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera s
   <li>The camera you want to render from, you attatch the RenderHandler script to(if you have a camera tagged MainCamera, this will be done automatically)</li>
   <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building</li>
   <li>Objects can be added and removed at will simply by toggling the associated gameobject with a ParentObject script on/off in the hierarchy(clicking on parent objects with complex objects for children will lag), but they will take time to appear as the acceleration structure needs to  be rebuilt for them</li>
-  <li>If you change the emissiveness of a mesh, you need to disable and re-enable its parent(basically reloading it) if you want to take advantage of NEE correctly sampling it(Does not need to be reloaded for Naive tracing)</li>
+  <li>Emmissive meshes need to be emmissive when you build the hierarchy to work with NEE, and can have their emissiveness at will</li>
   <li>If you use normal maps, they need to be in unity normal map format</li>
-  <li>To set up PBR with the default material, all textures go into their proper names, but Roughness goes into the Occlusion texture(Since path tracing gets ambient occlusion by default)</li>
+  <li>To set up PBR with the DEFAULT material, all textures go into their proper names, but Roughness goes into the Occlusion texture(This can be changed in the MaterialPairing menu)</li>
   <li>If you are using blendshapes to change geometry of a skinned mesh, you may need to go to the import settings of it(in the inspector), turn off Legacy Blendshape Normals, and make sure all normals are imported, not calculated, otherwise the normals for blendshapes might be wrong</li>
-</ul>
-
-## MagicaVoxel Usage
-<ul>
-  <li>Before anything, the files need to be in .txt format, to do this, go to the file in file explorer, and rename the .vox to .txt and change the format</li>
-  <li>Firstly, you still need to have a gameobject under the scene gameobject to attatch your voxel model to</li>
-  <li>Second, you need to attatch a VoxelObject to that gameobject(Located under Assets->Resources->BVH->VoxelObject)</li>
-  <li>Next you need to attatch the voxel model to this script, by dragging your voxel model asset in the project tab to the VoxelRef space in the VoxelObject script</li>
+  <li>A fun thing you may want to do is go to TrueTrace -> Resources -> RenderPipelines -> RendererHandle, and uncomment the "[ImageEffectOpaque]"</li>
 </ul>
 
 ## Using Instancing
 <ul>
-  <li>First, there needs to be a gameobject called InstancedStorage in the scene with the InstanceManager attatched to it as a sibling object of the Scene gameobject(this is automatically created on initial start of the scene and pathtracing settings)</li>
-  <li>Second, all objects that will be the source of instanced objects will need to go under the InstancedStorage and can be arranged like normal objects(with regards to the layout of parentobject to raytracingobjects)</li>
-  <li>Finally, to instance the objects, you just need gameobjects with the InstanceObject script attatched to them under the Scene gameobject, and then drag the desired object instance from the hierarchy to the Instance Parent slot in the InstanceObject script(all of this is displayed in the demoscene)</li>
+  <li>Firstly, all objects that will be the source of instanced objects will need to go under the InstancedStorage and can be arranged like normal objects(with regards to the layout of parentobject to raytracingobjects)</li>
+  <li>Then, to instance the objects, you just need gameobjects with the InstanceObject script attatched to them under the Scene gameobject, and then drag the desired object instance from the hierarchy to the Instance Parent slot in the InstanceObject script</li>
 </ul>
 
 ## Linking your own Materials
@@ -123,21 +100,18 @@ Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera s
 
 ## Using Hardware RT
 <ul>
-  <li>First off, this REQUIRES unity 2023 or higher and REQUIRES an Nvidia GPU of 20 series or higher</li>
-  <li>All you need to do is uncomment the #define HardwareRT in the following files:</li>
-  <li>TrueTrace -> Resources -> GlobalDefines.cginc</li>
-  <li>TrueTrace -> Resources -> AssetManager.cs</li>
-  <li>TrueTrace -> Resources -> RayTracingMaster.cs</li>
-  <li>TrueTrace -> Resources -> Objects -> ParentObject.cs</li>
-  <li>Then just use like normal</li>
+  <li>First off, this REQUIRES unity 2023 or higher</li>
+  <li>In the TrueTrace settings menu, click on the top right button "Functionality Settings" and toggle HardwareRT</li>
+  <li>Uncomment the #define HardwareRT in: TrueTrace -> Resources -> GlobalDefines.cginc</li>
+  <li>Then just use like normal, but this does not support Instances</li>
 </ul>
 
 ## Editor Window Guide
 BVH Options Description - 
 <ul>
   <li>Build Aggregated BVH(Recommended to do any time you change objects in edit mode)- Allows you to pre-build objects BVH's before running so you dont have to wait every time you go into play mode for it to build.</li>
-  <li>Clear Parent Data - Clears the data stored in parent gameobjects, allowing you to actually click them without lagging(but will then require the BVH to be rebuilt)</li>
-  <li>Take Screenshot - Requires a folder called Screenshots under the asset folder, takes a screenshot</li>
+  <li>Clear Parent Data - Clears the data stored in parent gameobjects, allowing you to actually click them without lagging, and for you to save the scene(but will then require the BVH to be rebuilt)</li>
+  <li>Take Screenshot - Takes a screenshot to Assets/ScreenShots folder(Will be created if missing)</li>
   <li>Auto Assign Scripts - Assigns all required scripts to all objects under the Scene gameobject, best way to add objects</li>
   <li>Make All Static - Utility button that takes all objects in the scene and puts them under one parent object, not reccomended for general use</li>
   <li>Force Instances - Looks at all meshes in the scene, sees what objects have the same meshes, and makes them into instances, keep in mind instances use the same material and textures</li>
@@ -167,7 +141,7 @@ BVH Options Description -
   <li>Enable SVGF - Turns on the SVGF denoiser</li>
   <li>(If SVGF Denosier is on)Atrous Kernel Size - The amount of times the SVGF denoiser runs through the Atrous kernel</li>
   <li>Enable ASVGF - Turns on the ASVGF denoiser</li>
-  <li>Enable Tonemapping - Turns on TonyMcMapFace Tonemapping</li>
+  <li>Enable Tonemapping - Turns on tonemapping</li>
   <li>Enable TAAU - Use TAAU for upscaling(if off, you use my semi custom upscaler instead)</li>
   <li>Use Partial Rendering - Traces only 1 out of X rays</li>
   <li>Use AntiFirefly - Enables RCRS filter for getting rid of those single bright pixels</li>
@@ -212,6 +186,7 @@ BVH Options Description -
 
 # Huge thanks to these people for being sponsors/patrons:
 <ul>
+  <li>John Draisey</li>
   <li>Andrew Varga</li>
   <li>Duong Nguyen</li>
   <li>UnityCoder</li>
@@ -284,11 +259,9 @@ Scenes From:
 </br>
 Disney BSDF from: https://schuttejoe.github.io/post/disneybsdf/
 Rectangle packer for faster atlas creation from here: https://github.com/ThomasMiz/RectpackSharp/tree/main/RectpackSharp
+GPU Texture Compression: https://github.com/aras-p/UnityGPUTexCompression
 
 This project uses:
 Crytek Sponza
 CC BY 3.0
 © 2010 Frank Meinl, Crytek
-
-## Ideas/Reminders for later
-Reduce memory consumption, work on adding back in Mitsuba scene support

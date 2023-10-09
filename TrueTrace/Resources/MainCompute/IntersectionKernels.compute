@@ -1,4 +1,5 @@
 #include "CommonData.cginc"
+#include "../GlobalDefines.cginc"
 #ifdef HardwareRT
     #include "UnityRayQuery.cginc"
     #pragma require inlineraytracing
@@ -18,7 +19,7 @@ Texture2D<float> Depth;
 RWTexture2D<uint4> _PrimaryTriangleInfo;
 #pragma kernel kernel_trace 
 
-inline void IntersectTriangle(int mesh_id, int tri_id, const Ray ray, inout RayHit ray_hit) {
+inline void IntersectTriangle(int mesh_id, int tri_id, const Ray ray, inout RayHit ray_hit, const int MatOffset) {
 
     TrianglePos tri = triangle_get_positions(tri_id);
 
@@ -38,11 +39,11 @@ inline void IntersectTriangle(int mesh_id, int tri_id, const Ray ray, inout RayH
 
             if (t > 0 && t < ray_hit.t) {
                 #ifdef AdvancedAlphaMapped
-                    int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTris[tri_id].MatDat);
+                    int MaterialIndex = (MatOffset + AggTris[tri_id].MatDat);
                     if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                         float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - u - v) + AggTris[tri_id].texedge1 * u + AggTris[tri_id].texedge2 * v;
                         float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex);
-                        if(AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < 0.0001f) return;
+                        if(_TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0).w < 0.0001f) return;
                     }
                     #ifdef VideoIncludedInAlphaMapping
                         if(_Materials[MaterialIndex].MatType == VideoIndex) {
@@ -65,8 +66,6 @@ inline void IntersectTriangle(int mesh_id, int tri_id, const Ray ray, inout RayH
 }
 
 
-
-
 void IntersectBVH() {
     int Reps;
     RayHit bestHit;
@@ -81,11 +80,15 @@ void IntersectBVH() {
     uint oct_inv4;
     int tlas_stack_size;
     int mesh_id = -1;
-    int NodeOffset = 0;
-    int TriOffset = 0;
     Ray ray2;
+    int NodeOffset;
+    int TriOffset;
+    int MatOffset;
 
     while (true) {
+        NodeOffset = 0;
+        TriOffset = 0;
+        MatOffset = 0;
         Reps = 0;
         //Revive dead threads(persistent threads, need Shader Model 6 to take true advantage of)
         InterlockedAdd(BufferSizes[CurBounce].rays_retired, 1, ray_index);
@@ -126,9 +129,14 @@ void IntersectBVH() {
             } else {
                 bestHit.t = FarPlane;
             }
+            int PixIndex = GlobalRays[ray_index].PixelIndex;
+            uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
+            int2 Indexes = Unpack1To2(bestHit.mesh_id);
+            if(UseASVGF && CurBounce == 0) _PrimaryTriangleInfo[TempUv] = uint4(MeshOffsets[Indexes.y].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x] - _MeshData[MeshOffsets[Indexes.y].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
+
             set(ray_index, bestHit);
         #else
-            while (true) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
+            while (Reps < 1000) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
                 uint2 triangle_group;
                 [branch]if (current_group.y & 0xff000000) {
                     uint child_index_offset = firstbithigh(current_group.y);
@@ -156,10 +164,10 @@ void IntersectBVH() {
                     current_group.y = (hitmask & 0xff000000) | ((node_0w >> 24) & 0xff);
                     triangle_group.y = (hitmask & 0x00ffffff);
 
-                    current_group.x = (node_1.x) + ((tlas_stack_size == -1) ? 0 : NodeOffset);
-                    triangle_group.x = (node_1.y) + ((tlas_stack_size == -1) ? 0 : TriOffset);
+                    current_group.x = (node_1.x) + NodeOffset;
+                    triangle_group.x = (node_1.y) + TriOffset;
 
-                    // Reps++;
+                    Reps++;
                 }
                 else {
                     triangle_group = current_group;
@@ -185,6 +193,7 @@ void IntersectBVH() {
 
                         int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
 
+                        MatOffset = _MeshData[mesh_id].MaterialOffset;
                         ray.direction = (mul((float3x3)_MeshData[mesh_id].Transform, ray.direction));
                         ray.origin = (mul(_MeshData[mesh_id].Transform, float4(ray.origin, 1))).xyz;
                         ray.direction_inv = rcp(ray.direction);
@@ -196,20 +205,21 @@ void IntersectBVH() {
                                            // Reps++;
 
                     } else {
-                        [loop]for (int i = 0; i < 24; i++) {
-                        if(triangle_group.y == 0) break;
+                        while (triangle_group.y != 0) {
                             
                             uint triangle_index = firstbithigh(triangle_group.y);
                             triangle_group.y &= ~(1 << triangle_index);
-                            IntersectTriangle(mesh_id, triangle_group.x + triangle_index, ray, bestHit);//Intersect Mesh Triangles
+                            IntersectTriangle(mesh_id, triangle_group.x + triangle_index, ray, bestHit, MatOffset);//Intersect Mesh Triangles
                         }
                     }
                 }
                 if ((current_group.y & 0xff000000) == 0) {
                     if (stack_size == 0) {//thread has finished traversing
-                        int PixIndex = GlobalRays[ray_index].PixelIndex;
-                        uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
-                        if(UseASVGF && CurBounce == 0) _PrimaryTriangleInfo[TempUv] = uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
+                        [branch] if((UseASVGF || UseReCur) && CurBounce == 0) {
+                            int PixIndex = GlobalRays[ray_index].PixelIndex;
+                            uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
+                            _PrimaryTriangleInfo[TempUv] = uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
+                        }
                         // if(CurBounce == 0) _DebugTex[TempUv] = float4((Reps) / 42.0f,Reps > 80,0,1);
                         set(ray_index, bestHit);
                         current_group.y = 0;
@@ -217,6 +227,8 @@ void IntersectBVH() {
                     }
 
                     if (stack_size == tlas_stack_size) {
+                        NodeOffset = 0;
+                        TriOffset = 0;
                         tlas_stack_size = -1;
                         ray = ray2;
                         oct_inv4 = ray_get_octant_inv4(ray.direction);

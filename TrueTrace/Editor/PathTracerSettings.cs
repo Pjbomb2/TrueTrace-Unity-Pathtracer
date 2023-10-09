@@ -1,13 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
  using UnityEditor;
 using CommonVars;
+ using UnityEngine.UIElements;
+using UnityEditor.UIElements;
  using System.Xml;
  using System.IO;
- using UnityEngine.UIElements;
  using UnityEngine.Profiling;
-using UnityEditor.UIElements;
 using System.Xml.Serialization;
 using UnityEngine.Rendering;
 using UnityEditor.SceneManagement;
@@ -15,9 +16,9 @@ using UnityEngine.SceneManagement;
 
 namespace TrueTrace {
    public class EditModeFunctions : EditorWindow {
-        [MenuItem("PathTracer/Pathtracer Settings")]
+        [MenuItem("TrueTrace/TrueTrace Settings")]
         public static void ShowWindow() {
-            GetWindow<EditModeFunctions>("Pathtracing Settings");
+            GetWindow<EditModeFunctions>("TrueTrace Settings");
         }
 
         public Toggle NEEToggle;
@@ -122,7 +123,7 @@ namespace TrueTrace {
                if(ChildObjects[i].GetComponent<ParentObject>() != null || ChildObjects[i].GetComponent<InstancedObject>() != null) {
                   continue;
                }
-               if(ChildObjects[i].GetComponent<RayTracingObject>() != null) {
+               if(ChildObjects[i].GetComponent<RayTracingObject>() != null && ChildObjects[i].GetComponent<MeshFilter>() != null) {
                      var mesh = ChildObjects[i].GetComponent<MeshFilter>().sharedMesh;
                      if(SourceMeshes.Contains(mesh)) {
                         int Index = SourceMeshes.IndexOf(mesh);
@@ -562,6 +563,7 @@ Toolbar toolbar;
          IsInMainField = true;
       }
 
+      VisualElement HardSettingsMenu;
       VisualElement SceneSettingsMenu;
       PopupField<string> BackgroundSettingsField;
       ObjectField InputHDRIField;
@@ -582,7 +584,7 @@ Toolbar toolbar;
          InputHDRIField = new ObjectField();
          InputHDRIField.objectType = typeof(Texture);
          InputHDRIField.label = "Drag your skybox here ->";
-         if(RayMaster.SkyboxTexture != null) InputHDRIField.value = RayMaster.SkyboxTexture;
+         InputHDRIField.value = RayMaster.SkyboxTexture;
          InputHDRIField.RegisterValueChangedCallback(evt => RayMaster.SkyboxTexture = evt.newValue as Texture);
          BackgroundColorField = new ColorField();
          BackgroundColorField.value = new Color(RayMaster.SceneBackgroundColor.x, RayMaster.SceneBackgroundColor.y, RayMaster.SceneBackgroundColor.z, 1);
@@ -605,6 +607,7 @@ Toolbar toolbar;
 
          SceneSettingsMenu.Add(BackgroundSettingsField);
          BackgroundSettingsField.RegisterValueChangedCallback(evt => {
+            int Prev = RayMaster.BackgroundType;
             RayMaster.BackgroundType = BackgroundSettingsField.index;
             switch(BackgroundSettingsField.index) {
                case 0:
@@ -617,7 +620,7 @@ Toolbar toolbar;
                   BackgroundSettingsField.Add(BackgroundColorField);
                break;
             }
-            BackgroundSettingsField.RemoveAt(2);
+            if(Prev != RayMaster.BackgroundType) BackgroundSettingsField.RemoveAt(2);
 
             });
       
@@ -757,6 +760,46 @@ Toolbar toolbar;
          Button ConfirmMaterialButton = new Button(() => ConfirmMats()) {text = "Apply Material Links"};
          MaterialPairingMenu.Add(ConfirmMaterialButton);
       }
+
+      List<string> definesList;
+
+       private void RemoveDefine(string define)
+       {
+           definesList = GetDefines();
+           if (definesList.Contains(define))
+           {
+               definesList.Remove(define);
+           }
+       }
+    
+      private List<string> GetDefines() {
+         var target = EditorUserBuildSettings.activeBuildTarget;
+         var group = BuildPipeline.GetBuildTargetGroup(target);
+         var namedBuildTarget = UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(group);
+         var defines = PlayerSettings.GetScriptingDefineSymbols(namedBuildTarget);
+         return defines.Split(';').ToList();
+      }
+    
+      private void SetDefines() {
+         var target = EditorUserBuildSettings.activeBuildTarget;
+         var group = BuildPipeline.GetBuildTargetGroup(target);
+         var namedBuildTarget = UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(group);
+         var defines = string.Join(";", definesList.ToArray());
+         PlayerSettings.SetScriptingDefineSymbols(namedBuildTarget, defines);
+      }
+
+      void AddHardSettingsToMenu() {
+         definesList = GetDefines();
+
+         Toggle HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
+         HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("HardwareRT"); else RemoveDefine("HardwareRT"); SetDefines();});
+
+
+         HardSettingsMenu.Add(HardwareRTToggle);
+
+
+      }
+
       public struct CustomGBufferData {
          public uint GeomNorm;
          public uint SurfNorm;
@@ -786,6 +829,7 @@ Toolbar toolbar;
             MainSource = new VisualElement();
             MaterialPairingMenu = new VisualElement();
             SceneSettingsMenu = new VisualElement();
+            HardSettingsMenu = new VisualElement();
             InputMaterialField = new ObjectField();
             InputMaterialField.objectType = typeof(Material);
             InputMaterialField.label = "Drag a material with the desired shader here ->";
@@ -806,12 +850,15 @@ Toolbar toolbar;
             Button MainSourceButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();});
             Button MaterialPairButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); InputMaterialField.value = null; MaterialPairingMenu.Add(InputMaterialField); rootVisualElement.Add(MaterialPairingMenu);});
             Button SceneSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(SceneSettingsMenu);});
+            Button HardSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(HardSettingsMenu);});
             toolbar.Add(MainSourceButton);
             toolbar.Add(MaterialPairButton);
             toolbar.Add(SceneSettingsButton);
+            toolbar.Add(HardSettingsButton);
             MainSourceButton.text = "Main Options";
             MaterialPairButton.text = "Material Pair Options";
             SceneSettingsButton.text = "Scene Settings";
+            HardSettingsButton.text = "Functionality Settings";
 
             if(RayMaster != null && Assets != null) {
             AddNormalSettings();
@@ -842,7 +889,7 @@ Toolbar toolbar;
            RayMaster.AllowToneMap = ToneMap;
            RayMaster.UseTAAU = TAAU;
            RayMaster.AtmoNumLayers = AtmoScatter;
-           RayMaster.Exposure = 100 * Exposure + 1;
+           RayMaster.Exposure = Exposure;
            Assets.DesiredRes = AtlasSize;
            RayMaster.DoPartialRendering = DoPartialRendering;
            RayMaster.PartialRenderingFactor = PartialRenderingFactor;
@@ -853,17 +900,16 @@ Toolbar toolbar;
            RayMaster.ReCurBlurRadius = ReCurBlurRadius;
          }
 
-
+         AddHardSettingsToMenu();
            BVHBuild = new Button(() => OnStartAsyncCombined()) {text = "Build Aggregated BVH"};
            BVHBuild.style.minWidth = 145;
            ScreenShotButton = new Button(() => {
                string dirPath = Application.dataPath + "/../Assets/ScreenShots";
                if(!System.IO.Directory.Exists(dirPath)) {
-                  Debug.Log("No Folder Named ScreenShots in Assets Folder.  Please Create One");
-               } else {
-                  ScreenCapture.CaptureScreenshot(dirPath + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayMaster.SampleCount + " Samples.png");
-                  UnityEditor.AssetDatabase.Refresh();
+                  AssetDatabase.CreateFolder("Assets", "ScreenShots");
                }
+               ScreenCapture.CaptureScreenshot(dirPath + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayMaster.SampleCount + " Samples.png");
+               UnityEditor.AssetDatabase.Refresh();
            }) {text = "Take Screenshot"};
            ScreenShotButton.style.minWidth = 100;
            StaticButton = new Button(() => {if(!Application.isPlaying) OptimizeForStatic(); else Debug.Log("Cant Do This In Editor");}) {text = "Make All Static"};
@@ -999,20 +1045,24 @@ Toolbar toolbar;
            AperatureSlider.RegisterValueChangedCallback(evt => {DoFAperature = evt.newValue; RayMaster.DoFAperature = DoFAperature;});
            FocalSlider.RegisterValueChangedCallback(evt => {DoFFocal = Mathf.Max(0.001f, evt.newValue); RayMaster.DoFFocal = DoFFocal;});
            if(DoF) MainSource.Add(DoFFoldout);
+           
            Toggle DoExposureToggle = new Toggle() {value = DoExposure, text = "Enable Auto/Manual Exposure"};
            MainSource.Add(DoExposureToggle);
            VisualElement ExposureElement = new VisualElement();
                ExposureElement.style.flexDirection = FlexDirection.Row;
                Label ExposureLabel = new Label("Exposure");
-               Slider ExposureSlider = new Slider() {value = Exposure, highValue = 1, lowValue = 0};
+               Slider ExposureSlider = new Slider() {value = Exposure, highValue = 50.0f, lowValue = 0};
+               FloatField ExposureField = new FloatField() {value = Exposure};
                DoExposureToggle.tooltip = "Slide to the left for Auto";
                ExposureSlider.tooltip = "Slide to the left for Auto";
                ExposureLabel.tooltip = "Slide to the left for Auto";
                ExposureSlider.style.width = 100;
                ExposureElement.Add(ExposureLabel);
                ExposureElement.Add(ExposureSlider);
+               ExposureElement.Add(ExposureField);
            DoExposureToggle.RegisterValueChangedCallback(evt => {DoExposure = evt.newValue; RayMaster.AllowAutoExpose = DoExposure;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(DoExposureToggle) + 1, ExposureElement); else MainSource.Remove(ExposureElement);});
-           ExposureSlider.RegisterValueChangedCallback(evt => {Exposure = evt.newValue; RayMaster.Exposure = Exposure * 100 + 1;});
+           ExposureSlider.RegisterValueChangedCallback(evt => {Exposure = evt.newValue; ExposureField.value = Exposure; RayMaster.Exposure = Exposure;});
+           ExposureField.RegisterValueChangedCallback(evt => {Exposure = evt.newValue; ExposureSlider.value = Exposure; RayMaster.Exposure = Exposure;});
             if(DoExposure) MainSource.Add(ExposureElement);
 
            GIToggle = new Toggle() {value = ReSTIRGI, text = "Use ReSTIR GI"};
@@ -1085,9 +1135,26 @@ Toolbar toolbar;
            MainSource.Add(ASVGFToggle);
            ASVGFToggle.RegisterValueChangedCallback(evt => {ASVGF = evt.newValue; RayMaster.UseASVGF = ASVGF;});
 
+           
+            List<string> TonemapSettings = new List<string>();
+            TonemapSettings.Add("TonyMcToneFace");
+            TonemapSettings.Add("ACES Filmic");
+            TonemapSettings.Add("Uchimura");
+            TonemapSettings.Add("Reinhard");
+            TonemapSettings.Add("Uncharted 2");
+            PopupField<string> ToneMapField = new PopupField<string>("Tonemapper");
+            ToneMapField.choices = TonemapSettings;
+            ToneMapField.index = RayMaster.ToneMapper;
+            ToneMapField.RegisterValueChangedCallback(evt => {RayMaster.ToneMapper = ToneMapField.index;});
+
            Toggle ToneMapToggle = new Toggle() {value = ToneMap, text = "Enable Tonemapping"};
+            VisualElement ToneMapFoldout = new VisualElement() {};
+               ToneMapFoldout.style.flexDirection = FlexDirection.Row;
+               ToneMapFoldout.Add(ToneMapField);
            MainSource.Add(ToneMapToggle);
-           ToneMapToggle.RegisterValueChangedCallback(evt => {ToneMap = evt.newValue; RayMaster.AllowToneMap = ToneMap;});
+           ToneMapToggle.RegisterValueChangedCallback(evt => {ToneMap = evt.newValue; RayMaster.AllowToneMap = ToneMap; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(ToneMapToggle) + 1, ToneMapFoldout); else MainSource.Remove(ToneMapFoldout);});
+           if(ToneMap) MainSource.Add(ToneMapFoldout);
+
 
            TAAUToggle = new Toggle() {value = TAAU, text = "Enable TAAU"};
            TAAUToggle.tooltip = "On = Temporal Anti Aliasing Upscaling; Off = Semi Custom Upscaler, performs slightly differently";

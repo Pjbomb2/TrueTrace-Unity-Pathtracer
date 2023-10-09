@@ -1,6 +1,5 @@
 #define AdvancedAlphaMapped
 // #define VideoIncludedInAlphaMapping
-// #define UseSkyBox//Comment out to have no skybox and use precomputed atmosphere
 #define ExtraSampleValidation
 #define IgnoreGlassShadow
 // #define IgnoreGlassMain
@@ -8,6 +7,9 @@
 // #define HardwareRT
 #define PointFiltering
 #define StainedGlassShadows
+// #define DX11
+
+
 
 //Dont change the ones below
 #define DiffuseIndex 0

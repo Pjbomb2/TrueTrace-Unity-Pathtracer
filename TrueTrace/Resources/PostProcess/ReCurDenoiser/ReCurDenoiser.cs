@@ -43,11 +43,10 @@ namespace TrueTrace {
         int ScreenHeight;
         int ScreenWidth;
 
-        public void init(int ScreenWidth, int ScreenHeight, Camera camera)
+        public void init(int ScreenWidth, int ScreenHeight)
         {
             this.ScreenWidth = ScreenWidth;
             this.ScreenHeight = ScreenHeight;
-            this.camera = camera;
 
             if (shader == null) { shader = Resources.Load<ComputeShader>("PostProcess/ReCurDenoiser/ReCur"); }
 
@@ -65,15 +64,34 @@ namespace TrueTrace {
             CommonFunctions.CreateRenderTexture(ref SSAOTexA, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf1);
             CommonFunctions.CreateRenderTexture(ref SSAOTexB, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf1);
             CommonFunctions.CreateRenderTexture(ref BlurHints, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf1);
-            CommonFunctions.CreateRenderTexture(ref HFA, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4,RenderTextureReadWrite.Linear,true);
-            CommonFunctions.CreateRenderTexture(ref HFB, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4,RenderTextureReadWrite.Linear,true);
-            CommonFunctions.CreateRenderTexture(ref HFPrev, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4,RenderTextureReadWrite.Linear,true);
-            CommonFunctions.CreateRenderTexture(ref HFLAA, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4,RenderTextureReadWrite.Linear,true);
-            CommonFunctions.CreateRenderTexture(ref HFLAB, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4,RenderTextureReadWrite.Linear,true);
+            CommonFunctions.CreateRenderTexture(ref HFA, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4,RenderTextureReadWrite.Linear);
+            CommonFunctions.CreateRenderTexture(ref HFB, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4,RenderTextureReadWrite.Linear);
+            CommonFunctions.CreateRenderTexture(ref HFPrev, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4,RenderTextureReadWrite.Linear);
+            CommonFunctions.CreateRenderTexture(ref HFLAA, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4,RenderTextureReadWrite.Linear);
+            CommonFunctions.CreateRenderTexture(ref HFLAB, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4,RenderTextureReadWrite.Linear);
             CommonFunctions.CreateRenderTexture(ref NormA, ScreenWidth, ScreenHeight, CommonFunctions.RTFull2);
             CommonFunctions.CreateRenderTexture(ref NormB, ScreenWidth, ScreenHeight, CommonFunctions.RTFull2);
             shader.SetInt("screen_width", ScreenWidth);
             shader.SetInt("screen_height", ScreenHeight);
+        }
+
+        public void ClearAll() {
+            if(MomA != null) {
+                MomA.Release();
+                MomB.Release();
+                DepthA.Release();
+                DepthB.Release();
+                SSAOTexA.Release();
+                SSAOTexB.Release();
+                BlurHints.Release();
+                HFA.Release();
+                HFB.Release();
+                HFPrev.Release();
+                HFLAA.Release();
+                HFLAB.Release();
+                NormA.Release();
+                NormB.Release();
+            }
         }
 
 
@@ -93,9 +111,12 @@ namespace TrueTrace {
                             bool UseReSTIRGI, 
                             float ScaleMultiplier, 
                             float BlurRadius, 
-                            int PartialRenderingFactor) {
+                            int PartialRenderingFactor,
+                            float IndirectBoost) {
+            camera = RayTracingMaster._camera;
             bool DoUpscale = ScaleMultiplier != 1;
             shader.SetFloat("CameraDist", Vector3.Distance(camera.transform.position, PrevCamPos));
+            shader.SetFloat("IndirectBoost", IndirectBoost);
             shader.SetFloat("gBlurRadius", BlurRadius * ScaleMultiplier);
             cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "Albedo", Albedo);
             cmd.SetComputeTextureParam(shader, CopyColorKernel, "Albedo", Albedo);
@@ -137,8 +158,7 @@ namespace TrueTrace {
             cmd.EndSample("ReCur SSAO");
 
             cmd.SetComputeTextureParam(shader, MainBlurKernel, "HintsRead", BlurHints);
-            HFA.GenerateMips();
-            HFPrev.GenerateMips();
+
             cmd.BeginSample("ReCur Fast Temporal");
             cmd.SetComputeIntParam(shader, "PassNum", 1);
             shader.SetTextureFromGlobal(TemporalFastKernel, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
@@ -181,14 +201,6 @@ namespace TrueTrace {
             cmd.DispatchCompute(shader, MainBlurKernel, Mathf.CeilToInt(ScreenWidth / 16.0f), Mathf.CeilToInt(ScreenHeight / 16.0f), 1);
             cmd.EndSample("ReCur Output Blur");
 
-            // cmd.BeginSample("ReCur Edge Clean Blur");
-            // cmd.SetComputeIntParam(shader, "PassNum", 14);
-            // cmd.SetComputeTextureParam(shader, MainBlurKernel, "HFA", (!EvenFrame) ? HFA : HFPrev);
-            // cmd.SetComputeTextureParam(shader, MainBlurKernel, "HFB", HFB);
-            // cmd.DispatchCompute(shader, MainBlurKernel, Mathf.CeilToInt(ScreenWidth / 16.0f), Mathf.CeilToInt(ScreenHeight / 16.0f), 1);
-            // cmd.EndSample("ReCur Edge Clean Blur");
-            HFLAA.GenerateMips();
-            HFLAB.GenerateMips();
             cmd.BeginSample("ReCur Slow Temporal");
             cmd.SetComputeIntParam(shader, "PassNum", 4);
             shader.SetTextureFromGlobal(TemporalSlowKernel, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");

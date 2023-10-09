@@ -71,45 +71,34 @@ void Construct(uint3 id : SV_DispatchThreadID)
 	if (id.x >= gVertexCount)
 		return;
 
-	uint3 vidx = uint3(bufIndexes.Load(id.x * 12), bufIndexes.Load(id.x * 12 + 8), bufIndexes.Load(id.x * 12 + 4)) * 10;
+	uint3 vidx = bufIndexes.Load3(id.x * 12).xzy * 10;
 
-	uint3 praw = bufVertices.Load3((vidx.x) << 2);
-	float3 p = asfloat(praw);
+	float3 p = asfloat(bufVertices.Load3((vidx.x) << 2));
+	float3 n1 = asfloat(bufVertices.Load3((vidx.x + 3) << 2));
+	float3 p3 = asfloat(bufVertices.Load3((vidx.z) << 2));
+	float3 n3 = asfloat(bufVertices.Load3((vidx.z + 3) << 2));
+	float3 p2 = asfloat(bufVertices.Load3((vidx.y) << 2));
+	float3 n2 = asfloat(bufVertices.Load3((vidx.y + 3) << 2));
 
-	praw = bufVertices.Load3((vidx.y) << 2);
-	float3 p2 = asfloat(praw);
 
-	praw = bufVertices.Load3((vidx.z) << 2);
-	float3 p3 = asfloat(praw);
+	id.x = CWBVHIndices[VertOffset + id.x];
 
-	praw = bufVertices.Load3((vidx.x + 3) << 2);
-	float3 n1 = asfloat(praw);
-
-	praw = bufVertices.Load3((vidx.y + 3) << 2);
-	float3 n2 = asfloat(praw);
-
-	praw = bufVertices.Load3((vidx.z + 3) << 2);
-	float3 n3 = asfloat(praw);
-	int VertOfst = VertOffset + id.x;
-
-	BoundingBox TempAdvTri = Boxs[CWBVHIndices[VertOfst]];
-	CudaTriangle TempTri = CudaTriArrayIN[CWBVHIndices[VertOfst]];
 	
 	p *= Scale;
 	p2 *= Scale;
 	p3 *= Scale;
 	
-	p = mul(float4(p, 0), Transform).xyz;
-	p2 = mul(float4(p2, 0), Transform).xyz;
-	p3 = mul(float4(p3, 0), Transform).xyz;
+	p = mul(p, (float3x3)Transform);
+	p2 = mul(p2, (float3x3)Transform);
+	p3 = mul(p3, (float3x3)Transform);
 
 	p += Offset;
 	p2 += Offset;
 	p3 += Offset;
 
-	float3 Norm1 = mul(float4(n1, 0), Transform).xyz;
-	float3 Norm2 = mul(float4(n2, 0), Transform).xyz;
-	float3 Norm3 = mul(float4(n3, 0), Transform).xyz;
+	float3 Norm1 = mul(n1, (float3x3)Transform);
+	float3 Norm2 = mul(n2, (float3x3)Transform);
+	float3 Norm3 = mul(n3, (float3x3)Transform);
 
 	float3 BBMax = max(max(p, p2), p3);
 	float3 BBMin = min(min(p, p2), p3);
@@ -119,20 +108,19 @@ void Construct(uint3 id : SV_DispatchThreadID)
 			BBMax[i2] += 0.0000001f;
 		}
 	}
-	TempAdvTri.BBMax = BBMax;
-	TempAdvTri.BBMin = BBMin;
 
-	Boxs[CWBVHIndices[VertOfst]] = TempAdvTri;
+	Boxs[id.x].BBMax = BBMax;
+	Boxs[id.x].BBMin = BBMin;
 
+	CudaTriangle TempTri = CudaTriArrayIN[id.x];
 	TempTri.pos0 = p;
 	TempTri.posedge1 = p2 - p;
 	TempTri.posedge2 = p3 - p;
 
 	TempTri.norms.x = octahedral_32(Norm1);
-
 	TempTri.norms.y = octahedral_32(Norm2);
 	TempTri.norms.z = octahedral_32(Norm3);
-	CudaTriArray[CWBVHIndices[VertOfst] + TriBuffOffset] = TempTri;
+	CudaTriArray[id.x + TriBuffOffset] = TempTri;
 }
 
 
@@ -140,14 +128,10 @@ void Construct(uint3 id : SV_DispatchThreadID)
 
 
 struct NodeIndexPairData {
-	int PreviousNode;//4
-	int BVHNode;//8
-	int Node;//12
 	float3 BBMax;//24
 	float3 BBMin;//36
+	int BVHNode;//8
 	int InNodeOffset;//40
-	int isLeaf;
-	int RecursionCount;
 };
 
 RWStructuredBuffer<NodeIndexPairData> AllNodes;
@@ -168,36 +152,39 @@ StructuredBuffer<Layer> ReverseStack;
 StructuredBuffer<int> NodesToWork;
 uint NodeCount;
 
-
-
 [numthreads(KernelRatio, 1, 1)]
 void RefitLayer(uint3 id : SV_DispatchThreadID)
 {
 	if (id.x > NodeCount)
 		return;
-	const int CurrentParent = NodesToWork[id.x];
 
-	float3 RunningMax = AllNodes[CurrentParent].BBMax;
-	float3 RunningMin = AllNodes[CurrentParent].BBMin;
-	const Layer CurrentLayer = ReverseStack[CurrentParent];
+	float3 RunningMax = AllNodes[id.x].BBMax;
+	float3 RunningMin = AllNodes[id.x].BBMin;
+	const Layer CurrentLayer = ReverseStack[id.x];
+	int2 Stack[8];
+	int stack_count = 0;
+
 	[unroll]
 	for (int i = 0; i < 8; i++) {
-		[branch] if (CurrentLayer.Leaf[i] == 0) {
+		const int Leaf = CurrentLayer.Leaf[i];
+		if(Leaf < 0) continue;
+		[branch] if (Leaf == 0) {
 			RunningMax = max(RunningMax, AllNodes[CurrentLayer.Children[i]].BBMax);
 			RunningMin = min(RunningMin, AllNodes[CurrentLayer.Children[i]].BBMin);
-		}
-		else if (CurrentLayer.Leaf[i] > 0) {
-			int Max = CurrentLayer.Children[i];
-			for (int i4 = CurrentLayer.Leaf[i] - 1; i4 < Max; i4++) {
-				RunningMax = max(RunningMax, Boxs[i4].BBMax);
-				RunningMin = min(RunningMin, Boxs[i4].BBMin);
-			}
-
+		} else {
+			Stack[stack_count++] = int2(Leaf - 1, CurrentLayer.Children[i]);
 		}
 	}
 
-	AllNodes[CurrentParent].BBMax = RunningMax;
-	AllNodes[CurrentParent].BBMin = RunningMin;
+	for(int i = 0; i < stack_count; i++) {
+		for (int i4 = Stack[i].x; i4 < Stack[i].y; i4++) {
+			RunningMax = max(RunningMax, Boxs[i4].BBMax);
+			RunningMin = min(RunningMin, Boxs[i4].BBMin);
+		}
+	}
+
+	AllNodes[id.x].BBMax = RunningMax;
+	AllNodes[id.x].BBMin = RunningMin;
 
 }
 
@@ -208,28 +195,33 @@ void RefitBVHLayer(uint3 id : SV_DispatchThreadID)
 {
 	if (id.x > NodeCount)
 		return;
-	const int CurrentParent = NodesToWork[id.x];
 
-	float3 RunningMax = AllNodes[CurrentParent].BBMax;
-	float3 RunningMin = AllNodes[CurrentParent].BBMin;
-	const Layer CurrentLayer = ReverseStack[CurrentParent];
+
+	float3 RunningMax = AllNodes[id.x].BBMax;
+	float3 RunningMin = AllNodes[id.x].BBMin;
+	const Layer CurrentLayer = ReverseStack[id.x];
+	int2 Stack[8];
+	int stack_count = 0;
 	[unroll]
 	for (int i = 0; i < 8; i++) {
-		[branch] if (CurrentLayer.Leaf[i] == 0) {
+		const int Leaf = CurrentLayer.Leaf[i];
+		if(Leaf < 0) continue;
+		[branch] if (Leaf == 0) {
 			RunningMax = max(RunningMax, AllNodes[CurrentLayer.Children[i]].BBMax);
 			RunningMin = min(RunningMin, AllNodes[CurrentLayer.Children[i]].BBMin);
+		} else {
+			Stack[stack_count++] = int2(Leaf - 1, CurrentLayer.Children[i] + Leaf - 1);
 		}
-		else if (CurrentLayer.Leaf[i] > 0) {
-			for (int i4 = CurrentLayer.Leaf[i] - 1; i4 < CurrentLayer.Children[i] + CurrentLayer.Leaf[i] - 1; i4++) {
-				RunningMax = max(RunningMax, Boxs[TLASCWBVHIndices[i4]].BBMax);
-				RunningMin = min(RunningMin, Boxs[TLASCWBVHIndices[i4]].BBMin);
-			}
-
+	}
+	for(int i = 0; i < stack_count; i++) {
+		for (int i4 = Stack[i].x; i4 < Stack[i].y; i4++) {
+			RunningMax = max(RunningMax, Boxs[TLASCWBVHIndices[i4]].BBMax);
+			RunningMin = min(RunningMin, Boxs[TLASCWBVHIndices[i4]].BBMin);
 		}
 	}
 
-	AllNodes[CurrentParent].BBMax = RunningMax;
-	AllNodes[CurrentParent].BBMin = RunningMin;
+	AllNodes[id.x].BBMax = RunningMax;
+	AllNodes[id.x].BBMin = RunningMin;
 
 }
 

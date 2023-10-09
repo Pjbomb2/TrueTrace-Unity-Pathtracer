@@ -130,6 +130,7 @@ static const float2 Offsets[] = {
 	float2(0.937500f, 0.259259f),
 	float2(0.031250f, 0.592593f)
 };
+SamplerState my_linear_clamp_sampler;
 
 [numthreads(16, 16, 1)]
 void kernel_taa(int3 id : SV_DispatchThreadID)
@@ -148,7 +149,7 @@ void kernel_taa(int3 id : SV_DispatchThreadID)
 	#ifdef HDRP
 		float2 screen_position_prev = (id.xy / float2(screen_width, screen_height) - MotionVectors[int3(id.xy,0)].xy) * 2.0f - 1.0f;
 	#else
-		float2 screen_position_prev = (id.xy / float2(screen_width, screen_height) - MotionVectors[id.xy].xy) * 2.0f - 1.0f;
+		float2 screen_position_prev = (id.xy / float2(screen_width, screen_height) - MotionVectors.SampleLevel(my_linear_clamp_sampler, id.xy / float2(screen_width, screen_height), 0).xy) * 2.0f - 1.0f;
 	#endif
 	screen_position_prev += (Offsets[Samples_Accumulated % 16] - 0.5f) / float2(screen_width, screen_height);
 	// Convert from [-1, 1] to [0, 1]

@@ -5,7 +5,7 @@
 #define gHistoryFixFrameNum 12
 #define FasterSampling
 
-
+float IndirectBoost;
 bool DoUpscale;
 bool UseReSTIRGI;
 
@@ -143,7 +143,7 @@ void ColorKernel (uint3 id : SV_DispatchThreadID)
     const float3 Alb = Albedo[id.xy].xyz;
     const ColData Pixel = PerPixelRadiance[pixel_index];
     const float3 ScreenSpaceAlb = unpackRGBE(WorldPosData[id.xy].w);
-    float3 Col = max((Pixel.Direct + Pixel.Indirect + unpackRGBE(Pixel.Fog) * ((Alb > 0.005f) ? rcp(Alb) : 0))* Alb * ((ScreenSpaceAlb > 0.001f) ? rcp(ScreenSpaceAlb) : 0),0);
+    float3 Col = max((Pixel.Direct + Pixel.Indirect * IndirectBoost + unpackRGBE(Pixel.Fog) * ((Alb > 0.005f) ? rcp(Alb) : 0))* Alb * ((ScreenSpaceAlb > 0.001f) ? rcp(ScreenSpaceAlb) : 0),0);
     uint Input = asuint(Pixel.Metallic);
     HintsWrite[id.xy] = ((((Input >> 16) / 65535.0f) > 0.1f) ? ((Input & 0xFFFF) / 65535.0f) : 1);
     NormA[id.xy] = asuint(ScreenSpaceInfo[id.xy].xy);
@@ -220,7 +220,7 @@ void BlurKernel (uint3 id : SV_DispatchThreadID)
         }
     }
     const float Hints = HintsRead[id.xy];
-    if(Hints == 1) blurRadius *= lerp(0.1f, 1.0f, SSAOAvg);
+    if(Hints == 1) blurRadius *= lerp(0.1f, 1.0f, lerp(SSAOAvg, 1, 1.0f - min(AccumFrames / 12.0f, 1)));
     if(Hints > 0.01f && Hints < 0.4f) blurRadius *= Hints;
     // blurRadius /= clamp(CenterDepth / 10.0f,1,3.0f);
     // blurRadius *= (float)PartialRenderingFactor;
@@ -251,7 +251,7 @@ void BlurKernel (uint3 id : SV_DispatchThreadID)
         w *= clamp(NormFactor * DepthFactor,0, 1);
         if(abs(Hints - HintsRead[OffsetUV * float2(screen_width, screen_height)]) > 0.01f) continue;
 
-        if(AccumFrames > 4) w *= pow(exp(-abs(CenterLum - luminance(Sample.xyz)) / (PassNum == 2 ? 4.0f : 1.0f)),max((min(Sample.w - 4, 4)) / (1.0f + CenterLum * 4.0f), 1));
+        if(AccumFrames > 4) w *= pow(exp(-abs(CenterLum - luminance(Sample.xyz)) / (PassNum == 2 ? 4.0f : 1.0f)),max((min(Sample.w, 4)), 1));
         // if(AccumFrames <= 1) w *= luminance(Albedo[OffsetUV * float2(screen_width, screen_height)].xyz);
         // w = clamp(w, 0, 1);
         Center +=  Sample * w;
@@ -321,14 +321,14 @@ void temporal (uint3 id : SV_DispatchThreadID)
                     temporal_color_hf += HFPrev[p] * w_diff;
                     temporal_sum_w_diff += w_diff;
                 }
-                 else {
-                     float normframe = saturate(HFPrev.SampleLevel(my_linear_clamp_sampler, p / float2(screen_width, screen_height), 0).w / 4.0f);
-                    if(normframe == 1.0f) continue;
-                    uint mip_level = 4.0 * (1.0f - normframe);
+                //  else {
+                //      float normframe = saturate(HFPrev.SampleLevel(my_linear_clamp_sampler, p / float2(screen_width, screen_height), 0).w / 4.0f);
+                //     if(normframe == 1.0f) continue;
+                //     uint mip_level = 4.0 * (1.0f - normframe);
 
-                    temporal_color_hf += HFPrev.SampleLevel(my_linear_clamp_sampler, p / float2(screen_width, screen_height), mip_level + 2) * w[i];
-                    temporal_sum_w_diff += w[i];// * max(dot_normals, 0);
-                }
+                //     temporal_color_hf += HFPrev.SampleLevel(my_linear_clamp_sampler, p / float2(screen_width, screen_height), mip_level + 2) * w[i];
+                //     temporal_sum_w_diff += w[i];// * max(dot_normals, 0);
+                // }
 
         }
 
@@ -471,13 +471,13 @@ void secondarytemporal (uint3 id : SV_DispatchThreadID)
     float AccumFrames = min(HFPrev[pos_prev].w,60);
     if(!temporal_sample_valid_diff || any(pos_prev < 0 || pos_prev > float2(screen_width, screen_height))) AccumFrames = 0;
 
+    if(AccumFrames > 10) AccumFrames *= lerp(0.1f, 1, pow(exp2(-abs(luminance((temporal_color_hf)) - luminance((Center)))),1));
     [branch]if(UseReSTIRGI) {
         if((ReservoirDataB[pos_prev].x+1.0f) / (ReservoirDataA[id.xy].x+1) > 1.0f) {
             AccumFrames = 0;
         }
     }
 
-    if(AccumFrames > 30) AccumFrames *= lerp(0.1f, 1, pow(exp2(-abs(luminance((temporal_color_hf)) - luminance((Center)))),1));
     AccumFrames++;
     Center = lerp(temporal_color_hf, Center, min(rcp(AccumFrames),1));
     HFA[id.xy] = float4(Center, AccumFrames);

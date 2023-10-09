@@ -8,6 +8,8 @@ Texture3D<float4> LUT;
 RWTexture2D<float4> Result;
 SamplerState sampler_linear_clamp;
 
+int ToneMapSelection;
+
 int width;
 
 float3 tony_mc_mapface(float3 stimulus) {
@@ -37,13 +39,6 @@ float3 RomBinDaHouseToneMapping(float3 color)
 {
     //color = pow(color, gamma);
     color = exp( -1.0 / ( 2.72*color + 0.15 ) );
-    //color = pow(color, 1. / gamma);
-    return color;
-}
-float3 simpleReinhardToneMapping(float3 color)
-{
-    float exposure = 1.0;
-    color *= exposure/(1. + color / exposure);
     //color = pow(color, 1. / gamma);
     return color;
 }
@@ -122,7 +117,24 @@ float3 HejlBurgess(float3 texColor) {
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     // TODO: insert actual code here!
-    float3 result = tony_mc_mapface(Result[id.xy].xyz);//pow(TonemapUchimura(pow(Result[id.xy].xyz, (1. / gamma))),gamma);
+    float3 result;//
+    switch(ToneMapSelection) {
+        default:
+            result = tony_mc_mapface(Result[id.xy].xyz);
+        break;
+        case 1:
+            result = ACESFilmicTonemap(Result[id.xy].xyz);
+        break;
+        case 2:
+            result = TonemapUchimura(Result[id.xy].xyz);
+        break;
+        case 3:
+            result = lumaBasedReinhardToneMapping(Result[id.xy].xyz);
+        break;
+        case 4:
+            result = Uncharted2ToneMapping(Result[id.xy].xyz);
+        break;
+    };//pow(TonemapUchimura(pow(Result[id.xy].xyz, (1. / gamma))),gamma);
     Result[id.xy] = float4(result, 1.0);
 }
 

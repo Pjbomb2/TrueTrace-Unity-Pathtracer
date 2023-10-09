@@ -12,6 +12,7 @@ float4x4 CamInvProj;
 float4x4 ViewMatrix;
 uniform int MaxBounce;
 uniform int CurBounce;
+uniform int AlbedoAtlasSize;
 
 uint screen_width;
 uint screen_height;
@@ -246,11 +247,9 @@ RWTexture2D<float4> RandomNumsWrite;
 Texture2D<float4> RandomNums;
 RWTexture2D<float4> _DebugTex;
 
-Texture2D<half> AlphaAtlas;
-
 Texture2D<float4> VideoTex;
 SamplerState sampler_VideoTex;
-Texture2D<float4> _TextureAtlas;
+Texture2D<half4> _TextureAtlas;
 
 
 Texture2D<float2> _NormalAtlas;
@@ -507,7 +506,7 @@ inline bool triangle_intersect_shadow(int tri_id, const Ray ray, float max_dista
                 if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                     float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - u - v) + AggTris[tri_id].texedge1 * u + AggTris[tri_id].texedge2 * v;
                     float2 Uv = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].AlbedoTex.xy - _Materials[MaterialIndex].AlbedoTex.zw) + _Materials[MaterialIndex].AlbedoTex.zw;
-                    if(AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < 0.0001f) return false;
+                    if(_TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0).w < 0.0001f) return false;
                 }
 	            #ifdef VideoIncludedInAlphaMapping
 	                if(_Materials[MaterialIndex].MatType == VideoIndex) {
@@ -528,7 +527,7 @@ inline bool triangle_intersect_shadow(int tri_id, const Ray ray, float max_dista
 	                    float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - u - v) + AggTris[tri_id].texedge1 * u + AggTris[tri_id].texedge2 * v;
 	                    float2 Uv = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].AlbedoTex.xy - _Materials[MaterialIndex].AlbedoTex.zw) + _Materials[MaterialIndex].AlbedoTex.zw;
 	                    float4 BaseCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0);
-	                    throughput *= (BaseCol.xyz * BaseCol.w + 2.0f) / 3.0f;
+	                    throughput *= (BaseCol.xyz + 2.0f) / 3.0f;
 
 	                	return false;}
 	            #endif
@@ -640,7 +639,6 @@ struct LightMeshData {//remove 74 bytes
 	int StartIndex;
 	int IndexEnd;
 	int MatOffset;
-	int OrigionalMesh;
 	int LockedMeshIndex;
 };
 StructuredBuffer<LightMeshData> _LightMeshes;
@@ -649,8 +647,6 @@ struct LightData {
 	float3 Radiance;
 	float3 Position;
 	float3 Direction;
-	float pdf;
-	float CDF;
 	int Type;
 	float2 SpotAngle;
 	float ZAxisRotation;
@@ -698,6 +694,31 @@ int SelectLightMesh(uint pixel_index) {//Select mesh to sample light from
 	if (LightMeshCount == 1) return 0;
 	const float2 rand_mesh = random(4, pixel_index);
 	return clamp((rand_mesh.y * LightMeshCount), 0, LightMeshCount - 1);
+}
+
+int SelectLightMeshSmart(uint pixel_index, inout float MeshWeight, float3 Pos) {//Maybe add an "extents" to the lightmeshes to get an even better estimate?
+
+ 	int MinIndex = 0;
+    float wsum = 0;
+    int M = 0;
+    float MinP_Hat = 0;
+    int FinalMesh = 0;
+    float p_hat;
+    float2 Rand;
+    for(int i = 0; i < RISCount + 1; i++) {
+        Rand = random(i + 92, pixel_index);
+        int Index = clamp((Rand.x * LightMeshCount), 0, LightMeshCount - 1);
+        p_hat = 1.0f / length(Pos - _LightMeshes[Index].Center);
+        wsum += p_hat;
+        M++;
+        if(Rand.y < p_hat / wsum) {
+            MinIndex = Index;
+            MinP_Hat = p_hat;
+        }
+
+    }
+    MeshWeight = (wsum / max((M + 1) * MinP_Hat, 0.000001f) * LightMeshCount);
+    return MinIndex;
 }
 
 
@@ -995,7 +1016,7 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
                     uint mesh_offset = firstbithigh(triangle_group.y);
                     triangle_group.y &= ~(1 << mesh_offset);
 
-                    mesh_id = triangle_group.x + mesh_offset;
+                    mesh_id = TLASBVH8Indices[triangle_group.x + mesh_offset];
 
                     if (triangle_group.y != 0) stack[stack_size++] = triangle_group;
 
@@ -1021,13 +1042,10 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
                     triangle_group.y &= ~(1 << triangle_index);
                     float3 through = 0;
                     if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, max_distance, mesh_id, through)) {
-                        hit = true;
-                        break;
+						return false;
                     }
                 }
             }
-
-            if (hit) return false;
 
             if ((current_group.y & 0xff000000) == 0) {
                 if (stack_size == 0) {//thread has finished traversing
@@ -1042,6 +1060,7 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
                 current_group = stack[--stack_size];
             }
         }
+        return false;
 }
 
 

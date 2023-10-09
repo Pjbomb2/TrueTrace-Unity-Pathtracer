@@ -1,5 +1,6 @@
 #pragma kernel kernel_upsample
 #include "UnityCG.cginc"
+#include "../../GlobalDefines.cginc"
 
 int source_width;
 int source_height;
@@ -16,7 +17,11 @@ Texture2D<float4> PrevOutput;
 
 float4x4 ViewProjectionMatrix;
 
-Texture2D<float4> NormalTex;
+#ifdef HDRP
+    Texture2DArray<float4> NormalTex;
+#else
+    Texture2D<float4> NormalTex;
+#endif
 Texture2D<float4> PrevNormalTex;
 RWTexture2D<float4> PrevNormalTexWrite;
 SamplerState sampler_NormalTex; 
@@ -353,7 +358,11 @@ void kernel_upsample (int3 id : SV_DispatchThreadID)
     float3 WorldPos = CreateCameraRay(UV2, Depth);
     float3 PreviousWorldPosition = CreateCameraRayPrev(newUV, PrevDepthTex.SampleLevel(my_linear_clamp_sampler, newUV, 0).x);
     PrevDepthTexWrite[id.xy] = float4(Depth, 0, 0, 1);
-    bool Disocluded = length(WorldPos - PrevWorldPos.SampleLevel(my_linear_clamp_sampler, newUV, 0).xyz) > 0.1 * Depth || dot(PrevNormalTex.SampleLevel(sampler_Input_trilinear_clamp, newUV, 0).xyz * 2.0 - 1.0f, NormalTex[id.xy].xyz * 2.0 - 1.0f) < 0.99f;
+    #ifdef HDRP
+        bool Disocluded = length(WorldPos - PrevWorldPos.SampleLevel(my_linear_clamp_sampler, newUV, 0).xyz) > 0.1 * Depth || dot(PrevNormalTex.SampleLevel(sampler_Input_trilinear_clamp, newUV, 0).xyz * 2.0 - 1.0f, NormalTex[int3(id.xy,0)].xyz * 2.0 - 1.0f) < 0.99f;
+    #else
+        bool Disocluded = length(WorldPos - PrevWorldPos.SampleLevel(my_linear_clamp_sampler, newUV, 0).xyz) > 0.1 * Depth || dot(PrevNormalTex.SampleLevel(sampler_Input_trilinear_clamp, newUV, 0).xyz * 2.0 - 1.0f, NormalTex[id.xy].xyz * 2.0 - 1.0f) < 0.99f;
+    #endif
         if(any(newUV >= 1) || any(newUV <= 0)) Disocluded = true;
 
 
@@ -392,8 +401,11 @@ int SampleCount = min(PrevOutput[newUV * float2(target_width, target_height)].w,
     float3 CurrentColor = o_rgba.xyz;
     if(!(luminance(CurrentColor) >= luminance(minCol) && luminance(CurrentColor) <= luminance(maxCol))) {Disocluded = true; SampleCount = 0;}
     if(abs(luminance(CurrentColor - Input.SampleLevel(sampler_Input_trilinear_clamp,UV2, 0).rgb)) > 0.25f) {Disocluded = true; SampleCount = 0;}
-
-        PrevNormalTexWrite[id.xy] = NormalTex[id.xy];
+        #ifdef HDRP
+            PrevNormalTexWrite[id.xy] = NormalTex[int3(id.xy,0)];
+        #else
+            PrevNormalTexWrite[id.xy] = NormalTex[id.xy];
+        #endif
         if(Disocluded) PrevWorldPosWrite[id.xy] = float4(WorldPos,1);
         else {
             PrevWorldPosWrite[id.xy] = PrevWorldPos.SampleLevel(my_linear_clamp_sampler, newUV, 0);

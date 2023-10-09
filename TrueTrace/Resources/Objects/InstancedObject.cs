@@ -12,6 +12,7 @@ namespace TrueTrace {
         private ParentObject PreviousInstance;
         public ParentObject InstanceParent;
         [HideInInspector] public int CompactedMeshData;
+        [HideInInspector] public int ExistsInQue;
 
         public void UpdateInstance()
         {
@@ -39,6 +40,7 @@ namespace TrueTrace {
                     Destroy(this);
                     return;
                 }
+                ExistsInQue = 3;
                 this.transform.hasChanged = true;
                 this.GetComponentInParent<AssetManager>().InstanceAddQue.Add(this);
                 this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
@@ -56,6 +58,11 @@ namespace TrueTrace {
                 this.GetComponentInParent<AssetManager>().InstanceRemoveQue.Add(this);
                 this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
             }
+        }
+        public void OnParentClear() {
+            this.GetComponentInParent<AssetManager>().InstanceRemoveQue.Add(this);
+            this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
+            this.GetComponentInParent<AssetManager>().InstanceUpdateQue.Add(this);
         }
     }
 }

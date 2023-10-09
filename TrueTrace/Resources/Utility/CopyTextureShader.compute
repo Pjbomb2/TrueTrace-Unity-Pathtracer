@@ -1,4 +1,11 @@
-// Each #kernel tells which function to compile; you can have many kernels
+#define ASPM_GPU
+#define ASPM_HLSL
+#include "External/AMD_Compressonator/bcn_common_kernel.h"
+
+
+
+
+
 #pragma kernel SingleInputPass
 Texture2D<float4> AdditionTex;
 SamplerState sampler_point_clamp;
@@ -116,6 +123,37 @@ void DoubleOutputPass (uint3 id : SV_DispatchThreadID)
             InputNormal.y = 1.0f - InputNormal.y;
         // InputNormal.y = 1.0f - InputNormal.y;
         ResultDouble[id.xy + floor(Offset * Scale)] = InputNormal;
+
+
+}
+
+
+
+#pragma kernel Compress
+Texture2D<float4> _Source;
+RWTexture2D<uint4> _Target;
+RWTexture2D<half> Alpha;
+
+void LoadTexelBlockRGBA(Texture2D tex, uint2 tid, out float3 rgb[16], out float alpha[16])
+{
+    uint2 coord = tid.xy << 2;
+    for (uint i = 0; i < 16; ++i)
+    {
+        uint2 offs = uint2(i & 3, i >> 2);
+        float4 pix = float4(tex[coord + offs].xyz * tex[coord + offs].w, Alpha[coord + offs].x);
+        rgb[i] = pix.rgb;
+        alpha[i] = pix.a;
+    }
+}
+
+[numthreads(8,8,1)]
+void Compress (uint2 dtid : SV_DispatchThreadID)
+{
+     float3 colors[16];
+    float alphas[16];
+    LoadTexelBlockRGBA(_Source, dtid, colors, alphas);
+    uint4 block = CompressBlockBC3_UNORM(colors, alphas, 0.7f, true);
+    _Target[dtid] = block;
 
 
 }

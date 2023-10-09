@@ -1,4 +1,3 @@
-// #define DoLightMapping
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -13,8 +12,6 @@ namespace CommonVars
         public Vector3 Radiance;
         public Vector3 Position;
         public Vector3 Direction;
-        public float energy;
-        public float CDF;
         public int Type;
         public Vector2 SpotAngle;
         public float ZAxisRotation;
@@ -29,22 +26,9 @@ namespace CommonVars
         public List<Vector4> Tangents;
         public List<Vector2> UVs;
         public List<int> MatDat;
-        public List<Vector2> LightMapUvs;
-        public List<int> LightMapTexIndexes;
-
-        public void FillMapIndexes(int Count, int Index) {
-            for (int i = 0; i < Count; i++) LightMapTexIndexes.Add(Index);
-        }
-
-        public void FillMapUVsScaled(Vector2[] Uvs, Vector4 Scale) {
-            for (int i = 0; i < Uvs.Length; i++) LightMapUvs.Add(Uvs[i] * Scale.x + new Vector2(Scale.z, Scale.w));
-        }
 
         public void SetUvZero(int Count) {
             for (int i = 0; i < Count; i++) UVs.Add(new Vector2(0.0f, 0.0f));
-        }
-        public void SetLightMapUvZero(int Count) {
-            for (int i = 0; i < Count; i++) LightMapUvs.Add(new Vector2(0.0f, 0.0f));
         }
         public void SetTansZero(int Count) {
             for (int i = 0; i < Count; i++) Tangents.Add(new Vector4(0.0f, 0.0f, 0.0f, 0.0f));
@@ -56,8 +40,6 @@ namespace CommonVars
             this.Verticies = new List<Vector3>();
             this.Normals = new List<Vector3>();
             this.Indices = new List<int>();
-            this.LightMapUvs = new List<Vector2>();
-            this.LightMapTexIndexes = new List<int>();
         }
         public void Clear() {
             if (Tangents != null) {
@@ -67,8 +49,6 @@ namespace CommonVars
                 CommonFunctions.DeepClean(ref Verticies);
                 CommonFunctions.DeepClean(ref Normals);
                 CommonFunctions.DeepClean(ref Indices);
-                CommonFunctions.DeepClean(ref LightMapUvs);
-                CommonFunctions.DeepClean(ref LightMapTexIndexes);
             }
         }
     }
@@ -238,31 +218,6 @@ namespace CommonVars
     }
 
     [System.Serializable]
-    public struct LightmapMeshDataCompacted
-    {
-        public Matrix4x4 Transform;
-        public Matrix4x4 Inverse;
-        public int AggTriCount;
-        public int AggTriOffset;
-    }
-    [System.Serializable]
-    public struct LightMapTriangle
-    {
-        public Vector3 pos0;
-        public Vector3 posedge1;
-        public Vector3 posedge2;
-
-        public Vector3 norm;
-
-        public Vector2 UV0;
-        public Vector2 UV1;
-        public Vector2 UV2;
-
-        public int LightMapIndex;
-        public Vector2 WH;
-    }
-
-    [System.Serializable]
     public struct AABB
     {
         public Vector3 BBMax;
@@ -334,13 +289,9 @@ namespace CommonVars
     [System.Serializable]
     public struct NodeIndexPairData
     {
-        public int PreviousNode;
-        public int BVHNode;
-        public int Node;
         public CommonVars.AABB AABB;
+        public int BVHNode;
         public int InNodeOffset;
-        public int IsLeaf;
-        public int RecursionCount;
     }
 
     [System.Serializable]
@@ -395,7 +346,6 @@ namespace CommonVars
         public int StartIndex;
         public int IndexEnd;
         public int MatOffset;
-        public int OrigionalMesh;
         public int LockedMeshIndex;
     }
 
@@ -658,9 +608,11 @@ namespace CommonVars
 
         public static readonly RenderTextureFormat RTFull4 = RenderTextureFormat.ARGBFloat;
         public static readonly RenderTextureFormat RTInt1 = RenderTextureFormat.RInt;
+        public static readonly RenderTextureFormat RTInt2 = RenderTextureFormat.RGInt;
         public static readonly RenderTextureFormat RTHalf4 = RenderTextureFormat.ARGBHalf;
         public static readonly RenderTextureFormat RTHalf1 = RenderTextureFormat.RHalf;
         public static readonly RenderTextureFormat RTFull2 = RenderTextureFormat.RGFloat;
+        public static readonly RenderTextureFormat RTFull1 = RenderTextureFormat.RFloat;
         public static readonly RenderTextureFormat RTHalf2 = RenderTextureFormat.RGHalf;
 
         public static void CreateRenderTexture(ref RenderTexture ThisTex, 
@@ -678,6 +630,41 @@ namespace CommonVars
             ThisTex.enableRandomWrite = true;
             ThisTex.Create();
         }
+
+
+        public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, List<T> data)
+            where T : struct
+        {
+            int stride = System.Runtime.InteropServices.Marshal.SizeOf<T>();
+            if (buffer != null) {
+                if (data.Count == 0 || buffer.count != data.Count || buffer.stride != stride) {
+                    buffer.Release();
+                    buffer = null;
+                }
+            }
+            if (data.Count != 0) {
+                if (buffer == null) buffer = new ComputeBuffer(data.Count, stride);
+                buffer.SetData(data);
+            }
+        }
+        public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, T[] data)
+            where T : struct
+        {
+            int stride = System.Runtime.InteropServices.Marshal.SizeOf<T>();
+            if (buffer != null) {
+                if (data.Length == 0 || buffer.count != data.Length || buffer.stride != stride) {
+                    buffer.Release();
+                    buffer = null;
+                }
+            }
+            if (data.Length != 0) {
+                if (buffer == null) buffer = new ComputeBuffer(data.Length, stride);
+                buffer.SetData(data);
+            }
+        }
+
+
+
 
     }
 

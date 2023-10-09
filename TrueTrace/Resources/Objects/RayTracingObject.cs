@@ -81,9 +81,6 @@ namespace TrueTrace {
 		 		if(this.GetComponent<SkinnedMeshRenderer>() == null) DestroyImmediate(this);
 		 		GetComponent<SkinnedMeshRenderer>().BakeMesh(mesh);
 				SubMeshCount = (GetComponent<SkinnedMeshRenderer>().sharedMaterials).Length;
-				// this.transform.localScale = new Vector3(1,1,1);
-				// this.transform.position = new Vector3(0,0,0);
-				// this.transform.eulerAngles = new Vector3(0,0,0);
 		 	}
 		 	Material[] SharedMaterials = (GetComponent<Renderer>() != null) ? GetComponent<Renderer>().sharedMaterials : GetComponent<SkinnedMeshRenderer>().sharedMaterials;
 		 	if(mesh == null || SharedMaterials == null || SharedMaterials.Length == 0 || mesh.GetTopology(0) != MeshTopology.Triangles || mesh.vertexCount == 0) {

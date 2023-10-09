@@ -84,7 +84,7 @@ void AutoExpose(uint3 id : SV_DispatchThreadID)
 {
 	// TODO: insert actual code here!
 
-	A[0] = ((Exposure == 1) ? calculateAverageLuminance() : Exposure);
+	A[0] = ((Exposure == 0) ? calculateAverageLuminance() : Exposure);
 }
 
 

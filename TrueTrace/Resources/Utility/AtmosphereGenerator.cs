@@ -1,31 +1,30 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using CommonVars;
 
 namespace TrueTrace {
     [System.Serializable]
     public class AtmosphereGenerator
     {
-
         public RenderTexture _TransmittanceLUT;
-        public RenderTexture _RayleighTex;
-        public RenderTexture _MieTex;
         public RenderTexture MultiScatterTex;
+        private RenderTexture _RayleighTex;
+        private RenderTexture _MieTex;
 
-        public RenderTexture DeltaIrradianceTex;
-        public RenderTexture IrradianceTex;
+        private RenderTexture DeltaIrradianceTex;
+        private RenderTexture IrradianceTex;
 
-        public RenderTexture ScatteringTex;
+        private RenderTexture ScatteringTex;
 
-        public RenderTexture DeltaScatteringTex;
+        private RenderTexture DeltaScatteringTex;
 
-        public RenderTexture DeltaMultiScatterTex;
-        public RenderTexture DebugTex;
+        private RenderTexture DeltaMultiScatterTex;
 
-        public RenderTexture CloudTex1;
-        public RenderTexture CloudTex2;
+        private RenderTexture CloudTex1;
+        private RenderTexture CloudTex2;
 
-        public ComputeShader Atmosphere;
+        private ComputeShader Atmosphere;
         private ComputeBuffer rayleigh_densityC;
         private ComputeBuffer mie_densityC;
         private ComputeBuffer absorption_densityC;
@@ -41,40 +40,9 @@ namespace TrueTrace {
             public float constant_term;
         }
 
-        public Texture2D PermutationTable2D;
-        public Texture2D Gradient3D;
-
-        private void CreateComputeBuffer<T>(ref ComputeBuffer buffer, List<T> data, int stride)
-            where T : struct
+        public AtmosphereGenerator(float BottomRadius, float TopRadius, int MultiScatterIterations)
         {
-            // Do we already have a compute buffer?
-            if (buffer != null)
-            {
-                // If no data or buffer doesn't match the given criteria, release it
-                if (data.Count == 0 || buffer.count != data.Count || buffer.stride != stride)
-                {
-                    buffer.Release();
-                    buffer = null;
-                }
-            }
-
-            if (data.Count != 0)
-            {
-                // If the buffer has been released or wasn't there to
-                // begin with, create it
-                if (buffer == null)
-                {
-                    buffer = new ComputeBuffer(data.Count, stride);
-                }
-                // Set data on the buffer
-                buffer.SetData(data);
-            }
-        }
-
-        public AtmosphereGenerator(ComputeShader Atmosphere, float BottomRadius, float TopRadius, int MultiScatterIterations)
-        {
-
-            this.Atmosphere = Atmosphere;
+            if (Atmosphere == null) { Atmosphere = Resources.Load<ComputeShader>("Utility/AtmosphereLUTGenerator"); }
             List<DensityProfileLayer> rayleigh_density = new List<DensityProfileLayer>();
             List<DensityProfileLayer> mie_density = new List<DensityProfileLayer>();
             List<DensityProfileLayer> absorption_density = new List<DensityProfileLayer>();
@@ -150,9 +118,9 @@ namespace TrueTrace {
             int FirstCloudKernel = Atmosphere.FindKernel("FirstCloudKernel");
             int SecondCloudKernel = Atmosphere.FindKernel("SecondCloudKernel");
 
-            CreateComputeBuffer(ref rayleigh_densityC, rayleigh_density, 20);
-            CreateComputeBuffer(ref mie_densityC, mie_density, 20);
-            CreateComputeBuffer(ref absorption_densityC, absorption_density, 20);
+            CommonFunctions.CreateComputeBuffer(ref rayleigh_densityC, rayleigh_density);
+            CommonFunctions.CreateComputeBuffer(ref mie_densityC, mie_density);
+            CommonFunctions.CreateComputeBuffer(ref absorption_densityC, absorption_density);
 
             Atmosphere.SetVector("rayleigh_scattering", ray_s);
             Atmosphere.SetVector("solar_irradiance", new Vector3(1.474f, 1.8504f, 1.91198f));
@@ -208,11 +176,6 @@ namespace TrueTrace {
             ScatteringTex.enableRandomWrite = true;
             ScatteringTex.Create();
 
-            DebugTex = new RenderTexture(8 * 32, 128, 0,
-            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-            DebugTex.enableRandomWrite = true;
-            DebugTex.Create();
-
             DeltaScatteringTex = new RenderTexture(8 * 32, 128, 0,
             RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
             DeltaScatteringTex.volumeDepth = 32;
@@ -250,7 +213,6 @@ namespace TrueTrace {
             CloudTex2.useMipMap = true;
             CloudTex2.Create();
 
-            Atmosphere.SetTexture(SingleScatterKernel, "DebugTex", DebugTex);
             Atmosphere.SetTexture(TransmittanceKernel, "TransmittanceTex", _TransmittanceLUT);
             Atmosphere.Dispatch(TransmittanceKernel, 256, 64, 1);
             Atmosphere.SetTexture(SingleScatterKernel, "TransmittanceTexRead", _TransmittanceLUT);
@@ -271,7 +233,6 @@ namespace TrueTrace {
             {
                 var TempScatOrder = ScatteringOrder;
                 Atmosphere.SetInt("ScatteringOrder", TempScatOrder);
-                Atmosphere.SetTexture(ScatteringDensityKernel, "DebugTex", DebugTex);
                 Atmosphere.SetTexture(ScatteringDensityKernel, "IrradianceTexRead", DeltaIrradianceTex);
                 Atmosphere.SetTexture(ScatteringDensityKernel, "TransmittanceTexRead", _TransmittanceLUT);
                 Atmosphere.SetTexture(ScatteringDensityKernel, "RayleighTexRead", _RayleighTex);
@@ -290,7 +251,6 @@ namespace TrueTrace {
                 Atmosphere.Dispatch(IndirectIrradianceKernel, 64, 16, 1);
 
                 Atmosphere.SetInt("ScatteringOrder", TempScatOrder);
-                Atmosphere.SetTexture(MultipleScatteringKernel, "DebugTex", DebugTex);
                 Atmosphere.SetTexture(MultipleScatteringKernel, "DeltaMultipleScattering", DeltaMultiScatterTex);
                 Atmosphere.SetTexture(MultipleScatteringKernel, "MultiScatterTex", MultiScatterTex);
                 Atmosphere.SetTexture(MultipleScatteringKernel, "ScatteringDensityTexRead", DeltaScatteringTex);
@@ -313,6 +273,14 @@ namespace TrueTrace {
             rayleigh_densityC.Release();
             mie_densityC.Release();
             absorption_densityC.Release();
+
+            _RayleighTex.Release();
+            _MieTex.Release();
+            DeltaIrradianceTex.Release();
+            IrradianceTex.Release();
+            ScatteringTex.Release();
+            DeltaScatteringTex.Release();
+            DeltaMultiScatterTex.Release();
 
             // Material SkyBoxMaterial;
             // SkyBoxMaterial = RenderSettings.skybox;

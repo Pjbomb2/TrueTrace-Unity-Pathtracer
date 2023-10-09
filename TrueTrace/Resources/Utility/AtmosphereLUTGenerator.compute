@@ -647,14 +647,12 @@ float3 ComputeScatteringDensityTexture(
 		scattering_order);
 }
 
-RWTexture2D<float4> DebugTex;
 
 [numthreads(1, 1, 1)]
 void ScatteringDensity_kernel(uint3 id : SV_DispatchThreadID)
 {
 	float3 ScatteringDensity = ComputeScatteringDensityTexture(float3(id.xy + 0.5f, id.z + 0.5f), ScatteringOrder);
 	ScatteringDensityTex[id.xyz] = float4(ScatteringDensity, 1);
-	if (id.z == 30) DebugTex[id.xy] = float4(ScatteringDensity, 1);
 
 }
 
@@ -751,7 +749,6 @@ void MultiScatter_kernel(uint3 id : SV_DispatchThreadID)
 	float3 MultipleScatterDelta = ComputeMultipleScatteringTexture(float3(id.xy + 0.5f, id.z + 0.5f), nu);
 	DeltaMultipleScattering[id.xyz] = float4(MultipleScatterDelta, 1);
 	MultiScatterTex[id.xyz] = (MultiScatterTex[id.xyz] + float4(mul(LuminanceFromRadiance, float4(MultipleScatterDelta.xyz / RayleighPhaseFunction(nu), 1)).xyz, 0.0f));
-	//  if(id.z == 3) DebugTex[id.xy] = float4(mul(LuminanceFromRadiance, float4(MultipleScatterDelta.xyz / RayleighPhaseFunction(nu),0)).xyz,1);
 
 }
 

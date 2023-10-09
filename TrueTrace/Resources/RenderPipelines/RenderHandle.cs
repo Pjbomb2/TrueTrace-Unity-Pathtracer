@@ -20,9 +20,6 @@ public class RenderHandle : MonoBehaviour
     }
     void Start()
     {
-        // if(OverlayMaterial == null) OverlayMaterial = new Material(Shader.Find("Hidden/OverlayShader"));
-        // CreateRenderTexture(ref GITex);
-        // CreateRenderTexture(ref ParticleTex);
         RayMaster = GameObject.Find("Scene").GetComponent<TrueTrace.RayTracingMaster>();
         RayMaster.TossCamera(gameObject.GetComponent<Camera>());
         RayMaster.Start2();
@@ -41,15 +38,9 @@ public class RenderHandle : MonoBehaviour
         if(RayMaster == null) {
             Start();
         }
-        // RayMaster.ParticleCamera.targetTexture = ParticleTex;
-        // RayMaster.ParticleCamera.Render();
-
         CommandBuffer cmd = new CommandBuffer();
         cmd.name = "TrueTrace";
         RayMaster.RenderImage(destination, cmd);
-        // cmd.Blit(destination, GITex);
-        // OverlayMaterial.SetTexture("GITexture", GITex);
-        // cmd.Blit(source, destination, OverlayMaterial);
         Graphics.ExecuteCommandBuffer(cmd);
         cmd.Clear();
         cmd.Release();

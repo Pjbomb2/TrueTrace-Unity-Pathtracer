@@ -109,7 +109,6 @@ RWTexture2D<half2> IMG_ASVGF_GRAD_LF_PONG;
 RWTexture2D<half2> IMG_ASVGF_GRAD_HF_SPEC_PING;
 RWTexture2D<half2> IMG_ASVGF_GRAD_HF_SPEC_PONG;
 Texture2D<half> TEX_PT_VIEW_DEPTH_A;//current frame depth
-RWTexture2D<half> TEX_PT_VIEW_DEPTH_BWrite;//previous frame depth
 Texture2D<half> TEX_PT_VIEW_DEPTH_B;//previous frame depth
 Texture2D<float> TEX_ASVGF_GRAD_SMPL_POS_B;
 RWTexture2D<float> IMG_ASVGF_GRAD_SMPL_POS_A;
@@ -152,6 +151,10 @@ Texture2D<uint> TEX_ASVGF_ATROUS_PING_HF;
 RWTexture2D<float4> DebugTex;
 SamplerState my_linear_clamp_sampler;
 SamplerState my_point_clamp_sampler;
+
+StructuredBuffer<float> ExposureBuffer;
+bool UseExposure;
+float IndirectBoost;
 
 static const int GRAD_DWN = 3;
 #define STRATUM_OFFSET_SHIFT 3
@@ -347,16 +350,18 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 	ReflectedRefractedTexWrite[id.xy] = max(Pixel.IsSpecular - 2,0);
 	bool ReflectedRefracted = max(Pixel.IsSpecular - 2,0);
 	float3 WorldAlbedo = unpackRGBE(WorldPosData[id.xy].w);
+	float Exposure = 1;
+	if(UseExposure) Exposure = ExposureBuffer[0];
 	if (Pixel.IsSpecular == 0 || MetallicAWrite[id.xy].y >= 0.4f) {
 		AlbedoColorA[id.xy] = int2(WorldPosData[id.xy].w, AlbedoColorB[pos_prev].y);
-		STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, irradiance_to_SH(clamp(Pixel.Indirect * ((TEX_PT_BASE_COLOR_A[id.xy].xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0))) / 1024.0f,0,12000), asfloat(WorldPosData[id.xy].xyz)));
-		TEX_PT_COLOR_HFWrite[id.xy] = packRGBE((Pixel.Direct + unpackRGBE(Pixel.Fog) * ((Pixel.IsSpecular != 2) ? TexBaseColor : 1)) * ((Pixel.IsSpecular == 2) ? ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0) : 1));
+		STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, irradiance_to_SH(Exposure * IndirectBoost * clamp(Pixel.Indirect * ((TEX_PT_BASE_COLOR_A[id.xy].xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0))) / 1024.0f,0,12000), asfloat(WorldPosData[id.xy].xyz)));
+		TEX_PT_COLOR_HFWrite[id.xy] = packRGBE(Exposure * (Pixel.Direct + unpackRGBE(Pixel.Fog) * ((Pixel.IsSpecular != 2) ? TexBaseColor : 1)) * ((Pixel.IsSpecular == 2) ? ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0) : 1));
 		TEX_PT_COLOR_SPECWrite[id.xy] = 0;
 	} else {
 		AlbedoColorA[id.xy] = int2(AlbedoColorB[pos_prev].x, WorldPosData[id.xy].w);
 		SH TempSH = { 0,0,0,0,0,0 };
 		STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, TempSH);
-		TEX_PT_COLOR_SPECWrite[id.xy] = packRGBE(max((Pixel.Direct + Pixel.Indirect + unpackRGBE(Pixel.Fog) * TexBaseColor)* TEX_PT_BASE_COLOR_A[id.xy].xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0),0));
+		TEX_PT_COLOR_SPECWrite[id.xy] = packRGBE(max(Exposure * (Pixel.Direct + IndirectBoost * Pixel.Indirect + unpackRGBE(Pixel.Fog) * TexBaseColor)* TEX_PT_BASE_COLOR_A[id.xy].xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0),0));
 		TEX_PT_COLOR_HFWrite[id.xy] = 0;
 	}
 	if(!ReflectedRefracted) {
@@ -605,6 +610,7 @@ inline float get_gradient(float l_curr, float l_prev)
 		return 0;
 
 	float ret = abs(l_curr - l_prev) / l_max;
+	// ret = min(ret, 0.4f);
 	ret *= ret; // make small changes less significant
 
 	return ret;
@@ -1022,7 +1028,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 				float lum_p_hf;
 				get_shared_data(int2(xx, yy), depth, normal, lum_p_hf, gl_LocalInvocationID);
 				// lum_p_hf += luminance(unpackRGBE(TEX_PT_COLOR_SPEC[p].x));
-				float dist_z = abs(depth_curr - depth) / abs(depth_curr);
+				float dist_z = abs(depth_curr - depth) / abs(depth_curr);// * FDepth[ipos] * 120.0f;
 				if (dist_z < 2.0) {
 					float w_hf = pow(max(0.0, dot(normal, normal_curr)), 128.0);
 
@@ -1548,7 +1554,7 @@ inline void filter_image(
 			float roughness = MetallicA[p].y;
 
 			float dist_z = abs(depth_center - depth);// * fwidth_depth;
-			w *= exp(-dist_z / float(step_size));
+			w *= exp(-dist_z * (FDepth[ipos] * 120.0f + 1));
 			w *= wavelet_kernel[abs(xx)][abs(yy)];
 
 			float w_hf = w;
@@ -1559,7 +1565,7 @@ inline void filter_image(
 			float l_hf = luminance(c_hf.rgb);
 			float dist_l_hf = abs(lum_mean_hf - l_hf);
 
-			w_hf *= exp(-dist_l_hf * dist_l_hf * sigma_l_hf);
+			w_hf *= exp(-dist_l_hf * dist_l_hf * sigma_l_hf * step_size);
 
 			w_hf *= 1.0f - clamp(abs(MetallicA[p].x - CenterMetallic),0,1);
 			float w_spec = w_hf;
@@ -1682,7 +1688,9 @@ float3 composite_color(float4 surf_base_color,
 	// 		GBufferCol = 1;//((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, ipos / float2(screen_width, screen_height), 0).xyz + SpecularAlbedo) == 0) ? 1 : ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, ipos / float2(screen_width, screen_height), 0).xyz + SpecularAlbedo));
 	// 	#endif
 	// }
-	float3 final_color = ((surf_base_color.w == 0) ? pow(surf_base_color, 1.0f) : ((projected_lf.rgb + high_freq.rgb) * surf_base_color + specular * SpecColor));
+	float Exposure = 1;
+	if(UseExposure) Exposure = ExposureBuffer[0];
+	float3 final_color = ((surf_base_color.w == 0) ? pow(surf_base_color, 1.0f) : ((projected_lf.rgb + high_freq.rgb) * surf_base_color / Exposure + specular * SpecColor / Exposure));
 
 	return final_color;
 }
@@ -1751,7 +1759,13 @@ void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGrou
 		
 		float3 final_color = composite_color(base_color, projected_lf, filtered_hf, filtered_spec, (DiffRes && base_color.w <= 1) ? 1 : unpackRGBE(AlbedoColorB[ipos].y), ipos);
 
-		IMG_ASVGF_COLOR[ipos] = float4(final_color, 0);
+		// if(base_color.w != 0) {
+		// 	SH FullSH = irradiance_to_SH(final_color, i_octahedral_32(TEX_PT_NORMALS_A[ipos].x));
+
+		// 	IMG_ASVGF_COLOR[ipos] = float4(project_SH_irradiance(FullSH, normal), 0);
+		// } else {
+			IMG_ASVGF_COLOR[ipos] = float4(final_color, 0);
+		// }
 	}
 }
 

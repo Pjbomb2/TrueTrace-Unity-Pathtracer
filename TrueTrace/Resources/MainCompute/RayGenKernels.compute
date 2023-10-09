@@ -1,5 +1,8 @@
 #include "CommonData.cginc"
-#pragma use_dxc
+#include "../GlobalDefines.cginc"
+#ifndef DX11
+    #pragma use_dxc
+#endif
 
 #ifdef HDRP
 Texture2DArray<float2> MotionVectors;

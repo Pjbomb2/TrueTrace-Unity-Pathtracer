@@ -73,10 +73,8 @@ namespace TrueTrace {
         public void UpdateRenderAndBuildQues(ref bool NeedsToUpdate)
         {
 
+            // UnityEngine.Profiling.Profiler.BeginSample("Instaced AddQue");
             int AddQueCount = AddQue.Count - 1;
-            int RemoveQueCount = RemoveQue.Count - 1;
-            int RenderQueCount = RenderQue.Count - 1;
-            int BuildQueCount = BuildQue.Count - 1;
             for (int i = AddQueCount; i >= 0; i--)
             {
                 var CurrentRep = BuildQue.Count;
@@ -85,6 +83,9 @@ namespace TrueTrace {
                 BuildQue[CurrentRep].LoadData();
                 CurrentlyActiveTasks.Add(Task.Run(() => BuildQue[CurrentRep].BuildTotal()));
             }
+            // UnityEngine.Profiling.Profiler.EndSample();
+            // UnityEngine.Profiling.Profiler.BeginSample("Instaced RemoveQue");
+            int RemoveQueCount = RemoveQue.Count - 1;
             for (int i = RemoveQueCount; i >= 0; i--)
             {
                 if (RenderQue.Contains(RemoveQue[i]))
@@ -97,6 +98,9 @@ namespace TrueTrace {
                 NeedsToUpdate = true;
                 RemoveQue.RemoveAt(i);
             }
+            // UnityEngine.Profiling.Profiler.EndSample();
+            // UnityEngine.Profiling.Profiler.BeginSample("Instaced RenderQue");
+            int RenderQueCount = RenderQue.Count - 1;
             for (int i = RenderQueCount; i >= 0; i--)
             {//Demotes from Render Que to Build Que in case mesh has changed
                 if (RenderQue[i].NeedsToUpdate)
@@ -110,18 +114,31 @@ namespace TrueTrace {
                     NeedsToUpdate = true;
                 }
             }
+            // UnityEngine.Profiling.Profiler.EndSample();
+            // UnityEngine.Profiling.Profiler.BeginSample("Instaced BuildQue");
+            int BuildQueCount = BuildQue.Count - 1;
             for (int i = BuildQueCount; i >= 0; i--)
             {//Promotes from Build Que to Render Que
-                if (CurrentlyActiveTasks[i].IsFaulted) Debug.Log(CurrentlyActiveTasks[i].Exception + ", " + BuildQue[i].Name);//Fuck, something fucked up
-                if (CurrentlyActiveTasks[i].Status == TaskStatus.RanToCompletion)
-                {
-                    BuildQue[i].SetUpBuffers();
-                    RenderQue.Add(BuildQue[i]);
+                if (CurrentlyActiveTasks[i].IsFaulted) {
+                    Debug.Log(CurrentlyActiveTasks[i].Exception + ", " + BuildQue[i].Name);//Fuck, something fucked up
+                    AddQue.Add(BuildQue[i]);
                     BuildQue.RemoveAt(i);
                     CurrentlyActiveTasks.RemoveAt(i);
-                    NeedsToUpdate = true;
+                } else if (CurrentlyActiveTasks[i].Status == TaskStatus.RanToCompletion) {
+                    if (BuildQue[i].AggTriangles == null || BuildQue[i].AggNodes == null) {
+                        AddQue.Add(BuildQue[i]);
+                        BuildQue.RemoveAt(i);
+                        CurrentlyActiveTasks.RemoveAt(i);
+                    } else {
+                        BuildQue[i].SetUpBuffers();
+                        RenderQue.Add(BuildQue[i]);
+                        BuildQue.RemoveAt(i);
+                        CurrentlyActiveTasks.RemoveAt(i);
+                        NeedsToUpdate = true;
+                    }
                 }
             }
+            // UnityEngine.Profiling.Profiler.EndSample();
         }
     }
 }
