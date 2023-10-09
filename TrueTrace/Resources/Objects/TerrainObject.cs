@@ -183,14 +183,14 @@ namespace TrueTrace {
                 }
                 if (TerrainTile.terrainData.terrainLayers[i].normalMapTexture != null)
                 {
-                    if (AlbedoTexs.Contains(TerrainTile.terrainData.terrainLayers[i].normalMapTexture))
+                    if (NormalTexs.Contains(TerrainTile.terrainData.terrainLayers[i].normalMapTexture))
                     {
-                        NormalIndexes[AlbedoTexs.IndexOf(TerrainTile.terrainData.terrainLayers[i].normalMapTexture)].RayObjectList.Add(TempObj);
+                        NormalIndexes[NormalTexs.IndexOf(TerrainTile.terrainData.terrainLayers[i].normalMapTexture)].RayObjectList.Add(TempObj);
                     }
                     else
                     {
                         NormalIndexes.Add(new RayObjects());
-                        NormalIndexes[AlbedoIndexes.Count - 1].RayObjectList.Add(TempObj);
+                        NormalIndexes[NormalIndexes.Count - 1].RayObjectList.Add(TempObj);
                         NormalTexs.Add(TerrainTile.terrainData.terrainLayers[i].normalMapTexture);
                     }
                 }
