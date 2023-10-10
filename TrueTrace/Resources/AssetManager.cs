@@ -40,7 +40,7 @@ namespace TrueTrace {
         [HideInInspector] public RenderTexture VideoTexture;
 
         [HideInInspector] public List<RayTracingObject> MaterialsChanged;
-        [HideInInspector] public List<MaterialData> _Materials;
+        public List<MaterialData> _Materials;
         [HideInInspector] public ComputeBuffer BVH8AggregatedBuffer;
         [HideInInspector] public ComputeBuffer AggTriBuffer;
         [HideInInspector] public List<MyMeshDataCompacted> MyMeshesCompacted;

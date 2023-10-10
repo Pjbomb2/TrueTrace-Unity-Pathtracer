@@ -20,6 +20,7 @@ uint gVertexCount;
 int VertOffset;
 
 float4x4 Transform;
+float4x4 Transform2;
 
 float3 Offset;
 
@@ -64,6 +65,7 @@ uint octahedral_32( in float3 nor )
     //return packSnorm2x16(nor.xy);
     uint2 d = uint2(round(32767.5 + nor.xy*32767.5));  return d.x|(d.y<<16u);
 }
+int Stride;
 int TriBuffOffset;
 [numthreads(KernelRatio, 1, 1)]
 void Construct(uint3 id : SV_DispatchThreadID)
@@ -71,7 +73,7 @@ void Construct(uint3 id : SV_DispatchThreadID)
 	if (id.x >= gVertexCount)
 		return;
 
-	uint3 vidx = bufIndexes.Load3(id.x * 12).xzy * 10;
+	uint3 vidx = bufIndexes.Load3(id.x * 12).xzy * Stride;
 
 	float3 p = asfloat(bufVertices.Load3((vidx.x) << 2));
 	float3 n1 = asfloat(bufVertices.Load3((vidx.x + 3) << 2));
@@ -83,22 +85,21 @@ void Construct(uint3 id : SV_DispatchThreadID)
 
 	id.x = CWBVHIndices[VertOffset + id.x];
 
-	
-	p *= Scale;
-	p2 *= Scale;
-	p3 *= Scale;
-	
-	p = mul(p, (float3x3)Transform);
-	p2 = mul(p2, (float3x3)Transform);
-	p3 = mul(p3, (float3x3)Transform);
+	// p = mul(Transform2, float4(p,1));
+	// p2 = mul(Transform2, float4(p2,1));
+	// p3 = mul(Transform2, float4(p3,1));
 
-	p += Offset;
-	p2 += Offset;
-	p3 += Offset;
+	p = mul(Transform, float4(p,1));
+	p2 = mul(Transform, float4(p2,1));
+	p3 = mul(Transform, float4(p3,1));
 
-	float3 Norm1 = mul(n1, (float3x3)Transform);
-	float3 Norm2 = mul(n2, (float3x3)Transform);
-	float3 Norm3 = mul(n3, (float3x3)Transform);
+	// n1 = mul(Transform2, float4(n1,1));
+	// n2 = mul(Transform2, float4(n2,1));
+	// n3 = mul(Transform2, float4(n3,1));
+
+	n1 = mul(Transform, float4(n1,1));
+	n2 = mul(Transform, float4(n2,1));
+	n3 = mul(Transform, float4(n3,1));
 
 	float3 BBMax = max(max(p, p2), p3);
 	float3 BBMin = min(min(p, p2), p3);
@@ -117,9 +118,9 @@ void Construct(uint3 id : SV_DispatchThreadID)
 	TempTri.posedge1 = p2 - p;
 	TempTri.posedge2 = p3 - p;
 
-	TempTri.norms.x = octahedral_32(Norm1);
-	TempTri.norms.y = octahedral_32(Norm2);
-	TempTri.norms.z = octahedral_32(Norm3);
+	TempTri.norms.x = octahedral_32(n1);
+	TempTri.norms.y = octahedral_32(n2);
+	TempTri.norms.z = octahedral_32(n3);
 	CudaTriArray[id.x + TriBuffOffset] = TempTri;
 }
 

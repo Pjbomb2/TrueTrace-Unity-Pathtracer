@@ -215,7 +215,7 @@ void IntersectBVH() {
                 }
                 if ((current_group.y & 0xff000000) == 0) {
                     if (stack_size == 0) {//thread has finished traversing
-                        [branch] if((UseASVGF || UseReCur) && CurBounce == 0) {
+                        [branch] if((UseASVGF) && CurBounce == 0) {
                             int PixIndex = GlobalRays[ray_index].PixelIndex;
                             uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
                             _PrimaryTriangleInfo[TempUv] = uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v));

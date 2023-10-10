@@ -10,9 +10,9 @@ float4x4 CamToWorld;
 float4x4 CamInvProj;
 
 float4x4 ViewMatrix;
-uniform int MaxBounce;
-uniform int CurBounce;
-uniform int AlbedoAtlasSize;
+int MaxBounce;
+int CurBounce;
+int AlbedoAtlasSize;
 
 uint screen_width;
 uint screen_height;
@@ -22,8 +22,8 @@ int frames_accumulated;
 int curframe;//might be able to get rid of this
 
 
-uniform bool DoHeightmap;
-uniform bool UseReCur;
+bool DoHeightmap;
+bool UseReCur;
 bool DiffRes;
 bool UseRussianRoulette;
 bool UseNEE;
@@ -271,7 +271,7 @@ struct TerrainData {
 StructuredBuffer<TerrainData> Terrains;
 
 int TerrainCount;
-uniform bool TerrainExists;
+bool TerrainExists;
 
 float GetHeight(float3 CurrentPos, const TerrainData Terrain) {
     CurrentPos -= Terrain.PositionOffset;
@@ -336,8 +336,8 @@ uint pcg_hash(uint seed) {
 	return (word >> 22u) ^ word;
 }
 
-uniform bool UseASVGF;
-uniform int ReSTIRGIUpdateRate;
+bool UseASVGF;
+int ReSTIRGIUpdateRate;
 bool UseReSTIRGI;
 
 float2 randomNEE(uint samdim, uint pixel_index) {

@@ -1054,8 +1054,8 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 
 	// Load the gradients
 	float grad_lf = TEX_ASVGF_GRAD_LF_PONG[ipos / GRAD_DWN].r;
-	float2 grad_hf_spec = TEX_ASVGF_GRAD_HF_SPEC_PONG[ipos / GRAD_DWN].rg;
 	grad_lf = clamp(grad_lf, 0, 1);
+	float2 grad_hf_spec = TEX_ASVGF_GRAD_HF_SPEC_PONG[ipos / GRAD_DWN].rg;
 	grad_hf_spec = clamp(grad_hf_spec, 0, 1);
 
 	if (temporal_sample_valid_diff)
@@ -1565,7 +1565,7 @@ inline void filter_image(
 			float l_hf = luminance(c_hf.rgb);
 			float dist_l_hf = abs(lum_mean_hf - l_hf);
 
-			w_hf *= exp(-dist_l_hf * dist_l_hf * sigma_l_hf * step_size);
+			w_hf *= exp(-dist_l_hf * dist_l_hf * sigma_l_hf);
 
 			w_hf *= 1.0f - clamp(abs(MetallicA[p].x - CenterMetallic),0,1);
 			float w_spec = w_hf;

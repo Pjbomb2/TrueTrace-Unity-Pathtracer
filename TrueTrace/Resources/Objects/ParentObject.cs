@@ -38,7 +38,6 @@ namespace TrueTrace {
         public AABB aabb_untransformed;
         public AABB aabb;
         [HideInInspector] public bool AllFull;
-        public Transform Hips;
         [HideInInspector] public int AggIndexCount;
         [HideInInspector] public int AggBVHNodeCount;
         public List<MaterialData> _Materials;
@@ -344,7 +343,7 @@ namespace TrueTrace {
             ChildObjects = new List<RayTracingObject>();
             ChildObjectTransforms = new List<Transform>();
             ChildObjectTransforms.Add(this.transform);
-            IsSkinnedGroup = false;
+            IsSkinnedGroup = this.gameObject.GetComponent<SkinnedMeshRenderer>() != null;
             bool IsChildOfSelf = false;
             for (int i = 0; i < this.transform.childCount; i++) if (this.transform.GetChild(i).gameObject.GetComponent<SkinnedMeshRenderer>() != null && this.transform.GetChild(i).gameObject.GetComponent<ParentObject>() == null && this.transform.GetChild(i).gameObject.activeInHierarchy) { IsSkinnedGroup = true; break; }
             if(IsSkinnedGroup) {
@@ -589,9 +588,8 @@ namespace TrueTrace {
                 ToBVHIndexBuffer = new ComputeBuffer(ToBVHIndex.Length, 4);
                 ToBVHIndexBuffer.SetData(ToBVHIndex);
                 HasStarted = true;
-                if (Hips == null && this.transform.childCount != 0 && this.transform.GetChild(0).childCount != 0 && this.transform.GetChild(0).GetChild(0) != null) Hips = this.transform.GetChild(0).GetChild(0);
                 int MaxLength = 0;
-                WorkingBuffer = new ComputeBuffer[LayerStack.Length];//(MaxLength, 4);
+                WorkingBuffer = new ComputeBuffer[LayerStack.Length];
                 for (int i = 0; i < LayerStack.Length; i++) {
                     WorkingBuffer[i] = new ComputeBuffer(LayerStack[i].Slab.Count, 4);
                     WorkingBuffer[i].SetData(LayerStack[i].Slab);
@@ -612,13 +610,6 @@ namespace TrueTrace {
                     SkinnedMeshes[i].vertexBufferTarget |= GraphicsBuffer.Target.Raw;
                     VertexBuffers[i] = SkinnedMeshes[i].GetVertexBuffer();
                 }
-                if (Hips == null) Hips = SkinnedMeshes[0].rootBone;//transform;
-                if(Hips == null) return;
-                Matrix4x4 Transform2 = this.transform.localToWorldMatrix;
-                Matrix4x4 Transform3 = this.transform.worldToLocalMatrix;
-                Vector3 OverallOffset = Hips.parent.localToWorldMatrix * Hips.localPosition + this.transform.localToWorldMatrix * Hips.parent.localPosition;
-                Vector3 Scale = this.transform.lossyScale;
-                Scale = new Vector3(Scale.x * Scale.x, Scale.y * Scale.y, Scale.z * Scale.z);
                 cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "ReverseStack", StackBuffer);
                 cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "Boxs", AABBBuffer);
                 cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "CudaTriArrayIN", TriBuffer);
@@ -640,9 +631,9 @@ namespace TrueTrace {
                     var SkinnedRootBone = SkinnedMeshes[i].rootBone;
                     int IndexCount = IndexCounts[i];
 
-                    cmd.SetComputeVectorParam(MeshRefit, "Scale", new Vector3(SkinnedRootBone.parent.lossyScale.x / Scale.x, SkinnedRootBone.parent.lossyScale.y / Scale.y, SkinnedRootBone.parent.lossyScale.z / Scale.z));
-                    cmd.SetComputeMatrixParam(MeshRefit, "Transform", SkinnedRootBone.worldToLocalMatrix * Transform2);
-                    cmd.SetComputeVectorParam(MeshRefit, "Offset", Transform3 * ((SkinnedRootBone.position - Hips.position) + OverallOffset));
+                    cmd.SetComputeIntParam(MeshRefit, "Stride", VertexBuffers[i].stride / 4);
+                    cmd.SetComputeMatrixParam(MeshRefit, "Transform", transform.worldToLocalMatrix * Matrix4x4.TRS(SkinnedRootBone.position, SkinnedRootBone.rotation, Vector3.one ));
+                    cmd.SetComputeVectorParam(MeshRefit, "Offset", SkinnedRootBone.localPosition);
     
                     cmd.SetComputeIntParam(MeshRefit, "VertOffset", CurVertOffset);
                     cmd.SetComputeIntParam(MeshRefit, "gVertexCount", IndexCount);
