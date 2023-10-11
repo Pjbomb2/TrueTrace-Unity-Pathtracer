@@ -44,7 +44,9 @@ Let me know if you use this for anything, I would be excited to see any use of t
 ## Required Settings Changes:
 <ul>
   <li>Set the Color Space to Linear through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Color Space, and change from Gamma to Linear</li>
-  <li>Change the Graphics Api for Windows to DirectX12 through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Untoggle "Auto Graphics API For Windows", then click the little + that appears, select "Direct3D12(Experimental)", and drag that to the top.  A restart of the editor is required(Not technically needed but raw DX11 is experimental)</li>
+  <li>Enable Unsafe Code(Its for memory management) through Edit -> Project Settings -> Player -> Other Settings -> "Allow 'unsafe' Code" (near the bottom)</li>
+  <li>Change the Graphics Api for Windows to DirectX12 through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Untoggle "Auto Graphics API For Windows", then click the little + that appears, select "Direct3D12(Experimental)", and drag that to the top.  A restart of the editor is required</li>
+  <li>Your target camera NEEDS to be deferred</li>
 </ul>
 
 ## Controls:
@@ -74,6 +76,7 @@ Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera s
   <li>To set up PBR with the DEFAULT material, all textures go into their proper names, but Roughness goes into the Occlusion texture(This can be changed in the MaterialPairing menu)</li>
   <li>If you are using blendshapes to change geometry of a skinned mesh, you may need to go to the import settings of it(in the inspector), turn off Legacy Blendshape Normals, and make sure all normals are imported, not calculated, otherwise the normals for blendshapes might be wrong</li>
   <li>A fun thing you may want to do is go to TrueTrace -> Resources -> RenderPipelines -> RendererHandle, and uncomment the "[ImageEffectOpaque]"</li>
+  <li>If you use HDRIs, or CubeMaps for the skybox, you need to format as the texture to a cube shape in the inspector of the image, unity will convert it automatically, then put it in the slot in Scene Settings</li>
 </ul>
 
 ## Using Instancing
@@ -186,6 +189,8 @@ BVH Options Description -
 
 # Huge thanks to these people for being sponsors/patrons:
 <ul>
+  <li>MakIt3D</li>
+  <li>Christian Wauben</li>
   <li>John Draisey</li>
   <li>Andrew Varga</li>
   <li>Duong Nguyen</li>
