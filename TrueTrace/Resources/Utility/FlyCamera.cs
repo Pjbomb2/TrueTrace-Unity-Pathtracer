@@ -22,7 +22,6 @@ namespace TrueTrace {
         private float totalRun= 1.0f;
         private bool StopMovement = true;
         private bool IsPressingT = false;
-        private bool IsLocked = true;
         void Update () {
             bool PressedT = Input.GetKey(KeyCode.T);
             if(PressedT && !IsPressingT) {

@@ -204,10 +204,6 @@ namespace TrueTrace {
                     TransmittanceColor = new Vector3(TerrainTile.terrainData.terrainLayers[i].tileOffset.x / TerrainTile.terrainData.terrainLayers[i].tileSize.x, TerrainTile.terrainData.terrainLayers[i].tileOffset.y / TerrainTile.terrainData.terrainLayers[i].tileSize.y, 0),
                     MatType = 1,
                     AlbedoTextureScale = new Vector4(1,1,0,0),
-                    NormalTextureScale = new Vector4(1,1,0,0),
-                    MetallicTextureScale = new Vector4(1,1,0,0),
-                    RoughnessTextureScale = new Vector4(1,1,0,0),
-                    EmissiveTextureScale = new Vector4(1,1,0,0),
                 });
 
                 MaterialIndex[i] = i;
@@ -234,20 +230,6 @@ namespace TrueTrace {
                 }
             }
 
-            // Details = DetailedObjectInstance.ExportObjects(TerrainTile);
-            // DetailPrototype[] DetailObjects = TerrainTile.terrainData.detailPrototypes;
-            // List<GameObject> DetailSources = new List<GameObject>();
-            // foreach(DetailPrototype Detail in DetailObjects) {
-            //     if(!Instanced.transform.Find(Detail.prototype.name + "(Clone)")) {
-            //         GameObject TempObject = GameObject.Instantiate(Detail.prototype, Instanced.transform);
-            //         TempObject.AddComponent<ParentObject>();
-            //         TempObject.AddComponent<RayTracingObject>();
-            //         DetailSources.Add(TempObject);
-            //     } else {
-            //         DetailSources.Add(Instanced.transform.Find(Detail.prototype.name + "(Clone)").gameObject);
-            //     }
-            // }
-
 
 
 
@@ -264,35 +246,7 @@ namespace TrueTrace {
                     TempGameObject.transform.position = new Vector3(Tree.position.x * TerrainDim, Tree.position.y * HeightScale, Tree.position.z * TerrainDim) + this.transform.position;
 
                 }
-                // foreach (var item in Details)
-                //        {
-                //       GameObject TempGameObject = new GameObject();
-                //       TempGameObject.transform.parent = this.gameObject.transform;
-                //       TempGameObject.AddComponent<InstancedObject>();
-                //       TempGameObject.GetComponent<InstancedObject>().InstanceParent = GameObject.Find(item.Prefab.name + "(Clone)").GetComponent<ParentObject>();
-                //       TempGameObject.transform.position = item.Position;
-                //       TempGameObject.transform.localScale = item.Scale;
-                //        }
             }
-            // Debug.Log("LENGTH: " + Details.Length);
         }
-
-        // private void OnEnable() {
-        //     if(gameObject.scene.isLoaded) {
-        //         this.GetComponentInParent<AssetManager>().Terrains.Add(this);
-        //         this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
-        //     }
-        // }
-
-        // private void OnDisable() {
-        //     if(gameObject.scene.isLoaded) {
-        //         this.GetComponentInParent<AssetManager>().Terrains.Remove(this);
-        //         this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
-        //     }
-        // }
-
-
-
-
     }
 }

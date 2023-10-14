@@ -282,14 +282,14 @@ void IntersectBVHShadow(const int localid) {
         tlas_stack_size = -1;
         bool hit = false;
         #ifdef HardwareRT
-            const uint rayFlags = RAY_FLAG_FORCE_OPAQUE  ;
+            const uint rayFlags = RAY_FLAG_CULL_NON_OPAQUE;
             UnityRayQuery<rayFlags> q;
             RayDesc myRay;
             myRay.Origin = ray.origin;
             myRay.Direction = ray.direction;
             myRay.TMin = 0;
             myRay.TMax = abs(ShadowRaysBuffer[ray_index].t);
-            q.TraceRayInline(myAccelerationStructure, rayFlags, 0xff, myRay);
+            q.TraceRayInline(myAccelerationStructure, rayFlags, 0x1, myRay);
             while(q.Proceed()){}
 
             if(q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) ShadowRaysBuffer[ray_index].t = -1;

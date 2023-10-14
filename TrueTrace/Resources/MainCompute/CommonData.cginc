@@ -225,10 +225,6 @@ struct MaterialData {//56
 	float scatterDistance;
 	int IsSmoothness;
 	float4 AlbedoTexScale;
-	float4 NormalTexScale;
-	float4 MetallicTexScale;
-	float4 RoughnessTexScale;
-	float4 EmissiveTexScale;
 };
 
 StructuredBuffer<MaterialData> _Materials;
@@ -478,6 +474,18 @@ Ray CreateCameraRay(float2 uv, uint pixel_index) {
 	return CreateRay(origin, direction);
 }
 
+inline Ray CreateCameraRay(float2 uv) {
+    // Transform the camera origin to world space
+    float3 origin = mul(CamToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
+
+    // Invert the perspective projection of the view-space position
+    float3 direction = mul(CamInvProj, float4(uv, 0.0f, 1.0f)).xyz;
+    // Transform the direction from camera to world space and normalize
+    direction = mul(CamToWorld, float4(direction, 0.0f)).xyz;
+    direction = normalize(direction);
+
+    return CreateRay(origin, direction);
+}
 
 inline uint ray_get_octant_inv4(const float3 ray_direction) {
     return
@@ -624,9 +632,6 @@ float2 sample_triangle(float u1, float u2) {
 }
 
 struct LightTriData {
-	float3 pos0;
-	float3 posedge1;
-	float3 posedge2;
 	uint TriTarget;
 };
 
@@ -1667,8 +1672,11 @@ inline float3 project_SH_irradiance(SH sh, float3 N)
 }
 
 
-float3 sample_projected_triangle(float3 pt, float3 posA, float3 posB, float3 posC, float2 rnd, out float3 light_normal, out float pdfw, out float2 UVs)
+float3 sample_projected_triangle(float3 pt, TrianglePos pos, float2 rnd, out float3 light_normal, out float pdfw, out float2 UVs)
 {
+	float3 posA = pos.pos0;
+	float3 posB = posA + pos.posedge1;
+	float3 posC = posA + pos.posedge2;
 	light_normal = cross(posB - posA, posC - posA);
 	light_normal = normalize(light_normal);
 

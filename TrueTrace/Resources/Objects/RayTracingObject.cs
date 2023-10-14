@@ -26,6 +26,7 @@ namespace TrueTrace {
 		[SerializeField] public int[] Thin;
 		[SerializeField] public bool[] FollowMaterial;
 		[SerializeField] public float[] ScatterDist;
+		[SerializeField] public Material[] SharedMaterials;
 		public string[] Names;
 		[SerializeField] public float[] Specular;
 		[SerializeField] public bool[] IsSmoothness;
@@ -38,6 +39,7 @@ namespace TrueTrace {
 		[HideInInspector] public int[] LocalMaterialIndex;
 		AssetManager Assets;
 		[HideInInspector] public bool JustCreated = true;
+		[HideInInspector] public bool TilingChanged = false;
 		private bool WasDeleted = false;
 
 		public void CallMaterialOverride() {
@@ -68,7 +70,13 @@ namespace TrueTrace {
 			System.Array.Fill(FollowMaterial, false);
 		}
 
+		public void CallTilingScrolled() {
+			TilingChanged = true;
+			CallMaterialEdited();
+		}
+
 		public void matfill() {
+			TilingChanged = false;
 			WasDeleted = false;
 			this.gameObject.isStatic = false;
 			Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
@@ -82,7 +90,7 @@ namespace TrueTrace {
 		 		GetComponent<SkinnedMeshRenderer>().BakeMesh(mesh);
 				SubMeshCount = (GetComponent<SkinnedMeshRenderer>().sharedMaterials).Length;
 		 	}
-		 	Material[] SharedMaterials = (GetComponent<Renderer>() != null) ? GetComponent<Renderer>().sharedMaterials : GetComponent<SkinnedMeshRenderer>().sharedMaterials;
+		 	SharedMaterials = (GetComponent<Renderer>() != null) ? GetComponent<Renderer>().sharedMaterials : GetComponent<SkinnedMeshRenderer>().sharedMaterials;
 		 	if(mesh == null || SharedMaterials == null || SharedMaterials.Length == 0 || mesh.GetTopology(0) != MeshTopology.Triangles || mesh.vertexCount == 0) {
 		 		DestroyImmediate(this);
 		 		WasDeleted = true;

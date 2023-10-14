@@ -355,7 +355,7 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 	if (Pixel.IsSpecular == 0 || MetallicAWrite[id.xy].y >= 0.4f) {
 		AlbedoColorA[id.xy] = int2(WorldPosData[id.xy].w, AlbedoColorB[pos_prev].y);
 		STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, irradiance_to_SH(Exposure * IndirectBoost * clamp(Pixel.Indirect * ((TEX_PT_BASE_COLOR_A[id.xy].xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0))) / 1024.0f,0,12000), asfloat(WorldPosData[id.xy].xyz)));
-		TEX_PT_COLOR_HFWrite[id.xy] = packRGBE(Exposure * (Pixel.Direct + unpackRGBE(Pixel.Fog) * ((Pixel.IsSpecular != 2) ? TexBaseColor : 1)) * ((Pixel.IsSpecular == 2) ? ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0) : 1));
+		TEX_PT_COLOR_HFWrite[id.xy] = packRGBE(Exposure * (Pixel.Direct + unpackRGBE(Pixel.Fog) * ((Pixel.IsSpecular != 2) ? TexBaseColor : 1)) * TEX_PT_BASE_COLOR_A[id.xy].xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0));
 		TEX_PT_COLOR_SPECWrite[id.xy] = 0;
 	} else {
 		AlbedoColorA[id.xy] = int2(AlbedoColorB[pos_prev].x, WorldPosData[id.xy].w);
@@ -369,9 +369,6 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 	} else {
 		TEX_PT_NORMALS_AWrite[id.xy] = TEX_PT_NORMALS_B[pos_prev];
 	}
-	// DebugTex[id.xy] = float4(i_octahedral_32(TEX_PT_NORMAL_AWrite[id.xy]) * 0.5f + 0.5f, 1);
-
-
 }
 
 #pragma kernel CopyRadiance
@@ -537,7 +534,6 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 	int2 found_pos_prev = 0;
 	float2 found_prev_lum = 0;
 
-	// DebugTex[pos_grad] = 0;
 	for (int offy = 0; offy < GRAD_DWN; offy++)
 	{
 		for (int offx = 0; offx < GRAD_DWN; offx++)
@@ -545,7 +541,6 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 			int2 p = local_pos * GRAD_DWN + int2(offx, offy);
 
 			float4 reprojected_pixel = s_reprojected_pixels[p.y][p.x];
-			// DebugTex[pos_grad] = float4(max(DebugTex[pos_grad].x, reprojected_pixel.z),0,0,0);
 
 			float2 prev_lum = reprojected_pixel.zw;
 			// Use total luminance of diffuse and specular as the heuristic
@@ -634,7 +629,7 @@ inline float2 get_lf_gradient(int2 ipos)
 	// Get the current path tracer output and the temporally accumulated history.
 	// Ignore disocclusion, doesn't seem to be necessary here as there is a huge blur pass
 	// done on the LF gradient samples after.
-	float lum_curr = TEX_PT_COLOR_LF_SH[ipos].w;//clamp(TEX_PT_COLOR_LF_SH[ipos].w, ClampedMin - 0.1f, ClampedMax + 0.1f);
+	float lum_curr = TEX_PT_COLOR_LF_SH[ipos].w;
 	float lum_prev = TEX_ASVGF_HIST_COLOR_LF_SH_B[pos_prev].w;
 
 	// Return raw colors, do not divide until after the blur pass. We want to detect 
@@ -691,7 +686,6 @@ void Gradient_Img(uint3 gl_GlobalInvocationID : SV_DispatchThreadID)
 		}
 	}
 
-		// DebugTex[ipos] = float4(grad_lf, 0, 1);
 	IMG_ASVGF_GRAD_LF_PING[ipos] = grad_lf;
 
 	IMG_ASVGF_GRAD_HF_SPEC_PING[ipos] = float2(grad_hf, grad_spec);
@@ -1027,7 +1021,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 				float3 normal;
 				float lum_p_hf;
 				get_shared_data(int2(xx, yy), depth, normal, lum_p_hf, gl_LocalInvocationID);
-				// lum_p_hf += luminance(unpackRGBE(TEX_PT_COLOR_SPEC[p].x));
+				lum_p_hf += luminance(unpackRGBE(TEX_PT_COLOR_SPEC[p].x));
 				float dist_z = abs(depth_curr - depth) / abs(depth_curr);// * FDepth[ipos] * 120.0f;
 				if (dist_z < 2.0) {
 					float w_hf = pow(max(0.0, dot(normal, normal_curr)), 128.0);
@@ -1269,6 +1263,8 @@ inline void filter_image(
 
 	step_size *= clamp(step_size * (LFVarianceA[ipos_lowres] / (1.0f + (hist_len_lf / 8.0f)) + (1.0f - min(hist_len_lf / 6.0f,1))), 1.0f, step_size * 2.0f);
 	step_size *= clamp(2.0 * ((1.0f - min(hist_len_lf / 12.0f,1))), 1.0f, 2.0f);
+	step_size *= exp(-clamp(fwidth_depth * 3.0f,0, 12.0f));
+		step_size++;
 	float2 jitter = float2(step_size * 0.5f * (random(23, gl_GlobalInvocationID.xy) - 0.5));
 	float TotVariance = LFVarianceA[ipos_lowres];/// (1.0f + (hist_len_lf / 8.0f));
 
@@ -1305,7 +1301,7 @@ inline void filter_image(
 			float depth = TEX_PT_VIEW_DEPTH_A[p_hires].x;
 
 			float dist_z = abs(depth_center - depth);// * fwidth_depth;
-			w *= exp(-dist_z);
+			w *= exp(-dist_z / step_size);
 			w *= wavelet_kernel[abs(xx)][abs(yy)];
 			// w *= (2.0f - (1 + LFVarianceA[p_lowres]));
 
@@ -1470,7 +1466,7 @@ inline void filter_image(
 		return;
 	}
 
-	float3 normal_center = i_octahedral_32(TEX_PT_NORMALS_A[ipos].x);
+	float3 normal_center = i_octahedral_32(TEX_PT_NORMALS_A[ipos].y);
 	float depth_center = TEX_PT_VIEW_DEPTH_A[ipos].x;
 	// float fwidth_depth = FDepth[ipos];
 	float roughness_center = MetallicA[ipos].y;
@@ -1501,7 +1497,7 @@ inline void filter_image(
 	// reduce the HF filter sensitivity to normals when the lighting is invalidated
 	float normal_weight_scale = clamp(hist_len_hf / 8, 0, 1);
 
-	float normal_weight_hf = 64;
+	float normal_weight_hf = 12;
 	normal_weight_hf *= normal_weight_scale;
 	float normal_weight_spec = RoughnessSquareToSpecPower(square(roughness_center));
 	normal_weight_spec = clamp(normal_weight_spec, 8, 1024);
@@ -1548,7 +1544,7 @@ inline void filter_image(
 				&& all((p < int2(screen_width, screen_height))));
 			if(w == 0) continue;
 
-			float3 normal = i_octahedral_32(TEX_PT_NORMALS_A[p].x);
+			float3 normal = i_octahedral_32(TEX_PT_NORMALS_A[p].y);
 
 			float depth = TEX_PT_VIEW_DEPTH_A[p].x;
 			float roughness = MetallicA[p].y;
@@ -1675,19 +1671,6 @@ bool DiffRes;
 float3 composite_color(float4 surf_base_color,
 	float3 projected_lf, float3 high_freq, float3 specular, float3 SpecColor, int2 ipos)
 {
-	projected_lf *= 1.0f;
-	high_freq *= 1;
-	specular *= 1;
-	float3 GBufferCol = 1;
-	// if(DiffRes) {
-	// 	#ifdef HDRP
-	//     	float3 SpecularAlbedo = 0;//Albedo2[int3(ipos,0)].xyz;
-	// 		GBufferCol = 1;//((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, float3(ipos / float2(screen_width, screen_height), 0), 0).xyz + SpecularAlbedo) == 0) ? 1 : (DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, float3(ipos / float2(screen_width, screen_height), 0), 0).xyz + SpecularAlbedo);
-	// 	#else
-	// 		float3 SpecularAlbedo = 1;//SpecularGBuffer.SampleLevel(my_linear_clamp_sampler, ipos / float2(screen_width, screen_height), 0);
-	// 		GBufferCol = 1;//((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, ipos / float2(screen_width, screen_height), 0).xyz + SpecularAlbedo) == 0) ? 1 : ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, ipos / float2(screen_width, screen_height), 0).xyz + SpecularAlbedo));
-	// 	#endif
-	// }
 	float Exposure = 1;
 	if(UseExposure) Exposure = ExposureBuffer[0];
 	float3 final_color = ((surf_base_color.w == 0) ? pow(surf_base_color, 1.0f) : ((projected_lf.rgb + high_freq.rgb) * surf_base_color / Exposure + specular * SpecColor / Exposure));

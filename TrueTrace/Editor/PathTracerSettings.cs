@@ -73,7 +73,6 @@ namespace TrueTrace {
          [SerializeField] public float MinSpatialSize = 10;
          [SerializeField] public float ReCurBlurRadius = 30;
          [SerializeField] public int RISCount = 5;
-         private bool IsInMainField = false;
          void OnEnable() {
             EditorSceneManager.activeSceneChangedInEditMode += EvaluateScene;
             if(EditorPrefs.GetString("EditModeFunctions", JsonUtility.ToJson(this, false)) != null) {
@@ -560,7 +559,6 @@ Toolbar toolbar;
          rootVisualElement.Remove(RearrangeElement); 
          rootVisualElement.Add(MainSource); 
          Assets.UpdateMaterialDefinition();
-         IsInMainField = true;
       }
 
       VisualElement HardSettingsMenu;
@@ -790,14 +788,9 @@ Toolbar toolbar;
 
       void AddHardSettingsToMenu() {
          definesList = GetDefines();
-
          Toggle HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
          HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("HardwareRT"); else RemoveDefine("HardwareRT"); SetDefines();});
-
-
          HardSettingsMenu.Add(HardwareRTToggle);
-
-
       }
 
       public struct CustomGBufferData {
@@ -838,7 +831,6 @@ Toolbar toolbar;
             toolbar = new Toolbar();
             rootVisualElement.Add(toolbar);
             if(Assets == null) {
-               IsInMainField = false;
                RearrangeElement = new VisualElement();
                Button RearrangeButton = new Button(() => {UnityEditor.PopupWindow.Show(new Rect(0,0,10,10), new PopupWarningWindow());}) {text="Arrange Hierarchy"};
                RearrangeElement.Add(RearrangeButton);
@@ -1215,7 +1207,7 @@ Toolbar toolbar;
            Box EnclosingBox = new Box();
                try {
                   EnclosingBox.style.position = Position.Absolute;
-               } catch(System.Exception e) {}
+               } finally {}
                EnclosingBox.style.top = 70;
                EnclosingBox.style.width = 110;
                EnclosingBox.style.height = 55;

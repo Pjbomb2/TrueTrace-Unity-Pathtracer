@@ -705,7 +705,7 @@ static bool SampleDisneyClearcoat(const MaterialData hitDat, const float3 v,
     float f = lerp(0.04f, 1.0f, FH);//Schlick(0.04f, (dotLH));
     float g = SeparableSmithGGXG1(wi, 0.25f) * SeparableSmithGGXG1(wo, 0.25f);
 
-    float fPdf = d / (4.0f * dot(wo, wm));
+    float fPdf = d / (4.0f * abs(dot(wo, wm)));
 
     sample.reflectance = (0.25f * clearcoatWeight * g * f * d) / fPdf;
     sample.wi = normalize(ToWorld(TruTan, wi));
@@ -821,7 +821,7 @@ inline float ReconstructDisneyClearcoat(float clearcoat, float alpha, const floa
     float Gr = SeparableSmithGGXG1(wi, 0.25f) * SeparableSmithGGXG1(wo, 0.25f);
     fPdfW = Dr / (4.0f * abs(dot(wo, wm)));
     success = fPdfW > 0.1f;
-    return 0.25f * clearcoat * Fr * Gr * Dr;
+    return 0.25f * clearcoat * Fr * Gr * Dr * PI;
 }
 
 
@@ -956,7 +956,7 @@ bool SampleDisney(MaterialData hitDat, float3 v, bool thin, inout BsdfSample sam
     bool CachedSuccess = false;
     if(pSpecular > 0) {
         success = SampleDisneyBRDF(hitDat, v, sample, TruTanMat, pixel_index);
-        Reflection += sample.reflectance * pSpecular;
+        Reflection += sample.reflectance;
         PDF +=  sample.forwardPdfW * pSpecular;
         if (p <= pSpecular) {
             CachedSample = sample;
@@ -968,7 +968,7 @@ bool SampleDisney(MaterialData hitDat, float3 v, bool thin, inout BsdfSample sam
     hitDat.surfaceColor *= PI;
     if(pClearcoat > 0) {
         success = SampleDisneyClearcoat(hitDat, v, sample, TruTanMat, pixel_index);
-        Reflection += sample.reflectance * pClearcoat;
+        Reflection += sample.reflectance;
         PDF +=  sample.forwardPdfW * pClearcoat;
         if (p > pSpecular && p <= (pSpecular + pClearcoat)) {
             CachedSample = sample;
@@ -979,7 +979,7 @@ bool SampleDisney(MaterialData hitDat, float3 v, bool thin, inout BsdfSample sam
     }
     if(pDiffuse > 0) {
         success = SampleDisneyDiffuse(hitDat, v, thin, sample, TruTanMat, Refracted, pixel_index);
-        Reflection += sample.reflectance * pDiffuse;
+        Reflection += sample.reflectance;
         PDF +=  sample.forwardPdfW * pDiffuse;
         if (p > pSpecular + pClearcoat && p <= (pSpecular + pClearcoat + pDiffuse)) {
             CachedSample = sample;
@@ -1045,7 +1045,7 @@ float3 ReconstructDisney(MaterialData hitDat, float3 V, float3 L, bool thin,
         float forwardMetallicPdfW;
         float3 specular = ReconstructDisneyBRDF(hitDat, wo, wm, wi, forwardMetallicPdfW, TempSuccess);
         if(TempSuccess) {
-            reflectance += pBRDF * specular;
+            reflectance += specular;
             forwardPdf += pBRDF * forwardMetallicPdfW;
             Success = Success || true;
         }
@@ -1056,7 +1056,7 @@ float3 ReconstructDisney(MaterialData hitDat, float3 V, float3 L, bool thin,
         float clearcoat = ReconstructDisneyClearcoat(hitDat.clearcoat, hitDat.clearcoatGloss, wo, wm, wi,
             forwardClearcoatPdfW, TempSuccess);
         if(TempSuccess) {
-            reflectance += pClearcoat * clearcoat / (forwardClearcoatPdfW);
+            reflectance += clearcoat;// / (forwardClearcoatPdfW);
             forwardPdf += pClearcoat * forwardClearcoatPdfW;
             Success = Success || true;
         }
@@ -1067,7 +1067,7 @@ float3 ReconstructDisney(MaterialData hitDat, float3 V, float3 L, bool thin,
 
         float3 sheen = EvaluateSheen(hitDat, wo, wm, wi);
         if(pDiffuse * forwardDiffusePdfW > 0) {
-            reflectance += pDiffuse * (diffuse * hitDat.surfaceColor + sheen);    
+            reflectance += (diffuse * hitDat.surfaceColor + sheen);    
             forwardPdf += pDiffuse * forwardDiffusePdfW;
             Success = Success || true;
         }

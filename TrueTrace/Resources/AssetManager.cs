@@ -40,7 +40,7 @@ namespace TrueTrace {
         [HideInInspector] public RenderTexture VideoTexture;
 
         [HideInInspector] public List<RayTracingObject> MaterialsChanged;
-        public List<MaterialData> _Materials;
+        [HideInInspector] public List<MaterialData> _Materials;
         [HideInInspector] public ComputeBuffer BVH8AggregatedBuffer;
         [HideInInspector] public ComputeBuffer AggTriBuffer;
         [HideInInspector] public List<MyMeshDataCompacted> MyMeshesCompacted;
@@ -195,13 +195,13 @@ namespace TrueTrace {
             }
         }
 
-        private void ConstructAtlas(List<Texture2D> Texs, ref RenderTexture Atlas, out Rect[] Rects, int DesiredRes, bool IsNormalMap, int ReadIndex = -1, List<int> TexChannelIndex = null) {
+        private void ConstructAtlas(List<Texture2D> Texs, ref RenderTexture Atlas, out Rect[] Rects, int DesiredRes, bool IsNormalMap, bool IsAlbedo = false, int ReadIndex = -1, List<int> TexChannelIndex = null) {
             if(Texs.Count == 0) {
                 Rects = new Rect[0];
                 if(TexChannelIndex != null || IsNormalMap) {
                     if(IsNormalMap) CreateRenderTexture(ref Atlas, 1, 1, RenderTextureFormat.RG16, true);
                     else CreateRenderTexture(ref Atlas, 1, 1, RenderTextureFormat.R8, true);
-                } else CreateRenderTexture(ref Atlas, 1, 1, RenderTextureFormat.ARGB32, false);
+                } else CreateRenderTexture(ref Atlas, IsAlbedo ? DesiredRes : 1, IsAlbedo ? DesiredRes : 1, RenderTextureFormat.ARGB32, false);
                 return;
             }
             PackingRectangle[] rectangles = new PackingRectangle[Texs.Count];
@@ -371,7 +371,7 @@ namespace TrueTrace {
             if(RoughnessAtlas != null) RoughnessAtlas?.Release();
             if(MetallicAtlas != null) MetallicAtlas?.Release();
             if(EmissiveAtlas != null) EmissiveAtlas?.Release();
-            ConstructAtlas(AlbedoTexs, ref TempTex, out AlbedoRects, DesiredRes, false);
+            ConstructAtlas(AlbedoTexs, ref TempTex, out AlbedoRects, DesiredRes, false, true);
             int tempWidth = (TempTex.width + 3) / 4;
             int tempHeight = (TempTex.height + 3) / 4;
             var desc = new RenderTextureDescriptor
@@ -386,7 +386,7 @@ namespace TrueTrace {
             desc.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R32G32B32A32_SInt;
 
             s_Prop_EncodeBCn_Temp = new RenderTexture(desc);
-            ConstructAtlas(AlbedoTexs, ref AlphaAtlas, out AlbedoRects, AlbedoAtlas.width, false, 3, null);
+            ConstructAtlas(AlbedoTexs, ref AlphaAtlas, out AlbedoRects, AlbedoAtlas.width, false, false, 3, null);
             CopyShader.SetTexture(4, "_Source", TempTex);
             CopyShader.SetTexture(4, "Alpha", AlphaAtlas);
             CopyShader.SetTexture(4, "_Target", s_Prop_EncodeBCn_Temp);
@@ -395,10 +395,10 @@ namespace TrueTrace {
             TempTex.Release();
             s_Prop_EncodeBCn_Temp.Release();
             AlphaAtlas.Release();
-            ConstructAtlas(NormalTexs, ref NormalAtlas, out NormalRects, DesiredRes, true);
-            ConstructAtlas(EmissiveTexs, ref EmissiveAtlas, out EmissiveRects, DesiredRes, false);
-            ConstructAtlas(MetallicTexs, ref MetallicAtlas, out MetallicRects, AlbedoAtlas.width, false, 0, MetallicTexChannelIndex);
-            ConstructAtlas(RoughnessTexs, ref RoughnessAtlas, out RoughnessRects, AlbedoAtlas.width, false, 0, RoughnessTexChannelIndex);
+            ConstructAtlas(NormalTexs, ref NormalAtlas, out NormalRects, DesiredRes, true, false);
+            ConstructAtlas(EmissiveTexs, ref EmissiveAtlas, out EmissiveRects, DesiredRes, false, false);
+            ConstructAtlas(MetallicTexs, ref MetallicAtlas, out MetallicRects, AlbedoAtlas.width, false, false, 0, MetallicTexChannelIndex);
+            ConstructAtlas(RoughnessTexs, ref RoughnessAtlas, out RoughnessRects, AlbedoAtlas.width, false, false, 0, RoughnessTexChannelIndex);
             AlbedoAtlasSize = AlbedoAtlas.width;
 
             MetallicAtlas.GenerateMips();
@@ -486,6 +486,7 @@ namespace TrueTrace {
             if (BoxesBuffer != null) BoxesBuffer.Release();
             if (TerrainBuffer != null) TerrainBuffer.Release();
             if(TLASCWBVHIndexes != null) TLASCWBVHIndexes.Release();
+            if(TerrainBuffer != null) TerrainBuffer.Release();
         }
 
         void OnDisable() {
@@ -558,7 +559,7 @@ namespace TrueTrace {
                 AccelStruct = new UnityEngine.Rendering.RayTracingAccelerationStructure();
             #endif
             if(AlbedoAtlas == null || AlbedoAtlas.width != DesiredRes) AlbedoAtlas = new Texture2D(DesiredRes,DesiredRes, TextureFormat.DXT5, false);
-            AlbedoAtlas.Apply(false, true);
+            // AlbedoAtlas.Apply(false, true);
             UpdateMaterialDefinition();
             UnityEngine.Video.VideoPlayer[] VideoObjects = GameObject.FindObjectsOfType<UnityEngine.Video.VideoPlayer>();
             if (VideoTexture != null) VideoTexture.Release();
@@ -796,8 +797,6 @@ namespace TrueTrace {
             InstanceAddQue = new List<InstancedObject>(GetComponentsInChildren<InstancedObject>());
             InstanceData.BuildCombined();
             RunningTasks = 0;
-            int TotLength = 0;
-            int MeshOffset = 0;
             for (int i = 0; i < TempQue.Count; i++)
             {
                 if (TempQue[i].HasCompleted && !TempQue[i].NeedsToUpdate) {
@@ -968,10 +967,12 @@ namespace TrueTrace {
 
                             cmd.SetComputeIntParam(RenderQue[i].MeshRefit, "TriBuffOffset", RenderQue[i].TriOffset);
                             RenderQue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBuffer, cmd);
-                            TempMesh2 = MyMeshesCompacted[i];
-                            TempMesh2.Transform = RenderTransforms[i].worldToLocalMatrix;
-                            MyMeshesCompacted[i] = TempMesh2;
-                            MeshAABBs[i] = RenderQue[i].aabb;
+                            if(i < MyMeshesCompacted.Count) {
+                                TempMesh2 = MyMeshesCompacted[i];
+                                TempMesh2.Transform = RenderTransforms[i].worldToLocalMatrix;
+                                MyMeshesCompacted[i] = TempMesh2;
+                                MeshAABBs[i] = RenderQue[i].aabb;
+                            }
                         }
                     }
                 }
@@ -1094,9 +1095,9 @@ namespace TrueTrace {
                         }
                         RayTracingSubMeshFlags[] B = new RayTracingSubMeshFlags[mesh.subMeshCount];
                         for(int i2 = 0; i2 < B.Length; i2++) {
-                            B[i2] = RayTracingSubMeshFlags.Enabled;
+                            B[i2] = RayTracingSubMeshFlags.Enabled | RayTracingSubMeshFlags.ClosestHitOnly;
                         }
-                        AccelStruct.AddInstance(A, B, true, false, 0xff, (uint)MeshOffset);
+                        AccelStruct.AddInstance(A, B, true, false, (uint)((A.gameObject.GetComponent<RayTracingObject>().SpecTrans[0] == 1) ? 0x2 : 0x1), (uint)MeshOffset);
                         MeshOffset++;
                     }
                 }
@@ -1145,7 +1146,6 @@ namespace TrueTrace {
                     LayerStack[IsLeafList[i].y] = TempLayer;
                 }
                 CommonFunctions.ConvertToSplitNodes(TLASBVH8, ref SplitNodes);
-                int MaxLength = 0;
                 List<Layer2> TempStack = new List<Layer2>();
                 for (int i = 0; i < LayerStack.Length; i++) if(LayerStack[i].Slab.Count != 0) TempStack.Add(LayerStack[i]);
                 MaxRecur = TempStack.Count;
@@ -1224,7 +1224,6 @@ namespace TrueTrace {
                     LayerStack[IsLeafList[i].y] = TempLayer;
                 }
                 CommonFunctions.ConvertToSplitNodes(TLASBVH8, ref SplitNodes);
-                int MaxLength = 0;
                 List<Layer2> TempStack = new List<Layer2>();
                 for (int i = 0; i < LayerStack.Length; i++) if(LayerStack[i].Slab.Count != 0) TempStack.Add(LayerStack[i]);
 
@@ -1319,8 +1318,7 @@ namespace TrueTrace {
                 cmd.SetComputeBufferParam(Refitter, NodeCompress, "BVHNodes", BVHDataBuffer);
                 try {
                     cmd.SetComputeBufferParam(Refitter, NodeCompress, "AggNodes", BVH8AggregatedBuffer);
-                } catch(System.Exception E) {
-                }
+                } finally {}
                 cmd.DispatchCompute(Refitter, NodeCompress, (int)Mathf.Ceil(NodeBuffer.count / (float)256), 1, 1);
                 // cmd.EndSample("TLAS Refit Node Compress");
 
@@ -1336,7 +1334,7 @@ namespace TrueTrace {
             bool LightsHaveUpdated = false;
             AccumulateData(cmd);
 
-                UnityEngine.Profiling.Profiler.BeginSample("Lights Update");
+                // UnityEngine.Profiling.Profiler.BeginSample("Lights Update");
             if (!didstart || PrevLightCount != RayTracingMaster._rayTracingLights.Count || UnityLights.Count == 0)
             {
                 UnityLights.Clear();
@@ -1353,7 +1351,6 @@ namespace TrueTrace {
                 PrevLightCount = RayTracingMaster._rayTracingLights.Count;
             } else {
                 int LightCount = RayTracingMaster._rayTracingLights.Count;
-                LightData UnityLight;
                 RayTracingLights RayLight;
                 for (int i = 0; i < LightCount; i++) {
                     RayLight = RayTracingMaster._rayTracingLights[i];
@@ -1552,9 +1549,23 @@ namespace TrueTrace {
                     TempMat.Specular = CurrentMaterial.Specular[Index];
                     TempMat.scatterDistance = CurrentMaterial.ScatterDist[Index];
                     TempMat.IsSmoothness = CurrentMaterial.IsSmoothness[Index] ? 1 : 0;
+                    if(CurrentMaterial.TilingChanged) {
+                        string MatTile = AssetManager.data.Material[AssetManager.ShaderNames.IndexOf(CurrentMaterial.SharedMaterials[Index].shader.name)].BaseColorTex;
+                        TempMat.AlbedoTextureScale = new Vector4(CurrentMaterial.SharedMaterials[Index].GetTextureScale(MatTile).x, CurrentMaterial.SharedMaterials[Index].GetTextureScale(MatTile).y, CurrentMaterial.SharedMaterials[Index].GetTextureOffset(MatTile).x, CurrentMaterial.SharedMaterials[Index].GetTextureOffset(MatTile).y);
+                    }
                     _Materials[CurrentMaterial.MaterialIndex[i3]] = TempMat;
+                    #if HardwareRT
+                        if(CurrentMaterial.gameObject.GetComponent<Renderer>() != null) {
+                            if(TempMat.specTrans == 1) AccelStruct.UpdateInstanceMask(CurrentMaterial.gameObject.GetComponent<Renderer>(), 0x2);
+                            else AccelStruct.UpdateInstanceMask(CurrentMaterial.gameObject.GetComponent<Renderer>(), 0x1);
+                        } else {
+                            if(TempMat.specTrans == 1) AccelStruct.UpdateInstanceMask(CurrentMaterial.gameObject.GetComponent<SkinnedMeshRenderer>(), 0x2);
+                            else AccelStruct.UpdateInstanceMask(CurrentMaterial.gameObject.GetComponent<SkinnedMeshRenderer>(), 0x1);
+                        }
+                    #endif
                     HasChangedMaterials = true;
                 }
+                CurrentMaterial.TilingChanged = false;
                 CurrentMaterial.NeedsToUpdate = false;
             }
             MaterialsChanged.Clear();

@@ -267,7 +267,7 @@ namespace TrueTrace {
         }
 
 
-        public void Do(ref ComputeBuffer _ColorBuffer, ref RenderTexture Albedo, ref RenderTexture Output, bool DiffRes, RenderTexture TEX_PT_VIEW_DEPTH_B, RenderTexture ScreenSpaceInfo, CommandBuffer cmd, RenderTexture CorrectedDepthTex, int CurFrame, ref RenderTexture WorldPosData, int PartialRenderingFactor, ComputeBuffer ExposureModifier, bool DoExposure, float IndirectBoost)
+        public void Do(ref ComputeBuffer _ColorBuffer, ref RenderTexture Albedo, ref RenderTexture Output, bool DiffRes, RenderTexture TEX_PT_VIEW_DEPTH_B, RenderTexture ScreenSpaceInfo, CommandBuffer cmd, RenderTexture CorrectedDepthTex, int CurFrame, ref RenderTexture WorldPosData, int PartialRenderingFactor, ComputeBuffer ExposureModifier, bool DoExposure, float IndirectBoost, RenderTexture RNGTex)
         {
 
             bool EvenFrame = CurFrame % 2 == 0;
@@ -287,6 +287,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_COLOR_LF_COCGWrite", PT_LF2);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_COLOR_HFWrite", TEX_PT_COLOR_HF);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_COLOR_SPECWrite", TEX_PT_COLOR_SPEC);
+            cmd.SetComputeTextureParam(shader, CopyData, "RNGTexB", RNGTex);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_NORMALS_AWrite", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_NORMALS_B", (!EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
             shader.SetTextureFromGlobal(CopyData, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
@@ -384,6 +385,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_PT_NORMALS_A", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
             cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_PT_VIEW_DEPTH_A", CorrectedDepthTex);
             shader.SetTextureFromGlobal(Atrous_LF, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
+            cmd.SetComputeTextureParam(shader, Atrous_LF, "FDepth", FDepth);
 
 
             cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_ASVGF_ATROUS_PING_LF_SH", ASVGF_ATROUS_PING_LF_SH);

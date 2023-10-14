@@ -85,21 +85,13 @@ void Construct(uint3 id : SV_DispatchThreadID)
 
 	id.x = CWBVHIndices[VertOffset + id.x];
 
-	// p = mul(Transform2, float4(p,1));
-	// p2 = mul(Transform2, float4(p2,1));
-	// p3 = mul(Transform2, float4(p3,1));
+	p = mul(Transform, float4(p,1)).xyz;
+	p2 = mul(Transform, float4(p2,1)).xyz;
+	p3 = mul(Transform, float4(p3,1)).xyz;
 
-	p = mul(Transform, float4(p,1));
-	p2 = mul(Transform, float4(p2,1));
-	p3 = mul(Transform, float4(p3,1));
-
-	// n1 = mul(Transform2, float4(n1,1));
-	// n2 = mul(Transform2, float4(n2,1));
-	// n3 = mul(Transform2, float4(n3,1));
-
-	n1 = mul(Transform, float4(n1,1));
-	n2 = mul(Transform, float4(n2,1));
-	n3 = mul(Transform, float4(n3,1));
+	n1 = mul(Transform, float4(n1,1)).xyz;
+	n2 = mul(Transform, float4(n2,1)).xyz;
+	n3 = mul(Transform, float4(n3,1)).xyz;
 
 	float3 BBMax = max(max(p, p2), p3);
 	float3 BBMin = min(min(p, p2), p3);
@@ -164,9 +156,9 @@ void RefitLayer(uint3 id : SV_DispatchThreadID)
 	const Layer CurrentLayer = ReverseStack[id.x];
 	int2 Stack[8];
 	int stack_count = 0;
-
+	int i;
 	[unroll]
-	for (int i = 0; i < 8; i++) {
+	for (i = 0; i < 8; i++) {
 		const int Leaf = CurrentLayer.Leaf[i];
 		if(Leaf < 0) continue;
 		[branch] if (Leaf == 0) {
@@ -177,7 +169,7 @@ void RefitLayer(uint3 id : SV_DispatchThreadID)
 		}
 	}
 
-	for(int i = 0; i < stack_count; i++) {
+	for(i = 0; i < stack_count; i++) {
 		for (int i4 = Stack[i].x; i4 < Stack[i].y; i4++) {
 			RunningMax = max(RunningMax, Boxs[i4].BBMax);
 			RunningMin = min(RunningMin, Boxs[i4].BBMin);
@@ -203,8 +195,9 @@ void RefitBVHLayer(uint3 id : SV_DispatchThreadID)
 	const Layer CurrentLayer = ReverseStack[id.x];
 	int2 Stack[8];
 	int stack_count = 0;
+	int i;
 	[unroll]
-	for (int i = 0; i < 8; i++) {
+	for (i = 0; i < 8; i++) {
 		const int Leaf = CurrentLayer.Leaf[i];
 		if(Leaf < 0) continue;
 		[branch] if (Leaf == 0) {
@@ -214,7 +207,7 @@ void RefitBVHLayer(uint3 id : SV_DispatchThreadID)
 			Stack[stack_count++] = int2(Leaf - 1, CurrentLayer.Children[i] + Leaf - 1);
 		}
 	}
-	for(int i = 0; i < stack_count; i++) {
+	for(i = 0; i < stack_count; i++) {
 		for (int i4 = Stack[i].x; i4 < Stack[i].y; i4++) {
 			RunningMax = max(RunningMax, Boxs[TLASCWBVHIndices[i4]].BBMax);
 			RunningMin = min(RunningMin, Boxs[TLASCWBVHIndices[i4]].BBMin);

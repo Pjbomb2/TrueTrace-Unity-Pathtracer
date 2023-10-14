@@ -84,10 +84,6 @@ namespace CommonVars
         public float scatterDistance;
         public int IsSmoothness;
         public Vector4 AlbedoTextureScale;
-        public Vector4 NormalTextureScale;
-        public Vector4 MetallicTextureScale;
-        public Vector4 RoughnessTextureScale;
-        public Vector4 EmissiveTextureScale;
     }
 
     [System.Serializable]
@@ -211,9 +207,6 @@ namespace CommonVars
     [System.Serializable]
     public struct LightTriData
     {
-        public Vector3 pos0;
-        public Vector3 posedge1;
-        public Vector3 posedge2;
         public uint TriTarget;
     }
 

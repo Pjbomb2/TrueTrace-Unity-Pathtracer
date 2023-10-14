@@ -263,6 +263,7 @@ namespace TrueTrace {
             MetallicTexChannelIndex = new List<int>();
             int CurMatIndex = 0;
             Mesh mesh;
+            Vector4 Throwaway = Vector3.zero;
             foreach (RayTracingObject obj in ChildObjects) {
                 List<Material> DoneMats = new List<Material>();
                 if (obj.GetComponent<MeshFilter>() != null) mesh = obj.GetComponent<MeshFilter>().sharedMesh;
@@ -307,10 +308,10 @@ namespace TrueTrace {
                     if(RelevantMat.IsCutout || (RelevantMat.Name.Equals("Standard") && SharedMaterials[i].GetFloat("_Mode") == 1)) obj.MaterialOptions[i] = RayTracingObject.Options.Cutout;
 
                     int Result = TextureParse(ref CurMat.AlbedoTextureScale, TempObj, SharedMaterials[i], RelevantMat.BaseColorTex, ref AlbedoTexs, ref AlbedoIndexes);
-                    if(!RelevantMat.NormalTex.Equals("null")) {Result = TextureParse(ref CurMat.NormalTextureScale, TempObj, SharedMaterials[i], RelevantMat.NormalTex, ref NormalTexs, ref NormalIndexes);}
-                    if(!RelevantMat.EmissionTex.Equals("null")) {Result = TextureParse(ref CurMat.EmissiveTextureScale, TempObj, SharedMaterials[i], RelevantMat.EmissionTex, ref EmissionTexs, ref EmissionIndexes); if(Result != 2 && JustCreated) obj.emmission[i] = 12.0f;}
-                    if(!RelevantMat.MetallicTex.Equals("null")) {Result = TextureParse(ref CurMat.MetallicTextureScale, TempObj, SharedMaterials[i], RelevantMat.MetallicTex, ref MetallicTexs, ref MetallicIndexes); if(Result == 1) MetallicTexChannelIndex.Add(RelevantMat.MetallicTexChannel);}
-                    if(!RelevantMat.RoughnessTex.Equals("null")) {Result = TextureParse(ref CurMat.RoughnessTextureScale, TempObj, SharedMaterials[i], RelevantMat.RoughnessTex, ref RoughnessTexs, ref RoughnessIndexes); if(Result == 1) RoughnessTexChannelIndex.Add(RelevantMat.RoughnessTexChannel);}
+                    if(!RelevantMat.NormalTex.Equals("null")) {Result = TextureParse(ref Throwaway, TempObj, SharedMaterials[i], RelevantMat.NormalTex, ref NormalTexs, ref NormalIndexes);}
+                    if(!RelevantMat.EmissionTex.Equals("null")) {Result = TextureParse(ref Throwaway, TempObj, SharedMaterials[i], RelevantMat.EmissionTex, ref EmissionTexs, ref EmissionIndexes); if(Result != 2 && JustCreated) obj.emmission[i] = 12.0f;}
+                    if(!RelevantMat.MetallicTex.Equals("null")) {Result = TextureParse(ref Throwaway, TempObj, SharedMaterials[i], RelevantMat.MetallicTex, ref MetallicTexs, ref MetallicIndexes); if(Result == 1) MetallicTexChannelIndex.Add(RelevantMat.MetallicTexChannel);}
+                    if(!RelevantMat.RoughnessTex.Equals("null")) {Result = TextureParse(ref Throwaway, TempObj, SharedMaterials[i], RelevantMat.RoughnessTex, ref RoughnessTexs, ref RoughnessIndexes); if(Result == 1) RoughnessTexChannelIndex.Add(RelevantMat.RoughnessTexChannel);}
 
                     CurMat.BaseColor = obj.BaseColor[i];
                     CurMat.emmissive = obj.emmission[i];
@@ -344,7 +345,6 @@ namespace TrueTrace {
             ChildObjectTransforms = new List<Transform>();
             ChildObjectTransforms.Add(this.transform);
             IsSkinnedGroup = this.gameObject.GetComponent<SkinnedMeshRenderer>() != null;
-            bool IsChildOfSelf = false;
             for (int i = 0; i < this.transform.childCount; i++) if (this.transform.GetChild(i).gameObject.GetComponent<SkinnedMeshRenderer>() != null && this.transform.GetChild(i).gameObject.GetComponent<ParentObject>() == null && this.transform.GetChild(i).gameObject.activeInHierarchy) { IsSkinnedGroup = true; break; }
             if(IsSkinnedGroup) {
                 var Temp = this.GetComponentsInChildren<SkinnedMeshRenderer>();
@@ -483,9 +483,6 @@ namespace TrueTrace {
 
         NodePair[CurrentNode] = CurrentPair;
     }
-    private float GetArea(LightTriData Tri) {
-        return AreaOfTriangle(Tri.pos0, Tri.pos0 + Tri.posedge1, Tri.pos0 + Tri.posedge2);
-    }
 
         unsafe public void Construct()
         {
@@ -550,7 +547,6 @@ namespace TrueTrace {
                 LT.TriTarget = (uint)CWBVHIndicesBufferInverted[LT.TriTarget];
                 LightTriangles[i] = LT;
             }
-            LightTriangles.Sort((s1, s2) => GetArea(s1).CompareTo(GetArea(s2)));
 
         }
         
@@ -705,7 +701,6 @@ namespace TrueTrace {
 
         public async Task BuildTotal() {
             int IllumTriCount = 0;
-            float TotalEnergy = 0.0f;
             CudaTriangle TempTri = new CudaTriangle();
             Matrix4x4 ParentMatInv = CachedTransforms[0].WTL;
             Matrix4x4 ParentMat = CachedTransforms[0].WTL.inverse;
@@ -775,9 +770,6 @@ namespace TrueTrace {
                         TotEnergy += area;
 
                         LightTriangles.Add(new LightTriData() {
-                            pos0 = V1,
-                            posedge1 = V2 - V1,
-                            posedge2 = V3 - V1,
                             TriTarget = (uint)(i3 / 3)
                             });
                         IllumTriCount++;

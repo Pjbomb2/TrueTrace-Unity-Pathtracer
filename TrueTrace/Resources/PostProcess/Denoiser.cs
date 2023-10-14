@@ -202,7 +202,7 @@ namespace TrueTrace {
             for(int i = 0; i < BloomSamples.Length; i++) {
                 BloomSamples[i].Release();
             }
-            if(ExposureBuffer != null) ExposureBuffer?.Dispose();
+            if(ExposureBuffer != null) ExposureBuffer?.Release();
         }
 
         public Denoiser(int SourceWidth, int SourceHeight)
@@ -245,7 +245,7 @@ namespace TrueTrace {
             AutoExposeFinalizeKernel = AutoExpose.FindKernel("AutoExposeFinalize");
             List<float> TestBuffer = new List<float>();
             TestBuffer.Add(1);
-            ExposureBuffer?.Dispose(); ExposureBuffer = new ComputeBuffer(1, sizeof(float)); ExposureBuffer.SetData(TestBuffer);
+            ExposureBuffer?.Release(); ExposureBuffer = new ComputeBuffer(1, sizeof(float)); ExposureBuffer.SetData(TestBuffer);
             SVGF.SetInt("screen_width", SourceWidth);
             SVGF.SetInt("screen_height", SourceHeight);
             SVGF.SetInt("TargetWidth", Screen.width);
@@ -286,7 +286,7 @@ namespace TrueTrace {
 
             List<float> TestBuffer = new List<float>();
             TestBuffer.Add(1);
-            ExposureBuffer?.Dispose(); ExposureBuffer = new ComputeBuffer(1, sizeof(float)); ExposureBuffer.SetData(TestBuffer);
+            ExposureBuffer?.Release(); ExposureBuffer = new ComputeBuffer(1, sizeof(float)); ExposureBuffer.SetData(TestBuffer);
             SVGF.SetInt("screen_width", SourceWidth);
             SVGF.SetInt("screen_height", SourceHeight);
             SVGF.SetInt("TargetWidth", Screen.width);
