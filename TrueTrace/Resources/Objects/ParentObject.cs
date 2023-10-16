@@ -231,7 +231,7 @@ namespace TrueTrace {
 
         private int TextureParse(ref Vector4 RefMat, RayObjectTextureIndex TexIndex, Material Mat, string TexName, ref List<Texture> Texs, ref List<RayObjects> Indexes) {
             if (Mat.HasProperty(TexName) && Mat.GetTexture(TexName) as Texture2D != null) {
-                RefMat = new Vector4(Mat.GetTextureScale(TexName).x, Mat.GetTextureScale(TexName).y, Mat.GetTextureOffset(TexName).x, Mat.GetTextureOffset(TexName).y);
+                if(RefMat.x == 0) RefMat = new Vector4(Mat.GetTextureScale(TexName).x, Mat.GetTextureScale(TexName).y, Mat.GetTextureOffset(TexName).x, Mat.GetTextureOffset(TexName).y);
                 if (Texs.Contains(Mat.GetTexture(TexName))) {
                     Indexes[Texs.IndexOf(Mat.GetTexture(TexName))].RayObjectList.Add(TexIndex);
                     return 0;
@@ -308,10 +308,10 @@ namespace TrueTrace {
                     if(RelevantMat.IsCutout || (RelevantMat.Name.Equals("Standard") && SharedMaterials[i].GetFloat("_Mode") == 1)) obj.MaterialOptions[i] = RayTracingObject.Options.Cutout;
 
                     int Result = TextureParse(ref CurMat.AlbedoTextureScale, TempObj, SharedMaterials[i], RelevantMat.BaseColorTex, ref AlbedoTexs, ref AlbedoIndexes);
-                    if(!RelevantMat.NormalTex.Equals("null")) {Result = TextureParse(ref Throwaway, TempObj, SharedMaterials[i], RelevantMat.NormalTex, ref NormalTexs, ref NormalIndexes);}
-                    if(!RelevantMat.EmissionTex.Equals("null")) {Result = TextureParse(ref Throwaway, TempObj, SharedMaterials[i], RelevantMat.EmissionTex, ref EmissionTexs, ref EmissionIndexes); if(Result != 2 && JustCreated) obj.emmission[i] = 12.0f;}
-                    if(!RelevantMat.MetallicTex.Equals("null")) {Result = TextureParse(ref Throwaway, TempObj, SharedMaterials[i], RelevantMat.MetallicTex, ref MetallicTexs, ref MetallicIndexes); if(Result == 1) MetallicTexChannelIndex.Add(RelevantMat.MetallicTexChannel);}
-                    if(!RelevantMat.RoughnessTex.Equals("null")) {Result = TextureParse(ref Throwaway, TempObj, SharedMaterials[i], RelevantMat.RoughnessTex, ref RoughnessTexs, ref RoughnessIndexes); if(Result == 1) RoughnessTexChannelIndex.Add(RelevantMat.RoughnessTexChannel);}
+                    if(!RelevantMat.NormalTex.Equals("null")) {Result = TextureParse(ref CurMat.AlbedoTextureScale, TempObj, SharedMaterials[i], RelevantMat.NormalTex, ref NormalTexs, ref NormalIndexes);}
+                    if(!RelevantMat.EmissionTex.Equals("null")) {Result = TextureParse(ref CurMat.AlbedoTextureScale, TempObj, SharedMaterials[i], RelevantMat.EmissionTex, ref EmissionTexs, ref EmissionIndexes); if(Result != 2 && JustCreated) obj.emmission[i] = 12.0f;}
+                    if(!RelevantMat.MetallicTex.Equals("null")) {Result = TextureParse(ref CurMat.AlbedoTextureScale, TempObj, SharedMaterials[i], RelevantMat.MetallicTex, ref MetallicTexs, ref MetallicIndexes); if(Result == 1) MetallicTexChannelIndex.Add(RelevantMat.MetallicTexChannel);}
+                    if(!RelevantMat.RoughnessTex.Equals("null")) {Result = TextureParse(ref CurMat.AlbedoTextureScale, TempObj, SharedMaterials[i], RelevantMat.RoughnessTex, ref RoughnessTexs, ref RoughnessIndexes); if(Result == 1) RoughnessTexChannelIndex.Add(RelevantMat.RoughnessTexChannel);}
 
                     CurMat.BaseColor = obj.BaseColor[i];
                     CurMat.emmissive = obj.emmission[i];

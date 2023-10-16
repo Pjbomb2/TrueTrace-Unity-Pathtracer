@@ -66,7 +66,7 @@ Shader "Hidden/FireFlyPass"
             }
 
             float4 frag (v2f i) : SV_Target {   
-                return float4(RCRS(i.uv), 1);
+                return float4(RCRS(i.uv), round(tex2D(_MainTex, i.uv).w));
             }
             ENDCG
         }

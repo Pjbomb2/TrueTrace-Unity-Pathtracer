@@ -124,6 +124,7 @@ namespace TrueTrace {
         [HideInInspector] public bool DoPartialRendering = false;
         [HideInInspector] public int PartialRenderingFactor = 1;
         [HideInInspector] public bool DoFirefly = false;
+        [HideInInspector] public bool ImprovedPrimaryHit = false;
         [HideInInspector] public int RISCount = 5;
         [HideInInspector] public int ToneMapper = 0;
 
@@ -507,6 +508,7 @@ namespace TrueTrace {
 
 
             SetBool("UseReCur", UseReCur);
+            SetBool("ImprovedPrimaryHit", ImprovedPrimaryHit);
             SetBool("UseRussianRoulette", UseRussianRoulette);
             SetBool("UseNEE", UseNEE);
             SetBool("UseDoF", AllowDoF);

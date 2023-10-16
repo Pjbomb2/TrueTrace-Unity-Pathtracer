@@ -1358,6 +1358,7 @@ namespace TrueTrace {
                     RayLight.ThisLightData.Radiance *= LightEnergyScale;
                     if (RayLight.ThisLightData.Type == 1) SunDirection = RayLight.ThisLightData.Direction;
                     UnityLights[RayLight.ArrayIndex] = RayLight.ThisLightData;
+                    // finally {PrevLightCount = 0;}
                 }
             }
                 // UnityEngine.Profiling.Profiler.EndSample();

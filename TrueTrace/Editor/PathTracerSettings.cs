@@ -70,6 +70,7 @@ namespace TrueTrace {
          [SerializeField] public int PartialRenderingFactor = 1;
          [SerializeField] public bool DoFirefly = false;
          [SerializeField] public bool UseReCur = true;
+         [SerializeField] public bool ImprovedPrimaryHit = false;
          [SerializeField] public float MinSpatialSize = 10;
          [SerializeField] public float ReCurBlurRadius = 30;
          [SerializeField] public int RISCount = 5;
@@ -258,7 +259,6 @@ namespace TrueTrace {
                if(Parent.Children[i].This.gameObject.GetComponent<RayTracingObject>() != null && Parent.Children[i].This.gameObject.GetComponent<ParentObject>() == null) RayTracingObjectChildCount++;
                if(Parent.Children[i].This.gameObject.GetComponent<MeshFilter>() != null && Parent.Children[i].This.gameObject.GetComponent<ParentObject>() == null) HasNormalMeshAsChild = true;
                if(Parent.Children[i].This.gameObject.GetComponent<SkinnedMeshRenderer>() != null && Parent.Children[i].This.gameObject.GetComponent<ParentObject>() == null) HasSkinnedMeshAsChild = true;
-               if(Parent.Children[i].This.gameObject.GetComponent<Light>() != null && Parent.Children[i].This.gameObject.GetComponent<RayTracingLights>() == null) Parent.Children[i].This.gameObject.AddComponent<RayTracingLights>(); 
             }
             bool ReductionNeeded = false;
             for(int i = 0; i < ChildLength; i++) {
@@ -304,6 +304,11 @@ namespace TrueTrace {
             // foreach(var a in TempObjects2) {
             //    DestroyImmediate(a);
             // }
+
+            var LightObjects = GameObject.FindObjectsOfType<Light>();
+            foreach(var LightObj in LightObjects) {
+               if(LightObj.gameObject.GetComponent<RayTracingLights>() == null) LightObj.gameObject.AddComponent<RayTracingLights>(); 
+            }
            UnityEngine.Video.VideoPlayer[] VideoObjects = GameObject.FindObjectsOfType<UnityEngine.Video.VideoPlayer>();
            if(VideoObjects.Length != 0) {
                if(VideoObjects[0].gameObject.GetComponent<VideoObject>() == null) {
@@ -1180,7 +1185,9 @@ Toolbar toolbar;
            ReCurToggle.RegisterValueChangedCallback(evt => {UseReCur = evt.newValue; RayMaster.UseReCur = UseReCur;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(ReCurToggle) + 1, ReCurFoldout); else MainSource.Remove(ReCurFoldout);});
            if(UseReCur) MainSource.Add(ReCurFoldout);
 
-
+           Toggle ImprovedPrimaryHitToggle = new Toggle() {value = ImprovedPrimaryHit, text = "RR Ignores Primary Hit"};
+           ImprovedPrimaryHitToggle.RegisterValueChangedCallback(evt => {ImprovedPrimaryHit = evt.newValue; RayMaster.ImprovedPrimaryHit = ImprovedPrimaryHit;});
+           MainSource.Add(ImprovedPrimaryHitToggle);
 
 
            VisualElement AtmoBox = new VisualElement();

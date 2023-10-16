@@ -43,7 +43,7 @@ void Generate(uint3 id : SV_DispatchThreadID) {
     if (id.x >= screen_width || id.y >= screen_height) return;
     const uint pixel_index = id.y * screen_width + id.x;
     float2 jitter = ((random(1, pixel_index) - 0.5));
-    float2 uv = float2((id.xy + (UseReCur ? 0 : 0)) / float2(screen_width, screen_height) * 2.0f - 1.0f);
+    float2 uv = float2((id.xy + (UseReCur ? 0 : jitter)) / float2(screen_width, screen_height) * 2.0f - 1.0f);
 
     Ray ray = CreateCameraRay(uv, pixel_index);
     set(pixel_index, tempray);

@@ -9,57 +9,55 @@ namespace TrueTrace {
     public class ASVGF
     {
         public bool Initialized = false;
-        public RenderTexture ASVGF_HIST_COLOR_HF;
-        public RenderTexture ASVGF_ATROUS_PING_LF_SH;
-        public RenderTexture ASVGF_ATROUS_PONG_LF_SH;
-        public RenderTexture ASVGF_ATROUS_PING_LF_COCG;
-        public RenderTexture ASVGF_ATROUS_PONG_LF_COCG;
-        public RenderTexture ASVGF_ATROUS_PING_HF;
-        public RenderTexture ASVGF_ATROUS_PONG_HF;
-        public RenderTexture ASVGF_ATROUS_PING_SPEC;
-        public RenderTexture ASVGF_ATROUS_PONG_SPEC;
-        public RenderTexture ASVGF_ATROUS_PING_MOMENTS;
-        public RenderTexture ASVGF_ATROUS_PONG_MOMENTS;
-        public RenderTexture ASVGF_COLOR;
-        public RenderTexture ASVGF_GRAD_LF_PING;
-        public RenderTexture ASVGF_GRAD_LF_PONG;
-        public RenderTexture ASVGF_GRAD_HF_SPEC_PING;
-        public RenderTexture ASVGF_GRAD_HF_SPEC_PONG;
-        public RenderTexture ASVGF_FILTERED_SPEC_A;
-        public RenderTexture ASVGF_FILTERED_SPEC_B;
-        public RenderTexture ASVGF_HIST_MOMENTS_HF_A;
-        public RenderTexture ASVGF_HIST_MOMENTS_HF_B;
-        public RenderTexture ASVGF_HIST_COLOR_LF_SH_A;
-        public RenderTexture ASVGF_HIST_COLOR_LF_SH_B;
-        public RenderTexture ASVGF_HIST_COLOR_LF_COCG_A;
-        public RenderTexture ASVGF_HIST_COLOR_LF_COCG_B;
-        public RenderTexture ASVGF_GRAD_SMPL_POS_A;
-        public RenderTexture ASVGF_GRAD_SMPL_POS_B;
-        public RenderTexture MetallicA;
-        public RenderTexture MetallicB;
+        private RenderTexture ASVGF_HIST_COLOR_HF;
+        private RenderTexture ASVGF_ATROUS_PING_LF_SH;
+        private RenderTexture ASVGF_ATROUS_PONG_LF_SH;
+        private RenderTexture ASVGF_ATROUS_PING_LF_COCG;
+        private RenderTexture ASVGF_ATROUS_PONG_LF_COCG;
+        private RenderTexture ASVGF_ATROUS_PING_HF;
+        private RenderTexture ASVGF_ATROUS_PONG_HF;
+        private RenderTexture ASVGF_ATROUS_PING_SPEC;
+        private RenderTexture ASVGF_ATROUS_PONG_SPEC;
+        private RenderTexture ASVGF_ATROUS_PING_MOMENTS;
+        private RenderTexture ASVGF_ATROUS_PONG_MOMENTS;
+        private RenderTexture ASVGF_COLOR;
+        private RenderTexture ASVGF_GRAD_LF_PING;
+        private RenderTexture ASVGF_GRAD_LF_PONG;
+        private RenderTexture ASVGF_GRAD_HF_SPEC_PING;
+        private RenderTexture ASVGF_GRAD_HF_SPEC_PONG;
+        private RenderTexture ASVGF_FILTERED_SPEC_A;
+        private RenderTexture ASVGF_FILTERED_SPEC_B;
+        private RenderTexture ASVGF_HIST_MOMENTS_HF_A;
+        private RenderTexture ASVGF_HIST_MOMENTS_HF_B;
+        private RenderTexture ASVGF_HIST_COLOR_LF_SH_A;
+        private RenderTexture ASVGF_HIST_COLOR_LF_SH_B;
+        private RenderTexture ASVGF_HIST_COLOR_LF_COCG_A;
+        private RenderTexture ASVGF_HIST_COLOR_LF_COCG_B;
+        private RenderTexture ASVGF_GRAD_SMPL_POS_A;
+        private RenderTexture ASVGF_GRAD_SMPL_POS_B;
+        private RenderTexture MetallicA;
+        private RenderTexture MetallicB;
 
 
-        public RenderTexture FDepth;
+        private RenderTexture FDepth;
 
-        public RenderTexture LFVarianceA;
-        public RenderTexture LFVarianceB;
+        private RenderTexture LFVarianceA;
+        private RenderTexture LFVarianceB;
 
-        public RenderTexture TEX_PT_NORMALS_A;
-        public RenderTexture TEX_PT_NORMALS_B;
+        private RenderTexture TEX_PT_NORMALS_A;
+        private RenderTexture TEX_PT_NORMALS_B;
 
-        public RenderTexture AlbedoColorA;
-        public RenderTexture AlbedoColorB;
+        private RenderTexture AlbedoColorA;
+        private RenderTexture AlbedoColorB;
 
-        public RenderTexture PT_LF1;
-        public RenderTexture PT_LF2;
+        private RenderTexture PT_LF1;
+        private RenderTexture PT_LF2;
 
-        public RenderTexture TEX_PT_COLOR_HF;
-        public RenderTexture TEX_PT_COLOR_SPEC;
+        private RenderTexture TEX_PT_COLOR_HF;
+        private RenderTexture TEX_PT_COLOR_SPEC;
 
-        public RenderTexture ReflectedRefractedTex;
-        public RenderTexture ReflectedRefractedTexPrev;
-
-        public RenderTexture DebugTex;
+        private RenderTexture ReflectedRefractedTex;
+        private RenderTexture ReflectedRefractedTexPrev;
 
 
         public Camera camera;
@@ -113,7 +111,6 @@ namespace TrueTrace {
                 PT_LF1.Release();
                 PT_LF2.Release();
                 TEX_PT_COLOR_HF.Release();
-                DebugTex.Release();
                 TEX_PT_COLOR_SPEC.Release();
                 MetallicA.Release();
                 MetallicB.Release();
@@ -176,7 +173,6 @@ namespace TrueTrace {
             CommonFunctions.CreateRenderTexture(ref ASVGF_GRAD_SMPL_POS_A, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTFull1);
             CommonFunctions.CreateRenderTexture(ref ASVGF_GRAD_SMPL_POS_B, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTFull1);
             CommonFunctions.CreateRenderTexture(ref TEX_PT_COLOR_HF, ScreenWidth, ScreenHeight, CommonFunctions.RTInt1);
-            CommonFunctions.CreateRenderTexture(ref DebugTex, ScreenWidth, ScreenHeight, CommonFunctions.RTFull4);
             CommonFunctions.CreateRenderTexture(ref TEX_PT_COLOR_SPEC, ScreenWidth, ScreenHeight, CommonFunctions.RTInt1);
             CommonFunctions.CreateRenderTexture(ref MetallicA, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf2);
             CommonFunctions.CreateRenderTexture(ref MetallicB, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf2);
@@ -225,7 +221,6 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(shader, "iter", iter);
             cmd.SetComputeTextureParam(shader, CopyRadiance, "RNGTexA", (EvenFrame) ? RNGTex : RNGTexB);
             cmd.SetComputeTextureParam(shader, CopyRadiance, "RNGTexB", (!EvenFrame) ? RNGTex : RNGTexB);
-            cmd.SetComputeTextureParam(shader, CopyRadiance, "DebugTex", DebugTex);
             cmd.SetComputeBufferParam(shader, CopyRadiance, "RayB", (!EvenFrame) ? GlobalRays : GlobalRaysB);
             cmd.SetComputeBufferParam(shader, CopyRadiance, "GlobalRays", (EvenFrame) ? GlobalRays : GlobalRaysB);
 
@@ -248,7 +243,6 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, Reproject, "IMG_ASVGF_GRAD_LF_PING", ASVGF_GRAD_LF_PING);
             cmd.SetComputeTextureParam(shader, Reproject, "RNGTexA", (EvenFrame) ? RNGTex : RNGTexB);
             cmd.SetComputeTextureParam(shader, Reproject, "RNGTexB", (!EvenFrame) ? RNGTex : RNGTexB);
-            cmd.SetComputeTextureParam(shader, Reproject, "DebugTex", DebugTex);
             cmd.SetComputeTextureParam(shader, Reproject, "MetallicAWrite", (EvenFrame ? MetallicA : MetallicB));
             cmd.SetComputeTextureParam(shader, Reproject, "MetallicB", (!EvenFrame ? MetallicA : MetallicB));
             cmd.SetComputeTextureParam(shader, Reproject, "PrimaryTriData", PrimaryTriData);
@@ -297,7 +291,6 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, CopyData, "ReflectedRefractedTexWrite", (EvenFrame ? ReflectedRefractedTex : ReflectedRefractedTexPrev));
             cmd.SetComputeTextureParam(shader, CopyData, "ReflectedRefractedTexPrev", (!EvenFrame ? ReflectedRefractedTex : ReflectedRefractedTexPrev));
 
-            cmd.SetComputeTextureParam(shader, CopyData, "DebugTex", DebugTex);
             cmd.SetComputeTextureParam(shader, CopyData, "AlbedoColorA", (EvenFrame ? AlbedoColorA : AlbedoColorB));
             cmd.SetComputeTextureParam(shader, CopyData, "AlbedoColorB", (!EvenFrame ? AlbedoColorA : AlbedoColorB));
 
@@ -314,7 +307,6 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, Gradient_Img, "TEX_PT_COLOR_SPECWrite", TEX_PT_COLOR_SPEC);
             cmd.SetComputeTextureParam(shader, Gradient_Img, "TEX_PT_COLOR_LF_SH", PT_LF1);
             cmd.SetComputeTextureParam(shader, Gradient_Img, "TEX_ASVGF_HIST_COLOR_LF_SH_B", (!EvenFrame ? ASVGF_HIST_COLOR_LF_SH_A : ASVGF_HIST_COLOR_LF_SH_B));
-            cmd.SetComputeTextureParam(shader, Gradient_Img, "DebugTex", DebugTex);
 
 
             cmd.DispatchCompute(shader, Gradient_Img, Mathf.CeilToInt((ScreenWidth / 3.0f + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight / 3.0f + 15) / 16.0f), 1);
@@ -335,7 +327,6 @@ namespace TrueTrace {
                 cmd.SetComputeTextureParam(shader, Gradient_Atrous, "IMG_ASVGF_GRAD_HF_SPEC_PING", ASVGF_GRAD_HF_SPEC_PING);
                 cmd.SetComputeTextureParam(shader, Gradient_Atrous, "IMG_ASVGF_GRAD_LF_PONG", ASVGF_GRAD_LF_PONG);
                 cmd.SetComputeTextureParam(shader, Gradient_Atrous, "IMG_ASVGF_GRAD_HF_SPEC_PONG", ASVGF_GRAD_HF_SPEC_PONG);
-                cmd.SetComputeTextureParam(shader, Gradient_Atrous, "DebugTex", DebugTex);
 
                 cmd.DispatchCompute(shader, Gradient_Atrous, Mathf.CeilToInt((ScreenWidth / 3.0f + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight / 3.0f + 15) / 16.0f), 1);
             }
@@ -370,7 +361,6 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, Temporal, "IMG_ASVGF_ATROUS_PING_MOMENTS", ASVGF_ATROUS_PING_MOMENTS);
             cmd.SetComputeTextureParam(shader, Temporal, "IMG_ASVGF_ATROUS_PING_LF_SH", ASVGF_ATROUS_PING_LF_SH);
             cmd.SetComputeTextureParam(shader, Temporal, "IMG_ASVGF_ATROUS_PING_LF_COCG", ASVGF_ATROUS_PING_LF_COCG);
-            cmd.SetComputeTextureParam(shader, Temporal, "DebugTex", DebugTex);
             
             cmd.SetComputeTextureParam(shader, Temporal, "TEX_ASVGF_ATROUS_PONG_LF_SH", ASVGF_ATROUS_PONG_LF_SH);
             cmd.SetComputeTextureParam(shader, Temporal, "TEX_ASVGF_ATROUS_PONG_LF_COCG", ASVGF_ATROUS_PONG_LF_COCG);
@@ -400,7 +390,6 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, Atrous_LF, "IMG_ASVGF_ATROUS_PONG_LF_COCG", ASVGF_ATROUS_PONG_LF_COCG);
             cmd.SetComputeTextureParam(shader, Atrous_LF, "IMG_ASVGF_ATROUS_PING_LF_SH", ASVGF_ATROUS_PING_LF_SH);
             cmd.SetComputeTextureParam(shader, Atrous_LF, "IMG_ASVGF_ATROUS_PING_LF_COCG", ASVGF_ATROUS_PING_LF_COCG);
-            cmd.SetComputeTextureParam(shader, Atrous_LF, "DebugTex", DebugTex);
             cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_ASVGF_HIST_MOMENTS_HF_A", (EvenFrame ? ASVGF_HIST_MOMENTS_HF_A : ASVGF_HIST_MOMENTS_HF_B));
             cmd.DispatchCompute(shader, Atrous_LF, Mathf.CeilToInt((ScreenWidth / 3.0f + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight / 3.0f + 15) / 16.0f), 1);
             cmd.EndSample("ASVGF Atrous LF: " + 0);
@@ -427,7 +416,6 @@ namespace TrueTrace {
                 cmd.SetComputeTextureParam(shader, Atrous_LF, "IMG_ASVGF_ATROUS_PONG_LF_COCG", ASVGF_ATROUS_PONG_LF_COCG);
                 cmd.SetComputeTextureParam(shader, Atrous_LF, "IMG_ASVGF_ATROUS_PING_LF_SH", ASVGF_ATROUS_PING_LF_SH);
                 cmd.SetComputeTextureParam(shader, Atrous_LF, "IMG_ASVGF_ATROUS_PING_LF_COCG", ASVGF_ATROUS_PING_LF_COCG);
-                cmd.SetComputeTextureParam(shader, Atrous_LF, "DebugTex", DebugTex);
                 cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_ASVGF_HIST_MOMENTS_HF_A", (EvenFrame ? ASVGF_HIST_MOMENTS_HF_A : ASVGF_HIST_MOMENTS_HF_B));
                 cmd.DispatchCompute(shader, Atrous_LF, Mathf.CeilToInt((ScreenWidth / 3.0f + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight / 3.0f + 15) / 16.0f), 1);
 
@@ -463,7 +451,6 @@ namespace TrueTrace {
                 cmd.SetComputeTextureParam(shader, Atrous, "IMG_ASVGF_COLOR", Output);
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_GRAD_LF_PONG", ASVGF_GRAD_LF_PONG);
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_GRAD_HF_SPEC_PONG", ASVGF_GRAD_HF_SPEC_PONG);
-                cmd.SetComputeTextureParam(shader, Atrous, "DebugTex", DebugTex);
                 cmd.SetComputeTextureParam(shader, Atrous, "MetallicA", (EvenFrame ? MetallicA : MetallicB));
                 cmd.SetComputeTextureParam(shader, Atrous, "MetallicB", (!EvenFrame ? MetallicA : MetallicB));
                 shader.SetTextureFromGlobal(Atrous, "DiffuseGBuffer", "_CameraGBufferTexture0");

@@ -88,6 +88,12 @@ float3 Schlick(float3 r0, float rad)
     return r0 + (1.0f - r0) * exponential;
 }
 
+float3 Schlick3(float3 r0, float rad)
+{
+    float exponential = pow(1.0f - rad, 5.0f);
+    return r0 + (1.0f - r0) * exponential;
+}
+
 float SchlickWeight(float u)
 {
     float m = saturate(1.0f - u);
@@ -220,11 +226,11 @@ static float3 DisneyFresnel(MaterialData hitDat, const float3 wo, const float3 w
 
     // -- See section 3.1 and 3.2 of the 2015 PBR presentation + the Disney BRDF explorer (which does their 2012 remapping
     // -- rather than the SchlickR0FromRelativeIOR seen here but they mentioned the switch in 3.2).
-    float3 R0 = SchlickR0FromRelativeIOR(hitDat.ior) * lerp(1.0f, tint, 1);
+    float3 R0 = SchlickR0FromRelativeIOR(hitDat.ior) * lerp(1.0f, tint, hitDat.specularTint);
     R0 = lerp(R0, hitDat.surfaceColor, hitDat.metallic);
 
     float dielectricFresnel = Dielectric(dotHV, 1.0f, hitDat.ior);
-    float3 metallicFresnel = Schlick(R0, dot(wi, wm));
+    float3 metallicFresnel = Schlick3(R0, dot(wi, wm));
 
     return lerp(dielectricFresnel, metallicFresnel, hitDat.metallic);
 }
@@ -341,7 +347,7 @@ static float3 EvaluateSheen(MaterialData hitDat, const float3 wo, const float3 w
         return 0;
     }
 
-    float dotHL = dot(wm, wi);
+    float dotHL = abs(dot(wm, wi));
     float3 tint = CalculateTint(hitDat.surfaceColor);
     return hitDat.sheen * lerp(1.0f, tint, hitDat.sheenTint) * SchlickWeight(dotHL);
 }

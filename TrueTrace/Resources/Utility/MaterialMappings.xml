@@ -8,7 +8,7 @@
     <MetallicTex>_MetallicGlossMap</MetallicTex>
     <MetallicTexChannel>0</MetallicTexChannel>
     <MetallicRange>_Metallic</MetallicRange>
-    <RoughnessTex>_OcclusionMap</RoughnessTex>
+    <RoughnessTex>null</RoughnessTex>
     <RoughnessTexChannel>0</RoughnessTexChannel>
     <RoughnessRange>_Glossiness</RoughnessRange>
     <IsGlass>false</IsGlass>
@@ -1586,8 +1586,8 @@
   </MaterialShader>
   <MaterialShader>
     <Name>AVP/Height_Blend_2_Layer</Name>
-    <BaseColorTex>_MainTex</BaseColorTex>
-    <NormalTex>null</NormalTex>
+    <BaseColorTex>_Albedo1</BaseColorTex>
+    <NormalTex>_Normal1</NormalTex>
     <EmissionTex>null</EmissionTex>
     <MetallicTex>null</MetallicTex>
     <MetallicTexChannel>0</MetallicTexChannel>
@@ -1598,7 +1598,7 @@
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
-    <BaseColorValue>null</BaseColorValue>
+    <BaseColorValue>_Color1</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard (Specular setup)</Name>
@@ -1618,8 +1618,8 @@
   </MaterialShader>
   <MaterialShader>
     <Name>AVP/DoubleSided</Name>
-    <BaseColorTex>_MainTex</BaseColorTex>
-    <NormalTex>null</NormalTex>
+    <BaseColorTex>_Albedo</BaseColorTex>
+    <NormalTex>_Normal</NormalTex>
     <EmissionTex>null</EmissionTex>
     <MetallicTex>null</MetallicTex>
     <MetallicTexChannel>0</MetallicTexChannel>
@@ -1628,9 +1628,9 @@
     <RoughnessTexChannel>0</RoughnessTexChannel>
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
-    <IsCutout>false</IsCutout>
+    <IsCutout>true</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
-    <BaseColorValue>null</BaseColorValue>
+    <BaseColorValue>_Color</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
     <Name>AVP/POM</Name>
@@ -1698,8 +1698,8 @@
   </MaterialShader>
   <MaterialShader>
     <Name>AVP/Vegetation</Name>
-    <BaseColorTex>_MainTex</BaseColorTex>
-    <NormalTex>null</NormalTex>
+    <BaseColorTex>_Albedo</BaseColorTex>
+    <NormalTex>_Normal</NormalTex>
     <EmissionTex>null</EmissionTex>
     <MetallicTex>null</MetallicTex>
     <MetallicTexChannel>0</MetallicTexChannel>
@@ -1708,9 +1708,9 @@
     <RoughnessTexChannel>0</RoughnessTexChannel>
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
-    <IsCutout>false</IsCutout>
+    <IsCutout>true</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
-    <BaseColorValue>null</BaseColorValue>
+    <BaseColorValue>_Color</BaseColorValue>
   </MaterialShader>
   <MaterialShader>
     <Name>FX/Water</Name>

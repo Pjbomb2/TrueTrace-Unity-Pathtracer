@@ -8,7 +8,7 @@ int target_width;
 int target_height;
 
 #define GROUP_SIZE 16
-#define FILTER_RADIUS 1 
+#define FILTER_RADIUS 2 
 #define SHARED_SIZE (GROUP_SIZE + FILTER_RADIUS * 3)
 
 groupshared float4 s_color_pq[SHARED_SIZE][SHARED_SIZE];
@@ -103,6 +103,7 @@ void preload(int2 group_base, int2 group_size, int gl_LocalInvocationIndex)
 
 		// Load
 		int2 ipos = group_base + int2(xx, yy) - FILTER_RADIUS;
+		ipos += (random(54, ipos) - 0.5f);
 		ipos = clamp(ipos, 0, int2(source_width - 1, source_height - 1));
 		float4 color = TEX_FLAT_COLOR[ipos];
 		ipos = (float2)ipos * float2(rcp(source_width), rcp(source_height)) * float2(target_width, target_height);
@@ -171,7 +172,7 @@ float2 hires_to_lores(int2 ipos)
 	float2 input_size = float2(source_width, source_height);
 	float2 output_size = float2(target_width, target_height);
 
-	return (float2(ipos)+0.5) * (input_size / output_size) - 0.5 - 0;
+	return (float2(ipos)+0.5) * (input_size / output_size) + 0.5f;// - 0.5 - 0;
 }
 
 void BicubicCatmullRom(float2 UV, float2 texSize, out float2 Sample[3], out float2 Weight[3])
@@ -259,7 +260,7 @@ void TAAU(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGroupI
 
 	// Obtain the color moments for the surrounding pixels.
 	get_moments(int_render_pos, group_base_lores, FILTER_RADIUS, mom1, mom2);
-	num_pix = 9;
+	num_pix = ((FILTER_RADIUS * 2) + 1) * ((FILTER_RADIUS * 2) + 1);
 
 	// Remove or reduce sparkles by clamping the color of the center pixel to its surroundings
 	if (0.25f > 0)

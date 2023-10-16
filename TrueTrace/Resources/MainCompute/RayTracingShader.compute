@@ -19,6 +19,7 @@ Texture2D<float3> NormalTex;
 Texture2D<float> Depth;
 #endif
 
+
 #pragma kernel kernel_shade
 
 #ifdef EnableRayDebug
@@ -31,6 +32,7 @@ SamplerState sampler_SkyboxTexture;
 int BackgroundType;
 float3 BackgroundColor;
 float BackgroundIntensity;
+bool ImprovedPrimaryHit;
 
 //These are here purely for the Atrous
 #ifdef HardwareRT
@@ -373,10 +375,10 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
     if (GotFlipped) Geomnorm *= -1;//Backfacing surface
 
     norm = Geomnorm;
-    [branch] if (NormalUV.x != -1) {//Handle Normal Maps
+    [branch] if (CurBounce == 0 && NormalUV.x != -1) {//Handle Normal Maps
         float3 LocalTan = GetTriangleTangent(hit.triangle_id, float2(hit.u, hit.v), Inverse);
         float3 LocalBinorm = normalize(cross(Geomnorm, LocalTan));
-        float2 Norm = _NormalAtlas[StochasticBilinear(NormalUV * NormalSize, random(54, pixel_index).x)];
+        float2 Norm = _NormalAtlas[NormalUV * NormalSize];
 
         float3 LocalNormIN = float3((2.0f * Norm - 1.0f), 0.0f);
         LocalNormIN.z = 1.0 - 0.5 * dot(LocalNormIN, LocalNormIN);
@@ -648,7 +650,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
     if (!validBSDFSample) return;//If the ray failed, we have no choice but to terminate this path
 
     if (CurBounce > 0 && UseRussianRoulette && AlbedoTexData.w != -1) {
-        float3 AdjustedCol = throughput * (AlbedoTexData.xyz);
+        float3 AdjustedCol = throughput * (ImprovedPrimaryHit ? 1.0f : AlbedoTexData.xyz);
         float p = saturate(max(AdjustedCol.x, max(AdjustedCol.y, AdjustedCol.z)));
         if (random(2, pixel_index).x > p)//Simple Russian Roulette
             return;
