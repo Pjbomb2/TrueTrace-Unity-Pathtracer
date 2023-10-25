@@ -953,7 +953,6 @@ Toolbar toolbar;
             DenoiserField.choices = DenoiserSettings;
             DenoiserField.index = DenoiserSelection;
             DenoiserField.style.flexDirection = FlexDirection.Row;
-            DenoiserField.style.width = 210;
             DenoiserField.RegisterValueChangedCallback(evt => {
                DenoiserSelection = DenoiserField.index;
                RayMaster.UseASVGF = false;
