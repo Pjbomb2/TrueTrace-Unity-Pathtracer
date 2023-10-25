@@ -116,19 +116,40 @@ void IntersectBVH() {
             myRay.Direction = ray.direction;
             myRay.TMin = 0;
             myRay.TMax = FarPlane;
+            while(true) {
+               q.TraceRayInline(myAccelerationStructure, rayFlags, 0xff, myRay);
+                while(q.Proceed()){}
 
-           q.TraceRayInline(myAccelerationStructure, rayFlags, 0xff, myRay);
-            while(q.Proceed()){}
-
-            if(q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
-                bestHit.t = q.CommittedRayT();
-                bestHit.u = q.CommittedTriangleBarycentrics().y;
-                bestHit.v = q.CommittedTriangleBarycentrics().x;
-                bestHit.mesh_id = Pack2To1(q.CommittedInstanceID(), q.CommittedGeometryIndex());
-                bestHit.triangle_id = q.CommittedPrimitiveIndex();
-            } else {
-                bestHit.t = FarPlane;
+                if(q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
+                    bestHit.t = q.CommittedRayT();
+                    bestHit.u = q.CommittedTriangleBarycentrics().y;
+                    bestHit.v = q.CommittedTriangleBarycentrics().x;
+                    bestHit.mesh_id = Pack2To1(q.CommittedInstanceID(), q.CommittedGeometryIndex());
+                    bestHit.triangle_id = q.CommittedPrimitiveIndex();
+                    #ifdef AdvancedAlphaMapped
+                        int tri_id;
+                        int mesh_id;
+                        if(bestHit.mesh_id != 9999999) {
+                            int2 Indexes = Unpack1To2(bestHit.mesh_id);
+                            int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x];
+                            tri_id = bestHit.triangle_id + triangleOffset;
+                            mesh_id = MeshOffsets[Indexes.y].y;
+                        }
+                        int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTris[tri_id].MatDat);
+                        if(_Materials[MaterialIndex].MatType == CutoutIndex) {
+                            float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - bestHit.u - bestHit.v) + AggTris[tri_id].texedge1 * bestHit.u + AggTris[tri_id].texedge2 * bestHit.v;
+                            float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex);
+                            if(_TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0).w < 0.0001f) {myRay.TMin = bestHit.t + 0.001f; continue;}
+                        }
+                    #endif
+                } else {
+                    bestHit.t = FarPlane;
+                }
+                break;
             }
+
+
+
             int PixIndex = GlobalRays[ray_index].PixelIndex;
             uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
             int2 Indexes = Unpack1To2(bestHit.mesh_id);

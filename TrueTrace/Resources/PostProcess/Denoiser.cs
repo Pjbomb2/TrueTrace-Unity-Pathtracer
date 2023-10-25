@@ -8,6 +8,7 @@ namespace TrueTrace {
     [System.Serializable]
     public class Denoiser
     {
+        public bool Initialized = false;
         private ComputeShader SVGF;
         private ComputeShader Bloom;
         private ComputeShader AutoExpose;
@@ -53,10 +54,6 @@ namespace TrueTrace {
         private RenderTexture TAAA;
         private RenderTexture TAAB;
         public RenderTexture[] BloomSamples;
-
-        public RenderTexture[] mips;
-        public RenderTexture[] mipsWeights;
-        public RenderTexture[] mipsAssemble;
 
         private int ToneMapLuminanceKernel;
         private int ToneMapExposureWeightKernel;
@@ -118,19 +115,22 @@ namespace TrueTrace {
         public bool SVGFInitialized;
         public void ClearSVGF()
         {
-            _ColorDirectIn.Release();
-            _ColorIndirectIn.Release();
-            _ColorDirectOut.Release();
-            _ColorIndirectOut.Release();
-            _ScreenPosPrev.Release();
-            _PrevPosTex.Release();
-            _HistoryDirect.Release();
-            _HistoryIndirect.Release();
-            _HistoryMoment.Release();
-            _HistoryNormalDepth.Release();
-            _NormalDepth.Release();
-            _FrameMoment.Release();
-            _History.Release();
+            if(_ColorDirectIn != null) {
+                _ColorDirectIn.Release();
+                _ColorIndirectIn.Release();
+                _ColorDirectOut.Release();
+                _ColorIndirectOut.Release();
+                _ScreenPosPrev.Release();
+                _PrevPosTex.Release();
+                _HistoryDirect.Release();
+                _HistoryIndirect.Release();
+                _HistoryMoment.Release();
+                _HistoryNormalDepth.Release();
+                _NormalDepth.Release();
+                _FrameMoment.Release();
+                _History.Release();
+            }
+
             SVGFInitialized = false;
         }
         public void InitSVGF()
@@ -196,16 +196,37 @@ namespace TrueTrace {
                 }
             }
         }
-        void OnApplicationQuit()
-        {
-            if (ExposureBuffer != null) ExposureBuffer.Release();
-            for(int i = 0; i < BloomSamples.Length; i++) {
-                BloomSamples[i].Release();
-            }
-            if(ExposureBuffer != null) ExposureBuffer?.Release();
+        public void ClearAll() {
+            ClearSVGF();
+            _TAAPrev.ReleaseSafe();
+            Intermediate.ReleaseSafe();
+            SuperIntermediate.ReleaseSafe();
+            PrevDepthTex.ReleaseSafe();
+            PrevOutputTex.ReleaseSafe();
+            PrevUpscalerTAA.ReleaseSafe();
+            UpScalerLightingDataTexture.ReleaseSafe();
+            PrevNormalUpscalerTex.ReleaseSafe();
+            PrevNormalUpscalerTexWrite.ReleaseSafe();
+            PrevWorldPosWrite.ReleaseSafe();
+            PrevWorldPos.ReleaseSafe();
+
+            TempTex.ReleaseSafe();
+            TempTex2.ReleaseSafe();
+
+            TAAA.ReleaseSafe();
+            TAAB.ReleaseSafe();
+
+            ExposureBuffer.ReleaseSafe();
+            if(BloomSamples != null) for(int i = 0; i < BloomSamples.Length; i++) BloomSamples[i].ReleaseSafe();
+
         }
 
-        public Denoiser(int SourceWidth, int SourceHeight)
+        void OnApplicationQuit()
+        {
+            ClearAll();
+        }
+
+        public void init(int SourceWidth, int SourceHeight)
         {
             this.SourceWidth = SourceWidth;
             this.SourceHeight = SourceHeight;
@@ -276,6 +297,7 @@ namespace TrueTrace {
 
 
             InitRenderTexture();
+            Initialized = true;
         }
 
         public void Reinit(int SourceWidth, int SourceHeight)
@@ -593,48 +615,6 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(ToneMapper, 0, "LUT", LUT);
             cmd.DispatchCompute(ToneMapper, 0, threadGroupsX2, threadGroupsY2, 1);
             cmd.EndSample("ToneMap");
-
-            // cmd.// SetComputeTextureParam(ToneMapper, ToneMapLuminanceKernel, "Result", Output);
-            // cmd.// SetComputeTextureParam(ToneMapper, ToneMapLuminanceKernel, "LuminanceTex", mips[0]);
-            // // ToneMapper.Dispatch(ToneMapLuminanceKernel, (int)Mathf.Ceil(mips[0].width / 16.0f), (int)Mathf.Ceil(mips[0].height / 16.0f), 1);
-            // cmd.// SetComputeTextureParam(ToneMapper, ToneMapExposureWeightKernel, "DiffuseTex", mips[0]);
-            // cmd.// SetComputeTextureParam(ToneMapper, ToneMapExposureWeightKernel, "Result", mipsWeights[0]);
-            // // ToneMapper.Dispatch(ToneMapExposureWeightKernel, (int)Mathf.Ceil(mips[0].width / 16.0f), (int)Mathf.Ceil(mips[0].height / 16.0f), 1);
-            // // for (int i = 0; i < mips.Length - 1; i++)
-            // // {
-            // //     cmd.SetComputeIntParam(Bloom, "TargetWidth", mips[i + 1].width);
-            // //     cmd.SetComputeIntParam(Bloom, "TargetHeight", mips[i + 1].height);
-            // //     cmd.SetComputeIntParam(Bloom, "screen_width", mips[i].width);
-            // //     cmd.SetComputeIntParam(Bloom, "screen_height", mips[i].height);
-            // cmd.//     SetComputeTextureParam(Bloom, BloomDownsampleKernel, "InputTex", mips[i]);
-            // cmd.//     SetComputeTextureParam(Bloom, BloomDownsampleKernel, "OutputTex", mips[i + 1]);
-            // //     cmd.DispatchCompute(Bloom, BloomDownsampleKernel, (int)Mathf.Ceil(mips[i + 1].width / 16.0f), (int)Mathf.Ceil(mips[i + 1].height / 16.0f), 1);
-            // cmd.//     SetComputeTextureParam(Bloom, BloomDownsampleKernel, "InputTex", mipsWeights[i]);
-            // cmd.//     SetComputeTextureParam(Bloom, BloomDownsampleKernel, "OutputTex", mipsWeights[i + 1]);
-            // //     cmd.DispatchCompute(Bloom, BloomDownsampleKernel, (int)Mathf.Ceil(mips[i + 1].width / 16.0f), (int)Mathf.Ceil(mips[i + 1].height / 16.0f), 1);
-            // // }
-            // cmd.// SetComputeTextureParam(ToneMapper, ToneMapBlendKernel, "tWeights", mipsWeights[mipsWeights.Length - 1]);
-            // cmd.// SetComputeTextureParam(ToneMapper, ToneMapBlendKernel, "tExposures", mips[mipsWeights.Length - 1]);
-            // cmd.// SetComputeTextureParam(ToneMapper, ToneMapBlendKernel, "Result", mipsAssemble[mipsWeights.Length - 1]);
-            // // ToneMapper.Dispatch(ToneMapBlendKernel, (int)Mathf.Ceil(mips[mipsWeights.Length - 1].width / 16.0f), (int)Mathf.Ceil(mips[mipsWeights.Length - 1].height / 16.0f), 1);
-            // // for (int i = mips.Length - 1; i > 0; i--) {
-            // //     cmd.SetComputeIntParam(ToneMapper,"ScreenWidth", mips[i - 1].width);
-            // //     cmd.SetComputeIntParam(ToneMapper,"ScreenHeight", mips[i - 1].height);
-            // //     // Blend the finer levels - Laplacians.
-            // cmd.//     SetComputeTextureParam(ToneMapper, ToneMapBlendLapLaceKernel, "tExposures", mips[i - 1]);
-            // cmd.//     SetComputeTextureParam(ToneMapper, ToneMapBlendLapLaceKernel, "tExposuresCoarser", mips[i]);
-            // cmd.//     SetComputeTextureParam(ToneMapper, ToneMapBlendLapLaceKernel, "tWeights", mipsWeights[i - 1]);
-            // cmd.//     SetComputeTextureParam(ToneMapper, ToneMapBlendLapLaceKernel, "tAccumSoFar", mipsAssemble[i]);
-            // cmd.//     SetComputeTextureParam(ToneMapper, ToneMapBlendLapLaceKernel, "Result", mipsAssemble[i - 1]);
-            // //     ToneMapper.Dispatch(ToneMapBlendLapLaceKernel, (int)Mathf.Ceil(mips[i - 1].width / 16.0f), (int)Mathf.Ceil(mips[i - 1].height / 16.0f), 1);
-            // // }
-            // //     cmd.SetComputeIntParam(ToneMapper,"ScreenWidth", mips[0].width);
-            // //     cmd.SetComputeIntParam(ToneMapper,"ScreenHeight", mips[0].height);
-            // cmd.// SetComputeTextureParam(ToneMapper, ToneMapCombineKernel, "tOrigionalMip", mips[1]);
-            // cmd.// SetComputeTextureParam(ToneMapper, ToneMapCombineKernel, "tOrigional", Output);
-            // cmd.// SetComputeTextureParam(ToneMapper, ToneMapCombineKernel, "DiffuseTex", mipsAssemble[0]);
-            // cmd.// SetComputeTextureParam(ToneMapper, ToneMapCombineKernel, "Result", Output);
-            // ToneMapper.Dispatch(ToneMapCombineKernel, (int)Mathf.Ceil(Output.width / 16.0f), (int)Mathf.Ceil(Output.height / 16.0f), 1);
         }
 
         public void ExecuteTAAU(ref RenderTexture Output, ref RenderTexture Input, ref RenderTexture ThroughputTex, CommandBuffer cmd, int CurFrame, RenderTexture CorrectedDepthTex)

@@ -15,6 +15,7 @@ namespace CommonVars
         public int Type;
         public Vector2 SpotAngle;
         public float ZAxisRotation;
+        public float Softness;
     }
 
     [System.Serializable]
@@ -84,6 +85,8 @@ namespace CommonVars
         public float scatterDistance;
         public int IsSmoothness;
         public Vector4 AlbedoTextureScale;
+        public Vector2 MetallicRemap;
+        public Vector2 RoughnessRemap;
     }
 
     [System.Serializable]
@@ -207,6 +210,9 @@ namespace CommonVars
     [System.Serializable]
     public struct LightTriData
     {
+        public Vector3 pos0;
+        public Vector3 posedge1;
+        public Vector3 posedge2;
         public uint TriTarget;
     }
 
@@ -387,6 +393,10 @@ namespace CommonVars
         public bool IsCutout;
         public bool UsesSmoothness;
         public string BaseColorValue;
+        public string MetallicRemapMin;
+        public string MetallicRemapMax;
+        public string RoughnessRemapMin;
+        public string RoughnessRemapMax;
     }
     [System.Serializable]
     public class Materials
@@ -581,6 +591,15 @@ namespace CommonVars
         {
             if (buffer != null) Shader.SetBuffer(kernel, name, buffer);
         }
+        public static void ReleaseSafe(this RenderTexture Tex)
+        {
+            if (Tex != null) Tex.Release();
+        }
+        public static void ReleaseSafe(this ComputeBuffer Buff)
+        {
+            if (Buff != null) {Buff.Release(); Buff = null;}
+        }
+
         static Vector2 msign( Vector2 v )
         {
             return new Vector2( (v.x>=0.0f) ? 1.0f : -1.0f, 

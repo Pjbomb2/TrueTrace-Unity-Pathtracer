@@ -9,6 +9,7 @@ namespace TrueTrace {
 		public enum Options {Diffuse, Disney, Cutout, Volumetric, Video};
 		public Options[] MaterialOptions;
 		[SerializeField] public Vector3[] TransmissionColor, BaseColor;
+		[SerializeField] public Vector2[] MetallicRemap, RoughnessRemap;
 		[SerializeField] public float[] emmission; 
 		[SerializeField] public Vector3[] EmissionColor;
 		[SerializeField] public float[] Roughness;
@@ -112,6 +113,10 @@ namespace TrueTrace {
 				if(SharedMaterials[i].shader.name.Contains("InternalErrorShader")) {
 					SharedMaterials[i].shader = Shader.Find("Standard");
 				}
+			}
+			if(MetallicRemap == null || MetallicRemap.Length != SubMeshCount) {
+				MetallicRemap = new Vector2[SubMeshCount];
+				RoughnessRemap = new Vector2[SubMeshCount];
 			}
 			if(IsSmoothness == null || IsSmoothness.Length != SubMeshCount) IsSmoothness = new bool[SubMeshCount];
 			if(ScatterDist == null || ScatterDist.Length != SubMeshCount) ScatterDist = new float[SubMeshCount];

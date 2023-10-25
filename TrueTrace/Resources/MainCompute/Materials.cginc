@@ -170,7 +170,27 @@ static void CalculateAnisotropicParams(float roughness, float anisotropic, inout
     ay = max(0.0001f, (roughness * roughness) * aspect);
 }
 
-void GgxVndfAnisotropicPdf(const float3 wi, const float3 wm, const float3 wo, float ax, float ay,
+void GgxVndfAnisotropicPdf ( float3 wi , float3 wm , float3 wo, float ax, float ay, inout float pdf) {
+float2 alpha = float2(ax, ay);
+float3 i = wi.xzy;
+float3 o = wo.xzy;
+float ndf = GgxAnisotropicD(wm, ax, ay);
+float2 ai = alpha * i . xy ;
+float len2 = dot( ai , ai ) ;
+float t = sqrt ( len2 + i . z * i . z ) ;
+if ( i . z >= 0.0f ) {
+float a = saturate (min( alpha .x, alpha .y)); // Eq. 6
+float s = 1.0f + length ( float2 (i.x, i.y)); // Omit sgn for a <=1
+float a2 = a * a; float s2 = s * s;
+float k = (1.0f - a2) * s2 / (s2 + a2 * i.z * i.z); // Eq. 5
+pdf = ndf / (2.0f * (k * i . z + t ) ) ; // Eq. 8 * || dm/do ||
+return;
+}
+// Numerically stable form of the previous PDF for i.z < 0
+pdf = ndf * ( t - i . z ) / (2.0f * len2 ) ; // = Eq. 7 * || dm/do ||
+}
+
+void GgxVndfAnisotropicPdf2(const float3 wi, const float3 wm, const float3 wo, float ax, float ay,
     inout float forwardPdfW)
 {
     float D = GgxAnisotropicD(wm, ax, ay);
@@ -226,7 +246,7 @@ static float3 DisneyFresnel(MaterialData hitDat, const float3 wo, const float3 w
 
     // -- See section 3.1 and 3.2 of the 2015 PBR presentation + the Disney BRDF explorer (which does their 2012 remapping
     // -- rather than the SchlickR0FromRelativeIOR seen here but they mentioned the switch in 3.2).
-    float3 R0 = SchlickR0FromRelativeIOR(hitDat.ior) * lerp(1.0f, tint, hitDat.specularTint);
+    float3 R0 = SchlickR0FromRelativeIOR(1.0f / hitDat.ior) * lerp(1.0f, tint, hitDat.specularTint);
     R0 = lerp(R0, hitDat.surfaceColor, hitDat.metallic);
 
     float dielectricFresnel = Dielectric(dotHV, 1.0f, hitDat.ior);
@@ -264,7 +284,7 @@ float3 SampleVndf_Hemisphere(float2 u, float3 wi)
 }
 
 // Sample the GGX VNDF
-float3 SampleGgxVndfAnisotropic(float3 wi, float ax, float ay, float u1, float u2)
+float3 SampleGgxVndfAnisotropic2(float3 wi, float ax, float ay, float u1, float u2)
 {
     // warp to the hemisphere configuration
     float3 wiStd = normalize(float3(wi.x * ax,wi.y, wi.z * ay));
@@ -274,6 +294,30 @@ float3 SampleGgxVndfAnisotropic(float3 wi, float ax, float ay, float u1, float u
     float3 wm = normalize(float3(wmStd.x * ax,wmStd.y, wmStd.z * ay));
     // return final normal
     return wm;
+}
+
+float3 SampleGgxVndfAnisotropic ( float3 i , float alphax, float alphay , float randx, float randy, inout float3 m2) {
+    float2 alpha = float2(alphax, alphay);
+    float2 rand = float2(randx, randy);
+i = i.xzy;    
+float3 i_std = normalize ( float3 ( i . xy * alpha , i . z ) ) ;
+// Sample a spherical cap
+float phi = 2.0f * PI * rand . x ;
+float a = saturate (min( alpha .x, alpha .y)); // Eq. 6
+float s = 1.0f + length ( float2 (i.x, i.y)); // Omit sgn for a <=1
+float a2 = a * a; float s2 = s * s;
+float k = (1.0f - a2) * s2 / (s2 + a2 * i.z * i.z); // Eq. 5
+float b = i . z > 0 ? k * i_std . z : i_std . z ;
+float z = mad (1.0f - rand .y , 1.0f + b , -b ) ;
+float sinTheta = sqrt ( saturate (1.0f - z * z ) ) ;
+float3 o_std = { sinTheta * cos( phi ) , sinTheta * sin( phi ) , z };
+// Compute the microfacet normal m
+float3 m_std = i_std + o_std ;
+float3 m = normalize ( float3 ( m_std . xy * alpha , m_std . z ) ) ;
+m2 = m.xzy;
+// Return the reflection vector o
+float3 i2 = 2.0f * dot(i , m ) * m - i ;
+return i2.xzy;
 }
 
 
@@ -372,7 +416,7 @@ static float EvaluateDisneyClearcoat(float clearcoat, float alpha, const float3 
 
 
 static float3 EvaluateDisneyBRDF(const MaterialData hitDat, const float3 wo, const float3 wm,
-    const float3 wi, inout float fPdf)
+    const float3 wi, inout float fPdf, int pixel_index)
 {
     fPdf = 0.0f;
 
@@ -424,7 +468,7 @@ static float3 EvaluateDisneySpecTransmission(const MaterialData hitDat, const fl
     float gl = SeparableSmithGGXG1(wi, wm, ax, ay);
     float gv = SeparableSmithGGXG1(wo, wm, ax, ay);
 
-    float f = Dielectric(dotHV, 1.0f, 1.0f / hitDat.ior);
+    float f = Dielectric(dotHV, 1.0f, hitDat.ior);
 
     float3 color;
     if (thin)
@@ -512,7 +556,8 @@ static bool SampleDisneySpecTransmission(const MaterialData hitDat, float3 v, bo
 
     // -- Sample visible distribution of normals
     float2 r = random(23, pixel_index);
-    float3 wm = SampleGgxVndfAnisotropic(wo, tax, tay, r.x, r.y);
+    float3 wm;
+    float3 throwaway = SampleGgxVndfAnisotropic(wo, tax, tay, r.x, r.y, wm);
 
     float dotVH = dot(wo, wm);
     if (wm.y < 0.0f) {
@@ -536,7 +581,7 @@ static bool SampleDisneySpecTransmission(const MaterialData hitDat, float3 v, bo
     refracted = false;
 
     float3 wi;
-    if (random(24, pixel_index).x <= F) {
+    if (saturate(random(24, pixel_index).x + hitDat.flatness) <= F) {
         wi = normalize(reflect(-wo, wm));
 
         sample.reflectance = G1v * hitDat.surfaceColor;
@@ -554,7 +599,7 @@ static bool SampleDisneySpecTransmission(const MaterialData hitDat, float3 v, bo
             sample.reflectance = G1v * sqrt(hitDat.surfaceColor);
         }
         else {
-            if (Transmit(wm, wo, relativeIOR, wi)) {
+            if (Transmit(wm, wo, relativeIOR, wi) || hitDat.flatness == 1) {
                 refracted = true;
             }
             else {
@@ -649,10 +694,10 @@ static bool SampleDisneyBRDF(const MaterialData hitDat, float3 v, inout BsdfSamp
 
     // -- Sample visible distribution of normals
     float2 r = random(203, pixel_index);
-    float3 wm = SampleGgxVndfAnisotropic(wo, ay, ax, r.y, r.x);
+    float3 wm;
+    float3 wi = SampleGgxVndfAnisotropic(wo, ay, ax, r.y, r.x, wm);
 
     // -- Reflect over wm
-    float3 wi = normalize(reflect(-wo, wm));
     if (CosTheta(wi) <= 0.0f) {
         sample.forwardPdfW = 0.0f;
         sample.reflectance = 0;
@@ -672,6 +717,7 @@ static bool SampleDisneyBRDF(const MaterialData hitDat, float3 v, inout BsdfSamp
 
     sample.reflectance = specular;
     sample.wi = normalize(ToWorld(TruTan, wi));
+    
     GgxVndfAnisotropicPdf(wi, wm, wo, ay, ax, sample.forwardPdfW);
 
     sample.forwardPdfW *= (1.0f / (4 * abs(dot(wo, wm))));
@@ -891,7 +937,7 @@ float3 EvaluateDisney(MaterialData hitDat, float3 V, float3 L, bool thin,
         float forwardClearcoatPdfW;
 
         float clearcoat = EvaluateDisneyClearcoat(hitDat.clearcoat, hitDat.clearcoatGloss, wo, wm, wi, forwardClearcoatPdfW);
-        reflectance += clearcoat;
+        reflectance += clearcoat * pClearcoat;
         forwardPdf += pClearcoat * forwardClearcoatPdfW;
     }
 
@@ -902,7 +948,7 @@ float3 EvaluateDisney(MaterialData hitDat, float3 V, float3 L, bool thin,
 
         float3 sheen = EvaluateSheen(hitDat, wo, wm, wi);
 
-        reflectance += (diffuse * hitDat.surfaceColor + sheen);
+        reflectance += (diffuse * hitDat.surfaceColor + sheen) * pDiffuse;
 
         forwardPdf += pDiffuse * forwardDiffusePdfW;
     }
@@ -930,12 +976,12 @@ float3 EvaluateDisney(MaterialData hitDat, float3 V, float3 L, bool thin,
     }
 
     // -- specular
-    if (upperHemisphere) {
+    if (upperHemisphere && pBRDF > 0) {
         float forwardMetallicPdfW;
 
-        float3 specular = EvaluateDisneyBRDF(hitDat, wo, wm, wi, forwardMetallicPdfW);
+        float3 specular = EvaluateDisneyBRDF(hitDat, wo, wm, wi, forwardMetallicPdfW, pixel_index);
 
-        reflectance += specular;
+        reflectance += specular * pBRDF;
         forwardPdf += pBRDF * forwardMetallicPdfW / (4 * abs(dot(wo, wm)));
     }
 
@@ -962,7 +1008,7 @@ bool SampleDisney(MaterialData hitDat, float3 v, bool thin, inout BsdfSample sam
     bool CachedSuccess = false;
     if(pSpecular > 0) {
         success = SampleDisneyBRDF(hitDat, v, sample, TruTanMat, pixel_index);
-        Reflection += sample.reflectance;
+        Reflection += sample.reflectance * pSpecular;
         PDF +=  sample.forwardPdfW * pSpecular;
         if (p <= pSpecular) {
             CachedSample = sample;
@@ -974,7 +1020,7 @@ bool SampleDisney(MaterialData hitDat, float3 v, bool thin, inout BsdfSample sam
     hitDat.surfaceColor *= PI;
     if(pClearcoat > 0) {
         success = SampleDisneyClearcoat(hitDat, v, sample, TruTanMat, pixel_index);
-        Reflection += sample.reflectance;
+        Reflection += sample.reflectance * pClearcoat;
         PDF +=  sample.forwardPdfW * pClearcoat;
         if (p > pSpecular && p <= (pSpecular + pClearcoat)) {
             CachedSample = sample;
@@ -985,7 +1031,7 @@ bool SampleDisney(MaterialData hitDat, float3 v, bool thin, inout BsdfSample sam
     }
     if(pDiffuse > 0) {
         success = SampleDisneyDiffuse(hitDat, v, thin, sample, TruTanMat, Refracted, pixel_index);
-        Reflection += sample.reflectance;
+        Reflection += sample.reflectance * pDiffuse;
         PDF +=  sample.forwardPdfW * pDiffuse;
         if (p > pSpecular + pClearcoat && p <= (pSpecular + pClearcoat + pDiffuse)) {
             CachedSample = sample;
@@ -1051,7 +1097,7 @@ float3 ReconstructDisney(MaterialData hitDat, float3 V, float3 L, bool thin,
         float forwardMetallicPdfW;
         float3 specular = ReconstructDisneyBRDF(hitDat, wo, wm, wi, forwardMetallicPdfW, TempSuccess);
         if(TempSuccess) {
-            reflectance += specular;
+            reflectance += specular * pBRDF;
             forwardPdf += pBRDF * forwardMetallicPdfW;
             Success = Success || true;
         }
@@ -1062,7 +1108,7 @@ float3 ReconstructDisney(MaterialData hitDat, float3 V, float3 L, bool thin,
         float clearcoat = ReconstructDisneyClearcoat(hitDat.clearcoat, hitDat.clearcoatGloss, wo, wm, wi,
             forwardClearcoatPdfW, TempSuccess);
         if(TempSuccess) {
-            reflectance += clearcoat;// / (forwardClearcoatPdfW);
+            reflectance += clearcoat * pClearcoat;// / (forwardClearcoatPdfW);
             forwardPdf += pClearcoat * forwardClearcoatPdfW;
             Success = Success || true;
         }
@@ -1073,7 +1119,7 @@ float3 ReconstructDisney(MaterialData hitDat, float3 V, float3 L, bool thin,
 
         float3 sheen = EvaluateSheen(hitDat, wo, wm, wi);
         if(pDiffuse * forwardDiffusePdfW > 0) {
-            reflectance += (diffuse * hitDat.surfaceColor + sheen);    
+            reflectance += (diffuse * hitDat.surfaceColor + sheen) * pDiffuse;    
             forwardPdf += pDiffuse * forwardDiffusePdfW;
             Success = Success || true;
         }

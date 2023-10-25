@@ -225,6 +225,8 @@ struct MaterialData {//56
 	float scatterDistance;
 	int IsSmoothness;
 	float4 AlbedoTexScale;
+	float2 MetallicRemap;
+	float2 RoughnessRemap;
 };
 
 StructuredBuffer<MaterialData> _Materials;
@@ -249,9 +251,12 @@ Texture2D<half4> _TextureAtlas;
 
 
 Texture2D<float2> _NormalAtlas;
+SamplerState sampler_NormalAtlas;
 Texture2D<float4> _EmissiveAtlas;
 
 RWTexture2D<half> PrevDepthTex;
+
+
 
 Texture2D<half> Heightmap;
 
@@ -632,6 +637,9 @@ float2 sample_triangle(float u1, float u2) {
 }
 
 struct LightTriData {
+	float3 pos0;
+	float3 posedge1;
+	float3 posedge2;
 	uint TriTarget;
 };
 
@@ -655,6 +663,7 @@ struct LightData {
 	int Type;
 	float2 SpotAngle;
 	float ZAxisRotation;
+	float Softness;
 };
 StructuredBuffer<LightData> _UnityLights;
 
@@ -713,7 +722,7 @@ int SelectLightMeshSmart(uint pixel_index, inout float MeshWeight, float3 Pos) {
     for(int i = 0; i < RISCount + 1; i++) {
         Rand = random(i + 92, pixel_index);
         int Index = clamp((Rand.x * LightMeshCount), 0, LightMeshCount - 1);
-        p_hat = 1.0f / length(Pos - _LightMeshes[Index].Center);
+        p_hat = 1.0f / dot(Pos - _LightMeshes[Index].Center, Pos - _LightMeshes[Index].Center);
         wsum += p_hat;
         M++;
         if(Rand.y < p_hat / wsum) {
@@ -722,7 +731,7 @@ int SelectLightMeshSmart(uint pixel_index, inout float MeshWeight, float3 Pos) {
         }
 
     }
-    MeshWeight = (wsum / max((M + 1) * MinP_Hat, 0.000001f) * LightMeshCount);
+    MeshWeight = (wsum / max((RISCount + 1) * MinP_Hat, 0.000001f));
     return MinIndex;
 }
 
@@ -1672,8 +1681,19 @@ inline float3 project_SH_irradiance(SH sh, float3 N)
 }
 
 
-float3 sample_projected_triangle(float3 pt, TrianglePos pos, float2 rnd, out float3 light_normal, out float pdfw, out float2 UVs)
+float3 sample_projected_triangle(float3 pt, TrianglePos pos, float2 rnd, out float3 light_normal, out float pdfw, out float2 UVs, bool DoSimple)
 {
+	if(DoSimple) {
+		UVs = sample_triangle(rnd.x, rnd.y);
+		float3 posA = pos.pos0;
+		float3 posB = posA + pos.posedge1;
+		float3 posC = posA + pos.posedge2;
+		light_normal = cross(posB - posA, posC - posA);
+		light_normal = normalize(light_normal);
+		float3 LightPos = posA + pos.posedge1 * UVs.x + pos.posedge2 * UVs.y;
+		pdfw = rcp(dot(LightPos - pt, LightPos - pt)) * (AreaOfTriangle(posA, posB, posC));
+		return LightPos;		
+	}
 	float3 posA = pos.pos0;
 	float3 posB = posA + pos.posedge1;
 	float3 posC = posA + pos.posedge2;

@@ -9,9 +9,9 @@ public class HDRPCompatability : CustomPass
     RenderTexture MainTex;
     TrueTrace.RayTracingMaster RayMaster;
     Material MainMat;
-    private void CreateRenderTexture(ref RenderTexture ThisTex)
+    private void CreateRenderTexture(ref RenderTexture ThisTex, Camera cam)
     {
-        ThisTex = new RenderTexture(Camera.main.pixelWidth, Camera.main.pixelHeight, 0,
+        ThisTex = new RenderTexture(cam.pixelWidth, cam.pixelHeight, 0,
             RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
         ThisTex.enableRandomWrite = true;
         ThisTex.Create();
@@ -23,10 +23,9 @@ public class HDRPCompatability : CustomPass
     // The render pipeline will ensure target setup and clearing happens in an performance manner.
     protected override void Setup(ScriptableRenderContext renderContext, CommandBuffer cmd)
     {
-        CreateRenderTexture(ref MainTex);
-        RayMaster = GameObject.Find("Scene").GetComponent<TrueTrace.RayTracingMaster>();
+        if(GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>().Length == 0) {RayMaster = null; return;}
+        RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
         Shader.SetGlobalTexture("_CameraGBufferTexture2", Shader.GetGlobalTexture("_GBufferTexture2"));
-        RayMaster.TossCamera(Camera.main.gameObject.GetComponent<Camera>());
         if(RayMaster.ShadingShader == null) {
             RayMaster.Start2();
             GameObject.Find("Scene").GetComponent<TrueTrace.AssetManager>().Start();
@@ -36,6 +35,12 @@ public class HDRPCompatability : CustomPass
     protected override void Execute(CustomPassContext ctx)
     {
         if(Application.isPlaying) {
+            if(RayMaster == null) {
+                if(GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>().Length == 0) {RayMaster = null; return;}
+                RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
+            }
+            if(MainTex == null) CreateRenderTexture(ref MainTex, ctx.hdCamera.camera);
+            ctx.hdCamera.camera.renderingPath = RenderingPath.DeferredShading;
             ctx.hdCamera.camera.depthTextureMode |= DepthTextureMode.MotionVectors | DepthTextureMode.Depth;
             RayMaster.TossCamera(ctx.hdCamera.camera);
             Shader.SetGlobalTexture("_CameraGBufferTexture2", Shader.GetGlobalTexture("_GBufferTexture2"));

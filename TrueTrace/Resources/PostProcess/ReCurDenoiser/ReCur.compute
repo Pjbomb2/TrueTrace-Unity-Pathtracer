@@ -345,8 +345,12 @@ void temporal (uint3 id : SV_DispatchThreadID)
     int AccumFrames = min(temporal_color_hf.w,12);
 
     [branch]if(UseReSTIRGI) {
-        if((ReservoirDataB[pos_prev].x+1.0f) / (ReservoirDataA[id.xy].x+1) > 1.0f) {
-            AccumFrames = 0;
+        for(int i = -2; i <= 2; i++) {
+            for(int j = -2; j <= 2; j++) {
+                if((ReservoirDataB[pos_prev + int2(i, j) * 2].x+1.0f) / (ReservoirDataA[id.xy + int2(i, j) * 2].x+1) > 1.0f) {
+                    AccumFrames = 0;
+                }
+            }
         }
     }
     if(!temporal_sample_valid_diff) AccumFrames = 0;
@@ -473,8 +477,12 @@ void secondarytemporal (uint3 id : SV_DispatchThreadID)
 
     if(AccumFrames > 10) AccumFrames *= lerp(0.1f, 1, pow(exp2(-abs(luminance((temporal_color_hf)) - luminance((Center)))),1));
     [branch]if(UseReSTIRGI) {
-        if((ReservoirDataB[pos_prev].x+1.0f) / (ReservoirDataA[id.xy].x+1) > 1.0f) {
-            AccumFrames = 0;
+        for(int i = -2; i <= 2; i++) {
+            for(int j = -2; j <= 2; j++) {
+                if((ReservoirDataB[pos_prev + int2(i, j) * 2].x+1.0f) / (ReservoirDataA[id.xy + int2(i, j) * 2].x+1) > 1.0f) {
+                    AccumFrames = 0;
+                }
+            }
         }
     }
 

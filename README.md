@@ -128,11 +128,12 @@ BVH Options Description -
   <li>Use Next Event Estimation - Enables shadow rays/NEE for direct light sampling</li>
   <li>RIS Count - Number of RIS passes done for lights(select the best light out of X number of randomly selected lights)</li>
   <li>Allow Mesh Skinning - Turns on the ability for skinned meshes to be animated or deformed with respect to their armeture</li>
+  <li>Denoisers -> Allows you to switch between different denoisers</li>
   <li>Allow Bloom - Turns on or off Bloom</li>
   <li>Enable DoF - Turns on or off Depth of Field, and its associated settings</li>
   <li>Autofocus DoF - Sets the focal length to bring whatever is in the center of the screen into focus</li>
   <li>Enable Auto/Manual Exposure - Turns on or off Auto Exposure(Set all the way to left to use autoexposure)</li>
-  <li>Use ReSTIR GI - Enables ReSTIR GI which is usually much higher quality</li>
+  <li>Use ReSTIR GI - Enables ReSTIR GI which is usually much higher quality(Does not work with ASVGF)</li>
   <li>Do Sample Connection Validation - Confirms that two samples are mutually visable and throws it away if they are not</li>
   <li>Update Rate - How many pixels per frame get re-traced to ensure they are still valid paths(7 is a good number to aim for here)</li>
   <li>Enable Temporal - Enables the Temporal pass of ReSTIR GI(allows samples to travel across time</li>
@@ -141,14 +142,11 @@ BVH Options Description -
   <li>Spatial Sample Count - How many neighboring pixels are looked at(turn to 0 to make it adapative to sample count)</li>
   <li>Minimum Spatial Radius - The minimum radius the spatial pass can sample from</li>
   <li>Use Temporal Antialiasing - Enables Temporal Antialiasing(TAA)</li>
-  <li>Enable SVGF - Turns on the SVGF denoiser</li>
-  <li>(If SVGF Denosier is on)Atrous Kernel Size - The amount of times the SVGF denoiser runs through the Atrous kernel</li>
-  <li>Enable ASVGF - Turns on the ASVGF denoiser</li>
   <li>Enable Tonemapping - Turns on tonemapping</li>
   <li>Enable TAAU - Use TAAU for upscaling(if off, you use my semi custom upscaler instead)</li>
   <li>Use Partial Rendering - Traces only 1 out of X rays</li>
   <li>Use AntiFirefly - Enables RCRS filter for getting rid of those single bright pixels</li>
-  <li>Use Recurrent Denoiser - Enables the recurrent denoiser of my own design(much cheaper than ASVGF, but of course worse quality)</li>
+  <li>RR Ignores Primary Hit - Allows for an extra bounce basically, makes it so that dark objects arent noisier, but at the cost of performance</li>
   <li>Atmospheric Scatter Samples - Lower this to 1 if you keep crashing on entering play mode(controls how many atmospheric samples are precomputed)</li>
   <li>Current Samples - Shows how many samples have currently been accumulated</li>
   </ul>

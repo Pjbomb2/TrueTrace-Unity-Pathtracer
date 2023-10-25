@@ -233,38 +233,32 @@ void sampleEquiAngular( float u, float maxDistance, float3 rOrigin, float3 rDire
 bool ChangedExposure;
 
 
-int SelectUnityLight(int pixel_index, out float lightWeight, float3 Norm, float3 Position, float3 RayDir, MaterialData hitmat) {
-    lightWeight = unitylightcount;
-    if (unitylightcount == 1) return 0;
-    float2 Rand = random(0, pixel_index);
-    if(RISCount == 0)   return clamp(floor(Rand.y * unitylightcount), 0, unitylightcount - 1);
+int SelectUnityLight(int pixel_index, out float lightWeight, float3 Norm, float3 Position, float3 RayDir) {
+    float2 Rand;
     int MinIndex = 0;
     float wsum = 0;
-    int M = 0;
     float MinP_Hat = 0;
-    for(int i = 0; i < RISCount; i++) {
+    float3 to_light;
+    int Index;
+    float LengthSquared;
+    float p_hat;
+    for(int i = 0; i < RISCount + 1; i++) {
         Rand = random(i + 23, pixel_index);
-        int Index = clamp((Rand.x * unitylightcount), 0, unitylightcount - 1);
+        Index = clamp((Rand.x * unitylightcount), 0, unitylightcount - 1);
         LightData light = _UnityLights[Index];
-        float3 Pos = light.Type == 1 ? (light.Direction * 120000.0f + Position) : light.Position;
-        float3 to_light = Pos - Position;
-        float LengthSquared = dot(to_light, to_light);
+        to_light = (light.Type == 1 ? (light.Direction * 120000.0f + Position) : light.Position) - Position;
+        LengthSquared = dot(to_light, to_light);
         to_light /= sqrt(LengthSquared);
-        float3 bsdf_value;
-        float bsdf_pdf;
-        bool A = EvaluateBsdf(hitmat, RayDir, to_light, Norm, bsdf_pdf, bsdf_value, pixel_index);
-        // bool A = evaldiffuse(to_light, dot(to_light, Norm), bsdf_value, bsdf_pdf);
-        float p_hat = max(A * luminance(bsdf_value * light.Radiance) / ((light.Type == 1) ? 1 : LengthSquared) * ((light.Type == 2) ? saturate(saturate(dot(to_light, -light.Direction)) * light.SpotAngle.x + light.SpotAngle.y) : 1),0);
+
+        p_hat = max(1.0f / ((light.Type == 1) ? 1 : LengthSquared) * ((light.Type == 2) ? saturate(saturate(dot(to_light, -light.Direction)) * light.SpotAngle.x + light.SpotAngle.y) : ((light.Type == 3 || light.Type == 4) ?  saturate(dot(to_light, -light.Direction)) : 1)),0);
         wsum += p_hat;
-        M++;
         if(Rand.y < p_hat / wsum) {
             MinIndex = Index;
             MinP_Hat = p_hat;
         }
 
     }
-    if(MinP_Hat == 0) return clamp(floor(Rand.y * unitylightcount), 0, unitylightcount - 1);
-    lightWeight = (wsum / max((M + 1) *MinP_Hat, 0.000001f)) * (float)unitylightcount;
+    lightWeight = (wsum / max((RISCount + 1) *MinP_Hat, 0.000001f)) * (float)unitylightcount;
     return MinIndex;
 }
 
@@ -293,57 +287,44 @@ int NormalSize;
 int EmissiveSize;
 
 //can I improve RIS by pre-doing the transforms??
-inline int SelectLight(uint pixel_index, uint MeshIndex, out float lightWeight, float3 Norm, float3 Position, const float3 RayDir, const MaterialData hitmat, const float4x4 Transform, inout float3 FinalPos, inout float2 FinalUV, inout float3 FinalNorm, inout float Finalarea) {//Need to check these to make sure they arnt simply doing uniform sampling
+inline int SelectLight(const uint pixel_index, const uint MeshIndex, out float lightWeight, float3 Norm, float3 Position, float4x4 Transform, inout float2 FinalUV) {//Need to check these to make sure they arnt simply doing uniform sampling
 
-    float2 Rand = random(3, pixel_index);
     const int StartIndex = _LightMeshes[MeshIndex].StartIndex;
-    const int IndexEnd = _LightMeshes[MeshIndex].IndexEnd;
-    const int LightCount = IndexEnd - StartIndex;
-    lightWeight = (LightCount);
+    const int LightCount = _LightMeshes[MeshIndex].IndexEnd - StartIndex;
 
     const int MeshTriOffset = _MeshData[_LightMeshes[MeshIndex].LockedMeshIndex].TriOffset;
-    LightTriData Tri;
     Position = mul(Transform, float4(Position,1));
     Norm = normalize(mul(Transform, float4(Norm,0)).xyz);
-    if(RISCount == 0) {
-        int Index = clamp((Rand.x * LightCount) + StartIndex, StartIndex, IndexEnd - 1);
-        Tri = LightTriangles[Index];
-        FinalPos = sample_projected_triangle(Position, triangle_get_positions(Tri.TriTarget + MeshTriOffset), random(24, pixel_index), FinalNorm, Finalarea, FinalUV);    
-        return Index;
-    }
-    const int MatOffset = _LightMeshes[MeshIndex].MatOffset;
+
+    float2 Rand;
     int MinIndex = 0;
     float wsum = 0;
-    int M = 0;
     float MinP_Hat = 0;
-    float3 bsdf_value;
-    float bsdf_pdf;
-    for(int i = 0; i < RISCount; i++) {
+    int Index;
+    float2 Rand2;
+    float2 TriangleUV;
+    float3 LightPosition;
+    float p_hat;
+    for(int i = 0; i < RISCount + 1; i++) {
         Rand = random(i, pixel_index);
-        int Index = clamp((Rand.x * LightCount) + StartIndex, StartIndex, IndexEnd - 1);
-        Tri = LightTriangles[Index];
-        float2 TriangleUV;
-        float3 LightPosition;
-        float3 LightNorm;
-        float p_hat;
-        LightPosition = sample_projected_triangle(Position, triangle_get_positions(Tri.TriTarget + MeshTriOffset), random(24 + i, pixel_index), LightNorm, p_hat, TriangleUV);    
-        if(dot(normalize(LightPosition - Position), Norm) < 0) p_hat = 0;
+        Index = (Rand.x * LightCount) + StartIndex;
+        Rand2 = random(25 + i, pixel_index);
+
+        TriangleUV = sample_triangle(Rand2.x, Rand2.y);
+        LightPosition = (LightTriangles[Index].pos0 + LightTriangles[Index].posedge1 * TriangleUV.x + LightTriangles[Index].posedge2 * TriangleUV.y - Position);
+        p_hat = rcp(dot(LightPosition, LightPosition));
+        if(dot(normalize(LightPosition), Norm) < 0) p_hat = 0;
         wsum += p_hat;
-        M++;
-        if(Rand.y < p_hat / wsum) {
-            FinalPos = LightPosition;
-            FinalNorm = LightNorm;
+        [branch]if(Rand.y < p_hat / wsum) {
             FinalUV = TriangleUV;
-            Finalarea = p_hat;
             MinIndex = Index;
             MinP_Hat = p_hat;
         }
 
     }
-    lightWeight = (wsum / max((M + 1) *MinP_Hat, 0.000001f) * LightCount);
-    return MinIndex;
+    lightWeight = (wsum / max((RISCount + 1) *MinP_Hat, 0.000001f) * LightCount);
+    return LightTriangles[MinIndex].TriTarget + MeshTriOffset;
 }
-
 
 void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 Uv, float2 NormalUV, bool IsEmissiveTex, RayData RayDat, bool HitHeightmap, const uint pixel_index, int MaterialIndex, inout float4 AlbedoTexData) {//main function
     bool CB = !DoPartialRendering;
@@ -357,6 +338,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
     float3 PrevDirection = ray.direction;
     float3 PrevOrigin = ray.origin;
     float3 Geomnorm;
+    float3 USGNorm;//Unsmoothed geometric normal
     float3 norm;
     float4x4 Inverse = inverse(_MeshData[hit.mesh_id].Transform);
     float pdf = 0.0f;
@@ -364,21 +346,24 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
     bool validBSDFSample;
 
     float3 throughput = Color.throughput;
-
     [branch] if (TerrainExists && HitHeightmap) {
         Geomnorm = GetHeightmapNormal(pos, hit.triangle_id);
+        USGNorm = Geomnorm;
     } else {
         Geomnorm = GetTriangleNormal(hit.triangle_id, float2(hit.u, hit.v), Inverse);
+        USGNorm = -normalize(cross(mul(Inverse, float4(normalize(AggTris[hit.triangle_id].posedge1),0)).xyz, mul(Inverse, float4(normalize(AggTris[hit.triangle_id].posedge2),0)).xyz));
+        if(dot(USGNorm, Geomnorm) < 0) USGNorm *= -1;
+        if(hitDat.MatType == CutoutIndex) USGNorm = Geomnorm;
     }
 
-    bool GotFlipped = dot(ray.direction, Geomnorm) >= 0.0f;
-    if (GotFlipped) Geomnorm *= -1;//Backfacing surface
+    bool GotFlipped = dot(ray.direction, USGNorm) > 0.0f;
+    if (GotFlipped) {USGNorm *= -1.0f; Geomnorm *= -1.0f;}//Backfacing surface
 
     norm = Geomnorm;
     [branch] if (CurBounce == 0 && NormalUV.x != -1) {//Handle Normal Maps
         float3 LocalTan = GetTriangleTangent(hit.triangle_id, float2(hit.u, hit.v), Inverse);
         float3 LocalBinorm = normalize(cross(Geomnorm, LocalTan));
-        float2 Norm = _NormalAtlas[NormalUV * NormalSize];
+        float2 Norm = _NormalAtlas.SampleLevel(sampler_NormalAtlas, NormalUV, clamp(pow(hit.t, 0.0f) / 7.0f,0,2));// [NormalUV * NormalSize];
 
         float3 LocalNormIN = float3((2.0f * Norm - 1.0f), 0.0f);
         LocalNormIN.z = 1.0 - 0.5 * dot(LocalNormIN, LocalNormIN);
@@ -394,18 +379,21 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
             else if(CurBounce == 1) Color.Direct += hitDat.emmissive * hitDat.surfaceColor;
             else Color.Indirect += Color.throughput * hitDat.emmissive * hitDat.surfaceColor;
         } else {
-            float3 a0 = AggTris[hit.triangle_id].pos0;
-            float3 a1 = a0 + AggTris[hit.triangle_id].posedge1;
-            float3 a2 = a0 + AggTris[hit.triangle_id].posedge2;
-            float light_pdf = 1.0f / (LightMeshCount * rcp(get_spherical_triangle_pdfw(a0, a1, a2, mul(_MeshData[hit.mesh_id].Transform, float4(PrevOrigin,1))))) * rcp(_MeshData[hit.mesh_id].LightTriCount);
+            float3 a0 = mul(Inverse, float4(AggTris[hit.triangle_id].pos0, 1)).xyz;
+            float3 a1 = mul(Inverse, float4(AggTris[hit.triangle_id].pos0 + AggTris[hit.triangle_id].posedge1, 1)).xyz;
+            float3 a2 = mul(Inverse, float4(AggTris[hit.triangle_id].pos0 + AggTris[hit.triangle_id].posedge2, 1)).xyz;
+
+            float a = AreaOfTriangle(a0, a1, a2);
+            float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
+            float light_pdf = 1.0f / (SA * LightMeshCount) * rcp(_MeshData[hit.mesh_id].LightTriCount);
             w = power_heuristic(max(RayDat.last_pdf,0), light_pdf);
-            if (CurBounce == 0) Color.Direct = hitDat.emmissive;
+            if (CurBounce == 0) Color.Direct += hitDat.emmissive;
             else if (CurBounce == 1) Color.Direct += (hitDat.surfaceColor * hitDat.emmissive) * w;
             else Color.Indirect += Color.throughput * hitDat.surfaceColor * hitDat.emmissive * w;
         }
         NEEPosA[Uv.xy] += float4(0,0,0,luminance(hitDat.surfaceColor * hitDat.emmissive)); 
         if(CurBounce == 1) WorldPosA[Uv] = uint4(UseReSTIRGI ? asuint(pos) : asuint(PrevDirection), WorldPosA[Uv].w);
-        if(CurBounce == 0) AlbedoTexData = float4(hitDat.surfaceColor, 0);
+        if(CurBounce == 0) AlbedoTexData = float4(hitDat.surfaceColor * hitDat.emmissive, 0);
         return;
     }
 
@@ -437,8 +425,10 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
                     if (MaterialLobe == 0 || MaterialLobe == 3) {
                         Color.IsSpecular = (hitDat.roughness < 0.01f) ? 0 : 1;
                     }
-                    
-                    uint ABPacked = ((uint)(hitDat.metallic * 0xFFFF) << 16) | ((uint)(hitDat.roughness * 0xFFFF) & 0xFFFF);
+                    float TotMet = saturate(hitDat.Specular + hitDat.metallic);
+                    if(!UseASVGF) TotMet = hitDat.metallic;
+                    // if(UseASVGF) hitDat.metallic += hitDat.Specular;
+                    uint ABPacked = ((uint)(TotMet * 0xFFFF) << 16) | ((uint)(hitDat.roughness * 0xFFFF) & 0xFFFF);
                     Color.pad = asfloat(ABPacked);
                     
                     if (MaterialLobe == 3) {
@@ -448,6 +438,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
                             B = 0.5f * 0xFFFF;
                         } else Color.IsSpecular = 3;
                         uint ABPacked = (1 * 0xFFFF << 16) | (B & 0xFFFF);
+                        if(UseReSTIRGI) ABPacked = 0;
                         Color.pad = asfloat(ABPacked);
                     }
                 }
@@ -455,10 +446,11 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
                 if (Refracted) {
                     Geomnorm *= -1;
                     norm *= -1;
+                    USGNorm *= -1;
                 } 
                 else if (AlbedoTexData.w <= 0 && MaterialLobe == 3) {
                     Color.IsSpecular = 3;
-                    uint ABPacked = ((uint)(1 * 0xFFFF) << 16) | ((uint)(0.1f * 0xFFFF) & 0xFFFF);
+                    uint ABPacked = ((uint)(0 * 0xFFFF) << 16) | ((uint)(0.0f * 0xFFFF) & 0xFFFF);
                     Color.pad = asfloat(ABPacked);
                 }
             break;
@@ -489,7 +481,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
         }
     }
 
-    ray.origin = Geomnorm * NormalOffset + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
+    ray.origin = USGNorm * NormalOffset + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
     if(AlbedoTexData.w == CurBounce) {
         WorldPosA[Uv] = uint4(UseReSTIRGI ? asuint(pos) : asuint(PrevDirection), WorldPosA[Uv].w);
     }
@@ -516,6 +508,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
         bool IsFullStrength = true;
         bool IsDirectional = false;
         bool RequiresRadialFalloff = false;
+        bool RequiresDirectionalFocus = false;
         float SelectionWeight = 1;
         float area = 0;
 
@@ -529,51 +522,84 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
 
         int AggTriIndex = 0;
         if (UseUnityLight) {
-            triindex = SelectUnityLight(pixel_index, LightWeight, norm, pos, PrevDirection, hitDat);
+            triindex = SelectUnityLight(pixel_index, LightWeight, norm, pos, PrevDirection);
             LightData Light = _UnityLights[triindex];
+            float3x3 rotationmatrix;
+            float3 tangent1;
+            float3 tangent0;
+            float Length;
+            float3 oldRand;
+            float3 randVector;
             [branch] switch (Light.Type) {
                 default://Point light
                     LightPosition = Light.Position;
                     LightNorm = normalize(ray.origin - LightPosition);
+                    LightPosition += (float3(random(23, pixel_index), random(62, pixel_index).x) - 0.5f) * _UnityLights[triindex].Softness * 0.1f;//Soft Shadows
                 break;
                 case 1://Sun/Directional light
                     LightPosition = ray.origin + Light.Direction;
                     LightNorm = -Light.Direction;
                     IsFullStrength = (LightNorm.y <= 0.0f);
                     IsDirectional = true;
-                    LightPosition += (float3(random(23, pixel_index), random(62, pixel_index).x) - 0.5f) * _UnityLights[triindex].SpotAngle.x * 0.01f;//Soft Shadows
+                    LightPosition += (float3(random(23, pixel_index), random(62, pixel_index).x) - 0.5f) * _UnityLights[triindex].Softness * 0.01f;//Soft Shadows
                 break;
                 case 2://Spot light
                     LightPosition = Light.Position;
                     LightNorm = Light.Direction;
                     IsFullStrength = false;
                     RequiresRadialFalloff = true;
-                    LightPosition += (float3(random(23, pixel_index), random(62, pixel_index).x) - 0.5f) * 0.1f;//Soft Shadows
+                    LightPosition += (float3(random(23, pixel_index), random(62, pixel_index).x) - 0.5f) * _UnityLights[triindex].Softness * 0.1f;//Soft Shadows
                 break;
                 case 3://Area light
+                    RequiresDirectionalFocus = true;
                     RequiresRadialFalloff = true;
-                    float3 randVector = (float3(random(43, pixel_index).x * Light.SpotAngle.x, random(43, pixel_index).y * Light.SpotAngle.y, 0)) - float3(Light.SpotAngle.x, Light.SpotAngle.y, 0) / 2;
-                    float3 oldRand = randVector;
+                    randVector = (float3(random(43, pixel_index).x * Light.SpotAngle.x, random(43, pixel_index).y * Light.SpotAngle.y, 0)) - float3(Light.SpotAngle.x, Light.SpotAngle.y, 0) / 2;
+                    oldRand = randVector;
                     Light.ZAxisRotation *= PI / 180.0f;
                     randVector = float3(oldRand.x * cos(Light.ZAxisRotation) - oldRand.y * sin(Light.ZAxisRotation), oldRand.y * cos(Light.ZAxisRotation) + oldRand.x * sin(Light.ZAxisRotation), 0);
-                    float3 tangent0 = cross(Light.Direction, float3(0, 1, 0));
+                    tangent0 = cross(Light.Direction, float3(0, 1, 0));
                     if (dot(tangent0, tangent0) < 0.001f) tangent0 = cross(Light.Direction, float3(1, 0, 0));
                     tangent0 = normalize(tangent0);
-                    float3 tangent1 = normalize(cross(Light.Direction, tangent0));
-                    float3x3 rotationmatrix = { tangent0, tangent1, Light.Direction };
-                    float3 Length = length(randVector);
+                    tangent1 = normalize(cross(Light.Direction, tangent0));
+                    rotationmatrix = float3x3(tangent0, tangent1, Light.Direction);
+                    Length = length(randVector);
+                    LightPosition = Light.Position + mul(normalize(randVector), rotationmatrix) * Length;
+                    LightNorm = Light.Direction;
+                break;
+                case 4://Disk Light
+                    RequiresDirectionalFocus = true;
+                    RequiresRadialFalloff = true;
+                    randVector = (float3(sin(random(43, pixel_index).x * 2.0f * PI), cos(random(43, pixel_index).x * 2.0f * PI), 0));
+                    oldRand = randVector;
+                    Light.ZAxisRotation *= PI / 180.0f;
+                    randVector = float3(oldRand.x * cos(Light.ZAxisRotation) - oldRand.y * sin(Light.ZAxisRotation), oldRand.y * cos(Light.ZAxisRotation) + oldRand.x * sin(Light.ZAxisRotation), 0) * random(63, pixel_index).x * Light.SpotAngle.x;
+                    tangent0 = cross(Light.Direction, float3(0, 1, 0));
+                    if (dot(tangent0, tangent0) < 0.001f) tangent0 = cross(Light.Direction, float3(1, 0, 0));
+                    tangent0 = normalize(tangent0);
+                    tangent1 = normalize(cross(Light.Direction, tangent0));
+                    rotationmatrix = float3x3(tangent0, tangent1, Light.Direction);
+                    Length = length(randVector);
                     LightPosition = Light.Position + mul(normalize(randVector), rotationmatrix) * Length;
                     LightNorm = Light.Direction;
                 break;
             }
         } else {
             MeshIndex = SelectLightMesh(pixel_index);
+            float MeshWeight = 1;
+            // if(Uv.x > screen_width / 2) {
+                MeshIndex = SelectLightMeshSmart(pixel_index, MeshWeight, pos);
+            // }
             float4x4 MeshTransformInverse = _MeshData[_LightMeshes[MeshIndex].LockedMeshIndex].Transform;
-            triindex = SelectLight(pixel_index, MeshIndex, LightWeight, norm, pos, PrevDirection, hitDat, MeshTransformInverse, LightPosition, TriangleUV, LightNorm, area);
-            AggTriIndex = LightTriangles[triindex].TriTarget + _MeshData[_LightMeshes[MeshIndex].LockedMeshIndex].TriOffset;
+            AggTriIndex = SelectLight(pixel_index, MeshIndex, LightWeight, norm, pos, MeshTransformInverse, TriangleUV);
+            TrianglePos CurTri = triangle_get_positions(AggTriIndex);
             MeshTransformInverse = inverse(MeshTransformInverse);
-            LightPosition = mul(MeshTransformInverse, float4(LightPosition,1));
-            LightNorm = normalize(mul((float3x3)MeshTransformInverse, LightNorm).xyz);
+            float3 a0 = mul(MeshTransformInverse, float4(CurTri.pos0, 1)).xyz;
+            float3 a1 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge1, 1)).xyz;
+            float3 a2 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge2, 1)).xyz;
+            area = AreaOfTriangle(a0, a1, a2);
+            LightWeight *= MeshWeight;
+            LightPosition = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge1 * TriangleUV.x + CurTri.posedge2 * TriangleUV.y,1));
+            LightNorm = normalize(mul((float3x3)MeshTransformInverse, normalize(cross(CurTri.posedge1, CurTri.posedge2))).xyz);
         }
         LightWeight *= SelectionWeight;
         float3 to_light = LightPosition - ray.origin;
@@ -583,7 +609,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
 
         to_light = to_light / distance_to_light;
         
-        if(RequiresRadialFalloff) LightAttenuation = saturate(dot(to_light, -LightNorm));
+        if(RequiresRadialFalloff) LightAttenuation = pow(saturate(dot(to_light, -LightNorm)), (RequiresDirectionalFocus ? (_UnityLights[triindex].Softness * 120.0f + 1) : 1.0f));
         if (!IsDirectional && !IsFullStrength) LightAttenuation = saturate(LightAttenuation * _UnityLights[triindex].SpotAngle.x + _UnityLights[triindex].SpotAngle.y);
 
         bool validbsdfNEE = EvaluateBsdf(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_value, pixel_index);
@@ -601,11 +627,11 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
                 #endif
                 Radiance = _UnityLights[triindex].Radiance * transmittance;
                 NEE_pdf = distance_to_light_squared * LightCos;
-                Illum = Color.throughput * (Radiance * bsdf_value) / NEE_pdf * LightAttenuation * LightWeight;
+                Illum = Color.throughput * (Radiance * bsdf_value) / NEE_pdf * LightAttenuation * LightWeight * (RequiresDirectionalFocus ? (_UnityLights[triindex].Softness * 120.0f + 1) : 1.0f);
             } else {        
-                NEE_pdf = (1.0f / (LightMeshCount * area)) / LightWeight;//Putting the lightweight up here makes it biased
+                NEE_pdf = (1.0f / (LightMeshCount * (LightCos * area) / distance_to_light_squared)) / LightWeight;//Putting the lightweight up here makes it biased
                 int MaterialIndex = AggTris[AggTriIndex].MatDat + _MeshData[_LightMeshes[MeshIndex].LockedMeshIndex].MaterialOffset;
-                Radiance = _Materials[MaterialIndex].emmissive *  _Materials[MaterialIndex].surfaceColor;
+                Radiance = _Materials[MaterialIndex].emmissive * _Materials[MaterialIndex].surfaceColor;
                 if (_Materials[MaterialIndex].MatType == VideoIndex || (_Materials[MaterialIndex].EmissiveTex.x > 0 && _Materials[MaterialIndex].emmissive >= 0)) {
                     float2 BaseUv = AggTris[AggTriIndex].tex0 * (1.0f - TriangleUV.x - TriangleUV.y) + AggTris[AggTriIndex].texedge1 * TriangleUV.x + AggTris[AggTriIndex].texedge2 * TriangleUV.y;
                     if (_Materials[MaterialIndex].MatType == VideoIndex) {
@@ -621,6 +647,11 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
                             Radiance = EmissCol * _Materials[MaterialIndex].emmissive;
                         } else Radiance = 0;
                     }
+                } else if(_Materials[MaterialIndex].AlbedoTex.x > 0) {
+                    float2 BaseUv = AggTris[AggTriIndex].tex0 * (1.0f - TriangleUV.x - TriangleUV.y) + AggTris[AggTriIndex].texedge1 * TriangleUV.x + AggTris[AggTriIndex].texedge2 * TriangleUV.y;
+                    float2 EmissionUV = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex);   
+                    float4 EmissTex = _TextureAtlas.SampleLevel(my_point_clamp_sampler, EmissionUV, 0);
+                    Radiance *= EmissTex.xyz;
                 }
                 float NEEMISWeight = power_heuristic(NEE_pdf, bsdf_pdf);
                 Illum = Color.throughput * (Radiance * bsdf_value) / NEE_pdf * LightAttenuation * NEEMISWeight;
@@ -634,12 +665,12 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
             Illum *= rcp(saturate(maxillum));
             if(maxillum > random(27, pixel_index).y) {//NEE russian roulette, massively improves performance while giivng the same result
                 uint index3;
-                if(UseReSTIRGI && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
+                if(UseReSTIRGI && CurBounce == AlbedoTexData.w - 1) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
 
                 InterlockedAdd(BufferSizes[CurBounce].shadow_rays, 1, index3);
                 ShadowRaysBuffer[index3].origin = ray.origin;
                 ShadowRaysBuffer[index3].direction = to_light;
-                ShadowRaysBuffer[index3].t = (IsDirectional ? 10000.0f : distance_to_light - 0.01f) * ((CurBounce != 0) ? 1 : -1);
+                ShadowRaysBuffer[index3].t = (IsDirectional ? 10000.0f : distance_to_light - 0.01f) * ((CurBounce != AlbedoTexData.w - 1) ? 1 : -1);
                 ShadowRaysBuffer[index3].illumination = Illum;
                 ShadowRaysBuffer[index3].PixelIndex = pixel_index;
                 ShadowRaysBuffer[index3].LuminanceIncomming = luminance(Radiance);
@@ -785,12 +816,15 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     } else if(AlbedoUv.x != -1 && !HitTerrain) {
         TempMat.surfaceColor *= _TextureAtlas[StochasticBilinear(AlbedoUv * AlbedoAtlasSize, random(54, pixel_index).x)].xyz;
     }
+    // TempMat.surfaceColor = clamp(TempMat.surfaceColor,0.005f,1);
     TempMat.roughness = max(TempMat.roughness, 0.00001f);
     float2 MetallicUV = AlignUV(BaseUv, TempMat.AlbedoTexScale, TempMat.MetallicTex);
     float2 RoughnessUV = AlignUV(BaseUv, TempMat.AlbedoTexScale, TempMat.RoughnessTex);
-    if (TempMat.specTrans != 1 && MetallicUV.x > 0) TempMat.metallic = MetallicTex.SampleLevel(my_point_clamp_sampler, StochasticBilinear(MetallicUV * AtlasSize, random(54, pixel_index).x) / AtlasSize, max(CurBounce, 0));
+    if (TempMat.specTrans != 1 && MetallicUV.x > 0) {float Tempmet = MetallicTex.SampleLevel(my_point_clamp_sampler, StochasticBilinear(MetallicUV * AtlasSize, random(54, pixel_index).x) / AtlasSize, max(CurBounce, 0)); if(Tempmet != 0) TempMat.metallic = Tempmet;}
     if (RoughnessUV.x > 0) TempMat.roughness = saturate(RoughnessTex.SampleLevel(my_point_clamp_sampler, StochasticBilinear(RoughnessUV * AtlasSize, random(54, pixel_index).x) / AtlasSize, max(CurBounce, 0)));
-    if(TempMat.IsSmoothness) TempMat.roughness = 1.0f - TempMat.roughness;
+    if(!all(TempMat.MetallicRemap == float2(0,1))) TempMat.metallic = (TempMat.metallic * (TempMat.MetallicRemap.y - TempMat.MetallicRemap.x)) + TempMat.MetallicRemap.x;
+    if(TempMat.IsSmoothness)  TempMat.roughness = 1.0f - TempMat.roughness;
+    if(!all(TempMat.RoughnessRemap == float2(0,1))) TempMat.roughness = (TempMat.roughness * (TempMat.RoughnessRemap.y - TempMat.RoughnessRemap.x)) + TempMat.RoughnessRemap.x;
     if(AlbedoTexData.w != -1) TempMat.roughness = min(TempMat.roughness + max(CurBounce / (float)MaxBounce,0),1);
     bool IsEmissiveTex = false;
     if(TempMat.emmissive >= 0) {

@@ -72,3 +72,25 @@ void CombineNodeBuffers(uint3 id : SV_DispatchThreadID)
 	OutAggNodes[id.x + Offset] = InAggNodes[id.x];
 
 }
+
+#pragma kernel CombineLightBuffers
+
+struct LightTriData {
+	float3 pos0;
+	float3 posedge1;
+	float3 posedge2;
+	uint TriTarget;
+};
+
+StructuredBuffer<LightTriData> LightTrianglesIn;
+RWStructuredBuffer<LightTriData> LightTrianglesOut;
+
+[numthreads(372, 1, 1)]
+void CombineLightBuffers(uint3 id : SV_DispatchThreadID)
+{
+	if (id.x >= Count)
+		return;
+
+	LightTrianglesOut[id.x + Offset] = LightTrianglesIn[id.x];
+
+}

@@ -89,9 +89,9 @@ void Construct(uint3 id : SV_DispatchThreadID)
 	p2 = mul(Transform, float4(p2,1)).xyz;
 	p3 = mul(Transform, float4(p3,1)).xyz;
 
-	n1 = mul(Transform, float4(n1,1)).xyz;
-	n2 = mul(Transform, float4(n2,1)).xyz;
-	n3 = mul(Transform, float4(n3,1)).xyz;
+	n1 = normalize(mul(Transform, float4(n1,0)).xyz);
+	n2 = normalize(mul(Transform, float4(n2,0)).xyz);
+	n3 = normalize(mul(Transform, float4(n3,0)).xyz);
 
 	float3 BBMax = max(max(p, p2), p3);
 	float3 BBMin = min(min(p, p2), p3);
@@ -114,6 +114,31 @@ void Construct(uint3 id : SV_DispatchThreadID)
 	TempTri.norms.y = octahedral_32(n2);
 	TempTri.norms.z = octahedral_32(n3);
 	CudaTriArray[id.x + TriBuffOffset] = TempTri;
+}
+
+#pragma kernel TransferKernel
+
+struct LightTriData {
+	float3 pos0;
+	float3 posedge1;
+	float3 posedge2;
+	uint TriTarget;
+};
+
+RWStructuredBuffer<LightTriData> LightTrianglesOut;
+int LightTriBuffOffset;
+[numthreads(KernelRatio, 1, 1)]
+void TransferKernel(uint3 id : SV_DispatchThreadID)
+{
+	if (id.x >= gVertexCount)
+		return;
+
+	CudaTriangle TempTri = CudaTriArrayIN[LightTrianglesOut[id.x + LightTriBuffOffset].TriTarget + TriBuffOffset];
+
+	LightTrianglesOut[id.x + LightTriBuffOffset].pos0 = TempTri.pos0;
+	LightTrianglesOut[id.x + LightTriBuffOffset].posedge1 = TempTri.posedge1;
+	LightTrianglesOut[id.x + LightTriBuffOffset].posedge2 = TempTri.posedge2;
+
 }
 
 

@@ -33,7 +33,7 @@ namespace TrueTrace {
         private int NodeUpdater;
         private int NodeCompress;
         private int NodeInitializerKernel;
-        [HideInInspector] static public Camera SelectedCamera;
+
         [HideInInspector] public int AlbedoAtlasSize;
 
         [HideInInspector] public VideoObject VideoPlayerObject;
@@ -43,8 +43,8 @@ namespace TrueTrace {
         [HideInInspector] public List<MaterialData> _Materials;
         [HideInInspector] public ComputeBuffer BVH8AggregatedBuffer;
         [HideInInspector] public ComputeBuffer AggTriBuffer;
+        [HideInInspector] public ComputeBuffer LightTriBuffer;
         [HideInInspector] public List<MyMeshDataCompacted> MyMeshesCompacted;
-        [HideInInspector] public List<LightTriData> AggLightTriangles;
         [HideInInspector] public List<LightData> UnityLights;
         [HideInInspector] public InstancedManager InstanceData;
         [HideInInspector] public List<InstancedObject> Instances;
@@ -60,6 +60,7 @@ namespace TrueTrace {
         private ComputeShader MeshFunctions;
         private int TriangleBufferKernel;
         private int NodeBufferKernel;
+        private int LightBufferKernel;
 
         [HideInInspector] public List<ParentObject> RenderQue;
         [HideInInspector] public List<Transform> RenderTransforms;
@@ -121,7 +122,6 @@ namespace TrueTrace {
             CommonFunctions.DeepClean(ref LightTransforms);
             CommonFunctions.DeepClean(ref LightMeshes);
             CommonFunctions.DeepClean(ref MyMeshesCompacted);
-            CommonFunctions.DeepClean(ref AggLightTriangles);
             CommonFunctions.DeepClean(ref UnityLights);
 
             DestroyImmediate(AlbedoAtlas);
@@ -132,6 +132,8 @@ namespace TrueTrace {
             DestroyImmediate(RoughnessAtlas);
             if (BVH8AggregatedBuffer != null)
             {
+                LightTriBuffer.Release();
+                LightTriBuffer = null;
                 BVH8AggregatedBuffer.Release();
                 BVH8AggregatedBuffer = null;
                 AggTriBuffer.Release();
@@ -400,7 +402,8 @@ namespace TrueTrace {
             ConstructAtlas(MetallicTexs, ref MetallicAtlas, out MetallicRects, AlbedoAtlas.width, false, false, 0, MetallicTexChannelIndex);
             ConstructAtlas(RoughnessTexs, ref RoughnessAtlas, out RoughnessRects, AlbedoAtlas.width, false, false, 0, RoughnessTexChannelIndex);
             AlbedoAtlasSize = AlbedoAtlas.width;
-
+            NormalAtlas.anisoLevel = 3;
+            NormalAtlas.GenerateMips();
             MetallicAtlas.GenerateMips();
             RoughnessAtlas.GenerateMips();
             MatCount = 0;
@@ -457,7 +460,7 @@ namespace TrueTrace {
         }
 
         void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
-            gameObject.GetComponent<RayTracingMaster>().Start2();
+            if(this != null) gameObject.GetComponent<RayTracingMaster>().Start2();
         }
 
         public void ForceUpdateAtlas() {
@@ -474,6 +477,8 @@ namespace TrueTrace {
             {
                 BVH8AggregatedBuffer.Release();
                 BVH8AggregatedBuffer = null;
+                LightTriBuffer.Release();
+                LightTriBuffer = null;
                 AggTriBuffer.Release();
                 AggTriBuffer = null;
             }
@@ -501,8 +506,8 @@ namespace TrueTrace {
         [HideInInspector] public bool NeedsToUpdateXML;
         public void AddMaterial(Shader shader) {
             int ShaderPropertyCount = shader.GetPropertyCount();
-            string NormalTex, EmissionTex, MetallicTex, RoughnessTex, MetallicRange, RoughnessRange;
-            NormalTex = EmissionTex = MetallicTex = RoughnessTex = MetallicRange = RoughnessRange = "null";
+            string NormalTex, EmissionTex, MetallicTex, RoughnessTex, MetallicRange, RoughnessRange, MetallicRemapMin, MetallicRemapMax, RoughnessRemapMin, RoughnessRemapMax;
+            NormalTex = EmissionTex = MetallicTex = RoughnessTex = MetallicRange = RoughnessRange = MetallicRemapMin = MetallicRemapMax = RoughnessRemapMin = RoughnessRemapMax = "null";
             int MetallicIndex, RoughnessIndex;
             MetallicIndex = RoughnessIndex = 0;
             data.Material.Add(new MaterialShader() {
@@ -519,7 +524,11 @@ namespace TrueTrace {
                 IsGlass = false,
                 IsCutout = false,
                 UsesSmoothness = false,
-                BaseColorValue = "null"
+                BaseColorValue = "null",
+                MetallicRemapMin = MetallicRemapMin,
+                MetallicRemapMax = MetallicRemapMax,
+                RoughnessRemapMin = RoughnessRemapMin,
+                RoughnessRemapMax = RoughnessRemapMax
             });
             ShaderNames.Add(shader.name);
             NeedsToUpdateXML = true;
@@ -528,20 +537,22 @@ namespace TrueTrace {
             XMLObject = Resources.Load<TextAsset>("Utility/MaterialMappings");
             #if UNITY_EDITOR
                 if(XMLObject == null) {
-                    XMLObject = new TextAsset();
-                    var g = UnityEditor.AssetDatabase.FindAssets ( $"t:Script {nameof(AssetManager)}" );
-                    var Path = UnityEditor.AssetDatabase.GUIDToAssetPath ( g [ 0 ] );
-                    Path = Path.Replace("AssetManager.cs", "Utility/MaterialMappings.xml").Replace("Assets", Application.dataPath);
-                    using(var A = File.OpenWrite(Path)) {
-                        byte[] info = new System.Text.UTF8Encoding(true).GetBytes("<?xml version=\"1.0\"?>\n");
-                        A.Write(info, 0, info.Length);
-                        info = new System.Text.UTF8Encoding(true).GetBytes("<Materials xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n");
-                        A.Write(info, 0, info.Length);
-                        info = new System.Text.UTF8Encoding(true).GetBytes("</Materials>\n");
-                        A.Write(info, 0, info.Length);
-                    }
-                    UnityEditor.AssetDatabase.Refresh();
-                    XMLObject = Resources.Load<TextAsset>("Utility/MaterialMappings");
+                    // XMLObject = new TextAsset();
+                    // var g = UnityEditor.AssetDatabase.FindAssets ( $"t:Script {nameof(AssetManager)}" );
+                    // var Path = UnityEditor.AssetDatabase.GUIDToAssetPath ( g [ 0 ] );
+                    // Path = Path.Replace("AssetManager.cs", "Utility/MaterialMappings.xml").Replace("Assets", Application.dataPath);
+                    // using(var A = File.OpenWrite(Path)) {
+                    //     byte[] info = new System.Text.UTF8Encoding(true).GetBytes("<?xml version=\"1.0\"?>\n");
+                    //     A.Write(info, 0, info.Length);
+                    //     info = new System.Text.UTF8Encoding(true).GetBytes("<Materials xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n");
+                    //     A.Write(info, 0, info.Length);
+                    //     info = new System.Text.UTF8Encoding(true).GetBytes("</Materials>\n");
+                    //     A.Write(info, 0, info.Length);
+                    // }
+                    // UnityEditor.AssetDatabase.Refresh();
+                    // XMLObject = Resources.Load<TextAsset>("Utility/MaterialMappings");
+                    Debug.Log("Missing XML Object");
+                    return;
                 }
             #endif
             ShaderNames = new List<string>();
@@ -596,7 +607,6 @@ namespace TrueTrace {
                 InstanceRemoveQue = new List<InstancedObject>();
             }
             MyMeshesCompacted = new List<MyMeshDataCompacted>();
-            AggLightTriangles = new List<LightTriData>();
             UnityLights = new List<LightData>();
             LightMeshes = new List<LightMeshData>();
             LightTransforms = new List<Transform>();
@@ -606,12 +616,15 @@ namespace TrueTrace {
             if (BVH8AggregatedBuffer != null) {
                 BVH8AggregatedBuffer.Release();
                 BVH8AggregatedBuffer = null;
+                LightTriBuffer.Release();
+                LightTriBuffer = null;
                 AggTriBuffer.Release();
                 AggTriBuffer = null;
             }
             MeshFunctions = Resources.Load<ComputeShader>("Utility/GeneralMeshFunctions");
             TriangleBufferKernel = MeshFunctions.FindKernel("CombineTriBuffers");
             NodeBufferKernel = MeshFunctions.FindKernel("CombineNodeBuffers");
+            LightBufferKernel = MeshFunctions.FindKernel("CombineLightBuffers");
             AlphaMap = Texture2D.blackTexture;
             HeightMap = Texture2D.blackTexture;
             if (TerrainBuffer != null) TerrainBuffer.Release();
@@ -668,8 +681,13 @@ namespace TrueTrace {
                 for (int i = QueCount - 1; i >= 0; i--) {//Promotes from Build Que to Render Que
                     if (BuildQue[i].AsyncTask.IsFaulted) {//Fuck, something fucked up
                         Debug.Log(BuildQue[i].AsyncTask.Exception + ", " + BuildQue[i].Name);
-                        BuildQue[i].ExistsInQue = 3;
-                        AddQue.Add(BuildQue[i]);
+                        BuildQue[i].FailureCount++;
+                        if(BuildQue[i].FailureCount > 6) {
+                            BuildQue[i].ExistsInQue = -1;
+                        } else {
+                            BuildQue[i].ExistsInQue = 3;
+                            AddQue.Add(BuildQue[i]);
+                        }
                         BuildQue.RemoveAt(i);
                     } else {
                         if (BuildQue[i].AsyncTask.Status == TaskStatus.RanToCompletion) {
@@ -705,6 +723,12 @@ namespace TrueTrace {
             {//Instanced Models Data Handling
                 InstanceData.UpdateRenderAndBuildQues(ref ChildrenUpdated);
              // UnityEngine.Profiling.Profiler.BeginSample("Asset Instance Remove");
+                QueCount = InstanceUpdateQue.Count;
+                for (int i = QueCount - 1; i >= 0; i--) {//Demotes from Render Que to Build Que in case mesh has changed
+                    if(InstanceRenderQue.Contains(InstanceUpdateQue[i])) {InstanceRenderTransforms.RemoveAt(InstanceRenderQue.IndexOf(InstanceUpdateQue[i])); InstanceRenderQue.Remove(InstanceUpdateQue[i]);}
+                    OnlyInstanceUpdated = true;
+                }
+                InstanceUpdateQue.Clear();
                 QueCount = InstanceRemoveQue.Count;
                  for (int i = QueCount - 1; i >= 0; i--) {
                     switch(InstanceRemoveQue[i].ExistsInQue) {
@@ -722,22 +746,12 @@ namespace TrueTrace {
              // UnityEngine.Profiling.Profiler.BeginSample("Asset Instance Add");
                 QueCount = InstanceAddQue.Count;
                 for (int i = QueCount - 1; i >= 0; i--) {
-                    if (InstanceAddQue[i].InstanceParent != null) {
+                    if (InstanceAddQue[i].InstanceParent != null && InstanceAddQue[i].InstanceParent.gameObject.activeInHierarchy) {
                         InstanceAddQue[i].ExistsInQue = 1;
                         InstanceBuildQue.Add(InstanceAddQue[i]);
                         InstanceAddQue.RemoveAt(i);
                     }
                 }
-            // UnityEngine.Profiling.Profiler.EndSample();
-
-             // UnityEngine.Profiling.Profiler.BeginSample("Asset Instance Render");
-                QueCount = InstanceUpdateQue.Count;
-                for (int i = QueCount - 1; i >= 0; i--) {//Demotes from Render Que to Build Que in case mesh has changed
-                    InstanceUpdateQue[i].ExistsInQue = 1;
-                    InstanceBuildQue.Add(InstanceUpdateQue[i]);
-                    OnlyInstanceUpdated = true;
-                }
-                InstanceUpdateQue.Clear();
             // UnityEngine.Profiling.Profiler.EndSample();
              // UnityEngine.Profiling.Profiler.BeginSample("Asset Instance Build");
                 QueCount = InstanceBuildQue.Count;
@@ -785,7 +799,6 @@ namespace TrueTrace {
                 BuildQue[CurrentRep].ExistsInQue = 1;
                 RunningTasks++;
             }
-            if (AggLightTriangles.Count == 0) { AggLightTriangles.Add(new LightTriData() {}); }
             didstart = false;
         }
         public void BuildCombined()
@@ -813,7 +826,6 @@ namespace TrueTrace {
                 BuildQue[CurrentRep].AsyncTask = Task.Run(() => {BuildQue[CurrentRep].BuildTotal(); RunningTasks--;});
             }
             ParentCountHasChanged = true;
-            if (AggLightTriangles.Count == 0) { AggLightTriangles.Add(new LightTriData() {}); }
             if (RenderQue.Count != 0) {CommandBuffer cmd = new CommandBuffer(); int throwaway = UpdateTLAS(cmd);  Graphics.ExecuteCommandBuffer(cmd);
         cmd.Clear();
         cmd.Release();}
@@ -834,34 +846,42 @@ namespace TrueTrace {
                 HasToDo = false;
                 int CurNodeOffset = nodes;
                 int CurTriOffset = 0;
+                int CurLightTriOffset = 0;
                 LightMeshCount = 0;
                 LightMeshes.Clear();
-                AggLightTriangles.Clear();
                 LightTransforms.Clear();
                 int AggTriCount = 0;
                 int AggNodeCount = nodes;
+                int LightTriCount = 0;
                 if (BVH8AggregatedBuffer != null)
                 {
                     BVH8AggregatedBuffer.Release();
                     AggTriBuffer.Release();
+                    LightTriBuffer.Release();
                 }
                 for (int i = 0; i < ParentsLength; i++)
                 {
                     AggNodeCount += RenderQue[i].AggNodes.Length;
                     AggTriCount += RenderQue[i].AggTriangles.Length;
+                    LightTriCount += RenderQue[i].LightTriangles.Count;
                 }
                 for (int i = 0; i < InstanceData.RenderQue.Count; i++)
                 {
                     AggNodeCount += InstanceData.RenderQue[i].AggNodes.Length;
                     AggTriCount += InstanceData.RenderQue[i].AggTriangles.Length;
+                    LightTriCount += InstanceData.RenderQue[i].LightTriangles.Count;
                 }
                 Debug.Log("Total Tri Count: " + AggTriCount);
+                Debug.Log("Total Light Tri Count: " + LightTriCount);
+                if(LightTriCount == 0) LightTriCount++;
                 if (AggNodeCount != 0)
                 {//Accumulate the BVH nodes and triangles for all normal models
                     BVH8AggregatedBuffer = new ComputeBuffer(AggNodeCount, 80);
                     AggTriBuffer = new ComputeBuffer(AggTriCount, 88);
+                    LightTriBuffer = new ComputeBuffer(LightTriCount, 40);
                     MeshFunctions.SetBuffer(TriangleBufferKernel, "OutCudaTriArray", AggTriBuffer);
                     MeshFunctions.SetBuffer(NodeBufferKernel, "OutAggNodes", BVH8AggregatedBuffer);
+                    MeshFunctions.SetBuffer(LightBufferKernel, "LightTrianglesOut", LightTriBuffer);
                     int MatOffset = 0;
                     for (int i = 0; i < ParentsLength; i++)
                     {
@@ -880,25 +900,33 @@ namespace TrueTrace {
                         cmd.DispatchCompute(MeshFunctions, NodeBufferKernel, (int)Mathf.Ceil(RenderQue[i].BVHBuffer.count / 372.0f), 1, 1);
                         // cmd.EndSample("AccumBufferNode");
 
+                        if (RenderQue[i].LightTriangles.Count != 0)
+                        {
+                            cmd.SetComputeIntParam(MeshFunctions, "Offset", CurLightTriOffset);
+                            cmd.SetComputeIntParam(MeshFunctions, "Count", RenderQue[i].LightTriBuffer.count);
+                            cmd.SetComputeBufferParam(MeshFunctions, LightBufferKernel, "LightTrianglesIn", RenderQue[i].LightTriBuffer);
+                            cmd.DispatchCompute(MeshFunctions, LightBufferKernel, (int)Mathf.Ceil(RenderQue[i].LightTriBuffer.count / 372.0f), 1, 1);
+                            LightMeshCount++;
+                            LightTransforms.Add(RenderTransforms[i]);
+                            LightMeshes.Add(new LightMeshData()
+                            {
+                                StartIndex = CurLightTriOffset,
+                                IndexEnd = RenderQue[i].LightTriangles.Count + CurLightTriOffset,
+                                MatOffset = MatOffset,
+                                LockedMeshIndex = i
+                            });
+
+
+                            RenderQue[i].LightTriOffset = CurLightTriOffset;
+                            CurLightTriOffset += RenderQue[i].LightTriangles.Count;
+                            TotalParentObjectSize += RenderQue[i].LightTriBuffer.count * RenderQue[i].LightTriBuffer.stride;
+                        }
                         TotalParentObjectSize += RenderQue[i].TriBuffer.count * RenderQue[i].TriBuffer.stride;
                         TotalParentObjectSize += RenderQue[i].BVHBuffer.count * RenderQue[i].BVHBuffer.stride;
                         RenderQue[i].NodeOffset = CurNodeOffset;
                         RenderQue[i].TriOffset = CurTriOffset;
                         CurNodeOffset += RenderQue[i].AggNodes.Length;
                         CurTriOffset += RenderQue[i].AggTriangles.Length;
-                        if (RenderQue[i].LightTriangles.Count != 0)
-                        {
-                            LightMeshCount++;
-                            LightTransforms.Add(RenderTransforms[i]);
-                            LightMeshes.Add(new LightMeshData()
-                            {
-                                StartIndex = AggLightTriangles.Count,
-                                IndexEnd = RenderQue[i].LightTriangles.Count + AggLightTriangles.Count,
-                                MatOffset = MatOffset,
-                                LockedMeshIndex = i
-                            });
-                            AggLightTriangles.AddRange(RenderQue[i].LightTriangles);
-                        }
                         MatOffset += RenderQue[i]._Materials.Count;
                     }
                     for (int i = 0; i < InstanceData.RenderQue.Count; i++)
@@ -919,18 +947,23 @@ namespace TrueTrace {
                         cmd.SetComputeBufferParam(MeshFunctions, NodeBufferKernel, "InAggNodes", InstanceData.RenderQue[i].BVHBuffer);
                         cmd.DispatchCompute(MeshFunctions, NodeBufferKernel, (int)Mathf.Ceil(InstanceData.RenderQue[i].BVHBuffer.count / 372.0f), 1, 1);
                         // cmd.EndSample("AccumBufferInstanceNode");
+                        if (InstanceData.RenderQue[i].LightTriangles.Count != 0)
+                        {
+                            cmd.SetComputeIntParam(MeshFunctions, "Offset", CurLightTriOffset);
+                            cmd.SetComputeIntParam(MeshFunctions, "Count", InstanceData.RenderQue[i].LightTriBuffer.count);
+                            cmd.SetComputeBufferParam(MeshFunctions, LightBufferKernel, "LightTrianglesIn", InstanceData.RenderQue[i].LightTriBuffer);
+                            cmd.DispatchCompute(MeshFunctions, LightBufferKernel, (int)Mathf.Ceil(InstanceData.RenderQue[i].LightTriBuffer.count / 372.0f), 1, 1);
+                            
+                            InstanceData.RenderQue[i].LightTriOffset = CurLightTriOffset;
+                            CurLightTriOffset += InstanceData.RenderQue[i].LightTriangles.Count;
+                            InstanceData.RenderQue[i].LightEndIndex = CurLightTriOffset;
+                        }
 
                         InstanceData.RenderQue[i].NodeOffset = CurNodeOffset;
                         InstanceData.RenderQue[i].TriOffset = CurTriOffset;
                         CurNodeOffset += InstanceData.RenderQue[i].AggNodes.Length;
                         CurTriOffset += InstanceData.RenderQue[i].AggTriangles.Length;
 
-                        if (InstanceData.RenderQue[i].LightTriangles.Count != 0)
-                        {
-                            InstanceData.RenderQue[i].LightStartIndex = AggLightTriangles.Count;
-                            InstanceData.RenderQue[i].LightEndIndex = InstanceData.RenderQue[i].LightTriangles.Count + AggLightTriangles.Count;
-                            AggLightTriangles.AddRange(InstanceData.RenderQue[i].LightTriangles);
-                        }
                     }
                     for (int i = 0; i < InstanceRenderQue.Count; i++)
                     {
@@ -940,8 +973,8 @@ namespace TrueTrace {
                             LightTransforms.Add(InstanceRenderTransforms[i]);
                             LightMeshes.Add(new LightMeshData()
                             {
-                                LockedMeshIndex = i + ParentsLength,// InstanceRenderQue[i].InstanceParent.InstanceMeshIndex,
-                                StartIndex = InstanceRenderQue[i].InstanceParent.LightStartIndex,
+                                LockedMeshIndex = i + ParentsLength,
+                                StartIndex = InstanceRenderQue[i].InstanceParent.LightTriOffset,
                                 IndexEnd = InstanceRenderQue[i].InstanceParent.LightEndIndex
                             });
                         }
@@ -949,7 +982,6 @@ namespace TrueTrace {
                 }
 
                 if (LightMeshCount == 0) { LightMeshes.Add(new LightMeshData() { }); }
-                if (AggLightTriangles.Count == 0) { AggLightTriangles.Add(new LightTriData() {}); }
 
 
                 if (!OnlyInstanceUpdated || _Materials.Count == 0) CreateAtlas();
@@ -963,10 +995,9 @@ namespace TrueTrace {
                     {//Refit BVH's of skinned meshes
                         if (RenderQue[i].IsSkinnedGroup)//this can be optimized to operate directly on the triangle buffer instead of needing to copy it
                         {
-                            
-
                             cmd.SetComputeIntParam(RenderQue[i].MeshRefit, "TriBuffOffset", RenderQue[i].TriOffset);
-                            RenderQue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBuffer, cmd);
+                            cmd.SetComputeIntParam(RenderQue[i].MeshRefit, "LightTriBuffOffset", RenderQue[i].LightTriOffset);
+                            RenderQue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBuffer, ref LightTriBuffer, cmd);
                             if(i < MyMeshesCompacted.Count) {
                                 TempMesh2 = MyMeshesCompacted[i];
                                 TempMesh2.Transform = RenderTransforms[i].worldToLocalMatrix;
@@ -979,13 +1010,18 @@ namespace TrueTrace {
             #else
                 if (UseSkinning && didstart)
                 {
+                    MyMeshDataCompacted TempMesh2;
                     for (int i = 0; i < ParentsLength; i++)
                     {//Refit BVH's of skinned meshes
                         if (RenderQue[i].IsSkinnedGroup)//this can be optimized to operate directly on the triangle buffer instead of needing to copy it
                         {
-                            foreach(var a in RenderQue[i].Renderers) {
-                                AccelStruct.UpdateInstanceTransform(a);
-                            }
+                             cmd.SetComputeIntParam(RenderQue[i].MeshRefit, "TriBuffOffset", RenderQue[i].TriOffset);
+                            cmd.SetComputeIntParam(RenderQue[i].MeshRefit, "LightTriBuffOffset", RenderQue[i].LightTriOffset);
+                            RenderQue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBuffer, ref LightTriBuffer, cmd);
+                            TempMesh2 = MyMeshesCompacted[i];
+                            TempMesh2.Transform = RenderTransforms[i].worldToLocalMatrix;
+                            MyMeshesCompacted[i] = TempMesh2;
+                            MeshAABBs[i] = RenderQue[i].aabb;
                         }
                     }
                 }
@@ -1344,6 +1380,7 @@ namespace TrueTrace {
                     RayLight.UpdateLight();
                     if (RayLight.ThisLightData.Type == 1) SunDirection = RayLight.ThisLightData.Direction;
                     RayLight.ArrayIndex = UnityLightCount - 1;
+                    RayLight.ThisLightData.Radiance *= LightEnergyScale;
                     UnityLights.Add(RayLight.ThisLightData);
                 }
                 if (UnityLights.Count == 0) { UnityLights.Add(new LightData() { }); }
@@ -1357,7 +1394,7 @@ namespace TrueTrace {
                     RayLight.UpdateLight();
                     RayLight.ThisLightData.Radiance *= LightEnergyScale;
                     if (RayLight.ThisLightData.Type == 1) SunDirection = RayLight.ThisLightData.Direction;
-                    UnityLights[RayLight.ArrayIndex] = RayLight.ThisLightData;
+                    try{UnityLights[RayLight.ArrayIndex] = RayLight.ThisLightData;} catch(System.Exception throwawayerror) {}
                     // finally {PrevLightCount = 0;}
                 }
             }

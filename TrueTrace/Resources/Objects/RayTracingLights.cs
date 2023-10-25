@@ -10,7 +10,7 @@ namespace TrueTrace {
         [HideInInspector] public LightData ThisLightData;
         [HideInInspector] public int ArrayIndex;
         [HideInInspector] private bool HasChanged;
-        [Range(0,10)] public float SunSoftness = 1.0f;
+        [Range(0,10)] public float ShadowSoftness = 0.0f;
 
         public void Start() {
             ThisLightData = new LightData();
@@ -33,21 +33,24 @@ namespace TrueTrace {
             }
             Color col = ThisLight.color; 
             ThisLightData.Radiance = new Vector3(col[0], col[1], col[2]) * ThisLight.intensity;
-            ThisLightData.Type = (ThisLight.type == LightType.Point) ? 0 : (ThisLight.type == LightType.Directional) ? 1 : (ThisLight.type == LightType.Spot) ? 2 : 3;
+            ThisLightData.Type = (ThisLight.type == LightType.Point) ? 0 : (ThisLight.type == LightType.Directional) ? 1 : (ThisLight.type == LightType.Spot) ? 2 : (ThisLight.type == LightType.Rectangle) ? 3 : 4;
             if(ThisLight.type == LightType.Spot) {
                 float innerCos = Mathf.Cos(Mathf.Deg2Rad * 0.5f * ThisLight.innerSpotAngle);
                 float outerCos = Mathf.Cos(Mathf.Deg2Rad * 0.5f * ThisLight.spotAngle);
                 float angleRangeInv = 1.0f / Mathf.Max(innerCos - outerCos, 0.001f);
                 ThisLightData.SpotAngle = new Vector2(angleRangeInv, -outerCos * angleRangeInv);
-            } else if(ThisLight.type == LightType.Area) {
+            } else if(ThisLight.type == LightType.Rectangle) {
                 #if UNITY_EDITOR
                     ThisLightData.SpotAngle = ThisLight.areaSize;
                 #endif
-            } else if(ThisLight.type == LightType.Directional) {
-                ThisLightData.SpotAngle = new Vector2(SunSoftness, 0.0f);
+            } else if(ThisLight.type == LightType.Disc) {
+                #if UNITY_EDITOR
+                    ThisLightData.SpotAngle = ThisLight.areaSize;
+                #endif
             } else {
                 ThisLightData.SpotAngle = new Vector2(0.0f, 0.0f);
             }
+            ThisLightData.Softness = ShadowSoftness;
         }
 
         private void OnEnable() { 

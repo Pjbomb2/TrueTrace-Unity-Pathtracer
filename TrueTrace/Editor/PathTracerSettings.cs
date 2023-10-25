@@ -56,10 +56,7 @@ namespace TrueTrace {
          [SerializeField] public bool GISpatial = true;
          [SerializeField] public int GISpatialSampleCount = 6;
          [SerializeField] public bool TAA = false;
-         [SerializeField] public bool SVGF = false;
          [SerializeField] public int SVGFSize = 4;
-         [SerializeField] public bool ASVGF = false;
-         [SerializeField] public int ASVGFSize = 4;
          [SerializeField] public bool ToneMap = false;
          [SerializeField] public bool TAAU = true;
          [SerializeField] public int AtmoScatter = 4;
@@ -69,11 +66,11 @@ namespace TrueTrace {
          [SerializeField] public bool DoPartialRendering = false;
          [SerializeField] public int PartialRenderingFactor = 1;
          [SerializeField] public bool DoFirefly = false;
-         [SerializeField] public bool UseReCur = true;
          [SerializeField] public bool ImprovedPrimaryHit = false;
          [SerializeField] public float MinSpatialSize = 10;
          [SerializeField] public float ReCurBlurRadius = 30;
          [SerializeField] public int RISCount = 5;
+         [SerializeField] public int DenoiserSelection = 0;
          void OnEnable() {
             EditorSceneManager.activeSceneChangedInEditMode += EvaluateScene;
             if(EditorPrefs.GetString("EditModeFunctions", JsonUtility.ToJson(this, false)) != null) {
@@ -305,7 +302,7 @@ namespace TrueTrace {
             //    DestroyImmediate(a);
             // }
 
-            var LightObjects = GameObject.FindObjectsOfType<Light>();
+            var LightObjects = GameObject.FindObjectsOfType<Light>(true);
             foreach(var LightObj in LightObjects) {
                if(LightObj.gameObject.GetComponent<RayTracingLights>() == null) LightObj.gameObject.AddComponent<RayTracingLights>(); 
             }
@@ -386,8 +383,6 @@ Toggle AccumToggle;
 Toggle SkinToggle;
 Toggle BloomToggle;        
 FloatField ResField;
-Toggle SVGFToggle;
-Toggle ASVGFToggle;
 Toggle TAAUToggle;
 FloatField AtmoScatterField;
 Toggle GIToggle;
@@ -403,7 +398,6 @@ FloatField SVGFSizeField;
 Toggle SampleValidToggle;
 Toggle IndirectClampingToggle;
 FloatField RISCountField;
-Toggle ReCurToggle;
 FloatField ReCurBlurField;
 FloatField FocalSlider;
 
@@ -432,10 +426,7 @@ private void StandardSet() {
          GISpatial = true;
          GISpatialSampleCount = 12;
          TAA = false;
-         SVGF = false;
          SVGFSize = 4;
-         ASVGF = false;
-         ASVGFSize = 4;
          ToneMap = false;
          TAAU = true;
          AtmoScatter = 4;
@@ -446,109 +437,10 @@ private void StandardSet() {
          DoFirefly = false;
          MinSpatialSize = 30;
          RISCount = 12;
-         UseReCur = true;
          ReCurBlurRadius = 30.0f;
 }
 
-      private void LowSettingsAssign() {
-         StandardSet();
-         RRToggle.value = true;
-         ResField.value = 0.25f;
-         MovingToggle.value = true;
-         NEEToggle.value = true;
-         AccumToggle.value = true;
-         SkinToggle.value = true;
-         BloomToggle.value = false;
-         SVGFToggle.value = false;
-         SVGFSizeField.value = 6;
-         ASVGFToggle.value = true;
-         TAAUToggle.value = true;
-         AtmoScatterField.value = 1;
-         GIToggle.value = false;
-         DoPartialRenderingToggle.value = false;
-      }
 
-      private void HighSettingsAssign() {
-         RRToggle.value = true;
-         ResField.value = 0.5f;
-         MovingToggle.value = true;
-         NEEToggle.value = true;
-         AccumToggle.value = false;
-         SkinToggle.value = true;
-         BloomToggle.value = false;
-         SVGFToggle.value = false;
-         ASVGFToggle.value = true;
-         TAAUToggle.value = true;
-         AtmoScatterField.value = 4;
-         GIToggle.value = false;
-      }
-
-      private void QualityRenderPreview() {
-         RRToggle.value = true;
-         ResField.value = 1.0f;
-         MovingToggle.value = true;
-         NEEToggle.value = true;
-         AccumToggle.value = true;
-         SkinToggle.value = true;
-         BloomToggle.value = true;
-         SVGFToggle.value = false;
-         ASVGFToggle.value = false;
-         TAAUToggle.value = false;
-         AtmoScatterField.value = 4;
-         GIToggle.value = true;
-         TAAToggle.value = true;
-         TeporalGIMCapField.value = 488;
-         GIUpdateRateField.value = 7;
-         TemporalGIToggle.value = true;
-         SpatialGIToggle.value = true;
-         SpatialGIToggle.value = true;
-         SampleValidToggle.value = true;
-      }
-
-      private void UpdatingRenderSettings() {
-         RRToggle.value = true;
-         ResField.value = 1.0f;
-         MovingToggle.value = true;
-         NEEToggle.value = true;
-         AccumToggle.value = true;
-         SkinToggle.value = true;
-         BloomToggle.value = true;
-         SVGFToggle.value = false;
-         ASVGFToggle.value = false;
-         TAAUToggle.value = false;
-         AtmoScatterField.value = 4;
-         GIToggle.value = true;
-         TAAToggle.value = true;
-         TeporalGIMCapField.value = 122;
-         GIUpdateRateField.value = 7;
-         TemporalGIToggle.value = true;
-         SpatialGIToggle.value = true;
-         SpatialGIToggle.value = true;
-         SampleValidToggle.value = true;
-      }
-
-
-      private void QuickRenderPreview() {
-         RRToggle.value = true;
-         ResField.value = 1.0f;
-         MovingToggle.value = true;
-         NEEToggle.value = true;
-         AccumToggle.value = true;
-         SkinToggle.value = true;
-         BloomToggle.value = true;
-         SVGFToggle.value = false;
-         ASVGFToggle.value = false;
-         TAAUToggle.value = false;
-         AtmoScatterField.value = 4;
-         GIToggle.value = true;
-         TAAToggle.value = true;
-         TeporalGIMCapField.value = 12;
-         GIUpdateRateField.value = 0;
-         TemporalGIToggle.value = true;
-         SpatialGIToggle.value = true;
-         SpatialGIToggle.value = true;
-         SampleValidToggle.value = false;
-      }
 
 VisualElement MainSource;
 VisualElement RearrangeElement;
@@ -560,7 +452,7 @@ Toolbar toolbar;
       public void ConfirmPopup() {
          ReArrangeHierarchy();  
          OnFocus(); 
-         if(Camera.main.gameObject.GetComponent<FlyCamera>() == null) Camera.main.gameObject.AddComponent<FlyCamera>();
+         if(Camera.main != null && Camera.main.gameObject.GetComponent<FlyCamera>() == null) Camera.main.gameObject.AddComponent<FlyCamera>();
          rootVisualElement.Remove(RearrangeElement); 
          rootVisualElement.Add(MainSource); 
          Assets.UpdateMaterialDefinition();
@@ -655,6 +547,10 @@ Toolbar toolbar;
       PopupField<string> RoughnessRangeField;
       PopupField<string> RoughnessTextureField;
       PopupField<string> RoughnessChannelField;
+      PopupField<string> MetallicRemapMinField;
+      PopupField<string> MetallicRemapMaxField;
+      PopupField<string> RoughnessRemapMinField;
+      PopupField<string> RoughnessRemapMaxField;
       Toggle GlassToggle;
       Toggle CutoutToggle;
       Toggle SmoothnessToggle;
@@ -674,6 +570,10 @@ Toolbar toolbar;
          MatShader.IsGlass = GlassToggle.value;
          MatShader.IsCutout = CutoutToggle.value;
          MatShader.UsesSmoothness = SmoothnessToggle.value;
+         MatShader.MetallicRemapMin = MetallicRemapMinField.value;
+         MatShader.MetallicRemapMax = MetallicRemapMaxField.value;
+         MatShader.RoughnessRemapMin = RoughnessRemapMinField.value;
+         MatShader.RoughnessRemapMax = RoughnessRemapMaxField.value;
          AssetManager.data.Material[Index] = MatShader;
          using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialMappings.xml")) {
             var serializer = new XmlSerializer(typeof(Materials));
@@ -682,12 +582,14 @@ Toolbar toolbar;
       }
       void AddAssetsToMenu() {
          Shader shader = (InputMaterialField.value as Material).shader;
+         List<string> RangeProperties = new List<string>();
          List<string> FloatProperties = new List<string>();
          List<string> ColorProperties = new List<string>();
          List<string> TextureProperties = new List<string>();
          List<string> ChannelProperties = new List<string>();
          int PropCount = shader.GetPropertyCount();
          ColorProperties.Add("null");
+         RangeProperties.Add("null");
          FloatProperties.Add("null");
          TextureProperties.Add("null");
          ChannelProperties.Add("R");
@@ -697,7 +599,8 @@ Toolbar toolbar;
          for(int i = 0; i < PropCount; i++) {
             if(shader.GetPropertyType(i) == ShaderPropertyType.Texture) TextureProperties.Add(shader.GetPropertyName(i));
             if(shader.GetPropertyType(i) == ShaderPropertyType.Color) ColorProperties.Add(shader.GetPropertyName(i));
-            if(shader.GetPropertyType(i) == ShaderPropertyType.Range) FloatProperties.Add(shader.GetPropertyName(i));
+            if(shader.GetPropertyType(i) == ShaderPropertyType.Range) RangeProperties.Add(shader.GetPropertyName(i));
+            if(shader.GetPropertyType(i) == ShaderPropertyType.Float) FloatProperties.Add(shader.GetPropertyName(i));
          }
          MatShader = AssetManager.data.Material.Find((s1) => s1.Name.Equals(shader.name));
          Index = AssetManager.data.Material.IndexOf(MatShader);
@@ -721,37 +624,62 @@ Toolbar toolbar;
          EmissionTextureField.choices = TextureProperties;
          EmissionTextureField.index = TextureProperties.IndexOf(MatShader.EmissionTex);
          MaterialPairingMenu.Add(EmissionTextureField);
-         VisualElement MetallicRow = new VisualElement();
-         MetallicRow.style.flexDirection = FlexDirection.Row;
+         VisualElement MetallicTexRow = new VisualElement();
+         MetallicTexRow.style.flexDirection = FlexDirection.Row;
             MetallicRangeField = new PopupField<string>("Metallic Float ->");
-            MetallicRangeField.choices = FloatProperties;
-            MetallicRangeField.index = FloatProperties.IndexOf(MatShader.MetallicRange);
-            MetallicRow.Add(MetallicRangeField);
+            MetallicRangeField.choices = RangeProperties;
+            MetallicRangeField.index = RangeProperties.IndexOf(MatShader.MetallicRange);
+            MetallicTexRow.Add(MetallicRangeField);
             MetallicTextureField = new PopupField<string>("Metallic Texture ->");
             MetallicTextureField.choices = TextureProperties;
             MetallicTextureField.index = TextureProperties.IndexOf(MatShader.MetallicTex);
-            MetallicRow.Add(MetallicTextureField);
+            MetallicTexRow.Add(MetallicTextureField);
             MetallicChannelField = new PopupField<string>("Texture Channel Of Metallic ->");
             MetallicChannelField.choices = ChannelProperties;
             MetallicChannelField.index = MatShader.MetallicTexChannel;
-            MetallicRow.Add(MetallicChannelField);
+            MetallicTexRow.Add(MetallicChannelField);
+         MaterialPairingMenu.Add(MetallicTexRow);
+         VisualElement MetallicRow = new VisualElement();
+         MetallicRow.style.flexDirection = FlexDirection.Row;
+            MetallicRemapMinField = new PopupField<string>("Metallic Remap Min ->");
+            MetallicRemapMinField.choices = FloatProperties;
+            MetallicRemapMinField.index = FloatProperties.IndexOf(MatShader.MetallicRemapMin);
+            MetallicRow.Add(MetallicRemapMinField);
+            MetallicRemapMaxField = new PopupField<string>("Metallic Remap Max ->");
+            MetallicRemapMaxField.choices = FloatProperties;
+            MetallicRemapMaxField.index = FloatProperties.IndexOf(MatShader.MetallicRemapMax);
+            MetallicRow.Add(MetallicRemapMaxField);
          MaterialPairingMenu.Add(MetallicRow);
 
-         VisualElement RoughnessRow = new VisualElement();
-         RoughnessRow.style.flexDirection = FlexDirection.Row;
+
+         VisualElement RoughnessTexRow = new VisualElement();
+         RoughnessTexRow.style.flexDirection = FlexDirection.Row;
             RoughnessRangeField = new PopupField<string>("Roughness Float ->");
-            RoughnessRangeField.choices = FloatProperties;
-            RoughnessRangeField.index = FloatProperties.IndexOf(MatShader.RoughnessRange);
-            RoughnessRow.Add(RoughnessRangeField);
+            RoughnessRangeField.choices = RangeProperties;
+            RoughnessRangeField.index = RangeProperties.IndexOf(MatShader.RoughnessRange);
+            RoughnessTexRow.Add(RoughnessRangeField);
             RoughnessTextureField = new PopupField<string>("Roughness Texture ->");
             RoughnessTextureField.choices = TextureProperties;
             RoughnessTextureField.index = TextureProperties.IndexOf(MatShader.RoughnessTex);
-            RoughnessRow.Add(RoughnessTextureField);
+            RoughnessTexRow.Add(RoughnessTextureField);
             RoughnessChannelField = new PopupField<string>("Texture Channel Of Roughness ->");
             RoughnessChannelField.choices = ChannelProperties;
             RoughnessChannelField.index = MatShader.RoughnessTexChannel;
-            RoughnessRow.Add(RoughnessChannelField);
+            RoughnessTexRow.Add(RoughnessChannelField);
+         MaterialPairingMenu.Add(RoughnessTexRow);
+
+         VisualElement RoughnessRow = new VisualElement();
+         RoughnessRow.style.flexDirection = FlexDirection.Row;
+            RoughnessRemapMinField = new PopupField<string>("Roughness Remap Min ->");
+            RoughnessRemapMinField.choices = FloatProperties;
+            RoughnessRemapMinField.index = FloatProperties.IndexOf(MatShader.RoughnessRemapMin);
+            RoughnessRow.Add(RoughnessRemapMinField);
+            RoughnessRemapMaxField = new PopupField<string>("Roughness Remap Max ->");
+            RoughnessRemapMaxField.choices = FloatProperties;
+            RoughnessRemapMaxField.index = FloatProperties.IndexOf(MatShader.RoughnessRemapMax);
+            RoughnessRow.Add(RoughnessRemapMaxField);
          MaterialPairingMenu.Add(RoughnessRow);
+
 
          GlassToggle = new Toggle() {value = MatShader.IsGlass, text = "Force Glass On All Objects With This Material"};
          MaterialPairingMenu.Add(GlassToggle);
@@ -791,11 +719,38 @@ Toolbar toolbar;
          PlayerSettings.SetScriptingDefineSymbols(namedBuildTarget, defines);
       }
 
+      private void RemoveTrueTrace() {
+         GameObject SceneObject = GameObject.Find("Scene");
+         int ChildCount = SceneObject.transform.childCount;
+         for(int i = ChildCount - 1; i >= 0; i--) {
+            SceneObject.transform.GetChild(i).parent = null;
+         }
+         RayTracingObject[] TempObjects = GameObject.FindObjectsOfType<RayTracingObject>();
+         foreach(var a in TempObjects) DestroyImmediate(a);
+         ParentObject[] TempObjects2 = GameObject.FindObjectsOfType<ParentObject>();
+         foreach(var a in TempObjects2) DestroyImmediate(a);
+         RayTracingLights[] TempObjects3 = GameObject.FindObjectsOfType<RayTracingLights>();
+         foreach(var a in TempObjects3) DestroyImmediate(a);
+         InstancedObject[] TempObjects4 = GameObject.FindObjectsOfType<InstancedObject>();
+         foreach(var a in TempObjects4) DestroyImmediate(a);
+         GameObject InstanceObject = GameObject.Find("InstancedStorage");
+         DestroyImmediate(InstanceObject);
+         DestroyImmediate(SceneObject);
+         RenderHandle[] TempObjects5 = GameObject.FindObjectsOfType<RenderHandle>();
+         foreach(var a in TempObjects5) DestroyImmediate(a);
+         FlyCamera[] TempObjects6 = GameObject.FindObjectsOfType<FlyCamera>();
+         foreach(var a in TempObjects6) DestroyImmediate(a);
+
+      }
+
       void AddHardSettingsToMenu() {
          definesList = GetDefines();
          Toggle HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
          HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("HardwareRT"); else RemoveDefine("HardwareRT"); SetDefines();});
          HardSettingsMenu.Add(HardwareRTToggle);
+         Button RemoveTrueTraceButton = new Button(() => RemoveTrueTrace()) {text = "Remove TrueTrace Scripts From Scene"};
+         HardSettingsMenu.Add(RemoveTrueTraceButton);
+
       }
 
       public struct CustomGBufferData {
@@ -880,9 +835,7 @@ Toolbar toolbar;
            RayMaster.ReSTIRGITemporalMCap = GITemporalMCap;
            RayMaster.ReSTIRGISpatialCount = GISpatialSampleCount;
            RayMaster.AllowTAA = TAA;
-           RayMaster.UseSVGF = SVGF;
            RayMaster.SVGFAtrousKernelSizes = SVGFSize;
-           RayMaster.UseASVGF = ASVGF;
            RayMaster.AllowToneMap = ToneMap;
            RayMaster.UseTAAU = TAAU;
            RayMaster.AtmoNumLayers = AtmoScatter;
@@ -893,7 +846,6 @@ Toolbar toolbar;
            RayMaster.DoFirefly = DoFirefly;
            RayMaster.MinSpatialSize = MinSpatialSize;
            RayMaster.RISCount = RISCount;
-           RayMaster.UseReCur = UseReCur;
            RayMaster.ReCurBlurRadius = ReCurBlurRadius;
          }
 
@@ -930,19 +882,11 @@ Toolbar toolbar;
                AtlasField.ElementAt(0).style.minWidth = 65;
                AtlasField.ElementAt(1).style.width = 45;
 
-            LowSettings = new Button(() => {if(!Application.isPlaying) LowSettingsAssign(); else Debug.Log("Cant Change In Editor");}) {text = "Low Quality"};
-            Button HighSettings = new Button(() => {if(!Application.isPlaying) HighSettingsAssign(); else Debug.Log("Cant Change In Editor");}) {text = "High Quality"};
-            Button RenderSettings = new Button(() => {if(!Application.isPlaying) QualityRenderPreview(); else Debug.Log("Cant Change In Editor");}) {text = "Static Render"};
-            Button PreviewRenderSettings = new Button(() => {if(!Application.isPlaying) QuickRenderPreview(); else Debug.Log("Cant Change In Editor");}) {text = "Fast Static Render"};
-            Button UpdateRenderSettings = new Button(() => {if(!Application.isPlaying) UpdatingRenderSettings(); else Debug.Log("Cant Change In Editor");}) {text = "High Quality 1"};
-
            Box ButtonField1 = new Box();
            ButtonField1.style.flexDirection = FlexDirection.Row;
            ButtonField1.Add(BVHBuild);
            ButtonField1.Add(ScreenShotButton);
            ButtonField1.Add(StaticButton);
-           ButtonField1.Add(LowSettings);
-           ButtonField1.Add(PreviewRenderSettings);
            MainSource.Add(ButtonField1);
 
            Box ButtonField2 = new Box();
@@ -950,8 +894,6 @@ Toolbar toolbar;
            ButtonField2.Add(ClearButton);
            ButtonField2.Add(QuickStartButton);
            ButtonField2.Add(ForceInstancesButton);
-           ButtonField2.Add(HighSettings);
-           ButtonField2.Add(RenderSettings);
            MainSource.Add(ButtonField2);
 
            Box TopEnclosingBox = new Box();
@@ -968,7 +910,6 @@ Toolbar toolbar;
                TopEnclosingBox.Add(ResField);
                ResField.RegisterValueChangedCallback(evt => {if(!Application.isPlaying) {RenderRes = evt.newValue; RayMaster.RenderScale = RenderRes;} else ResField.value = RenderRes;});        
                TopEnclosingBox.Add(AtlasField);
-               TopEnclosingBox.Add(UpdateRenderSettings);
            MainSource.Add(TopEnclosingBox);
 
            RRToggle = new Toggle() {value = RR, text = "Use Russian Roulette"};
@@ -1002,6 +943,73 @@ Toolbar toolbar;
            SkinToggle = new Toggle() {value = MeshSkin, text = "Allow Mesh Skinning"};
            MainSource.Add(SkinToggle);
            SkinToggle.RegisterValueChangedCallback(evt => {MeshSkin = evt.newValue; Assets.UseSkinning = MeshSkin;});
+
+            List<string> DenoiserSettings = new List<string>();
+            DenoiserSettings.Add("None");
+            DenoiserSettings.Add("ASVGF");
+            DenoiserSettings.Add("ReCur");
+            DenoiserSettings.Add("SVGF");
+            PopupField<string> DenoiserField = new PopupField<string>("Denoiser");
+            DenoiserField.choices = DenoiserSettings;
+            DenoiserField.index = DenoiserSelection;
+            DenoiserField.style.flexDirection = FlexDirection.Row;
+            DenoiserField.style.width = 210;
+            DenoiserField.RegisterValueChangedCallback(evt => {
+               DenoiserSelection = DenoiserField.index;
+               RayMaster.UseASVGF = false;
+               RayMaster.UseReCur = false;
+               RayMaster.UseSVGF = false;
+               if(DenoiserField.Contains(ReCurBlurField)) DenoiserField.Remove(ReCurBlurField);
+               if(DenoiserField.Contains(SVGFSizeField)) DenoiserField.Remove(SVGFSizeField);
+               switch(DenoiserSelection) {
+                  case 0:
+                  break;
+                  case 1:
+                     RayMaster.UseASVGF = true;
+                  break;
+                  case 2:
+                     RayMaster.UseReCur = true;
+                     ReCurBlurField = new FloatField("ReCur Blur Radius") {value = ReCurBlurRadius};
+                     ReCurBlurField.RegisterValueChangedCallback(evt => {ReCurBlurRadius = (int)evt.newValue; ReCurBlurRadius = Mathf.Max(ReCurBlurRadius, 2); RayMaster.ReCurBlurRadius = ReCurBlurRadius;});
+                     DenoiserField.Add(ReCurBlurField);
+                  break;
+                  case 3:
+                     RayMaster.UseSVGF = true;
+                     SVGFSizeField = new FloatField("SVGF Atrous Kernel Size") {value = SVGFSize};
+                     SVGFSizeField.RegisterValueChangedCallback(evt => {SVGFSize = (int)evt.newValue; RayMaster.SVGFAtrousKernelSizes = SVGFSize;});
+                     DenoiserField.Add(SVGFSizeField);
+                  break;
+               } 
+            });
+            if(DenoiserField.Contains(ReCurBlurField)) DenoiserField.Remove(ReCurBlurField);
+            if(DenoiserField.Contains(SVGFSizeField)) DenoiserField.Remove(SVGFSizeField);
+            DenoiserSelection = DenoiserField.index;
+            RayMaster.UseASVGF = false;
+            RayMaster.UseReCur = false;
+            RayMaster.UseSVGF = false;
+            switch(DenoiserSelection) {
+               case 0:
+               break;
+               case 1:
+                  RayMaster.UseASVGF = true;
+               break;
+               case 2:
+                  RayMaster.UseReCur = true;
+                  ReCurBlurField = new FloatField("ReCur Blur Radius") {value = ReCurBlurRadius};
+                  ReCurBlurField.RegisterValueChangedCallback(evt => {ReCurBlurRadius = (int)evt.newValue; ReCurBlurRadius = Mathf.Max(ReCurBlurRadius, 2); RayMaster.ReCurBlurRadius = ReCurBlurRadius;});
+                  DenoiserField.Add(ReCurBlurField);
+               break;
+               case 3:
+                  RayMaster.UseSVGF = true;
+                  SVGFSizeField = new FloatField("SVGF Atrous Kernel Size") {value = SVGFSize};
+                  SVGFSizeField.RegisterValueChangedCallback(evt => {SVGFSize = (int)evt.newValue; RayMaster.SVGFAtrousKernelSizes = SVGFSize;});
+                  DenoiserField.Add(SVGFSizeField);
+               break;
+            } 
+            MainSource.Add(DenoiserField);
+
+
+
 
          BloomToggle = new Toggle() {value = Bloom, text = "Enable Bloom"};
            VisualElement BloomBox = new VisualElement();
@@ -1117,21 +1125,6 @@ Toolbar toolbar;
            MainSource.Add(TAAToggle);
            TAAToggle.RegisterValueChangedCallback(evt => {TAA = evt.newValue; RayMaster.AllowTAA = TAA;});
 
-           SVGFToggle = new Toggle() {value = SVGF, text = "Enable SVGF"};
-           VisualElement SVGFFoldout = new VisualElement() {};
-               SVGFFoldout.style.flexDirection = FlexDirection.Row;
-               SVGFSizeField = new FloatField("SVGF Atrous Kernel Size") {value = SVGFSize};
-               SVGFSizeField.RegisterValueChangedCallback(evt => {SVGFSize = (int)evt.newValue; RayMaster.SVGFAtrousKernelSizes = SVGFSize;});
-               SVGFFoldout.Add(SVGFSizeField);
-           MainSource.Add(SVGFToggle);
-           SVGFToggle.RegisterValueChangedCallback(evt => {SVGF = evt.newValue; RayMaster.UseSVGF = SVGF;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(SVGFToggle) + 1, SVGFFoldout); else MainSource.Remove(SVGFFoldout);});
-           if(SVGF) MainSource.Add(SVGFFoldout);
-
-           ASVGFToggle = new Toggle() {value = ASVGF, text = "Enable A-SVGF"};
-           ASVGFToggle.tooltip = "Upgrade to SVGF, lighting updates much faster but is more costly to run";
-           MainSource.Add(ASVGFToggle);
-           ASVGFToggle.RegisterValueChangedCallback(evt => {ASVGF = evt.newValue; RayMaster.UseASVGF = ASVGF;});
-
            
             List<string> TonemapSettings = new List<string>();
             TonemapSettings.Add("TonyMcToneFace");
@@ -1173,17 +1166,6 @@ Toolbar toolbar;
            DoFireflyToggle = new Toggle() {value = DoFirefly, text = "Enable AntiFirefly"};
            DoFireflyToggle.RegisterValueChangedCallback(evt => {DoFirefly = evt.newValue; RayMaster.DoFirefly = DoFirefly;});
            MainSource.Add(DoFireflyToggle);
-
-           ReCurToggle = new Toggle() {value = UseReCur, text = "Use Recurrent Denoiser"};
-           
-            VisualElement ReCurFoldout = new VisualElement() {};
-               ReCurFoldout.style.flexDirection = FlexDirection.Row;
-               ReCurBlurField = new FloatField("ReCur Blur Radius") {value = ReCurBlurRadius};
-               ReCurBlurField.RegisterValueChangedCallback(evt => {ReCurBlurRadius = (int)evt.newValue; ReCurBlurRadius = Mathf.Max(ReCurBlurRadius, 2); RayMaster.ReCurBlurRadius = ReCurBlurRadius;});
-               ReCurFoldout.Add(ReCurBlurField);
-           MainSource.Add(ReCurToggle);
-           ReCurToggle.RegisterValueChangedCallback(evt => {UseReCur = evt.newValue; RayMaster.UseReCur = UseReCur;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(ReCurToggle) + 1, ReCurFoldout); else MainSource.Remove(ReCurFoldout);});
-           if(UseReCur) MainSource.Add(ReCurFoldout);
 
            Toggle ImprovedPrimaryHitToggle = new Toggle() {value = ImprovedPrimaryHit, text = "RR Ignores Primary Hit"};
            ImprovedPrimaryHitToggle.RegisterValueChangedCallback(evt => {ImprovedPrimaryHit = evt.newValue; RayMaster.ImprovedPrimaryHit = ImprovedPrimaryHit;});
@@ -1239,12 +1221,7 @@ Toolbar toolbar;
         void Update() {
             if(Assets != null && Instancer != null) RemainingObjectsField.value = Assets.RunningTasks + Instancer.RunningTasks;
             if(RayMaster != null) SampleCountField.value = RayMaster.SampleCount;
-            if(AssetManager.SelectedCamera == null) AssetManager.SelectedCamera = SelectedCamera;
-            if(ReSTIRGI) {
-               ASVGFToggle.value = false;
-               ASVGF = false;
-               RayMaster.UseASVGF = false;
-            }
+            
             if(Assets != null && Assets.NeedsToUpdateXML) {
                 using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialMappings.xml")) {
                   var serializer = new XmlSerializer(typeof(Materials));

@@ -55,14 +55,16 @@ namespace TrueTrace {
                     Destroy(this);
                     return;
                 }
-                this.GetComponentInParent<AssetManager>().InstanceRemoveQue.Add(this);
+                if(!this.GetComponentInParent<AssetManager>().InstanceRemoveQue.Contains(this)) this.GetComponentInParent<AssetManager>().InstanceRemoveQue.Add(this);
                 this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
             }
         }
         public void OnParentClear() {
-            this.GetComponentInParent<AssetManager>().InstanceRemoveQue.Add(this);
-            this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
+
             this.GetComponentInParent<AssetManager>().InstanceUpdateQue.Add(this);
+            this.ExistsInQue = 3;
+            this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
+            this.GetComponentInParent<AssetManager>().InstanceAddQue.Add(this);
         }
     }
 }

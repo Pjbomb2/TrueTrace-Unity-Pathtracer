@@ -15,6 +15,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>GLTFUtility/Standard (Metallic)</Name>
@@ -31,6 +35,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Bakery/Standard</Name>
@@ -47,6 +55,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Autodesk Interactive</Name>
@@ -56,13 +68,17 @@
     <MetallicTex>null</MetallicTex>
     <MetallicTexChannel>0</MetallicTexChannel>
     <MetallicRange>null</MetallicRange>
-    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTex>_MetallicGlossMap</RoughnessTex>
     <RoughnessTexChannel>0</RoughnessTexChannel>
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>DissolverShader/DissolveShader</Name>
@@ -79,6 +95,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Legacy Shaders/Bumped Specular</Name>
@@ -95,6 +115,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Legacy Shaders/Transparent/Cutout/Bumped Specular</Name>
@@ -111,6 +135,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>TOZ/Object/TriProj/Local/StandardBumped</Name>
@@ -127,6 +155,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Custom/hideEverythingBehind</Name>
@@ -143,6 +175,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Custom/ScrollingUV</Name>
@@ -159,6 +195,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>ProBuilder/Standard Vertex Color</Name>
@@ -175,6 +215,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>GLTFUtility/Standard Transparent (Metallic)</Name>
@@ -191,6 +235,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/.poiyomi/★ Poiyomi Pro ★/Belly-Belly</Name>
@@ -207,6 +255,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/.poiyomi/★ Poiyomi Pro ★/panties-panties</Name>
@@ -223,6 +275,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Sun_Temple/VertexBlend</Name>
@@ -239,6 +295,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Sun_Temple/WindowGlass</Name>
@@ -255,6 +315,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Sun_Temple/Foliage</Name>
@@ -271,6 +335,10 @@
     <IsCutout>true</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Sun_Temple/Decal</Name>
@@ -287,6 +355,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Sun_Temple/Cloth</Name>
@@ -303,6 +375,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Sun_Temple/Decal_Puddle</Name>
@@ -319,6 +395,10 @@
     <IsCutout>true</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Sun_Temple/Mountains</Name>
@@ -335,6 +415,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Sun_Temple/Clouds</Name>
@@ -351,6 +435,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Nature/Tree Creator Bark Optimized</Name>
@@ -367,6 +455,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Nature/Tree Creator Leaves Optimized</Name>
@@ -383,6 +475,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Flooded_Grounds/PBR_TopBlend</Name>
@@ -399,6 +495,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Flooded_Grounds/Triplanar_BumpSpec</Name>
@@ -415,6 +515,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Flooded_Grounds/PBR_Water</Name>
@@ -431,6 +535,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -447,6 +555,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -463,6 +575,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -479,6 +595,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -495,6 +615,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -511,6 +635,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -527,6 +655,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -543,6 +675,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -559,6 +695,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -575,6 +715,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -591,6 +735,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -607,6 +755,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -623,6 +775,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -639,6 +795,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -655,6 +815,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -671,6 +835,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -687,6 +855,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -703,6 +875,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -719,6 +895,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -735,6 +915,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -751,6 +935,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -767,6 +955,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -783,6 +975,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -799,6 +995,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -815,6 +1015,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -831,6 +1035,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -847,6 +1055,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -863,6 +1075,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -879,6 +1095,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -895,6 +1115,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -911,6 +1135,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -927,6 +1155,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -943,6 +1175,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -959,6 +1195,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -975,6 +1215,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -991,6 +1235,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1007,6 +1255,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1023,6 +1275,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1039,6 +1295,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1055,6 +1315,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1071,6 +1335,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1087,6 +1355,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1103,6 +1375,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1119,6 +1395,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1135,6 +1415,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1151,6 +1435,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1167,6 +1455,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1183,6 +1475,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1199,6 +1495,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1215,6 +1515,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1231,6 +1535,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1247,6 +1555,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1263,6 +1575,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1279,6 +1595,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1295,6 +1615,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1311,6 +1635,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1327,6 +1655,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1343,6 +1675,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1359,6 +1695,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1375,6 +1715,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1391,6 +1735,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1407,6 +1755,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1423,6 +1775,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1439,6 +1795,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1455,6 +1815,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1471,6 +1835,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1487,6 +1855,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1503,6 +1875,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1519,6 +1895,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1535,6 +1915,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1551,6 +1935,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard</Name>
@@ -1567,6 +1955,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>AVP/Height_Blend_3_Layer</Name>
@@ -1583,6 +1975,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>AVP/Height_Blend_2_Layer</Name>
@@ -1599,6 +1995,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>_Color1</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard (Specular setup)</Name>
@@ -1615,6 +2015,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>AVP/DoubleSided</Name>
@@ -1631,6 +2035,10 @@
     <IsCutout>true</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>AVP/POM</Name>
@@ -1647,6 +2055,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>AVP/Velvet_Curtains</Name>
@@ -1663,6 +2075,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>AVP/Velvet</Name>
@@ -1679,6 +2095,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>_AlbedoColor</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>AVP/Glass</Name>
@@ -1695,6 +2115,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>AVP/Vegetation</Name>
@@ -1711,6 +2135,10 @@
     <IsCutout>true</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>FX/Water</Name>
@@ -1727,6 +2155,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Transparent/Cutout/DiffuseDoubleside</Name>
@@ -1743,6 +2175,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Legacy Shaders/Diffuse</Name>
@@ -1759,6 +2195,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Unity Japan Office/Glass_FakeTransmittance</Name>
@@ -1775,6 +2215,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>MFEP_Stream</Name>
@@ -1791,6 +2235,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>CyberCity/CCSprite</Name>
@@ -1807,6 +2255,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>CyberCity/UnityDefaultProjectorL</Name>
@@ -1823,6 +2275,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Nature/Tree Soft Occlusion Leaves</Name>
@@ -1839,6 +2295,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>.poiyomi/• Poiyomi Toon •</Name>
@@ -1855,6 +2315,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>TearsTop</Name>
@@ -1871,6 +2335,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>TearsBottom</Name>
@@ -1887,6 +2355,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>arktoon/Opaque</Name>
@@ -1903,6 +2375,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Nature/Tree Creator Leaves Fast Optimized</Name>
@@ -1919,6 +2395,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Mobile/Diffuse</Name>
@@ -1935,6 +2415,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Legacy Shaders/Transparent/Cutout/Diffuse</Name>
@@ -1951,6 +2435,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Unlit/Texture</Name>
@@ -1967,6 +2455,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/.poiyomi/• Poiyomi Toon •/Black Latex-Black Latex</Name>
@@ -1983,6 +2475,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/.poiyomi/• Poiyomi Toon •/Face 1-Face 1</Name>
@@ -1999,6 +2495,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/.poiyomi/• Poiyomi Toon •/Deira Extra_Basecolour-Deira Extra_Basecolour</Name>
@@ -2015,6 +2515,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/.poiyomi/• Poiyomi Toon •/Body 2-Body 2</Name>
@@ -2031,6 +2535,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/.poiyomi/• Poiyomi Toon •/Ear 1-Ear 1</Name>
@@ -2047,6 +2555,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/.poiyomi/• Poiyomi Toon •/Hair-Hair</Name>
@@ -2063,6 +2575,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/.poiyomi/• Poiyomi Toon •/Metal Hair Clip-Metal Hair Clip</Name>
@@ -2079,6 +2595,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/.poiyomi/• Poiyomi Toon •/Black Clothes-Black Clothes</Name>
@@ -2095,6 +2615,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/.poiyomi/• Poiyomi Toon •/Tail 1-Tail 1</Name>
@@ -2111,6 +2635,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Legacy Shaders/Specular</Name>
@@ -2127,6 +2655,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Standard-DoubleSided</Name>
@@ -2143,6 +2675,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Unlit/Color</Name>
@@ -2159,6 +2695,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>GLTFUtility/Standard (Specular)</Name>
@@ -2175,6 +2715,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>GLTFUtility/Standard Transparent (Specular)</Name>
@@ -2191,6 +2735,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Rollthered/Fire</Name>
@@ -2207,6 +2755,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/.poiyomi/• Poiyomi Toon •/Body M 2-Body M 2</Name>
@@ -2223,6 +2775,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Shader Forge/Crystal Shader</Name>
@@ -2239,6 +2795,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/890d0aa64203fe04bb04780656ffa953</Name>
@@ -2255,6 +2815,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/42a68ae10d1cdbb468e96322aaf42847</Name>
@@ -2271,6 +2835,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/a3ff20cf3d5a38a409319309abb769e5</Name>
@@ -2287,6 +2855,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/58192e3f7e250d24cb4cfecc0db45e24</Name>
@@ -2303,6 +2875,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/70a215fdc924cbe4caa58ee54783f2ea</Name>
@@ -2319,6 +2895,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/b9dac6a0021c3234d887d5ef1d684315</Name>
@@ -2335,6 +2915,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/5d665ebeb9f3dbb44b072b37e1a3fa0c</Name>
@@ -2351,6 +2935,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/40919f26622ca974cb3def00c7dbde68</Name>
@@ -2367,6 +2955,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/062ac40ec76c3314987e9aa8ea9e082a</Name>
@@ -2383,6 +2975,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/d382f86fba49fbf4684164b1423aa97e</Name>
@@ -2399,6 +2995,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/a6fa995818f17414eb30cd8b8fd9076b</Name>
@@ -2415,6 +3015,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/b600c433ff8a42e41b7a3d06cfffa4bb</Name>
@@ -2431,6 +3035,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/0b06d9f5acbf4f8469264f21cbc67831</Name>
@@ -2447,6 +3055,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/0663f8c35ee69294faf33fb99fbaa829</Name>
@@ -2463,6 +3075,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/1e7d1819a59585d41864c4c8b9aa33fb</Name>
@@ -2479,6 +3095,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/eb51a217541fe5f42899e4dd20657b87</Name>
@@ -2495,6 +3115,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/ec7ca3d895d9318489ae34325fd534f9</Name>
@@ -2511,6 +3135,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/0e14cc34ac844ae428b0ea0597cdb105</Name>
@@ -2527,6 +3155,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/ad6aba6e23808184e893eb9393e8385b</Name>
@@ -2543,6 +3175,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/9a232ceca199c0343968e6879d73d925</Name>
@@ -2559,6 +3195,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Shader Graphs/MasterMaterial</Name>
@@ -2575,6 +3215,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Shader Graphs/Foliage</Name>
@@ -2591,6 +3235,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>TsunaMoo/Simple Water FX</Name>
@@ -2607,6 +3255,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Mochie/Standard</Name>
@@ -2623,6 +3275,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>true</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Silent/FakeGlass Rain</Name>
@@ -2639,6 +3295,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Mochie/Water</Name>
@@ -2655,6 +3315,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Silent/FakeGlass</Name>
@@ -2671,6 +3335,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>ArcadeCarPhysics/CheckerBoardGlobal</Name>
@@ -2687,6 +3355,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>ArcadeCarPhysics/CheckerBoardLocal</Name>
@@ -2703,6 +3375,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Silent/Volumetric Box</Name>
@@ -2719,22 +3395,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
-  </MaterialShader>
-  <MaterialShader>
-    <Name>Lit</Name>
-    <BaseColorTex>_MainTex</BaseColorTex>
-    <NormalTex>null</NormalTex>
-    <EmissionTex>null</EmissionTex>
-    <MetallicTex>null</MetallicTex>
-    <MetallicTexChannel>0</MetallicTexChannel>
-    <MetallicRange>null</MetallicRange>
-    <RoughnessTex>null</RoughnessTex>
-    <RoughnessTexChannel>0</RoughnessTexChannel>
-    <RoughnessRange>null</RoughnessRange>
-    <IsGlass>false</IsGlass>
-    <IsCutout>false</IsCutout>
-    <UsesSmoothness>false</UsesSmoothness>
-    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Sprites/Default</Name>
@@ -2751,6 +3415,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Custom/Terrain</Name>
@@ -2767,6 +3435,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Custom/GroundCover</Name>
@@ -2783,6 +3455,10 @@
     <IsCutout>true</IsCutout>
     <UsesSmoothness>true</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Custom/Rock</Name>
@@ -2799,6 +3475,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Custom/GroundFog</Name>
@@ -2815,6 +3495,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Custom/Vegetation</Name>
@@ -2831,6 +3515,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Custom/Dissolve</Name>
@@ -2847,6 +3535,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Custom/MossMask</Name>
@@ -2863,6 +3555,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Custom/SculptedHair</Name>
@@ -2879,6 +3575,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Custom/ToonSkin</Name>
@@ -2895,6 +3595,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Custom/EyeBallsHD</Name>
@@ -2911,6 +3615,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Custom/EyeLash</Name>
@@ -2927,6 +3635,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Unlit/Swish</Name>
@@ -2943,6 +3655,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Particles/Standard Unlit</Name>
@@ -2959,6 +3675,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Custom/Alien</Name>
@@ -2975,6 +3695,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Custom/EnergyCore</Name>
@@ -2991,6 +3715,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Custom/Translucency</Name>
@@ -3007,6 +3735,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Custom/Acid</Name>
@@ -3023,6 +3755,10 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
     <Name>Custom/WaterX</Name>
@@ -3039,5 +3775,209 @@
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>HDRP/Unlit</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>HDRP/Lit</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>_NormalMap</NormalTex>
+    <EmissionTex>_EmissiveColorMap</EmissionTex>
+    <MetallicTex>_MaskMap</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>_Metallic</MetallicRange>
+    <RoughnessTex>_MaskMap</RoughnessTex>
+    <RoughnessTexChannel>3</RoughnessTexChannel>
+    <RoughnessRange>_Smoothness</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>true</UsesSmoothness>
+    <BaseColorValue>_BaseColor</BaseColorValue>
+    <MetallicRemapMin>_MetallicRemapMin</MetallicRemapMin>
+    <MetallicRemapMax>_MetallicRemapMax</MetallicRemapMax>
+    <RoughnessRemapMin>_SmoothnessRemapMin</RoughnessRemapMin>
+    <RoughnessRemapMax>_SmoothnessRemapMax</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>HDRP/LitTessellation</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>HDRP/Decal</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 7.3/• Poiyomi Toon •/0cfd234c0136c684c99a1ab6a78e34f8</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 7.3/• Poiyomi Toon •/39a6a26bfb4ee614f838615f87916b0b</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 7.3/• Poiyomi Toon •/6b11b8e6c43c3694aac4a0241c2512be</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 7.3/• Poiyomi Toon •/e20e372d57e44b24d9f353ab7962fbd9</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>_BumpMap</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>_Color</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 7.3/• Poiyomi Toon •/bdaee1825ee6e544e9efdc051d2ad35b</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 7.3/• Poiyomi Toon •/df051747b9523214e924b7f984dbc99c</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>null</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
 </Materials>
