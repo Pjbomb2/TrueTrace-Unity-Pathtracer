@@ -224,11 +224,12 @@ namespace CommonVars
 
         public void Create(Vector3 A, Vector3 B)
         {
-            this.BBMax = new Vector3(System.Math.Max(A.x, B.x), System.Math.Max(A.y, B.y), System.Math.Max(A.z, B.z));
-            this.BBMin = new Vector3(System.Math.Min(A.x, B.x), System.Math.Min(A.y, B.y), System.Math.Min(A.z, B.z));
+            this.BBMax = A;//new Vector3(System.Math.Max(A.x, B.x), System.Math.Max(A.y, B.y), System.Math.Max(A.z, B.z));
+            this.BBMin = A;//new Vector3(System.Math.Min(A.x, B.x), System.Math.Min(A.y, B.y), System.Math.Min(A.z, B.z));
+            Extend(B);
         }
         public float ComputeVolume() {
-            return System.Math.Max((BBMax.x - BBMin.x),0.00001f) * System.Math.Max((BBMax.y - BBMin.y),0.00001f) * System.Math.Max((BBMax.z - BBMin.z),0.00001f);
+            return System.Math.Max((BBMax.x - BBMin.x) * (BBMax.y - BBMin.y) * (BBMax.z - BBMin.z),0.00001f);
         }
 
         public void Extend(ref AABB aabb)

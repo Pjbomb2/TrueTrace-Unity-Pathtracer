@@ -886,7 +886,7 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
             GBufferCol = ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo) == 0) ? 1 : ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo));
         #endif
     }
-    float3 res = (TempAlbedoTex[id.xy].w == 0) ? TempAlbedoTex[id.xy].xyz : (((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) * TempAlbedoTex[id.xy].xyz + unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay)) / GBufferCol);
+    float3 res = (TempAlbedoTex[id.xy].w == 0) ? TempAlbedoTex[id.xy].xyz : ((float)PartialRenderingFactor * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) * TempAlbedoTex[id.xy].xyz + unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay)) / GBufferCol);
     if (!all(res < 100000)) res = 0;
     Result[id.xy] = float4(res, 1.0f);
 }
@@ -909,7 +909,8 @@ void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadI
     const uint pixel_index = id.y * screen_width + id.x;
 
     float2 uv = float2((id.xy) / float2(screen_width, screen_height) * 2.0f - 1.0f);
-    Ray ray = CreateCameraRay(uv, pixel_index);
+    Ray ray2 = CreateCameraRay(uv, pixel_index);
+    SmallerRay ray = {ray2.origin, ray2.direction};
 
     RandomNumsWrite[id.xy] = float4(curframe, pixel_index, 0, 0);
     if(curframe % ReSTIRGIUpdateRate == pixel_index % ReSTIRGIUpdateRate) {

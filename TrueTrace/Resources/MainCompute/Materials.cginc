@@ -411,7 +411,7 @@ static float EvaluateDisneyClearcoat(float clearcoat, float alpha, const float3 
     float Fr = lerp(0.04f, 1.0f, FH);
     float Gr = SeparableSmithGGXG1(wi, 0.25f) * SeparableSmithGGXG1(wo, 0.25f);
     fPdfW = Dr / (4.0f * abs(dot(wo, wm)));
-    return 0.25f * clearcoat * Fr * Gr * Dr * PI;
+    return 0.25f * clearcoat * Fr * Gr * Dr;
 }
 
 
@@ -872,7 +872,7 @@ inline float ReconstructDisneyClearcoat(float clearcoat, float alpha, const floa
     float Fr = lerp(0.04f, 1.0f, FH);
     float Gr = SeparableSmithGGXG1(wi, 0.25f) * SeparableSmithGGXG1(wo, 0.25f);
     fPdfW = Dr / (4.0f * abs(dot(wo, wm)));
-    success = fPdfW > 0.1f;
+    success = fPdfW > 0;
     return 0.25f * clearcoat * Fr * Gr * Dr * PI;
 }
 
@@ -937,7 +937,7 @@ float3 EvaluateDisney(MaterialData hitDat, float3 V, float3 L, bool thin,
         float forwardClearcoatPdfW;
 
         float clearcoat = EvaluateDisneyClearcoat(hitDat.clearcoat, hitDat.clearcoatGloss, wo, wm, wi, forwardClearcoatPdfW);
-        reflectance += clearcoat * pClearcoat;
+        reflectance += pClearcoat * clearcoat;
         forwardPdf += pClearcoat * forwardClearcoatPdfW;
     }
 
@@ -1108,7 +1108,7 @@ float3 ReconstructDisney(MaterialData hitDat, float3 V, float3 L, bool thin,
         float clearcoat = ReconstructDisneyClearcoat(hitDat.clearcoat, hitDat.clearcoatGloss, wo, wm, wi,
             forwardClearcoatPdfW, TempSuccess);
         if(TempSuccess) {
-            reflectance += clearcoat * pClearcoat;// / (forwardClearcoatPdfW);
+            reflectance += pClearcoat * clearcoat / (forwardClearcoatPdfW);
             forwardPdf += pClearcoat * forwardClearcoatPdfW;
             Success = Success || true;
         }

@@ -1018,10 +1018,12 @@ namespace TrueTrace {
                              cmd.SetComputeIntParam(RenderQue[i].MeshRefit, "TriBuffOffset", RenderQue[i].TriOffset);
                             cmd.SetComputeIntParam(RenderQue[i].MeshRefit, "LightTriBuffOffset", RenderQue[i].LightTriOffset);
                             RenderQue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBuffer, ref LightTriBuffer, cmd);
-                            TempMesh2 = MyMeshesCompacted[i];
-                            TempMesh2.Transform = RenderTransforms[i].worldToLocalMatrix;
-                            MyMeshesCompacted[i] = TempMesh2;
-                            MeshAABBs[i] = RenderQue[i].aabb;
+                            if(i < MyMeshesCompacted.Count) {
+                                TempMesh2 = MyMeshesCompacted[i];
+                                TempMesh2.Transform = RenderTransforms[i].worldToLocalMatrix;
+                                MyMeshesCompacted[i] = TempMesh2;
+                                MeshAABBs[i] = RenderQue[i].aabb;
+                            }
                         }
                     }
                 }

@@ -24,11 +24,8 @@ void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
 
     if (id.x >= screen_width || id.y >= screen_height) return;
     const uint pixel_index = id.y * screen_width + id.x;
-
-    set(pixel_index, tempray);
-    GlobalRays[pixel_index].origin = Rays[pixel_index].origin;
-    GlobalRays[pixel_index].direction = Rays[pixel_index].direction;
-    GlobalRays[pixel_index].PixelIndex = pixel_index;
+    RayData globray = {Rays[pixel_index].origin, pixel_index, Rays[pixel_index].direction, 0, 0,0,asuint(FarPlane),0};
+    GlobalRays[pixel_index] = globray;
     GlobalColors[pixel_index] = InitCol;
     WorldPosA[id.xy] = float4(0,0,0, 0);
     NEEPosA[id.xy] = float4(0,0,0, 0);

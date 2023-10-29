@@ -56,7 +56,6 @@ namespace TrueTrace {
         private Texture3D ToneMapTex;
         private Material _addMaterial;
         private Material _FireFlyMaterial;
-        private Material _PartialRenderingBoost;
         private int _currentSample = 0;
         [HideInInspector] public List<Transform> _transformsToWatch = new List<Transform>();
         private static bool _meshObjectsNeedRebuilding = false;
@@ -367,8 +366,8 @@ namespace TrueTrace {
             CommonFunctions.CreateDynamicBuffer(ref LightingBuffer, SourceWidth * SourceHeight, 48);
             CommonFunctions.CreateDynamicBuffer(ref PrevLightingBufferA, SourceWidth * SourceHeight, 48);
             CommonFunctions.CreateDynamicBuffer(ref PrevLightingBufferB, SourceWidth * SourceHeight, 48);
-            CommonFunctions.CreateDynamicBuffer(ref RaysBuffer, SourceWidth * SourceHeight, 36);
-            CommonFunctions.CreateDynamicBuffer(ref RaysBufferB, SourceWidth * SourceHeight, 36);
+            CommonFunctions.CreateDynamicBuffer(ref RaysBuffer, SourceWidth * SourceHeight, 24);
+            CommonFunctions.CreateDynamicBuffer(ref RaysBufferB, SourceWidth * SourceHeight, 24);
             GenerateShader.SetBuffer(GenASVGFKernel, "Rays", RaysBuffer);
         }
 
@@ -501,7 +500,7 @@ namespace TrueTrace {
             SetFloat("AtlasSize", Assets.DesiredRes);
             SetFloat("BackgroundIntensity", BackgroundIntensity);
             SetInt("AlbedoAtlasSize", Assets.AlbedoAtlasSize, cmd);
-
+            SetInt("PartialRenderingFactor", DoPartialRendering ? PartialRenderingFactor : 1, cmd);
 
             SetBool("UseReCur", UseReCur);
             SetBool("ImprovedPrimaryHit", ImprovedPrimaryHit);
@@ -954,23 +953,16 @@ namespace TrueTrace {
             if(DoFirefly) cmd.Blit(_target, _converged);
             cmd.EndSample("Firefly Blit");
 
-            if (_PartialRenderingBoost == null)
-                _PartialRenderingBoost = new Material(Shader.Find("Hidden/PartialRenderingBoost"));
 
             cmd.BeginSample("Post Processing");
             if (SourceWidth != TargetWidth)
             {
                 if (UseTAAU) Denoisers.ExecuteTAAU(ref _FinalTex, ref _converged, ref _Albedo, cmd, FramesSinceStart2, (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTex : CorrectedDistanceTexB);
                 else Denoisers.ExecuteUpsample(ref _converged, ref _FinalTex, FramesSinceStart2, _currentSample, ref _Albedo, cmd);//This is a postprocessing pass, but im treating it like its not one, need to move it to after the accumulation
-                if(DoPartialRendering) {
-                    cmd.Blit(_FinalTex, _IntermediateTex, _PartialRenderingBoost);
-                    cmd.CopyTexture(_IntermediateTex, 0, 0, _FinalTex, 0, 0);
-                }
             }
             else
             {
-                if(DoPartialRendering) cmd.Blit(_converged, _FinalTex, _PartialRenderingBoost);
-                else cmd.CopyTexture(_converged, 0, 0, _FinalTex, 0, 0);
+                cmd.CopyTexture(_converged, 0, 0, _FinalTex, 0, 0);
             }
 
             if (AllowAutoExpose)

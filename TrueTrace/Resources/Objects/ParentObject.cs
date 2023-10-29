@@ -748,7 +748,8 @@ namespace TrueTrace {
                 Vector3 Ofst = CachedTransforms[i + 1].WTL * CachedTransforms[i + 1].Position;
                 Vector3 Ofst2 = ParentMatInv * CachedTransforms[0].Position;
                 int IndexOffset = TransformIndexes[i].IndexOffset;
-                for (int i3 = TransformIndexes[i].VertexStart; i3 < TransformIndexes[i].VertexStart + TransformIndexes[i].VertexCount; i3 += 3) {//Transforming child meshes into the space of their parent
+                int IndexEnd = TransformIndexes[i].VertexStart + TransformIndexes[i].VertexCount;
+                for (int i3 = TransformIndexes[i].VertexStart; i3 < IndexEnd; i3 += 3) {//Transforming child meshes into the space of their parent
                     int Index1 = CurMeshData.Indices[i3] + IndexOffset;
                     int Index2 = CurMeshData.Indices[i3 + 2] + IndexOffset;
                     int Index3 = CurMeshData.Indices[i3 + 1] + IndexOffset;

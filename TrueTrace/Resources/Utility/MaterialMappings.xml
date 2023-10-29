@@ -8,7 +8,7 @@
     <MetallicTex>_MetallicGlossMap</MetallicTex>
     <MetallicTexChannel>0</MetallicTexChannel>
     <MetallicRange>_Metallic</MetallicRange>
-    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTex>_OcclusionMap</RoughnessTex>
     <RoughnessTexChannel>0</RoughnessTexChannel>
     <RoughnessRange>_Glossiness</RoughnessRange>
     <IsGlass>false</IsGlass>

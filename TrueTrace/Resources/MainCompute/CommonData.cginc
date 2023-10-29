@@ -91,6 +91,12 @@ struct Ray {
 	float3 direction_inv;
 };
 
+struct SmallerRay {
+	float3 origin;
+	float3 direction;
+};
+
+
 struct RayHit {
 	float t;
 	float u, v;
@@ -109,7 +115,7 @@ struct RayData {//128 bit aligned
 RWStructuredBuffer<RayData> GlobalRays;
 
 RWTexture2D<float4> ScreenSpaceInfo;
-RWTexture2D<float4> PrevScreenSpaceInfo;
+Texture2D<float4> PrevScreenSpaceInfo;
 
 bool DoExposure;
 StructuredBuffer<float> Exposure;
@@ -154,7 +160,7 @@ Texture2D<half4> NEEPosC;
 
 RWTexture2D<float4> Result;
 
-RWStructuredBuffer<Ray> Rays;
+RWStructuredBuffer<SmallerRay> Rays;
 
 Texture2D<uint4> PrimaryTriData;
 StructuredBuffer<int> TLASBVH8Indices;

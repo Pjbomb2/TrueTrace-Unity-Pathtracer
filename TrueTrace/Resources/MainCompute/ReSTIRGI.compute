@@ -151,10 +151,10 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
             if(UseReSTIRGITemporal) {
 
                 float depth_prev = PrevScreenSpaceInfo[prevIndex].z;
-                float3  geo_normal_prev = i_octahedral_32(asuint(PrevScreenSpaceInfo[prevIndex].y));//needs to be TEX_PT_GEO_NORMAL_B, but since for now I am not worrying about normal maps yet, it can use the same texture
+                float3  geo_normal_prev = i_octahedral_32(asuint(PrevScreenSpaceInfo[prevIndex].x));//needs to be TEX_PT_GEO_NORMAL_B, but since for now I am not worrying about normal maps yet, it can use the same texture
                 
                 float dist_depth = (abs(GBuffer.z - depth_prev) - length(CamDelta)) / abs(GBuffer.z);
-                float dot_geo_normals = dot(SurfNorm, geo_normal_prev);
+                float dot_geo_normals = dot(GeomNorm, geo_normal_prev);
 
                 if (dist_depth < 0.1f && dot_geo_normals > 0.7)
                 {

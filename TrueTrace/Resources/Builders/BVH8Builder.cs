@@ -160,8 +160,8 @@ namespace TrueTrace {
                 for(int s = 0; s < 8; s++) {
                     Vector3 direction = new Vector3(
                         (((s >> 2) & 1) == 1) ? -1.0f : 1.0f,
-                    (((s >> 1) & 1) == 1) ? -1.0f : 1.0f,
-                    (((s >> 0) & 1) == 1) ? -1.0f : 1.0f);
+                        (((s >> 1) & 1) == 1) ? -1.0f : 1.0f,
+                        (((s >> 0) & 1) == 1) ? -1.0f : 1.0f);
                     cost2[c,s] = Vector3.Dot((nodes[children[c]].aabb.BBMax + nodes[children[c]].aabb.BBMin) / 2.0f - p, direction);
                 }
             }

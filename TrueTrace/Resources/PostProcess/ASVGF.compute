@@ -182,7 +182,6 @@ inline float luminance(in float3 color)
 struct Ray {
 	float3 origin;
 	float3 direction;
-	float3 direction_inv;
 };
 RWStructuredBuffer<Ray> RayB;
 RWStructuredBuffer<Ray> GlobalRays;
@@ -296,25 +295,25 @@ RWTexture2D<int2> AlbedoColorA;
 Texture2D<int2> AlbedoColorB;
 
 float4x4 _CameraInverseProjection;
+float4x4 _CameraToWorld;
 
-inline Ray CreateRay(float3 origin, float3 direction) {
+Ray CreateRay(float3 origin, float3 direction) {
 	Ray ray;
 	ray.origin = origin;
 	ray.direction = direction;
-	ray.direction_inv = 0;
 	return ray;
 }
 
 
 
-inline Ray CreateCameraRay(float2 uv) {
+Ray CreateCameraRay(float2 uv) {
 	// Transform the camera origin to world space
-	float3 origin = mul(unity_CameraToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
+	float3 origin = mul(_CameraToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
 
 	// Invert the perspective projection of the view-space position
 	float3 direction = mul(_CameraInverseProjection, float4(uv, 0.0f, 1.0f)).xyz;
 	// Transform the direction from camera to world space and normalize
-	direction = mul(unity_CameraToWorld, float4(direction, 0.0f)).xyz;
+	direction = mul(_CameraToWorld, float4(direction, 0.0f)).xyz;
 	direction = normalize(direction);
 
 	return CreateRay(origin, direction);
@@ -353,14 +352,14 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 	if(UseExposure) Exposure = ExposureBuffer[0];
 	if (Pixel.IsSpecular == 0 || MetallicAWrite[id.xy].y >= 0.4f) {
 		AlbedoColorA[id.xy] = int2(WorldPosData[id.xy].w, AlbedoColorB[pos_prev].y);
-		STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, irradiance_to_SH(Exposure * IndirectBoost * clamp(Pixel.Indirect * ((TEX_PT_BASE_COLOR_A[id.xy].xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0))) / 1024.0f,0,12000), asfloat(WorldPosData[id.xy].xyz)));
-		TEX_PT_COLOR_HFWrite[id.xy] = packRGBE(Exposure * (Pixel.Direct + unpackRGBE(Pixel.Fog) * ((Pixel.IsSpecular != 2) ? TexBaseColor : TexBaseColor)) * TEX_PT_BASE_COLOR_A[id.xy].xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0));
+		STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, irradiance_to_SH(PartialRenderingFactor * Exposure * IndirectBoost * clamp(Pixel.Indirect * ((TEX_PT_BASE_COLOR_A[id.xy].xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0))) / 1024.0f,0,12000), asfloat(WorldPosData[id.xy].xyz)));
+		TEX_PT_COLOR_HFWrite[id.xy] = packRGBE(PartialRenderingFactor * Exposure * (Pixel.Direct + unpackRGBE(Pixel.Fog) * ((Pixel.IsSpecular != 2) ? TexBaseColor : TexBaseColor)) * TEX_PT_BASE_COLOR_A[id.xy].xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0));
 		TEX_PT_COLOR_SPECWrite[id.xy] = 0;
 	} else {
 		AlbedoColorA[id.xy] = int2(AlbedoColorB[pos_prev].x, WorldPosData[id.xy].w);
 		SH TempSH = { 0,0,0,0,0,0 };
 		STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, TempSH);
-		TEX_PT_COLOR_SPECWrite[id.xy] = packRGBE(max(Exposure * (Pixel.Direct + IndirectBoost * Pixel.Indirect + unpackRGBE(Pixel.Fog) * TexBaseColor) * TEX_PT_BASE_COLOR_A[id.xy].xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0),0));
+		TEX_PT_COLOR_SPECWrite[id.xy] = packRGBE(PartialRenderingFactor * max(Exposure * (Pixel.Direct + IndirectBoost * Pixel.Indirect + unpackRGBE(Pixel.Fog) * TexBaseColor) * TEX_PT_BASE_COLOR_A[id.xy].xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0),0));
 		TEX_PT_COLOR_HFWrite[id.xy] = 0;
 	}
 	if(!ReflectedRefracted) {
@@ -408,21 +407,12 @@ void CopyRadiance(uint3 id : SV_DispatchThreadID)
 {
 	if (id.x >= screen_width || id.y >= screen_height) return;
 	float2 Uv = id.xy / float2(screen_width, screen_height);
-	Ray ray = CreateCameraRay(Uv * 2.0f - 1.0f + (random(34, id.xy) - 0.5f) * rcp(6.0f * float2(screen_width, screen_height)));
-	GlobalRays[id.x + id.y * screen_width] = ray;
-	RNGTexA[id.xy] = float4(CurFrame, id.x + id.y * screen_width, 0, 0);
 	float CurDepth = Depth.SampleLevel(my_linear_clamp_sampler, Uv, 0);
 	float CurDepthX = Depth.SampleLevel(my_linear_clamp_sampler, (Uv + float2(rcp(screen_width), 0)), 0);
 	float CurDepthY = Depth.SampleLevel(my_linear_clamp_sampler, (Uv + float2(0, rcp(screen_height))), 0);
-		FDepthWrite[id.xy] = abs(CurDepth - CurDepthX) + abs(CurDepth - CurDepthY);
-	#ifdef HDRP
-		TEX_PT_NORMALS_AWrite[id.xy] = int2(TEX_PT_NORMALS_AWrite[id.xy].x,octahedral_32(normalize(NormalTex[int3(id.xy,0)].xyz)));
-	#else
-		TEX_PT_NORMALS_AWrite[id.xy] = int2(TEX_PT_NORMALS_AWrite[id.xy].x,octahedral_32(normalize(NormalTex.SampleLevel(my_point_clamp_sampler, Uv, 0).xyz)));
-	#endif
+	FDepthWrite[id.xy] = abs(CurDepth - CurDepthX) + abs(CurDepth - CurDepthY);
 
-
-
+	RNGTexA[id.xy] = float4(CurFrame, id.x + id.y * screen_width, 0, 0);
 }
 
 
@@ -533,6 +523,7 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 
 	reproject_pixel(ipos, 0, screen_width, gl_LocalInvocationID);
 
+	GlobalRays[ipos.x + ipos.y * screen_width] = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f + (random(34, ipos.xy) - 0.5f) * rcp(6.0f * float2(screen_width, screen_height)));
 	GroupMemoryBarrierWithGroupSync();
 
 	// Second pass: the first (GROUP_SIZE_GRAD)^2 pixels are looking for the brightest
@@ -691,10 +682,10 @@ void Gradient_Img(uint3 gl_GlobalInvocationID : SV_DispatchThreadID)
 		float3 curr_spec = unpackRGBE(TEX_PT_COLOR_SPECWrite[grad_sample_pos_curr]);
 		TEX_PT_COLOR_HFWrite[grad_sample_pos_curr] = 0;//TEX_PT_COLOR_HFWrite[grad_sample_pos_curr + 1];
 		TEX_PT_COLOR_SPECWrite[grad_sample_pos_curr] = 0;//TEX_PT_COLOR_SPECWrite[grad_sample_pos_curr + 1];
-		TEX_PT_VIEW_DEPTH_AWRITE[grad_sample_pos_curr] = TEX_PT_VIEW_DEPTH_AWRITE[grad_sample_pos_curr + 1];
-		AlbedoColorA[grad_sample_pos_curr] = AlbedoColorA[grad_sample_pos_curr + 1];
-		TEX_PT_NORMALS_AWrite[grad_sample_pos_curr] = TEX_PT_NORMALS_AWrite[grad_sample_pos_curr + 1];
-		ReflectedRefractedTexWrite[grad_sample_pos_curr] = ReflectedRefractedTexWrite[grad_sample_pos_curr + 1];
+		// TEX_PT_VIEW_DEPTH_AWRITE[grad_sample_pos_curr] = TEX_PT_VIEW_DEPTH_AWRITE[grad_sample_pos_curr + 1];
+		// AlbedoColorA[grad_sample_pos_curr] = AlbedoColorA[grad_sample_pos_curr + 1];
+		// TEX_PT_NORMALS_AWrite[grad_sample_pos_curr] = TEX_PT_NORMALS_AWrite[grad_sample_pos_curr + 1];
+		// ReflectedRefractedTexWrite[grad_sample_pos_curr] = ReflectedRefractedTexWrite[grad_sample_pos_curr + 1];
 		grad_hf = get_gradient(luminance(curr_hf), prev_hf_spec_lum.x);
 		grad_spec = get_gradient(luminance(curr_spec), prev_hf_spec_lum.y);
 		// grad_hf *= grad_hf > 0.01f;
@@ -819,7 +810,6 @@ groupshared float4 s_normal_lum[SHARED_SIZE][SHARED_SIZE];
 groupshared float s_depth[SHARED_SIZE][SHARED_SIZE];
 groupshared float4 s_lf_shy[GROUP_SIZE][GROUP_SIZE];
 groupshared float2 s_lf_cocg[GROUP_SIZE][GROUP_SIZE];
-groupshared float s_depth_width[GROUP_SIZE / GRAD_DWN][GROUP_SIZE / GRAD_DWN];
 
 
 
@@ -900,8 +890,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 	float motion_length = length((motion.xy + reflprojection) * float2(screen_width, screen_height));
 
 
-	float2 metal_rough = MetallicA[ipos].xy;
-	float shininess = clamp(2.0 / max(pow(metal_rough.y, 4), 0.001f) - 2.0, 0.0, 32.0);
+	float shininess = clamp(2.0 / max(pow(MetallicA[ipos].y, 4), 0.001f) - 2.0, 0.0, 32.0);
 
 	float3 geo_normal_curr = i_octahedral_32(TEX_PT_NORMALS_A[ipos].x);
 
@@ -935,21 +924,15 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 
 			float depth_prev = TEX_PT_VIEW_DEPTH_B[p].x;
 			uint2 norms = TEX_PT_NORMALS_B[p];
+			bool ReflectedRefractedPrev = ReflectedRefractedTexPrev[p];
 			float3  normal_prev = i_octahedral_32(norms.y);
 			float3  geo_normal_prev = i_octahedral_32(norms.x);//needs to be TEX_PT_GEO_NORMAL_B, but since for now I am not worrying about normal maps yet, it can use the same texture
 			
-			bool ReflectedRefractedPrev = ReflectedRefractedTexPrev[p];
 
 			float dist_depth = (abs(depth_curr - depth_prev) - CameraDist) / abs(depth_curr);
 			float dot_normals = dot(normal_curr, normal_prev);
 			float dot_geo_normals = dot(geo_normal_curr, geo_normal_prev);
 
-			if (depth_curr < 0)
-			{
-				// Reduce the filter sensitivity to depth for secondary surfaces,
-				// because reflection/refracion motion vectors are often inaccurate.
-				dist_depth *= 0.25;
-			}
 			[branch]if(!ReflectedRefracted && !ReflectedRefractedPrev) {
 				if (dist_depth < 0.1 && dot_geo_normals > 0.8)
 				{
@@ -1092,13 +1075,11 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 	if (temporal_sample_valid_spec)
 	{
 		float3 Max = 0;
-		float3 Min = 9999;
 		for(int x = -1; x <= 1; x++) {
 			for(int y = -1; y <= 1; y++) {
 				if(x == 0 && y == 0) continue;
 				float3 col = unpackRGBE(TEX_PT_COLOR_SPEC[ipos + int2(x,y)]);
 				Max = max(Max, col);
-				Min = min(Min, col);
 			}
 		}
 		color_curr_spec.rgb = exp(clamp(log(color_curr_spec.rgb + 1), 0, log(Max + 15))) - 1;
@@ -1131,10 +1112,6 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 	s_lf_shy[gl_LocalInvocationID.y][gl_LocalInvocationID.x] = out_color_lf.shY;
 	s_lf_cocg[gl_LocalInvocationID.y][gl_LocalInvocationID.x] = out_color_lf.CoCg;
 
-	if (gl_LocalInvocationID.x % GRAD_DWN == 1 && gl_LocalInvocationID.y % GRAD_DWN == 1)
-	{
-		s_depth_width[gl_LocalInvocationID.y / GRAD_DWN][gl_LocalInvocationID.x / GRAD_DWN] = FDepth[ipos];
-	}
 	GroupMemoryBarrierWithGroupSync();
 
 	// Comptue a 1/3-resolution version of the LF channel for this group.
@@ -1151,7 +1128,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 	float2 center_shared_pos = lowres_local_id * GRAD_DWN + 1;
 	float3 center_normal = s_normal_lum[center_shared_pos.y + FILTER_RADIUS][center_shared_pos.x + FILTER_RADIUS].xyz;
 	float center_depth = s_depth[center_shared_pos.y + FILTER_RADIUS][center_shared_pos.x + FILTER_RADIUS];
-	float depth_width = s_depth_width[lowres_local_id.y][lowres_local_id.x];
+	float depth_width = FDepth[ipos];
 
 	SH center_lf;
 	center_lf.shY = s_lf_shy[center_shared_pos.y][center_shared_pos.x];
@@ -1168,7 +1145,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 			if (yy == 0 && xx == 0)
 				continue;
 
-			float3 p_normal = s_normal_lum[center_shared_pos.y + FILTER_RADIUS + yy][center_shared_pos.x + FILTER_RADIUS + xx].xyz;
+			// float3 p_normal = s_normal_lum[center_shared_pos.y + FILTER_RADIUS + yy][center_shared_pos.x + FILTER_RADIUS + xx].xyz;
 			float p_depth = s_depth[center_shared_pos.y + FILTER_RADIUS + yy][center_shared_pos.x + FILTER_RADIUS + xx];
 
 			float dist_depth = abs(p_depth - center_depth) * depth_width;
@@ -1193,13 +1170,6 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 	// Store the LF result for further processing by the a-trous LF filter
 	int2 ipos_lowres = int2(gl_WorkGroupID.xy) * (GROUP_SIZE / GRAD_DWN) + int2(lowres_local_id);
 	STORE_SH(IMG_ASVGF_ATROUS_PING_LF_SH, IMG_ASVGF_ATROUS_PING_LF_COCG, ipos_lowres, sum_lf);
-	// if((ipos_lowres * GRAD_DWN).y > screen_height / 2) {
-	// 	for(int i = 0; i < GRAD_DWN; i++) {
-	// 		for(int j = 0; j < GRAD_DWN; j++) {
-	// 			STORE_SH(IMG_ASVGF_HIST_COLOR_LF_SH_A, IMG_ASVGF_HIST_COLOR_LF_COCG_A, ipos_lowres * GRAD_DWN + int2(i, j), sum_lf);
-	// 		}
-	// 	}
-	// }
 }
 
 
@@ -1756,4 +1726,4 @@ void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGrou
 			IMG_ASVGF_COLOR[ipos] = float4(final_color, 0);
 		}
 	}
-}
+} 
