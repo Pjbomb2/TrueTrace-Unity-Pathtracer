@@ -5,7 +5,7 @@
 Notes:</br>
 
 # Compute Shader Based Unity PathTracer
-A passion projects that has been going on for awhile with the goal of bringing at least interactive pathtracing to everyone in unity, regardless of their hardware
+A passion projects that has been going on for a while with the goal of bringing at least interactive path-tracing to everyone in unity, regardless of their hardware
 ## Features: 
 <ul>
 <li>Fast Compute Shader based path tracing</li>
@@ -16,7 +16,7 @@ A passion projects that has been going on for awhile with the goal of bringing a
 <li>Compressed Wide Bounding Volume Hierarchy as the Acceleration Structure (See Ylitie et al. 2017 below)</li>
 <li>PBR Texture Support</li>
 <li>Next Event Estimation with Multiple Importance Sampling for Explicit Light Sampling</li>
-<li>Support for all default unity lights which interact via NEE</li>
+<li>Support for all default unity lights, which interact via NEE</li>
 <li>Bloom, Depth of Field, AutoExposure, TAA, Tonemappiong</li>
 <li>No specific GPU vendor needed(this will run on integrated graphics if you so wish it, aka no RTX cores needed)</li>
 <li>Precomputed Multiple Atmospheric Scattering for dynamic and realtime sky(from ebruneton below)</li>
@@ -60,18 +60,18 @@ Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera s
 
 ## Basic script structure breakdown:
 <ul>
-  <li>Top Level is a GameObject called Scene with an AssetManager and RayTracingMaster script attatched</li>
-  <li>Second Level: Parent Object Script - Attatch this to all objects that will have children with meshes you want to raytrace</li>
+  <li>Top Level is a GameObject called Scene with an AssetManager and RayTracingMaster script attached</li>
+  <li>Second Level: Parent Object Script - Attach this to all objects that will have children with meshes you want to raytrace</li>
   <li>Third Level: RayTracingObject Script - This defines what meshes get raytraced, must either be a direct child of a GameObject with the ParentObject Script, or in the same GameObject as the ParentObject Script</li>
-  <li>Misc Level: Unity Lights - Must have a RayTracingLight script attatched to be considered(and UseNEE needs to be on)</li>
+  <li>Misc Level: Unity Lights - Must have a RayTracingLight script attached to be considered(and UseNEE needs to be on)</li>
 </ul>
 
 ## General Use/Notes
 <ul>
-  <li>The camera you want to render from, you attatch the RenderHandler script to(if you have a camera tagged MainCamera, this will be done automatically)</li>
+  <li>The camera you want to render from, you attach the RenderHandler script to(if you have a camera tagged MainCamera, this will be done automatically)</li>
   <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building</li>
   <li>Objects can be added and removed at will simply by toggling the associated GameObject with a ParentObject script on/off in the hierarchy(clicking on parent objects with complex objects for children will lag), but they will take time to appear as the acceleration structure needs to  be rebuilt for them</li>
-  <li>Emmissive meshes need to be Emissive when you build the hierarchy to work with NEE, and can have their emissiveness at will</li>
+  <li>Emissive meshes need to be emissive when you build the hierarchy to work with NEE, and can have their emissiveness at will</li>
   <li>If you use normal maps, they need to be in unity normal map format</li>
   <li>To set up PBR with the DEFAULT material, all textures go into their proper names, but Roughness goes into the Occlusion texture(This can be changed in the MaterialPairing menu)</li>
   <li>If you are using blendshapes to change geometry of a skinned mesh, you may need to go to the import settings of it(in the inspector), turn off Legacy Blendshape Normals, and make sure all normals are imported, not calculated, otherwise the normals for blendshapes might be wrong</li>
@@ -87,7 +87,7 @@ Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera s
 
 ## Linking your own Materials
 <ul>
-  <li>This is how to take your material, and have the textures assign properly, meaning you dont need to use a specific material</li>
+  <li>This is how to take your material, and have the textures assign properly, meaning you don't need to use a specific material</li>
   <li>In the PathTracingSettings, click the tab called "Material Pair Options"</li>
   <li>Drag any material that has the shader you want to pair into the material slot that appears</li>
   <li>From here, you need to select each dropdown that appears and select the property that is associated with the text to the left of the dropdown</li>
