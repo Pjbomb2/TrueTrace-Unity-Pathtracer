@@ -15,7 +15,7 @@ using UnityEngine.Rendering;
 namespace TrueTrace {
     [System.Serializable]
     public class AssetManager : MonoBehaviour
-    {//This handels all the data
+    {//This handles all the data
         public int TotalParentObjectSize;
         public float LightEnergyScale = 1.0f;
         //emissive, alpha, metallic, roughness
@@ -62,19 +62,19 @@ namespace TrueTrace {
         private int NodeBufferKernel;
         private int LightBufferKernel;
 
-        [HideInInspector] public List<ParentObject> RenderQue;
+        [HideInInspector] public List<ParentObject> RenderQueue;
         [HideInInspector] public List<Transform> RenderTransforms;
-        [HideInInspector] public List<ParentObject> BuildQue;
-        [HideInInspector] public List<ParentObject> AddQue;
-        [HideInInspector] public List<ParentObject> RemoveQue;
-        [HideInInspector] public List<ParentObject> UpdateQue;
+        [HideInInspector] public List<ParentObject> BuildQueue;
+        [HideInInspector] public List<ParentObject> AddQueue;
+        [HideInInspector] public List<ParentObject> RemoveQueue;
+        [HideInInspector] public List<ParentObject> UpdateQueue;
 
-        [HideInInspector] public List<InstancedObject> InstanceRenderQue;
-        [HideInInspector] public List<InstancedObject> InstanceUpdateQue;
+        [HideInInspector] public List<InstancedObject> InstanceRenderQueue;
+        [HideInInspector] public List<InstancedObject> InstanceUpdateQueue;
         [HideInInspector] public List<Transform> InstanceRenderTransforms;
-        [HideInInspector] public List<InstancedObject> InstanceBuildQue;
-        [HideInInspector] public List<InstancedObject> InstanceAddQue;
-        [HideInInspector] public List<InstancedObject> InstanceRemoveQue;
+        [HideInInspector] public List<InstancedObject> InstanceBuildQueue;
+        [HideInInspector] public List<InstancedObject> InstanceAddQueue;
+        [HideInInspector] public List<InstancedObject> InstanceRemoveQueue;
 
         private bool OnlyInstanceUpdated;
         [HideInInspector] public List<Transform> LightTransforms;
@@ -339,16 +339,16 @@ namespace TrueTrace {
                     TerrainInfos[i] = TempTerrain;
                 }
             }
-            if(RenderQue.Count == 0) return;
-            int CurCount = RenderQue[0].AlbedoTexs.Count;
-            foreach (ParentObject Obj in RenderQue) {
+            if(RenderQueue.Count == 0) return;
+            int CurCount = RenderQueue[0].AlbedoTexs.Count;
+            foreach (ParentObject Obj in RenderQueue) {
                 AddTextures(ref AlbedoTexs, ref AlbedoIndexes, ref Obj.AlbedoIndexes, ref Obj.AlbedoTexs, ref MetallicTexChannelIndex);
                 AddTextures(ref NormalTexs, ref NormalIndexes, ref Obj.NormalIndexes, ref Obj.NormalTexs, ref MetallicTexChannelIndex);
                 AddTextures(ref MetallicTexs, ref MetallicIndexes, ref Obj.MetallicIndexes, ref Obj.MetallicTexs, ref MetallicTexChannelIndex, Obj.MetallicTexChannelIndex);
                 AddTextures(ref RoughnessTexs, ref RoughnessIndexes, ref Obj.RoughnessIndexes, ref Obj.RoughnessTexs, ref RoughnessTexChannelIndex, Obj.RoughnessTexChannelIndex);
                 AddTextures(ref EmissiveTexs, ref EmissiveIndexes, ref Obj.EmissionIndexes, ref Obj.EmissionTexs, ref MetallicTexChannelIndex);
             }
-            foreach (ParentObject Obj in InstanceData.RenderQue) {
+            foreach (ParentObject Obj in InstanceData.RenderQueue) {
                 AddTextures(ref AlbedoTexs, ref AlbedoIndexes, ref Obj.AlbedoIndexes, ref Obj.AlbedoTexs, ref MetallicTexChannelIndex);
                 AddTextures(ref NormalTexs, ref NormalIndexes, ref Obj.NormalIndexes, ref Obj.NormalTexs, ref MetallicTexChannelIndex);
                 AddTextures(ref MetallicTexs, ref MetallicIndexes, ref Obj.MetallicIndexes, ref Obj.MetallicTexs, ref MetallicTexChannelIndex, Obj.MetallicTexChannelIndex);
@@ -363,7 +363,7 @@ namespace TrueTrace {
                 }
             }
 
-            if (!RenderQue.Any())
+            if (!RenderQueue.Any())
                 return;
 
             Rect[] AlbedoRects, NormalRects, EmissiveRects, MetallicRects, RoughnessRects;
@@ -408,7 +408,7 @@ namespace TrueTrace {
             RoughnessAtlas.GenerateMips();
             MatCount = 0;
 
-            foreach (ParentObject Obj in RenderQue) {
+            foreach (ParentObject Obj in RenderQueue) {
                 foreach (RayTracingObject Obj2 in Obj.ChildObjects) {
                     MaterialsChanged.Add(Obj2);
                     for (int i = 0; i < Obj2.MaterialIndex.Length; i++) Obj2.MaterialIndex[i] = Obj2.LocalMaterialIndex[i] + MatCount;
@@ -416,7 +416,7 @@ namespace TrueTrace {
                 _Materials.AddRange(Obj._Materials);
                 MatCount += Obj._Materials.Count;
             }
-            foreach (ParentObject Obj in InstanceData.RenderQue) {
+            foreach (ParentObject Obj in InstanceData.RenderQueue) {
                 foreach (RayTracingObject Obj2 in Obj.ChildObjects) {
                     MaterialsChanged.Add(Obj2);
                     for (int i = 0; i < Obj2.MaterialIndex.Length; i++) Obj2.MaterialIndex[i] = Obj2.LocalMaterialIndex[i] + MatCount;
@@ -464,7 +464,7 @@ namespace TrueTrace {
         }
 
         public void ForceUpdateAtlas() {
-            for(int i = 0; i < RenderQue.Count; i++) RenderQue[i].CreateAtlas();
+            for(int i = 0; i < RenderQueue.Count; i++) RenderQueue[i].CreateAtlas();
             CreateAtlas();
         }
 
@@ -591,20 +591,20 @@ namespace TrueTrace {
             Instances = new List<InstancedObject>();
             SunDirection = new Vector3(0, -1, 0);
             {
-                AddQue = new List<ParentObject>();
-                RemoveQue = new List<ParentObject>();
-                RenderQue = new List<ParentObject>();
+                AddQueue = new List<ParentObject>();
+                RemoveQueue = new List<ParentObject>();
+                RenderQueue = new List<ParentObject>();
                 RenderTransforms = new List<Transform>();
-                UpdateQue = new List<ParentObject>();
-                BuildQue = new List<ParentObject>();
+                UpdateQueue = new List<ParentObject>();
+                BuildQueue = new List<ParentObject>();
             }
             {
-                InstanceRenderQue = new List<InstancedObject>();
-                InstanceUpdateQue = new List<InstancedObject>();
+                InstanceRenderQueue = new List<InstancedObject>();
+                InstanceUpdateQueue = new List<InstancedObject>();
                 InstanceRenderTransforms = new List<Transform>();
-                InstanceBuildQue = new List<InstancedObject>();
-                InstanceAddQue = new List<InstancedObject>();
-                InstanceRemoveQue = new List<InstancedObject>();
+                InstanceBuildQueue = new List<InstancedObject>();
+                InstanceAddQueue = new List<InstancedObject>();
+                InstanceRemoveQueue = new List<InstancedObject>();
             }
             MyMeshesCompacted = new List<MyMeshDataCompacted>();
             UnityLights = new List<LightData>();
@@ -633,134 +633,134 @@ namespace TrueTrace {
             if (Terrains.Count != 0) for (int i = 0; i < Terrains.Count; i++) Terrains[i].Load();
         }
 
-        private void UpdateRenderAndBuildQues() {
+        private void UpdateRenderAndBuildQueues() {
             ChildrenUpdated = false;
             OnlyInstanceUpdated = false;
 
-            int QueCount = RemoveQue.Count;
+            int QueCount = RemoveQueue.Count;
             {//Main Object Data Handling
              // UnityEngine.Profiling.Profiler.BeginSample("Remove");
                 for (int i = QueCount - 1; i >= 0; i--) {
-                    switch(RemoveQue[i].ExistsInQue) {
-                        case 0: {int Index = RenderQue.IndexOf(RemoveQue[i]); RenderQue.RemoveAt(Index); RenderTransforms.RemoveAt(Index);}; break;
-                        case 1: BuildQue.Remove(RemoveQue[i]); break;
-                        case 2: UpdateQue.Remove(RemoveQue[i]); break;
-                        case 3: AddQue.Remove(RemoveQue[i]); break;
+                    switch(RemoveQueue[i].ExistsInQueue) {
+                        case 0: {int Index = RenderQueue.IndexOf(RemoveQueue[i]); RenderQueue.RemoveAt(Index); RenderTransforms.RemoveAt(Index);}; break;
+                        case 1: BuildQueue.Remove(RemoveQueue[i]); break;
+                        case 2: UpdateQueue.Remove(RemoveQueue[i]); break;
+                        case 3: AddQueue.Remove(RemoveQueue[i]); break;
                     }
-                    RemoveQue[i].ExistsInQue = -1;
+                    RemoveQueue[i].ExistsInQueue = -1;
                     ChildrenUpdated = true;
                 }
-                RemoveQue.Clear();
+                RemoveQueue.Clear();
             // UnityEngine.Profiling.Profiler.EndSample();
              // UnityEngine.Profiling.Profiler.BeginSample("Update");
-                QueCount = UpdateQue.Count;
+                QueCount = UpdateQueue.Count;
                 for (int i = QueCount - 1; i >= 0; i--) {
-                    if(UpdateQue[i] == null) continue;
-                    switch(UpdateQue[i].ExistsInQue) {
-                        case 0: {int Index = RenderQue.IndexOf(UpdateQue[i]); RenderQue.RemoveAt(Index); RenderTransforms.RemoveAt(Index);}; break;
-                        case 1: BuildQue.Remove(UpdateQue[i]); break;
+                    if(UpdateQueue[i] == null) continue;
+                    switch(UpdateQueue[i].ExistsInQueue) {
+                        case 0: {int Index = RenderQueue.IndexOf(UpdateQueue[i]); RenderQueue.RemoveAt(Index); RenderTransforms.RemoveAt(Index);}; break;
+                        case 1: BuildQueue.Remove(UpdateQueue[i]); break;
                     }
-                    UpdateQue[i].ExistsInQue = -1;
+                    UpdateQueue[i].ExistsInQueue = -1;
                     ChildrenUpdated = true;
                 }
             // UnityEngine.Profiling.Profiler.EndSample();
              // UnityEngine.Profiling.Profiler.BeginSample("Add");
-                QueCount = AddQue.Count;
+                QueCount = AddQueue.Count;
                 for (int i = QueCount - 1; i >= 0; i--) {
-                    bool Contained = AddQue[i].ExistsInQue != 3;
-                    if(!Contained || (AddQue[i].AsyncTask == null || AddQue[i].AsyncTask.Status != TaskStatus.RanToCompletion)) {
-                        AddQue[i].Reset(1);
-                        BuildQue.Add(AddQue[i]);
+                    bool Contained = AddQueue[i].ExistsInQueue != 3;
+                    if(!Contained || (AddQueue[i].AsyncTask == null || AddQueue[i].AsyncTask.Status != TaskStatus.RanToCompletion)) {
+                        AddQueue[i].Reset(1);
+                        BuildQueue.Add(AddQueue[i]);
                         ChildrenUpdated = true;
                     }
                 }
-                AddQue.Clear();
+                AddQueue.Clear();
             // UnityEngine.Profiling.Profiler.EndSample();
              // UnityEngine.Profiling.Profiler.BeginSample("Build");
-                QueCount = BuildQue.Count;
+                QueCount = BuildQueue.Count;
                 for (int i = QueCount - 1; i >= 0; i--) {//Promotes from Build Que to Render Que
-                    if (BuildQue[i].AsyncTask.IsFaulted) {//Fuck, something fucked up
-                        Debug.Log(BuildQue[i].AsyncTask.Exception + ", " + BuildQue[i].Name);
-                        BuildQue[i].FailureCount++;
-                        if(BuildQue[i].FailureCount > 6) {
-                            BuildQue[i].ExistsInQue = -1;
+                    if (BuildQueue[i].AsyncTask.IsFaulted) {//Fuck, something fucked up
+                        Debug.Log(BuildQueue[i].AsyncTask.Exception + ", " + BuildQueue[i].Name);
+                        BuildQueue[i].FailureCount++;
+                        if(BuildQueue[i].FailureCount > 6) {
+                            BuildQueue[i].ExistsInQueue = -1;
                         } else {
-                            BuildQue[i].ExistsInQue = 3;
-                            AddQue.Add(BuildQue[i]);
+                            BuildQueue[i].ExistsInQueue = 3;
+                            AddQueue.Add(BuildQueue[i]);
                         }
-                        BuildQue.RemoveAt(i);
+                        BuildQueue.RemoveAt(i);
                     } else {
-                        if (BuildQue[i].AsyncTask.Status == TaskStatus.RanToCompletion) {
-                            if (BuildQue[i].AggTriangles == null || BuildQue[i].AggNodes == null) {
-                                BuildQue[i].ExistsInQue = 3;
-                                AddQue.Add(BuildQue[i]);
+                        if (BuildQueue[i].AsyncTask.Status == TaskStatus.RanToCompletion) {
+                            if (BuildQueue[i].AggTriangles == null || BuildQueue[i].AggNodes == null) {
+                                BuildQueue[i].ExistsInQueue = 3;
+                                AddQueue.Add(BuildQueue[i]);
                             } else {
-                                BuildQue[i].SetUpBuffers();
-                                BuildQue[i].ExistsInQue = 0;
-                                RenderTransforms.Add(BuildQue[i].gameObject.transform);
-                                RenderQue.Add(BuildQue[i]);
+                                BuildQueue[i].SetUpBuffers();
+                                BuildQueue[i].ExistsInQueue = 0;
+                                RenderTransforms.Add(BuildQueue[i].gameObject.transform);
+                                RenderQueue.Add(BuildQueue[i]);
                                 ChildrenUpdated = true;
                             }
-                            BuildQue.RemoveAt(i);
+                            BuildQueue.RemoveAt(i);
                         }
                     }
                 }
             // UnityEngine.Profiling.Profiler.EndSample();
              // UnityEngine.Profiling.Profiler.BeginSample("Update 2");
-                QueCount = UpdateQue.Count;
+                QueCount = UpdateQueue.Count;
                 for (int i = QueCount - 1; i >= 0; i--) {//Demotes from Render Que to Build Que in case mesh has changed
-                    if (UpdateQue[i] != null && UpdateQue[i].gameObject.activeInHierarchy) {
-                        if (UpdateQue[i].ExistsInQue != 1) {
-                            UpdateQue[i].Reset(1);
-                            BuildQue.Add(UpdateQue[i]);
+                    if (UpdateQueue[i] != null && UpdateQueue[i].gameObject.activeInHierarchy) {
+                        if (UpdateQueue[i].ExistsInQueue != 1) {
+                            UpdateQueue[i].Reset(1);
+                            BuildQueue.Add(UpdateQueue[i]);
                         }
                         ChildrenUpdated = true;
                     }
-                    UpdateQue.RemoveAt(i);
+                    UpdateQueue.RemoveAt(i);
                 }
             // UnityEngine.Profiling.Profiler.EndSample();
             }
             {//Instanced Models Data Handling
-                InstanceData.UpdateRenderAndBuildQues(ref ChildrenUpdated);
+                InstanceData.UpdateRenderAndBuildQueues(ref ChildrenUpdated);
              // UnityEngine.Profiling.Profiler.BeginSample("Asset Instance Remove");
-                QueCount = InstanceUpdateQue.Count;
+                QueCount = InstanceUpdateQueue.Count;
                 for (int i = QueCount - 1; i >= 0; i--) {//Demotes from Render Que to Build Que in case mesh has changed
-                    if(InstanceRenderQue.Contains(InstanceUpdateQue[i])) {InstanceRenderTransforms.RemoveAt(InstanceRenderQue.IndexOf(InstanceUpdateQue[i])); InstanceRenderQue.Remove(InstanceUpdateQue[i]);}
+                    if(InstanceRenderQueue.Contains(InstanceUpdateQueue[i])) {InstanceRenderTransforms.RemoveAt(InstanceRenderQueue.IndexOf(InstanceUpdateQueue[i])); InstanceRenderQueue.Remove(InstanceUpdateQueue[i]);}
                     OnlyInstanceUpdated = true;
                 }
-                InstanceUpdateQue.Clear();
-                QueCount = InstanceRemoveQue.Count;
+                InstanceUpdateQueue.Clear();
+                QueCount = InstanceRemoveQueue.Count;
                  for (int i = QueCount - 1; i >= 0; i--) {
-                    switch(InstanceRemoveQue[i].ExistsInQue) {
+                    switch(InstanceRemoveQueue[i].ExistsInQueue) {
                         default: Debug.Log("INSTANCES BROKE!"); break;
-                        case 0: {InstanceRenderTransforms.RemoveAt(InstanceRenderQue.IndexOf(InstanceRemoveQue[i])); InstanceRenderQue.Remove(InstanceRemoveQue[i]);} break;
-                        case 1: InstanceBuildQue.Remove(InstanceRemoveQue[i]); break;
-                        case 3: InstanceAddQue.Remove(InstanceRemoveQue[i]); break;
+                        case 0: {InstanceRenderTransforms.RemoveAt(InstanceRenderQueue.IndexOf(InstanceRemoveQueue[i])); InstanceRenderQueue.Remove(InstanceRemoveQueue[i]);} break;
+                        case 1: InstanceBuildQueue.Remove(InstanceRemoveQueue[i]); break;
+                        case 3: InstanceAddQueue.Remove(InstanceRemoveQueue[i]); break;
                     }
-                    InstanceRemoveQue[i].ExistsInQue = -1;
+                    InstanceRemoveQueue[i].ExistsInQueue = -1;
                     OnlyInstanceUpdated = true;
                 }
-                InstanceRemoveQue.Clear();
+                InstanceRemoveQueue.Clear();
             // UnityEngine.Profiling.Profiler.EndSample();
 
              // UnityEngine.Profiling.Profiler.BeginSample("Asset Instance Add");
-                QueCount = InstanceAddQue.Count;
+                QueCount = InstanceAddQueue.Count;
                 for (int i = QueCount - 1; i >= 0; i--) {
-                    if (InstanceAddQue[i].InstanceParent != null && InstanceAddQue[i].InstanceParent.gameObject.activeInHierarchy) {
-                        InstanceAddQue[i].ExistsInQue = 1;
-                        InstanceBuildQue.Add(InstanceAddQue[i]);
-                        InstanceAddQue.RemoveAt(i);
+                    if (InstanceAddQueue[i].InstanceParent != null && InstanceAddQueue[i].InstanceParent.gameObject.activeInHierarchy) {
+                        InstanceAddQueue[i].ExistsInQueue = 1;
+                        InstanceBuildQueue.Add(InstanceAddQueue[i]);
+                        InstanceAddQueue.RemoveAt(i);
                     }
                 }
             // UnityEngine.Profiling.Profiler.EndSample();
              // UnityEngine.Profiling.Profiler.BeginSample("Asset Instance Build");
-                QueCount = InstanceBuildQue.Count;
+                QueCount = InstanceBuildQueue.Count;
                 for (int i = QueCount - 1; i >= 0; i--) {//Promotes from Build Que to Render Que
-                    if (InstanceBuildQue[i].InstanceParent.HasCompleted == true) {
-                        InstanceBuildQue[i].ExistsInQue = 0;
-                        InstanceRenderTransforms.Add(InstanceBuildQue[i].transform);
-                        InstanceRenderQue.Add(InstanceBuildQue[i]);
-                        InstanceBuildQue.RemoveAt(i);
+                    if (InstanceBuildQueue[i].InstanceParent.HasCompleted == true) {
+                        InstanceBuildQueue[i].ExistsInQueue = 0;
+                        InstanceRenderTransforms.Add(InstanceBuildQueue[i].transform);
+                        InstanceRenderQueue.Add(InstanceBuildQueue[i]);
+                        InstanceBuildQueue.RemoveAt(i);
                         OnlyInstanceUpdated = true;
                     }
                 }
@@ -776,7 +776,7 @@ namespace TrueTrace {
             {
                 OnlyInstanceUpdated = false;
             }
-            if (ChildrenUpdated || ParentCountHasChanged) MeshAABBs = new AABB[RenderQue.Count + InstanceRenderQue.Count];
+            if (ChildrenUpdated || ParentCountHasChanged) MeshAABBs = new AABB[RenderQueue.Count + InstanceRenderQueue.Count];
         }
         public void EditorBuild()
         {//Forces all to rebuild
@@ -784,19 +784,19 @@ namespace TrueTrace {
             Terrains = new List<TerrainObject>();
             Terrains = new List<TerrainObject>(GetComponentsInChildren<TerrainObject>());
             init();
-            AddQue = new List<ParentObject>();
-            RemoveQue = new List<ParentObject>();
-            RenderQue = new List<ParentObject>();
+            AddQueue = new List<ParentObject>();
+            RemoveQueue = new List<ParentObject>();
+            RenderQueue = new List<ParentObject>();
             RenderTransforms = new List<Transform>();
-            BuildQue = new List<ParentObject>(GetComponentsInChildren<ParentObject>());
+            BuildQueue = new List<ParentObject>(GetComponentsInChildren<ParentObject>());
             RunningTasks = 0;
             InstanceData.EditorBuild();
-            for (int i = 0; i < BuildQue.Count; i++)
+            for (int i = 0; i < BuildQueue.Count; i++)
             {
                 var CurrentRep = i;
-                BuildQue[CurrentRep].LoadData();
-                BuildQue[CurrentRep].AsyncTask = Task.Run(() => { BuildQue[CurrentRep].BuildTotal(); RunningTasks--; });
-                BuildQue[CurrentRep].ExistsInQue = 1;
+                BuildQueue[CurrentRep].LoadData();
+                BuildQueue[CurrentRep].AsyncTask = Task.Run(() => { BuildQueue[CurrentRep].BuildTotal(); RunningTasks--; });
+                BuildQueue[CurrentRep].ExistsInQueue = 1;
                 RunningTasks++;
             }
             didstart = false;
@@ -806,27 +806,27 @@ namespace TrueTrace {
             HasToDo = false;
             Terrains = new List<TerrainObject>(GetComponentsInChildren<TerrainObject>());
             init();
-            List<ParentObject> TempQue = new List<ParentObject>(GetComponentsInChildren<ParentObject>());
-            InstanceAddQue = new List<InstancedObject>(GetComponentsInChildren<InstancedObject>());
+            List<ParentObject> TempQueue = new List<ParentObject>(GetComponentsInChildren<ParentObject>());
+            InstanceAddQueue = new List<InstancedObject>(GetComponentsInChildren<InstancedObject>());
             InstanceData.BuildCombined();
             RunningTasks = 0;
-            for (int i = 0; i < TempQue.Count; i++)
+            for (int i = 0; i < TempQueue.Count; i++)
             {
-                if (TempQue[i].HasCompleted && !TempQue[i].NeedsToUpdate) {
-                    TempQue[i].ExistsInQue = 0;
-                    RenderQue.Add(TempQue[i]);
-                    RenderTransforms.Add(TempQue[i].gameObject.transform);
+                if (TempQueue[i].HasCompleted && !TempQueue[i].NeedsToUpdate) {
+                    TempQueue[i].ExistsInQueue = 0;
+                    RenderQueue.Add(TempQueue[i]);
+                    RenderTransforms.Add(TempQueue[i].gameObject.transform);
                 }
-                else {TempQue[i].ExistsInQue = 1; BuildQue.Add(TempQue[i]); RunningTasks++;}
+                else {TempQueue[i].ExistsInQueue = 1; BuildQueue.Add(TempQueue[i]); RunningTasks++;}
             }
-            for (int i = 0; i < BuildQue.Count; i++)
+            for (int i = 0; i < BuildQueue.Count; i++)
             {
                 var CurrentRep = i;
-                BuildQue[CurrentRep].LoadData();
-                BuildQue[CurrentRep].AsyncTask = Task.Run(() => {BuildQue[CurrentRep].BuildTotal(); RunningTasks--;});
+                BuildQueue[CurrentRep].LoadData();
+                BuildQueue[CurrentRep].AsyncTask = Task.Run(() => {BuildQueue[CurrentRep].BuildTotal(); RunningTasks--;});
             }
             ParentCountHasChanged = true;
-            if (RenderQue.Count != 0) {CommandBuffer cmd = new CommandBuffer(); int throwaway = UpdateTLAS(cmd);  Graphics.ExecuteCommandBuffer(cmd);
+            if (RenderQueue.Count != 0) {CommandBuffer cmd = new CommandBuffer(); int throwaway = UpdateTLAS(cmd);  Graphics.ExecuteCommandBuffer(cmd);
         cmd.Clear();
         cmd.Release();}
         }
@@ -835,11 +835,11 @@ namespace TrueTrace {
         private void AccumulateData(CommandBuffer cmd)
         {
             // UnityEngine.Profiling.Profiler.BeginSample("Update Object Lists");
-            UpdateRenderAndBuildQues();
+            UpdateRenderAndBuildQueues();
             // UnityEngine.Profiling.Profiler.EndSample();
 
-            int ParentsLength = RenderQue.Count;
-            int nodes = 2 * (ParentsLength + InstanceRenderQue.Count);
+            int ParentsLength = RenderQueue.Count;
+            int nodes = 2 * (ParentsLength + InstanceRenderQueue.Count);
             if (ChildrenUpdated || ParentCountHasChanged)
             {
                 TotalParentObjectSize = 0;
@@ -861,15 +861,15 @@ namespace TrueTrace {
                 }
                 for (int i = 0; i < ParentsLength; i++)
                 {
-                    AggNodeCount += RenderQue[i].AggNodes.Length;
-                    AggTriCount += RenderQue[i].AggTriangles.Length;
-                    LightTriCount += RenderQue[i].LightTriangles.Count;
+                    AggNodeCount += RenderQueue[i].AggNodes.Length;
+                    AggTriCount += RenderQueue[i].AggTriangles.Length;
+                    LightTriCount += RenderQueue[i].LightTriangles.Count;
                 }
-                for (int i = 0; i < InstanceData.RenderQue.Count; i++)
+                for (int i = 0; i < InstanceData.RenderQueue.Count; i++)
                 {
-                    AggNodeCount += InstanceData.RenderQue[i].AggNodes.Length;
-                    AggTriCount += InstanceData.RenderQue[i].AggTriangles.Length;
-                    LightTriCount += InstanceData.RenderQue[i].LightTriangles.Count;
+                    AggNodeCount += InstanceData.RenderQueue[i].AggNodes.Length;
+                    AggTriCount += InstanceData.RenderQueue[i].AggTriangles.Length;
+                    LightTriCount += InstanceData.RenderQueue[i].LightTriangles.Count;
                 }
                 Debug.Log("Total Tri Count: " + AggTriCount);
                 Debug.Log("Total Light Tri Count: " + LightTriCount);
@@ -885,97 +885,97 @@ namespace TrueTrace {
                     int MatOffset = 0;
                     for (int i = 0; i < ParentsLength; i++)
                     {
-                        RenderQue[i].UpdateData();
+                        RenderQueue[i].UpdateData();
                         // cmd.BeginSample("AccumBufferTri");
                         cmd.SetComputeIntParam(MeshFunctions, "Offset", CurTriOffset);
-                        cmd.SetComputeIntParam(MeshFunctions, "Count", RenderQue[i].TriBuffer.count);
-                        cmd.SetComputeBufferParam(MeshFunctions, TriangleBufferKernel, "InCudaTriArray", RenderQue[i].TriBuffer);
-                        cmd.DispatchCompute(MeshFunctions, TriangleBufferKernel, (int)Mathf.Ceil(RenderQue[i].TriBuffer.count / 372.0f), 1, 1);
+                        cmd.SetComputeIntParam(MeshFunctions, "Count", RenderQueue[i].TriBuffer.count);
+                        cmd.SetComputeBufferParam(MeshFunctions, TriangleBufferKernel, "InCudaTriArray", RenderQueue[i].TriBuffer);
+                        cmd.DispatchCompute(MeshFunctions, TriangleBufferKernel, (int)Mathf.Ceil(RenderQueue[i].TriBuffer.count / 372.0f), 1, 1);
                         // cmd.EndSample("AccumBufferTri");
 
                         // cmd.BeginSample("AccumBufferNode");
                         cmd.SetComputeIntParam(MeshFunctions, "Offset", CurNodeOffset);
-                        cmd.SetComputeIntParam(MeshFunctions, "Count", RenderQue[i].BVHBuffer.count);
-                        cmd.SetComputeBufferParam(MeshFunctions, NodeBufferKernel, "InAggNodes", RenderQue[i].BVHBuffer);
-                        cmd.DispatchCompute(MeshFunctions, NodeBufferKernel, (int)Mathf.Ceil(RenderQue[i].BVHBuffer.count / 372.0f), 1, 1);
+                        cmd.SetComputeIntParam(MeshFunctions, "Count", RenderQueue[i].BVHBuffer.count);
+                        cmd.SetComputeBufferParam(MeshFunctions, NodeBufferKernel, "InAggNodes", RenderQueue[i].BVHBuffer);
+                        cmd.DispatchCompute(MeshFunctions, NodeBufferKernel, (int)Mathf.Ceil(RenderQueue[i].BVHBuffer.count / 372.0f), 1, 1);
                         // cmd.EndSample("AccumBufferNode");
 
-                        if (RenderQue[i].LightTriangles.Count != 0)
+                        if (RenderQueue[i].LightTriangles.Count != 0)
                         {
                             cmd.SetComputeIntParam(MeshFunctions, "Offset", CurLightTriOffset);
-                            cmd.SetComputeIntParam(MeshFunctions, "Count", RenderQue[i].LightTriBuffer.count);
-                            cmd.SetComputeBufferParam(MeshFunctions, LightBufferKernel, "LightTrianglesIn", RenderQue[i].LightTriBuffer);
-                            cmd.DispatchCompute(MeshFunctions, LightBufferKernel, (int)Mathf.Ceil(RenderQue[i].LightTriBuffer.count / 372.0f), 1, 1);
+                            cmd.SetComputeIntParam(MeshFunctions, "Count", RenderQueue[i].LightTriBuffer.count);
+                            cmd.SetComputeBufferParam(MeshFunctions, LightBufferKernel, "LightTrianglesIn", RenderQueue[i].LightTriBuffer);
+                            cmd.DispatchCompute(MeshFunctions, LightBufferKernel, (int)Mathf.Ceil(RenderQueue[i].LightTriBuffer.count / 372.0f), 1, 1);
                             LightMeshCount++;
                             LightTransforms.Add(RenderTransforms[i]);
                             LightMeshes.Add(new LightMeshData()
                             {
                                 StartIndex = CurLightTriOffset,
-                                IndexEnd = RenderQue[i].LightTriangles.Count + CurLightTriOffset,
+                                IndexEnd = RenderQueue[i].LightTriangles.Count + CurLightTriOffset,
                                 MatOffset = MatOffset,
                                 LockedMeshIndex = i
                             });
 
 
-                            RenderQue[i].LightTriOffset = CurLightTriOffset;
-                            CurLightTriOffset += RenderQue[i].LightTriangles.Count;
-                            TotalParentObjectSize += RenderQue[i].LightTriBuffer.count * RenderQue[i].LightTriBuffer.stride;
+                            RenderQueue[i].LightTriOffset = CurLightTriOffset;
+                            CurLightTriOffset += RenderQueue[i].LightTriangles.Count;
+                            TotalParentObjectSize += RenderQueue[i].LightTriBuffer.count * RenderQueue[i].LightTriBuffer.stride;
                         }
-                        TotalParentObjectSize += RenderQue[i].TriBuffer.count * RenderQue[i].TriBuffer.stride;
-                        TotalParentObjectSize += RenderQue[i].BVHBuffer.count * RenderQue[i].BVHBuffer.stride;
-                        RenderQue[i].NodeOffset = CurNodeOffset;
-                        RenderQue[i].TriOffset = CurTriOffset;
-                        CurNodeOffset += RenderQue[i].AggNodes.Length;
-                        CurTriOffset += RenderQue[i].AggTriangles.Length;
-                        MatOffset += RenderQue[i]._Materials.Count;
+                        TotalParentObjectSize += RenderQueue[i].TriBuffer.count * RenderQueue[i].TriBuffer.stride;
+                        TotalParentObjectSize += RenderQueue[i].BVHBuffer.count * RenderQueue[i].BVHBuffer.stride;
+                        RenderQueue[i].NodeOffset = CurNodeOffset;
+                        RenderQueue[i].TriOffset = CurTriOffset;
+                        CurNodeOffset += RenderQueue[i].AggNodes.Length;
+                        CurTriOffset += RenderQueue[i].AggTriangles.Length;
+                        MatOffset += RenderQueue[i]._Materials.Count;
                     }
-                    for (int i = 0; i < InstanceData.RenderQue.Count; i++)
+                    for (int i = 0; i < InstanceData.RenderQueue.Count; i++)
                     {//Accumulate the BVH nodes and triangles for all instanced models
-                        InstanceData.RenderQue[i].UpdateData();
-                        InstanceData.RenderQue[i].InstanceMeshIndex = i + ParentsLength;
+                        InstanceData.RenderQueue[i].UpdateData();
+                        InstanceData.RenderQueue[i].InstanceMeshIndex = i + ParentsLength;
 
                         // cmd.BeginSample("AccumBufferInstanceTri");
                         cmd.SetComputeIntParam(MeshFunctions, "Offset", CurTriOffset);
-                        cmd.SetComputeIntParam(MeshFunctions, "Count", InstanceData.RenderQue[i].TriBuffer.count);
-                        cmd.SetComputeBufferParam(MeshFunctions, TriangleBufferKernel, "InCudaTriArray", InstanceData.RenderQue[i].TriBuffer);
-                        cmd.DispatchCompute(MeshFunctions, TriangleBufferKernel, (int)Mathf.Ceil(InstanceData.RenderQue[i].TriBuffer.count / 372.0f), 1, 1);
+                        cmd.SetComputeIntParam(MeshFunctions, "Count", InstanceData.RenderQueue[i].TriBuffer.count);
+                        cmd.SetComputeBufferParam(MeshFunctions, TriangleBufferKernel, "InCudaTriArray", InstanceData.RenderQueue[i].TriBuffer);
+                        cmd.DispatchCompute(MeshFunctions, TriangleBufferKernel, (int)Mathf.Ceil(InstanceData.RenderQueue[i].TriBuffer.count / 372.0f), 1, 1);
                         // cmd.EndSample("AccumBufferInstanceTri");
 
                         // cmd.BeginSample("AccumBufferInstanceNode");
                         cmd.SetComputeIntParam(MeshFunctions, "Offset", CurNodeOffset);
-                        cmd.SetComputeIntParam(MeshFunctions, "Count", InstanceData.RenderQue[i].BVHBuffer.count);
-                        cmd.SetComputeBufferParam(MeshFunctions, NodeBufferKernel, "InAggNodes", InstanceData.RenderQue[i].BVHBuffer);
-                        cmd.DispatchCompute(MeshFunctions, NodeBufferKernel, (int)Mathf.Ceil(InstanceData.RenderQue[i].BVHBuffer.count / 372.0f), 1, 1);
+                        cmd.SetComputeIntParam(MeshFunctions, "Count", InstanceData.RenderQueue[i].BVHBuffer.count);
+                        cmd.SetComputeBufferParam(MeshFunctions, NodeBufferKernel, "InAggNodes", InstanceData.RenderQueue[i].BVHBuffer);
+                        cmd.DispatchCompute(MeshFunctions, NodeBufferKernel, (int)Mathf.Ceil(InstanceData.RenderQueue[i].BVHBuffer.count / 372.0f), 1, 1);
                         // cmd.EndSample("AccumBufferInstanceNode");
-                        if (InstanceData.RenderQue[i].LightTriangles.Count != 0)
+                        if (InstanceData.RenderQueue[i].LightTriangles.Count != 0)
                         {
                             cmd.SetComputeIntParam(MeshFunctions, "Offset", CurLightTriOffset);
-                            cmd.SetComputeIntParam(MeshFunctions, "Count", InstanceData.RenderQue[i].LightTriBuffer.count);
-                            cmd.SetComputeBufferParam(MeshFunctions, LightBufferKernel, "LightTrianglesIn", InstanceData.RenderQue[i].LightTriBuffer);
-                            cmd.DispatchCompute(MeshFunctions, LightBufferKernel, (int)Mathf.Ceil(InstanceData.RenderQue[i].LightTriBuffer.count / 372.0f), 1, 1);
+                            cmd.SetComputeIntParam(MeshFunctions, "Count", InstanceData.RenderQueue[i].LightTriBuffer.count);
+                            cmd.SetComputeBufferParam(MeshFunctions, LightBufferKernel, "LightTrianglesIn", InstanceData.RenderQueue[i].LightTriBuffer);
+                            cmd.DispatchCompute(MeshFunctions, LightBufferKernel, (int)Mathf.Ceil(InstanceData.RenderQueue[i].LightTriBuffer.count / 372.0f), 1, 1);
                             
-                            InstanceData.RenderQue[i].LightTriOffset = CurLightTriOffset;
-                            CurLightTriOffset += InstanceData.RenderQue[i].LightTriangles.Count;
-                            InstanceData.RenderQue[i].LightEndIndex = CurLightTriOffset;
+                            InstanceData.RenderQueue[i].LightTriOffset = CurLightTriOffset;
+                            CurLightTriOffset += InstanceData.RenderQueue[i].LightTriangles.Count;
+                            InstanceData.RenderQueue[i].LightEndIndex = CurLightTriOffset;
                         }
 
-                        InstanceData.RenderQue[i].NodeOffset = CurNodeOffset;
-                        InstanceData.RenderQue[i].TriOffset = CurTriOffset;
-                        CurNodeOffset += InstanceData.RenderQue[i].AggNodes.Length;
-                        CurTriOffset += InstanceData.RenderQue[i].AggTriangles.Length;
+                        InstanceData.RenderQueue[i].NodeOffset = CurNodeOffset;
+                        InstanceData.RenderQueue[i].TriOffset = CurTriOffset;
+                        CurNodeOffset += InstanceData.RenderQueue[i].AggNodes.Length;
+                        CurTriOffset += InstanceData.RenderQueue[i].AggTriangles.Length;
 
                     }
-                    for (int i = 0; i < InstanceRenderQue.Count; i++)
+                    for (int i = 0; i < InstanceRenderQueue.Count; i++)
                     {
-                        if (InstanceRenderQue[i].InstanceParent.LightTriangles.Count != 0)
+                        if (InstanceRenderQueue[i].InstanceParent.LightTriangles.Count != 0)
                         {
                             LightMeshCount++;
                             LightTransforms.Add(InstanceRenderTransforms[i]);
                             LightMeshes.Add(new LightMeshData()
                             {
                                 LockedMeshIndex = i + ParentsLength,
-                                StartIndex = InstanceRenderQue[i].InstanceParent.LightTriOffset,
-                                IndexEnd = InstanceRenderQue[i].InstanceParent.LightEndIndex
+                                StartIndex = InstanceRenderQueue[i].InstanceParent.LightTriOffset,
+                                IndexEnd = InstanceRenderQueue[i].InstanceParent.LightEndIndex
                             });
                         }
                     }
@@ -993,16 +993,16 @@ namespace TrueTrace {
                     MyMeshDataCompacted TempMesh2;
                     for (int i = 0; i < ParentsLength; i++)
                     {//Refit BVH's of skinned meshes
-                        if (RenderQue[i].IsSkinnedGroup)//this can be optimized to operate directly on the triangle buffer instead of needing to copy it
+                        if (RenderQueue[i].IsSkinnedGroup)//this can be optimized to operate directly on the triangle buffer instead of needing to copy it
                         {
-                            cmd.SetComputeIntParam(RenderQue[i].MeshRefit, "TriBuffOffset", RenderQue[i].TriOffset);
-                            cmd.SetComputeIntParam(RenderQue[i].MeshRefit, "LightTriBuffOffset", RenderQue[i].LightTriOffset);
-                            RenderQue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBuffer, ref LightTriBuffer, cmd);
+                            cmd.SetComputeIntParam(RenderQueue[i].MeshRefit, "TriBuffOffset", RenderQueue[i].TriOffset);
+                            cmd.SetComputeIntParam(RenderQueue[i].MeshRefit, "LightTriBuffOffset", RenderQueue[i].LightTriOffset);
+                            RenderQueue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBuffer, ref LightTriBuffer, cmd);
                             if(i < MyMeshesCompacted.Count) {
                                 TempMesh2 = MyMeshesCompacted[i];
                                 TempMesh2.Transform = RenderTransforms[i].worldToLocalMatrix;
                                 MyMeshesCompacted[i] = TempMesh2;
-                                MeshAABBs[i] = RenderQue[i].aabb;
+                                MeshAABBs[i] = RenderQueue[i].aabb;
                             }
                         }
                     }
@@ -1013,16 +1013,16 @@ namespace TrueTrace {
                     MyMeshDataCompacted TempMesh2;
                     for (int i = 0; i < ParentsLength; i++)
                     {//Refit BVH's of skinned meshes
-                        if (RenderQue[i].IsSkinnedGroup)//this can be optimized to operate directly on the triangle buffer instead of needing to copy it
+                        if (RenderQueue[i].IsSkinnedGroup)//this can be optimized to operate directly on the triangle buffer instead of needing to copy it
                         {
-                             cmd.SetComputeIntParam(RenderQue[i].MeshRefit, "TriBuffOffset", RenderQue[i].TriOffset);
-                            cmd.SetComputeIntParam(RenderQue[i].MeshRefit, "LightTriBuffOffset", RenderQue[i].LightTriOffset);
-                            RenderQue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBuffer, ref LightTriBuffer, cmd);
+                             cmd.SetComputeIntParam(RenderQueue[i].MeshRefit, "TriBuffOffset", RenderQueue[i].TriOffset);
+                            cmd.SetComputeIntParam(RenderQueue[i].MeshRefit, "LightTriBuffOffset", RenderQueue[i].LightTriOffset);
+                            RenderQueue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBuffer, ref LightTriBuffer, cmd);
                             if(i < MyMeshesCompacted.Count) {
                                 TempMesh2 = MyMeshesCompacted[i];
                                 TempMesh2.Transform = RenderTransforms[i].worldToLocalMatrix;
                                 MyMeshesCompacted[i] = TempMesh2;
-                                MeshAABBs[i] = RenderQue[i].aabb;
+                                MeshAABBs[i] = RenderQueue[i].aabb;
                             }
                         }
                     }
@@ -1120,9 +1120,9 @@ namespace TrueTrace {
                 SubMeshOffsets = new List<int>();
                 MeshOffsets = new List<Vector2>();
                 AccelStruct.ClearInstances();
-                for(int i = 0; i < RenderQue.Count; i++) {
-                    RenderQue[i].HWRTIndex = new List<int>();
-                    foreach(var A in RenderQue[i].Renderers) {
+                for(int i = 0; i < RenderQueue.Count; i++) {
+                    RenderQueue[i].HWRTIndex = new List<int>();
+                    foreach(var A in RenderQueue[i].Renderers) {
                         MeshOffsets.Add(new Vector2(SubMeshOffsets.Count, i));
                         Mesh mesh = ((A.gameObject.GetComponent<MeshFilter>() != null) ? A.gameObject.GetComponent<MeshFilter>().sharedMesh : A.gameObject.GetComponent<SkinnedMeshRenderer>().sharedMesh);
                         for (int i2 = 0; i2 < mesh.subMeshCount; ++i2)
@@ -1281,7 +1281,7 @@ namespace TrueTrace {
              if(TLASTask.Status == TaskStatus.RanToCompletion && CurFrame % 25 == 24) {
                 MaxRecur = TempRecur; 
 
-                if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
+                if (WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
                 if (NodeBuffer != null) NodeBuffer.Release();
                 if (StackBuffer != null) StackBuffer.Release();
                 if (ToBVHIndexBuffer != null) ToBVHIndexBuffer.Release();
@@ -1307,8 +1307,8 @@ namespace TrueTrace {
                 BoxesBuffer = new ComputeBuffer(MeshAABBs.Length, 24);
                 TLASCWBVHIndexes = new ComputeBuffer(MeshAABBs.Length, 4);
                 TLASCWBVHIndexes.SetData(TLASBVH8.cwbvh_indices);
-                 for (int i = 0; i < RenderQue.Count; i++) {
-                    ParentObject TargetParent = RenderQue[i];
+                 for (int i = 0; i < RenderQueue.Count; i++) {
+                    ParentObject TargetParent = RenderQueue[i];
                     MeshAABBs[TargetParent.CompactedMeshData] = TargetParent.aabb;
                 }
                 Boxes = MeshAABBs;
@@ -1403,72 +1403,72 @@ namespace TrueTrace {
                 // UnityEngine.Profiling.Profiler.EndSample();
 
             int MatOffset = 0;
-            int MeshDataCount = RenderQue.Count;
-            int aggregated_bvh_node_count = 2 * (MeshDataCount + InstanceRenderQue.Count);
+            int MeshDataCount = RenderQueue.Count;
+            int aggregated_bvh_node_count = 2 * (MeshDataCount + InstanceRenderQueue.Count);
             int AggNodeCount = aggregated_bvh_node_count;
             int AggTriCount = 0;
             if (ChildrenUpdated || !didstart || OnlyInstanceUpdated || MyMeshesCompacted.Count == 0)
             {
                 MyMeshesCompacted.Clear();
-                AggData[] Aggs = new AggData[InstanceData.RenderQue.Count];
+                AggData[] Aggs = new AggData[InstanceData.RenderQueue.Count];
                 // UnityEngine.Profiling.Profiler.BeginSample("Remake Initial Data");
                 for (int i = 0; i < MeshDataCount; i++) {
-                    if (!RenderQue[i].IsSkinnedGroup) RenderQue[i].UpdateAABB(RenderTransforms[i]);
+                    if (!RenderQueue[i].IsSkinnedGroup) RenderQueue[i].UpdateAABB(RenderTransforms[i]);
                     MyMeshesCompacted.Add(new MyMeshDataCompacted() {
                         mesh_data_bvh_offsets = aggregated_bvh_node_count,
                         Transform = RenderTransforms[i].worldToLocalMatrix,
                         AggIndexCount = AggTriCount,
                         AggNodeCount = AggNodeCount,
                         MaterialOffset = MatOffset,
-                        LightTriCount = RenderQue[i].LightTriangles.Count
+                        LightTriCount = RenderQueue[i].LightTriangles.Count
                     });
-                    RenderQue[i].CompactedMeshData = i;
-                    MatOffset += RenderQue[i].MatOffset;
-                    MeshAABBs[i] = RenderQue[i].aabb;
-                    AggNodeCount += RenderQue[i].AggBVHNodeCount;//Can I replace this with just using aggregated_bvh_node_count below?
-                    AggTriCount += RenderQue[i].AggIndexCount;
+                    RenderQueue[i].CompactedMeshData = i;
+                    MatOffset += RenderQueue[i].MatOffset;
+                    MeshAABBs[i] = RenderQueue[i].aabb;
+                    AggNodeCount += RenderQueue[i].AggBVHNodeCount;//Can I replace this with just using aggregated_bvh_node_count below?
+                    AggTriCount += RenderQueue[i].AggIndexCount;
                     #if !HardwareRT
-                        aggregated_bvh_node_count += RenderQue[i].BVH.cwbvhnode_count;
+                        aggregated_bvh_node_count += RenderQueue[i].BVH.cwbvhnode_count;
                     #endif
                 }
                 // UnityEngine.Profiling.Profiler.EndSample();
 
                 // UnityEngine.Profiling.Profiler.BeginSample("Remake Initial Instance Data A");
-                int InstanceCount = InstanceData.RenderQue.Count;
+                int InstanceCount = InstanceData.RenderQueue.Count;
                 for (int i = 0; i < InstanceCount; i++)
                 {
-                    InstanceData.RenderQue[i].CompactedMeshData = i;
+                    InstanceData.RenderQueue[i].CompactedMeshData = i;
                     Aggs[i].AggIndexCount = AggTriCount;
                     Aggs[i].AggNodeCount = AggNodeCount;
                     Aggs[i].MaterialOffset = MatOffset;
                     Aggs[i].mesh_data_bvh_offsets = aggregated_bvh_node_count;
-                    Aggs[i].LightTriCount = InstanceData.RenderQue[i].LightTriangles.Count;
-                    MatOffset += InstanceData.RenderQue[i].MatOffset;
-                    AggNodeCount += InstanceData.RenderQue[i].AggBVHNodeCount;//Can I replace this with just using aggregated_bvh_node_count below?
-                    AggTriCount += InstanceData.RenderQue[i].AggIndexCount;
-                    aggregated_bvh_node_count += InstanceData.RenderQue[i].BVH.cwbvhnode_count;
+                    Aggs[i].LightTriCount = InstanceData.RenderQueue[i].LightTriangles.Count;
+                    MatOffset += InstanceData.RenderQueue[i].MatOffset;
+                    AggNodeCount += InstanceData.RenderQueue[i].AggBVHNodeCount;//Can I replace this with just using aggregated_bvh_node_count below?
+                    AggTriCount += InstanceData.RenderQueue[i].AggIndexCount;
+                    aggregated_bvh_node_count += InstanceData.RenderQueue[i].BVH.cwbvhnode_count;
                 }
                 // UnityEngine.Profiling.Profiler.EndSample();
                 // UnityEngine.Profiling.Profiler.BeginSample("Remake Initial Instance Data B");
-                InstanceCount = InstanceRenderQue.Count;
+                InstanceCount = InstanceRenderQueue.Count;
                 int MeshCount = MyMeshesCompacted.Count;
                 for (int i = 0; i < InstanceCount; i++)
                 {
-                    int Index = InstanceRenderQue[i].InstanceParent.CompactedMeshData;
+                    int Index = InstanceRenderQueue[i].InstanceParent.CompactedMeshData;
                     MyMeshesCompacted.Add(new MyMeshDataCompacted()
                     {
                         mesh_data_bvh_offsets = Aggs[Index].mesh_data_bvh_offsets,
-                        Transform = InstanceRenderQue[i].transform.worldToLocalMatrix,
+                        Transform = InstanceRenderQueue[i].transform.worldToLocalMatrix,
                         AggIndexCount = Aggs[Index].AggIndexCount,
                         AggNodeCount = Aggs[Index].AggNodeCount,
                         MaterialOffset = Aggs[Index].MaterialOffset,
                         LightTriCount = Aggs[Index].LightTriCount
 
                     });
-                    InstanceRenderQue[i].CompactedMeshData = MeshCount + i;
-                    AABB aabb = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
-                    CreateAABB(InstanceRenderQue[i].transform, ref aabb);
-                    MeshAABBs[RenderQue.Count + i] = aabb;
+                    InstanceRenderQueue[i].CompactedMeshData = MeshCount + i;
+                    AABB aabb = InstanceRenderQueue[i].InstanceParent.aabb_untransformed;
+                    CreateAABB(InstanceRenderQueue[i].transform, ref aabb);
+                    MeshAABBs[RenderQueue.Count + i] = aabb;
                 }
                 // UnityEngine.Profiling.Profiler.EndSample();
 
@@ -1491,7 +1491,7 @@ namespace TrueTrace {
                 {
                     if (RenderTransforms[i].hasChanged)
                     {
-                        TargetParent = RenderQue[i];
+                        TargetParent = RenderQueue[i];
                         // RenderTransforms[i].hasChanged = false;
                         if (TargetParent.IsSkinnedGroup) continue;
                         TargetTransform = RenderTransforms[i];
@@ -1511,19 +1511,19 @@ namespace TrueTrace {
                 // UnityEngine.Profiling.Profiler.EndSample();
 
                 // UnityEngine.Profiling.Profiler.BeginSample("Refit TLAS");
-                int ListCount = InstanceRenderQue.Count;
+                int ListCount = InstanceRenderQueue.Count;
                 for (int i = 0; i < ListCount; i++)
                 {
                     if (InstanceRenderTransforms[i].hasChanged || ChangedLastFrame)
                     {
                         TargetTransform = InstanceRenderTransforms[i];
-                        MyMeshDataCompacted TempMesh = MyMeshesCompacted[InstanceRenderQue[i].CompactedMeshData];
+                        MyMeshDataCompacted TempMesh = MyMeshesCompacted[InstanceRenderQueue[i].CompactedMeshData];
                         TempMesh.Transform = TargetTransform.worldToLocalMatrix;
-                        MyMeshesCompacted[InstanceRenderQue[i].CompactedMeshData] = TempMesh;
+                        MyMeshesCompacted[InstanceRenderQueue[i].CompactedMeshData] = TempMesh;
                         TargetTransform.hasChanged = false;
-                        AABB aabb = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
+                        AABB aabb = InstanceRenderQueue[i].InstanceParent.aabb_untransformed;
                         CreateAABB(TargetTransform, ref aabb);
-                        MeshAABBs[InstanceRenderQue[i].CompactedMeshData] = aabb;
+                        MeshAABBs[InstanceRenderQueue[i].CompactedMeshData] = aabb;
                     }
                 }
 
@@ -1554,7 +1554,7 @@ namespace TrueTrace {
         public bool UpdateMaterials()
         {//Allows for live updating of material properties of any object
             bool HasChangedMaterials = false;
-            int ParentCount = RenderQue.Count;
+            int ParentCount = RenderQueue.Count;
             RayTracingObject CurrentMaterial;
             MaterialData TempMat;
             int ChangedMaterialCount = MaterialsChanged.Count;
@@ -1569,7 +1569,7 @@ namespace TrueTrace {
                     if(CurrentMaterial.MaterialIndex[i3] >= MatCount) continue;
                     TempMat = _Materials[CurrentMaterial.MaterialIndex[i3]];
                     TempMat.BaseColor = CurrentMaterial.BaseColor[Index];
-                    TempMat.emmissive = CurrentMaterial.emmission[Index];
+                    TempMat.Emissive = CurrentMaterial.Emission[Index];
                     TempMat.Roughness = ((int)CurrentMaterial.MaterialOptions[Index] != 1) ? CurrentMaterial.Roughness[Index] : Mathf.Max(CurrentMaterial.Roughness[Index], 0.000001f);
                     TempMat.TransmittanceColor = CurrentMaterial.TransmissionColor[Index];
                     TempMat.MatType = (int)CurrentMaterial.MaterialOptions[Index];
@@ -1578,10 +1578,10 @@ namespace TrueTrace {
                     TempMat.specularTint = CurrentMaterial.SpecularTint[Index];
                     TempMat.sheen = CurrentMaterial.Sheen[Index];
                     TempMat.sheenTint = CurrentMaterial.SheenTint[Index];
-                    TempMat.clearcoat = CurrentMaterial.ClearCoat[Index];
+                    TempMat.ClearCoat = CurrentMaterial.ClearCoat[Index];
                     TempMat.IOR = CurrentMaterial.IOR[Index];
                     TempMat.Thin = CurrentMaterial.Thin[Index];
-                    TempMat.clearcoatGloss = CurrentMaterial.ClearCoatGloss[Index];
+                    TempMat.ClearCoatGloss = CurrentMaterial.ClearCoatGloss[Index];
                     TempMat.specTrans = CurrentMaterial.SpecTrans[Index];
                     TempMat.anisotropic = CurrentMaterial.Anisotropic[Index];
                     TempMat.diffTrans = CurrentMaterial.DiffTrans[Index];
@@ -1610,15 +1610,15 @@ namespace TrueTrace {
             }
             MaterialsChanged.Clear();
 
-            ParentCount = InstanceData.RenderQue.Count;
+            ParentCount = InstanceData.RenderQueue.Count;
             // UnityEngine.Profiling.Profiler.BeginSample("Update Materials");
 
             for (int i = 0; i < ParentCount; i++)
             {
-                int ChildCount = InstanceData.RenderQue[i].ChildObjects.Count;
+                int ChildCount = InstanceData.RenderQueue[i].ChildObjects.Count;
                 for (int i2 = 0; i2 < ChildCount; i2++)
                 {
-                    CurrentMaterial = InstanceData.RenderQue[i].ChildObjects[i2];
+                    CurrentMaterial = InstanceData.RenderQueue[i].ChildObjects[i2];
                     if (CurrentMaterial.NeedsToUpdate || !didstart)
                     {
                         int MaterialCount = (int)Mathf.Min(CurrentMaterial.MaterialIndex.Length, CurrentMaterial.Indexes.Length);
@@ -1627,7 +1627,7 @@ namespace TrueTrace {
                             int Index = CurrentMaterial.Indexes[i3];
                             TempMat = _Materials[CurrentMaterial.MaterialIndex[i3]];
                             TempMat.BaseColor = CurrentMaterial.BaseColor[Index];
-                            TempMat.emmissive = CurrentMaterial.emmission[Index];
+                            TempMat.Emissive = CurrentMaterial.Emission[Index];
                             TempMat.Roughness = ((int)CurrentMaterial.MaterialOptions[Index] != 1) ? CurrentMaterial.Roughness[Index] : Mathf.Max(CurrentMaterial.Roughness[Index], 0.000001f);
                             TempMat.TransmittanceColor = CurrentMaterial.TransmissionColor[Index];
                             TempMat.MatType = (int)CurrentMaterial.MaterialOptions[Index];
@@ -1636,10 +1636,10 @@ namespace TrueTrace {
                             TempMat.specularTint = CurrentMaterial.SpecularTint[Index];
                             TempMat.sheen = CurrentMaterial.Sheen[Index];
                             TempMat.sheenTint = CurrentMaterial.SheenTint[Index];
-                            TempMat.clearcoat = CurrentMaterial.ClearCoat[Index];
+                            TempMat.ClearCoat = CurrentMaterial.ClearCoat[Index];
                             TempMat.IOR = CurrentMaterial.IOR[Index];
                             TempMat.Thin = CurrentMaterial.Thin[Index];
-                            TempMat.clearcoatGloss = CurrentMaterial.ClearCoatGloss[Index];
+                            TempMat.ClearCoatGloss = CurrentMaterial.ClearCoatGloss[Index];
                             TempMat.specTrans = CurrentMaterial.SpecTrans[Index];
                             TempMat.anisotropic = CurrentMaterial.Anisotropic[Index];
                             TempMat.diffTrans = CurrentMaterial.DiffTrans[Index];

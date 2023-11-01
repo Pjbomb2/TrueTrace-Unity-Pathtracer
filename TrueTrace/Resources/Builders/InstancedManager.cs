@@ -10,20 +10,20 @@ namespace TrueTrace {
     [System.Serializable]
     public class InstancedManager : MonoBehaviour
     {
-        [HideInInspector] public List<ParentObject> AddQue;
-        [HideInInspector] public List<ParentObject> RemoveQue;
-        [HideInInspector] public List<ParentObject> BuildQue;
-        [HideInInspector] public List<ParentObject> RenderQue;
+        [HideInInspector] public List<ParentObject> AddQueue;
+        [HideInInspector] public List<ParentObject> RemoveQueue;
+        [HideInInspector] public List<ParentObject> BuildQueue;
+        [HideInInspector] public List<ParentObject> RenderQueue;
         [HideInInspector] public List<Task> CurrentlyActiveTasks;
         [HideInInspector] public bool ParentCountHasChanged;
         [HideInInspector] public bool NeedsToUpdateTextures;
 
         public void init()
         {
-            AddQue = new List<ParentObject>();
-            RemoveQue = new List<ParentObject>();
-            BuildQue = new List<ParentObject>();
-            RenderQue = new List<ParentObject>();
+            AddQueue = new List<ParentObject>();
+            RemoveQueue = new List<ParentObject>();
+            BuildQueue = new List<ParentObject>();
+            RenderQueue = new List<ParentObject>();
             CurrentlyActiveTasks = new List<Task>();
         }
 
@@ -37,17 +37,17 @@ namespace TrueTrace {
         public void EditorBuild()
         {
             init();
-            AddQue = new List<ParentObject>();
-            RemoveQue = new List<ParentObject>();
-            RenderQue = new List<ParentObject>();
+            AddQueue = new List<ParentObject>();
+            RemoveQueue = new List<ParentObject>();
+            RenderQueue = new List<ParentObject>();
             CurrentlyActiveTasks = new List<Task>();
-            BuildQue = new List<ParentObject>(GetComponentsInChildren<ParentObject>());
+            BuildQueue = new List<ParentObject>(GetComponentsInChildren<ParentObject>());
             RunningTasks = 0;
-            for (int i = 0; i < BuildQue.Count; i++)
+            for (int i = 0; i < BuildQueue.Count; i++)
             {
                 var CurrentRep = i;
-                BuildQue[CurrentRep].LoadData();
-                Task t1 = Task.Run(() => { BuildQue[CurrentRep].BuildTotal(); RunningTasks--; });
+                BuildQueue[CurrentRep].LoadData();
+                Task t1 = Task.Run(() => { BuildQueue[CurrentRep].BuildTotal(); RunningTasks--; });
                 RunningTasks++;
                 CurrentlyActiveTasks.Add(t1);
             }
@@ -56,83 +56,83 @@ namespace TrueTrace {
         public void BuildCombined()
         {
             init();
-            List<ParentObject> TempQue = new List<ParentObject>(GetComponentsInChildren<ParentObject>());
-            for (int i = 0; i < TempQue.Count; i++)
+            List<ParentObject> TempQueue = new List<ParentObject>(GetComponentsInChildren<ParentObject>());
+            for (int i = 0; i < TempQueue.Count; i++)
             {
-                if (TempQue[i].HasCompleted && !TempQue[i].NeedsToUpdate) RenderQue.Add(TempQue[i]);
-                else BuildQue.Add(TempQue[i]);
+                if (TempQueue[i].HasCompleted && !TempQueue[i].NeedsToUpdate) RenderQueue.Add(TempQueue[i]);
+                else BuildQueue.Add(TempQueue[i]);
             }
-            for (int i = 0; i < BuildQue.Count; i++)
+            for (int i = 0; i < BuildQueue.Count; i++)
             {
                 var CurrentRep = i;
-                BuildQue[CurrentRep].LoadData();
-                CurrentlyActiveTasks.Add(Task.Run(() => BuildQue[CurrentRep].BuildTotal()));
+                BuildQueue[CurrentRep].LoadData();
+                CurrentlyActiveTasks.Add(Task.Run(() => BuildQueue[CurrentRep].BuildTotal()));
             }
         }
 
-        public void UpdateRenderAndBuildQues(ref bool NeedsToUpdate)
+        public void UpdateRenderAndBuildQueues(ref bool NeedsToUpdate)
         {
 
-            // UnityEngine.Profiling.Profiler.BeginSample("Instaced AddQue");
-            int AddQueCount = AddQue.Count - 1;
-            for (int i = AddQueCount; i >= 0; i--)
+            // UnityEngine.Profiling.Profiler.BeginSample("Instanced AddQueue");
+            int AddQueueCount = AddQueue.Count - 1;
+            for (int i = AddQueueCount; i >= 0; i--)
             {
-                var CurrentRep = BuildQue.Count;
-                BuildQue.Add(AddQue[i]);
-                AddQue.RemoveAt(i);
-                BuildQue[CurrentRep].LoadData();
-                CurrentlyActiveTasks.Add(Task.Run(() => BuildQue[CurrentRep].BuildTotal()));
+                var CurrentRep = BuildQueue.Count;
+                BuildQueue.Add(AddQueue[i]);
+                AddQueue.RemoveAt(i);
+                BuildQueue[CurrentRep].LoadData();
+                CurrentlyActiveTasks.Add(Task.Run(() => BuildQueue[CurrentRep].BuildTotal()));
             }
             // UnityEngine.Profiling.Profiler.EndSample();
-            // UnityEngine.Profiling.Profiler.BeginSample("Instaced RemoveQue");
-            int RemoveQueCount = RemoveQue.Count - 1;
-            for (int i = RemoveQueCount; i >= 0; i--)
+            // UnityEngine.Profiling.Profiler.BeginSample("Instanced RemoveQueue");
+            int RemoveQueueCount = RemoveQueue.Count - 1;
+            for (int i = RemoveQueueCount; i >= 0; i--)
             {
-                if (RenderQue.Contains(RemoveQue[i]))
-                    RenderQue.Remove(RemoveQue[i]);
-                else if (BuildQue.Contains(RemoveQue[i]))
+                if (RenderQueue.Contains(RemoveQueue[i]))
+                    RenderQueue.Remove(RemoveQueue[i]);
+                else if (BuildQueue.Contains(RemoveQueue[i]))
                 {
-                    CurrentlyActiveTasks.RemoveAt(BuildQue.IndexOf(RemoveQue[i]));
-                    BuildQue.Remove(RemoveQue[i]);
+                    CurrentlyActiveTasks.RemoveAt(BuildQueue.IndexOf(RemoveQueue[i]));
+                    BuildQueue.Remove(RemoveQueue[i]);
                 }
                 NeedsToUpdate = true;
-                RemoveQue.RemoveAt(i);
+                RemoveQueue.RemoveAt(i);
             }
             // UnityEngine.Profiling.Profiler.EndSample();
-            // UnityEngine.Profiling.Profiler.BeginSample("Instaced RenderQue");
-            int RenderQueCount = RenderQue.Count - 1;
-            for (int i = RenderQueCount; i >= 0; i--)
+            // UnityEngine.Profiling.Profiler.BeginSample("Instanced RenderQueue");
+            int RenderQueueCount = RenderQueue.Count - 1;
+            for (int i = RenderQueueCount; i >= 0; i--)
             {//Demotes from Render Que to Build Que in case mesh has changed
-                if (RenderQue[i].NeedsToUpdate)
+                if (RenderQueue[i].NeedsToUpdate)
                 {
-                    RenderQue[i].ClearAll();
-                    RenderQue[i].LoadData();
-                    BuildQue.Add(RenderQue[i]);
-                    RenderQue.RemoveAt(i);
-                    var TempBuildQueCount = BuildQue.Count - 1;
-                    CurrentlyActiveTasks.Add(Task.Run(() => BuildQue[TempBuildQueCount].BuildTotal()));
+                    RenderQueue[i].ClearAll();
+                    RenderQueue[i].LoadData();
+                    BuildQueue.Add(RenderQueue[i]);
+                    RenderQueue.RemoveAt(i);
+                    var TempBuildQueueCount = BuildQueue.Count - 1;
+                    CurrentlyActiveTasks.Add(Task.Run(() => BuildQueue[TempBuildQueueCount].BuildTotal()));
                     NeedsToUpdate = true;
                 }
             }
             // UnityEngine.Profiling.Profiler.EndSample();
-            // UnityEngine.Profiling.Profiler.BeginSample("Instaced BuildQue");
-            int BuildQueCount = BuildQue.Count - 1;
-            for (int i = BuildQueCount; i >= 0; i--)
+            // UnityEngine.Profiling.Profiler.BeginSample("Instanced BuildQueue");
+            int BuildQueueCount = BuildQueue.Count - 1;
+            for (int i = BuildQueueCount; i >= 0; i--)
             {//Promotes from Build Que to Render Que
                 if (CurrentlyActiveTasks[i].IsFaulted) {
-                    Debug.Log(CurrentlyActiveTasks[i].Exception + ", " + BuildQue[i].Name);//Fuck, something fucked up
-                    AddQue.Add(BuildQue[i]);
-                    BuildQue.RemoveAt(i);
+                    Debug.Log(CurrentlyActiveTasks[i].Exception + ", " + BuildQueue[i].Name);//Fuck, something fucked up
+                    AddQueue.Add(BuildQueue[i]);
+                    BuildQueue.RemoveAt(i);
                     CurrentlyActiveTasks.RemoveAt(i);
                 } else if (CurrentlyActiveTasks[i].Status == TaskStatus.RanToCompletion) {
-                    if (BuildQue[i].AggTriangles == null || BuildQue[i].AggNodes == null) {
-                        AddQue.Add(BuildQue[i]);
-                        BuildQue.RemoveAt(i);
+                    if (BuildQueue[i].AggTriangles == null || BuildQueue[i].AggNodes == null) {
+                        AddQueue.Add(BuildQueue[i]);
+                        BuildQueue.RemoveAt(i);
                         CurrentlyActiveTasks.RemoveAt(i);
                     } else {
-                        BuildQue[i].SetUpBuffers();
-                        RenderQue.Add(BuildQue[i]);
-                        BuildQue.RemoveAt(i);
+                        BuildQueue[i].SetUpBuffers();
+                        RenderQueue.Add(BuildQueue[i]);
+                        BuildQueue.RemoveAt(i);
                         CurrentlyActiveTasks.RemoveAt(i);
                         NeedsToUpdate = true;
                     }

@@ -7,10 +7,10 @@ using CommonVars;
 using UnityEditor.UIElements;
 
 namespace TrueTrace {
-    public class HierarchyModifers : EditorWindow {
-        [MenuItem("TrueTrace/Hierarchy Modifers")]
+    public class HierarchyModifiers : EditorWindow {
+        [MenuItem("TrueTrace/Hierarchy Modifiers")]
         public static void ShowWindow() {
-            GetWindow<HierarchyModifers>("Hierarchy Modifers");
+            GetWindow<HierarchyModifiers>("Hierarchy Modifiers");
         }
 
              public struct ParentData {

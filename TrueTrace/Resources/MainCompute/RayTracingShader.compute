@@ -40,7 +40,7 @@ bool ImprovedPrimaryHit;
     #pragma require inlineraytracing
     RaytracingAccelerationStructure myAccelerationStructure;
 #endif
-bool VisabilityCheck(Ray ray, float dist) {
+bool VisibilityCheck(Ray ray, float dist) {
     #ifdef HardwareRT
         const uint rayFlags = RAY_FLAG_FORCE_OPAQUE  ;
         UnityRayQuery<rayFlags> q;
@@ -55,7 +55,7 @@ bool VisabilityCheck(Ray ray, float dist) {
         if(q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) return false;
         else return true;
     #else
-    return VisabilityCheckCompute(ray, dist);
+    return VisibilityCheckCompute(ray, dist);
     #endif
 }
 
@@ -372,12 +372,12 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
         if (abs(norm.x) == abs(norm.y) == abs(norm.z)) norm = Geomnorm;
     }
 
-    [branch] if (hitDat.emmissive > 0.0f) {//if we hit a light, this ray is done
+    [branch] if (hitDat.Emissive > 0.0f) {//if we hit a light, this ray is done
         float w = 1;
         if (!UseNEE || hitDat.MatType == VideoIndex) {
-            if (CurBounce == 0) Color.Direct += hitDat.emmissive;
-            else if(CurBounce == 1) Color.Direct += hitDat.emmissive * hitDat.surfaceColor;
-            else Color.Indirect += Color.throughput * hitDat.emmissive * hitDat.surfaceColor;
+            if (CurBounce == 0) Color.Direct += hitDat.Emissive;
+            else if(CurBounce == 1) Color.Direct += hitDat.Emissive * hitDat.surfaceColor;
+            else Color.Indirect += Color.throughput * hitDat.Emissive * hitDat.surfaceColor;
         } else {
             float3 a0 = mul(Inverse, float4(AggTris[hit.triangle_id].pos0, 1)).xyz;
             float3 a1 = mul(Inverse, float4(AggTris[hit.triangle_id].pos0 + AggTris[hit.triangle_id].posedge1, 1)).xyz;
@@ -387,13 +387,13 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
             float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
             float light_pdf = 1.0f / (SA * LightMeshCount) * rcp(_MeshData[hit.mesh_id].LightTriCount);
             w = power_heuristic(max(RayDat.last_pdf,0), light_pdf);
-            if (CurBounce == 0) Color.Direct += hitDat.emmissive;
-            else if (CurBounce == 1) Color.Direct += (hitDat.surfaceColor * hitDat.emmissive) * w;
-            else Color.Indirect += Color.throughput * hitDat.surfaceColor * hitDat.emmissive * w;
+            if (CurBounce == 0) Color.Direct += hitDat.Emissive;
+            else if (CurBounce == 1) Color.Direct += (hitDat.surfaceColor * hitDat.Emissive) * w;
+            else Color.Indirect += Color.throughput * hitDat.surfaceColor * hitDat.Emissive * w;
         }
-        NEEPosA[Uv.xy] += float4(0,0,0,luminance(hitDat.surfaceColor * hitDat.emmissive)); 
+        NEEPosA[Uv.xy] += float4(0,0,0,luminance(hitDat.surfaceColor * hitDat.Emissive));
         if(CurBounce == 1) WorldPosA[Uv] = uint4(UseReSTIRGI ? asuint(pos) : asuint(PrevDirection), WorldPosA[Uv].w);
-        if(CurBounce == 0) AlbedoTexData = float4(hitDat.surfaceColor * hitDat.emmissive, 0);
+        if(CurBounce == 0) AlbedoTexData = float4(hitDat.surfaceColor * hitDat.Emissive, 0);
         return;
     }
 
@@ -631,8 +631,8 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
             } else {        
                 NEE_pdf = (1.0f / (LightMeshCount * (LightCos * area) / distance_to_light_squared)) / LightWeight;//Putting the lightweight up here makes it biased
                 int MaterialIndex = AggTris[AggTriIndex].MatDat + _MeshData[_LightMeshes[MeshIndex].LockedMeshIndex].MaterialOffset;
-                Radiance = _Materials[MaterialIndex].emmissive * _Materials[MaterialIndex].surfaceColor;
-                if (_Materials[MaterialIndex].MatType == VideoIndex || (_Materials[MaterialIndex].EmissiveTex.x > 0 && _Materials[MaterialIndex].emmissive >= 0)) {
+                Radiance = _Materials[MaterialIndex].Emissive * _Materials[MaterialIndex].surfaceColor;
+                if (_Materials[MaterialIndex].MatType == VideoIndex || (_Materials[MaterialIndex].EmissiveTex.x > 0 && _Materials[MaterialIndex].Emissive >= 0)) {
                     float2 BaseUv = AggTris[AggTriIndex].tex0 * (1.0f - TriangleUV.x - TriangleUV.y) + AggTris[AggTriIndex].texedge1 * TriangleUV.x + AggTris[AggTriIndex].texedge2 * TriangleUV.y;
                     if (_Materials[MaterialIndex].MatType == VideoIndex) {
                         Radiance *= VideoTex.SampleLevel(sampler_VideoTex, BaseUv, 0).xyz;
@@ -644,7 +644,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
                         if (!IsMask) EmissCol = EmissTex.xyz * EmissTex.w;
                         else EmissCol *= EmissTex.xyz * EmissTex.w;
                         if (dot(EmissCol, EmissCol) > 0.001f) {
-                            Radiance = EmissCol * _Materials[MaterialIndex].emmissive;
+                            Radiance = EmissCol * _Materials[MaterialIndex].Emissive;
                         } else Radiance = 0;
                     }
                 } else if(_Materials[MaterialIndex].AlbedoTex.x > 0) {
@@ -673,7 +673,7 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
                 ShadowRaysBuffer[index3].t = (IsDirectional ? 10000.0f : distance_to_light - 0.01f) * ((CurBounce != AlbedoTexData.w - 1) ? 1 : -1);
                 ShadowRaysBuffer[index3].illumination = Illum;
                 ShadowRaysBuffer[index3].PixelIndex = pixel_index;
-                ShadowRaysBuffer[index3].LuminanceIncomming = luminance(Radiance);
+                ShadowRaysBuffer[index3].LuminanceIncoming = luminance(Radiance);
             }
         }
     }
@@ -827,7 +827,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     if(!all(TempMat.RoughnessRemap == float2(0,1))) TempMat.roughness = (TempMat.roughness * (TempMat.RoughnessRemap.y - TempMat.RoughnessRemap.x)) + TempMat.RoughnessRemap.x;
     if(AlbedoTexData.w != -1) TempMat.roughness = min(TempMat.roughness + max(CurBounce / (float)MaxBounce,0),1);
     bool IsEmissiveTex = false;
-    if(TempMat.emmissive >= 0) {
+    if(TempMat.Emissive >= 0) {
         float2 EmissionUV = AlignUV(BaseUv, TempMat.AlbedoTexScale, TempMat.EmissiveTex);        
         if (EmissionUV.x != -1) {
             float3 EmissCol = _Materials[MaterialIndex].EmissionColor;
@@ -838,7 +838,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
             if (dot(EmissCol, EmissCol) > 0.001f) {
                 IsEmissiveTex = true;
                 TempMat.surfaceColor = EmissCol;
-            } else TempMat.emmissive = 0;
+            } else TempMat.Emissive = 0;
         } else if(any(_Materials[MaterialIndex].EmissionColor != 0)) {
             TempMat.surfaceColor += _Materials[MaterialIndex].EmissionColor * TempMat.surfaceColor;
         }

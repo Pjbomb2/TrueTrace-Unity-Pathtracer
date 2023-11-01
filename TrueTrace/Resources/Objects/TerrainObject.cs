@@ -24,21 +24,21 @@ namespace TrueTrace {
                 int detailHeight = data.detailHeight;
 
 
-                float delatilWToTerrainW = data.size.x / detailWidth;
-                float delatilHToTerrainW = data.size.z / detailHeight;
+                float detailWToTerrainW = data.size.x / detailWidth;
+                float detailHToTerrainW = data.size.z / detailHeight;
 
                 Vector3 mapPosition = terrain.transform.position;
 
-                bool doDentisy = false;
-                float targetDentisty = 0;
+                bool doDensity = false;
+                float targetDensity = 0;
                 if (terrain.detailObjectDensity != 1)
                 {
-                    targetDentisty = (1 / (1f - terrain.detailObjectDensity));
-                    doDentisy = true;
+                    targetDensity = (1 / (1f - terrain.detailObjectDensity));
+                    doDensity = true;
                 }
 
 
-                float currentDentity = 0;
+                float currentDensity = 0;
 
                 DetailPrototype[] details = data.detailPrototypes;
                 for (int i = 0; i < details.Length; i++)
@@ -60,19 +60,19 @@ namespace TrueTrace {
                         {
                             if (map[x, y] > 0)
                             {
-                                currentDentity += 1f;
+                                currentDensity += 1f;
 
 
                                 bool pass = false;
-                                if (!doDentisy)
+                                if (!doDensity)
                                     pass = true;
                                 else
-                                    pass = currentDentity < targetDentisty;
+                                    pass = currentDensity < targetDensity;
 
                                 if (pass)
                                 {
-                                    float _z = (x * delatilWToTerrainW) + mapPosition.z;
-                                    float _x = (y * delatilHToTerrainW) + mapPosition.x;
+                                    float _z = (x * detailWToTerrainW) + mapPosition.z;
+                                    float _x = (y * detailHToTerrainW) + mapPosition.x;
                                     float _y = terrain.SampleHeight(new Vector3(_x, 0, _z));
                                     grasses.Add(new Vector3(
                                         _x,
@@ -82,7 +82,7 @@ namespace TrueTrace {
                                 }
                                 else
                                 {
-                                    currentDentity -= targetDentisty;
+                                    currentDensity -= targetDensity;
                                 }
 
                             }

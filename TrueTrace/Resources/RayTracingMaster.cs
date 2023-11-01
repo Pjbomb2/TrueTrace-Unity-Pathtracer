@@ -90,7 +90,7 @@ namespace TrueTrace {
 
         private int uFirstFrame = 1;
         public float IndirectBoost = 1;
-        [HideInInspector] public int bouncecount = 24;
+        [HideInInspector] public int BounceCount = 24;
         [HideInInspector] public bool UseSVGF = false;
         [HideInInspector] public bool UseRussianRoulette = true;
         [HideInInspector] public bool UseNEE = true;
@@ -101,7 +101,7 @@ namespace TrueTrace {
         [HideInInspector] public bool AllowAutoExpose = false;
         [HideInInspector] public bool AllowToneMap = true;
         [HideInInspector] public bool AllowTAA = false;
-        [HideInInspector] public float DoFAperature = 0.2f;
+        [HideInInspector] public float DoFAperture = 0.2f;
         [HideInInspector] public float DoFFocal = 0.2f;
         [HideInInspector] public float RenderScale = 1.0f;
         [HideInInspector] public float BloomStrength = 32.0f;
@@ -423,14 +423,14 @@ namespace TrueTrace {
             else if(!PrevReCur && UseReCur) ReCurDen.init(SourceWidth, SourceHeight);
             if(Denoisers.Initialized == false) Denoisers.init(SourceWidth, SourceHeight);
 
-            BufferSizes = new BufferSizeData[bouncecount + 1];
+            BufferSizes = new BufferSizeData[BounceCount + 1];
             BufferSizes[0].tracerays = 0;
             if(_BufferSizes == null) {
-                _BufferSizes = new ComputeBuffer(bouncecount + 1, 28);
+                _BufferSizes = new ComputeBuffer(BounceCount + 1, 28);
             }
-            if(_BufferSizes.count != bouncecount + 1) {
+            if(_BufferSizes.count != BounceCount + 1) {
                 _BufferSizes.Release();
-                _BufferSizes = new ComputeBuffer(bouncecount + 1, 28);
+                _BufferSizes = new ComputeBuffer(BounceCount + 1, 28);
             }
             _BufferSizes.SetData(BufferSizes);
             GenerateShader.SetComputeBuffer(GenKernel, "BufferSizes", _BufferSizes);
@@ -466,7 +466,7 @@ namespace TrueTrace {
             Shader.SetGlobalInt("PartialRenderingFactor", PartialRenderingFactor);
             SetFloat("FarPlane", _camera.farClipPlane);
             SetFloat("focal_distance", DoFFocal);
-            SetFloat("AperatureRadius", DoFAperature);
+            SetFloat("ApertureRadius", DoFAperture);
             SetFloat("sun_angular_radius", 0.1f);
             SetFloat("IndirectBoost", IndirectBoost);
             SetFloat("fps", 1.0f / Time.smoothDeltaTime);
@@ -482,7 +482,7 @@ namespace TrueTrace {
             SetInt("unitylightcount", Assets.UnityLightCount, cmd);
             SetInt("screen_width", SourceWidth, cmd);
             SetInt("screen_height", SourceHeight, cmd);
-            SetInt("MaxBounce", bouncecount - 1, cmd);
+            SetInt("MaxBounce", BounceCount - 1, cmd);
             SetInt("frames_accumulated", _currentSample, cmd);
             SetInt("ReSTIRGISpatialCount", ReSTIRGISpatialCount, cmd);
             SetInt("ReSTIRGITemporalMCap", ReSTIRGITemporalMCap, cmd);
@@ -852,7 +852,7 @@ namespace TrueTrace {
                 cmd.DispatchCompute(IntersectionShader, TraceKernel, 784, 1, 1);
                 cmd.EndSample("Trace Kernel: 0");
 
-                for (int i = 0; i < bouncecount; i++) {
+                for (int i = 0; i < BounceCount; i++) {
                     var bouncebounce = i;
                     SetInt("CurBounce", bouncebounce, cmd);
                     cmd.BeginSample("Transfer Kernel: " + i);
@@ -1013,7 +1013,7 @@ namespace TrueTrace {
             //     Debug.Log("TrueTrace needs to use Deferred Shading");
             //     return;
             // }
-            if (SceneIsRunning && Assets != null && Assets.RenderQue.Count > 0)
+            if (SceneIsRunning && Assets != null && Assets.RenderQueue.Count > 0)
             {
                 ResetAllTextures();
                 RunUpdate();

@@ -10,7 +10,7 @@ namespace TrueTrace {
 		public Options[] MaterialOptions;
 		[SerializeField] public Vector3[] TransmissionColor, BaseColor;
 		[SerializeField] public Vector2[] MetallicRemap, RoughnessRemap;
-		[SerializeField] public float[] emmission; 
+		[SerializeField] public float[] Emission;
 		[SerializeField] public Vector3[] EmissionColor;
 		[SerializeField] public float[] Roughness;
 		[SerializeField] public float[] IOR;
@@ -125,7 +125,7 @@ namespace TrueTrace {
 		 	if(Specular == null || Specular.Length != SubMeshCount) Specular = new float[SubMeshCount];
 			if(FollowMaterial == null || FollowMaterial.Length != SubMeshCount) {FollowMaterial = new bool[SubMeshCount]; System.Array.Fill(FollowMaterial, true);}
 			for(int i = 0; i < SharedMaterials.Length; i++) {
-				if(SharedMaterials[i].name.Equals("MI_LightWhite")) emmission[i] = 12.0f;
+				if(SharedMaterials[i].name.Equals("MI_LightWhite")) Emission[i] = 12.0f;
 			}
 			try {
 				if(Names == null || Names.Length == 0) {
@@ -146,7 +146,7 @@ namespace TrueTrace {
 					Thin = new int[SubMeshCount];
 					MaterialOptions = new Options[SubMeshCount];
 					LocalMaterialIndex = new int[SubMeshCount];
-					emmission = new float[SubMeshCount];
+					Emission = new float[SubMeshCount];
 					Roughness = new float[SubMeshCount];
 					System.Array.Fill(IOR, 1);
 					BaseColor = new Vector3[SubMeshCount];
@@ -166,7 +166,7 @@ namespace TrueTrace {
 		}
 
 		public void ResetData() {
-			emmission = null;
+			Emission = null;
 			Roughness = null;
 			TransmissionColor = null;
 			MaterialOptions = null;
@@ -179,11 +179,11 @@ namespace TrueTrace {
 	    		matfill();
 	    		if(WasDeleted) return;
 		    	this.transform.parent.GetComponent<ParentObject>().NeedsToUpdate = true;
-				if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
+				if(Assets != null && Assets.UpdateQueue != null && !Assets.UpdateQueue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQueue.Add(this.transform.parent.GetComponent<ParentObject>());
 	    	} else if(gameObject.scene.isLoaded && this.transform.GetComponent<ParentObject>() != null) {
 	    		matfill();
 	    		if(WasDeleted) return;
-				if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
+				if(Assets != null && Assets.UpdateQueue != null && !Assets.UpdateQueue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQueue.Add(this.transform.parent.GetComponent<ParentObject>());
 		    	this.transform.GetComponent<ParentObject>().NeedsToUpdate = true;
 	    	}
 	    }
@@ -191,7 +191,7 @@ namespace TrueTrace {
 	    private void OnDisable() {
 	    	if(gameObject.scene.isLoaded && this.transform.parent.GetComponent<ParentObject>() != null) {
 	    		this.transform.parent.GetComponent<ParentObject>().NeedsToUpdate = true;
-	    		if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
+	    		if(Assets != null && Assets.UpdateQueue != null && !Assets.UpdateQueue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQueue.Add(this.transform.parent.GetComponent<ParentObject>());
 	    	} else if(gameObject.scene.isLoaded && this.transform.GetComponent<ParentObject>() != null) {
 		    	this.transform.GetComponent<ParentObject>().NeedsToUpdate = true;
 	    	}

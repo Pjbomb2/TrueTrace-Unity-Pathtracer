@@ -438,7 +438,7 @@ namespace TrueTrace {
         }
 
         public void ExecuteBloom(ref RenderTexture _converged, float BloomStrength, CommandBuffer cmd)
-        {//need to fix this so it doesnt create new textures every time
+        {//need to fix this so it doesn't create new textures every time
 
             cmd.BeginSample("Bloom");
             Bloom.SetFloat("strength", BloomStrength);
@@ -491,7 +491,7 @@ namespace TrueTrace {
 
 
         public void ExecuteAutoExpose(ref RenderTexture _converged, float Exposure, CommandBuffer cmd)
-        {//need to fix this so it doesnt create new textures every time
+        {//need to fix this so it doesn't create new textures every time
             cmd.BeginSample("Auto Exposure");
             cmd.SetComputeTextureParam(AutoExpose, AutoExposeKernel, "InTex", _converged);
             AutoExpose.SetFloat("Exposure", Exposure);
@@ -505,7 +505,7 @@ namespace TrueTrace {
         }
 
         public void ExecuteTAA(ref RenderTexture _Final, int CurrentSamples, CommandBuffer cmd)
-        {//need to fix this so it doesnt create new textures every time
+        {//need to fix this so it doesn't create new textures every time
 
             cmd.SetComputeIntParam(TAA,"Samples_Accumulated", CurrentSamples);
 
@@ -540,7 +540,7 @@ namespace TrueTrace {
         Matrix4x4 PrevProjInv;
 
         public void ExecuteUpsample(ref RenderTexture Input, ref RenderTexture Output, int curframe, int cursample, ref RenderTexture ThroughputTex, CommandBuffer cmd)
-        {//need to fix this so it doesnt create new textures every time
+        {//need to fix this so it doesn't create new textures every time
             cmd.SetComputeIntParam(Upscaler,"curframe", curframe);
             cmd.SetComputeIntParam(Upscaler,"cursam", cursample);
             cmd.SetComputeIntParam(Upscaler,"source_width", Input.width);
@@ -604,7 +604,7 @@ namespace TrueTrace {
 
 
         public void ExecuteToneMap(ref RenderTexture Output, CommandBuffer cmd, ref Texture3D LUT, int ToneMapSelection)
-        {//need to fix this so it doesnt create new textures every time
+        {//need to fix this so it doesn't create new textures every time
             cmd.BeginSample("ToneMap");
             cmd.SetComputeIntParam(ToneMapper,"ToneMapSelection", ToneMapSelection);
             cmd.SetComputeIntParam(ToneMapper,"width", Output.width);
@@ -618,7 +618,7 @@ namespace TrueTrace {
         }
 
         public void ExecuteTAAU(ref RenderTexture Output, ref RenderTexture Input, ref RenderTexture ThroughputTex, CommandBuffer cmd, int CurFrame, RenderTexture CorrectedDepthTex)
-        {//need to fix this so it doesnt create new textures every time
+        {//need to fix this so it doesn't create new textures every time
             cmd.BeginSample("TAAU");
             bool IsEven = CurFrame % 2 == 0;
             cmd.SetComputeIntParam(TAAU,"source_width", SourceWidth);

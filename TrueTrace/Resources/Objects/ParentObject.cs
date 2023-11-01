@@ -13,7 +13,7 @@ namespace TrueTrace {
     public class ParentObject : MonoBehaviour
     {
         public Task AsyncTask;
-        public int ExistsInQue = -1;
+        public int ExistsInQueue = -1;
         [HideInInspector] public ComputeBuffer LightTriBuffer;
         [HideInInspector] public ComputeBuffer TriBuffer;
         [HideInInspector] public ComputeBuffer BVHBuffer;
@@ -45,7 +45,7 @@ namespace TrueTrace {
         [HideInInspector] public StorableTransform[] CachedTransforms;
         [HideInInspector] public MeshDat CurMeshData;
         public int TotalObjects;
-        [HideInInspector] public List<MeshTransformVertexs> TransformIndexes;
+        [HideInInspector] public List<MeshTransformVertices> TransformIndexes;
         [HideInInspector] public bool HasCompleted;
         [HideInInspector] public float TotEnergy;
         [HideInInspector] public Transform ThisTransform;
@@ -105,14 +105,14 @@ namespace TrueTrace {
         }
 
         [System.Serializable]
-        public struct MeshTransformVertexs {
+        public struct MeshTransformVertices {
             public int VertexStart;
             public int VertexCount;
             public int IndexOffset;
         }
 
         public void CallUpdate() {
-            if (!Assets.UpdateQue.Contains(this)) Assets.UpdateQue.Add(this);
+            if (!Assets.UpdateQueue.Contains(this)) Assets.UpdateQueue.Add(this);
         }  
 
         public void ClearAll() {
@@ -153,8 +153,8 @@ namespace TrueTrace {
             }
         }
 
-        public void Reset(int Que) {
-            ExistsInQue = Que;
+        public void Reset(int Queue) {
+            ExistsInQueue = Queue;
             ClearAll();
             LoadData();
             AsyncTask = Task.Run(() => BuildTotal());
@@ -189,7 +189,7 @@ namespace TrueTrace {
             this.gameObject.isStatic = false;
             Name = this.name;
             ThisTransform = this.transform;
-            TransformIndexes = new List<MeshTransformVertexs>();
+            TransformIndexes = new List<MeshTransformVertices>();
             _Materials = new List<MaterialData>();
             LightTriangles = new List<LightTriData>();
             MeshCountChanged = true;
@@ -326,14 +326,14 @@ namespace TrueTrace {
 
                     int Result = TextureParse(ref CurMat.AlbedoTextureScale, TempObj, SharedMaterials[i], RelevantMat.BaseColorTex, ref AlbedoTexs, ref AlbedoIndexes);
                     if(!RelevantMat.NormalTex.Equals("null")) {Result = TextureParse(ref CurMat.AlbedoTextureScale, TempObj, SharedMaterials[i], RelevantMat.NormalTex, ref NormalTexs, ref NormalIndexes);}
-                    if(!RelevantMat.EmissionTex.Equals("null")) {Result = TextureParse(ref CurMat.AlbedoTextureScale, TempObj, SharedMaterials[i], RelevantMat.EmissionTex, ref EmissionTexs, ref EmissionIndexes); if(Result != 2 && JustCreated) obj.emmission[i] = 12.0f;}
+                    if(!RelevantMat.EmissionTex.Equals("null")) {Result = TextureParse(ref CurMat.AlbedoTextureScale, TempObj, SharedMaterials[i], RelevantMat.EmissionTex, ref EmissionTexs, ref EmissionIndexes); if(Result != 2 && JustCreated) obj.Emission[i] = 12.0f;}
                     if(!RelevantMat.MetallicTex.Equals("null")) {Result = TextureParse(ref CurMat.AlbedoTextureScale, TempObj, SharedMaterials[i], RelevantMat.MetallicTex, ref MetallicTexs, ref MetallicIndexes); if(Result == 1) MetallicTexChannelIndex.Add(RelevantMat.MetallicTexChannel);}
                     if(!RelevantMat.RoughnessTex.Equals("null")) {Result = TextureParse(ref CurMat.AlbedoTextureScale, TempObj, SharedMaterials[i], RelevantMat.RoughnessTex, ref RoughnessTexs, ref RoughnessIndexes); if(Result == 1) RoughnessTexChannelIndex.Add(RelevantMat.RoughnessTexChannel);}
 
                     CurMat.MetallicRemap = obj.MetallicRemap[i];
                     CurMat.RoughnessRemap = obj.RoughnessRemap[i];
                     CurMat.BaseColor = obj.BaseColor[i];
-                    CurMat.emmissive = obj.emmission[i];
+                    CurMat.Emissive = obj.Emission[i];
                     CurMat.Roughness = obj.Roughness[i];
                     CurMat.specTrans = obj.SpecTrans[i];
                     CurMat.EmissionColor = obj.EmissionColor[i];
@@ -433,8 +433,8 @@ namespace TrueTrace {
                 var Norms = new List<Vector3>();
                 mesh.GetNormals(Norms);
                 CurMeshData.Normals.AddRange(Norms);
-                int IndexOffset = CurMeshData.Verticies.Count;
-                CurMeshData.Verticies.AddRange(mesh.vertices);
+                int IndexOffset = CurMeshData.Vertices.Count;
+                CurMeshData.Vertices.AddRange(mesh.vertices);
                 int MeshUvLength = mesh.uv.Length;
 
                 if (MeshUvLength == mesh.vertexCount) CurMeshData.UVs.AddRange(mesh.uv);
@@ -457,7 +457,7 @@ namespace TrueTrace {
                     SkinnedMeshes[i].updateWhenOffscreen = true;
                     TotalTriangles += TotalIndexLength;
                 }
-                TransformIndexes.Add(new MeshTransformVertexs() {
+                TransformIndexes.Add(new MeshTransformVertices() {
                     VertexStart = PreIndexLength,
                     VertexCount = CurMeshData.Indices.Count - PreIndexLength,
                     IndexOffset = IndexOffset
@@ -745,23 +745,23 @@ namespace TrueTrace {
             for (int i = 0; i < TotalObjects; i++) {//Transforming so all child objects are in the same object space
                 Matrix4x4 ChildMat = CachedTransforms[i + 1].WTL.inverse;
                 Matrix4x4 TransMat = ParentMatInv * ChildMat;
-                Vector3 Ofst = CachedTransforms[i + 1].WTL * CachedTransforms[i + 1].Position;
-                Vector3 Ofst2 = ParentMatInv * CachedTransforms[0].Position;
+                Vector3 Offset = CachedTransforms[i + 1].WTL * CachedTransforms[i + 1].Position;
+                Vector3 Offset2 = ParentMatInv * CachedTransforms[0].Position;
                 int IndexOffset = TransformIndexes[i].IndexOffset;
                 int IndexEnd = TransformIndexes[i].VertexStart + TransformIndexes[i].VertexCount;
                 for (int i3 = TransformIndexes[i].VertexStart; i3 < IndexEnd; i3 += 3) {//Transforming child meshes into the space of their parent
                     int Index1 = CurMeshData.Indices[i3] + IndexOffset;
                     int Index2 = CurMeshData.Indices[i3 + 2] + IndexOffset;
                     int Index3 = CurMeshData.Indices[i3 + 1] + IndexOffset;
-                    V1 = CurMeshData.Verticies[Index1] + Ofst;
-                    V2 = CurMeshData.Verticies[Index2] + Ofst;
-                    V3 = CurMeshData.Verticies[Index3] + Ofst;
+                    V1 = CurMeshData.Vertices[Index1] + Offset;
+                    V2 = CurMeshData.Vertices[Index2] + Offset;
+                    V3 = CurMeshData.Vertices[Index3] + Offset;
                     V1 = TransMat * V1;
                     V2 = TransMat * V2;
                     V3 = TransMat * V3;
-                    V1 = V1 - Ofst2;
-                    V2 = V2 - Ofst2;
-                    V3 = V3 - Ofst2;
+                    V1 = V1 - Offset2;
+                    V2 = V2 - Offset2;
+                    V3 = V3 - Offset2;
                     Norm1 = ChildMat * CurMeshData.Normals[Index1];
                     Norm2 = ChildMat * CurMeshData.Normals[Index2];
                     Norm3 = ChildMat * CurMeshData.Normals[Index3];
@@ -797,9 +797,9 @@ namespace TrueTrace {
                     tempAABB.Extend(V3);
                     tempAABB.Validate(ParentScale);
                     Triangles[i3 / 3] = tempAABB;
-                    if (_Materials[(int)TempTri.MatDat].emmissive > 0.0f) {
+                    if (_Materials[(int)TempTri.MatDat].Emissive > 0.0f) {
                         HasLightTriangles = true;
-                        Vector3 Radiance = _Materials[(int)TempTri.MatDat].emmissive * _Materials[(int)TempTri.MatDat].BaseColor;
+                        Vector3 Radiance = _Materials[(int)TempTri.MatDat].Emissive * _Materials[(int)TempTri.MatDat].BaseColor;
                         float radiance = luminance(Radiance.x, Radiance.y, Radiance.z);
                         float area = AreaOfTriangle(ParentMat * V1, ParentMat * V2, ParentMat * V3);
                         float e = radiance * area;
@@ -887,12 +887,12 @@ namespace TrueTrace {
             FailureCount = 0;
             if (gameObject.scene.isLoaded) {
                 if (this.GetComponentInParent<InstancedManager>() != null) {
-                    this.GetComponentInParent<InstancedManager>().AddQue.Add(this);
+                    this.GetComponentInParent<InstancedManager>().AddQueue.Add(this);
                     this.GetComponentInParent<InstancedManager>().ParentCountHasChanged = true;
                 }
                 else {
-                    GameObject.Find("Scene").GetComponent<AssetManager>().AddQue.Add(this);
-                    ExistsInQue = 3;
+                    GameObject.Find("Scene").GetComponent<AssetManager>().AddQueue.Add(this);
+                    ExistsInQueue = 3;
                     GameObject.Find("Scene").GetComponent<AssetManager>().ParentCountHasChanged = true;
                 }
                 HasCompleted = false;
@@ -905,7 +905,7 @@ namespace TrueTrace {
             if (gameObject.scene.isLoaded) {
                 ClearAll();
                 if (this.GetComponentInParent<InstancedManager>() != null) {
-                    this.GetComponentInParent<InstancedManager>().RemoveQue.Add(this);
+                    this.GetComponentInParent<InstancedManager>().RemoveQueue.Add(this);
                     this.GetComponentInParent<InstancedManager>().ParentCountHasChanged = true;
                     var Instances = FindObjectsOfType(typeof(InstancedObject)) as InstancedObject[];
                     int Count = Instances.Length;
@@ -914,7 +914,7 @@ namespace TrueTrace {
                     }
                 }
                 else {
-                    GameObject.FindObjectsOfType<AssetManager>()[0].RemoveQue.Add(this);
+                    GameObject.FindObjectsOfType<AssetManager>()[0].RemoveQueue.Add(this);
                     GameObject.FindObjectsOfType<AssetManager>()[0].ParentCountHasChanged = true;
                 }
                 HasCompleted = false;
