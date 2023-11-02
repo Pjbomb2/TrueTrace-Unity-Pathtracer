@@ -8,8 +8,6 @@ namespace TrueTrace {
     [System.Serializable]
     unsafe public class BVH8Builder {
 
-        private float[] cost;
-        private Decision[] decisions;
         public int[] cwbvh_indices;
         public BVHNode8Data[] BVH8Nodes;
         public int cwbvhindex_count;
@@ -20,6 +18,9 @@ namespace TrueTrace {
             public int dist_left;
             public int dist_right;
         }
+
+        private float[] cost;
+        private Decision[] decisions;
 
         int calculate_cost(int node_index, ref BVHNode2Data[] nodes) {
             Decision dectemp;

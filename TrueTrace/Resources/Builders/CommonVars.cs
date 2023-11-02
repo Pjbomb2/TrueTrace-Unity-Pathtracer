@@ -22,7 +22,7 @@ namespace CommonVars
     public struct MeshDat
     {
         public List<int> Indices;
-        public List<Vector3> Verticies;
+        public List<Vector3> Vertices;
         public List<Vector3> Normals;
         public List<Vector4> Tangents;
         public List<Vector2> UVs;
@@ -38,7 +38,7 @@ namespace CommonVars
             this.Tangents = new List<Vector4>();
             this.MatDat = new List<int>();
             this.UVs = new List<Vector2>();
-            this.Verticies = new List<Vector3>();
+            this.Vertices = new List<Vector3>();
             this.Normals = new List<Vector3>();
             this.Indices = new List<int>();
         }
@@ -47,7 +47,7 @@ namespace CommonVars
                 CommonFunctions.DeepClean(ref Tangents);
                 CommonFunctions.DeepClean(ref MatDat);
                 CommonFunctions.DeepClean(ref UVs);
-                CommonFunctions.DeepClean(ref Verticies);
+                CommonFunctions.DeepClean(ref Vertices);
                 CommonFunctions.DeepClean(ref Normals);
                 CommonFunctions.DeepClean(ref Indices);
             }
@@ -64,7 +64,7 @@ namespace CommonVars
         public Vector4 MetallicTex;
         public Vector4 RoughnessTex;
         public Vector3 BaseColor;
-        public float emmissive;
+        public float Emissive;
         public Vector3 EmissionColor;
         public float Roughness;
         public int MatType;
@@ -74,8 +74,8 @@ namespace CommonVars
         public float sheen;
         public float sheenTint;
         public float specularTint;
-        public float clearcoat;
-        public float clearcoatGloss;
+        public float ClearCoat;
+        public float ClearCoatGloss;
         public float anisotropic;
         public float flatness;
         public float diffTrans;

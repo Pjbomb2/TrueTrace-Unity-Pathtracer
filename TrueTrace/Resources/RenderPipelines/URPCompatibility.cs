@@ -5,11 +5,11 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
-public class URPCompatability : ScriptableRendererFeature
+public class URPCompatibility : ScriptableRendererFeature
 {
     RenderTexture MainTex;
     TrueTrace.RayTracingMaster RayMaster;
-    URPCompatabilityPass Pass;
+    URPCompatibilityPass Pass;
     bool SceneIsSetup = false;
     private void CreateRenderTexture(ref RenderTexture ThisTex, Camera cam)
     {
@@ -23,7 +23,7 @@ public class URPCompatability : ScriptableRendererFeature
         RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
         RayMaster.Start2();
         RayMaster.Assets.Start();
-        Pass = new URPCompatabilityPass(RayMaster, MainTex);
+        Pass = new URPCompatibilityPass(RayMaster, MainTex);
     }
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData) {
@@ -42,7 +42,7 @@ public class URPCompatability : ScriptableRendererFeature
           }
     }
 
-    class URPCompatabilityPass : ScriptableRenderPass
+    class URPCompatibilityPass : ScriptableRenderPass
     {
         TrueTrace.RayTracingMaster RayMaster;
         RenderTexture MainTex;
@@ -70,7 +70,7 @@ public class URPCompatability : ScriptableRendererFeature
             var motionVectors = Shader.GetGlobalTexture("_MotionVectorTexture");
             Shader.SetGlobalTexture("_CameraMotionVectorsTexture", motionVectors);
         }
-        public URPCompatabilityPass(TrueTrace.RayTracingMaster Master, RenderTexture maintex)
+        public URPCompatibilityPass(TrueTrace.RayTracingMaster Master, RenderTexture maintex)
         {
             MainTex = maintex;
             RayMaster = Master;

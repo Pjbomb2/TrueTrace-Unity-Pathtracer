@@ -41,7 +41,7 @@ float3 CamPos;
 //DoF
 bool UseDoF;
 float focal_distance;
-float AperatureRadius;
+float ApertureRadius;
 
 
 RWStructuredBuffer<uint3> BufferData;
@@ -126,7 +126,7 @@ struct ShadowRayData {
 	float3 direction;
 	float t;
 	float3 illumination;
-	float LuminanceIncomming;
+	float LuminanceIncoming;
 };
 RWStructuredBuffer<ShadowRayData> ShadowRaysBuffer;
 
@@ -210,7 +210,7 @@ struct MaterialData {//56
 	float4 MetallicTex;//64
 	float4 RoughnessTex;//80
 	float3 surfaceColor;
-	float emmissive;
+	float Emissive;
 	float3 EmissionColor;
 	float roughness;
 	int MatType;
@@ -220,8 +220,8 @@ struct MaterialData {//56
 	float sheen;
 	float sheenTint;
 	float specularTint;
-	float clearcoat;
-	float clearcoatGloss;
+	float ClearCoat;
+	float ClearCoatGloss;
 	float anisotropic;
 	float flatness;
 	float diffTrans;
@@ -471,7 +471,7 @@ Ray CreateCameraRay(float2 uv, uint pixel_index) {
 
 		float angle = random(6, pixel_index).x * 2.0f * PI;
 		float radius = sqrt(random(6, pixel_index).y);
-		float2 offset = float2(cos(angle), sin(angle)) * radius * AperatureRadius;
+		float2 offset = float2(cos(angle), sin(angle)) * radius * ApertureRadius;
 
 		float3 p = origin + direction * (focal_distance);
 
@@ -966,7 +966,7 @@ float3 GetSkyRadiance(
 		MiePhaseFunction(0.8f, nu);
 }
 
-bool VisabilityCheckCompute(Ray ray, float dist) {
+bool VisibilityCheckCompute(Ray ray, float dist) {
         uint2 stack[24];
         int stack_size = 0;
         uint ray_index;
@@ -1865,7 +1865,7 @@ float StarRender(float3 rayDir){
         theta_ = (level_+0.5)*width;
 
         //Uniformly picked latitudes lead to stars concentrating at the poles.
-        //Make the likelyhood of rendering stars a function of sin(theta_)
+        //Make the likelihood of rendering stars a function of sin(theta_)
         if(!isActiveElevation(theta_, 0.0)){
             continue;
         }

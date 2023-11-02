@@ -25,7 +25,7 @@ namespace TrueTrace {
                 t.MaterialOptions[Selected] = (RayTracingObject.Options)EditorGUILayout.EnumPopup("MaterialType: ", t.MaterialOptions[Selected]);
                 Color BaseCol = EditorGUILayout.ColorField("Base Color", new Color(t.BaseColor[Selected].x, t.BaseColor[Selected].y, t.BaseColor[Selected].z, 1));
                 serializedObject.FindProperty("BaseColor").GetArrayElementAtIndex(Selected).vector3Value = new Vector3(BaseCol.r, BaseCol.g, BaseCol.b);
-                serializedObject.FindProperty("emmission").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.FloatField("Emission: ", t.emmission[Selected]);
+                serializedObject.FindProperty("Emission").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.FloatField("Emission: ", t.Emission[Selected]);
                 serializedObject.FindProperty("EmissionColor").GetArrayElementAtIndex(Selected).vector3Value = EditorGUILayout.Vector3Field("Emission Color: ", t.EmissionColor[Selected]);
                 serializedObject.FindProperty("Roughness").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Roughness: ", t.Roughness[Selected], 0, 1);
                 serializedObject.FindProperty("IOR").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("IOR: ", t.IOR[Selected], 0, 10);
@@ -34,8 +34,8 @@ namespace TrueTrace {
                 serializedObject.FindProperty("SpecularTint").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Specular Tint: ", t.SpecularTint[Selected], 0, 1);
                 serializedObject.FindProperty("Sheen").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Sheen: ", t.Sheen[Selected], 0, 10);
                 serializedObject.FindProperty("SheenTint").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Sheen Tint: ", t.SheenTint[Selected], 0, 1);
-                serializedObject.FindProperty("ClearCoat").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Clearcoat: ", t.ClearCoat[Selected], 0, 1);
-                serializedObject.FindProperty("ClearCoatGloss").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Clearcoat Gloss: ", t.ClearCoatGloss[Selected], 0, 1);
+                serializedObject.FindProperty("ClearCoat").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("ClearCoat: ", t.ClearCoat[Selected], 0, 1);
+                serializedObject.FindProperty("ClearCoatGloss").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("ClearCoat Gloss: ", t.ClearCoatGloss[Selected], 0, 1);
                 serializedObject.FindProperty("Anisotropic").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Anisotropic: ", t.Anisotropic[Selected], 0, 1);
                 serializedObject.FindProperty("SpecTrans").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("SpecTrans(Glass): ", t.SpecTrans[Selected], 0, 1);
                 serializedObject.FindProperty("Thin").GetArrayElementAtIndex(Selected).intValue = EditorGUILayout.Toggle("Surface Is Thin", t.Thin[Selected] == 1 ? true : false) ? 1 : 0;
@@ -62,7 +62,7 @@ namespace TrueTrace {
                             if(Obj.Names[i].Equals(Name)) {
                                 Obj.BaseColor[i] = t.BaseColor[Selected];
                                 Obj.TransmissionColor[i] = t.TransmissionColor[Selected];
-                                Obj.emmission[i] = t.emmission[Selected];
+                                Obj.Emission[i] = t.Emission[Selected];
                                 Obj.EmissionColor[i] = t.EmissionColor[Selected];
                                 Obj.Roughness[i] = t.Roughness[Selected];
                                 Obj.IOR[i] = t.IOR[Selected];

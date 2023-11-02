@@ -12,7 +12,7 @@ namespace TrueTrace {
         private ParentObject PreviousInstance;
         public ParentObject InstanceParent;
         [HideInInspector] public int CompactedMeshData;
-        [HideInInspector] public int ExistsInQue;
+        [HideInInspector] public int ExistsInQueue;
 
         public void UpdateInstance()
         {
@@ -40,9 +40,9 @@ namespace TrueTrace {
                     Destroy(this);
                     return;
                 }
-                ExistsInQue = 3;
+                ExistsInQueue = 3;
                 this.transform.hasChanged = true;
-                this.GetComponentInParent<AssetManager>().InstanceAddQue.Add(this);
+                this.GetComponentInParent<AssetManager>().InstanceAddQueue.Add(this);
                 this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
             }
         }
@@ -55,16 +55,16 @@ namespace TrueTrace {
                     Destroy(this);
                     return;
                 }
-                if(!this.GetComponentInParent<AssetManager>().InstanceRemoveQue.Contains(this)) this.GetComponentInParent<AssetManager>().InstanceRemoveQue.Add(this);
+                if(!this.GetComponentInParent<AssetManager>().InstanceRemoveQueue.Contains(this)) this.GetComponentInParent<AssetManager>().InstanceRemoveQueue.Add(this);
                 this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
             }
         }
         public void OnParentClear() {
 
-            this.GetComponentInParent<AssetManager>().InstanceUpdateQue.Add(this);
-            this.ExistsInQue = 3;
+            this.GetComponentInParent<AssetManager>().InstanceUpdateQueue.Add(this);
+            this.ExistsInQueue = 3;
             this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
-            this.GetComponentInParent<AssetManager>().InstanceAddQue.Add(this);
+            this.GetComponentInParent<AssetManager>().InstanceAddQueue.Add(this);
         }
     }
 }

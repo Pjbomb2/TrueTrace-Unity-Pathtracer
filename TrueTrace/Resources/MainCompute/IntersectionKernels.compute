@@ -315,7 +315,7 @@ void IntersectBVHShadow(const int localid) {
 
             if(q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) ShadowRaysBuffer[ray_index].t = -1;
              else {
-                    // CurrentReservoirGI[ShadowRaysBuffer[ray_index].PixelIndex].LuminanceIncommingM = Pack2To1((Unpack1To2(CurrentReservoirGI[ShadowRaysBuffer[ray_index].PixelIndex].LuminanceIncommingM).y / 1000.0f + ShadowRaysBuffer[ray_index].LuminanceIncomming) * 1000.0f, 0);// * ((CurBounce == 0) ? 10.0f : 1.0f);
+                    // CurrentReservoirGI[ShadowRaysBuffer[ray_index].PixelIndex].LuminanceIncomingM = Pack2To1((Unpack1To2(CurrentReservoirGI[ShadowRaysBuffer[ray_index].PixelIndex].LuminanceIncomingM).y / 1000.0f + ShadowRaysBuffer[ray_index].LuminanceIncoming) * 1000.0f, 0);// * ((CurBounce == 0) ? 10.0f : 1.0f);
                     if (ShadowRaysBuffer[ray_index].t >= 0) {
                         if (CurBounce == 0) {
                             GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].Direct += ShadowRaysBuffer[ray_index].illumination;
@@ -423,8 +423,8 @@ void IntersectBVHShadow(const int localid) {
                     if (stack_size == 0) {//thread has finished traversing
                         current_group.y = 0;
                         if(!TerrainExists) {
-                            if(UseReSTIRGI && ReSTIRGIUpdateRate != 0) NEEPosA[uint2(ShadowRaysBuffer[ray_index].PixelIndex % screen_width, ShadowRaysBuffer[ray_index].PixelIndex / screen_width)] += float4(0,0,0,ShadowRaysBuffer[ray_index].LuminanceIncomming);
-                            // CurrentGIReservoir[ShadowRaysBuffer[ray_index].PixelIndex].LuminanceIncommingM = Pack2To1((Unpack1To2(CurrentGIReservoir[ShadowRaysBuffer[ray_index].PixelIndex].LuminanceIncommingM).y / 1000.0f + ShadowRaysBuffer[ray_index].LuminanceIncomming) * 1000.0f, 0);
+                            if(UseReSTIRGI && ReSTIRGIUpdateRate != 0) NEEPosA[uint2(ShadowRaysBuffer[ray_index].PixelIndex % screen_width, ShadowRaysBuffer[ray_index].PixelIndex / screen_width)] += float4(0,0,0,ShadowRaysBuffer[ray_index].LuminanceIncoming);
+                            // CurrentGIReservoir[ShadowRaysBuffer[ray_index].PixelIndex].LuminanceIncomingM = Pack2To1((Unpack1To2(CurrentGIReservoir[ShadowRaysBuffer[ray_index].PixelIndex].LuminanceIncomingM).y / 1000.0f + ShadowRaysBuffer[ray_index].LuminanceIncoming) * 1000.0f, 0);
                             if (ShadowRaysBuffer[ray_index].t >= 0) {
                                 if (CurBounce == 0) {
 
