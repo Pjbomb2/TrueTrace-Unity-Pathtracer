@@ -4,7 +4,7 @@ using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.Rendering;
 using UnityEngine.Experimental.Rendering;
 
-public class HDRPCompatibility : CustomPass
+public class HDRPCompatability : CustomPass
 {
     RenderTexture MainTex;
     TrueTrace.RayTracingMaster RayMaster;

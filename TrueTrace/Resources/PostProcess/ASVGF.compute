@@ -267,6 +267,7 @@ SamplerState sampler_trilinear_clamp;
 
 
 Texture2D<float4> ScreenSpaceInfo;
+RWTexture2D<float4> ScreenSpaceInfoWrite;
 
 Texture2D<uint4> WorldPosData;
 
@@ -523,7 +524,7 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 
 	reproject_pixel(ipos, 0, screen_width, gl_LocalInvocationID);
 
-	GlobalRays[ipos.x + ipos.y * screen_width] = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f + (random(34, ipos.xy) - 0.5f) * rcp(6.0f * float2(screen_width, screen_height)));
+	if(ipos.x < screen_width && ipos.y < screen_height) GlobalRays[ipos.x + ipos.y * screen_width] = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f + (random(34, ipos.xy) - 0.5f) * rcp(6.0f * float2(screen_width, screen_height)));
 	GroupMemoryBarrierWithGroupSync();
 
 	// Second pass: the first (GROUP_SIZE_GRAD)^2 pixels are looking for the brightest
@@ -603,7 +604,7 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 	GlobalRays[ipos.x + ipos.y * screen_width].direction = normalize(Pos - GlobalRays[ipos.x + ipos.y * screen_width].origin);
 
 	MetallicAWrite[ipos] = MetallicB[found_pos_prev];
-
+	ScreenSpaceInfoWrite[ipos] = float4(asfloat(TEX_PT_NORMALS_B[found_pos_prev]),0,0);
 }
 
 
@@ -888,7 +889,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 
 
 	float motion_length = length((motion.xy + reflprojection) * float2(screen_width, screen_height));
-
+	float CenterFDepth = FDepth[ipos];
 
 	float shininess = clamp(2.0 / max(pow(MetallicA[ipos].y, 4), 0.001f) - 2.0, 0.0, 32.0);
 
@@ -929,7 +930,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 			float3  geo_normal_prev = i_octahedral_32(norms.x);//needs to be TEX_PT_GEO_NORMAL_B, but since for now I am not worrying about normal maps yet, it can use the same texture
 			
 
-			float dist_depth = (abs(depth_curr - depth_prev) - CameraDist) / abs(depth_curr);
+			float dist_depth = (abs(depth_curr - depth_prev) - CameraDist) * max(CenterFDepth,0.25f);
 			float dot_normals = dot(normal_curr, normal_prev);
 			float dot_geo_normals = dot(geo_normal_curr, geo_normal_prev);
 
@@ -1005,7 +1006,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 				float lum_p_hf;
 				get_shared_data(int2(xx, yy), depth, normal, lum_p_hf, gl_LocalInvocationID);
 				// lum_p_hf += luminance(unpackRGBE(TEX_PT_COLOR_SPEC[p].x));
-				float dist_z = abs(depth_curr - depth) / abs(depth_curr);// * FDepth[ipos] * 120.0f;
+				float dist_z = abs(depth_curr - depth) / abs(depth_curr) * CenterFDepth;// * FDepth[ipos] * 120.0f;
 				if (dist_z < 2.0) {
 					float w_hf = clamp(pow(max(0.0, dot(normal, normal_curr)), 128.0),0,1);
 

@@ -22,7 +22,7 @@ namespace CommonVars
     public struct MeshDat
     {
         public List<int> Indices;
-        public List<Vector3> Vertices;
+        public List<Vector3> Verticies;
         public List<Vector3> Normals;
         public List<Vector4> Tangents;
         public List<Vector2> UVs;
@@ -34,20 +34,20 @@ namespace CommonVars
         public void SetTansZero(int Count) {
             for (int i = 0; i < Count; i++) Tangents.Add(new Vector4(0.0f, 0.0f, 0.0f, 0.0f));
         }
-        public void init() {
-            this.Tangents = new List<Vector4>();
-            this.MatDat = new List<int>();
-            this.UVs = new List<Vector2>();
-            this.Vertices = new List<Vector3>();
-            this.Normals = new List<Vector3>();
-            this.Indices = new List<int>();
+        public void init(int StartingSize) {
+            this.Tangents = new List<Vector4>(StartingSize);
+            this.MatDat = new List<int>(StartingSize / 3);
+            this.UVs = new List<Vector2>(StartingSize);
+            this.Verticies = new List<Vector3>(StartingSize);
+            this.Normals = new List<Vector3>(StartingSize);
+            this.Indices = new List<int>(StartingSize);
         }
         public void Clear() {
             if (Tangents != null) {
                 CommonFunctions.DeepClean(ref Tangents);
                 CommonFunctions.DeepClean(ref MatDat);
                 CommonFunctions.DeepClean(ref UVs);
-                CommonFunctions.DeepClean(ref Vertices);
+                CommonFunctions.DeepClean(ref Verticies);
                 CommonFunctions.DeepClean(ref Normals);
                 CommonFunctions.DeepClean(ref Indices);
             }
@@ -64,8 +64,9 @@ namespace CommonVars
         public Vector4 MetallicTex;
         public Vector4 RoughnessTex;
         public Vector3 BaseColor;
-        public float Emissive;
+        public float emmissive;
         public Vector3 EmissionColor;
+        public int EmissionResponse;
         public float Roughness;
         public int MatType;
         public Vector3 TransmittanceColor;
@@ -74,8 +75,8 @@ namespace CommonVars
         public float sheen;
         public float sheenTint;
         public float specularTint;
-        public float ClearCoat;
-        public float ClearCoatGloss;
+        public float clearcoat;
+        public float clearcoatGloss;
         public float anisotropic;
         public float flatness;
         public float diffTrans;
@@ -254,16 +255,15 @@ namespace CommonVars
 
             if (P.x < BBMin.x)
                 BBMin.x = P.x;
+            if(P.x > BBMax.x)
+                BBMax.x = P.x;
             if (P.y < BBMin.y)
                 BBMin.y = P.y;
+            if(P.y > BBMax.y)
+                BBMax.y = P.y;
             if (P.z < BBMin.z)
                 BBMin.z = P.z;
-
-            if (P.x > BBMax.x)
-                BBMax.x = P.x;
-            if (P.y > BBMax.y)
-                BBMax.y = P.y;
-            if (P.z > BBMax.z)
+            if(P.z > BBMax.z)
                 BBMax.z = P.z;
         }
 
@@ -271,10 +271,10 @@ namespace CommonVars
         {
             for (int i2 = 0; i2 < 3; i2++)
             {
-                if (BBMax[i2] - BBMin[i2] < 0.001f / Scale[i2])
+                if (BBMax[i2] - BBMin[i2] < Scale[i2])
                 {
-                    BBMin[i2] -= 0.001f / Scale[i2];
-                    BBMax[i2] += 0.001f / Scale[i2];
+                    BBMin[i2] -= Scale[i2];
+                    BBMax[i2] += Scale[i2];
                 }
             }
         }
@@ -405,6 +405,35 @@ namespace CommonVars
         [System.Xml.Serialization.XmlElement("MaterialShader")]
         public List<MaterialShader> Material = new List<MaterialShader>();
     }
+
+    public struct TTStopWatch {//stopwatch stuff
+        public string Name;
+        private System.Diagnostics.Stopwatch SW;
+        
+        public TTStopWatch(string Name) {
+            this.Name = Name;
+            SW = new System.Diagnostics.Stopwatch();
+        }
+        public void Start() {
+            SW = System.Diagnostics.Stopwatch.StartNew();
+        }
+        public void Pause() {
+            SW.Stop();
+        }
+        public void Resume() {
+            SW.Start();
+        }
+        public void Stop(string OptionalString = "") {
+            SW.Stop();
+            System.TimeSpan ts = SW.Elapsed;
+            if(OptionalString.Equals("")) {
+                Debug.Log(Name + ": " + System.String.Format("{0:00}:{1:00}:{2:00}.{3:00}", ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10));
+            } else {
+                Debug.Log(Name + ", " + OptionalString + ": " + System.String.Format("{0:00}:{1:00}:{2:00}.{3:00}", ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10));
+            }
+        }
+    }
+
 
     public static class CommonFunctions
     {
@@ -601,11 +630,10 @@ namespace CommonVars
             if (Buff != null) {Buff.Release(); Buff = null;}
         }
 
-        static Vector2 msign( Vector2 v )
-        {
-            return new Vector2( (v.x>=0.0f) ? 1.0f : -1.0f, 
-                         (v.y>=0.0f) ? 1.0f : -1.0f );
-        }
+static Vector2 msign(Vector2 v)
+{
+    return new Vector2((v.x >= 0.0f) ? 1.0f : -1.0f, (v.y >= 0.0f) ? 1.0f : -1.0f);
+}
 
         public static uint PackOctahedral(Vector3 nor)
         {
@@ -618,6 +646,25 @@ namespace CommonVars
             Vector2 d = new Vector2((Mathf.Round(32767.5f + nor.x*32767.5f)), (Mathf.Round(32767.5f + nor.y*32767.5f)));  
             return (uint)d.x|((uint)d.y<<16);
         }
+
+public static uint PackOctahedral2(Vector3 nor)
+{
+    const float halfMaxUInt16 = 32767.5f;
+
+    Vector2 sign = new Vector2((nor.x >= 0.0f) ? 1.0f : -1.0f, (nor.y >= 0.0f) ? 1.0f : -1.0f);
+    float absX = nor.x * sign.x;
+    float absY = nor.y * sign.y;
+    float Tot = absX + absY + Mathf.Abs(nor.z);
+
+    Vector2 temp = new Vector2(absX / Tot, absY / Tot);
+    if (nor.z < 0.0f)
+    {
+        temp = new Vector2(1.0f - temp.y, 1.0f - temp.x);
+    }
+
+    // Vector2 d = new Vector2(Mathf.Round(halfMaxUInt16 + temp.x * halfMaxUInt16), Mathf.Round(halfMaxUInt16 + temp.y * halfMaxUInt16));
+    return (uint)(halfMaxUInt16 + temp.x * halfMaxUInt16 * sign.x) | ((uint)(halfMaxUInt16 + temp.y * halfMaxUInt16 * sign.y) << 16);
+}
 
         public static readonly RenderTextureFormat RTFull4 = RenderTextureFormat.ARGBFloat;
         public static readonly RenderTextureFormat RTInt1 = RenderTextureFormat.RInt;

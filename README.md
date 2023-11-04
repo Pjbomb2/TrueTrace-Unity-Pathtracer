@@ -245,7 +245,7 @@ BVH Options Description -
 # Credits(will continue to expand when I have time)
 Biggest thanks to Zuen(R.I.P. You will be missed) who helped me a huge amount with the new BVH and traversal, thanks to them I got to where I am now, and I am very thankful to them for their help and patience
 </br>
-https://github.com/jan-van-bergen(R.I.P. You are missed)
+https://github.com/jan-van-bergen
 </br></br>
 Scenes From:
 <ul>

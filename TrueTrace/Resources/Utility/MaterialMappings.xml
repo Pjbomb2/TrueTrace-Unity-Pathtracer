@@ -3980,4 +3980,24 @@
     <RoughnessRemapMin>null</RoughnessRemapMin>
     <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
+  <MaterialShader>
+    <Name>.poiyomi/★ Poiyomi Pro ★</Name>
+    <BaseColorTex>_MainTex</BaseColorTex>
+    <NormalTex>_BumpMap</NormalTex>
+    <EmissionTex>null</EmissionTex>
+    <MetallicTex>null</MetallicTex>
+    <MetallicTexChannel>0</MetallicTexChannel>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessTex>null</RoughnessTex>
+    <RoughnessTexChannel>0</RoughnessTexChannel>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>_Color</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
 </Materials>

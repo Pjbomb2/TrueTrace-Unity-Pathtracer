@@ -8,8 +8,7 @@ struct TriangleData {
 	float3 Norm1, Norm2, Norm3;
 };
 
-// todo: this is unused...
-StructuredBuffer<TriangleData> VerticesIn;
+StructuredBuffer<TriangleData> VertexsIn;
 
 StructuredBuffer<int> CWBVHIndices;
 ByteAddressBuffer bufVertices;

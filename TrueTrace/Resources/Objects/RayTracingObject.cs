@@ -10,8 +10,9 @@ namespace TrueTrace {
 		public Options[] MaterialOptions;
 		[SerializeField] public Vector3[] TransmissionColor, BaseColor;
 		[SerializeField] public Vector2[] MetallicRemap, RoughnessRemap;
-		[SerializeField] public float[] Emission;
+		[SerializeField] public float[] emmission; 
 		[SerializeField] public Vector3[] EmissionColor;
+		[SerializeField] public int[] EmissionResponse;
 		[SerializeField] public float[] Roughness;
 		[SerializeField] public float[] IOR;
 		[SerializeField] public float[] Metallic;
@@ -120,15 +121,16 @@ namespace TrueTrace {
 			}
 			if(IsSmoothness == null || IsSmoothness.Length != SubMeshCount) IsSmoothness = new bool[SubMeshCount];
 			if(ScatterDist == null || ScatterDist.Length != SubMeshCount) ScatterDist = new float[SubMeshCount];
+			if(EmissionResponse == null || EmissionResponse.Length != SubMeshCount) EmissionResponse = new int[SubMeshCount];				
 			List<string> PropertyNames = new List<string>();
 		 	if(Indexes == null || Indexes.Length != Mathf.Max(mesh.subMeshCount, SubMeshCount)) Indexes = new int[Mathf.Max(mesh.subMeshCount, SubMeshCount)];
 		 	if(Specular == null || Specular.Length != SubMeshCount) Specular = new float[SubMeshCount];
 			if(FollowMaterial == null || FollowMaterial.Length != SubMeshCount) {FollowMaterial = new bool[SubMeshCount]; System.Array.Fill(FollowMaterial, true);}
 			for(int i = 0; i < SharedMaterials.Length; i++) {
-				if(SharedMaterials[i].name.Equals("MI_LightWhite")) Emission[i] = 12.0f;
+				if(SharedMaterials[i].name.Equals("MI_LightWhite")) emmission[i] = 12.0f;
 			}
 			try {
-				if(Names == null || Names.Length == 0) {
+				if(Names == null || Names.Length == 0 || Names.Length != SubMeshCount) {
 					Names = new string[SubMeshCount];
 					TransmissionColor = new Vector3[SubMeshCount];
 					EmissionColor = new Vector3[SubMeshCount];				
@@ -146,7 +148,7 @@ namespace TrueTrace {
 					Thin = new int[SubMeshCount];
 					MaterialOptions = new Options[SubMeshCount];
 					LocalMaterialIndex = new int[SubMeshCount];
-					Emission = new float[SubMeshCount];
+					emmission = new float[SubMeshCount];
 					Roughness = new float[SubMeshCount];
 					System.Array.Fill(IOR, 1);
 					BaseColor = new Vector3[SubMeshCount];
@@ -166,7 +168,7 @@ namespace TrueTrace {
 		}
 
 		public void ResetData() {
-			Emission = null;
+			emmission = null;
 			Roughness = null;
 			TransmissionColor = null;
 			MaterialOptions = null;
@@ -179,11 +181,11 @@ namespace TrueTrace {
 	    		matfill();
 	    		if(WasDeleted) return;
 		    	this.transform.parent.GetComponent<ParentObject>().NeedsToUpdate = true;
-				if(Assets != null && Assets.UpdateQueue != null && !Assets.UpdateQueue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQueue.Add(this.transform.parent.GetComponent<ParentObject>());
+				if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
 	    	} else if(gameObject.scene.isLoaded && this.transform.GetComponent<ParentObject>() != null) {
 	    		matfill();
 	    		if(WasDeleted) return;
-				if(Assets != null && Assets.UpdateQueue != null && !Assets.UpdateQueue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQueue.Add(this.transform.parent.GetComponent<ParentObject>());
+				if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
 		    	this.transform.GetComponent<ParentObject>().NeedsToUpdate = true;
 	    	}
 	    }
@@ -191,7 +193,7 @@ namespace TrueTrace {
 	    private void OnDisable() {
 	    	if(gameObject.scene.isLoaded && this.transform.parent.GetComponent<ParentObject>() != null) {
 	    		this.transform.parent.GetComponent<ParentObject>().NeedsToUpdate = true;
-	    		if(Assets != null && Assets.UpdateQueue != null && !Assets.UpdateQueue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQueue.Add(this.transform.parent.GetComponent<ParentObject>());
+	    		if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
 	    	} else if(gameObject.scene.isLoaded && this.transform.GetComponent<ParentObject>() != null) {
 		    	this.transform.GetComponent<ParentObject>().NeedsToUpdate = true;
 	    	}

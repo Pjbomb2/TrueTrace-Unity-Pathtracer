@@ -9,9 +9,14 @@ namespace TrueTrace {
     public class BVH2Builder {
 
         public BVHNode2Data[] BVH2Nodes;
+        private List<int>[] DimensionedIndices;
+        private bool[] indices_going_left;
+        private int[] temp;
         public int PrimCount;
         public int[] FinalIndices;
-
+        private ObjectSplit split = new ObjectSplit();
+        private float[] SAH;
+        
         public struct ObjectSplit {
             public int index;
             public float cost;
@@ -19,12 +24,6 @@ namespace TrueTrace {
             public AABB aabb_left;
             public AABB aabb_right;
         }
-
-        private List<int>[] DimensionedIndices;
-        private bool[] indices_going_left;
-        private int[] temp;
-        private ObjectSplit split = new ObjectSplit();
-        private float[] SAH;
 
         ObjectSplit partition_sah(int first_index, int index_count, ref float[] sah, ref AABB[] Primitives) {
 

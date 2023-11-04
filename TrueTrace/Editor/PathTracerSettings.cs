@@ -45,7 +45,7 @@ namespace TrueTrace {
          [SerializeField] public bool Bloom = false;
          [SerializeField] public float BloomStrength = 0.5f;
          [SerializeField] public bool DoF = false;
-         [SerializeField] public float DoFAperture = 0.1f;
+         [SerializeField] public float DoFAperature = 0.1f;
          [SerializeField] public float DoFFocal = 0.1f;
          [SerializeField] public bool DoExposure = false;
          [SerializeField] public bool ReSTIRGI = false;
@@ -415,7 +415,7 @@ private void StandardSet() {
          Bloom = false;
          BloomStrength = 0.5f;
          DoF = false;
-         DoFAperture = 0.1f;
+         DoFAperature = 0.1f;
          DoFFocal = 0.1f;
          DoExposure = false;
          ReSTIRGI = false;
@@ -814,7 +814,7 @@ Toolbar toolbar;
 
             if(RayMaster != null && Assets != null) {
             AddNormalSettings();
-           RayMaster.BounceCount = BounceCount;
+           RayMaster.bouncecount = BounceCount;
            RayMaster.RenderScale = RenderRes;
            RayMaster.UseRussianRoulette = RR;
            RayMaster.DoTLASUpdates = Moving;
@@ -824,8 +824,8 @@ Toolbar toolbar;
            RayMaster.AllowBloom = Bloom;
            RayMaster.BloomStrength = 128 - BloomStrength * 128.0f;
            RayMaster.AllowDoF = DoF;
-           RayMaster.DoFAperture = DoFAperture;
-           RayMaster.DoFFocal = DoFFocal * 60.0f;
+           RayMaster.DoFAperature = DoFAperature;
+           RayMaster.DoFFocal = DoFFocal;
            RayMaster.AllowAutoExpose = DoExposure;
            RayMaster.UseReSTIRGI = ReSTIRGI;
            RayMaster.UseReSTIRGITemporal = GITemporal;
@@ -847,6 +847,7 @@ Toolbar toolbar;
            RayMaster.MinSpatialSize = MinSpatialSize;
            RayMaster.RISCount = RISCount;
            RayMaster.ReCurBlurRadius = ReCurBlurRadius;
+           RayMaster.ImprovedPrimaryHit = ImprovedPrimaryHit;
          }
 
          AddHardSettingsToMenu();
@@ -903,12 +904,12 @@ Toolbar toolbar;
                BounceField.ElementAt(1).style.width = 25;
                BounceField.style.paddingRight = 40;
                TopEnclosingBox.Add(BounceField);
-               BounceField.RegisterValueChangedCallback(evt => {BounceCount = (int)evt.newValue; RayMaster.BounceCount = BounceCount;});
-               ResField = new FloatField("Render Scale") {value = RenderRes};
+               BounceField.RegisterValueChangedCallback(evt => {BounceCount = (int)evt.newValue; RayMaster.bouncecount = BounceCount;});        
+               ResField = new FloatField("Upscaling Ratio") {value = RenderRes};
                ResField.ElementAt(0).style.minWidth = 75;
                ResField.ElementAt(1).style.width = 35;
                TopEnclosingBox.Add(ResField);
-               ResField.RegisterValueChangedCallback(evt => {if(!Application.isPlaying) {RenderRes = evt.newValue; RayMaster.RenderScale = RenderRes;} else ResField.value = RenderRes;});        
+               ResField.RegisterValueChangedCallback(evt => {if(!Application.isPlaying) {RenderRes = evt.newValue; RenderRes = Mathf.Max(RenderRes, 0.05f); RenderRes = Mathf.Min(RenderRes, 1.0f); RayMaster.RenderScale = RenderRes;} else ResField.value = RenderRes;});        
                TopEnclosingBox.Add(AtlasField);
            MainSource.Add(TopEnclosingBox);
 
@@ -1023,17 +1024,17 @@ Toolbar toolbar;
                BloomBox.Add(BloomSlider);
            if(Bloom) MainSource.Add(BloomBox);
 
-           Label ApertureLabel = new Label("Aperture Size");
-           Slider ApertureSlider = new Slider() {value = DoFAperture, highValue = 1, lowValue = 0};
-           ApertureSlider.style.width = 100;
+           Label AperatureLabel = new Label("Aperature Size");
+           Slider AperatureSlider = new Slider() {value = DoFAperature, highValue = 1, lowValue = 0};
+           AperatureSlider.style.width = 100;
            Label FocalLabel = new Label("Focal Length");
            FocalSlider = new FloatField() {value = DoFFocal};
            FocalSlider.style.width = 100;
            Button AutofocusButton = new Button(() => GetFocalLength()) {text = "Autofocus DoF"};
-           Box ApertureBox = new Box();
-           ApertureBox.Add(ApertureLabel);
-           ApertureBox.Add(ApertureSlider);
-           ApertureBox.style.flexDirection = FlexDirection.Row;
+           Box AperatureBox = new Box();
+           AperatureBox.Add(AperatureLabel);
+           AperatureBox.Add(AperatureSlider);
+           AperatureBox.style.flexDirection = FlexDirection.Row;
            Box FocalBox = new Box();
            FocalBox.Add(FocalLabel);
            FocalBox.Add(FocalSlider);
@@ -1042,11 +1043,11 @@ Toolbar toolbar;
 
            Toggle DoFToggle = new Toggle() {value = DoF, text = "Enable DoF"};
            VisualElement DoFFoldout = new VisualElement();
-           DoFFoldout.Add(ApertureBox);
+           DoFFoldout.Add(AperatureBox);
            DoFFoldout.Add(FocalBox);
            MainSource.Add(DoFToggle);
            DoFToggle.RegisterValueChangedCallback(evt => {DoF = evt.newValue; RayMaster.AllowDoF = DoF;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(DoFToggle) + 1, DoFFoldout); else MainSource.Remove(DoFFoldout);});        
-           ApertureSlider.RegisterValueChangedCallback(evt => {DoFAperture = evt.newValue; RayMaster.DoFAperture = DoFAperture;});
+           AperatureSlider.RegisterValueChangedCallback(evt => {DoFAperature = evt.newValue; RayMaster.DoFAperature = DoFAperature;});
            FocalSlider.RegisterValueChangedCallback(evt => {DoFFocal = Mathf.Max(0.001f, evt.newValue); RayMaster.DoFFocal = DoFFocal;});
            if(DoF) MainSource.Add(DoFFoldout);
            

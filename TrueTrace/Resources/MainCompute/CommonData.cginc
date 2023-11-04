@@ -41,7 +41,7 @@ float3 CamPos;
 //DoF
 bool UseDoF;
 float focal_distance;
-float ApertureRadius;
+float AperatureRadius;
 
 
 RWStructuredBuffer<uint3> BufferData;
@@ -56,12 +56,9 @@ RWTexture2D<half> CorrectedDepthTex;
 
 struct BufferSizeData {
 	int tracerays;
-	int rays_retired;
-	int shade_rays;
 	int shadow_rays;
-	int shadow_rays_retired;
-	int heightmap_shadow_rays_retired;
-	int heighmap_rays_retired;
+	int heighmap_rays;
+	int heightmap_shadow_rays;
 };
 
 RWStructuredBuffer<BufferSizeData> BufferSizes;
@@ -107,7 +104,7 @@ struct RayHit {
 struct RayData {//128 bit aligned
 	float3 origin;
 	uint PixelIndex;//need to bump this back down to uint1
-	float3 direction;
+	uint direction;
 	float last_pdf;
 	uint4 hits;
 };
@@ -123,10 +120,10 @@ StructuredBuffer<float> Exposure;
 struct ShadowRayData {
 	float3 origin;
 	uint PixelIndex;
-	float3 direction;
+	uint direction;
 	float t;
 	float3 illumination;
-	float LuminanceIncoming;
+	float LuminanceIncomming;
 };
 RWStructuredBuffer<ShadowRayData> ShadowRaysBuffer;
 
@@ -210,8 +207,9 @@ struct MaterialData {//56
 	float4 MetallicTex;//64
 	float4 RoughnessTex;//80
 	float3 surfaceColor;
-	float Emissive;
+	float emmissive;
 	float3 EmissionColor;
+	int EmissionResponse;
 	float roughness;
 	int MatType;
 	float3 transmittanceColor;
@@ -220,8 +218,8 @@ struct MaterialData {//56
 	float sheen;
 	float sheenTint;
 	float specularTint;
-	float ClearCoat;
-	float ClearCoatGloss;
+	float clearcoat;
+	float clearcoatGloss;
 	float anisotropic;
 	float flatness;
 	float diffTrans;
@@ -254,6 +252,7 @@ RWTexture2D<float4> _DebugTex;
 Texture2D<float4> VideoTex;
 SamplerState sampler_VideoTex;
 Texture2D<half4> _TextureAtlas;
+SamplerState sampler_TextureAtlas;
 
 
 Texture2D<float2> _NormalAtlas;
@@ -387,7 +386,7 @@ float2 random(uint samdim, uint pixel_index) {
 }
 
 void set(int index, const RayHit ray_hit) {
-	uint uv = (int)(ray_hit.u * 65535.0f) | ((int)(ray_hit.v * 65535.0f) << 16);
+	uint uv = (uint)(ray_hit.u * 65535.0f) | ((uint)(ray_hit.v * 65535.0f) << 16);
 
 	GlobalRays[index].hits = uint4(ray_hit.mesh_id, ray_hit.triangle_id, asuint(ray_hit.t), uv);
 }
@@ -471,7 +470,7 @@ Ray CreateCameraRay(float2 uv, uint pixel_index) {
 
 		float angle = random(6, pixel_index).x * 2.0f * PI;
 		float radius = sqrt(random(6, pixel_index).y);
-		float2 offset = float2(cos(angle), sin(angle)) * radius * ApertureRadius;
+		float2 offset = float2(cos(angle), sin(angle)) * radius * AperatureRadius;
 
 		float3 p = origin + direction * (focal_distance);
 
@@ -966,7 +965,7 @@ float3 GetSkyRadiance(
 		MiePhaseFunction(0.8f, nu);
 }
 
-bool VisibilityCheckCompute(Ray ray, float dist) {
+bool VisabilityCheckCompute(Ray ray, float dist) {
         uint2 stack[24];
         int stack_size = 0;
         uint ray_index;
@@ -1490,32 +1489,33 @@ inline float luminance(const float3 a) {
 
 inline float2 AlignUV(float2 BaseUV, float4 TexScale, float4 TexDim) {
 	if(TexDim.x <= 0) return -1;
-	return fmod((BaseUV * TexScale.xy + TexScale.zw) + 100.0f, 1.0f) * (TexDim.xy - TexDim.zw) + TexDim.zw;
+	return fmod(abs(BaseUV * TexScale.xy + TexScale.zw), 1.0f) * (TexDim.xy - TexDim.zw) + TexDim.zw;
 }
-
 
 inline float3 GetTriangleNormal(const uint TriIndex, const float2 TriUV, const float3x3 Inverse) {
 	float scalex = length(mul(Inverse, float3(1,0,0)));
     float scaley = length(mul(Inverse, float3(0,1,0)));
     float scalez = length(mul(Inverse, float3(0,0,1)));
     float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
-    float3 Normal0 = i_octahedral_32(AggTris[TriIndex].norms.x);
-    float3 Normal1 = i_octahedral_32(AggTris[TriIndex].norms.y) - Normal0;
-    float3 Normal2 = i_octahedral_32(AggTris[TriIndex].norms.z) - Normal0;
 
-    return normalize(mul(Inverse, normalize(Scale * (Normal0 + TriUV.x * Normal1 + TriUV.y * Normal2))).xyz);
+    float3 Normal0 = i_octahedral_32(AggTris[TriIndex].norms.x);
+    float3 Normal1 = i_octahedral_32(AggTris[TriIndex].norms.y);
+    float3 Normal2 = i_octahedral_32(AggTris[TriIndex].norms.z);
+
+    return normalize(mul(Inverse, Scale * (Normal0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Normal1 + TriUV.y * Normal2)));
 }
 
 inline float3 GetTriangleTangent(const uint TriIndex, const float2 TriUV, const float3x3 Inverse) {
 	float scalex = length(mul(Inverse, float3(1,0,0)));
     float scaley = length(mul(Inverse, float3(0,1,0)));
     float scalez = length(mul(Inverse, float3(0,0,1)));
+
     float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
     float3 Tangent0 = i_octahedral_32(AggTris[TriIndex].tans.x);
-    float3 Tangent1 = i_octahedral_32(AggTris[TriIndex].tans.y) - Tangent0;
-    float3 Tangent2 = i_octahedral_32(AggTris[TriIndex].tans.z) - Tangent0;
+    float3 Tangent1 = i_octahedral_32(AggTris[TriIndex].tans.y);
+    float3 Tangent2 = i_octahedral_32(AggTris[TriIndex].tans.z);
 
-    return normalize(mul(Inverse, normalize(Scale * (Tangent0 + TriUV.x * Tangent1 + TriUV.y * Tangent2))).xyz);
+    return normalize(mul(Inverse, Scale * (Tangent0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Tangent1 + TriUV.y * Tangent2)));
 }
 
 inline float3 GetHeightmapNormal(float3 Position, uint TerrainID) {
@@ -1865,7 +1865,7 @@ float StarRender(float3 rayDir){
         theta_ = (level_+0.5)*width;
 
         //Uniformly picked latitudes lead to stars concentrating at the poles.
-        //Make the likelihood of rendering stars a function of sin(theta_)
+        //Make the likelyhood of rendering stars a function of sin(theta_)
         if(!isActiveElevation(theta_, 0.0)){
             continue;
         }

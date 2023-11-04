@@ -26,7 +26,7 @@ inline Ray CreateCameraRayGI(float2 uv, uint pixel_index, float4x4 CamToWorldMat
     #pragma require inlineraytracing
     RaytracingAccelerationStructure myAccelerationStructure;
 #endif
-bool VisibilityCheck(Ray ray, float dist) {
+bool VisabilityCheck(Ray ray, float dist) {
     #ifdef HardwareRT
         const uint rayFlags = RAY_FLAG_FORCE_OPAQUE  ;
         UnityRayQuery<rayFlags> q;
@@ -41,7 +41,7 @@ bool VisibilityCheck(Ray ray, float dist) {
         if(q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) return false;
         else return true;
     #else
-    return VisibilityCheckCompute(ray, dist);
+    return VisabilityCheckCompute(ray, dist);
     #endif
 }
 
@@ -156,7 +156,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
                 float dist_depth = (abs(GBuffer.z - depth_prev) - length(CamDelta)) / abs(GBuffer.z);
                 float dot_geo_normals = dot(GeomNorm, geo_normal_prev);
 
-                if (dist_depth < 0.1f && dot_geo_normals > 0.7)
+                if (dist_depth < 0.1f && dot_geo_normals > 0.7 || (CenterCol.IsSpecular == 3))
                 {
                     float4 PrevRes = ReservoirB[prevIndex];
 
@@ -226,7 +226,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
                 float4 PrevGBuffer = PrevScreenSpaceInfo[NeighborIndex];
 
                 float DistDiff = (abs(GBuffer.z - PrevGBuffer.z)) / (24.0f * length(CamDelta) + 1);
-                if (DistDiff >= 0.1f || dot(i_octahedral_32(asuint(PrevGBuffer.x)), GeomNorm) < 0.9 || CurrentRes.z != PrevRes.z) continue;
+                if (DistDiff >= 0.1f || dot(i_octahedral_32(asuint(PrevGBuffer.x)), GeomNorm) < 0.99 || CurrentRes.z != PrevRes.z) continue;
                 
                 UpdateReservoir(CurrentRes, wsum, PrevRes, randomNEE(23, pixel_index).x, CachedID, NeighborIndex);
                 CurrentRes.x += PrevRes.x;
@@ -264,15 +264,15 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
             float Distance = length(PrimaryHitPosition - asfloat(WorldPos.xyz)) - 0.025f;
             Ray ray = CreateRay(PrimaryHitPosition, normalize(asfloat(WorldPos.xyz) - PrimaryHitPosition));
 
-            bool InLineOfSight = VisibilityCheck(ray, Distance);
-            if (!InLineOfSight) {CenterCol.Direct = 0; CenterCol.Indirect = 0; }
+            bool ConnectedlyVisable = VisabilityCheck(ray, Distance);
+            if (!ConnectedlyVisable) {CenterCol.Direct = 0; CenterCol.Indirect = 0; }
             #ifdef ExtraSampleValidation
                 if (CenterCol.PrimaryNEERay != 0) {
                     Distance = length(PrimaryHitPosition - NEEPos.xyz) - 0.025f;
                     ray = CreateRay(PrimaryHitPosition, normalize(NEEPos.xyz - PrimaryHitPosition));
 
-                    InLineOfSight = VisibilityCheck(ray, Distance);
-                    if (!InLineOfSight) {
+                    ConnectedlyVisable = VisabilityCheck(ray, Distance);
+                    if (!ConnectedlyVisable) {
                         CenterCol = PrevGlobalColorsB[pixel_index];
                         CurrentRes = ReservoirA[id.xy];
                         WorldPos = WorldPosA[id.xy];

@@ -40,7 +40,7 @@ bool ImprovedPrimaryHit;
     #pragma require inlineraytracing
     RaytracingAccelerationStructure myAccelerationStructure;
 #endif
-bool VisibilityCheck(Ray ray, float dist) {
+bool VisabilityCheck(Ray ray, float dist) {
     #ifdef HardwareRT
         const uint rayFlags = RAY_FLAG_FORCE_OPAQUE  ;
         UnityRayQuery<rayFlags> q;
@@ -55,7 +55,7 @@ bool VisibilityCheck(Ray ray, float dist) {
         if(q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) return false;
         else return true;
     #else
-    return VisibilityCheckCompute(ray, dist);
+    return VisabilityCheckCompute(ray, dist);
     #endif
 }
 
@@ -144,7 +144,7 @@ float3 sample_henyey_greenstein(const float3 omega, float g, float u1, float u2)
     return local_to_world(direction, v1, v2, omega);
 }
 
-bool VolumetricScatter(inout float3 throughput, RayHit hit, inout Ray ray, inout float3 Pos, MaterialData hitDat, uint pixel_index) {
+bool VolumetricScatter(inout float3 throughput, RayHit hit, inout SmallerRay ray, inout float3 Pos, MaterialData hitDat, uint pixel_index) {
     float3 SigmaS = hitDat.surfaceColor;
     float3 SigmaA = hitDat.transmittanceColor;
 
@@ -326,7 +326,24 @@ inline int SelectLight(const uint pixel_index, const uint MeshIndex, out float l
     return LightTriangles[MinIndex].TriTarget + MeshTriOffset;
 }
 
-void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 Uv, float2 NormalUV, bool IsEmissiveTex, RayData RayDat, bool HitHeightmap, const uint pixel_index, int MaterialIndex, inout float4 AlbedoTexData) {//main function
+    float3 hueShift(float3 color, float Offset)
+    {
+        float4 K = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+        float4 P = lerp(float4(color.bg, K.wz), float4(color.gb, K.xy), step(color.b, color.g));
+        float4 Q = lerp(float4(P.xyw, color.r), float4(color.r, P.yzx), step(P.x, color.r));
+        float D = Q.x - min(Q.w, Q.y);
+        float E = 0.0000000001;
+        float3 hsv = float3(abs(Q.z + (Q.w - Q.y) / (6.0 * D + E)), D / (Q.x + E), Q.x);
+        
+        float hue = hsv.x + Offset;
+        hsv.x = frac(hue);
+        
+        float4 K2 = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+        float3 P2 = abs(frac(hsv.xxx + K2.xyz) * 6.0 - K2.www);
+        return hsv.z * lerp(K2.xxx, saturate(P2 - K2.xxx), hsv.y);
+    }
+
+void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 Uv, float2 NormalUV, RayData RayDat, bool HitHeightmap, const uint pixel_index, int MaterialIndex, inout float4 AlbedoTexData) {//main function
     bool CB = !DoPartialRendering;
     if(!CB) {
         CB = curframe % PartialRenderingFactor == pixel_index % PartialRenderingFactor;
@@ -371,13 +388,17 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
         norm = clamp(norm, -1, 1);
         if (abs(norm.x) == abs(norm.y) == abs(norm.z)) norm = Geomnorm;
     }
+    if(CurBounce == 0 && UseASVGF && RandomNums[Uv].w == 1 && hitDat.specTrans == 0 && hitDat.diffTrans == 0) {
+        Geomnorm = i_octahedral_32(asuint(ScreenSpaceInfo[Uv].x));
+        norm = i_octahedral_32(asuint(ScreenSpaceInfo[Uv].y));
+    }
 
-    [branch] if (hitDat.Emissive > 0.0f) {//if we hit a light, this ray is done
+    [branch] if (hitDat.emmissive > 0.0f) {//if we hit a light, this ray is done
         float w = 1;
         if (!UseNEE || hitDat.MatType == VideoIndex) {
-            if (CurBounce == 0) Color.Direct += hitDat.Emissive;
-            else if(CurBounce == 1) Color.Direct += hitDat.Emissive * hitDat.surfaceColor;
-            else Color.Indirect += Color.throughput * hitDat.Emissive * hitDat.surfaceColor;
+            if (CurBounce == 0) Color.Direct += hitDat.surfaceColor * hitDat.emmissive;
+            else if(CurBounce == 1) Color.Direct += hitDat.emmissive * hitDat.surfaceColor;
+            else Color.Indirect += Color.throughput * hitDat.emmissive * hitDat.surfaceColor;
         } else {
             float3 a0 = mul(Inverse, float4(AggTris[hit.triangle_id].pos0, 1)).xyz;
             float3 a1 = mul(Inverse, float4(AggTris[hit.triangle_id].pos0 + AggTris[hit.triangle_id].posedge1, 1)).xyz;
@@ -387,14 +408,16 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
             float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
             float light_pdf = 1.0f / (SA * LightMeshCount) * rcp(_MeshData[hit.mesh_id].LightTriCount);
             w = power_heuristic(max(RayDat.last_pdf,0), light_pdf);
-            if (CurBounce == 0) Color.Direct += hitDat.Emissive;
-            else if (CurBounce == 1) Color.Direct += (hitDat.surfaceColor * hitDat.Emissive) * w;
-            else Color.Indirect += Color.throughput * hitDat.surfaceColor * hitDat.Emissive * w;
+            if (CurBounce == 0) Color.Direct += hitDat.surfaceColor * hitDat.emmissive;
+            else if (CurBounce == 1) Color.Direct += (hitDat.surfaceColor * hitDat.emmissive) * w;
+            else Color.Indirect += Color.throughput * hitDat.surfaceColor * hitDat.emmissive * w;
         }
-        NEEPosA[Uv.xy] += float4(0,0,0,luminance(hitDat.surfaceColor * hitDat.Emissive));
-        if(CurBounce == 1) WorldPosA[Uv] = uint4(UseReSTIRGI ? asuint(pos) : asuint(PrevDirection), WorldPosA[Uv].w);
-        if(CurBounce == 0) AlbedoTexData = float4(hitDat.surfaceColor * hitDat.Emissive, 0);
-        return;
+        NEEPosA[Uv.xy] += float4(0,0,0,luminance(hitDat.surfaceColor * hitDat.emmissive)); 
+        if(all(hitDat.surfaceColor * hitDat.emmissive > 1) || luminance(hitDat.surfaceColor * hitDat.emmissive) > 10.0f) {
+            if(CurBounce == 1) WorldPosA[Uv] = uint4(UseReSTIRGI ? asuint(pos) : asuint(PrevDirection), WorldPosA[Uv].w);
+            if(CurBounce == 0) AlbedoTexData = float4(hitDat.surfaceColor * hitDat.emmissive, 0);
+            return;
+        }
     }
 
     int MaterialLobe = 2;
@@ -631,21 +654,32 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
             } else {        
                 NEE_pdf = (1.0f / (LightMeshCount * (LightCos * area) / distance_to_light_squared)) / LightWeight;//Putting the lightweight up here makes it biased
                 int MaterialIndex = AggTris[AggTriIndex].MatDat + _MeshData[_LightMeshes[MeshIndex].LockedMeshIndex].MaterialOffset;
-                Radiance = _Materials[MaterialIndex].Emissive * _Materials[MaterialIndex].surfaceColor;
-                if (_Materials[MaterialIndex].MatType == VideoIndex || (_Materials[MaterialIndex].EmissiveTex.x > 0 && _Materials[MaterialIndex].Emissive >= 0)) {
+                Radiance = _Materials[MaterialIndex].emmissive * _Materials[MaterialIndex].surfaceColor;
+                if (_Materials[MaterialIndex].MatType == VideoIndex || (_Materials[MaterialIndex].EmissiveTex.x > 0 && _Materials[MaterialIndex].emmissive >= 0)) {
                     float2 BaseUv = AggTris[AggTriIndex].tex0 * (1.0f - TriangleUV.x - TriangleUV.y) + AggTris[AggTriIndex].texedge1 * TriangleUV.x + AggTris[AggTriIndex].texedge2 * TriangleUV.y;
                     if (_Materials[MaterialIndex].MatType == VideoIndex) {
                         Radiance *= VideoTex.SampleLevel(sampler_VideoTex, BaseUv, 0).xyz;
                     } else {
-                        float2 EmissionUV = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].EmissiveTex);   
-                        float4 EmissTex = _EmissiveAtlas.SampleLevel(my_point_clamp_sampler, EmissionUV, 0);
-                        float3 EmissCol = _Materials[MaterialIndex].EmissionColor;
-                        bool IsMask = !all(EmissCol == 0);
-                        if (!IsMask) EmissCol = EmissTex.xyz * EmissTex.w;
-                        else EmissCol *= EmissTex.xyz * EmissTex.w;
-                        if (dot(EmissCol, EmissCol) > 0.001f) {
-                            Radiance = EmissCol * _Materials[MaterialIndex].Emissive;
-                        } else Radiance = 0;
+                        float2 EmissionUV = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].EmissiveTex);    
+                        if (EmissionUV.x != -1) {
+                            float3 EmissCol = _Materials[MaterialIndex].EmissionColor;
+                            float4 EmissTexture = _EmissiveAtlas[EmissionUV * EmissiveSize];
+                            float3 surfaceColor = 0;
+                            switch(_Materials[MaterialIndex].EmissionResponse) {
+                                case 0:
+                                    Radiance = EmissTexture.xyz * EmissTexture.w * _Materials[MaterialIndex].emmissive;
+                                break;
+                                case 1:
+                                    Radiance += EmissTexture.xyz * EmissTexture.w * _Materials[MaterialIndex].emmissive;
+                                break;
+                                case 2:
+                                    Radiance = EmissCol * EmissTexture.xyz * EmissTexture.w * lerp(0, _Materials[MaterialIndex].emmissive, clamp(luminance(EmissTexture.xyz * EmissTexture.w), 0, 1));
+                                break;
+                                case 3:
+                                    Radiance += EmissCol * EmissTexture.xyz * EmissTexture.w * lerp(0, _Materials[MaterialIndex].emmissive, clamp(luminance(EmissTexture.xyz * EmissTexture.w), 0, 1));
+                                break;
+                            }    
+                        }
                     }
                 } else if(_Materials[MaterialIndex].AlbedoTex.x > 0) {
                     float2 BaseUv = AggTris[AggTriIndex].tex0 * (1.0f - TriangleUV.x - TriangleUV.y) + AggTris[AggTriIndex].texedge1 * TriangleUV.x + AggTris[AggTriIndex].texedge2 * TriangleUV.y;
@@ -667,13 +701,14 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
                 uint index3;
                 if(UseReSTIRGI && CurBounce == AlbedoTexData.w - 1) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
 
+                // if(TerrainExists) InterlockedAdd(BufferSizes[CurBounce + 1].heightmap_shadow_rays, 1, index3);
                 InterlockedAdd(BufferSizes[CurBounce].shadow_rays, 1, index3);
                 ShadowRaysBuffer[index3].origin = ray.origin;
-                ShadowRaysBuffer[index3].direction = to_light;
+                ShadowRaysBuffer[index3].direction = octahedral_32(to_light);
                 ShadowRaysBuffer[index3].t = (IsDirectional ? 10000.0f : distance_to_light - 0.01f) * ((CurBounce != AlbedoTexData.w - 1) ? 1 : -1);
                 ShadowRaysBuffer[index3].illumination = Illum;
                 ShadowRaysBuffer[index3].PixelIndex = pixel_index;
-                ShadowRaysBuffer[index3].LuminanceIncoming = luminance(Radiance);
+                ShadowRaysBuffer[index3].LuminanceIncomming = luminance(Radiance);
             }
         }
     }
@@ -693,8 +728,9 @@ void calcFinalColor(inout Ray ray, inout ColData Color, MaterialData hitDat, Ray
     if(CB) {
         uint index2;//Congrats, the ray will continue its path
         InterlockedAdd(BufferSizes[CurBounce + 1].tracerays, 1, index2);
+        // if(TerrainExists) InterlockedAdd(BufferSizes[CurBounce + 1].heighmap_rays, 1, index2);
         GlobalRays[index2].origin = ray.origin;
-        GlobalRays[index2].direction = ray.direction;
+        GlobalRays[index2].direction = octahedral_32(ray.direction);
         GlobalRays[index2].PixelIndex = Uv.x + Uv.y * screen_width;
         GlobalRays[index2].last_pdf = pdf;
         set(index2, hit);
@@ -709,16 +745,15 @@ int MaterialCount;
 [numthreads(64, 1, 1)]
 void kernel_shade(uint3 id : SV_DispatchThreadID) {
 
-    if (id.x >= BufferSizes[CurBounce].tracerays) return;
+    if (CurBounce != 0 && id.x >= BufferSizes[CurBounce - 1].tracerays) return;
     uint pixel_index = GlobalRays[id.x].PixelIndex;
     uint2 TempUv = uint2(pixel_index % screen_width, pixel_index / screen_width);
     float4 AlbedoTexData = TempAlbedoTex[TempUv];
-    Ray ray;
+    SmallerRay ray;
     RayData GlobRay = GlobalRays[id.x];
     RayHit bestHit = get(id.x);
     ray.origin = GlobRay.origin;
-    ray.direction = GlobRay.direction;
-    ray.direction_inv = float3(0.0f, 0.0f, 0.0f);//We dont need to calculate this, but we do need to give it some value or Unity complains
+    ray.direction = i_octahedral_32(GlobRay.direction);
 
     #ifdef HardwareRT
         if(bestHit.mesh_id != 9999999) {
@@ -816,7 +851,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     } else if(AlbedoUv.x != -1 && !HitTerrain) {
         TempMat.surfaceColor *= _TextureAtlas[StochasticBilinear(AlbedoUv * AlbedoAtlasSize, random(54, pixel_index).x)].xyz;
     }
-    // TempMat.surfaceColor = clamp(TempMat.surfaceColor,0.005f,1);
+    // TempMat.surfaceColor = hueShift(TempMat.surfaceColor,TempMat.flatness);
     TempMat.roughness = max(TempMat.roughness, 0.00001f);
     float2 MetallicUV = AlignUV(BaseUv, TempMat.AlbedoTexScale, TempMat.MetallicTex);
     float2 RoughnessUV = AlignUV(BaseUv, TempMat.AlbedoTexScale, TempMat.RoughnessTex);
@@ -826,26 +861,34 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     if(TempMat.IsSmoothness)  TempMat.roughness = 1.0f - TempMat.roughness;
     if(!all(TempMat.RoughnessRemap == float2(0,1))) TempMat.roughness = (TempMat.roughness * (TempMat.RoughnessRemap.y - TempMat.RoughnessRemap.x)) + TempMat.RoughnessRemap.x;
     if(AlbedoTexData.w != -1) TempMat.roughness = min(TempMat.roughness + max(CurBounce / (float)MaxBounce,0),1);
-    bool IsEmissiveTex = false;
-    if(TempMat.Emissive >= 0) {
-        float2 EmissionUV = AlignUV(BaseUv, TempMat.AlbedoTexScale, TempMat.EmissiveTex);        
+    if(TempMat.emmissive > 0) {
+        float2 EmissionUV = AlignUV(BaseUv, TempMat.AlbedoTexScale, TempMat.EmissiveTex);    
         if (EmissionUV.x != -1) {
             float3 EmissCol = _Materials[MaterialIndex].EmissionColor;
             float4 EmissTexture = _EmissiveAtlas[StochasticBilinear(EmissionUV * EmissiveSize, random(54, pixel_index).x)];
-            bool IsMask = !all(EmissCol == 0);
-            if (!IsMask) EmissCol = EmissTexture.xyz * EmissTexture.w;
-            else EmissCol *= EmissTexture.xyz * EmissTexture.w;
-            if (dot(EmissCol, EmissCol) > 0.001f) {
-                IsEmissiveTex = true;
-                TempMat.surfaceColor = EmissCol;
-            } else TempMat.Emissive = 0;
-        } else if(any(_Materials[MaterialIndex].EmissionColor != 0)) {
-            TempMat.surfaceColor += _Materials[MaterialIndex].EmissionColor * TempMat.surfaceColor;
+            switch(TempMat.EmissionResponse) {
+                case 0:
+                    EmissCol = EmissTexture.xyz * EmissTexture.w;
+                    TempMat.surfaceColor = EmissCol;                
+                break;
+                case 1:
+                    EmissCol = EmissTexture.xyz * EmissTexture.w;
+                    TempMat.surfaceColor += EmissCol;                
+                break;
+                case 2:
+                    TempMat.emmissive = lerp(0, TempMat.emmissive, clamp(luminance(EmissTexture.xyz * EmissTexture.w), 0, 1));
+                    TempMat.surfaceColor = TempMat.EmissionColor * EmissTexture.xyz * EmissTexture.w;
+                break;
+                case 3:
+                    TempMat.emmissive = lerp(0, TempMat.emmissive, clamp(luminance(EmissTexture.xyz * EmissTexture.w), 0, 1));
+                    TempMat.surfaceColor += TempMat.EmissionColor * EmissTexture.xyz * EmissTexture.w;
+                break;
+            }    
         }
     }
 
     float PrevAlbedoTex = AlbedoTexData.x;
-    calcFinalColor(ray, Color, TempMat, bestHit, TempUv, NormalUV, IsEmissiveTex || (TempMat.MatType == VideoIndex), GlobRay, bestHit.mesh_id == 9999999, pixel_index, MaterialIndex, AlbedoTexData);
+    calcFinalColor(ray, Color, TempMat, bestHit, TempUv, NormalUV, GlobRay, bestHit.mesh_id == 9999999, pixel_index, MaterialIndex, AlbedoTexData);
     TempAlbedoTex[TempUv] = AlbedoTexData;
     GlobalColors[pixel_index] = Color;
 }
@@ -935,6 +978,7 @@ void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadI
 void TransferKernel(uint3 id : SV_DispatchThreadID) {
 
     BufferData[0] = uint3(ceil(BufferSizes[CurBounce].tracerays / 64.0f), 1, 1);
+    if(CurBounce != 0) BufferSizes[CurBounce - 1].tracerays = BufferSizes[CurBounce].tracerays;
 
 }
 

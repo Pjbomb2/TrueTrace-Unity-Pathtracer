@@ -14,12 +14,12 @@ namespace TrueTrace {
         space : Moves camera on X and Z axis only.  So camera doesn't gain any height*/
          
          //I made a small change so that I can turn off movement by pressing t
-        float MainSpeed = 1.0f; //regular speed
-        float ShiftAdd = 25.0f; //multiplied by how long shift is held.  Basically running
-        float MaxSpeedPressingShift = 1000.0f; //Maximum speed when holding shift
-        public float CameraSensitivity = 2.5f; //How sensitive it with mouse
-        private Vector3 LastMousePosition = new Vector3(255, 255, 255); //kind of in the middle of the screen, rather than at the top (play)
-        private float TotalRun = 1.0f;
+        float mainSpeed = 1.0f; //regular speed
+        float shiftAdd = 25.0f; //multiplied by how long shift is held.  Basically running
+        float maxShift = 1000.0f; //Maximum speed when holdin gshift
+        public float camSens = 2.5f; //How sensitive it with mouse
+        private Vector3 lastMouse = new Vector3(255, 255, 255); //kind of in the middle of the screen, rather than at the top (play)
+        private float totalRun= 1.0f;
         private bool StopMovement = true;
         private bool IsPressingT = false;
         void Update () {
@@ -43,29 +43,29 @@ namespace TrueTrace {
 
 
 
-            LastMousePosition = new Vector3(-Input.GetAxisRaw("Mouse Y") * CameraSensitivity, Input.GetAxisRaw("Mouse X") * CameraSensitivity, 0 );
-            LastMousePosition = new Vector3(transform.eulerAngles.x + LastMousePosition.x , transform.eulerAngles.y + LastMousePosition.y, 0);
-            if(LastMousePosition.x < 280) {
-                if(LastMousePosition.x < 95) {
-                    LastMousePosition.x = Mathf.Min(LastMousePosition.x, 88);
+            lastMouse = new Vector3(-Input.GetAxisRaw("Mouse Y") * camSens, Input.GetAxisRaw("Mouse X") * camSens, 0 );
+            lastMouse = new Vector3(transform.eulerAngles.x + lastMouse.x , transform.eulerAngles.y + lastMouse.y, 0);
+            if(lastMouse.x < 280) {
+                if(lastMouse.x < 95) {
+                    lastMouse.x = Mathf.Min(lastMouse.x, 88);
                 } else {
-                    LastMousePosition.x = Mathf.Max(LastMousePosition.x, 273);
+                    lastMouse.x = Mathf.Max(lastMouse.x, 273);
                 }
             }
             if(!StopMovement) {
-                    transform.eulerAngles = LastMousePosition;
+                    transform.eulerAngles = lastMouse;
                
                 Vector3 p = GetBaseInput();
                 if (Input.GetKey (KeyCode.LeftShift)){
-                    TotalRun += Time.deltaTime;
-                    p  = p * TotalRun * ShiftAdd;
-                    p.x = Mathf.Clamp(p.x, -MaxSpeedPressingShift, MaxSpeedPressingShift);
-                    p.y = Mathf.Clamp(p.y, -MaxSpeedPressingShift, MaxSpeedPressingShift);
-                    p.z = Mathf.Clamp(p.z, -MaxSpeedPressingShift, MaxSpeedPressingShift);
+                    totalRun += Time.deltaTime;
+                    p  = p * totalRun * shiftAdd;
+                    p.x = Mathf.Clamp(p.x, -maxShift, maxShift);
+                    p.y = Mathf.Clamp(p.y, -maxShift, maxShift);
+                    p.z = Mathf.Clamp(p.z, -maxShift, maxShift);
                 }
                 else{
-                    TotalRun = Mathf.Clamp(TotalRun * 0.5f, 1f, 1000f);
-                    p = p * MainSpeed;
+                    totalRun = Mathf.Clamp(totalRun * 0.5f, 1f, 1000f);
+                    p = p * mainSpeed;
                 }
            
                 p = p * Time.deltaTime;
@@ -83,20 +83,20 @@ namespace TrueTrace {
         }
          
         private Vector3 GetBaseInput() { //returns the basic values, if it's 0 than it's not active.
-            Vector3 Velocity = new Vector3();
+            Vector3 p_Velocity = new Vector3();
             if (Input.GetKey (KeyCode.W)){
-                Velocity += new Vector3(0, 0 , 1);
+                p_Velocity += new Vector3(0, 0 , 1);
             }
             if (Input.GetKey (KeyCode.S)){
-                Velocity += new Vector3(0, 0, -1);
+                p_Velocity += new Vector3(0, 0, -1);
             }
             if (Input.GetKey (KeyCode.A)){
-                Velocity += new Vector3(-1, 0, 0);
+                p_Velocity += new Vector3(-1, 0, 0);
             }
             if (Input.GetKey (KeyCode.D)){
-                Velocity += new Vector3(1, 0, 0);
+                p_Velocity += new Vector3(1, 0, 0);
             }
-            return Velocity;
+            return p_Velocity;
         }
     }
 }

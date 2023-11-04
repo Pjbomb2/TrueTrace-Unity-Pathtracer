@@ -8,6 +8,7 @@
 
 #pragma kernel SingleInputPass
 Texture2D<float4> AdditionTex;
+SamplerState sampler_AdditionTex;
 SamplerState sampler_point_clamp;
 
 RWTexture2D<float4> Result;
@@ -31,7 +32,7 @@ float4 EncodeRGBM(float3 rgb )
 void SingleInputPass (uint3 id : SV_DispatchThreadID)
 {
     if(any(id.xy >= (uint2)floor((InputSize) * Scale))) return;
-    float4 Col = AdditionTex.SampleLevel(sampler_point_clamp, (id.xy) / InputSize / Scale, 0);
+    float4 Col = AdditionTex.SampleLevel(sampler_AdditionTex, (id.xy) / InputSize / Scale, 0);
     if(IsNormalMap) {
         float2 InputNormal;
         [branch]if(Col.r == 1) {
