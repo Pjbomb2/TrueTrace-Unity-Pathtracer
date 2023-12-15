@@ -152,7 +152,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -220,7 +223,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -288,7 +294,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -356,7 +365,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -424,7 +436,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -497,7 +512,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -570,7 +588,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -643,7 +664,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -711,7 +735,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -784,8 +811,11 @@ MonoBehaviour:
   - 0
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 0000
+  BaseIsMap: 0000
+  ReplaceBase: 0000
   Roughness:
   - 0
   - 0
@@ -869,7 +899,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -942,7 +975,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -1015,7 +1051,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -1083,7 +1122,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -1156,7 +1198,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -1224,7 +1269,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -1297,7 +1345,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -1365,7 +1416,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -1438,7 +1492,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -1511,7 +1568,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -1604,7 +1664,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -1677,7 +1740,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -1745,7 +1811,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -1823,7 +1892,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -1891,7 +1963,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -1964,7 +2039,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -2032,7 +2110,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -2105,8 +2186,11 @@ MonoBehaviour:
   - 0
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 0000
+  BaseIsMap: 0000
+  ReplaceBase: 0000
   Roughness:
   - 0
   - 0
@@ -2200,7 +2284,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -2283,7 +2370,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -2351,7 +2441,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -2419,7 +2512,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -2492,7 +2588,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -2570,7 +2669,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -2638,7 +2740,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -2721,7 +2826,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -2804,7 +2912,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -2877,7 +2988,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -2945,7 +3059,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -3013,7 +3130,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -3081,7 +3201,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -3154,7 +3277,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -3227,7 +3353,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -3295,7 +3424,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -3363,7 +3495,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -3446,7 +3581,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -3514,7 +3652,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -3582,7 +3723,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -3650,7 +3794,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -3718,7 +3865,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -3786,7 +3936,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -3874,7 +4027,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -3942,7 +4098,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -4015,7 +4174,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -4083,7 +4245,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -4151,7 +4316,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -4224,7 +4392,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -4297,7 +4468,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -4365,7 +4539,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -4438,7 +4615,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -4516,7 +4696,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -4584,7 +4767,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -4652,7 +4838,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -4725,7 +4914,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -4793,7 +4985,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -4876,7 +5071,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -4944,7 +5142,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -5017,7 +5218,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -5095,7 +5299,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -5173,7 +5380,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -5241,7 +5451,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -5309,7 +5522,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -5377,7 +5593,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -5445,7 +5664,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -5513,7 +5735,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -5591,7 +5816,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -5659,7 +5887,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -5737,7 +5968,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -5805,7 +6039,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -5878,7 +6115,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -5946,7 +6186,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -6024,7 +6267,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -6092,7 +6338,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -6165,7 +6414,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -6304,7 +6556,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -6382,7 +6637,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -6450,7 +6708,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -6533,7 +6794,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -6606,7 +6870,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -6674,7 +6941,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -6742,7 +7012,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -6815,7 +7088,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -6888,7 +7164,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -6956,7 +7235,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -7024,7 +7306,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -7092,7 +7377,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -7170,7 +7458,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -7238,7 +7529,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -7326,7 +7620,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -7399,7 +7696,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -7477,7 +7777,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -7545,7 +7848,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -7613,7 +7919,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -7686,7 +7995,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -7877,7 +8189,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -7955,7 +8270,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -8023,7 +8341,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -8101,7 +8422,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -8169,7 +8493,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -8252,7 +8579,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -8320,7 +8650,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -8388,7 +8721,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -8456,7 +8792,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -8529,7 +8868,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -8602,7 +8944,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -8680,7 +9025,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -8753,8 +9101,11 @@ MonoBehaviour:
   - 0
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 0000
+  BaseIsMap: 0000
+  ReplaceBase: 0000
   Roughness:
   - 0
   - 0
@@ -8843,7 +9194,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -8911,7 +9265,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -8979,7 +9336,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -9047,7 +9407,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -9120,7 +9483,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -9188,7 +9554,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -9256,7 +9625,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -9324,7 +9696,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -9397,7 +9772,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -9465,7 +9843,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -9533,7 +9914,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -9601,7 +9985,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -9669,7 +10056,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -9747,7 +10137,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -9820,7 +10213,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -9898,7 +10294,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -9966,7 +10365,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -10034,7 +10436,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -10102,7 +10507,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -10170,7 +10578,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -10263,8 +10674,11 @@ MonoBehaviour:
   - 0
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 0000
+  BaseIsMap: 0000
+  ReplaceBase: 0000
   Roughness:
   - 0
   - 0
@@ -10358,7 +10772,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -10436,7 +10853,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -10519,7 +10939,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -10587,7 +11010,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -10670,7 +11096,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -10738,7 +11167,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -10821,7 +11253,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -10894,7 +11329,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -10967,7 +11405,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -11055,7 +11496,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -11123,7 +11567,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -11191,7 +11638,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -11259,7 +11709,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -11332,7 +11785,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -11400,7 +11856,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -11473,7 +11932,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -11551,7 +12013,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -11624,7 +12089,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -11692,7 +12160,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -11765,7 +12236,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -11833,7 +12307,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -11916,7 +12393,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -12029,7 +12509,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -12097,7 +12580,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -12165,7 +12651,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -12243,7 +12732,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -12311,7 +12803,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -12379,7 +12874,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -12457,7 +12955,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -12525,7 +13026,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -12593,7 +13097,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -12661,7 +13168,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -12734,7 +13244,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -12812,7 +13325,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -12880,7 +13396,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -12948,7 +13467,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -13016,7 +13538,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -13084,7 +13609,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -13152,7 +13680,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -13220,7 +13751,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -13288,7 +13822,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -13356,7 +13893,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -13429,7 +13969,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -13497,7 +14040,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -13570,7 +14116,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -13643,7 +14192,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -13711,7 +14263,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -13789,7 +14344,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -13867,7 +14425,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -13940,7 +14501,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -14013,7 +14577,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -14086,7 +14653,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -14154,7 +14724,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -14222,7 +14795,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -14290,7 +14866,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -14358,7 +14937,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -14431,7 +15013,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -14499,7 +15084,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -14567,7 +15155,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -14640,7 +15231,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -14718,7 +15312,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -14786,7 +15383,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -14859,7 +15459,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -14927,7 +15530,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -15000,7 +15606,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -15078,7 +15687,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -15146,7 +15758,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -15234,7 +15849,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -15302,7 +15920,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -15370,7 +15991,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -15438,7 +16062,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -15506,7 +16133,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -15584,8 +16214,11 @@ MonoBehaviour:
   - 0
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 0000
+  BaseIsMap: 0000
+  ReplaceBase: 0000
   Roughness:
   - 0
   - 0
@@ -15679,7 +16312,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -15752,7 +16388,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -15835,7 +16474,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -15903,7 +16545,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -15981,7 +16626,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -16049,7 +16697,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -16127,7 +16778,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -16195,7 +16849,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -16263,7 +16920,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -16341,7 +17001,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -16409,7 +17072,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -16487,7 +17153,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -16555,7 +17224,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -16623,7 +17295,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -16701,7 +17376,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -16774,8 +17452,11 @@ MonoBehaviour:
   - 0
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 0000
+  BaseIsMap: 0000
+  ReplaceBase: 0000
   Roughness:
   - 0
   - 0
@@ -16874,7 +17555,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -16942,7 +17626,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -17010,7 +17697,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -17083,7 +17773,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -17151,7 +17844,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -17224,7 +17920,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -17268,43 +17967,6 @@ MonoBehaviour:
   LocalMaterialIndex: 06000000
   JustCreated: 0
   TilingChanged: 0
---- !u!84 &1381827083
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_ForcedFallbackFormat: 4
-  m_DownscaleFallback: 0
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 5
-  m_Width: 1
-  m_Height: 1
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 0
-  m_ColorFormat: 4
-  m_MipMap: 0
-  m_GenerateMips: 1
-  m_SRGB: 1
-  m_UseDynamicScale: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 1
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!114 &1382003970
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17329,7 +17991,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -17417,7 +18082,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -17490,8 +18158,11 @@ MonoBehaviour:
   - 0
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 0000
+  BaseIsMap: 0000
+  ReplaceBase: 0000
   Roughness:
   - 0
   - 0
@@ -17575,7 +18246,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -17643,7 +18317,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -17716,7 +18393,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -17784,7 +18464,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -17872,7 +18555,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -17940,7 +18626,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -18008,7 +18697,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -18076,7 +18768,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -18154,7 +18849,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -18222,7 +18920,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -18305,7 +19006,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -18373,7 +19077,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -18441,7 +19148,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -18509,7 +19219,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -18582,7 +19295,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -18655,7 +19371,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -18723,7 +19442,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -18806,7 +19528,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -18874,7 +19599,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -18942,7 +19670,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -19010,7 +19741,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -19083,7 +19817,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -19161,7 +19898,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -19234,7 +19974,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -19302,7 +20045,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -19370,7 +20116,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -19448,7 +20197,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -19516,7 +20268,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -19592,9 +20347,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   TotalParentObjectSize: 0
   LightEnergyScale: 1
+  HeightmapAtlas: {fileID: 0}
   AlbedoAtlasSize: 0
   VideoPlayerObject: {fileID: 0}
-  VideoTexture: {fileID: 1381827083}
+  VideoTexture: {fileID: 2104418787}
   MaterialsChanged: []
   _Materials: []
   MyMeshesCompacted: []
@@ -19603,8 +20359,6 @@ MonoBehaviour:
   Instances: []
   Terrains: []
   TerrainInfos: []
-  HeightMap: {fileID: 0}
-  AlphaMap: {fileID: 0}
   DoHeightmap: 0
   RenderQue: []
   RenderTransforms: []
@@ -19612,7 +20366,8 @@ MonoBehaviour:
   - {fileID: 1770588100}
   AddQue: []
   RemoveQue: []
-  UpdateQue: []
+  UpdateQue:
+  - {fileID: 1770588100}
   InstanceRenderQue: []
   InstanceUpdateQue: []
   InstanceRenderTransforms: []
@@ -19636,7 +20391,6 @@ MonoBehaviour:
   SunDirection: {x: 0, y: -1, z: 0}
   RunningTasks: 0
   NeedsToUpdateXML: 0
-  HasToDo: 0
   TLASBVH8:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -19672,6 +20426,97 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ShadingShader: {fileID: 0}
   ScreenSpaceInfo: {fileID: 0}
+  ASVGFCode:
+    Initialized: 0
+    ASVGF_HIST_COLOR_HF: {fileID: 0}
+    ASVGF_ATROUS_PING_LF_SH: {fileID: 0}
+    ASVGF_ATROUS_PONG_LF_SH: {fileID: 0}
+    ASVGF_ATROUS_PING_LF_COCG: {fileID: 0}
+    ASVGF_ATROUS_PONG_LF_COCG: {fileID: 0}
+    ASVGF_ATROUS_PING_HF: {fileID: 0}
+    ASVGF_ATROUS_PONG_HF: {fileID: 0}
+    ASVGF_ATROUS_PING_SPEC: {fileID: 0}
+    ASVGF_ATROUS_PONG_SPEC: {fileID: 0}
+    ASVGF_ATROUS_PING_MOMENTS: {fileID: 0}
+    ASVGF_ATROUS_PONG_MOMENTS: {fileID: 0}
+    ASVGF_GRAD_LF_PING: {fileID: 0}
+    ASVGF_GRAD_LF_PONG: {fileID: 0}
+    ASVGF_GRAD_HF_SPEC_PING: {fileID: 0}
+    ASVGF_GRAD_HF_SPEC_PONG: {fileID: 0}
+    ASVGF_FILTERED_SPEC_A: {fileID: 0}
+    ASVGF_FILTERED_SPEC_B: {fileID: 0}
+    ASVGF_HIST_MOMENTS_HF_A: {fileID: 0}
+    ASVGF_HIST_MOMENTS_HF_B: {fileID: 0}
+    ASVGF_HIST_COLOR_LF_SH_A: {fileID: 0}
+    ASVGF_HIST_COLOR_LF_SH_B: {fileID: 0}
+    ASVGF_HIST_COLOR_LF_COCG_A: {fileID: 0}
+    ASVGF_HIST_COLOR_LF_COCG_B: {fileID: 0}
+    ASVGF_GRAD_SMPL_POS_A: {fileID: 0}
+    ASVGF_GRAD_SMPL_POS_B: {fileID: 0}
+    MetallicA: {fileID: 0}
+    MetallicB: {fileID: 0}
+    LFVarianceA: {fileID: 0}
+    LFVarianceB: {fileID: 0}
+    TEX_PT_NORMALS_A: {fileID: 0}
+    TEX_PT_NORMALS_B: {fileID: 0}
+    AlbedoColorA: {fileID: 0}
+    AlbedoColorB: {fileID: 0}
+    PT_LF1: {fileID: 0}
+    PT_LF2: {fileID: 0}
+    TEX_PT_COLOR_HF: {fileID: 0}
+    TEX_PT_COLOR_SPEC: {fileID: 0}
+    ReflectedRefractedTex: {fileID: 0}
+    ReflectedRefractedTexPrev: {fileID: 0}
+    camera: {fileID: 0}
+    ScreenWidth: 0
+    ScreenHeight: 0
+    shader: {fileID: 0}
+    Reproject: 0
+    Gradient_Img: 0
+    iter: 0
+  ReSTIRASVGFCode:
+    Initialized: 0
+    ASVGF_HIST_COLOR_HF: {fileID: 0}
+    ASVGF_ATROUS_PING_LF_SH: {fileID: 0}
+    ASVGF_ATROUS_PONG_LF_SH: {fileID: 0}
+    ASVGF_ATROUS_PING_LF_COCG: {fileID: 0}
+    ASVGF_ATROUS_PONG_LF_COCG: {fileID: 0}
+    ASVGF_ATROUS_PING_HF: {fileID: 0}
+    ASVGF_ATROUS_PONG_HF: {fileID: 0}
+    ASVGF_ATROUS_PING_SPEC: {fileID: 0}
+    ASVGF_ATROUS_PONG_SPEC: {fileID: 0}
+    ASVGF_ATROUS_PING_MOMENTS: {fileID: 0}
+    ASVGF_ATROUS_PONG_MOMENTS: {fileID: 0}
+    ASVGF_GRAD_LF_PING: {fileID: 0}
+    ASVGF_GRAD_LF_PONG: {fileID: 0}
+    ASVGF_GRAD_HF_SPEC_PING: {fileID: 0}
+    ASVGF_GRAD_HF_SPEC_PONG: {fileID: 0}
+    ASVGF_FILTERED_SPEC_A: {fileID: 0}
+    ASVGF_FILTERED_SPEC_B: {fileID: 0}
+    ASVGF_HIST_MOMENTS_HF_A: {fileID: 0}
+    ASVGF_HIST_MOMENTS_HF_B: {fileID: 0}
+    ASVGF_HIST_COLOR_LF_SH_A: {fileID: 0}
+    ASVGF_HIST_COLOR_LF_SH_B: {fileID: 0}
+    ASVGF_HIST_COLOR_LF_COCG_A: {fileID: 0}
+    ASVGF_HIST_COLOR_LF_COCG_B: {fileID: 0}
+    MetallicA: {fileID: 0}
+    MetallicB: {fileID: 0}
+    InputLFSH: {fileID: 0}
+    InputLFCOCG: {fileID: 0}
+    TEX_PT_COLOR_SPEC: {fileID: 0}
+    LFVarianceA: {fileID: 0}
+    LFVarianceB: {fileID: 0}
+    TEX_PT_NORMALS_A: {fileID: 0}
+    TEX_PT_NORMALS_B: {fileID: 0}
+    AlbedoColorA: {fileID: 0}
+    AlbedoColorB: {fileID: 0}
+    ReflectedRefractedTex: {fileID: 0}
+    ReflectedRefractedTexPrev: {fileID: 0}
+    camera: {fileID: 0}
+    ScreenWidth: 0
+    ScreenHeight: 0
+    shader: {fileID: 0}
+    iter: 0
   Atmo:
     _TransmittanceLUT: {fileID: 0}
     MultiScatterTex: {fileID: 0}
@@ -19684,34 +20529,36 @@ MonoBehaviour:
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  AllowConverge: 1
-  AllowBloom: 0
+  AllowConverge: 0
+  AllowBloom: 1
   AllowDoF: 0
   AllowAutoExpose: 0
-  AllowToneMap: 1
+  AllowToneMap: 0
   AllowTAA: 0
-  DoFAperature: 0.04
-  DoFFocal: 338.3715
+  DoFAperature: 0.02
+  DoFFocal: 1.9618866
   RenderScale: 1
-  BloomStrength: 53.760002
-  MinSpatialSize: 30
-  ReSTIRGIUpdateRate: 7
+  BloomStrength: 47.36
+  MinSpatialSize: 64
   UseASVGF: 0
   UseReCur: 0
   UseTAAU: 0
+  DoExposureAuto: 0
+  ReSTIRGIUpdateRate: 7
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
   UseReSTIRGI: 0
   ReSTIRGISpatialCount: 30
   ReSTIRGITemporalMCap: 122
-  DoReSTIRGIConnectionValidation: 0
-  Exposure: 2.1
+  DoReSTIRGIConnectionValidation: 1
+  Exposure: 50
   ReCurBlurRadius: 30
   PrevReSTIRGI: 0
   DoPartialRendering: 0
-  PartialRenderingFactor: 7
+  PartialRenderingFactor: 4
   DoFirefly: 0
-  ImprovedPrimaryHit: 0
+  ImprovedPrimaryHit: 1
+  ReSTIRDenoiser: 0
   RISCount: 0
   ToneMapper: 0
   BackgroundType: 0
@@ -19747,7 +20594,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -19815,7 +20665,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -19888,7 +20741,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -19971,7 +20827,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -20054,7 +20913,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -20122,7 +20984,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -20195,7 +21060,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -20273,7 +21141,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -20351,7 +21222,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -20419,7 +21293,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -20497,8 +21374,11 @@ MonoBehaviour:
   - 0
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 0000
+  BaseIsMap: 0000
+  ReplaceBase: 0000
   Roughness:
   - 0
   - 0
@@ -20582,7 +21462,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -20650,7 +21533,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -20718,7 +21604,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -20786,7 +21675,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -20859,7 +21751,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -20927,7 +21822,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -21000,7 +21898,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -21078,7 +21979,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -21146,7 +22050,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -21214,7 +22121,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -21292,7 +22202,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -21360,7 +22273,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -21428,7 +22344,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -21501,7 +22420,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -21574,7 +22496,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -21642,7 +22567,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -21710,7 +22638,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -21783,7 +22714,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -21851,7 +22785,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -21919,7 +22856,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -21997,7 +22937,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -22065,7 +23008,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -22133,7 +23079,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -22201,7 +23150,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -22274,7 +23226,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -22342,7 +23297,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -22415,7 +23373,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -22483,7 +23444,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -22551,7 +23515,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -22619,7 +23586,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -22687,7 +23657,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -24748,7 +25721,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -24816,7 +25792,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -24889,8 +25868,11 @@ MonoBehaviour:
   - 0
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 0000
+  BaseIsMap: 0000
+  ReplaceBase: 0000
   Roughness:
   - 0
   - 0
@@ -24974,7 +25956,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -25417,7 +26402,7 @@ MonoBehaviour:
   - {fileID: 1733887114}
   MeshCountChanged: 1
   AggTriangles: []
-  ParentScale: {x: 0.01, y: 0.01, z: 0.01}
+  ParentScale: {x: 0.10000001, y: 0.10000001, z: 0.10000001}
   LightTriangles: []
   BVH:
     cwbvh_indices: 
@@ -32339,7 +33324,7 @@ MonoBehaviour:
   NodeInitializerKernel: 6
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   Assets: {fileID: 1568839223}
   FailureCount: 0
   TotalTriangles: 0
@@ -34012,7 +34997,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -34090,7 +35078,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -34163,7 +35154,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -34241,7 +35235,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -34314,7 +35311,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -34387,7 +35387,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -34460,7 +35463,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -34538,7 +35544,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -34616,7 +35625,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -34689,7 +35701,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -34772,7 +35787,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -34855,7 +35873,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -34943,7 +35964,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -35031,7 +36055,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -35104,7 +36131,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -35182,7 +36212,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -35255,7 +36288,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -35328,7 +36364,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -35401,7 +36440,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -35489,7 +36531,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -35562,7 +36607,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -35635,7 +36683,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -35708,7 +36759,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -35781,7 +36835,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -35854,7 +36911,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -35932,7 +36992,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -36005,7 +37068,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -36088,7 +37154,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -36161,7 +37230,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -36234,7 +37306,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -36322,7 +37397,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -36395,7 +37473,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -36478,7 +37559,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -36556,7 +37640,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -36629,7 +37716,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -36702,7 +37792,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -36780,7 +37873,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -36853,7 +37949,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -36956,7 +38055,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -37029,7 +38131,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -37102,7 +38207,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -37175,7 +38283,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -37248,7 +38359,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -37321,7 +38435,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -37394,7 +38511,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -37467,7 +38587,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -37540,7 +38663,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -37618,7 +38744,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -37691,7 +38820,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -37764,7 +38896,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -37847,7 +38982,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -37925,7 +39063,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -37998,7 +39139,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -38091,7 +39235,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -38164,7 +39311,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -38237,7 +39387,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -38315,8 +39468,11 @@ MonoBehaviour:
   - 0
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 0000
+  BaseIsMap: 0000
+  ReplaceBase: 0000
   Roughness:
   - 0
   - 0
@@ -38432,7 +39588,7 @@ Camera:
   m_CullingMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_RenderingPath: -1
+  m_RenderingPath: 1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
   m_TargetEye: 3
@@ -38517,7 +39673,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -38590,7 +39749,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -38663,7 +39825,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -38736,7 +39901,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -38809,7 +39977,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -38882,7 +40053,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -38955,7 +40129,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -39038,8 +40215,11 @@ MonoBehaviour:
   - 0
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 0000
+  BaseIsMap: 0000
+  ReplaceBase: 0000
   Roughness:
   - 0
   - 0
@@ -39133,7 +40313,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -39216,7 +40399,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -39270,6 +40456,43 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8904350954061403114, guid: 16500a523b718314091d7e9b83146c62, type: 3}
   m_PrefabInstance: {fileID: 1770587712}
   m_PrefabAsset: {fileID: 0}
+--- !u!84 &2104418787
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_ForcedFallbackFormat: 4
+  m_DownscaleFallback: 0
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 5
+  m_Width: 1
+  m_Height: 1
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 0
+  m_ColorFormat: 4
+  m_MipMap: 0
+  m_GenerateMips: 1
+  m_SRGB: 1
+  m_UseDynamicScale: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 1
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!4 &2106558200 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -7897202948260234593, guid: 16500a523b718314091d7e9b83146c62, type: 3}
@@ -39299,7 +40522,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -39372,7 +40598,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0.484
   IOR:
@@ -39455,7 +40684,10 @@ MonoBehaviour:
   emmission:
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 00
+  BaseIsMap: 00
+  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -39533,8 +40765,11 @@ MonoBehaviour:
   - 0
   - 0
   EmissionColor:
-  - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 0}
+  - {x: 1, y: 1, z: 1}
+  - {x: 1, y: 1, z: 1}
+  EmissionMask: 0000
+  BaseIsMap: 0000
+  ReplaceBase: 0000
   Roughness:
   - 0
   - 0

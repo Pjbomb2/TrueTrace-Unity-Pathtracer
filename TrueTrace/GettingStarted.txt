@@ -31,18 +31,17 @@ Changeable Defines:
 To access the in script settings, go to the "GlobalDefines.cginc" under the TrueTrace/Resources folder
 This will allow you to toggle some low level settings:
 1. AdvancedAlphaMapped - This allows for cutout objects to be handled in the traversal stage, making them work
-2. VideoIncludedInAlphaMapping - Same as above but allows this to be done to videos
 3. ExtraSampleValidation - Allows an extra validation ray in ReSTIR GI for NEE rays
 4. IgnoreGlassShadow - Allows direct rays to go through glass
 5. IgnoreGlassMain - Same as above for main rays
-6. DRP - This needs to be enabled if you are in HDRP
+6. HDRP - This needs to be enabled if you are in HDRP
 7. HardwareRT - This needs to be enabled if you want to use RT cores
 8. PointFiltering - Disables stochastic texture sampling, basically turns off texture filtering
 9. StainedGlassShadows - if IgnoreGlassShadow is on, this allows rays to be tinted by glass color
 10. DX11 - Experimental still, but will make it so, you don't need DX12 (needs to be paired with C# #define)
 
 Pathtracer Settings Of Note:
-Render Scale - Turning this down decreases the resolution we path trace at, and then upscale to the correct res(so turning to 0.5 will path trace at half resolution then upscale it)
+Internal Render Resolution - Turning this down decreases the resolution we path trace at, and then upscale to the correct res(so turning to 0.5 will path trace at half resolution then upscale it)
 Atmospheric Scattering Samples - How many passes of atmospheric scatter is computed(for multiple scattering), decrease this to 1 if you end up crashing when you try to play
 
 Chair Scene provided by Mr_TibiT on Twitter

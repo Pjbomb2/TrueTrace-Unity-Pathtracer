@@ -66,7 +66,7 @@ namespace CommonVars
         public Vector3 BaseColor;
         public float emmissive;
         public Vector3 EmissionColor;
-        public int EmissionResponse;
+        public uint Tag;
         public float Roughness;
         public int MatType;
         public Vector3 TransmittanceColor;
@@ -233,6 +233,12 @@ namespace CommonVars
             return System.Math.Max((BBMax.x - BBMin.x) * (BBMax.y - BBMin.y) * (BBMax.z - BBMin.z),0.00001f);
         }
 
+        public float ComputeSurfaceArea() {
+            Vector3 sizes = BBMax - BBMin;
+            return 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z)); 
+        }
+
+
         public void Extend(ref AABB aabb)
         {
 
@@ -267,6 +273,24 @@ namespace CommonVars
                 BBMax.z = P.z;
         }
 
+        public bool IsInside(Vector3 P)
+        {
+
+            if (P.x < BBMin.x)
+                return true;
+            if(P.x > BBMax.x)
+                return true;
+            if (P.y < BBMin.y)
+                return true;
+            if(P.y > BBMax.y)
+                return true;
+            if (P.z < BBMin.z)
+                return true;
+            if(P.z > BBMax.z)
+                return true;
+            return false;
+        }
+
         public void Validate(Vector3 Scale)
         {
             for (int i2 = 0; i2 < 3; i2++)
@@ -285,6 +309,78 @@ namespace CommonVars
             BBMin = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
         }
     }
+
+    [System.Serializable]
+    public struct LightAABB
+    {
+        public Vector3 BBMax;
+        public Vector3 BBMin;
+        public float flux;
+        public Vector3 coneDirection;
+        public float cosConeAngle;
+
+        public void Create(AABB aabb, float flux, Vector3 Dir, float cosConeAngle)
+        {
+            this.flux = flux;
+            coneDirection = Dir;
+            this.cosConeAngle = cosConeAngle;
+            this.BBMax = aabb.BBMax;//new Vector3(System.Math.Max(A.x, B.x), System.Math.Max(A.y, B.y), System.Math.Max(A.z, B.z));
+            this.BBMin = aabb.BBMin;//new Vector3(System.Math.Min(A.x, B.x), System.Math.Min(A.y, B.y), System.Math.Min(A.z, B.z));
+        }
+        public float ComputeVolume() {
+            return System.Math.Max((BBMax.x - BBMin.x) * (BBMax.y - BBMin.y) * (BBMax.z - BBMin.z),0.00001f);
+        }
+
+        public float ComputeSurfaceArea() {
+            Vector3 sizes = BBMax - BBMin;
+            return 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z)); 
+        }
+
+
+        public void Extend(ref LightAABB aabb)
+        {
+            flux += aabb.flux;
+            coneDirection += aabb.coneDirection;
+            if (aabb.BBMin.x < BBMin.x)
+                BBMin.x = aabb.BBMin.x;
+            if (aabb.BBMin.y < BBMin.y)
+                BBMin.y = aabb.BBMin.y;
+            if (aabb.BBMin.z < BBMin.z)
+                BBMin.z = aabb.BBMin.z;
+
+            if (aabb.BBMax.x > BBMax.x)
+                BBMax.x = aabb.BBMax.x;
+            if (aabb.BBMax.y > BBMax.y)
+                BBMax.y = aabb.BBMax.y;
+            if (aabb.BBMax.z > BBMax.z)
+                BBMax.z = aabb.BBMax.z;
+        }
+
+
+
+
+        public void Validate(Vector3 Scale)
+        {
+            for (int i2 = 0; i2 < 3; i2++)
+            {
+                if (BBMax[i2] - BBMin[i2] < Scale[i2])
+                {
+                    BBMin[i2] -= Scale[i2];
+                    BBMax[i2] += Scale[i2];
+                }
+            }
+        }
+
+        public void init()
+        {
+            cosConeAngle = 1.0f;
+            BBMax = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+            BBMin = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+        }
+    }
+
+
+
 
     [System.Serializable]
     public struct NodeIndexPairData
@@ -422,6 +518,11 @@ namespace CommonVars
         }
         public void Resume() {
             SW.Start();
+        }
+        public float GetSeconds() {
+            SW.Stop();
+            System.TimeSpan ts = SW.Elapsed;
+            return ts.Minutes * 60.0f + ts.Seconds;
         }
         public void Stop(string OptionalString = "") {
             SW.Stop();
@@ -635,19 +736,7 @@ static Vector2 msign(Vector2 v)
     return new Vector2((v.x >= 0.0f) ? 1.0f : -1.0f, (v.y >= 0.0f) ? 1.0f : -1.0f);
 }
 
-        public static uint PackOctahedral(Vector3 nor)
-        {
-            float Tot = ( Mathf.Abs( nor.x ) + Mathf.Abs( nor.y ) + Mathf.Abs( nor.z ) );
-            nor = new Vector3(nor.x / Tot, nor.y / Tot, nor.z);
-            
-            Vector2 temp = (nor.z >= 0.0) ? new Vector2(nor.x, nor.y) : Vector2.Scale(new Vector2(1.0f-Mathf.Abs(nor.y),(1.0f-Mathf.Abs(nor.x))), msign(new Vector2(nor.x, nor.y)));
-            nor = new Vector3(temp.x, temp.y, nor.z);
-
-            Vector2 d = new Vector2((Mathf.Round(32767.5f + nor.x*32767.5f)), (Mathf.Round(32767.5f + nor.y*32767.5f)));  
-            return (uint)d.x|((uint)d.y<<16);
-        }
-
-public static uint PackOctahedral2(Vector3 nor)
+public static uint PackOctahedral(Vector3 nor)
 {
     const float halfMaxUInt16 = 32767.5f;
 

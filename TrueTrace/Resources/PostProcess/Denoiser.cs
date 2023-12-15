@@ -18,19 +18,33 @@ namespace TrueTrace {
         private ComputeShader TAAU;
 
 
-        public RenderTexture _ColorDirectIn;
-        public RenderTexture _ColorIndirectIn;
-        public RenderTexture _ColorDirectOut;
-        public RenderTexture _ColorIndirectOut;
-        public RenderTexture _PrevPosTex;
-        public RenderTexture _ScreenPosPrev;
-        public RenderTexture _HistoryDirect;
-        public RenderTexture _HistoryIndirect;
-        public RenderTexture _HistoryMoment;
-        public RenderTexture _HistoryNormalDepth;
-        public RenderTexture _NormalDepth;
-        public RenderTexture _FrameMoment;
-        public RenderTexture _History;
+
+        public RenderTexture DirectA;
+        public RenderTexture DirectB;
+        public RenderTexture DirectC;
+
+        public RenderTexture IndirectA;
+        public RenderTexture IndirectB;
+        public RenderTexture IndirectC;
+
+
+        public RenderTexture MomentA;
+        public RenderTexture MomentB;
+        public RenderTexture HistoryTex;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         public RenderTexture _TAAPrev;
         public RenderTexture Intermediate;
         public RenderTexture SuperIntermediate;
@@ -53,7 +67,9 @@ namespace TrueTrace {
 
         private RenderTexture TAAA;
         private RenderTexture TAAB;
-        public RenderTexture[] BloomSamples;
+        public RenderTexture[] BloomSamplesUp;
+        public RenderTexture[] BloomSamplesDown;
+        public RenderTexture BloomIntermediate;
 
         private int ToneMapLuminanceKernel;
         private int ToneMapExposureWeightKernel;
@@ -115,47 +131,40 @@ namespace TrueTrace {
         public bool SVGFInitialized;
         public void ClearSVGF()
         {
-            if(_ColorDirectIn != null) {
-                _ColorDirectIn.Release();
-                _ColorIndirectIn.Release();
-                _ColorDirectOut.Release();
-                _ColorIndirectOut.Release();
-                _ScreenPosPrev.Release();
-                _PrevPosTex.Release();
-                _HistoryDirect.Release();
-                _HistoryIndirect.Release();
-                _HistoryMoment.Release();
-                _HistoryNormalDepth.Release();
-                _NormalDepth.Release();
-                _FrameMoment.Release();
-                _History.Release();
-            }
+            DirectA.ReleaseSafe();
+            DirectB.ReleaseSafe();
+            DirectC.ReleaseSafe();
+            IndirectA.ReleaseSafe();
+            IndirectB.ReleaseSafe();
+            IndirectC.ReleaseSafe();
+            MomentA.ReleaseSafe();
+            MomentB.ReleaseSafe();
+            HistoryTex.ReleaseSafe();
 
             SVGFInitialized = false;
         }
-        public void InitSVGF()
+        public void InitSVGF(int SourceWidth, int SourceHeight)
         {
-            CommonFunctions.CreateRenderTexture(ref _ColorDirectIn, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref _ColorIndirectIn, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref _ColorDirectOut, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref _ColorIndirectOut, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref _ScreenPosPrev, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref _PrevPosTex, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref _HistoryDirect, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref _HistoryIndirect, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref _HistoryMoment, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref _HistoryNormalDepth, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref _NormalDepth, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref _FrameMoment, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref _History, SourceWidth, SourceHeight, CommonFunctions.RTInt1);
+
+            this.SourceWidth = SourceWidth;
+            this.SourceHeight = SourceHeight;
+            CommonFunctions.CreateRenderTexture(ref DirectA, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref DirectB, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref DirectC, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref IndirectA, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref IndirectB, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref IndirectC, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref MomentA, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref MomentB, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref HistoryTex, SourceWidth, SourceHeight, CommonFunctions.RTHalf1);
             SVGFInitialized = true;
         }
         private void InitRenderTexture(bool Force = false)
         {
-            if (Force || _ColorDirectIn == null || _ColorDirectIn.width != SourceWidth || _ColorDirectIn.height != SourceHeight)
+            if (Force || _TAAPrev == null || _TAAPrev.width != SourceWidth || _TAAPrev.height != SourceHeight)
             {
                 // Release render texture if we already have one
-                if (_ColorDirectIn != null)
+                if (_TAAPrev != null)
                 {
                     _TAAPrev.Release();
                     PrevOutputTex.Release();
@@ -168,27 +177,30 @@ namespace TrueTrace {
                     PrevNormalUpscalerTexWrite.Release();
                 }
 
-            CommonFunctions.CreateRenderTexture(ref _TAAPrev, Screen.width, Screen.height, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref PrevDepthTex, Screen.width, Screen.height, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref PrevOutputTex, Screen.width, Screen.height, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref PrevUpscalerTAA, Screen.width, Screen.height, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref UpScalerLightingDataTexture, Screen.width, Screen.height, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref TAAA, Screen.width, Screen.height, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref TAAB, Screen.width, Screen.height, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref TempTex, Screen.width, Screen.height, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref TempTex2, Screen.width, Screen.height, CommonFunctions.RTFull4);
+            CommonFunctions.CreateRenderTexture(ref _TAAPrev, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref PrevDepthTex, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref PrevOutputTex, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref PrevUpscalerTAA, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref UpScalerLightingDataTexture, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref TAAA, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref TAAB, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref TempTex, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref TempTex2, Screen.width, Screen.height, CommonFunctions.RTHalf4);
             CommonFunctions.CreateRenderTexture(ref PrevNormalUpscalerTex, Screen.width, Screen.height, CommonFunctions.RTFull4);
             CommonFunctions.CreateRenderTexture(ref PrevNormalUpscalerTexWrite, Screen.width, Screen.height, CommonFunctions.RTFull4);
             CommonFunctions.CreateRenderTexture(ref PrevWorldPos, Screen.width, Screen.height, CommonFunctions.RTFull4);
             CommonFunctions.CreateRenderTexture(ref PrevWorldPosWrite, Screen.width, Screen.height, CommonFunctions.RTFull4);
-                BloomSamples = new RenderTexture[8];
+            CommonFunctions.CreateRenderTexture(ref BloomIntermediate, Screen.width, Screen.height, CommonFunctions.RTFull4);
+                BloomSamplesUp = new RenderTexture[8];
+                BloomSamplesDown = new RenderTexture[8];
                 int BloomWidth = Screen.width / 2;
                 int BloomHeight = Screen.height / 2;
                 BloomWidths = new int[8];
                 BloomHeights = new int[8];
                 for (int i = 0; i < 8; i++)
                 {
-                    CommonFunctions.CreateRenderTexture(ref BloomSamples[i], BloomWidth, BloomHeight, CommonFunctions.RTFull4);
+                    CommonFunctions.CreateRenderTexture(ref BloomSamplesUp[i], BloomWidth, BloomHeight, CommonFunctions.RTHalf4);
+                    CommonFunctions.CreateRenderTexture(ref BloomSamplesDown[i], BloomWidth, BloomHeight, CommonFunctions.RTHalf4);
                     BloomWidths[i] = BloomWidth;
                     BloomHeights[i] = BloomHeight;
                     BloomWidth /= 2;
@@ -216,8 +228,10 @@ namespace TrueTrace {
             TAAA.ReleaseSafe();
             TAAB.ReleaseSafe();
 
+            BloomIntermediate.ReleaseSafe();
             ExposureBuffer.ReleaseSafe();
-            if(BloomSamples != null) for(int i = 0; i < BloomSamples.Length; i++) BloomSamples[i].ReleaseSafe();
+            if(BloomSamplesUp != null) for(int i = 0; i < BloomSamplesUp.Length; i++) BloomSamplesUp[i].ReleaseSafe();
+            if(BloomSamplesDown != null) for(int i = 0; i < BloomSamplesDown.Length; i++) BloomSamplesDown[i].ReleaseSafe();
 
         }
 
@@ -335,105 +349,96 @@ namespace TrueTrace {
             InitRenderTexture(true);
         }
 
-        public void ExecuteSVGF(int CurrentSamples, int AtrousKernelSize, ref ComputeBuffer _ColorBuffer, ref RenderTexture _target, ref RenderTexture _Albedo, RenderTexture ScreenSpaceInfo, bool DiffRes, RenderTexture PrevDepthTexMain, CommandBuffer cmd, RenderTexture CorrectedDepthTex, bool UseReSTIRGI)
+        public void ExecuteSVGF(int CurrentSamples, 
+                                int AtrousKernelSize, 
+                                ref ComputeBuffer _ColorBuffer, 
+                                ref RenderTexture _target, 
+                                ref RenderTexture _Albedo, 
+                                RenderTexture ScreenSpaceInfo, 
+                                RenderTexture PrevScreenSpaceInfo, 
+                                RenderTexture WorldPosData, 
+                                bool DiffRes, 
+                                bool UseReSTIRGI,
+                                CommandBuffer cmd) 
         {
             SVGF.SetBool("UseReSTIRGI", UseReSTIRGI);
             InitRenderTexture();
             SVGF.SetBool("DiffRes", DiffRes);
-            Matrix4x4 viewprojmatrix = _camera.projectionMatrix * _camera.worldToCameraMatrix;
-            var PrevMatrix = PrevViewProjection;
-            SVGF.SetMatrix("viewprojection", viewprojmatrix);
-            SVGF.SetMatrix("prevviewprojection", PrevMatrix);
-            SVGF.SetMatrix("_CameraToWorld", _camera.cameraToWorldMatrix);
-            cmd.SetComputeIntParam(SVGF, "Samples_Accumulated", CurrentSamples);
-            SVGF.SetMatrix("_CameraInverseProjection", _camera.projectionMatrix.inverse);
-            SVGF.SetVector("Forward", _camera.transform.forward);
-            PrevViewProjection = viewprojmatrix;
-            cmd.SetComputeIntParam(SVGF, "AtrousIterations", AtrousKernelSize);
             bool OddAtrousIteration = (AtrousKernelSize % 2 == 1);
+            bool Flipper = CurrentSamples % 2 == 0;
             SVGF.SetBuffer(CopyKernel, "PerPixelRadiance", _ColorBuffer);
-            cmd.SetComputeTextureParam(SVGF, CopyKernel, "RWHistoryNormalAndDepth", _HistoryNormalDepth);
-            cmd.SetComputeTextureParam(SVGF, CopyKernel, "RWNormalAndDepth", _NormalDepth);
-            cmd.SetComputeTextureParam(SVGF, CopyKernel, "RWScreenPosPrev", _ScreenPosPrev);
-            cmd.SetComputeTextureParam(SVGF, CopyKernel, "ColorDirectOut", _ColorDirectOut);
-            cmd.SetComputeTextureParam(SVGF, CopyKernel, "_Albedo", _Albedo);
-            cmd.SetComputeTextureParam(SVGF, CopyKernel, "ColorIndirectOut", _ColorIndirectOut);
-            SVGF.SetFloat("FarPlane", _camera.farClipPlane);
-            SVGF.SetTextureFromGlobal(CopyKernel, "MotionVectors", "_CameraMotionVectorsTexture");
-            cmd.SetComputeTextureParam(SVGF,CopyKernel, "DepthTex", CorrectedDepthTex);
-            cmd.SetComputeTextureParam(SVGF,CopyKernel, "PrevDepthTex", PrevDepthTexMain);
-            cmd.SetComputeTextureParam(SVGF, CopyKernel, "ScreenSpaceInfo", ScreenSpaceInfo);
-            SVGF.SetTextureFromGlobal(CopyKernel, "NormalTex", "_CameraGBufferTexture2");
-             cmd.BeginSample("SVGF Copy Kernel");
+            cmd.SetComputeIntParam(SVGF, "AtrousIterations", AtrousKernelSize);
+            cmd.SetComputeTextureParam(SVGF, CopyKernel, "TempAlbedoTex", _Albedo);
+            cmd.SetComputeTextureParam(SVGF, CopyKernel, "WorldPosData", WorldPosData);
+            cmd.SetComputeTextureParam(SVGF, CopyKernel, "IndirectA", IndirectA);
+            cmd.SetComputeTextureParam(SVGF, CopyKernel, "DirectA", DirectA);
+            cmd.BeginSample("SVGF Copy Kernel");
             cmd.DispatchCompute(SVGF, CopyKernel, threadGroupsX, threadGroupsY, 1);
-             cmd.EndSample("SVGF Copy Kernel");
+            cmd.EndSample("SVGF Copy Kernel");
 
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "NormalAndDepth", _NormalDepth);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "HistoryNormalAndDepth", _HistoryNormalDepth);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "HistoryDirectTex", _HistoryDirect);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "HistoryIndirectTex", _HistoryIndirect);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "HistoryMomentTex", _HistoryMoment);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "HistoryTex", _History);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "ColorDirectIn", _ColorDirectOut);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "ColorIndirectIn", _ColorIndirectOut);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "ScreenPosPrev", _ScreenPosPrev);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "ColorDirectOut", _ColorDirectIn);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "ColorIndirectOut", _ColorIndirectIn);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "FrameBufferMoment", _FrameMoment);
+
+
+
+            SVGF.SetTextureFromGlobal(ReprojectKernel, "MotionVectors", "_CameraMotionVectorsTexture");
+
+            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "DirectA", DirectA);
+            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "DirectB", DirectB);
+            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "IndirectA", IndirectA);
+            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "IndirectB", IndirectB);
+            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "MomentA", Flipper ? MomentA : MomentB);
+            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "MomentB", Flipper ? MomentB : MomentA);
+            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "HistoryTex", HistoryTex);
+            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "ScreenSpaceInfo", ScreenSpaceInfo);
+            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "PrevScreenSpaceInfo", PrevScreenSpaceInfo);
             cmd.BeginSample("SVGF Reproject Kernel");
             cmd.DispatchCompute(SVGF, ReprojectKernel, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("SVGF Reproject Kernel");
+            cmd.EndSample("SVGF Reproject Kernel");  
 
-            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "ColorDirectOut", _ColorDirectOut);
-            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "ColorIndirectOut", _ColorIndirectOut);
-            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "ColorDirectIn", _ColorDirectIn);
-            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "ColorIndirectIn", _ColorIndirectIn);
-            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "NormalAndDepth", _NormalDepth);
-            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "FrameBufferMoment", _FrameMoment);
-            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "HistoryTex", _History);
+            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "ScreenSpaceInfo", ScreenSpaceInfo);
+            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "HistoryTex", HistoryTex);
+            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "DirectA", DirectB);
+            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "DirectB", DirectA);
+            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "IndirectA", IndirectB);
+            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "IndirectB", IndirectA);//Current frame is stored in BTex, previous frame is erased
+            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "MomentA", Flipper ? MomentB : MomentA);//Current frame is stored in BTex, previous frame is erased
+            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "MomentB", Flipper ? MomentA : MomentB);//Need to be flipflopping moment
             cmd.BeginSample("SVGF Variance Kernel");
             cmd.DispatchCompute(SVGF, VarianceKernel, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("SVGF Variance Kernel");
+            cmd.EndSample("SVGF Variance Kernel");            
 
-            cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "NormalAndDepth", _NormalDepth);
-            cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "HistoryDirectTex", _HistoryDirect);
-            cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "HistoryIndirectTex", _HistoryIndirect);
+
+            cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "ScreenSpaceInfo", ScreenSpaceInfo);
+
             for (int i = 0; i < AtrousKernelSize; i++)
             {
                 int step_size = 1 << i;
-                bool UseFlipped = (i % 2 == 1);
-                cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "ColorDirectOut", (UseFlipped) ? _ColorDirectIn : _ColorDirectOut);
-                cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "ColorIndirectOut", (UseFlipped) ? _ColorIndirectIn : _ColorIndirectOut);
-                cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "ColorDirectIn", (UseFlipped) ? _ColorDirectOut : _ColorDirectIn);
-                cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "ColorIndirectIn", (UseFlipped) ? _ColorIndirectOut : _ColorIndirectIn);
+                bool UseFlipped = (i % 2 == 0);
+                cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "DirectA", (UseFlipped) ? DirectC : DirectA);
+                cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "DirectB", (UseFlipped) ? DirectA : DirectC);
+                cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "IndirectA", (UseFlipped) ? IndirectC : IndirectA);
+                cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "IndirectB", (UseFlipped) ? IndirectA : IndirectC);
                 var step2 = step_size;
                 cmd.SetComputeIntParam(SVGF, "step_size", step2);
-                cmd.SetComputeIntParam(SVGF, "iteration", i);
                 cmd.BeginSample("SVGF Atrous Kernel: " + i);
                 cmd.DispatchCompute(SVGF, SVGFAtrousKernel, threadGroupsX, threadGroupsY, 1);
                 cmd.EndSample("SVGF Atrous Kernel: " + i);
+                if(step2 == 1) {
+                    cmd.CopyTexture(DirectC, DirectB);
+                    cmd.CopyTexture(IndirectC, IndirectB);
+                }
             }
 
             SVGF.SetBuffer(FinalizeKernel, "PerPixelRadiance", _ColorBuffer);
             SVGF.SetTextureFromGlobal(FinalizeKernel, "DiffuseGBuffer", "_CameraGBufferTexture0");
             SVGF.SetTextureFromGlobal(FinalizeKernel, "SpecularGBuffer", "_CameraGBufferTexture1");
-            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "ColorDirectIn", (OddAtrousIteration) ? _ColorDirectOut : _ColorDirectIn);
-            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "ColorDirectOut", (OddAtrousIteration) ? _ColorDirectIn : _ColorDirectOut);
-            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "NormalAndDepth", _NormalDepth);
-            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "ColorIndirectIn", (OddAtrousIteration) ? _ColorIndirectOut : _ColorIndirectIn);
-            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "HistoryDirectTex", _HistoryDirect);
-            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "HistoryIndirectTex", _HistoryIndirect);
-            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "HistoryMomentTex", _HistoryMoment);
-            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "RWHistoryNormalAndDepth", _HistoryNormalDepth);
+            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "DirectB", (OddAtrousIteration) ? DirectC : DirectA);
+            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "IndirectB", (OddAtrousIteration) ? IndirectC : IndirectA);
             cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "Result", _target);
-            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "HistoryTex", _History);
-            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "_Albedo", _Albedo);
-
-            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "FrameBufferMoment", _FrameMoment);
+            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "WorldPosData", WorldPosData);
+            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "TempAlbedoTex", _Albedo);
             cmd.BeginSample("SVGF Finalize Kernel");
             cmd.DispatchCompute(SVGF, FinalizeKernel, threadGroupsX, threadGroupsY, 1);
             cmd.EndSample("SVGF Finalize Kernel");
-            // cmd.CopyTexture(CorrectedDepthTex, PrevDepthTexMain);
 
         }
 
@@ -447,7 +452,7 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(Bloom, "TargetWidth", BloomWidths[0]);
             cmd.SetComputeIntParam(Bloom, "TargetHeight", BloomHeights[0]);
             cmd.SetComputeTextureParam(Bloom, BloomLowPassKernel, "InputTex", _converged);
-            cmd.SetComputeTextureParam(Bloom, BloomLowPassKernel, "OutputTex", BloomSamples[0]);
+            cmd.SetComputeTextureParam(Bloom, BloomLowPassKernel, "OutputTex", BloomSamplesDown[0]);
             cmd.DispatchCompute(Bloom, BloomLowPassKernel, (int)Mathf.Ceil(BloomWidths[0] / 16.0f), (int)Mathf.Ceil(BloomHeights[0] / 16.0f), 1);
             for (int i = 1; i < 6; i++)
             {
@@ -456,8 +461,8 @@ namespace TrueTrace {
                 cmd.SetComputeIntParam(Bloom, "TargetHeight", BloomHeights[i]);
                 cmd.SetComputeIntParam(Bloom, "screen_width", BloomWidths[i - 1]);
                 cmd.SetComputeIntParam(Bloom, "screen_height", BloomHeights[i - 1]);
-                cmd.SetComputeTextureParam(Bloom, BloomDownsampleKernel, "InputTex", BloomSamples[i - 1]);
-                cmd.SetComputeTextureParam(Bloom, BloomDownsampleKernel, "OutputTex", BloomSamples[i]);
+                cmd.SetComputeTextureParam(Bloom, BloomDownsampleKernel, "InputTex", BloomSamplesDown[i - 1]);
+                cmd.SetComputeTextureParam(Bloom, BloomDownsampleKernel, "OutputTex", BloomSamplesDown[i]);
                 cmd.DispatchCompute(Bloom, BloomDownsampleKernel, (int)Mathf.Ceil(BloomWidths[i - 1] / 16.0f), (int)Mathf.Ceil(BloomHeights[i - 1] / 16.0f), 1);
             }
             Bloom.SetBool("IsFinal", false);
@@ -468,19 +473,20 @@ namespace TrueTrace {
                 cmd.SetComputeIntParam(Bloom, "TargetHeight", BloomHeights[i - 1]);
                 cmd.SetComputeIntParam(Bloom, "screen_width", BloomWidths[i]);
                 cmd.SetComputeIntParam(Bloom, "screen_height", BloomHeights[i]);
-                cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "InputTex", BloomSamples[i]);
-                cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OutputTex", BloomSamples[i - 1]);
-                cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OrigTex", BloomSamples[i - 1]);
+                cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "InputTex", BloomSamplesDown[i]);
+                cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OutputTex", BloomSamplesUp[i - 1]);
+                cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OrigTex", BloomSamplesDown[i - 1]);
 
                 cmd.DispatchCompute(Bloom, BloomUpsampleKernel, (int)Mathf.Ceil(BloomWidths[i - 1] / 16.0f), (int)Mathf.Ceil(BloomHeights[i - 1] / 16.0f), 1);
             }
+            cmd.Blit(_converged, BloomIntermediate);
             cmd.SetComputeIntParam(Bloom, "TargetWidth", Screen.width);
             cmd.SetComputeIntParam(Bloom, "TargetHeight", Screen.height);
             cmd.SetComputeIntParam(Bloom, "screen_width", BloomWidths[0]);
             cmd.SetComputeIntParam(Bloom, "screen_height", BloomHeights[0]);
             Bloom.SetBool("IsFinal", true);
-            cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OrigTex", _converged);
-            cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "InputTex", BloomSamples[0]);
+            cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OrigTex", BloomIntermediate);
+            cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "InputTex", BloomSamplesUp[0]);
             cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OutputTex", _converged);
             cmd.DispatchCompute(Bloom, BloomUpsampleKernel, (int)Mathf.Ceil(Screen.width / 16.0f), (int)Mathf.Ceil(Screen.height / 16.0f), 1);
             cmd.EndSample("Bloom");
@@ -490,11 +496,19 @@ namespace TrueTrace {
         }
 
 
-        public void ExecuteAutoExpose(ref RenderTexture _converged, float Exposure, CommandBuffer cmd)
+        public void ExecuteAutoExpose(ref RenderTexture _converged, float Exposure, CommandBuffer cmd, bool ExposureAuto)
         {//need to fix this so it doesnt create new textures every time
             cmd.BeginSample("Auto Exposure");
+            if(ExposureBuffer == null) {
+                List<float> TestBuffer = new List<float>();
+                TestBuffer.Add(1);
+                ExposureBuffer.ReleaseSafe(); ExposureBuffer = new ComputeBuffer(1, sizeof(float)); ExposureBuffer.SetData(TestBuffer);
+                AutoExpose.SetBuffer(AutoExposeKernel, "A", ExposureBuffer);
+                AutoExpose.SetBuffer(AutoExposeFinalizeKernel, "A", ExposureBuffer);
+            }
             cmd.SetComputeTextureParam(AutoExpose, AutoExposeKernel, "InTex", _converged);
             AutoExpose.SetFloat("Exposure", Exposure);
+            AutoExpose.SetBool("ExposureAuto", ExposureAuto);
             AutoExpose.SetFloat("frame_time", Time.deltaTime);
             cmd.DispatchCompute(AutoExpose, AutoExposeKernel, 1, 1, 1);
             cmd.SetComputeTextureParam(AutoExpose, AutoExposeFinalizeKernel, "OutTex", _converged);
@@ -522,6 +536,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorIn", TempTex);
             TAA.SetTextureFromGlobal(TAAKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             cmd.SetComputeTextureParam(TAA, TAAKernel, "TAAPrev", _TAAPrev);
+            cmd.SetComputeTextureParam(TAA, TAAKernel, "TAAPrevRead", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorOut", TempTex2);
             cmd.BeginSample("TAA Main Kernel");
             cmd.DispatchCompute(TAA, TAAKernel, threadGroupsX2, threadGroupsY2, 1);
@@ -539,7 +554,7 @@ namespace TrueTrace {
         Matrix4x4 PreviousCameraInverseMatrix;
         Matrix4x4 PrevProjInv;
 
-        public void ExecuteUpsample(ref RenderTexture Input, ref RenderTexture Output, int curframe, int cursample, ref RenderTexture ThroughputTex, CommandBuffer cmd)
+        public void ExecuteUpsample(ref RenderTexture Input, ref RenderTexture Output, int curframe, int cursample, ref RenderTexture ThroughputTex, CommandBuffer cmd, RenderTexture ScreenSpaceInfo)
         {//need to fix this so it doesnt create new textures every time
             cmd.SetComputeIntParam(Upscaler,"curframe", curframe);
             cmd.SetComputeIntParam(Upscaler,"cursam", cursample);
@@ -570,6 +585,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "ThroughputTex", ThroughputTex);
             Upscaler.SetTextureFromGlobal(UpsampleKernel, "NormalTex", "_CameraGBufferTexture2");
             Upscaler.SetTextureFromGlobal(UpsampleKernel, "MotionVectors", "_CameraMotionVectorsTexture");
+            cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "SmallerGBuffer", ScreenSpaceInfo);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "Input", Input);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "Output", UpScalerLightingDataTexture);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "FinalOutput", Output);

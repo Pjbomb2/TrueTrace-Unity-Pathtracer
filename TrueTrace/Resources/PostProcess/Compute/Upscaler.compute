@@ -8,12 +8,12 @@ int source_height;
 int target_width;
 int target_height;
 
-Texture2D<float4> Input;
-Texture2D<float4> ThroughputTex;
+Texture2D<half4> Input;
+Texture2D<half4> ThroughputTex;
 SamplerState sampler_Input_trilinear_clamp;
 RWTexture2D<float4> Output;
 RWTexture2D<float4> FinalOutput;
-Texture2D<float4> PrevOutput;
+Texture2D<half4> PrevOutput;
 
 float4x4 ViewProjectionMatrix;
 
@@ -260,7 +260,7 @@ float2 random(uint samdim, int2 id) {
 
 }
 
-float4 SampleTextureCatmullRom(in Texture2D<float4> tex, in SamplerState linearSampler, in float2 uv, in float2 texSize)
+float4 SampleTextureCatmullRom(in Texture2D<half4> tex, in SamplerState linearSampler, in float2 uv, in float2 texSize)
 {
     // We're going to sample a a 4x4 grid of texels surrounding the target UV coordinate. We'll do this by rounding
     // down the sample location to get the exact center of our "starting" texel. The starting texel will be at
@@ -310,125 +310,114 @@ float4 SampleTextureCatmullRom(in Texture2D<float4> tex, in SamplerState linearS
     return result;
 }
 
+float4 GetViewSpacePosition(float2 coord, float depth)
+{
+
+    float4 viewPosition = mul(_CameraInverseProjection, float4(coord.x * 2.0 - 1.0, coord.y * 2.0 - 1.0, 2.0 * depth - 1.0, 1.0));
+    viewPosition /= viewPosition.w;
+
+    return viewPosition;
+}
+
+Texture2D<float4> SmallerGBuffer;
+
+float3 i_octahedral_32( uint data ) {
+    uint2 iv = uint2( data, data>>16u ) & 65535u; 
+    float2 v = float2(iv)/32767.5f - 1.0f;
+    float3 nor = float3(v, 1.0f - abs(v.x) - abs(v.y)); // Rune Stubbe's version,
+    float t = max(-nor.z,0.0);                     // much faster than original
+    nor.x += (nor.x>0.0)?-t:t;                     // implementation of this
+    nor.y += (nor.y>0.0)?-t:t;                     // technique
+    return normalize( nor );
+}
+
 [numthreads(16,16,1)]
 void kernel_upsample (int3 id : SV_DispatchThreadID)
 {
     if (id.x >= target_width || id.y >= target_height) return;
     
-    pixel_index = id.y * target_width + id.x;
-    float2 UV2 = float2((id.xy + (random(32, id) - 0.5f) * 0.0f)) / float2(target_width, target_height);
-    float2 texel = 0.5f / float2(target_width, target_height);
-    float2 motion = MotionVectors.SampleLevel(sampler_trilinear_clamp, UV2, 0).xy;
-    float2 newUV = float2((UV2 * float2(target_width, target_height) - motion * float2(target_width, target_height) + 0.5f)) / float2(target_width, target_height);//UV - MotionVectors.SampleLevel(sampler_trilinear_clamp, UV, 0).xy + texel;
+    float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
+    float4 blurredDumb = float4(0.0, 0.0, 0.0, 0.0);
+    float validWeights = 0.0;
+    float2 UV = float2(id.xy) / float2(target_width, target_height);
+
+    float depth;
+    float3 WorldPos = CreateCameraRay(UV, depth);
+    PrevDepthTexWrite[id.xy] = float4(depth, 0, 0, 1);
+    // dot(PrevNormalTex.SampleLevel(sampler_Input_trilinear_clamp, newUV, 0).xyz * 2.0 - 1.0f, NormalTex[int3(id.xy,0)].xyz * 2.0 - 1.0f)
+    half3 normal = NormalTex[id.xy].xyz * 2.0 - 1.0f;
+    float thresh = 0.26;
     
+    float3 viewPosition = GetViewSpacePosition(UV, depth).xyz;
+    float3 viewVector = normalize(viewPosition);
+    
+    float NdotV = 1.0 / (saturate(dot(-viewVector, normal.xyz)) + 0.1);
+    thresh *= 1.0 + NdotV * 2.0;
+    
+    float4 sample00 = Input.SampleLevel(my_linear_clamp_sampler, float2(UV + float2(0,0)),0);//.Sampletex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 0.0) * 1.0, 0.0, 0.0));
+    float4 sample10 = Input.SampleLevel(my_linear_clamp_sampler, float2(UV + float2(rcp(source_width),0)),0);//tex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 0.0) * 1.0, 0.0, 0.0));
+    float4 sample11 = Input.SampleLevel(my_linear_clamp_sampler, float2(UV + float2(rcp(source_width),rcp(source_height))),0);//tex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 1.0) * 1.0, 0.0, 0.0));
+    float4 sample01 = Input.SampleLevel(my_linear_clamp_sampler, float2(UV + float2(0,rcp(source_height))),0);//tex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 1.0) * 1.0, 0.0, 0.0));
+    
+    float4 depthSamples;// = float4(0,0,0,0);
+    float3 Throwaway = CreateCameraRay(UV, depthSamples.x);
+    Throwaway = CreateCameraRay(UV + float2(rcp(target_width), 0), depthSamples.y);
+    Throwaway = CreateCameraRay(UV + float2(rcp(target_width), rcp(target_height)), depthSamples.z);
+    Throwaway = CreateCameraRay(UV + float2(0, rcp(target_height)), depthSamples.w);
+    // depthSamples.x = SmallerGBuffer.SampleLevel(my_linear_clamp_sampler,UV, 0).z;
+    // depthSamples.y = SmallerGBuffer.SampleLevel(my_linear_clamp_sampler,UV + float2(rcp(source_width), 0), 0).z;
+    // depthSamples.z = SmallerGBuffer.SampleLevel(my_linear_clamp_sampler,UV + float2(rcp(source_width), rcp(source_height)), 0).z;
+    // depthSamples.w = SmallerGBuffer.SampleLevel(my_linear_clamp_sampler,UV + float2(0, rcp(source_height)), 0).z;
+    // depthSamples.x = LinearEyeDepth(tex2Dlod(CurrentDepth, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 0.0), 0, 0)).x);
+    // depthSamples.y = LinearEyeDepth(tex2Dlod(CurrentDepth, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 0.0), 0, 0)).x);
+    // depthSamples.z = LinearEyeDepth(tex2Dlod(CurrentDepth, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 1.0), 0, 0)).x);
+    // depthSamples.w = LinearEyeDepth(tex2Dlod(CurrentDepth, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 1.0), 0, 0)).x);
+    
+    // half3 normal00 = i_octahedral_32(asuint(SmallerGBuffer[floor((UV + float2(0, 0)) * float2(source_width, source_height))].y));
+    // half3 normal10 = i_octahedral_32(asuint(SmallerGBuffer[floor((UV + float2(rcp(source_width),0)) * float2(source_width, source_height))].y));
+    // half3 normal11 = i_octahedral_32(asuint(SmallerGBuffer[floor((UV + float2(rcp(source_width),rcp(source_height))) * float2(source_width, source_height))].y));
+    // half3 normal01 = i_octahedral_32(asuint(SmallerGBuffer[floor((UV + float2(0,rcp(source_height))) * float2(source_width, source_height))].y));
+    half3 normal00 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,UV, 0).xyz * 2.0f - 1.0f);
+    half3 normal10 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,UV + float2(rcp(target_width), 0), 0).xyz * 2.0f - 1.0f);
+    half3 normal11 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,UV + float2(rcp(target_width), rcp(target_height)), 0).xyz * 2.0f - 1.0f);
+    half3 normal01 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,UV + float2(0, rcp(target_height)), 0).xyz * 2.0f - 1.0f);
 
-    float2 UV = id.xy / float2(target_width, target_height) * float2(source_width, source_height);
-    float2 tc = floor(UV - 0.5) + 0.5;
-    float2 f = UV - tc + 2;
-
-    // compute at f, f-1, f-2, f-3, f-4, and f-5 using trig angle addition
-    float2 fpi = f * M_PI, fpi3 = f * (M_PI / 3.0);
-    float2 sinfpi = sin(fpi), sinfpi3 = sin(fpi3), cosfpi3 = cos(fpi3);
-    const float r3 = sqrt(3.0);
-    float2 w0 = v_sel(f, 0, M_PI * M_PI * 1.0 / 3.0, (sinfpi *       sinfpi3) / (f       * f));
-    float2 w1 = v_sel(f, 1, M_PI * M_PI * 2.0 / 3.0, (-sinfpi * (sinfpi3 - r3 * cosfpi3)) / ((f - 1.0)*(f - 1.0)));
-    float2 w2 = v_sel(f, 2, M_PI * M_PI * 2.0 / 3.0, (sinfpi * (-sinfpi3 - r3 * cosfpi3)) / ((f - 2.0)*(f - 2.0)));
-    float2 w3 = v_sel(f, 3, M_PI * M_PI * 2.0 / 3.0, (-sinfpi * (-2.0*sinfpi3)) / ((f - 3.0)*(f - 3.0)));
-    float2 w4 = v_sel(f, 4, M_PI * M_PI * 2.0 / 3.0, (sinfpi * (-sinfpi3 + r3 * cosfpi3)) / ((f - 4.0)*(f - 4.0)));
-    float2 w5 = v_sel(f, 5, M_PI * M_PI * 2.0 / 3.0, (-sinfpi * (sinfpi3 + r3 * cosfpi3)) / ((f - 5.0)*(f - 5.0)));
-
-    // use bilinear texture weights to merge center two samples in each dimension
-    float2 Weight[5];
-    Weight[0] = w0;
-    Weight[1] = w1;
-    Weight[2] = w2 + w3;
-    Weight[3] = w4;
-    Weight[4] = w5;
-
-    float2 invTextureSize = 1.0 / float2(source_width, source_height);
-
-    float2 Sample[5];
-    Sample[0] = invTextureSize * (tc - 2);
-    Sample[1] = invTextureSize * (tc - 1);
-    Sample[2] = invTextureSize * (tc + w3 / Weight[2]);
-    Sample[3] = invTextureSize * (tc + 2);
-    Sample[4] = invTextureSize * (tc + 3);
-
-    float Depth;
-    float3 WorldPos = CreateCameraRay(UV2, Depth);
-    float3 PreviousWorldPosition = CreateCameraRayPrev(newUV, PrevDepthTex.SampleLevel(my_linear_clamp_sampler, newUV, 0).x);
-    PrevDepthTexWrite[id.xy] = float4(Depth, 0, 0, 1);
-    #ifdef HDRP
-        bool Disocluded = length(WorldPos - PrevWorldPos.SampleLevel(my_linear_clamp_sampler, newUV, 0).xyz) > 0.1 * Depth || dot(PrevNormalTex.SampleLevel(sampler_Input_trilinear_clamp, newUV, 0).xyz * 2.0 - 1.0f, NormalTex[int3(id.xy,0)].xyz * 2.0 - 1.0f) < 0.99f;
-    #else
-        bool Disocluded = length(WorldPos - PrevWorldPos.SampleLevel(my_linear_clamp_sampler, newUV, 0).xyz) > 0.1 * Depth || dot(PrevNormalTex.SampleLevel(sampler_Input_trilinear_clamp, newUV, 0).xyz * 2.0 - 1.0f, NormalTex[id.xy].xyz * 2.0 - 1.0f) < 0.99f;
-    #endif
-        if(any(newUV >= 1) || any(newUV <= 0)) Disocluded = true;
-
-
-   float4 o_rgba = 0;
-
-    // 5x5 footprint with corners dropped to give 13 texture taps
-    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[0].x, Sample[2].y), 0).rgb, 1.0) * Weight[0].x * Weight[2].y;
-    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[1].x, Sample[1].y), 0).rgb, 1.0) * Weight[1].x * Weight[1].y;
-    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[1].x, Sample[2].y), 0).rgb, 1.0) * Weight[1].x * Weight[2].y;
-    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[1].x, Sample[3].y), 0).rgb, 1.0) * Weight[1].x * Weight[3].y;
-    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[2].x, Sample[0].y), 0).rgb, 1.0) * Weight[2].x * Weight[0].y;
-    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[2].x, Sample[1].y), 0).rgb, 1.0) * Weight[2].x * Weight[1].y;
-    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[2].x, Sample[2].y), 0).rgb, 1.0) * Weight[2].x * Weight[2].y;
-    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[2].x, Sample[3].y), 0).rgb, 1.0) * Weight[2].x * Weight[3].y;
-    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[2].x, Sample[4].y), 0).rgb, 1.0) * Weight[2].x * Weight[4].y;
-    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[3].x, Sample[1].y), 0).rgb, 1.0) * Weight[3].x * Weight[1].y;
-    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[3].x, Sample[2].y), 0).rgb, 1.0) * Weight[3].x * Weight[2].y;
-    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[3].x, Sample[3].y), 0).rgb, 1.0) * Weight[3].x * Weight[3].y;
-    // o_rgba += float4(Input.SampleLevel(sampler_Input_trilinear_clamp,float2(Sample[4].x, Sample[2].y), 0).rgb, 1.0) * Weight[4].x * Weight[2].y;
-    o_rgba += SampleTextureCatmullRom(Input, sampler_Input_trilinear_clamp, UV2, float2(source_width, source_height));
-
-
-    float3 minCol = 9999.0f;
-    float3 maxCol = -9999.0f;
-int SampleCount = min(PrevOutput[newUV * float2(target_width, target_height)].w,300);
-
-    [unroll]for(int x = -1; x <= 1; ++x) {
-        [unroll]for(int y = -1; y <= 1; ++y) {
-            int2 OffsetIndex = newUV * float2(target_width, target_height) + int2(x,y);
-            if(any(OffsetIndex >= int2(target_width, target_height)) || any(OffsetIndex <= 0)) continue;
-            float3 color = PrevOutput.SampleLevel(my_linear_clamp_sampler, OffsetIndex / float2(target_width, target_height), 0).xyz;
-            minCol = min(minCol, color);
-            maxCol = max(maxCol, color);
-        }
+    // half3 normal00 = DecodeViewNormalStereo(tex2D(CurrentNormal, input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 0.0)));
+    // half3 normal10 = DecodeViewNormalStereo(tex2D(CurrentNormal, input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 0.0)));
+    // half3 normal11 = DecodeViewNormalStereo(tex2D(CurrentNormal, input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 1.0)));
+    // half3 normal01 = DecodeViewNormalStereo(tex2D(CurrentNormal, input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 1.0)));
+    
+    float4 depthWeights = saturate(1.0 - abs(depthSamples - depth.xxxx) / thresh);
+    
+    float4 normalWeights = float4(0,0,0,0);
+    normalWeights.x = pow(saturate(dot(normal00, normal)), 24.0);
+    normalWeights.y = pow(saturate(dot(normal10, normal)), 24.0);
+    normalWeights.z = pow(saturate(dot(normal11, normal)), 24.0);
+    normalWeights.w = pow(saturate(dot(normal01, normal)), 24.0);
+    
+    float4 weights = depthWeights * normalWeights;
+    
+    float weightSum = dot(weights, float4(1.0, 1.0, 1.0, 1.0));             
+                    
+    if (weightSum < 0.01)
+    {
+        weightSum = 4.0;
+        weights = (1.0).xxxx;
     }
-    float3 CurrentColor = o_rgba.xyz;
-    if(!(luminance(CurrentColor) >= luminance(minCol) && luminance(CurrentColor) <= luminance(maxCol))) {Disocluded = true; SampleCount = 0;}
-    if(abs(luminance(CurrentColor - Input.SampleLevel(sampler_Input_trilinear_clamp,UV2, 0).rgb)) > 0.25f) {Disocluded = true; SampleCount = 0;}
-        #ifdef HDRP
-            PrevNormalTexWrite[id.xy] = NormalTex[int3(id.xy,0)];
-        #else
-            PrevNormalTexWrite[id.xy] = NormalTex[id.xy];
-        #endif
-        if(Disocluded) PrevWorldPosWrite[id.xy] = float4(WorldPos,1);
-        else {
-            PrevWorldPosWrite[id.xy] = PrevWorldPos.SampleLevel(my_linear_clamp_sampler, newUV, 0);
-        }
-
-    #ifdef HDRP
-        float3 SpecularAlbedo = 0;//Albedo2[int3(ipos,0)].xyz;
-    #else
-        float3 SpecularAlbedo = Albedo2[id.xy].xyz;
-    #endif
-    // if(SpecularAlbedo.x == SpecularAlbedo.y && SpecularAlbedo.y == SpecularAlbedo.z) SpecularAlbedo = 0;
-// if(Disocluded) SampleCount *= clamp(dot(PrevNormalTex[newUV * float2(target_width, target_height)].xyz * 2.0 - 1.0f, NormalTex[id.xy].xyz * 2.0 - 1.0f),0,1.0f) * 0.1f;
-    // Output[id.xy] = float4(lerp((o_rgba.rgb / o_rgba.w), PrevOutput[newUV * float2(target_width, target_height)].xyz, 0.25f),1);// * (Albedo[id.xy].xyz),1);
-        Output[id.xy] = float4(CurrentColor, 1);//float4(lerp(PrevOutput[newUV * float2(target_width, target_height)].xyz, (o_rgba.rgb / o_rgba.w), rcp(SampleCount + 1)),SampleCount + 1);
-//     return o_rgba.rgb / o_rgba.w;
-
-
-//         float4 super = super_sample(UV, id.xyxy / float2(target_width, target_height).xyxy, view_pixel_size);
-// // Disocluded = Disocluded || abs(dot(lerp(dir_avg.xyz, super.xyz, 0.5f), float3(0.299f, 0.587f, 0.114f)) - dot(PrevOutput[newUV * float2(target_width, target_height)].xyz, float3(0.299f, 0.587f, 0.114f))) > 0.1f;
-//         float3 SpecularAlbedo = Albedo2[id.xy].xyz;
-//         if(SpecularAlbedo.x == SpecularAlbedo.y && SpecularAlbedo.y == SpecularAlbedo.z) SpecularAlbedo = 0;
-//         if(Disocluded || (newUV.x > 1 || newUV.x < 0 || newUV.y > 1 || newUV.y < 0) || true) Output[id.xy] = float4(lerp(dir_avg.xyz, super.xyz, 0.5f),1);
-    // FinalOutput[id.xy] = float4((Output[id.xy].xyz * (Albedo[id.xy].xyz + Albedo2[id.xy].xyz) < 100000) ? ((all(Albedo[id.xy].xyz + SpecularAlbedo == 0) ? Output[id.xy].xyz : (Output[id.xy].xyz * (Albedo[id.xy].xyz + SpecularAlbedo)))) : 0, 1);
+    
+    weights /= weightSum;
+    
+    float2 fractCoord = frac(UV * float2(target_width, target_height) * 1.0);
+    
+    float4 filteredX0 = lerp(sample00 * weights.x, sample10 * weights.y, fractCoord.x);
+    float4 filteredX1 = lerp(sample01 * weights.w, sample11 * weights.z, fractCoord.x);
+                
+    float4 filtered = lerp(filteredX0, filteredX1, fractCoord.y);
+                
+    Output[id.xy] = float4(filtered.xyz * 3.0f, 1);  
+    // return filtered * 3.0;
+        
+    // return blurred;
 }
 
 #pragma kernel simpleblur
@@ -437,13 +426,18 @@ int SampleCount = min(PrevOutput[newUV * float2(target_width, target_height)].w,
 void simpleblur (int3 id : SV_DispatchThreadID)
 {
     float3 In = Input[id.xy];
-    // for(int i = -1; i <= 1; i++) {
-    //     for(int j = -1; j <= 1; j++) {
-    //         if(i == 0 && j == 0) continue;
-    //         In += Input[id.xy + int2(i,j) * 2.0f];
-    //     }
-    // }
-    // In /= 9.0f;
+    float3 Max = -9999.0f;
+    float3 Min = 9999.0f;
+    for(int i = -1; i <= 1; i++) {
+        for(int j = -1; j <= 1; j++) {
+            if(i == 0 && j == 0) continue;
+            In += Input[id.xy + int2(i,j) * 1.0f];
+            Max = max(Max, Input[id.xy + int2(i,j) * 2.0f]);
+            Min = min(Min, Input[id.xy + int2(i,j) * 2.0f]);
+        }
+    }
+    In /= 9.0f;
+    In = clamp(In, Min, Max);
 
     #ifdef HDRP
         float3 SpecularAlbedo = 0;//Albedo2[int3(ipos,0)].xyz;

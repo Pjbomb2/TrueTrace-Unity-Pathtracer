@@ -18,75 +18,37 @@ struct ColData {
 };
 StructuredBuffer<ColData> PerPixelRadiance;
 
-float4x4 viewprojection;
-float4x4 prevviewprojection;
-float4x4 _CameraToWorld;
-
-Texture2D<float4> ColorDirectIn;
-Texture2D<float4> ColorIndirectIn;
-RWTexture2D<float4> ColorDirectOut;
-RWTexture2D<float4> ColorIndirectOut;
+Texture2D<half4> DirectB;
+Texture2D<half4> IndirectB;
+RWTexture2D<half4> DirectA;
+RWTexture2D<half4> IndirectA;
 RWTexture2D<float4> Result;
 
-Texture2D<float4> _Albedo;
-SamplerState sampler_Albedo;
-
-RWTexture2D<float4> RWScreenPosPrev;
-Texture2D<float4> ScreenPosPrev;
-Texture2D<float4> PosTex;
-RWTexture2D<float4> PrevPosTex;
-RWTexture2D<int> HistoryTex;
-Texture2D<float4> _CameraNormalDepthTex;
-SamplerState sampler_CameraNormalDepthTex;
-
-RWTexture2D<float4> FrameBufferMoment;
-
-RWTexture2D<float4> HistoryDirectTex;
-RWTexture2D<float4> HistoryIndirectTex;
-RWTexture2D<float4> HistoryMomentTex;
-
-RWTexture2D<float4> RWHistoryNormalAndDepth;
-RWTexture2D<float4> RWNormalAndDepth;
-
-Texture2D<float4> HistoryNormalAndDepth;
-Texture2D<float4> NormalAndDepth;
+Texture2D<half4> TempAlbedoTex;
 
 
 
+Texture2D<float4> ScreenSpaceInfo;
+Texture2D<float4> PrevScreenSpaceInfo;
 
-#define THRESHOLD_NORMAL 0.95f;
-#define THRESHOLD_DEPTH 1.0f;
-#pragma kernel kernel_copy
+RWTexture2D<float4> MomentA;
+Texture2D<float4> MomentB;
 
-int TargetWidth;
-int TargetHeight;
+RWTexture2D<half> HistoryTex;
 
+Texture2D<uint4> WorldPosData;
 
-float FarPlane;
-RWTexture2D<float4> PrevDepthTexMain;
-#ifdef HDRP
-	Texture2DArray<float4> NormalTex;
-	Texture2DArray<float4> MotionVectors;
-#else
-	Texture2D<float4> MotionVectors;
-	Texture2D<float4> NormalTex;
-#endif
-Texture2D<half> PrevDepthTex;
-Texture2D<half> DepthTex;
-SamplerState sampler_MotionVectors;
-SamplerState sampler_DepthTex;
-SamplerState sampler_PrevDepthTex;
-SamplerState sampler_NormalTex;
+float3 unpackRGBE(uint x)
+{
+    int exponent = int(x >> 27) - 20;
+    float scale = pow(2, exponent) / 256.0;
 
-inline float2 msign(float2 v) {
-    return (v>=0.0) ? 1.0 : -1.0; 
-}
+    float3 v;
+    v.r = float(x & 0x1ff) * scale;
+    v.g = float((x >> 9) & 0x1ff) * scale;
+    v.b = float((x >> 18) & 0x1ff) * scale;
 
-uint octahedral_32(float3 nor) {
-    nor.xy /= ( abs( nor.x ) + abs( nor.y ) + abs( nor.z ) );
-    nor.xy  = (nor.z >= 0.0) ? nor.xy : (1.0-abs(nor.yx))*msign(nor.xy);
-    uint2 d = uint2(round(32767.5 + nor.xy*32767.5));  
-    return d.x|(d.y<<16u);
+    return v;
 }
 
 float3 i_octahedral_32( uint data ) {
@@ -98,53 +60,36 @@ float3 i_octahedral_32( uint data ) {
     nor.y += (nor.y>0.0)?-t:t;                     // technique
     return normalize( nor );
 }
+SamplerState my_linear_clamp_sampler;
 
-float3 unpackRGBE(uint x)
-{
-	int exponent = int(x >> 27) - 20;
-	float scale = pow(2, exponent) / 256.0;
+#define THRESHOLD_NORMAL 0.7f;
+#define THRESHOLD_DEPTH 0.1f;
+#pragma kernel kernel_copy
 
-	float3 v;
-	v.r = float(x & 0x1ff) * scale;
-	v.g = float((x >> 9) & 0x1ff) * scale;
-	v.b = float((x >> 18) & 0x1ff) * scale;
-
-	return v;
-}
-
-float4x4 _CameraInverseProjection;
-float3 Forward;
-
-inline float3 CreateCameraRay(float2 uv) {
-	// Invert the perspective projection of the view-space position
-	float3 direction = mul(_CameraInverseProjection, float4(uv, 0.0f, 1.0f)).xyz;
-	// Transform the direction from camera to world space and normalize
-	direction = mul(_CameraToWorld, float4(direction, 0.0f)).xyz;
-	direction = normalize(direction);
-
-	return direction;
-}
-
-Texture2D<float4> ScreenSpaceInfo;
+float FarPlane;
+#ifdef HDRP
+	Texture2DArray<float4> MotionVectors;
+#else
+	Texture2D<float4> MotionVectors;
+#endif
 
 [numthreads(16, 16, 1)]
 void kernel_copy(int3 id : SV_DispatchThreadID)
 {//Reprojects and moves the color data from the array to textures
 	if (id.x >= screen_width || id.y >= screen_height) return;
 	int pixel_index = id.y * screen_width + id.x;
-	float2 UV = id.xy / float2(screen_width, screen_height);
-	uint2 NewSample = floor(UV * float2(TargetWidth, TargetHeight));
-	float3 Albedo = _Albedo.SampleLevel(sampler_Albedo, id.xy / float2(screen_width, screen_height), 0).xyz;
-	float3 Dir = CreateCameraRay(UV * 2.0f - 1.0f);
-	ColorDirectOut[id.xy] = float4(PerPixelRadiance[pixel_index].Direct + ((Albedo == 0) ? 0 : unpackRGBE(PerPixelRadiance[pixel_index].PrimaryNEERay) / Albedo), 1.0f);
-	ColorIndirectOut[id.xy] = float4(PerPixelRadiance[pixel_index].Indirect, 1.0f);
-	#ifdef HDRP
-		RWScreenPosPrev[id.xy] = float4((MotionVectors[int3(NewSample, 0)].xy), 0.0f, 1.0f);
-		RWNormalAndDepth[id.xy] = float4(octahedral_32(NormalTex[int3(NewSample,0)]), DepthTex[id.xy], PrevDepthTex[id.xy]);
-	#else
-		RWScreenPosPrev[id.xy] = float4((MotionVectors.SampleLevel(sampler_MotionVectors, UV, 0).xy), 0.0f, 1.0f);
-		RWNormalAndDepth[id.xy] = float4(ScreenSpaceInfo[id.xy].yxz, PrevDepthTex[id.xy].x);
-	#endif
+
+	ColData Pixel = PerPixelRadiance[pixel_index];
+
+	float3 TexBaseColor = TempAlbedoTex[id.xy].xyz;
+	TexBaseColor = (TexBaseColor > 0.005f ? rcp(TexBaseColor) : 0);
+	// uint Input = asuint(Pixel.Metallic);
+
+	float3 WorldAlbedo = unpackRGBE(WorldPosData[id.xy].w);
+
+	IndirectA[id.xy] = float4(clamp(Pixel.Indirect * ((TempAlbedoTex[id.xy].xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0))),0,1200.0f),1);
+	DirectA[id.xy] = float4(clamp((Pixel.Direct + unpackRGBE(Pixel.PrimaryNEERay) * ((Pixel.IsSpecular != 2) ? TexBaseColor : TexBaseColor)) * TempAlbedoTex[id.xy].xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0),0,1200.0f), 0);
+
 }
 
 
@@ -158,9 +103,8 @@ inline float luminance(const float r, const float g, const float b) {
 inline bool is_tap_consistent(int x, int y, const float3 normal, float depth) {
 	if (y < 0 || y >= screen_height || x < 0 || x >= screen_width)  return false;
 
-	float4 prev_normal_and_depth = HistoryNormalAndDepth[int2(x, y)];
-	float3 prev_normal = i_octahedral_32(asuint(prev_normal_and_depth.x));
-	float  prev_depth = prev_normal_and_depth.z;
+	float3 prev_normal = i_octahedral_32(asuint(PrevScreenSpaceInfo[int2(x, y)].x));
+	float  prev_depth = PrevScreenSpaceInfo[int2(x, y)].z;
 
 	bool consistent_normal = dot(normal, prev_normal) > THRESHOLD_NORMAL;
 	bool consistent_depth = abs(depth - prev_depth) / abs(depth) < THRESHOLD_DEPTH;
@@ -178,8 +122,8 @@ void kernel_reproject(int3 id : SV_DispatchThreadID)
 	if (id.x >= screen_width || id.y >= screen_height) return;
 
 
-	float4 direct = ColorDirectIn[id.xy];
-	float4 indirect = ColorIndirectIn[id.xy];
+	float4 direct = DirectA[id.xy];
+	float4 indirect = IndirectA[id.xy];
 
 	float4 moment;
 	moment.x = luminance(direct.x, direct.y, direct.z);
@@ -187,75 +131,105 @@ void kernel_reproject(int3 id : SV_DispatchThreadID)
 	moment.z = moment.x * moment.x;
 	moment.w = moment.y * moment.y;
 
-	float4 normdepth = NormalAndDepth[id.xy];
-	float3 normal = i_octahedral_32(asuint(normdepth.x));
-	float depth = normdepth.z;
+
+	float3 normal = i_octahedral_32(asuint(ScreenSpaceInfo[id.xy].x));
+	float depth = ScreenSpaceInfo[id.xy].z;
 	// float depth_prev = HistoryNormalAndDepth[id.xy].w;
 
-	float2 screen_position_prev = ((((float2(id.xy)+0.5f) * float2(rcp(screen_width), rcp(screen_height)) - ScreenPosPrev[id.xy].xy) * float2(screen_width, screen_height)));//((ScreenPosPrev[id.xy].xy + 1.0f) * 0.5f) * float2(screen_width, screen_height);
+	#ifdef HDRP
+		float2 motion = -MotionVectors.SampleLevel(my_linear_clamp_sampler, int3(id.xy,0) / float3(screen_width, screen_height, 1), 0).xy;
+	#else
+		float2 motion = -MotionVectors.SampleLevel(my_linear_clamp_sampler, id.xy / float2(screen_width, screen_height), 0).xy;
+	#endif
+	
+	float2 screen_position_prev = ((((float2(id.xy)) * float2(rcp(screen_width), rcp(screen_height)) + motion)));// * float2(screen_width, screen_height)));
 
 	if (depth == 0.0f) {
-		ColorDirectOut[id.xy] = ColorDirectIn[id.xy];
-		ColorIndirectOut[id.xy] = ColorIndirectIn[id.xy];
+		DirectA[id.xy] = DirectB[id.xy];
+		IndirectA[id.xy] = IndirectB[id.xy];
 		return;
 	};
-	float4 prev_direct = float4(0.0f, 0.0f, 0.0f, 0.0f);
-	float4 prev_indirect = float4(0.0f, 0.0f, 0.0f, 0.0f);
-	float4 prev_moment = float4(0.0f, 0.0f, 0.0f, 0.0f);
-		float temporal_sum_w_diff = 0.0;
-		float temporal_sum_w_spec = 0.0;
+    float u_prev = screen_position_prev.x;
+    float v_prev = screen_position_prev.y;
 
-		float2 pos_ld = floor(screen_position_prev - 0.5);
-		float2 subpix = frac(screen_position_prev - 0.5 - pos_ld);
+    float s_prev = u_prev * (float)screen_width;
+    float t_prev = v_prev * (float)screen_height;
 
-		// Bilinear/bilateral filter
-		static const int2 off[4] = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } };
-		float w[4] = {
-			(1.0 - subpix.x) * (1.0 - subpix.y),
-			(subpix.x) * (1.0 - subpix.y),
-			(1.0 - subpix.x) * (subpix.y),
-			(subpix.x) * (subpix.y)
-		};
-		for (int i = 0; i < 4; i++) {
-			int2 p = int2(pos_ld)+off[i];
+    int x_prev = (int)(s_prev);
+    int y_prev = (int)(t_prev);
 
-			if (p.x < 0 || p.x >= screen_width || p.y >= screen_height || p.y < 0)
-				continue;
+    float fractional_s = s_prev - floor(s_prev);
+    float fractional_t = t_prev - floor(t_prev);
 
-			float depth_prev = HistoryNormalAndDepth[p].z;
-			float3  normal_prev = i_octahedral_32(asuint(HistoryNormalAndDepth[p].x));
-			float3  geo_normal_prev = i_octahedral_32(asuint(HistoryNormalAndDepth[p].x));//needs to be TEX_PT_GEO_NORMAL_B, but since for now I am not worrying about normal maps yet, it can use the same texture
+    float one_minus_fractional_s = 1.0f - fractional_s;
+    float one_minus_fractional_t = 1.0f - fractional_t;
 
-			float dist_depth = (abs(depth - depth_prev)) / abs(depth);
-			float dot_normals = dot(normal, normal_prev);
-			float dot_geo_normals = dot(normal, geo_normal_prev);
+    float w0 = one_minus_fractional_s * one_minus_fractional_t;
+    float w1 =           fractional_s * one_minus_fractional_t;
+    float w2 = one_minus_fractional_s *           fractional_t;
+    float w3 = 1.0f - w0 - w1 - w2;
 
-			if (dist_depth < 0.1 && dot_geo_normals > 0.95)
-			{
+    float weights[4] = { w0, w1, w2, w3 };
+    float consistent_weights_sum = 0.0f;
+    float depth_prev;
 
-				float w_diff = w[i] * max(dot_normals, 0);
+    for (int j = 0; j < 2; j++) {
+        for (int i = 0; i < 2; i++) {
+            int tap = i + j * 2;
 
-					float4 tap_direct = HistoryDirectTex[p];
-					float4 tap_indirect = HistoryIndirectTex[p];
-					float4 tap_moment = HistoryMomentTex[p];
+            if (is_tap_consistent(x_prev + i, y_prev + j, normal, depth)) {
+                consistent_weights_sum += weights[tap];
+            } else {
+                weights[tap] = 0.0f;
+            }
+        }
+    }
 
+    float4 prev_direct   = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    float4 prev_indirect = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    float4 prev_moment   = float4(0.0f, 0.0f, 0.0f, 0.0f);
 
-				prev_direct += w_diff * tap_direct;
-				prev_indirect += w_diff * tap_indirect;
-				prev_moment += w_diff * tap_moment;
+    // If we already found at least 1 consistent tap
+    if (consistent_weights_sum > 0.0f) {
+        // Add consistent taps using their bilinear weight
+        for (int j = 0; j < 2; j++) {
+            for (int i = 0; i < 2; i++) {
+                int tap = i + j * 2;
 
-				temporal_sum_w_diff += w_diff;
-			}
-		}
+                if (weights[tap] != 0.0f) {
+                    int tap_x = x_prev + i;
+                    int tap_y = y_prev + j;
+                    int2 tap_index = int2(tap_x, tap_y);
 
-		// We found some relevant surfaces - good
-		if (temporal_sum_w_diff > 1e-6)
-		{
-			float inv_w_diff = 1.0 / temporal_sum_w_diff;
-			prev_direct *= inv_w_diff;
-			prev_indirect *= inv_w_diff;
-			prev_moment *= inv_w_diff;
-		}
+                    float4 tap_direct   = DirectB  [tap_index];
+                    float4 tap_indirect = IndirectB[tap_index];
+                    float4 tap_moment   = MomentB[tap_index];
+
+                    prev_direct   += weights[tap] * tap_direct;
+                    prev_indirect += weights[tap] * tap_indirect;
+                    prev_moment   += weights[tap] * tap_moment;
+                }
+            }
+        }
+    } else {
+        // If we haven't yet found a consistent tap in a 2x2 region, try a 3x3 region
+        for (int j = -1; j <= 1; j++) {
+            for (int i = -1; i <= 1; i++) {
+                int tap_x = x_prev + i;
+                int tap_y = y_prev + j;
+
+                if (is_tap_consistent(tap_x, tap_y, normal, depth)) {
+                    int2 tap_index = int2(tap_x, tap_y);
+
+                    prev_direct   += DirectB  [tap_index];
+                    prev_indirect += IndirectB[tap_index];
+                    prev_moment   += MomentB  [tap_index];
+
+                    consistent_weights_sum += 1.0f;
+                }
+            }
+        }
+    }
 
 
 	
@@ -264,24 +238,29 @@ void kernel_reproject(int3 id : SV_DispatchThreadID)
 
 
 
-	if (temporal_sum_w_diff > 1e-6) {
+	float History = 0; // Increase History Length by 1 step//whyh are we reading from id.xy, not prevpos?
+	if (consistent_weights_sum > 1e-6) {
 		// Normalize
+		prev_direct /= consistent_weights_sum;
+		prev_indirect /= consistent_weights_sum;
+		prev_moment /= consistent_weights_sum;
 		//consistent_weights_sum = max(consistent_weights_sum, 0.1f);
+		History = HistoryTex[int2(x_prev, y_prev)] + 1.0f; // Increase History Length by 1 step//whyh are we reading from id.xy, not prevpos?
 	
-		int history = HistoryTex[pos_ld].x + 1; // Increase History Length by 1 step
 		// history = min(history,10);
-		HistoryTex[id.xy] = history;
+		// HistoryTex[id.xy] = history;
 
 
-		float inv_history = rcp((float)(history));
-		float alpha_colour = max(((UseReSTIRGI) ? 0.2f : 0.015), inv_history);
-		float alpha_moment = max(((UseReSTIRGI) ? 0.6f : 0.04), inv_history);
+		float inv_history = rcp((float)(History));
+		float alpha_colour = max(0.05f, inv_history);
+		float alpha_moment = max(0.2f, inv_history);
 
 		// Integrate using exponential moving average
 		direct = lerp(prev_direct, direct, alpha_colour);
 		indirect = lerp(prev_indirect, indirect, alpha_colour);
 		moment = lerp(prev_moment, moment, alpha_moment);
-		if (history >= 400) {
+		if (History >= 4) {
+			History *= clamp(exp2(-abs((moment.z - moment.x * moment.x) - (prev_moment.z - prev_moment.x * prev_moment.x))),0.5f,1.0f);
 			float variance_direct = max(0.0f, moment.z - moment.x * moment.x);
 			float variance_indirect = max(0.0f, moment.w - moment.y * moment.y);
 
@@ -291,15 +270,15 @@ void kernel_reproject(int3 id : SV_DispatchThreadID)
 		}
 	}
 	else {
-		HistoryTex[id.xy] = 0; // Reset History Length
 
 		direct.w = 1.0f;
 		indirect.w = 1.0f;
 	}
-	ColorDirectOut[id.xy] = direct;
-	ColorIndirectOut[id.xy] = indirect;
+	HistoryTex[id.xy] = History; // Reset History Length
+	DirectA[id.xy] = direct;
+	IndirectA[id.xy] = indirect;
 
-	FrameBufferMoment[id.xy] = moment;
+	MomentA[id.xy] = moment;
 
 }
 
@@ -346,7 +325,6 @@ inline float2 edge_stopping_weights(
 
 	return float2(w_l_direct, w_l_indirect);
 }
-int iteration;
 
 [numthreads(16, 16, 1)]
 void kernel_variance(int3 id : SV_DispatchThreadID)
@@ -354,29 +332,28 @@ void kernel_variance(int3 id : SV_DispatchThreadID)
 	if (id.x >= screen_width || id.y >= screen_height) return;
 	int history = HistoryTex[id.xy].x;
 
-	if (history >= 400) {
-		ColorDirectOut[id.xy] = ColorDirectIn[id.xy];
-		ColorIndirectOut[id.xy] = ColorIndirectIn[id.xy];
+	if (history >= 4) {
+		DirectA[id.xy] = DirectB[id.xy];
+		IndirectA[id.xy] = IndirectB[id.xy];
 		return;
 	}
 
-	float4 center_color_direct = ColorDirectIn[id.xy];
-	float4 center_color_indirect = ColorIndirectIn[id.xy];
-	float4 CenterNormalDepth = NormalAndDepth[id.xy];
+	float4 center_color_direct = DirectB[id.xy];
+	float4 center_color_indirect = IndirectB[id.xy];
 
 	float4 center_luminence_direct = luminance(center_color_direct.x, center_color_direct.y, center_color_direct.z);
 	float4 center_luminence_indirect = luminance(center_color_indirect.x, center_color_indirect.y, center_color_indirect.z);
 
-	float3 CenterNormal = i_octahedral_32(asuint(CenterNormalDepth.x));
-	float CenterDepth = CenterNormalDepth.z;
+	float3 CenterNormal = i_octahedral_32(asuint(ScreenSpaceInfo[id.xy].x));
+	float CenterDepth = ScreenSpaceInfo[id.xy].z;
 
 	float2 center_depth_gradient = float2(
-		NormalAndDepth[int2(id.x + 1, id.y)].z - CenterDepth,
-		NormalAndDepth[int2(id.x, id.y + 1)].z - CenterDepth);
+		ScreenSpaceInfo[int2(id.x + 1, id.y)].z - CenterDepth,
+		ScreenSpaceInfo[int2(id.x, id.y + 1)].z - CenterDepth);
 
 	if (CenterDepth == 0.0f) {
-		ColorDirectOut[id.xy] = ColorDirectIn[id.xy];
-		ColorIndirectOut[id.xy] = ColorIndirectIn[id.xy];
+		DirectA[id.xy] = DirectB[id.xy];
+		IndirectA[id.xy] = IndirectB[id.xy];
 		return;
 	}
 
@@ -405,10 +382,9 @@ void kernel_variance(int3 id : SV_DispatchThreadID)
 
 			tap_index = int2(tap_x, tap_y);
 
-			float4 colour_direct = ColorDirectIn[tap_index];
-			float4 colour_indirect = ColorIndirectIn[tap_index];
-			float4 moment = FrameBufferMoment[tap_index];
-			float4 TappedNormalDepth = NormalAndDepth[tap_index];
+			float4 colour_direct = DirectB[tap_index];
+			float4 colour_indirect = IndirectB[tap_index];
+			float4 moment = MomentB[tap_index];
 
 			float luminance_direct = luminance(colour_direct.x, colour_direct.y, colour_direct.z);
 			float luminance_indirect = luminance(colour_indirect.x, colour_indirect.y, colour_indirect.z);
@@ -416,8 +392,8 @@ void kernel_variance(int3 id : SV_DispatchThreadID)
 			float2 w = edge_stopping_weights(
 				i, j,
 				center_depth_gradient,
-				CenterDepth, TappedNormalDepth.z,
-				CenterNormal, i_octahedral_32(asuint(TappedNormalDepth.x)),
+				CenterDepth, ScreenSpaceInfo[tap_index].z,
+				CenterNormal, i_octahedral_32(asuint(ScreenSpaceInfo[tap_index].x)),
 				center_luminence_direct, center_luminence_indirect,
 				luminance_direct, luminance_indirect,
 				luminance_denom, luminance_denom,
@@ -451,8 +427,8 @@ void kernel_variance(int3 id : SV_DispatchThreadID)
 	sum_colour_indirect.w = max(0.0f, sum_moment.w - sum_moment.y * sum_moment.y);
 
 	// Store the Variance in the alpha channel
-	ColorDirectOut[id.xy] = sum_colour_direct;
-	ColorIndirectOut[id.xy] = sum_colour_indirect;
+	DirectA[id.xy] = clamp(sum_colour_direct,0,120.0f);
+	IndirectA[id.xy] = clamp(sum_colour_indirect,0,120.0f);
 
 }
 
@@ -484,8 +460,8 @@ void kernel_atrous(int3 id : SV_DispatchThreadID)
 			tap_x = clamp(id.x + i, 0, screen_width - 1);
 			// Read the Variance of Direct/Indirect Illumination
 			// The Variance is stored in the alpha channel (w coordinate)
-			float variance_direct = ColorDirectIn[int2(tap_x, tap_y)].w;
-			float variance_indirect = ColorIndirectIn[int2(tap_x, tap_y)].w;
+			float variance_direct = DirectB[int2(tap_x, tap_y)].w;
+			float variance_indirect = IndirectB[int2(tap_x, tap_y)].w;
 
 			float kernel_weight = kernel_gaussian[abs(i)][abs(j)];
 
@@ -495,26 +471,25 @@ void kernel_atrous(int3 id : SV_DispatchThreadID)
 	}
 
 	// Precompute denominators that are loop invariant
-	const float luminance_denom_direct = rsqrt(max(0.0f, variance_blurred_direct) + epsilon);
-	float luminance_denom_indirect = rsqrt(max(0.0f, variance_blurred_indirect) + epsilon);
+	const float luminance_denom_direct = rsqrt(sigma_l_square * max(0.0f, variance_blurred_direct) + epsilon);
+	float luminance_denom_indirect = rsqrt(sigma_l_square * max(0.0f, variance_blurred_indirect) + epsilon);
 
-	const float4 center_colour_direct = ColorDirectIn[id.xy];
-	const float4 center_colour_indirect = ColorIndirectIn[id.xy];
+	const float4 center_colour_direct = DirectB[id.xy];
+	const float4 center_colour_indirect = IndirectB[id.xy];
 
 	float center_luminance_direct = luminance(center_colour_direct.x, center_colour_direct.y, center_colour_direct.z);
 	float center_luminance_indirect = luminance(center_colour_indirect.x, center_colour_indirect.y, center_colour_indirect.z);
 
-	float4 center_normal_and_depth = NormalAndDepth[id.xy];
 
-	float3 center_normal = i_octahedral_32(asuint(center_normal_and_depth.x));
-	float  center_depth = center_normal_and_depth.z;
+	float3 center_normal = i_octahedral_32(asuint(ScreenSpaceInfo[id.xy].y));
+	float  center_depth = ScreenSpaceInfo[id.xy].z;
 
 	// Check if the pixel belongs to the Skybox
 	if (center_depth == 0.0f) return;
 
 	float2 center_depth_gradient = float2(
-		NormalAndDepth[int2(id.x + 1, id.y)].z - center_depth,
-		NormalAndDepth[int2(id.x, id.y + 1)].z - center_depth
+		ScreenSpaceInfo[int2(id.x + 1, id.y)].z - center_depth,
+		ScreenSpaceInfo[int2(id.x, id.y + 1)].z - center_depth
 		);
 
 	float  sum_weight_direct = 1.0f;
@@ -528,7 +503,7 @@ void kernel_atrous(int3 id : SV_DispatchThreadID)
 	float4 color_indirect;
 	float4 normal_and_depth;
 	for (j = -radius; j <= radius; j++) {
-		tap_y = j * ceil(step_size * abs(1.0f - abs(center_depth_gradient.y))) + id.y;
+		tap_y = j * ceil(step_size * abs(1.0f - abs(center_depth_gradient.y))) + id.y;//these ceils and such could be weird
 
 		// if (tap_y < 0 || tap_y >= screen_height) continue;
 		[unroll]
@@ -538,16 +513,15 @@ void kernel_atrous(int3 id : SV_DispatchThreadID)
 			// if (tap_x < 0 || tap_x >= screen_width) continue;
 			if(i == 0 && j == 0) continue;
 
-			color_direct = ColorDirectIn[int2(tap_x, tap_y)];
-			color_indirect = ColorIndirectIn[int2(tap_x, tap_y)];
+			color_direct = DirectB[int2(tap_x, tap_y)];
+			color_indirect = IndirectB[int2(tap_x, tap_y)];
 
 			float luminance_direct = luminance(color_direct.x, color_direct.y, color_direct.z);
 			float luminance_indirect = luminance(color_indirect.x, color_indirect.y, color_indirect.z);
 
-			normal_and_depth = NormalAndDepth[int2(tap_x, tap_y)];
 
-			float3 normal = i_octahedral_32(asuint(normal_and_depth.x));
-			float depth = normal_and_depth.z;
+			float3 normal = i_octahedral_32(asuint(ScreenSpaceInfo[int2(tap_x, tap_y)].y));
+			float depth = ScreenSpaceInfo[int2(tap_x, tap_y)].z;
 
 			float2 w = edge_stopping_weights(
 				i * step_size,
@@ -585,14 +559,8 @@ void kernel_atrous(int3 id : SV_DispatchThreadID)
 	sum_colour_direct.w *= inv_sum_weight_direct;
 	sum_colour_indirect.w *= inv_sum_weight_indirect;
 
-	ColorDirectOut[id.xy] = sum_colour_direct;
-	ColorIndirectOut[id.xy] = sum_colour_indirect;
-
-	if (step_size == 1) {
-		HistoryDirectTex[id.xy] = ColorDirectIn[id.xy];
-		HistoryIndirectTex[id.xy] = ColorIndirectIn[id.xy];
-	}
-
+	DirectA[id.xy] = sum_colour_direct;
+	IndirectA[id.xy] = sum_colour_indirect;
 }
 
 
@@ -611,26 +579,24 @@ inline float luminance(const float3 a) {
 	Texture2D<float4> DiffuseGBuffer;
 	Texture2D<float4> SpecularGBuffer;
 #endif
-SamplerState my_linear_clamp_sampler;
+
 [numthreads(16, 16, 1)]
 void kernel_finalize(int3 id : SV_DispatchThreadID)
 {
 	if (id.x >= screen_width || id.y >= screen_height) return;
 	int pixel_index = id.y * screen_width + id.x;
 	float3 GBufferCol = 1;
-	if(DiffRes) {
-	    float2 UV = id.xy / float2(screen_width, screen_height);
-	    #ifdef HDRP
-	        float3 SpecularAlbedo = 0;//Albedo2[int3(ipos,0)].xyz;
-	        GBufferCol = ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, float3(UV, 0), 0).xyz + SpecularAlbedo) == 0) ? 1 : (DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, float3(UV, 0), 0).xyz + SpecularAlbedo);
-	    #else
-	        float3 SpecularAlbedo = SpecularGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0);
-	        GBufferCol = ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo) == 0) ? 1 : ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo));
-	    #endif
-	}
-	float3 colour = ((ColorDirectIn[id.xy].xyz + ColorIndirectIn[id.xy].xyz) * ( _Albedo.SampleLevel(sampler_Albedo, id.xy / float2(screen_width, screen_height), 0).w == 0 ? 1 : _Albedo.SampleLevel(sampler_Albedo, id.xy / float2(screen_width, screen_height), 0).xyz)) / GBufferCol;
-	if (luminance(colour) < 10000) Result[id.xy] = float4(colour, 1);
+	// if(DiffRes) {
+	//     float2 UV = id.xy / float2(screen_width, screen_height);
+	//     #ifdef HDRP
+	//         float3 SpecularAlbedo = 0;//Albedo2[int3(ipos,0)].xyz;
+	//         GBufferCol = ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, float3(UV, 0), 0).xyz + SpecularAlbedo) == 0) ? 1 : (DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, float3(UV, 0), 0).xyz + SpecularAlbedo);
+	//     #else
+	//         float3 SpecularAlbedo = SpecularGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0);
+	//         GBufferCol = ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo) == 0) ? 1 : ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo));
+	//     #endif
+	// }
+	float3 colour = TempAlbedoTex[id.xy].w <= 0 ? TempAlbedoTex[id.xy] : ((DirectB[id.xy].xyz + IndirectB[id.xy].xyz) * unpackRGBE(WorldPosData[id.xy].w));
+	Result[id.xy] = float4(colour, 1);
 
-	HistoryMomentTex[id.xy] = FrameBufferMoment[id.xy];
-	RWHistoryNormalAndDepth[id.xy] = NormalAndDepth[id.xy];
 }

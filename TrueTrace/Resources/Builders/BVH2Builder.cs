@@ -62,9 +62,10 @@ namespace TrueTrace {
                     }
                 }
             }
-
-            for(int i = first_index; i < split.index; i++) {
-                CurIndex = DimensionedIndices[split.dimension][i];
+            int sindex = split.index;
+            int sd = split.dimension;
+            for(int i = first_index; i < sindex; i++) {
+                CurIndex = DimensionedIndices[sd][i];
                 split.aabb_left.Extend(ref Primitives[CurIndex]);
             }
             return split;
@@ -79,10 +80,11 @@ namespace TrueTrace {
             
             ObjectSplit split = partition_sah(first_index, index_count, ref SAH, ref Primitives);
             int EndIndex = first_index + index_count;
-            for(int i = first_index; i < EndIndex; i++) indices_going_left[DimensionedIndices[split.dimension][i]] = i < split.index;
+            int sd = split.dimension;
+            for(int i = first_index; i < EndIndex; i++) indices_going_left[DimensionedIndices[sd][i]] = i < split.index;
 
             for(int dim = 0; dim < 3; dim++) {
-                if(dim == split.dimension) continue;
+                if(dim == sd) continue;
 
                 int left = 0;
                 int right = split.index - first_index;
@@ -106,7 +108,7 @@ namespace TrueTrace {
             BVH2Nodes[nodesi].left = node_index;
             BVH2Nodes[nodesi].first = node_index;
             BVH2Nodes[nodesi].count = 0;
-            BVH2Nodes[nodesi].axis = (uint)split.dimension;
+            BVH2Nodes[nodesi].axis = (uint)sd;
 
             BVH2Nodes[BVH2Nodes[nodesi].left].aabb = split.aabb_left;
             BVH2Nodes[BVH2Nodes[nodesi].left + 1].aabb = split.aabb_right;

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using CommonVars;
+using UnityEngine.Rendering;
 
 namespace TrueTrace {
     [System.Serializable]
@@ -20,9 +21,6 @@ namespace TrueTrace {
         private RenderTexture DeltaScatteringTex;
 
         private RenderTexture DeltaMultiScatterTex;
-
-        private RenderTexture CloudTex1;
-        private RenderTexture CloudTex2;
 
         private ComputeShader Atmosphere;
         private ComputeBuffer rayleigh_densityC;
@@ -197,29 +195,13 @@ namespace TrueTrace {
             MultiScatterTex.enableRandomWrite = true;
             MultiScatterTex.Create();
 
-            CloudTex1 = new RenderTexture(128, 128, 0,
-            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-            CloudTex1.volumeDepth = 128;
-            CloudTex1.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-            CloudTex1.enableRandomWrite = true;
-            CloudTex1.useMipMap = true;
-            CloudTex1.Create();
-
-            CloudTex2 = new RenderTexture(32, 32, 0,
-            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-            CloudTex2.volumeDepth = 32;
-            CloudTex2.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-            CloudTex2.enableRandomWrite = true;
-            CloudTex2.useMipMap = true;
-            CloudTex2.Create();
-
             Atmosphere.SetTexture(TransmittanceKernel, "TransmittanceTex", _TransmittanceLUT);
-            Atmosphere.Dispatch(TransmittanceKernel, 256, 64, 1);
+            Atmosphere.Dispatch(TransmittanceKernel, 32, 8, 1);
             Atmosphere.SetTexture(SingleScatterKernel, "TransmittanceTexRead", _TransmittanceLUT);
             Atmosphere.SetTexture(SingleScatterKernel, "RayleighTex", _RayleighTex);
             Atmosphere.SetTexture(SingleScatterKernel, "MieTex", _MieTex);
             Atmosphere.SetTexture(SingleScatterKernel, "ScatteringTex", ScatteringTex);
-            Atmosphere.Dispatch(SingleScatterKernel, 256, 128, 32);
+            Atmosphere.Dispatch(SingleScatterKernel, 32, 16, 4);
 
             Atmosphere.SetInt("ScatteringOrder", 1);
             int NumScatteringOrder = MultiScatterIterations;
@@ -239,7 +221,7 @@ namespace TrueTrace {
                 Atmosphere.SetTexture(ScatteringDensityKernel, "MieTexRead", _MieTex);
                 Atmosphere.SetTexture(ScatteringDensityKernel, "MultipleScatteringTexRead", DeltaMultiScatterTex);
                 Atmosphere.SetTexture(ScatteringDensityKernel, "ScatteringDensityTex", DeltaScatteringTex);
-                Atmosphere.Dispatch(ScatteringDensityKernel, 256, 128, 32);
+                Atmosphere.Dispatch(ScatteringDensityKernel, 32, 16, 4);
 
                 var TempScatOrder2 = ScatteringOrder - 1;
                 Atmosphere.SetInt("ScatteringOrder", TempScatOrder2);
@@ -255,20 +237,10 @@ namespace TrueTrace {
                 Atmosphere.SetTexture(MultipleScatteringKernel, "MultiScatterTex", MultiScatterTex);
                 Atmosphere.SetTexture(MultipleScatteringKernel, "ScatteringDensityTexRead", DeltaScatteringTex);
                 Atmosphere.SetTexture(MultipleScatteringKernel, "TransmittanceTexRead", _TransmittanceLUT);
-                Atmosphere.Dispatch(MultipleScatteringKernel, 256, 128, 32);
+                Atmosphere.Dispatch(MultipleScatteringKernel, 32, 16, 4);
 
 
             }
-
-
-            // Atmosphere.SetTexture(FirstCloudKernel, "CloudTex1", CloudTex1);
-            // Atmosphere.SetInt("u_size", 128);
-            // Atmosphere.Dispatch(FirstCloudKernel, 128, 128, 128);
-
-
-            // Atmosphere.SetTexture(SecondCloudKernel, "CloudTex2", CloudTex2);
-            // Atmosphere.SetInt("u_size", 32);
-            // Atmosphere.Dispatch(SecondCloudKernel, 32, 32, 32);
 
             rayleigh_densityC.Release();
             mie_densityC.Release();
@@ -281,17 +253,6 @@ namespace TrueTrace {
             ScatteringTex.Release();
             DeltaScatteringTex.Release();
             DeltaMultiScatterTex.Release();
-
-            // Material SkyBoxMaterial;
-            // SkyBoxMaterial = RenderSettings.skybox;
-            // Texture2D FirstTex = SkyBoxMaterial.GetTexture("_FrontTex") as Texture2D;
-            // Skybox = new Cubemap(FirstTex.width, FirstTex.format, false);
-            // Skybox.SetPixels(FirstTex.GetPixels(0), CubemapFace.PositiveZ,0);
-            // Skybox.SetPixels((SkyBoxMaterial.GetTexture("_BackTex") as Texture2D).GetPixels(0), CubemapFace.NegativeZ,0);
-            // Skybox.SetPixels((SkyBoxMaterial.GetTexture("_RightTex") as Texture2D).GetPixels(0), CubemapFace.PositiveX,0);
-            // Skybox.SetPixels((SkyBoxMaterial.GetTexture("_LeftTex") as Texture2D).GetPixels(0), CubemapFace.NegativeX,0);
-            // Skybox.SetPixels((SkyBoxMaterial.GetTexture("_UpTex") as Texture2D).GetPixels(0), CubemapFace.PositiveY,0);
-            // Skybox.SetPixels((SkyBoxMaterial.GetTexture("_DownTex") as Texture2D).GetPixels(0), CubemapFace.NegativeY,0);
         }
 
 

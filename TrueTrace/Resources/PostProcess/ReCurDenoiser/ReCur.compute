@@ -3,7 +3,7 @@
 #include "UnityCG.cginc"
 #define PI 3.14159
 #define gHistoryFixFrameNum 12
-#define FasterSampling
+// #define FasterSampling
 
 float IndirectBoost;
 bool DoUpscale;
@@ -203,36 +203,33 @@ void BlurKernel (uint3 id : SV_DispatchThreadID)
     float3 CentNorm = i_octahedral_32(NormB[id.xy].y);
     float4 Center = HFB[id.xy];
     int AccumFrames = Center.w;
+    float CenterLum = luminance(Center);
+    float sum_w = 1;
 
     float angle = random(53, id.xy).x * 2.0f * PI;
     float2 angs = float2(cos(angle), sin(angle));
     const float2x2 rotationMatrix = float2x2(angs.xy, -angs.y, angs.x);
 
-    float boost = 1.0f - GetFadeBasedOnAccumulatedFrames(AccumFrames);
+    float boost = 1.0f - smoothstep(8.0f+1e-6, 16.0f+2e-6, AccumFrames);
 
     float blurRadius = gBlurRadius * ( 1.0 + 2.0 * boost ) / 3.0;
-    // blurRadius *= clamp(blurRadius * (1.0f - clamp(AccumFrames / 4.0f, 0, 1)), 1, blurRadius);
-    float SSAOAvg = SSAORead[id.xy];
+
+    float SSAOMin = SSAORead[id.xy];
     for(int j = -1; j <= 1; j++) {
         for(int k = -1; k <= 1; k++) {
             if(j == 0 && k == 0) continue;
-            SSAOAvg = min(SSAOAvg, SSAORead[id.xy + int2(j, k)]);
+            SSAOMin = min(SSAOMin, SSAORead[id.xy + int2(j, k)]);
         }
     }
     const float Hints = HintsRead[id.xy];
-    if(Hints == 1) blurRadius *= lerp(0.1f, 1.0f, lerp(SSAOAvg, 1, 1.0f - min(AccumFrames / 12.0f, 1)));
-    if(Hints > 0.01f && Hints < 0.4f) blurRadius *= Hints;
-    // blurRadius /= clamp(CenterDepth / 10.0f,1,3.0f);
-    // blurRadius *= (float)PartialRenderingFactor;
+    if(Hints == 1) blurRadius *= lerp(0.1f, 1.0f, SSAOMin);
+    if(Hints > 0.05f && Hints < 0.4f) blurRadius *= Hints;
     blurRadius += 1.0;
 
     float2 BlurRadius = blurRadius * rcp(float2(screen_width, screen_height));
-    float sum_w = 1;
-    // if(AccumFrames <= 1) sum_w = luminance(Albedo[id.xy]);
-    float CenterLum = luminance(Center);
 
     float2 uv = (id.xy + 0.5f) / (float2(screen_width, screen_height));
-    uv += (random(64, id.xy) - 0.5f) * rcp(float2(screen_width, screen_height));
+    uv += (random(64, id.xy) - 0.5f) * rcp(float2(screen_width, screen_height));//jitter
 
     [unroll]for(int i = 0; i < DiskCount; i++) {
         float3 offset = DiskSamples[i];
@@ -246,14 +243,12 @@ void BlurKernel (uint3 id : SV_DispatchThreadID)
         float3 norm = i_octahedral_32(NormB[OffsetUV * float2(screen_width, screen_height)].y);
         float4 Sample = HFB.SampleLevel(my_linear_clamp_sampler, OffsetUV, 0);
 
-        float DepthFactor = exp2((AccumFrames > 7 ? -100.0f : -10.0f) * abs(1.0f - (CenterDepth / sampleDepth)));// / (float)PartialRenderingFactor);
-        float NormFactor = AccumFrames > 3 ? pow(max(0, dot(CentNorm, norm)),64) : 1;
+        float DepthFactor = exp2((AccumFrames > 7 ? -100.0f : -10.0f) * abs(1.0f - (CenterDepth / sampleDepth)));//bunch of arbitrary values I found through trial and error
+        float NormFactor = AccumFrames > 2 ? pow(max(0, dot(CentNorm, norm)),64) : pow(max(0, dot(i_octahedral_32(NormB[id.xy].x), i_octahedral_32(NormB[OffsetUV * float2(screen_width, screen_height)].x))),3);
         w *= clamp(NormFactor * DepthFactor,0, 1);
-        if(abs(Hints - HintsRead[OffsetUV * float2(screen_width, screen_height)]) > 0.01f) continue;
 
         if(AccumFrames > 4) w *= pow(exp(-abs(CenterLum - luminance(Sample.xyz)) / (PassNum == 2 ? 4.0f : 1.0f)),max((min(Sample.w - 4, 4)) / (1.0f + CenterLum * 4.0f), 1));
-        // if(AccumFrames <= 1) w *= luminance(Albedo[OffsetUV * float2(screen_width, screen_height)].xyz);
-        // w = clamp(w, 0, 1);
+
         Center +=  Sample * w;
         sum_w += w;
     }
@@ -263,7 +258,7 @@ void BlurKernel (uint3 id : SV_DispatchThreadID)
 }
 
 
-
+Texture2D<half2> Gradients;
 #pragma kernel temporal
 
 [numthreads(8,8,1)]
@@ -311,7 +306,7 @@ void temporal (uint3 id : SV_DispatchThreadID)
             float3  normal_prev = i_octahedral_32(NormB[p].x);
             
 
-            float dist_depth = (abs(depth_curr - depth_prev)) / abs(depth_curr);
+            float dist_depth = (abs(depth_curr - depth_prev) - CameraDist) / abs(depth_curr);
             float dot_normals = dot(normal_curr, normal_prev);
         
                 if (dist_depth < 0.1 && dot_normals > 0.8)
@@ -344,15 +339,16 @@ void temporal (uint3 id : SV_DispatchThreadID)
 
     int AccumFrames = min(temporal_color_hf.w,12);
 
-    [branch]if(UseReSTIRGI) {
-        for(int i = -2; i <= 2; i++) {
-            for(int j = -2; j <= 2; j++) {
-                if((ReservoirDataB[pos_prev + int2(i, j) * 2].x+1.0f) / (ReservoirDataA[id.xy + int2(i, j) * 2].x+1) > 1.0f) {
-                    AccumFrames = 0;
-                }
-            }
-        }
-    }
+    // [branch]if(UseReSTIRGI) {
+    //     for(int i = -2; i <= 2; i++) {
+    //         for(int j = -2; j <= 2; j++) {
+    //             if((ReservoirDataB[pos_prev + int2(i, j) * 2].x+1.0f) / (ReservoirDataA[id.xy + int2(i, j) * 2].x+1) > 1.0f) {
+    //                 AccumFrames *= 0.8f;
+    //             }
+    //         }
+    //     }
+    // }
+    if(UseReSTIRGI) AccumFrames *= pow(1.0 - clamp(Gradients[id.xy / 3].x,0,1), 10);
     if(!temporal_sample_valid_diff) AccumFrames = 0;
 
     AccumFrames++;
@@ -438,7 +434,7 @@ void secondarytemporal (uint3 id : SV_DispatchThreadID)
             float3  normal_prev = i_octahedral_32(NormB[p].x);
             
 
-            float dist_depth = (abs(depth_curr - depth_prev)) / abs(depth_curr);
+            float dist_depth = (abs(depth_curr - depth_prev) - CameraDist) / abs(depth_curr);
             float dot_normals = dot(normal_curr, normal_prev);
 
         
@@ -475,16 +471,17 @@ void secondarytemporal (uint3 id : SV_DispatchThreadID)
     float AccumFrames = min(HFPrev[pos_prev].w,60);
     if(!temporal_sample_valid_diff || any(pos_prev < 0 || pos_prev > float2(screen_width, screen_height))) AccumFrames = 0;
 
-    if(AccumFrames > 10) AccumFrames *= lerp(0.1f, 1, pow(exp2(-abs(luminance((temporal_color_hf)) - luminance((Center)))),1));
-    [branch]if(UseReSTIRGI) {
-        for(int i = -2; i <= 2; i++) {
-            for(int j = -2; j <= 2; j++) {
-                if((ReservoirDataB[pos_prev + int2(i, j) * 2].x+1.0f) / (ReservoirDataA[id.xy + int2(i, j) * 2].x+1) > 1.0f) {
-                    AccumFrames = 0;
-                }
-            }
-        }
-    }
+    if(UseReSTIRGI) AccumFrames *= pow(1.0 - clamp(Gradients[id.xy / 3].x,0,1), 10);
+    else if(AccumFrames > 10) AccumFrames *= lerp(0.1f, 1, pow(exp2(-abs(luminance((temporal_color_hf)) - luminance((Center)))),1));
+    // [branch]if(UseReSTIRGI) {
+    //     for(int i = -1; i <= 1; i++) {
+    //         for(int j = -1; j <= 1; j++) {
+    //             if((ReservoirDataB[pos_prev + int2(i, j) * 2].x+1.0f) / (ReservoirDataA[id.xy + int2(i, j) * 2].x+1) > 1.5f) {
+    //                 AccumFrames *= 0.8f;
+    //             }
+    //         }
+    //     }
+    // }
 
     AccumFrames++;
     Center = lerp(temporal_color_hf, Center, min(rcp(AccumFrames),1));
@@ -610,3 +607,64 @@ void SSAOFilter (uint3 id : SV_DispatchThreadID)
 
 }
 
+#pragma kernel Gradient_Atrous
+
+int iteration;
+
+static const float wavelet_factor = 0.5;
+static const float wavelet_kernel[2][2] = {
+    { 1.0, wavelet_factor  },
+    { wavelet_factor, wavelet_factor * wavelet_factor }
+};
+
+#define GRAD_DWN 3
+inline float2 filter_image(Texture2D<half2> img, int2 ipos)
+{
+    int2 grad_size = int2(screen_width, screen_height) / GRAD_DWN;
+
+    float2 color_center = img[ipos].xy;
+
+    float sum_w = 1;
+
+    const int step_size = int(1u << iteration);
+
+    float2 sum_color = 0;
+    sum_w = 0;
+    ipos += (random(64, ipos) - 0.5f);
+
+    const int r = 1;
+    for (int yy = -r; yy <= r; yy++) {
+        for (int xx = -r; xx <= r; xx++) {
+            int2 p = ipos + int2(xx, yy) * step_size;
+
+            float2  c = img[p].xy;
+
+            if (any((p >= grad_size)))
+                c = 0;
+
+            float w = wavelet_kernel[abs(xx)][abs(yy)];// / (float)step_size;
+
+            sum_color += c * w;
+            sum_w += w;
+        }
+    }
+    sum_color /= sum_w;
+
+
+    return sum_color;
+}
+RWTexture2D<half2> GradA;
+Texture2D<half2> GradB;
+[numthreads(16, 16, 1)]
+void Gradient_Atrous(uint3 id : SV_DispatchThreadID)
+{
+
+    int2 ipos = id.xy;
+    int2 grad_size = int2(screen_width, screen_height) / GRAD_DWN;
+    if (any((ipos >= grad_size)))
+        return;
+
+
+    GradA[ipos] = filter_image(GradB, id.xy);
+
+}

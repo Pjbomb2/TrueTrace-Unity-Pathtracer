@@ -1,0 +1,16 @@
+{
+    "name": "TrueTraceEditor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:ed514bd980ff3ea46904db26e115c21d"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

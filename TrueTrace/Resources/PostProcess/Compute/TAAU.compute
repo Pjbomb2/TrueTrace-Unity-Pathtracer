@@ -14,7 +14,7 @@ int target_height;
 groupshared float4 s_color_pq[SHARED_SIZE][SHARED_SIZE];
 groupshared float2 s_motion[SHARED_SIZE][SHARED_SIZE];
 
-Texture2D<float4> TEX_FLAT_COLOR;
+Texture2D<half4> TEX_FLAT_COLOR;
 #ifdef HDRP
 	Texture2DArray<float4> TEX_FLAT_MOTION;
 	Texture2DArray<float4> Albedo;
@@ -24,12 +24,12 @@ Texture2D<float4> TEX_FLAT_COLOR;
 	Texture2D<float4> Albedo2;
 	Texture2D<float4> TEX_FLAT_MOTION;
 #endif
-Texture2D<float4> ThroughputTex;
+Texture2D<half4> ThroughputTex;
 
-Texture2D<float4> TEX_ASVGF_TAA_B;
+Texture2D<half4> TEX_ASVGF_TAA_B;
 SamplerState my_linear_clamp_sampler;
 
-RWTexture2D<float4> IMG_ASVGF_TAA_A;
+RWTexture2D<half4> IMG_ASVGF_TAA_A;
 RWTexture2D<float4> IMG_TAA_OUTPUT;
 
 int CurFrame;
@@ -203,7 +203,7 @@ void BicubicCatmullRom(float2 UV, float2 texSize, out float2 Sample[3], out floa
 }
 
 /* uv is in pixel coordinates */
-float4 sample_texture_catmull_rom(Texture2D<float4> tex, float2 uv)
+float4 sample_texture_catmull_rom(Texture2D<half4> tex, float2 uv)
 {
 	float4 sum = 0;
 	float2 sampleLoc[3], sampleWeight[3];

@@ -99,12 +99,13 @@ uint packUnormArb(float3 data2) {
 }
 
 RWTexture2D<float> ResultSingle;
+bool IsHeightmap;
 [numthreads(32,32,1)]
 void SingleOutputPass (uint3 id : SV_DispatchThreadID)
 {
     if(any(id.xy >= (uint2)floor((InputSize) * Scale))) return;
     float A = AdditionTex.SampleLevel(sampler_point_clamp, (id.xy) / InputSize / Scale, 0)[OutputRead];
-    ResultSingle[id.xy + floor(Offset * Scale)] = pow(abs(A), 0.4545f);
+    ResultSingle[id.xy + floor(Offset * Scale)] = IsHeightmap ? A : pow(abs(A), 0.4545f);
 
 
 }

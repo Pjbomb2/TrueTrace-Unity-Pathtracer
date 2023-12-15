@@ -1,8 +1,8 @@
 #include "../../GlobalDefines.cginc"
-Texture2D<float4> ColorIn;
+Texture2D<half4> ColorIn;
 SamplerState sampler_ColorIn;
 
-RWTexture2D<float4> ColorOut;
+RWTexture2D<half4> ColorOut;
 RWTexture2D<float4> RWScreenPosPrev;
 
 Texture2D<float4> ScreenPosPrev;
@@ -75,7 +75,8 @@ void kernel_taa_prepare(int3 id : SV_DispatchThreadID)
 
 #pragma kernel kernel_taa
 
-RWTexture2D<float4> TAAPrev;
+RWTexture2D<half4> TAAPrev;
+Texture2D<half4> TAAPrevRead;
 
 inline float3 rgb_to_ycocg(const float3 colour) {
 	return float3(
@@ -132,10 +133,8 @@ static const float2 Offsets[] = {
 };
 SamplerState my_linear_clamp_sampler;
 
-[numthreads(16, 16, 1)]
-void kernel_taa(int3 id : SV_DispatchThreadID)
-{
-	if (id.x >= screen_width || id.y >= screen_height) return;
+
+float4 TAAA(int2 id) {
 	//in = Result
 	//out = ColorDirectOut
 	float4 colour = ColorIn[id.xy];
@@ -143,8 +142,8 @@ void kernel_taa(int3 id : SV_DispatchThreadID)
 	if (Samples_Accumulated == 0) {
 		// On the first frame the history buffer will be black,
 		// in this case we don't perform temporal accumulation
-		ColorOut[id.xy] = colour;
-		return;
+		// ColorOut[id.xy] = colour;
+		return float4(ycocg_to_rgb(ColorIn[id.xy].xyz), ColorIn[id.xy].w);
 	}
 	#ifdef HDRP
 		float2 screen_position_prev = (id.xy / float2(screen_width, screen_height) - MotionVectors[int3(id.xy,0)].xy) * 2.0f - 1.0f;
@@ -264,16 +263,214 @@ void kernel_taa(int3 id : SV_DispatchThreadID)
 		//      float contrast = length(colour_curr - colour_avg);
 
 				// Integrate temporally
-		float ALPHA = 0.1f;
+					float2 locpix = frac(float2(u_prev, v_prev));// * float2(screen_width, screen_height));
+
+				float blend = abs(0.5f - locpix.x) + abs(0.5f - locpix.y);
+		float ALPHA = lerp(0.1f, 1.0f, blend);
 		float3 integrated = ycocg_to_rgb(lerp(colour_prev, colour_curr, ALPHA));
 
 		colour.x = integrated.x;
 		colour.y = integrated.y;
 		colour.z = integrated.z;
 	}
+	return colour;
+}
+#define EPS 1e-4
 
-	ColorOut[id.xy] = colour;
+float3 rgb2ycocg(in float3 rgb)
+{
+    float co = rgb.r - rgb.b;
+    float t = rgb.b + co / 2.0;
+    float cg = rgb.g - t;
+    float y = t + cg / 2.0;
+    return float3(y, co, cg);
+}
 
+
+float3 ycocg2rgb(in float3 ycocg)
+{
+    float t = ycocg.r - ycocg.b / 2.0;
+    float g = ycocg.b + t;
+    float b = t - ycocg.g / 2.0;
+    float r = ycocg.g + b;
+    return float3(r, g, b);
+}
+
+float3 RGBtoYCoCg(float3 c)
+{
+    //return rgb2ycocg(c);
+    return mul(float3x3(0.25, 0.5, -0.25, 0.5, 0, 0.5, 0.25, -0.5, -0.25), c);
+}
+
+float3 YCoCgToRGB(float3 c)
+{
+    //return ycocg2rgb(c);
+    return mul(float3x3(1, 1, 1, 1, 0, -1, -1, 1, -1), c);
+}
+
+
+
+float4 SampleTextureCatmullRom(Texture2D<half4> tex, float2 texSize, float2 uv)
+{
+    // We're going to sample a a 4x4 grid of texels surrounding the target UV coordinate. We'll do this by rounding
+    // down the sample location to get the exact center of our "starting" texel. The starting texel will be at
+    // location [1, 1] in the grid, where [0, 0] is the top left corner.
+    float2 samplePos = uv * texSize;
+    float2 texPos1 = floor(samplePos - 0.5) + 0.5;
+
+    // Compute the fractional offset from our starting texel to our original sample location, which we'll
+    // feed into the Catmull-Rom spline function to get our filter weights.
+    float2 f = samplePos - texPos1;
+
+    // Compute the Catmull-Rom weights using the fractional offset that we calculated earlier.
+    // These equations are pre-expanded based on our knowledge of where the texels will be located,
+    // which lets us avoid having to evaluate a piece-wise function.
+    float2 w0 = f * ( -0.5 + f * (1.0 - 0.5*f));
+    float2 w1 = 1.0 + f * f * (-2.5 + 1.5*f);
+    float2 w2 = f * ( 0.5 + f * (2.0 - 1.5*f) );
+    float2 w3 = f * f * (-0.5 + 0.5 * f);
+    
+    // Work out weighting factors and sampling offsets that will let us use bilinear filtering to
+    // simultaneously evaluate the middle 2 samples from the 4x4 grid.
+    float2 w12 = w1 + w2;
+    float2 offset12 = w2 / w12;
+
+    // Compute the final UV coordinates we'll use for sampling the texture
+    float2 texPos0 = texPos1 - 1.0f;
+    float2 texPos3 = texPos1 + 2.0f;
+    float2 texPos12 = texPos1 + offset12;
+
+    texPos0 /= texSize;
+    texPos3 /= texSize;
+    texPos12 /= texSize;
+
+    float4 result = 0;
+    result += tex.SampleLevel(my_linear_clamp_sampler, float2(texPos0.x,  texPos0.y),0) * w0.x * w0.y;
+    result += tex.SampleLevel(my_linear_clamp_sampler, float2(texPos12.x, texPos0.y),0) * w12.x * w0.y;
+    result += tex.SampleLevel(my_linear_clamp_sampler, float2(texPos3.x,  texPos0.y),0) * w3.x * w0.y;
+
+    result += tex.SampleLevel(my_linear_clamp_sampler, float2(texPos0.x,  texPos12.y),0) * w0.x * w12.y;
+    result += tex.SampleLevel(my_linear_clamp_sampler, float2(texPos12.x, texPos12.y),0) * w12.x * w12.y;
+    result += tex.SampleLevel(my_linear_clamp_sampler, float2(texPos3.x,  texPos12.y),0) * w3.x * w12.y;
+
+    result += tex.SampleLevel(my_linear_clamp_sampler, float2(texPos0.x,  texPos3.y),0) * w0.x * w3.y;
+    result += tex.SampleLevel(my_linear_clamp_sampler, float2(texPos12.x, texPos3.y),0) * w12.x * w3.y;
+    result += tex.SampleLevel(my_linear_clamp_sampler, float2(texPos3.x,  texPos3.y),0) * w3.x * w3.y;
+
+    return result;
+}
+
+
+
+
+
+#define coprimes float2(2,3)
+float2 halton (float2 s)
+{
+  float4 a = float4(1,1,0,0);
+  while (s.x > 0. && s.y > 0.)
+  {
+    a.xy = a.xy/coprimes;
+    a.zw += a.xy*fmod(s,coprimes);
+    s = floor(s/coprimes);
+  }
+  return a.zw;
+}
+
+float2 getJitter(float2 pos)
+{
+    pos = floor(pos);
+    return halton(Samples_Accumulated%8+1) - .5;
+    //return float2(IGN(pos, frame), IGN(pos, frame+33));
+    //return texelFetch(ch, (ifloat2(pos) + ifloat2(13, 27) * frame) % ifloat2(1024), 0).xy;
+}
+
+
+float3 clipToAABB(in float3 cOld, in float3 cNew, in float3 center, in float3 halfSize)
+{
+// Clip towards AABB center
+    float3 r = cOld - cNew;
+    float3 m = (center + halfSize) - cNew;
+    float3 n = (center - halfSize) - cNew;
+    
+    if (r.x > m.x + EPS)
+		r *= (m.x / r.x);
+	if (r.y > m.y + EPS)
+		r *= (m.y / r.y);
+	if (r.z > m.z + EPS)
+		r *= (m.z / r.z);
+
+	if (r.x < n.x - EPS)
+		r *= (n.x / r.x);
+	if (r.y < n.y - EPS)
+		r *= (n.y / r.y);
+	if (r.z < n.z - EPS)
+		r *= (n.z / r.z);
+
+	return cNew + r;
+
+}
+
+#define OFFSET_COUNT 4
+
+static const int2 off[] = {
+ 	int2( 1,  0), int2( 0, -1), 
+	int2( 0,  1), int2(-1,  0)
+};
+
+float4 TAAB(int2 id) {
+	float4 colour = ColorIn[id.xy];
+
+	if (Samples_Accumulated == 0) {
+		// On the first frame the history buffer will be black,
+		// in this case we don't perform temporal accumulation
+		return ColorIn[id.xy];
+	}
+	float2 UV = id / float2(screen_width, screen_height);
+	float2 o = getJitter(id);
+	float4 curr = ColorIn.SampleLevel(my_linear_clamp_sampler, UV - o / float2(screen_width, screen_height), 0).xyzw;
+	float3 New = curr.rgb;
+
+    float2 screen_position_prev = ((((float2(id.xy)+0.5f) * float2(rcp(screen_width), rcp(screen_height)) - MotionVectors.SampleLevel(my_linear_clamp_sampler, id.xy / float2(screen_width, screen_height), 0).xy)));
+	// float2 screen_position_prev = (id.xy / float2(screen_width, screen_height) - MotionVectors.SampleLevel(my_linear_clamp_sampler, id.xy / float2(screen_width, screen_height), 0).xy);
+	float2 o2 = getJitter(screen_position_prev * float2(screen_width, screen_height)) / float2(screen_width, screen_height);
+
+	float4 hist = SampleTextureCatmullRom(TAAPrevRead, float2(screen_width, screen_height), screen_position_prev);
+	float a = 0.1f;
+	if(any(screen_position_prev != saturate(screen_position_prev))) a = 1;
+	// else if()
+	float3 old = hist.rgb;
+
+	float3 avg = New;
+	float3 var = New * New;
+	for(int i = 0; i < OFFSET_COUNT; i++) {
+		float3 tex = ColorIn.SampleLevel(my_linear_clamp_sampler,UV + off[i] / float2(screen_width, screen_height), 0).rgb;
+		avg += tex;
+		var += tex * tex;
+
+	}
+	avg /= (float)OFFSET_COUNT + 1.0f;
+	var /= (float)OFFSET_COUNT + 1.0f;
+
+	float3 sig = sqrt(max(var - avg * avg, 0));
+	float g = 1.0f;
+	float3 cmin = avg - sig * g;
+	float3 cmax = avg + sig * g;
+	float3 Clip = clipToAABB(old, clamp(avg, cmin, cmax), avg, sig);
+	old = Clip;
+
+		return float4(lerp(old, New, a), ColorIn[id.xy].w);
+
+
+}
+
+
+[numthreads(16, 16, 1)]
+void kernel_taa(int3 id : SV_DispatchThreadID)
+{
+	if (id.x >= screen_width || id.y >= screen_height) return;
+
+		ColorOut[id.xy] = TAAA(id.xy);
 
 
 }

@@ -6,7 +6,7 @@ Shader "Hidden/Accumulate"
     }
     SubShader
     {
-        Cull Off ZWrite Off ZTest Always
+        Cull Off ZWrite Off ZTest Never
         Blend SrcAlpha OneMinusSrcAlpha
 
         Pass

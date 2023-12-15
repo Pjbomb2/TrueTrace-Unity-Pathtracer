@@ -1,6 +1,6 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel CSMain
-
+#define LUT_DIMS 48
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
 Texture2D<float4> Input;
@@ -12,12 +12,11 @@ int ToneMapSelection;
 
 int width;
 
-float3 tony_mc_mapface(float3 stimulus) {
+inline float3 tony_mc_mapface(float3 stimulus) {
     // Apply a non-linear transform that the LUT is encoded with.
     const float3 encoded = stimulus / (stimulus + 1.0);
 
     // Align the encoded range to texel centers.
-    const float LUT_DIMS = 48.0;
     const float3 uv = encoded * ((LUT_DIMS - 1.0) / LUT_DIMS) + 0.5 / LUT_DIMS;
 
     // Note: for OpenGL, do `uv.y = 1.0 - uv.y`
@@ -117,24 +116,24 @@ float3 HejlBurgess(float3 texColor) {
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     // TODO: insert actual code here!
-    float3 result;//
-    switch(ToneMapSelection) {
-        default:
-            result = tony_mc_mapface(Result[id.xy].xyz);
+    float3 result = Result[id.xy].xyz;//
+    [branch]switch(ToneMapSelection) {
+        case 0:
+            result = tony_mc_mapface(result);
         break;
         case 1:
-            result = ACESFilmicTonemap(Result[id.xy].xyz);
+            result = ACESFilmicTonemap(result);
         break;
         case 2:
-            result = TonemapUchimura(Result[id.xy].xyz);
+            result = TonemapUchimura(result);
         break;
         case 3:
-            result = lumaBasedReinhardToneMapping(Result[id.xy].xyz);
+            result = lumaBasedReinhardToneMapping(result);
         break;
         case 4:
-            result = Uncharted2ToneMapping(Result[id.xy].xyz);
+            result = Uncharted2ToneMapping(result);
         break;
-    };//pow(TonemapUchimura(pow(Result[id.xy].xyz, (1. / gamma))),gamma);
+    };
     Result[id.xy] = float4(result, 1.0);
 }
 

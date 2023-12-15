@@ -198,8 +198,8 @@ namespace TrueTrace {
                 Materials.Add(new MaterialData()
                 {
                     metallic = TerrainTile.terrainData.terrainLayers[i].metallic,
-                    Specular = TerrainTile.terrainData.terrainLayers[i].smoothness,
-                    IOR = TerrainTile.terrainData.terrainLayers[i].smoothness != 0 ? 1.33f : 1,
+                    Specular = 0,//TerrainTile.terrainData.terrainLayers[i].smoothness,
+                    IOR = 1,//TerrainTile.terrainData.terrainLayers[i].smoothness != 0 ? 1.33f : 1,
                     BaseColor = new Vector3(TerrainTile.terrainData.size.x / TerrainTile.terrainData.terrainLayers[i].tileSize.x, TerrainTile.terrainData.size.z / TerrainTile.terrainData.terrainLayers[i].tileSize.y, 0),
                     TransmittanceColor = new Vector3(TerrainTile.terrainData.terrainLayers[i].tileOffset.x / TerrainTile.terrainData.terrainLayers[i].tileSize.x, TerrainTile.terrainData.terrainLayers[i].tileOffset.y / TerrainTile.terrainData.terrainLayers[i].tileSize.y, 0),
                     MatType = 1,

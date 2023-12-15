@@ -1,3 +1,5 @@
+    // #pragma use_dxc
+    // #pragma enable_d3d11_debug_symbols
 #include "CommonData.cginc"
 #include "../GlobalDefines.cginc"
 #ifdef HardwareRT
@@ -45,14 +47,11 @@ inline void IntersectTriangle(int mesh_id, int tri_id, const Ray ray, inout RayH
                         float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex);
                         if(_TextureAtlas.SampleLevel(my_linear_clamp_sampler, Uv, 0).w < 0.1f) return;
                     }
-                    #ifdef VideoIncludedInAlphaMapping
-                        if(_Materials[MaterialIndex].MatType == VideoIndex) {
-                            float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - u - v) + AggTris[tri_id].texedge1 * u + AggTris[tri_id].texedge2 * v;
-                            if(VideoTex.SampleLevel(sampler_VideoTex, BaseUv, 0).w < 0.1f) return;
-                        }
-                    #endif
                 #endif
                 #ifdef IgnoreGlassMain
+                    #ifndef AdvancedAlphaMapped
+                        int MaterialIndex = (MatOffset + AggTris[tri_id].MatDat);
+                    #endif
                     if(_Materials[MaterialIndex].specTrans == 1) return;
                 #endif
                 ray_hit.t = t;
@@ -67,10 +66,10 @@ inline void IntersectTriangle(int mesh_id, int tri_id, const Ray ray, inout RayH
 
 
 void IntersectBVH() {
-    int Reps;
     RayHit bestHit;
     Ray ray;
     #ifndef HardwareRT
+        int Reps;
         uint2 stack[24];
         int stack_size = 0;
         uint2 current_group;
@@ -78,22 +77,19 @@ void IntersectBVH() {
         int tlas_stack_size;
         Ray ray2;
         int NodeOffset;
+        int TriOffset;
+        int MatOffset;
+        int mesh_id = -1;
     #endif
-    int TriOffset;
-    int MatOffset;
     int ray_index;
-
-    int mesh_id = -1;
+    RayData GlobalRay;
 
     while (true) {
-        TriOffset = 0;
-        MatOffset = 0;
-        Reps = 0;
         //Revive dead threads(persistent threads, need Shader Model 6 to take true advantage of)
         InterlockedAdd(BufferSizes[CurBounce].tracerays, -1, ray_index);
         ray_index--;
         if (ray_index < 0) return;
-
+        GlobalRay = GlobalRays[ray_index];
         bestHit = CreateRayHit();
 
         #ifdef HardwareRT
@@ -104,6 +100,7 @@ void IntersectBVH() {
             myRay.Direction = i_octahedral_32(GlobalRays[ray_index].direction);
             myRay.TMin = 0;
             myRay.TMax = FarPlane;
+            bestHit.t = FarPlane;
             while(true) {
                q.TraceRayInline(myAccelerationStructure, rayFlags, 0xff, myRay);
                 while(q.Proceed()){}
@@ -130,23 +127,25 @@ void IntersectBVH() {
                             if(_TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0).w < 0.0001f) {myRay.TMin = bestHit.t + 0.001f; continue;}
                         }
                     #endif
-                } else {
-                    bestHit.t = FarPlane;
                 }
                 break;
             }
 
 
-
-            int PixIndex = GlobalRays[ray_index].PixelIndex;
-            uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
-            int2 Indexes = Unpack1To2(bestHit.mesh_id);
-            if(UseASVGF && CurBounce == 0) _PrimaryTriangleInfo[TempUv] = uint4(MeshOffsets[Indexes.y].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x] - _MeshData[MeshOffsets[Indexes.y].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
+            [branch]if((UseASVGF || UseReSTIRGI) && CurBounce == 0) {
+                int PixIndex = GlobalRay.PixelIndex;
+                uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
+                int2 Indexes = Unpack1To2(bestHit.mesh_id);
+                _PrimaryTriangleInfo[TempUv] = uint4(MeshOffsets[Indexes.y].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x] - _MeshData[MeshOffsets[Indexes.y].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
+            }
 
             set(ray_index, bestHit);
         #else
-            ray.origin = GlobalRays[ray_index].origin;
-            ray.direction = i_octahedral_32(GlobalRays[ray_index].direction);
+            TriOffset = 0;
+            MatOffset = 0;
+            Reps = 0;
+            ray.origin = GlobalRay.origin;
+            ray.direction = i_octahedral_32(GlobalRay.direction);
             ray.direction_inv = rcp(ray.direction);
             NodeOffset = 0;
             tlas_stack_size = -1;
@@ -221,11 +220,8 @@ void IntersectBVH() {
 
                         current_group.x = (uint)root_index;
                         current_group.y = (uint)0x80000000;
-                                           // Reps++;
-
                     } else {
                         while (triangle_group.y != 0) {
-                            
                             uint triangle_index = firstbithigh(triangle_group.y);
                             triangle_group.y &= ~(1 << triangle_index);
                             IntersectTriangle(mesh_id, triangle_group.x + triangle_index, ray, bestHit, MatOffset);//Intersect Mesh Triangles
@@ -234,12 +230,11 @@ void IntersectBVH() {
                 }
                 if ((current_group.y & 0xff000000) == 0) {
                     if (stack_size == 0) {//thread has finished traversing
-                        [branch] if((UseASVGF) && CurBounce == 0) {
-                            int PixIndex = GlobalRays[ray_index].PixelIndex;
+                        [branch]if(CurBounce == 0) {
+                            int PixIndex = GlobalRay.PixelIndex;
                             uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
                             _PrimaryTriangleInfo[TempUv] = uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
                         }
-                        // if(CurBounce == 0) _DebugTex[TempUv] = float4((Reps) / 42.0f,Reps > 80,0,1);
                         set(ray_index, bestHit);
                         current_group.y = 0;
                         break;
@@ -274,16 +269,19 @@ void IntersectBVHShadow(const int localid) {
         uint2 stack[24];
         int stack_size = 0;
         uint2 current_group;
+        int NodeOffset;
+        int TriOffset;
+        int MatOffset;
         uint oct_inv4;
         int tlas_stack_size;
         Ray ray2;
-        int NodeOffset;
+        float max_distance;
+        int Reps = 0;
     #endif
 
+    int mesh_id = -1;
     int ray_index;
 
-    int mesh_id;
-    float max_distance;
 
     while (true) {
         //Revive dead threads(persistent threads, need Shader Model 6 to take true advantage of)
@@ -300,23 +298,48 @@ void IntersectBVHShadow(const int localid) {
             myRay.Direction = i_octahedral_32(ShadowRaysBuffer[ray_index].direction);
             myRay.TMin = 0;
             myRay.TMax = abs(ShadowRaysBuffer[ray_index].t);
-            q.TraceRayInline(myAccelerationStructure, rayFlags, 0x1, myRay);
-            while(q.Proceed()){}
+            while(true) {
+                q.TraceRayInline(myAccelerationStructure, rayFlags, 0x1, myRay);
+                while(q.Proceed()){}
 
-            if(q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) ShadowRaysBuffer[ray_index].t = -1;
-             else {
-                    // CurrentReservoirGI[ShadowRaysBuffer[ray_index].PixelIndex].LuminanceIncommingM = Pack2To1((Unpack1To2(CurrentReservoirGI[ShadowRaysBuffer[ray_index].PixelIndex].LuminanceIncommingM).y / 1000.0f + ShadowRaysBuffer[ray_index].LuminanceIncomming) * 1000.0f, 0);// * ((CurBounce == 0) ? 10.0f : 1.0f);
-                    if (ShadowRaysBuffer[ray_index].t >= 0) {
-                        if (CurBounce == 0) {
-                            GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].Direct += ShadowRaysBuffer[ray_index].illumination;
+                if(q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
+
+                    float u = q.CommittedTriangleBarycentrics().y;
+                    float v = q.CommittedTriangleBarycentrics().x;
+                    int2 Indexes = int2(q.CommittedInstanceID(), q.CommittedGeometryIndex());
+                    int triangle_id = q.CommittedPrimitiveIndex();
+                    #ifdef AdvancedAlphaMapped
+
+                        int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
+                        triangle_id += triangleOffset;
+                        mesh_id = MeshOffsets[Indexes.x].y;
+
+                        int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTris[triangle_id].MatDat);
+                        if(_Materials[MaterialIndex].MatType == CutoutIndex) {
+                            float2 BaseUv = AggTris[triangle_id].tex0 * (1.0f - u - v) + AggTris[triangle_id].texedge1 * u + AggTris[triangle_id].texedge2 * v;
+                            float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex);
+                            if(_TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0).w < 0.1f) {myRay.TMin = q.CommittedRayT() + 0.001f; continue;}
                         }
-                        else {
-                            GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;
+                    #endif
+
+                    ShadowRaysBuffer[ray_index].t = 0;
+                } else {
+                    if(!TerrainExists) {
+                        if(UseReSTIRGI && ReSTIRGIUpdateRate != 0) NEEPosA[uint2(ShadowRaysBuffer[ray_index].PixelIndex % screen_width, ShadowRaysBuffer[ray_index].PixelIndex / screen_width)] += float4(0,0,0,ShadowRaysBuffer[ray_index].LuminanceIncomming);
+
+                        if (ShadowRaysBuffer[ray_index].t >= 0) {
+                            if (CurBounce == 0) {
+
+                                GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].Direct += ShadowRaysBuffer[ray_index].illumination;
+                            } else {
+                                GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;
+                            }
+                        } else {
+                            GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].PrimaryNEERay = packRGBE(unpackRGBE(GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].PrimaryNEERay) + ShadowRaysBuffer[ray_index].illumination);
                         }
                     }
-                    else {
-                        GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].PrimaryNEERay += packRGBE(ShadowRaysBuffer[ray_index].illumination);
-                    }
+                }
+                break;
             }
         #else
             max_distance = abs(ShadowRaysBuffer[ray_index].t);
@@ -325,6 +348,10 @@ void IntersectBVHShadow(const int localid) {
             ray.direction_inv = rcp(ray.direction);
             ray2 = ray;
             float3 throughput = 1;
+            TriOffset = 0;
+            MatOffset = 0;
+            Reps = 0;
+            NodeOffset = 0;
 
             oct_inv4 = ray_get_octant_inv4(ray.direction);
 
@@ -332,55 +359,53 @@ void IntersectBVHShadow(const int localid) {
             current_group.y = (uint)0x80000000;
 
             tlas_stack_size = -1;
-            while (true) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
-                uint2 triangle_group;
-                if (current_group.y & 0xff000000) {
-                    uint hits_imask = current_group.y;
-                    uint child_index_offset = firstbithigh(hits_imask);
-                    uint child_index_base = current_group.x;
+            uint2 triangle_group;
+            [loop] while (Reps < 1000) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
+                [branch]if (current_group.y & 0xff000000) {
+                   uint child_index_offset = firstbithigh(current_group.y);
+
+                    uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
+                    uint relative_index = countbits(current_group.y & ~(0xffffffff << slot_index));
+                    uint child_node_index = current_group.x + relative_index;
 
                     current_group.y &= ~(1 << child_index_offset);
 
                     if (current_group.y & 0xff000000) {
                         stack[stack_size++] = current_group;
                     }
-                    uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
-                    uint relative_index = countbits(hits_imask & ~(0xffffffff << slot_index));
-                    uint child_node_index = child_index_base + relative_index;
+                    const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
+                    float3 node_0 = TempNode.node_0xyz;
+                    uint node_0w = TempNode.node_0w;
 
-                    float3 node_0 = cwbvh_nodes[child_node_index].node_0xyz;
-                    uint node_0w = cwbvh_nodes[child_node_index].node_0w;
-
-                    uint4 node_1 = cwbvh_nodes[child_node_index].node_1;
-                    uint4 node_2 = cwbvh_nodes[child_node_index].node_2;
-                    uint4 node_3 = cwbvh_nodes[child_node_index].node_3;
-                    uint4 node_4 = cwbvh_nodes[child_node_index].node_4;
+                    uint4 node_1 = TempNode.node_1;
+                    uint4 node_2 = TempNode.node_2;
+                    uint4 node_3 = TempNode.node_3;
+                    uint4 node_4 = TempNode.node_4;
 
                     uint hitmask = cwbvh_node_intersect(ray, oct_inv4, max_distance, node_0, node_0w, node_1, node_2, node_3, node_4);
 
-                    uint imask = (node_0w >> (3 * 8)) & 0xff;
-
-                    current_group.x = asuint(node_1.x) + ((tlas_stack_size == -1) ? 0 : _MeshData[mesh_id].NodeOffset);
-                    triangle_group.x = asuint(node_1.y) + ((tlas_stack_size == -1) ? 0 : _MeshData[mesh_id].TriOffset);
-
-                    current_group.y = (hitmask & 0xff000000) | (uint)(imask);
+                    current_group.y = (hitmask & 0xff000000) | ((node_0w >> 24) & 0xff);
                     triangle_group.y = (hitmask & 0x00ffffff);
+
+                    current_group.x = (node_1.x) + NodeOffset;
+                    triangle_group.x = (node_1.y) + TriOffset;
+
+                    Reps++;
                 }
                 else {
-                    triangle_group.x = current_group.x;
-                    triangle_group.y = current_group.y;
-                    current_group.x = (uint)0;
-                    current_group.y = (uint)0;
+                    triangle_group = current_group;
+                    current_group = (uint)0;
                 }
 
 
-                while (triangle_group.y != 0) {
-                    if (tlas_stack_size == -1) {//Transfer from Top Level Accelleration Structure to Bottom Level Accelleration Structure
+                if(triangle_group.y != 0) {
+                    [branch]if (tlas_stack_size == -1) {//Transfer from Top Level Accelleration Structure to Bottom Level Accelleration Structure
                         uint mesh_offset = firstbithigh(triangle_group.y);
                         triangle_group.y &= ~(1 << mesh_offset);
 
                         mesh_id = TLASBVH8Indices[triangle_group.x + mesh_offset];
-
+                        NodeOffset = _MeshData[mesh_id].NodeOffset;
+                        TriOffset = _MeshData[mesh_id].TriOffset;
                         if (triangle_group.y != 0) {
                             stack[stack_size++] = triangle_group;
                         }
@@ -392,7 +417,8 @@ void IntersectBVHShadow(const int localid) {
 
                         int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
 
-                        ray.direction = (mul(_MeshData[mesh_id].Transform, float4(ray.direction, 0))).xyz;
+                        MatOffset = _MeshData[mesh_id].MaterialOffset;
+                        ray.direction = (mul((float3x3)_MeshData[mesh_id].Transform, ray.direction)).xyz;
                         ray.origin = (mul(_MeshData[mesh_id].Transform, float4(ray.origin, 1))).xyz;
                         ray.direction_inv = rcp(ray.direction);
 
@@ -400,17 +426,14 @@ void IntersectBVHShadow(const int localid) {
 
                         current_group.x = (uint)root_index;
                         current_group.y = (uint)0x80000000;
-
-                        break;
-                    }
-                    else {
-                        uint triangle_index = firstbithigh(triangle_group.y);
-                        triangle_group.y &= ~(1 << triangle_index);
-
-                        if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, max_distance, mesh_id, throughput)) {
-                            hit = true;
-                            ShadowRaysBuffer[ray_index].t = 0;
-                            break;
+                    } else {
+                        while (triangle_group.y != 0) {    
+                            uint triangle_index = firstbithigh(triangle_group.y);
+                            triangle_group.y &= ~(1 << triangle_index);
+                            if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, max_distance, mesh_id, throughput, MatOffset)) {
+                                hit = true;
+                                break;
+                            }
                         }
                     }
                 }
@@ -427,18 +450,14 @@ void IntersectBVHShadow(const int localid) {
                         current_group.y = 0;
                         if(!TerrainExists) {
                             if(UseReSTIRGI && ReSTIRGIUpdateRate != 0) NEEPosA[uint2(ShadowRaysBuffer[ray_index].PixelIndex % screen_width, ShadowRaysBuffer[ray_index].PixelIndex / screen_width)] += float4(0,0,0,ShadowRaysBuffer[ray_index].LuminanceIncomming);
-                            // CurrentGIReservoir[ShadowRaysBuffer[ray_index].PixelIndex].LuminanceIncommingM = Pack2To1((Unpack1To2(CurrentGIReservoir[ShadowRaysBuffer[ray_index].PixelIndex].LuminanceIncommingM).y / 1000.0f + ShadowRaysBuffer[ray_index].LuminanceIncomming) * 1000.0f, 0);
                             if (ShadowRaysBuffer[ray_index].t >= 0) {
                                 if (CurBounce == 0) {
-
                                     GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].Direct += ShadowRaysBuffer[ray_index].illumination * throughput;
-                                }
-                                else {
+                                } else {
                                     GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination * throughput;
                                 }
                             }
                             else {
-                                    // _DebugTex[int2(ShadowRaysBuffer[ray_index].PixelIndex % screen_width, ShadowRaysBuffer[ray_index].PixelIndex / screen_width)] = float4(normalize(OutputDIBuffer[ShadowRaysBuffer[ray_index].PixelIndex].AvgDir),1);
                                 GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].PrimaryNEERay = packRGBE(unpackRGBE(GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].PrimaryNEERay) + ShadowRaysBuffer[ray_index].illumination * throughput);
                             }
                         }
@@ -446,6 +465,8 @@ void IntersectBVHShadow(const int localid) {
                     }
 
                     if (stack_size == tlas_stack_size) {
+                        NodeOffset = 0;
+                        TriOffset = 0;
                         tlas_stack_size = -1;
                         ray = ray2;
                         oct_inv4 = ray_get_octant_inv4(ray.direction);
@@ -560,7 +581,7 @@ bool GetDist(float3 CurrentPos, out float2 uv, out float dist, const TerrainData
     q.z /= Terrain.TerrainDim;
     uv = float2(min(CurrentPos.x / Terrain.TerrainDim, 1), min(CurrentPos.z / Terrain.TerrainDim, 1));
     float h = Heightmap.SampleLevel(sampler_trilinear_clamp, uv * (Terrain.HeightMap.xy - Terrain.HeightMap.zw) + Terrain.HeightMap.zw, 0).x;
-    h *= Terrain.HeightScale * 2;
+    h *= Terrain.HeightScale * 2.0f;
     q.y -= h;
     q.y *= g;
     float b2 = q.y;

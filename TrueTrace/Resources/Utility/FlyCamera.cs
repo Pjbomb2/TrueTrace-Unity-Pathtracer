@@ -23,23 +23,27 @@ namespace TrueTrace {
         private bool StopMovement = true;
         private bool IsPressingT = false;
         void Update () {
-            bool PressedT = Input.GetKey(KeyCode.T);
-            if(PressedT && !IsPressingT) {
-                if(!StopMovement) {
-                    Cursor.lockState = CursorLockMode.None;
-                    StopMovement = true;
-                } else  {
-                    Cursor.lockState = CursorLockMode.Locked;
-                    StopMovement = false;   
-                }
-            }
-            if(Input.GetMouseButtonDown(0)) {
-                Cursor.lockState = CursorLockMode.Locked;
-                StopMovement = false;
-            }
-            if(PressedT) {
-                IsPressingT = true;
-            } else {IsPressingT = false;}
+            bool PressedT = Input.GetMouseButtonDown(1);
+            // if(PressedT && !IsPressingT) {
+            //     if(!StopMovement) {
+            //         // Cursor.lockState = CursorLockMode.None;
+            //         StopMovement = true;
+            //     } else  {
+            //         // Cursor.lockState = CursorLockMode.Locked;
+            //         StopMovement = false;   
+            //     }
+            // }
+            // if(Input.GetMouseButtonDown(1)) {
+            //     // Cursor.lockState = CursorLockMode.Locked;
+            //     StopMovement = false;
+            // } else {
+            //     StopMovement = true;
+
+            // }
+            // if(PressedT) {
+            //     IsPressingT = true;
+            // } else {IsPressingT = false;}
+            StopMovement = !Input.GetMouseButton(1);
 
 
 

@@ -62,29 +62,30 @@ float screenAverageLuma() {
 static float nightVision = 0.0f;
 static float EXPOSURE_SPEED = 0.75f;
 float frame_time;
+float Exposure;
+bool ExposureAuto;
 float calculateAverageLuminance() {
 	const float L_min = 0.00075;
-	const float L_max = 5.0;
+	const float L_max = 50.0;
 	const float exposureDecay = 0.05;
 	const float exposureGrowth = 0.035;
 
-	float eCurrent = max(A[0], 0.0f);
+	float eCurrent = clamp(A[0], 0.0f,50.0f);
 	float L_median = screenAverageLuma();
-	float keyVal = 1.03 - 2.0 / (2.0 + log10(L_median + 1.0)); // Keyvalue remap to preserve relative brightness of lighting in scenes 1.03
-	float eTarget = keyVal * 2.15 / clamp(L_median, L_min, L_max - nightVision * 0.1);
+	float keyVal = 1.5f - 2.0 / (2.0 + log10(L_median + 1.0)); // Keyvalue remap to preserve relative brightness of lighting in scenes 1.03
+	float eTarget = keyVal * 2.15 / clamp(L_median, L_min, L_max);
 
 	float speed = eTarget < eCurrent ? exposureDecay : exposureGrowth;
 
-	return lerp(eCurrent, eTarget, speed * 2.0 * EXPOSURE_SPEED * (frame_time / 0.033));
+	return lerp(eCurrent, eTarget, clamp(speed * 2.0 * EXPOSURE_SPEED * (frame_time / 0.033),0,1));
 }
 
-float Exposure;
 [numthreads(1, 1, 1)]
 void AutoExpose(uint3 id : SV_DispatchThreadID)
 {
 	// TODO: insert actual code here!
 
-	A[0] = ((Exposure == 0) ? calculateAverageLuminance() : Exposure);
+	A[0] = ((ExposureAuto) ? calculateAverageLuminance() : Exposure);
 }
 
 

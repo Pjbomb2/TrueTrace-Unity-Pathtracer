@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +14,7 @@ using System.Xml.Serialization;
 using UnityEngine.Rendering;
 using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
+using System.Reflection;
 
 namespace TrueTrace {
    public class EditModeFunctions : EditorWindow {
@@ -22,6 +24,7 @@ namespace TrueTrace {
         }
 
         public Toggle NEEToggle;
+        public Toggle DingToggle;
         public Button BVHBuild;
         public Button ScreenShotButton;
         public Button StaticButton;
@@ -31,16 +34,15 @@ namespace TrueTrace {
         public RayTracingMaster RayMaster;
         public AssetManager Assets;
         public InstancedManager Instancer;
+        private AudioClip DingNoise;
          [SerializeField] public Camera SelectedCamera;
          [SerializeField] public ObjectField CameraField;
          [SerializeField] public int BounceCount = 7;
          [SerializeField] public float RenderRes = 1;
-         [SerializeField] public bool NEE = false;
+         [SerializeField] public bool NEE = true;
          [SerializeField] public bool Accumulate = true;
          [SerializeField] public bool RR = true;
          [SerializeField] public bool Moving = true;
-         [SerializeField] public bool Volumetrics = false;
-         [SerializeField] public float VolumDens = 0;
          [SerializeField] public bool MeshSkin = true;
          [SerializeField] public bool Bloom = false;
          [SerializeField] public float BloomStrength = 0.5f;
@@ -48,6 +50,7 @@ namespace TrueTrace {
          [SerializeField] public float DoFAperature = 0.1f;
          [SerializeField] public float DoFFocal = 0.1f;
          [SerializeField] public bool DoExposure = false;
+         [SerializeField] public bool DoExposureAuto = false;
          [SerializeField] public bool ReSTIRGI = false;
          [SerializeField] public bool SampleValid = false;
          [SerializeField] public int UpdateRate = 7;
@@ -67,10 +70,12 @@ namespace TrueTrace {
          [SerializeField] public int PartialRenderingFactor = 1;
          [SerializeField] public bool DoFirefly = false;
          [SerializeField] public bool ImprovedPrimaryHit = false;
+         [SerializeField] public static bool DoDing = true;
          [SerializeField] public float MinSpatialSize = 10;
          [SerializeField] public float ReCurBlurRadius = 30;
          [SerializeField] public int RISCount = 5;
          [SerializeField] public int DenoiserSelection = 0;
+         [SerializeField] public bool ReSTIRDenoiser = false;
          void OnEnable() {
             EditorSceneManager.activeSceneChangedInEditMode += EvaluateScene;
             if(EditorPrefs.GetString("EditModeFunctions", JsonUtility.ToJson(this, false)) != null) {
@@ -85,9 +90,11 @@ namespace TrueTrace {
 
          List<List<GameObject>> Objects;
          List<Mesh> SourceMeshes;
-
+         private static TTStopWatch BuildWatch;
          private void OnStartAsyncCombined() {
             EditorUtility.SetDirty(GameObject.Find("Scene").GetComponent<AssetManager>());
+            BuildWatch = new TTStopWatch("Total Scene Build Time");
+            BuildWatch.Start();
             GameObject.Find("Scene").GetComponent<AssetManager>().EditorBuild();
          }
 
@@ -405,12 +412,10 @@ FloatField FocalSlider;
 private void StandardSet() {
          BounceCount = 7;
          RenderRes = 1;
-         NEE = false;
+         NEE = true;
          Accumulate = true;
          RR = true;
          Moving = true;
-         Volumetrics = false;
-         VolumDens = 0;
          MeshSkin = true;
          Bloom = false;
          BloomStrength = 0.5f;
@@ -418,6 +423,7 @@ private void StandardSet() {
          DoFAperature = 0.1f;
          DoFFocal = 0.1f;
          DoExposure = false;
+         DoExposureAuto = false;
          ReSTIRGI = false;
          SampleValid = false;
          UpdateRate = 7;
@@ -748,9 +754,14 @@ Toolbar toolbar;
          Toggle HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
          HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("HardwareRT"); else RemoveDefine("HardwareRT"); SetDefines();});
          HardSettingsMenu.Add(HardwareRTToggle);
+         Toggle DX11Toggle = new Toggle() {value = (definesList.Contains("DX11Only")), text = "Use DX11"};
+         DX11Toggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("DX11Only"); else RemoveDefine("DX11Only"); SetDefines();});
+         HardSettingsMenu.Add(DX11Toggle);
          Button RemoveTrueTraceButton = new Button(() => RemoveTrueTrace()) {text = "Remove TrueTrace Scripts From Scene"};
          HardSettingsMenu.Add(RemoveTrueTraceButton);
-
+         DingToggle = new Toggle() {value = DoDing, text = "Play Ding When Build Finishes"};
+         DingToggle.RegisterValueChangedCallback(evt => DoDing = evt.newValue);
+         HardSettingsMenu.Add(DingToggle);
       }
 
       public struct CustomGBufferData {
@@ -778,6 +789,7 @@ Toolbar toolbar;
             CreateGUI();
          }
         public void CreateGUI() {
+            DingNoise = Resources.Load("Utility/DING", typeof(AudioClip)) as AudioClip;
             OnFocus();
             MainSource = new VisualElement();
             MaterialPairingMenu = new VisualElement();
@@ -827,7 +839,10 @@ Toolbar toolbar;
            RayMaster.DoFAperature = DoFAperature;
            RayMaster.DoFFocal = DoFFocal;
            RayMaster.AllowAutoExpose = DoExposure;
+           RayMaster.DoExposureAuto = DoExposureAuto;
+           RayMaster.Exposure = Exposure;
            RayMaster.UseReSTIRGI = ReSTIRGI;
+           RayMaster.ReSTIRDenoiser = ReSTIRDenoiser;
            RayMaster.UseReSTIRGITemporal = GITemporal;
            RayMaster.UseReSTIRGISpatial = GISpatial;
            RayMaster.DoReSTIRGIConnectionValidation = SampleValid;
@@ -839,7 +854,6 @@ Toolbar toolbar;
            RayMaster.AllowToneMap = ToneMap;
            RayMaster.UseTAAU = TAAU;
            RayMaster.AtmoNumLayers = AtmoScatter;
-           RayMaster.Exposure = Exposure;
            Assets.DesiredRes = AtlasSize;
            RayMaster.DoPartialRendering = DoPartialRendering;
            RayMaster.PartialRenderingFactor = PartialRenderingFactor;
@@ -905,7 +919,7 @@ Toolbar toolbar;
                BounceField.style.paddingRight = 40;
                TopEnclosingBox.Add(BounceField);
                BounceField.RegisterValueChangedCallback(evt => {BounceCount = (int)evt.newValue; RayMaster.bouncecount = BounceCount;});        
-               ResField = new FloatField("Upscaling Ratio") {value = RenderRes};
+               ResField = new FloatField("Internal Resolution Ratio") {value = RenderRes};
                ResField.ElementAt(0).style.minWidth = 75;
                ResField.ElementAt(1).style.width = 35;
                TopEnclosingBox.Add(ResField);
@@ -1058,6 +1072,8 @@ Toolbar toolbar;
                Label ExposureLabel = new Label("Exposure");
                Slider ExposureSlider = new Slider() {value = Exposure, highValue = 50.0f, lowValue = 0};
                FloatField ExposureField = new FloatField() {value = Exposure};
+               Toggle DoExposureAutoToggle = new Toggle() {value = DoExposureAuto, text = "Auto(On)/Manual(Off)"};
+               DoExposureAutoToggle.RegisterValueChangedCallback(evt => {DoExposureAuto = evt.newValue; RayMaster.DoExposureAuto = DoExposureAuto;});
                DoExposureToggle.tooltip = "Slide to the left for Auto";
                ExposureSlider.tooltip = "Slide to the left for Auto";
                ExposureLabel.tooltip = "Slide to the left for Auto";
@@ -1065,6 +1081,7 @@ Toolbar toolbar;
                ExposureElement.Add(ExposureLabel);
                ExposureElement.Add(ExposureSlider);
                ExposureElement.Add(ExposureField);
+               ExposureElement.Add(DoExposureAutoToggle);
            DoExposureToggle.RegisterValueChangedCallback(evt => {DoExposure = evt.newValue; RayMaster.AllowAutoExpose = DoExposure;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(DoExposureToggle) + 1, ExposureElement); else MainSource.Remove(ExposureElement);});
            ExposureSlider.RegisterValueChangedCallback(evt => {Exposure = evt.newValue; ExposureField.value = Exposure; RayMaster.Exposure = Exposure;});
            ExposureField.RegisterValueChangedCallback(evt => {Exposure = evt.newValue; ExposureSlider.value = Exposure; RayMaster.Exposure = Exposure;});
@@ -1089,14 +1106,18 @@ Toolbar toolbar;
                Box TemporalGI = new Box();
                    TemporalGI.style.flexDirection = FlexDirection.Row;
                    TemporalGIToggle = new Toggle() {value = GITemporal, text = "Enable Temporal"};
+                   Toggle GIDenoiserToggle = new Toggle() {value = ReSTIRDenoiser, text = "Enable Denoiser"};
+                   
                    Label TemporalGIMCapLabel = new Label("Temporal M Cap(0 is off)");
                    TemporalGIMCapLabel.tooltip = "Controls how long a sample is valid for, lower numbers update more quickly but have more noise, good for quickly changing scenes/lighting";
                    TeporalGIMCapField = new FloatField() {value = GITemporalMCap};
                    TemporalGIToggle.RegisterValueChangedCallback(evt => {GITemporal = evt.newValue; RayMaster.UseReSTIRGITemporal = GITemporal;});
                    TeporalGIMCapField.RegisterValueChangedCallback(evt => {GITemporalMCap = (int)evt.newValue; RayMaster.ReSTIRGITemporalMCap = GITemporalMCap;});
+                   GIDenoiserToggle.RegisterValueChangedCallback(evt => {ReSTIRDenoiser = (bool)evt.newValue; RayMaster.ReSTIRDenoiser = ReSTIRDenoiser;});
                    TemporalGI.Add(TemporalGIToggle);
                    TemporalGI.Add(TeporalGIMCapField);
                    TemporalGI.Add(TemporalGIMCapLabel);
+                   TemporalGI.Add(GIDenoiserToggle);
                EnclosingGI.Add(TemporalGI);
                Box SpatialGI = new Box();
                    SpatialGI.style.flexDirection = FlexDirection.Row;
@@ -1207,7 +1228,7 @@ Toolbar toolbar;
                Box ReadyBox = new Box();
                ReadyBox.style.height = 18;
                ReadyBox.style.backgroundColor = Color.green;
-               RemainingObjectsField.RegisterValueChangedCallback(evt => {if(evt.newValue == 0) ReadyBox.style.backgroundColor = Color.green; else ReadyBox.style.backgroundColor = Color.red;});
+               RemainingObjectsField.RegisterValueChangedCallback(evt => {if(evt.newValue == 0) {ReadyBox.style.backgroundColor = Color.green; PlayClip(DingNoise);} else ReadyBox.style.backgroundColor = Color.red;});
                Label ReadyLabel = new Label("All Objects Built");
                ReadyLabel.style.color = Color.black;
                ReadyBox.style.alignItems = Align.Center;
@@ -1231,6 +1252,28 @@ Toolbar toolbar;
             }
         }
 
+    public static void PlayClip(AudioClip clip, int startSample = 0, bool loop = false)
+    {
+         float TimeElapsed = BuildWatch.GetSeconds();
+         BuildWatch.Stop();
+         if(DoDing && TimeElapsed > 15.0f) {
+            Assembly unityEditorAssembly = typeof(AudioImporter).Assembly;
+        
+            System.Type audioUtilClass = unityEditorAssembly.GetType("UnityEditor.AudioUtil");
+            MethodInfo method = audioUtilClass.GetMethod(
+               "PlayPreviewClip",
+               BindingFlags.Static | BindingFlags.Public,
+               null,
+               new System.Type[] { typeof(AudioClip), typeof(int), typeof(bool) },
+               null
+            );
+            method.Invoke(
+               null,
+               new object[] { clip, startSample, loop }
+            );
+         }
+    }
+
    }
 
     public class PopupWarningWindow : PopupWindowContent
@@ -1247,3 +1290,4 @@ Toolbar toolbar;
         }
     }
 }
+#endif

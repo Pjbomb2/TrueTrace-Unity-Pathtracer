@@ -46,7 +46,7 @@ float AperatureRadius;
 
 RWStructuredBuffer<uint3> BufferData;
 
-RWTexture2D<half> CorrectedDepthTex;
+RWTexture2D<half2> CorrectedDepthTex;
 
 #ifdef HardwareRT
 	StructuredBuffer<int> SubMeshOffsets;
@@ -61,7 +61,7 @@ struct BufferSizeData {
 	int heightmap_shadow_rays;
 };
 
-RWStructuredBuffer<BufferSizeData> BufferSizes;
+globallycoherent RWStructuredBuffer<BufferSizeData> BufferSizes;
 
 
 struct CudaTriangle {
@@ -103,8 +103,8 @@ struct RayHit {
 
 struct RayData {//128 bit aligned
 	float3 origin;
-	uint PixelIndex;//need to bump this back down to uint1
 	uint direction;
+	uint PixelIndex;//need to bump this back down to uint1
 	float last_pdf;
 	uint4 hits;
 };
@@ -112,6 +112,7 @@ struct RayData {//128 bit aligned
 RWStructuredBuffer<RayData> GlobalRays;
 
 RWTexture2D<float4> ScreenSpaceInfo;
+Texture2D<float4> ScreenSpaceInfoRead;
 Texture2D<float4> PrevScreenSpaceInfo;
 
 bool DoExposure;
@@ -119,11 +120,11 @@ StructuredBuffer<float> Exposure;
 
 struct ShadowRayData {
 	float3 origin;
-	uint PixelIndex;
 	uint direction;
-	float t;
 	float3 illumination;
 	float LuminanceIncomming;
+	float t;
+	uint PixelIndex;
 };
 RWStructuredBuffer<ShadowRayData> ShadowRaysBuffer;
 
@@ -149,7 +150,7 @@ Texture2D<half4> ReservoirB;
 
 RWTexture2D<uint4> WorldPosA;
 Texture2D<uint4> WorldPosB;
-Texture2D<uint4> WorldPosC;
+RWTexture2D<uint4> WorldPosC;
 
 RWTexture2D<half4> NEEPosA;
 Texture2D<half4> NEEPosB;
@@ -209,9 +210,9 @@ struct MaterialData {//56
 	float3 surfaceColor;
 	float emmissive;
 	float3 EmissionColor;
-	int EmissionResponse;
+	uint Tag;
 	float roughness;
-	int MatType;
+	int MatType;//Can pack into tag
 	float3 transmittanceColor;
 	float ior;
 	float metallic;
@@ -224,10 +225,10 @@ struct MaterialData {//56
 	float flatness;
 	float diffTrans;
 	float specTrans;
-	int Thin;
+	int Thin;//Can pack into tag
 	float Specular;
 	float scatterDistance;
-	int IsSmoothness;
+	int IsSmoothness;//Can pack into tag
 	float4 AlbedoTexScale;
 	float2 MetallicRemap;
 	float2 RoughnessRemap;
@@ -247,7 +248,7 @@ Texture2D<float4> AlbedoTex;
 RWTexture2D<half4> TempAlbedoTex;
 RWTexture2D<float4> RandomNumsWrite;
 Texture2D<float4> RandomNums;
-RWTexture2D<float4> _DebugTex;
+RWTexture2D<half4> _DebugTex;
 
 Texture2D<float4> VideoTex;
 SamplerState sampler_VideoTex;
@@ -275,6 +276,11 @@ struct TerrainData {
 };
 
 StructuredBuffer<TerrainData> Terrains;
+
+Texture2D<float4> TerrainAlphaMap;
+SamplerState sampler_TerrainAlphaMap;
+int MaterialCount;
+
 
 int TerrainCount;
 bool TerrainExists;
@@ -358,6 +364,16 @@ float2 randomNEE(uint samdim, uint pixel_index) {
 	return float2(x, y);
 }
 
+float2 SampleDiskUniform(float u1, float u2)
+{
+    float r   = sqrt(u1);
+    float phi = 2.0f * PI * u2;
+
+    float sinPhi, cosPhi;
+    sincos(phi, sinPhi, cosPhi);
+
+    return r * float2(cosPhi, sinPhi);
+}
 
 float2 random(uint samdim, uint pixel_index) {
 	[branch] if (UseASVGF || ReSTIRGIUpdateRate != 0) {
@@ -390,6 +406,11 @@ void set(int index, const RayHit ray_hit) {
 
 	GlobalRays[index].hits = uint4(ray_hit.mesh_id, ray_hit.triangle_id, asuint(ray_hit.t), uv);
 }
+uint4 set2(const RayHit ray_hit) {
+	uint uv = (uint)(ray_hit.u * 65535.0f) | ((uint)(ray_hit.v * 65535.0f) << 16);
+
+	return uint4(ray_hit.mesh_id, ray_hit.triangle_id, asuint(ray_hit.t), uv);
+}
 
 RayHit get(int index) {
 	const uint4 hit = GlobalRays[index].hits;
@@ -406,8 +427,28 @@ RayHit get(int index) {
 
 	return ray_hit;
 }
+RayHit get2(const uint4 hit) {
 
+	RayHit ray_hit;
 
+	ray_hit.mesh_id = hit.x;
+	ray_hit.triangle_id = hit.y;
+
+	ray_hit.t = asfloat(hit.z);
+
+	ray_hit.u = (hit.w & 0xffff) / 65535.0f;
+	ray_hit.v = (hit.w >> 16) / 65535.0f;
+
+	return ray_hit;
+}
+
+int Pack2To1(int A, int B) {
+    return A | (B << 16);
+}
+
+int2 Unpack1To2(int A) {
+    return int2(A >> 16, A & 0x0000FFFF);
+}
 
 uint packRGBE(float3 v)
 {
@@ -441,7 +482,7 @@ float3 unpackRGBE(uint x)
     return v;
 }
 
-Ray CreateCameraRay(float2 uv, uint pixel_index) {
+SmallerRay CreateCameraRay(float2 uv, uint pixel_index) {
 	// Transform the camera origin to world space
 	float3 origin = mul(CamToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
 
@@ -480,8 +521,10 @@ Ray CreateCameraRay(float2 uv, uint pixel_index) {
 		direction = normalize(p - origin);
 	}
 
-
-	return CreateRay(origin, direction);
+	SmallerRay smolray;
+	smolray.origin = origin;
+	smolray.direction = direction;
+	return smolray;
 }
 
 inline Ray CreateCameraRay(float2 uv) {
@@ -497,13 +540,19 @@ inline Ray CreateCameraRay(float2 uv) {
     return CreateRay(origin, direction);
 }
 
+inline float2 AlignUV(float2 BaseUV, float4 TexScale, float4 TexDim) {
+	if(TexDim.x <= 0) return -1;
+	BaseUV = BaseUV * TexScale.xy + TexScale.zw;
+	return (BaseUV < 0 ? (1.0f - fmod(abs(BaseUV), 1.0f)) : fmod(abs(BaseUV), 1.0f)) * (TexDim.xy - TexDim.zw) + TexDim.zw;
+}
+
 inline uint ray_get_octant_inv4(const float3 ray_direction) {
     return
         (ray_direction.x < 0.0f ? 0 : 0x04040404) |
         (ray_direction.y < 0.0f ? 0 : 0x02020202) |
         (ray_direction.z < 0.0f ? 0 : 0x01010101);
 }
-inline bool triangle_intersect_shadow(int tri_id, const Ray ray, float max_distance, int mesh_id, inout float3 throughput) {
+inline bool triangle_intersect_shadow(int tri_id, const Ray ray, float max_distance, int mesh_id, inout float3 throughput, const int MatOffset) {
     TrianglePos tri = triangle_get_positions(tri_id);
 
     float3 h = cross(ray.direction, tri.posedge2);
@@ -520,36 +569,22 @@ inline bool triangle_intersect_shadow(int tri_id, const Ray ray, float max_dista
         if (v >= 0.0f && u + v <= 1.0f) {
             float t = f * dot(tri.posedge2, q);
             #ifdef AdvancedAlphaMapped
-                int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTris[tri_id].MatDat);
-                if(_Materials[MaterialIndex].MatType == CutoutIndex) {
-                    float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - u - v) + AggTris[tri_id].texedge1 * u + AggTris[tri_id].texedge2 * v;
-                    float2 Uv = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].AlbedoTex.xy - _Materials[MaterialIndex].AlbedoTex.zw) + _Materials[MaterialIndex].AlbedoTex.zw;
-                    if(_TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0).w < 0.0001f) return false;
-                }
-	            #ifdef VideoIncludedInAlphaMapping
-	                if(_Materials[MaterialIndex].MatType == VideoIndex) {
-	                    float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - u - v) + AggTris[tri_id].texedge1 * u + AggTris[tri_id].texedge2 * v;
-	                    if(VideoTex.SampleLevel(sampler_VideoTex, BaseUv, 0).w < 0.1f) return false;
-	                }
-	            #endif
-            #endif
-            #ifdef IgnoreGlassShadow
-            	#ifndef AdvancedAlphaMapped
-            	    int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTris[tri_id].MatDat);
-            	#endif
-            	#ifndef StainedGlassShadows
-	            	if(_Materials[MaterialIndex].specTrans == 1) {return false;}
-    			#else
-	                if(_Materials[MaterialIndex].specTrans == 1) {throughput *= _Materials[MaterialIndex].surfaceColor; 
-					int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTris[tri_id].MatDat);
-	                    float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - u - v) + AggTris[tri_id].texedge1 * u + AggTris[tri_id].texedge2 * v;
-	                    float2 Uv = fmod(BaseUv + 100.0f, float2(1.0f, 1.0f)) * (_Materials[MaterialIndex].AlbedoTex.xy - _Materials[MaterialIndex].AlbedoTex.zw) + _Materials[MaterialIndex].AlbedoTex.zw;
-	                    float4 BaseCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0);
-	                    throughput *= (BaseCol.xyz + 2.0f) / 3.0f;
+                int MaterialIndex = (MatOffset + AggTris[tri_id].MatDat);
+        		if(_Materials[MaterialIndex].MatType == CutoutIndex || _Materials[MaterialIndex].specTrans == 1) {
+	                float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - u - v) + AggTris[tri_id].texedge1 * u + AggTris[tri_id].texedge2 * v;
+	                float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex);
+	                float4 BaseCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0);
+	                if(_Materials[MaterialIndex].MatType == CutoutIndex && BaseCol.w < 0.1f) return false;
 
-	                	return false;}
-	            #endif
-
+		            #ifdef IgnoreGlassShadow
+		                if(_Materials[MaterialIndex].specTrans == 1) {
+			            	#ifdef StainedGlassShadows
+		    	            	throughput *= _Materials[MaterialIndex].surfaceColor * (BaseCol.xyz + 2.0f) / 3.0f;
+		    				#endif
+		                	return false;
+		                }
+		            #endif
+		        }
             #endif
             if (t > 0.0f && t < max_distance) return true;
         }
@@ -672,25 +707,14 @@ struct LightData {
 };
 StructuredBuffer<LightData> _UnityLights;
 
-int Pack2To1(int A, int B) {
-    return A | (B << 16);
-}
-
-int2 Unpack1To2(int A) {
-    return int2(A >> 16, A & 0x0000FFFF);
-}
-
 inline float power_heuristic(float pdf_f, float pdf_g) {
     return (pdf_f * pdf_f) / (pdf_f * pdf_f + pdf_g * pdf_g); // Power of 2 hardcoded, best empirical results according to Veach
 }
 
-inline float2 msign(float2 v) {
-    return (v>=0.0) ? 1.0 : -1.0; 
-}
-
 uint octahedral_32(float3 nor) {
-    nor.xy /= ( abs( nor.x ) + abs( nor.y ) + abs( nor.z ) );
-    nor.xy  = (nor.z >= 0.0) ? nor.xy : (1.0-abs(nor.yx))*msign(nor.xy);
+	float2 Signs = (nor.xy>=0.0) ? 1.0 : -1.0;
+    nor.xy /= ( nor.x * Signs.x + nor.y * Signs.y + abs( nor.z ) );
+    nor.xy  = (nor.z >= 0.0) ? nor.xy : (1.0-(nor.yx * Signs.yx)) * Signs.xy;
     uint2 d = uint2(round(32767.5 + nor.xy*32767.5));  
     return d.x|(d.y<<16u);
 }
@@ -724,7 +748,8 @@ int SelectLightMeshSmart(uint pixel_index, inout float MeshWeight, float3 Pos) {
     int FinalMesh = 0;
     float p_hat;
     float2 Rand;
-    for(int i = 0; i < RISCount + 1; i++) {
+    const int RISFinal = RISCount + 1;
+    for(int i = 0; i < RISFinal; i++) {
         Rand = random(i + 92, pixel_index);
         int Index = clamp((Rand.x * LightMeshCount), 0, LightMeshCount - 1);
         p_hat = 1.0f / dot(Pos - _LightMeshes[Index].Center, Pos - _LightMeshes[Index].Center);
@@ -734,9 +759,8 @@ int SelectLightMeshSmart(uint pixel_index, inout float MeshWeight, float3 Pos) {
             MinIndex = Index;
             MinP_Hat = p_hat;
         }
-
     }
-    MeshWeight = (wsum / max((RISCount + 1) * MinP_Hat, 0.000001f));
+    MeshWeight *= (wsum / max((RISFinal) * MinP_Hat, 0.000001f));
     return MinIndex;
 }
 
@@ -965,17 +989,88 @@ float3 GetSkyRadiance(
 		MiePhaseFunction(0.8f, nu);
 }
 
+
+float3 GetSkyTransmittance(
+	float3 camera, float3 view_ray, float shadow_length,
+	float3 sun_direction) {
+	camera /= 2048.0f;
+	camera.y += bottom_radius;
+
+	// Compute the distance to the top atmosphere boundary along the view ray,
+	// assuming the viewer is in space (or NaN if the view ray does not intersect
+	// the atmosphere).
+	float r = length(camera);
+	float rmu = dot(camera, view_ray);
+	float distance_to_top_atmosphere_boundary = -rmu -
+		sqrt(rmu * rmu - r * r + top_radius * top_radius);
+	// If the viewer is in space and the view ray intersects the atmosphere, move
+	// the viewer to the top atmosphere boundary (along the view ray):
+	if (distance_to_top_atmosphere_boundary > 0.0) {
+		camera = camera + view_ray * distance_to_top_atmosphere_boundary;
+		r = top_radius;
+		rmu += distance_to_top_atmosphere_boundary;
+	} else if (r >= top_radius) {
+		// If the view ray does not intersect the atmosphere, simply return 0.
+		return 1;
+	}
+	// Compute the r, mu, mu_s and nu parameters needed for the texture lookups.
+	float mu = rmu / r;
+	float mu_s = dot(camera, sun_direction) / r;
+	float nu = dot(view_ray, sun_direction);
+	bool ray_r_mu_intersects_ground = RayIntersectsGround(r, mu);
+
+	return ray_r_mu_intersects_ground ? 0.0 :
+		exp(GetTransmittanceToTopAtmosphereBoundary(r, mu));
+}
+
+bool RayIntersectsGround2(float r, float mu) {
+	return (mu < -0.01f && r * r * (mu * mu - 1.0f) + bottom_radius * bottom_radius >= 0.0f);
+}
+
+float3 GetSkyTransmittance2(
+	float3 camera, float3 view_ray, float shadow_length,
+	float3 sun_direction) {
+	camera /= 2048.0f;
+	camera.y += bottom_radius;
+
+	// Compute the distance to the top atmosphere boundary along the view ray,
+	// assuming the viewer is in space (or NaN if the view ray does not intersect
+	// the atmosphere).
+	float r = length(camera);
+	float rmu = dot(camera, view_ray);
+	float distance_to_top_atmosphere_boundary = -rmu -
+		sqrt(rmu * rmu - r * r + top_radius * top_radius);
+	// If the viewer is in space and the view ray intersects the atmosphere, move
+	// the viewer to the top atmosphere boundary (along the view ray):
+	if (distance_to_top_atmosphere_boundary > 0.0) {
+		camera = camera + view_ray * distance_to_top_atmosphere_boundary;
+		r = top_radius;
+		rmu += distance_to_top_atmosphere_boundary;
+	} else if (r >= top_radius) {
+		// If the view ray does not intersect the atmosphere, simply return 0.
+		return 1;
+	}
+	// Compute the r, mu, mu_s and nu parameters needed for the texture lookups.
+	float mu = rmu / r;
+	float mu_s = dot(camera, sun_direction) / r;
+	float nu = dot(view_ray, sun_direction);
+	bool ray_r_mu_intersects_ground = RayIntersectsGround2(r, mu);
+
+	return ray_r_mu_intersects_ground ? 0.0 :
+		exp(GetTransmittanceToTopAtmosphereBoundary(r, mu));
+}
+
 bool VisabilityCheckCompute(Ray ray, float dist) {
         uint2 stack[24];
         int stack_size = 0;
-        uint ray_index;
         uint2 current_group;
 
         uint oct_inv4;
-        int tlas_stack_size;
-        int mesh_id;
-        float max_distance;
+        int tlas_stack_size = -1;
+        int mesh_id = -1;
         Ray ray2;
+        int TriOffset = 0;
+        int NodeOffset = 0;
 
         ray.direction_inv = rcp(ray.direction);
         ray2 = ray;
@@ -984,58 +1079,50 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
 
         current_group.x = (uint)0;
         current_group.y = (uint)0x80000000;
-
-        max_distance = dist;
-
-        tlas_stack_size = -1;
-
-        while (true) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
-            uint2 triangle_group;
-            if (current_group.y & 0xff000000) {
-                uint hits_imask = current_group.y;
-                uint child_index_offset = firstbithigh(hits_imask);
-                uint child_index_base = current_group.x;
+        int MatOffset = 0;
+        int Reps = 0;
+        uint2 triangle_group;
+        [loop] while (Reps < 1000) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
+            [branch]if (current_group.y & 0xff000000) {
+                uint child_index_offset = firstbithigh(current_group.y);
+                
+                uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
+                uint relative_index = countbits(current_group.y & ~(0xffffffff << slot_index));
+                uint child_node_index = current_group.x + relative_index;
 
                 current_group.y &= ~(1 << child_index_offset);
 
                 if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
 
-                uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
-                uint relative_index = countbits(hits_imask & ~(0xffffffff << slot_index));
-                uint child_node_index = child_index_base + relative_index;
+                const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
+                float3 node_0 = TempNode.node_0xyz;
+                uint node_0w = TempNode.node_0w;
 
-                float3 node_0 = cwbvh_nodes[child_node_index].node_0xyz;
-                uint node_0w = cwbvh_nodes[child_node_index].node_0w;
+                uint4 node_1 = TempNode.node_1;
+                uint4 node_2 = TempNode.node_2;
+                uint4 node_3 = TempNode.node_3;
+                uint4 node_4 = TempNode.node_4;
 
-                uint4 node_1 = cwbvh_nodes[child_node_index].node_1;
-                uint4 node_2 = cwbvh_nodes[child_node_index].node_2;
-                uint4 node_3 = cwbvh_nodes[child_node_index].node_3;
-                uint4 node_4 = cwbvh_nodes[child_node_index].node_4;
+                uint hitmask = cwbvh_node_intersect(ray, oct_inv4, dist, node_0, node_0w, node_1, node_2, node_3, node_4);
 
-                uint hitmask = cwbvh_node_intersect(ray, oct_inv4, max_distance, node_0, node_0w, node_1, node_2, node_3, node_4);
-
-                uint imask = (node_0w >> (3 * 8)) & 0xff;
-
-                current_group.x = asuint(node_1.x) + ((tlas_stack_size == -1) ? 0 : _MeshData[mesh_id].NodeOffset);
-                triangle_group.x = asuint(node_1.y) + ((tlas_stack_size == -1) ? 0 : _MeshData[mesh_id].TriOffset);
-
-                current_group.y = (hitmask & 0xff000000) | (uint)(imask);
+ 				current_group.y = (hitmask & 0xff000000) | ((node_0w >> 24) & 0xff);
                 triangle_group.y = (hitmask & 0x00ffffff);
+
+	            current_group.x = (node_1.x) + NodeOffset;
+                triangle_group.x = (node_1.y) + TriOffset;
+                Reps++;
             } else {
-                triangle_group.x = current_group.x;
-                triangle_group.y = current_group.y;
-                current_group.x = (uint)0;
-                current_group.y = (uint)0;
+                triangle_group = current_group;
+                current_group = (uint2)0;
             }
 
-            bool hit = false;
-
-            while (triangle_group.y != 0) {
-                if (tlas_stack_size == -1) {//Transfer from Top Level Accelleration Structure to Bottom Level Accelleration Structure
+            if(triangle_group.y != 0) {
+                [branch]if (tlas_stack_size == -1) {//Transfer from Top Level Accelleration Structure to Bottom Level Accelleration Structure
                     uint mesh_offset = firstbithigh(triangle_group.y);
                     triangle_group.y &= ~(1 << mesh_offset);
-
                     mesh_id = TLASBVH8Indices[triangle_group.x + mesh_offset];
+                    NodeOffset = _MeshData[mesh_id].NodeOffset;
+                    TriOffset = _MeshData[mesh_id].TriOffset;
 
                     if (triangle_group.y != 0) stack[stack_size++] = triangle_group;
 
@@ -1045,7 +1132,8 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
 
                     int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
 
-                    ray.direction = (mul(_MeshData[mesh_id].Transform, float4(ray.direction, 0))).xyz;
+                    MatOffset = _MeshData[mesh_id].MaterialOffset;
+                    ray.direction = (mul((float3x3)_MeshData[mesh_id].Transform, ray.direction)).xyz;
                     ray.origin = (mul(_MeshData[mesh_id].Transform, float4(ray.origin, 1))).xyz;
                     ray.direction_inv = rcp(ray.direction);
 
@@ -1053,25 +1141,26 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
 
                     current_group.x = (uint)root_index;
                     current_group.y = (uint)0x80000000;
-
-                    break;
-                }
-                else {
-                    uint triangle_index = firstbithigh(triangle_group.y);
-                    triangle_group.y &= ~(1 << triangle_index);
+                } else {
                     float3 through = 0;
-                    if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, max_distance, mesh_id, through)) {
-						return false;
+					while (triangle_group.y != 0) {                        
+                        uint triangle_index = firstbithigh(triangle_group.y);
+                        triangle_group.y &= ~(1 << triangle_index);
+	                    if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, dist, mesh_id, through, MatOffset)) {
+							return false;
+	                    }
                     }
                 }
             }
 
             if ((current_group.y & 0xff000000) == 0) {
                 if (stack_size == 0) {//thread has finished traversing
-                    return true;
+                    break;
                 }
 
                 if (stack_size == tlas_stack_size) {
+					NodeOffset = 0;
+                    TriOffset = 0;
                     tlas_stack_size = -1;
                     ray = ray2;
                     oct_inv4 = ray_get_octant_inv4(ray.direction);
@@ -1079,7 +1168,7 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
                 current_group = stack[--stack_size];
             }
         }
-        return false;
+        return true;
 }
 
 
@@ -1487,11 +1576,6 @@ inline float luminance(const float3 a) {
     return dot(float3(0.299f, 0.587f, 0.114f), a);
 }
 
-inline float2 AlignUV(float2 BaseUV, float4 TexScale, float4 TexDim) {
-	if(TexDim.x <= 0) return -1;
-	return fmod(abs(BaseUV * TexScale.xy + TexScale.zw), 1.0f) * (TexDim.xy - TexDim.zw) + TexDim.zw;
-}
-
 inline float3 GetTriangleNormal(const uint TriIndex, const float2 TriUV, const float3x3 Inverse) {
 	float scalex = length(mul(Inverse, float3(1,0,0)));
     float scaley = length(mul(Inverse, float3(0,1,0)));
@@ -1518,14 +1602,22 @@ inline float3 GetTriangleTangent(const uint TriIndex, const float2 TriUV, const 
     return normalize(mul(Inverse, Scale * (Tangent0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Tangent1 + TriUV.y * Tangent2)));
 }
 
+float GetHeightRaw(float3 CurrentPos, const TerrainData Terrain) {
+    CurrentPos -= Terrain.PositionOffset;
+    float3 b = float3(Terrain.TerrainDim, 0.11f, Terrain.TerrainDim);
+    float2 uv = float2(min(CurrentPos.x / Terrain.TerrainDim, b.x / Terrain.TerrainDim), min(CurrentPos.z / Terrain.TerrainDim, b.z / Terrain.TerrainDim));
+    float h = Heightmap.SampleLevel(sampler_trilinear_clamp, uv * (Terrain.HeightMap.xy - Terrain.HeightMap.zw) + Terrain.HeightMap.zw, 0).x;
+    h *= Terrain.HeightScale * 2.0f;
+    return h;
+}
+
 inline float3 GetHeightmapNormal(float3 Position, uint TerrainID) {
 	TerrainData CurrentTerrain = Terrains[TerrainID];
-	float3 Geomnorm;
-	static const float2 Offset = float2(0.01f,0);
-    Geomnorm.x = (GetHeight(Position + Offset.xyy, CurrentTerrain) - GetHeight(Position - Offset.xyy, CurrentTerrain));
-    Geomnorm.y = (GetHeight(Position + Offset.yxy, CurrentTerrain) - GetHeight(Position - Offset.yxy, CurrentTerrain));
-    Geomnorm.z = (GetHeight(Position + Offset.yyx, CurrentTerrain) - GetHeight(Position - Offset.yyx, CurrentTerrain));
-    return normalize(Geomnorm);
+	static const float2 Offset = float2(0.25f,0);
+	float3 Center = float3(Position.x, GetHeightRaw(Position, CurrentTerrain), Position.z);
+	float3 OffX = float3(Position.x + Offset.x, GetHeightRaw(Position + Offset.xyy, CurrentTerrain), Position.z);
+	float3 OffY = float3(Position.x, GetHeightRaw(Position + Offset.yyx, CurrentTerrain), Position.z + Offset.x);
+	return normalize(cross(normalize(OffX - Center), normalize(OffY - Center)));
 }
 
 inline void orthonormal_basis(const float3 normal, inout float3 tangent, inout float3 binormal) {
@@ -1539,8 +1631,7 @@ inline void orthonormal_basis(const float3 normal, inout float3 tangent, inout f
 
 inline float2 vogelDiskSample(int i, int num_samples, float r_offset, float phi_offset) {
     float r = sqrt((float(i) + 0.07 + r_offset*0.93) / float(num_samples));
-    static const float golden_angle = 2.399963229728;
-    float phi = float(i) * golden_angle + 2.0 * PI * phi_offset;
+    float phi = float(i) * 2.399963229728 + 2.0 * PI * phi_offset;
 
     return r * float2(cos(phi), sin(phi));
 }
@@ -1765,7 +1856,7 @@ float3 sample_projected_triangle(float3 pt, TrianglePos pos, float2 rnd, out flo
 	// Since the solid angle is distributed uniformly, the PDF wrt to solid angle is simply:
 	pdfw = area;
 	UVs = float2(u, v);
-	return pt + lo;
+	return lo;
 }
 
 float get_spherical_triangle_pdfw(float3 A, float3 B, float3 C, float3 p)

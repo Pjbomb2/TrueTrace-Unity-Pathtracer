@@ -4,7 +4,7 @@ int screen_width;
 int screen_height;
 int TargetWidth;
 int TargetHeight;
-Texture2D<float4> InputTex;
+Texture2D<half4> InputTex;
 SamplerState sampler_InputTex;
 Texture2D<float4> OrigTex;
 SamplerState sampler_OrigTex;

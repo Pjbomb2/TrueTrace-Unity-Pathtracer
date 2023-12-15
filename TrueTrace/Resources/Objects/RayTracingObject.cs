@@ -12,7 +12,9 @@ namespace TrueTrace {
 		[SerializeField] public Vector2[] MetallicRemap, RoughnessRemap;
 		[SerializeField] public float[] emmission; 
 		[SerializeField] public Vector3[] EmissionColor;
-		[SerializeField] public int[] EmissionResponse;
+		[SerializeField] public bool[] EmissionMask;
+		[SerializeField] public bool[] BaseIsMap;
+		[SerializeField] public bool[] ReplaceBase;
 		[SerializeField] public float[] Roughness;
 		[SerializeField] public float[] IOR;
 		[SerializeField] public float[] Metallic;
@@ -121,7 +123,9 @@ namespace TrueTrace {
 			}
 			if(IsSmoothness == null || IsSmoothness.Length != SubMeshCount) IsSmoothness = new bool[SubMeshCount];
 			if(ScatterDist == null || ScatterDist.Length != SubMeshCount) ScatterDist = new float[SubMeshCount];
-			if(EmissionResponse == null || EmissionResponse.Length != SubMeshCount) EmissionResponse = new int[SubMeshCount];				
+			if(BaseIsMap == null || BaseIsMap.Length != SubMeshCount) BaseIsMap = new bool[SubMeshCount];				
+			if(ReplaceBase == null || ReplaceBase.Length != SubMeshCount) ReplaceBase = new bool[SubMeshCount];				
+			if(EmissionMask == null || EmissionMask.Length != SubMeshCount) EmissionMask = new bool[SubMeshCount];				
 			List<string> PropertyNames = new List<string>();
 		 	if(Indexes == null || Indexes.Length != Mathf.Max(mesh.subMeshCount, SubMeshCount)) Indexes = new int[Mathf.Max(mesh.subMeshCount, SubMeshCount)];
 		 	if(Specular == null || Specular.Length != SubMeshCount) Specular = new float[SubMeshCount];

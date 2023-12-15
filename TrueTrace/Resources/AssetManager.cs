@@ -17,14 +17,16 @@ namespace TrueTrace {
     public class AssetManager : MonoBehaviour
     {//This handels all the data
         public int TotalParentObjectSize;
-        public float LightEnergyScale = 1.0f;
+        [System.NonSerialized] public float LightEnergyScale = 1.0f;
         //emissive, alpha, metallic, roughness
         [System.NonSerialized] public Texture2D AlbedoAtlas;
+        [System.NonSerialized] public RenderTexture HeightmapAtlas;
+        [System.NonSerialized] public RenderTexture AlphaMapAtlas;
         [System.NonSerialized] public RenderTexture NormalAtlas;
         [System.NonSerialized] public RenderTexture EmissiveAtlas;
-        [System.NonSerialized] public RenderTexture AlphaAtlas;
         [System.NonSerialized] public RenderTexture MetallicAtlas;
         [System.NonSerialized] public RenderTexture RoughnessAtlas;
+        private RenderTexture AlphaAtlas;
         private RenderTexture TempTex;
         private RenderTexture s_Prop_EncodeBCn_Temp;
         private ComputeShader CopyShader;
@@ -53,8 +55,6 @@ namespace TrueTrace {
         [HideInInspector] public List<TerrainObject> Terrains;
         [HideInInspector] public List<TerrainDat> TerrainInfos;
         [HideInInspector] public ComputeBuffer TerrainBuffer;
-        [HideInInspector] public Texture2D HeightMap;
-        [HideInInspector] public Texture2D AlphaMap;
         [HideInInspector] public bool DoHeightmap;
 
         private ComputeShader MeshFunctions;
@@ -127,9 +127,10 @@ namespace TrueTrace {
             DestroyImmediate(AlbedoAtlas);
             DestroyImmediate(NormalAtlas);
             DestroyImmediate(EmissiveAtlas);
-            DestroyImmediate(AlphaAtlas);
             DestroyImmediate(MetallicAtlas);
             DestroyImmediate(RoughnessAtlas);
+            DestroyImmediate(HeightmapAtlas);
+            DestroyImmediate(AlphaMapAtlas);
 
             LightTriBuffer.ReleaseSafe();
             BVH8AggregatedBuffer.ReleaseSafe();
@@ -193,10 +194,12 @@ namespace TrueTrace {
             }
         }
 
-        private void ConstructAtlas(List<Texture2D> Texs, ref RenderTexture Atlas, out Rect[] Rects, int DesiredRes, bool IsNormalMap, bool IsAlbedo = false, int ReadIndex = -1, List<int> TexChannelIndex = null) {
+        private void ConstructAtlas(List<Texture2D> Texs, ref RenderTexture Atlas, out Rect[] Rects, int DesiredRes, bool IsNormalMap, bool IsHeightmap = false, bool IsAlbedo = false, int ReadIndex = -1, List<int> TexChannelIndex = null) {
             if(Texs.Count == 0) {
                 Rects = new Rect[0];
-                if(TexChannelIndex != null || IsNormalMap) {
+                if(IsHeightmap) {
+                    CreateRenderTexture(ref Atlas, 1, 1, RenderTextureFormat.RHalf, true);
+                } else if(TexChannelIndex != null || IsNormalMap) {
                     if(IsNormalMap) CreateRenderTexture(ref Atlas, 1, 1, RenderTextureFormat.RG16, true);
                     else CreateRenderTexture(ref Atlas, 1, 1, RenderTextureFormat.R8, true);
                 } else CreateRenderTexture(ref Atlas, IsAlbedo ? DesiredRes : 1, IsAlbedo ? DesiredRes : 1, RenderTextureFormat.ARGB32, false);
@@ -210,7 +213,10 @@ namespace TrueTrace {
             }
             PackingRectangle BoundRects;
             RectanglePacker.Pack(rectangles, out BoundRects);
-            if(TexChannelIndex != null || IsNormalMap) {
+            if(IsHeightmap) {
+                DesiredRes = (int)Mathf.Min(Mathf.Max(BoundRects.Width, BoundRects.Height), DesiredRes);
+                CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.RHalf, true);
+            } else if(TexChannelIndex != null || IsNormalMap) {
                 if(IsNormalMap) {
                     DesiredRes = (int)Mathf.Min(Mathf.Max(BoundRects.Width, BoundRects.Height), DesiredRes);
                     CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.RG16, true);
@@ -238,7 +244,13 @@ namespace TrueTrace {
                 CopyShader.SetVector("Scale", Scale);
                 CopyShader.SetVector("Offset", new Vector2(Rects[i].x, Rects[i].y));
 
-                if(ReadIndex != -1) {
+                CopyShader.SetBool("IsHeightmap", IsHeightmap);
+                if(IsHeightmap) {
+                    CopyShader.SetInt("OutputRead", 0);
+                    CopyShader.SetTexture(2, "AdditionTex", Texs[i]);
+                    CopyShader.SetTexture(2, "ResultSingle", Atlas);
+                    CopyShader.Dispatch(2, (int)Mathf.CeilToInt(Rects[i].width * Scale.x / 32.0f), (int)Mathf.CeilToInt(Rects[i].height * Scale.y / 32.0f), 1);
+                } else if(ReadIndex != -1) {
                     CopyShader.SetInt("OutputRead", ((TexChannelIndex == null) ? ReadIndex : TexChannelIndex[i]));
                     if(!IsNormalMap) {
                         CopyShader.SetTexture(2, "AdditionTex", Texs[i]);
@@ -296,6 +308,8 @@ namespace TrueTrace {
             List<Vector2> Sizes = new List<Vector2>();
             TerrainInfos = new List<TerrainDat>();
             DoHeightmap = false;
+
+            if (CopyShader == null) CopyShader = Resources.Load<ComputeShader>("Utility/CopyTextureShader");
             for (int i = 0; i < TerrainCount; i++) {
                 TerrainDat TempTerrain = new TerrainDat();
                 TempTerrain.PositionOffset = Terrains[i].transform.position;
@@ -308,29 +322,16 @@ namespace TrueTrace {
                 MaterialOffset += Terrains[i].Materials.Count;
                 TerrainInfos.Add(TempTerrain);
             }
+            Rect[] HeightRects;
+            Rect[] AlphaRects;
+
+            ConstructAtlas(HeightMaps, ref HeightmapAtlas, out HeightRects, 16300, false, true);
+            ConstructAtlas(AlphaMaps, ref AlphaMapAtlas, out AlphaRects, 16300, false, true);
             if (TerrainCount != 0) {
                 DoHeightmap = true;
-                Rect[] AlphaRects;
-                List<Rect> HeightRects = new List<Rect>();
-                float MinX = 0;
-                float MinY = 0;
-                for (int i = 0; i < Sizes.Count; i++) {
-                    MinX = Mathf.Max(Sizes[i].x, MinX);
-                    MinY += Sizes[i].y * 2;
-                }
-                int Size = (int)Mathf.Min((MinY) / Mathf.Ceil(Mathf.Sqrt(Sizes.Count)), 16300);
-
-                Texture2D.GenerateAtlas(Sizes.ToArray(), 0, Size, HeightRects);
-                HeightMap = new Texture2D(Size, Size, UnityEngine.Experimental.Rendering.GraphicsFormat.R16_UNorm, UnityEngine.Experimental.Rendering.TextureCreationFlags.None);
-                Color32[] Colors = HeightMap.GetPixels32(0);
-                System.Array.Fill(Colors, Color.black);
-                HeightMap.SetPixels32(Colors);
-                HeightMap.Apply();
-                AlphaRects = AlphaMap.PackTextures(AlphaMaps.ToArray(), 1, 16300, true);
                 for (int i = 0; i < TerrainCount; i++) {
-                    Graphics.CopyTexture(HeightMaps[i], 0, 0, 0, 0, HeightMaps[i].width, HeightMaps[i].height, HeightMap, 0, 0, (int)HeightRects[i].xMin, (int)HeightRects[i].yMin);
                     TerrainDat TempTerrain = TerrainInfos[i];
-                    TempTerrain.HeightMap = new Vector4(HeightRects[i].xMax / Size, HeightRects[i].yMax / Size, HeightRects[i].xMin / Size, HeightRects[i].yMin / Size);
+                    TempTerrain.HeightMap = new Vector4(HeightRects[i].xMax, HeightRects[i].yMax, HeightRects[i].xMin, HeightRects[i].yMin);
                     TempTerrain.AlphaMap = new Vector4(AlphaRects[i].xMax, AlphaRects[i].yMax, AlphaRects[i].xMin, AlphaRects[i].yMin);
                     TerrainInfos[i] = TempTerrain;
                 }
@@ -363,13 +364,11 @@ namespace TrueTrace {
                 return;
 
             Rect[] AlbedoRects, NormalRects, EmissiveRects, MetallicRects, RoughnessRects;
-            if (CopyShader == null) CopyShader = Resources.Load<ComputeShader>("Utility/CopyTextureShader");
             if(NormalAtlas != null) NormalAtlas?.Release();
-            if(AlphaAtlas != null) AlphaAtlas?.Release();
             if(RoughnessAtlas != null) RoughnessAtlas?.Release();
             if(MetallicAtlas != null) MetallicAtlas?.Release();
             if(EmissiveAtlas != null) EmissiveAtlas?.Release();
-            ConstructAtlas(AlbedoTexs, ref TempTex, out AlbedoRects, DesiredRes, false, true);
+            ConstructAtlas(AlbedoTexs, ref TempTex, out AlbedoRects, DesiredRes, false, false, true);
             int tempWidth = (TempTex.width + 3) / 4;
             int tempHeight = (TempTex.height + 3) / 4;
             var desc = new RenderTextureDescriptor
@@ -384,7 +383,7 @@ namespace TrueTrace {
             desc.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R32G32B32A32_SInt;
 
             s_Prop_EncodeBCn_Temp = new RenderTexture(desc);
-            ConstructAtlas(AlbedoTexs, ref AlphaAtlas, out AlbedoRects, AlbedoAtlas.width, false, false, 3, null);
+            ConstructAtlas(AlbedoTexs, ref AlphaAtlas, out AlbedoRects, AlbedoAtlas.width, false, false, false, 3, null);
             CopyShader.SetTexture(4, "_Source", TempTex);
             CopyShader.SetTexture(4, "Alpha", AlphaAtlas);
             CopyShader.SetTexture(4, "_Target", s_Prop_EncodeBCn_Temp);
@@ -393,10 +392,10 @@ namespace TrueTrace {
             TempTex.Release();
             s_Prop_EncodeBCn_Temp.Release();
             AlphaAtlas.Release();
-            ConstructAtlas(NormalTexs, ref NormalAtlas, out NormalRects, DesiredRes, true, false);
-            ConstructAtlas(EmissiveTexs, ref EmissiveAtlas, out EmissiveRects, DesiredRes, false, false);
-            ConstructAtlas(MetallicTexs, ref MetallicAtlas, out MetallicRects, AlbedoAtlas.width, false, false, 0, MetallicTexChannelIndex);
-            ConstructAtlas(RoughnessTexs, ref RoughnessAtlas, out RoughnessRects, AlbedoAtlas.width, false, false, 0, RoughnessTexChannelIndex);
+            ConstructAtlas(NormalTexs, ref NormalAtlas, out NormalRects, DesiredRes, true, false, false);
+            ConstructAtlas(EmissiveTexs, ref EmissiveAtlas, out EmissiveRects, DesiredRes, false, false, false);
+            ConstructAtlas(MetallicTexs, ref MetallicAtlas, out MetallicRects, AlbedoAtlas.width, false, false, false, 0, MetallicTexChannelIndex);
+            ConstructAtlas(RoughnessTexs, ref RoughnessAtlas, out RoughnessRects, AlbedoAtlas.width, false, false, false, 0, RoughnessTexChannelIndex);
             AlbedoAtlasSize = AlbedoAtlas.width;
             NormalAtlas.anisoLevel = 3;
             NormalAtlas.GenerateMips();
@@ -530,21 +529,7 @@ namespace TrueTrace {
             XMLObject = Resources.Load<TextAsset>("Utility/MaterialMappings");
             #if UNITY_EDITOR
                 if(XMLObject == null) {
-                    // XMLObject = new TextAsset();
-                    // var g = UnityEditor.AssetDatabase.FindAssets ( $"t:Script {nameof(AssetManager)}" );
-                    // var Path = UnityEditor.AssetDatabase.GUIDToAssetPath ( g [ 0 ] );
-                    // Path = Path.Replace("AssetManager.cs", "Utility/MaterialMappings.xml").Replace("Assets", Application.dataPath);
-                    // using(var A = File.OpenWrite(Path)) {
-                    //     byte[] info = new System.Text.UTF8Encoding(true).GetBytes("<?xml version=\"1.0\"?>\n");
-                    //     A.Write(info, 0, info.Length);
-                    //     info = new System.Text.UTF8Encoding(true).GetBytes("<Materials xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n");
-                    //     A.Write(info, 0, info.Length);
-                    //     info = new System.Text.UTF8Encoding(true).GetBytes("</Materials>\n");
-                    //     A.Write(info, 0, info.Length);
-                    // }
-                    // UnityEditor.AssetDatabase.Refresh();
-                    // XMLObject = Resources.Load<TextAsset>("Utility/MaterialMappings");
-                    Debug.Log("Missing XML Object");
+                    Debug.Log("Missing Material Mappings XML");
                     return;
                 }
             #endif
@@ -562,6 +547,7 @@ namespace TrueTrace {
             #if HardwareRT
                 AccelStruct = new UnityEngine.Rendering.RayTracingAccelerationStructure();
             #endif
+                if(DesiredRes == 0) DesiredRes = 16300;
             if(AlbedoAtlas == null || AlbedoAtlas.width != DesiredRes) AlbedoAtlas = new Texture2D(DesiredRes,DesiredRes, TextureFormat.DXT5, false);
             // AlbedoAtlas.Apply(false, true);
             UpdateMaterialDefinition();
@@ -613,8 +599,6 @@ namespace TrueTrace {
             TriangleBufferKernel = MeshFunctions.FindKernel("CombineTriBuffers");
             NodeBufferKernel = MeshFunctions.FindKernel("CombineNodeBuffers");
             LightBufferKernel = MeshFunctions.FindKernel("CombineLightBuffers");
-            AlphaMap = Texture2D.blackTexture;
-            HeightMap = Texture2D.blackTexture;
             if (TerrainBuffer != null) TerrainBuffer.Release();
             TerrainBuffer = new ComputeBuffer(1, 56);
 
@@ -791,7 +775,6 @@ namespace TrueTrace {
         }
         public void BuildCombined()
         {//Only has unbuilt be built
-            HasToDo = false;
             Terrains = new List<TerrainObject>(GetComponentsInChildren<TerrainObject>());
             init();
             List<ParentObject> TempQue = new List<ParentObject>(GetComponentsInChildren<ParentObject>());
@@ -818,7 +801,6 @@ namespace TrueTrace {
         cmd.Clear();
         cmd.Release();}
         }
-        [HideInInspector] public bool HasToDo;
 
         private void AccumulateData(CommandBuffer cmd)
         {
@@ -827,20 +809,18 @@ namespace TrueTrace {
             // UnityEngine.Profiling.Profiler.EndSample();
 
             int ParentsLength = RenderQue.Count;
-            int nodes = 2 * (ParentsLength + InstanceRenderQue.Count);
             if (ChildrenUpdated || ParentCountHasChanged)
             {
-                TotalParentObjectSize = 0;
-                HasToDo = false;
-                int CurNodeOffset = nodes;
+                int CurNodeOffset = 2 * (ParentsLength + InstanceRenderQue.Count);
+                int AggTriCount = 0;
+                int AggNodeCount = CurNodeOffset;
+                int LightTriCount = 0;
                 int CurTriOffset = 0;
                 int CurLightTriOffset = 0;
+                TotalParentObjectSize = 0;
                 LightMeshCount = 0;
                 LightMeshes.Clear();
                 LightTransforms.Clear();
-                int AggTriCount = 0;
-                int AggNodeCount = nodes;
-                int LightTriCount = 0;
                 if (BVH8AggregatedBuffer != null)
                 {
                     BVH8AggregatedBuffer.Release();
@@ -860,7 +840,6 @@ namespace TrueTrace {
                     LightTriCount += InstanceData.RenderQue[i].LightTriangles.Count;
                 }
                 Debug.Log("Total Tri Count: " + AggTriCount);
-                Debug.Log("Total Light Tri Count: " + LightTriCount);
                 if(LightTriCount == 0) LightTriCount++;
                 if (AggNodeCount != 0)
                 {//Accumulate the BVH nodes and triangles for all normal models
@@ -1562,7 +1541,10 @@ namespace TrueTrace {
                     TempMat.TransmittanceColor = CurrentMaterial.TransmissionColor[Index];
                     TempMat.MatType = (int)CurrentMaterial.MaterialOptions[Index];
                     TempMat.EmissionColor = CurrentMaterial.EmissionColor[Index];
-                    TempMat.EmissionResponse = CurrentMaterial.EmissionResponse[Index];
+                    TempMat.Tag = (uint)(
+                        ((CurrentMaterial.ReplaceBase[Index] ? 1 : 0) << 2) | 
+                        ((CurrentMaterial.BaseIsMap[Index] ? 1 : 0) << 1) | 
+                        ((CurrentMaterial.EmissionMask[Index] ? 0 : 1) << 0));
                     TempMat.metallic = CurrentMaterial.Metallic[Index];
                     TempMat.specularTint = CurrentMaterial.SpecularTint[Index];
                     TempMat.sheen = CurrentMaterial.Sheen[Index];
@@ -1623,7 +1605,10 @@ namespace TrueTrace {
                             TempMat.EmissionColor = CurrentMaterial.EmissionColor[Index];
                             TempMat.metallic = CurrentMaterial.Metallic[Index];
                             TempMat.specularTint = CurrentMaterial.SpecularTint[Index];
-                            TempMat.EmissionResponse = CurrentMaterial.EmissionResponse[Index];
+                            TempMat.Tag = (uint)(
+                                ((CurrentMaterial.ReplaceBase[Index] ? 1 : 0) << 2) | 
+                                ((CurrentMaterial.BaseIsMap[Index] ? 1 : 0) << 1) | 
+                                ((CurrentMaterial.EmissionMask[Index] ? 0 : 1) << 0));
                             TempMat.sheen = CurrentMaterial.Sheen[Index];
                             TempMat.sheenTint = CurrentMaterial.SheenTint[Index];
                             TempMat.clearcoat = CurrentMaterial.ClearCoat[Index];

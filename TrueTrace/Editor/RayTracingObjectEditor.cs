@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -10,14 +11,8 @@ namespace TrueTrace {
 
         int Selected = 0;
         string[] TheseNames;
-        string[] EmissionResponse;
         void OnEnable()
         {
-            EmissionResponse = new string[4];
-            EmissionResponse[0] = "Emission Tex Replaces";
-            EmissionResponse[1] = "Emission Tex Adds";
-            EmissionResponse[2] = "Emission Mask Replaces";
-            EmissionResponse[3] = "Emission Mask Adds";
 
             (target as RayTracingObject).matfill();
         }
@@ -35,10 +30,12 @@ namespace TrueTrace {
                 serializedObject.FindProperty("emmission").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.FloatField("Emission: ", t.emmission[Selected]);
                 Color EmissCol = EditorGUILayout.ColorField("Emission Color", new Color(t.EmissionColor[Selected].x, t.EmissionColor[Selected].y, t.EmissionColor[Selected].z, 1));
                 serializedObject.FindProperty("EmissionColor").GetArrayElementAtIndex(Selected).vector3Value = new Vector3(EmissCol.r, EmissCol.g, EmissCol.b);
-                serializedObject.FindProperty("EmissionResponse").GetArrayElementAtIndex(Selected).intValue = EditorGUILayout.Popup("Emissive Texture Response:", t.EmissionResponse[Selected], EmissionResponse);
+                serializedObject.FindProperty("EmissionMask").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Is Emission Map: ", t.EmissionMask[Selected]);
+                serializedObject.FindProperty("BaseIsMap").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Base Color Is Map: ", t.BaseIsMap[Selected]);
+                serializedObject.FindProperty("ReplaceBase").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Replace Base Color: ", t.ReplaceBase[Selected]);
                 serializedObject.FindProperty("Roughness").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Roughness: ", t.Roughness[Selected], 0, 1);
-                serializedObject.FindProperty("IOR").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("IOR: ", t.IOR[Selected], 0, 10);
                 serializedObject.FindProperty("Metallic").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Metallic: ", t.Metallic[Selected], 0, 1);
+                serializedObject.FindProperty("IOR").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("IOR: ", t.IOR[Selected], 0, 10);
                 serializedObject.FindProperty("Specular").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Specular: ", t.Specular[Selected], 0, 1);
                 serializedObject.FindProperty("SpecularTint").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Specular Tint: ", t.SpecularTint[Selected], 0, 1);
                 serializedObject.FindProperty("Sheen").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Sheen: ", t.Sheen[Selected], 0, 10);
@@ -75,7 +72,9 @@ namespace TrueTrace {
                                 Obj.emmission[i] = t.emmission[Selected];
                                 Obj.EmissionColor[i] = t.EmissionColor[Selected];
                                 Obj.Roughness[i] = t.Roughness[Selected];
-                                Obj.EmissionResponse[i] = t.EmissionResponse[Selected];
+                                Obj.EmissionMask[i] = t.EmissionMask[Selected];
+                                Obj.BaseIsMap[i] = t.BaseIsMap[Selected];
+                                Obj.ReplaceBase[i] = t.ReplaceBase[Selected];
                                 Obj.IOR[i] = t.IOR[Selected];
                                 Obj.Metallic[i] = t.Metallic[Selected];
                                 Obj.SpecularTint[i] = t.SpecularTint[Selected];
@@ -102,3 +101,4 @@ namespace TrueTrace {
         }
     }
 }
+#endif

@@ -32,11 +32,16 @@ namespace TrueTrace {
 
         public RenderTexture BlurHints;
 
+        public RenderTexture GradA;
+        public RenderTexture GradB;
+
+
         private int CopyColorKernel;
         private int MainBlurKernel;
         private int TemporalFastKernel;
         private int TemporalSlowKernel;
         private int SSAOKernel;
+        private int GradKernel;
 
 
         Camera camera;
@@ -55,6 +60,7 @@ namespace TrueTrace {
             TemporalFastKernel = shader.FindKernel("temporal");
             TemporalSlowKernel = shader.FindKernel("secondarytemporal");
             SSAOKernel = shader.FindKernel("SSAO");
+            GradKernel = shader.FindKernel("Gradient_Atrous");
 
 
             CommonFunctions.CreateRenderTexture(ref MomA, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf2);
@@ -71,6 +77,8 @@ namespace TrueTrace {
             CommonFunctions.CreateRenderTexture(ref HFLAB, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4,RenderTextureReadWrite.Linear);
             CommonFunctions.CreateRenderTexture(ref NormA, ScreenWidth, ScreenHeight, CommonFunctions.RTFull2);
             CommonFunctions.CreateRenderTexture(ref NormB, ScreenWidth, ScreenHeight, CommonFunctions.RTFull2);
+            CommonFunctions.CreateRenderTexture(ref GradA, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTHalf2);
+            CommonFunctions.CreateRenderTexture(ref GradB, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTHalf2);
             shader.SetInt("screen_width", ScreenWidth);
             shader.SetInt("screen_height", ScreenHeight);
         }
@@ -91,6 +99,8 @@ namespace TrueTrace {
                 HFLAB.Release();
                 NormA.Release();
                 NormB.Release();
+                GradA.Release();
+                GradB.Release();
             }
         }
 
@@ -112,8 +122,33 @@ namespace TrueTrace {
                             float ScaleMultiplier, 
                             float BlurRadius, 
                             int PartialRenderingFactor,
-                            float IndirectBoost) {
+                            float IndirectBoost,
+                            RenderTexture Gradients) {
+
             camera = RayTracingMaster._camera;
+            shader.SetFloat("ViewFrustrumTop", camera.projectionMatrix.decomposeProjection.top);
+            shader.SetFloat("ViewFrustrumBottom", camera.projectionMatrix.decomposeProjection.bottom);
+            shader.SetFloat("FarPlane", camera.farClipPlane);
+            
+            if(UseReSTIRGI) {
+                cmd.SetComputeIntParam(shader, "iteration", 0);
+                cmd.SetComputeTextureParam(shader, GradKernel, "GradB", Gradients);
+                cmd.SetComputeTextureParam(shader, GradKernel, "GradA", GradA);
+                cmd.DispatchCompute(shader, GradKernel, Mathf.CeilToInt(ScreenWidth / 3 / 16.0f), Mathf.CeilToInt(ScreenHeight / 3 / 16.0f), 1);
+
+                cmd.SetComputeIntParam(shader, "iteration", 1);
+                cmd.SetComputeTextureParam(shader, GradKernel, "GradB", GradA);
+                cmd.SetComputeTextureParam(shader, GradKernel, "GradA", GradB);
+                cmd.DispatchCompute(shader, GradKernel, Mathf.CeilToInt(ScreenWidth / 3 / 16.0f), Mathf.CeilToInt(ScreenHeight / 3 / 16.0f), 1);
+
+                cmd.SetComputeIntParam(shader, "iteration", 2);
+                cmd.SetComputeTextureParam(shader, GradKernel, "GradB", GradB);
+                cmd.SetComputeTextureParam(shader, GradKernel, "GradA", GradA);
+                cmd.DispatchCompute(shader, GradKernel, Mathf.CeilToInt(ScreenWidth / 3 / 16.0f), Mathf.CeilToInt(ScreenHeight / 3 / 16.0f), 1);
+
+            }
+
+
             bool DoUpscale = ScaleMultiplier != 1;
             shader.SetFloat("CameraDist", Vector3.Distance(camera.transform.position, PrevCamPos));
             shader.SetFloat("IndirectBoost", IndirectBoost);
@@ -173,6 +208,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, TemporalFastKernel, "HFPrev", (!EvenFrame) ? HFA : HFPrev);
             cmd.SetComputeTextureParam(shader, TemporalFastKernel, "MomentsA", (EvenFrame) ? MomA : MomB);
             cmd.SetComputeTextureParam(shader, TemporalFastKernel, "MomentsB", (!EvenFrame) ? MomA : MomB);
+            cmd.SetComputeTextureParam(shader, TemporalFastKernel, "Gradients", GradA);
             cmd.DispatchCompute(shader, TemporalFastKernel, Mathf.CeilToInt(ScreenWidth / 8.0f), Mathf.CeilToInt(ScreenHeight / 8.0f), 1);
             cmd.EndSample("ReCur Fast Temporal");
 
@@ -214,6 +250,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "CurDepth", EvenFrame ? DepthA : DepthB);
             cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "PrevDepth", (!EvenFrame) ? DepthA : DepthB);
             cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "Output", Output);
+            cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "Gradients", GradA);
             cmd.DispatchCompute(shader, TemporalSlowKernel, Mathf.CeilToInt(ScreenWidth / 16.0f), Mathf.CeilToInt(ScreenHeight / 16.0f), 1);
             cmd.EndSample("ReCur Slow Temporal");
             PrevCamPos = camera.transform.position;

@@ -13,7 +13,7 @@ namespace TrueTrace {
         public ParentObject InstanceParent;
         [HideInInspector] public int CompactedMeshData;
         [HideInInspector] public int ExistsInQue;
-
+        bool PrevInstance = false;
         public void UpdateInstance()
         {
             if (PreviousInstance != null)
@@ -31,12 +31,11 @@ namespace TrueTrace {
                 PreviousInstance = InstanceParent;
             }
         }
-
         private void OnEnable()
         {
             if (gameObject.scene.isLoaded)
             {
-                if(InstanceParent == null) {
+                if(PrevInstance && InstanceParent == null) {
                     Destroy(this);
                     return;
                 }

@@ -8,8 +8,8 @@ Notes:</br>
 A passion projects that has been going on for a while with the goal of bringing at least interactive path-tracing to everyone in unity, regardless of their hardware
 ## Features: 
 <ul>
-<li>Fast Compute Shader based path tracing</li>
-<li>Disney BSDF for materials with support for emissive meshes and Video Players</li>
+<li>Fast Compute Shader based path tracing without RT cores</li>
+<li>Full Disney BSDF for materials with support for emissive meshes and Video Players</li>
 <li>Ability to move, add, and remove objects during play</li>
 <li>Ability to update material properties on the fly during play</li>
 <li>ASVGF, SVGF, and my own Recurrent Denoisers</li>
@@ -17,12 +17,12 @@ A passion projects that has been going on for a while with the goal of bringing 
 <li>PBR Texture Support</li>
 <li>Next Event Estimation with Multiple Importance Sampling for Explicit Light Sampling</li>
 <li>Support for all default unity lights, which interact via NEE</li>
-<li>Bloom, Depth of Field, AutoExposure, TAA, Tonemappiong</li>
+<li>Bloom, Depth of Field, AutoExposure, TAA, Tonemapping</li>
 <li>No specific GPU vendor needed(this will run on integrated graphics if you so wish it, aka no RTX cores needed)</li>
 <li>Precomputed Multiple Atmospheric Scattering for dynamic and realtime sky(from ebruneton below)</li>
 <li>Object Instancing</li>
 <li>ReSTIR GI for faster convergence in complex scenes and more complete images in scenes with changing lighting</li>
-<li>Simple upscaling ability for performance increase</li>
+<li>Simple upscaling ability</li>
 <li>Hardware RT Support for modern cards</li>
 <li>Supports Built-in, HDRP, and URP</li>
 <li>Full skinned mesh support for animated skinned meshes</li>
@@ -43,14 +43,12 @@ Let me know if you use this for anything, I would be excited to see any use of t
 # Instructions:
 ## Required Settings Changes:
 <ul>
-  <li>Set the Color Space to Linear through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Color Space, and change from Gamma to Linear</li>
-  <li>Enable Unsafe Code(Its for memory management) through Edit -> Project Settings -> Player -> Other Settings -> "Allow 'unsafe' Code" (near the bottom)</li>
   <li>Change the Graphics Api for Windows to DirectX12 through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Untoggle "Auto Graphics API For Windows", then click the little + that appears, select "Direct3D12(Experimental)", and drag that to the top.  A restart of the editor is required</li>
   <li>Your target camera NEEDS to be deferred</li>
 </ul>
 
 ## Controls:
-Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera starts frozen), and shift increases speed
+Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift increases speed
 
 ## General Setup
 <ul>
@@ -69,7 +67,7 @@ Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera s
 ## General Use/Notes
 <ul>
   <li>The camera you want to render from, you attach the RenderHandler script to(if you have a camera tagged MainCamera, this will be done automatically)</li>
-  <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building</li>
+  <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building, a ding will sound when it completes if it takes longer than 15 seconds</li>
   <li>Objects can be added and removed at will simply by toggling the associated GameObject with a ParentObject script on/off in the hierarchy(clicking on parent objects with complex objects for children will lag), but they will take time to appear as the acceleration structure needs to  be rebuilt for them</li>
   <li>Emissive meshes need to be emissive when you build the hierarchy to work with NEE, and can have their emissiveness at will</li>
   <li>If you use normal maps, they need to be in unity normal map format</li>
@@ -109,6 +107,12 @@ Camera Controls: WASD, Mouse, and press T to freeze/unfreeze the camera(Camera s
   <li>Then just use like normal, but this does not support Instances</li>
 </ul>
 
+## Using DX11 Only
+<ul>
+  <li>In the TrueTrace settings menu, click on the top right button "Functionality Settings" and toggle "Use DX11"</li>
+  <li>Uncomment the "#define DX11" in: TrueTrace -> Resources -> GlobalDefines.cginc</li>
+</ul>
+
 ## Editor Window Guide
 BVH Options Description - 
 <ul>
@@ -120,7 +124,7 @@ BVH Options Description -
   <li>Force Instances - Looks at all meshes in the scene, sees what objects have the same meshes, and makes them into instances, keep in mind instances use the same material and textures</li>
   <li>Remaining Objects - Objects still being processed</li>
   <li>Max Bounces - Sets the maximum number of bounces a ray can achieve</li>
-  <li>Render Scale - Render scale in comparison to gameview size, turn to below 1 while in edit mode to decrease rendered resolution(to then be upscaled)</li>
+  <li>Internal Resolution Ratio - Render scale in comparison to gameview size, turn to below 1 while in edit mode to decrease rendered resolution(to then be upscaled)</li>
   <li>Atlas Size - Maximum size of the texture atlas used(All textures are packed into atlas's so I can send them to the GPU)</li>
   <li>Use Russian Roulette - Highly recommended to leave this on, kills rays that may not contribute much early, and thus greatly increases performance</li>
   <li>Enable Object Moving - Allows objects to be moved during play, and allows for added objects to spawn in when they are done building</li>
@@ -128,28 +132,29 @@ BVH Options Description -
   <li>Use Next Event Estimation - Enables shadow rays/NEE for direct light sampling</li>
   <li>RIS Count - Number of RIS passes done for lights(select the best light out of X number of randomly selected lights)</li>
   <li>Allow Mesh Skinning - Turns on the ability for skinned meshes to be animated or deformed with respect to their armeture</li>
-  <li>Denoisers -> Allows you to switch between different denoisers</li>
+  <li>Denoiser - Allows you to switch between different denoisers</li>
   <li>Allow Bloom - Turns on or off Bloom</li>
   <li>Enable DoF - Turns on or off Depth of Field, and its associated settings</li>
   <li>Autofocus DoF - Sets the focal length to bring whatever is in the center of the screen into focus</li>
-  <li>Enable Auto/Manual Exposure - Turns on or off Auto Exposure(Set all the way to left to use autoexposure)</li>
-  <li>Use ReSTIR GI - Enables ReSTIR GI which is usually much higher quality(Does not work with ASVGF)</li>
+  <li>Enable Auto/Manual Exposure - Turns on or off Exposure</li>
+  <li>Use ReSTIR GI - Enables ReSTIR GI which is usually much higher quality(Works with Recur and SVGF denoisers)</li>
   <li>Do Sample Connection Validation - Confirms that two samples are mutually visable and throws it away if they are not</li>
-  <li>Update Rate - How many pixels per frame get re-traced to ensure they are still valid paths(7 is a good number to aim for here)</li>
+  <li>Update Rate - How many pixels per frame get re-traced to ensure they are still valid paths(7 or 33 is a good number to aim for here at 1080p)</li>
   <li>Enable Temporal - Enables the Temporal pass of ReSTIR GI(allows samples to travel across time</li>
   <li>Temporal M Cap - How long a sample may live for, lower means lighting updates faster(until 0 which is the opposite) but more noise(recommended either 0 or around 12, but can be played with)</li>
+  <li>Enable Denoiser - Enables a custom denoiser that is more tuned for ReSTIR GI</li>
   <li>Enable Spatial - Enables the Spatial pass of ReSTIR GI(Allows pixels to choose to use the neighboring pixels sample instead)</li>
   <li>Spatial Sample Count - How many neighboring pixels are looked at(turn to 0 to make it adapative to sample count)</li>
   <li>Minimum Spatial Radius - The minimum radius the spatial pass can sample from</li>
-  <li>Use Temporal Antialiasing - Enables Temporal Antialiasing(TAA)</li>
-  <li>Enable Tonemapping - Turns on tonemapping</li>
+  <li>Enable TAA - Enables Temporal Antialiasing</li>
+  <li>Enable Tonemapping - Turns on tonemapping, and allows you to select a specific tonemapper</li>
   <li>Enable TAAU - Use TAAU for upscaling(if off, you use my semi custom upscaler instead)</li>
   <li>Use Partial Rendering - Traces only 1 out of X rays</li>
   <li>Use AntiFirefly - Enables RCRS filter for getting rid of those single bright pixels</li>
   <li>RR Ignores Primary Hit - Allows for an extra bounce basically, makes it so that dark objects arent noisier, but at the cost of performance</li>
   <li>Atmospheric Scatter Samples - Lower this to 1 if you keep crashing on entering play mode(controls how many atmospheric samples are precomputed)</li>
   <li>Current Samples - Shows how many samples have currently been accumulated</li>
-  </ul>
+</ul>
 
 ## Materials(RayTracingObject script)
  <ul>
@@ -159,25 +164,23 @@ BVH Options Description -
   <li>Emission - The emittance of an object(how much light it gives off)</li>
   <li>Emission Color - Changes the color of emissive objects, most useful when you have an emission mask on an object</li>
   <li>Roughness - Roughness of the object</li>
+  <li>Metallic - How metallic an object is</li>
+  <li>IOR - Index of Refraction of an object - Affects Glass and Specular</li>
+  <li>Specular - Adds specular reflection to an object, use in conjunction with Roughness and IOR</li>
+  <li>Specular Tint - Weights color more towards the objects color for specular reflections</li>
+  <li>Sheen - Adds Sheen to objects</li>
+  <li>SheenTint - Allows you to choose if an objects sheen is white or is that objects base color</li>
+  <li>ClearCoat - Adds a ClearCoat effect to the object</li>
+  <li>ClearCoatGloss - Influences the ClearCoat</li>
+  <li>Anisotropic - Makes the material anisotropic based on roughness</li>
+  <li>SpecTrans(Glass) - Makes an object more or less like glass</li>
+  <li>Thin - Marks an object as thin, Influences Diffuse, DiffTrans, and SpecTrans</li>
+  <li>Diffuse Transmission - Makes an object Diffuse but Transmissive(transluscent)</li>
+  <li>Transmission Color - Affects Diffuse Transmission color, must be greater than 0 for diffuse transmission</li>
+  <li>Flatness - Affects Thin objects</li>
+  <li>Scatter Distance - Affects SpecTrans and Diffuse Transmission, must be greater than 0 for Diffuse Transmission</li>
+  <li>Propogate To Materials - Copies properties of local material to all other objects in the scene with the same material</li>
 </ul>
-
-## Disney BSDF Only Properties
-<ul>
-  <li>IOR - Index of Refraction of an object.  Affects only Disney BSDF</li>
-  <li>Metallic - How metallic an object is.  Affects only Disney BSDF</li>
-  <li>Specular - Adds specular reflection to an object, use in conjunction with Roughness and IOR.  Affects only Disney BSDF</li>
-  <li>Specular Tint - Weights color more towards the objects color for specular reflections.  Affects only Disney BSDF</li>
-  <li>Sheen - Adds Sheen to objects.  Affects only Disney BSDF</li>
-  <li>SheenTint - Allows you to choose if an objects sheen is white or is that objects base color.  Affects only Disney BSDF</li>
-  <li>ClearCoat - Adds a ClearCoat effect to the object.  Affects only Disney BSDF</li>
-  <li>ClearCoatGloss - Influences the ClearCoat.  Affects only Disney BSDF</li>
-  <li>Anisotropic - Makes the material(mostly metallic and specular) anisotropic.  Affects only Disney BSDF</li>
-  <li>Specular Transmission - Makes an object more or less like glass.  Affects only Disney BSDF(Play with the IOR for this)</li>
-  <li>Diffuse Transmission - Makes an object Diffuse but Transmissive(transluscent).  Affects only Disney BSDF</li>
-  <li>Transmission Color - doesn't do anything for now, used for volumetric disney bsdf(which is not yet implemented)</li>
-  <li>Flatness - Affects Thin objects.  Affects only Disney BSDF</li>
-  <li>Thin - Marks an object as thin so it can be better handled by the BSDF.  Affects only Disney BSDF, can be either 0 or 1</li>
- </ul>
 
 # Known Bugs:
 </br>

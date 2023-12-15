@@ -21,14 +21,14 @@ namespace TrueTrace {
             ThisLightData = new LightData();
             ThisLight = this.GetComponent<Light>();
             HasChanged = true;
-            ThisLight.shadows = LightShadows.None;
+            // ThisLight.shadows = LightShadows.None;
         }
         public void UpdateLight() {
             if(transform.hasChanged || HasChanged) {
                 ThisLightData.Position = transform.position;
                 ThisLightData.Direction = (ThisLight.type == LightType.Directional) ? -transform.forward : (ThisLight.type == LightType.Spot) ? Vector3.Normalize(transform.forward) : transform.forward;
                 HasChanged = false;
-                ThisLightData.ZAxisRotation = transform.localEulerAngles.z;
+                ThisLightData.ZAxisRotation = transform.localEulerAngles.z * 3.14159f / 180.0f;
                 transform.hasChanged = false;
             }
             Color col = ThisLight.color; 
