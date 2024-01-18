@@ -12,7 +12,7 @@ To get started:
 
 Important Notes:
 1. If your camera is not tagged "Main Camera", you need to add the script "RenderHandle" to it manually
-2. Objects cannot be marked with the static tag(this is due to them not being read/writeable when this is done, so I cant use them), truetrace will automatically turn this off on setup
+2. Objects cannot be marked with the static tag that combines meshes, as this makes them non read/writeable
 3. Whenever you add objects to the scene, in order for them to be included in the path tracer, you need to add the parent object/raytracing object, however I highly recommend just pressing "Auto Assign Scripts" to automatically assign the scripts for you
 4. Objects that will be spawned/despawned while in play mode(or in builds) that are to be included in the path-tracing must be read/write enabled, otherwise I cant read them at all
 5. Meshes that are to move independently need to either be a child of a GameObject with the "ParentObject" script or have a "ParentObject" script in the same GameObject
@@ -21,10 +21,6 @@ Important Notes:
 Structure Notes:
 1. All objects that are to be raytraced must be under a GameObject with the "ParentObject" script or have this script on themselves, think of the parentobject as defining groups of meshes(its children with RayTracingObject scripts)
 2. Meshes with RayTracingObject scripts will be raytraced
-
-
-For an example scene, open up the DemoScene scene
-
 
 
 Changeable Defines:
@@ -39,9 +35,10 @@ This will allow you to toggle some low level settings:
 8. PointFiltering - Disables stochastic texture sampling, basically turns off texture filtering
 9. StainedGlassShadows - if IgnoreGlassShadow is on, this allows rays to be tinted by glass color
 10. DX11 - Experimental still, but will make it so, you don't need DX12 (needs to be paired with C# #define)
+11. LightMapping - Experimental
 
 Pathtracer Settings Of Note:
-Internal Render Resolution - Turning this down decreases the resolution we path trace at, and then upscale to the correct res(so turning to 0.5 will path trace at half resolution then upscale it)
+Internal Resoltuion Ratio - Turning this down decreases the resolution we path trace at, and then upscale to the correct res(so turning to 0.5 will path trace at half resolution then upscale it)
 Atmospheric Scattering Samples - How many passes of atmospheric scatter is computed(for multiple scattering), decrease this to 1 if you end up crashing when you try to play
 
 Chair Scene provided by Mr_TibiT on Twitter

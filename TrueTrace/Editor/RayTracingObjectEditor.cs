@@ -49,6 +49,7 @@ namespace TrueTrace {
                 serializedObject.FindProperty("TransmissionColor").GetArrayElementAtIndex(Selected).vector3Value = EditorGUILayout.Vector3Field("Transmission Color: ", t.TransmissionColor[Selected]);
                 serializedObject.FindProperty("Flatness").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Flatness: ", t.Flatness[Selected], 0, 1);
                 serializedObject.FindProperty("ScatterDist").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Scatter Distance: ", t.ScatterDist[Selected], 0, 5);
+                serializedObject.FindProperty("AlphaCutoff").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Alpha Cutoff: ", t.AlphaCutoff[Selected], 0.01f, 1.0f);
                 if(EditorGUI.EndChangeCheck()) {
                     for(int i = 0; i < t1.Length; i++) {
                         (t1[i] as RayTracingObject).CallMaterialEdited();
@@ -91,6 +92,7 @@ namespace TrueTrace {
                                 Obj.ScatterDist[i] = t.ScatterDist[Selected];
                                 Obj.Specular[i] = t.Specular[Selected];
                                 Obj.IsSmoothness[i] = t.IsSmoothness[Selected];
+                                Obj.AlphaCutoff[i] = t.AlphaCutoff[Selected];
                                 Obj.CallMaterialEdited();
                             }
                         }

@@ -7,6 +7,7 @@
 #define PointFiltering
 #define StainedGlassShadows
 // #define DX11
+// #define LightMapping
 
 
 //Dont change the ones below

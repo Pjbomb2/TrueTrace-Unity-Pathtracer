@@ -34,8 +34,6 @@ Texture2D<float4> Albedo;
 Texture2D<float4> Albedo2;
 Texture2D<float4> MotionVectors;
 SamplerState sampler_trilinear_clamp;
-Texture2D<float4> PrevWorldPos;
-RWTexture2D<float4> PrevWorldPosWrite;
 
 float3 CamPos;
 float FarPlane;
@@ -345,7 +343,11 @@ void kernel_upsample (int3 id : SV_DispatchThreadID)
     float3 WorldPos = CreateCameraRay(UV, depth);
     PrevDepthTexWrite[id.xy] = float4(depth, 0, 0, 1);
     // dot(PrevNormalTex.SampleLevel(sampler_Input_trilinear_clamp, newUV, 0).xyz * 2.0 - 1.0f, NormalTex[int3(id.xy,0)].xyz * 2.0 - 1.0f)
-    half3 normal = NormalTex[id.xy].xyz * 2.0 - 1.0f;
+    #ifdef HDRP
+        half3 normal = NormalTex[int3(id.xy,1)].xyz * 2.0 - 1.0f;
+    #else
+        half3 normal = NormalTex[id.xy].xyz * 2.0 - 1.0f;
+    #endif
     float thresh = 0.26;
     
     float3 viewPosition = GetViewSpacePosition(UV, depth).xyz;
@@ -377,11 +379,17 @@ void kernel_upsample (int3 id : SV_DispatchThreadID)
     // half3 normal10 = i_octahedral_32(asuint(SmallerGBuffer[floor((UV + float2(rcp(source_width),0)) * float2(source_width, source_height))].y));
     // half3 normal11 = i_octahedral_32(asuint(SmallerGBuffer[floor((UV + float2(rcp(source_width),rcp(source_height))) * float2(source_width, source_height))].y));
     // half3 normal01 = i_octahedral_32(asuint(SmallerGBuffer[floor((UV + float2(0,rcp(source_height))) * float2(source_width, source_height))].y));
-    half3 normal00 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,UV, 0).xyz * 2.0f - 1.0f);
-    half3 normal10 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,UV + float2(rcp(target_width), 0), 0).xyz * 2.0f - 1.0f);
-    half3 normal11 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,UV + float2(rcp(target_width), rcp(target_height)), 0).xyz * 2.0f - 1.0f);
-    half3 normal01 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,UV + float2(0, rcp(target_height)), 0).xyz * 2.0f - 1.0f);
-
+    #ifdef HDRP
+        half3 normal00 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,float3(UV,0), 0).xyz * 2.0f - 1.0f);
+        half3 normal10 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,float3(UV + float2(rcp(target_width),0), 0), 0).xyz * 2.0f - 1.0f);
+        half3 normal11 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,float3(UV + float2(rcp(target_width), rcp(target_height)),0), 0).xyz * 2.0f - 1.0f);
+        half3 normal01 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,float3(UV + float2(0, rcp(target_height)),0), 0).xyz * 2.0f - 1.0f);
+    #else
+        half3 normal00 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,UV, 0).xyz * 2.0f - 1.0f);
+        half3 normal10 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,UV + float2(rcp(target_width), 0), 0).xyz * 2.0f - 1.0f);
+        half3 normal11 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,UV + float2(rcp(target_width), rcp(target_height)), 0).xyz * 2.0f - 1.0f);
+        half3 normal01 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,UV + float2(0, rcp(target_height)), 0).xyz * 2.0f - 1.0f);
+    #endif
     // half3 normal00 = DecodeViewNormalStereo(tex2D(CurrentNormal, input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 0.0)));
     // half3 normal10 = DecodeViewNormalStereo(tex2D(CurrentNormal, input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 0.0)));
     // half3 normal11 = DecodeViewNormalStereo(tex2D(CurrentNormal, input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 1.0)));

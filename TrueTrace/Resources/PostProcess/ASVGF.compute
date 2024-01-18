@@ -586,7 +586,7 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 	float3 Pos = mul(Inverse, float4(AggTris[Target.y].pos0 + UV.x * AggTris[Target.y].posedge1 + UV.y * AggTris[Target.y].posedge2,1)).xyz;
 	if(UseBackupPointSelection || Target.w == 1) Pos = GlobalRays[ipos.x + ipos.y * screen_width].origin + GlobalRays[ipos.x + ipos.y * screen_width].direction * TEX_PT_VIEW_DEPTH_B[found_pos_prev].x;
 
-	// GlobalRays[ipos.x + ipos.y * screen_width].origin -= CamDiff;
+	GlobalRays[ipos.x + ipos.y * screen_width].origin -= CamDiff;
 	GlobalRays[ipos.x + ipos.y * screen_width].direction = normalize(Pos - GlobalRays[ipos.x + ipos.y * screen_width].origin);
 
 	MetallicAWrite[ipos] = MetallicB[found_pos_prev];
@@ -912,14 +912,14 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 			float3  geo_normal_prev = i_octahedral_32(norms.x);//needs to be TEX_PT_GEO_NORMAL_B, but since for now I am not worrying about normal maps yet, it can use the same texture
 			
 
-			float dist_depth = (abs(depth_curr.x - depth_prev) - CameraDist);// * max(depth_curr.y,0.25f);
+			float dist_depth = (abs(depth_curr.x - depth_prev) - CameraDist) / min(depth_curr.x, depth_prev);// * max(depth_curr.y,0.25f);
 			float dot_normals = dot(normal_curr, normal_prev);
 			float dot_geo_normals = dot(geo_normal_curr, geo_normal_prev);
 
 			[branch]if(!ReflectedRefracted && !ReflectedRefractedPrev) {
-				if (dist_depth < 0.1)
+				if (dist_depth < 0.01)
 				{
-					float w_diff =w[i] * pow(max(dot_normals, 0),clamp(6.0f / depth_curr.x,1.0f, 3.0f));;// * max(dot_normals, 0);
+					float w_diff =w[i] * pow(max(dot_normals, 0),clamp(6.0f / depth_curr.x,1.0f, 3.0f));// * max(dot_normals, 0);
 					float w_spec = w[i] * pow(max(dot_normals, 0), shininess);
 
 						SH hist_color_lf = load_SH(TEX_ASVGF_HIST_COLOR_LF_SH_B, TEX_ASVGF_HIST_COLOR_LF_COCG_B, p);
@@ -1514,7 +1514,7 @@ inline void filter_image(
 			float depth = TEX_PT_VIEW_DEPTH_A[p].x;
 			float roughness = MetallicA[p].y;
 
-			float dist_z = abs(depth_center.x - depth) * depth_center.y;
+			float dist_z = abs(depth_center.x - depth);
 			w *= exp(-dist_z);
 			w *= wavelet_kernel[abs(xx)][abs(yy)];
 
@@ -1530,7 +1530,7 @@ inline void filter_image(
 
 			w_hf *= 1.0f - clamp(abs(MetallicA[p].x - CenterMetallic),0,1);
 			float w_spec = w_hf;
-			// w_spec *= max(0, 1 - 10 * abs(roughness - roughness_center));
+			w_spec *= max(0, 1 - 10 * abs(roughness - roughness_center));
 			w_spec *= spec_filter_width_scale;
 
 

@@ -46,10 +46,12 @@ Shader "Hidden/FireFlyPass"
                 float MinLum = 9999;
                 int2 MaxLumIndex;
                 int2 MinLumIndex;
+                int Radius = ((floor(_Time.w) % 2) + 1);
+                float Sharpness = Radius == 1 ? 1 : pow(0.9, Radius - 1);
                 for(int i = -1; i <= 1; i++) {
                     for(int j = -1; j <= 1; j++) {
                         if(i == 0 && j == 0) continue;
-                        float CurLum = luminance(tex2D(_MainTex, UV + float2(i, j) * _MainTex_TexelSize.xy).rgb);
+                        float CurLum = luminance(tex2D(_MainTex, UV + float2(i, j) * Radius * _MainTex_TexelSize.xy).rgb);
                         if(MaxLum < CurLum) {
                             MaxLum = CurLum;
                             MaxLumIndex = int2(i,j);
@@ -60,6 +62,8 @@ Shader "Hidden/FireFlyPass"
                         }
                     }
                 }
+                MaxLum *= rcp(Sharpness);
+                MinLum *= Sharpness;
                 if(Center >= MinLum && Center <= MaxLum) return tex2D(_MainTex, UV).rgb;
                 else if(Center > MaxLum) return tex2D(_MainTex, UV + MaxLumIndex * _MainTex_TexelSize.xy).rgb;
                 else return tex2D(_MainTex, UV + MinLumIndex * _MainTex_TexelSize.xy).rgb;

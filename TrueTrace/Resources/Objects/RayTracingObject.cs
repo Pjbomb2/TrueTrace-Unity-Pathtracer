@@ -33,6 +33,7 @@ namespace TrueTrace {
 		[SerializeField] public Material[] SharedMaterials;
 		public string[] Names;
 		[SerializeField] public float[] Specular;
+		[SerializeField] public float[] AlphaCutoff;
 		[SerializeField] public bool[] IsSmoothness;
 		[SerializeField] public int Selected;
 		public int[] Indexes;
@@ -69,9 +70,11 @@ namespace TrueTrace {
 
 
 		public void CallMaterialEdited() {
-			if(Assets == null) Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
-			if(gameObject.activeInHierarchy && Assets != null) Assets.MaterialsChanged.Add(this);
-			System.Array.Fill(FollowMaterial, false);
+			if(Application.isPlaying) {
+				if(Assets == null) Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
+				if(gameObject.activeInHierarchy && Assets != null) Assets.MaterialsChanged.Add(this);
+			}
+				System.Array.Fill(FollowMaterial, false);
 		}
 
 		public void CallTilingScrolled() {
@@ -82,8 +85,8 @@ namespace TrueTrace {
 		public void matfill() {
 			TilingChanged = false;
 			WasDeleted = false;
-			this.gameObject.isStatic = false;
-			Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
+			// this.gameObject.isStatic = false;
+			if(GameObject.Find("Scene") != null) Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
 			 Mesh mesh = new Mesh();
 			 int SubMeshCount;
 			 if(GetComponent<MeshRenderer>() != null) { 
@@ -122,6 +125,7 @@ namespace TrueTrace {
 				RoughnessRemap = new Vector2[SubMeshCount];
 			}
 			if(IsSmoothness == null || IsSmoothness.Length != SubMeshCount) IsSmoothness = new bool[SubMeshCount];
+			if(AlphaCutoff == null || AlphaCutoff.Length != SubMeshCount) {AlphaCutoff = new float[SubMeshCount]; System.Array.Fill(AlphaCutoff, 0.1f);}
 			if(ScatterDist == null || ScatterDist.Length != SubMeshCount) ScatterDist = new float[SubMeshCount];
 			if(BaseIsMap == null || BaseIsMap.Length != SubMeshCount) BaseIsMap = new bool[SubMeshCount];				
 			if(ReplaceBase == null || ReplaceBase.Length != SubMeshCount) ReplaceBase = new bool[SubMeshCount];				
@@ -181,11 +185,16 @@ namespace TrueTrace {
 		
 	    private void OnEnable() {
 	    	// if(this.gameObject.GetComponent<SkinnedMeshRenderer>() != null) this.gameObject.GetComponent<SkinnedMeshRenderer>().sharedMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-	    	if(gameObject.scene.isLoaded && this.transform.parent.GetComponent<ParentObject>() != null) {
+	    	if(gameObject.scene.isLoaded && (this.transform.GetComponent<ParentObject>() != null || this.transform.parent.GetComponent<ParentObject>() != null)) {
 	    		matfill();
 	    		if(WasDeleted) return;
-		    	this.transform.parent.GetComponent<ParentObject>().NeedsToUpdate = true;
-				if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
+		    	if(this.transform.GetComponent<ParentObject>() != null) {
+		    		this.transform.GetComponent<ParentObject>().NeedsToUpdate = true;
+					if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.GetComponent<ParentObject>());
+		    	} else {
+		    		this.transform.parent.GetComponent<ParentObject>().NeedsToUpdate = true;
+					if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
+	    		}
 	    	} else if(gameObject.scene.isLoaded && this.transform.GetComponent<ParentObject>() != null) {
 	    		matfill();
 	    		if(WasDeleted) return;
@@ -196,6 +205,7 @@ namespace TrueTrace {
 
 	    private void OnDisable() {
 	    	if(gameObject.scene.isLoaded && this.transform.parent.GetComponent<ParentObject>() != null) {
+				if(GameObject.Find("Scene") != null) Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
 	    		this.transform.parent.GetComponent<ParentObject>().NeedsToUpdate = true;
 	    		if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
 	    	} else if(gameObject.scene.isLoaded && this.transform.GetComponent<ParentObject>() != null) {

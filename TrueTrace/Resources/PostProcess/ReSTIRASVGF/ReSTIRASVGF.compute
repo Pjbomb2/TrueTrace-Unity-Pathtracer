@@ -140,9 +140,9 @@ Texture2D<float4> TEX_ASVGF_HIST_COLOR_LF_SH_A;
 
 Texture2D<float2> TEX_ASVGF_HIST_COLOR_LF_COCG_A;
 
-RWTexture2D<half> ReflectedRefractedTexWrite;
-Texture2D<half> ReflectedRefractedTex;
-Texture2D<half> ReflectedRefractedTexPrev;
+RWTexture2D<half2> ReflectedRefractedTexWrite;
+Texture2D<half2> ReflectedRefractedTex;
+Texture2D<half2> ReflectedRefractedTexPrev;
 
 Texture2D<half4> TEX_ASVGF_ATROUS_PING_HF;
 SamplerState my_linear_clamp_sampler;
@@ -268,6 +268,7 @@ SamplerState sampler_trilinear_clamp;
 
 
 Texture2D<float4> ScreenSpaceInfo;
+Texture2D<float4> ScreenSpaceInfoPrev;
 
 Texture2D<uint4> WorldPosData;
 
@@ -327,13 +328,14 @@ int PartialRenderingFactor;
 void CopyData(uint3 id : SV_DispatchThreadID)
 {
     if(id.x > screen_width || id.y > screen_height) return;
-    int pixel_index = id.y * screen_width + id.x;
+    const int pixel_index = id.y * screen_width + id.x;
     ColData Pixel = PerPixelRadiance[pixel_index];
-    const float4 TexInverted = TEX_PT_BASE_COLOR_A[id.xy];
+    float4 TexInverted = TEX_PT_BASE_COLOR_A[id.xy];
     const uint4 WorldData = WorldPosData[id.xy];
     float3 TexBaseColor = clamp(TexInverted.xyz,0,12.0f);
     TexBaseColor = (TexBaseColor > 0.005f ? rcp(TexBaseColor) : 0);
-    uint Input = asuint(Pixel.Metallic);
+    const uint Input = asuint(Pixel.Metallic);
+    MetallicAWrite[id.xy] = float2((Input >> 16) / 65535.0f, (Input & 0xFFFF) / 65535.0f);
 
     #ifdef HDRP
         float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, int3(id.xy,0) / float3(screen_width, screen_height, 1), 0).xy;
@@ -341,31 +343,43 @@ void CopyData(uint3 id : SV_DispatchThreadID)
         float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, id.xy / float2(screen_width, screen_height), 0).xy;
     #endif
     
-    float2 pos_prev = ((((float2(id.xy)+0.5f) * float2(rcp(screen_width), rcp(screen_height)) + motion) * float2(screen_width, screen_height)));
-    MetallicAWrite[id.xy] = float2((Input >> 16) / 65535.0f, (Input & 0xFFFF) / 65535.0f);
+    int2 pos_prev = floor((((float2(id.xy)+0.5f) * float2(rcp(screen_width), rcp(screen_height)) + motion) * float2(screen_width, screen_height)));
+    if(any(pos_prev > float2(screen_width, screen_height) || pos_prev < 0)) pos_prev.x = -1000;
+    if(((asuint(ScreenSpaceInfo[id.xy].w) << 2) >> 2) != ((asuint(ScreenSpaceInfoPrev[pos_prev].w) << 2) >> 2)) {
+        pos_prev.x = -1000;
+    }
     if(TexInverted.w == 0) {
         Pixel.Direct = float3(0,0,0);
         Pixel.Indirect = float3(0,0,0);
         Pixel.Fog = 0;
     }
 
-    ReflectedRefractedTexWrite[id.xy] = max(Pixel.IsSpecular - 2,0);
     bool ReflectedRefracted = max(Pixel.IsSpecular - 2,0);
     float3 WorldAlbedo = clamp(unpackRGBE(WorldData.w),0,12.0f);
+    TexInverted.xyz *= ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 1.0f);
     float Exposure = 1;
     if(UseExposure) Exposure = ExposureBuffer[0];
+
+
+    uint2 AlbedoData = WorldData.ww;
+    SH IndirectSH = init_SH();
+    float4 HFCol = 0;
+    uint SpecCol = 0;
+    float3 Direct = Pixel.Direct + unpackRGBE(Pixel.Fog) * TexBaseColor;
+
     [branch]if (Pixel.IsSpecular == 0 || (Input & 0xFFFF) / 65535.0f >= 0.4f) {
-        AlbedoColorA[id.xy] = uint2(WorldData.w, AlbedoColorB[pos_prev].y);
-        STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, irradiance_to_SH(clamp(PartialRenderingFactor * Exposure * IndirectBoost * clamp(Pixel.Indirect * ((TexInverted.xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0))) / 1024.0f,0,120000),0,120000.0f), clamp(asfloat(WorldData.xyz),-1,1)));
-        TEX_PT_COLOR_HFWrite[id.xy] = clamp(float4(PartialRenderingFactor * Exposure * (Pixel.Direct + unpackRGBE(Pixel.Fog) * ((Pixel.IsSpecular != 2) ? TexBaseColor : TexBaseColor)) * TexInverted.xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 1.0f),1),0,120000.0f);
-        TEX_PT_COLOR_SPECWrite[id.xy] = 0;
+        if(pos_prev.x != -1000) AlbedoData.y = AlbedoColorB[pos_prev].y;
+        IndirectSH = irradiance_to_SH(clamp(PartialRenderingFactor * Exposure * IndirectBoost * clamp(Pixel.Indirect * TexInverted.xyz / 1024.0f,0,120000),0,120000.0f), clamp(asfloat(WorldData.xyz),-1,1));
+        HFCol = clamp(float4(PartialRenderingFactor * Exposure * (Direct) * TexInverted.xyz,1),0,120000.0f);
     } else {
-        AlbedoColorA[id.xy] = uint2(AlbedoColorB[pos_prev].x, WorldData.w);
-        TEX_PT_COLOR_LF_SHWrite[id.xy] = 0;
-        TEX_PT_COLOR_LF_COCGWrite[id.xy] = 0;
-        TEX_PT_COLOR_SPECWrite[id.xy] = packRGBE(PartialRenderingFactor * max(Exposure * (Pixel.Direct + IndirectBoost * Pixel.Indirect + unpackRGBE(Pixel.Fog) * TexBaseColor) * TexInverted.xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 1.0f),0));
-        TEX_PT_COLOR_HFWrite[id.xy] = 0;
+        if(pos_prev.x != -1000) AlbedoData.x = AlbedoColorB[pos_prev].x;
+        SpecCol = packRGBE(PartialRenderingFactor * max(Exposure * (Direct + IndirectBoost * Pixel.Indirect) * TexInverted.xyz,0));
     }
+    ReflectedRefractedTexWrite[id.xy] = float2(ReflectedRefracted, ((asuint(ScreenSpaceInfo[id.xy].w) << 2) >> 2));
+    AlbedoColorA[id.xy] = AlbedoData;
+    STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, IndirectSH);
+    TEX_PT_COLOR_HFWrite[id.xy] = HFCol;
+    TEX_PT_COLOR_SPECWrite[id.xy] = SpecCol;
     if(!ReflectedRefracted) {
         TEX_PT_NORMALS_AWrite[id.xy] = asuint(ScreenSpaceInfo[id.xy].xy);//GeoNorm, Norm
     } else {
@@ -505,7 +519,7 @@ inline float2 filter_image(Texture2D<half2> img, int2 ipos)
 
             float2  c = img[p].xy;
 
-            if (any((p >= grad_size)))
+            if (any((p >= grad_size) || p < 0))
                 c = 0;
 
             float w = wavelet_kernel[abs(xx)][abs(yy)];// / (float)step_size;
@@ -526,7 +540,7 @@ void Gradient_Atrous(uint3 id : SV_DispatchThreadID)
 
     int2 ipos = id.xy;
     int2 grad_size = int2(screen_width, screen_height) / GRAD_DWN;
-    if (any((ipos >= grad_size)))
+    if (any((ipos >= grad_size) || ipos < 0))
         return;
 
     float2 filtered_lf = 0;
@@ -635,10 +649,10 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
     #endif
 
 
-    float2 pos_prev = ((((float2(ipos)+0.5f) * float2(rcp(screen_width), rcp(screen_height)) + motion.xy) * float2(screen_width, screen_height))) + (random(54, gl_GlobalInvocationID) - 0.5f) * 0.2f;
+    float2 pos_prev = ((((float2(ipos)+0.5f) * float2(rcp(screen_width), rcp(screen_height)) + motion.xy) * float2(screen_width, screen_height)));// + (random(54, gl_GlobalInvocationID) - 0.5f) * 0.2f;
 
     // Load the parameters of the target pixel
-    bool ReflectedRefracted = ReflectedRefractedTex[gl_GlobalInvocationID.xy];
+    float2 ReflectedRefracted = ReflectedRefractedTex[gl_GlobalInvocationID.xy];
     float depth_curr;
     float3 normal_curr;
     float lum_curr_hf;
@@ -649,7 +663,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
     float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
 
 
-    float motion_length = 0.0f;//length((motion.xy) * float2(screen_width, screen_height));
+    float motion_length = length((motion.xy) * float2(screen_width, screen_height));
     float CenterFDepth = TEX_PT_VIEW_DEPTH_A[ipos].y;
 
     float shininess = clamp(2.0 / max(pow(MetallicA[ipos].y, 4), 0.001f) - 2.0, 0.0, 32.0);
@@ -686,17 +700,17 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 
             float depth_prev = TEX_PT_VIEW_DEPTH_B[p].x;
             uint2 norms = TEX_PT_NORMALS_B[p];
-            bool ReflectedRefractedPrev = ReflectedRefractedTexPrev[p];
+            float2 ReflectedRefractedPrev = ReflectedRefractedTexPrev[p];
             float3  normal_prev = i_octahedral_32(norms.y);
             float3  geo_normal_prev = i_octahedral_32(norms.x);//needs to be TEX_PT_GEO_NORMAL_B, but since for now I am not worrying about normal maps yet, it can use the same texture
             
 
-            float dist_depth = (abs(depth_curr - depth_prev) - CameraDist) * max(CenterFDepth,0.25f);
+            float dist_depth = (abs(depth_curr - depth_prev) - CameraDist) / depth_curr * max(CenterFDepth,0.25f);
             float dot_normals = dot(normal_curr, normal_prev);
             float dot_geo_normals = dot(geo_normal_curr, geo_normal_prev);
 
-            [branch]if(!ReflectedRefracted && !ReflectedRefractedPrev) {
-                if (dist_depth < 0.1 && dot_geo_normals > 0.8)
+            [branch]if(!(ReflectedRefracted.x == 1) && !(ReflectedRefractedPrev.x == 1)) {
+                if (ReflectedRefracted.y == ReflectedRefractedPrev.y && dist_depth < 0.1 && dot_geo_normals > 0.8)
                 {
                     float w_diff = pow(w[i],clamp(6.0f / depth_curr,1.0f, 3.0f)) * max(dot_normals, 0);
                     float w_spec = w[i] * pow(max(dot_normals, 0), shininess);
@@ -712,7 +726,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
                     temporal_sum_w_spec += w_spec;
                 }
             } else {
-                if (dist_depth < 0.1)
+                if (ReflectedRefracted.y == ReflectedRefractedPrev.y &&dist_depth < 0.1)
                 {
                     float w_diff = pow(w[i],clamp(6.0f / depth_curr,1.0f, 3.0f));
                     float w_spec = w[i];
@@ -800,7 +814,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
     if (temporal_sample_valid_diff)
     {
         // Compute the antilag factors based on the gradients
-        float antilag_alpha_lf = clamp(lerp(1.0, 0.2f * grad_lf, 1.0f), 0, 1);//play with the middle 2 values?
+        float antilag_alpha_lf = clamp(lerp(1.0, 0.6f * grad_lf, 1.0f), 0, 1);//play with the middle 2 values?
         float antilag_alpha_hf = clamp(lerp(1.0, 1.0f * grad_hf_spec.x, 1.0f), 0, 1);//play with the middle 2 values?
 
         // Adjust the history length, taking the antilag factors into account
@@ -809,9 +823,9 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 
         // Compute the blending weights based on history length, so that the filter
         // converges faster. I.e. the first frame has weight of 1.0, the second frame 1/2, third 1/3 and so on.
-        float alpha_color_lf = max(0.001f, 1.0f / (hist_len_lf));
-        float alpha_color_hf = max(0.002f, 1.0f / (hist_len_hf));
-        float alpha_moments_hf = max(0.001f, 1.0f / (hist_len_hf));
+        float alpha_color_lf = max(0.01f, 1.0f / max(hist_len_lf-1,1));
+        float alpha_color_hf = max(0.02f, 1.0f / max(hist_len_hf-1,1));
+        float alpha_moments_hf = max(0.01f, 1.0f / max(hist_len_hf-1,1));
 
         // Adjust the blending factors, taking the antilag factors into account again
         alpha_color_lf = lerp(alpha_color_lf, 1.0, antilag_alpha_lf);
@@ -983,31 +997,29 @@ inline void filter_image(
     // Load the parameters of the anchor pixel
     float3 geo_normal_center = i_octahedral_32(TEX_PT_NORMALS_A[ipos_hires].x);
     float depth_center = TEX_PT_VIEW_DEPTH_A[ipos_hires].x;
-    float fwidth_depth = TEX_PT_VIEW_DEPTH_A[ipos_hires].y;
+    float fwidth_depth = TEX_PT_VIEW_DEPTH_A[ipos_hires].y + 1.0f;
 
     float step_size = int(1u << (iteration));
     float hist_len_lf = TEX_ASVGF_HIST_MOMENTS_HF_A[ipos_hires].a;
-    if(hist_len_lf > 2 && iteration == 4) step_size = int(1u << (1));
-    float sum_w_lf = 1;// + clamp((hist_len_lf + 4) / 12.0f, 0, 1) * 1.0f;
-    // sum_w_lf = clamp((hist_len_lf + 6) / 12.0f, 0, 1) * 1.0f;
+    if(hist_len_lf > 0 && iteration == 4) step_size = int(1u << (1));
+    float sum_w_lf = 1;
+
     SH sum_color_lf = color_center_lf;
-    color_center_lf.CoCg *= sum_w_lf;
-    color_center_lf.shY *= sum_w_lf;
 
-    step_size *= clamp(step_size * (LFVarianceA[ipos_lowres] / (1.0f + (hist_len_lf / 8.0f)) + (1.0f - min(hist_len_lf / 6.0f,1))), 1.0f, max(step_size,2.0f));
-    step_size *= clamp(2.0 * ((1.0f - min(hist_len_lf / 12.0f,1))), 1.0f, 2.0f);
-    // step_size *= ResRatio;
-    // step_size *= exp(-clamp(fwidth_depth * 3.0f,0, 12.0f));
-        // step_size++;
     float TotVariance = LFVarianceA[ipos_lowres];/// (1.0f + (hist_len_lf / 8.0f));
+    step_size *= clamp(step_size * (TotVariance / (1.0f + (hist_len_lf / 8.0f)) + (1.0f - min(hist_len_lf / 6.0f,1))), 1.0f, max(step_size,2.0f));
+    step_size *= clamp(2.0 * ((1.0f - min(hist_len_lf / 12.0f,1))), 1.0f, 2.0f);
 
+    float Weight1 = max((exp(img_lf_shY[ipos_lowres].w) - 1) * 1024.0f* 1024.0f,0);
+    float HistModifier = clamp(pow(hist_len_lf / 32.0f,2), 0, 1);
     // Compute the weighted average of color and moments from a sparse 3x3 pattern around the target pixel
     const int r = 1;
     for (int yy = -r; yy <= r; yy++) {
         for (int xx = -r; xx <= r; xx++) {
+            if (xx == 0 && yy == 0)
+                continue;
             int2 p_lowres = ipos_lowres + int2(xx, yy) * step_size;
             int2 p_hires = p_lowres * GRAD_DWN + 1;
-
 
             int actxx = xx;
             int actyy = yy;
@@ -1021,8 +1033,6 @@ inline void filter_image(
             p_lowres = ipos_lowres + int2(actxx, actyy) * step_size;
             p_hires = p_lowres * GRAD_DWN + 1 + jitter;
 
-            if (xx == 0 && yy == 0)
-                continue;
 
             float w = float(all((p_hires >= int2(0, 0)))
                 && all((p_hires < int2(screen_width, screen_height))));
@@ -1033,28 +1043,22 @@ inline void filter_image(
 
             float depth = TEX_PT_VIEW_DEPTH_A[p_hires].x;
 
-            float dist_z = abs(depth_center - depth) * (fwidth_depth + 1.0f);
+            float dist_z = abs(depth_center - depth) * fwidth_depth;
             w *= exp(-dist_z);
             w *= wavelet_kernel[abs(xx)][abs(yy)];
-            // w *= (2.0f - (1 + LFVarianceA[p_lowres]));
 
 
             float w_lf = w;
 
             SH c_lf = load_SH(img_lf_shY, img_lf_CoCg, p_lowres);
 
-            // float Weight1 = max(luminance(project_SH_irradiance(load_SH(img_lf_shY, img_lf_CoCg, ipos_lowres), geo_normal_center)) * 1024.0f* 1024.0f,0);
-            // float Weight2 = max(luminance(project_SH_irradiance(load_SH(img_lf_shY, img_lf_CoCg, p_lowres), geo_normal)) * 1024.0f* 1024.0f,0);
-
-            float Weight1 = max((exp(img_lf_shY[ipos_lowres].w) - 1) * 1024.0f* 1024.0f,0);
             float Weight2 = max((exp(img_lf_shY[p_lowres].w) - 1) * 1024.0f* 1024.0f,0);
 
             float GNdotGN = max(0.0, dot(geo_normal_center, geo_normal));
             w_lf *= pow(GNdotGN, 8);
-            float w_l = clamp(exp(-pow(abs(Weight2 - Weight1) / (1.0f + (Weight1)),1) * max(1.0f - LFVarianceA[p_lowres], 0)  * clamp(pow(hist_len_lf / 32.0f,2), 0, 1)),0.01f, 1.0f);
+            float w_l = clamp(exp(-pow(abs(Weight2 - Weight1) / (1.0f + (Weight1)),1) * max(1.0f - LFVarianceA[p_lowres], 0) * HistModifier),0.01f, 1.0f);
             if ((Weight1 + Weight2) / 2048.0f > 0.01f && iteration >= 1 && iteration < 5)
                 w_lf *= w_l;
-            // if(w_lf < 0.1f) continue;
 
             // The 4th iteration has filter footprint big enough to step over obstacles and produce noticeable light leaking.
             // Prevent that by throwing away samples that are too bright. This also helps make some shadows a bit sharper.
@@ -1106,8 +1110,8 @@ inline void deflicker_image(
         float ratio = max_lum / color_center_lf.shY.w;
         float ratio2 = (exp(max_lum) - 1) * 1024.0f * 1024.0f / ((exp(color_center_lf.shY.w) - 1) * 1024.0f * 1024.0f);
         // if(TEX_ASVGF_HIST_MOMENTS_HF_A[ipos_hires].a > 4) {
-            // color_center_lf.shY *= ratio;
-            // color_center_lf.CoCg *= ratio;
+            color_center_lf.shY *= ratio;
+            color_center_lf.CoCg *= ratio;
         // }
         LFVarianceB[gl_GlobalInvocationID.xy] = ratio;
     } else {
@@ -1201,16 +1205,20 @@ inline void filter_image(
     float roughness_center = MetallicA[ipos].y;
 
     float lum_mean_hf = luminance(color_center_hf);
-    // float lum_mean_hf = 0;
     float sigma_l_hf = 0;
 
     float hist_len_hf = TEX_ASVGF_HIST_MOMENTS_HF_A[ipos].b;
     float3 normal_center = normalize(lerp(i_octahedral_32(TEX_PT_NORMALS_A[ipos].x), i_octahedral_32(TEX_PT_NORMALS_A[ipos].y), clamp(hist_len_hf / 8.0f, 0, 1)));
-
-    float lum_variance_hf = max(1e-8, moments_center.y - moments_center.x * moments_center.x) * (hist_len_hf <= 4 ? (1.0f + 2.0f * (1.0f - (hist_len_hf) / 4.0f)) : 1.0f);
+    if (hist_len_hf > 1)
+    {
+        // Compute luminance variance from the statistical moments: Var(X) = E[X^2] - E[X]^2
+        // The `asvgf_temporal` shader computes a combination of temporal and spatial (3x3) moments,
+        // and stores these into a texture. This shader will combine moments of the surrounding 
+        // pixels using the same weights as for colors, and the combined moments are used on the next iteration.
+        lum_mean_hf = moments_center.x;
+        float lum_variance_hf = max(1e-8, moments_center.y - moments_center.x * moments_center.x) * (hist_len_hf <= 4 ? (1.0f + 2.0f * (1.0f - (hist_len_hf) / 4.0f)) : 1.0f);
         sigma_l_hf =  min(hist_len_hf, 16) / (2.0 * lum_variance_hf);
-        // if(spec_iteration == 0) sigma_l_hf = 120.0f;
-    // sigma_l_hf = lerp(0, sigma_l_hf, clamp(hist_len_hf / 12.0f - 1, 0.01f, 1));
+    }
 
     // reduce the HF filter sensitivity to normals when the lighting is invalidated
     float normal_weight_scale = clamp(hist_len_hf / 8.0f, 0, 1);
@@ -1222,23 +1230,23 @@ inline void filter_image(
     normal_weight_spec *= normal_weight_scale;
     float CenterMetallic = MetallicA[ipos].x;
 
-    float step_size = int(1u << min(spec_iteration,3));
-    float MinMom = 99999.0f;
-    float MaxMom = -99999.0f;
-    float3 Min = 9999.0f;
-    float3 Max = -9999.0f;
-    [unroll]for(int i = -1; i <= 1; i++) {
-        [unroll]for(int j = -1; j <= 1; j++) {
-            int2 offID = ipos + int2(i, j);
-            if(i == 0 && j == 0) continue;
-            Min = min(Min, unpackRGBE(asuint(img_spec[ipos].x)));
-            Max = max(Max, unpackRGBE(asuint(img_spec[ipos].x)));
-            MinMom = min(MinMom, img_moments[offID].y);
-            MaxMom = max(MaxMom, img_moments[offID].y);
-        }
-    }
-    color_center_spec = clamp(color_center_spec, Min, Max);
-    float Mom2 = clamp(moments_center.x, MinMom, MaxMom);
+    float step_size = int(1u << spec_iteration);
+    // float MinMom = 99999.0f;
+    // float MaxMom = -99999.0f;
+    // float3 Min = 9999.0f;
+    // float3 Max = -9999.0f;
+    // [unroll]for(int i = -1; i <= 1; i++) {
+    //     [unroll]for(int j = -1; j <= 1; j++) {
+    //         int2 offID = ipos + int2(i, j);
+    //         if(i == 0 && j == 0) continue;
+    //         Min = min(Min, unpackRGBE(asuint(img_spec[ipos].x)));
+    //         Max = max(Max, unpackRGBE(asuint(img_spec[ipos].x)));
+    //         MinMom = min(MinMom, img_moments[offID].y);
+    //         MaxMom = max(MaxMom, img_moments[offID].y);
+    //     }
+    // }
+    // color_center_spec = clamp(color_center_spec, Min, Max);
+    // float Mom2 = clamp(moments_center.x, MinMom, MaxMom);
     // step_size *= clamp(step_size * (max(1e-8, moments_center.y * moments_center.y * 10.0f)) + rcp(hist_len_hf / 10.0f + 1), 1.0f, step_size);
     // step_size *= clamp(3 *  (max(1e-8, Mom2 * Mom2 * 10.0f)), 1.0f, 3);// (max(1e-8, moments_center.y * moments_center.y * 10.0f)) + rcp(hist_len_hf / 10.0f + 1), 1.0f, step_size);
     // step_size *= ResRatio;
@@ -1252,7 +1260,7 @@ inline void filter_image(
     float sum_w_spec = 1.0;
 
     // Add some jitter to sample positions to hide the a-trous filter aliasing patterns
-    int2 jitter = int2((random(spec_iteration, gl_GlobalInvocationID.xy) - 0.5) * float(step_size));
+    // int2 jitter = int2((random(spec_iteration, gl_GlobalInvocationID.xy) - 0.5) * float(step_size));
 
     float spec_filter_width_scale = clamp(roughness_center * 30 - spec_iteration * sqrt(sqrt(step_size)), 0.1f, 1);
 
@@ -1263,7 +1271,7 @@ inline void filter_image(
 
             if (xx == 0 && yy == 0)
                 continue;
-            int2 p = ipos + int2(xx, yy) * step_size + jitter;
+            int2 p = ipos + int2(xx, yy) * step_size;// + jitter;
             int actxx = xx;
             int actyy = yy;
             if(p.x <= 0 || p.x > screen_width) {
@@ -1281,7 +1289,6 @@ inline void filter_image(
             float3 normal = normalize(lerp(i_octahedral_32(TEX_PT_NORMALS_A[p].x), i_octahedral_32(TEX_PT_NORMALS_A[p].y), clamp(hist_len_hf / 8.0f, 0, 1)));
 
             float depth = TEX_PT_VIEW_DEPTH_A[p].x;
-            float roughness = MetallicA[p].y;
 
             float dist_z = abs(depth_center - depth) * fwidth_depth;
             w *= exp(-dist_z);
@@ -1299,7 +1306,7 @@ inline void filter_image(
 
             w_hf *= 1.0f - clamp(abs(MetallicA[p].x - CenterMetallic),0,1);
             float w_spec = w_hf;
-            // w_spec *= max(0, 1 - 10 * abs(roughness - roughness_center));
+
             w_spec *= spec_filter_width_scale;
 
 
@@ -1364,7 +1371,7 @@ inline SH interpolate_lf(Texture2D<float4> img_lf_shY, Texture2D<float2> img_lf_
         float p_w = w[i];
 
         // Compute depth and normal similarity between the target pixel and the low-res anchor pixel
-        float dist_depth = abs(p_depth - depth_center) * fwidth_depth * 1.0f;
+        float dist_depth = abs(p_depth - depth_center) * fwidth_depth;
         p_w *= exp(-dist_depth);
         p_w *= pow(max(0.0, dot(geo_normal_center, p_geo_normal)), 8);
 

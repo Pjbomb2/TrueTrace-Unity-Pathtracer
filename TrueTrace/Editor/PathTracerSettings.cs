@@ -34,6 +34,7 @@ namespace TrueTrace {
         public RayTracingMaster RayMaster;
         public AssetManager Assets;
         public InstancedManager Instancer;
+        private bool Cleared;
         private AudioClip DingNoise;
          [SerializeField] public Camera SelectedCamera;
          [SerializeField] public ObjectField CameraField;
@@ -389,7 +390,7 @@ Toggle MovingToggle;
 Toggle AccumToggle;
 Toggle SkinToggle;
 Toggle BloomToggle;        
-FloatField ResField;
+[Delayed] FloatField ResField;
 Toggle TAAUToggle;
 FloatField AtmoScatterField;
 Toggle GIToggle;
@@ -562,37 +563,48 @@ Toolbar toolbar;
       Toggle SmoothnessToggle;
       MaterialShader MatShader;
       int Index;
+      List<string> TextureProperties;
+      List<string> ColorProperties;
+      List<string> FloatProperties;
+      List<string> RangeProperties;
       void ConfirmMats() {
-         MatShader.BaseColorTex = BaseColorTextureField.value;
-         MatShader.BaseColorValue = BaseColorField.value;
-         MatShader.NormalTex = NormalTextureField.value;
-         MatShader.EmissionTex = EmissionTextureField.value;
-         MatShader.MetallicTex = MetallicTextureField.value;
-         MatShader.MetallicRange = MetallicRangeField.value;
+         MatShader.BaseColorTex = TextureProperties[BaseColorTextureField.index];
+         MatShader.BaseColorValue = ColorProperties[BaseColorField.index];
+         MatShader.NormalTex = TextureProperties[NormalTextureField.index];
+         MatShader.EmissionTex = TextureProperties[EmissionTextureField.index];
+         MatShader.MetallicTex = TextureProperties[MetallicTextureField.index];
+         MatShader.MetallicRange = RangeProperties[MetallicRangeField.index];
          MatShader.MetallicTexChannel = MetallicChannelField.index;
-         MatShader.RoughnessTex = RoughnessTextureField.value;
-         MatShader.RoughnessRange = RoughnessRangeField.value;
+         MatShader.RoughnessTex = TextureProperties[RoughnessTextureField.index];
+         MatShader.RoughnessRange = RangeProperties[RoughnessRangeField.index];
          MatShader.RoughnessTexChannel = RoughnessChannelField.index;
          MatShader.IsGlass = GlassToggle.value;
          MatShader.IsCutout = CutoutToggle.value;
          MatShader.UsesSmoothness = SmoothnessToggle.value;
-         MatShader.MetallicRemapMin = MetallicRemapMinField.value;
-         MatShader.MetallicRemapMax = MetallicRemapMaxField.value;
-         MatShader.RoughnessRemapMin = RoughnessRemapMinField.value;
-         MatShader.RoughnessRemapMax = RoughnessRemapMaxField.value;
+         MatShader.MetallicRemapMin = FloatProperties[MetallicRemapMinField.index];
+         MatShader.MetallicRemapMax = FloatProperties[MetallicRemapMaxField.index];
+         MatShader.RoughnessRemapMin = FloatProperties[RoughnessRemapMinField.index];
+         MatShader.RoughnessRemapMax = FloatProperties[RoughnessRemapMaxField.index];
          AssetManager.data.Material[Index] = MatShader;
          using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialMappings.xml")) {
             var serializer = new XmlSerializer(typeof(Materials));
             serializer.Serialize(writer.BaseStream, AssetManager.data);
+            AssetDatabase.Refresh();
+            
+               Assets.UpdateMaterialDefinition();
          }
       }
       void AddAssetsToMenu() {
          Shader shader = (InputMaterialField.value as Material).shader;
-         List<string> RangeProperties = new List<string>();
-         List<string> FloatProperties = new List<string>();
-         List<string> ColorProperties = new List<string>();
-         List<string> TextureProperties = new List<string>();
+         RangeProperties = new List<string>();
+         FloatProperties = new List<string>();
+         ColorProperties = new List<string>();
+         TextureProperties = new List<string>();
          List<string> ChannelProperties = new List<string>();
+         List<string> VerboseRangeProperties = new List<string>();
+         List<string> VerboseFloatProperties = new List<string>();
+         List<string> VerboseColorProperties = new List<string>();
+         List<string> VerboseTextureProperties = new List<string>();
          int PropCount = shader.GetPropertyCount();
          ColorProperties.Add("null");
          RangeProperties.Add("null");
@@ -602,42 +614,59 @@ Toolbar toolbar;
          ChannelProperties.Add("G");
          ChannelProperties.Add("B");
          ChannelProperties.Add("A");
+
+         VerboseColorProperties.Add("null");
+         VerboseRangeProperties.Add("null");
+         VerboseFloatProperties.Add("null");
+         VerboseTextureProperties.Add("null");
          for(int i = 0; i < PropCount; i++) {
-            if(shader.GetPropertyType(i) == ShaderPropertyType.Texture) TextureProperties.Add(shader.GetPropertyName(i));
-            if(shader.GetPropertyType(i) == ShaderPropertyType.Color) ColorProperties.Add(shader.GetPropertyName(i));
-            if(shader.GetPropertyType(i) == ShaderPropertyType.Range) RangeProperties.Add(shader.GetPropertyName(i));
-            if(shader.GetPropertyType(i) == ShaderPropertyType.Float) FloatProperties.Add(shader.GetPropertyName(i));
+            if(shader.GetPropertyType(i) == ShaderPropertyType.Texture) {TextureProperties.Add(shader.GetPropertyName(i)); VerboseTextureProperties.Add(shader.GetPropertyDescription(i));}
+            if(shader.GetPropertyType(i) == ShaderPropertyType.Color) {ColorProperties.Add(shader.GetPropertyName(i)); VerboseColorProperties.Add(shader.GetPropertyDescription(i));}
+            if(shader.GetPropertyType(i) == ShaderPropertyType.Range) {RangeProperties.Add(shader.GetPropertyName(i)); VerboseRangeProperties.Add(shader.GetPropertyDescription(i));}
+            if(shader.GetPropertyType(i) == ShaderPropertyType.Float) {FloatProperties.Add(shader.GetPropertyName(i)); VerboseFloatProperties.Add(shader.GetPropertyDescription(i));}
          }
          MatShader = AssetManager.data.Material.Find((s1) => s1.Name.Equals(shader.name));
          Index = AssetManager.data.Material.IndexOf(MatShader);
+         if(Index == -1) {
+            if(Assets != null && Assets.NeedsToUpdateXML) {
+               Assets.AddMaterial(shader);
+               using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialMappings.xml")) {
+                  var serializer = new XmlSerializer(typeof(Materials));
+                  serializer.Serialize(writer.BaseStream, AssetManager.data);
+                  AssetDatabase.Refresh();
+               }
+               Assets.UpdateMaterialDefinition();
+               Index = AssetManager.data.Material.IndexOf(MatShader);
+            }
+         }
          VisualElement BaseColorRow = new VisualElement();
          BaseColorRow.style.flexDirection = FlexDirection.Row;
             BaseColorField = new PopupField<string>("Base Color ->");
-            BaseColorField.choices = ColorProperties;
+            BaseColorField.choices = VerboseColorProperties;
             BaseColorField.index = ColorProperties.IndexOf(MatShader.BaseColorValue);
             BaseColorRow.Add(BaseColorField);
             BaseColorTextureField = new PopupField<string>("Base Color Texture ->");
-            BaseColorTextureField.choices = TextureProperties;
+            BaseColorTextureField.choices = VerboseTextureProperties;
             BaseColorTextureField.index = TextureProperties.IndexOf(MatShader.BaseColorTex);
             BaseColorRow.Add(BaseColorTextureField);
          MaterialPairingMenu.Add(BaseColorRow);
 
          NormalTextureField = new PopupField<string>("Normal Texture ->");
-         NormalTextureField.choices = TextureProperties;
+         NormalTextureField.choices = VerboseTextureProperties;
          NormalTextureField.index = TextureProperties.IndexOf(MatShader.NormalTex);
          MaterialPairingMenu.Add(NormalTextureField);
          EmissionTextureField = new PopupField<string>("Emission Texture ->");
-         EmissionTextureField.choices = TextureProperties;
+         EmissionTextureField.choices = VerboseTextureProperties;
          EmissionTextureField.index = TextureProperties.IndexOf(MatShader.EmissionTex);
          MaterialPairingMenu.Add(EmissionTextureField);
          VisualElement MetallicTexRow = new VisualElement();
          MetallicTexRow.style.flexDirection = FlexDirection.Row;
             MetallicRangeField = new PopupField<string>("Metallic Float ->");
-            MetallicRangeField.choices = RangeProperties;
+            MetallicRangeField.choices = VerboseRangeProperties;
             MetallicRangeField.index = RangeProperties.IndexOf(MatShader.MetallicRange);
             MetallicTexRow.Add(MetallicRangeField);
             MetallicTextureField = new PopupField<string>("Metallic Texture ->");
-            MetallicTextureField.choices = TextureProperties;
+            MetallicTextureField.choices = VerboseTextureProperties;
             MetallicTextureField.index = TextureProperties.IndexOf(MatShader.MetallicTex);
             MetallicTexRow.Add(MetallicTextureField);
             MetallicChannelField = new PopupField<string>("Texture Channel Of Metallic ->");
@@ -648,11 +677,11 @@ Toolbar toolbar;
          VisualElement MetallicRow = new VisualElement();
          MetallicRow.style.flexDirection = FlexDirection.Row;
             MetallicRemapMinField = new PopupField<string>("Metallic Remap Min ->");
-            MetallicRemapMinField.choices = FloatProperties;
+            MetallicRemapMinField.choices = VerboseFloatProperties;
             MetallicRemapMinField.index = FloatProperties.IndexOf(MatShader.MetallicRemapMin);
             MetallicRow.Add(MetallicRemapMinField);
             MetallicRemapMaxField = new PopupField<string>("Metallic Remap Max ->");
-            MetallicRemapMaxField.choices = FloatProperties;
+            MetallicRemapMaxField.choices = VerboseFloatProperties;
             MetallicRemapMaxField.index = FloatProperties.IndexOf(MatShader.MetallicRemapMax);
             MetallicRow.Add(MetallicRemapMaxField);
          MaterialPairingMenu.Add(MetallicRow);
@@ -661,11 +690,11 @@ Toolbar toolbar;
          VisualElement RoughnessTexRow = new VisualElement();
          RoughnessTexRow.style.flexDirection = FlexDirection.Row;
             RoughnessRangeField = new PopupField<string>("Roughness Float ->");
-            RoughnessRangeField.choices = RangeProperties;
+            RoughnessRangeField.choices = VerboseRangeProperties;
             RoughnessRangeField.index = RangeProperties.IndexOf(MatShader.RoughnessRange);
             RoughnessTexRow.Add(RoughnessRangeField);
             RoughnessTextureField = new PopupField<string>("Roughness Texture ->");
-            RoughnessTextureField.choices = TextureProperties;
+            RoughnessTextureField.choices = VerboseTextureProperties;
             RoughnessTextureField.index = TextureProperties.IndexOf(MatShader.RoughnessTex);
             RoughnessTexRow.Add(RoughnessTextureField);
             RoughnessChannelField = new PopupField<string>("Texture Channel Of Roughness ->");
@@ -677,11 +706,11 @@ Toolbar toolbar;
          VisualElement RoughnessRow = new VisualElement();
          RoughnessRow.style.flexDirection = FlexDirection.Row;
             RoughnessRemapMinField = new PopupField<string>("Roughness Remap Min ->");
-            RoughnessRemapMinField.choices = FloatProperties;
+            RoughnessRemapMinField.choices = VerboseFloatProperties;
             RoughnessRemapMinField.index = FloatProperties.IndexOf(MatShader.RoughnessRemapMin);
             RoughnessRow.Add(RoughnessRemapMinField);
             RoughnessRemapMaxField = new PopupField<string>("Roughness Remap Max ->");
-            RoughnessRemapMaxField.choices = FloatProperties;
+            RoughnessRemapMaxField.choices = VerboseFloatProperties;
             RoughnessRemapMaxField.index = FloatProperties.IndexOf(MatShader.RoughnessRemapMax);
             RoughnessRow.Add(RoughnessRemapMaxField);
          MaterialPairingMenu.Add(RoughnessRow);
@@ -754,6 +783,9 @@ Toolbar toolbar;
          Toggle HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
          HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("HardwareRT"); else RemoveDefine("HardwareRT"); SetDefines();});
          HardSettingsMenu.Add(HardwareRTToggle);
+         Toggle LightmappingToggle = new Toggle() {value = (definesList.Contains("TTLightMapping")), text = "Use TrueTrace as a LightMapper"};
+         LightmappingToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("TTLightMapping"); else RemoveDefine("TTLightMapping"); SetDefines();});
+         HardSettingsMenu.Add(LightmappingToggle);
          Toggle DX11Toggle = new Toggle() {value = (definesList.Contains("DX11Only")), text = "Use DX11"};
          DX11Toggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("DX11Only"); else RemoveDefine("DX11Only"); SetDefines();});
          HardSettingsMenu.Add(DX11Toggle);
@@ -886,6 +918,7 @@ Toolbar toolbar;
                InstancedManager Instanced = GameObject.Find("InstancedStorage").GetComponent<InstancedManager>();
                EditorUtility.SetDirty(Instanced);
                Instanced.ClearAll();
+               Cleared = true;
            } else Debug.Log("Cant Do This In Editor");}) {text = "Clear Parent Data"};
            ClearButton.style.minWidth = 145;
            QuickStartButton = new Button(() => QuickStart()) {text = "Auto Assign Scripts"};
@@ -923,7 +956,7 @@ Toolbar toolbar;
                ResField.ElementAt(0).style.minWidth = 75;
                ResField.ElementAt(1).style.width = 35;
                TopEnclosingBox.Add(ResField);
-               ResField.RegisterValueChangedCallback(evt => {if(!Application.isPlaying) {RenderRes = evt.newValue; RenderRes = Mathf.Max(RenderRes, 0.05f); RenderRes = Mathf.Min(RenderRes, 1.0f); RayMaster.RenderScale = RenderRes;} else ResField.value = RenderRes;});        
+               ResField.RegisterValueChangedCallback(evt => {RenderRes = evt.newValue; RenderRes = Mathf.Max(RenderRes, 0.5f); RenderRes = Mathf.Min(RenderRes, 1.0f); RayMaster.RenderScale = RenderRes;});        
                TopEnclosingBox.Add(AtlasField);
            MainSource.Add(TopEnclosingBox);
 
@@ -1228,7 +1261,7 @@ Toolbar toolbar;
                Box ReadyBox = new Box();
                ReadyBox.style.height = 18;
                ReadyBox.style.backgroundColor = Color.green;
-               RemainingObjectsField.RegisterValueChangedCallback(evt => {if(evt.newValue == 0) {ReadyBox.style.backgroundColor = Color.green; PlayClip(DingNoise);} else ReadyBox.style.backgroundColor = Color.red;});
+               RemainingObjectsField.RegisterValueChangedCallback(evt => {if(evt.newValue == 0) {ReadyBox.style.backgroundColor = Color.green; if(!Cleared) PlayClip(DingNoise);} else ReadyBox.style.backgroundColor = Color.red;});
                Label ReadyLabel = new Label("All Objects Built");
                ReadyLabel.style.color = Color.black;
                ReadyBox.style.alignItems = Align.Center;
@@ -1240,7 +1273,7 @@ Toolbar toolbar;
 
         }
         void Update() {
-            if(Assets != null && Instancer != null) RemainingObjectsField.value = Assets.RunningTasks + Instancer.RunningTasks;
+            if(Assets != null && Instancer != null && Assets.RunningTasks != null && Instancer.RunningTasks != null) RemainingObjectsField.value = Assets.RunningTasks + Instancer.RunningTasks;
             if(RayMaster != null) SampleCountField.value = RayMaster.SampleCount;
             
             if(Assets != null && Assets.NeedsToUpdateXML) {
@@ -1250,6 +1283,7 @@ Toolbar toolbar;
                }
                Assets.NeedsToUpdateXML = false;
             }
+            Cleared = false;
         }
 
     public static void PlayClip(AudioClip clip, int startSample = 0, bool loop = false)

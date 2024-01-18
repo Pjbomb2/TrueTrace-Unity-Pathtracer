@@ -26,13 +26,14 @@ A passion projects that has been going on for a while with the goal of bringing 
 <li>Hardware RT Support for modern cards</li>
 <li>Supports Built-in, HDRP, and URP</li>
 <li>Full skinned mesh support for animated skinned meshes</li>
+<li>Supports deformable standard meshes</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
 </br>[ebruneton](https://ebruneton.github.io/precomputed_atmospheric_scattering/)
 </br>
 
-If you have any questions, or suggestions, etc. let me know either through github issues or my twitter or my discord! I am always looking for more stuff to add, and more ways to make it more user friendly or appealing for others to use
+If you have any questions, or suggestions, etc. let me know either through github issues, my twitter, or my discord! I am always looking for more stuff to add, and more ways to make this project more user friendly or appealing for others to use
 ## You can contact me easiest through my discord server(above) or my twitter(https://twitter.com/Pjbomb2)
 
 
@@ -44,7 +45,7 @@ Let me know if you use this for anything, I would be excited to see any use of t
 ## Required Settings Changes:
 <ul>
   <li>Change the Graphics Api for Windows to DirectX12 through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Untoggle "Auto Graphics API For Windows", then click the little + that appears, select "Direct3D12(Experimental)", and drag that to the top.  A restart of the editor is required</li>
-  <li>Your target camera NEEDS to be deferred</li>
+  <li>Your target camera NEEDS to be deferred, this will usually be automatically done for you by TrueTrace</li>
 </ul>
 
 ## Controls:
@@ -52,8 +53,8 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
 
 ## General Setup
 <ul>
-  <li>Download and import the UnityPackage provided and open the new Pathtracer Settings at the top of the screen, and click "Arrange Hierarchy"(This WILL re-arrange your hierarchy)</li>
-  <li>Whenever you add a new object(or tree of objects), you need to add it to under the GameObject named Scene, and its recommended you press "Auto Assign Scripts" to automatically assign the needed scripts to the new objects</li>
+  <li>Download and import the UnityPackage provided and open the new TrueTrace Settings tab at the top of the screen, and click "Arrange Hierarchy"(This WILL re-arrange your hierarchy)</li>
+  <li>Its recommended you press "Auto Assign Scripts" to automatically assign the needed scripts to new objects</li>
 </ul>
 
 ## Basic script structure breakdown:
@@ -69,8 +70,7 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
   <li>The camera you want to render from, you attach the RenderHandler script to(if you have a camera tagged MainCamera, this will be done automatically)</li>
   <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building, a ding will sound when it completes if it takes longer than 15 seconds</li>
   <li>Objects can be added and removed at will simply by toggling the associated GameObject with a ParentObject script on/off in the hierarchy(clicking on parent objects with complex objects for children will lag), but they will take time to appear as the acceleration structure needs to  be rebuilt for them</li>
-  <li>Emissive meshes need to be emissive when you build the hierarchy to work with NEE, and can have their emissiveness at will</li>
-  <li>If you use normal maps, they need to be in unity normal map format</li>
+  <li>Emissive meshes need to be have a non-zero emissive value when they are built or rebuilt to work with NEE, but after that can have their emissiveness changed at will</li>
   <li>To set up PBR with the DEFAULT material, all textures go into their proper names, but Roughness goes into the Occlusion texture(This can be changed in the MaterialPairing menu)</li>
   <li>If you are using blendshapes to change geometry of a skinned mesh, you may need to go to the import settings of it(in the inspector), turn off Legacy Blendshape Normals, and make sure all normals are imported, not calculated, otherwise the normals for blendshapes might be wrong</li>
   <li>A fun thing you may want to do is go to TrueTrace -> Resources -> RenderPipelines -> RendererHandle, and uncomment the "[ImageEffectOpaque]"</li>
@@ -89,14 +89,13 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
   <li>In the PathTracingSettings, click the tab called "Material Pair Options"</li>
   <li>Drag any material that has the shader you want to pair into the material slot that appears</li>
   <li>From here, you need to select each dropdown that appears and select the property that is associated with the text to the left of the dropdown</li>
-  <li>If the names in the dropdown make no sense, you will have to navigate to the shader itself in the inspector(select the material in the project folder, click the 3 dots in the inspector, and click select shader), this should display the names along with what they mean to unity</li>
   <li>Once this is done, click "Apply Material Links" and rebuild the BVH in the "Main Options" tab to update the objects in the scene</li>
 </ul>
 
 ## Using HDRP
 <ul>
   <li>Go into TrueTrace -> Resources -> GlobalDefines.cginc, and uncomment the #define HDRP</li>
-  <li>This is used by attatching it to a custom pass, so create a new custom pass(Hierarchy -> Volume -> Custom Pass) and add the custom pass in the inspector called "HDRP Compatibility"</li>
+  <li>Create a new custom pass(Hierarchy -> Volume -> Custom Pass) and add the custom pass in the inspector called "HDRP Compatibility"</li>
 </ul>
 
 ## Using Hardware RT
@@ -111,6 +110,16 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
 <ul>
   <li>In the TrueTrace settings menu, click on the top right button "Functionality Settings" and toggle "Use DX11"</li>
   <li>Uncomment the "#define DX11" in: TrueTrace -> Resources -> GlobalDefines.cginc</li>
+</ul>
+
+## Using Lightmapping(EXPERIMENTAL, ONLY DIFFUSE)
+<ul>
+  <li>In the TrueTrace settings menu, click on the top right button "Functionality Settings" and toggle "Use TrueTrace As A Lightmapper"</li>
+  <li>Uncomment the "#define LightMapping" in: TrueTrace -> Resources -> GlobalDefines.cginc</li>
+  <li>Make sure the lightmapping textures for the scene already exist(you need to already have unity bake the scene once, at any quality)</li>
+  <li>Make sure to set the Game view size to the size of the lightmapping textures(Again its very experimental)</li>
+  <li>Under the Scene gameobject, the RayTracingMaster script, adjust the sample count you want to use for each lightmap</li>
+  <li>Click play and run truetrace as normal, it will cycle through each lightmap and do its thing, you should use ReSTIR GI with a low temporal M</li>
 </ul>
 
 ## Editor Window Guide
@@ -179,6 +188,7 @@ BVH Options Description -
   <li>Transmission Color - Affects Diffuse Transmission color, must be greater than 0 for diffuse transmission</li>
   <li>Flatness - Affects Thin objects</li>
   <li>Scatter Distance - Affects SpecTrans and Diffuse Transmission, must be greater than 0 for Diffuse Transmission</li>
+  <li>Link Mat To Unity Material - Overwrites the material properties with the properties from the material assigned to the mesh by Unity</li>
   <li>Propogate To Materials - Copies properties of local material to all other objects in the scene with the same material</li>
 </ul>
 
@@ -191,16 +201,14 @@ BVH Options Description -
 # Huge thanks to these people for being sponsors/patrons:
 <ul>
   <li>MakIt3D</li>
-  <li>Christian Wauben</li>
-  <li>John Draisey</li>
   <li>Andrew Varga</li>
   <li>Duong Nguyen</li>
-  <li>UnityCoder</li>
   <li>jhintringer</li>
 </ul>
 
 # Sample Images(Taken from various stages of development)
 
+![](/Images/CommonRender.png)
 ![](/Images/SunTemple1.png)
 ![](/Images/ModernBistro.png)
 ![](/Images/SunTemple2.png)
@@ -209,6 +217,8 @@ BVH Options Description -
 ![](/Images/ArchRender2.png)
 ![](/Images/ArchRender3.png)
 ![](/Images/ArchRender4.png)
+![](/Images/ArchViz5.png)
+![](/Images/ArchViz4.png)
 ![](/Images/ArchViz3.png)
 ![](/Images/ArchViz1.png)
 ![](/Images/ArchViz2.png)

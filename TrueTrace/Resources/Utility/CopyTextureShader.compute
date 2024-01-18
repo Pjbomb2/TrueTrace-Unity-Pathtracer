@@ -159,3 +159,15 @@ void Compress (uint2 dtid : SV_DispatchThreadID)
 
 
 }
+
+
+#pragma kernel AlphaMap
+Texture2D<half4> _Source2;
+RWTexture2D<half4> _Target2;
+
+[numthreads(32,32,1)]
+void AlphaMap (uint2 id : SV_DispatchThreadID)
+{
+    float4 A = _Source2.SampleLevel(sampler_point_clamp, (id.xy) / InputSize / Scale, 0);
+    _Target2[id.xy + floor(Offset * Scale)] = A;
+}

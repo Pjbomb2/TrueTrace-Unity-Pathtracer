@@ -119,16 +119,10 @@ namespace TrueTrace {
         public TreeInstance[] Trees;
         public DetailedObjectInstance[] Details;
         // Start is called before the first frame update
-        public List<Texture> AlbedoTexs;
-        public List<RayObjects> AlbedoIndexes;
-        public List<Texture> NormalTexs;
-        public List<RayObjects> NormalIndexes;
-        public List<Texture> MetallicTexs;
-        public List<RayObjects> MetallicIndexes;
-        public List<Texture> RoughnessTexs;
-        public List<RayObjects> RoughnessIndexes;
         public List<MaterialData> Materials;
-        public int[] MaterialIndex;
+        public List<Texture> MaskTexs;
+        public List<Texture> AlbedoTexs;
+        public List<Texture> NormalTexs;
 
         public int TerrainDim;
         public float HeightScale;
@@ -138,6 +132,21 @@ namespace TrueTrace {
             Trees = null;
             TerrainTile = null;
         }
+        private void TextureParse(ref List<Texture> Texs, ref float TextureIndex, Texture Tex) {
+            TextureIndex = 0;
+            if (Tex != null) {
+                TextureIndex = Texs.IndexOf(Tex) + 1;
+                if (TextureIndex != 0) {
+                    return;
+                } else {
+                    Texs.Add(Tex);
+                    TextureIndex = Texs.Count;
+                    return;
+                }
+            }
+            return;
+        }
+
         public void Load()
         {
             TerrainTile = this.gameObject.GetComponent<Terrain>();
@@ -152,61 +161,28 @@ namespace TrueTrace {
             TerrainDim = (int)TerrainTile.terrainData.size.x;
 
             AlbedoTexs = new List<Texture>();
-            AlbedoIndexes = new List<RayObjects>();
             NormalTexs = new List<Texture>();
-            NormalIndexes = new List<RayObjects>();
-            MetallicTexs = new List<Texture>();
-            MetallicIndexes = new List<RayObjects>();
-            RoughnessTexs = new List<Texture>();
-            RoughnessIndexes = new List<RayObjects>();
+            MaskTexs = new List<Texture>();
             Materials = new List<MaterialData>();
 
             int TerrainLayerCount = TerrainTile.terrainData.terrainLayers.Length;
-            MaterialIndex = new int[TerrainLayerCount];
             for (int i = 0; i < TerrainLayerCount; i++)
             {
-                RayObjectTextureIndex TempObj = new RayObjectTextureIndex();
-                TempObj.Terrain = this;
-                TempObj.ObjIndex = i;
-                if (TerrainTile.terrainData.terrainLayers[i].diffuseTexture != null)
-                {
-                    if (AlbedoTexs.Contains(TerrainTile.terrainData.terrainLayers[i].diffuseTexture))
-                    {
-                        AlbedoIndexes[AlbedoTexs.IndexOf(TerrainTile.terrainData.terrainLayers[i].diffuseTexture)].RayObjectList.Add(TempObj);
-                    }
-                    else
-                    {
-                        AlbedoIndexes.Add(new RayObjects());
-                        AlbedoIndexes[AlbedoIndexes.Count - 1].RayObjectList.Add(TempObj);
-                        AlbedoTexs.Add(TerrainTile.terrainData.terrainLayers[i].diffuseTexture);
-                    }
-                }
-                if (TerrainTile.terrainData.terrainLayers[i].normalMapTexture != null)
-                {
-                    if (NormalTexs.Contains(TerrainTile.terrainData.terrainLayers[i].normalMapTexture))
-                    {
-                        NormalIndexes[NormalTexs.IndexOf(TerrainTile.terrainData.terrainLayers[i].normalMapTexture)].RayObjectList.Add(TempObj);
-                    }
-                    else
-                    {
-                        NormalIndexes.Add(new RayObjects());
-                        NormalIndexes[NormalIndexes.Count - 1].RayObjectList.Add(TempObj);
-                        NormalTexs.Add(TerrainTile.terrainData.terrainLayers[i].normalMapTexture);
-                    }
-                }
+                MaterialData MatDat = new MaterialData();
+                TextureParse(ref AlbedoTexs, ref MatDat.AlbedoTex.w, TerrainTile.terrainData.terrainLayers[i].diffuseTexture);
+                TextureParse(ref NormalTexs, ref MatDat.NormalTex.w, TerrainTile.terrainData.terrainLayers[i].normalMapTexture);
+                TextureParse(ref MaskTexs, ref MatDat.MetallicTex.w, TerrainTile.terrainData.terrainLayers[i].maskMapTexture);
+                TextureParse(ref MaskTexs, ref MatDat.RoughnessTex.w, TerrainTile.terrainData.terrainLayers[i].maskMapTexture);
 
-                Materials.Add(new MaterialData()
-                {
-                    metallic = TerrainTile.terrainData.terrainLayers[i].metallic,
-                    Specular = 0,//TerrainTile.terrainData.terrainLayers[i].smoothness,
-                    IOR = 1,//TerrainTile.terrainData.terrainLayers[i].smoothness != 0 ? 1.33f : 1,
-                    BaseColor = new Vector3(TerrainTile.terrainData.size.x / TerrainTile.terrainData.terrainLayers[i].tileSize.x, TerrainTile.terrainData.size.z / TerrainTile.terrainData.terrainLayers[i].tileSize.y, 0),
-                    TransmittanceColor = new Vector3(TerrainTile.terrainData.terrainLayers[i].tileOffset.x / TerrainTile.terrainData.terrainLayers[i].tileSize.x, TerrainTile.terrainData.terrainLayers[i].tileOffset.y / TerrainTile.terrainData.terrainLayers[i].tileSize.y, 0),
-                    MatType = 1,
-                    AlbedoTextureScale = new Vector4(1,1,0,0),
-                });
-
-                MaterialIndex[i] = i;
+                MatDat.metallic = TerrainTile.terrainData.terrainLayers[i].metallic;
+                MatDat.Specular = 0;//TerrainTile.terrainData.terrainLayers[i].smoothness,
+                MatDat.IOR = 1;//TerrainTile.terrainData.terrainLayers[i].smoothness != 0 ? 1.33f : 1,
+                MatDat.BaseColor = new Vector3(TerrainTile.terrainData.size.x / TerrainTile.terrainData.terrainLayers[i].tileSize.x, TerrainTile.terrainData.size.z / TerrainTile.terrainData.terrainLayers[i].tileSize.y, 0);
+                MatDat.TransmittanceColor = new Vector3(TerrainTile.terrainData.terrainLayers[i].tileOffset.x / TerrainTile.terrainData.terrainLayers[i].tileSize.x, TerrainTile.terrainData.terrainLayers[i].tileOffset.y / TerrainTile.terrainData.terrainLayers[i].tileSize.y, 0);
+                MatDat.MatType = 1;
+                MatDat.IsSmoothness = 1;
+                MatDat.AlbedoTextureScale = new Vector4(1,1,0,0);
+                Materials.Add(MatDat);
             }
 
 

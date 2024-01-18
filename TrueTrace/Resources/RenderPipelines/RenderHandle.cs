@@ -7,22 +7,12 @@ using UnityEngine.SceneManagement;
 public class RenderHandle : MonoBehaviour
 {
     TrueTrace.RayTracingMaster RayMaster;
-    Material OverlayMaterial;
-    RenderTexture GITex;
-    RenderTexture ParticleTex;
-    private void CreateRenderTexture(ref RenderTexture ThisTex)
-    {
-        ThisTex?.Release();
-        ThisTex = new RenderTexture(gameObject.GetComponent<Camera>().pixelWidth, gameObject.GetComponent<Camera>().pixelHeight, 0,
-            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-        ThisTex.enableRandomWrite = true;
-        ThisTex.Create();
-    }
+
     void Start()
     {
         if(GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>().Length == 0) {RayMaster = null; return;}
         RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
-        // gameObject.GetComponent<Camera>().renderingPath = RenderingPath.DeferredShading;
+        gameObject.GetComponent<Camera>().renderingPath = RenderingPath.DeferredShading;
         gameObject.GetComponent<Camera>().depthTextureMode |= DepthTextureMode.MotionVectors | DepthTextureMode.Depth;
         RayMaster.TossCamera(gameObject.GetComponent<Camera>());
         RayMaster.Start2();
@@ -37,7 +27,8 @@ public class RenderHandle : MonoBehaviour
     }
     // [ImageEffectOpaque]
     private void OnRenderImage(RenderTexture source, RenderTexture destination) {
-        if(gameObject.GetComponent<Camera>() != Camera.current) return;
+        if(gameObject.GetComponent<Camera>() != Camera.current || (RayMaster == null && GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>().Length == 0)) {Graphics.Blit(source, destination); return;}
+        if(RayMaster == null) RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
         RayMaster.TossCamera(gameObject.GetComponent<Camera>());
         if(RayMaster == null) {
             Start();

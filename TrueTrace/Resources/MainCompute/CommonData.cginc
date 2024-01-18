@@ -145,7 +145,6 @@ RWStructuredBuffer<ColData> PrevGlobalColorsB;
 
 
 RWTexture2D<half4> ReservoirA;
-Texture2D<half4> ReservoirC;
 Texture2D<half4> ReservoirB;
 
 RWTexture2D<uint4> WorldPosA;
@@ -154,17 +153,17 @@ RWTexture2D<uint4> WorldPosC;
 
 RWTexture2D<half4> NEEPosA;
 Texture2D<half4> NEEPosB;
-Texture2D<half4> NEEPosC;
 
 RWTexture2D<float4> Result;
 
 RWStructuredBuffer<SmallerRay> Rays;
+StructuredBuffer<SmallerRay> Rays2;
 
 Texture2D<uint4> PrimaryTriData;
 StructuredBuffer<int> TLASBVH8Indices;
 
 struct MyMeshDataCompacted {
-	float4x4 Transform;
+	float4x4 W2L;
 	int TriOffset;
 	int NodeOffset;
 	int MaterialOffset;
@@ -232,6 +231,7 @@ struct MaterialData {//56
 	float4 AlbedoTexScale;
 	float2 MetallicRemap;
 	float2 RoughnessRemap;
+	float AlphaCutoff;
 };
 
 StructuredBuffer<MaterialData> _Materials;
@@ -244,7 +244,6 @@ SamplerState my_point_clamp_sampler;
 
 Texture2D<half> MetallicTex;
 Texture2D<half> RoughnessTex;
-Texture2D<float4> AlbedoTex;
 RWTexture2D<half4> TempAlbedoTex;
 RWTexture2D<float4> RandomNumsWrite;
 Texture2D<float4> RandomNums;
@@ -254,15 +253,9 @@ Texture2D<float4> VideoTex;
 SamplerState sampler_VideoTex;
 Texture2D<half4> _TextureAtlas;
 SamplerState sampler_TextureAtlas;
-
-
 Texture2D<float2> _NormalAtlas;
 SamplerState sampler_NormalAtlas;
 Texture2D<float4> _EmissiveAtlas;
-
-RWTexture2D<half> PrevDepthTex;
-
-
 
 Texture2D<half> Heightmap;
 
@@ -285,21 +278,7 @@ int MaterialCount;
 int TerrainCount;
 bool TerrainExists;
 
-float GetHeight(float3 CurrentPos, const TerrainData Terrain) {
-    CurrentPos -= Terrain.PositionOffset;
-    float3 b = float3(Terrain.TerrainDim, 0.1f, Terrain.TerrainDim);
-    float3 q = (abs(CurrentPos) - b);
-    q.x /= Terrain.TerrainDim;
-    q.z /= Terrain.TerrainDim;
-    float2 uv = float2(min(CurrentPos.x / Terrain.TerrainDim, b.x / Terrain.TerrainDim), min(CurrentPos.z / Terrain.TerrainDim, b.z / Terrain.TerrainDim));
-    float h = Heightmap.SampleLevel(sampler_trilinear_clamp, uv * (Terrain.HeightMap.xy - Terrain.HeightMap.zw) + Terrain.HeightMap.zw, 0).x;
-    h *= Terrain.HeightScale * 2;
-    q.y -= h;
-    // q = max(0,q);
-    return q.y;//length(q);
-}
-
-float3x3 GetTangentSpace2(float3 normal) {
+float3x3 GetTangentSpace(float3 normal) {
     // Choose a helper floattor for the cross product
     float3 helper = float3(1, 0, 0);
     if (abs(normal.x) > 0.99f)
@@ -312,7 +291,13 @@ float3x3 GetTangentSpace2(float3 normal) {
     return float3x3(tangent, normal, binormal);
 }
 
+float3x3 GetTangentSpace2(float3 normal) {
 
+    float3 tangent = normalize(cross(normal, float3(0, 1, 0)));
+    float3 binormal = cross(normal, tangent);
+
+    return float3x3(tangent, normal, binormal);
+}
 
 float FarPlane;
 
@@ -353,7 +338,7 @@ int ReSTIRGIUpdateRate;
 bool UseReSTIRGI;
 
 float2 randomNEE(uint samdim, uint pixel_index) {
-	uint hash = pcg_hash((pixel_index * (uint)204 + samdim) * (MaxBounce + 1) + CurBounce);
+	uint hash = pcg_hash((pixel_index * (uint)258 + samdim) * (MaxBounce + 1) + CurBounce);
 
 	const static float one_over_max_unsigned = asfloat(0x2f7fffff);
 
@@ -364,21 +349,12 @@ float2 randomNEE(uint samdim, uint pixel_index) {
 	return float2(x, y);
 }
 
-float2 SampleDiskUniform(float u1, float u2)
-{
-    float r   = sqrt(u1);
-    float phi = 2.0f * PI * u2;
 
-    float sinPhi, cosPhi;
-    sincos(phi, sinPhi, cosPhi);
-
-    return r * float2(cosPhi, sinPhi);
-}
 
 float2 random(uint samdim, uint pixel_index) {
 	[branch] if (UseASVGF || ReSTIRGIUpdateRate != 0) {
 		uint2 pixid = uint2(pixel_index % screen_width, pixel_index / screen_width);
-		uint hash = pcg_hash(((uint)RandomNums[pixid].y * (uint)112 + samdim) * (MaxBounce + 1) + CurBounce);
+		uint hash = pcg_hash(((uint)RandomNums[pixid].y * (uint)258 + samdim) * (MaxBounce + 1) + CurBounce);
 
 		const static float one_over_max_unsigned = asfloat(0x2f7fffff);
 
@@ -389,7 +365,7 @@ float2 random(uint samdim, uint pixel_index) {
 		return float2(x, y);
 	}
 	else {
-		uint hash = pcg_hash((pixel_index * (uint)204 + samdim) * (MaxBounce + 1) + CurBounce);
+		uint hash = pcg_hash((pixel_index * (uint)258 + samdim) * (MaxBounce + 1) + CurBounce);
 
 		const static float one_over_max_unsigned = asfloat(0x2f7fffff);
 
@@ -491,7 +467,7 @@ SmallerRay CreateCameraRay(float2 uv, uint pixel_index) {
 	// Transform the direction from camera to world space and normalize
 	direction = mul(CamToWorld, float4(direction, 0.0f)).xyz;
 	direction = normalize(direction);
-	[branch] if (UseDoF && pixel_index != (screen_width / 2 + screen_width * screen_height / 2)) {
+	[branch] if (UseDoF) {
 		float3 cameraForward = mul(CamInvProj, float4(0, 0, 0.0f, 1.0f)).xyz;
 		// Transform the direction from camera to world space and normalize
 		float4 sensorPlane;
@@ -507,10 +483,10 @@ SmallerRay CreateCameraRay(float2 uv, uint pixel_index) {
 		cameraSpaceSensorPos.z *= focal_distance;
 
 		// convert back into world space
-		sensorPos = mul(unity_CameraToWorld, float4(cameraSpaceSensorPos, 1.0f)).xyz;
+		sensorPos = mul(CamToWorld, float4(cameraSpaceSensorPos, 1.0f)).xyz;
 
-		float angle = random(6, pixel_index).x * 2.0f * PI;
-		float radius = sqrt(random(6, pixel_index).y);
+		float angle = random(9, pixel_index).x * 2.0f * PI;
+		float radius = sqrt(random(9, pixel_index).y);
 		float2 offset = float2(cos(angle), sin(angle)) * radius * AperatureRadius;
 
 		float3 p = origin + direction * (focal_distance);
@@ -574,7 +550,7 @@ inline bool triangle_intersect_shadow(int tri_id, const Ray ray, float max_dista
 	                float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - u - v) + AggTris[tri_id].texedge1 * u + AggTris[tri_id].texedge2 * v;
 	                float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex);
 	                float4 BaseCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0);
-	                if(_Materials[MaterialIndex].MatType == CutoutIndex && BaseCol.w < 0.1f) return false;
+	                if(_Materials[MaterialIndex].MatType == CutoutIndex && BaseCol.w < _Materials[MaterialIndex].AlphaCutoff) return false;
 
 		            #ifdef IgnoreGlassShadow
 		                if(_Materials[MaterialIndex].specTrans == 1) {
@@ -661,10 +637,6 @@ inline uint cwbvh_node_intersect(const Ray ray, int oct_inv4, float max_distance
     return hit_mask;
 }
 
-
-
-
-
 float2 sample_triangle(float u1, float u2) {
 	if (u2 > u1) {
 		u1 *= 0.5f;
@@ -735,7 +707,7 @@ int RISCount;
 
 int SelectLightMesh(uint pixel_index) {//Select mesh to sample light from
 	if (LightMeshCount == 1) return 0;
-	const float2 rand_mesh = random(4, pixel_index);
+	const float2 rand_mesh = random(10, pixel_index);
 	return clamp((rand_mesh.y * LightMeshCount), 0, LightMeshCount - 1);
 }
 
@@ -750,7 +722,7 @@ int SelectLightMeshSmart(uint pixel_index, inout float MeshWeight, float3 Pos) {
     float2 Rand;
     const int RISFinal = RISCount + 1;
     for(int i = 0; i < RISFinal; i++) {
-        Rand = random(i + 92, pixel_index);
+        Rand = random(i + 11, pixel_index);
         int Index = clamp((Rand.x * LightMeshCount), 0, LightMeshCount - 1);
         p_hat = 1.0f / dot(Pos - _LightMeshes[Index].Center, Pos - _LightMeshes[Index].Center);
         wsum += p_hat;
@@ -780,8 +752,8 @@ static uint ScatteringTexMUSize = 128;
 static uint ScatteringTexMUSSize = 32;
 static uint ScatteringTexNUSize = 8;
 
-static float bottom_radius =6360;
-static float top_radius = 6420;
+#define bottom_radius 6360
+#define top_radius 6420
 static uint TransmittanceTexWidth = 256;
 static uint TransmittanceTexHeight = 64;
 
@@ -990,44 +962,12 @@ float3 GetSkyRadiance(
 }
 
 
-float3 GetSkyTransmittance(
-	float3 camera, float3 view_ray, float shadow_length,
-	float3 sun_direction) {
-	camera /= 2048.0f;
-	camera.y += bottom_radius;
-
-	// Compute the distance to the top atmosphere boundary along the view ray,
-	// assuming the viewer is in space (or NaN if the view ray does not intersect
-	// the atmosphere).
-	float r = length(camera);
-	float rmu = dot(camera, view_ray);
-	float distance_to_top_atmosphere_boundary = -rmu -
-		sqrt(rmu * rmu - r * r + top_radius * top_radius);
-	// If the viewer is in space and the view ray intersects the atmosphere, move
-	// the viewer to the top atmosphere boundary (along the view ray):
-	if (distance_to_top_atmosphere_boundary > 0.0) {
-		camera = camera + view_ray * distance_to_top_atmosphere_boundary;
-		r = top_radius;
-		rmu += distance_to_top_atmosphere_boundary;
-	} else if (r >= top_radius) {
-		// If the view ray does not intersect the atmosphere, simply return 0.
-		return 1;
-	}
-	// Compute the r, mu, mu_s and nu parameters needed for the texture lookups.
-	float mu = rmu / r;
-	float mu_s = dot(camera, sun_direction) / r;
-	float nu = dot(view_ray, sun_direction);
-	bool ray_r_mu_intersects_ground = RayIntersectsGround(r, mu);
-
-	return ray_r_mu_intersects_ground ? 0.0 :
-		exp(GetTransmittanceToTopAtmosphereBoundary(r, mu));
-}
 
 bool RayIntersectsGround2(float r, float mu) {
 	return (mu < -0.01f && r * r * (mu * mu - 1.0f) + bottom_radius * bottom_radius >= 0.0f);
 }
 
-float3 GetSkyTransmittance2(
+float3 GetSkyTransmittance(
 	float3 camera, float3 view_ray, float shadow_length,
 	float3 sun_direction) {
 	camera /= 2048.0f;
@@ -1133,8 +1073,8 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
                     int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
 
                     MatOffset = _MeshData[mesh_id].MaterialOffset;
-                    ray.direction = (mul((float3x3)_MeshData[mesh_id].Transform, ray.direction)).xyz;
-                    ray.origin = (mul(_MeshData[mesh_id].Transform, float4(ray.origin, 1))).xyz;
+                    ray.direction = (mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)).xyz;
+                    ray.origin = (mul(_MeshData[mesh_id].W2L, float4(ray.origin, 1))).xyz;
                     ray.direction_inv = rcp(ray.direction);
 
                     oct_inv4 = ray_get_octant_inv4(ray.direction);
@@ -1172,404 +1112,7 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
 }
 
 
-
-Texture2D<float4> _WeatherTexture;
-Texture3D<float4> _ShapeTexture;
-Texture3D<float4> _DetailTexture;
-Texture2D<float4> _CurlNoise;
-
 float3 SunDir;
-
-
-#define _Thickness (top_radius - bottom_radius) / 2.0f
-#define _CloudHeightMinMax float2((bottom_radius + top_radius) / 2.0f - bottom_radius, (bottom_radius + top_radius) / 2.0f - bottom_radius + _Thickness)
-#define _PlanetCenter float3(0,-bottom_radius,0)
-#define _SphereSize bottom_radius
-#define _Gradient1 float4(0, 0.07, 0.12, 0.28)
-#define _Gradient2 float4(0, 0.08, 0.39, 0.59)
-#define _Gradient3 float4(0, 0.07, 0.88, 1.0)
-#define _CoverageWindOffset 0
-#define _WeatherScale 0.1 * 0.00025f
-#define _Coverage (1.0f - 1.05)
-#define _WindOffset 0
-#define _WindDirection -22
-#define _Scale (0.00001f + 0.3 * 0.0004f)
-#define _LowFreqMinMax float2(0.47, 0.8)
-#define _CurlDistortScale 2.9 * _Scale
-#define _CurlDistortAmount (150 + 231)
-#define _DetailScale 13.9 * _Scale
-#define _HighFreqModifier 0.4
-#define _SampleMultiplier 1
-#define _Density 1
-#define _HenyeyGreensteinGBackward 0.5
-#define _HenyeyGreensteinGForward 0.54
-#define _LightStepLength 48
-#define _LightConeRadius 0.4
-#define _SunColor 1
-#define BIG_STEP 3
-#define _CameraWS CamPos
-#define _CloudBaseColor float3(0.7794118, 0.8646881, 1)
-#define _CloudTopColor 1
-#define _SunLightFactor 1
-#define _AmbientLightFactor 0
-#define _SunDir SunDir
-
-SamplerState my_linear_repeat_sampler;
-
-	// http://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0/
-	float rand(float2 co) {
-		float a = 12.9898;
-		float b = 78.233;
-		float c = 43758.5453;
-		float dt = dot(co.xy, float2(a, b));
-		float sn = fmod(dt, 3.14);
-
-		return 2.0 * frac(sin(sn) * c) - 1.0;
-	}
-
-	float weatherDensity(float3 weatherData) // Gets weather density from weather texture sample and adds 1 to it.
-	{
-		return weatherData.b + 1.0;
-	}
-
-	// from GPU Pro 7 - remaps value from one range to other range
-	float remap(float original_value, float original_min, float original_max, float new_min, float new_max)
-	{
-		return new_min + (((original_value - original_min) / (original_max - original_min)) * (new_max - new_min));
-	}
-
-	// returns height fraction [0, 1] for point in cloud
-	float getHeightFractionForPoint(float3 pos)
-	{
-		return saturate((distance(pos,  _PlanetCenter) - (_SphereSize + _CloudHeightMinMax.x)) / _Thickness);
-	}
-
-	// samples the gradient
-	float sampleGradient(float4 gradient, float height)
-	{
-		return smoothstep(gradient.x, gradient.y, height) - smoothstep(gradient.z, gradient.w, height);
-	}
-
-	// lerps between cloud type gradients and samples it
-	float getDensityHeightGradient(float height, float3 weatherData)
-	{
-		float type = weatherData.g;
-		float4 gradient = lerp(lerp(_Gradient1, _Gradient2, type * 2.0), _Gradient3, saturate((type - 0.5) * 2.0));
-		return sampleGradient(gradient, height);
-	}
-
-	// samples weather texture
-	float3 sampleWeather(float3 pos) {
-		float3 weatherData = _WeatherTexture.SampleLevel(my_linear_repeat_sampler, (pos.xz + _CoverageWindOffset) * _WeatherScale, 0).rgb;
-		weatherData.r = saturate(weatherData.r - _Coverage);
-		return weatherData;
-	}
-
-	// samples cloud density
-	float sampleCloudDensity(float3 p, float heightFraction, float3 weatherData, float lod, bool sampleDetail)
-	{
-		float3 pos = p + _WindOffset; // add wind offset
-		// pos += heightFraction * _WindDirection * 700.0; // shear at higher altitude
-
-
-		float cloudSample = _ShapeTexture.SampleLevel(my_linear_repeat_sampler, float3(pos * _Scale), 0).r; // sample cloud shape texture
-		// cloudSample = remap(cloudSample ,0,1, _LowFreqMinMax.x, _LowFreqMinMax.y); // pick certain range from sample texture
-		cloudSample = remap(cloudSample * pow(1.2 - heightFraction, 0.1), _LowFreqMinMax.x, _LowFreqMinMax.y, 0.0, 1.0); // pick certain range from sample texture
-
-
-		cloudSample *= getDensityHeightGradient(heightFraction, weatherData); // multiply cloud by its type gradient
-
-		float cloudCoverage = weatherData.r;
-		cloudSample = saturate(remap(cloudSample, saturate(heightFraction / cloudCoverage), 1.0, 0.0, 1.0)); // Change cloud coverage based by height and use remap to reduce clouds outside coverage
-		cloudSample *= cloudCoverage; // multiply by cloud coverage to smooth them out, GPU Pro 7
-
-#if defined(DEBUG_NO_HIGH_FREQ_NOISE)
-		cloudSample = remap(cloudSample, 0.2, 1.0, 0.0, 1.0);
-#else
-		if (cloudSample > 0.0 && sampleDetail) // If cloud sample > 0 then erode it with detail noise
-		{
-#if defined(DEBUG_NO_CURL)
-#else
-			float3 curlNoise = mad(_CurlNoise.SampleLevel(my_linear_repeat_sampler, p.xz * _CurlDistortScale, 0).rgb, 2.0, -1.0); // sample Curl noise and transform it from [0, 1] to [-1, 1]
-			pos += float3(curlNoise.r, curlNoise.b, curlNoise.g) * heightFraction * _CurlDistortAmount; // distort position with curl noise
-#endif
-			float detailNoise = _DetailTexture.SampleLevel(my_linear_repeat_sampler, float3(pos * _DetailScale), 0).r; // Sample detail noise
-
-			float highFreqNoiseModifier = lerp(1.0 - detailNoise, detailNoise, saturate(heightFraction * 10.0)); // At lower cloud levels invert it to produce more wispy shapes and higher billowy
-
-			cloudSample = remap(cloudSample, highFreqNoiseModifier * _HighFreqModifier, 1.0, 0.0, 1.0); // Erode cloud edges
-		}
-#endif
-
-		return max(cloudSample * _SampleMultiplier, 0.0);
-	}
-
-	// GPU Pro 7
-	float beerLaw(float density)
-	{
-		float d = -density * _Density;
-		return max(exp(d), exp(d * 0.5)*0.7);
-	}
-
-	// GPU Pro 7
-	float HenyeyGreensteinPhase(float cosAngle, float g)
-	{
-		float g2 = g * g;
-		return ((1.0 - g2) / pow(1.0 + g2 - 2.0 * g * cosAngle, 1.5)) / 4.0 * 3.1415;
-	}
-
-	// GPU Pro 7
-	float powderEffect(float density, float cosAngle)
-	{
-		float powder = 1.0 - exp(-density * 2.0);
-		return lerp(1.0f, powder, saturate((-cosAngle * 0.5f) + 0.5f));
-	}
-
-	float calculateLightEnergy(float density, float cosAngle, float powderDensity) { // calculates direct light components and multiplies them together
-		float beerPowder = 2.0 * beerLaw(density) * powderEffect(powderDensity, cosAngle);
-		float HG = max(HenyeyGreensteinPhase(cosAngle, _HenyeyGreensteinGForward), HenyeyGreensteinPhase(cosAngle, _HenyeyGreensteinGBackward)) * 0.07 + 0.8;
-		return beerPowder * HG;
-	}
-
-	float randSimple(float n) // simple hash function for more random light vectors
-	{
-		return mad(frac(sin(n) * 43758.5453123), 2.0, -1.0);
-	}
-
-	float3 rand3(float3 n) // random vector
-	{
-		return normalize(float3(randSimple(n.x), randSimple(n.y), randSimple(n.z)));
-	}
-
-	float3 sampleConeToLight(float3 pos, float3 lightDir, float cosAngle, float density, float3 initialWeather, float lod)
-	{
-#if defined(RANDOM_UNIT_SPHERE)
-#else
-		const float3 RandomUnitSphere[5] = // precalculated random vectors
-		{
-			{ -0.6, -0.8, -0.2 },
-		{ 1.0, -0.3, 0.0 },
-		{ -0.7, 0.0, 0.7 },
-		{ -0.2, 0.6, -0.8 },
-		{ 0.4, 0.3, 0.9 }
-		};
-#endif
-		float heightFraction;
-		float densityAlongCone = 0.0;
-		const int steps = 5; // light cone step count
-		float3 weatherData;
-		for (int i = 0; i < steps; i++) {
-			pos += lightDir * _LightStepLength; // march forward
-#if defined(RANDOM_UNIT_SPHERE) // apply random vector to achive cone shape
-			float3 randomOffset = rand3(pos) * _LightStepLength * _LightConeRadius * ((float)(i + 1));
-#else
-			float3 randomOffset = RandomUnitSphere[i] * _LightStepLength * _LightConeRadius * ((float)(i + 1));
-#endif
-			float3 p = pos + randomOffset; // light sample point
-			// sample cloud
-			heightFraction = getHeightFractionForPoint(p); 
-			weatherData = sampleWeather(p);
-			densityAlongCone += sampleCloudDensity(p, heightFraction, weatherData, lod + ((float)i) * 0.5, true) * weatherDensity(weatherData);
-		}
-
-#if defined(SLOW_LIGHTING) // if doing slow lighting then do more samples in straight line
-		pos += 24.0 * _LightStepLength * lightDir;
-		weatherData = sampleWeather(pos);
-		heightFraction = getHeightFractionForPoint(pos);
-		densityAlongCone += sampleCloudDensity(pos, heightFraction, weatherData, lod, true) * 2.0;
-		int j = 0;
-		while (1) {
-			if (j > 22) {
-				break;
-			}
-			pos += 4.25 * _LightStepLength * lightDir;
-			weatherData = sampleWeather(pos);
-			if (weatherData.r > 0.05) {
-				heightFraction = getHeightFractionForPoint(pos);
-				densityAlongCone += sampleCloudDensity(pos, heightFraction, weatherData, lod, true);
-			}
-
-			j++;
-		}
-#else
-		pos += 32.0 * _LightStepLength * lightDir; // light sample from further away
-		weatherData = sampleWeather(pos);
-		heightFraction = getHeightFractionForPoint(pos);
-		densityAlongCone += sampleCloudDensity(pos, heightFraction, weatherData, lod + 2, false) * weatherDensity(weatherData) * 3.0;
-#endif
-		
-		return calculateLightEnergy(densityAlongCone, cosAngle, density) * _SunColor;
-	}
-
-	// raymarches clouds
-	fixed4 raymarch(float3 ro, float3 rd, float steps, float depth, float cosAngle)
-	{
-		float3 pos = ro;
-		fixed4 res = 0.0; // cloud color
-		float lod = 0.0;
-		float zeroCount = 0.0; // number of times cloud sample has been 0
-		float stepLength = BIG_STEP; // step length multiplier, 1.0 when doing small steps
-
-
-		for (float i = 0.0; i < steps; i += stepLength)
-		{
-			if (distance(_CameraWS, pos) >= depth || res.a >= 0.99) { // check if is behind some geometrical object or that cloud color aplha is almost 1
-				break;  // if it is then raymarch ends
-			}
-			float heightFraction = getHeightFractionForPoint(pos);
-// #if defined(ALLOW_IN_CLOUDS) // if it is allowed to fly in the clouds, then we need to check that the sample position is above the ground and in the cloud layer
-			if (pos.y < 0 || heightFraction < 0.0 || heightFraction > 1.0) {
-				break;
-			}
-// #endif
-			float3 weatherData = sampleWeather(pos); // sample weather
-			if (weatherData.r <= 0.1) // if value is low, then continue marching, at some specific weather textures makes it a bit faster.
-			{
-				pos += rd * stepLength;
-				zeroCount += 1.0;
-				stepLength = zeroCount > 10.0 ? BIG_STEP : 1.0;
-				continue;
-			}
-
-			float cloudDensity = saturate(sampleCloudDensity(pos, heightFraction, weatherData, lod, true)); // sample the cloud
-
-			if (cloudDensity > 0.0) // check if cloud density is > 0
-			{
-				zeroCount = 0.0; // set zero cloud density counter to 0
-
-				if (stepLength > 1.0) // if we did big steps before
-				{
-					i -= stepLength - 1.0; // then move back, previous 0 density location + one small step
-					pos -= rd * (stepLength - 1.0);
-					weatherData = sampleWeather(pos); // sample weather
-					cloudDensity = saturate(sampleCloudDensity(pos, heightFraction, weatherData, lod, true)); // and cloud again
-				}
-
-				float4 particle = cloudDensity; // construct cloud particle
-				float3 directLight = sampleConeToLight(pos, _SunDir, cosAngle, cloudDensity, weatherData, lod); // calculate direct light energy and color
-				float3 ambientLight = lerp(_CloudBaseColor, _CloudTopColor, heightFraction); // and ambient
-
-				directLight *= _SunLightFactor; // multiply them by their uniform factors
-				ambientLight *= _AmbientLightFactor;
-
-				particle.rgb = directLight + ambientLight; // add lights up and set cloud particle color
-
-				particle.rgb *= particle.a; // multiply color by clouds density
-				res = (1.0 - res.a) * particle + res; // use premultiplied alpha blending to acumulate samples
-			}
-			else // if cloud sample was 0, then increase zero cloud sample counter
-			{
-				zeroCount += 1.0;
-			}
-			stepLength = zeroCount > 10.0 ? BIG_STEP : 1.0; // check if we need to do big or small steps
-
-			pos += rd * stepLength; // march forward
-		}
-
-		return res;
-	}
-
-	// https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
-	float3 findRayStartPos(float3 rayOrigin, float3 rayDirection, float3 sphereCenter, float radius)
-	{
-		float3 l = rayOrigin - sphereCenter;
-		float a = 1.0;
-		float b = 2.0 * dot(rayDirection, l);
-		float c = dot(l, l) - pow(radius, 2);
-		float D = pow(b, 2) - 4.0 * a * c;
-		if (D < 0.0)
-		{
-			return rayOrigin;
-		}
-		else if (abs(D) - 0.00005 <= 0.0)
-		{
-			return rayOrigin + rayDirection * (-0.5 * b / a);
-		}
-		else
-		{
-			float q = 0.0;
-			if (b > 0.0)
-			{
-				q = -0.5 * (b + sqrt(D));
-			}
-			else
-			{
-				q = -0.5 * (b - sqrt(D));
-			}
-			float h1 = q / a;
-			float h2 = c / q;
-			float2 t = float2(min(h1, h2), max(h1, h2));
-			if (t.x < 0.0) {
-				t.x = t.y;
-				if (t.x < 0.0) {
-					return rayOrigin;
-				}
-			}
-			return rayOrigin + t.x * rayDirection;
-		}
-	}
-
-
-
-		#define _Steps 128
-		#define _ZeroPoint float3(0,0,0)
-		#define _FarPlane 9999.0f 
-
-	float4 DoClouds(Ray ray, int pixel_index) {
-		// starting and end point accordingly.
-		float3 rd = ray.direction;
-		float3 ro = ray.origin;
-		float3 rs;
-		float3 re;
-		float steps;
-		float stepSize;
-		bool aboveClouds = false;
-		float distanceCameraPlanet = distance(_CameraWS, _PlanetCenter);
-		if (distanceCameraPlanet < _SphereSize + _CloudHeightMinMax.x) // Below clouds
-		{
-			rs = findRayStartPos(ro, rd, _PlanetCenter, _SphereSize + _CloudHeightMinMax.x);
-			if (rs.y < _ZeroPoint.y) // If ray starting position is below horizon
-			{
-				return 0.0;
-			}
-			re = findRayStartPos(ro, rd, _PlanetCenter, _SphereSize + _CloudHeightMinMax.y);
-			steps = lerp(_Steps, _Steps * 0.5, rd.y);
-			stepSize = (distance(re, rs)) / steps;
-		}
-		else if (distanceCameraPlanet > _SphereSize + _CloudHeightMinMax.y) // Above clouds
-		{
-			rs = findRayStartPos(ro, rd, _PlanetCenter, _SphereSize + _CloudHeightMinMax.y);
-			re = rs + rd * 9999.0f;
-			steps = lerp(_Steps, _Steps * 0.5, rd.y);
-			stepSize = (distance(re, rs)) / steps;
-			aboveClouds = true;
-		}
-		else // In clouds
-		{
-			rs = ro;
-			re = rs + rd * _FarPlane;
-
-			steps = lerp(_Steps, _Steps * 0.5, rd.y);
-			stepSize = (distance(re, rs)) / steps;
-		}
-		rs += rd * stepSize * random(32, pixel_index).x;
-				float cosAngle = dot(rd, _SunDir);
-		fixed4 clouds3D = raymarch(rs, rd * stepSize, steps, 9999.0f, cosAngle); // raymarch volumetric clouds
-		return clouds3D;
-	}
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 inline float luminance(const float3 a) {
@@ -1577,29 +1120,21 @@ inline float luminance(const float3 a) {
 }
 
 inline float3 GetTriangleNormal(const uint TriIndex, const float2 TriUV, const float3x3 Inverse) {
-	float scalex = length(mul(Inverse, float3(1,0,0)));
-    float scaley = length(mul(Inverse, float3(0,1,0)));
-    float scalez = length(mul(Inverse, float3(0,0,1)));
-    float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
-
     float3 Normal0 = i_octahedral_32(AggTris[TriIndex].norms.x);
     float3 Normal1 = i_octahedral_32(AggTris[TriIndex].norms.y);
     float3 Normal2 = i_octahedral_32(AggTris[TriIndex].norms.z);
-
-    return normalize(mul(Inverse, Scale * (Normal0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Normal1 + TriUV.y * Normal2)));
+    Normal2 = mul(Inverse, (Normal0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Normal1 + TriUV.y * Normal2));
+    float wldScale = rsqrt(dot(Normal2, Normal2));
+    return mul(wldScale, Normal2);	
 }
 
 inline float3 GetTriangleTangent(const uint TriIndex, const float2 TriUV, const float3x3 Inverse) {
-	float scalex = length(mul(Inverse, float3(1,0,0)));
-    float scaley = length(mul(Inverse, float3(0,1,0)));
-    float scalez = length(mul(Inverse, float3(0,0,1)));
-
-    float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
-    float3 Tangent0 = i_octahedral_32(AggTris[TriIndex].tans.x);
-    float3 Tangent1 = i_octahedral_32(AggTris[TriIndex].tans.y);
-    float3 Tangent2 = i_octahedral_32(AggTris[TriIndex].tans.z);
-
-    return normalize(mul(Inverse, Scale * (Tangent0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Tangent1 + TriUV.y * Tangent2)));
+    float3 Normal0 = i_octahedral_32(AggTris[TriIndex].tans.x);
+    float3 Normal1 = i_octahedral_32(AggTris[TriIndex].tans.y);
+    float3 Normal2 = i_octahedral_32(AggTris[TriIndex].tans.z);
+    Normal2 = mul(Inverse, (Normal0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Normal1 + TriUV.y * Normal2));
+    float wldScale = rsqrt(dot(Normal2, Normal2));
+    return mul(wldScale, Normal2);
 }
 
 float GetHeightRaw(float3 CurrentPos, const TerrainData Terrain) {
@@ -1920,6 +1455,16 @@ bool isActiveElevation(float theta, float level){
 float getDistToStar(float3 p, float theta, float phi){
     float3 starPos = getStarPosition(theta, phi);
     return 0.5+0.5*dot(starPos, p);
+}
+
+float rand(float2 co) {
+	float a = 12.9898;
+	float b = 78.233;
+	float c = 43758.5453;
+	float dt = dot(co.xy, float2(a, b));
+	float sn = fmod(dt, 3.14);
+
+	return 2.0 * frac(sin(sn) * c) - 1.0;
 }
 
 //Get star colour from view direction.

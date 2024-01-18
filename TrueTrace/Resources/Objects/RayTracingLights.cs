@@ -24,13 +24,13 @@ namespace TrueTrace {
             // ThisLight.shadows = LightShadows.None;
         }
         public void UpdateLight() {
-            if(transform.hasChanged || HasChanged) {
+            // if(transform.hasChanged || HasChanged) {
                 ThisLightData.Position = transform.position;
                 ThisLightData.Direction = (ThisLight.type == LightType.Directional) ? -transform.forward : (ThisLight.type == LightType.Spot) ? Vector3.Normalize(transform.forward) : transform.forward;
                 HasChanged = false;
                 ThisLightData.ZAxisRotation = transform.localEulerAngles.z * 3.14159f / 180.0f;
                 transform.hasChanged = false;
-            }
+            // }
             Color col = ThisLight.color; 
             ThisLightData.Radiance = new Vector3(col[0], col[1], col[2]) * ThisLight.intensity;
             ThisLightData.Type = (ThisLight.type == LightType.Point) ? 0 : (ThisLight.type == LightType.Directional) ? 1 : (ThisLight.type == LightType.Spot) ? 2 : (ThisLight.type == LightType.Rectangle) ? 3 : 4;

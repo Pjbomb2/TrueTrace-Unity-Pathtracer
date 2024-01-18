@@ -16,7 +16,10 @@ namespace TrueTrace {
         private ComputeShader Upscaler;
         private ComputeShader ToneMapper;
         private ComputeShader TAAU;
-
+        bool BloomInitialized = false;
+        bool TAAInitialized = false;
+        bool UpscalerInitialized = false;
+        bool TAAUInitialized = false;
 
 
         public RenderTexture DirectA;
@@ -54,12 +57,12 @@ namespace TrueTrace {
         private RenderTexture UpScalerLightingDataTexture;
         private RenderTexture PrevNormalUpscalerTex;
         private RenderTexture PrevNormalUpscalerTexWrite;
-        private RenderTexture PrevWorldPosWrite;
-        private RenderTexture PrevWorldPos;
 
-        private RenderTexture TempTex;
-        private RenderTexture TempTex2;
+        private RenderTexture TempTexTAA;
+        private RenderTexture TempTexTAA2;
 
+        private RenderTexture TempTexUpscaler;
+        private RenderTexture TempTexUpscaler2;
 
 
 
@@ -161,52 +164,23 @@ namespace TrueTrace {
         }
         private void InitRenderTexture(bool Force = false)
         {
-            if (Force || _TAAPrev == null || _TAAPrev.width != SourceWidth || _TAAPrev.height != SourceHeight)
-            {
-                // Release render texture if we already have one
-                if (_TAAPrev != null)
-                {
-                    _TAAPrev.Release();
-                    PrevOutputTex.Release();
-                    PrevUpscalerTAA.Release();
-                    TAAA.Release();
-                    TAAB.Release();
-                    TempTex.Release();
-                    TempTex2.Release();
-                    PrevNormalUpscalerTex.Release();
-                    PrevNormalUpscalerTexWrite.Release();
-                }
-
-            CommonFunctions.CreateRenderTexture(ref _TAAPrev, Screen.width, Screen.height, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref PrevDepthTex, Screen.width, Screen.height, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref PrevOutputTex, Screen.width, Screen.height, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref PrevUpscalerTAA, Screen.width, Screen.height, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref UpScalerLightingDataTexture, Screen.width, Screen.height, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref TAAA, Screen.width, Screen.height, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref TAAB, Screen.width, Screen.height, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref TempTex, Screen.width, Screen.height, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref TempTex2, Screen.width, Screen.height, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref PrevNormalUpscalerTex, Screen.width, Screen.height, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref PrevNormalUpscalerTexWrite, Screen.width, Screen.height, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref PrevWorldPos, Screen.width, Screen.height, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref PrevWorldPosWrite, Screen.width, Screen.height, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref BloomIntermediate, Screen.width, Screen.height, CommonFunctions.RTFull4);
-                BloomSamplesUp = new RenderTexture[8];
-                BloomSamplesDown = new RenderTexture[8];
-                int BloomWidth = Screen.width / 2;
-                int BloomHeight = Screen.height / 2;
-                BloomWidths = new int[8];
-                BloomHeights = new int[8];
-                for (int i = 0; i < 8; i++)
-                {
-                    CommonFunctions.CreateRenderTexture(ref BloomSamplesUp[i], BloomWidth, BloomHeight, CommonFunctions.RTHalf4);
-                    CommonFunctions.CreateRenderTexture(ref BloomSamplesDown[i], BloomWidth, BloomHeight, CommonFunctions.RTHalf4);
-                    BloomWidths[i] = BloomWidth;
-                    BloomHeights[i] = BloomHeight;
-                    BloomWidth /= 2;
-                    BloomHeight /= 2;
-                }
+            if(Force) {
+                    PrevOutputTex.ReleaseSafe();
+                    PrevUpscalerTAA.ReleaseSafe();
+                    TAAA.ReleaseSafe();
+                    TAAB.ReleaseSafe();
+                    _TAAPrev.ReleaseSafe();
+                    TempTexTAA.ReleaseSafe();
+                    TempTexTAA2.ReleaseSafe();
+                    TempTexUpscaler.ReleaseSafe();
+                    TempTexUpscaler2.ReleaseSafe();
+                    PrevNormalUpscalerTex.ReleaseSafe();
+                    PrevNormalUpscalerTexWrite.ReleaseSafe();
+                BloomInitialized = false;
+                TAAInitialized = false;
+                UpscalerInitialized = false;
             }
+            
         }
         public void ClearAll() {
             ClearSVGF();
@@ -219,17 +193,17 @@ namespace TrueTrace {
             UpScalerLightingDataTexture.ReleaseSafe();
             PrevNormalUpscalerTex.ReleaseSafe();
             PrevNormalUpscalerTexWrite.ReleaseSafe();
-            PrevWorldPosWrite.ReleaseSafe();
-            PrevWorldPos.ReleaseSafe();
 
-            TempTex.ReleaseSafe();
-            TempTex2.ReleaseSafe();
+            TempTexTAA.ReleaseSafe();
+            TempTexTAA2.ReleaseSafe();
+            TempTexUpscaler.ReleaseSafe();
+            TempTexUpscaler2.ReleaseSafe();
 
             TAAA.ReleaseSafe();
             TAAB.ReleaseSafe();
 
-            BloomIntermediate.ReleaseSafe();
             ExposureBuffer.ReleaseSafe();
+            BloomIntermediate.ReleaseSafe();
             if(BloomSamplesUp != null) for(int i = 0; i < BloomSamplesUp.Length; i++) BloomSamplesUp[i].ReleaseSafe();
             if(BloomSamplesDown != null) for(int i = 0; i < BloomSamplesDown.Length; i++) BloomSamplesDown[i].ReleaseSafe();
 
@@ -309,7 +283,9 @@ namespace TrueTrace {
             threadGroupsX2 = Mathf.CeilToInt(Screen.width / 16.0f);
             threadGroupsY2 = Mathf.CeilToInt(Screen.height / 16.0f);
 
-
+            BloomInitialized = false;
+            TAAInitialized = false;
+            UpscalerInitialized = false;
             InitRenderTexture();
             Initialized = true;
         }
@@ -347,6 +323,46 @@ namespace TrueTrace {
 
 
             InitRenderTexture(true);
+        }
+
+        public void ValidateInit(bool BloomInit, bool TAAInit, bool IsUpscaling, bool UseTAAU) {
+            if(!BloomInit) {
+                if(BloomInitialized) {
+                    BloomIntermediate.ReleaseSafe();
+                    if(BloomSamplesUp != null) for(int i = 0; i < BloomSamplesUp.Length; i++) BloomSamplesUp[i].ReleaseSafe();
+                    if(BloomSamplesDown != null) for(int i = 0; i < BloomSamplesDown.Length; i++) BloomSamplesDown[i].ReleaseSafe();
+                    BloomInitialized = false;
+                }
+            }
+            if(!TAAInit) {
+                if(TAAInitialized) {
+                    _TAAPrev.ReleaseSafe();
+                    TempTexTAA.ReleaseSafe();
+                    TempTexTAA2.ReleaseSafe();
+                    TAAInitialized = false;
+                }
+            }
+            if(!IsUpscaling) {
+                if(!UseTAAU) {
+                    if(UpscalerInitialized) {
+                        PrevNormalUpscalerTex.ReleaseSafe();
+                        PrevNormalUpscalerTexWrite.ReleaseSafe();
+                        PrevDepthTex.ReleaseSafe();
+                        UpScalerLightingDataTexture.ReleaseSafe();
+                        PrevOutputTex.ReleaseSafe();
+                        TempTexUpscaler.ReleaseSafe();
+                        TempTexUpscaler2.ReleaseSafe();
+                        PrevUpscalerTAA.ReleaseSafe();
+                        UpscalerInitialized = false;
+                    }
+                } else {
+                    if(TAAUInitialized) {
+                        TAAA.ReleaseSafe();
+                        TAAB.ReleaseSafe();
+                        TAAUInitialized = false;
+                    }
+                }
+            }
         }
 
         public void ExecuteSVGF(int CurrentSamples, 
@@ -442,9 +458,29 @@ namespace TrueTrace {
 
         }
 
+
+        private void InitBloom() {
+            BloomSamplesUp = new RenderTexture[8];
+            BloomSamplesDown = new RenderTexture[8];
+            int BloomWidth = Screen.width / 2;
+            int BloomHeight = Screen.height / 2;
+            BloomWidths = new int[8];
+            BloomHeights = new int[8];
+            for (int i = 0; i < 8; i++)
+            {
+                CommonFunctions.CreateRenderTexture(ref BloomSamplesUp[i], BloomWidth, BloomHeight, CommonFunctions.RTHalf4);
+                CommonFunctions.CreateRenderTexture(ref BloomSamplesDown[i], BloomWidth, BloomHeight, CommonFunctions.RTHalf4);
+                BloomWidths[i] = BloomWidth;
+                BloomHeights[i] = BloomHeight;
+                BloomWidth /= 2;
+                BloomHeight /= 2;
+            }
+            CommonFunctions.CreateRenderTexture(ref BloomIntermediate, Screen.width, Screen.height, CommonFunctions.RTFull4);
+            BloomInitialized = true;
+        }
         public void ExecuteBloom(ref RenderTexture _converged, float BloomStrength, CommandBuffer cmd)
         {//need to fix this so it doesnt create new textures every time
-
+            if(!BloomInitialized) InitBloom();
             cmd.BeginSample("Bloom");
             Bloom.SetFloat("strength", BloomStrength);
             cmd.SetComputeIntParam(Bloom, "screen_width", Screen.width);
@@ -517,34 +553,40 @@ namespace TrueTrace {
 
 
         }
-
+        private void InitializeTAA() {
+            CommonFunctions.CreateRenderTexture(ref TempTexTAA, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref TempTexTAA2, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref _TAAPrev, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            TAAInitialized = true;
+        }
         public void ExecuteTAA(ref RenderTexture _Final, int CurrentSamples, CommandBuffer cmd)
         {//need to fix this so it doesnt create new textures every time
 
+            if(!TAAInitialized) InitializeTAA();
             cmd.SetComputeIntParam(TAA,"Samples_Accumulated", CurrentSamples);
 
             TAA.SetFloat("FarPlane", _camera.farClipPlane);
             TAA.SetTextureFromGlobal(TAAPrepareKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             TAA.SetTextureFromGlobal(TAAPrepareKernel, "DepthTex", "_CameraDepthTexture");
             cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorIn", _Final);
-            cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorOut", TempTex);
+            cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorOut", TempTexTAA);
             cmd.BeginSample("TAA Prepare Kernel");
             cmd.DispatchCompute(TAA, TAAPrepareKernel, threadGroupsX2, threadGroupsY2, 1);
             cmd.EndSample("TAA Prepare Kernel");
 
 
-            cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorIn", TempTex);
+            cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorIn", TempTexTAA);
             TAA.SetTextureFromGlobal(TAAKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             cmd.SetComputeTextureParam(TAA, TAAKernel, "TAAPrev", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAKernel, "TAAPrevRead", _TAAPrev);
-            cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorOut", TempTex2);
+            cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorOut", TempTexTAA2);
             cmd.BeginSample("TAA Main Kernel");
             cmd.DispatchCompute(TAA, TAAKernel, threadGroupsX2, threadGroupsY2, 1);
             cmd.EndSample("TAA Main Kernel");
 
             cmd.SetComputeTextureParam(TAA, TAAFinalizeKernel, "TAAPrev", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAFinalizeKernel, "ColorOut", _Final);
-            cmd.SetComputeTextureParam(TAA, TAAFinalizeKernel, "ColorIn", TempTex2);
+            cmd.SetComputeTextureParam(TAA, TAAFinalizeKernel, "ColorIn", TempTexTAA2);
             cmd.BeginSample("TAA Finalize Kernel");
             cmd.DispatchCompute(TAA, TAAFinalizeKernel, threadGroupsX2, threadGroupsY2, 1);
             cmd.EndSample("TAA Finalize Kernel");
@@ -553,9 +595,20 @@ namespace TrueTrace {
         Matrix4x4 PreviousCameraMatrix;
         Matrix4x4 PreviousCameraInverseMatrix;
         Matrix4x4 PrevProjInv;
-
+        private void InitializeUpsampler() {
+            CommonFunctions.CreateRenderTexture(ref PrevNormalUpscalerTex, Screen.width, Screen.height, CommonFunctions.RTFull4);
+            CommonFunctions.CreateRenderTexture(ref PrevNormalUpscalerTexWrite, Screen.width, Screen.height, CommonFunctions.RTFull4);
+            CommonFunctions.CreateRenderTexture(ref PrevDepthTex, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref UpScalerLightingDataTexture, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref PrevOutputTex, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref TempTexUpscaler, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref TempTexUpscaler2, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref PrevUpscalerTAA, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            UpscalerInitialized = true;
+        }
         public void ExecuteUpsample(ref RenderTexture Input, ref RenderTexture Output, int curframe, int cursample, ref RenderTexture ThroughputTex, CommandBuffer cmd, RenderTexture ScreenSpaceInfo)
         {//need to fix this so it doesnt create new textures every time
+            if(!UpscalerInitialized) InitializeUpsampler();
             cmd.SetComputeIntParam(Upscaler,"curframe", curframe);
             cmd.SetComputeIntParam(Upscaler,"cursam", cursample);
             cmd.SetComputeIntParam(Upscaler,"source_width", Input.width);
@@ -571,8 +624,6 @@ namespace TrueTrace {
             Upscaler.SetVector("Forward", _camera.transform.forward);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "PrevNormalTex", PrevNormalUpscalerTex);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "PrevNormalTexWrite", PrevNormalUpscalerTexWrite);
-            cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "PrevWorldPos", PrevWorldPos);
-            cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "PrevWorldPosWrite", PrevWorldPosWrite);
             Upscaler.SetVector("CamPos", _camera.transform.position);
             Upscaler.SetMatrix("ViewProjectionMatrix", _camera.projectionMatrix * _camera.worldToCameraMatrix);
             Upscaler.SetFloat("FarPlane", _camera.farClipPlane);
@@ -590,9 +641,9 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "Output", UpScalerLightingDataTexture);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "FinalOutput", Output);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "PrevOutput", PrevOutputTex);
-            cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "PrevDepthTexWrite", TempTex);
+            cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "PrevDepthTexWrite", TempTexUpscaler);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "TAAPrev", PrevUpscalerTAA);
-            cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "TAAPrevWrite", TempTex2);
+            cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "TAAPrevWrite", TempTexUpscaler2);
             cmd.BeginSample("Upsample Main Kernel");
             cmd.DispatchCompute(Upscaler, UpsampleKernel, threadGroupsX2, threadGroupsY2, 1);
             cmd.EndSample("Upsample Main Kernel");
@@ -607,11 +658,10 @@ namespace TrueTrace {
             cmd.EndSample("Upsample Blur Kernel");
             
 
-            cmd.CopyTexture(TempTex, PrevDepthTex);
+            cmd.CopyTexture(TempTexUpscaler, PrevDepthTex);
             cmd.CopyTexture(UpScalerLightingDataTexture, PrevOutputTex);
-            cmd.CopyTexture(TempTex2, PrevUpscalerTAA);
+            cmd.CopyTexture(TempTexUpscaler2, PrevUpscalerTAA);
             cmd.CopyTexture(PrevNormalUpscalerTexWrite, PrevNormalUpscalerTex);
-            cmd.CopyTexture(PrevWorldPosWrite, PrevWorldPos);
             PreviousCameraMatrix = _camera.cameraToWorldMatrix;
             PreviousCameraInverseMatrix = _camera.projectionMatrix.inverse;
             //PrevDepthTex = Shader.GetGlobalTexture("_LastCameraDepthTexture");
@@ -632,9 +682,14 @@ namespace TrueTrace {
             cmd.DispatchCompute(ToneMapper, 0, threadGroupsX2, threadGroupsY2, 1);
             cmd.EndSample("ToneMap");
         }
-
+        private void InitializeTAAU() {
+            CommonFunctions.CreateRenderTexture(ref TAAA, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref TAAB, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            TAAUInitialized = true;
+        }
         public void ExecuteTAAU(ref RenderTexture Output, ref RenderTexture Input, ref RenderTexture ThroughputTex, CommandBuffer cmd, int CurFrame, RenderTexture CorrectedDepthTex)
         {//need to fix this so it doesnt create new textures every time
+            if(!TAAUInitialized) InitializeTAAU();
             cmd.BeginSample("TAAU");
             bool IsEven = CurFrame % 2 == 0;
             cmd.SetComputeIntParam(TAAU,"source_width", SourceWidth);

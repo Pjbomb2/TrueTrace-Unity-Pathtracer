@@ -42,7 +42,7 @@ void Generate(uint3 id : SV_DispatchThreadID) {
 
     if (id.x >= screen_width || id.y >= screen_height) return;
     const uint pixel_index = id.y * screen_width + id.x;
-    float2 jitter = ((random(1, pixel_index) - 0.5));
+    float2 jitter = ((random(0, pixel_index) - 0.5));
     float2 uv = float2((id.xy + (UseReCur ? 0 : jitter)) / float2(screen_width, screen_height) * 2.0f - 1.0f);
 
     SmallerRay ray = CreateCameraRay(uv, pixel_index);
@@ -51,4 +51,179 @@ void Generate(uint3 id : SV_DispatchThreadID) {
     GlobalColors[pixel_index] = InitCol;
 
     // InterlockedAdd(BufferSizes[0].tracerays, 1);
+}
+
+
+int LightMapTriCount;
+
+    struct LightMapTriData
+    {
+        float3 pos0;
+        float3 posedge1;
+        float3 posedge2;
+        float2 LMUV0;
+        float2 LMUV1;
+        float2 LMUV2;
+        uint3 Norms;
+    };
+
+StructuredBuffer<LightMapTriData> LightMapTris;
+
+float CalcArea(float2 p1, float2 p2, float2 p3)
+{
+    float2 v1 = p1 - p3;
+    float2 v2 = p2 - p3;
+    return (v1.x * v2.y - v1.y * v2.x) / 2.0f;
+}
+
+float3 UvTo3D(float2 uv, float3 v1, float3 v2, float3 v3, float2 t1, float2 t2, float2 t3) {
+
+    float Area = CalcArea(t1, t2, t3);
+    if(Area == 0) return 0;
+
+    float a1 = CalcArea(t2, t3, uv) / Area;
+    // if(a1 < 0) return 0;
+    float a2 = CalcArea(t3, t1, uv) / Area;
+    // if(a2 < 0) return 0;
+    float a3 = CalcArea(t1, t2, uv) / Area;
+    // if(a3 < 0) return 0;
+
+    return float3(a1, a2, a3);//a1 * v1 + a2 * v2 + a3 * v3;
+
+}
+
+float2 sample_disc(float u1, float u2) {
+    float a = 2.0f * u1 - 1.0f;
+    float b = 2.0f * u2 - 1.0f;
+    if (a == 0.0f) a = 0.00001;
+    if (b == 0.0f) b = 0.00001;
+
+    float phi, r;
+    if (a * a > b * b) {
+        r = a;
+        phi = (0.25f * PI) * (b / a);
+    }
+    else {
+        r = b;
+        phi = (0.25f * PI) * (a / b) + (0.5f * PI);
+    }
+
+    float sin_phi, cos_phi;
+    sincos(phi, sin_phi, cos_phi);
+
+    return float2(r * cos_phi, r * sin_phi);
+}
+
+float3 sample_cosine_weighted_direction(float u1, float u2) {
+    float2 d = sample_disc(u1, u2);
+    return float3(d.x, sqrt(abs(1.0f - dot(d, d))), d.y);
+}
+
+float3 sample(inout float pdf, uint pixel_index) {//Diffuse
+    float2 rando = random(1, pixel_index);
+    float3 omega_o = sample_cosine_weighted_direction(rando.x, rando.y);
+    pdf = omega_o.y * ONE_OVER_PI;
+    return omega_o;
+}
+
+RWTexture2D<float4> WorldIndex;
+
+#pragma kernel LightMapGen
+[numthreads(16, 16, 1)]
+void LightMapGen(uint3 id : SV_DispatchThreadID) {
+
+    if(WorldIndex[id.xy].w == -1) return;
+    LightMapTriData Tri = LightMapTris[WorldIndex[id.xy].w];
+
+
+    float3 Normal = cross(normalize(Tri.posedge1), normalize(Tri.posedge2));
+    float wldScale = rsqrt(dot(Normal, Normal));
+    int pixel_index = id.x + id.y * screen_width;
+    Normal = -normalize(mul(wldScale, normalize(Normal)));
+
+            
+            float3 world = WorldIndex[id.xy];
+            if(all(world == 0)) return;
+            float3 ActualNormal = normalize(world.x * i_octahedral_32(Tri.Norms.x) + world.y * (i_octahedral_32(Tri.Norms.y) - i_octahedral_32(Tri.Norms.x)) + world.z * (i_octahedral_32(Tri.Norms.z) - i_octahedral_32(Tri.Norms.x)));
+            if(dot(Normal, ActualNormal) < 0) Normal *= -1;
+            // Normal = ActualNormal;
+            world = world.x * Tri.pos0 + world.y * (Tri.pos0 + Tri.posedge1) + world.z * (Tri.pos0 + Tri.posedge2);
+            float3 RandVec = float3(random(3, pixel_index), random(4, pixel_index).x);
+            sincos(RandVec.x * 2.0f * PI, RandVec.x, RandVec.y);
+            float sinPhi, cosPhi;
+            sincos(1, sinPhi, cosPhi);
+            RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy) * RandVec.z * 0.00f;
+            float pdf;
+            float3 IncommingRay = -normalize(mul(sample(pdf, pixel_index), GetTangentSpace(-Normal)));
+            float3 NewWorldPos = world;// + Normal * NormalOffset;// - ToWorld(GetTangentSpace2(-Normal), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
+            NewWorldPos += Normal * NormalOffset;
+            NewWorldPos -= IncommingRay * 0.0001f;
+            IncommingRay = normalize(world - NewWorldPos);
+            NewWorldPos += ToWorld(GetTangentSpace2(-normalize(Normal + float3(random(5, pixel_index), random(6, pixel_index).x) * 0.001f)), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy) * 0.1f;
+            RayData globray = {NewWorldPos, octahedral_32(IncommingRay), pixel_index, 0, 0,0,asuint(FarPlane),0};
+            int RayCount = 0;
+            InterlockedAdd(BufferSizes[0].tracerays, 1, RayCount);
+            GlobalRays[RayCount] = globray;
+
+         
+
+        }
+    
+
+
+
+
+
+
+
+
+
+
+#pragma kernel GenClear
+[numthreads(16, 16, 1)]
+void GenClear(uint3 id : SV_DispatchThreadID) {
+
+    if (id.x >= screen_width || id.y >= screen_height) return;
+    const uint pixel_index = id.y * screen_width + id.x;
+
+    GlobalColors[pixel_index] = InitCol;
+
+}
+
+
+#pragma kernel LightMapGen2
+[numthreads(256, 1, 1)]
+void LightMapGen2(uint3 id : SV_DispatchThreadID) {
+
+    if (id.x > LightMapTriCount) return;
+    LightMapTriData Tri = LightMapTris[id.x];
+
+
+    float2 UVMax = max(max(Tri.LMUV0, Tri.LMUV1), Tri.LMUV2);
+    float2 UVMin = min(min(Tri.LMUV0, Tri.LMUV1), Tri.LMUV2);
+
+    float LightMapWidthMin1 = screen_width - 1;
+    float LightMapHeightMin1 = screen_height - 1;
+    int minX = floor(UVMin.x * LightMapWidthMin1);
+    int minY = floor(UVMin.y * LightMapHeightMin1);
+    int maxX = ceil(UVMax.x * LightMapWidthMin1);
+    int maxY = ceil(UVMax.y * LightMapHeightMin1);
+
+    float3 Normal = cross(normalize(Tri.posedge1), normalize(Tri.posedge2));
+    float wldScale = rsqrt(dot(Normal, Normal));
+    Normal = -normalize(mul(wldScale, Normal) + float3(random(7, id.x), random(8, id.x).x) * 0.01f);
+
+    for(int x = minX; x <= maxX; x++) {
+        for(int y = minY; y <= maxY; y++) {
+            float xx = min(x, maxX - 1) / (float)LightMapWidthMin1;
+            float yy = min(y, maxY - 1) / (float)LightMapHeightMin1;
+            
+            float3 world = UvTo3D(float2(xx, yy), Tri.pos0, Tri.pos0 + Tri.posedge1, Tri.pos0 + Tri.posedge2, Tri.LMUV0, Tri.LMUV1, Tri.LMUV2);
+            if(all(world == 0)) continue;
+            WorldIndex[int2(x, y)] = float4(world, id.x);
+
+         
+
+        }
+    }
 }

@@ -96,9 +96,9 @@ void Construct(uint3 id : SV_DispatchThreadID)
 	float3 BBMax = max(max(p, p2), p3);
 	float3 BBMin = min(min(p, p2), p3);
 	[unroll] for (int i2 = 0; i2 < 3; i2++) {
-		if (BBMax[i2] - BBMin[i2] < 0.0000001f) {
-			BBMin[i2] -= 0.0000001f;
-			BBMax[i2] += 0.0000001f;
+		if (BBMax[i2] - BBMin[i2] < 0.000001f) {
+			BBMin[i2] -= 0.000001f;
+			BBMax[i2] += 0.000001f;
 		}
 	}
 
@@ -163,7 +163,6 @@ StructuredBuffer<int2> TriPair;
 
 struct Layer {
 	int Children[8];
-	int Leaf[8];
 };
 StructuredBuffer<Layer> ReverseStack;
 
@@ -179,23 +178,25 @@ void RefitLayer(uint3 id : SV_DispatchThreadID)
 	float3 RunningMax = AllNodes[id.x].BBMax;
 	float3 RunningMin = AllNodes[id.x].BBMin;
 	const Layer CurrentLayer = ReverseStack[id.x];
-	int2 Stack[8];
+	int Stack[8];
 	int stack_count = 0;
 	int i;
+	int i4;
 	[unroll]
 	for (i = 0; i < 8; i++) {
-		const int Leaf = CurrentLayer.Leaf[i];
-		if(Leaf < 0) continue;
-		[branch] if (Leaf == 0) {
-			RunningMax = max(RunningMax, AllNodes[CurrentLayer.Children[i]].BBMax);
-			RunningMin = min(RunningMin, AllNodes[CurrentLayer.Children[i]].BBMin);
+		const int Leaf = CurrentLayer.Children[i];
+		if(Leaf == 0) continue;
+		[branch] if (Leaf < 0) {
+			RunningMax = max(RunningMax, AllNodes[(-Leaf) - 1].BBMax);
+			RunningMin = min(RunningMin, AllNodes[(-Leaf) - 1].BBMin);
 		} else {
-			Stack[stack_count++] = int2(Leaf - 1, CurrentLayer.Children[i]);
+			Stack[stack_count++] = Leaf-1;
 		}
 	}
-
 	for(i = 0; i < stack_count; i++) {
-		for (int i4 = Stack[i].x; i4 < Stack[i].y; i4++) {
+		int Start = Stack[i] / 24;
+		int End = Start + Stack[i] % 24;
+		for (i4 = Start; i4 < End; i4++) {
 			RunningMax = max(RunningMax, Boxs[i4].BBMax);
 			RunningMin = min(RunningMin, Boxs[i4].BBMin);
 		}
@@ -214,26 +215,28 @@ void RefitBVHLayer(uint3 id : SV_DispatchThreadID)
 	if (id.x > NodeCount)
 		return;
 
-
 	float3 RunningMax = AllNodes[id.x].BBMax;
 	float3 RunningMin = AllNodes[id.x].BBMin;
 	const Layer CurrentLayer = ReverseStack[id.x];
-	int2 Stack[8];
+	int Stack[8];
 	int stack_count = 0;
 	int i;
+	int i4;
 	[unroll]
 	for (i = 0; i < 8; i++) {
-		const int Leaf = CurrentLayer.Leaf[i];
-		if(Leaf < 0) continue;
-		[branch] if (Leaf == 0) {
-			RunningMax = max(RunningMax, AllNodes[CurrentLayer.Children[i]].BBMax);
-			RunningMin = min(RunningMin, AllNodes[CurrentLayer.Children[i]].BBMin);
+		const int Leaf = CurrentLayer.Children[i];
+		if(Leaf == 0) continue;
+		[branch] if (Leaf < 0) {
+			RunningMax = max(RunningMax, AllNodes[(-Leaf) - 1].BBMax);
+			RunningMin = min(RunningMin, AllNodes[(-Leaf) - 1].BBMin);
 		} else {
-			Stack[stack_count++] = int2(Leaf - 1, CurrentLayer.Children[i] + Leaf - 1);
+			Stack[stack_count++] = Leaf-1;
 		}
 	}
 	for(i = 0; i < stack_count; i++) {
-		for (int i4 = Stack[i].x; i4 < Stack[i].y; i4++) {
+		int Start = Stack[i] / 24;
+		int End = Start + Stack[i] % 24;
+		for (i4 = Start; i4 < End; i4++) {
 			RunningMax = max(RunningMax, Boxs[TLASCWBVHIndices[i4]].BBMax);
 			RunningMin = min(RunningMin, Boxs[TLASCWBVHIndices[i4]].BBMin);
 		}
