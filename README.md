@@ -27,6 +27,7 @@ A passion projects that has been going on for a while with the goal of bringing 
 <li>Supports Built-in, HDRP, and URP</li>
 <li>Full skinned mesh support for animated skinned meshes</li>
 <li>Supports deformable standard meshes</li>
+<li>Supports unity heightmap terrain and heightmap trees</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)

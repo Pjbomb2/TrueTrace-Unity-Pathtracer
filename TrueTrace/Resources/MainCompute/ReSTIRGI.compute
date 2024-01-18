@@ -126,7 +126,6 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     ReservoirGS[LocalID] = 0;
     NEEPosGS[LocalID] = 0;
 
-
     GroupMemoryBarrier();
     if(id.x > screen_width || id.y > screen_height) return;
     const int pixel_index = id.x + id.y * screen_width;
@@ -193,7 +192,6 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
         CenterCol.throughput.z = asfloat(GBuffer.y);
         bool SkipTemporal = ReSTIRGIUpdateRate != 0 && Case != 3 && RandomNums[id.xy].z != 0;
         bool TemporalValid = !(prevIndex.x < 0 || prevIndex.x >= (int)screen_width || prevIndex.y < 0 || prevIndex.y >= (int)screen_height);
-        // bool TemporalValid = !(prevIndex.x < 0 || prevIndex.x >= (int)screen_width || prevIndex.y < 0 || prevIndex.y >= (int)screen_height) && SkipTemporal;
         if(SkipTemporal) {
             float LumA = luminance(CenterCol.Direct + unpackRGBE(CenterCol.PrimaryNEERay));
             float LumB = luminance(PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].Direct + unpackRGBE(PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].PrimaryNEERay));
@@ -217,7 +215,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
 
         [branch]if(TemporalValid && !SkipTemporal) {
             if(UseReSTIRGITemporal) {
-                float3 geo_normal_prev = i_octahedral_32(asuint(PrevGBuffer.x));//needs to be TEX_PT_GEO_NORMAL_B, but since for now I am not worrying about normal maps yet, it can use the same texture
+                float3 geo_normal_prev = i_octahedral_32(asuint(PrevGBuffer.x));
                 
                 float dist_depth = (abs(GBuffer.z - PrevGBuffer.z)) / abs(GBuffer.z);
                 float dot_geo_normals = dot(GeomNorm, geo_normal_prev);
@@ -296,7 +294,6 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
 
                 PrevRes = ReservoirB[NeighborIndex];
                 PrevGBuffer = PrevScreenSpaceInfo[NeighborIndex];
-                    // PrevRes.x = clamp(PrevRes.x,1,(PrevRes.z == 3) ? 12.0f : ReSTIRGITemporalMCap);
 
                 float NormFactor = dot(i_octahedral_32(asuint(PrevGBuffer.x)), GeomNorm);
                 float DistDiff = (abs(GBuffer.z - PrevGBuffer.z)) * DepthModifier;
@@ -318,22 +315,15 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
                     PrevRes = ReservoirGS[LocalRandID];
                     int2 NeighborIndex = id3 * KernelSize + LocalRand;
                     PrevGBuffer = ScreenSpaceInfoRead[NeighborIndex];
-                    // PrevRes.x = clamp(PrevRes.x,1,(PrevRes.z == 3) ? 12.0f : ReSTIRGITemporalMCap);
-
 
                     float NormFactor = dot(i_octahedral_32(asuint(PrevGBuffer.x)), GeomNorm);
                     float DistDiff = (abs(GBuffer.z - PrevGBuffer.z)) * DepthModifier;
                     
                     if (!(DistDiff >= 0.1f || NormFactor < 0.99) && PrevRes.z == CurrentRes.z &&  
                         ((PrevRes.w - CurrentRes.w) < 0.0f || abs(PrevRes.w - CurrentRes.w) < min(PrevRes.w + 1.0f, CurrentRes.w + 1.0f) * 25.0f)) {
-                        // if(PrevRes.z == 0 && !ggx_distribution(dot(normalize(-normalize(asfloat(WorldPosC[NeighborIndex].xyz) - PrimaryHitPosition) + CameraRay.direction), GeomNorm), clamp(SurfaceMat.roughness, 0.089 * 0.089, 1.0)) > 0.1f) continue;
-                        // if(GBuffer.z < 0 && luminance(abs(unpackRGBE(WorldPosB[NeighborIndex].w) - SurfaceMat.surfaceColor)) > 0.01f) continue;
-                           // PrevRes.x = 1;
-
                         UpdateReservoir(CurrentRes, wsum, PrevRes, random(226 + i, pixel_index).x, CachedID, -1 * LocalRand - 2);
                         CurrentRes.x += PrevRes.x;
                     }
-                        // CurrentRes.x++;// += PrevRes.x;
 
                 }
             }
@@ -364,7 +354,6 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
                 TempNEEPos = NEEPosGS[CachedID.x + CachedID.y * KernelSize];
                 Case3 = ReservoirGS[CachedID.x + CachedID.y * KernelSize].z;
             }
-
             SurfaceMat.roughness = (asuint(TempCol.pad) & 0xFFFF) / 65535.0f;
             SurfaceMat.metallic = (asuint(TempCol.pad) >> 16) / 65535.0f;
             TempCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(TempNEEPos.xyz - PrimaryHitPosition), SurfNorm, NEEpdf, NEEbsdf, pixel_index);
@@ -405,7 +394,6 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
                     ConnectedlyVisable = VisabilityCheck(ray, Distance);
                     if (!ConnectedlyVisable) {
                         CenterCol.PrimaryNEERay = 0;
-                        // GradientWrite[ceil(id.xy / 3)] = 1;
                     }
                 }
             #endif

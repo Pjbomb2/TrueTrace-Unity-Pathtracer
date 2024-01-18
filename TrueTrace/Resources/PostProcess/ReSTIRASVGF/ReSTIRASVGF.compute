@@ -814,7 +814,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
     if (temporal_sample_valid_diff)
     {
         // Compute the antilag factors based on the gradients
-        float antilag_alpha_lf = clamp(lerp(1.0, 0.6f * grad_lf, 1.0f), 0, 1);//play with the middle 2 values?
+        float antilag_alpha_lf = clamp(lerp(1.0, 1.0f * grad_lf, 1.0f), 0, 1);//play with the middle 2 values?
         float antilag_alpha_hf = clamp(lerp(1.0, 1.0f * grad_hf_spec.x, 1.0f), 0, 1);//play with the middle 2 values?
 
         // Adjust the history length, taking the antilag factors into account
