@@ -1174,6 +1174,7 @@ Toolbar toolbar;
             TonemapSettings.Add("Uchimura");
             TonemapSettings.Add("Reinhard");
             TonemapSettings.Add("Uncharted 2");
+            TonemapSettings.Add("AgX");
             PopupField<string> ToneMapField = new PopupField<string>("Tonemapper");
             ToneMapField.choices = TonemapSettings;
             ToneMapField.index = RayMaster.ToneMapper;

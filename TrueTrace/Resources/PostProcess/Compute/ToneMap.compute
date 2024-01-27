@@ -112,6 +112,50 @@ float3 HejlBurgess(float3 texColor) {
    return retColor;
 }
 
+struct ParamsLogC
+{
+    float cut;
+    float a, b, c, d, e, f;
+};
+
+static const ParamsLogC LogC =
+{
+    0.011361, // cut
+    5.555556, // a
+    0.047996, // b
+    0.244161, // c
+    0.386036, // d
+    5.301883, // e
+    0.092819  // f
+};
+
+float LinearToLogC_Precise(half x)
+{
+    float o;
+    if (x > LogC.cut)
+        o = LogC.c * log10(LogC.a * x + LogC.b) + LogC.d;
+    else
+        o = LogC.e * x + LogC.f;
+    return o;
+}
+
+inline float3 AgX(float3 stimulus) {
+    // Apply a non-linear transform that the LUT is encoded with.
+    const float3 encoded = stimulus;// / (stimulus + 1.0);
+
+    // Align the encoded range to texel centers.
+    float3 uv = encoded;// * ((LUT_DIMS - 1.0) / LUT_DIMS) + 0.5 / LUT_DIMS;
+
+    // Note: for OpenGL, do `uv.y = 1.0 - uv.y`
+    uv = float3(
+        LinearToLogC_Precise(uv.x),
+        LinearToLogC_Precise(uv.y),
+        LinearToLogC_Precise(uv.z)
+    );
+
+    return LUT.SampleLevel(sampler_linear_clamp, uv, 0);
+}
+
 [numthreads(16,16,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
@@ -132,6 +176,9 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         break;
         case 4:
             result = Uncharted2ToneMapping(result);
+        break;
+        case 5:
+            result = AgX(result);
         break;
     };
     Result[id.xy] = float4(result, 1.0);

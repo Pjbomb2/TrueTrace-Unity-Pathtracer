@@ -241,7 +241,7 @@ namespace TrueTrace {
                     case 3:
                     case 4:
                     case 7:
-                        CopyShader.SetInt("OutputRead", ((TexChannelIndex == null) ? ReadIndex : SelectedTex.ReadIndex));
+                        CopyShader.SetInt("OutputRead", SelectedTex.ReadIndex);
                         CopyShader.SetTexture(2, "AdditionTex", SelectedTex.Tex);
                         CopyShader.SetTexture(2, "ResultSingle", Atlas);
                         CopyShader.Dispatch(2, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 32.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 32.0f), 1);

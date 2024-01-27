@@ -80,6 +80,7 @@ namespace TrueTrace {
         #endif
 
         private Texture3D ToneMapTex;
+        private Texture3D ToneMapTex2;
         private Material _addMaterial;
         private Material _FireFlyMaterial;
         private int _currentSample = 0;
@@ -195,6 +196,7 @@ namespace TrueTrace {
             ReCurDen = new ReCurDenoiser();
             ReSTIRASVGFCode = new ReSTIRASVGF();
             ToneMapTex = Resources.Load<Texture3D>("Utility/ToneMapTex");
+            ToneMapTex2 = Resources.Load<Texture3D>("Utility/AgXBC");
             if (ShadingShader == null) {ShadingShader = Resources.Load<ComputeShader>("MainCompute/RayTracingShader"); }
             if (IntersectionShader == null) {IntersectionShader = Resources.Load<ComputeShader>("MainCompute/IntersectionKernels"); }
             if (GenerateShader == null) {GenerateShader = Resources.Load<ComputeShader>("MainCompute/RayGenKernels"); }
@@ -983,7 +985,7 @@ namespace TrueTrace {
                 Denoisers.ExecuteAutoExpose(ref _FinalTex, Exposure, cmd, DoExposureAuto);
             }
             if (AllowBloom) Denoisers.ExecuteBloom(ref _FinalTex, BloomStrength, cmd);
-            if(AllowToneMap) Denoisers.ExecuteToneMap(ref _FinalTex, cmd, ref ToneMapTex, ToneMapper);
+            if(AllowToneMap) Denoisers.ExecuteToneMap(ref _FinalTex, cmd, ref ToneMapTex, ref ToneMapTex2, ToneMapper);
             if (AllowTAA) Denoisers.ExecuteTAA(ref _FinalTex, _currentSample, cmd);
 
             cmd.Blit(_FinalTex, destination);

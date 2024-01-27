@@ -506,7 +506,7 @@ namespace TrueTrace {
         }
 
 
-        public void ExecuteToneMap(ref RenderTexture Output, CommandBuffer cmd, ref Texture3D LUT, int ToneMapSelection)
+        public void ExecuteToneMap(ref RenderTexture Output, CommandBuffer cmd, ref Texture3D LUT, ref Texture3D LUT2, int ToneMapSelection)
         {//need to fix this so it doesnt create new textures every time
             cmd.BeginSample("ToneMap");
             cmd.SetComputeIntParam(ToneMapper,"ToneMapSelection", ToneMapSelection);
@@ -515,7 +515,7 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(ToneMapper,"ScreenWidth", Output.width);
             cmd.SetComputeIntParam(ToneMapper,"ScreenHeight", Output.height);
             cmd.SetComputeTextureParam(ToneMapper, 0, "Result", Output);
-            cmd.SetComputeTextureParam(ToneMapper, 0, "LUT", LUT);
+            cmd.SetComputeTextureParam(ToneMapper, 0, "LUT", ToneMapSelection == 5 ? LUT2 : LUT);
             cmd.DispatchCompute(ToneMapper, 0, threadGroupsX2, threadGroupsY2, 1);
             cmd.EndSample("ToneMap");
         }
