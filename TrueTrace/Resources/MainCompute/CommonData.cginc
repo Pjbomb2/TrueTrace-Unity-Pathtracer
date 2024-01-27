@@ -12,7 +12,6 @@ float4x4 CamInvProj;
 float4x4 ViewMatrix;
 int MaxBounce;
 int CurBounce;
-int AlbedoAtlasSize;
 
 uint screen_width;
 uint screen_height;
@@ -232,11 +231,10 @@ struct MaterialData {//56
 	float2 MetallicRemap;
 	float2 RoughnessRemap;
 	float AlphaCutoff;
+	float NormalStrength;
 };
 
 StructuredBuffer<MaterialData> _Materials;
-
-float AtlasSize;
 
 SamplerState my_linear_clamp_sampler;
 SamplerState sampler_trilinear_clamp;

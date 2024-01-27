@@ -54,6 +54,14 @@ inline void IntersectTriangle(int mesh_id, int tri_id, const Ray ray, inout RayH
                     #endif
                     if(_Materials[MaterialIndex].specTrans == 1) return;
                 #endif
+                #ifdef IgnoreBackfacing
+                    #ifndef AdvancedAlphaMapped
+                        #ifndef IgnoreGlassMain
+                            int MaterialIndex = (MatOffset + AggTris[tri_id].MatDat);
+                        #endif
+                    #endif
+                    if(_Materials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction) > 0) return;
+                #endif
                 ray_hit.t = t;
                 ray_hit.u = u;
                 ray_hit.v = v;
@@ -70,7 +78,7 @@ void IntersectBVH() {
     Ray ray;
     #ifndef HardwareRT
         int Reps;
-        uint2 stack[24];
+        uint2 stack[16];
         int stack_size = 0;
         uint2 current_group;
         uint oct_inv4;
@@ -156,7 +164,8 @@ void IntersectBVH() {
             current_group.x = (uint)0;
             current_group.y = (uint)0x80000000;
             uint2 triangle_group;
-            [loop]while (Reps < 1000) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
+            [loop]while (Reps < 1000) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)          
+
                 [branch]if (current_group.y & 0xff000000) {
                     uint child_index_offset = firstbithigh(current_group.y);
 
@@ -228,6 +237,11 @@ void IntersectBVH() {
                         }
                     }
                 }
+                // [branch]if(CurBounce == 0) {
+                //     int PixIndex = GlobalRay.PixelIndex;
+                //     uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
+                //     if(stack_size >= 15) _DebugTex[TempUv] = 1;//float4(Reps / 42.0f, Reps > 82, 0, 0);
+                // }  
                 if ((current_group.y & 0xff000000) == 0) {
                     if (stack_size == 0) {//thread has finished traversing
                         [branch]if(CurBounce == 0) {
@@ -266,7 +280,7 @@ void IntersectBVHShadow(const int localid) {
     Ray ray;
 
     #ifndef HardwareRT
-        uint2 stack[24];
+        uint2 stack[16];
         int stack_size = 0;
         uint2 current_group;
         int NodeOffset;

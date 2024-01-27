@@ -150,7 +150,7 @@ float4 TAAA(int2 id) {
 	#else
 		float2 screen_position_prev = (id.xy / float2(screen_width, screen_height) - MotionVectors.SampleLevel(my_linear_clamp_sampler, id.xy / float2(screen_width, screen_height), 0).xy) * 2.0f - 1.0f;
 	#endif
-	screen_position_prev += (Offsets[Samples_Accumulated % 16] - 0.5f) / float2(screen_width, screen_height);
+	id.xy += (Offsets[Samples_Accumulated % 16] - 0.5f);// / float2(screen_width, screen_height);
 	// Convert from [-1, 1] to [0, 1]
 	float u_prev = 0.5f + 0.5f * screen_position_prev.x;
 	float v_prev = 0.5f + 0.5f * screen_position_prev.y;
@@ -263,10 +263,10 @@ float4 TAAA(int2 id) {
 		//      float contrast = length(colour_curr - colour_avg);
 
 				// Integrate temporally
-					float2 locpix = frac(float2(u_prev, v_prev));// * float2(screen_width, screen_height));
+					float2 locpix = frac(float2(u_prev, v_prev)* float2(screen_width, screen_height));// * float2(screen_width, screen_height));
 
 				float blend = abs(0.5f - locpix.x) + abs(0.5f - locpix.y);
-		float ALPHA = lerp(0.1f, 1.0f, blend);
+		float ALPHA = 0.1f;//lerp(0.1f, 1.0f, blend);
 		float3 integrated = ycocg_to_rgb(lerp(colour_prev, colour_curr, ALPHA));
 
 		colour.x = integrated.x;

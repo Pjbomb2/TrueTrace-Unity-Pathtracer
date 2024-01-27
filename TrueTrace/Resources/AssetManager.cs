@@ -17,7 +17,7 @@ namespace TrueTrace {
     public class AssetManager : MonoBehaviour
     {//This handels all the data
         public int TotalParentObjectSize;
-        [System.NonSerialized] public float LightEnergyScale = 1.0f;
+        [HideInInspector] public float LightEnergyScale = 1.0f;
         //emissive, alpha, metallic, roughness
         [System.NonSerialized] public Texture2D AlbedoAtlas;
         [System.NonSerialized] public RenderTexture HeightmapAtlas;
@@ -42,7 +42,7 @@ namespace TrueTrace {
         [HideInInspector] public RenderTexture VideoTexture;
 
         [HideInInspector] public List<RayTracingObject> MaterialsChanged;
-        [HideInInspector] public List<MaterialData> _Materials;
+        [HideInInspector] public MaterialData[] _Materials;
         [HideInInspector] public ComputeBuffer BVH8AggregatedBuffer;
         [HideInInspector] public ComputeBuffer AggTriBuffer;
         [HideInInspector] public ComputeBuffer LightTriBuffer;
@@ -78,12 +78,9 @@ namespace TrueTrace {
 
         private bool OnlyInstanceUpdated;
         [HideInInspector] public List<Transform> LightTransforms;
-        [HideInInspector] public int DesiredRes = 16300;
+        [HideInInspector] public int MainDesiredRes = 16384;
 
         [HideInInspector] public int MatCount;
-
-        [HideInInspector] public int NormalSize;
-        [HideInInspector] public int EmissiveSize;
 
         [HideInInspector] public List<LightMeshData> LightMeshes;
 
@@ -207,17 +204,17 @@ namespace TrueTrace {
 
                 if(TexIndex >= 2 && TexIndex < 7) {
                     for(int j = 0; j < ListLength; j++) {
-                            MatDat = _Materials[SelectedTex.TexObjList[j]];
-                            switch (TexIndex) {
-                                case 2: MatDat.NormalTex = RectSelect; break;
-                                case 3: MatDat.MetallicTex = RectSelect; break;
-                                case 4: MatDat.RoughnessTex = RectSelect; break;
-                                case 5: MatDat.EmissiveTex = RectSelect; break;
-                                case 6: MatDat.AlbedoTex = RectSelect; break;
-                                default: break;
-                            }
-                            _Materials[SelectedTex.TexObjList[j]] = MatDat;
+                        // MatDat = _Materials[SelectedTex.TexObjList[j]];
+                        switch (TexIndex) {
+                            case 2: _Materials[SelectedTex.TexObjList[j]].NormalTex = RectSelect; break;
+                            case 3: _Materials[SelectedTex.TexObjList[j]].MetallicTex = RectSelect; break;
+                            case 4: _Materials[SelectedTex.TexObjList[j]].RoughnessTex = RectSelect; break;
+                            case 5: _Materials[SelectedTex.TexObjList[j]].EmissiveTex = RectSelect; break;
+                            case 6: _Materials[SelectedTex.TexObjList[j]].AlbedoTex = RectSelect; break;
+                            default: break;
                         }
+                        // _Materials[SelectedTex.TexObjList[j]] = MatDat;
+                    }
                 } else if(TexIndex < 2) {
                     TerrainDat TempTerrain = TerrainInfos[SelectedTex.TexObjList[0]];
                     if(TexIndex == 0) TempTerrain.HeightMap = RectSelect;
@@ -275,25 +272,28 @@ namespace TrueTrace {
         }
 
         private void KeyCheck(int MatIndex, Texture Tex, ref Dictionary<int, TexObj> DictTextures, ref List<PackingRectangle> PR, int ReadChannelIndex) {
-            int Index = Tex.GetInstanceID();
-            if(DictTextures.ContainsKey(Index)) {
-                DictTextures[Index].TexObjList.Add(MatIndex);
+            int index = Tex.GetInstanceID();
+
+            if (DictTextures.TryGetValue(index, out var existingTexObj)) {
+                existingTexObj.TexObjList.Add(MatIndex);
             } else {
-                var E = new TexObj();
-                E.Tex = Tex;
-                PR.Add(new PackingRectangle() {
+                var newTexObj = new TexObj {
+                    Tex = Tex,
+                    ReadIndex = ReadChannelIndex
+                };
+
+                PR.Add(new PackingRectangle {
                     Width = (uint)Tex.width + 1,
                     Height = (uint)Tex.height + 1,
-                    Id = Index
+                    Id = index
                 });
-                E.ReadIndex = ReadChannelIndex;
-                E.TexObjList.Add(MatIndex);
-                DictTextures.Add(Index, E);
-            }                    
-        } 
 
-        private void CreateAtlas() {//Creates texture atlas
-            _Materials = new List<MaterialData>();
+                newTexObj.TexObjList.Add(MatIndex);
+                DictTextures.Add(index, newTexObj);
+            }
+        }
+        private void CreateAtlas(int TotalMatCount) {//Creates texture atlas
+            _Materials = new MaterialData[TotalMatCount];
             Dictionary<int, TexObj> HeightMapTextures = new Dictionary<int, TexObj>();
             Dictionary<int, TexObj> AlphaMapTextures = new Dictionary<int, TexObj>();
             List<PackingRectangle> HeightMapRect = new List<PackingRectangle>();
@@ -319,41 +319,37 @@ namespace TrueTrace {
             int CurCount = RenderQue[0].AlbedoTexs.Count;
             foreach (ParentObject Obj in RenderQue) {
                 foreach (RayTracingObject Obj2 in Obj.ChildObjects) {
-                    MaterialsChanged.Add(Obj2);
-                    int ObjLength = Obj2.MaterialIndex.Length;
-                    for (int i = 0; i < ObjLength; i++) Obj2.MaterialIndex[i] = Obj2.LocalMaterialIndex[i] + MatCount;
+                    Obj2.MatOffset = MatCount;
                 }
+                MaterialsChanged.AddRange(Obj.ChildObjects);
                 int ThisMatCount = Obj._Materials.Count;
                 for(int i = 0; i < ThisMatCount; i++) {
                     MaterialData TempMat = Obj._Materials[i];
-                    if(TempMat.AlbedoTex.w != 0) KeyCheck(MatCount + i, Obj.AlbedoTexs[(int)TempMat.AlbedoTex.w-1], ref AlbTextures, ref AlbRect, 0);
-                    if(TempMat.NormalTex.w != 0) KeyCheck(MatCount + i, Obj.NormalTexs[(int)TempMat.NormalTex.w-1], ref NormTextures, ref NormRect, 0);
-                    if(TempMat.EmissiveTex.w != 0) KeyCheck(MatCount + i, Obj.EmissionTexs[(int)TempMat.EmissiveTex.w-1], ref EmisTextures, ref EmisRect, 0);
-                    if(TempMat.MetallicTex.w != 0) KeyCheck(MatCount + i, Obj.MetallicTexs[(int)TempMat.MetallicTex.w-1], ref MetTextures, ref MetRect, Obj.MetallicTexChannelIndex[(int)TempMat.MetallicTex.w-1]);
-                    if(TempMat.RoughnessTex.w != 0) KeyCheck(MatCount + i, Obj.RoughnessTexs[(int)TempMat.RoughnessTex.w-1], ref RoughTextures, ref RoughRect, Obj.RoughnessTexChannelIndex[(int)TempMat.RoughnessTex.w-1]);
-
-                    _Materials.Add(TempMat);
+                    if(TempMat.AlbedoTex.w != 0) KeyCheck(MatCount, Obj.AlbedoTexs[(int)TempMat.AlbedoTex.w-1], ref AlbTextures, ref AlbRect, 0);
+                    if(TempMat.NormalTex.w != 0) KeyCheck(MatCount, Obj.NormalTexs[(int)TempMat.NormalTex.w-1], ref NormTextures, ref NormRect, 0);
+                    if(TempMat.EmissiveTex.w != 0) KeyCheck(MatCount, Obj.EmissionTexs[(int)TempMat.EmissiveTex.w-1], ref EmisTextures, ref EmisRect, 0);
+                    if(TempMat.MetallicTex.w != 0) KeyCheck(MatCount, Obj.MetallicTexs[(int)TempMat.MetallicTex.w-1], ref MetTextures, ref MetRect, Obj.MetallicTexChannelIndex[(int)TempMat.MetallicTex.w-1]);
+                    if(TempMat.RoughnessTex.w != 0) KeyCheck(MatCount, Obj.RoughnessTexs[(int)TempMat.RoughnessTex.w-1], ref RoughTextures, ref RoughRect, Obj.RoughnessTexChannelIndex[(int)TempMat.RoughnessTex.w-1]);
+                    _Materials[MatCount] = TempMat;
+                    MatCount++;
                 }
-                MatCount += ThisMatCount;
             }
             foreach (ParentObject Obj in InstanceData.RenderQue) {
                 foreach (RayTracingObject Obj2 in Obj.ChildObjects) {
-                    MaterialsChanged.Add(Obj2);
-                    int ObjLength = Obj2.MaterialIndex.Length;
-                    for (int i = 0; i < ObjLength; i++) Obj2.MaterialIndex[i] = Obj2.LocalMaterialIndex[i] + MatCount;
+                    Obj2.MatOffset = MatCount;
                 }
+                MaterialsChanged.AddRange(Obj.ChildObjects);
                 int ThisMatCount = Obj._Materials.Count;
                 for(int i = 0; i < ThisMatCount; i++) {
                     MaterialData TempMat = Obj._Materials[i];
-                    if(TempMat.AlbedoTex.w != 0) KeyCheck(MatCount + i, Obj.AlbedoTexs[(int)TempMat.AlbedoTex.w-1], ref AlbTextures, ref AlbRect, 0);
-                    if(TempMat.NormalTex.w != 0) KeyCheck(MatCount + i, Obj.NormalTexs[(int)TempMat.NormalTex.w-1], ref NormTextures, ref NormRect, 0);
-                    if(TempMat.EmissiveTex.w != 0) KeyCheck(MatCount + i, Obj.EmissionTexs[(int)TempMat.EmissiveTex.w-1], ref EmisTextures, ref EmisRect, 0);
-                    if(TempMat.MetallicTex.w != 0) KeyCheck(MatCount + i, Obj.MetallicTexs[(int)TempMat.MetallicTex.w-1], ref MetTextures, ref MetRect, Obj.MetallicTexChannelIndex[(int)TempMat.MetallicTex.w-1]);
-                    if(TempMat.RoughnessTex.w != 0) KeyCheck(MatCount + i, Obj.RoughnessTexs[(int)TempMat.RoughnessTex.w-1], ref RoughTextures, ref RoughRect, Obj.RoughnessTexChannelIndex[(int)TempMat.RoughnessTex.w-1]);
-
-                    _Materials.Add(TempMat);
+                    if(TempMat.AlbedoTex.w != 0) KeyCheck(MatCount, Obj.AlbedoTexs[(int)TempMat.AlbedoTex.w-1], ref AlbTextures, ref AlbRect, 0);
+                    if(TempMat.NormalTex.w != 0) KeyCheck(MatCount, Obj.NormalTexs[(int)TempMat.NormalTex.w-1], ref NormTextures, ref NormRect, 0);
+                    if(TempMat.EmissiveTex.w != 0) KeyCheck(MatCount, Obj.EmissionTexs[(int)TempMat.EmissiveTex.w-1], ref EmisTextures, ref EmisRect, 0);
+                    if(TempMat.MetallicTex.w != 0) KeyCheck(MatCount, Obj.MetallicTexs[(int)TempMat.MetallicTex.w-1], ref MetTextures, ref MetRect, Obj.MetallicTexChannelIndex[(int)TempMat.MetallicTex.w-1]);
+                    if(TempMat.RoughnessTex.w != 0) KeyCheck(MatCount, Obj.RoughnessTexs[(int)TempMat.RoughnessTex.w-1], ref RoughTextures, ref RoughRect, Obj.RoughnessTexChannelIndex[(int)TempMat.RoughnessTex.w-1]);
+                    _Materials[MatCount] = TempMat;
+                    MatCount++;
                 }
-                MatCount += ThisMatCount;
             }
             int TerrainMatCount = MatCount;
             if (TerrainCount != 0) {
@@ -400,7 +396,7 @@ namespace TrueTrace {
                         if(TempMat.MetallicTex.w != 0) KeyCheck(TerrainMatCount + i, Obj2.MaskTexs[(int)TempMat.MetallicTex.w-1], ref MetTextures, ref MetRect, 2);
                         if(TempMat.RoughnessTex.w != 0) KeyCheck(TerrainMatCount + i, Obj2.MaskTexs[(int)TempMat.RoughnessTex.w-1], ref RoughTextures, ref RoughRect, 1);
 
-                        _Materials.Add(TempMat);
+                        _Materials[TerrainMatCount + i] = TempMat;
                     }
                     TerrainMatCount += ThisMatCount;
                     TerrainInfos.Add(TempTerrain);
@@ -415,8 +411,9 @@ namespace TrueTrace {
             if(RoughnessAtlas != null) RoughnessAtlas?.Release();
             if(MetallicAtlas != null) MetallicAtlas?.Release();
             if(EmissiveAtlas != null) EmissiveAtlas?.Release();
-            
-            PackAndCompact(AlbTextures, ref TempTex, ref AlphaAtlas, AlbRect.ToArray(), DesiredRes, 6, 3, null);
+
+            if(AlbedoAtlas == null || AlbedoAtlas.width != MainDesiredRes) AlbedoAtlas = new Texture2D(MainDesiredRes,MainDesiredRes, TextureFormat.DXT5, false);
+            PackAndCompact(AlbTextures, ref TempTex, ref AlphaAtlas, AlbRect.ToArray(), MainDesiredRes, 6, 3, null);
             int tempWidth = (TempTex.width + 3) / 4;
             int tempHeight = (TempTex.height + 3) / 4;
             var desc = new RenderTextureDescriptor
@@ -440,12 +437,12 @@ namespace TrueTrace {
             s_Prop_EncodeBCn_Temp.Release();
 
 
-            PackAndCompact(NormTextures, ref NormalAtlas, ref AlphaAtlas, NormRect.ToArray(), DesiredRes, 2);
-            PackAndCompact(EmisTextures, ref EmissiveAtlas, ref AlphaAtlas, EmisRect.ToArray(), DesiredRes, 5);
+            PackAndCompact(NormTextures, ref NormalAtlas, ref AlphaAtlas, NormRect.ToArray(), MainDesiredRes, 2);
+            PackAndCompact(EmisTextures, ref EmissiveAtlas, ref AlphaAtlas, EmisRect.ToArray(), MainDesiredRes, 5);
             PackAndCompact(MetTextures, ref MetallicAtlas, ref AlphaAtlas, MetRect.ToArray(), AlbedoAtlas.width, 3, 0);
             PackAndCompact(RoughTextures, ref RoughnessAtlas, ref AlphaAtlas, RoughRect.ToArray(), AlbedoAtlas.width, 4, 0);
-            PackAndCompact(HeightMapTextures, ref HeightmapAtlas, ref AlphaAtlas, HeightMapRect.ToArray(), 16300, 0);
-            PackAndCompact(AlphaMapTextures, ref AlphaMapAtlas, ref AlphaAtlas, AlphaMapRect.ToArray(), 16300, 1);
+            PackAndCompact(HeightMapTextures, ref HeightmapAtlas, ref AlphaAtlas, HeightMapRect.ToArray(), 16384, 0);
+            PackAndCompact(AlphaMapTextures, ref AlphaMapAtlas, ref AlphaAtlas, AlphaMapRect.ToArray(), 16384, 1);
             AlphaAtlas.Release();
             AlbedoAtlasSize = AlbedoAtlas.width;
             NormalAtlas.anisoLevel = 3;
@@ -489,9 +486,6 @@ namespace TrueTrace {
                 TerrainBuffer.SetData(TerrainInfos);
             }
 
-            NormalSize = NormalAtlas.width;
-            EmissiveSize = EmissiveAtlas.width;
-
         }
         public void Start() {
             Assets = this;
@@ -504,8 +498,8 @@ namespace TrueTrace {
 
         public void ForceUpdateAtlas() {
             int throwaway = 0;
-            for(int i = 0; i < RenderQue.Count; i++) RenderQue[i].CreateAtlas(ref throwaway);
-            CreateAtlas();
+            // for(int i = 0; i < RenderQue.Count; i++) RenderQue[i].CreateAtlas(ref throwaway);
+            // CreateAtlas();
         }
 
         public void OnApplicationQuit() {
@@ -591,9 +585,7 @@ namespace TrueTrace {
             #if HardwareRT
                 AccelStruct = new UnityEngine.Rendering.RayTracingAccelerationStructure();
             #endif
-                if(DesiredRes == 0) DesiredRes = 16300;
-            if(AlbedoAtlas == null || AlbedoAtlas.width != DesiredRes) AlbedoAtlas = new Texture2D(DesiredRes,DesiredRes, TextureFormat.DXT5, false);
-            // AlbedoAtlas.Apply(false, true);
+            if(AlbedoAtlas == null || AlbedoAtlas.width != MainDesiredRes) AlbedoAtlas = new Texture2D(MainDesiredRes,MainDesiredRes, TextureFormat.DXT5, false);
             UpdateMaterialDefinition();
             UnityEngine.Video.VideoPlayer[] VideoObjects = GameObject.FindObjectsOfType<UnityEngine.Video.VideoPlayer>();
             if (VideoTexture != null) VideoTexture.Release();
@@ -875,6 +867,7 @@ namespace TrueTrace {
                 LightMeshCount = 0;
                 LightMeshes.Clear();
                 LightTransforms.Clear();
+                int TotalMatCount = 0;
                 if (BVH8AggregatedBuffer != null)
                 {
                     BVH8AggregatedBuffer.Release();
@@ -883,12 +876,14 @@ namespace TrueTrace {
                 }
                 for (int i = 0; i < ParentsLength; i++)
                 {
+                    TotalMatCount += RenderQue[i]._Materials.Count;
                     AggNodeCount += RenderQue[i].AggNodes.Length;
                     AggTriCount += RenderQue[i].AggTriangles.Length;
                     LightTriCount += RenderQue[i].LightTriangles.Count;
                 }
                 for (int i = 0; i < InstanceData.RenderQue.Count; i++)
                 {
+                    TotalMatCount += InstanceData.RenderQue[i]._Materials.Count;
                     AggNodeCount += InstanceData.RenderQue[i].AggNodes.Length;
                     AggTriCount += InstanceData.RenderQue[i].AggTriangles.Length;
                     LightTriCount += InstanceData.RenderQue[i].LightTriangles.Count;
@@ -1029,7 +1024,7 @@ namespace TrueTrace {
                 if (LightMeshCount == 0) { LightMeshes.Add(new LightMeshData() { }); }
 
 
-                if (!OnlyInstanceUpdated || _Materials.Count == 0) CreateAtlas();
+                if (!OnlyInstanceUpdated || _Materials.Length == 0) CreateAtlas(TotalMatCount);
             }
             ParentCountHasChanged = false;
             if (UseSkinning && didstart) {
@@ -1139,18 +1134,20 @@ namespace TrueTrace {
                     RenderQue[i].HWRTIndex = new List<int>();
                     foreach(var A in RenderQue[i].Renderers) {
                         MeshOffsets.Add(new Vector2(SubMeshOffsets.Count, i));
-                        Mesh mesh = ((A.gameObject.GetComponent<MeshFilter>() != null) ? A.gameObject.GetComponent<MeshFilter>().sharedMesh : A.gameObject.GetComponent<SkinnedMeshRenderer>().sharedMesh);
-                        for (int i2 = 0; i2 < mesh.subMeshCount; ++i2)
+                        var B2 = A.gameObject;
+                        Mesh mesh = ((B2.GetComponent<MeshFilter>() != null) ? B2.GetComponent<MeshFilter>().sharedMesh : B2.GetComponent<SkinnedMeshRenderer>().sharedMesh);
+                        int SubMeshCount = mesh.subMeshCount;
+                        for (int i2 = 0; i2 < SubMeshCount; ++i2)
                         {//Add together all the submeshes in the mesh to consider it as one object
                             SubMeshOffsets.Add(TotLength);
                             int IndiceLength = (int)mesh.GetIndexCount(i2) / 3;
                             TotLength += IndiceLength;
                         }
-                        RayTracingSubMeshFlags[] B = new RayTracingSubMeshFlags[mesh.subMeshCount];
-                        for(int i2 = 0; i2 < B.Length; i2++) {
+                        RayTracingSubMeshFlags[] B = new RayTracingSubMeshFlags[SubMeshCount];
+                        for(int i2 = 0; i2 < SubMeshCount; i2++) {
                             B[i2] = RayTracingSubMeshFlags.Enabled | RayTracingSubMeshFlags.ClosestHitOnly;
                         }
-                        AccelStruct.AddInstance(A, B, true, false, (uint)((A.gameObject.GetComponent<RayTracingObject>().SpecTrans[0] == 1) ? 0x2 : 0x1), (uint)MeshOffset);
+                        AccelStruct.AddInstance(A, B, true, false, (uint)((B2.GetComponent<RayTracingObject>().SpecTrans[0] == 1) ? 0x2 : 0x1), (uint)MeshOffset);
                         MeshOffset++;
                     }
                 }
@@ -1565,7 +1562,7 @@ namespace TrueTrace {
             RayTracingObject CurrentMaterial;
             MaterialData TempMat;
             int ChangedMaterialCount = MaterialsChanged.Count;
-            int MatCount = _Materials.Count;
+            int MatCount = _Materials.Length;
             for (int i = 0; i < ChangedMaterialCount; i++)
             {
                 CurrentMaterial = MaterialsChanged[i];
@@ -1573,8 +1570,8 @@ namespace TrueTrace {
                 for (int i3 = 0; i3 < MaterialCount; i3++)
                 {
                     int Index = CurrentMaterial.Indexes[i3];
-                    if(CurrentMaterial.MaterialIndex[i3] >= MatCount) continue;
-                    TempMat = _Materials[CurrentMaterial.MaterialIndex[i3]];
+                    if(CurrentMaterial.MaterialIndex[i3] + CurrentMaterial.MatOffset >= MatCount) continue;
+                    TempMat = _Materials[CurrentMaterial.MaterialIndex[i3] + CurrentMaterial.MatOffset];
                     TempMat.BaseColor = CurrentMaterial.BaseColor[Index];
                     TempMat.emmissive = CurrentMaterial.emmission[Index];
                     TempMat.Roughness = ((int)CurrentMaterial.MaterialOptions[Index] != 1) ? CurrentMaterial.Roughness[Index] : Mathf.Max(CurrentMaterial.Roughness[Index], 0.000001f);
@@ -1601,11 +1598,14 @@ namespace TrueTrace {
                     TempMat.scatterDistance = CurrentMaterial.ScatterDist[Index];
                     TempMat.IsSmoothness = CurrentMaterial.IsSmoothness[Index] ? 1 : 0;
                     TempMat.AlphaCutoff = CurrentMaterial.AlphaCutoff[Index];
+                    TempMat.NormalStrength = CurrentMaterial.NormalStrength[Index];
+                    TempMat.MetallicRemap = CurrentMaterial.MetallicRemap[Index];
+                    TempMat.RoughnessRemap = CurrentMaterial.RoughnessRemap[Index];
                     if(CurrentMaterial.TilingChanged) {
                         string MatTile = AssetManager.data.Material[AssetManager.ShaderNames.IndexOf(CurrentMaterial.SharedMaterials[Index].shader.name)].BaseColorTex;
                         TempMat.AlbedoTextureScale = new Vector4(CurrentMaterial.SharedMaterials[Index].GetTextureScale(MatTile).x, CurrentMaterial.SharedMaterials[Index].GetTextureScale(MatTile).y, CurrentMaterial.SharedMaterials[Index].GetTextureOffset(MatTile).x, CurrentMaterial.SharedMaterials[Index].GetTextureOffset(MatTile).y);
                     }
-                    _Materials[CurrentMaterial.MaterialIndex[i3]] = TempMat;
+                    _Materials[CurrentMaterial.MaterialIndex[i3] + CurrentMaterial.MatOffset] = TempMat;
                     #if HardwareRT
                         var A = CurrentMaterial.gameObject.GetComponent<Renderer>();
                         if(A != null) {
@@ -1622,55 +1622,6 @@ namespace TrueTrace {
                 CurrentMaterial.NeedsToUpdate = false;
             }
             MaterialsChanged.Clear();
-
-            ParentCount = InstanceData.RenderQue.Count;
-            // UnityEngine.Profiling.Profiler.BeginSample("Update Materials");
-
-            for (int i = 0; i < ParentCount; i++)
-            {
-                int ChildCount = InstanceData.RenderQue[i].ChildObjects.Count;
-                for (int i2 = 0; i2 < ChildCount; i2++)
-                {
-                    CurrentMaterial = InstanceData.RenderQue[i].ChildObjects[i2];
-                    if (CurrentMaterial.NeedsToUpdate || !didstart)
-                    {
-                        int MaterialCount = (int)Mathf.Min(CurrentMaterial.MaterialIndex.Length, CurrentMaterial.Indexes.Length);
-                        for (int i3 = 0; i3 < MaterialCount; i3++)
-                        {
-                            int Index = CurrentMaterial.Indexes[i3];
-                            TempMat = _Materials[CurrentMaterial.MaterialIndex[i3]];
-                            TempMat.BaseColor = CurrentMaterial.BaseColor[Index];
-                            TempMat.emmissive = CurrentMaterial.emmission[Index];
-                            TempMat.Roughness = ((int)CurrentMaterial.MaterialOptions[Index] != 1) ? CurrentMaterial.Roughness[Index] : Mathf.Max(CurrentMaterial.Roughness[Index], 0.000001f);
-                            TempMat.TransmittanceColor = CurrentMaterial.TransmissionColor[Index];
-                            TempMat.MatType = (int)CurrentMaterial.MaterialOptions[Index];
-                            TempMat.EmissionColor = CurrentMaterial.EmissionColor[Index];
-                            TempMat.metallic = CurrentMaterial.Metallic[Index];
-                            TempMat.specularTint = CurrentMaterial.SpecularTint[Index];
-                            TempMat.Tag = (uint)(
-                                ((CurrentMaterial.ReplaceBase[Index] ? 1 : 0) << 2) | 
-                                ((CurrentMaterial.BaseIsMap[Index] ? 1 : 0) << 1) | 
-                                ((CurrentMaterial.EmissionMask[Index] ? 0 : 1) << 0));
-                            TempMat.sheen = CurrentMaterial.Sheen[Index];
-                            TempMat.sheenTint = CurrentMaterial.SheenTint[Index];
-                            TempMat.clearcoat = CurrentMaterial.ClearCoat[Index];
-                            TempMat.IOR = CurrentMaterial.IOR[Index];
-                            TempMat.Thin = CurrentMaterial.Thin[Index];
-                            TempMat.clearcoatGloss = CurrentMaterial.ClearCoatGloss[Index];
-                            TempMat.specTrans = CurrentMaterial.SpecTrans[Index];
-                            TempMat.anisotropic = CurrentMaterial.Anisotropic[Index];
-                            TempMat.diffTrans = CurrentMaterial.DiffTrans[Index];
-                            TempMat.flatness = CurrentMaterial.Flatness[Index];
-                            TempMat.Specular = CurrentMaterial.Specular[Index];
-                            TempMat.scatterDistance = CurrentMaterial.ScatterDist[Index];
-                            TempMat.IsSmoothness = CurrentMaterial.IsSmoothness[Index] ? 1 : 0;
-                            TempMat.AlphaCutoff = CurrentMaterial.AlphaCutoff[Index];
-                            _Materials[CurrentMaterial.MaterialIndex[i3]] = TempMat;
-                            HasChangedMaterials = true;
-                        }
-                    }
-                }
-            }
             // UnityEngine.Profiling.Profiler.EndSample();
             return HasChangedMaterials;
 

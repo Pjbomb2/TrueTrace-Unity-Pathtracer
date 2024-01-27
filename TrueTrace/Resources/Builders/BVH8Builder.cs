@@ -212,7 +212,7 @@ namespace TrueTrace {
             if(nodes[node_index].count > 0) {
                 Assert.IsTrue(nodes[node_index].count == 1);
                 for(int i = 0; i < nodes[node_index].count; i++) {
-                    cwbvh_indices[cwbvhindex_count++] = indices[nodes[node_index].first + i];
+                    cwbvh_indices[cwbvhindex_count++] = indices[nodes[node_index].left + i];
                 }
                 return (int)nodes[node_index].count;
             }

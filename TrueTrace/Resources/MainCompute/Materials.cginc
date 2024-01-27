@@ -414,9 +414,9 @@ static float3 EvaluateDisneyBRDF(const MaterialData hitDat, const float3 wo, con
     float ax, ay;
     CalculateAnisotropicParams(hitDat.roughness, hitDat.anisotropic, ax, ay);
 
-    float d = GgxAnisotropicD(wm, ax, ay);
-    float gl = SeparableSmithGGXG1(wi, wm, ax, ay);
-    float gv = SeparableSmithGGXG1(wo, wm, ax, ay);
+    float d = GgxAnisotropicD(wm, ay, ax);
+    float gl = SeparableSmithGGXG1(wi, wm, ay, ax);
+    float gv = SeparableSmithGGXG1(wo, wm, ay, ax);
     float3 f = DisneyFresnel(hitDat, wo, wm, wi);
 
     // fPdf = gv * max(dot(wi, wm), 0.0) * d * (rcp(4.0f * (dot(wi, wm)))) / dotNL;

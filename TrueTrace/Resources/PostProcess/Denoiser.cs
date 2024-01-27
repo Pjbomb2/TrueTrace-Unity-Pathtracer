@@ -9,7 +9,6 @@ namespace TrueTrace {
     public class Denoiser
     {
         public bool Initialized = false;
-        private ComputeShader SVGF;
         private ComputeShader Bloom;
         private ComputeShader AutoExpose;
         private ComputeShader TAA;
@@ -20,20 +19,6 @@ namespace TrueTrace {
         bool TAAInitialized = false;
         bool UpscalerInitialized = false;
         bool TAAUInitialized = false;
-
-
-        public RenderTexture DirectA;
-        public RenderTexture DirectB;
-        public RenderTexture DirectC;
-
-        public RenderTexture IndirectA;
-        public RenderTexture IndirectB;
-        public RenderTexture IndirectC;
-
-
-        public RenderTexture MomentA;
-        public RenderTexture MomentB;
-        public RenderTexture HistoryTex;
 
 
 
@@ -97,12 +82,6 @@ namespace TrueTrace {
         private int threadGroupsX2;
         private int threadGroupsY2;
 
-        private int VarianceKernel;
-        private int CopyKernel;
-        private int ReprojectKernel;
-        private int FinalizeKernel;
-        private int SVGFAtrousKernel;
-
         private int BloomDownsampleKernel;
         private int BloomLowPassKernel;
         private int BloomUpsampleKernel;
@@ -131,37 +110,6 @@ namespace TrueTrace {
         private int[] BloomWidths;
         private int[] BloomHeights;
 
-        public bool SVGFInitialized;
-        public void ClearSVGF()
-        {
-            DirectA.ReleaseSafe();
-            DirectB.ReleaseSafe();
-            DirectC.ReleaseSafe();
-            IndirectA.ReleaseSafe();
-            IndirectB.ReleaseSafe();
-            IndirectC.ReleaseSafe();
-            MomentA.ReleaseSafe();
-            MomentB.ReleaseSafe();
-            HistoryTex.ReleaseSafe();
-
-            SVGFInitialized = false;
-        }
-        public void InitSVGF(int SourceWidth, int SourceHeight)
-        {
-
-            this.SourceWidth = SourceWidth;
-            this.SourceHeight = SourceHeight;
-            CommonFunctions.CreateRenderTexture(ref DirectA, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref DirectB, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref DirectC, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref IndirectA, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref IndirectB, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref IndirectC, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref MomentA, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref MomentB, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref HistoryTex, SourceWidth, SourceHeight, CommonFunctions.RTHalf1);
-            SVGFInitialized = true;
-        }
         private void InitRenderTexture(bool Force = false)
         {
             if(Force) {
@@ -183,7 +131,6 @@ namespace TrueTrace {
             
         }
         public void ClearAll() {
-            ClearSVGF();
             _TAAPrev.ReleaseSafe();
             Intermediate.ReleaseSafe();
             SuperIntermediate.ReleaseSafe();
@@ -218,10 +165,8 @@ namespace TrueTrace {
         {
             this.SourceWidth = SourceWidth;
             this.SourceHeight = SourceHeight;
-            SVGFInitialized = false;
 
             _camera = RayTracingMaster._camera;
-            if (SVGF == null) { SVGF = Resources.Load<ComputeShader>("PostProcess/Compute/SVGF"); }
             if (AutoExpose == null) { AutoExpose = Resources.Load<ComputeShader>("PostProcess/Compute/AutoExpose"); }
             if (Bloom == null) { Bloom = Resources.Load<ComputeShader>("PostProcess/Compute/Bloom"); }
             if (TAA == null) { TAA = Resources.Load<ComputeShader>("PostProcess/Compute/TAA"); }
@@ -229,12 +174,6 @@ namespace TrueTrace {
             if (ToneMapper == null) { ToneMapper = Resources.Load<ComputeShader>("PostProcess/Compute/ToneMap"); }
             if (TAAU == null) { TAAU = Resources.Load<ComputeShader>("PostProcess/Compute/TAAU"); }
 
-
-            VarianceKernel = SVGF.FindKernel("kernel_variance");
-            CopyKernel = SVGF.FindKernel("kernel_copy");
-            ReprojectKernel = SVGF.FindKernel("kernel_reproject");
-            FinalizeKernel = SVGF.FindKernel("kernel_finalize");
-            SVGFAtrousKernel = SVGF.FindKernel("kernel_atrous");
 
             TAAUKernel = TAAU.FindKernel("TAAU");
             TAAUCopyKernel = TAAU.FindKernel("Copy");
@@ -255,13 +194,9 @@ namespace TrueTrace {
             List<float> TestBuffer = new List<float>();
             TestBuffer.Add(1);
             ExposureBuffer?.Release(); ExposureBuffer = new ComputeBuffer(1, sizeof(float)); ExposureBuffer.SetData(TestBuffer);
-            SVGF.SetInt("screen_width", SourceWidth);
-            SVGF.SetInt("screen_height", SourceHeight);
-            SVGF.SetInt("TargetWidth", Screen.width);
-            SVGF.SetInt("TargetHeight", Screen.height);
 
             Bloom.SetInt("screen_width", Screen.width);
-            Bloom.SetInt("screen_width", Screen.height);
+            Bloom.SetInt("screen_height", Screen.height);
 
             AutoExpose.SetInt("screen_width", Screen.width);
             AutoExpose.SetInt("screen_height", Screen.height);
@@ -299,14 +234,9 @@ namespace TrueTrace {
             List<float> TestBuffer = new List<float>();
             TestBuffer.Add(1);
             ExposureBuffer?.Release(); ExposureBuffer = new ComputeBuffer(1, sizeof(float)); ExposureBuffer.SetData(TestBuffer);
-            SVGF.SetInt("screen_width", SourceWidth);
-            SVGF.SetInt("screen_height", SourceHeight);
-            SVGF.SetInt("TargetWidth", Screen.width);
-            SVGF.SetInt("TargetHeight", Screen.height);
 
             Bloom.SetInt("screen_width", Screen.width);
-            Bloom.SetInt("screen_width", Screen.height);
-
+            Bloom.SetInt("screen_height", Screen.height);
             AutoExpose.SetInt("screen_width", Screen.width);
             AutoExpose.SetInt("screen_height", Screen.height);
             AutoExpose.SetBuffer(AutoExposeKernel, "A", ExposureBuffer);
@@ -363,99 +293,6 @@ namespace TrueTrace {
                     }
                 }
             }
-        }
-
-        public void ExecuteSVGF(int CurrentSamples, 
-                                int AtrousKernelSize, 
-                                ref ComputeBuffer _ColorBuffer, 
-                                ref RenderTexture _target, 
-                                ref RenderTexture _Albedo, 
-                                RenderTexture ScreenSpaceInfo, 
-                                RenderTexture PrevScreenSpaceInfo, 
-                                RenderTexture WorldPosData, 
-                                bool DiffRes, 
-                                bool UseReSTIRGI,
-                                CommandBuffer cmd) 
-        {
-            SVGF.SetBool("UseReSTIRGI", UseReSTIRGI);
-            InitRenderTexture();
-            SVGF.SetBool("DiffRes", DiffRes);
-            bool OddAtrousIteration = (AtrousKernelSize % 2 == 1);
-            bool Flipper = CurrentSamples % 2 == 0;
-            SVGF.SetBuffer(CopyKernel, "PerPixelRadiance", _ColorBuffer);
-            cmd.SetComputeIntParam(SVGF, "AtrousIterations", AtrousKernelSize);
-            cmd.SetComputeTextureParam(SVGF, CopyKernel, "TempAlbedoTex", _Albedo);
-            cmd.SetComputeTextureParam(SVGF, CopyKernel, "WorldPosData", WorldPosData);
-            cmd.SetComputeTextureParam(SVGF, CopyKernel, "IndirectA", IndirectA);
-            cmd.SetComputeTextureParam(SVGF, CopyKernel, "DirectA", DirectA);
-            cmd.BeginSample("SVGF Copy Kernel");
-            cmd.DispatchCompute(SVGF, CopyKernel, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("SVGF Copy Kernel");
-
-
-
-
-            SVGF.SetTextureFromGlobal(ReprojectKernel, "MotionVectors", "_CameraMotionVectorsTexture");
-
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "DirectA", DirectA);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "DirectB", DirectB);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "IndirectA", IndirectA);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "IndirectB", IndirectB);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "MomentA", Flipper ? MomentA : MomentB);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "MomentB", Flipper ? MomentB : MomentA);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "HistoryTex", HistoryTex);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "ScreenSpaceInfo", ScreenSpaceInfo);
-            cmd.SetComputeTextureParam(SVGF, ReprojectKernel, "PrevScreenSpaceInfo", PrevScreenSpaceInfo);
-            cmd.BeginSample("SVGF Reproject Kernel");
-            cmd.DispatchCompute(SVGF, ReprojectKernel, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("SVGF Reproject Kernel");  
-
-            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "ScreenSpaceInfo", ScreenSpaceInfo);
-            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "HistoryTex", HistoryTex);
-            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "DirectA", DirectB);
-            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "DirectB", DirectA);
-            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "IndirectA", IndirectB);
-            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "IndirectB", IndirectA);//Current frame is stored in BTex, previous frame is erased
-            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "MomentA", Flipper ? MomentB : MomentA);//Current frame is stored in BTex, previous frame is erased
-            cmd.SetComputeTextureParam(SVGF, VarianceKernel, "MomentB", Flipper ? MomentA : MomentB);//Need to be flipflopping moment
-            cmd.BeginSample("SVGF Variance Kernel");
-            cmd.DispatchCompute(SVGF, VarianceKernel, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("SVGF Variance Kernel");            
-
-
-            cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "ScreenSpaceInfo", ScreenSpaceInfo);
-
-            for (int i = 0; i < AtrousKernelSize; i++)
-            {
-                int step_size = 1 << i;
-                bool UseFlipped = (i % 2 == 0);
-                cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "DirectA", (UseFlipped) ? DirectC : DirectA);
-                cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "DirectB", (UseFlipped) ? DirectA : DirectC);
-                cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "IndirectA", (UseFlipped) ? IndirectC : IndirectA);
-                cmd.SetComputeTextureParam(SVGF, SVGFAtrousKernel, "IndirectB", (UseFlipped) ? IndirectA : IndirectC);
-                var step2 = step_size;
-                cmd.SetComputeIntParam(SVGF, "step_size", step2);
-                cmd.BeginSample("SVGF Atrous Kernel: " + i);
-                cmd.DispatchCompute(SVGF, SVGFAtrousKernel, threadGroupsX, threadGroupsY, 1);
-                cmd.EndSample("SVGF Atrous Kernel: " + i);
-                if(step2 == 1) {
-                    cmd.CopyTexture(DirectC, DirectB);
-                    cmd.CopyTexture(IndirectC, IndirectB);
-                }
-            }
-
-            SVGF.SetBuffer(FinalizeKernel, "PerPixelRadiance", _ColorBuffer);
-            SVGF.SetTextureFromGlobal(FinalizeKernel, "DiffuseGBuffer", "_CameraGBufferTexture0");
-            SVGF.SetTextureFromGlobal(FinalizeKernel, "SpecularGBuffer", "_CameraGBufferTexture1");
-            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "DirectB", (OddAtrousIteration) ? DirectC : DirectA);
-            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "IndirectB", (OddAtrousIteration) ? IndirectC : IndirectA);
-            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "Result", _target);
-            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "WorldPosData", WorldPosData);
-            cmd.SetComputeTextureParam(SVGF, FinalizeKernel, "TempAlbedoTex", _Albedo);
-            cmd.BeginSample("SVGF Finalize Kernel");
-            cmd.DispatchCompute(SVGF, FinalizeKernel, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("SVGF Finalize Kernel");
-
         }
 
 

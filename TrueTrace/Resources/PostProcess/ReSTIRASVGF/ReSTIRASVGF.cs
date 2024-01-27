@@ -70,45 +70,42 @@ namespace TrueTrace {
 
         public void ClearAll()
         {
-            if (ASVGF_HIST_COLOR_HF != null)
-            {
-                ASVGF_HIST_COLOR_HF.Release();
-                ASVGF_ATROUS_PING_LF_SH.Release();
-                ASVGF_ATROUS_PONG_LF_SH.Release();
-                ASVGF_ATROUS_PING_LF_COCG.Release();
-                ASVGF_ATROUS_PONG_LF_COCG.Release();
-                ASVGF_ATROUS_PING_HF.Release();
-                ASVGF_ATROUS_PONG_HF.Release();
-                ASVGF_ATROUS_PING_SPEC.Release();
-                ASVGF_ATROUS_PONG_SPEC.Release();
-                ASVGF_ATROUS_PING_MOMENTS.Release();
-                ASVGF_ATROUS_PONG_MOMENTS.Release();
-                ASVGF_GRAD_LF_PING.Release();
-                ASVGF_GRAD_LF_PONG.Release();
-                ASVGF_GRAD_HF_SPEC_PING.Release();
-                ASVGF_GRAD_HF_SPEC_PONG.Release();
-                ASVGF_FILTERED_SPEC_A.Release();
-                ASVGF_FILTERED_SPEC_B.Release();
-                ASVGF_HIST_MOMENTS_HF_A.Release();
-                ASVGF_HIST_MOMENTS_HF_B.Release();
-                ASVGF_HIST_COLOR_LF_SH_A.Release();
-                ASVGF_HIST_COLOR_LF_SH_B.Release();
-                ASVGF_HIST_COLOR_LF_COCG_A.Release();
-                ASVGF_HIST_COLOR_LF_COCG_B.Release();
-                MetallicA.Release();
-                MetallicB.Release();
-                TEX_PT_NORMALS_A.Release();
-                TEX_PT_NORMALS_B.Release();
-                ReflectedRefractedTex.Release();
-                ReflectedRefractedTexPrev.Release();
-                AlbedoColorA.Release();
-                AlbedoColorB.Release();
-                LFVarianceA.Release();
-                LFVarianceB.Release();
-                InputLFSH.Release();
-                InputLFCOCG.Release();
-                TEX_PT_COLOR_SPEC.Release();
-            }
+                CommonFunctions.ReleaseSafe(ASVGF_HIST_COLOR_HF);
+                CommonFunctions.ReleaseSafe(ASVGF_ATROUS_PING_LF_SH);
+                CommonFunctions.ReleaseSafe(ASVGF_ATROUS_PONG_LF_SH);
+                CommonFunctions.ReleaseSafe(ASVGF_ATROUS_PING_LF_COCG);
+                CommonFunctions.ReleaseSafe(ASVGF_ATROUS_PONG_LF_COCG);
+                CommonFunctions.ReleaseSafe(ASVGF_ATROUS_PING_HF);
+                CommonFunctions.ReleaseSafe(ASVGF_ATROUS_PONG_HF);
+                CommonFunctions.ReleaseSafe(ASVGF_ATROUS_PING_SPEC);
+                CommonFunctions.ReleaseSafe(ASVGF_ATROUS_PONG_SPEC);
+                CommonFunctions.ReleaseSafe(ASVGF_ATROUS_PING_MOMENTS);
+                CommonFunctions.ReleaseSafe(ASVGF_ATROUS_PONG_MOMENTS);
+                CommonFunctions.ReleaseSafe(ASVGF_GRAD_LF_PING);
+                CommonFunctions.ReleaseSafe(ASVGF_GRAD_LF_PONG);
+                CommonFunctions.ReleaseSafe(ASVGF_GRAD_HF_SPEC_PING);
+                CommonFunctions.ReleaseSafe(ASVGF_GRAD_HF_SPEC_PONG);
+                CommonFunctions.ReleaseSafe(ASVGF_FILTERED_SPEC_A);
+                CommonFunctions.ReleaseSafe(ASVGF_FILTERED_SPEC_B);
+                CommonFunctions.ReleaseSafe(ASVGF_HIST_MOMENTS_HF_A);
+                CommonFunctions.ReleaseSafe(ASVGF_HIST_MOMENTS_HF_B);
+                CommonFunctions.ReleaseSafe(ASVGF_HIST_COLOR_LF_SH_A);
+                CommonFunctions.ReleaseSafe(ASVGF_HIST_COLOR_LF_SH_B);
+                CommonFunctions.ReleaseSafe(ASVGF_HIST_COLOR_LF_COCG_A);
+                CommonFunctions.ReleaseSafe(ASVGF_HIST_COLOR_LF_COCG_B);
+                CommonFunctions.ReleaseSafe(MetallicA);
+                CommonFunctions.ReleaseSafe(MetallicB);
+                CommonFunctions.ReleaseSafe(TEX_PT_NORMALS_A);
+                CommonFunctions.ReleaseSafe(TEX_PT_NORMALS_B);
+                CommonFunctions.ReleaseSafe(ReflectedRefractedTex);
+                CommonFunctions.ReleaseSafe(ReflectedRefractedTexPrev);
+                CommonFunctions.ReleaseSafe(AlbedoColorA);
+                CommonFunctions.ReleaseSafe(AlbedoColorB);
+                CommonFunctions.ReleaseSafe(LFVarianceA);
+                CommonFunctions.ReleaseSafe(LFVarianceB);
+                CommonFunctions.ReleaseSafe(InputLFSH);
+                CommonFunctions.ReleaseSafe(InputLFCOCG);
+                CommonFunctions.ReleaseSafe(TEX_PT_COLOR_SPEC);
             Initialized = false;
         }
 

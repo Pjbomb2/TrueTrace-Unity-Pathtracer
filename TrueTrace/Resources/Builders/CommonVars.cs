@@ -82,6 +82,45 @@ namespace CommonVars
         }
     }
 
+    [System.Serializable]
+    public struct RayObject
+    {
+        public GameObject RayObj;
+        public List<RayObjectData> RayData;
+    }
+
+    [System.Serializable]
+    public struct RayObjectData
+    {
+        public Vector3 TransmittanceColor;
+        public Vector3 BaseColor;
+        public Vector2 MetallicRemap;
+        public Vector2 RoughnessRemap;
+        public float emmission;
+        public Vector3 EmissionColor;
+        public bool EmissionMask;
+        public bool BaseIsMap;
+        public bool ReplaceBase;
+        public float Roughness;
+        public float IOR;
+        public float Metallic;
+        public float SpecularTint;
+        public float Sheen;
+        public float SheenTint;
+        public float ClearCoat;
+        public float ClearCoatGloss;
+        public float Anisotropic;
+        public float Flatness;
+        public float DiffTrans;
+        public float SpecTrans;
+        public int Thin;
+        public bool FollowMaterial;
+        public float ScatterDist;
+        public float Specular;
+        public float AlphaCutoff;
+        public bool IsSmoothness;
+        public float NormalStrength;
+    }
 
     [System.Serializable]
     public struct MaterialData
@@ -117,6 +156,7 @@ namespace CommonVars
         public Vector2 MetallicRemap;
         public Vector2 RoughnessRemap;
         public float AlphaCutoff;
+        public float NormalStrength;
     }
 
     [System.Serializable]
@@ -124,9 +164,7 @@ namespace CommonVars
     {
         public AABB aabb;
         public int left;
-        public int first;
         public uint count;
-        public uint axis;
     }
 
     [System.Serializable]

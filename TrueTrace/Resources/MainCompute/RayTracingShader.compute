@@ -34,6 +34,7 @@ int BackgroundType;
 float3 BackgroundColor;
 float BackgroundIntensity;
 bool ImprovedPrimaryHit;
+bool ClayMode;
 
 //These are here purely for the Atrous
 #ifdef HardwareRT
@@ -271,9 +272,6 @@ int2 StochasticBilinear(float2 st, float u) {
     #endif
 }
 
-int NormalSize;
-int EmissiveSize;
-
 //can I improve RIS by pre-doing the transforms??
 inline int SelectLight(const uint pixel_index, const uint MeshIndex, inout float lightWeight, float3 Norm, float3 Position, float4x4 Transform, inout float3 Radiance, inout float3 FinalPos) {//Need to check these to make sure they arnt simply doing uniform sampling
 
@@ -336,7 +334,7 @@ inline int SelectLight(const uint pixel_index, const uint MeshIndex, inout float
             float2 EmissionUV = AlignUV(BaseUv, MatDat.AlbedoTexScale, MatDat.EmissiveTex);    
             if (EmissionUV.x != -1) {
                 float3 EmissCol = lerp(MatDat.EmissionColor, MatDat.surfaceColor, saturate(MatDat.Tag & 0x2));
-                float4 EmissTexture = _EmissiveAtlas[StochasticBilinear(EmissionUV * EmissiveSize, random(112, pixel_index).x)];
+                float4 EmissTexture = _EmissiveAtlas.SampleLevel(my_linear_clamp_sampler, EmissionUV, 0);
                 if(saturate(MatDat.Tag & 0x1)) {//IS a mask
                     MatDat.emmissive *= luminance(EmissTexture.xyz * EmissTexture.w);
                     MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissCol, saturate(MatDat.emmissive) * saturate(MatDat.Tag & 0x4));
@@ -353,7 +351,7 @@ inline int SelectLight(const uint pixel_index, const uint MeshIndex, inout float
 inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, float2 NormalUV, RayData RayDat, const uint pixel_index, int MaterialIndex, inout float4 AlbedoTexData, inout uint4 PrevWorldData, inout float4 PrevScreenData) {//main function
     bool CB = !DoPartialRendering;
     if(!CB) {
-        CB = (int(id.x)/2 + int(id.y)/2 + curframe)%PartialRenderingFactor==0;//(floor((pixel_index % screen_width) / PartialRenderingFactor) + (floor((pixel_index / screen_width) / PartialRenderingFactor) % PartialRenderingFactor)) % PartialRenderingFactor;
+        CB = (int(id.x)/2 + int(id.y)/2 + curframe)%PartialRenderingFactor==0;
         if(UseASVGF || (UseReSTIRGI && ReSTIRGIUpdateRate != 0)) {
             if(RandomNums[id].z != 0 || RandomNums[id].w != 0) CB = true;
         }
@@ -388,9 +386,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     [branch] if (CurBounce == 0 && NormalUV.x != -1) {//Handle Normal Maps
         float3 LocalTan = GetTriangleTangent(hit.triangle_id, float2(hit.u, hit.v), Inverse);
         float3 LocalBinorm = normalize(cross(Geomnorm, LocalTan));
-        float2 Norm = _NormalAtlas.SampleLevel(sampler_NormalAtlas, NormalUV, clamp(pow(hit.t, 0.0f) / 7.0f,0,2));// [NormalUV * NormalSize];
+        float2 Norm = _NormalAtlas.SampleLevel(sampler_NormalAtlas, NormalUV, clamp(pow(hit.t, 0.0f) / 7.0f,0,2));
 
-        float3 LocalNormIN = float3((2.0f * Norm - 1.0f), 0.0f);
+        float3 LocalNormIN = float3((hitDat.NormalStrength * Norm - (hitDat.NormalStrength / 2.0f)), 0.0f);
         LocalNormIN.z = 1.0 - 0.5 * dot(LocalNormIN, LocalNormIN);
         norm = clamp(normalize(mul(normalize(LocalNormIN), float3x3(LocalTan, LocalBinorm, Geomnorm)).xyz),-1,1);
         if (abs(norm.x) == abs(norm.y) == abs(norm.z)) norm = Geomnorm;
@@ -440,7 +438,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, (id) / float2(screen_width, screen_height) , 0).xy;
         #endif
         uint2 prevIndexDoub = int2(floor(((float2(id) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
-        // hitDat.surfaceColor = unpackRGBE(WorldPosB[prevIndexDoub].w);
+        hitDat.surfaceColor = unpackRGBE(WorldPosB[prevIndexDoub].w);
         ray.direction = normalize(asfloat(WorldPosB[prevIndexDoub].xyz) - (pos + USGNorm * NormalOffset));
         MaterialLobe = RandomNums[id].z - 1;
         validBSDFSample = ReconstructBsdf(hitDat, PrevDirection, ray.direction, norm, pdf, bsdf_value, GetTangentSpace(norm), pixel_index, MaterialLobe);
@@ -544,15 +542,21 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         AlbedoTexData = float4(((CurBounce == 0) ? max(throughput, 0.005f) : (max(throughput, 0.005f) * AlbedoTexData.xyz)), (UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (MaterialLobe == 0 && hitDat.roughness < 0.01f && hitDat.metallic == 1 && CurBounce == 0))) ? -1 : (CurBounce + 1));  
         throughput = 1;  
     }   
+    if(UseReSTIRGI && CurBounce == 1 && ((asuint(Color.pad) >> 16) / 65535.0f == 1 || asuint(PrevScreenData.w) >> 30 == 3) && (asuint(Color.pad) & 0xFFFF) / 65535.0f < 0.01f) {
+        PrevScreenData = float4(asfloat(octahedral_32(Geomnorm)), asfloat(octahedral_32(norm)),PrevScreenData.z + hit.t, asfloat(packRGBE(max(throughput, 0.005f)))); 
+        throughput = 1;  
+        Color.throughput = 1;  
+        // hitDat.surfaceColor = 1;
+    }
 
     [branch] if ((UseNEE) && CurBounce < MaxBounce && hitDat.MatType != VolumetricIndex && unitylightcount + LightMeshCount != 0 && CB && !(MaterialLobe == 0 && hitDat.roughness < 0.1f)) {//Next event estimation
-        int triindex;
         float3 LightNorm;
         float3 LightPosition;
         int LightFormat = TRILIGHT;
         float3 Radiance;
         float RunningWeight = 1;
         float area = 1;
+        float3 MiscInfo = 0;
 
         bool UseUnityLight = false;
         if(unitylightcount != 0) {
@@ -563,14 +567,14 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         };
 
         if (UseUnityLight) {
-            triindex = SelectUnityLight(pixel_index, RunningWeight, norm, pos, PrevDirection);
-            LightData Light = _UnityLights[triindex];
+            LightData Light = _UnityLights[SelectUnityLight(pixel_index, RunningWeight, norm, pos, PrevDirection)];
             float sinPhi, cosPhi;
             LightPosition = Light.Position;
             LightNorm = Light.Direction;
             LightFormat = Light.Type;
             Radiance = Light.Radiance;
             float3 RandVec = float3(random(115, pixel_index), random(116, pixel_index).x);
+            MiscInfo = float3(Light.Softness * 120.0f + 1, Light.SpotAngle);
             if(LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) {
                 sincos(Light.ZAxisRotation, sinPhi, cosPhi);
             }
@@ -622,7 +626,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         
         float SurfaceCos = dot(to_light, norm);//YES KEEP THIS, IT NOT ONLY IMPROVES PERFORMANCE BUT IT ALSO HELPS KEEPS THINGS LESS BIASED AS OTHERWISE THE NORMAL OFFSET CAN RESULT IN WRONG VISABILITY!
         if(SurfaceCos > 0) {
-            
             float bsdf_pdf = 0.0f;
             float3 bsdf_value = 0.0f;
             if((UseReSTIRGI && CurBounce == 0) || (UseASVGF && (CurBounce == AlbedoTexData.w - 1 && CurBounce > 0))) hitDat.surfaceColor = 1.0f;
@@ -634,14 +637,14 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 float3 Illum;
                 [branch]if (UseUnityLight) {
                     NEE_pdf = distance_to_light_squared * abs(dot(to_light, LightNorm)) / area;
-                    Illum = Color.throughput * (Radiance * bsdf_value) / NEE_pdf * RunningWeight * ((LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) ? (_UnityLights[triindex].Softness * 120.0f + 1) : 1.0f);
+                    Illum = Color.throughput * (Radiance * bsdf_value) / NEE_pdf * RunningWeight * ((LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) ? (MiscInfo.x) : 1.0f);
                 } else {        
                     NEE_pdf = (1.0f / (LightMeshCount * (abs(dot(to_light, LightNorm)) * area) / distance_to_light_squared)) / RunningWeight;//Putting the lightweight up here makes it biased
                     float NEEMISWeight = power_heuristic(NEE_pdf, bsdf_pdf);
                     Illum = Color.throughput * (Radiance * bsdf_value) / NEE_pdf * NEEMISWeight;
                 }
-                if(LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) Illum *= pow(saturate(dot(to_light, -LightNorm)), _UnityLights[triindex].Softness * 120.0f + 1);
-                if (LightFormat == SPOTLIGHT) Illum *= saturate(saturate(dot(to_light, -LightNorm)) * _UnityLights[triindex].SpotAngle.x + _UnityLights[triindex].SpotAngle.y);
+                if(LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) Illum *= pow(saturate(dot(to_light, -LightNorm)), MiscInfo.x);
+                if (LightFormat == SPOTLIGHT) Illum *= saturate(saturate(dot(to_light, -LightNorm)) * MiscInfo.y + MiscInfo.z);
                 if (CurBounce == 0) NEEPosA[id] = float4((LightFormat == DIRECTIONALLIGHT) ? (ray.origin + to_light * 100.0f) : LightPosition,NEEPosA[id].w);
                 float maxillum = max(max(Illum.x, Illum.y), Illum.z);
                 if(DoExposure) maxillum *= Exposure[0];
@@ -736,10 +739,13 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
         if(CurBounce == 1) WorldPosA[id.xy] = uint4(UseReSTIRGI ? asuint(ray.origin + ray.direction * 1222.0f) : asuint(ray.direction), WorldPosA[id.xy].w);
         if(CurBounce == 0) TempAlbedoTex[id.xy] = float4(Color.Direct,0);
         GlobalColors[pixel_index] = Color;
+        if(UseReSTIRGI && CurBounce == 1 && asuint(ScreenSpaceInfoRead[id.xy].w) >> 30 == 0) {
+            ScreenSpaceInfo[id.xy] = float4(0,0,bestHit.t, asfloat(packRGBE(max(Color.throughput, 0.005f)))); 
+        }
         return;
     }
     uint4 PrevWorldData = WorldPosA[id.xy];
-    float4 PrevScreenData = (!UseASVGF && CurBounce == 0) ? 0 : ScreenSpaceInfo[id.xy];
+    float4 PrevScreenData = (!UseASVGF && CurBounce == 0) ? 0 : ScreenSpaceInfoRead[id.xy];
 
     float2 BaseUv;
     int MaterialIndex;
@@ -789,19 +795,20 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     if(TempMat.MatType == VideoIndex) {
         TempMat.surfaceColor = VideoTex.SampleLevel(sampler_VideoTex, BaseUv, 0).xyz;
     } else if(AlbedoUv.x != -1 && !HitTerrain) {
-        TempMat.surfaceColor *= _TextureAtlas[AlbedoUv * 16300].xyz;
+        TempMat.surfaceColor *= _TextureAtlas.SampleLevel(my_point_clamp_sampler, AlbedoUv, 0).xyz;
     }
     #ifdef LightMapping
         if(CurBounce == 0) TempMat.surfaceColor = 1;
     #endif
-    TempMat.roughness = max(TempMat.roughness, 0.00001f);
     if (TempMat.specTrans != 1 && MetallicUV.x > 0) {float Tempmet = MetallicTex.SampleLevel(my_point_clamp_sampler, MetallicUV, max(CurBounce, 0)); TempMat.metallic = Tempmet;}
     if (RoughnessUV.x > 0) TempMat.roughness = saturate(RoughnessTex.SampleLevel(my_point_clamp_sampler, RoughnessUV, max(CurBounce, 0)));
     if(!all(TempMat.MetallicRemap == float2(0,1))) TempMat.metallic = (TempMat.metallic * (TempMat.MetallicRemap.y - TempMat.MetallicRemap.x)) + TempMat.MetallicRemap.x;
     if(TempMat.IsSmoothness)  TempMat.roughness = 1.0f - TempMat.roughness;
     if(!all(TempMat.RoughnessRemap == float2(0,1))) TempMat.roughness = (TempMat.roughness * (TempMat.RoughnessRemap.y - TempMat.RoughnessRemap.x)) + TempMat.RoughnessRemap.x;
-    // if(AlbedoTexData.w != -1) TempMat.roughness = min(TempMat.roughness + max(CurBounce / (float)MaxBounce,0),1);
+
+    TempMat.roughness = max(TempMat.roughness, 0.00001f);
     TempMat.surfaceColor = max(TempMat.surfaceColor, 0.005f);
+    if(ClayMode) TempMat.surfaceColor = 0.75f;
     if(TempMat.emmissive > 0) {
         float2 EmissionUV = AlignUV(BaseUv, TempMat.AlbedoTexScale, TempMat.EmissiveTex);    
         if (EmissionUV.x != -1) {
@@ -820,7 +827,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     calcFinalColor(ray, Color, TempMat, bestHit, id.xy, NormalUV, GlobRay, pixel_index, MaterialIndex, AlbedoTexData, PrevWorldData, PrevScreenData);
     TempAlbedoTex[id.xy] = AlbedoTexData;
     if(CurBounce == 0 || any(PrevWorld != PrevWorldData)) WorldPosA[id.xy] = PrevWorldData;
-    if(CurBounce == 0 || any(PrevScreen != PrevScreenData)) ScreenSpaceInfo[id.xy] = PrevScreenData;
+    if(CurBounce == 0 || ((CurBounce == 1 || !UseReSTIRGI) && any(PrevScreen != PrevScreenData))) ScreenSpaceInfo[id.xy] = PrevScreenData;
     GlobalColors[pixel_index] = Color;
 }
 
@@ -859,40 +866,6 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
     float3 res = (TempAlbedoTex[id.xy].w == 0) ? TempAlbedoTex[id.xy].xyz : ((float)PartialRenderingFactor * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) * TempAlbedoTex[id.xy].xyz + unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay)) / GBufferCol);
     if (!all(res < 100000)) res = 0;
     Result[id.xy] = float4(res, 1.0f);
-}
-
-
-
-
-#pragma kernel GIReTraceKernel
-
-static const ColData InitCol = { 1,1,1,0,0,0,0,0,0,0,0,0};
-[numthreads(24, 24, 1)]
-void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID, uint3 id3 : SV_GroupID, uint id4 : SV_GroupIndex) {
-    if (id.x >= screen_width || id.y >= screen_height) return;
-    const uint pixel_index = id.y * screen_width + id.x;
-
-    float2 uv = float2((id.xy) / float2(screen_width, screen_height));
-    SmallerRay ray = CreateCameraRay(uv * 2.0f - 1.0f, pixel_index);
-    // Rays[pixel_index] = ray;
-    RandomNumsWrite[id.xy] = float4(curframe, pixel_index, 0, 0);
-
-    if(curframe % ReSTIRGIUpdateRate == pixel_index % ReSTIRGIUpdateRate) {
-        #ifdef HDRP
-            float2 MotionVector = MotionVectors[int3(id.xy,0)].xy;
-        #else
-            float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, uv, 0).xy;
-        #endif
-        int2 prevIndex = int2(floor(((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
-        if ((!DoPartialRendering || (int(prevIndex.x)/2 + int(prevIndex.y)/2 + curframe-1)%PartialRenderingFactor==0) && RandomNums[prevIndex].z == 0 && ReservoirA[prevIndex].z != 3 && prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height && PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.x >= 0) {
-            RandomNumsWrite[id.xy] = float4(PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.yx, 1 + ReservoirA[prevIndex].z,  PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.z);
-        }
-    }
-    RayData globray = {ray.origin, octahedral_32(ray.direction), pixel_index, 0, 0,0,asuint(FarPlane),0};
-    GlobalRays[pixel_index] = globray;
-    GlobalColors[pixel_index] = InitCol;
-    WorldPosA[id.xy] = float4(0,0,0, 0);
-    NEEPosA[id.xy] = float4(0,0,0, 0);
 }
 
 

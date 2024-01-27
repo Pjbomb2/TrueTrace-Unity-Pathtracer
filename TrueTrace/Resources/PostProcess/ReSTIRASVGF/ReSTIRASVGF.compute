@@ -381,10 +381,11 @@ void CopyData(uint3 id : SV_DispatchThreadID)
     TEX_PT_COLOR_HFWrite[id.xy] = HFCol;
     TEX_PT_COLOR_SPECWrite[id.xy] = SpecCol;
     if(!ReflectedRefracted) {
-        TEX_PT_NORMALS_AWrite[id.xy] = asuint(ScreenSpaceInfo[id.xy].xy);//GeoNorm, Norm
+        TEX_PT_NORMALS_AWrite[id.xy] = asuint(Pixel.throughput.xy);//GeoNorm, Norm
     } else {
         TEX_PT_NORMALS_AWrite[id.xy] = TEX_PT_NORMALS_B[pos_prev];
     }
+
 }
 
 
@@ -462,7 +463,6 @@ inline float2 get_lf_gradient(int2 ipos)
     // brightness changes over large parts of the screen to avoid noise.
     return float2(lum_curr, lum_prev);
 }
-RWTexture2D<half> TEX_PT_VIEW_DEPTH_AWRITE;
 [numthreads(16, 16, 1)]
 void Gradient_Img(uint3 gl_GlobalInvocationID : SV_DispatchThreadID)
 {
@@ -1482,12 +1482,6 @@ void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGrou
         
         float3 final_color = composite_color(base_color, projected_lf, filtered_hf, filtered_spec, (DiffRes && base_color.w <= 1) ? 1 : unpackRGBE(AlbedoColorB[ipos].y), ipos);
 
-        // if(base_color.w != 0) {
-            // SH FullSH = irradiance_to_SH(final_color, i_octahedral_32(TEX_PT_NORMALS_A[ipos].x));
-
-            // IMG_ASVGF_COLOR[ipos] = float4(project_SH_irradiance(FullSH, normal) * abs(dot(normal, i_octahedral_32(TEX_PT_NORMALS_A[ipos].x))), 0);
-        // } else {
-            IMG_ASVGF_COLOR[ipos] = float4(final_color, 0);
-        // }
+        IMG_ASVGF_COLOR[ipos] = float4(final_color, 0);
     }
 } 

@@ -8,6 +8,9 @@
 #define StainedGlassShadows
 // #define DX11
 // #define LightMapping
+// #define IgnoreBackfacing
+
+
 
 
 //Dont change the ones below

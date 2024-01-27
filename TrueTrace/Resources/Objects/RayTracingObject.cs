@@ -34,6 +34,7 @@ namespace TrueTrace {
 		public string[] Names;
 		[SerializeField] public float[] Specular;
 		[SerializeField] public float[] AlphaCutoff;
+		[SerializeField] public float[] NormalStrength;
 		[SerializeField] public bool[] IsSmoothness;
 		[SerializeField] public int Selected;
 		public int[] Indexes;
@@ -45,6 +46,7 @@ namespace TrueTrace {
 		AssetManager Assets;
 		[HideInInspector] public bool JustCreated = true;
 		[HideInInspector] public bool TilingChanged = false;
+		[HideInInspector] public int MatOffset = 0;
 		private bool WasDeleted = false;
 
 		public void CallMaterialOverride() {
@@ -85,7 +87,9 @@ namespace TrueTrace {
 		public void matfill() {
 			TilingChanged = false;
 			WasDeleted = false;
-			// this.gameObject.isStatic = false;
+			#if UNITY_EDITOR
+				UnityEditor.GameObjectUtility.SetStaticEditorFlags(gameObject, UnityEditor.GameObjectUtility.GetStaticEditorFlags(gameObject) & ~UnityEditor.StaticEditorFlags.BatchingStatic);
+			#endif
 			if(GameObject.Find("Scene") != null) Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
 			 Mesh mesh = new Mesh();
 			 int SubMeshCount;
@@ -124,6 +128,7 @@ namespace TrueTrace {
 				MetallicRemap = new Vector2[SubMeshCount];
 				RoughnessRemap = new Vector2[SubMeshCount];
 			}
+			if(NormalStrength == null || NormalStrength.Length != SubMeshCount) {NormalStrength = new float[SubMeshCount]; System.Array.Fill(NormalStrength, 1.0f);}
 			if(IsSmoothness == null || IsSmoothness.Length != SubMeshCount) IsSmoothness = new bool[SubMeshCount];
 			if(AlphaCutoff == null || AlphaCutoff.Length != SubMeshCount) {AlphaCutoff = new float[SubMeshCount]; System.Array.Fill(AlphaCutoff, 0.1f);}
 			if(ScatterDist == null || ScatterDist.Length != SubMeshCount) ScatterDist = new float[SubMeshCount];
@@ -182,7 +187,24 @@ namespace TrueTrace {
 			MaterialOptions = null;
 			BaseColor = null;
 		}
-		
+		public void ForceUpdateParent() {
+	    	if(gameObject.scene.isLoaded && (this.transform.GetComponent<ParentObject>() != null || this.transform.parent.GetComponent<ParentObject>() != null)) {
+	    		matfill();
+	    		if(WasDeleted) return;
+		    	if(this.transform.GetComponent<ParentObject>() != null) {
+		    		this.transform.GetComponent<ParentObject>().NeedsToUpdate = true;
+					if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.GetComponent<ParentObject>());
+		    	} else {
+		    		this.transform.parent.GetComponent<ParentObject>().NeedsToUpdate = true;
+					if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
+	    		}
+	    	} else if(gameObject.scene.isLoaded && this.transform.GetComponent<ParentObject>() != null) {
+	    		matfill();
+	    		if(WasDeleted) return;
+				if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
+		    	this.transform.GetComponent<ParentObject>().NeedsToUpdate = true;
+	    	}			
+		}
 	    private void OnEnable() {
 	    	// if(this.gameObject.GetComponent<SkinnedMeshRenderer>() != null) this.gameObject.GetComponent<SkinnedMeshRenderer>().sharedMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
 	    	if(gameObject.scene.isLoaded && (this.transform.GetComponent<ParentObject>() != null || this.transform.parent.GetComponent<ParentObject>() != null)) {

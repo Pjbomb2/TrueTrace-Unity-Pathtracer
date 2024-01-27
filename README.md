@@ -1,7 +1,7 @@
 ![](/Images/ArchRender0.png)
 # If you like what I do and want to support me and this project(as this takes a LOT of my time), Please consider becoming a Github Sponsor or a Patron at patreon.com/Pjbomb2!  This allows me to keep this free for everyone!
 # Discord Server: https://discord.gg/4Yh7AZuhcD
-## Demo:  https://drive.google.com/file/d/1vzrRyNftRRVyJ1SVbUvyNhQh0uXQso-N/view?usp=sharing
+## Demo:  https://drive.google.com/file/d/1sb_zRycX23AlC3QQ9LfqrtEZzBj47Z-Y/view?usp=sharing
 Notes:</br>
 
 # Compute Shader Based Unity PathTracer
@@ -12,7 +12,7 @@ A passion projects that has been going on for a while with the goal of bringing 
 <li>Full Disney BSDF for materials with support for emissive meshes and Video Players</li>
 <li>Ability to move, add, and remove objects during play</li>
 <li>Ability to update material properties on the fly during play</li>
-<li>ASVGF, SVGF, and my own Recurrent Denoisers</li>
+<li>ASVGF and my own Recurrent Denoisers</li>
 <li>Compressed Wide Bounding Volume Hierarchy as the Acceleration Structure (See Ylitie et al. 2017 below)</li>
 <li>PBR Texture Support</li>
 <li>Next Event Estimation with Multiple Importance Sampling for Explicit Light Sampling</li>
@@ -189,7 +189,8 @@ BVH Options Description -
   <li>Transmission Color - Affects Diffuse Transmission color, must be greater than 0 for diffuse transmission</li>
   <li>Flatness - Affects Thin objects</li>
   <li>Scatter Distance - Affects SpecTrans and Diffuse Transmission, must be greater than 0 for Diffuse Transmission</li>
-  <li>Link Mat To Unity Material - Overwrites the material properties with the properties from the material assigned to the mesh by Unity</li>
+  <li>Save Material - Saves the material and applys it when you exit play mode(MUST HAVE TRUETRACE SETTINGS OPEN)</li>
+  <li>Texture Scroll Changed - Updates the textures offset/scaling from the shader</li>
   <li>Propogate To Materials - Copies properties of local material to all other objects in the scene with the same material</li>
 </ul>
 

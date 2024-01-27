@@ -13,7 +13,6 @@ namespace TrueTrace {
         string[] TheseNames;
         void OnEnable()
         {
-
             (target as RayTracingObject).matfill();
         }
 
@@ -34,7 +33,9 @@ namespace TrueTrace {
                 serializedObject.FindProperty("BaseIsMap").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Base Color Is Map: ", t.BaseIsMap[Selected]);
                 serializedObject.FindProperty("ReplaceBase").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Replace Base Color: ", t.ReplaceBase[Selected]);
                 serializedObject.FindProperty("Roughness").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Roughness: ", t.Roughness[Selected], 0, 1);
+                EditorGUILayout.MinMaxSlider("Roughness Remap: ", ref t.RoughnessRemap[Selected].x, ref t.RoughnessRemap[Selected].y, 0, 1);
                 serializedObject.FindProperty("Metallic").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Metallic: ", t.Metallic[Selected], 0, 1);
+                EditorGUILayout.MinMaxSlider("Metallic Remap: ", ref t.MetallicRemap[Selected].x, ref t.MetallicRemap[Selected].y, 0, 1);
                 serializedObject.FindProperty("IOR").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("IOR: ", t.IOR[Selected], 0, 10);
                 serializedObject.FindProperty("Specular").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Specular: ", t.Specular[Selected], 0, 1);
                 serializedObject.FindProperty("SpecularTint").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Specular Tint: ", t.SpecularTint[Selected], 0, 1);
@@ -50,16 +51,58 @@ namespace TrueTrace {
                 serializedObject.FindProperty("Flatness").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Flatness: ", t.Flatness[Selected], 0, 1);
                 serializedObject.FindProperty("ScatterDist").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Scatter Distance: ", t.ScatterDist[Selected], 0, 5);
                 serializedObject.FindProperty("AlphaCutoff").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Alpha Cutoff: ", t.AlphaCutoff[Selected], 0.01f, 1.0f);
+                serializedObject.FindProperty("NormalStrength").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Normalmap Strength: ", t.NormalStrength[Selected], 0, 5.0f);
+
                 if(EditorGUI.EndChangeCheck()) {
                     for(int i = 0; i < t1.Length; i++) {
                         (t1[i] as RayTracingObject).CallMaterialEdited();
-
                     }
                 }
+
                 serializedObject.FindProperty("FollowMaterial").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Link Mat To Unity Material: ", t.FollowMaterial[Selected]);
                 serializedObject.ApplyModifiedProperties();
-                if(GUILayout.Button("Force Update Materials")) {
-                    t.CallMaterialEdited();
+                if(Application.isPlaying && GUILayout.Button("Save Properties")) {
+                    List<CommonVars.RayObjectData> RayDat = new List<CommonVars.RayObjectData>();
+                    for(int i = 0; i < t.TransmissionColor.Length; i++) {
+                        RayDat.Add(new CommonVars.RayObjectData() {
+                            TransmittanceColor = t.TransmissionColor[i],
+                            BaseColor = t.BaseColor[i],
+                            MetallicRemap = t.MetallicRemap[i],
+                            RoughnessRemap = t.RoughnessRemap[i],
+                            emmission = t.emmission[i],
+                            EmissionColor = t.EmissionColor[i],
+                            EmissionMask = t.EmissionMask[i],
+                            BaseIsMap = t.BaseIsMap[i],
+                            ReplaceBase = t.ReplaceBase[i],
+                            Roughness = t.Roughness[i],
+                            IOR = t.IOR[i],
+                            Metallic = t.Metallic[i],
+                            SpecularTint = t.SpecularTint[i],
+                            Sheen = t.Sheen[i],
+                            SheenTint = t.SheenTint[i],
+                            ClearCoat = t.ClearCoat[i],
+                            ClearCoatGloss = t.ClearCoatGloss[i],
+                            Anisotropic = t.Anisotropic[i],
+                            Flatness = t.Flatness[i],
+                            DiffTrans = t.DiffTrans[i],
+                            SpecTrans = t.SpecTrans[i],
+                            Thin = t.Thin[i],
+                            FollowMaterial = t.FollowMaterial[i],
+                            ScatterDist = t.ScatterDist[i],
+                            Specular = t.Specular[i],
+                            AlphaCutoff = t.AlphaCutoff[i],
+                            IsSmoothness = t.IsSmoothness[i],
+                            NormalStrength = t.NormalStrength[i]
+                        });
+                    }
+                    if(!EditModeFunctions.RayObjects.ContainsKey(t.GetInstanceID())) {
+                        EditModeFunctions.RayObjects.Add(t.GetInstanceID(), new CommonVars.RayObject() {RayObj = t.gameObject, RayData = RayDat});
+                    } else {
+                        EditModeFunctions.RayObjects[t.GetInstanceID()] = new CommonVars.RayObject() {RayObj = t.gameObject, RayData = RayDat};
+                    }
+                }
+                if(GUILayout.Button("Texture Scroll Changed")) {
+                    t.CallTilingScrolled();
                 }
                 if(GUILayout.Button("Propogate To Materials")) {
                     RayTracingObject[] Objects = GameObject.FindObjectsOfType<RayTracingObject>();
