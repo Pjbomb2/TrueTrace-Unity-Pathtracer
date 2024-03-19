@@ -540,7 +540,6 @@ static float3 SampleDisneySpecTransmission(const MaterialData hitDat, float3 wo,
     // -- Sample visible distribution of normals
     float2 r = random(119, pixel_index);
     float3 wm = SampleGgxVndfAnisotropic3(wo, tax, tay, r.x, r.y);
-
     float dotVH = dot(wo, wm);
     if (wm.y < 0.0f) {
         dotVH = -dotVH;
@@ -577,15 +576,13 @@ static float3 SampleDisneySpecTransmission(const MaterialData hitDat, float3 wo,
             wi.y = -wi.y;
             refracted = true;
             G1v *= sqrt(hitDat.surfaceColor);
-        }
-        else {
+        } else {
             if (Transmit(wm, wo, relativeIOR, wi) || hitDat.flatness == 1) {
                 refracted = true;
             }
             else {
                 wi = reflect(-wo, wm);
             }
-
         }
 
         wi = normalize(wi);
@@ -766,14 +763,14 @@ inline float3 ReconstructDisneySpecTransmission(MaterialData hitDat, const float
 
     float3 reflectance;
     if (random(120, pixel_index).x <= F) {
-        reflectance = G1v * hitDat.surfaceColor;
+        reflectance = G1v;// * hitDat.surfaceColor;
 
         float jacobian = (4 * abs(dot(wo, wm)));
         pdf = F / jacobian;
     }
     else {
 
-        reflectance = G1v * hitDat.surfaceColor;
+        reflectance = G1v;// * hitDat.surfaceColor;
 
 
         float dotLH = abs(dot(wi, wm));
@@ -948,7 +945,6 @@ float3 ReconstructDisney(MaterialData hitDat, float3 wo, float3 wi, bool thin,
 
     float4 P = CalculateLobePdfs(hitDat);
 
-
     switch(Case) {
         case 0:
             if(P.x > 0) reflectance = ReconstructDisneyBRDF(hitDat, wo, wm, wi, forwardPdf, Success);
@@ -1018,7 +1014,7 @@ bool SampleDisney(MaterialData hitDat, inout float3 v, bool thin, out float PDF,
     }
 
     v = normalize(ToWorld(TruTanMat, wi));
-    throughput *= (Reflection / P[Case]);
+    throughput *= saturate(Reflection / P[Case]);
     PDF *= P[Case];
 
     return Reflection.x != -1;
@@ -1031,7 +1027,7 @@ inline bool EvaluateBsdf(const MaterialData hitDat, float3 DirectionIn, float3 D
     [branch] switch (hitDat.MatType) {//Switch between different materials
         case CutoutIndex:
         case DisneyIndex:
-            bsdf_value = EvaluateDisney(hitDat, -DirectionIn, DirectionOut, hitDat.Thin == 1, PDF, GetTangentSpace(Normal), pixel_index);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
+            bsdf_value = EvaluateDisney(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, GetTangentSpace(Normal), pixel_index);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
             validbsdf = PDF > 0;
         break;
         case VolumetricIndex:
@@ -1046,6 +1042,114 @@ inline bool EvaluateBsdf(const MaterialData hitDat, float3 DirectionIn, float3 D
     return validbsdf;
 }
 
+
+float3 EvaluateDisney2(MaterialData hitDat, float3 V, float3 L, bool thin,
+    inout float forwardPdf, float3x3 TruTan, uint pixel_index, float3 n)
+{
+    float3 wi = ToLocal(TruTan, V); // NDotL = L.z; NDotV = V.z; NDotH = H.z
+    float3 wo = ToLocal(TruTan, L); // NDotL = L.z; NDotV = V.z; NDotH = H.z
+
+    float3 wm = normalize(wo + wi);
+
+    float dotNV = CosTheta(wo);
+    float dotNL = CosTheta(wi);
+
+    float3 reflectance = 0;
+    forwardPdf = 0.0f;
+
+    float4 P = CalculateLobePdfs(hitDat);
+
+    float metallic = hitDat.metallic;
+    float specTrans = hitDat.specTrans;
+
+    float diffuseWeight = (1.0f - metallic) * (1.0f - specTrans);
+    float transWeight = (1.0f - metallic) * specTrans;
+
+    // -- Clearcoat
+    bool upperHemisphere = dotNL > 0.0f && dotNV > 0.0f;
+    if (upperHemisphere && hitDat.clearcoat > 0.0f) {
+
+        float forwardClearcoatPdfW;
+
+        float clearcoat = EvaluateDisneyClearcoat(hitDat.clearcoat, hitDat.clearcoatGloss, wo, wm, wi, forwardClearcoatPdfW);
+        reflectance += clearcoat / abs(dotNL);
+        forwardPdf += forwardClearcoatPdfW * P[1];
+    }
+
+    // -- Diffuse
+    if (diffuseWeight > 0.0f) {
+        float forwardDiffusePdfW = AbsCosTheta(wi);
+        float diffuse = EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin);
+        float3 sheen = EvaluateSheen(hitDat, wo, wm, wi);
+
+        reflectance += (diffuse * hitDat.surfaceColor + sheen / PI);
+
+        forwardPdf += forwardDiffusePdfW * P[2];
+    }
+
+    // -- specular
+    if (P.x > 0) {
+        float forwardMetallicPdfW;
+
+        float3 specular = EvaluateDisneyBRDF(hitDat, wo, wm, wi, forwardMetallicPdfW, pixel_index);
+
+        reflectance += specular;
+        forwardPdf += forwardMetallicPdfW / (4 * abs(dot(wo, wm)))* P[0];
+    }
+
+    // -- transmission
+    if (transWeight > 0.0f) {
+
+        // Scale roughness based on IOR (Burley 2015, Figure 15).
+        float rscaled = thin ? ThinTransmissionRoughness(hitDat.ior, hitDat.roughness) : hitDat.roughness;
+        float tax, tay;
+        CalculateAnisotropicParams(rscaled, hitDat.anisotropic, tax, tay);
+
+        float3 transmission = EvaluateDisneySpecTransmission(hitDat, wo, wm, wi, tax, tay, thin);
+        reflectance += transWeight * transmission;
+
+        float forwardTransmissivePdfW;
+        GgxVndfAnisotropicPdf2(wi, wm, wo, tax, tay, forwardTransmissivePdfW);
+
+        float ni = wo.y > 0.0f ? 1.0f : hitDat.ior;
+        float nt = wo.y > 0.0f ? hitDat.ior : 1.0f;
+
+        float dotLH = dot(wm, wi);
+        float dotVH = dot(wm, wo);
+        forwardPdf += P[3] * forwardTransmissivePdfW / (pow(dotLH + (ni / nt) * dotVH, 2));
+    }
+
+forwardPdf = luminance(reflectance);// saturate(forwardPdf);
+    reflectance = reflectance * abs(dotNL);
+
+    return reflectance;
+}
+
+
+inline float EvaluateBsdfPDF(const MaterialData hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, uint pixel_index) {
+    bool validbsdf = false;
+    float PDF = 0;
+    float3 bsdf_value = 0;
+    float cos_theta_hit = dot(DirectionOut, Normal);
+    [branch] switch (hitDat.MatType) {//Switch between different materials
+        case CutoutIndex:
+        case DisneyIndex:
+            bsdf_value = EvaluateDisney2(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, GetTangentSpace(Normal), pixel_index, Normal);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
+            validbsdf = PDF > 0.0000f;
+        break;
+        case VolumetricIndex:
+            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
+            bsdf_value *= hitDat.surfaceColor;
+        break;
+        default:
+            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
+            bsdf_value *= hitDat.surfaceColor;
+        break;
+    }
+    return validbsdf ? PDF : 0;
+}
+
+
 inline bool ReconstructBsdf(const MaterialData hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, out float PDF, out float3 bsdf_value, const float3x3 TangentSpaceNorm, uint pixel_index, uint Case) {
     bool validbsdf = false;
     bsdf_value = 0;
@@ -1053,7 +1157,7 @@ inline bool ReconstructBsdf(const MaterialData hitDat, float3 DirectionIn, float
     [call] switch (hitDat.MatType) {//Switch between different materials
         case CutoutIndex:
         case DisneyIndex:
-            bsdf_value = ReconstructDisney(hitDat, -DirectionIn, DirectionOut, hitDat.Thin == 1, PDF, TangentSpaceNorm, validbsdf, pixel_index, Case);
+            bsdf_value = ReconstructDisney(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, TangentSpaceNorm, validbsdf, pixel_index, Case);
         break;
         case VolumetricIndex:
             validbsdf = true;

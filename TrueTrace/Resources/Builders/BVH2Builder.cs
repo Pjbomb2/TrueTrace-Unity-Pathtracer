@@ -1,15 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Assertions;
 using CommonVars;
-
+using System; 
 namespace TrueTrace {
 
     public class BVH2Builder {
 
         public BVHNode2Data[] BVH2Nodes;
-        private List<int>[] DimensionedIndices;
+        private int[] DimensionedIndices;
         private bool[] indices_going_left;
         private int[] temp;
         public int PrimCount;
@@ -26,31 +25,27 @@ namespace TrueTrace {
         }
 
         ObjectSplit partition_sah(int first_index, int index_count, ref AABB[] Primitives) {
-
             split.cost = float.MaxValue;
             split.index = -1;
             split.dimension = -1;
             split.aabb_left.init();
             split.aabb_right.init();
-            int CurIndex;
 
             AABB aabb_left = new AABB();
             AABB aabb_right = new AABB();
+            int Offset;
             for(int dimension = 0; dimension < 3; dimension++) {
-
                 aabb_left.init();
                 aabb_right.init();
-
+                Offset = PrimCount * dimension + first_index;
                 for(int i = 1; i < index_count; i++) {
-                    CurIndex = DimensionedIndices[dimension][first_index + i - 1];
-                    aabb_left.Extend(ref Primitives[CurIndex]);
+                    aabb_left.Extend(ref Primitives[DimensionedIndices[Offset + i - 1]]);
 
                     SAH[i] = surface_area(ref aabb_left) * (float)i;
                 }
 
                 for(int i = index_count - 1; i > 0; i--) {
-                    CurIndex = DimensionedIndices[dimension][first_index + i];
-                    aabb_right.Extend(ref Primitives[CurIndex]);
+                    aabb_right.Extend(ref Primitives[DimensionedIndices[Offset + i]]);
 
                     float cost = SAH[i] + surface_area(ref aabb_right) * (float)(index_count - i);
 
@@ -62,12 +57,8 @@ namespace TrueTrace {
                     }
                 }
             }
-            int sindex = split.index;
-            int sd = split.dimension;
-            for(int i = first_index; i < sindex; i++) {
-                CurIndex = DimensionedIndices[sd][i];
-                split.aabb_left.Extend(ref Primitives[CurIndex]);
-            }
+            Offset = split.dimension * PrimCount;
+            for(int i = first_index; i < split.index; i++) split.aabb_left.Extend(ref Primitives[DimensionedIndices[Offset + i]]);
             return split;
         }
         void BuildRecursive(int nodesi, ref int node_index, int first_index, int index_count, ref AABB[] Primitives) {
@@ -78,43 +69,32 @@ namespace TrueTrace {
             }
             
             ObjectSplit split = partition_sah(first_index, index_count, ref Primitives);
-            int EndIndex = first_index + index_count;
-            int sd = split.dimension;
-            for(int i = first_index; i < EndIndex; i++) indices_going_left[DimensionedIndices[sd][i]] = i < split.index;
+            int Offset = split.dimension * PrimCount;
+            int IndexEnd = first_index + index_count;
+            for(int i = first_index; i < IndexEnd; i++) indices_going_left[DimensionedIndices[Offset + i]] = i < split.index;
 
             for(int dim = 0; dim < 3; dim++) {
-                if(dim == sd) continue;
+                if(dim == split.dimension) continue;
 
+                int index;
                 int left = 0;
                 int right = split.index - first_index;
-
-                for(int i = first_index; i < EndIndex; i++) {
-                    int index = DimensionedIndices[dim][i];
-
-                    bool goes_left = indices_going_left[index];
-                    if(goes_left) {
-                        temp[left++] = index + 1;
-                    } else {
-                        temp[right++] = index + 1;
-                    }
+                Offset = dim * PrimCount;
+                for(int i = first_index; i < IndexEnd; i++) {
+                    index = DimensionedIndices[Offset + i];
+                    temp[indices_going_left[index] ? (left++) : (right++)] = index;
                 }
           
-
-                for(int index = 0; index < index_count; index++) {
-                    DimensionedIndices[dim][index + first_index] = temp[index] - 1;    
-                }
+                System.Array.Copy(temp, 0, DimensionedIndices, Offset + first_index, index_count);
             }
             BVH2Nodes[nodesi].left = node_index;
-            BVH2Nodes[nodesi].count = 0;
 
             BVH2Nodes[BVH2Nodes[nodesi].left].aabb = split.aabb_left;
             BVH2Nodes[BVH2Nodes[nodesi].left + 1].aabb = split.aabb_right;
             node_index += 2;
-            int num_left = split.index - first_index;
-            int num_right = EndIndex - split.index;
 
-            BuildRecursive(BVH2Nodes[nodesi].left, ref node_index,first_index,num_left, ref Primitives);
-            BuildRecursive(BVH2Nodes[nodesi].left + 1, ref node_index,first_index + num_left,num_right, ref Primitives);
+            BuildRecursive(BVH2Nodes[nodesi].left, ref node_index, first_index, split.index - first_index, ref Primitives);
+            BuildRecursive(BVH2Nodes[nodesi].left + 1, ref node_index, split.index, first_index + index_count - split.index, ref Primitives);
         }
 
         float surface_area(ref AABB aabb) {
@@ -124,95 +104,70 @@ namespace TrueTrace {
 
         public BVH2Builder(ref AABB[] Triangles) {//Bottom Level Acceleration Structure Builder
             PrimCount = Triangles.Length;
-            DimensionedIndices = new List<int>[3];
-            DimensionedIndices[0] = new List<int>(PrimCount);
-            DimensionedIndices[1] = new List<int>(PrimCount);             
-            DimensionedIndices[2] = new List<int>(PrimCount);
-            BVH2Nodes = new BVHNode2Data[PrimCount * 2];
             temp = new int[PrimCount]; 
-            indices_going_left = new bool[PrimCount];
-            AABB RootBB = new AABB();
-            RootBB.init();
+            SAH = new float[PrimCount];
+            FinalIndices = new int[PrimCount];
             float[] CentersX = new float[PrimCount];
             float[] CentersY = new float[PrimCount];
             float[] CentersZ = new float[PrimCount];
-            Vector3 Center;
+            indices_going_left = new bool[PrimCount];
+            DimensionedIndices = new int[3 * PrimCount];
+            BVH2Nodes = new BVHNode2Data[PrimCount * 2];
+            BVH2Nodes[0].aabb.init();
             for(int i = 0; i < PrimCount; i++) {
-                DimensionedIndices[0].Add(i);
-                DimensionedIndices[1].Add(i);
-                DimensionedIndices[2].Add(i);
-                indices_going_left[i] = false;
+                FinalIndices[i] = i;
                 CentersX[i] = (Triangles[i].BBMax.x - Triangles[i].BBMin.x) / 2.0f + Triangles[i].BBMin.x;
                 CentersY[i] = (Triangles[i].BBMax.y - Triangles[i].BBMin.y) / 2.0f + Triangles[i].BBMin.y;
                 CentersZ[i] = (Triangles[i].BBMax.z - Triangles[i].BBMin.z) / 2.0f + Triangles[i].BBMin.z;
-                RootBB.Extend(ref Triangles[i]);
+                BVH2Nodes[0].aabb.Extend(ref Triangles[i]);
             }
-
-            BVH2Nodes[0].aabb = RootBB;
-            AABB tempAABB = new AABB();
-            tempAABB.init();
-
-            DimensionedIndices[0].Sort((s1,s2) => CentersX[s1].CompareTo(CentersX[s2]));
-            DimensionedIndices[1].Sort((s1,s2) => CentersY[s1].CompareTo(CentersY[s2]));
-            DimensionedIndices[2].Sort((s1,s2) => CentersZ[s1].CompareTo(CentersZ[s2]));
-
+            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = CentersX[s1] - CentersX[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
+            System.Array.Copy(FinalIndices, 0, DimensionedIndices, 0, PrimCount);
+            for(int i = 0; i < PrimCount; i++) FinalIndices[i] = i;
+            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = CentersY[s1] - CentersY[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
+            System.Array.Copy(FinalIndices, 0, DimensionedIndices, PrimCount, PrimCount);
+            for(int i = 0; i < PrimCount; i++) FinalIndices[i] = i;
+            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = CentersZ[s1] - CentersZ[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
+            System.Array.Copy(FinalIndices, 0, DimensionedIndices, PrimCount * 2, PrimCount);
             int nodeIndex = 2;
-            SAH = new float[PrimCount];
             BuildRecursive(0, ref nodeIndex,0,PrimCount, ref Triangles);
-            Assert.IsTrue(nodeIndex <= 2 * PrimCount);
             int BVHNodeCount = BVH2Nodes.Length;
-            FinalIndices = DimensionedIndices[0].ToArray();
+            System.Array.Copy(DimensionedIndices, 0, FinalIndices, 0, PrimCount);
             DimensionedIndices = null;
-
         }
 
         public BVH2Builder(AABB[] MeshAABBs) {//Top Level Acceleration Structure
-            int MeshCount = MeshAABBs.Length;
-            DimensionedIndices = new List<int>[3];
-            DimensionedIndices[0] = new List<int>(MeshCount);
-            DimensionedIndices[1] = new List<int>(MeshCount);             
-            DimensionedIndices[2] = new List<int>(MeshCount);
-            BVH2Nodes = new BVHNode2Data[MeshCount * 2];
-            temp = new int[MeshCount];
-            AABB[] Primitives = new AABB[MeshCount];
-            indices_going_left = new bool[MeshCount];  
-            AABB RootBB = new AABB();
-            RootBB.init();
-            float[] CentersX = new float[MeshCount];
-            float[] CentersY = new float[MeshCount];
-            float[] CentersZ = new float[MeshCount];
-            Vector3 Center;
-            for(int i = 0; i < MeshCount; i++) {//Treat Bottom Level BVH Root Nodes as triangles
-                DimensionedIndices[0].Add(i);
-                DimensionedIndices[1].Add(i);
-                DimensionedIndices[2].Add(i);
-                Primitives[i].BBMax = MeshAABBs[i].BBMax;
-                Primitives[i].BBMin = MeshAABBs[i].BBMin;
-                Center = ((MeshAABBs[i].BBMax - MeshAABBs[i].BBMin)/2.0f + MeshAABBs[i].BBMin);
-                Primitives[i].BBMax = MeshAABBs[i].BBMax;
-                Primitives[i].BBMin = MeshAABBs[i].BBMin;
-
-                CentersX[i] = Center.x;
-                CentersY[i] = Center.y;
-                CentersZ[i] = Center.z;
-                indices_going_left[i] = false;
-                RootBB.Extend(ref Primitives[i]);
+            PrimCount = MeshAABBs.Length;
+            temp = new int[PrimCount];
+            SAH = new float[PrimCount];
+            FinalIndices = new int[PrimCount];
+            float[] CentersX = new float[PrimCount];
+            float[] CentersY = new float[PrimCount];
+            float[] CentersZ = new float[PrimCount];
+            indices_going_left = new bool[PrimCount];  
+            DimensionedIndices = new int[3 * PrimCount];
+            BVH2Nodes = new BVHNode2Data[PrimCount * 2];
+            BVH2Nodes[0].aabb.init();
+            for(int i = 0; i < PrimCount; i++) {//Treat Bottom Level BVH Root Nodes as triangles
+                FinalIndices[i] = i;
+                CentersX[i] = ((MeshAABBs[i].BBMax.x - MeshAABBs[i].BBMin.x)/2.0f + MeshAABBs[i].BBMin.x);
+                CentersY[i] = ((MeshAABBs[i].BBMax.y - MeshAABBs[i].BBMin.y)/2.0f + MeshAABBs[i].BBMin.y);
+                CentersZ[i] = ((MeshAABBs[i].BBMax.z - MeshAABBs[i].BBMin.z)/2.0f + MeshAABBs[i].BBMin.z);
+                BVH2Nodes[0].aabb.Extend(ref MeshAABBs[i]);
             }
-
-            BVH2Nodes[0].aabb = RootBB;
-
-
-            DimensionedIndices[0].Sort((s1,s2) => CentersX[s1].CompareTo(CentersX[s2]));
-            DimensionedIndices[1].Sort((s1,s2) => CentersY[s1].CompareTo(CentersY[s2]));
-            DimensionedIndices[2].Sort((s1,s2) => CentersZ[s1].CompareTo(CentersZ[s2]));
+            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = CentersX[s1] - CentersX[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
+            System.Array.Copy(FinalIndices, 0, DimensionedIndices, 0, PrimCount);
+            for(int i = 0; i < PrimCount; i++) FinalIndices[i] = i;
+            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = CentersY[s1] - CentersY[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
+            System.Array.Copy(FinalIndices, 0, DimensionedIndices, PrimCount, PrimCount);
+            for(int i = 0; i < PrimCount; i++) FinalIndices[i] = i;
+            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = CentersZ[s1] - CentersZ[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
+            System.Array.Copy(FinalIndices, 0, DimensionedIndices, PrimCount * 2, PrimCount);
 
             int nodeIndex = 2;
-            SAH = new float[MeshCount];
-            BuildRecursive(0, ref nodeIndex,0,MeshCount, ref Primitives);
-
-            Assert.IsTrue(nodeIndex <= 2 * MeshCount);
+            BuildRecursive(0, ref nodeIndex,0,PrimCount, ref MeshAABBs);
             int BVHNodeCount = BVH2Nodes.Length;
-            FinalIndices = DimensionedIndices[0].ToArray();
+            System.Array.Copy(DimensionedIndices, 0, FinalIndices, 0, PrimCount);
             DimensionedIndices = null;
         }
     }

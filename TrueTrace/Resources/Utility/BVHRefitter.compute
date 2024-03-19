@@ -1,5 +1,7 @@
 #define KernelRatio 256
 
+#pragma warning( disable : 3556)
+
 #pragma kernel Construct
 
 

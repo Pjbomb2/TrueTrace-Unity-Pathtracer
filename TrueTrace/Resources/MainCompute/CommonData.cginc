@@ -1,5 +1,4 @@
-#include "UnityCG.cginc"
-#include "../GlobalDefines.cginc"
+// #include "UnityCG.cginc"
 
 #define ONE_OVER_PI 0.318309886548f
 #define PI 3.14159265f
@@ -21,6 +20,7 @@ int frames_accumulated;
 int curframe;//might be able to get rid of this
 
 
+bool UseLightBVH;
 bool DoHeightmap;
 bool UseReCur;
 bool DiffRes;
@@ -168,6 +168,7 @@ struct MyMeshDataCompacted {
 	int MaterialOffset;
 	int mesh_data_bvh_offsets;//could I convert this an int4?
 	int LightTriCount;
+	int LightNodeOffset;
 };
 
 StructuredBuffer<MyMeshDataCompacted> _MeshData;
@@ -190,12 +191,26 @@ struct TrianglePos {
 	float3 posedge1;
 	float3 posedge2;
 };
+struct TriangleUvs {
+	float2 pos0;
+	float2 posedge1;
+	float2 posedge2;
+};
+
 
 inline TrianglePos triangle_get_positions(const int ID) {
 	TrianglePos tri;
 	tri.pos0 = AggTris.Load(ID).pos0;
 	tri.posedge1 = AggTris.Load(ID).posedge1;
 	tri.posedge2 = AggTris.Load(ID).posedge2;
+	return tri;
+}
+
+inline TriangleUvs triangle_get_positions2(const int ID) {
+	TriangleUvs tri;
+	tri.pos0 = AggTris.Load(ID).tex0;
+	tri.posedge1 = AggTris.Load(ID).texedge1;
+	tri.posedge2 = AggTris.Load(ID).texedge2;
 	return tri;
 }
 
@@ -223,15 +238,21 @@ struct MaterialData {//56
 	float flatness;
 	float diffTrans;
 	float specTrans;
-	int Thin;//Can pack into tag
 	float Specular;
 	float scatterDistance;
-	int IsSmoothness;//Can pack into tag
 	float4 AlbedoTexScale;
 	float2 MetallicRemap;
 	float2 RoughnessRemap;
 	float AlphaCutoff;
 	float NormalStrength;
+	float Hue;
+	float Saturation;
+	float Contrast;
+	float Brightness;
+	float3 BlendColor;
+	float BlendFactor;
+	float2 SecondaryTexScale;
+	float Rotation;
 };
 
 StructuredBuffer<MaterialData> _Materials;
@@ -253,7 +274,7 @@ Texture2D<half4> _TextureAtlas;
 SamplerState sampler_TextureAtlas;
 Texture2D<float2> _NormalAtlas;
 SamplerState sampler_NormalAtlas;
-Texture2D<float4> _EmissiveAtlas;
+Texture2D<half4> _EmissiveAtlas;
 
 Texture2D<half> Heightmap;
 
@@ -338,13 +359,20 @@ bool UseReSTIRGI;
 float2 randomNEE(uint samdim, uint pixel_index) {
 	uint hash = pcg_hash((pixel_index * (uint)258 + samdim) * (MaxBounce + 1) + CurBounce);
 
-	const static float one_over_max_unsigned = asfloat(0x2f7fffff);
+	static const float one_over_max_unsigned = asfloat(0x2f7fffff);
 
 
 	float x = hash_with(frames_accumulated, hash) * one_over_max_unsigned;
 	float y = hash_with(frames_accumulated + 0xdeadbeef, hash) * one_over_max_unsigned;
 
 	return float2(x, y);
+}
+
+uint randomNEE2(uint samdim, uint pixel_index) {
+	uint hash = pcg_hash((pixel_index * (uint)258 + samdim) * (MaxBounce + 1) + CurBounce);
+
+
+	return hash_with(frames_accumulated, hash);
 }
 
 
@@ -514,10 +542,22 @@ inline Ray CreateCameraRay(float2 uv) {
     return CreateRay(origin, direction);
 }
 
-inline float2 AlignUV(float2 BaseUV, float4 TexScale, float4 TexDim) {
+inline float2 AlignUV(float2 BaseUV, const float4 TexScale, const float4 TexDim, const float Rotation = 0, const bool IsAlbedo = false) {
 	if(TexDim.x <= 0) return -1;
 	BaseUV = BaseUV * TexScale.xy + TexScale.zw;
-	return (BaseUV < 0 ? (1.0f - fmod(abs(BaseUV), 1.0f)) : fmod(abs(BaseUV), 1.0f)) * (TexDim.xy - TexDim.zw) + TexDim.zw;
+	BaseUV = (BaseUV < 0 ? (1.0f - fmod(abs(BaseUV), 1.0f)) : fmod(abs(BaseUV), 1.0f));
+	if(IsAlbedo) BaseUV = clamp(BaseUV, 8.0f/16384.0f, 1.0f);
+	if(Rotation != 0) {
+		float sinc, cosc;
+		sincos(Rotation, sinc, cosc);
+		BaseUV -= 0.5f;
+		float2 tempuv = BaseUV;
+		BaseUV.x = tempuv.x * cosc - tempuv.y * sinc;
+		BaseUV.y = tempuv.x * sinc + tempuv.y * cosc;
+		BaseUV += 0.5f;
+		BaseUV = fmod(abs(BaseUV), 1.0f);
+	}
+	return BaseUV * (TexDim.xy - TexDim.zw) + TexDim.zw;
 }
 
 inline uint ray_get_octant_inv4(const float3 ray_direction) {
@@ -528,6 +568,8 @@ inline uint ray_get_octant_inv4(const float3 ray_direction) {
 }
 inline bool triangle_intersect_shadow(int tri_id, const Ray ray, float max_distance, int mesh_id, inout float3 throughput, const int MatOffset) {
     TrianglePos tri = triangle_get_positions(tri_id);
+  	TriangleUvs tri2 = triangle_get_positions2(tri_id);
+    int MaterialIndex = (MatOffset + AggTris[tri_id].MatDat);
 
     float3 h = cross(ray.direction, tri.posedge2);
     float  a = dot(tri.posedge1, h);
@@ -543,9 +585,9 @@ inline bool triangle_intersect_shadow(int tri_id, const Ray ray, float max_dista
         if (v >= 0.0f && u + v <= 1.0f) {
             float t = f * dot(tri.posedge2, q);
             #ifdef AdvancedAlphaMapped
-                int MaterialIndex = (MatOffset + AggTris[tri_id].MatDat);
+        		if(_Materials[MaterialIndex].MatType == DiffuseIndex) return false;
         		if(_Materials[MaterialIndex].MatType == CutoutIndex || _Materials[MaterialIndex].specTrans == 1) {
-	                float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - u - v) + AggTris[tri_id].texedge1 * u + AggTris[tri_id].texedge2 * v;
+	                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
 	                float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex);
 	                float4 BaseCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0);
 	                if(_Materials[MaterialIndex].MatType == CutoutIndex && BaseCol.w < _Materials[MaterialIndex].AlphaCutoff) return false;
@@ -776,6 +818,12 @@ float DistanceToTopAtmosphereBoundary(float r, float mu) {
 	float discriminant = r * r * (mu * mu - 1.0f) + top_radius * top_radius;
 	return max(-r * mu + sqrt(max(discriminant, 0.0f)), 0.0f);
 }
+float DistanceToBottomAtmosphereBoundary(float r, float mu) {
+	if (mu < -1 || mu > 1 || r > top_radius) return 0;
+	float discriminant = r * r * (mu * mu - 1.0f) + bottom_radius * bottom_radius;
+	return max(-r * mu - sqrt(max(discriminant, 0.0f)), 0.0f);
+}
+
 
 float4 GetScatteringTextureUvwzFromRMuMuSNu(float r, float mu, float mu_s, float nu, bool ray_r_mu_intersects_ground) {
 	float H = sqrt(top_radius * top_radius - bottom_radius * bottom_radius);
@@ -814,6 +862,7 @@ float4 GetScatteringTextureUvwzFromRMuMuSNu(float r, float mu, float mu_s, float
 
 Texture3D<float4> scattering_texture;
 Texture2D<float4> TransmittanceTex;
+Texture2D<float4> IrradianceTex;
 SamplerState linearClampSampler;
 SamplerState sampler_scattering_texture_trilinear_clamp;
 
@@ -897,11 +946,106 @@ float3 GetTransmittance(float r, float mu, float d, bool ray_r_mu_intersects_gro
 			float3(1.0f, 1.0f, 1.0f));
 	}
 }
+#define IrradianceTexWidth 64
+#define IrradianceTexHeight 16
+float2 GetIrradianceTextureUvFromRMuS(float r, float mu_s) {
+	float x_r = (r - bottom_radius) /
+		(top_radius - bottom_radius);
+	float x_mu_s = mu_s * 0.5 + 0.5;
+	return float2(GetTextureCoordFromUnitRange(x_mu_s, IrradianceTexWidth),
+		GetTextureCoordFromUnitRange(x_r, IrradianceTexHeight));
+}
 
+float3 GetIrradiance(float r, float mu_s) {
+	float2 uv = GetIrradianceTextureUvFromRMuS(r, mu_s);
+	return IrradianceTex.SampleLevel(_LinearClamp, uv, 0);
+}
+
+float3 GetTransmittanceToSun(float r, float mu_s) {
+	float sin_theta_h = bottom_radius / r;
+	float cos_theta_h = -sqrt(max(1.0f - sin_theta_h * sin_theta_h, 0.0f));
+	return exp(GetTransmittanceToTopAtmosphereBoundary(r, mu_s)) *
+		smoothstep(-sin_theta_h * (0.00935f / 2.0f) / 1.0f,
+			sin_theta_h * (0.00935f / 2.0f) / 1.0f,
+			mu_s - cos_theta_h);
+}
+
+float3 GetSkyRadianceToPoint(
+	float3 camera, float3 pos,
+	float3 sun_direction, out float3 transmittance)
+{
+	// Compute the distance to the top atmosphere boundary along the view ray,
+	// assuming the viewer is in space (or NaN if the view ray does not intersect
+	// the atmosphere).
+	float3 view_ray = normalize(pos - camera);
+	float r = length(camera);
+	float rmu = dot(camera, view_ray);
+	float distance_to_top_atmosphere_boundary = -rmu - sqrt(rmu * rmu - r * r + top_radius * top_radius);
+
+	// If the viewer is in space and the view ray intersects the atmosphere, move
+	// the viewer to the top atmosphere boundary (along the view ray):
+	if (distance_to_top_atmosphere_boundary > 0.0)
+	{
+		camera = camera + view_ray * distance_to_top_atmosphere_boundary;
+		r = top_radius;
+		rmu += distance_to_top_atmosphere_boundary;
+	}
+
+	// Compute the r, mu, mu_s and nu parameters for the first texture lookup.
+	float mu = rmu / r;
+	float mu_s = dot(camera, sun_direction) / r;
+	float nu = dot(view_ray, sun_direction);
+	float d = length(pos - camera);
+	bool ray_r_mu_intersects_ground = RayIntersectsGround(r, mu);
+
+	transmittance = GetTransmittance(
+		r, mu, d, ray_r_mu_intersects_ground);
+
+	float3 single_mie_scattering;
+	float3 scattering = GetCombinedScattering(
+		r, mu, mu_s, nu, ray_r_mu_intersects_ground,
+		single_mie_scattering);
+
+	// Compute the r, mu, mu_s and nu parameters for the second texture lookup.
+	// If shadow_length is not 0 (case of light shafts), we want to ignore the
+	// scattering along the last shadow_length meters of the view ray, which we
+	// do by subtracting shadow_length from d (this way scattering_p is equal to
+	// the S|x_s=x_0-lv term in Eq. (17) of our paper).
+	d = max(d, 0.0);
+	float r_p = ClampRadius(sqrt(d * d + 2.0 * r * mu * d + r * r));
+	float mu_p = (r * mu + d) / r_p;
+	float mu_s_p = (r * mu_s + d * nu) / r_p;
+
+	float3 single_mie_scattering_p;
+	float3 scattering_p = GetCombinedScattering(
+		r_p, mu_p, mu_s_p, nu, ray_r_mu_intersects_ground,
+		single_mie_scattering_p);
+
+	// Combine the lookup results to get the scattering between camera and point.
+	float3  shadow_transmittance = transmittance;
+	scattering = scattering - shadow_transmittance * scattering_p;
+	single_mie_scattering = single_mie_scattering - shadow_transmittance * single_mie_scattering_p;
+	// Hack to avoid rendering artifacts when the sun is below the horizon.
+	single_mie_scattering = single_mie_scattering *
+		smoothstep(0, 0.01, mu_s);
+
+	return scattering * RayleighPhaseFunction(nu) + single_mie_scattering *
+		MiePhaseFunction(0.8f, nu);
+}
+float3 GetSunAndSkyIrradiance(float3 groundpoint, float3 normal, float3 sun_direction, inout float3 sky_irradiance) {
+	float r = length(groundpoint);
+	float mu_s = dot(groundpoint, sun_direction) / r;
+
+	sky_irradiance = GetIrradiance(r, mu_s) * (1.0f + abs(dot(normal, groundpoint)) / r) * 0.5f;
+	return GetTransmittanceToSun(r, mu_s) * max(dot(normal, sun_direction), 0);
+}
+float3 GroundColor;
+float3 ClayColor;
 float3 GetSkyRadiance(
 	float3 camera, float3 view_ray, float shadow_length,
-	float3 sun_direction, inout float3 transmittance) {
+	float3 sun_direction, inout float3 transmittance, inout float3 debug) {
 	camera /= 2048.0f;
+	camera.y = max(camera.y, 0);
 	camera.y += bottom_radius;
 
 	// Compute the distance to the top atmosphere boundary along the view ray,
@@ -932,29 +1076,19 @@ float3 GetSkyRadiance(
 		exp(GetTransmittanceToTopAtmosphereBoundary(r, mu));
 	float3 single_mie_scattering;
 	float3 scattering;
-	if (shadow_length == 0.0) {
 		scattering = GetCombinedScattering(
 			r, mu, mu_s, nu, ray_r_mu_intersects_ground,
 			single_mie_scattering);
-	} else {
-		// Case of light shafts (shadow_length is the total length noted l in our
-		// paper): we omit the scattering between the camera and the point at
-		// distance l, by implementing Eq. (18) of the paper (shadow_transmittance
-		// is the T(x,x_s) term, scattering is the S|x_s=x+lv term).
-		float d = shadow_length;
-		float r_p =
-			ClampRadius(sqrt(d * d + 2.0 * r * mu * d + r * r));
-		float mu_p = (r * mu + d) / r_p;
-		float mu_s_p = (r * mu_s + d * nu) / r_p;
+		if(ray_r_mu_intersects_ground) {
+			float3 Position = camera + view_ray * DistanceToBottomAtmosphereBoundary(r, mu);
+			float3 Normal = normalize(Position - float3(0,-bottom_radius,0));
+			float3 sky_irradiance;
 
-		scattering = GetCombinedScattering(
-			r_p, mu_p, mu_s_p, nu, ray_r_mu_intersects_ground,
-			single_mie_scattering);
-		float3 shadow_transmittance =
-			GetTransmittance(r, mu, shadow_length, ray_r_mu_intersects_ground);
-		scattering = scattering * shadow_transmittance;
-		single_mie_scattering = single_mie_scattering * shadow_transmittance;
-	}
+			float3 sun_irradiance = GetSunAndSkyIrradiance(Position, Normal, sun_direction, sky_irradiance);
+			float3 trans;
+			float3 in_scatter = GetSkyRadianceToPoint(camera, Position, sun_direction, trans);
+			debug = (GroundColor * (1.0f / PI) * (sun_irradiance + sky_irradiance)) * trans + in_scatter * 100.0f;
+		}
 	return scattering * RayleighPhaseFunction(nu) + single_mie_scattering *
 		MiePhaseFunction(0.8f, nu);
 }
@@ -1109,6 +1243,8 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
         return true;
 }
 
+float SunDesaturate;
+float SkyDesaturate;
 
 float3 SunDir;
 
@@ -1163,10 +1299,11 @@ inline void orthonormal_basis(const float3 normal, inout float3 tangent, inout f
 }
 
 inline float2 vogelDiskSample(int i, int num_samples, float r_offset, float phi_offset) {
-    float r = sqrt((float(i) + 0.07 + r_offset*0.93) / float(num_samples));
-    float phi = float(i) * 2.399963229728 + 2.0 * PI * phi_offset;
-
-    return r * float2(cos(phi), sin(phi));
+    float r = sqrt((float(i) + 0.07f + r_offset*0.93f) / float(num_samples));
+    float phi = float(i) * 2.399963229728f + 2.0f * PI * phi_offset;
+    float sinc;
+    sincos(phi, sinc, phi);
+    return r * float2(sinc,phi);
 }
 
 inline float4x4 inverse(float4x4 m) {
@@ -1512,4 +1649,410 @@ float StarRender(float3 rayDir){
     }
     
     return 0.05*stars;
+}
+
+
+
+
+
+struct LightBVHData {
+	float3 BBMax;
+	float3 BBMin;
+	float3 w;
+	float phi;
+	float cosTheta_o;
+	float cosTheta_e;
+	int LightCount;
+	float Pad1;
+	int left;
+	int isLeaf;
+};
+
+StructuredBuffer<LightBVHData> LightNodes;
+
+float cosSubClamped(float sinTheta_a, float cosTheta_a, float sinTheta_b, float cosTheta_b) {
+	if(cosTheta_a > cosTheta_b) return 1;
+	return cosTheta_a * cosTheta_b + sinTheta_a * sinTheta_b;
+}
+float sinSubClamped(float sinTheta_a, float cosTheta_a, float sinTheta_b, float cosTheta_b) {
+	if(cosTheta_a > cosTheta_b) return 0;
+	return sinTheta_a * cosTheta_b - cosTheta_a * sinTheta_b;
+}
+
+float BoundSubtendedDirections(float3 BBMax, float3 BBMin, float3 p) {
+    float3 pCenter = (BBMax + BBMin) / 2.0f;
+    float radius = (all(pCenter >= BBMin) && all(pCenter <= BBMax)) ? dot(BBMax - pCenter, BBMax - pCenter) : 0;
+    float pDiff = dot(p - pCenter, p - pCenter);
+    if(pDiff < radius) return -1;
+    float sin2ThetaMax = (radius) / pDiff;
+    float cosThetaMax = sqrt(1.0f - sin2ThetaMax);
+    return cosThetaMax;
+}
+
+
+ float Importance(const float3 p, const float3 n, const LightBVHData node) {
+	float3 pc = (node.BBMax + node.BBMin) / 2.0f;
+	float d2 = dot(p - pc, p - pc);
+	d2 = max(d2, length(node.BBMax - node.BBMin) / 2.0f);
+
+	float3 wi = normalize(p - pc);
+	float cosTheta_w = abs(dot(node.w, wi));
+	float sinTheta_w = sqrt(max(1.0f - cosTheta_w * cosTheta_w,0));
+
+	float cosTheta_b = BoundSubtendedDirections(node.BBMax, node.BBMin, p);
+	float sinTheta_b = sqrt(max(1.0f - cosTheta_b * cosTheta_b,0));
+
+	float sinTheta_o = sqrt(max(1.0f - node.cosTheta_o * node.cosTheta_o,0));
+	float cosTheta_x = cosSubClamped(sinTheta_w, cosTheta_w, sinTheta_o, node.cosTheta_o);
+	float sinTheta_x = sinSubClamped(sinTheta_w, cosTheta_w, sinTheta_o, node.cosTheta_o);
+	float cosThetap = cosSubClamped(sinTheta_x, cosTheta_x, sinTheta_b, cosTheta_b);
+	if(cosThetap <= node.cosTheta_e) return 0;
+
+	float importance = node.phi * cosThetap / d2;
+
+	float cosTheta_i = abs(dot(wi, n));
+	float sinTheta_i = sqrt(max(1.0f - cosTheta_i * cosTheta_i,0));
+	float cosThetap_i = cosSubClamped(sinTheta_i, cosTheta_i, sinTheta_b, cosTheta_b);
+	importance *= cosThetap_i;
+
+	return importance;// / (float)max(node.LightCount,1);
+}
+
+int CalcInside(LightBVHData A, LightBVHData B, float3 p, int Index) {
+	bool Residency0 = all(p <= A.BBMax) && all(p >= A.BBMin);
+	bool Residency1 = all(p <= B.BBMax) && all(p >= B.BBMin);
+	if(Residency0 && Residency1) {
+		return Index + 2;
+	} else if(Residency0) {
+		return 0;
+	} else if(Residency1) {
+		return 1;
+	} else return -1;
+}
+
+void CalcLightPDF(inout float pmf, float3 p, float3 p2, float3 n, int pixel_index, int MeshIndex) {
+	int node_index = 0;
+	int Reps = 0;
+	bool HasHitTLAS = false;
+	int NodeOffset = 0;
+	int StartIndex = 0;
+	float2 stack[32];
+	int stacksize = 0;
+	while(Reps < 100) {
+		Reps++;
+		LightBVHData node = LightNodes[node_index];
+		if(node.isLeaf == 0) {
+			float2 ci = float2(
+				Importance(p, n, LightNodes[node.left + NodeOffset]),
+				Importance(p, n, LightNodes[node.left + 1 + NodeOffset])
+			);
+			// if(ci.x == 0 && ci.y == 0) {pmf = -1; return;}
+
+			int Index = CalcInside(LightNodes[node.left + NodeOffset], LightNodes[node.left + NodeOffset + 1], p2, random(264 + Reps, pixel_index).x > (ci.x / (ci.x + ci.y)));
+			if(Index == -1) {
+				if(stacksize == 0) {return;}
+				float2 tempstack = stack[--stacksize];
+				node_index = tempstack.x;
+				pmf = tempstack.y;
+				continue;
+			}
+			if(Index >= 2) {
+				Index -= 2;
+				stack[stacksize++] = float2(node.left + NodeOffset + !Index, pmf * ((ci[!Index] / (ci.x + ci.y))));
+			}
+			pmf *= ((ci[Index] / (ci.x + ci.y)));
+			node_index = node.left + Index + NodeOffset;
+		} else {
+			if(HasHitTLAS) {
+        		// if(CurBounce == 0) _DebugTex[int2(pixel_index % screen_width, pixel_index / screen_width)] = pmf / 12000.0f;
+				if(node_index > 0 || Importance(p, n, node) > 0) return;	
+			} else {
+				StartIndex = _LightMeshes[node.left].StartIndex;
+				// if(_LightMeshes[node.left].LockedMeshIndex != MeshIndex) return -1; 
+				p = mul(_MeshData[MeshIndex].W2L, float4(p,1));
+				p2 = mul(_MeshData[MeshIndex].W2L, float4(p2,1));
+			    float3x3 Inverse = (float3x3)inverse(_MeshData[MeshIndex].W2L);
+			    float scalex = length(mul(Inverse, float3(1,0,0)));
+			    float scaley = length(mul(Inverse, float3(0,1,0)));
+			    float scalez = length(mul(Inverse, float3(0,0,1)));
+			    float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
+				n = normalize(mul(_MeshData[MeshIndex].W2L, float4(n,0)).xyz / Scale);
+				NodeOffset = _MeshData[MeshIndex].LightNodeOffset;
+				node_index = NodeOffset;
+				HasHitTLAS = true;
+			}
+		}
+	}
+
+	return;
+}
+
+int SampleLightBVH(float3 p, float3 n, inout float pmf, int pixel_index, inout int MeshIndex) {
+	int node_index = 0;
+	int Reps = 0;
+	bool HasHitTLAS = false;
+	int NodeOffset = 0;
+	int StartIndex = 0;
+	while(Reps < 122) {
+		Reps++;
+		LightBVHData node = LightNodes[node_index];
+		[branch]if(node.isLeaf == 0) {
+			const float2 ci = float2(
+				Importance(p, n, LightNodes[node.left + NodeOffset]),
+				Importance(p, n, LightNodes[node.left + 1 + NodeOffset])
+			);
+			if(ci.x == 0 && ci.y == 0) break;
+
+			bool Index = random(264 + Reps, pixel_index).x > (ci.x / (ci.x + ci.y));
+			pmf /= ((ci[Index] / (ci.x + ci.y)));
+			node_index = node.left + Index + NodeOffset;
+		} else {
+			[branch]if(HasHitTLAS) {
+				if(node_index > 0 || Importance(p, n, node) > 0) return node.left + StartIndex;	
+			} else {
+				StartIndex = _LightMeshes[node.left].StartIndex; 
+				MeshIndex = _LightMeshes[node.left].LockedMeshIndex;
+				p = mul(_MeshData[MeshIndex].W2L, float4(p,1));
+			    float3x3 Inverse = (float3x3)inverse(_MeshData[MeshIndex].W2L);
+			    float scalex = length(mul(Inverse, float3(1,0,0)));
+			    float scaley = length(mul(Inverse, float3(0,1,0)));
+			    float scalez = length(mul(Inverse, float3(0,0,1)));
+			    float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
+				n = normalize(mul(_MeshData[MeshIndex].W2L, float4(n,0)).xyz / Scale);
+				NodeOffset = _MeshData[MeshIndex].LightNodeOffset;
+				node_index = NodeOffset;
+				HasHitTLAS = true;
+			}
+		}
+	}
+	return -1;
+}
+
+
+
+
+
+float3 LoadSurfaceInfo(int2 id) {
+    uint4 Target = PrimaryTriData[id.xy];
+    MyMeshDataCompacted Mesh = _MeshData[Target.x];
+    Target.y += Mesh.TriOffset;
+    float2 TriUV;
+    TriUV.x = asfloat(Target.z);
+    TriUV.y = asfloat(Target.w);
+    float4x4 Inverse = inverse(Mesh.W2L);
+    return mul(Inverse, float4(AggTris[Target.y].pos0 + TriUV.x * AggTris[Target.y].posedge1 + TriUV.y * AggTris[Target.y].posedge2,1)).xyz;
+}
+
+
+void Unity_Hue_Degrees_float(float3 In, float Offset, out float3 Out)
+{
+    // RGB to HSV
+    float4 K = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    float4 P = lerp(float4(In.bg, K.wz), float4(In.gb, K.xy), step(In.b, In.g));
+    float4 Q = lerp(float4(P.xyw, In.r), float4(In.r, P.yzx), step(P.x, In.r));
+    float D = Q.x - min(Q.w, Q.y);
+    float E = 1e-10;
+    float V = (D == 0) ? Q.x : (Q.x + E);
+    float3 hsv = float3(abs(Q.z + (Q.w - Q.y)/(6.0 * D + E)), D / (Q.x + E), V);
+
+    float hue = hsv.x + Offset / 360;
+    hsv.x = (hue < 0)
+            ? hue + 1
+            : (hue > 1)
+                ? hue - 1
+                : hue;
+
+    // HSV to RGB
+    float4 K2 = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    float3 P2 = abs(frac(hsv.xxx + K2.xyz) * 6.0 - K2.www);
+    Out = hsv.z * lerp(K2.xxx, saturate(P2 - K2.xxx), hsv.y);
+}
+
+void Unity_Saturation_float(float3 In, float Saturation, out float3 Out)
+{
+    float luma = dot(In, float3(0.2126729, 0.7151522, 0.0721750));
+    Out =  luma.xxx + Saturation.xxx * (In - luma.xxx);
+}
+
+void Unity_Saturation_float(inout float3 In, float Saturation)
+{
+    float luma = dot(In, float3(0.2126729, 0.7151522, 0.0721750));
+    In =  luma.xxx + Saturation.xxx * (In - luma.xxx);
+}
+
+void Unity_Contrast_float(float3 In, float Contrast, out float3 Out)
+{
+    float midpoint = pow(0.5, 2.2);
+    Out =  (In - midpoint) * Contrast + midpoint;
+}
+
+float3 DeSat(float3 In, float Saturation)
+{
+    float luma = dot(In, float3(0.2126729, 0.7151522, 0.0721750));
+    return  luma.xxx + Saturation.xxx * (In - luma.xxx);
+}
+
+
+
+
+
+#define LAYERS            5.0
+
+#define PI                3.141592654
+#define TAU               (2.0*PI)
+#define TIME              fmod(iTime, 30.0)
+#define TTIME             (TAU*TIME)
+#define RESOLUTION        iResolution
+#define ROT(a)            float2x2(cos(a), sin(a), -sin(a), cos(a))
+
+// License: Unknown, author: nmz (twitter: @stormoid), found: https://www.shadertoy.com/view/NdfyRM
+float sRGB(float t) { return lerp(1.055*pow(t, 1./2.4) - 0.055, 12.92*t, step(t, 0.0031308)); }
+// License: Unknown, author: nmz (twitter: @stormoid), found: https://www.shadertoy.com/view/NdfyRM
+float3 sRGB(in float3 c) { return float3 (sRGB(c.x), sRGB(c.y), sRGB(c.z)); }
+
+// License: Unknown, author: Matt Taylor (https://github.com/64), found: https://64.github.io/tonemapping/
+float3 aces_approx(float3 v) {
+  v = max(v, 0.0);
+  v *= 0.6f;
+  float a = 2.51f;
+  float b = 0.03f;
+  float c = 2.43f;
+  float d = 0.59f;
+  float e = 0.14f;
+  return clamp((v*(a*v+b))/(v*(c*v+d)+e), 0.0f, 1.0f);
+}
+
+// License: Unknown, author: Unknown, found: don't remember
+float tanh_approx(float x) {
+  //  Found this somewhere on the interwebs
+  //  return tanh(x);
+  float x2 = x*x;
+  return clamp(x*(27.0 + x2)/(27.0+9.0*x2), -1.0, 1.0);
+}
+
+
+// License: WTFPL, author: sam hocevar, found: https://stackoverflow.com/a/17897228/418488
+const float4 hsv2rgb_K = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+float3 hsv2rgb(float3 c) {
+  float3 p = abs(frac(c.xxx + hsv2rgb_K.xyz) * 6.0 - hsv2rgb_K.www);
+  return c.z * lerp(hsv2rgb_K.xxx, clamp(p - hsv2rgb_K.xxx, 0.0, 1.0), c.y);
+}
+
+// License: MIT OR CC-BY-NC-4.0, author: mercury, found: https://mercury.sexy/hg_sdf/
+float2 mod2(inout float2 p, float2 size) {
+  float2 c = floor((p + size*0.5)/size);
+  p = fmod(p + size*0.5,size) - size*0.5;
+  return c;
+}
+
+// License: Unknown, author: Unknown, found: don't remember
+float2 hash2(float2 p) {
+  p = float2(dot (p, float2 (127.1, 311.7)), dot (p, float2 (269.5, 183.3)));
+  return frac(sin(p)*43758.5453123);
+}
+
+float2 shash2(float2 p) {
+  return -1.0+2.0*hash2(p);
+}
+
+float3 toSpherical(float3 p) {
+  float r   = length(p);
+  float t   = acos(p.z/r);
+  float ph  = atan(p.y / p.x);
+  return float3(r, t, ph);
+}
+
+
+// License: CC BY-NC-SA 3.0, author: Stephane Cuillerdier - Aiekick/2015 (twitter:@aiekick), found: https://www.shadertoy.com/view/Mt3GW2
+float3 blackbody(float Temp) {
+  float3 col = 255;
+  col.x = 56100000. * pow(Temp,(-3. / 2.)) + 148.;
+  col.y = 100.04 * log(Temp) - 623.6;
+  if (Temp > 6500.) col.y = 35200000. * pow(Temp,(-3. / 2.)) + 184.;
+  col.z = 194.18 * log(Temp) - 1448.6;
+  col = clamp(col, 0., 255.)/255.;
+  if (Temp < 1000.) col *= Temp/1000.;
+  return col;
+}
+
+
+// License: MIT, author: Inigo Quilez, found: https://www.shadertoy.com/view/XslGRr
+float noise(float2 p) {
+  // Found at https://www.shadertoy.com/view/sdlXWX
+  // Which then redirected to IQ shader
+  float2 i = floor(p);
+  float2 f = frac(p);
+  float2 u = f*f*(3.-2.*f);
+  
+  float n =
+         lerp( lerp( dot(shash2(i + float2(0.,0.) ), f - float2(0.,0.)), 
+                   dot(shash2(i + float2(1.,0.) ), f - float2(1.,0.)), u.x),
+              lerp( dot(shash2(i + float2(0.,1.) ), f - float2(0.,1.)), 
+                   dot(shash2(i + float2(1.,1.) ), f - float2(1.,1.)), u.x), u.y);
+
+  return 2.0*n;              
+}
+
+float fbm(float2 p, float o, float s, int iters) {
+  p *= s;
+  p += o;
+
+  const float aa = 0.5;
+  const float2x2 pp = 2.04*ROT(1.0);
+
+  float h = 0.0;
+  float a = 1.0;
+  float d = 0.0;
+  for (int i = 0; i < iters; ++i) {
+    d += a;
+    h += a*noise(p);
+    p += float2(10.7, 8.3);
+    p = mul(p, pp);
+    a *= aa;
+  }
+  h /= d;
+  
+  return h;
+}
+
+float height(float2 p) {
+  float h = fbm(p, 0.0, 5.0, 5);
+  h *= 0.3;
+  h += 0.0;
+  return (h);
+}
+
+float3 stars(float3 ro, float3 rd, float2 sp, float hh) {
+  float3 col = 0;
+  
+  const float m = LAYERS;
+  hh = tanh_approx(20.0*hh);
+
+  for (float i = 0.0; i < m; ++i) {
+    float2 pp = sp+0.5*i;
+    float s = i/(m-1.0);
+    float2 dim  = (lerp(0.05, 0.003, s)*PI);
+    float2 np = mod2(pp, dim);
+    float2 h = hash2(np+127.0+i);
+    float2 o = -1.0+2.0*h;
+    float y = sin(sp.x);
+    pp += o*dim*0.5;
+    pp.y *= y;
+    float l = length(pp);
+  
+    float h1 = frac(h.x*1667.0);
+    float h2 = frac(h.x*1887.0);
+    float h3 = frac(h.x*2997.0);
+
+    float3 scol = lerp(8.0*h2, 0.25*h2*h2, s)*blackbody(lerp(3000.0, 22000.0, h1*h1));
+
+    float3 ccol = col + exp(-(lerp(6000.0, 2000.0, hh)/lerp(2.0, 0.25, s))*max(l-0.001, 0.0))*scol;
+    col = h3 < y ? ccol : col;
+  }
+  
+  return col;
+}
+
+bool GetFlag(int FlagVar, int flag) {
+    return (((int)FlagVar >> flag) & (int)1) == 1;
 }

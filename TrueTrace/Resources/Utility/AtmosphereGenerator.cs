@@ -14,7 +14,7 @@ namespace TrueTrace {
         private RenderTexture _MieTex;
 
         private RenderTexture DeltaIrradianceTex;
-        private RenderTexture IrradianceTex;
+        public RenderTexture IrradianceTex;
 
         private RenderTexture ScatteringTex;
 
@@ -249,7 +249,6 @@ namespace TrueTrace {
             _RayleighTex.Release();
             _MieTex.Release();
             DeltaIrradianceTex.Release();
-            IrradianceTex.Release();
             ScatteringTex.Release();
             DeltaScatteringTex.Release();
             DeltaMultiScatterTex.Release();

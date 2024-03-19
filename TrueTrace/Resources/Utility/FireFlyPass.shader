@@ -36,6 +36,9 @@ Shader "Hidden/FireFlyPass"
             sampler2D _MainTex;
             uniform float4 _MainTex_TexelSize;
 
+            float _Strength;
+            float _Offset;
+
             inline float luminance(const float3 a) {
                 return dot(float3(0.299f, 0.587f, 0.114f), a);
             }
@@ -47,7 +50,7 @@ Shader "Hidden/FireFlyPass"
                 int2 MaxLumIndex;
                 int2 MinLumIndex;
                 int Radius = ((floor(_Time.w) % 2) + 1);
-                float Sharpness = Radius == 1 ? 1 : pow(0.9, Radius - 1);
+                float Sharpness =( Radius == 1 ? 1 : pow(0.9, Radius - 1)) * _Strength;
                 for(int i = -1; i <= 1; i++) {
                     for(int j = -1; j <= 1; j++) {
                         if(i == 0 && j == 0) continue;
@@ -63,6 +66,7 @@ Shader "Hidden/FireFlyPass"
                     }
                 }
                 MaxLum *= rcp(Sharpness);
+                MaxLum += _Offset;
                 MinLum *= Sharpness;
                 if(Center >= MinLum && Center <= MaxLum) return tex2D(_MainTex, UV).rgb;
                 else if(Center > MaxLum) return tex2D(_MainTex, UV + MaxLumIndex * _MainTex_TexelSize.xy).rgb;

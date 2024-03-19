@@ -31,7 +31,8 @@ float screenAverageLuma() {
 	const uint tileLod = int(log2(tileSize)) / 2;
 	// Construct Luminance Histogram
 	uint pdf[256];
-	for (uint X = 0; X < 256; X++) {
+	uint X;
+	for (X = 0; X < 256; X++) {
 		pdf[X] = 0;
 	}
 	for (uint tx = 0; tx <= gridSize.x; tx++) {
@@ -47,7 +48,7 @@ float screenAverageLuma() {
 	uint cumulative_density = 0;
 	uint closest_bin_to_median = 0;
 	float closest_dist_to_median = tileCount;
-	for (uint X = 0; X < 256; X++) {
+	for (X = 0; X < 256; X++) {
 		cumulative_density += pdf[X];
 		float dist = distance(tileCount / 2, cumulative_density); // m Is the Median of a RV iff CDF(m) = 0.5 (I dont normalize PDF so its tileCount/2 instead of 0.5)
 		if (dist < closest_dist_to_median) {

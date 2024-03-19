@@ -9,6 +9,9 @@
 // #define DX11
 // #define LightMapping
 // #define IgnoreBackfacing
+// #define WhiteLights
+#define LBVH
+#define AccurateEmissionTex
 
 
 
@@ -28,3 +31,15 @@
 #define TRILIGHT 5
 
 #define NormalOffset 0.0001f
+
+#define IsEmissionMask 0
+#define BaseIsMap 1
+#define ReplaceBase 2
+#define UseSmoothness 3
+#define InvertSmoothnessTexture 4
+#define IsBackground 5
+#define ShadowCaster 6
+#define Invisible 7
+#define BackgrounBleed 8
+#define Thin 9
+

@@ -94,7 +94,7 @@ void preload(int2 group_base, int2 group_size, int gl_LocalInvocationIndex)
 {
 	int2 preload_size = min(group_size + FILTER_RADIUS * 3, SHARED_SIZE);
 
-	for (uint linear_idx = gl_LocalInvocationIndex; linear_idx < preload_size.x * preload_size.y; linear_idx += GROUP_SIZE * GROUP_SIZE)
+	for (int linear_idx = gl_LocalInvocationIndex; linear_idx < preload_size.x * preload_size.y; linear_idx += GROUP_SIZE * GROUP_SIZE)
 	{
 		// Convert the linear index to 2D index in a (preload_size x preload_size) virtual group
 		float t = (float(linear_idx) + 0.5) / float(preload_size.x);
@@ -309,8 +309,6 @@ void TAAU(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGroupI
 		// Motion vector was valid - sample the previous frame
 		float3 color_prev = sample_texture_catmull_rom(TEX_ASVGF_TAA_B, pos_prev).rgb;
 
-		if (!any(isnan(color_prev)))
-		{
 			// If enabled, apply neighbourhood color clamping (NCC)
 			if (1.0f > 0)
 			{
@@ -330,7 +328,6 @@ void TAAU(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGroupI
 			float pixel_weight = max(motion_weight, sample_weight) * 0.1f;
 			pixel_weight = clamp(pixel_weight, 0, 1);
 			color_output = lerp(color_prev, color_center, pixel_weight);
-		}
 	}
 
 	linear_color_output = PQDecode(color_output);

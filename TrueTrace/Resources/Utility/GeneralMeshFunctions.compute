@@ -93,3 +93,33 @@ void CombineLightBuffers(uint3 id : SV_DispatchThreadID)
 	LightTrianglesOut[id.x + Offset] = LightTrianglesIn[id.x];
 
 }
+
+
+
+#pragma kernel CombineLightNodes
+
+struct LightBVHData {
+	float3 BBMax;
+	float3 BBMin;
+	float3 w;
+	float phi;
+	float cosTheta_o;
+	float cosTheta_e;
+	int LightCount;
+	float Pad1;
+	int left;
+	int isLeaf;
+};
+
+StructuredBuffer<LightBVHData> LightNodesIn;
+RWStructuredBuffer<LightBVHData> LightNodesOut;
+
+[numthreads(372, 1, 1)]
+void CombineLightNodes(uint3 id : SV_DispatchThreadID)
+{
+	if (id.x >= Count)
+		return;
+
+	LightNodesOut[id.x + Offset] = LightNodesIn[id.x];
+
+}

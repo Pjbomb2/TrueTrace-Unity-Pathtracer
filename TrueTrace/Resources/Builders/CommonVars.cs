@@ -83,46 +83,6 @@ namespace CommonVars
     }
 
     [System.Serializable]
-    public struct RayObject
-    {
-        public GameObject RayObj;
-        public List<RayObjectData> RayData;
-    }
-
-    [System.Serializable]
-    public struct RayObjectData
-    {
-        public Vector3 TransmittanceColor;
-        public Vector3 BaseColor;
-        public Vector2 MetallicRemap;
-        public Vector2 RoughnessRemap;
-        public float emmission;
-        public Vector3 EmissionColor;
-        public bool EmissionMask;
-        public bool BaseIsMap;
-        public bool ReplaceBase;
-        public float Roughness;
-        public float IOR;
-        public float Metallic;
-        public float SpecularTint;
-        public float Sheen;
-        public float SheenTint;
-        public float ClearCoat;
-        public float ClearCoatGloss;
-        public float Anisotropic;
-        public float Flatness;
-        public float DiffTrans;
-        public float SpecTrans;
-        public int Thin;
-        public bool FollowMaterial;
-        public float ScatterDist;
-        public float Specular;
-        public float AlphaCutoff;
-        public bool IsSmoothness;
-        public float NormalStrength;
-    }
-
-    [System.Serializable]
     public struct MaterialData
     {
         public Vector4 AlbedoTex;
@@ -133,7 +93,7 @@ namespace CommonVars
         public Vector3 BaseColor;
         public float emmissive;
         public Vector3 EmissionColor;
-        public uint Tag;
+        public int Tag;
         public float Roughness;
         public int MatType;
         public Vector3 TransmittanceColor;
@@ -148,15 +108,21 @@ namespace CommonVars
         public float flatness;
         public float diffTrans;
         public float specTrans;
-        public int Thin;
         public float Specular;
         public float scatterDistance;
-        public int IsSmoothness;
         public Vector4 AlbedoTextureScale;
         public Vector2 MetallicRemap;
         public Vector2 RoughnessRemap;
         public float AlphaCutoff;
         public float NormalStrength;
+        public float Hue;
+        public float Saturation;
+        public float Contrast;
+        public float Brightness;
+        public Vector3 BlendColor;
+        public float BlendFactor;
+        public Vector2 SecondaryTextureScale;
+        public float Rotation;
     }
 
     [System.Serializable]
@@ -273,6 +239,7 @@ namespace CommonVars
         public int MaterialOffset;
         public int mesh_data_bvh_offsets;
         public int LightTriCount;
+        public int LightNodeOffset;
     }
 
     [System.Serializable]
@@ -285,10 +252,44 @@ namespace CommonVars
     }
 
     [System.Serializable]
+    public struct LightBounds {
+        public AABB b;
+        public Vector3 w;
+        public float phi;
+        public float cosTheta_o;
+        public float cosTheta_e;
+        public int LightCount;
+        public float Pad1;
+
+        public LightBounds(AABB aabb, Vector3 W, float Phi, float cosTheta_o, float cosTheta_e, int lc, int p1) {
+            b = aabb;
+            w = W;
+            phi = Phi;
+            this.cosTheta_o = cosTheta_o;
+            this.cosTheta_e = cosTheta_e;
+            LightCount = lc;
+            Pad1 = p1;
+        }
+    }
+
+        [System.Serializable]
+        public struct NodeBounds {
+            public LightBounds aabb;
+            public int left;
+            public int isLeaf;
+        }
+
+    [System.Serializable]
     public struct AABB
     {
         public Vector3 BBMax;
         public Vector3 BBMin;
+
+
+        public AABB(int a = 0) { 
+            BBMax = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+            BBMin = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+        }
 
         public void Create(Vector3 A, Vector3 B)
         {
@@ -323,6 +324,7 @@ namespace CommonVars
             if (aabb.BBMax.z > BBMax.z)
                 BBMax.z = aabb.BBMax.z;
         }
+
         public void Extend(Vector3 P)
         {
 
@@ -376,77 +378,6 @@ namespace CommonVars
             BBMin = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
         }
     }
-
-    [System.Serializable]
-    public struct LightAABB
-    {
-        public Vector3 BBMax;
-        public Vector3 BBMin;
-        public float flux;
-        public Vector3 coneDirection;
-        public float cosConeAngle;
-
-        public void Create(AABB aabb, float flux, Vector3 Dir, float cosConeAngle)
-        {
-            this.flux = flux;
-            coneDirection = Dir;
-            this.cosConeAngle = cosConeAngle;
-            this.BBMax = aabb.BBMax;//new Vector3(System.Math.Max(A.x, B.x), System.Math.Max(A.y, B.y), System.Math.Max(A.z, B.z));
-            this.BBMin = aabb.BBMin;//new Vector3(System.Math.Min(A.x, B.x), System.Math.Min(A.y, B.y), System.Math.Min(A.z, B.z));
-        }
-        public float ComputeVolume() {
-            return System.Math.Max((BBMax.x - BBMin.x) * (BBMax.y - BBMin.y) * (BBMax.z - BBMin.z),0.00001f);
-        }
-
-        public float ComputeSurfaceArea() {
-            Vector3 sizes = BBMax - BBMin;
-            return 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z)); 
-        }
-
-
-        public void Extend(ref LightAABB aabb)
-        {
-            flux += aabb.flux;
-            coneDirection += aabb.coneDirection;
-            if (aabb.BBMin.x < BBMin.x)
-                BBMin.x = aabb.BBMin.x;
-            if (aabb.BBMin.y < BBMin.y)
-                BBMin.y = aabb.BBMin.y;
-            if (aabb.BBMin.z < BBMin.z)
-                BBMin.z = aabb.BBMin.z;
-
-            if (aabb.BBMax.x > BBMax.x)
-                BBMax.x = aabb.BBMax.x;
-            if (aabb.BBMax.y > BBMax.y)
-                BBMax.y = aabb.BBMax.y;
-            if (aabb.BBMax.z > BBMax.z)
-                BBMax.z = aabb.BBMax.z;
-        }
-
-
-
-
-        public void Validate(Vector3 Scale)
-        {
-            for (int i2 = 0; i2 < 3; i2++)
-            {
-                if (BBMax[i2] - BBMin[i2] < Scale[i2])
-                {
-                    BBMin[i2] -= Scale[i2];
-                    BBMax[i2] += Scale[i2];
-                }
-            }
-        }
-
-        public void init()
-        {
-            cosConeAngle = 1.0f;
-            BBMax = new Vector3(float.MinValue, float.MinValue, float.MinValue);
-            BBMin = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
-        }
-    }
-
-
 
 
     [System.Serializable]
@@ -575,6 +506,55 @@ namespace CommonVars
         [System.Xml.Serialization.XmlElement("MaterialShader")]
         public List<MaterialShader> Material = new List<MaterialShader>();
     }
+
+
+    [System.Serializable]
+    public class RayObjectDatas
+    {
+        public int ID;
+        public string MatName;
+        public int OptionID;
+        public Vector3 TransCol;
+        public Vector3 BaseCol;
+        public Vector2 MetRemap;
+        public Vector2 RoughRemap;
+        public float Emiss;
+        public Vector3 EmissCol;
+        public float Rough;
+        public float IOR;
+        public float Met;
+        public float SpecTint;
+        public float Sheen;
+        public float SheenTint;
+        public float Clearcoat;
+        public float ClearcoatGloss;
+        public float Anisotropic;
+        public float Flatness;
+        public float DiffTrans;
+        public float SpecTrans;
+        public bool FollowMat;
+        public float ScatterDist;
+        public float Spec;
+        public float AlphaCutoff;
+        public float NormStrength;
+        public float Hue;
+        public float Saturation;
+        public float Brightness;
+        public float Contrast;
+        public Vector3 BlendColor;
+        public float BlendFactor;
+        public Vector4 MainTexScaleOffset;
+        public Vector2 SecondaryTextureScale;
+        public float Rotation;
+        public int Flags;
+    }
+    [System.Serializable]
+    public class RayObjs
+    {
+        [System.Xml.Serialization.XmlElement("RayObjectDatas")]
+        public List<RayObjectDatas> RayObj = new List<RayObjectDatas>();
+    }
+
 
     public struct TTStopWatch {//stopwatch stuff
         public string Name;
@@ -854,6 +834,25 @@ public static uint PackOctahedral(Vector3 nor)
             ThisTex.Create();
         }
 
+        public static void CreateRenderTexture2(ref RenderTexture ThisTex, 
+                                                    int Width, int Height, 
+                                                    RenderTextureFormat Form,  
+                                                    int MipCount) {
+            if(ThisTex != null) ThisTex?.Release();
+            RenderTextureDescriptor desc = new RenderTextureDescriptor(Width, 
+                                                                        Height, 
+                                                                        Form, 
+                                                                        0,
+                                                                        MipCount);
+            ThisTex = new RenderTexture(desc);
+
+                ThisTex.useMipMap = true;
+                ThisTex.autoGenerateMips = false;
+
+            ThisTex.enableRandomWrite = true;
+            ThisTex.Create();
+        }
+
         public static void CreateRenderTextureArray(ref RenderTexture ThisTexArray, 
                                                     int Width, int Height, int Depth,
                                                     RenderTextureFormat Form, 
@@ -898,6 +897,21 @@ public static uint PackOctahedral(Vector3 nor)
                 if (buffer == null) buffer = new ComputeBuffer(data.Length, stride);
                 buffer.SetData(data);
             }
+        }
+
+
+        public enum Flags {IsEmissionMask, BaseIsMap, ReplaceBase, UseSmoothness, InvertSmoothnessTexture, IsBackground, ShadowCaster, Invisible, BackgroundBleed, Thin};
+
+        public static void SetFlag(this int FlagVar, Flags flag, bool Setter) {
+            FlagVar = (FlagVar & ~(1 << (int)flag)) | ((Setter ? 1 : 0) << (int)flag);
+        }
+        
+        public static int SetFlagVar(int FlagVar, Flags flag, bool Setter) {
+            return (FlagVar & ~(1 << (int)flag)) | ((Setter ? 1 : 0) << (int)flag);
+        }
+
+        public static bool GetFlag(this int FlagVar, Flags flag) {
+            return (((int)FlagVar >> (int)flag) & (int)1) == 1;
         }
 
 

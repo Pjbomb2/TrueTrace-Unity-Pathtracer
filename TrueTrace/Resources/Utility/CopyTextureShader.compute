@@ -62,7 +62,7 @@ void AddInputPass (uint3 id : SV_DispatchThreadID)
 {
     if(any(id.xy >= (uint2)floor((InputSize) * Scale))) return;
     float4 Col = Result[id.xy + floor(Offset * Scale)];
-    Col.xyz = pow(Col.xyz, 2.2f) * Col.w;
+    Col.xyz = pow(abs(Col.xyz), 2.2f) * Col.w;
     float A = AdditionTex.SampleLevel(sampler_point_clamp, (id.xy) / InputSize / Scale, 0)[OutputRead];
 
     switch(OutputWrite) {
@@ -79,7 +79,7 @@ void AddInputPass (uint3 id : SV_DispatchThreadID)
 
     Col = EncodeRGBM(Col.xyz);
 
-    Result[id.xy + floor(Offset * Scale)] = float4(pow(Col.xyz, 0.4545f), Col.w);
+    Result[id.xy + floor(Offset * Scale)] = float4(pow(abs(Col.xyz), 0.4545f), Col.w);
 
 
 }

@@ -19,12 +19,14 @@ Texture2D<float> Depth;
 static const ColData InitCol = { 1,1,1,0,0,0,0,0,0,0,0,0};
 const static RayHit tempray = CreateRayHit();
 
+float NearPlane;
+
 [numthreads(256, 1, 1)]
 void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
 
     if (id.x >= screen_width || id.y >= screen_height) return;
     const uint pixel_index = id.y * screen_width + id.x;
-    RayData globray = {Rays[pixel_index].origin, octahedral_32(Rays[pixel_index].direction), pixel_index, 0, 0,0,asuint(FarPlane),0};
+    RayData globray = {Rays[pixel_index].origin + NearPlane * Rays[pixel_index].direction, octahedral_32(Rays[pixel_index].direction), pixel_index, 0, 0,0,asuint(FarPlane),0};
     GlobalRays[pixel_index] = globray;
     GlobalColors[pixel_index] = InitCol;
     WorldPosA[id.xy] = float4(0,0,0, 0);
@@ -42,10 +44,12 @@ void Generate(uint3 id : SV_DispatchThreadID) {
     float2 uv = float2((id.xy + (UseReCur ? 0 : jitter)) / float2(screen_width, screen_height) * 2.0f - 1.0f);
 
     SmallerRay ray = CreateCameraRay(uv, pixel_index);
-    RayData globray = {ray.origin, octahedral_32(ray.direction), pixel_index, 0, 0,0,asuint(FarPlane),0};
+    RayData globray = {ray.origin + NearPlane * ray.direction, octahedral_32(ray.direction), pixel_index, 0, 0,0,asuint(FarPlane),0};
     GlobalRays[pixel_index] = globray;
     GlobalColors[pixel_index] = InitCol;
 }
+
+float3 CamDelta;
 
 #pragma kernel GIReTraceKernel
 [numthreads(16, 16, 1)]
@@ -55,7 +59,7 @@ void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadI
 
     float2 uv = float2((id.xy) / float2(screen_width, screen_height));
     SmallerRay ray = CreateCameraRay(uv * 2.0f - 1.0f, pixel_index);
-    RandomNumsWrite[id.xy] = float4(curframe, pixel_index, 0, 0);
+    RandomNumsWrite[id.xy] = float4(frames_accumulated, pixel_index, 0, 0);
 
     if(curframe % ReSTIRGIUpdateRate == pixel_index % ReSTIRGIUpdateRate) {
         #ifdef HDRP
@@ -64,15 +68,18 @@ void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadI
             float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, uv, 0).xy;
         #endif
         int2 prevIndex = int2(floor(((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
-        if ((!DoPartialRendering || (int(prevIndex.x)/2 + int(prevIndex.y)/2 + curframe-1)%PartialRenderingFactor==0) && RandomNums[prevIndex].z == 0 && ReservoirA[prevIndex].z != 3 && prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height && PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.x >= 0) {
+        //reservoirA.z != 3, RandomNums.z == 0 && prevglovglobcola.throu.x >= 0
+        if ((!DoPartialRendering || (int(prevIndex.x)/2 + int(prevIndex.y)/2 + curframe-1)%PartialRenderingFactor==0) && RandomNums[prevIndex].z == 0 && ReservoirA[prevIndex].z != 3 && prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height) {
+            // ray.origin += CamDelta;
+            
             RandomNumsWrite[id.xy] = float4(PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.yx, 1 + ReservoirA[prevIndex].z,  PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.z);
         }
     }
-    RayData globray = {ray.origin, octahedral_32(ray.direction), pixel_index, 0, 0,0,asuint(FarPlane),0};
+    RayData globray = {ray.origin + NearPlane * ray.direction, octahedral_32(ray.direction), pixel_index, 0, 0,0,asuint(FarPlane),0};
     GlobalRays[pixel_index] = globray;
     GlobalColors[pixel_index] = InitCol;
-    WorldPosA[id.xy] = float4(0,0,0, 0);
-    NEEPosA[id.xy] = float4(0,0,0, 0);
+    // WorldPosA[id.xy] = float4(0,0,0, 0);
+    // NEEPosA[id.xy] = float4(0,0,0, 0);
 }
 
 

@@ -9,25 +9,21 @@ namespace TrueTrace {
         [HideInInspector] public Light ThisLight;
         [HideInInspector] public LightData ThisLightData;
         [HideInInspector] public int ArrayIndex;
-        [HideInInspector] private bool HasChanged;
-        [Range(0,10)] public float ShadowSoftness = 0.0f;
+        [Range(0,40)] public float ShadowSoftness = 0.0f;
 
         public void Start() {
             ThisLightData = new LightData();
             ThisLight = this.GetComponent<Light>();
-            HasChanged = true;
         }
         void Awake() {
             ThisLightData = new LightData();
             ThisLight = this.GetComponent<Light>();
-            HasChanged = true;
             // ThisLight.shadows = LightShadows.None;
         }
         public void UpdateLight() {
             // if(transform.hasChanged || HasChanged) {
                 ThisLightData.Position = transform.position;
                 ThisLightData.Direction = (ThisLight.type == LightType.Directional) ? -transform.forward : (ThisLight.type == LightType.Spot) ? Vector3.Normalize(transform.forward) : transform.forward;
-                HasChanged = false;
                 ThisLightData.ZAxisRotation = transform.localEulerAngles.z * 3.14159f / 180.0f;
                 transform.hasChanged = false;
             // }

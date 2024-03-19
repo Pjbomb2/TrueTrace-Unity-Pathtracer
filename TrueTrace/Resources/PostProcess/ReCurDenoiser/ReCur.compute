@@ -1,4 +1,4 @@
-
+#pragma warning( disable : 3556)
 #include "../../GlobalDefines.cginc"
 #include "UnityCG.cginc"
 #define PI 3.14159
@@ -138,12 +138,12 @@ float3 i_octahedral_32( uint data ) {
 [numthreads(32,32,1)]
 void ColorKernel (uint3 id : SV_DispatchThreadID)
 {
-    if(id.x > screen_width) return;
+    if(id.x > (uint)screen_width) return;
     int pixel_index = id.y * screen_width + id.x;
     const float3 Alb = Albedo[id.xy].xyz;
     const ColData Pixel = PerPixelRadiance[pixel_index];
     const float3 ScreenSpaceAlb = unpackRGBE(WorldPosData[id.xy].w);
-    float3 Col = max((float)PartialRenderingFactor * (Pixel.Direct + Pixel.Indirect * IndirectBoost + unpackRGBE(Pixel.Fog) * ((Alb > 0.005f) ? rcp(Alb) : 0))* Alb * ((ScreenSpaceAlb > 0.001f) ? rcp(ScreenSpaceAlb) : 0),0);
+    float3 Col = max((float)PartialRenderingFactor * (Pixel.Direct + Pixel.Indirect * IndirectBoost + pow(unpackRGBE(Pixel.Fog),2.2f) * ((Alb > 0.005f) ? rcp(Alb) : 0))* Alb * ((ScreenSpaceAlb > 0.001f) ? rcp(ScreenSpaceAlb) : 0),0);
     uint Input = asuint(Pixel.Metallic);
     HintsWrite[id.xy] = ((((Input >> 16) / 65535.0f) > 0.1f) ? ((Input & 0xFFFF) / 65535.0f) : 1);
     NormA[id.xy] = asuint(ScreenSpaceInfo[id.xy].xy);

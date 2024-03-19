@@ -180,7 +180,7 @@ namespace TrueTrace {
                 MatDat.BaseColor = new Vector3(TerrainTile.terrainData.size.x / TerrainTile.terrainData.terrainLayers[i].tileSize.x, TerrainTile.terrainData.size.z / TerrainTile.terrainData.terrainLayers[i].tileSize.y, 0);
                 MatDat.TransmittanceColor = new Vector3(TerrainTile.terrainData.terrainLayers[i].tileOffset.x / TerrainTile.terrainData.terrainLayers[i].tileSize.x, TerrainTile.terrainData.terrainLayers[i].tileOffset.y / TerrainTile.terrainData.terrainLayers[i].tileSize.y, 0);
                 MatDat.MatType = 1;
-                MatDat.IsSmoothness = 1;
+                MatDat.Tag.SetFlag(CommonFunctions.Flags.UseSmoothness, true);
                 MatDat.AlbedoTextureScale = new Vector4(1,1,0,0);
                 Materials.Add(MatDat);
             }

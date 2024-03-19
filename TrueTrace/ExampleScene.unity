@@ -200,9 +200,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -227,7 +224,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -241,8 +245,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -250,6 +264,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &3121420
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -325,6 +340,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Cube (2)
@@ -332,9 +353,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 3121419}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.002, y: 0.002, z: 0.002}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -344,6 +367,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -418,7 +442,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -434,6 +458,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -506,9 +531,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -533,7 +555,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -547,8 +576,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -556,6 +595,7 @@ MonoBehaviour:
   LocalMaterialIndex: 05000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &20711759
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -665,6 +705,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: GameObject (3)
@@ -672,9 +718,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 1589002262}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.002, y: 0.002, z: 0.002}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -684,6 +732,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -758,7 +807,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -774,6 +823,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -925,9 +975,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -952,7 +999,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -966,8 +1020,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -975,6 +1039,7 @@ MonoBehaviour:
   LocalMaterialIndex: 02000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &129861321
 GameObject:
   m_ObjectHideFlags: 0
@@ -1036,9 +1101,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -1063,7 +1125,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 00
   ScatterDist:
   - 0
@@ -1077,8 +1146,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -1086,6 +1165,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!135 &129861324
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -1161,6 +1241,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Sphere (3)
@@ -1168,9 +1254,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 129861323}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.0037037036, y: 0.0037037036, z: 0.0037037036}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -1180,6 +1268,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -1254,7 +1343,7 @@ MonoBehaviour:
   CompactedMeshData: 15
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -1270,6 +1359,7 @@ MonoBehaviour:
   NodeOffset: 253
   TriOffset: 1752
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -1405,9 +1495,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -1432,7 +1519,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -1446,8 +1540,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -1455,6 +1559,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &177067413
 GameObject:
   m_ObjectHideFlags: 0
@@ -1503,6 +1608,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Plane
@@ -1510,9 +1621,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 177067416}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.00008333334, y: 0.00008333334, z: 0.00008333334}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -1522,6 +1635,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -1596,7 +1710,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -1612,6 +1726,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs:
   - {fileID: 2800000, guid: 37e193aecf48c7b47a31647e1953ed1e, type: 3}
@@ -1650,9 +1765,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -1677,7 +1789,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 00
   ScatterDist:
   - 0
@@ -1691,8 +1810,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -1700,6 +1829,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!64 &177067417
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -1887,9 +2017,6 @@ MonoBehaviour:
   - 64
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -1914,7 +2041,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 00
   ScatterDist:
   - 0
@@ -1928,8 +2062,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -1937,6 +2081,7 @@ MonoBehaviour:
   LocalMaterialIndex: 01000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &232921933
 GameObject:
   m_ObjectHideFlags: 0
@@ -2032,9 +2177,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -2059,7 +2201,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -2073,8 +2222,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -2082,6 +2241,7 @@ MonoBehaviour:
   LocalMaterialIndex: 03000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &247698683
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -2196,6 +2356,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Wall0
@@ -2209,9 +2375,11 @@ MonoBehaviour:
   - {fileID: 20711758}
   - {fileID: 1285275929}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.0009999998, y: 0.001, z: 0.0009999998}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -2221,6 +2389,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -2403,7 +2572,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -2419,6 +2588,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -2531,6 +2701,7 @@ GameObject:
   - component: {fileID: 311583680}
   - component: {fileID: 311583679}
   - component: {fileID: 311583678}
+  - component: {fileID: 311583681}
   m_Layer: 0
   m_Name: Scene
   m_TagString: Untagged
@@ -2553,28 +2724,31 @@ MonoBehaviour:
   Atmo:
     _TransmittanceLUT: {fileID: 0}
     MultiScatterTex: {fileID: 0}
+    IrradianceTex: {fileID: 0}
   Assets: {fileID: 0}
   ShadingShader: {fileID: 0}
   ScreenSpaceInfo: {fileID: 0}
+  _currentSample: 0
   _transformsToWatch: []
+  FramesSinceStart2: 0
   SampleCount: 0
   IndirectBoost: 1
   bouncecount: 12
-  UseSVGF: 0
   ClayMode: 0
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
   AllowConverge: 0
-  AllowBloom: 1
+  AllowBloom: 0
   AllowDoF: 0
   AllowAutoExpose: 0
-  AllowToneMap: 1
+  AllowToneMap: 0
   AllowTAA: 0
-  DoFAperature: 0
-  DoFFocal: 16.061237
+  DoFAperature: 0.015
+  DoFAperatureScale: 1
+  DoFFocal: 2.6303766
   RenderScale: 1
-  BloomStrength: 18.047997
+  BloomStrength: 43.776
   MinSpatialSize: 32
   UseASVGF: 0
   UseReCur: 0
@@ -2584,25 +2758,35 @@ MonoBehaviour:
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
   UseReSTIRGI: 1
-  ReSTIRGISpatialCount: 30
-  ReSTIRGITemporalMCap: 64
+  ReSTIRGISpatialCount: 12
+  ReSTIRGITemporalMCap: 32
   DoReSTIRGIConnectionValidation: 0
   Exposure: 50
-  ReCurBlurRadius: 30
+  ReCurBlurRadius: 32
   PrevReSTIRGI: 0
   DoPartialRendering: 0
-  PartialRenderingFactor: 2
+  PartialRenderingFactor: 4
   DoFirefly: 0
-  ImprovedPrimaryHit: 0
-  ReSTIRDenoiser: 1
-  RISCount: 0
+  ImprovedPrimaryHit: 1
+  RISCount: 12
   ToneMapper: 0
+  DoOldReSTIR: 0
+  SunDesaturate: 0
+  SkyDesaturate: 0
+  ClayColor: {x: 1, y: 1, z: 1}
+  GroundColor: {x: 0.1, y: 0.1, z: 0.1}
+  FireflyFrameCount: 0
+  FireflyStrength: 1
+  FireflyOffset: 0
+  OIDNFrameCount: 0
+  UseOIDN: 0
   BackgroundType: 0
-  SceneBackgroundColor: {x: 1, y: 1, z: 1}
+  SceneBackgroundColor: {x: 0, y: 0, z: 0}
   SkyboxTexture: {fileID: 0}
   BackgroundIntensity: 1
-  SVGFAtrousKernelSizes: 4
-  AtmoNumLayers: 4
+  AtmoNumLayers: 7
+  FramesSinceStart: 0
+  Spatials: []
 --- !u!114 &311583679
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2615,11 +2799,41 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5624c7317a712eb41bf35106683e22a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!4 &311583680
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 311583677}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1708579438}
+  - {fileID: 915254519}
+  - {fileID: 232921934}
+  m_Father: {fileID: 0}
+  m_RootOrder: 2
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &311583681
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 311583677}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e210df74166f4f84ab6b93830079b275, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
   TotalParentObjectSize: 0
   LightEnergyScale: 1
   AlbedoAtlasSize: 0
   VideoPlayerObject: {fileID: 0}
-  VideoTexture: {fileID: 2059361442}
+  VideoTexture: {fileID: 564884580}
   MaterialsChanged: []
   _Materials: []
   MyMeshesCompacted: []
@@ -2678,12 +2892,11 @@ MonoBehaviour:
   InstanceAddQue: []
   InstanceRemoveQue: []
   LightTransforms: []
-  DesiredRes: 16300
+  MainDesiredRes: 16384
   MatCount: 0
-  NormalSize: 0
-  EmissiveSize: 0
   LightMeshes: []
   MeshAABBs: []
+  LightAABBs: []
   ParentCountHasChanged: 0
   LightMeshCount: 0
   UnityLightCount: 0
@@ -2699,24 +2912,7 @@ MonoBehaviour:
     BVH8Nodes: []
     cwbvhindex_count: 0
     cwbvhnode_count: 0
---- !u!4 &311583680
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 311583677}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1708579438}
-  - {fileID: 915254519}
-  - {fileID: 232921934}
-  m_Father: {fileID: 0}
-  m_RootOrder: 2
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  LightBVHTransforms: []
 --- !u!1 &333827297
 GameObject:
   m_ObjectHideFlags: 0
@@ -2778,9 +2974,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -2805,7 +2998,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -2819,8 +3019,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -2828,6 +3038,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &333827300
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -2903,6 +3114,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Cube (1)
@@ -2910,9 +3127,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 333827299}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.001, y: 0.00021601074, z: 0.00016651126}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -2922,6 +3141,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -2996,7 +3216,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -3012,6 +3232,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -3085,9 +3306,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -3112,7 +3330,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 00
   ScatterDist:
   - 0
@@ -3126,8 +3351,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -3135,6 +3370,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!135 &335448385
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -3210,6 +3446,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Sphere
@@ -3217,9 +3459,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 335448384}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.0037037036, y: 0.0037037036, z: 0.0037037036}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -3229,6 +3473,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -3303,7 +3548,7 @@ MonoBehaviour:
   CompactedMeshData: 18
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -3319,6 +3564,7 @@ MonoBehaviour:
   NodeOffset: 496
   TriOffset: 4056
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -3391,9 +3637,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -3418,7 +3661,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -3432,8 +3682,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -3441,6 +3701,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &358834647
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -3565,9 +3826,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -3592,7 +3850,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -3606,8 +3871,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -3615,6 +3890,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!64 &386698923
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -3691,6 +3967,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Plane (1)
@@ -3698,9 +3980,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 386698922}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.001, y: 0.001, z: 0.0018163986}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -3710,6 +3994,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -3784,7 +4069,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -3800,6 +4085,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -3874,6 +4160,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: GameObject
@@ -3881,9 +4173,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 1805173906}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.002, y: 0.002, z: 0.002}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -3893,6 +4187,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -3967,7 +4262,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -3983,6 +4278,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -4118,9 +4414,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -4145,7 +4438,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -4159,8 +4459,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -4168,6 +4478,7 @@ MonoBehaviour:
   LocalMaterialIndex: 02000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &474113880
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -4291,9 +4602,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -4318,7 +4626,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -4332,8 +4647,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -4341,6 +4666,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &497198165
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -4465,9 +4791,6 @@ MonoBehaviour:
   - 64
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -4492,7 +4815,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 00
   ScatterDist:
   - 0
@@ -4506,8 +4836,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -4515,6 +4855,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!64 &564602525
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -4591,6 +4932,78 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris:
+    - b:
+        BBMax: {x: 0.5, y: 0.5, z: 0.0001}
+        BBMin: {x: -0.49999988, y: -0.5, z: -0.0001}
+      w: {x: -0, y: -0, z: 1}
+      phi: 0.1
+      cosTheta_o: 1
+      cosTheta_e: 0.0000012675908
+      LightCount: 1
+      Pad1: 0
+    - b:
+        BBMax: {x: 0.5, y: 0.49999997, z: 0.0001}
+        BBMin: {x: -0.49999988, y: -0.5, z: -0.0001}
+      w: {x: -0, y: -0, z: 1}
+      phi: 0.1
+      cosTheta_o: 1
+      cosTheta_e: 0.0000012675908
+      LightCount: 1
+      Pad1: 0
+    nodes:
+    - aabb:
+        b:
+          BBMax: {x: 0.5, y: 0.5, z: 0.0001}
+          BBMin: {x: -0.49999988, y: -0.5, z: -0.0001}
+        w: {x: -0, y: -0, z: 1}
+        phi: 0.2
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 2
+        Pad1: 0
+      left: 2
+      isLeaf: 0
+    - aabb:
+        b:
+          BBMax: {x: 0, y: 0, z: 0}
+          BBMin: {x: 0, y: 0, z: 0}
+        w: {x: 0, y: 0, z: 0}
+        phi: 0
+        cosTheta_o: 0
+        cosTheta_e: 0
+        LightCount: 0
+        Pad1: 0
+      left: 0
+      isLeaf: 0
+    - aabb:
+        b:
+          BBMax: {x: 0.5, y: 0.49999997, z: 0.0001}
+          BBMin: {x: -0.49999988, y: -0.5, z: -0.0001}
+        w: {x: -0, y: -0, z: 1}
+        phi: 0.1
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 1
+        Pad1: 0
+      left: 1
+      isLeaf: 1
+    - aabb:
+        b:
+          BBMax: {x: 0.5, y: 0.5, z: 0.0001}
+          BBMin: {x: -0.49999988, y: -0.5, z: -0.0001}
+        w: {x: -0, y: -0, z: 1}
+        phi: 0.1
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 1
+        Pad1: 0
+      left: 0
+      isLeaf: 1
+    PrimCount: 2
+    FinalIndices: 0000000001000000
+    MaxDepth: 2
   ExistsInQue: 1
   IsDeformable: 0
   Name: Quad
@@ -4598,9 +5011,13 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 564602524}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.00008032129, y: 0.005882353, z: 0.001}
   LightTriangles: []
+  LightTriNorms:
+  - {x: 0, y: 0, z: -1}
+  - {x: 0, y: 0, z: -1}
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -4610,6 +5027,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -4684,7 +5102,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -4700,6 +5118,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -4712,6 +5131,43 @@ MonoBehaviour:
   - {fileID: 564602523}
   center: {x: 0.000000059604645, y: -0.000000014901161, z: 0}
   extent: {x: 0.49999994, y: 0.5, z: 0.001}
+--- !u!84 &564884580
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_ForcedFallbackFormat: 4
+  m_DownscaleFallback: 0
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 5
+  m_Width: 1
+  m_Height: 1
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 0
+  m_ColorFormat: 4
+  m_MipMap: 0
+  m_GenerateMips: 1
+  m_SRGB: 1
+  m_UseDynamicScale: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 1
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1 &633129395
 GameObject:
   m_ObjectHideFlags: 0
@@ -4772,9 +5228,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -4799,7 +5252,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -4813,8 +5273,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -4822,6 +5292,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &633129398
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -4946,9 +5417,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -4973,7 +5441,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 1
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 00
   ScatterDist:
   - 0.51
@@ -4987,8 +5462,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -4996,6 +5481,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!135 &656616949
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -5071,6 +5557,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Sphere (5)
@@ -5078,9 +5570,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 656616948}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.0037037036, y: 0.0037037036, z: 0.0037037036}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -5090,6 +5584,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -5164,7 +5659,7 @@ MonoBehaviour:
   CompactedMeshData: 35
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -5180,6 +5675,7 @@ MonoBehaviour:
   NodeOffset: 5101
   TriOffset: 42412
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -5269,9 +5765,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -5296,7 +5789,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -5310,8 +5810,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -5319,6 +5829,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &704253416
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -5394,6 +5905,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Cube (2)
@@ -5401,9 +5918,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 704253415}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.00006329114, y: 0.00027173915, z: 0.001}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -5413,6 +5932,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -5487,7 +6007,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -5503,6 +6023,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -5639,9 +6160,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 0, y: 0, z: 0}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.287
   IOR:
@@ -5666,7 +6184,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 00
   ScatterDist:
   - 0
@@ -5680,8 +6205,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -5689,6 +6224,7 @@ MonoBehaviour:
   LocalMaterialIndex: 01000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!4 &723082881 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 70162dd9a2f014648ad050848a9ee5f0, type: 3}
@@ -5758,6 +6294,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: GameObject (5)
@@ -5766,9 +6308,11 @@ MonoBehaviour:
   - {fileID: 633129397}
   - {fileID: 749452644}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.002, y: 0.002, z: 0.002}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -5778,6 +6322,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -5870,7 +6415,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -5886,6 +6431,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -5924,9 +6470,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -5951,7 +6494,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -5965,8 +6515,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -5974,6 +6534,7 @@ MonoBehaviour:
   LocalMaterialIndex: 01000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!23 &749452645
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -6078,6 +6639,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Cube
@@ -6085,9 +6652,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 792070509}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.002, y: 0.002, z: 0.002}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -6097,6 +6666,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -6171,7 +6741,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -6187,6 +6757,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -6239,9 +6810,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -6266,7 +6834,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -6280,8 +6855,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -6289,6 +6874,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!114 &792070510
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6427,9 +7013,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -6454,7 +7037,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -6468,8 +7058,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -6477,6 +7077,7 @@ MonoBehaviour:
   LocalMaterialIndex: 04000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &803864522
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -6588,6 +7189,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Ceiling
@@ -6598,9 +7205,11 @@ MonoBehaviour:
   - {fileID: 1119288162}
   - {fileID: 1328427762}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.001, y: 0.001, z: 0.001}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -6610,6 +7219,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -6738,7 +7348,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -6754,6 +7364,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -6894,9 +7505,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 0, y: 0, z: 0}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -6921,7 +7529,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 00
   ScatterDist:
   - 0
@@ -6935,8 +7550,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -6944,6 +7569,7 @@ MonoBehaviour:
   LocalMaterialIndex: 03000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &915254518
 GameObject:
   m_ObjectHideFlags: 0
@@ -7038,9 +7664,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -7065,7 +7688,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -7079,8 +7709,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -7088,6 +7728,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &920834747
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -7163,6 +7804,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Cube (3)
@@ -7170,9 +7817,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 920834746}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.00026382512, y: 0.0004550475, z: 0.0028800264}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -7182,6 +7831,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -7256,7 +7906,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -7272,6 +7922,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -7314,6 +7965,408 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris:
+    - b:
+        BBMax: {x: -2.548832, y: 1.5184402, z: 0.5026398}
+        BBMin: {x: -3.3834705, y: 0.8775139, z: -0.58517075}
+      w: {x: -0.51415324, y: 0.8360527, z: -0.1914739}
+      phi: 0.1
+      cosTheta_o: 1
+      cosTheta_e: 0.0000012675908
+      LightCount: 1
+      Pad1: 0
+    - b:
+        BBMax: {x: -2.7463837, y: 1.5184402, z: 0.5026398}
+        BBMin: {x: -3.5810204, y: 0.8775139, z: -0.58517075}
+      w: {x: -0.51415324, y: 0.8360527, z: -0.1914739}
+      phi: 0.1
+      cosTheta_o: 1
+      cosTheta_e: 0.0000012675908
+      LightCount: 1
+      Pad1: 0
+    - b:
+        BBMax: {x: -2.548832, y: 2.354494, z: 0.31116676}
+        BBMin: {x: -3.2605362, y: 1.4166355, z: -0.663826}
+      w: {x: -0.8346378, y: -0.5391211, z: -0.11281929}
+      phi: 0.1
+      cosTheta_o: 1
+      cosTheta_e: 0.0000012675908
+      LightCount: 1
+      Pad1: 0
+    - b:
+        BBMax: {x: -2.548832, y: 2.354494, z: 0.5026398}
+        BBMin: {x: -3.2605362, y: 1.4166355, z: -0.47235107}
+      w: {x: -0.8346378, y: -0.5391211, z: -0.11281929}
+      phi: 0.1
+      cosTheta_o: 1
+      cosTheta_e: 0.0000012675908
+      LightCount: 1
+      Pad1: 0
+    - b:
+        BBMax: {x: -3.0629864, y: 2.2526894, z: 0.19834709}
+        BBMin: {x: -4.095175, y: 1.7135677, z: -0.77664566}
+      w: {x: 0.51415324, y: -0.8360527, z: 0.1914739}
+      phi: 0.1
+      cosTheta_o: 1
+      cosTheta_e: 0.0000012675908
+      LightCount: 1
+      Pad1: 0
+    - b:
+        BBMax: {x: -3.0629864, y: 2.354494, z: 0.31116676}
+        BBMin: {x: -4.095175, y: 1.8153725, z: -0.663826}
+      w: {x: 0.51415324, y: -0.8360527, z: 0.1914739}
+      phi: 0.1
+      cosTheta_o: 1
+      cosTheta_e: 0.0000012675908
+      LightCount: 1
+      Pad1: 0
+    - b:
+        BBMax: {x: -3.3834705, y: 1.7135677, z: 0.3898201}
+        BBMin: {x: -3.897623, y: 0.8775139, z: -0.77664566}
+      w: {x: 0.8346378, y: 0.5391211, z: 0.11281929}
+      phi: 0.1
+      cosTheta_o: 1
+      cosTheta_e: 0.0000012675908
+      LightCount: 1
+      Pad1: 0
+    - b:
+        BBMax: {x: -3.5810204, y: 1.8153725, z: 0.3898201}
+        BBMin: {x: -4.095175, y: 0.9793205, z: -0.77664566}
+      w: {x: 0.8346378, y: 0.5391211, z: 0.11281929}
+      phi: 0.1
+      cosTheta_o: 1
+      cosTheta_e: 0.0000012675908
+      LightCount: 1
+      Pad1: 0
+    - b:
+        BBMax: {x: -2.7463837, y: 2.354494, z: 0.5026398}
+        BBMin: {x: -3.5810204, y: 0.9793205, z: 0.31116676}
+      w: {x: 0.1975505, y: -0.1018049, z: -0.9749921}
+      phi: 0.1
+      cosTheta_o: 1
+      cosTheta_e: 0.0000012675908
+      LightCount: 1
+      Pad1: 0
+    - b:
+        BBMax: {x: -3.2605362, y: 2.354494, z: 0.3898201}
+        BBMin: {x: -4.095175, y: 0.9793205, z: 0.19834709}
+      w: {x: 0.1975505, y: -0.1018049, z: -0.9749921}
+      phi: 0.1
+      cosTheta_o: 1
+      cosTheta_e: 0.0000012675908
+      LightCount: 1
+      Pad1: 0
+    - b:
+        BBMax: {x: -2.548832, y: 2.2526894, z: -0.47235107}
+        BBMin: {x: -3.897623, y: 1.4166355, z: -0.77664566}
+      w: {x: -0.1975505, y: 0.1018049, z: 0.9749921}
+      phi: 0.1
+      cosTheta_o: 1
+      cosTheta_e: 0.0000012675908
+      LightCount: 1
+      Pad1: 0
+    - b:
+        BBMax: {x: -2.548832, y: 1.7135677, z: -0.47235107}
+        BBMin: {x: -3.897623, y: 0.8775139, z: -0.77664566}
+      w: {x: -0.1975505, y: 0.1018049, z: 0.9749921}
+      phi: 0.1
+      cosTheta_o: 1
+      cosTheta_e: 0.0000012675908
+      LightCount: 1
+      Pad1: 0
+    nodes:
+    - aabb:
+        b:
+          BBMax: {x: -2.548832, y: 2.354494, z: 0.5026398}
+          BBMin: {x: -4.095175, y: 0.8775139, z: -0.77664566}
+        w: {x: -0.15569861, y: 0.2531779, z: -0.05798314}
+        phi: 1.2000002
+        cosTheta_o: -0.6646068
+        cosTheta_e: 0.0000012675908
+        LightCount: 12
+        Pad1: 0
+      left: 2
+      isLeaf: 0
+    - aabb:
+        b:
+          BBMax: {x: 0, y: 0, z: 0}
+          BBMin: {x: 0, y: 0, z: 0}
+        w: {x: 0, y: 0, z: 0}
+        phi: 0
+        cosTheta_o: 0
+        cosTheta_e: 0
+        LightCount: 0
+        Pad1: 0
+      left: 0
+      isLeaf: 0
+    - aabb:
+        b:
+          BBMax: {x: -3.0629864, y: 2.354494, z: 0.3898201}
+          BBMin: {x: -4.095175, y: 0.8775139, z: -0.77664566}
+        w: {x: 0.83463794, y: 0.5391211, z: 0.112819344}
+        phi: 0.5
+        cosTheta_o: 0.19509035
+        cosTheta_e: 0.0000012675908
+        LightCount: 5
+        Pad1: 0
+      left: 4
+      isLeaf: 0
+    - aabb:
+        b:
+          BBMax: {x: -2.548832, y: 2.354494, z: 0.5026398}
+          BBMin: {x: -3.897623, y: 0.8775139, z: -0.77664566}
+        w: {x: -0.83463776, y: -0.5391211, z: -0.11281931}
+        phi: 0.70000005
+        cosTheta_o: 0.04906789
+        cosTheta_e: 0.0000012675908
+        LightCount: 7
+        Pad1: 0
+      left: 12
+      isLeaf: 0
+    - aabb:
+        b:
+          BBMax: {x: -3.2605362, y: 2.354494, z: 0.3898201}
+          BBMin: {x: -4.095175, y: 0.8775139, z: -0.77664566}
+        w: {x: 0.8346378, y: 0.5391211, z: 0.11281934}
+        phi: 0.3
+        cosTheta_o: 0.7071068
+        cosTheta_e: 0.0000012675908
+        LightCount: 3
+        Pad1: 0
+      left: 6
+      isLeaf: 0
+    - aabb:
+        b:
+          BBMax: {x: -3.0629864, y: 2.354494, z: 0.31116676}
+          BBMin: {x: -4.095175, y: 1.7135677, z: -0.77664566}
+        w: {x: 0.51415324, y: -0.8360527, z: 0.1914739}
+        phi: 0.2
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 2
+        Pad1: 0
+      left: 10
+      isLeaf: 0
+    - aabb:
+        b:
+          BBMax: {x: -3.3834705, y: 1.8153725, z: 0.3898201}
+          BBMin: {x: -4.095175, y: 0.8775139, z: -0.77664566}
+        w: {x: 0.8346378, y: 0.5391211, z: 0.11281929}
+        phi: 0.2
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 2
+        Pad1: 0
+      left: 8
+      isLeaf: 0
+    - aabb:
+        b:
+          BBMax: {x: -3.2605362, y: 2.354494, z: 0.3898201}
+          BBMin: {x: -4.095175, y: 0.9793205, z: 0.19834709}
+        w: {x: 0.1975505, y: -0.1018049, z: -0.9749921}
+        phi: 0.1
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 1
+        Pad1: 0
+      left: 9
+      isLeaf: 1
+    - aabb:
+        b:
+          BBMax: {x: -3.3834705, y: 1.7135677, z: 0.3898201}
+          BBMin: {x: -3.897623, y: 0.8775139, z: -0.77664566}
+        w: {x: 0.8346378, y: 0.5391211, z: 0.11281929}
+        phi: 0.1
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 1
+        Pad1: 0
+      left: 6
+      isLeaf: 1
+    - aabb:
+        b:
+          BBMax: {x: -3.5810204, y: 1.8153725, z: 0.3898201}
+          BBMin: {x: -4.095175, y: 0.9793205, z: -0.77664566}
+        w: {x: 0.8346378, y: 0.5391211, z: 0.11281929}
+        phi: 0.1
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 1
+        Pad1: 0
+      left: 7
+      isLeaf: 1
+    - aabb:
+        b:
+          BBMax: {x: -3.0629864, y: 2.2526894, z: 0.19834709}
+          BBMin: {x: -4.095175, y: 1.7135677, z: -0.77664566}
+        w: {x: 0.51415324, y: -0.8360527, z: 0.1914739}
+        phi: 0.1
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 1
+        Pad1: 0
+      left: 4
+      isLeaf: 1
+    - aabb:
+        b:
+          BBMax: {x: -3.0629864, y: 2.354494, z: 0.31116676}
+          BBMin: {x: -4.095175, y: 1.8153725, z: -0.663826}
+        w: {x: 0.51415324, y: -0.8360527, z: 0.1914739}
+        phi: 0.1
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 1
+        Pad1: 0
+      left: 5
+      isLeaf: 1
+    - aabb:
+        b:
+          BBMax: {x: -2.548832, y: 1.7135677, z: 0.5026398}
+          BBMin: {x: -3.897623, y: 0.8775139, z: -0.77664566}
+        w: {x: -0.51415324, y: 0.8360527, z: -0.19147389}
+        phi: 0.3
+        cosTheta_o: 0.70710766
+        cosTheta_e: 0.0000012675908
+        LightCount: 3
+        Pad1: 0
+      left: 14
+      isLeaf: 0
+    - aabb:
+        b:
+          BBMax: {x: -2.548832, y: 2.354494, z: 0.5026398}
+          BBMin: {x: -3.897623, y: 0.9793205, z: -0.77664566}
+        w: {x: -0.83463776, y: -0.5391211, z: -0.112819344}
+        phi: 0.4
+        cosTheta_o: 0.38268343
+        cosTheta_e: 0.0000012675908
+        LightCount: 4
+        Pad1: 0
+      left: 18
+      isLeaf: 0
+    - aabb:
+        b:
+          BBMax: {x: -2.548832, y: 1.7135677, z: -0.47235107}
+          BBMin: {x: -3.897623, y: 0.8775139, z: -0.77664566}
+        w: {x: -0.1975505, y: 0.1018049, z: 0.9749921}
+        phi: 0.1
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 1
+        Pad1: 0
+      left: 11
+      isLeaf: 1
+    - aabb:
+        b:
+          BBMax: {x: -2.548832, y: 1.5184402, z: 0.5026398}
+          BBMin: {x: -3.5810204, y: 0.8775139, z: -0.58517075}
+        w: {x: -0.51415324, y: 0.8360527, z: -0.1914739}
+        phi: 0.2
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 2
+        Pad1: 0
+      left: 16
+      isLeaf: 0
+    - aabb:
+        b:
+          BBMax: {x: -2.548832, y: 1.5184402, z: 0.5026398}
+          BBMin: {x: -3.3834705, y: 0.8775139, z: -0.58517075}
+        w: {x: -0.51415324, y: 0.8360527, z: -0.1914739}
+        phi: 0.1
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 1
+        Pad1: 0
+      left: 0
+      isLeaf: 1
+    - aabb:
+        b:
+          BBMax: {x: -2.7463837, y: 1.5184402, z: 0.5026398}
+          BBMin: {x: -3.5810204, y: 0.8775139, z: -0.58517075}
+        w: {x: -0.51415324, y: 0.8360527, z: -0.1914739}
+        phi: 0.1
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 1
+        Pad1: 0
+      left: 1
+      isLeaf: 1
+    - aabb:
+        b:
+          BBMax: {x: -2.548832, y: 2.354494, z: 0.5026398}
+          BBMin: {x: -3.897623, y: 0.9793205, z: -0.77664566}
+        w: {x: -0.8346378, y: -0.5391211, z: -0.11281929}
+        phi: 0.3
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 3
+        Pad1: 0
+      left: 20
+      isLeaf: 0
+    - aabb:
+        b:
+          BBMax: {x: -2.548832, y: 2.354494, z: 0.5026398}
+          BBMin: {x: -3.2605362, y: 1.4166355, z: -0.47235107}
+        w: {x: -0.8346378, y: -0.5391211, z: -0.11281929}
+        phi: 0.1
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 1
+        Pad1: 0
+      left: 3
+      isLeaf: 1
+    - aabb:
+        b:
+          BBMax: {x: -2.7463837, y: 2.354494, z: 0.5026398}
+          BBMin: {x: -3.5810204, y: 0.9793205, z: 0.31116676}
+        w: {x: 0.1975505, y: -0.1018049, z: -0.9749921}
+        phi: 0.1
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 1
+        Pad1: 0
+      left: 8
+      isLeaf: 1
+    - aabb:
+        b:
+          BBMax: {x: -2.548832, y: 2.354494, z: 0.31116676}
+          BBMin: {x: -3.897623, y: 1.4166355, z: -0.77664566}
+        w: {x: -0.8346378, y: -0.5391211, z: -0.11281934}
+        phi: 0.2
+        cosTheta_o: 0.7071068
+        cosTheta_e: 0.0000012675908
+        LightCount: 2
+        Pad1: 0
+      left: 22
+      isLeaf: 0
+    - aabb:
+        b:
+          BBMax: {x: -2.548832, y: 2.2526894, z: -0.47235107}
+          BBMin: {x: -3.897623, y: 1.4166355, z: -0.77664566}
+        w: {x: -0.1975505, y: 0.1018049, z: 0.9749921}
+        phi: 0.1
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 1
+        Pad1: 0
+      left: 10
+      isLeaf: 1
+    - aabb:
+        b:
+          BBMax: {x: -2.548832, y: 2.354494, z: 0.31116676}
+          BBMin: {x: -3.2605362, y: 1.4166355, z: -0.663826}
+        w: {x: -0.8346378, y: -0.5391211, z: -0.11281929}
+        phi: 0.1
+        cosTheta_o: 1
+        cosTheta_e: 0.0000012675908
+        LightCount: 1
+        Pad1: 0
+      left: 2
+      isLeaf: 1
+    PrimCount: 12
+    FinalIndices: 0a0000000b00000004000000060000000700000002000000050000000000000001000000030000000900000008000000
+    MaxDepth: 6
   ExistsInQue: 1
   IsDeformable: 0
   Name: GameObject (5)
@@ -7325,9 +8378,23 @@ MonoBehaviour:
   - {fileID: 1455194016}
   - {fileID: 2066388754}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.002, y: 0.002, z: 0.002}
   LightTriangles: []
+  LightTriNorms:
+  - {x: 0.51415324, y: -0.8360527, z: 0.1914739}
+  - {x: 0.51415324, y: -0.8360527, z: 0.1914739}
+  - {x: 0.8346378, y: 0.5391211, z: 0.11281929}
+  - {x: 0.8346378, y: 0.5391211, z: 0.11281929}
+  - {x: -0.51415324, y: 0.8360527, z: -0.1914739}
+  - {x: -0.51415324, y: 0.8360527, z: -0.1914739}
+  - {x: -0.8346378, y: -0.5391211, z: -0.11281929}
+  - {x: -0.8346378, y: -0.5391211, z: -0.11281929}
+  - {x: -0.1975505, y: 0.1018049, z: 0.9749921}
+  - {x: -0.1975505, y: 0.1018049, z: 0.9749921}
+  - {x: 0.1975505, y: -0.1018049, z: -0.9749921}
+  - {x: 0.1975505, y: -0.1018049, z: -0.9749921}
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -7337,6 +8404,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -7483,7 +8551,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -7499,6 +8567,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -7599,6 +8668,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Cube
@@ -7606,9 +8681,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 1019081023}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.001, y: 0.001, z: 0.001}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -7618,6 +8695,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -7692,7 +8770,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -7708,6 +8786,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -7745,9 +8824,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -7772,7 +8848,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -7786,8 +8869,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -7795,6 +8888,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &1019081024
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -7918,9 +9012,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -7945,7 +9036,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -7959,8 +9057,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -7968,6 +9076,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &1026810544
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -8155,9 +9264,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 0, y: 0, z: 0}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -8182,7 +9288,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 00
   ScatterDist:
   - 0
@@ -8196,8 +9309,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -8205,6 +9328,7 @@ MonoBehaviour:
   LocalMaterialIndex: 02000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &1037320532
 GameObject:
   m_ObjectHideFlags: 0
@@ -8265,9 +9389,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -8292,7 +9413,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -8306,8 +9434,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -8315,6 +9453,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &1037320535
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -8439,9 +9578,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -8466,7 +9602,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -8480,8 +9623,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -8489,6 +9642,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!64 &1040692907
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -8565,6 +9719,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Plane (2)
@@ -8572,9 +9732,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 1040692906}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.0007319037, y: 0.001, z: 0.005006004}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -8584,6 +9746,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -8658,7 +9821,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -8674,6 +9837,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs:
   - {fileID: 2800000, guid: 37e193aecf48c7b47a31647e1953ed1e, type: 3}
@@ -8773,6 +9937,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Cube (4)
@@ -8780,9 +9950,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 1095303985}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.001, y: 0.001, z: 0.001}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -8792,6 +9964,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -8866,7 +10039,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -8882,6 +10055,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -8919,9 +10093,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -8946,7 +10117,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -8960,8 +10138,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -8969,6 +10157,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &1095303986
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -9155,9 +10344,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -9182,7 +10368,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -9196,8 +10389,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -9205,6 +10408,7 @@ MonoBehaviour:
   LocalMaterialIndex: 02000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &1128676514
 GameObject:
   m_ObjectHideFlags: 0
@@ -9266,9 +10470,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.135
   IOR:
@@ -9293,7 +10494,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 00
   ScatterDist:
   - 0
@@ -9307,8 +10515,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -9316,6 +10534,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!135 &1128676517
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -9391,6 +10610,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Sphere (1)
@@ -9398,9 +10623,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 1128676516}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.0037037036, y: 0.0037037036, z: 0.0037037036}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -9410,6 +10637,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -9484,7 +10712,7 @@ MonoBehaviour:
   CompactedMeshData: 17
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -9500,6 +10728,7 @@ MonoBehaviour:
   NodeOffset: 415
   TriOffset: 3288
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -9559,6 +10788,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Entrance
@@ -9568,9 +10803,11 @@ MonoBehaviour:
   - {fileID: 1594094342}
   - {fileID: 1642786190}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.001, y: 0.001, z: 0.001}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -9580,6 +10817,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -9690,7 +10928,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -9706,6 +10944,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -9788,6 +11027,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Cube (4)
@@ -9795,9 +11040,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 1153382557}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.002, y: 0.002, z: 0.002}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -9807,6 +11054,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -9881,7 +11129,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -9897,6 +11145,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -9949,9 +11198,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -9976,7 +11222,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -9990,8 +11243,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -9999,6 +11262,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!114 &1153382558
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10137,9 +11401,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -10164,7 +11425,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -10178,8 +11446,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -10187,6 +11465,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &1243321079
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -10310,9 +11589,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -10337,7 +11613,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -10351,8 +11634,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -10360,6 +11653,7 @@ MonoBehaviour:
   LocalMaterialIndex: 04000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!64 &1243490825
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -10548,9 +11842,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -10575,7 +11866,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 00
   ScatterDist:
   - 0
@@ -10589,8 +11887,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -10598,6 +11906,7 @@ MonoBehaviour:
   LocalMaterialIndex: 06000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &1306942641
 GameObject:
   m_ObjectHideFlags: 0
@@ -10675,9 +11984,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -10702,7 +12008,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -10716,8 +12029,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -10725,6 +12048,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &1306942645
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -10800,6 +12124,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Cube (1)
@@ -10807,9 +12137,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 1306942644}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.002, y: 0.002, z: 0.002}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -10819,6 +12151,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -10893,7 +12226,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -10909,6 +12242,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -10981,9 +12315,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -11008,7 +12339,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -11022,8 +12360,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -11031,6 +12379,7 @@ MonoBehaviour:
   LocalMaterialIndex: 03000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &1328427763
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -11140,6 +12489,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: GameObject (4)
@@ -11147,9 +12502,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 358834646}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.002, y: 0.002, z: 0.002}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -11159,6 +12516,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -11233,7 +12591,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -11249,6 +12607,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -11441,6 +12800,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Cube (5)
@@ -11448,9 +12813,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 1448344606}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.002, y: 0.0020000003, z: 0.002}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -11460,6 +12827,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -11534,7 +12902,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -11550,6 +12918,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -11602,9 +12971,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -11629,7 +12995,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 00
   ScatterDist:
   - 0
@@ -11643,8 +13016,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -11652,6 +13035,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!114 &1448344607
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11853,9 +13237,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -11880,7 +13261,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -11894,8 +13282,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -11903,6 +13301,7 @@ MonoBehaviour:
   LocalMaterialIndex: 03000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &1563250957
 GameObject:
   m_ObjectHideFlags: 0
@@ -12107,9 +13506,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -12134,7 +13530,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -12148,8 +13551,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -12157,6 +13570,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &1589002263
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -12280,9 +13694,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -12307,7 +13718,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -12321,8 +13739,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -12330,6 +13758,7 @@ MonoBehaviour:
   LocalMaterialIndex: 01000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &1594094343
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -12454,6 +13883,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: GameObject
@@ -12461,9 +13896,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 2130231732}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.002, y: 0.002, z: 0.002}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -12473,6 +13910,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -12547,7 +13985,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -12563,6 +14001,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -12665,6 +14104,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Pedestal
@@ -12672,9 +14117,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 1601323049}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.001, y: 0.001, z: 0.001}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -12684,6 +14131,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -12758,7 +14206,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -12774,6 +14222,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs:
   - {fileID: 2800000, guid: 37e193aecf48c7b47a31647e1953ed1e, type: 3}
@@ -12825,9 +14274,6 @@ MonoBehaviour:
   - {x: 1, y: 1, z: 1}
   - {x: 1, y: 1, z: 1}
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 000000
-  BaseIsMap: 000000
-  ReplaceBase: 000000
   Roughness:
   - 0
   - 0.399
@@ -12876,7 +14322,22 @@ MonoBehaviour:
   - 0
   - 0
   - 0
-  Thin: 000000000000000000000000
+  Hue:
+  - 0
+  - 0
+  - 0
+  Brightness:
+  - 1
+  - 1
+  - 1
+  Saturation:
+  - 1
+  - 1
+  - 1
+  Contrast:
+  - 1
+  - 1
+  - 1
   FollowMaterial: 010101
   ScatterDist:
   - 0
@@ -12902,8 +14363,28 @@ MonoBehaviour:
   - 1
   - 1
   - 1
-  IsSmoothness: 000000
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  - {x: 1, y: 1, z: 1}
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  - {x: 1, y: 1, z: 0, w: 0}
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  - {x: 1, y: 1}
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  - 0
+  - 0
+  BlendFactor:
+  - 0
+  - 0
+  - 0
   Selected: 0
+  Flags: 000000000000000000000000
   Indexes: 000000000100000002000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -12911,6 +14392,7 @@ MonoBehaviour:
   LocalMaterialIndex: 000000000100000002000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &1642786187
 GameObject:
   m_ObjectHideFlags: 0
@@ -12971,9 +14453,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -12998,7 +14477,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -13012,8 +14498,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -13021,6 +14517,7 @@ MonoBehaviour:
   LocalMaterialIndex: 02000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &1642786191
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -13215,6 +14712,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Wall1
@@ -13226,9 +14729,11 @@ MonoBehaviour:
   - {fileID: 908202568}
   - {fileID: 1243490824}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.001, y: 0.001, z: 0.001}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -13238,6 +14743,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -13384,7 +14890,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -13400,6 +14906,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -13581,6 +15088,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: GameObject (2)
@@ -13588,9 +15101,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 1243321078}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.002, y: 0.002, z: 0.002}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -13600,6 +15115,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -13674,7 +15190,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -13690,6 +15206,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -13823,9 +15340,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -13850,7 +15364,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -13864,8 +15385,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -13873,6 +15404,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &1805173907
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -14013,9 +15545,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -14040,7 +15569,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -14054,8 +15590,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -14063,6 +15609,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &1809484610
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -14138,6 +15685,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Cube (3)
@@ -14145,9 +15698,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 1809484609}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.002, y: 0.002, z: 0.002}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -14157,6 +15712,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -14231,7 +15787,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -14247,6 +15803,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -14305,6 +15862,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: GameObject (1)
@@ -14312,9 +15875,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 1037320534}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.002, y: 0.002, z: 0.002}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -14324,6 +15889,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -14398,7 +15964,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -14414,6 +15980,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -14566,9 +16133,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 0, y: 0, z: 0}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -14593,7 +16157,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 00
   ScatterDist:
   - 0
@@ -14607,8 +16178,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -14616,6 +16197,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &1994328031
 GameObject:
   m_ObjectHideFlags: 0
@@ -14650,6 +16232,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Cube (1)
@@ -14657,9 +16245,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 1994328034}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.002, y: 0.002, z: 0.00036951504}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -14669,6 +16259,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -14743,7 +16334,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -14759,6 +16350,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -14811,9 +16403,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -14838,7 +16427,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -14852,8 +16448,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -14861,6 +16467,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!114 &1994328035
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15062,9 +16669,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -15089,7 +16693,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -15103,8 +16714,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -15112,6 +16733,7 @@ MonoBehaviour:
   LocalMaterialIndex: 01000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &2015288902
 GameObject:
   m_ObjectHideFlags: 0
@@ -15149,43 +16771,6 @@ Transform:
   m_Father: {fileID: 1708579438}
   m_RootOrder: 13
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!84 &2059361442
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_ForcedFallbackFormat: 4
-  m_DownscaleFallback: 0
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 5
-  m_Width: 1
-  m_Height: 1
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 0
-  m_ColorFormat: 4
-  m_MipMap: 0
-  m_GenerateMips: 1
-  m_SRGB: 1
-  m_UseDynamicScale: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 1
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!1 &2066388749
 GameObject:
   m_ObjectHideFlags: 0
@@ -15309,9 +16894,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -15336,7 +16918,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -15350,8 +16939,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -15359,6 +16958,7 @@ MonoBehaviour:
   LocalMaterialIndex: 04000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &2095100201
 GameObject:
   m_ObjectHideFlags: 0
@@ -15520,9 +17120,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -15547,7 +17144,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 00
   ScatterDist:
   - 0
@@ -15561,8 +17165,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -15570,6 +17184,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &2100613707
 GameObject:
   m_ObjectHideFlags: 0
@@ -15631,9 +17246,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0
   IOR:
@@ -15658,7 +17270,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 1
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 00
   ScatterDist:
   - 0
@@ -15672,8 +17291,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -15681,6 +17310,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!135 &2100613710
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -15756,6 +17386,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Sphere (2)
@@ -15763,9 +17399,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 2100613709}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.0037037036, y: 0.0037037036, z: 0.0037037036}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -15775,6 +17413,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -15849,7 +17488,7 @@ MonoBehaviour:
   CompactedMeshData: 16
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -15865,6 +17504,7 @@ MonoBehaviour:
   NodeOffset: 334
   TriOffset: 2520
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -15937,9 +17577,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -15964,7 +17601,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -15978,8 +17622,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -15987,6 +17641,7 @@ MonoBehaviour:
   LocalMaterialIndex: 01000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &2102754299
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -16111,9 +17766,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.42
   IOR:
@@ -16138,7 +17790,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 00
   ScatterDist:
   - 0
@@ -16152,8 +17811,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -16161,6 +17830,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!135 &2122698164
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -16236,6 +17906,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: Sphere (4)
@@ -16243,9 +17919,11 @@ MonoBehaviour:
   ChildObjects:
   - {fileID: 2122698163}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.0037037036, y: 0.0037037036, z: 0.0037037036}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -16255,6 +17933,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -16329,7 +18008,7 @@ MonoBehaviour:
   CompactedMeshData: 34
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -16345,6 +18024,7 @@ MonoBehaviour:
   NodeOffset: 5020
   TriOffset: 41644
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -16417,9 +18097,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.5
   IOR:
@@ -16444,7 +18121,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -16458,8 +18142,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -16467,6 +18161,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!65 &2130231733
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -17570,9 +19265,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -17597,7 +19289,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -17611,8 +19310,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -17620,6 +19329,7 @@ MonoBehaviour:
   LocalMaterialIndex: 1b000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &1822785045789627408
 GameObject:
   m_ObjectHideFlags: 0
@@ -18331,9 +20041,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -18358,7 +20065,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -18372,8 +20086,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -18381,6 +20105,7 @@ MonoBehaviour:
   LocalMaterialIndex: 11000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!4 &2709068368880471208
 Transform:
   m_ObjectHideFlags: 0
@@ -19051,9 +20776,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -19078,7 +20800,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -19092,8 +20821,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -19101,6 +20840,7 @@ MonoBehaviour:
   LocalMaterialIndex: 11000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &3416850531234635713
 GameObject:
   m_ObjectHideFlags: 0
@@ -19852,9 +21592,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -19879,7 +21616,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -19893,8 +21637,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -19902,6 +21656,7 @@ MonoBehaviour:
   LocalMaterialIndex: 1b000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!33 &4591523298219939597
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -20095,9 +21850,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -20122,7 +21874,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -20136,8 +21895,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -20145,6 +21914,7 @@ MonoBehaviour:
   LocalMaterialIndex: 07000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &4836858093024480603
 GameObject:
   m_ObjectHideFlags: 0
@@ -20430,9 +22200,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -20457,7 +22224,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -20471,8 +22245,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -20480,6 +22264,7 @@ MonoBehaviour:
   LocalMaterialIndex: 03000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &5270646668031183664
 GameObject:
   m_ObjectHideFlags: 0
@@ -20524,9 +22309,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -20551,7 +22333,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -20565,8 +22354,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -20574,6 +22373,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!4 &5331948116529677307
 Transform:
   m_ObjectHideFlags: 0
@@ -20637,9 +22437,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -20664,7 +22461,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -20678,8 +22482,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -20687,6 +22501,7 @@ MonoBehaviour:
   LocalMaterialIndex: 16000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!108 &5414217804203963260
 Light:
   m_ObjectHideFlags: 0
@@ -20820,9 +22635,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -20847,7 +22659,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -20861,8 +22680,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -20870,6 +22699,7 @@ MonoBehaviour:
   LocalMaterialIndex: 04000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!23 &5612031043782147240
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -21002,9 +22832,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -21029,7 +22856,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -21043,8 +22877,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -21052,6 +22896,7 @@ MonoBehaviour:
   LocalMaterialIndex: 0b000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!4 &5730692161133624338
 Transform:
   m_ObjectHideFlags: 0
@@ -21092,9 +22937,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -21119,7 +22961,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -21133,8 +22982,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -21142,6 +23001,7 @@ MonoBehaviour:
   LocalMaterialIndex: 0f000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!23 &5747335187008517196
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -21276,9 +23136,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -21303,7 +23160,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -21317,8 +23181,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -21326,6 +23200,7 @@ MonoBehaviour:
   LocalMaterialIndex: 0a000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &5981564913148558099
 GameObject:
   m_ObjectHideFlags: 0
@@ -21370,9 +23245,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -21397,7 +23269,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -21411,8 +23290,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -21420,6 +23309,7 @@ MonoBehaviour:
   LocalMaterialIndex: 10000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!23 &5988596342609312789
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -21487,9 +23377,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -21514,7 +23401,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -21528,8 +23422,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -21537,6 +23441,7 @@ MonoBehaviour:
   LocalMaterialIndex: 05000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &6102943757062725476
 GameObject:
   m_ObjectHideFlags: 0
@@ -21581,9 +23486,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -21608,7 +23510,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -21622,8 +23531,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -21631,6 +23550,7 @@ MonoBehaviour:
   LocalMaterialIndex: 1e000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!4 &6149304850046490601
 Transform:
   m_ObjectHideFlags: 0
@@ -21686,9 +23606,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -21713,7 +23630,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -21727,8 +23651,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -21736,6 +23670,7 @@ MonoBehaviour:
   LocalMaterialIndex: 18000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!23 &6306490505881123771
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -21864,9 +23799,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -21891,7 +23823,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -21905,8 +23844,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -21914,6 +23863,7 @@ MonoBehaviour:
   LocalMaterialIndex: 19000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!4 &6375735495596961887
 Transform:
   m_ObjectHideFlags: 0
@@ -21969,9 +23919,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -21996,7 +23943,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -22010,8 +23964,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -22019,6 +23983,7 @@ MonoBehaviour:
   LocalMaterialIndex: 17000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!33 &6467643215804918070
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -22067,9 +24032,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -22094,7 +24056,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -22108,8 +24077,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -22117,6 +24096,7 @@ MonoBehaviour:
   LocalMaterialIndex: 0d000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!33 &6538157499317416784
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -22158,9 +24138,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -22185,7 +24162,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -22199,8 +24183,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -22208,6 +24202,7 @@ MonoBehaviour:
   LocalMaterialIndex: 0e000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &6562673992905692651
 GameObject:
   m_ObjectHideFlags: 0
@@ -22258,9 +24253,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -22285,7 +24277,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -22299,8 +24298,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -22308,6 +24317,7 @@ MonoBehaviour:
   LocalMaterialIndex: 0c000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!4 &6618258291362147581
 Transform:
   m_ObjectHideFlags: 0
@@ -22364,6 +24374,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: ImageToStl.com_text
@@ -22398,9 +24414,11 @@ MonoBehaviour:
   - {fileID: 8951447159914944572}
   - {fileID: 4546887249110896373}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.010000001, y: 0.010000001, z: 0.010000001}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -22410,6 +24428,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -22970,7 +24989,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -22986,6 +25005,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -23089,9 +25109,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -23116,7 +25133,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -23130,8 +25154,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -23139,6 +25173,7 @@ MonoBehaviour:
   LocalMaterialIndex: 13000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &6774422917237956221
 GameObject:
   m_ObjectHideFlags: 0
@@ -23198,9 +25233,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -23225,7 +25257,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -23239,8 +25278,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -23248,6 +25297,7 @@ MonoBehaviour:
   LocalMaterialIndex: 12000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!33 &6875551556684929199
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -23281,9 +25331,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -23308,7 +25355,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -23322,8 +25376,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -23331,6 +25395,7 @@ MonoBehaviour:
   LocalMaterialIndex: 15000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!33 &6894130930212376801
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -23453,9 +25518,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -23480,7 +25542,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -23494,8 +25563,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -23503,6 +25582,7 @@ MonoBehaviour:
   LocalMaterialIndex: 09000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!33 &7327461537823756785
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -23555,9 +25635,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -23582,7 +25659,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -23596,8 +25680,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -23605,6 +25699,7 @@ MonoBehaviour:
   LocalMaterialIndex: 10000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!23 &7412023288577533909
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -23706,9 +25801,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -23733,7 +25825,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -23747,8 +25846,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -23756,6 +25865,7 @@ MonoBehaviour:
   LocalMaterialIndex: 1f000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!4 &7618634125782886455
 Transform:
   m_ObjectHideFlags: 0
@@ -23804,9 +25914,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -23831,7 +25938,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -23845,8 +25959,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -23854,6 +25978,7 @@ MonoBehaviour:
   LocalMaterialIndex: 14000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!33 &7687032112019309423
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -23887,9 +26012,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -23914,7 +26036,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -23928,8 +26057,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -23937,6 +26076,7 @@ MonoBehaviour:
   LocalMaterialIndex: 15000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!4 &7764253972627115851
 Transform:
   m_ObjectHideFlags: 0
@@ -23996,9 +26136,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -24023,7 +26160,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -24037,8 +26181,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -24046,6 +26200,7 @@ MonoBehaviour:
   LocalMaterialIndex: 08000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!33 &7784085412527223542
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -24203,6 +26358,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  LBVH:
+    LightTris: []
+    nodes: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
   ExistsInQue: 1
   IsDeformable: 0
   Name: MultipleObjects
@@ -24243,9 +26404,11 @@ MonoBehaviour:
   - {fileID: 9132025027011697621}
   - {fileID: 8823690234498190043}
   MeshCountChanged: 1
+  Triangles: []
   AggTriangles: []
   ParentScale: {x: 0.010000001, y: 0.010000001, z: 0.010000001}
   LightTriangles: []
+  LightTriNorms: []
   BVH:
     cwbvh_indices: 
     BVH8Nodes: []
@@ -24255,6 +26418,7 @@ MonoBehaviour:
   DeformableMeshes: []
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  LightMeshRefit: {fileID: 7200000, guid: 80f1eb03ffee8414f9d999cc16c0a367, type: 3}
   HasStarted: 0
   AggNodes: []
   InstanceMeshIndex: 0
@@ -24923,7 +27087,7 @@ MonoBehaviour:
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
-  Assets: {fileID: 311583679}
+  Assets: {fileID: 311583681}
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -24939,6 +27103,7 @@ MonoBehaviour:
   NodeOffset: 0
   TriOffset: 0
   LightTriOffset: 0
+  LightNodeOffset: 0
   SplitNodes: []
   AlbedoTexs: []
   NormalTexs: []
@@ -25026,9 +27191,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -25053,7 +27215,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -25067,8 +27236,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -25076,6 +27255,7 @@ MonoBehaviour:
   LocalMaterialIndex: 0e000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &7986081113224171051
 GameObject:
   m_ObjectHideFlags: 0
@@ -25133,9 +27313,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -25160,7 +27337,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -25174,8 +27358,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -25183,6 +27377,7 @@ MonoBehaviour:
   LocalMaterialIndex: 0d000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!33 &8033081254035761296
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -25231,9 +27426,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -25258,7 +27450,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -25272,8 +27471,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -25281,6 +27490,7 @@ MonoBehaviour:
   LocalMaterialIndex: 1c000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!33 &8071072584919464867
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -25314,9 +27524,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -25341,7 +27548,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -25355,8 +27569,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -25364,6 +27588,7 @@ MonoBehaviour:
   LocalMaterialIndex: 18000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!33 &8086111187378193131
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -25439,9 +27664,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -25466,7 +27688,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -25480,8 +27709,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -25489,6 +27728,7 @@ MonoBehaviour:
   LocalMaterialIndex: 13000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &8202817629932690511
 GameObject:
   m_ObjectHideFlags: 0
@@ -25533,9 +27773,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -25560,7 +27797,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -25574,8 +27818,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -25583,6 +27837,7 @@ MonoBehaviour:
   LocalMaterialIndex: 17000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &8233478681318616303
 GameObject:
   m_ObjectHideFlags: 0
@@ -25627,9 +27882,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -25654,7 +27906,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -25668,8 +27927,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -25677,6 +27946,7 @@ MonoBehaviour:
   LocalMaterialIndex: 06000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!4 &8257958224074549326
 Transform:
   m_ObjectHideFlags: 0
@@ -25717,9 +27987,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -25744,7 +28011,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -25758,8 +28032,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -25767,6 +28051,7 @@ MonoBehaviour:
   LocalMaterialIndex: 0c000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!33 &8308403325674095318
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -25800,9 +28085,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -25827,7 +28109,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -25841,8 +28130,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -25850,6 +28149,7 @@ MonoBehaviour:
   LocalMaterialIndex: 1d000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &8344631740159622495
 GameObject:
   m_ObjectHideFlags: 0
@@ -25894,9 +28194,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -25921,7 +28218,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -25935,8 +28239,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -25944,6 +28258,7 @@ MonoBehaviour:
   LocalMaterialIndex: 09000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!23 &8374469149583968264
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -26011,9 +28326,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -26038,7 +28350,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -26052,8 +28371,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -26061,6 +28390,7 @@ MonoBehaviour:
   LocalMaterialIndex: 01000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!23 &8425072732674514189
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -26170,9 +28500,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -26197,7 +28524,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -26211,8 +28545,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -26220,6 +28564,7 @@ MonoBehaviour:
   LocalMaterialIndex: 06000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!4 &8502669270699514170
 Transform:
   m_ObjectHideFlags: 0
@@ -26260,9 +28605,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -26287,7 +28629,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -26301,8 +28650,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -26310,6 +28669,7 @@ MonoBehaviour:
   LocalMaterialIndex: 0a000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!33 &8531085367943698490
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -26362,9 +28722,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -26389,7 +28746,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -26403,8 +28767,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -26412,6 +28786,7 @@ MonoBehaviour:
   LocalMaterialIndex: 12000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &8563866833613674139
 GameObject:
   m_ObjectHideFlags: 0
@@ -26456,9 +28831,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -26483,7 +28855,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -26497,8 +28876,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -26506,6 +28895,7 @@ MonoBehaviour:
   LocalMaterialIndex: 1a000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!33 &8566583769055133684
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -26539,9 +28929,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -26566,7 +28953,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -26580,8 +28974,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -26589,6 +28993,7 @@ MonoBehaviour:
   LocalMaterialIndex: 08000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &8609348783063164163
 GameObject:
   m_ObjectHideFlags: 0
@@ -26633,9 +29038,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -26660,7 +29062,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -26674,8 +29083,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -26683,6 +29102,7 @@ MonoBehaviour:
   LocalMaterialIndex: 07000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &8791268269504941472
 GameObject:
   m_ObjectHideFlags: 0
@@ -26727,9 +29147,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -26754,7 +29171,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -26768,8 +29192,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -26777,6 +29211,7 @@ MonoBehaviour:
   LocalMaterialIndex: 01000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!23 &8792624796996644748
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -26844,9 +29279,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -26871,7 +29303,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -26885,8 +29324,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -26894,6 +29343,7 @@ MonoBehaviour:
   LocalMaterialIndex: 14000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!4 &8809196333710993362
 Transform:
   m_ObjectHideFlags: 0
@@ -26934,9 +29384,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -26961,7 +29408,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -26975,8 +29429,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -26984,6 +29448,7 @@ MonoBehaviour:
   LocalMaterialIndex: 0f000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!33 &8823690234498190042
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -27017,9 +29482,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -27044,7 +29506,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -27058,8 +29527,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -27067,6 +29546,7 @@ MonoBehaviour:
   LocalMaterialIndex: 21000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!23 &8887793723313527092
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -27134,9 +29614,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -27161,7 +29638,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -27175,8 +29659,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -27184,6 +29678,7 @@ MonoBehaviour:
   LocalMaterialIndex: 0b000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!33 &8929427373285423442
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -27217,9 +29712,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -27244,7 +29736,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -27258,8 +29757,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -27267,6 +29776,7 @@ MonoBehaviour:
   LocalMaterialIndex: 19000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!4 &8951447159914944571
 Transform:
   m_ObjectHideFlags: 0
@@ -27307,9 +29817,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -27334,7 +29841,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -27348,8 +29862,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -27357,6 +29881,7 @@ MonoBehaviour:
   LocalMaterialIndex: 1a000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &8998779693823955184
 GameObject:
   m_ObjectHideFlags: 0
@@ -27401,9 +29926,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -27428,7 +29950,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -27442,8 +29971,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -27451,6 +29990,7 @@ MonoBehaviour:
   LocalMaterialIndex: 00000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!23 &9020030044484677343
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -27518,9 +30058,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -27545,7 +30082,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -27559,8 +30103,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -27568,6 +30122,7 @@ MonoBehaviour:
   LocalMaterialIndex: 03000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!4 &9071467435547908827
 Transform:
   m_ObjectHideFlags: 0
@@ -27608,9 +30163,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -27635,7 +30187,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -27649,8 +30208,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -27658,6 +30227,7 @@ MonoBehaviour:
   LocalMaterialIndex: 02000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &9098135666060840602
 GameObject:
   m_ObjectHideFlags: 0
@@ -27702,9 +30272,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -27729,7 +30296,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -27743,8 +30317,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -27752,6 +30336,7 @@ MonoBehaviour:
   LocalMaterialIndex: 05000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!1 &9100882274182628413
 GameObject:
   m_ObjectHideFlags: 0
@@ -27796,9 +30381,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -27823,7 +30405,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -27837,8 +30426,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -27846,6 +30445,7 @@ MonoBehaviour:
   LocalMaterialIndex: 04000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!33 &9101465472233343536
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -27879,9 +30479,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -27906,7 +30503,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -27920,8 +30524,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -27929,6 +30543,7 @@ MonoBehaviour:
   LocalMaterialIndex: 02000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!33 &9132025027011697620
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -27962,9 +30577,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -27989,7 +30601,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -28003,8 +30622,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -28012,6 +30641,7 @@ MonoBehaviour:
   LocalMaterialIndex: 20000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0
 --- !u!108 &9143473981004998844
 Light:
   m_ObjectHideFlags: 0
@@ -28122,9 +30752,6 @@ MonoBehaviour:
   - 0
   EmissionColor:
   - {x: 1, y: 1, z: 1}
-  EmissionMask: 00
-  BaseIsMap: 00
-  ReplaceBase: 00
   Roughness:
   - 0.59999996
   IOR:
@@ -28149,7 +30776,14 @@ MonoBehaviour:
   - 0
   SpecTrans:
   - 0
-  Thin: 00000000
+  Hue:
+  - 0
+  Brightness:
+  - 1
+  Saturation:
+  - 1
+  Contrast:
+  - 1
   FollowMaterial: 01
   ScatterDist:
   - 0
@@ -28163,8 +30797,18 @@ MonoBehaviour:
   - 0.1
   NormalStrength:
   - 1
-  IsSmoothness: 00
+  BlendColor:
+  - {x: 1, y: 1, z: 1}
+  MainTexScaleOffset:
+  - {x: 1, y: 1, z: 0, w: 0}
+  SecondaryTextureScale:
+  - {x: 1, y: 1}
+  Rotation:
+  - 0
+  BlendFactor:
+  - 0
   Selected: 0
+  Flags: 00000000
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -28172,3 +30816,4 @@ MonoBehaviour:
   LocalMaterialIndex: 16000000
   JustCreated: 0
   TilingChanged: 0
+  MatOffset: 0

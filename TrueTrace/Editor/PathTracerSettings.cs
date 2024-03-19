@@ -36,9 +36,10 @@ namespace TrueTrace {
         public InstancedManager Instancer;
         private bool Cleared;
         private AudioClip DingNoise;
-         [SerializeField] public static Dictionary<int, CommonVars.RayObject> RayObjects;
          [SerializeField] public Camera SelectedCamera;
          [SerializeField] public bool ClayMode = false;
+         [SerializeField] public Vector3 ClayColor = new Vector3(0.5f,0.5f,0.5f);
+         [SerializeField] public Vector3 GroundColor = new Vector3(0.1f,0.1f,0.1f);
          [SerializeField] public ObjectField CameraField;
          [SerializeField] public int BounceCount = 7;
          [SerializeField] public float RenderRes = 1;
@@ -51,6 +52,7 @@ namespace TrueTrace {
          [SerializeField] public float BloomStrength = 0.5f;
          [SerializeField] public bool DoF = false;
          [SerializeField] public float DoFAperature = 0.1f;
+         [SerializeField] public float DoFAperatureScale = 1.0f;
          [SerializeField] public float DoFFocal = 0.1f;
          [SerializeField] public bool DoExposure = false;
          [SerializeField] public bool DoExposureAuto = false;
@@ -63,6 +65,7 @@ namespace TrueTrace {
          [SerializeField] public int GISpatialSampleCount = 6;
          [SerializeField] public bool TAA = false;
          [SerializeField] public bool ToneMap = false;
+         [SerializeField] public int ToneMapIndex = 0;
          [SerializeField] public bool TAAU = true;
          [SerializeField] public int AtmoScatter = 4;
          [SerializeField] public bool ShowFPS = true;
@@ -72,15 +75,29 @@ namespace TrueTrace {
          [SerializeField] public int PartialRenderingFactor = 1;
          [SerializeField] public bool DoFirefly = false;
          [SerializeField] public bool ImprovedPrimaryHit = false;
-         [SerializeField] public static bool DoDing = true;
          [SerializeField] public float MinSpatialSize = 10;
          [SerializeField] public float ReCurBlurRadius = 30;
          [SerializeField] public int RISCount = 5;
          [SerializeField] public int DenoiserSelection = 0;
-         [SerializeField] public bool ReSTIRDenoiser = false;
+         [SerializeField] public Color SceneBackgroundColor = new Color(1,1,1,1);
+         [SerializeField] public float BackgroundIntensity = 1;
+         [SerializeField] public float LightEnergyScale = 1;
+         [SerializeField] public float IndirectBoost = 1;
+         [SerializeField] public int BackgroundType = 0;
+         [SerializeField] public bool DoOldReSTIR = false;
+         [SerializeField] public bool DoDing = true;
+         [SerializeField] public bool DoSaving = true;
+         [SerializeField] public float SunDesaturate = 0;
+         [SerializeField] public float SkyDesaturate = 0;
+         [SerializeField] public int FireflyFrameCount = 0;
+         [SerializeField] public float FireflyStrength = 1.0f;
+         [SerializeField] public float FireflyOffset = 0;
+         [SerializeField] public int OIDNFrameCount = 0;
+         [SerializeField] public bool UseOIDN = false;
+         
          void OnEnable() {
-            RayObjects = new Dictionary<int, CommonVars.RayObject>();
             EditorSceneManager.activeSceneChangedInEditMode += EvaluateScene;
+            EditorSceneManager.sceneSaving += SaveScene;
             if(EditorPrefs.GetString("EditModeFunctions", JsonUtility.ToJson(this, false)) != null) {
                var data = EditorPrefs.GetString("EditModeFunctions", JsonUtility.ToJson(this, false));
                JsonUtility.FromJsonOverwrite(data, this);
@@ -408,6 +425,7 @@ Toggle SampleValidToggle;
 Toggle IndirectClampingToggle;
 FloatField RISCountField;
 FloatField ReCurBlurField;
+IntegerField OIDNFrameField;
 FloatField FocalSlider;
 
 
@@ -423,6 +441,7 @@ private void StandardSet() {
          BloomStrength = 0.5f;
          DoF = false;
          DoFAperature = 0.1f;
+         DoFAperatureScale = 1.0f;
          DoFFocal = 0.1f;
          DoExposure = false;
          DoExposureAuto = false;
@@ -489,12 +508,14 @@ Toolbar toolbar;
          InputHDRIField.value = RayMaster.SkyboxTexture;
          InputHDRIField.RegisterValueChangedCallback(evt => RayMaster.SkyboxTexture = evt.newValue as Texture);
          BackgroundColorField = new ColorField();
-         BackgroundColorField.value = new Color(RayMaster.SceneBackgroundColor.x, RayMaster.SceneBackgroundColor.y, RayMaster.SceneBackgroundColor.z, 1);
-         BackgroundColorField.RegisterValueChangedCallback(evt => RayMaster.SceneBackgroundColor = new Vector3(evt.newValue.r,evt.newValue.g,evt.newValue.b));
+         BackgroundColorField.value = SceneBackgroundColor;
+         BackgroundColorField.style.width = 150;
+         BackgroundColorField.RegisterValueChangedCallback(evt => {SceneBackgroundColor = evt.newValue; RayMaster.SceneBackgroundColor = new Vector3(SceneBackgroundColor.r,SceneBackgroundColor.g,SceneBackgroundColor.b);});
 
          BackgroundSettingsField = new PopupField<string>("Background Type");
          BackgroundSettingsField.choices = BackgroundSettings;
-         BackgroundSettingsField.index = RayMaster.BackgroundType;
+         BackgroundSettingsField.index = BackgroundType;
+         BackgroundSettingsField.style.width = 450;
          switch(BackgroundSettingsField.index) {
             case 0:
                BackgroundSettingsField.Add(BlankElement);
@@ -510,7 +531,8 @@ Toolbar toolbar;
          SceneSettingsMenu.Add(BackgroundSettingsField);
          BackgroundSettingsField.RegisterValueChangedCallback(evt => {
             int Prev = RayMaster.BackgroundType;
-            RayMaster.BackgroundType = BackgroundSettingsField.index;
+            BackgroundType = BackgroundSettingsField.index;
+            RayMaster.BackgroundType = BackgroundType;
             switch(BackgroundSettingsField.index) {
                case 0:
                   BackgroundSettingsField.Add(BlankElement);
@@ -526,17 +548,26 @@ Toolbar toolbar;
 
             });
       
-      BackgroundIntensityField = new FloatField() {value = RayMaster.BackgroundIntensity, label = "Background Intensity"};
-      BackgroundIntensityField.RegisterValueChangedCallback(evt => RayMaster.BackgroundIntensity = evt.newValue);
+      BackgroundIntensityField = new FloatField() {value = BackgroundIntensity, label = "Background Intensity"};
+      BackgroundIntensityField.RegisterValueChangedCallback(evt => {BackgroundIntensity = evt.newValue; RayMaster.BackgroundIntensity = BackgroundIntensity;});
       SceneSettingsMenu.Add(BackgroundIntensityField);
 
-      UnityLightModifierField = new FloatField() {value = Assets.LightEnergyScale, label = "Unity Light Intensity Modifier"};
-      UnityLightModifierField.RegisterValueChangedCallback(evt => Assets.LightEnergyScale = evt.newValue);
+      UnityLightModifierField = new FloatField() {value = LightEnergyScale, label = "Unity Light Intensity Modifier"};
+      UnityLightModifierField.RegisterValueChangedCallback(evt => {LightEnergyScale = evt.newValue; Assets.LightEnergyScale = LightEnergyScale;});
       SceneSettingsMenu.Add(UnityLightModifierField);
 
-      IndirectBoostField = new FloatField() {value = RayMaster.IndirectBoost, label = "Indirect Lighting Boost"};
-      IndirectBoostField.RegisterValueChangedCallback(evt => RayMaster.IndirectBoost = evt.newValue);
+      IndirectBoostField = new FloatField() {value = IndirectBoost, label = "Indirect Lighting Boost"};
+      IndirectBoostField.RegisterValueChangedCallback(evt => {IndirectBoost = evt.newValue; RayMaster.IndirectBoost = IndirectBoost;});
       SceneSettingsMenu.Add(IndirectBoostField);
+
+      Slider SunDesatSlider = new Slider() {label = "SunDesat: ", value = SunDesaturate, highValue = 1.0f, lowValue = 0.0f};
+      SunDesatSlider.RegisterValueChangedCallback(evt => {SunDesaturate = evt.newValue; RayMaster.SunDesaturate = SunDesaturate;});
+      SceneSettingsMenu.Add(SunDesatSlider);
+
+      Slider SkyDesatSlider = new Slider() {label = "SkyDesat: ", value = SkyDesaturate, highValue = 1.0f, lowValue = 0.0f};
+      SkyDesatSlider.RegisterValueChangedCallback(evt => {SkyDesaturate = evt.newValue; RayMaster.SkyDesaturate = SkyDesaturate;});
+      SceneSettingsMenu.Add(SkyDesatSlider);
+
 
 
       }
@@ -783,9 +814,32 @@ Toolbar toolbar;
          Toggle HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
          HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("HardwareRT"); else RemoveDefine("HardwareRT"); SetDefines();});
          HardSettingsMenu.Add(HardwareRTToggle);
+         
+         VisualElement ClayColorBox = new VisualElement();
+
          Toggle ClayModeToggle = new Toggle() {value = ClayMode, text = "Use ClayMode"};
-         ClayModeToggle.RegisterValueChangedCallback(evt => {ClayMode = evt.newValue; RayMaster.ClayMode = ClayMode;});
+         ClayModeToggle.RegisterValueChangedCallback(evt => {ClayMode = evt.newValue; RayMaster.ClayMode = ClayMode; if(evt.newValue) HardSettingsMenu.Insert(HardSettingsMenu.IndexOf(ClayModeToggle) + 1, ClayColorBox); else HardSettingsMenu.Remove(ClayColorBox);});
          HardSettingsMenu.Add(ClayModeToggle);
+
+         ColorField ClayColorField = new ColorField();
+         ClayColorField.label = "Clay Color: ";
+         ClayColorField.value = new Color(ClayColor.x, ClayColor.y, ClayColor.z, 1.0f);
+         ClayColorField.style.width = 250;
+         ClayColorField.RegisterValueChangedCallback(evt => {ClayColor = new Vector3(evt.newValue.r, evt.newValue.g, evt.newValue.b); RayMaster.ClayColor = ClayColor;});
+         ClayColorBox.Add(ClayColorField);
+         if(ClayMode) HardSettingsMenu.Add(ClayColorBox);
+
+         ColorField GroundColorField = new ColorField();
+         GroundColorField.label = "Ground Color: ";
+         GroundColorField.value = new Color(GroundColor.x, GroundColor.y, GroundColor.z, 1.0f);
+         GroundColorField.style.width = 250;
+         GroundColorField.RegisterValueChangedCallback(evt => {GroundColor = new Vector3(evt.newValue.r, evt.newValue.g, evt.newValue.b); RayMaster.GroundColor = GroundColor;});
+         HardSettingsMenu.Add(GroundColorField);
+
+         Toggle OIDNToggle = new Toggle() {value = (definesList.Contains("UseOIDN")), text = "Enable OIDN"};
+         OIDNToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("UseOIDN"); else RemoveDefine("UseOIDN"); SetDefines();});
+         HardSettingsMenu.Add(OIDNToggle);
+
          Toggle LightmappingToggle = new Toggle() {value = (definesList.Contains("TTLightMapping")), text = "Use TrueTrace as a LightMapper"};
          LightmappingToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("TTLightMapping"); else RemoveDefine("TTLightMapping"); SetDefines();});
          HardSettingsMenu.Add(LightmappingToggle);
@@ -795,8 +849,24 @@ Toolbar toolbar;
          Button RemoveTrueTraceButton = new Button(() => RemoveTrueTrace()) {text = "Remove TrueTrace Scripts From Scene"};
          HardSettingsMenu.Add(RemoveTrueTraceButton);
          DingToggle = new Toggle() {value = DoDing, text = "Play Ding When Build Finishes"};
-         DingToggle.RegisterValueChangedCallback(evt => DoDing = evt.newValue);
+         DingToggle.RegisterValueChangedCallback(evt => {DoDing = evt.newValue; RayTracingMaster.DoDing = DoDing;});
          HardSettingsMenu.Add(DingToggle);
+         Toggle DoSavingToggle = new Toggle() {value = DoSaving, text = "Enable RayTacingObject Saving"};
+         DoSavingToggle.RegisterValueChangedCallback(evt => {DoSaving = evt.newValue; RayTracingMaster.DoSaving = DoSaving;});
+         HardSettingsMenu.Add(DoSavingToggle);
+         VisualElement ScreenShotBox = new VisualElement();
+         ScreenShotBox.style.flexDirection = FlexDirection.Row;
+         Label PathLabel = new Label() {text = "Screenshot Path: "};
+         PathLabel.style.color = Color.black;
+         if(System.IO.Directory.Exists(PlayerPrefs.GetString("ScreenShotPath"))) PathLabel.style.backgroundColor = Color.green;
+         else PathLabel.style.backgroundColor = Color.red;
+         TextField AbsolutePath = new TextField();
+         AbsolutePath.value = PlayerPrefs.GetString("ScreenShotPath");
+         AbsolutePath.RegisterValueChangedCallback(evt => {if(System.IO.Directory.Exists(evt.newValue)) {PathLabel.style.backgroundColor = Color.green;} else {PathLabel.style.backgroundColor = Color.red;} PlayerPrefs.SetString("ScreenShotPath", evt.newValue);});
+         ScreenShotBox.Add(PathLabel);
+         ScreenShotBox.Add(AbsolutePath);
+         HardSettingsMenu.Add(ScreenShotBox);
+
       }
 
       public struct CustomGBufferData {
@@ -824,7 +894,31 @@ Toolbar toolbar;
             CreateGUI();
          }
 
+         void SaveScene(Scene Current, string ThrowawayString) {
+            EditorUtility.SetDirty(Assets);
+            Assets.ClearAll();
+            InstancedManager Instanced = GameObject.Find("InstancedStorage").GetComponent<InstancedManager>();
+            EditorUtility.SetDirty(Instanced);
+            Instanced.ClearAll();
+            Cleared = true;
+         }
+
+         private void TakeScreenshot() {
+            ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayMaster.SampleCount + " Samples.png");
+            UnityEditor.AssetDatabase.Refresh();
+         }
+         bool HasNoMore = false;
+
         public void CreateGUI() {
+            HasNoMore = false;
+            if(!PlayerPrefs.HasKey("ScreenShotPath")) {
+               PlayerPrefs.SetString("ScreenShotPath",  Application.dataPath + "/ScreenShots");
+            }
+            if(!System.IO.Directory.Exists(PlayerPrefs.GetString("ScreenShotPath"))) {
+               AssetDatabase.CreateFolder("Assets", "ScreenShots");
+               PlayerPrefs.SetString("ScreenShotPath",  Application.dataPath + "/ScreenShots");
+            }
+
             DingNoise = Resources.Load("Utility/DING", typeof(AudioClip)) as AudioClip;
             OnFocus();
             MainSource = new VisualElement();
@@ -872,13 +966,15 @@ Toolbar toolbar;
            RayMaster.AllowBloom = Bloom;
            RayMaster.BloomStrength = 128 - BloomStrength * 128.0f;
            RayMaster.AllowDoF = DoF;
+           RayMaster.ClayColor = ClayColor;
+           RayMaster.GroundColor = GroundColor;
            RayMaster.DoFAperature = DoFAperature;
+           RayMaster.DoFAperatureScale = DoFAperatureScale;
            RayMaster.DoFFocal = DoFFocal;
            RayMaster.AllowAutoExpose = DoExposure;
            RayMaster.DoExposureAuto = DoExposureAuto;
            RayMaster.Exposure = Exposure;
            RayMaster.UseReSTIRGI = ReSTIRGI;
-           RayMaster.ReSTIRDenoiser = ReSTIRDenoiser;
            RayMaster.UseReSTIRGITemporal = GITemporal;
            RayMaster.UseReSTIRGISpatial = GISpatial;
            RayMaster.DoReSTIRGIConnectionValidation = SampleValid;
@@ -887,6 +983,7 @@ Toolbar toolbar;
            RayMaster.ReSTIRGISpatialCount = GISpatialSampleCount;
            RayMaster.AllowTAA = TAA;
            RayMaster.AllowToneMap = ToneMap;
+           RayMaster.ToneMapper = ToneMapIndex;
            RayMaster.UseTAAU = TAAU;
            RayMaster.AtmoNumLayers = AtmoScatter;
            Assets.MainDesiredRes = AtlasSize;
@@ -898,19 +995,23 @@ Toolbar toolbar;
            RayMaster.ReCurBlurRadius = ReCurBlurRadius;
            RayMaster.ImprovedPrimaryHit = ImprovedPrimaryHit;
            RayMaster.ClayMode = ClayMode;
+           RayMaster.SceneBackgroundColor = new Vector3(SceneBackgroundColor.r,SceneBackgroundColor.g,SceneBackgroundColor.b);
+           RayMaster.BackgroundIntensity = BackgroundIntensity;
+           Assets.LightEnergyScale = LightEnergyScale;
+           RayMaster.IndirectBoost = IndirectBoost;
+           RayMaster.BackgroundType = BackgroundType;
+           RayMaster.DoOldReSTIR = DoOldReSTIR;
+           RayTracingMaster.DoSaving = DoSaving;
+           RayTracingMaster.DoDing = DoDing;
+           RayMaster.SunDesaturate = SunDesaturate;
+           RayMaster.SkyDesaturate = SkyDesaturate;
+           RayMaster.FireflyFrameCount = FireflyFrameCount;
          }
 
-         AddHardSettingsToMenu();
+           AddHardSettingsToMenu();
            BVHBuild = new Button(() => OnStartAsyncCombined()) {text = "Build Aggregated BVH"};
            BVHBuild.style.minWidth = 145;
-           ScreenShotButton = new Button(() => {
-               string dirPath = Application.dataPath + "/../Assets/ScreenShots";
-               if(!System.IO.Directory.Exists(dirPath)) {
-                  AssetDatabase.CreateFolder("Assets", "ScreenShots");
-               }
-               ScreenCapture.CaptureScreenshot(dirPath + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayMaster.SampleCount + " Samples.png");
-               UnityEditor.AssetDatabase.Refresh();
-           }) {text = "Take Screenshot"};
+           ScreenShotButton = new Button(() => TakeScreenshot()) {text = "Take Screenshot"};
            ScreenShotButton.style.minWidth = 100;
            StaticButton = new Button(() => {if(!Application.isPlaying) OptimizeForStatic(); else Debug.Log("Cant Do This In Editor");}) {text = "Make All Static"};
            StaticButton.style.minWidth = 105;
@@ -1001,7 +1102,12 @@ Toolbar toolbar;
             DenoiserSettings.Add("None");
             DenoiserSettings.Add("ASVGF");
             DenoiserSettings.Add("ReCur");
-            PopupField<string> DenoiserField = new PopupField<string>("Denoiser");
+            #if UseOIDN
+               DenoiserSettings.Add("OIDN");
+            #endif
+            PopupField<string> DenoiserField = new PopupField<string>("<b>Denoiser</b>");
+            DenoiserField.ElementAt(0).style.minWidth = 55;
+            DenoiserField.style.width = 275;
             DenoiserField.choices = DenoiserSettings;
             DenoiserField.index = DenoiserSelection;
             DenoiserField.style.flexDirection = FlexDirection.Row;
@@ -1009,7 +1115,9 @@ Toolbar toolbar;
                DenoiserSelection = DenoiserField.index;
                RayMaster.UseASVGF = false;
                RayMaster.UseReCur = false;
+               RayMaster.UseOIDN = false;
                if(DenoiserField.Contains(ReCurBlurField)) DenoiserField.Remove(ReCurBlurField);
+               if(DenoiserField.Contains(OIDNFrameField)) DenoiserField.Remove(OIDNFrameField);
                switch(DenoiserSelection) {
                   case 0:
                   break;
@@ -1019,15 +1127,32 @@ Toolbar toolbar;
                   case 2:
                      RayMaster.UseReCur = true;
                      ReCurBlurField = new FloatField("ReCur Blur Radius") {value = ReCurBlurRadius};
+                     ReCurBlurField.ElementAt(0).style.minWidth = 65;
                      ReCurBlurField.RegisterValueChangedCallback(evt => {ReCurBlurRadius = (int)evt.newValue; ReCurBlurRadius = Mathf.Max(ReCurBlurRadius, 2); RayMaster.ReCurBlurRadius = ReCurBlurRadius;});
                      DenoiserField.Add(ReCurBlurField);
                   break;
+                  case 3:
+                     #if UseOIDN
+                        RayMaster.UseOIDN = true;
+                        OIDNFrameField = new IntegerField("Frames Before OIDN") {value = OIDNFrameCount};
+                        OIDNFrameField.ElementAt(0).style.minWidth = 95;
+                        OIDNFrameField.RegisterValueChangedCallback(evt => {OIDNFrameCount = (int)evt.newValue; RayMaster.OIDNFrameCount = OIDNFrameCount;});
+                        DenoiserField.Add(OIDNFrameField);
+                     #else 
+                        RayMaster.UseOIDN = false;
+                        DenoiserField.index = 0;
+                        DenoiserSelection = 0;
+                     #endif
+                  break;
+
                } 
             });
             if(DenoiserField.Contains(ReCurBlurField)) DenoiserField.Remove(ReCurBlurField);
+            if(DenoiserField.Contains(OIDNFrameField)) DenoiserField.Remove(OIDNFrameField);
             DenoiserSelection = DenoiserField.index;
             RayMaster.UseASVGF = false;
             RayMaster.UseReCur = false;
+            RayMaster.UseOIDN = false;
             switch(DenoiserSelection) {
                case 0:
                break;
@@ -1037,10 +1162,25 @@ Toolbar toolbar;
                case 2:
                   RayMaster.UseReCur = true;
                   ReCurBlurField = new FloatField("ReCur Blur Radius") {value = ReCurBlurRadius};
+                  ReCurBlurField.ElementAt(0).style.minWidth = 65;
                   ReCurBlurField.RegisterValueChangedCallback(evt => {ReCurBlurRadius = (int)evt.newValue; ReCurBlurRadius = Mathf.Max(ReCurBlurRadius, 2); RayMaster.ReCurBlurRadius = ReCurBlurRadius;});
                   DenoiserField.Add(ReCurBlurField);
                break;
+               case 3:
+                  #if UseOIDN
+                     RayMaster.UseOIDN = true;
+                     OIDNFrameField = new IntegerField("Frames Before OIDN") {value = OIDNFrameCount};
+                     OIDNFrameField.ElementAt(0).style.minWidth = 95;
+                     OIDNFrameField.RegisterValueChangedCallback(evt => {OIDNFrameCount = (int)evt.newValue; RayMaster.OIDNFrameCount = OIDNFrameCount;});
+                     DenoiserField.Add(OIDNFrameField);
+                  #else 
+                     RayMaster.UseOIDN = false;
+                     DenoiserField.index = 0;
+                     DenoiserSelection = 0;
+                  #endif
+               break;
             } 
+
             MainSource.Add(DenoiserField);
 
 
@@ -1049,7 +1189,7 @@ Toolbar toolbar;
          BloomToggle = new Toggle() {value = Bloom, text = "Enable Bloom"};
            VisualElement BloomBox = new VisualElement();
                Label BloomLabel = new Label("Bloom Strength");
-               Slider BloomSlider = new Slider() {value = BloomStrength, highValue = 0.99f, lowValue = 0.5f};
+               Slider BloomSlider = new Slider() {value = BloomStrength, highValue = 0.9999f, lowValue = 0.5f};
                BloomSlider.style.width = 100;
                BloomToggle.RegisterValueChangedCallback(evt => {Bloom = evt.newValue; RayMaster.AllowBloom = Bloom; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(BloomToggle) + 1, BloomBox); else MainSource.Remove(BloomBox);});        
                BloomSlider.RegisterValueChangedCallback(evt => {BloomStrength = evt.newValue; RayMaster.BloomStrength = 128 - BloomStrength * 128.0f;});
@@ -1062,6 +1202,9 @@ Toolbar toolbar;
            Label AperatureLabel = new Label("Aperature Size");
            Slider AperatureSlider = new Slider() {value = DoFAperature, highValue = 1, lowValue = 0};
            AperatureSlider.style.width = 250;
+           FloatField AperatureScaleField = new FloatField() {value = DoFAperatureScale, label = "Aperature Scale"};
+           AperatureScaleField.ElementAt(0).style.minWidth = 65;
+           AperatureScaleField.RegisterValueChangedCallback(evt => {DoFAperatureScale = evt.newValue; DoFAperatureScale = Mathf.Max(DoFAperatureScale, 0.0001f); RayMaster.DoFAperatureScale = DoFAperatureScale; AperatureScaleField.value = DoFAperatureScale;});
            Label FocalLabel = new Label("Focal Length");
            FocalSlider = new FloatField() {value = DoFFocal};
            FocalSlider.style.width = 150;
@@ -1069,6 +1212,7 @@ Toolbar toolbar;
            Box AperatureBox = new Box();
            AperatureBox.Add(AperatureLabel);
            AperatureBox.Add(AperatureSlider);
+           AperatureBox.Add(AperatureScaleField);
            AperatureBox.style.flexDirection = FlexDirection.Row;
            Box FocalBox = new Box();
            FocalBox.Add(FocalLabel);
@@ -1123,22 +1267,22 @@ Toolbar toolbar;
                    TopGI.Add(SampleValidToggle);
                    TopGI.Add(GIUpdateRateField);
                    TopGI.Add(GIUpdateRateLabel);
+                   Toggle OldReSTIRToggle = new Toggle() {value = DoOldReSTIR};
+                   OldReSTIRToggle.RegisterValueChangedCallback(evt => {DoOldReSTIR = evt.newValue; RayMaster.DoOldReSTIR = DoOldReSTIR;});
+                   TopGI.Add(OldReSTIRToggle);
                EnclosingGI.Add(TopGI);
                Box TemporalGI = new Box();
                    TemporalGI.style.flexDirection = FlexDirection.Row;
                    TemporalGIToggle = new Toggle() {value = GITemporal, text = "Enable Temporal"};
-                   Toggle GIDenoiserToggle = new Toggle() {value = ReSTIRDenoiser, text = "Enable Denoiser"};
                    
                    Label TemporalGIMCapLabel = new Label("Temporal M Cap(0 is off)");
                    TemporalGIMCapLabel.tooltip = "Controls how long a sample is valid for, lower numbers update more quickly but have more noise, good for quickly changing scenes/lighting";
                    TeporalGIMCapField = new FloatField() {value = GITemporalMCap};
                    TemporalGIToggle.RegisterValueChangedCallback(evt => {GITemporal = evt.newValue; RayMaster.UseReSTIRGITemporal = GITemporal;});
                    TeporalGIMCapField.RegisterValueChangedCallback(evt => {GITemporalMCap = (int)evt.newValue; RayMaster.ReSTIRGITemporalMCap = GITemporalMCap;});
-                   GIDenoiserToggle.RegisterValueChangedCallback(evt => {ReSTIRDenoiser = (bool)evt.newValue; RayMaster.ReSTIRDenoiser = ReSTIRDenoiser;});
                    TemporalGI.Add(TemporalGIToggle);
                    TemporalGI.Add(TeporalGIMCapField);
                    TemporalGI.Add(TemporalGIMCapLabel);
-                   TemporalGI.Add(GIDenoiserToggle);
                EnclosingGI.Add(TemporalGI);
                Box SpatialGI = new Box();
                    SpatialGI.style.flexDirection = FlexDirection.Row;
@@ -1175,10 +1319,11 @@ Toolbar toolbar;
             TonemapSettings.Add("Reinhard");
             TonemapSettings.Add("Uncharted 2");
             TonemapSettings.Add("AgX");
-            PopupField<string> ToneMapField = new PopupField<string>("Tonemapper");
+            PopupField<string> ToneMapField = new PopupField<string>("<b>Tonemapper</b>");
+            ToneMapField.ElementAt(0).style.minWidth = 65;
             ToneMapField.choices = TonemapSettings;
-            ToneMapField.index = RayMaster.ToneMapper;
-            ToneMapField.RegisterValueChangedCallback(evt => {RayMaster.ToneMapper = ToneMapField.index;});
+            ToneMapField.index = ToneMapIndex;
+            ToneMapField.RegisterValueChangedCallback(evt => {ToneMapIndex = ToneMapField.index; RayMaster.ToneMapper = ToneMapIndex;});
 
            Toggle ToneMapToggle = new Toggle() {value = ToneMap, text = "Enable Tonemapping"};
             VisualElement ToneMapFoldout = new VisualElement() {};
@@ -1199,6 +1344,7 @@ Toolbar toolbar;
             VisualElement PartialRenderingFoldout = new VisualElement() {};
                PartialRenderingFoldout.style.flexDirection = FlexDirection.Row;
                IntegerField PartialRenderingField = new IntegerField() {value = PartialRenderingFactor, label = "Partial Factor"};
+               PartialRenderingField.ElementAt(0).style.minWidth = 65;
                PartialRenderingField.RegisterValueChangedCallback(evt => {PartialRenderingFactor = evt.newValue; PartialRenderingFactor = Mathf.Max(PartialRenderingFactor, 1); RayMaster.PartialRenderingFactor = PartialRenderingFactor;});
                PartialRenderingFoldout.Add(PartialRenderingField);
            DoPartialRenderingToggle = new Toggle() {value = DoPartialRendering, text = "Use Partial Rendering"};
@@ -1206,9 +1352,25 @@ Toolbar toolbar;
            DoPartialRenderingToggle.RegisterValueChangedCallback(evt => {DoPartialRendering = evt.newValue; RayMaster.DoPartialRendering = DoPartialRendering;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(DoPartialRenderingToggle) + 1, PartialRenderingFoldout); else MainSource.Remove(PartialRenderingFoldout);});
            if(DoPartialRendering) MainSource.Add(PartialRenderingFoldout);
 
+            VisualElement FireflyFoldout = new VisualElement() {};
+               IntegerField FireflyFrameCountField = new IntegerField() {value = FireflyFrameCount, label = "Frames Before Anti-Firefly"};
+               FireflyFrameCountField.ElementAt(0).style.minWidth = 65;
+               FireflyFrameCountField.RegisterValueChangedCallback(evt => {FireflyFrameCount = evt.newValue; RayMaster.FireflyFrameCount = FireflyFrameCount;});
+               FireflyFoldout.Add(FireflyFrameCountField);
+         
+               Slider FireflyStrengthSlider = new Slider() {label = "Anti Firefly Strength: ", value = FireflyStrength, highValue = 1.0f, lowValue = 0.0f};
+               FireflyStrengthSlider.RegisterValueChangedCallback(evt => {FireflyStrength = evt.newValue; RayMaster.FireflyStrength = FireflyStrength;});
+               FireflyFoldout.Add(FireflyStrengthSlider);
+
+               FloatField FireflyOffsetField = new FloatField("Firefly Minimum Offset") {value = FireflyOffset};
+               FireflyOffsetField.RegisterValueChangedCallback(evt => {FireflyOffset = (int)evt.newValue; RayMaster.FireflyOffset = FireflyOffset;});
+               FireflyFoldout.Add(FireflyOffsetField);
+
+
            DoFireflyToggle = new Toggle() {value = DoFirefly, text = "Enable AntiFirefly"};
-           DoFireflyToggle.RegisterValueChangedCallback(evt => {DoFirefly = evt.newValue; RayMaster.DoFirefly = DoFirefly;});
            MainSource.Add(DoFireflyToggle);
+           DoFireflyToggle.RegisterValueChangedCallback(evt => {DoFirefly = evt.newValue; RayMaster.DoFirefly = DoFirefly; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(DoFireflyToggle) + 1, FireflyFoldout); else MainSource.Remove(FireflyFoldout);});
+           if(DoFirefly) MainSource.Add(FireflyFoldout);
 
            Toggle ImprovedPrimaryHitToggle = new Toggle() {value = ImprovedPrimaryHit, text = "RR Ignores Primary Hit"};
            ImprovedPrimaryHitToggle.RegisterValueChangedCallback(evt => {ImprovedPrimaryHit = evt.newValue; RayMaster.ImprovedPrimaryHit = ImprovedPrimaryHit;});
@@ -1261,44 +1423,97 @@ Toolbar toolbar;
             MainSource.Add(EnclosingBox);
 
         }
+
+         public GameObject getOBJ(int id)
+         {
+             Dictionary<int, GameObject> m_instanceMap = new Dictionary<int, GameObject>();
+             //record instance map
+
+             m_instanceMap.Clear();
+             List<GameObject> gos = new List<GameObject>();
+             foreach (GameObject go in Resources.FindObjectsOfTypeAll(typeof(GameObject)))
+             {
+                 if (gos.Contains(go))
+                 {
+                     continue;
+                 }
+                 gos.Add(go);
+                 m_instanceMap[go.GetInstanceID()] = go;
+             }
+
+             if (m_instanceMap.ContainsKey(id))
+             {
+                 return m_instanceMap[id];
+             }
+             else
+             {
+                 return null;
+             }
+         }
+
         void Update() {
             if(!Application.isPlaying) {
-               foreach(var A in RayObjects.Values) {
-                  if(A.RayObj != null && A.RayObj.GetComponent<RayTracingObject>() != null) {
-                     RayTracingObject a = A.RayObj.GetComponent<RayTracingObject>();
-                     for(int i = 0; i < a.BaseColor.Length; i++) {
-                        a.BaseColor[i] = A.RayData[i].BaseColor;
-                        a.TransmissionColor[i] = A.RayData[i].TransmittanceColor;
-                        a.MetallicRemap[i] = A.RayData[i].MetallicRemap;
-                        a.RoughnessRemap[i] = A.RayData[i].RoughnessRemap;
-                        a.emmission[i] = A.RayData[i].emmission;
-                        a.EmissionColor[i] = A.RayData[i].EmissionColor;
-                        a.EmissionMask[i] = A.RayData[i].EmissionMask;
-                        a.BaseIsMap[i] = A.RayData[i].BaseIsMap;
-                        a.ReplaceBase[i] = A.RayData[i].ReplaceBase;
-                        a.Roughness[i] = A.RayData[i].Roughness;
-                        a.IOR[i] = A.RayData[i].IOR;
-                        a.Metallic[i] = A.RayData[i].Metallic;
-                        a.SpecularTint[i] = A.RayData[i].SpecularTint;
-                        a.Sheen[i] = A.RayData[i].Sheen;
-                        a.SheenTint[i] = A.RayData[i].SheenTint;
-                        a.ClearCoat[i] = A.RayData[i].ClearCoat;
-                        a.ClearCoatGloss[i] = A.RayData[i].ClearCoatGloss;
-                        a.Anisotropic[i] = A.RayData[i].Anisotropic;
-                        a.Flatness[i] = A.RayData[i].Flatness;
-                        a.DiffTrans[i] = A.RayData[i].DiffTrans;
-                        a.SpecTrans[i] = A.RayData[i].SpecTrans;
-                        a.Thin[i] = A.RayData[i].Thin;
-                        a.FollowMaterial[i] = A.RayData[i].FollowMaterial;
-                        a.ScatterDist[i] = A.RayData[i].ScatterDist;
-                        a.Specular[i] = A.RayData[i].Specular;
-                        a.AlphaCutoff[i] = A.RayData[i].AlphaCutoff;
-                        a.IsSmoothness[i] = A.RayData[i].IsSmoothness;
-                        a.NormalStrength[i] = A.RayData[i].NormalStrength;
-                     }
+               if(RayTracingMaster.DoCheck && DoSaving) {
+                  try{
+                      UnityEditor.AssetDatabase.Refresh();
+                     using (var A = new StringReader(Resources.Load<TextAsset>("Utility/SaveFile").text)) {
+                         var serializer = new XmlSerializer(typeof(RayObjs));
+                         RayObjs rayreads = serializer.Deserialize(A) as RayObjs;
+                         for(int i = 0; i < rayreads.RayObj.Count; i++) {
+                           RayObjectDatas Ray = rayreads.RayObj[i];
+                           GameObject TempObj = getOBJ(Ray.ID);
+                           RayTracingObject TempRTO = TempObj.GetComponent<RayTracingObject>();
+                           int NameIndex = (new List<string>(TempRTO.Names)).IndexOf(Ray.MatName);
+                           if(NameIndex == -1) {
+                              Debug.Log("EEEE");
+                           } else {
+                              TempRTO.MaterialOptions[NameIndex] = (RayTracingObject.Options)Ray.OptionID;
+                              TempRTO.TransmissionColor[NameIndex] = Ray.TransCol;
+                              TempRTO.BaseColor[NameIndex] = Ray.BaseCol;
+                              TempRTO.MetallicRemap[NameIndex] = Ray.MetRemap;
+                              TempRTO.RoughnessRemap[NameIndex] = Ray.RoughRemap;
+                              TempRTO.emmission[NameIndex] = Ray.Emiss;
+                              TempRTO.EmissionColor[NameIndex] = Ray.EmissCol;
+                              TempRTO.Roughness[NameIndex] = Ray.Rough;
+                              TempRTO.IOR[NameIndex] = Ray.IOR;
+                              TempRTO.Metallic[NameIndex] = Ray.Met;
+                              TempRTO.SpecularTint[NameIndex] = Ray.SpecTint;
+                              TempRTO.Sheen[NameIndex] = Ray.Sheen;
+                              TempRTO.SheenTint[NameIndex] = Ray.SheenTint;
+                              TempRTO.ClearCoat[NameIndex] = Ray.Clearcoat;
+                              TempRTO.ClearCoatGloss[NameIndex] = Ray.ClearcoatGloss;
+                              TempRTO.Anisotropic[NameIndex] = Ray.Anisotropic;
+                              TempRTO.Flatness[NameIndex] = Ray.Flatness;
+                              TempRTO.DiffTrans[NameIndex] = Ray.DiffTrans;
+                              TempRTO.SpecTrans[NameIndex] = Ray.SpecTrans;
+                              TempRTO.FollowMaterial[NameIndex] = Ray.FollowMat;
+                              TempRTO.ScatterDist[NameIndex] = Ray.ScatterDist;
+                              TempRTO.Specular[NameIndex] = Ray.Spec;
+                              TempRTO.AlphaCutoff[NameIndex] = Ray.AlphaCutoff;
+                              TempRTO.NormalStrength[NameIndex] = Ray.NormStrength;
+                              TempRTO.Hue[NameIndex] = Ray.Hue;
+                              TempRTO.Brightness[NameIndex] = Ray.Brightness;
+                              TempRTO.Contrast[NameIndex] = Ray.Contrast;
+                              TempRTO.Saturation[NameIndex] = Ray.Saturation;
+                              TempRTO.BlendColor[NameIndex] = Ray.BlendColor;
+                              TempRTO.BlendFactor[NameIndex] = Ray.BlendFactor;
+                              TempRTO.MainTexScaleOffset[NameIndex] = Ray.MainTexScaleOffset;
+                              TempRTO.SecondaryTextureScale[NameIndex] = Ray.SecondaryTextureScale;
+                              TempRTO.Rotation[NameIndex] = Ray.Rotation;
+                              TempRTO.Flags[NameIndex] = Ray.Flags;
+                              TempRTO.CallMaterialEdited();
+                           }
+
+                         }
+                      }
+                  } catch(System.Exception e) {HasNoMore = true;};
+                  using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/SaveFile.xml")) {
+                      var serializer = new XmlSerializer(typeof(RayObjs));
+                      serializer.Serialize(writer.BaseStream, new RayObjs());
+                      UnityEditor.AssetDatabase.Refresh();
                   }
                }
-               RayObjects.Clear();
+               RayTracingMaster.DoCheck = false;
             }
 
             if(Assets != null && Instancer != null && Assets.RunningTasks != null && Instancer.RunningTasks != null) RemainingObjectsField.value = Assets.RunningTasks + Instancer.RunningTasks;
@@ -1318,7 +1533,7 @@ Toolbar toolbar;
     {
          float TimeElapsed = BuildWatch.GetSeconds();
          BuildWatch.Stop();
-         if(DoDing && TimeElapsed > 15.0f) {
+         if(RayTracingMaster.DoDing && TimeElapsed > 15.0f) {
             Assembly unityEditorAssembly = typeof(AudioImporter).Assembly;
         
             System.Type audioUtilClass = unityEditorAssembly.GetType("UnityEditor.AudioUtil");

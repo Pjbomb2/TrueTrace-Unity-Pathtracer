@@ -1,4 +1,4 @@
-![](/Images/ArchRender0.png)
+![](/Images/Yanus0.png)
 # If you like what I do and want to support me and this project(as this takes a LOT of my time), Please consider becoming a Github Sponsor or a Patron at patreon.com/Pjbomb2!  This allows me to keep this free for everyone!
 # Discord Server: https://discord.gg/4Yh7AZuhcD
 ## Demo:  https://drive.google.com/file/d/1sb_zRycX23AlC3QQ9LfqrtEZzBj47Z-Y/view?usp=sharing
@@ -76,6 +76,7 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
   <li>If you are using blendshapes to change geometry of a skinned mesh, you may need to go to the import settings of it(in the inspector), turn off Legacy Blendshape Normals, and make sure all normals are imported, not calculated, otherwise the normals for blendshapes might be wrong</li>
   <li>A fun thing you may want to do is go to TrueTrace -> Resources -> RenderPipelines -> RendererHandle, and uncomment the "[ImageEffectOpaque]"</li>
   <li>If you use HDRIs, or CubeMaps for the skybox, you need to format as the texture to a cube shape in the inspector of the image, unity will convert it automatically, then put it in the slot in Scene Settings</li>
+  <li>With multi-pass ReSTIR GI, the additional passes for spatial are in the RayTracingMaster script, where you can add more to the "Spatials" array.  X is spatial sample count, Y is spatial sample radius.</li>
 </ul>
 
 ## Using Instancing
@@ -124,11 +125,11 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
 </ul>
 
 ## Editor Window Guide
-BVH Options Description - 
+TrueTrace Options Description - 
 <ul>
   <li>Build Aggregated BVH(Recommended to do any time you change objects in edit mode)- Allows you to pre-build objects BVH's before running so you dont have to wait every time you go into play mode for it to build.</li>
-  <li>Clear Parent Data - Clears the data stored in parent GameObjects, allowing you to actually click them without lagging, and for you to save the scene(but will then require the BVH to be rebuilt)</li>
-  <li>Take Screenshot - Takes a screenshot to Assets/ScreenShots folder(Will be created if missing)</li>
+  <li>Clear Parent Data - Clears the data stored in parent GameObjects, allowing you to actually click them without lagging</li>
+  <li>Take Screenshot - Takes a screenshot to the path under "Functionality Settings" in the TrueTrace options</li>
   <li>Auto Assign Scripts - Assigns all required scripts to all objects under the Scene GameObject, best way to add objects</li>
   <li>Make All Static - Utility button that takes all objects in the scene and puts them under one parent object, not recommended for general use</li>
   <li>Force Instances - Looks at all meshes in the scene, sees what objects have the same meshes, and makes them into instances, keep in mind instances use the same material and textures</li>
@@ -152,7 +153,6 @@ BVH Options Description -
   <li>Update Rate - How many pixels per frame get re-traced to ensure they are still valid paths(7 or 33 is a good number to aim for here at 1080p)</li>
   <li>Enable Temporal - Enables the Temporal pass of ReSTIR GI(allows samples to travel across time</li>
   <li>Temporal M Cap - How long a sample may live for, lower means lighting updates faster(until 0 which is the opposite) but more noise(recommended either 0 or around 12, but can be played with)</li>
-  <li>Enable Denoiser - Enables a custom denoiser that is more tuned for ReSTIR GI</li>
   <li>Enable Spatial - Enables the Spatial pass of ReSTIR GI(Allows pixels to choose to use the neighboring pixels sample instead)</li>
   <li>Spatial Sample Count - How many neighboring pixels are looked at(turn to 0 to make it adapative to sample count)</li>
   <li>Minimum Spatial Radius - The minimum radius the spatial pass can sample from</li>
@@ -278,6 +278,7 @@ Scenes From:
 Disney BSDF from: https://schuttejoe.github.io/post/disneybsdf/
 Rectangle packer for faster atlas creation from here: https://github.com/ThomasMiz/RectpackSharp/tree/main/RectpackSharp
 GPU Texture Compression: https://github.com/aras-p/UnityGPUTexCompression
+OIDN Wrapper: https://github.com/guoxx/UnityDenoiserPlugin
 
 This project uses:
 Crytek Sponza

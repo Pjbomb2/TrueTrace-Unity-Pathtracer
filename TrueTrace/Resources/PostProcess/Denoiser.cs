@@ -206,11 +206,6 @@ namespace TrueTrace {
             TAA.SetInt("screen_width", Screen.width);
             TAA.SetInt("screen_height", Screen.height);
 
-            ToneMapLuminanceKernel = ToneMapper.FindKernel("LuminanceShader");
-            ToneMapExposureWeightKernel = ToneMapper.FindKernel("ExposureWeightShader");
-            ToneMapBlendKernel = ToneMapper.FindKernel("BlendShader");
-            ToneMapBlendLapLaceKernel = ToneMapper.FindKernel("BlendLapLaceShader");
-            ToneMapCombineKernel = ToneMapper.FindKernel("FinalCombine");
 
             threadGroupsX = Mathf.CeilToInt(SourceWidth / 16.0f);
             threadGroupsY = Mathf.CeilToInt(SourceHeight / 16.0f);
@@ -376,9 +371,11 @@ namespace TrueTrace {
                 List<float> TestBuffer = new List<float>();
                 TestBuffer.Add(1);
                 ExposureBuffer.ReleaseSafe(); ExposureBuffer = new ComputeBuffer(1, sizeof(float)); ExposureBuffer.SetData(TestBuffer);
-                AutoExpose.SetBuffer(AutoExposeKernel, "A", ExposureBuffer);
-                AutoExpose.SetBuffer(AutoExposeFinalizeKernel, "A", ExposureBuffer);
             }
+            AutoExpose.SetInt("screen_width", Screen.width);
+            AutoExpose.SetInt("screen_height", Screen.height);
+            AutoExpose.SetBuffer(AutoExposeKernel, "A", ExposureBuffer);
+            AutoExpose.SetBuffer(AutoExposeFinalizeKernel, "A", ExposureBuffer);
             cmd.SetComputeTextureParam(AutoExpose, AutoExposeKernel, "InTex", _converged);
             AutoExpose.SetFloat("Exposure", Exposure);
             AutoExpose.SetBool("ExposureAuto", ExposureAuto);
