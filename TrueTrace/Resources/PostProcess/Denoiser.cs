@@ -15,10 +15,12 @@ namespace TrueTrace {
         private ComputeShader Upscaler;
         private ComputeShader ToneMapper;
         private ComputeShader TAAU;
+        private ComputeShader Sharpen;
         bool BloomInitialized = false;
         bool TAAInitialized = false;
         bool UpscalerInitialized = false;
         bool TAAUInitialized = false;
+        bool SharpenInitialized = false;
 
 
 
@@ -49,6 +51,7 @@ namespace TrueTrace {
         private RenderTexture TempTexUpscaler;
         private RenderTexture TempTexUpscaler2;
 
+        private RenderTexture SharpenTex;
 
 
 
@@ -124,9 +127,11 @@ namespace TrueTrace {
                     TempTexUpscaler2.ReleaseSafe();
                     PrevNormalUpscalerTex.ReleaseSafe();
                     PrevNormalUpscalerTexWrite.ReleaseSafe();
+                    SharpenTex.ReleaseSafe();
                 BloomInitialized = false;
                 TAAInitialized = false;
                 UpscalerInitialized = false;
+                SharpenInitialized = false;
             }
             
         }
@@ -148,6 +153,8 @@ namespace TrueTrace {
 
             TAAA.ReleaseSafe();
             TAAB.ReleaseSafe();
+
+            SharpenTex.ReleaseSafe();
 
             ExposureBuffer.ReleaseSafe();
             BloomIntermediate.ReleaseSafe();
@@ -173,6 +180,7 @@ namespace TrueTrace {
             if (Upscaler == null) { Upscaler = Resources.Load<ComputeShader>("PostProcess/Compute/Upscaler"); }
             if (ToneMapper == null) { ToneMapper = Resources.Load<ComputeShader>("PostProcess/Compute/ToneMap"); }
             if (TAAU == null) { TAAU = Resources.Load<ComputeShader>("PostProcess/Compute/TAAU"); }
+            if (Sharpen == null) { Sharpen = Resources.Load<ComputeShader>("PostProcess/Compute/Sharpen"); }
 
 
             TAAUKernel = TAAU.FindKernel("TAAU");
@@ -197,6 +205,9 @@ namespace TrueTrace {
 
             Bloom.SetInt("screen_width", Screen.width);
             Bloom.SetInt("screen_height", Screen.height);
+
+            Sharpen.SetInt("screen_width", Screen.width);
+            Sharpen.SetInt("screen_height", Screen.height);
 
             AutoExpose.SetInt("screen_width", Screen.width);
             AutoExpose.SetInt("screen_height", Screen.height);
@@ -250,7 +261,7 @@ namespace TrueTrace {
             InitRenderTexture(true);
         }
 
-        public void ValidateInit(bool BloomInit, bool TAAInit, bool IsUpscaling, bool UseTAAU) {
+        public void ValidateInit(bool BloomInit, bool TAAInit, bool IsUpscaling, bool UseTAAU, bool SharpenInit) {
             if(!BloomInit) {
                 if(BloomInitialized) {
                     BloomIntermediate.ReleaseSafe();
@@ -265,6 +276,12 @@ namespace TrueTrace {
                     TempTexTAA.ReleaseSafe();
                     TempTexTAA2.ReleaseSafe();
                     TAAInitialized = false;
+                }
+            }
+            if(!SharpenInit) {
+                if(SharpenInitialized) {
+                    SharpenTex.ReleaseSafe();
+                    SharpenInitialized = false;
                 }
             }
             if(!IsUpscaling) {
@@ -542,6 +559,24 @@ namespace TrueTrace {
             TAAU.SetTextureFromGlobal(TAAUKernel, "TEX_FLAT_MOTION", "_CameraMotionVectorsTexture");
             cmd.DispatchCompute(TAAU, TAAUKernel, threadGroupsX2, threadGroupsY2, 1);
             cmd.EndSample("TAAU");
+        }
+
+
+        private void InitializeSharpen() {
+            CommonFunctions.CreateRenderTexture(ref SharpenTex, Screen.width, Screen.height, CommonFunctions.RTFull4);
+            SharpenInitialized = true;
+        }
+        public void ExecuteSharpen(ref RenderTexture Output, float Sharpness, CommandBuffer cmd) {
+            if(!SharpenInitialized) InitializeSharpen();
+            if (Sharpen == null) { Sharpen = Resources.Load<ComputeShader>("PostProcess/Compute/Sharpen"); }
+            Sharpen.SetInt("screen_width", Screen.width);
+            Sharpen.SetInt("screen_height", Screen.height);
+            cmd.CopyTexture(Output, 0, 0, SharpenTex, 0, 0);
+            cmd.SetComputeTextureParam(Sharpen, 0, "Input", SharpenTex);
+            cmd.SetComputeTextureParam(Sharpen, 0, "Result", Output);
+            Sharpen.SetFloat("Sharpness", Sharpness);
+            cmd.DispatchCompute(Sharpen, 0, threadGroupsX2, threadGroupsY2, 1);
+
         }
 
     }

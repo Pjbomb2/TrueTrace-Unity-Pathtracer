@@ -26,7 +26,7 @@ float4 EncodeRGBM(float3 rgb )
     M =            ceil(M * 255.0) / 255.0;
     return float4(rgb / (M * 1), M);
 }
-
+bool ForceLossless;
 
 [numthreads(32,32,1)]
 void SingleInputPass (uint3 id : SV_DispatchThreadID)
@@ -45,11 +45,18 @@ void SingleInputPass (uint3 id : SV_DispatchThreadID)
         InputNormal.y = 1.0f - InputNormal.y;
         Col = float4(InputNormal, 0, 0);
     }
+    if(ForceLossless) {
+        if(IsNormalMap) {
+            Col = EncodeRGBM(Col.xyz);
+            Result[id.xy + floor(Offset * Scale)] = float4(pow(abs(Col.xyz), 0.4545f), Col.w);
+        } else {
+            Result[id.xy + floor(Offset * Scale)] = Col;
+        }
+    } else {
+        Col = EncodeRGBM(Col.xyz);
+        Result[id.xy + floor(Offset * Scale)] = float4(pow(abs(Col.xyz), 0.4545f), Col.w);
+    }
 
-    Col = EncodeRGBM(Col.xyz);
-
-
-    Result[id.xy + floor(Offset * Scale)] = float4(pow(abs(Col.xyz), 0.4545f), Col.w);
 
 
 }

@@ -16,6 +16,7 @@ A passion projects that has been going on for a while with the goal of bringing 
 <li>Compressed Wide Bounding Volume Hierarchy as the Acceleration Structure (See Ylitie et al. 2017 below)</li>
 <li>PBR Texture Support</li>
 <li>Next Event Estimation with Multiple Importance Sampling for Explicit Light Sampling</li>
+<li>Light BVH from PBRT 4 for NEE</li>
 <li>Support for all default unity lights, which interact via NEE</li>
 <li>Bloom, Depth of Field, AutoExposure, TAA, Tonemapping</li>
 <li>No specific GPU vendor needed(this will run on integrated graphics if you so wish it, aka no RTX cores needed)</li>
@@ -28,6 +29,8 @@ A passion projects that has been going on for a while with the goal of bringing 
 <li>Full skinned mesh support for animated skinned meshes</li>
 <li>Supports deformable standard meshes</li>
 <li>Supports unity heightmap terrain and heightmap trees</li>
+<li>Supports OIDN Denoiser</li>
+<li>Enironment Map Importance Sampling</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
@@ -45,7 +48,7 @@ Let me know if you use this for anything, I would be excited to see any use of t
 # Instructions:
 ## Required Settings Changes:
 <ul>
-  <li>Change the Graphics Api for Windows to DirectX12 through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Untoggle "Auto Graphics API For Windows", then click the little + that appears, select "Direct3D12(Experimental)", and drag that to the top.  A restart of the editor is required</li>
+  <li>If you plan to use DX12(otherwise look down below for DX11 instructions): Change the Graphics Api for Windows to DirectX12 through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Untoggle "Auto Graphics API For Windows", then click the little + that appears, select "Direct3D12(Experimental)", and drag that to the top.  A restart of the editor is required</li>
   <li>Your target camera NEEDS to be deferred, this will usually be automatically done for you by TrueTrace</li>
 </ul>
 
@@ -75,12 +78,13 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
   <li>To set up PBR with the DEFAULT material, all textures go into their proper names, but Roughness goes into the Occlusion texture(This can be changed in the MaterialPairing menu)</li>
   <li>If you are using blendshapes to change geometry of a skinned mesh, you may need to go to the import settings of it(in the inspector), turn off Legacy Blendshape Normals, and make sure all normals are imported, not calculated, otherwise the normals for blendshapes might be wrong</li>
   <li>A fun thing you may want to do is go to TrueTrace -> Resources -> RenderPipelines -> RendererHandle, and uncomment the "[ImageEffectOpaque]"</li>
-  <li>If you use HDRIs, or CubeMaps for the skybox, you need to format as the texture to a cube shape in the inspector of the image, unity will convert it automatically, then put it in the slot in Scene Settings</li>
+  <li>If you use HDRIs, or CubeMaps for the skybox, you need to format as the texture to a Texture2D in the inspector of the image, unity will convert it automatically, then put it in the slot in "Scene Settings" in the TrueTrace settings menu</li>
   <li>With multi-pass ReSTIR GI, the additional passes for spatial are in the RayTracingMaster script, where you can add more to the "Spatials" array.  X is spatial sample count, Y is spatial sample radius.</li>
 </ul>
 
 ## Using Instancing
 <ul>
+  <li>THIS DOES NOT WORK WITH RT CORES</li>
   <li>Firstly, all objects that will be the source of instanced objects will need to go under the InstancedStorage and can be arranged like normal objects(with regards to the layout of parentobject to raytracingobjects)</li>
   <li>Then, to instance the objects, you just need GameObjects with the InstanceObject script attatched to them under the Scene GameObject, and then drag the desired object instance from the hierarchy to the Instance Parent slot in the InstanceObject script</li>
 </ul>
@@ -92,6 +96,11 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
   <li>Drag any material that has the shader you want to pair into the material slot that appears</li>
   <li>From here, you need to select each dropdown that appears and select the property that is associated with the text to the left of the dropdown</li>
   <li>Once this is done, click "Apply Material Links" and rebuild the BVH in the "Main Options" tab to update the objects in the scene</li>
+</ul>
+
+## Using OIDN
+<ul>
+  <li>Go to "Functionality Settings" in the TrueTrace Options, and check "Enable OIDN"</li>
 </ul>
 
 ## Using HDRP
@@ -110,6 +119,7 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
 
 ## Using DX11 Only
 <ul>
+  <li>DX11 does not currently work with ASVGF(just havent fixed yet), or hue shift(seems to be a compiler bug)</li>
   <li>In the TrueTrace settings menu, click on the top right button "Functionality Settings" and toggle "Use DX11"</li>
   <li>Uncomment the "#define DX11" in: TrueTrace -> Resources -> GlobalDefines.cginc</li>
 </ul>
@@ -141,16 +151,18 @@ TrueTrace Options Description -
   <li>Enable Object Moving - Allows objects to be moved during play, and allows for added objects to spawn in when they are done building</li>
   <li>Allow Image Accumulation - Allows the image to accumulate while the camera is not moving</li>
   <li>Use Next Event Estimation - Enables shadow rays/NEE for direct light sampling</li>
-  <li>RIS Count - Number of RIS passes done for lights(select the best light out of X number of randomly selected lights)</li>
+  <li>RIS Count - Number of RIS passes done for lights(select the best light out of X number of randomly selected lights, only works if LBVH is off in "GlobalDefines.cginc")</li>
   <li>Allow Mesh Skinning - Turns on the ability for skinned meshes to be animated or deformed with respect to their armeture</li>
   <li>Denoiser - Allows you to switch between different denoisers</li>
   <li>Allow Bloom - Turns on or off Bloom</li>
+  <li>Sharpness Filter - Contrast Adaptive Sharpening</li>
   <li>Enable DoF - Turns on or off Depth of Field, and its associated settings</li>
   <li>Autofocus DoF - Sets the focal length to bring whatever is in the center of the screen into focus</li>
   <li>Enable Auto/Manual Exposure - Turns on or off Exposure</li>
   <li>Use ReSTIR GI - Enables ReSTIR GI which is usually much higher quality(Works with Recur and SVGF denoisers)</li>
   <li>Do Sample Connection Validation - Confirms that two samples are mutually visable and throws it away if they are not</li>
   <li>Update Rate - How many pixels per frame get re-traced to ensure they are still valid paths(7 or 33 is a good number to aim for here at 1080p)</li>
+  <li>Unmarked Toggle - Unlabeled toggle, switches between old ReSTIR GI and new ReSTIR GI</li>
   <li>Enable Temporal - Enables the Temporal pass of ReSTIR GI(allows samples to travel across time</li>
   <li>Temporal M Cap - How long a sample may live for, lower means lighting updates faster(until 0 which is the opposite) but more noise(recommended either 0 or around 12, but can be played with)</li>
   <li>Enable Spatial - Enables the Spatial pass of ReSTIR GI(Allows pixels to choose to use the neighboring pixels sample instead)</li>
@@ -173,8 +185,11 @@ TrueTrace Options Description -
   <li>Base Color - If theres no Albedo Texture, this is the color the object will be</li>
   <li>Emission - The emittance of an object(how much light it gives off)</li>
   <li>Emission Color - Changes the color of emissive objects, most useful when you have an emission mask on an object</li>
+  <li>Thin - Marks an object as thin, Influences Diffuse, DiffTrans, and SpecTrans</li>
   <li>Roughness - Roughness of the object</li>
+  <li>Roughness Remap - Remaps from the [0,1] of Roughness Slider to the min and max defined here</li>
   <li>Metallic - How metallic an object is</li>
+  <li>Metallic Remap - Remaps from the [0,1] of Metallic Slider to the min and max defined here</li>
   <li>IOR - Index of Refraction of an object - Affects Glass and Specular</li>
   <li>Specular - Adds specular reflection to an object, use in conjunction with Roughness and IOR</li>
   <li>Specular Tint - Weights color more towards the objects color for specular reflections</li>
@@ -184,12 +199,18 @@ TrueTrace Options Description -
   <li>ClearCoatGloss - Influences the ClearCoat</li>
   <li>Anisotropic - Makes the material anisotropic based on roughness</li>
   <li>SpecTrans(Glass) - Makes an object more or less like glass</li>
-  <li>Thin - Marks an object as thin, Influences Diffuse, DiffTrans, and SpecTrans</li>
   <li>Diffuse Transmission - Makes an object Diffuse but Transmissive(transluscent)</li>
   <li>Transmission Color - Affects Diffuse Transmission color, must be greater than 0 for diffuse transmission</li>
   <li>Flatness - Affects Thin objects</li>
   <li>Scatter Distance - Affects SpecTrans and Diffuse Transmission, must be greater than 0 for Diffuse Transmission</li>
-  <li>Save Material - Saves the material and applys it when you exit play mode(MUST HAVE TRUETRACE SETTINGS OPEN)</li>
+  <li>Alpha Cutoff - For Cutout objects, this is the value compared against the alpha texture</li>
+  <li>Normalmap Strength - Strength of the Normal Map</li>
+  <li>Blend Color - Color to blend to</li>
+  <li>Blend Factor - Blending weight between Blend Color and the usual color an object would have</li>
+  <li>MainTex Scale/Offset - Albedo texture scales and all texture offset</li>
+  <li>SecondaryTex Scale - All texture scale other than Albedo</li>
+  <li>Link Mat To Unity Material - The material will have its properties overridden by the unity material</li>
+
   <li>Texture Scroll Changed - Updates the textures offset/scaling from the shader</li>
   <li>Propogate To Materials - Copies properties of local material to all other objects in the scene with the same material</li>
 </ul>
@@ -198,6 +219,7 @@ TrueTrace Options Description -
 </br>
 <ul>
   <li>Report any you find! There WILL be bugs, I just dont know what they are</li>
+  <li>DX11 does not work with ASVGF</li>
 </ul>
 
 # Huge thanks to these people for being sponsors/patrons:

@@ -9,7 +9,7 @@ namespace TrueTrace {
         void OnDestroy() {
             Debug.Log("EEE");
         }
-
+        public NodeBounds ParentBound;
         public struct DirectionCone {
             public Vector3 W;
             public float cosTheta;
@@ -78,8 +78,8 @@ namespace TrueTrace {
             if(IsEmpty(ref A)) {A.w = B.w; A.cosTheta_o = B.cosTheta_o; return;}
             if(IsEmpty(ref B)) return;
 
-            float theta_a = (float)System.Math.Acos(A.cosTheta_o);
-            float theta_b = (float)System.Math.Acos(B.cosTheta_o);
+            float theta_a = (float)System.Math.Acos(Mathf.Clamp(A.cosTheta_o,-1.0f, 1.0f));
+            float theta_b = (float)System.Math.Acos(Mathf.Clamp(B.cosTheta_o,-1.0f, 1.0f));
             float theta_d = AngleBetween(A.w, B.w);
             if(System.Math.Min(theta_d + theta_b, 3.14159f) <= theta_a) return;
             if(System.Math.Min(theta_d + theta_a, 3.14159f) <= theta_b) {A.w = B.w; A.cosTheta_o = B.cosTheta_o; return;}
@@ -124,11 +124,12 @@ namespace TrueTrace {
                                  2.0f * theta_o * sinTheta_o + b.cosTheta_o);
 
 
-            return b.phi * M_omega * Kr * surface_area(b.b);
+            return b.phi * M_omega * Kr * surface_area(b.b) / (float)Mathf.Max(b.LightCount, 1);
         }
 
-        public List<LightBounds> LightTris;
-        public NodeBounds[] nodes;
+        private LightBounds[] LightTris;
+        private NodeBounds[] nodes2;
+        public CompactLightBVHData[] nodes;
 
 
         private int[] DimensionedIndices;
@@ -214,13 +215,13 @@ namespace TrueTrace {
         public int MaxDepth;
         void BuildRecursive(int nodesi, ref int node_index, int first_index, int index_count, int Depth) {
             if(index_count == 1) {
-                nodes[nodesi].left = first_index;
-                nodes[nodesi].isLeaf = 1;
+                nodes2[nodesi].left = first_index;
+                nodes2[nodesi].isLeaf = 1;
                 MaxDepth = System.Math.Max(Depth, MaxDepth);
                 return;
             }
             // Debug.Log(nodesi);
-            ObjectSplit split = partition_sah(first_index, index_count, nodes[nodesi].aabb.b);
+            ObjectSplit split = partition_sah(first_index, index_count, nodes2[nodesi].aabb.b);
             int Offset = split.dimension * PrimCount;
             int IndexEnd = first_index + index_count;
             for(int i = first_index; i < IndexEnd; i++) indices_going_left[DimensionedIndices[Offset + i]] = i < split.index;
@@ -239,23 +240,23 @@ namespace TrueTrace {
           
                 System.Array.Copy(temp, 0, DimensionedIndices, Offset + first_index, index_count);
             }
-            nodes[nodesi].left = node_index;
+            nodes2[nodesi].left = node_index;
 
-            nodes[nodes[nodesi].left].aabb = split.aabb_left;
-            nodes[nodes[nodesi].left + 1].aabb = split.aabb_right;
+            nodes2[nodes2[nodesi].left].aabb = split.aabb_left;
+            nodes2[nodes2[nodesi].left + 1].aabb = split.aabb_right;
             node_index += 2;
 
-            BuildRecursive(nodes[nodesi].left, ref node_index,first_index,split.index - first_index, Depth + 1);
-            BuildRecursive(nodes[nodesi].left + 1, ref node_index,first_index + split.index - first_index,first_index + index_count - split.index, Depth + 1);
+            BuildRecursive(nodes2[nodesi].left, ref node_index,first_index,split.index - first_index, Depth + 1);
+            BuildRecursive(nodes2[nodesi].left + 1, ref node_index,first_index + split.index - first_index,first_index + index_count - split.index, Depth + 1);
         }
         public ComputeBuffer[] WorkingSet;
         private List<int>[] Set;
         void Refit(int Depth, int CurrentIndex) {
-            if(nodes[CurrentIndex].aabb.cosTheta_e == 0) return;
+            if(nodes2[CurrentIndex].aabb.cosTheta_e == 0) return;
             Set[Depth].Add(CurrentIndex);
-            if(nodes[CurrentIndex].isLeaf == 1) return;
-            Refit(Depth + 1, nodes[CurrentIndex].left);
-            Refit(Depth + 1, nodes[CurrentIndex].left + 1);
+            if(nodes2[CurrentIndex].isLeaf == 1) return;
+            Refit(Depth + 1, nodes2[CurrentIndex].left);
+            Refit(Depth + 1, nodes2[CurrentIndex].left + 1);
         }
   
         private float AreaOfTriangle(Vector3 pt1, Vector3 pt2, Vector3 pt3)
@@ -270,8 +271,8 @@ namespace TrueTrace {
         public LightBVHBuilder(List<LightTriData> Tris, List<Vector3> Norms, float phi) {//need to make sure incomming is transformed to world space already
             PrimCount = Tris.Count;          
             MaxDepth = 0;
-            LightTris = new List<LightBounds>(PrimCount);  
-            nodes = new NodeBounds[PrimCount * 2];    
+            LightTris = new LightBounds[PrimCount];  
+            nodes2 = new NodeBounds[PrimCount * 2];    
             SAH = new float[PrimCount];
             indices_going_left = new bool[PrimCount];
             temp = new int[PrimCount];
@@ -280,7 +281,7 @@ namespace TrueTrace {
             float[] CentersX = new float[PrimCount];
             float[] CentersY = new float[PrimCount];
             float[] CentersZ = new float[PrimCount];     
-            for(int i = 0; i < PrimCount * 2; i++) nodes[i] = new NodeBounds();
+            for(int i = 0; i < PrimCount * 2; i++) nodes2[i] = new NodeBounds();
             for(int i = 0; i < PrimCount; i++) {
                 AABB TriAABB = new AABB();
                 TriAABB.init();
@@ -290,12 +291,12 @@ namespace TrueTrace {
                 TriAABB.Validate(new Vector3(0.0001f,0.0001f,0.0001f));
                 DirectionCone tricone = new DirectionCone(-Norms[i], 1);
                 LightBounds TempBound = new LightBounds(TriAABB, tricone.W, 0.1f, tricone.cosTheta,(float)System.Math.Cos(3.14159f / 2.0f), 1, 0);
-                LightTris.Add(TempBound);
+                LightTris[i] = TempBound;
                 FinalIndices[i] = i;
                 CentersX[i] = (TriAABB.BBMax.x - TriAABB.BBMin.x) / 2.0f + TriAABB.BBMin.x;
                 CentersY[i] = (TriAABB.BBMax.y - TriAABB.BBMin.y) / 2.0f + TriAABB.BBMin.y;
                 CentersZ[i] = (TriAABB.BBMax.z - TriAABB.BBMin.z) / 2.0f + TriAABB.BBMin.z;
-                Union(ref nodes[0].aabb, TempBound);
+                Union(ref nodes2[0].aabb, TempBound);
             }
 
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = CentersX[s1] - CentersX[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
@@ -311,23 +312,41 @@ namespace TrueTrace {
             BuildRecursive(0, ref nodeIndex,0,PrimCount, 1);
             // NodeBounds[] TempNodes = new NodeBounds[nodeIndex];
             // for(int i = 0; i < nodeIndex; i++) {
-                // TempNodes[i] = nodes[i];
+                // TempNodes[i] = nodes2[i];
             // }
-            // nodes = new NodeBounds[nodeIndex];
-            // nodes = TempNodes;
+            // nodes2 = new NodeBounds[nodeIndex];
+            // nodes2 = TempNodes;
             for(int i = 0; i < PrimCount * 2; i++) {
-                if(nodes[i].isLeaf == 1) {
-                    nodes[i].left = DimensionedIndices[nodes[i].left];
+                if(nodes2[i].isLeaf == 1) {
+                    nodes2[i].left = DimensionedIndices[nodes2[i].left];
                 }
             }
+            nodes = new CompactLightBVHData[nodes2.Length];
+            for(int i = 0; i < PrimCount * 2; i++) {
+                CompactLightBVHData TempNode = new CompactLightBVHData();
+                TempNode.BBMax = nodes2[i].aabb.b.BBMax;
+                TempNode.BBMin = nodes2[i].aabb.b.BBMin;
+                TempNode.w = CommonFunctions.PackOctahedral(nodes2[i].aabb.w);
+                TempNode.phi = nodes2[i].aabb.phi;
+                TempNode.cosTheta_oe = ((uint)Mathf.Floor(32767.0f * ((nodes2[i].aabb.cosTheta_o + 1.0f) / 2.0f))) | ((uint)Mathf.Floor(32767.0f * ((nodes2[i].aabb.cosTheta_e + 1.0f) / 2.0f)) << 16);
+                if(nodes2[i].isLeaf == 1) {
+                    TempNode.left = (-nodes2[i].left) - 1;
+                } else {
+                    TempNode.left = nodes2[i].left;
+                }
+                nodes[i] = TempNode;
+            }
+            ParentBound = nodes2[0];
+            CommonFunctions.DeepClean(ref nodes2);
+            CommonFunctions.DeepClean(ref LightTris);
         }
 
 
         public LightBVHBuilder(LightBounds[] Tris) {//need to make sure incomming is transformed to world space already
             PrimCount = Tris.Length;          
             MaxDepth = 0;
-            LightTris = new List<LightBounds>(Tris);  
-            nodes = new NodeBounds[PrimCount * 2];    
+            LightTris = Tris;  
+            nodes2 = new NodeBounds[PrimCount * 2];    
             SAH = new float[PrimCount];
             indices_going_left = new bool[PrimCount];
             temp = new int[PrimCount];
@@ -336,13 +355,13 @@ namespace TrueTrace {
             float[] CentersX = new float[PrimCount];
             float[] CentersY = new float[PrimCount];
             float[] CentersZ = new float[PrimCount];     
-            for(int i = 0; i < PrimCount * 2; i++) nodes[i] = new NodeBounds();
+            for(int i = 0; i < PrimCount * 2; i++) nodes2[i] = new NodeBounds();
             for(int i = 0; i < PrimCount; i++) {
                 FinalIndices[i] = i;
                 CentersX[i] = (Tris[i].b.BBMax.x - Tris[i].b.BBMin.x) / 2.0f + Tris[i].b.BBMin.x;
                 CentersY[i] = (Tris[i].b.BBMax.y - Tris[i].b.BBMin.y) / 2.0f + Tris[i].b.BBMin.y;
                 CentersZ[i] = (Tris[i].b.BBMax.z - Tris[i].b.BBMin.z) / 2.0f + Tris[i].b.BBMin.z;
-                Union(ref nodes[0].aabb, Tris[i]);
+                Union(ref nodes2[0].aabb, Tris[i]);
             }
 
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = CentersX[s1] - CentersX[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
@@ -357,9 +376,9 @@ namespace TrueTrace {
             int nodeIndex = 2;
             BuildRecursive(0, ref nodeIndex,0,PrimCount, 1);
             for(int i = 0; i < PrimCount * 2; i++) {
-                if(nodes[i].isLeaf == 1) {
-                    nodes[i].left = DimensionedIndices[nodes[i].left];
-                    // nodes[i].left = Offsets[nodes[i].left];
+                if(nodes2[i].isLeaf == 1) {
+                    nodes2[i].left = DimensionedIndices[nodes2[i].left];
+                    // nodes2[i].left = Offsets[nodes2[i].left];
                 }
             }
             Set = new List<int>[MaxDepth];
@@ -370,6 +389,34 @@ namespace TrueTrace {
                 WorkingSet[i] = new ComputeBuffer(Set[i].Count, 4);
                 WorkingSet[i].SetData(Set[i]);
             }
+            nodes = new CompactLightBVHData[nodes2.Length];
+            for(int i = 0; i < PrimCount * 2; i++) {
+                CompactLightBVHData TempNode = new CompactLightBVHData();
+                TempNode.BBMax = nodes2[i].aabb.b.BBMax;
+                TempNode.BBMin = nodes2[i].aabb.b.BBMin;
+                TempNode.w = CommonFunctions.PackOctahedral(nodes2[i].aabb.w);
+                TempNode.phi = nodes2[i].aabb.phi;
+                TempNode.cosTheta_oe = ((uint)Mathf.Floor(32767.0f * ((nodes2[i].aabb.cosTheta_o + 1.0f) / 2.0f))) | ((uint)Mathf.Floor(32767.0f * ((nodes2[i].aabb.cosTheta_e + 1.0f) / 2.0f)) << 16);
+                if(nodes2[i].isLeaf == 1) {
+                    TempNode.left = (-nodes2[i].left) - 1;
+                } else {
+                    TempNode.left = nodes2[i].left;
+                }
+                nodes[i] = TempNode;
+            }
+            ParentBound = nodes2[0];
+            CommonFunctions.DeepClean(ref nodes2);
+        }
+
+        public void ClearAll() {
+            CommonFunctions.DeepClean(ref LightTris);
+            CommonFunctions.DeepClean(ref nodes2);
+            CommonFunctions.DeepClean(ref nodes);
+            CommonFunctions.DeepClean(ref SAH);
+            CommonFunctions.DeepClean(ref indices_going_left);
+            CommonFunctions.DeepClean(ref temp);
+            CommonFunctions.DeepClean(ref DimensionedIndices);
+            CommonFunctions.DeepClean(ref FinalIndices);
         }
     }
 }

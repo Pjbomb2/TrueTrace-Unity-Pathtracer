@@ -101,14 +101,10 @@ void CombineLightBuffers(uint3 id : SV_DispatchThreadID)
 struct LightBVHData {
 	float3 BBMax;
 	float3 BBMin;
-	float3 w;
+	uint w;
 	float phi;
-	float cosTheta_o;
-	float cosTheta_e;
-	int LightCount;
-	float Pad1;
+	uint cosTheta_oe;
 	int left;
-	int isLeaf;
 };
 
 StructuredBuffer<LightBVHData> LightNodesIn;

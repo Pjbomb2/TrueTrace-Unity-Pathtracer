@@ -48,7 +48,6 @@ namespace TrueTrace {
 
 		[HideInInspector] public int[] MaterialIndex;
 		[HideInInspector] public int[] LocalMaterialIndex;
-		AssetManager Assets;
 		[HideInInspector] public bool JustCreated = true;
 		[HideInInspector] public bool TilingChanged = false;
 		[HideInInspector] public int MatOffset = 0;
@@ -72,16 +71,15 @@ namespace TrueTrace {
 				 }
 
 			}
-			if(Assets == null) Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
-			if(gameObject.activeInHierarchy && Assets != null) Assets.MaterialsChanged.Add(this);
+			if(gameObject.activeInHierarchy && AssetManager.Assets != null) AssetManager.Assets.MaterialsChanged.Add(this);
 		}
 
 
 		public void CallMaterialEdited(bool Do = false) {
 			if(Application.isPlaying) {
-				if(Assets == null) Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
-				if(gameObject.activeInHierarchy && Assets != null) Assets.MaterialsChanged.Add(this);
+				if(gameObject.activeInHierarchy && AssetManager.Assets != null) AssetManager.Assets.MaterialsChanged.Add(this);
 			}
+			System.Array.Fill(FollowMaterial, false);
 			CallMaterialOverride();
 			#if UNITY_EDITOR
 				if(Application.isPlaying && Do) {
@@ -90,7 +88,6 @@ namespace TrueTrace {
 					}
 				}
 			#endif
-			System.Array.Fill(FollowMaterial, false);
 		}
 
 		public void CallTilingScrolled() {
@@ -161,17 +158,25 @@ namespace TrueTrace {
 			#if UNITY_EDITOR
 				UnityEditor.GameObjectUtility.SetStaticEditorFlags(gameObject, UnityEditor.GameObjectUtility.GetStaticEditorFlags(gameObject) & ~UnityEditor.StaticEditorFlags.BatchingStatic);
 			#endif
-			if(GameObject.Find("Scene") != null) Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
 			 Mesh mesh = new Mesh();
-			 if(GetComponent<MeshRenderer>() != null) { 
-			 	mesh = GetComponent<MeshFilter>().sharedMesh;
-			 	SubMeshCount = (GetComponent<MeshRenderer>().sharedMaterials).Length;
+			 if(TryGetComponent<MeshRenderer>(out MeshRenderer MeshRend)) { 
+			 	if(TryGetComponent<MeshFilter>(out MeshFilter MeshFilt)) { 
+			 		mesh = MeshFilt.sharedMesh;
+			 	}
+			 	if(!MeshRend.enabled) mesh = null;
+			 	SubMeshCount = (MeshRend.sharedMaterials).Length;
+			 	if(TryGetComponent<Renderer>(out Renderer Rend)) SharedMaterials = Rend.sharedMaterials;
+		 	} else if(TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer SkinnedRend)) {
+		 		SkinnedRend.BakeMesh(mesh);
+			 	if(!SkinnedRend.enabled) mesh = null;
+				SubMeshCount = (SkinnedRend.sharedMaterials).Length;
+		 		SharedMaterials = SkinnedRend.sharedMaterials;
 		 	} else {
-		 		if(this.GetComponent<SkinnedMeshRenderer>() == null) DestroyImmediate(this);
-		 		GetComponent<SkinnedMeshRenderer>().BakeMesh(mesh);
-				SubMeshCount = (GetComponent<SkinnedMeshRenderer>().sharedMaterials).Length;
+		 		DestroyImmediate(this);
+		 		WasDeleted = true;
+		 		return;
 		 	}
-		 	SharedMaterials = (GetComponent<Renderer>() != null) ? GetComponent<Renderer>().sharedMaterials : GetComponent<SkinnedMeshRenderer>().sharedMaterials;
+
 		 	if(mesh == null || SharedMaterials == null || SharedMaterials.Length == 0 || mesh.GetTopology(0) != MeshTopology.Triangles || mesh.vertexCount == 0) {
 		 		DestroyImmediate(this);
 		 		WasDeleted = true;
@@ -250,50 +255,42 @@ namespace TrueTrace {
 			BaseColor = null;
 		}
 		public void ForceUpdateParent() {
-	    	if(gameObject.scene.isLoaded && (this.transform.GetComponent<ParentObject>() != null || this.transform.parent.GetComponent<ParentObject>() != null)) {
+			bool Fine = TryGetComponent<ParentObject>(out ParentObject ThisParent);
+			Fine = transform.parent.TryGetComponent<ParentObject>(out ParentObject ParParent) || Fine;
+	    	if(gameObject.scene.isLoaded && Fine) {
 	    		matfill();
 	    		if(WasDeleted) return;
-		    	if(this.transform.GetComponent<ParentObject>() != null) {
-		    		this.transform.GetComponent<ParentObject>().NeedsToUpdate = true;
-					if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.GetComponent<ParentObject>());
-		    	} else {
-		    		this.transform.parent.GetComponent<ParentObject>().NeedsToUpdate = true;
-					if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
+		    	if(ThisParent != null) {
+		    		ThisParent.NeedsToUpdate = true;
+					if(AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ThisParent)) AssetManager.Assets.UpdateQue.Add(ThisParent);
+		    	} else if(ParParent != null) {
+		    		ParParent.NeedsToUpdate = true;
+					if(AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ParParent)) AssetManager.Assets.UpdateQue.Add(ParParent);
 	    		}
-	    	} else if(gameObject.scene.isLoaded && this.transform.GetComponent<ParentObject>() != null) {
-	    		matfill();
-	    		if(WasDeleted) return;
-				if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
-		    	this.transform.GetComponent<ParentObject>().NeedsToUpdate = true;
 	    	}			
 		}
 	    private void OnEnable() {
-	    	// if(this.gameObject.GetComponent<SkinnedMeshRenderer>() != null) this.gameObject.GetComponent<SkinnedMeshRenderer>().sharedMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-	    	if(gameObject.scene.isLoaded && (this.transform.GetComponent<ParentObject>() != null || this.transform.parent.GetComponent<ParentObject>() != null)) {
+			bool Fine = TryGetComponent<ParentObject>(out ParentObject ThisParent);
+			Fine = transform.parent.TryGetComponent<ParentObject>(out ParentObject ParParent) || Fine;
+	    	if(gameObject.scene.isLoaded && Fine) {
 	    		matfill();
 	    		if(WasDeleted) return;
-		    	if(this.transform.GetComponent<ParentObject>() != null) {
-		    		this.transform.GetComponent<ParentObject>().NeedsToUpdate = true;
-					if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.GetComponent<ParentObject>());
-		    	} else {
-		    		this.transform.parent.GetComponent<ParentObject>().NeedsToUpdate = true;
-					if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
+		    	if(ThisParent != null) {
+		    		ThisParent.NeedsToUpdate = true;
+					if(AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ThisParent)) AssetManager.Assets.UpdateQue.Add(ThisParent);
+		    	} else if(ParParent != null) {
+		    		ParParent.NeedsToUpdate = true;
+					if(AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ParParent)) AssetManager.Assets.UpdateQue.Add(ParParent);
 	    		}
-	    	} else if(gameObject.scene.isLoaded && this.transform.GetComponent<ParentObject>() != null) {
-	    		matfill();
-	    		if(WasDeleted) return;
-				if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
-		    	this.transform.GetComponent<ParentObject>().NeedsToUpdate = true;
 	    	}
 	    }
 
 	    private void OnDisable() {
-	    	if(gameObject.scene.isLoaded && this.transform.parent.GetComponent<ParentObject>() != null) {
-				if(GameObject.Find("Scene") != null) Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
-	    		this.transform.parent.GetComponent<ParentObject>().NeedsToUpdate = true;
-	    		if(Assets != null && Assets.UpdateQue != null && !Assets.UpdateQue.Contains(this.transform.parent.GetComponent<ParentObject>())) Assets.UpdateQue.Add(this.transform.parent.GetComponent<ParentObject>());
-	    	} else if(gameObject.scene.isLoaded && this.transform.GetComponent<ParentObject>() != null) {
-		    	this.transform.GetComponent<ParentObject>().NeedsToUpdate = true;
+	    	if(gameObject.scene.isLoaded && transform.parent.TryGetComponent<ParentObject>(out ParentObject ParParent)) {
+	    		ParParent.NeedsToUpdate = true;
+	    		if(AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ParParent)) AssetManager.Assets.UpdateQue.Add(ParParent);
+	    	} else if(gameObject.scene.isLoaded && TryGetComponent<ParentObject>(out ParentObject ThisParent)) {
+		    	ThisParent.NeedsToUpdate = true;
 	    	}
 	    }
 

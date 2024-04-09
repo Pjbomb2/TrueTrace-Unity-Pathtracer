@@ -1,0 +1,169 @@
+
+
+inline float luminance(const float3 a) {
+    return dot(float3(0.299f, 0.587f, 0.114f), a);
+}
+
+
+Texture2D<float4> Tex;
+RWTexture2D<float> CDFX;
+RWTexture2D<float> CDFY;
+RWStructuredBuffer<int> CounterBuffer;
+RWStructuredBuffer<float> TotalBuff;
+
+#pragma kernel makeCdf2d_kernel
+
+int w;
+int h;
+
+#define NParam 2
+#define blockSize 1024
+
+groupshared float smemf[blockSize];
+groupshared float total;
+groupshared bool done;
+
+void PrefixSumBlock(int index_x, uint3 id, int threadIdx, int numElements, inout float4 val) {
+    val.y += val.x;
+    val.z += val.y;
+    val.w += val.z;
+
+    for(int i = 1; i < blockSize; i <<= 1) {
+        smemf[threadIdx.x] = val.w;
+        GroupMemoryBarrierWithGroupSync();
+
+        if(threadIdx.x >= i) {
+            val += smemf[threadIdx - i];
+        }
+        GroupMemoryBarrierWithGroupSync();
+    }
+    val += total;
+    GroupMemoryBarrierWithGroupSync();
+
+    if(threadIdx == blockSize - 1) {
+        total = val.w;
+    }
+    GroupMemoryBarrierWithGroupSync();
+}
+
+#define PI 3.14159
+
+void FactorY(int index, int h, inout float4 val) {
+        val.x *= sin(float(PI) * (float(index) + 0.125f) / float(h));
+        val.y *= sin(float(PI) * (float(index) + 0.375f) / float(h));
+        val.z *= sin(float(PI) * (float(index) + 0.625f) / float(h));
+        val.w *= sin(float(PI) * (float(index) + 0.875f) / float(h));
+}
+
+[numthreads(1024,1,1)]
+void makeCdf2d_kernel (uint3 id : SV_DispatchThreadID, uint3 blockIdx : SV_GroupID, uint3 threadIdx : SV_GroupThreadID)
+{
+    int index_y = blockIdx.y;
+    int index_x = id.x;
+
+    if(threadIdx.x == 0) {
+        total = 0;
+    }
+    GroupMemoryBarrierWithGroupSync();
+
+    {
+        float4 valN[NParam];
+        
+        int kNumFields = 4;
+        int numElements = ceil((float)w / 4.0f);
+
+        for(int blockN = 0; blockN < NParam; ++blockN) {
+            float4 val = 0;
+            if(index_x < numElements) {
+                val.x = luminance(Tex[int2(index_x * 4, id.y)].xyz);
+                val.y = luminance(Tex[int2(index_x * 4 + 1, id.y)].xyz);
+                val.z = luminance(Tex[int2(index_x * 4 + 2, id.y)].xyz);
+                val.w = luminance(Tex[int2(index_x * 4 + 3, id.y)].xyz);
+            }
+
+            PrefixSumBlock(index_x * 4, id, threadIdx.x, numElements, val);
+
+            valN[blockN] = val;
+
+            index_x += blockSize / 4;
+        }
+
+        float normalization = (total != 0.0f ? 1.0f / total : 0);
+        index_x = id.x;
+        for(int blockN = 0; blockN < NParam; ++blockN) {
+
+            if(index_x < numElements) {
+                CDFX[int2(index_x * 4,id.y)] = valN[blockN].x * normalization;
+                CDFX[int2(index_x * 4 + 1,id.y)] = valN[blockN].y * normalization;
+                CDFX[int2(index_x * 4 + 2,id.y)] = valN[blockN].z * normalization;
+                CDFX[int2(index_x * 4 + 3,id.y)] = valN[blockN].w * normalization;
+            }
+
+            index_x += blockSize;
+        }
+    }
+
+
+    {
+        if(threadIdx.x == 0) {
+            CDFY[int2(index_y,0)] = total;
+            total = 0;
+        }
+        AllMemoryBarrierWithGroupSync();
+        if(threadIdx.x == 0) {
+            int Dat = 0;
+            InterlockedAdd(CounterBuffer[0], 1, Dat);
+            done = Dat == (h - 1);
+        }
+        AllMemoryBarrierWithGroupSync();
+
+    }
+
+
+    if(done) {
+        int kNumFields = 4;
+        int numElements = ceil((float)h / 4.0f);        
+        int numBlocks = ceil((float)numElements / (float)blockSize);
+        int index = threadIdx.x;
+        for(int blockN = 0; blockN < numBlocks; ++blockN) {
+            float4 val = 0;
+            if(index < numElements) {
+                val = float4(CDFY[int2(index * 4,0)], CDFY[int2(index * 4 + 1,0)], CDFY[int2(index * 4 + 2,0)], CDFY[int2(index * 4 + 3,0)]);
+            }
+            PrefixSumBlock(index * 4, id, threadIdx.x, numElements, val);
+
+            if(index < numElements) {
+                CDFY[int2(index * 4,0)] = val.x;
+                CDFY[int2(index * 4 + 1,0)] = val.y;
+                CDFY[int2(index * 4 + 2,0)] = val.z;
+                CDFY[int2(index * 4 + 3,0)] = val.w;
+                FactorY(index, numElements, val);
+            }
+
+            index += blockSize / 4;
+        }
+    }
+    GroupMemoryBarrierWithGroupSync();
+    if(done) {
+        int kNumFields = 4;
+        int numElements = ceil((float)h / 4.0f);        
+        int numBlocks = ceil((float)numElements / (float)blockSize);
+        int index = threadIdx.x;
+        float normalization = (total != 0 ? 1.0f / total : 0);
+        for(int blockN = 0; blockN < numBlocks; ++blockN) {
+            if(index < numElements) {
+                CDFY[int2(index * 4,0)] *= normalization;
+                CDFY[int2(index * 4 + 1,0)] *= normalization;
+                CDFY[int2(index * 4 + 2,0)] *= normalization;
+                CDFY[int2(index * 4 + 3,0)] *= normalization;
+            }
+            index += blockSize / 4;
+
+        }
+        if(threadIdx.x == 0) {
+            TotalBuff[0] = total;
+        }
+    }
+
+
+}

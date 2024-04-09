@@ -1,5 +1,9 @@
 // #include "UnityCG.cginc"
 
+// #include "../GlobalDefines.cginc"
+
+
+
 #define ONE_OVER_PI 0.318309886548f
 #define PI 3.14159265f
 #define EPSILON 1e-8
@@ -36,6 +40,7 @@ float3 Forward;
 float3 Right;
 float3 Up;
 float3 CamPos;
+float3 CamDelta;
 
 //DoF
 bool UseDoF;
@@ -102,8 +107,8 @@ struct RayHit {
 
 struct RayData {//128 bit aligned
 	float3 origin;
-	uint direction;
 	uint PixelIndex;//need to bump this back down to uint1
+	float3 direction;
 	float last_pdf;
 	uint4 hits;
 };
@@ -119,10 +124,10 @@ StructuredBuffer<float> Exposure;
 
 struct ShadowRayData {
 	float3 origin;
-	uint direction;
-	float3 illumination;
 	float LuminanceIncomming;
+	float3 direction;
 	float t;
+	float3 illumination;
 	uint PixelIndex;
 };
 RWStructuredBuffer<ShadowRayData> ShadowRaysBuffer;
@@ -272,7 +277,7 @@ Texture2D<float4> VideoTex;
 SamplerState sampler_VideoTex;
 Texture2D<half4> _TextureAtlas;
 SamplerState sampler_TextureAtlas;
-Texture2D<float2> _NormalAtlas;
+Texture2D<half2> _NormalAtlas;
 SamplerState sampler_NormalAtlas;
 Texture2D<half4> _EmissiveAtlas;
 
@@ -281,7 +286,7 @@ Texture2D<half> Heightmap;
 struct TerrainData {
     float3 PositionOffset;
     float HeightScale;
-    float TerrainDim;
+    float2 TerrainDim;
     float4 AlphaMap;
     float4 HeightMap;
     int MatOffset;
@@ -369,7 +374,7 @@ float2 randomNEE(uint samdim, uint pixel_index) {
 }
 
 uint randomNEE2(uint samdim, uint pixel_index) {
-	uint hash = pcg_hash((pixel_index * (uint)258 + samdim) * (MaxBounce + 1) + CurBounce);
+	uint hash = pcg_hash(pixel_index);
 
 
 	return hash_with(frames_accumulated, hash);
@@ -542,11 +547,10 @@ inline Ray CreateCameraRay(float2 uv) {
     return CreateRay(origin, direction);
 }
 
-inline float2 AlignUV(float2 BaseUV, const float4 TexScale, const float4 TexDim, const float Rotation = 0, const bool IsAlbedo = false) {
+inline float2 AlignUV(float2 BaseUV, const float4 TexScale, const float4 TexDim, float Rotation = 0, bool IsAlbedo = false) {
 	if(TexDim.x <= 0) return -1;
 	BaseUV = BaseUV * TexScale.xy + TexScale.zw;
 	BaseUV = (BaseUV < 0 ? (1.0f - fmod(abs(BaseUV), 1.0f)) : fmod(abs(BaseUV), 1.0f));
-	if(IsAlbedo) BaseUV = clamp(BaseUV, 8.0f/16384.0f, 1.0f);
 	if(Rotation != 0) {
 		float sinc, cosc;
 		sincos(Rotation, sinc, cosc);
@@ -557,7 +561,8 @@ inline float2 AlignUV(float2 BaseUV, const float4 TexScale, const float4 TexDim,
 		BaseUV += 0.5f;
 		BaseUV = fmod(abs(BaseUV), 1.0f);
 	}
-	return BaseUV * (TexDim.xy - TexDim.zw) + TexDim.zw;
+	if(IsAlbedo) return clamp(BaseUV * (TexDim.xy - TexDim.zw) + TexDim.zw, TexDim.zw + 1.0f / 16384.0f, TexDim.zw + TexDim.xy);
+	else return BaseUV * (TexDim.xy - TexDim.zw) + TexDim.zw;
 }
 
 inline uint ray_get_octant_inv4(const float3 ray_direction) {
@@ -585,7 +590,7 @@ inline bool triangle_intersect_shadow(int tri_id, const Ray ray, float max_dista
         if (v >= 0.0f && u + v <= 1.0f) {
             float t = f * dot(tri.posedge2, q);
             #ifdef AdvancedAlphaMapped
-        		if(_Materials[MaterialIndex].MatType == DiffuseIndex) return false;
+				if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster)) return false; 
         		if(_Materials[MaterialIndex].MatType == CutoutIndex || _Materials[MaterialIndex].specTrans == 1) {
 	                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
 	                float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex);
@@ -1273,8 +1278,8 @@ inline float3 GetTriangleTangent(const uint TriIndex, const float2 TriUV, const 
 
 float GetHeightRaw(float3 CurrentPos, const TerrainData Terrain) {
     CurrentPos -= Terrain.PositionOffset;
-    float3 b = float3(Terrain.TerrainDim, 0.11f, Terrain.TerrainDim);
-    float2 uv = float2(min(CurrentPos.x / Terrain.TerrainDim, b.x / Terrain.TerrainDim), min(CurrentPos.z / Terrain.TerrainDim, b.z / Terrain.TerrainDim));
+    float3 b = float3(Terrain.TerrainDim.x, 0.11f, Terrain.TerrainDim.y);
+    float2 uv = float2(min(CurrentPos.x / Terrain.TerrainDim.x, b.x / Terrain.TerrainDim.x), min(CurrentPos.z / Terrain.TerrainDim.y, b.z / Terrain.TerrainDim.y));
     float h = Heightmap.SampleLevel(sampler_trilinear_clamp, uv * (Terrain.HeightMap.xy - Terrain.HeightMap.zw) + Terrain.HeightMap.zw, 0).x;
     h *= Terrain.HeightScale * 2.0f;
     return h;
@@ -1658,65 +1663,63 @@ float StarRender(float3 rayDir){
 struct LightBVHData {
 	float3 BBMax;
 	float3 BBMin;
-	float3 w;
+	uint w;
 	float phi;
-	float cosTheta_o;
-	float cosTheta_e;
-	int LightCount;
-	float Pad1;
+	uint cosTheta_oe;
 	int left;
-	int isLeaf;
 };
 
 StructuredBuffer<LightBVHData> LightNodes;
 
-float cosSubClamped(float sinTheta_a, float cosTheta_a, float sinTheta_b, float cosTheta_b) {
+inline float cosSubClamped(float sinTheta_a, float cosTheta_a, float sinTheta_b, float cosTheta_b) {
 	if(cosTheta_a > cosTheta_b) return 1;
 	return cosTheta_a * cosTheta_b + sinTheta_a * sinTheta_b;
 }
-float sinSubClamped(float sinTheta_a, float cosTheta_a, float sinTheta_b, float cosTheta_b) {
+inline float sinSubClamped(float sinTheta_a, float cosTheta_a, float sinTheta_b, float cosTheta_b) {
 	if(cosTheta_a > cosTheta_b) return 0;
 	return sinTheta_a * cosTheta_b - cosTheta_a * sinTheta_b;
 }
 
-float BoundSubtendedDirections(float3 BBMax, float3 BBMin, float3 p) {
-    float3 pCenter = (BBMax + BBMin) / 2.0f;
-    float radius = (all(pCenter >= BBMin) && all(pCenter <= BBMax)) ? dot(BBMax - pCenter, BBMax - pCenter) : 0;
-    float pDiff = dot(p - pCenter, p - pCenter);
-    if(pDiff < radius) return -1;
-    float sin2ThetaMax = (radius) / pDiff;
-    float cosThetaMax = sqrt(1.0f - sin2ThetaMax);
-    return cosThetaMax;
-}
 
 
- float Importance(const float3 p, const float3 n, const LightBVHData node) {
-	float3 pc = (node.BBMax + node.BBMin) / 2.0f;
-	float d2 = dot(p - pc, p - pc);
-	d2 = max(d2, length(node.BBMax - node.BBMin) / 2.0f);
 
-	float3 wi = normalize(p - pc);
-	float cosTheta_w = abs(dot(node.w, wi));
-	float sinTheta_w = sqrt(max(1.0f - cosTheta_w * cosTheta_w,0));
+    float Importance(const float3 p, const float3 n, LightBVHData node)
+    {//Taken straight from pbrt
+    	float cosTheta_o = (2.0f * ((float)(node.cosTheta_oe & 0x0000FFFF) / 32767.0f) - 1.0f);
+        float3 pc = (node.BBMax + node.BBMin) / 2.0f;
+        float pDiff = dot(p - pc, p - pc);
+        float d2 = max(pDiff, length(node.BBMax - node.BBMin) / 2.0f);
 
-	float cosTheta_b = BoundSubtendedDirections(node.BBMax, node.BBMin, p);
-	float sinTheta_b = sqrt(max(1.0f - cosTheta_b * cosTheta_b,0));
+        float3 wi = (pc - p) / sqrt(pDiff);
+        float cosTheta_w = abs(dot(i_octahedral_32(node.w), wi));
+        float sinTheta_w = sqrt(max(1.0f - cosTheta_w * cosTheta_w, 0));
 
-	float sinTheta_o = sqrt(max(1.0f - node.cosTheta_o * node.cosTheta_o,0));
-	float cosTheta_x = cosSubClamped(sinTheta_w, cosTheta_w, sinTheta_o, node.cosTheta_o);
-	float sinTheta_x = sinSubClamped(sinTheta_w, cosTheta_w, sinTheta_o, node.cosTheta_o);
-	float cosThetap = cosSubClamped(sinTheta_x, cosTheta_x, sinTheta_b, cosTheta_b);
-	if(cosThetap <= node.cosTheta_e) return 0;
+        float cosTheta_b;
+        {
+            float radius = (all(pc >= node.BBMin) && all(pc <= node.BBMax)) ? dot(node.BBMax - pc, node.BBMax - pc) : 0;
+            if (pDiff < radius)
+                cosTheta_b = -1.0f;
+            else
+                cosTheta_b = sqrt(max(1.0f - radius / pDiff, 0));
+        }
+        float sinTheta_b = sqrt(max(1.0f - cosTheta_b * cosTheta_b, 0));
 
-	float importance = node.phi * cosThetap / d2;
+        float sinTheta_o = sqrt(max(1.0f - cosTheta_o * cosTheta_o, 0));
+        float cosTheta_x = cosSubClamped(sinTheta_w, cosTheta_w, sinTheta_o, cosTheta_o);
+        float sinTheta_x = sinSubClamped(sinTheta_w, cosTheta_w, sinTheta_o, cosTheta_o);
+        float cosThetap = cosSubClamped(sinTheta_x, cosTheta_x, sinTheta_b, cosTheta_b);
+        if (cosThetap <= (2.0f * ((float)(node.cosTheta_oe >> 16) / 32767.0f) - 1.0f))
+            return 0;
 
-	float cosTheta_i = abs(dot(wi, n));
-	float sinTheta_i = sqrt(max(1.0f - cosTheta_i * cosTheta_i,0));
-	float cosThetap_i = cosSubClamped(sinTheta_i, cosTheta_i, sinTheta_b, cosTheta_b);
-	importance *= cosThetap_i;
+        float importance = node.phi * cosThetap / d2;
 
-	return importance;// / (float)max(node.LightCount,1);
-}
+        float cosTheta_i = (dot(wi, n));
+        float sinTheta_i = sqrt(max(1.0f - cosTheta_i * cosTheta_i, 0));
+        float cosThetap_i = cosSubClamped(sinTheta_i, cosTheta_i, sinTheta_b, cosTheta_b);
+        importance *= cosThetap_i;
+
+        return max(importance, 0.f); // / (float) max(node.LightCount, 1);
+    }
 
 int CalcInside(LightBVHData A, LightBVHData B, float3 p, int Index) {
 	bool Residency0 = all(p <= A.BBMax) && all(p >= A.BBMin);
@@ -1730,45 +1733,57 @@ int CalcInside(LightBVHData A, LightBVHData B, float3 p, int Index) {
 	} else return -1;
 }
 
-void CalcLightPDF(inout float pmf, float3 p, float3 p2, float3 n, int pixel_index, int MeshIndex) {
+void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, int pixel_index, int MeshIndex) {
 	int node_index = 0;
 	int Reps = 0;
 	bool HasHitTLAS = false;
 	int NodeOffset = 0;
-	int StartIndex = 0;
-	float2 stack[32];
+	float3 stack[12];
 	int stacksize = 0;
+	float RandNum = random(264, pixel_index).x;
+	
 	while(Reps < 100) {
 		Reps++;
 		LightBVHData node = LightNodes[node_index];
-		if(node.isLeaf == 0) {
+		if(node.left >= 0) {
 			float2 ci = float2(
 				Importance(p, n, LightNodes[node.left + NodeOffset]),
 				Importance(p, n, LightNodes[node.left + 1 + NodeOffset])
 			);
 			// if(ci.x == 0 && ci.y == 0) {pmf = -1; return;}
 
-			int Index = CalcInside(LightNodes[node.left + NodeOffset], LightNodes[node.left + NodeOffset + 1], p2, random(264 + Reps, pixel_index).x > (ci.x / (ci.x + ci.y)));
+		    float sumweights = (ci.x + ci.y);
+            float up = RandNum * sumweights;
+            if (up == sumweights)
+            {
+                up = asfloat(asuint(up) - 1);
+            }
+            int offset = 0;
+            float sum = 0;
+            if(sum + ci[offset] <= up) sum += ci[offset++];
+            if(sum + ci[offset] <= up) sum += ci[offset++];
+
+
+			int Index = CalcInside(LightNodes[node.left + NodeOffset], LightNodes[node.left + NodeOffset + 1], p2, offset);
 			if(Index == -1) {
 				if(stacksize == 0) {return;}
-				float2 tempstack = stack[--stacksize];
+				float3 tempstack = stack[--stacksize];
 				node_index = tempstack.x;
-				pmf = tempstack.y;
+				lightPDF = tempstack.y;
+				RandNum = tempstack.z;
 				continue;
 			}
 			if(Index >= 2) {
 				Index -= 2;
-				stack[stacksize++] = float2(node.left + NodeOffset + !Index, pmf * ((ci[!Index] / (ci.x + ci.y))));
+				stack[stacksize++] = float3(node.left + NodeOffset + !Index, lightPDF * (ci[!Index] / sumweights), min((up - sum) / ci[!Index], 1.0f - (1e-6)));
 			}
-			pmf *= ((ci[Index] / (ci.x + ci.y)));
-			node_index = node.left + Index + NodeOffset;
+            RandNum = min((up - sum) / ci[Index], 1.0f - (1e-6));
+            node_index = node.left + Index + NodeOffset;
+            lightPDF *= ci[Index] / sumweights;
 		} else {
 			if(HasHitTLAS) {
-        		// if(CurBounce == 0) _DebugTex[int2(pixel_index % screen_width, pixel_index / screen_width)] = pmf / 12000.0f;
-				if(node_index > 0 || Importance(p, n, node) > 0) return;	
+				return;	
 			} else {
-				StartIndex = _LightMeshes[node.left].StartIndex;
-				// if(_LightMeshes[node.left].LockedMeshIndex != MeshIndex) return -1; 
 				p = mul(_MeshData[MeshIndex].W2L, float4(p,1));
 				p2 = mul(_MeshData[MeshIndex].W2L, float4(p2,1));
 			    float3x3 Inverse = (float3x3)inverse(_MeshData[MeshIndex].W2L);
@@ -1787,31 +1802,45 @@ void CalcLightPDF(inout float pmf, float3 p, float3 p2, float3 n, int pixel_inde
 	return;
 }
 
-int SampleLightBVH(float3 p, float3 n, inout float pmf, int pixel_index, inout int MeshIndex) {
-	int node_index = 0;
+int SampleLightBVH(float3 p, float3 n, inout float lightPDF, int pixel_index, inout int MeshIndex) {
 	int Reps = 0;
 	bool HasHitTLAS = false;
 	int NodeOffset = 0;
 	int StartIndex = 0;
+	float RandNum = random(264, pixel_index).x;
+	LightBVHData Leftnode = LightNodes[0];
+	LightBVHData Rightnode;
 	while(Reps < 122) {
 		Reps++;
-		LightBVHData node = LightNodes[node_index];
-		[branch]if(node.isLeaf == 0) {
+		[branch]if(Leftnode.left >= 0) {
+			Rightnode = LightNodes[Leftnode.left + 1 + NodeOffset];
+			Leftnode = LightNodes[Leftnode.left + NodeOffset];
 			const float2 ci = float2(
-				Importance(p, n, LightNodes[node.left + NodeOffset]),
-				Importance(p, n, LightNodes[node.left + 1 + NodeOffset])
+				Importance(p, n, Leftnode),
+				Importance(p, n, Rightnode)
 			);
 			if(ci.x == 0 && ci.y == 0) break;
 
-			bool Index = random(264 + Reps, pixel_index).x > (ci.x / (ci.x + ci.y));
-			pmf /= ((ci[Index] / (ci.x + ci.y)));
-			node_index = node.left + Index + NodeOffset;
+		    float sumweights = (ci.x + ci.y);
+            float up = RandNum * sumweights;
+            if (up == sumweights)
+            {
+                up = asfloat(asuint(up) - 1);
+            }
+            int offset = 0;
+            float sum = 0;
+            if(sum + ci[offset] <= up) sum += ci[offset++];
+            if(sum + ci[offset] <= up) sum += ci[offset++];
+
+            RandNum = min((up - sum) / ci[offset], 1.0f - (1e-6));
+            if(offset == 1) Leftnode = Rightnode; //node_index = node.left + offset + NodeOffset;
+            lightPDF /= ci[offset] / sumweights;
 		} else {
 			[branch]if(HasHitTLAS) {
-				if(node_index > 0 || Importance(p, n, node) > 0) return node.left + StartIndex;	
+				return -(Leftnode.left + 1) + StartIndex;	
 			} else {
-				StartIndex = _LightMeshes[node.left].StartIndex; 
-				MeshIndex = _LightMeshes[node.left].LockedMeshIndex;
+				StartIndex = _LightMeshes[-(Leftnode.left+1)].StartIndex; 
+				MeshIndex = _LightMeshes[-(Leftnode.left+1)].LockedMeshIndex;
 				p = mul(_MeshData[MeshIndex].W2L, float4(p,1));
 			    float3x3 Inverse = (float3x3)inverse(_MeshData[MeshIndex].W2L);
 			    float scalex = length(mul(Inverse, float3(1,0,0)));
@@ -1820,7 +1849,7 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, int pixel_index, inout i
 			    float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
 				n = normalize(mul(_MeshData[MeshIndex].W2L, float4(n,0)).xyz / Scale);
 				NodeOffset = _MeshData[MeshIndex].LightNodeOffset;
-				node_index = NodeOffset;
+				Leftnode = LightNodes[NodeOffset];
 				HasHitTLAS = true;
 			}
 		}
@@ -1898,7 +1927,6 @@ float3 DeSat(float3 In, float Saturation)
 
 #define LAYERS            5.0
 
-#define PI                3.141592654
 #define TAU               (2.0*PI)
 #define TIME              fmod(iTime, 30.0)
 #define TTIME             (TAU*TIME)
@@ -2053,6 +2081,84 @@ float3 stars(float3 ro, float3 rd, float2 sp, float hh) {
   return col;
 }
 
-bool GetFlag(int FlagVar, int flag) {
-    return (((int)FlagVar >> flag) & (int)1) == 1;
+StructuredBuffer<float> TotSum;
+float2 HDRIParams;
+
+float3 equirectUvToDirection(float2 uv) {
+    uv.x -= 0.5;
+    uv.y = 1.0 - uv.y;
+
+    float theta = uv.x * 2.0 * PI;
+    float phi = uv.y * PI;
+    float sinPhi, sinTheta;
+    sincos(phi, sinPhi, phi);
+    sincos(theta, sinTheta, theta);
+
+    return -float3(sinPhi * theta, phi, sinPhi * sinTheta);
+}
+
+float2 equirectDirectionToUv(float3 direction) {
+    float2 uv = float2(atan2(direction.z, direction.x), acos(direction.y));
+    uv /= float2(2.0 * PI, PI);
+
+    uv.x += 0.5;
+    uv.y = 1.0 - uv.y;
+    return uv;
+}
+
+float equirectDirectionPdf(float3 direction) {
+    float2 uv = equirectDirectionToUv(direction);
+    float theta = uv.y * PI;
+    float sinTheta = sin( theta );
+    if (sinTheta == 0.0)
+        return 0.0;
+
+    return 1.0 / (2.0 * PI * PI * sinTheta);
+}
+
+Texture2D<float> CDFX;
+Texture2D<float> CDFY;
+Texture2D<float4> _SkyboxTexture;
+SamplerState sampler_SkyboxTexture;
+int FindInterval(int size, float u, Texture2D<float> CDF, int v = 0) {
+    int first = 0, len = size;
+    while (len > 0) {
+        int hal = len >> 1, middle = first + hal;
+        // Bisect range based on value of _pred_ at _middle_
+        if (CDF[int2(middle, v)] <= u) {
+            first = middle + 1;
+            len -= hal + 1;
+        } else
+            len = hal;
+    }
+    return clamp(first - 1, 0, size - 2);
+}
+
+float3 SampleLI(int pixel_index, inout float pdf, inout float3 wi) {
+    float2 Rand = random(94, pixel_index);
+    float2 uv;
+    int v, offset;
+    {
+        v = FindInterval(HDRIParams.y, Rand.x, CDFY);
+
+        float du = Rand.x - CDFY[int2(v, 0)];
+        float diff = (CDFY[int2(v + 1, 0)] - CDFY[int2(v, 0)]);
+        if(diff > 0)
+            du /= diff;
+
+        uv.y = ((float)v + du) / HDRIParams.y;
+    }
+
+    {
+        offset = FindInterval(HDRIParams.x, Rand.y, CDFX, v);
+        float du = Rand.y - CDFX[int2(offset, v)];
+        float diff = (CDFX[int2(offset + 1, v)] - CDFX[int2(offset, v)]);
+        if(diff > 0)
+            du /= diff;
+
+        uv.x = ((float)offset + du) / HDRIParams.x;
+    }
+    wi = equirectUvToDirection(uv);
+
+    return _SkyboxTexture.SampleLevel(my_linear_clamp_sampler, uv, 0);
 }

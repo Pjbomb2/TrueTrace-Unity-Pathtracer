@@ -295,7 +295,7 @@ using CommonVars;
                                 RoughnessMinMax.RegisterValueChangedCallback(evt => {RTO.RoughnessRemap[Selected] = evt.newValue;RTO.CallMaterialEdited(true);});
                                 RoughnessMinMax.style.width = 350;
 
-                                Slider MetallicSlider = new Slider() {label = "Metallic: ", value = RTO.Metallic[Selected], highValue = 5.0f, lowValue = 0};
+                                Slider MetallicSlider = new Slider() {label = "Metallic: ", value = RTO.Metallic[Selected], highValue = 1.0f, lowValue = 0};
                                 MetallicSlider.RegisterValueChangedCallback(evt => {RTO.Metallic[Selected] = evt.newValue;RTO.CallMaterialEdited(true);});
                                 MetallicSlider.style.width = 350;
                                 MetallicSlider.showInputField = true;

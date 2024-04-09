@@ -124,7 +124,8 @@ namespace TrueTrace {
         public List<Texture> AlbedoTexs;
         public List<Texture> NormalTexs;
 
-        public int TerrainDim;
+        public int TerrainDimX;
+        public int TerrainDimY;
         public float HeightScale;
 
         public void ClearAll()
@@ -158,7 +159,8 @@ namespace TrueTrace {
             AlphaMap = TerrainTile.terrainData.alphamapTextures[0];//new RenderTexture(TerrainTile.terrainData.alphamapResolution, TerrainTile.terrainData.alphamapResolution, 0, TerrainTile.terrainData.alphamapTextures[0].format, RenderTextureReadWrite.Linear);
 
             HeightScale = TerrainTile.terrainData.heightmapScale.y;
-            TerrainDim = (int)TerrainTile.terrainData.size.x;
+            TerrainDimX = (int)TerrainTile.terrainData.size.x;
+            TerrainDimY = (int)TerrainTile.terrainData.size.z;
 
             AlbedoTexs = new List<Texture>();
             NormalTexs = new List<Texture>();
@@ -219,7 +221,7 @@ namespace TrueTrace {
                     TempGameObject.transform.parent = this.gameObject.transform;
                     TempGameObject.AddComponent<InstancedObject>();
                     TempGameObject.GetComponent<InstancedObject>().InstanceParent = GameObject.Find(TreeSources[Tree.prototypeIndex].name).GetComponent<ParentObject>();
-                    TempGameObject.transform.position = new Vector3(Tree.position.x * TerrainDim, Tree.position.y * HeightScale, Tree.position.z * TerrainDim) + this.transform.position;
+                    TempGameObject.transform.position = new Vector3(Tree.position.x * TerrainDimX, Tree.position.y * HeightScale, Tree.position.z * TerrainDimY) + this.transform.position;
 
                 }
             }

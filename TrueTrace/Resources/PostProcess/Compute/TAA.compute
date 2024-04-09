@@ -379,8 +379,6 @@ void kernel_taa(int3 id : SV_DispatchThreadID)
 
 #pragma kernel kernel_taa_finalize
 
-
-
 [numthreads(16, 16, 1)]
 void kernel_taa_finalize(int3 id : SV_DispatchThreadID)
 {
@@ -395,7 +393,6 @@ void kernel_taa_finalize(int3 id : SV_DispatchThreadID)
 	color = color / (1.0f - luminance(color.x, color.y, color.z));
 
 	ColorOut[id.xy] = color;
-
 
 }
 

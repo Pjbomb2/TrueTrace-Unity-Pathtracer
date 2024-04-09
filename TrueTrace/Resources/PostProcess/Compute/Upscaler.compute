@@ -337,7 +337,7 @@ void kernel_upsample (int3 id : SV_DispatchThreadID)
     float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
     float4 blurredDumb = float4(0.0, 0.0, 0.0, 0.0);
     float validWeights = 0.0;
-    float2 UV = float2(id.xy) / float2(target_width, target_height);
+    float2 UV = float2(id.xy + 0.5f) / float2(target_width, target_height);
 
     float depth;
     float3 WorldPos = CreateCameraRay(UV, depth);

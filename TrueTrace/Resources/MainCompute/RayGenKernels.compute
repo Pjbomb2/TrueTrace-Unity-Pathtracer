@@ -1,5 +1,5 @@
-#include "CommonData.cginc"
 #include "../GlobalDefines.cginc"
+#include "CommonData.cginc"
 #ifndef DX11
     #pragma use_dxc
 #endif
@@ -26,7 +26,7 @@ void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
 
     if (id.x >= screen_width || id.y >= screen_height) return;
     const uint pixel_index = id.y * screen_width + id.x;
-    RayData globray = {Rays[pixel_index].origin + NearPlane * Rays[pixel_index].direction, octahedral_32(Rays[pixel_index].direction), pixel_index, 0, 0,0,asuint(FarPlane),0};
+    RayData globray = {Rays[pixel_index].origin + NearPlane * Rays[pixel_index].direction, pixel_index, Rays[pixel_index].direction, 0, 0,0,asuint(FarPlane),0};
     GlobalRays[pixel_index] = globray;
     GlobalColors[pixel_index] = InitCol;
     WorldPosA[id.xy] = float4(0,0,0, 0);
@@ -44,12 +44,10 @@ void Generate(uint3 id : SV_DispatchThreadID) {
     float2 uv = float2((id.xy + (UseReCur ? 0 : jitter)) / float2(screen_width, screen_height) * 2.0f - 1.0f);
 
     SmallerRay ray = CreateCameraRay(uv, pixel_index);
-    RayData globray = {ray.origin + NearPlane * ray.direction, octahedral_32(ray.direction), pixel_index, 0, 0,0,asuint(FarPlane),0};
+    RayData globray = {ray.origin + NearPlane * ray.direction, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
     GlobalRays[pixel_index] = globray;
     GlobalColors[pixel_index] = InitCol;
 }
-
-float3 CamDelta;
 
 #pragma kernel GIReTraceKernel
 [numthreads(16, 16, 1)]
@@ -75,7 +73,7 @@ void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadI
             RandomNumsWrite[id.xy] = float4(PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.yx, 1 + ReservoirA[prevIndex].z,  PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.z);
         }
     }
-    RayData globray = {ray.origin + NearPlane * ray.direction, octahedral_32(ray.direction), pixel_index, 0, 0,0,asuint(FarPlane),0};
+    RayData globray = {ray.origin + NearPlane * ray.direction, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
     GlobalRays[pixel_index] = globray;
     GlobalColors[pixel_index] = InitCol;
     // WorldPosA[id.xy] = float4(0,0,0, 0);
@@ -190,7 +188,7 @@ void LightMapGen(uint3 id : SV_DispatchThreadID) {
             NewWorldPos -= IncommingRay * 0.0001f;
             IncommingRay = normalize(world - NewWorldPos);
             NewWorldPos += ToWorld(GetTangentSpace2(-normalize(Normal + float3(random(5, pixel_index), random(6, pixel_index).x) * 0.001f)), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy) * 0.1f;
-            RayData globray = {NewWorldPos, octahedral_32(IncommingRay), pixel_index, 0, 0,0,asuint(FarPlane),0};
+            RayData globray = {NewWorldPos, pixel_index, IncommingRay, 0, 0,0,asuint(FarPlane),0};
             int RayCount = 0;
             InterlockedAdd(BufferSizes[0].tracerays, 1, RayCount);
             GlobalRays[RayCount] = globray;

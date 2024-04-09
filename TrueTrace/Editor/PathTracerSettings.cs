@@ -94,7 +94,9 @@ namespace TrueTrace {
          [SerializeField] public float FireflyOffset = 0;
          [SerializeField] public int OIDNFrameCount = 0;
          [SerializeField] public bool UseOIDN = false;
-         
+         [SerializeField] public bool DoSharpen = false;
+         [SerializeField] public float Sharpness = 1.0f;
+
          void OnEnable() {
             EditorSceneManager.activeSceneChangedInEditMode += EvaluateScene;
             EditorSceneManager.sceneSaving += SaveScene;
@@ -110,10 +112,9 @@ namespace TrueTrace {
 
          List<List<GameObject>> Objects;
          List<Mesh> SourceMeshes;
-         private static TTStopWatch BuildWatch;
+         private static TTStopWatch BuildWatch = new TTStopWatch("Total Scene Build Time");
          private void OnStartAsyncCombined() {
             EditorUtility.SetDirty(GameObject.Find("Scene").GetComponent<AssetManager>());
-            BuildWatch = new TTStopWatch("Total Scene Build Time");
             BuildWatch.Start();
             GameObject.Find("Scene").GetComponent<AssetManager>().EditorBuild();
          }
@@ -144,7 +145,7 @@ namespace TrueTrace {
 
             int ChildCount = ChildObjects.Count;
             for(int i = ChildCount - 1; i >= 0; i--) {
-               if(ChildObjects[i].GetComponent<ParentObject>() != null || ChildObjects[i].GetComponent<InstancedObject>() != null) {
+               if(ChildObjects[i].GetComponent<InstancedObject>() != null) {
                   continue;
                }
                if(ChildObjects[i].GetComponent<RayTracingObject>() != null && ChildObjects[i].GetComponent<MeshFilter>() != null) {
@@ -164,9 +165,10 @@ namespace TrueTrace {
                if(Objects[i].Count > 1) {
                   int Count = Objects[i].Count;
                   GameObject InstancedParent = Instantiate(Objects[i][0], new Vector3(0,-100,0), Quaternion.identity, InstanceStorage);
-                  InstancedParent.AddComponent<ParentObject>();
+                  if(InstancedParent.GetComponent<ParentObject>() == null) InstancedParent.AddComponent<ParentObject>();
                   for(int i2 = Count - 1; i2 >= 0; i2--) {
                      DestroyImmediate(Objects[i][i2].GetComponent<RayTracingObject>());
+                     if(InstancedParent.GetComponent<ParentObject>()) DestroyImmediate(Objects[i][i2].GetComponent<ParentObject>());
                      Objects[i][i2].AddComponent<InstancedObject>();
                      Objects[i][i2].GetComponent<InstancedObject>().InstanceParent = InstancedParent.GetComponent<ParentObject>();
                   }
@@ -244,7 +246,7 @@ namespace TrueTrace {
          private bool TraverseFirstLevel(ParentData Parent) {
             int ChildLength = Parent.Children.Count;
             for(int i = 0; i < ChildLength; i++) {
-               if(Parent.Children[i].This.gameObject.GetComponent<MeshFilter>() != null) {
+               if(Parent.Children[i].This.gameObject.TryGetComponent<MeshFilter>(out MeshFilter TempFilt)) {
                   return false;
                }
             }
@@ -254,9 +256,9 @@ namespace TrueTrace {
          private void ReduceChildren(ParentData Parent) {
             int ChildLength = Parent.Children.Count;
             for(int i = 0; i < ChildLength; i++) {
-               if(Parent.Children[i].This.gameObject.GetComponent<ParentObject>() != null) {
+               if(Parent.Children[i].This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent)) {
                   if(TraverseFirstLevel(Parent.Children[i])) {
-                     DestroyImmediate(Parent.Children[i].This.gameObject.GetComponent<ParentObject>());
+                     DestroyImmediate(TempParent);
                   }
                }
                ReduceChildren(Parent.Children[i]);
@@ -268,10 +270,19 @@ namespace TrueTrace {
             for(int i = 0; i < ChildLength; i++) {
                SolveChildren(Parent.Children[i]);
             }
-            if(((Parent.This.gameObject.GetComponent<MeshFilter>() != null && Parent.This.gameObject.GetComponent<MeshFilter>().sharedMesh != null) || (Parent.This.gameObject.GetComponent<SkinnedMeshRenderer>() != null && Parent.This.gameObject.GetComponent<SkinnedMeshRenderer>().sharedMesh != null)) && Parent.This.gameObject.GetComponent<InstancedObject>() == null) {
-               if(Parent.This.gameObject.GetComponent<RayTracingObject>() == null) {
-                     if((Parent.This.gameObject.GetComponent<MeshRenderer>() != null && Parent.This.gameObject.GetComponent<MeshRenderer>().sharedMaterials != null && Parent.This.gameObject.GetComponent<MeshRenderer>().sharedMaterials.Length != 0) || (Parent.This.gameObject.GetComponent<SkinnedMeshRenderer>() != null && Parent.This.gameObject.GetComponent<SkinnedMeshRenderer>().sharedMaterials != null && Parent.This.gameObject.GetComponent<SkinnedMeshRenderer>().sharedMaterials.Length != 0)) {
-                        Parent.This.gameObject.AddComponent<RayTracingObject>();
+            bool Fine0 = Parent.This.gameObject.TryGetComponent<MeshFilter>(out MeshFilter TempFilt);
+            bool Fine2 = Fine0;
+            if(Fine0) Fine0 = Fine0 && TempFilt.sharedMesh != null;
+            bool Fine1 = Parent.This.gameObject.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin);
+            if(Fine1) Fine1 = Fine1 && TempSkin.sharedMesh != null;
+            if((Fine0 || Fine1) && !Parent.This.gameObject.TryGetComponent<InstancedObject>(out InstancedObject InstObj)) {
+               if(!Parent.This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempRayObj)) {
+                     if(Parent.This.gameObject.TryGetComponent<MeshRenderer>(out MeshRenderer MeshRend)) {
+                        if(MeshRend.sharedMaterials != null && MeshRend.sharedMaterials.Length != 0)
+                          Parent.This.gameObject.AddComponent<RayTracingObject>();
+                     } else if(Parent.This.gameObject.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer SkinRend)) {
+                        if(SkinRend.sharedMaterials != null && SkinRend.sharedMaterials.Length != 0)
+                           Parent.This.gameObject.AddComponent<RayTracingObject>();
                      }
 
                   }
@@ -280,36 +291,39 @@ namespace TrueTrace {
             bool HasSkinnedMeshAsChild = false;
             bool HasNormalMeshAsChild = false;
             for(int i = 0; i < ChildLength; i++) {
-               if(Parent.Children[i].This.gameObject.GetComponent<RayTracingObject>() != null && Parent.Children[i].This.gameObject.GetComponent<ParentObject>() == null) RayTracingObjectChildCount++;
-               if(Parent.Children[i].This.gameObject.GetComponent<MeshFilter>() != null && Parent.Children[i].This.gameObject.GetComponent<ParentObject>() == null) HasNormalMeshAsChild = true;
-               if(Parent.Children[i].This.gameObject.GetComponent<SkinnedMeshRenderer>() != null && Parent.Children[i].This.gameObject.GetComponent<ParentObject>() == null) HasSkinnedMeshAsChild = true;
+               bool FoundParent = Parent.Children[i].This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent);
+               if(Parent.Children[i].This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempRayObj2) && !FoundParent) RayTracingObjectChildCount++;
+               if(Parent.Children[i].This.gameObject.TryGetComponent<MeshFilter>(out MeshFilter TempFilt2) && !FoundParent) HasNormalMeshAsChild = true;
+               if(Parent.Children[i].This.gameObject.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer SkinRend2) && !FoundParent) HasSkinnedMeshAsChild = true;
             }
             bool ReductionNeeded = false;
             for(int i = 0; i < ChildLength; i++) {
-               if(Parent.Children[i].This.gameObject.GetComponent<SkinnedMeshRenderer>() != null && Parent.This.gameObject.GetComponent<MeshFilter>() == null) {
+               if(Parent.Children[i].This.gameObject.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin2) && !Fine2) {
                   ReductionNeeded = true;
+                  break;
                }
             }
             if(ReductionNeeded) ReduceChildren(Parent);
             if(RayTracingObjectChildCount > 0) {
-               if(Parent.This.gameObject.GetComponent<AssetManager>() == null) {
-                  if(Parent.This.gameObject.GetComponent<ParentObject>() == null) {
+               if(!Parent.This.gameObject.TryGetComponent<AssetManager>(out AssetManager TempAsset)) {
+                  if(!Parent.This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent2)) {
                      Parent.This.gameObject.AddComponent<ParentObject>();
                   }
                }
                else {
                   for(int i = 0; i < ChildLength; i++) {
-                     if(Parent.Children[i].This.gameObject.GetComponent<RayTracingObject>() != null && Parent.Children[i].This.gameObject.GetComponent<ParentObject>() == null) Parent.Children[i].This.gameObject.AddComponent<ParentObject>();
+                     if(Parent.Children[i].This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj2) && !Parent.Children[i].This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent2)) Parent.Children[i].This.gameObject.AddComponent<ParentObject>();
                   }               
                }
             } else {
+               bool Fine3 = Parent.This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent2);
                for(int i = 0; i < ChildLength; i++) {
-                  if(Parent.Children[i].This.gameObject.GetComponent<RayTracingObject>() != null && Parent.Children[i].This.gameObject.GetComponent<ParentObject>() == null && Parent.This.gameObject.GetComponent<ParentObject>() == null) Parent.This.gameObject.AddComponent<ParentObject>();
+                  if(Parent.Children[i].This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj2) && !Parent.Children[i].This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent3) && !Fine3) Parent.This.gameObject.AddComponent<ParentObject>();
                }
             }
             if(HasNormalMeshAsChild && HasSkinnedMeshAsChild) {
                for(int i = 0; i < ChildLength; i++) {
-                  if(Parent.Children[i].This.gameObject.GetComponent<SkinnedMeshRenderer>() != null && Parent.Children[i].This.gameObject.GetComponent<ParentObject>() == null) {
+                  if(!Parent.Children[i].This.gameObject.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin3) && !Parent.Children[i].This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent3)) {
                      Parent.Children[i].This.gameObject.AddComponent<ParentObject>();
                   }
                }  
@@ -355,6 +369,14 @@ namespace TrueTrace {
       IntegerField RemainingObjectsField;
       IntegerField SampleCountField;
       private void ReArrangeHierarchy() {
+            if(Camera.main != null) {
+               if(Camera.main.gameObject.GetComponent<RayTracingMaster>() != null) {
+                  DestroyImmediate(Camera.main.gameObject.GetComponent<RayTracingMaster>());
+                  Camera.main.gameObject.AddComponent<RenderHandle>();
+               }
+               if(Camera.main.gameObject.GetComponent<RenderHandle>() == null) Camera.main.gameObject.AddComponent<RenderHandle>();
+
+            }
          if(GameObject.Find("Scene") == null) {
                   List<GameObject> Objects = new List<GameObject>();
                   UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects(Objects);
@@ -375,14 +397,6 @@ namespace TrueTrace {
       }
 
          public void OnFocus() {
-            if(Camera.main != null) {
-               if(Camera.main.gameObject.GetComponent<RayTracingMaster>() != null) {
-                  DestroyImmediate(Camera.main.gameObject.GetComponent<RayTracingMaster>());
-                  Camera.main.gameObject.AddComponent<RenderHandle>();
-               }
-               if(Camera.main.gameObject.GetComponent<RenderHandle>() == null) Camera.main.gameObject.AddComponent<RenderHandle>();
-
-            }
            if(Assets == null) {
                if( GameObject.Find("Scene") != null) {
                   Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
@@ -515,7 +529,7 @@ Toolbar toolbar;
          BackgroundSettingsField = new PopupField<string>("Background Type");
          BackgroundSettingsField.choices = BackgroundSettings;
          BackgroundSettingsField.index = BackgroundType;
-         BackgroundSettingsField.style.width = 450;
+         BackgroundSettingsField.style.width = 550;
          switch(BackgroundSettingsField.index) {
             case 0:
                BackgroundSettingsField.Add(BlankElement);
@@ -846,6 +860,12 @@ Toolbar toolbar;
          Toggle DX11Toggle = new Toggle() {value = (definesList.Contains("DX11Only")), text = "Use DX11"};
          DX11Toggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("DX11Only"); else RemoveDefine("DX11Only"); SetDefines();});
          HardSettingsMenu.Add(DX11Toggle);
+
+         Toggle LosslessToggle = new Toggle() {value = (definesList.Contains("ForceLossless")), text = "Disable Atlas Compression"};
+         LosslessToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("ForceLossless"); else RemoveDefine("ForceLossless"); SetDefines();});
+         HardSettingsMenu.Add(LosslessToggle);
+
+
          Button RemoveTrueTraceButton = new Button(() => RemoveTrueTrace()) {text = "Remove TrueTrace Scripts From Scene"};
          HardSettingsMenu.Add(RemoveTrueTraceButton);
          DingToggle = new Toggle() {value = DoDing, text = "Play Ding When Build Finishes"};
@@ -964,6 +984,8 @@ Toolbar toolbar;
            RayMaster.UseNEE = NEE;
            Assets.UseSkinning = MeshSkin;
            RayMaster.AllowBloom = Bloom;
+           RayMaster.DoSharpen = DoSharpen;
+           RayMaster.Sharpness = Sharpness;
            RayMaster.BloomStrength = 128 - BloomStrength * 128.0f;
            RayMaster.AllowDoF = DoF;
            RayMaster.ClayColor = ClayColor;
@@ -1006,6 +1028,7 @@ Toolbar toolbar;
            RayMaster.SunDesaturate = SunDesaturate;
            RayMaster.SkyDesaturate = SkyDesaturate;
            RayMaster.FireflyFrameCount = FireflyFrameCount;
+           RayMaster.OIDNFrameCount = OIDNFrameCount;
          }
 
            AddHardSettingsToMenu();
@@ -1198,6 +1221,23 @@ Toolbar toolbar;
                BloomBox.Add(BloomLabel);
                BloomBox.Add(BloomSlider);
            if(Bloom) MainSource.Add(BloomBox);
+
+
+
+            VisualElement SharpenFoldout = new VisualElement() {};
+               Slider SharpnessSlider = new Slider() {label = "Sharpness: ", value = Sharpness, highValue = 1.0f, lowValue = 0.0f};
+               SharpnessSlider.style.width = 200;
+               SharpnessSlider.RegisterValueChangedCallback(evt => {Sharpness = evt.newValue; RayMaster.Sharpness = Sharpness;});
+               SharpenFoldout.Add(SharpnessSlider);
+            SharpnessSlider.ElementAt(0).style.minWidth = 65;
+
+
+            Toggle SharpenToggle = new Toggle() {value = DoSharpen, text = "Use Sharpness Filter"};
+            MainSource.Add(SharpenToggle);
+            SharpenToggle.RegisterValueChangedCallback(evt => {DoSharpen = evt.newValue; RayMaster.DoSharpen = DoSharpen; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(SharpenToggle) + 1, SharpenFoldout); else MainSource.Remove(SharpenFoldout);});
+            if(DoSharpen) MainSource.Add(SharpenFoldout);
+
+
 
            Label AperatureLabel = new Label("Aperature Size");
            Slider AperatureSlider = new Slider() {value = DoFAperature, highValue = 1, lowValue = 0};
@@ -1529,8 +1569,8 @@ Toolbar toolbar;
             Cleared = false;
         }
 
-    public static void PlayClip(AudioClip clip, int startSample = 0, bool loop = false)
-    {
+      public static void PlayClip(AudioClip clip, int startSample = 0, bool loop = false)
+      {
          float TimeElapsed = BuildWatch.GetSeconds();
          BuildWatch.Stop();
          if(RayTracingMaster.DoDing && TimeElapsed > 15.0f) {
@@ -1549,7 +1589,7 @@ Toolbar toolbar;
                new object[] { clip, startSample, loop }
             );
          }
-    }
+      }
 
    }
 

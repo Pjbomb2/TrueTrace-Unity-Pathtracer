@@ -1,9 +1,10 @@
+#include "../GlobalDefines.cginc"
 
 #ifndef DX11
     #pragma use_dxc
     // #pragma enable_d3d11_debug_symbols
 #endif
-#include "../GlobalDefines.cginc"
+// #include "../GlobalDefines.cginc"
 #include "CommonData.cginc"
 #include "Materials.cginc"
 
@@ -80,7 +81,7 @@ bool VisabilityCheck(Ray ray, float dist) {
 float4x4 PrevCamToWorld;
 float4x4 PrevCamInvProj;
 
-float3 CamDelta;
+
 bool AbandonSamples;
 bool UseReSTIRGITemporal;
 bool UseReSTIRGISpatial;
@@ -137,6 +138,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     float4 NEEPos = NEEPosA[id.xy];
     MaterialData SurfaceMat = _Materials[MatIndex];
     SurfaceMat.surfaceColor = 1.0f;
+            SurfaceMat.surfaceColor = max(unpackRGBE(WorldPosC[id.xy].w), 0.005f);
     SurfaceMat.roughness = (asuint(CenterCol.pad) & 0xFFFF) / 65535.0f;
     SurfaceMat.metallic = (asuint(CenterCol.pad) >> 16) / 65535.0f;
 
@@ -205,9 +207,9 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     if(UseReSTIRGITemporal && (ReSTIRGIUpdateRate == 0 || RandomNums[id.xy].z == 0)) {
         float dist_depth = (abs(GBuffer.z - PrevGBuffer.z)) / abs(GBuffer.z);
         float dot_geo_normals = dot(GeomNorm, i_octahedral_32(asuint(PrevGBuffer.x)));
-        if ((dist_depth < 0.1f && dot_geo_normals > 0.7) || Case == 3) {
+        if ((dist_depth < 0.1f && (dot_geo_normals > 0.7|| Case == 3))) {
             if(PrevRes.z != 0 || ggx_distribution(dot(normalize(-normalize(asfloat(WorldPosB[prevIndex].xyz) - PrimaryHitPosition) + CameraRay.direction), GeomNorm), clamp(SurfaceMat.roughness, 0.089 * 0.089, 1.0)) > 0.1f * randomNEE(126, pixel_index).y) {
-                PrevRes.x = clamp(PrevRes.x,1,ReSTIRGITemporalMCap);
+                PrevRes.x = clamp(PrevRes.x,0,ReSTIRGITemporalMCap);
                 if(Case == 3) PrevRes.x = clamp(PrevRes.x,1,12);
                 UpdateReservoir(CurrentRes, wsum, PrevRes, randomNEE(126, pixel_index).x, CachedID, prevIndex);
                 CurrentRes.x += PrevRes.x;
@@ -231,7 +233,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
             NEEPos = TempNEEPos;
             float Lum = luminance((CenterCol.Direct + CenterCol.Indirect) * bsdf) + luminance(unpackRGBE(CenterCol.PrimaryNEERay) * NEEbsdf);
             CurrentRes.w = clamp(Lum,0,3000);
-            CurrentRes.y = wsum / max(CurrentRes.x * CurrentRes.w, 0.0000001f);
+            // CurrentRes.y = wsum / max(CurrentRes.x * CurrentRes.w, 0.0000001f);
         } else {
             CurrentRes.yzw = TempRes.yzw;
         }
@@ -268,6 +270,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     float4 NEEPos = NEEPosB[id.xy];
     MaterialData SurfaceMat = _Materials[MatIndex];
     SurfaceMat.surfaceColor = 1.0f;
+            SurfaceMat.surfaceColor = max(unpackRGBE(WorldPosB[id.xy].w), 0.005f);
     SurfaceMat.roughness = (asuint(CenterCol.pad) & 0xFFFF) / 65535.0f;
     SurfaceMat.metallic = (asuint(CenterCol.pad) >> 16) / 65535.0f;
 
@@ -303,19 +306,19 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
 
             float NormFactor = dot(i_octahedral_32(asuint(PrevGBuffer.y)), CompareNorm);
             float DistDiff = (abs(GBuffer.z - PrevGBuffer.z)) / abs(GBuffer.z);
-            if((DistDiff >= 0.1f || NormFactor < 0.7)) TempRad *= 0.5f;
+            // if((DistDiff >= 0.1f || NormFactor < 0.99)) TempRad *= 0.5f;
 
             if (!(DistDiff >= 0.1f || NormFactor < 0.7)  && PrevRes.z == CurrentRes.z && MatIndex ==  (asuint(PrevGBuffer.w) << 2) >> 2 && 
                 ((PrevRes.w - CurrentRes.w) < 0.0f || abs(PrevRes.w - CurrentRes.w) < min(PrevRes.w + 1.0f, CurrentRes.w + 1.0f) * 25.0f)) {
                 if(GBuffer.z < 0) {
                     if(luminance(abs(unpackRGBE(WorldPosB[NeighborIndex].w) - unpackRGBE(WorldPos.w))) > 0.01f) continue;
                 }
-               // if(PrevRes.z != 0 || ggx_distribution(dot(normalize(-normalize(asfloat(WorldPosB[NeighborIndex].xyz) - PrimaryHitPosition) + CameraRay.direction), SurfNorm), clamp(SurfaceMat.roughness, 0.089 * 0.089, 1.0)) > 0.5f * randomNEE(i + 192, pixel_index).x) {
+               if(PrevRes.z != 0 || ggx_distribution(dot(normalize(-normalize(asfloat(WorldPosB[NeighborIndex].xyz) - PrimaryHitPosition) + CameraRay.direction), SurfNorm), clamp(SurfaceMat.roughness, 0.089 * 0.089, 1.0)) > 0.5f * randomNEE(i + 192, pixel_index).x) {
                     // PrevRes.x = clamp(PrevRes.x,1,ReSTIRGITemporalMCap);
                     // Found = true;
                     UpdateReservoir(CurrentRes, wsum, PrevRes, RandOffsets2.y, CachedID, NeighborIndex);
                     CurrentRes.x += PrevRes.x;
-                // }
+                }
             }
         }
         CurrentRes.y = wsum / max(CurrentRes.x * CurrentRes.w, 0.0000001f);
@@ -335,7 +338,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
             WorldPos.xyz = TempWorldPos.xyz;
             float Lum = luminance((CenterCol.Direct + CenterCol.Indirect) * bsdf) + luminance(unpackRGBE(CenterCol.PrimaryNEERay) * NEEbsdf);
             CurrentRes.w = clamp(Lum,0,3000);
-            CurrentRes.y = wsum / max(CurrentRes.x * CurrentRes.w, 0.0000001f);
+            // CurrentRes.y = wsum / max(CurrentRes.x * CurrentRes.w, 0.0000001f);
         } else {
             CurrentRes.yzw = TempRes2.yzw;
         }

@@ -3,32 +3,33 @@
 
 #pragma kernel RefitKernel
 
+uint octahedral_32(float3 nor) {
+    float2 Signs = (nor.xy>=0.0) ? 1.0 : -1.0;
+    nor.xy /= ( nor.x * Signs.x + nor.y * Signs.y + abs( nor.z ) );
+    nor.xy  = (nor.z >= 0.0) ? nor.xy : (1.0-(nor.yx * Signs.yx)) * Signs.xy;
+    uint2 d = uint2(round(32767.5 + nor.xy*32767.5));  
+    return d.x|(d.y<<16u);
+}
+
+float3 i_octahedral_32( uint data ) {
+    uint2 iv = uint2( data, data>>16u ) & 65535u; 
+    float2 v = float2(iv)/32767.5f - 1.0f;
+    float3 nor = float3(v, 1.0f - abs(v.x) - abs(v.y)); // Rune Stubbe's version,
+    float t = max(-nor.z,0.0);                     // much faster than original
+    nor.x += (nor.x>0.0)?-t:t;                     // implementation of this
+    nor.y += (nor.y>0.0)?-t:t;                     // technique
+    return normalize( nor );
+}
+
 struct LightBVHData {
     float3 BBMax;
     float3 BBMin;
-    float3 w;
+    uint w;
     float phi;
-    float cosTheta_o;
-    float cosTheta_e;
-    int LightCount;
-    float Pad1;
+    uint cosTheta_oe;
     int left;
-    int isLeaf;
 };
 
-struct LightBound {
-    float3 BBMax;
-    float3 BBMin;
-    float3 w;
-    float phi;
-    float cosTheta_o;
-    float cosTheta_e;
-    int LightCount;
-    float Pad1;
-};
-
-
-StructuredBuffer<LightBound> LightBounds;
 RWStructuredBuffer<LightBVHData> LightNodes;
 StructuredBuffer<int> WorkingSet;
 int SetCount;
@@ -70,6 +71,16 @@ return mul(m, transpose(m));
 float4x4 Rotate(float Theta, float3 axis) {
     return Rotate(sin(Theta), cos(Theta), axis);
 }
+float GetCosThetaO(uint cosTheta) {
+    return (2.0f * ((float)(cosTheta & 0x0000FFFF) / 32767.0f) - 1.0f);
+}
+float GetCosThetaE(uint cosTheta) {
+    return (2.0f * ((float)(cosTheta >> 16) / 32767.0f) - 1.0f);
+}
+uint CompCosTheta(float cosTheta_o, float cosTheta_e) {
+    return (uint)floor(32767.0f * ((cosTheta_o + 1.0f) / 2.0f)) | ((uint)floor(32767.0f * ((cosTheta_e + 1.0f) / 2.0f)) << 16);
+}
+
 float FloatMax;
 inline float4 DoCone(float4 A, float4 B) {
     if(all(A.xyz == 0)) return B;
@@ -86,19 +97,17 @@ inline float4 DoCone(float4 A, float4 B) {
 
     float theta_r = theta_o - theta_a;
     float3 wr = cross(A.xyz, B.xyz);
-    if(dot(wr, wr) < 0.001f) return float4(0,0,0,-1);
+    if(dot(wr, wr) == 0) return float4(0,0,0,-1);
     float3 w = mul(Rotate(theta_r, wr), float4(A.xyz,0)).xyz;
     return float4(w, cos(theta_o));
 }
 
 
 inline LightBVHData Union(const LightBVHData A, const LightBVHData B, int Left) {
-    if(A.phi == 0) {LightBVHData AA = B; AA.LightCount += A.LightCount; AA.phi += A.phi; return AA;}
-    if(B.phi == 0) {LightBVHData AA = A; AA.LightCount += B.LightCount; AA.phi += B.phi; return AA;}
-    float4 Cone = DoCone(float4(A.w, A.cosTheta_o), float4(B.w, B.cosTheta_o));
+    float4 Cone = DoCone(float4(i_octahedral_32(A.w), GetCosThetaO(A.cosTheta_oe)), float4(i_octahedral_32(B.w), GetCosThetaO(B.cosTheta_oe)));
     float cosTheta_o = Cone.w;
-    float cosTheta_e = min(A.cosTheta_e, B.cosTheta_e);
-    LightBVHData Dat = {max(A.BBMax, B.BBMax), min(A.BBMin, B.BBMin), Cone.xyz, A.phi + B.phi, cosTheta_o, cosTheta_e, A.LightCount + B.LightCount,0,Left, 0};
+    float cosTheta_e = min(GetCosThetaE(A.cosTheta_oe), GetCosThetaE(B.cosTheta_oe));
+    LightBVHData Dat = {max(A.BBMax, B.BBMax), min(A.BBMin, B.BBMin), octahedral_32(Cone.xyz), A.phi + B.phi, CompCosTheta(cosTheta_o, cosTheta_e), Left};
     return Dat;
 }
 
@@ -131,18 +140,15 @@ void RefitKernel (uint3 id : SV_DispatchThreadID)
     if(id.x > (uint)SetCount) return;
     const int Index = WorkingSet[id.x];
     LightBVHData Node = LightNodes[Index];
-    if(Node.isLeaf == 1) {
-        Transfer Transf = Transfers[Node.left];
+    if(Node.left < 0) {
+        Transfer Transf = Transfers[-(Node.left+1)];
         float3 center = transform_position(Transf.Transf2, (LightNodes[Transf.SolidOffset].BBMax + LightNodes[Transf.SolidOffset].BBMin) / 2.0f);
         float3 extent = transform_direction(Transf.Transf2, (LightNodes[Transf.SolidOffset].BBMax - LightNodes[Transf.SolidOffset].BBMin) / 2.0f);
         LightNodes[Index].BBMax = center + extent;
         LightNodes[Index].BBMin = center - extent;
-        LightNodes[Index].w = transform_direction(Transf.Transf2, LightNodes[Transf.SolidOffset].w);
+        LightNodes[Index].w = octahedral_32(transform_direction(Transf.Transf2, i_octahedral_32(LightNodes[Transf.SolidOffset].w)));
         LightNodes[Index].phi = max(LightNodes[Transf.SolidOffset].phi,0.000000f);
-        LightNodes[Index].cosTheta_o = LightNodes[Transf.SolidOffset].cosTheta_o;
-        LightNodes[Index].cosTheta_e = LightNodes[Transf.SolidOffset].cosTheta_e;
-        LightNodes[Index].isLeaf = 1;
-        LightNodes[Index].LightCount = 1;//LightNodes[Transf.SolidOffset].LightCount;
+        LightNodes[Index].cosTheta_oe = LightNodes[Transf.SolidOffset].cosTheta_oe;
         return;
     }
     LightBVHData LeftNode = LightNodes[Node.left];
@@ -181,8 +187,8 @@ void LightRefitKernel (uint3 id : SV_DispatchThreadID)
     if(id.x > (uint)SetCount) return;
     const int Index = WorkingSet[id.x] + TotalNodeOffset;
     LightBVHData Node = LightNodes[Index];
-    if(Node.isLeaf == 1) {
-        LightTriData LightTri = LightTriangles[Node.left + LightTriBuffOffset];
+    if(Node.left < 0) {
+        LightTriData LightTri = LightTriangles[-(Node.left+1) + LightTriBuffOffset];
         float3 BBMax = max(max(LightTri.pos0, LightTri.pos0 + LightTri.posedge1), LightTri.pos0 + LightTri.posedge2);
         float3 BBMin = min(min(LightTri.pos0, LightTri.pos0 + LightTri.posedge1), LightTri.pos0 + LightTri.posedge2);
         [unroll]for(int i = 0; i < 3; i++) {
@@ -193,9 +199,8 @@ void LightRefitKernel (uint3 id : SV_DispatchThreadID)
         }
         LightNodes[Index].BBMax = BBMax;
         LightNodes[Index].BBMin = BBMin;
-        LightNodes[Index].w = -normalize(cross(normalize(LightTri.posedge1), normalize(LightTri.posedge2)));
+        LightNodes[Index].w = octahedral_32(-normalize(cross(normalize(LightTri.posedge1), normalize(LightTri.posedge2))));
         LightNodes[Index].phi = max(AreaOfTriangle(LightTri.pos0, LightTri.pos0 + LightTri.posedge1, LightTri.pos0 + LightTri.posedge2),0.00000001f);   
-        LightNodes[Index].LightCount = 1;//AreaOfTriangle(LightTri.pos0, LightTri.pos0 + LightTri.posedge1, LightTri.pos0 + LightTri.posedge2);   
         return;
     }
     LightBVHData LeftNode = LightNodes[Node.left + TotalNodeOffset];

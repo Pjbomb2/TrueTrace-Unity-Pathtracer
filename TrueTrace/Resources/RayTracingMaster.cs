@@ -82,6 +82,7 @@ namespace TrueTrace {
         private ComputeShader IntersectionShader;
         private ComputeShader GenerateShader;
         private ComputeShader ReSTIRGI;
+        private ComputeShader CDFCompute;
 
         private RenderTexture _target;
         private RenderTexture _converged;
@@ -107,6 +108,9 @@ namespace TrueTrace {
         private RenderTexture GINEEPosA;
         private RenderTexture GINEEPosB;
         private RenderTexture GINEEPosC;
+
+        public RenderTexture CDFX;
+        public RenderTexture CDFY;
 
 
         private RenderTexture Gradients;
@@ -140,6 +144,7 @@ namespace TrueTrace {
         private ComputeBuffer RaysBuffer;
         private ComputeBuffer RaysBufferB;
         private ComputeBuffer CurBounceInfoBuffer;
+        private ComputeBuffer CDFTotalBuffer;
         #if HardwareRT
             private ComputeBuffer MeshIndexOffsets;
             private ComputeBuffer SubMeshOffsetsBuffer;
@@ -219,6 +224,9 @@ namespace TrueTrace {
         [HideInInspector] public float FireflyOffset = 0.0f;
         [HideInInspector] public int OIDNFrameCount = 0;
         [HideInInspector] public bool UseOIDN = false;
+        [HideInInspector] public bool DoSharpen = false;
+        [HideInInspector] public float Sharpness = 1.0f;
+
         public static bool SceneIsRunning = false;
 
         [HideInInspector] public int BackgroundType = 0;
@@ -372,6 +380,9 @@ namespace TrueTrace {
             #endif
             CurBounceInfoBuffer?.Release();
             Denoisers.ClearAll();
+            CDFX.ReleaseSafe();
+            CDFY.ReleaseSafe();
+            CDFTotalBuffer.ReleaseSafe();
         }
         public static Vector3 SunDirection;
         private void RunUpdate()
@@ -413,7 +424,7 @@ namespace TrueTrace {
             // _meshObjectsNeedRebuilding = true;
         }
 
-        public void RebuildMeshObjectBuffers(CommandBuffer cmd)
+        public bool RebuildMeshObjectBuffers(CommandBuffer cmd)
         {
             cmd.BeginSample("Full Update");
             if (uFirstFrame != 1)
@@ -440,7 +451,7 @@ namespace TrueTrace {
                         CommonFunctions.CreateComputeBuffer(ref _UnityLights, Assets.UnityLights);
                         if (Assets.LightMeshCount != 0) cmd.SetBufferData(_LightMeshes, Assets.LightMeshes);
                         _MaterialDataBuffer.SetData(Assets._Materials);
-                    } else {
+                    } else if(UpdateFlags != -1) {
                         MeshOrderChanged = false;
                         cmd.BeginSample("Update Materials");
                         cmd.SetBufferData(_CompactedMeshData, Assets.MyMeshesCompacted);
@@ -448,11 +459,11 @@ namespace TrueTrace {
                         if (Assets.UnityLightCount != 0) cmd.SetBufferData(_UnityLights, Assets.UnityLights);
                         if(Assets.UpdateMaterials()) _MaterialDataBuffer.SetData(Assets._Materials);
                         cmd.EndSample("Update Materials");
-                    }
+                    } else return false;
                 }
             }
             cmd.EndSample("Full Update");
-            if (!_meshObjectsNeedRebuilding) return;
+            if (!_meshObjectsNeedRebuilding) return true;
             _meshObjectsNeedRebuilding = false;
             FramesSinceStart = 0;
             CommonFunctions.CreateComputeBuffer(ref _UnityLights, Assets.UnityLights);
@@ -468,14 +479,15 @@ namespace TrueTrace {
 
             if(CurBounceInfoBuffer != null) CurBounceInfoBuffer.Release();
             CurBounceInfoBuffer = new ComputeBuffer(1, 12);
-            CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight, 40);
-            CommonFunctions.CreateDynamicBuffer(ref _ShadowBuffer, SourceWidth * SourceHeight, 40);
+            CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight, 48);
+            CommonFunctions.CreateDynamicBuffer(ref _ShadowBuffer, SourceWidth * SourceHeight, 48);
             CommonFunctions.CreateDynamicBuffer(ref LightingBuffer, SourceWidth * SourceHeight, 48);
             CommonFunctions.CreateDynamicBuffer(ref PrevLightingBufferA, SourceWidth * SourceHeight, 48);
             CommonFunctions.CreateDynamicBuffer(ref PrevLightingBufferB, SourceWidth * SourceHeight, 48);
             CommonFunctions.CreateDynamicBuffer(ref RaysBuffer, SourceWidth * SourceHeight, 24);
             CommonFunctions.CreateDynamicBuffer(ref RaysBufferB, SourceWidth * SourceHeight, 24);
             GenerateShader.SetBuffer(GenASVGFKernel, "Rays", RaysBuffer);
+            return true;
         }
 
        
@@ -518,6 +530,7 @@ namespace TrueTrace {
         Matrix4x4 PrevCamToWorld;
         Matrix4x4 PrevCamInvProj;
         Vector3 PrevPos;
+        private Vector2 HDRIParams = Vector2.zero;
         private void SetShaderParameters(CommandBuffer cmd)
         {
             if(RenderScale != 1.0f) _camera.renderingPath = RenderingPath.DeferredShading;
@@ -679,14 +692,39 @@ namespace TrueTrace {
                 ShadingShader.SetBuffer(ShadeKernel, "SubMeshOffsets", SubMeshOffsetsBuffer);
             #endif
 
-            if (SkyboxTexture == null) SkyboxTexture = new Cubemap(1, TextureFormat.RGBA32, false);
+            if (SkyboxTexture == null) SkyboxTexture = new Texture2D(1,1, TextureFormat.RGBA32, false);
             if (SkyboxTexture != null)
             {
+                if(CDFX == null) {
+                    CDFCompute = Resources.Load<ComputeShader>("Utility/CDFCreator");
+                    CommonFunctions.CreateRenderTexture(ref CDFX, SkyboxTexture.width, SkyboxTexture.height, CommonFunctions.RTFull1);
+                    CommonFunctions.CreateRenderTexture(ref CDFY, SkyboxTexture.height, 1, CommonFunctions.RTFull1);
+                    CDFTotalBuffer = new ComputeBuffer(1, 4);
+                    float[] CDFTotalInit = new float[1];
+                    CDFTotalBuffer.SetData(CDFTotalInit);
+                    ComputeBuffer CounterBuffer = new ComputeBuffer(1, 4);
+                    int[] CounterInit = new int[1];
+                    CounterBuffer.SetData(CounterInit);
+                    CDFCompute.SetTexture(0, "Tex", SkyboxTexture);
+                    CDFCompute.SetTexture(0, "CDFX", CDFX);
+                    CDFCompute.SetTexture(0, "CDFY", CDFY);
+                    CDFCompute.SetInt("w", SkyboxTexture.width);
+                    CDFCompute.SetInt("h", SkyboxTexture.height);
+                    CDFCompute.SetBuffer(0, "CounterBuffer", CounterBuffer);
+                    CDFCompute.SetBuffer(0, "TotalBuff", CDFTotalBuffer);
+                    CDFCompute.Dispatch(0, 1, SkyboxTexture.height, 1);
+                    CounterBuffer.Release();
+                    HDRIParams = new Vector2(SkyboxTexture.width, SkyboxTexture.height);
+                }
                 ShadingShader.SetTexture(ShadeKernel, "_SkyboxTexture", SkyboxTexture);
+                ShadingShader.SetTexture(ShadeKernel, "CDFX", CDFX);
+                ShadingShader.SetTexture(ShadeKernel, "CDFY", CDFY);
+                ShadingShader.SetBuffer(ShadeKernel, "TotSum", CDFTotalBuffer);
             }
             IntersectionShader.SetComputeBuffer(HeightmapKernel, "GlobalRays", _RayBuffer);
             IntersectionShader.SetTexture(HeightmapKernel, "Heightmap", Assets.HeightmapAtlas);
             IntersectionShader.SetTexture(HeightmapKernel, "_PrimaryTriangleInfo", _PrimaryTriangleInfo);
+            SetVector("HDRIParams", HDRIParams);
 
 
             ShadingShader.SetTexture(CorrectedDistanceKernel, "CorrectedDepthTex", FlipFrame ? CorrectedDistanceTex : CorrectedDistanceTexB);
@@ -905,8 +943,8 @@ namespace TrueTrace {
                 Denoisers.init(SourceWidth, SourceHeight);
 
                 InitRenderTexture(true);
-                CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight, 40);
-                CommonFunctions.CreateDynamicBuffer(ref _ShadowBuffer, SourceWidth * SourceHeight, 40);
+                CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight, 48);
+                CommonFunctions.CreateDynamicBuffer(ref _ShadowBuffer, SourceWidth * SourceHeight, 48);
                 CommonFunctions.CreateDynamicBuffer(ref LightingBuffer, SourceWidth * SourceHeight, 48);
                 CommonFunctions.CreateDynamicBuffer(ref PrevLightingBufferA, SourceWidth * SourceHeight, 48);
                 CommonFunctions.CreateDynamicBuffer(ref PrevLightingBufferB, SourceWidth * SourceHeight, 48);
@@ -1020,7 +1058,7 @@ namespace TrueTrace {
         private void Render(RenderTexture destination, CommandBuffer cmd)
         {
             if(Spatials == null || Spatials.Length == 0) {Spatials = new Vector2[1]; Spatials[0] = new Vector2(12,48);}
-            Denoisers.ValidateInit(AllowBloom, AllowTAA, SourceWidth != TargetWidth, UseTAAU);
+            Denoisers.ValidateInit(AllowBloom, AllowTAA, SourceWidth != TargetWidth, UseTAAU, DoSharpen);
             float CurrentSample;
             cmd.BeginSample("Linearize and Copy Depth");
             cmd.DispatchCompute(ShadingShader, CorrectedDistanceKernel, Mathf.CeilToInt(SourceWidth / 32.0f), Mathf.CeilToInt(SourceHeight / 32.0f), 1);
@@ -1063,48 +1101,59 @@ namespace TrueTrace {
                 cmd.BeginSample("Pathtracing Kernels");
 
                 for (int i = 0; i < bouncecount; i++) {
-                    var bouncebounce = i;
-                    SetInt("CurBounce", bouncebounce, cmd);
-                    if(UseReSTIRGI && bouncebounce == 1) {
-                        cmd.SetComputeTextureParam(ShadingShader, ShadeKernel, "ScreenSpaceInfo", (FramesSinceStart2 % 2 == 0) ? GISecondBounceA : GISecondBounceB);
-                    }
-                    cmd.BeginSample("Transfer Kernel: " + i);
-                    cmd.SetComputeIntParam(ShadingShader, "Type", 0);
-                    cmd.DispatchCompute(ShadingShader, TransferKernel, 1, 1, 1);
-                    cmd.EndSample("Transfer Kernel: " + i);
+                    cmd.BeginSample("Bounce: " + i);
+                        var bouncebounce = i;
+                        SetInt("CurBounce", bouncebounce, cmd);
+                        if(UseReSTIRGI && bouncebounce == 1) {
+                            cmd.SetComputeTextureParam(ShadingShader, ShadeKernel, "ScreenSpaceInfo", (FramesSinceStart2 % 2 == 0) ? GISecondBounceA : GISecondBounceB);
+                        }
+                        cmd.BeginSample("Transfer Kernel: " + i);
+                        cmd.SetComputeIntParam(ShadingShader, "Type", 0);
+                        cmd.DispatchCompute(ShadingShader, TransferKernel, 1, 1, 1);
+                        cmd.EndSample("Transfer Kernel: " + i);
 
-                    cmd.BeginSample("Trace Kernel: " + i);
-                    cmd.DispatchCompute(IntersectionShader, TraceKernel, CurBounceInfoBuffer, 0);//784 is 28^2
-                    cmd.EndSample("Trace Kernel: " + i);
+                        cmd.BeginSample("Trace Kernel: " + i);
+                        #if DX11Only
+                            cmd.DispatchCompute(IntersectionShader, TraceKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
+                        #else
+                            cmd.DispatchCompute(IntersectionShader, TraceKernel, CurBounceInfoBuffer, 0);//784 is 28^2
+                        #endif
+                        cmd.EndSample("Trace Kernel: " + i);
 
-                    if (Assets.Terrains.Count != 0) {
-                        cmd.BeginSample("HeightMap Trace Kernel: " + i);
-                        cmd.DispatchCompute(IntersectionShader, HeightmapKernel, 784, 1, 1);
-                        cmd.EndSample("HeightMap Trace Kernel: " + i);
-                    }
+                        if (Assets.Terrains.Count != 0) {
+                            cmd.BeginSample("HeightMap Trace Kernel: " + i);
+                            cmd.DispatchCompute(IntersectionShader, HeightmapKernel, 784, 1, 1);
+                            cmd.EndSample("HeightMap Trace Kernel: " + i);
+                        }
 
-                    cmd.BeginSample("Shading Kernel: " + i);
-                    #if DX11Only
-                        cmd.DispatchCompute(ShadingShader, ShadeKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
-                    #else
-                        cmd.DispatchCompute(ShadingShader, ShadeKernel, CurBounceInfoBuffer, 0);
-                    #endif
-                    cmd.EndSample("Shading Kernel: " + i);
+                        cmd.BeginSample("Shading Kernel: " + i);
+                        #if DX11Only
+                            cmd.DispatchCompute(ShadingShader, ShadeKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
+                        #else
+                            cmd.DispatchCompute(ShadingShader, ShadeKernel, CurBounceInfoBuffer, 0);
+                        #endif
+                        cmd.EndSample("Shading Kernel: " + i);
 
-                    cmd.BeginSample("Transfer Kernel 2: " + i);
-                    cmd.SetComputeIntParam(ShadingShader, "Type", 1);
-                    cmd.DispatchCompute(ShadingShader, TransferKernel, 1, 1, 1);
-                    cmd.EndSample("Transfer Kernel 2: " + i);
-                    if (UseNEE) {
-                        cmd.BeginSample("Shadow Kernel: " + i);
-                        cmd.DispatchCompute(IntersectionShader, ShadowKernel, CurBounceInfoBuffer, 0);
-                        cmd.EndSample("Shadow Kernel: " + i);
-                    }
-                    if (UseNEE && Assets.Terrains.Count != 0) {
-                        cmd.BeginSample("Heightmap Shadow Kernel: " + i);
-                        cmd.DispatchCompute(IntersectionShader, HeightmapShadowKernel, 784, 1, 1);
-                        cmd.EndSample("Heightmap Shadow Kernel: " + i);
-                    }
+                        cmd.BeginSample("Transfer Kernel 2: " + i);
+                        cmd.SetComputeIntParam(ShadingShader, "Type", 1);
+                        cmd.DispatchCompute(ShadingShader, TransferKernel, 1, 1, 1);
+                        cmd.EndSample("Transfer Kernel 2: " + i);
+                        if (UseNEE) {
+                            cmd.BeginSample("Shadow Kernel: " + i);
+                            #if DX11Only
+                                cmd.DispatchCompute(IntersectionShader, ShadowKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
+                            #else
+                                cmd.DispatchCompute(IntersectionShader, ShadowKernel, CurBounceInfoBuffer, 0);
+                            #endif
+                            cmd.EndSample("Shadow Kernel: " + i);
+                        }
+                        if (UseNEE && Assets.Terrains.Count != 0) {
+                            cmd.BeginSample("Heightmap Shadow Kernel: " + i);
+                            cmd.DispatchCompute(IntersectionShader, HeightmapShadowKernel, 784, 1, 1);
+                            cmd.EndSample("Heightmap Shadow Kernel: " + i);
+                        }
+                    cmd.EndSample("Bounce: " + i);
+
                 }
             cmd.EndSample("Pathtracing Kernels");
 
@@ -1241,9 +1290,6 @@ namespace TrueTrace {
                 _FinalTex.GenerateMips();
                 Denoisers.ExecuteAutoExpose(ref _FinalTex, Exposure, cmd, DoExposureAuto);
             }
-            if (AllowBloom) Denoisers.ExecuteBloom(ref _FinalTex, BloomStrength, cmd);
-            if(AllowToneMap) Denoisers.ExecuteToneMap(ref _FinalTex, cmd, ref ToneMapTex, ref ToneMapTex2, ToneMapper);
-            if (AllowTAA) Denoisers.ExecuteTAA(ref _FinalTex, _currentSample, cmd);
 
             #if UseOIDN
                 if(UseOIDN && SampleCount > OIDNFrameCount) {
@@ -1258,6 +1304,11 @@ namespace TrueTrace {
                     cmd.DispatchCompute(ShadingShader, OIDNtoTTKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);            
                 }
             #endif
+
+            if (AllowBloom) Denoisers.ExecuteBloom(ref _FinalTex, BloomStrength, cmd);
+            if(AllowToneMap) Denoisers.ExecuteToneMap(ref _FinalTex, cmd, ref ToneMapTex, ref ToneMapTex2, ToneMapper);
+            if (AllowTAA) Denoisers.ExecuteTAA(ref _FinalTex, _currentSample, cmd);
+            if (DoSharpen) Denoisers.ExecuteSharpen(ref _FinalTex, Sharpness, cmd);
 
             cmd.Blit(_FinalTex, destination);
             ClearOutRenderTexture(_DebugTex);
@@ -1295,15 +1346,16 @@ namespace TrueTrace {
                 #endif
                 ResetAllTextures();
                 RunUpdate();
-                RebuildMeshObjectBuffers(cmd);
-                InitRenderTexture();
-                SetShaderParameters(cmd);
-                #if TTLightMapping
-                    Render(LightMapTemp, cmd);
-                    cmd.Blit(LightMapTemp, destination);
-                #else
-                    Render(destination, cmd);
-                #endif
+                if(RebuildMeshObjectBuffers(cmd)) {
+                    InitRenderTexture();
+                    SetShaderParameters(cmd);
+                    #if TTLightMapping
+                        Render(LightMapTemp, cmd);
+                        cmd.Blit(LightMapTemp, destination);
+                    #else
+                        Render(destination, cmd);
+                    #endif
+                }
                 uFirstFrame = 0;
             }
             else

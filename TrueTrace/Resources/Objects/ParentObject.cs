@@ -69,7 +69,6 @@ namespace TrueTrace {
 
         [HideInInspector] public bool NeedsToUpdate;
 
-        public AssetManager Assets;
         public int FailureCount = 0;
 
         public int TotalTriangles;
@@ -127,7 +126,7 @@ namespace TrueTrace {
         }
 
         public void CallUpdate() {
-            if (!Assets.UpdateQue.Contains(this)) Assets.UpdateQue.Add(this);
+            if (!AssetManager.Assets.UpdateQue.Contains(this)) AssetManager.Assets.UpdateQue.Add(this);
         }  
 
         public void ClearAll() {
@@ -141,6 +140,9 @@ namespace TrueTrace {
             CommonFunctions.DeepClean(ref AggTriangles);
             CommonFunctions.DeepClean(ref AggNodes);
             CommonFunctions.DeepClean(ref ForwardStack);
+            CommonFunctions.DeepClean(ref LightTriNorms);
+            CommonFunctions.DeepClean(ref CWBVHIndicesBufferInverted);
+            CommonFunctions.DeepClean(ref CWBVHIndicesBufferInverted);
             BVH = null;
             CurMeshData.Clear();
             MeshCountChanged = true;
@@ -167,6 +169,9 @@ namespace TrueTrace {
                 LightNodeBuffer?.Release();
                 TriBuffer?.Release();
                 BVHBuffer?.Release();
+            }
+            if(LBVH != null) {
+                LBVH.ClearAll();
             }
         }
 
@@ -221,7 +226,6 @@ namespace TrueTrace {
             NodeUpdateKernel = MeshRefit.FindKernel("NodeUpdate");
             NodeCompressKernel = MeshRefit.FindKernel("NodeCompress");
             NodeInitializerKernel = MeshRefit.FindKernel("NodeInitializer");
-            Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
         }
         private bool NeedsToResetBuffers = true;
         public void SetUpBuffers()
@@ -235,10 +239,10 @@ namespace TrueTrace {
                   if(AggTriangles != null) {
                     if(LightTriangles.Count == 0) {
                         LightTriBuffer = new ComputeBuffer(1, 40);
-                        LightNodeBuffer = new ComputeBuffer(1, 64);
+                        LightNodeBuffer = new ComputeBuffer(1, 40);
                     } else {
                         LightTriBuffer = new ComputeBuffer(Mathf.Max(LightTriangles.Count,1), 40);
-                        LightNodeBuffer = new ComputeBuffer(Mathf.Max(LBVH.nodes.Length,1), 64);
+                        LightNodeBuffer = new ComputeBuffer(Mathf.Max(LBVH.nodes.Length,1), 40);
                     }
                     TriBuffer = new ComputeBuffer(AggTriangles.Length, 88);
                     BVHBuffer = new ComputeBuffer(AggNodes.Length, 80);
@@ -260,7 +264,7 @@ namespace TrueTrace {
         public List<int> RoughnessTexChannelIndex;
         public List<Texture> EmissionTexs;
 
-
+        
         private int TextureParse(ref Vector4 RefMat, Material Mat, string TexName, ref List<Texture> Texs, ref float TextureIndex) {
             TextureIndex = 0;
             if (Mat.HasProperty(TexName) && Mat.GetTexture(TexName) as Texture2D != null) {
@@ -295,12 +299,16 @@ namespace TrueTrace {
             foreach (RayTracingObject obj in ChildObjects) {
                 if(obj == null) Debug.Log("WTF");
                 List<Material> DoneMats = new List<Material>();
-                if (obj.GetComponent<MeshFilter>() != null) mesh = obj.GetComponent<MeshFilter>().sharedMesh;
-                else mesh = obj.GetComponent<SkinnedMeshRenderer>().sharedMesh;
+                if (obj.TryGetComponent<MeshFilter>(out MeshFilter TempMesh)) mesh = TempMesh.sharedMesh;
+                else if(obj.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin)) mesh = TempSkin.sharedMesh;
+                else mesh = null;
+
                 if(mesh == null) Debug.Log("Missing Mesh: " + name);
                 obj.matfill();
                 VertCount += mesh.vertexCount;
-                Material[] SharedMaterials = (obj.GetComponent<Renderer>() != null) ? obj.GetComponent<Renderer>().sharedMaterials : obj.GetComponent<SkinnedMeshRenderer>().sharedMaterials;
+                Material[] SharedMaterials = new Material[1];
+                if(obj.TryGetComponent<Renderer>(out Renderer TempRend)) SharedMaterials = TempRend.sharedMaterials;
+                else if(obj.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkinRend)) SharedMaterials = TempSkinRend.sharedMaterials;
                 int SharedMatLength = Mathf.Min(obj.Indexes.Length, SharedMaterials.Length);
                 int Offset = 0;
 
@@ -324,7 +332,7 @@ namespace TrueTrace {
                                 CurMat.AlbedoTex.w = AlbedoTexs.Count;
                             }
                         }
-                        Assets.AddMaterial(SharedMaterials[i].shader);
+                        AssetManager.Assets.AddMaterial(SharedMaterials[i].shader);
                         Index = AssetManager.ShaderNames.IndexOf(SharedMaterials[i].shader.name);
                     }
                     MaterialShader RelevantMat = AssetManager.data.Material[Index];
@@ -383,46 +391,65 @@ namespace TrueTrace {
             init();
             CurMeshData = new MeshDat();
             if(this == null) return;
-            ParentScale = this.transform.lossyScale;
+            Transform transf = transform;
+            ParentScale = transf.lossyScale;
             ParentScale = new Vector3(0.001f / ParentScale.x, 0.001f / ParentScale.y, 0.001f / ParentScale.z);
             ChildObjects = new List<RayTracingObject>();
             ChildObjectTransforms = new List<Transform>();
-            ChildObjectTransforms.Add(this.transform);
-            IsSkinnedGroup = this.gameObject.GetComponent<SkinnedMeshRenderer>() != null;
-            for (int i = 0; i < this.transform.childCount; i++) if (this.GetComponent<MeshFilter>() == null && this.transform.GetChild(i).gameObject.GetComponent<SkinnedMeshRenderer>() != null && this.transform.GetChild(i).gameObject.GetComponent<ParentObject>() == null && this.transform.GetChild(i).gameObject.activeInHierarchy) { IsSkinnedGroup = true; break; }
+            ChildObjectTransforms.Add(transf);
+            int transfchildLength = transf.childCount;
+            Transform[] ChildTransf = new Transform[transfchildLength];
+            for(int i = 0; i < transfchildLength; i++) ChildTransf[i] = transf.GetChild(i);
+            MeshFilter tempfilter = GetComponent<MeshFilter>();
+            SkinnedMeshRenderer temprend = GetComponent<SkinnedMeshRenderer>();
+            IsSkinnedGroup = temprend != null;
+            if(tempfilter == null) for (int i = 0; i < transfchildLength; i++) if (ChildTransf[i].gameObject.activeInHierarchy && ChildTransf[i].gameObject.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer Skin) && !ChildTransf[i].gameObject.TryGetComponent<ParentObject>(out ParentObject Paren)) { IsSkinnedGroup = true; break; }
             if(IsSkinnedGroup) {
-                var Temp = this.GetComponentsInChildren<SkinnedMeshRenderer>();
-                for(int i = 0; i < Temp.Length; i++) {
+                var Temp = GetComponentsInChildren<SkinnedMeshRenderer>(false);
+                int TempLength = Temp.Length;
+                for(int i = 0; i < TempLength; i++) {
                     if(FailureCount > 2 && Application.isPlaying && !Temp[i].sharedMesh.isReadable) continue;
                     GameObject Target = Temp[i].gameObject;
-                    if(Target.GetComponent<RayTracingObject>() != null && Target.GetComponent<ParentObject>() == null && Target.activeInHierarchy) {
-                        Target.GetComponent<RayTracingObject>().matfill();
-                        if(Target.GetComponent<RayTracingObject>() != null) {
-                            ChildObjectTransforms.Add(Target.transform);
+                    if(Target.activeInHierarchy) {
+                        if(Target.TryGetComponent<RayTracingObject>(out RayTracingObject TempRayObj)) {
+                            if(!Target.TryGetComponent<ParentObject>(out ParentObject Paren2)) {
+                                TempRayObj.matfill();
+                                if(Target.TryGetComponent<RayTracingObject>(out RayTracingObject TempRayObj2)) {
+                                    ChildObjectTransforms.Add(Target.transform);
+                                }
+                            }
                         }
                     }
                 }
             } else {
-                for (int i = 0; i < this.transform.childCount; i++) {
-                    GameObject Target = this.transform.GetChild(i).gameObject;
-                    if(Application.isPlaying && Target.GetComponent<RayTracingObject>() != null && Target.GetComponent<MeshFilter>() != null && (!Target.GetComponent<MeshFilter>().sharedMesh.isReadable && FailureCount > 2)) continue;
-                    if(Target.GetComponent<RayTracingObject>() != null && Target.GetComponent<ParentObject>() == null && Target.activeInHierarchy) {
-                        Target.GetComponent<RayTracingObject>().matfill();
-                        if(Target.GetComponent<RayTracingObject>() != null) {
-                            ChildObjectTransforms.Add(Target.transform);
+                for (int i = 0; i < transfchildLength; i++) {
+                    GameObject Target = ChildTransf[i].gameObject;
+                    if(Target.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj)) {
+                        if(Application.isPlaying) {
+                            if(Target.TryGetComponent<MeshFilter>(out MeshFilter TempFilter)) {
+                                if((FailureCount > 2 && !TempFilter.sharedMesh.isReadable)) continue;
+                            }
+                        } 
+                        if(Target.activeInHierarchy && !Target.TryGetComponent<ParentObject>(out ParentObject ThrowawayObj)) {
+                            TempObj.matfill();
+                            if(Target.TryGetComponent<RayTracingObject>(out RayTracingObject TempRayObj2)) {
+                                ChildObjectTransforms.Add(ChildTransf[i]);
+                            }
                         }
                     }
                 }
             }
-            for(int i = 0; i < ChildObjectTransforms.Count; i++) {
-                RayTracingObject Target = ChildObjectTransforms[i].gameObject.GetComponent<RayTracingObject>();
-                if(Target != null && ChildObjectTransforms[i] != this.transform) ChildObjects.Add(Target);
+            int ChildCount = ChildObjectTransforms.Count;
+            for(int i = 0; i < ChildCount; i++) {
+                if(ChildObjectTransforms[i].gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject Target))
+                    if(ChildObjectTransforms[i] != this.transform) ChildObjects.Add(Target);
             }
-            if(gameObject.GetComponent<RayTracingObject>() != null) ChildObjects.Add(gameObject.GetComponent<RayTracingObject>());
-            CachedTransforms = new StorableTransform[ChildObjects.Count + 1];
-            CachedTransforms[0].WTL = gameObject.transform.worldToLocalMatrix;
-            CachedTransforms[0].Position = gameObject.transform.position;
-            for (int i = 0; i < CachedTransforms.Length - 1; i++) {
+            if(TryGetComponent<RayTracingObject>(out RayTracingObject TempObj2)) ChildObjects.Add(TempObj2);
+            TotalObjects = ChildObjects.Count;
+            CachedTransforms = new StorableTransform[TotalObjects + 1];
+            CachedTransforms[0].WTL = transf.worldToLocalMatrix;
+            CachedTransforms[0].Position = transf.position;
+            for (int i = 0; i < TotalObjects; i++) {
                 CachedTransforms[i + 1].WTL = ChildObjects[i].gameObject.transform.worldToLocalMatrix;
                 CachedTransforms[i + 1].Position = ChildObjects[i].gameObject.transform.position;
             }
@@ -474,14 +501,21 @@ namespace TrueTrace {
 
             for (int i = 0; i < TotalObjects; i++) {
                 CurrentObject = ChildObjects[i];
-                if (CurrentObject.GetComponent<MeshFilter>() != null) mesh = CurrentObject.GetComponent<MeshFilter>().sharedMesh;
-                else mesh = CurrentObject.GetComponent<SkinnedMeshRenderer>().sharedMesh;
+                if (CurrentObject.TryGetComponent<MeshFilter>(out MeshFilter TempFilter)) {
+                    mesh = TempFilter.sharedMesh;
+                    if(IsDeformable)
+                      DeformableMeshes[i] = TempFilter;
+                } else if(CurrentObject.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempRend)) {
+                    mesh = TempRend.sharedMesh;
+                    if (IsSkinnedGroup)
+                        SkinnedMeshes[i] = TempRend;
+                }
                 submeshcount = mesh.subMeshCount;
                 #if TTLightMapping
                     PerRendererIndex.Add(CurrentObject.GetComponent<Renderer>().lightmapIndex);
                 #endif
                 #if HardwareRT
-                    Renderers[i] = CurrentObject.GetComponent<Renderer>();
+                    if(CurrentObject.TryGetComponent<Renderer>(out Renderers[i])) {}
                 #endif
 
                 var Tans = new List<Vector4>();
@@ -518,12 +552,10 @@ namespace TrueTrace {
                 }
                 if (IsSkinnedGroup) {
                     IndexCounts[i] = TotalIndexLength;
-                    SkinnedMeshes[i] = ChildObjects[i].GetComponent<SkinnedMeshRenderer>();
                     SkinnedMeshes[i].updateWhenOffscreen = true;
                     TotalTriangles += TotalIndexLength;
                 } else if(IsDeformable) {
                     IndexCounts[i] = TotalIndexLength;
-                    DeformableMeshes[i] = ChildObjects[i].GetComponent<MeshFilter>();
                     TotalTriangles += TotalIndexLength;
                 }
                 TransformIndexes.Add(new MeshTransformVertexs() {
@@ -584,7 +616,8 @@ namespace TrueTrace {
             MaxRecur = 0;
             BVH2 = new BVH2Builder(ref Triangles);//Binary BVH Builder, and also the component that takes the longest to build
             this.BVH = new BVH8Builder(ref BVH2);
-            // BVH2 = null;
+            CommonFunctions.DeepClean(ref BVH2.BVH2Nodes);
+            BVH2 = null;
             System.Array.Resize(ref BVH.BVH8Nodes, BVH.cwbvhnode_count);
             ToBVHIndex = new int[BVH.cwbvhnode_count];
 
@@ -642,9 +675,9 @@ namespace TrueTrace {
 
         public List<int>[] Set;
         private void Refit(int Depth, int CurrentIndex) {
-            if(LBVH.nodes[CurrentIndex].aabb.cosTheta_e == 0) return;
+            if((2.0f * ((float)(LBVH.nodes[CurrentIndex].cosTheta_oe >> 16) / 32767.0f) - 1.0f) == 0) return;
             Set[Depth].Add(CurrentIndex);
-            if(LBVH.nodes[CurrentIndex].isLeaf == 1) return;
+            if(LBVH.nodes[CurrentIndex].left < 0) return;
             Refit(Depth + 1, LBVH.nodes[CurrentIndex].left);
             Refit(Depth + 1, LBVH.nodes[CurrentIndex].left + 1);
         }
@@ -652,7 +685,7 @@ namespace TrueTrace {
         public void RefitMesh(ref ComputeBuffer RealizedAggNodes, ref ComputeBuffer RealizedTriBuffer, ref ComputeBuffer RealizedLightTriBuffer, ref ComputeBuffer RealizedLightNodeBuffer, CommandBuffer cmd)
         {
             #if HardwareRT
-                for(int i = 0; i < Renderers.Length; i++) Assets.AccelStruct.UpdateInstanceTransform(Renderers[i]);
+                for(int i = 0; i < Renderers.Length; i++) AssetManager.Assets.AccelStruct.UpdateInstanceTransform(Renderers[i]);
             #endif
             int KernelRatio = 256;
 
@@ -1026,7 +1059,7 @@ namespace TrueTrace {
 
         public void UpdateAABB(Transform transform) {//Update the Transformed AABB by getting the new Max/Min of the untransformed AABB after transforming it
             #if HardwareRT
-                for(int i = 0; i < Renderers.Length; i++) Assets.AccelStruct.UpdateInstanceTransform(Renderers[i]);
+                for(int i = 0; i < Renderers.Length; i++) AssetManager.Assets.AccelStruct.UpdateInstanceTransform(Renderers[i]);
             #else
                 Matrix4x4 Mat = transform.localToWorldMatrix;
                 Vector3 new_center = CommonFunctions.transform_position(Mat, center);
@@ -1055,10 +1088,9 @@ namespace TrueTrace {
                     this.GetComponentInParent<InstancedManager>().ParentCountHasChanged = true;
                 }
                 else {
-                    GameObject.FindObjectsOfType<AssetManager>()[0].AddQue.Add(this);
-                    Assets = GameObject.FindObjectsOfType<AssetManager>()[0];
+                    AssetManager.Assets.AddQue.Add(this);
                     ExistsInQue = 3;
-                    GameObject.FindObjectsOfType<AssetManager>()[0].ParentCountHasChanged = true;
+                    AssetManager.Assets.ParentCountHasChanged = true;
                 }
                 HasCompleted = false;
             }
@@ -1079,8 +1111,8 @@ namespace TrueTrace {
                     }
                 }
                 else {
-                    GameObject.FindObjectsOfType<AssetManager>()[0].RemoveQue.Add(this);
-                    GameObject.FindObjectsOfType<AssetManager>()[0].ParentCountHasChanged = true;
+                    AssetManager.Assets.RemoveQue.Add(this);
+                    AssetManager.Assets.ParentCountHasChanged = true;
                 }
                 HasCompleted = false;
             }

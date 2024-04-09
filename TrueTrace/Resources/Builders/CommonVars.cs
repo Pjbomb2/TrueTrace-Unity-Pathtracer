@@ -138,7 +138,8 @@ namespace CommonVars
     {
         public Vector3 PositionOffset;
         public float HeightScale;
-        public float TerrainDim;
+        public float TerrainDimX;
+        public float TerrainDimY;
         public Vector4 AlphaMap;
         public Vector4 HeightMap;
         public int MatOffset;
@@ -278,6 +279,16 @@ namespace CommonVars
             public int left;
             public int isLeaf;
         }
+
+    [System.Serializable]
+    public struct CompactLightBVHData {
+        public Vector3 BBMax;
+        public Vector3 BBMin;
+        public uint w;
+        public float phi;
+        public uint cosTheta_oe;
+        public int left;
+    };
 
     [System.Serializable]
     public struct AABB
@@ -604,10 +615,10 @@ namespace CommonVars
             A = null;
         }
 
-        public static void CreateDynamicBuffer(ref ComputeBuffer TargetBuffer, int Count, int Stride)
+        public static void CreateDynamicBuffer(ref ComputeBuffer TargetBuffer, int Count, int Stride, ComputeBufferType ComputeType = ComputeBufferType.Structured)
         {
             if (TargetBuffer != null) TargetBuffer?.Dispose();
-            TargetBuffer = new ComputeBuffer(Count, Stride);
+            TargetBuffer = new ComputeBuffer(Count, Stride, ComputeType);
         }
         public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, List<T> data, int stride)
             where T : struct
@@ -834,21 +845,20 @@ public static uint PackOctahedral(Vector3 nor)
             ThisTex.Create();
         }
 
-        public static void CreateRenderTexture2(ref RenderTexture ThisTex, 
-                                                    int Width, int Height, 
-                                                    RenderTextureFormat Form,  
-                                                    int MipCount) {
+        public static void CreateRenderTexture3D(ref RenderTexture ThisTex, 
+                                                    int Width, int Height, int Depth, 
+                                                    RenderTextureFormat Form, 
+                                                    RenderTextureReadWrite RendRead = RenderTextureReadWrite.Linear, 
+                                                    bool UseMip = false) {
             if(ThisTex != null) ThisTex?.Release();
-            RenderTextureDescriptor desc = new RenderTextureDescriptor(Width, 
-                                                                        Height, 
-                                                                        Form, 
-                                                                        0,
-                                                                        MipCount);
-            ThisTex = new RenderTexture(desc);
+            ThisTex = new RenderTexture(Width, Height, 0, Form, RendRead);
+            ThisTex.volumeDepth = Depth;
+            ThisTex.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
 
+            if (UseMip) {
                 ThisTex.useMipMap = true;
                 ThisTex.autoGenerateMips = false;
-
+            }
             ThisTex.enableRandomWrite = true;
             ThisTex.Create();
         }

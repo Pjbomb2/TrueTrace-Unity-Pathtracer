@@ -11,15 +11,20 @@ using System.Linq;
 using UnityEngine.SceneManagement;
 using UnityEngine.Rendering;
 #pragma warning disable 4014
-
 namespace TrueTrace {
     [System.Serializable]
     public class AssetManager : MonoBehaviour
     {//This handels all the data
+
+        public static AssetManager Assets;
         public int TotalParentObjectSize;
         [HideInInspector] public float LightEnergyScale = 1.0f;
         //emissive, alpha, metallic, roughness
-        [System.NonSerialized] public Texture2D AlbedoAtlas;
+        #if ForceLossless
+            [System.NonSerialized] public RenderTexture AlbedoAtlas;
+        #else
+            [System.NonSerialized] public Texture2D AlbedoAtlas;
+        #endif
         [System.NonSerialized] public RenderTexture HeightmapAtlas;
         [System.NonSerialized] public RenderTexture AlphaMapAtlas;
         [System.NonSerialized] public RenderTexture NormalAtlas;
@@ -152,7 +157,6 @@ namespace TrueTrace {
             System.GC.Collect();
         }
 
-        public static AssetManager Assets;
 
     private void PackAndCompact(Dictionary<int, TexObj> DictTex, ref RenderTexture Atlas, ref RenderTexture AlphaAtlas, PackingRectangle[] Rects, int DesiredRes, int TexIndex, int ReadIndex = -1, List<int> TexChannelIndex = null) {
         Vector2 Scale = new Vector2(1,1);
@@ -160,7 +164,11 @@ namespace TrueTrace {
         if(TexCount != 0) {
             PackingRectangle BoundRects;
             RectanglePacker.Pack(Rects, out BoundRects);
-            if(TexIndex < 3) DesiredRes = (int)Mathf.Min(Mathf.Max(BoundRects.Width, BoundRects.Height), DesiredRes);
+            #if ForceLossless
+                if(TexIndex <= 6) DesiredRes = (int)Mathf.Min(Mathf.Max(BoundRects.Width, BoundRects.Height), DesiredRes);
+            #else
+                if(TexIndex < 6) DesiredRes = (int)Mathf.Min(Mathf.Max(BoundRects.Width, BoundRects.Height), DesiredRes);
+            #endif
             Scale = new Vector2(Mathf.Min((float)DesiredRes / BoundRects.Width, 1), Mathf.Min((float)DesiredRes / BoundRects.Height, 1));
         } else {
             if(TexIndex != 6 && TexIndex != 7) DesiredRes = 1;
@@ -174,7 +182,7 @@ namespace TrueTrace {
                 CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.ARGBHalf, true);
             break;
             case 2://normalmap
-                CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, CommonFunctions.RTHalf2, true);
+                CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, CommonFunctions.RTHalf2, false);
             break;
             case 3://metallicmap
             case 4://roughnessmap
@@ -184,17 +192,25 @@ namespace TrueTrace {
                 CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.ARGB32, false);
             break;
             case 6://AlbedoMap
-                CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.ARGB32, false);
-                CreateRenderTexture(ref AlphaAtlas, DesiredRes, DesiredRes, RenderTextureFormat.R8, true);
+                #if ForceLossless
+                    CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, CommonFunctions.RTHalf4, false);
+                #else
+                    CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.ARGB32, false);
+                #endif
+                CreateRenderTexture(ref AlphaAtlas, DesiredRes, DesiredRes, RenderTextureFormat.R8, false);
             break;
             case 7://albedoalpha
                 CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.ARGB32, false);
-                CreateRenderTexture(ref AlphaAtlas, DesiredRes, DesiredRes, RenderTextureFormat.R8, true);
+                CreateRenderTexture(ref AlphaAtlas, DesiredRes, DesiredRes, RenderTextureFormat.R8, false);
             break;
         }
         if(TexCount == 0) return;
 
-
+        #if ForceLossless
+            CopyShader.SetBool("ForceLossless", true);
+        #else
+            CopyShader.SetBool("ForceLossless", false);
+        #endif
         CopyShader.SetBool("IsNormalMap", TexIndex == 2);
         CopyShader.SetVector("Scale", Scale);
         CopyShader.SetVector("OutputSize", new Vector2(Atlas.width, Atlas.height));
@@ -380,7 +396,8 @@ namespace TrueTrace {
                     TerrainObject Obj2 = Terrains[j];
                     TerrainDat TempTerrain = new TerrainDat();
                     TempTerrain.PositionOffset = Obj2.transform.position;
-                    TempTerrain.TerrainDim = Terrains[j].TerrainDim;
+                    TempTerrain.TerrainDimX = Terrains[j].TerrainDimX;
+                    TempTerrain.TerrainDimY = Terrains[j].TerrainDimY;
                     TempTerrain.HeightScale = Terrains[j].HeightScale;
                     TempTerrain.MatOffset = TerrainMatCount - MatCount;
                     int Index = Obj2.HeightMap.GetInstanceID();
@@ -433,30 +450,34 @@ namespace TrueTrace {
             if(RoughnessAtlas != null) RoughnessAtlas?.Release();
             if(MetallicAtlas != null) MetallicAtlas?.Release();
             if(EmissiveAtlas != null) EmissiveAtlas?.Release();
+            #if ForceLossless
+                if(AlbedoAtlas != null) AlbedoAtlas?.Release();
+                PackAndCompact(AlbTextures, ref AlbedoAtlas, ref AlphaAtlas, AlbRect.ToArray(), MainDesiredRes, 6, 3, null);
+            #else
+                if(AlbedoAtlas == null || AlbedoAtlas.width != MainDesiredRes) AlbedoAtlas = new Texture2D(MainDesiredRes,MainDesiredRes, TextureFormat.DXT5, false);
+                PackAndCompact(AlbTextures, ref TempTex, ref AlphaAtlas, AlbRect.ToArray(), MainDesiredRes, 6, 3, null);
+                int tempWidth = (TempTex.width + 3) / 4;
+                int tempHeight = (TempTex.height + 3) / 4;
+                var desc = new RenderTextureDescriptor
+                {
+                    width = tempWidth,
+                    height = tempHeight,
+                    dimension = TextureDimension.Tex2D,
+                    enableRandomWrite = true,
+                    msaaSamples = 1,
+                    volumeDepth = 1
+                };
+                desc.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R32G32B32A32_SInt;
 
-            if(AlbedoAtlas == null || AlbedoAtlas.width != MainDesiredRes) AlbedoAtlas = new Texture2D(MainDesiredRes,MainDesiredRes, TextureFormat.DXT5, false);
-            PackAndCompact(AlbTextures, ref TempTex, ref AlphaAtlas, AlbRect.ToArray(), MainDesiredRes, 6, 3, null);
-            int tempWidth = (TempTex.width + 3) / 4;
-            int tempHeight = (TempTex.height + 3) / 4;
-            var desc = new RenderTextureDescriptor
-            {
-                width = tempWidth,
-                height = tempHeight,
-                dimension = TextureDimension.Tex2D,
-                enableRandomWrite = true,
-                msaaSamples = 1,
-                volumeDepth = 1
-            };
-            desc.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R32G32B32A32_SInt;
-
-            s_Prop_EncodeBCn_Temp = new RenderTexture(desc);
-            CopyShader.SetTexture(4, "_Source", TempTex);
-            CopyShader.SetTexture(4, "Alpha", AlphaAtlas);
-            CopyShader.SetTexture(4, "_Target", s_Prop_EncodeBCn_Temp);
-            CopyShader.Dispatch(4, (int)((tempWidth + 8 - 1) / 8), (int)((tempHeight + 8 - 1) / 8),1);
-            Graphics.CopyTexture(s_Prop_EncodeBCn_Temp, 0, AlbedoAtlas, 0);
-            TempTex.Release();
-            s_Prop_EncodeBCn_Temp.Release();
+                s_Prop_EncodeBCn_Temp = new RenderTexture(desc);
+                CopyShader.SetTexture(4, "_Source", TempTex);
+                CopyShader.SetTexture(4, "Alpha", AlphaAtlas);
+                CopyShader.SetTexture(4, "_Target", s_Prop_EncodeBCn_Temp);
+                CopyShader.Dispatch(4, (int)((tempWidth + 8 - 1) / 8), (int)((tempHeight + 8 - 1) / 8),1);
+                Graphics.CopyTexture(s_Prop_EncodeBCn_Temp, 0, AlbedoAtlas, 0);
+                TempTex.Release();
+                s_Prop_EncodeBCn_Temp.Release();
+            #endif
 
 
             PackAndCompact(NormTextures, ref NormalAtlas, ref AlphaAtlas, NormRect.ToArray(), MainDesiredRes, 2);
@@ -467,8 +488,7 @@ namespace TrueTrace {
             PackAndCompact(AlphaMapTextures, ref AlphaMapAtlas, ref AlphaAtlas, AlphaMapRect.ToArray(), 16384, 1);
             AlphaAtlas.Release();
             AlbedoAtlasSize = AlbedoAtlas.width;
-            NormalAtlas.anisoLevel = 3;
-            NormalAtlas.GenerateMips();
+            NormalAtlas.anisoLevel = 0;
             MetallicAtlas.GenerateMips();
             RoughnessAtlas.GenerateMips();
 
@@ -504,11 +524,15 @@ namespace TrueTrace {
             AlphaMapRect.TrimExcess();
             if (TerrainCount != 0) {
                 if (TerrainBuffer != null) TerrainBuffer.Release();
-                TerrainBuffer = new ComputeBuffer(TerrainCount, 56);
+                TerrainBuffer = new ComputeBuffer(TerrainCount, 60);
                 TerrainBuffer.SetData(TerrainInfos);
             }
 
         }
+        public void Awake() {
+            Assets = this;
+        }
+
         public void Start() {
             Assets = this;
             SceneManager.sceneLoaded += OnSceneLoaded;
@@ -608,7 +632,10 @@ namespace TrueTrace {
             #if HardwareRT
                 AccelStruct = new UnityEngine.Rendering.RayTracingAccelerationStructure();
             #endif
-            if(AlbedoAtlas == null || AlbedoAtlas.width != MainDesiredRes) AlbedoAtlas = new Texture2D(MainDesiredRes,MainDesiredRes, TextureFormat.DXT5, false);
+            #if ForceLossless
+            #else
+                if(AlbedoAtlas == null || AlbedoAtlas.width != MainDesiredRes) AlbedoAtlas = new Texture2D(MainDesiredRes,MainDesiredRes, TextureFormat.DXT5, false);
+            #endif
             UpdateMaterialDefinition();
             UnityEngine.Video.VideoPlayer[] VideoObjects = GameObject.FindObjectsOfType<UnityEngine.Video.VideoPlayer>();
             if (VideoTexture != null) VideoTexture.Release();
@@ -820,6 +847,7 @@ namespace TrueTrace {
             public void EditorBuild()
         #endif
         {//Forces all to rebuild
+            Assets = this;
             ClearAll();
             Terrains = new List<TerrainObject>();
             Terrains = new List<TerrainObject>(GetComponentsInChildren<TerrainObject>());
@@ -847,6 +875,7 @@ namespace TrueTrace {
             public void BuildCombined()
         #endif
         {//Only has unbuilt be built
+            Assets = this;
             Terrains = new List<TerrainObject>(GetComponentsInChildren<TerrainObject>());
             init();
             List<ParentObject> TempQue = new List<ParentObject>(GameObject.FindObjectsOfType<ParentObject>());
@@ -961,7 +990,7 @@ namespace TrueTrace {
                     BVH8AggregatedBuffer = new ComputeBuffer(AggNodeCount, 80);
                     AggTriBuffer = new ComputeBuffer(AggTriCount, 88);
                     LightTriBuffer = new ComputeBuffer(LightTriCount, 40);
-                    LightNodeBuffer = new ComputeBuffer(AggLightNodeCount, 64);
+                    LightNodeBuffer = new ComputeBuffer(AggLightNodeCount, 40);
                     MeshFunctions.SetBuffer(TriangleBufferKernel, "OutCudaTriArray", AggTriBuffer);
                     MeshFunctions.SetBuffer(NodeBufferKernel, "OutAggNodes", BVH8AggregatedBuffer);
                     MeshFunctions.SetBuffer(LightBufferKernel, "LightTrianglesOut", LightTriBuffer);
@@ -1007,9 +1036,9 @@ namespace TrueTrace {
                             });
                             try
                             {
-                                LightAABBs[CurLightMesh].phi = RenderQue[i].LBVH.nodes[0].aabb.phi;
-                                LightAABBs[CurLightMesh].cosTheta_o = RenderQue[i].LBVH.nodes[0].aabb.cosTheta_o;
-                                LightAABBs[CurLightMesh].cosTheta_e = RenderQue[i].LBVH.nodes[0].aabb.cosTheta_e;
+                                LightAABBs[CurLightMesh].phi = RenderQue[i].LBVH.ParentBound.aabb.phi;
+                                LightAABBs[CurLightMesh].cosTheta_o = RenderQue[i].LBVH.ParentBound.aabb.cosTheta_o;
+                                LightAABBs[CurLightMesh].cosTheta_e = RenderQue[i].LBVH.ParentBound.aabb.cosTheta_e;
                             } catch(System.Exception e) {Debug.Log("BROKEN FUCKER: " + RenderQue[i].Name + ", " + e);}
 
 
@@ -1085,9 +1114,9 @@ namespace TrueTrace {
                                 IndexEnd = InstanceRenderQue[i].InstanceParent.LightEndIndex
                             });
 
-                            LightAABBs[CurLightMesh].phi = InstanceRenderQue[i].InstanceParent.LBVH.nodes[0].aabb.phi;
-                            LightAABBs[CurLightMesh].cosTheta_o = InstanceRenderQue[i].InstanceParent.LBVH.nodes[0].aabb.cosTheta_o;
-                            LightAABBs[CurLightMesh].cosTheta_e = InstanceRenderQue[i].InstanceParent.LBVH.nodes[0].aabb.cosTheta_e;
+                            LightAABBs[CurLightMesh].phi = InstanceRenderQue[i].InstanceParent.LBVH.ParentBound.aabb.phi;
+                            LightAABBs[CurLightMesh].cosTheta_o = InstanceRenderQue[i].InstanceParent.LBVH.ParentBound.aabb.cosTheta_o;
+                            LightAABBs[CurLightMesh].cosTheta_e = InstanceRenderQue[i].InstanceParent.LBVH.ParentBound.aabb.cosTheta_e;
                             CurLightMesh++;
                         }
                     }
@@ -1216,7 +1245,9 @@ namespace TrueTrace {
                     foreach(var A in RenderQue[i].Renderers) {
                         MeshOffsets.Add(new Vector2(SubMeshOffsets.Count, i));
                         var B2 = A.gameObject;
-                        Mesh mesh = ((B2.GetComponent<MeshFilter>() != null) ? B2.GetComponent<MeshFilter>().sharedMesh : B2.GetComponent<SkinnedMeshRenderer>().sharedMesh);
+                        Mesh mesh = new Mesh();
+                        if(B2.TryGetComponent<MeshFilter>(out MeshFilter TempFilter)) mesh = TempFilter.sharedMesh;
+                        else if(B2.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin)) mesh = TempSkin.sharedMesh;
                         int SubMeshCount = mesh.subMeshCount;
                         for (int i2 = 0; i2 < SubMeshCount; ++i2)
                         {//Add together all the submeshes in the mesh to consider it as one object
@@ -1228,7 +1259,8 @@ namespace TrueTrace {
                         for(int i2 = 0; i2 < SubMeshCount; i2++) {
                             B[i2] = RayTracingSubMeshFlags.Enabled | RayTracingSubMeshFlags.ClosestHitOnly;
                         }
-                        AccelStruct.AddInstance(A, B, true, false, (uint)((B2.GetComponent<RayTracingObject>().SpecTrans[0] == 1) ? 0x2 : 0x1), (uint)MeshOffset);
+                        if(B2.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj))
+                            AccelStruct.AddInstance(A, B, true, false, (uint)((TempObj.SpecTrans[0] == 1) ? 0x2 : 0x1), (uint)MeshOffset);
                         MeshOffset++;
                     }
                 }
@@ -1287,7 +1319,6 @@ namespace TrueTrace {
                 BoxesBuffer.ReleaseSafe();
                 TLASCWBVHIndexes.ReleaseSafe();
                 WorkingBuffer = new ComputeBuffer[LayerStack.Length];
-                LightBVHTransformsBuffer.ReleaseSafe();
                 for (int i = 0; i < MaxRecur; i++) {
                     WorkingBuffer[i] = new ComputeBuffer(LayerStack[i].Slab.Count, 4);
                     WorkingBuffer[i].SetData(LayerStack[i].Slab);
@@ -1305,12 +1336,13 @@ namespace TrueTrace {
                 BoxesBuffer = new ComputeBuffer(MeshAABBs.Length, 24);
                 TLASCWBVHIndexes = new ComputeBuffer(MeshAABBs.Length, 4);
                 TLASCWBVHIndexes.SetData(TLASBVH8.cwbvh_indices);
-                if(LightBVHTransforms.Length != 0) {
-                    LightBVHTransformsBuffer = new ComputeBuffer(LightBVHTransforms.Length, 68);
-                    LightBVHTransformsBuffer.SetData(LightBVHTransforms);
-                }
                 CurFrame = 0;
             #endif
+            LightBVHTransformsBuffer.ReleaseSafe();
+            if(LightBVHTransforms.Length != 0) {
+                LightBVHTransformsBuffer = new ComputeBuffer(LightBVHTransforms.Length, 68);
+                LightBVHTransformsBuffer.SetData(LightBVHTransforms);
+            }
         }
         Task TLASTask;
         unsafe async void CorrectRefit(AABB[] Boxes) {
@@ -1369,13 +1401,22 @@ namespace TrueTrace {
 
         public unsafe void RefitTLAS(AABB[] Boxes, CommandBuffer cmd)
         {
+            CurFrame++;
             #if !HardwareRT
             if(TLASTask == null) TLASTask = Task.Run(() => CorrectRefit(Boxes));
 
-            CurFrame++;
              if(TLASTask.Status == TaskStatus.RanToCompletion && CurFrame % 25 == 24) {
                 MaxRecur = TempRecur; 
-
+                if(LightMeshCount > 0) {
+                    if(LBVH != null && LBVH.WorkingSet != null) {
+                        int Coun = LBVH.WorkingSet.Length - 1;
+                        for(int i = Coun; i >= 0; i--) {
+                            LBVH.WorkingSet[i].ReleaseSafe();
+                        }
+                    }
+                    LBVH = new LightBVHBuilder(LightAABBs);
+                    LightNodeBuffer.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
+                }
                 if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
                 if (NodeBuffer != null) NodeBuffer.Release();
                 if (StackBuffer != null) StackBuffer.Release();
@@ -1460,6 +1501,23 @@ namespace TrueTrace {
                 cmd.DispatchCompute(Refitter, NodeCompress, (int)Mathf.Ceil(NodeBuffer.count / (float)256), 1, 1);
 
 
+
+                // cmd.EndSample("TLAS Refit Node Compress");
+            #else
+
+             if(CurFrame % 25 == 24) {
+                if(LightMeshCount > 0) {
+                    LBVH = new LightBVHBuilder(LightAABBs);
+                    LightNodeBuffer.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
+                }
+                if (LightBVHTransformsBuffer != null) LightBVHTransformsBuffer.Release();
+                if(LightBVHTransforms.Length != 0) {
+                    LightBVHTransformsBuffer = new ComputeBuffer(LightBVHTransforms.Length, 68);
+                    LightBVHTransformsBuffer.SetData(LightBVHTransforms);
+                }
+            }
+
+            #endif
                 if(LightAABBs != null && LightAABBs.Length != 0) {
                     LightBVHTransformsBuffer.SetData(LightBVHTransforms);
                     if(LightBoxesBuffer == null || LightBoxesBuffer.count != LightAABBs.Length) LightBoxesBuffer = new ComputeBuffer(LightAABBs.Length, 56);
@@ -1484,10 +1542,6 @@ namespace TrueTrace {
 
 
                 }
-
-                // cmd.EndSample("TLAS Refit Node Compress");
-
-            #endif
         }
 
         private bool ChangedLastFrame = true;
@@ -1532,6 +1586,7 @@ namespace TrueTrace {
             int aggregated_bvh_node_count = 2 * (MeshDataCount + InstanceRenderQue.Count);
             int AggNodeCount = aggregated_bvh_node_count;
             int AggTriCount = 0;
+            if(MeshAABBs.Length == 0) return -1;
             if (ChildrenUpdated || !didstart || OnlyInstanceUpdated || MyMeshesCompacted.Count == 0)
             {
                 MyMeshesCompacted.Clear();// = new MyMeshDataCompacted[MeshDataCount + InstanceRenderQue.Count];
@@ -1566,21 +1621,21 @@ namespace TrueTrace {
                     int Index = LightMeshes[i].LockedMeshIndex;
                     if(Index < RendQueCount) {
                         LightBVHTransforms[i].SolidOffset = RenderQue[Index].LightNodeOffset; 
-                        Vector3 new_center = CommonFunctions.transform_position(Mat, (RenderQue[Index].LBVH.nodes[0].aabb.b.BBMax + RenderQue[Index].LBVH.nodes[0].aabb.b.BBMin) / 2.0f);
-                        Vector3 new_extent = CommonFunctions.transform_direction(Mat, (RenderQue[Index].LBVH.nodes[0].aabb.b.BBMax - RenderQue[Index].LBVH.nodes[0].aabb.b.BBMin) / 2.0f);
+                        Vector3 new_center = CommonFunctions.transform_position(Mat, (RenderQue[Index].LBVH.ParentBound.aabb.b.BBMax + RenderQue[Index].LBVH.ParentBound.aabb.b.BBMin) / 2.0f);
+                        Vector3 new_extent = CommonFunctions.transform_direction(Mat, (RenderQue[Index].LBVH.ParentBound.aabb.b.BBMax - RenderQue[Index].LBVH.ParentBound.aabb.b.BBMin) / 2.0f);
 
                         LightAABBs[i].b.BBMin = new_center - new_extent;
                         LightAABBs[i].b.BBMax = new_center + new_extent;
-                        LightAABBs[i].w = (Mat * RenderQue[Index].LBVH.nodes[0].aabb.w).normalized;
+                        LightAABBs[i].w = (Mat * RenderQue[Index].LBVH.ParentBound.aabb.w).normalized;
                     } else {
-                        LightBVHTransforms[i].SolidOffset = InstanceRenderQue[Index].InstanceParent.LightNodeOffset; 
                         Index -= RendQueCount;
-                        Vector3 new_center = CommonFunctions.transform_position(Mat, (InstanceRenderQue[Index].InstanceParent.LBVH.nodes[0].aabb.b.BBMax + InstanceRenderQue[Index].InstanceParent.LBVH.nodes[0].aabb.b.BBMin) / 2.0f);
-                        Vector3 new_extent = CommonFunctions.transform_direction(Mat, (InstanceRenderQue[Index].InstanceParent.LBVH.nodes[0].aabb.b.BBMax - InstanceRenderQue[Index].InstanceParent.LBVH.nodes[0].aabb.b.BBMin) / 2.0f);
+                        LightBVHTransforms[i].SolidOffset = InstanceRenderQue[Index].InstanceParent.LightNodeOffset; 
+                        Vector3 new_center = CommonFunctions.transform_position(Mat, (InstanceRenderQue[Index].InstanceParent.LBVH.ParentBound.aabb.b.BBMax + InstanceRenderQue[Index].InstanceParent.LBVH.ParentBound.aabb.b.BBMin) / 2.0f);
+                        Vector3 new_extent = CommonFunctions.transform_direction(Mat, (InstanceRenderQue[Index].InstanceParent.LBVH.ParentBound.aabb.b.BBMax - InstanceRenderQue[Index].InstanceParent.LBVH.ParentBound.aabb.b.BBMin) / 2.0f);
 
                         LightAABBs[i].b.BBMin = new_center - new_extent;
                         LightAABBs[i].b.BBMax = new_center + new_extent;
-                        LightAABBs[i].w = (Mat * InstanceRenderQue[Index].InstanceParent.LBVH.nodes[0].aabb.w).normalized;
+                        LightAABBs[i].w = (Mat * InstanceRenderQue[Index].InstanceParent.LBVH.ParentBound.aabb.w).normalized;
                     }
                 }
                 if(LightMeshCount > 0) {

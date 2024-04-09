@@ -43,3 +43,6 @@
 #define BackgrounBleed 8
 #define Thin 9
 
+bool GetFlag(int FlagVar, int flag) {
+    return (((int)FlagVar >> flag) & (int)1) == 1;
+}
