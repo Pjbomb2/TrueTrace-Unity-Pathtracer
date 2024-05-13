@@ -17,6 +17,7 @@ A passion projects that has been going on for a while with the goal of bringing 
 <li>PBR Texture Support</li>
 <li>Next Event Estimation with Multiple Importance Sampling for Explicit Light Sampling</li>
 <li>Light BVH from PBRT 4 for NEE</li>
+<li>Sharc inspired Radiance Cache</li>
 <li>Support for all default unity lights, which interact via NEE</li>
 <li>Bloom, Depth of Field, AutoExposure, TAA, Tonemapping</li>
 <li>No specific GPU vendor needed(this will run on integrated graphics if you so wish it, aka no RTX cores needed)</li>
@@ -94,7 +95,7 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
   <li>This is how to take your material, and have the textures assign properly, meaning you don't need to use a specific material</li>
   <li>In the PathTracingSettings, click the tab called "Material Pair Options"</li>
   <li>Drag any material that has the shader you want to pair into the material slot that appears</li>
-  <li>From here, you need to select each dropdown that appears and select the property that is associated with the text to the left of the dropdown</li>
+  <li>From here, you will see 4 buttons, click those to add the input type and connect it to the output tab.  Metallic, roughness, matcapmask, and alpha are single channel texture</li>
   <li>Once this is done, click "Apply Material Links" and rebuild the BVH in the "Main Options" tab to update the objects in the scene</li>
 </ul>
 
@@ -119,19 +120,9 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
 
 ## Using DX11 Only
 <ul>
-  <li>DX11 does not currently work with ASVGF(just havent fixed yet), or hue shift(seems to be a compiler bug)</li>
+  <li>DX11 does not currently work with hue shift(seems to be a compiler bug)</li>
   <li>In the TrueTrace settings menu, click on the top right button "Functionality Settings" and toggle "Use DX11"</li>
   <li>Uncomment the "#define DX11" in: TrueTrace -> Resources -> GlobalDefines.cginc</li>
-</ul>
-
-## Using Lightmapping(EXPERIMENTAL, ONLY DIFFUSE)
-<ul>
-  <li>In the TrueTrace settings menu, click on the top right button "Functionality Settings" and toggle "Use TrueTrace As A Lightmapper"</li>
-  <li>Uncomment the "#define LightMapping" in: TrueTrace -> Resources -> GlobalDefines.cginc</li>
-  <li>Make sure the lightmapping textures for the scene already exist(you need to already have unity bake the scene once, at any quality)</li>
-  <li>Make sure to set the Game view size to the size of the lightmapping textures(Again its very experimental)</li>
-  <li>Under the Scene gameobject, the RayTracingMaster script, adjust the sample count you want to use for each lightmap</li>
-  <li>Click play and run truetrace as normal, it will cycle through each lightmap and do its thing, you should use ReSTIR GI with a low temporal M</li>
 </ul>
 
 ## Editor Window Guide
@@ -161,8 +152,7 @@ TrueTrace Options Description -
   <li>Enable Auto/Manual Exposure - Turns on or off Exposure</li>
   <li>Use ReSTIR GI - Enables ReSTIR GI which is usually much higher quality(Works with Recur and SVGF denoisers)</li>
   <li>Do Sample Connection Validation - Confirms that two samples are mutually visable and throws it away if they are not</li>
-  <li>Update Rate - How many pixels per frame get re-traced to ensure they are still valid paths(7 or 33 is a good number to aim for here at 1080p)</li>
-  <li>Unmarked Toggle - Unlabeled toggle, switches between old ReSTIR GI and new ReSTIR GI</li>
+  <li>Update Rate - How many pixels per frame get re-traced to ensure they are still valid paths(7 or 33 is a good number to aim for here at 1080p)</li>]
   <li>Enable Temporal - Enables the Temporal pass of ReSTIR GI(allows samples to travel across time</li>
   <li>Temporal M Cap - How long a sample may live for, lower means lighting updates faster(until 0 which is the opposite) but more noise(recommended either 0 or around 12, but can be played with)</li>
   <li>Enable Spatial - Enables the Spatial pass of ReSTIR GI(Allows pixels to choose to use the neighboring pixels sample instead)</li>
@@ -215,11 +205,32 @@ TrueTrace Options Description -
   <li>Propogate To Materials - Copies properties of local material to all other objects in the scene with the same material</li>
 </ul>
 
+## GlobalDefines.cginc Settings
+<ul>
+  <li>AdvancedAlphaMapping - Enables or Disables the support of cutout objects(performance penalty)</li>
+  <li>ExtraSampleValidation - Shoots an additional ray(2 instead of 1) in ReSTIR GI ray validation for sharper shadows</li>
+  <li>IgnoreGlassShadow - Shadow Rays can pass through glass</li>
+  <li>IgnoreGlassMain - Main Rays can pass through glass</li>
+  <li>HDRP - Turn on if your in HDRP</li>
+  <li>HardwareRT - Turn on if your in Unity 2023 or higher and want to use Hardware RT cores</li>
+  <li>PointFiltering - Switch between point and linear filtering for albedo textures</li>
+  <li>StainedGlassShadows - Shadow rays passing through glass will be tinted to the glass color</li>
+  <li>DX11 - Turn on if you dont plan to use dx12 at all</li>
+  <li>LightMapping - IGNORE FOR NOW</li>
+  <li>IgnoreBackFacing - Culls backfacing triangles</li>
+  <li>WhiteLights - Forces all lights to be white</li>
+  <li>LBVH - Enable/Disable the light BVH</li>
+  <li>AccurateEmissionTex - Turn on/off emission textures</li>
+  <li>RadianceCache - Turn on/off the Radiance Cache</li>
+  <li>RadianceDebug - Debug view for Radiance Cache</li>
+  <li>IndirectRetraceWeighting - Adds indirect lighting into ReSTIR GI retracing/luminance validation</li>
+</ul>
+
+
 # Known Bugs:
 </br>
 <ul>
   <li>Report any you find! There WILL be bugs, I just dont know what they are</li>
-  <li>DX11 does not work with ASVGF</li>
 </ul>
 
 # Huge thanks to these people for being sponsors/patrons:

@@ -24,7 +24,6 @@ Texture2D<half4> TEX_FLAT_COLOR;
 	Texture2D<float4> Albedo2;
 	Texture2D<float4> TEX_FLAT_MOTION;
 #endif
-Texture2D<half4> ThroughputTex;
 
 Texture2D<half4> TEX_ASVGF_TAA_B;
 SamplerState my_linear_clamp_sampler;

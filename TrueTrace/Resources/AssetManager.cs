@@ -21,17 +21,19 @@ namespace TrueTrace {
         [HideInInspector] public float LightEnergyScale = 1.0f;
         //emissive, alpha, metallic, roughness
         #if ForceLossless
-            [System.NonSerialized] public RenderTexture AlbedoAtlas;
+            public RenderTexture AlbedoAtlas;
+            public RenderTexture NormalAtlas;
+            public RenderTexture SingleComponentAtlas;
+            public RenderTexture EmissiveAtlas;
         #else
-            [System.NonSerialized] public Texture2D AlbedoAtlas;
+            public Texture2D AlbedoAtlas;
+            public Texture2D NormalAtlas;
+            public Texture2D SingleComponentAtlas;
+            public Texture2D EmissiveAtlas;
         #endif
-        [System.NonSerialized] public RenderTexture HeightmapAtlas;
-        [System.NonSerialized] public RenderTexture AlphaMapAtlas;
-        [System.NonSerialized] public RenderTexture NormalAtlas;
-        [System.NonSerialized] public RenderTexture EmissiveAtlas;
-        [System.NonSerialized] public RenderTexture MetallicAtlas;
-        [System.NonSerialized] public RenderTexture RoughnessAtlas;
-        private RenderTexture AlphaAtlas;
+        public RenderTexture HeightmapAtlas;
+        public RenderTexture AlphaMapAtlas;
+        public RenderTexture AlphaAtlas;
         private RenderTexture TempTex;
         private RenderTexture s_Prop_EncodeBCn_Temp;
         private ComputeShader CopyShader;
@@ -139,9 +141,9 @@ namespace TrueTrace {
 
             DestroyImmediate(AlbedoAtlas);
             DestroyImmediate(NormalAtlas);
+            DestroyImmediate(SingleComponentAtlas);
+            DestroyImmediate(AlphaAtlas);
             DestroyImmediate(EmissiveAtlas);
-            DestroyImmediate(MetallicAtlas);
-            DestroyImmediate(RoughnessAtlas);
             DestroyImmediate(HeightmapAtlas);
             DestroyImmediate(AlphaMapAtlas);
 
@@ -157,87 +159,129 @@ namespace TrueTrace {
             System.GC.Collect();
         }
 
-
-    private void PackAndCompact(Dictionary<int, TexObj> DictTex, ref RenderTexture Atlas, ref RenderTexture AlphaAtlas, PackingRectangle[] Rects, int DesiredRes, int TexIndex, int ReadIndex = -1, List<int> TexChannelIndex = null) {
+    Vector2Int PackRect(Vector4 ThisRect) {
+        int A = (int)Mathf.Ceil(ThisRect.x * 16384.0f) | ((int)Mathf.Ceil(ThisRect.y * 16384.0f) << 15);
+        int B = (int)Mathf.Ceil(ThisRect.z * 16384.0f) | ((int)Mathf.Ceil(ThisRect.w * 16384.0f) << 15);
+        return new Vector2Int(A, B);
+    }
+    private void PackAndCompact(Dictionary<int, TexObj> DictTex, ref RenderTexture Atlas, PackingRectangle[] Rects, int DesiredRes, int TexIndex, int ReadIndex = -1) {
         Vector2 Scale = new Vector2(1,1);
         int TexCount = DictTex.Count;
         if(TexCount != 0) {
             PackingRectangle BoundRects;
             RectanglePacker.Pack(Rects, out BoundRects);
             #if ForceLossless
-                if(TexIndex <= 6) DesiredRes = (int)Mathf.Min(Mathf.Max(BoundRects.Width, BoundRects.Height), DesiredRes);
+                DesiredRes = (int)Mathf.Min(Mathf.Max(BoundRects.Width, BoundRects.Height), DesiredRes);
             #else
-                if(TexIndex < 6) DesiredRes = (int)Mathf.Min(Mathf.Max(BoundRects.Width, BoundRects.Height), DesiredRes);
+                DesiredRes = (int)Mathf.Min((Mathf.Floor((float)Mathf.Max(BoundRects.Width, BoundRects.Height) / 4.0f)) * 4, DesiredRes);
             #endif
-            Scale = new Vector2(Mathf.Min((float)DesiredRes / BoundRects.Width, 1), Mathf.Min((float)DesiredRes / BoundRects.Height, 1));
+            Scale = new Vector2(Mathf.Ceil(Mathf.Min((float)DesiredRes / BoundRects.Width, 1) * 16384.0f / 4.0f) * 4.0f / 16384.0f, Mathf.Ceil(Mathf.Min((float)DesiredRes / BoundRects.Height, 1) * 16384.0f / 4.0f) * 4.0f / 16384.0f);
         } else {
-            if(TexIndex != 6 && TexIndex != 7) DesiredRes = 1;
+            DesiredRes = 4;
         }
+    #if ForceLossless
+        if(Atlas == null || Atlas.width != DesiredRes) {
+    #else
+        if(Atlas == null || Atlas.width != DesiredRes) {
+    #endif
+            if(Atlas != null) Atlas.ReleaseSafe();
+            int tempWidth = (DesiredRes + 3) / 4;
+            int tempHeight = (DesiredRes + 3) / 4;
+            var desc = new RenderTextureDescriptor
+            {
+                width = tempWidth,
+                height = tempHeight,
+                dimension = TextureDimension.Tex2D,
+                enableRandomWrite = true,
+                msaaSamples = 1,
+                volumeDepth = 1
+            };
+            desc.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R32G32B32A32_SInt;
+            switch(TexIndex) {
+                case 0://heightmap
+                    CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.RHalf, true);
+                break;
+                case 1://alphamap
+                    CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.ARGBHalf, true);
+                break;
+                case 2://normalmap
+                    Atlas = new RenderTexture(desc);
 
-        switch(TexIndex) {
-            case 0://heightmap
-                CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.RHalf, true);
-            break;
-            case 1://alphamap
-                CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.ARGBHalf, true);
-            break;
-            case 2://normalmap
-                CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, CommonFunctions.RTHalf2, false);
-            break;
-            case 3://metallicmap
-            case 4://roughnessmap
-                CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.R8, true);
-            break;
-            case 5://EmissionMap
-                CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.ARGB32, false);
-            break;
-            case 6://AlbedoMap
-                #if ForceLossless
-                    CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, CommonFunctions.RTHalf4, false);
-                #else
-                    CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.ARGB32, false);
-                #endif
-                CreateRenderTexture(ref AlphaAtlas, DesiredRes, DesiredRes, RenderTextureFormat.R8, false);
-            break;
-            case 7://albedoalpha
-                CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.ARGB32, false);
-                CreateRenderTexture(ref AlphaAtlas, DesiredRes, DesiredRes, RenderTextureFormat.R8, false);
-            break;
+                    if(NormalAtlas != null && NormalAtlas.width != DesiredRes) {
+                        DestroyImmediate(NormalAtlas);
+                        NormalAtlas = new Texture2D(DesiredRes,DesiredRes, TextureFormat.BC5, 1, false);
+                    }
+                break;
+                case 3://metallicmap
+                case 4://roughnessmap
+                    desc.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R32G32_SInt;
+                    Atlas = new RenderTexture(desc);
+
+                    if(SingleComponentAtlas != null && SingleComponentAtlas.width != DesiredRes) {
+                        DestroyImmediate(SingleComponentAtlas);
+                        SingleComponentAtlas = new Texture2D(DesiredRes,DesiredRes, TextureFormat.BC4, 1, false);
+                    }
+                break;
+                case 7://AlphaMap
+                    CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.R8, false);
+                break;
+                case 5://EmissionMap
+                    Atlas = new RenderTexture(desc);
+                    if(EmissiveAtlas != null && EmissiveAtlas.width != DesiredRes) {
+                        DestroyImmediate(EmissiveAtlas);
+                        EmissiveAtlas = new Texture2D(DesiredRes,DesiredRes, TextureFormat.BC6H, false);
+                    }
+                break;
+                case 6://AlbedoMap
+                    #if ForceLossless
+                        CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, CommonFunctions.RTHalf4, false);
+                    #else
+                        Atlas = new RenderTexture(desc);
+                        AlbedoAtlasSize = DesiredRes;
+                        if(AlbedoAtlas != null && AlbedoAtlas.width != DesiredRes) {
+                            DestroyImmediate(AlbedoAtlas);
+                            AlbedoAtlas = new Texture2D(DesiredRes,DesiredRes, TextureFormat.BC6H, false);
+                        }
+                    #endif
+                break;
+            }
         }
         if(TexCount == 0) return;
 
         #if ForceLossless
-            CopyShader.SetBool("ForceLossless", true);
+            CopyShader.SetBool("ForceLossless", TexIndex != 5);
         #else
             CopyShader.SetBool("ForceLossless", false);
         #endif
-        CopyShader.SetBool("IsNormalMap", TexIndex == 2);
-        CopyShader.SetVector("Scale", Scale);
-        CopyShader.SetVector("OutputSize", new Vector2(Atlas.width, Atlas.height));
         CopyShader.SetBool("IsHeightmap", TexIndex == 0);
         for (int i = 0; i < TexCount; i++) {
                 PackingRectangle TempRect = Rects[i];
                 int ID = TempRect.Id;
-                CopyShader.SetVector("InputSize", new Vector2(TempRect.Width, TempRect.Height));
-                CopyShader.SetVector("Offset", new Vector2(TempRect.X, TempRect.Y));
+                CopyShader.SetVector("InputSize", new Vector2(TempRect.Width * Scale.x, TempRect.Height * Scale.y));
+                CopyShader.SetVector("Offset", new Vector2((TempRect.X * Scale.x), (TempRect.Y * Scale.y)));
                 TexObj SelectedTex = DictTex[ID];
                 int ListLength = SelectedTex.TexObjList.Count;
-                Vector4 RectSelect = new Vector4(0, 0, Mathf.Floor(TempRect.X * Scale.x) / Atlas.width, Mathf.Floor(TempRect.Y * Scale.y) / Atlas.height);
-                RectSelect.x = RectSelect.z + Mathf.Floor((TempRect.Width - 1) * Scale.x) / Atlas.width;
-                RectSelect.y = RectSelect.w + Mathf.Floor((TempRect.Height - 1) * Scale.y) / Atlas.height;
+                Vector4 RectSelect = new Vector4(0, 0, Mathf.Ceil(TempRect.X * Scale.x) / DesiredRes, Mathf.Ceil(TempRect.Y * Scale.y) / DesiredRes);
+                RectSelect.x = RectSelect.z + Mathf.Ceil((TempRect.Width) * Scale.x) / DesiredRes;
+                RectSelect.y = RectSelect.w + Mathf.Ceil((TempRect.Height) * Scale.y) / DesiredRes;
 
-                if(TexIndex >= 2 && TexIndex < 7) {
+                if(TexIndex >= 2) {
                     for(int j = 0; j < ListLength; j++) {
-                        // MatDat = _Materials[SelectedTex.TexObjList[j]];
                         switch (TexIndex) {
-                            case 2: _Materials[SelectedTex.TexObjList[j]].NormalTex = RectSelect; break;
-                            case 3: _Materials[SelectedTex.TexObjList[j]].MetallicTex = RectSelect; break;
-                            case 4: _Materials[SelectedTex.TexObjList[j]].RoughnessTex = RectSelect; break;
-                            case 5: _Materials[SelectedTex.TexObjList[j]].EmissiveTex = RectSelect; break;
-                            case 6: _Materials[SelectedTex.TexObjList[j]].AlbedoTex = RectSelect; break;
+                            case 2: _Materials[SelectedTex.TexObjList[j]].NormalTex = PackRect(RectSelect); break;
+                            case 4: 
+                                if(TempRect.TexType == 4) _Materials[SelectedTex.TexObjList[j]].MetallicTex = PackRect(RectSelect); 
+                                else if(TempRect.TexType == 5)  _Materials[SelectedTex.TexObjList[j]].RoughnessTex = PackRect(RectSelect);
+                                else if(TempRect.TexType == 6)  _Materials[SelectedTex.TexObjList[j]].MatCapMask = PackRect(RectSelect);
+                            break;
+                            case 5: _Materials[SelectedTex.TexObjList[j]].EmissiveTex = PackRect(RectSelect); break;
+                            case 6: 
+                                if(TempRect.TexType == 0) _Materials[SelectedTex.TexObjList[j]].AlbedoTex = PackRect(RectSelect); 
+                                else if(TempRect.TexType == 7) _Materials[SelectedTex.TexObjList[j]].MatCapTex = PackRect(RectSelect); 
+                            break;
+                            case 7: _Materials[SelectedTex.TexObjList[j]].AlphaTex = PackRect(RectSelect); break;
                             default: break;
                         }
-                        // _Materials[SelectedTex.TexObjList[j]] = MatDat;
                     }
                 } else if(TexIndex < 2) {
                     TerrainDat TempTerrain = TerrainInfos[SelectedTex.TexObjList[0]];
@@ -245,48 +289,57 @@ namespace TrueTrace {
                     else TempTerrain.AlphaMap = RectSelect;
                     TerrainInfos[SelectedTex.TexObjList[0]] = TempTerrain;
                 }
+                    Vector2 RCPSize = new Vector2(1.0f / (float)(TempRect.Width2 * Scale.x), 1.0f / (float)(TempRect.Height2 * Scale.y));
+                CopyShader.SetInt("OutputRead", ((ReadIndex != -1) ? ReadIndex : SelectedTex.ReadIndex));
+                        CopyShader.SetVector("TextureSizeRcp", RCPSize);
                 switch(TexIndex) {
-                    case 0:
-                        CopyShader.SetInt("OutputRead", 0);
-                        CopyShader.SetTexture(2, "AdditionTex", SelectedTex.Tex);
-                        CopyShader.SetTexture(2, "ResultSingle", Atlas);
-                        CopyShader.Dispatch(2, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 32.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 32.0f), 1);
+                    case 0://heightmap
+                        CopyShader.SetTexture(0, "InputTex", SelectedTex.Tex);
+                        CopyShader.SetTexture(0, "ResultSingle", Atlas);
+                        CopyShader.Dispatch(0, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 32.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 32.0f), 1);
                     break;
-                    case 1:
-                        CopyShader.SetTexture(5, "_Source2", SelectedTex.Tex);
-                        CopyShader.SetTexture(5, "_Target2", Atlas);
-                        CopyShader.Dispatch(5, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 32.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 32.0f), 1);
+                    case 3://metallic
+                    case 4://roughness
+                        CopyShader.SetTexture(6, "SingleInput", SelectedTex.Tex);
+                        CopyShader.SetTexture(6, "SingleOutput", Atlas);
+                        CopyShader.Dispatch(6, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 4.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 4.0f), 1);
+                    break;
+                    case 7://albedoalpha
+                        CopyShader.SetTexture(0, "InputTex", SelectedTex.Tex);
+                        CopyShader.SetTexture(0, "ResultSingle", Atlas);
+                        CopyShader.Dispatch(0, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 32.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 32.0f), 1);
+                    break;
+                    case 1://alphamap(uncompressed)
+                        CopyShader.SetBool("ForceLossless", true);
+                        CopyShader.SetTexture(2, "InputTex", SelectedTex.Tex);
+                        CopyShader.SetTexture(2, "ResultFull", Atlas);
+                        CopyShader.Dispatch(2, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 32.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 32.0f), 1);
                     break;
                     case 2:
-                        CopyShader.SetTexture(3, "AdditionTex", SelectedTex.Tex);
-                        CopyShader.SetTexture(3, "ResultDouble", Atlas);
-                        CopyShader.Dispatch(3, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 32.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 32.0f), 1);
-                    break;                    
-                    case 3:
-                    case 4:
-                    case 7:
-                        CopyShader.SetInt("OutputRead", SelectedTex.ReadIndex);
-                        CopyShader.SetTexture(2, "AdditionTex", SelectedTex.Tex);
-                        CopyShader.SetTexture(2, "ResultSingle", Atlas);
-                        CopyShader.Dispatch(2, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 32.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 32.0f), 1);
-                    break;
+                        CopyShader.SetTexture(5, "NormSource", SelectedTex.Tex);
+                        CopyShader.SetTexture(5, "NormTarget", Atlas);
+                        CopyShader.Dispatch(5, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 4.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 4.0f), 1);
+                    break;  
                     case 5:
                     case 6:
-                        CopyShader.SetTexture(0, "AdditionTex", SelectedTex.Tex);
-                        CopyShader.SetTexture(0, "Result", Atlas);
-                        CopyShader.Dispatch(0, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 32.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 32.0f), 1);
-                        CopyShader.SetInt("OutputRead", ((TexChannelIndex == null) ? ReadIndex : SelectedTex.ReadIndex));
-                        CopyShader.SetTexture(2, "AdditionTex", SelectedTex.Tex);
-                        CopyShader.SetTexture(2, "ResultSingle", AlphaAtlas);
+                #if ForceLossless                  
+                        CopyShader.SetTexture(2, "InputTex", SelectedTex.Tex);
+                        CopyShader.SetTexture(2, "ResultFull", Atlas);
                         CopyShader.Dispatch(2, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 32.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 32.0f), 1);
+                #else
+                        CopyShader.SetTexture(4, "_Source", SelectedTex.Tex);
+
+                        CopyShader.SetTexture(4, "_Target", Atlas);
+                        CopyShader.Dispatch(4, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 4.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 4.0f), 1);
+                #endif
                     break;
                 }
 
             }
         }
 
-        private void CreateRenderTexture(ref RenderTexture ThisTex, int Width, int Height, RenderTextureFormat Form, bool UseMip) {
-            ThisTex = new RenderTexture(Width, Height, 0, Form, RenderTextureReadWrite.sRGB);
+        private void CreateRenderTexture(ref RenderTexture ThisTex, int Width, int Height, RenderTextureFormat Form, bool UseMip, RenderTextureReadWrite RendRead = RenderTextureReadWrite.sRGB) {
+            ThisTex = new RenderTexture(Width, Height, 0, Form, RendRead);
             ThisTex.enableRandomWrite = true;
             if(UseMip) {
                 ThisTex.useMipMap = true;
@@ -295,8 +348,8 @@ namespace TrueTrace {
             ThisTex.Create();
         }
 
-        private void KeyCheck(int MatIndex, Texture Tex, ref Dictionary<int, TexObj> DictTextures, ref List<PackingRectangle> PR, int ReadChannelIndex) {
-            int index = Tex.GetInstanceID();
+        private void KeyCheck(int MatIndex, Texture Tex, ref Dictionary<int, TexObj> DictTextures, ref List<PackingRectangle> PR, int ReadChannelIndex, int TexType) {
+            int index = System.HashCode.Combine(Tex.GetInstanceID(), TexType);
 
             if (DictTextures.TryGetValue(index, out var existingTexObj)) {
                 existingTexObj.TexObjList.Add(MatIndex);
@@ -307,9 +360,12 @@ namespace TrueTrace {
                 };
 
                 PR.Add(new PackingRectangle {
-                    Width = (uint)Tex.width + 1,
-                    Height = (uint)Tex.height + 1,
-                    Id = index
+                    Width = (uint)Mathf.Ceil(((float)Tex.width) / 4.0f) * 4,
+                    Height = (uint)Mathf.Ceil(((float)Tex.height) / 4.0f) * 4,
+                    Width2 = (uint)(Tex.width),
+                    Height2 = (uint)(Tex.height),
+                    Id = index,
+                    TexType = TexType
                 });
 
                 newTexObj.TexObjList.Add(MatIndex);
@@ -339,13 +395,13 @@ namespace TrueTrace {
             Dictionary<int, TexObj> AlbTextures = new Dictionary<int, TexObj>();
             Dictionary<int, TexObj> NormTextures = new Dictionary<int, TexObj>();
             Dictionary<int, TexObj> EmisTextures = new Dictionary<int, TexObj>();
-            Dictionary<int, TexObj> MetTextures = new Dictionary<int, TexObj>();
-            Dictionary<int, TexObj> RoughTextures = new Dictionary<int, TexObj>();
+            Dictionary<int, TexObj> SingleComponentTexture = new Dictionary<int, TexObj>();
+            Dictionary<int, TexObj> AlphTextures = new Dictionary<int, TexObj>();
             List<PackingRectangle> AlbRect = new List<PackingRectangle>();
             List<PackingRectangle> NormRect = new List<PackingRectangle>();
             List<PackingRectangle> EmisRect = new List<PackingRectangle>();
-            List<PackingRectangle> MetRect = new List<PackingRectangle>();
-            List<PackingRectangle> RoughRect = new List<PackingRectangle>();
+            List<PackingRectangle> SingleComponentRect = new List<PackingRectangle>();
+            List<PackingRectangle> AlphRect = new List<PackingRectangle>();
             MatCount = 0;
             TerrainInfos = new List<TerrainDat>();
             DoHeightmap = false;
@@ -364,11 +420,14 @@ namespace TrueTrace {
                 int ThisMatCount = Obj._Materials.Count;
                 for(int i = 0; i < ThisMatCount; i++) {
                     MaterialData TempMat = Obj._Materials[i];
-                    if(TempMat.AlbedoTex.w != 0) KeyCheck(MatCount, Obj.AlbedoTexs[(int)TempMat.AlbedoTex.w-1], ref AlbTextures, ref AlbRect, 0);
-                    if(TempMat.NormalTex.w != 0) KeyCheck(MatCount, Obj.NormalTexs[(int)TempMat.NormalTex.w-1], ref NormTextures, ref NormRect, 0);
-                    if(TempMat.EmissiveTex.w != 0) KeyCheck(MatCount, Obj.EmissionTexs[(int)TempMat.EmissiveTex.w-1], ref EmisTextures, ref EmisRect, 0);
-                    if(TempMat.MetallicTex.w != 0) KeyCheck(MatCount, Obj.MetallicTexs[(int)TempMat.MetallicTex.w-1], ref MetTextures, ref MetRect, Obj.MetallicTexChannelIndex[(int)TempMat.MetallicTex.w-1]);
-                    if(TempMat.RoughnessTex.w != 0) KeyCheck(MatCount, Obj.RoughnessTexs[(int)TempMat.RoughnessTex.w-1], ref RoughTextures, ref RoughRect, Obj.RoughnessTexChannelIndex[(int)TempMat.RoughnessTex.w-1]);
+                    if(TempMat.AlbedoTex.x != 0) KeyCheck(MatCount, Obj.AlbedoTexs[(int)TempMat.AlbedoTex.x-1], ref AlbTextures, ref AlbRect, 0, 0);
+                    if(TempMat.NormalTex.x != 0) KeyCheck(MatCount, Obj.NormalTexs[(int)TempMat.NormalTex.x-1], ref NormTextures, ref NormRect, 0, 1);
+                    if(TempMat.EmissiveTex.x != 0) KeyCheck(MatCount, Obj.EmissionTexs[(int)TempMat.EmissiveTex.x-1], ref EmisTextures, ref EmisRect, 0, 2);
+                    if(TempMat.AlphaTex.x != 0) KeyCheck(MatCount, Obj.AlphaTexs[(int)TempMat.AlphaTex.x-1], ref AlphTextures, ref AlphRect, Obj.AlphaTexChannelIndex[(int)TempMat.AlphaTex.x-1], 3);
+                    if(TempMat.MetallicTex.x != 0) KeyCheck(MatCount, Obj.MetallicTexs[(int)TempMat.MetallicTex.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.MetallicTexChannelIndex[(int)TempMat.MetallicTex.x-1], 4);
+                    if(TempMat.RoughnessTex.x != 0) KeyCheck(MatCount, Obj.RoughnessTexs[(int)TempMat.RoughnessTex.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.RoughnessTexChannelIndex[(int)TempMat.RoughnessTex.x-1], 5);
+                    if(TempMat.MatCapMask.x != 0) KeyCheck(MatCount, Obj.MatCapMasks[(int)TempMat.MatCapMask.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.MatCapMaskChannelIndex[(int)TempMat.MatCapMask.x-1], 6);
+                    if(TempMat.MatCapTex.x != 0) KeyCheck(MatCount, Obj.MatCapTexs[(int)TempMat.MatCapTex.x-1], ref AlbTextures, ref AlbRect, 0, 7);
                     _Materials[MatCount] = TempMat;
                     MatCount++;
                 }
@@ -381,11 +440,14 @@ namespace TrueTrace {
                 int ThisMatCount = Obj._Materials.Count;
                 for(int i = 0; i < ThisMatCount; i++) {
                     MaterialData TempMat = Obj._Materials[i];
-                    if(TempMat.AlbedoTex.w != 0) KeyCheck(MatCount, Obj.AlbedoTexs[(int)TempMat.AlbedoTex.w-1], ref AlbTextures, ref AlbRect, 0);
-                    if(TempMat.NormalTex.w != 0) KeyCheck(MatCount, Obj.NormalTexs[(int)TempMat.NormalTex.w-1], ref NormTextures, ref NormRect, 0);
-                    if(TempMat.EmissiveTex.w != 0) KeyCheck(MatCount, Obj.EmissionTexs[(int)TempMat.EmissiveTex.w-1], ref EmisTextures, ref EmisRect, 0);
-                    if(TempMat.MetallicTex.w != 0) KeyCheck(MatCount, Obj.MetallicTexs[(int)TempMat.MetallicTex.w-1], ref MetTextures, ref MetRect, Obj.MetallicTexChannelIndex[(int)TempMat.MetallicTex.w-1]);
-                    if(TempMat.RoughnessTex.w != 0) KeyCheck(MatCount, Obj.RoughnessTexs[(int)TempMat.RoughnessTex.w-1], ref RoughTextures, ref RoughRect, Obj.RoughnessTexChannelIndex[(int)TempMat.RoughnessTex.w-1]);
+                    if(TempMat.AlbedoTex.x != 0) KeyCheck(MatCount, Obj.AlbedoTexs[(int)TempMat.AlbedoTex.x-1], ref AlbTextures, ref AlbRect, 0, 0);
+                    if(TempMat.NormalTex.x != 0) KeyCheck(MatCount, Obj.NormalTexs[(int)TempMat.NormalTex.x-1], ref NormTextures, ref NormRect, 0, 1);
+                    if(TempMat.EmissiveTex.x != 0) KeyCheck(MatCount, Obj.EmissionTexs[(int)TempMat.EmissiveTex.x-1], ref EmisTextures, ref EmisRect, 0, 2);
+                    if(TempMat.AlphaTex.x != 0) KeyCheck(MatCount, Obj.AlphaTexs[(int)TempMat.AlphaTex.x-1], ref AlphTextures, ref AlphRect, Obj.AlphaTexChannelIndex[(int)TempMat.AlphaTex.x-1], 3);
+                    if(TempMat.MetallicTex.x != 0) KeyCheck(MatCount, Obj.MetallicTexs[(int)TempMat.MetallicTex.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.MetallicTexChannelIndex[(int)TempMat.MetallicTex.x-1], 4);
+                    if(TempMat.RoughnessTex.x != 0) KeyCheck(MatCount, Obj.RoughnessTexs[(int)TempMat.RoughnessTex.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.RoughnessTexChannelIndex[(int)TempMat.RoughnessTex.x-1], 5);
+                    if(TempMat.MatCapMask.x != 0) KeyCheck(MatCount, Obj.MatCapMasks[(int)TempMat.MatCapMask.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.MatCapMaskChannelIndex[(int)TempMat.MatCapMask.x-1], 6);
+                    if(TempMat.MatCapTex.x != 0) KeyCheck(MatCount, Obj.MatCapTexs[(int)TempMat.MatCapTex.x-1], ref AlbTextures, ref AlbRect, 0, 7);
                     _Materials[MatCount] = TempMat;
                     MatCount++;
                 }
@@ -406,7 +468,10 @@ namespace TrueTrace {
                         HeightMapRect.Add(new PackingRectangle() {
                             Width = (uint)Obj2.HeightMap.width + 1,
                             Height = (uint)Obj2.HeightMap.height + 1,
-                            Id = Index
+                            Width2 = (uint)Obj2.HeightMap.width + 1,
+                            Height2 = (uint)Obj2.HeightMap.height + 1,
+                            Id = Index,
+                            TexType = 99999
                         });
                         E.Tex = Obj2.HeightMap;
                         E.ReadIndex = 0;
@@ -419,7 +484,10 @@ namespace TrueTrace {
                         AlphaMapRect.Add(new PackingRectangle() {
                             Width = (uint)Obj2.AlphaMap.width + 1,
                             Height = (uint)Obj2.AlphaMap.height + 1,
-                            Id = Index
+                            Width2 = (uint)Obj2.AlphaMap.width + 1,
+                            Height2 = (uint)Obj2.AlphaMap.height + 1,
+                            Id = Index,
+                            TexType = 9999
                         });
                         E.Tex = Obj2.AlphaMap;
                         E.ReadIndex = 0;
@@ -430,10 +498,10 @@ namespace TrueTrace {
                     int ThisMatCount = Obj2.Materials.Count;
                     for (int i = 0; i < ThisMatCount; i++) {
                         MaterialData TempMat = Obj2.Materials[i];
-                        if(TempMat.AlbedoTex.w != 0) KeyCheck(TerrainMatCount + i, Obj2.AlbedoTexs[(int)TempMat.AlbedoTex.w-1], ref AlbTextures, ref AlbRect, 0);
-                        if(TempMat.NormalTex.w != 0) KeyCheck(TerrainMatCount + i, Obj2.NormalTexs[(int)TempMat.NormalTex.w-1], ref NormTextures, ref NormRect, 0);
-                        if(TempMat.MetallicTex.w != 0) KeyCheck(TerrainMatCount + i, Obj2.MaskTexs[(int)TempMat.MetallicTex.w-1], ref MetTextures, ref MetRect, 2);
-                        if(TempMat.RoughnessTex.w != 0) KeyCheck(TerrainMatCount + i, Obj2.MaskTexs[(int)TempMat.RoughnessTex.w-1], ref RoughTextures, ref RoughRect, 1);
+                        if(TempMat.AlbedoTex.x != 0) KeyCheck(TerrainMatCount + i, Obj2.AlbedoTexs[(int)TempMat.AlbedoTex.x-1], ref AlbTextures, ref AlbRect, 0, 0);
+                        if(TempMat.NormalTex.x != 0) KeyCheck(TerrainMatCount + i, Obj2.NormalTexs[(int)TempMat.NormalTex.x-1], ref NormTextures, ref NormRect, 0, 1);
+                        if(TempMat.MetallicTex.x != 0) KeyCheck(TerrainMatCount + i, Obj2.MaskTexs[(int)TempMat.MetallicTex.x-1], ref SingleComponentTexture, ref SingleComponentRect, 2, 4);
+                        if(TempMat.RoughnessTex.x != 0) KeyCheck(TerrainMatCount + i, Obj2.MaskTexs[(int)TempMat.RoughnessTex.x-1], ref SingleComponentTexture, ref SingleComponentRect, 1, 5);
 
                         _Materials[TerrainMatCount + i] = TempMat;
                     }
@@ -446,51 +514,39 @@ namespace TrueTrace {
             if (!RenderQue.Any())
                 return;
 
-            if(NormalAtlas != null) NormalAtlas?.Release();
-            if(RoughnessAtlas != null) RoughnessAtlas?.Release();
-            if(MetallicAtlas != null) MetallicAtlas?.Release();
-            if(EmissiveAtlas != null) EmissiveAtlas?.Release();
             #if ForceLossless
                 if(AlbedoAtlas != null) AlbedoAtlas?.Release();
-                PackAndCompact(AlbTextures, ref AlbedoAtlas, ref AlphaAtlas, AlbRect.ToArray(), MainDesiredRes, 6, 3, null);
+                PackAndCompact(AlbTextures, ref AlbedoAtlas, AlbRect.ToArray(), MainDesiredRes, 6, 3);
+                if(NormalAtlas != null) NormalAtlas?.Release();
+                PackAndCompact(NormTextures, ref NormalAtlas, NormRect.ToArray(), MainDesiredRes, 2);
             #else
-                if(AlbedoAtlas == null || AlbedoAtlas.width != MainDesiredRes) AlbedoAtlas = new Texture2D(MainDesiredRes,MainDesiredRes, TextureFormat.DXT5, false);
-                PackAndCompact(AlbTextures, ref TempTex, ref AlphaAtlas, AlbRect.ToArray(), MainDesiredRes, 6, 3, null);
-                int tempWidth = (TempTex.width + 3) / 4;
-                int tempHeight = (TempTex.height + 3) / 4;
-                var desc = new RenderTextureDescriptor
-                {
-                    width = tempWidth,
-                    height = tempHeight,
-                    dimension = TextureDimension.Tex2D,
-                    enableRandomWrite = true,
-                    msaaSamples = 1,
-                    volumeDepth = 1
-                };
-                desc.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R32G32B32A32_SInt;
-
-                s_Prop_EncodeBCn_Temp = new RenderTexture(desc);
-                CopyShader.SetTexture(4, "_Source", TempTex);
-                CopyShader.SetTexture(4, "Alpha", AlphaAtlas);
-                CopyShader.SetTexture(4, "_Target", s_Prop_EncodeBCn_Temp);
-                CopyShader.Dispatch(4, (int)((tempWidth + 8 - 1) / 8), (int)((tempHeight + 8 - 1) / 8),1);
-                Graphics.CopyTexture(s_Prop_EncodeBCn_Temp, 0, AlbedoAtlas, 0);
+                PackAndCompact(AlbTextures, ref TempTex, AlbRect.ToArray(), MainDesiredRes, 6, 3);
+                Graphics.CopyTexture(TempTex, 0, AlbedoAtlas, 0);
                 TempTex.Release();
-                s_Prop_EncodeBCn_Temp.Release();
+                TempTex = null;
+
+                PackAndCompact(NormTextures, ref TempTex, NormRect.ToArray(), MainDesiredRes, 2);
+
+                Graphics.CopyTexture(TempTex, 0, NormalAtlas, 0);
+                TempTex.Release();
+                TempTex = null;
+
+                PackAndCompact(SingleComponentTexture, ref TempTex, SingleComponentRect.ToArray(), MainDesiredRes, 4);
+
+                Graphics.CopyTexture(TempTex, 0, SingleComponentAtlas, 0);
+                TempTex.Release();
+                TempTex = null;
+
+                PackAndCompact(EmisTextures, ref TempTex, EmisRect.ToArray(), MainDesiredRes, 5);
+                Graphics.CopyTexture(TempTex, 0, EmissiveAtlas, 0);
+                TempTex.Release();
+                TempTex = null;
             #endif
 
 
-            PackAndCompact(NormTextures, ref NormalAtlas, ref AlphaAtlas, NormRect.ToArray(), MainDesiredRes, 2);
-            PackAndCompact(EmisTextures, ref EmissiveAtlas, ref AlphaAtlas, EmisRect.ToArray(), MainDesiredRes, 5);
-            PackAndCompact(MetTextures, ref MetallicAtlas, ref AlphaAtlas, MetRect.ToArray(), AlbedoAtlas.width, 3, 0);
-            PackAndCompact(RoughTextures, ref RoughnessAtlas, ref AlphaAtlas, RoughRect.ToArray(), AlbedoAtlas.width, 4, 0);
-            PackAndCompact(HeightMapTextures, ref HeightmapAtlas, ref AlphaAtlas, HeightMapRect.ToArray(), 16384, 0);
-            PackAndCompact(AlphaMapTextures, ref AlphaMapAtlas, ref AlphaAtlas, AlphaMapRect.ToArray(), 16384, 1);
-            AlphaAtlas.Release();
-            AlbedoAtlasSize = AlbedoAtlas.width;
-            NormalAtlas.anisoLevel = 0;
-            MetallicAtlas.GenerateMips();
-            RoughnessAtlas.GenerateMips();
+            PackAndCompact(AlphTextures, ref AlphaAtlas, AlphRect.ToArray(), MainDesiredRes, 7);
+            PackAndCompact(HeightMapTextures, ref HeightmapAtlas, HeightMapRect.ToArray(), 16384, 0, 0);
+            PackAndCompact(AlphaMapTextures, ref AlphaMapAtlas, AlphaMapRect.ToArray(), 16384, 1);
 
 
             AlbTextures.Clear();
@@ -499,14 +555,14 @@ namespace TrueTrace {
             NormTextures.TrimExcess();
             EmisTextures.Clear();
             EmisTextures.TrimExcess();
-            MetTextures.Clear();
-            MetTextures.TrimExcess();
-            RoughTextures.Clear();
-            RoughTextures.TrimExcess();
+            SingleComponentTexture.Clear();
+            SingleComponentTexture.TrimExcess();
             HeightMapTextures.Clear();
             HeightMapTextures.TrimExcess();
             AlphaMapTextures.Clear();
             AlphaMapTextures.TrimExcess();
+            AlphTextures.Clear();
+            AlphTextures.TrimExcess();
 
             AlbRect.Clear();
             AlbRect.TrimExcess();
@@ -514,14 +570,14 @@ namespace TrueTrace {
             NormRect.TrimExcess();
             EmisRect.Clear();
             EmisRect.TrimExcess();
-            MetRect.Clear();
-            MetRect.TrimExcess();
-            RoughRect.Clear();
-            RoughRect.TrimExcess();
+            SingleComponentRect.Clear();
+            SingleComponentRect.TrimExcess();
             HeightMapRect.Clear();
             HeightMapRect.TrimExcess();
             AlphaMapRect.Clear();
             AlphaMapRect.TrimExcess();
+            AlphRect.Clear();
+            AlphRect.TrimExcess();
             if (TerrainCount != 0) {
                 if (TerrainBuffer != null) TerrainBuffer.Release();
                 TerrainBuffer = new ComputeBuffer(TerrainCount, 60);
@@ -564,7 +620,6 @@ namespace TrueTrace {
             StackBuffer.ReleaseSafe();
             ToBVHIndexBuffer.ReleaseSafe();
             BVHDataBuffer.ReleaseSafe();
-            BVHBuffer.ReleaseSafe();
             BoxesBuffer.ReleaseSafe();
             TerrainBuffer.ReleaseSafe();
             TLASCWBVHIndexes.ReleaseSafe();
@@ -583,29 +638,30 @@ namespace TrueTrace {
         [HideInInspector] public bool NeedsToUpdateXML;
         public void AddMaterial(Shader shader) {
             int ShaderPropertyCount = shader.GetPropertyCount();
-            string NormalTex, EmissionTex, MetallicTex, RoughnessTex, MetallicRange, RoughnessRange, MetallicRemapMin, MetallicRemapMax, RoughnessRemapMin, RoughnessRemapMax;
-            NormalTex = EmissionTex = MetallicTex = RoughnessTex = MetallicRange = RoughnessRange = MetallicRemapMin = MetallicRemapMax = RoughnessRemapMin = RoughnessRemapMax = "null";
-            int MetallicIndex, RoughnessIndex;
-            MetallicIndex = RoughnessIndex = 0;
+            List<TexturePairs> TexturePairList = new List<TexturePairs>();
+            TexturePairList.Add(new TexturePairs() {
+                Purpose = (int)TexturePurpose.Albedo,
+                ReadIndex = -4,
+                TextureName = "_MainTex"
+            });
+            TexturePairList.Add(new TexturePairs() {
+                Purpose = (int)TexturePurpose.Alpha,
+                ReadIndex = 3,
+                TextureName = "_MainTex"
+            });
             data.Material.Add(new MaterialShader() {
                 Name = shader.name,
-                BaseColorTex = "_MainTex",
-                NormalTex = NormalTex,
-                EmissionTex = EmissionTex,
-                MetallicTex = MetallicTex,
-                MetallicTexChannel = MetallicIndex,
-                MetallicRange = MetallicRange,
-                RoughnessTex = RoughnessTex,
-                RoughnessTexChannel = RoughnessIndex,
-                RoughnessRange = RoughnessRange,
+                AvailableTextures = TexturePairList,
+                MetallicRange = "null",
+                RoughnessRange = "null",
                 IsGlass = false,
                 IsCutout = false,
                 UsesSmoothness = false,
                 BaseColorValue = "null",
-                MetallicRemapMin = MetallicRemapMin,
-                MetallicRemapMax = MetallicRemapMax,
-                RoughnessRemapMin = RoughnessRemapMin,
-                RoughnessRemapMax = RoughnessRemapMax
+                MetallicRemapMin = "null",
+                MetallicRemapMax = "null",
+                RoughnessRemapMin = "null",
+                RoughnessRemapMax = "null"
             });
             ShaderNames.Add(shader.name);
             NeedsToUpdateXML = true;
@@ -634,7 +690,10 @@ namespace TrueTrace {
             #endif
             #if ForceLossless
             #else
-                if(AlbedoAtlas == null || AlbedoAtlas.width != MainDesiredRes) AlbedoAtlas = new Texture2D(MainDesiredRes,MainDesiredRes, TextureFormat.DXT5, false);
+                if(AlbedoAtlas == null) AlbedoAtlas = new Texture2D(4,4, TextureFormat.BC6H, false);
+                if(EmissiveAtlas == null) EmissiveAtlas = new Texture2D(4,4, TextureFormat.BC6H, false);
+                if(NormalAtlas == null) NormalAtlas = new Texture2D(4,4, TextureFormat.BC5, 1, false);
+                if(SingleComponentAtlas == null) SingleComponentAtlas = new Texture2D(4,4, TextureFormat.BC4, 1, false);
             #endif
             UpdateMaterialDefinition();
             UnityEngine.Video.VideoPlayer[] VideoObjects = GameObject.FindObjectsOfType<UnityEngine.Video.VideoPlayer>();
@@ -744,6 +803,7 @@ namespace TrueTrace {
                     if (BuildQue[i].AsyncTask.IsFaulted) {//Fuck, something fucked up
                         Debug.Log(BuildQue[i].AsyncTask.Exception + ", " + BuildQue[i].Name);
                         BuildQue[i].FailureCount++;
+                        BuildQue[i].ClearAll();
                         if(BuildQue[i].FailureCount > 6) {
                             BuildQue[i].ExistsInQue = -1;
                         } else {
@@ -754,8 +814,14 @@ namespace TrueTrace {
                     } else {
                         if (BuildQue[i].AsyncTask.Status == TaskStatus.RanToCompletion) {
                             if (BuildQue[i].AggTriangles == null || BuildQue[i].AggNodes == null) {
-                                BuildQue[i].ExistsInQue = 3;
-                                AddQue.Add(BuildQue[i]);
+                                BuildQue[i].FailureCount++;
+                                BuildQue[i].ClearAll();
+                                if(BuildQue[i].FailureCount > 6) {
+                                    BuildQue[i].ExistsInQue = -1;
+                                } else {
+                                    BuildQue[i].ExistsInQue = 3;
+                                    AddQue.Add(BuildQue[i]);
+                                }
                             } else {
                                 BuildQue[i].SetUpBuffers();
                                 BuildQue[i].ExistsInQue = 0;
@@ -987,10 +1053,10 @@ namespace TrueTrace {
                     }
                     LightAABBs = new LightBounds[LightMeshCount];
 
-                    BVH8AggregatedBuffer = new ComputeBuffer(AggNodeCount, 80);
-                    AggTriBuffer = new ComputeBuffer(AggTriCount, 88);
-                    LightTriBuffer = new ComputeBuffer(LightTriCount, 40);
-                    LightNodeBuffer = new ComputeBuffer(AggLightNodeCount, 40);
+                    CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80);
+                    CommonFunctions.CreateDynamicBuffer(ref AggTriBuffer, AggTriCount, 88);
+                    CommonFunctions.CreateDynamicBuffer(ref LightTriBuffer, LightTriCount, 40);
+                    CommonFunctions.CreateDynamicBuffer(ref LightNodeBuffer, AggLightNodeCount, 40);
                     MeshFunctions.SetBuffer(TriangleBufferKernel, "OutCudaTriArray", AggTriBuffer);
                     MeshFunctions.SetBuffer(NodeBufferKernel, "OutAggNodes", BVH8AggregatedBuffer);
                     MeshFunctions.SetBuffer(LightBufferKernel, "LightTrianglesOut", LightTriBuffer);
@@ -1143,8 +1209,7 @@ namespace TrueTrace {
             }
         }
 
-        public struct AggData
-        {
+        public struct AggData {
             public int AggIndexCount;
             public int AggNodeCount;
             public int MaterialOffset;
@@ -1172,47 +1237,47 @@ namespace TrueTrace {
 
         int MaxRecur = 0;
         int TempRecur = 0;
-          private List<Vector3Int> IsLeafList;
-    unsafe public void DocumentNodes(int CurrentNode, int ParentNode, int NextNode, int NextBVH8Node, bool IsLeafRecur, int CurRecur) {
-        NodeIndexPairData CurrentPair = NodePair[CurrentNode];
-        TempRecur = Mathf.Max(TempRecur, CurRecur);
-        IsLeafList[CurrentNode] = new Vector3Int(IsLeafList[CurrentNode].x, CurRecur, ParentNode);
-        if (!IsLeafRecur) {
-            ToBVHIndex[NextBVH8Node] = CurrentNode;
-            IsLeafList[CurrentNode] = new Vector3Int(0, IsLeafList[CurrentNode].y, IsLeafList[CurrentNode].z);
-            BVHNode8Data node = TLASBVH8.BVH8Nodes[NextBVH8Node];
-            NodeIndexPairData IndexPair = new NodeIndexPairData();
-            IndexPair.AABB = new AABB();
+        private List<Vector3Int> IsLeafList;
+        unsafe public void DocumentNodes(int CurrentNode, int ParentNode, int NextNode, int NextBVH8Node, bool IsLeafRecur, int CurRecur) {
+            NodeIndexPairData CurrentPair = NodePair[CurrentNode];
+            TempRecur = Mathf.Max(TempRecur, CurRecur);
+            IsLeafList[CurrentNode] = new Vector3Int(IsLeafList[CurrentNode].x, CurRecur, ParentNode);
+            if (!IsLeafRecur) {
+                ToBVHIndex[NextBVH8Node] = CurrentNode;
+                IsLeafList[CurrentNode] = new Vector3Int(0, IsLeafList[CurrentNode].y, IsLeafList[CurrentNode].z);
+                BVHNode8Data node = TLASBVH8.BVH8Nodes[NextBVH8Node];
+                NodeIndexPairData IndexPair = new NodeIndexPairData();
+                IndexPair.AABB = new AABB();
 
-            Vector3 e = Vector3.zero;
-            for(int i = 0; i < 3; i++) e[i] = (float)(System.Convert.ToSingle((int)(System.Convert.ToUInt32(node.e[i]) << 23)));
-            for (int i = 0; i < 8; i++) {
-                IndexPair.InNodeOffset = i;
-                float maxFactorX = node.quantized_max_x[i] * e.x;
-                float maxFactorY = node.quantized_max_y[i] * e.y;
-                float maxFactorZ = node.quantized_max_z[i] * e.z;
-                float minFactorX = node.quantized_min_x[i] * e.x;
-                float minFactorY = node.quantized_min_y[i] * e.y;
-                float minFactorZ = node.quantized_min_z[i] * e.z;
+                Vector3 e = Vector3.zero;
+                for(int i = 0; i < 3; i++) e[i] = (float)(System.Convert.ToSingle((int)(System.Convert.ToUInt32(node.e[i]) << 23)));
+                for (int i = 0; i < 8; i++) {
+                    IndexPair.InNodeOffset = i;
+                    float maxFactorX = node.quantized_max_x[i] * e.x;
+                    float maxFactorY = node.quantized_max_y[i] * e.y;
+                    float maxFactorZ = node.quantized_max_z[i] * e.z;
+                    float minFactorX = node.quantized_min_x[i] * e.x;
+                    float minFactorY = node.quantized_min_y[i] * e.y;
+                    float minFactorZ = node.quantized_min_z[i] * e.z;
 
-                IndexPair.AABB.Create(new Vector3(maxFactorX, maxFactorY, maxFactorZ) + node.p, new Vector3(minFactorX, minFactorY, minFactorZ) + node.p);
+                    IndexPair.AABB.Create(new Vector3(maxFactorX, maxFactorY, maxFactorZ) + node.p, new Vector3(minFactorX, minFactorY, minFactorZ) + node.p);
 
-                NextNode++;
-                IndexPair.BVHNode = NextBVH8Node;
-                NodePair.Add(IndexPair);
-                IsLeafList.Add(new Vector3Int(0,0,0));
-                if ((node.meta[i] & 0b11111) < 24) {
-                    DocumentNodes(NodePair.Count - 1, CurrentNode, NextNode, -1, true, CurRecur + 1);
-                } else {
-                    int child_offset = (byte)node.meta[i] & 0b11111;
-                    int child_index = (int)node.base_index_child + child_offset - 24;
-                    DocumentNodes(NodePair.Count - 1, CurrentNode, NextNode, child_index, false, CurRecur + 1);
+                    NextNode++;
+                    IndexPair.BVHNode = NextBVH8Node;
+                    NodePair.Add(IndexPair);
+                    IsLeafList.Add(new Vector3Int(0,0,0));
+                    if ((node.meta[i] & 0b11111) < 24) {
+                        DocumentNodes(NodePair.Count - 1, CurrentNode, NextNode, -1, true, CurRecur + 1);
+                    } else {
+                        int child_offset = (byte)node.meta[i] & 0b11111;
+                        int child_index = (int)node.base_index_child + child_offset - 24;
+                        DocumentNodes(NodePair.Count - 1, CurrentNode, NextNode, child_index, false, CurRecur + 1);
+                    }
                 }
-            }
-        } else IsLeafList[CurrentNode] = new Vector3Int(1, IsLeafList[CurrentNode].y, IsLeafList[CurrentNode].z);
+            } else IsLeafList[CurrentNode] = new Vector3Int(1, IsLeafList[CurrentNode].y, IsLeafList[CurrentNode].z);
 
-        NodePair[CurrentNode] = CurrentPair;
-    }
+            NodePair[CurrentNode] = CurrentPair;
+        }
         List<BVHNode8DataFixed> SplitNodes;
         List<NodeIndexPairData> NodePair;
         Layer[] ForwardStack;
@@ -1223,7 +1288,6 @@ namespace TrueTrace {
         ComputeBuffer StackBuffer;
         ComputeBuffer ToBVHIndexBuffer;
         ComputeBuffer BVHDataBuffer;
-        ComputeBuffer BVHBuffer;
         ComputeBuffer LightBVHTransformsBuffer;
 
         [System.Serializable]
@@ -1284,21 +1348,17 @@ namespace TrueTrace {
                 ForwardStack = new Layer[NodeCount];
                 LayerStack = new Layer2[MaxRecur];
                 Layer PresetLayer = new Layer();
-                Layer2 TempSlab = new Layer2();
-                TempSlab.Slab = new List<int>();
 
-                for (int i = 0; i < MaxRecur; i++) LayerStack[i] = TempSlab;
+                for (int i = 0; i < MaxRecur; i++) {LayerStack[i] = new Layer2(); LayerStack[i].Slab = new List<int>();}
                 for(int i = 0; i < 8; i++) PresetLayer.Children[i] = 0;
-
-                for (int i = 0; i < NodePair.Count; i++) {
+                for (int i = 0; i < NodeCount; i++) {
                     ForwardStack[i] = PresetLayer;
                     if (IsLeafList[i].x == 1) {
                         int first_triangle = (byte)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] & 0b11111;
                         int NumBits = CommonFunctions.NumberOfSetBits((byte)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] >> 5);
                         ForwardStack[i].Children[NodePair[i].InNodeOffset] = NumBits + ((int)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].base_index_triangle + first_triangle) * 24 + 1;
-                    } else {
-                        ForwardStack[i].Children[NodePair[i].InNodeOffset] = (-i) - 1;
-                    }
+                    } 
+                    else ForwardStack[i].Children[NodePair[i].InNodeOffset] = (-i) - 1;
                     ForwardStack[IsLeafList[i].z].Children[NodePair[i].InNodeOffset] = (-i) - 1;
                     
                     var TempLayer = LayerStack[IsLeafList[i].y];
@@ -1315,7 +1375,6 @@ namespace TrueTrace {
                 StackBuffer.ReleaseSafe();
                 ToBVHIndexBuffer.ReleaseSafe();
                 BVHDataBuffer.ReleaseSafe();
-                BVHBuffer.ReleaseSafe();
                 BoxesBuffer.ReleaseSafe();
                 TLASCWBVHIndexes.ReleaseSafe();
                 WorkingBuffer = new ComputeBuffer[LayerStack.Length];
@@ -1331,12 +1390,11 @@ namespace TrueTrace {
                 ToBVHIndexBuffer.SetData(ToBVHIndex);
                 BVHDataBuffer = new ComputeBuffer(TempBVHArray.Length, 260);
                 BVHDataBuffer.SetData(SplitNodes);
-                BVHBuffer = new ComputeBuffer(TempBVHArray.Length, 80);
-                BVHBuffer.SetData(TempBVHArray);
                 BoxesBuffer = new ComputeBuffer(MeshAABBs.Length, 24);
                 TLASCWBVHIndexes = new ComputeBuffer(MeshAABBs.Length, 4);
                 TLASCWBVHIndexes.SetData(TLASBVH8.cwbvh_indices);
                 CurFrame = 0;
+                TLASTask = null;
             #endif
             LightBVHTransformsBuffer.ReleaseSafe();
             if(LightBVHTransforms.Length != 0) {
@@ -1364,21 +1422,17 @@ namespace TrueTrace {
                 ForwardStack = new Layer[NodeCount];
                 LayerStack = new Layer2[TempRecur];
                 Layer PresetLayer = new Layer();
-                Layer2 TempSlab = new Layer2();
-                TempSlab.Slab = new List<int>();
 
-                for (int i = 0; i < TempRecur; i++) LayerStack[i] = TempSlab;
+                for (int i = 0; i < TempRecur; i++) {LayerStack[i] = new Layer2(); LayerStack[i].Slab = new List<int>();}
                 for(int i = 0; i < 8; i++) PresetLayer.Children[i] = 0;
-
-                for (int i = 0; i < NodePair.Count; i++) {
+                for (int i = 0; i < NodeCount; i++) {
                     ForwardStack[i] = PresetLayer;
                     if (IsLeafList[i].x == 1) {
                         int first_triangle = (byte)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] & 0b11111;
                         int NumBits = CommonFunctions.NumberOfSetBits((byte)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] >> 5);
                         ForwardStack[i].Children[NodePair[i].InNodeOffset] = NumBits + ((int)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].base_index_triangle + first_triangle) * 24 + 1;
-                    } else {
-                        ForwardStack[i].Children[NodePair[i].InNodeOffset] = (-i) - 1;
-                    }
+                    } 
+                    else ForwardStack[i].Children[NodePair[i].InNodeOffset] = (-i) - 1;
                     ForwardStack[IsLeafList[i].z].Children[NodePair[i].InNodeOffset] = (-i) - 1;
                     
                     var TempLayer = LayerStack[IsLeafList[i].y];
@@ -1403,67 +1457,63 @@ namespace TrueTrace {
         {
             CurFrame++;
             #if !HardwareRT
-            if(TLASTask == null) TLASTask = Task.Run(() => CorrectRefit(Boxes));
+            // if(TLASTask == null) TLASTask = Task.Run(() => CorrectRefit(Boxes));
 
-             if(TLASTask.Status == TaskStatus.RanToCompletion && CurFrame % 25 == 24) {
-                MaxRecur = TempRecur; 
-                if(LightMeshCount > 0) {
-                    if(LBVH != null && LBVH.WorkingSet != null) {
-                        int Coun = LBVH.WorkingSet.Length - 1;
-                        for(int i = Coun; i >= 0; i--) {
-                            LBVH.WorkingSet[i].ReleaseSafe();
-                        }
-                    }
-                    LBVH = new LightBVHBuilder(LightAABBs);
-                    LightNodeBuffer.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
-                }
-                if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
-                if (NodeBuffer != null) NodeBuffer.Release();
-                if (StackBuffer != null) StackBuffer.Release();
-                if (ToBVHIndexBuffer != null) ToBVHIndexBuffer.Release();
-                if (BVHDataBuffer != null) BVHDataBuffer.Release();
-                if (BVHBuffer != null) BVHBuffer.Release();
-                if (BoxesBuffer != null) BoxesBuffer.Release();
-                if (TLASCWBVHIndexes != null) TLASCWBVHIndexes.Release();
-                if (LightBVHTransformsBuffer != null) LightBVHTransformsBuffer.Release();
-                WorkingBuffer = new ComputeBuffer[LayerStack.Length];
-                for (int i = 0; i < MaxRecur; i++) {
-                    WorkingBuffer[i] = new ComputeBuffer(LayerStack[i].Slab.Count, 4);
-                    WorkingBuffer[i].SetData(LayerStack[i].Slab);
-                }
-                if(LightBVHTransforms.Length != 0) {
-                    LightBVHTransformsBuffer = new ComputeBuffer(LightBVHTransforms.Length, 68);
-                    LightBVHTransformsBuffer.SetData(LightBVHTransforms);
-                }
-                NodeBuffer = new ComputeBuffer(NodePair.Count, 32);
-                NodeBuffer.SetData(NodePair);
-                StackBuffer = new ComputeBuffer(ForwardStack.Length, 32);
-                StackBuffer.SetData(ForwardStack);
-                ToBVHIndexBuffer = new ComputeBuffer(ToBVHIndex.Length, 4);
-                ToBVHIndexBuffer.SetData(ToBVHIndex);
-                BVHDataBuffer = new ComputeBuffer(TempBVHArray.Length, 260);
-                BVHDataBuffer.SetData(SplitNodes);
-                BVHBuffer = new ComputeBuffer(TempBVHArray.Length, 80);
-                BVHBuffer.SetData(TempBVHArray);
-                BoxesBuffer = new ComputeBuffer(MeshAABBs.Length, 24);
-                TLASCWBVHIndexes = new ComputeBuffer(MeshAABBs.Length, 4);
-                TLASCWBVHIndexes.SetData(TLASBVH8.cwbvh_indices);
-                 for (int i = 0; i < RenderQue.Count; i++) {
-                    ParentObject TargetParent = RenderQue[i];
-                    MeshAABBs[TargetParent.CompactedMeshData] = TargetParent.aabb;
-                }
-                Boxes = MeshAABBs;
-                #if !HardwareRT
-                    BVH8AggregatedBuffer.SetData(TempBVHArray, 0, 0, TempBVHArray.Length);
-                #endif
-                BVHNodeCount = TLASBVH8.BVH8Nodes.Length;
+            //  if(TLASTask.Status == TaskStatus.RanToCompletion && CurFrame % 25 == 24) {
+            //     MaxRecur = TempRecur; 
+            //     if(LightMeshCount > 0) {
+            //         if(LBVH != null && LBVH.WorkingSet != null) {
+            //             int Coun = LBVH.WorkingSet.Length - 1;
+            //             for(int i = Coun; i >= 0; i--) {
+            //                 LBVH.WorkingSet[i].ReleaseSafe();
+            //             }
+            //         }
+            //         LBVH = new LightBVHBuilder(LightAABBs);
+            //         LightNodeBuffer.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
+            //     }
+            //     if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
+            //     if (NodeBuffer != null) NodeBuffer.Release();
+            //     if (StackBuffer != null) StackBuffer.Release();
+            //     if (ToBVHIndexBuffer != null) ToBVHIndexBuffer.Release();
+            //     if (BVHDataBuffer != null) BVHDataBuffer.Release();
+            //     if (BoxesBuffer != null) BoxesBuffer.Release();
+            //     if (TLASCWBVHIndexes != null) TLASCWBVHIndexes.Release();
+            //     if (LightBVHTransformsBuffer != null) LightBVHTransformsBuffer.Release();
+            //     WorkingBuffer = new ComputeBuffer[LayerStack.Length];
+            //     for (int i = 0; i < MaxRecur; i++) {
+            //         WorkingBuffer[i] = new ComputeBuffer(LayerStack[i].Slab.Count, 4);
+            //         WorkingBuffer[i].SetData(LayerStack[i].Slab);
+            //     }
+            //     if(LightBVHTransforms.Length != 0) {
+            //         LightBVHTransformsBuffer = new ComputeBuffer(LightBVHTransforms.Length, 68);
+            //         LightBVHTransformsBuffer.SetData(LightBVHTransforms);
+            //     }
+            //     NodeBuffer = new ComputeBuffer(NodePair.Count, 32);
+            //     NodeBuffer.SetData(NodePair);
+            //     StackBuffer = new ComputeBuffer(ForwardStack.Length, 32);
+            //     StackBuffer.SetData(ForwardStack);
+            //     ToBVHIndexBuffer = new ComputeBuffer(ToBVHIndex.Length, 4);
+            //     ToBVHIndexBuffer.SetData(ToBVHIndex);
+            //     BVHDataBuffer = new ComputeBuffer(TempBVHArray.Length, 260);
+            //     BVHDataBuffer.SetData(SplitNodes);
+            //     BoxesBuffer = new ComputeBuffer(MeshAABBs.Length, 24);
+            //     TLASCWBVHIndexes = new ComputeBuffer(MeshAABBs.Length, 4);
+            //     TLASCWBVHIndexes.SetData(TLASBVH8.cwbvh_indices);
+            //      for (int i = 0; i < RenderQue.Count; i++) {
+            //         ParentObject TargetParent = RenderQue[i];
+            //         MeshAABBs[TargetParent.CompactedMeshData] = TargetParent.aabb;
+            //     }
+            //     Boxes = MeshAABBs;
+            //     #if !HardwareRT
+            //         BVH8AggregatedBuffer.SetData(TempBVHArray, 0, 0, TempBVHArray.Length);
+            //     #endif
+            //     BVHNodeCount = TLASBVH8.BVH8Nodes.Length;
 
-                TLASTask = Task.Run(() => CorrectRefit(Boxes));
-            }
+            //     TLASTask = Task.Run(() => CorrectRefit(Boxes));
+            // }
                 // cmd.BeginSample("TLAS Refit Init");
                 cmd.SetComputeIntParam(Refitter, "NodeCount", NodeBuffer.count);
                 cmd.SetComputeBufferParam(Refitter, NodeInitializerKernel, "AllNodes", NodeBuffer);
-
                 cmd.DispatchCompute(Refitter, NodeInitializerKernel, (int)Mathf.Ceil(NodeBuffer.count / (float)256), 1, 1);
                 // cmd.EndSample("TLAS Refit Init");
 
@@ -1473,13 +1523,12 @@ namespace TrueTrace {
                 cmd.SetComputeBufferParam(Refitter, RefitLayer, "Boxs", BoxesBuffer);
                 cmd.SetComputeBufferParam(Refitter, RefitLayer, "ReverseStack", StackBuffer);
                 cmd.SetComputeBufferParam(Refitter, RefitLayer, "AllNodes", NodeBuffer);
-                cmd.SetComputeBufferParam(Refitter, NodeInitializerKernel, "AllNodes", NodeBuffer);
                 for (int i = MaxRecur - 1; i >= 0; i--)
                 {
                     var NodeCount2 = WorkingBuffer[i].count;
                     cmd.SetComputeIntParam(Refitter, "NodeCount", NodeCount2);
-                    cmd.SetComputeBufferParam(Refitter, RefitLayer, "NodesToWork", WorkingBuffer[i]);
-                    cmd.DispatchCompute(Refitter, RefitLayer, (int)Mathf.Ceil(WorkingBuffer[i].count / (float)256), 1, 1);
+                    cmd.SetComputeBufferParam(Refitter, RefitLayer, "WorkingBuffer", WorkingBuffer[i]);
+                    cmd.DispatchCompute(Refitter, RefitLayer, (int)Mathf.Ceil(NodeCount2 / (float)256), 1, 1);
                 }
                 // cmd.EndSample("TLAS Refit Refit");
 
@@ -1500,8 +1549,6 @@ namespace TrueTrace {
                 } finally {}
                 cmd.DispatchCompute(Refitter, NodeCompress, (int)Mathf.Ceil(NodeBuffer.count / (float)256), 1, 1);
 
-
-
                 // cmd.EndSample("TLAS Refit Node Compress");
             #else
 
@@ -1510,7 +1557,7 @@ namespace TrueTrace {
                     LBVH = new LightBVHBuilder(LightAABBs);
                     LightNodeBuffer.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
                 }
-                if (LightBVHTransformsBuffer != null) LightBVHTransformsBuffer.Release();
+                LightBVHTransformsBuffer.ReleaseSafe();
                 if(LightBVHTransforms.Length != 0) {
                     LightBVHTransformsBuffer = new ComputeBuffer(LightBVHTransforms.Length, 68);
                     LightBVHTransformsBuffer.SetData(LightBVHTransforms);
@@ -1526,7 +1573,6 @@ namespace TrueTrace {
                     cmd.SetComputeBufferParam(LightRefitter, LightBVHKernel, "Transfers", LightBVHTransformsBuffer);
                     cmd.SetComputeBufferParam(LightRefitter, LightBVHKernel, "LightNodes", LightNodeBuffer);
                     cmd.SetComputeBufferParam(LightRefitter, LightBVHKernel, "LightBounds", LightBoxesBuffer);
-                    cmd.SetComputeFloatParam(LightRefitter, "FloatMax", float.MaxValue);
                     int ObjectOffset = 0;
                     for(int i = LBVH.WorkingSet.Length - 1; i >= 0; i--) {
                         var ObjOffVar = ObjectOffset;
@@ -1539,8 +1585,6 @@ namespace TrueTrace {
                         ObjectOffset += SetCount;
                     }
                     cmd.EndSample("LightRefitter");
-
-
                 }
         }
 

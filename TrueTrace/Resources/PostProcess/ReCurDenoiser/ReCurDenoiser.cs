@@ -107,8 +107,7 @@ namespace TrueTrace {
 
 
         Vector3 PrevCamPos = Vector3.zero;
-        public void Do(ref RenderTexture Output,
-                        ref RenderTexture Albedo, 
+        public void Do(ref RenderTexture Output, 
                         ref ComputeBuffer _ColorBuffer,  
                             RenderTexture ScreenSpaceInfo, 
                             RenderTexture TEX_PT_VIEW_DEPTH_B, 
@@ -153,10 +152,8 @@ namespace TrueTrace {
             shader.SetFloat("CameraDist", Vector3.Distance(camera.transform.position, PrevCamPos));
             shader.SetFloat("IndirectBoost", IndirectBoost);
             shader.SetFloat("gBlurRadius", BlurRadius * ScaleMultiplier);
-            cmd.SetComputeTextureParam(shader, TemporalSlowKernel, "Albedo", Albedo);
-            cmd.SetComputeTextureParam(shader, CopyColorKernel, "Albedo", Albedo);
+            shader.SetBuffer(TemporalSlowKernel, "PerPixelRadiance", _ColorBuffer);
             cmd.SetComputeTextureParam(shader, CopyColorKernel, "WorldPosData", WorldPosData);
-            cmd.SetComputeTextureParam(shader, MainBlurKernel, "Albedo", Albedo);
             cmd.SetComputeTextureParam(shader, MainBlurKernel, "SSAORead", SSAOTexB);
             shader.SetInt("CurFrame", CurFrame);
             shader.SetInt("PartialRenderingFactor", PartialRenderingFactor);

@@ -47,16 +47,20 @@ namespace CommonVars
         public List<Vector3> Normals;
         public List<Vector4> Tangents;
         public List<Vector2> UVs;
-        public List<Vector2> LightmapUVs;
+        #if TTLightMapping
+            public List<Vector2> LightmapUVs;
+        #endif
         public List<int> MatDat;
 
         public void SetUvZero(int Count) {
             for (int i = 0; i < Count; i++) UVs.Add(new Vector2(0.0f, 0.0f));
         }
-        public void AddLightmapUVs(Vector2[] LightUVs, Vector4 ScaleOffset) {
-            int Count = LightUVs.Length;
-            for (int i = 0; i < Count; i++) LightmapUVs.Add(new Vector2(LightUVs[i].x * ScaleOffset.x + ScaleOffset.z, LightUVs[i].y * ScaleOffset.y + ScaleOffset.w));
-        }
+        #if TTLightMapping
+            public void AddLightmapUVs(Vector2[] LightUVs, Vector4 ScaleOffset) {
+                int Count = LightUVs.Length;
+                for (int i = 0; i < Count; i++) LightmapUVs.Add(new Vector2(LightUVs[i].x * ScaleOffset.x + ScaleOffset.z, LightUVs[i].y * ScaleOffset.y + ScaleOffset.w));
+            }
+        #endif
         public void SetTansZero(int Count) {
             for (int i = 0; i < Count; i++) Tangents.Add(new Vector4(0.0f, 0.0f, 0.0f, 0.0f));
         }
@@ -64,7 +68,9 @@ namespace CommonVars
             this.Tangents = new List<Vector4>(StartingSize);
             this.MatDat = new List<int>(StartingSize / 3);
             this.UVs = new List<Vector2>(StartingSize);
-            this.LightmapUVs = new List<Vector2>(StartingSize);
+            #if TTLightMapping
+                this.LightmapUVs = new List<Vector2>(StartingSize);
+            #endif
             this.Verticies = new List<Vector3>(StartingSize);
             this.Normals = new List<Vector3>(StartingSize);
             this.Indices = new List<int>(StartingSize);
@@ -74,7 +80,9 @@ namespace CommonVars
                 CommonFunctions.DeepClean(ref Tangents);
                 CommonFunctions.DeepClean(ref MatDat);
                 CommonFunctions.DeepClean(ref UVs);
-                CommonFunctions.DeepClean(ref LightmapUVs);
+                #if TTLightMapping
+                    CommonFunctions.DeepClean(ref LightmapUVs);
+                #endif
                 CommonFunctions.DeepClean(ref Verticies);
                 CommonFunctions.DeepClean(ref Normals);
                 CommonFunctions.DeepClean(ref Indices);
@@ -85,11 +93,14 @@ namespace CommonVars
     [System.Serializable]
     public struct MaterialData
     {
-        public Vector4 AlbedoTex;
-        public Vector4 NormalTex;
-        public Vector4 EmissiveTex;
-        public Vector4 MetallicTex;
-        public Vector4 RoughnessTex;
+        public Vector2Int AlbedoTex;
+        public Vector2Int NormalTex;
+        public Vector2Int EmissiveTex;
+        public Vector2Int MetallicTex;
+        public Vector2Int RoughnessTex;
+        public Vector2Int AlphaTex;
+        public Vector2Int MatCapMask;
+        public Vector2Int MatCapTex;
         public Vector3 BaseColor;
         public float emmissive;
         public Vector3 EmissionColor;
@@ -487,20 +498,21 @@ namespace CommonVars
         public int ReadIndex;
         public List<int> TexObjList = new List<int>();
     }   
+    public enum TexturePurpose {Albedo, Alpha, Normal, Emission, Metallic, Roughness, MatCapTex, MatCapMask};
 
+    [System.Serializable]
+    public class TexturePairs {
+        public int Purpose;
+        public int ReadIndex;//negative is the amount of components the destination contains plus 1, for use later with another idea I had
+        public string TextureName;
+    }
 
     [System.Serializable]
     public class MaterialShader
     {
         public string Name;
-        public string BaseColorTex;
-        public string NormalTex;
-        public string EmissionTex;
-        public string MetallicTex;
-        public int MetallicTexChannel;
+        public List<TexturePairs> AvailableTextures;
         public string MetallicRange;
-        public string RoughnessTex;
-        public int RoughnessTexChannel;
         public string RoughnessRange;
         public bool IsGlass;
         public bool IsCutout;
@@ -615,10 +627,10 @@ namespace CommonVars
             A = null;
         }
 
-        public static void CreateDynamicBuffer(ref ComputeBuffer TargetBuffer, int Count, int Stride, ComputeBufferType ComputeType = ComputeBufferType.Structured)
+        public static void CreateDynamicBuffer(ref ComputeBuffer TargetBuffer, int Count, int Stride, ComputeBufferType ComputeType = ComputeBufferType.Structured, ComputeBufferMode ComputeMode = ComputeBufferMode.Immutable)
         {
             if (TargetBuffer != null) TargetBuffer?.Dispose();
-            TargetBuffer = new ComputeBuffer(Count, Stride, ComputeType);
+            TargetBuffer = new ComputeBuffer(Count, Stride, ComputeType, ComputeMode);
         }
         public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, List<T> data, int stride)
             where T : struct
@@ -796,29 +808,29 @@ namespace CommonVars
             if (Buff != null) {Buff.Release(); Buff = null;}
         }
 
-static Vector2 msign(Vector2 v)
-{
-    return new Vector2((v.x >= 0.0f) ? 1.0f : -1.0f, (v.y >= 0.0f) ? 1.0f : -1.0f);
-}
+        static Vector2 msign(Vector2 v)
+        {
+            return new Vector2((v.x >= 0.0f) ? 1.0f : -1.0f, (v.y >= 0.0f) ? 1.0f : -1.0f);
+        }
 
-public static uint PackOctahedral(Vector3 nor)
-{
-    const float halfMaxUInt16 = 32767.5f;
+        public static uint PackOctahedral(Vector3 nor)
+        {
+            const float halfMaxUInt16 = 32767.5f;
 
-    Vector2 sign = new Vector2((nor.x >= 0.0f) ? 1.0f : -1.0f, (nor.y >= 0.0f) ? 1.0f : -1.0f);
-    float absX = nor.x * sign.x;
-    float absY = nor.y * sign.y;
-    float Tot = absX + absY + Mathf.Abs(nor.z);
+            Vector2 sign = new Vector2((nor.x >= 0.0f) ? 1.0f : -1.0f, (nor.y >= 0.0f) ? 1.0f : -1.0f);
+            float absX = nor.x * sign.x;
+            float absY = nor.y * sign.y;
+            float Tot = absX + absY + Mathf.Abs(nor.z);
 
-    Vector2 temp = new Vector2(absX / Tot, absY / Tot);
-    if (nor.z < 0.0f)
-    {
-        temp = new Vector2(1.0f - temp.y, 1.0f - temp.x);
-    }
+            Vector2 temp = new Vector2(absX / Tot, absY / Tot);
+            if (nor.z < 0.0f)
+            {
+                temp = new Vector2(1.0f - temp.y, 1.0f - temp.x);
+            }
 
-    // Vector2 d = new Vector2(Mathf.Round(halfMaxUInt16 + temp.x * halfMaxUInt16), Mathf.Round(halfMaxUInt16 + temp.y * halfMaxUInt16));
-    return (uint)(halfMaxUInt16 + temp.x * halfMaxUInt16 * sign.x) | ((uint)(halfMaxUInt16 + temp.y * halfMaxUInt16 * sign.y) << 16);
-}
+            // Vector2 d = new Vector2(Mathf.Round(halfMaxUInt16 + temp.x * halfMaxUInt16), Mathf.Round(halfMaxUInt16 + temp.y * halfMaxUInt16));
+            return (uint)(halfMaxUInt16 + temp.x * halfMaxUInt16 * sign.x) | ((uint)(halfMaxUInt16 + temp.y * halfMaxUInt16 * sign.y) << 16);
+        }
 
         public static readonly RenderTextureFormat RTFull4 = RenderTextureFormat.ARGBFloat;
         public static readonly RenderTextureFormat RTInt1 = RenderTextureFormat.RInt;
@@ -883,14 +895,16 @@ public static uint PackOctahedral(Vector3 nor)
         {
             int stride = System.Runtime.InteropServices.Marshal.SizeOf<T>();
             if (buffer != null) {
-                if (data.Count == 0 || buffer.count != data.Count || buffer.stride != stride) {
+                if (data == null || data.Count == 0 || buffer.count != data.Count || buffer.stride != stride) {
                     buffer.Release();
                     buffer = null;
                 }
             }
-            if (data.Count != 0) {
+            if (data != null && data.Count != 0) {
                 if (buffer == null) buffer = new ComputeBuffer(data.Count, stride);
                 buffer.SetData(data);
+            } else {
+                if (buffer == null) buffer = new ComputeBuffer(1, stride);
             }
         }
         public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, T[] data)
@@ -898,14 +912,17 @@ public static uint PackOctahedral(Vector3 nor)
         {
             int stride = System.Runtime.InteropServices.Marshal.SizeOf<T>();
             if (buffer != null) {
-                if (data.Length == 0 || buffer.count != data.Length || buffer.stride != stride) {
-                    buffer.Release();
+                if (data == null || data.Length == 0 || buffer.count != data.Length || buffer.stride != stride) {
+                    buffer.ReleaseSafe();
                     buffer = null;
                 }
             }
-            if (data.Length != 0) {
+            if (data != null && data.Length != 0) {
                 if (buffer == null) buffer = new ComputeBuffer(data.Length, stride);
                 buffer.SetData(data);
+            } else {
+                if (buffer == null) buffer = new ComputeBuffer(1, stride);
+
             }
         }
 

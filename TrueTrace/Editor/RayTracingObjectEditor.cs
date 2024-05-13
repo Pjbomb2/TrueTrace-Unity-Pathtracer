@@ -31,6 +31,7 @@ namespace TrueTrace {
                 var t =  t1[0] as RayTracingObject;
                 TheseNames = t.Names;
                 Selected = EditorGUILayout.Popup("Selected Material:", Selected, TheseNames);
+
                 EditorGUILayout.Space();
                 EditorGUI.BeginChangeCheck();
                 t.MaterialOptions[Selected] = (RayTracingObject.Options)EditorGUILayout.EnumPopup("MaterialType: ", t.MaterialOptions[Selected]);
@@ -94,14 +95,61 @@ namespace TrueTrace {
                 serializedObject.FindProperty("Rotation").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Texture Rotation: ", t.Rotation[Selected], 0, 1);
                 serializedObject.FindProperty("Flags").GetArrayElementAtIndex(Selected).intValue = Flag;
 
-
+                bool EEE = false;
                 if(EditorGUI.EndChangeCheck()) {
+                    EEE = true;
+
                     for(int i = 0; i < t1.Length; i++) {
                         (t1[i] as RayTracingObject).CallMaterialEdited();
                     }
                 }
                 serializedObject.FindProperty("FollowMaterial").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Link Mat To Unity Material: ", t.FollowMaterial[Selected]);
                 serializedObject.ApplyModifiedProperties();
+
+                if(EEE) {
+                                        string Name = TheseNames[Selected];
+                    for(int i = 0; i < TheseNames.Length; i++) {
+                        if(Selected == i) continue;
+                        if(TheseNames[i].Equals(Name)) {
+                            t.MaterialOptions[i] = t.MaterialOptions[Selected];
+                            t.BaseColor[i] = t.BaseColor[Selected];
+                            t.TransmissionColor[i] = t.TransmissionColor[Selected];
+                            t.emmission[i] = t.emmission[Selected];
+                            t.EmissionColor[i] = t.EmissionColor[Selected];
+                            t.Roughness[i] = t.Roughness[Selected];
+                            t.RoughnessRemap[i] = t.RoughnessRemap[Selected];
+                            t.MetallicRemap[i] = t.MetallicRemap[Selected];
+                            t.IOR[i] = t.IOR[Selected];
+                            t.Metallic[i] = t.Metallic[Selected];
+                            t.SpecularTint[i] = t.SpecularTint[Selected];
+                            t.Sheen[i] = t.Sheen[Selected];
+                            t.SheenTint[i] = t.SheenTint[Selected];
+                            t.ClearCoat[i] = t.ClearCoat[Selected];
+                            t.ClearCoatGloss[i] = t.ClearCoatGloss[Selected];
+                            t.Anisotropic[i] = t.Anisotropic[Selected];
+                            t.Flatness[i] = t.Flatness[Selected];
+                            t.DiffTrans[i] = t.DiffTrans[Selected];
+                            t.SpecTrans[i] = t.SpecTrans[Selected];
+                            t.Hue[i] = t.Hue[Selected];
+                            t.Brightness[i] = t.Brightness[Selected];
+                            t.Saturation[i] = t.Saturation[Selected];
+                            t.Contrast[i] = t.Contrast[Selected];
+                            t.FollowMaterial[i] = t.FollowMaterial[Selected];
+                            t.ScatterDist[i] = t.ScatterDist[Selected];
+                            t.Specular[i] = t.Specular[Selected];
+                            t.AlphaCutoff[i] = t.AlphaCutoff[Selected];
+                            t.NormalStrength[i] = t.NormalStrength[Selected];
+                            t.BlendColor[i] = t.BlendColor[Selected];
+                            t.BlendFactor[i] = t.BlendFactor[Selected];
+                            t.MainTexScaleOffset[i] = t.MainTexScaleOffset[Selected];
+                            t.SecondaryTextureScale[i] = t.SecondaryTextureScale[Selected];
+                            t.Rotation[i] = t.Rotation[Selected];
+                            t.Flags[i] = Flag;
+                            // Debug.Log(i);
+                            t.CallMaterialEdited(true);
+                        }
+                    }
+                }
 
                 if(GUILayout.Button("Texture Scroll Changed")) {
                     t.CallTilingScrolled();
@@ -131,10 +179,15 @@ namespace TrueTrace {
                                 Obj.Flatness[i] = t.Flatness[Selected];
                                 Obj.DiffTrans[i] = t.DiffTrans[Selected];
                                 Obj.SpecTrans[i] = t.SpecTrans[Selected];
+                                Obj.Hue[i] = t.Hue[Selected];
+                                Obj.Brightness[i] = t.Brightness[Selected];
+                                Obj.Saturation[i] = t.Saturation[Selected];
+                                Obj.Contrast[i] = t.Contrast[Selected];
                                 Obj.FollowMaterial[i] = t.FollowMaterial[Selected];
                                 Obj.ScatterDist[i] = t.ScatterDist[Selected];
                                 Obj.Specular[i] = t.Specular[Selected];
                                 Obj.AlphaCutoff[i] = t.AlphaCutoff[Selected];
+                                Obj.NormalStrength[i] = t.NormalStrength[Selected];
                                 Obj.BlendColor[i] = t.BlendColor[Selected];
                                 Obj.BlendFactor[i] = t.BlendFactor[Selected];
                                 Obj.MainTexScaleOffset[i] = t.MainTexScaleOffset[Selected];

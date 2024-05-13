@@ -50,8 +50,9 @@ struct ColData {
     float3 Direct;
     float3 Indirect;
     uint Fog;
-    int IsSpecular;
-    float Metallic;
+    uint Flags;
+    uint MetRoughIsSpec;
+    float4 Data;
 };
 StructuredBuffer<ColData> PerPixelRadiance;
 
@@ -263,14 +264,14 @@ float FarPlane;
 
 int CurFrame;
 
-Texture2D<half4> TEX_PT_BASE_COLOR_A;
 SamplerState sampler_trilinear_clamp;
 
 
 Texture2D<float4> ScreenSpaceInfo;
 Texture2D<float4> ScreenSpaceInfoPrev;
 
-Texture2D<uint4> WorldPosData;
+Texture2D<uint4> PrimaryTriData;
+Texture2D<uint4> SecondaryTriData;
 
 inline SH irradiance_to_SH(float3 color, float3 dir)
 {
@@ -321,6 +322,82 @@ Ray CreateCameraRay(float2 uv) {
     return CreateRay(origin, direction);
 }
 
+
+uint ToColorSpecPacked(float3 A) {
+    return ((uint)(A.x * 16383.0f)) | ((uint)(A.y * 16383.0f) << 14) | ((uint)A.z << 28);
+}
+float3 FromColorSpecPacked(uint A) {
+    return float3(
+        (A & 0x3FFF) / 16383.0f,
+        ((A >> 14) & 0x3FFF) / 16383.0f,
+        (A >> 28)
+        );
+}
+
+
+struct CudaTriangle {
+    float3 pos0;
+    float3 posedge1;
+    float3 posedge2;
+
+    uint3 norms;
+
+    uint3 tans;
+
+    float2 tex0;
+    float2 texedge1;
+    float2 texedge2;
+
+    uint MatDat;
+};
+
+StructuredBuffer<CudaTriangle> AggTris;
+
+struct MyMeshDataCompacted {
+    float4x4 Transform;
+    int TriOffset;
+    int NodeOffset;
+    int MaterialOffset;
+    int mesh_data_bvh_offsets;//could I convert this an int4?
+    int LightTriCount;
+    int LightNodeCount;
+};
+
+StructuredBuffer<MyMeshDataCompacted> _MeshData;
+
+
+
+float3 CalcPos(uint4 TriData) {
+    if(TriData.w == 1) return asfloat(TriData.xyz);
+    MyMeshDataCompacted Mesh = _MeshData[TriData.x];
+    TriData.y += Mesh.TriOffset;
+    float2 UV;
+    UV.x = asfloat(TriData.z);
+    UV.y = asfloat(TriData.w);
+    float4x4 Inverse = inverse(Mesh.Transform);
+    return mul(Inverse, float4(AggTris[TriData.y].pos0 + UV.x * AggTris[TriData.y].posedge1 + UV.y * AggTris[TriData.y].posedge2,1)).xyz;
+}
+
+
+float3 CalcPos2(uint4 TriData) {
+    if(TriData.w == 1) return asfloat(TriData.xyz);
+    MyMeshDataCompacted Mesh = _MeshData[TriData.x];
+    TriData.y += Mesh.TriOffset;
+    float2 UV;
+    UV.x = (TriData.z & 0xffff) / 65535.0f;
+    UV.y = (TriData.z >> 16) / 65535.0f;
+    float4x4 Inverse = inverse(Mesh.Transform);
+    return mul(Inverse, float4(AggTris[TriData.y].pos0 + UV.x * AggTris[TriData.y].posedge1 + UV.y * AggTris[TriData.y].posedge2,1)).xyz;
+}
+
+int CalcMat(uint4 TriData) {
+    if(TriData.w == 1) return -1;
+    MyMeshDataCompacted Mesh = _MeshData[TriData.x];
+    TriData.y += Mesh.TriOffset;
+    return AggTris[TriData.y].MatDat + Mesh.MaterialOffset;
+}
+
+
 float4x4 viewprojection;
 float4x4 prevviewprojection;
 int PartialRenderingFactor;
@@ -330,13 +407,11 @@ void CopyData(int3 id : SV_DispatchThreadID)
     if(id.x > screen_width || id.y > screen_height) return;
     const int pixel_index = id.y * screen_width + id.x;
     ColData Pixel = PerPixelRadiance[pixel_index];
-    float4 TexInverted = TEX_PT_BASE_COLOR_A[id.xy];
-    const uint4 WorldData = WorldPosData[id.xy];
+    float4 TexInverted = Pixel.Data;
     float3 TexBaseColor = clamp(TexInverted.xyz,0,12.0f);
     TexBaseColor = (TexBaseColor > 0.005f ? rcp(TexBaseColor) : 0);
-    const uint Input = asuint(Pixel.Metallic);
-    MetallicAWrite[id.xy] = float2((Input >> 16) / 65535.0f, (Input & 0xFFFF) / 65535.0f);
-
+    float2 MetRough = FromColorSpecPacked(Pixel.MetRoughIsSpec);
+    MetallicAWrite[id.xy] = MetRough;
     #ifdef HDRP
         float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, int3(id.xy,0) / float3(screen_width, screen_height, 1), 0).xy;
     #else
@@ -345,7 +420,7 @@ void CopyData(int3 id : SV_DispatchThreadID)
     
     int2 pos_prev = floor((((float2(id.xy)+0.5f) * float2(rcp(screen_width), rcp(screen_height)) + motion) * float2(screen_width, screen_height)));
     if(any(pos_prev > float2(screen_width, screen_height) || pos_prev < 0)) pos_prev.x = -1000;
-    if(((asuint(ScreenSpaceInfo[id.xy].w) << 2) >> 2) != ((asuint(ScreenSpaceInfoPrev[pos_prev].w) << 2) >> 2)) {
+    if(((asuint(ScreenSpaceInfo[id.xy].w) << 3) >> 3) != ((asuint(ScreenSpaceInfoPrev[pos_prev].w) << 3) >> 3)) {
         pos_prev.x = -1000;
     }
     if(TexInverted.w == 0) {
@@ -354,35 +429,36 @@ void CopyData(int3 id : SV_DispatchThreadID)
         Pixel.Fog = 0;
     }
 
-    bool ReflectedRefracted = max(Pixel.IsSpecular - 2,0);
-    float3 WorldAlbedo = clamp(unpackRGBE(WorldData.w),0,12.0f);
+    bool ReflectedRefracted = max(FromColorSpecPacked(Pixel.MetRoughIsSpec).z - 2,0);
+    float3 WorldAlbedo = clamp(unpackRGBE(Pixel.Flags),0,12.0f);
     TexInverted.xyz *= ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 1.0f);
     float Exposure = 1;
     if(UseExposure) Exposure = ExposureBuffer[0];
 
 
-    uint2 AlbedoData = WorldData.ww;
+    uint2 AlbedoData = Pixel.Flags;
     SH IndirectSH = init_SH();
     float4 HFCol = 0;
     uint SpecCol = 0;
     float3 Direct = Pixel.Direct + pow(unpackRGBE(Pixel.Fog),2.2f) * TexBaseColor;
 
-    [branch]if (Pixel.IsSpecular == 0 || (Input & 0xFFFF) / 65535.0f >= 0.4f) {
+    [branch]if (FromColorSpecPacked(Pixel.MetRoughIsSpec).z != 0 || MetRough.y >= 0.6f) {
         if(pos_prev.x != -1000) AlbedoData.y = AlbedoColorB[pos_prev].y;
-        IndirectSH = irradiance_to_SH(clamp(PartialRenderingFactor * Exposure * IndirectBoost * clamp(Pixel.Indirect * TexInverted.xyz / 1024.0f,0,120000),0,120000.0f), clamp(asfloat(WorldData.xyz),-1,1));
+        IndirectSH = irradiance_to_SH(clamp(PartialRenderingFactor * Exposure * IndirectBoost * clamp(Pixel.Indirect * TexInverted.xyz / 1024.0f,0,120000),0,120000.0f), clamp(normalize(CalcPos2(SecondaryTriData[id.xy]) - CalcPos(PrimaryTriData[id.xy])),-1,1));
         HFCol = clamp(float4(PartialRenderingFactor * Exposure * (Direct) * TexInverted.xyz,1),0,120000.0f);
     } else {
         if(pos_prev.x != -1000) AlbedoData.x = AlbedoColorB[pos_prev].x;
         SpecCol = packRGBE(PartialRenderingFactor * max(Exposure * (Direct + IndirectBoost * Pixel.Indirect) * TexInverted.xyz,0));
     }
-    ReflectedRefractedTexWrite[id.xy] = float4(ReflectedRefracted, ((asuint(ScreenSpaceInfo[id.xy].w) << 2) >> 2), length((motion.xy) * float2(screen_width, screen_height)), 0);
+    ReflectedRefractedTexWrite[id.xy] = float4(ReflectedRefracted, ((asuint(ScreenSpaceInfo[id.xy].w) << 3) >> 3), length((motion.xy) * float2(screen_width, screen_height)), 0);
 
     AlbedoColorA[id.xy] = AlbedoData;
     STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, IndirectSH);
     TEX_PT_COLOR_HFWrite[id.xy] = HFCol;
     TEX_PT_COLOR_SPECWrite[id.xy] = SpecCol;
     if(!ReflectedRefracted) {
-        TEX_PT_NORMALS_AWrite[id.xy] = asuint(Pixel.throughput.xy);//GeoNorm, Norm
+        if((asuint(ScreenSpaceInfo[id.xy].w) >> 31) & 0x1) TEX_PT_NORMALS_AWrite[id.xy] = uint2(octahedral_32(-i_octahedral_32(asuint(Pixel.throughput.x))), octahedral_32(-i_octahedral_32(asuint(Pixel.throughput.y))));
+        else TEX_PT_NORMALS_AWrite[id.xy] = asuint(Pixel.throughput.xy);//GeoNorm, Norm
     } else {
         TEX_PT_NORMALS_AWrite[id.xy] = TEX_PT_NORMALS_B[pos_prev];
     }
@@ -662,7 +738,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
     float4 prevprojectedrefl = mul(prevviewprojection, float4(ray.origin + ray.direction * depth_curr, 1));
     float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
 
-
+    int MatDat = ReflectedRefractedTex[gl_GlobalInvocationID.xy].w;
     float motion_length = max(length((motion.xy) * float2(screen_width, screen_height)), ReflectedRefractedTexPrev[pos_prev].z);
 
     float CenterFDepth = TEX_PT_VIEW_DEPTH_A[ipos].y;
@@ -709,7 +785,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
             float dist_depth = (abs(depth_curr - depth_prev) - CameraDist) / depth_curr * max(CenterFDepth,0.25f);
             float dot_normals = dot(normal_curr, normal_prev);
             float dot_geo_normals = dot(geo_normal_curr, geo_normal_prev);
-
+            if(ReflectedRefractedTexPrev[p].w == MatDat)
             [branch]if(!(ReflectedRefracted.x == 1) && !(ReflectedRefractedPrev.x == 1)) {
                 if (ReflectedRefracted.y == ReflectedRefractedPrev.y && dist_depth < 0.1 && dot_geo_normals > 0.8)
                 {
@@ -824,9 +900,9 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 
         // Compute the blending weights based on history length, so that the filter
         // converges faster. I.e. the first frame has weight of 1.0, the second frame 1/2, third 1/3 and so on.
-        float alpha_color_lf = max(0.01f, 1.0f / max(hist_len_lf,1));
-        float alpha_color_hf = max(0.02f, 1.0f / max(hist_len_hf,1));
-        float alpha_moments_hf = max(0.01f, 1.0f / max(hist_len_hf,1));
+        float alpha_color_lf = max(0.01f, 1.0f / hist_len_lf);
+        float alpha_color_hf = max(0.02f, 1.0f / hist_len_hf);
+        float alpha_moments_hf = max(0.01f, 1.0f / hist_len_hf);
 
         // Adjust the blending factors, taking the antilag factors into account again
         alpha_color_lf = lerp(alpha_color_lf, 1.0, antilag_alpha_lf);
@@ -1145,23 +1221,12 @@ void Atrous_LF(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
     if (any((ipos * GRAD_DWN >= int2(screen_width, screen_height))))
         return;
 
-    SH filtered_lf = init_SH();
+    SH filtered_lf;
 
-    [branch] switch (iteration) {
-    case 0: deflicker_image(TEX_ASVGF_ATROUS_PING_LF_SH, TEX_ASVGF_ATROUS_PING_LF_COCG, filtered_lf, ipos); break;
-    case 1: filter_image(TEX_ASVGF_ATROUS_PONG_LF_SH, TEX_ASVGF_ATROUS_PONG_LF_COCG, filtered_lf, ipos); break;
-    case 2: filter_image(TEX_ASVGF_ATROUS_PING_LF_SH, TEX_ASVGF_ATROUS_PING_LF_COCG, filtered_lf, ipos); break;
-    case 3: filter_image(TEX_ASVGF_ATROUS_PONG_LF_SH, TEX_ASVGF_ATROUS_PONG_LF_COCG, filtered_lf, ipos); break;
-    case 4: filter_image(TEX_ASVGF_ATROUS_PING_LF_SH, TEX_ASVGF_ATROUS_PING_LF_COCG, filtered_lf, ipos); break;
-    }
+    if(iteration == 0) deflicker_image(TEX_ASVGF_ATROUS_PING_LF_SH, TEX_ASVGF_ATROUS_PING_LF_COCG, filtered_lf, ipos);
+    else filter_image(TEX_ASVGF_ATROUS_PING_LF_SH, TEX_ASVGF_ATROUS_PING_LF_COCG, filtered_lf, ipos);
 
-    [branch] switch (iteration) {
-    case 0: STORE_SH(IMG_ASVGF_ATROUS_PONG_LF_SH, IMG_ASVGF_ATROUS_PONG_LF_COCG, ipos, filtered_lf); break;
-    case 1: STORE_SH(IMG_ASVGF_ATROUS_PING_LF_SH, IMG_ASVGF_ATROUS_PING_LF_COCG, ipos, filtered_lf); break;
-    case 2: STORE_SH(IMG_ASVGF_ATROUS_PONG_LF_SH, IMG_ASVGF_ATROUS_PONG_LF_COCG, ipos, filtered_lf); break;
-    case 3: STORE_SH(IMG_ASVGF_ATROUS_PING_LF_SH, IMG_ASVGF_ATROUS_PING_LF_COCG, ipos, filtered_lf); break;
-    case 4: STORE_SH(IMG_ASVGF_ATROUS_PONG_LF_SH, IMG_ASVGF_ATROUS_PONG_LF_COCG, ipos, filtered_lf); break;
-    }
+    STORE_SH(IMG_ASVGF_ATROUS_PONG_LF_SH, IMG_ASVGF_ATROUS_PONG_LF_COCG, ipos, filtered_lf);
 }
 
 
@@ -1209,7 +1274,7 @@ inline void filter_image(
     float sigma_l_hf = 0;
 
     float hist_len_hf = TEX_ASVGF_HIST_MOMENTS_HF_A[ipos].b;
-    float3 normal_center = normalize(lerp(i_octahedral_32(TEX_PT_NORMALS_A[ipos].x), i_octahedral_32(TEX_PT_NORMALS_A[ipos].y), clamp(hist_len_hf / 8.0f, 0, 1)));
+    float3 normal_center = normalize(i_octahedral_32(TEX_PT_NORMALS_A[ipos].y));
     if (hist_len_hf > 1)
     {
         // Compute luminance variance from the statistical moments: Var(X) = E[X^2] - E[X]^2
@@ -1263,7 +1328,7 @@ inline void filter_image(
     // Add some jitter to sample positions to hide the a-trous filter aliasing patterns
     // int2 jitter = int2((random(spec_iteration, gl_GlobalInvocationID.xy) - 0.5) * float(step_size));
 
-    float spec_filter_width_scale = clamp(roughness_center * 30 - spec_iteration * sqrt(sqrt(step_size)), 0.1f, 1);
+    float spec_filter_width_scale = clamp(roughness_center * 30 - spec_iteration, 0.1f, 1);
 
 
     // Compute the weighted average of color and moments from a sparse 3x3 pattern around the target pixel
@@ -1287,7 +1352,7 @@ inline void filter_image(
                 && all((p < int2(screen_width, screen_height))));
             if(w == 0) continue;
 
-            float3 normal = normalize(lerp(i_octahedral_32(TEX_PT_NORMALS_A[p].x), i_octahedral_32(TEX_PT_NORMALS_A[p].y), clamp(hist_len_hf / 8.0f, 0, 1)));
+            float3 normal = normalize(i_octahedral_32(TEX_PT_NORMALS_A[p].y));
 
             float depth = TEX_PT_VIEW_DEPTH_A[p].x;
 
@@ -1421,14 +1486,7 @@ float3 composite_color(float4 surf_base_color,
 }
 
 Texture2D<half2> TEX_ASVGF_ATROUS_PING_MOMENTS;
-Texture2D<float2> TEX_ASVGF_ATROUS_PONG_SPEC;
 Texture2D<float2> TEX_ASVGF_ATROUS_PING_SPEC;
-Texture2D<half2> TEX_ASVGF_ATROUS_PONG_MOMENTS;
-Texture2D<half4> TEX_ASVGF_ATROUS_PONG_HF;
-RWTexture2D<half4> IMG_ASVGF_HIST_COLOR_HF;
-RWTexture2D<float2> IMG_ASVGF_ATROUS_PONG_SPEC;
-RWTexture2D<half2> IMG_ASVGF_ATROUS_PONG_MOMENTS;
-RWTexture2D<half4> IMG_ASVGF_ATROUS_PONG_HF;
 RWTexture2D<float4> IMG_ASVGF_COLOR;
 
 [numthreads(16, 16, 1)]
@@ -1438,33 +1496,17 @@ void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGrou
     if (any((ipos >= int2(screen_width, screen_height))))
         return;
 
-    float3 filtered_hf = 0;
-    float3 filtered_spec = 0;
-    float2 filtered_moments = 0;
+    float3 filtered_hf;
+    float3 filtered_spec;
+    float2 filtered_moments;
 
-    [branch] switch (spec_iteration) {
-    case 0: filter_image(TEX_ASVGF_ATROUS_PING_HF, TEX_ASVGF_ATROUS_PING_SPEC, TEX_ASVGF_ATROUS_PING_MOMENTS, filtered_hf, filtered_spec, filtered_moments, ipos); break;
-    case 1: filter_image(TEX_ASVGF_HIST_COLOR_HF, TEX_ASVGF_ATROUS_PONG_SPEC, TEX_ASVGF_ATROUS_PONG_MOMENTS, filtered_hf, filtered_spec, filtered_moments, ipos); break;
-    case 2: filter_image(TEX_ASVGF_ATROUS_PING_HF, TEX_ASVGF_ATROUS_PING_SPEC, TEX_ASVGF_ATROUS_PING_MOMENTS, filtered_hf, filtered_spec, filtered_moments, ipos); break;
-    case 3: filter_image(TEX_ASVGF_ATROUS_PONG_HF, TEX_ASVGF_ATROUS_PONG_SPEC, TEX_ASVGF_ATROUS_PONG_MOMENTS, filtered_hf, filtered_spec, filtered_moments, ipos); break;
-    }
+    filter_image(TEX_ASVGF_ATROUS_PING_HF, TEX_ASVGF_ATROUS_PING_SPEC, TEX_ASVGF_ATROUS_PING_MOMENTS, filtered_hf, filtered_spec, filtered_moments, ipos);
+    
 
-    [branch] switch (spec_iteration) {
-    case 0:
-        IMG_ASVGF_HIST_COLOR_HF[ipos] = float4(filtered_hf,1);
-        IMG_ASVGF_ATROUS_PONG_SPEC[ipos] = float2(asfloat(packRGBE(filtered_spec)),0);
-        IMG_ASVGF_ATROUS_PONG_MOMENTS[ipos] = filtered_moments;
-        break;
-    case 1:
+    if(spec_iteration < 3) {
         IMG_ASVGF_ATROUS_PING_HF[ipos] = float4(filtered_hf,1);
         IMG_ASVGF_ATROUS_PING_SPEC[ipos] = float2(asfloat(packRGBE(filtered_spec)),0);
         IMG_ASVGF_ATROUS_PING_MOMENTS[ipos] = filtered_moments;
-        break;
-    case 2:
-        IMG_ASVGF_ATROUS_PONG_HF[ipos] = float4(filtered_hf,1);
-        IMG_ASVGF_ATROUS_PONG_SPEC[ipos] = float2(asfloat(packRGBE(filtered_spec)),0);
-        IMG_ASVGF_ATROUS_PONG_MOMENTS[ipos] = filtered_moments;
-        break;
     }
 
     // Perform compositing on the last iteration
@@ -1474,9 +1516,9 @@ void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGrou
 
 
         float3 normal = i_octahedral_32(TEX_PT_NORMALS_A[ipos].y);
-        float4 base_color = float4(unpackRGBE(AlbedoColorB[ipos].x),TEX_PT_BASE_COLOR_A[ipos].w);// TEX_PT_BASE_COLOR_A.SampleLevel(sampler_trilinear_clamp, ipos / float2(screen_width, screen_height), 0);
+        float4 base_color = float4(unpackRGBE(AlbedoColorB[ipos].x),PerPixelRadiance[ipos.x + ipos.y * screen_width].Data.w);// TEX_PT_BASE_COLOR_A.SampleLevel(sampler_trilinear_clamp, ipos / float2(screen_width, screen_height), 0);
         if(DiffRes && base_color.w <= 1) base_color.xyz = 1;
-        if(base_color.w == 0) base_color = TEX_PT_BASE_COLOR_A[ipos];
+        if(base_color.w == 0) base_color = PerPixelRadiance[ipos.x + ipos.y * screen_width].Data;
         // Project the spherical harmonics lighting onto the actual surface normal
         float3 projected_lf = project_SH_irradiance(filtered_lf, normal);
         projected_lf *= 1024.0f;

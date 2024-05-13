@@ -59,7 +59,6 @@ SamplerState my_linear_clamp_sampler;
 RWTexture2D<half> SSAOWrite;
 Texture2D<half> SSAORead;
 
-RWTexture2D<half4> Albedo;
 
 RWTexture2D<uint2> NormA;
 Texture2D<uint2> NormB;
@@ -88,10 +87,11 @@ struct ColData {
     float3 Direct;
     float3 Indirect;
     uint Fog;
-    int IsSpecular;
-    float Metallic;
+    uint Flags;
+    uint MetRoughIsSpec;
+    float4 Data;
 };
-StructuredBuffer<ColData> PerPixelRadiance;
+RWStructuredBuffer<ColData> PerPixelRadiance;
 
 
 Texture2D<float4> ScreenSpaceInfo;
@@ -134,21 +134,31 @@ float3 i_octahedral_32( uint data ) {
 
 #pragma kernel ColorKernel
 
+uint ToColorSpecPacked(float3 A) {
+    return ((uint)(A.x * 16383.0f)) | ((uint)(A.y * 16383.0f) << 14) | ((uint)A.z << 28);
+}
+float3 FromColorSpecPacked(uint A) {
+    return float3(
+        (A & 0x3FFF) / 16383.0f,
+        ((A >> 14) & 0x3FFF) / 16383.0f,
+        (A >> 28)
+        );
+}
+
 
 [numthreads(32,32,1)]
 void ColorKernel (uint3 id : SV_DispatchThreadID)
 {
     if(id.x > (uint)screen_width) return;
     int pixel_index = id.y * screen_width + id.x;
-    const float3 Alb = Albedo[id.xy].xyz;
     const ColData Pixel = PerPixelRadiance[pixel_index];
-    const float3 ScreenSpaceAlb = unpackRGBE(WorldPosData[id.xy].w);
+    const float4 Alb = Pixel.Data;
+    const float3 ScreenSpaceAlb = unpackRGBE(Pixel.Flags);
     float3 Col = max((float)PartialRenderingFactor * (Pixel.Direct + Pixel.Indirect * IndirectBoost + pow(unpackRGBE(Pixel.Fog),2.2f) * ((Alb > 0.005f) ? rcp(Alb) : 0))* Alb * ((ScreenSpaceAlb > 0.001f) ? rcp(ScreenSpaceAlb) : 0),0);
-    uint Input = asuint(Pixel.Metallic);
-    HintsWrite[id.xy] = ((((Input >> 16) / 65535.0f) > 0.1f) ? ((Input & 0xFFFF) / 65535.0f) : 1);
+    HintsWrite[id.xy] = ((FromColorSpecPacked(Pixel.MetRoughIsSpec).x > 0.1f) ? FromColorSpecPacked(Pixel.MetRoughIsSpec).y : 1);
     NormA[id.xy] = asuint(ScreenSpaceInfo[id.xy].xy);
-    if(Albedo[id.xy].w == 0) Col = 0;
-    else Albedo[id.xy] = float4(ScreenSpaceAlb, Albedo[id.xy].w);
+    if(Alb.w == 0) Col = 0;
+    else PerPixelRadiance[pixel_index].Data = float4(ScreenSpaceAlb, Alb.w);
     CurDepthWrite[id.xy] = ScreenSpaceInfo[id.xy].z;
     HFA[id.xy] = float4(clamp(Col,0,999999.0f) ,0);
 }
@@ -467,7 +477,6 @@ void secondarytemporal (uint3 id : SV_DispatchThreadID)
     }
 
 
-    float4 AlbedoVal = Albedo[id.xy];
     float AccumFrames = min(HFPrev[pos_prev].w,60);
     if(!temporal_sample_valid_diff || any(pos_prev < 0 || pos_prev > float2(screen_width, screen_height))) AccumFrames = 0;
 
@@ -482,7 +491,7 @@ void secondarytemporal (uint3 id : SV_DispatchThreadID)
     //         }
     //     }
     // }
-
+    float4 AlbedoVal = PerPixelRadiance[id.x + id.y * screen_width].Data;
     AccumFrames++;
     Center = lerp(temporal_color_hf, Center, min(rcp(AccumFrames),1));
     HFA[id.xy] = float4(Center, AccumFrames);

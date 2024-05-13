@@ -133,7 +133,7 @@ namespace TrueTrace {
             Trees = null;
             TerrainTile = null;
         }
-        private void TextureParse(ref List<Texture> Texs, ref float TextureIndex, Texture Tex) {
+        private void TextureParse(ref List<Texture> Texs, ref int TextureIndex, Texture Tex) {
             TextureIndex = 0;
             if (Tex != null) {
                 TextureIndex = Texs.IndexOf(Tex) + 1;
@@ -171,10 +171,11 @@ namespace TrueTrace {
             for (int i = 0; i < TerrainLayerCount; i++)
             {
                 MaterialData MatDat = new MaterialData();
-                TextureParse(ref AlbedoTexs, ref MatDat.AlbedoTex.w, TerrainTile.terrainData.terrainLayers[i].diffuseTexture);
-                TextureParse(ref NormalTexs, ref MatDat.NormalTex.w, TerrainTile.terrainData.terrainLayers[i].normalMapTexture);
-                TextureParse(ref MaskTexs, ref MatDat.MetallicTex.w, TerrainTile.terrainData.terrainLayers[i].maskMapTexture);
-                TextureParse(ref MaskTexs, ref MatDat.RoughnessTex.w, TerrainTile.terrainData.terrainLayers[i].maskMapTexture);
+                int TempIndex = 0;
+                TextureParse(ref AlbedoTexs, ref TempIndex, TerrainTile.terrainData.terrainLayers[i].diffuseTexture); MatDat.AlbedoTex.x = TempIndex;
+                TextureParse(ref NormalTexs, ref TempIndex, TerrainTile.terrainData.terrainLayers[i].normalMapTexture); MatDat.NormalTex.x = TempIndex;
+                TextureParse(ref MaskTexs, ref TempIndex, TerrainTile.terrainData.terrainLayers[i].maskMapTexture); MatDat.MetallicTex.x = TempIndex;
+                TextureParse(ref MaskTexs, ref TempIndex, TerrainTile.terrainData.terrainLayers[i].maskMapTexture); MatDat.RoughnessTex.x = TempIndex;
 
                 MatDat.metallic = TerrainTile.terrainData.terrainLayers[i].metallic;
                 MatDat.Specular = 0;//TerrainTile.terrainData.terrainLayers[i].smoothness,

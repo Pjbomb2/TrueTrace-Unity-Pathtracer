@@ -81,7 +81,6 @@ uint CompCosTheta(float cosTheta_o, float cosTheta_e) {
     return (uint)floor(32767.0f * ((cosTheta_o + 1.0f) / 2.0f)) | ((uint)floor(32767.0f * ((cosTheta_e + 1.0f) / 2.0f)) << 16);
 }
 
-float FloatMax;
 inline float4 DoCone(float4 A, float4 B) {
     if(all(A.xyz == 0)) return B;
     if(all(B.xyz == 0)) return A;

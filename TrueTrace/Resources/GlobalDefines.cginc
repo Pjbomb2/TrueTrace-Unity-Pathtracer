@@ -4,7 +4,7 @@
 // #define IgnoreGlassMain
 // #define HDRP
 // #define HardwareRT
-#define PointFiltering
+// #define PointFiltering
 #define StainedGlassShadows
 // #define DX11
 // #define LightMapping
@@ -12,7 +12,9 @@
 // #define WhiteLights
 #define LBVH
 #define AccurateEmissionTex
-
+#define RadianceCache
+// #define RadianceDebug
+#define IndirectRetraceWeighting
 
 
 

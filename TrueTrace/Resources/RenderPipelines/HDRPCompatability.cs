@@ -39,7 +39,10 @@ public class HDRPCompatability : CustomPass
                 if(GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>().Length == 0) {RayMaster = null; return;}
                 RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
             }
-            if(MainTex == null) CreateRenderTexture(ref MainTex, ctx.hdCamera.camera);
+            if(MainTex == null || MainTex.width != ctx.hdCamera.camera.pixelWidth) {
+                if(MainTex != null) MainTex?.Release();
+                CreateRenderTexture(ref MainTex, ctx.hdCamera.camera);
+            }
             ctx.hdCamera.camera.renderingPath = RenderingPath.DeferredShading;
             ctx.hdCamera.camera.depthTextureMode |= DepthTextureMode.MotionVectors | DepthTextureMode.Depth;
             RayMaster.TossCamera(ctx.hdCamera.camera);

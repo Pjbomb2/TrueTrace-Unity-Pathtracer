@@ -165,6 +165,8 @@ namespace RectpackSharp
         /// </summary>
         public int Id;
 
+        public int TexType;
+
         /// <summary>A value used internally by the packing algorithm for sorting rectangles.</summary>
         public uint SortKey;
 
@@ -179,6 +181,12 @@ namespace RectpackSharp
 
         /// <summary>The height of this <see cref="PackingRectangle"/>.</summary>
         public uint Height;
+
+        /// <summary>The width of this <see cref="PackingRectangle"/>.</summary>
+        public uint Width2;
+
+        /// <summary>The height of this <see cref="PackingRectangle"/>.</summary>
+        public uint Height2;
 
         /// <summary>
         /// Gets or sets the X coordinate of the right edge of this <see cref="PackingRectangle"/>.
@@ -222,7 +230,10 @@ namespace RectpackSharp
             Y = y;
             Width = width;
             Height = height;
+            Width2 = width;
+            Height2 = height;
             Id = id;
+            TexType = 0;
             SortKey = 0;
         }
 
@@ -285,13 +296,13 @@ namespace RectpackSharp
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(X, Y, Width, Height, Id);
+            return HashCode.Combine(X, Y, Width, Height, Id, TexType);
         }
 
         public bool Equals(PackingRectangle other)
         {
             return X == other.X && Y == other.Y && Width == other.Width
-                && Height == other.Height && Id == other.Id;
+                && Height == other.Height && Id == other.Id && TexType == other.TexType;
         }
 
         public override bool Equals(object obj)

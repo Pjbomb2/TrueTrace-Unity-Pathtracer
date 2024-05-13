@@ -201,6 +201,7 @@ namespace TrueTrace {
 			}
 			int[] Index = new int[SubMeshCount];
 			InitializeArrayWithIndex(ref Names, "", SharedMaterials, ref Index);
+			
 			InitializeArray<float>(ref Rotation, 0, Index);
 			InitializeArray<int>(ref Flags, 0, Index);
 			/*

@@ -3,25 +3,31 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
 using CommonVars;
+using Unity.Collections;
 
 namespace TrueTrace {
     [System.Serializable]
     unsafe public class BVH8Builder {
 
-        private float[] cost;
-        private Decision[] decisions;
+        private float* cost;
+        private Decision* decisions;
         public int[] cwbvh_indices;
         public BVHNode8Data[] BVH8Nodes;
         public int cwbvhindex_count;
         public int cwbvhnode_count;
+        private BVHNode2Data* nodes;
 
+
+        public NativeArray<float> costArray;
+        public NativeArray<Decision> decisionsArray;
+        
         public struct Decision {
             public int Type;//Types: 0 is LEAF, 1 is INTERNAL, 2 is DISTRIBUTE
             public int dist_left;
             public int dist_right;
         }
 
-        int calculate_cost(int node_index, ref BVHNode2Data[] nodes) {
+        int calculate_cost(int node_index) {
             Decision dectemp;
             BVHNode2Data node = nodes[node_index];
             int num_primitives;
@@ -43,8 +49,8 @@ namespace TrueTrace {
                 }
             } else {
                 num_primitives = 
-                    calculate_cost(node.left, ref nodes) +
-                    calculate_cost(node.left + 1, ref nodes);
+                    calculate_cost(node.left) +
+                    calculate_cost(node.left + 1);
                         {
                             float cost_leaf = num_primitives <= 3 ? (float)num_primitives * surface_area(ref node.aabb) : float.MaxValue;
 
@@ -122,7 +128,7 @@ namespace TrueTrace {
         }
 
 
-        void get_children(int node_index, ref BVHNode2Data[] nodes, int i, ref int child_count, ref int[] children) {
+        void get_children(int node_index, int i, ref int child_count, ref int[] children) {
 
             if(nodes[node_index].count > 0) {
                 children[child_count++] = node_index;
@@ -138,20 +144,20 @@ namespace TrueTrace {
             Assert.IsTrue(child_count < 8);
 
             if(decisions[nodes[node_index].left * 7 + dist_left].Type == 2) {
-                get_children(nodes[node_index].left, ref nodes, dist_left, ref child_count, ref children);
+                get_children(nodes[node_index].left, dist_left, ref child_count, ref children);
             } else {
                 children[child_count++] = nodes[node_index].left;
             }
 
             if(decisions[(nodes[node_index].left + 1) * 7 + dist_right].Type == 2) {
-                get_children(nodes[node_index].left + 1, ref nodes, dist_right, ref child_count, ref children);   
+                get_children(nodes[node_index].left + 1, dist_right, ref child_count, ref children);   
             } else {
                 children[child_count++] = nodes[node_index].left + 1;
             }
         }
         float[,] cost2;
         float[,] costpreset;
-        void order_children(int node_index, ref BVHNode2Data[] nodes, ref int[] children, int child_count) {
+        void order_children(int node_index, ref int[] children, int child_count) {
             Vector3 p = (nodes[node_index].aabb.BBMax + nodes[node_index].aabb.BBMin) / 2.0f;
 
             cost2 = costpreset;//try moving these out into public variables, since they can be the same array, as they get overwritten every time, just need their values initialized to 0?
@@ -207,7 +213,7 @@ namespace TrueTrace {
             }
         }
 
-        int count_primitives(int node_index, ref BVHNode2Data[] nodes, ref int[] indices) {
+        int count_primitives(int node_index, ref int[] indices) {
 
             if(nodes[node_index].count > 0) {
                 Assert.IsTrue(nodes[node_index].count == 1);
@@ -216,14 +222,14 @@ namespace TrueTrace {
                 }
                 return (int)nodes[node_index].count;
             }
-            return count_primitives(nodes[node_index].left, ref nodes, ref indices) + count_primitives(nodes[node_index].left + 1, ref nodes, ref indices);
+            return count_primitives(nodes[node_index].left, ref indices) + count_primitives(nodes[node_index].left + 1, ref indices);
         }
 
 
-        void collapse(ref BVHNode2Data[] nodes_bvh, ref int[] indices_bvh, int node_index_cwbvh, int node_index_bvh) {
+        void collapse(ref int[] indices_bvh, int node_index_cwbvh, int node_index_bvh) {
           BVHNode8Data node = BVH8Nodes[node_index_cwbvh];
           AABB aabb = new AABB();
-          aabb = nodes_bvh[node_index_bvh].aabb;
+          aabb = nodes[node_index_bvh].aabb;
           
           node.p = aabb.BBMin;
 
@@ -259,11 +265,11 @@ namespace TrueTrace {
           int child_count = 0;
           int[] children = {-1, -1, -1, -1, -1, -1, -1, -1};
 
-          get_children(node_index_bvh, ref nodes_bvh, 0, ref child_count, ref children);
+          get_children(node_index_bvh, 0, ref child_count, ref children);
 
           Assert.IsTrue(child_count <= 8);
 
-          order_children(node_index_bvh, ref nodes_bvh, ref children, child_count);
+          order_children(node_index_bvh, ref children, child_count);
 
           node.imask = 0;
 
@@ -278,7 +284,7 @@ namespace TrueTrace {
             int child_index = children[i];
             if(child_index == -1) continue;
 
-            child_aabb = nodes_bvh[child_index].aabb;
+            child_aabb = nodes[child_index].aabb;
 
             node.quantized_min_x[i] = (byte)(uint)Mathf.Floor((child_aabb.BBMin.x - node.p.x) * one_over_e.x);
             node.quantized_min_y[i] = (byte)(uint)Mathf.Floor((child_aabb.BBMin.y - node.p.y) * one_over_e.y);
@@ -289,7 +295,7 @@ namespace TrueTrace {
             node.quantized_max_z[i] = (byte)(uint)Mathf.Ceil((child_aabb.BBMax.z - node.p.z) * one_over_e.z);
           switch(decisions[child_index * 7].Type) {
             case 0: {
-                int triangle_count = count_primitives(child_index, ref nodes_bvh, ref indices_bvh);
+                int triangle_count = count_primitives(child_index, ref indices_bvh);
                 Assert.IsTrue(triangle_count > 0 && triangle_count <= 3);
 
                 for(int j = 0; j < triangle_count; j++) {
@@ -323,7 +329,7 @@ namespace TrueTrace {
             if(child_index == -1) continue;
 
             if(decisions[child_index * 7].Type == 1) {
-                collapse(ref nodes_bvh, ref indices_bvh, (int)node.base_index_child + ((byte)node.meta[i] & 31) - 24, child_index);
+                collapse(ref indices_bvh, (int)node.base_index_child + ((byte)node.meta[i] & 31) - 24, child_index);
             }
           }
         }
@@ -334,30 +340,42 @@ namespace TrueTrace {
         }
 
         public BVH8Builder(ref BVH2Builder BVH2) {//Bottom Level CWBVH Builder
-            int BVH2NodesCount = BVH2.BVH2Nodes.Length;
+            int BVH2NodesCount = BVH2.BVH2NodesArray.Length;
             int BVH2IndicesCount = BVH2.FinalIndices.Length;
             cost2 = new float[8,8];
             costpreset = new float[8,8];
-            cost = new float[BVH2NodesCount * 7];
-            decisions = new Decision[BVH2NodesCount * 7];
+            costArray = new NativeArray<float>(BVH2NodesCount * 7,  Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
+            decisionsArray = new NativeArray<Decision>(BVH2NodesCount * 7,  Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
+            cost = (float*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(costArray);
+            decisions = (Decision*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(decisionsArray);
+            
             BVH8Nodes = new BVHNode8Data[BVH2NodesCount];
             cwbvh_indices = new int[BVH2IndicesCount];
-
+            
+            nodes = BVH2.BVH2Nodes;
+            
             cwbvhindex_count = 0;
             cwbvhnode_count = 1;
-            calculate_cost(0, ref BVH2.BVH2Nodes);
+            calculate_cost(0);
 
-            collapse(ref BVH2.BVH2Nodes, ref BVH2.FinalIndices, 0, 0);
-            decisions = null;
+            collapse(ref BVH2.FinalIndices, 0, 0);
+
+            costArray.Dispose();
+            decisionsArray.Dispose();
         }
 
         public BVH8Builder(BVH2Builder BVH2) {//Top Level CWBVH Builder
-            int BVH2NodesCount = BVH2.BVH2Nodes.Length;
+            int BVH2NodesCount = BVH2.BVH2NodesArray.Length;
             int BVH2IndicesCount = BVH2.FinalIndices.Length;
             cost2 = new float[8,8];
             costpreset = new float[8,8];
-            cost = new float[BVH2NodesCount * 7];
-            decisions = new Decision[BVH2NodesCount * 7];
+            costArray = new NativeArray<float>(BVH2NodesCount * 7,  Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
+            decisionsArray = new NativeArray<Decision>(BVH2NodesCount * 7,  Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
+            cost = (float*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(costArray);
+            decisions = (Decision*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(decisionsArray);
+            
+            nodes = BVH2.BVH2Nodes;
+
             BVH8Nodes = new BVHNode8Data[BVH2NodesCount];
             cwbvh_indices = new int[BVH2IndicesCount];
 
@@ -365,11 +383,12 @@ namespace TrueTrace {
             cwbvhindex_count = 0;
             cwbvhnode_count = 1;
 
-            calculate_cost(0, ref BVH2.BVH2Nodes);
+            calculate_cost(0);
 
-            collapse(ref BVH2.BVH2Nodes, ref BVH2.FinalIndices, 0, 0);
-
-            decisions = null;
+            collapse(ref BVH2.FinalIndices, 0, 0);
+            BVH2.BVH2NodesArray.Dispose();
+            costArray.Dispose();
+            decisionsArray.Dispose();
         }
     }
 }

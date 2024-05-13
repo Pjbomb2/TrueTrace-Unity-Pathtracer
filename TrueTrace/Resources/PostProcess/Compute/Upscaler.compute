@@ -1,6 +1,6 @@
 #pragma kernel kernel_upsample
-#include "UnityCG.cginc"
 #include "../../GlobalDefines.cginc"
+#include "UnityCG.cginc"
 
 int source_width;
 int source_height;
@@ -10,442 +10,186 @@ int target_height;
 
 Texture2D<half4> Input;
 Texture2D<half4> ThroughputTex;
-SamplerState sampler_Input_trilinear_clamp;
+SamplerState my_linear_clamp_sampler;
 RWTexture2D<float4> Output;
 RWTexture2D<float4> FinalOutput;
 Texture2D<half4> PrevOutput;
 
-float4x4 ViewProjectionMatrix;
 
-#ifdef HDRP
-    Texture2DArray<float4> NormalTex;
-#else
-    Texture2D<float4> NormalTex;
-#endif
-Texture2D<float4> PrevNormalTex;
-RWTexture2D<float4> PrevNormalTexWrite;
-SamplerState sampler_NormalTex; 
-Texture2D<float4> DepthTex;
-SamplerState sampler_DepthTex; 
-Texture2D<float4> PrevDepthTex;
-SamplerState sampler_PrevDepthTex; 
-RWTexture2D<float4> PrevDepthTexWrite;
-Texture2D<float4> Albedo;
-Texture2D<float4> Albedo2;
-Texture2D<float4> MotionVectors;
-SamplerState sampler_trilinear_clamp;
-
-float3 CamPos;
-float FarPlane;
-
-uint pixel_index;
-
-uint curframe;
-uint cursam;
-
-SamplerState my_linear_clamp_sampler;
-
-
-// texture coords for directional sampling
-float2 center_pixel;
-float2 north_pixel;
-float2 south_pixel;
-float2 east_pixel;
-float2 west_pixel;
-float2 north_east_pixel;
-float2 north_west_pixel;
-float2 south_east_pixel;
-float2 south_west_pixel;
-
-// offset coordinates used for super sampling
-const float2 offset_uv = float2(0.36, 0.64);
-
-// finds the absolute distance from two floats
-float float_diff(float float_a, float float_b) {
-    return abs(float_a - float_b);
+half4 SGSRRH(float2 p)
+{
+    half4 res = Input.GatherRed(my_linear_clamp_sampler, p);
+    return res;
+}
+half4 SGSRGH(float2 p)
+{
+    half4 res = Input.GatherGreen(my_linear_clamp_sampler, p);
+    return res;
+}
+half4 SGSRBH(float2 p)
+{
+    half4 res = Input.GatherBlue(my_linear_clamp_sampler, p);
+    return res;
+}
+half4 SGSRAH(float2 p)
+{
+    half4 res = Input.GatherAlpha(my_linear_clamp_sampler, p);
+    return res;
+}
+half4 SGSRRGBH(float2 p)
+{
+    half4 res = Input.SampleLevel(my_linear_clamp_sampler, p, 0);
+    return res;
 }
 
-// maximum difference for all 3 color channels
-float color_diff(float4 color_a, float4 color_b) {
-    float diff_r = float_diff(color_a.r, color_b.r);
-    float diff_g = float_diff(color_a.g, color_b.g);
-    float diff_b = float_diff(color_a.b, color_b.b);
-    return max(diff_r, max(diff_g, diff_b));
+half4 SGSRH(float2 p, uint channel)
+{
+    if (channel == 0)
+        return SGSRRH(p);
+    if (channel == 1)
+        return SGSRGH(p);
+    if (channel == 2)
+        return SGSRBH(p);
+    return SGSRAH(p);
 }
 
-// simple average of two colors
-float4 color_average(float4 color_a, float4 color_b) {
-    return lerp(color_a, color_b, 0.5);
+
+#define OperationMode 3
+
+#define EdgeThreshold 4.0/255.0
+
+#define EdgeSharpness 2.0
+
+////////////////////////
+////////////////////////
+////////////////////////
+
+// ///////SGSR_GL_Mobile.frag/////////////////////////////////////////
+// #if defined(SGSR_MOBILE)
+half fastLanczos2(half x)
+{
+    half wA = x- half(4.0);
+    half wB = x*wA-wA;
+    wA *= wA;
+    return wB*wA;
+}
+half2 weightY(half dx, half dy, half c, half std)
+{
+    half x = ((dx*dx)+(dy* dy))* half(0.5) + clamp(abs(c)*std, 0.0, 1.0);
+    half w = fastLanczos2(x);
+    return half2(w, w * c);
 }
 
-// take 9 samples and perform a directional average
-float4 directional_average() {
-    // get the colors of all 9 pixels in the 3x3 grid
-    float4 pixel_0 = Input.SampleLevel(sampler_Input_trilinear_clamp, center_pixel, 0.0); // center pixel
-    float4 pixel_1 = Input.SampleLevel(sampler_Input_trilinear_clamp, north_pixel, 0.0); // north pixel
-    float4 pixel_2 = Input.SampleLevel(sampler_Input_trilinear_clamp, south_pixel, 0.0); // south pixel
-    float4 pixel_3 = Input.SampleLevel(sampler_Input_trilinear_clamp, east_pixel, 0.0); // east pixel
-    float4 pixel_4 = Input.SampleLevel(sampler_Input_trilinear_clamp, west_pixel, 0.0); // west pixel
-    float4 pixel_5 = Input.SampleLevel(sampler_Input_trilinear_clamp, north_east_pixel, 0.0); // north-east pixel
-    float4 pixel_6 = Input.SampleLevel(sampler_Input_trilinear_clamp, north_west_pixel, 0.0); // north-west pixel
-    float4 pixel_7 = Input.SampleLevel(sampler_Input_trilinear_clamp, south_east_pixel, 0.0); // south-east pixel
-    float4 pixel_8 = Input.SampleLevel(sampler_Input_trilinear_clamp, south_west_pixel, 0.0); // south-west pixel
+void SgsrYuvH(
+    out half4 pix,
+    float2 uv,
+    float4 con1)
+{
+    int mode = OperationMode;
+    half edgeThreshold = EdgeThreshold;
+    half edgeSharpness = EdgeSharpness;
+    if(mode == 1)
+        pix.xyz = SGSRRGBH(uv).xyz;
+    else
+        pix.xyzw = SGSRRGBH(uv).xyzw;
+    float xCenter;
+    xCenter = abs(uv.x+-0.5);
+    float yCenter;
+    yCenter = abs(uv.y+-0.5);
     
-    // find the maximum color difference for each of 12 directions
-    float dir_1 = color_diff(pixel_0, pixel_1); // center to north
-    float dir_2 = color_diff(pixel_0, pixel_2); // center to south
-    float dir_3 = color_diff(pixel_0, pixel_3); // center to east
-    float dir_4 = color_diff(pixel_0, pixel_4); // center to west
-    float dir_5 = color_diff(pixel_0, pixel_5); // center to north-east
-    float dir_6 = color_diff(pixel_0, pixel_6); // center to north-west
-    float dir_7 = color_diff(pixel_0, pixel_7); // center to south-east
-    float dir_8 = color_diff(pixel_0, pixel_8); // center to south-west
-    float dir_9 = color_diff(pixel_1, pixel_4); // north to west
-    float dir_10 = color_diff(pixel_1, pixel_3); // north to east
-    float dir_11 = color_diff(pixel_2, pixel_3); // south to east
-    float dir_12 = color_diff(pixel_2, pixel_4); // south to west
-    
-    // find the minimum distance of each of the 12 directions
-    float min_dist = dir_1;
-    min_dist = min(min_dist, dir_2);
-    min_dist = min(min_dist, dir_3);
-    min_dist = min(min_dist, dir_4);
-    min_dist = min(min_dist, dir_5);
-    min_dist = min(min_dist, dir_6);
-    min_dist = min(min_dist, dir_7);
-    min_dist = min(min_dist, dir_8);
-    min_dist = min(min_dist, dir_9);
-    min_dist = min(min_dist, dir_10);
-    min_dist = min(min_dist, dir_11);
-    min_dist = min(min_dist, dir_12);
-    
-    // get the average color along the minimum direction
-    float4 result = pixel_0;
-    if (min_dist == dir_1)
-        result = color_average(pixel_0, pixel_1); // center to north
-    else if (min_dist == dir_2) 
-        result = color_average(pixel_0, pixel_2); // center to south
-    else if (min_dist == dir_3) 
-        result = color_average(pixel_0, pixel_3); // center to east
-    else if (min_dist == dir_4) 
-        result = color_average(pixel_0, pixel_4); // center to west
-    else if (min_dist == dir_5) 
-        result = color_average(pixel_0, pixel_5); // center to north-east
-    else if (min_dist == dir_6) 
-        result = color_average(pixel_0, pixel_6); // center to north-west
-    else if (min_dist == dir_7) 
-        result = color_average(pixel_0, pixel_7); // center to south-east
-    else if (min_dist == dir_8) 
-        result = color_average(pixel_0, pixel_8); // center to south-west
-    else if (min_dist == dir_9) 
-        result = color_average(pixel_0, color_average(pixel_1, pixel_4)); // north to west
-    else if (min_dist == dir_10) 
-        result = color_average(pixel_0, color_average(pixel_1, pixel_3)); // north to east
-    else if (min_dist == dir_11) 
-        result = color_average(pixel_0, color_average(pixel_2, pixel_3)); // south to east
-    else if (min_dist == dir_12) 
-        result = color_average(pixel_0, color_average(pixel_2, pixel_4)); // south to west
-    return result;
-}
+    //todo: config the SR region based on needs
+    //if ( mode!=4 && xCenter*xCenter+yCenter*yCenter<=0.4 * 0.4)
+    if ( mode!=4)
+    {
+        float2 imgCoord = ((uv.xy*con1.zw)+ float2(-0.5,0.5));
+        float2 imgCoordPixel = floor(imgCoord);
+        float2 coord = (imgCoordPixel*con1.xy);
+        half2 pl = (imgCoord+(-imgCoordPixel));
+        half4  left = SGSRH(coord, mode);
+        
+        half edgeVote = abs(left.z - left.y) + abs(pix[mode] - left.y)  + abs(pix[mode] - left.z) ;
+        if(edgeVote > edgeThreshold)
+        {
+            coord.x += con1.x;
 
-// partial derivative on x-axis
-float2 deriv_x(float2 pos, float4 frag, float2 pixel) {
-    float2 offset = float2(pixel.x, 0.0);
-    float2 pos_plus = pos + offset;
-    float2 pos_minus = pos - offset;
-    int coord = int(frag.x) / 2;
-    bool even = int(coord * 2) == int(frag.x);
-    return even ? (pos_plus - pos) : (pos - pos_minus);
-}
+            half4 right = SGSRH(coord + float2(con1.x,  0.0), mode);
+            half4 upDown;
+            upDown.xy = SGSRH(coord + float2(0.0, -con1.y), mode).wz;
+            upDown.zw = SGSRH(coord + float2(0.0,  con1.y), mode).yx;
 
-// partial derivative on y-axis
-float2 deriv_y(float2 pos, float4 frag, float2 pixel) {
-    float2 offset = float2(0.0, pixel.y);
-    float2 pos_plus = pos + offset;
-    float2 pos_minus = pos - offset;
-    int coord = int(frag.y) / 2;
-    bool even = int(coord * 2) == int(frag.y);
-    return even ? (pos_plus - pos) : (pos - pos_minus);
-}
+            half mean = (left.y+left.z+right.x+right.w)* half(0.25);
+            left = left - half4(mean,mean,mean,mean);
+            right = right - half4(mean, mean, mean, mean);
+            upDown = upDown - half4(mean, mean, mean, mean);
+            pix.w =pix[mode] - mean;
 
-// take 4 samples in a rotated grid for super sampling
-float4 super_sample(float2 base_uv, float4 frag, float2 pixel) {
-    float2 dx = deriv_x(base_uv, frag, pixel);
-    float2 dy = deriv_y(base_uv, frag, pixel);
-    float2 uv = 0.0;
-    float4 color = 0.0;
-    uv = base_uv + offset_uv.x * dx + offset_uv.y * dy;
-    color += Input.SampleLevel(sampler_Input_trilinear_clamp, uv, 0.0);
-    uv = base_uv - offset_uv.x * dx - offset_uv.y * dy;
-    color += Input.SampleLevel(sampler_Input_trilinear_clamp, uv, 0.0);
-    uv = base_uv + offset_uv.y * dx - offset_uv.x * dy;
-    color += Input.SampleLevel(sampler_Input_trilinear_clamp, uv, 0.0);
-    uv = base_uv - offset_uv.y * dx + offset_uv.x * dy;
-    color += Input.SampleLevel(sampler_Input_trilinear_clamp, uv, 0.0);
-    color *= 0.25;
-    return color;
-}
+            half sum = (((((abs(left.x)+abs(left.y))+abs(left.z))+abs(left.w))+(((abs(right.x)+abs(right.y))+abs(right.z))+abs(right.w)))+(((abs(upDown.x)+abs(upDown.y))+abs(upDown.z))+abs(upDown.w)));
+            half std = half(2.181818)/sum;
+            
+            half2 aWY = weightY(pl.x, pl.y+1.0, upDown.x,std);
+            aWY += weightY(pl.x-1.0, pl.y+1.0, upDown.y,std);
+            aWY += weightY(pl.x-1.0, pl.y-2.0, upDown.z,std);
+            aWY += weightY(pl.x, pl.y-2.0, upDown.w,std);           
+            aWY += weightY(pl.x+1.0, pl.y-1.0, left.x,std);
+            aWY += weightY(pl.x, pl.y-1.0, left.y,std);
+            aWY += weightY(pl.x, pl.y, left.z,std);
+            aWY += weightY(pl.x+1.0, pl.y, left.w,std);
+            aWY += weightY(pl.x-1.0, pl.y-1.0, right.x,std);
+            aWY += weightY(pl.x-2.0, pl.y-1.0, right.y,std);
+            aWY += weightY(pl.x-2.0, pl.y, right.z,std);
+            aWY += weightY(pl.x-1.0, pl.y, right.w,std);
 
-float4x4 _CameraToWorld;
-float4x4 _CameraInverseProjection;
-float4x4 _PrevCameraToWorld;
-float4x4 _PrevCameraInverseProjection;
+            half finalY = aWY.y/aWY.x;
 
-float3 Forward;
-float3 PrevCamPos;
+            half max4 = max(max(left.y,left.z),max(right.x,right.w));
+            half min4 = min(min(left.y,left.z),min(right.x,right.w));
+            finalY = clamp(edgeSharpness*finalY, min4, max4);
+                    
+            half deltaY = finalY -pix.w;
 
-float3 CreateCameraRayPrev(float2 uv, float depth) {
-    float3 origin = mul(_PrevCameraToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
-    // Invert the perspective projection of the view-space position
-    float3 direction = mul(_PrevCameraInverseProjection, float4(uv, 0.0f, 1.0f)).xyz;
-    // Transform the direction from camera to world space and normalize
-    direction = mul(_PrevCameraToWorld, float4(direction, 0.0f)).xyz;
-    direction = normalize(direction);
-    return origin + direction * depth;
-}   
-
-float3 CreateCameraRay(float2 uv, out float depth) {
-    float3 origin = mul(unity_CameraToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
-    // Invert the perspective projection of the view-space position
-    float3 direction = mul(_CameraInverseProjection, float4(uv, 0.0f, 1.0f)).xyz;
-    // Transform the direction from camera to world space and normalize
-    direction = mul(unity_CameraToWorld, float4(direction, 0.0f)).xyz;
-    direction = normalize(direction);
-    depth = length(direction / dot(direction, Forward) * LinearEyeDepth(DepthTex.SampleLevel(my_linear_clamp_sampler, uv, 0).x));
-    return origin + direction * depth;
-}   
-
-float2 v_sel(float2 f, float val, float eq, float2 neq)
-{
-    float2 result;
-    result.x = (f.x == val) ? eq : neq.x;
-    result.y = (f.y == val) ? eq : neq.y;
-    return result;
-}
-#define M_PI 3.14159
-
-float luminance(float3 c)
-{
-    return 0.212671 * c.x + 0.715160 * c.y + 0.072169 * c.z;
-}
-
-int CurFrame;
-
-uint hash_with(uint seed, uint hash) {
-    // Wang hash
-    seed = (seed ^ 61) ^ hash;
-    seed += seed << 3;
-    seed ^= seed >> 4;
-    seed *= 0x27d4eb2d;
-    return seed;
-}
-uint pcg_hash(uint seed) {
-    uint state = seed * 747796405u + 2891336453u;
-    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
-    return (word >> 22u) ^ word;
-}
-
-float2 random(uint samdim, int2 id) {
-    uint hash = pcg_hash(((id.x + id.y * target_width) * (uint)112 + samdim));
-
-    const static float one_over_max_unsigned = asfloat(0x2f7fffff);
-
-
-    float x = hash_with(CurFrame, hash) * one_over_max_unsigned;
-    float y = hash_with(CurFrame + 0xdeadbeef, hash) * one_over_max_unsigned;
-
-    return float2(x, y);
+            pix.x = saturate((pix.x+deltaY));
+            pix.y = saturate((pix.y+deltaY));
+            pix.z = saturate((pix.z+deltaY));
+        }
+    }
+    pix.w = 1.0;  //assume alpha channel is not used
 
 }
+// #endif
 
-float4 SampleTextureCatmullRom(in Texture2D<half4> tex, in SamplerState linearSampler, in float2 uv, in float2 texSize)
-{
-    // We're going to sample a a 4x4 grid of texels surrounding the target UV coordinate. We'll do this by rounding
-    // down the sample location to get the exact center of our "starting" texel. The starting texel will be at
-    // location [1, 1] in the grid, where [0, 0] is the top left corner.
-    float2 samplePos = uv * texSize;
-    float2 texPos1 = floor(samplePos - 0.5f) + 0.5f;
 
-    // Compute the fractional offset from our starting texel to our original sample location, which we'll
-    // feed into the Catmull-Rom spline function to get our filter weights.
-    float2 f = samplePos - texPos1;
-
-    // Compute the Catmull-Rom weights using the fractional offset that we calculated earlier.
-    // These equations are pre-expanded based on our knowledge of where the texels will be located,
-    // which lets us avoid having to evaluate a piece-wise function.
-    float2 w0 = f * (-0.5f + f * (1.0f - 0.5f * f));
-    float2 w1 = 1.0f + f * f * (-2.5f + 1.5f * f);
-    float2 w2 = f * (0.5f + f * (2.0f - 1.5f * f));
-    float2 w3 = f * f * (-0.5f + 0.5f * f);
-
-    // Work out weighting factors and sampling offsets that will let us use bilinear filtering to
-    // simultaneously evaluate the middle 2 samples from the 4x4 grid.
-    float2 w12 = w1 + w2;
-    float2 offset12 = w2 / (w1 + w2);
-
-    // Compute the final UV coordinates we'll use for sampling the texture
-    float2 texPos0 = texPos1 - 1;
-    float2 texPos3 = texPos1 + 2;
-    float2 texPos12 = texPos1 + offset12;
-
-    texPos0 /= texSize;
-    texPos3 /= texSize;
-    texPos12 /= texSize;
-
-    float4 result = 0.0f;
-    result += tex.SampleLevel(linearSampler, float2(texPos0.x, texPos0.y), 0.0f) * w0.x * w0.y;
-    result += tex.SampleLevel(linearSampler, float2(texPos12.x, texPos0.y), 0.0f) * w12.x * w0.y;
-    result += tex.SampleLevel(linearSampler, float2(texPos3.x, texPos0.y), 0.0f) * w3.x * w0.y;
-
-    result += tex.SampleLevel(linearSampler, float2(texPos0.x, texPos12.y), 0.0f) * w0.x * w12.y;
-    result += tex.SampleLevel(linearSampler, float2(texPos12.x, texPos12.y), 0.0f) * w12.x * w12.y;
-    result += tex.SampleLevel(linearSampler, float2(texPos3.x, texPos12.y), 0.0f) * w3.x * w12.y;
-
-    result += tex.SampleLevel(linearSampler, float2(texPos0.x, texPos3.y), 0.0f) * w0.x * w3.y;
-    result += tex.SampleLevel(linearSampler, float2(texPos12.x, texPos3.y), 0.0f) * w12.x * w3.y;
-    result += tex.SampleLevel(linearSampler, float2(texPos3.x, texPos3.y), 0.0f) * w3.x * w3.y;
-
-    return result;
-}
-
-float4 GetViewSpacePosition(float2 coord, float depth)
-{
-
-    float4 viewPosition = mul(_CameraInverseProjection, float4(coord.x * 2.0 - 1.0, coord.y * 2.0 - 1.0, 2.0 * depth - 1.0, 1.0));
-    viewPosition /= viewPosition.w;
-
-    return viewPosition;
-}
-
-Texture2D<float4> SmallerGBuffer;
-
-float3 i_octahedral_32( uint data ) {
-    uint2 iv = uint2( data, data>>16u ) & 65535u; 
-    float2 v = float2(iv)/32767.5f - 1.0f;
-    float3 nor = float3(v, 1.0f - abs(v.x) - abs(v.y)); // Rune Stubbe's version,
-    float t = max(-nor.z,0.0);                     // much faster than original
-    nor.x += (nor.x>0.0)?-t:t;                     // implementation of this
-    nor.y += (nor.y>0.0)?-t:t;                     // technique
-    return normalize( nor );
-}
 
 [numthreads(16,16,1)]
 void kernel_upsample (int3 id : SV_DispatchThreadID)
 {
     if (id.x >= target_width || id.y >= target_height) return;
     
-    float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
-    float4 blurredDumb = float4(0.0, 0.0, 0.0, 0.0);
-    float validWeights = 0.0;
-    float2 UV = float2(id.xy + 0.5f) / float2(target_width, target_height);
-
-    float depth;
-    float3 WorldPos = CreateCameraRay(UV, depth);
-    PrevDepthTexWrite[id.xy] = float4(depth, 0, 0, 1);
-    // dot(PrevNormalTex.SampleLevel(sampler_Input_trilinear_clamp, newUV, 0).xyz * 2.0 - 1.0f, NormalTex[int3(id.xy,0)].xyz * 2.0 - 1.0f)
-    #ifdef HDRP
-        half3 normal = NormalTex[int3(id.xy,1)].xyz * 2.0 - 1.0f;
-    #else
-        half3 normal = NormalTex[id.xy].xyz * 2.0 - 1.0f;
-    #endif
-    float thresh = 0.26;
-    
-    float3 viewPosition = GetViewSpacePosition(UV, depth).xyz;
-    float3 viewVector = normalize(viewPosition);
-    
-    float NdotV = 1.0 / (saturate(dot(-viewVector, normal.xyz)) + 0.1);
-    thresh *= 1.0 + NdotV * 2.0;
-    
-    float4 sample00 = Input.SampleLevel(my_linear_clamp_sampler, float2(UV + float2(0,0)),0);//.Sampletex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 0.0) * 1.0, 0.0, 0.0));
-    float4 sample10 = Input.SampleLevel(my_linear_clamp_sampler, float2(UV + float2(rcp(source_width),0)),0);//tex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 0.0) * 1.0, 0.0, 0.0));
-    float4 sample11 = Input.SampleLevel(my_linear_clamp_sampler, float2(UV + float2(rcp(source_width),rcp(source_height))),0);//tex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 1.0) * 1.0, 0.0, 0.0));
-    float4 sample01 = Input.SampleLevel(my_linear_clamp_sampler, float2(UV + float2(0,rcp(source_height))),0);//tex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 1.0) * 1.0, 0.0, 0.0));
-    
-    float4 depthSamples;// = float4(0,0,0,0);
-    float3 Throwaway = CreateCameraRay(UV, depthSamples.x);
-    Throwaway = CreateCameraRay(UV + float2(rcp(target_width), 0), depthSamples.y);
-    Throwaway = CreateCameraRay(UV + float2(rcp(target_width), rcp(target_height)), depthSamples.z);
-    Throwaway = CreateCameraRay(UV + float2(0, rcp(target_height)), depthSamples.w);
-    // depthSamples.x = SmallerGBuffer.SampleLevel(my_linear_clamp_sampler,UV, 0).z;
-    // depthSamples.y = SmallerGBuffer.SampleLevel(my_linear_clamp_sampler,UV + float2(rcp(source_width), 0), 0).z;
-    // depthSamples.z = SmallerGBuffer.SampleLevel(my_linear_clamp_sampler,UV + float2(rcp(source_width), rcp(source_height)), 0).z;
-    // depthSamples.w = SmallerGBuffer.SampleLevel(my_linear_clamp_sampler,UV + float2(0, rcp(source_height)), 0).z;
-    // depthSamples.x = LinearEyeDepth(tex2Dlod(CurrentDepth, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 0.0), 0, 0)).x);
-    // depthSamples.y = LinearEyeDepth(tex2Dlod(CurrentDepth, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 0.0), 0, 0)).x);
-    // depthSamples.z = LinearEyeDepth(tex2Dlod(CurrentDepth, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 1.0), 0, 0)).x);
-    // depthSamples.w = LinearEyeDepth(tex2Dlod(CurrentDepth, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 1.0), 0, 0)).x);
-    
-    // half3 normal00 = i_octahedral_32(asuint(SmallerGBuffer[floor((UV + float2(0, 0)) * float2(source_width, source_height))].y));
-    // half3 normal10 = i_octahedral_32(asuint(SmallerGBuffer[floor((UV + float2(rcp(source_width),0)) * float2(source_width, source_height))].y));
-    // half3 normal11 = i_octahedral_32(asuint(SmallerGBuffer[floor((UV + float2(rcp(source_width),rcp(source_height))) * float2(source_width, source_height))].y));
-    // half3 normal01 = i_octahedral_32(asuint(SmallerGBuffer[floor((UV + float2(0,rcp(source_height))) * float2(source_width, source_height))].y));
-    #ifdef HDRP
-        half3 normal00 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,float3(UV,0), 0).xyz * 2.0f - 1.0f);
-        half3 normal10 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,float3(UV + float2(rcp(target_width),0), 0), 0).xyz * 2.0f - 1.0f);
-        half3 normal11 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,float3(UV + float2(rcp(target_width), rcp(target_height)),0), 0).xyz * 2.0f - 1.0f);
-        half3 normal01 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,float3(UV + float2(0, rcp(target_height)),0), 0).xyz * 2.0f - 1.0f);
-    #else
-        half3 normal00 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,UV, 0).xyz * 2.0f - 1.0f);
-        half3 normal10 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,UV + float2(rcp(target_width), 0), 0).xyz * 2.0f - 1.0f);
-        half3 normal11 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,UV + float2(rcp(target_width), rcp(target_height)), 0).xyz * 2.0f - 1.0f);
-        half3 normal01 = normalize(NormalTex.SampleLevel(my_linear_clamp_sampler,UV + float2(0, rcp(target_height)), 0).xyz * 2.0f - 1.0f);
-    #endif
-    // half3 normal00 = DecodeViewNormalStereo(tex2D(CurrentNormal, input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 0.0)));
-    // half3 normal10 = DecodeViewNormalStereo(tex2D(CurrentNormal, input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 0.0)));
-    // half3 normal11 = DecodeViewNormalStereo(tex2D(CurrentNormal, input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 1.0)));
-    // half3 normal01 = DecodeViewNormalStereo(tex2D(CurrentNormal, input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 1.0)));
-    
-    float4 depthWeights = saturate(1.0 - abs(depthSamples - depth.xxxx) / thresh);
-    
-    float4 normalWeights = float4(0,0,0,0);
-    normalWeights.x = pow(saturate(dot(normal00, normal)), 24.0);
-    normalWeights.y = pow(saturate(dot(normal10, normal)), 24.0);
-    normalWeights.z = pow(saturate(dot(normal11, normal)), 24.0);
-    normalWeights.w = pow(saturate(dot(normal01, normal)), 24.0);
-    
-    float4 weights = depthWeights * normalWeights;
-    
-    float weightSum = dot(weights, float4(1.0, 1.0, 1.0, 1.0));             
-                    
-    if (weightSum < 0.01)
-    {
-        weightSum = 4.0;
-        weights = (1.0).xxxx;
-    }
-    
-    weights /= weightSum;
-    
-    float2 fractCoord = frac(UV * float2(target_width, target_height) * 1.0);
-    
-    float4 filteredX0 = lerp(sample00 * weights.x, sample10 * weights.y, fractCoord.x);
-    float4 filteredX1 = lerp(sample01 * weights.w, sample11 * weights.z, fractCoord.x);
-                
-    float4 filtered = lerp(filteredX0, filteredX1, fractCoord.y);
-                
-    Output[id.xy] = float4(filtered.xyz * 3.0f, 1);  
-    // return filtered * 3.0;
-        
-    // return blurred;
+    float4 OutColor;
+    float4 ViewportInfo = float4(rcp(float2(target_width, target_height)), float2(target_width, target_height));
+    float2 uv = (id.xy + 0.5f) / float2(target_width, target_height);
+    SgsrYuvH(OutColor, uv, ViewportInfo);
+    Output[id.xy] =  OutColor;
 }
 
 #pragma kernel simpleblur
-
+Texture2D<float4> Albedo;
+Texture2D<float4> Albedo2;
 [numthreads(16,16,1)]
 void simpleblur (int3 id : SV_DispatchThreadID)
 {
     float3 In = Input[id.xy];
-    float3 Max = -9999.0f;
-    float3 Min = 9999.0f;
-    for(int i = -1; i <= 1; i++) {
-        for(int j = -1; j <= 1; j++) {
-            if(i == 0 && j == 0) continue;
-            In += Input[id.xy + int2(i,j) * 1.0f];
-            Max = max(Max, Input[id.xy + int2(i,j) * 2.0f]);
-            Min = min(Min, Input[id.xy + int2(i,j) * 2.0f]);
-        }
-    }
-    In /= 9.0f;
-    In = clamp(In, Min, Max);
+    // float3 Max = -9999.0f;
+    // float3 Min = 9999.0f;
+    // for(int i = -1; i <= 1; i++) {
+    //     for(int j = -1; j <= 1; j++) {
+    //         if(i == 0 && j == 0) continue;
+    //         In += Input[id.xy + int2(i,j) * 1.0f];
+    //         Max = max(Max, Input[id.xy + int2(i,j) * 2.0f]);
+    //         Min = min(Min, Input[id.xy + int2(i,j) * 2.0f]);
+    //     }
+    // }
+    // In /= 9.0f;
+    // In = clamp(In, Min, Max);
 
     #ifdef HDRP
         float3 SpecularAlbedo = 0;//Albedo2[int3(ipos,0)].xyz;

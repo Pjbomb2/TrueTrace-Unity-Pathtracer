@@ -8,16 +8,6 @@
     RaytracingAccelerationStructure myAccelerationStructure;
 #endif
 
-#ifdef HDRP
-Texture2DArray<float2> MotionVectors;
-Texture2DArray<float3> NormalTex;
-Texture2DArray<float> Depth;
-#else
-Texture2D<float2> MotionVectors;
-Texture2D<float3> NormalTex;
-Texture2D<float> Depth;
-#endif
-
 RWTexture2D<uint4> _PrimaryTriangleInfo;
 #pragma kernel kernel_trace 
 
@@ -45,15 +35,15 @@ inline void IntersectTriangle(int mesh_id, const int tri_id, const Ray ray, inou
                 #ifdef AdvancedAlphaMapped
                     if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                         float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
-                        float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex);
-                        if(_TextureAtlas.SampleLevel(my_linear_clamp_sampler, Uv, 0).w < _Materials[MaterialIndex].AlphaCutoff) return;
+                        float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlphaTex);
+                        if(_AlphaAtlas.SampleLevel(my_linear_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) return;
                     }
                 #endif
                 #ifdef IgnoreGlassMain
                     if(_Materials[MaterialIndex].specTrans == 1) return;
                 #endif
                 #ifdef IgnoreBackfacing
-                    if(_Materials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction) <= 0) return;
+                    if(CurBounce == 0 &&_Materials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction) <= 0) return;
                 #endif
                 if(CurBounce == 0 && GetFlag(_Materials[MaterialIndex].Tag, Invisible)) return;
                 ray_hit.t = t;
@@ -89,6 +79,7 @@ void IntersectBVH() {
         InterlockedAdd(BufferSizes[CurBounce].tracerays, -1, ray_index);
         ray_index--;
         if (ray_index < 0) return;
+        if(CurBounce % 2 == 1) ray_index += screen_width * screen_height;
         GlobalRay = GlobalRays[ray_index];
         bestHit = CreateRayHit();
 
@@ -98,6 +89,8 @@ void IntersectBVH() {
             RayDesc myRay;
             myRay.Origin = GlobalRays[ray_index].origin;
             myRay.Direction = GlobalRays[ray_index].direction;
+            ray.origin = myRay.Origin;
+            ray.direction = myRay.Direction;
             myRay.TMin = 0;
             myRay.TMax = FarPlane;
             bestHit.t = FarPlane;
@@ -124,8 +117,8 @@ void IntersectBVH() {
                         if(CurBounce == 0 && GetFlag(_Materials[MaterialIndex].Tag, Invisible)) {myRay.TMin = bestHit.t + 0.001f; bestHit.t = FarPlane; continue;}
                         if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                             float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - bestHit.u - bestHit.v) + AggTris[tri_id].texedge1 * bestHit.u + AggTris[tri_id].texedge2 * bestHit.v;
-                            float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex);
-                            if(_TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0).w < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t + 0.001f; bestHit.t = FarPlane; continue;}
+                            float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlphaTex);
+                            if(_AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t + 0.001f; bestHit.t = FarPlane; continue;}
                         }
                     #endif
                 }
@@ -133,11 +126,13 @@ void IntersectBVH() {
             }
 
 
-            [branch]if((UseASVGF || UseReSTIRGI) && CurBounce == 0) {
-                int PixIndex = GlobalRay.PixelIndex;
-                uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
-                int2 Indexes = Unpack1To2(bestHit.mesh_id);
+            int PixIndex = GlobalRay.PixelIndex;
+            uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
+            int2 Indexes = Unpack1To2(bestHit.mesh_id);
+            [branch]if(CurBounce == 0) {
                 _PrimaryTriangleInfo[TempUv] = uint4(MeshOffsets[Indexes.y].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x] - _MeshData[MeshOffsets[Indexes.y].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
+            } else if(CurBounce == 1) {
+                WorldPosA[TempUv] = uint4((UseReSTIRGI && bestHit.t != FarPlane) ? uint3(MeshOffsets[Indexes.y].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x] - _MeshData[MeshOffsets[Indexes.y].y].TriOffset, ((uint)(bestHit.u * 65535.0f) | (uint)(bestHit.v * 65535.0f) << 16)) : ((bestHit.t != FarPlane) ? asuint(ray.direction) : asuint(ray.direction * bestHit.t + ray.origin)), bestHit.t == FarPlane);
             }
 
             set(ray_index, bestHit);
@@ -233,15 +228,17 @@ void IntersectBVH() {
               
                 if ((current_group.y & 0xff000000) == 0) {
                     if (stack_size == 0) {//thread has finished traversing
+                        int PixIndex = GlobalRay.PixelIndex;
+                        uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
                         [branch]if(CurBounce == 0) {
-                            int PixIndex = GlobalRay.PixelIndex;
-                            uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
                             _PrimaryTriangleInfo[TempUv] = uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
+                            // _DebugTex[TempUv] = float4(Reps / 43.0f, Reps > 80, 0, 1);
+                        } else if(GlobalColors[PixIndex].Data.w == -1 || CurBounce == GlobalColors[PixIndex].Data.w) {
+                            WorldPosA[TempUv] = uint4((UseReSTIRGI && bestHit.t != FarPlane) ? uint3(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, ((uint)(bestHit.u * 65535.0f) | ((uint)(bestHit.v * 65535.0f) << 16))) : ((UseASVGF || bestHit.t != FarPlane) ? asuint(ray2.direction) : asuint(ray2.direction * bestHit.t + ray2.origin)), bestHit.t == FarPlane);
                         }
-
+                        // if(CurBounce > 0) NEEPosA[TempUv] += float4(0,0,0, bestHit.t);
                         set(ray_index, bestHit);
-                        current_group.y = 0;
-                        break;
+                        return;
                     }
 
                     if (stack_size == tlas_stack_size) {
@@ -296,6 +293,8 @@ void IntersectBVHShadow() {
             RayDesc myRay;
             myRay.Origin = ShadowRaysBuffer[ray_index].origin;
             myRay.Direction = ShadowRaysBuffer[ray_index].direction;
+            ray.origin = myRay.Origin;
+            ray.direction = myRay.Direction;
             myRay.TMin = 0;
             myRay.TMax = abs(ShadowRaysBuffer[ray_index].t);
             while(true) {
@@ -318,8 +317,8 @@ void IntersectBVHShadow() {
                         if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster)) {myRay.TMin = q.CommittedRayT() + 0.001f; continue;} 
                         if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                             float2 BaseUv = AggTris[triangle_id].tex0 * (1.0f - u - v) + AggTris[triangle_id].texedge1 * u + AggTris[triangle_id].texedge2 * v;
-                            float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex);
-                            if(_TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0).w < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.001f; continue;}
+                            float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlphaTex);
+                            if(_AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.001f; continue;}
 
                         }
                     #endif
@@ -327,17 +326,23 @@ void IntersectBVHShadow() {
                     ShadowRaysBuffer[ray_index].t = 0;
                 } else {
                     if(!TerrainExists) {
-                        if(UseReSTIRGI && ReSTIRGIUpdateRate != 0) NEEPosA[uint2(ShadowRaysBuffer[ray_index].PixelIndex % screen_width, ShadowRaysBuffer[ray_index].PixelIndex / screen_width)] += float4(0,0,0,ShadowRaysBuffer[ray_index].LuminanceIncomming);
-
+                        uint PixelIndex = ShadowRaysBuffer[ray_index].PixelIndex;
+                        if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray.origin + ray.direction * abs(ShadowRaysBuffer[ray_index].t),NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)].w);
+                            #ifdef RadianceCache
+                                CacheBuffer[PixelIndex].CurrentIlluminance += ShadowRaysBuffer[ray_index].illumination * ((!UseReSTIRGI || ShadowRaysBuffer[ray_index].t >= 0) ? 1 : unpackRGBE(asuint(ShadowRaysBuffer[ray_index].LuminanceIncomming)));
+                            #endif
                         if (ShadowRaysBuffer[ray_index].t >= 0) {
                             if (CurBounce == 0) {
 
-                                GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].Direct += ShadowRaysBuffer[ray_index].illumination;
+                                GlobalColors[PixelIndex].Direct += ShadowRaysBuffer[ray_index].illumination;
                             } else {
-                                GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;
+                                #ifndef RadianceCache
+                                    GlobalColors[PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;
+                                #endif
                             }
                         } else {
-                            GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[ShadowRaysBuffer[ray_index].PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRaysBuffer[ray_index].illumination,rcp(2.2f)));
+                            if(CurBounce != 0 && UseReSTIRGI) GlobalColors[PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;// * unpackRGBE(asuint(ShadowRay.LuminanceIncomming));
+                            else GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRaysBuffer[ray_index].illumination,rcp(2.2f)));
                         }
                     }
                 }
@@ -453,16 +458,27 @@ void IntersectBVHShadow() {
                         current_group.y = 0;
                         if(!TerrainExists) {
                             uint PixelIndex = ShadowRay.PixelIndex;
-                            if(UseReSTIRGI && ReSTIRGIUpdateRate != 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] += float4(0,0,0,ShadowRay.LuminanceIncomming);
+                            if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray2.origin + ray2.direction * abs(ShadowRaysBuffer[ray_index].t), 0);
+                            // if(UseReSTIRGI && ReSTIRGIUpdateRate != 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] += float4(0,0,0,ShadowRay.LuminanceIncomming);
+                            #ifdef RadianceCache
+                                CacheBuffer[PixelIndex].CurrentIlluminance += ShadowRay.illumination * throughput * ((!UseReSTIRGI || ShadowRay.t >= 0) ? 1 : unpackRGBE(asuint(ShadowRay.LuminanceIncomming)));// * abs(dot(i_octahedral_32(CacheBuffer[PixelIndex].Norm), ShadowRay.direction));
+                            #endif
                             if (ShadowRay.t >= 0) {
+
                                 if (CurBounce == 0) {
                                     GlobalColors[PixelIndex].Direct += ShadowRay.illumination * throughput;
                                 } else {
-                                    GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
+                                    #ifndef RadianceCache
+                                        GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
+                                    #endif
                                 }
-                            }
-                            else {
-                                GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)) * throughput);
+                            } else {
+                                #ifdef RadianceCache
+                                    if(CurBounce != 0 &&  (UseReSTIRGI || GlobalColors[PixelIndex].Data.w == CurBounce)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput * (UseReSTIRGI ? unpackRGBE(asuint(ShadowRay.LuminanceIncomming)) : 1);
+                                #else
+                                    if(CurBounce != 0 && (!UseReSTIRGI && GlobalColors[PixelIndex].Data.w == -1)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;// * unpackRGBE(asuint(ShadowRay.LuminanceIncomming));
+                                #endif
+                                else GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)) * throughput);
                             }
                         }
                         break;
@@ -552,19 +568,26 @@ void IntersectShadowHeightmap() {
             Ray ray = CreateRay(ShadowRaysBuffer[ray_index].origin, ShadowRaysBuffer[ray_index].direction);
             bool HitHeightmap = TerrainExists;
             if(ShadowRaysBuffer[ray_index].t != 0) {
-                if (TerrainExists) HitHeightmap = IntersectHeightMapShadow(ray, abs(ShadowRaysBuffer[ray_index].t));
-                if (!HitHeightmap) {
-                    if(UseReSTIRGI && ReSTIRGIUpdateRate != 0) NEEPosA[uint2(pixel_index % screen_width, pixel_index / screen_width)] += float4(0,0,0,ShadowRaysBuffer[ray_index].LuminanceIncomming);
+                if (TerrainExists) HitHeightmap = IntersectHeightMapShadow(ray, abs(ShadowRaysBuffer[ray_index].t));                  
+                if(!HitHeightmap) {
+                    uint PixelIndex = ShadowRaysBuffer[ray_index].PixelIndex;
+                    if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray.origin + ray.direction * abs(ShadowRaysBuffer[ray_index].t), 0);
+                    // if(UseReSTIRGI && ReSTIRGIUpdateRate != 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] += float4(0,0,0,ShadowRay.LuminanceIncomming);
+                    #ifdef RadianceCache
+                        CacheBuffer[PixelIndex].CurrentIlluminance += ShadowRaysBuffer[ray_index].illumination * ((!UseReSTIRGI || ShadowRaysBuffer[ray_index].t >= 0) ? 1 : unpackRGBE(asuint(ShadowRaysBuffer[ray_index].LuminanceIncomming)));// * abs(dot(i_octahedral_32(CacheBuffer[PixelIndex].Norm), ShadowRay.direction));
+                    #endif
                     if (ShadowRaysBuffer[ray_index].t >= 0) {
+
                         if (CurBounce == 0) {
-                            GlobalColors[pixel_index].Direct += ShadowRaysBuffer[ray_index].illumination;
+                            GlobalColors[PixelIndex].Direct += ShadowRaysBuffer[ray_index].illumination;
+                        } else {
+                            #ifndef RadianceCache
+                                GlobalColors[PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;
+                            #endif
                         }
-                        else {
-                            GlobalColors[pixel_index].Indirect += ShadowRaysBuffer[ray_index].illumination;
-                        }
-                    }
-                    else {
-                        GlobalColors[pixel_index].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[pixel_index].PrimaryNEERay),2.2f) + pow(ShadowRaysBuffer[ray_index].illumination,rcp(2.2f)));
+                    } else {
+                        if(CurBounce != 0 && UseReSTIRGI) GlobalColors[PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;// * unpackRGBE(asuint(ShadowRay.LuminanceIncomming));
+                        else GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRaysBuffer[ray_index].illumination,rcp(2.2f)));
                     }
                 }
             }
@@ -607,6 +630,7 @@ void IntersectHeightMap() {
         int step_count = 0;
         InterlockedAdd(BufferSizes[CurBounce].heighmap_rays, -1, ray_index);
         if (ray_index < 0) return;
+        if(CurBounce % 2 == 1) ray_index += screen_width * screen_height;
         ray.origin = GlobalRays[ray_index].origin;
         CurrentPos = ray.origin;
         ray.direction = GlobalRays[ray_index].direction;
@@ -654,13 +678,17 @@ void IntersectHeightMap() {
 
                         int PixIndex = GlobalRays[ray_index].PixelIndex;
                         uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
-                        if(CurBounce == 0) _PrimaryTriangleInfo[TempUv] = uint4(0, 0, 0, 1);
 
                         bestHit.u = uv.x;
                         bestHit.v = uv.y;
                         bestHit.t = CurDist + t0;
                         bestHit.triangle_id = i;
                         bestHit.mesh_id = 9999999;
+                        [branch]if(CurBounce == 0) {
+                            _PrimaryTriangleInfo[TempUv] = uint4(bestHit.mesh_id, bestHit.triangle_id, asuint(bestHit.u), asuint(bestHit.v));
+                        } else if(CurBounce == 1) {
+                            WorldPosA[TempUv] = uint4(((!UseReSTIRGI) ? asuint(ray2.direction) : asuint(ray2.direction * bestHit.t + ray2.origin)), 1);
+                        }
                         set(ray_index, bestHit);
                         break;
                     }

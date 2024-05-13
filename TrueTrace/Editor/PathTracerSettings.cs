@@ -15,6 +15,7 @@ using UnityEngine.Rendering;
 using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
 using System.Reflection;
+using UnityEditor.Experimental.GraphView;
 
 namespace TrueTrace {
    public class EditModeFunctions : EditorWindow {
@@ -84,7 +85,6 @@ namespace TrueTrace {
          [SerializeField] public float LightEnergyScale = 1;
          [SerializeField] public float IndirectBoost = 1;
          [SerializeField] public int BackgroundType = 0;
-         [SerializeField] public bool DoOldReSTIR = false;
          [SerializeField] public bool DoDing = true;
          [SerializeField] public bool DoSaving = true;
          [SerializeField] public float SunDesaturate = 0;
@@ -586,6 +586,22 @@ Toolbar toolbar;
 
       }
 
+      private enum Properties {AlbedoColor, 
+                                       AlbedoTexture, 
+                                       NormalTexture,
+                                       EmissionTexture,
+                                       MetallicTexture,
+                                       MetallicSlider,
+                                       MetallicMin,
+                                       MetallicMax,
+                                       RoughnessTexture,
+                                       RoughnessSlider,
+                                       RoughnessMin,
+                                       RoughnessMax,
+                                       AlphaTexture,
+                                       MatCapTexture,
+                                       MatCapMask
+                                       };
 
       VisualElement MaterialPairingMenu;
       ObjectField InputMaterialField;
@@ -612,24 +628,109 @@ Toolbar toolbar;
       List<string> ColorProperties;
       List<string> FloatProperties;
       List<string> RangeProperties;
+      DialogueNode OutputNode;
       void ConfirmMats() {
-         MatShader.BaseColorTex = TextureProperties[BaseColorTextureField.index];
-         MatShader.BaseColorValue = ColorProperties[BaseColorField.index];
-         MatShader.NormalTex = TextureProperties[NormalTextureField.index];
-         MatShader.EmissionTex = TextureProperties[EmissionTextureField.index];
-         MatShader.MetallicTex = TextureProperties[MetallicTextureField.index];
-         MatShader.MetallicRange = RangeProperties[MetallicRangeField.index];
-         MatShader.MetallicTexChannel = MetallicChannelField.index;
-         MatShader.RoughnessTex = TextureProperties[RoughnessTextureField.index];
-         MatShader.RoughnessRange = RangeProperties[RoughnessRangeField.index];
-         MatShader.RoughnessTexChannel = RoughnessChannelField.index;
+         
+         MatShader.AvailableTextures = new List<TexturePairs>();
+         List<int> AvailableEdges = new List<int>();
+         List<DialogueNode> AvailableIndexes = new List<DialogueNode>();
+         for(int i = 0; i < OutputNode.inputContainer.childCount; i++) {
+            if((OutputNode.inputContainer[i] as Port).connected) {
+               DialogueNode TempNode = ((((OutputNode.inputContainer[i] as Port).connections.ToList())[0].output as Port).node as DialogueNode);
+               TempNode.PropertyIndex = i;
+               AvailableIndexes.Add(TempNode);
+            }
+         }
+
+
+         for(int i = 0; i < AvailableIndexes.Count; i++) {
+            switch((int)AvailableIndexes[i].PropertyIndex) {
+               case((int)Properties.AlbedoColor):
+                  MatShader.BaseColorValue = ColorProperties[VerboseColorProperties.IndexOf(AvailableIndexes[i].title)];
+               break;
+               case((int)Properties.AlbedoTexture):
+                  MatShader.AvailableTextures.Add(new TexturePairs() {
+                     Purpose = (int)TexturePurpose.Albedo,
+                     ReadIndex = -4,
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                  });  
+               break;
+               case((int)Properties.NormalTexture):
+                  MatShader.AvailableTextures.Add(new TexturePairs() {
+                     Purpose = (int)TexturePurpose.Normal,
+                     ReadIndex = -3,
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                  });  
+               break;
+               case((int)Properties.EmissionTexture):
+                  MatShader.AvailableTextures.Add(new TexturePairs() {
+                     Purpose = (int)TexturePurpose.Emission,
+                     ReadIndex = -4,
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                  });  
+               break;
+               case((int)Properties.MetallicTexture):
+                  MatShader.AvailableTextures.Add(new TexturePairs() {
+                     Purpose = (int)TexturePurpose.Metallic,
+                     ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                  });  
+               break;
+               case((int)Properties.MetallicSlider):
+                  MatShader.MetallicRange = RangeProperties[VerboseRangeProperties.IndexOf(AvailableIndexes[i].title)];
+               break;
+               case((int)Properties.MetallicMin):
+                  MatShader.MetallicRemapMin = FloatProperties[VerboseFloatProperties.IndexOf(AvailableIndexes[i].title)];
+               break;
+               case((int)Properties.MetallicMax):
+                  MatShader.MetallicRemapMax = FloatProperties[VerboseFloatProperties.IndexOf(AvailableIndexes[i].title)];
+               break;
+               case((int)Properties.RoughnessTexture):
+                  MatShader.AvailableTextures.Add(new TexturePairs() {
+                     Purpose = (int)TexturePurpose.Roughness,
+                     ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                  });  
+               break;
+               case((int)Properties.RoughnessSlider):
+                  MatShader.RoughnessRange = RangeProperties[VerboseRangeProperties.IndexOf(AvailableIndexes[i].title)];
+               break;
+               case((int)Properties.RoughnessMin):
+                  MatShader.RoughnessRemapMin = FloatProperties[VerboseFloatProperties.IndexOf(AvailableIndexes[i].title)];
+               break;
+               case((int)Properties.RoughnessMax):
+                  MatShader.RoughnessRemapMax = FloatProperties[VerboseFloatProperties.IndexOf(AvailableIndexes[i].title)];
+               break;
+               case((int)Properties.AlphaTexture):
+                  MatShader.AvailableTextures.Add(new TexturePairs() {
+                     Purpose = (int)TexturePurpose.Alpha,
+                     ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                  });  
+               break;
+               case((int)Properties.MatCapTexture):
+                  MatShader.AvailableTextures.Add(new TexturePairs() {
+                     Purpose = (int)TexturePurpose.MatCapTex,
+                     ReadIndex = -4,
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                  });  
+               break;
+               case((int)Properties.MatCapMask):
+                  MatShader.AvailableTextures.Add(new TexturePairs() {
+                     Purpose = (int)TexturePurpose.MatCapMask,
+                     ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                  });  
+               break;
+            }
+         }
+
+
+      
+
          MatShader.IsGlass = GlassToggle.value;
          MatShader.IsCutout = CutoutToggle.value;
          MatShader.UsesSmoothness = SmoothnessToggle.value;
-         MatShader.MetallicRemapMin = FloatProperties[MetallicRemapMinField.index];
-         MatShader.MetallicRemapMax = FloatProperties[MetallicRemapMaxField.index];
-         MatShader.RoughnessRemapMin = FloatProperties[RoughnessRemapMinField.index];
-         MatShader.RoughnessRemapMax = FloatProperties[RoughnessRemapMaxField.index];
          AssetManager.data.Material[Index] = MatShader;
          using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialMappings.xml")) {
             var serializer = new XmlSerializer(typeof(Materials));
@@ -639,17 +740,84 @@ Toolbar toolbar;
                Assets.UpdateMaterialDefinition();
          }
       }
+      List<string> ChannelProperties;
+      List<string> VerboseRangeProperties;
+      List<string> VerboseFloatProperties;
+      List<string> VerboseColorProperties;
+      List<string> VerboseTextureProperties;
+      public DialogueNode CreateInputNode(string PropertyID, System.Type T, Vector2 Pos, string InitialValue = "null", int InputElement = -1, bool IsRange = false, Texture SampleTex = null) 
+      {
+           var dialogueNode = new DialogueNode() {
+               title = PropertyID,
+               DialogueText = PropertyID,
+               GUID = PropertyID
+           };
+
+            PopupField<string> DropField = new PopupField<string>(PropertyID);
+           var inputPort = _graphView.GeneratePort(dialogueNode, Direction.Output, T, Port.Capacity.Multi);
+           inputPort.portName = PropertyID;
+           dialogueNode.outputContainer.Add(inputPort);
+           if(T == typeof(Texture)) {
+               if(InputElement != -1) {
+                  PopupField<string> ChannelField = new PopupField<string>("Read Channel");
+                  ChannelField.choices = ChannelProperties;               
+                  ChannelField.index = InputElement;
+                  dialogueNode.GUID = ChannelProperties[ChannelField.index];
+                  dialogueNode.inputContainer.Add(ChannelField);
+                  ChannelField.RegisterValueChangedCallback(evt => {dialogueNode.GUID = ChannelProperties[ChannelField.index];});
+               }
+               DropField.choices = TextureProperties;
+               DropField.index = TextureProperties.IndexOf(InitialValue);
+               dialogueNode.title = VerboseTextureProperties[DropField.index];
+               Image TexPreview = new Image();
+               if(DropField.index > 0) TexPreview.image = (InputMaterialField.value as Material).GetTexture(TextureProperties[DropField.index]);
+               TexPreview.style.width = 100;
+               TexPreview.style.height = 100;
+               dialogueNode.outputContainer.Add(TexPreview);
+               DropField.RegisterValueChangedCallback(evt => {dialogueNode.title = VerboseTextureProperties[DropField.index]; TexPreview.image = (InputMaterialField.value as Material).GetTexture(TextureProperties[DropField.index]);});
+           } else if(T == typeof(Color)) {
+               DropField.choices = ColorProperties;
+               DropField.index = ColorProperties.IndexOf(InitialValue);
+               dialogueNode.title = VerboseColorProperties[DropField.index];
+               DropField.RegisterValueChangedCallback(evt => {dialogueNode.title = VerboseColorProperties[DropField.index];});
+           }else if(T == typeof(float)) {
+               if(!IsRange) {
+                  DropField.choices = RangeProperties;
+                  DropField.index = RangeProperties.IndexOf(InitialValue);
+                  dialogueNode.title = VerboseRangeProperties[DropField.index];
+                  DropField.RegisterValueChangedCallback(evt => {dialogueNode.title = VerboseRangeProperties[DropField.index];});
+               } else {
+                  DropField.choices = FloatProperties;
+                  DropField.index = FloatProperties.IndexOf(InitialValue);
+                  dialogueNode.title = VerboseFloatProperties[DropField.index];
+                  DropField.RegisterValueChangedCallback(evt => {dialogueNode.title = VerboseFloatProperties[DropField.index];});
+               }
+           }
+
+           dialogueNode.inputContainer.Add(DropField);
+           dialogueNode.RefreshExpandedState();
+           dialogueNode.RefreshPorts();
+           dialogueNode.SetPosition(new Rect(Pos, new Vector2(50, 100)));
+
+           return dialogueNode;
+      }
+
+
+
+      private DialogueGraphView _graphView;
       void AddAssetsToMenu() {
+
+
          Shader shader = (InputMaterialField.value as Material).shader;
          RangeProperties = new List<string>();
          FloatProperties = new List<string>();
          ColorProperties = new List<string>();
          TextureProperties = new List<string>();
-         List<string> ChannelProperties = new List<string>();
-         List<string> VerboseRangeProperties = new List<string>();
-         List<string> VerboseFloatProperties = new List<string>();
-         List<string> VerboseColorProperties = new List<string>();
-         List<string> VerboseTextureProperties = new List<string>();
+         ChannelProperties = new List<string>();
+         VerboseRangeProperties = new List<string>();
+         VerboseFloatProperties = new List<string>();
+         VerboseColorProperties = new List<string>();
+         VerboseTextureProperties = new List<string>();
          int PropCount = shader.GetPropertyCount();
          ColorProperties.Add("null");
          RangeProperties.Add("null");
@@ -684,83 +852,8 @@ Toolbar toolbar;
                Index = AssetManager.data.Material.IndexOf(MatShader);
             }
          }
-         VisualElement BaseColorRow = new VisualElement();
-         BaseColorRow.style.flexDirection = FlexDirection.Row;
-            BaseColorField = new PopupField<string>("Base Color ->");
-            BaseColorField.choices = VerboseColorProperties;
-            BaseColorField.index = ColorProperties.IndexOf(MatShader.BaseColorValue);
-            BaseColorRow.Add(BaseColorField);
-            BaseColorTextureField = new PopupField<string>("Base Color Texture ->");
-            BaseColorTextureField.choices = VerboseTextureProperties;
-            BaseColorTextureField.index = TextureProperties.IndexOf(MatShader.BaseColorTex);
-            BaseColorRow.Add(BaseColorTextureField);
-         MaterialPairingMenu.Add(BaseColorRow);
 
-         NormalTextureField = new PopupField<string>("Normal Texture ->");
-         NormalTextureField.choices = VerboseTextureProperties;
-         NormalTextureField.index = TextureProperties.IndexOf(MatShader.NormalTex);
-         MaterialPairingMenu.Add(NormalTextureField);
-         EmissionTextureField = new PopupField<string>("Emission Texture ->");
-         EmissionTextureField.choices = VerboseTextureProperties;
-         EmissionTextureField.index = TextureProperties.IndexOf(MatShader.EmissionTex);
-         MaterialPairingMenu.Add(EmissionTextureField);
-         VisualElement MetallicTexRow = new VisualElement();
-         MetallicTexRow.style.flexDirection = FlexDirection.Row;
-            MetallicRangeField = new PopupField<string>("Metallic Float ->");
-            MetallicRangeField.choices = VerboseRangeProperties;
-            MetallicRangeField.index = RangeProperties.IndexOf(MatShader.MetallicRange);
-            MetallicTexRow.Add(MetallicRangeField);
-            MetallicTextureField = new PopupField<string>("Metallic Texture ->");
-            MetallicTextureField.choices = VerboseTextureProperties;
-            MetallicTextureField.index = TextureProperties.IndexOf(MatShader.MetallicTex);
-            MetallicTexRow.Add(MetallicTextureField);
-            MetallicChannelField = new PopupField<string>("Texture Channel Of Metallic ->");
-            MetallicChannelField.choices = ChannelProperties;
-            MetallicChannelField.index = MatShader.MetallicTexChannel;
-            MetallicTexRow.Add(MetallicChannelField);
-         MaterialPairingMenu.Add(MetallicTexRow);
-         VisualElement MetallicRow = new VisualElement();
-         MetallicRow.style.flexDirection = FlexDirection.Row;
-            MetallicRemapMinField = new PopupField<string>("Metallic Remap Min ->");
-            MetallicRemapMinField.choices = VerboseFloatProperties;
-            MetallicRemapMinField.index = FloatProperties.IndexOf(MatShader.MetallicRemapMin);
-            MetallicRow.Add(MetallicRemapMinField);
-            MetallicRemapMaxField = new PopupField<string>("Metallic Remap Max ->");
-            MetallicRemapMaxField.choices = VerboseFloatProperties;
-            MetallicRemapMaxField.index = FloatProperties.IndexOf(MatShader.MetallicRemapMax);
-            MetallicRow.Add(MetallicRemapMaxField);
-         MaterialPairingMenu.Add(MetallicRow);
-
-
-         VisualElement RoughnessTexRow = new VisualElement();
-         RoughnessTexRow.style.flexDirection = FlexDirection.Row;
-            RoughnessRangeField = new PopupField<string>("Roughness Float ->");
-            RoughnessRangeField.choices = VerboseRangeProperties;
-            RoughnessRangeField.index = RangeProperties.IndexOf(MatShader.RoughnessRange);
-            RoughnessTexRow.Add(RoughnessRangeField);
-            RoughnessTextureField = new PopupField<string>("Roughness Texture ->");
-            RoughnessTextureField.choices = VerboseTextureProperties;
-            RoughnessTextureField.index = TextureProperties.IndexOf(MatShader.RoughnessTex);
-            RoughnessTexRow.Add(RoughnessTextureField);
-            RoughnessChannelField = new PopupField<string>("Texture Channel Of Roughness ->");
-            RoughnessChannelField.choices = ChannelProperties;
-            RoughnessChannelField.index = MatShader.RoughnessTexChannel;
-            RoughnessTexRow.Add(RoughnessChannelField);
-         MaterialPairingMenu.Add(RoughnessTexRow);
-
-         VisualElement RoughnessRow = new VisualElement();
-         RoughnessRow.style.flexDirection = FlexDirection.Row;
-            RoughnessRemapMinField = new PopupField<string>("Roughness Remap Min ->");
-            RoughnessRemapMinField.choices = VerboseFloatProperties;
-            RoughnessRemapMinField.index = FloatProperties.IndexOf(MatShader.RoughnessRemapMin);
-            RoughnessRow.Add(RoughnessRemapMinField);
-            RoughnessRemapMaxField = new PopupField<string>("Roughness Remap Max ->");
-            RoughnessRemapMaxField.choices = VerboseFloatProperties;
-            RoughnessRemapMaxField.index = FloatProperties.IndexOf(MatShader.RoughnessRemapMax);
-            RoughnessRow.Add(RoughnessRemapMaxField);
-         MaterialPairingMenu.Add(RoughnessRow);
-
-
+        
          GlassToggle = new Toggle() {value = MatShader.IsGlass, text = "Force Glass On All Objects With This Material"};
          MaterialPairingMenu.Add(GlassToggle);
          CutoutToggle = new Toggle() {value = MatShader.IsCutout, text = "Force All Objects With This Material To Be Cutout"};
@@ -770,6 +863,187 @@ Toolbar toolbar;
 
          Button ConfirmMaterialButton = new Button(() => ConfirmMats()) {text = "Apply Material Links"};
          MaterialPairingMenu.Add(ConfirmMaterialButton);
+
+
+         _graphView = new DialogueGraphView
+         {
+            name = "Dialogue Graph"
+         };
+         _graphView.SetupZoom(0.1f, 5.0f);
+         VisualElement Spacer = new VisualElement();
+
+         Spacer.style.width = 1800;
+         Spacer.style.height = 1800;
+
+         Spacer.Add(_graphView);
+         _graphView.StretchToParentSize();
+         
+
+
+
+
+         OutputNode = new DialogueNode() {
+            title = "Output",
+            DialogueText = "Output",
+            GUID = "Output"
+         };
+
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Color), Port.Capacity.Single, "Base Color"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Base Texture"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Normal Texture"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Emission Texture"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Metallic Texture"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Metallic Range"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Metallic Min"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Metallic Max"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Roughness Texture"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Roughness Range"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Roughness Min"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Roughness Max"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Alpha Texture"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "MatCap Texture"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "MatCap Mask"));
+
+         _graphView.AddElement(OutputNode);
+         Vector2 Pos = new Vector2(30, 10);
+         List<int> AvailableTexturesPurposes = new List<int>();
+         for(int i = 0; i < MatShader.AvailableTextures.Count; i++) {
+            AvailableTexturesPurposes.Add(MatShader.AvailableTextures[i].Purpose);
+         }
+         for(int i = 0; i < MatShader.AvailableTextures.Count; i++) {
+            DialogueNode ThisNode = new DialogueNode();
+            Edge ThisEdge = new Edge();
+            switch((int)MatShader.AvailableTextures[i].Purpose) {
+               case((int)TexturePurpose.MatCapMask):
+                  Pos.y = 1140;
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName, MatShader.AvailableTextures[i].ReadIndex);
+                  ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.MatCapMask] as Port);
+               break;
+               case((int)TexturePurpose.MatCapTex):
+                  Pos.y = 1060;
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName);
+                  ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.MatCapTexture] as Port);
+               break;
+               case((int)TexturePurpose.Alpha):
+                  Pos.y = 980;
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName, MatShader.AvailableTextures[i].ReadIndex);
+                  ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.AlphaTexture] as Port);
+               break;
+               case((int)TexturePurpose.Metallic):
+                  Pos.y = 340;
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName, MatShader.AvailableTextures[i].ReadIndex);
+                  ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.MetallicTexture] as Port);
+               break;
+               case((int)TexturePurpose.Roughness):
+                  Pos.y = 660;
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName, MatShader.AvailableTextures[i].ReadIndex);
+                  ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.RoughnessTexture] as Port);
+               break;
+               case((int)TexturePurpose.Albedo):
+                  Pos.y = 100;
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName);
+                  ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.AlbedoTexture] as Port);
+               break;
+               case((int)TexturePurpose.Normal):
+                  Pos.y = 180;
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName);
+                  ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.NormalTexture] as Port);
+               break;
+               case((int)TexturePurpose.Emission):
+                  Pos.y = 260;
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName);
+                  ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.EmissionTexture] as Port);
+               break;
+            }
+            _graphView.AddElement(ThisNode);
+            _graphView.AddElement(ThisEdge);
+         }
+
+         {
+            int Index = ColorProperties.IndexOf(MatShader.BaseColorValue);
+            if(Index > 0) {
+               DialogueNode ThisNode = new DialogueNode();
+                  Pos.y = 20;
+                ThisNode = CreateInputNode("Color", typeof(Color), Pos, MatShader.BaseColorValue);
+               _graphView.AddElement(ThisNode);
+               _graphView.AddElement((ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.AlbedoColor] as Port));
+            }
+            Index = RangeProperties.IndexOf(MatShader.MetallicRange);
+            if(Index > 0) {
+               DialogueNode ThisNode = new DialogueNode();
+               Pos.y = 420;
+                ThisNode = CreateInputNode("Float", typeof(float), Pos, MatShader.MetallicRange);
+               _graphView.AddElement(ThisNode);
+               _graphView.AddElement((ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.MetallicSlider] as Port));
+            }
+
+            Index = RangeProperties.IndexOf(MatShader.RoughnessRange);
+            if(Index > 0) {
+               DialogueNode ThisNode = new DialogueNode();
+                  Pos.y = 740;
+                ThisNode = CreateInputNode("Float", typeof(float), Pos, MatShader.RoughnessRange);
+               _graphView.AddElement(ThisNode);
+               _graphView.AddElement((ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.RoughnessSlider] as Port));
+            }
+
+            Index = FloatProperties.IndexOf(MatShader.MetallicRemapMin);
+            if(Index > 0) {
+               DialogueNode ThisNode = new DialogueNode();
+                  Pos.y = 500;
+                ThisNode = CreateInputNode("Float", typeof(float), Pos, MatShader.MetallicRemapMin, -1, true);
+               _graphView.AddElement(ThisNode);
+               _graphView.AddElement((ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.MetallicMin] as Port));
+            }
+            Index = FloatProperties.IndexOf(MatShader.MetallicRemapMax);
+            if(Index > 0) {
+               DialogueNode ThisNode = new DialogueNode();
+                  Pos.y = 580;
+                ThisNode = CreateInputNode("Float", typeof(float), Pos, MatShader.MetallicRemapMax, -1, true);
+               _graphView.AddElement(ThisNode);
+               _graphView.AddElement((ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.MetallicMax] as Port));
+            }
+            Index = FloatProperties.IndexOf(MatShader.RoughnessRemapMin);
+            if(Index > 0) {
+               DialogueNode ThisNode = new DialogueNode();
+                  Pos.y = 820;
+                ThisNode = CreateInputNode("Float", typeof(float), Pos, MatShader.RoughnessRemapMin, -1, true);
+               _graphView.AddElement(ThisNode);
+               _graphView.AddElement((ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.RoughnessMin] as Port));
+            }
+            Index = FloatProperties.IndexOf(MatShader.RoughnessRemapMax);
+            if(Index > 0) {
+               DialogueNode ThisNode = new DialogueNode();
+                ThisNode = CreateInputNode("Float", typeof(float), Pos, MatShader.RoughnessRemapMax, -1, true);
+               _graphView.AddElement(ThisNode);
+               _graphView.AddElement((ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.RoughnessMax] as Port));
+               Pos.y = 900;
+            }
+
+
+         }
+
+         OutputNode.RefreshExpandedState();
+         OutputNode.RefreshPorts();
+         OutputNode.SetPosition(new Rect(new Vector2(500, 50), new Vector2(150,200)));
+
+        var toolbar = new Toolbar();
+
+
+        var TextureNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Texture", typeof(Texture), new Vector2(0,0), "null"));}) {text = "Texture"};
+        var PartialTextureNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Texture", typeof(Texture), new Vector2(0,0), "null", 0));}) {text = "Texture(Single Component)"};
+        var FloatNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Float", typeof(float), new Vector2(0,0), "null"));}) {text = "Float"};
+        var ColorNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Color", typeof(Color), new Vector2(0,0), "null"));}) {text = "Color"};
+        var RangeNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("MinMax", typeof(float), new Vector2(0,0), "null", -1, true));}) {text = "Range"};
+
+        toolbar.Add(TextureNodeButton);//partial textures will be defined as according to the output they are connected to 
+        toolbar.Add(PartialTextureNodeButton);//partial textures will be defined as according to the output they are connected to 
+        toolbar.Add(FloatNodeButton);
+        toolbar.Add(ColorNodeButton);
+        toolbar.Add(RangeNodeButton);
+        MaterialPairingMenu.Add(toolbar);
+        MaterialPairingMenu.Add(Spacer);
+
+        
       }
 
       List<string> definesList;
@@ -854,9 +1128,14 @@ Toolbar toolbar;
          OIDNToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("UseOIDN"); else RemoveDefine("UseOIDN"); SetDefines();});
          HardSettingsMenu.Add(OIDNToggle);
 
-         Toggle LightmappingToggle = new Toggle() {value = (definesList.Contains("TTLightMapping")), text = "Use TrueTrace as a LightMapper"};
-         LightmappingToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("TTLightMapping"); else RemoveDefine("TTLightMapping"); SetDefines();});
-         HardSettingsMenu.Add(LightmappingToggle);
+         Toggle RadCacheToggle = new Toggle() {value = (definesList.Contains("UseRadianceCache")), text = "Disable Radiance Cache(inverted toggle)"};
+         RadCacheToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("UseRadianceCache"); else RemoveDefine("UseRadianceCache"); SetDefines();});
+         HardSettingsMenu.Add(RadCacheToggle);
+
+
+         // Toggle LightmappingToggle = new Toggle() {value = (definesList.Contains("TTLightMapping")), text = "Use TrueTrace as a LightMapper"};
+         // LightmappingToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("TTLightMapping"); else RemoveDefine("TTLightMapping"); SetDefines();});
+         // HardSettingsMenu.Add(LightmappingToggle);
          Toggle DX11Toggle = new Toggle() {value = (definesList.Contains("DX11Only")), text = "Use DX11"};
          DX11Toggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("DX11Only"); else RemoveDefine("DX11Only"); SetDefines();});
          HardSettingsMenu.Add(DX11Toggle);
@@ -887,6 +1166,15 @@ Toolbar toolbar;
          ScreenShotBox.Add(AbsolutePath);
          HardSettingsMenu.Add(ScreenShotBox);
 
+         ObjectField SelectiveAutoAssignField = new ObjectField();
+         SelectiveAutoAssignField.objectType = typeof(GameObject);
+         SelectiveAutoAssignField.label = "Selective Auto Assign Scripts";
+         Button SelectiveAutoAssignButton = new Button(() => {
+            ParentData SourceParent = GrabChildren2((SelectiveAutoAssignField.value as GameObject).transform);
+            SolveChildren(SourceParent);
+            }) {text = "Selective Auto Assign"};
+         HardSettingsMenu.Add(SelectiveAutoAssignField);
+         HardSettingsMenu.Add(SelectiveAutoAssignButton);
       }
 
       public struct CustomGBufferData {
@@ -1022,7 +1310,6 @@ Toolbar toolbar;
            Assets.LightEnergyScale = LightEnergyScale;
            RayMaster.IndirectBoost = IndirectBoost;
            RayMaster.BackgroundType = BackgroundType;
-           RayMaster.DoOldReSTIR = DoOldReSTIR;
            RayTracingMaster.DoSaving = DoSaving;
            RayTracingMaster.DoDing = DoDing;
            RayMaster.SunDesaturate = SunDesaturate;
@@ -1307,9 +1594,6 @@ Toolbar toolbar;
                    TopGI.Add(SampleValidToggle);
                    TopGI.Add(GIUpdateRateField);
                    TopGI.Add(GIUpdateRateLabel);
-                   Toggle OldReSTIRToggle = new Toggle() {value = DoOldReSTIR};
-                   OldReSTIRToggle.RegisterValueChangedCallback(evt => {DoOldReSTIR = evt.newValue; RayMaster.DoOldReSTIR = DoOldReSTIR;});
-                   TopGI.Add(OldReSTIRToggle);
                EnclosingGI.Add(TopGI);
                Box TemporalGI = new Box();
                    TemporalGI.style.flexDirection = FlexDirection.Row;
@@ -1606,5 +1890,43 @@ Toolbar toolbar;
             if(GUILayout.Button("Proceed")) EditorWindow.GetWindow<EditModeFunctions>().ConfirmPopup();
         }
     }
+
+public class DialogueNode : Node
+{
+    public string GUID;
+
+    public string DialogueText;
+
+    public bool EntryPoint = false;
+
+    public int PropertyIndex;
+}
+
+
+public class DialogueGraphView : GraphView
+{
+
+    public DialogueGraphView() {
+        this.AddManipulator(new ContentDragger());
+        this.AddManipulator(new SelectionDragger());
+        this.AddManipulator(new RectangleSelector());
+    }
+    public override List<Port> GetCompatiblePorts(Port startPort, NodeAdapter nodeAdapater) {
+        var compatablePorts = new List<Port>();
+
+        ports.ForEach(port => {
+        if(startPort != port && startPort.node != port.node)
+            compatablePorts.Add(port);
+
+        });
+        return compatablePorts;
+    }
+    public Port GeneratePort(DialogueNode node, Direction portDirection, System.Type T, Port.Capacity capacity = Port.Capacity.Single, string Name = "") {
+        var NodePort = node.InstantiatePort(Orientation.Horizontal, portDirection, capacity, T);
+        NodePort.portName = Name;
+        return NodePort;
+    }
+}  
+
 }
 #endif
