@@ -268,6 +268,7 @@ struct MaterialData {//56
 StructuredBuffer<MaterialData> _Materials;
 
 SamplerState my_linear_clamp_sampler;
+SamplerState my_trilinear_clamp_sampler;
 SamplerState sampler_trilinear_clamp;
 SamplerState my_point_clamp_sampler;
 

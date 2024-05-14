@@ -131,8 +131,9 @@ void IntersectBVH() {
             int2 Indexes = Unpack1To2(bestHit.mesh_id);
             [branch]if(CurBounce == 0) {
                 _PrimaryTriangleInfo[TempUv] = uint4(MeshOffsets[Indexes.y].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x] - _MeshData[MeshOffsets[Indexes.y].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
-            } else if(CurBounce == 1) {
-                WorldPosA[TempUv] = uint4((UseReSTIRGI && bestHit.t != FarPlane) ? uint3(MeshOffsets[Indexes.y].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x] - _MeshData[MeshOffsets[Indexes.y].y].TriOffset, ((uint)(bestHit.u * 65535.0f) | (uint)(bestHit.v * 65535.0f) << 16)) : ((bestHit.t != FarPlane) ? asuint(ray.direction) : asuint(ray.direction * bestHit.t + ray.origin)), bestHit.t == FarPlane);
+            } else if(GlobalColors[PixIndex].Data.w == -1 || CurBounce == GlobalColors[PixIndex].Data.w) {
+            // } else if(CurBounce == 1) {
+                WorldPosA[TempUv] = uint4((UseReSTIRGI && bestHit.t != FarPlane) ? uint3(MeshOffsets[Indexes.y].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x] - _MeshData[MeshOffsets[Indexes.y].y].TriOffset, ((uint)(bestHit.u * 65535.0f) | ((uint)(bestHit.v * 65535.0f) << 16))) : ((bestHit.t != FarPlane) ? asuint(ray.direction) : asuint(ray.direction * bestHit.t + ray.origin)), bestHit.t == FarPlane);
             }
 
             set(ray_index, bestHit);
@@ -287,6 +288,7 @@ void IntersectBVHShadow() {
         if (ray_index < 0) return;
 
         bool hit = false;
+        ShadowRayData ShadowRay = ShadowRaysBuffer[ray_index];
         #ifdef HardwareRT
             const uint rayFlags = RAY_FLAG_CULL_NON_OPAQUE;
             UnityRayQuery<rayFlags> q;
@@ -341,15 +343,18 @@ void IntersectBVHShadow() {
                                 #endif
                             }
                         } else {
-                            if(CurBounce != 0 && UseReSTIRGI) GlobalColors[PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;// * unpackRGBE(asuint(ShadowRay.LuminanceIncomming));
-                            else GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRaysBuffer[ray_index].illumination,rcp(2.2f)));
+                            #ifdef RadianceCache
+                                if(CurBounce != 0 &&  (UseReSTIRGI || GlobalColors[PixelIndex].Data.w == CurBounce)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * (UseReSTIRGI ? unpackRGBE(asuint(ShadowRay.LuminanceIncomming)) : 1);
+                            #else
+                                if(CurBounce != 0 && (!UseReSTIRGI && GlobalColors[PixelIndex].Data.w == -1)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination;// * unpackRGBE(asuint(ShadowRay.LuminanceIncomming));
+                            #endif
+                            else GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)));
                         }
                     }
                 }
                 break;
             }
         #else
-            ShadowRayData ShadowRay = ShadowRaysBuffer[ray_index];
             max_distance = abs(ShadowRay.t);
             ray.origin = ShadowRay.origin;
             ray.direction = ShadowRay.direction;

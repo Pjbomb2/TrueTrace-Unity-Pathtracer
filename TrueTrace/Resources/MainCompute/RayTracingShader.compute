@@ -555,7 +555,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
         if (CurBounce == 0) {
             float Metallic = saturate(hitDat.metallic + ((!UseASVGF || UseReSTIRGI) ? 0 : hitDat.Specular));
-            if (MaterialLobe == 3) Color.MetRoughIsSpec = ToColorSpecPacked(float3(0, Refracted ? 0.5f : 0.39f, 2 + !Refracted));
+            if (MaterialLobe == 3) Color.MetRoughIsSpec = ToColorSpecPacked(float3(0, Refracted ? 0.6f : 0.39f, 2 + !Refracted));
             else Color.MetRoughIsSpec = ToColorSpecPacked(float3(Metallic, hitDat.roughness, MaterialLobe));
         }
 
@@ -578,7 +578,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 throughput *= bsdf;
                 if (CurBounce == 0) {
                     float Metallic = saturate(hitDat.metallic + ((!UseASVGF || UseReSTIRGI) ? 0 : hitDat.Specular));
-                    if (MaterialLobe == 3) Color.MetRoughIsSpec = ToColorSpecPacked(float3(0, Refracted ? 0.5f : 0.39f, 2 + !Refracted));
+                    if (MaterialLobe == 3) Color.MetRoughIsSpec = ToColorSpecPacked(float3(0, Refracted ? 0.6f : 0.39f, 2 + !Refracted));
                     else Color.MetRoughIsSpec = ToColorSpecPacked(float3(Metallic, hitDat.roughness, MaterialLobe));
                 }
 

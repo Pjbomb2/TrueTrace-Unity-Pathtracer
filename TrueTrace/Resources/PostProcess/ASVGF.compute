@@ -356,7 +356,7 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 	float3 WorldAlbedo = unpackRGBE(Pixel.Flags);
 	float Exposure = 1;
 		if(UseExposure) Exposure = ExposureBuffer[0];
-	if (FromColorSpecPacked(Pixel.MetRoughIsSpec).z != 0 || MetRough.y >= 0.6f) {
+	if (FromColorSpecPacked(Pixel.MetRoughIsSpec).z == 2 || MetRough.y >= 0.6f) {
 		AlbedoColorA[id.xy] = uint2(Pixel.Flags, AlbedoColorB[pos_prev].y);
 		STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, irradiance_to_SH(PartialRenderingFactor * Exposure * IndirectBoost * clamp(Pixel.Indirect * ((Pixel.Data.xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0))) / 1024.0f,0,1200000.0f), asfloat(WorldPosData[id.xy].xyz)));
 		TEX_PT_COLOR_HFWrite[id.xy] = float4(PartialRenderingFactor * Exposure * clamp((Pixel.Direct + pow(unpackRGBE(Pixel.Fog),2.2f) * TexBaseColor) * Pixel.Data.xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 1.0f),0,1200000.0f),1);

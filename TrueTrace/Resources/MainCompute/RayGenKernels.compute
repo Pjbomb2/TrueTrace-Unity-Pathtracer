@@ -31,8 +31,8 @@ void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
     NEEPosA[id.xy] = float4(0,0,0, 0);
 
     #ifdef RadianceCache
-        CacheBuffer[pixel_index] = (PropogatedCacheData)0;
-        // CacheBuffer[pixel_index].samples[0] = float4(1,1,1, asfloat(0));
+        CacheBuffer[pixel_index].pathLength = 0;
+        CacheBuffer[pixel_index].CurrentIlluminance = 0;
         CacheBuffer[pixel_index].throughput = 1;
     #endif
 }
@@ -46,8 +46,8 @@ void Generate(uint3 id : SV_DispatchThreadID) {
     float2 jitter = ((random(0, pixel_index) - 0.5));
     float2 uv = float2((id.xy + (UseReCur ? 0 : jitter)) / float2(screen_width, screen_height) * 2.0f - 1.0f);
     #ifdef RadianceCache
-        CacheBuffer[pixel_index] = (PropogatedCacheData)0;
-        // CacheBuffer[pixel_index].samples[0] = float4(1,1,1, asfloat(0));
+        CacheBuffer[pixel_index].pathLength = 0;
+        CacheBuffer[pixel_index].CurrentIlluminance = 0;
         CacheBuffer[pixel_index].throughput = 1;
     #endif
     SmallerRay ray = CreateCameraRay(uv, pixel_index);
@@ -68,6 +68,11 @@ void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadI
     SmallerRay ray = CreateCameraRay(uv * 2.0f - 1.0f, pixel_index);
     RandomNumsWrite[id.xy] = float4(frames_accumulated, pixel_index, 0, 0);
 
+    #ifdef RadianceCache
+        CacheBuffer[pixel_index].pathLength = 0;
+        CacheBuffer[pixel_index].CurrentIlluminance = 0;
+        CacheBuffer[pixel_index].throughput = 1;
+    #endif
     if(curframe % ReSTIRGIUpdateRate == pixel_index % ReSTIRGIUpdateRate) {
         #ifdef HDRP
             float2 MotionVector = MotionVectors[int3(id.xy,0)].xy;
@@ -76,17 +81,12 @@ void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadI
         #endif
         int2 prevIndex = int2(floor(((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
         //reservoirA.z != 3, RandomNums.z == 0 && prevglovglobcola.throu.x >= 0
-        if (RandomNums[prevIndex].z == 0 && ReservoirA[prevIndex].z != 3 && prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height) {
+        if (RandomNums[prevIndex].z == 0 && ReservoirA[prevIndex].z != 3 && prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height && PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.z != 0) {
             // ray.origin += CamDelta;
             
             RandomNumsWrite[id.xy] = float4(PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.yx, 1 + ReservoirA[prevIndex].z,  PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.z);
         }
     }
-    #ifdef RadianceCache
-        CacheBuffer[pixel_index] = (PropogatedCacheData)0;
-        CacheBuffer[pixel_index].samples[0] = float4(1,1,1, asfloat(0));
-        CacheBuffer[pixel_index].throughput = 1;
-    #endif
     
     RayData globray = {ray.origin + NearPlane * ray.direction, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
     GlobalRays[pixel_index] = globray;

@@ -51,7 +51,7 @@ bool VisabilityCheck(Ray ray, float dist) {
                     if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                         float2 BaseUv = AggTris[triangle_id].tex0 * (1.0f - u - v) + AggTris[triangle_id].texedge1 * u + AggTris[triangle_id].texedge2 * v;
                         float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex);
-                        if(_TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0).w < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.001f; continue;}
+                        if(_AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.001f; continue;}
                     }
                 #endif
 
@@ -257,6 +257,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     WorldPosA[id.xy] = WorldPos;
     NEEPosA[id.xy] = NEEPos;
     ReservoirA[id.xy] = CurrentRes;
+    if(((asuint(GBuffer.w) >> 31) & 0x1)) PrevGlobalColorsB[pixel_index].throughput.z = 0;
 }
 
 
@@ -294,9 +295,9 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     float wsum = max(CurrentRes.x * CurrentRes.y * CurrentRes.w, 0);
     int2 CachedID = -1;
     const uint Case = CurrentRes.z;
-    if(Case == 0 && SurfaceMat.roughness < 0.1f) {
-        GBuffer.z += length(PrimaryHitPosition - CalcPos(WorldPos)) * 12.0f;
-    }
+    // if(Case == 0 && SurfaceMat.roughness < 0.1f) {
+    //     GBuffer.z += length(PrimaryHitPosition - CalcPos(WorldPos)) * 12.0f;
+    // }
     float3 CompareNorm = SurfNorm;
 
     float DepthModifier = rcp(24.0f * dot(CamDelta,CamDelta) + 1.0f);
@@ -317,9 +318,9 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
             PrevGBuffer = ScreenSpaceInfoRead[NeighborIndex];
 
             float NormFactor = dot(i_octahedral_32(asuint(PrevGBuffer.y)), CompareNorm);
-            if(Case == 0 && SurfaceMat.roughness < 0.1f) {
-                PrevGBuffer.z += length(PrimaryHitPosition - CalcPos(WorldPosB[NeighborIndex])) * 12.0f;
-            }
+            // if(Case == 0 && SurfaceMat.roughness < 0.1f) {
+            //     PrevGBuffer.z += length(PrimaryHitPosition - CalcPos(WorldPosB[NeighborIndex])) * 12.0f;
+            // }
             float DistDiff = (abs(GBuffer.z - PrevGBuffer.z)) / abs(GBuffer.z);
             // if((DistDiff >= 0.1f || NormFactor < 0.99)) TempRad *= 0.5f;
 
@@ -334,7 +335,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
                     UpdateReservoir(CurrentRes, wsum, PrevRes, RandOffsets2.y, CachedID, NeighborIndex);
                     CurrentRes.x += PrevRes.x;
                 // }
-            }// else TempRad *= 0.5f;
+            } else TempRad *= 0.5f;
         }
         CurrentRes.y = wsum / max(CurrentRes.x * CurrentRes.w, 0.0000001f);
 
@@ -362,7 +363,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     CurrentRes.y = min(CurrentRes.y, 10);
 
     [branch]if(Finish == 1) {
-        if (DoReSTIRGIConnectionValidation && Case != 3) {
+        if (DoReSTIRGIConnectionValidation && Case != 3 && !((asuint(GBuffer.w) >> 31) & 0x1)) {
             PrimaryHitPosition += GeomNorm * NormalOffset;
             float Distance = length(PrimaryHitPosition - CalcPos(WorldPos)) - 0.025f;
             Ray ray = CreateRay(PrimaryHitPosition, normalize(CalcPos(WorldPos) - PrimaryHitPosition));
