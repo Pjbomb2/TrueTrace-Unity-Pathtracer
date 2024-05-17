@@ -91,9 +91,9 @@ void Construct(uint3 id : SV_DispatchThreadID)
 	p2 = mul(Transform, float4(p2,1)).xyz;
 	p3 = mul(Transform, float4(p3,1)).xyz;
 
-	n1 = normalize(mul(Transform, float4(n1,0)).xyz);
-	n2 = normalize(mul(Transform, float4(n2,0)).xyz);
-	n3 = normalize(mul(Transform, float4(n3,0)).xyz);
+	n1 = normalize(mul((float3x3)Transform, n1));
+	n2 = normalize(mul((float3x3)Transform, n2));
+	n3 = normalize(mul((float3x3)Transform, n3));
 
 	float3 BBMax = max(max(p, p2), p3);
 	float3 BBMin = min(min(p, p2), p3);
@@ -107,15 +107,18 @@ void Construct(uint3 id : SV_DispatchThreadID)
 	Boxs[id.x].BBMax = BBMax;
 	Boxs[id.x].BBMin = BBMin;
 
-	CudaTriangle TempTri = CudaTriArrayIN[id.x];
-	TempTri.pos0 = p;
-	TempTri.posedge1 = p2 - p;
-	TempTri.posedge2 = p3 - p;
+	// CudaTriangle TempTri = CudaTriArrayIN[id.x];
+	// TempTri.pos0 = p;
+	// TempTri.posedge1 = p2 - p;
+	// TempTri.posedge2 = p3 - p;
+	CudaTriArray[id.x + TriBuffOffset].pos0 = p;// = TempTri;
+	CudaTriArray[id.x + TriBuffOffset].posedge1 = p2 - p;// = TempTri;
+	CudaTriArray[id.x + TriBuffOffset].posedge2 = p3 - p;// = TempTri;
+	CudaTriArray[id.x + TriBuffOffset].norms = uint3(octahedral_32(n1), octahedral_32(n2), octahedral_32(n3));// = TempTri;
 
-	TempTri.norms.x = octahedral_32(n1);
-	TempTri.norms.y = octahedral_32(n2);
-	TempTri.norms.z = octahedral_32(n3);
-	CudaTriArray[id.x + TriBuffOffset] = TempTri;
+	// TempTri.norms.x = octahedral_32(n1);
+	// TempTri.norms.y = octahedral_32(n2);
+	// TempTri.norms.z = octahedral_32(n3);
 }
 
 #pragma kernel TransferKernel

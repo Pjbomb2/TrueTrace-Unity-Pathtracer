@@ -442,7 +442,7 @@ void CopyData(int3 id : SV_DispatchThreadID)
     uint SpecCol = 0;
     float3 Direct = Pixel.Direct + pow(unpackRGBE(Pixel.Fog),2.2f) * TexBaseColor;
 
-    [branch]if (FromColorSpecPacked(Pixel.MetRoughIsSpec).z != 0 || MetRough.y >= 0.6f) {
+    [branch]if (!((asuint(ScreenSpaceInfo[id.xy].w) >> 31) & 0x1) && (FromColorSpecPacked(Pixel.MetRoughIsSpec).z != 0 || MetRough.y >= 0.6f)) {
         if(pos_prev.x != -1000) AlbedoData.y = AlbedoColorB[pos_prev].y;
         IndirectSH = irradiance_to_SH(clamp(PartialRenderingFactor * Exposure * IndirectBoost * clamp(Pixel.Indirect * TexInverted.xyz / 1024.0f,0,120000),0,120000.0f), clamp(normalize(CalcPos2(SecondaryTriData[id.xy]) - CalcPos(PrimaryTriData[id.xy])),-1,1));
         HFCol = clamp(float4(PartialRenderingFactor * Exposure * (Direct) * TexInverted.xyz,1),0,120000.0f);
@@ -457,8 +457,8 @@ void CopyData(int3 id : SV_DispatchThreadID)
     TEX_PT_COLOR_HFWrite[id.xy] = HFCol;
     TEX_PT_COLOR_SPECWrite[id.xy] = SpecCol;
     if(!ReflectedRefracted) {
-        if((asuint(ScreenSpaceInfo[id.xy].w) >> 31) & 0x1) TEX_PT_NORMALS_AWrite[id.xy] = uint2(octahedral_32(-i_octahedral_32(asuint(Pixel.throughput.x))), octahedral_32(-i_octahedral_32(asuint(Pixel.throughput.y))));
-        else TEX_PT_NORMALS_AWrite[id.xy] = asuint(Pixel.throughput.xy);//GeoNorm, Norm
+        // if((asuint(ScreenSpaceInfo[id.xy].w) >> 31) & 0x1) TEX_PT_NORMALS_AWrite[id.xy] = uint2(octahedral_32(-i_octahedral_32(asuint(Pixel.throughput.x))), octahedral_32(-i_octahedral_32(asuint(Pixel.throughput.y))));
+        TEX_PT_NORMALS_AWrite[id.xy] = asuint(Pixel.throughput.xy);//GeoNorm, Norm
     } else {
         TEX_PT_NORMALS_AWrite[id.xy] = TEX_PT_NORMALS_B[pos_prev];
     }
@@ -1526,5 +1526,6 @@ void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGrou
         float3 final_color = composite_color(base_color, projected_lf, filtered_hf, filtered_spec, (DiffRes && base_color.w <= 1) ? 1 : unpackRGBE(AlbedoColorB[ipos].y), ipos);
 
         IMG_ASVGF_COLOR[ipos] = float4(final_color, 0);
+    
     }
 } 

@@ -14,7 +14,7 @@
 #define AccurateEmissionTex
 #define RadianceCache
 // #define RadianceDebug
-#define IndirectRetraceWeighting
+// #define IndirectRetraceWeighting
 
 
 
@@ -22,8 +22,7 @@
 #define DiffuseIndex 0
 #define DisneyIndex 1
 #define CutoutIndex 2
-#define VolumetricIndex 3
-#define VideoIndex 4
+#define VideoIndex 3
 
 #define POINTLIGHT 0
 #define DIRECTIONALLIGHT 1

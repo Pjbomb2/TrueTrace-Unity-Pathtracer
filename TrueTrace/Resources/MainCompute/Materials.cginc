@@ -1031,10 +1031,6 @@ inline bool EvaluateBsdf(const MaterialData hitDat, float3 DirectionIn, float3 D
             bsdf_value = EvaluateDisney(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, GetTangentSpace(Normal), pixel_index);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
             validbsdf = PDF > 0;
         break;
-        case VolumetricIndex:
-            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
-            bsdf_value *= hitDat.surfaceColor;
-        break;
         default:
             validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
             bsdf_value *= hitDat.surfaceColor;
@@ -1052,9 +1048,6 @@ inline bool ReconstructBsdf(const MaterialData hitDat, float3 DirectionIn, float
         case CutoutIndex:
         case DisneyIndex:
             bsdf_value = ReconstructDisney(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, TangentSpaceNorm, validbsdf, pixel_index, Case);
-        break;
-        case VolumetricIndex:
-            validbsdf = true;
         break;
         default:
             validbsdf = evaldiffuse(DirectionOut, dot(DirectionOut, Normal), bsdf_value, PDF);

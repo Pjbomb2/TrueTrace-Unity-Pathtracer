@@ -13,7 +13,13 @@ namespace TrueTrace {
     {
         public override bool RequiresConstantRepaint() => false;
         public override VisualElement CreateInspectorGUI() {
-            return new VisualElement();
+            var t1 = (targets);
+            var t =  t1[0] as ParentObject;
+            VisualElement Root = new VisualElement();
+            Toggle DeformableToggle = new Toggle() {value = t.IsDeformable, text = "Deformable Mesh"};
+            DeformableToggle.RegisterValueChangedCallback(evt => {t.IsDeformable = evt.newValue;});
+            Root.Add(DeformableToggle);
+            return Root;
         }
     }
 }

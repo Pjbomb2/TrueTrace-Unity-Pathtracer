@@ -132,8 +132,7 @@ void IntersectBVH() {
             [branch]if(CurBounce == 0) {
                 _PrimaryTriangleInfo[TempUv] = uint4(MeshOffsets[Indexes.y].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x] - _MeshData[MeshOffsets[Indexes.y].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
             } else if(GlobalColors[PixIndex].Data.w == -1 || CurBounce == GlobalColors[PixIndex].Data.w) {
-            // } else if(CurBounce == 1) {
-                WorldPosA[TempUv] = uint4((UseReSTIRGI && bestHit.t != FarPlane) ? uint3(MeshOffsets[Indexes.y].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x] - _MeshData[MeshOffsets[Indexes.y].y].TriOffset, ((uint)(bestHit.u * 65535.0f) | ((uint)(bestHit.v * 65535.0f) << 16))) : ((bestHit.t != FarPlane) ? asuint(ray.direction) : asuint(ray.direction * bestHit.t + ray.origin)), bestHit.t == FarPlane);
+                _PrimaryTriangleInfo[TempUv] = uint4((UseReSTIRGI && bestHit.t != FarPlane) ? uint3(MeshOffsets[Indexes.y].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x] - _MeshData[MeshOffsets[Indexes.y].y].TriOffset, ((uint)(bestHit.u * 65535.0f) | ((uint)(bestHit.v * 65535.0f) << 16))) : ((bestHit.t != FarPlane) ? asuint(ray.direction) : asuint(ray.direction * bestHit.t + ray.origin)), bestHit.t == FarPlane);
             }
 
             set(ray_index, bestHit);
@@ -235,9 +234,8 @@ void IntersectBVH() {
                             _PrimaryTriangleInfo[TempUv] = uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
                             // _DebugTex[TempUv] = float4(Reps / 43.0f, Reps > 80, 0, 1);
                         } else if(GlobalColors[PixIndex].Data.w == -1 || CurBounce == GlobalColors[PixIndex].Data.w) {
-                            WorldPosA[TempUv] = uint4((UseReSTIRGI && bestHit.t != FarPlane) ? uint3(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, ((uint)(bestHit.u * 65535.0f) | ((uint)(bestHit.v * 65535.0f) << 16))) : ((UseASVGF || bestHit.t != FarPlane) ? asuint(ray2.direction) : asuint(ray2.direction * bestHit.t + ray2.origin)), bestHit.t == FarPlane);
+                            _PrimaryTriangleInfo[TempUv] = uint4((UseReSTIRGI && bestHit.t != FarPlane) ? uint3(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, ((uint)(bestHit.u * 65535.0f) | ((uint)(bestHit.v * 65535.0f) << 16))) : ((UseASVGF || bestHit.t != FarPlane) ? asuint(ray2.direction) : asuint(ray2.direction * bestHit.t + ray2.origin)), bestHit.t == FarPlane);
                         }
-                        // if(CurBounce > 0) NEEPosA[TempUv] += float4(0,0,0, bestHit.t);
                         set(ray_index, bestHit);
                         return;
                     }
@@ -331,7 +329,7 @@ void IntersectBVHShadow() {
                         uint PixelIndex = ShadowRaysBuffer[ray_index].PixelIndex;
                         if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray.origin + ray.direction * abs(ShadowRaysBuffer[ray_index].t),NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)].w);
                             #ifdef RadianceCache
-                                CacheBuffer[PixelIndex].CurrentIlluminance += ShadowRaysBuffer[ray_index].illumination * ((!UseReSTIRGI || ShadowRaysBuffer[ray_index].t >= 0) ? 1 : unpackRGBE(asuint(ShadowRaysBuffer[ray_index].LuminanceIncomming)));
+                                CacheBuffer[PixelIndex].CurrentIlluminance = EncodeRGB(DecodeRGB(CacheBuffer[PixelIndex].CurrentIlluminance) + ShadowRaysBuffer[ray_index].illumination * ((!UseReSTIRGI || ShadowRaysBuffer[ray_index].t >= 0) ? 1 : unpackRGBE(asuint(ShadowRaysBuffer[ray_index].LuminanceIncomming))));
                             #endif
                         if (ShadowRaysBuffer[ray_index].t >= 0) {
                             if (CurBounce == 0) {
@@ -382,9 +380,8 @@ void IntersectBVHShadow() {
 
                     current_group.y &= ~(1 << child_index_offset);
 
-                    if (current_group.y & 0xff000000) {
-                        stack[stack_size++] = current_group;
-                    }
+                    if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
+
                     const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
                     float3 node_0 = TempNode.node_0xyz;
                     uint node_0w = TempNode.node_0w;
@@ -418,13 +415,11 @@ void IntersectBVHShadow() {
                         mesh_id = TLASBVH8Indices[triangle_group.x + mesh_offset];
                         NodeOffset = _MeshData[mesh_id].NodeOffset;
                         TriOffset = _MeshData[mesh_id].TriOffset;
-                        if (triangle_group.y != 0) {
-                            stack[stack_size++] = triangle_group;
-                        }
 
-                        if (current_group.y & 0xff000000) {
-                            stack[stack_size++] = current_group;
-                        }
+                        if (triangle_group.y != 0) stack[stack_size++] = triangle_group;
+
+                        if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
+
                         tlas_stack_size = stack_size;
 
                         int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
@@ -466,7 +461,7 @@ void IntersectBVHShadow() {
                             if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray2.origin + ray2.direction * abs(ShadowRaysBuffer[ray_index].t), 0);
                             // if(UseReSTIRGI && ReSTIRGIUpdateRate != 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] += float4(0,0,0,ShadowRay.LuminanceIncomming);
                             #ifdef RadianceCache
-                                CacheBuffer[PixelIndex].CurrentIlluminance += ShadowRay.illumination * throughput * ((!UseReSTIRGI || ShadowRay.t >= 0) ? 1 : unpackRGBE(asuint(ShadowRay.LuminanceIncomming)));// * abs(dot(i_octahedral_32(CacheBuffer[PixelIndex].Norm), ShadowRay.direction));
+                                CacheBuffer[PixelIndex].CurrentIlluminance = EncodeRGB(DecodeRGB(CacheBuffer[PixelIndex].CurrentIlluminance) + ShadowRay.illumination * throughput * ((!UseReSTIRGI || ShadowRay.t >= 0) ? 1 : unpackRGBE(asuint(ShadowRay.LuminanceIncomming))));// * abs(dot(i_octahedral_32(CacheBuffer[PixelIndex].Norm), ShadowRay.direction));
                             #endif
                             if (ShadowRay.t >= 0) {
 
@@ -579,7 +574,7 @@ void IntersectShadowHeightmap() {
                     if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray.origin + ray.direction * abs(ShadowRaysBuffer[ray_index].t), 0);
                     // if(UseReSTIRGI && ReSTIRGIUpdateRate != 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] += float4(0,0,0,ShadowRay.LuminanceIncomming);
                     #ifdef RadianceCache
-                        CacheBuffer[PixelIndex].CurrentIlluminance += ShadowRaysBuffer[ray_index].illumination * ((!UseReSTIRGI || ShadowRaysBuffer[ray_index].t >= 0) ? 1 : unpackRGBE(asuint(ShadowRaysBuffer[ray_index].LuminanceIncomming)));// * abs(dot(i_octahedral_32(CacheBuffer[PixelIndex].Norm), ShadowRay.direction));
+                        CacheBuffer[PixelIndex].CurrentIlluminance = EncodeRGB(DecodeRGB(CacheBuffer[PixelIndex].CurrentIlluminance) + ShadowRaysBuffer[ray_index].illumination * ((!UseReSTIRGI || ShadowRaysBuffer[ray_index].t >= 0) ? 1 : unpackRGBE(asuint(ShadowRaysBuffer[ray_index].LuminanceIncomming))));// * abs(dot(i_octahedral_32(CacheBuffer[PixelIndex].Norm), ShadowRay.direction));
                     #endif
                     if (ShadowRaysBuffer[ray_index].t >= 0) {
 

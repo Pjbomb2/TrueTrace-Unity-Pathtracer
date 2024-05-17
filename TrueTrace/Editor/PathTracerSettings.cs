@@ -316,9 +316,8 @@ namespace TrueTrace {
                   }               
                }
             } else {
-               bool Fine3 = Parent.This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent2);
                for(int i = 0; i < ChildLength; i++) {
-                  if(Parent.Children[i].This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj2) && !Parent.Children[i].This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent3) && !Fine3) Parent.This.gameObject.AddComponent<ParentObject>();
+                  if(Parent.Children[i].This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj2) && !Parent.Children[i].This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent3) && !Parent.This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent2)) Parent.This.gameObject.AddComponent<ParentObject>();
                }
             }
             if(HasNormalMeshAsChild && HasSkinnedMeshAsChild) {
@@ -331,6 +330,104 @@ namespace TrueTrace {
 
 
          }
+         // public struct FlagObjects {
+         //    public List<FlagObjects> Children;
+         //    public GameObject Obj;
+         //    public bool HasSkinnedChild;
+         //    public bool HasSkinnedSelf;
+         //    public bool HasNormChild;
+         //    public bool HasNormSelf;
+         //    public bool HasPO;
+         //    public bool HasRTO;
+         //    public bool ChainedImportance;
+         //    public bool AlreadyHandled;
+         //    public bool IsEmpty;
+         // }
+         // public List<FlagObjects> Hierarchy;       
+
+         // FlagObjects Prepare(Transform Source) {
+         //    FlagObjects SourceObj = new FlagObjects();
+         //    SourceObj.Children = new List<FlagObjects>();
+         //    SourceObj.Obj = Source.gameObject;
+         //    if(Source.gameObject.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin)) {
+         //       SourceObj.HasSkinnedSelf = true;
+         //       SourceObj.ChainedImportance = true;
+         //    }
+         //    if(Source.gameObject.TryGetComponent<MeshRenderer>(out MeshRenderer TempRend)) {
+         //       SourceObj.HasNormSelf = true;
+         //       SourceObj.ChainedImportance = true;
+         //    }
+         //    SourceObj.IsEmpty = !Source.ChainedImportance;
+
+         //    if(Source.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempRTO)) SourceObj.HasRTO = true;
+         //    if(Source.gameObject.TryGetComponent<ParentObject>(out ParentObject TempPO)) SourceObj.HasPO = true;
+
+         //    int TransformCount = Source.transform.childCount;
+         //    for(int i = 0; i < TransformCount; i++) {
+         //       if(Source.GetChild(i).gameObject.activeInHierarchy) {
+         //          FlagObjects TempFlag = Prepare(Source.GetChild(i));
+         //          if(TempFlag.HasSkinnedSelf) SourceObj.HasSkinnedChild = true;
+         //          if(TempFlag.HasNormSelf) SourceObj.HasNormChild = true;
+         //          if(TempFlag.ChainedImportance) SourceObj.ChainedImportance = true;
+         //          SourceObj.Children.Add(TempFlag);
+         //       }
+         //    }
+         //    return SourceObj;
+         // }
+         // void Prune(ref FlagObjects Source) {
+         //    if(Source.Children == null) return;
+         //    int ChildCount = Source.Children.Count;
+         //    for(int i = ChildCount - 1; i >= 0; i--) {
+         //       if(Source.Children[i].ChainedImportance) Prune(ref Source.Children[i]);
+         //       else Source.Children.RemoveAt(i);
+         //    }
+         // }
+
+         // int Check(ref FlagObjects Source, FlagObjects Child) {
+         //    if(!(Child.HasPO && (Child.HasRTO || Child.HasSkinnedChild || Child.HasNormChild))) Source.ChildNeedsHandling = true;  
+         // }
+         // void Solve(ref FlagObjects Source) {
+         //    int ChildCount = Source.Children.Count;
+         //    for(int i = 0; i < ChildCount; i++) {
+         //       Solve(ref Source.Children[i]);
+         //    }
+
+         //    if(Source.HasNormSelf || Source.HasSkinnedSelf) {//check for material count not zero and mesh exists?
+         //       if(!Source.HasRTO) {
+         //          Source.Obj.AddComponent<RayTracingObject>();
+         //          Source.HasRTO = true;
+         //       }
+         //    }
+
+         //    bool ChildrenSafe = true;
+         //    bool UnhandledContainsSkinned = false;
+         //    bool UnhandledContainsNormal = false;
+         //    List<int> UnhandledChildrenIndexes = new List<int>();
+         //    for(int i = 0; i < ChildCount && ChildrenSafe; i++) {
+         //       if(!Source.Children[i].AlreadyHandled) {
+         //          UnhandledChildrenIndexes.Add(i); 
+         //          UnhandledContainsSkinned = UnhandledContainsSkinned || Source.Children[i].HasSkinnedSelf;
+         //          UnhandledContainsNormal = UnhandledContainsNormal || Source.Children[i].HasNormSelf;
+         //       }
+         //    }
+         //    int UnhandledCount = UnhandledChildrenIndexes.Count;
+         //    if(!Source.AlreadyHandled) {
+         //       if(UnhandledContainsSkinned && !Source.HasNormSelf) {
+         //          Source.Obj.AddComponent<ParentObject>();
+         //          Source.AlreadyHandled = true;     
+         //          for(int i = 0; i < UnhandledCount; i++) {
+         //             int Index = UnhandledChildrenIndexes[i];
+         //             if(Source.Children[Index].HasSkinnedSelf) {
+         //                Source.Children[Index].AlreadyHandled = true;
+         //             } else if(Source.Children[Index].HasNormSelf) {
+         //                Source.Children[Index].Obj.AddComponent<ParentObject>();
+         //                Source.Children[Index].AlreadyHandled = true;
+         //             }
+         //          }
+         //       } else if(UnhandledContainsSkinned && Source.HasNormSelf) {
+
+         //       }
+         //    }
 
 
          private void QuickStart() {
@@ -353,6 +450,10 @@ namespace TrueTrace {
                   VideoObjects[0].gameObject.AddComponent<VideoObject>();
                }
            }
+
+            // FlagsObjects RootFlag = Prepare(Assets.transform);
+            // Prune(ref RootFlag);
+
             ParentData SourceParent = GrabChildren2(Assets.transform);
 
             SolveChildren(SourceParent);

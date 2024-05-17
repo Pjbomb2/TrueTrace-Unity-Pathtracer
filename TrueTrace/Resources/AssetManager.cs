@@ -69,6 +69,45 @@ namespace TrueTrace {
         [HideInInspector] public ComputeBuffer TerrainBuffer;
         [HideInInspector] public bool DoHeightmap;
 
+        [HideInInspector] public ComputeBuffer MaterialBuffer;
+        [HideInInspector] public ComputeBuffer MeshDataBuffer;
+        [HideInInspector] public ComputeBuffer LightMeshBuffer;
+        [HideInInspector] public ComputeBuffer UnityLightBuffer;
+
+        #if HardwareRT
+            private ComputeBuffer MeshIndexOffsets;
+            private ComputeBuffer SubMeshOffsetsBuffer;
+        #endif
+
+        public void SetMeshTraceBuffers(ComputeShader ThisShader, int Kernel) {
+            ThisShader.SetComputeBuffer(Kernel, "TLASBVH8Indices", TLASCWBVHIndexes);
+            ThisShader.SetComputeBuffer(Kernel, "AggTris", AggTriBuffer);
+            ThisShader.SetComputeBuffer(Kernel, "cwbvh_nodes", BVH8AggregatedBuffer);
+            ThisShader.SetComputeBuffer(Kernel, "_MeshData", MeshDataBuffer);
+            ThisShader.SetComputeBuffer(Kernel, "_Materials", MaterialBuffer);
+            ThisShader.SetTexture(Kernel, "_AlphaAtlas", AlphaAtlas);
+            ThisShader.SetTexture(Kernel, "_TextureAtlas", AlbedoAtlas);
+            #if HardwareRT
+                ThisShader.SetRayTracingAccelerationStructure(Kernel, "myAccelerationStructure", AccelStruct);
+                ThisShader.SetBuffer(Kernel, "MeshOffsets", MeshIndexOffsets);
+                ThisShader.SetBuffer(Kernel, "SubMeshOffsets", SubMeshOffsetsBuffer);
+            #endif
+        }
+
+        public void SetHeightmapTraceBuffers(ComputeShader ThisShader, int Kernel) {
+            ThisShader.SetComputeBuffer(Kernel, "Terrains", TerrainBuffer);
+            ThisShader.SetTexture(Kernel, "Heightmap", HeightmapAtlas);
+            ThisShader.SetTexture(Kernel, "TerrainAlphaMap", AlphaMapAtlas);
+        }
+
+        public void SetLightData(ComputeShader ThisShader, int Kernel) {
+            ThisShader.SetComputeBuffer(Kernel, "_UnityLights", UnityLightBuffer);
+            ThisShader.SetComputeBuffer(Kernel, "LightNodes", LightNodeBuffer);
+            ThisShader.SetComputeBuffer(Kernel, "LightTriangles", LightTriBuffer);
+            ThisShader.SetComputeBuffer(Kernel, "_LightMeshes", LightMeshBuffer);
+            ThisShader.SetTexture(Kernel, "Heightmap", HeightmapAtlas);
+        }
+
         private ComputeShader MeshFunctions;
         private int TriangleBufferKernel;
         private int NodeBufferKernel;
@@ -153,7 +192,17 @@ namespace TrueTrace {
             BVH8AggregatedBuffer.ReleaseSafe();
             AggTriBuffer.ReleaseSafe();
 
+            MaterialBuffer.ReleaseSafe();
+            MeshDataBuffer.ReleaseSafe();
+            LightMeshBuffer.ReleaseSafe();
+            UnityLightBuffer.ReleaseSafe();
+
             TLASCWBVHIndexes.ReleaseSafe();
+
+            #if HardwareRT
+                MeshIndexOffsets?.Release();
+                SubMeshOffsetsBuffer?.Release();
+            #endif
 
             Resources.UnloadUnusedAssets();
             System.GC.Collect();
@@ -1191,7 +1240,11 @@ namespace TrueTrace {
                 if (LightMeshCount == 0) { LightMeshes.Add(new LightMeshData() { }); }
 
 
-                if (!OnlyInstanceUpdated || _Materials.Length == 0) CreateAtlas(TotalMatCount);
+                if (!OnlyInstanceUpdated || _Materials.Length == 0) {
+                    CreateAtlas(TotalMatCount);
+                    // MaterialBuffer.ReleaseSafe();
+                    CommonFunctions.CreateComputeBuffer(ref MaterialBuffer, _Materials);
+                }
             }
             ParentCountHasChanged = false;
             if (UseSkinning && didstart) {
@@ -1457,60 +1510,60 @@ namespace TrueTrace {
         {
             CurFrame++;
             #if !HardwareRT
-            // if(TLASTask == null) TLASTask = Task.Run(() => CorrectRefit(Boxes));
+            if(TLASTask == null) TLASTask = Task.Run(() => CorrectRefit(Boxes));
 
-            //  if(TLASTask.Status == TaskStatus.RanToCompletion && CurFrame % 25 == 24) {
-            //     MaxRecur = TempRecur; 
-            //     if(LightMeshCount > 0) {
-            //         if(LBVH != null && LBVH.WorkingSet != null) {
-            //             int Coun = LBVH.WorkingSet.Length - 1;
-            //             for(int i = Coun; i >= 0; i--) {
-            //                 LBVH.WorkingSet[i].ReleaseSafe();
-            //             }
-            //         }
-            //         LBVH = new LightBVHBuilder(LightAABBs);
-            //         LightNodeBuffer.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
-            //     }
-            //     if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
-            //     if (NodeBuffer != null) NodeBuffer.Release();
-            //     if (StackBuffer != null) StackBuffer.Release();
-            //     if (ToBVHIndexBuffer != null) ToBVHIndexBuffer.Release();
-            //     if (BVHDataBuffer != null) BVHDataBuffer.Release();
-            //     if (BoxesBuffer != null) BoxesBuffer.Release();
-            //     if (TLASCWBVHIndexes != null) TLASCWBVHIndexes.Release();
-            //     if (LightBVHTransformsBuffer != null) LightBVHTransformsBuffer.Release();
-            //     WorkingBuffer = new ComputeBuffer[LayerStack.Length];
-            //     for (int i = 0; i < MaxRecur; i++) {
-            //         WorkingBuffer[i] = new ComputeBuffer(LayerStack[i].Slab.Count, 4);
-            //         WorkingBuffer[i].SetData(LayerStack[i].Slab);
-            //     }
-            //     if(LightBVHTransforms.Length != 0) {
-            //         LightBVHTransformsBuffer = new ComputeBuffer(LightBVHTransforms.Length, 68);
-            //         LightBVHTransformsBuffer.SetData(LightBVHTransforms);
-            //     }
-            //     NodeBuffer = new ComputeBuffer(NodePair.Count, 32);
-            //     NodeBuffer.SetData(NodePair);
-            //     StackBuffer = new ComputeBuffer(ForwardStack.Length, 32);
-            //     StackBuffer.SetData(ForwardStack);
-            //     ToBVHIndexBuffer = new ComputeBuffer(ToBVHIndex.Length, 4);
-            //     ToBVHIndexBuffer.SetData(ToBVHIndex);
-            //     BVHDataBuffer = new ComputeBuffer(TempBVHArray.Length, 260);
-            //     BVHDataBuffer.SetData(SplitNodes);
-            //     BoxesBuffer = new ComputeBuffer(MeshAABBs.Length, 24);
-            //     TLASCWBVHIndexes = new ComputeBuffer(MeshAABBs.Length, 4);
-            //     TLASCWBVHIndexes.SetData(TLASBVH8.cwbvh_indices);
-            //      for (int i = 0; i < RenderQue.Count; i++) {
-            //         ParentObject TargetParent = RenderQue[i];
-            //         MeshAABBs[TargetParent.CompactedMeshData] = TargetParent.aabb;
-            //     }
-            //     Boxes = MeshAABBs;
-            //     #if !HardwareRT
-            //         BVH8AggregatedBuffer.SetData(TempBVHArray, 0, 0, TempBVHArray.Length);
-            //     #endif
-            //     BVHNodeCount = TLASBVH8.BVH8Nodes.Length;
+             if(TLASTask.Status == TaskStatus.RanToCompletion && CurFrame % 25 == 24) {
+                MaxRecur = TempRecur; 
+                if(LightMeshCount > 0) {
+                    if(LBVH != null && LBVH.WorkingSet != null) {
+                        int Coun = LBVH.WorkingSet.Length - 1;
+                        for(int i = Coun; i >= 0; i--) {
+                            LBVH.WorkingSet[i].ReleaseSafe();
+                        }
+                    }
+                    LBVH = new LightBVHBuilder(LightAABBs);
+                    LightNodeBuffer.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
+                }
+                if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
+                if (NodeBuffer != null) NodeBuffer.Release();
+                if (StackBuffer != null) StackBuffer.Release();
+                if (ToBVHIndexBuffer != null) ToBVHIndexBuffer.Release();
+                if (BVHDataBuffer != null) BVHDataBuffer.Release();
+                if (BoxesBuffer != null) BoxesBuffer.Release();
+                if (TLASCWBVHIndexes != null) TLASCWBVHIndexes.Release();
+                if (LightBVHTransformsBuffer != null) LightBVHTransformsBuffer.Release();
+                WorkingBuffer = new ComputeBuffer[LayerStack.Length];
+                for (int i = 0; i < MaxRecur; i++) {
+                    WorkingBuffer[i] = new ComputeBuffer(LayerStack[i].Slab.Count, 4);
+                    WorkingBuffer[i].SetData(LayerStack[i].Slab);
+                }
+                if(LightBVHTransforms.Length != 0) {
+                    LightBVHTransformsBuffer = new ComputeBuffer(LightBVHTransforms.Length, 68);
+                    LightBVHTransformsBuffer.SetData(LightBVHTransforms);
+                }
+                NodeBuffer = new ComputeBuffer(NodePair.Count, 32);
+                NodeBuffer.SetData(NodePair);
+                StackBuffer = new ComputeBuffer(ForwardStack.Length, 32);
+                StackBuffer.SetData(ForwardStack);
+                ToBVHIndexBuffer = new ComputeBuffer(ToBVHIndex.Length, 4);
+                ToBVHIndexBuffer.SetData(ToBVHIndex);
+                BVHDataBuffer = new ComputeBuffer(TempBVHArray.Length, 260);
+                BVHDataBuffer.SetData(SplitNodes);
+                BoxesBuffer = new ComputeBuffer(MeshAABBs.Length, 24);
+                TLASCWBVHIndexes = new ComputeBuffer(MeshAABBs.Length, 4);
+                TLASCWBVHIndexes.SetData(TLASBVH8.cwbvh_indices);
+                 for (int i = 0; i < RenderQue.Count; i++) {
+                    ParentObject TargetParent = RenderQue[i];
+                    MeshAABBs[TargetParent.CompactedMeshData] = TargetParent.aabb;
+                }
+                Boxes = MeshAABBs;
+                #if !HardwareRT
+                    BVH8AggregatedBuffer.SetData(TempBVHArray, 0, 0, TempBVHArray.Length);
+                #endif
+                BVHNodeCount = TLASBVH8.BVH8Nodes.Length;
 
-            //     TLASTask = Task.Run(() => CorrectRefit(Boxes));
-            // }
+                TLASTask = Task.Run(() => CorrectRefit(Boxes));
+            }
                 // cmd.BeginSample("TLAS Refit Init");
                 cmd.SetComputeIntParam(Refitter, "NodeCount", NodeBuffer.count);
                 cmd.SetComputeBufferParam(Refitter, NodeInitializerKernel, "AllNodes", NodeBuffer);
@@ -1612,6 +1665,8 @@ namespace TrueTrace {
                 if (UnityLights.Count == 0) { UnityLights.Add(new LightData() { }); }
                 if (PrevLightCount != RayTracingMaster._rayTracingLights.Count) LightsHaveUpdated = true;
                 PrevLightCount = RayTracingMaster._rayTracingLights.Count;
+                // UnityLightBuffer.ReleaseSafe();
+                CommonFunctions.CreateComputeBuffer(ref UnityLightBuffer, UnityLights);
             } else {
                 int LightCount = RayTracingMaster._rayTracingLights.Count;
                 RayTracingLights RayLight;
@@ -1622,6 +1677,7 @@ namespace TrueTrace {
                     if (RayLight.ThisLightData.Type == 1) SunDirection = RayLight.ThisLightData.Direction;
                     UnityLights[RayLight.ArrayIndex] = RayLight.ThisLightData;
                 }
+                UnityLightBuffer.SetData(UnityLights);
             }
                 // UnityEngine.Profiling.Profiler.EndSample();
 
@@ -1630,6 +1686,7 @@ namespace TrueTrace {
             int aggregated_bvh_node_count = 2 * (MeshDataCount + InstanceRenderQue.Count);
             int AggNodeCount = aggregated_bvh_node_count;
             int AggTriCount = 0;
+            bool HasChangedMaterials = false;
             if(MeshAABBs.Length == 0) return -1;
             if (ChildrenUpdated || !didstart || OnlyInstanceUpdated || MyMeshesCompacted.Count == 0)
             {
@@ -1732,11 +1789,16 @@ namespace TrueTrace {
 
                 Debug.Log("Total Object Count: " + MeshAABBs.Length);
                 // UnityEngine.Profiling.Profiler.BeginSample("Update Materials");
-                UpdateMaterials();
+                HasChangedMaterials = UpdateMaterials();
                 // UnityEngine.Profiling.Profiler.EndSample();
                 ConstructNewTLAS();
                 #if !HardwareRT
                     BVH8AggregatedBuffer.SetData(TempBVHArray, 0, 0, TempBVHArray.Length);
+                #endif
+                CommonFunctions.CreateComputeBuffer(ref MeshDataBuffer, MyMeshesCompacted);
+                #if HardwareRT
+                    CommonFunctions.CreateComputeBuffer(ref MeshIndexOffsets, MeshOffsets);
+                    CommonFunctions.CreateComputeBuffer(ref SubMeshOffsetsBuffer, SubMeshOffsets);
                 #endif
             } else {
                 // UnityEngine.Profiling.Profiler.BeginSample("Update Transforms");
@@ -1795,13 +1857,20 @@ namespace TrueTrace {
                 cmd.BeginSample("TLAS Refitting");
                 RefitTLAS(MeshAABBs, cmd);
                 cmd.EndSample("TLAS Refitting");
+                HasChangedMaterials = UpdateMaterials();
+                MeshDataBuffer.SetData(MyMeshesCompacted);
             }
+            if(HasChangedMaterials) MaterialBuffer.SetData(_Materials);
             LightMeshData CurLightMesh;
             for (int i = 0; i < LightMeshCount; i++)
             {
                 CurLightMesh = LightMeshes[i];
                 CurLightMesh.Center = LightTransforms[i].position;
                 LightMeshes[i] = CurLightMesh;
+            }
+            if (LightMeshBuffer != null && LightMeshCount != 0 && LightMeshCount == LightMeshBuffer.count) LightMeshBuffer.SetData(LightMeshes);
+            else {
+                CommonFunctions.CreateComputeBuffer(ref LightMeshBuffer, LightMeshes);
             }
             if (!didstart) didstart = true;
 
