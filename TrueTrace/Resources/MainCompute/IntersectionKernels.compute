@@ -687,7 +687,7 @@ void IntersectHeightMap() {
                         [branch]if(CurBounce == 0) {
                             _PrimaryTriangleInfo[TempUv] = uint4(bestHit.mesh_id, bestHit.triangle_id, asuint(bestHit.u), asuint(bestHit.v));
                         } else if(CurBounce == 1) {
-                            WorldPosA[TempUv] = uint4(((!UseReSTIRGI) ? asuint(ray2.direction) : asuint(ray2.direction * bestHit.t + ray2.origin)), 1);
+                            _PrimaryTriangleInfo[TempUv] = uint4(((!UseReSTIRGI) ? asuint(ray2.direction) : asuint(ray2.direction * bestHit.t + ray2.origin)), 1);
                         }
                         set(ray_index, bestHit);
                         break;

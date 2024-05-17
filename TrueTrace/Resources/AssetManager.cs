@@ -96,6 +96,7 @@ namespace TrueTrace {
 
         public void SetHeightmapTraceBuffers(ComputeShader ThisShader, int Kernel) {
             ThisShader.SetComputeBuffer(Kernel, "Terrains", TerrainBuffer);
+            ThisShader.SetComputeBuffer(Kernel, "_Materials", MaterialBuffer);
             ThisShader.SetTexture(Kernel, "Heightmap", HeightmapAtlas);
             ThisShader.SetTexture(Kernel, "TerrainAlphaMap", AlphaMapAtlas);
         }
@@ -507,6 +508,7 @@ namespace TrueTrace {
                     TerrainObject Obj2 = Terrains[j];
                     TerrainDat TempTerrain = new TerrainDat();
                     TempTerrain.PositionOffset = Obj2.transform.position;
+                    Debug.Log("POS: " + TempTerrain.PositionOffset + ", " + Obj2.gameObject.name);
                     TempTerrain.TerrainDimX = Terrains[j].TerrainDimX;
                     TempTerrain.TerrainDimY = Terrains[j].TerrainDimY;
                     TempTerrain.HeightScale = Terrains[j].HeightScale;
@@ -515,10 +517,10 @@ namespace TrueTrace {
                     var E = new TexObj();
                     {
                         HeightMapRect.Add(new PackingRectangle() {
-                            Width = (uint)Obj2.HeightMap.width + 1,
-                            Height = (uint)Obj2.HeightMap.height + 1,
-                            Width2 = (uint)Obj2.HeightMap.width + 1,
-                            Height2 = (uint)Obj2.HeightMap.height + 1,
+                            Width = (uint)Mathf.Ceil(((float)Obj2.HeightMap.width) / 4.0f) * 4,
+                            Height = (uint)Mathf.Ceil(((float)Obj2.HeightMap.height) / 4.0f) * 4,
+                            Width2 = (uint)Obj2.HeightMap.width,
+                            Height2 = (uint)Obj2.HeightMap.height,
                             Id = Index,
                             TexType = 99999
                         });
@@ -531,10 +533,10 @@ namespace TrueTrace {
                     Index = Obj2.AlphaMap.GetInstanceID();
                     {
                         AlphaMapRect.Add(new PackingRectangle() {
-                            Width = (uint)Obj2.AlphaMap.width + 1,
-                            Height = (uint)Obj2.AlphaMap.height + 1,
-                            Width2 = (uint)Obj2.AlphaMap.width + 1,
-                            Height2 = (uint)Obj2.AlphaMap.height + 1,
+                            Width = (uint)Mathf.Ceil(((float)Obj2.AlphaMap.width) / 4.0f) * 4,
+                            Height = (uint)Mathf.Ceil(((float)Obj2.AlphaMap.height) / 4.0f) * 4,
+                            Width2 = (uint)Obj2.AlphaMap.width,
+                            Height2 = (uint)Obj2.AlphaMap.height,
                             Id = Index,
                             TexType = 9999
                         });
@@ -627,10 +629,12 @@ namespace TrueTrace {
             AlphaMapRect.TrimExcess();
             AlphRect.Clear();
             AlphRect.TrimExcess();
+            if (TerrainBuffer != null) TerrainBuffer.Release();
             if (TerrainCount != 0) {
-                if (TerrainBuffer != null) TerrainBuffer.Release();
                 TerrainBuffer = new ComputeBuffer(TerrainCount, 60);
                 TerrainBuffer.SetData(TerrainInfos);
+            } else {
+                TerrainBuffer = new ComputeBuffer(1, 60);
             }
 
         }
@@ -797,8 +801,6 @@ namespace TrueTrace {
             NodeBufferKernel = MeshFunctions.FindKernel("CombineNodeBuffers");
             LightBufferKernel = MeshFunctions.FindKernel("CombineLightBuffers");
             LightNodeBufferKernel = MeshFunctions.FindKernel("CombineLightNodes");
-            if (TerrainBuffer != null) TerrainBuffer.Release();
-            TerrainBuffer = new ComputeBuffer(1, 56);
 
             if (Terrains.Count != 0) for (int i = 0; i < Terrains.Count; i++) Terrains[i].Load();
         }

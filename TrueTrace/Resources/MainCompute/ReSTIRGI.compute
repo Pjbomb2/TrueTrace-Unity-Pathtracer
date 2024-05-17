@@ -146,7 +146,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     SurfaceMat.metallic = FromColorSpecPacked(MetRoughIsSpec).x;
 
     #ifdef HDRP
-        float2 MotionVector = MotionVectors[int3(UV * float2(TargetWidth, TargetHeight),0)].xy;
+        float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, float3(UV,0), 0).xy;
     #else
          float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, UV, 0).xy;
     #endif

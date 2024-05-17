@@ -868,7 +868,7 @@ Toolbar toolbar;
                   ChannelField.RegisterValueChangedCallback(evt => {dialogueNode.GUID = ChannelProperties[ChannelField.index];});
                }
                DropField.choices = TextureProperties;
-               DropField.index = TextureProperties.IndexOf(InitialValue);
+               DropField.index = (int)Mathf.Max(TextureProperties.IndexOf(InitialValue),0);
                dialogueNode.title = VerboseTextureProperties[DropField.index];
                Image TexPreview = new Image();
                if(DropField.index > 0) TexPreview.image = (InputMaterialField.value as Material).GetTexture(TextureProperties[DropField.index]);
@@ -878,18 +878,18 @@ Toolbar toolbar;
                DropField.RegisterValueChangedCallback(evt => {dialogueNode.title = VerboseTextureProperties[DropField.index]; TexPreview.image = (InputMaterialField.value as Material).GetTexture(TextureProperties[DropField.index]);});
            } else if(T == typeof(Color)) {
                DropField.choices = ColorProperties;
-               DropField.index = ColorProperties.IndexOf(InitialValue);
+               DropField.index = (int)Mathf.Max(ColorProperties.IndexOf(InitialValue),0);
                dialogueNode.title = VerboseColorProperties[DropField.index];
                DropField.RegisterValueChangedCallback(evt => {dialogueNode.title = VerboseColorProperties[DropField.index];});
            }else if(T == typeof(float)) {
                if(!IsRange) {
                   DropField.choices = RangeProperties;
-                  DropField.index = RangeProperties.IndexOf(InitialValue);
+                  DropField.index = (int)Mathf.Max(RangeProperties.IndexOf(InitialValue),0);
                   dialogueNode.title = VerboseRangeProperties[DropField.index];
                   DropField.RegisterValueChangedCallback(evt => {dialogueNode.title = VerboseRangeProperties[DropField.index];});
                } else {
                   DropField.choices = FloatProperties;
-                  DropField.index = FloatProperties.IndexOf(InitialValue);
+                  DropField.index = (int)Mathf.Max(FloatProperties.IndexOf(InitialValue),0);
                   dialogueNode.title = VerboseFloatProperties[DropField.index];
                   DropField.RegisterValueChangedCallback(evt => {dialogueNode.title = VerboseFloatProperties[DropField.index];});
                }

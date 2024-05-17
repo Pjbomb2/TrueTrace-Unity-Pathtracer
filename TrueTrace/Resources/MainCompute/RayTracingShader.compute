@@ -606,10 +606,10 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
         minmat = 0;
         float3 BaseCol = 0;
         MaterialIndex = MaterialCount + Terrains[bestHit.triangle_id].MatOffset;
-        if(Mats.x > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex].surfaceColor.xy + _Materials[MaterialIndex].transmittanceColor.xy, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex), 0).xyz * Mats.x;
-        if(Mats.y > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex + 1].surfaceColor.xy + _Materials[MaterialIndex + 1].transmittanceColor.xy, _Materials[MaterialIndex + 1].AlbedoTexScale, _Materials[MaterialIndex + 1].AlbedoTex), 0).xyz * Mats.y;
-        if(Mats.z > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex + 2].surfaceColor.xy + _Materials[MaterialIndex + 2].transmittanceColor.xy, _Materials[MaterialIndex + 2].AlbedoTexScale, _Materials[MaterialIndex + 2].AlbedoTex), 0).xyz * Mats.z;
-        if(Mats.w > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex + 3].surfaceColor.xy + _Materials[MaterialIndex + 3].transmittanceColor.xy, _Materials[MaterialIndex + 3].AlbedoTexScale, _Materials[MaterialIndex + 3].AlbedoTex), 0).xyz * Mats.w;
+        if(Mats.x > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex].surfaceColor.xy + _Materials[MaterialIndex].transmittanceColor.xy, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex, true), 0).xyz * Mats.x;
+        if(Mats.y > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex + 1].surfaceColor.xy + _Materials[MaterialIndex + 1].transmittanceColor.xy, _Materials[MaterialIndex + 1].AlbedoTexScale, _Materials[MaterialIndex + 1].AlbedoTex, true), 0).xyz * Mats.y;
+        if(Mats.z > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex + 2].surfaceColor.xy + _Materials[MaterialIndex + 2].transmittanceColor.xy, _Materials[MaterialIndex + 2].AlbedoTexScale, _Materials[MaterialIndex + 2].AlbedoTex, true), 0).xyz * Mats.z;
+        if(Mats.w > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex + 3].surfaceColor.xy + _Materials[MaterialIndex + 3].transmittanceColor.xy, _Materials[MaterialIndex + 3].AlbedoTexScale, _Materials[MaterialIndex + 3].AlbedoTex, true), 0).xyz * Mats.w;
         MaterialIndex += x;
         TempMat = _Materials[MaterialIndex];
         BaseUv = BaseUv * TempMat.surfaceColor.xy + TempMat.transmittanceColor.xy;
