@@ -894,8 +894,9 @@ namespace CommonVars
             where T : struct
         {
             int stride = System.Runtime.InteropServices.Marshal.SizeOf<T>();
+            Debug.Log("EEEEE");
             if (buffer != null) {
-                if (data == null || data.Count == 0 || buffer.count != data.Count || buffer.stride != stride) {
+                if (data == null || data.Count == 0 || !buffer.IsValid() || buffer.count != data.Count || buffer.stride != stride) {
                     buffer.Release();
                     buffer = null;
                 }
@@ -911,9 +912,10 @@ namespace CommonVars
             where T : struct
         {
             int stride = System.Runtime.InteropServices.Marshal.SizeOf<T>();
+            Debug.Log("EEEEE");
             if (buffer != null) {
-                if (data == null || data.Length == 0 || buffer.count != data.Length || buffer.stride != stride) {
-                    buffer.ReleaseSafe();
+                if (data == null || data.Length == 0 || !buffer.IsValid() || buffer.count != data.Length || buffer.stride != stride) {
+                    buffer.Release();
                     buffer = null;
                 }
             }

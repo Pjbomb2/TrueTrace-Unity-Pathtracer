@@ -306,11 +306,11 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         #endif
         if(CurBounce > 0 && (CacheInstance.pathLength >> 5) & 0x1) {
             float3 res2 = 0;
-            // if((hit.t >= CalcVoxelSize(ray.origin) * lerp(1.0f, 2.0f, random(64, pixel_index).x))) {
+            if((hit.t >= CalcVoxelSize(ray.origin) * lerp(1.0f, 2.0f, random(64, pixel_index).x))) {
                 if(RetrieveCacheRadiance(CacheInstance, ray.origin, norm, res2)) {
                     Color.Indirect += Color.throughput * res2;
                 }
-            // }
+            }
             CacheInstance.pathLength |= (1u << 6);
         } else if((!(MaterialLobe == 0 && hitDat.roughness < 0.05) && MaterialLobe != 3)) CacheInstance.pathLength |= (1u << 5);
 

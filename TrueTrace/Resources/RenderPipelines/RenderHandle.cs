@@ -13,7 +13,7 @@ public class RenderHandle : MonoBehaviour
         if(GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>().Length == 0) {RayMaster = null; return;}
         RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
         gameObject.GetComponent<Camera>().renderingPath = RenderingPath.DeferredShading;
-        gameObject.GetComponent<Camera>().depthTextureMode |= DepthTextureMode.MotionVectors | DepthTextureMode.Depth;
+        gameObject.GetComponent<Camera>().depthTextureMode |= DepthTextureMode.MotionVectors;
         RayMaster.TossCamera(gameObject.GetComponent<Camera>());
         RayMaster.Start2();
     

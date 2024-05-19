@@ -5859,8 +5859,8 @@
       </TexturePairs>
       <TexturePairs>
         <Purpose>1</Purpose>
-        <ReadIndex>0</ReadIndex>
-        <TextureName>_ClippingMask</TextureName>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
       </TexturePairs>
       <TexturePairs>
         <Purpose>6</Purpose>

@@ -1870,7 +1870,7 @@ namespace TrueTrace {
                 CurLightMesh.Center = LightTransforms[i].position;
                 LightMeshes[i] = CurLightMesh;
             }
-            if (LightMeshBuffer != null && LightMeshCount != 0 && LightMeshCount == LightMeshBuffer.count) LightMeshBuffer.SetData(LightMeshes);
+            if (LightMeshBuffer != null && LightMeshBuffer.IsValid() && LightMeshCount != 0 && LightMeshCount == LightMeshBuffer.count) LightMeshBuffer.SetData(LightMeshes);
             else {
                 CommonFunctions.CreateComputeBuffer(ref LightMeshBuffer, LightMeshes);
             }

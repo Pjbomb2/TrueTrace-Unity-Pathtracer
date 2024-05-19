@@ -648,7 +648,7 @@ static float3 SampleDisneyDiffuse(const MaterialData hitDat, float3 wo, bool thi
 
     float diffuse = EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin);
     forwardPdfW = abs(dotNL) * pdf;
-    return (sheen + color * (diffuse / pdf)) * extinction;
+    return (sheen + color * (diffuse)) * extinction;
 }
 
 static float3 SampleDisneyBRDF(const MaterialData hitDat, float3 wo, out float forwardPdfW, out float3 wi, uint pixel_index)
@@ -954,7 +954,7 @@ float3 ReconstructDisney(MaterialData hitDat, float3 wo, float3 wi, bool thin,
         break;
         case 2:
             if(P.z > 0) { 
-                reflectance = (EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin) * hitDat.surfaceColor + EvaluateSheen(hitDat, wo, wm, wi)) * P[2];
+                reflectance = (EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin) * hitDat.surfaceColor + EvaluateSheen(hitDat, wo, wm, wi));
                 forwardPdf = AbsCosTheta(wi);
                 Success = forwardPdf > 0;
             }
@@ -1006,7 +1006,7 @@ bool SampleDisney(MaterialData hitDat, inout float3 v, bool thin, out float PDF,
         break;
         case 2:
             hitDat.surfaceColor *= PI;
-            Reflection = SampleDisneyDiffuse(hitDat, v, thin, PDF, wi, Refracted, pixel_index) * P[2];
+            Reflection = SampleDisneyDiffuse(hitDat, v, thin, PDF, wi, Refracted, pixel_index);// * P[2];
         break;
         case 3:
             Reflection = SampleDisneySpecTransmission(hitDat, v, thin, PDF, wi, Refracted, pixel_index, GotFlipped);

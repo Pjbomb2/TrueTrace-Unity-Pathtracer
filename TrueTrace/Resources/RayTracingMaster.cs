@@ -476,7 +476,7 @@ namespace TrueTrace {
         private void SetShaderParameters(CommandBuffer cmd)
         {
             if(RenderScale != 1.0f) _camera.renderingPath = RenderingPath.DeferredShading;
-            _camera.depthTextureMode |= DepthTextureMode.MotionVectors | DepthTextureMode.Depth;
+            _camera.depthTextureMode |= DepthTextureMode.MotionVectors;
             if(UseReSTIRGI && UseASVGF && !ReSTIRASVGFCode.Initialized) ReSTIRASVGFCode.init(SourceWidth, SourceHeight);
             else if ((!UseASVGF || !UseReSTIRGI) && ReSTIRASVGFCode.Initialized) ReSTIRASVGFCode.ClearAll();
             if (!UseReSTIRGI && UseASVGF && !ASVGFCode.Initialized) ASVGFCode.init(SourceWidth, SourceHeight);
@@ -762,7 +762,7 @@ namespace TrueTrace {
 
         private void ResetAllTextures() {
             // _camera.renderingPath = RenderingPath.DeferredShading;
-            _camera.depthTextureMode |= DepthTextureMode.MotionVectors | DepthTextureMode.Depth;
+            _camera.depthTextureMode |= DepthTextureMode.MotionVectors;
             if(PrevResFactor != RenderScale || TargetWidth != _camera.scaledPixelWidth) {
                 TargetWidth = _camera.scaledPixelWidth;
                 TargetHeight = _camera.scaledPixelHeight;

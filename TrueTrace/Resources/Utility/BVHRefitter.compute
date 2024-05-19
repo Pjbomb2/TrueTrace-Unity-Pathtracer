@@ -180,8 +180,8 @@ void RefitLayer(uint3 id : SV_DispatchThreadID)
 	if (id.x > NodeCount)
 		return;
 		id.x = WorkingBuffer[id.x];
-	float3 RunningMax = AllNodes[id.x].BBMax;
-	float3 RunningMin = AllNodes[id.x].BBMin;
+	float3 RunningMax = -99999999.0f;//AllNodes[id.x].BBMax;
+	float3 RunningMin = 99999999.0f;//AllNodes[id.x].BBMin;
 	const Layer CurrentLayer = ReverseStack[id.x];
 	int Stack[8];
 	int stack_count = 0;
@@ -219,8 +219,8 @@ void RefitBVHLayer(uint3 id : SV_DispatchThreadID)
 	if (id.x > NodeCount)
 		return;
 		id.x = WorkingBuffer[id.x];
-	float3 RunningMax = AllNodes[id.x].BBMax;
-	float3 RunningMin = AllNodes[id.x].BBMin;
+	float3 RunningMax = -99999999.0f;//AllNodes[id.x].BBMax;
+	float3 RunningMin = 99999999.0f;//AllNodes[id.x].BBMin;
 	const Layer CurrentLayer = ReverseStack[id.x];
 	int Stack[8];
 	int stack_count = 0;
