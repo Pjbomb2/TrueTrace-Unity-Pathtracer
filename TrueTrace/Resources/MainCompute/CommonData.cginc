@@ -1475,15 +1475,12 @@ float3 FromColorSpecPacked(uint A) {
 		);
 }
 
-float3 CalcPos(uint4 TriData) {
+inline float3 CalcPos(uint4 TriData) {
 	if(TriData.w == 1) return asfloat(TriData.xyz);
     MyMeshDataCompacted Mesh = _MeshData[TriData.x];
-    TriData.y += Mesh.TriOffset;
-    float2 UV;
-    UV.x = (TriData.z & 0xffff) / 65535.0f;
-    UV.y = (TriData.z >> 16) / 65535.0f;
     float4x4 Inverse = inverse(Mesh.W2L);
-	return mul(Inverse, float4(AggTris[TriData.y].pos0 + UV.x * AggTris[TriData.y].posedge1 + UV.y * AggTris[TriData.y].posedge2,1)).xyz;
+    TriData.y += Mesh.TriOffset;
+	return mul(Inverse, float4(AggTris[TriData.y].pos0 + ((TriData.z & 0xffff) / 65535.0f) * AggTris[TriData.y].posedge1 + ((TriData.z >> 16) / 65535.0f) * AggTris[TriData.y].posedge2,1)).xyz;
 }
 
 
@@ -1670,7 +1667,7 @@ float3 RTXDI_XYZToRGBInRec709(float3 c)
 		if(baseSlot < CacheCapacity) {
 			for(int i = 0; i < BucketCount; i++) {	
 				InterlockedExchange(HashEntriesBuffer[baseSlot + i].z, 0xAAAAAAAA, BucketIndex);
-				[flatten]if(BucketIndex != 0xAAAAAAAA && HashEntriesBuffer[baseSlot + i].x == 0 && HashEntriesBuffer[baseSlot + i].y == 0) {
+				if(BucketIndex != 0xAAAAAAAA && HashEntriesBuffer[baseSlot + i].x == 0 && HashEntriesBuffer[baseSlot + i].y == 0) {
 					HashEntriesBuffer[baseSlot + i].xy = HashValue.xy;
 					InterlockedExchange(HashEntriesBuffer[baseSlot + i].z, BucketIndex, temp);
 					return baseSlot + i;
@@ -1721,8 +1718,15 @@ float3 RTXDI_XYZToRGBInRec709(float3 c)
 	inline bool AddHitToCache(inout PropogatedCacheData CurrentProp, float3 Pos, float random) {
 	    bool EarlyOut = false;
 	    float3 lighting = clamp(DecodeRGB(CurrentProp.CurrentIlluminance), 0, 1200.0f);
+  	#ifdef DX11
+	    int PathLength = (CurrentProp.pathLength & PathLengthMask);
+        if(PathLength >= 3) CurrentProp.samples[3] = CurrentProp.samples[2];
+        if(PathLength >= 2) CurrentProp.samples[2] = CurrentProp.samples[1];
+        if(PathLength >= 1) CurrentProp.samples[1] = CurrentProp.samples[0];
+	#else
 	  	for (int i = (CurrentProp.pathLength & PathLengthMask); i > 0; --i)
 	        CurrentProp.samples[i] = CurrentProp.samples[i - 1];
+	#endif
 
 	    float3 Norm = i_octahedral_32(CurrentProp.Norm);
 	   	HashKeyValue HashValue = ComputeHash(Pos, Norm);

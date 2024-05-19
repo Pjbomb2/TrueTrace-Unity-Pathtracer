@@ -442,15 +442,23 @@ void CopyData(int3 id : SV_DispatchThreadID)
     uint SpecCol = 0;
     float3 Direct = Pixel.Direct + pow(unpackRGBE(Pixel.Fog),2.2f) * TexBaseColor;
 
-    [branch]if (!((asuint(ScreenSpaceInfo[id.xy].w) >> 31) & 0x1) && (FromColorSpecPacked(Pixel.MetRoughIsSpec).z != 0 || MetRough.y >= 0.6f)) {
-        if(pos_prev.x != -1000) AlbedoData.y = AlbedoColorB[pos_prev].y;
-        IndirectSH = irradiance_to_SH(clamp(PartialRenderingFactor * Exposure * IndirectBoost * clamp(Pixel.Indirect * TexInverted.xyz / 1024.0f,0,120000),0,120000.0f), clamp(normalize(CalcPos2(SecondaryTriData[id.xy]) - CalcPos(PrimaryTriData[id.xy])),-1,1));
-        HFCol = clamp(float4(PartialRenderingFactor * Exposure * (Direct) * TexInverted.xyz,1),0,120000.0f);
+    const float dielectric_specular = 0.04;
+    float3 o_albedo = lerp(unpackRGBE(AlbedoData.x) * (1.0 - dielectric_specular), 0, FromColorSpecPacked(Pixel.MetRoughIsSpec).x * (MetRough.y < 0.6f));
+    float3 o_base_reflectivity = lerp(dielectric_specular, unpackRGBE(AlbedoData.x), FromColorSpecPacked(Pixel.MetRoughIsSpec).x * (MetRough.y < 0.6f));
+        if(TexInverted.w != 0) {
+            AlbedoData.x = packRGBE(o_albedo);
+            AlbedoData.y = packRGBE(o_base_reflectivity);
+        }
+    [branch]if (!((asuint(ScreenSpaceInfo[id.xy].w) >> 31) & 0x1) && (FromColorSpecPacked(Pixel.MetRoughIsSpec).z == 2 || MetRough.y >= 0.6f)) {
+        // if(pos_prev.x != -1000) AlbedoData.y = AlbedoColorB[pos_prev].y;
+        IndirectSH = irradiance_to_SH(clamp(PartialRenderingFactor * Exposure * IndirectBoost * clamp(Pixel.Indirect * Pixel.Data.xyz / max(0.01f, o_albedo) / 1024.0f,0,120000),0,120000.0f), clamp(normalize(CalcPos2(SecondaryTriData[id.xy]) - CalcPos(PrimaryTriData[id.xy])),-1,1));
+        HFCol = clamp(float4(PartialRenderingFactor * Exposure * (Direct * Pixel.Data.xyz / max(0.01f, o_albedo)),1),0,120000.0f);
     } else {
-        if(pos_prev.x != -1000) AlbedoData.x = AlbedoColorB[pos_prev].x;
-        SpecCol = packRGBE(PartialRenderingFactor * max(Exposure * (Direct + IndirectBoost * Pixel.Indirect) * TexInverted.xyz,0));
+        // if(pos_prev.x != -1000) AlbedoData.x = AlbedoColorB[pos_prev].x;
+        SpecCol = packRGBE(PartialRenderingFactor * max(Exposure * (Direct + IndirectBoost * Pixel.Indirect) * Pixel.Data.xyz / max(0.01f, o_base_reflectivity),0));
     }
     ReflectedRefractedTexWrite[id.xy] = float4(ReflectedRefracted, ((asuint(ScreenSpaceInfo[id.xy].w) << 3) >> 3), length((motion.xy) * float2(screen_width, screen_height)), 0);
+
 
     AlbedoColorA[id.xy] = AlbedoData;
     STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, IndirectSH);

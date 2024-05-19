@@ -123,7 +123,10 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
     Geomnorm = i_octahedral_32(octahedral_32(Geomnorm));
     norm = Geomnorm;
-    [branch] if (!ClayMode && NormalUV.x != -1) {//Handle Normal Maps
+
+    [branch]if(CurBounce == 0 && UseReSTIRGI && ReSTIRGIUpdateRate != 0 && RandomNums[id].z != 0 && hitDat.specTrans == 0 && hitDat.diffTrans == 0) {
+        norm = i_octahedral_32(asuint(RandomNums[id].w));
+    } else if (!ClayMode && NormalUV.x != -1) {//Handle Normal Maps
         float3 LocalTan = GetTriangleTangent(hit.triangle_id, float2(hit.u, hit.v), Inverse);
         float3 LocalBinorm = normalize(cross(Geomnorm, LocalTan));
         float2 Norm = _NormalAtlas.SampleLevel(sampler_NormalAtlas, NormalUV, 0);
@@ -134,9 +137,13 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         if (abs(norm.x) == abs(norm.y) == abs(norm.z)) norm = Geomnorm;
         norm = i_octahedral_32(octahedral_32(norm));
     }
+    if(CurBounce == 0 && UseASVGF && RandomNums[id].w == 1 && !(hitDat.metallic == 1 && hitDat.roughness < 0.05f)) {
+        Geomnorm = i_octahedral_32(asuint(PrevScreenData.x));
+        norm = i_octahedral_32(asuint(PrevScreenData.y));
+    }
 
     {
-        if(hitDat.MatCapTex.x > 0) {
+        [branch]if(hitDat.MatCapTex.x > 0) {
             float3 worldViewUp = normalize(float3(0, 1, 0) - ray.direction * dot(ray.direction, float3(0, 1, 0)));
             float3 worldViewRight = normalize(cross(ray.direction, worldViewUp));
             
@@ -151,14 +158,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         }
     }
 
-
-    if(CurBounce == 0 && UseASVGF && RandomNums[id].w == 1 && !(hitDat.metallic == 1 && hitDat.roughness < 0.05f)) {
-        Geomnorm = i_octahedral_32(asuint(PrevScreenData.x));
-        norm = i_octahedral_32(asuint(PrevScreenData.y));
-    }
-    if(CurBounce == 0 && UseReSTIRGI && ReSTIRGIUpdateRate != 0 && RandomNums[id].z != 0 && hitDat.specTrans == 0 && hitDat.diffTrans == 0) {
-        norm = i_octahedral_32(asuint(RandomNums[id].w));
-    }
 
     [branch] if (hitDat.emmissive > 0.0f) {//if we hit a light, this ray is done
         #ifdef WhiteLights
@@ -212,7 +211,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     }
    
 
-    if(ClayMode) {
+    [branch]if(ClayMode) {
         hitDat.surfaceColor = ClayColor;
         hitDat.metallic = 0;
         hitDat.clearcoat = 0;

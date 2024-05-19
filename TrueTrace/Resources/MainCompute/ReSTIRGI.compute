@@ -97,7 +97,7 @@ inline void UpdateReservoir(inout float4 CurRes, inout float wsum, float4 PrevRe
     [branch]if (rndnum < (w / wsum)) {
         CachedID = ID;
         CurRes.w = PrevRes.w;
-        CurRes.z = PrevRes.z;
+        // CurRes.z = PrevRes.z;
     }
 }
 
@@ -144,6 +144,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     uint MetRoughIsSpec = CenterCol.MetRoughIsSpec;
     SurfaceMat.roughness = FromColorSpecPacked(MetRoughIsSpec).y;
     SurfaceMat.metallic = FromColorSpecPacked(MetRoughIsSpec).x;
+    CenterCol.throughput.z = asfloat(GBuffer.y);
 
     #ifdef HDRP
         float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, float3(UV,0), 0).xy;
@@ -153,19 +154,18 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     int2 prevIndex = int2(floor(((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
     float4 PrevRes = ReservoirB[prevIndex];
     float4 PrevGBuffer = PrevScreenSpaceInfo[prevIndex];
-
+    const bool RetracedSample = ReSTIRGIUpdateRate != 0 && RandomNums[id.xy].z != 0;
     int2 CachedID = -1;
-    CenterCol.throughput.z = asfloat(GBuffer.y);
     GradientWrite[ceil(id.xy / 3)] = 0;
     float4 CurrentRes = 1;
-    if(ReSTIRGIUpdateRate != 0 && RandomNums[id.xy].z != 0) {
+    if(RetracedSample) {
         float3 LumA = (CenterCol.Direct + pow(unpackRGBE(CenterCol.PrimaryNEERay),2.2f));
         float3 LumB = (PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].Direct + pow(unpackRGBE(PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].PrimaryNEERay),2.2f));
         float LumA2 = luminance(LumA);
         float LumB2 = luminance(LumB);
         #ifdef IndirectRetraceWeighting
-        LumA += 0.1f + 0.1f * CenterCol.Indirect;
-        LumB += 0.1f + 0.1f * PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].Indirect;
+            LumA += 0.1f + 0.1f * CenterCol.Indirect;
+            LumB += 0.1f + 0.1f * PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].Indirect;
 
         #endif
 
@@ -189,35 +189,26 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
                 WorldPos = WorldPosB[prevIndex];
             }
         }
-    } else {
-        // MotionVector = MotionVectors[id.xy].xy;
-        
-
-        // uint randStrat = randomNEE2(258,pixel_index);
-        // float2 randnum = (float2(randStrat & 0xFF, randStrat >> 24) + 0.5f) * 0x1.0p-8f;
-
-        // prevIndex = (id.xy + randnum) - MotionVector * float2(screen_width, screen_height);
-        // PrevRes = ReservoirB[prevIndex];
-        // PrevGBuffer = PrevScreenSpaceInfo[prevIndex];
     }
+
     float3 bsdf, NEEbsdf;
     float pdf, NEEpdf;
     CenterCol.Indirect = clamp(CenterCol.Indirect, 0.0f, 2500.0f);//I NEED to find a better way of handling fireflies
     CenterCol.Direct = clamp(CenterCol.Direct, 0.0f, 2500.0f);//I NEED to find a better way of handling fireflies
     CenterCol.PrimaryNEERay = packRGBE(clamp(unpackRGBE(CenterCol.PrimaryNEERay),0.0f, 2500.0f));//I NEED to find a better way of handling fireflies
-    CenterCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(NEEPos.xyz - PrimaryHitPosition), GeomNorm, NEEpdf, NEEbsdf, pixel_index);
-    bool Valid2 = ReconstructBsdf(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPos) - PrimaryHitPosition), GeomNorm, pdf, bsdf, GetTangentSpace(GeomNorm), pixel_index, Case);
+    CenterCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(NEEPos.xyz - PrimaryHitPosition), SurfNorm, NEEpdf, NEEbsdf, pixel_index);
+    bool Valid2 = ReconstructBsdf(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, GetTangentSpace(SurfNorm), pixel_index, Case);
     float Lum = (luminance((CenterCol.Direct + CenterCol.Indirect) * bsdf) + luminance(pow(unpackRGBE(CenterCol.PrimaryNEERay),2.2f) * NEEbsdf));
     if(CurrentRes.x == 1) CurrentRes = float4(1,1,Case,clamp(Lum, 0, 3000));
 
 
     float wsum = CurrentRes.w;
     float4 TempRes = CurrentRes;
-    if(UseReSTIRGITemporal && (ReSTIRGIUpdateRate == 0 || RandomNums[id.xy].z == 0)) {
+    if(UseReSTIRGITemporal && (!RetracedSample)) {
         float dist_depth = (abs(GBuffer.z - PrevGBuffer.z)) / abs(GBuffer.z);
         float dot_geo_normals = dot(GeomNorm, i_octahedral_32(asuint(PrevGBuffer.x)));
-        if ((dist_depth < 0.1f && (dot_geo_normals > 0.7))) {
-            if(PrevRes.z != 0 || ggx_distribution(dot(normalize(-normalize(CalcPos(WorldPosB[prevIndex]) - PrimaryHitPosition) + CameraRay.direction), GeomNorm), clamp(SurfaceMat.roughness, 0.089 * 0.089, 1.0)) > 0.1f * randomNEE(126, pixel_index).y) {
+        if ((dist_depth < 0.1f && dot_geo_normals > 0.7)) {
+            if(PrevRes.z != 0 || ggx_distribution(dot(normalize(-normalize(CalcPos(WorldPosB[prevIndex]) - PrimaryHitPosition) + CameraRay.direction), SurfNorm), clamp(SurfaceMat.roughness, 0.089 * 0.089, 1.0)) > 0.1f * randomNEE(126, pixel_index).y) {
                 PrevRes.x = clamp(PrevRes.x,0,ReSTIRGITemporalMCap);
                 if(Case == 3) PrevRes.x = clamp(PrevRes.x,1,12);
                 UpdateReservoir(CurrentRes, wsum, PrevRes, randomNEE(126, pixel_index).x, CachedID, prevIndex);
@@ -231,15 +222,15 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     if(CachedID.x >= 0) {
         ColData TempCol = PrevGlobalColorsA[CachedID.x + CachedID.y * screen_width];
         uint4 TempWorldPos = WorldPosB[CachedID];
-        float4 TempNEEPos =  NEEPosB[CachedID];
-        TempCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(TempNEEPos.xyz - PrimaryHitPosition), GeomNorm, NEEpdf, NEEbsdf, pixel_index);
-        bool Valid4 = ReconstructBsdf(SurfaceMat, CameraRay.direction, normalize(CalcPos(TempWorldPos) - PrimaryHitPosition), GeomNorm, pdf, bsdf, GetTangentSpace(GeomNorm), pixel_index, CurrentRes.z);
+        bool Valid4 = ReconstructBsdf(SurfaceMat, CameraRay.direction, normalize(CalcPos(TempWorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, GetTangentSpace(SurfNorm), pixel_index, PrevRes.z);
         if(Valid4) {
             CenterCol = TempCol;
+            NEEPos = NEEPosB[CachedID];
             WorldPos = TempWorldPos;
-            NEEPos = TempNEEPos;
+            CenterCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(NEEPos.xyz - PrimaryHitPosition), SurfNorm, NEEpdf, NEEbsdf, pixel_index);
             float Lum = luminance((CenterCol.Direct + CenterCol.Indirect) * bsdf) + luminance(pow(unpackRGBE(CenterCol.PrimaryNEERay),2.2f) * NEEbsdf);
             CurrentRes.w = clamp(Lum,0,3000);
+            CurrentRes.z = PrevRes.z;
             // CurrentRes.y = wsum / max(CurrentRes.x * CurrentRes.w, 0.0000001f);
         } else {
             CurrentRes.yzw = TempRes.yzw;
@@ -252,10 +243,10 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     PrevGlobalColorsB[pixel_index].Data = Data;
     PrevGlobalColorsB[pixel_index].MetRoughIsSpec = MetRoughIsSpec;
     PrevGlobalColorsB[pixel_index].Flags = Flag;
+    if(((asuint(GBuffer.w) >> 31) & 0x1)) PrevGlobalColorsB[pixel_index].throughput.z = 0;
     WorldPosA[id.xy] = WorldPos;
     NEEPosA[id.xy] = NEEPos;
     ReservoirA[id.xy] = CurrentRes;
-    if(((asuint(GBuffer.w) >> 31) & 0x1)) PrevGlobalColorsB[pixel_index].throughput.z = 0;
 }
 
 
@@ -297,10 +288,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     if(Case == 0 && SurfaceMat.roughness < 0.1f) {
         GBuffer.z += length(PrimaryHitPosition - CalcPos(WorldPos)) * 12.0f;
     }
-    float3 CompareNorm = SurfNorm;
 
-    float DepthModifier = rcp(24.0f * dot(CamDelta,CamDelta) + 1.0f);
-    float4 TempRes2 = CurrentRes;
     if (UseReSTIRGISpatial && Case != 3) {
         int2 NeighborIndex;
         float2 RandOffsets;
@@ -311,12 +299,17 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
             RandOffsets2 = randomNEE(i + 160 * RandOffset, pixel_index);
             NeighborIndex = id.xy + vogelDiskSample(i, ReSTIRGISpatialCount, RandOffsets.y, 2.0f * PI * RandOffsets.x) * max(TempRad,2);
 
-            if ((NeighborIndex.x < 0 || NeighborIndex.x >= (int)screen_width || NeighborIndex.y < 0 || NeighborIndex.y >= (int)screen_height) || all(id.xy == NeighborIndex)) {TempRad *= 0.5f; continue;}
+            // if ((NeighborIndex.x < 0 || NeighborIndex.x >= (int)screen_width || NeighborIndex.y < 0 || NeighborIndex.y >= (int)screen_height) || all(id.xy == NeighborIndex)) {TempRad *= 0.5f; continue;}
+
+            if(NeighborIndex.x < 0) NeighborIndex.x = -NeighborIndex.x;
+            if(NeighborIndex.y < 0) NeighborIndex.y = -NeighborIndex.y;
+            if(NeighborIndex.x >= screen_width) NeighborIndex.x = 2 * screen_width - NeighborIndex.x - 1;
+            if(NeighborIndex.y >= screen_height) NeighborIndex.y = 2 * screen_height - NeighborIndex.y - 1;
 
             PrevRes = ReservoirB[NeighborIndex];
             PrevGBuffer = ScreenSpaceInfoRead[NeighborIndex];
 
-            float NormFactor = dot(i_octahedral_32(asuint(PrevGBuffer.y)), CompareNorm);
+            float NormFactor = dot(i_octahedral_32(asuint(PrevGBuffer.y)), SurfNorm);
             if(Case == 0 && SurfaceMat.roughness < 0.1f) {
                 PrevGBuffer.z += length(PrimaryHitPosition - CalcPos(WorldPosB[NeighborIndex])) * 12.0f;
             }
@@ -326,7 +319,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
             if (!(DistDiff >= 0.1f || NormFactor < 0.9)  && PrevRes.z == CurrentRes.z && MatIndex ==  (asuint(PrevGBuffer.w) << 3) >> 3) {
                 UpdateReservoir(CurrentRes, wsum, PrevRes, RandOffsets2.y, CachedID, NeighborIndex);
                 CurrentRes.x += PrevRes.x;
-            } //else TempRad *= 0.5f;
+            } else TempRad *= 0.5f;
         }
         CurrentRes.y = wsum / max(CurrentRes.x * CurrentRes.w, 0.0000001f);
 
@@ -337,17 +330,16 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     if(CachedID.x >= 0) {
         ColData TempCol = PrevGlobalColorsA[CachedID.x + CachedID.y * screen_width];
         uint4 TempWorldPos = WorldPosB[CachedID];
-        bool Valid4 = ReconstructBsdf(SurfaceMat, CameraRay.direction, normalize(CalcPos(TempWorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, GetTangentSpace(SurfNorm), pixel_index, CurrentRes.z);
+        bool Valid4 = ReconstructBsdf(SurfaceMat, CameraRay.direction, normalize(CalcPos(TempWorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, GetTangentSpace(SurfNorm), pixel_index, ReservoirB[CachedID].z);
         if(Valid4) {
             NEEPos =  NEEPosB[CachedID];
             CenterCol = TempCol;
             CenterCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(NEEPos.xyz - PrimaryHitPosition), SurfNorm, NEEpdf, NEEbsdf, pixel_index);
             WorldPos = TempWorldPos;
+            CurrentRes.z = ReservoirB[CachedID].z;
             float Lum = luminance((CenterCol.Direct + CenterCol.Indirect) * bsdf) + luminance(pow(unpackRGBE(CenterCol.PrimaryNEERay),2.2f) * NEEbsdf);
             CurrentRes.w = clamp(Lum,0,3000);
             // CurrentRes.y = wsum / max(CurrentRes.x * CurrentRes.w, 0.0000001f);
-        } else {
-            CurrentRes.yzw = TempRes2.yzw;
         }
     }
 
@@ -355,7 +347,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     if(CurrentRes.y > 10) CurrentRes.y = 0;
 
     [branch]if(Finish == 1) {
-        if (DoReSTIRGIConnectionValidation && Case != 3 && !((asuint(GBuffer.w) >> 31) & 0x1)) {
+        [branch]if (DoReSTIRGIConnectionValidation && Case != 3 && !((asuint(GBuffer.w) >> 31) & 0x1)) {
             PrimaryHitPosition += GeomNorm * NormalOffset;
             float Distance = length(PrimaryHitPosition - CalcPos(WorldPos)) - 0.025f;
             Ray ray = CreateRay(PrimaryHitPosition, normalize(CalcPos(WorldPos) - PrimaryHitPosition));
@@ -376,19 +368,14 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
             #endif
         }
 
-        // if(CachedID.x == -1) {
-            // SurfaceMat.roughness = (asuint(CenterCol.pad) & 0xFFFF) / 65535.0f;
-            // SurfaceMat.metallic = (asuint(CenterCol.pad) >> 16) / 65535.0f;
-
-            CenterCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(NEEPos.xyz - PrimaryHitPosition), SurfNorm, NEEpdf, NEEbsdf, pixel_index);
-            bool Valid4 = ReconstructBsdf(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, GetTangentSpace(SurfNorm), pixel_index, CurrentRes.z);
-        // }
-        if(CenterCol.Data.w != 0) CenterCol.Data = float4( max(bsdf, 0.005f), 1);
+        CenterCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(NEEPos.xyz - PrimaryHitPosition), SurfNorm, NEEpdf, NEEbsdf, pixel_index);
+        bool Valid4 = ReconstructBsdf(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, GetTangentSpace(SurfNorm), pixel_index, CurrentRes.z);
+        if(Data.w != 0) GlobalColors[pixel_index].Data = float4(bsdf, 1);
         GlobalColors[pixel_index].throughput = float3(asfloat(uint2(octahedral_32(GeomNorm), octahedral_32(SurfNorm))), PrevG);
         GlobalColors[pixel_index].Direct = CenterCol.Direct * CurrentRes.y;
         GlobalColors[pixel_index].Indirect = CenterCol.Indirect * CurrentRes.y;
         GlobalColors[pixel_index].PrimaryNEERay = packRGBE(pow(pow(unpackRGBE(CenterCol.PrimaryNEERay),2.2f) * CurrentRes.y * NEEbsdf,rcp(2.2f)));
-        GlobalColors[pixel_index].MetRoughIsSpec = MetRoughIsSpec;
+        GlobalColors[pixel_index].MetRoughIsSpec = MetRoughIsSpec;//ToColorSpecPacked(float3(saturate((SurfaceMat.metallic + SurfaceMat.clearcoat + SurfaceMat.Specular)), FromColorSpecPacked(MetRoughIsSpec).yz));
         GlobalColors[pixel_index].Flags = Flag;
     } else {
         GlobalColors[pixel_index] = CenterCol;

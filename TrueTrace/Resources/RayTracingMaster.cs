@@ -872,9 +872,9 @@ namespace TrueTrace {
                 CommonFunctions.CreateRenderTexture(ref _converged, SourceWidth, SourceHeight, CommonFunctions.RTFull4, RenderTextureReadWrite.sRGB);
                 CommonFunctions.CreateRenderTexture(ref CorrectedDistanceTex, SourceWidth, SourceHeight, CommonFunctions.RTHalf2);
                 CommonFunctions.CreateRenderTexture(ref CorrectedDistanceTexB, SourceWidth, SourceHeight, CommonFunctions.RTHalf2);
-                CommonFunctions.CreateRenderTexture(ref GIReservoirA, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-                CommonFunctions.CreateRenderTexture(ref GIReservoirB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-                CommonFunctions.CreateRenderTexture(ref GIReservoirC, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+                CommonFunctions.CreateRenderTexture(ref GIReservoirA, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
+                CommonFunctions.CreateRenderTexture(ref GIReservoirB, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
+                CommonFunctions.CreateRenderTexture(ref GIReservoirC, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
                 CommonFunctions.CreateRenderTexture(ref GINEEPosA, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
                 CommonFunctions.CreateRenderTexture(ref GINEEPosB, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
                 CommonFunctions.CreateRenderTexture(ref GINEEPosC, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
@@ -908,7 +908,7 @@ namespace TrueTrace {
             #if !UseRadianceCache
                 cmd.DispatchCompute(GenerateShader, ResolveKernel + 2, Mathf.CeilToInt((4.0f * 1024.0f * 1024.0f) / 256.0f), 1, 1);
             #endif
-            if(Spatials == null || Spatials.Length == 0) {Spatials = new Vector2[1]; Spatials[0] = new Vector2(12,48);}
+            if(Spatials == null || Spatials.Length == 0) {Spatials = new Vector2[1]; Spatials[0] = new Vector2(7,30);}
             Denoisers.ValidateInit(AllowBloom, AllowTAA, SourceWidth != TargetWidth, UseTAAU, DoSharpen);
             float CurrentSample;
             cmd.BeginSample("Linearize and Copy Depth");

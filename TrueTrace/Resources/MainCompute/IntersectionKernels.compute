@@ -132,7 +132,7 @@ void IntersectBVH() {
             [branch]if(CurBounce == 0) {
                 _PrimaryTriangleInfo[TempUv] = uint4(MeshOffsets[Indexes.y].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x] - _MeshData[MeshOffsets[Indexes.y].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
             } else if(GlobalColors[PixIndex].Data.w == -1 || CurBounce == GlobalColors[PixIndex].Data.w) {
-                _PrimaryTriangleInfo[TempUv] = uint4((UseReSTIRGI && bestHit.t != FarPlane) ? uint3(MeshOffsets[Indexes.y].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x] - _MeshData[MeshOffsets[Indexes.y].y].TriOffset, ((uint)(bestHit.u * 65535.0f) | ((uint)(bestHit.v * 65535.0f) << 16))) : ((bestHit.t != FarPlane) ? asuint(ray.direction) : asuint(ray.direction * bestHit.t + ray.origin)), bestHit.t == FarPlane);
+                _PrimaryTriangleInfo[TempUv] = uint4((UseReSTIRGI && bestHit.t != FarPlane) ? uint3(MeshOffsets[Indexes.y].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x] - _MeshData[MeshOffsets[Indexes.y].y].TriOffset, ((uint)(bestHit.u * 65535.0f) | ((uint)(bestHit.v * 65535.0f) << 16))) : ((UseASVGF || bestHit.t != FarPlane) ? asuint(ray.direction) : asuint(ray.direction * bestHit.t + ray.origin)), bestHit.t == FarPlane);
             }
 
             set(ray_index, bestHit);
