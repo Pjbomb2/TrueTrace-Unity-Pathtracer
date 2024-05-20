@@ -1225,7 +1225,7 @@ Toolbar toolbar;
          GroundColorField.RegisterValueChangedCallback(evt => {GroundColor = new Vector3(evt.newValue.r, evt.newValue.g, evt.newValue.b); RayMaster.GroundColor = GroundColor;});
          HardSettingsMenu.Add(GroundColorField);
 
-         Toggle OIDNToggle = new Toggle() {value = (definesList.Contains("UseOIDN")), text = "Enable OIDN"};
+         Toggle OIDNToggle = new Toggle() {value = (definesList.Contains("UseOIDN")), text = "Enable OIDN(Does NOT work with DX11 Only)"};
          OIDNToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("UseOIDN"); else RemoveDefine("UseOIDN"); SetDefines();});
          HardSettingsMenu.Add(OIDNToggle);
 

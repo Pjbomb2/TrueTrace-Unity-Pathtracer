@@ -1,21 +1,21 @@
 #define AdvancedAlphaMapped
 #define ExtraSampleValidation
 #define IgnoreGlassShadow
-//#define IgnoreGlassMain
-//#define PointFiltering
+// #define IgnoreGlassMain
+// #define HDRP
+// #define HardwareRT
+// #define PointFiltering
 #define StainedGlassShadows
-//#define LightMapping
-//#define IgnoreBackfacing
-//#define WhiteLights
+// #define DX11
+// #define LightMapping
+// #define IgnoreBackfacing
+// #define WhiteLights
 #define LBVH
 #define AccurateEmissionTex
-//#define RadianceDebug
-#define IndirectRetraceWeighting
-
-//#define HDRP
-//#define HardwareRT
-//#define DX11
 #define RadianceCache
+// #define RadianceDebug
+// #define IndirectRetraceWeighting
+
 
 
 //Dont change the ones below

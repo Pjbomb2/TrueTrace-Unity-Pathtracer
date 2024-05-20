@@ -79,7 +79,7 @@ void IntersectBVH() {
         InterlockedAdd(BufferSizes[CurBounce].tracerays, -1, ray_index);
         ray_index--;
         if (ray_index < 0) return;
-        if(CurBounce % 2 == 1) ray_index += screen_width * screen_height;
+        [branch]if(CurBounce % 2 == 1) ray_index += screen_width * screen_height;
         GlobalRay = GlobalRays[ray_index];
         bestHit = CreateRayHit();
 

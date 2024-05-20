@@ -696,7 +696,7 @@ void Gradient_Img(uint3 gl_GlobalInvocationID : SV_DispatchThreadID)
 
 	IMG_ASVGF_GRAD_LF_PING[ipos] = grad_lf;
 
-	IMG_ASVGF_GRAD_HF_SPEC_PING[ipos] = float2(grad_hf, grad_spec * 0.1f);
+	IMG_ASVGF_GRAD_HF_SPEC_PING[ipos] = float2(grad_hf, grad_spec);
 }
 
 
@@ -1077,8 +1077,8 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 		float antilag = 0.1f * grad_hf_spec.y * clamp(1.0f - motion_length, 0.01f, 1.0f) + motion_length * 0.001f;
 		// float antilag = grad_hf_spec.y + motion_length * 0.001f;
 		float antilag_alpha_spec = clamp(lerp(0.0, antilag, 1), 0, 1);
-		float hist_len_spec = min(max(temporal_color_histlen_spec.a * pow(1.0 - antilag_alpha_spec, 10),4) + 1.0, 256.0);
-		float alpha_color_spec = max(0.01f, 1.0 / max(hist_len_spec,12));
+		float hist_len_spec = min(max(temporal_color_histlen_spec.a * pow(1.0 - antilag_alpha_spec, 10),0) + 1.0, 256.0);
+		float alpha_color_spec = max(0.01f, 1.0 / max(hist_len_spec,0));
 		alpha_color_spec = lerp(alpha_color_spec, 1.0, antilag_alpha_spec);
 		out_color_histlen_spec.rgb = lerp(temporal_color_histlen_spec.rgb, color_curr_spec.rgb, alpha_color_spec);
 		out_color_histlen_spec.a = hist_len_spec;

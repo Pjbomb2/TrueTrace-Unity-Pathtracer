@@ -306,11 +306,11 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         #endif
         if(CurBounce > 0 && (CacheInstance.pathLength >> 5) & 0x1) {
             float3 res2 = 0;
-            if((hit.t >= CalcVoxelSize(ray.origin) * lerp(1.0f, 2.0f, random(64, pixel_index).x))) {
+            // if((hit.t >= CalcVoxelSize(ray.origin) * lerp(1.0f, 2.0f, random(64, pixel_index).x))) {
                 if(RetrieveCacheRadiance(CacheInstance, ray.origin, norm, res2)) {
                     Color.Indirect += Color.throughput * res2;
                 }
-            }
+            // }
             CacheInstance.pathLength |= (1u << 6);
         } else if((!(MaterialLobe == 0 && hitDat.roughness < 0.05) && MaterialLobe != 3)) CacheInstance.pathLength |= (1u << 5);
 
@@ -500,7 +500,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         InterlockedAdd(BufferSizes[CurBounce + 1].tracerays, 1, index2);
         if(TerrainExists) InterlockedAdd(BufferSizes[CurBounce + 1].heighmap_rays, 1, index2);
         const RayData GlobalRay = {ray.origin, pixel_index, ray.direction, pdf,set2(hit)};
-        if(CurBounce % 2 == 0) index2 += screen_width * screen_height;
+        [branch]if(CurBounce % 2 == 0) index2 += screen_width * screen_height;
         GlobalRays[index2] = GlobalRay;
 
     }
@@ -510,7 +510,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 void kernel_shade(uint3 id : SV_DispatchThreadID) {
 
     if (CurBounce != 0 && (id.x >= BufferSizes[CurBounce - 1].tracerays)) return;
-    if(CurBounce % 2 == 1) id.x += screen_width * screen_height;
+    [branch]if(CurBounce % 2 == 1) id.x += screen_width * screen_height;
     const RayData GlobRay = GlobalRays[id.x];
     uint pixel_index = GlobRay.PixelIndex;
     id.xy = uint2(pixel_index % screen_width, pixel_index / screen_width);
@@ -584,7 +584,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     int MaterialIndex;
     bool HitTerrain = false;
     MaterialData TempMat;
-    if (TerrainExists && (bestHit.mesh_id == 9999999)) {//if hit terrain
+    [branch]if (TerrainExists && (bestHit.mesh_id == 9999999)) {//if hit terrain
         BaseUv = float2(bestHit.u, bestHit.v);
         float4 Mats = TerrainAlphaMap.SampleLevel(sampler_TerrainAlphaMap, BaseUv * (Terrains[bestHit.triangle_id].AlphaMap.xy - Terrains[bestHit.triangle_id].AlphaMap.zw) + Terrains[bestHit.triangle_id].AlphaMap.zw, 0);
         int x = 0;
