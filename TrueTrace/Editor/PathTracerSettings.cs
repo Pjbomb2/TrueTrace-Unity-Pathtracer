@@ -1241,10 +1241,6 @@ Toolbar toolbar;
          DX11Toggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("DX11Only"); else RemoveDefine("DX11Only"); SetDefines();});
          HardSettingsMenu.Add(DX11Toggle);
 
-         Toggle LosslessToggle = new Toggle() {value = (definesList.Contains("ForceLossless")), text = "Disable Atlas Compression"};
-         LosslessToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("ForceLossless"); else RemoveDefine("ForceLossless"); SetDefines();});
-         HardSettingsMenu.Add(LosslessToggle);
-
 
          Button RemoveTrueTraceButton = new Button(() => RemoveTrueTrace()) {text = "Remove TrueTrace Scripts From Scene"};
          HardSettingsMenu.Add(RemoveTrueTraceButton);

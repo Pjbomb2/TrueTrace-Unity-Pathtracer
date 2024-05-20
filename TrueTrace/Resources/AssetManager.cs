@@ -20,20 +20,13 @@ namespace TrueTrace {
         public int TotalParentObjectSize;
         [HideInInspector] public float LightEnergyScale = 1.0f;
         //emissive, alpha, metallic, roughness
-        #if ForceLossless
-            public RenderTexture AlbedoAtlas;
-            public RenderTexture NormalAtlas;
-            public RenderTexture SingleComponentAtlas;
-            public RenderTexture EmissiveAtlas;
-        #else
-            public Texture2D AlbedoAtlas;
-            public Texture2D NormalAtlas;
-            public Texture2D SingleComponentAtlas;
-            public Texture2D EmissiveAtlas;
-        #endif
-        public RenderTexture HeightmapAtlas;
-        public RenderTexture AlphaMapAtlas;
-        public RenderTexture AlphaAtlas;
+        [HideInInspector] public Texture2D AlbedoAtlas;
+        [HideInInspector] public Texture2D NormalAtlas;
+        [HideInInspector] public Texture2D SingleComponentAtlas;
+        [HideInInspector] public Texture2D EmissiveAtlas;
+        [HideInInspector] public RenderTexture HeightmapAtlas;
+        [HideInInspector] public RenderTexture AlphaMapAtlas;
+        [HideInInspector] public RenderTexture AlphaAtlas;
         private RenderTexture TempTex;
         private RenderTexture s_Prop_EncodeBCn_Temp;
         private ComputeShader CopyShader;
@@ -58,7 +51,7 @@ namespace TrueTrace {
         [HideInInspector] public ComputeBuffer AggTriBuffer;
         [HideInInspector] public ComputeBuffer LightTriBuffer;
         [HideInInspector] public ComputeBuffer LightNodeBuffer;
-        public List<MyMeshDataCompacted> MyMeshesCompacted;
+        [HideInInspector] public List<MyMeshDataCompacted> MyMeshesCompacted;
         [HideInInspector] public List<LightData> UnityLights;
         [HideInInspector] public InstancedManager InstanceData;
         [HideInInspector] public List<InstancedObject> Instances;
@@ -135,10 +128,10 @@ namespace TrueTrace {
 
         [HideInInspector] public int MatCount;
 
-        public List<LightMeshData> LightMeshes;
+        [HideInInspector] public List<LightMeshData> LightMeshes;
 
         [HideInInspector] public AABB[] MeshAABBs;
-        public LightBounds[] LightAABBs;
+        [HideInInspector] public LightBounds[] LightAABBs;
 
         [HideInInspector] public bool ParentCountHasChanged;
 
@@ -220,20 +213,12 @@ namespace TrueTrace {
         if(TexCount != 0) {
             PackingRectangle BoundRects;
             RectanglePacker.Pack(Rects, out BoundRects);
-            #if ForceLossless
-                DesiredRes = (int)Mathf.Min(Mathf.Max(BoundRects.Width, BoundRects.Height), DesiredRes);
-            #else
-                DesiredRes = (int)Mathf.Min((Mathf.Floor((float)Mathf.Max(BoundRects.Width, BoundRects.Height) / 4.0f)) * 4, DesiredRes);
-            #endif
+            DesiredRes = (int)Mathf.Min((Mathf.Floor((float)Mathf.Max(BoundRects.Width, BoundRects.Height) / 4.0f)) * 4, DesiredRes);
             Scale = new Vector2(Mathf.Ceil(Mathf.Min((float)DesiredRes / BoundRects.Width, 1) * 16384.0f / 4.0f) * 4.0f / 16384.0f, Mathf.Ceil(Mathf.Min((float)DesiredRes / BoundRects.Height, 1) * 16384.0f / 4.0f) * 4.0f / 16384.0f);
         } else {
             DesiredRes = 4;
         }
-    #if ForceLossless
         if(Atlas == null || Atlas.width != DesiredRes) {
-    #else
-        if(Atlas == null || Atlas.width != DesiredRes) {
-    #endif
             if(Atlas != null) Atlas.ReleaseSafe();
             int tempWidth = (DesiredRes + 3) / 4;
             int tempHeight = (DesiredRes + 3) / 4;
@@ -283,26 +268,18 @@ namespace TrueTrace {
                     }
                 break;
                 case 6://AlbedoMap
-                    #if ForceLossless
-                        CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, CommonFunctions.RTHalf4, false);
-                    #else
-                        Atlas = new RenderTexture(desc);
-                        AlbedoAtlasSize = DesiredRes;
-                        if(AlbedoAtlas != null && AlbedoAtlas.width != DesiredRes) {
-                            DestroyImmediate(AlbedoAtlas);
-                            AlbedoAtlas = new Texture2D(DesiredRes,DesiredRes, TextureFormat.BC6H, false);
-                        }
-                    #endif
+                    Atlas = new RenderTexture(desc);
+                    AlbedoAtlasSize = DesiredRes;
+                    if(AlbedoAtlas != null && AlbedoAtlas.width != DesiredRes) {
+                        DestroyImmediate(AlbedoAtlas);
+                        AlbedoAtlas = new Texture2D(DesiredRes,DesiredRes, TextureFormat.BC6H, false);
+                    }
                 break;
             }
         }
         if(TexCount == 0) return;
 
-        #if ForceLossless
-            CopyShader.SetBool("ForceLossless", TexIndex != 5);
-        #else
-            CopyShader.SetBool("ForceLossless", false);
-        #endif
+        CopyShader.SetBool("ForceLossless", false);
         CopyShader.SetBool("IsHeightmap", TexIndex == 0);
         for (int i = 0; i < TexCount; i++) {
                 PackingRectangle TempRect = Rects[i];
@@ -372,16 +349,10 @@ namespace TrueTrace {
                     break;  
                     case 5:
                     case 6:
-                #if ForceLossless                  
-                        CopyShader.SetTexture(2, "InputTex", SelectedTex.Tex);
-                        CopyShader.SetTexture(2, "ResultFull", Atlas);
-                        CopyShader.Dispatch(2, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 32.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 32.0f), 1);
-                #else
                         CopyShader.SetTexture(4, "_Source", SelectedTex.Tex);
 
                         CopyShader.SetTexture(4, "_Target", Atlas);
                         CopyShader.Dispatch(4, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 4.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 4.0f), 1);
-                #endif
                     break;
                 }
 
@@ -565,34 +536,27 @@ namespace TrueTrace {
             if (!RenderQue.Any())
                 return;
 
-            #if ForceLossless
-                if(AlbedoAtlas != null) AlbedoAtlas?.Release();
-                PackAndCompact(AlbTextures, ref AlbedoAtlas, AlbRect.ToArray(), MainDesiredRes, 6, 3);
-                if(NormalAtlas != null) NormalAtlas?.Release();
-                PackAndCompact(NormTextures, ref NormalAtlas, NormRect.ToArray(), MainDesiredRes, 2);
-            #else
-                PackAndCompact(AlbTextures, ref TempTex, AlbRect.ToArray(), MainDesiredRes, 6, 3);
-                Graphics.CopyTexture(TempTex, 0, AlbedoAtlas, 0);
-                TempTex.Release();
-                TempTex = null;
+            PackAndCompact(AlbTextures, ref TempTex, AlbRect.ToArray(), MainDesiredRes, 6, 3);
+            Graphics.CopyTexture(TempTex, 0, AlbedoAtlas, 0);
+            TempTex.Release();
+            TempTex = null;
 
-                PackAndCompact(NormTextures, ref TempTex, NormRect.ToArray(), MainDesiredRes, 2);
+            PackAndCompact(NormTextures, ref TempTex, NormRect.ToArray(), MainDesiredRes, 2);
 
-                Graphics.CopyTexture(TempTex, 0, NormalAtlas, 0);
-                TempTex.Release();
-                TempTex = null;
+            Graphics.CopyTexture(TempTex, 0, NormalAtlas, 0);
+            TempTex.Release();
+            TempTex = null;
 
-                PackAndCompact(SingleComponentTexture, ref TempTex, SingleComponentRect.ToArray(), MainDesiredRes, 4);
+            PackAndCompact(SingleComponentTexture, ref TempTex, SingleComponentRect.ToArray(), MainDesiredRes, 4);
 
-                Graphics.CopyTexture(TempTex, 0, SingleComponentAtlas, 0);
-                TempTex.Release();
-                TempTex = null;
+            Graphics.CopyTexture(TempTex, 0, SingleComponentAtlas, 0);
+            TempTex.Release();
+            TempTex = null;
 
-                PackAndCompact(EmisTextures, ref TempTex, EmisRect.ToArray(), MainDesiredRes, 5);
-                Graphics.CopyTexture(TempTex, 0, EmissiveAtlas, 0);
-                TempTex.Release();
-                TempTex = null;
-            #endif
+            PackAndCompact(EmisTextures, ref TempTex, EmisRect.ToArray(), MainDesiredRes, 5);
+            Graphics.CopyTexture(TempTex, 0, EmissiveAtlas, 0);
+            TempTex.Release();
+            TempTex = null;
 
 
             PackAndCompact(AlphTextures, ref AlphaAtlas, AlphRect.ToArray(), MainDesiredRes, 7);
@@ -741,13 +705,11 @@ namespace TrueTrace {
             #if HardwareRT
                 AccelStruct = new UnityEngine.Rendering.RayTracingAccelerationStructure();
             #endif
-            #if ForceLossless
-            #else
-                if(AlbedoAtlas == null) AlbedoAtlas = new Texture2D(4,4, TextureFormat.BC6H, false);
-                if(EmissiveAtlas == null) EmissiveAtlas = new Texture2D(4,4, TextureFormat.BC6H, false);
-                if(NormalAtlas == null) NormalAtlas = new Texture2D(4,4, TextureFormat.BC5, 1, false);
-                if(SingleComponentAtlas == null) SingleComponentAtlas = new Texture2D(4,4, TextureFormat.BC4, 1, false);
-            #endif
+            if(AlbedoAtlas == null) AlbedoAtlas = new Texture2D(4,4, TextureFormat.BC6H, false);
+            if(EmissiveAtlas == null) EmissiveAtlas = new Texture2D(4,4, TextureFormat.BC6H, false);
+            if(NormalAtlas == null) NormalAtlas = new Texture2D(4,4, TextureFormat.BC5, 1, false);
+            if(SingleComponentAtlas == null) SingleComponentAtlas = new Texture2D(4,4, TextureFormat.BC4, 1, false);
+            
             UpdateMaterialDefinition();
             UnityEngine.Video.VideoPlayer[] VideoObjects = GameObject.FindObjectsOfType<UnityEngine.Video.VideoPlayer>();
             if (VideoTexture != null) VideoTexture.Release();
@@ -1350,7 +1312,7 @@ namespace TrueTrace {
             public Matrix4x4 Transform;
             public int SolidOffset;
         }
-        public LightBVHTransform[] LightBVHTransforms;
+        [HideInInspector] public LightBVHTransform[] LightBVHTransforms;
 
         unsafe public void ConstructNewTLAS() {
             #if HardwareRT

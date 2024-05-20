@@ -106,8 +106,8 @@ namespace TrueTrace {
         private RenderTexture GINEEPosB;
         private RenderTexture GINEEPosC;
 
-        public RenderTexture CDFX;
-        public RenderTexture CDFY;
+        private RenderTexture CDFX;
+        private RenderTexture CDFY;
 
         private RenderTexture Gradients;
 
