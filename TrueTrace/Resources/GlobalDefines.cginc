@@ -19,10 +19,9 @@
 
 
 //Dont change the ones below
-#define DiffuseIndex 0
-#define DisneyIndex 1
-#define CutoutIndex 2
-#define VideoIndex 3
+#define DisneyIndex 0
+#define CutoutIndex 1
+#define VideoIndex 2
 
 #define POINTLIGHT 0
 #define DIRECTIONALLIGHT 1

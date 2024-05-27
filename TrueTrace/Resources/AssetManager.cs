@@ -24,9 +24,9 @@ namespace TrueTrace {
         [HideInInspector] public Texture2D NormalAtlas;
         [HideInInspector] public Texture2D SingleComponentAtlas;
         [HideInInspector] public Texture2D EmissiveAtlas;
+        [HideInInspector] public Texture2D AlphaAtlas;
         [HideInInspector] public RenderTexture HeightmapAtlas;
         [HideInInspector] public RenderTexture AlphaMapAtlas;
-        [HideInInspector] public RenderTexture AlphaAtlas;
         private RenderTexture TempTex;
         private RenderTexture s_Prop_EncodeBCn_Temp;
         private ComputeShader CopyShader;
@@ -258,7 +258,12 @@ namespace TrueTrace {
                     }
                 break;
                 case 7://AlphaMap
-                    CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.R8, false);
+                    desc.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R32G32_SInt;
+                    Atlas = new RenderTexture(desc);
+                    if(AlphaAtlas != null && AlphaAtlas.width != DesiredRes) {
+                        DestroyImmediate(AlphaAtlas);
+                        AlphaAtlas = new Texture2D(DesiredRes,DesiredRes, TextureFormat.BC4, 1, false);
+                    }
                 break;
                 case 5://EmissionMap
                     Atlas = new RenderTexture(desc);
@@ -327,14 +332,10 @@ namespace TrueTrace {
                     break;
                     case 3://metallic
                     case 4://roughness
+                    case 7://alpha
                         CopyShader.SetTexture(6, "SingleInput", SelectedTex.Tex);
                         CopyShader.SetTexture(6, "SingleOutput", Atlas);
                         CopyShader.Dispatch(6, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 4.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 4.0f), 1);
-                    break;
-                    case 7://albedoalpha
-                        CopyShader.SetTexture(0, "InputTex", SelectedTex.Tex);
-                        CopyShader.SetTexture(0, "ResultSingle", Atlas);
-                        CopyShader.Dispatch(0, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 32.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 32.0f), 1);
                     break;
                     case 1://alphamap(uncompressed)
                         CopyShader.SetBool("ForceLossless", true);
@@ -542,13 +543,11 @@ namespace TrueTrace {
             TempTex = null;
 
             PackAndCompact(NormTextures, ref TempTex, NormRect.ToArray(), MainDesiredRes, 2);
-
             Graphics.CopyTexture(TempTex, 0, NormalAtlas, 0);
             TempTex.Release();
             TempTex = null;
 
             PackAndCompact(SingleComponentTexture, ref TempTex, SingleComponentRect.ToArray(), MainDesiredRes, 4);
-
             Graphics.CopyTexture(TempTex, 0, SingleComponentAtlas, 0);
             TempTex.Release();
             TempTex = null;
@@ -558,8 +557,11 @@ namespace TrueTrace {
             TempTex.Release();
             TempTex = null;
 
+            PackAndCompact(AlphTextures, ref TempTex, AlphRect.ToArray(), MainDesiredRes, 7);
+            Graphics.CopyTexture(TempTex, 0, AlphaAtlas, 0);
+            TempTex.Release();
+            TempTex = null;
 
-            PackAndCompact(AlphTextures, ref AlphaAtlas, AlphRect.ToArray(), MainDesiredRes, 7);
             PackAndCompact(HeightMapTextures, ref HeightmapAtlas, HeightMapRect.ToArray(), 16384, 0, 0);
             PackAndCompact(AlphaMapTextures, ref AlphaMapAtlas, AlphaMapRect.ToArray(), 16384, 1);
 
@@ -709,6 +711,7 @@ namespace TrueTrace {
             if(EmissiveAtlas == null) EmissiveAtlas = new Texture2D(4,4, TextureFormat.BC6H, false);
             if(NormalAtlas == null) NormalAtlas = new Texture2D(4,4, TextureFormat.BC5, 1, false);
             if(SingleComponentAtlas == null) SingleComponentAtlas = new Texture2D(4,4, TextureFormat.BC4, 1, false);
+            if(AlphaAtlas == null) AlphaAtlas = new Texture2D(4,4, TextureFormat.BC4, 1, false);
             
             UpdateMaterialDefinition();
             UnityEngine.Video.VideoPlayer[] VideoObjects = GameObject.FindObjectsOfType<UnityEngine.Video.VideoPlayer>();

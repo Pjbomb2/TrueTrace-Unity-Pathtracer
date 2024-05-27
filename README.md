@@ -51,6 +51,8 @@ Let me know if you use this for anything, I would be excited to see any use of t
 <ul>
   <li>If you plan to use DX12(otherwise look down below for DX11 instructions): Change the Graphics Api for Windows to DirectX12 through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Untoggle "Auto Graphics API For Windows", then click the little + that appears, select "Direct3D12(Experimental)", and drag that to the top.  A restart of the editor is required</li>
   <li>Your target camera NEEDS to be deferred, this will usually be automatically done for you by TrueTrace</li>
+  <li>Dynamic batching can break motion vectors a bit, so its best if this is turned off: Edit Tab -> Project Settings -> Player -> Other Settings -> Dynamic Batching</li>
+  <li>I reccomend turning on "GPU Skinning", as otherwise skinned meshes will freak out a bit, not horribly but its noticeable: Edit Tab -> Project Settings -> Player -> Other Settings -> GPU Skinning</li>
 </ul>
 
 ## Controls:
@@ -239,6 +241,8 @@ TrueTrace Options Description -
   <li>Andrew Varga</li>
   <li>Duong Nguyen</li>
   <li>jhintringer</li>
+  <li>DJ</li>
+  <li>Yanus</li>
 </ul>
 
 # Sample Images(Taken from various stages of development)

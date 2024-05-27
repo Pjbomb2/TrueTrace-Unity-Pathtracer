@@ -587,7 +587,7 @@ inline float2 AlignUV(float2 BaseUV, const float4 TexScale, const int2 TexDim2, 
 	// TexDim.zw += 1.0f / (float)AlbedoAtlasSize;
 	// TexDim.xy -= 1.0f / (float)AlbedoAtlasSize;
 	if(IsAlbedo) return clamp(BaseUV * (TexDim.xy - TexDim.zw) + TexDim.zw, TexDim.zw + 1.0f / (float)AlbedoAtlasSize, TexDim.xy - 1.0f / (float)AlbedoAtlasSize);
-	else return BaseUV * (TexDim.xy - TexDim.zw) + TexDim.zw;
+	else return clamp(BaseUV * (TexDim.xy - TexDim.zw) + TexDim.zw, TexDim.zw + 1.0f / 16384.0f, TexDim.xy - 1.0f / 16384.0f);
 }
 
 inline bool triangle_intersect_shadow(int tri_id, const Ray ray, float max_distance, int mesh_id, inout float3 throughput, const int MatOffset) {
@@ -613,7 +613,7 @@ inline bool triangle_intersect_shadow(int tri_id, const Ray ray, float max_dista
         		if(_Materials[MaterialIndex].MatType == CutoutIndex || _Materials[MaterialIndex].specTrans == 1) {
 	                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
 	                float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlphaTex);
-	                if(_Materials[MaterialIndex].MatType == CutoutIndex && _AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) return false;
+	                if(Uv.x != -1 && _Materials[MaterialIndex].MatType == CutoutIndex && _AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) return false;
 
 		            #ifdef IgnoreGlassShadow
 		                if(_Materials[MaterialIndex].specTrans == 1) {
@@ -1168,11 +1168,7 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, int pixel_index, inout i
 
 float3 LoadSurfaceInfo(int2 id) {
     uint4 Target = PrimaryTriData[id.xy];
-	if(Target.x == 9999999) {
-    	const Ray CameraRay = CreateCameraRay(id.xy / float2(screen_width, screen_height) * 2.0f - 1.0f);
-    	const float4 GBuffer = ScreenSpaceInfoRead[id.xy];
-    	return CameraRay.origin + CameraRay.direction * GBuffer.z;
-	}
+	if(Target.w == 1) return asfloat(Target.xyz);
     MyMeshDataCompacted Mesh = _MeshData[Target.x];
     Target.y += Mesh.TriOffset;
     float2 TriUV;
@@ -1487,73 +1483,70 @@ inline float3 CalcPos(uint4 TriData) {
 
 
 
-	#define WorldCacheScale 50.0f
-	#define GridBias 2
-	#define BucketCount 32
-	#define PropDepth 4
-	#define MinSampleToContribute 8
-	#define MaxSampleCount 32
-	#define CacheCapacity (4 * 1024 * 1024)
+#define WorldCacheScale 50.0f
+#define GridBias 2
+#define BucketCount 32
+#define PropDepth 4
+#define MinSampleToContribute 8
+#define MaxSampleCount 122
+#define CacheCapacity (4 * 1024 * 1024)
 
-	RWByteAddressBuffer VoxelDataBufferA;
-	ByteAddressBuffer VoxelDataBufferB;
-	#define HashKeyValue uint3
-	RWStructuredBuffer<HashKeyValue> HashEntriesBuffer;//May want to leave the last bit unused, so I can use it as a "written to" flag instead of having to compare both A and B components for empty
-	StructuredBuffer<HashKeyValue> HashEntriesBufferB;//May want to leave the last bit unused, so I can use it as a "written to" flag instead of having to compare both A and B components for empty
+RWByteAddressBuffer VoxelDataBufferA;
+ByteAddressBuffer VoxelDataBufferB;
+#define HashKeyValue uint3
+RWStructuredBuffer<HashKeyValue> HashEntriesBuffer;//May want to leave the last bit unused, so I can use it as a "written to" flag instead of having to compare both A and B components for empty
+StructuredBuffer<HashKeyValue> HashEntriesBufferB;//May want to leave the last bit unused, so I can use it as a "written to" flag instead of having to compare both A and B components for empty
 
-	float CalcVoxelSize(float3 VertPos) {
-	    uint GridLayer = clamp(floor(log2(distance(CamPos, VertPos)) + GridBias), 1, ((1u << 10) - 1));
-	    return pow(2, GridLayer) / (float)(WorldCacheScale * 4);
-	}
+float CalcVoxelSize(float3 VertPos) {
+    uint GridLayer = clamp(floor(log2(distance(CamPos, VertPos)) + GridBias), 1, ((1u << 10) - 1));
+    return pow(2, GridLayer) / (float)(WorldCacheScale * 4);
+}
 
-	int4 CalculateCellParams(float3 VertexPos) {
-		float LogData = log2(distance(CamPos, VertexPos));
-		uint Layer = clamp(floor(LogData) + GridBias, 1, ((1u << 10) - 1));
-		return int4(floor((VertexPos * WorldCacheScale * 4) / pow(2, Layer)), Layer);
-	}
+int4 CalculateCellParams(float3 VertexPos) {
+	float LogData = log2(distance(CamPos, VertexPos));
+	uint Layer = clamp(floor(LogData) + GridBias, 1, ((1u << 10) - 1));
+	return int4(floor((VertexPos * WorldCacheScale * 4) / pow(2, Layer)), Layer);
+}
 
-	HashKeyValue CompressHash(uint4 CellParams, uint NormHash) {
-		HashKeyValue HashValue;
-		HashValue.x = (CellParams.x & ((1u << 17) - 1)) | ((CellParams.y & ((1u << 17) - 1)) << 17);
-		HashValue.y = ((CellParams.y & ((1u << 17) - 1)) >> 15) | ((CellParams.z & ((1u << 17) - 1)) << 2) | ((CellParams.w & ((1u << 10) - 1)) << 19) | (NormHash << 29);
-		return HashValue;
-	}
+HashKeyValue CompressHash(uint4 CellParams, uint NormHash) {
+	HashKeyValue HashValue;
+	HashValue.x = (CellParams.x & ((1u << 17) - 1)) | ((CellParams.y & ((1u << 17) - 1)) << 17);
+	HashValue.y = ((CellParams.y & ((1u << 17) - 1)) >> 15) | ((CellParams.z & ((1u << 17) - 1)) << 2) | ((CellParams.w & ((1u << 10) - 1)) << 19) | (NormHash << 29);
+	return HashValue;
+}
 
-	HashKeyValue ComputeHash(float3 Position, float3 Norm) {
-		uint4 CellParams = asuint(CalculateCellParams(Position));
-		uint NormHash =
-	        (Norm.x >= 0 ? 1 : 0) +
-	        (Norm.y >= 0 ? 2 : 0) +
-	        (Norm.z >= 0 ? 4 : 0);
+HashKeyValue ComputeHash(float3 Position, float3 Norm) {
+	uint4 CellParams = asuint(CalculateCellParams(Position));
+	uint NormHash =
+        (Norm.x >= 0 ? 1 : 0) +
+        (Norm.y >= 0 ? 2 : 0) +
+        (Norm.z >= 0 ? 4 : 0);
 
-		return CompressHash(CellParams, NormHash);
-	}
+	return CompressHash(CellParams, NormHash);
+}
 
-	// http://burtleburtle.net/bob/hash/integer.html
-	uint HashJenkins32(uint a)
-	{
-	    a = (a + 0x7ed55d16) + (a << 12);
-	    a = (a ^ 0xc761c23c) ^ (a >> 19);
-	    a = (a + 0x165667b1) + (a << 5);
-	    a = (a + 0xd3a2646c) ^ (a << 9);
-	    a = (a + 0xfd7046c5) + (a << 3);
-	    a = (a ^ 0xb55a4f09) ^ (a >> 16);
-	    return a;
-	}
+// http://burtleburtle.net/bob/hash/integer.html
+uint HashJenkins32(uint a) {
+    a = (a + 0x7ed55d16) + (a << 12);
+    a = (a ^ 0xc761c23c) ^ (a >> 19);
+    a = (a + 0x165667b1) + (a << 5);
+    a = (a + 0xd3a2646c) ^ (a << 9);
+    a = (a + 0xfd7046c5) + (a << 3);
+    a = (a ^ 0xb55a4f09) ^ (a >> 16);
+    return a;
+}
 
-	uint Hash32(HashKeyValue HashValue)
-	{
-	    return HashJenkins32(HashValue.x & 0xffffffff)
-	         ^ HashJenkins32(HashValue.y & 0xffffffff);
-	}
+uint Hash32(HashKeyValue HashValue) {
+    return HashJenkins32(HashValue.x & 0xffffffff)
+         ^ HashJenkins32(HashValue.y & 0xffffffff);
+}
 
 
-	#define PathLengthBits PropDepth
-	#define PathLengthMask ((1u << PathLengthBits) - 1)
+#define PathLengthBits PropDepth
+#define PathLengthMask ((1u << PathLengthBits) - 1)
 
-// Transforms an RGB color in Rec.709 to CIE XYZ.
-float3 RTXDI_RGBToXYZInRec709(float3 c)
-{
+
+float3 RTXDI_RGBToXYZInRec709(float3 c) {
     static const float3x3 M = float3x3(
         0.4123907992659595, 0.3575843393838780, 0.1804807884018343,
         0.2126390058715104, 0.7151686787677559, 0.0721923153607337,
@@ -1561,8 +1554,7 @@ float3 RTXDI_RGBToXYZInRec709(float3 c)
     );
     return mul(M, c);
 }
-float3 RTXDI_XYZToRGBInRec709(float3 c)
-{
+float3 RTXDI_XYZToRGBInRec709(float3 c) {
     static const float3x3 M = float3x3(
         3.240969941904522, -1.537383177570094, -0.4986107602930032,
         -0.9692436362808803, 1.875967501507721, 0.04155505740717569,
@@ -1570,20 +1562,17 @@ float3 RTXDI_XYZToRGBInRec709(float3 c)
     );
 
     return mul(M, c);
-
 }
 
 	uint EncodeRGB(float3 Col) {
 		float3 XYZ = RTXDI_RGBToXYZInRec709(Col);
-		float logY = 409.6 * (log2(XYZ.y) + 20.0); // -inf if Y==0
+		float logY = 409.6 * (log2(XYZ.y) + 20.0);
     	uint Le = uint(clamp(logY, 0.0, 16383.0));
     	if(Le == 0) return 0;
 
 		float invDenom = 1.0 / (-2.0 * XYZ.x + 12.0 * XYZ.y + 3.0 * (XYZ.x + XYZ.y + XYZ.z));
 	    float2 uv = float2(4.0, 9.0) * XYZ.xy * invDenom;
 
-	    // Encode chroma (u,v) in 9 bits each.
-	    // The gamut of perceivable uv values is roughly [0,0.62], so scale by 820 to get 9-bit values.
 	    uint2 uve = uint2(clamp(820.0 * uv, 0.0, 511.0));
 
 	    return (Le << 18) | (uve.x << 9) | uve.y;
@@ -1596,25 +1585,15 @@ float3 RTXDI_XYZToRGBInRec709(float3 c)
 	    float logY = (float(Le) + 0.5) / 409.6 - 20.0;
 	    float Y = pow(2.0, logY);
 
-	    // Decode normalized chromaticity xy from encoded chroma (u,v).
-	    //
-	    //  x = 9u / (6u - 16v + 12)
-	    //  y = 4v / (6u - 16v + 12)
-	    //
 	    uint2 uve = uint2(packedColor >> 9, packedColor) & 0x1ff;
 	    float2 uv = (float2(uve)+0.5) / 820.0;
 
 	    float invDenom = 1.0 / (6.0 * uv.x - 16.0 * uv.y + 12.0);
 	    float2 xy = float2(9.0, 4.0) * uv * invDenom;
 
-	    // Convert chromaticity to XYZ and back to RGB.
-	    //  X = Y / y * x
-	    //  Z = Y / y * (1 - x - y)
-	    //
 	    float s = Y / xy.y;
 	    float3 XYZ = float3(s * xy.x, Y, s * (1.f - xy.x - xy.y));
 
-	    // Convert back to RGB and clamp to avoid out-of-gamut colors.
 	    return max(RTXDI_XYZToRGBInRec709(XYZ), 0.0);
 	}
 
@@ -1636,8 +1615,7 @@ float3 RTXDI_XYZToRGBInRec709(float3 c)
 
 	GridVoxel RetrieveCacheData(uint CacheEntry) {
 	    if (CacheEntry == 0xFFFFFFFF) return (GridVoxel)0;
-	    CacheEntry *= 16;
-	    uint4 voxelDataPacked = VoxelDataBufferB.Load4(CacheEntry);
+	    uint4 voxelDataPacked = VoxelDataBufferB.Load4(CacheEntry * 16);
 
 	    GridVoxel Voxel;
 		Voxel.radiance = voxelDataPacked.xyz / 1e4f;
@@ -1675,7 +1653,6 @@ float3 RTXDI_XYZToRGBInRec709(float3 c)
 					HashKeyValue OldHashValue = HashEntriesBuffer[baseSlot + i];
 					if((OldHashValue.x == 0 && OldHashValue.y == 0) || (OldHashValue.x == HashValue.x && OldHashValue.y == HashValue.y)) return baseSlot + i;
 				}
-
 			}
 		}
 		return 0;
@@ -1692,9 +1669,7 @@ float3 RTXDI_XYZToRGBInRec709(float3 c)
 	        if (PrevHash.x == HashValue.x && PrevHash.y == HashValue.y) {
 	            cacheEntry = baseSlot + i;
 	            return true;
-	        } else if (PrevHash.x == 0 && PrevHash.y == 0) {
-                return false;
-            }
+	        } else if (PrevHash.x == 0 && PrevHash.y == 0) break;
 	    }
 	    return false;
 	}
@@ -1704,7 +1679,6 @@ float3 RTXDI_XYZToRGBInRec709(float3 c)
 		HashKeyValue HashValue = ComputeHash(Pos, Norm);
 	   	uint CacheEntry = 0xFFFFFFFF;
 	   	HashGridFind(HashValue, CacheEntry);
-	    if (CacheEntry == 0xFFFFFFFF) return false;
 
 	    GridVoxel voxelData = RetrieveCacheData(CacheEntry);
 	    if (voxelData.sampleNum > MinSampleToContribute) {
@@ -1718,23 +1692,22 @@ float3 RTXDI_XYZToRGBInRec709(float3 c)
 	inline bool AddHitToCache(inout PropogatedCacheData CurrentProp, float3 Pos, float random) {
 	    bool EarlyOut = false;
 	    float3 lighting = clamp(DecodeRGB(CurrentProp.CurrentIlluminance), 0, 1200.0f);
-  	#ifdef DX11
+#ifdef DX11
 	    int PathLength = (CurrentProp.pathLength & PathLengthMask);
         if(PathLength >= 3) CurrentProp.samples[3] = CurrentProp.samples[2];
         if(PathLength >= 2) CurrentProp.samples[2] = CurrentProp.samples[1];
         if(PathLength >= 1) CurrentProp.samples[1] = CurrentProp.samples[0];
-	#else
+#else
 	  	for (int i = (CurrentProp.pathLength & PathLengthMask); i > 0; --i)
 	        CurrentProp.samples[i] = CurrentProp.samples[i - 1];
-	#endif
+#endif
 
 	    float3 Norm = i_octahedral_32(CurrentProp.Norm);
 	   	HashKeyValue HashValue = ComputeHash(Pos, Norm);
 	   	uint CacheEntry = HashGridInsert(HashValue);
 	    CurrentProp.samples[0].y = CacheEntry;
 
-	    uint resamplingDepth = uint(lerp(1, PropDepth, random));
-	    if (resamplingDepth <= (CurrentProp.pathLength & PathLengthMask)) {
+	    if (((3.0f * random) + 1) <= (CurrentProp.pathLength & PathLengthMask)) {
 	        GridVoxel Voxel = RetrieveCacheData(CacheEntry);
 	        if (Voxel.sampleNum > MinSampleToContribute) {
 	            lighting = Voxel.radiance / Voxel.sampleNum;
@@ -1743,12 +1716,9 @@ float3 RTXDI_XYZToRGBInRec709(float3 c)
 	    }
 	    CurrentProp.pathLength = (CurrentProp.pathLength & ~PathLengthMask) | min((CurrentProp.pathLength & PathLengthMask) + 1, PropDepth - 1);
 
-	    if (!EarlyOut)
-	        AddDataToCache(CurrentProp.samples[0].y, uint4(lighting * 1e4f, 1));
-
-	    for (int i = 1; i < (CurrentProp.pathLength & PathLengthMask); ++i) {
-	        lighting *= DecodeRGB(CurrentProp.samples[i].x);
-	        AddDataToCache(CurrentProp.samples[i].y, uint4(lighting * 1e4f, 0));
+	    for (int i = EarlyOut; i < (CurrentProp.pathLength & PathLengthMask); ++i) {
+	        if(i > 0) lighting *= DecodeRGB(CurrentProp.samples[i].x);
+	        AddDataToCache(CurrentProp.samples[i].y, uint4(lighting * 1e4f, i == 0));
 	    }
 
 	    return !EarlyOut;
@@ -1761,8 +1731,7 @@ float3 RTXDI_XYZToRGBInRec709(float3 c)
 	    }
 	}
 
-	HashKeyValue GetReprojectedHash(HashKeyValue HashValue)
-	{
+	HashKeyValue GetReprojectedHash(HashKeyValue HashValue) {
 	    const uint negativeBit = 1 << (17 - 1);
 	    const uint negativeNumberMask = ~((1 << 17) - 1);
 
@@ -1788,22 +1757,19 @@ float3 RTXDI_XYZToRGBInRec709(float3 c)
 	    if (cameraDistance < cameraDistancePrev) {
 	        gridPosition = floor(gridPosition / 2.0f);
 	        level = min(level + 1, ((1u << 10) - 1));
-	    }
-	    else // this may be inaccurate
-	    {
+	    } else {
 	        gridPosition = floor(gridPosition * 2);
 	        level = max(level - 1, 1);
 	    }
-	    HashKeyValue reprojectedHashValue = CompressHash(asuint(int4(cameraGridPosition, level)), HashValue.y >> 29); 
 
-	    return reprojectedHashValue;
+	    return CompressHash(asuint(int4(cameraGridPosition, level)), HashValue.y >> 29); 
 	}
 
 
 
 
 
-int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Norm, float3 Position, float3 RayDir) {
+inline int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Norm, float3 Position, float3 RayDir) {
     float2 Rand;
     int MinIndex = 0;
     float wsum = 0;
@@ -1846,7 +1812,7 @@ int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Norm, floa
 
             p_hat = max(length(light.Radiance) / LengthSquared * saturate(dot(to_light, -light.Direction)),0);
         } else {
-            p_hat = max(length(light.Radiance) / ((light.Type == DIRECTIONALLIGHT) ? 12.0f : LengthSquared) * ((light.Type == SPOTLIGHT) ? saturate(saturate(dot(to_light, -light.Direction)) * light.SpotAngle.x + light.SpotAngle.y) : 1)* (dot(to_light, Norm) > 0),0);
+            p_hat = max(luminance(light.Radiance) / ((light.Type == DIRECTIONALLIGHT) ? 12.0f : LengthSquared) * ((light.Type == SPOTLIGHT) ? saturate(saturate(dot(to_light, -light.Direction)) * light.SpotAngle.x + light.SpotAngle.y) : 1)* (dot(to_light, Norm) > 0),0);
         }
         wsum += p_hat;
         if(Rand.y < p_hat / wsum) {

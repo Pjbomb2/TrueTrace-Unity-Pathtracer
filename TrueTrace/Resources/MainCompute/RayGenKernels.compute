@@ -277,7 +277,7 @@ void LightMapGen2(uint3 id : SV_DispatchThreadID) {
         HashEntriesBuffer[id.x].z = 0;
         HashKeyValue HashValue = HashEntriesBuffer[id.x];
         bool Valid = !(id.x > CacheCapacity || (HashValue.x == 0 && HashValue.y == 0));
-        int GroupIndex = GT.x / BucketCount;
+        int GroupIndex = floor(GT.x / (float)BucketCount);
         ActiveData[GT.x] = Valid;
         TotalCount[GroupIndex] = 0;
         GroupMemoryBarrierWithGroupSync();

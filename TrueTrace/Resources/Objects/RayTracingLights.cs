@@ -50,8 +50,8 @@ namespace TrueTrace {
         }
 
         private void OnEnable() { 
-            UpdateLight();           
-            RayTracingMaster.RegisterObject(this);
+            UpdateLight();  
+            if(!RayTracingMaster._rayTracingLights.Contains(this)) RayTracingMaster.RegisterObject(this);
         }
 
         private void OnDisable() {

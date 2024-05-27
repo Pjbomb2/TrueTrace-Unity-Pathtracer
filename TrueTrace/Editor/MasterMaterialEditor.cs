@@ -394,7 +394,7 @@ using CommonVars;
                                 BrightnessSlider.style.width = 350;
                                 BrightnessSlider.showInputField = true;
 
-                                Slider SaturationSlider = new Slider() {label = "Saturation: ", value = RTO.NormalStrength[Selected], highValue = 2.0f, lowValue = 0.0f};
+                                Slider SaturationSlider = new Slider() {label = "Saturation: ", value = RTO.Saturation[Selected], highValue = 2.0f, lowValue = 0.0f};
                                 SaturationSlider.RegisterValueChangedCallback(evt => {RTO.Saturation[Selected] = evt.newValue;RTO.CallMaterialEdited(true);});
                                 SaturationSlider.style.width = 350;
                                 SaturationSlider.showInputField = true;

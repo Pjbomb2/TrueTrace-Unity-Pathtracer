@@ -392,6 +392,7 @@ void kernel_taa_finalize(int3 id : SV_DispatchThreadID)
 
 	color = color / (1.0f - luminance(color.x, color.y, color.z));
 
+	// id.xy += (Offsets[Samples_Accumulated % 16] - 0.5f);// / float2(screen_width, screen_height);
 	ColorOut[id.xy] = color;
 
 }

@@ -398,6 +398,11 @@
         <ReadIndex>-4</ReadIndex>
         <TextureName>_MainTex</TextureName>
       </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>
     <RoughnessRange>null</RoughnessRange>
@@ -3452,6 +3457,11 @@
         <Purpose>5</Purpose>
         <ReadIndex>1</ReadIndex>
         <TextureName>_MetallicGlossMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>_Metallic</MetallicRange>
@@ -7076,6 +7086,256 @@
   </MaterialShader>
   <MaterialShader>
     <Name>Mochie/Glass</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Toon/d648e39af593ee04dad4d7c7708ceeb6</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Toon/1b5502f1db94bae4b8c03d3f39991039</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Toon/0015d942ee3d627448d991da2a8faacd</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Toon/c4b38d98653db564db1002d8d75cba0e</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Toon/6c44ec7a7aabe6d4cac4b2a8b0eacc03</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Toon/bbe2208cf61eb5c46aa132daf9e8cb14</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Toon/2fc4b8a448e5568499e8ff69e5e64406</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Toon/8ed79709472abb14b9a5d3db92c0c4c6</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Toon/4a6e73d95e8f93d4bbe4524c71b8049e</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Toon/3d9b54c0487efa04e85ad3daa2cf3bc8</Name>
     <AvailableTextures>
       <TexturePairs>
         <Purpose>0</Purpose>

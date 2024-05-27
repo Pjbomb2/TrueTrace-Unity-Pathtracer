@@ -432,8 +432,8 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(Upscaler,"source_height", Input.height);
             cmd.SetComputeIntParam(Upscaler,"target_width", Output.width);
             cmd.SetComputeIntParam(Upscaler,"target_height", Output.height);
-            Upscaler.SetMatrix("_CameraToWorld", _camera.cameraToWorldMatrix);
-            Upscaler.SetMatrix("_CameraInverseProjection", _camera.projectionMatrix.inverse);
+            Upscaler.SetMatrix("CamToWorld", _camera.cameraToWorldMatrix);
+            Upscaler.SetMatrix("CamInvProj", _camera.projectionMatrix.inverse);
             Upscaler.SetMatrix("_PrevCameraToWorld", PreviousCameraMatrix);
             Upscaler.SetMatrix("_PrevCameraInverseProjection", PreviousCameraInverseMatrix);
             Upscaler.SetMatrix("_CameraInverseProjection", _camera.projectionMatrix.inverse);

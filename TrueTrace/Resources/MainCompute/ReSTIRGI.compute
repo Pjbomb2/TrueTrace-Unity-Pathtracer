@@ -198,7 +198,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     CenterCol.PrimaryNEERay = packRGBE(clamp(unpackRGBE(CenterCol.PrimaryNEERay),0.0f, 2500.0f));//I NEED to find a better way of handling fireflies
     CenterCol.PrimaryNEERay *= EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(NEEPos.xyz - PrimaryHitPosition), SurfNorm, NEEpdf, NEEbsdf, pixel_index);
     bool Valid2 = ReconstructBsdf(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, GetTangentSpace(SurfNorm), pixel_index, Case);
-    float Lum = (luminance((CenterCol.Direct + CenterCol.Indirect) * bsdf) + luminance(pow(unpackRGBE(CenterCol.PrimaryNEERay),2.2f) * NEEbsdf));
+    float Lum = (luminance((CenterCol.Direct + CenterCol.Indirect) * bsdf * Valid2) + luminance(pow(unpackRGBE(CenterCol.PrimaryNEERay),2.2f) * NEEbsdf));
     if(CurrentRes.x == 1) CurrentRes = float4(1,1,Case,clamp(Lum, 0, 3000));
 
 

@@ -1198,6 +1198,26 @@ Toolbar toolbar;
 
       }
 
+      void FixRayObjects() {
+         List<RayTracingObject> RayObjs = new List<RayTracingObject>();
+         foreach (var go in Resources.FindObjectsOfTypeAll<RayTracingObject>()) {
+            RayObjs.Add(go);
+         }
+         int RayObjCount = RayObjs.Count;
+         for(int i = 0; i < RayObjCount; i++) {
+            int MatCount = RayObjs[i].MaterialOptions.Length;
+            for(int i2 = 0; i2 < MatCount; i2++) {
+               if(RayObjs[i].MaterialOptions[i2] == RayTracingObject.Options.Cutout) 
+                  RayObjs[i].MaterialOptions[i2] = RayTracingObject.Options.Disney;
+               else if(RayObjs[i].MaterialOptions[i2] == RayTracingObject.Options.Video) 
+                  RayObjs[i].MaterialOptions[i2] = RayTracingObject.Options.Cutout; 
+               else if(RayObjs[i].MaterialOptions[i2] != RayTracingObject.Options.Disney) 
+                  RayObjs[i].MaterialOptions[i2] = RayTracingObject.Options.Disney;
+            }
+         }
+
+      }
+
       void AddHardSettingsToMenu() {
          definesList = GetDefines();
          Toggle HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
@@ -1272,6 +1292,10 @@ Toolbar toolbar;
             }) {text = "Selective Auto Assign"};
          HardSettingsMenu.Add(SelectiveAutoAssignField);
          HardSettingsMenu.Add(SelectiveAutoAssignButton);
+
+         Button CorrectMatOptionsButton = new Button(() => FixRayObjects()) {text = "Correct Mat Options"};
+         HardSettingsMenu.Add(CorrectMatOptionsButton);
+
       }
 
       public struct CustomGBufferData {
@@ -1469,7 +1493,7 @@ Toolbar toolbar;
                ResField.ElementAt(0).style.minWidth = 75;
                ResField.ElementAt(1).style.width = 35;
                TopEnclosingBox.Add(ResField);
-               ResField.RegisterValueChangedCallback(evt => {RenderRes = evt.newValue; RenderRes = Mathf.Max(RenderRes, 0.5f); RenderRes = Mathf.Min(RenderRes, 1.0f); RayMaster.RenderScale = RenderRes;});        
+               ResField.RegisterValueChangedCallback(evt => {RenderRes = evt.newValue; RenderRes = Mathf.Max(RenderRes, 0.1f); RenderRes = Mathf.Min(RenderRes, 1.0f); RayMaster.RenderScale = RenderRes;});        
                TopEnclosingBox.Add(AtlasField);
            MainSource.Add(TopEnclosingBox);
 
@@ -1880,7 +1904,8 @@ Toolbar toolbar;
                      using (var A = new StringReader(Resources.Load<TextAsset>("Utility/SaveFile").text)) {
                          var serializer = new XmlSerializer(typeof(RayObjs));
                          RayObjs rayreads = serializer.Deserialize(A) as RayObjs;
-                         for(int i = 0; i < rayreads.RayObj.Count; i++) {
+                         int RayReadCount = rayreads.RayObj.Count;
+                         for(int i = 0; i < RayReadCount; i++) {
                            RayObjectDatas Ray = rayreads.RayObj[i];
                            GameObject TempObj = getOBJ(Ray.ID);
                            RayTracingObject TempRTO = TempObj.GetComponent<RayTracingObject>();

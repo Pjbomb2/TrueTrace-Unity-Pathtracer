@@ -1,6 +1,7 @@
 #pragma kernel kernel_upsample
-#include "../../GlobalDefines.cginc"
 #include "UnityCG.cginc"
+#include "../../GlobalDefines.cginc"
+#include "../../MainCompute/CommonData.cginc"
 
 int source_width;
 int source_height;
@@ -10,11 +11,19 @@ int target_height;
 
 Texture2D<half4> Input;
 Texture2D<half4> ThroughputTex;
-SamplerState my_linear_clamp_sampler;
 RWTexture2D<float4> Output;
 RWTexture2D<float4> FinalOutput;
 Texture2D<half4> PrevOutput;
+Texture2D<float4> SmallerGBuffer;
 
+
+#ifdef HDRP
+    Texture2DArray<float> DepthTex;
+    Texture2DArray<float4> NormalTex;
+#else
+    Texture2D<float> DepthTex;
+    Texture2D<float4> NormalTex;
+#endif
 
 half4 SGSRRH(float2 p)
 {
@@ -58,7 +67,7 @@ half4 SGSRH(float2 p, uint channel)
 
 #define EdgeThreshold 4.0/255.0
 
-#define EdgeSharpness 2.0
+#define EdgeSharpness 1.0
 
 ////////////////////////
 ////////////////////////
@@ -79,6 +88,42 @@ half2 weightY(half dx, half dy, half c, half std)
     half w = fastLanczos2(x);
     return half2(w, w * c);
 }
+
+
+float RetrieveDepthLowRes(float2 uv) {
+
+    return SmallerGBuffer.SampleLevel(my_linear_clamp_sampler, uv, 0).z;   
+}
+
+float RetrieveDepth(float2 uv) {
+    Ray ray = CreateCameraRay(uv * 2.0f - 1.0f);  
+    #ifdef HDRP
+        return length(ray.direction / dot(ray.direction, Forward) * LinearEyeDepth(DepthTex.SampleLevel(my_linear_clamp_sampler, float3(uv,0), 0).x));
+    #else
+        return length(ray.direction / dot(ray.direction, Forward) * LinearEyeDepth(DepthTex.SampleLevel(my_point_clamp_sampler, uv, 0).x));   
+    #endif
+}
+float3 RetrieveNorm(float2 uv) {
+    #ifdef HDRP
+        return NormalTex.SampleLevel(my_linear_clamp_sampler, float3(uv,0), 0).xyz * 2.0f - 1.0f;
+    #else
+        return NormalTex.SampleLevel(my_linear_clamp_sampler, uv, 0).xyz * 2.0f - 1.0f;
+    #endif 
+}
+int CurFrame;
+float2 random(uint samdim, int2 id) {
+    uint hash = pcg_hash(((id.x + id.y * screen_width) * (uint)112 + samdim));
+
+    const static float one_over_max_unsigned = asfloat(0x2f7fffff);
+
+
+    float x = hash_with(CurFrame, hash) * one_over_max_unsigned;
+    float y = hash_with(CurFrame + 0xdeadbeef, hash) * one_over_max_unsigned;
+
+    return float2(x, y);
+
+}
+
 
 void SgsrYuvH(
     out half4 pix,
@@ -158,6 +203,9 @@ void SgsrYuvH(
 // #endif
 
 
+bool IsUnique(float2 OrigUv, float2 uv) {
+    return dot(RetrieveNorm(OrigUv), RetrieveNorm(uv)) < 0.9f || abs(RetrieveDepth(OrigUv) - RetrieveDepth(uv)) > 0.1f;
+}
 
 [numthreads(16,16,1)]
 void kernel_upsample (int3 id : SV_DispatchThreadID)
@@ -167,35 +215,52 @@ void kernel_upsample (int3 id : SV_DispatchThreadID)
     float4 OutColor;
     float4 ViewportInfo = float4(rcp(float2(target_width, target_height)), float2(target_width, target_height));
     float2 uv = (id.xy + 0.5f) / float2(target_width, target_height);
+    float2 TotalDirection = 0;
+    for(int i = -1; i <= 1; i++) {
+        for(int j = -1; j <= 1; j++) {
+            if(i == 0 && j == 0) continue;
+            TotalDirection += IsUnique(uv, ((id.xy + int2(i, j) + 0.5f) / float2(target_width, target_height))) * float2(clamp(i,-1,1), clamp(j,-1,1));
+        }
+    }
+    uv -= (TotalDirection) / float2(target_width, target_height);
     SgsrYuvH(OutColor, uv, ViewportInfo);
+
+
     Output[id.xy] =  OutColor;
+    // Output[id.xy] =  float4(TotalDirection / (8.0f), 0, 1);//OutColor;
 }
 
 #pragma kernel simpleblur
-Texture2D<float4> Albedo;
-Texture2D<float4> Albedo2;
+#ifdef HDRP
+    Texture2DArray<float4> Albedo;
+    Texture2DArray<float4> Albedo2;
+#else
+    Texture2D<float4> Albedo;
+    Texture2D<float4> Albedo2;
+#endif
 [numthreads(16,16,1)]
 void simpleblur (int3 id : SV_DispatchThreadID)
 {
     float3 In = Input[id.xy];
-    // float3 Max = -9999.0f;
-    // float3 Min = 9999.0f;
-    // for(int i = -1; i <= 1; i++) {
-    //     for(int j = -1; j <= 1; j++) {
-    //         if(i == 0 && j == 0) continue;
-    //         In += Input[id.xy + int2(i,j) * 1.0f];
-    //         Max = max(Max, Input[id.xy + int2(i,j) * 2.0f]);
-    //         Min = min(Min, Input[id.xy + int2(i,j) * 2.0f]);
-    //     }
-    // }
-    // In /= 9.0f;
-    // In = clamp(In, Min, Max);
+    float3 Max = -9999.0f;
+    float3 Min = 9999.0f;
+    for(int i = -1; i <= 1; i++) {
+        for(int j = -1; j <= 1; j++) {
+            if(i == 0 && j == 0) continue;
+            In += Input[id.xy + int2(i,j) * 1.0f];
+            Max = max(Max, Input[id.xy + int2(i,j) * 2.0f]);
+            Min = min(Min, Input[id.xy + int2(i,j) * 2.0f]);
+        }
+    }
+    In /= 9.0f;
+    In = clamp(In, Min, Max);
 
     #ifdef HDRP
         float3 SpecularAlbedo = 0;//Albedo2[int3(ipos,0)].xyz;
+        FinalOutput[id.xy] = float4(In * ((all((Albedo.SampleLevel(my_linear_clamp_sampler, float3(id.xy / float2(target_width, target_height),0), 0).xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo.SampleLevel(my_linear_clamp_sampler, float3(id.xy / float2(target_width, target_height),0), 0).xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
     #else
         float3 SpecularAlbedo = Albedo2[id.xy].xyz;
+        FinalOutput[id.xy] = float4(In * ((all((Albedo.SampleLevel(my_linear_clamp_sampler, id.xy / float2(target_width, target_height), 0).xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo.SampleLevel(my_linear_clamp_sampler, id.xy / float2(target_width, target_height), 0).xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
     #endif
 
-    FinalOutput[id.xy] = float4(In * ((all((Albedo.SampleLevel(my_linear_clamp_sampler, id.xy / float2(target_width, target_height), 0).xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo.SampleLevel(my_linear_clamp_sampler, id.xy / float2(target_width, target_height), 0).xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
 }

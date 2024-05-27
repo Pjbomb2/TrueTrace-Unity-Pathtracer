@@ -1157,8 +1157,10 @@ namespace TrueTrace {
                     this.GetComponentInParent<InstancedManager>().ParentCountHasChanged = true;
                 }
                 else {
-                    AssetManager.Assets.AddQue.Add(this);
-                    ExistsInQue = 3;
+                    if(!AssetManager.Assets.RemoveQue.Contains(this)) {
+                        AssetManager.Assets.AddQue.Add(this);
+                        ExistsInQue = 3;
+                    }
                     AssetManager.Assets.ParentCountHasChanged = true;
                 }
                 HasCompleted = false;
@@ -1180,7 +1182,7 @@ namespace TrueTrace {
                     }
                 }
                 else {
-                    AssetManager.Assets.RemoveQue.Add(this);
+                    if(!AssetManager.Assets.RemoveQue.Contains(this)) AssetManager.Assets.RemoveQue.Add(this);
                     AssetManager.Assets.ParentCountHasChanged = true;
                 }
                 HasCompleted = false;

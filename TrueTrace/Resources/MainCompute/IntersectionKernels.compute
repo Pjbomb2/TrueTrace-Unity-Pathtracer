@@ -36,7 +36,7 @@ inline void IntersectTriangle(int mesh_id, const int tri_id, const Ray ray, inou
                     if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                         float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
                         float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlphaTex);
-                        if(_AlphaAtlas.SampleLevel(my_linear_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) return;
+                        if(Uv.x != -1 && _AlphaAtlas.SampleLevel(my_linear_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) return;
                     }
                 #endif
                 #ifdef IgnoreGlassMain
@@ -118,7 +118,7 @@ void IntersectBVH() {
                         if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                             float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - bestHit.u - bestHit.v) + AggTris[tri_id].texedge1 * bestHit.u + AggTris[tri_id].texedge2 * bestHit.v;
                             float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlphaTex);
-                            if(_AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t + 0.001f; bestHit.t = FarPlane; continue;}
+                            if(Uv.x != -1 && _AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t + 0.001f; bestHit.t = FarPlane; continue;}
                         }
                     #endif
                 }
@@ -318,7 +318,7 @@ void IntersectBVHShadow() {
                         if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                             float2 BaseUv = AggTris[triangle_id].tex0 * (1.0f - u - v) + AggTris[triangle_id].texedge1 * u + AggTris[triangle_id].texedge2 * v;
                             float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlphaTex);
-                            if(_AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.001f; continue;}
+                            if(Uv.x != -1 && _AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.001f; continue;}
 
                         }
                     #endif
@@ -685,7 +685,7 @@ void IntersectHeightMap() {
                         bestHit.triangle_id = i;
                         bestHit.mesh_id = 9999999;
                         [branch]if(CurBounce == 0) {
-                            _PrimaryTriangleInfo[TempUv] = uint4(bestHit.mesh_id, bestHit.triangle_id, asuint(bestHit.u), asuint(bestHit.v));
+                            _PrimaryTriangleInfo[TempUv] = uint4(asuint(ray2.direction * bestHit.t + ray2.origin), 1);
                         } else if(CurBounce == 1) {
                             _PrimaryTriangleInfo[TempUv] = uint4(((!UseReSTIRGI) ? asuint(ray2.direction) : asuint(ray2.direction * bestHit.t + ray2.origin)), 1);
                         }

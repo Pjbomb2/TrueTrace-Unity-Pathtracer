@@ -1,15 +1,3 @@
-
-bool evaldiffuse(const float3 to_light, float cos_theta_o, inout float3 bsdf, inout float pdf) {
-    if (cos_theta_o <= 0.0f) return false;
-
-    bsdf = float3(cos_theta_o * ONE_OVER_PI, cos_theta_o * ONE_OVER_PI, cos_theta_o * ONE_OVER_PI);
-    pdf = cos_theta_o * ONE_OVER_PI;
-
-    return (pdf > 0 || pdf < 0 || pdf == 0);
-}
-
-
-
 //Disney
 
 float CosTheta(const float3 w)
@@ -509,7 +497,7 @@ static float EvaluateDisneyDiffuse(const MaterialData hitDat, const float3 wo, c
     float retro = EvaluateDisneyRetroDiffuse(hitDat, wo, wm, wi);
     float subsurfaceApprox = lerp(lambert, hanrahanKrueger, thin ? hitDat.flatness : 0.0f);
 
-    return rcp(PI) * (retro + subsurfaceApprox * (1.0f - 0.5f * fl) * (1.0f - 0.5f * fv));
+    return rcp(PI) * (retro + subsurfaceApprox * (1.0f - 0.5f * fl) * (1.0f - 0.5f * fv)) * (1.0f - hitDat.metallic);
 }
 
 
@@ -845,8 +833,7 @@ static float4 CalculateLobePdfs(const MaterialData hitDat) {
     
     float4 P = float4(metallicBRDF + hitDat.Specular, 1.0f * saturate(hitDat.clearcoat), dielectricBRDF, specularBSDF);
 
-    float norm = 1.0f / (P.x + P.y + P.z + P.w);
-    return P * norm;
+    return P / (P.x + P.y + P.z + P.w);
 }
 
 
@@ -1022,37 +1009,17 @@ bool SampleDisney(MaterialData hitDat, inout float3 v, bool thin, out float PDF,
 }
 
 
-inline bool EvaluateBsdf(const MaterialData hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, out float PDF, out float3 bsdf_value, uint pixel_index) {
+inline bool EvaluateBsdf(const MaterialData hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, inout float PDF, inout float3 bsdf_value, uint pixel_index) {
     bool validbsdf = false;
-    float cos_theta_hit = dot(DirectionOut, Normal);
-    [branch] switch (hitDat.MatType) {//Switch between different materials
-        case CutoutIndex:
-        case DisneyIndex:
-            bsdf_value = EvaluateDisney(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, GetTangentSpace(Normal), pixel_index);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
-            validbsdf = PDF > 0;
-        break;
-        default:
-            validbsdf = evaldiffuse(DirectionOut, cos_theta_hit, bsdf_value, PDF);
-            bsdf_value *= hitDat.surfaceColor;
-        break;
-    }
+    bsdf_value = EvaluateDisney(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, GetTangentSpace(Normal), pixel_index);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
+    validbsdf = PDF > 0;
     return validbsdf;
 }
 
 
-inline bool ReconstructBsdf(const MaterialData hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, out float PDF, out float3 bsdf_value, const float3x3 TangentSpaceNorm, uint pixel_index, uint Case) {
+inline bool ReconstructBsdf(const MaterialData hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, inout float PDF, inout float3 bsdf_value, const float3x3 TangentSpaceNorm, uint pixel_index, uint Case) {
     bool validbsdf = false;
-    bsdf_value = 0;
     PDF = 0;
-    [call] switch (hitDat.MatType) {//Switch between different materials
-        case CutoutIndex:
-        case DisneyIndex:
-            bsdf_value = ReconstructDisney(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, TangentSpaceNorm, validbsdf, pixel_index, Case);
-        break;
-        default:
-            validbsdf = evaldiffuse(DirectionOut, dot(DirectionOut, Normal), bsdf_value, PDF);
-            bsdf_value = hitDat.surfaceColor;
-        break;
-    }
+    bsdf_value = ReconstructDisney(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, TangentSpaceNorm, validbsdf, pixel_index, Case);
     return validbsdf;
 }

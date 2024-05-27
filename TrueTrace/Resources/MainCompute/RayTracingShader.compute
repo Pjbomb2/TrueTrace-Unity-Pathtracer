@@ -49,40 +49,6 @@ bool VisabilityCheck(Ray ray, float dist) {
     #endif
 }
 
-float2 sample_disc(float u1, float u2) {
-    float a = 2.0f * u1 - 1.0f;
-    float b = 2.0f * u2 - 1.0f;
-    if (a == 0.0f) a = 0.00001;
-    if (b == 0.0f) b = 0.00001;
-
-    float phi, r;
-    if (a * a > b * b) {
-        r = a;
-        phi = (0.25f * PI) * (b / a);
-    }
-    else {
-        r = b;
-        phi = (0.25f * PI) * (a / b) + (0.5f * PI);
-    }
-
-    float sin_phi, cos_phi;
-    sincos(phi, sin_phi, cos_phi);
-
-    return float2(r * cos_phi, r * sin_phi);
-}
-
-float3 sample_cosine_weighted_direction(float u1, float u2) {
-    float2 d = sample_disc(u1, u2);
-    return float3(d.x, sqrt(abs(1.0f - dot(d, d))), d.y);
-}
-
-float3 sample(inout float pdf, uint pixel_index) {//Diffuse
-    float2 rando = random(1, pixel_index);
-    float3 omega_o = sample_cosine_weighted_direction(rando.x, rando.y);
-    pdf = omega_o.y * ONE_OVER_PI;
-    return omega_o;
-}
-
 #ifdef RadianceCache
 inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, float2 NormalUV, RayData RayDat, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout PropogatedCacheData CacheInstance) {//main function
 #else
@@ -224,7 +190,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     bool Refracted = false;
     float3 bsdf = 1;
     [branch] if(CurBounce == 0 && UseReSTIRGI && ReSTIRGIUpdateRate != 0 && RandomNums[id].z != 0) {
-        float3 bsdf_value = 1;
         #ifdef HDRP
             float2 MotionVector = MotionVectors[int3(id,0)].xy;
         #else
@@ -234,10 +199,11 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
         ray.direction = normalize(CalcPos(WorldPosB[prevIndexDoub]) - (pos + USGNorm * NormalOffset));
         MaterialLobe = RandomNums[id].z - 1;
-        validBSDFSample = ReconstructBsdf(hitDat, PrevDirection, ray.direction, norm, pdf, bsdf_value, GetTangentSpace(norm), pixel_index, MaterialLobe);
-        throughput *= bsdf_value;
-        bsdf *= bsdf_value;
+        validBSDFSample = ReconstructBsdf(hitDat, PrevDirection, ray.direction, norm, pdf, bsdf, GetTangentSpace(norm), pixel_index, MaterialLobe);
+    } else validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
 
+    {
+        throughput *= bsdf;
         if (CurBounce == 0) {
             float Metallic = saturate(hitDat.metallic + ((!UseASVGF || UseReSTIRGI) ? 0 : hitDat.Specular));
             if (MaterialLobe == 3) Color.MetRoughIsSpec = ToColorSpecPacked(float3(0, Refracted ? 0.6f : 0.39f, 2 + !Refracted));
@@ -248,43 +214,13 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             Geomnorm *= -1;
             norm *= -1;
             USGNorm *= -1;
+            CB = true;
         } else if (Color.Data.w <= 0 && MaterialLobe == 3) {
             Color.MetRoughIsSpec = ToColorSpecPacked(float3(0, 0, 3));
         }
         if(!GetFlag(hitDat.Tag, Thin) && GotFlipped && hitDat.specTrans != 0 && hit.mesh_id != 9999999) {
             throughput *= exp(-hit.t * CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance));
             bsdf *= exp(-hit.t * CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance));
-        }
-    } else {
-        switch (hitDat.MatType) {//Switch between different materials
-            case CutoutIndex://mask material
-            case DisneyIndex://Disney BSDF
-                validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
-                throughput *= bsdf;
-                if (CurBounce == 0) {
-                    float Metallic = saturate(hitDat.metallic + ((!UseASVGF || UseReSTIRGI) ? 0 : hitDat.Specular));
-                    if (MaterialLobe == 3) Color.MetRoughIsSpec = ToColorSpecPacked(float3(0, Refracted ? 0.6f : 0.39f, 2 + !Refracted));
-                    else Color.MetRoughIsSpec = ToColorSpecPacked(float3(Metallic, hitDat.roughness, MaterialLobe));
-                }
-
-                if (Refracted) {
-                    Geomnorm *= -1;
-                    norm *= -1;
-                    USGNorm *= -1;
-                    CB = true;
-                } else if (Color.Data.w <= 0 && MaterialLobe == 3) {
-                    Color.MetRoughIsSpec = ToColorSpecPacked(float3(0, 0, 3));
-                }
-                if(!GetFlag(hitDat.Tag, Thin) && GotFlipped && hitDat.specTrans != 0 && hit.mesh_id != 9999999) {
-                    throughput *= exp(-hit.t * CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance));
-                    bsdf *= exp(-hit.t * CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance));
-                }
-            break;
-            default:
-                ray.direction = normalize(mul(sample(pdf, pixel_index), GetTangentSpace(norm)));
-                validBSDFSample = pdf > 0;
-                throughput *= hitDat.surfaceColor;
-            break;
         }
     }
 
@@ -306,11 +242,11 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         #endif
         if(CurBounce > 0 && (CacheInstance.pathLength >> 5) & 0x1) {
             float3 res2 = 0;
-            // if((hit.t >= CalcVoxelSize(ray.origin) * lerp(1.0f, 2.0f, random(64, pixel_index).x))) {
+            if((hit.t >= CalcVoxelSize(ray.origin) * lerp(1.0f, 2.0f, random(64, pixel_index).x))) {
                 if(RetrieveCacheRadiance(CacheInstance, ray.origin, norm, res2)) {
                     Color.Indirect += Color.throughput * res2;
                 }
-            // }
+            }
             CacheInstance.pathLength |= (1u << 6);
         } else if((!(MaterialLobe == 0 && hitDat.roughness < 0.05) && MaterialLobe != 3)) CacheInstance.pathLength |= (1u << 5);
 
@@ -762,12 +698,14 @@ float FetchDepth(float2 UV) {
 [numthreads(32, 32, 1)]
 void DepthCopyKernel(uint3 id : SV_DispatchThreadID) {
     if(id.x > screen_width || id.y > screen_height) return;
-    float2 Uv = id.xy / float2(screen_width, screen_height);
+    float2 Uv = (id.xy + 0.5f) / float2(screen_width, screen_height);
 
     float CurDepth = FetchDepth(Uv);
-    float CurDepthX = FetchDepth(Uv + float2(rcp(screen_width), 0));
-    float CurDepthY = FetchDepth(Uv + float2(0, rcp(screen_height)));
-    CorrectedDepthTex[id.xy] = float2(CurDepth, abs(CurDepth - CurDepthX) + abs(CurDepth - CurDepthY));
+    float CurDepthX = FetchDepth(Uv + float2(rcp(screen_width) * 2.0f, 0));
+    float CurDepthY = FetchDepth(Uv + float2(0, rcp(screen_height) * 2.0f));
+    float CurDepthX2 = FetchDepth(Uv - float2(rcp(screen_width) * 2.0f, 0));
+    float CurDepthY2 = FetchDepth(Uv - float2(0, rcp(screen_height) * 2.0f));
+    CorrectedDepthTex[id.xy] = float2(CurDepth, abs(CurDepth - CurDepthX) + abs(CurDepth - CurDepthY) + abs(CurDepth - CurDepthY2) + abs(CurDepth - CurDepthX2));
 }
 
 

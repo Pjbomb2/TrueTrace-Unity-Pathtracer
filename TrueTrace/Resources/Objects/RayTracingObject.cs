@@ -6,7 +6,7 @@ using CommonVars;
 namespace TrueTrace {
 	[ExecuteInEditMode][System.Serializable]
 	public class RayTracingObject : MonoBehaviour {
-		public enum Options {Diffuse, Disney, Cutout, Video};
+		public enum Options {Disney, Cutout, Video};
 		[SerializeField] public Options[] MaterialOptions;
 		[SerializeField] public Vector3[] TransmissionColor, BaseColor;
 		[SerializeField] public Vector2[] MetallicRemap, RoughnessRemap;
@@ -204,10 +204,7 @@ namespace TrueTrace {
 			
 			InitializeArray<float>(ref Rotation, 0, Index);
 			InitializeArray<int>(ref Flags, 0, Index);
-			/*
-				
 
-			*/
 			InitializeArray<Vector2>(ref SecondaryTextureScale, new Vector2(1,1), Index);
 			InitializeArray<Vector4>(ref MainTexScaleOffset, new Vector4(1,1,0,0), Index);
 			InitializeArray<Vector3>(ref BlendColor, new Vector3(1,1,1), Index);
