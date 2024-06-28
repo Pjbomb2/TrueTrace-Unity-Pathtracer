@@ -19,7 +19,7 @@ Texture2D<float> Depth;
 static const ColData InitCol = { 1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,-1};
 const static RayHit tempray = CreateRayHit();
 
-[numthreads(256, 1, 1)]
+[numthreads(16, 16, 1)]
 void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
 
     if (id.x >= screen_width || id.y >= screen_height) return;
@@ -27,8 +27,6 @@ void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
     RayData globray = {Rays[pixel_index].origin + NearPlane * Rays[pixel_index].direction, pixel_index, Rays[pixel_index].direction, 0, 0,0,asuint(FarPlane),0};
     GlobalRays[pixel_index] = globray;
     GlobalColors[pixel_index] = InitCol;
-    WorldPosA[id.xy] = float4(0,0,0, 0);
-    NEEPosA[id.xy] = float4(0,0,0, 0);
 
     #ifdef RadianceCache
         CacheBuffer[pixel_index].pathLength = 0;
@@ -38,7 +36,7 @@ void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
 }
 
 #pragma kernel Generate
-[numthreads(256, 1, 1)]
+[numthreads(16, 16, 1)]
 void Generate(uint3 id : SV_DispatchThreadID) {
 
     if (id.x >= screen_width || id.y >= screen_height) return;
@@ -66,13 +64,9 @@ void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadI
 
     float2 uv = float2((id.xy) / float2(screen_width, screen_height));
     SmallerRay ray = CreateCameraRay(uv * 2.0f - 1.0f, pixel_index);
+    RayData globray = {ray.origin + NearPlane * ray.direction, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
     RandomNumsWrite[id.xy] = float4(frames_accumulated, pixel_index, 0, 0);
 
-    #ifdef RadianceCache
-        CacheBuffer[pixel_index].pathLength = 0;
-        CacheBuffer[pixel_index].CurrentIlluminance = 0;
-        CacheBuffer[pixel_index].throughput = EncodeRGB(float3(1,1,1));
-    #endif
     if(curframe % ReSTIRGIUpdateRate == pixel_index % ReSTIRGIUpdateRate) {
         #ifdef HDRP
             float2 MotionVector = MotionVectors[int3(id.xy,0)].xy;
@@ -80,16 +74,18 @@ void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadI
             float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, uv, 0).xy;
         #endif
         int2 prevIndex = int2(floor(((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
-        if (RandomNums[prevIndex].z == 0 && ReservoirA[prevIndex].z != 3 && prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height && PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.z != 0) {
+        if (RandomNums[prevIndex].z == 0 && ReservoirA[prevIndex].z != 3 && prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height && !(PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].MetRoughIsSpec >> 31)) {
             RandomNumsWrite[id.xy] = float4(PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.yx, 1 + ReservoirA[prevIndex].z,  PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.z);
         }
     }
     
-    RayData globray = {ray.origin + NearPlane * ray.direction, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
+    #ifdef RadianceCache
+        CacheBuffer[pixel_index].pathLength = 0;
+        CacheBuffer[pixel_index].CurrentIlluminance = 0;
+        CacheBuffer[pixel_index].throughput = EncodeRGB(float3(1,1,1));
+    #endif
     GlobalRays[pixel_index] = globray;
     GlobalColors[pixel_index] = InitCol;
-    WorldPosA[id.xy] = float4(0,0,0, 0);
-    NEEPosA[id.xy] = float4(0,0,0, 0);
 }
 
 
@@ -282,7 +278,7 @@ void LightMapGen2(uint3 id : SV_DispatchThreadID) {
         TotalCount[GroupIndex] = 0;
         GroupMemoryBarrierWithGroupSync();
         uint4 SummedVoxel = 0;
-        if(ActiveData[GT.x]) {
+        [branch]if(ActiveData[GT.x]) {
             uint4 VoxelCurr = VoxelDataBufferA.Load4(id.x * 16);
             uint4 VoxelPrev = VoxelDataBufferB.Load4(id.x * 16);
             SummedVoxel = VoxelCurr + VoxelPrev;
@@ -323,7 +319,7 @@ void LightMapGen2(uint3 id : SV_DispatchThreadID) {
         }
 
         GroupMemoryBarrierWithGroupSync();
-        // if(!Valid) return;
+        if(!Valid) return;
 
         if(id.x % BucketCount >= TotalCount[GroupIndex]) {
             VoxelDataBufferA.Store4(id.x * 16, (uint4)0);

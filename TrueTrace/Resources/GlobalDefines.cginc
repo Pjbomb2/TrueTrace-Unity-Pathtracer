@@ -11,11 +11,11 @@
 // #define IgnoreBackfacing
 // #define WhiteLights
 #define LBVH
+// #define FasterLightSampling
 #define AccurateEmissionTex
 #define RadianceCache
 // #define RadianceDebug
 // #define IndirectRetraceWeighting
-
 
 
 //Dont change the ones below

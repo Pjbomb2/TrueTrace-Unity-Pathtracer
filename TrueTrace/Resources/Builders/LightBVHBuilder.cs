@@ -157,20 +157,9 @@ namespace TrueTrace {
             LightBounds aabb_left = new LightBounds();
             LightBounds aabb_right = new LightBounds();
             int Offset;
-            // Vector3 Diagonal = parentBounds.BBMax - parentBounds.BBMin;
-            // int dimension = 0;
-            // float MaxDiag = Diagonal.x;
-            // if(Diagonal.y > MaxDiag) {
-            //     MaxDiag = Diagonal.y;
-            //     dimension = 1;
-            // }
-            // if(Diagonal.z > MaxDiag) {
-            //     dimension = 2;
-            // }
             Vector3 Diagonal = parentBounds.BBMax - parentBounds.BBMin;
             float Kr1 = System.Math.Max(System.Math.Max(Diagonal.x, Diagonal.y), Diagonal.z);
             for(int dimension = 0; dimension < 3; dimension++) {
-            // {
                 float Kr = Kr1 / Diagonal[dimension];
                 Offset = PrimCount * dimension + first_index;
                 aabb_left = LightTris[DimensionedIndices[Offset]];
@@ -268,7 +257,7 @@ namespace TrueTrace {
             return Mathf.Sqrt(s * (s - a) * (s - b) * (s - c));
         }
   
-        public LightBVHBuilder(List<LightTriData> Tris, List<Vector3> Norms, float phi) {//need to make sure incomming is transformed to world space already
+        public LightBVHBuilder(List<LightTriData> Tris, List<Vector3> Norms, float phi, List<float> LuminanceWeights) {//need to make sure incomming is transformed to world space already
             PrimCount = Tris.Count;          
             MaxDepth = 0;
             LightTris = new LightBounds[PrimCount];  
@@ -290,7 +279,8 @@ namespace TrueTrace {
                 TriAABB.Extend(Tris[i].pos0 + Tris[i].posedge2);
                 TriAABB.Validate(new Vector3(0.0001f,0.0001f,0.0001f));
                 DirectionCone tricone = new DirectionCone(-Norms[i], 1);
-                LightBounds TempBound = new LightBounds(TriAABB, tricone.W, 0.1f, tricone.cosTheta,(float)System.Math.Cos(3.14159f / 2.0f), 1, 0);
+                float ThisPhi = AreaOfTriangle(Tris[i].pos0, Tris[i].pos0 + Tris[i].posedge1, Tris[i].pos0 + Tris[i].posedge2) * LuminanceWeights[i];
+                LightBounds TempBound = new LightBounds(TriAABB, tricone.W, ThisPhi, tricone.cosTheta,(float)System.Math.Cos(3.14159f / 2.0f), 1, 0);
                 LightTris[i] = TempBound;
                 FinalIndices[i] = i;
                 CentersX[i] = (TriAABB.BBMax.x - TriAABB.BBMin.x) / 2.0f + TriAABB.BBMin.x;

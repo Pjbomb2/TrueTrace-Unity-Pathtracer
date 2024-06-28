@@ -328,6 +328,21 @@ namespace CommonVars
             return 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z)); 
         }
 
+        public Vector3 Diagonal() {
+            return BBMax - BBMin;
+        }
+
+        public float HalfArea() {
+            Vector3 d = BBMax - BBMin;
+            return (d.x + d.y) * d.z + d.x * d.y;
+        }
+
+        public AABB Intersect(ref AABB aabb) {
+            AABB NewAABB = new AABB();
+            NewAABB.BBMax = new Vector3(Mathf.Min(BBMax.x, aabb.BBMax.x), Mathf.Min(BBMax.y, aabb.BBMax.y), Mathf.Min(BBMax.z, aabb.BBMax.z));
+            NewAABB.BBMin = new Vector3(Mathf.Max(BBMin.x, aabb.BBMin.x), Mathf.Max(BBMin.y, aabb.BBMin.y), Mathf.Max(BBMin.z, aabb.BBMin.z));
+            return NewAABB;
+        }
 
         public void Extend(ref AABB aabb)
         {
@@ -345,6 +360,27 @@ namespace CommonVars
                 BBMax.y = aabb.BBMax.y;
             if (aabb.BBMax.z > BBMax.z)
                 BBMax.z = aabb.BBMax.z;
+        }
+
+        public AABB Union(AABB aabb)
+        {
+            AABB ResultAABB;
+            ResultAABB.BBMax = BBMax;
+            ResultAABB.BBMin = BBMin;
+            if (aabb.BBMin.x < BBMin.x)
+                ResultAABB.BBMin.x = aabb.BBMin.x;
+            if (aabb.BBMin.y < BBMin.y)
+                ResultAABB.BBMin.y = aabb.BBMin.y;
+            if (aabb.BBMin.z < BBMin.z)
+                ResultAABB.BBMin.z = aabb.BBMin.z;
+
+            if (aabb.BBMax.x > BBMax.x)
+                ResultAABB.BBMax.x = aabb.BBMax.x;
+            if (aabb.BBMax.y > BBMax.y)
+                ResultAABB.BBMax.y = aabb.BBMax.y;
+            if (aabb.BBMax.z > BBMax.z)
+                ResultAABB.BBMax.z = aabb.BBMax.z;
+            return ResultAABB;
         }
 
         public void Extend(Vector3 P)
@@ -392,6 +428,18 @@ namespace CommonVars
                     BBMax[i2] += Scale[i2];
                 }
             }
+        }
+
+        public bool IsValid()
+        {
+            for (int i2 = 0; i2 < 3; i2++)
+            {
+                if (BBMax[i2] < BBMin[i2])
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         public void init()

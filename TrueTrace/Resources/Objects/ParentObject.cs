@@ -98,6 +98,7 @@ namespace TrueTrace {
         [HideInInspector] public Layer[] ForwardStack;
         [HideInInspector] public Layer2[] LayerStack;
         [HideInInspector] public List<NodeIndexPairData> NodePair;
+        [HideInInspector] public List<float> LuminanceWeights;
 
         [HideInInspector] public int MaxRecur = 0;
         [HideInInspector] public int[] ToBVHIndex;
@@ -145,6 +146,7 @@ namespace TrueTrace {
             CommonFunctions.DeepClean(ref LightTriNorms);
             CommonFunctions.DeepClean(ref CWBVHIndicesBufferInverted);
             CommonFunctions.DeepClean(ref CWBVHIndicesBufferInverted);
+            CommonFunctions.DeepClean(ref LuminanceWeights);
             if(TrianglesArray.IsCreated) TrianglesArray.Dispose();
             if(BVH2 != null) {
                 if(BVH2.BVH2NodesArray.IsCreated) BVH2.BVH2NodesArray.Dispose();
@@ -233,6 +235,7 @@ namespace TrueTrace {
             _Materials = new List<MaterialData>();
             LightTriangles = new List<LightTriData>();
             LightTriNorms = new List<Vector3>();
+            LuminanceWeights = new List<float>();
             MeshCountChanged = true;
             HasCompleted = false;
             MeshRefit = Resources.Load<ComputeShader>("Utility/BVHRefitter");
@@ -286,8 +289,12 @@ namespace TrueTrace {
         public List<int> MatCapMaskChannelIndex;
         public List<Texture> MatCapTexs;
 
+        #if !NonAccurateLightTris
+            List<Color[]> EmissionTexPixels;
+            List<Vector2> EmissionTexWidthHeight;
+        #endif
         
-        private int TextureParse(ref Vector4 RefMat, Material Mat, string TexName, ref List<Texture> Texs, ref int TextureIndex) {
+        private int TextureParse(ref Vector4 RefMat, Material Mat, string TexName, ref List<Texture> Texs, ref int TextureIndex, bool IsEmission = false) {
             TextureIndex = 0;
             if (Mat.HasProperty(TexName) && Mat.GetTexture(TexName) as Texture2D != null) {
                 if(RefMat.x == 0) RefMat = new Vector4(Mat.mainTextureScale.x, Mat.mainTextureScale.y, Mat.mainTextureOffset.x, Mat.mainTextureOffset.y);
@@ -296,6 +303,30 @@ namespace TrueTrace {
                 if (TextureIndex != 0) {
                     return 0;
                 } else {
+                    #if !NonAccurateLightTris
+                        if(IsEmission) {
+                            RenderTexture tmp = RenderTexture.GetTemporary( 
+                                Tex.width,
+                                Tex.height,
+                                0,
+                                RenderTextureFormat.Default,
+                                RenderTextureReadWrite.Linear);
+
+                            Graphics.Blit(Tex, tmp);
+
+                            RenderTexture previous = RenderTexture.active;
+                            RenderTexture.active = tmp;
+                            Texture2D myTexture2D = new Texture2D(Tex.width, Tex.height);
+                            myTexture2D.ReadPixels(new Rect(0, 0, tmp.width, tmp.height), 0, 0);
+                            myTexture2D.Apply();
+                            RenderTexture.active = previous;
+                            RenderTexture.ReleaseTemporary(tmp);
+
+                            EmissionTexPixels.Add(myTexture2D.GetPixels(0));
+                            DestroyImmediate(myTexture2D);
+                            EmissionTexWidthHeight.Add(new Vector2(Tex.width, Tex.height));
+                        }
+                    #endif
                     Texs.Add(Tex);
                     TextureIndex = Texs.Count;
                     return 1;
@@ -306,7 +337,10 @@ namespace TrueTrace {
 
         public void CreateAtlas(ref int VertCount)
         {//Creates texture atlas
-
+            #if !NonAccurateLightTris
+                EmissionTexPixels = new List<Color[]>();
+                EmissionTexWidthHeight = new List<Vector2>();
+            #endif
             _Materials.Clear();
             AlbedoTexs = new List<Texture>();
             NormalTexs = new List<Texture>();
@@ -394,7 +428,7 @@ namespace TrueTrace {
                                 CurMat.NormalTex.x = TempIndex;
                             break;
                             case(TexturePurpose.Emission):
-                                Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref EmissionTexs, ref TempIndex); 
+                                Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref EmissionTexs, ref TempIndex, true); 
                                 CurMat.EmissiveTex.x = TempIndex; 
                                 if(Result != 2 && JustCreated) obj.emmission[i] = 12.0f;
                             break;
@@ -460,7 +494,7 @@ namespace TrueTrace {
             if(this == null) return;
             Transform transf = transform;
             ParentScale = transf.lossyScale;
-            ParentScale = new Vector3(0.001f / ParentScale.x, 0.001f / ParentScale.y, 0.001f / ParentScale.z);
+            ParentScale = new Vector3(Mathf.Abs(0.001f / ParentScale.x), Mathf.Abs(0.001f / ParentScale.y), 0.001f / Mathf.Abs(ParentScale.z));
             ChildObjects = new List<RayTracingObject>();
             ChildObjectTransforms = new List<Transform>();
             ChildObjectTransforms.Add(transf);
@@ -500,7 +534,10 @@ namespace TrueTrace {
                         if(Target.activeInHierarchy && !Target.TryGetComponent<ParentObject>(out ParentObject ThrowawayObj)) {
                             TempObj.matfill();
                             if(Target.TryGetComponent<RayTracingObject>(out RayTracingObject TempRayObj2)) {
-                                ChildObjectTransforms.Add(ChildTransf[i]);
+                                if(Target.TryGetComponent<MeshRenderer>(out MeshRenderer TempRenderer)) {
+                                    if(TempRenderer.enabled)
+                                        ChildObjectTransforms.Add(ChildTransf[i]);
+                                }
                             }
                         }
                     }
@@ -522,7 +559,7 @@ namespace TrueTrace {
             }
             if (ChildObjects == null || ChildObjects.Count == 0) {
                 Debug.Log("NO RAYTRACINGOBJECT CHILDREN AT GAMEOBJECT: " + Name);
-                DestroyImmediate(this);
+                this.enabled = false;
                 return;
             }
             TotalObjects = ChildObjects.Count;
@@ -736,7 +773,7 @@ namespace TrueTrace {
                 LT.TriTarget = (uint)CWBVHIndicesBufferInverted[LT.TriTarget];
                 LightTriangles[i] = LT;
             }
-            if(LightTriangles.Count > 0) LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f);
+            if(LightTriangles.Count > 0) LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
 
 
         }
@@ -995,8 +1032,6 @@ namespace TrueTrace {
                 float scalex = Vector3.Distance(ChildMat * new Vector3(1,0,0), new Vector3(0,0,0));
                 float scaley = Vector3.Distance(ChildMat * new Vector3(0,1,0), new Vector3(0,0,0));
                 float scalez = Vector3.Distance(ChildMat * new Vector3(0,0,1), new Vector3(0,0,0));
-                // float scaley = length(mul(Inverse, float3(0,1,0)));
-                // float scalez = length(mul(Inverse, float3(0,0,1)));
                 Vector3 Scale = IsSingle ? new Vector3(1,1,1) : new Vector3(Mathf.Pow(1.0f / scalex, 2.0f), Mathf.Pow(1.0f / scaley, 2.0f), Mathf.Pow(1.0f / scalez, 2.0f));
                 for (int i3 = TransformIndexes[i].VertexStart; i3 < IndexEnd; i3 += 3) {//Transforming child meshes into the space of their parent
                     int Index1 = CurMeshData.Indices[i3] + IndexOffset;
@@ -1058,21 +1093,35 @@ namespace TrueTrace {
                     Triangles[OffsetReal].Validate(ParentScale);
 
                     if (_Materials[(int)TempTri.MatDat].emmissive > 0.0f) {
-                        HasLightTriangles = true;
-                        Vector3 Radiance = _Materials[(int)TempTri.MatDat].emmissive * _Materials[(int)TempTri.MatDat].BaseColor;
-                        float radiance = luminance(Radiance.x, Radiance.y, Radiance.z);
-                        float area = AreaOfTriangle(ParentMat * V1, ParentMat * V2, ParentMat * V3);
-                        float e = radiance * area;
-                        if(System.Double.IsNaN(area)) continue;
-                        TotEnergy += area;
-                        LightTriNorms.Add(((Norm1.normalized + Norm2.normalized + Norm3.normalized) / 3.0f).normalized);
-                        LightTriangles.Add(new LightTriData() {
-                            pos0 = TempTri.pos0,
-                            posedge1 = TempTri.posedge1,
-                            posedge2 = TempTri.posedge2,
-                            TriTarget = (uint)(OffsetReal)
-                            });
-                        IllumTriCount++;
+                        bool IsValid = true;
+                        #if !NonAccurateLightTris
+                            if(_Materials[(int)TempTri.MatDat].EmissiveTex.x != 0) {
+                                int ThisIndex = _Materials[(int)TempTri.MatDat].EmissiveTex.x - 1;
+                                Vector2 UVV = (TempTri.tex0 + TempTri.texedge1 + TempTri.texedge2) / 3.0f;
+                                int UVIndex3 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
+                                if(UVIndex3 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x)
+                                    if(EmissionTexPixels[ThisIndex][UVIndex3].r < 0.1f && EmissionTexPixels[ThisIndex][UVIndex3].g < 0.1f && EmissionTexPixels[ThisIndex][UVIndex3].b < 0.1f) IsValid = false;
+                            
+                            }
+                        #endif
+                        if(IsValid) {
+                            HasLightTriangles = true;
+                            LuminanceWeights.Add(_Materials[(int)TempTri.MatDat].emmissive);
+                            Vector3 Radiance = _Materials[(int)TempTri.MatDat].emmissive * _Materials[(int)TempTri.MatDat].BaseColor;
+                            float radiance = luminance(Radiance.x, Radiance.y, Radiance.z);
+                            float area = AreaOfTriangle(ParentMat * V1, ParentMat * V2, ParentMat * V3);
+                            float e = radiance * area;
+                            if(System.Double.IsNaN(area)) continue;
+                            TotEnergy += area;
+                            LightTriNorms.Add(((Norm1.normalized + Norm2.normalized + Norm3.normalized) / 3.0f).normalized);
+                            LightTriangles.Add(new LightTriData() {
+                                pos0 = TempTri.pos0,
+                                posedge1 = TempTri.posedge1,
+                                posedge2 = TempTri.posedge2,
+                                TriTarget = (uint)(OffsetReal)
+                                });
+                            IllumTriCount++;
+                        }
                     }
                     OffsetReal++;
                 }
@@ -1098,7 +1147,7 @@ namespace TrueTrace {
                     CommonFunctions.Aggregate(ref AggNodes, ref BVH.BVH8Nodes);
                 } else {
                     AggNodes = new BVHNode8DataCompressed[1];
-                    if(LightTriangles.Count > 0) LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f);
+                    if(LightTriangles.Count > 0) LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
                 }
             #endif
             MeshCountChanged = false;
@@ -1188,6 +1237,20 @@ namespace TrueTrace {
                 HasCompleted = false;
             }
         }
+
+
+        // public void OnDrawGizmos() {
+
+        //     int LightTriCount = LightTriangles.Count;
+        //     for(int i = 0; i < LightTriCount; i++) {
+        //         Vector3 Pos0 = this.transform.localToWorldMatrix * LightTriangles[i].pos0;
+        //         Vector3 Pos1 = this.transform.localToWorldMatrix * (LightTriangles[i].pos0 + LightTriangles[i].posedge1);
+        //         Vector3 Pos2 = this.transform.localToWorldMatrix * (LightTriangles[i].pos0 + LightTriangles[i].posedge2);
+        //             Gizmos.DrawLine(Pos0, Pos1);
+        //             Gizmos.DrawLine(Pos0, Pos2);
+        //             Gizmos.DrawLine(Pos2, Pos1);
+        //     }
+        // }
 
     }
 

@@ -98,9 +98,9 @@ void Construct(uint3 id : SV_DispatchThreadID)
 	float3 BBMax = max(max(p, p2), p3);
 	float3 BBMin = min(min(p, p2), p3);
 	[unroll] for (int i2 = 0; i2 < 3; i2++) {
-		if (BBMax[i2] - BBMin[i2] < 0.000001f) {
-			BBMin[i2] -= 0.000001f;
-			BBMax[i2] += 0.000001f;
+		if (BBMax[i2] - BBMin[i2] < 0.00001f) {
+			BBMin[i2] -= 0.00001f;
+			BBMax[i2] += 0.00001f;
 		}
 	}
 

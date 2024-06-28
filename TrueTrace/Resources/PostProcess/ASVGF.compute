@@ -322,7 +322,7 @@ float3 FromColorSpecPacked(uint A) {
     return float3(
         (A & 0x3FFF) / 16383.0f,
         ((A >> 14) & 0x3FFF) / 16383.0f,
-        (A >> 28)
+        ((A >> 28) & 0x3)
         );
 }
 float4x4 viewprojection;
@@ -357,14 +357,14 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 		if(UseExposure) Exposure = ExposureBuffer[0];
 	if (!((asuint(ScreenSpaceInfo[id.xy].w) >> 31) & 0x1) && (FromColorSpecPacked(Pixel.MetRoughIsSpec).z == 2 || MetRough.y >= 0.6f)) {
 		AlbedoColorA[id.xy] = uint2(Pixel.Flags, any(pos_prev < 0 || pos_prev >= float2(screen_width, screen_height)) ? Pixel.Flags : AlbedoColorB[pos_prev].y);
-		STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, irradiance_to_SH(PartialRenderingFactor * Exposure * IndirectBoost * clamp(Pixel.Indirect * ((Pixel.Data.xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0))) / 1024.0f,0,1200000.0f), asfloat(WorldPosData[id.xy].xyz)));
-		TEX_PT_COLOR_HFWrite[id.xy] = float4(PartialRenderingFactor * Exposure * clamp((Pixel.Direct + pow(unpackRGBE(Pixel.Fog),2.2f) * TexBaseColor) * Pixel.Data.xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 1.0f),0,1200000.0f),1);
+		STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, irradiance_to_SH(PartialRenderingFactor * IndirectBoost * clamp(Pixel.Indirect * ((Pixel.Data.xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0))) / 1024.0f,0,1200000.0f), asfloat(WorldPosData[id.xy].xyz)));
+		TEX_PT_COLOR_HFWrite[id.xy] = float4(PartialRenderingFactor * clamp((Pixel.Direct + pow(unpackRGBE(Pixel.Fog),2.2f) * TexBaseColor) * Pixel.Data.xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 1.0f),0,1200000.0f),1);
 		TEX_PT_COLOR_SPECWrite[id.xy] = 0;
 	} else {
 		AlbedoColorA[id.xy] = uint2(any(pos_prev < 0 || pos_prev >= float2(screen_width, screen_height)) ? Pixel.Flags : AlbedoColorB[pos_prev].x, Pixel.Flags);
 		SH TempSH = { 0,0,0,0,0,0 };
 		STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, TempSH);
-		TEX_PT_COLOR_SPECWrite[id.xy] = packRGBE(PartialRenderingFactor * max(Exposure * clamp((Pixel.Direct + IndirectBoost * Pixel.Indirect + pow(unpackRGBE(Pixel.Fog),2.2f) * TexBaseColor) * Pixel.Data.xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 1.0f),0,1200000.0f),0));
+		TEX_PT_COLOR_SPECWrite[id.xy] = packRGBE(PartialRenderingFactor * max(clamp((Pixel.Direct + IndirectBoost * Pixel.Indirect + pow(unpackRGBE(Pixel.Fog),2.2f) * TexBaseColor) * Pixel.Data.xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 1.0f),0,1200000.0f),0));
 		TEX_PT_COLOR_HFWrite[id.xy] = 0;
 	}
 	if(!ReflectedRefracted || any(pos_prev < 0 || pos_prev >= float2(screen_width, screen_height))) {
@@ -817,7 +817,7 @@ inline void preload(int2 gl_WorkGroupID, int gl_LocalInvocationIndex)
 	// use them for some spatial filtering. So a single load per thread is not enough.
 	// Rename the threads so that some of them will load 2 pixels, and most will load 1 pixel, 
 	// in the most dense way possible.
-	for (uint linear_idx = gl_LocalInvocationIndex; linear_idx < SHARED_SIZE * SHARED_SIZE; linear_idx += GROUP_SIZE * GROUP_SIZE)
+	[unroll]for (uint linear_idx = gl_LocalInvocationIndex; linear_idx < SHARED_SIZE * SHARED_SIZE; linear_idx += GROUP_SIZE * GROUP_SIZE)
 	{
 		// Convert the linear index to 2D index in a SHARED_SIZE x SHARED_SIZE virtual group
 		float t = (float(linear_idx) + 0.5) / float(SHARED_SIZE);
@@ -837,7 +837,7 @@ inline void preload(int2 gl_WorkGroupID, int gl_LocalInvocationIndex)
 }
 
 
-inline void get_shared_data(int2 offset, out float2 depth, out float3 normal, out float lum_hf, int2 gl_LocalInvocationID)
+inline void get_shared_data(int2 offset, inout float2 depth, inout float3 normal, inout float lum_hf, int2 gl_LocalInvocationID)
 {
 	int2 addr = gl_LocalInvocationID + int2(FILTER_RADIUS, FILTER_RADIUS) + offset;
 
@@ -1040,9 +1040,9 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 
 		// Compute the blending weights based on history length, so that the filter
 		// converges faster. I.e. the first frame has weight of 1.0, the second frame 1/2, third 1/3 and so on.
-		float alpha_color_lf = max(0.001f, 1.0f / (hist_len_lf));
-		float alpha_color_hf = max(0.002f, 1.0f / (hist_len_hf));
-		float alpha_moments_hf = max(0.001f, 1.0f / (hist_len_hf));
+		float alpha_color_lf = max(0.01f, 1.0f / (hist_len_lf));
+		float alpha_color_hf = max(0.02f, 1.0f / (hist_len_hf));
+		float alpha_moments_hf = max(0.01f, 1.0f / (hist_len_hf));
 
 		// Adjust the blending factors, taking the antilag factors into account again
 		alpha_color_lf = lerp(alpha_color_lf, 1.0, antilag_alpha_lf);
@@ -1453,24 +1453,26 @@ inline void filter_image(
 	float CenterMetallic = MetallicA[ipos].x;
 
 	float step_size = int(1u << spec_iteration);
-	float MinMom = 99999.0f;
-	float MaxMom = -99999.0f;
-	float3 Min = 9999.0f;
-	float3 Max = -9999.0f;
-	[unroll]for(int i = -1; i <= 1; i++) {
-		[unroll]for(int j = -1; j <= 1; j++) {
-			int2 offID = ipos + int2(i, j);
-			if(i == 0 && j == 0) continue;
-			Min = min(Min, unpackRGBE(asuint(img_spec[ipos].x)));
-			Max = max(Max, unpackRGBE(asuint(img_spec[ipos].x)));
-			MinMom = min(MinMom, img_moments[offID].y);
-			MaxMom = max(MaxMom, img_moments[offID].y);
+	if(spec_iteration != 3) {
+		float MinMom = 99999.0f;
+		float MaxMom = -99999.0f;
+		float3 Min = 9999.0f;
+		float3 Max = -9999.0f;
+		[unroll]for(int i = -1; i <= 1; i++) {
+			[unroll]for(int j = -1; j <= 1; j++) {
+				int2 offID = ipos + int2(i, j);
+				if(i == 0 && j == 0) continue;
+				Min = min(Min, unpackRGBE(asuint(img_spec[ipos].x)));
+				Max = max(Max, unpackRGBE(asuint(img_spec[ipos].x)));
+				MinMom = min(MinMom, img_moments[offID].y);
+				MaxMom = max(MaxMom, img_moments[offID].y);
+			}
 		}
+		color_center_spec = clamp(color_center_spec, Min, Max);
+		float Mom2 = clamp(moments_center.x, MinMom, MaxMom);
+		// step_size *= clamp(step_size * (max(1e-8, moments_center.y * moments_center.y * 10.0f)) + rcp(hist_len_hf / 10.0f + 1), 1.0f, step_size);
+		if(spec_iteration != 0) step_size *= clamp(step_size * (max(1e-8, Mom2 * Mom2 * 10.0f)), 1.0f, step_size);// (max(1e-8, moments_center.y * moments_center.y * 10.0f)) + rcp(hist_len_hf / 10.0f + 1), 1.0f, step_size);
 	}
-	color_center_spec = clamp(color_center_spec, Min, Max);
-	float Mom2 = clamp(moments_center.x, MinMom, MaxMom);
-	// step_size *= clamp(step_size * (max(1e-8, moments_center.y * moments_center.y * 10.0f)) + rcp(hist_len_hf / 10.0f + 1), 1.0f, step_size);
-	if(spec_iteration != 0) step_size *= clamp(step_size * (max(1e-8, Mom2 * Mom2 * 10.0f)), 1.0f, step_size);// (max(1e-8, moments_center.y * moments_center.y * 10.0f)) + rcp(hist_len_hf / 10.0f + 1), 1.0f, step_size);
 	// step_size *= ResRatio;
 	// step_size++;
 
@@ -1636,7 +1638,7 @@ float3 composite_color(float4 surf_base_color,
 {
 	float Exposure = 1;
 	if(UseExposure) Exposure = ExposureBuffer[0];
-	float3 final_color = ((surf_base_color.w == 0) ? pow(surf_base_color, 1.0f) : ((projected_lf.rgb + high_freq.rgb) * surf_base_color / Exposure + specular * SpecColor / Exposure));
+	float3 final_color = ((surf_base_color.w == 0) ? pow(surf_base_color, 1.0f) : ((projected_lf.rgb + high_freq.rgb) * surf_base_color + specular * SpecColor));
 
 	return final_color;
 }

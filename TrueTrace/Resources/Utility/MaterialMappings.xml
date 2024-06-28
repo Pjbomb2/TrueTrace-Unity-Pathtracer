@@ -5855,7 +5855,7 @@
       <TexturePairs>
         <Purpose>3</Purpose>
         <ReadIndex>-4</ReadIndex>
-        <TextureName>_EmissionMap</TextureName>
+        <TextureName>_CubeMapMask</TextureName>
       </TexturePairs>
       <TexturePairs>
         <Purpose>4</Purpose>
@@ -5863,14 +5863,9 @@
         <TextureName>_CubeMapMask</TextureName>
       </TexturePairs>
       <TexturePairs>
-        <Purpose>5</Purpose>
-        <ReadIndex>0</ReadIndex>
-        <TextureName>_CubeMapMask</TextureName>
-      </TexturePairs>
-      <TexturePairs>
         <Purpose>1</Purpose>
-        <ReadIndex>3</ReadIndex>
-        <TextureName>_MainTex</TextureName>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_ClippingMask</TextureName>
       </TexturePairs>
       <TexturePairs>
         <Purpose>6</Purpose>
@@ -5880,7 +5875,7 @@
       <TexturePairs>
         <Purpose>7</Purpose>
         <ReadIndex>0</ReadIndex>
-        <TextureName>_MatcapMask</TextureName>
+        <TextureName>_Matcap2Mask</TextureName>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>
@@ -7336,6 +7331,31 @@
   </MaterialShader>
   <MaterialShader>
     <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Toon/3d9b54c0487efa04e85ad3daa2cf3bc8</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>AE/Leaves</Name>
     <AvailableTextures>
       <TexturePairs>
         <Purpose>0</Purpose>

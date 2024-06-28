@@ -133,9 +133,9 @@ Texture2D<half2> MetallicB;
 Texture2D<half4> TEX_ASVGF_HIST_MOMENTS_HF_A;
 
 
-RWTexture2D<int2> TEX_PT_NORMALS_AWrite;
-Texture2D<int2> TEX_PT_NORMALS_A;
-Texture2D<int2> TEX_PT_NORMALS_B;
+RWTexture2D<uint4> TEX_PT_NORMALS_AWrite;
+Texture2D<uint4> TEX_PT_NORMALS_A;
+Texture2D<uint4> TEX_PT_NORMALS_B;
 
 Texture2D<float4> TEX_ASVGF_HIST_COLOR_LF_SH_A;
 
@@ -330,7 +330,7 @@ float3 FromColorSpecPacked(uint A) {
     return float3(
         (A & 0x3FFF) / 16383.0f,
         ((A >> 14) & 0x3FFF) / 16383.0f,
-        (A >> 28)
+        ((A >> 28) & 0x3)
         );
 }
 
@@ -466,7 +466,7 @@ void CopyData(int3 id : SV_DispatchThreadID)
     TEX_PT_COLOR_SPECWrite[id.xy] = SpecCol;
     if(!ReflectedRefracted) {
         // if((asuint(ScreenSpaceInfo[id.xy].w) >> 31) & 0x1) TEX_PT_NORMALS_AWrite[id.xy] = uint2(octahedral_32(-i_octahedral_32(asuint(Pixel.throughput.x))), octahedral_32(-i_octahedral_32(asuint(Pixel.throughput.y))));
-        TEX_PT_NORMALS_AWrite[id.xy] = asuint(Pixel.throughput.xy);//GeoNorm, Norm
+        TEX_PT_NORMALS_AWrite[id.xy] = uint4(asuint(Pixel.throughput.xy), asuint(ScreenSpaceInfo[id.xy].z), 0);//GeoNorm, Norm
     } else {
         TEX_PT_NORMALS_AWrite[id.xy] = TEX_PT_NORMALS_B[pos_prev];
     }
@@ -1274,7 +1274,7 @@ inline void filter_image(
         return;
     }
 
-    float depth_center = TEX_PT_VIEW_DEPTH_A[ipos].x;
+    float depth_center = asfloat(TEX_PT_NORMALS_A[ipos].z);
     float fwidth_depth = TEX_PT_VIEW_DEPTH_A[ipos].y;
     float roughness_center = MetallicA[ipos].y;
 
@@ -1305,24 +1305,24 @@ inline void filter_image(
     float CenterMetallic = MetallicA[ipos].x;
 
     float step_size = int(1u << spec_iteration);
-    // float MinMom = 99999.0f;
-    // float MaxMom = -99999.0f;
-    // float3 Min = 9999.0f;
-    // float3 Max = -9999.0f;
-    // [unroll]for(int i = -1; i <= 1; i++) {
-    //     [unroll]for(int j = -1; j <= 1; j++) {
-    //         int2 offID = ipos + int2(i, j);
-    //         if(i == 0 && j == 0) continue;
-    //         Min = min(Min, unpackRGBE(asuint(img_spec[ipos].x)));
-    //         Max = max(Max, unpackRGBE(asuint(img_spec[ipos].x)));
-    //         MinMom = min(MinMom, img_moments[offID].y);
-    //         MaxMom = max(MaxMom, img_moments[offID].y);
-    //     }
-    // }
-    // color_center_spec = clamp(color_center_spec, Min, Max);
-    // float Mom2 = clamp(moments_center.x, MinMom, MaxMom);
+    float MinMom = 99999.0f;
+    float MaxMom = -99999.0f;
+    float3 Min = 9999.0f;
+    float3 Max = -9999.0f;
+    [unroll]for(int i = -1; i <= 1; i++) {
+        [unroll]for(int j = -1; j <= 1; j++) {
+            int2 offID = ipos + int2(i, j);
+            if(i == 0 && j == 0) continue;
+            Min = min(Min, unpackRGBE(asuint(img_spec[ipos].x)));
+            Max = max(Max, unpackRGBE(asuint(img_spec[ipos].x)));
+            MinMom = min(MinMom, img_moments[offID].y);
+            MaxMom = max(MaxMom, img_moments[offID].y);
+        }
+    }
+    color_center_spec = clamp(color_center_spec, Min, Max);
+    float Mom2 = clamp(moments_center.x, MinMom, MaxMom);
     // step_size *= clamp(step_size * (max(1e-8, moments_center.y * moments_center.y * 10.0f)) + rcp(hist_len_hf / 10.0f + 1), 1.0f, step_size);
-    // step_size *= clamp(3 *  (max(1e-8, Mom2 * Mom2 * 10.0f)), 1.0f, 3);// (max(1e-8, moments_center.y * moments_center.y * 10.0f)) + rcp(hist_len_hf / 10.0f + 1), 1.0f, step_size);
+    step_size *= clamp(3 *  (max(1e-8, Mom2 * Mom2 * 10.0f)), 1.0f, 3);// (max(1e-8, moments_center.y * moments_center.y * 10.0f)) + rcp(hist_len_hf / 10.0f + 1), 1.0f, step_size);
     // step_size *= ResRatio;
     // step_size++;
 
@@ -1362,9 +1362,9 @@ inline void filter_image(
 
             float3 normal = normalize(i_octahedral_32(TEX_PT_NORMALS_A[p].y));
 
-            float depth = TEX_PT_VIEW_DEPTH_A[p].x;
+            float depth = asfloat(TEX_PT_NORMALS_A[p].z);
 
-            float dist_z = abs(depth_center - depth) * fwidth_depth;
+            float dist_z = abs(depth_center - depth);// * fwidth_depth;
             w *= exp(-dist_z);
             w *= wavelet_kernel[abs(xx)][abs(yy)];
 

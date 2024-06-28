@@ -9,48 +9,48 @@ namespace TrueTrace {
     public class ReSTIRASVGF
     {
         public bool Initialized = false;
-        public RenderTexture ASVGF_HIST_COLOR_HF;
-        public RenderTexture ASVGF_ATROUS_PING_LF_SH;
-        public RenderTexture ASVGF_ATROUS_PONG_LF_SH;
-        public RenderTexture ASVGF_ATROUS_PING_LF_COCG;
-        public RenderTexture ASVGF_ATROUS_PONG_LF_COCG;
-        public RenderTexture ASVGF_ATROUS_PING_HF;
-        public RenderTexture ASVGF_ATROUS_PONG_HF;
-        public RenderTexture ASVGF_ATROUS_PING_SPEC;
-        public RenderTexture ASVGF_ATROUS_PONG_SPEC;
-        public RenderTexture ASVGF_ATROUS_PING_MOMENTS;
-        public RenderTexture ASVGF_ATROUS_PONG_MOMENTS;
-        public RenderTexture ASVGF_GRAD_LF_PING;
-        public RenderTexture ASVGF_GRAD_LF_PONG;
-        public RenderTexture ASVGF_GRAD_HF_SPEC_PONG;
-        public RenderTexture ASVGF_FILTERED_SPEC_A;
-        public RenderTexture ASVGF_FILTERED_SPEC_B;
-        public RenderTexture ASVGF_HIST_MOMENTS_HF_A;
-        public RenderTexture ASVGF_HIST_MOMENTS_HF_B;
-        public RenderTexture ASVGF_HIST_COLOR_LF_SH_A;
-        public RenderTexture ASVGF_HIST_COLOR_LF_SH_B;
-        public RenderTexture ASVGF_HIST_COLOR_LF_COCG_A;
-        public RenderTexture ASVGF_HIST_COLOR_LF_COCG_B;
-        public RenderTexture MetallicA;
-        public RenderTexture MetallicB;
-        public RenderTexture InputLFSH;
-        public RenderTexture InputLFCOCG;
+        private RenderTexture ASVGF_HIST_COLOR_HF;
+        private RenderTexture ASVGF_ATROUS_PING_LF_SH;
+        private RenderTexture ASVGF_ATROUS_PONG_LF_SH;
+        private RenderTexture ASVGF_ATROUS_PING_LF_COCG;
+        private RenderTexture ASVGF_ATROUS_PONG_LF_COCG;
+        private RenderTexture ASVGF_ATROUS_PING_HF;
+        private RenderTexture ASVGF_ATROUS_PONG_HF;
+        private RenderTexture ASVGF_ATROUS_PING_SPEC;
+        private RenderTexture ASVGF_ATROUS_PONG_SPEC;
+        private RenderTexture ASVGF_ATROUS_PING_MOMENTS;
+        private RenderTexture ASVGF_ATROUS_PONG_MOMENTS;
+        private RenderTexture ASVGF_GRAD_LF_PING;
+        private RenderTexture ASVGF_GRAD_LF_PONG;
+        private RenderTexture ASVGF_GRAD_HF_SPEC_PONG;
+        private RenderTexture ASVGF_FILTERED_SPEC_A;
+        private RenderTexture ASVGF_FILTERED_SPEC_B;
+        private RenderTexture ASVGF_HIST_MOMENTS_HF_A;
+        private RenderTexture ASVGF_HIST_MOMENTS_HF_B;
+        private RenderTexture ASVGF_HIST_COLOR_LF_SH_A;
+        private RenderTexture ASVGF_HIST_COLOR_LF_SH_B;
+        private RenderTexture ASVGF_HIST_COLOR_LF_COCG_A;
+        private RenderTexture ASVGF_HIST_COLOR_LF_COCG_B;
+        private RenderTexture MetallicA;
+        private RenderTexture MetallicB;
+        private RenderTexture InputLFSH;
+        private RenderTexture InputLFCOCG;
 
-        public RenderTexture TEX_PT_COLOR_SPEC;
-
-
-        public RenderTexture LFVarianceA;
-        public RenderTexture LFVarianceB;
-
-        public RenderTexture TEX_PT_NORMALS_A;
-        public RenderTexture TEX_PT_NORMALS_B;
-
-        public RenderTexture AlbedoColorA;
-        public RenderTexture AlbedoColorB;
+        private RenderTexture TEX_PT_COLOR_SPEC;
 
 
-        public RenderTexture ReflectedRefractedTex;
-        public RenderTexture ReflectedRefractedTexPrev;
+        private RenderTexture LFVarianceB;
+        private RenderTexture LFVarianceA;
+
+        private RenderTexture TEX_PT_NORMALS_A;
+        private RenderTexture TEX_PT_NORMALS_B;
+
+        private RenderTexture AlbedoColorA;
+        private RenderTexture AlbedoColorB;
+
+
+        private RenderTexture ReflectedRefractedTex;
+        private RenderTexture ReflectedRefractedTexPrev;
 
 
         public Camera camera;
@@ -125,8 +125,8 @@ namespace TrueTrace {
 
 
             CommonFunctions.CreateRenderTexture(ref ASVGF_HIST_COLOR_HF, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref TEX_PT_NORMALS_A, ScreenWidth, ScreenHeight, CommonFunctions.RTInt2);
-            CommonFunctions.CreateRenderTexture(ref TEX_PT_NORMALS_B, ScreenWidth, ScreenHeight, CommonFunctions.RTInt2);
+            CommonFunctions.CreateRenderTexture(ref TEX_PT_NORMALS_A, ScreenWidth, ScreenHeight, CommonFunctions.RTFull4);
+            CommonFunctions.CreateRenderTexture(ref TEX_PT_NORMALS_B, ScreenWidth, ScreenHeight, CommonFunctions.RTFull4);
 
             CommonFunctions.CreateRenderTexture(ref ASVGF_ATROUS_PING_LF_SH, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTFull4);
             CommonFunctions.CreateRenderTexture(ref ASVGF_ATROUS_PONG_LF_SH, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTFull4);

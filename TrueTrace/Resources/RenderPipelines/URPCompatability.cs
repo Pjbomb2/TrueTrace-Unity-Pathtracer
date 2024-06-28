@@ -8,6 +8,7 @@ using UnityEngine.Rendering.Universal;
 public class URPCompatability : ScriptableRendererFeature
 {
     RenderTexture MainTex;
+    RenderTexture MainTex2;
     TrueTrace.RayTracingMaster RayMaster;
     URPCompatabilityPass Pass;
     bool SceneIsSetup = false;
@@ -23,7 +24,7 @@ public class URPCompatability : ScriptableRendererFeature
         RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
         RayMaster.Start2();
         RayMaster.Assets.Start();
-        Pass = new URPCompatabilityPass(RayMaster, MainTex);
+        Pass = new URPCompatabilityPass(RayMaster, MainTex, MainTex2);
     }
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData) {
@@ -34,11 +35,13 @@ public class URPCompatability : ScriptableRendererFeature
             }
             RayMaster.TossCamera(renderingData.cameraData.camera);
             if(MainTex == null) CreateRenderTexture(ref MainTex, renderingData.cameraData.camera);
+            if(MainTex == null) CreateRenderTexture(ref MainTex2, renderingData.cameraData.camera);
             renderingData.cameraData.camera.depthTextureMode |= (DepthTextureMode.MotionVectors | DepthTextureMode.Depth);
             Pass.ConfigureInput(ScriptableRenderPassInput.Color);
             Pass.SetTarget(renderer);
             Pass.ConfigureInput(ScriptableRenderPassInput.Motion);
             renderer.EnqueuePass(Pass);
+            renderingData.cameraData.camera.forceIntoRenderTexture = true;
           }
     }
 
@@ -46,10 +49,13 @@ public class URPCompatability : ScriptableRendererFeature
     {
         TrueTrace.RayTracingMaster RayMaster;
         RenderTexture MainTex;
+        RenderTexture MainTex2;
         #if UNITY_2021
             RenderTargetIdentifier m_CameraColorTarget;
+            RenderTargetIdentifier m_CameraColorTarget2;
         #else
             RTHandle m_CameraColorTarget;
+            RTHandle m_CameraColorTarget2;
         #endif
         ScriptableRenderer renderer;
 
@@ -62,31 +68,38 @@ public class URPCompatability : ScriptableRendererFeature
             // renderingData.cameraData.camera.depthTextureMode = DepthTextureMode.MotionVectors | DepthTextureMode.Depth | DepthTextureMode.DepthNormals;
             #if UNITY_2021
                 m_CameraColorTarget = renderer.cameraColorTarget;
+                m_CameraColorTarget2 = renderer.cameraColorTarget;
             #else
                 m_CameraColorTarget = renderer.cameraColorTargetHandle;
+                m_CameraColorTarget2 = renderer.cameraColorTargetHandle;
             #endif
 
             ConfigureTarget(m_CameraColorTarget);
             var motionVectors = Shader.GetGlobalTexture("_MotionVectorTexture");
             Shader.SetGlobalTexture("_CameraMotionVectorsTexture", motionVectors);
         }
-        public URPCompatabilityPass(TrueTrace.RayTracingMaster Master, RenderTexture maintex)
+        public URPCompatabilityPass(TrueTrace.RayTracingMaster Master, RenderTexture maintex, RenderTexture maintex2)
         {
+            MainTex2 = maintex2;
             MainTex = maintex;
             RayMaster = Master;
             renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
         }
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
-            CommandBuffer cmd = CommandBufferPool.Get(name: "LensFlarePass");
+            CommandBuffer cmd = new CommandBuffer();
+            cmd.name = "TrueTrace";
             
             Shader.SetGlobalTexture("_CameraGBufferTexture2", Shader.GetGlobalTexture("_GBuffer2"));
             Shader.SetGlobalTexture("_CameraGBufferTexture0", Shader.GetGlobalTexture("_GBuffer0"));
             Shader.SetGlobalTexture("_CameraGBufferTexture1", Shader.GetGlobalTexture("_GBuffer1"));
             RayMaster.RenderImage(MainTex, cmd);
-            cmd.Blit(MainTex, m_CameraColorTarget);
+            cmd.Blit(MainTex, m_CameraColorTarget2);
+            cmd.Blit(m_CameraColorTarget2, MainTex2);
+            cmd.Blit(MainTex2, m_CameraColorTarget);
             context.ExecuteCommandBuffer(cmd);
-            CommandBufferPool.Release(cmd);
+            cmd.Clear();
+            cmd.Release();
         }
     }   
 

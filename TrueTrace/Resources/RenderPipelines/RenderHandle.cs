@@ -16,7 +16,7 @@ public class RenderHandle : MonoBehaviour
         gameObject.GetComponent<Camera>().depthTextureMode |= DepthTextureMode.MotionVectors;
         RayMaster.TossCamera(gameObject.GetComponent<Camera>());
         RayMaster.Start2();
-    
+        SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)

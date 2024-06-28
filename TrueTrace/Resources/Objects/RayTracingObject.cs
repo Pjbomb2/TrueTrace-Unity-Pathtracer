@@ -275,10 +275,18 @@ namespace TrueTrace {
 	    		if(WasDeleted) return;
 		    	if(ThisParent != null) {
 		    		ThisParent.NeedsToUpdate = true;
-					if(AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ThisParent)) AssetManager.Assets.UpdateQue.Add(ThisParent);
+		    		if(ThisParent.enabled)
+						if(AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ThisParent)) AssetManager.Assets.UpdateQue.Add(ThisParent);
+					else {
+						ThisParent.enabled = true;
+					}
 		    	} else if(ParParent != null) {
 		    		ParParent.NeedsToUpdate = true;
-					if(AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ParParent)) AssetManager.Assets.UpdateQue.Add(ParParent);
+		    		if(ParParent.enabled)
+						if(AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ParParent)) AssetManager.Assets.UpdateQue.Add(ParParent);
+					else {
+						ParParent.enabled = true;
+					}
 	    		}
 	    	}
 	    }

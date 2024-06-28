@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ce9a6213bc68c0458b33690315e1b16, type: 3}
+  m_Name: DemoScene
+  m_EditorClassIdentifier: 
+  SceneName: TestA
+  IndirectBoost: 1
+  bouncecount: 12
+  ClayMode: 0
+  UseRussianRoulette: 1
+  UseNEE: 1
+  DoTLASUpdates: 1
+  Accumulate: 0
+  PPBloom: 1
+  BloomStrength: 18.5
+  PPDoF: 0
+  DoFAperature: 0.057
+  DoFAperatureScale: 0.54
+  DoFFocal: 14.4285555
+  PPExposure: 0
+  ExposureAuto: 0
+  PPToneMap: 1
+  PPTAA: 0
+  RenderScale: 1
+  UseASVGF: 1
+  UseReCur: 0
+  UseTAAU: 0
+  ReSTIRGIUpdateRate: 0
+  UseReSTIRGITemporal: 1
+  UseReSTIRGISpatial: 1
+  UseReSTIRGI: 0
+  ReSTIRGISpatialCount: 24
+  ReSTIRGISpatialRadius: 50
+  ReSTIRGITemporalMCap: 32
+  DoReSTIRGIConnectionValidation: 0
+  Exposure: 50
+  ReCurBlurRadius: 12
+  DoPartialRendering: 0
+  PartialRenderingFactor: 3
+  DoFirefly: 0
+  ImprovedPrimaryHit: 1
+  RISCount: 12
+  ToneMapper: 5
+  SunDesaturate: 0
+  SkyDesaturate: 0
+  ClayColor: {x: 0.20754719, y: 0.20754719, z: 0.20754719}
+  GroundColor: {x: 0.1, y: 0.1, z: 0.1}
+  FireflyFrameCount: 0
+  FireflyStrength: 1
+  FireflyOffset: 0
+  OIDNFrameCount: 122
+  UseOIDN: 0
+  DoSharpen: 0
+  Sharpness: 1
+  MainDesiredRes: 16384
+  UseSkinning: 1
+  LightEnergyScale: 1
+  BackgroundType: 0
+  BackgroundIntensity: 1
+  SceneBackgroundColor: {x: 0.052705556, y: 0.5451765, z: 0.5943396}

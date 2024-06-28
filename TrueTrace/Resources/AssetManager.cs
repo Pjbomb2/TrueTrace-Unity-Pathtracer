@@ -20,7 +20,7 @@ namespace TrueTrace {
         public int TotalParentObjectSize;
         [HideInInspector] public float LightEnergyScale = 1.0f;
         //emissive, alpha, metallic, roughness
-        [HideInInspector] public Texture2D AlbedoAtlas;
+        public Texture2D AlbedoAtlas;
         [HideInInspector] public Texture2D NormalAtlas;
         [HideInInspector] public Texture2D SingleComponentAtlas;
         [HideInInspector] public Texture2D EmissiveAtlas;
@@ -214,7 +214,7 @@ namespace TrueTrace {
             PackingRectangle BoundRects;
             RectanglePacker.Pack(Rects, out BoundRects);
             DesiredRes = (int)Mathf.Min((Mathf.Floor((float)Mathf.Max(BoundRects.Width, BoundRects.Height) / 4.0f)) * 4, DesiredRes);
-            Scale = new Vector2(Mathf.Ceil(Mathf.Min((float)DesiredRes / BoundRects.Width, 1) * 16384.0f / 4.0f) * 4.0f / 16384.0f, Mathf.Ceil(Mathf.Min((float)DesiredRes / BoundRects.Height, 1) * 16384.0f / 4.0f) * 4.0f / 16384.0f);
+            Scale = new Vector2((Mathf.Min((float)DesiredRes / BoundRects.Width, 1) * 16384.0f / 4.0f) * 4.0f / 16384.0f, (Mathf.Min((float)DesiredRes / BoundRects.Height, 1) * 16384.0f / 4.0f) * 4.0f / 16384.0f);
         } else {
             DesiredRes = 4;
         }
@@ -234,10 +234,10 @@ namespace TrueTrace {
             desc.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R32G32B32A32_SInt;
             switch(TexIndex) {
                 case 0://heightmap
-                    CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.RHalf, true);
+                    CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.RFloat, false);
                 break;
                 case 1://alphamap
-                    CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.ARGBHalf, true);
+                    CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.ARGBHalf, false);
                 break;
                 case 2://normalmap
                     Atlas = new RenderTexture(desc);
@@ -289,13 +289,13 @@ namespace TrueTrace {
         for (int i = 0; i < TexCount; i++) {
                 PackingRectangle TempRect = Rects[i];
                 int ID = TempRect.Id;
-                CopyShader.SetVector("InputSize", new Vector2(TempRect.Width * Scale.x, TempRect.Height * Scale.y));
-                CopyShader.SetVector("Offset", new Vector2((TempRect.X * Scale.x), (TempRect.Y * Scale.y)));
+                CopyShader.SetVector("InputSize", new Vector2(Mathf.Ceil((TempRect.Width) * Scale.x / 4.0f) * 4.0f, Mathf.Ceil((TempRect.Height) * Scale.y / 4.0f) * 4.0f));
+                CopyShader.SetVector("Offset", new Vector2(Mathf.Ceil(TempRect.X * Scale.x / 4.0f) * 4.0f, Mathf.Ceil(TempRect.Y * Scale.y / 4.0f) * 4.0f));
                 TexObj SelectedTex = DictTex[ID];
                 int ListLength = SelectedTex.TexObjList.Count;
-                Vector4 RectSelect = new Vector4(0, 0, Mathf.Ceil(TempRect.X * Scale.x) / DesiredRes, Mathf.Ceil(TempRect.Y * Scale.y) / DesiredRes);
-                RectSelect.x = RectSelect.z + Mathf.Ceil((TempRect.Width) * Scale.x) / DesiredRes;
-                RectSelect.y = RectSelect.w + Mathf.Ceil((TempRect.Height) * Scale.y) / DesiredRes;
+                Vector4 RectSelect = new Vector4(0, 0, (Mathf.Ceil(TempRect.X * Scale.x / 4.0f) * 4.0f) / DesiredRes, (Mathf.Ceil(TempRect.Y * Scale.y / 4.0f) * 4.0f) / DesiredRes);
+                RectSelect.x = (Mathf.Ceil((TempRect.X * Scale.x + (TempRect.Width) * Scale.x) / 4.0f) * 4.0f) / DesiredRes;
+                RectSelect.y = (Mathf.Ceil((TempRect.Y * Scale.y + (TempRect.Height) * Scale.y) / 4.0f) * 4.0f) / DesiredRes;
 
                 if(TexIndex >= 2) {
                     for(int j = 0; j < ListLength; j++) {
@@ -480,7 +480,6 @@ namespace TrueTrace {
                     TerrainObject Obj2 = Terrains[j];
                     TerrainDat TempTerrain = new TerrainDat();
                     TempTerrain.PositionOffset = Obj2.transform.position;
-                    Debug.Log("POS: " + TempTerrain.PositionOffset + ", " + Obj2.gameObject.name);
                     TempTerrain.TerrainDimX = Terrains[j].TerrainDimX;
                     TempTerrain.TerrainDimY = Terrains[j].TerrainDimY;
                     TempTerrain.HeightScale = Terrains[j].HeightScale;

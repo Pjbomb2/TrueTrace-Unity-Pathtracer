@@ -56,14 +56,14 @@ namespace TrueTrace {
          [SerializeField] public float DoFAperatureScale = 1.0f;
          [SerializeField] public float DoFFocal = 0.1f;
          [SerializeField] public bool DoExposure = false;
-         [SerializeField] public bool DoExposureAuto = false;
+         [SerializeField] public bool ExposureAuto = false;
          [SerializeField] public bool ReSTIRGI = false;
          [SerializeField] public bool SampleValid = false;
          [SerializeField] public int UpdateRate = 7;
          [SerializeField] public bool GITemporal = true;
          [SerializeField] public int GITemporalMCap = 12;
          [SerializeField] public bool GISpatial = true;
-         [SerializeField] public int GISpatialSampleCount = 6;
+         [SerializeField] public int GISpatialSampleCount = 24;
          [SerializeField] public bool TAA = false;
          [SerializeField] public bool ToneMap = false;
          [SerializeField] public int ToneMapIndex = 0;
@@ -76,7 +76,7 @@ namespace TrueTrace {
          [SerializeField] public int PartialRenderingFactor = 1;
          [SerializeField] public bool DoFirefly = false;
          [SerializeField] public bool ImprovedPrimaryHit = false;
-         [SerializeField] public float MinSpatialSize = 10;
+         [SerializeField] public float ReSTIRGISpatialRadius = 50;
          [SerializeField] public float ReCurBlurRadius = 30;
          [SerializeField] public int RISCount = 5;
          [SerializeField] public int DenoiserSelection = 0;
@@ -100,11 +100,18 @@ namespace TrueTrace {
          void OnEnable() {
             EditorSceneManager.activeSceneChangedInEditMode += EvaluateScene;
             EditorSceneManager.sceneSaving += SaveScene;
+            EditorSceneManager.activeSceneChanged += ChangedActiveScene;
             if(EditorPrefs.GetString("EditModeFunctions", JsonUtility.ToJson(this, false)) != null) {
                var data = EditorPrefs.GetString("EditModeFunctions", JsonUtility.ToJson(this, false));
                JsonUtility.FromJsonOverwrite(data, this);
             }
          }
+
+         private void ChangedActiveScene(Scene current, Scene next)
+         {
+            CreateGUI();
+         }
+
          void OnDisable() {
             var data = JsonUtility.ToJson(this, false);
             EditorPrefs.SetString("EditModeFunctions", data);
@@ -510,6 +517,7 @@ namespace TrueTrace {
                if(GameObject.Find("Scene") != null) {
                   if(GameObject.Find("Scene").GetComponent<RayTracingMaster>() == null) GameObject.Find("Scene").AddComponent(typeof(RayTracingMaster));
                   RayMaster = GameObject.Find("Scene").GetComponent<RayTracingMaster>();
+                  RayMaster.LoadTT();
                }
             }
             if(RayMaster == null) return;
@@ -530,7 +538,7 @@ FloatField AtmoScatterField;
 Toggle GIToggle;
 FloatField GIUpdateRateField;
 FloatField TeporalGIMCapField;
-FloatField MinSpatialSizeField;
+FloatField ReSTIRGISpatialRadiusField;
 Toggle TemporalGIToggle;
 Toggle SpatialGIToggle;
 Toggle TAAToggle;
@@ -559,7 +567,7 @@ private void StandardSet() {
          DoFAperatureScale = 1.0f;
          DoFFocal = 0.1f;
          DoExposure = false;
-         DoExposureAuto = false;
+         ExposureAuto = false;
          ReSTIRGI = false;
          SampleValid = false;
          UpdateRate = 7;
@@ -576,7 +584,7 @@ private void StandardSet() {
          AtlasSize = 16384;
          DoPartialRendering = false;
          DoFirefly = false;
-         MinSpatialSize = 30;
+         ReSTIRGISpatialRadius = 30;
          RISCount = 12;
          ReCurBlurRadius = 30.0f;
 }
@@ -594,7 +602,9 @@ Toolbar toolbar;
          ReArrangeHierarchy();  
          OnFocus(); 
          if(Camera.main != null && Camera.main.gameObject.GetComponent<FlyCamera>() == null) Camera.main.gameObject.AddComponent<FlyCamera>();
-         rootVisualElement.Remove(RearrangeElement); 
+
+         rootVisualElement.Remove(RearrangeElement);
+         CreateGUI(); 
          rootVisualElement.Add(MainSource); 
          Assets.UpdateMaterialDefinition();
       }
@@ -625,7 +635,7 @@ Toolbar toolbar;
          BackgroundColorField = new ColorField();
          BackgroundColorField.value = SceneBackgroundColor;
          BackgroundColorField.style.width = 150;
-         BackgroundColorField.RegisterValueChangedCallback(evt => {SceneBackgroundColor = evt.newValue; RayMaster.SceneBackgroundColor = new Vector3(SceneBackgroundColor.r,SceneBackgroundColor.g,SceneBackgroundColor.b);});
+         BackgroundColorField.RegisterValueChangedCallback(evt => {SceneBackgroundColor = evt.newValue; RayMaster.LocalTTSettings.SceneBackgroundColor = new Vector3(SceneBackgroundColor.r,SceneBackgroundColor.g,SceneBackgroundColor.b);});
 
          BackgroundSettingsField = new PopupField<string>("Background Type");
          BackgroundSettingsField.choices = BackgroundSettings;
@@ -645,9 +655,9 @@ Toolbar toolbar;
 
          SceneSettingsMenu.Add(BackgroundSettingsField);
          BackgroundSettingsField.RegisterValueChangedCallback(evt => {
-            int Prev = RayMaster.BackgroundType;
+            int Prev = RayMaster.LocalTTSettings.BackgroundType;
             BackgroundType = BackgroundSettingsField.index;
-            RayMaster.BackgroundType = BackgroundType;
+            RayMaster.LocalTTSettings.BackgroundType = BackgroundType;
             switch(BackgroundSettingsField.index) {
                case 0:
                   BackgroundSettingsField.Add(BlankElement);
@@ -659,12 +669,12 @@ Toolbar toolbar;
                   BackgroundSettingsField.Add(BackgroundColorField);
                break;
             }
-            if(Prev != RayMaster.BackgroundType) BackgroundSettingsField.RemoveAt(2);
+            if(Prev != RayMaster.LocalTTSettings.BackgroundType) BackgroundSettingsField.RemoveAt(2);
 
             });
       
       BackgroundIntensityField = new FloatField() {value = BackgroundIntensity, label = "Background Intensity"};
-      BackgroundIntensityField.RegisterValueChangedCallback(evt => {BackgroundIntensity = evt.newValue; RayMaster.BackgroundIntensity = BackgroundIntensity;});
+      BackgroundIntensityField.RegisterValueChangedCallback(evt => {BackgroundIntensity = evt.newValue; RayMaster.LocalTTSettings.BackgroundIntensity = BackgroundIntensity;});
       SceneSettingsMenu.Add(BackgroundIntensityField);
 
       UnityLightModifierField = new FloatField() {value = LightEnergyScale, label = "Unity Light Intensity Modifier"};
@@ -672,15 +682,15 @@ Toolbar toolbar;
       SceneSettingsMenu.Add(UnityLightModifierField);
 
       IndirectBoostField = new FloatField() {value = IndirectBoost, label = "Indirect Lighting Boost"};
-      IndirectBoostField.RegisterValueChangedCallback(evt => {IndirectBoost = evt.newValue; RayMaster.IndirectBoost = IndirectBoost;});
+      IndirectBoostField.RegisterValueChangedCallback(evt => {IndirectBoost = evt.newValue; RayMaster.LocalTTSettings.IndirectBoost = IndirectBoost;});
       SceneSettingsMenu.Add(IndirectBoostField);
 
       Slider SunDesatSlider = new Slider() {label = "SunDesat: ", value = SunDesaturate, highValue = 1.0f, lowValue = 0.0f};
-      SunDesatSlider.RegisterValueChangedCallback(evt => {SunDesaturate = evt.newValue; RayMaster.SunDesaturate = SunDesaturate;});
+      SunDesatSlider.RegisterValueChangedCallback(evt => {SunDesaturate = evt.newValue; RayMaster.LocalTTSettings.SunDesaturate = SunDesaturate;});
       SceneSettingsMenu.Add(SunDesatSlider);
 
       Slider SkyDesatSlider = new Slider() {label = "SkyDesat: ", value = SkyDesaturate, highValue = 1.0f, lowValue = 0.0f};
-      SkyDesatSlider.RegisterValueChangedCallback(evt => {SkyDesaturate = evt.newValue; RayMaster.SkyDesaturate = SkyDesaturate;});
+      SkyDesatSlider.RegisterValueChangedCallback(evt => {SkyDesaturate = evt.newValue; RayMaster.LocalTTSettings.SkyDesaturate = SkyDesaturate;});
       SceneSettingsMenu.Add(SkyDesatSlider);
 
 
@@ -1223,18 +1233,22 @@ Toolbar toolbar;
          Toggle HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
          HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("HardwareRT"); else RemoveDefine("HardwareRT"); SetDefines();});
          HardSettingsMenu.Add(HardwareRTToggle);
+
+         Toggle NonAccurateLightTriToggle = new Toggle() {value = (definesList.Contains("NonAccurateLightTris")), text = "Disable Emissive Texture Aware Light BVH"};
+         NonAccurateLightTriToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("NonAccurateLightTris"); else RemoveDefine("NonAccurateLightTris"); SetDefines();});
+         HardSettingsMenu.Add(NonAccurateLightTriToggle);
          
          VisualElement ClayColorBox = new VisualElement();
 
          Toggle ClayModeToggle = new Toggle() {value = ClayMode, text = "Use ClayMode"};
-         ClayModeToggle.RegisterValueChangedCallback(evt => {ClayMode = evt.newValue; RayMaster.ClayMode = ClayMode; if(evt.newValue) HardSettingsMenu.Insert(HardSettingsMenu.IndexOf(ClayModeToggle) + 1, ClayColorBox); else HardSettingsMenu.Remove(ClayColorBox);});
+         ClayModeToggle.RegisterValueChangedCallback(evt => {ClayMode = evt.newValue; RayMaster.LocalTTSettings.ClayMode = ClayMode; if(evt.newValue) HardSettingsMenu.Insert(HardSettingsMenu.IndexOf(ClayModeToggle) + 1, ClayColorBox); else HardSettingsMenu.Remove(ClayColorBox);});
          HardSettingsMenu.Add(ClayModeToggle);
 
          ColorField ClayColorField = new ColorField();
          ClayColorField.label = "Clay Color: ";
          ClayColorField.value = new Color(ClayColor.x, ClayColor.y, ClayColor.z, 1.0f);
          ClayColorField.style.width = 250;
-         ClayColorField.RegisterValueChangedCallback(evt => {ClayColor = new Vector3(evt.newValue.r, evt.newValue.g, evt.newValue.b); RayMaster.ClayColor = ClayColor;});
+         ClayColorField.RegisterValueChangedCallback(evt => {ClayColor = new Vector3(evt.newValue.r, evt.newValue.g, evt.newValue.b); RayMaster.LocalTTSettings.ClayColor = ClayColor;});
          ClayColorBox.Add(ClayColorField);
          if(ClayMode) HardSettingsMenu.Add(ClayColorBox);
 
@@ -1242,15 +1256,15 @@ Toolbar toolbar;
          GroundColorField.label = "Ground Color: ";
          GroundColorField.value = new Color(GroundColor.x, GroundColor.y, GroundColor.z, 1.0f);
          GroundColorField.style.width = 250;
-         GroundColorField.RegisterValueChangedCallback(evt => {GroundColor = new Vector3(evt.newValue.r, evt.newValue.g, evt.newValue.b); RayMaster.GroundColor = GroundColor;});
+         GroundColorField.RegisterValueChangedCallback(evt => {GroundColor = new Vector3(evt.newValue.r, evt.newValue.g, evt.newValue.b); RayMaster.LocalTTSettings.GroundColor = GroundColor;});
          HardSettingsMenu.Add(GroundColorField);
 
          Toggle OIDNToggle = new Toggle() {value = (definesList.Contains("UseOIDN")), text = "Enable OIDN(Does NOT work with DX11 Only)"};
          OIDNToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("UseOIDN"); else RemoveDefine("UseOIDN"); SetDefines();});
          HardSettingsMenu.Add(OIDNToggle);
 
-         Toggle RadCacheToggle = new Toggle() {value = (definesList.Contains("UseRadianceCache")), text = "Disable Radiance Cache(inverted toggle)"};
-         RadCacheToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("UseRadianceCache"); else RemoveDefine("UseRadianceCache"); SetDefines();});
+         Toggle RadCacheToggle = new Toggle() {value = (definesList.Contains("DisableRadianceCache")), text = "Disable Radiance Cache"};
+         RadCacheToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("DisableRadianceCache"); else RemoveDefine("DisableRadianceCache"); SetDefines();});
          HardSettingsMenu.Add(RadCacheToggle);
 
 
@@ -1366,6 +1380,7 @@ Toolbar toolbar;
                Button RearrangeButton = new Button(() => {UnityEditor.PopupWindow.Show(new Rect(0,0,10,10), new PopupWarningWindow());}) {text="Arrange Hierarchy"};
                RearrangeElement.Add(RearrangeButton);
                rootVisualElement.Add(RearrangeElement);
+               return;
             } else {
                {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();}
                Assets.UpdateMaterialDefinition();
@@ -1385,58 +1400,58 @@ Toolbar toolbar;
 
             if(RayMaster != null && Assets != null) {
             AddNormalSettings();
-           RayMaster.bouncecount = BounceCount;
-           RayMaster.RenderScale = RenderRes;
-           RayMaster.UseRussianRoulette = RR;
-           RayMaster.DoTLASUpdates = Moving;
-           RayMaster.AllowConverge = Accumulate;
-           RayMaster.UseNEE = NEE;
            Assets.UseSkinning = MeshSkin;
-           RayMaster.AllowBloom = Bloom;
-           RayMaster.DoSharpen = DoSharpen;
-           RayMaster.Sharpness = Sharpness;
-           RayMaster.BloomStrength = 128 - BloomStrength * 128.0f;
-           RayMaster.AllowDoF = DoF;
-           RayMaster.ClayColor = ClayColor;
-           RayMaster.GroundColor = GroundColor;
-           RayMaster.DoFAperature = DoFAperature;
-           RayMaster.DoFAperatureScale = DoFAperatureScale;
-           RayMaster.DoFFocal = DoFFocal;
-           RayMaster.AllowAutoExpose = DoExposure;
-           RayMaster.DoExposureAuto = DoExposureAuto;
-           RayMaster.Exposure = Exposure;
-           RayMaster.UseReSTIRGI = ReSTIRGI;
-           RayMaster.UseReSTIRGITemporal = GITemporal;
-           RayMaster.UseReSTIRGISpatial = GISpatial;
-           RayMaster.DoReSTIRGIConnectionValidation = SampleValid;
-           RayMaster.ReSTIRGIUpdateRate = UpdateRate;
-           RayMaster.ReSTIRGITemporalMCap = GITemporalMCap;
-           RayMaster.ReSTIRGISpatialCount = GISpatialSampleCount;
-           RayMaster.AllowTAA = TAA;
-           RayMaster.AllowToneMap = ToneMap;
-           RayMaster.ToneMapper = ToneMapIndex;
-           RayMaster.UseTAAU = TAAU;
            RayMaster.AtmoNumLayers = AtmoScatter;
            Assets.MainDesiredRes = AtlasSize;
-           RayMaster.DoPartialRendering = DoPartialRendering;
-           RayMaster.PartialRenderingFactor = PartialRenderingFactor;
-           RayMaster.DoFirefly = DoFirefly;
-           RayMaster.MinSpatialSize = MinSpatialSize;
-           RayMaster.RISCount = RISCount;
-           RayMaster.ReCurBlurRadius = ReCurBlurRadius;
-           RayMaster.ImprovedPrimaryHit = ImprovedPrimaryHit;
-           RayMaster.ClayMode = ClayMode;
-           RayMaster.SceneBackgroundColor = new Vector3(SceneBackgroundColor.r,SceneBackgroundColor.g,SceneBackgroundColor.b);
-           RayMaster.BackgroundIntensity = BackgroundIntensity;
            Assets.LightEnergyScale = LightEnergyScale;
-           RayMaster.IndirectBoost = IndirectBoost;
-           RayMaster.BackgroundType = BackgroundType;
            RayTracingMaster.DoSaving = DoSaving;
            RayTracingMaster.DoDing = DoDing;
-           RayMaster.SunDesaturate = SunDesaturate;
-           RayMaster.SkyDesaturate = SkyDesaturate;
-           RayMaster.FireflyFrameCount = FireflyFrameCount;
-           RayMaster.OIDNFrameCount = OIDNFrameCount;
+           BounceCount = RayMaster.LocalTTSettings.bouncecount;
+           RenderRes = RayMaster.LocalTTSettings.RenderScale;
+           RR = RayMaster.LocalTTSettings.UseRussianRoulette;
+           Moving = RayMaster.LocalTTSettings.DoTLASUpdates;
+           Accumulate = RayMaster.LocalTTSettings.Accumulate;
+           NEE = RayMaster.LocalTTSettings.UseNEE;
+           Bloom = RayMaster.LocalTTSettings.PPBloom;
+           DoSharpen = RayMaster.LocalTTSettings.DoSharpen;
+           Sharpness = RayMaster.LocalTTSettings.Sharpness;
+           BloomStrength = 128.0f + RayMaster.LocalTTSettings.BloomStrength / 128.0f ;
+           DoF = RayMaster.LocalTTSettings.PPDoF;
+           ClayColor = RayMaster.LocalTTSettings.ClayColor;
+           GroundColor = RayMaster.LocalTTSettings.GroundColor;
+           DoFAperature = RayMaster.LocalTTSettings.DoFAperature;
+           DoFAperatureScale = RayMaster.LocalTTSettings.DoFAperatureScale;
+           DoFFocal = RayMaster.LocalTTSettings.DoFFocal;
+           DoExposure = RayMaster.LocalTTSettings.PPExposure;
+           ExposureAuto = RayMaster.LocalTTSettings.ExposureAuto;
+           Exposure = RayMaster.LocalTTSettings.Exposure;
+           ReSTIRGI = RayMaster.LocalTTSettings.UseReSTIRGI;
+           GITemporal = RayMaster.LocalTTSettings.UseReSTIRGITemporal;
+           GISpatial = RayMaster.LocalTTSettings.UseReSTIRGISpatial;
+           SampleValid = RayMaster.LocalTTSettings.DoReSTIRGIConnectionValidation;
+           UpdateRate = RayMaster.LocalTTSettings.ReSTIRGIUpdateRate;
+           GITemporalMCap = RayMaster.LocalTTSettings.ReSTIRGITemporalMCap;
+           GISpatialSampleCount = RayMaster.LocalTTSettings.ReSTIRGISpatialCount;
+           TAA = RayMaster.LocalTTSettings.PPTAA;
+           ToneMap = RayMaster.LocalTTSettings.PPToneMap;
+           ToneMapIndex = RayMaster.LocalTTSettings.ToneMapper;
+           TAAU = RayMaster.LocalTTSettings.UseTAAU;
+           DoPartialRendering = RayMaster.LocalTTSettings.DoPartialRendering;
+           PartialRenderingFactor = RayMaster.LocalTTSettings.PartialRenderingFactor;
+           DoFirefly = RayMaster.LocalTTSettings.DoFirefly;
+           ReSTIRGISpatialRadius = RayMaster.LocalTTSettings.ReSTIRGISpatialRadius;
+           RISCount = RayMaster.LocalTTSettings.RISCount;
+           ReCurBlurRadius = RayMaster.LocalTTSettings.ReCurBlurRadius;
+           ImprovedPrimaryHit = RayMaster.LocalTTSettings.ImprovedPrimaryHit;
+           ClayMode = RayMaster.LocalTTSettings.ClayMode;
+           SceneBackgroundColor = new Color(RayMaster.LocalTTSettings.SceneBackgroundColor.x, RayMaster.LocalTTSettings.SceneBackgroundColor.y, RayMaster.LocalTTSettings.SceneBackgroundColor.z, 1);
+           BackgroundIntensity = RayMaster.LocalTTSettings.BackgroundIntensity;
+           IndirectBoost = RayMaster.LocalTTSettings.IndirectBoost;
+           BackgroundType = RayMaster.LocalTTSettings.BackgroundType;
+           SunDesaturate = RayMaster.LocalTTSettings.SunDesaturate;
+           SkyDesaturate = RayMaster.LocalTTSettings.SkyDesaturate;
+           FireflyFrameCount = RayMaster.LocalTTSettings.FireflyFrameCount;
+           OIDNFrameCount = RayMaster.LocalTTSettings.OIDNFrameCount;
          }
 
            AddHardSettingsToMenu();
@@ -1488,38 +1503,38 @@ Toolbar toolbar;
                BounceField.ElementAt(1).style.width = 25;
                BounceField.style.paddingRight = 40;
                TopEnclosingBox.Add(BounceField);
-               BounceField.RegisterValueChangedCallback(evt => {BounceCount = (int)evt.newValue; RayMaster.bouncecount = BounceCount;});        
+               BounceField.RegisterValueChangedCallback(evt => {BounceCount = (int)evt.newValue; RayMaster.LocalTTSettings.bouncecount = BounceCount;});        
                ResField = new FloatField("Internal Resolution Ratio") {value = RenderRes};
                ResField.ElementAt(0).style.minWidth = 75;
                ResField.ElementAt(1).style.width = 35;
                TopEnclosingBox.Add(ResField);
-               ResField.RegisterValueChangedCallback(evt => {RenderRes = evt.newValue; RenderRes = Mathf.Max(RenderRes, 0.1f); RenderRes = Mathf.Min(RenderRes, 1.0f); RayMaster.RenderScale = RenderRes;});        
+               ResField.RegisterValueChangedCallback(evt => {RenderRes = evt.newValue; RenderRes = Mathf.Max(RenderRes, 0.1f); RenderRes = Mathf.Min(RenderRes, 1.0f); RayMaster.LocalTTSettings.RenderScale = RenderRes;});        
                TopEnclosingBox.Add(AtlasField);
            MainSource.Add(TopEnclosingBox);
 
            RRToggle = new Toggle() {value = RR, text = "Use Russian Roulette"};
            MainSource.Add(RRToggle);
-           RRToggle.RegisterValueChangedCallback(evt => {RR = evt.newValue; RayMaster.UseRussianRoulette = RR;});
+           RRToggle.RegisterValueChangedCallback(evt => {RR = evt.newValue; RayMaster.LocalTTSettings.UseRussianRoulette = RR;});
 
            MovingToggle = new Toggle() {value = Moving, text = "Enable Object Moving"};
            MovingToggle.tooltip = "Enables realtime updating of materials and object positions, laggy to leave on for scenes with high ParentObject counts";
            MainSource.Add(MovingToggle);
-           MovingToggle.RegisterValueChangedCallback(evt => {Moving = evt.newValue; RayMaster.DoTLASUpdates = Moving;});
+           MovingToggle.RegisterValueChangedCallback(evt => {Moving = evt.newValue; RayMaster.LocalTTSettings.DoTLASUpdates = Moving;});
 
            AccumToggle = new Toggle() {value = Accumulate, text = "Allow Image Accumulation"};
            MainSource.Add(AccumToggle);
-           AccumToggle.RegisterValueChangedCallback(evt => {Accumulate = evt.newValue; RayMaster.AllowConverge = Accumulate;});
+           AccumToggle.RegisterValueChangedCallback(evt => {Accumulate = evt.newValue; RayMaster.LocalTTSettings.Accumulate = Accumulate;});
 
            NEEToggle = new Toggle() {value = NEE, text = "Use Next Event Estimation"};
            MainSource.Add(NEEToggle);
            VisualElement NEEBox = new VisualElement();
             Label RISLabel = new Label("RIS Count");
             RISCountField = new FloatField() {value = RISCount};
-            RISCountField.RegisterValueChangedCallback(evt => {RISCount = (int)evt.newValue; RayMaster.RISCount = RISCount;});
+            RISCountField.RegisterValueChangedCallback(evt => {RISCount = (int)evt.newValue; RayMaster.LocalTTSettings.RISCount = RISCount;});
             NEEBox.style.flexDirection = FlexDirection.Row;
             NEEBox.Add(RISLabel);
             NEEBox.Add(RISCountField);
-           NEEToggle.RegisterValueChangedCallback(evt => {NEE = evt.newValue; RayMaster.UseNEE = NEE; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(NEEToggle) + 1, NEEBox);else MainSource.Remove(NEEBox);});
+           NEEToggle.RegisterValueChangedCallback(evt => {NEE = evt.newValue; RayMaster.LocalTTSettings.UseNEE = NEE; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(NEEToggle) + 1, NEEBox);else MainSource.Remove(NEEBox);});
             if(NEEToggle.value) {
                MainSource.Add(NEEBox);
             }
@@ -1544,33 +1559,33 @@ Toolbar toolbar;
             DenoiserField.style.flexDirection = FlexDirection.Row;
             DenoiserField.RegisterValueChangedCallback(evt => {
                DenoiserSelection = DenoiserField.index;
-               RayMaster.UseASVGF = false;
-               RayMaster.UseReCur = false;
-               RayMaster.UseOIDN = false;
+               RayMaster.LocalTTSettings.UseASVGF = false;
+               RayMaster.LocalTTSettings.UseReCur = false;
+               RayMaster.LocalTTSettings.UseOIDN = false;
                if(DenoiserField.Contains(ReCurBlurField)) DenoiserField.Remove(ReCurBlurField);
                if(DenoiserField.Contains(OIDNFrameField)) DenoiserField.Remove(OIDNFrameField);
                switch(DenoiserSelection) {
                   case 0:
                   break;
                   case 1:
-                     RayMaster.UseASVGF = true;
+                     RayMaster.LocalTTSettings.UseASVGF = true;
                   break;
                   case 2:
-                     RayMaster.UseReCur = true;
+                     RayMaster.LocalTTSettings.UseReCur = true;
                      ReCurBlurField = new FloatField("ReCur Blur Radius") {value = ReCurBlurRadius};
                      ReCurBlurField.ElementAt(0).style.minWidth = 65;
-                     ReCurBlurField.RegisterValueChangedCallback(evt => {ReCurBlurRadius = (int)evt.newValue; ReCurBlurRadius = Mathf.Max(ReCurBlurRadius, 2); RayMaster.ReCurBlurRadius = ReCurBlurRadius;});
+                     ReCurBlurField.RegisterValueChangedCallback(evt => {ReCurBlurRadius = (int)evt.newValue; ReCurBlurRadius = Mathf.Max(ReCurBlurRadius, 2); RayMaster.LocalTTSettings.ReCurBlurRadius = ReCurBlurRadius;});
                      DenoiserField.Add(ReCurBlurField);
                   break;
                   case 3:
                      #if UseOIDN
-                        RayMaster.UseOIDN = true;
+                        RayMaster.LocalTTSettings.UseOIDN = true;
                         OIDNFrameField = new IntegerField("Frames Before OIDN") {value = OIDNFrameCount};
                         OIDNFrameField.ElementAt(0).style.minWidth = 95;
-                        OIDNFrameField.RegisterValueChangedCallback(evt => {OIDNFrameCount = (int)evt.newValue; RayMaster.OIDNFrameCount = OIDNFrameCount;});
+                        OIDNFrameField.RegisterValueChangedCallback(evt => {OIDNFrameCount = (int)evt.newValue; RayMaster.LocalTTSettings.OIDNFrameCount = OIDNFrameCount;});
                         DenoiserField.Add(OIDNFrameField);
                      #else 
-                        RayMaster.UseOIDN = false;
+                        RayMaster.LocalTTSettings.UseOIDN = false;
                         DenoiserField.index = 0;
                         DenoiserSelection = 0;
                      #endif
@@ -1581,31 +1596,35 @@ Toolbar toolbar;
             if(DenoiserField.Contains(ReCurBlurField)) DenoiserField.Remove(ReCurBlurField);
             if(DenoiserField.Contains(OIDNFrameField)) DenoiserField.Remove(OIDNFrameField);
             DenoiserSelection = DenoiserField.index;
-            RayMaster.UseASVGF = false;
-            RayMaster.UseReCur = false;
-            RayMaster.UseOIDN = false;
+            if(RayMaster.LocalTTSettings.UseASVGF) {
+               DenoiserSelection = 1;
+            } else if(RayMaster.LocalTTSettings.UseReCur) {
+               DenoiserSelection = 2;
+            } else if(RayMaster.LocalTTSettings.UseOIDN) {
+               DenoiserSelection = 3;
+            }
             switch(DenoiserSelection) {
                case 0:
                break;
                case 1:
-                  RayMaster.UseASVGF = true;
+                  RayMaster.LocalTTSettings.UseASVGF = true;
                break;
                case 2:
-                  RayMaster.UseReCur = true;
+                  RayMaster.LocalTTSettings.UseReCur = true;
                   ReCurBlurField = new FloatField("ReCur Blur Radius") {value = ReCurBlurRadius};
                   ReCurBlurField.ElementAt(0).style.minWidth = 65;
-                  ReCurBlurField.RegisterValueChangedCallback(evt => {ReCurBlurRadius = (int)evt.newValue; ReCurBlurRadius = Mathf.Max(ReCurBlurRadius, 2); RayMaster.ReCurBlurRadius = ReCurBlurRadius;});
+                  ReCurBlurField.RegisterValueChangedCallback(evt => {ReCurBlurRadius = (int)evt.newValue; ReCurBlurRadius = Mathf.Max(ReCurBlurRadius, 2); RayMaster.LocalTTSettings.ReCurBlurRadius = ReCurBlurRadius;});
                   DenoiserField.Add(ReCurBlurField);
                break;
                case 3:
                   #if UseOIDN
-                     RayMaster.UseOIDN = true;
+                     RayMaster.LocalTTSettings.UseOIDN = true;
                      OIDNFrameField = new IntegerField("Frames Before OIDN") {value = OIDNFrameCount};
                      OIDNFrameField.ElementAt(0).style.minWidth = 95;
-                     OIDNFrameField.RegisterValueChangedCallback(evt => {OIDNFrameCount = (int)evt.newValue; RayMaster.OIDNFrameCount = OIDNFrameCount;});
+                     OIDNFrameField.RegisterValueChangedCallback(evt => {OIDNFrameCount = (int)evt.newValue; RayMaster.LocalTTSettings.OIDNFrameCount = OIDNFrameCount;});
                      DenoiserField.Add(OIDNFrameField);
                   #else 
-                     RayMaster.UseOIDN = false;
+                     RayMaster.LocalTTSettings.UseOIDN = false;
                      DenoiserField.index = 0;
                      DenoiserSelection = 0;
                   #endif
@@ -1622,8 +1641,8 @@ Toolbar toolbar;
                Label BloomLabel = new Label("Bloom Strength");
                Slider BloomSlider = new Slider() {value = BloomStrength, highValue = 0.9999f, lowValue = 0.5f};
                BloomSlider.style.width = 100;
-               BloomToggle.RegisterValueChangedCallback(evt => {Bloom = evt.newValue; RayMaster.AllowBloom = Bloom; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(BloomToggle) + 1, BloomBox); else MainSource.Remove(BloomBox);});        
-               BloomSlider.RegisterValueChangedCallback(evt => {BloomStrength = evt.newValue; RayMaster.BloomStrength = 128 - BloomStrength * 128.0f;});
+               BloomToggle.RegisterValueChangedCallback(evt => {Bloom = evt.newValue; RayMaster.LocalTTSettings.PPBloom = Bloom; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(BloomToggle) + 1, BloomBox); else MainSource.Remove(BloomBox);});        
+               BloomSlider.RegisterValueChangedCallback(evt => {BloomStrength = evt.newValue; RayMaster.LocalTTSettings.BloomStrength = 128 - BloomStrength * 128.0f;});
                MainSource.Add(BloomToggle);
                BloomBox.style.flexDirection = FlexDirection.Row;
                BloomBox.Add(BloomLabel);
@@ -1635,14 +1654,14 @@ Toolbar toolbar;
             VisualElement SharpenFoldout = new VisualElement() {};
                Slider SharpnessSlider = new Slider() {label = "Sharpness: ", value = Sharpness, highValue = 1.0f, lowValue = 0.0f};
                SharpnessSlider.style.width = 200;
-               SharpnessSlider.RegisterValueChangedCallback(evt => {Sharpness = evt.newValue; RayMaster.Sharpness = Sharpness;});
+               SharpnessSlider.RegisterValueChangedCallback(evt => {Sharpness = evt.newValue; RayMaster.LocalTTSettings.Sharpness = Sharpness;});
                SharpenFoldout.Add(SharpnessSlider);
             SharpnessSlider.ElementAt(0).style.minWidth = 65;
 
 
             Toggle SharpenToggle = new Toggle() {value = DoSharpen, text = "Use Sharpness Filter"};
             MainSource.Add(SharpenToggle);
-            SharpenToggle.RegisterValueChangedCallback(evt => {DoSharpen = evt.newValue; RayMaster.DoSharpen = DoSharpen; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(SharpenToggle) + 1, SharpenFoldout); else MainSource.Remove(SharpenFoldout);});
+            SharpenToggle.RegisterValueChangedCallback(evt => {DoSharpen = evt.newValue; RayMaster.LocalTTSettings.DoSharpen = DoSharpen; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(SharpenToggle) + 1, SharpenFoldout); else MainSource.Remove(SharpenFoldout);});
             if(DoSharpen) MainSource.Add(SharpenFoldout);
 
 
@@ -1652,7 +1671,7 @@ Toolbar toolbar;
            AperatureSlider.style.width = 250;
            FloatField AperatureScaleField = new FloatField() {value = DoFAperatureScale, label = "Aperature Scale"};
            AperatureScaleField.ElementAt(0).style.minWidth = 65;
-           AperatureScaleField.RegisterValueChangedCallback(evt => {DoFAperatureScale = evt.newValue; DoFAperatureScale = Mathf.Max(DoFAperatureScale, 0.0001f); RayMaster.DoFAperatureScale = DoFAperatureScale; AperatureScaleField.value = DoFAperatureScale;});
+           AperatureScaleField.RegisterValueChangedCallback(evt => {DoFAperatureScale = evt.newValue; DoFAperatureScale = Mathf.Max(DoFAperatureScale, 0.0001f); RayMaster.LocalTTSettings.DoFAperatureScale = DoFAperatureScale; AperatureScaleField.value = DoFAperatureScale;});
            Label FocalLabel = new Label("Focal Length");
            FocalSlider = new FloatField() {value = DoFFocal};
            FocalSlider.style.width = 150;
@@ -1673,9 +1692,9 @@ Toolbar toolbar;
            DoFFoldout.Add(AperatureBox);
            DoFFoldout.Add(FocalBox);
            MainSource.Add(DoFToggle);
-           DoFToggle.RegisterValueChangedCallback(evt => {DoF = evt.newValue; RayMaster.AllowDoF = DoF;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(DoFToggle) + 1, DoFFoldout); else MainSource.Remove(DoFFoldout);});        
-           AperatureSlider.RegisterValueChangedCallback(evt => {DoFAperature = evt.newValue; RayMaster.DoFAperature = DoFAperature;});
-           FocalSlider.RegisterValueChangedCallback(evt => {DoFFocal = Mathf.Max(0.001f, evt.newValue); RayMaster.DoFFocal = DoFFocal;});
+           DoFToggle.RegisterValueChangedCallback(evt => {DoF = evt.newValue; RayMaster.LocalTTSettings.PPDoF = DoF;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(DoFToggle) + 1, DoFFoldout); else MainSource.Remove(DoFFoldout);});        
+           AperatureSlider.RegisterValueChangedCallback(evt => {DoFAperature = evt.newValue; RayMaster.LocalTTSettings.DoFAperature = DoFAperature;});
+           FocalSlider.RegisterValueChangedCallback(evt => {DoFFocal = Mathf.Max(0.001f, evt.newValue); RayMaster.LocalTTSettings.DoFFocal = DoFFocal;});
            if(DoF) MainSource.Add(DoFFoldout);
            
            Toggle DoExposureToggle = new Toggle() {value = DoExposure, text = "Enable Auto/Manual Exposure"};
@@ -1685,8 +1704,8 @@ Toolbar toolbar;
                Label ExposureLabel = new Label("Exposure");
                Slider ExposureSlider = new Slider() {value = Exposure, highValue = 50.0f, lowValue = 0};
                FloatField ExposureField = new FloatField() {value = Exposure};
-               Toggle DoExposureAutoToggle = new Toggle() {value = DoExposureAuto, text = "Auto(On)/Manual(Off)"};
-               DoExposureAutoToggle.RegisterValueChangedCallback(evt => {DoExposureAuto = evt.newValue; RayMaster.DoExposureAuto = DoExposureAuto;});
+               Toggle ExposureAutoToggle = new Toggle() {value = ExposureAuto, text = "Auto(On)/Manual(Off)"};
+               ExposureAutoToggle.RegisterValueChangedCallback(evt => {ExposureAuto = evt.newValue; RayMaster.LocalTTSettings.ExposureAuto = ExposureAuto;});
                DoExposureToggle.tooltip = "Slide to the left for Auto";
                ExposureSlider.tooltip = "Slide to the left for Auto";
                ExposureLabel.tooltip = "Slide to the left for Auto";
@@ -1694,10 +1713,10 @@ Toolbar toolbar;
                ExposureElement.Add(ExposureLabel);
                ExposureElement.Add(ExposureSlider);
                ExposureElement.Add(ExposureField);
-               ExposureElement.Add(DoExposureAutoToggle);
-           DoExposureToggle.RegisterValueChangedCallback(evt => {DoExposure = evt.newValue; RayMaster.AllowAutoExpose = DoExposure;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(DoExposureToggle) + 1, ExposureElement); else MainSource.Remove(ExposureElement);});
-           ExposureSlider.RegisterValueChangedCallback(evt => {Exposure = evt.newValue; ExposureField.value = Exposure; RayMaster.Exposure = Exposure;});
-           ExposureField.RegisterValueChangedCallback(evt => {Exposure = evt.newValue; ExposureSlider.value = Exposure; RayMaster.Exposure = Exposure;});
+               ExposureElement.Add(ExposureAutoToggle);
+           DoExposureToggle.RegisterValueChangedCallback(evt => {DoExposure = evt.newValue; RayMaster.LocalTTSettings.PPExposure = DoExposure;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(DoExposureToggle) + 1, ExposureElement); else MainSource.Remove(ExposureElement);});
+           ExposureSlider.RegisterValueChangedCallback(evt => {Exposure = evt.newValue; ExposureField.value = Exposure; RayMaster.LocalTTSettings.Exposure = Exposure;});
+           ExposureField.RegisterValueChangedCallback(evt => {Exposure = evt.newValue; ExposureSlider.value = Exposure; RayMaster.LocalTTSettings.Exposure = Exposure;});
             if(DoExposure) MainSource.Add(ExposureElement);
 
            GIToggle = new Toggle() {value = ReSTIRGI, text = "Use ReSTIR GI"};
@@ -1710,8 +1729,8 @@ Toolbar toolbar;
                    Label GIUpdateRateLabel = new Label("Update Rate(0 is off)");
                    GIUpdateRateLabel.tooltip = "How often a pixel should validate its entire path, good for quickly changing lighting";
                    GIUpdateRateField = new FloatField() {value = UpdateRate};
-                   SampleValidToggle.RegisterValueChangedCallback(evt => {SampleValid = evt.newValue; RayMaster.DoReSTIRGIConnectionValidation = SampleValid;});
-                   GIUpdateRateField.RegisterValueChangedCallback(evt => {UpdateRate = (int)evt.newValue; RayMaster.ReSTIRGIUpdateRate = UpdateRate;});
+                   SampleValidToggle.RegisterValueChangedCallback(evt => {SampleValid = evt.newValue; RayMaster.LocalTTSettings.DoReSTIRGIConnectionValidation = SampleValid;});
+                   GIUpdateRateField.RegisterValueChangedCallback(evt => {UpdateRate = (int)evt.newValue; RayMaster.LocalTTSettings.ReSTIRGIUpdateRate = UpdateRate;});
                    TopGI.Add(SampleValidToggle);
                    TopGI.Add(GIUpdateRateField);
                    TopGI.Add(GIUpdateRateLabel);
@@ -1723,8 +1742,8 @@ Toolbar toolbar;
                    Label TemporalGIMCapLabel = new Label("Temporal M Cap(0 is off)");
                    TemporalGIMCapLabel.tooltip = "Controls how long a sample is valid for, lower numbers update more quickly but have more noise, good for quickly changing scenes/lighting";
                    TeporalGIMCapField = new FloatField() {value = GITemporalMCap};
-                   TemporalGIToggle.RegisterValueChangedCallback(evt => {GITemporal = evt.newValue; RayMaster.UseReSTIRGITemporal = GITemporal;});
-                   TeporalGIMCapField.RegisterValueChangedCallback(evt => {GITemporalMCap = (int)evt.newValue; RayMaster.ReSTIRGITemporalMCap = GITemporalMCap;});
+                   TemporalGIToggle.RegisterValueChangedCallback(evt => {GITemporal = evt.newValue; RayMaster.LocalTTSettings.UseReSTIRGITemporal = GITemporal;});
+                   TeporalGIMCapField.RegisterValueChangedCallback(evt => {GITemporalMCap = (int)evt.newValue; RayMaster.LocalTTSettings.ReSTIRGITemporalMCap = GITemporalMCap;});
                    TemporalGI.Add(TemporalGIToggle);
                    TemporalGI.Add(TeporalGIMCapField);
                    TemporalGI.Add(TemporalGIMCapLabel);
@@ -1733,28 +1752,28 @@ Toolbar toolbar;
                    SpatialGI.style.flexDirection = FlexDirection.Row;
                    SpatialGIToggle = new Toggle() {value = GISpatial, text = "Enable Spatial"};
                    Label SpatialGISampleCountLabel = new Label("Spatial Sample Count");
-                   Label MinSpatialSizeLabel = new Label("Minimum Spatial Radius");
+                   Label ReSTIRGISpatialRadiusLabel = new Label("Minimum Spatial Radius");
                    SpatialGISampleCountLabel.tooltip = "How many neighbors are sampled, tradeoff between performance and quality";
                    FloatField SpatialGISampleCountField = new FloatField() {value = GISpatialSampleCount};
-                   FloatField MinSpatialSizeField = new FloatField() {value = MinSpatialSize};
-                   SpatialGIToggle.RegisterValueChangedCallback(evt => {GISpatial = evt.newValue; RayMaster.UseReSTIRGISpatial = GISpatial;});
-                   SpatialGISampleCountField.RegisterValueChangedCallback(evt => {GISpatialSampleCount = (int)evt.newValue; RayMaster.ReSTIRGISpatialCount = GISpatialSampleCount;});
-                   MinSpatialSizeField.RegisterValueChangedCallback(evt => {MinSpatialSize = (int)evt.newValue; RayMaster.MinSpatialSize = MinSpatialSize;});
+                   FloatField ReSTIRGISpatialRadiusField = new FloatField() {value = ReSTIRGISpatialRadius};
+                   SpatialGIToggle.RegisterValueChangedCallback(evt => {GISpatial = evt.newValue; RayMaster.LocalTTSettings.UseReSTIRGISpatial = GISpatial;});
+                   SpatialGISampleCountField.RegisterValueChangedCallback(evt => {GISpatialSampleCount = (int)evt.newValue; RayMaster.LocalTTSettings.ReSTIRGISpatialCount = GISpatialSampleCount;});
+                   ReSTIRGISpatialRadiusField.RegisterValueChangedCallback(evt => {ReSTIRGISpatialRadius = (int)evt.newValue; RayMaster.LocalTTSettings.ReSTIRGISpatialRadius = ReSTIRGISpatialRadius;});
                    SpatialGI.Add(SpatialGIToggle);
                    SpatialGI.Add(SpatialGISampleCountField);
                    SpatialGI.Add(SpatialGISampleCountLabel);
-                   SpatialGI.Add(MinSpatialSizeField);
-                   SpatialGI.Add(MinSpatialSizeLabel);
+                   SpatialGI.Add(ReSTIRGISpatialRadiusField);
+                   SpatialGI.Add(ReSTIRGISpatialRadiusLabel);
                EnclosingGI.Add(SpatialGI);
            GIFoldout.Add(EnclosingGI);
            MainSource.Add(GIToggle);
-           GIToggle.RegisterValueChangedCallback(evt => {ReSTIRGI = evt.newValue; RayMaster.UseReSTIRGI = ReSTIRGI;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(GIToggle) + 1, GIFoldout); else MainSource.Remove(GIFoldout);});
+           GIToggle.RegisterValueChangedCallback(evt => {ReSTIRGI = evt.newValue; RayMaster.LocalTTSettings.UseReSTIRGI = ReSTIRGI;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(GIToggle) + 1, GIFoldout); else MainSource.Remove(GIFoldout);});
            if(ReSTIRGI) MainSource.Add(GIFoldout);
        
 
            TAAToggle = new Toggle() {value = TAA, text = "Enable TAA"};
            MainSource.Add(TAAToggle);
-           TAAToggle.RegisterValueChangedCallback(evt => {TAA = evt.newValue; RayMaster.AllowTAA = TAA;});
+           TAAToggle.RegisterValueChangedCallback(evt => {TAA = evt.newValue; RayMaster.LocalTTSettings.PPTAA = TAA;});
 
            
             List<string> TonemapSettings = new List<string>();
@@ -1768,21 +1787,21 @@ Toolbar toolbar;
             ToneMapField.ElementAt(0).style.minWidth = 65;
             ToneMapField.choices = TonemapSettings;
             ToneMapField.index = ToneMapIndex;
-            ToneMapField.RegisterValueChangedCallback(evt => {ToneMapIndex = ToneMapField.index; RayMaster.ToneMapper = ToneMapIndex;});
+            ToneMapField.RegisterValueChangedCallback(evt => {ToneMapIndex = ToneMapField.index; RayMaster.LocalTTSettings.ToneMapper = ToneMapIndex;});
 
            Toggle ToneMapToggle = new Toggle() {value = ToneMap, text = "Enable Tonemapping"};
             VisualElement ToneMapFoldout = new VisualElement() {};
                ToneMapFoldout.style.flexDirection = FlexDirection.Row;
                ToneMapFoldout.Add(ToneMapField);
            MainSource.Add(ToneMapToggle);
-           ToneMapToggle.RegisterValueChangedCallback(evt => {ToneMap = evt.newValue; RayMaster.AllowToneMap = ToneMap; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(ToneMapToggle) + 1, ToneMapFoldout); else MainSource.Remove(ToneMapFoldout);});
+           ToneMapToggle.RegisterValueChangedCallback(evt => {ToneMap = evt.newValue; RayMaster.LocalTTSettings.PPToneMap = ToneMap; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(ToneMapToggle) + 1, ToneMapFoldout); else MainSource.Remove(ToneMapFoldout);});
            if(ToneMap) MainSource.Add(ToneMapFoldout);
 
 
            TAAUToggle = new Toggle() {value = TAAU, text = "Enable TAAU"};
            TAAUToggle.tooltip = "On = Temporal Anti Aliasing Upscaling; Off = Semi Custom Upscaler, performs slightly differently";
            MainSource.Add(TAAUToggle);
-           TAAUToggle.RegisterValueChangedCallback(evt => {TAAU = evt.newValue; RayMaster.UseTAAU = TAAU;});
+           TAAUToggle.RegisterValueChangedCallback(evt => {TAAU = evt.newValue; RayMaster.LocalTTSettings.UseTAAU = TAAU;});
 
 
 
@@ -1790,35 +1809,35 @@ Toolbar toolbar;
                PartialRenderingFoldout.style.flexDirection = FlexDirection.Row;
                IntegerField PartialRenderingField = new IntegerField() {value = PartialRenderingFactor, label = "Partial Factor"};
                PartialRenderingField.ElementAt(0).style.minWidth = 65;
-               PartialRenderingField.RegisterValueChangedCallback(evt => {PartialRenderingFactor = evt.newValue; PartialRenderingFactor = Mathf.Max(PartialRenderingFactor, 1); RayMaster.PartialRenderingFactor = PartialRenderingFactor;});
+               PartialRenderingField.RegisterValueChangedCallback(evt => {PartialRenderingFactor = evt.newValue; PartialRenderingFactor = Mathf.Max(PartialRenderingFactor, 1); RayMaster.LocalTTSettings.PartialRenderingFactor = PartialRenderingFactor;});
                PartialRenderingFoldout.Add(PartialRenderingField);
            DoPartialRenderingToggle = new Toggle() {value = DoPartialRendering, text = "Use Partial Rendering"};
            MainSource.Add(DoPartialRenderingToggle);
-           DoPartialRenderingToggle.RegisterValueChangedCallback(evt => {DoPartialRendering = evt.newValue; RayMaster.DoPartialRendering = DoPartialRendering;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(DoPartialRenderingToggle) + 1, PartialRenderingFoldout); else MainSource.Remove(PartialRenderingFoldout);});
+           DoPartialRenderingToggle.RegisterValueChangedCallback(evt => {DoPartialRendering = evt.newValue; RayMaster.LocalTTSettings.DoPartialRendering = DoPartialRendering;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(DoPartialRenderingToggle) + 1, PartialRenderingFoldout); else MainSource.Remove(PartialRenderingFoldout);});
            if(DoPartialRendering) MainSource.Add(PartialRenderingFoldout);
 
             VisualElement FireflyFoldout = new VisualElement() {};
                IntegerField FireflyFrameCountField = new IntegerField() {value = FireflyFrameCount, label = "Frames Before Anti-Firefly"};
                FireflyFrameCountField.ElementAt(0).style.minWidth = 65;
-               FireflyFrameCountField.RegisterValueChangedCallback(evt => {FireflyFrameCount = evt.newValue; RayMaster.FireflyFrameCount = FireflyFrameCount;});
+               FireflyFrameCountField.RegisterValueChangedCallback(evt => {FireflyFrameCount = evt.newValue; RayMaster.LocalTTSettings.FireflyFrameCount = FireflyFrameCount;});
                FireflyFoldout.Add(FireflyFrameCountField);
          
                Slider FireflyStrengthSlider = new Slider() {label = "Anti Firefly Strength: ", value = FireflyStrength, highValue = 1.0f, lowValue = 0.0f};
-               FireflyStrengthSlider.RegisterValueChangedCallback(evt => {FireflyStrength = evt.newValue; RayMaster.FireflyStrength = FireflyStrength;});
+               FireflyStrengthSlider.RegisterValueChangedCallback(evt => {FireflyStrength = evt.newValue; RayMaster.LocalTTSettings.FireflyStrength = FireflyStrength;});
                FireflyFoldout.Add(FireflyStrengthSlider);
 
                FloatField FireflyOffsetField = new FloatField("Firefly Minimum Offset") {value = FireflyOffset};
-               FireflyOffsetField.RegisterValueChangedCallback(evt => {FireflyOffset = (int)evt.newValue; RayMaster.FireflyOffset = FireflyOffset;});
+               FireflyOffsetField.RegisterValueChangedCallback(evt => {FireflyOffset = (int)evt.newValue; RayMaster.LocalTTSettings.FireflyOffset = FireflyOffset;});
                FireflyFoldout.Add(FireflyOffsetField);
 
 
            DoFireflyToggle = new Toggle() {value = DoFirefly, text = "Enable AntiFirefly"};
            MainSource.Add(DoFireflyToggle);
-           DoFireflyToggle.RegisterValueChangedCallback(evt => {DoFirefly = evt.newValue; RayMaster.DoFirefly = DoFirefly; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(DoFireflyToggle) + 1, FireflyFoldout); else MainSource.Remove(FireflyFoldout);});
+           DoFireflyToggle.RegisterValueChangedCallback(evt => {DoFirefly = evt.newValue; RayMaster.LocalTTSettings.DoFirefly = DoFirefly; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(DoFireflyToggle) + 1, FireflyFoldout); else MainSource.Remove(FireflyFoldout);});
            if(DoFirefly) MainSource.Add(FireflyFoldout);
 
            Toggle ImprovedPrimaryHitToggle = new Toggle() {value = ImprovedPrimaryHit, text = "RR Ignores Primary Hit"};
-           ImprovedPrimaryHitToggle.RegisterValueChangedCallback(evt => {ImprovedPrimaryHit = evt.newValue; RayMaster.ImprovedPrimaryHit = ImprovedPrimaryHit;});
+           ImprovedPrimaryHitToggle.RegisterValueChangedCallback(evt => {ImprovedPrimaryHit = evt.newValue; RayMaster.LocalTTSettings.ImprovedPrimaryHit = ImprovedPrimaryHit;});
            MainSource.Add(ImprovedPrimaryHitToggle);
 
 

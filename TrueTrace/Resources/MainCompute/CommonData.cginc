@@ -43,6 +43,8 @@ float AperatureRadius;
 RWStructuredBuffer<uint3> BufferData;
 
 RWTexture2D<half2> CorrectedDepthTex;
+Texture2D<half2> DepthTexA;
+Texture2D<half2> DepthTexB;
 
 #ifdef HardwareRT
 	StructuredBuffer<int> SubMeshOffsets;
@@ -137,6 +139,7 @@ struct ColData {
 RWStructuredBuffer<ColData> GlobalColors;
 StructuredBuffer<ColData> PrevGlobalColorsA;
 RWStructuredBuffer<ColData> PrevGlobalColorsB;
+RWStructuredBuffer<ColData> PrevGlobalColorsC;
 
 
 
@@ -660,7 +663,7 @@ inline uint cwbvh_node_intersect(const Ray ray, int oct_inv4, float max_distance
         uint meta4 = (i == 0 ? node_1.z : node_1.w);
 
         uint is_inner4   = (meta4 & (meta4 << 1)) & 0x10101010;
-        uint inner_mask4 = (((is_inner4 << 3) >> 7) & 0x01010101) * 0xff;
+        uint inner_mask4 = (is_inner4 >> 4) * 0xffu;
         uint bit_index4  = (meta4 ^ (oct_inv4 & inner_mask4)) & 0x1f1f1f1f;
         uint child_bits4 = (meta4 >> 5) & 0x07070707;
 
@@ -1467,12 +1470,12 @@ float3 FromColorSpecPacked(uint A) {
 	return float3(
 		(A & 0x3FFF) / 16383.0f,
 		((A >> 14) & 0x3FFF) / 16383.0f,
-		(A >> 28)
+		((A >> 28) & 0x3)
 		);
 }
 
 inline float3 CalcPos(uint4 TriData) {
-	if(TriData.w == 1) return asfloat(TriData.xyz);
+	if(TriData.w > 0) return asfloat(TriData.xyz);
     MyMeshDataCompacted Mesh = _MeshData[TriData.x];
     float4x4 Inverse = inverse(Mesh.W2L);
     TriData.y += Mesh.TriOffset;
@@ -1488,7 +1491,7 @@ inline float3 CalcPos(uint4 TriData) {
 #define BucketCount 32
 #define PropDepth 4
 #define MinSampleToContribute 8
-#define MaxSampleCount 122
+#define MaxSampleCount 128
 #define CacheCapacity (4 * 1024 * 1024)
 
 RWByteAddressBuffer VoxelDataBufferA;
@@ -1932,4 +1935,36 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
     #endif
     Radiance = MatDat.emmissive * MatDat.surfaceColor;
     return AggTriIndex;
+}
+
+
+inline float3 temperature(float t)
+{
+    const static float3 c[10] = {
+        float3(0.0f / 255.0f, 2.0f / 255.0f, 91.0f / 255.0f),
+        float3(0.0f / 255.0f, 108.0f / 255.0f, 251.0f / 255.0f),
+        float3(0.0f / 255.0f, 221.0f / 255.0f, 221.0f / 255.0f),
+        float3(51.0f / 255.0f, 221.0f / 255.0f, 0.0f / 255.0f),
+        float3(255.0f / 255.0f, 252.0f / 255.0f, 0.0f / 255.0f),
+        float3(255.0f / 255.0f, 180.0f / 255.0f, 0.0f / 255.0f),
+        float3(255.0f / 255.0f, 104.0f / 255.0f, 0.0f / 255.0f),
+        float3(226.0f / 255.0f, 22.0f / 255.0f, 0.0f / 255.0f),
+        float3(191.0f / 255.0f, 0.0f / 255.0f, 83.0f / 255.0f),
+        float3(145.0f / 255.0f, 0.0f / 255.0f, 65.0f / 255.0f)
+    };
+
+    const float s = t * 10.0f;
+
+    const int cur = int(s) <= 9 ? int(s) : 9;
+    const int prv = cur >= 1 ? cur - 1 : 0;
+    const int nxt = cur < 9 ? cur + 1 : 9;
+
+    const float blur = 0.8f;
+
+    const float wc = smoothstep(float(cur) - blur, float(cur) + blur, s) * (1.0f - smoothstep(float(cur + 1) - blur, float(cur + 1) + blur, s));
+    const float wp = 1.0f - smoothstep(float(cur) - blur, float(cur) + blur, s);
+    const float wn = smoothstep(float(cur + 1) - blur, float(cur + 1) + blur, s);
+
+    const float3 r = wc * c[cur] + wp * c[prv] + wn * c[nxt];
+    return float3(clamp(r.x, 0.0f, 1.0f), clamp(r.y, 0.0f, 1.0f), clamp(r.z, 0.0f, 1.0f));
 }

@@ -215,5 +215,11 @@ namespace TrueTrace {
             PrimAABBs.Dispose();
 
         }
+
+    
+
+
+
+
     }
 }

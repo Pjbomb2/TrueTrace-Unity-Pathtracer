@@ -146,7 +146,11 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
             float light_pdf = 1.0f / (SA * LightMeshCount);
             #ifdef LBVH
-                CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id);
+                #ifdef FasterLightSampling
+                    light_pdf *= rcp(_MeshData[hit.mesh_id].LightTriCount);
+                #else
+                    CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id);
+                #endif
             #else
                 light_pdf *= rcp(_MeshData[hit.mesh_id].LightTriCount);
             #endif
@@ -203,7 +207,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     } else validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
 
     {
-        throughput *= bsdf;
         if (CurBounce == 0) {
             float Metallic = saturate(hitDat.metallic + ((!UseASVGF || UseReSTIRGI) ? 0 : hitDat.Specular));
             if (MaterialLobe == 3) Color.MetRoughIsSpec = ToColorSpecPacked(float3(0, Refracted ? 0.6f : 0.39f, 2 + !Refracted));
@@ -218,21 +221,18 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         } else if (Color.Data.w <= 0 && MaterialLobe == 3) {
             Color.MetRoughIsSpec = ToColorSpecPacked(float3(0, 0, 3));
         }
-        if(!GetFlag(hitDat.Tag, Thin) && GotFlipped && hitDat.specTrans != 0 && hit.mesh_id != 9999999) {
-            throughput *= exp(-hit.t * CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance));
+        if(!GetFlag(hitDat.Tag, Thin) && GotFlipped && hitDat.specTrans != 0 && hit.mesh_id != 9999999)
             bsdf *= exp(-hit.t * CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance));
-        }
+
+        throughput *= bsdf;
     }
-
-
 
     ray.origin = USGNorm * NormalOffset + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
 
     [branch] if (CurBounce == 0 || Color.Data.w == -1) {//Setting textures for denosier to use
-        
         Color.Flags = packRGBE((CurBounce == 0) ? max(hitDat.surfaceColor, 0.005f) : (unpackRGBE(Color.Flags) * max(hitDat.surfaceColor, 0.005f)));
         PrevScreenData = float4(asfloat(octahedral_32((CurBounce == 0 && Refracted) ? -Geomnorm : Geomnorm)), asfloat(octahedral_32((CurBounce == 0 && Refracted) ? -norm : norm)),PrevScreenData.z + hit.t, asfloat(((uint)(MaterialIndex << 2) >> 2) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
-
+        Color.MetRoughIsSpec |= (Refracted << 31);
         Color.Data = float4(((CurBounce == 0) ? max(throughput, 0.005f) : (max(throughput, 0.005f) * Color.Data.xyz)), (UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.01f && CurBounce == 0))) ? -1 : (CurBounce + 1));  
         throughput = 1;  
     }   
@@ -242,8 +242,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         #endif
         if(CurBounce > 0 && (CacheInstance.pathLength >> 5) & 0x1) {
             float3 res2 = 0;
-            if((hit.t >= CalcVoxelSize(ray.origin) * lerp(1.0f, 2.0f, random(64, pixel_index).x))) {
+            if((hit.t >= CalcVoxelSize(ray.origin) * lerp(1.0f, 2.0f, random(324, pixel_index).x))) {
                 if(RetrieveCacheRadiance(CacheInstance, ray.origin, norm, res2)) {
+                // CacheInstance.CurrentIlluminance = EncodeRGB(DecodeRGB(CacheInstance.CurrentIlluminance) + throughput * res2 * (MaterialLobe == 3 ? 1 : abs(dot(norm, ray.direction))));//fabled "infinite bounce" - VERY hard to weight properly
                     Color.Indirect += Color.throughput * res2;
                 }
             }
@@ -484,7 +485,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
                     else Color.Indirect += Color.throughput * DeSat(Radiance, 1.0f - SkyDesaturate) * BackgroundIntensity;
                     #ifdef RadianceCache
                         if(!UseReSTIRGI || ReSTIRGIUpdateRate == 0 || RandomNums[id.xy].z == 0)
-                            AddMissToCache(CacheBuffer[pixel_index], Color.throughput * Radiance);
+                            AddMissToCache(CacheBuffer[pixel_index], Color.throughput * Radiance * BackgroundIntensity);
                     #endif
                 }
             break;
@@ -587,9 +588,9 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     #ifdef LightMapping
         if(CurBounce == 0) TempMat.surfaceColor = 1;
     #endif
-    if (TempMat.specTrans != 1 && MetallicUV.x > 0) {float Tempmet = SingleComponentAtlas.SampleLevel(my_point_clamp_sampler, MetallicUV, max(CurBounce, 0)); TempMat.metallic = Tempmet;}
+    if (TempMat.specTrans != 1 && MetallicUV.x > 0) {float Tempmet = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, MetallicUV, max(CurBounce, 0)); TempMat.metallic = Tempmet;}
     if(GetFlag(TempMat.Tag, UseSmoothness))  TempMat.roughness = 1.0f - TempMat.roughness;
-    if (RoughnessUV.x > 0) TempMat.roughness = (GetFlag(TempMat.Tag, InvertSmoothnessTexture) ? (1.0f - saturate(SingleComponentAtlas.SampleLevel(my_point_clamp_sampler, RoughnessUV, max(CurBounce, 0)))) : saturate(SingleComponentAtlas.SampleLevel(my_point_clamp_sampler, RoughnessUV, max(CurBounce, 0))));
+    if (RoughnessUV.x > 0) TempMat.roughness = (GetFlag(TempMat.Tag, InvertSmoothnessTexture) ? (1.0f - saturate(SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, RoughnessUV, max(CurBounce, 0)))) : saturate(SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, RoughnessUV, max(CurBounce, 0))));
     TempMat.metallic = saturate(TempMat.metallic);
     if(!all(TempMat.MetallicRemap == float2(0,1))) TempMat.metallic = (TempMat.metallic * (TempMat.MetallicRemap.y - TempMat.MetallicRemap.x)) + TempMat.MetallicRemap.x;
     if(!all(TempMat.RoughnessRemap == float2(0,1))) TempMat.roughness = (TempMat.roughness * (TempMat.RoughnessRemap.y - TempMat.RoughnessRemap.x)) + TempMat.RoughnessRemap.x;
