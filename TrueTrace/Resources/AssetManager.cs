@@ -853,7 +853,10 @@ namespace TrueTrace {
                 QueCount = UpdateQue.Count;
                 for (int i = QueCount - 1; i >= 0; i--) {//Demotes from Render Que to Build Que in case mesh has changed
                     if (UpdateQue[i] != null && UpdateQue[i].gameObject.activeInHierarchy) {
-                        if (UpdateQue[i].ExistsInQue != 1) {
+                        if (UpdateQue[i].ExistsInQue == 0) {
+                            int Index = RenderQue.IndexOf(UpdateQue[i]); 
+                            RenderQue.RemoveAt(Index); 
+                            RenderTransforms.RemoveAt(Index);
                             UpdateQue[i].Reset(1);
                             BuildQue.Add(UpdateQue[i]);
                         }
