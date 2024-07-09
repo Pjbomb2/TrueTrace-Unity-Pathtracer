@@ -239,12 +239,17 @@ TrueTrace Options Description -
 
 # Huge thanks to these people for being sponsors/patrons:
 <ul>
-  <li>MakIt3D</li>
-  <li>Andrew Varga</li>
-  <li>Duong Nguyen</li>
-  <li>jhintringer</li>
-  <li>DJ</li>
-  <li>Yanus</li>
+  <li>Patreon:</li>
+  <li> MakIt3D</li>
+  <li> Christian</li>
+  <li> Andrew Varga</li>
+  <li> Duong Nguyen</li>
+  <li> DJ</li>
+  <li> Launemax</li>
+  <li> Yanus</li>
+  <li>Github Sponsors:</li>
+  <li> jhintringer</li>
+  <li>Kofi:</li>
 </ul>
 
 # Sample Images(Taken from various stages of development)
