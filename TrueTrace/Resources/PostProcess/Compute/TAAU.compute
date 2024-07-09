@@ -135,13 +135,11 @@ float2 get_shared_motion(int2 pos, int2 group_base)
 	return s_motion[addr.y][addr.x];
 }
 
-Texture2D<float> CorrectedDepthTex;
 
 void get_moments(int2 pos, int2 group_base, int r, out float3 mom1, out float3 mom2)
 {
 	mom1 = 0.0;
 	mom2 = 0.0;
-	// float Depth = CorrectedDepthTex.SampleLevel(my_linear_clamp_sampler, pos / float2(source_width, source_height), 0).x;
 	for (int yy = -r; yy <= r; yy++)
 	{
 		for (int xx = -r; xx <= r; xx++)
@@ -153,8 +151,6 @@ void get_moments(int2 pos, int2 group_base, int r, out float3 mom1, out float3 m
 			float3 c;
 			int checkerboard_flags;
 			get_shared_color(p, group_base, c, checkerboard_flags);
-			// float Depth2 = CorrectedDepthTex.SampleLevel(my_linear_clamp_sampler, p / float2(source_width, source_height), 0).x;
-			// if(abs(Depth - Depth2) > 0.3f) continue;
 			mom1 += c.rgb;
 			mom2 += c.rgb * c.rgb;
 		}

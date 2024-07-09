@@ -15,7 +15,7 @@ namespace TrueTrace {
         [SerializeField] public bool DoTLASUpdates = true;
         [SerializeField] public bool Accumulate = true;
         [SerializeField] public bool PPBloom = false;
-        [SerializeField] public float BloomStrength = 32.0f;
+        [SerializeField] public float BloomStrength = 0.5f;
         [SerializeField] public bool PPDoF = false;
         [SerializeField] public float DoFAperature = 0.2f;
         [SerializeField] public float DoFAperatureScale = 1.0f;
@@ -26,7 +26,6 @@ namespace TrueTrace {
         [SerializeField] public bool PPTAA = false;
         [SerializeField] public float RenderScale = 1.0f;
         [SerializeField] public bool UseASVGF = false;
-        [SerializeField] public bool UseReCur = false;
         [SerializeField] public bool UseTAAU = true;
         [SerializeField] public int ReSTIRGIUpdateRate = 7;
         [SerializeField] public bool UseReSTIRGITemporal = true;
@@ -37,7 +36,6 @@ namespace TrueTrace {
         [SerializeField] public int ReSTIRGITemporalMCap = 32;
         [SerializeField] public bool DoReSTIRGIConnectionValidation = true;
         [SerializeField] public float Exposure = 1.0f;
-        [SerializeField] public float ReCurBlurRadius = 30.0f;
         [SerializeField] public bool DoPartialRendering = false;
         [SerializeField] public int PartialRenderingFactor = 1;
         [SerializeField] public bool DoFirefly = false;
@@ -61,5 +59,7 @@ namespace TrueTrace {
         [SerializeField] public int BackgroundType = 0;
         [SerializeField] public float BackgroundIntensity = 1.0f;
         [SerializeField] public Vector3 SceneBackgroundColor = Vector3.one;
+        [SerializeField] public int SecondaryBackgroundType = 0;
+        [SerializeField] public Vector3 SecondarySceneBackgroundColor = Vector3.one;
     }
 }

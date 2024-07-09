@@ -269,7 +269,7 @@ namespace TrueTrace {
 		}
 	    private void OnEnable() {
 			bool Fine = TryGetComponent<ParentObject>(out ParentObject ThisParent);
-			Fine = transform.parent.TryGetComponent<ParentObject>(out ParentObject ParParent) || Fine;
+			if(transform.parent != null) Fine = transform.parent.TryGetComponent<ParentObject>(out ParentObject ParParent) || Fine;
 	    	if(gameObject.scene.isLoaded && Fine) {
 	    		matfill();
 	    		if(WasDeleted) return;
@@ -280,7 +280,7 @@ namespace TrueTrace {
 					else {
 						ThisParent.enabled = true;
 					}
-		    	} else if(ParParent != null) {
+		    	} else if(transform.parent.TryGetComponent<ParentObject>(out ParentObject ParParent)) {
 		    		ParParent.NeedsToUpdate = true;
 		    		if(ParParent.enabled)
 						if(AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ParParent)) AssetManager.Assets.UpdateQue.Add(ParParent);
@@ -292,7 +292,7 @@ namespace TrueTrace {
 	    }
 
 	    private void OnDisable() {
-	    	if(gameObject.scene.isLoaded && transform.parent.TryGetComponent<ParentObject>(out ParentObject ParParent)) {
+	    	if(transform.parent != null && gameObject.scene.isLoaded && transform.parent.TryGetComponent<ParentObject>(out ParentObject ParParent)) {
 	    		ParParent.NeedsToUpdate = true;
 	    		if(AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ParParent)) AssetManager.Assets.UpdateQue.Add(ParParent);
 	    	} else if(gameObject.scene.isLoaded && TryGetComponent<ParentObject>(out ParentObject ThisParent)) {

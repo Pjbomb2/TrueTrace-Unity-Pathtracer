@@ -23,18 +23,6 @@ namespace TrueTrace {
         bool SharpenInitialized = false;
 
 
-
-
-
-
-
-
-
-
-
-
-
-
         public RenderTexture _TAAPrev;
         public RenderTexture Intermediate;
         public RenderTexture SuperIntermediate;
@@ -51,7 +39,6 @@ namespace TrueTrace {
 
         private RenderTexture TAAA;
         private RenderTexture TAAB;
-        public RenderTexture[] BloomSamplesUp;
         public RenderTexture[] BloomSamplesDown;
         public RenderTexture BloomIntermediate;
 
@@ -138,7 +125,6 @@ namespace TrueTrace {
 
             ExposureBuffer.ReleaseSafe();
             BloomIntermediate.ReleaseSafe();
-            if(BloomSamplesUp != null) for(int i = 0; i < BloomSamplesUp.Length; i++) BloomSamplesUp[i].ReleaseSafe();
             if(BloomSamplesDown != null) for(int i = 0; i < BloomSamplesDown.Length; i++) BloomSamplesDown[i].ReleaseSafe();
 
         }
@@ -182,6 +168,7 @@ namespace TrueTrace {
             List<float> TestBuffer = new List<float>();
             TestBuffer.Add(1);
             ExposureBuffer?.Release(); ExposureBuffer = new ComputeBuffer(1, sizeof(float)); ExposureBuffer.SetData(TestBuffer);
+
 
             Bloom.SetInt("screen_width", Screen.width);
             Bloom.SetInt("screen_height", Screen.height);
@@ -245,7 +232,6 @@ namespace TrueTrace {
             if(!BloomInit) {
                 if(BloomInitialized) {
                     BloomIntermediate.ReleaseSafe();
-                    if(BloomSamplesUp != null) for(int i = 0; i < BloomSamplesUp.Length; i++) BloomSamplesUp[i].ReleaseSafe();
                     if(BloomSamplesDown != null) for(int i = 0; i < BloomSamplesDown.Length; i++) BloomSamplesDown[i].ReleaseSafe();
                     BloomInitialized = false;
                 }
@@ -282,7 +268,6 @@ namespace TrueTrace {
 
 
         private void InitBloom() {
-            BloomSamplesUp = new RenderTexture[8];
             BloomSamplesDown = new RenderTexture[8];
             int BloomWidth = Screen.width / 2;
             int BloomHeight = Screen.height / 2;
@@ -290,7 +275,6 @@ namespace TrueTrace {
             BloomHeights = new int[8];
             for (int i = 0; i < 8; i++)
             {
-                CommonFunctions.CreateRenderTexture(ref BloomSamplesUp[i], BloomWidth, BloomHeight, CommonFunctions.RTHalf4);
                 CommonFunctions.CreateRenderTexture(ref BloomSamplesDown[i], BloomWidth, BloomHeight, CommonFunctions.RTHalf4);
                 BloomWidths[i] = BloomWidth;
                 BloomHeights[i] = BloomHeight;
@@ -303,6 +287,10 @@ namespace TrueTrace {
         public void ExecuteBloom(ref RenderTexture _converged, float BloomStrength, CommandBuffer cmd)
         {//need to fix this so it doesnt create new textures every time
             if(!BloomInitialized) InitBloom();
+            if (Bloom == null) { Bloom = Resources.Load<ComputeShader>("PostProcess/Compute/Bloom"); }
+
+            Bloom.SetInt("screen_width", Screen.width);
+            Bloom.SetInt("screen_height", Screen.height);
             cmd.BeginSample("Bloom");
             Bloom.SetFloat("strength", BloomStrength);
             cmd.SetComputeIntParam(Bloom, "screen_width", Screen.width);
@@ -312,7 +300,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(Bloom, BloomLowPassKernel, "InputTex", _converged);
             cmd.SetComputeTextureParam(Bloom, BloomLowPassKernel, "OutputTex", BloomSamplesDown[0]);
             cmd.DispatchCompute(Bloom, BloomLowPassKernel, (int)Mathf.Ceil(BloomWidths[0] / 16.0f), (int)Mathf.Ceil(BloomHeights[0] / 16.0f), 1);
-            for (int i = 1; i < 6; i++)
+            for (int i = 1; i < 8; i++)
             {
                 // Debug.Log(BloomWidths[i]);
                 cmd.SetComputeIntParam(Bloom, "TargetWidth", BloomWidths[i]);
@@ -325,15 +313,15 @@ namespace TrueTrace {
             }
             Bloom.SetBool("IsFinal", false);
 
-            for (int i = 5; i > 0; i--)
+            for (int i = 7; i > 0; i--)
             {
                 cmd.SetComputeIntParam(Bloom, "TargetWidth", BloomWidths[i - 1]);
                 cmd.SetComputeIntParam(Bloom, "TargetHeight", BloomHeights[i - 1]);
                 cmd.SetComputeIntParam(Bloom, "screen_width", BloomWidths[i]);
                 cmd.SetComputeIntParam(Bloom, "screen_height", BloomHeights[i]);
                 cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "InputTex", BloomSamplesDown[i]);
-                cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OutputTex", BloomSamplesUp[i - 1]);
-                cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OrigTex", BloomSamplesDown[i - 1]);
+                cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OutputTex", BloomSamplesDown[i - 1]);
+                // cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OrigTex", BloomSamplesDown[i - 1]);
 
                 cmd.DispatchCompute(Bloom, BloomUpsampleKernel, (int)Mathf.Ceil(BloomWidths[i - 1] / 16.0f), (int)Mathf.Ceil(BloomHeights[i - 1] / 16.0f), 1);
             }
@@ -344,7 +332,7 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(Bloom, "screen_height", BloomHeights[0]);
             Bloom.SetBool("IsFinal", true);
             cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OrigTex", BloomIntermediate);
-            cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "InputTex", BloomSamplesUp[0]);
+            cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "InputTex", BloomSamplesDown[0]);
             cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OutputTex", _converged);
             cmd.DispatchCompute(Bloom, BloomUpsampleKernel, (int)Mathf.Ceil(Screen.width / 16.0f), (int)Mathf.Ceil(Screen.height / 16.0f), 1);
             cmd.EndSample("Bloom");
@@ -490,7 +478,7 @@ namespace TrueTrace {
             CommonFunctions.CreateRenderTexture(ref TAAB, Screen.width, Screen.height, CommonFunctions.RTHalf4);
             TAAUInitialized = true;
         }
-        public void ExecuteTAAU(ref RenderTexture Output, ref RenderTexture Input, CommandBuffer cmd, int CurFrame, RenderTexture CorrectedDepthTex)
+        public void ExecuteTAAU(ref RenderTexture Output, ref RenderTexture Input, CommandBuffer cmd, int CurFrame)
         {//need to fix this so it doesnt create new textures every time
             if(!TAAUInitialized) InitializeTAAU();
             cmd.BeginSample("TAAU");
@@ -504,7 +492,6 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(TAAU, TAAUKernel, "TEX_ASVGF_TAA_B", !IsEven ? TAAA : TAAB);
             cmd.SetComputeTextureParam(TAAU, TAAUKernel, "TEX_FLAT_COLOR", Input);
             cmd.SetComputeTextureParam(TAAU, TAAUKernel, "IMG_TAA_OUTPUT", Output);
-            cmd.SetComputeTextureParam(TAAU, TAAUKernel, "CorrectedDepthTex", CorrectedDepthTex);
             TAAU.SetTextureFromGlobal(TAAUKernel, "Albedo", "_CameraGBufferTexture0");
             TAAU.SetTextureFromGlobal(TAAUKernel, "Albedo2", "_CameraGBufferTexture1");
             TAAU.SetTextureFromGlobal(TAAUKernel, "TEX_FLAT_MOTION", "_CameraMotionVectorsTexture");

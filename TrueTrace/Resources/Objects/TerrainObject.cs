@@ -111,6 +111,7 @@ namespace TrueTrace {
 
     [ExecuteInEditMode]
     [System.Serializable]
+    [RequireComponent(typeof(Terrain))]
     public class TerrainObject : MonoBehaviour
     {
         Terrain TerrainTile;

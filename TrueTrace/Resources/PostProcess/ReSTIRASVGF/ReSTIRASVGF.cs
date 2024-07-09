@@ -52,6 +52,8 @@ namespace TrueTrace {
         private RenderTexture ReflectedRefractedTex;
         private RenderTexture ReflectedRefractedTexPrev;
 
+        public RenderTexture CorrectedDistanceTexA;
+        public RenderTexture CorrectedDistanceTexB;
 
         public Camera camera;
 
@@ -65,6 +67,7 @@ namespace TrueTrace {
         private int Temporal;
         private int Atrous_LF;
         private int Atrous;
+        private int DistanceCorrection;
         private Vector3 PrevCamPos;
 
         public void ClearAll()
@@ -104,6 +107,8 @@ namespace TrueTrace {
                 CommonFunctions.ReleaseSafe(InputLFSH);
                 CommonFunctions.ReleaseSafe(InputLFCOCG);
                 CommonFunctions.ReleaseSafe(TEX_PT_COLOR_SPEC);
+                CommonFunctions.ReleaseSafe(CorrectedDistanceTexA);
+                CommonFunctions.ReleaseSafe(CorrectedDistanceTexB);
             Initialized = false;
         }
 
@@ -120,6 +125,7 @@ namespace TrueTrace {
             Temporal = shader.FindKernel("Temporal");
             CopyData = shader.FindKernel("CopyData");
             Atrous = shader.FindKernel("Atrous");
+            DistanceCorrection = shader.FindKernel("DistanceCorrectionKernel");
             shader.SetInt("screen_width", ScreenWidth);
             shader.SetInt("screen_height", ScreenHeight);
 
@@ -162,6 +168,8 @@ namespace TrueTrace {
             CommonFunctions.CreateRenderTexture(ref InputLFSH, ScreenWidth, ScreenHeight, CommonFunctions.RTFull4);
             CommonFunctions.CreateRenderTexture(ref InputLFCOCG, ScreenWidth, ScreenHeight, CommonFunctions.RTFull2);
             CommonFunctions.CreateRenderTexture(ref TEX_PT_COLOR_SPEC, ScreenWidth, ScreenHeight, CommonFunctions.RTFull1);
+            CommonFunctions.CreateRenderTexture(ref CorrectedDistanceTexA, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf2);
+            CommonFunctions.CreateRenderTexture(ref CorrectedDistanceTexB, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf2);
             Initialized = true;
         }
 
@@ -172,11 +180,9 @@ namespace TrueTrace {
         public void Do(ref ComputeBuffer _ColorBuffer,  
                         ref RenderTexture Output, 
                         float ResolutionRatio, 
-                        RenderTexture TEX_PT_VIEW_DEPTH_B, 
                         RenderTexture ScreenSpaceInfo, 
                         RenderTexture ScreenSpaceInfoPrev, 
                         CommandBuffer cmd, 
-                        RenderTexture CorrectedDepthTex, 
                         int CurFrame, 
                         ref RenderTexture SecondaryTriData, 
                         int PartialRenderingFactor, 
@@ -191,6 +197,16 @@ namespace TrueTrace {
 
             camera = RayTracingMaster._camera;
             bool EvenFrame = CurFrame % 2 == 0;
+            cmd.BeginSample("Dist Correct Kernel");
+            shader.SetVector("Forward", camera.transform.forward);
+            shader.SetFloat("FarPlane", camera.farClipPlane);
+            shader.SetFloat("NearPlane", camera.nearClipPlane);
+            shader.SetMatrix("_CameraToWorld", camera.cameraToWorldMatrix);
+            shader.SetMatrix("_CameraInverseProjection", camera.projectionMatrix.inverse);
+            shader.SetTextureFromGlobal(DistanceCorrection, "Depth", "_CameraDepthTexture");
+            cmd.SetComputeTextureParam(shader, DistanceCorrection, "TEX_PT_VIEW_DEPTH_AWRITE", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
+            cmd.DispatchCompute(shader, DistanceCorrection, Mathf.CeilToInt((ScreenWidth) / 32.0f), Mathf.CeilToInt((ScreenHeight) / 32.0f), 1);
+            cmd.EndSample("Dist Correct Kernel");
             cmd.BeginSample("ASVGF Copy Data Kernel");
             cmd.SetComputeIntParam(shader, "MaxIterations", 4);
             cmd.SetComputeFloatParam(shader, "ResRatio", ResolutionRatio);
@@ -210,7 +226,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_COLOR_HFWrite", ASVGF_ATROUS_PING_HF);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_COLOR_SPECWrite", TEX_PT_COLOR_SPEC);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_NORMALS_AWrite", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
-            cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_VIEW_DEPTH_B", TEX_PT_VIEW_DEPTH_B);
+            cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_VIEW_DEPTH_B", !EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_NORMALS_B", (!EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
             cmd.SetComputeTextureParam(shader, CopyData, "SecondaryTriData", SecondaryTriData);
             cmd.SetComputeTextureParam(shader, CopyData, "PrimaryTriData", PrimaryTriData);
@@ -232,7 +248,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, Gradient_Img, "TEX_ASVGF_GRAD_LF_PONG", ASVGF_GRAD_LF_PONG);
             cmd.SetComputeTextureParam(shader, Gradient_Img, "TEX_PT_COLOR_LF_SH", InputLFSH);
             cmd.SetComputeTextureParam(shader, Gradient_Img, "TEX_ASVGF_HIST_COLOR_LF_SH_B", (!EvenFrame ? ASVGF_HIST_COLOR_LF_SH_A : ASVGF_HIST_COLOR_LF_SH_B));
-            cmd.SetComputeTextureParam(shader, Gradient_Img, "TEX_PT_VIEW_DEPTH_AWRITE", CorrectedDepthTex);
+            cmd.SetComputeTextureParam(shader, Gradient_Img, "TEX_PT_VIEW_DEPTH_AWRITE", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
             cmd.SetComputeTextureParam(shader, Gradient_Img, "AlbedoColorA", (EvenFrame ? AlbedoColorA : AlbedoColorB));
             cmd.SetComputeTextureParam(shader, Gradient_Img, "TEX_PT_NORMALS_AWrite", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
             cmd.SetComputeTextureParam(shader, Gradient_Img, "ReflectedRefractedTexWrite", (EvenFrame ? ReflectedRefractedTex : ReflectedRefractedTexPrev));
@@ -266,8 +282,8 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, Temporal, "MetallicA", (EvenFrame ? MetallicA : MetallicB));
             cmd.SetComputeTextureParam(shader, Temporal, "ReflectedRefractedTex", (EvenFrame ? ReflectedRefractedTex : ReflectedRefractedTexPrev));
             cmd.SetComputeTextureParam(shader, Temporal, "ReflectedRefractedTexPrev", (!EvenFrame ? ReflectedRefractedTex : ReflectedRefractedTexPrev));
-            cmd.SetComputeTextureParam(shader, Temporal, "TEX_PT_VIEW_DEPTH_A", CorrectedDepthTex);
-            cmd.SetComputeTextureParam(shader, Temporal, "TEX_PT_VIEW_DEPTH_B", TEX_PT_VIEW_DEPTH_B);
+            cmd.SetComputeTextureParam(shader, Temporal, "TEX_PT_VIEW_DEPTH_A", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
+            cmd.SetComputeTextureParam(shader, Temporal, "TEX_PT_VIEW_DEPTH_B", !EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
             cmd.SetComputeTextureParam(shader, Temporal, "TEX_PT_NORMALS_A", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
             cmd.SetComputeTextureParam(shader, Temporal, "TEX_PT_NORMALS_B", (!EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
             cmd.SetComputeTextureParam(shader, Temporal, "TEX_ASVGF_HIST_COLOR_LF_SH_B", (!EvenFrame ? ASVGF_HIST_COLOR_LF_SH_A : ASVGF_HIST_COLOR_LF_SH_B));
@@ -300,7 +316,7 @@ namespace TrueTrace {
             cmd.BeginSample("ASVGF Atrous LF: " + 0);
             cmd.SetComputeIntParam(shader, "iteration", 0);
             cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_PT_NORMALS_A", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
-            cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_PT_VIEW_DEPTH_A", CorrectedDepthTex);
+            cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_PT_VIEW_DEPTH_A", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
             shader.SetTextureFromGlobal(Atrous_LF, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
 
 
@@ -323,7 +339,7 @@ namespace TrueTrace {
                 cmd.BeginSample("ASVGF Atrous LF " + (e + 1));
                 cmd.SetComputeIntParam(shader, "iteration", e + 1);
                 cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_PT_NORMALS_A", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
-                cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_PT_VIEW_DEPTH_A", CorrectedDepthTex);
+                cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_PT_VIEW_DEPTH_A", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
 
                 cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_ASVGF_ATROUS_PING_LF_SH", (e % 2 == 0) ? ASVGF_ATROUS_PONG_LF_SH : ASVGF_ATROUS_PING_LF_SH);
                 cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_ASVGF_ATROUS_PING_LF_COCG", (e % 2 == 0) ? ASVGF_ATROUS_PONG_LF_COCG : ASVGF_ATROUS_PING_LF_COCG);
@@ -341,7 +357,7 @@ namespace TrueTrace {
 
                 cmd.SetComputeIntParam(shader, "spec_iteration", e);
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_PT_NORMALS_A", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
-                cmd.SetComputeTextureParam(shader, Atrous, "TEX_PT_VIEW_DEPTH_A", CorrectedDepthTex);
+                cmd.SetComputeTextureParam(shader, Atrous, "TEX_PT_VIEW_DEPTH_A", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
                 shader.SetTextureFromGlobal(Atrous, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_GRAD_HF_SPEC_PONG", ASVGF_GRAD_HF_SPEC_PONG);
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_HIST_MOMENTS_HF_A", (EvenFrame ? ASVGF_HIST_MOMENTS_HF_A : ASVGF_HIST_MOMENTS_HF_B));

@@ -321,7 +321,9 @@ void NodeUpdate(uint3 id : SV_DispatchThreadID)
 
 
 struct BVHNode8DataCompressed {
-	float3 node_0xyz;
+	uint node_0x;
+	uint node_0y;
+	uint node_0z;
 	uint node_0w;
 	uint node_1x;
 	uint node_1y;
@@ -353,7 +355,9 @@ void NodeCompress(uint3 id : SV_DispatchThreadID)
 	const BVHNode8Data TempNode = BVHNodes[id.x];
 	BVHNode8DataCompressed TempBVHNode = AggNodes[id.x + NodeOffset];
 
-	TempBVHNode.node_0xyz = float3(TempNode.p.x, TempNode.p.y, TempNode.p.z);
+	TempBVHNode.node_0x = asuint(TempNode.p.x);
+	TempBVHNode.node_0y = asuint(TempNode.p.y);
+	TempBVHNode.node_0z = asuint(TempNode.p.z);
 	TempBVHNode.node_0w = (TempNode.e[0] | (TempNode.e[1] << 8) | (TempNode.e[2] << 16) | (TempNode.imask << 24));
 	TempBVHNode.node_1x = TempNode.base_index_child;
 	TempBVHNode.node_1y = TempNode.base_index_triangle;

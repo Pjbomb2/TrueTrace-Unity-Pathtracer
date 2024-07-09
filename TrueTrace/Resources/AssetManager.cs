@@ -775,7 +775,6 @@ namespace TrueTrace {
 
             int QueCount = RemoveQue.Count;
             {//Main Object Data Handling
-             // UnityEngine.Profiling.Profiler.BeginSample("Remove");
                 for (int i = QueCount - 1; i >= 0; i--) {
                     switch(RemoveQue[i].ExistsInQue) {
                         case 0: {int Index = RenderQue.IndexOf(RemoveQue[i]); RenderQue.RemoveAt(Index); RenderTransforms.RemoveAt(Index);}; break;
@@ -787,20 +786,6 @@ namespace TrueTrace {
                     ChildrenUpdated = true;
                 }
                 RemoveQue.Clear();
-            // UnityEngine.Profiling.Profiler.EndSample();
-             // UnityEngine.Profiling.Profiler.BeginSample("Update");
-                QueCount = UpdateQue.Count;
-                for (int i = QueCount - 1; i >= 0; i--) {
-                    if(UpdateQue[i] == null) continue;
-                    switch(UpdateQue[i].ExistsInQue) {
-                        case 0: {int Index = RenderQue.IndexOf(UpdateQue[i]); RenderQue.RemoveAt(Index); RenderTransforms.RemoveAt(Index);}; break;
-                        case 1: BuildQue.Remove(UpdateQue[i]); break;
-                    }
-                    UpdateQue[i].ExistsInQue = -1;
-                    ChildrenUpdated = true;
-                }
-            // UnityEngine.Profiling.Profiler.EndSample();
-             // UnityEngine.Profiling.Profiler.BeginSample("Add");
                 QueCount = AddQue.Count;
                 for (int i = QueCount - 1; i >= 0; i--) {
                     bool Contained = AddQue[i].ExistsInQue != 3;
@@ -811,8 +796,6 @@ namespace TrueTrace {
                     }
                 }
                 AddQue.Clear();
-            // UnityEngine.Profiling.Profiler.EndSample();
-             // UnityEngine.Profiling.Profiler.BeginSample("Build");
                 QueCount = BuildQue.Count;
                 for (int i = QueCount - 1; i >= 0; i--) {//Promotes from Build Que to Render Que
                     if (BuildQue[i].AsyncTask.IsFaulted) {//Fuck, something fucked up
@@ -848,8 +831,6 @@ namespace TrueTrace {
                         }
                     }
                 }
-            // UnityEngine.Profiling.Profiler.EndSample();
-             // UnityEngine.Profiling.Profiler.BeginSample("Update 2");
                 QueCount = UpdateQue.Count;
                 for (int i = QueCount - 1; i >= 0; i--) {//Demotes from Render Que to Build Que in case mesh has changed
                     if (UpdateQue[i] != null && UpdateQue[i].gameObject.activeInHierarchy) {
@@ -864,11 +845,9 @@ namespace TrueTrace {
                     }
                     UpdateQue.RemoveAt(i);
                 }
-            // UnityEngine.Profiling.Profiler.EndSample();
             }
             {//Instanced Models Data Handling
                 InstanceData.UpdateRenderAndBuildQues(ref ChildrenUpdated);
-             // UnityEngine.Profiling.Profiler.BeginSample("Asset Instance Remove");
                 QueCount = InstanceUpdateQue.Count;
                 for (int i = QueCount - 1; i >= 0; i--) {//Demotes from Render Que to Build Que in case mesh has changed
                     if(InstanceRenderQue.Contains(InstanceUpdateQue[i])) {InstanceRenderTransforms.RemoveAt(InstanceRenderQue.IndexOf(InstanceUpdateQue[i])); InstanceRenderQue.Remove(InstanceUpdateQue[i]);}
@@ -887,9 +866,7 @@ namespace TrueTrace {
                     OnlyInstanceUpdated = true;
                 }
                 InstanceRemoveQue.Clear();
-            // UnityEngine.Profiling.Profiler.EndSample();
 
-             // UnityEngine.Profiling.Profiler.BeginSample("Asset Instance Add");
                 QueCount = InstanceAddQue.Count;
                 for (int i = QueCount - 1; i >= 0; i--) {
                     if (InstanceAddQue[i].InstanceParent != null && InstanceAddQue[i].InstanceParent.gameObject.activeInHierarchy) {
@@ -898,8 +875,6 @@ namespace TrueTrace {
                         InstanceAddQue.RemoveAt(i);
                     }
                 }
-            // UnityEngine.Profiling.Profiler.EndSample();
-             // UnityEngine.Profiling.Profiler.BeginSample("Asset Instance Build");
                 QueCount = InstanceBuildQue.Count;
                 for (int i = QueCount - 1; i >= 0; i--) {//Promotes from Build Que to Render Que
                     if (InstanceBuildQue[i].InstanceParent.HasCompleted == true) {
@@ -910,7 +885,6 @@ namespace TrueTrace {
                         OnlyInstanceUpdated = true;
                     }
                 }
-            // UnityEngine.Profiling.Profiler.EndSample();
             }
 
 
@@ -968,7 +942,7 @@ namespace TrueTrace {
             RunningTasks = 0;
             for (int i = 0; i < TempQue.Count; i++)
             {
-                if(TempQue[i].transform.parent.name == "InstancedStorage") continue;
+                if(TempQue[i].transform.parent != null && TempQue[i].transform.parent.name == "InstancedStorage") continue;
                 if (TempQue[i].HasCompleted && !TempQue[i].NeedsToUpdate) {
                     TempQue[i].ExistsInQue = 0;
                     RenderQue.Add(TempQue[i]);

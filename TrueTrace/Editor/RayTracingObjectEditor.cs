@@ -4,14 +4,146 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using CommonVars;
+using System.IO;
+using System.Xml;
+using System.Xml.Serialization;
 
 namespace TrueTrace {
+    public class SavePopup : PopupWindowContent
+    {
+        string PresetName = "Null";
+        RayTracingObject ThisOBJ;
+        int SaveIndex;
+
+        public SavePopup(RayTracingObject ThisOBJ, int SaveIndex) {
+            this.ThisOBJ = ThisOBJ;
+            this.SaveIndex = SaveIndex;
+        }
+        public override Vector2 GetWindowSize()
+        {
+            return new Vector2(460, 50);
+        }
+
+        public override void OnGUI(Rect rect) {
+            // Debug.Log("ONINSPECTORGUI");
+
+            PresetName = GUILayout.TextField(PresetName, 32);
+            
+            if(GUILayout.Button("Save Preset")) {
+                RayObjs PresetRays;
+                int CopyIndex = -1;
+                using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets").text)) {
+                    var serializer = new XmlSerializer(typeof(RayObjs));
+                    PresetRays = serializer.Deserialize(A) as RayObjs;
+                    int RayReadCount = PresetRays.RayObj.Count;
+                    for(int i = 0; i < RayReadCount; i++) {
+                        if(PresetRays.RayObj[i].MatName.Equals(PresetName)) {
+                            CopyIndex = i;
+                            break;
+                        }
+                    }
+                }
+                RayObjectDatas TempRay = new RayObjectDatas() {
+                    ID = 0,
+                    MatName = PresetName,
+                    OptionID = (int)ThisOBJ.MaterialOptions[SaveIndex],
+                    TransCol = ThisOBJ.TransmissionColor[SaveIndex],
+                    BaseCol = ThisOBJ.BaseColor[SaveIndex],
+                    MetRemap = ThisOBJ.MetallicRemap[SaveIndex],
+                    RoughRemap = ThisOBJ.RoughnessRemap[SaveIndex],
+                    Emiss = ThisOBJ.emmission[SaveIndex],
+                    EmissCol = ThisOBJ.EmissionColor[SaveIndex],
+                    Rough = ThisOBJ.Roughness[SaveIndex],
+                    IOR = ThisOBJ.IOR[SaveIndex],
+                    Met = ThisOBJ.Metallic[SaveIndex],
+                    SpecTint = ThisOBJ.SpecularTint[SaveIndex],
+                    Sheen = ThisOBJ.Sheen[SaveIndex],
+                    SheenTint = ThisOBJ.SheenTint[SaveIndex],
+                    Clearcoat = ThisOBJ.ClearCoat[SaveIndex],
+                    ClearcoatGloss = ThisOBJ.ClearCoatGloss[SaveIndex],
+                    Anisotropic = ThisOBJ.Anisotropic[SaveIndex],
+                    Flatness = ThisOBJ.Flatness[SaveIndex],
+                    DiffTrans = ThisOBJ.DiffTrans[SaveIndex],
+                    SpecTrans = ThisOBJ.SpecTrans[SaveIndex],
+                    FollowMat = ThisOBJ.FollowMaterial[SaveIndex],
+                    ScatterDist = ThisOBJ.ScatterDist[SaveIndex],
+                    Spec = ThisOBJ.Specular[SaveIndex],
+                    AlphaCutoff = ThisOBJ.AlphaCutoff[SaveIndex],
+                    NormStrength = ThisOBJ.NormalStrength[SaveIndex],
+                    Hue = ThisOBJ.Hue[SaveIndex],
+                    Brightness = ThisOBJ.Brightness[SaveIndex],
+                    Contrast = ThisOBJ.Contrast[SaveIndex],
+                    Saturation = ThisOBJ.Saturation[SaveIndex],
+                    BlendColor = ThisOBJ.BlendColor[SaveIndex],
+                    BlendFactor = ThisOBJ.BlendFactor[SaveIndex],
+                    MainTexScaleOffset = ThisOBJ.MainTexScaleOffset[SaveIndex],
+                    SecondaryTextureScale = ThisOBJ.SecondaryTextureScale[SaveIndex],
+                    Rotation = ThisOBJ.Rotation[SaveIndex],
+                    Flags = ThisOBJ.Flags[SaveIndex]
+                };
+                if(CopyIndex != -1) PresetRays.RayObj[CopyIndex] = TempRay;
+                else PresetRays.RayObj.Add(TempRay);
+
+                using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialPresets.xml")) {
+                    var serializer = new XmlSerializer(typeof(RayObjs));
+                    serializer.Serialize(writer.BaseStream, PresetRays);
+                    UnityEditor.AssetDatabase.Refresh();
+                }
+                this.editorWindow.Close();
+            }
+
+
+        }
+    }
+    public class LoadPopup : PopupWindowContent
+    {
+        RayObjs PresetRays;
+        Vector2 ScrollPosition;
+        RayTracingObjectEditor SourceWindow;
+        public LoadPopup(RayTracingObjectEditor editor) {
+            this.SourceWindow = editor;
+        }
+        private void CallEditorFunction(RayObjectDatas RayObj) {
+            if(SourceWindow != null) {
+                SourceWindow.LoadFunction(RayObj);
+            }
+        }
+        public override Vector2 GetWindowSize()
+        {
+            return new Vector2(460, 250);
+        }
+
+        public override void OnGUI(Rect rect) {
+            using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets").text)) {
+                var serializer = new XmlSerializer(typeof(RayObjs));
+                PresetRays = serializer.Deserialize(A) as RayObjs;
+            }
+            int PresetLength = PresetRays.RayObj.Count;
+            ScrollPosition = GUILayout.BeginScrollView(ScrollPosition, GUILayout.Width(460), GUILayout.Height(250));
+            for(int i = 0; i < PresetLength; i++) {
+                GUILayout.BeginHorizontal();
+                    if(GUILayout.Button(PresetRays.RayObj[i].MatName)) {CallEditorFunction(PresetRays.RayObj[i]); this.editorWindow.Close();}
+                    if(GUILayout.Button("Delete")) {
+                        PresetRays.RayObj.RemoveAt(i);
+                        using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialPresets.xml")) {
+                            var serializer = new XmlSerializer(typeof(RayObjs));
+                            serializer.Serialize(writer.BaseStream, PresetRays);
+                            UnityEditor.AssetDatabase.Refresh();
+                        }
+                        OnGUI(new Rect(0,0,100,10));
+                    }
+                GUILayout.EndHorizontal();
+            }
+            GUILayout.EndScrollView();
+        }
+    }
     [CustomEditor(typeof(RayTracingObject))]
     public class RayTracingObjectEditor : Editor
     {
 
         int Selected = 0;
         string[] TheseNames;
+        RayTracingObject t;
         void OnEnable()
         {
             (target as RayTracingObject).matfill();
@@ -26,11 +158,60 @@ namespace TrueTrace {
             }
         }
 
+        public void LoadFunction(RayObjectDatas RayObj) {
+            t.MaterialOptions[Selected] = (RayTracingObject.Options)RayObj.OptionID;
+            t.TransmissionColor[Selected] = RayObj.TransCol;
+            t.BaseColor[Selected] = RayObj.BaseCol;
+            t.MetallicRemap[Selected] = RayObj.MetRemap;
+            t.RoughnessRemap[Selected] = RayObj.RoughRemap;
+            t.emmission[Selected] = RayObj.Emiss;
+            t.EmissionColor[Selected] = RayObj.EmissCol;
+            t.Roughness[Selected] = RayObj.Rough;
+            t.IOR[Selected] = RayObj.IOR;
+            t.Metallic[Selected] = RayObj.Met;
+            t.SpecularTint[Selected] = RayObj.SpecTint;
+            t.Sheen[Selected] = RayObj.Sheen;
+            t.SheenTint[Selected] = RayObj.SheenTint;
+            t.ClearCoat[Selected] = RayObj.Clearcoat;
+            t.ClearCoatGloss[Selected] = RayObj.ClearcoatGloss;
+            t.Anisotropic[Selected] = RayObj.Anisotropic;
+            t.Flatness[Selected] = RayObj.Flatness;
+            t.DiffTrans[Selected] = RayObj.DiffTrans;
+            t.SpecTrans[Selected] = RayObj.SpecTrans;
+            t.FollowMaterial[Selected] = RayObj.FollowMat;
+            t.ScatterDist[Selected] = RayObj.ScatterDist;
+            t.Specular[Selected] = RayObj.Spec;
+            t.AlphaCutoff[Selected] = RayObj.AlphaCutoff;
+            t.NormalStrength[Selected] = RayObj.NormStrength;
+            t.Hue[Selected] = RayObj.Hue;
+            t.Brightness[Selected] = RayObj.Brightness;
+            t.Contrast[Selected] = RayObj.Contrast;
+            t.Saturation[Selected] = RayObj.Saturation;
+            t.BlendColor[Selected] = RayObj.BlendColor;
+            t.BlendFactor[Selected] = RayObj.BlendFactor;
+            t.MainTexScaleOffset[Selected] = RayObj.MainTexScaleOffset;
+            t.SecondaryTextureScale[Selected] = RayObj.SecondaryTextureScale;
+            t.Rotation[Selected] = RayObj.Rotation;
+            t.Flags[Selected] = RayObj.Flags;
+            t.CallMaterialEdited(true);
+
+
+            OnInspectorGUI();
+        }
         public override void OnInspectorGUI() {
+                
                 var t1 = (targets);
-                var t =  t1[0] as RayTracingObject;
+                t =  t1[0] as RayTracingObject;
                 TheseNames = t.Names;
                 Selected = EditorGUILayout.Popup("Selected Material:", Selected, TheseNames);
+
+                if(GUILayout.Button("Save Material Preset")) {
+                    UnityEditor.PopupWindow.Show(new Rect(0,0,10,10), new SavePopup(t, Selected));
+                }
+                if(GUILayout.Button("Load Material Preset")) {
+                    UnityEditor.PopupWindow.Show(new Rect(0,0,100,10), new LoadPopup(this));
+                }
+
 
                 EditorGUILayout.Space();
                 EditorGUI.BeginChangeCheck();
@@ -65,7 +246,7 @@ namespace TrueTrace {
                 EditorGUILayout.MinMaxSlider("Roughness Remap: ", ref t.RoughnessRemap[Selected].x, ref t.RoughnessRemap[Selected].y, 0, 1);
                 serializedObject.FindProperty("Metallic").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Metallic: ", t.Metallic[Selected], 0, 1);
                 EditorGUILayout.MinMaxSlider("Metallic Remap: ", ref t.MetallicRemap[Selected].x, ref t.MetallicRemap[Selected].y, 0, 1);
-                serializedObject.FindProperty("IOR").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("IOR: ", t.IOR[Selected], 0, 10);
+                serializedObject.FindProperty("IOR").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("IOR: ", t.IOR[Selected], 1, 10);
                 serializedObject.FindProperty("Specular").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Specular: ", t.Specular[Selected], 0, 1);
                 serializedObject.FindProperty("SpecularTint").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Specular Tint: ", t.SpecularTint[Selected], 0, 1);
                 serializedObject.FindProperty("Sheen").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Sheen: ", t.Sheen[Selected], 0, 10);
@@ -107,7 +288,7 @@ namespace TrueTrace {
                 serializedObject.ApplyModifiedProperties();
 
                 if(EEE) {
-                                        string Name = TheseNames[Selected];
+                    string Name = TheseNames[Selected];
                     for(int i = 0; i < TheseNames.Length; i++) {
                         if(Selected == i) continue;
                         if(TheseNames[i].Equals(Name)) {

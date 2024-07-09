@@ -469,7 +469,7 @@ namespace TrueTrace {
                     CurMat.specTrans = obj.SpecTrans[i];
                     CurMat.EmissionColor = obj.EmissionColor[i];
                     CurMat.MatType = (int)obj.MaterialOptions[i];
-                    if(JustCreated) obj.Flags[i].SetFlag(CommonFunctions.Flags.UseSmoothness, RelevantMat.UsesSmoothness);
+                    if(JustCreated) obj.Flags[i] = CommonFunctions.SetFlagVar(obj.Flags[i], CommonFunctions.Flags.UseSmoothness, RelevantMat.UsesSmoothness);
                     if(i == obj.BaseColor.Length - 1) obj.JustCreated = false;
                     obj.Indexes[i] = Offset;
                     obj.MaterialIndex[i] = CurMatIndex;

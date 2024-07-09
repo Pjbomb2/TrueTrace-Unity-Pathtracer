@@ -32,6 +32,8 @@ A passion projects that has been going on for a while with the goal of bringing 
 <li>Supports unity heightmap terrain and heightmap trees</li>
 <li>Supports OIDN Denoiser</li>
 <li>Enironment Map Importance Sampling</li>
+<li>Radiance Cache</li>
+<li>Material Preset System</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)

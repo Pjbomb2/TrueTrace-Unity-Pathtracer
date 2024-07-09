@@ -19,37 +19,35 @@ MonoBehaviour:
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 0
-  PPBloom: 1
-  BloomStrength: 18.5
+  Accumulate: 1
+  PPBloom: 0
+  BloomStrength: 0.805
   PPDoF: 0
   DoFAperature: 0.057
   DoFAperatureScale: 0.54
-  DoFFocal: 14.4285555
+  DoFFocal: 4.8121676
   PPExposure: 0
-  ExposureAuto: 0
-  PPToneMap: 1
+  ExposureAuto: 1
+  PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
   UseASVGF: 1
-  UseReCur: 0
   UseTAAU: 0
-  ReSTIRGIUpdateRate: 0
+  ReSTIRGIUpdateRate: 7
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
   UseReSTIRGI: 0
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
   ReSTIRGITemporalMCap: 32
-  DoReSTIRGIConnectionValidation: 0
-  Exposure: 50
-  ReCurBlurRadius: 12
+  DoReSTIRGIConnectionValidation: 1
+  Exposure: 8.9
   DoPartialRendering: 0
   PartialRenderingFactor: 3
   DoFirefly: 0
   ImprovedPrimaryHit: 1
   RISCount: 12
-  ToneMapper: 5
+  ToneMapper: 0
   SunDesaturate: 0
   SkyDesaturate: 0
   ClayColor: {x: 0.20754719, y: 0.20754719, z: 0.20754719}
@@ -60,10 +58,12 @@ MonoBehaviour:
   OIDNFrameCount: 122
   UseOIDN: 0
   DoSharpen: 0
-  Sharpness: 1
+  Sharpness: 0
   MainDesiredRes: 16384
   UseSkinning: 1
   LightEnergyScale: 1
   BackgroundType: 0
   BackgroundIntensity: 1
-  SceneBackgroundColor: {x: 0.052705556, y: 0.5451765, z: 0.5943396}
+  SceneBackgroundColor: {x: 0, y: 0, z: 0}
+  SecondaryBackgroundType: 0
+  SecondarySceneBackgroundColor: {x: 1, y: 1, z: 1}

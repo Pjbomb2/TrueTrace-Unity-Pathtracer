@@ -11,7 +11,7 @@
 RWTexture2D<uint4> _PrimaryTriangleInfo;
 #pragma kernel kernel_trace 
 
-inline void IntersectTriangle(int mesh_id, const int tri_id, const Ray ray, inout RayHit ray_hit, const int MatOffset) {
+inline void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inout RayHit ray_hit, const int MatOffset) {
     TrianglePos tri = triangle_get_positions(tri_id);
     TriangleUvs tri2 = triangle_get_positions2(tri_id);
     int MaterialIndex = (MatOffset + AggTris[tri_id].MatDat);
@@ -59,18 +59,18 @@ inline void IntersectTriangle(int mesh_id, const int tri_id, const Ray ray, inou
 
 void IntersectBVH() {
     RayHit bestHit;
-    Ray ray;
+    SmallerRay ray;
     #ifndef HardwareRT
-        int Reps;
+        int Reps = 0;
         uint2 stack[16];
         int stack_size = 0;
         uint2 current_group;
         uint oct_inv4;
-        int tlas_stack_size;
-        Ray ray2;
-        int NodeOffset;
-        int TriOffset;
-        int MatOffset;
+        int tlas_stack_size = -1;
+        SmallerRay ray2;
+        int NodeOffset = 0;
+        int TriOffset = 0;
+        int MatOffset = 0;
         int mesh_id = -1;
     #endif
     int ray_index;
@@ -137,22 +137,16 @@ void IntersectBVH() {
 
             set(ray_index, bestHit);
         #else
-            TriOffset = 0;
-            MatOffset = 0;
-            Reps = 0;
             ray.origin = GlobalRay.origin;
-            ray.direction = GlobalRay.direction;
-            ray.direction_inv = rcp(ray.direction);
-            NodeOffset = 0;
-            tlas_stack_size = -1;
+            ray.direction = (GlobalRay.direction == 0 ? EPSILON : GlobalRay.direction);
             ray2 = ray;
 
             oct_inv4 = ray_get_octant_inv4(ray.direction);
 
             current_group.x = (uint)0;
             current_group.y = (uint)0x80000000;
-            uint2 triangle_group;
             [loop]while (Reps < 1000) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)          
+                uint2 triangle_group;
 
                 [branch]if (current_group.y & 0xff000000) {
                     uint child_index_offset = firstbithigh(current_group.y);
@@ -160,32 +154,24 @@ void IntersectBVH() {
                     uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
                     uint relative_index = countbits(current_group.y & ~(0xffffffff << slot_index));
                     uint child_node_index = current_group.x + relative_index;
+                    const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
 
                     current_group.y &= ~(1 << child_index_offset);
 
                     if (current_group.y & 0xff000000) {
                         stack[stack_size++] = current_group;
                     }
-                    const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
-                    float3 node_0 = TempNode.node_0xyz;
-                    uint node_0w = TempNode.node_0w;
 
-                    uint4 node_1 = TempNode.node_1;
-                    uint4 node_2 = TempNode.node_2;
-                    uint4 node_3 = TempNode.node_3;
-                    uint4 node_4 = TempNode.node_4;
+                    uint hitmask = cwbvh_node_intersect(ray, oct_inv4, bestHit.t, TempNode);
 
-                    uint hitmask = cwbvh_node_intersect(ray, oct_inv4, bestHit.t, node_0, node_0w, node_1, node_2, node_3, node_4);
-
-                    current_group.y = (hitmask & 0xff000000) | ((node_0w >> 24) & 0xff);
+                    current_group.y = (hitmask & 0xff000000) | ((TempNode.nodes[0].w >> 24) & 0xff);
                     triangle_group.y = (hitmask & 0x00ffffff);
 
-                    current_group.x = (node_1.x) + NodeOffset;
-                    triangle_group.x = (node_1.y) + TriOffset;
+                    current_group.x = (TempNode.nodes[1].x) + NodeOffset;
+                    triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
 
                     Reps++;
-                }
-                else {
+                } else {
                     triangle_group = current_group;
                     current_group = (uint)0;
                 }
@@ -211,7 +197,6 @@ void IntersectBVH() {
                         MatOffset = _MeshData[mesh_id].MaterialOffset;
                         ray.direction = (mul((float3x3)_MeshData[mesh_id].W2L, ray.direction));
                         ray.origin = (mul(_MeshData[mesh_id].W2L, float4(ray.origin, 1))).xyz;
-                        ray.direction_inv = rcp(ray.direction);
 
                         oct_inv4 = ray_get_octant_inv4(ray.direction);
 
@@ -262,7 +247,7 @@ void kernel_trace() {//If I move the function contents into here, unity yells at
 #pragma kernel kernel_shadow
 
 void IntersectBVHShadow() {
-    Ray ray;
+    SmallerRay ray;
 
     #ifndef HardwareRT
         uint2 stack[16];
@@ -273,7 +258,7 @@ void IntersectBVHShadow() {
         int MatOffset;
         uint oct_inv4;
         int tlas_stack_size;
-        Ray ray2;
+        SmallerRay ray2;
         float max_distance;
         int Reps = 0;
     #endif
@@ -355,8 +340,7 @@ void IntersectBVHShadow() {
         #else
             max_distance = abs(ShadowRay.t);
             ray.origin = ShadowRay.origin;
-            ray.direction = ShadowRay.direction;
-            ray.direction_inv = rcp(ray.direction);
+            ray.direction = (ShadowRay.direction == 0 ? EPSILON : ShadowRay.direction);
             ray2 = ray;
             float3 throughput = 1;
             TriOffset = 0;
@@ -377,27 +361,20 @@ void IntersectBVHShadow() {
                     uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
                     uint relative_index = countbits(current_group.y & ~(0xffffffff << slot_index));
                     uint child_node_index = current_group.x + relative_index;
+                    const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
 
                     current_group.y &= ~(1 << child_index_offset);
 
                     if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
 
-                    const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
-                    float3 node_0 = TempNode.node_0xyz;
-                    uint node_0w = TempNode.node_0w;
 
-                    uint4 node_1 = TempNode.node_1;
-                    uint4 node_2 = TempNode.node_2;
-                    uint4 node_3 = TempNode.node_3;
-                    uint4 node_4 = TempNode.node_4;
+                    uint hitmask = cwbvh_node_intersect(ray, oct_inv4, max_distance, TempNode);
 
-                    uint hitmask = cwbvh_node_intersect(ray, oct_inv4, max_distance, node_0, node_0w, node_1, node_2, node_3, node_4);
-
-                    current_group.y = (hitmask & 0xff000000) | ((node_0w >> 24) & 0xff);
+                    current_group.y = (hitmask & 0xff000000) | ((TempNode.nodes[0].w >> 24) & 0xff);
                     triangle_group.y = (hitmask & 0x00ffffff);
 
-                    current_group.x = (node_1.x) + NodeOffset;
-                    triangle_group.x = (node_1.y) + TriOffset;
+                    current_group.x = (TempNode.nodes[1].x) + NodeOffset;
+                    triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
 
                     Reps++;
                 }
@@ -427,7 +404,6 @@ void IntersectBVHShadow() {
                         MatOffset = _MeshData[mesh_id].MaterialOffset;
                         ray.direction = (mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)).xyz;
                         ray.origin = (mul(_MeshData[mesh_id].W2L, float4(ray.origin, 1))).xyz;
-                        ray.direction_inv = rcp(ray.direction);
 
                         oct_inv4 = ray_get_octant_inv4(ray.direction);
 
@@ -512,9 +488,9 @@ void kernel_shadow() {//If I move the function contents into here, unity yells a
 
 static float g = sin(atan(1.0f / 2.0f));
 
-inline bool rayBoxIntersection(const float3 ray_orig, const float3 inv_dir, const float3 Min, const float3 Max, float tMax, inout float t0) {
-    const float3 tmp_min = (Min - ray_orig) * inv_dir;
-    const float3 tmp_max = (Max - ray_orig) * inv_dir;
+inline bool rayBoxIntersection(const float3 ray_orig, const float3 ray_dir, const float3 Min, const float3 Max, float tMax, inout float t0) {
+    const float3 tmp_min = (Min - ray_orig) / ray_dir;
+    const float3 tmp_max = (Max - ray_orig) / ray_dir;
     const float3 tmin = min(tmp_min, tmp_max);
     const float3 tmax = max(tmp_min, tmp_max);
     t0 = max(tmin.x, max(tmin.y, max(tmin.z, 0.025f))); // Usually ray_tmin = 0
@@ -524,12 +500,12 @@ inline bool rayBoxIntersection(const float3 ray_orig, const float3 inv_dir, cons
 
 
 
-bool IntersectHeightMapShadow(Ray ray, float MaxDist) {
+bool IntersectHeightMapShadow(SmallerRay ray, float MaxDist) {
     float3 Origin = ray.origin;
     for (int i = 0; i < TerrainCount; i++) {
         const TerrainData Terrain = Terrains[i];
         float t0;
-        if (rayBoxIntersection(Origin, ray.direction_inv, Terrain.PositionOffset, Terrain.PositionOffset + float3(Terrain.TerrainDim.x, Terrain.TerrainDim.x, Terrain.TerrainDim.y), MaxDist, t0)) {
+        if (rayBoxIntersection(Origin, ray.direction, Terrain.PositionOffset, Terrain.PositionOffset + float3(Terrain.TerrainDim.x, Terrain.TerrainDim.x, Terrain.TerrainDim.y), MaxDist, t0)) {
             ray.origin = Origin + ray.direction * (t0 + 0.001f) - Terrain.PositionOffset;
             float3 CurrentPos = ray.origin;
             int step_count = 0;
@@ -566,7 +542,8 @@ void IntersectShadowHeightmap() {
     InterlockedAdd(BufferSizes[CurBounce].heightmap_shadow_rays, -1, ray_index);
     if (ray_index < 0) return;
     int pixel_index = ShadowRaysBuffer[ray_index].PixelIndex;
-    Ray ray = CreateRay(ShadowRaysBuffer[ray_index].origin, ShadowRaysBuffer[ray_index].direction);
+    SmallerRay ray = CreateRay(ShadowRaysBuffer[ray_index].origin, ShadowRaysBuffer[ray_index].direction);
+    ray.direction = (ray.direction == 0 ? EPSILON : ray.direction);
     bool HitHeightmap = TerrainExists;
     if(ShadowRaysBuffer[ray_index].t != 0) {
         if (TerrainExists) HitHeightmap = IntersectHeightMapShadow(ray, abs(ShadowRaysBuffer[ray_index].t));                  
@@ -618,8 +595,8 @@ bool GetDist(float3 CurrentPos, out float2 uv, out float dist, const TerrainData
 }
 
 void IntersectHeightMap() {
-    Ray ray;
-    Ray ray2;
+    SmallerRay ray;
+    SmallerRay ray2;
 
     int ray_index;
     RayHit bestHit;
@@ -633,7 +610,7 @@ void IntersectHeightMap() {
     ray.origin = GlobalRays[ray_index].origin;
     CurrentPos = ray.origin;
     ray.direction = GlobalRays[ray_index].direction;
-    ray.direction_inv = rcp(ray.direction);
+    ray.direction = (ray.direction == 0 ? EPSILON : ray.direction);
     ray2 = ray;
     bestHit = get(ray_index);
     float dist = FarPlane;
@@ -642,7 +619,7 @@ void IntersectHeightMap() {
         float t0;
         float CurDist = 0;
         const TerrainData Terrain = Terrains[i];
-        if (rayBoxIntersection(ray2.origin, ray.direction_inv, Terrain.PositionOffset + 0.001f, Terrain.PositionOffset + float3(Terrain.TerrainDim.x, Terrain.TerrainDim.x, Terrain.TerrainDim.y) - 0.001f, bestHit.t, t0)) {
+        if (rayBoxIntersection(ray2.origin, ray.direction, Terrain.PositionOffset + 0.001f, Terrain.PositionOffset + float3(Terrain.TerrainDim.x, Terrain.TerrainDim.x, Terrain.TerrainDim.y) - 0.001f, bestHit.t, t0)) {
             CurDist = 0;
             dist = FarPlane;
             ray.origin = ray2.origin + ray.direction * max(t0 + 0.0001f, 0) - Terrain.PositionOffset;

@@ -929,18 +929,25 @@ float3 ReconstructDisney(MaterialData hitDat, float3 wo, float3 wi, bool thin,
 
     float3 reflectance = 0;
     forwardPdf = 0.0f;
-
+    float PDF = 0;
     float4 P = CalculateLobePdfs(hitDat);
-    bool TempSuccess = false;
-    if(P.x > 0) reflectance += ReconstructDisneyBRDF(hitDat, wo, wm, wi, forwardPdf, TempSuccess);
-    Success = Success || TempSuccess;
-    if(P.y > 0) reflectance += ReconstructDisneyClearcoat(hitDat.clearcoat, hitDat.clearcoatGloss, wo, wm, wi, forwardPdf, Success);
-    Success = Success || TempSuccess;
-    if(P.z > 0) { 
-        forwardPdf = AbsCosTheta(wi);
-        TempSuccess = forwardPdf > 0;
-        reflectance += (EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin) * hitDat.surfaceColor + EvaluateSheen(hitDat, wo, wm, wi));
-        Success = Success || TempSuccess;
+    
+    switch(Case) {
+        case 0:
+            if(P.x > 0) reflectance = ReconstructDisneyBRDF(hitDat, wo, wm, wi, forwardPdf, Success);
+        break;
+        case 1:
+            if(P.y > 0) reflectance = ReconstructDisneyClearcoat(hitDat.clearcoat, hitDat.clearcoatGloss, wo, wm, wi, forwardPdf, Success);
+        break;
+        case 2:
+            if(P.z > 0) { 
+                reflectance = (EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin) * hitDat.surfaceColor + EvaluateSheen(hitDat, wo, wm, wi));
+                forwardPdf = AbsCosTheta(wi);
+                Success = forwardPdf > 0;
+            }
+        break;
+        case 3:
+        break;
     }
 
     if(P.w > 0) {
@@ -953,7 +960,7 @@ float3 ReconstructDisney(MaterialData hitDat, float3 wo, float3 wi, bool thin,
             Success = Success || true;
         }
     } else {
-        // reflectance = (reflectance / P[Case]);
+        reflectance = saturate(reflectance / P[Case]);
         forwardPdf *= P[Case];
     }
 

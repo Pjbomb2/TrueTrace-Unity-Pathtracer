@@ -4,7 +4,7 @@ using UnityEngine;
 using CommonVars;
 
 namespace TrueTrace {
-    [ExecuteInEditMode][System.Serializable]
+    [ExecuteInEditMode][System.Serializable][RequireComponent(typeof(Light))]
     public class RayTracingLights : MonoBehaviour {
         [HideInInspector] public Light ThisLight;
         [HideInInspector] public LightData ThisLightData;

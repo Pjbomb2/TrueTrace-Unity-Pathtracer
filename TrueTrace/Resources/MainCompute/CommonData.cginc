@@ -17,7 +17,6 @@ int curframe;//might be able to get rid of this
 
 
 bool UseLightBVH;
-bool UseReCur;
 bool DiffRes;
 bool UseRussianRoulette;
 bool UseNEE;
@@ -79,12 +78,6 @@ struct CudaTriangle {
 };
 
 StructuredBuffer<CudaTriangle> AggTris;
-
-struct Ray {
-	float3 origin;
-	float3 direction;
-	float3 direction_inv;
-};
 
 struct SmallerRay {
 	float3 origin;
@@ -176,12 +169,7 @@ StructuredBuffer<MyMeshDataCompacted> _MeshData;
 
 
 struct BVHNode8Data {
-	float3 node_0xyz;
-	uint node_0w;
-	uint4 node_1;
-	uint4 node_2;
-	uint4 node_3;
-	uint4 node_4;
+	uint4 nodes[5];
 };
 
 StructuredBuffer<BVHNode8Data> cwbvh_nodes;
@@ -356,11 +344,10 @@ float3x3 GetTangentSpace2(float3 normal) {
 float FarPlane;
 float NearPlane;
 
-Ray CreateRay(float3 origin, float3 direction) {
-	Ray ray;
+SmallerRay CreateRay(float3 origin, float3 direction) {
+	SmallerRay ray;
 	ray.origin = origin;
 	ray.direction = direction;
-	ray.direction_inv = rcp(direction);
 	return ray;
 }
 
@@ -520,7 +507,7 @@ SmallerRay CreateCameraRay(float2 uv, uint pixel_index) {
 	// Transform the direction from camera to world space and normalize
 	direction = mul(CamToWorld, float4(direction, 0.0f)).xyz;
 	direction = normalize(direction);
-	[branch] if (UseDoF) {
+	[branch] if (UseDoF && pixel_index != (screen_width / 2 + (screen_width * (screen_height / 2)))) {
 		float3 cameraForward = mul(CamInvProj, float4(0, 0, 0.0f, 1.0f)).xyz;
 		// Transform the direction from camera to world space and normalize
 		float4 sensorPlane;
@@ -556,7 +543,7 @@ SmallerRay CreateCameraRay(float2 uv, uint pixel_index) {
 	return smolray;
 }
 
-inline Ray CreateCameraRay(float2 uv) {
+inline SmallerRay CreateCameraRay(float2 uv) {
     // Transform the camera origin to world space
     float3 origin = mul(CamToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
 
@@ -593,7 +580,7 @@ inline float2 AlignUV(float2 BaseUV, const float4 TexScale, const int2 TexDim2, 
 	else return clamp(BaseUV * (TexDim.xy - TexDim.zw) + TexDim.zw, TexDim.zw + 1.0f / 16384.0f, TexDim.xy - 1.0f / 16384.0f);
 }
 
-inline bool triangle_intersect_shadow(int tri_id, const Ray ray, float max_distance, int mesh_id, inout float3 throughput, const int MatOffset) {
+inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, float max_distance, int mesh_id, inout float3 throughput, const int MatOffset) {
     TrianglePos tri = triangle_get_positions(tri_id);
   	TriangleUvs tri2 = triangle_get_positions2(tri_id);
     int MaterialIndex = (MatOffset + AggTris[tri_id].MatDat);
@@ -641,17 +628,18 @@ inline uint ray_get_octant_inv4(const float3 ray_direction) {
         (ray_direction.y < 0.0f ? 0 : 0x02020202) |
         (ray_direction.z < 0.0f ? 0 : 0x01010101);
 }
-inline uint cwbvh_node_intersect(const Ray ray, int oct_inv4, float max_distance, const float3 node_0, uint node_0w, const uint4 node_1, const uint4 node_2, const uint4 node_3, const uint4 node_4) {
-    uint e_x = (node_0w) & 0xff;
-    uint e_y = (node_0w >> (8)) & 0xff;
-    uint e_z = (node_0w >> (16)) & 0xff;
+
+inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_distance, const BVHNode8Data TempNode) {
+    uint e_x = (TempNode.nodes[0].w) & 0xff;
+    uint e_y = (TempNode.nodes[0].w >> (8)) & 0xff;
+    uint e_z = (TempNode.nodes[0].w >> (16)) & 0xff;
 
     const float3 adjusted_ray_direction_inv = float3(
-        asfloat(e_x << 23) * ray.direction_inv.x,
-        asfloat(e_y << 23) * ray.direction_inv.y,
-        asfloat(e_z << 23) * ray.direction_inv.z
-        );
-    const float3 adjusted_ray_origin = ray.direction_inv * (node_0 - ray.origin);
+        asfloat(e_x << 23),
+        asfloat(e_y << 23),
+        asfloat(e_z << 23)
+        ) / ray.direction;
+    const float3 adjusted_ray_origin = (asfloat(TempNode.nodes[0].xyz) - ray.origin) / ray.direction;
             
     uint hit_mask = 0;
     float3 tmin3;
@@ -660,21 +648,21 @@ inline uint cwbvh_node_intersect(const Ray ray, int oct_inv4, float max_distance
     uint bit_index;
     [unroll]
     for(int i = 0; i < 2; i++) {
-        uint meta4 = (i == 0 ? node_1.z : node_1.w);
+        uint meta4 = (i == 0 ? TempNode.nodes[1].z : TempNode.nodes[1].w);
 
         uint is_inner4   = (meta4 & (meta4 << 1)) & 0x10101010;
         uint inner_mask4 = (is_inner4 >> 4) * 0xffu;
         uint bit_index4  = (meta4 ^ (oct_inv4 & inner_mask4)) & 0x1f1f1f1f;
         uint child_bits4 = (meta4 >> 5) & 0x07070707;
 
-        uint q_lo_x = (i == 0 ? node_2.x : node_2.y);
-        uint q_hi_x = (i == 0 ? node_2.z : node_2.w);
+        uint q_lo_x = (i == 0 ? TempNode.nodes[2].x : TempNode.nodes[2].y);
+        uint q_hi_x = (i == 0 ? TempNode.nodes[2].z : TempNode.nodes[2].w);
 
-        uint q_lo_y = (i == 0 ? node_3.x : node_3.y);
-        uint q_hi_y = (i == 0 ? node_3.z : node_3.w);
+        uint q_lo_y = (i == 0 ? TempNode.nodes[3].x : TempNode.nodes[3].y);
+        uint q_hi_y = (i == 0 ? TempNode.nodes[3].z : TempNode.nodes[3].w);
 
-        uint q_lo_z = (i == 0 ? node_4.x : node_4.y);
-        uint q_hi_z = (i == 0 ? node_4.z : node_4.w);
+        uint q_lo_z = (i == 0 ? TempNode.nodes[4].x : TempNode.nodes[4].y);
+        uint q_hi_z = (i == 0 ? TempNode.nodes[4].z : TempNode.nodes[4].w);
 
         uint x_min = ray.direction.x < 0.0f ? q_hi_x : q_lo_x;
         uint x_max = ray.direction.x < 0.0f ? q_lo_x : q_hi_x;
@@ -710,7 +698,7 @@ inline uint cwbvh_node_intersect(const Ray ray, int oct_inv4, float max_distance
 }
 
 
-bool VisabilityCheckCompute(Ray ray, float dist) {
+inline bool VisabilityCheckCompute(SmallerRay ray, float dist) {
         uint2 stack[16];
         int stack_size = 0;
         uint2 current_group;
@@ -718,11 +706,10 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
         uint oct_inv4;
         int tlas_stack_size = -1;
         int mesh_id = -1;
-        Ray ray2;
+        SmallerRay ray2;
         int TriOffset = 0;
         int NodeOffset = 0;
 
-        ray.direction_inv = rcp(ray.direction);
         ray2 = ray;
 
         oct_inv4 = ray_get_octant_inv4(ray.direction);
@@ -731,36 +718,28 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
         current_group.y = (uint)0x80000000;
         int MatOffset = 0;
         int Reps = 0;
-        uint2 triangle_group;
         float3 through = 0;
         [loop] while (Reps < 1000) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
+        	uint2 triangle_group;
             [branch]if (current_group.y & 0xff000000) {
                 uint child_index_offset = firstbithigh(current_group.y);
                 
                 uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
                 uint relative_index = countbits(current_group.y & ~(0xffffffff << slot_index));
                 uint child_node_index = current_group.x + relative_index;
+                const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
 
                 current_group.y &= ~(1 << child_index_offset);
 
                 if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
 
-                const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
-                float3 node_0 = TempNode.node_0xyz;
-                uint node_0w = TempNode.node_0w;
+                uint hitmask = cwbvh_node_intersect(ray, oct_inv4, dist, TempNode);
 
-                uint4 node_1 = TempNode.node_1;
-                uint4 node_2 = TempNode.node_2;
-                uint4 node_3 = TempNode.node_3;
-                uint4 node_4 = TempNode.node_4;
-
-                uint hitmask = cwbvh_node_intersect(ray, oct_inv4, dist, node_0, node_0w, node_1, node_2, node_3, node_4);
-
- 				current_group.y = (hitmask & 0xff000000) | ((node_0w >> 24) & 0xff);
+ 				current_group.y = (hitmask & 0xff000000) | ((TempNode.nodes[0].w >> 24) & 0xff);
                 triangle_group.y = (hitmask & 0x00ffffff);
 
-	            current_group.x = (node_1.x) + NodeOffset;
-                triangle_group.x = (node_1.y) + TriOffset;
+	            current_group.x = (TempNode.nodes[1].x) + NodeOffset;
+                triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
                 Reps++;
             } else {
                 triangle_group = current_group;
@@ -786,7 +765,6 @@ bool VisabilityCheckCompute(Ray ray, float dist) {
                     MatOffset = _MeshData[mesh_id].MaterialOffset;
                     ray.direction = (mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)).xyz;
                     ray.origin = (mul(_MeshData[mesh_id].W2L, float4(ray.origin, 1))).xyz;
-                    ray.direction_inv = rcp(ray.direction);
 
                     oct_inv4 = ray_get_octant_inv4(ray.direction);
 
@@ -1636,7 +1614,7 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 
 	void CachePropogateBSDF(inout PropogatedCacheData CurrentProp, float3 throughput) {
 	    CurrentProp.samples[0].x = CurrentProp.throughput;
-	    CurrentProp.throughput = EncodeRGB(throughput);
+	    CurrentProp.throughput = EncodeRGB(DecodeRGB(CurrentProp.throughput) * throughput);
 	}
 
 	inline uint HashGridInsert(const HashKeyValue HashValue) {
@@ -1765,7 +1743,7 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 	        level = max(level - 1, 1);
 	    }
 
-	    return CompressHash(asuint(int4(cameraGridPosition, level)), HashValue.y >> 29); 
+	    return CompressHash(asuint(int4(gridPosition, level)), HashValue.y >> 29); 
 	}
 
 

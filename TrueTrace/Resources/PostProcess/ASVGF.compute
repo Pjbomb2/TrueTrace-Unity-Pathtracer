@@ -94,9 +94,11 @@ float3 unpackRGBE(uint x)
 #ifdef HDRP
 	Texture2DArray<half4> NormalTex;
 	Texture2DArray<float2> TEX_PT_MOTION;
+    Texture2DArray<float> Depth;
 #else
 	Texture2D<float2> TEX_PT_MOTION;
 	Texture2D<half4> NormalTex;
+    Texture2D<float> Depth;
 #endif
 RWTexture2D<float4> TEX_PT_COLOR_LF_SHWrite;
 Texture2D<float4> TEX_PT_COLOR_LF_SH;
@@ -1692,3 +1694,32 @@ void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGrou
 		// }
 	}
 } 
+
+
+RWTexture2D<half2> TEX_PT_VIEW_DEPTH_AWRITE;//current frame depth
+float NearPlane;
+float3 Forward;
+#pragma kernel DistanceCorrectionKernel
+float FetchDepth(float2 UV) {
+    Ray ray = CreateCameraRay(UV * 2.0f - 1.0f);  
+    #ifdef HDRP
+        float depth = 1.0f - (Depth[int3(UV * float2(screen_width, screen_height),0)].x);
+    #else
+        float depth = 1.0f - (Depth.SampleLevel(my_linear_clamp_sampler, UV, 0).x);
+    #endif
+        depth = NearPlane * FarPlane / (depth * (NearPlane - FarPlane) + FarPlane);
+        return length(ray.direction / dot(ray.direction, Forward) * depth);   
+}
+
+[numthreads(32, 32, 1)]
+void DistanceCorrectionKernel(uint3 id : SV_DispatchThreadID) {
+    if(id.x > screen_width || id.y > screen_height) return;
+    float2 Uv = (id.xy + 0.5f) / float2(screen_width, screen_height);
+
+    float CurDepth = FetchDepth(Uv);
+    float CurDepthX = FetchDepth(Uv + float2(rcp(screen_width) * 2.0f, 0));
+    float CurDepthY = FetchDepth(Uv + float2(0, rcp(screen_height) * 2.0f));
+    float CurDepthX2 = FetchDepth(Uv - float2(rcp(screen_width) * 2.0f, 0));
+    float CurDepthY2 = FetchDepth(Uv - float2(0, rcp(screen_height) * 2.0f));
+    TEX_PT_VIEW_DEPTH_AWRITE[id.xy] = float2(CurDepth, abs(CurDepth - CurDepthX) + abs(CurDepth - CurDepthY) + abs(CurDepth - CurDepthY2) + abs(CurDepth - CurDepthX2));
+}

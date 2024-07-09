@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.Video;
 
 namespace TrueTrace {
+    [RequireComponent(typeof(VideoPlayer))]
     public class VideoObject : MonoBehaviour
     {
         [HideInInspector] public RenderTexture VideoTexture;

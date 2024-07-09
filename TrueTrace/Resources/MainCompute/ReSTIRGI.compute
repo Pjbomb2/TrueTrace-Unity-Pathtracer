@@ -19,7 +19,7 @@
     #pragma require inlineraytracing
     RaytracingAccelerationStructure myAccelerationStructure;
 #endif
-bool VisabilityCheck(Ray ray, float dist) {
+inline bool VisabilityCheck(SmallerRay ray, float dist) {
     #ifdef HardwareRT
         const uint rayFlags = RAY_FLAG_FORCE_OPAQUE  ;
         UnityRayQuery<rayFlags> q;
@@ -123,7 +123,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     const int pixel_index = id.x + id.y * screen_width;
 
     const float2 UV = id.xy / float2(screen_width, screen_height);
-    const Ray CameraRay = CreateCameraRay(id.xy / float2(screen_width, screen_height) * 2.0f - 1.0f);
+    const SmallerRay CameraRay = CreateCameraRay(id.xy / float2(screen_width, screen_height) * 2.0f - 1.0f);
     
     const float4 GBuffer = ScreenSpaceInfoRead[id.xy];
     const int MatIndex = (asuint(GBuffer.w) << 3) >> 3;
@@ -259,7 +259,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     const float3 GeomNorm = i_octahedral_32(asuint(GBuffer.x));
     const float3 SurfNorm = i_octahedral_32(asuint(GBuffer.y));
     float3 PrimaryHitPosition = LoadSurfaceInfo(id.xy);
-    const Ray CameraRay = CreateCameraRay(id.xy / float2(screen_width, screen_height) * 2.0f - 1.0f);
+    const SmallerRay CameraRay = CreateCameraRay(id.xy / float2(screen_width, screen_height) * 2.0f - 1.0f);
     const float3 DirectionalPosition = GBuffer.z * CameraRay.direction;
     ColData CenterCol = PrevGlobalColorsA[pixel_index];
     const float4 Data = CenterCol.Data;
@@ -281,9 +281,10 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
         int2 NeighborIndex;
         float2 RandOffsets;
         float2 RandOffsets2;
+        float TempSpatialRadius = GISpatialRadius;
         for (int i = 0; i < ReSTIRGISpatialCount; i++) {
             RandOffsets = randomNEE(i + 127 * RandOffset + 12, pixel_index);
-            NeighborIndex = id.xy + vogelDiskSample(i, ReSTIRGISpatialCount, RandOffsets.y, 2.0f * PI * RandOffsets.x) * GISpatialRadius;
+            NeighborIndex = id.xy + vogelDiskSample(i, ReSTIRGISpatialCount, RandOffsets.y, 2.0f * PI * RandOffsets.x) * TempSpatialRadius;
 
             if(NeighborIndex.x < 0) NeighborIndex.x = -NeighborIndex.x;
             if(NeighborIndex.y < 0) NeighborIndex.y = -NeighborIndex.y;
@@ -292,10 +293,13 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
 
             PrevGBuffer = ScreenSpaceInfoRead[NeighborIndex];
 
-            if(dot(i_octahedral_32(asuint(PrevGBuffer.y)), SurfNorm) < 0.99f || (abs(GBuffer.z - PrevGBuffer.z)) / abs(GBuffer.z) >= 0.1f) continue;
+            if(dot(i_octahedral_32(asuint(PrevGBuffer.y)), SurfNorm) < 0.99f || (abs(GBuffer.z - PrevGBuffer.z)) / abs(GBuffer.z) >= 0.1f) {
+                // if(TempSpatialRadius > GISpatialRadius / 8) TempSpatialRadius *= 0.75f; 
+                continue;
+            }
 
             PrevRes = ReservoirB[NeighborIndex];
-            Ray NeighborRay = CreateCameraRay(NeighborIndex / float2(screen_width, screen_height) * 2.0f - 1.0f);
+            SmallerRay NeighborRay = CreateCameraRay(NeighborIndex / float2(screen_width, screen_height) * 2.0f - 1.0f);
             float3 ray = (PrevGBuffer.z * NeighborRay.direction) - DirectionalPosition;
             if (abs(dot(GeomNorm, ray)) < 0.1f && PrevRes.z == CurrentRes.z && MatIndex ==  (asuint(PrevGBuffer.w) << 3) >> 3) {
                 RandOffsets2 = randomNEE(i + 160 * RandOffset + 12, pixel_index);
@@ -330,17 +334,17 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
         [branch]if (DoReSTIRGIConnectionValidation && Case != 3 && !((asuint(GBuffer.w) >> 31) & 0x1)) {
             PrimaryHitPosition += GeomNorm * NormalOffset;
             float Distance = length(PrimaryHitPosition - CalcPos(WorldPos)) - 0.025f;
-            Ray ray = CreateRay(PrimaryHitPosition, normalize(CalcPos(WorldPos) - PrimaryHitPosition));
+            SmallerRay ray = CreateRay(PrimaryHitPosition, normalize(CalcPos(WorldPos) - PrimaryHitPosition));
 
-            bool ConnectedlyVisable = true;
-            if(luminance(CenterCol.Direct + CenterCol.Indirect) != 0) ConnectedlyVisable = VisabilityCheck(ray, Distance);
+            bool ConnectedlyVisable = dot(ray.direction, GeomNorm) > 0.0f;
+            if(ConnectedlyVisable && luminance(CenterCol.Direct + CenterCol.Indirect) != 0) ConnectedlyVisable = VisabilityCheck(ray, Distance);
             if (!ConnectedlyVisable) {CenterCol.Direct = 0; CenterCol.Indirect = 0;}
             #ifdef ExtraSampleValidation
                 if (CenterCol.PrimaryNEERay != 0) {
                     Distance = length(PrimaryHitPosition - NEEPos.xyz) - 0.025f;
                     ray = CreateRay(PrimaryHitPosition, normalize(NEEPos.xyz - PrimaryHitPosition));
-
-                    ConnectedlyVisable = VisabilityCheck(ray, Distance);
+                    ConnectedlyVisable = dot(ray.direction, GeomNorm) > 0.0f;
+                    if(ConnectedlyVisable) ConnectedlyVisable = VisabilityCheck(ray, Distance);
                     if (!ConnectedlyVisable) {
                         CenterCol.PrimaryNEERay = 0;
                     }

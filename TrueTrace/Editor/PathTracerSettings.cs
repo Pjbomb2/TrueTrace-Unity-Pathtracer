@@ -77,14 +77,15 @@ namespace TrueTrace {
          [SerializeField] public bool DoFirefly = false;
          [SerializeField] public bool ImprovedPrimaryHit = false;
          [SerializeField] public float ReSTIRGISpatialRadius = 50;
-         [SerializeField] public float ReCurBlurRadius = 30;
          [SerializeField] public int RISCount = 5;
          [SerializeField] public int DenoiserSelection = 0;
          [SerializeField] public Color SceneBackgroundColor = new Color(1,1,1,1);
+         [SerializeField] public Color SecondarySceneBackgroundColor = new Color(1,1,1,1);
          [SerializeField] public float BackgroundIntensity = 1;
          [SerializeField] public float LightEnergyScale = 1;
          [SerializeField] public float IndirectBoost = 1;
          [SerializeField] public int BackgroundType = 0;
+         [SerializeField] public int SecondaryBackgroundType = 0;
          [SerializeField] public bool DoDing = true;
          [SerializeField] public bool DoSaving = true;
          [SerializeField] public float SunDesaturate = 0;
@@ -547,7 +548,6 @@ Toggle DoFireflyToggle;
 Toggle SampleValidToggle;
 Toggle IndirectClampingToggle;
 FloatField RISCountField;
-FloatField ReCurBlurField;
 IntegerField OIDNFrameField;
 FloatField FocalSlider;
 
@@ -586,7 +586,6 @@ private void StandardSet() {
          DoFirefly = false;
          ReSTIRGISpatialRadius = 30;
          RISCount = 12;
-         ReCurBlurRadius = 30.0f;
 }
 
 
@@ -612,8 +611,11 @@ Toolbar toolbar;
       VisualElement HardSettingsMenu;
       VisualElement SceneSettingsMenu;
       PopupField<string> BackgroundSettingsField;
+      PopupField<string> SecondaryBackgroundSettingsField;
       ObjectField InputHDRIField;
+      ObjectField SecondaryInputHDRIField;
       ColorField BackgroundColorField;
+      ColorField SecondaryBackgroundColorField;
       FloatField BackgroundIntensityField;
       FloatField UnityLightModifierField;
       FloatField IndirectBoostField;
@@ -631,11 +633,20 @@ Toolbar toolbar;
          InputHDRIField.objectType = typeof(Texture);
          InputHDRIField.label = "Drag your skybox here ->";
          InputHDRIField.value = RayMaster.SkyboxTexture;
-         InputHDRIField.RegisterValueChangedCallback(evt => RayMaster.SkyboxTexture = evt.newValue as Texture);
+         InputHDRIField.RegisterValueChangedCallback(evt => {RayMaster.SkyboxTexture = evt.newValue as Texture; SecondaryInputHDRIField.value = evt.newValue;});
+         SecondaryInputHDRIField = new ObjectField();
+         SecondaryInputHDRIField.objectType = typeof(Texture);
+         SecondaryInputHDRIField.label = "Drag your skybox here ->";
+         SecondaryInputHDRIField.value = RayMaster.SkyboxTexture;
+         SecondaryInputHDRIField.RegisterValueChangedCallback(evt => {RayMaster.SkyboxTexture = evt.newValue as Texture; InputHDRIField.value = evt.newValue;});
          BackgroundColorField = new ColorField();
          BackgroundColorField.value = SceneBackgroundColor;
          BackgroundColorField.style.width = 150;
          BackgroundColorField.RegisterValueChangedCallback(evt => {SceneBackgroundColor = evt.newValue; RayMaster.LocalTTSettings.SceneBackgroundColor = new Vector3(SceneBackgroundColor.r,SceneBackgroundColor.g,SceneBackgroundColor.b);});
+         SecondaryBackgroundColorField = new ColorField();
+         SecondaryBackgroundColorField.value = SecondarySceneBackgroundColor;
+         SecondaryBackgroundColorField.style.width = 150;
+         SecondaryBackgroundColorField.RegisterValueChangedCallback(evt => {SecondarySceneBackgroundColor = evt.newValue; RayMaster.LocalTTSettings.SecondarySceneBackgroundColor = new Vector3(SecondarySceneBackgroundColor.r,SecondarySceneBackgroundColor.g,SecondarySceneBackgroundColor.b);});
 
          BackgroundSettingsField = new PopupField<string>("Background Type");
          BackgroundSettingsField.choices = BackgroundSettings;
@@ -670,6 +681,42 @@ Toolbar toolbar;
                break;
             }
             if(Prev != RayMaster.LocalTTSettings.BackgroundType) BackgroundSettingsField.RemoveAt(2);
+
+            });
+
+         SecondaryBackgroundSettingsField = new PopupField<string>("Secondary Background Type");
+         SecondaryBackgroundSettingsField.choices = BackgroundSettings;
+         SecondaryBackgroundSettingsField.index = SecondaryBackgroundType;
+         SecondaryBackgroundSettingsField.style.width = 550;
+         switch(SecondaryBackgroundSettingsField.index) {
+            case 0:
+               SecondaryBackgroundSettingsField.Add(BlankElement);
+            break;
+            case 1:
+               SecondaryBackgroundSettingsField.Add(SecondaryInputHDRIField);
+            break;
+            case 2:
+               SecondaryBackgroundSettingsField.Add(SecondaryBackgroundColorField);
+            break;
+         }
+
+         SceneSettingsMenu.Add(SecondaryBackgroundSettingsField);
+         SecondaryBackgroundSettingsField.RegisterValueChangedCallback(evt => {
+            int Prev2 = RayMaster.LocalTTSettings.SecondaryBackgroundType;
+            SecondaryBackgroundType = SecondaryBackgroundSettingsField.index;
+            RayMaster.LocalTTSettings.SecondaryBackgroundType = SecondaryBackgroundType;
+            switch(SecondaryBackgroundSettingsField.index) {
+               case 0:
+                  SecondaryBackgroundSettingsField.Add(BlankElement);
+               break;
+               case 1:
+                  SecondaryBackgroundSettingsField.Add(SecondaryInputHDRIField);
+               break;
+               case 2:
+                  SecondaryBackgroundSettingsField.Add(SecondaryBackgroundColorField);
+               break;
+            }
+            if(Prev2 != RayMaster.LocalTTSettings.SecondaryBackgroundType) SecondaryBackgroundSettingsField.RemoveAt(2);
 
             });
       
@@ -1322,11 +1369,11 @@ Toolbar toolbar;
          var old_rt = RenderTexture.active;
          RenderTexture.active = RayMaster.ScreenSpaceInfo;
          Texture2D currenttexture = new Texture2D(1, 1, TextureFormat.RGBAFloat, false, true);
-         currenttexture.ReadPixels(new Rect(RayMaster.SourceWidth / 2, RayMaster.SourceHeight / 2, 1, 1), 0, 0);
+         currenttexture.ReadPixels(new Rect(RayMaster.SourceWidth / 2, RayMaster.SourceHeight / 2 - 1, 1, 1), 0, 0);
          currenttexture.Apply();
           RenderTexture.active = old_rt;
          var CenterDistance = currenttexture.GetPixelData<Vector4>(0);
-         FocalSlider.value = CenterDistance[0].z;
+         FocalSlider.value = CenterDistance[0].z + RayTracingMaster._camera.nearClipPlane;
          Destroy(currenttexture);
          CenterDistance.Dispose();
       }
@@ -1415,7 +1462,7 @@ Toolbar toolbar;
            Bloom = RayMaster.LocalTTSettings.PPBloom;
            DoSharpen = RayMaster.LocalTTSettings.DoSharpen;
            Sharpness = RayMaster.LocalTTSettings.Sharpness;
-           BloomStrength = 128.0f + RayMaster.LocalTTSettings.BloomStrength / 128.0f ;
+           BloomStrength = RayMaster.LocalTTSettings.BloomStrength;
            DoF = RayMaster.LocalTTSettings.PPDoF;
            ClayColor = RayMaster.LocalTTSettings.ClayColor;
            GroundColor = RayMaster.LocalTTSettings.GroundColor;
@@ -1441,13 +1488,14 @@ Toolbar toolbar;
            DoFirefly = RayMaster.LocalTTSettings.DoFirefly;
            ReSTIRGISpatialRadius = RayMaster.LocalTTSettings.ReSTIRGISpatialRadius;
            RISCount = RayMaster.LocalTTSettings.RISCount;
-           ReCurBlurRadius = RayMaster.LocalTTSettings.ReCurBlurRadius;
            ImprovedPrimaryHit = RayMaster.LocalTTSettings.ImprovedPrimaryHit;
            ClayMode = RayMaster.LocalTTSettings.ClayMode;
            SceneBackgroundColor = new Color(RayMaster.LocalTTSettings.SceneBackgroundColor.x, RayMaster.LocalTTSettings.SceneBackgroundColor.y, RayMaster.LocalTTSettings.SceneBackgroundColor.z, 1);
+           SecondarySceneBackgroundColor = new Color(RayMaster.LocalTTSettings.SecondarySceneBackgroundColor.x, RayMaster.LocalTTSettings.SecondarySceneBackgroundColor.y, RayMaster.LocalTTSettings.SecondarySceneBackgroundColor.z, 1);
            BackgroundIntensity = RayMaster.LocalTTSettings.BackgroundIntensity;
            IndirectBoost = RayMaster.LocalTTSettings.IndirectBoost;
            BackgroundType = RayMaster.LocalTTSettings.BackgroundType;
+           SecondaryBackgroundType = RayMaster.LocalTTSettings.SecondaryBackgroundType;
            SunDesaturate = RayMaster.LocalTTSettings.SunDesaturate;
            SkyDesaturate = RayMaster.LocalTTSettings.SkyDesaturate;
            FireflyFrameCount = RayMaster.LocalTTSettings.FireflyFrameCount;
@@ -1547,7 +1595,6 @@ Toolbar toolbar;
             List<string> DenoiserSettings = new List<string>();
             DenoiserSettings.Add("None");
             DenoiserSettings.Add("ASVGF");
-            DenoiserSettings.Add("ReCur");
             #if UseOIDN
                DenoiserSettings.Add("OIDN");
             #endif
@@ -1560,9 +1607,7 @@ Toolbar toolbar;
             DenoiserField.RegisterValueChangedCallback(evt => {
                DenoiserSelection = DenoiserField.index;
                RayMaster.LocalTTSettings.UseASVGF = false;
-               RayMaster.LocalTTSettings.UseReCur = false;
                RayMaster.LocalTTSettings.UseOIDN = false;
-               if(DenoiserField.Contains(ReCurBlurField)) DenoiserField.Remove(ReCurBlurField);
                if(DenoiserField.Contains(OIDNFrameField)) DenoiserField.Remove(OIDNFrameField);
                switch(DenoiserSelection) {
                   case 0:
@@ -1571,13 +1616,6 @@ Toolbar toolbar;
                      RayMaster.LocalTTSettings.UseASVGF = true;
                   break;
                   case 2:
-                     RayMaster.LocalTTSettings.UseReCur = true;
-                     ReCurBlurField = new FloatField("ReCur Blur Radius") {value = ReCurBlurRadius};
-                     ReCurBlurField.ElementAt(0).style.minWidth = 65;
-                     ReCurBlurField.RegisterValueChangedCallback(evt => {ReCurBlurRadius = (int)evt.newValue; ReCurBlurRadius = Mathf.Max(ReCurBlurRadius, 2); RayMaster.LocalTTSettings.ReCurBlurRadius = ReCurBlurRadius;});
-                     DenoiserField.Add(ReCurBlurField);
-                  break;
-                  case 3:
                      #if UseOIDN
                         RayMaster.LocalTTSettings.UseOIDN = true;
                         OIDNFrameField = new IntegerField("Frames Before OIDN") {value = OIDNFrameCount};
@@ -1593,15 +1631,12 @@ Toolbar toolbar;
 
                } 
             });
-            if(DenoiserField.Contains(ReCurBlurField)) DenoiserField.Remove(ReCurBlurField);
             if(DenoiserField.Contains(OIDNFrameField)) DenoiserField.Remove(OIDNFrameField);
             DenoiserSelection = DenoiserField.index;
             if(RayMaster.LocalTTSettings.UseASVGF) {
                DenoiserSelection = 1;
-            } else if(RayMaster.LocalTTSettings.UseReCur) {
-               DenoiserSelection = 2;
             } else if(RayMaster.LocalTTSettings.UseOIDN) {
-               DenoiserSelection = 3;
+               DenoiserSelection = 2;
             }
             switch(DenoiserSelection) {
                case 0:
@@ -1610,13 +1645,6 @@ Toolbar toolbar;
                   RayMaster.LocalTTSettings.UseASVGF = true;
                break;
                case 2:
-                  RayMaster.LocalTTSettings.UseReCur = true;
-                  ReCurBlurField = new FloatField("ReCur Blur Radius") {value = ReCurBlurRadius};
-                  ReCurBlurField.ElementAt(0).style.minWidth = 65;
-                  ReCurBlurField.RegisterValueChangedCallback(evt => {ReCurBlurRadius = (int)evt.newValue; ReCurBlurRadius = Mathf.Max(ReCurBlurRadius, 2); RayMaster.LocalTTSettings.ReCurBlurRadius = ReCurBlurRadius;});
-                  DenoiserField.Add(ReCurBlurField);
-               break;
-               case 3:
                   #if UseOIDN
                      RayMaster.LocalTTSettings.UseOIDN = true;
                      OIDNFrameField = new IntegerField("Frames Before OIDN") {value = OIDNFrameCount};
@@ -1639,10 +1667,10 @@ Toolbar toolbar;
          BloomToggle = new Toggle() {value = Bloom, text = "Enable Bloom"};
            VisualElement BloomBox = new VisualElement();
                Label BloomLabel = new Label("Bloom Strength");
-               Slider BloomSlider = new Slider() {value = BloomStrength, highValue = 0.9999f, lowValue = 0.5f};
+               Slider BloomSlider = new Slider() {value = BloomStrength, highValue = 0.9999f, lowValue = 0.25f};
                BloomSlider.style.width = 100;
                BloomToggle.RegisterValueChangedCallback(evt => {Bloom = evt.newValue; RayMaster.LocalTTSettings.PPBloom = Bloom; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(BloomToggle) + 1, BloomBox); else MainSource.Remove(BloomBox);});        
-               BloomSlider.RegisterValueChangedCallback(evt => {BloomStrength = evt.newValue; RayMaster.LocalTTSettings.BloomStrength = 128 - BloomStrength * 128.0f;});
+               BloomSlider.RegisterValueChangedCallback(evt => {BloomStrength = evt.newValue; RayMaster.LocalTTSettings.BloomStrength = BloomStrength;});
                MainSource.Add(BloomToggle);
                BloomBox.style.flexDirection = FlexDirection.Row;
                BloomBox.Add(BloomLabel);
@@ -1676,6 +1704,10 @@ Toolbar toolbar;
            FocalSlider = new FloatField() {value = DoFFocal};
            FocalSlider.style.width = 150;
            Button AutofocusButton = new Button(() => GetFocalLength()) {text = "Autofocus DoF"};
+           // AutofocusButton.RegisterCallback<MouseEnterEvent>(evt => {});
+           // AutofocusButton.RegisterCallback<MouseLeaveEvent>(evt => {});
+
+
            Box AperatureBox = new Box();
            AperatureBox.Add(AperatureLabel);
            AperatureBox.Add(AperatureSlider);
@@ -2015,7 +2047,6 @@ Toolbar toolbar;
             );
          }
       }
-
    }
 
     public class PopupWarningWindow : PopupWindowContent

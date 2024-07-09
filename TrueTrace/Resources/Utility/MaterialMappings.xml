@@ -4922,6 +4922,21 @@
         <ReadIndex>-3</ReadIndex>
         <TextureName>_BumpMap</TextureName>
       </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>6</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_Matcap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>7</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MatcapMask</TextureName>
+      </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>
     <RoughnessRange>null</RoughnessRange>
@@ -5855,7 +5870,7 @@
       <TexturePairs>
         <Purpose>3</Purpose>
         <ReadIndex>-4</ReadIndex>
-        <TextureName>_CubeMapMask</TextureName>
+        <TextureName>_EmissionMap</TextureName>
       </TexturePairs>
       <TexturePairs>
         <Purpose>4</Purpose>
@@ -6425,7 +6440,12 @@
       <TexturePairs>
         <Purpose>3</Purpose>
         <ReadIndex>-4</ReadIndex>
-        <TextureName>_EmissionMap</TextureName>
+        <TextureName>_EmissionMask</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>4</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_EmissionMask1</TextureName>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>

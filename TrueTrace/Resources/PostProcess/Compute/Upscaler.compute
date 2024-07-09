@@ -96,7 +96,7 @@ float RetrieveDepthLowRes(float2 uv) {
 }
 
 float RetrieveDepth(float2 uv) {
-    Ray ray = CreateCameraRay(uv * 2.0f - 1.0f);  
+    SmallerRay ray = CreateCameraRay(uv * 2.0f - 1.0f);  
     #ifdef HDRP
         return length(ray.direction / dot(ray.direction, Forward) * LinearEyeDepth(DepthTex.SampleLevel(my_linear_clamp_sampler, float3(uv,0), 0).x));
     #else

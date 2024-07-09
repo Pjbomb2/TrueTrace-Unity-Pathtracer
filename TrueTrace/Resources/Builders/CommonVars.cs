@@ -177,7 +177,9 @@ namespace CommonVars
     [System.Serializable]
     public struct BVHNode8DataFixed
     {
-        public Vector3 p;
+        public uint px;
+        public uint py;
+        public uint pz;
         public uint e1;
         public uint e2;
         public uint e3;
@@ -461,7 +463,9 @@ namespace CommonVars
     [System.Serializable]
     public struct BVHNode8DataCompressed
     {
-        public Vector3 node_0xyz;
+        public uint node_0x;
+        public uint node_0y;
+        public uint node_0z;
         public uint node_0w;
         public uint node_1x;
         public uint node_1y;
@@ -713,7 +717,9 @@ namespace CommonVars
             for (int i = 0; i < BVH8Nodes.Length; ++i)
             {
                 BVHNode8Data TempNode = BVH8Nodes[i];
-                TempBVHNode.node_0xyz = new Vector3(TempNode.p.x, TempNode.p.y, TempNode.p.z);
+                TempBVHNode.node_0x = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(TempNode.p.x), 0);
+                TempBVHNode.node_0y = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(TempNode.p.y), 0);
+                TempBVHNode.node_0z = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(TempNode.p.z), 0);
                 TempBVHNode.node_0w = (TempNode.e[0] | (TempNode.e[1] << 8) | (TempNode.e[2] << 16) | (TempNode.imask << 24));
                 TempBVHNode.node_1x = TempNode.base_index_child;
                 TempBVHNode.node_1y = TempNode.base_index_triangle;
@@ -743,7 +749,9 @@ namespace CommonVars
             for (int i = 0; i < BVH.BVH8Nodes.Length; i++)
             {
                 SourceNode = BVH.BVH8Nodes[i];
-                NewNode.p = SourceNode.p;
+                NewNode.px = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(SourceNode.p.x), 0);
+                NewNode.py = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(SourceNode.p.y), 0);
+                NewNode.pz = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(SourceNode.p.z), 0);
                 NewNode.e1 = SourceNode.e[0];
                 NewNode.e2 = SourceNode.e[1];
                 NewNode.e3 = SourceNode.e[2];
