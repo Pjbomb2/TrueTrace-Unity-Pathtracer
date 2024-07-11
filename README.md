@@ -249,6 +249,7 @@ TrueTrace Options Description -
   <li> Yanus</li>
   <li>Github Sponsors:</li>
   <li> jhintringer</li>
+  <li> Omid</li>
   <li>Kofi:</li>
 </ul>
 
