@@ -31,7 +31,7 @@ MonoBehaviour:
   PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
-  UseASVGF: 1
+  UseASVGF: 0
   UseTAAU: 0
   ReSTIRGIUpdateRate: 7
   UseReSTIRGITemporal: 1
@@ -52,7 +52,7 @@ MonoBehaviour:
   SkyDesaturate: 0
   ClayColor: {x: 0.20754719, y: 0.20754719, z: 0.20754719}
   GroundColor: {x: 0.1, y: 0.1, z: 0.1}
-  FireflyFrameCount: 0
+  FireflyFrameCount: 533
   FireflyStrength: 1
   FireflyOffset: 0
   OIDNFrameCount: 122

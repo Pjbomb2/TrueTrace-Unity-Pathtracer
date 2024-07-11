@@ -3,7 +3,17 @@ using System.Collections;
      
 namespace TrueTrace {
     public class FlyCamera : MonoBehaviour {
-     
+        bool isPaused = false;
+        bool isPaused2 = false;
+        void OnApplicationFocus(bool hasFocus)
+        {
+            isPaused = !hasFocus;
+        }
+
+        void OnApplicationPause(bool pauseStatus)
+        {
+            isPaused = pauseStatus;
+        }
         /*
         Writen by Windexglow 11-13-10.  Use it, edit it, steal it I don't care.  
         Converted to C# 27-02-13 - no credit wanted.
@@ -45,8 +55,8 @@ namespace TrueTrace {
             StopMovement = !Input.GetMouseButton(1);
 
 
-
-            lastMouse = new Vector3(-Input.GetAxisRaw("Mouse Y") * camSens, Input.GetAxisRaw("Mouse X") * camSens, 0 );
+            if(!isPaused2) lastMouse = new Vector3(-Input.GetAxis("Mouse Y") * camSens, Input.GetAxis("Mouse X") * camSens, 0 );
+            else lastMouse = Vector3.zero;
             lastMouse = new Vector3(transform.eulerAngles.x + lastMouse.x , transform.eulerAngles.y + lastMouse.y, 0);
             if(lastMouse.x < 280) {
                 if(lastMouse.x < 95) {
@@ -83,6 +93,7 @@ namespace TrueTrace {
                     transform.Translate(p);
                 }
             }
+            isPaused2 = isPaused;
         }
          
         private Vector3 GetBaseInput() { //returns the basic values, if it's 0 than it's not active.

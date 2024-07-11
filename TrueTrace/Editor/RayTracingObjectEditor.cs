@@ -32,6 +32,7 @@ namespace TrueTrace {
             if(GUILayout.Button("Save Preset")) {
                 RayObjs PresetRays;
                 int CopyIndex = -1;
+                UnityEditor.AssetDatabase.Refresh();
                 using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets").text)) {
                     var serializer = new XmlSerializer(typeof(RayObjs));
                     PresetRays = serializer.Deserialize(A) as RayObjs;
@@ -97,7 +98,6 @@ namespace TrueTrace {
     }
     public class LoadPopup : PopupWindowContent
     {
-        RayObjs PresetRays;
         Vector2 ScrollPosition;
         RayTracingObjectEditor SourceWindow;
         public LoadPopup(RayTracingObjectEditor editor) {
@@ -114,6 +114,8 @@ namespace TrueTrace {
         }
 
         public override void OnGUI(Rect rect) {
+            RayObjs PresetRays;
+            UnityEditor.AssetDatabase.Refresh();
             using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets").text)) {
                 var serializer = new XmlSerializer(typeof(RayObjs));
                 PresetRays = serializer.Deserialize(A) as RayObjs;
@@ -241,11 +243,11 @@ namespace TrueTrace {
                     EditorGUILayout.EndHorizontal();
                 EditorGUILayout.EndVertical();
 
+                serializedObject.FindProperty("Metallic").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Metallic: ", t.Metallic[Selected], 0, 1);
+                EditorGUILayout.MinMaxSlider("Metallic Remap: ", ref t.MetallicRemap[Selected].x, ref t.MetallicRemap[Selected].y, 0, 1);
                 if(Flag.GetFlag(CommonFunctions.Flags.UseSmoothness)) serializedObject.FindProperty("Roughness").GetArrayElementAtIndex(Selected).floatValue = 1.0f - EditorGUILayout.Slider("Smoothness: ", 1.0f - t.Roughness[Selected], 0, 1);
                 else serializedObject.FindProperty("Roughness").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Roughness: ", t.Roughness[Selected], 0, 1);
                 EditorGUILayout.MinMaxSlider("Roughness Remap: ", ref t.RoughnessRemap[Selected].x, ref t.RoughnessRemap[Selected].y, 0, 1);
-                serializedObject.FindProperty("Metallic").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Metallic: ", t.Metallic[Selected], 0, 1);
-                EditorGUILayout.MinMaxSlider("Metallic Remap: ", ref t.MetallicRemap[Selected].x, ref t.MetallicRemap[Selected].y, 0, 1);
                 serializedObject.FindProperty("IOR").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("IOR: ", t.IOR[Selected], 1, 10);
                 serializedObject.FindProperty("Specular").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Specular: ", t.Specular[Selected], 0, 1);
                 serializedObject.FindProperty("SpecularTint").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Specular Tint: ", t.SpecularTint[Selected], 0, 1);

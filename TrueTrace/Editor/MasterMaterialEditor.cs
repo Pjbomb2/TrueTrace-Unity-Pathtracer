@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
  using UnityEngine.UIElements;
 using CommonVars;
+using System.IO;
+using System.Xml;
+using System.Xml.Serialization;
 
 #if UNITY_EDITOR
     #if UNITY_2021
@@ -10,11 +13,187 @@ using CommonVars;
     using UnityEditor.UIElements;
      using UnityEditor;
     namespace TrueTrace {
+
+
+    public class SavePopup2 : PopupWindowContent
+    {
+        string PresetName = "Null";
+        RayTracingObject ThisOBJ;
+        int SaveIndex;
+
+        public SavePopup2(RayTracingObject ThisOBJ, int SaveIndex) {
+            this.ThisOBJ = ThisOBJ;
+            this.SaveIndex = SaveIndex;
+        }
+        public override Vector2 GetWindowSize()
+        {
+            return new Vector2(460, 50);
+        }
+
+        public override void OnGUI(Rect rect) {
+            // Debug.Log("ONINSPECTORGUI");
+
+            PresetName = GUILayout.TextField(PresetName, 32);
+            
+            if(GUILayout.Button("Save Preset")) {
+                RayObjs PresetRays;
+                int CopyIndex = -1;
+                UnityEditor.AssetDatabase.Refresh();
+                using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets").text)) {
+                    var serializer = new XmlSerializer(typeof(RayObjs));
+                    PresetRays = serializer.Deserialize(A) as RayObjs;
+                    int RayReadCount = PresetRays.RayObj.Count;
+                    for(int i = 0; i < RayReadCount; i++) {
+                        if(PresetRays.RayObj[i].MatName.Equals(PresetName)) {
+                            CopyIndex = i;
+                            break;
+                        }
+                    }
+                }
+                RayObjectDatas TempRay = new RayObjectDatas() {
+                    ID = 0,
+                    MatName = PresetName,
+                    OptionID = (int)ThisOBJ.MaterialOptions[SaveIndex],
+                    TransCol = ThisOBJ.TransmissionColor[SaveIndex],
+                    BaseCol = ThisOBJ.BaseColor[SaveIndex],
+                    MetRemap = ThisOBJ.MetallicRemap[SaveIndex],
+                    RoughRemap = ThisOBJ.RoughnessRemap[SaveIndex],
+                    Emiss = ThisOBJ.emmission[SaveIndex],
+                    EmissCol = ThisOBJ.EmissionColor[SaveIndex],
+                    Rough = ThisOBJ.Roughness[SaveIndex],
+                    IOR = ThisOBJ.IOR[SaveIndex],
+                    Met = ThisOBJ.Metallic[SaveIndex],
+                    SpecTint = ThisOBJ.SpecularTint[SaveIndex],
+                    Sheen = ThisOBJ.Sheen[SaveIndex],
+                    SheenTint = ThisOBJ.SheenTint[SaveIndex],
+                    Clearcoat = ThisOBJ.ClearCoat[SaveIndex],
+                    ClearcoatGloss = ThisOBJ.ClearCoatGloss[SaveIndex],
+                    Anisotropic = ThisOBJ.Anisotropic[SaveIndex],
+                    Flatness = ThisOBJ.Flatness[SaveIndex],
+                    DiffTrans = ThisOBJ.DiffTrans[SaveIndex],
+                    SpecTrans = ThisOBJ.SpecTrans[SaveIndex],
+                    FollowMat = ThisOBJ.FollowMaterial[SaveIndex],
+                    ScatterDist = ThisOBJ.ScatterDist[SaveIndex],
+                    Spec = ThisOBJ.Specular[SaveIndex],
+                    AlphaCutoff = ThisOBJ.AlphaCutoff[SaveIndex],
+                    NormStrength = ThisOBJ.NormalStrength[SaveIndex],
+                    Hue = ThisOBJ.Hue[SaveIndex],
+                    Brightness = ThisOBJ.Brightness[SaveIndex],
+                    Contrast = ThisOBJ.Contrast[SaveIndex],
+                    Saturation = ThisOBJ.Saturation[SaveIndex],
+                    BlendColor = ThisOBJ.BlendColor[SaveIndex],
+                    BlendFactor = ThisOBJ.BlendFactor[SaveIndex],
+                    MainTexScaleOffset = ThisOBJ.MainTexScaleOffset[SaveIndex],
+                    SecondaryTextureScale = ThisOBJ.SecondaryTextureScale[SaveIndex],
+                    Rotation = ThisOBJ.Rotation[SaveIndex],
+                    Flags = ThisOBJ.Flags[SaveIndex]
+                };
+                if(CopyIndex != -1) PresetRays.RayObj[CopyIndex] = TempRay;
+                else PresetRays.RayObj.Add(TempRay);
+
+                using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialPresets.xml")) {
+                    var serializer = new XmlSerializer(typeof(RayObjs));
+                    serializer.Serialize(writer.BaseStream, PresetRays);
+                    UnityEditor.AssetDatabase.Refresh();
+                }
+                this.editorWindow.Close();
+            }
+
+
+        }
+    }
+    public class LoadPopup2 : PopupWindowContent
+    {
+        RayObjs PresetRays;
+        Vector2 ScrollPosition;
+        MasterMaterialEditor SourceWindow;
+        public LoadPopup2(MasterMaterialEditor editor) {
+            this.SourceWindow = editor;
+        }
+        private void CallEditorFunction(RayObjectDatas RayObj) {
+            if(SourceWindow != null) {
+                SourceWindow.LoadFunction(RayObj);
+            }
+        }
+        public override Vector2 GetWindowSize()
+        {
+            return new Vector2(460, 250);
+        }
+
+        public override void OnGUI(Rect rect) {
+            UnityEditor.AssetDatabase.Refresh();
+            using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets").text)) {
+                var serializer = new XmlSerializer(typeof(RayObjs));
+                PresetRays = serializer.Deserialize(A) as RayObjs;
+            }
+            int PresetLength = PresetRays.RayObj.Count;
+            ScrollPosition = GUILayout.BeginScrollView(ScrollPosition, GUILayout.Width(460), GUILayout.Height(250));
+            for(int i = 0; i < PresetLength; i++) {
+                GUILayout.BeginHorizontal();
+                    if(GUILayout.Button(PresetRays.RayObj[i].MatName)) {CallEditorFunction(PresetRays.RayObj[i]); this.editorWindow.Close();}
+                    if(GUILayout.Button("Delete")) {
+                        PresetRays.RayObj.RemoveAt(i);
+                        using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialPresets.xml")) {
+                            var serializer = new XmlSerializer(typeof(RayObjs));
+                            serializer.Serialize(writer.BaseStream, PresetRays);
+                            UnityEditor.AssetDatabase.Refresh();
+                        }
+                        OnGUI(new Rect(0,0,100,10));
+                    }
+                GUILayout.EndHorizontal();
+            }
+            GUILayout.EndScrollView();
+        }
+    }
+
+
+
        public class MasterMaterialEditor : EditorWindow {
             [MenuItem("TrueTrace/Master Material Editor")]
             public static void ShowWindow() {
                 GetWindow<MasterMaterialEditor>("Material Editor");
             }
+            int Selected2;
+            RayTracingObject TempRTO2;
+            public void LoadFunction(RayObjectDatas RayObj) {
+                TempRTO2.MaterialOptions[Selected2] = (RayTracingObject.Options)RayObj.OptionID;
+                TempRTO2.TransmissionColor[Selected2] = RayObj.TransCol;
+                TempRTO2.BaseColor[Selected2] = RayObj.BaseCol;
+                TempRTO2.MetallicRemap[Selected2] = RayObj.MetRemap;
+                TempRTO2.RoughnessRemap[Selected2] = RayObj.RoughRemap;
+                TempRTO2.emmission[Selected2] = RayObj.Emiss;
+                TempRTO2.EmissionColor[Selected2] = RayObj.EmissCol;
+                TempRTO2.Roughness[Selected2] = RayObj.Rough;
+                TempRTO2.IOR[Selected2] = RayObj.IOR;
+                TempRTO2.Metallic[Selected2] = RayObj.Met;
+                TempRTO2.SpecularTint[Selected2] = RayObj.SpecTint;
+                TempRTO2.Sheen[Selected2] = RayObj.Sheen;
+                TempRTO2.SheenTint[Selected2] = RayObj.SheenTint;
+                TempRTO2.ClearCoat[Selected2] = RayObj.Clearcoat;
+                TempRTO2.ClearCoatGloss[Selected2] = RayObj.ClearcoatGloss;
+                TempRTO2.Anisotropic[Selected2] = RayObj.Anisotropic;
+                TempRTO2.Flatness[Selected2] = RayObj.Flatness;
+                TempRTO2.DiffTrans[Selected2] = RayObj.DiffTrans;
+                TempRTO2.SpecTrans[Selected2] = RayObj.SpecTrans;
+                TempRTO2.FollowMaterial[Selected2] = RayObj.FollowMat;
+                TempRTO2.ScatterDist[Selected2] = RayObj.ScatterDist;
+                TempRTO2.Specular[Selected2] = RayObj.Spec;
+                TempRTO2.AlphaCutoff[Selected2] = RayObj.AlphaCutoff;
+                TempRTO2.NormalStrength[Selected2] = RayObj.NormStrength;
+                TempRTO2.Hue[Selected2] = RayObj.Hue;
+                TempRTO2.Brightness[Selected2] = RayObj.Brightness;
+                TempRTO2.Contrast[Selected2] = RayObj.Contrast;
+                TempRTO2.Saturation[Selected2] = RayObj.Saturation;
+                TempRTO2.BlendColor[Selected2] = RayObj.BlendColor;
+                TempRTO2.BlendFactor[Selected2] = RayObj.BlendFactor;
+                TempRTO2.MainTexScaleOffset[Selected2] = RayObj.MainTexScaleOffset;
+                TempRTO2.SecondaryTextureScale[Selected2] = RayObj.SecondaryTextureScale;
+                TempRTO2.Rotation[Selected2] = RayObj.Rotation;
+                TempRTO2.Flags[Selected2] = RayObj.Flags;
+                TempRTO2.CallMaterialEdited(true);
+            }
+
+
 
             private List<TreeViewItemData<string>> TraverseChildren(Transform t, ref int id, int depth) {
                 List<TreeViewItemData<string>> TempList = new List<TreeViewItemData<string>>();
@@ -258,11 +437,11 @@ using CommonVars;
                                 MiscBar1.style.height = 20;
 
                                 Slider RoughnessSlider = new Slider() {label = RTO.Flags[Selected].GetFlag(CommonFunctions.Flags.UseSmoothness) ? "Smoothness: " : "Roughness: ", value = RTO.Roughness[Selected], highValue = 1.0f, lowValue = 0};
-                                RoughnessSlider.RegisterValueChangedCallback(evt => {RTO.Roughness[Selected] = evt.newValue; RTO.CallMaterialEdited(true);});
+                                RoughnessSlider.RegisterValueChangedCallback(evt => {RTO.Roughness[Selected] = (RTO.Flags[Selected].GetFlag(CommonFunctions.Flags.UseSmoothness) ? (1.0f - evt.newValue) : evt.newValue); RTO.CallMaterialEdited(true);});
                                 RoughnessSlider.style.width = 350;
                                 RoughnessSlider.showInputField = true;
                                     Toggle IsSmoothness = new Toggle("Use Smoothness: ") {value = RTO.Flags[Selected].GetFlag(CommonFunctions.Flags.UseSmoothness)};
-                                    IsSmoothness.RegisterValueChangedCallback(evt => {RTO.Flags[Selected] = CommonFunctions.SetFlagVar(RTO.Flags[Selected], CommonFunctions.Flags.UseSmoothness, evt.newValue); if(evt.newValue) RoughnessSlider.label = "Smoothness: "; else RoughnessSlider.label = "Roughness";RTO.CallMaterialEdited(true);});
+                                    IsSmoothness.RegisterValueChangedCallback(evt => {RTO.Flags[Selected] = CommonFunctions.SetFlagVar(RTO.Flags[Selected], CommonFunctions.Flags.UseSmoothness, evt.newValue); if(evt.newValue) RoughnessSlider.label = "Smoothness: "; else RoughnessSlider.label = "Roughness";RTO.CallMaterialEdited(true); RTO.Roughness[Selected] = 1.0f - RTO.Roughness[Selected];});
 
                                     Toggle InvertSmoothTex = new Toggle("Invert Roughness Tex: ") {value = RTO.Flags[Selected].GetFlag(CommonFunctions.Flags.InvertSmoothnessTexture)};
                                     InvertSmoothTex.RegisterValueChangedCallback(evt => {RTO.Flags[Selected] = CommonFunctions.SetFlagVar(RTO.Flags[Selected], CommonFunctions.Flags.InvertSmoothnessTexture, evt.newValue);RTO.CallMaterialEdited(true);});
@@ -425,8 +604,12 @@ using CommonVars;
                                 RotationSlider.style.width = 350;
                                 RotationSlider.showInputField = true;
 
+                                Button SavePresetButton = new Button(() => UnityEditor.PopupWindow.Show(new Rect(0,0,10,10), new SavePopup2(RTO, Selected))) {text = "Save Material Preset"};
+                                Button LoadPresetButton = new Button(() => {TempRTO2 = RTO; Selected2 = Selected; UnityEditor.PopupWindow.Show(new Rect(0,0,100,10), new LoadPopup2(this));}){text = "Load Material Preset"};
 
                                 TempWindow.Add(new Label(RTO.name));
+                                TempWindow.Add(SavePresetButton);
+                                TempWindow.Add(LoadPresetButton);
                                 TempWindow.Add(MatTypePopup);
                                 TempWindow.Add(ColField);
                                 TempWindow.Add(EmissField);
@@ -434,10 +617,10 @@ using CommonVars;
                                 TempWindow.Add(EmissionBar);
                                 TempWindow.Add(MiscBar1);
                                 TempWindow.Add(MiscBar2);
-                                TempWindow.Add(RoughnessSlider);
-                                TempWindow.Add(RoughnessMinMax);
                                 TempWindow.Add(MetallicSlider);
                                 TempWindow.Add(MetallicMinMax);
+                                TempWindow.Add(RoughnessSlider);
+                                TempWindow.Add(RoughnessMinMax);
 
                                 TempWindow.Add(IORSlider);
                                 TempWindow.Add(SpecularSlider);

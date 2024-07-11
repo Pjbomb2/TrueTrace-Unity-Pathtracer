@@ -41,7 +41,7 @@ A passion projects that has been going on for a while with the goal of bringing 
 </br>
 
 If you have any questions, or suggestions, etc. let me know either through github issues, my twitter, or my discord! I am always looking for more stuff to add, and more ways to make this project more user friendly or appealing for others to use
-## You can contact me easiest through my discord server(above) or my twitter(https://twitter.com/Pjbomb2)
+## You can contact me easiest through my discord server(above) or my twitter(https://x.com/Pjbomb2)
 
 
 ## Notes:
