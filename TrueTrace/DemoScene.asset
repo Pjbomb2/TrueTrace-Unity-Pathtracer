@@ -19,7 +19,7 @@ MonoBehaviour:
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 1
+  Accumulate: 0
   PPBloom: 0
   BloomStrength: 0.805
   PPDoF: 0
@@ -36,7 +36,7 @@ MonoBehaviour:
   ReSTIRGIUpdateRate: 7
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
-  UseReSTIRGI: 0
+  UseReSTIRGI: 1
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
   ReSTIRGITemporalMCap: 32

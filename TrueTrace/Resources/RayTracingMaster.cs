@@ -440,7 +440,8 @@ namespace TrueTrace {
             GenerateShader.SetBool(Name, IN);
             ReSTIRGI.SetBool(Name, IN);
         }
-
+        Matrix4x4 CamInvProjPrev;
+        Matrix4x4 CamToWorldPrev;
         Vector3 PrevPos;
         private Vector2 HDRIParams = Vector2.zero;
         private void SetShaderParameters(CommandBuffer cmd)
@@ -468,8 +469,14 @@ namespace TrueTrace {
             ShadingShader.SetComputeBuffer(TransferKernel, "BufferData", CurBounceInfoBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernel, "BufferData", CurBounceInfoBuffer);
 
+            var EA = CamToWorldPrev;
+            var EB = CamInvProjPrev;
+            CamInvProjPrev = _camera.projectionMatrix.inverse;
+            CamToWorldPrev = _camera.cameraToWorldMatrix;
             SetMatrix("CamInvProj", _camera.projectionMatrix.inverse);
             SetMatrix("CamToWorld", _camera.cameraToWorldMatrix);
+            SetMatrix("CamInvProjPrev", EB);
+            SetMatrix("CamToWorldPrev", EA);
             SetMatrix("ViewMatrix", _camera.worldToCameraMatrix);
             var E = _camera.transform.position - PrevPos;
             SetVector("Up", _camera.transform.up, cmd);

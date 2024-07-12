@@ -131,6 +131,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     const float3 GeomNorm = i_octahedral_32(asuint(GBuffer.x));
     const float3 SurfNorm = i_octahedral_32(asuint(GBuffer.y));
     float3 PrimaryHitPosition = LoadSurfaceInfo(id.xy);
+    const float3 DirectionalPosition = GBuffer.z * CameraRay.direction + CameraRay.origin;
 
     ColData CenterCol = GlobalColors[pixel_index];
     float4 Data = CenterCol.Data;
@@ -211,7 +212,9 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     if(UseReSTIRGITemporal && (!RetracedSample)) {
         float dist_depth = (abs(GBuffer.z - PrevGBuffer.z)) / abs(GBuffer.z);
         float dot_geo_normals = dot(GeomNorm, i_octahedral_32(asuint(PrevGBuffer.x)));
-        if ((dist_depth < 0.1f && dot_geo_normals > 0.7) && Case != 3 && IsTemporalValid) {
+        SmallerRay NeighborRay = CreateCameraRayPrev(prevIndex / float2(screen_width, screen_height) * 2.0f - 1.0f);
+        float3 ray = (PrevGBuffer.z * NeighborRay.direction + NeighborRay.origin) - DirectionalPosition; 
+        if ((abs(dot(GeomNorm, ray)) < 0.1f && dot_geo_normals > 0.7) && Case != 3 && IsTemporalValid) {
             // if(PrevRes.z != 0 || ggx_distribution(dot(normalize(-normalize(CalcPos(WorldPosB[prevIndex]) - PrimaryHitPosition) + CameraRay.direction), SurfNorm), clamp(SurfaceMat.roughness, 0.089 * 0.089, 1.0)) > 0.1f * randomNEE(126, pixel_index).y) {
                 UpdateReservoir(CurrentRes, wsum, PrevRes, randomNEE(126, pixel_index).x, CachedID, prevIndex);
                 CurrentRes.x += PrevRes.x;

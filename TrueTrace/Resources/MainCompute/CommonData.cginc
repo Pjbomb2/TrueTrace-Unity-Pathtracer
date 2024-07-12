@@ -5,6 +5,8 @@
 
 float4x4 CamToWorld;
 float4x4 CamInvProj;
+float4x4 CamToWorldPrev;
+float4x4 CamInvProjPrev;
 
 float4x4 ViewMatrix;
 int MaxBounce;
@@ -551,6 +553,19 @@ inline SmallerRay CreateCameraRay(float2 uv) {
     float3 direction = mul(CamInvProj, float4(uv, 0.0f, 1.0f)).xyz;
     // Transform the direction from camera to world space and normalize
     direction = mul(CamToWorld, float4(direction, 0.0f)).xyz;
+    direction = normalize(direction);
+
+    return CreateRay(origin, direction);
+}
+
+inline SmallerRay CreateCameraRayPrev(float2 uv) {
+    // Transform the camera origin to world space
+    float3 origin = mul(CamToWorldPrev, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
+
+    // Invert the perspective projection of the view-space position
+    float3 direction = mul(CamInvProjPrev, float4(uv, 0.0f, 1.0f)).xyz;
+    // Transform the direction from camera to world space and normalize
+    direction = mul(CamToWorldPrev, float4(direction, 0.0f)).xyz;
     direction = normalize(direction);
 
     return CreateRay(origin, direction);
