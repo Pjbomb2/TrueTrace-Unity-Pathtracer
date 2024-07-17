@@ -66,6 +66,7 @@ struct LightTriData {
 	float3 posedge1;
 	float3 posedge2;
 	uint TriTarget;
+	float SourceEnergy;
 };
 
 StructuredBuffer<LightTriData> LightTrianglesIn;

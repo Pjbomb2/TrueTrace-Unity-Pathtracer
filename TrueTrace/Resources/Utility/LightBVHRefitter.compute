@@ -165,6 +165,7 @@ struct LightTriData {
     float3 posedge1;
     float3 posedge2;
     uint TriTarget;
+    float SourceEnergy;
 };
 
 StructuredBuffer<LightTriData> LightTriangles;
@@ -178,7 +179,7 @@ inline float AreaOfTriangle(float3 pt1, float3 pt2, float3 pt3) {
     float s = (a + b + c) / 2.0f;
     return sqrt(s * (s - a) * (s - b) * (s - c));
 }
-
+float4x4 ToWorld;
 
 [numthreads(256,1,1)]
 void LightRefitKernel (uint3 id : SV_DispatchThreadID)
@@ -199,7 +200,8 @@ void LightRefitKernel (uint3 id : SV_DispatchThreadID)
         LightNodes[Index].BBMax = BBMax;
         LightNodes[Index].BBMin = BBMin;
         LightNodes[Index].w = octahedral_32(-normalize(cross(normalize(LightTri.posedge1), normalize(LightTri.posedge2))));
-        LightNodes[Index].phi = max(AreaOfTriangle(LightTri.pos0, LightTri.pos0 + LightTri.posedge1, LightTri.pos0 + LightTri.posedge2),0.00000001f);   
+        LightNodes[Index].phi = max(LightTri.SourceEnergy * AreaOfTriangle(mul(ToWorld, float4(LightTri.pos0,1)), mul(ToWorld, float4(LightTri.pos0 + LightTri.posedge1,1)), mul(ToWorld, float4(LightTri.pos0 + LightTri.posedge2,1))),0.00000001f);   
+        // LightNodes[Index].phi = max(AreaOfTriangle(LightTri.pos0, LightTri.pos0 + LightTri.posedge1, LightTri.pos0 + LightTri.posedge2),0.00000001f);   
         return;
     }
     LightBVHData LeftNode = LightNodes[Node.left + TotalNodeOffset];

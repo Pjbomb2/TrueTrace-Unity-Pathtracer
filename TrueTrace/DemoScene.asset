@@ -19,7 +19,7 @@ MonoBehaviour:
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 0
+  Accumulate: 1
   PPBloom: 0
   BloomStrength: 0.805
   PPDoF: 0
@@ -33,19 +33,19 @@ MonoBehaviour:
   RenderScale: 1
   UseASVGF: 0
   UseTAAU: 0
-  ReSTIRGIUpdateRate: 7
+  ReSTIRGIUpdateRate: 0
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
-  UseReSTIRGI: 1
+  UseReSTIRGI: 0
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
-  ReSTIRGITemporalMCap: 32
+  ReSTIRGITemporalMCap: 4
   DoReSTIRGIConnectionValidation: 1
   Exposure: 8.9
   DoPartialRendering: 0
   PartialRenderingFactor: 3
   DoFirefly: 0
-  ImprovedPrimaryHit: 1
+  ImprovedPrimaryHit: 0
   RISCount: 12
   ToneMapper: 0
   SunDesaturate: 0
@@ -56,7 +56,7 @@ MonoBehaviour:
   FireflyStrength: 1
   FireflyOffset: 0
   OIDNFrameCount: 122
-  UseOIDN: 0
+  UseOIDN: 1
   DoSharpen: 0
   Sharpness: 0
   MainDesiredRes: 16384
@@ -65,5 +65,5 @@ MonoBehaviour:
   BackgroundType: 0
   BackgroundIntensity: 1
   SceneBackgroundColor: {x: 0, y: 0, z: 0}
-  SecondaryBackgroundType: 0
-  SecondarySceneBackgroundColor: {x: 1, y: 1, z: 1}
+  SecondaryBackgroundType: 2
+  SecondarySceneBackgroundColor: {x: 0, y: 0, z: 0}

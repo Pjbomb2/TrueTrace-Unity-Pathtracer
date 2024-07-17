@@ -350,6 +350,11 @@ namespace TrueTrace {
                 TestBuffer.Add(1);
                 ExposureBuffer.ReleaseSafe(); ExposureBuffer = new ComputeBuffer(1, sizeof(float)); ExposureBuffer.SetData(TestBuffer);
             }
+            if (AutoExpose == null) { 
+                AutoExpose = Resources.Load<ComputeShader>("PostProcess/Compute/AutoExpose");
+                AutoExposeKernel = AutoExpose.FindKernel("AutoExpose");
+                AutoExposeFinalizeKernel = AutoExpose.FindKernel("AutoExposeFinalize");
+            }
             AutoExpose.SetInt("screen_width", Screen.width);
             AutoExpose.SetInt("screen_height", Screen.height);
             AutoExpose.SetBuffer(AutoExposeKernel, "A", ExposureBuffer);

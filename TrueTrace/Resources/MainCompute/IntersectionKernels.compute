@@ -35,8 +35,12 @@ inline void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ra
                 #ifdef AdvancedAlphaMapped
                     if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                         float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
-                        float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlphaTex);
-                        if(Uv.x != -1 && _AlphaAtlas.SampleLevel(my_linear_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) return;
+                        float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlphaTex, _Materials[MaterialIndex].Rotation, true);
+                        #ifdef PointFiltering
+                            if(Uv.x != -1 && _AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) return;
+                        #else
+                            if(Uv.x != -1 && _AlphaAtlas.SampleLevel(my_linear_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) return;
+                        #endif
                     }
                 #endif
                 #ifdef IgnoreGlassMain
@@ -444,7 +448,7 @@ void IntersectBVHShadow() {
                                 if (CurBounce == 0) {
                                     GlobalColors[PixelIndex].Direct += ShadowRay.illumination * throughput;
                                 } else {
-                                    #ifndef RadianceCache
+                                    #if !defined(RadianceCache) || defined(ImprovedRadCacheSpecularResponse)
                                         GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
                                     #endif
                                 }

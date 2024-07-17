@@ -107,6 +107,7 @@ namespace TrueTrace {
         private RenderTexture Gradients;
 
 
+
         [HideInInspector] public RenderTexture ScreenSpaceInfo;
         private RenderTexture ScreenSpaceInfoPrev;
 
@@ -143,6 +144,8 @@ namespace TrueTrace {
         private static bool _meshObjectsNeedRebuilding = false;
         public static List<RayTracingLights> _rayTracingLights = new List<RayTracingLights>();
 
+
+        public Vector2 CurrentHorizonalPatch;
         private float _lastFieldOfView;
 
         [HideInInspector] public int FramesSinceStart2;
@@ -154,7 +157,7 @@ namespace TrueTrace {
         [HideInInspector] public static bool DoCheck = false;
         [HideInInspector] public bool PrevReSTIRGI = false;
 
-
+        public bool DoPanorama = false;
         public TTSettings LocalTTSettings;
 
         public static bool SceneIsRunning = false;
@@ -166,6 +169,7 @@ namespace TrueTrace {
         [HideInInspector] public int AtmoNumLayers = 4;
         private float PrevResFactor;
         private int GenKernel;
+        private int GenPanoramaKernel;
         private int GenASVGFKernel;
         private int TraceKernel;
         private int ShadowKernel;
@@ -179,6 +183,7 @@ namespace TrueTrace {
         private int ReSTIRGISpatialKernel;
         private int TTtoOIDNKernel;
         private int OIDNtoTTKernel;
+        private int TTtoOIDNKernelPanorama;
         #if !DisableRadianceCache
             private int ResolveKernel;
         #endif
@@ -225,6 +230,7 @@ namespace TrueTrace {
         }
         unsafe public void Start2()
         {
+            CurrentHorizonalPatch = new Vector2(0,1);
             LoadTT();
             LoadInitialSettings();//Build only
             Application.targetFrameRate = 165;
@@ -247,6 +253,7 @@ namespace TrueTrace {
             uFirstFrame = 1;
             FramesSinceStart = 0;
             GenKernel = GenerateShader.FindKernel("Generate");
+            GenPanoramaKernel = GenerateShader.FindKernel("GeneratePanorama");
             GenASVGFKernel = GenerateShader.FindKernel("GenerateASVGF");
             TraceKernel = IntersectionShader.FindKernel("kernel_trace");
             ShadowKernel = IntersectionShader.FindKernel("kernel_shadow");
@@ -260,6 +267,7 @@ namespace TrueTrace {
             ReSTIRGISpatialKernel = ReSTIRGI.FindKernel("ReSTIRGISpatial");
             TTtoOIDNKernel = ShadingShader.FindKernel("TTtoOIDNKernel");
             OIDNtoTTKernel = ShadingShader.FindKernel("OIDNtoTTKernel");
+            TTtoOIDNKernelPanorama = ShadingShader.FindKernel("TTtoOIDNKernelPanorama");
             #if !DisableRadianceCache
                 ResolveKernel = GenerateShader.FindKernel("CacheResolve");
             #endif
@@ -324,7 +332,10 @@ namespace TrueTrace {
                 OutputBuffer?.Release();
                 AlbedoBuffer?.Release();
                 NormalBuffer?.Release();
-                OIDNDenoiser.Dispose();
+                if(OIDNDenoiser != null) {
+                    OIDNDenoiser.Dispose();
+                    OIDNDenoiser = null;
+                }
             #endif
             if(ASVGFCode != null) ASVGFCode.ClearAll();
             if(ReSTIRASVGFCode != null) ReSTIRASVGFCode.ClearAll();
@@ -490,6 +501,7 @@ namespace TrueTrace {
             SetVector("BackgroundColor", LocalTTSettings.SceneBackgroundColor, cmd);
             SetVector("ClayColor", LocalTTSettings.ClayColor, cmd);
             SetVector("GroundColor", LocalTTSettings.GroundColor, cmd);
+            SetVector("Segment", CurrentHorizonalPatch, cmd);
             if(LocalTTSettings.UseASVGF && !LocalTTSettings.UseReSTIRGI) ASVGFCode.shader.SetVector("CamDelta", E);
             if(LocalTTSettings.UseASVGF && LocalTTSettings.UseReSTIRGI) ReSTIRASVGFCode.shader.SetVector("CamDelta", E);
 
@@ -591,13 +603,15 @@ namespace TrueTrace {
                 } else {
                     ShadingShader.SetTexture(ShadeKernel, "CDFX", CDFX);
                     ShadingShader.SetTexture(ShadeKernel, "CDFY", CDFY);
+
                 }
                 ShadingShader.SetBuffer(ShadeKernel, "TotSum", CDFTotalBuffer);
                 ShadingShader.SetTexture(ShadeKernel, "_SkyboxTexture", SkyboxTexture);
             }
             SetVector("HDRIParams", HDRIParams, cmd);
 
-
+            ShadingShader.SetTexture(TTtoOIDNKernelPanorama, "ScreenSpaceInfo", ScreenSpaceInfo);
+            ShadingShader.SetComputeBuffer(TTtoOIDNKernelPanorama, "GlobalColors", LightingBuffer);
 
             GenerateShader.SetBuffer(GenASVGFKernel, "Rays", (FramesSinceStart2 % 2 == 0) ? RaysBuffer : RaysBufferB);
             GenerateShader.SetTexture(GenASVGFKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
@@ -612,6 +626,9 @@ namespace TrueTrace {
             GenerateShader.SetTexture(GenKernel, "RandomNums", (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB);
             GenerateShader.SetComputeBuffer(GenKernel, "GlobalRays", _RayBuffer);
             GenerateShader.SetComputeBuffer(GenKernel, "GlobalColors", LightingBuffer);            
+            GenerateShader.SetTexture(GenPanoramaKernel, "RandomNums", (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB);
+            GenerateShader.SetComputeBuffer(GenPanoramaKernel, "GlobalRays", _RayBuffer);
+            GenerateShader.SetComputeBuffer(GenPanoramaKernel, "GlobalColors", LightingBuffer);            
 
             AssetManager.Assets.SetMeshTraceBuffers(IntersectionShader, TraceKernel);
             IntersectionShader.SetComputeBuffer(TraceKernel, "GlobalRays", _RayBuffer);
@@ -655,6 +672,9 @@ namespace TrueTrace {
                 GenerateShader.SetComputeBuffer(GenASVGFKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
                 GenerateShader.SetComputeBuffer(GenKernel, "CacheBuffer", CacheBuffer);
                 GenerateShader.SetComputeBuffer(GenKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
+
+                GenerateShader.SetComputeBuffer(GenPanoramaKernel, "CacheBuffer", CacheBuffer);
+                GenerateShader.SetComputeBuffer(GenPanoramaKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
                 
                 ShadingShader.SetComputeBuffer(ShadeKernel, "CacheBuffer", CacheBuffer);
                 ShadingShader.SetComputeBuffer(ShadeKernel, "HashEntriesBuffer", HashBuffer);
@@ -673,7 +693,6 @@ namespace TrueTrace {
             AssetManager.Assets.SetMeshTraceBuffers(ShadingShader, ShadeKernel);
             AssetManager.Assets.SetHeightmapTraceBuffers(ShadingShader, ShadeKernel);
             ShadingShader.SetTexture(ShadeKernel, "WorldPosB", !FlipFrame ? GIWorldPosB : GIWorldPosC);
-            ShadingShader.SetTexture(ShadeKernel, "NEEPosA", FlipFrame ? GINEEPosA : GINEEPosB);
             ShadingShader.SetTexture(ShadeKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
             ShadingShader.SetTexture(ShadeKernel, "SingleComponentAtlas", Assets.SingleComponentAtlas);
             ShadingShader.SetTexture(ShadeKernel, "_EmissiveAtlas", Assets.EmissiveAtlas);
@@ -685,12 +704,15 @@ namespace TrueTrace {
             ShadingShader.SetComputeBuffer(ShadeKernel, "ShadowRaysBuffer", _ShadowBuffer);
 
 
+
             ShadingShader.SetBuffer(FinalizeKernel, "GlobalColors", LightingBuffer);
             ShadingShader.SetTexture(FinalizeKernel, "Result", _target);
 
             #if UseOIDN
                 ShadingShader.SetBuffer(TTtoOIDNKernel, "AlbedoBuffer", AlbedoBuffer);
                 ShadingShader.SetBuffer(TTtoOIDNKernel, "NormalBuffer", NormalBuffer);
+                ShadingShader.SetBuffer(TTtoOIDNKernelPanorama, "AlbedoBuffer", AlbedoBuffer);
+                ShadingShader.SetBuffer(TTtoOIDNKernelPanorama, "NormalBuffer", NormalBuffer);
             #endif
 
             GenerateShader.SetComputeBuffer(GIReTraceKernel, "GlobalRays", _RayBuffer);
@@ -856,6 +878,7 @@ namespace TrueTrace {
                 CommonFunctions.CreateRenderTexture(ref ScreenSpaceInfo, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref ScreenSpaceInfoPrev, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref Gradients, SourceWidth / 3, SourceHeight / 3, CommonFunctions.RTHalf2);
+
                 #if TTLightMapping
                     CommonFunctions.CreateRenderTexture(ref LightWorldIndex, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 #endif
@@ -892,7 +915,7 @@ namespace TrueTrace {
                 cmd.EndSample("ReSTIR GI Reproject");
             } else {
                 cmd.BeginSample("Primary Ray Generation");
-                cmd.DispatchCompute(GenerateShader, (LocalTTSettings.UseASVGF && !LocalTTSettings.UseReSTIRGI) ? GenASVGFKernel : GenKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+                cmd.DispatchCompute(GenerateShader, (DoPanorama ? GenPanoramaKernel : ((LocalTTSettings.UseASVGF && !LocalTTSettings.UseReSTIRGI) ? GenASVGFKernel : GenKernel)), Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 cmd.EndSample("Primary Ray Generation");
             }
         }
@@ -950,6 +973,8 @@ namespace TrueTrace {
                             cmd.DispatchCompute(ShadingShader, ShadeKernel, CurBounceInfoBuffer, 0);
                         #endif
                         cmd.EndSample("Shading Kernel: " + i);
+
+
 
                         cmd.BeginSample("Transfer Kernel 2: " + i);
                         cmd.SetComputeIntParam(ShadingShader, "Type", 1);
@@ -1066,9 +1091,15 @@ namespace TrueTrace {
 
             #if UseOIDN
                 if(LocalTTSettings.UseOIDN && SampleCount > LocalTTSettings.OIDNFrameCount) {
-                    cmd.SetComputeBufferParam(ShadingShader, TTtoOIDNKernel, "OutputBuffer", ColorBuffer);
-                    ShadingShader.SetTexture(TTtoOIDNKernel, "Result", _FinalTex);
-                    cmd.DispatchCompute(ShadingShader, TTtoOIDNKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+                    if(DoPanorama) {
+                        cmd.SetComputeBufferParam(ShadingShader, TTtoOIDNKernelPanorama, "OutputBuffer", ColorBuffer);
+                        ShadingShader.SetTexture(TTtoOIDNKernelPanorama, "Result", _FinalTex);
+                        cmd.DispatchCompute(ShadingShader, TTtoOIDNKernelPanorama, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+                    } else {
+                        cmd.SetComputeBufferParam(ShadingShader, TTtoOIDNKernel, "OutputBuffer", ColorBuffer);
+                        ShadingShader.SetTexture(TTtoOIDNKernel, "Result", _FinalTex);
+                        cmd.DispatchCompute(ShadingShader, TTtoOIDNKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+                    }
 
                     OIDNDenoiser.Render(cmd, ColorBuffer, OutputBuffer, AlbedoBuffer, NormalBuffer);
 

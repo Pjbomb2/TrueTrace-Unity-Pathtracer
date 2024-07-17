@@ -258,10 +258,10 @@ namespace TrueTrace {
                 if (BVHBuffer != null) BVHBuffer.Release();
                   if(AggTriangles != null) {
                     if(LightTriangles.Count == 0) {
-                        LightTriBuffer = new ComputeBuffer(1, 40);
+                        LightTriBuffer = new ComputeBuffer(1, 44);
                         LightNodeBuffer = new ComputeBuffer(1, 40);
                     } else {
-                        LightTriBuffer = new ComputeBuffer(Mathf.Max(LightTriangles.Count,1), 40);
+                        LightTriBuffer = new ComputeBuffer(Mathf.Max(LightTriangles.Count,1), 44);
                         LightNodeBuffer = new ComputeBuffer(Mathf.Max(LBVH.nodes.Length,1), 40);
                     }
                     TriBuffer = new ComputeBuffer(AggTriangles.Length, 88);
@@ -924,6 +924,7 @@ namespace TrueTrace {
 
                 if(LightTriangles.Count != 0) {
                     cmd.BeginSample("LightRefitter");
+                    cmd.SetComputeMatrixParam(LightMeshRefit, "ToWorld", transform.localToWorldMatrix);
                     cmd.SetComputeIntParam(LightMeshRefit, "TotalNodeOffset", LightNodeOffset);
                     cmd.SetComputeBufferParam(LightMeshRefit, 1, "LightNodes", RealizedLightNodeBuffer);
                     cmd.SetComputeFloatParam(LightMeshRefit, "FloatMax", float.MaxValue);
@@ -1118,7 +1119,8 @@ namespace TrueTrace {
                                 pos0 = TempTri.pos0,
                                 posedge1 = TempTri.posedge1,
                                 posedge2 = TempTri.posedge2,
-                                TriTarget = (uint)(OffsetReal)
+                                TriTarget = (uint)(OffsetReal),
+                                SourceEnergy = radiance
                                 });
                             IllumTriCount++;
                         }

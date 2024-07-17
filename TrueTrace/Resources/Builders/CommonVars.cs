@@ -263,6 +263,7 @@ namespace CommonVars
         public Vector3 posedge1;
         public Vector3 posedge2;
         public uint TriTarget;
+        public float SourceEnergy;
     }
 
     [System.Serializable]

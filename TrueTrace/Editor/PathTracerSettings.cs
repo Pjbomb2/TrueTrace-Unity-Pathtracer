@@ -628,6 +628,7 @@ Toolbar toolbar;
          BackgroundSettings.Add("Solid Color");
 
          VisualElement BlankElement = new VisualElement();
+         VisualElement SecondaryBlankElement = new VisualElement();
 
          InputHDRIField = new ObjectField();
          InputHDRIField.objectType = typeof(Texture);
@@ -690,7 +691,7 @@ Toolbar toolbar;
          SecondaryBackgroundSettingsField.style.width = 550;
          switch(SecondaryBackgroundSettingsField.index) {
             case 0:
-               SecondaryBackgroundSettingsField.Add(BlankElement);
+               SecondaryBackgroundSettingsField.Add(SecondaryBlankElement);
             break;
             case 1:
                SecondaryBackgroundSettingsField.Add(SecondaryInputHDRIField);
@@ -707,7 +708,7 @@ Toolbar toolbar;
             RayMaster.LocalTTSettings.SecondaryBackgroundType = SecondaryBackgroundType;
             switch(SecondaryBackgroundSettingsField.index) {
                case 0:
-                  SecondaryBackgroundSettingsField.Add(BlankElement);
+                  SecondaryBackgroundSettingsField.Add(SecondaryBlankElement);
                break;
                case 1:
                   SecondaryBackgroundSettingsField.Add(SecondaryInputHDRIField);
@@ -1509,6 +1510,22 @@ Toolbar toolbar;
            ScreenShotButton.style.minWidth = 100;
            StaticButton = new Button(() => {if(!Application.isPlaying) OptimizeForStatic(); else Debug.Log("Cant Do This In Editor");}) {text = "Make All Static"};
            StaticButton.style.minWidth = 105;
+
+           Button PanoramaButton = new Button(() => {
+            var TempPan = GameObject.Find("Scene").GetComponent<PanoramaDoer>();
+            if((10000.0f / (float)RayTracingMaster._camera.pixelWidth) != Mathf.Ceil(10000.0f / (float)RayTracingMaster._camera.pixelWidth)) {
+               Debug.LogError("You need to set the resolution width to evenly divide 10,000(500, 1000, etc.), and the height to 5,000");
+            } else {
+               if(TempPan != null) {
+                  TempPan.Init();
+                  RayMaster.DoPanorama = true;
+               } else {
+                  Debug.LogError("You need to add the PanoramaDoer to the Scene Gameobject");
+               }
+            }
+            }) {text = "Make Panorama"};
+           PanoramaButton.style.minWidth = 105;
+
            
            ClearButton = new Button(() => {
             if(!Application.isPlaying) {
@@ -1535,6 +1552,7 @@ Toolbar toolbar;
            ButtonField1.Add(BVHBuild);
            ButtonField1.Add(ScreenShotButton);
            ButtonField1.Add(StaticButton);
+           ButtonField1.Add(PanoramaButton);
            MainSource.Add(ButtonField1);
 
            Box ButtonField2 = new Box();

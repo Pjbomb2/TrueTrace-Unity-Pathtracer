@@ -120,7 +120,16 @@ namespace TrueTrace {
 
 		private void InitializeArrayWithIndex(ref string[] ExsArray, string FillVar, Material[] SharedMaterials, ref int[] Index, int ExtraCount = -1) {
 			if(ExtraCount == -1) ExtraCount = SubMeshCount;
-			if(ExsArray == null || ExsArray.Length != ExtraCount) {
+			bool NeedsRedo = false;
+			if(ExsArray != null && ExsArray.Length == ExtraCount) {
+				for(int i = 0; i < ExtraCount; i++) {
+					if(!ExsArray[i].Equals(SharedMaterials[i].name)) {
+						NeedsRedo = true;
+						break;
+					}
+				}
+			}
+			if(ExsArray == null || ExsArray.Length != ExtraCount || NeedsRedo) {
 				if(ExsArray == null) {
 					ExsArray = new string[ExtraCount];
 					System.Array.Fill(ExsArray, FillVar);
@@ -129,7 +138,7 @@ namespace TrueTrace {
 					int PrevLength = ExsArray.Length;
 					string[] OrigExsArray = new string[PrevLength];
 					System.Array.Copy(ExsArray, OrigExsArray, PrevLength);
-					if(ExtraCount != PrevLength) {
+					if(ExtraCount != PrevLength || NeedsRedo) {
 						ExsArray = new string[ExtraCount];
 						System.Array.Fill(ExsArray, FillVar);
 						Index = new int[PrevLength];
@@ -177,7 +186,7 @@ namespace TrueTrace {
 		 		return;
 		 	}
 
-		 	if(mesh == null || SharedMaterials == null || SharedMaterials.Length == 0 || mesh.GetTopology(0) != MeshTopology.Triangles || mesh.vertexCount == 0) {
+		 	if((Application.isPlaying && !mesh.isReadable) || mesh == null || SharedMaterials == null || SharedMaterials.Length == 0 || mesh.GetTopology(0) != MeshTopology.Triangles || mesh.vertexCount == 0) {
 		 		DestroyImmediate(this);
 		 		WasDeleted = true;
 		 		return;

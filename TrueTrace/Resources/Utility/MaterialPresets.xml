@@ -70,12 +70,12 @@
   </RayObjectDatas>
   <RayObjectDatas>
     <ID>0</ID>
-    <MatName>Glass</MatName>
-    <OptionID>1</OptionID>
+    <MatName>GlassFull</MatName>
+    <OptionID>0</OptionID>
     <TransCol>
-      <x>0</x>
-      <y>0</y>
-      <z>0</z>
+      <x>1</x>
+      <y>1</y>
+      <z>1</z>
     </TransCol>
     <BaseCol>
       <x>1</x>
@@ -109,7 +109,7 @@
     <DiffTrans>0</DiffTrans>
     <SpecTrans>1</SpecTrans>
     <FollowMat>false</FollowMat>
-    <ScatterDist>0</ScatterDist>
+    <ScatterDist>0.1</ScatterDist>
     <Spec>0</Spec>
     <AlphaCutoff>0.1</AlphaCutoff>
     <NormStrength>1</NormStrength>
@@ -135,5 +135,141 @@
     </SecondaryTextureScale>
     <Rotation>0</Rotation>
     <Flags>0</Flags>
+  </RayObjectDatas>
+  <RayObjectDatas>
+    <ID>0</ID>
+    <MatName>GlassThin</MatName>
+    <OptionID>0</OptionID>
+    <TransCol>
+      <x>1</x>
+      <y>1</y>
+      <z>1</z>
+    </TransCol>
+    <BaseCol>
+      <x>1</x>
+      <y>1</y>
+      <z>1</z>
+    </BaseCol>
+    <MetRemap>
+      <x>0</x>
+      <y>1</y>
+    </MetRemap>
+    <RoughRemap>
+      <x>0</x>
+      <y>1</y>
+    </RoughRemap>
+    <Emiss>0</Emiss>
+    <EmissCol>
+      <x>1</x>
+      <y>1</y>
+      <z>1</z>
+    </EmissCol>
+    <Rough>0</Rough>
+    <IOR>1.33</IOR>
+    <Met>0</Met>
+    <SpecTint>0</SpecTint>
+    <Sheen>0</Sheen>
+    <SheenTint>0</SheenTint>
+    <Clearcoat>0</Clearcoat>
+    <ClearcoatGloss>0</ClearcoatGloss>
+    <Anisotropic>0</Anisotropic>
+    <Flatness>0</Flatness>
+    <DiffTrans>0</DiffTrans>
+    <SpecTrans>1</SpecTrans>
+    <FollowMat>false</FollowMat>
+    <ScatterDist>0.1</ScatterDist>
+    <Spec>0</Spec>
+    <AlphaCutoff>0.1</AlphaCutoff>
+    <NormStrength>1</NormStrength>
+    <Hue>0</Hue>
+    <Saturation>1</Saturation>
+    <Brightness>1</Brightness>
+    <Contrast>1</Contrast>
+    <BlendColor>
+      <x>1</x>
+      <y>1</y>
+      <z>1</z>
+    </BlendColor>
+    <BlendFactor>0</BlendFactor>
+    <MainTexScaleOffset>
+      <x>1</x>
+      <y>1</y>
+      <z>0</z>
+      <w>0</w>
+    </MainTexScaleOffset>
+    <SecondaryTextureScale>
+      <x>1</x>
+      <y>1</y>
+    </SecondaryTextureScale>
+    <Rotation>0</Rotation>
+    <Flags>512</Flags>
+  </RayObjectDatas>
+  <RayObjectDatas>
+    <ID>0</ID>
+    <MatName>BodyA</MatName>
+    <OptionID>0</OptionID>
+    <TransCol>
+      <x>0</x>
+      <y>0</y>
+      <z>0</z>
+    </TransCol>
+    <BaseCol>
+      <x>1</x>
+      <y>1</y>
+      <z>1</z>
+    </BaseCol>
+    <MetRemap>
+      <x>0</x>
+      <y>1</y>
+    </MetRemap>
+    <RoughRemap>
+      <x>0</x>
+      <y>1</y>
+    </RoughRemap>
+    <Emiss>12</Emiss>
+    <EmissCol>
+      <x>0.105882347</x>
+      <y>1</y>
+      <z>0.8368656</z>
+    </EmissCol>
+    <Rough>1</Rough>
+    <IOR>1</IOR>
+    <Met>0</Met>
+    <SpecTint>0</SpecTint>
+    <Sheen>3.47</Sheen>
+    <SheenTint>0</SheenTint>
+    <Clearcoat>0.075</Clearcoat>
+    <ClearcoatGloss>0</ClearcoatGloss>
+    <Anisotropic>0</Anisotropic>
+    <Flatness>1</Flatness>
+    <DiffTrans>0</DiffTrans>
+    <SpecTrans>0</SpecTrans>
+    <FollowMat>false</FollowMat>
+    <ScatterDist>0</ScatterDist>
+    <Spec>0</Spec>
+    <AlphaCutoff>0.1</AlphaCutoff>
+    <NormStrength>1</NormStrength>
+    <Hue>0</Hue>
+    <Saturation>1</Saturation>
+    <Brightness>1</Brightness>
+    <Contrast>1</Contrast>
+    <BlendColor>
+      <x>1</x>
+      <y>1</y>
+      <z>1</z>
+    </BlendColor>
+    <BlendFactor>0</BlendFactor>
+    <MainTexScaleOffset>
+      <x>1</x>
+      <y>1</y>
+      <z>0</z>
+      <w>0</w>
+    </MainTexScaleOffset>
+    <SecondaryTextureScale>
+      <x>1</x>
+      <y>1</y>
+    </SecondaryTextureScale>
+    <Rotation>0</Rotation>
+    <Flags>512</Flags>
   </RayObjectDatas>
 </RayObjs>

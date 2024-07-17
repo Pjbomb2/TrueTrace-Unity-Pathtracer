@@ -1047,7 +1047,7 @@ namespace TrueTrace {
 
                     CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80);
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBuffer, AggTriCount, 88);
-                    CommonFunctions.CreateDynamicBuffer(ref LightTriBuffer, LightTriCount, 40);
+                    CommonFunctions.CreateDynamicBuffer(ref LightTriBuffer, LightTriCount, 44);
                     CommonFunctions.CreateDynamicBuffer(ref LightNodeBuffer, AggLightNodeCount, 40);
                     MeshFunctions.SetBuffer(TriangleBufferKernel, "OutCudaTriArray", AggTriBuffer);
                     MeshFunctions.SetBuffer(NodeBufferKernel, "OutAggNodes", BVH8AggregatedBuffer);

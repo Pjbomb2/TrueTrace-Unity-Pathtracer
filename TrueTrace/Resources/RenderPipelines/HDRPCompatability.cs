@@ -34,7 +34,7 @@ public class HDRPCompatability : CustomPass
 
     protected override void Execute(CustomPassContext ctx)
     {
-        if(Application.isPlaying) {
+        if(Application.isPlaying && Camera.current == null) {
             if(RayMaster == null) {
                 if(GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>().Length == 0) {RayMaster = null; return;}
                 RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];

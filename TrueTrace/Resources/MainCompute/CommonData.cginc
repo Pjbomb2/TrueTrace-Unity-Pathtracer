@@ -134,7 +134,6 @@ struct ColData {
 RWStructuredBuffer<ColData> GlobalColors;
 StructuredBuffer<ColData> PrevGlobalColorsA;
 RWStructuredBuffer<ColData> PrevGlobalColorsB;
-RWStructuredBuffer<ColData> PrevGlobalColorsC;
 
 
 
@@ -292,6 +291,7 @@ struct LightTriData {
 	float3 posedge1;
 	float3 posedge2;
 	uint TriTarget;
+	float SourceEnergy;
 };
 
 StructuredBuffer<LightTriData> LightTriangles;
@@ -835,20 +835,19 @@ inline float power_heuristic(float pdf_f, float pdf_g) {
 }
 
 uint octahedral_32(float3 nor) {
-	float2 Signs = (nor.xy>=0.0) ? 1.0 : -1.0;
-    nor.xy /= ( nor.x * Signs.x + nor.y * Signs.y + abs( nor.z ) );
-    nor.xy  = (nor.z >= 0.0) ? nor.xy : (1.0-(nor.yx * Signs.yx)) * Signs.xy;
+	float oct = 1.0f / (abs(nor.x) + abs(nor.y) + abs(nor.z));
+	float t = saturate(-nor.z);
+	nor.xy = (nor.xy + (nor.xy > 0.0f ? t : -t)) * oct;
     uint2 d = uint2(round(32767.5 + nor.xy*32767.5));  
     return d.x|(d.y<<16u);
 }
 
 float3 i_octahedral_32( uint data ) {
     uint2 iv = uint2( data, data>>16u ) & 65535u; 
-    float2 v = float2(iv)/32767.5f - 1.0f;
+    float2 v = iv/32767.5f - 1.0f;
     float3 nor = float3(v, 1.0f - abs(v.x) - abs(v.y)); // Rune Stubbe's version,
     float t = max(-nor.z,0.0);                     // much faster than original
-    nor.x += (nor.x>0.0)?-t:t;                     // implementation of this
-    nor.y += (nor.y>0.0)?-t:t;                     // technique
+    nor.xy += (nor.xy>=0.0)?-t:t;                     // implementation of this
     return normalize( nor );
 }
 
@@ -1008,7 +1007,12 @@ float Importance(const float3 p, const float3 n, LightBVHData node)
     float d2 = max(pDiff, length(node.BBMax - node.BBMin) / 2.0f);
 
     float3 wi = (pc - p) / sqrt(pDiff);
-    float cosTheta_w = abs(dot(i_octahedral_32(node.w), wi));
+    float cosTheta_w = (dot(i_octahedral_32(node.w), wi));
+    #ifdef IgnoreBackfacing
+	    if(cosTheta_w < 0) return 0;
+    #else
+    	cosTheta_w = abs(cosTheta_w);
+    #endif
     float sinTheta_w = sqrt(max(1.0f - cosTheta_w * cosTheta_w, 0));
 
     float cosTheta_b;
@@ -1628,8 +1632,7 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 	}
 
 	void CachePropogateBSDF(inout PropogatedCacheData CurrentProp, float3 throughput) {
-	    CurrentProp.samples[0].x = CurrentProp.throughput;
-	    CurrentProp.throughput = EncodeRGB(DecodeRGB(CurrentProp.throughput) * throughput);
+	    CurrentProp.throughput = EncodeRGB(throughput);
 	}
 
 	inline uint HashGridInsert(const HashKeyValue HashValue) {
@@ -1688,22 +1691,22 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 	inline bool AddHitToCache(inout PropogatedCacheData CurrentProp, float3 Pos, float random) {
 	    bool EarlyOut = false;
 	    float3 lighting = clamp(DecodeRGB(CurrentProp.CurrentIlluminance), 0, 1200.0f);
-#ifdef DX11
+// #ifdef DX11
 	    int PathLength = (CurrentProp.pathLength & PathLengthMask);
         if(PathLength >= 3) CurrentProp.samples[3] = CurrentProp.samples[2];
         if(PathLength >= 2) CurrentProp.samples[2] = CurrentProp.samples[1];
         if(PathLength >= 1) CurrentProp.samples[1] = CurrentProp.samples[0];
-#else
-	  	for (int i = (CurrentProp.pathLength & PathLengthMask); i > 0; --i)
-	        CurrentProp.samples[i] = CurrentProp.samples[i - 1];
-#endif
+// #else
+// 	  	for (int i = (CurrentProp.pathLength & PathLengthMask); i > 0; --i)
+// 	        CurrentProp.samples[i] = CurrentProp.samples[i - 1];
+// #endif
 
 	    float3 Norm = i_octahedral_32(CurrentProp.Norm);
 	   	HashKeyValue HashValue = ComputeHash(Pos, Norm);
 	   	uint CacheEntry = HashGridInsert(HashValue);
 	    CurrentProp.samples[0].y = CacheEntry;
 
-	    if (((3.0f * random) + 1) <= (CurrentProp.pathLength & PathLengthMask)) {
+	    if (lerp(1.0f, 4.0f, random) <= (CurrentProp.pathLength & PathLengthMask)) {
 	        GridVoxel Voxel = RetrieveCacheData(CacheEntry);
 	        if (Voxel.sampleNum > MinSampleToContribute) {
 	            lighting = Voxel.radiance / Voxel.sampleNum;
@@ -1720,7 +1723,7 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 	    return !EarlyOut;
 	}
 
-	void AddMissToCache(inout PropogatedCacheData CurrentProp, float3 radiance) {
+	inline void AddMissToCache(inout PropogatedCacheData CurrentProp, float3 radiance) {
 	    for (int i = 0; i < (CurrentProp.pathLength & PathLengthMask); ++i) {
 	        radiance *= DecodeRGB(CurrentProp.samples[i].x);
 	        AddDataToCache(CurrentProp.samples[i].y, uint4(radiance * 1e4f, 0));

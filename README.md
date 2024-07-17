@@ -34,6 +34,7 @@ A passion projects that has been going on for a while with the goal of bringing 
 <li>Enironment Map Importance Sampling</li>
 <li>Radiance Cache</li>
 <li>Material Preset System</li>
+<li>Prototype Panorama Rendering</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
@@ -85,6 +86,16 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
   <li>A fun thing you may want to do is go to TrueTrace -> Resources -> RenderPipelines -> RendererHandle, and uncomment the "[ImageEffectOpaque]"</li>
   <li>If you use HDRIs, or CubeMaps for the skybox, you need to format as the texture to a Texture2D in the inspector of the image, unity will convert it automatically, then put it in the slot in "Scene Settings" in the TrueTrace settings menu</li>
   <li>With multi-pass ReSTIR GI, the additional passes for spatial are in the RayTracingMaster script, where you can add more to the "Spatials" array.  X is spatial sample count, Y is spatial sample radius.</li>
+</ul>
+
+## Creating Panoramas
+<ul>
+    <li>Keep in mind this is a prototype and thus is not fully fleshed out yet</li>
+    <li>To set up, you need to have the game view resolution have a width that evenly divides 10,000(so 500, 1000, 2000, etc.), and a height of 5,000</li>
+    <li>Attatch the "PanoramaDoer" script to the "Scene" gameobject in the hierarchy</li>
+    <li>Enter Play Mode like normal and click the panorama button in TrueTrace Settings</li>
+    <li>The rest is automatic, from rendering, to stitching and will automatically exit play mode when finished</li>
+    <li>The final Panorama(10,000 by 5,000) will be put in Assets -> Screenshots, and the intermediate slices are in Assets -> TempPanorama</li>
 </ul>
 
 ## Using Instancing
