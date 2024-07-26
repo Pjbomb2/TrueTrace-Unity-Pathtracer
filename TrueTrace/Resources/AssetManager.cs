@@ -20,7 +20,8 @@ namespace TrueTrace {
         public int TotalParentObjectSize;
         [HideInInspector] public float LightEnergyScale = 1.0f;
         //emissive, alpha, metallic, roughness
-        public Texture2D AlbedoAtlas;
+        [HideInInspector] public Texture2D IESAtlas;
+        [HideInInspector] public Texture2D AlbedoAtlas;
         [HideInInspector] public Texture2D NormalAtlas;
         [HideInInspector] public Texture2D SingleComponentAtlas;
         [HideInInspector] public Texture2D EmissiveAtlas;
@@ -41,6 +42,7 @@ namespace TrueTrace {
 
 
         [HideInInspector] public int AlbedoAtlasSize;
+        [HideInInspector] public int IESAtlasSize;
 
         [HideInInspector] public VideoObject VideoPlayerObject;
         [HideInInspector] public RenderTexture VideoTexture;
@@ -79,6 +81,7 @@ namespace TrueTrace {
             ThisShader.SetComputeBuffer(Kernel, "_MeshData", MeshDataBuffer);
             ThisShader.SetComputeBuffer(Kernel, "_Materials", MaterialBuffer);
             ThisShader.SetTexture(Kernel, "_AlphaAtlas", AlphaAtlas);
+            ThisShader.SetTexture(Kernel, "_IESAtlas", IESAtlas);
             ThisShader.SetTexture(Kernel, "_TextureAtlas", AlbedoAtlas);
             #if HardwareRT
                 ThisShader.SetRayTracingAccelerationStructure(Kernel, "myAccelerationStructure", AccelStruct);
@@ -172,6 +175,7 @@ namespace TrueTrace {
             CommonFunctions.DeepClean(ref MyMeshesCompacted);
             CommonFunctions.DeepClean(ref UnityLights);
 
+            DestroyImmediate(IESAtlas);
             DestroyImmediate(AlbedoAtlas);
             DestroyImmediate(NormalAtlas);
             DestroyImmediate(SingleComponentAtlas);
@@ -280,6 +284,15 @@ namespace TrueTrace {
                         AlbedoAtlas = new Texture2D(DesiredRes,DesiredRes, TextureFormat.BC6H, false);
                     }
                 break;
+                case 8://IESMap
+                    desc.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R32G32_SInt;
+                    Atlas = new RenderTexture(desc);
+                    IESAtlasSize = DesiredRes;
+                    if(IESAtlas != null && IESAtlas.width != DesiredRes) {
+                        DestroyImmediate(IESAtlas);
+                        IESAtlas = new Texture2D(DesiredRes,DesiredRes, TextureFormat.BC4, 1, false);
+                    }
+                break;
             }
         }
         if(TexCount == 0) return;
@@ -312,6 +325,12 @@ namespace TrueTrace {
                                 else if(TempRect.TexType == 7) _Materials[SelectedTex.TexObjList[j]].MatCapTex = PackRect(RectSelect); 
                             break;
                             case 7: _Materials[SelectedTex.TexObjList[j]].AlphaTex = PackRect(RectSelect); break;
+                            case 8: 
+                                LightData TempLight = UnityLights[SelectedTex.TexObjList[j]];
+                                TempLight.IESTex = PackRect(RectSelect); 
+                                RayTracingMaster._rayTracingLights[SelectedTex.TexObjList[j]].ThisLightData.IESTex = PackRect(RectSelect); 
+                                UnityLights[SelectedTex.TexObjList[j]] = TempLight;
+                                break;
                             default: break;
                         }
                     }
@@ -333,6 +352,7 @@ namespace TrueTrace {
                     case 3://metallic
                     case 4://roughness
                     case 7://alpha
+                    case 8://IES
                         CopyShader.SetTexture(6, "SingleInput", SelectedTex.Tex);
                         CopyShader.SetTexture(6, "SingleOutput", Atlas);
                         CopyShader.Dispatch(6, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 4.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 4.0f), 1);
@@ -394,6 +414,28 @@ namespace TrueTrace {
                 DictTextures.Add(index, newTexObj);
             }
         }
+
+        private void CreateAtlasIES() {//Creates texture atlas
+            Dictionary<int, TexObj> IESMapTextures = new Dictionary<int, TexObj>();
+            List<PackingRectangle> IESMapRect = new List<PackingRectangle>();
+            if (CopyShader == null) CopyShader = Resources.Load<ComputeShader>("Utility/CopyTextureShader");
+            if(RenderQue.Count == 0) return;
+
+            int IESLightCount = 0;
+            foreach (RayTracingLights Obj in RayTracingMaster._rayTracingLights) {
+                if(Obj.ThisLight.type == LightType.Spot && Obj.IESProfile != null) KeyCheck(IESLightCount, Obj.IESProfile, ref IESMapTextures, ref IESMapRect, 0, 8);
+                IESLightCount++;
+            }
+            PackAndCompact(IESMapTextures, ref TempTex, IESMapRect.ToArray(), MainDesiredRes, 8);
+            Graphics.CopyTexture(TempTex, 0, IESAtlas, 0);
+            TempTex.Release();
+            TempTex = null;
+            IESMapTextures.Clear();
+            IESMapTextures.TrimExcess();
+            IESMapRect.TrimExcess();
+            IESMapRect.Clear();
+        }
+
         private void CreateAtlas(int TotalMatCount) {//Creates texture atlas
             TotalMatCount = 0;
             foreach (ParentObject Obj in RenderQue) {
@@ -434,6 +476,7 @@ namespace TrueTrace {
 
             if(RenderQue.Count == 0) return;
             int CurCount = RenderQue[0].AlbedoTexs.Count;
+
             foreach (ParentObject Obj in RenderQue) {
                 foreach (RayTracingObject Obj2 in Obj.ChildObjects) {
                     Obj2.MatOffset = MatCount;
@@ -561,9 +604,9 @@ namespace TrueTrace {
             TempTex.Release();
             TempTex = null;
 
+
             PackAndCompact(HeightMapTextures, ref HeightmapAtlas, HeightMapRect.ToArray(), 16384, 0, 0);
             PackAndCompact(AlphaMapTextures, ref AlphaMapAtlas, AlphaMapRect.ToArray(), 16384, 1);
-
 
             AlbTextures.Clear();
             AlbTextures.TrimExcess();
@@ -707,6 +750,7 @@ namespace TrueTrace {
                 AccelStruct = new UnityEngine.Rendering.RayTracingAccelerationStructure();
             #endif
             if(AlbedoAtlas == null) AlbedoAtlas = new Texture2D(4,4, TextureFormat.BC6H, false);
+            if(IESAtlas == null) IESAtlas = new Texture2D(4,4, TextureFormat.BC4, 1, false);
             if(EmissiveAtlas == null) EmissiveAtlas = new Texture2D(4,4, TextureFormat.BC6H, false);
             if(NormalAtlas == null) NormalAtlas = new Texture2D(4,4, TextureFormat.BC5, 1, false);
             if(SingleComponentAtlas == null) SingleComponentAtlas = new Texture2D(4,4, TextureFormat.BC4, 1, false);
@@ -1591,8 +1635,6 @@ namespace TrueTrace {
 
             bool LightsHaveUpdated = false;
             AccumulateData(cmd);
-
-                // UnityEngine.Profiling.Profiler.BeginSample("Lights Update");
             if (!didstart || PrevLightCount != RayTracingMaster._rayTracingLights.Count || UnityLights.Count == 0)
             {
                 UnityLights.Clear();
@@ -1609,6 +1651,7 @@ namespace TrueTrace {
                 if (PrevLightCount != RayTracingMaster._rayTracingLights.Count) LightsHaveUpdated = true;
                 PrevLightCount = RayTracingMaster._rayTracingLights.Count;
                 // UnityLightBuffer.ReleaseSafe();
+                CreateAtlasIES();
                 CommonFunctions.CreateComputeBuffer(ref UnityLightBuffer, UnityLights);
             } else {
                 int LightCount = RayTracingMaster._rayTracingLights.Count;
@@ -1620,8 +1663,10 @@ namespace TrueTrace {
                     if (RayLight.ThisLightData.Type == 1) SunDirection = RayLight.ThisLightData.Direction;
                     UnityLights[RayLight.ArrayIndex] = RayLight.ThisLightData;
                 }
-                UnityLightBuffer.SetData(UnityLights);
+                cmd.SetBufferData(UnityLightBuffer, UnityLights);
             }
+
+                // UnityEngine.Profiling.Profiler.BeginSample("Lights Update");
                 // UnityEngine.Profiling.Profiler.EndSample();
 
             int MatOffset = 0;

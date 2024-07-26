@@ -112,7 +112,7 @@ StructuredBuffer<float> Exposure;
 
 struct ShadowRayData {
 	float3 origin;
-	float LuminanceIncomming;
+	uint DiffuseIlluminance;
 	float3 direction;
 	float t;
 	float3 illumination;
@@ -266,6 +266,7 @@ SamplerState sampler_TextureAtlas;
 Texture2D<half2> _NormalAtlas;
 SamplerState sampler_NormalAtlas;
 Texture2D<half4> _EmissiveAtlas;
+Texture2D<half> _IESAtlas;
 
 Texture2D<half> Heightmap;
 
@@ -315,6 +316,8 @@ struct LightData {
 	float2 SpotAngle;
 	float ZAxisRotation;
 	float Softness;
+	int2 IESTex;//16
+
 };
 StructuredBuffer<LightData> _UnityLights;
 
@@ -571,7 +574,7 @@ inline SmallerRay CreateCameraRayPrev(float2 uv) {
     return CreateRay(origin, direction);
 }
 
-inline float2 AlignUV(float2 BaseUV, const float4 TexScale, const int2 TexDim2, float Rotation = 0, bool IsAlbedo = false) {
+inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotation = 0) {
 	if(TexDim2.x <= 0) return -1;
 	float4 TexDim;
     TexDim.xy = float2((float)(((uint)TexDim2.x) & 0x7FFF) / 16384.0f, (float)(((uint)TexDim2.x >> 15)) / 16384.0f);
@@ -589,10 +592,7 @@ inline float2 AlignUV(float2 BaseUV, const float4 TexScale, const int2 TexDim2, 
 		BaseUV += 0.5f;
 		BaseUV = fmod(abs(BaseUV), 1.0f);
 	}
-	// TexDim.zw += 1.0f / (float)AlbedoAtlasSize;
-	// TexDim.xy -= 1.0f / (float)AlbedoAtlasSize;
-	if(IsAlbedo) return clamp(BaseUV * (TexDim.xy - TexDim.zw) + TexDim.zw, TexDim.zw + 1.0f / (float)AlbedoAtlasSize, TexDim.xy - 1.0f / (float)AlbedoAtlasSize);
-	else return clamp(BaseUV * (TexDim.xy - TexDim.zw) + TexDim.zw, TexDim.zw + 1.0f / 16384.0f, TexDim.xy - 1.0f / 16384.0f);
+	return clamp(BaseUV * (TexDim.xy - TexDim.zw) + TexDim.zw, TexDim.zw + 1.0f / 16384.0f, TexDim.xy - 1.0f / 16384.0f);
 }
 
 inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, float max_distance, int mesh_id, inout float3 throughput, const int MatOffset) {

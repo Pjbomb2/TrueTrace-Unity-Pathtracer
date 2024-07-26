@@ -16,6 +16,7 @@ namespace CommonVars
         public Vector2 SpotAngle;
         public float ZAxisRotation;
         public float Softness;
+        public Vector2Int IESTex;
     }
 
     [System.Serializable]
@@ -860,6 +861,15 @@ namespace CommonVars
         {
             if (Tex != null) Tex.Release();
         }
+        public static void ReleaseSafe(this RenderTexture[] Tex)
+        {
+            if (Tex != null) {
+                int TexLength = Tex.Length;
+                for(int i = 0; i < TexLength; i++) {
+                    if(Tex[i] != null) Tex[i].Release();
+                }
+            }
+        }
         public static void ReleaseSafe(this ComputeBuffer Buff)
         {
             if (Buff != null) {Buff.Release(); Buff = null;}
@@ -913,6 +923,26 @@ namespace CommonVars
             ThisTex.enableRandomWrite = true;
             ThisTex.Create();
         }
+
+        public static void CreateRenderTextureArray2(ref RenderTexture[] ThisTex, 
+                                                    int Width, int Height, int Depth,
+                                                    RenderTextureFormat Form, 
+                                                    RenderTextureReadWrite RendRead = RenderTextureReadWrite.Linear, 
+                                                    bool UseMip = false) {
+            ThisTex = new RenderTexture[2];
+            for(int i = 0; i < Depth; i++) {
+                if(ThisTex[i] != null) ThisTex[i]?.Release();
+                ThisTex[i] = new RenderTexture(Width, Height, 0,
+                    Form, RendRead);
+                if (UseMip) {
+                    ThisTex[i].useMipMap = true;
+                    ThisTex[i].autoGenerateMips = false;
+                }
+                ThisTex[i].enableRandomWrite = true;
+                ThisTex[i].Create();
+            }
+        }
+
 
         public static void CreateRenderTexture3D(ref RenderTexture ThisTex, 
                                                     int Width, int Height, int Depth, 

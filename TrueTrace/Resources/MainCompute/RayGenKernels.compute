@@ -47,6 +47,7 @@ void Generate(uint3 id : SV_DispatchThreadID) {
         CacheBuffer[pixel_index].pathLength = 0;
         CacheBuffer[pixel_index].CurrentIlluminance = 0;
         CacheBuffer[pixel_index].throughput = EncodeRGB(float3(1,1,1));
+        CacheBuffer[pixel_index].samples[0].x = EncodeRGB(1);
     #endif
     SmallerRay ray = CreateCameraRay(uv, pixel_index);
     RayData globray = {ray.origin + NearPlane * ray.direction, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
@@ -88,7 +89,7 @@ void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadI
     GlobalColors[pixel_index] = InitCol;
 }
 
-
+bool DoPanorama;
 float2 Segment;
 #pragma kernel GeneratePanorama
 [numthreads(16, 16, 1)]
@@ -96,17 +97,27 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
     if (id.x >= screen_width || id.y >= screen_height) return;
     const uint pixel_index = id.y * screen_width + id.x;
     float2 jitter = ((random(0, pixel_index) - 0.5));
-    float2 uv = float2((id.xy) / float2(screen_width, screen_height) * 2.0f - 1.0f);
+    float2 uv = float2((id.xy) / float2(screen_width, screen_height));
     #ifdef RadianceCache
         CacheBuffer[pixel_index].pathLength = 0;
         CacheBuffer[pixel_index].CurrentIlluminance = 0;
         CacheBuffer[pixel_index].throughput = EncodeRGB(float3(1,1,1));
     #endif
-    uv = (uv + 1.0f) * 0.5f;
-    uv.y = 1.0f - uv.y;
-    uv.x = (uv.x * (Segment.y - Segment.x)) + Segment.x;
+    SmallerRay ray;
+    if(DoPanorama) {
+        uv.y = 1.0f - uv.y;
+        uv.x = (uv.x * (Segment.y - Segment.x)) + Segment.x;
+        uv.x = 1.0f - uv.x;
 
-    RayData globray = {mul(CamToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz + NearPlane * normalize(equirectUvToDirection(uv)), pixel_index, normalize(equirectUvToDirection(uv)), 0, 0,0,asuint(FarPlane),0};
+        ray = CreateRay(mul(CamToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz + NearPlane * normalize(equirectUvToDirection(uv)), normalize(equirectUvToDirection(uv)));
+    } else {
+        uv.x = ((uv.x * (Segment.y - Segment.x)) + Segment.x);
+        uv = (uv * 2.0f) - 1.0f;
+
+        ray = CreateCameraRay(uv, pixel_index);
+        ray.origin = ray.origin + NearPlane * ray.direction;
+    }
+    RayData globray = {ray.origin, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
     GlobalRays[pixel_index] = globray;
     GlobalColors[pixel_index] = InitCol;
 }

@@ -27,25 +27,25 @@ MonoBehaviour:
   DoFAperatureScale: 0.54
   DoFFocal: 4.8121676
   PPExposure: 0
-  ExposureAuto: 1
+  ExposureAuto: 0
   PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
-  UseASVGF: 0
+  UseASVGF: 1
   UseTAAU: 0
-  ReSTIRGIUpdateRate: 0
+  ReSTIRGIUpdateRate: 7
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
-  UseReSTIRGI: 0
+  UseReSTIRGI: 1
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
   ReSTIRGITemporalMCap: 4
   DoReSTIRGIConnectionValidation: 1
-  Exposure: 8.9
+  Exposure: 6.4
   DoPartialRendering: 0
   PartialRenderingFactor: 3
   DoFirefly: 0
-  ImprovedPrimaryHit: 0
+  ImprovedPrimaryHit: 1
   RISCount: 12
   ToneMapper: 0
   SunDesaturate: 0
@@ -55,8 +55,8 @@ MonoBehaviour:
   FireflyFrameCount: 533
   FireflyStrength: 1
   FireflyOffset: 0
-  OIDNFrameCount: 122
-  UseOIDN: 1
+  OIDNFrameCount: 322
+  UseOIDN: 0
   DoSharpen: 0
   Sharpness: 0
   MainDesiredRes: 16384
@@ -65,5 +65,5 @@ MonoBehaviour:
   BackgroundType: 0
   BackgroundIntensity: 1
   SceneBackgroundColor: {x: 0, y: 0, z: 0}
-  SecondaryBackgroundType: 2
+  SecondaryBackgroundType: 0
   SecondarySceneBackgroundColor: {x: 0, y: 0, z: 0}

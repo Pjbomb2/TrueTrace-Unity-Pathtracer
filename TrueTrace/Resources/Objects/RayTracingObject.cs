@@ -185,8 +185,8 @@ namespace TrueTrace {
 		 		WasDeleted = true;
 		 		return;
 		 	}
-
-		 	if((Application.isPlaying && !mesh.isReadable) || mesh == null || SharedMaterials == null || SharedMaterials.Length == 0 || mesh.GetTopology(0) != MeshTopology.Triangles || mesh.vertexCount == 0) {
+// (Application.isPlaying && !mesh.isReadable) || 
+		 	if(mesh == null || SharedMaterials == null || SharedMaterials.Length == 0 || mesh.GetTopology(0) != MeshTopology.Triangles || mesh.vertexCount == 0) {
 		 		DestroyImmediate(this);
 		 		WasDeleted = true;
 		 		return;

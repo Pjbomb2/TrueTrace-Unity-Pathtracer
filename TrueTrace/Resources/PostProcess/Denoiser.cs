@@ -469,10 +469,8 @@ namespace TrueTrace {
         {//need to fix this so it doesnt create new textures every time
             cmd.BeginSample("ToneMap");
             cmd.SetComputeIntParam(ToneMapper,"ToneMapSelection", ToneMapSelection);
-            cmd.SetComputeIntParam(ToneMapper,"width", Output.width);
-            cmd.SetComputeIntParam(ToneMapper,"height", Output.height);
-            cmd.SetComputeIntParam(ToneMapper,"ScreenWidth", Output.width);
-            cmd.SetComputeIntParam(ToneMapper,"ScreenHeight", Output.height);
+            cmd.SetComputeIntParam(ToneMapper,"screen_width", Output.width);
+            cmd.SetComputeIntParam(ToneMapper,"screen_height", Output.height);
             cmd.SetComputeTextureParam(ToneMapper, 0, "Result", Output);
             cmd.SetComputeTextureParam(ToneMapper, 0, "LUT", ToneMapSelection == 5 ? LUT2 : LUT);
             cmd.DispatchCompute(ToneMapper, 0, threadGroupsX2, threadGroupsY2, 1);

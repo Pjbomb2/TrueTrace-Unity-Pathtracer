@@ -7399,4 +7399,49 @@
     <RoughnessRemapMin>null</RoughnessRemapMin>
     <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
+  <MaterialShader>
+    <Name>Shader Graphs/TrueTrace_Core</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_MainTex_3</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>3</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_Emmision</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>4</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_MainTex_1</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>5</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_MainTex_2</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_Alpha</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
 </Materials>

@@ -34,7 +34,8 @@ A passion projects that has been going on for a while with the goal of bringing 
 <li>Enironment Map Importance Sampling</li>
 <li>Radiance Cache</li>
 <li>Material Preset System</li>
-<li>Prototype Panorama Rendering</li>
+<li>Panorama Rendering</li>
+<li>IES for spotlights</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
@@ -90,12 +91,11 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
 
 ## Creating Panoramas
 <ul>
-    <li>Keep in mind this is a prototype and thus is not fully fleshed out yet</li>
-    <li>To set up, you need to have the game view resolution have a width that evenly divides 10,000(so 500, 1000, 2000, etc.), and a height of 5,000</li>
     <li>Attatch the "PanoramaDoer" script to the "Scene" gameobject in the hierarchy</li>
-    <li>Enter Play Mode like normal and click the panorama button in TrueTrace Settings</li>
+    <li>Set your settings in the PanoramaDoer</li>
+    <li>Enter Play Mode like normal and click the "Create Panorama" button in TrueTrace Settings</li>
     <li>The rest is automatic, from rendering, to stitching and will automatically exit play mode when finished</li>
-    <li>The final Panorama(10,000 by 5,000) will be put in Assets -> Screenshots, and the intermediate slices are in Assets -> TempPanorama</li>
+    <li>The final Panorama will be put in Assets -> Screenshots, and the intermediate slices are in Assets -> TempPanorama</li>
 </ul>
 
 ## Using Instancing
@@ -241,6 +241,12 @@ TrueTrace Options Description -
   <li>IndirectRetraceWeighting - Adds indirect lighting into ReSTIR GI retracing/luminance validation</li>
 </ul>
 
+
+## IES System
+<ul>
+    <li>Add the texture highlighted in the image below to the "IES Profile" slot in the raytracinglights component thats added to standard unity lights(directional, point, spot, etc. type lights)</li>
+    <li>![](/Images/IESInstructions0.png)</li>
+</ul>
 
 # Known Bugs:
 </br>

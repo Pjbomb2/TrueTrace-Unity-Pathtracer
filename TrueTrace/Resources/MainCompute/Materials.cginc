@@ -960,7 +960,7 @@ float3 ReconstructDisney(MaterialData hitDat, float3 wo, float3 wi, bool thin,
             Success = Success || true;
         }
     } else {
-        reflectance = saturate(reflectance / P[Case]);
+        reflectance = (reflectance / P[Case]);
         forwardPdf *= P[Case];
     }
 
@@ -1023,5 +1023,52 @@ inline bool ReconstructBsdf(const MaterialData hitDat, float3 DirectionIn, float
     bool validbsdf = false;
     PDF = 0;
     bsdf_value = ReconstructDisney(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, TangentSpaceNorm, validbsdf, pixel_index, Case);
+    return validbsdf;
+}
+
+float3 EvaluateDisney2(MaterialData hitDat, float3 V, float3 L, bool thin,
+    inout float forwardPdf, float3x3 TruTan, uint pixel_index)
+{
+    float3 wo = ToLocal(TruTan, V); // NDotL = L.z; NDotV = V.z; NDotH = H.z
+    float3 wi = ToLocal(TruTan, L); // NDotL = L.z; NDotV = V.z; NDotH = H.z
+
+    float3 wm = normalize(wo + wi);
+
+    float dotNV = CosTheta(wo);
+    float dotNL = CosTheta(wi);
+
+    float3 reflectance = 0;
+    forwardPdf = 0.0f;
+
+    float4 P = CalculateLobePdfs(hitDat);
+
+    float metallic = hitDat.metallic;
+    float specTrans = hitDat.specTrans;
+
+    float diffuseWeight = (1.0f - metallic) * (1.0f - specTrans);
+    float transWeight = (1.0f - metallic) * specTrans;
+
+
+    // -- Diffuse
+    if (diffuseWeight > 0.0f) {
+        float forwardDiffusePdfW = AbsCosTheta(wi);
+        float diffuse = EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin);
+        float3 sheen = EvaluateSheen(hitDat, wo, wm, wi);
+
+        reflectance += (diffuse * hitDat.surfaceColor + sheen / PI) * P[2];
+
+        forwardPdf += forwardDiffusePdfW * P[2];
+    }
+
+
+    reflectance = reflectance * abs(dotNL);
+
+    return reflectance;
+}
+
+inline bool EvaluateBsdf2(const MaterialData hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, inout float PDF, inout float3 bsdf_value, uint pixel_index) {
+    bool validbsdf = false;
+    bsdf_value = EvaluateDisney2(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, GetTangentSpace(Normal), pixel_index);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
+    validbsdf = PDF > 0;
     return validbsdf;
 }

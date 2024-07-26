@@ -354,7 +354,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
                 }
             #endif
         }
-        if(Data.w != 0) GlobalColors[pixel_index].Data = float4(bsdf, 1);
+        if(Data.w != 0) GlobalColors[pixel_index].Data = float4(max(bsdf, 0.0001f), 1);
         GlobalColors[pixel_index].throughput = float3(asfloat(uint2(octahedral_32(GeomNorm), octahedral_32(SurfNorm))), GBuffer.z);
         GlobalColors[pixel_index].Direct = CenterCol.Direct * CurrentRes.y;
         GlobalColors[pixel_index].Indirect = CenterCol.Indirect * CurrentRes.y;

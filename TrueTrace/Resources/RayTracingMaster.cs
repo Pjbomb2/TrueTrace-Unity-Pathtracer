@@ -15,7 +15,7 @@ namespace TrueTrace {
         [HideInInspector] public AtmosphereGenerator Atmo;
         [HideInInspector] public AssetManager Assets;
         private ReSTIRASVGF ReSTIRASVGFCode;
-        public Denoiser Denoisers;
+        private Denoiser Denoisers;
         private ASVGF ASVGFCode;
         private bool Abandon = false;
         #if UseOIDN
@@ -145,7 +145,7 @@ namespace TrueTrace {
         public static List<RayTracingLights> _rayTracingLights = new List<RayTracingLights>();
 
 
-        public Vector2 CurrentHorizonalPatch;
+        [HideInInspector] public Vector2 CurrentHorizonalPatch;
         private float _lastFieldOfView;
 
         [HideInInspector] public int FramesSinceStart2;
@@ -157,8 +157,9 @@ namespace TrueTrace {
         [HideInInspector] public static bool DoCheck = false;
         [HideInInspector] public bool PrevReSTIRGI = false;
 
-        public bool DoPanorama = false;
-        public TTSettings LocalTTSettings;
+        [HideInInspector] public bool DoPanorama = false;
+        [HideInInspector] public bool DoChainedImages = false;
+        [HideInInspector] public TTSettings LocalTTSettings;
 
         public static bool SceneIsRunning = false;
 
@@ -278,6 +279,10 @@ namespace TrueTrace {
             FramesSinceStart2 = 0;
             Denoisers = new Denoiser();
             Denoisers.Initialized = false;
+        }
+        public void Start() {
+            DoPanorama = false;
+            DoChainedImages = false;
         }
 
         void Reset() {
@@ -522,7 +527,7 @@ namespace TrueTrace {
             SetInt("screen_width", SourceWidth, cmd);
             SetInt("screen_height", SourceHeight, cmd);
             SetInt("MaxBounce", LocalTTSettings.bouncecount - 1, cmd);
-            SetInt("frames_accumulated", _currentSample % 65000, cmd);
+            SetInt("frames_accumulated", _currentSample, cmd);
             SetInt("ReSTIRGISpatialCount", LocalTTSettings.ReSTIRGISpatialCount, cmd);
             SetInt("ReSTIRGITemporalMCap", LocalTTSettings.ReSTIRGITemporalMCap, cmd);
             SetInt("curframe", FramesSinceStart2, cmd);
@@ -534,6 +539,7 @@ namespace TrueTrace {
             SetInt("MaterialCount", Assets.MatCount, cmd);
             SetInt("PartialRenderingFactor", LocalTTSettings.DoPartialRendering ? LocalTTSettings.PartialRenderingFactor : 1, cmd);
 
+            SetBool("DoPanorama", DoPanorama);
             SetBool("ClayMode", LocalTTSettings.ClayMode);
             SetBool("ImprovedPrimaryHit", LocalTTSettings.ImprovedPrimaryHit);
             SetBool("UseRussianRoulette", LocalTTSettings.UseRussianRoulette);
@@ -915,7 +921,7 @@ namespace TrueTrace {
                 cmd.EndSample("ReSTIR GI Reproject");
             } else {
                 cmd.BeginSample("Primary Ray Generation");
-                cmd.DispatchCompute(GenerateShader, (DoPanorama ? GenPanoramaKernel : ((LocalTTSettings.UseASVGF && !LocalTTSettings.UseReSTIRGI) ? GenASVGFKernel : GenKernel)), Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+                cmd.DispatchCompute(GenerateShader, (DoChainedImages ? GenPanoramaKernel : ((LocalTTSettings.UseASVGF && !LocalTTSettings.UseReSTIRGI) ? GenASVGFKernel : GenKernel)), Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 cmd.EndSample("Primary Ray Generation");
             }
         }
@@ -1091,7 +1097,7 @@ namespace TrueTrace {
 
             #if UseOIDN
                 if(LocalTTSettings.UseOIDN && SampleCount > LocalTTSettings.OIDNFrameCount) {
-                    if(DoPanorama) {
+                    if(DoChainedImages) {
                         cmd.SetComputeBufferParam(ShadingShader, TTtoOIDNKernelPanorama, "OutputBuffer", ColorBuffer);
                         ShadingShader.SetTexture(TTtoOIDNKernelPanorama, "Result", _FinalTex);
                         cmd.DispatchCompute(ShadingShader, TTtoOIDNKernelPanorama, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);

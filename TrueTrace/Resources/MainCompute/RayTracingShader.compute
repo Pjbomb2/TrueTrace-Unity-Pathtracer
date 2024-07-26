@@ -117,15 +117,15 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             
             float2 matcapUV = float2(dot(worldViewRight, norm), dot(worldViewUp, norm)) * 0.5f + 0.5;
 
-            float2 MatCapUV = AlignUV(matcapUV, hitDat.AlbedoTexScale, hitDat.MatCapTex, hitDat.Rotation, true);
+            float2 MatCapUV = AlignUV(matcapUV, hitDat.AlbedoTexScale, hitDat.MatCapTex, hitDat.Rotation);
             float4 matcap = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, MatCapUV, 0);
-            float2 MatCapMaskUV = AlignUV(BaseUv, hitDat.AlbedoTexScale, hitDat.MatCapMask, hitDat.Rotation, true);
+            float2 MatCapMaskUV = AlignUV(BaseUv, hitDat.AlbedoTexScale, hitDat.MatCapMask, hitDat.Rotation);
             if(MatCapMaskUV.x != -1) {
                 hitDat.surfaceColor = lerp(hitDat.surfaceColor, matcap.xyz, SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, MatCapMaskUV, 0).x);
             }
         }
     }
-    
+
 
     [branch] if (hitDat.emmissive > 0.0f) {//if we hit a light, this ray is done
         #ifdef WhiteLights
@@ -139,8 +139,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             #else
             else {
                 CacheInstance.CurrentIlluminance = EncodeRGB(DecodeRGB(CacheInstance.CurrentIlluminance) + EmissCol);
-                if(!((CacheInstance.pathLength >> 5) & 0x1))
-                    Color.Indirect += Color.throughput * EmissCol;
+                // if(!((CacheInstance.pathLength >> 5) & 0x1))
+                //     Color.Indirect += Color.throughput * EmissCol;
                 }
             #endif
         } else {
@@ -166,8 +166,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             #else
             else {
                 CacheInstance.CurrentIlluminance = EncodeRGB(DecodeRGB(CacheInstance.CurrentIlluminance) + EmissCol * w);
-                if(!((CacheInstance.pathLength >> 5) & 0x1))
-                    Color.Indirect += Color.throughput * EmissCol * w;
+                // if(!((CacheInstance.pathLength >> 5) & 0x1))
+                //     Color.Indirect += Color.throughput * EmissCol * w;
                 }
             #endif
         }
@@ -175,13 +175,13 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         #ifdef RadianceCache
             if(!UseReSTIRGI || ReSTIRGIUpdateRate == 0 || RandomNums[id.xy].z == 0) {
                 // if(hit.t >= CalcVoxelSize(pos)) {
-                    if(CurBounce == 0 || UseRussianRoulette) {
-                        CacheInstance.Norm = octahedral_32(norm);
-                        if(!AddHitToCache(CacheInstance, pos, random(324, pixel_index).x)) return;
-                    } else {
-                        CacheInstance.CurrentIlluminance = EncodeRGB(DecodeRGB(CacheInstance.CurrentIlluminance) * Color.throughput);
+                    // if(CurBounce == 0 || UseRussianRoulette) {
+                    //     CacheInstance.Norm = octahedral_32(norm);
+                    //     if(!AddHitToCache(CacheInstance, pos, random(324, pixel_index).x)) return;
+                    // } else {
+                        // CacheInstance.CurrentIlluminance = EncodeRGB(DecodeRGB(CacheInstance.CurrentIlluminance) * Color.throughput);
                         if(!AddHitToCache(CacheInstance, PrevOrigin, random(324, pixel_index).x)) return;
-                    }
+                    // }
                     CacheInstance.CurrentIlluminance = 0;   
                 // }
             }
@@ -192,7 +192,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         }
     }
    
-
     [branch]if(ClayMode) {
         hitDat.surfaceColor = ClayColor;
         hitDat.metallic = 0;
@@ -244,23 +243,32 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
     [branch] if (CurBounce == 0 || Color.Data.w == -1) {//Setting textures for denosier to use
         Color.Flags = packRGBE((CurBounce == 0) ? max(hitDat.surfaceColor, 0.005f) : (unpackRGBE(Color.Flags) * max(hitDat.surfaceColor, 0.005f)));
-        PrevScreenData = float4(asfloat(octahedral_32((CurBounce == 0 && Refracted) ? -Geomnorm : Geomnorm)), asfloat(octahedral_32((CurBounce == 0 && Refracted) ? -norm : norm)),PrevScreenData.z + hit.t, asfloat(((uint)(MaterialIndex << 2) >> 2) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
+        PrevScreenData = float4(asfloat(octahedral_32((CurBounce == 0 && Refracted) ? -Geomnorm : Geomnorm)), asfloat(octahedral_32((CurBounce == 0 && Refracted) ? -norm : norm)),PrevScreenData.z + hit.t, asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 2) >> 2) : ((asuint(PrevScreenData.w) << 3) >> 3)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
         Color.MetRoughIsSpec |= (Refracted << 31);
-        Color.Data = float4(((CurBounce == 0) ? max(throughput, 0.005f) : (max(throughput, 0.005f) * Color.Data.xyz)), (UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.01f && CurBounce == 0))) ? -1 : (CurBounce + 1));  
+        Color.Data = float4(((CurBounce == 0) ? max(throughput, 0.006f) : (max(throughput, 0.005f) * Color.Data.xyz)), (UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.01f && CurBounce == 0))) ? -1 : (CurBounce + 1));  
         throughput = 1;  
     }   
     #ifdef RadianceCache
-        CacheInstance.samples[0].x = CacheInstance.throughput;
         #ifdef RadianceDebug
             if(CurBounce == 0) _DebugTex[id.xy] = float4(ray.origin, asfloat(octahedral_32(norm)));
         #endif
         if(CurBounce > 0 && (CacheInstance.pathLength >> 5) & 0x1) {
             float3 res2 = 0;
-            if((hit.t >= CalcVoxelSize(ray.origin) * lerp(1.0f, 2.0f, random(324, pixel_index).x))) {
+            if((all(Color.Indirect == 0) || CurBounce < 3) && (hit.t >= CalcVoxelSize(ray.origin) * lerp(1.0f, 2.0f, random(326, pixel_index).x))) {
                 if(RetrieveCacheRadiance(CacheInstance, ray.origin, norm, res2)) {
                     // CacheInstance.CurrentIlluminance = EncodeRGB(DecodeRGB(CacheInstance.CurrentIlluminance) + Color.Data * throughput * res2);//fabled "infinite bounce" - VERY hard to weight properly
                     Color.Indirect += Color.throughput * res2;
+                    #ifdef HighSpeedRadCache
+                        if(!all(Color.Indirect == 0)) {
+                            if(!((int(id.x)/2 + int(id.y)/2 + curframe)%7==0)) return;
+                            else throughput *= 7;
+                        }
+                    #endif
                 }
+            } else {
+                #ifdef HighSpeedRadCache
+                    if(!((int(id.x)/2 + int(id.y)/2 + curframe)%7==0)) return;
+                #endif
             }
             CacheInstance.pathLength |= (1u << 6);
         } else if((!(MaterialLobe == 0 && hitDat.roughness < 0.05) && MaterialLobe != 3)) CacheInstance.pathLength |= (1u << 5);
@@ -295,7 +303,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         SelectedLightGroup = selections[min(floor(random(114, pixel_index).x * (float)selectionoptions), selectionoptions - 1)];
 
         if (SelectedLightGroup == 1) {
-            LightData Light = _UnityLights[SelectUnityLight(pixel_index, RunningWeight, norm, pos, PrevDirection)];
+            AggTriIndex = SelectUnityLight(pixel_index, RunningWeight, norm, pos, PrevDirection);
+            LightData Light = _UnityLights[AggTriIndex];
             float sinPhi, cosPhi;
             LightPosition = Light.Position;
             LightNorm = Light.Direction;
@@ -373,15 +382,33 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             float distance_to_light = sqrt(max(distance_to_light_squared, 0.0f));
 
             to_light = to_light / distance_to_light;
+
+            if(LightFormat == SPOTLIGHT) {
+                float3 LocalLight = ToLocal(GetTangentSpace(LightNorm), -to_light) + 0.5f;
+                float2 AlignedUV = AlignUV(LocalLight.xz, float4(1,1,0,0), _UnityLights[AggTriIndex].IESTex);
+                if(AlignedUV.x != -1) Radiance *= _IESAtlas.SampleLevel(my_point_clamp_sampler, AlignedUV, 0);
+            }
             
             float SurfaceCos = dot(to_light, norm);//YES KEEP THIS, IT NOT ONLY IMPROVES PERFORMANCE BUT IT ALSO HELPS KEEPS THINGS LESS BIASED AS OTHERWISE THE NORMAL OFFSET CAN RESULT IN WRONG VISABILITY!
             if(SurfaceCos > 0) {
                 float bsdf_pdf = 0.0f;
                 float3 bsdf_value = 0.0f;
+                float3 bsdf_diffuse = 0;
                 #ifndef RadianceCache
                     if((UseReSTIRGI && CurBounce == 0) || (UseASVGF && (CurBounce == Color.Data.w - 1 && CurBounce > 0))) hitDat.surfaceColor = 1.0f;
                 #endif
-                bool validbsdfNEE = EvaluateBsdf(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_value, pixel_index);
+                bool validbsdfNEE;
+                #ifdef RadianceCache
+                    // if(CurBounce != 0) {
+                        if(hitDat.roughness > 0.6f || CurBounce == 0) validbsdfNEE = EvaluateBsdf(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_diffuse, pixel_index);
+                        else validbsdfNEE = EvaluateBsdf2(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_diffuse, pixel_index);
+                        // bsdf_value /= bsdf_pdf;
+                    //} else 
+                    bsdf_pdf = 0;
+                    validbsdfNEE = EvaluateBsdf(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_value, pixel_index);
+                #else
+                    validbsdfNEE = EvaluateBsdf(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_value, pixel_index);
+                #endif
                 #ifndef RadianceCache
                     if((UseASVGF && (CurBounce == Color.Data.w - 1 && CurBounce > 0))) bsdf_value *= Color.Data.xyz;
                 #endif
@@ -392,6 +419,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     [branch]if (SelectedLightGroup == 1) {
                         NEE_pdf = distance_to_light_squared * abs(dot(to_light, LightNorm)) / area;
                         Illum = (Radiance * bsdf_value) / NEE_pdf * RunningWeight * ((LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) ? (MiscInfo.x) : 1.0f);
+                        bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf * RunningWeight * ((LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) ? (MiscInfo.x) : 1.0f);
                     } else if(SelectedLightGroup == 0) {        
                         NEE_pdf = (1.0f / ((abs(dot(to_light, LightNorm)) * area) / distance_to_light_squared)) / RunningWeight;
                         #ifndef LBVH
@@ -399,38 +427,49 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                         #endif
                         float NEEMISWeight = power_heuristic(NEE_pdf, bsdf_pdf);
                         Illum = (Radiance * bsdf_value) / NEE_pdf * NEEMISWeight;
+                        bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf * NEEMISWeight;
                     } else {
                         NEE_pdf = HDRIParams.x * HDRIParams.y * equirectDirectionPdf(to_light) * (luminance(Radiance) / TotSum[0]);
                         float NEEMISWeight = power_heuristic(NEE_pdf, bsdf_pdf);
                         Illum = (Radiance * bsdf_value) / NEE_pdf * RunningWeight * NEEMISWeight;
+                        bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf * RunningWeight * NEEMISWeight;
                     }
                     #ifndef RadianceCache
                         Illum *= Color.throughput;
                     #endif
-                    if(LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) Illum *= pow(saturate(dot(to_light, -LightNorm)), MiscInfo.x);
-                    if (LightFormat == SPOTLIGHT) Illum *= saturate(saturate(dot(to_light, -LightNorm)) * MiscInfo.y + MiscInfo.z);
+                    if(LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) {
+                        Illum *= pow(saturate(dot(to_light, -LightNorm)), MiscInfo.x);
+                        bsdf_diffuse *= pow(saturate(dot(to_light, -LightNorm)), MiscInfo.x);
+                    }
+                    if (LightFormat == SPOTLIGHT) {
+                        bsdf_diffuse *= saturate(saturate(dot(to_light, -LightNorm)) * MiscInfo.y + MiscInfo.z);
+                        Illum *= saturate(saturate(dot(to_light, -LightNorm)) * MiscInfo.y + MiscInfo.z);
+                    }
                     float maxillum = max(max(Illum.x, Illum.y), Illum.z);
                     if(DoExposure) maxillum *= Exposure[0];
                     if(!UseRussianRoulette || (CurBounce == 0 && ImprovedPrimaryHit)) maxillum = 1;
                     Illum *= rcp(saturate(maxillum));
-                    if(bsdf_pdf > 0.0001f && maxillum > random(117, pixel_index).y) {//NEE russian roulette, massively improves performance while giivng the same result
+                    bsdf_diffuse *= rcp(saturate(maxillum));
+                    if(maxillum > random(117, pixel_index).y) {//NEE russian roulette, massively improves performance while giivng the same result
                         uint index3;
                         #ifdef RadianceCache
-                            bool TempTemp = !(((CacheInstance.pathLength >> 5) & 0x1) && !((CacheInstance.pathLength >> 6) & 0x1));
-                            if(UseReSTIRGI && !TempTemp) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
+                            bool TempTemp = (CurBounce != Color.Data.w - 1);//!(((CacheInstance.pathLength >> 5) & 0x1) && !((CacheInstance.pathLength >> 6) & 0x1));
+                            if(UseReSTIRGI && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
                         #else
                             bool TempTemp = (CurBounce != Color.Data.w - 1);
                             if(UseReSTIRGI && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
                         #endif            
                         const ShadowRayData ShadRay = {pos, 
-                                                        asfloat(packRGBE(bsdf_value)), 
+                                                        packRGBE(bsdf_diffuse), 
                                                         to_light, 
                                                         (LightFormat == DIRECTIONALLIGHT ? 10000.0f : distance_to_light - 0.01f) * (TempTemp ? 1 : -1),
                                                         Illum, 
                                                         pixel_index};
-                        if(TerrainExists) InterlockedAdd(BufferSizes[CurBounce].heightmap_shadow_rays, 1, index3);
-                        InterlockedAdd(BufferSizes[CurBounce].shadow_rays, 1, index3);
-                        ShadowRaysBuffer[index3] = ShadRay;
+                        if(abs(ShadRay.t) > 0.001f) {
+                            if(TerrainExists) InterlockedAdd(BufferSizes[CurBounce].heightmap_shadow_rays, 1, index3);
+                            InterlockedAdd(BufferSizes[CurBounce].shadow_rays, 1, index3);
+                            ShadowRaysBuffer[index3] = ShadRay;
+                        }
                     }
                 }
             }
@@ -446,10 +485,14 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         if (random(118, pixel_index).x > p)//Simple Russian Roulette
             return;
         throughput *= rcp(p);//rcp is a slightly faster but less accurate version of 1 / p, I decided the inaccuracy was worth the performance bump
+        #ifdef RadianceCache
+            CacheInstance.throughput = EncodeRGB(bsdf * rcp(p));
+        #endif
+    } else {
+        #ifdef RadianceCache
+            CacheInstance.throughput = EncodeRGB(bsdf);
+        #endif
     }
-    #ifdef RadianceCache
-        CacheInstance.throughput = EncodeRGB(clamp(bsdf,0,1));
-    #endif
 
     Color.throughput = throughput;
 
@@ -487,6 +530,9 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
         }
     #endif
     ColData Color = GlobalColors[pixel_index];
+    #ifdef RadianceCache
+        CacheBuffer[pixel_index].samples[0].x = CacheBuffer[pixel_index].throughput;
+    #endif
     if (bestHit.t == FarPlane) {//if ray goes into the void, sample skybox
         float3 Radiance, transmittance, debug = 0;
         float Stars;
@@ -507,7 +553,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
                     else Color.Indirect += Color.throughput * DeSat(Radiance, 1.0f - SkyDesaturate) * BackgroundIntensity;
                     #ifdef RadianceCache
                         if(!UseReSTIRGI || ReSTIRGIUpdateRate == 0 || RandomNums[id.xy].z == 0)
-                            AddMissToCache(CacheBuffer[pixel_index], Color.throughput * Radiance * BackgroundIntensity);
+                            AddMissToCache(CacheBuffer[pixel_index], Radiance * BackgroundIntensity);
                     #endif
                 }
             break;
@@ -519,7 +565,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
                 if (CurBounce == 1) Color.Direct += DeSat(_SkyboxTexture.SampleLevel(my_linear_clamp_sampler, uv, 0).xyz * BackgroundIntensity,1.0f - SkyDesaturate) * mis;
                 else Color.Indirect += Color.throughput * DeSat(_SkyboxTexture.SampleLevel(my_linear_clamp_sampler, uv, 0).xyz * BackgroundIntensity,1.0f - SkyDesaturate) * mis;
                 #ifdef RadianceCache
-                    AddMissToCache(CacheBuffer[pixel_index], Color.throughput * DeSat(_SkyboxTexture.SampleLevel(my_linear_clamp_sampler, uv, 0).xyz * BackgroundIntensity,1.0f - SkyDesaturate) * mis * abs(dot(i_octahedral_32(CacheBuffer[pixel_index].Norm), ray.direction)));
+                    AddMissToCache(CacheBuffer[pixel_index], DeSat(_SkyboxTexture.SampleLevel(my_linear_clamp_sampler, uv, 0).xyz * BackgroundIntensity,1.0f - SkyDesaturate) * mis);
                 #endif
             break;
             case 2:
@@ -527,7 +573,8 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
                 else if (CurBounce == 1) Color.Direct += BackgroundColor * BackgroundIntensity;
                 else Color.Indirect += Color.throughput * BackgroundColor * BackgroundIntensity;
                 #ifdef RadianceCache
-                    AddMissToCache(CacheBuffer[pixel_index], Color.throughput * BackgroundColor * abs(dot(i_octahedral_32(CacheBuffer[pixel_index].Norm), ray.direction)));
+                    // AddHitToCache(CacheBuffer[pixel_index], ray.origin, random(324, pixel_index).y);
+                    AddMissToCache(CacheBuffer[pixel_index], BackgroundColor * BackgroundIntensity);
                 #endif
             break;
         }
@@ -564,10 +611,10 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
         minmat = 0;
         float3 BaseCol = 0;
         MaterialIndex = MaterialCount + Terrains[bestHit.triangle_id].MatOffset;
-        if(Mats.x > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex].surfaceColor.xy + _Materials[MaterialIndex].transmittanceColor.xy, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex, true), 0).xyz * Mats.x;
-        if(Mats.y > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex + 1].surfaceColor.xy + _Materials[MaterialIndex + 1].transmittanceColor.xy, _Materials[MaterialIndex + 1].AlbedoTexScale, _Materials[MaterialIndex + 1].AlbedoTex, true), 0).xyz * Mats.y;
-        if(Mats.z > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex + 2].surfaceColor.xy + _Materials[MaterialIndex + 2].transmittanceColor.xy, _Materials[MaterialIndex + 2].AlbedoTexScale, _Materials[MaterialIndex + 2].AlbedoTex, true), 0).xyz * Mats.z;
-        if(Mats.w > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex + 3].surfaceColor.xy + _Materials[MaterialIndex + 3].transmittanceColor.xy, _Materials[MaterialIndex + 3].AlbedoTexScale, _Materials[MaterialIndex + 3].AlbedoTex, true), 0).xyz * Mats.w;
+        if(Mats.x > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex].surfaceColor.xy + _Materials[MaterialIndex].transmittanceColor.xy, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex), 0).xyz * Mats.x;
+        if(Mats.y > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex + 1].surfaceColor.xy + _Materials[MaterialIndex + 1].transmittanceColor.xy, _Materials[MaterialIndex + 1].AlbedoTexScale, _Materials[MaterialIndex + 1].AlbedoTex), 0).xyz * Mats.y;
+        if(Mats.z > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex + 2].surfaceColor.xy + _Materials[MaterialIndex + 2].transmittanceColor.xy, _Materials[MaterialIndex + 2].AlbedoTexScale, _Materials[MaterialIndex + 2].AlbedoTex), 0).xyz * Mats.z;
+        if(Mats.w > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex + 3].surfaceColor.xy + _Materials[MaterialIndex + 3].transmittanceColor.xy, _Materials[MaterialIndex + 3].AlbedoTexScale, _Materials[MaterialIndex + 3].AlbedoTex), 0).xyz * Mats.w;
         MaterialIndex += x;
         TempMat = _Materials[MaterialIndex];
         BaseUv = BaseUv * TempMat.surfaceColor.xy + TempMat.transmittanceColor.xy;
@@ -580,7 +627,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     }
 
     if(TempMat.Rotation != 0) {TempMat.Rotation *= PI;} 
-    float2 AlbedoUv = AlignUV(BaseUv, TempMat.AlbedoTexScale, TempMat.AlbedoTex, TempMat.Rotation, true);
+    float2 AlbedoUv = AlignUV(BaseUv, TempMat.AlbedoTexScale, TempMat.AlbedoTex, TempMat.Rotation);
     float2 NormalUV = AlignUV(BaseUv, float4(TempMat.SecondaryTexScale, TempMat.AlbedoTexScale.zw), TempMat.NormalTex, TempMat.Rotation);
     float2 MetallicUV = AlignUV(BaseUv, float4(TempMat.SecondaryTexScale, TempMat.AlbedoTexScale.zw), TempMat.MetallicTex, TempMat.Rotation);
     float2 RoughnessUV = AlignUV(BaseUv, float4(TempMat.SecondaryTexScale, TempMat.AlbedoTexScale.zw), TempMat.RoughnessTex, TempMat.Rotation);
@@ -623,8 +670,6 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
 
     TempMat.roughness = max(TempMat.roughness, 0.00001f);
     TempMat.surfaceColor = max(TempMat.surfaceColor, 0.005f);
-
-
 
     #ifndef WhiteLights
         if(TempMat.emmissive > 0) {
@@ -687,6 +732,7 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
         #endif
     }
     float3 res = (GlobalColors[final_pixel_index].Data.w == 0) ? GlobalColors[final_pixel_index].Data.xyz : ((float)PartialRenderingFactor * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) * GlobalColors[final_pixel_index].Data.xyz + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f)) / GBufferCol);
+    // float3 res = (GlobalColors[final_pixel_index].Data.w == 0) ? GlobalColors[final_pixel_index].Data.xyz : ((float)PartialRenderingFactor * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) * GlobalColors[final_pixel_index].Data.xyz) / GBufferCol);
     if (!all(res < 100000)) res = 0;
     #if defined(RadianceDebug) && defined(RadianceCache)
         res = 0;

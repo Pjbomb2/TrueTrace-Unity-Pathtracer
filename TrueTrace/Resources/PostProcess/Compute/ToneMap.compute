@@ -12,6 +12,56 @@ int ToneMapSelection;
 
 int width;
 
+
+float3 tonemap22(float3 sRGB)
+{
+    // sRGB = pow(sRGB, 2.2f);
+    // NOTE: Tune these params based on your use case.
+    // Desmos graph: https://www.desmos.com/calculator/cvt2brlyl3
+    const float EXPOSUREX = 4.0;
+    const float CONTRAST = 1.9;
+    const float RANGE = 1.5;
+    
+    const float3x3 sRGB_to_LMS = transpose(float3x3(
+        0.31399022, 0.63951294, 0.04649755,
+        0.15537241, 0.75789446, 0.08670142,
+        0.01775239, 0.10944209, 0.87256922));
+
+    const float3x3 LMS_to_sRGB = transpose(float3x3(
+        5.47221206, -4.6419601 ,  0.16963708,
+       -1.1252419 ,  2.29317094, -0.1678952 ,
+        0.02980165, -0.19318073,  1.16364789));
+        
+    const float3 sRGB_to_Y = float3(0.2126729, 0.7151522, 0.0721750);
+    
+    // Apply tonescale in LMS
+    
+    float3 LMS = mul(sRGB, sRGB_to_LMS);
+    
+    LMS = pow(EXPOSUREX * LMS, CONTRAST / RANGE);
+    LMS = LMS / (LMS + 1.0);
+    LMS = pow(LMS, RANGE);
+    
+    sRGB = mul(LMS, LMS_to_sRGB);
+    
+    // Apply gamut mapping in sRGB
+    
+    float Y = dot(sRGB_to_Y, sRGB);
+    if (Y > 1.0)
+        return 1.0;
+        
+    float minimum = min(sRGB.r, min(sRGB.g, sRGB.b));
+    if (minimum < 0.0)
+        sRGB = lerp(sRGB, Y, -minimum / (Y - minimum));
+    
+    float maximum = max(sRGB.r, max(sRGB.g, sRGB.b));
+    if (maximum > 1.0)
+        sRGB = lerp(sRGB, Y, (1.0 - maximum) / (Y - maximum));
+    
+    return sRGB;
+}
+
+
 inline float3 tony_mc_mapface(float3 stimulus) {
     // Apply a non-linear transform that the LUT is encoded with.
     const float3 encoded = stimulus / (stimulus + 1.0);
@@ -155,6 +205,7 @@ inline float3 AgX(float3 stimulus) {
 
     return LUT.SampleLevel(sampler_linear_clamp, uv, 0).xyz;
 }
+int screen_width;
 
 [numthreads(16,16,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)

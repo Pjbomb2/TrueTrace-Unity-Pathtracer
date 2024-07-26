@@ -13,9 +13,9 @@ RWStructuredBuffer<float> A;
 uint screen_width;
 uint screen_height;
 
-const static float histogram_log_scale = 25.0f;
+const static float histogram_log_scale = 12.0f;
 const static float histogram_log_zero = 220.0f;
-RWTexture2D<float4> _DebugTex;
+
 float LuminanceAP1(float3 color) {
 	return dot(color, float3(0.2722287168f, 0.6740817658f, 0.0536895174f));
 }
@@ -67,11 +67,11 @@ float Exposure;
 bool ExposureAuto;
 float calculateAverageLuminance() {
 	const float L_min = 0.00075;
-	const float L_max = 500.0;
+	const float L_max = 50.0;
 	const float exposureDecay = 0.05;
 	const float exposureGrowth = 0.035;
 
-	float eCurrent = clamp(A[0], 0.0f,500.0f);
+	float eCurrent = clamp(A[0], 0.0f,50.0f);
 	float L_median = screenAverageLuma();
 	float keyVal = 1.5f - 2.0 / (2.0 + log10(L_median + 1.0)); // Keyvalue remap to preserve relative brightness of lighting in scenes 1.03
 	float eTarget = keyVal * 2.15 / clamp(L_median, L_min, L_max);

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 using UnityEngine;
  using UnityEditor;
 using CommonVars;
@@ -1051,17 +1052,17 @@ Toolbar toolbar;
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Base Texture"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Normal Texture"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Emission Texture"));
-         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Metallic Texture"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Metallic Texture(Single Component)"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Metallic Range"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Metallic Min"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Metallic Max"));
-         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Roughness Texture"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Roughness Texture(Single Component)"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Roughness Range"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Roughness Min"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Roughness Max"));
-         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Alpha Texture"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Alpha Texture(Single Component)"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "MatCap Texture"));
-         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "MatCap Mask"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "MatCap Mask(Single Component)"));
 
          _graphView.AddElement(OutputNode);
          Vector2 Pos = new Vector2(30, 10);
@@ -1400,6 +1401,54 @@ Toolbar toolbar;
          }
          bool HasNoMore = false;
 
+
+void AddResolution(int width, int height, string label)
+    {
+        Type gameViewSize = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSize");
+        Type gameViewSizes = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizes");
+        Type gameViewSizeType = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizeType");
+        Type generic = typeof(ScriptableSingleton<>).MakeGenericType(gameViewSizes);
+        MethodInfo getGroup = gameViewSizes.GetMethod("GetGroup");
+        object instance = generic.GetProperty("instance").GetValue(null, null);         
+        object group = getGroup.Invoke(instance, new object[] { (int)GameViewSizeGroupType.Standalone });       
+        Type[] types = new Type[] { gameViewSizeType, typeof(int), typeof(int), typeof(string)};
+        ConstructorInfo constructorInfo = gameViewSize.GetConstructor(types);
+        object entry = constructorInfo.Invoke(new object[] { 1, width, height, label });
+        MethodInfo addCustomSize = getGroup.ReturnType.GetMethod("AddCustomSize");
+        addCustomSize.Invoke(group, new object[] { entry });
+    }
+ void RemoveResolution(int index)
+    {
+        Type gameViewSizes = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizes");
+        Type generic = typeof(ScriptableSingleton<>).MakeGenericType(gameViewSizes);
+        MethodInfo getGroup = gameViewSizes.GetMethod("GetGroup");
+        object instance = generic.GetProperty("instance").GetValue(null, null);
+        object group = getGroup.Invoke(instance, new object[] { (int)GameViewSizeGroupType.Standalone });
+        MethodInfo removeCustomSize = getGroup.ReturnType.GetMethod("RemoveCustomSize");
+        removeCustomSize.Invoke(group, new object[] { index });
+    }
+
+    int GetCount()
+    {
+        Type gameViewSizes = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizes");
+        Type generic = typeof(ScriptableSingleton<>).MakeGenericType(gameViewSizes);
+        MethodInfo getGroup = gameViewSizes.GetMethod("GetGroup");
+        object instance = generic.GetProperty("instance").GetValue(null, null);
+        PropertyInfo currentGroupType = instance.GetType().GetProperty("currentGroupType");
+        GameViewSizeGroupType groupType = (GameViewSizeGroupType)(int)currentGroupType.GetValue(instance, null);
+        object group = getGroup.Invoke(instance, new object[] { (int)groupType });
+        MethodInfo getBuiltinCount = group.GetType().GetMethod("GetBuiltinCount");
+        MethodInfo getCustomCount = group.GetType().GetMethod("GetCustomCount");
+        return (int)getBuiltinCount.Invoke(group, null) + (int)getCustomCount.Invoke(group, null);   
+    }
+
+    void SetResolution(int index)
+    {
+        Type gameView = typeof(Editor).Assembly.GetType("UnityEditor.GameView");
+        PropertyInfo selectedSizeIndex = gameView.GetProperty("selectedSizeIndex", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        EditorWindow window = EditorWindow.GetWindow(gameView);
+        selectedSizeIndex.SetValue(window, index, null);
+    }
         public void CreateGUI() {
             HasNoMore = false;
             if(!PlayerPrefs.HasKey("ScreenShotPath")) {
@@ -1513,18 +1562,36 @@ Toolbar toolbar;
 
            Button PanoramaButton = new Button(() => {
             var TempPan = GameObject.Find("Scene").GetComponent<PanoramaDoer>();
-            if((10000.0f / (float)RayTracingMaster._camera.pixelWidth) != Mathf.Ceil(10000.0f / (float)RayTracingMaster._camera.pixelWidth)) {
-               Debug.LogError("You need to set the resolution width to evenly divide 10,000(500, 1000, etc.), and the height to 5,000");
-            } else {
+            // if(TempPan != null && ((float)TempPan.FinalAtlasSize.x / (float)RayTracingMaster._camera.pixelWidth) != Mathf.Ceil((float)TempPan.FinalAtlasSize.x / (float)RayTracingMaster._camera.pixelWidth)) {
+               // Debug.LogError("You need to set the resolution width to evenly divide the width (" + TempPan.FinalAtlasSize.x + "), and the height to " + TempPan.FinalAtlasSize.y);
+            // } else {
                if(TempPan != null) {
+                  AddResolution(Mathf.CeilToInt((float)TempPan.FinalAtlasSize.x / (float)TempPan.HorizontalSegments), TempPan.FinalAtlasSize.y, "TempPanoramaSize");
+                  SetResolution(GetCount() - 1);
                   TempPan.Init();
                   RayMaster.DoPanorama = true;
+                  RayMaster.DoChainedImages = true;
                } else {
                   Debug.LogError("You need to add the PanoramaDoer to the Scene Gameobject");
                }
-            }
-            }) {text = "Make Panorama"};
+            // }
+            }) {text = "Create Panorama"};
            PanoramaButton.style.minWidth = 105;
+
+           Button ChainedImageButton = new Button(() => {
+            var TempPan = GameObject.Find("Scene").GetComponent<PanoramaDoer>();
+               if(TempPan != null) {
+                  AddResolution(TempPan.FinalAtlasSize.x, TempPan.FinalAtlasSize.y, "TempPanoramaSize");
+                  SetResolution(GetCount() - 1);
+                  TempPan.HorizontalSegments = 1;
+                  TempPan.Init();
+                  RayMaster.DoPanorama = false;
+                  RayMaster.DoChainedImages = true;
+               } else {
+                  Debug.LogError("You need to add the PanoramaDoer to the Scene Gameobject");
+               }
+            }) {text = "Create Qued Screenshots"};
+           ChainedImageButton.style.minWidth = 105;
 
            
            ClearButton = new Button(() => {
@@ -1560,6 +1627,7 @@ Toolbar toolbar;
            ButtonField2.Add(ClearButton);
            ButtonField2.Add(QuickStartButton);
            ButtonField2.Add(ForceInstancesButton);
+           ButtonField2.Add(ChainedImageButton);
            MainSource.Add(ButtonField2);
 
            Box TopEnclosingBox = new Box();

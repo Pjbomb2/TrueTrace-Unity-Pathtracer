@@ -9,7 +9,9 @@ namespace TrueTrace {
         [HideInInspector] public Light ThisLight;
         [HideInInspector] public LightData ThisLightData;
         [HideInInspector] public int ArrayIndex;
+        [HideInInspector] public int IESIndex;
         [Range(0,40)] public float ShadowSoftness = 0.0f;
+        public Texture2D IESProfile;
 
         public void Start() {
             ThisLightData = new LightData();
