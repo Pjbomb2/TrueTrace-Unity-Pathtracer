@@ -245,8 +245,9 @@ TrueTrace Options Description -
 ## IES System
 <ul>
     <li>Add the texture highlighted in the image below to the "IES Profile" slot in the raytracinglights component thats added to standard unity lights(directional, point, spot, etc. type lights)</li>
-    <li>![](/Images/IESInstructions0.png)</li>
 </ul>
+
+![](/Images/IESInstructions0.png)
 
 # Known Bugs:
 </br>
