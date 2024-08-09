@@ -249,7 +249,12 @@ struct MaterialData {//56
 	float BlendFactor;
 	float2 SecondaryTexScale;
 	float Rotation;
-	int BindlessIndex;
+	int AlbedoIndex;
+	int MetallicIndex;
+	int RoughnessIndex;
+	int EmissionIndex;
+	int NormalIndex;
+	int AlphaIndex;
 };
 
 StructuredBuffer<MaterialData> _Materials;
@@ -301,18 +306,66 @@ inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotati
 }
 
 
-float4 SampleTexture(float2 UV, uint MaterialIndex) {
+float4 SampleTexture(float2 UV, int TextureType, MaterialData MatTex) {
+	float4 FinalCol = 0;
 	#ifdef ATLAS
-		#ifdef PointFiltering
-			return _TextureAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex, _Materials[MaterialIndex].Rotation), 0);
-		#else
-			return _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex, _Materials[MaterialIndex].Rotation), 0);
-		#endif
+		switch(TextureType) {
+			case SampleAlbedo:
+				#ifdef PointFiltering
+					FinalCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlbedoTex, MatTex.Rotation), 0);
+				#else
+					FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlbedoTex, MatTex.Rotation), 0);
+				#endif
+			break;
+			case SampleMetallic:
+				FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, float4(MatTex.SecondaryTexScale, MatTex.AlbedoTexScale.zw), MatTex.MetallicTex, MatTex.Rotation), 0);
+			break;
+			case SampleRoughness:
+				FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, float4(MatTex.SecondaryTexScale, MatTex.AlbedoTexScale.zw), MatTex.RoughnessTex, MatTex.Rotation), 0);
+			break;
+			case SampleEmission:
+				FinalCol = _EmissiveAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.EmissiveTex, MatTex.Rotation), 0);
+			break;
+			case SampleNormal:
+				FinalCol = _NormalAtlas.SampleLevel(sampler_NormalAtlas, AlignUV(UV, float4(MatTex.SecondaryTexScale, MatTex.AlbedoTexScale.zw), MatTex.NormalTex, MatTex.Rotation), 0).xyxy;
+			break;
+			case SampleAlpha://roughness
+				#ifdef PointFiltering
+					FinalCol = _AlphaAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlphaTex, MatTex.Rotation), 0);
+				#else
+					FinalCol = _AlphaAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlphaTex, MatTex.Rotation), 0);
+				#endif
+			break;
+			// case SampleIES://roughness
+			// 	// FinalCol = _IESAtlas.SampleLevel(sampler_NormalAtlas, AlignUV(UV, float4(MatTex.SecondaryTexScale, MatTex.AlbedoTexScale.zw), MatTex.RoughnessTex, MatTex.Rotation), 0);
+			// break;
+			// case SampleMatCap:
+			// 	FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.MatCapTex, MatTex.Rotation), 0);
+			// break;
+			// case SampleMatCapMask:
+			// 	FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.MatCapMask, MatTex.Rotation), 0);
+			// break;
+		}
 	#else//BINDLESS
 		//AlbedoTexScale, AlbedoTex, and Rotation dont worry about, thats just for transforming to the atlas 
-		int TextureIndexInArray = _Materials[MaterialIndex].BindlessIndex;
+		int TextureIndexInArray = -1;// = MatTex.BindlessIndex;
+		switch(TextureType) {
+			case SampleAlbedo: TextureIndexInArray = MatTex.AlbedoIndex; break;
+			case SampleMetallic: TextureIndexInArray = MatTex.MetallicIndex; break;
+			case SampleRoughness: TextureIndexInArray = MatTex.RoughnessIndex; break;
+			case SampleEmission: TextureIndexInArray = MatTex.EmissionIndex; break;
+			case SampleNormal: TextureIndexInArray = MatTex.NormalIndex; break;
+			case SampleAlpha: TextureIndexInArray = MatTex.AlphaIndex; break;
+		}
+		//For SampleNormal, you need to output FinalCol = Texture.xyxy;
+		if(SampleNormal) {
+
+		}
+
+
 
 	#endif
+	return FinalCol;
 }
 
 
@@ -647,16 +700,14 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, float ma
 				if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster)) return false; 
         		if(_Materials[MaterialIndex].MatType == CutoutIndex || _Materials[MaterialIndex].specTrans == 1) {
 	                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
-	                float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlphaTex);
-	                if(Uv.x != -1 && _Materials[MaterialIndex].MatType == CutoutIndex && _AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) return false;
+                    if(_Materials[MaterialIndex].MatType == CutoutIndex && _Materials[MaterialIndex].AlphaTex.x > 0)
+                        if( SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) return false;
 
 		            #ifdef IgnoreGlassShadow
 		                if(_Materials[MaterialIndex].specTrans == 1) {
 			            	#ifdef StainedGlassShadows
-	                			Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex);
 		    	            	throughput *= _Materials[MaterialIndex].surfaceColor;
-	                			// if(Uv.x != -1)
-			    	            	// throughput *= (_TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0).xyz + 2.0f) / 3.0f;// * abs(dot(ray.direction, normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2)))));
+						        if(_Materials[MaterialIndex].AlbedoTex.x > 0) throughput *= SampleTexture(BaseUv, SampleAlbedo, _Materials[MaterialIndex]) / 3.0f;
 		    				#endif
 		                	return false;
 		                }
@@ -1936,11 +1987,8 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
         MatDat.surfaceColor = 0.5f;
     #else
         float2 BaseUv = AggTris[AggTriIndex].tex0 * (1.0f - FinalUV.x - FinalUV.y) + AggTris[AggTriIndex].texedge1 * FinalUV.x + AggTris[AggTriIndex].texedge2 * FinalUV.y;
-        if(MatDat.AlbedoTex.x > 0) {
-            float2 EmissionUV = AlignUV(BaseUv, MatDat.AlbedoTexScale, MatDat.AlbedoTex);   
-            float4 EmissTex = SampleTexture(BaseUv, MaterialIndex);
-            MatDat.surfaceColor *= EmissTex.xyz;
-        }
+        if(MatDat.AlbedoTex.x > 0)
+        	MatDat.surfaceColor *= SampleTexture(BaseUv, SampleAlbedo, MatDat);
 
         float3 TempCol = MatDat.surfaceColor;
         #ifndef DX11
@@ -1957,20 +2005,15 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
             if (MatDat.MatType == VideoIndex) {
                 MatDat.surfaceColor *= VideoTex.SampleLevel(sampler_VideoTex, BaseUv, 0).xyz;
             } else {
-                float2 EmissionUV = AlignUV(BaseUv, MatDat.AlbedoTexScale, MatDat.EmissiveTex);    
-                if (EmissionUV.x != -1) {
+            	if (MatDat.EmissiveTex.x > 0) {
                     float3 EmissCol = lerp(MatDat.EmissionColor, MatDat.surfaceColor, GetFlag(MatDat.Tag, BaseIsMap));
-                    #ifdef AccurateEmissionTex
-                        float4 EmissTexture = _EmissiveAtlas.SampleLevel(my_linear_clamp_sampler, EmissionUV, 0);
-                    #else
-                        float4 EmissTexture = float4(EmissCol, 1);
-                    #endif
+            		float4 EmissTex = SampleTexture(BaseUv, SampleEmission, MatDat);
                     if(!GetFlag(MatDat.Tag, IsEmissionMask)) {//IS a mask
-                        MatDat.emmissive *= luminance(EmissTexture.xyz);
+                        MatDat.emmissive *= luminance(EmissTex.xyz);
                         
                         MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissCol, saturate(MatDat.emmissive) * GetFlag(MatDat.Tag, ReplaceBase));
                     } else {//is NOT a mask
-                        MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissTexture.xyz * EmissCol, saturate(MatDat.emmissive) * GetFlag(MatDat.Tag, ReplaceBase));
+                        MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissTex.xyz * EmissCol, saturate(MatDat.emmissive) * GetFlag(MatDat.Tag, ReplaceBase));
                     }            
                 }
             }

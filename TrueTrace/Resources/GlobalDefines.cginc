@@ -45,6 +45,16 @@
 #define BackgrounBleed 8
 #define Thin 9
 
+#define SampleAlbedo 0
+#define SampleMetallic 1
+#define SampleRoughness 2
+#define SampleEmission 3
+#define SampleNormal 4
+#define SampleAlpha 5
+#define SampleIES 6
+#define SampleMatCap 7
+#define SampleMatCapMask 8
+
 bool GetFlag(int FlagVar, int flag) {
     return (((int)FlagVar >> flag) & (int)1) == 1;
 }

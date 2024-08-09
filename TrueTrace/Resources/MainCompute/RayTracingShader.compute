@@ -52,9 +52,9 @@ bool VisabilityCheck(SmallerRay ray, float dist) {
 }
 
 #ifdef RadianceCache
-inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, float2 NormalUV, RayData RayDat, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout PropogatedCacheData CacheInstance) {//main function
+inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, RayData RayDat, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout PropogatedCacheData CacheInstance) {//main function
 #else
-inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, float2 NormalUV, RayData RayDat, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData) {//main function
+inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, RayData RayDat, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData) {//main function
 #endif
     bool CB = !DoPartialRendering;
     if(!CB) {
@@ -94,10 +94,10 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
     [branch]if(CurBounce == 0 && UseReSTIRGI && ReSTIRGIUpdateRate != 0 && RandomNums[id].z != 0 && hitDat.specTrans == 0 && hitDat.diffTrans == 0) {
         norm = i_octahedral_32(asuint(RandomNums[id].w));
-    } else if (!ClayMode && NormalUV.x != -1) {//Handle Normal Maps
+    } else if (!ClayMode && hitDat.NormalTex.x > 0) {//Handle Normal Maps
         float3 LocalTan = GetTriangleTangent(hit.triangle_id, float2(hit.u, hit.v), Inverse);
         float3 LocalBinorm = normalize(cross(Geomnorm, LocalTan));
-        float2 Norm = _NormalAtlas.SampleLevel(sampler_NormalAtlas, NormalUV, 0);
+        float2 Norm = SampleTexture(BaseUv, SampleNormal, hitDat);
 
         float3 LocalNormIN = float3((hitDat.NormalStrength * Norm - (hitDat.NormalStrength / 2.0f)), 0.0f);
         LocalNormIN.z = 1.0 - 0.5 * dot(LocalNormIN, LocalNormIN);
@@ -119,10 +119,10 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     //         float2 matcapUV = float2(dot(worldViewRight, norm), dot(worldViewUp, norm)) * 0.5f + 0.5;
 
     //         float2 MatCapUV = AlignUV(matcapUV, hitDat.AlbedoTexScale, hitDat.MatCapTex, hitDat.Rotation);
-    //         float4 matcap = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, MatCapUV, 0);
+    //         float4 matcap = SampleTexture(BaseUv, SampleMatCap, hitDat);
     //         float2 MatCapMaskUV = AlignUV(BaseUv, hitDat.AlbedoTexScale, hitDat.MatCapMask, hitDat.Rotation);
     //         if(MatCapMaskUV.x != -1) {
-    //             hitDat.surfaceColor = lerp(hitDat.surfaceColor, matcap.xyz, SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, MatCapMaskUV, 0).x);
+    //             hitDat.surfaceColor = lerp(hitDat.surfaceColor, matcap.xyz, SampleTexture(BaseUv, SampleMatCapMask, hitDat).x);
     //         }
     //     }
     // }
@@ -659,7 +659,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     //     minmat = 0;
     //     float3 BaseCol = 0;
     //     MaterialIndex = MaterialCount + Terrains[bestHit.triangle_id].MatOffset;
-    //     if(Mats.x > 0.001f) BaseCol += _SampleTexture(TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex].surfaceColor.xy + _Materials[MaterialIndex].transmittanceColor.xy, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex), 0).xyz * Mats.x;
+    //     if(Mats.x > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex].surfaceColor.xy + _Materials[MaterialIndex].transmittanceColor.xy, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex), 0).xyz * Mats.x;
     //     if(Mats.y > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex + 1].surfaceColor.xy + _Materials[MaterialIndex + 1].transmittanceColor.xy, _Materials[MaterialIndex + 1].AlbedoTexScale, _Materials[MaterialIndex + 1].AlbedoTex), 0).xyz * Mats.y;
     //     if(Mats.z > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex + 2].surfaceColor.xy + _Materials[MaterialIndex + 2].transmittanceColor.xy, _Materials[MaterialIndex + 2].AlbedoTexScale, _Materials[MaterialIndex + 2].AlbedoTex), 0).xyz * Mats.z;
     //     if(Mats.w > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex + 3].surfaceColor.xy + _Materials[MaterialIndex + 3].transmittanceColor.xy, _Materials[MaterialIndex + 3].AlbedoTexScale, _Materials[MaterialIndex + 3].AlbedoTex), 0).xyz * Mats.w;
@@ -675,16 +675,12 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     // }
 
     if(TempMat.Rotation != 0) {TempMat.Rotation *= PI;} 
-    float2 AlbedoUv = AlignUV(BaseUv, TempMat.AlbedoTexScale, TempMat.AlbedoTex, TempMat.Rotation);
-    float2 NormalUV = AlignUV(BaseUv, float4(TempMat.SecondaryTexScale, TempMat.AlbedoTexScale.zw), TempMat.NormalTex, TempMat.Rotation);
-    float2 MetallicUV = AlignUV(BaseUv, float4(TempMat.SecondaryTexScale, TempMat.AlbedoTexScale.zw), TempMat.MetallicTex, TempMat.Rotation);
-    float2 RoughnessUV = AlignUV(BaseUv, float4(TempMat.SecondaryTexScale, TempMat.AlbedoTexScale.zw), TempMat.RoughnessTex, TempMat.Rotation);
     
 
     if(TempMat.MatType == VideoIndex) {
         TempMat.surfaceColor = VideoTex.SampleLevel(sampler_VideoTex, BaseUv, 0).xyz;
-    } else if(AlbedoUv.x != -1 && !HitTerrain) {
-        TempMat.surfaceColor = SampleTexture(BaseUv, MaterialIndex);
+    } else if(!HitTerrain) {
+        if(TempMat.AlbedoTex.x > 0) TempMat.surfaceColor *= SampleTexture(BaseUv, SampleAlbedo, TempMat);
     }
     if(!HitTerrain) {
         float3 TempCol = TempMat.surfaceColor;
@@ -703,8 +699,11 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     #ifdef LightMapping
         if(CurBounce == 0) TempMat.surfaceColor = 1;
     #endif
-    if (TempMat.specTrans != 1 && MetallicUV.x > 0) {float Tempmet = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, MetallicUV, max(CurBounce, 0)); TempMat.metallic = Tempmet;}
-    if (RoughnessUV.x > 0) TempMat.roughness = (GetFlag(TempMat.Tag, InvertSmoothnessTexture) ? (1.0f - saturate(SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, RoughnessUV, max(CurBounce, 0)))) : saturate(SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, RoughnessUV, max(CurBounce, 0))));
+    if (TempMat.specTrans != 1 && TempMat.MetallicTex.x > 0) TempMat.metallic = SampleTexture(BaseUv, SampleMetallic, TempMat);
+    if (TempMat.RoughnessTex.x > 0) {
+        TempMat.roughness = saturate(SampleTexture(BaseUv, SampleRoughness, TempMat));
+        TempMat.roughness = (GetFlag(TempMat.Tag, InvertSmoothnessTexture) ? (1.0f - TempMat.roughness) : TempMat.roughness);
+    }
     TempMat.metallic = saturate(TempMat.metallic);
     if(!all(TempMat.MetallicRemap == float2(0,1))) TempMat.metallic = (TempMat.metallic * (TempMat.MetallicRemap.y - TempMat.MetallicRemap.x)) + TempMat.MetallicRemap.x;
     if(!all(TempMat.RoughnessRemap == float2(0,1))) {
@@ -719,24 +718,23 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
 
     #ifndef WhiteLights
         if(TempMat.emmissive > 0) {
-            float2 EmissionUV = AlignUV(BaseUv, TempMat.AlbedoTexScale, TempMat.EmissiveTex);    
-            if (EmissionUV.x != -1) {
+            if (TempMat.EmissiveTex.x > 0) {
                 float3 EmissCol = lerp(_Materials[MaterialIndex].EmissionColor, TempMat.surfaceColor, GetFlag(TempMat.Tag, BaseIsMap));
-                float4 EmissTexture = _EmissiveAtlas.SampleLevel(my_linear_clamp_sampler, EmissionUV, 0);
+                float4 EmissTex = SampleTexture(BaseUv, SampleEmission, TempMat);
                 if(!GetFlag(TempMat.Tag, IsEmissionMask)) {//IS a mask
-                    TempMat.emmissive *= luminance(EmissTexture.xyz);
+                    TempMat.emmissive *= luminance(EmissTex.xyz);
                     TempMat.surfaceColor = lerp(TempMat.surfaceColor, EmissCol, saturate(TempMat.emmissive) * GetFlag(TempMat.Tag, ReplaceBase));
                 } else {//is NOT a mask
-                    TempMat.surfaceColor = lerp(TempMat.surfaceColor, EmissTexture.xyz * EmissCol, saturate(TempMat.emmissive) * GetFlag(TempMat.Tag, ReplaceBase));
+                    TempMat.surfaceColor = lerp(TempMat.surfaceColor, EmissTex.xyz * EmissCol, saturate(TempMat.emmissive) * GetFlag(TempMat.Tag, ReplaceBase));
                 }            
             }
         }
     #endif
     float4 PrevScreen = PrevScreenData;
     #ifdef RadianceCache
-        calcFinalColor(ray, Color, TempMat, bestHit, id.xy, NormalUV, GlobRay, pixel_index, MaterialIndex, BaseUv, PrevScreenData, CacheBuffer[pixel_index]);
+        calcFinalColor(ray, Color, TempMat, bestHit, id.xy, GlobRay, pixel_index, MaterialIndex, BaseUv, PrevScreenData, CacheBuffer[pixel_index]);
     #else
-        calcFinalColor(ray, Color, TempMat, bestHit, id.xy, NormalUV, GlobRay, pixel_index, MaterialIndex, BaseUv, PrevScreenData);
+        calcFinalColor(ray, Color, TempMat, bestHit, id.xy, GlobRay, pixel_index, MaterialIndex, BaseUv, PrevScreenData);
     #endif
     if(CurBounce == 0 || ((CurBounce == 1 || !UseReSTIRGI) && any(PrevScreen != PrevScreenData))) ScreenSpaceInfo[id.xy] = PrevScreenData;
     GlobalColors[pixel_index] = Color;

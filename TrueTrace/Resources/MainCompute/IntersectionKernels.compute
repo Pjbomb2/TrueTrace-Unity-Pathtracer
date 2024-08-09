@@ -35,12 +35,8 @@ inline void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ra
                 #ifdef AdvancedAlphaMapped
                     if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                         float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
-                        float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlphaTex, _Materials[MaterialIndex].Rotation);
-                        #ifdef PointFiltering
-                            if(Uv.x != -1 && _AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) return;
-                        #else
-                            if(Uv.x != -1 && _AlphaAtlas.SampleLevel(my_linear_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) return;
-                        #endif
+                        if(_Materials[MaterialIndex].AlphaTex.x > 0) 
+                            if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) return;
                     }
                 #endif
                 #ifdef IgnoreGlassMain
@@ -121,12 +117,8 @@ void IntersectBVH() {
                         if(CurBounce == 0 && GetFlag(_Materials[MaterialIndex].Tag, Invisible)) {myRay.TMin = bestHit.t + 0.001f; bestHit.t = FarPlane; continue;}
                         if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                             float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - bestHit.u - bestHit.v) + AggTris[tri_id].texedge1 * bestHit.u + AggTris[tri_id].texedge2 * bestHit.v;
-                            float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlphaTex, _Materials[MaterialIndex].Rotation);
-                            #ifdef PointFiltering
-                                if(Uv.x != -1 && _AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t; bestHit.t = FarPlane; continue;}
-                            #else
-                                if(Uv.x != -1 && _AlphaAtlas.SampleLevel(my_linear_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t; bestHit.t = FarPlane; continue;}
-                            #endif
+                            if(_Materials[MaterialIndex].AlphaTex.x > 0)
+                                if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t; bestHit.t = FarPlane; continue;}
                         }
                     #endif
                 }
@@ -314,8 +306,8 @@ void IntersectBVHShadow() {
                         if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster)) {myRay.TMin = q.CommittedRayT() + 0.001f; continue;} 
                         if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                             float2 BaseUv = AggTris[triangle_id].tex0 * (1.0f - u - v) + AggTris[triangle_id].texedge1 * u + AggTris[triangle_id].texedge2 * v;
-                            float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlphaTex);
-                            if(Uv.x != -1 && _AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.001f; continue;}
+                            if(_Materials[MaterialIndex].AlphaTex.x > 0)
+                                if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.001f; continue;}
 
                         }
                     #endif

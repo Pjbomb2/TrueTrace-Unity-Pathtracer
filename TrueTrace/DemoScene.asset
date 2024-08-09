@@ -31,7 +31,7 @@ MonoBehaviour:
   PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
-  UseASVGF: 1
+  UseASVGF: 0
   UseTAAU: 0
   ReSTIRGIUpdateRate: 7
   UseReSTIRGITemporal: 0
