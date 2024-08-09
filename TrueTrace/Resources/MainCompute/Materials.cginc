@@ -554,6 +554,7 @@ static float3 SampleDisneySpecTransmission(const MaterialData hitDat, float3 wo,
         wi = normalize(reflect(-wo, wm));
 
         float jacobian = (4 * abs(dot(wo, wm)));
+        // G1v *= sqrt(hitDat.surfaceColor);
         pdf = F / jacobian;
     }
     else {
@@ -571,6 +572,7 @@ static float3 SampleDisneySpecTransmission(const MaterialData hitDat, float3 wo,
             else {
                 wi = reflect(-wo, wm);
             }
+            // G1v *= hitDat.surfaceColor;
         }
 
         wi = normalize(wi);
@@ -590,7 +592,7 @@ static float3 SampleDisneySpecTransmission(const MaterialData hitDat, float3 wo,
     forwardPdfW *= pdf;
     // -- convert wi back to world space
 
-    return G1v * exp(-CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0 ? 1 : hitDat.scatterDistance) * (hitDat.scatterDistance == 0 ? 1 : hitDat.scatterDistance));
+    return G1v;// * exp(-CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0 ? 1 : hitDat.scatterDistance) * (hitDat.scatterDistance));
 }
 
 static float3 SampleDisneyDiffuse(const MaterialData hitDat, float3 wo, bool thin, out float forwardPdfW, out float3 wi, inout bool refracted, uint pixel_index)

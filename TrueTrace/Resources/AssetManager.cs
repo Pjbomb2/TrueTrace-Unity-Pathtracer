@@ -22,6 +22,7 @@ namespace TrueTrace {
         //emissive, alpha, metallic, roughness
         [HideInInspector] public Texture2D IESAtlas;
         [HideInInspector] public Texture2D AlbedoAtlas;
+        public Texture2D[] AlbedoArray;
         [HideInInspector] public Texture2D NormalAtlas;
         [HideInInspector] public Texture2D SingleComponentAtlas;
         [HideInInspector] public Texture2D EmissiveAtlas;
@@ -83,6 +84,7 @@ namespace TrueTrace {
             ThisShader.SetTexture(Kernel, "_AlphaAtlas", AlphaAtlas);
             ThisShader.SetTexture(Kernel, "_IESAtlas", IESAtlas);
             ThisShader.SetTexture(Kernel, "_TextureAtlas", AlbedoAtlas);
+            //BINDLESS-TEST Assign the albedo array here
             #if HardwareRT
                 ThisShader.SetRayTracingAccelerationStructure(Kernel, "myAccelerationStructure", AccelStruct);
                 ThisShader.SetBuffer(Kernel, "MeshOffsets", MeshIndexOffsets);
@@ -277,6 +279,7 @@ namespace TrueTrace {
                     }
                 break;
                 case 6://AlbedoMap
+                    AlbedoArray = new Texture2D[2048];
                     Atlas = new RenderTexture(desc);
                     AlbedoAtlasSize = DesiredRes;
                     if(AlbedoAtlas != null && AlbedoAtlas.width != DesiredRes) {
@@ -323,6 +326,7 @@ namespace TrueTrace {
                             case 6: 
                                 if(TempRect.TexType == 0) _Materials[SelectedTex.TexObjList[j]].AlbedoTex = PackRect(RectSelect); 
                                 else if(TempRect.TexType == 7) _Materials[SelectedTex.TexObjList[j]].MatCapTex = PackRect(RectSelect); 
+                                else if(TempRect.TexType == 0) _Materials[SelectedTex.TexObjList[j]].BindlessIndex = i; 
                             break;
                             case 7: _Materials[SelectedTex.TexObjList[j]].AlphaTex = PackRect(RectSelect); break;
                             case 8: 
@@ -374,6 +378,7 @@ namespace TrueTrace {
 
                         CopyShader.SetTexture(4, "_Target", Atlas);
                         CopyShader.Dispatch(4, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 4.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 4.0f), 1);
+                        AlbedoArray[i] = SelectedTex.Tex as Texture2D;
                     break;
                 }
 
@@ -436,7 +441,7 @@ namespace TrueTrace {
             IESMapRect.Clear();
         }
 
-        private void CreateAtlas(int TotalMatCount) {//Creates texture atlas
+        private void CreateAtlas(int TotalMatCount, CommandBuffer cmd) {//Creates texture atlas
             TotalMatCount = 0;
             foreach (ParentObject Obj in RenderQue) {
                 MaterialsChanged.AddRange(Obj.ChildObjects);
@@ -584,6 +589,12 @@ namespace TrueTrace {
             TempTex.Release();
             TempTex = null;
 
+
+            {//BINDLESS-TEST create the bindless descriptor here, by this point all textures in scene are in the array "AlbedoArray"
+
+
+            }
+
             PackAndCompact(NormTextures, ref TempTex, NormRect.ToArray(), MainDesiredRes, 2);
             Graphics.CopyTexture(TempTex, 0, NormalAtlas, 0);
             TempTex.Release();
@@ -661,8 +672,8 @@ namespace TrueTrace {
 
         public void ForceUpdateAtlas() {
             int throwaway = 0;
-            for(int i = 0; i < RenderQue.Count; i++) RenderQue[i].CreateAtlas(ref throwaway);
-            CreateAtlas(throwaway);
+            // for(int i = 0; i < RenderQue.Count; i++) RenderQue[i].CreateAtlas(ref throwaway);
+            // CreateAtlas(throwaway);
         }
 
         public void OnApplicationQuit() {
@@ -1228,7 +1239,7 @@ namespace TrueTrace {
 
 
                 if (!OnlyInstanceUpdated || _Materials.Length == 0) {
-                    CreateAtlas(TotalMatCount);
+                    CreateAtlas(TotalMatCount, cmd);
                     // MaterialBuffer.ReleaseSafe();
                     CommonFunctions.CreateComputeBuffer(ref MaterialBuffer, _Materials);
                 }
@@ -1247,6 +1258,10 @@ namespace TrueTrace {
                     }
                 }
             }
+            {//BINDLESS-TEST this spot is guarenteed to run once per frame, be very close to the begining of the commandbuffer, and is guarenteed to have the AlbedoArray filled
+
+            }
+
         }
 
         public struct AggData {

@@ -54,19 +54,14 @@ struct CudaTriangle {
 StructuredBuffer<CudaTriangle> CudaTriArrayIN;
 RWStructuredBuffer<CudaTriangle> CudaTriArray;
 
-float2 msign( float2 v )
-{
-    return float2( (v.x>=0.0) ? 1.0 : -1.0, 
-                 (v.y>=0.0) ? 1.0 : -1.0 );
+uint octahedral_32(float3 nor) {
+	float oct = 1.0f / (abs(nor.x) + abs(nor.y) + abs(nor.z));
+	float t = saturate(-nor.z);
+	nor.xy = (nor.xy + (nor.xy > 0.0f ? t : -t)) * oct;
+    uint2 d = uint2(round(32767.5 + nor.xy*32767.5));  
+    return d.x|(d.y<<16u);
 }
 
-uint octahedral_32( in float3 nor )
-{
-    nor.xy /= ( abs( nor.x ) + abs( nor.y ) + abs( nor.z ) );
-    nor.xy  = (nor.z >= 0.0) ? nor.xy : (1.0-abs(nor.yx))*msign(nor.xy);
-    //return packSnorm2x16(nor.xy);
-    uint2 d = uint2(round(32767.5 + nor.xy*32767.5));  return d.x|(d.y<<16u);
-}
 int Stride;
 int TriBuffOffset;
 [numthreads(KernelRatio, 1, 1)]

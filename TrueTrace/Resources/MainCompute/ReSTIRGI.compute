@@ -100,6 +100,17 @@ inline void UpdateReservoir(inout float4 CurRes, inout float wsum, float4 PrevRe
         // CurRes.z = PrevRes.z;
     }
 }
+inline bool UpdateReservoir2(inout float4 CurRes, inout float wsum, float4 PrevRes, float rndnum, inout int2 CachedID, int2 ID) {
+    float w = max(PrevRes.x * PrevRes.y * PrevRes.w, 0);
+    wsum += w;
+    [branch]if (rndnum < (w / wsum)) {
+        CachedID = ID;
+        CurRes.w = PrevRes.w;
+        return true;
+        // CurRes.z = PrevRes.z;
+    }
+    return false;
+}
 
 inline float get_gradient(float l_curr, float l_prev)
 {
@@ -134,7 +145,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     const float3 DirectionalPosition = GBuffer.z * CameraRay.direction + CameraRay.origin;
 
     ColData CenterCol = GlobalColors[pixel_index];
-    float4 Data = CenterCol.Data;
+    float3 Data = CenterCol.Data;
     CenterCol.throughput.x = pixel_index;
     CenterCol.throughput.y = frames_accumulated;
     uint4 WorldPos = WorldPosC[id.xy];
@@ -265,8 +276,8 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     const SmallerRay CameraRay = CreateCameraRay(id.xy / float2(screen_width, screen_height) * 2.0f - 1.0f);
     const float3 DirectionalPosition = GBuffer.z * CameraRay.direction;
     ColData CenterCol = PrevGlobalColorsA[pixel_index];
-    const float4 Data = CenterCol.Data;
-    const uint MetRoughIsSpec = CenterCol.MetRoughIsSpec;
+    const float3 Data = CenterCol.Data;
+    uint MetRoughIsSpec = CenterCol.MetRoughIsSpec;
     MaterialData SurfaceMat = _Materials[MatIndex];
     const uint Flag = CenterCol.Flags;
     SurfaceMat.surfaceColor = max(unpackRGBE(Flag), 0.005f);
@@ -280,6 +291,8 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     float wsum = max(CurrentRes.x * CurrentRes.y * CurrentRes.w, 0);
     int2 CachedID = -1;
     const uint Case = CurrentRes.z;
+    float3 MainPos = CameraRay.origin + CameraRay.direction * GBuffer.z;
+    float4 WorldPosA2 = WorldPosB[id.xy];
     if (UseReSTIRGISpatial && Case != 3) {
         int2 NeighborIndex;
         float2 RandOffsets;
@@ -304,9 +317,19 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
             PrevRes = ReservoirB[NeighborIndex];
             SmallerRay NeighborRay = CreateCameraRay(NeighborIndex / float2(screen_width, screen_height) * 2.0f - 1.0f);
             float3 ray = (PrevGBuffer.z * NeighborRay.direction) - DirectionalPosition;
-            if (abs(dot(GeomNorm, ray)) < 0.1f && PrevRes.z == CurrentRes.z && MatIndex ==  (asuint(PrevGBuffer.w) << 3) >> 3) {
+            float3 NeighborPos = NeighborRay.origin + NeighborRay.direction * PrevGBuffer.z;
+            float Similarity = 0;
+            if((CurrentRes.z == 0)) {
+                float3 ray2 = CalcPos(WorldPosB[NeighborIndex]) - CalcPos(WorldPosA2);
+                float3 norm2 = normalize((normalize(CalcPos(WorldPosB[NeighborIndex]) - MainPos) + normalize(CalcPos(WorldPosA2) - MainPos)) / 2.0f);
+                float3 MainDir = normalize(CalcPos(WorldPosA2) - MainPos);
+                Similarity = lerp(log2(abs(dot(norm2, ray2)) + 1), 0, SurfaceMat.roughness);
+            }
+            if (Similarity < 0.1f && abs(dot(GeomNorm, ray)) < 0.1f && PrevRes.z == CurrentRes.z && MatIndex ==  (asuint(PrevGBuffer.w) << 3) >> 3) {
                 RandOffsets2 = randomNEE(i + 160 * RandOffset + 12, pixel_index);
-                UpdateReservoir(CurrentRes, wsum, PrevRes, RandOffsets2.y, CachedID, NeighborIndex);
+                if(UpdateReservoir2(CurrentRes, wsum, PrevRes, RandOffsets2.y, CachedID, NeighborIndex)) {
+                    WorldPosA2 = WorldPosB[NeighborIndex];
+                }
                 CurrentRes.x += PrevRes.x;
             };
         }
@@ -354,7 +377,10 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
                 }
             #endif
         }
-        if(Data.w != 0) GlobalColors[pixel_index].Data = float4(max(bsdf, 0.0001f), 1);
+        if(GetBounceData(MetRoughIsSpec) != 1) {
+            MetRoughIsSpec = (MetRoughIsSpec & ~(0xFC000000)) |  ((2) << 26);  
+            GlobalColors[pixel_index].Data = float3(max(bsdf, 0.0001f));
+        }
         GlobalColors[pixel_index].throughput = float3(asfloat(uint2(octahedral_32(GeomNorm), octahedral_32(SurfNorm))), GBuffer.z);
         GlobalColors[pixel_index].Direct = CenterCol.Direct * CurrentRes.y;
         GlobalColors[pixel_index].Indirect = CenterCol.Indirect * CurrentRes.y;

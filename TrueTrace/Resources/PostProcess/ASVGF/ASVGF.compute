@@ -236,7 +236,7 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 	float3 TexBaseColor = Pixel.Data.xyz;
 	TexBaseColor = (TexBaseColor > 0.005f ? rcp(TexBaseColor) : 0);
 	float2 MetRough = FromColorSpecPacked(Pixel.MetRoughIsSpec);
-	if(Pixel.Data.w == 0) {
+	if(GetBounceData(Pixel.MetRoughIsSpec) == 1) {
 		Pixel.Direct = float3(0,0,0);
 		Pixel.Indirect = float3(0,0,0);
 		Pixel.PrimaryNEERay = 0;
@@ -632,8 +632,8 @@ inline float2 filter_image(Texture2D<half2> img, int2 ipos)
 	// ipos += (random(64, ipos) - 0.5f);
 
 	const int r = 1;
-	for (int yy = -r; yy <= r; yy++) {
-		for (int xx = -r; xx <= r; xx++) {
+	[unroll]for (int yy = -r; yy <= r; yy++) {
+		[unroll]for (int xx = -r; xx <= r; xx++) {
 			int2 p = ipos + int2(xx, yy) * step_size;
 
 			float2  c = img[p].xy;
@@ -980,7 +980,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 		color_curr_spec.rgb = exp(clamp(log(color_curr_spec.rgb + 1), 0, log(Max + 15))) - 1;
 
 		// Same sequence as above, only for the specular channel
-		float antilag = 0.1f * grad_hf_spec.y * clamp(1.0f - motion_length, 0.01f, 1.0f) + motion_length * 0.001f;
+		float antilag = 0.01f * grad_hf_spec.y * clamp(1.0f - motion_length, 0.01f, 1.0f) + motion_length * 0.001f;
 		// float antilag = grad_hf_spec.y + motion_length * 0.001f;
 		float antilag_alpha_spec = clamp(lerp(0.0, antilag, 1), 0, 1);
 		float hist_len_spec = min(max(temporal_color_histlen_spec.a * pow(1.0 - antilag_alpha_spec, 10),0) + 1.0, 256.0);
@@ -1512,7 +1512,7 @@ float3 composite_color(float4 surf_base_color,
 {
 	float Exposure = 1;
 	if(UseExposure) Exposure = ExposureBuffer[0];
-	float3 final_color = ((surf_base_color.w == 0) ? pow(surf_base_color, 1.0f) : ((projected_lf.rgb + high_freq.rgb) * surf_base_color + specular * SpecColor));
+	float3 final_color = ((surf_base_color.w == 1) ? pow(surf_base_color, 1.0f) : ((projected_lf.rgb + high_freq.rgb) * surf_base_color + specular * SpecColor));
 
 	return final_color;
 }
@@ -1549,14 +1549,14 @@ void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGrou
 
 
 		float3 normal = i_octahedral_32(TEX_PT_NORMALS_A[ipos].y);
-		float4 base_color = float4(unpackRGBE(AlbedoColorB[ipos].x),GlobalColors[ipos.x + ipos.y * screen_width].Data.w);// TEX_PT_BASE_COLOR_A.SampleLevel(sampler_trilinear_clamp, ipos / float2(screen_width, screen_height), 0);
-		if(DiffRes && base_color.w <= 1) base_color.xyz = 1;
-		if(base_color.w == 0) base_color = GlobalColors[ipos.x + ipos.y * screen_width].Data;
+		float4 base_color = float4(unpackRGBE(AlbedoColorB[ipos].x),GetBounceData(GlobalColors[ipos.x + ipos.y * screen_width].MetRoughIsSpec));// TEX_PT_BASE_COLOR_A.SampleLevel(sampler_trilinear_clamp, ipos / float2(screen_width, screen_height), 0);
+		if(DiffRes && base_color.w <= 2) base_color.xyz = 1;
+		if(base_color.w == 1) base_color = float4(GlobalColors[ipos.x + ipos.y * screen_width].Data,1);
 		// Project the spherical harmonics lighting onto the actual surface normal
 		float3 projected_lf = project_SH_irradiance(filtered_lf, normal);
 		projected_lf *= 1024.0f;
 		
-		float3 final_color = composite_color(base_color, projected_lf, filtered_hf, filtered_spec, (DiffRes && base_color.w <= 1) ? 1 : unpackRGBE(AlbedoColorB[ipos].y), ipos);
+		float3 final_color = composite_color(base_color, projected_lf, filtered_hf, filtered_spec, (DiffRes && base_color.w <= 2) ? 1 : unpackRGBE(AlbedoColorB[ipos].y), ipos);
 
 		IMG_ASVGF_COLOR[ipos] = float4(final_color, 0);
 	}

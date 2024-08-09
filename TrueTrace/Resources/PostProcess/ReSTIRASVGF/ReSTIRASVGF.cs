@@ -175,8 +175,6 @@ namespace TrueTrace {
 
         Vector3 prevEuler;
         Vector3 PrevPos;
-
-
         public void Do(ref ComputeBuffer _ColorBuffer,  
                         ref RenderTexture Output, 
                         float ResolutionRatio, 
@@ -198,6 +196,12 @@ namespace TrueTrace {
             camera = RayTracingMaster._camera;
             bool EvenFrame = CurFrame % 2 == 0;
             cmd.BeginSample("Dist Correct Kernel");
+            Vector3 Euler = camera.transform.eulerAngles;
+            shader.SetMatrix("viewprojection", camera.projectionMatrix * camera.worldToCameraMatrix);
+            camera.transform.eulerAngles = prevEuler; 
+            shader.SetMatrix("prevviewprojection", camera.projectionMatrix * camera.worldToCameraMatrix);
+            camera.transform.eulerAngles = Euler; 
+            prevEuler = Euler;
             shader.SetVector("Forward", camera.transform.forward);
             shader.SetFloat("FarPlane", camera.farClipPlane);
             shader.SetFloat("NearPlane", camera.nearClipPlane);

@@ -42,7 +42,6 @@ namespace TrueTrace {
          [SerializeField] public bool ClayMode = false;
          [SerializeField] public Vector3 ClayColor = new Vector3(0.5f,0.5f,0.5f);
          [SerializeField] public Vector3 GroundColor = new Vector3(0.1f,0.1f,0.1f);
-         [SerializeField] public ObjectField CameraField;
          [SerializeField] public int BounceCount = 7;
          [SerializeField] public float RenderRes = 1;
          [SerializeField] public bool NEE = true;
@@ -82,8 +81,9 @@ namespace TrueTrace {
          [SerializeField] public int DenoiserSelection = 0;
          [SerializeField] public Color SceneBackgroundColor = new Color(1,1,1,1);
          [SerializeField] public Color SecondarySceneBackgroundColor = new Color(1,1,1,1);
-         [SerializeField] public float BackgroundIntensity = 1;
+         [SerializeField] public Vector2 BackgroundIntensity = Vector2.one;
          [SerializeField] public float LightEnergyScale = 1;
+         [SerializeField] public float LEMEnergyScale = 1;
          [SerializeField] public float IndirectBoost = 1;
          [SerializeField] public int BackgroundType = 0;
          [SerializeField] public int SecondaryBackgroundType = 0;
@@ -98,6 +98,8 @@ namespace TrueTrace {
          [SerializeField] public bool UseOIDN = false;
          [SerializeField] public bool DoSharpen = false;
          [SerializeField] public float Sharpness = 1.0f;
+         [SerializeField] public Vector2 HDRILongLat = Vector2.zero;
+         [SerializeField] public Vector2 HDRIScale = Vector2.one;
 
          void OnEnable() {
             EditorSceneManager.activeSceneChangedInEditMode += EvaluateScene;
@@ -722,25 +724,89 @@ Toolbar toolbar;
 
             });
       
-      BackgroundIntensityField = new FloatField() {value = BackgroundIntensity, label = "Background Intensity"};
-      BackgroundIntensityField.RegisterValueChangedCallback(evt => {BackgroundIntensity = evt.newValue; RayMaster.LocalTTSettings.BackgroundIntensity = BackgroundIntensity;});
+
+
+      BackgroundIntensityField = new FloatField() {value = BackgroundIntensity.x, label = "Primary Background Intensity"};
+      BackgroundIntensityField.RegisterValueChangedCallback(evt => {BackgroundIntensity = new Vector2(evt.newValue, BackgroundIntensity.y); RayMaster.LocalTTSettings.BackgroundIntensity = BackgroundIntensity;});
+      BackgroundIntensityField.style.maxWidth = 345;
       SceneSettingsMenu.Add(BackgroundIntensityField);
+
+      FloatField SecondaryBackgroundIntensityField = new FloatField() {value = BackgroundIntensity.y, label = "Secondary Background Intensity"};
+      SecondaryBackgroundIntensityField.RegisterValueChangedCallback(evt => {BackgroundIntensity = new Vector2(BackgroundIntensity.x, evt.newValue); RayMaster.LocalTTSettings.BackgroundIntensity = BackgroundIntensity;});
+      SecondaryBackgroundIntensityField.style.maxWidth = 345;
+      SceneSettingsMenu.Add(SecondaryBackgroundIntensityField);
 
       UnityLightModifierField = new FloatField() {value = LightEnergyScale, label = "Unity Light Intensity Modifier"};
       UnityLightModifierField.RegisterValueChangedCallback(evt => {LightEnergyScale = evt.newValue; Assets.LightEnergyScale = LightEnergyScale;});
+      UnityLightModifierField.style.maxWidth = 345;
       SceneSettingsMenu.Add(UnityLightModifierField);
+
+      FloatField LEMLightModifierField = new FloatField() {value = LEMEnergyScale, label = "LEM Light Intensity Modifier"};
+      LEMLightModifierField.RegisterValueChangedCallback(evt => {LEMEnergyScale = evt.newValue; RayMaster.LocalTTSettings.LEMEnergyScale = LEMEnergyScale;});
+      LEMLightModifierField.style.maxWidth = 345;
+      SceneSettingsMenu.Add(LEMLightModifierField);
 
       IndirectBoostField = new FloatField() {value = IndirectBoost, label = "Indirect Lighting Boost"};
       IndirectBoostField.RegisterValueChangedCallback(evt => {IndirectBoost = evt.newValue; RayMaster.LocalTTSettings.IndirectBoost = IndirectBoost;});
+      IndirectBoostField.style.maxWidth = 345;
       SceneSettingsMenu.Add(IndirectBoostField);
 
       Slider SunDesatSlider = new Slider() {label = "SunDesat: ", value = SunDesaturate, highValue = 1.0f, lowValue = 0.0f};
       SunDesatSlider.RegisterValueChangedCallback(evt => {SunDesaturate = evt.newValue; RayMaster.LocalTTSettings.SunDesaturate = SunDesaturate;});
       SceneSettingsMenu.Add(SunDesatSlider);
+      SunDesatSlider.style.maxWidth = 345;
 
       Slider SkyDesatSlider = new Slider() {label = "SkyDesat: ", value = SkyDesaturate, highValue = 1.0f, lowValue = 0.0f};
       SkyDesatSlider.RegisterValueChangedCallback(evt => {SkyDesaturate = evt.newValue; RayMaster.LocalTTSettings.SkyDesaturate = SkyDesaturate;});
       SceneSettingsMenu.Add(SkyDesatSlider);
+      SkyDesatSlider.style.maxWidth = 345;
+
+
+
+
+      VisualElement HDRILongElement = new VisualElement();
+         HDRILongElement.style.flexDirection = FlexDirection.Row;
+         Slider HDRILongSlider = new Slider() {label = "HDRI Horizontal Offset: ", value = HDRILongLat.x, highValue = 360.0f, lowValue = 0.0f};
+         HDRILongSlider.style.minWidth = 345;
+         HDRILongSlider.style.maxWidth = 345;
+         FloatField HDRILongField = new FloatField() {value = HDRILongLat.x};
+         HDRILongField.style.maxWidth = 345;
+         HDRILongElement.Add(HDRILongSlider);
+         HDRILongElement.Add(HDRILongField);
+      HDRILongSlider.RegisterValueChangedCallback(evt => {HDRILongLat = new Vector2(evt.newValue, HDRILongLat.y); HDRILongField.value = HDRILongLat.x; RayMaster.LocalTTSettings.HDRILongLat = HDRILongLat;});
+      HDRILongField.RegisterValueChangedCallback(evt => {HDRILongLat = new Vector2(evt.newValue, HDRILongLat.y); HDRILongSlider.value = HDRILongLat.x; RayMaster.LocalTTSettings.HDRILongLat = HDRILongLat;});
+      SceneSettingsMenu.Add(HDRILongElement);
+
+
+      VisualElement HDRILatElement = new VisualElement();
+         HDRILatElement.style.flexDirection = FlexDirection.Row;
+         Slider HDRILatSlider = new Slider() {label = "HDRI Vertical Offset: ", value = HDRILongLat.y, highValue = 360.0f, lowValue = 0.0f};
+         HDRILatSlider.style.minWidth = 345;
+         HDRILatSlider.style.maxWidth = 345;
+         FloatField HDRILatField = new FloatField() {value = HDRILongLat.y};
+         HDRILatField.style.maxWidth = 345;
+         HDRILatElement.Add(HDRILatSlider);
+         HDRILatElement.Add(HDRILatField);
+      HDRILatSlider.RegisterValueChangedCallback(evt => {HDRILongLat = new Vector2(HDRILongLat.x, evt.newValue); HDRILatField.value = HDRILongLat.y; RayMaster.LocalTTSettings.HDRILongLat = HDRILongLat;});
+      HDRILatField.RegisterValueChangedCallback(evt => {HDRILongLat = new Vector2(HDRILongLat.x, evt.newValue); HDRILatSlider.value = HDRILongLat.y; RayMaster.LocalTTSettings.HDRILongLat = HDRILongLat;});
+      SceneSettingsMenu.Add(HDRILatElement);
+
+     VisualElement HDRIScaleElement = new VisualElement();
+         HDRIScaleElement.style.flexDirection = FlexDirection.Row;
+         FloatField HDRIXScale = new FloatField() {label = "HDRI Scaling X: ", value = HDRIScale.x};
+         HDRIXScale.style.minWidth = 200;
+         HDRIXScale.style.maxWidth = 200;
+         HDRIXScale.ElementAt(0).style.minWidth = 65;
+         HDRIXScale.ElementAt(1).style.width = 45;
+         FloatField HDRIYScale = new FloatField() {label = "Y: ", value = HDRIScale.y};
+         HDRIYScale.style.maxWidth = 200;
+         HDRIYScale.ElementAt(0).style.minWidth = 65;
+         HDRIYScale.ElementAt(1).style.width = 45;
+         HDRIScaleElement.Add(HDRIXScale);
+         HDRIScaleElement.Add(HDRIYScale);
+      HDRIXScale.RegisterValueChangedCallback(evt => {HDRIScale = new Vector2(evt.newValue, HDRIScale.y); RayMaster.LocalTTSettings.HDRIScale = HDRIScale;});
+      HDRIYScale.RegisterValueChangedCallback(evt => {HDRIScale = new Vector2(HDRIScale.x, evt.newValue); RayMaster.LocalTTSettings.HDRIScale = HDRIScale;});
+      SceneSettingsMenu.Add(HDRIScaleElement);
 
 
 
@@ -1481,6 +1547,19 @@ void AddResolution(int width, int height, string label)
             } else {
                {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();}
                Assets.UpdateMaterialDefinition();
+
+               #if UNITY_PIPELINE_HDRP
+                  GameObject NewObject = GameObject.Find("HDRPPASS");
+                  
+                  if(NewObject == null) {
+                      NewObject = new GameObject();
+                      NewObject.name = "HDRPPASS";
+                      NewObject.AddComponent<UnityEngine.Rendering.HighDefinition.CustomPassVolume>();
+                      var A = NewObject.GetComponent<UnityEngine.Rendering.HighDefinition.CustomPassVolume>();
+                      A.injectionPoint = UnityEngine.Rendering.HighDefinition.CustomPassInjectionPoint.BeforePostProcess;
+                      A.customPasses.Add(new HDRPCompatability());
+                  }
+               #endif
             }
             Button MainSourceButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();});
             Button MaterialPairButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); InputMaterialField.value = null; MaterialPairingMenu.Add(InputMaterialField); rootVisualElement.Add(MaterialPairingMenu);});
@@ -1501,6 +1580,7 @@ void AddResolution(int width, int height, string label)
            RayMaster.AtmoNumLayers = AtmoScatter;
            Assets.MainDesiredRes = AtlasSize;
            Assets.LightEnergyScale = LightEnergyScale;
+           LEMEnergyScale = RayMaster.LocalTTSettings.LEMEnergyScale;
            RayTracingMaster.DoSaving = DoSaving;
            RayTracingMaster.DoDing = DoDing;
            BounceCount = RayMaster.LocalTTSettings.bouncecount;
@@ -1512,6 +1592,7 @@ void AddResolution(int width, int height, string label)
            Bloom = RayMaster.LocalTTSettings.PPBloom;
            DoSharpen = RayMaster.LocalTTSettings.DoSharpen;
            Sharpness = RayMaster.LocalTTSettings.Sharpness;
+           HDRILongLat = RayMaster.LocalTTSettings.HDRILongLat;
            BloomStrength = RayMaster.LocalTTSettings.BloomStrength;
            DoF = RayMaster.LocalTTSettings.PPDoF;
            ClayColor = RayMaster.LocalTTSettings.ClayColor;
@@ -1632,12 +1713,12 @@ void AddResolution(int width, int height, string label)
 
            Box TopEnclosingBox = new Box();
                TopEnclosingBox.style.flexDirection = FlexDirection.Row;
-               FloatField BounceField = new FloatField() {value = BounceCount, label = "Max Bounces"};
+               FloatField BounceField = new FloatField() {value = (int)Mathf.Min(BounceCount, 63), label = "Max Bounces"};
                BounceField.ElementAt(0).style.minWidth = 75;
                BounceField.ElementAt(1).style.width = 25;
                BounceField.style.paddingRight = 40;
                TopEnclosingBox.Add(BounceField);
-               BounceField.RegisterValueChangedCallback(evt => {BounceCount = (int)evt.newValue; RayMaster.LocalTTSettings.bouncecount = BounceCount;});        
+               BounceField.RegisterValueChangedCallback(evt => {BounceCount = (int)Mathf.Min(evt.newValue, 63); RayMaster.LocalTTSettings.bouncecount = BounceCount;});        
                ResField = new FloatField("Internal Resolution Ratio") {value = RenderRes};
                ResField.ElementAt(0).style.minWidth = 75;
                ResField.ElementAt(1).style.width = 35;
@@ -1938,14 +2019,17 @@ void AddResolution(int width, int height, string label)
                IntegerField FireflyFrameCountField = new IntegerField() {value = FireflyFrameCount, label = "Frames Before Anti-Firefly"};
                FireflyFrameCountField.ElementAt(0).style.minWidth = 65;
                FireflyFrameCountField.RegisterValueChangedCallback(evt => {FireflyFrameCount = evt.newValue; RayMaster.LocalTTSettings.FireflyFrameCount = FireflyFrameCount;});
+               FireflyFrameCountField.style.maxWidth = 345;
                FireflyFoldout.Add(FireflyFrameCountField);
          
                Slider FireflyStrengthSlider = new Slider() {label = "Anti Firefly Strength: ", value = FireflyStrength, highValue = 1.0f, lowValue = 0.0f};
                FireflyStrengthSlider.RegisterValueChangedCallback(evt => {FireflyStrength = evt.newValue; RayMaster.LocalTTSettings.FireflyStrength = FireflyStrength;});
+               FireflyStrengthSlider.style.maxWidth = 345;
                FireflyFoldout.Add(FireflyStrengthSlider);
 
                FloatField FireflyOffsetField = new FloatField("Firefly Minimum Offset") {value = FireflyOffset};
                FireflyOffsetField.RegisterValueChangedCallback(evt => {FireflyOffset = (int)evt.newValue; RayMaster.LocalTTSettings.FireflyOffset = FireflyOffset;});
+               FireflyOffsetField.style.maxWidth = 345;
                FireflyFoldout.Add(FireflyOffsetField);
 
 

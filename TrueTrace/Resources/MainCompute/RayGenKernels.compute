@@ -16,7 +16,7 @@ Texture2D<float> Depth;
 
 #pragma kernel GenerateASVGF 
 
-static const ColData InitCol = { 1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,-1};
+static const ColData InitCol = { 1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0};
 const static RayHit tempray = CreateRayHit();
 
 [numthreads(16, 16, 1)]
@@ -75,7 +75,7 @@ void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadI
             float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, uv, 0).xy;
         #endif
         int2 prevIndex = int2(floor(((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
-        if (RandomNums[prevIndex].z == 0 && ReservoirA[prevIndex].z != 3 && prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height && !(PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].MetRoughIsSpec >> 31)) {
+        if (RandomNums[prevIndex].z == 0 && ReservoirA[prevIndex].z != 3 && prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height && !((PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].MetRoughIsSpec >> 22) & 0x1)) {
             RandomNumsWrite[id.xy] = float4(PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.yx, 1 + ReservoirA[prevIndex].z,  PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.z);
         }
     }

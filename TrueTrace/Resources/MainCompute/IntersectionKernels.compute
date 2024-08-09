@@ -121,8 +121,12 @@ void IntersectBVH() {
                         if(CurBounce == 0 && GetFlag(_Materials[MaterialIndex].Tag, Invisible)) {myRay.TMin = bestHit.t + 0.001f; bestHit.t = FarPlane; continue;}
                         if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                             float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - bestHit.u - bestHit.v) + AggTris[tri_id].texedge1 * bestHit.u + AggTris[tri_id].texedge2 * bestHit.v;
-                            float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlphaTex);
-                            if(Uv.x != -1 && _AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t + 0.001f; bestHit.t = FarPlane; continue;}
+                            float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlphaTex, _Materials[MaterialIndex].Rotation);
+                            #ifdef PointFiltering
+                                if(Uv.x != -1 && _AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t; bestHit.t = FarPlane; continue;}
+                            #else
+                                if(Uv.x != -1 && _AlphaAtlas.SampleLevel(my_linear_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t; bestHit.t = FarPlane; continue;}
+                            #endif
                         }
                     #endif
                 }
@@ -135,7 +139,7 @@ void IntersectBVH() {
             int2 Indexes = Unpack1To2(bestHit.mesh_id);
             [branch]if(CurBounce == 0) {
                 _PrimaryTriangleInfo[TempUv] = uint4(MeshOffsets[Indexes.y].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x] - _MeshData[MeshOffsets[Indexes.y].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
-            } else if(GlobalColors[PixIndex].Data.w == -1 || CurBounce == GlobalColors[PixIndex].Data.w) {
+            } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
                 _PrimaryTriangleInfo[TempUv] = uint4((UseReSTIRGI && bestHit.t != FarPlane) ? uint3(MeshOffsets[Indexes.y].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x] - _MeshData[MeshOffsets[Indexes.y].y].TriOffset, ((uint)(bestHit.u * 65535.0f) | ((uint)(bestHit.v * 65535.0f) << 16))) : ((UseASVGF || bestHit.t != FarPlane) ? asuint(ray.direction) : asuint(ray.direction * bestHit.t + ray.origin)), bestHit.t == FarPlane);
             }
 
@@ -222,7 +226,7 @@ void IntersectBVH() {
                         [branch]if(CurBounce == 0) {
                             _PrimaryTriangleInfo[TempUv] = uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
                             // _DebugTex[TempUv] = float4(Reps / 43.0f, Reps > 80, 0, 1);
-                        } else if(GlobalColors[PixIndex].Data.w == -1 || CurBounce == GlobalColors[PixIndex].Data.w) {
+                        } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
                             _PrimaryTriangleInfo[TempUv] = uint4((UseReSTIRGI && bestHit.t != FarPlane) ? uint3(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, ((uint)(bestHit.u * 65535.0f) | ((uint)(bestHit.v * 65535.0f) << 16))) : ((UseASVGF || bestHit.t != FarPlane) ? asuint(ray2.direction) : asuint(ray2.direction * bestHit.t + ray2.origin)), bestHit.t == FarPlane);
                         }
                         set(ray_index, bestHit);
@@ -287,7 +291,11 @@ void IntersectBVHShadow() {
             myRay.TMin = 0;
             myRay.TMax = abs(ShadowRaysBuffer[ray_index].t);
             while(true) {
-                q.TraceRayInline(myAccelerationStructure, rayFlags, 0x1, myRay);
+                #ifdef IgnoreGlassShadow
+                    q.TraceRayInline(myAccelerationStructure, rayFlags, 0x1, myRay);
+                #else
+                    q.TraceRayInline(myAccelerationStructure, rayFlags, 0xff, myRay);
+                #endif
                 while(q.Proceed()){}
 
                 if(q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
@@ -331,9 +339,9 @@ void IntersectBVHShadow() {
                             }
                         } else {
                             #ifdef RadianceCache
-                                if(CurBounce != 0 &&  (UseReSTIRGI || GlobalColors[PixelIndex].Data.w == CurBounce)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination;
+                                if(CurBounce != 0 &&  (UseReSTIRGI || GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == CurBounce + 1)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination;
                             #else
-                                if(CurBounce != 0 && (!UseReSTIRGI && GlobalColors[PixelIndex].Data.w == -1)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination;// * unpackRGBE(asuint(ShadowRay.DiffuseIlluminance));
+                                if(CurBounce != 0 && (!UseReSTIRGI && GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == 0)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination;// * unpackRGBE(asuint(ShadowRay.DiffuseIlluminance));
                             #endif
                             else GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)));
                         }
@@ -454,9 +462,9 @@ void IntersectBVHShadow() {
                                 }
                             } else {
                                 #ifdef RadianceCache
-                                    if(CurBounce != 0 &&  (UseReSTIRGI || GlobalColors[PixelIndex].Data.w == CurBounce)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
+                                    if(CurBounce != 0 &&  (UseReSTIRGI || GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == CurBounce + 1)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
                                 #else
-                                    if(CurBounce != 0 && (!UseReSTIRGI && GlobalColors[PixelIndex].Data.w == -1)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;// * unpackRGBE(asuint(ShadowRay.DiffuseIlluminance));
+                                    if(CurBounce != 0 && (!UseReSTIRGI && GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == 0)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;// * unpackRGBE(asuint(ShadowRay.DiffuseIlluminance));
                                 #endif
                                 else GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)) * throughput);
                             }

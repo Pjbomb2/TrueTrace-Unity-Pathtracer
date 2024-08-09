@@ -3,6 +3,8 @@
 #define EPSILON 1e-8
 
 
+
+
 float4x4 CamToWorld;
 float4x4 CamInvProj;
 float4x4 CamToWorldPrev;
@@ -16,7 +18,7 @@ uint screen_width;
 uint screen_height;
 int frames_accumulated;
 int curframe;//might be able to get rid of this
-
+float LEMEnergyScale;
 
 bool UseLightBVH;
 bool DiffRes;
@@ -128,7 +130,8 @@ struct ColData {
 	uint PrimaryNEERay;
 	uint Flags;
 	uint MetRoughIsSpec;
-	float4 Data;//could compress down to one uint for the color, and store the bounce flag in the existing metroughisspec flag, its already 14 bits for metallic and roughness, which is very unneeded
+	float3 Data;//could compress down to one uint for the color, and store the bounce flag in the existing metroughisspec flag, its already 14 bits for metallic and roughness, which is very unneeded
+	float InWaterDistance;
 };
 
 RWStructuredBuffer<ColData> GlobalColors;
@@ -246,6 +249,7 @@ struct MaterialData {//56
 	float BlendFactor;
 	float2 SecondaryTexScale;
 	float Rotation;
+	int BindlessIndex;
 };
 
 StructuredBuffer<MaterialData> _Materials;
@@ -269,6 +273,51 @@ Texture2D<half4> _EmissiveAtlas;
 Texture2D<half> _IESAtlas;
 
 Texture2D<half> Heightmap;
+
+
+
+
+#define ATLAS
+
+inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotation = 0) {
+	if(TexDim2.x <= 0) return -1;
+	float4 TexDim;
+    TexDim.xy = float2((float)(((uint)TexDim2.x) & 0x7FFF) / 16384.0f, (float)(((uint)TexDim2.x >> 15)) / 16384.0f);
+    TexDim.zw = float2((float)(((uint)TexDim2.y) & 0x7FFF) / 16384.0f, (float)(((uint)TexDim2.y >> 15)) / 16384.0f);
+	BaseUV = BaseUV * TexScale.xy + TexScale.zw;
+	BaseUV = (BaseUV < 0 ? (1.0f - fmod(abs(BaseUV), 1.0f)) : fmod(abs(BaseUV), 1.0f));
+	// BaseUV =fmod(abs(BaseUV), 1.0f);
+	if(Rotation != 0) {
+		float sinc, cosc;
+		sincos(Rotation, sinc, cosc);
+		BaseUV -= 0.5f;
+		float2 tempuv = BaseUV;
+		BaseUV.x = tempuv.x * cosc - tempuv.y * sinc;
+		BaseUV.y = tempuv.x * sinc + tempuv.y * cosc;
+		BaseUV += 0.5f;
+		BaseUV = fmod(abs(BaseUV), 1.0f);
+	}
+	return clamp(BaseUV * (TexDim.xy - TexDim.zw) + TexDim.zw, TexDim.zw + 1.0f / 16384.0f, TexDim.xy - 1.0f / 16384.0f);
+}
+
+
+float4 SampleTexture(float2 UV, uint MaterialIndex) {
+	#ifdef ATLAS
+		#ifdef PointFiltering
+			return _TextureAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex, _Materials[MaterialIndex].Rotation), 0);
+		#else
+			return _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex, _Materials[MaterialIndex].Rotation), 0);
+		#endif
+	#else//BINDLESS
+		//AlbedoTexScale, AlbedoTex, and Rotation dont worry about, thats just for transforming to the atlas 
+		int TextureIndexInArray = _Materials[MaterialIndex].BindlessIndex;
+
+	#endif
+}
+
+
+
+
 
 struct TerrainData {
     float3 PositionOffset;
@@ -574,26 +623,7 @@ inline SmallerRay CreateCameraRayPrev(float2 uv) {
     return CreateRay(origin, direction);
 }
 
-inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotation = 0) {
-	if(TexDim2.x <= 0) return -1;
-	float4 TexDim;
-    TexDim.xy = float2((float)(((uint)TexDim2.x) & 0x7FFF) / 16384.0f, (float)(((uint)TexDim2.x >> 15)) / 16384.0f);
-    TexDim.zw = float2((float)(((uint)TexDim2.y) & 0x7FFF) / 16384.0f, (float)(((uint)TexDim2.y >> 15)) / 16384.0f);
-	BaseUV = BaseUV * TexScale.xy + TexScale.zw;
-	BaseUV = (BaseUV < 0 ? (1.0f - fmod(abs(BaseUV), 1.0f)) : fmod(abs(BaseUV), 1.0f));
-	// BaseUV =fmod(abs(BaseUV), 1.0f);
-	if(Rotation != 0) {
-		float sinc, cosc;
-		sincos(Rotation, sinc, cosc);
-		BaseUV -= 0.5f;
-		float2 tempuv = BaseUV;
-		BaseUV.x = tempuv.x * cosc - tempuv.y * sinc;
-		BaseUV.y = tempuv.x * sinc + tempuv.y * cosc;
-		BaseUV += 0.5f;
-		BaseUV = fmod(abs(BaseUV), 1.0f);
-	}
-	return clamp(BaseUV * (TexDim.xy - TexDim.zw) + TexDim.zw, TexDim.zw + 1.0f / 16384.0f, TexDim.xy - 1.0f / 16384.0f);
-}
+
 
 inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, float max_distance, int mesh_id, inout float3 throughput, const int MatOffset) {
     TrianglePos tri = triangle_get_positions(tri_id);
@@ -624,7 +654,9 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, float ma
 		                if(_Materials[MaterialIndex].specTrans == 1) {
 			            	#ifdef StainedGlassShadows
 	                			Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex);
-		    	            	throughput *= _Materials[MaterialIndex].surfaceColor * (_TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0).xyz + 2.0f) / 3.0f;
+		    	            	throughput *= _Materials[MaterialIndex].surfaceColor;
+	                			// if(Uv.x != -1)
+			    	            	// throughput *= (_TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0).xyz + 2.0f) / 3.0f;// * abs(dot(ray.direction, normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2)))));
 		    				#endif
 		                	return false;
 		                }
@@ -1429,7 +1461,8 @@ int FindInterval(int size, float u, Texture2D<float> CDF, int v = 0) {
     }
     return clamp(first - 1, 0, size - 2);
 }
-
+float2 HDRILongLat;
+float2 HDRIScale;
 float3 SampleLI(int pixel_index, inout float pdf, inout float3 wi) {
     float2 Rand = random(94, pixel_index);
     float2 uv;
@@ -1454,20 +1487,34 @@ float3 SampleLI(int pixel_index, inout float pdf, inout float3 wi) {
 
         uv.x = ((float)offset + du) / HDRIParams.x;
     }
-    wi = equirectUvToDirection(uv);
+    float2 uv2 = fmod(uv * HDRIScale + HDRILongLat / 360.0f, 1.0f);
+    wi = equirectUvToDirection(uv2);
 
     return _SkyboxTexture.SampleLevel(my_linear_clamp_sampler, uv, 0);
 }	
 
-
+/*
+10 bits: metallic
+10 bits: roughness
+2 bits: Material Lobe
+1 bit: refracted
+//9 bits remaining
+3 bits: refraction counter
+*/
+uint GetBounceData(uint A) {
+	return (A & 0xFC000000) >> 26;
+}
+uint ToColorSpecPackedAdd(float3 A, uint B) {
+	return (B & ~0xFFFFFE00) | ((uint)(A.x * 1022.0f)) | ((uint)(A.y * 1022.0f) << 10) | ((uint)A.z << 20);
+}
 uint ToColorSpecPacked(float3 A) {
-	return ((uint)(A.x * 16383.0f)) | ((uint)(A.y * 16383.0f) << 14) | ((uint)A.z << 28);
+	return ((uint)(A.x * 1022.0f)) | ((uint)(A.y * 1022.0f) << 10) | ((uint)A.z << 20);
 }
 float3 FromColorSpecPacked(uint A) {
 	return float3(
-		(A & 0x3FFF) / 16383.0f,
-		((A >> 14) & 0x3FFF) / 16383.0f,
-		((A >> 28) & 0x3)
+		(A & 0x3FF) / 1022.0f,
+		((A >> 10) & 0x3FF) / 1022.0f,
+		((A >> 20) & 0x3)
 		);
 }
 
@@ -1891,7 +1938,7 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
         float2 BaseUv = AggTris[AggTriIndex].tex0 * (1.0f - FinalUV.x - FinalUV.y) + AggTris[AggTriIndex].texedge1 * FinalUV.x + AggTris[AggTriIndex].texedge2 * FinalUV.y;
         if(MatDat.AlbedoTex.x > 0) {
             float2 EmissionUV = AlignUV(BaseUv, MatDat.AlbedoTexScale, MatDat.AlbedoTex);   
-            float4 EmissTex = _TextureAtlas.SampleLevel(my_point_clamp_sampler, EmissionUV, 0);
+            float4 EmissTex = SampleTexture(BaseUv, MaterialIndex);
             MatDat.surfaceColor *= EmissTex.xyz;
         }
 

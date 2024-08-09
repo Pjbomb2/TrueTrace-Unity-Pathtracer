@@ -17,8 +17,13 @@ struct ColData {
     uint PrimaryNEERay;
     uint Flags;
     uint MetRoughIsSpec;
-    float4 Data;//could compress down to one uint for the color, and store the bounce flag in the existing metroughisspec flag, its already 14 bits for metallic and roughness, which is very unneeded
+    float3 Data;//could compress down to one uint for the color, and store the bounce flag in the existing metroughisspec flag, its already 14 bits for metallic and roughness, which is very unneeded
+    float InWaterDistance;
 };
+
+uint GetBounceData(uint A) {
+    return (A & 0xFC000000) >> 26;
+}
 
 StructuredBuffer<ColData> GlobalColors;
 
@@ -67,9 +72,9 @@ inline float luminance(in float3 color) {
 
 float3 FromColorSpecPacked(uint A) {
     return float3(
-        (A & 0x3FFF) / 16383.0f,
-        ((A >> 14) & 0x3FFF) / 16383.0f,
-        ((A >> 28) & 0x3)
+        (A & 0x3FF) / 1022.0f,
+        ((A >> 10) & 0x3FF) / 1022.0f,
+        ((A >> 20) & 0x3)
         );
 }
 

@@ -443,11 +443,11 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(ReSTIRGI, Name, IN);
         }
 
-        private void SetFloat(string Name, float IN) {
-            ShadingShader.SetFloat(Name, IN);
-            IntersectionShader.SetFloat(Name, IN);
-            GenerateShader.SetFloat(Name, IN);
-            ReSTIRGI.SetFloat(Name, IN);
+        private void SetFloat(string Name, float IN, CommandBuffer cmd) {
+            cmd.SetComputeFloatParam(ShadingShader, Name, IN);
+            cmd.SetComputeFloatParam(IntersectionShader, Name, IN);
+            cmd.SetComputeFloatParam(GenerateShader, Name, IN);
+            cmd.SetComputeFloatParam(ReSTIRGI, Name, IN);
         }
 
         private void SetBool(string Name, bool IN) {
@@ -463,7 +463,7 @@ namespace TrueTrace {
         private void SetShaderParameters(CommandBuffer cmd)
         {
             if(LocalTTSettings.RenderScale != 1.0f) _camera.renderingPath = RenderingPath.DeferredShading;
-            _camera.depthTextureMode |= DepthTextureMode.MotionVectors;
+            _camera.depthTextureMode |= DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
             if(LocalTTSettings.UseReSTIRGI && LocalTTSettings.UseASVGF && !ReSTIRASVGFCode.Initialized) ReSTIRASVGFCode.init(SourceWidth, SourceHeight);
             else if ((!LocalTTSettings.UseASVGF || !LocalTTSettings.UseReSTIRGI) && ReSTIRASVGFCode.Initialized) ReSTIRASVGFCode.ClearAll();
             if (!LocalTTSettings.UseReSTIRGI && LocalTTSettings.UseASVGF && !ASVGFCode.Initialized) ASVGFCode.init(SourceWidth, SourceHeight);
@@ -507,19 +507,23 @@ namespace TrueTrace {
             SetVector("ClayColor", LocalTTSettings.ClayColor, cmd);
             SetVector("GroundColor", LocalTTSettings.GroundColor, cmd);
             SetVector("Segment", CurrentHorizonalPatch, cmd);
+            SetVector("HDRILongLat", LocalTTSettings.HDRILongLat, cmd);
+            SetVector("HDRIScale", LocalTTSettings.HDRIScale, cmd);
             if(LocalTTSettings.UseASVGF && !LocalTTSettings.UseReSTIRGI) ASVGFCode.shader.SetVector("CamDelta", E);
             if(LocalTTSettings.UseASVGF && LocalTTSettings.UseReSTIRGI) ReSTIRASVGFCode.shader.SetVector("CamDelta", E);
 
             Shader.SetGlobalInt("PartialRenderingFactor", LocalTTSettings.PartialRenderingFactor);
-            SetFloat("FarPlane", _camera.farClipPlane);
-            SetFloat("NearPlane", _camera.nearClipPlane);
-            SetFloat("focal_distance", LocalTTSettings.DoFFocal);
-            SetFloat("AperatureRadius", LocalTTSettings.DoFAperature * LocalTTSettings.DoFAperatureScale);
-            SetFloat("IndirectBoost", LocalTTSettings.IndirectBoost);
-            SetFloat("GISpatialRadius", LocalTTSettings.ReSTIRGISpatialRadius);
-            SetFloat("SunDesaturate", LocalTTSettings.SunDesaturate);
-            SetFloat("SkyDesaturate", LocalTTSettings.SkyDesaturate);
-            SetFloat("BackgroundIntensity", LocalTTSettings.BackgroundIntensity);
+            SetFloat("FarPlane", _camera.farClipPlane, cmd);
+            SetFloat("NearPlane", _camera.nearClipPlane, cmd);
+            SetFloat("focal_distance", LocalTTSettings.DoFFocal, cmd);
+            SetFloat("AperatureRadius", LocalTTSettings.DoFAperature * LocalTTSettings.DoFAperatureScale, cmd);
+            SetFloat("IndirectBoost", LocalTTSettings.IndirectBoost, cmd);
+            SetFloat("GISpatialRadius", LocalTTSettings.ReSTIRGISpatialRadius, cmd);
+            SetFloat("SunDesaturate", LocalTTSettings.SunDesaturate, cmd);
+            SetFloat("SkyDesaturate", LocalTTSettings.SkyDesaturate, cmd);
+            SetFloat("BackgroundIntensity", LocalTTSettings.BackgroundIntensity.x, cmd);
+            SetFloat("SecondaryBackgroundIntensity", LocalTTSettings.BackgroundIntensity.y, cmd);
+            SetFloat("LEMEnergyScale", LocalTTSettings.LEMEnergyScale, cmd);
 
             SetInt("AlbedoAtlasSize", Assets.AlbedoAtlasSize, cmd);
             SetInt("LightMeshCount", Assets.LightMeshCount, cmd);
@@ -770,7 +774,7 @@ namespace TrueTrace {
 
         private void ResetAllTextures() {
             // _camera.renderingPath = RenderingPath.DeferredShading;
-            _camera.depthTextureMode |= DepthTextureMode.MotionVectors;
+            _camera.depthTextureMode |= DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
             if(PrevResFactor != LocalTTSettings.RenderScale || TargetWidth != _camera.scaledPixelWidth) {
                 TargetWidth = _camera.scaledPixelWidth;
                 TargetHeight = _camera.scaledPixelHeight;
@@ -942,6 +946,7 @@ namespace TrueTrace {
                     cmd.BeginSample("Bounce: " + i);
                         var bouncebounce = i;
                         if(bouncebounce == 1) {
+                            SetFloat("BackgroundIntensity", LocalTTSettings.BackgroundIntensity.y, cmd);
                             cmd.SetComputeTextureParam(IntersectionShader, TraceKernel, "_PrimaryTriangleInfo", GIWorldPosA);
                             cmd.SetComputeTextureParam(IntersectionShader, HeightmapKernel, "_PrimaryTriangleInfo", GIWorldPosA);
                             SetInt("BackgroundType", LocalTTSettings.SecondaryBackgroundType, cmd);

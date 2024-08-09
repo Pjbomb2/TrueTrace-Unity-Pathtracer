@@ -57,9 +57,12 @@ namespace TrueTrace {
         [SerializeField] public bool UseSkinning = true;
         [SerializeField] public float LightEnergyScale = 1.0f;
         [SerializeField] public int BackgroundType = 0;
-        [SerializeField] public float BackgroundIntensity = 1.0f;
+        [SerializeField] public Vector2 BackgroundIntensity = Vector2.one;
         [SerializeField] public Vector3 SceneBackgroundColor = Vector3.one;
         [SerializeField] public int SecondaryBackgroundType = 0;
         [SerializeField] public Vector3 SecondarySceneBackgroundColor = Vector3.one;
+        [SerializeField] public Vector2 HDRILongLat = Vector2.zero;
+        [SerializeField] public Vector2 HDRIScale = Vector2.one;
+        [SerializeField] public float LEMEnergyScale = 1.0f;
     }
 }

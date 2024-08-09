@@ -7,7 +7,6 @@
 // #define PointFiltering
 #define StainedGlassShadows
 // #define DX11
-// #define LightMapping
 // #define IgnoreBackfacing
 // #define WhiteLights
 #define LBVH
@@ -18,6 +17,7 @@
 // #define HighSpeedRadCache
 // #define RadianceDebug
 #define IndirectRetraceWeighting
+#define TrueBlack
 
 
 //Dont change the ones below

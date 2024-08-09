@@ -135,6 +135,7 @@ namespace CommonVars
         public float BlendFactor;
         public Vector2 SecondaryTextureScale;
         public float Rotation;
+        public int BindlessIndex;
     }
 
     [System.Serializable]
