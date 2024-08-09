@@ -1,4 +1,4 @@
-    // #pragma use_dxc
+    #pragma use_dxc
     // #pragma enable_d3d11_debug_symbols
 #include "../GlobalDefines.cginc"
 #include "CommonData.cginc"
