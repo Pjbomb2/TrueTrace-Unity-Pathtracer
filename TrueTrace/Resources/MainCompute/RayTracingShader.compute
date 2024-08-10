@@ -111,21 +111,17 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     }
 
 
-    // {
-    //     [branch]if(hitDat.MatCapTex.x > 0) {
-    //         float3 worldViewUp = normalize(float3(0, 1, 0) - ray.direction * dot(ray.direction, float3(0, 1, 0)));
-    //         float3 worldViewRight = normalize(cross(ray.direction, worldViewUp));
+    {
+        [branch]if(hitDat.MatCapTex.x > 0 && hitDat.MatCapMask.x > 0) {
+            float3 worldViewUp = normalize(float3(0, 1, 0) - ray.direction * dot(ray.direction, float3(0, 1, 0)));
+            float3 worldViewRight = normalize(cross(ray.direction, worldViewUp));
             
-    //         float2 matcapUV = float2(dot(worldViewRight, norm), dot(worldViewUp, norm)) * 0.5f + 0.5;
+            float2 matcapUV = float2(dot(worldViewRight, norm), dot(worldViewUp, norm)) * 0.5f + 0.5;
 
-    //         float2 MatCapUV = AlignUV(matcapUV, hitDat.AlbedoTexScale, hitDat.MatCapTex, hitDat.Rotation);
-    //         float4 matcap = SampleTexture(BaseUv, SampleMatCap, hitDat);
-    //         float2 MatCapMaskUV = AlignUV(BaseUv, hitDat.AlbedoTexScale, hitDat.MatCapMask, hitDat.Rotation);
-    //         if(MatCapMaskUV.x != -1) {
-    //             hitDat.surfaceColor = lerp(hitDat.surfaceColor, matcap.xyz, SampleTexture(BaseUv, SampleMatCapMask, hitDat).x);
-    //         }
-    //     }
-    // }
+            float4 matcap = SampleTexture(matcapUV, SampleMatCap, hitDat);
+            hitDat.surfaceColor = lerp(hitDat.surfaceColor, matcap.xyz, SampleTexture(BaseUv, SampleMatCapMask, hitDat).x);
+        }
+    }
 
 
     [branch] if (hitDat.emmissive > 0.0f) {//if we hit a light, this ray is done
@@ -638,41 +634,41 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     int MaterialIndex;
     bool HitTerrain = false;
     MaterialData TempMat;
-    // [branch]if (TerrainExists && (bestHit.mesh_id == 9999999)) {//if hit terrain
-    //     BaseUv = float2(bestHit.u, bestHit.v);
-    //     float4 Mats = TerrainAlphaMap.SampleLevel(sampler_TerrainAlphaMap, BaseUv * (Terrains[bestHit.triangle_id].AlphaMap.xy - Terrains[bestHit.triangle_id].AlphaMap.zw) + Terrains[bestHit.triangle_id].AlphaMap.zw, 0);
-    //     int x = 0;
-    //     float minmat = Mats.x;
-    //     if(minmat < Mats.y) {
-    //         minmat = Mats.y;
-    //         x = 1;
-    //     }
-    //     if(minmat < Mats.z) {
-    //         minmat = Mats.z;
-    //         x = 2;
-    //     }
-    //     if(minmat < Mats.a) {
-    //         minmat = Mats.a;
-    //         x = 3;
-    //     }
+    [branch]if (TerrainExists && (bestHit.mesh_id == 9999999)) {//if hit terrain
+        BaseUv = float2(bestHit.u, bestHit.v);
+        float4 Mats = TerrainAlphaMap.SampleLevel(sampler_TerrainAlphaMap, BaseUv * (Terrains[bestHit.triangle_id].AlphaMap.xy - Terrains[bestHit.triangle_id].AlphaMap.zw) + Terrains[bestHit.triangle_id].AlphaMap.zw, 0);
+        int x = 0;
+        float minmat = Mats.x;
+        if(minmat < Mats.y) {
+            minmat = Mats.y;
+            x = 1;
+        }
+        if(minmat < Mats.z) {
+            minmat = Mats.z;
+            x = 2;
+        }
+        if(minmat < Mats.a) {
+            minmat = Mats.a;
+            x = 3;
+        }
 
-    //     minmat = 0;
-    //     float3 BaseCol = 0;
-    //     MaterialIndex = MaterialCount + Terrains[bestHit.triangle_id].MatOffset;
-    //     if(Mats.x > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex].surfaceColor.xy + _Materials[MaterialIndex].transmittanceColor.xy, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex), 0).xyz * Mats.x;
-    //     if(Mats.y > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex + 1].surfaceColor.xy + _Materials[MaterialIndex + 1].transmittanceColor.xy, _Materials[MaterialIndex + 1].AlbedoTexScale, _Materials[MaterialIndex + 1].AlbedoTex), 0).xyz * Mats.y;
-    //     if(Mats.z > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex + 2].surfaceColor.xy + _Materials[MaterialIndex + 2].transmittanceColor.xy, _Materials[MaterialIndex + 2].AlbedoTexScale, _Materials[MaterialIndex + 2].AlbedoTex), 0).xyz * Mats.z;
-    //     if(Mats.w > 0.001f) BaseCol += _TextureAtlas.SampleLevel(my_point_clamp_sampler,  AlignUV(BaseUv * _Materials[MaterialIndex + 3].surfaceColor.xy + _Materials[MaterialIndex + 3].transmittanceColor.xy, _Materials[MaterialIndex + 3].AlbedoTexScale, _Materials[MaterialIndex + 3].AlbedoTex), 0).xyz * Mats.w;
-    //     MaterialIndex += x;
-    //     TempMat = _Materials[MaterialIndex];
-    //     BaseUv = BaseUv * TempMat.surfaceColor.xy + TempMat.transmittanceColor.xy;
-    //     TempMat.surfaceColor = BaseCol;
-    //     HitTerrain = true;
-    // } else {
+        minmat = 0;
+        float3 BaseCol = 0;
+        MaterialIndex = MaterialCount + Terrains[bestHit.triangle_id].MatOffset;
+        if(Mats.x > 0.001f) BaseCol += SampleTexture(BaseUv, SampleTerrainAlbedo, _Materials[MaterialIndex]) * Mats.x;
+        if(Mats.y > 0.001f) BaseCol += SampleTexture(BaseUv, SampleTerrainAlbedo, _Materials[MaterialIndex + 1]) * Mats.y;
+        if(Mats.z > 0.001f) BaseCol += SampleTexture(BaseUv, SampleTerrainAlbedo, _Materials[MaterialIndex + 2]) * Mats.z;
+        if(Mats.w > 0.001f) BaseCol += SampleTexture(BaseUv, SampleTerrainAlbedo, _Materials[MaterialIndex + 3]) * Mats.w;
+        MaterialIndex += x;
+        TempMat = _Materials[MaterialIndex];
+        BaseUv = BaseUv * TempMat.surfaceColor.xy + TempMat.transmittanceColor.xy;
+        TempMat.surfaceColor = BaseCol;
+        HitTerrain = true;
+    } else {
         BaseUv = AggTris[bestHit.triangle_id].tex0 * (1.0f - bestHit.u - bestHit.v) + AggTris[bestHit.triangle_id].texedge1 * bestHit.u + AggTris[bestHit.triangle_id].texedge2 * bestHit.v;
         MaterialIndex = _MeshData[bestHit.mesh_id].MaterialOffset + AggTris[bestHit.triangle_id].MatDat;
         TempMat = _Materials[MaterialIndex];
-    // }
+    }
 
     if(TempMat.Rotation != 0) {TempMat.Rotation *= PI;} 
     

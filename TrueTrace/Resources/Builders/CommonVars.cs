@@ -135,12 +135,6 @@ namespace CommonVars
         public float BlendFactor;
         public Vector2 SecondaryTextureScale;
         public float Rotation;
-        public int AlbedoIndex;
-        public int MetallicIndex;
-        public int RoughnessIndex;
-        public int EmissionIndex;
-        public int NormalIndex;
-        public int AlphaIndex;
     }
 
     [System.Serializable]

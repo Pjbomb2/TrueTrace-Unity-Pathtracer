@@ -5,7 +5,7 @@
 // #define HDRP
 // #define HardwareRT
 // #define PointFiltering
-#define StainedGlassShadows
+// #define StainedGlassShadows
 // #define DX11
 // #define IgnoreBackfacing
 // #define WhiteLights
@@ -18,6 +18,7 @@
 // #define RadianceDebug
 #define IndirectRetraceWeighting
 #define TrueBlack
+#define UseBindless
 
 
 //Dont change the ones below
@@ -45,7 +46,7 @@
 #define BackgrounBleed 8
 #define Thin 9
 
-#define SampleAlbedo 0
+#define SampleAlbedo 9
 #define SampleMetallic 1
 #define SampleRoughness 2
 #define SampleEmission 3
@@ -54,6 +55,7 @@
 #define SampleIES 6
 #define SampleMatCap 7
 #define SampleMatCapMask 8
+#define SampleTerrainAlbedo 0
 
 bool GetFlag(int FlagVar, int flag) {
     return (((int)FlagVar >> flag) & (int)1) == 1;

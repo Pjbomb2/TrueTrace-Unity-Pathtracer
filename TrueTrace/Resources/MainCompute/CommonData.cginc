@@ -249,12 +249,6 @@ struct MaterialData {//56
 	float BlendFactor;
 	float2 SecondaryTexScale;
 	float Rotation;
-	int AlbedoIndex;
-	int MetallicIndex;
-	int RoughnessIndex;
-	int EmissionIndex;
-	int NormalIndex;
-	int AlphaIndex;
 };
 
 StructuredBuffer<MaterialData> _Materials;
@@ -276,13 +270,12 @@ Texture2D<half2> _NormalAtlas;
 SamplerState sampler_NormalAtlas;
 Texture2D<half4> _EmissiveAtlas;
 Texture2D<half> _IESAtlas;
-
 Texture2D<half> Heightmap;
 
-
-
-
-#define ATLAS
+#ifdef UseBindless
+	SamplerState my_linear_repeat_sampler;
+	Texture2D<float4> _BindlessTextures[2048] : register(t31);
+#endif
 
 inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotation = 0) {
 	if(TexDim2.x <= 0) return -1;
@@ -308,7 +301,7 @@ inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotati
 
 float4 SampleTexture(float2 UV, int TextureType, MaterialData MatTex) {
 	float4 FinalCol = 0;
-	#ifdef ATLAS
+	#ifndef UseBindless
 		switch(TextureType) {
 			case SampleAlbedo:
 				#ifdef PointFiltering
@@ -329,36 +322,46 @@ float4 SampleTexture(float2 UV, int TextureType, MaterialData MatTex) {
 			case SampleNormal:
 				FinalCol = _NormalAtlas.SampleLevel(sampler_NormalAtlas, AlignUV(UV, float4(MatTex.SecondaryTexScale, MatTex.AlbedoTexScale.zw), MatTex.NormalTex, MatTex.Rotation), 0).xyxy;
 			break;
-			case SampleAlpha://roughness
+			case SampleAlpha:
 				#ifdef PointFiltering
 					FinalCol = _AlphaAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlphaTex, MatTex.Rotation), 0);
 				#else
 					FinalCol = _AlphaAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlphaTex, MatTex.Rotation), 0);
 				#endif
 			break;
-			// case SampleIES://roughness
-			// 	// FinalCol = _IESAtlas.SampleLevel(sampler_NormalAtlas, AlignUV(UV, float4(MatTex.SecondaryTexScale, MatTex.AlbedoTexScale.zw), MatTex.RoughnessTex, MatTex.Rotation), 0);
-			// break;
-			// case SampleMatCap:
-			// 	FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.MatCapTex, MatTex.Rotation), 0);
-			// break;
-			// case SampleMatCapMask:
-			// 	FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.MatCapMask, MatTex.Rotation), 0);
-			// break;
+			case SampleMatCap:
+				FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.MatCapTex, MatTex.Rotation), 0);
+			break;
+			case SampleMatCapMask:
+				FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.MatCapMask, MatTex.Rotation), 0);
+			break;
+			case SampleTerrainAlbedo:
+				UV = AlignUV(UV * MatTex.surfaceColor.xy + MatTex.transmittanceColor.xy, MatTex.AlbedoTexScale, MatTex.AlbedoTex);
+				FinalCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, UV, 0);
+			break;
 		}
 	#else//BINDLESS
 		//AlbedoTexScale, AlbedoTex, and Rotation dont worry about, thats just for transforming to the atlas 
-		int TextureIndexInArray = -1;// = MatTex.BindlessIndex;
+		int2 TextureIndexAndChannel = -1;// = MatTex.BindlessIndex;
 		switch(TextureType) {
-			case SampleAlbedo: TextureIndexInArray = MatTex.AlbedoIndex; break;
-			case SampleMetallic: TextureIndexInArray = MatTex.MetallicIndex; break;
-			case SampleRoughness: TextureIndexInArray = MatTex.RoughnessIndex; break;
-			case SampleEmission: TextureIndexInArray = MatTex.EmissionIndex; break;
-			case SampleNormal: TextureIndexInArray = MatTex.NormalIndex; break;
-			case SampleAlpha: TextureIndexInArray = MatTex.AlphaIndex; break;
+			case SampleAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleMetallic: TextureIndexAndChannel = MatTex.MetallicTex; UV = UV * MatTex.SecondaryTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleRoughness: TextureIndexAndChannel = MatTex.RoughnessTex; UV = UV * MatTex.SecondaryTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleEmission: TextureIndexAndChannel = MatTex.EmissiveTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleNormal: TextureIndexAndChannel = MatTex.NormalTex; UV = UV * MatTex.SecondaryTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleAlpha: TextureIndexAndChannel = MatTex.AlphaTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleMatCap: TextureIndexAndChannel = MatTex.MatCapTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleMatCapMask: TextureIndexAndChannel = MatTex.MatCapMask; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleTerrainAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 		}
+		int TextureIndex = TextureIndexAndChannel.x - 1;
+		int TextureReadChannel = TextureIndexAndChannel.y;//0-3 is rgba, 4 is to just read all
 		//For SampleNormal, you need to output FinalCol = Texture.xyxy;
-		if(SampleNormal) {
+			if(TextureReadChannel == 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_linear_repeat_sampler, UV, 0);
+			else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_linear_repeat_sampler, UV, 0)[TextureReadChannel];
+		if(TextureType == SampleNormal) {
+			FinalCol.g = 1.0f - FinalCol.g;
+			FinalCol = (FinalCol.r == 1) ? FinalCol.agag : FinalCol.rgrg;
 
 		}
 

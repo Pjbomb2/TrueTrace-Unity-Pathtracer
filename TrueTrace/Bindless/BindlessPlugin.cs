@@ -177,11 +177,6 @@ namespace Meetem.Bindless
             return MeetemBindless_SetBindlessTextures((uint)data.Length, in data.GetPinnableReference()) != 0;
         }
         
-        public static bool SetBindlessTextures(NativeArray<BindlessTexture> data, int arrayOffset = 0, int arrayLength = 0)
-        {
-            var span = data.AsReadOnlySpan();
-            span = span.Slice(arrayOffset, arrayLength);
-            return SetBindlessTextures(span);
-        }
+
     }
 }
