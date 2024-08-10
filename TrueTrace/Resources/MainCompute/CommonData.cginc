@@ -260,6 +260,10 @@ struct MaterialData {//56
 StructuredBuffer<MaterialData> _Materials;
 
 SamplerState my_linear_clamp_sampler;
+SamplerState my_linear_repeat_sampler;
+SamplerState my_point_repeat_sampler;
+SamplerState my_trilinear_repeat_sampler;
+
 SamplerState sampler_trilinear_clamp;
 SamplerState my_point_clamp_sampler;
 
@@ -278,11 +282,11 @@ Texture2D<half4> _EmissiveAtlas;
 Texture2D<half> _IESAtlas;
 
 Texture2D<half> Heightmap;
+Texture2D<float4> _BindlessTextures[2048] : register(t31);
 
 
 
-
-#define ATLAS
+#undef ATLAS
 
 inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotation = 0) {
 	if(TexDim2.x <= 0) return -1;
@@ -306,7 +310,7 @@ inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotati
 }
 
 
-float4 SampleTexture(float2 UV, int TextureType, MaterialData MatTex) {
+float4 SampleTexture(float2 UV, const int TextureType, MaterialData MatTex) {
 	float4 FinalCol = 0;
 	#ifdef ATLAS
 		switch(TextureType) {
@@ -348,29 +352,38 @@ float4 SampleTexture(float2 UV, int TextureType, MaterialData MatTex) {
 		}
 	#else//BINDLESS
 		//AlbedoTexScale, AlbedoTex, and Rotation dont worry about, thats just for transforming to the atlas 
-		int TextureIndexInArray = -1;// = MatTex.BindlessIndex;
+		int TextureIndexInArray = 2047;// = MatTex.BindlessIndex;
+		uint mip = 0;
 		switch(TextureType) {
-			case SampleAlbedo: TextureIndexInArray = MatTex.AlbedoIndex; break;
-			case SampleMetallic: TextureIndexInArray = MatTex.MetallicIndex; break;
-			case SampleRoughness: TextureIndexInArray = MatTex.RoughnessIndex; break;
-			case SampleEmission: TextureIndexInArray = MatTex.EmissionIndex; break;
-			case SampleNormal: TextureIndexInArray = MatTex.NormalIndex; break;
-			case SampleAlpha: TextureIndexInArray = MatTex.AlphaIndex; break;
+			case SampleAlbedo:
+				mip = 0;
+				TextureIndexInArray = MatTex.AlbedoIndex; break;
+			case SampleMetallic:
+				mip = 0;
+				TextureIndexInArray = MatTex.MetallicIndex; break;
+			case SampleRoughness:
+				mip = 0;
+				TextureIndexInArray = MatTex.RoughnessIndex; break;
+			case SampleEmission:
+				mip = 0;
+				TextureIndexInArray = MatTex.EmissionIndex; break;
+			case SampleNormal:
+				mip = 0;
+				TextureIndexInArray = MatTex.NormalIndex; break;
+			case SampleAlpha:
+				mip = 0;
+				TextureIndexInArray = MatTex.AlphaIndex; break;
 		}
+
+		FinalCol = _BindlessTextures[TextureIndexInArray].SampleLevel(my_linear_repeat_sampler, UV, mip);
+		
 		//For SampleNormal, you need to output FinalCol = Texture.xyxy;
-		if(SampleNormal) {
-
+		if(TextureType == SampleNormal) {
+			FinalCol = FinalCol.xyxy;
 		}
-
-
-
 	#endif
 	return FinalCol;
 }
-
-
-
-
 
 struct TerrainData {
     float3 PositionOffset;
