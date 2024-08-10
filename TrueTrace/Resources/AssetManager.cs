@@ -8,6 +8,7 @@ using RectpackSharp;
 using System.IO;
 using System.Xml.Serialization;
 using System.Linq;
+using Meetem.Bindless;
 using UnityEngine.SceneManagement;
 using UnityEngine.Rendering;
 #pragma warning disable 4014
@@ -20,14 +21,13 @@ namespace TrueTrace {
             public System.IntPtr TexturePointer;
         }
 
+        private BindlessArray bindlessTextures;
         public static AssetManager Assets;
         public int TotalParentObjectSize;
         [HideInInspector] public float LightEnergyScale = 1.0f;
         //emissive, alpha, metallic, roughness
         [HideInInspector] public Texture2D IESAtlas;
         [HideInInspector] public Texture2D AlbedoAtlas;
-        public BindlessStruct[] BindlessArray;
-        public int CurrentBindlessIndex;
         [HideInInspector] public Texture2D NormalAtlas;
         [HideInInspector] public Texture2D SingleComponentAtlas;
         [HideInInspector] public Texture2D EmissiveAtlas;
@@ -318,34 +318,33 @@ namespace TrueTrace {
                 RectSelect.y = (Mathf.Ceil((TempRect.Y * Scale.y + (TempRect.Height) * Scale.y) / 4.0f) * 4.0f) / DesiredRes;
 
                 if(TexIndex >= 2) {
-                    BindlessArray[CurrentBindlessIndex] = new BindlessStruct() {
-                        TexturePointer = SelectedTex.Tex.GetNativeTexturePtr()
-                    };
+                    var bindlessIdx = bindlessTextures.AppendRaw(SelectedTex.Tex);
+                    
                     for(int j = 0; j < ListLength; j++) {
                         switch (TexIndex) {
                             case 2: 
                                 _Materials[SelectedTex.TexObjList[j]].NormalTex = PackRect(RectSelect); 
-                                if(TempRect.TexType == 4) _Materials[SelectedTex.TexObjList[j]].NormalIndex = CurrentBindlessIndex; 
+                                if(TempRect.TexType == 4) _Materials[SelectedTex.TexObjList[j]].NormalIndex = bindlessIdx; 
                             break;
                             case 4: 
                                 if(TempRect.TexType == 4) _Materials[SelectedTex.TexObjList[j]].MetallicTex = PackRect(RectSelect); 
                                 else if(TempRect.TexType == 5)  _Materials[SelectedTex.TexObjList[j]].RoughnessTex = PackRect(RectSelect);
                                 else if(TempRect.TexType == 6)  _Materials[SelectedTex.TexObjList[j]].MatCapMask = PackRect(RectSelect);
-                                if(TempRect.TexType == 4) _Materials[SelectedTex.TexObjList[j]].MetallicIndex = CurrentBindlessIndex; 
-                                if(TempRect.TexType == 5) _Materials[SelectedTex.TexObjList[j]].RoughnessIndex = CurrentBindlessIndex; 
+                                if(TempRect.TexType == 4) _Materials[SelectedTex.TexObjList[j]].MetallicIndex = bindlessIdx; 
+                                if(TempRect.TexType == 5) _Materials[SelectedTex.TexObjList[j]].RoughnessIndex = bindlessIdx; 
                             break;
                             case 5: 
                                 _Materials[SelectedTex.TexObjList[j]].EmissiveTex = PackRect(RectSelect); 
-                                _Materials[SelectedTex.TexObjList[j]].EmissionIndex = CurrentBindlessIndex; 
+                                _Materials[SelectedTex.TexObjList[j]].EmissionIndex = bindlessIdx; 
                             break;
                             case 6: 
                                 if(TempRect.TexType == 0) _Materials[SelectedTex.TexObjList[j]].AlbedoTex = PackRect(RectSelect); 
                                 else if(TempRect.TexType == 7) _Materials[SelectedTex.TexObjList[j]].MatCapTex = PackRect(RectSelect); 
-                                if(TempRect.TexType == 0) _Materials[SelectedTex.TexObjList[j]].AlbedoIndex = CurrentBindlessIndex; 
+                                if(TempRect.TexType == 0) _Materials[SelectedTex.TexObjList[j]].AlbedoIndex = bindlessIdx; 
                             break;
                             case 7:
                                 _Materials[SelectedTex.TexObjList[j]].AlphaTex = PackRect(RectSelect);
-                                _Materials[SelectedTex.TexObjList[j]].AlphaIndex = CurrentBindlessIndex; 
+                                _Materials[SelectedTex.TexObjList[j]].AlphaIndex = bindlessIdx; 
                             break;
                             case 8: 
                                 LightData TempLight = UnityLights[SelectedTex.TexObjList[j]];
@@ -356,7 +355,6 @@ namespace TrueTrace {
                             default: break;
                         }
                     }
-                    CurrentBindlessIndex++;
                 } else if(TexIndex < 2) {
                     TerrainDat TempTerrain = TerrainInfos[SelectedTex.TexObjList[0]];
                     if(TexIndex == 0) TempTerrain.HeightMap = RectSelect;
@@ -474,8 +472,8 @@ namespace TrueTrace {
                     TotalMatCount += Terrains[j].Materials.Count;
                }
             }
-            CurrentBindlessIndex = 0;
-            BindlessArray = new BindlessStruct[2048];
+             
+             bindlessTextures.Clear();
             _Materials = new MaterialData[TotalMatCount];
             Dictionary<int, TexObj> HeightMapTextures = new Dictionary<int, TexObj>();
             Dictionary<int, TexObj> AlphaMapTextures = new Dictionary<int, TexObj>();
@@ -609,12 +607,6 @@ namespace TrueTrace {
             TempTex.Release();
             TempTex = null;
 
-
-            {//BINDLESS-TEST create the bindless descriptor here, by this point all textures in scene are in the array "AlbedoArray"
-
-
-            }
-
             PackAndCompact(NormTextures, ref TempTex, NormRect.ToArray(), MainDesiredRes, 2);
             Graphics.CopyTexture(TempTex, 0, NormalAtlas, 0);
             TempTex.Release();
@@ -679,6 +671,7 @@ namespace TrueTrace {
         }
         public void Awake() {
             Assets = this;
+            bindlessTextures = new BindlessArray();
         }
 
         public void Start() {
@@ -720,6 +713,10 @@ namespace TrueTrace {
 
         void OnDisable() {
             ClearAll();
+            
+            bindlessTextures?.Dispose();
+            bindlessTextures = null;
+            
             SceneManager.sceneLoaded -= OnSceneLoaded;
         }
 
@@ -1279,7 +1276,8 @@ namespace TrueTrace {
                 }
             }
             {//BINDLESS-TEST this spot is guarenteed to run once per frame, be very close to the begining of the commandbuffer, and is guarenteed to have the AlbedoArray filled
-
+                Shader.SetGlobalTexture("_BindlessTextures", Texture2D.whiteTexture);
+                bindlessTextures.UpdateDescriptors();
             }
 
         }
