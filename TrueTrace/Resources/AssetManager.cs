@@ -27,6 +27,7 @@ namespace TrueTrace {
         [HideInInspector] public Texture2D IESAtlas;
         [HideInInspector] public Texture2D AlbedoAtlas;
         public BindlessStruct[] BindlessArray;
+        public int CurrentBindlessIndex;
         [HideInInspector] public Texture2D NormalAtlas;
         [HideInInspector] public Texture2D SingleComponentAtlas;
         [HideInInspector] public Texture2D EmissiveAtlas;
@@ -315,37 +316,36 @@ namespace TrueTrace {
                 Vector4 RectSelect = new Vector4(0, 0, (Mathf.Ceil(TempRect.X * Scale.x / 4.0f) * 4.0f) / DesiredRes, (Mathf.Ceil(TempRect.Y * Scale.y / 4.0f) * 4.0f) / DesiredRes);
                 RectSelect.x = (Mathf.Ceil((TempRect.X * Scale.x + (TempRect.Width) * Scale.x) / 4.0f) * 4.0f) / DesiredRes;
                 RectSelect.y = (Mathf.Ceil((TempRect.Y * Scale.y + (TempRect.Height) * Scale.y) / 4.0f) * 4.0f) / DesiredRes;
-                BindlessArray[i] = new BindlessStruct() {
-                    TexturePointer = SelectedTex.Tex.GetNativeTexturePtr()
-
-                };
 
                 if(TexIndex >= 2) {
+                    BindlessArray[CurrentBindlessIndex] = new BindlessStruct() {
+                        TexturePointer = SelectedTex.Tex.GetNativeTexturePtr()
+                    };
                     for(int j = 0; j < ListLength; j++) {
                         switch (TexIndex) {
                             case 2: 
                                 _Materials[SelectedTex.TexObjList[j]].NormalTex = PackRect(RectSelect); 
-                                if(TempRect.TexType == 4) _Materials[SelectedTex.TexObjList[j]].NormalIndex = i; 
+                                if(TempRect.TexType == 4) _Materials[SelectedTex.TexObjList[j]].NormalIndex = CurrentBindlessIndex; 
                             break;
                             case 4: 
                                 if(TempRect.TexType == 4) _Materials[SelectedTex.TexObjList[j]].MetallicTex = PackRect(RectSelect); 
                                 else if(TempRect.TexType == 5)  _Materials[SelectedTex.TexObjList[j]].RoughnessTex = PackRect(RectSelect);
                                 else if(TempRect.TexType == 6)  _Materials[SelectedTex.TexObjList[j]].MatCapMask = PackRect(RectSelect);
-                                if(TempRect.TexType == 4) _Materials[SelectedTex.TexObjList[j]].MetallicIndex = i; 
-                                if(TempRect.TexType == 5) _Materials[SelectedTex.TexObjList[j]].RoughnessIndex = i; 
+                                if(TempRect.TexType == 4) _Materials[SelectedTex.TexObjList[j]].MetallicIndex = CurrentBindlessIndex; 
+                                if(TempRect.TexType == 5) _Materials[SelectedTex.TexObjList[j]].RoughnessIndex = CurrentBindlessIndex; 
                             break;
                             case 5: 
                                 _Materials[SelectedTex.TexObjList[j]].EmissiveTex = PackRect(RectSelect); 
-                                _Materials[SelectedTex.TexObjList[j]].EmissionIndex = i; 
+                                _Materials[SelectedTex.TexObjList[j]].EmissionIndex = CurrentBindlessIndex; 
                             break;
                             case 6: 
                                 if(TempRect.TexType == 0) _Materials[SelectedTex.TexObjList[j]].AlbedoTex = PackRect(RectSelect); 
                                 else if(TempRect.TexType == 7) _Materials[SelectedTex.TexObjList[j]].MatCapTex = PackRect(RectSelect); 
-                                if(TempRect.TexType == 0) _Materials[SelectedTex.TexObjList[j]].AlbedoIndex = i; 
+                                if(TempRect.TexType == 0) _Materials[SelectedTex.TexObjList[j]].AlbedoIndex = CurrentBindlessIndex; 
                             break;
                             case 7:
                                 _Materials[SelectedTex.TexObjList[j]].AlphaTex = PackRect(RectSelect);
-                                _Materials[SelectedTex.TexObjList[j]].AlphaIndex = i; 
+                                _Materials[SelectedTex.TexObjList[j]].AlphaIndex = CurrentBindlessIndex; 
                             break;
                             case 8: 
                                 LightData TempLight = UnityLights[SelectedTex.TexObjList[j]];
@@ -356,6 +356,7 @@ namespace TrueTrace {
                             default: break;
                         }
                     }
+                    CurrentBindlessIndex++;
                 } else if(TexIndex < 2) {
                     TerrainDat TempTerrain = TerrainInfos[SelectedTex.TexObjList[0]];
                     if(TexIndex == 0) TempTerrain.HeightMap = RectSelect;
@@ -473,6 +474,7 @@ namespace TrueTrace {
                     TotalMatCount += Terrains[j].Materials.Count;
                }
             }
+            CurrentBindlessIndex = 0;
             BindlessArray = new BindlessStruct[2048];
             _Materials = new MaterialData[TotalMatCount];
             Dictionary<int, TexObj> HeightMapTextures = new Dictionary<int, TexObj>();
