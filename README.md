@@ -39,7 +39,10 @@ A passion projects that has been going on for a while with the goal of bringing 
 <li>True Bindless texturing(Thanks to Meetem)</li>
 </ul>
 
-[Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
+MASSIVE thanks to 
+[Alex Bakanov(AKA Meetem)](https://github.com/Meetem)
+for bringing bindless textures to unity!
+</br>[Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
 </br>[ebruneton](https://ebruneton.github.io/precomputed_atmospheric_scattering/)
 </br>
 
