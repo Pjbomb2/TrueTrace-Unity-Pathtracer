@@ -754,7 +754,7 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
         res = 0;
         RetrieveCacheRadiance(CacheBuffer[final_pixel_index], _DebugTex[id.xy].xyz, i_octahedral_32(asuint(_DebugTex[id.xy].w)), res);
     #endif
-    Result[id.xy] = _DebugTex[id.xy];//float4(res, 1.0f);
+    Result[id.xy] = float4(res, 1.0f);
 }
 
 

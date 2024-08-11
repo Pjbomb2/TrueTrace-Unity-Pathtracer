@@ -206,16 +206,6 @@ namespace TrueTrace {
             public int heightmap_rays;
             public int Heightmap_shadow_rays;
         }
-        private List<string> TextAssetToList(TextAsset ta)
-        {
-            var listToReturn = new List<string>();
-            var arrayString = ta.text.Split(")");
-            foreach (var line in arrayString)
-            {
-                listToReturn.Add(line);
-            }
-            return listToReturn;
-        }
 
         private void LoadInitialSettings() {//Loads settings from text file only in builds 
             if(AssetManager.Assets != null) {

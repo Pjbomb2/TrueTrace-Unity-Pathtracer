@@ -216,7 +216,7 @@ void IntersectBVH(int ray_index) {
                         uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
                         [branch]if(CurBounce == 0) {
                             _PrimaryTriangleInfo[TempUv] = uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
-                            _DebugTex[TempUv] = float4(Reps / 43.0f, Reps > 80, 0, 1);
+                            // _DebugTex[TempUv] = float4(Reps / 43.0f, Reps > 80, 0, 1);
                         } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
                             _PrimaryTriangleInfo[TempUv] = uint4((UseReSTIRGI && bestHit.t != FarPlane) ? uint3(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, ((uint)(bestHit.u * 65535.0f) | ((uint)(bestHit.v * 65535.0f) << 16))) : ((UseASVGF || bestHit.t != FarPlane) ? asuint(ray2.direction) : asuint(ray2.direction * bestHit.t + ray2.origin)), bestHit.t == FarPlane);
                         }
