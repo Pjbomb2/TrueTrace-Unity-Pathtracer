@@ -12,7 +12,7 @@ A passion projects that has been going on for a while with the goal of bringing 
 <li>Full Disney BSDF for materials with support for emissive meshes and Video Players</li>
 <li>Ability to move, add, and remove objects during play</li>
 <li>Ability to update material properties on the fly during play</li>
-<li>ASVGF and my own Recurrent Denoisers</li>
+<li>ASVGF and OIDN for denoising</li>
 <li>Compressed Wide Bounding Volume Hierarchy as the Acceleration Structure (See Ylitie et al. 2017 below)</li>
 <li>PBR Texture Support</li>
 <li>Next Event Estimation with Multiple Importance Sampling for Explicit Light Sampling</li>
@@ -30,7 +30,6 @@ A passion projects that has been going on for a while with the goal of bringing 
 <li>Full skinned mesh support for animated skinned meshes</li>
 <li>Supports deformable standard meshes</li>
 <li>Supports unity heightmap terrain and heightmap trees</li>
-<li>Supports OIDN Denoiser</li>
 <li>Enironment Map Importance Sampling</li>
 <li>Radiance Cache</li>
 <li>Material Preset System</li>
@@ -149,8 +148,6 @@ TrueTrace Options Description -
   <li>Clear Parent Data - Clears the data stored in parent GameObjects, allowing you to actually click them without lagging</li>
   <li>Take Screenshot - Takes a screenshot to the path under "Functionality Settings" in the TrueTrace options</li>
   <li>Auto Assign Scripts - Assigns all required scripts to all objects under the Scene GameObject, best way to add objects</li>
-  <li>Make All Static - Utility button that takes all objects in the scene and puts them under one parent object, not recommended for general use</li>
-  <li>Force Instances - Looks at all meshes in the scene, sees what objects have the same meshes, and makes them into instances, keep in mind instances use the same material and textures</li>
   <li>Remaining Objects - Objects still being processed</li>
   <li>Max Bounces - Sets the maximum number of bounces a ray can achieve</li>
   <li>Internal Resolution Ratio - Render scale in comparison to gameview size, turn to below 1 while in edit mode to decrease rendered resolution(to then be upscaled)</li>
