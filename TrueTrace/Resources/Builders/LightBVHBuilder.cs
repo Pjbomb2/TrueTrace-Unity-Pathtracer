@@ -129,7 +129,7 @@ namespace TrueTrace {
 
         private LightBounds[] LightTris;
         private NodeBounds[] nodes2;
-        public CompactLightBVHData[] nodes;
+        public LightBVHData[] nodes;
 
 
         private int[] DimensionedIndices;
@@ -311,9 +311,9 @@ namespace TrueTrace {
                     nodes2[i].left = DimensionedIndices[nodes2[i].left];
                 }
             }
-            nodes = new CompactLightBVHData[nodes2.Length];
+            nodes = new LightBVHData[nodes2.Length];
             for(int i = 0; i < PrimCount * 2; i++) {
-                CompactLightBVHData TempNode = new CompactLightBVHData();
+                LightBVHData TempNode = new LightBVHData();
                 TempNode.BBMax = nodes2[i].aabb.b.BBMax;
                 TempNode.BBMin = nodes2[i].aabb.b.BBMin;
                 TempNode.w = CommonFunctions.PackOctahedral(nodes2[i].aabb.w);
@@ -379,9 +379,9 @@ namespace TrueTrace {
                 WorkingSet[i] = new ComputeBuffer(Set[i].Count, 4);
                 WorkingSet[i].SetData(Set[i]);
             }
-            nodes = new CompactLightBVHData[nodes2.Length];
+            nodes = new LightBVHData[nodes2.Length];
             for(int i = 0; i < PrimCount * 2; i++) {
-                CompactLightBVHData TempNode = new CompactLightBVHData();
+                LightBVHData TempNode = new LightBVHData();
                 TempNode.BBMax = nodes2[i].aabb.b.BBMax;
                 TempNode.BBMin = nodes2[i].aabb.b.BBMin;
                 TempNode.w = CommonFunctions.PackOctahedral(nodes2[i].aabb.w);

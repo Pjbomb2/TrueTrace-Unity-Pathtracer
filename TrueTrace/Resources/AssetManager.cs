@@ -9,6 +9,7 @@ using System.IO;
 using System.Xml.Serialization;
 using System.Linq;
 using Meetem.Bindless;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine.SceneManagement;
 using UnityEngine.Rendering;
 #pragma warning disable 4014
@@ -1147,7 +1148,7 @@ namespace TrueTrace {
                     CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80);
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBuffer, AggTriCount, 88);
                     CommonFunctions.CreateDynamicBuffer(ref LightTriBuffer, LightTriCount, 44);
-                    CommonFunctions.CreateDynamicBuffer(ref LightNodeBuffer, AggLightNodeCount, 40);
+                    CommonFunctions.CreateDynamicBuffer(ref LightNodeBuffer, AggLightNodeCount, UnsafeUtility.SizeOf<LightBVHData>());
                     MeshFunctions.SetBuffer(TriangleBufferKernel, "OutCudaTriArray", AggTriBuffer);
                     MeshFunctions.SetBuffer(NodeBufferKernel, "OutAggNodes", BVH8AggregatedBuffer);
                     MeshFunctions.SetBuffer(LightBufferKernel, "LightTrianglesOut", LightTriBuffer);
