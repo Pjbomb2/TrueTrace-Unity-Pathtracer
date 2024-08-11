@@ -1618,6 +1618,7 @@ void AddResolution(int width, int height, string label)
            RayMaster.AtmoNumLayers = AtmoScatter;
            Assets.MainDesiredRes = AtlasSize;
            Assets.LightEnergyScale = LightEnergyScale;
+           RayMaster.LoadTT();
            LEMEnergyScale = RayMaster.LocalTTSettings.LEMEnergyScale;
            RayTracingMaster.DoSaving = DoSaving;
            RayTracingMaster.DoDing = DoDing;

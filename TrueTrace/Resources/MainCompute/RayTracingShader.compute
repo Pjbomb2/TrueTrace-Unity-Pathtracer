@@ -415,7 +415,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 bool validbsdfNEE;
                 #ifdef RadianceCache
                     // if(CurBounce != 0) {
-                        // validbsdfNEE = EvaluateBsdf(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_diffuse, pixel_index);
+                        // if(hitDat.roughness > 0.6f || CurBounce == 0) validbsdfNEE = EvaluateBsdf(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_diffuse, pixel_index);
                         validbsdfNEE = EvaluateBsdf2(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_diffuse, pixel_index);
                         // bsdf_value /= bsdf_pdf;
                     //} else 
@@ -483,7 +483,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                                                         Illum, 
                                                         pixel_index};
                         if(abs(ShadRay.t) > 0.001f) {
-                            if(TerrainExists) InterlockedAdd(BufferSizes[CurBounce].heightmap_shadow_rays, 1, index3);
                             InterlockedAdd(BufferSizes[CurBounce].shadow_rays, 1, index3);
                             ShadowRaysBuffer[index3] = ShadRay;
                         }
@@ -516,7 +515,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     if(CB) {
         uint index2;//Congrats, the ray will continue its path
         InterlockedAdd(BufferSizes[CurBounce + 1].tracerays, 1, index2);
-        if(TerrainExists) InterlockedAdd(BufferSizes[CurBounce + 1].heighmap_rays, 1, index2);
         const RayData GlobalRay = {ray.origin, pixel_index, ray.direction, pdf,set2(hit)};
         [branch]if(CurBounce % 2 == 0) index2 += screen_width * screen_height;
         GlobalRays[index2] = GlobalRay;
@@ -756,7 +754,7 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
         res = 0;
         RetrieveCacheRadiance(CacheBuffer[final_pixel_index], _DebugTex[id.xy].xyz, i_octahedral_32(asuint(_DebugTex[id.xy].w)), res);
     #endif
-    Result[id.xy] = float4(res, 1.0f);
+    Result[id.xy] = _DebugTex[id.xy];//float4(res, 1.0f);
 }
 
 

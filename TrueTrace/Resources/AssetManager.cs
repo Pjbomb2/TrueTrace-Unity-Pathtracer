@@ -9,7 +9,6 @@ using System.IO;
 using System.Xml.Serialization;
 using System.Linq;
 using Meetem.Bindless;
-using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine.SceneManagement;
 using UnityEngine.Rendering;
 #pragma warning disable 4014
@@ -502,8 +501,10 @@ namespace TrueTrace {
                }
             }
             CurrentBindlessCount = 0;
-            if(bindlessTextures == null) bindlessTextures = new BindlessArray();
-            bindlessTextures.Clear();
+            #if !DX11Only && !UseAtlas
+                if(bindlessTextures == null) bindlessTextures = new BindlessArray();
+                bindlessTextures.Clear();
+            #endif
             _Materials = new MaterialData[TotalMatCount];
             Dictionary<int, TexObj> HeightMapTextures = new Dictionary<int, TexObj>();
             Dictionary<int, TexObj> AlphaMapTextures = new Dictionary<int, TexObj>();
@@ -1148,7 +1149,7 @@ namespace TrueTrace {
                     CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80);
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBuffer, AggTriCount, 88);
                     CommonFunctions.CreateDynamicBuffer(ref LightTriBuffer, LightTriCount, 44);
-                    CommonFunctions.CreateDynamicBuffer(ref LightNodeBuffer, AggLightNodeCount, UnsafeUtility.SizeOf<LightBVHData>());
+                    CommonFunctions.CreateDynamicBuffer(ref LightNodeBuffer, AggLightNodeCount, 40);
                     MeshFunctions.SetBuffer(TriangleBufferKernel, "OutCudaTriArray", AggTriBuffer);
                     MeshFunctions.SetBuffer(NodeBufferKernel, "OutAggNodes", BVH8AggregatedBuffer);
                     MeshFunctions.SetBuffer(LightBufferKernel, "LightTrianglesOut", LightTriBuffer);
@@ -1304,8 +1305,10 @@ namespace TrueTrace {
                 }
             }
             {//BINDLESS-TEST this spot is guarenteed to run once per frame, be very close to the begining of the commandbuffer, and is guarenteed to have the AlbedoArray filled
+            #if !DX11Only && !UseAtlas
                 Shader.SetGlobalTexture("_BindlessTextures", Texture2D.whiteTexture);
                 bindlessTextures.UpdateDescriptors();
+            #endif
             }
 
         }

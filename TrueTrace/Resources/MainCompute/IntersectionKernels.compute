@@ -59,7 +59,7 @@ inline void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ra
 }
 
 
-void IntersectBVH() {
+void IntersectBVH(int ray_index) {
     RayHit bestHit;
     SmallerRay ray;
     #ifndef HardwareRT
@@ -75,12 +75,9 @@ void IntersectBVH() {
         int MatOffset = 0;
         int mesh_id = -1;
     #endif
-    int ray_index;
     RayData GlobalRay;
+    if(ray_index >= BufferSizes[CurBounce].tracerays) return;
 
-        InterlockedAdd(BufferSizes[CurBounce].tracerays, -1, ray_index);
-        ray_index--;
-        if (ray_index < 0) return;
         [branch]if(CurBounce % 2 == 1) ray_index += screen_width * screen_height;
         GlobalRay = GlobalRays[ray_index];
         bestHit = CreateRayHit();
@@ -219,7 +216,7 @@ void IntersectBVH() {
                         uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
                         [branch]if(CurBounce == 0) {
                             _PrimaryTriangleInfo[TempUv] = uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
-                            // _DebugTex[TempUv] = float4(Reps / 43.0f, Reps > 80, 0, 1);
+                            _DebugTex[TempUv] = float4(Reps / 43.0f, Reps > 80, 0, 1);
                         } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
                             _PrimaryTriangleInfo[TempUv] = uint4((UseReSTIRGI && bestHit.t != FarPlane) ? uint3(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, ((uint)(bestHit.u * 65535.0f) | ((uint)(bestHit.v * 65535.0f) << 16))) : ((UseASVGF || bestHit.t != FarPlane) ? asuint(ray2.direction) : asuint(ray2.direction * bestHit.t + ray2.origin)), bestHit.t == FarPlane);
                         }
@@ -242,13 +239,13 @@ void IntersectBVH() {
 
 
 [numthreads(64, 1, 1)]
-void kernel_trace() {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
-    IntersectBVH();
+void kernel_trace(uint3 id : SV_DispatchThreadID) {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
+    IntersectBVH(id.x);
 }
 
 #pragma kernel kernel_shadow
 
-void IntersectBVHShadow() {
+void IntersectBVHShadow(int ray_index) {
     SmallerRay ray;
 
     #ifndef HardwareRT
@@ -266,11 +263,8 @@ void IntersectBVHShadow() {
     #endif
 
     int mesh_id = -1;
-    int ray_index;
 
-        InterlockedAdd(BufferSizes[CurBounce].shadow_rays, -1, ray_index);
-        ray_index--;
-        if (ray_index < 0) return;
+        if(ray_index >= BufferSizes[CurBounce].shadow_rays) return;
 
         bool hit = false;
         ShadowRayData ShadowRay = ShadowRaysBuffer[ray_index];
@@ -484,8 +478,8 @@ void IntersectBVHShadow() {
 
 
 [numthreads(64, 1, 1)]
-void kernel_shadow() {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
-    IntersectBVHShadow();
+void kernel_shadow(uint3 id : SV_DispatchThreadID) {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
+    IntersectBVHShadow(id.x);
 }
 
 
@@ -544,10 +538,8 @@ bool IntersectHeightMapShadow(SmallerRay ray, float MaxDist) {
 
 }
 
-void IntersectShadowHeightmap() {
-    int ray_index;
-    InterlockedAdd(BufferSizes[CurBounce].heightmap_shadow_rays, -1, ray_index);
-    if (ray_index < 0) return;
+void IntersectShadowHeightmap(int ray_index) {
+    if(ray_index >= BufferSizes[CurBounce].shadow_rays) return;
     int pixel_index = ShadowRaysBuffer[ray_index].PixelIndex;
     SmallerRay ray = CreateRay(ShadowRaysBuffer[ray_index].origin, ShadowRaysBuffer[ray_index].direction);
     ray.direction = (ray.direction == 0 ? EPSILON : ray.direction);
@@ -580,8 +572,8 @@ void IntersectShadowHeightmap() {
 
 
 [numthreads(64, 1, 1)]
-void kernel_shadow_heightmap() {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
-    IntersectShadowHeightmap();
+void kernel_shadow_heightmap(uint3 id : SV_DispatchThreadID) {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
+    IntersectShadowHeightmap(id.x);
 }
 #pragma kernel kernel_heightmap
 
@@ -601,19 +593,17 @@ bool GetDist(float3 CurrentPos, out float2 uv, out float dist, const TerrainData
     return b2 != abs(b2);
 }
 
-void IntersectHeightMap() {
+void IntersectHeightMap(int ray_index) {
+    if(ray_index >= BufferSizes[CurBounce].tracerays) return;
+    if(CurBounce % 2 == 1) ray_index += screen_width * screen_height;
     SmallerRay ray;
     SmallerRay ray2;
 
-    int ray_index;
     RayHit bestHit;
 
     bool DidHit = false;
     float3 CurrentPos;
     int step_count = 0;
-    InterlockedAdd(BufferSizes[CurBounce].heighmap_rays, -1, ray_index);
-    if (ray_index < 0) return;
-    if(CurBounce % 2 == 1) ray_index += screen_width * screen_height;
     ray.origin = GlobalRays[ray_index].origin;
     CurrentPos = ray.origin;
     ray.direction = GlobalRays[ray_index].direction;
@@ -686,9 +676,9 @@ void IntersectHeightMap() {
 
 
 [numthreads(64, 1, 1)]
-void kernel_heightmap() {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
+void kernel_heightmap(uint3 id : SV_DispatchThreadID) {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
 
-    IntersectHeightMap();
+    IntersectHeightMap(id.x);
 }
 
 

@@ -283,6 +283,7 @@ namespace TrueTrace {
         public void Start() {
             DoPanorama = false;
             DoChainedImages = false;
+            LoadTT();
         }
 
         void Reset() {
