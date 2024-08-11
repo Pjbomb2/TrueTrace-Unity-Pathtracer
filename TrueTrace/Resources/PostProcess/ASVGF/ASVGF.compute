@@ -234,6 +234,8 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 	int pixel_index = id.y * screen_width + id.x;
 	ColData Pixel = GlobalColors[pixel_index];
 	float3 TexBaseColor = Pixel.Data.xyz;
+	Pixel.Flags = packRGBE(max(unpackRGBE(Pixel.Flags), 0.01f));
+	Pixel.Data = max(Pixel.Data, 0.01f);
 	TexBaseColor = (TexBaseColor > 0.005f ? rcp(TexBaseColor) : 0);
 	float2 MetRough = FromColorSpecPacked(Pixel.MetRoughIsSpec);
 	if(GetBounceData(Pixel.MetRoughIsSpec) == 1) {
@@ -249,7 +251,6 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 	#endif
 	
 	float2 pos_prev = ((((float2(id.xy)+0.5f) * float2(rcp(screen_width), rcp(screen_height)) + motion) * float2(screen_width, screen_height)));
-
 	bool ReflectedRefracted = max(FromColorSpecPacked(Pixel.MetRoughIsSpec).z - 2,0);
     MetallicAWrite[id.xy] = MetRough;//, ReflectedRefracted, asfloat((asuint(ScreenSpaceInfo[id.xy].w) << 3) >> 3));
     ReflRefracAWrite[id.xy] = (ReflectedRefracted << 31) | ((asuint(ScreenSpaceInfo[id.xy].w) << 3) >> 3);

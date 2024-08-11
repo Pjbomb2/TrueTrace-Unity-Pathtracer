@@ -296,7 +296,7 @@ namespace TrueTrace {
         
         private int TextureParse(ref Vector4 RefMat, Material Mat, string TexName, ref List<Texture> Texs, ref int TextureIndex, bool IsEmission = false) {
             TextureIndex = 0;
-            if (Mat.HasProperty(TexName) && Mat.GetTexture(TexName) as Texture2D != null) {
+            if (Mat.HasProperty(TexName) && Mat.GetTexture(TexName) != null) {
                 if(RefMat.x == 0) RefMat = new Vector4(Mat.mainTextureScale.x, Mat.mainTextureScale.y, Mat.mainTextureOffset.x, Mat.mainTextureOffset.y);
                 Texture Tex = Mat.GetTexture(TexName);
                 TextureIndex = Texs.IndexOf(Tex) + 1;

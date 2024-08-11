@@ -19,7 +19,7 @@ MonoBehaviour:
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 0
+  Accumulate: 1
   PPBloom: 0
   BloomStrength: 0.732
   PPDoF: 0
@@ -34,13 +34,13 @@ MonoBehaviour:
   UseASVGF: 1
   UseTAAU: 0
   ReSTIRGIUpdateRate: 7
-  UseReSTIRGITemporal: 0
-  UseReSTIRGISpatial: 0
+  UseReSTIRGITemporal: 1
+  UseReSTIRGISpatial: 1
   UseReSTIRGI: 0
   ReSTIRGISpatialCount: 12
   ReSTIRGISpatialRadius: 24
   ReSTIRGITemporalMCap: 32
-  DoReSTIRGIConnectionValidation: 0
+  DoReSTIRGIConnectionValidation: 1
   Exposure: 19.4
   DoPartialRendering: 0
   PartialRenderingFactor: 8

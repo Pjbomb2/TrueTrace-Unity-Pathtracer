@@ -262,8 +262,6 @@ RWTexture2D<float4> RandomNumsWrite;
 Texture2D<float4> RandomNums;
 RWTexture2D<float4> _DebugTex;
 
-Texture2D<float4> VideoTex;
-SamplerState sampler_VideoTex;
 Texture2D<half4> _TextureAtlas;
 SamplerState sampler_TextureAtlas;
 Texture2D<half2> _NormalAtlas;
@@ -272,7 +270,7 @@ Texture2D<half4> _EmissiveAtlas;
 Texture2D<half> _IESAtlas;
 Texture2D<half> Heightmap;
 
-#ifdef UseBindless
+#if defined(UseBindless) && !defined(DX11)
 	SamplerState my_linear_repeat_sampler;
 	Texture2D<float4> _BindlessTextures[2048] : register(t31);
 #endif
@@ -301,7 +299,7 @@ inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotati
 
 float4 SampleTexture(float2 UV, int TextureType, MaterialData MatTex) {
 	float4 FinalCol = 0;
-	#ifndef UseBindless
+	#if !defined(UseBindless) || defined(DX11)
 		switch(TextureType) {
 			case SampleAlbedo:
 				#ifdef PointFiltering
@@ -1736,6 +1734,28 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 	    CurrentProp.throughput = EncodeRGB(throughput);
 	}
 
+	float3 HashGridDebugOccupancy(uint2 pixelPosition, uint2 screenSize)
+	{
+	    const uint elementSize = 7;
+	    const uint borderSize = 1;
+	    const uint blockSize = elementSize + borderSize;
+
+	    uint rowNum = screenSize.y / blockSize;
+	    uint rowIndex = pixelPosition.y / blockSize;
+	    uint columnIndex = pixelPosition.x / blockSize;
+	    uint elementIndex = (columnIndex / 32) * (rowNum * 32) + rowIndex * 32 + (columnIndex % 32);
+
+	    if (elementIndex < CacheCapacity && ((pixelPosition.x % blockSize) < elementSize && (pixelPosition.y % blockSize) < elementSize))
+	    {
+	        HashKeyValue storedHashKey = HashEntriesBufferB[elementIndex];
+
+	        if ((storedHashKey.x != 0 && storedHashKey.y != 0))
+	            return float3(0.0f, 1.0f, 0.0f);
+	    }
+
+	    return float3(0.0f, 0.0f, 0.0f);
+	}
+
 	inline uint HashGridInsert(const HashKeyValue HashValue) {
 		uint BucketIndex;
 		uint hash = Hash32(HashValue);
@@ -2004,21 +2024,17 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
         Unity_Contrast_float(TempCol, MatDat.Contrast, MatDat.surfaceColor);
         MatDat.surfaceColor = saturate(MatDat.surfaceColor);
 
-        if (MatDat.MatType == VideoIndex || (MatDat.EmissiveTex.x > 0 && MatDat.emmissive >= 0)) {
-            if (MatDat.MatType == VideoIndex) {
-                MatDat.surfaceColor *= VideoTex.SampleLevel(sampler_VideoTex, BaseUv, 0).xyz;
-            } else {
-            	if (MatDat.EmissiveTex.x > 0) {
-                    float3 EmissCol = lerp(MatDat.EmissionColor, MatDat.surfaceColor, GetFlag(MatDat.Tag, BaseIsMap));
-            		float4 EmissTex = SampleTexture(BaseUv, SampleEmission, MatDat);
-                    if(!GetFlag(MatDat.Tag, IsEmissionMask)) {//IS a mask
-                        MatDat.emmissive *= luminance(EmissTex.xyz);
-                        
-                        MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissCol, saturate(MatDat.emmissive) * GetFlag(MatDat.Tag, ReplaceBase));
-                    } else {//is NOT a mask
-                        MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissTex.xyz * EmissCol, saturate(MatDat.emmissive) * GetFlag(MatDat.Tag, ReplaceBase));
-                    }            
-                }
+        if ((MatDat.EmissiveTex.x > 0 && MatDat.emmissive >= 0)) {
+        	if (MatDat.EmissiveTex.x > 0) {
+                float3 EmissCol = lerp(MatDat.EmissionColor, MatDat.surfaceColor, GetFlag(MatDat.Tag, BaseIsMap));
+        		float4 EmissTex = SampleTexture(BaseUv, SampleEmission, MatDat);
+                if(!GetFlag(MatDat.Tag, IsEmissionMask)) {//IS a mask
+                    MatDat.emmissive *= luminance(EmissTex.xyz);
+                    
+                    MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissCol, saturate(MatDat.emmissive) * GetFlag(MatDat.Tag, ReplaceBase));
+                } else {//is NOT a mask
+                    MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissTex.xyz * EmissCol, saturate(MatDat.emmissive) * GetFlag(MatDat.Tag, ReplaceBase));
+                }            
             }
         }
     #endif

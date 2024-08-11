@@ -6,7 +6,7 @@ using CommonVars;
 namespace TrueTrace {
 	[ExecuteInEditMode][System.Serializable]
 	public class RayTracingObject : MonoBehaviour {
-		public enum Options {Disney, Cutout, Video};
+		public enum Options {Disney, Cutout};
 		[SerializeField] public Options[] MaterialOptions;
 		[SerializeField] public Vector3[] TransmissionColor, BaseColor;
 		[SerializeField] public Vector2[] MetallicRemap, RoughnessRemap;

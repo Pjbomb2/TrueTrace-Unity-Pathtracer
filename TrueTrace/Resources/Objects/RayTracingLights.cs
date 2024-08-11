@@ -12,7 +12,7 @@ namespace TrueTrace {
         [HideInInspector] public int IESIndex;
         [Range(0,40)] public float ShadowSoftness = 0.0f;
         [SerializeField] public bool UseKelvin = false;
-        [SerializeField] [Range(1000.0f,40000.0f)] public float KelvinTemperature = 1000.0f;
+        [SerializeField] [Range(1000.0f,20000.0f)] public float KelvinTemperature = 1000.0f;
         public Texture2D IESProfile;
 
 

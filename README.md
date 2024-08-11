@@ -36,6 +36,7 @@ A passion projects that has been going on for a while with the goal of bringing 
 <li>Material Preset System</li>
 <li>Panorama Rendering</li>
 <li>IES for spotlights</li>
+<li>True Bindless texturing(Thanks to Meetem)</li>
 </ul>
 
 [Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
@@ -56,7 +57,7 @@ Let me know if you use this for anything, I would be excited to see any use of t
   <li>If you plan to use DX12(otherwise look down below for DX11 instructions): Change the Graphics Api for Windows to DirectX12 through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Untoggle "Auto Graphics API For Windows", then click the little + that appears, select "Direct3D12(Experimental)", and drag that to the top.  A restart of the editor is required</li>
   <li>Your target camera NEEDS to be deferred, this will usually be automatically done for you by TrueTrace</li>
   <li>Dynamic batching can break motion vectors a bit, so its best if this is turned off: Edit Tab -> Project Settings -> Player -> Other Settings -> Dynamic Batching</li>
-  <li>I reccomend turning on "GPU Skinning", as otherwise skinned meshes will freak out a bit, not horribly but its noticeable: Edit Tab -> Project Settings -> Player -> Other Settings -> GPU Skinning</li>
+  <li>I recommend turning on "GPU Skinning", as otherwise skinned meshes will freak out a bit, not horribly but its noticeable: Edit Tab -> Project Settings -> Player -> Other Settings -> GPU Skinning</li>
 </ul>
 
 ## Controls:
@@ -79,7 +80,7 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
 ## General Use/Notes
 <ul>
   <li>The camera you want to render from, you attach the RenderHandler script to(if you have a camera tagged MainCamera, this will be done automatically)</li>
-  <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building, a ding will sound when it completes if it takes longer than 15 seconds</li>
+  <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building, a ding will sound when it completes if it takes longer than 15 seconds(Turn on Truetrace Settings -> Functionality Settings</li>
   <li>Objects can be added and removed at will simply by toggling the associated GameObject with a ParentObject script on/off in the hierarchy(clicking on parent objects with complex objects for children will lag), but they will take time to appear as the acceleration structure needs to  be rebuilt for them</li>
   <li>Emissive meshes need to be have a non-zero emissive value when they are built or rebuilt to work with NEE, but after that can have their emissiveness changed at will</li>
   <li>To set up PBR with the DEFAULT material, all textures go into their proper names, but Roughness goes into the Occlusion texture(This can be changed in the MaterialPairing menu)</li>
@@ -119,7 +120,7 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
   <li>Go to "Functionality Settings" in the TrueTrace Options, and check "Enable OIDN"</li>
 </ul>
 
-## Using HDRP
+## Using HDRP(Should be automatic now)
 <ul>
   <li>Go into TrueTrace -> Resources -> GlobalDefines.cginc, and uncomment the #define HDRP</li>
   <li>Create a new custom pass(Hierarchy -> Volume -> Custom Pass) and add the custom pass in the inspector called "HDRP Compatibility"</li>
@@ -129,7 +130,6 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
 <ul>
   <li>First off, this REQUIRES unity 2023 or higher</li>
   <li>In the TrueTrace settings menu, click on the top right button "Functionality Settings" and toggle HardwareRT</li>
-  <li>Uncomment the #define HardwareRT in: TrueTrace -> Resources -> GlobalDefines.cginc</li>
   <li>Then just use like normal, but this does not support Instances</li>
 </ul>
 
@@ -137,7 +137,6 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
 <ul>
   <li>DX11 does not currently work with hue shift(seems to be a compiler bug)</li>
   <li>In the TrueTrace settings menu, click on the top right button "Functionality Settings" and toggle "Use DX11"</li>
-  <li>Uncomment the "#define DX11" in: TrueTrace -> Resources -> GlobalDefines.cginc</li>
 </ul>
 
 ## Editor Window Guide

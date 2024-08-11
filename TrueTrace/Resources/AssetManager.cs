@@ -1,4 +1,3 @@
-#define UseBindless
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -18,18 +17,14 @@ namespace TrueTrace {
     public class AssetManager : MonoBehaviour
     {//This handels all the data
 
-        public struct BindlessStruct {
-            public System.IntPtr TexturePointer;
-        }
-
         private BindlessArray bindlessTextures;
         public static AssetManager Assets;
         public int TotalParentObjectSize;
         [HideInInspector] public float LightEnergyScale = 1.0f;
         //emissive, alpha, metallic, roughness
+        [HideInInspector] public int CurrentBindlessCount;
         [HideInInspector] public Texture2D IESAtlas;
         [HideInInspector] public Texture2D AlbedoAtlas;
-        public int CurrentBindlessCount;
         [HideInInspector] public Texture2D NormalAtlas;
         [HideInInspector] public Texture2D SingleComponentAtlas;
         [HideInInspector] public Texture2D EmissiveAtlas;
@@ -52,8 +47,6 @@ namespace TrueTrace {
         [HideInInspector] public int AlbedoAtlasSize;
         [HideInInspector] public int IESAtlasSize;
 
-        [HideInInspector] public VideoObject VideoPlayerObject;
-        [HideInInspector] public RenderTexture VideoTexture;
 
         [HideInInspector] public List<RayTracingObject> MaterialsChanged;
         [HideInInspector] public MaterialData[] _Materials;
@@ -508,7 +501,8 @@ namespace TrueTrace {
                }
             }
             CurrentBindlessCount = 0;
-             bindlessTextures.Clear();
+            if(bindlessTextures == null) bindlessTextures = new BindlessArray();
+            bindlessTextures.Clear();
             _Materials = new MaterialData[TotalMatCount];
             Dictionary<int, TexObj> HeightMapTextures = new Dictionary<int, TexObj>();
             Dictionary<int, TexObj> AlphaMapTextures = new Dictionary<int, TexObj>();
@@ -637,12 +631,7 @@ namespace TrueTrace {
             if (!RenderQue.Any())
                 return;
 
-
-            {//BINDLESS-TEST create the bindless descriptor here, by this point all textures in scene are in the array "AlbedoArray"
-
-
-            }
-            #if UseBindless
+            #if !DX11Only && !UseAtlas
                 PackAndCompactBindless(AlbTextures, AlbRect.ToArray(), 6);
                 PackAndCompactBindless(NormTextures, NormRect.ToArray(), 2);
                 PackAndCompactBindless(SingleComponentTexture, SingleComponentRect.ToArray(), 4, 1);
@@ -675,7 +664,6 @@ namespace TrueTrace {
                 TempTex.Release();
                 TempTex = null;
             #endif
-
 
             PackAndCompact(HeightMapTextures, ref HeightmapAtlas, HeightMapRect.ToArray(), 16384, 0, 0);
             PackAndCompact(AlphaMapTextures, ref AlphaMapAtlas, AlphaMapRect.ToArray(), 16384, 1);
@@ -832,14 +820,6 @@ namespace TrueTrace {
             if(AlphaAtlas == null) AlphaAtlas = new Texture2D(4,4, TextureFormat.BC4, 1, false);
             
             UpdateMaterialDefinition();
-            UnityEngine.Video.VideoPlayer[] VideoObjects = GameObject.FindObjectsOfType<UnityEngine.Video.VideoPlayer>();
-            if (VideoTexture != null) VideoTexture.Release();
-            if (VideoObjects.Length == 0) CreateRenderTexture(ref VideoTexture, 1, 1, RenderTextureFormat.ARGB32, false);
-            else {
-                GameObject VideoAttatchedObject = VideoObjects[0].gameObject;
-                VideoPlayerObject = (VideoAttatchedObject.GetComponent<VideoObject>() == null) ? VideoAttatchedObject.AddComponent<VideoObject>() : VideoAttatchedObject.GetComponent<VideoObject>();
-                VideoTexture = VideoPlayerObject.VideoTexture;
-            }
             Refitter = Resources.Load<ComputeShader>("Utility/BVHRefitter");
             LightRefitter = Resources.Load<ComputeShader>("Utility/LightBVHRefitter");
             LightBVHKernel = LightRefitter.FindKernel("RefitKernel");

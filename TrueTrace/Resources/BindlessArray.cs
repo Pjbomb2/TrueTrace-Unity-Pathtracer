@@ -37,6 +37,16 @@ namespace Meetem.Bindless
             isUpdateNeeded = true;
         }
 
+        // public int AppendPtr(System.IntPtr nativePtr)
+        // {
+        //     textures[lastTextureIndex] = BindlessTexture.FromResource(nativePtr);
+        //     textureMap[lastTextureIndex] = tex;
+            
+        //     lastTextureIndex++;
+        //     isUpdateNeeded = true;
+        //     return lastTextureIndex - 1;
+        // }
+
         public int AppendRaw(Texture tex)
         {
             if (tex is not Texture2D
