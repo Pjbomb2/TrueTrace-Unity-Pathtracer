@@ -296,13 +296,15 @@ namespace CommonVars
         }
 
     [System.Serializable]
-    public struct CompactLightBVHData {
+    public struct LightBVHData {
         public Vector3 BBMax;
         public Vector3 BBMin;
         public uint w;
         public float phi;
         public uint cosTheta_oe;
         public int left;
+        private uint __pad1;
+        private uint __pad2;
     };
 
     [System.Serializable]

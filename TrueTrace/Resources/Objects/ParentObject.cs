@@ -259,10 +259,10 @@ namespace TrueTrace {
                   if(AggTriangles != null) {
                     if(LightTriangles.Count == 0) {
                         LightTriBuffer = new ComputeBuffer(1, 44);
-                        LightNodeBuffer = new ComputeBuffer(1, 40);
+                        LightNodeBuffer = new ComputeBuffer(1, UnsafeUtility.SizeOf<LightBVHData>());
                     } else {
                         LightTriBuffer = new ComputeBuffer(Mathf.Max(LightTriangles.Count,1), 44);
-                        LightNodeBuffer = new ComputeBuffer(Mathf.Max(LBVH.nodes.Length,1), 40);
+                        LightNodeBuffer = new ComputeBuffer(Mathf.Max(LBVH.nodes.Length,1), UnsafeUtility.SizeOf<LightBVHData>());
                     }
                     TriBuffer = new ComputeBuffer(AggTriangles.Length, 88);
                     BVHBuffer = new ComputeBuffer(AggNodes.Length, 80);
