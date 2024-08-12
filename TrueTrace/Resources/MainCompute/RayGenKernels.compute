@@ -31,7 +31,6 @@ void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
     #ifdef RadianceCache
         CacheBuffer[pixel_index].pathLength = 0;
         CacheBuffer[pixel_index].CurrentIlluminance = 0;
-        CacheBuffer[pixel_index].throughput = EncodeRGB(float3(1,1,1));
     #endif
 }
 
@@ -46,8 +45,6 @@ void Generate(uint3 id : SV_DispatchThreadID) {
     #ifdef RadianceCache
         CacheBuffer[pixel_index].pathLength = 0;
         CacheBuffer[pixel_index].CurrentIlluminance = 0;
-        CacheBuffer[pixel_index].throughput = EncodeRGB(float3(1,1,1));
-        CacheBuffer[pixel_index].samples[0].x = EncodeRGB(1);
     #endif
     SmallerRay ray = CreateCameraRay(uv, pixel_index);
     RayData globray = {ray.origin + NearPlane * ray.direction, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
@@ -83,7 +80,6 @@ void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadI
     #ifdef RadianceCache
         CacheBuffer[pixel_index].pathLength = 0;
         CacheBuffer[pixel_index].CurrentIlluminance = 0;
-        CacheBuffer[pixel_index].throughput = EncodeRGB(float3(1,1,1));
     #endif
     GlobalRays[pixel_index] = globray;
     GlobalColors[pixel_index] = InitCol;
@@ -101,7 +97,6 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
     #ifdef RadianceCache
         CacheBuffer[pixel_index].pathLength = 0;
         CacheBuffer[pixel_index].CurrentIlluminance = 0;
-        CacheBuffer[pixel_index].throughput = EncodeRGB(float3(1,1,1));
     #endif
     SmallerRay ray;
     if(DoPanorama) {

@@ -271,7 +271,8 @@ Texture2D<half> _IESAtlas;
 Texture2D<half> Heightmap;
 
 #if defined(UseBindless) && !defined(DX11)
-	SamplerState my_trilinear_repeat_sampler;
+	SamplerState my_linear_repeat_sampler;
+	SamplerState my_point_repeat_sampler;
 	Texture2D<float4> _BindlessTextures[2048] : register(t31);
 #endif
 
@@ -354,9 +355,13 @@ float4 SampleTexture(float2 UV, int TextureType, MaterialData MatTex) {
 		}
 		int TextureIndex = TextureIndexAndChannel.x - 1;
 		int TextureReadChannel = TextureIndexAndChannel.y;//0-3 is rgba, 4 is to just read all
-		//For SampleNormal, you need to output FinalCol = Texture.xyxy;
-			if(TextureReadChannel == 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
-			else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0)[TextureReadChannel];
+
+		#ifdef PointFiltering
+			FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+		#else
+			FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_linear_repeat_sampler, UV, 0);
+		#endif
+		if(TextureReadChannel != 4) FinalCol = FinalCol[TextureReadChannel];
 		if(TextureType == SampleNormal) {
 			// FinalCol.g = 1.0f - FinalCol.g;
 			FinalCol = (FinalCol.r == 1) ? FinalCol.agag : FinalCol.rgrg;

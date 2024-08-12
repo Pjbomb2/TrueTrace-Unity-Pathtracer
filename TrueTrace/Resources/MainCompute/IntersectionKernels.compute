@@ -1,8 +1,8 @@
+#include "../GlobalDefines.cginc"
 #ifndef DX11
     #pragma use_dxc
 #endif
     // #pragma enable_d3d11_debug_symbols
-#include "../GlobalDefines.cginc"
 #include "CommonData.cginc"
 #ifdef HardwareRT
     #include "UnityRayQuery.cginc"
@@ -238,7 +238,11 @@ void IntersectBVH(int ray_index) {
 }
 
 
+#ifdef DX11
 [numthreads(64, 1, 1)]
+#else
+[numthreads(32, 1, 1)]
+#endif
 void kernel_trace(uint3 id : SV_DispatchThreadID) {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
     IntersectBVH(id.x);
 }
@@ -477,7 +481,11 @@ void IntersectBVHShadow(int ray_index) {
 }
 
 
+#ifdef DX11
 [numthreads(64, 1, 1)]
+#else
+[numthreads(32, 1, 1)]
+#endif
 void kernel_shadow(uint3 id : SV_DispatchThreadID) {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
     IntersectBVHShadow(id.x);
 }
@@ -571,7 +579,11 @@ void IntersectShadowHeightmap(int ray_index) {
 }
 
 
+#ifdef DX11
 [numthreads(64, 1, 1)]
+#else
+[numthreads(32, 1, 1)]
+#endif
 void kernel_shadow_heightmap(uint3 id : SV_DispatchThreadID) {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
     IntersectShadowHeightmap(id.x);
 }
@@ -675,7 +687,11 @@ void IntersectHeightMap(int ray_index) {
 }
 
 
+#ifdef DX11
 [numthreads(64, 1, 1)]
+#else
+[numthreads(32, 1, 1)]
+#endif
 void kernel_heightmap(uint3 id : SV_DispatchThreadID) {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
 
     IntersectHeightMap(id.x);

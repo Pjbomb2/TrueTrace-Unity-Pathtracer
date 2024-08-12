@@ -238,6 +238,10 @@ namespace TrueTrace {
                         }
                 }
                 CurrentBindlessCount++;
+                if(CurrentBindlessCount > 2046) {
+                    Debug.LogError("TOO MANY TEXTURES, REPORT BACK TO DEVELOPER");
+                    return;
+                }
             }
         }
 

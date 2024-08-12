@@ -502,14 +502,13 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             return;
         throughput *= rcp(p);//rcp is a slightly faster but less accurate version of 1 / p, I decided the inaccuracy was worth the performance bump
         #ifdef RadianceCache
-            CacheInstance.throughput = EncodeRGB(clamp(bsdf * rcp(p),0,2));
+            CacheInstance.samples[0].x = EncodeRGB(clamp(bsdf * rcp(p),0,2));
         #endif
     } else {
         #ifdef RadianceCache
-            CacheInstance.throughput = EncodeRGB(clamp(bsdf,0,2));
+            CacheInstance.samples[0].x = EncodeRGB(clamp(bsdf,0,2));
         #endif
     }
-
     Color.throughput = throughput;
 
     if(CB) {
@@ -522,7 +521,11 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     }
 }
 
+#ifdef DX11
 [numthreads(64, 1, 1)]
+#else
+[numthreads(32, 1, 1)]
+#endif
 void kernel_shade(uint3 id : SV_DispatchThreadID) {
 
     if (CurBounce != 0 && (id.x >= BufferSizes[CurBounce - 1].tracerays)) return;
@@ -545,9 +548,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
         }
     #endif
     ColData Color = GlobalColors[pixel_index];
-    #ifdef RadianceCache
-        CacheBuffer[pixel_index].samples[0].x = CacheBuffer[pixel_index].throughput;
-    #endif
+
     if (bestHit.t == FarPlane) {//if ray goes into the void, sample skybox
         float3 Radiance, transmittance, debug = 0;
         float Stars;
@@ -763,10 +764,10 @@ int Type;
 [numthreads(1, 1, 1)]
 void TransferKernel(uint3 id : SV_DispatchThreadID) {
     if(Type == 0) {
-        BufferData[0] = uint3(ceil(BufferSizes[CurBounce].tracerays / 64.0f), 1, 1);
+        BufferData[0] = uint3(ceil(BufferSizes[CurBounce].tracerays / 32.0f), 1, 1);
         if(CurBounce != 0) BufferSizes[CurBounce - 1].tracerays = BufferSizes[CurBounce].tracerays;
     } else {
-        BufferData[0] = uint3(ceil(BufferSizes[CurBounce].shadow_rays / 64.0f), 1, 1);
+        BufferData[0] = uint3(ceil(BufferSizes[CurBounce].shadow_rays / 32.0f), 1, 1);
     }
 
 }
