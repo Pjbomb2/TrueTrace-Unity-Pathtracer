@@ -22,7 +22,7 @@ namespace TrueTrace {
         public int TotalParentObjectSize;
         [HideInInspector] public float LightEnergyScale = 1.0f;
         //emissive, alpha, metallic, roughness
-        [HideInInspector] public int CurrentBindlessCount;
+        public int BindlessTextureCount;
         [HideInInspector] public Texture2D IESAtlas;
         [HideInInspector] public Texture2D AlbedoAtlas;
         [HideInInspector] public Texture2D NormalAtlas;
@@ -224,7 +224,7 @@ namespace TrueTrace {
                 var bindlessIdx = bindlessTextures.AppendRaw(SelectedTex.Tex);
 
                 for(int j = 0; j < ListLength; j++) {
-                        Vector2Int VectoredTexIndex = new Vector2Int(CurrentBindlessCount + 1, SelectedTex.TexObjList[j].z);
+                        Vector2Int VectoredTexIndex = new Vector2Int(BindlessTextureCount + 1, SelectedTex.TexObjList[j].z);
                         switch (SelectedTex.TexObjList[j].y) {
                             case 0: _Materials[SelectedTex.TexObjList[j].x].AlbedoTex = VectoredTexIndex; break;
                             case 1: _Materials[SelectedTex.TexObjList[j].x].NormalTex = VectoredTexIndex; break;
@@ -237,8 +237,8 @@ namespace TrueTrace {
                             default: break;
                         }
                 }
-                CurrentBindlessCount++;
-                if(CurrentBindlessCount > 2046) {
+                BindlessTextureCount++;
+                if(BindlessTextureCount > 2046) {
                     Debug.LogError("TOO MANY TEXTURES, REPORT BACK TO DEVELOPER");
                     return;
                 }
@@ -497,7 +497,7 @@ namespace TrueTrace {
                     TotalMatCount += Terrains[j].Materials.Count;
                }
             }
-            CurrentBindlessCount = 0;
+            BindlessTextureCount = 0;
             Dictionary<int, TexObj> HeightMapTextures = new Dictionary<int, TexObj>();
             Dictionary<int, TexObj> AlphaMapTextures = new Dictionary<int, TexObj>();
             List<PackingRectangle> HeightMapRect = new List<PackingRectangle>();
@@ -1710,7 +1710,7 @@ namespace TrueTrace {
                     LightBoxesBuffer.SetData(LightAABBs);
                     cmd.BeginSample("LightRefitter");
                     cmd.SetComputeBufferParam(LightRefitter, LightBVHKernel, "Transfers", LightBVHTransformsBuffer);
-                    cmd.SetComputeBufferParam(LightRefitter, LightBVHKernel, "LightNodes", LightNodeBuffer);
+                    cmd.SetComputeBufferParam(LightRefitter, LightBVHKernel, "LightNodesWrite", LightNodeBuffer);
                     cmd.SetComputeBufferParam(LightRefitter, LightBVHKernel, "LightBounds", LightBoxesBuffer);
                     int ObjectOffset = 0;
                     for(int i = LBVH.WorkingSet.Length - 1; i >= 0; i--) {

@@ -135,8 +135,7 @@ static const float wavelet_kernel[2][2] = {
 
 
 
-RWStructuredBuffer<Ray> RayB;
-RWStructuredBuffer<Ray> GlobalRays;
+
 
 
 struct SH {
@@ -232,7 +231,7 @@ int PartialRenderingFactor;
 void CopyData(uint3 id : SV_DispatchThreadID)
 {
 	int pixel_index = id.y * screen_width + id.x;
-	ColData Pixel = GlobalColors[pixel_index];
+	ColData Pixel = GlobalColorsRead[pixel_index];
 	float3 TexBaseColor = Pixel.Data.xyz;
 	Pixel.Flags = packRGBE(max(unpackRGBE(Pixel.Flags), 0.01f));
 	Pixel.Data = max(Pixel.Data, 0.01f);
@@ -259,14 +258,14 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 		if(UseExposure) Exposure = ExposureBuffer[0];
 	if (!((asuint(ScreenSpaceInfo[id.xy].w) >> 31) & 0x1) && (FromColorSpecPacked(Pixel.MetRoughIsSpec).z == 2 || MetRough.y >= 0.6f)) {
 		AlbedoColorA[id.xy] = uint2(Pixel.Flags, any(pos_prev < 0 || pos_prev >= float2(screen_width, screen_height)) ? Pixel.Flags : AlbedoColorB[pos_prev].y);
-		STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, irradiance_to_SH(PartialRenderingFactor * IndirectBoost * clamp(Pixel.Indirect * ((Pixel.Data.xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0))) / 1024.0f,0,1200000.0f), asfloat(WorldPosData[id.xy].xyz)));
-		TEX_PT_COLOR_HFWrite[id.xy] = float4(PartialRenderingFactor * clamp((Pixel.Direct + pow(unpackRGBE(Pixel.PrimaryNEERay),2.2f) * TexBaseColor) * Pixel.Data.xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 1.0f),0,1200000.0f),1);
+		STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, irradiance_to_SH(Exposure * PartialRenderingFactor * IndirectBoost * clamp(Pixel.Indirect * ((Pixel.Data.xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 0))) / 1024.0f,0,1200000.0f), asfloat(WorldPosData[id.xy].xyz)));
+		TEX_PT_COLOR_HFWrite[id.xy] = float4(PartialRenderingFactor * clamp(Exposure * (Pixel.Direct + pow(unpackRGBE(Pixel.PrimaryNEERay),2.2f) * TexBaseColor) * Pixel.Data.xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 1.0f),0,1200000.0f),1);
 		TEX_PT_COLOR_SPECWrite[id.xy] = 0;
 	} else {
 		AlbedoColorA[id.xy] = uint2(any(pos_prev < 0 || pos_prev >= float2(screen_width, screen_height)) ? Pixel.Flags : AlbedoColorB[pos_prev].x, Pixel.Flags);
 		SH TempSH = { 0,0,0,0,0,0 };
 		STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, TempSH);
-		TEX_PT_COLOR_SPECWrite[id.xy] = packRGBE(PartialRenderingFactor * max(clamp((Pixel.Direct + IndirectBoost * Pixel.Indirect + pow(unpackRGBE(Pixel.PrimaryNEERay),2.2f) * TexBaseColor) * Pixel.Data.xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 1.0f),0,1200000.0f),0));
+		TEX_PT_COLOR_SPECWrite[id.xy] = packRGBE(PartialRenderingFactor * max(clamp(Exposure * (Pixel.Direct + IndirectBoost * Pixel.Indirect + pow(unpackRGBE(Pixel.PrimaryNEERay),2.2f) * TexBaseColor) * Pixel.Data.xyz * ((WorldAlbedo > 0.001f) ? rcp(WorldAlbedo) : 1.0f),0,1200000.0f),0));
 		TEX_PT_COLOR_HFWrite[id.xy] = 0;
 	}
 	if(!ReflectedRefracted || any(pos_prev < 0 || pos_prev >= float2(screen_width, screen_height))) {
@@ -370,36 +369,6 @@ inline void reproject_pixel(int2 p, int field_left, int field_right, int2 gl_Loc
 
 float3 CamDiff;
 
-struct CudaTriangle {
-	float3 pos0;
-	float3 posedge1;
-	float3 posedge2;
-
-	uint3 norms;
-
-	uint3 tans;
-
-	float2 tex0;
-	float2 texedge1;
-	float2 texedge2;
-
-	uint MatDat;
-};
-
-StructuredBuffer<CudaTriangle> AggTris;
-
-struct MyMeshDataCompacted {
-	float4x4 Transform;
-	int TriOffset;
-	int NodeOffset;
-	int MaterialOffset;
-	int mesh_data_bvh_offsets;//could I convert this an int4?
-	int LightTriCount;
-	int LightNodeCount;
-};
-
-StructuredBuffer<MyMeshDataCompacted> _MeshData;
-
 Texture2D<uint4> PrimaryTriData;
 
 bool UseBackupPointSelection;
@@ -417,7 +386,7 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 
 	if(ipos.x < screen_width && ipos.y < screen_height) {
 		RNGTexA[ipos] = float4(CurFrame, ipos.x + ipos.y * screen_width, 0, 0);
-		GlobalRays[ipos.x + ipos.y * screen_width] = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
+		GlobalRaysMini[ipos.x + ipos.y * screen_width] = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
 	}
 	GroupMemoryBarrierWithGroupSync();
 
@@ -483,7 +452,7 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 	IMG_ASVGF_GRAD_HF_SPEC_PING[pos_grad] = found_prev_lum;
 
 	RNGTexA[ipos] = float4(RNGTexB[found_pos_prev].xyz, (ReflRefracB[found_pos_prev] >> 31) ? 2 : 1);
-	GlobalRays[ipos.x + ipos.y * screen_width] = RayB[found_pos_prev.x + found_pos_prev.y * screen_width];
+	GlobalRaysMini[ipos.x + ipos.y * screen_width] = RayB[found_pos_prev.x + found_pos_prev.y * screen_width];
 	uint4 Target = PrimaryTriData[found_pos_prev];
 	float3 Pos;
 	if(Target.w == 1) Pos = asfloat(Target.xyz);
@@ -493,13 +462,13 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 		float2 UV;
 		UV.x = asfloat(Target.z);//(Target.z & 0xffff) / 65535.0f;
 		UV.y = asfloat(Target.w);//(Target.z >> 16) / 65535.0f;
-		float4x4 Inverse = inverse(Mesh.Transform);
+		float4x4 Inverse = inverse(Mesh.W2L);
 		Pos = mul(Inverse, float4(AggTris[Target.y].pos0 + UV.x * AggTris[Target.y].posedge1 + UV.y * AggTris[Target.y].posedge2,1)).xyz;
-		if(UseBackupPointSelection || Target.x == 9999999) Pos = GlobalRays[ipos.x + ipos.y * screen_width].origin + GlobalRays[ipos.x + ipos.y * screen_width].direction * TEX_PT_VIEW_DEPTH_B[found_pos_prev].x;
+		if(UseBackupPointSelection || Target.x == 9999999) Pos = GlobalRaysMini[ipos.x + ipos.y * screen_width].origin + GlobalRaysMini[ipos.x + ipos.y * screen_width].direction * TEX_PT_VIEW_DEPTH_B[found_pos_prev].x;
 	}
 
-	GlobalRays[ipos.x + ipos.y * screen_width].origin -= CamDiff;
-	GlobalRays[ipos.x + ipos.y * screen_width].direction = normalize(Pos - GlobalRays[ipos.x + ipos.y * screen_width].origin);
+	GlobalRaysMini[ipos.x + ipos.y * screen_width].origin -= CamDiff;
+	GlobalRaysMini[ipos.x + ipos.y * screen_width].direction = normalize(Pos - GlobalRaysMini[ipos.x + ipos.y * screen_width].origin);
 
 	MetallicAWrite[ipos] = MetallicB[found_pos_prev];
 	ScreenSpaceInfoWrite[ipos] = float4(asfloat(TEX_PT_NORMALS_B[found_pos_prev]),0,0);
@@ -978,10 +947,10 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 				Max = max(Max, col);
 			}
 		}
-		color_curr_spec.rgb = exp(clamp(log(color_curr_spec.rgb + 1), 0, log(Max + 15))) - 1;
+		// color_curr_spec.rgb = exp(clamp(log(color_curr_spec.rgb + 1), 0, log(Max + 15))) - 1;
 
 		// Same sequence as above, only for the specular channel
-		float antilag = 0.01f * grad_hf_spec.y * clamp(1.0f - motion_length, 0.01f, 1.0f) + motion_length * 0.0005f;
+		float antilag = clamp(0.01f * grad_hf_spec.y * clamp(1.0f - motion_length, 0.01f, 1.0f) + motion_length * 0.0005f, 0, 1);
 		// float antilag = grad_hf_spec.y + motion_length * 0.001f;
 		float antilag_alpha_spec = clamp(lerp(0.0, antilag, 1), 0, 1);
 		float hist_len_spec = min(max(temporal_color_histlen_spec.a * pow(1.0 - antilag_alpha_spec, 10),0) + 1.0, 256.0);
@@ -1349,7 +1318,7 @@ inline void filter_image(
 				// MaxMom = max(MaxMom, img_moments[offID].y);
 			}
 		}
-		color_center_spec = clamp(color_center_spec, Min, Max);
+		// color_center_spec = clamp(color_center_spec, Min, Max);
 		// float Mom2 = clamp(moments_center.x, MinMom, MaxMom);
 		// step_size *= clamp(step_size * (max(1e-8, moments_center.y * moments_center.y * 10.0f)) + rcp(hist_len_hf / 10.0f + 1), 1.0f, step_size);
 		// if(spec_iteration != 0) step_size *= clamp(step_size * (max(1e-8, Mom2 * Mom2 * 10.0f)), 1.0f, step_size);// (max(1e-8, moments_center.y * moments_center.y * 10.0f)) + rcp(hist_len_hf / 10.0f + 1), 1.0f, step_size);
@@ -1513,7 +1482,7 @@ float3 composite_color(float4 surf_base_color,
 {
 	float Exposure = 1;
 	if(UseExposure) Exposure = ExposureBuffer[0];
-	float3 final_color = ((surf_base_color.w == 1) ? pow(surf_base_color, 1.0f) : ((projected_lf.rgb + high_freq.rgb) * surf_base_color + specular * SpecColor));
+	float3 final_color = ((surf_base_color.w == 1) ? pow(surf_base_color, 1.0f) : ((projected_lf.rgb + high_freq.rgb) * surf_base_color / Exposure + specular * SpecColor / Exposure));
 
 	return final_color;
 }
@@ -1550,9 +1519,9 @@ void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGrou
 
 
 		float3 normal = i_octahedral_32(TEX_PT_NORMALS_A[ipos].y);
-		float4 base_color = float4(unpackRGBE(AlbedoColorB[ipos].x),GetBounceData(GlobalColors[ipos.x + ipos.y * screen_width].MetRoughIsSpec));// TEX_PT_BASE_COLOR_A.SampleLevel(sampler_trilinear_clamp, ipos / float2(screen_width, screen_height), 0);
+		float4 base_color = float4(unpackRGBE(AlbedoColorB[ipos].x),GetBounceData(GlobalColorsRead[ipos.x + ipos.y * screen_width].MetRoughIsSpec));// TEX_PT_BASE_COLOR_A.SampleLevel(sampler_trilinear_clamp, ipos / float2(screen_width, screen_height), 0);
 		if(DiffRes && base_color.w <= 2) base_color.xyz = 1;
-		if(base_color.w == 1) base_color = float4(GlobalColors[ipos.x + ipos.y * screen_width].Data,1);
+		if(base_color.w == 1) base_color = float4(GlobalColorsRead[ipos.x + ipos.y * screen_width].Data,1);
 		// Project the spherical harmonics lighting onto the actual surface normal
 		float3 projected_lf = project_SH_irradiance(filtered_lf, normal);
 		projected_lf *= 1024.0f;

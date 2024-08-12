@@ -926,7 +926,7 @@ namespace TrueTrace {
                     cmd.BeginSample("LightRefitter");
                     cmd.SetComputeMatrixParam(LightMeshRefit, "ToWorld", transform.localToWorldMatrix);
                     cmd.SetComputeIntParam(LightMeshRefit, "TotalNodeOffset", LightNodeOffset);
-                    cmd.SetComputeBufferParam(LightMeshRefit, 1, "LightNodes", RealizedLightNodeBuffer);
+                    cmd.SetComputeBufferParam(LightMeshRefit, 1, "LightNodesWrite", RealizedLightNodeBuffer);
                     cmd.SetComputeFloatParam(LightMeshRefit, "FloatMax", float.MaxValue);
                     int ObjectOffset = LightNodeOffset;
                     for(int i = WorkingSet.Length - 1; i >= 0; i--) {

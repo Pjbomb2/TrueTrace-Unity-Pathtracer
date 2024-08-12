@@ -105,7 +105,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         if (abs(norm.x) == abs(norm.y) == abs(norm.z)) norm = Geomnorm;
         norm = i_octahedral_32(octahedral_32(norm));
     }
-    if(CurBounce == 0 && UseASVGF && RandomNums[id].w == 1 && !(hitDat.metallic == 1 && hitDat.roughness < 0.05f)) {
+    if(CurBounce == 0 && UseASVGF && !(hitDat.metallic == 1 && hitDat.roughness < 0.05f) && hitDat.specTrans != 1 && RandomNums[id].w == 1) {
         Geomnorm = i_octahedral_32(asuint(PrevScreenData.x));
         norm = i_octahedral_32(asuint(PrevScreenData.y));
     }
@@ -175,7 +175,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         #endif
         if(luminance(EmissCol) > 12.0f) {
             if(CurBounce == 0) {
-                Color.Data = float3(EmissCol);
+                Color.Data = EmissCol;
                 Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0xFC000000)) |  ((1) << 26);  
             }
             return;

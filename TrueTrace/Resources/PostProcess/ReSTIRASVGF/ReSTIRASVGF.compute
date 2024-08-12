@@ -128,8 +128,6 @@ static const float wavelet_kernel[2][2] = {
 #pragma kernel CopyData
 
 
-RWStructuredBuffer<Ray> RayB;
-RWStructuredBuffer<Ray> GlobalRays;
 
 
 struct SH {
@@ -192,7 +190,6 @@ int CurFrame;
 
 SamplerState sampler_trilinear_clamp;
 
-Texture2D<float4> ScreenSpaceInfoPrev;
 
 Texture2D<uint4> PrimaryTriData;
 Texture2D<uint4> SecondaryTriData;
@@ -222,37 +219,6 @@ RWTexture2D<uint2> AlbedoColorA;
 Texture2D<uint2> AlbedoColorB;
 
 
-struct CudaTriangle {
-    float3 pos0;
-    float3 posedge1;
-    float3 posedge2;
-
-    uint3 norms;
-
-    uint3 tans;
-
-    float2 tex0;
-    float2 texedge1;
-    float2 texedge2;
-
-    uint MatDat;
-};
-
-StructuredBuffer<CudaTriangle> AggTris;
-
-struct MyMeshDataCompacted {
-    float4x4 Transform;
-    int TriOffset;
-    int NodeOffset;
-    int MaterialOffset;
-    int mesh_data_bvh_offsets;//could I convert this an int4?
-    int LightTriCount;
-    int LightNodeCount;
-};
-
-StructuredBuffer<MyMeshDataCompacted> _MeshData;
-
-
 
 float3 CalcPos(uint4 TriData) {
     if(TriData.w == 1) return asfloat(TriData.xyz);
@@ -261,7 +227,7 @@ float3 CalcPos(uint4 TriData) {
     float2 UV;
     UV.x = asfloat(TriData.z);
     UV.y = asfloat(TriData.w);
-    float4x4 Inverse = inverse(Mesh.Transform);
+    float4x4 Inverse = inverse(Mesh.W2L);
     return mul(Inverse, float4(AggTris[TriData.y].pos0 + UV.x * AggTris[TriData.y].posedge1 + UV.y * AggTris[TriData.y].posedge2,1)).xyz;
 }
 
@@ -273,7 +239,7 @@ float3 CalcPos2(uint4 TriData) {
     float2 UV;
     UV.x = (TriData.z & 0xffff) / 65535.0f;
     UV.y = (TriData.z >> 16) / 65535.0f;
-    float4x4 Inverse = inverse(Mesh.Transform);
+    float4x4 Inverse = inverse(Mesh.W2L);
     return mul(Inverse, float4(AggTris[TriData.y].pos0 + UV.x * AggTris[TriData.y].posedge1 + UV.y * AggTris[TriData.y].posedge2,1)).xyz;
 }
 
@@ -293,7 +259,7 @@ void CopyData(int3 id : SV_DispatchThreadID)
 {
     if(id.x > screen_width || id.y > screen_height) return;
     const int pixel_index = id.y * screen_width + id.x;
-    ColData Pixel = GlobalColors[pixel_index];
+    ColData Pixel = GlobalColorsRead[pixel_index];
     float3 TexInverted = Pixel.Data;
     float3 TexBaseColor = clamp(TexInverted.xyz,0,12.0f);
     TexBaseColor = (TexBaseColor > 0.005f ? rcp(TexBaseColor) : 0);
@@ -1398,9 +1364,9 @@ void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGrou
 
 
         float3 normal = i_octahedral_32(TEX_PT_NORMALS_A[ipos].y);
-        float4 base_color = float4(unpackRGBE(AlbedoColorB[ipos].x),GetBounceData(GlobalColors[ipos.x + ipos.y * screen_width].MetRoughIsSpec));// TEX_PT_BASE_COLOR_A.SampleLevel(sampler_trilinear_clamp, ipos / float2(screen_width, screen_height), 0);
+        float4 base_color = float4(unpackRGBE(AlbedoColorB[ipos].x),GetBounceData(GlobalColorsRead[ipos.x + ipos.y * screen_width].MetRoughIsSpec));// TEX_PT_BASE_COLOR_A.SampleLevel(sampler_trilinear_clamp, ipos / float2(screen_width, screen_height), 0);
         if(DiffRes && base_color.w <= 2) base_color.xyz = 1;
-        if(base_color.w == 1) base_color = float4(GlobalColors[ipos.x + ipos.y * screen_width].Data,1);
+        if(base_color.w == 1) base_color = float4(GlobalColorsRead[ipos.x + ipos.y * screen_width].Data,1);
         // Project the spherical harmonics lighting onto the actual surface normal
         float3 projected_lf = project_SH_irradiance(filtered_lf, normal);
         projected_lf *= 1024.0f;

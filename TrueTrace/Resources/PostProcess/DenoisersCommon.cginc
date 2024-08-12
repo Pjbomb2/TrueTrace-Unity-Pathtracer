@@ -1,3 +1,4 @@
+#include "../MainCompute/CommonStructs.cginc"
 int screen_width;
 int screen_height;
 float4x4 CamToWorld;
@@ -7,30 +8,23 @@ float4x4 CamInvProjPrev;
 
 RWTexture2D<float4> _DebugTex;
 
+Texture2D<float4> ScreenSpaceInfoPrev;
 Texture2D<float4> ScreenSpaceInfo;
 SamplerState my_linear_clamp_sampler;
-
-struct ColData {
-    float3 throughput;
-    float3 Direct;
-    float3 Indirect;
-    uint PrimaryNEERay;
-    uint Flags;
-    uint MetRoughIsSpec;
-    float3 Data;//could compress down to one uint for the color, and store the bounce flag in the existing metroughisspec flag, its already 14 bits for metallic and roughness, which is very unneeded
-    float InWaterDistance;
-};
 
 uint GetBounceData(uint A) {
     return (A & 0xFC000000) >> 26;
 }
 
-StructuredBuffer<ColData> GlobalColors;
+StructuredBuffer<ColData> GlobalColorsRead;
 
 struct Ray {
     float3 origin;
     float3 direction;
 };
+
+RWStructuredBuffer<Ray> RayB;
+RWStructuredBuffer<Ray> GlobalRaysMini;
 
 Ray CreateRay(float3 origin, float3 direction) {
     Ray ray;
