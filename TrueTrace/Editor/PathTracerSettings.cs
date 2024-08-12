@@ -833,6 +833,9 @@ Toolbar toolbar;
 
       }
 
+      VisualElement HierarchyOptionsMenu;
+
+
       private enum Properties {AlbedoColor, 
                                        AlbedoTexture, 
                                        NormalTexture,
@@ -1373,6 +1376,10 @@ Toolbar toolbar;
 
       void AddHardSettingsToMenu() {
          definesList = GetDefines();
+         SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
+         SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
+         if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadianceCache", false);
+         SetGlobalDefines("DX11", definesList.Contains("DX11Only"));
          Toggle HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
          HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("HardwareRT"); SetGlobalDefines("HardwareRT", true);} else {RemoveDefine("HardwareRT"); SetGlobalDefines("HardwareRT", false);}SetDefines();});
          HardSettingsMenu.Add(HardwareRTToggle);
@@ -1381,8 +1388,8 @@ Toolbar toolbar;
          BindlessToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("UseAtlas"); SetGlobalDefines("UseBindless", false);} else {RemoveDefine("UseAtlas"); SetGlobalDefines("UseBindless", true);} SetDefines();});
          HardSettingsMenu.Add(BindlessToggle);
 
-         Toggle NonAccurateLightTriToggle = new Toggle() {value = (definesList.Contains("NonAccurateLightTris")), text = "Disable Emissive Texture Aware Light BVH"};
-         NonAccurateLightTriToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("NonAccurateLightTris"); else RemoveDefine("NonAccurateLightTris"); SetDefines();});
+         Toggle NonAccurateLightTriToggle = new Toggle() {value = (definesList.Contains("AccurateLightTris")), text = "Enable Emissive Texture Aware Light BVH"};
+         NonAccurateLightTriToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("AccurateLightTris"); else RemoveDefine("AccurateLightTris"); SetDefines();});
          HardSettingsMenu.Add(NonAccurateLightTriToggle);
          
          VisualElement ClayColorBox = new VisualElement();
@@ -1450,6 +1457,12 @@ Toolbar toolbar;
          ScreenShotBox.Add(AbsolutePath);
          HardSettingsMenu.Add(ScreenShotBox);
 
+         Button CorrectMatOptionsButton = new Button(() => FixRayObjects()) {text = "Correct Mat Options"};
+         HardSettingsMenu.Add(CorrectMatOptionsButton);
+
+      }
+
+      void AddHierarchyOptionsToMenu() {
          ObjectField SelectiveAutoAssignField = new ObjectField();
          SelectiveAutoAssignField.objectType = typeof(GameObject);
          SelectiveAutoAssignField.label = "Selective Auto Assign Scripts";
@@ -1457,12 +1470,15 @@ Toolbar toolbar;
             ParentData SourceParent = GrabChildren2((SelectiveAutoAssignField.value as GameObject).transform);
             SolveChildren(SourceParent);
             }) {text = "Selective Auto Assign"};
-         HardSettingsMenu.Add(SelectiveAutoAssignField);
-         HardSettingsMenu.Add(SelectiveAutoAssignButton);
+         HierarchyOptionsMenu.Add(SelectiveAutoAssignField);
+         HierarchyOptionsMenu.Add(SelectiveAutoAssignButton);
+      
+         ForceInstancesButton = new Button(() => {if(!Application.isPlaying) ConstructInstances(); else Debug.Log("Cant Do This In Editor");}) {text = "Force Instances"};
+         HierarchyOptionsMenu.Add(ForceInstancesButton);
 
-         Button CorrectMatOptionsButton = new Button(() => FixRayObjects()) {text = "Correct Mat Options"};
-         HardSettingsMenu.Add(CorrectMatOptionsButton);
-
+         StaticButton = new Button(() => {if(!Application.isPlaying) OptimizeForStatic(); else Debug.Log("Cant Do This In Editor");}) {text = "Make All Static"};
+         StaticButton.style.minWidth = 105;
+         HierarchyOptionsMenu.Add(StaticButton);
       }
 
       public struct CustomGBufferData {
@@ -1566,6 +1582,7 @@ void AddResolution(int width, int height, string label)
             DingNoise = Resources.Load("Utility/DING", typeof(AudioClip)) as AudioClip;
             OnFocus();
             MainSource = new VisualElement();
+            HierarchyOptionsMenu = new VisualElement();
             MaterialPairingMenu = new VisualElement();
             SceneSettingsMenu = new VisualElement();
             HardSettingsMenu = new VisualElement();
@@ -1603,14 +1620,17 @@ void AddResolution(int width, int height, string label)
             Button MaterialPairButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); InputMaterialField.value = null; MaterialPairingMenu.Add(InputMaterialField); rootVisualElement.Add(MaterialPairingMenu);});
             Button SceneSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(SceneSettingsMenu);});
             Button HardSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(HardSettingsMenu);});
+            Button HierarchyOptionsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(HierarchyOptionsMenu);});
             toolbar.Add(MainSourceButton);
             toolbar.Add(MaterialPairButton);
             toolbar.Add(SceneSettingsButton);
             toolbar.Add(HardSettingsButton);
+            toolbar.Add(HierarchyOptionsButton);
             MainSourceButton.text = "Main Options";
             MaterialPairButton.text = "Material Pair Options";
             SceneSettingsButton.text = "Scene Settings";
             HardSettingsButton.text = "Functionality Settings";
+            HierarchyOptionsButton.text = "Hierarchy Options";
 
             if(RayMaster != null && Assets != null) {
             AddNormalSettings();
@@ -1673,12 +1693,11 @@ void AddResolution(int width, int height, string label)
          }
 
            AddHardSettingsToMenu();
+           AddHierarchyOptionsToMenu();
            BVHBuild = new Button(() => OnStartAsyncCombined()) {text = "Build Aggregated BVH"};
            BVHBuild.style.minWidth = 145;
            ScreenShotButton = new Button(() => TakeScreenshot()) {text = "Take Screenshot"};
            ScreenShotButton.style.minWidth = 100;
-           StaticButton = new Button(() => {if(!Application.isPlaying) OptimizeForStatic(); else Debug.Log("Cant Do This In Editor");}) {text = "Make All Static"};
-           StaticButton.style.minWidth = 105;
 
            Button PanoramaButton = new Button(() => {
             var TempPan = GameObject.Find("Scene").GetComponent<PanoramaDoer>();
@@ -1726,7 +1745,6 @@ void AddResolution(int width, int height, string label)
            ClearButton.style.minWidth = 145;
            QuickStartButton = new Button(() => QuickStart()) {text = "Auto Assign Scripts"};
            QuickStartButton.style.minWidth = 111;
-           ForceInstancesButton = new Button(() => {if(!Application.isPlaying) ConstructInstances(); else Debug.Log("Cant Do This In Editor");}) {text = "Force Instances"};
 
            IntegerField AtlasField = new IntegerField() {value = AtlasSize, label = "Atlas Size"};
            AtlasField.isDelayed = true;
@@ -1738,7 +1756,6 @@ void AddResolution(int width, int height, string label)
            ButtonField1.style.flexDirection = FlexDirection.Row;
            ButtonField1.Add(BVHBuild);
            ButtonField1.Add(ScreenShotButton);
-           ButtonField1.Add(StaticButton);
            ButtonField1.Add(PanoramaButton);
            MainSource.Add(ButtonField1);
 
@@ -1746,7 +1763,6 @@ void AddResolution(int width, int height, string label)
            ButtonField2.style.flexDirection = FlexDirection.Row;
            ButtonField2.Add(ClearButton);
            ButtonField2.Add(QuickStartButton);
-           ButtonField2.Add(ForceInstancesButton);
            ButtonField2.Add(ChainedImageButton);
            MainSource.Add(ButtonField2);
 

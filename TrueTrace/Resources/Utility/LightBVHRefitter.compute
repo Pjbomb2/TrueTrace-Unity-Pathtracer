@@ -200,7 +200,7 @@ void LightRefitKernel (uint3 id : SV_DispatchThreadID)
         LightNodes[Index].BBMax = BBMax;
         LightNodes[Index].BBMin = BBMin;
         LightNodes[Index].w = octahedral_32(-normalize(cross(normalize(LightTri.posedge1), normalize(LightTri.posedge2))));
-        LightNodes[Index].phi = max(LightTri.SourceEnergy * AreaOfTriangle(mul(ToWorld, float4(LightTri.pos0,1)), mul(ToWorld, float4(LightTri.pos0 + LightTri.posedge1,1)), mul(ToWorld, float4(LightTri.pos0 + LightTri.posedge2,1))),0.00000001f);   
+        // LightNodes[Index].phi = max(LightTri.SourceEnergy * AreaOfTriangle(mul(ToWorld, float4(LightTri.pos0,1)), mul(ToWorld, float4(LightTri.pos0 + LightTri.posedge1,1)), mul(ToWorld, float4(LightTri.pos0 + LightTri.posedge2,1))),0.00000001f);   
         // LightNodes[Index].phi = max(AreaOfTriangle(LightTri.pos0, LightTri.pos0 + LightTri.posedge1, LightTri.pos0 + LightTri.posedge2),0.00000001f);   
         return;
     }

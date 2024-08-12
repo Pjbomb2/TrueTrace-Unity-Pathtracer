@@ -174,6 +174,7 @@ namespace TrueTrace {
                     aabb_right = LightTris[DimensionedIndices[Offset + index_count - 1]];
                     float cost = SAH[index_count - 1] + EvaluateCost(ref aabb_right, Kr, dimension) * (float)(index_count - (index_count - 1));
 
+                    if(cost != 0)
                     if(cost <= split.cost) {
                         split.cost = cost;
                         split.index = first_index + index_count - 1;
@@ -188,6 +189,7 @@ namespace TrueTrace {
 
                     float cost = SAH[i] + EvaluateCost(ref aabb_right, Kr, dimension) * (float)(index_count - i);
 
+                    if(cost != 0)
                     if(cost <= split.cost) {
                         split.cost = cost;
                         split.index = first_index + i;
@@ -196,7 +198,14 @@ namespace TrueTrace {
                     }
                 }
             }
+            if(split.cost == float.MaxValue) split.dimension = 0;
             Offset = split.dimension * PrimCount;
+            if(split.cost == float.MaxValue) {
+                split.index = first_index + (index_count) / 2;
+                for(int i = split.index; i < index_count + first_index; i++) {
+                    Union(ref split.aabb_right, LightTris[DimensionedIndices[Offset + i]]);
+                }
+            }
             split.aabb_left = LightTris[DimensionedIndices[Offset + first_index]];
             for(int i = first_index + 1; i < split.index; i++) Union(ref split.aabb_left, LightTris[DimensionedIndices[Offset + i]]);
             return split;
@@ -209,7 +218,6 @@ namespace TrueTrace {
                 MaxDepth = System.Math.Max(Depth, MaxDepth);
                 return;
             }
-            // Debug.Log(nodesi);
             ObjectSplit split = partition_sah(first_index, index_count, nodes2[nodesi].aabb.b);
             int Offset = split.dimension * PrimCount;
             int IndexEnd = first_index + index_count;

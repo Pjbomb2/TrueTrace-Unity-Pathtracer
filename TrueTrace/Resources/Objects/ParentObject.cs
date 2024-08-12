@@ -289,7 +289,7 @@ namespace TrueTrace {
         public List<int> MatCapMaskChannelIndex;
         public List<Texture> MatCapTexs;
 
-        #if !NonAccurateLightTris
+        #if AccurateLightTris
             List<Color[]> EmissionTexPixels;
             List<Vector2> EmissionTexWidthHeight;
         #endif
@@ -303,7 +303,7 @@ namespace TrueTrace {
                 if (TextureIndex != 0) {
                     return 0;
                 } else {
-                    #if !NonAccurateLightTris
+                    #if AccurateLightTris
                         if(IsEmission) {
                             RenderTexture tmp = RenderTexture.GetTemporary( 
                                 Tex.width,
@@ -337,7 +337,7 @@ namespace TrueTrace {
 
         public void CreateAtlas(ref int VertCount)
         {//Creates texture atlas
-            #if !NonAccurateLightTris
+            #if AccurateLightTris
                 EmissionTexPixels = new List<Color[]>();
                 EmissionTexWidthHeight = new List<Vector2>();
             #endif
@@ -1095,7 +1095,7 @@ namespace TrueTrace {
 
                     if (_Materials[(int)TempTri.MatDat].emmissive > 0.0f) {
                         bool IsValid = true;
-                        #if !NonAccurateLightTris
+                        #if AccurateLightTris
                             if(_Materials[(int)TempTri.MatDat].EmissiveTex.x != 0) {
                                 int ThisIndex = _Materials[(int)TempTri.MatDat].EmissiveTex.x - 1;
                                 Vector2 UVV = (TempTri.tex0 + TempTri.texedge1 + TempTri.texedge2) / 3.0f;

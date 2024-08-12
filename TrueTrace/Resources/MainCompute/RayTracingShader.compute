@@ -166,7 +166,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             }
             #endif
         }
-        if(CurBounce == 0 && !(id.x == screen_width / 2 && id.y == screen_height / 2-1)) PrevScreenData.z = -10000.0f;
+        if(CurBounce == 0 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -10000.0f;
         #ifdef RadianceCache
             if(!UseReSTIRGI || ReSTIRGIUpdateRate == 0 || RandomNums[id.xy].z == 0) {
                 if(!AddHitToCache(CacheInstance, PrevOrigin, random(324, pixel_index).x)) return;
@@ -247,12 +247,12 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
 
     ray.origin = USGNorm * NormalOffset + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
-
+    throughput = max(throughput, 0);
     [branch] if (CurBounce == 0 || GetBounceData(Color.MetRoughIsSpec) == 0) {//Setting textures for denosier to use
         #ifdef TrueBlack
             Color.Flags = packRGBE((CurBounce == 0) ? hitDat.surfaceColor : (unpackRGBE(Color.Flags) * hitDat.surfaceColor));
             Color.Data = float3((CurBounce == 0) ? throughput : (throughput * Color.Data.xyz));
-            Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0xFC000000)) | (((CurBounce < 45 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.01f))) ? 0 : (CurBounce + 2)) << 26);  
+            Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0xFC000000)) | (((CurBounce < 45 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.01f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26);  
         #else
             Color.Flags = packRGBE((CurBounce == 0) ? max(hitDat.surfaceColor, 0.005f) : (unpackRGBE(Color.Flags) * max(hitDat.surfaceColor, 0.005f)));
             Color.Data = float3((CurBounce == 0) ? max(throughput, 0.006f) : (max(throughput, 0.005f) * Color.Data.xyz));
@@ -285,7 +285,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 #endif
             }
             CacheInstance.pathLength |= (1u << 6);
-        } else if((!(MaterialLobe == 0 && hitDat.roughness < 0.4f) && MaterialLobe != 3)) CacheInstance.pathLength |= (1u << 5);
+        } else if((!(MaterialLobe == 0 && hitDat.roughness < 0.04f) && MaterialLobe != 3)) CacheInstance.pathLength |= (1u << 5);
 
         if(CurBounce > 0) {
             if((CacheInstance.pathLength >> 6) & 0x1) {
@@ -297,6 +297,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
         CacheInstance.Norm = octahedral_32(norm);
     #endif
+    if (!validBSDFSample) return;//If the ray failed, we have no choice but to terminate this path
     pos = ray.origin;
       [branch] if (hitDat.specTrans == 0 && (UseNEE) && CurBounce < MaxBounce && (SecondaryBackgroundType == 1 || unitylightcount + LightMeshCount != 0)) {//Next event estimation
         float3 LightNorm;
@@ -470,7 +471,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                         #ifdef RadianceCache
                             // bool TempTemp = (CurBounce != GetBounceData(Color.MetRoughIsSpec) - 2);
                             bool TempTemp = !(((CacheInstance.pathLength >> 5) & 0x1) && !((CacheInstance.pathLength >> 6) & 0x1));
-                            if(UseReSTIRGI && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
+                            if(UseReSTIRGI && !TempTemp && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
                             // if(UseReSTIRGI && CurBounce == 0) bsdf_diffuse *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
                         #else
                             bool TempTemp = (CurBounce != GetBounceData(Color.MetRoughIsSpec) - 2);
@@ -493,7 +494,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     }
 
 
-    if (!validBSDFSample) return;//If the ray failed, we have no choice but to terminate this path
 
     if (CurBounce > 0 && UseRussianRoulette && GetBounceData(Color.MetRoughIsSpec) != 0) {
         float3 AdjustedCol = throughput * (ImprovedPrimaryHit ? 1.0f : Color.Data.xyz);
@@ -671,9 +671,9 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     #ifdef LightMapping
         if(CurBounce == 0) TempMat.surfaceColor = 1;
     #endif
-    if (TempMat.specTrans != 1 && TempMat.MetallicTex.x > 0) TempMat.metallic = SampleTexture(BaseUv, SampleMetallic, TempMat);
+    if (TempMat.specTrans != 1 && TempMat.MetallicTex.x > 0) TempMat.metallic = pow(SampleTexture(BaseUv, SampleMetallic, TempMat), rcp(2.2f));
     if (TempMat.RoughnessTex.x > 0) {
-        TempMat.roughness = saturate(SampleTexture(BaseUv, SampleRoughness, TempMat));
+        TempMat.roughness = saturate(pow(SampleTexture(BaseUv, SampleRoughness, TempMat), rcp(2.2f)));
         TempMat.roughness = (GetFlag(TempMat.Tag, InvertSmoothnessTexture) ? (1.0f - TempMat.roughness) : TempMat.roughness);
     }
     TempMat.metallic = saturate(TempMat.metallic);
@@ -691,7 +691,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     #ifndef WhiteLights
         if(TempMat.emmissive > 0) {
             if (TempMat.EmissiveTex.x > 0) {
-                float3 EmissCol = lerp(_Materials[MaterialIndex].EmissionColor, TempMat.surfaceColor, GetFlag(TempMat.Tag, BaseIsMap));
+                float3 EmissCol = lerp(TempMat.EmissionColor, TempMat.surfaceColor, GetFlag(TempMat.Tag, BaseIsMap));
                 float4 EmissTex = SampleTexture(BaseUv, SampleEmission, TempMat);
                 if(!GetFlag(TempMat.Tag, IsEmissionMask)) {//IS a mask
                     TempMat.emmissive *= luminance(EmissTex.xyz);

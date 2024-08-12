@@ -271,7 +271,7 @@ Texture2D<half> _IESAtlas;
 Texture2D<half> Heightmap;
 
 #if defined(UseBindless) && !defined(DX11)
-	SamplerState my_linear_repeat_sampler;
+	SamplerState my_trilinear_repeat_sampler;
 	Texture2D<float4> _BindlessTextures[2048] : register(t31);
 #endif
 
@@ -355,10 +355,10 @@ float4 SampleTexture(float2 UV, int TextureType, MaterialData MatTex) {
 		int TextureIndex = TextureIndexAndChannel.x - 1;
 		int TextureReadChannel = TextureIndexAndChannel.y;//0-3 is rgba, 4 is to just read all
 		//For SampleNormal, you need to output FinalCol = Texture.xyxy;
-			if(TextureReadChannel == 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_linear_repeat_sampler, UV, 0);
-			else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_linear_repeat_sampler, UV, 0)[TextureReadChannel];
+			if(TextureReadChannel == 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
+			else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0)[TextureReadChannel];
 		if(TextureType == SampleNormal) {
-			FinalCol.g = 1.0f - FinalCol.g;
+			// FinalCol.g = 1.0f - FinalCol.g;
 			FinalCol = (FinalCol.r == 1) ? FinalCol.agag : FinalCol.rgrg;
 
 		}
@@ -368,10 +368,6 @@ float4 SampleTexture(float2 UV, int TextureType, MaterialData MatTex) {
 	#endif
 	return FinalCol;
 }
-
-
-
-
 
 struct TerrainData {
     float3 PositionOffset;
@@ -745,6 +741,12 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
     float3 tmax3;
     uint child_bits;
     uint bit_index;
+        uint q_lo_x;
+        uint q_hi_x;
+        uint q_lo_y;
+        uint q_hi_y;
+        uint q_lo_z;
+        uint q_hi_z;
     [unroll]
     for(int i = 0; i < 2; i++) {
         uint meta4 = (i == 0 ? TempNode.nodes[1].z : TempNode.nodes[1].w);
@@ -753,15 +755,21 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
         uint inner_mask4 = (is_inner4 >> 4) * 0xffu;
         uint bit_index4  = (meta4 ^ (oct_inv4 & inner_mask4)) & 0x1f1f1f1f;
         uint child_bits4 = (meta4 >> 5) & 0x07070707;
-
-        uint q_lo_x = (i == 0 ? TempNode.nodes[2].x : TempNode.nodes[2].y);
-        uint q_hi_x = (i == 0 ? TempNode.nodes[2].z : TempNode.nodes[2].w);
-
-        uint q_lo_y = (i == 0 ? TempNode.nodes[3].x : TempNode.nodes[3].y);
-        uint q_hi_y = (i == 0 ? TempNode.nodes[3].z : TempNode.nodes[3].w);
-
-        uint q_lo_z = (i == 0 ? TempNode.nodes[4].x : TempNode.nodes[4].y);
-        uint q_hi_z = (i == 0 ? TempNode.nodes[4].z : TempNode.nodes[4].w);
+        if(i == 0u) {
+	        q_lo_x = TempNode.nodes[2].x;
+	        q_hi_x = TempNode.nodes[2].y;
+	        q_lo_y = TempNode.nodes[3].x;
+	        q_hi_y = TempNode.nodes[3].y;
+	        q_lo_z = TempNode.nodes[4].x;
+	        q_hi_z = TempNode.nodes[4].y;
+	    } else {
+	        q_lo_x = TempNode.nodes[2].z;
+	        q_hi_x = TempNode.nodes[2].w;
+	        q_lo_y = TempNode.nodes[3].z;
+	        q_hi_y = TempNode.nodes[3].w;
+	        q_lo_z = TempNode.nodes[4].z;
+	        q_hi_z = TempNode.nodes[4].w;
+	    }
 
         uint x_min = ray.direction.x < 0.0f ? q_hi_x : q_lo_x;
         uint x_max = ray.direction.x < 0.0f ? q_lo_x : q_hi_x;
