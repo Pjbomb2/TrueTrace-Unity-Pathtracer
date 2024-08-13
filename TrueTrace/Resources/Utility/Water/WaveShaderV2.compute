@@ -1,0 +1,265 @@
+
+float2 TextureDimensions;
+float deltaT;
+float Time;
+float PrevTime;
+float PressureDamper;
+float WaveDeltaTime;
+float PlaneDefaultY;
+int gVertexCount;
+float2 RelativeScale;
+float FakeWaterIntensity;
+float FakeWaterTiling;
+int DoFakeWaves;
+int DoRealWater;
+int UseVertexNormals;
+
+#define DRAG_MULT 0.38 // changes how much waves pull on the water
+#define WATER_DEPTH 1.0 // how deep is the water
+#define CAMERA_HEIGHT 1.5 // how high the camera should be
+#define ITERATIONS_RAYMARCH 12 // waves iterations of raymarching
+#define ITERATIONS_NORMAL 37 // waves iterations when calculating normals
+
+float2 wavedx(float2 position, float2 direction, float frequency, float timeshift) {
+  float x = dot(direction, position) * frequency + timeshift;
+  float wave = exp(sin(x) - 1.0);
+  float dx = wave * cos(x);
+  return float2(wave, -dx);
+}
+
+// Calculates waves by summing octaves of various waves with various parameters
+float getwaves(float2 position, int iterations) {
+  float wavePhaseShift = length(position) * 0.1; // this is to avoid every octave having exactly the same phase everywhere
+  float iter = 0.0; // this will help generating well distributed wave directions
+  float frequency = 1.0; // frequency of the wave, this will change every iteration
+  float timeMultiplier = 2.0; // time multiplier for the wave, this will change every iteration
+  float weight = 1.0;// weight in final sum for the wave, this will change every iteration
+  float sumOfValues = 0.0; // will store final sum of values
+  float sumOfWeights = 0.0; // will store final sum of weights
+  for(int i=0; i < iterations; i++) {
+    float2 p = float2(sin(iter), cos(iter));
+    float2 res = wavedx(position, p, frequency, Time * timeMultiplier + wavePhaseShift);
+    position += p * res.y * weight * DRAG_MULT;
+    sumOfValues += res.x * weight;
+    sumOfWeights += weight;
+    weight = lerp(weight, 0.0, 0.2);
+    frequency *= 1.18;
+    timeMultiplier *= 1.07;
+    iter += 1232.399963;
+  }
+  return sumOfValues / sumOfWeights * FakeWaterIntensity;
+}
+
+float3 normal(float2 pos, float e, float depth) {
+  float2 ex = float2(e, 0);
+  float H = getwaves(pos.xy, ITERATIONS_NORMAL) * depth;
+  float3 a = float3(pos.x, H, pos.y);
+  return normalize(
+    cross(
+      a - float3(pos.x - e, getwaves(pos.xy - ex.xy, ITERATIONS_NORMAL) * depth, pos.y), 
+      a - float3(pos.x, getwaves(pos.xy + ex.yx, ITERATIONS_NORMAL) * depth, pos.y + e)
+    )
+  );
+}
+
+
+SamplerState my_linear_clamp_sampler;
+
+RWTexture2D<float4> WaveTexA;
+Texture2D<float4> WaveTexB;
+
+
+#pragma kernel ApplyWaves
+RWByteAddressBuffer bufVertices;
+float GetFilteredHeight(float2 uv) {
+    float HCount = 0;
+    float H = 0;
+    for(int i = -1; i <= 1; i++) {
+        for(int j = -1; j <= 1; j++) {
+            if(any(uv + float2(i, j) / TextureDimensions >= 1.0f || uv + float2(i, j) / TextureDimensions <= 0.0f)) continue;
+            // if(abs(WaveTexB.SampleLevel(my_linear_clamp_sampler, uv + float2(i, j) / TextureDimensions, 0).x) < 0.01f) continue;
+            float h2 = 1;//min((i == 0 && j == 0) ? 1 : rcp(length(float2(i, j))), 1);
+            float h3 = (WaveTexB.SampleLevel(my_linear_clamp_sampler, uv + float2(i, j) / TextureDimensions, 0).x) * h2;
+            if(!(h3 < 1000.0f)) {
+                h3 = 0;
+                h2 = 0;
+            }
+            H += h3;
+            HCount += h2;
+        }
+    }
+    return H / max(HCount,1);
+}
+
+float4x4 LocalToWorld;
+[numthreads(256,1,1)]
+void ApplyWaves (uint3 id : SV_DispatchThreadID)
+{
+    uint idx = id.x;
+    if (idx >= gVertexCount)
+        return;
+
+    uint3 praw = bufVertices.Load3((idx * 12) << 2);
+    float3 p = asfloat(praw);
+    uint2 uvraw = bufVertices.Load2((idx * 12 + 10) << 2);
+    float2 uv = asfloat(uvraw);
+    p.y = PlaneDefaultY;
+    if(DoRealWater) p.y += GetFilteredHeight(uv);
+
+    if(DoFakeWaves) p.y += getwaves(mul(LocalToWorld, float4(p, 1)).xz * FakeWaterTiling, ITERATIONS_RAYMARCH) - FakeWaterIntensity / 2.0f;
+
+    bufVertices.Store3((idx * 12) << 2, asuint(p));
+}
+
+#pragma kernel CalcNorms
+
+StructuredBuffer<int> IndexBuffer;
+[numthreads(256,1,1)]
+void CalcNorms (uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= gVertexCount)
+        return;
+    int IndexA = IndexBuffer[id.x * 3];
+    int IndexB = IndexBuffer[id.x * 3 + 1];
+    int IndexC = IndexBuffer[id.x * 3 + 2];
+
+    uint3 praw = bufVertices.Load3((IndexA * 12) << 2);
+    float3 p = asfloat(praw);
+    uint2 uvraw = bufVertices.Load2((IndexA * 12 + 10) << 2);
+
+    float3 Normal = float3(0,1,0);
+    float3 NormalA = normalize(cross(normalize(asfloat(bufVertices.Load3((IndexB * 12) << 2)) - p), normalize(asfloat(bufVertices.Load3((IndexC * 12) << 2)) - p)));
+    float3 NormalB = normalize(normal(mul(LocalToWorld, float4(p, 1)).xz * FakeWaterTiling, 0.01f, WATER_DEPTH));
+    
+    if(DoRealWater) {
+        Normal = NormalA;
+        if(!UseVertexNormals && DoFakeWaves) Normal = normalize(Normal + NormalB);
+    } else if(DoFakeWaves) {
+        if(UseVertexNormals) Normal = NormalA;
+        else Normal = NormalB;
+    }
+
+
+    WaveTexA[asfloat(uvraw) * TextureDimensions] = float4(Normal, 1);
+}
+
+
+#pragma kernel BlurNorms
+
+[numthreads(16,16,1)]
+void BlurNorms (uint3 id : SV_DispatchThreadID)
+{
+    if(any(id.xy >= TextureDimensions)) return;
+
+    float4 NormCenter = WaveTexB[id.xy];
+    float HCount = 1;
+    static const int radius = 1;
+    for(int i = -radius; i <= radius; i++) {
+        for(int j = -radius; j <= radius; j++) {
+            if(i == 0 && j == 0) continue;
+            int2 OffsetIndex = id.xy + int2(i, j);
+            if(any(OffsetIndex >= TextureDimensions || OffsetIndex < 0)) continue;
+            NormCenter += WaveTexB[OffsetIndex];
+            HCount++;
+        }
+    }
+    WaveTexA[id.xy] = NormCenter /= 4.0f;
+}
+
+
+#pragma kernel ApplyNorms
+
+[numthreads(256,1,1)]
+void ApplyNorms (uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= gVertexCount)
+        return;
+
+    uint2 uvraw = bufVertices.Load2((id.x * 12 + 10) << 2);
+    float2 uv = asfloat(uvraw);
+
+    bufVertices.Store3((id.x * 12 + 3) << 2, asuint(WaveTexB[uv * TextureDimensions].xyz));
+}
+
+
+
+
+#pragma kernel SanitizeWalls
+
+[numthreads(16,16,1)]
+void SanitizeWalls (uint3 id : SV_DispatchThreadID)
+{
+    if(any(id.xy >= TextureDimensions)) return;
+
+    WaveTexA[id.xy] = float4(WaveTexA[id.xy].xyz, 0);
+}
+
+
+#pragma kernel UpdateWalls
+
+[numthreads(16,16,1)]
+void UpdateWalls (uint3 id : SV_DispatchThreadID)
+{
+    if(any(id.xy >= TextureDimensions)) return;
+
+    float Intensity = 0;
+    float wsum = 0;
+    static const int radius = 7;
+    float2 WorldSpaceScale = RelativeScale / TextureDimensions;
+    for(int i = -radius; i <= radius; i++) {
+        for(int j = -radius; j <= radius; j++) {
+            float w = 1.0f / ((dot(float2(i, j) * WorldSpaceScale, float2(i, j) * WorldSpaceScale)) + 1);
+            Intensity += (WaveTexB[id.xy + int2(i, j)].w - WaveTexA[id.xy + int2(i, j)].w) * w;
+            wsum += w;
+        }
+    }
+
+    if(wsum != 0) Intensity /= wsum;
+    float Diff = -Intensity;// * 100.0f;// * (Time - PrevTime);//-max((WaveTexB[id.xy].w - WaveTexA[id.xy].w) * 0.35f, 0);
+    Diff = log2(1.0f + abs(Diff)) * sign(Diff);
+    float4 Diff2 = WaveTexA[id.xy];
+    Diff2.xy += Diff;
+    Diff2.z = abs(Intensity);
+    // Diff2.y = -Intensity;
+    if(WaveTexA[id.xy].w == 1) {Diff2.x = 0; Diff2.y = 0;}
+    WaveTexA[id.xy] = Diff2;
+}
+
+
+
+#pragma kernel Simulate
+
+
+[numthreads(16,16,1)]
+void Simulate (uint3 id : SV_DispatchThreadID)
+{
+    if(any(id.xy >= TextureDimensions)) return;
+    if(WaveTexA[id.xy].w != 0) {
+        WaveTexA[id.xy] = WaveTexB[id.xy];
+        return;
+    }
+    float pressure = WaveTexB[id.xy].y;
+    float pVel = WaveTexB[id.xy].x;
+
+    float p_right = WaveTexB[id.xy + int2(1,0)].y;
+    float p_left = WaveTexB[id.xy - int2(1,0)].y;
+    float p_up = WaveTexB[id.xy + int2(0,1)].y;
+    float p_down = WaveTexB[id.xy - int2(0,1)].y;
+    // pressure += (p_right + p_down + p_up + p_left) / 4.0f;
+
+    float delta = WaveDeltaTime;
+    pVel += delta * (-2.0 * pressure + p_right + p_left) / 4.0;
+    // Apply vertical wave function (these could just as easily have been one line)
+    pVel += delta * (-2.0 * pressure + p_up + p_down) / 4.0;
+
+    pressure += delta * pVel;
+    // if(abs(dot(id.xy - TextureDimensions / 2, id.xy - TextureDimensions / 2)) < 3) pVel = ((sin(Time * 2.0f) > 0.97f)) * 1.0f;
+
+    pVel -= 0.005 * delta * pressure;
+
+    pVel *= 1.0 - 0.002 * delta;
+    
+    pressure *= PressureDamper;
+
+    WaveTexA[id.xy] = float4(pVel, pressure, WaveTexB[id.xy].zw);
+}

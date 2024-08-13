@@ -2,6 +2,9 @@
 #define PI 3.14159265f
 #define EPSILON 1e-8
 
+#include "CommonStructs.cginc"
+
+
 
 float4x4 CamToWorld;
 float4x4 CamInvProj;
@@ -16,7 +19,7 @@ uint screen_width;
 uint screen_height;
 int frames_accumulated;
 int curframe;//might be able to get rid of this
-
+float LEMEnergyScale;
 
 bool UseLightBVH;
 bool DiffRes;
@@ -63,23 +66,7 @@ struct BufferSizeData {
 globallycoherent RWStructuredBuffer<BufferSizeData> BufferSizes;
 
 
-struct CudaTriangle {
-	float3 pos0;
-	float3 posedge1;
-	float3 posedge2;
 
-	uint3 norms;
-
-	uint3 tans;
-
-	float2 tex0;
-	float2 texedge1;
-	float2 texedge2;
-
-	uint MatDat;
-};
-
-StructuredBuffer<CudaTriangle> AggTris;
 
 struct SmallerRay {
 	float3 origin;
@@ -94,46 +81,12 @@ struct RayHit {
 	int triangle_id;
 };
 
-struct RayData {//128 bit aligned
-	float3 origin;
-	uint PixelIndex;//need to bump this back down to uint1
-	float3 direction;
-	float last_pdf;
-	uint4 hits;
-};
-RWStructuredBuffer<RayData> GlobalRays;
-
 RWTexture2D<float4> ScreenSpaceInfo;
 Texture2D<float4> ScreenSpaceInfoRead;
 Texture2D<float4> PrevScreenSpaceInfo;
 
 bool DoExposure;
 StructuredBuffer<float> Exposure;
-
-struct ShadowRayData {
-	float3 origin;
-	uint DiffuseIlluminance;
-	float3 direction;
-	float t;
-	float3 illumination;
-	uint PixelIndex;
-};
-RWStructuredBuffer<ShadowRayData> ShadowRaysBuffer;
-
-
-struct ColData {
-	float3 throughput;
-	float3 Direct;
-	float3 Indirect;
-	uint PrimaryNEERay;
-	uint Flags;
-	uint MetRoughIsSpec;
-	float4 Data;//could compress down to one uint for the color, and store the bounce flag in the existing metroughisspec flag, its already 14 bits for metallic and roughness, which is very unneeded
-};
-
-RWStructuredBuffer<ColData> GlobalColors;
-StructuredBuffer<ColData> PrevGlobalColorsA;
-RWStructuredBuffer<ColData> PrevGlobalColorsB;
 
 
 
@@ -155,25 +108,6 @@ StructuredBuffer<SmallerRay> Rays2;
 
 Texture2D<uint4> PrimaryTriData;
 StructuredBuffer<int> TLASBVH8Indices;
-
-struct MyMeshDataCompacted {
-	float4x4 W2L;
-	int TriOffset;
-	int NodeOffset;
-	int MaterialOffset;
-	int mesh_data_bvh_offsets;//could I convert this an int4?
-	int LightTriCount;
-	int LightNodeOffset;
-};
-
-StructuredBuffer<MyMeshDataCompacted> _MeshData;
-
-
-struct BVHNode8Data {
-	uint4 nodes[5];
-};
-
-StructuredBuffer<BVHNode8Data> cwbvh_nodes;
 
 int AlbedoAtlasSize;
 struct TrianglePos {
@@ -204,52 +138,6 @@ inline TriangleUvs triangle_get_positions2(const int ID) {
 	return tri;
 }
 
-struct MaterialData {//56
-	int2 AlbedoTex;//16
-	int2 NormalTex;//32
-	int2 EmissiveTex;//48
-	int2 MetallicTex;//64
-	int2 RoughnessTex;//80
-	int2 AlphaTex;//80
-	int2 MatCapMask;
-	int2 MatCapTex;
-	float3 surfaceColor;
-	float emmissive;
-	float3 EmissionColor;
-	uint Tag;
-	float roughness;
-	int MatType;//Can pack into tag
-	float3 transmittanceColor;
-	float ior;
-	float metallic;
-	float sheen;
-	float sheenTint;
-	float specularTint;
-	float clearcoat;
-	float clearcoatGloss;
-	float anisotropic;
-	float flatness;
-	float diffTrans;
-	float specTrans;
-	float Specular;
-	float scatterDistance;
-	float4 AlbedoTexScale;
-	float2 MetallicRemap;
-	float2 RoughnessRemap;
-	float AlphaCutoff;
-	float NormalStrength;
-	float Hue;
-	float Saturation;
-	float Contrast;
-	float Brightness;
-	float3 BlendColor;
-	float BlendFactor;
-	float2 SecondaryTexScale;
-	float Rotation;
-};
-
-StructuredBuffer<MaterialData> _Materials;
-
 SamplerState my_linear_clamp_sampler;
 SamplerState sampler_trilinear_clamp;
 SamplerState my_point_clamp_sampler;
@@ -259,27 +147,118 @@ RWTexture2D<float4> RandomNumsWrite;
 Texture2D<float4> RandomNums;
 RWTexture2D<float4> _DebugTex;
 
-Texture2D<float4> VideoTex;
-SamplerState sampler_VideoTex;
 Texture2D<half4> _TextureAtlas;
 SamplerState sampler_TextureAtlas;
 Texture2D<half2> _NormalAtlas;
 SamplerState sampler_NormalAtlas;
 Texture2D<half4> _EmissiveAtlas;
 Texture2D<half> _IESAtlas;
-
 Texture2D<half> Heightmap;
 
-struct TerrainData {
-    float3 PositionOffset;
-    float HeightScale;
-    float2 TerrainDim;
-    float4 AlphaMap;
-    float4 HeightMap;
-    int MatOffset;
-};
+#if defined(UseBindless) && !defined(DX11)
+	SamplerState my_linear_repeat_sampler;
+	SamplerState my_point_repeat_sampler;
+	Texture2D<float4> _BindlessTextures[2048] : register(t31);
+#endif
 
-StructuredBuffer<TerrainData> Terrains;
+inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotation = 0) {
+	if(TexDim2.x <= 0) return -1;
+	float4 TexDim;
+    TexDim.xy = float2((float)(((uint)TexDim2.x) & 0x7FFF) / 16384.0f, (float)(((uint)TexDim2.x >> 15)) / 16384.0f);
+    TexDim.zw = float2((float)(((uint)TexDim2.y) & 0x7FFF) / 16384.0f, (float)(((uint)TexDim2.y >> 15)) / 16384.0f);
+	BaseUV = BaseUV * TexScale.xy + TexScale.zw;
+	BaseUV = (BaseUV < 0 ? (1.0f - fmod(abs(BaseUV), 1.0f)) : fmod(abs(BaseUV), 1.0f));
+	// BaseUV =fmod(abs(BaseUV), 1.0f);
+	if(Rotation != 0) {
+		float sinc, cosc;
+		sincos(Rotation, sinc, cosc);
+		BaseUV -= 0.5f;
+		float2 tempuv = BaseUV;
+		BaseUV.x = tempuv.x * cosc - tempuv.y * sinc;
+		BaseUV.y = tempuv.x * sinc + tempuv.y * cosc;
+		BaseUV += 0.5f;
+		BaseUV = fmod(abs(BaseUV), 1.0f);
+	}
+	return clamp(BaseUV * (TexDim.xy - TexDim.zw) + TexDim.zw, TexDim.zw + 1.0f / 16384.0f, TexDim.xy - 1.0f / 16384.0f);
+}
+
+
+float4 SampleTexture(float2 UV, int TextureType, MaterialData MatTex) {
+	float4 FinalCol = 0;
+	#if !defined(UseBindless) || defined(DX11)
+		switch(TextureType) {
+			case SampleAlbedo:
+				#ifdef PointFiltering
+					FinalCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlbedoTex, MatTex.Rotation), 0);
+				#else
+					FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlbedoTex, MatTex.Rotation), 0);
+				#endif
+			break;
+			case SampleMetallic:
+				FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, float4(MatTex.SecondaryTexScale, MatTex.AlbedoTexScale.zw), MatTex.MetallicTex, MatTex.Rotation), 0);
+			break;
+			case SampleRoughness:
+				FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, float4(MatTex.SecondaryTexScale, MatTex.AlbedoTexScale.zw), MatTex.RoughnessTex, MatTex.Rotation), 0);
+			break;
+			case SampleEmission:
+				FinalCol = _EmissiveAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.EmissiveTex, MatTex.Rotation), 0);
+			break;
+			case SampleNormal:
+				FinalCol = _NormalAtlas.SampleLevel(sampler_NormalAtlas, AlignUV(UV, float4(MatTex.SecondaryTexScale, MatTex.AlbedoTexScale.zw), MatTex.NormalTex, MatTex.Rotation), 0).xyxy;
+			break;
+			case SampleAlpha:
+				#ifdef PointFiltering
+					FinalCol = _AlphaAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlphaTex, MatTex.Rotation), 0);
+				#else
+					FinalCol = _AlphaAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlphaTex, MatTex.Rotation), 0);
+				#endif
+			break;
+			case SampleMatCap:
+				FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.MatCapTex, MatTex.Rotation), 0);
+			break;
+			case SampleMatCapMask:
+				FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.MatCapMask, MatTex.Rotation), 0);
+			break;
+			case SampleTerrainAlbedo:
+				UV = AlignUV(UV * MatTex.surfaceColor.xy + MatTex.transmittanceColor.xy, MatTex.AlbedoTexScale, MatTex.AlbedoTex);
+				FinalCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, UV, 0);
+			break;
+		}
+	#else//BINDLESS
+		//AlbedoTexScale, AlbedoTex, and Rotation dont worry about, thats just for transforming to the atlas 
+		int2 TextureIndexAndChannel = -1;// = MatTex.BindlessIndex;
+		switch(TextureType) {
+			case SampleAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleMetallic: TextureIndexAndChannel = MatTex.MetallicTex; UV = UV * MatTex.SecondaryTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleRoughness: TextureIndexAndChannel = MatTex.RoughnessTex; UV = UV * MatTex.SecondaryTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleEmission: TextureIndexAndChannel = MatTex.EmissiveTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleNormal: TextureIndexAndChannel = MatTex.NormalTex; UV = UV * MatTex.SecondaryTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleAlpha: TextureIndexAndChannel = MatTex.AlphaTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleMatCap: TextureIndexAndChannel = MatTex.MatCapTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleMatCapMask: TextureIndexAndChannel = MatTex.MatCapMask; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleTerrainAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+		}
+		int TextureIndex = TextureIndexAndChannel.x - 1;
+		int TextureReadChannel = TextureIndexAndChannel.y;//0-3 is rgba, 4 is to just read all
+
+		#ifdef PointFiltering
+			FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+		#else
+			FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_linear_repeat_sampler, UV, 0);
+		#endif
+		if(TextureReadChannel != 4) FinalCol = FinalCol[TextureReadChannel];
+		if(TextureType == SampleNormal) {
+			// FinalCol.g = 1.0f - FinalCol.g;
+			FinalCol = (FinalCol.r == 1) ? FinalCol.agag : FinalCol.rgrg;
+
+		}
+
+
+
+	#endif
+	return FinalCol;
+}
+
 
 Texture2D<float4> TerrainAlphaMap;
 SamplerState sampler_TerrainAlphaMap;
@@ -287,40 +266,7 @@ int MaterialCount;
 
 
 
-struct LightTriData {
-	float3 pos0;
-	float3 posedge1;
-	float3 posedge2;
-	uint TriTarget;
-	float SourceEnergy;
-};
-
-StructuredBuffer<LightTriData> LightTriangles;
-
 int LightMeshCount;
-
-struct LightMeshData {//remove 74 bytes
-	float3 Center;
-	int StartIndex;
-	int IndexEnd;
-	int MatOffset;
-	int LockedMeshIndex;
-};
-StructuredBuffer<LightMeshData> _LightMeshes;
-
-struct LightData {
-	float3 Radiance;
-	float3 Position;
-	float3 Direction;
-	int Type;
-	float2 SpotAngle;
-	float ZAxisRotation;
-	float Softness;
-	int2 IESTex;//16
-
-};
-StructuredBuffer<LightData> _UnityLights;
-
 
 int TerrainCount;
 bool TerrainExists;
@@ -574,26 +520,7 @@ inline SmallerRay CreateCameraRayPrev(float2 uv) {
     return CreateRay(origin, direction);
 }
 
-inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotation = 0) {
-	if(TexDim2.x <= 0) return -1;
-	float4 TexDim;
-    TexDim.xy = float2((float)(((uint)TexDim2.x) & 0x7FFF) / 16384.0f, (float)(((uint)TexDim2.x >> 15)) / 16384.0f);
-    TexDim.zw = float2((float)(((uint)TexDim2.y) & 0x7FFF) / 16384.0f, (float)(((uint)TexDim2.y >> 15)) / 16384.0f);
-	BaseUV = BaseUV * TexScale.xy + TexScale.zw;
-	BaseUV = (BaseUV < 0 ? (1.0f - fmod(abs(BaseUV), 1.0f)) : fmod(abs(BaseUV), 1.0f));
-	// BaseUV =fmod(abs(BaseUV), 1.0f);
-	if(Rotation != 0) {
-		float sinc, cosc;
-		sincos(Rotation, sinc, cosc);
-		BaseUV -= 0.5f;
-		float2 tempuv = BaseUV;
-		BaseUV.x = tempuv.x * cosc - tempuv.y * sinc;
-		BaseUV.y = tempuv.x * sinc + tempuv.y * cosc;
-		BaseUV += 0.5f;
-		BaseUV = fmod(abs(BaseUV), 1.0f);
-	}
-	return clamp(BaseUV * (TexDim.xy - TexDim.zw) + TexDim.zw, TexDim.zw + 1.0f / 16384.0f, TexDim.xy - 1.0f / 16384.0f);
-}
+
 
 inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, float max_distance, int mesh_id, inout float3 throughput, const int MatOffset) {
     TrianglePos tri = triangle_get_positions(tri_id);
@@ -617,14 +544,14 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, float ma
 				if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster)) return false; 
         		if(_Materials[MaterialIndex].MatType == CutoutIndex || _Materials[MaterialIndex].specTrans == 1) {
 	                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
-	                float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlphaTex);
-	                if(Uv.x != -1 && _Materials[MaterialIndex].MatType == CutoutIndex && _AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) return false;
+                    if(_Materials[MaterialIndex].MatType == CutoutIndex && _Materials[MaterialIndex].AlphaTex.x > 0)
+                        if( SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) return false;
 
 		            #ifdef IgnoreGlassShadow
 		                if(_Materials[MaterialIndex].specTrans == 1) {
 			            	#ifdef StainedGlassShadows
-	                			Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex);
-		    	            	throughput *= _Materials[MaterialIndex].surfaceColor * (_TextureAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0).xyz + 2.0f) / 3.0f;
+		    	            	throughput *= _Materials[MaterialIndex].surfaceColor;
+						        if(_Materials[MaterialIndex].AlbedoTex.x > 0) throughput *= SampleTexture(BaseUv, SampleAlbedo, _Materials[MaterialIndex]) / 3.0f;
 		    				#endif
 		                	return false;
 		                }
@@ -661,6 +588,12 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
     float3 tmax3;
     uint child_bits;
     uint bit_index;
+        uint q_lo_x;
+        uint q_hi_x;
+        uint q_lo_y;
+        uint q_hi_y;
+        uint q_lo_z;
+        uint q_hi_z;
     [unroll]
     for(int i = 0; i < 2; i++) {
         uint meta4 = (i == 0 ? TempNode.nodes[1].z : TempNode.nodes[1].w);
@@ -669,15 +602,21 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
         uint inner_mask4 = (is_inner4 >> 4) * 0xffu;
         uint bit_index4  = (meta4 ^ (oct_inv4 & inner_mask4)) & 0x1f1f1f1f;
         uint child_bits4 = (meta4 >> 5) & 0x07070707;
-
-        uint q_lo_x = (i == 0 ? TempNode.nodes[2].x : TempNode.nodes[2].y);
-        uint q_hi_x = (i == 0 ? TempNode.nodes[2].z : TempNode.nodes[2].w);
-
-        uint q_lo_y = (i == 0 ? TempNode.nodes[3].x : TempNode.nodes[3].y);
-        uint q_hi_y = (i == 0 ? TempNode.nodes[3].z : TempNode.nodes[3].w);
-
-        uint q_lo_z = (i == 0 ? TempNode.nodes[4].x : TempNode.nodes[4].y);
-        uint q_hi_z = (i == 0 ? TempNode.nodes[4].z : TempNode.nodes[4].w);
+        if(i == 0u) {
+	        q_lo_x = TempNode.nodes[2].x;
+	        q_hi_x = TempNode.nodes[2].y;
+	        q_lo_y = TempNode.nodes[3].x;
+	        q_hi_y = TempNode.nodes[3].y;
+	        q_lo_z = TempNode.nodes[4].x;
+	        q_hi_z = TempNode.nodes[4].y;
+	    } else {
+	        q_lo_x = TempNode.nodes[2].z;
+	        q_hi_x = TempNode.nodes[2].w;
+	        q_lo_y = TempNode.nodes[3].z;
+	        q_hi_y = TempNode.nodes[3].w;
+	        q_lo_z = TempNode.nodes[4].z;
+	        q_hi_z = TempNode.nodes[4].w;
+	    }
 
         uint x_min = ray.direction.x < 0.0f ? q_hi_x : q_lo_x;
         uint x_max = ray.direction.x < 0.0f ? q_lo_x : q_hi_x;
@@ -979,16 +918,6 @@ inline float AreaOfTriangle(float3 pt1, float3 pt2, float3 pt3) {
     return sqrt(s * (s - a) * (s - b) * (s - c));
 }
 
-struct LightBVHData {
-	float3 BBMax;
-	float3 BBMin;
-	uint w;
-	float phi;
-	uint cosTheta_oe;
-	int left;
-};
-
-StructuredBuffer<LightBVHData> LightNodes;
 
 inline float cosSubClamped(float sinTheta_a, float cosTheta_a, float sinTheta_b, float cosTheta_b) {
 	if(cosTheta_a > cosTheta_b) return 1;
@@ -1429,7 +1358,8 @@ int FindInterval(int size, float u, Texture2D<float> CDF, int v = 0) {
     }
     return clamp(first - 1, 0, size - 2);
 }
-
+float2 HDRILongLat;
+float2 HDRIScale;
 float3 SampleLI(int pixel_index, inout float pdf, inout float3 wi) {
     float2 Rand = random(94, pixel_index);
     float2 uv;
@@ -1454,20 +1384,34 @@ float3 SampleLI(int pixel_index, inout float pdf, inout float3 wi) {
 
         uv.x = ((float)offset + du) / HDRIParams.x;
     }
-    wi = equirectUvToDirection(uv);
+    float2 uv2 = fmod(uv * HDRIScale + HDRILongLat / 360.0f, 1.0f);
+    wi = equirectUvToDirection(uv2);
 
     return _SkyboxTexture.SampleLevel(my_linear_clamp_sampler, uv, 0);
 }	
 
-
+/*
+10 bits: metallic
+10 bits: roughness
+2 bits: Material Lobe
+1 bit: refracted
+//9 bits remaining
+3 bits: refraction counter
+*/
+uint GetBounceData(uint A) {
+	return (A & 0xFC000000) >> 26;
+}
+uint ToColorSpecPackedAdd(float3 A, uint B) {
+	return (B & ~0xFFFFFE00) | ((uint)(A.x * 1022.0f)) | ((uint)(A.y * 1022.0f) << 10) | ((uint)A.z << 20);
+}
 uint ToColorSpecPacked(float3 A) {
-	return ((uint)(A.x * 16383.0f)) | ((uint)(A.y * 16383.0f) << 14) | ((uint)A.z << 28);
+	return ((uint)(A.x * 1022.0f)) | ((uint)(A.y * 1022.0f) << 10) | ((uint)A.z << 20);
 }
 float3 FromColorSpecPacked(uint A) {
 	return float3(
-		(A & 0x3FFF) / 16383.0f,
-		((A >> 14) & 0x3FFF) / 16383.0f,
-		((A >> 28) & 0x3)
+		(A & 0x3FF) / 1022.0f,
+		((A >> 10) & 0x3FF) / 1022.0f,
+		((A >> 20) & 0x3)
 		);
 }
 
@@ -1633,6 +1577,28 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 
 	void CachePropogateBSDF(inout PropogatedCacheData CurrentProp, float3 throughput) {
 	    CurrentProp.throughput = EncodeRGB(throughput);
+	}
+
+	float3 HashGridDebugOccupancy(uint2 pixelPosition, uint2 screenSize)
+	{
+	    const uint elementSize = 7;
+	    const uint borderSize = 1;
+	    const uint blockSize = elementSize + borderSize;
+
+	    uint rowNum = screenSize.y / blockSize;
+	    uint rowIndex = pixelPosition.y / blockSize;
+	    uint columnIndex = pixelPosition.x / blockSize;
+	    uint elementIndex = (columnIndex / 32) * (rowNum * 32) + rowIndex * 32 + (columnIndex % 32);
+
+	    if (elementIndex < CacheCapacity && ((pixelPosition.x % blockSize) < elementSize && (pixelPosition.y % blockSize) < elementSize))
+	    {
+	        HashKeyValue storedHashKey = HashEntriesBufferB[elementIndex];
+
+	        if ((storedHashKey.x != 0 && storedHashKey.y != 0))
+	            return float3(0.0f, 1.0f, 0.0f);
+	    }
+
+	    return float3(0.0f, 0.0f, 0.0f);
 	}
 
 	inline uint HashGridInsert(const HashKeyValue HashValue) {
@@ -1889,11 +1855,8 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
         MatDat.surfaceColor = 0.5f;
     #else
         float2 BaseUv = AggTris[AggTriIndex].tex0 * (1.0f - FinalUV.x - FinalUV.y) + AggTris[AggTriIndex].texedge1 * FinalUV.x + AggTris[AggTriIndex].texedge2 * FinalUV.y;
-        if(MatDat.AlbedoTex.x > 0) {
-            float2 EmissionUV = AlignUV(BaseUv, MatDat.AlbedoTexScale, MatDat.AlbedoTex);   
-            float4 EmissTex = _TextureAtlas.SampleLevel(my_point_clamp_sampler, EmissionUV, 0);
-            MatDat.surfaceColor *= EmissTex.xyz;
-        }
+        if(MatDat.AlbedoTex.x > 0)
+        	MatDat.surfaceColor *= SampleTexture(BaseUv, SampleAlbedo, MatDat);
 
         float3 TempCol = MatDat.surfaceColor;
         #ifndef DX11
@@ -1906,26 +1869,17 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
         Unity_Contrast_float(TempCol, MatDat.Contrast, MatDat.surfaceColor);
         MatDat.surfaceColor = saturate(MatDat.surfaceColor);
 
-        if (MatDat.MatType == VideoIndex || (MatDat.EmissiveTex.x > 0 && MatDat.emmissive >= 0)) {
-            if (MatDat.MatType == VideoIndex) {
-                MatDat.surfaceColor *= VideoTex.SampleLevel(sampler_VideoTex, BaseUv, 0).xyz;
-            } else {
-                float2 EmissionUV = AlignUV(BaseUv, MatDat.AlbedoTexScale, MatDat.EmissiveTex);    
-                if (EmissionUV.x != -1) {
-                    float3 EmissCol = lerp(MatDat.EmissionColor, MatDat.surfaceColor, GetFlag(MatDat.Tag, BaseIsMap));
-                    #ifdef AccurateEmissionTex
-                        float4 EmissTexture = _EmissiveAtlas.SampleLevel(my_linear_clamp_sampler, EmissionUV, 0);
-                    #else
-                        float4 EmissTexture = float4(EmissCol, 1);
-                    #endif
-                    if(!GetFlag(MatDat.Tag, IsEmissionMask)) {//IS a mask
-                        MatDat.emmissive *= luminance(EmissTexture.xyz);
-                        
-                        MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissCol, saturate(MatDat.emmissive) * GetFlag(MatDat.Tag, ReplaceBase));
-                    } else {//is NOT a mask
-                        MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissTexture.xyz * EmissCol, saturate(MatDat.emmissive) * GetFlag(MatDat.Tag, ReplaceBase));
-                    }            
-                }
+        if ((MatDat.EmissiveTex.x > 0 && MatDat.emmissive >= 0)) {
+        	if (MatDat.EmissiveTex.x > 0) {
+                float3 EmissCol = lerp(MatDat.EmissionColor, MatDat.surfaceColor, GetFlag(MatDat.Tag, BaseIsMap));
+        		float4 EmissTex = SampleTexture(BaseUv, SampleEmission, MatDat);
+                if(!GetFlag(MatDat.Tag, IsEmissionMask)) {//IS a mask
+                    MatDat.emmissive *= luminance(EmissTex.xyz);
+                    
+                    MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissCol, saturate(MatDat.emmissive) * GetFlag(MatDat.Tag, ReplaceBase));
+                } else {//is NOT a mask
+                    MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissTex.xyz * EmissCol, saturate(MatDat.emmissive) * GetFlag(MatDat.Tag, ReplaceBase));
+                }            
             }
         }
     #endif

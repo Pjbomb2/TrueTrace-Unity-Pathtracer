@@ -436,7 +436,7 @@ using System.Xml.Serialization;
                                 MiscBar1.style.width = 450;
                                 MiscBar1.style.height = 20;
 
-                                Slider RoughnessSlider = new Slider() {label = RTO.Flags[Selected].GetFlag(CommonFunctions.Flags.UseSmoothness) ? "Smoothness: " : "Roughness: ", value = RTO.Roughness[Selected], highValue = 1.0f, lowValue = 0};
+                                Slider RoughnessSlider = new Slider() {label = RTO.Flags[Selected].GetFlag(CommonFunctions.Flags.UseSmoothness) ? "Smoothness: " : "Roughness: ", value = RTO.Flags[Selected].GetFlag(CommonFunctions.Flags.UseSmoothness) ? (1.0f - RTO.Roughness[Selected]) : RTO.Roughness[Selected], highValue = 1.0f, lowValue = 0};
                                 RoughnessSlider.RegisterValueChangedCallback(evt => {RTO.Roughness[Selected] = (RTO.Flags[Selected].GetFlag(CommonFunctions.Flags.UseSmoothness) ? (1.0f - evt.newValue) : evt.newValue); RTO.CallMaterialEdited(true);});
                                 RoughnessSlider.style.width = 350;
                                 RoughnessSlider.showInputField = true;

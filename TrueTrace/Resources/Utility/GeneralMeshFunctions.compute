@@ -1,20 +1,6 @@
+#include "../MainCompute/CommonStructs.cginc"
+
 #pragma kernel CombineTriBuffers
-
-struct CudaTriangle {
-	float3 pos0;
-	float3 posedge1;
-	float3 posedge2;
-
-	uint3 norms;
-
-	uint3 tans;
-
-	float2 tex0;
-	float2 texedge1;
-	float2 texedge2;
-
-	uint MatDat;
-};
 
 RWStructuredBuffer<CudaTriangle> OutCudaTriArray;
 
@@ -37,17 +23,9 @@ void CombineTriBuffers(uint3 id : SV_DispatchThreadID)
 
 #pragma kernel CombineNodeBuffers
 
-struct BVHNode8DataCompressed {
-	uint4 node_0;
-	uint4 node_1;
-	uint4 node_2;
-	uint4 node_3;
-	uint4 node_4;
-};
+RWStructuredBuffer<BVHNode8Data> OutAggNodes;
 
-RWStructuredBuffer<BVHNode8DataCompressed> OutAggNodes;
-
-StructuredBuffer<BVHNode8DataCompressed> InAggNodes;
+StructuredBuffer<BVHNode8Data> InAggNodes;
 
 [numthreads(372, 1, 1)]
 void CombineNodeBuffers(uint3 id : SV_DispatchThreadID)
@@ -60,14 +38,6 @@ void CombineNodeBuffers(uint3 id : SV_DispatchThreadID)
 }
 
 #pragma kernel CombineLightBuffers
-
-struct LightTriData {
-	float3 pos0;
-	float3 posedge1;
-	float3 posedge2;
-	uint TriTarget;
-	float SourceEnergy;
-};
 
 StructuredBuffer<LightTriData> LightTrianglesIn;
 RWStructuredBuffer<LightTriData> LightTrianglesOut;
@@ -85,15 +55,6 @@ void CombineLightBuffers(uint3 id : SV_DispatchThreadID)
 
 
 #pragma kernel CombineLightNodes
-
-struct LightBVHData {
-	float3 BBMax;
-	float3 BBMin;
-	uint w;
-	float phi;
-	uint cosTheta_oe;
-	int left;
-};
 
 StructuredBuffer<LightBVHData> LightNodesIn;
 RWStructuredBuffer<LightBVHData> LightNodesOut;

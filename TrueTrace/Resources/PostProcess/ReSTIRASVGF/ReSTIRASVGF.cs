@@ -175,8 +175,6 @@ namespace TrueTrace {
 
         Vector3 prevEuler;
         Vector3 PrevPos;
-
-
         public void Do(ref ComputeBuffer _ColorBuffer,  
                         ref RenderTexture Output, 
                         float ResolutionRatio, 
@@ -198,6 +196,12 @@ namespace TrueTrace {
             camera = RayTracingMaster._camera;
             bool EvenFrame = CurFrame % 2 == 0;
             cmd.BeginSample("Dist Correct Kernel");
+            Vector3 Euler = camera.transform.eulerAngles;
+            shader.SetMatrix("viewprojection", camera.projectionMatrix * camera.worldToCameraMatrix);
+            camera.transform.eulerAngles = prevEuler; 
+            shader.SetMatrix("prevviewprojection", camera.projectionMatrix * camera.worldToCameraMatrix);
+            camera.transform.eulerAngles = Euler; 
+            prevEuler = Euler;
             shader.SetVector("Forward", camera.transform.forward);
             shader.SetFloat("FarPlane", camera.farClipPlane);
             shader.SetFloat("NearPlane", camera.nearClipPlane);
@@ -212,7 +216,7 @@ namespace TrueTrace {
             cmd.SetComputeFloatParam(shader, "ResRatio", ResolutionRatio);
             shader.SetBool("UseExposure", DoExposure);
             shader.SetFloat("IndirectBoost", IndirectBoost);
-            shader.SetBuffer(CopyData, "GlobalColors", _ColorBuffer);
+            shader.SetBuffer(CopyData, "GlobalColorsRead", _ColorBuffer);
             shader.SetBuffer(CopyData, "ExposureBuffer", ExposureModifier);
             shader.SetBuffer(Atrous, "ExposureBuffer", ExposureModifier);
             shader.SetTexture(CopyData, "ScreenSpaceInfo", ScreenSpaceInfo);
@@ -381,7 +385,7 @@ namespace TrueTrace {
 
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_ATROUS_PING_LF_SH", ASVGF_ATROUS_PONG_LF_SH);
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_ATROUS_PING_LF_COCG", ASVGF_ATROUS_PONG_LF_COCG);
-                cmd.SetComputeBufferParam(shader, Atrous, "GlobalColors", _ColorBuffer);
+                cmd.SetComputeBufferParam(shader, Atrous, "GlobalColorsRead", _ColorBuffer);
                 cmd.SetComputeTextureParam(shader, Atrous, "IMG_ASVGF_COLOR", Output);
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_GRAD_LF_PONG", ASVGF_GRAD_LF_PONG);
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_GRAD_HF_SPEC_PONG", ASVGF_GRAD_HF_SPEC_PONG);

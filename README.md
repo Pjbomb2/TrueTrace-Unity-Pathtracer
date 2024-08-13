@@ -1,4 +1,4 @@
-![](/Images/Yanus0.png)
+![](/.Images/Yanus0.png)
 # If you like what I do and want to support me and this project(as this takes a LOT of my time), Please consider becoming a Github Sponsor or a Patron at patreon.com/Pjbomb2!  This allows me to keep this free for everyone!
 # Discord Server: https://discord.gg/4Yh7AZuhcD
 ## Demo:  https://drive.google.com/file/d/1sb_zRycX23AlC3QQ9LfqrtEZzBj47Z-Y/view?usp=sharing
@@ -12,7 +12,7 @@ A passion projects that has been going on for a while with the goal of bringing 
 <li>Full Disney BSDF for materials with support for emissive meshes and Video Players</li>
 <li>Ability to move, add, and remove objects during play</li>
 <li>Ability to update material properties on the fly during play</li>
-<li>ASVGF and my own Recurrent Denoisers</li>
+<li>ASVGF and OIDN for denoising</li>
 <li>Compressed Wide Bounding Volume Hierarchy as the Acceleration Structure (See Ylitie et al. 2017 below)</li>
 <li>PBR Texture Support</li>
 <li>Next Event Estimation with Multiple Importance Sampling for Explicit Light Sampling</li>
@@ -30,15 +30,18 @@ A passion projects that has been going on for a while with the goal of bringing 
 <li>Full skinned mesh support for animated skinned meshes</li>
 <li>Supports deformable standard meshes</li>
 <li>Supports unity heightmap terrain and heightmap trees</li>
-<li>Supports OIDN Denoiser</li>
 <li>Enironment Map Importance Sampling</li>
 <li>Radiance Cache</li>
 <li>Material Preset System</li>
 <li>Panorama Rendering</li>
 <li>IES for spotlights</li>
+<li>True Bindless texturing(Thanks to Meetem)</li>
 </ul>
 
-[Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
+MASSIVE thanks to 
+[Alex Bakanov(AKA Meetem)](https://github.com/Meetem)
+for bringing bindless textures to unity!
+</br>[Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
 </br>[ebruneton](https://ebruneton.github.io/precomputed_atmospheric_scattering/)
 </br>
 
@@ -56,7 +59,7 @@ Let me know if you use this for anything, I would be excited to see any use of t
   <li>If you plan to use DX12(otherwise look down below for DX11 instructions): Change the Graphics Api for Windows to DirectX12 through Edit Tab(Top Left) -> Project Settings -> Player -> Other Settings -> Untoggle "Auto Graphics API For Windows", then click the little + that appears, select "Direct3D12(Experimental)", and drag that to the top.  A restart of the editor is required</li>
   <li>Your target camera NEEDS to be deferred, this will usually be automatically done for you by TrueTrace</li>
   <li>Dynamic batching can break motion vectors a bit, so its best if this is turned off: Edit Tab -> Project Settings -> Player -> Other Settings -> Dynamic Batching</li>
-  <li>I reccomend turning on "GPU Skinning", as otherwise skinned meshes will freak out a bit, not horribly but its noticeable: Edit Tab -> Project Settings -> Player -> Other Settings -> GPU Skinning</li>
+  <li>I recommend turning on "GPU Skinning", as otherwise skinned meshes will freak out a bit, not horribly but its noticeable: Edit Tab -> Project Settings -> Player -> Other Settings -> GPU Skinning</li>
 </ul>
 
 ## Controls:
@@ -79,7 +82,7 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
 ## General Use/Notes
 <ul>
   <li>The camera you want to render from, you attach the RenderHandler script to(if you have a camera tagged MainCamera, this will be done automatically)</li>
-  <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building, a ding will sound when it completes if it takes longer than 15 seconds</li>
+  <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building, a ding will sound when it completes if it takes longer than 15 seconds(Turn on Truetrace Settings -> Functionality Settings</li>
   <li>Objects can be added and removed at will simply by toggling the associated GameObject with a ParentObject script on/off in the hierarchy(clicking on parent objects with complex objects for children will lag), but they will take time to appear as the acceleration structure needs to  be rebuilt for them</li>
   <li>Emissive meshes need to be have a non-zero emissive value when they are built or rebuilt to work with NEE, but after that can have their emissiveness changed at will</li>
   <li>To set up PBR with the DEFAULT material, all textures go into their proper names, but Roughness goes into the Occlusion texture(This can be changed in the MaterialPairing menu)</li>
@@ -119,7 +122,7 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
   <li>Go to "Functionality Settings" in the TrueTrace Options, and check "Enable OIDN"</li>
 </ul>
 
-## Using HDRP
+## Using HDRP(Should be automatic now)
 <ul>
   <li>Go into TrueTrace -> Resources -> GlobalDefines.cginc, and uncomment the #define HDRP</li>
   <li>Create a new custom pass(Hierarchy -> Volume -> Custom Pass) and add the custom pass in the inspector called "HDRP Compatibility"</li>
@@ -129,7 +132,6 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
 <ul>
   <li>First off, this REQUIRES unity 2023 or higher</li>
   <li>In the TrueTrace settings menu, click on the top right button "Functionality Settings" and toggle HardwareRT</li>
-  <li>Uncomment the #define HardwareRT in: TrueTrace -> Resources -> GlobalDefines.cginc</li>
   <li>Then just use like normal, but this does not support Instances</li>
 </ul>
 
@@ -137,7 +139,6 @@ Camera Controls: WASD, Mouse, hold right click rotate the camera, and shift incr
 <ul>
   <li>DX11 does not currently work with hue shift(seems to be a compiler bug)</li>
   <li>In the TrueTrace settings menu, click on the top right button "Functionality Settings" and toggle "Use DX11"</li>
-  <li>Uncomment the "#define DX11" in: TrueTrace -> Resources -> GlobalDefines.cginc</li>
 </ul>
 
 ## Editor Window Guide
@@ -147,8 +148,6 @@ TrueTrace Options Description -
   <li>Clear Parent Data - Clears the data stored in parent GameObjects, allowing you to actually click them without lagging</li>
   <li>Take Screenshot - Takes a screenshot to the path under "Functionality Settings" in the TrueTrace options</li>
   <li>Auto Assign Scripts - Assigns all required scripts to all objects under the Scene GameObject, best way to add objects</li>
-  <li>Make All Static - Utility button that takes all objects in the scene and puts them under one parent object, not recommended for general use</li>
-  <li>Force Instances - Looks at all meshes in the scene, sees what objects have the same meshes, and makes them into instances, keep in mind instances use the same material and textures</li>
   <li>Remaining Objects - Objects still being processed</li>
   <li>Max Bounces - Sets the maximum number of bounces a ray can achieve</li>
   <li>Internal Resolution Ratio - Render scale in comparison to gameview size, turn to below 1 while in edit mode to decrease rendered resolution(to then be upscaled)</li>
@@ -247,7 +246,7 @@ TrueTrace Options Description -
     <li>Add the texture highlighted in the image below to the "IES Profile" slot in the raytracinglights component thats added to standard unity lights(directional, point, spot, etc. type lights)</li>
 </ul>
 
-![](/Images/IESInstructions0.png)
+![](/.Images/IESInstructions0.png)
 
 # Known Bugs:
 </br>
@@ -273,51 +272,51 @@ TrueTrace Options Description -
 
 # Sample Images(Taken from various stages of development)
 
-![](/Images/CommonRender.png)
-![](/Images/SunTemple1.png)
-![](/Images/ModernBistro.png)
-![](/Images/SunTemple2.png)
-![](/Images/Cozy1.png)
-![](/Images/ArchRender1.png)
-![](/Images/ArchRender2.png)
-![](/Images/ArchRender3.png)
-![](/Images/ArchRender4.png)
-![](/Images/ArchViz5.png)
-![](/Images/ArchViz4.png)
-![](/Images/ArchViz3.png)
-![](/Images/ArchViz1.png)
-![](/Images/ArchViz2.png)
-![](/Images/Loft1.png)
-![](/Images/Portal.png)
-![](/Images/ShittyMesh.png)
-![](/Images/HQFurry.png)
-![](/Images/Loft.png)
-![](/Images/Minecraft.png)
-![](/Images/Loft1.png)
-![](/Images/Portal2.png)
-![](/Images/NewBlender.png)
-![](/Images/NewReSTIRV2.png)
-![](/Images/NewSponza3V2.png)
-![](/Images/NewSponza1V2.png)
-![](/Images/NewSponza2V2.png)
-![](/Images/Cornell.png)
-![](/Images/SanMiguel1.png)
-![](/Images/SanMiguel2.png)
-![](/Images/Sponza1V2.png)
-![](/Images/BistroUpdated.png)
-![](/Images/Room.png)
-![](/Images/Lego.png)
-![](/Images/RealisticSponza.png)
-![](/Images/Blender1.png)
-![](/Images/ReSTIR5.png)
-![](/Images/ReSTIR2.png)
-![](/Images/Restir3.png)
-![](/Images/PBRTest1.png)
-![](/Images/NewFog.png)
-![](/Images/Sunset1.png)
-![](/Images/VolumeScene2.png)
-![](/Images/VolumeScene1.png)
-![](/Images/SpaceShip.png)
+![](/.Images/CommonRender.png)
+![](/.Images/SunTemple1.png)
+![](/.Images/ModernBistro.png)
+![](/.Images/SunTemple2.png)
+![](/.Images/Cozy1.png)
+![](/.Images/ArchRender1.png)
+![](/.Images/ArchRender2.png)
+![](/.Images/ArchRender3.png)
+![](/.Images/ArchRender4.png)
+![](/.Images/ArchViz5.png)
+![](/.Images/ArchViz4.png)
+![](/.Images/ArchViz3.png)
+![](/.Images/ArchViz1.png)
+![](/.Images/ArchViz2.png)
+![](/.Images/Loft1.png)
+![](/.Images/Portal.png)
+![](/.Images/ShittyMesh.png)
+![](/.Images/HQFurry.png)
+![](/.Images/Loft.png)
+![](/.Images/Minecraft.png)
+![](/.Images/Loft1.png)
+![](/.Images/Portal2.png)
+![](/.Images/NewBlender.png)
+![](/.Images/NewReSTIRV2.png)
+![](/.Images/NewSponza3V2.png)
+![](/.Images/NewSponza1V2.png)
+![](/.Images/NewSponza2V2.png)
+![](/.Images/Cornell.png)
+![](/.Images/SanMiguel1.png)
+![](/.Images/SanMiguel2.png)
+![](/.Images/Sponza1V2.png)
+![](/.Images/BistroUpdated.png)
+![](/.Images/Room.png)
+![](/.Images/Lego.png)
+![](/.Images/RealisticSponza.png)
+![](/.Images/Blender1.png)
+![](/.Images/ReSTIR5.png)
+![](/.Images/ReSTIR2.png)
+![](/.Images/Restir3.png)
+![](/.Images/PBRTest1.png)
+![](/.Images/NewFog.png)
+![](/.Images/Sunset1.png)
+![](/.Images/VolumeScene2.png)
+![](/.Images/VolumeScene1.png)
+![](/.Images/SpaceShip.png)
 
 
 # Credits(will continue to expand when I have time)

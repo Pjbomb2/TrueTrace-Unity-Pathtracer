@@ -57,8 +57,8 @@ public class HDRPCompatability : CustomPass
 
     protected override void Cleanup()
     {
-        RayMaster.OnDisable();
-        GameObject.Find("Scene").GetComponent<TrueTrace.AssetManager>().ClearAll();
+        if(RayMaster != null) RayMaster.OnDisable();
+        if(GameObject.Find("Scene") != null) GameObject.Find("Scene").GetComponent<TrueTrace.AssetManager>().ClearAll();
         // Cleanup code
     }
 }

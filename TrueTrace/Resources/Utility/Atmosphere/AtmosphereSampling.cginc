@@ -298,7 +298,7 @@ float3 GetSkyRadiance(
 			float3 sun_irradiance = GetSunAndSkyIrradiance(Position, Normal, sun_direction, sky_irradiance);
 			float3 trans;
 			float3 in_scatter = GetSkyRadianceToPoint(camera, Position, sun_direction, trans);
-			debug = (GroundColor * (1.0f / PI) * (sun_irradiance + sky_irradiance)) * trans + in_scatter * 100.0f;
+			debug = (GroundColor * (1.0f / PI) * (sun_irradiance + sky_irradiance)) * trans + in_scatter;
 		}
 	return scattering * RayleighPhaseFunction(nu) + single_mie_scattering *
 		MiePhaseFunction(0.8f, nu);

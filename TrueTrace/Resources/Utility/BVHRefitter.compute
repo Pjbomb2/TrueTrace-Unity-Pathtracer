@@ -1,16 +1,8 @@
 #define KernelRatio 256
-
+#include "../MainCompute/CommonStructs.cginc"
 #pragma warning( disable : 3556)
 
 #pragma kernel Construct
-
-
-struct TriangleData {
-	float3 V1, V2, V3;
-	float3 Norm1, Norm2, Norm3;
-};
-
-StructuredBuffer<TriangleData> VertexsIn;
 
 StructuredBuffer<int> CWBVHIndices;
 ByteAddressBuffer bufVertices;
@@ -35,38 +27,17 @@ struct BoundingBox {
 };
 RWStructuredBuffer<BoundingBox> Boxs;
 
-struct CudaTriangle {
-	float3 pos0;
-	float3 posedge1;
-	float3 posedge2;
-
-	uint3 norms;
-
-	uint3 tans;
-
-	float2 tex0;
-	float2 texedge1;
-	float2 texedge2;
-
-	uint MatDat;
-};
-
 StructuredBuffer<CudaTriangle> CudaTriArrayIN;
 RWStructuredBuffer<CudaTriangle> CudaTriArray;
 
-float2 msign( float2 v )
-{
-    return float2( (v.x>=0.0) ? 1.0 : -1.0, 
-                 (v.y>=0.0) ? 1.0 : -1.0 );
+uint octahedral_32(float3 nor) {
+	float oct = 1.0f / (abs(nor.x) + abs(nor.y) + abs(nor.z));
+	float t = saturate(-nor.z);
+	nor.xy = (nor.xy + (nor.xy > 0.0f ? t : -t)) * oct;
+    uint2 d = uint2(round(32767.5 + nor.xy*32767.5));  
+    return d.x|(d.y<<16u);
 }
 
-uint octahedral_32( in float3 nor )
-{
-    nor.xy /= ( abs( nor.x ) + abs( nor.y ) + abs( nor.z ) );
-    nor.xy  = (nor.z >= 0.0) ? nor.xy : (1.0-abs(nor.yx))*msign(nor.xy);
-    //return packSnorm2x16(nor.xy);
-    uint2 d = uint2(round(32767.5 + nor.xy*32767.5));  return d.x|(d.y<<16u);
-}
 int Stride;
 int TriBuffOffset;
 [numthreads(KernelRatio, 1, 1)]
@@ -122,14 +93,6 @@ void Construct(uint3 id : SV_DispatchThreadID)
 }
 
 #pragma kernel TransferKernel
-
-struct LightTriData {
-	float3 pos0;
-	float3 posedge1;
-	float3 posedge2;
-	uint TriTarget;
-	float SourceEnergy;
-};
 
 RWStructuredBuffer<LightTriData> LightTrianglesOut;
 int LightTriBuffOffset;
@@ -255,7 +218,7 @@ void RefitBVHLayer(uint3 id : SV_DispatchThreadID)
 
 #pragma kernel NodeUpdate
 
-struct BVHNode8Data {
+struct BVHNode8DataUnpacked {
 	float3 p;//12
 	uint e[3];//24
 	uint imask;//28    
@@ -272,7 +235,7 @@ struct BVHNode8Data {
 
 StructuredBuffer<int> ToBVHIndex;
 
-RWStructuredBuffer<BVHNode8Data> BVHNodes;
+RWStructuredBuffer<BVHNode8DataUnpacked> BVHNodes;
 
 
 [numthreads(KernelRatio, 1, 1)]
@@ -282,7 +245,7 @@ void NodeUpdate(uint3 id : SV_DispatchThreadID)
 		return;
 	NodeIndexPairData TempNode = AllNodes[id.x];
 	int NodeLink = ToBVHIndex[TempNode.BVHNode];
-	BVHNode8Data TempBVHNode = BVHNodes[TempNode.BVHNode];
+	BVHNode8DataUnpacked TempBVHNode = BVHNodes[TempNode.BVHNode];
 	float3 BBMax = AllNodes[NodeLink].BBMax;
 	float3 BBMin = AllNodes[NodeLink].BBMin;
 	[branch] if (TempNode.BBMax.x < -10000.0f) {
@@ -320,31 +283,7 @@ void NodeUpdate(uint3 id : SV_DispatchThreadID)
 #pragma kernel NodeCompress
 
 
-
-struct BVHNode8DataCompressed {
-	uint node_0x;
-	uint node_0y;
-	uint node_0z;
-	uint node_0w;
-	uint node_1x;
-	uint node_1y;
-	uint node_1z;
-	uint node_1w;
-	uint node_2x;
-	uint node_2y;
-	uint node_2z;
-	uint node_2w;
-	uint node_3x;
-	uint node_3y;
-	uint node_3z;
-	uint node_3w;
-	uint node_4x;
-	uint node_4y;
-	uint node_4z;
-	uint node_4w;
-};
-
-RWStructuredBuffer<BVHNode8DataCompressed> AggNodes;
+RWStructuredBuffer<BVHNode8Data> AggNodes;
 
 
 int NodeOffset;
@@ -353,29 +292,30 @@ void NodeCompress(uint3 id : SV_DispatchThreadID)
 {
 	if (id.x >= NodeCount)
 		return;
-	const BVHNode8Data TempNode = BVHNodes[id.x];
-	BVHNode8DataCompressed TempBVHNode = AggNodes[id.x + NodeOffset];
+	const BVHNode8DataUnpacked TempNode = BVHNodes[id.x];
+	BVHNode8Data TempBVHNode;
 
-	TempBVHNode.node_0x = asuint(TempNode.p.x);
-	TempBVHNode.node_0y = asuint(TempNode.p.y);
-	TempBVHNode.node_0z = asuint(TempNode.p.z);
-	TempBVHNode.node_0w = (TempNode.e[0] | (TempNode.e[1] << 8) | (TempNode.e[2] << 16) | (TempNode.imask << 24));
-	TempBVHNode.node_1x = TempNode.base_index_child;
-	TempBVHNode.node_1y = TempNode.base_index_triangle;
-	TempBVHNode.node_1z = (TempNode.meta[0] | (TempNode.meta[1] << 8) | (TempNode.meta[2] << 16) | (TempNode.meta[3] << 24));
-	TempBVHNode.node_1w = (TempNode.meta[4] | (TempNode.meta[5] << 8) | (TempNode.meta[6] << 16) | (TempNode.meta[7] << 24));
-	TempBVHNode.node_2x = (TempNode.quantized_min_x[0] | (TempNode.quantized_min_x[1] << 8) | (TempNode.quantized_min_x[2] << 16) | (TempNode.quantized_min_x[3] << 24));
-	TempBVHNode.node_2y = (TempNode.quantized_min_x[4] | (TempNode.quantized_min_x[5] << 8) | (TempNode.quantized_min_x[6] << 16) | (TempNode.quantized_min_x[7] << 24));
-	TempBVHNode.node_2z = (TempNode.quantized_max_x[0] | (TempNode.quantized_max_x[1] << 8) | (TempNode.quantized_max_x[2] << 16) | (TempNode.quantized_max_x[3] << 24));
-	TempBVHNode.node_2w = (TempNode.quantized_max_x[4] | (TempNode.quantized_max_x[5] << 8) | (TempNode.quantized_max_x[6] << 16) | (TempNode.quantized_max_x[7] << 24));
-	TempBVHNode.node_3x = (TempNode.quantized_min_y[0] | (TempNode.quantized_min_y[1] << 8) | (TempNode.quantized_min_y[2] << 16) | (TempNode.quantized_min_y[3] << 24));
-	TempBVHNode.node_3y = (TempNode.quantized_min_y[4] | (TempNode.quantized_min_y[5] << 8) | (TempNode.quantized_min_y[6] << 16) | (TempNode.quantized_min_y[7] << 24));
-	TempBVHNode.node_3z = (TempNode.quantized_max_y[0] | (TempNode.quantized_max_y[1] << 8) | (TempNode.quantized_max_y[2] << 16) | (TempNode.quantized_max_y[3] << 24));
-	TempBVHNode.node_3w = (TempNode.quantized_max_y[4] | (TempNode.quantized_max_y[5] << 8) | (TempNode.quantized_max_y[6] << 16) | (TempNode.quantized_max_y[7] << 24));
-	TempBVHNode.node_4x = (TempNode.quantized_min_z[0] | (TempNode.quantized_min_z[1] << 8) | (TempNode.quantized_min_z[2] << 16) | (TempNode.quantized_min_z[3] << 24));
-	TempBVHNode.node_4y = (TempNode.quantized_min_z[4] | (TempNode.quantized_min_z[5] << 8) | (TempNode.quantized_min_z[6] << 16) | (TempNode.quantized_min_z[7] << 24));
-	TempBVHNode.node_4z = (TempNode.quantized_max_z[0] | (TempNode.quantized_max_z[1] << 8) | (TempNode.quantized_max_z[2] << 16) | (TempNode.quantized_max_z[3] << 24));
-	TempBVHNode.node_4w = (TempNode.quantized_max_z[4] | (TempNode.quantized_max_z[5] << 8) | (TempNode.quantized_max_z[6] << 16) | (TempNode.quantized_max_z[7] << 24));
+	TempBVHNode.nodes[0] = uint4(asuint(TempNode.p.x),
+								asuint(TempNode.p.y),
+								asuint(TempNode.p.z),
+								(TempNode.e[0] | (TempNode.e[1] << 8) | (TempNode.e[2] << 16) | (TempNode.imask << 24)));
+
+	TempBVHNode.nodes[1] = uint4(TempNode.base_index_child,
+							TempNode.base_index_triangle,
+							(TempNode.meta[0] | (TempNode.meta[1] << 8) | (TempNode.meta[2] << 16) | (TempNode.meta[3] << 24)),
+							(TempNode.meta[4] | (TempNode.meta[5] << 8) | (TempNode.meta[6] << 16) | (TempNode.meta[7] << 24)));
+	TempBVHNode.nodes[2] = uint4((TempNode.quantized_min_x[0] | (TempNode.quantized_min_x[1] << 8) | (TempNode.quantized_min_x[2] << 16) | (TempNode.quantized_min_x[3] << 24)),
+							(TempNode.quantized_max_x[0] | (TempNode.quantized_max_x[1] << 8) | (TempNode.quantized_max_x[2] << 16) | (TempNode.quantized_max_x[3] << 24)),
+							(TempNode.quantized_min_x[4] | (TempNode.quantized_min_x[5] << 8) | (TempNode.quantized_min_x[6] << 16) | (TempNode.quantized_min_x[7] << 24)),
+							(TempNode.quantized_max_x[4] | (TempNode.quantized_max_x[5] << 8) | (TempNode.quantized_max_x[6] << 16) | (TempNode.quantized_max_x[7] << 24)));
+	TempBVHNode.nodes[3] = uint4((TempNode.quantized_min_y[0] | (TempNode.quantized_min_y[1] << 8) | (TempNode.quantized_min_y[2] << 16) | (TempNode.quantized_min_y[3] << 24)),
+							(TempNode.quantized_max_y[0] | (TempNode.quantized_max_y[1] << 8) | (TempNode.quantized_max_y[2] << 16) | (TempNode.quantized_max_y[3] << 24)),
+							(TempNode.quantized_min_y[4] | (TempNode.quantized_min_y[5] << 8) | (TempNode.quantized_min_y[6] << 16) | (TempNode.quantized_min_y[7] << 24)),
+							(TempNode.quantized_max_y[4] | (TempNode.quantized_max_y[5] << 8) | (TempNode.quantized_max_y[6] << 16) | (TempNode.quantized_max_y[7] << 24)));
+	TempBVHNode.nodes[4] = uint4((TempNode.quantized_min_z[0] | (TempNode.quantized_min_z[1] << 8) | (TempNode.quantized_min_z[2] << 16) | (TempNode.quantized_min_z[3] << 24)),
+							(TempNode.quantized_max_z[0] | (TempNode.quantized_max_z[1] << 8) | (TempNode.quantized_max_z[2] << 16) | (TempNode.quantized_max_z[3] << 24)),
+							(TempNode.quantized_min_z[4] | (TempNode.quantized_min_z[5] << 8) | (TempNode.quantized_min_z[6] << 16) | (TempNode.quantized_min_z[7] << 24)),
+							(TempNode.quantized_max_z[4] | (TempNode.quantized_max_z[5] << 8) | (TempNode.quantized_max_z[6] << 16) | (TempNode.quantized_max_z[7] << 24)));
 	AggNodes[id.x + NodeOffset] = TempBVHNode;
 }
 

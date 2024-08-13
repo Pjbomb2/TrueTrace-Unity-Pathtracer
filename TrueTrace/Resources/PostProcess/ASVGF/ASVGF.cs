@@ -246,7 +246,7 @@ namespace TrueTrace {
             cmd.SetComputeBufferParam(shader, Reproject, "AggTris", Tris);
             cmd.SetComputeBufferParam(shader, Reproject, "MeshIndexes", MeshIndexes);
             shader.SetVector("CamDiff", PrevPos - camera.transform.position);
-            cmd.SetComputeBufferParam(shader, Reproject, "GlobalRays", (EvenFrame) ? GlobalRays : GlobalRaysB);
+            cmd.SetComputeBufferParam(shader, Reproject, "GlobalRaysMini", (EvenFrame) ? GlobalRays : GlobalRaysB);
 
 
 
@@ -267,8 +267,8 @@ namespace TrueTrace {
             cmd.SetComputeFloatParam(shader, "ResRatio", ResolutionRatio);
             shader.SetBool("UseExposure", DoExposure);
             shader.SetFloat("IndirectBoost", IndirectBoost);
-            shader.SetBuffer(CopyData, "GlobalColors", _ColorBuffer);
-            shader.SetBuffer(Atrous, "GlobalColors", _ColorBuffer);
+            shader.SetBuffer(CopyData, "GlobalColorsRead", _ColorBuffer);
+            shader.SetBuffer(Atrous, "GlobalColorsRead", _ColorBuffer);
             shader.SetBuffer(CopyData, "ExposureBuffer", ExposureModifier);
             shader.SetBuffer(Atrous, "ExposureBuffer", ExposureModifier);
             shader.SetTexture(CopyData, "ScreenSpaceInfo", ScreenSpaceInfo);

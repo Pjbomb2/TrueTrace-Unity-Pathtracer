@@ -20,6 +20,31 @@ public class RenderingPipelineDefines
     {
         UpdateDefines();
     }
+
+    static void SetGlobalDefines(string DefineToSet, bool SetValue) {
+        if(System.IO.File.Exists(Application.dataPath + "/TrueTrace/Resources/GlobalDefines.cginc")) {
+            string[] GlobalDefines = System.IO.File.ReadAllLines(Application.dataPath + "/TrueTrace/Resources/GlobalDefines.cginc");
+            int Index = -1;
+            for(int i = 0; i < GlobalDefines.Length; i++) {
+                if(GlobalDefines[i].Equals("//END OF DEFINES")) break;
+                string TempString = GlobalDefines[i].Replace("#define ", "");
+                TempString = TempString.Replace("// ", "");
+                if(TempString.Equals(DefineToSet)) {
+                    Index = i;
+                    break;
+                }
+            }
+            if(Index == -1) {
+                Debug.Log("Cant find define \"" + DefineToSet + "\"");
+                return;
+            }
+            GlobalDefines[Index] = GlobalDefines[Index].Replace("// ", "");
+            if(!SetValue) GlobalDefines[Index] = "// " + GlobalDefines[Index];
+
+            System.IO.File.WriteAllLines(Application.dataPath + "/TrueTrace/Resources/GlobalDefines.cginc", GlobalDefines);
+            AssetDatabase.Refresh();
+        } else {Debug.Log("No GlobalDefinesFile");}
+    }
  
     /// <summary>
     /// Update the unity pipeline defines for URP
@@ -39,10 +64,12 @@ public class RenderingPipelineDefines
         if (pipeline == PipelineType.HDPipeline)
         {
             AddDefine("UNITY_PIPELINE_HDRP");
+            SetGlobalDefines("HDRP", true);
         }
         else
         {
             RemoveDefine("UNITY_PIPELINE_HDRP");
+            SetGlobalDefines("HDRP", false);
         }
     }
  

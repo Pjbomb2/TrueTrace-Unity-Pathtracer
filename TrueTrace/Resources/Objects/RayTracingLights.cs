@@ -11,7 +11,40 @@ namespace TrueTrace {
         [HideInInspector] public int ArrayIndex;
         [HideInInspector] public int IESIndex;
         [Range(0,40)] public float ShadowSoftness = 0.0f;
+        [SerializeField] public bool UseKelvin = false;
+        [SerializeField] [Range(1000.0f,20000.0f)] public float KelvinTemperature = 1000.0f;
         public Texture2D IESProfile;
+
+
+        private Vector3 GetRgbFromTemperature(float temperature) {
+            temperature = Mathf.Clamp(temperature, 1000, 40000);
+
+            temperature /= 100.0f;
+
+            float red, green, blue;
+
+            if (temperature <= 66) red = 255;
+            else {
+                red = (329.698727446f * (Mathf.Pow(temperature - 60, -0.1332047592f)));
+                red = Mathf.Clamp(red, 0, 255);
+            }
+
+            if (temperature <= 66) green = (int)(99.4708025861f * Mathf.Log(temperature) - 161.1195681661f);
+            else green = (288.1221695283f * (Mathf.Pow(temperature - 60, -0.0755148492f)));
+
+            green = Mathf.Clamp(green, 0, 255);
+
+            if (temperature >= 66) blue = 255;
+            else if (temperature <= 19) blue = 0;
+            else {
+                blue = (int)(138.5177312231f * Mathf.Log(temperature - 10) - 305.0447927307f);
+                blue = Mathf.Clamp(blue, 0, 255);
+            }
+
+            return new Vector3(red, green, blue) / 255.0f;
+        }
+
+
 
         public void Start() {
             ThisLightData = new LightData();
@@ -23,14 +56,20 @@ namespace TrueTrace {
             // ThisLight.shadows = LightShadows.None;
         }
         public void UpdateLight() {
+            ThisLight.useColorTemperature = true;
+            UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = true;
             // if(transform.hasChanged || HasChanged) {
                 ThisLightData.Position = transform.position;
                 ThisLightData.Direction = (ThisLight.type == LightType.Directional) ? -transform.forward : (ThisLight.type == LightType.Spot) ? Vector3.Normalize(transform.forward) : transform.forward;
                 ThisLightData.ZAxisRotation = transform.localEulerAngles.z * 3.14159f / 180.0f;
                 transform.hasChanged = false;
             // }
-            Color col = ThisLight.color; 
-            ThisLightData.Radiance = new Vector3(col[0], col[1], col[2]) * ThisLight.intensity;
+            if(UseKelvin) {
+                ThisLightData.Radiance = GetRgbFromTemperature(KelvinTemperature) * ThisLight.intensity;
+            } else {
+                Color col = ThisLight.color;
+                ThisLightData.Radiance = new Vector3(col[0], col[1], col[2]) * ThisLight.intensity;
+            }
             ThisLightData.Type = (ThisLight.type == LightType.Point) ? 0 : (ThisLight.type == LightType.Directional) ? 1 : (ThisLight.type == LightType.Spot) ? 2 : (ThisLight.type == LightType.Rectangle) ? 3 : 4;
             if(ThisLight.type == LightType.Spot) {
                 float innerCos = Mathf.Cos(Mathf.Deg2Rad * 0.5f * ThisLight.innerSpotAngle);

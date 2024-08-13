@@ -548,6 +548,11 @@
         <ReadIndex>-4</ReadIndex>
         <TextureName>_MainTex</TextureName>
       </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>
     <RoughnessRange>null</RoughnessRange>
@@ -4923,6 +4928,11 @@
         <TextureName>_BumpMap</TextureName>
       </TexturePairs>
       <TexturePairs>
+        <Purpose>3</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_EmissionMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
         <Purpose>1</Purpose>
         <ReadIndex>3</ReadIndex>
         <TextureName>_MainTex</TextureName>
@@ -7431,6 +7441,136 @@
         <Purpose>1</Purpose>
         <ReadIndex>0</ReadIndex>
         <TextureName>_Alpha</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/.poiyomi/★ Poiyomi Pro ★/base textures-base textures</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_BumpMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>3</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_EmissionMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_ClippingMask</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/.poiyomi/★ Poiyomi Pro ★/Nips_2D_View-Nips_2D_View</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/.poiyomi/★ Poiyomi Pro ★/Tail.001_2D_View-Tail.001_2D_View</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_BumpMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>3</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_EmissionMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_ClippingMask</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/.poiyomi/★ Poiyomi Pro ★/HAir_2D_View-HAir_2D_View</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_BumpMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>3</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_EmissionMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_ClippingMask</TextureName>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>

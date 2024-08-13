@@ -1,13 +1,14 @@
+// #define HardwareRT
+// #define HDRP
+// #define DX11
+#define UseBindless
+//Dont modify above, CPU code will do automatically
 #define AdvancedAlphaMapped
 #define ExtraSampleValidation
 #define IgnoreGlassShadow
 // #define IgnoreGlassMain
-// #define HDRP
-// #define HardwareRT
 // #define PointFiltering
 #define StainedGlassShadows
-// #define DX11
-// #define LightMapping
 // #define IgnoreBackfacing
 // #define WhiteLights
 #define LBVH
@@ -18,12 +19,13 @@
 // #define HighSpeedRadCache
 // #define RadianceDebug
 #define IndirectRetraceWeighting
+#define TrueBlack
 
 
+//END OF DEFINES
 //Dont change the ones below
 #define DisneyIndex 0
 #define CutoutIndex 1
-#define VideoIndex 2
 
 #define POINTLIGHT 0
 #define DIRECTIONALLIGHT 1
@@ -44,6 +46,17 @@
 #define Invisible 7
 #define BackgrounBleed 8
 #define Thin 9
+
+#define SampleAlbedo 0
+#define SampleMetallic 1
+#define SampleRoughness 2
+#define SampleEmission 3
+#define SampleNormal 4
+#define SampleAlpha 5
+#define SampleIES 6
+#define SampleMatCap 7
+#define SampleMatCapMask 8
+#define SampleTerrainAlbedo 9
 
 bool GetFlag(int FlagVar, int flag) {
     return (((int)FlagVar >> flag) & (int)1) == 1;

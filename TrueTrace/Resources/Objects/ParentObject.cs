@@ -289,21 +289,21 @@ namespace TrueTrace {
         public List<int> MatCapMaskChannelIndex;
         public List<Texture> MatCapTexs;
 
-        #if !NonAccurateLightTris
+        #if AccurateLightTris
             List<Color[]> EmissionTexPixels;
             List<Vector2> EmissionTexWidthHeight;
         #endif
         
         private int TextureParse(ref Vector4 RefMat, Material Mat, string TexName, ref List<Texture> Texs, ref int TextureIndex, bool IsEmission = false) {
             TextureIndex = 0;
-            if (Mat.HasProperty(TexName) && Mat.GetTexture(TexName) as Texture2D != null) {
+            if (Mat.HasProperty(TexName) && Mat.GetTexture(TexName) != null) {
                 if(RefMat.x == 0) RefMat = new Vector4(Mat.mainTextureScale.x, Mat.mainTextureScale.y, Mat.mainTextureOffset.x, Mat.mainTextureOffset.y);
                 Texture Tex = Mat.GetTexture(TexName);
                 TextureIndex = Texs.IndexOf(Tex) + 1;
                 if (TextureIndex != 0) {
                     return 0;
                 } else {
-                    #if !NonAccurateLightTris
+                    #if AccurateLightTris
                         if(IsEmission) {
                             RenderTexture tmp = RenderTexture.GetTemporary( 
                                 Tex.width,
@@ -337,7 +337,7 @@ namespace TrueTrace {
 
         public void CreateAtlas(ref int VertCount)
         {//Creates texture atlas
-            #if !NonAccurateLightTris
+            #if AccurateLightTris
                 EmissionTexPixels = new List<Color[]>();
                 EmissionTexWidthHeight = new List<Vector2>();
             #endif
@@ -926,7 +926,7 @@ namespace TrueTrace {
                     cmd.BeginSample("LightRefitter");
                     cmd.SetComputeMatrixParam(LightMeshRefit, "ToWorld", transform.localToWorldMatrix);
                     cmd.SetComputeIntParam(LightMeshRefit, "TotalNodeOffset", LightNodeOffset);
-                    cmd.SetComputeBufferParam(LightMeshRefit, 1, "LightNodes", RealizedLightNodeBuffer);
+                    cmd.SetComputeBufferParam(LightMeshRefit, 1, "LightNodesWrite", RealizedLightNodeBuffer);
                     cmd.SetComputeFloatParam(LightMeshRefit, "FloatMax", float.MaxValue);
                     int ObjectOffset = LightNodeOffset;
                     for(int i = WorkingSet.Length - 1; i >= 0; i--) {
@@ -1095,7 +1095,7 @@ namespace TrueTrace {
 
                     if (_Materials[(int)TempTri.MatDat].emmissive > 0.0f) {
                         bool IsValid = true;
-                        #if !NonAccurateLightTris
+                        #if AccurateLightTris
                             if(_Materials[(int)TempTri.MatDat].EmissiveTex.x != 0) {
                                 int ThisIndex = _Materials[(int)TempTri.MatDat].EmissiveTex.x - 1;
                                 Vector2 UVV = (TempTri.tex0 + TempTri.texedge1 + TempTri.texedge2) / 3.0f;

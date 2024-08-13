@@ -42,7 +42,6 @@ namespace TrueTrace {
          [SerializeField] public bool ClayMode = false;
          [SerializeField] public Vector3 ClayColor = new Vector3(0.5f,0.5f,0.5f);
          [SerializeField] public Vector3 GroundColor = new Vector3(0.1f,0.1f,0.1f);
-         [SerializeField] public ObjectField CameraField;
          [SerializeField] public int BounceCount = 7;
          [SerializeField] public float RenderRes = 1;
          [SerializeField] public bool NEE = true;
@@ -82,8 +81,9 @@ namespace TrueTrace {
          [SerializeField] public int DenoiserSelection = 0;
          [SerializeField] public Color SceneBackgroundColor = new Color(1,1,1,1);
          [SerializeField] public Color SecondarySceneBackgroundColor = new Color(1,1,1,1);
-         [SerializeField] public float BackgroundIntensity = 1;
+         [SerializeField] public Vector2 BackgroundIntensity = Vector2.one;
          [SerializeField] public float LightEnergyScale = 1;
+         [SerializeField] public float LEMEnergyScale = 1;
          [SerializeField] public float IndirectBoost = 1;
          [SerializeField] public int BackgroundType = 0;
          [SerializeField] public int SecondaryBackgroundType = 0;
@@ -98,6 +98,35 @@ namespace TrueTrace {
          [SerializeField] public bool UseOIDN = false;
          [SerializeField] public bool DoSharpen = false;
          [SerializeField] public float Sharpness = 1.0f;
+         [SerializeField] public Vector2 HDRILongLat = Vector2.zero;
+         [SerializeField] public Vector2 HDRIScale = Vector2.one;
+
+
+         public void SetGlobalDefines(string DefineToSet, bool SetValue) {
+            if(File.Exists(Application.dataPath + "/TrueTrace/Resources/GlobalDefines.cginc")) {
+               string[] GlobalDefines = System.IO.File.ReadAllLines(Application.dataPath + "/TrueTrace/Resources/GlobalDefines.cginc");
+               int Index = -1;
+               for(int i = 0; i < GlobalDefines.Length; i++) {
+                  if(GlobalDefines[i].Equals("//END OF DEFINES")) break;
+                  string TempString = GlobalDefines[i].Replace("#define ", "");
+                  TempString = TempString.Replace("// ", "");
+                  if(TempString.Equals(DefineToSet)) {
+                     Index = i;
+                     break;
+                  }
+               }
+               if(Index == -1) {
+                  Debug.Log("Cant find define \"" + DefineToSet + "\"");
+                  return;
+               }
+               GlobalDefines[Index] = GlobalDefines[Index].Replace("// ", "");
+               if(!SetValue) GlobalDefines[Index] = "// " + GlobalDefines[Index];
+
+               System.IO.File.WriteAllLines(Application.dataPath + "/TrueTrace/Resources/GlobalDefines.cginc", GlobalDefines);
+               AssetDatabase.Refresh();
+            } else {Debug.Log("No GlobalDefinesFile");}
+         }
+
 
          void OnEnable() {
             EditorSceneManager.activeSceneChangedInEditMode += EvaluateScene;
@@ -453,12 +482,6 @@ namespace TrueTrace {
             foreach(var LightObj in LightObjects) {
                if(LightObj.gameObject.GetComponent<RayTracingLights>() == null) LightObj.gameObject.AddComponent<RayTracingLights>(); 
             }
-           UnityEngine.Video.VideoPlayer[] VideoObjects = GameObject.FindObjectsOfType<UnityEngine.Video.VideoPlayer>();
-           if(VideoObjects.Length != 0) {
-               if(VideoObjects[0].gameObject.GetComponent<VideoObject>() == null) {
-                  VideoObjects[0].gameObject.AddComponent<VideoObject>();
-               }
-           }
 
             // FlagsObjects RootFlag = Prepare(Assets.transform);
             // Prune(ref RootFlag);
@@ -722,29 +745,96 @@ Toolbar toolbar;
 
             });
       
-      BackgroundIntensityField = new FloatField() {value = BackgroundIntensity, label = "Background Intensity"};
-      BackgroundIntensityField.RegisterValueChangedCallback(evt => {BackgroundIntensity = evt.newValue; RayMaster.LocalTTSettings.BackgroundIntensity = BackgroundIntensity;});
+
+
+      BackgroundIntensityField = new FloatField() {value = BackgroundIntensity.x, label = "Primary Background Intensity"};
+      BackgroundIntensityField.RegisterValueChangedCallback(evt => {BackgroundIntensity = new Vector2(evt.newValue, BackgroundIntensity.y); RayMaster.LocalTTSettings.BackgroundIntensity = BackgroundIntensity;});
+      BackgroundIntensityField.style.maxWidth = 345;
       SceneSettingsMenu.Add(BackgroundIntensityField);
+
+      FloatField SecondaryBackgroundIntensityField = new FloatField() {value = BackgroundIntensity.y, label = "Secondary Background Intensity"};
+      SecondaryBackgroundIntensityField.RegisterValueChangedCallback(evt => {BackgroundIntensity = new Vector2(BackgroundIntensity.x, evt.newValue); RayMaster.LocalTTSettings.BackgroundIntensity = BackgroundIntensity;});
+      SecondaryBackgroundIntensityField.style.maxWidth = 345;
+      SceneSettingsMenu.Add(SecondaryBackgroundIntensityField);
 
       UnityLightModifierField = new FloatField() {value = LightEnergyScale, label = "Unity Light Intensity Modifier"};
       UnityLightModifierField.RegisterValueChangedCallback(evt => {LightEnergyScale = evt.newValue; Assets.LightEnergyScale = LightEnergyScale;});
+      UnityLightModifierField.style.maxWidth = 345;
       SceneSettingsMenu.Add(UnityLightModifierField);
+
+      FloatField LEMLightModifierField = new FloatField() {value = LEMEnergyScale, label = "LEM Light Intensity Modifier"};
+      LEMLightModifierField.RegisterValueChangedCallback(evt => {LEMEnergyScale = evt.newValue; RayMaster.LocalTTSettings.LEMEnergyScale = LEMEnergyScale;});
+      LEMLightModifierField.style.maxWidth = 345;
+      SceneSettingsMenu.Add(LEMLightModifierField);
 
       IndirectBoostField = new FloatField() {value = IndirectBoost, label = "Indirect Lighting Boost"};
       IndirectBoostField.RegisterValueChangedCallback(evt => {IndirectBoost = evt.newValue; RayMaster.LocalTTSettings.IndirectBoost = IndirectBoost;});
+      IndirectBoostField.style.maxWidth = 345;
       SceneSettingsMenu.Add(IndirectBoostField);
 
       Slider SunDesatSlider = new Slider() {label = "SunDesat: ", value = SunDesaturate, highValue = 1.0f, lowValue = 0.0f};
       SunDesatSlider.RegisterValueChangedCallback(evt => {SunDesaturate = evt.newValue; RayMaster.LocalTTSettings.SunDesaturate = SunDesaturate;});
       SceneSettingsMenu.Add(SunDesatSlider);
+      SunDesatSlider.style.maxWidth = 345;
 
       Slider SkyDesatSlider = new Slider() {label = "SkyDesat: ", value = SkyDesaturate, highValue = 1.0f, lowValue = 0.0f};
       SkyDesatSlider.RegisterValueChangedCallback(evt => {SkyDesaturate = evt.newValue; RayMaster.LocalTTSettings.SkyDesaturate = SkyDesaturate;});
       SceneSettingsMenu.Add(SkyDesatSlider);
+      SkyDesatSlider.style.maxWidth = 345;
+
+
+
+
+      VisualElement HDRILongElement = new VisualElement();
+         HDRILongElement.style.flexDirection = FlexDirection.Row;
+         Slider HDRILongSlider = new Slider() {label = "HDRI Horizontal Offset: ", value = HDRILongLat.x, highValue = 360.0f, lowValue = 0.0f};
+         HDRILongSlider.style.minWidth = 345;
+         HDRILongSlider.style.maxWidth = 345;
+         FloatField HDRILongField = new FloatField() {value = HDRILongLat.x};
+         HDRILongField.style.maxWidth = 345;
+         HDRILongElement.Add(HDRILongSlider);
+         HDRILongElement.Add(HDRILongField);
+      HDRILongSlider.RegisterValueChangedCallback(evt => {HDRILongLat = new Vector2(evt.newValue, HDRILongLat.y); HDRILongField.value = HDRILongLat.x; RayMaster.LocalTTSettings.HDRILongLat = HDRILongLat;});
+      HDRILongField.RegisterValueChangedCallback(evt => {HDRILongLat = new Vector2(evt.newValue, HDRILongLat.y); HDRILongSlider.value = HDRILongLat.x; RayMaster.LocalTTSettings.HDRILongLat = HDRILongLat;});
+      SceneSettingsMenu.Add(HDRILongElement);
+
+
+      VisualElement HDRILatElement = new VisualElement();
+         HDRILatElement.style.flexDirection = FlexDirection.Row;
+         Slider HDRILatSlider = new Slider() {label = "HDRI Vertical Offset: ", value = HDRILongLat.y, highValue = 360.0f, lowValue = 0.0f};
+         HDRILatSlider.style.minWidth = 345;
+         HDRILatSlider.style.maxWidth = 345;
+         FloatField HDRILatField = new FloatField() {value = HDRILongLat.y};
+         HDRILatField.style.maxWidth = 345;
+         HDRILatElement.Add(HDRILatSlider);
+         HDRILatElement.Add(HDRILatField);
+      HDRILatSlider.RegisterValueChangedCallback(evt => {HDRILongLat = new Vector2(HDRILongLat.x, evt.newValue); HDRILatField.value = HDRILongLat.y; RayMaster.LocalTTSettings.HDRILongLat = HDRILongLat;});
+      HDRILatField.RegisterValueChangedCallback(evt => {HDRILongLat = new Vector2(HDRILongLat.x, evt.newValue); HDRILatSlider.value = HDRILongLat.y; RayMaster.LocalTTSettings.HDRILongLat = HDRILongLat;});
+      SceneSettingsMenu.Add(HDRILatElement);
+
+     VisualElement HDRIScaleElement = new VisualElement();
+         HDRIScaleElement.style.flexDirection = FlexDirection.Row;
+         FloatField HDRIXScale = new FloatField() {label = "HDRI Scaling X: ", value = HDRIScale.x};
+         HDRIXScale.style.minWidth = 200;
+         HDRIXScale.style.maxWidth = 200;
+         HDRIXScale.ElementAt(0).style.minWidth = 65;
+         HDRIXScale.ElementAt(1).style.width = 45;
+         FloatField HDRIYScale = new FloatField() {label = "Y: ", value = HDRIScale.y};
+         HDRIYScale.style.maxWidth = 200;
+         HDRIYScale.ElementAt(0).style.minWidth = 65;
+         HDRIYScale.ElementAt(1).style.width = 45;
+         HDRIScaleElement.Add(HDRIXScale);
+         HDRIScaleElement.Add(HDRIYScale);
+      HDRIXScale.RegisterValueChangedCallback(evt => {HDRIScale = new Vector2(evt.newValue, HDRIScale.y); RayMaster.LocalTTSettings.HDRIScale = HDRIScale;});
+      HDRIYScale.RegisterValueChangedCallback(evt => {HDRIScale = new Vector2(HDRIScale.x, evt.newValue); RayMaster.LocalTTSettings.HDRIScale = HDRIScale;});
+      SceneSettingsMenu.Add(HDRIScaleElement);
 
 
 
       }
+
+      VisualElement HierarchyOptionsMenu;
+
 
       private enum Properties {AlbedoColor, 
                                        AlbedoTexture, 
@@ -1216,6 +1306,15 @@ Toolbar toolbar;
                definesList.Remove(define);
            }
        }
+
+       private void AddDefine(string define)
+       {
+           definesList = GetDefines();
+           if (!definesList.Contains(define))
+           {
+               definesList.Add(define);
+           }
+       }
     
       private List<string> GetDefines() {
          var target = EditorUserBuildSettings.activeBuildTarget;
@@ -1268,8 +1367,6 @@ Toolbar toolbar;
             for(int i2 = 0; i2 < MatCount; i2++) {
                if(RayObjs[i].MaterialOptions[i2] == RayTracingObject.Options.Cutout) 
                   RayObjs[i].MaterialOptions[i2] = RayTracingObject.Options.Disney;
-               else if(RayObjs[i].MaterialOptions[i2] == RayTracingObject.Options.Video) 
-                  RayObjs[i].MaterialOptions[i2] = RayTracingObject.Options.Cutout; 
                else if(RayObjs[i].MaterialOptions[i2] != RayTracingObject.Options.Disney) 
                   RayObjs[i].MaterialOptions[i2] = RayTracingObject.Options.Disney;
             }
@@ -1279,12 +1376,20 @@ Toolbar toolbar;
 
       void AddHardSettingsToMenu() {
          definesList = GetDefines();
+         SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
+         SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
+         if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadianceCache", false);
+         SetGlobalDefines("DX11", definesList.Contains("DX11Only"));
          Toggle HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
-         HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("HardwareRT"); else RemoveDefine("HardwareRT"); SetDefines();});
+         HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("HardwareRT"); SetGlobalDefines("HardwareRT", true);} else {RemoveDefine("HardwareRT"); SetGlobalDefines("HardwareRT", false);}SetDefines();});
          HardSettingsMenu.Add(HardwareRTToggle);
 
-         Toggle NonAccurateLightTriToggle = new Toggle() {value = (definesList.Contains("NonAccurateLightTris")), text = "Disable Emissive Texture Aware Light BVH"};
-         NonAccurateLightTriToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("NonAccurateLightTris"); else RemoveDefine("NonAccurateLightTris"); SetDefines();});
+         Toggle BindlessToggle = new Toggle() {value = (definesList.Contains("UseAtlas")), text = "Disable Bindless Textures"};
+         BindlessToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("UseAtlas"); SetGlobalDefines("UseBindless", false);} else {RemoveDefine("UseAtlas"); SetGlobalDefines("UseBindless", true);} SetDefines();});
+         HardSettingsMenu.Add(BindlessToggle);
+
+         Toggle NonAccurateLightTriToggle = new Toggle() {value = (definesList.Contains("AccurateLightTris")), text = "Enable Emissive Texture Aware Light BVH"};
+         NonAccurateLightTriToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("AccurateLightTris"); else RemoveDefine("AccurateLightTris"); SetDefines();});
          HardSettingsMenu.Add(NonAccurateLightTriToggle);
          
          VisualElement ClayColorBox = new VisualElement();
@@ -1309,11 +1414,11 @@ Toolbar toolbar;
          HardSettingsMenu.Add(GroundColorField);
 
          Toggle OIDNToggle = new Toggle() {value = (definesList.Contains("UseOIDN")), text = "Enable OIDN(Does NOT work with DX11 Only)"};
-         OIDNToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("UseOIDN"); else RemoveDefine("UseOIDN"); SetDefines();});
+         OIDNToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("UseOIDN"); else RemoveDefine("UseOIDN"); SetDefines();});
          HardSettingsMenu.Add(OIDNToggle);
 
          Toggle RadCacheToggle = new Toggle() {value = (definesList.Contains("DisableRadianceCache")), text = "Disable Radiance Cache"};
-         RadCacheToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("DisableRadianceCache"); else RemoveDefine("DisableRadianceCache"); SetDefines();});
+         RadCacheToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {SetGlobalDefines("RadianceCache", false); AddDefine("DisableRadianceCache");} else {SetGlobalDefines("RadianceCache", true); RemoveDefine("DisableRadianceCache");} SetDefines();});
          HardSettingsMenu.Add(RadCacheToggle);
 
 
@@ -1321,7 +1426,13 @@ Toolbar toolbar;
          // LightmappingToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("TTLightMapping"); else RemoveDefine("TTLightMapping"); SetDefines();});
          // HardSettingsMenu.Add(LightmappingToggle);
          Toggle DX11Toggle = new Toggle() {value = (definesList.Contains("DX11Only")), text = "Use DX11"};
-         DX11Toggle.RegisterValueChangedCallback(evt => {if(evt.newValue) definesList.Add("DX11Only"); else RemoveDefine("DX11Only"); SetDefines();});
+         DX11Toggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {BindlessToggle.value = true; 
+                                                                           OIDNToggle.value = false; 
+                                                                           RemoveDefine("UseOIDN"); 
+                                                                           AddDefine("UseAtlas"); 
+                                                                           AddDefine("DX11Only"); 
+                                                                           SetGlobalDefines("DX11", true); 
+                                                                           SetGlobalDefines("UseBindless", false);} else {RemoveDefine("DX11Only"); SetGlobalDefines("DX11", false);}SetDefines();});
          HardSettingsMenu.Add(DX11Toggle);
 
 
@@ -1346,6 +1457,12 @@ Toolbar toolbar;
          ScreenShotBox.Add(AbsolutePath);
          HardSettingsMenu.Add(ScreenShotBox);
 
+         Button CorrectMatOptionsButton = new Button(() => FixRayObjects()) {text = "Correct Mat Options"};
+         HardSettingsMenu.Add(CorrectMatOptionsButton);
+
+      }
+
+      void AddHierarchyOptionsToMenu() {
          ObjectField SelectiveAutoAssignField = new ObjectField();
          SelectiveAutoAssignField.objectType = typeof(GameObject);
          SelectiveAutoAssignField.label = "Selective Auto Assign Scripts";
@@ -1353,12 +1470,15 @@ Toolbar toolbar;
             ParentData SourceParent = GrabChildren2((SelectiveAutoAssignField.value as GameObject).transform);
             SolveChildren(SourceParent);
             }) {text = "Selective Auto Assign"};
-         HardSettingsMenu.Add(SelectiveAutoAssignField);
-         HardSettingsMenu.Add(SelectiveAutoAssignButton);
+         HierarchyOptionsMenu.Add(SelectiveAutoAssignField);
+         HierarchyOptionsMenu.Add(SelectiveAutoAssignButton);
+      
+         ForceInstancesButton = new Button(() => {if(!Application.isPlaying) ConstructInstances(); else Debug.Log("Cant Do This In Editor");}) {text = "Force Instances"};
+         HierarchyOptionsMenu.Add(ForceInstancesButton);
 
-         Button CorrectMatOptionsButton = new Button(() => FixRayObjects()) {text = "Correct Mat Options"};
-         HardSettingsMenu.Add(CorrectMatOptionsButton);
-
+         StaticButton = new Button(() => {if(!Application.isPlaying) OptimizeForStatic(); else Debug.Log("Cant Do This In Editor");}) {text = "Make All Static"};
+         StaticButton.style.minWidth = 105;
+         HierarchyOptionsMenu.Add(StaticButton);
       }
 
       public struct CustomGBufferData {
@@ -1462,6 +1582,7 @@ void AddResolution(int width, int height, string label)
             DingNoise = Resources.Load("Utility/DING", typeof(AudioClip)) as AudioClip;
             OnFocus();
             MainSource = new VisualElement();
+            HierarchyOptionsMenu = new VisualElement();
             MaterialPairingMenu = new VisualElement();
             SceneSettingsMenu = new VisualElement();
             HardSettingsMenu = new VisualElement();
@@ -1481,19 +1602,35 @@ void AddResolution(int width, int height, string label)
             } else {
                {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();}
                Assets.UpdateMaterialDefinition();
+
+               #if UNITY_PIPELINE_HDRP
+                  GameObject NewObject = GameObject.Find("HDRPPASS");
+                  
+                  if(NewObject == null) {
+                      NewObject = new GameObject();
+                      NewObject.name = "HDRPPASS";
+                      NewObject.AddComponent<UnityEngine.Rendering.HighDefinition.CustomPassVolume>();
+                      var A = NewObject.GetComponent<UnityEngine.Rendering.HighDefinition.CustomPassVolume>();
+                      A.injectionPoint = UnityEngine.Rendering.HighDefinition.CustomPassInjectionPoint.BeforePostProcess;
+                      A.customPasses.Add(new HDRPCompatability());
+                  }
+               #endif
             }
             Button MainSourceButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();});
             Button MaterialPairButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); InputMaterialField.value = null; MaterialPairingMenu.Add(InputMaterialField); rootVisualElement.Add(MaterialPairingMenu);});
             Button SceneSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(SceneSettingsMenu);});
             Button HardSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(HardSettingsMenu);});
+            Button HierarchyOptionsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(HierarchyOptionsMenu);});
             toolbar.Add(MainSourceButton);
             toolbar.Add(MaterialPairButton);
             toolbar.Add(SceneSettingsButton);
             toolbar.Add(HardSettingsButton);
+            toolbar.Add(HierarchyOptionsButton);
             MainSourceButton.text = "Main Options";
             MaterialPairButton.text = "Material Pair Options";
             SceneSettingsButton.text = "Scene Settings";
             HardSettingsButton.text = "Functionality Settings";
+            HierarchyOptionsButton.text = "Hierarchy Options";
 
             if(RayMaster != null && Assets != null) {
             AddNormalSettings();
@@ -1501,6 +1638,8 @@ void AddResolution(int width, int height, string label)
            RayMaster.AtmoNumLayers = AtmoScatter;
            Assets.MainDesiredRes = AtlasSize;
            Assets.LightEnergyScale = LightEnergyScale;
+           RayMaster.LoadTT();
+           LEMEnergyScale = RayMaster.LocalTTSettings.LEMEnergyScale;
            RayTracingMaster.DoSaving = DoSaving;
            RayTracingMaster.DoDing = DoDing;
            BounceCount = RayMaster.LocalTTSettings.bouncecount;
@@ -1512,6 +1651,7 @@ void AddResolution(int width, int height, string label)
            Bloom = RayMaster.LocalTTSettings.PPBloom;
            DoSharpen = RayMaster.LocalTTSettings.DoSharpen;
            Sharpness = RayMaster.LocalTTSettings.Sharpness;
+           HDRILongLat = RayMaster.LocalTTSettings.HDRILongLat;
            BloomStrength = RayMaster.LocalTTSettings.BloomStrength;
            DoF = RayMaster.LocalTTSettings.PPDoF;
            ClayColor = RayMaster.LocalTTSettings.ClayColor;
@@ -1553,12 +1693,11 @@ void AddResolution(int width, int height, string label)
          }
 
            AddHardSettingsToMenu();
+           AddHierarchyOptionsToMenu();
            BVHBuild = new Button(() => OnStartAsyncCombined()) {text = "Build Aggregated BVH"};
            BVHBuild.style.minWidth = 145;
            ScreenShotButton = new Button(() => TakeScreenshot()) {text = "Take Screenshot"};
            ScreenShotButton.style.minWidth = 100;
-           StaticButton = new Button(() => {if(!Application.isPlaying) OptimizeForStatic(); else Debug.Log("Cant Do This In Editor");}) {text = "Make All Static"};
-           StaticButton.style.minWidth = 105;
 
            Button PanoramaButton = new Button(() => {
             var TempPan = GameObject.Find("Scene").GetComponent<PanoramaDoer>();
@@ -1606,7 +1745,6 @@ void AddResolution(int width, int height, string label)
            ClearButton.style.minWidth = 145;
            QuickStartButton = new Button(() => QuickStart()) {text = "Auto Assign Scripts"};
            QuickStartButton.style.minWidth = 111;
-           ForceInstancesButton = new Button(() => {if(!Application.isPlaying) ConstructInstances(); else Debug.Log("Cant Do This In Editor");}) {text = "Force Instances"};
 
            IntegerField AtlasField = new IntegerField() {value = AtlasSize, label = "Atlas Size"};
            AtlasField.isDelayed = true;
@@ -1618,7 +1756,6 @@ void AddResolution(int width, int height, string label)
            ButtonField1.style.flexDirection = FlexDirection.Row;
            ButtonField1.Add(BVHBuild);
            ButtonField1.Add(ScreenShotButton);
-           ButtonField1.Add(StaticButton);
            ButtonField1.Add(PanoramaButton);
            MainSource.Add(ButtonField1);
 
@@ -1626,13 +1763,12 @@ void AddResolution(int width, int height, string label)
            ButtonField2.style.flexDirection = FlexDirection.Row;
            ButtonField2.Add(ClearButton);
            ButtonField2.Add(QuickStartButton);
-           ButtonField2.Add(ForceInstancesButton);
            ButtonField2.Add(ChainedImageButton);
            MainSource.Add(ButtonField2);
 
            Box TopEnclosingBox = new Box();
                TopEnclosingBox.style.flexDirection = FlexDirection.Row;
-               FloatField BounceField = new FloatField() {value = BounceCount, label = "Max Bounces"};
+               FloatField BounceField = new FloatField() {value = (int)BounceCount, label = "Max Bounces"};
                BounceField.ElementAt(0).style.minWidth = 75;
                BounceField.ElementAt(1).style.width = 25;
                BounceField.style.paddingRight = 40;
@@ -1938,14 +2074,17 @@ void AddResolution(int width, int height, string label)
                IntegerField FireflyFrameCountField = new IntegerField() {value = FireflyFrameCount, label = "Frames Before Anti-Firefly"};
                FireflyFrameCountField.ElementAt(0).style.minWidth = 65;
                FireflyFrameCountField.RegisterValueChangedCallback(evt => {FireflyFrameCount = evt.newValue; RayMaster.LocalTTSettings.FireflyFrameCount = FireflyFrameCount;});
+               FireflyFrameCountField.style.maxWidth = 345;
                FireflyFoldout.Add(FireflyFrameCountField);
          
                Slider FireflyStrengthSlider = new Slider() {label = "Anti Firefly Strength: ", value = FireflyStrength, highValue = 1.0f, lowValue = 0.0f};
                FireflyStrengthSlider.RegisterValueChangedCallback(evt => {FireflyStrength = evt.newValue; RayMaster.LocalTTSettings.FireflyStrength = FireflyStrength;});
+               FireflyStrengthSlider.style.maxWidth = 345;
                FireflyFoldout.Add(FireflyStrengthSlider);
 
                FloatField FireflyOffsetField = new FloatField("Firefly Minimum Offset") {value = FireflyOffset};
                FireflyOffsetField.RegisterValueChangedCallback(evt => {FireflyOffset = (int)evt.newValue; RayMaster.LocalTTSettings.FireflyOffset = FireflyOffset;});
+               FireflyOffsetField.style.maxWidth = 345;
                FireflyFoldout.Add(FireflyOffsetField);
 
 
