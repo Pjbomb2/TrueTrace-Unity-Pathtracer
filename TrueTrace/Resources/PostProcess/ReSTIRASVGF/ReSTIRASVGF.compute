@@ -260,7 +260,8 @@ void CopyData(int3 id : SV_DispatchThreadID)
     if(id.x > screen_width || id.y > screen_height) return;
     const int pixel_index = id.y * screen_width + id.x;
     ColData Pixel = GlobalColorsRead[pixel_index];
-    float3 TexInverted = Pixel.Data;
+    Pixel.Flags = packRGBE(max(unpackRGBE(Pixel.Flags), 0.01f));
+    float3 TexInverted = max(Pixel.Data, 0.01f);
     float3 TexBaseColor = clamp(TexInverted.xyz,0,12.0f);
     TexBaseColor = (TexBaseColor > 0.005f ? rcp(TexBaseColor) : 0);
     float2 MetRough = FromColorSpecPacked(Pixel.MetRoughIsSpec);

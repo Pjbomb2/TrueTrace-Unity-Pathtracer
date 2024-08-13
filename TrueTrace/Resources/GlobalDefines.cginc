@@ -12,7 +12,7 @@
 // #define IgnoreBackfacing
 // #define WhiteLights
 #define LBVH
-// #define FasterLightSampling
+#define FasterLightSampling
 #define AccurateEmissionTex
 #define RadianceCache
 // #define ImprovedRadCacheSpecularResponse

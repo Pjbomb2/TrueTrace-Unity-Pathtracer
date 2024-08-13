@@ -234,7 +234,7 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 	ColData Pixel = GlobalColorsRead[pixel_index];
 	float3 TexBaseColor = Pixel.Data.xyz;
 	Pixel.Flags = packRGBE(max(unpackRGBE(Pixel.Flags), 0.01f));
-	Pixel.Data = max(Pixel.Data, 0.01f);
+	Pixel.Data = max(Pixel.Data, 0.0001f);
 	TexBaseColor = (TexBaseColor > 0.005f ? rcp(TexBaseColor) : 0);
 	float2 MetRough = FromColorSpecPacked(Pixel.MetRoughIsSpec);
 	if(GetBounceData(Pixel.MetRoughIsSpec) == 1) {
@@ -947,10 +947,10 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 				Max = max(Max, col);
 			}
 		}
-		// color_curr_spec.rgb = exp(clamp(log(color_curr_spec.rgb + 1), 0, log(Max + 15))) - 1;
+		color_curr_spec.rgb = exp(clamp(log(color_curr_spec.rgb + 1), 0, log(Max + 15))) - 1;
 
 		// Same sequence as above, only for the specular channel
-		float antilag = clamp(0.01f * grad_hf_spec.y * clamp(1.0f - motion_length, 0.01f, 1.0f) + motion_length * 0.0005f, 0, 1);
+		float antilag = 0.01f * grad_hf_spec.y * clamp(1.0f - motion_length, 0.01f, 1.0f) + motion_length * 0.0005f;
 		// float antilag = grad_hf_spec.y + motion_length * 0.001f;
 		float antilag_alpha_spec = clamp(lerp(0.0, antilag, 1), 0, 1);
 		float hist_len_spec = min(max(temporal_color_histlen_spec.a * pow(1.0 - antilag_alpha_spec, 10),0) + 1.0, 256.0);
@@ -1318,7 +1318,7 @@ inline void filter_image(
 				// MaxMom = max(MaxMom, img_moments[offID].y);
 			}
 		}
-		// color_center_spec = clamp(color_center_spec, Min, Max);
+		color_center_spec = clamp(color_center_spec, Min, Max);
 		// float Mom2 = clamp(moments_center.x, MinMom, MaxMom);
 		// step_size *= clamp(step_size * (max(1e-8, moments_center.y * moments_center.y * 10.0f)) + rcp(hist_len_hf / 10.0f + 1), 1.0f, step_size);
 		// if(spec_iteration != 0) step_size *= clamp(step_size * (max(1e-8, Mom2 * Mom2 * 10.0f)), 1.0f, step_size);// (max(1e-8, moments_center.y * moments_center.y * 10.0f)) + rcp(hist_len_hf / 10.0f + 1), 1.0f, step_size);

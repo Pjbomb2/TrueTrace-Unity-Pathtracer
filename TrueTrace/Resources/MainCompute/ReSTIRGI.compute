@@ -280,7 +280,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     uint MetRoughIsSpec = CenterCol.MetRoughIsSpec;
     MaterialData SurfaceMat = _Materials[MatIndex];
     const uint Flag = CenterCol.Flags;
-    SurfaceMat.surfaceColor = max(unpackRGBE(Flag), 0.005f);
+    SurfaceMat.surfaceColor = unpackRGBE(Flag);
     SurfaceMat.roughness = FromColorSpecPacked(MetRoughIsSpec).y;
     SurfaceMat.metallic = FromColorSpecPacked(MetRoughIsSpec).x;
 
@@ -379,7 +379,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
         }
         if(GetBounceData(MetRoughIsSpec) != 1) {
             MetRoughIsSpec = (MetRoughIsSpec & ~(0xFC000000)) |  ((2) << 26);  
-            GlobalColors[pixel_index].Data = float3(max(bsdf, 0.0001f));
+            GlobalColors[pixel_index].Data = float3(bsdf);
         }
         GlobalColors[pixel_index].throughput = float3(asfloat(uint2(octahedral_32(GeomNorm), octahedral_32(SurfNorm))), GBuffer.z);
         GlobalColors[pixel_index].Direct = CenterCol.Direct * CurrentRes.y;

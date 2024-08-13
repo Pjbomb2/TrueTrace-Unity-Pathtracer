@@ -62,10 +62,10 @@ MonoBehaviour:
   MainDesiredRes: 16384
   UseSkinning: 1
   LightEnergyScale: 1
-  BackgroundType: 0
+  BackgroundType: 2
   BackgroundIntensity: {x: 1, y: 1}
   SceneBackgroundColor: {x: 0, y: 0, z: 0}
-  SecondaryBackgroundType: 0
+  SecondaryBackgroundType: 2
   SecondarySceneBackgroundColor: {x: 0, y: 0, z: 0}
   HDRILongLat: {x: 0, y: 0}
   HDRIScale: {x: 1, y: 1}

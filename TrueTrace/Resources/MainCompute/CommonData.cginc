@@ -156,7 +156,7 @@ Texture2D<half> _IESAtlas;
 Texture2D<half> Heightmap;
 
 #if defined(UseBindless) && !defined(DX11)
-	SamplerState my_linear_repeat_sampler;
+	SamplerState my_trilinear_repeat_sampler;
 	SamplerState my_point_repeat_sampler;
 	Texture2D<float4> _BindlessTextures[2048] : register(t31);
 #endif
@@ -183,7 +183,7 @@ inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotati
 }
 
 
-float4 SampleTexture(float2 UV, int TextureType, MaterialData MatTex) {
+inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTex) {
 	float4 FinalCol = 0;
 	#if !defined(UseBindless) || defined(DX11)
 		switch(TextureType) {
@@ -244,7 +244,7 @@ float4 SampleTexture(float2 UV, int TextureType, MaterialData MatTex) {
 		#ifdef PointFiltering
 			FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
 		#else
-			FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_linear_repeat_sampler, UV, 0);
+			FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
 		#endif
 		if(TextureReadChannel != 4) FinalCol = FinalCol[TextureReadChannel];
 		if(TextureType == SampleNormal) {
