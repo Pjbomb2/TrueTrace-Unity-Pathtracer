@@ -549,6 +549,7 @@ static float3 SampleDisneySpecTransmission(const MaterialData hitDat, float3 wo,
     float pdf;
     refracted = false;
 
+    if(thin) G1v *= sqrt(hitDat.surfaceColor);
     if (saturate(random(120, pixel_index).x + hitDat.flatness) <= F) {
 
         wi = normalize(reflect(-wo, wm));
@@ -564,7 +565,6 @@ static float3 SampleDisneySpecTransmission(const MaterialData hitDat, float3 wo,
             wi = reflect(-wo, wm);
             wi.y = -wi.y;
             refracted = true;
-            // G1v *= sqrt(hitDat.surfaceColor);
         } else {
             if (Transmit(wm, wo, relativeIOR, wi) || hitDat.flatness == 1) {
                 refracted = true;

@@ -19,15 +19,15 @@ MonoBehaviour:
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 0
+  Accumulate: 1
   PPBloom: 0
-  BloomStrength: 0.632
+  BloomStrength: 0.807
   PPDoF: 0
   DoFAperature: 0.157
   DoFAperatureScale: 0.54
   DoFFocal: 4.8121676
   PPExposure: 0
-  ExposureAuto: 1
+  ExposureAuto: 0
   PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
@@ -41,7 +41,7 @@ MonoBehaviour:
   ReSTIRGISpatialRadius: 24
   ReSTIRGITemporalMCap: 32
   DoReSTIRGIConnectionValidation: 1
-  Exposure: 0
+  Exposure: 0.4
   DoPartialRendering: 0
   PartialRenderingFactor: 8
   DoFirefly: 0
@@ -62,10 +62,10 @@ MonoBehaviour:
   MainDesiredRes: 16384
   UseSkinning: 1
   LightEnergyScale: 1
-  BackgroundType: 2
+  BackgroundType: 0
   BackgroundIntensity: {x: 1, y: 1}
   SceneBackgroundColor: {x: 0, y: 0, z: 0}
-  SecondaryBackgroundType: 2
+  SecondaryBackgroundType: 0
   SecondarySceneBackgroundColor: {x: 0, y: 0, z: 0}
   HDRILongLat: {x: 0, y: 0}
   HDRIScale: {x: 1, y: 1}

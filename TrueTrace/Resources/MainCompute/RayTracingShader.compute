@@ -167,17 +167,18 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             #endif
         }
         if(CurBounce == 0 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -10000.0f;
-        #ifdef RadianceCache
-            if(!UseReSTIRGI || ReSTIRGIUpdateRate == 0 || RandomNums[id.xy].z == 0) {
-                if(!AddHitToCache(CacheInstance, PrevOrigin, random(324, pixel_index).x)) return;
-                CacheInstance.CurrentIlluminance = 0;   
-            }
-        #endif
         if(luminance(EmissCol) > 12.0f) {
             if(CurBounce == 0) {
                 Color.Data = EmissCol;
                 Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0xFC000000)) |  ((1) << 26);  
             }
+            #ifdef RadianceCache
+                if(CurBounce > 0)
+                if(!UseReSTIRGI || ReSTIRGIUpdateRate == 0 || RandomNums[id.xy].z == 0) {
+                    if(!AddHitToCache(CacheInstance, PrevOrigin, random(324, pixel_index).x)) return;
+                    CacheInstance.CurrentIlluminance = 0;   
+                }
+            #endif
             return;
         }
     }
@@ -222,25 +223,25 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         } else if (GetBounceData(Color.MetRoughIsSpec) <= 1 && MaterialLobe == 3) {
             Color.MetRoughIsSpec = ToColorSpecPackedAdd(float3(0, 0, 3), Color.MetRoughIsSpec);
         }
-            Color.InWaterDistance += hit.t;
-        int WaterStageFlag = (Color.MetRoughIsSpec & 0x3800000) >> 23;
-        if(!GetFlag(hitDat.Tag, Thin) && GotFlipped && (WaterStageFlag == 2 || WaterStageFlag == 4) && hit.mesh_id != 9999999) {
-            bsdf *= exp(-Color.InWaterDistance * CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance));
-            Color.InWaterDistance = 0;
-        }
 
-        if(MaterialLobe == 3 && GotFlipped && (WaterStageFlag == 0 || (WaterStageFlag == 1 || WaterStageFlag == 3))) {
-            bsdf *= exp(-Color.InWaterDistance * CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance));
-            Color.InWaterDistance = 0;
-            WaterStageFlag = 3 + !Refracted;//WaterStageFlag == 2 ? 5 : 4;
-        }
+        Color.InWaterDistance += hit.t;
+        if(!GetFlag(hitDat.Tag, Thin)) {
+            int WaterStageFlag = (Color.MetRoughIsSpec & 0x3800000) >> 23;
+            if(GotFlipped) {
+                if(MaterialLobe == 3 || (WaterStageFlag == 2 || WaterStageFlag == 4)) {
+                    bsdf *= exp(-Color.InWaterDistance * CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance));
+                    if(!(WaterStageFlag == 2 || WaterStageFlag == 4)) WaterStageFlag = 3 + !Refracted;
+                    Color.InWaterDistance = 0;
+                }
+            }
+            if(MaterialLobe == 3 && (Refracted)) {
+                Color.InWaterDistance = 0;
+                if(GotFlipped) WaterStageFlag == 2;
+                else WaterStageFlag = 1;
+            }
 
-        if(MaterialLobe == 3 && (Refracted)) {
-            Color.InWaterDistance = 0;
-            if(GotFlipped) WaterStageFlag == 2;
-            else WaterStageFlag = 1;
+            Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x3800000)) | (WaterStageFlag << 23);
         }
-        Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x3800000)) | (WaterStageFlag << 23);
 
         throughput *= bsdf;
     }
@@ -252,14 +253,12 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         #ifdef TrueBlack
             Color.Flags = packRGBE((CurBounce == 0) ? hitDat.surfaceColor : (unpackRGBE(Color.Flags) * hitDat.surfaceColor));
             Color.Data = float3((CurBounce == 0) ? throughput : (throughput * Color.Data.xyz));
-            Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0xFC000000)) | (((CurBounce < 45 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.01f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26);  
         #else
             Color.Flags = packRGBE((CurBounce == 0) ? max(hitDat.surfaceColor, 0.005f) : (unpackRGBE(Color.Flags) * max(hitDat.surfaceColor, 0.005f)));
             Color.Data = float3((CurBounce == 0) ? max(throughput, 0.006f) : (max(throughput, 0.005f) * Color.Data.xyz));
-            Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0xFC000000)) |  (((CurBounce < 45 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.01f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26);  
         #endif
         PrevScreenData = float4(asfloat(octahedral_32((CurBounce == 0 && Refracted) ? -Geomnorm : Geomnorm)), asfloat(octahedral_32((CurBounce == 0 && Refracted) ? -norm : norm)),PrevScreenData.z + hit.t, asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 2) >> 2) : ((asuint(PrevScreenData.w) << 3) >> 3)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
-        Color.MetRoughIsSpec |= (Refracted << 22);
+        Color.MetRoughIsSpec = ((Color.MetRoughIsSpec & ~(0xFC000000)) | (((CurBounce < 45 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.01f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
         throughput = 1;  
     }   
     #ifdef RadianceCache

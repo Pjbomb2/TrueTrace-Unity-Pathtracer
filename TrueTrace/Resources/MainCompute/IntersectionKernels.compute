@@ -60,6 +60,7 @@ inline void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ra
 
 
 void IntersectBVH(int ray_index) {
+    if(ray_index >= BufferSizes[CurBounce].tracerays) return;
     RayHit bestHit;
     SmallerRay ray;
     #ifndef HardwareRT
@@ -75,11 +76,9 @@ void IntersectBVH(int ray_index) {
         int MatOffset = 0;
         int mesh_id = -1;
     #endif
-    RayData GlobalRay;
-    if(ray_index >= BufferSizes[CurBounce].tracerays) return;
 
         [branch]if(CurBounce % 2 == 1) ray_index += screen_width * screen_height;
-        GlobalRay = GlobalRays[ray_index];
+        RayData GlobalRay = GlobalRays[ray_index];
         bestHit = CreateRayHit();
 
         #ifdef HardwareRT

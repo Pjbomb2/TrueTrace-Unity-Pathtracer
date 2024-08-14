@@ -1431,8 +1431,8 @@ inline float3 CalcPos(uint4 TriData) {
 #define GridBias 2
 #define BucketCount 32
 #define PropDepth 4
-#define MinSampleToContribute 8
-#define MaxSampleCount 128
+#define MinSampleToContribute 0
+#define MaxSampleCount 32
 #define CacheCapacity (4 * 1024 * 1024)
 
 RWByteAddressBuffer VoxelDataBufferA;
@@ -1452,14 +1452,14 @@ int4 CalculateCellParams(float3 VertexPos) {
 	return int4(floor((VertexPos * WorldCacheScale * 4) / pow(2, Layer)), Layer);
 }
 
-HashKeyValue CompressHash(uint4 CellParams, uint NormHash) {
-	HashKeyValue HashValue;
+uint2 CompressHash(uint4 CellParams, uint NormHash) {
+	uint2 HashValue;
 	HashValue.x = (CellParams.x & ((1u << 17) - 1)) | ((CellParams.y & ((1u << 17) - 1)) << 17);
 	HashValue.y = ((CellParams.y & ((1u << 17) - 1)) >> 15) | ((CellParams.z & ((1u << 17) - 1)) << 2) | ((CellParams.w & ((1u << 10) - 1)) << 19) | (NormHash << 29);
 	return HashValue;
 }
 
-HashKeyValue ComputeHash(float3 Position, float3 Norm) {
+uint2 ComputeHash(float3 Position, float3 Norm) {
 	uint4 CellParams = asuint(CalculateCellParams(Position));
 	uint NormHash =
         (Norm.x >= 0 ? 1 : 0) +
@@ -1469,20 +1469,21 @@ HashKeyValue ComputeHash(float3 Position, float3 Norm) {
 	return CompressHash(CellParams, NormHash);
 }
 
-// http://burtleburtle.net/bob/hash/integer.html
-uint HashJenkins32(uint a) {
-    a = (a + 0x7ed55d16) + (a << 12);
-    a = (a ^ 0xc761c23c) ^ (a >> 19);
-    a = (a + 0x165667b1) + (a << 5);
-    a = (a + 0xd3a2646c) ^ (a << 9);
-    a = (a + 0xfd7046c5) + (a << 3);
-    a = (a ^ 0xb55a4f09) ^ (a >> 16);
+//Using third hash from here: http://burtleburtle.net/bob/hash/integer.html
+uint Hash32Bit(uint a) {
+  	a -= (a<<6);
+    a ^= (a>>17);
+    a -= (a<<9);
+    a ^= (a<<4);
+    a -= (a<<3);
+    a ^= (a<<10);
+    a ^= (a>>15);
     return a;
 }
 
-uint Hash32(HashKeyValue HashValue) {
-    return HashJenkins32(HashValue.x & 0xffffffff)
-         ^ HashJenkins32(HashValue.y & 0xffffffff);
+uint Hash32(uint2 HashValue) {
+    return Hash32Bit(HashValue.x & 0xffffffff)
+         ^ Hash32Bit(HashValue.y & 0xffffffff);
 }
 
 
@@ -1562,7 +1563,7 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 	    uint4 voxelDataPacked = VoxelDataBufferB.Load4(CacheEntry * 16);
 
 	    GridVoxel Voxel;
-		Voxel.radiance = voxelDataPacked.xyz / 1e4f;
+		Voxel.radiance = voxelDataPacked.xyz / 1e3f;
 	    Voxel.sampleNum = (voxelDataPacked.w) & ((1u << 20) - 1);
 
 	    return Voxel;
@@ -1575,33 +1576,8 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 	    	if(Values[i] != 0) VoxelDataBufferA.InterlockedAdd(CacheEntry + 4 * i, Values[i]);
 	}
 
-	void CachePropogateBSDF(inout PropogatedCacheData CurrentProp, float3 throughput) {
-	    CurrentProp.throughput = EncodeRGB(throughput);
-	}
 
-	float3 HashGridDebugOccupancy(uint2 pixelPosition, uint2 screenSize)
-	{
-	    const uint elementSize = 7;
-	    const uint borderSize = 1;
-	    const uint blockSize = elementSize + borderSize;
-
-	    uint rowNum = screenSize.y / blockSize;
-	    uint rowIndex = pixelPosition.y / blockSize;
-	    uint columnIndex = pixelPosition.x / blockSize;
-	    uint elementIndex = (columnIndex / 32) * (rowNum * 32) + rowIndex * 32 + (columnIndex % 32);
-
-	    if (elementIndex < CacheCapacity && ((pixelPosition.x % blockSize) < elementSize && (pixelPosition.y % blockSize) < elementSize))
-	    {
-	        HashKeyValue storedHashKey = HashEntriesBufferB[elementIndex];
-
-	        if ((storedHashKey.x != 0 && storedHashKey.y != 0))
-	            return float3(0.0f, 1.0f, 0.0f);
-	    }
-
-	    return float3(0.0f, 0.0f, 0.0f);
-	}
-
-	inline uint HashGridInsert(const HashKeyValue HashValue) {
+	inline uint FindOpenHash(const uint2 HashValue) {
 		uint BucketIndex;
 		uint hash = Hash32(HashValue);
 	    uint HashIndex = hash % CacheCapacity;
@@ -1623,13 +1599,13 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 		return 0;
 	}
 
-	inline bool HashGridFind(const HashKeyValue HashValue, inout uint cacheEntry) {
+	inline bool HashGridFind(const uint2 HashValue, inout uint cacheEntry) {
 	    uint hash = Hash32(HashValue);
 	    uint HashIndex = hash % CacheCapacity;
 
 	    uint baseSlot = floor(HashIndex / (float)BucketCount) * BucketCount;
 	    for (uint i = 0; i < BucketCount; i++) {
-	        HashKeyValue PrevHash = HashEntriesBufferB[baseSlot + i];//I am read and writing to the same hash buffer, this could be a problem
+	        uint2 PrevHash = HashEntriesBufferB[baseSlot + i];//I am read and writing to the same hash buffer, this could be a problem
 
 	        if (PrevHash.x == HashValue.x && PrevHash.y == HashValue.y) {
 	            cacheEntry = baseSlot + i;
@@ -1641,7 +1617,7 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 
 
 	inline bool RetrieveCacheRadiance(inout PropogatedCacheData CurrentProp, float3 Pos, float3 Norm, out float3 radiance) {
-		HashKeyValue HashValue = ComputeHash(Pos, Norm);
+		uint2 HashValue = ComputeHash(Pos, Norm);
 	   	uint CacheEntry = 0xFFFFFFFF;
 	   	HashGridFind(HashValue, CacheEntry);
 
@@ -1656,35 +1632,26 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 
 	inline bool AddHitToCache(inout PropogatedCacheData CurrentProp, float3 Pos, float random) {
 	    bool EarlyOut = false;
-	    float3 lighting = clamp(DecodeRGB(CurrentProp.CurrentIlluminance), 0, 1200.0f);
-// #ifdef DX11
+	    float3 OrigLighting = clamp(DecodeRGB(CurrentProp.CurrentIlluminance), 0, 1200.0f);
+	    float3 ModifiedLighting = OrigLighting;
 	    int PathLength = (CurrentProp.pathLength & PathLengthMask);
+
+	   	uint CacheEntry = FindOpenHash(ComputeHash(Pos, i_octahedral_32(CurrentProp.Norm)));
+	    if (random * 3.0f + 1.0f <= PathLength) {
+	        GridVoxel Voxel = RetrieveCacheData(CacheEntry);
+            EarlyOut = Voxel.sampleNum > MinSampleToContribute;
+	        if (EarlyOut) ModifiedLighting = Voxel.radiance / Voxel.sampleNum;
+	    }
+	    if(!EarlyOut) AddDataToCache(CacheEntry, uint4(OrigLighting * 1e3f, 1));
+	    for (int i = 0; i < PathLength; ++i) {
+	        ModifiedLighting *= DecodeRGB(CurrentProp.samples[i].x);
+	        AddDataToCache(CurrentProp.samples[i].y, uint4(ModifiedLighting * 1e3f, 0));
+	    }
         if(PathLength >= 3) CurrentProp.samples[3] = CurrentProp.samples[2];
         if(PathLength >= 2) CurrentProp.samples[2] = CurrentProp.samples[1];
         if(PathLength >= 1) CurrentProp.samples[1] = CurrentProp.samples[0];
-// #else
-// 	  	for (int i = (CurrentProp.pathLength & PathLengthMask); i > 0; --i)
-// 	        CurrentProp.samples[i] = CurrentProp.samples[i - 1];
-// #endif
-
-	    float3 Norm = i_octahedral_32(CurrentProp.Norm);
-	   	HashKeyValue HashValue = ComputeHash(Pos, Norm);
-	   	uint CacheEntry = HashGridInsert(HashValue);
 	    CurrentProp.samples[0].y = CacheEntry;
-
-	    if (lerp(1.0f, 4.0f, random) <= (CurrentProp.pathLength & PathLengthMask)) {
-	        GridVoxel Voxel = RetrieveCacheData(CacheEntry);
-	        if (Voxel.sampleNum > MinSampleToContribute) {
-	            lighting = Voxel.radiance / Voxel.sampleNum;
-	            EarlyOut = true;
-	        }
-	    }
-	    CurrentProp.pathLength = (CurrentProp.pathLength & ~PathLengthMask) | min((CurrentProp.pathLength & PathLengthMask) + 1, PropDepth - 1);
-
-	    for (int i = EarlyOut; i < (CurrentProp.pathLength & PathLengthMask); ++i) {
-	        if(i > 0) lighting *= DecodeRGB(CurrentProp.samples[i].x);
-	        AddDataToCache(CurrentProp.samples[i].y, uint4(lighting * 1e4f, i == 0));
-	    }
+	    CurrentProp.pathLength = (CurrentProp.pathLength & ~PathLengthMask) | min(PathLength + 1, PropDepth - 1);
 
 	    return !EarlyOut;
 	}
@@ -1692,11 +1659,11 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 	inline void AddMissToCache(inout PropogatedCacheData CurrentProp, float3 radiance) {
 	    for (int i = 0; i < (CurrentProp.pathLength & PathLengthMask); ++i) {
 	        radiance *= DecodeRGB(CurrentProp.samples[i].x);
-	        AddDataToCache(CurrentProp.samples[i].y, uint4(radiance * 1e4f, 0));
+	        AddDataToCache(CurrentProp.samples[i].y, uint4(radiance * 1e3f, 0));
 	    }
 	}
 
-	HashKeyValue GetReprojectedHash(HashKeyValue HashValue) {
+	uint2 GetReprojectedHash(uint2 HashValue) {
 	    const uint negativeBit = 1 << (17 - 1);
 	    const uint negativeNumberMask = ~((1 << 17) - 1);
 

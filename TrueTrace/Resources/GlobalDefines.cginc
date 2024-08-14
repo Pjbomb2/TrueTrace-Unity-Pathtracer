@@ -8,11 +8,11 @@
 #define IgnoreGlassShadow
 // #define IgnoreGlassMain
 // #define PointFiltering
-#define StainedGlassShadows
+// #define StainedGlassShadows
 // #define IgnoreBackfacing
 // #define WhiteLights
 #define LBVH
-#define FasterLightSampling
+// #define FasterLightSampling
 #define AccurateEmissionTex
 #define RadianceCache
 // #define ImprovedRadCacheSpecularResponse

@@ -97,6 +97,7 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
     #ifdef RadianceCache
         CacheBuffer[pixel_index].pathLength = 0;
         CacheBuffer[pixel_index].CurrentIlluminance = 0;
+        CacheBuffer[pixel_index].throughput = EncodeRGB(float3(1,1,1));
     #endif
     SmallerRay ray;
     if(DoPanorama) {
@@ -126,7 +127,7 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
     void CacheResolve(uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID) {
     #ifdef RadianceCache
         HashEntriesBuffer[id.x].z = 0;
-        HashKeyValue HashValue = HashEntriesBuffer[id.x];
+        uint2 HashValue = HashEntriesBuffer[id.x];
         bool Valid = !(id.x > CacheCapacity || (HashValue.x == 0 && HashValue.y == 0));
         int GroupIndex = floor(GT.x / (float)BucketCount);
         ActiveData[GT.x] = Valid;
@@ -140,13 +141,13 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
             uint VoxelSampleCount = SummedVoxel.w & ((1u << 20) - 1);
 
             if ((VoxelSampleCount < MaxSampleCount) && any(CamPos - PrevCamPos) && (VoxelCurr.w != 0)) {
-                HashKeyValue SidelinedHashKey = GetReprojectedHash(HashValue);
+                uint2 SidelinedHashKey = GetReprojectedHash(HashValue);
 
                 uint cacheEntry = 0xFFFFFFFF;
                 if (HashGridFind(SidelinedHashKey, cacheEntry)) {
                     uint4 SidelinedVoxelPrev = VoxelDataBufferB.Load4(cacheEntry * 16);
                     uint SidelinedVoxelSampleCount = SidelinedVoxelPrev.w & ((1u << 20) - 1);
-                    if (SidelinedVoxelSampleCount > 8) {
+                    if (SidelinedVoxelSampleCount > 0) {
                         SummedVoxel.xyz += SidelinedVoxelPrev.xyz;
                         VoxelSampleCount += SidelinedVoxelSampleCount;
                     }
