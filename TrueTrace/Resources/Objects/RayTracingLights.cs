@@ -12,6 +12,7 @@ namespace TrueTrace {
         [HideInInspector] public int IESIndex;
         [Range(0,40)] public float ShadowSoftness = 0.0f;
         [SerializeField] public bool UseKelvin = false;
+        [SerializeField] public bool DebugTest = false;
         [SerializeField] [Range(1000.0f,20000.0f)] public float KelvinTemperature = 1000.0f;
         public Texture2D IESProfile;
 
@@ -45,7 +46,6 @@ namespace TrueTrace {
         }
 
 
-
         public void Start() {
             ThisLightData = new LightData();
             ThisLight = this.GetComponent<Light>();
@@ -65,7 +65,12 @@ namespace TrueTrace {
                 transform.hasChanged = false;
             // }
             if(UseKelvin) {
-                ThisLightData.Radiance = GetRgbFromTemperature(KelvinTemperature) * ThisLight.intensity;
+                if(DebugTest) {
+                    Color TempCol = Mathf.CorrelatedColorTemperatureToRGB(KelvinTemperature);
+                    ThisLightData.Radiance = new Vector3(TempCol[0], TempCol[1], TempCol[2]) * ThisLight.intensity;
+                } else {
+                    ThisLightData.Radiance = GetRgbFromTemperature(KelvinTemperature) * ThisLight.intensity;
+                }
             } else {
                 Color col = ThisLight.color;
                 ThisLightData.Radiance = new Vector3(col[0], col[1], col[2]) * ThisLight.intensity;

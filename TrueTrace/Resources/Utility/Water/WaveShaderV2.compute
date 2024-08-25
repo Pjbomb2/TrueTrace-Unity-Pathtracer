@@ -14,6 +14,8 @@ int DoFakeWaves;
 int DoRealWater;
 int UseVertexNormals;
 
+//Fake waves origin: https://www.shadertoy.com/view/MdXyzX
+
 #define DRAG_MULT 0.38 // changes how much waves pull on the water
 #define WATER_DEPTH 1.0 // how deep is the water
 #define CAMERA_HEIGHT 1.5 // how high the camera should be
@@ -228,7 +230,8 @@ void UpdateWalls (uint3 id : SV_DispatchThreadID)
 
 
 #pragma kernel Simulate
-
+//Simulation base: 
+//https://www.shadertoy.com/view/wdtyDH
 
 [numthreads(16,16,1)]
 void Simulate (uint3 id : SV_DispatchThreadID)

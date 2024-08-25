@@ -1,8 +1,8 @@
 #include "../GlobalDefines.cginc"
-#include "CommonData.cginc"
 #ifndef DX11
     #pragma use_dxc
 #endif
+#include "CommonData.cginc"
 
 #ifdef HDRP
 Texture2DArray<float2> MotionVectors;
@@ -26,12 +26,6 @@ void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
     const uint pixel_index = id.y * screen_width + id.x;
     RayData globray = {Rays[pixel_index].origin + NearPlane * Rays[pixel_index].direction, pixel_index, Rays[pixel_index].direction, 0, 0,0,asuint(FarPlane),0};
     GlobalRays[pixel_index] = globray;
-    GlobalColors[pixel_index] = InitCol;
-
-    #ifdef RadianceCache
-        CacheBuffer[pixel_index].pathLength = 0;
-        CacheBuffer[pixel_index].CurrentIlluminance = 0;
-    #endif
 }
 
 #pragma kernel Generate
@@ -42,14 +36,9 @@ void Generate(uint3 id : SV_DispatchThreadID) {
     const uint pixel_index = id.y * screen_width + id.x;
     float2 jitter = ((random(0, pixel_index) - 0.5));
     float2 uv = float2((id.xy + jitter) / float2(screen_width, screen_height) * 2.0f - 1.0f);
-    #ifdef RadianceCache
-        CacheBuffer[pixel_index].pathLength = 0;
-        CacheBuffer[pixel_index].CurrentIlluminance = 0;
-    #endif
     SmallerRay ray = CreateCameraRay(uv, pixel_index);
     RayData globray = {ray.origin + NearPlane * ray.direction, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
     GlobalRays[pixel_index] = globray;
-    GlobalColors[pixel_index] = InitCol;
 }
 
 
@@ -76,13 +65,8 @@ void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadI
             RandomNumsWrite[id.xy] = float4(PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.yx, 1 + ReservoirA[prevIndex].z,  PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.z);
         }
     }
-    
-    #ifdef RadianceCache
-        CacheBuffer[pixel_index].pathLength = 0;
-        CacheBuffer[pixel_index].CurrentIlluminance = 0;
-    #endif
+
     GlobalRays[pixel_index] = globray;
-    GlobalColors[pixel_index] = InitCol;
 }
 
 bool DoPanorama;
@@ -94,11 +78,6 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
     const uint pixel_index = id.y * screen_width + id.x;
     float2 jitter = ((random(0, pixel_index) - 0.5));
     float2 uv = float2((id.xy) / float2(screen_width, screen_height));
-    #ifdef RadianceCache
-        CacheBuffer[pixel_index].pathLength = 0;
-        CacheBuffer[pixel_index].CurrentIlluminance = 0;
-        CacheBuffer[pixel_index].throughput = EncodeRGB(float3(1,1,1));
-    #endif
     SmallerRay ray;
     if(DoPanorama) {
         uv.y = 1.0f - uv.y;
@@ -115,7 +94,6 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
     }
     RayData globray = {ray.origin, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
     GlobalRays[pixel_index] = globray;
-    GlobalColors[pixel_index] = InitCol;
 }
 
 
@@ -178,7 +156,7 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
         if(!Valid) return;
 
         if(id.x % BucketCount >= TotalCount[GroupIndex]) {
-            VoxelDataBufferA.Store4(id.x * 16, (uint4)0);
+            VoxelDataBufferA.Store4(id.x * 16, 0);
                 
             uint Offset = 0;
             if(ActiveData[GT.x]) {
@@ -203,7 +181,7 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
         } else if(ActiveData[GT.x]) {
             VoxelDataBufferA.Store4(id.x * 16, SummedVoxel);
         } else {
-            VoxelDataBufferA.Store4(id.x * 16, (uint4)0);
+            VoxelDataBufferA.Store4(id.x * 16, 0);
             
         }
     #endif
@@ -215,14 +193,16 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
     void ScreenCopy(uint3 id : SV_DispatchThreadID) {
     #ifdef RadianceCache
         uint copyOffset = HashEntriesBuffer[id.x].z;
-        if (copyOffset == 0 || id.x > CacheCapacity) return;
-        if (copyOffset == 0xFFFFFFFF) HashEntriesBuffer[id.x] = (HashKeyValue)0;
-        else if(copyOffset != 0) {
-            HashKeyValue HashValue = uint3(HashEntriesBuffer[id.x].xy,0);
-            HashEntriesBuffer[id.x] = (HashKeyValue)0;
-            HashEntriesBuffer[copyOffset] = HashValue;
+        if (!(copyOffset == 0 || id.x >= CacheCapacity)) {
+            if (copyOffset == 0xFFFFFFFF) HashEntriesBuffer[id.x] = (HashKeyValue)0;
+            else if(copyOffset != 0) {
+                HashKeyValue HashValue = uint3(HashEntriesBuffer[id.x].xy,0);
+                HashEntriesBuffer[id.x] = (HashKeyValue)0;
+                HashEntriesBuffer[copyOffset] = HashValue;
+            }
+            HashEntriesBuffer[id.x].z = 0;
         }
-        HashEntriesBuffer[id.x].z = 0;
+        HashEntriesBufferA2[id.x] = HashEntriesBuffer[id.x];
     #endif
     }
 
@@ -231,7 +211,6 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
     [numthreads(256, 1, 1)]
     void ScreenClear(uint3 id : SV_DispatchThreadID) {
     #ifdef RadianceCache
-        VoxelDataBufferA.Store4(id.x * 16, (uint4)0);
-        HashEntriesBuffer[id.x] = uint3(HashEntriesBufferB[id.x].xy,0);
+        VoxelDataBufferA.Store4(id.x * 16, 0);
     #endif
     }

@@ -8,7 +8,7 @@
 #define IgnoreGlassShadow
 // #define IgnoreGlassMain
 // #define PointFiltering
-// #define StainedGlassShadows
+#define StainedGlassShadows
 // #define IgnoreBackfacing
 // #define WhiteLights
 #define LBVH
@@ -20,9 +20,20 @@
 // #define RadianceDebug
 #define IndirectRetraceWeighting
 #define TrueBlack
+// #define DebugSlowFixOn
 
 
 //END OF DEFINES
+//DEBUG VIEW DEFINES
+#define DebugView DVNone
+//Replace DVNone(^) with any of the DV Defines below
+
+#define DVNone -1
+#define DVMatID 0
+#define DVMeshID 1
+#define DVTriID 2
+#define DVAlbID 3
+
 //Dont change the ones below
 #define DisneyIndex 0
 #define CutoutIndex 1
@@ -61,3 +72,5 @@
 bool GetFlag(int FlagVar, int flag) {
     return (((int)FlagVar >> flag) & (int)1) == 1;
 }
+
+#define MaxTraversalSamples 1000

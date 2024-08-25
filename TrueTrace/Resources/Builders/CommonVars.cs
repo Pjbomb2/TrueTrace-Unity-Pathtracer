@@ -624,6 +624,8 @@ namespace CommonVars
         public Vector2 SecondaryTextureScale;
         public float Rotation;
         public int Flags;
+        public bool UseKelvin;
+        public float KelvinTemp;
     }
     [System.Serializable]
     public class RayObjs
@@ -1028,11 +1030,5 @@ namespace CommonVars
             return (((int)FlagVar >> (int)flag) & (int)1) == 1;
         }
 
-
-
-
     }
-
-
-
 }

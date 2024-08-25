@@ -55,15 +55,13 @@ namespace TrueTrace {
             float ozone_scale_height = 22349.90f;
             float ozone_height = 35660.71f;
             float density = 0.001f;
-            Vector3 ray_s = new Vector3(6.6049f, 12.345f, 29.413f) * density;
+            Vector3 ray_s = new Vector3(0.005802339f, 0.013557760f, 0.033100010f);
             Vector3 ray_a = new Vector3(0.0f, 0.0f, 0.0f);
             Vector3 ray_e = ray_s + ray_a;
-            Vector3 mie_s = new Vector3(3.996f, 3.996f, 3.996f) * density;
-            Vector3 mie_a = new Vector3(4.4f, 4.4f, 4.4f) * density;
+            Vector3 mie_s = new Vector3 (0.003996000f, 0.003996000f, 0.003996000f);
+            Vector3 mie_a = new Vector3 (0.004440000f, 0.004440000f, 0.004440000f);
             Vector3 mie_e = mie_s + mie_a;
-            Vector3 ozo_s = new Vector3(0.0f, 0.0f, 0.0f);
-            Vector3 ozo_a = new Vector3(0.22811f, 0.15404f, 0) * density;
-            Vector3 ozo_e = ozo_s + ozo_a;
+            Vector3 ozo_e = new Vector3 (0.000649717f, 0.001880900f, 0.000085017f);
             rayleigh_density.Add(new DensityProfileLayer()
             {
                 width = 0.0f,
@@ -131,7 +129,7 @@ namespace TrueTrace {
             Atmosphere.SetVector("absorption_extinction", ozo_e);
             Atmosphere.SetVector("mie_extinction", mie_e);
             Atmosphere.SetVector("mie_scattering", mie_s);
-            Atmosphere.SetFloat("mu_s_min", -0.207911690817759f);
+            Atmosphere.SetFloat("mu_s_min", -0.5f);
 
             Atmosphere.SetBuffer(TransmittanceKernel, "rayleigh_density", rayleigh_densityC);
             Atmosphere.SetBuffer(TransmittanceKernel, "mie_density", mie_densityC);
@@ -147,7 +145,7 @@ namespace TrueTrace {
             Atmosphere.SetFloat("top_radius", TopRadius);
 
             _TransmittanceLUT = new RenderTexture(256, 64, 0,
-            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+            RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
             _TransmittanceLUT.enableRandomWrite = true;
             _TransmittanceLUT.Create();
             _RayleighTex = new RenderTexture(256, 128, 0,

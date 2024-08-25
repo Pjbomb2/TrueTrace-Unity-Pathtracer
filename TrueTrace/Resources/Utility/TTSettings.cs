@@ -30,10 +30,10 @@ namespace TrueTrace {
         [SerializeField] public int ReSTIRGIUpdateRate = 7;
         [SerializeField] public bool UseReSTIRGITemporal = true;
         [SerializeField] public bool UseReSTIRGISpatial = true;
-        [SerializeField] public bool UseReSTIRGI = true;
+        [SerializeField] public bool UseReSTIRGI = false;
         [SerializeField] public int ReSTIRGISpatialCount = 24;
         [SerializeField] public float ReSTIRGISpatialRadius = 50.0f;
-        [SerializeField] public int ReSTIRGITemporalMCap = 32;
+        [SerializeField] public int ReSTIRGITemporalMCap = 4;
         [SerializeField] public bool DoReSTIRGIConnectionValidation = true;
         [SerializeField] public float Exposure = 1.0f;
         [SerializeField] public bool DoPartialRendering = false;
@@ -64,5 +64,6 @@ namespace TrueTrace {
         [SerializeField] public Vector2 HDRILongLat = Vector2.zero;
         [SerializeField] public Vector2 HDRIScale = Vector2.one;
         [SerializeField] public float LEMEnergyScale = 1.0f;
+        [SerializeField] public bool UseTransmittanceInNEE = true;
     }
 }

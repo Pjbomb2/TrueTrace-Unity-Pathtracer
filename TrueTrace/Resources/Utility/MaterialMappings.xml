@@ -5880,7 +5880,7 @@
       <TexturePairs>
         <Purpose>3</Purpose>
         <ReadIndex>-4</ReadIndex>
-        <TextureName>_EmissionMap</TextureName>
+        <TextureName>_EmissionMask</TextureName>
       </TexturePairs>
       <TexturePairs>
         <Purpose>4</Purpose>

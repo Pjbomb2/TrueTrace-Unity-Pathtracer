@@ -42,6 +42,8 @@ namespace TrueTrace {
 		[SerializeField] public float[] BlendFactor;
 		[SerializeField] public int Selected;
 		[SerializeField] public int[] Flags;
+		[SerializeField] public bool[] UseKelvin;
+		[SerializeField] public float[] KelvinTemp;
 		public int[] Indexes;
 		public bool NeedsToUpdate;
 		[SerializeField] public bool IsReady = false;
@@ -249,6 +251,8 @@ namespace TrueTrace {
 			InitializeArray<float>(ref Roughness, 0, Index);
 			InitializeArray<Vector3>(ref BaseColor, new Vector3(1,1,1), Index);
 			InitializeArray<int>(ref MaterialIndex, 0, Index);
+			InitializeArray<bool>(ref UseKelvin, false, Index);
+			InitializeArray<float>(ref KelvinTemp, 0, Index);
 
 			IsReady = true;
 			mesh = null;

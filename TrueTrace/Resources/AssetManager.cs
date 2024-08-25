@@ -20,7 +20,6 @@ namespace TrueTrace {
         private BindlessArray bindlessTextures;
         public static AssetManager Assets;
         public int TotalParentObjectSize;
-        [HideInInspector] public float LightEnergyScale = 1.0f;
         //emissive, alpha, metallic, roughness
         public int BindlessTextureCount;
         [HideInInspector] public Texture2D IESAtlas;
@@ -1053,13 +1052,13 @@ namespace TrueTrace {
             BuildQue = new List<ParentObject>(GetComponentsInChildren<ParentObject>());
             RunningTasks = 0;
             InstanceData.EditorBuild();
+            RunningTasks = BuildQue.Count;
             for (int i = 0; i < BuildQue.Count; i++)
             {
                 var CurrentRep = i;
                 BuildQue[CurrentRep].LoadData();
                 BuildQue[CurrentRep].AsyncTask = Task.Run(() => { BuildQue[CurrentRep].BuildTotal(); RunningTasks--; });
                 BuildQue[CurrentRep].ExistsInQue = 1;
-                RunningTasks++;
             }
             didstart = false;
         }
@@ -1728,10 +1727,10 @@ namespace TrueTrace {
         }
 
         private bool ChangedLastFrame = true;
-
+        private RayTracingMaster RayMaster;
         public int UpdateTLAS(CommandBuffer cmd)
         {  //Allows for objects to be moved in the scene or animated while playing 
-
+            if(RayMaster == null) TryGetComponent<RayTracingMaster>(out RayMaster);
             bool LightsHaveUpdated = false;
             AccumulateData(cmd);
             if (!didstart || PrevLightCount != RayTracingMaster._rayTracingLights.Count || UnityLights.Count == 0)
@@ -1743,7 +1742,7 @@ namespace TrueTrace {
                     RayLight.UpdateLight();
                     if (RayLight.ThisLightData.Type == 1) SunDirection = RayLight.ThisLightData.Direction;
                     RayLight.ArrayIndex = UnityLightCount - 1;
-                    RayLight.ThisLightData.Radiance *= LightEnergyScale;
+                    RayLight.ThisLightData.Radiance *= RayMaster.LocalTTSettings.LightEnergyScale;
                     RayLight.ThisLightData.IESTex = new Vector2Int(-1, 0);
                     UnityLights.Add(RayLight.ThisLightData);
                 }
@@ -1759,7 +1758,7 @@ namespace TrueTrace {
                 for (int i = 0; i < LightCount; i++) {
                     RayLight = RayTracingMaster._rayTracingLights[i];
                     RayLight.UpdateLight();
-                    RayLight.ThisLightData.Radiance *= LightEnergyScale;
+                    RayLight.ThisLightData.Radiance *= RayMaster.LocalTTSettings.LightEnergyScale;
                     if (RayLight.ThisLightData.Type == 1) SunDirection = RayLight.ThisLightData.Direction;
                     UnityLights[RayLight.ArrayIndex] = RayLight.ThisLightData;
                 }
@@ -1985,7 +1984,7 @@ namespace TrueTrace {
                     int Index = CurrentMaterial.Indexes[i3];
                     if(CurrentMaterial.MaterialIndex[i3] + CurrentMaterial.MatOffset >= MatCount) continue;
                     TempMat = _Materials[CurrentMaterial.MaterialIndex[i3] + CurrentMaterial.MatOffset];
-                    TempMat.BaseColor = CurrentMaterial.BaseColor[Index];
+                    TempMat.BaseColor = (!CurrentMaterial.UseKelvin[Index]) ? CurrentMaterial.BaseColor[Index] : new Vector3(Mathf.CorrelatedColorTemperatureToRGB(CurrentMaterial.KelvinTemp[Index]).r, Mathf.CorrelatedColorTemperatureToRGB(CurrentMaterial.KelvinTemp[Index]).g, Mathf.CorrelatedColorTemperatureToRGB(CurrentMaterial.KelvinTemp[Index]).b);
                     TempMat.emmissive = CurrentMaterial.emmission[Index];
                     TempMat.Roughness = ((int)CurrentMaterial.MaterialOptions[Index] != 1) ? CurrentMaterial.Roughness[Index] : Mathf.Max(CurrentMaterial.Roughness[Index], 0.000001f);
                     TempMat.TransmittanceColor = CurrentMaterial.TransmissionColor[Index];
@@ -2018,7 +2017,7 @@ namespace TrueTrace {
                     TempMat.BlendFactor = CurrentMaterial.BlendFactor[Index];
                     TempMat.AlbedoTextureScale = CurrentMaterial.MainTexScaleOffset[Index];
                     TempMat.SecondaryTextureScale = CurrentMaterial.SecondaryTextureScale[Index];
-                    TempMat.Rotation = CurrentMaterial.Rotation[Index];
+                    TempMat.Rotation = CurrentMaterial.Rotation[Index] * 3.14159f;
                     _Materials[CurrentMaterial.MaterialIndex[i3] + CurrentMaterial.MatOffset] = TempMat;
                     #if HardwareRT
                         var A = CurrentMaterial.gameObject.GetComponent<Renderer>();

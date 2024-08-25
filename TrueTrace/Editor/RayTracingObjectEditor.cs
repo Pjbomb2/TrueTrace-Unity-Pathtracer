@@ -80,7 +80,9 @@ namespace TrueTrace {
                     MainTexScaleOffset = ThisOBJ.MainTexScaleOffset[SaveIndex],
                     SecondaryTextureScale = ThisOBJ.SecondaryTextureScale[SaveIndex],
                     Rotation = ThisOBJ.Rotation[SaveIndex],
-                    Flags = ThisOBJ.Flags[SaveIndex]
+                    Flags = ThisOBJ.Flags[SaveIndex],
+                    UseKelvin = ThisOBJ.UseKelvin[SaveIndex],
+                    KelvinTemp = ThisOBJ.KelvinTemp[SaveIndex]
                 };
                 if(CopyIndex != -1) PresetRays.RayObj[CopyIndex] = TempRay;
                 else PresetRays.RayObj.Add(TempRay);
@@ -195,6 +197,8 @@ namespace TrueTrace {
             t.SecondaryTextureScale[Selected] = RayObj.SecondaryTextureScale;
             t.Rotation[Selected] = RayObj.Rotation;
             t.Flags[Selected] = RayObj.Flags;
+            t.UseKelvin[Selected] = RayObj.UseKelvin;
+            t.KelvinTemp[Selected] = RayObj.KelvinTemp;
             t.CallMaterialEdited(true);
 
 
@@ -238,8 +242,6 @@ namespace TrueTrace {
                     EditorGUILayout.BeginHorizontal();
                         Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.Invisible, EditorGUILayout.ToggleLeft("Invisible", Flag.GetFlag(CommonFunctions.Flags.Invisible), GUILayout.MaxWidth(200)));
                         Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.Thin, EditorGUILayout.ToggleLeft("Thin", Flag.GetFlag(CommonFunctions.Flags.Thin), GUILayout.MaxWidth(200)));
-                        // Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.IsBackground, EditorGUILayout.ToggleLeft("Is Background Object", Flag.GetFlag(CommonFunctions.Flags.IsBackground), GUILayout.MaxWidth(200)));
-                        // Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.BackgroundBleed, EditorGUILayout.ToggleLeft("Background Bleed", Flag.GetFlag(CommonFunctions.Flags.BackgroundBleed)));
                     EditorGUILayout.EndHorizontal();
                 EditorGUILayout.EndVertical();
 
@@ -278,18 +280,22 @@ namespace TrueTrace {
                 serializedObject.FindProperty("Rotation").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Texture Rotation: ", t.Rotation[Selected], 0, 1);
                 serializedObject.FindProperty("Flags").GetArrayElementAtIndex(Selected).intValue = Flag;
 
-                bool EEE = false;
+                serializedObject.FindProperty("UseKelvin").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Use Kelvin: ", t.UseKelvin[Selected]);
+                serializedObject.FindProperty("KelvinTemp").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Kelvin Temperature: ", t.KelvinTemp[Selected], 0, 20000);
+
+
+                bool MaterialWasChanged = false;
                 if(EditorGUI.EndChangeCheck()) {
-                    EEE = true;
+                    MaterialWasChanged = true;
 
                     for(int i = 0; i < t1.Length; i++) {
-                        (t1[i] as RayTracingObject).CallMaterialEdited();
+                        (t1[i] as RayTracingObject).CallMaterialEdited(true);
                     }
                 }
                 serializedObject.FindProperty("FollowMaterial").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Link Mat To Unity Material: ", t.FollowMaterial[Selected]);
                 serializedObject.ApplyModifiedProperties();
 
-                if(EEE) {
+                if(MaterialWasChanged) {
                     string Name = TheseNames[Selected];
                     for(int i = 0; i < TheseNames.Length; i++) {
                         if(Selected == i) continue;
@@ -328,6 +334,8 @@ namespace TrueTrace {
                             t.SecondaryTextureScale[i] = t.SecondaryTextureScale[Selected];
                             t.Rotation[i] = t.Rotation[Selected];
                             t.Flags[i] = Flag;
+                            t.UseKelvin[i] = t.UseKelvin[Selected];
+                            t.KelvinTemp[i] = t.KelvinTemp[Selected];
                             // Debug.Log(i);
                             t.CallMaterialEdited(true);
                         }
@@ -377,6 +385,8 @@ namespace TrueTrace {
                                 Obj.SecondaryTextureScale[i] = t.SecondaryTextureScale[Selected];
                                 Obj.Rotation[i] = t.Rotation[Selected];
                                 Obj.Flags[i] = Flag;
+                                Obj.UseKelvin[i] = t.UseKelvin[Selected];
+                                Obj.KelvinTemp[i] = t.KelvinTemp[Selected];
                                 Obj.CallMaterialEdited(true);
                             }
                         }

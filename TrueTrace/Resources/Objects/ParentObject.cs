@@ -463,6 +463,7 @@ namespace TrueTrace {
                     if(JustCreated && obj.EmissionColor[i].x == 0 && obj.EmissionColor[i].y == 0 && obj.EmissionColor[i].z == 0) obj.EmissionColor[i] = new Vector3(1,1,1);
                     CurMat.MetallicRemap = obj.MetallicRemap[i];
                     CurMat.RoughnessRemap = obj.RoughnessRemap[i];
+                    CurMat.BaseColor = (!obj.UseKelvin[i]) ? obj.BaseColor[i] : new Vector3(Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).r, Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).g, Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).b);
                     CurMat.BaseColor = obj.BaseColor[i];
                     CurMat.emmissive = obj.emmission[i];
                     CurMat.Roughness = obj.Roughness[i];

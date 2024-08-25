@@ -42,7 +42,8 @@ float3 CamDelta;
 bool UseDoF;
 float focal_distance;
 float AperatureRadius;
-
+float3 MousePos;
+bool IsFocusing;
 
 RWStructuredBuffer<uint3> BufferData;
 
@@ -227,6 +228,15 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 	#else//BINDLESS
 		//AlbedoTexScale, AlbedoTex, and Rotation dont worry about, thats just for transforming to the atlas 
 		int2 TextureIndexAndChannel = -1;// = MatTex.BindlessIndex;
+		if(MatTex.Rotation != 0) {
+			float sinc, cosc;
+			sincos(MatTex.Rotation, sinc, cosc);
+			UV -= 0.5f;
+			float2 tempuv = UV;
+			UV.x = tempuv.x * cosc - tempuv.y * sinc;
+			UV.y = tempuv.x * sinc + tempuv.y * cosc;
+			UV += 0.5f;
+		}
 		switch(TextureType) {
 			case SampleAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 			case SampleMetallic: TextureIndexAndChannel = MatTex.MetallicTex; UV = UV * MatTex.SecondaryTexScale.xy + MatTex.AlbedoTexScale.zw; break;
@@ -241,15 +251,23 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 		int TextureIndex = TextureIndexAndChannel.x - 1;
 		int TextureReadChannel = TextureIndexAndChannel.y;//0-3 is rgba, 4 is to just read all
 
-		#ifdef PointFiltering
-			FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+		#ifdef DebugSlowFixOn
+			#ifdef PointFiltering
+				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
+			#else
+				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
+			#endif
 		#else
-			FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
+			#ifdef PointFiltering
+				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+			#else
+				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
+			#endif
 		#endif
 		if(TextureReadChannel != 4) FinalCol = FinalCol[TextureReadChannel];
 		if(TextureType == SampleNormal) {
-			// FinalCol.g = 1.0f - FinalCol.g;
-			FinalCol = (FinalCol.r == 1) ? FinalCol.agag : FinalCol.rgrg;
+			FinalCol.g = 1.0f - FinalCol.g;
+			FinalCol = (FinalCol.r >= 0.99f) ? FinalCol.agag : FinalCol.rgrg;
 
 		}
 
@@ -458,7 +476,8 @@ SmallerRay CreateCameraRay(float2 uv, uint pixel_index) {
 	// Transform the direction from camera to world space and normalize
 	direction = mul(CamToWorld, float4(direction, 0.0f)).xyz;
 	direction = normalize(direction);
-	[branch] if (UseDoF && pixel_index != (screen_width / 2 + (screen_width * (screen_height / 2)))) {
+	uint2 id = uint2(pixel_index % screen_width, pixel_index / screen_width);
+	[branch] if (UseDoF && (!IsFocusing || dot(id - int2(MousePos.x, MousePos.y), id - int2(MousePos.x, MousePos.y)) > 2.0f)) {
 		float3 cameraForward = mul(CamInvProj, float4(0, 0, 0.0f, 1.0f)).xyz;
 		// Transform the direction from camera to world space and normalize
 		float4 sensorPlane;
@@ -673,7 +692,7 @@ inline bool VisabilityCheckCompute(SmallerRay ray, float dist) {
         int MatOffset = 0;
         int Reps = 0;
         float3 through = 0;
-        [loop] while (Reps < 1000) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
+        [loop] while (Reps < MaxTraversalSamples) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
         	uint2 triangle_group;
             [branch]if (current_group.y & 0xff000000) {
                 uint child_index_offset = firstbithigh(current_group.y);
@@ -1439,6 +1458,7 @@ RWByteAddressBuffer VoxelDataBufferA;
 ByteAddressBuffer VoxelDataBufferB;
 #define HashKeyValue uint3
 RWStructuredBuffer<HashKeyValue> HashEntriesBuffer;//May want to leave the last bit unused, so I can use it as a "written to" flag instead of having to compare both A and B components for empty
+RWStructuredBuffer<HashKeyValue> HashEntriesBufferA2;//May want to leave the last bit unused, so I can use it as a "written to" flag instead of having to compare both A and B components for empty
 StructuredBuffer<HashKeyValue> HashEntriesBufferB;//May want to leave the last bit unused, so I can use it as a "written to" flag instead of having to compare both A and B components for empty
 
 float CalcVoxelSize(float3 VertPos) {
@@ -1710,6 +1730,12 @@ inline int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Nor
     int Index;
     float LengthSquared;
     float p_hat;
+    if(RISCount == 0) {
+    	lightWeight *= (float)unitylightcount;
+	    return clamp(( random(11, pixel_index).x * unitylightcount), 0, unitylightcount - 1);
+
+    }
+
     for(int i = 0; i < RISCount + 1; i++) {
         Rand = random(i + 11, pixel_index);
         Index = clamp((Rand.x * unitylightcount), 0, unitylightcount - 1);
@@ -1729,22 +1755,27 @@ inline int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Nor
                     light.Position += ToWorld(GetTangentSpace2(light.Direction), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
                     // area = Light.SpotAngle.x * Light.SpotAngle.y;
                     // if(hitDat.MatType == 3) Radiance = 0;
+                    // light.Radiance *= (light.SpotAngle.x * light.SpotAngle.y) / 2.0f;
                 break;
                 case AREALIGHTDISK:
                     sincos(RandVec.x * 2.0f * PI, RandVec.x, RandVec.y);
                     RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy) * RandVec.z * light.SpotAngle.x;
                     light.Position += ToWorld(GetTangentSpace2(light.Direction), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
                     // area = PI * Light.SpotAngle.x * Light.SpotAngle.x;
+                    // light.Radiance *= PI * light.SpotAngle.x * light.SpotAngle.x;
                 break;
             }
 
             to_light = light.Position - Position;
             LengthSquared = dot(to_light, to_light);
             to_light /= sqrt(LengthSquared);
-
-            p_hat = max(length(light.Radiance) / LengthSquared * saturate(dot(to_light, -light.Direction)),0);
+            float PDF = saturate(dot(to_light, -light.Direction));
+            if(PDF > 0) p_hat = max(luminance(light.Radiance) / (LengthSquared * max(PDF, 0.1f)),0);
+        	else p_hat = 0;
         } else {
-            p_hat = max(luminance(light.Radiance) / ((light.Type == DIRECTIONALLIGHT) ? 12.0f : LengthSquared) * ((light.Type == SPOTLIGHT) ? saturate(saturate(dot(to_light, -light.Direction)) * light.SpotAngle.x + light.SpotAngle.y) : 1)* (dot(to_light, Norm) > 0),0);
+        	float PDF = (((light.Type == DIRECTIONALLIGHT) ? 10.0f : LengthSquared) * ((light.Type == SPOTLIGHT) ? saturate(saturate(dot(to_light, -light.Direction)) * light.SpotAngle.x + light.SpotAngle.y) : 1)* (dot(to_light, Norm) > 0));
+            if(PDF != 0) p_hat = max(luminance(light.Radiance) / PDF,0);
+        	else p_hat = 0;
         }
         wsum += p_hat;
         if(Rand.y < p_hat / wsum) {
@@ -1885,3 +1916,22 @@ inline float3 temperature(float t)
     const float3 r = wc * c[cur] + wp * c[prv] + wn * c[nxt];
     return float3(clamp(r.x, 0.0f, 1.0f), clamp(r.y, 0.0f, 1.0f), clamp(r.z, 0.0f, 1.0f));
 }
+
+
+
+#if DebugView != -1
+	float3 pal(float t) {
+	    float3 a = float3(0.5f, 0.5f, 0.5f);
+	    float3 b = float3(0.5f, 0.5f, 0.5f);
+	    float3 c = float3(0.8f, 0.8f, 0.8f);
+	    float3 d = float3(0.0f, 0.33f, 0.67f) + 0.21f;
+	    return a + b*cos( 6.28318*(c*t+d) );
+	}
+
+	float4 HandleDebug(int Index) {
+        static const float one_over_max_unsigned = asfloat(0x2f7fffff);
+        uint hash = pcg_hash(32);
+        float LinearIndex = hash_with(Index, hash) * one_over_max_unsigned;
+        return float4(pal(LinearIndex), 1);
+    }
+#endif

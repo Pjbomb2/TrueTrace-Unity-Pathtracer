@@ -147,8 +147,8 @@ namespace TrueTrace {
 
 
             CommonFunctions.CreateRenderTexture(ref ASVGF_HIST_COLOR_HF, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref TEX_PT_NORMALS_A, ScreenWidth, ScreenHeight, CommonFunctions.RTInt2);
-            CommonFunctions.CreateRenderTexture(ref TEX_PT_NORMALS_B, ScreenWidth, ScreenHeight, CommonFunctions.RTInt2);
+            CommonFunctions.CreateRenderTexture(ref TEX_PT_NORMALS_A, ScreenWidth, ScreenHeight, CommonFunctions.RTFull4);
+            CommonFunctions.CreateRenderTexture(ref TEX_PT_NORMALS_B, ScreenWidth, ScreenHeight, CommonFunctions.RTFull4);
 
             CommonFunctions.CreateRenderTexture(ref ASVGF_ATROUS_PING_LF_SH, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTFull4);
             CommonFunctions.CreateRenderTexture(ref ASVGF_ATROUS_PONG_LF_SH, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTFull4);
@@ -188,8 +188,8 @@ namespace TrueTrace {
             CommonFunctions.CreateRenderTexture(ref ASVGF_GRAD_LF_PONG, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTHalf2);
             CommonFunctions.CreateRenderTexture(ref ASVGF_GRAD_HF_SPEC_PING, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTHalf2);
             CommonFunctions.CreateRenderTexture(ref ASVGF_GRAD_HF_SPEC_PONG, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTHalf2);
-            CommonFunctions.CreateRenderTexture(ref CorrectedDistanceTexA, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf2);
-            CommonFunctions.CreateRenderTexture(ref CorrectedDistanceTexB, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf2);
+            CommonFunctions.CreateRenderTexture(ref CorrectedDistanceTexA, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf1);
+            CommonFunctions.CreateRenderTexture(ref CorrectedDistanceTexB, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf1);
             Initialized = true;
         }
 
@@ -272,6 +272,7 @@ namespace TrueTrace {
             shader.SetBuffer(CopyData, "ExposureBuffer", ExposureModifier);
             shader.SetBuffer(Atrous, "ExposureBuffer", ExposureModifier);
             shader.SetTexture(CopyData, "ScreenSpaceInfo", ScreenSpaceInfo);
+            shader.SetTexture(Temporal, "ScreenSpaceInfo", ScreenSpaceInfo);
             shader.SetTextureFromGlobal(CopyData, "MotionVectors", "_CameraMotionVectorsTexture");
             shader.SetInt("PartialRenderingFactor", PartialRenderingFactor);
             cmd.SetComputeTextureParam(shader, CopyData, "WorldPosData", WorldPosData);
@@ -283,6 +284,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_NORMALS_AWrite", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_VIEW_DEPTH_B", !EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_NORMALS_B", (!EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
+            cmd.SetComputeTextureParam(shader, CopyData, "ReflRefracB", (!EvenFrame ? ReflectedRefractedA : ReflectedRefractedB));
             shader.SetTextureFromGlobal(CopyData, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
 
             cmd.SetComputeTextureParam(shader, CopyData, "MetallicAWrite", (EvenFrame ? MetallicA : MetallicB));

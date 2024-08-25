@@ -67,6 +67,8 @@
     </SecondaryTextureScale>
     <Rotation>0</Rotation>
     <Flags>0</Flags>
+    <UseKelvin>false</UseKelvin>
+    <KelvinTemp>0</KelvinTemp>
   </RayObjectDatas>
   <RayObjectDatas>
     <ID>0</ID>
@@ -135,6 +137,8 @@
     </SecondaryTextureScale>
     <Rotation>0</Rotation>
     <Flags>0</Flags>
+    <UseKelvin>false</UseKelvin>
+    <KelvinTemp>0</KelvinTemp>
   </RayObjectDatas>
   <RayObjectDatas>
     <ID>0</ID>
@@ -203,6 +207,8 @@
     </SecondaryTextureScale>
     <Rotation>0</Rotation>
     <Flags>512</Flags>
+    <UseKelvin>false</UseKelvin>
+    <KelvinTemp>0</KelvinTemp>
   </RayObjectDatas>
   <RayObjectDatas>
     <ID>0</ID>
@@ -271,6 +277,8 @@
     </SecondaryTextureScale>
     <Rotation>0</Rotation>
     <Flags>512</Flags>
+    <UseKelvin>false</UseKelvin>
+    <KelvinTemp>0</KelvinTemp>
   </RayObjectDatas>
   <RayObjectDatas>
     <ID>0</ID>
@@ -339,6 +347,8 @@
     </SecondaryTextureScale>
     <Rotation>0</Rotation>
     <Flags>4</Flags>
+    <UseKelvin>false</UseKelvin>
+    <KelvinTemp>0</KelvinTemp>
   </RayObjectDatas>
   <RayObjectDatas>
     <ID>0</ID>
@@ -407,6 +417,8 @@
     </SecondaryTextureScale>
     <Rotation>0</Rotation>
     <Flags>0</Flags>
+    <UseKelvin>false</UseKelvin>
+    <KelvinTemp>0</KelvinTemp>
   </RayObjectDatas>
   <RayObjectDatas>
     <ID>0</ID>
@@ -475,5 +487,147 @@
     </SecondaryTextureScale>
     <Rotation>0</Rotation>
     <Flags>0</Flags>
+    <UseKelvin>false</UseKelvin>
+    <KelvinTemp>0</KelvinTemp>
+  </RayObjectDatas>
+  <RayObjectDatas>
+    <ID>0</ID>
+    <MatName>Water3</MatName>
+    <OptionID>0</OptionID>
+    <TransCol>
+      <x>1</x>
+      <y>1</y>
+      <z>1</z>
+    </TransCol>
+    <BaseCol>
+      <x>0.4171709</x>
+      <y>0.8396226</y>
+      <z>0.764596641</z>
+    </BaseCol>
+    <MetRemap>
+      <x>0</x>
+      <y>1</y>
+    </MetRemap>
+    <RoughRemap>
+      <x>0</x>
+      <y>1</y>
+    </RoughRemap>
+    <Emiss>0</Emiss>
+    <EmissCol>
+      <x>1</x>
+      <y>1</y>
+      <z>1</z>
+    </EmissCol>
+    <Rough>0</Rough>
+    <IOR>1.39</IOR>
+    <Met>0</Met>
+    <SpecTint>0</SpecTint>
+    <Sheen>0</Sheen>
+    <SheenTint>0</SheenTint>
+    <Clearcoat>0</Clearcoat>
+    <ClearcoatGloss>0</ClearcoatGloss>
+    <Anisotropic>0</Anisotropic>
+    <Flatness>0</Flatness>
+    <DiffTrans>0</DiffTrans>
+    <SpecTrans>1</SpecTrans>
+    <FollowMat>false</FollowMat>
+    <ScatterDist>0.53</ScatterDist>
+    <Spec>0</Spec>
+    <AlphaCutoff>0.1</AlphaCutoff>
+    <NormStrength>1</NormStrength>
+    <Hue>0</Hue>
+    <Saturation>1</Saturation>
+    <Brightness>1</Brightness>
+    <Contrast>1</Contrast>
+    <BlendColor>
+      <x>1</x>
+      <y>1</y>
+      <z>1</z>
+    </BlendColor>
+    <BlendFactor>0</BlendFactor>
+    <MainTexScaleOffset>
+      <x>1</x>
+      <y>1</y>
+      <z>0</z>
+      <w>0</w>
+    </MainTexScaleOffset>
+    <SecondaryTextureScale>
+      <x>1</x>
+      <y>1</y>
+    </SecondaryTextureScale>
+    <Rotation>0</Rotation>
+    <Flags>0</Flags>
+    <UseKelvin>false</UseKelvin>
+    <KelvinTemp>0</KelvinTemp>
+  </RayObjectDatas>
+  <RayObjectDatas>
+    <ID>0</ID>
+    <MatName>Leaf1</MatName>
+    <OptionID>1</OptionID>
+    <TransCol>
+      <x>1</x>
+      <y>1</y>
+      <z>1</z>
+    </TransCol>
+    <BaseCol>
+      <x>1</x>
+      <y>1</y>
+      <z>1</z>
+    </BaseCol>
+    <MetRemap>
+      <x>0</x>
+      <y>1</y>
+    </MetRemap>
+    <RoughRemap>
+      <x>0</x>
+      <y>1</y>
+    </RoughRemap>
+    <Emiss>0</Emiss>
+    <EmissCol>
+      <x>1</x>
+      <y>1</y>
+      <z>1</z>
+    </EmissCol>
+    <Rough>0</Rough>
+    <IOR>1</IOR>
+    <Met>0</Met>
+    <SpecTint>0</SpecTint>
+    <Sheen>0</Sheen>
+    <SheenTint>0</SheenTint>
+    <Clearcoat>0</Clearcoat>
+    <ClearcoatGloss>0</ClearcoatGloss>
+    <Anisotropic>0</Anisotropic>
+    <Flatness>0</Flatness>
+    <DiffTrans>0.219</DiffTrans>
+    <SpecTrans>0</SpecTrans>
+    <FollowMat>false</FollowMat>
+    <ScatterDist>0.29</ScatterDist>
+    <Spec>0</Spec>
+    <AlphaCutoff>0.1</AlphaCutoff>
+    <NormStrength>1</NormStrength>
+    <Hue>0</Hue>
+    <Saturation>1</Saturation>
+    <Brightness>1</Brightness>
+    <Contrast>1</Contrast>
+    <BlendColor>
+      <x>1</x>
+      <y>1</y>
+      <z>1</z>
+    </BlendColor>
+    <BlendFactor>0</BlendFactor>
+    <MainTexScaleOffset>
+      <x>1</x>
+      <y>1</y>
+      <z>0</z>
+      <w>0</w>
+    </MainTexScaleOffset>
+    <SecondaryTextureScale>
+      <x>1</x>
+      <y>1</y>
+    </SecondaryTextureScale>
+    <Rotation>0</Rotation>
+    <Flags>8</Flags>
+    <UseKelvin>false</UseKelvin>
+    <KelvinTemp>0</KelvinTemp>
   </RayObjectDatas>
 </RayObjs>

@@ -130,7 +130,7 @@ float ComputeOpticalfloatToTopAtmosphereBoundary(DensityProfileLayer DensProf1, 
 
 float3 ComputeTransmittanceToTopAtmosphereBoundary(float r, float mu) {
 
-	return (-(
+	return exp(-(
 		rayleigh_scattering *
 		ComputeOpticalfloatToTopAtmosphereBoundary(rayleigh_density[0], rayleigh_density[1], r, mu) +
 		mie_extinction *
@@ -200,13 +200,13 @@ float3 GetTransmittance(float r, float mu, float d, bool ray_r_mu_intersects_gro
 	float r_d = clamp(sqrt(d * d + 2.0f * r * mu * d + r * r), bottom_radius, top_radius);
 	float mu_d = clamp((r * mu + d) / r_d, -1.0f, 1.0f);
 	if (ray_r_mu_intersects_ground) {
-		return min(exp(GetTransmittanceToTopAtmosphereBoundary(r_d, -mu_d) -
+		return min((GetTransmittanceToTopAtmosphereBoundary(r_d, -mu_d) /
 			GetTransmittanceToTopAtmosphereBoundary(r, -mu)),
 			float3(1.0f, 1.0f, 1.0f));
 
 	}
 	else {
-		return min(exp(GetTransmittanceToTopAtmosphereBoundary(r, mu) -
+		return min((GetTransmittanceToTopAtmosphereBoundary(r, mu) /
 			GetTransmittanceToTopAtmosphereBoundary(r_d, mu_d)),
 			float3(1.0f, 1.0f, 1.0f));
 	}
@@ -217,7 +217,7 @@ float3 GetTransmittance(float r, float mu, float d, bool ray_r_mu_intersects_gro
 float3 GetTransmissionToSun(float r, float mu_s) {
 	float sin_theta_h = bottom_radius / r;
 	float cos_theta_h = -sqrt(max(1.0f - sin_theta_h * sin_theta_h, 0.0f));
-	return exp(GetTransmittanceToTopAtmosphereBoundary(r, mu_s)) *
+	return (GetTransmittanceToTopAtmosphereBoundary(r, mu_s)) *
 		smoothstep(-sin_theta_h * sun_angular_radius, sin_theta_h * sun_angular_radius, mu_s - cos_theta_h);
 }
 
@@ -380,14 +380,15 @@ float MiePhaseFunction(float g, float nu) {
 float3 GetTransmittanceToSun(float r, float mu_s) {
 	float sin_theta_h = bottom_radius / r;
 	float cos_theta_h = -sqrt(max(1.0f - sin_theta_h * sin_theta_h, 0.0f));
-	return exp(GetTransmittanceToTopAtmosphereBoundary(r, mu_s)) *
+	return (GetTransmittanceToTopAtmosphereBoundary(r, mu_s)) *
 		smoothstep(-sin_theta_h * sun_angular_radius / 1.0f,
 			sin_theta_h * sun_angular_radius / 1.0f,
 			mu_s - cos_theta_h);
 }
 
 
-static float4x4 LuminanceFromRadiance = float4x4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+static const float4x4 LuminanceFromRadiance = float4x4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+
 
 
 [numthreads(8, 8, 8)]
@@ -419,7 +420,7 @@ float3 ComputeDirectIrradiance(float r, float mu_s) {
 			(mu_s + alpha_s) * (mu_s + alpha_s) / (4.0 * alpha_s));
 
 	return solar_irradiance *
-		exp(GetTransmittanceToTopAtmosphereBoundary(
+		(GetTransmittanceToTopAtmosphereBoundary(
 			r, mu_s)) * average_cosine_factor;
 
 }
@@ -526,7 +527,7 @@ void IndirectIrradiance_Kernel(uint3 id : SV_DispatchThreadID)
 	float3 DeltaIrradiance = ComputeIndirectIrradianceTexture(
 		id.xy + 0.5f, ScatteringOrder);
 	DeltaIrradianceTex[id.xy] = float4(DeltaIrradiance, 0);
-	IrradianceTex[id.xy] = (float4(mul(LuminanceFromRadiance, float4(DeltaIrradiance, 0)).xyz, 0) + IrradianceTex[id.xy]) / 2.0f;
+	IrradianceTex[id.xy] = (float4(mul(LuminanceFromRadiance, float4(DeltaIrradiance, 0)).xyz, 0) + IrradianceTex[id.xy]);
 }
 
 

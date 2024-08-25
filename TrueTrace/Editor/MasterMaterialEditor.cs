@@ -86,7 +86,9 @@ using System.Xml.Serialization;
                     MainTexScaleOffset = ThisOBJ.MainTexScaleOffset[SaveIndex],
                     SecondaryTextureScale = ThisOBJ.SecondaryTextureScale[SaveIndex],
                     Rotation = ThisOBJ.Rotation[SaveIndex],
-                    Flags = ThisOBJ.Flags[SaveIndex]
+                    Flags = ThisOBJ.Flags[SaveIndex],
+                    UseKelvin = ThisOBJ.UseKelvin[SaveIndex],
+                    KelvinTemp = ThisOBJ.KelvinTemp[SaveIndex]
                 };
                 if(CopyIndex != -1) PresetRays.RayObj[CopyIndex] = TempRay;
                 else PresetRays.RayObj.Add(TempRay);
@@ -190,6 +192,8 @@ using System.Xml.Serialization;
                 TempRTO2.SecondaryTextureScale[Selected2] = RayObj.SecondaryTextureScale;
                 TempRTO2.Rotation[Selected2] = RayObj.Rotation;
                 TempRTO2.Flags[Selected2] = RayObj.Flags;
+                TempRTO2.UseKelvin[Selected2] = RayObj.UseKelvin;
+                TempRTO2.KelvinTemp[Selected2] = RayObj.KelvinTemp;
                 TempRTO2.CallMaterialEdited(true);
             }
 
@@ -274,7 +278,9 @@ using System.Xml.Serialization;
                     MainTexScaleOffset = OBJtoWrite.MainTexScaleOffset[Index],
                     SecondaryTextureScale = OBJtoWrite.SecondaryTextureScale[Index],
                     Rotation = OBJtoWrite.Rotation[Index],
-                    Flags = OBJtoWrite.Flags[Index]
+                    Flags = OBJtoWrite.Flags[Index],
+                    UseKelvin = OBJtoWrite.UseKelvin[Index],
+                    KelvinTemp = OBJtoWrite.KelvinTemp[Index]
                 };
             }
 
@@ -313,6 +319,8 @@ using System.Xml.Serialization;
                 TempRTO.SecondaryTextureScale[NameIndex] = Ray.SecondaryTextureScale;
                 TempRTO.Rotation[NameIndex] = Ray.Rotation;
                 TempRTO.Flags[NameIndex] = Ray.Flags;
+                TempRTO.UseKelvin[NameIndex] = Ray.UseKelvin;
+                TempRTO.KelvinTemp[NameIndex] = Ray.KelvinTemp;
 
                 TempRTO.CallMaterialEdited(true);
             }
@@ -352,6 +360,8 @@ using System.Xml.Serialization;
                                 Obj.SecondaryTextureScale[i] = TempRTO.SecondaryTextureScale[NameIndex];
                                 Obj.Rotation[i] = TempRTO.Rotation[NameIndex];
                                 Obj.Flags[i] = TempRTO.Flags[NameIndex];
+                                Obj.UseKelvin[i] = TempRTO.UseKelvin[NameIndex];
+                                Obj.KelvinTemp[i] = TempRTO.KelvinTemp[NameIndex];
                                 Obj.CallMaterialEdited(true);
                             }
                         }
@@ -604,6 +614,16 @@ using System.Xml.Serialization;
                                 RotationSlider.style.width = 350;
                                 RotationSlider.showInputField = true;
 
+                                Toggle KelvinToggle = new Toggle() {label = "Use Kelvin: ", value = RTO.UseKelvin[Selected]};
+                                KelvinToggle.RegisterValueChangedCallback(evt => {RTO.UseKelvin[Selected] = evt.newValue; RTO.CallMaterialEdited(true);});
+
+                                Slider KelvinSlider = new Slider() {label = "Kelvin Temperature: ", value = RTO.KelvinTemp[Selected], highValue = 20000.0f, lowValue = 0.0f};
+                                KelvinSlider.value = RTO.KelvinTemp[Selected];
+                                KelvinSlider.RegisterValueChangedCallback(evt => {RTO.KelvinTemp[Selected] = evt.newValue; RTO.CallMaterialEdited(true);});
+                                KelvinSlider.style.width = 350;
+                                KelvinSlider.showInputField = true;
+
+
                                 Button SavePresetButton = new Button(() => UnityEditor.PopupWindow.Show(new Rect(0,0,10,10), new SavePopup2(RTO, Selected))) {text = "Save Material Preset"};
                                 Button LoadPresetButton = new Button(() => {TempRTO2 = RTO; Selected2 = Selected; UnityEditor.PopupWindow.Show(new Rect(0,0,100,10), new LoadPopup2(this));}){text = "Load Material Preset"};
 
@@ -651,6 +671,8 @@ using System.Xml.Serialization;
                                 TempWindow.Add(SecondaryTexField);
                                 TempWindow.Add(RotationSlider);
 
+                                TempWindow.Add(KelvinToggle);
+                                TempWindow.Add(KelvinSlider);
 
 
                                 Button CopyButton = new Button(() => Copy(RTO, Selected)) {text = "Copy"};

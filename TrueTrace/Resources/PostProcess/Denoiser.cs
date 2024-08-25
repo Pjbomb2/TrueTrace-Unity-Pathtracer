@@ -194,6 +194,7 @@ namespace TrueTrace {
             BloomInitialized = false;
             TAAInitialized = false;
             UpscalerInitialized = false;
+            SharpenInitialized = false;
             InitRenderTexture();
             Initialized = true;
         }

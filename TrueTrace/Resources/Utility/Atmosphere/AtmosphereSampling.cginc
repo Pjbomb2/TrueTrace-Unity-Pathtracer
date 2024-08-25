@@ -3,8 +3,8 @@ static uint ScatteringTexMUSize = 128;
 static uint ScatteringTexMUSSize = 32;
 static uint ScatteringTexNUSize = 8;
 
-#define bottom_radius 6360
-#define top_radius 6420
+#define bottom_radius (6360 * 1000.0f)
+#define top_radius (6420 * 1000.0f)
 static uint TransmittanceTexWidth = 256;
 static uint TransmittanceTexHeight = 64;
 
@@ -148,11 +148,11 @@ float3 GetTransmittance(float r, float mu, float d, bool ray_r_mu_intersects_gro
 	float r_d = clamp(sqrt(d * d + 2.0f * r * mu * d + r * r), bottom_radius, top_radius);
 	float mu_d = clamp((r * mu + d) / r_d, -1.0f, 1.0f);
 	if (ray_r_mu_intersects_ground) {
-		return min(exp(GetTransmittanceToTopAtmosphereBoundary(r_d, -mu_d) -
+		return min((GetTransmittanceToTopAtmosphereBoundary(r_d, -mu_d) /
 			GetTransmittanceToTopAtmosphereBoundary(r, -mu)),
 			float3(1.0f, 1.0f, 1.0f));
 	} else {
-		return min(exp(GetTransmittanceToTopAtmosphereBoundary(r, mu) -
+		return min((GetTransmittanceToTopAtmosphereBoundary(r, mu) /
 			GetTransmittanceToTopAtmosphereBoundary(r_d, mu_d)),
 			float3(1.0f, 1.0f, 1.0f));
 	}
@@ -175,7 +175,7 @@ float3 GetIrradiance(float r, float mu_s) {
 float3 GetTransmittanceToSun(float r, float mu_s) {
 	float sin_theta_h = bottom_radius / r;
 	float cos_theta_h = -sqrt(max(1.0f - sin_theta_h * sin_theta_h, 0.0f));
-	return exp(GetTransmittanceToTopAtmosphereBoundary(r, mu_s)) *
+	return (GetTransmittanceToTopAtmosphereBoundary(r, mu_s)) *
 		smoothstep(-sin_theta_h * (0.00935f / 2.0f) / 1.0f,
 			sin_theta_h * (0.00935f / 2.0f) / 1.0f,
 			mu_s - cos_theta_h);
@@ -237,6 +237,8 @@ float3 GetSkyRadianceToPoint(
 	scattering = scattering - shadow_transmittance * scattering_p;
 	single_mie_scattering = single_mie_scattering - shadow_transmittance * single_mie_scattering_p;
 	// Hack to avoid rendering artifacts when the sun is below the horizon.
+	single_mie_scattering = GetExtrapolatedSingleMieScattering(float4(scattering, single_mie_scattering.r));
+
 	single_mie_scattering = single_mie_scattering *
 		smoothstep(0, 0.01, mu_s);
 
@@ -255,8 +257,8 @@ float3 ClayColor;
 float3 GetSkyRadiance(
 	float3 camera, float3 view_ray, float shadow_length,
 	float3 sun_direction, inout float3 transmittance, inout float3 debug) {
-	camera /= 2048.0f;
-	camera.y = max(camera.y, 0);
+	// camera /= 2048.0f;
+	// camera.y = max(camera.y, 0);
 	camera.y += bottom_radius;
 
 	// Compute the distance to the top atmosphere boundary along the view ray,
@@ -284,7 +286,7 @@ float3 GetSkyRadiance(
 	bool ray_r_mu_intersects_ground = RayIntersectsGround(r, mu);
 
 	transmittance = ray_r_mu_intersects_ground ? 0.0 :
-		exp(GetTransmittanceToTopAtmosphereBoundary(r, mu));
+		(GetTransmittanceToTopAtmosphereBoundary(r, mu));
 	float3 single_mie_scattering;
 	float3 scattering;
 		scattering = GetCombinedScattering(
@@ -313,7 +315,7 @@ bool RayIntersectsGround2(float r, float mu) {
 float3 GetSkyTransmittance(
 	float3 camera, float3 view_ray, float shadow_length,
 	float3 sun_direction) {
-	camera /= 2048.0f;
+	// camera /= 2048.0f;
 	camera.y += bottom_radius;
 
 	// Compute the distance to the top atmosphere boundary along the view ray,
@@ -340,5 +342,5 @@ float3 GetSkyTransmittance(
 	bool ray_r_mu_intersects_ground = RayIntersectsGround2(r, mu);
 
 	return ray_r_mu_intersects_ground ? 0.0 :
-		exp(GetTransmittanceToTopAtmosphereBoundary(r, mu));
+		(GetTransmittanceToTopAtmosphereBoundary(r, mu));
 }

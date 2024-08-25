@@ -100,6 +100,7 @@ namespace TrueTrace {
          [SerializeField] public float Sharpness = 1.0f;
          [SerializeField] public Vector2 HDRILongLat = Vector2.zero;
          [SerializeField] public Vector2 HDRIScale = Vector2.one;
+         [SerializeField] public bool UseTransmittanceInNEE = true;
 
 
          public void SetGlobalDefines(string DefineToSet, bool SetValue) {
@@ -119,11 +120,15 @@ namespace TrueTrace {
                   Debug.Log("Cant find define \"" + DefineToSet + "\"");
                   return;
                }
-               GlobalDefines[Index] = GlobalDefines[Index].Replace("// ", "");
-               if(!SetValue) GlobalDefines[Index] = "// " + GlobalDefines[Index];
+               bool CachedValue = true;
+               if(GlobalDefines[Index].Contains("// ")) CachedValue = false;
+               if(CachedValue != SetValue) {
+                  GlobalDefines[Index] = GlobalDefines[Index].Replace("// ", "");
+                  if(!SetValue) GlobalDefines[Index] = "// " + GlobalDefines[Index];
 
-               System.IO.File.WriteAllLines(Application.dataPath + "/TrueTrace/Resources/GlobalDefines.cginc", GlobalDefines);
-               AssetDatabase.Refresh();
+                  System.IO.File.WriteAllLines(Application.dataPath + "/TrueTrace/Resources/GlobalDefines.cginc", GlobalDefines);
+                  AssetDatabase.Refresh();
+               }
             } else {Debug.Log("No GlobalDefinesFile");}
          }
 
@@ -230,11 +235,16 @@ namespace TrueTrace {
             if(GameObject.Find("Terrain") != null) GameObject.Find("Terrain").transform.parent = Source;
             int ChildrenLeft = Source.childCount;
             Transform Parent;
+            Transform LeftoverParent;
+            if(GameObject.Find("Leftover Objects") == null) {
+               GameObject TempObject2 = new GameObject("Leftover Objects");
+               LeftoverParent = TempObject2.transform;
+            } else LeftoverParent = GameObject.Find("Leftover Objects").transform;
+            LeftoverParent.parent = Source;
             if(GameObject.Find("Static Objects") == null) {
                GameObject TempObject = new GameObject("Static Objects", typeof(ParentObject));
                Parent = TempObject.transform;
-            }
-            else Parent = GameObject.Find("Static Objects").transform;
+            } else Parent = GameObject.Find("Static Objects").transform;
             Parent.parent = Source;
             int CurrentChild = 0;
             while(CurrentChild < ChildrenLeft) {
@@ -259,7 +269,7 @@ namespace TrueTrace {
                } else if(ChildObjects[i].GetComponent<InstancedObject>() != null) {
                   ChildObjects[i].parent = Source;
                } else {
-                  ChildObjects[i].parent = null;
+                  ChildObjects[i].parent = LeftoverParent;
                }
             }
 
@@ -758,7 +768,7 @@ Toolbar toolbar;
       SceneSettingsMenu.Add(SecondaryBackgroundIntensityField);
 
       UnityLightModifierField = new FloatField() {value = LightEnergyScale, label = "Unity Light Intensity Modifier"};
-      UnityLightModifierField.RegisterValueChangedCallback(evt => {LightEnergyScale = evt.newValue; Assets.LightEnergyScale = LightEnergyScale;});
+      UnityLightModifierField.RegisterValueChangedCallback(evt => {LightEnergyScale = evt.newValue; RayMaster.LocalTTSettings.LightEnergyScale = LightEnergyScale;});
       UnityLightModifierField.style.maxWidth = 345;
       SceneSettingsMenu.Add(UnityLightModifierField);
 
@@ -877,7 +887,6 @@ Toolbar toolbar;
       List<string> TextureProperties;
       List<string> ColorProperties;
       List<string> FloatProperties;
-      List<string> RangeProperties;
       DialogueNode OutputNode;
       void ConfirmMats() {
          
@@ -927,7 +936,7 @@ Toolbar toolbar;
                   });  
                break;
                case((int)Properties.MetallicSlider):
-                  MatShader.MetallicRange = RangeProperties[VerboseRangeProperties.IndexOf(AvailableIndexes[i].title)];
+                  MatShader.MetallicRange = FloatProperties[VerboseFloatProperties.IndexOf(AvailableIndexes[i].title)];
                break;
                case((int)Properties.MetallicMin):
                   MatShader.MetallicRemapMin = FloatProperties[VerboseFloatProperties.IndexOf(AvailableIndexes[i].title)];
@@ -943,7 +952,7 @@ Toolbar toolbar;
                   });  
                break;
                case((int)Properties.RoughnessSlider):
-                  MatShader.RoughnessRange = RangeProperties[VerboseRangeProperties.IndexOf(AvailableIndexes[i].title)];
+                  MatShader.RoughnessRange = FloatProperties[VerboseFloatProperties.IndexOf(AvailableIndexes[i].title)];
                break;
                case((int)Properties.RoughnessMin):
                   MatShader.RoughnessRemapMin = FloatProperties[VerboseFloatProperties.IndexOf(AvailableIndexes[i].title)];
@@ -991,7 +1000,6 @@ Toolbar toolbar;
          }
       }
       List<string> ChannelProperties;
-      List<string> VerboseRangeProperties;
       List<string> VerboseFloatProperties;
       List<string> VerboseColorProperties;
       List<string> VerboseTextureProperties;
@@ -1031,17 +1039,10 @@ Toolbar toolbar;
                dialogueNode.title = VerboseColorProperties[DropField.index];
                DropField.RegisterValueChangedCallback(evt => {dialogueNode.title = VerboseColorProperties[DropField.index];});
            }else if(T == typeof(float)) {
-               if(!IsRange) {
-                  DropField.choices = RangeProperties;
-                  DropField.index = (int)Mathf.Max(RangeProperties.IndexOf(InitialValue),0);
-                  dialogueNode.title = VerboseRangeProperties[DropField.index];
-                  DropField.RegisterValueChangedCallback(evt => {dialogueNode.title = VerboseRangeProperties[DropField.index];});
-               } else {
                   DropField.choices = FloatProperties;
                   DropField.index = (int)Mathf.Max(FloatProperties.IndexOf(InitialValue),0);
                   dialogueNode.title = VerboseFloatProperties[DropField.index];
                   DropField.RegisterValueChangedCallback(evt => {dialogueNode.title = VerboseFloatProperties[DropField.index];});
-               }
            }
 
            dialogueNode.inputContainer.Add(DropField);
@@ -1059,18 +1060,15 @@ Toolbar toolbar;
 
 
          Shader shader = (InputMaterialField.value as Material).shader;
-         RangeProperties = new List<string>();
          FloatProperties = new List<string>();
          ColorProperties = new List<string>();
          TextureProperties = new List<string>();
          ChannelProperties = new List<string>();
-         VerboseRangeProperties = new List<string>();
          VerboseFloatProperties = new List<string>();
          VerboseColorProperties = new List<string>();
          VerboseTextureProperties = new List<string>();
          int PropCount = shader.GetPropertyCount();
          ColorProperties.Add("null");
-         RangeProperties.Add("null");
          FloatProperties.Add("null");
          TextureProperties.Add("null");
          ChannelProperties.Add("R");
@@ -1079,14 +1077,12 @@ Toolbar toolbar;
          ChannelProperties.Add("A");
 
          VerboseColorProperties.Add("null");
-         VerboseRangeProperties.Add("null");
          VerboseFloatProperties.Add("null");
          VerboseTextureProperties.Add("null");
          for(int i = 0; i < PropCount; i++) {
             if(shader.GetPropertyType(i) == ShaderPropertyType.Texture) {TextureProperties.Add(shader.GetPropertyName(i)); VerboseTextureProperties.Add(shader.GetPropertyDescription(i));}
             if(shader.GetPropertyType(i) == ShaderPropertyType.Color) {ColorProperties.Add(shader.GetPropertyName(i)); VerboseColorProperties.Add(shader.GetPropertyDescription(i));}
-            if(shader.GetPropertyType(i) == ShaderPropertyType.Range) {RangeProperties.Add(shader.GetPropertyName(i)); VerboseRangeProperties.Add(shader.GetPropertyDescription(i));}
-            if(shader.GetPropertyType(i) == ShaderPropertyType.Float) {FloatProperties.Add(shader.GetPropertyName(i)); VerboseFloatProperties.Add(shader.GetPropertyDescription(i));}
+            if(shader.GetPropertyType(i) == ShaderPropertyType.Float || shader.GetPropertyType(i) == ShaderPropertyType.Range) {FloatProperties.Add(shader.GetPropertyName(i)); VerboseFloatProperties.Add(shader.GetPropertyDescription(i));}
          }
          MatShader = AssetManager.data.Material.Find((s1) => s1.Name.Equals(shader.name));
          Index = AssetManager.data.Material.IndexOf(MatShader);
@@ -1218,7 +1214,7 @@ Toolbar toolbar;
                _graphView.AddElement(ThisNode);
                _graphView.AddElement((ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.AlbedoColor] as Port));
             }
-            Index = RangeProperties.IndexOf(MatShader.MetallicRange);
+            Index = FloatProperties.IndexOf(MatShader.MetallicRange);
             if(Index > 0) {
                DialogueNode ThisNode = new DialogueNode();
                Pos.y = 420;
@@ -1227,7 +1223,7 @@ Toolbar toolbar;
                _graphView.AddElement((ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.MetallicSlider] as Port));
             }
 
-            Index = RangeProperties.IndexOf(MatShader.RoughnessRange);
+            Index = FloatProperties.IndexOf(MatShader.RoughnessRange);
             if(Index > 0) {
                DialogueNode ThisNode = new DialogueNode();
                   Pos.y = 740;
@@ -1283,13 +1279,11 @@ Toolbar toolbar;
         var PartialTextureNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Texture", typeof(Texture), new Vector2(0,0), "null", 0));}) {text = "Texture(Single Component)"};
         var FloatNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Float", typeof(float), new Vector2(0,0), "null"));}) {text = "Float"};
         var ColorNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Color", typeof(Color), new Vector2(0,0), "null"));}) {text = "Color"};
-        var RangeNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("MinMax", typeof(float), new Vector2(0,0), "null", -1, true));}) {text = "Range"};
 
         toolbar.Add(TextureNodeButton);//partial textures will be defined as according to the output they are connected to 
         toolbar.Add(PartialTextureNodeButton);//partial textures will be defined as according to the output they are connected to 
         toolbar.Add(FloatNodeButton);
         toolbar.Add(ColorNodeButton);
-        toolbar.Add(RangeNodeButton);
         MaterialPairingMenu.Add(toolbar);
         MaterialPairingMenu.Add(Spacer);
 
@@ -1365,8 +1359,11 @@ Toolbar toolbar;
          for(int i = 0; i < RayObjCount; i++) {
             int MatCount = RayObjs[i].MaterialOptions.Length;
             for(int i2 = 0; i2 < MatCount; i2++) {
-               if(RayObjs[i].MaterialOptions[i2] == RayTracingObject.Options.Cutout) 
+               if(RayObjs[i].MaterialOptions[i2] == RayTracingObject.Options.Cutout) {
                   RayObjs[i].MaterialOptions[i2] = RayTracingObject.Options.Disney;
+                  if(Application.isPlaying)
+                     RayObjs[i].CallMaterialEdited(true);
+               }
                else if(RayObjs[i].MaterialOptions[i2] != RayTracingObject.Options.Disney) 
                   RayObjs[i].MaterialOptions[i2] = RayTracingObject.Options.Disney;
             }
@@ -1412,6 +1409,10 @@ Toolbar toolbar;
          GroundColorField.style.width = 250;
          GroundColorField.RegisterValueChangedCallback(evt => {GroundColor = new Vector3(evt.newValue.r, evt.newValue.g, evt.newValue.b); RayMaster.LocalTTSettings.GroundColor = GroundColor;});
          HardSettingsMenu.Add(GroundColorField);
+
+         Toggle TransmittanceInNEEToggle = new Toggle() {value = RayMaster.LocalTTSettings.UseTransmittanceInNEE, text = "Apply Sky Transmittance to Sun"};
+         TransmittanceInNEEToggle.RegisterValueChangedCallback(evt => {UseTransmittanceInNEE = evt.newValue; RayMaster.LocalTTSettings.UseTransmittanceInNEE = UseTransmittanceInNEE;});
+         HardSettingsMenu.Add(TransmittanceInNEEToggle);
 
          Toggle OIDNToggle = new Toggle() {value = (definesList.Contains("UseOIDN")), text = "Enable OIDN(Does NOT work with DX11 Only)"};
          OIDNToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("UseOIDN"); else RemoveDefine("UseOIDN"); SetDefines();});
@@ -1491,7 +1492,7 @@ Toolbar toolbar;
          var old_rt = RenderTexture.active;
          RenderTexture.active = RayMaster.ScreenSpaceInfo;
          Texture2D currenttexture = new Texture2D(1, 1, TextureFormat.RGBAFloat, false, true);
-         currenttexture.ReadPixels(new Rect(RayMaster.SourceWidth / 2, RayMaster.SourceHeight / 2 - 1, 1, 1), 0, 0);
+         currenttexture.ReadPixels(new Rect(Input.mousePosition.x, RayMaster.SourceHeight - Input.mousePosition.y, 1, 1), 0, 0);
          currenttexture.Apply();
           RenderTexture.active = old_rt;
          var CenterDistance = currenttexture.GetPixelData<Vector4>(0);
@@ -1637,11 +1638,12 @@ void AddResolution(int width, int height, string label)
            Assets.UseSkinning = MeshSkin;
            RayMaster.AtmoNumLayers = AtmoScatter;
            Assets.MainDesiredRes = AtlasSize;
-           Assets.LightEnergyScale = LightEnergyScale;
            RayMaster.LoadTT();
+           LightEnergyScale = RayMaster.LocalTTSettings.LightEnergyScale;
            LEMEnergyScale = RayMaster.LocalTTSettings.LEMEnergyScale;
            RayTracingMaster.DoSaving = DoSaving;
            RayTracingMaster.DoDing = DoDing;
+           UseTransmittanceInNEE = RayMaster.LocalTTSettings.UseTransmittanceInNEE;
            BounceCount = RayMaster.LocalTTSettings.bouncecount;
            RenderRes = RayMaster.LocalTTSettings.RenderScale;
            RR = RayMaster.LocalTTSettings.UseRussianRoulette;
@@ -1690,6 +1692,7 @@ void AddResolution(int width, int height, string label)
            SkyDesaturate = RayMaster.LocalTTSettings.SkyDesaturate;
            FireflyFrameCount = RayMaster.LocalTTSettings.FireflyFrameCount;
            OIDNFrameCount = RayMaster.LocalTTSettings.OIDNFrameCount;
+           RayMaster.IsFocusing = false;
          }
 
            AddHardSettingsToMenu();
@@ -1925,7 +1928,8 @@ void AddResolution(int width, int height, string label)
            Label FocalLabel = new Label("Focal Length");
            FocalSlider = new FloatField() {value = DoFFocal};
            FocalSlider.style.width = 150;
-           Button AutofocusButton = new Button(() => GetFocalLength()) {text = "Autofocus DoF"};
+           Label AutoFocLabel = new Label("Hold Middle Mouse in game to point");
+           // Button AutofocusButton = new Button(() => {IsFocusing = true;}) {text = "Autofocus DoF"};
            // AutofocusButton.RegisterCallback<MouseEnterEvent>(evt => {});
            // AutofocusButton.RegisterCallback<MouseLeaveEvent>(evt => {});
 
@@ -1938,7 +1942,8 @@ void AddResolution(int width, int height, string label)
            Box FocalBox = new Box();
            FocalBox.Add(FocalLabel);
            FocalBox.Add(FocalSlider);
-           FocalBox.Add(AutofocusButton);
+           FocalBox.Add(AutoFocLabel);
+           // FocalBox.Add(AutofocusButton);
            FocalBox.style.flexDirection = FlexDirection.Row;
 
            Toggle DoFToggle = new Toggle() {value = DoF, text = "Enable DoF"};
@@ -2145,86 +2150,88 @@ void AddResolution(int width, int height, string label)
 
         }
 
-         public GameObject getOBJ(int id)
-         {
-             Dictionary<int, GameObject> m_instanceMap = new Dictionary<int, GameObject>();
-             //record instance map
 
-             m_instanceMap.Clear();
-             List<GameObject> gos = new List<GameObject>();
-             foreach (GameObject go in Resources.FindObjectsOfTypeAll(typeof(GameObject)))
-             {
-                 if (gos.Contains(go))
-                 {
-                     continue;
-                 }
-                 gos.Add(go);
-                 m_instanceMap[go.GetInstanceID()] = go;
-             }
-
-             if (m_instanceMap.ContainsKey(id))
-             {
-                 return m_instanceMap[id];
-             }
-             else
-             {
-                 return null;
-             }
-         }
 
         void Update() {
+         if(RayMaster.LocalTTSettings.PPDoF && Input.GetMouseButton(2)) {
+            if(Input.mousePosition.x >= 0 && Input.mousePosition.x < RayMaster.SourceWidth && Input.mousePosition.y >= 0 && Input.mousePosition.y < RayMaster.SourceHeight) {
+               RayMaster.IsFocusing = true;
+               GetFocalLength();
+            } else {
+               RayMaster.IsFocusing = false;
+            }
+         } else {
+            RayMaster.IsFocusing = false;
+         }
             if(!Application.isPlaying) {
                if(RayTracingMaster.DoCheck && DoSaving) {
                   try{
                       UnityEditor.AssetDatabase.Refresh();
-                     using (var A = new StringReader(Resources.Load<TextAsset>("Utility/SaveFile").text)) {
-                         var serializer = new XmlSerializer(typeof(RayObjs));
-                         RayObjs rayreads = serializer.Deserialize(A) as RayObjs;
-                         int RayReadCount = rayreads.RayObj.Count;
-                         for(int i = 0; i < RayReadCount; i++) {
-                           RayObjectDatas Ray = rayreads.RayObj[i];
-                           GameObject TempObj = getOBJ(Ray.ID);
-                           RayTracingObject TempRTO = TempObj.GetComponent<RayTracingObject>();
-                           int NameIndex = (new List<string>(TempRTO.Names)).IndexOf(Ray.MatName);
-                           if(NameIndex == -1) {
-                              Debug.Log("EEEE");
-                           } else {
-                              TempRTO.MaterialOptions[NameIndex] = (RayTracingObject.Options)Ray.OptionID;
-                              TempRTO.TransmissionColor[NameIndex] = Ray.TransCol;
-                              TempRTO.BaseColor[NameIndex] = Ray.BaseCol;
-                              TempRTO.MetallicRemap[NameIndex] = Ray.MetRemap;
-                              TempRTO.RoughnessRemap[NameIndex] = Ray.RoughRemap;
-                              TempRTO.emmission[NameIndex] = Ray.Emiss;
-                              TempRTO.EmissionColor[NameIndex] = Ray.EmissCol;
-                              TempRTO.Roughness[NameIndex] = Ray.Rough;
-                              TempRTO.IOR[NameIndex] = Ray.IOR;
-                              TempRTO.Metallic[NameIndex] = Ray.Met;
-                              TempRTO.SpecularTint[NameIndex] = Ray.SpecTint;
-                              TempRTO.Sheen[NameIndex] = Ray.Sheen;
-                              TempRTO.SheenTint[NameIndex] = Ray.SheenTint;
-                              TempRTO.ClearCoat[NameIndex] = Ray.Clearcoat;
-                              TempRTO.ClearCoatGloss[NameIndex] = Ray.ClearcoatGloss;
-                              TempRTO.Anisotropic[NameIndex] = Ray.Anisotropic;
-                              TempRTO.Flatness[NameIndex] = Ray.Flatness;
-                              TempRTO.DiffTrans[NameIndex] = Ray.DiffTrans;
-                              TempRTO.SpecTrans[NameIndex] = Ray.SpecTrans;
-                              TempRTO.FollowMaterial[NameIndex] = Ray.FollowMat;
-                              TempRTO.ScatterDist[NameIndex] = Ray.ScatterDist;
-                              TempRTO.Specular[NameIndex] = Ray.Spec;
-                              TempRTO.AlphaCutoff[NameIndex] = Ray.AlphaCutoff;
-                              TempRTO.NormalStrength[NameIndex] = Ray.NormStrength;
-                              TempRTO.Hue[NameIndex] = Ray.Hue;
-                              TempRTO.Brightness[NameIndex] = Ray.Brightness;
-                              TempRTO.Contrast[NameIndex] = Ray.Contrast;
-                              TempRTO.Saturation[NameIndex] = Ray.Saturation;
-                              TempRTO.BlendColor[NameIndex] = Ray.BlendColor;
-                              TempRTO.BlendFactor[NameIndex] = Ray.BlendFactor;
-                              TempRTO.MainTexScaleOffset[NameIndex] = Ray.MainTexScaleOffset;
-                              TempRTO.SecondaryTextureScale[NameIndex] = Ray.SecondaryTextureScale;
-                              TempRTO.Rotation[NameIndex] = Ray.Rotation;
-                              TempRTO.Flags[NameIndex] = Ray.Flags;
-                              TempRTO.CallMaterialEdited();
+                        using (var A = new StringReader(Resources.Load<TextAsset>("Utility/SaveFile").text)) {
+                           var serializer = new XmlSerializer(typeof(RayObjs));
+                           RayObjs rayreads = serializer.Deserialize(A) as RayObjs;
+                           int RayReadCount = rayreads.RayObj.Count;
+                           RayTracingObject TempRTO;
+                           Dictionary<int, GameObject> m_instanceMap = new Dictionary<int, GameObject>();
+                           //record instance map
+
+                           m_instanceMap.Clear();
+                           List<GameObject> gos = new List<GameObject>();
+                           var Candidates = Resources.FindObjectsOfTypeAll(typeof(GameObject));
+                           foreach (GameObject go in Candidates) {
+                              if (gos.Contains(go))
+                                 continue;
+                              gos.Add(go);
+                              m_instanceMap[go.GetInstanceID()] = go;
                            }
+                           for(int i = 0; i < RayReadCount; i++) {
+                              RayObjectDatas Ray = rayreads.RayObj[i];
+                              if(m_instanceMap.ContainsKey(Ray.ID)) {
+                                 if(m_instanceMap[Ray.ID].TryGetComponent(out TempRTO)) {
+                                    int NameIndex = (new List<string>(TempRTO.Names)).IndexOf(Ray.MatName);
+                                    if(NameIndex == -1) {
+                                       Debug.Log("Missing material marked for update");
+                                    } else {
+                                       TempRTO.MaterialOptions[NameIndex] = (RayTracingObject.Options)Ray.OptionID;
+                                       TempRTO.TransmissionColor[NameIndex] = Ray.TransCol;
+                                       TempRTO.BaseColor[NameIndex] = Ray.BaseCol;
+                                       TempRTO.MetallicRemap[NameIndex] = Ray.MetRemap;
+                                       TempRTO.RoughnessRemap[NameIndex] = Ray.RoughRemap;
+                                       TempRTO.emmission[NameIndex] = Ray.Emiss;
+                                       TempRTO.EmissionColor[NameIndex] = Ray.EmissCol;
+                                       TempRTO.Roughness[NameIndex] = Ray.Rough;
+                                       TempRTO.IOR[NameIndex] = Ray.IOR;
+                                       TempRTO.Metallic[NameIndex] = Ray.Met;
+                                       TempRTO.SpecularTint[NameIndex] = Ray.SpecTint;
+                                       TempRTO.Sheen[NameIndex] = Ray.Sheen;
+                                       TempRTO.SheenTint[NameIndex] = Ray.SheenTint;
+                                       TempRTO.ClearCoat[NameIndex] = Ray.Clearcoat;
+                                       TempRTO.ClearCoatGloss[NameIndex] = Ray.ClearcoatGloss;
+                                       TempRTO.Anisotropic[NameIndex] = Ray.Anisotropic;
+                                       TempRTO.Flatness[NameIndex] = Ray.Flatness;
+                                       TempRTO.DiffTrans[NameIndex] = Ray.DiffTrans;
+                                       TempRTO.SpecTrans[NameIndex] = Ray.SpecTrans;
+                                       TempRTO.FollowMaterial[NameIndex] = Ray.FollowMat;
+                                       TempRTO.ScatterDist[NameIndex] = Ray.ScatterDist;
+                                       TempRTO.Specular[NameIndex] = Ray.Spec;
+                                       TempRTO.AlphaCutoff[NameIndex] = Ray.AlphaCutoff;
+                                       TempRTO.NormalStrength[NameIndex] = Ray.NormStrength;
+                                       TempRTO.Hue[NameIndex] = Ray.Hue;
+                                       TempRTO.Brightness[NameIndex] = Ray.Brightness;
+                                       TempRTO.Contrast[NameIndex] = Ray.Contrast;
+                                       TempRTO.Saturation[NameIndex] = Ray.Saturation;
+                                       TempRTO.BlendColor[NameIndex] = Ray.BlendColor;
+                                       TempRTO.BlendFactor[NameIndex] = Ray.BlendFactor;
+                                       TempRTO.MainTexScaleOffset[NameIndex] = Ray.MainTexScaleOffset;
+                                       TempRTO.SecondaryTextureScale[NameIndex] = Ray.SecondaryTextureScale;
+                                       TempRTO.Rotation[NameIndex] = Ray.Rotation;
+                                       TempRTO.Flags[NameIndex] = Ray.Flags;
+                                       TempRTO.UseKelvin[NameIndex] = Ray.UseKelvin;
+                                       TempRTO.KelvinTemp[NameIndex] = Ray.KelvinTemp;
+                                       TempRTO.CallMaterialEdited();
+                                    }
+                                 }
+                              }
 
                          }
                       }
@@ -2238,7 +2245,7 @@ void AddResolution(int width, int height, string label)
                RayTracingMaster.DoCheck = false;
             }
 
-            if(Assets != null && Instancer != null && Assets.RunningTasks != null && Instancer.RunningTasks != null) RemainingObjectsField.value = Assets.RunningTasks + Instancer.RunningTasks;
+            if(Assets != null && Instancer != null) RemainingObjectsField.value = Assets.RunningTasks + Instancer.RunningTasks;
             if(RayMaster != null) SampleCountField.value = RayMaster.SampleCount;
             
             if(Assets != null && Assets.NeedsToUpdateXML) {
