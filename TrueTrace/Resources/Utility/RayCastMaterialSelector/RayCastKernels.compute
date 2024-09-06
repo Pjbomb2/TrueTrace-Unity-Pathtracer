@@ -1,0 +1,40 @@
+#include "../../GlobalDefines.cginc"
+#ifndef DX11
+    #pragma use_dxc
+#endif
+#include "../../MainCompute/CommonData.cginc"
+
+#pragma kernel GenKernel
+float3 ScreenPosition;
+
+[numthreads(1,1,1)]
+void GenKernel (uint3 id : SV_DispatchThreadID)
+{
+    const uint pixel_index = ScreenPosition.y * screen_width + ScreenPosition.x;
+    float2 uv = float2(ScreenPosition.xy / float2(screen_width, screen_height) * 2.0f - 1.0f);
+    SmallerRay ray = CreateCameraRay(uv);
+    RayData globray = {ray.origin + NearPlane * ray.direction, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
+    GlobalRays[0] = globray;
+
+}
+
+
+
+#pragma kernel FinalizeKernel
+RWStructuredBuffer<int> OutputBuffer;
+[numthreads(1,1,1)]
+void FinalizeKernel (uint3 id : SV_DispatchThreadID)
+{
+    
+    RayHit bestHit = get2(GlobalRays[0].hits);
+    #ifdef HardwareRT
+        if(bestHit.mesh_id != 9999999) {
+            int2 Indexes = int2(bestHit.mesh_id & 0x0000FFFF, bestHit.mesh_id >> 16);
+            int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
+            bestHit.triangle_id += triangleOffset;
+            bestHit.mesh_id = MeshOffsets[Indexes.x].y;
+        }
+    #endif
+    OutputBuffer[0] = _MeshData[bestHit.mesh_id].MaterialOffset + AggTris[bestHit.triangle_id].MatDat;
+
+}

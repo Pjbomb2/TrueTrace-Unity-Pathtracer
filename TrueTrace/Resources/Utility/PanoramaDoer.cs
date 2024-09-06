@@ -93,6 +93,11 @@ namespace TrueTrace {
                 if(RayTracingMaster._camera != null)
                     Cameras[0] = RayTracingMaster._camera;
             }
+            if(!(Cameras == null || Cameras.Length == 0)) {
+                Cameras[0].gameObject.SetActive(true);
+                for(int i = 1; i < Cameras.Length; i++) Cameras[i].gameObject.SetActive(false);
+            }
+
         }
 
         IEnumerator RecordFrame()

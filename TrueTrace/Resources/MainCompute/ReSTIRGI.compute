@@ -137,7 +137,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     const SmallerRay CameraRay = CreateCameraRay(id.xy / float2(screen_width, screen_height) * 2.0f - 1.0f);
     
     const float4 GBuffer = ScreenSpaceInfoRead[id.xy];
-    const int MatIndex = (asuint(GBuffer.w) << 3) >> 3;
+    const int MatIndex = (asuint(GBuffer.w) << 4) >> 4;
     const uint Case = (asuint(GBuffer.w) << 1) >> 30;
     const float3 GeomNorm = i_octahedral_32(asuint(GBuffer.x));
     const float3 SurfNorm = i_octahedral_32(asuint(GBuffer.y));
@@ -269,7 +269,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     const int pixel_index = id.x + id.y * screen_width;
 
     const float4 GBuffer = ScreenSpaceInfoRead[id.xy];
-    const int MatIndex = (asuint(GBuffer.w) << 3) >> 3;
+    const int MatIndex = (asuint(GBuffer.w) << 4) >> 4;
     const float3 GeomNorm = i_octahedral_32(asuint(GBuffer.x));
     const float3 SurfNorm = i_octahedral_32(asuint(GBuffer.y));
     float3 PrimaryHitPosition = LoadSurfaceInfo(id.xy);

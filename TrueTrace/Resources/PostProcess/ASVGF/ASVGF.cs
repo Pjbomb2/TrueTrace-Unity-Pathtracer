@@ -269,6 +269,7 @@ namespace TrueTrace {
             shader.SetFloat("IndirectBoost", IndirectBoost);
             shader.SetBuffer(CopyData, "GlobalColorsRead", _ColorBuffer);
             shader.SetBuffer(Atrous, "GlobalColorsRead", _ColorBuffer);
+            shader.SetTexture(Atrous, "ReflRefracA", (EvenFrame ? ReflectedRefractedA : ReflectedRefractedB));
             shader.SetBuffer(CopyData, "ExposureBuffer", ExposureModifier);
             shader.SetBuffer(Atrous, "ExposureBuffer", ExposureModifier);
             shader.SetTexture(CopyData, "ScreenSpaceInfo", ScreenSpaceInfo);
@@ -384,6 +385,7 @@ namespace TrueTrace {
             shader.SetTextureFromGlobal(Atrous_LF, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
 
 
+            cmd.SetComputeTextureParam(shader, Atrous_LF, "MetallicA", (EvenFrame ? MetallicA : MetallicB));
             cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_ASVGF_ATROUS_PING_LF_SH", ASVGF_ATROUS_PING_LF_SH);
             cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_ASVGF_ATROUS_PING_LF_COCG", ASVGF_ATROUS_PING_LF_COCG);
 
@@ -434,8 +436,7 @@ namespace TrueTrace {
                 cmd.DispatchCompute(shader, Atrous, Mathf.CeilToInt((ScreenWidth + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight + 15) / 16.0f), 1);
                 cmd.EndSample("ASVGF Atrous " + 0);
 
-            for (int i = 0; i < MaxIterations; i++)
-            {
+            for(int i = 0; i < 6; i++) {
                 var e = i;
                 cmd.BeginSample("ASVGF Atrous LF " + (e + 1));
                 cmd.SetComputeIntParam(shader, "iteration", e + 1);
@@ -454,6 +455,12 @@ namespace TrueTrace {
                 cmd.DispatchCompute(shader, Atrous_LF, Mathf.CeilToInt((ScreenWidth / 3.0f + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight / 3.0f + 15) / 16.0f), 1);
 
                 cmd.EndSample("ASVGF Atrous LF " + (e + 1));
+            }
+
+            for (int i = 0; i < MaxIterations; i++)
+            {
+                var e = i;
+
                 cmd.BeginSample("ASVGF Atrous " + (e + 1));
 
                 cmd.SetComputeIntParam(shader, "spec_iteration", (e + 1));
@@ -491,7 +498,6 @@ namespace TrueTrace {
                 shader.SetTexture(Atrous, "ScreenSpaceInfo", ScreenSpaceInfo);
                 cmd.DispatchCompute(shader, Atrous, Mathf.CeilToInt((ScreenWidth + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight + 15) / 16.0f), 1);
                 cmd.EndSample("ASVGF Atrous " + (e + 1));
-
             }
 
 

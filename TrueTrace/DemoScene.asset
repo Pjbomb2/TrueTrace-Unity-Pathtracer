@@ -21,15 +21,15 @@ MonoBehaviour:
   DoTLASUpdates: 1
   Accumulate: 0
   PPBloom: 1
-  BloomStrength: 0.866
+  BloomStrength: 0.797
   PPDoF: 0
   DoFAperature: 0.403
   DoFAperatureScale: 0.54
-  DoFFocal: 3.0317974
+  DoFFocal: 5.1366353
   PPExposure: 0
   ExposureAuto: 1
-  PPToneMap: 0
-  PPTAA: 1
+  PPToneMap: 1
+  PPTAA: 0
   RenderScale: 1
   UseASVGF: 0
   UseTAAU: 0
@@ -48,14 +48,13 @@ MonoBehaviour:
   ImprovedPrimaryHit: 1
   RISCount: 12
   ToneMapper: 0
-  SunDesaturate: 0
   SkyDesaturate: 0
   ClayColor: {x: 0.20754719, y: 0.20754719, z: 0.20754719}
   GroundColor: {x: 0.11320752, y: 0.11320752, z: 0.11320752}
   FireflyFrameCount: 533
   FireflyStrength: 1
   FireflyOffset: 0
-  OIDNFrameCount: 5000
+  OIDNFrameCount: 32
   UseOIDN: 0
   DoSharpen: 0
   Sharpness: 1
@@ -71,3 +70,5 @@ MonoBehaviour:
   HDRIScale: {x: 1, y: 1}
   LEMEnergyScale: 1
   UseTransmittanceInNEE: 1
+  SecondarySkyDesaturate: 0
+  MatChangeResetsAccum: 0

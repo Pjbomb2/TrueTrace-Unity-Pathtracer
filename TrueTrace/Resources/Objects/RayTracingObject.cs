@@ -6,11 +6,11 @@ using CommonVars;
 namespace TrueTrace {
 	[ExecuteInEditMode][System.Serializable]
 	public class RayTracingObject : MonoBehaviour {
-		public enum Options {Disney, Cutout};
+		public enum Options {Disney, Cutout, Fade};
 		[SerializeField] public Options[] MaterialOptions;
 		[SerializeField] public Vector3[] TransmissionColor, BaseColor;
 		[SerializeField] public Vector2[] MetallicRemap, RoughnessRemap;
-		[SerializeField] public float[] emmission; 
+		[SerializeField] public float[] emission; 
 		[SerializeField] public Vector3[] EmissionColor;
 		[SerializeField] public float[] Roughness;
 		[SerializeField] public float[] IOR;
@@ -44,6 +44,7 @@ namespace TrueTrace {
 		[SerializeField] public int[] Flags;
 		[SerializeField] public bool[] UseKelvin;
 		[SerializeField] public float[] KelvinTemp;
+		[SerializeField] public float[] ColorBleed; 
 		public int[] Indexes;
 		public bool NeedsToUpdate;
 		[SerializeField] public bool IsReady = false;
@@ -247,19 +248,20 @@ namespace TrueTrace {
 			InitializeArray<float>(ref SpecTrans, 0.0f, Index);
 			InitializeArray<Options>(ref MaterialOptions, Options.Disney, Index);
 			InitializeArray<int>(ref LocalMaterialIndex, 0, Index);
-			InitializeArray<float>(ref emmission, 0, Index);
+			InitializeArray<float>(ref emission, 0, Index);
 			InitializeArray<float>(ref Roughness, 0, Index);
 			InitializeArray<Vector3>(ref BaseColor, new Vector3(1,1,1), Index);
 			InitializeArray<int>(ref MaterialIndex, 0, Index);
 			InitializeArray<bool>(ref UseKelvin, false, Index);
 			InitializeArray<float>(ref KelvinTemp, 0, Index);
+			InitializeArray<float>(ref ColorBleed, 1, Index);
 
 			IsReady = true;
 			mesh = null;
 		}
 
 		public void ResetData() {
-			emmission = null;
+			emission = null;
 			Roughness = null;
 			TransmissionColor = null;
 			MaterialOptions = null;

@@ -42,7 +42,6 @@ namespace TrueTrace {
         [SerializeField] public bool ImprovedPrimaryHit = false;
         [SerializeField] public int RISCount = 12;
         [SerializeField] public int ToneMapper = 0;
-        [SerializeField] public float SunDesaturate = 0.0f;
         [SerializeField] public float SkyDesaturate = 0.0f;
         [SerializeField] public Vector3 ClayColor = new Vector3(0.5f, 0.5f, 0.5f);
         [SerializeField] public Vector3 GroundColor = new Vector3(0.1f, 0.1f, 0.1f);
@@ -65,5 +64,7 @@ namespace TrueTrace {
         [SerializeField] public Vector2 HDRIScale = Vector2.one;
         [SerializeField] public float LEMEnergyScale = 1.0f;
         [SerializeField] public bool UseTransmittanceInNEE = true;
+        [SerializeField] public float SecondarySkyDesaturate = 0.0f;
+        [SerializeField] public bool MatChangeResetsAccum = false;
     }
 }
