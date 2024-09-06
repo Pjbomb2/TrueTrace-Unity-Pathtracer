@@ -230,19 +230,17 @@ TrueTrace Options Description -
 
 # Sample Images(Taken from various stages of development)
 
+![](/.Images/Arch2.png)
 ![](/.Images/CommonRender.png)
 ![](/.Images/SunTemple1.png)
 ![](/.Images/ModernBistro.png)
-![](/.Images/SunTemple2.png)
 ![](/.Images/ArchViz5.png)
 ![](/.Images/ArchViz4.png)
 ![](/.Images/Loft1.png)
 ![](/.Images/NewSponza3V2.png)
-![](/.Images/NewSponza1V2.png)
 ![](/.Images/NewSponza2V2.png)
 ![](/.Images/Cornell.png)
 ![](/.Images/Lego.png)
-![](/.Images/RealisticSponza.png)
 ![](/.Images/SpaceShip.png)
 
 
@@ -253,15 +251,10 @@ https://github.com/jan-van-bergen
 </br></br>
 Scenes From:
 <ul>
-  <li>https://www.blendermarket.com/products/blender-eevee-modern-villa</li>
-  <li>https://sketchfab.com/3d-models/bali-villa-modern-barn-house-scandinavian-barn-145684ac3b9b457f88ff2798acdb4306</li>
-  <li>https://sketchfab.com/3d-models/bali-villa-a-frame-house-mid-century-modern-c57267678a924eacad51414afd3ade24</li>
+  <li>https://sketchfab.com/3d-models/modern-house-and-garage-1bed-241e5ee17e874697bceb2feacedf44e1</li>
   <li>https://benedikt-bitterli.me/resources/</li>
   <li>https://casual-effects.com/data/</li>
   <li>https://www.intel.com/content/www/us/en/developer/topic-technology/graphics-research/samples.html</li>
-  <li>https://sketchfab.com/3d-models/tallers-de-la-fundacio-llorenc-artigas-22-5224b721b0854998a1808fcea3cff924</li>
-  <li>https://sketchfab.com/3d-models/dae-bilora-bella-46-camera-game-ready-asset-eeb9d9f0627f4783b5d16a8732f0d1a4</li>
-  <li>https://www.unrealengine.com/marketplace/en-US/product/victorian-train-station-and-railroad-modular-set</li>
 </ul>
 </br>
 Disney BSDF from: https://schuttejoe.github.io/post/disneybsdf/
