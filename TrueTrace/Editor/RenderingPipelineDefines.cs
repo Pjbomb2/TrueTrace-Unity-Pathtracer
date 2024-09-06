@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
 using System.Linq;
+using TrueTrace;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -21,9 +22,11 @@ public class RenderingPipelineDefines
         UpdateDefines();
     }
 
-    static void SetGlobalDefines(string DefineToSet, bool SetValue) {
-        if(System.IO.File.Exists(Application.dataPath + "/TrueTrace/Resources/GlobalDefines.cginc")) {
-            string[] GlobalDefines = System.IO.File.ReadAllLines(Application.dataPath + "/TrueTrace/Resources/GlobalDefines.cginc");
+    static void SetGlobalDefines(string DefineToSet, bool SetValue)
+    {
+        var globalDefinesPath = PathFinder.GetGlobalDefinesPath();
+        if(System.IO.File.Exists(globalDefinesPath)) {
+            string[] GlobalDefines = System.IO.File.ReadAllLines(globalDefinesPath);
             int Index = -1;
             for(int i = 0; i < GlobalDefines.Length; i++) {
                 if(GlobalDefines[i].Equals("//END OF DEFINES")) break;
@@ -41,7 +44,7 @@ public class RenderingPipelineDefines
             GlobalDefines[Index] = GlobalDefines[Index].Replace("// ", "");
             if(!SetValue) GlobalDefines[Index] = "// " + GlobalDefines[Index];
 
-            System.IO.File.WriteAllLines(Application.dataPath + "/TrueTrace/Resources/GlobalDefines.cginc", GlobalDefines);
+            System.IO.File.WriteAllLines(globalDefinesPath, GlobalDefines);
             AssetDatabase.Refresh();
         } else {Debug.Log("No GlobalDefinesFile");}
     }

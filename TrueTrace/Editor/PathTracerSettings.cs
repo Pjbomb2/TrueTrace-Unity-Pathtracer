@@ -103,9 +103,12 @@ namespace TrueTrace {
          [SerializeField] public bool UseTransmittanceInNEE = true;
 
 
-         public void SetGlobalDefines(string DefineToSet, bool SetValue) {
-            if(File.Exists(Application.dataPath + "/TrueTrace/Resources/GlobalDefines.cginc")) {
-               string[] GlobalDefines = System.IO.File.ReadAllLines(Application.dataPath + "/TrueTrace/Resources/GlobalDefines.cginc");
+         public void SetGlobalDefines(string DefineToSet, bool SetValue)
+         {
+            var globalDefinesPath = PathFinder.GetGlobalDefinesPath();
+            Debug.Log(globalDefinesPath);
+            if(File.Exists(globalDefinesPath)) {
+               string[] GlobalDefines = System.IO.File.ReadAllLines(globalDefinesPath);
                int Index = -1;
                for(int i = 0; i < GlobalDefines.Length; i++) {
                   if(GlobalDefines[i].Equals("//END OF DEFINES")) break;
@@ -126,7 +129,7 @@ namespace TrueTrace {
                   GlobalDefines[Index] = GlobalDefines[Index].Replace("// ", "");
                   if(!SetValue) GlobalDefines[Index] = "// " + GlobalDefines[Index];
 
-                  System.IO.File.WriteAllLines(Application.dataPath + "/TrueTrace/Resources/GlobalDefines.cginc", GlobalDefines);
+                  System.IO.File.WriteAllLines(globalDefinesPath, GlobalDefines);
                   AssetDatabase.Refresh();
                }
             } else {Debug.Log("No GlobalDefinesFile");}
@@ -991,7 +994,8 @@ Toolbar toolbar;
          MatShader.IsCutout = CutoutToggle.value;
          MatShader.UsesSmoothness = SmoothnessToggle.value;
          AssetManager.data.Material[Index] = MatShader;
-         using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialMappings.xml")) {
+         var materialMappingsPath = PathFinder.GetMaterialMappingsPath();
+         using(StreamWriter writer = new StreamWriter(materialMappingsPath)) {
             var serializer = new XmlSerializer(typeof(Materials));
             serializer.Serialize(writer.BaseStream, AssetManager.data);
             AssetDatabase.Refresh();
@@ -1089,7 +1093,8 @@ Toolbar toolbar;
          if(Index == -1) {
             if(Assets != null && Assets.NeedsToUpdateXML) {
                Assets.AddMaterial(shader);
-               using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialMappings.xml")) {
+               var materialMappingsPath = PathFinder.GetMaterialMappingsPath();
+               using(StreamWriter writer = new StreamWriter(materialMappingsPath)) {
                   var serializer = new XmlSerializer(typeof(Materials));
                   serializer.Serialize(writer.BaseStream, AssetManager.data);
                   AssetDatabase.Refresh();
@@ -2236,7 +2241,8 @@ void AddResolution(int width, int height, string label)
                          }
                       }
                   } catch(System.Exception e) {HasNoMore = true;};
-                  using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/SaveFile.xml")) {
+                  var saveFilePath = PathFinder.GetSaveFilePath();
+                  using(StreamWriter writer = new StreamWriter(saveFilePath)) {
                       var serializer = new XmlSerializer(typeof(RayObjs));
                       serializer.Serialize(writer.BaseStream, new RayObjs());
                       UnityEditor.AssetDatabase.Refresh();
@@ -2248,8 +2254,10 @@ void AddResolution(int width, int height, string label)
             if(Assets != null && Instancer != null) RemainingObjectsField.value = Assets.RunningTasks + Instancer.RunningTasks;
             if(RayMaster != null) SampleCountField.value = RayMaster.SampleCount;
             
-            if(Assets != null && Assets.NeedsToUpdateXML) {
-                using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialMappings.xml")) {
+            if(Assets != null && Assets.NeedsToUpdateXML)
+            {
+               var materialMappingsPath = PathFinder.GetMaterialMappingsPath();
+                using(StreamWriter writer = new StreamWriter(materialMappingsPath)) {
                   var serializer = new XmlSerializer(typeof(Materials));
                   serializer.Serialize(writer.BaseStream, AssetManager.data);
                }

@@ -93,7 +93,8 @@ using System.Xml.Serialization;
                 if(CopyIndex != -1) PresetRays.RayObj[CopyIndex] = TempRay;
                 else PresetRays.RayObj.Add(TempRay);
 
-                using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialPresets.xml")) {
+                var materialPresetsPath = PathFinder.GetMaterialPresetsPath();
+                using(StreamWriter writer = new StreamWriter(materialPresetsPath)) {
                     var serializer = new XmlSerializer(typeof(RayObjs));
                     serializer.Serialize(writer.BaseStream, PresetRays);
                     UnityEditor.AssetDatabase.Refresh();
@@ -135,7 +136,8 @@ using System.Xml.Serialization;
                     if(GUILayout.Button(PresetRays.RayObj[i].MatName)) {CallEditorFunction(PresetRays.RayObj[i]); this.editorWindow.Close();}
                     if(GUILayout.Button("Delete")) {
                         PresetRays.RayObj.RemoveAt(i);
-                        using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialPresets.xml")) {
+                        var materialPresetsPath = PathFinder.GetMaterialPresetsPath();
+                        using(StreamWriter writer = new StreamWriter(materialPresetsPath)) {
                             var serializer = new XmlSerializer(typeof(RayObjs));
                             serializer.Serialize(writer.BaseStream, PresetRays);
                             UnityEditor.AssetDatabase.Refresh();

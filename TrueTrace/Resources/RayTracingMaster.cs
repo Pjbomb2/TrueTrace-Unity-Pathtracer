@@ -302,20 +302,26 @@ namespace TrueTrace {
             }
         }
 
-        private void OnEnable() {
+        private void OnEnable()
+        {
             _currentSample = 0;
         }
 
-        void OnDestroy() {
-            #if UNITY_EDITOR
-                using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/SaveFile.xml")) {
-                    var serializer = new XmlSerializer(typeof(RayObjs));
-                    serializer.Serialize(writer.BaseStream, raywrites);
-                    UnityEditor.AssetDatabase.Refresh();
-                }
-            #endif
+        void OnDestroy()
+        {
+#if UNITY_EDITOR
+
+            var saveFilePath = PathFinder.GetSaveFilePath();
+            using (StreamWriter writer = new StreamWriter(saveFilePath))
+            {
+                var serializer = new XmlSerializer(typeof(RayObjs));
+                serializer.Serialize(writer.BaseStream, raywrites);
+                UnityEditor.AssetDatabase.Refresh();
+            }
+#endif
         }
-        public void OnDisable() {
+
+    public void OnDisable() {
             DoCheck = true;
             _RayBuffer?.Release();
             LightingBuffer?.Release();
