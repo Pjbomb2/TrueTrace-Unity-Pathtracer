@@ -88,7 +88,8 @@ namespace TrueTrace {
                 if(CopyIndex != -1) PresetRays.RayObj[CopyIndex] = TempRay;
                 else PresetRays.RayObj.Add(TempRay);
 
-                using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialPresets.xml")) {
+                var materialPresetsPath = TTPathFinder.GetMaterialPresetsPath();
+                using(StreamWriter writer = new StreamWriter(materialPresetsPath)) {
                     var serializer = new XmlSerializer(typeof(RayObjs));
                     serializer.Serialize(writer.BaseStream, PresetRays);
                     UnityEditor.AssetDatabase.Refresh();
@@ -130,7 +131,8 @@ namespace TrueTrace {
                     if(GUILayout.Button(PresetRays.RayObj[i].MatName)) {CallEditorFunction(PresetRays.RayObj[i]); this.editorWindow.Close();}
                     if(GUILayout.Button("Delete")) {
                         PresetRays.RayObj.RemoveAt(i);
-                        using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialPresets.xml")) {
+                        var materialPresetsPath = TTPathFinder.GetMaterialPresetsPath();
+                        using(StreamWriter writer = new StreamWriter(materialPresetsPath)) {
                             var serializer = new XmlSerializer(typeof(RayObjs));
                             serializer.Serialize(writer.BaseStream, PresetRays);
                             UnityEditor.AssetDatabase.Refresh();
@@ -262,8 +264,9 @@ namespace TrueTrace {
                 };
                 if(CopyIndex != -1) PresetRays.RayObj[CopyIndex] = TempRay;
                 else PresetRays.RayObj.Add(TempRay);
-
-                using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialPresets.xml")) {
+                
+                var materialPresetsPath = TTPathFinder.GetMaterialPresetsPath();
+                using(StreamWriter writer = new StreamWriter(materialPresetsPath)) {
                     var serializer = new XmlSerializer(typeof(RayObjs));
                     serializer.Serialize(writer.BaseStream, PresetRays);
                     UnityEditor.AssetDatabase.Refresh();

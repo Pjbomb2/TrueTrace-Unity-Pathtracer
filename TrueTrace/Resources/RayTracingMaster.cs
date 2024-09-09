@@ -317,7 +317,8 @@ namespace TrueTrace {
 
         void OnDestroy() {
             #if UNITY_EDITOR
-                using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/SaveFile.xml")) {
+                var saveFilePath = TTPathFinder.GetSaveFilePath();
+                using(StreamWriter writer = new StreamWriter(saveFilePath)) {
                     var serializer = new XmlSerializer(typeof(RayObjs));
                     serializer.Serialize(writer.BaseStream, raywrites);
                     UnityEditor.AssetDatabase.Refresh();
