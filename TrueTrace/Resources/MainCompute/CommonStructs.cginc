@@ -102,7 +102,7 @@ struct MaterialData {//56
 	int2 MatCapMask;
 	int2 MatCapTex;
 	float3 surfaceColor;
-	float emmissive;
+	float emission;
 	float3 EmissionColor;
 	uint Tag;
 	float roughness;
@@ -134,6 +134,7 @@ struct MaterialData {//56
 	float BlendFactor;
 	float2 SecondaryTexScale;
 	float Rotation;
+	float ColorBleed;
 };
 
 StructuredBuffer<MaterialData> _Materials;
@@ -172,6 +173,19 @@ struct ColData {
 	float3 Data;//could compress down to one uint for the color, and store the bounce flag in the existing metroughisspec flag, its already 14 bits for metallic and roughness, which is very unneeded
 	float InWaterDistance;
 };
+
+/*
+	MetRoughIsSpec Bit Purposes:
+	0-9: Metallic
+	10-19: Roughness
+	20-21: MatLobe
+	22-22: Refracted
+	23-25: Water Stage Flag
+	26-30: BounceCount
+	31-31: BackupRefractionFlag
+
+
+*/
 
 RWStructuredBuffer<ColData> GlobalColors;
 StructuredBuffer<ColData> PrevGlobalColorsA;

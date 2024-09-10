@@ -115,6 +115,7 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
         [branch]if(ActiveData[GT.x]) {
             uint4 VoxelCurr = VoxelDataBufferA.Load4(id.x * 16);
             uint4 VoxelPrev = VoxelDataBufferB.Load4(id.x * 16);
+            uint FrameCounter = (VoxelPrev.w >> 20) & ((1u << 12) - 1);
             SummedVoxel = VoxelCurr + VoxelPrev;
             uint VoxelSampleCount = SummedVoxel.w & ((1u << 20) - 1);
 
@@ -137,7 +138,6 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
                 VoxelSampleCount = MaxSampleCount;
             }
 
-            uint FrameCounter = (VoxelPrev.w >> 20) & ((1u << 12) - 1);
             SummedVoxel.w = VoxelSampleCount;
 
             if ((VoxelCurr.w & ((1u << 20) - 1)) == 0) {

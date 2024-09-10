@@ -13,7 +13,7 @@ Texture2D<float4> ScreenSpaceInfo;
 SamplerState my_linear_clamp_sampler;
 
 uint GetBounceData(uint A) {
-    return (A & 0xFC000000) >> 26;
+    return (A & 0x7C000000) >> 26;
 }
 
 StructuredBuffer<ColData> GlobalColorsRead;

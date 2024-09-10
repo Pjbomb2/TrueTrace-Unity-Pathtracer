@@ -49,9 +49,11 @@ public class HDRPCompatability : CustomPass
             Shader.SetGlobalTexture("_CameraGBufferTexture2", Shader.GetGlobalTexture("_GBufferTexture2"));
             Shader.SetGlobalTexture("_CameraGBufferTexture0", Shader.GetGlobalTexture("_GBufferTexture0"));
             Shader.SetGlobalTexture("_CameraGBufferTexture1", Shader.GetGlobalTexture("_GBufferTexture1"));
+            ctx.cmd.BeginSample("TrueTrace");
             RayMaster.RenderImage(MainTex, ctx.cmd);
             ctx.propertyBlock.SetTexture("_MainTex", MainTex);
             ctx.cmd.Blit(MainTex, ctx.cameraColorBuffer);
+            ctx.cmd.EndSample("TrueTrace");
          }
     }
 

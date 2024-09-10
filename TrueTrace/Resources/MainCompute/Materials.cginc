@@ -549,7 +549,7 @@ static float3 SampleDisneySpecTransmission(const MaterialData hitDat, float3 wo,
     float pdf;
     refracted = false;
 
-    if(thin) G1v *= sqrt(hitDat.surfaceColor);
+    if(thin) G1v *= sqrt(exp(-CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance)));
     if (saturate(random(120, pixel_index).x + hitDat.flatness) <= F) {
 
         wi = normalize(reflect(-wo, wm));
@@ -1006,10 +1006,10 @@ bool SampleDisney(MaterialData hitDat, inout float3 v, bool thin, out float PDF,
 
     v = normalize(ToWorld(TruTanMat, wi));
     throughput = (Reflection / P[Case]);
-    if(Refracted) throughput = saturate(throughput);
+    if(Case == 3) throughput = saturate(throughput);
     PDF *= P[Case];
 
-    return Reflection.x != -1;
+    return Reflection.x != -1 && PDF > 0;
 }
 
 

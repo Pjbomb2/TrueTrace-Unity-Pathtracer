@@ -251,7 +251,7 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 		int TextureIndex = TextureIndexAndChannel.x - 1;
 		int TextureReadChannel = TextureIndexAndChannel.y;//0-3 is rgba, 4 is to just read all
 
-		#ifdef DebugSlowFixOn
+		#ifdef UseTextureLOD
 			#ifdef PointFiltering
 				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
 			#else
@@ -427,13 +427,7 @@ RayHit get2(const uint4 hit) {
 	return ray_hit;
 }
 
-int Pack2To1(int A, int B) {
-    return A | (B << 16);
-}
 
-int2 Unpack1To2(int A) {
-    return int2(A >> 16, A & 0x0000FFFF);
-}
 
 uint packRGBE(float3 v)
 {
@@ -477,7 +471,7 @@ SmallerRay CreateCameraRay(float2 uv, uint pixel_index) {
 	direction = mul(CamToWorld, float4(direction, 0.0f)).xyz;
 	direction = normalize(direction);
 	uint2 id = uint2(pixel_index % screen_width, pixel_index / screen_width);
-	[branch] if (UseDoF && (!IsFocusing || dot(id - int2(MousePos.x, MousePos.y), id - int2(MousePos.x, MousePos.y)) > 2.0f)) {
+	[branch] if (UseDoF && (!IsFocusing || dot(id - int2(MousePos.x, MousePos.y), id - int2(MousePos.x, MousePos.y)) > 6.0f)) {
 		float3 cameraForward = mul(CamInvProj, float4(0, 0, 0.0f, 1.0f)).xyz;
 		// Transform the direction from camera to world space and normalize
 		float4 sensorPlane;
@@ -539,8 +533,14 @@ inline SmallerRay CreateCameraRayPrev(float2 uv) {
     return CreateRay(origin, direction);
 }
 
+static float3 CalculateExtinction2(float3 apparantColor, float scatterDistance)
+{
+    float3 a = apparantColor;
+    float3 s = 1.9f - a + 3.5f * (a - 0.8f) * (a - 0.8f);
 
-
+    return 1.0f / (s * scatterDistance);
+}
+//shadow_triangle
 inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, float max_distance, int mesh_id, inout float3 throughput, const int MatOffset) {
     TrianglePos tri = triangle_get_positions(tri_id);
   	TriangleUvs tri2 = triangle_get_positions2(tri_id);
@@ -569,8 +569,10 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, float ma
 		            #ifdef IgnoreGlassShadow
 		                if(_Materials[MaterialIndex].specTrans == 1) {
 			            	#ifdef StainedGlassShadows
-		    	            	throughput *= _Materials[MaterialIndex].surfaceColor;
-						        if(_Materials[MaterialIndex].AlbedoTex.x > 0) throughput *= SampleTexture(BaseUv, SampleAlbedo, _Materials[MaterialIndex]) / 3.0f;
+			            		float3 MatCol = _Materials[MaterialIndex].surfaceColor;
+						        if(_Materials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _Materials[MaterialIndex]) / 3.0f;
+        						MatCol = lerp(MatCol, _Materials[MaterialIndex].BlendColor, _Materials[MaterialIndex].BlendFactor);
+		    					throughput *= sqrt(exp(-CalculateExtinction2(1.0f - MatCol, _Materials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _Materials[MaterialIndex].scatterDistance)));
 		    				#endif
 		                	return false;
 		                }
@@ -844,14 +846,18 @@ float3 ToLocal(float3x3 X, float3 V) {
 }
 
 
-float SunDesaturate;
 float SkyDesaturate;
+float SecondarySkyDesaturate;
 
 float3 SunDir;
 
 
 inline float luminance(const float3 a) {
     return dot(float3(0.299f, 0.587f, 0.114f), a);
+}
+
+inline float lum2(const float3 a) {
+    return dot(float3(0.21f, 0.72f, 0.07f), a);
 }
 
 inline float3 GetTriangleNormal(const uint TriIndex, const float2 TriUV, const float3x3 Inverse) {
@@ -947,7 +953,7 @@ inline float sinSubClamped(float sinTheta_a, float cosTheta_a, float sinTheta_b,
 	return sinTheta_a * cosTheta_b - cosTheta_a * sinTheta_b;
 }
 
-float Importance(const float3 p, const float3 n, LightBVHData node)
+float Importance(const float3 p, const float3 n, LightBVHData node, bool HasHitTLAS)
 {//Taken straight from pbrt
 	float cosTheta_o = (2.0f * ((float)(node.cosTheta_oe & 0x0000FFFF) / 32767.0f) - 1.0f);
     float3 pc = (node.BBMax + node.BBMin) / 2.0f;
@@ -957,7 +963,8 @@ float Importance(const float3 p, const float3 n, LightBVHData node)
     float3 wi = (pc - p) / sqrt(pDiff);
     float cosTheta_w = (dot(i_octahedral_32(node.w), wi));
     #ifdef IgnoreBackfacing
-	    if(cosTheta_w < 0) return 0;
+	    if(HasHitTLAS && node.left < 0 && cosTheta_w < 0) return 0;
+	    else cosTheta_w = abs(cosTheta_w);
     #else
     	cosTheta_w = abs(cosTheta_w);
     #endif
@@ -1016,8 +1023,8 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, int pixel
 		LightBVHData node = LightNodes[node_index];
 		if(node.left >= 0) {
 			float2 ci = float2(
-				Importance(p, n, LightNodes[node.left + NodeOffset]),
-				Importance(p, n, LightNodes[node.left + 1 + NodeOffset])
+				Importance(p, n, LightNodes[node.left + NodeOffset], HasHitTLAS),
+				Importance(p, n, LightNodes[node.left + 1 + NodeOffset], HasHitTLAS)
 			);
 			// if(ci.x == 0 && ci.y == 0) {pmf = -1; return;}
 
@@ -1082,8 +1089,8 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, int pixel_index, inout i
 		LightBVHData node = LightNodes[node_index];
 		[branch]if(node.left >= 0) {
 			const float2 ci = float2(
-				Importance(p, n, LightNodes[node.left + NodeOffset]),
-				Importance(p, n, LightNodes[node.left + 1 + NodeOffset])
+				Importance(p, n, LightNodes[node.left + NodeOffset], HasHitTLAS),
+				Importance(p, n, LightNodes[node.left + 1 + NodeOffset], HasHitTLAS)
 			);
 			if(ci.x == 0 && ci.y == 0) break;
 
@@ -1093,7 +1100,6 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, int pixel_index, inout i
 		} else {
 			[branch]if(HasHitTLAS) {
 				return -(node.left+1) + StartIndex;	
-				// else return -1;
 			} else {
 				StartIndex = _LightMeshes[-(node.left+1)].StartIndex; 
 				MeshIndex = _LightMeshes[-(node.left+1)].LockedMeshIndex;
@@ -1409,16 +1415,8 @@ float3 SampleLI(int pixel_index, inout float pdf, inout float3 wi) {
     return _SkyboxTexture.SampleLevel(my_linear_clamp_sampler, uv, 0);
 }	
 
-/*
-10 bits: metallic
-10 bits: roughness
-2 bits: Material Lobe
-1 bit: refracted
-//9 bits remaining
-3 bits: refraction counter
-*/
 uint GetBounceData(uint A) {
-	return (A & 0xFC000000) >> 26;
+	return (A & 0x7C000000) >> 26;
 }
 uint ToColorSpecPackedAdd(float3 A, uint B) {
 	return (B & ~0xFFFFFE00) | ((uint)(A.x * 1022.0f)) | ((uint)(A.y * 1022.0f) << 10) | ((uint)A.z << 20);
@@ -1450,8 +1448,8 @@ inline float3 CalcPos(uint4 TriData) {
 #define GridBias 2
 #define BucketCount 32
 #define PropDepth 4
-#define MinSampleToContribute 0
-#define MaxSampleCount 32
+#define MinSampleToContribute 7
+#define MaxSampleCount 128
 #define CacheCapacity (4 * 1024 * 1024)
 
 RWByteAddressBuffer VoxelDataBufferA;
@@ -1564,7 +1562,7 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 
 	struct PropogatedCacheData {
 		uint2 samples[PropDepth];
-		uint throughput;
+		uint throughput;//not needed, just padding, if I could remove one other uint, than I could bump prop_depth up to 5
 		uint pathLength;
 		uint CurrentIlluminance;
 		uint Norm;
@@ -1608,7 +1606,7 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 				InterlockedExchange(HashEntriesBuffer[baseSlot + i].z, 0xAAAAAAAA, BucketIndex);
 				if(BucketIndex != 0xAAAAAAAA && HashEntriesBuffer[baseSlot + i].x == 0 && HashEntriesBuffer[baseSlot + i].y == 0) {
 					HashEntriesBuffer[baseSlot + i].xy = HashValue.xy;
-					InterlockedExchange(HashEntriesBuffer[baseSlot + i].z, BucketIndex, temp);
+					// InterlockedExchange(HashEntriesBuffer[baseSlot + i].z, BucketIndex, temp);//May be bad
 					return baseSlot + i;
 				} else {
 					HashKeyValue OldHashValue = HashEntriesBuffer[baseSlot + i];
@@ -1636,7 +1634,7 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 	}
 
 
-	inline bool RetrieveCacheRadiance(inout PropogatedCacheData CurrentProp, float3 Pos, float3 Norm, out float3 radiance) {
+	inline bool RetrieveCacheRadiance(PropogatedCacheData CurrentProp, float3 Pos, float3 Norm, out float3 radiance) {
 		uint2 HashValue = ComputeHash(Pos, Norm);
 	   	uint CacheEntry = 0xFFFFFFFF;
 	   	HashGridFind(HashValue, CacheEntry);
@@ -1684,29 +1682,22 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 	}
 
 	uint2 GetReprojectedHash(uint2 HashValue) {
-	    const uint negativeBit = 1 << (17 - 1);
-	    const uint negativeNumberMask = ~((1 << 17) - 1);
-
 	    int3 gridPosition;
 	    gridPosition.x = int((HashValue.x) & ((1u << 17) - 1));
 	    gridPosition.y = int((((HashValue.y << 15)) | (HashValue.x >> 17)) & ((1u << 17) - 1));
 	    gridPosition.z = int((HashValue.y >> 2) & ((1u << 17) - 1));
 
-	    // Fix negative coordinates
-	    gridPosition.x = (gridPosition.x & negativeBit) ? gridPosition.x | negativeNumberMask : gridPosition.x;
-	    gridPosition.y = (gridPosition.y & negativeBit) ? gridPosition.y | negativeNumberMask : gridPosition.y;
-	    gridPosition.z = (gridPosition.z & negativeBit) ? gridPosition.z | negativeNumberMask : gridPosition.z;
+	    //checking 16th bit as thats the max resolution of the grid hash, and if its negative, cant you do this with msb?
+	    //This is faster than calling firstbithigh as you know the index to check, aka the highest possible bit based off of max grid resolution
+	    gridPosition = (gridPosition & (1 << (17 - 1))) ? (gridPosition | (~((1 << 17) - 1))) : gridPosition;
 
 	    int level = uint((HashValue.y >> 19) & ((1u << 10) - 1));
 
 	    float voxelSize = pow(2, level) / (WorldCacheScale * 4.0f);
-	    int3 cameraGridPosition = floor(CamPos / voxelSize);
-	    int3 cameraGridPositionPrev = floor(PrevCamPos / voxelSize);
-	    int cameraDistance = dot(cameraGridPosition - gridPosition, cameraGridPosition - gridPosition);
-	    int cameraDistancePrev = dot(cameraGridPositionPrev - gridPosition, cameraGridPositionPrev - gridPosition);
+	    int3 CamPosDiff = floor(CamPos / voxelSize) - gridPosition;
+	    int3 CamPosDiffPrev = floor(PrevCamPos / voxelSize) - gridPosition;
 
-
-	    if (cameraDistance < cameraDistancePrev) {
+	    if (dot(CamPosDiff, CamPosDiff) < dot(CamPosDiffPrev, CamPosDiffPrev)) {
 	        gridPosition = floor(gridPosition / 2.0f);
 	        level = min(level + 1, ((1u << 10) - 1));
 	    } else {
@@ -1773,9 +1764,10 @@ inline int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Nor
             if(PDF > 0) p_hat = max(luminance(light.Radiance) / (LengthSquared * max(PDF, 0.1f)),0);
         	else p_hat = 0;
         } else {
-        	float PDF = (((light.Type == DIRECTIONALLIGHT) ? 10.0f : LengthSquared) * ((light.Type == SPOTLIGHT) ? saturate(saturate(dot(to_light, -light.Direction)) * light.SpotAngle.x + light.SpotAngle.y) : 1)* (dot(to_light, Norm) > 0));
-            if(PDF != 0) p_hat = max(luminance(light.Radiance) / PDF,0);
-        	else p_hat = 0;
+            p_hat = max(luminance(light.Radiance) / ((light.Type == DIRECTIONALLIGHT) ? 12.0f : LengthSquared) * ((light.Type == SPOTLIGHT) ? saturate(saturate(dot(to_light, -light.Direction)) * light.SpotAngle.x + light.SpotAngle.y) : 1)* (dot(to_light, Norm) > 0),0);
+        	// float PDF = (((light.Type == DIRECTIONALLIGHT) ? 10.0f : LengthSquared) * ((light.Type == SPOTLIGHT) ? saturate(saturate(dot(to_light, -light.Direction)) * light.SpotAngle.x + light.SpotAngle.y) : 1)* (dot(to_light, Norm) > 0));
+            // if(PDF > 0.01f) p_hat = max(luminance(light.Radiance) / PDF,0);
+        	// else p_hat = 0;
         }
         wsum += p_hat;
         if(Rand.y < p_hat / wsum) {
@@ -1867,21 +1859,19 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
         Unity_Contrast_float(TempCol, MatDat.Contrast, MatDat.surfaceColor);
         MatDat.surfaceColor = saturate(MatDat.surfaceColor);
 
-        if ((MatDat.EmissiveTex.x > 0 && MatDat.emmissive >= 0)) {
-        	if (MatDat.EmissiveTex.x > 0) {
-                float3 EmissCol = lerp(MatDat.EmissionColor, MatDat.surfaceColor, GetFlag(MatDat.Tag, BaseIsMap));
-        		float4 EmissTex = SampleTexture(BaseUv, SampleEmission, MatDat);
-                if(!GetFlag(MatDat.Tag, IsEmissionMask)) {//IS a mask
-                    MatDat.emmissive *= luminance(EmissTex.xyz);
-                    
-                    MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissCol, saturate(MatDat.emmissive) * GetFlag(MatDat.Tag, ReplaceBase));
-                } else {//is NOT a mask
-                    MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissTex.xyz * EmissCol, saturate(MatDat.emmissive) * GetFlag(MatDat.Tag, ReplaceBase));
-                }            
-            }
+        if ((MatDat.EmissiveTex.x > 0 && MatDat.emission >= 0)) {
+            float3 EmissCol = lerp(MatDat.EmissionColor, MatDat.surfaceColor, GetFlag(MatDat.Tag, BaseIsMap));
+    		float4 EmissTex = SampleTexture(BaseUv, SampleEmission, MatDat);
+            if(!GetFlag(MatDat.Tag, IsEmissionMask)) {//IS a mask
+                MatDat.emission *= luminance(EmissTex.xyz);
+                
+                MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissCol, saturate(MatDat.emission) * GetFlag(MatDat.Tag, ReplaceBase));
+            } else {//is NOT a mask
+                MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissTex.xyz * EmissCol, saturate(MatDat.emission) * GetFlag(MatDat.Tag, ReplaceBase));
+            }            
         }
     #endif
-    Radiance = MatDat.emmissive * MatDat.surfaceColor;
+    Radiance = MatDat.emission * MatDat.surfaceColor;
     return AggTriIndex;
 }
 
@@ -1919,7 +1909,6 @@ inline float3 temperature(float t)
 
 
 
-#if DebugView != -1
 	float3 pal(float t) {
 	    float3 a = float3(0.5f, 0.5f, 0.5f);
 	    float3 b = float3(0.5f, 0.5f, 0.5f);
@@ -1928,6 +1917,7 @@ inline float3 temperature(float t)
 	    return a + b*cos( 6.28318*(c*t+d) );
 	}
 
+#if DebugView != -1
 	float4 HandleDebug(int Index) {
         static const float one_over_max_unsigned = asfloat(0x2f7fffff);
         uint hash = pcg_hash(32);

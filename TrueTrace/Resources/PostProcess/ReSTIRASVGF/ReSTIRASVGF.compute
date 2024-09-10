@@ -274,7 +274,7 @@ void CopyData(int3 id : SV_DispatchThreadID)
     
     int2 pos_prev = floor((((float2(id.xy)+0.5f) * float2(rcp(screen_width), rcp(screen_height)) + motion) * float2(screen_width, screen_height)));
     if(any(pos_prev > float2(screen_width, screen_height) || pos_prev < 0)) pos_prev.x = -1000;
-    if(((asuint(ScreenSpaceInfo[id.xy].w) << 3) >> 3) != ((asuint(ScreenSpaceInfoPrev[pos_prev].w) << 3) >> 3)) {
+    if(((asuint(ScreenSpaceInfo[id.xy].w) << 4) >> 4) != ((asuint(ScreenSpaceInfoPrev[pos_prev].w) << 4) >> 4)) {
         pos_prev.x = -1000;
     }
     if(GetBounceData(Pixel.MetRoughIsSpec) == 1) {
@@ -311,7 +311,7 @@ void CopyData(int3 id : SV_DispatchThreadID)
         // if(pos_prev.x != -1000) AlbedoData.x = AlbedoColorB[pos_prev].x;
         SpecCol = packRGBE(PartialRenderingFactor * max(Exposure * (Direct + IndirectBoost * Pixel.Indirect) * Pixel.Data.xyz / max(0.01f, o_base_reflectivity),0));
     }
-    ReflectedRefractedTexWrite[id.xy] = (ReflectedRefracted << 31) | ((asuint(ScreenSpaceInfo[id.xy].w) << 3) >> 3);
+    ReflectedRefractedTexWrite[id.xy] = (ReflectedRefracted << 31) | ((asuint(ScreenSpaceInfo[id.xy].w) << 4) >> 4);
 
 
     AlbedoColorA[id.xy] = AlbedoData;
@@ -599,7 +599,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
     float4 prevprojectedrefl = mul(prevviewprojection, float4(ray.origin + ray.direction * depth_curr, 1));
     float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
 
-    int MatDat = (ReflectedRefractedTex[gl_GlobalInvocationID.xy] << 1) >> 1;
+    int MatDat = (ReflectedRefractedTex[gl_GlobalInvocationID.xy] << 4) >> 4;
     bool ReflectedRefracted = ReflectedRefractedTex[gl_GlobalInvocationID.xy] >> 31;
     float motion_length = length((motion.xy + reflprojection) * float2(screen_width, screen_height));
     // float motion_length = length((motion.xy) * float2(screen_width, screen_height));
@@ -647,7 +647,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
             float dist_depth = (abs(depth_curr - depth_prev) - CameraDist) / depth_curr * max(CenterFDepth,0.25f);
             float dot_normals = dot(normal_curr, normal_prev);
             float dot_geo_normals = dot(geo_normal_curr, geo_normal_prev);
-            if(((ReflectedRefractedTexPrev[p] << 1) >> 1) == MatDat)
+            if(((ReflectedRefractedTexPrev[p] << 4) >> 4) == MatDat)
             [branch]if(!(ReflectedRefracted) && !(ReflectedRefractedTexPrev[p] >> 31)) {
                 if (dist_depth < 0.1 && dot_geo_normals > 0.8)
                 {

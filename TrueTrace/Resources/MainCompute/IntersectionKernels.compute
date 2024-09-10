@@ -13,7 +13,7 @@
 RWTexture2D<uint4> _PrimaryTriangleInfo;
 #pragma kernel kernel_trace 
 
-inline void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inout RayHit ray_hit, const int MatOffset) {
+inline void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inout RayHit ray_hit, const int MatOffset, const float RandNum) {
     TrianglePos tri = triangle_get_positions(tri_id);
     TriangleUvs tri2 = triangle_get_positions2(tri_id);
     int MaterialIndex = (MatOffset + AggTris[tri_id].MatDat);
@@ -46,6 +46,13 @@ inline void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ra
                 #endif
                 #ifdef IgnoreBackfacing
                     if(_Materials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction) <= 0) return;
+                #endif
+                #ifdef FadeMapping
+                    if(_Materials[MaterialIndex].MatType == FadeIndex) {
+                        float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
+                        if(_Materials[MaterialIndex].AlphaTex.x > 0)
+                            if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x - _Materials[MaterialIndex].AlphaCutoff <= RandNum) return;
+                    }
                 #endif
                 if(CurBounce == 0 && GetFlag(_Materials[MaterialIndex].Tag, Invisible)) return;
                 ray_hit.t = t;
@@ -80,7 +87,7 @@ void IntersectBVH(int ray_index) {
         [branch]if(CurBounce % 2 == 1) ray_index += screen_width * screen_height;
         RayData GlobalRay = GlobalRays[ray_index];
         bestHit = CreateRayHit();
-
+        float RandNum = random(43, GlobalRay.PixelIndex).x;
         #ifdef HardwareRT
             const uint rayFlags = RAY_FLAG_FORCE_OPAQUE  ;
             UnityRayQuery<rayFlags> q;
@@ -100,23 +107,32 @@ void IntersectBVH(int ray_index) {
                     bestHit.t = q.CommittedRayT();
                     bestHit.u = q.CommittedTriangleBarycentrics().y;
                     bestHit.v = q.CommittedTriangleBarycentrics().x;
-                    bestHit.mesh_id = Pack2To1(q.CommittedInstanceID(), q.CommittedGeometryIndex());
+                    bestHit.mesh_id = uint(q.CommittedInstanceID() | (q.CommittedGeometryIndex() << 16));
                     bestHit.triangle_id = q.CommittedPrimitiveIndex();
-                    #ifdef AdvancedAlphaMapped
-                        int tri_id;
-                        int mesh_id;
-                        if(bestHit.mesh_id != 9999999) {
-                            int2 Indexes = Unpack1To2(bestHit.mesh_id);
-                            int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x];
-                            tri_id = bestHit.triangle_id + triangleOffset;
-                            mesh_id = MeshOffsets[Indexes.y].y;
-                        }
+                    #if defined(AdvancedAlphaMapped) || defined(IgnoreBackfacing) || defined(FadeMapping)
+                        int2 Indexes = int2(bestHit.mesh_id & 0x0000FFFF, bestHit.mesh_id >> 16);
+                        int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
+                        int tri_id = bestHit.triangle_id + triangleOffset;
+                        int mesh_id = MeshOffsets[Indexes.x].y;
                         int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTris[tri_id].MatDat);
+                    #endif
+                    #ifdef AdvancedAlphaMapped
                         if(CurBounce == 0 && GetFlag(_Materials[MaterialIndex].Tag, Invisible)) {myRay.TMin = bestHit.t + 0.001f; bestHit.t = FarPlane; continue;}
                         if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                             float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - bestHit.u - bestHit.v) + AggTris[tri_id].texedge1 * bestHit.u + AggTris[tri_id].texedge2 * bestHit.v;
                             if(_Materials[MaterialIndex].AlphaTex.x > 0)
-                                if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t; bestHit.t = FarPlane; continue;}
+                                if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t + 0.001f; bestHit.t = FarPlane; continue;}
+                        }
+                    #endif
+                    #ifdef IgnoreBackfacing
+                        TrianglePos tri = triangle_get_positions(tri_id);
+                        if(_Materials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)) <= 0) {myRay.TMin = bestHit.t + 0.001f; bestHit.t = FarPlane; continue;}
+                    #endif
+                    #ifdef FadeMapping
+                        if(_Materials[MaterialIndex].MatType == FadeIndex) {
+                            float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - bestHit.u - bestHit.v) + AggTris[tri_id].texedge1 * bestHit.u + AggTris[tri_id].texedge2 * bestHit.v;
+                            if(_Materials[MaterialIndex].AlphaTex.x > 0)
+                                if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x - _Materials[MaterialIndex].AlphaCutoff <= RandNum) {myRay.TMin = bestHit.t + 0.001f; bestHit.t = FarPlane; continue;}
                         }
                     #endif
                 }
@@ -126,11 +142,11 @@ void IntersectBVH(int ray_index) {
 
             int PixIndex = GlobalRay.PixelIndex;
             uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
-            int2 Indexes = Unpack1To2(bestHit.mesh_id);
+            int2 Indexes = int2(bestHit.mesh_id & 0x0000FFFF, bestHit.mesh_id >> 16);
             [branch]if(CurBounce == 0) {
-                _PrimaryTriangleInfo[TempUv] = uint4(MeshOffsets[Indexes.y].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x] - _MeshData[MeshOffsets[Indexes.y].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
+                _PrimaryTriangleInfo[TempUv] = uint4(MeshOffsets[Indexes.x].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y] - _MeshData[MeshOffsets[Indexes.x].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
             } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
-                _PrimaryTriangleInfo[TempUv] = uint4((UseReSTIRGI && bestHit.t != FarPlane) ? uint3(MeshOffsets[Indexes.y].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.y].x + Indexes.x] - _MeshData[MeshOffsets[Indexes.y].y].TriOffset, ((uint)(bestHit.u * 65535.0f) | ((uint)(bestHit.v * 65535.0f) << 16))) : ((UseASVGF || bestHit.t != FarPlane) ? asuint(ray.direction) : asuint(ray.direction * bestHit.t + ray.origin)), bestHit.t == FarPlane);
+                _PrimaryTriangleInfo[TempUv] = uint4((UseReSTIRGI && bestHit.t != FarPlane) ? uint3(MeshOffsets[Indexes.x].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y] - _MeshData[MeshOffsets[Indexes.x].y].TriOffset, ((uint)(bestHit.u * 65535.0f) | ((uint)(bestHit.v * 65535.0f) << 16))) : ((UseASVGF || bestHit.t != FarPlane) ? asuint(ray.direction) : asuint(ray.direction * bestHit.t + ray.origin)), bestHit.t == FarPlane);
             }
 
             set(ray_index, bestHit);
@@ -156,9 +172,7 @@ void IntersectBVH(int ray_index) {
 
                     current_group.y &= ~(1 << child_index_offset);
 
-                    if (current_group.y & 0xff000000) {
-                        stack[stack_size++] = current_group;
-                    }
+                    if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
 
                     uint hitmask = cwbvh_node_intersect(ray, oct_inv4, bestHit.t, TempNode);
 
@@ -181,13 +195,10 @@ void IntersectBVH(int ray_index) {
                         mesh_id = TLASBVH8Indices[triangle_group.x + mesh_offset];
                         NodeOffset = _MeshData[mesh_id].NodeOffset;
                         TriOffset = _MeshData[mesh_id].TriOffset;
-                        if (triangle_group.y != 0) {
-                            stack[stack_size++] = triangle_group;
-                        }
 
-                        if (current_group.y & 0xff000000) {
-                            stack[stack_size++] = current_group;
-                        }
+                        if (triangle_group.y != 0) stack[stack_size++] = triangle_group;
+                        if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
+
                         tlas_stack_size = stack_size;
 
                         int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
@@ -204,7 +215,7 @@ void IntersectBVH(int ray_index) {
                         while (triangle_group.y != 0) {
                             uint triangle_index = firstbithigh(triangle_group.y);
                             triangle_group.y &= ~(1 << triangle_index);
-                            IntersectTriangle(mesh_id, triangle_group.x + triangle_index, ray, bestHit, MatOffset);//Intersect Mesh Triangles
+                            IntersectTriangle(mesh_id, triangle_group.x + triangle_index, ray, bestHit, MatOffset, RandNum);//Intersect Mesh Triangles
                         }
                     }
                 }
@@ -215,7 +226,9 @@ void IntersectBVH(int ray_index) {
                         uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
                         [branch]if(CurBounce == 0) {
                             _PrimaryTriangleInfo[TempUv] = uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
-                            // _DebugTex[TempUv] = float4(Reps / 43.0f, Reps > 80, 0, 1);
+                            #if DebugView == DVBVHView
+                                _DebugTex[TempUv] = float4(Reps / 43.0f, Reps > 80, 0, 1);
+                            #endif
                         } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
                             _PrimaryTriangleInfo[TempUv] = uint4((UseReSTIRGI && bestHit.t != FarPlane) ? uint3(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, ((uint)(bestHit.u * 65535.0f) | ((uint)(bestHit.v * 65535.0f) << 16))) : ((UseASVGF || bestHit.t != FarPlane) ? asuint(ray2.direction) : asuint(ray2.direction * bestHit.t + ray2.origin)), bestHit.t == FarPlane);
                         }
@@ -271,6 +284,7 @@ void IntersectBVHShadow(int ray_index) {
 
         bool hit = false;
         ShadowRayData ShadowRay = ShadowRaysBuffer[ray_index];
+        float3 throughput = 1;
         #ifdef HardwareRT
             const uint rayFlags = RAY_FLAG_CULL_NON_OPAQUE;
             UnityRayQuery<rayFlags> q;
@@ -282,11 +296,7 @@ void IntersectBVHShadow(int ray_index) {
             myRay.TMin = 0;
             myRay.TMax = abs(ShadowRaysBuffer[ray_index].t);
             while(true) {
-                #ifdef IgnoreGlassShadow
-                    q.TraceRayInline(myAccelerationStructure, rayFlags, 0x1, myRay);
-                #else
-                    q.TraceRayInline(myAccelerationStructure, rayFlags, 0xff, myRay);
-                #endif
+                q.TraceRayInline(myAccelerationStructure, rayFlags, 0xff, myRay);
                 while(q.Proceed()){}
 
                 if(q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
@@ -295,19 +305,34 @@ void IntersectBVHShadow(int ray_index) {
                     float v = q.CommittedTriangleBarycentrics().x;
                     int2 Indexes = int2(q.CommittedInstanceID(), q.CommittedGeometryIndex());
                     int triangle_id = q.CommittedPrimitiveIndex();
-                    #ifdef AdvancedAlphaMapped
-
+                    #if defined(IgnoreBackfacing) || defined(AdvancedAlphaMapped) || defined(IgnoreGlassShadow)
                         int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
                         triangle_id += triangleOffset;
                         mesh_id = MeshOffsets[Indexes.x].y;
-
                         int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTris[triangle_id].MatDat);
-                        if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster)) {myRay.TMin = q.CommittedRayT() + 0.001f; continue;} 
+                    #endif
+                    #ifdef AdvancedAlphaMapped
                         if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                             float2 BaseUv = AggTris[triangle_id].tex0 * (1.0f - u - v) + AggTris[triangle_id].texedge1 * u + AggTris[triangle_id].texedge2 * v;
                             if(_Materials[MaterialIndex].AlphaTex.x > 0)
                                 if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.001f; continue;}
-
+                        }
+                    #endif
+                    #ifdef IgnoreBackfacing
+                        TrianglePos tri = triangle_get_positions(triangle_id);
+                        if(_Materials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)) <= 0) {myRay.TMin = q.CommittedRayT() + 0.001f; continue;}
+                    #endif
+                    #ifdef IgnoreGlassShadow
+                        if(_Materials[MaterialIndex].specTrans == 1) {
+                            #ifdef StainedGlassShadows
+                                float2 BaseUv = AggTris[triangle_id].tex0 * (1.0f - u - v) + AggTris[triangle_id].texedge1 * u + AggTris[triangle_id].texedge2 * v;
+                                float3 MatCol = _Materials[MaterialIndex].surfaceColor;
+                                if(_Materials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _Materials[MaterialIndex]) / 3.0f;
+                                MatCol = lerp(MatCol, _Materials[MaterialIndex].BlendColor, _Materials[MaterialIndex].BlendFactor);
+                                throughput *= sqrt(exp(-CalculateExtinction2(1.0f - MatCol, _Materials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _Materials[MaterialIndex].scatterDistance)));
+                            #endif
+                            myRay.TMin = q.CommittedRayT() + 0.001f; 
+                            continue;
                         }
                     #endif
 
@@ -315,9 +340,10 @@ void IntersectBVHShadow(int ray_index) {
                 } else {
                     if(!TerrainExists) {
                         uint PixelIndex = ShadowRaysBuffer[ray_index].PixelIndex;
+                        ShadowRaysBuffer[ray_index].illumination *= throughput;
                         if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray.origin + ray.direction * abs(ShadowRaysBuffer[ray_index].t),NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)].w);
                             #ifdef RadianceCache
-                                CacheBuffer[PixelIndex].CurrentIlluminance = EncodeRGB(DecodeRGB(CacheBuffer[PixelIndex].CurrentIlluminance) + unpackRGBE(ShadowRaysBuffer[ray_index].DiffuseIlluminance));
+                                CacheBuffer[PixelIndex].CurrentIlluminance = EncodeRGB(DecodeRGB(CacheBuffer[PixelIndex].CurrentIlluminance) + unpackRGBE(ShadowRaysBuffer[ray_index].DiffuseIlluminance) * throughput);
                             #endif
                         if (ShadowRaysBuffer[ray_index].t >= 0) {
                             if (CurBounce == 0) {
@@ -330,11 +356,11 @@ void IntersectBVHShadow(int ray_index) {
                             }
                         } else {
                             #ifdef RadianceCache
-                                if(CurBounce != 0 &&  (UseReSTIRGI || GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == CurBounce + 1)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination;
+                                if(CurBounce != 0 &&  (UseReSTIRGI || GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == CurBounce + 1)) GlobalColors[PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;
                             #else
-                                if(CurBounce != 0 && (!UseReSTIRGI && GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == 0)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination;// * unpackRGBE(asuint(ShadowRay.DiffuseIlluminance));
+                                if(CurBounce != 0 && (!UseReSTIRGI && GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == 0)) GlobalColors[PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;// * unpackRGBE(asuint(ShadowRay.DiffuseIlluminance));
                             #endif
-                            else GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)));
+                            else GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRaysBuffer[ray_index].illumination,rcp(2.2f)));
                         }
                     }
                 }
@@ -345,7 +371,6 @@ void IntersectBVHShadow(int ray_index) {
             ray.origin = ShadowRay.origin;
             ray.direction = (ShadowRay.direction == 0 ? EPSILON : ShadowRay.direction);
             ray2 = ray;
-            float3 throughput = 1;
             TriOffset = 0;
             MatOffset = 0;
             Reps = 0;
@@ -438,7 +463,6 @@ void IntersectBVHShadow(int ray_index) {
                         if(!TerrainExists) {
                             uint PixelIndex = ShadowRay.PixelIndex;
                             if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray2.origin + ray2.direction * abs(ShadowRaysBuffer[ray_index].t), 0);
-                            // if(UseReSTIRGI && ReSTIRGIUpdateRate != 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] += float4(0,0,0,ShadowRay.DiffuseIlluminance);
                             #ifdef RadianceCache
                                 CacheBuffer[PixelIndex].CurrentIlluminance = EncodeRGB(DecodeRGB(CacheBuffer[PixelIndex].CurrentIlluminance) + unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput);// * abs(dot(i_octahedral_32(CacheBuffer[PixelIndex].Norm), ShadowRay.direction));
                             #endif

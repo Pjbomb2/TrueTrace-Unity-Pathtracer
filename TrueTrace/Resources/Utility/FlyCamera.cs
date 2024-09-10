@@ -5,6 +5,7 @@ namespace TrueTrace {
     public class FlyCamera : MonoBehaviour {
         bool isPaused = false;
         bool isPaused2 = false;
+        public bool UseAltScheme = false;
         void OnApplicationFocus(bool hasFocus)
         {
             isPaused = !hasFocus;
@@ -24,15 +25,18 @@ namespace TrueTrace {
         space : Moves camera on X and Z axis only.  So camera doesn't gain any height*/
          
          //I made a small change so that I can turn off movement by pressing t
-        float mainSpeed = 1.0f; //regular speed
-        float shiftAdd = 25.0f; //multiplied by how long shift is held.  Basically running
-        float maxShift = 1000.0f; //Maximum speed when holdin gshift
+        public float mainSpeed = 1.0f; //regular speed
+        public float shiftAdd = 25.0f; //multiplied by how long shift is held.  Basically running
+        public float maxShift = 1000.0f; //Maximum speed when holdin gshift
         public float camSens = 2.5f; //How sensitive it with mouse
         private Vector3 lastMouse = new Vector3(255, 255, 255); //kind of in the middle of the screen, rather than at the top (play)
         private float totalRun= 1.0f;
         private bool StopMovement = true;
+        public void Start() {
+            lastMouse = transform.eulerAngles;
+        }
         void Update () {
-            bool PressedT = Input.GetMouseButtonDown(1);
+            bool PressedT = UseAltScheme || Input.GetMouseButtonDown(1);
             // if(PressedT && !IsPressingT) {
             //     if(!StopMovement) {
             //         // Cursor.lockState = CursorLockMode.None;
@@ -54,22 +58,22 @@ namespace TrueTrace {
             // } else {IsPressingT = false;}
             StopMovement = !Input.GetMouseButton(1);
 
-
-            if(!isPaused2) lastMouse = new Vector3(-Input.GetAxis("Mouse Y") * camSens, Input.GetAxis("Mouse X") * camSens, 0 );
-            else lastMouse = Vector3.zero;
-            lastMouse = new Vector3(transform.eulerAngles.x + lastMouse.x , transform.eulerAngles.y + lastMouse.y, 0);
-            if(lastMouse.x < 280) {
-                if(lastMouse.x < 95) {
-                    lastMouse.x = Mathf.Min(lastMouse.x, 88);
-                } else {
-                    lastMouse.x = Mathf.Max(lastMouse.x, 273);
+            if(Input.GetMouseButton(1)) {
+                if(!isPaused2) lastMouse = new Vector3(-Input.GetAxis("Mouse Y") * camSens, Input.GetAxis("Mouse X") * camSens, 0 );
+                else lastMouse = Vector3.zero;
+                lastMouse = new Vector3(transform.eulerAngles.x + lastMouse.x , transform.eulerAngles.y + lastMouse.y, 0);
+                if(lastMouse.x < 280) {
+                    if(lastMouse.x < 95) {
+                        lastMouse.x = Mathf.Min(lastMouse.x, 88);
+                    } else {
+                        lastMouse.x = Mathf.Max(lastMouse.x, 273);
+                    }
                 }
             }
-            if(!StopMovement) {
+            if(UseAltScheme || !StopMovement) {
                     transform.eulerAngles = lastMouse;
-               
                 Vector3 p = GetBaseInput();
-                if (Input.GetKey (KeyCode.LeftShift)){
+                if (Input.GetKey (KeyCode.LeftShift) || Input.GetKey (KeyCode.RightShift)){
                     totalRun += Time.deltaTime;
                     p  = p * totalRun * shiftAdd;
                     p.x = Mathf.Clamp(p.x, -maxShift, maxShift);
@@ -98,17 +102,23 @@ namespace TrueTrace {
          
         private Vector3 GetBaseInput() { //returns the basic values, if it's 0 than it's not active.
             Vector3 p_Velocity = new Vector3();
-            if (Input.GetKey (KeyCode.W)){
+            if (Input.GetKey (KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) {
                 p_Velocity += new Vector3(0, 0 , 1);
             }
-            if (Input.GetKey (KeyCode.S)){
+            if (Input.GetKey (KeyCode.S) || Input.GetKey(KeyCode.DownArrow)){
                 p_Velocity += new Vector3(0, 0, -1);
             }
-            if (Input.GetKey (KeyCode.A)){
+            if (Input.GetKey (KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)){
                 p_Velocity += new Vector3(-1, 0, 0);
             }
-            if (Input.GetKey (KeyCode.D)){
+            if (Input.GetKey (KeyCode.D) || Input.GetKey(KeyCode.RightArrow)){
                 p_Velocity += new Vector3(1, 0, 0);
+            }
+            if (Input.GetKey (KeyCode.PageUp) || Input.GetKey(KeyCode.E)){
+                p_Velocity += new Vector3(0, 1, 0);
+            }
+            if (Input.GetKey (KeyCode.PageDown) || Input.GetKey(KeyCode.Q)){
+                p_Velocity += new Vector3(0, -1, 0);
             }
             return p_Velocity;
         }

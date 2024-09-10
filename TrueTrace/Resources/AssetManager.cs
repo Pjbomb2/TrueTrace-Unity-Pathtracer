@@ -830,7 +830,7 @@ namespace TrueTrace {
             XMLObject = Resources.Load<TextAsset>("Utility/MaterialMappings");
             #if UNITY_EDITOR
                 if(XMLObject == null) {
-                    Debug.Log("Missing Material Mappings XML");
+                    Debug.LogError("Missing Material Mappings XML");
                     return;
                 }
             #endif
@@ -934,7 +934,7 @@ namespace TrueTrace {
                 QueCount = BuildQue.Count;
                 for (int i = QueCount - 1; i >= 0; i--) {//Promotes from Build Que to Render Que
                     if (BuildQue[i].AsyncTask.IsFaulted) {//Fuck, something fucked up
-                        Debug.Log(BuildQue[i].AsyncTask.Exception + ", " + BuildQue[i].Name);
+                        Debug.LogError(BuildQue[i].AsyncTask.Exception + ", " + BuildQue[i].Name);
                         BuildQue[i].FailureCount++;
                         BuildQue[i].ClearAll();
                         if(BuildQue[i].FailureCount > 6) {
@@ -1154,30 +1154,6 @@ namespace TrueTrace {
                 if(LightTriCount == 0) {LightTriCount++; AggLightNodeCount++;}
                 if (AggNodeCount != 0)
                 {//Accumulate the BVH nodes and triangles for all normal models
-                    {
-                        #if TTLightMapping
-                            LightMapTexIndex = new List<int>();
-                            for(int i = 0; i < ParentsLength; i++) {
-                                int Count2 = RenderQue[i].LightMapTexIndex.Count;
-                                for(int j = 0; j < Count2; j++) {
-                                    if(!LightMapTexIndex.Contains(RenderQue[i].LightMapTexIndex[j])) LightMapTexIndex.Add(RenderQue[i].LightMapTexIndex[j]);
-                                }
-                            }
-                            int LightMapCount = LightMapTexIndex.Count;
-                            LightMaps = new LightMapData[LightMapCount];
-                            for(int i = 0; i < LightMapCount; i++) {
-                                LightMaps[i].LightMapIndex = i;
-                                LightMaps[i].LightMapTris = new List<LightMapTriData>();
-                            }
-                            for(int i = 0; i < ParentsLength; i++) {
-                                int Count2 = RenderQue[i].LightMapTexIndex.Count;
-                                for(int j = 0; j < Count2; j++) {
-                                    Debug.Log(RenderQue[i].LightMapTris.Length);
-                                    LightMaps[RenderQue[i].LightMapTexIndex[j]].LightMapTris.AddRange(RenderQue[i].LightMapTris[j]);
-                                }
-                            }
-                        #endif
-                    }
                     LightAABBs = new LightBounds[LightMeshCount];
 
                     CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80);
@@ -1985,7 +1961,7 @@ namespace TrueTrace {
                     if(CurrentMaterial.MaterialIndex[i3] + CurrentMaterial.MatOffset >= MatCount) continue;
                     TempMat = _Materials[CurrentMaterial.MaterialIndex[i3] + CurrentMaterial.MatOffset];
                     TempMat.BaseColor = (!CurrentMaterial.UseKelvin[Index]) ? CurrentMaterial.BaseColor[Index] : new Vector3(Mathf.CorrelatedColorTemperatureToRGB(CurrentMaterial.KelvinTemp[Index]).r, Mathf.CorrelatedColorTemperatureToRGB(CurrentMaterial.KelvinTemp[Index]).g, Mathf.CorrelatedColorTemperatureToRGB(CurrentMaterial.KelvinTemp[Index]).b);
-                    TempMat.emmissive = CurrentMaterial.emmission[Index];
+                    TempMat.emission = CurrentMaterial.emission[Index];
                     TempMat.Roughness = ((int)CurrentMaterial.MaterialOptions[Index] != 1) ? CurrentMaterial.Roughness[Index] : Mathf.Max(CurrentMaterial.Roughness[Index], 0.000001f);
                     TempMat.TransmittanceColor = CurrentMaterial.TransmissionColor[Index];
                     TempMat.MatType = (int)CurrentMaterial.MaterialOptions[Index];
@@ -2018,6 +1994,11 @@ namespace TrueTrace {
                     TempMat.AlbedoTextureScale = CurrentMaterial.MainTexScaleOffset[Index];
                     TempMat.SecondaryTextureScale = CurrentMaterial.SecondaryTextureScale[Index];
                     TempMat.Rotation = CurrentMaterial.Rotation[Index] * 3.14159f;
+                    TempMat.ColorBleed = CurrentMaterial.ColorBleed[Index];
+                    if(RayMaster.LocalTTSettings.MatChangeResetsAccum) {
+                        RayMaster.SampleCount = 0;
+                        RayMaster.FramesSinceStart = 0;
+                    }
                     _Materials[CurrentMaterial.MaterialIndex[i3] + CurrentMaterial.MatOffset] = TempMat;
                     #if HardwareRT
                         var A = CurrentMaterial.gameObject.GetComponent<Renderer>();
