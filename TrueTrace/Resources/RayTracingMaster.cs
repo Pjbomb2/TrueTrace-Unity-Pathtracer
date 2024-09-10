@@ -38,7 +38,7 @@ namespace TrueTrace {
                     BaseCol = OBJtoWrite.BaseColor[Index],
                     MetRemap = OBJtoWrite.MetallicRemap[Index],
                     RoughRemap = OBJtoWrite.RoughnessRemap[Index],
-                    Emiss = OBJtoWrite.emmission[Index],
+                    Emiss = OBJtoWrite.emission[Index],
                     EmissCol = OBJtoWrite.EmissionColor[Index],
                     Rough = OBJtoWrite.Roughness[Index],
                     IOR = OBJtoWrite.IOR[Index],
@@ -68,8 +68,8 @@ namespace TrueTrace {
                     Rotation = OBJtoWrite.Rotation[Index],
                     Flags = OBJtoWrite.Flags[Index],
                     UseKelvin = OBJtoWrite.UseKelvin[Index],
-                    KelvinTemp = OBJtoWrite.KelvinTemp[Index]
-
+                    KelvinTemp = OBJtoWrite.KelvinTemp[Index],
+                    ColorBleed = OBJtoWrite.ColorBleed[Index]
                 };
                 if(WriteID == -1) {
                     raywrites.RayObj.Add(DataToWrite);
@@ -146,6 +146,11 @@ namespace TrueTrace {
         [HideInInspector] public int _currentSample = 0;
         private static bool _meshObjectsNeedRebuilding = false;
         public static List<RayTracingLights> _rayTracingLights = new List<RayTracingLights>();
+        public static bool RTOShowBase = true;
+        public static bool RTOShowEmission = false;
+        public static bool RTOShowAdvanced = false;
+        public static bool RTOShowColorModifiers = false;
+        public static bool RTOShowMisc = false;
 
 
         [HideInInspector] public Vector2 CurrentHorizonalPatch;
@@ -162,7 +167,7 @@ namespace TrueTrace {
 
         [HideInInspector] public bool DoPanorama = false;
         [HideInInspector] public bool DoChainedImages = false;
-        [HideInInspector] public TTSettings LocalTTSettings;
+        [HideInInspector] [SerializeField] public TTSettings LocalTTSettings;
 
         public static bool SceneIsRunning = false;
 
@@ -225,7 +230,7 @@ namespace TrueTrace {
         {
             CurrentHorizonalPatch = new Vector2(0,1);
             LoadTT();
-            LoadInitialSettings();//Build only
+            // LoadInitialSettings();//Build only
             Application.targetFrameRate = 165;
             ASVGFCode = new ASVGF();
             ReSTIRASVGFCode = new ReSTIRASVGF();
@@ -272,6 +277,9 @@ namespace TrueTrace {
             Denoisers = new Denoiser();
             Denoisers.Initialized = false;
         }
+        public void Awake() {
+            LoadTT();
+        }
         public void Start() {
             DoPanorama = false;
             DoChainedImages = false;
@@ -302,26 +310,22 @@ namespace TrueTrace {
             }
         }
 
-        private void OnEnable()
-        {
+        private void OnEnable() {
             _currentSample = 0;
+            LoadTT();
         }
 
-        void OnDestroy()
-        {
-#if UNITY_EDITOR
-
-            var saveFilePath = PathFinder.GetSaveFilePath();
-            using (StreamWriter writer = new StreamWriter(saveFilePath))
-            {
-                var serializer = new XmlSerializer(typeof(RayObjs));
-                serializer.Serialize(writer.BaseStream, raywrites);
-                UnityEditor.AssetDatabase.Refresh();
-            }
-#endif
+        void OnDestroy() {
+            #if UNITY_EDITOR
+                var saveFilePath = TTPathFinder.GetSaveFilePath();
+                using(StreamWriter writer = new StreamWriter(saveFilePath)) {
+                    var serializer = new XmlSerializer(typeof(RayObjs));
+                    serializer.Serialize(writer.BaseStream, raywrites);
+                    UnityEditor.AssetDatabase.Refresh();
+                }
+            #endif
         }
-
-    public void OnDisable() {
+        public void OnDisable() {
             DoCheck = true;
             _RayBuffer?.Release();
             LightingBuffer?.Release();
@@ -480,7 +484,12 @@ namespace TrueTrace {
                 _BufferSizes = new ComputeBuffer(LocalTTSettings.bouncecount + 1, 16);
             }
             _BufferSizes.SetData(BufferSizes);
-            Shader.SetGlobalBuffer("BufferSizes", _BufferSizes);
+            ShadingShader.SetBuffer(ShadeKernel, "BufferSizes", _BufferSizes);
+            ShadingShader.SetBuffer(TransferKernel, "BufferSizes", _BufferSizes);
+            IntersectionShader.SetBuffer(TraceKernel, "BufferSizes", _BufferSizes);
+            IntersectionShader.SetBuffer(ShadowKernel, "BufferSizes", _BufferSizes);
+            IntersectionShader.SetBuffer(HeightmapShadowKernel, "BufferSizes", _BufferSizes);
+            IntersectionShader.SetBuffer(HeightmapKernel, "BufferSizes", _BufferSizes);
             ShadingShader.SetComputeBuffer(TransferKernel, "BufferData", CurBounceInfoBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernel, "BufferData", CurBounceInfoBuffer);
 
@@ -503,6 +512,7 @@ namespace TrueTrace {
             SetVector("PrevCamPos", Temp22, cmd);
             SetVector("CamDelta", E, cmd);
             SetVector("BackgroundColor", LocalTTSettings.SceneBackgroundColor, cmd);
+            SetVector("SecondaryBackgroundColor", LocalTTSettings.SecondarySceneBackgroundColor, cmd);
             SetVector("ClayColor", LocalTTSettings.ClayColor, cmd);
             SetVector("GroundColor", LocalTTSettings.GroundColor, cmd);
             SetVector("Segment", CurrentHorizonalPatch, cmd);
@@ -519,8 +529,8 @@ namespace TrueTrace {
             SetFloat("AperatureRadius", LocalTTSettings.DoFAperature * LocalTTSettings.DoFAperatureScale, cmd);
             SetFloat("IndirectBoost", LocalTTSettings.IndirectBoost, cmd);
             SetFloat("GISpatialRadius", LocalTTSettings.ReSTIRGISpatialRadius, cmd);
-            SetFloat("SunDesaturate", LocalTTSettings.SunDesaturate, cmd);
             SetFloat("SkyDesaturate", LocalTTSettings.SkyDesaturate, cmd);
+            SetFloat("SecondarySkyDesaturate", LocalTTSettings.SecondarySkyDesaturate, cmd);
             SetFloat("BackgroundIntensity", LocalTTSettings.BackgroundIntensity.x, cmd);
             SetFloat("SecondaryBackgroundIntensity", LocalTTSettings.BackgroundIntensity.y, cmd);
             SetFloat("LEMEnergyScale", LocalTTSettings.LEMEnergyScale, cmd);
@@ -622,9 +632,6 @@ namespace TrueTrace {
             }
             SetVector("HDRIParams", HDRIParams, cmd);
 
-            ShadingShader.SetTexture(TTtoOIDNKernelPanorama, "ScreenSpaceInfo", ScreenSpaceInfo);
-            ShadingShader.SetComputeBuffer(TTtoOIDNKernelPanorama, "GlobalColors", LightingBuffer);
-
             GenerateShader.SetBuffer(GenASVGFKernel, "Rays", (FramesSinceStart2 % 2 == 0) ? RaysBuffer : RaysBufferB);
             GenerateShader.SetTexture(GenASVGFKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
             GenerateShader.SetComputeBuffer(GenASVGFKernel, "GlobalRays", _RayBuffer);
@@ -652,6 +659,7 @@ namespace TrueTrace {
             IntersectionShader.SetComputeBuffer(ShadowKernel, "ShadowRaysBuffer", _ShadowBuffer);
             IntersectionShader.SetComputeBuffer(ShadowKernel, "GlobalColors", LightingBuffer);
             IntersectionShader.SetTexture(ShadowKernel, "NEEPosA", FlipFrame ? GINEEPosA : GINEEPosB);
+            IntersectionShader.SetTexture(TraceKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
 
 
             AssetManager.Assets.SetHeightmapTraceBuffers(IntersectionShader, HeightmapKernel);
@@ -714,15 +722,18 @@ namespace TrueTrace {
             ShadingShader.SetComputeBuffer(ShadeKernel, "ShadowRaysBuffer", _ShadowBuffer);
 
 
-
             ShadingShader.SetBuffer(FinalizeKernel, "GlobalColors", LightingBuffer);
             ShadingShader.SetTexture(FinalizeKernel, "Result", _target);
 
             #if UseOIDN
                 ShadingShader.SetBuffer(TTtoOIDNKernel, "AlbedoBuffer", AlbedoBuffer);
                 ShadingShader.SetBuffer(TTtoOIDNKernel, "NormalBuffer", NormalBuffer);
+                ShadingShader.SetTexture(TTtoOIDNKernel, "ScreenSpaceInfo", ScreenSpaceInfo);
+                ShadingShader.SetComputeBuffer(TTtoOIDNKernel, "GlobalColors", LightingBuffer);
                 ShadingShader.SetBuffer(TTtoOIDNKernelPanorama, "AlbedoBuffer", AlbedoBuffer);
                 ShadingShader.SetBuffer(TTtoOIDNKernelPanorama, "NormalBuffer", NormalBuffer);
+                ShadingShader.SetTexture(TTtoOIDNKernelPanorama, "ScreenSpaceInfo", ScreenSpaceInfo);
+                ShadingShader.SetComputeBuffer(TTtoOIDNKernelPanorama, "GlobalColors", LightingBuffer);
             #endif
 
             GenerateShader.SetComputeBuffer(GIReTraceKernel, "GlobalRays", _RayBuffer);
@@ -946,11 +957,8 @@ namespace TrueTrace {
                     cmd.BeginSample("Bounce: " + i);
                         var bouncebounce = i;
                         if(bouncebounce == 1) {
-                            SetFloat("BackgroundIntensity", LocalTTSettings.BackgroundIntensity.y, cmd);
                             cmd.SetComputeTextureParam(IntersectionShader, TraceKernel, "_PrimaryTriangleInfo", GIWorldPosA);
                             cmd.SetComputeTextureParam(IntersectionShader, HeightmapKernel, "_PrimaryTriangleInfo", GIWorldPosA);
-                            SetInt("BackgroundType", LocalTTSettings.SecondaryBackgroundType, cmd);
-                            SetVector("BackgroundColor", LocalTTSettings.SecondarySceneBackgroundColor, cmd);
                         }
                         SetInt("CurBounce", bouncebounce, cmd);
                         cmd.BeginSample("Transfer Kernel: " + i);

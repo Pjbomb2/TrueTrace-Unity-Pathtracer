@@ -24,7 +24,7 @@ public class RenderingPipelineDefines
 
     static void SetGlobalDefines(string DefineToSet, bool SetValue)
     {
-        var globalDefinesPath = PathFinder.GetGlobalDefinesPath();
+        var globalDefinesPath = TTPathFinder.GetGlobalDefinesPath();
         if(System.IO.File.Exists(globalDefinesPath)) {
             string[] GlobalDefines = System.IO.File.ReadAllLines(globalDefinesPath);
             int Index = -1;

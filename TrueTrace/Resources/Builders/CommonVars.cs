@@ -103,7 +103,7 @@ namespace CommonVars
         public Vector2Int MatCapMask;
         public Vector2Int MatCapTex;
         public Vector3 BaseColor;
-        public float emmissive;
+        public float emission;
         public Vector3 EmissionColor;
         public int Tag;
         public float Roughness;
@@ -135,6 +135,7 @@ namespace CommonVars
         public float BlendFactor;
         public Vector2 SecondaryTextureScale;
         public float Rotation;
+        public float ColorBleed;
     }
 
     [System.Serializable]
@@ -626,6 +627,7 @@ namespace CommonVars
         public int Flags;
         public bool UseKelvin;
         public float KelvinTemp;
+        public float ColorBleed;
     }
     [System.Serializable]
     public class RayObjs

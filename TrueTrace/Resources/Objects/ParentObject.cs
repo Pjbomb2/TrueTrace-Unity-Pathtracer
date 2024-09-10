@@ -430,7 +430,7 @@ namespace TrueTrace {
                             case(TexturePurpose.Emission):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref EmissionTexs, ref TempIndex, true); 
                                 CurMat.EmissiveTex.x = TempIndex; 
-                                if(Result != 2 && JustCreated) obj.emmission[i] = 12.0f;
+                                if(Result != 2 && JustCreated) obj.emission[i] = 12.0f;
                             break;
                             case(TexturePurpose.Metallic):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref MetallicTexs, ref TempIndex); 
@@ -465,10 +465,11 @@ namespace TrueTrace {
                     CurMat.RoughnessRemap = obj.RoughnessRemap[i];
                     CurMat.BaseColor = (!obj.UseKelvin[i]) ? obj.BaseColor[i] : new Vector3(Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).r, Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).g, Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).b);
                     CurMat.BaseColor = obj.BaseColor[i];
-                    CurMat.emmissive = obj.emmission[i];
+                    CurMat.emission = obj.emission[i];
                     CurMat.Roughness = obj.Roughness[i];
                     CurMat.specTrans = obj.SpecTrans[i];
                     CurMat.EmissionColor = obj.EmissionColor[i];
+                    CurMat.ColorBleed = obj.ColorBleed[i];
                     CurMat.MatType = (int)obj.MaterialOptions[i];
                     if(JustCreated) obj.Flags[i] = CommonFunctions.SetFlagVar(obj.Flags[i], CommonFunctions.Flags.UseSmoothness, RelevantMat.UsesSmoothness);
                     if(i == obj.BaseColor.Length - 1) obj.JustCreated = false;
@@ -1094,7 +1095,7 @@ namespace TrueTrace {
                     Triangles[OffsetReal].Extend(V3);
                     Triangles[OffsetReal].Validate(ParentScale);
 
-                    if (_Materials[(int)TempTri.MatDat].emmissive > 0.0f) {
+                    if (_Materials[(int)TempTri.MatDat].emission > 0.0f) {
                         bool IsValid = true;
                         #if AccurateLightTris
                             if(_Materials[(int)TempTri.MatDat].EmissiveTex.x != 0) {
@@ -1108,8 +1109,8 @@ namespace TrueTrace {
                         #endif
                         if(IsValid) {
                             HasLightTriangles = true;
-                            LuminanceWeights.Add(_Materials[(int)TempTri.MatDat].emmissive);
-                            Vector3 Radiance = _Materials[(int)TempTri.MatDat].emmissive * _Materials[(int)TempTri.MatDat].BaseColor;
+                            LuminanceWeights.Add(_Materials[(int)TempTri.MatDat].emission);
+                            Vector3 Radiance = _Materials[(int)TempTri.MatDat].emission * _Materials[(int)TempTri.MatDat].BaseColor;
                             float radiance = luminance(Radiance.x, Radiance.y, Radiance.z);
                             float area = AreaOfTriangle(ParentMat * V1, ParentMat * V2, ParentMat * V3);
                             float e = radiance * area;
@@ -1240,15 +1241,20 @@ namespace TrueTrace {
                 HasCompleted = false;
             }
         }
-
+        // Vector4 ToVector4(Vector3 A, float B) {
+        //     return new Vector4(A.x, A.y, A.z, B);
+        // }
+        // Vector3 ToVector3(Vector4 A) {
+        //     return new Vector3(A.x, A.y, A.z);
+        // }
 
         // public void OnDrawGizmos() {
 
         //     int LightTriCount = LightTriangles.Count;
         //     for(int i = 0; i < LightTriCount; i++) {
-        //         Vector3 Pos0 = this.transform.localToWorldMatrix * LightTriangles[i].pos0;
-        //         Vector3 Pos1 = this.transform.localToWorldMatrix * (LightTriangles[i].pos0 + LightTriangles[i].posedge1);
-        //         Vector3 Pos2 = this.transform.localToWorldMatrix * (LightTriangles[i].pos0 + LightTriangles[i].posedge2);
+        //         Vector3 Pos0 = ToVector3(this.transform.localToWorldMatrix * ToVector4(LightTriangles[i].pos0, 1));
+        //         Vector3 Pos1 = ToVector3(this.transform.localToWorldMatrix * ToVector4(LightTriangles[i].pos0 + LightTriangles[i].posedge1, 1));
+        //         Vector3 Pos2 = ToVector3(this.transform.localToWorldMatrix * ToVector4(LightTriangles[i].pos0 + LightTriangles[i].posedge2, 1));
         //             Gizmos.DrawLine(Pos0, Pos1);
         //             Gizmos.DrawLine(Pos0, Pos2);
         //             Gizmos.DrawLine(Pos2, Pos1);

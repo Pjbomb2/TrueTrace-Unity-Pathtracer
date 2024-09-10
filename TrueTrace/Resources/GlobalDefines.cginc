@@ -7,8 +7,9 @@
 #define ExtraSampleValidation
 #define IgnoreGlassShadow
 // #define IgnoreGlassMain
+// #define FadeMapping
 // #define PointFiltering
-#define StainedGlassShadows
+// #define StainedGlassShadows
 // #define IgnoreBackfacing
 // #define WhiteLights
 #define LBVH
@@ -17,10 +18,10 @@
 #define RadianceCache
 // #define ImprovedRadCacheSpecularResponse
 // #define HighSpeedRadCache
-// #define RadianceDebug
 #define IndirectRetraceWeighting
 #define TrueBlack
-// #define DebugSlowFixOn
+// #define AdvancedRadCacheAlt
+// #define UseTextureLOD
 
 
 //END OF DEFINES
@@ -33,10 +34,14 @@
 #define DVMeshID 1
 #define DVTriID 2
 #define DVAlbID 3
+#define DVBVHView 4
+#define DVRadCache 5
+#define DVGIView 6
 
 //Dont change the ones below
 #define DisneyIndex 0
 #define CutoutIndex 1
+#define FadeIndex 2
 
 #define POINTLIGHT 0
 #define DIRECTIONALLIGHT 1
