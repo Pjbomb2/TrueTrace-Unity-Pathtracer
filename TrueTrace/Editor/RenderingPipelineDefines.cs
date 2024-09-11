@@ -1,9 +1,9 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
 using System.Linq;
-using TrueTrace;
 using UnityEditor;
 using UnityEngine;
+using TrueTrace;
 using UnityEngine.Rendering;
  
 [InitializeOnLoad]
@@ -22,9 +22,9 @@ public class RenderingPipelineDefines
         UpdateDefines();
     }
 
-    static void SetGlobalDefines(string DefineToSet, bool SetValue)
-    {
-        var globalDefinesPath = TTPathFinder.GetGlobalDefinesPath();
+    static void SetGlobalDefines(string DefineToSet, bool SetValue) {
+        string globalDefinesPath = TTPathFinder.GetGlobalDefinesPath();
+
         if(System.IO.File.Exists(globalDefinesPath)) {
             string[] GlobalDefines = System.IO.File.ReadAllLines(globalDefinesPath);
             int Index = -1;

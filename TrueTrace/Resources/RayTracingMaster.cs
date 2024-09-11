@@ -18,6 +18,7 @@ namespace TrueTrace {
         private Denoiser Denoisers;
         private ASVGF ASVGFCode;
         private bool Abandon = false;
+        public bool DebugValue = false;
         #if UseOIDN
             private UnityDenoiserPlugin.DenoiserPluginWrapper OIDNDenoiser;
         #endif
@@ -109,6 +110,7 @@ namespace TrueTrace {
         private RenderTexture Gradients;
 
 
+        private bool OIDNGuideWrite;
 
         [HideInInspector] public RenderTexture ScreenSpaceInfo;
         [HideInInspector] public bool IsFocusing = false;
@@ -167,7 +169,7 @@ namespace TrueTrace {
 
         [HideInInspector] public bool DoPanorama = false;
         [HideInInspector] public bool DoChainedImages = false;
-        [HideInInspector] [SerializeField] public TTSettings LocalTTSettings;
+        [SerializeField] public TTSettings LocalTTSettings;
 
         public static bool SceneIsRunning = false;
 
@@ -266,6 +268,7 @@ namespace TrueTrace {
             TTtoOIDNKernel = ShadingShader.FindKernel("TTtoOIDNKernel");
             OIDNtoTTKernel = ShadingShader.FindKernel("OIDNtoTTKernel");
             TTtoOIDNKernelPanorama = ShadingShader.FindKernel("TTtoOIDNKernelPanorama");
+            OIDNGuideWrite = false;
             #if !DisableRadianceCache
                 ResolveKernel = GenerateShader.FindKernel("CacheResolve");
             #endif
@@ -290,7 +293,7 @@ namespace TrueTrace {
             LoadTT();
         }
         public void LoadTT() {
-            if(LocalTTSettings == null) {
+            if(LocalTTSettings == null || !LocalTTSettings.name.Equals(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)) {
                 #if UNITY_EDITOR
                     UnityEngine.SceneManagement.Scene CurrentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
                     string path = CurrentScene.path.Replace(".unity", "");
@@ -317,7 +320,7 @@ namespace TrueTrace {
 
         void OnDestroy() {
             #if UNITY_EDITOR
-                var saveFilePath = TTPathFinder.GetSaveFilePath();
+            string saveFilePath = TTPathFinder.GetSaveFilePath();
                 using(StreamWriter writer = new StreamWriter(saveFilePath)) {
                     var serializer = new XmlSerializer(typeof(RayObjs));
                     serializer.Serialize(writer.BaseStream, raywrites);
@@ -553,6 +556,7 @@ namespace TrueTrace {
             SetInt("MaterialCount", Assets.MatCount, cmd);
             SetInt("PartialRenderingFactor", LocalTTSettings.DoPartialRendering ? LocalTTSettings.PartialRenderingFactor : 1, cmd);
 
+            SetBool("DebugValue", DebugValue);
             SetBool("IsFocusing", IsFocusing);
             SetBool("DoPanorama", DoPanorama);
             SetBool("ClayMode", LocalTTSettings.ClayMode);
@@ -568,7 +572,8 @@ namespace TrueTrace {
             SetBool("TerrainExists", Assets.Terrains.Count != 0);
             SetBool("DoPartialRendering", LocalTTSettings.DoPartialRendering);
             SetBool("UseTransmittanceInNEE", LocalTTSettings.UseTransmittanceInNEE);
-
+            OIDNGuideWrite = (FramesSinceStart == LocalTTSettings.OIDNFrameCount);
+            SetBool("OIDNGuideWrite", OIDNGuideWrite);
             SetBool("DiffRes", LocalTTSettings.RenderScale != 1.0f);
             SetBool("DoPartialRendering", LocalTTSettings.DoPartialRendering);
             SetBool("DoExposure", LocalTTSettings.PPExposure);
@@ -585,9 +590,6 @@ namespace TrueTrace {
             ShadingShader.SetTextureFromGlobal(FinalizeKernel, "DiffuseGBuffer", "_CameraGBufferTexture0");
             ShadingShader.SetTextureFromGlobal(FinalizeKernel, "SpecularGBuffer", "_CameraGBufferTexture1");
 
-            ShadingShader.SetTextureFromGlobal(TTtoOIDNKernel, "DiffuseGBuffer", "_CameraGBufferTexture0");
-            ShadingShader.SetTextureFromGlobal(TTtoOIDNKernel, "SpecularGBuffer", "_CameraGBufferTexture1");
-            ShadingShader.SetTextureFromGlobal(TTtoOIDNKernel, "NormalTexture", "_CameraGBufferTexture2");
 
             if (SkyboxTexture == null) SkyboxTexture = new Texture2D(1,1, TextureFormat.RGBA32, false);
             if (SkyboxTexture != null)

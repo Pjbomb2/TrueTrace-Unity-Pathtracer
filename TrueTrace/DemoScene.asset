@@ -19,8 +19,8 @@ MonoBehaviour:
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 0
-  PPBloom: 1
+  Accumulate: 1
+  PPBloom: 0
   BloomStrength: 0.797
   PPDoF: 0
   DoFAperature: 0.403
@@ -28,10 +28,10 @@ MonoBehaviour:
   DoFFocal: 5.1366353
   PPExposure: 0
   ExposureAuto: 1
-  PPToneMap: 1
+  PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
-  UseASVGF: 0
+  UseASVGF: 1
   UseTAAU: 0
   ReSTIRGIUpdateRate: 7
   UseReSTIRGITemporal: 1

@@ -236,13 +236,13 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         if(!GetFlag(hitDat.Tag, Thin)) {
             int WaterStageFlag = (Color.MetRoughIsSpec & 0x3800000) >> 23;
             if(GotFlipped) {
-                if(MaterialLobe == 3 || (WaterStageFlag == 2 || WaterStageFlag == 4)) {
-                    bsdfmodifier *= exp(-Color.InWaterDistance * CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance));
+                if((MaterialLobe == 2 && Refracted) || MaterialLobe == 3 || (WaterStageFlag == 2 || WaterStageFlag == 4)) {
+                    bsdfmodifier *= exp(-Color.InWaterDistance * CalculateExtinction((MaterialLobe == 2 && Refracted) ? (hitDat.transmittanceColor) : (1.0f - hitDat.surfaceColor), hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance));
                     if(!(WaterStageFlag == 2 || WaterStageFlag == 4)) WaterStageFlag = 3 + !Refracted;
                     Color.InWaterDistance = 0;
                 }
             }
-            if(MaterialLobe == 3 && (Refracted)) {
+            if((Refracted)) {
                 Color.InWaterDistance = 0;
                 if(GotFlipped) WaterStageFlag == 2;
                 else WaterStageFlag = 1;
@@ -418,7 +418,11 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             }
             
             float SurfaceCos = dot(to_light, norm);//YES KEEP THIS, IT NOT ONLY IMPROVES PERFORMANCE BUT IT ALSO HELPS KEEPS THINGS LESS BIASED AS OTHERWISE THE NORMAL OFFSET CAN RESULT IN WRONG VISABILITY!
+        #ifdef IgnoreBackfacing
+            if(SurfaceCos > 0 && (dot(to_light, LightNorm) > 0 || LightFormat != TRILIGHT)) {
+        #else
             if(SurfaceCos > 0) {
+        #endif
                 float bsdf_pdf = 0.0f;
                 float3 bsdf_value = 0.0f;
                 float3 bsdf_diffuse = 0;
@@ -466,6 +470,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     #endif
                         Illum *= Color.throughput;
                         bsdf_diffuse *= Color.throughput;
+
                     if(LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) {
                         Illum *= pow(saturate(dot(to_light, -LightNorm)), MiscInfo.x);
                         bsdf_diffuse *= pow(saturate(dot(to_light, -LightNorm)), MiscInfo.x);
@@ -479,6 +484,12 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     if(!UseRussianRoulette || (CurBounce == 0 && ImprovedPrimaryHit)) maxillum = 1;
                     Illum *= rcp(saturate(maxillum));
                     bsdf_diffuse *= rcp(saturate(maxillum));
+                        #ifdef RadianceCache
+                            if(!UseASVGF && CurBounce > 1 && (((CacheInstance.pathLength >> 5) & 0x1) && !((CacheInstance.pathLength >> 6) & 0x1))) {
+                                Illum *= Color.Data.xyz;
+                                // bsdf_diffuse *= Color.Data.xyz;
+                            }
+                        #endif
                     if(luminance(Illum) != 0 && maxillum > random(117, pixel_index).y) {//NEE russian roulette, massively improves performance while giivng the same result
                         uint index3;
                         #ifdef RadianceCache
@@ -594,6 +605,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
         bool DoSecondary = !(Color.MetRoughIsSpec >> 31);
         float Intensity = DoSecondary ? BackgroundIntensity : SecondaryBackgroundIntensity;
         float TrueDeSat = DoSecondary ? SkyDesaturate : SecondarySkyDesaturate;
+        if(CurBounce != 0 && IndirectBoost < 1) Intensity *= rcp(IndirectBoost);
         [branch]switch(DoSecondary ? BackgroundType : SecondaryBackgroundType) {
             case 0:
                 Radiance = GetSkyRadiance(ray.origin, ray.direction, 0, SunDir, transmittance, debug);
@@ -838,23 +850,16 @@ void OIDNtoTTKernel(uint3 id : SV_DispatchThreadID) {
     Result[id.xy] = float4(OutputBuffer[id.x + id.y * screen_width], 1);
 }
 
+
 #pragma kernel TTtoOIDNKernel
 [numthreads(16, 16, 1)]
 void TTtoOIDNKernel(uint3 id : SV_DispatchThreadID) {
     if(id.x > screen_width || id.y > screen_height) return;
     int pixel_index = id.x + id.y * screen_width;
-    float3 GBufferCol = 1;
-    float2 UV = id.xy / float2(screen_width, screen_height);
-    #ifdef HDRP
-        float3 SpecularAlbedo = 0;
-        GBufferCol = ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, float3(UV, 0), 0).xyz + SpecularAlbedo) == 0) ? 1 : (DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, float3(UV, 0), 0).xyz + SpecularAlbedo);
-        NormalBuffer[pixel_index] = NormalTexture.SampleLevel(my_linear_clamp_sampler, float3(UV, 0), 0).xyz * 2.0f - 1.0f;
-    #else
-        float3 SpecularAlbedo = SpecularGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0);
-        GBufferCol = ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo) == 0) ? 1 : ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo));
-        NormalBuffer[pixel_index] = NormalTexture.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz * 2.0f - 1.0f;
-    #endif
-    AlbedoBuffer[pixel_index] = GBufferCol;
+    if(OIDNGuideWrite) {
+        NormalBuffer[pixel_index] = i_octahedral_32(ScreenSpaceInfo[id.xy].y);
+        AlbedoBuffer[pixel_index] = unpackRGBE(GlobalColors[pixel_index].Flags);
+    }
     OutputBuffer[id.x + id.y * screen_width] = Result[id.xy].xyz;
 }
 
@@ -865,9 +870,9 @@ void TTtoOIDNKernel(uint3 id : SV_DispatchThreadID) {
 void TTtoOIDNKernelPanorama(uint3 id : SV_DispatchThreadID) {
     if(id.x >= screen_width || id.y >= screen_height) return;
     int pixel_index = id.x + id.y * screen_width;
-    float3 GBufferCol = 1;
-    float2 UV = id.xy / float2(screen_width, screen_height);
-    NormalBuffer[pixel_index] = i_octahedral_32(ScreenSpaceInfo[id.xy].y);
-    AlbedoBuffer[pixel_index] = unpackRGBE(GlobalColors[pixel_index].Flags);
+    if(OIDNGuideWrite) {
+        NormalBuffer[pixel_index] = i_octahedral_32(ScreenSpaceInfo[id.xy].y);
+        AlbedoBuffer[pixel_index] = unpackRGBE(GlobalColors[pixel_index].Flags);
+    }
     OutputBuffer[id.x + id.y * screen_width] = Result[id.xy].xyz;
 }

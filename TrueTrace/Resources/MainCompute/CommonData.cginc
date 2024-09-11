@@ -5,6 +5,7 @@
 #include "CommonStructs.cginc"
 
 
+bool OIDNGuideWrite;
 
 float4x4 CamToWorld;
 float4x4 CamInvProj;
@@ -246,7 +247,7 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 			case SampleAlpha: TextureIndexAndChannel = MatTex.AlphaTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 			case SampleMatCap: TextureIndexAndChannel = MatTex.MatCapTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 			case SampleMatCapMask: TextureIndexAndChannel = MatTex.MatCapMask; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
-			case SampleTerrainAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleTerrainAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; UV = (UV * MatTex.surfaceColor.xy + MatTex.transmittanceColor.xy) * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 		}
 		int TextureIndex = TextureIndexAndChannel.x - 1;
 		int TextureReadChannel = TextureIndexAndChannel.y;//0-3 is rgba, 4 is to just read all
@@ -471,7 +472,7 @@ SmallerRay CreateCameraRay(float2 uv, uint pixel_index) {
 	direction = mul(CamToWorld, float4(direction, 0.0f)).xyz;
 	direction = normalize(direction);
 	uint2 id = uint2(pixel_index % screen_width, pixel_index / screen_width);
-	[branch] if (UseDoF && (!IsFocusing || dot(id - int2(MousePos.x, MousePos.y), id - int2(MousePos.x, MousePos.y)) > 6.0f)) {
+	[branch] if (!OIDNGuideWrite && UseDoF && (!IsFocusing || dot(id - int2(MousePos.x, MousePos.y), id - int2(MousePos.x, MousePos.y)) > 6.0f)) {
 		float3 cameraForward = mul(CamInvProj, float4(0, 0, 0.0f, 1.0f)).xyz;
 		// Transform the direction from camera to world space and normalize
 		float4 sensorPlane;
@@ -961,13 +962,7 @@ float Importance(const float3 p, const float3 n, LightBVHData node, bool HasHitT
     float d2 = max(pDiff, length(node.BBMax - node.BBMin) / 2.0f);
 
     float3 wi = (pc - p) / sqrt(pDiff);
-    float cosTheta_w = (dot(i_octahedral_32(node.w), wi));
-    #ifdef IgnoreBackfacing
-	    if(HasHitTLAS && node.left < 0 && cosTheta_w < 0) return 0;
-	    else cosTheta_w = abs(cosTheta_w);
-    #else
-    	cosTheta_w = abs(cosTheta_w);
-    #endif
+    float cosTheta_w = abs(dot(i_octahedral_32(node.w), wi));
     float sinTheta_w = sqrt(max(1.0f - cosTheta_w * cosTheta_w, 0));
 
     float cosTheta_b;

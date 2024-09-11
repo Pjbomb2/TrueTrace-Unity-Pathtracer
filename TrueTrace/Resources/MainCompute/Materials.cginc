@@ -624,8 +624,9 @@ static float3 SampleDisneyDiffuse(const MaterialData hitDat, float3 wo, bool thi
         pdf = hitDat.diffTrans;
         refracted = true;
 
-        if (thin)
+        if (thin) {
             color = sqrt(color);
+        }
         else {
             extinction = CalculateExtinction(hitDat.transmittanceColor, hitDat.scatterDistance);
         }
@@ -638,7 +639,7 @@ static float3 SampleDisneyDiffuse(const MaterialData hitDat, float3 wo, bool thi
 
     float diffuse = EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin);
     forwardPdfW = abs(dotNL) * pdf;
-    return (sheen + color * (diffuse)) * extinction;
+    return (sheen + color * (diffuse));// * extinction;
 }
 
 static float3 SampleDisneyBRDF(const MaterialData hitDat, float3 wo, out float forwardPdfW, out float3 wi, uint pixel_index)

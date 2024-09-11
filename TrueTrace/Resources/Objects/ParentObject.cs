@@ -17,6 +17,7 @@ namespace TrueTrace {
         public LightBVHBuilder LBVH;
         public Task AsyncTask;
         public int ExistsInQue = -1;
+        public int QueInProgress = -1;
         public bool IsDeformable = false;
         [HideInInspector] public ComputeBuffer LightTriBuffer;
         [HideInInspector] public ComputeBuffer LightNodeBuffer;
@@ -130,7 +131,7 @@ namespace TrueTrace {
         }
 
         public void CallUpdate() {
-            if (!AssetManager.Assets.UpdateQue.Contains(this)) AssetManager.Assets.UpdateQue.Add(this);
+            if ((QueInProgress == 0 || QueInProgress == 1) && !AssetManager.Assets.UpdateQue.Contains(this)) AssetManager.Assets.UpdateQue.Add(this);
         }  
 
         public void ClearAll() {
@@ -196,6 +197,7 @@ namespace TrueTrace {
 
         public void Reset(int Que) {
             ExistsInQue = Que;
+            QueInProgress = Que;
             LoadData();
             AsyncTask = Task.Run(() => {BuildTotal();});
         }
@@ -1211,7 +1213,11 @@ namespace TrueTrace {
                 }
                 else {
                     if(!AssetManager.Assets.RemoveQue.Contains(this)) {
+                        if(QueInProgress == 2) {
+                            AssetManager.Assets.UpdateQue.Remove(this);
+                        }
                         AssetManager.Assets.AddQue.Add(this);
+                        QueInProgress = 3;
                         ExistsInQue = 3;
                     }
                     AssetManager.Assets.ParentCountHasChanged = true;
@@ -1235,7 +1241,10 @@ namespace TrueTrace {
                     }
                 }
                 else {
-                    if(!AssetManager.Assets.RemoveQue.Contains(this)) AssetManager.Assets.RemoveQue.Add(this);
+                    if(!AssetManager.Assets.RemoveQue.Contains(this)) {
+                        QueInProgress = -1;
+                        AssetManager.Assets.RemoveQue.Add(this);
+                    }
                     AssetManager.Assets.ParentCountHasChanged = true;
                 }
                 HasCompleted = false;

@@ -17,6 +17,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
 using System.Reflection;
 using UnityEditor.Experimental.GraphView;
+using UnityEditor.ShortcutManagement;
 
 namespace TrueTrace {
    public class EditModeFunctions : EditorWindow {
@@ -104,9 +105,9 @@ namespace TrueTrace {
          [SerializeField] public bool MatChangeResetsAccum = false;
 
 
-         public void SetGlobalDefines(string DefineToSet, bool SetValue)
-         {
-            var globalDefinesPath = TTPathFinder.GetGlobalDefinesPath();
+         public void SetGlobalDefines(string DefineToSet, bool SetValue) {
+            string globalDefinesPath = TTPathFinder.GetGlobalDefinesPath();
+
             if(File.Exists(globalDefinesPath)) {
                string[] GlobalDefines = System.IO.File.ReadAllLines(globalDefinesPath);
                int Index = -1;
@@ -156,6 +157,12 @@ namespace TrueTrace {
             EditorPrefs.SetString("EditModeFunctions", data);
          }
 
+         [Shortcut("TTBVHBuild", KeyCode.None, ShortcutModifiers.Action)]
+         public static void BuildBVHShortcut() {
+            EditorUtility.SetDirty(GameObject.Find("Scene").GetComponent<AssetManager>());
+            BuildWatch.Start();
+            GameObject.Find("Scene").GetComponent<AssetManager>().EditorBuild();
+         }
          List<List<GameObject>> Objects;
          List<Mesh> SourceMeshes;
          private static TTStopWatch BuildWatch = new TTStopWatch("Total Scene Build Time");
@@ -1002,7 +1009,7 @@ Toolbar toolbar;
          MatShader.IsCutout = CutoutToggle.value;
          MatShader.UsesSmoothness = SmoothnessToggle.value;
          AssetManager.data.Material[Index] = MatShader;
-         var materialMappingsPath = TTPathFinder.GetMaterialMappingsPath();
+         string materialMappingsPath = TTPathFinder.GetMaterialMappingsPath();
          using(StreamWriter writer = new StreamWriter(materialMappingsPath)) {
             var serializer = new XmlSerializer(typeof(Materials));
             serializer.Serialize(writer.BaseStream, AssetManager.data);
@@ -1101,7 +1108,7 @@ Toolbar toolbar;
          if(Index == -1) {
             if(Assets != null && Assets.NeedsToUpdateXML) {
                Assets.AddMaterial(shader);
-               var materialMappingsPath = TTPathFinder.GetMaterialMappingsPath();
+               string materialMappingsPath = TTPathFinder.GetMaterialMappingsPath();
                using(StreamWriter writer = new StreamWriter(materialMappingsPath)) {
                   var serializer = new XmlSerializer(typeof(Materials));
                   serializer.Serialize(writer.BaseStream, AssetManager.data);
@@ -1594,8 +1601,9 @@ Toolbar toolbar;
             Cleared = true;
          }
 
-         private void TakeScreenshot() {
-            ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayMaster.SampleCount + " Samples.png");
+         [Shortcut("TTScreenShot", KeyCode.None, ShortcutModifiers.Action)]
+         public static void TakeScreenshot() {
+            ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + GameObject.Find("Scene").GetComponent<RayTracingMaster>().SampleCount + " Samples.png");
             UnityEditor.AssetDatabase.Refresh();
          }
          bool HasNoMore = false;
@@ -2243,19 +2251,21 @@ void AddResolution(int width, int height, string label)
                   AFrame = TempTest.CastRay(RayTracingMaster._camera, RayMaster.SourceWidth, RayMaster.SourceHeight);
                }
             }
-            if(RayMaster.LocalTTSettings.PPDoF && (FramesSinceDOF < 3 || (Input.GetMouseButton(2) && Input.GetKey(KeyCode.LeftControl)))) {
-               FramesSinceDOF++;
-               if(Input.mousePosition.x >= 0 && Input.mousePosition.x < RayMaster.SourceWidth && Input.mousePosition.y >= 0 && Input.mousePosition.y < RayMaster.SourceHeight) {
-                  if((Input.GetMouseButton(2) && Input.GetKey(KeyCode.LeftControl))) FramesSinceDOF = 0;
-                  RayMaster.IsFocusing = true;
-                  GetFocalLength();
+            if(RayMaster != null) {
+               if(RayMaster.LocalTTSettings.PPDoF && (FramesSinceDOF < 3 || (Input.GetMouseButton(2) && Input.GetKey(KeyCode.LeftControl)))) {
+                  FramesSinceDOF++;
+                  if(Input.mousePosition.x >= 0 && Input.mousePosition.x < RayMaster.SourceWidth && Input.mousePosition.y >= 0 && Input.mousePosition.y < RayMaster.SourceHeight) {
+                     if((Input.GetMouseButton(2) && Input.GetKey(KeyCode.LeftControl))) FramesSinceDOF = 0;
+                     RayMaster.IsFocusing = true;
+                     GetFocalLength();
+                  } else {
+                     RayMaster.IsFocusing = false;
+                     FramesSinceDOF = 3;
+                  }
                } else {
                   RayMaster.IsFocusing = false;
                   FramesSinceDOF = 3;
                }
-            } else {
-               RayMaster.IsFocusing = false;
-               FramesSinceDOF = 3;
             }
             if(!Application.isPlaying) {
                if(RayTracingMaster.DoCheck && DoSaving) {
@@ -2331,7 +2341,7 @@ void AddResolution(int width, int height, string label)
                          }
                       }
                   } catch(System.Exception e) {HasNoMore = true;};
-                  var saveFilePath = TTPathFinder.GetSaveFilePath();
+                  string saveFilePath = TTPathFinder.GetSaveFilePath();
                   using(StreamWriter writer = new StreamWriter(saveFilePath)) {
                       var serializer = new XmlSerializer(typeof(RayObjs));
                       serializer.Serialize(writer.BaseStream, new RayObjs());
@@ -2345,8 +2355,8 @@ void AddResolution(int width, int height, string label)
             if(RayMaster != null) SampleCountField.value = RayMaster.SampleCount;
             
             if(Assets != null && Assets.NeedsToUpdateXML) {
-               var materialMappingsPath = TTPathFinder.GetMaterialMappingsPath();
-               using(StreamWriter writer = new StreamWriter(materialMappingsPath)) {
+               string materialMappingsPath = TTPathFinder.GetMaterialMappingsPath();
+                using(StreamWriter writer = new StreamWriter(materialMappingsPath)) {
                   var serializer = new XmlSerializer(typeof(Materials));
                   serializer.Serialize(writer.BaseStream, AssetManager.data);
                }
