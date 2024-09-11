@@ -1,4 +1,4 @@
-# TrueTrace: A High Performance Compute Shader based Unity Pathracer
+# TrueTrace: A High Performance Compute Shader based Unity Pathtracer
 
 ![](/.Images/Yanus0.png)
 ### A passion projects that has been going on for a while with the goal of bringing at least interactive path-tracing to everyone in unity, regardless of their hardware
@@ -214,18 +214,23 @@ TrueTrace Options Description -
 
 # Huge thanks to these people for being sponsors/patrons:
 <ul>
-  <li>Patreon:</li>
-  <li> MakIt3D</li>
-  <li> Christian</li>
-  <li> Andrew Varga</li>
-  <li> Duong Nguyen</li>
-  <li> DJ</li>
-  <li> Launemax</li>
-  <li> Yanus</li>
-  <li>Github Sponsors:</li>
-  <li> jhintringer</li>
-  <li> Omid</li>
-  <li>Kofi:</li>
+  <li>Thanks to:</li>
+  <ul>
+    <li>Patreon:</li>
+    <ul>
+      <li>Niko Kudos:   $500</li> 
+      <li>Duong Nguyen: $5</li>
+      <li>MakIt3D:      $5</li>
+      <li>Yanus:        $5</li>
+      <li>Andrew Varga: $3.34</li>
+      <li>DJ Huang:     $3</li>
+    </ul>
+    <li>Github Sponsors:</li>
+    <ul>
+      <li>Omid:         $2</li>
+    </ul>
+    <li>Kofi:</li>
+  </ul>
 </ul>
 
 # Sample Images(Taken from various stages of development)
