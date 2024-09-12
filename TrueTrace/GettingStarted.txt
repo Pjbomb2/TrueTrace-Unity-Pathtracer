@@ -1,44 +1,56 @@
 Hello and thank you for trying out my path tracer!
-Needed Changes:
-To get started you need to set yourself to DX12, go to the Edit Tab -> Project Settings -> Player -> Untick "Auto Graphics API For Windows" -> Click the little + Button that appears -> DirectX12 -> Drag the new DirectX12 to the top
-
 
 To get started:
-1. After importing the unity package, for a new scene you want to open the PathTracer tab on the top bar, and click "Arrange Hierarchy"(THIS WILL RE-ARRANGE YOUR HIERARCHY)
+1. After importing the unity package, for a new scene you want to open the PathTracer tab on the top bar, and click "Arrange Hierarchy"
 2. After doing this, your scene should now be in the format required by the path tracer
 3. Now you can click "Build Aggregated BVH" to build the acceleration structure for all objects, and just wait for the "All Objects Built" to turn green before entering play mode
 4. After that is done, you can just enter play mode and play as normal
 
 
-Important Notes:
-1. If your camera is not tagged "Main Camera", you need to add the script "RenderHandle" to it manually
-2. Objects cannot be marked with the static tag that combines meshes, as this makes them non read/writeable
-3. Whenever you add objects to the scene, in order for them to be included in the path tracer, you need to add the parent object/raytracing object, however I highly recommend just pressing "Auto Assign Scripts" to automatically assign the scripts for you
-4. Objects that will be spawned/despawned while in play mode(or in builds) that are to be included in the path-tracing must be read/write enabled, otherwise I cant read them at all
-5. Meshes that are to move independently need to either be a child of a GameObject with the "ParentObject" script or have a "ParentObject" script in the same GameObject
+Adding new objects
+	Automatic methods
+  		First, add your gameobjects as a child of the "Scene" gameobject created by TrueTrace.
+  			Global setup: Press "Auto Assign Scripts" in the TrueTrace settings menu.
+  			Local setup: Go to "Hierarchy Options" in the TrueTrace settings menu. 
+  			Drag the root gameobject that you added to the "Selective Auto Assign Scripts" section.
+  			Click "Selective Auto Assign".
 
+	Manual method
+		First, add your gameobjects as a child of the "Scene" gameobject created by TrueTrace.
+  		Each gameobject that contains a mesh needs the script "RayTracingObject" added to it.
+  		For non-skinned meshes: 
+    		Add the script "ParentObject" to either:
+      			Each gameobject that has a "RayTracingObject" script
+      			OR
+      			The Direct Parent gameobject of gameobjects that have a "RayTracingObject" script(Groups their meshes together, increasing performance)
+  		For Skinned Meshes:
+			Any parent gameobject of the RayTracingObjects(will group together all Skinned Children)
+	For default unity lights, you just add the "RayTracingLight" script to each one
 
-Structure Notes:
-1. All objects that are to be raytraced must be under a GameObject with the "ParentObject" script or have this script on themselves, think of the parentobject as defining groups of meshes(its children with RayTracingObject scripts)
-2. Meshes with RayTracingObject scripts will be raytraced
+General Use/Notes
+	DX12 is recommended, as it enables use of OIDN, Bindless texturing, RT Cores, and slightly higher performance
+	The camera you want to render from, you attach the RenderHandler script to(if you have a camera tagged MainCamera, this will be done automatically)
 
 
 Changeable Defines:
 To access the in script settings, go to the "GlobalDefines.cginc" under the TrueTrace/Resources folder
 This will allow you to toggle some low level settings:
-1. AdvancedAlphaMapped - This allows for cutout objects to be handled in the traversal stage, making them work
-3. ExtraSampleValidation - Allows an extra validation ray in ReSTIR GI for NEE rays
-4. IgnoreGlassShadow - Allows direct rays to go through glass
-5. IgnoreGlassMain - Same as above for main rays
-6. HDRP - This needs to be enabled if you are in HDRP
-7. HardwareRT - This needs to be enabled if you want to use RT cores
-8. PointFiltering - Disables stochastic texture sampling, basically turns off texture filtering
-9. StainedGlassShadows - if IgnoreGlassShadow is on, this allows rays to be tinted by glass color
-10. DX11 - Experimental still, but will make it so, you don't need DX12 (needs to be paired with C# #define)
-11. LightMapping - Experimental
-
-Pathtracer Settings Of Note:
-Internal Resoltuion Ratio - Turning this down decreases the resolution we path trace at, and then upscale to the correct res(so turning to 0.5 will path trace at half resolution then upscale it)
-Atmospheric Scattering Samples - How many passes of atmospheric scatter is computed(for multiple scattering), decrease this to 1 if you end up crashing when you try to play
-
-Chair Scene provided by Mr_TibiT on Twitter
+	1. AdvancedAlphaMapping - Enables or Disables the support of cutout objects(performance penalty)
+	2. ExtraSampleValidation - Shoots an additional ray(2 instead of 1) in ReSTIR GI ray validation for sharper shadows
+	3. IgnoreGlassShadow - Shadow Rays can pass through glass
+	4. IgnoreGlassMain - Main Rays can pass through glass
+	5. FadeMapping - Enables experimental Fade material type
+	6. HardwareRT - Turn on if your in Unity 2023 or higher and want to use Hardware RT cores
+	7. PointFiltering - Switch between point and linear filtering for albedo textures
+	8. StainedGlassShadows - Shadow rays passing through glass will be tinted to the glass color
+	9. IgnoreBackFacing - Culls backfacing triangles
+	10. WhiteLights - Forces all lights to be white
+	11. LBVH - Enable/Disable the light BVH
+	12. FasterLightSampling - Uses an alternative method for calculating LBVH PDF that is a bit wrong, but much faster
+	13. AccurateEmissionTex - Turn on/off emission textures
+	14. RadianceCache - Turn on/off the Radiance Cache
+	15. IndirectRetraceWeighting - Adds indirect lighting into ReSTIR GI retracing/luminance validation
+	16. TrueBlack - Allows materials to be truely black, removes the bottom limit
+	17. AdvancedRadCacheAlt - Experimental working set for the Radiance Cache, not recomended
+	18. UseTextureLOD - (Only works with Bindless)Enables Texture LOD
+	19. DebugView - Replace that "DVNone" with any of the defines below, from "DVNone" to "DVGIView"
