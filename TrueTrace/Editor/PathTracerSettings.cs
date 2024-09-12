@@ -66,6 +66,7 @@ namespace TrueTrace {
          [SerializeField] public bool GISpatial = true;
          [SerializeField] public int GISpatialSampleCount = 24;
          [SerializeField] public bool TAA = false;
+         [SerializeField] public bool FXAA = false;
          [SerializeField] public bool ToneMap = false;
          [SerializeField] public int ToneMapIndex = 0;
          [SerializeField] public bool TAAU = true;
@@ -587,6 +588,7 @@ FloatField ReSTIRGISpatialRadiusField;
 Toggle TemporalGIToggle;
 Toggle SpatialGIToggle;
 Toggle TAAToggle;
+Toggle FXAAToggle;
 Toggle DoPartialRenderingToggle;
 Toggle DoFireflyToggle;
 Toggle SampleValidToggle;
@@ -620,6 +622,7 @@ private void StandardSet() {
          GISpatial = true;
          GISpatialSampleCount = 12;
          TAA = false;
+         FXAA = false;
          ToneMap = false;
          TAAU = true;
          AtmoScatter = 4;
@@ -1759,6 +1762,7 @@ void AddResolution(int width, int height, string label)
            GITemporalMCap = RayMaster.LocalTTSettings.ReSTIRGITemporalMCap;
            GISpatialSampleCount = RayMaster.LocalTTSettings.ReSTIRGISpatialCount;
            TAA = RayMaster.LocalTTSettings.PPTAA;
+           FXAA = RayMaster.LocalTTSettings.PPFXAA;
            ToneMap = RayMaster.LocalTTSettings.PPToneMap;
            ToneMapIndex = RayMaster.LocalTTSettings.ToneMapper;
            TAAU = RayMaster.LocalTTSettings.UseTAAU;
@@ -2117,6 +2121,10 @@ void AddResolution(int width, int height, string label)
            MainSource.Add(TAAToggle);
            TAAToggle.RegisterValueChangedCallback(evt => {TAA = evt.newValue; RayMaster.LocalTTSettings.PPTAA = TAA;});
 
+           FXAAToggle = new Toggle() {value = FXAA, text = "Enable FXAA"};
+           MainSource.Add(FXAAToggle);
+           FXAAToggle.RegisterValueChangedCallback(evt => {FXAA = evt.newValue; RayMaster.LocalTTSettings.PPFXAA = FXAA;});
+
            
             List<string> TonemapSettings = new List<string>();
             TonemapSettings.Add("TonyMcToneFace");
@@ -2351,7 +2359,7 @@ void AddResolution(int width, int height, string label)
                RayTracingMaster.DoCheck = false;
             }
 
-            if(Assets != null && Instancer != null) RemainingObjectsField.value = Assets.RunningTasks + Instancer.RunningTasks;
+            if(Assets != null && Instancer != null && RemainingObjectsField != null) RemainingObjectsField.value = Assets.RunningTasks + Instancer.RunningTasks;
             if(RayMaster != null) SampleCountField.value = RayMaster.SampleCount;
             
             if(Assets != null && Assets.NeedsToUpdateXML) {

@@ -948,7 +948,7 @@ namespace TrueTrace {
                     cmd.DispatchCompute(GenerateShader, ResolveKernel + 2, Mathf.CeilToInt((4.0f * 1024.0f * 1024.0f) / 256.0f), 1, 1);
                 cmd.EndSample("RadCacheClear");
             #endif
-            Denoisers.ValidateInit(LocalTTSettings.PPBloom, LocalTTSettings.PPTAA, SourceWidth != TargetWidth, LocalTTSettings.UseTAAU, LocalTTSettings.DoSharpen);
+            Denoisers.ValidateInit(LocalTTSettings.PPBloom, LocalTTSettings.PPTAA, SourceWidth != TargetWidth, LocalTTSettings.UseTAAU, LocalTTSettings.DoSharpen, LocalTTSettings.PPFXAA);
             float CurrentSample;
             
             GenerateRays(cmd);
@@ -1133,6 +1133,7 @@ namespace TrueTrace {
             if (LocalTTSettings.PPBloom) Denoisers.ExecuteBloom(ref _FinalTex, LocalTTSettings.BloomStrength, cmd);
             if(LocalTTSettings.PPToneMap) Denoisers.ExecuteToneMap(ref _FinalTex, cmd, ref ToneMapTex, ref ToneMapTex2, LocalTTSettings.ToneMapper);
             if (LocalTTSettings.PPTAA) Denoisers.ExecuteTAA(ref _FinalTex, _currentSample, cmd);
+            if (LocalTTSettings.PPFXAA) Denoisers.ExecuteFXAA(ref _FinalTex, cmd);
             if (LocalTTSettings.DoSharpen) Denoisers.ExecuteSharpen(ref _FinalTex, LocalTTSettings.Sharpness, cmd);
             cmd.Blit(_FinalTex, destination);
             ClearOutRenderTexture(_DebugTex);

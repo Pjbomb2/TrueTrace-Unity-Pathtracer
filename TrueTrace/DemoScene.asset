@@ -31,7 +31,7 @@ MonoBehaviour:
   PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
-  UseASVGF: 1
+  UseASVGF: 0
   UseTAAU: 0
   ReSTIRGIUpdateRate: 7
   UseReSTIRGITemporal: 1
@@ -54,8 +54,8 @@ MonoBehaviour:
   FireflyFrameCount: 533
   FireflyStrength: 1
   FireflyOffset: 0
-  OIDNFrameCount: 32
-  UseOIDN: 0
+  OIDNFrameCount: 50
+  UseOIDN: 1
   DoSharpen: 0
   Sharpness: 1
   MainDesiredRes: 16384
@@ -72,3 +72,4 @@ MonoBehaviour:
   UseTransmittanceInNEE: 1
   SecondarySkyDesaturate: 0
   MatChangeResetsAccum: 0
+  PPFXAA: 0
