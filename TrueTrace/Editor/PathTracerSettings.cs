@@ -17,6 +17,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
 using System.Reflection;
 using UnityEditor.Experimental.GraphView;
+using UnityEditor.ShortcutManagement;
 
 namespace TrueTrace {
    public class EditModeFunctions : EditorWindow {
@@ -65,6 +66,7 @@ namespace TrueTrace {
          [SerializeField] public bool GISpatial = true;
          [SerializeField] public int GISpatialSampleCount = 24;
          [SerializeField] public bool TAA = false;
+         [SerializeField] public bool FXAA = false;
          [SerializeField] public bool ToneMap = false;
          [SerializeField] public int ToneMapIndex = 0;
          [SerializeField] public bool TAAU = true;
@@ -105,8 +107,10 @@ namespace TrueTrace {
 
 
          public void SetGlobalDefines(string DefineToSet, bool SetValue) {
-            if(File.Exists(Application.dataPath + "/TrueTrace/Resources/GlobalDefines.cginc")) {
-               string[] GlobalDefines = System.IO.File.ReadAllLines(Application.dataPath + "/TrueTrace/Resources/GlobalDefines.cginc");
+            string globalDefinesPath = TTPathFinder.GetGlobalDefinesPath();
+
+            if(File.Exists(globalDefinesPath)) {
+               string[] GlobalDefines = System.IO.File.ReadAllLines(globalDefinesPath);
                int Index = -1;
                for(int i = 0; i < GlobalDefines.Length; i++) {
                   if(GlobalDefines[i].Equals("//END OF DEFINES")) break;
@@ -127,7 +131,7 @@ namespace TrueTrace {
                   GlobalDefines[Index] = GlobalDefines[Index].Replace("// ", "");
                   if(!SetValue) GlobalDefines[Index] = "// " + GlobalDefines[Index];
 
-                  System.IO.File.WriteAllLines(Application.dataPath + "/TrueTrace/Resources/GlobalDefines.cginc", GlobalDefines);
+                  System.IO.File.WriteAllLines(globalDefinesPath, GlobalDefines);
                   AssetDatabase.Refresh();
                }
             } else {Debug.Log("No GlobalDefinesFile");}
@@ -154,6 +158,12 @@ namespace TrueTrace {
             EditorPrefs.SetString("EditModeFunctions", data);
          }
 
+         [Shortcut("TTBVHBuild", KeyCode.None, ShortcutModifiers.Action)]
+         public static void BuildBVHShortcut() {
+            EditorUtility.SetDirty(GameObject.Find("Scene").GetComponent<AssetManager>());
+            BuildWatch.Start();
+            GameObject.Find("Scene").GetComponent<AssetManager>().EditorBuild();
+         }
          List<List<GameObject>> Objects;
          List<Mesh> SourceMeshes;
          private static TTStopWatch BuildWatch = new TTStopWatch("Total Scene Build Time");
@@ -578,6 +588,7 @@ FloatField ReSTIRGISpatialRadiusField;
 Toggle TemporalGIToggle;
 Toggle SpatialGIToggle;
 Toggle TAAToggle;
+Toggle FXAAToggle;
 Toggle DoPartialRenderingToggle;
 Toggle DoFireflyToggle;
 Toggle SampleValidToggle;
@@ -611,6 +622,7 @@ private void StandardSet() {
          GISpatial = true;
          GISpatialSampleCount = 12;
          TAA = false;
+         FXAA = false;
          ToneMap = false;
          TAAU = true;
          AtmoScatter = 4;
@@ -1000,7 +1012,8 @@ Toolbar toolbar;
          MatShader.IsCutout = CutoutToggle.value;
          MatShader.UsesSmoothness = SmoothnessToggle.value;
          AssetManager.data.Material[Index] = MatShader;
-         using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialMappings.xml")) {
+         string materialMappingsPath = TTPathFinder.GetMaterialMappingsPath();
+         using(StreamWriter writer = new StreamWriter(materialMappingsPath)) {
             var serializer = new XmlSerializer(typeof(Materials));
             serializer.Serialize(writer.BaseStream, AssetManager.data);
             AssetDatabase.Refresh();
@@ -1098,7 +1111,8 @@ Toolbar toolbar;
          if(Index == -1) {
             if(Assets != null && Assets.NeedsToUpdateXML) {
                Assets.AddMaterial(shader);
-               using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialMappings.xml")) {
+               string materialMappingsPath = TTPathFinder.GetMaterialMappingsPath();
+               using(StreamWriter writer = new StreamWriter(materialMappingsPath)) {
                   var serializer = new XmlSerializer(typeof(Materials));
                   serializer.Serialize(writer.BaseStream, AssetManager.data);
                   AssetDatabase.Refresh();
@@ -1590,8 +1604,9 @@ Toolbar toolbar;
             Cleared = true;
          }
 
-         private void TakeScreenshot() {
-            ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayMaster.SampleCount + " Samples.png");
+         [Shortcut("TTScreenShot", KeyCode.None, ShortcutModifiers.Action)]
+         public static void TakeScreenshot() {
+            ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + GameObject.Find("Scene").GetComponent<RayTracingMaster>().SampleCount + " Samples.png");
             UnityEditor.AssetDatabase.Refresh();
          }
          bool HasNoMore = false;
@@ -1747,6 +1762,7 @@ void AddResolution(int width, int height, string label)
            GITemporalMCap = RayMaster.LocalTTSettings.ReSTIRGITemporalMCap;
            GISpatialSampleCount = RayMaster.LocalTTSettings.ReSTIRGISpatialCount;
            TAA = RayMaster.LocalTTSettings.PPTAA;
+           FXAA = RayMaster.LocalTTSettings.PPFXAA;
            ToneMap = RayMaster.LocalTTSettings.PPToneMap;
            ToneMapIndex = RayMaster.LocalTTSettings.ToneMapper;
            TAAU = RayMaster.LocalTTSettings.UseTAAU;
@@ -2105,6 +2121,10 @@ void AddResolution(int width, int height, string label)
            MainSource.Add(TAAToggle);
            TAAToggle.RegisterValueChangedCallback(evt => {TAA = evt.newValue; RayMaster.LocalTTSettings.PPTAA = TAA;});
 
+           FXAAToggle = new Toggle() {value = FXAA, text = "Enable FXAA"};
+           MainSource.Add(FXAAToggle);
+           FXAAToggle.RegisterValueChangedCallback(evt => {FXAA = evt.newValue; RayMaster.LocalTTSettings.PPFXAA = FXAA;});
+
            
             List<string> TonemapSettings = new List<string>();
             TonemapSettings.Add("TonyMcToneFace");
@@ -2239,19 +2259,21 @@ void AddResolution(int width, int height, string label)
                   AFrame = TempTest.CastRay(RayTracingMaster._camera, RayMaster.SourceWidth, RayMaster.SourceHeight);
                }
             }
-            if(RayMaster.LocalTTSettings.PPDoF && (FramesSinceDOF < 3 || (Input.GetMouseButton(2) && Input.GetKey(KeyCode.LeftControl)))) {
-               FramesSinceDOF++;
-               if(Input.mousePosition.x >= 0 && Input.mousePosition.x < RayMaster.SourceWidth && Input.mousePosition.y >= 0 && Input.mousePosition.y < RayMaster.SourceHeight) {
-                  if((Input.GetMouseButton(2) && Input.GetKey(KeyCode.LeftControl))) FramesSinceDOF = 0;
-                  RayMaster.IsFocusing = true;
-                  GetFocalLength();
+            if(RayMaster != null) {
+               if(RayMaster.LocalTTSettings.PPDoF && (FramesSinceDOF < 3 || (Input.GetMouseButton(2) && Input.GetKey(KeyCode.LeftControl)))) {
+                  FramesSinceDOF++;
+                  if(Input.mousePosition.x >= 0 && Input.mousePosition.x < RayMaster.SourceWidth && Input.mousePosition.y >= 0 && Input.mousePosition.y < RayMaster.SourceHeight) {
+                     if((Input.GetMouseButton(2) && Input.GetKey(KeyCode.LeftControl))) FramesSinceDOF = 0;
+                     RayMaster.IsFocusing = true;
+                     GetFocalLength();
+                  } else {
+                     RayMaster.IsFocusing = false;
+                     FramesSinceDOF = 3;
+                  }
                } else {
                   RayMaster.IsFocusing = false;
                   FramesSinceDOF = 3;
                }
-            } else {
-               RayMaster.IsFocusing = false;
-               FramesSinceDOF = 3;
             }
             if(!Application.isPlaying) {
                if(RayTracingMaster.DoCheck && DoSaving) {
@@ -2327,7 +2349,8 @@ void AddResolution(int width, int height, string label)
                          }
                       }
                   } catch(System.Exception e) {HasNoMore = true;};
-                  using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/SaveFile.xml")) {
+                  string saveFilePath = TTPathFinder.GetSaveFilePath();
+                  using(StreamWriter writer = new StreamWriter(saveFilePath)) {
                       var serializer = new XmlSerializer(typeof(RayObjs));
                       serializer.Serialize(writer.BaseStream, new RayObjs());
                       UnityEditor.AssetDatabase.Refresh();
@@ -2336,11 +2359,12 @@ void AddResolution(int width, int height, string label)
                RayTracingMaster.DoCheck = false;
             }
 
-            if(Assets != null && Instancer != null) RemainingObjectsField.value = Assets.RunningTasks + Instancer.RunningTasks;
+            if(Assets != null && Instancer != null && RemainingObjectsField != null) RemainingObjectsField.value = Assets.RunningTasks + Instancer.RunningTasks;
             if(RayMaster != null) SampleCountField.value = RayMaster.SampleCount;
             
             if(Assets != null && Assets.NeedsToUpdateXML) {
-                using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialMappings.xml")) {
+               string materialMappingsPath = TTPathFinder.GetMaterialMappingsPath();
+                using(StreamWriter writer = new StreamWriter(materialMappingsPath)) {
                   var serializer = new XmlSerializer(typeof(Materials));
                   serializer.Serialize(writer.BaseStream, AssetManager.data);
                }

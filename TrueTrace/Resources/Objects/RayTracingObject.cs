@@ -275,10 +275,16 @@ namespace TrueTrace {
 	    		if(WasDeleted) return;
 		    	if(ThisParent != null) {
 		    		ThisParent.NeedsToUpdate = true;
-					if(AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ThisParent)) AssetManager.Assets.UpdateQue.Add(ThisParent);
+					if((ThisParent.QueInProgress == 0 || ThisParent.QueInProgress == 1) && AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ThisParent)) {
+						ThisParent.QueInProgress = 2;
+						AssetManager.Assets.UpdateQue.Add(ThisParent);
+					}
 		    	} else if(ParParent != null) {
 		    		ParParent.NeedsToUpdate = true;
-					if(AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ParParent)) AssetManager.Assets.UpdateQue.Add(ParParent);
+					if((ParParent.QueInProgress == 0 || ParParent.QueInProgress == 1) && AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ParParent)) {
+						ParParent.QueInProgress = 2;
+						AssetManager.Assets.UpdateQue.Add(ParParent);
+					}
 	    		}
 	    	}			
 		}
@@ -290,16 +296,22 @@ namespace TrueTrace {
 	    		if(WasDeleted) return;
 		    	if(ThisParent != null) {
 		    		ThisParent.NeedsToUpdate = true;
-		    		if(ThisParent.enabled)
-						if(AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ThisParent)) AssetManager.Assets.UpdateQue.Add(ThisParent);
-					else {
+		    		if(ThisParent.enabled) {
+						if((ThisParent.QueInProgress == 0 || ThisParent.QueInProgress == 1) && AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ThisParent)) {
+							ThisParent.QueInProgress = 2;
+							AssetManager.Assets.UpdateQue.Add(ThisParent);
+						}
+					} else {
 						ThisParent.enabled = true;
 					}
 		    	} else if(transform.parent.TryGetComponent<ParentObject>(out ParentObject ParParent)) {
 		    		ParParent.NeedsToUpdate = true;
-		    		if(ParParent.enabled)
-						if(AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ParParent)) AssetManager.Assets.UpdateQue.Add(ParParent);
-					else {
+		    		if(ParParent.enabled) {
+						if((ParParent.QueInProgress == 0 || ParParent.QueInProgress == 1) && AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ParParent)) {
+							ParParent.QueInProgress = 2;
+							AssetManager.Assets.UpdateQue.Add(ParParent);
+						}
+					} else {
 						ParParent.enabled = true;
 					}
 	    		}
@@ -309,7 +321,10 @@ namespace TrueTrace {
 	    private void OnDisable() {
 	    	if(transform.parent != null && gameObject.scene.isLoaded && transform.parent.TryGetComponent<ParentObject>(out ParentObject ParParent)) {
 	    		ParParent.NeedsToUpdate = true;
-	    		if(AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ParParent)) AssetManager.Assets.UpdateQue.Add(ParParent);
+	    		if((ParParent.QueInProgress == 0 || ParParent.QueInProgress == 1) && AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(ParParent)) {
+					ParParent.QueInProgress = 2;
+	    			AssetManager.Assets.UpdateQue.Add(ParParent);
+	    		}
 	    	} else if(gameObject.scene.isLoaded && TryGetComponent<ParentObject>(out ParentObject ThisParent)) {
 		    	ThisParent.NeedsToUpdate = true;
 	    	}

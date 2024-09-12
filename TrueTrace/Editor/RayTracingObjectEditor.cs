@@ -87,8 +87,8 @@ namespace TrueTrace {
                 };
                 if(CopyIndex != -1) PresetRays.RayObj[CopyIndex] = TempRay;
                 else PresetRays.RayObj.Add(TempRay);
-
-                using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialPresets.xml")) {
+                string materialPresetsPath = TTPathFinder.GetMaterialPresetsPath();
+                using(StreamWriter writer = new StreamWriter(materialPresetsPath)) {
                     var serializer = new XmlSerializer(typeof(RayObjs));
                     serializer.Serialize(writer.BaseStream, PresetRays);
                     UnityEditor.AssetDatabase.Refresh();
@@ -125,12 +125,13 @@ namespace TrueTrace {
             }
             int PresetLength = PresetRays.RayObj.Count;
             ScrollPosition = GUILayout.BeginScrollView(ScrollPosition, GUILayout.Width(460), GUILayout.Height(250));
+            string materialPresetsPath = TTPathFinder.GetMaterialPresetsPath();
             for(int i = 0; i < PresetLength; i++) {
                 GUILayout.BeginHorizontal();
                     if(GUILayout.Button(PresetRays.RayObj[i].MatName)) {CallEditorFunction(PresetRays.RayObj[i]); this.editorWindow.Close();}
                     if(GUILayout.Button("Delete")) {
                         PresetRays.RayObj.RemoveAt(i);
-                        using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialPresets.xml")) {
+                        using(StreamWriter writer = new StreamWriter(materialPresetsPath)) {
                             var serializer = new XmlSerializer(typeof(RayObjs));
                             serializer.Serialize(writer.BaseStream, PresetRays);
                             UnityEditor.AssetDatabase.Refresh();
@@ -262,8 +263,8 @@ namespace TrueTrace {
                 };
                 if(CopyIndex != -1) PresetRays.RayObj[CopyIndex] = TempRay;
                 else PresetRays.RayObj.Add(TempRay);
-
-                using(StreamWriter writer = new StreamWriter(Application.dataPath + "/TrueTrace/Resources/Utility/MaterialPresets.xml")) {
+                string materialPresetsPath = TTPathFinder.GetMaterialPresetsPath();
+                using(StreamWriter writer = new StreamWriter(materialPresetsPath)) {
                     var serializer = new XmlSerializer(typeof(RayObjs));
                     serializer.Serialize(writer.BaseStream, PresetRays);
                     UnityEditor.AssetDatabase.Refresh();

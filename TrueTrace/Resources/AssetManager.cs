@@ -112,8 +112,8 @@ namespace TrueTrace {
         private int LightBufferKernel;
         private int LightNodeBufferKernel;
 
-        [HideInInspector] public List<ParentObject> RenderQue;
         [HideInInspector] public List<Transform> RenderTransforms;
+        [HideInInspector] public List<ParentObject> RenderQue;
         [HideInInspector] public List<ParentObject> BuildQue;
         [HideInInspector] public List<ParentObject> AddQue;
         [HideInInspector] public List<ParentObject> RemoveQue;
@@ -912,12 +912,13 @@ namespace TrueTrace {
             {//Main Object Data Handling
                 for (int i = QueCount - 1; i >= 0; i--) {
                     switch(RemoveQue[i].ExistsInQue) {
-                        case 0: {int Index = RenderQue.IndexOf(RemoveQue[i]); RenderQue.RemoveAt(Index); RenderTransforms.RemoveAt(Index);}; break;
+                        case 0: {int Index = RenderQue.IndexOf(RemoveQue[i]); if(Index != -1) {RenderQue.RemoveAt(Index); RenderTransforms.RemoveAt(Index);}}; break;
                         case 1: BuildQue.Remove(RemoveQue[i]); break;
                         case 2: UpdateQue.Remove(RemoveQue[i]); break;
                         case 3: AddQue.Remove(RemoveQue[i]); break;
                     }
                     RemoveQue[i].ExistsInQue = -1;
+                    RemoveQue[i].QueInProgress = -1;
                     ChildrenUpdated = true;
                 }
                 RemoveQue.Clear();
@@ -939,8 +940,10 @@ namespace TrueTrace {
                         BuildQue[i].ClearAll();
                         if(BuildQue[i].FailureCount > 6) {
                             BuildQue[i].ExistsInQue = -1;
+                            BuildQue[i].QueInProgress = -1;
                         } else {
                             BuildQue[i].ExistsInQue = 3;
+                            BuildQue[i].QueInProgress = 3;
                             AddQue.Add(BuildQue[i]);
                         }
                         BuildQue.RemoveAt(i);
@@ -951,13 +954,16 @@ namespace TrueTrace {
                                 BuildQue[i].ClearAll();
                                 if(BuildQue[i].FailureCount > 6) {
                                     BuildQue[i].ExistsInQue = -1;
+                                    BuildQue[i].QueInProgress = -1;
                                 } else {
                                     BuildQue[i].ExistsInQue = 3;
+                                    BuildQue[i].QueInProgress = 3;
                                     AddQue.Add(BuildQue[i]);
                                 }
                             } else {
                                 BuildQue[i].SetUpBuffers();
                                 BuildQue[i].ExistsInQue = 0;
+                                BuildQue[i].QueInProgress = 0;
                                 RenderTransforms.Add(BuildQue[i].gameObject.transform);
                                 RenderQue.Add(BuildQue[i]);
                                 ChildrenUpdated = true;
@@ -973,6 +979,14 @@ namespace TrueTrace {
                             int Index = RenderQue.IndexOf(UpdateQue[i]); 
                             RenderQue.RemoveAt(Index); 
                             RenderTransforms.RemoveAt(Index);
+                            UpdateQue[i].Reset(1);
+                            BuildQue.Add(UpdateQue[i]);
+                        } else if(UpdateQue[i].ExistsInQue == 1) {
+                            int Index = BuildQue.IndexOf(UpdateQue[i]); 
+                            BuildQue.RemoveAt(Index); 
+                            UpdateQue[i].Reset(1);
+                            BuildQue.Add(UpdateQue[i]);
+                        } else if (UpdateQue[i].ExistsInQue == -1) {
                             UpdateQue[i].Reset(1);
                             BuildQue.Add(UpdateQue[i]);
                         }
@@ -1052,13 +1066,20 @@ namespace TrueTrace {
             BuildQue = new List<ParentObject>(GetComponentsInChildren<ParentObject>());
             RunningTasks = 0;
             InstanceData.EditorBuild();
-            RunningTasks = BuildQue.Count;
-            for (int i = 0; i < BuildQue.Count; i++)
+            int QueCount = BuildQue.Count;
+            for(int i = QueCount - 1; i >= 0; i--) {
+                if(!BuildQue[i].enabled) BuildQue.RemoveAt(i);
+            }
+
+            QueCount = BuildQue.Count;
+            RunningTasks = QueCount;
+            for (int i = 0; i < QueCount; i++)
             {
                 var CurrentRep = i;
                 BuildQue[CurrentRep].LoadData();
                 BuildQue[CurrentRep].AsyncTask = Task.Run(() => { BuildQue[CurrentRep].BuildTotal(); RunningTasks--; });
                 BuildQue[CurrentRep].ExistsInQue = 1;
+                BuildQue[CurrentRep].QueInProgress = 1;
             }
             didstart = false;
         }
@@ -1075,15 +1096,23 @@ namespace TrueTrace {
             InstanceAddQue = new List<InstancedObject>(GetComponentsInChildren<InstancedObject>());
             InstanceData.BuildCombined();
             RunningTasks = 0;
-            for (int i = 0; i < TempQue.Count; i++)
+            int QueCount = TempQue.Count;
+            for(int i = QueCount - 1; i >= 0; i--) {
+                if(!TempQue[i].enabled) TempQue.RemoveAt(i);
+            }
+
+            QueCount = TempQue.Count;
+
+            for (int i = 0; i < QueCount; i++)
             {
                 if(TempQue[i].transform.parent != null && TempQue[i].transform.parent.name == "InstancedStorage") continue;
                 if (TempQue[i].HasCompleted && !TempQue[i].NeedsToUpdate) {
                     TempQue[i].ExistsInQue = 0;
+                    TempQue[i].QueInProgress = 0;
                     RenderQue.Add(TempQue[i]);
                     RenderTransforms.Add(TempQue[i].gameObject.transform);
                 }
-                else {TempQue[i].ExistsInQue = 1; BuildQue.Add(TempQue[i]); RunningTasks++;}
+                else {TempQue[i].ExistsInQue = 1; TempQue[i].QueInProgress = 1; BuildQue.Add(TempQue[i]); RunningTasks++;}
             }
             for (int i = 0; i < BuildQue.Count; i++)
             {

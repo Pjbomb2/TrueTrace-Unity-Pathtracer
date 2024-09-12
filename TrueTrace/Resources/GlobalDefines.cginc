@@ -9,7 +9,7 @@
 // #define IgnoreGlassMain
 // #define FadeMapping
 // #define PointFiltering
-// #define StainedGlassShadows
+#define StainedGlassShadows
 // #define IgnoreBackfacing
 // #define WhiteLights
 #define LBVH

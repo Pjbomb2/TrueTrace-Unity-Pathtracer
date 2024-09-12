@@ -16,11 +16,16 @@ namespace TrueTrace {
         private ComputeShader ToneMapper;
         private ComputeShader TAAU;
         private ComputeShader Sharpen;
+        private ComputeShader FXAAShader;
         bool BloomInitialized = false;
         bool TAAInitialized = false;
         bool UpscalerInitialized = false;
         bool TAAUInitialized = false;
         bool SharpenInitialized = false;
+        bool FXAAInitialized = false;
+
+        public RenderTexture FXAAFlopper;
+        private int FXAAFXAAKernel;
 
 
         public RenderTexture _TAAPrev;
@@ -62,8 +67,6 @@ namespace TrueTrace {
         private int threadGroupsX;
         private int threadGroupsY;
 
-        private int threadGroupsX2;
-        private int threadGroupsY2;
 
         private int BloomDownsampleKernel;
         private int BloomLowPassKernel;
@@ -102,6 +105,8 @@ namespace TrueTrace {
                     TempTexTAA.ReleaseSafe();
                     TempTexTAA2.ReleaseSafe();
                     SharpenTex.ReleaseSafe();
+                    FXAAFlopper.ReleaseSafe();
+                    FXAAInitialized = false;
                 BloomInitialized = false;
                 TAAInitialized = false;
                 UpscalerInitialized = false;
@@ -114,7 +119,7 @@ namespace TrueTrace {
             Intermediate.ReleaseSafe();
             SuperIntermediate.ReleaseSafe();
             UpScalerLightingDataTexture.ReleaseSafe();
-
+            FXAAFlopper.ReleaseSafe();
             TempTexTAA.ReleaseSafe();
             TempTexTAA2.ReleaseSafe();
 
@@ -147,10 +152,13 @@ namespace TrueTrace {
             if (ToneMapper == null) { ToneMapper = Resources.Load<ComputeShader>("PostProcess/Compute/ToneMap"); }
             if (TAAU == null) { TAAU = Resources.Load<ComputeShader>("PostProcess/Compute/TAAU"); }
             if (Sharpen == null) { Sharpen = Resources.Load<ComputeShader>("PostProcess/Compute/Sharpen"); }
+            if (FXAAShader == null) { FXAAShader = Resources.Load<ComputeShader>("PostProcess/Compute/FXAA"); }
 
 
             TAAUKernel = TAAU.FindKernel("TAAU");
             TAAUCopyKernel = TAAU.FindKernel("Copy");
+            
+            FXAAFXAAKernel = FXAAShader.FindKernel("FXAA");
 
 
             BloomDownsampleKernel = Bloom.FindKernel("Downsample");
@@ -173,6 +181,9 @@ namespace TrueTrace {
             Bloom.SetInt("screen_width", Screen.width);
             Bloom.SetInt("screen_height", Screen.height);
 
+            FXAAShader.SetInt("screen_width", Screen.width);
+            FXAAShader.SetInt("screen_height", Screen.height);
+
             Sharpen.SetInt("screen_width", Screen.width);
             Sharpen.SetInt("screen_height", Screen.height);
 
@@ -188,13 +199,11 @@ namespace TrueTrace {
             threadGroupsX = Mathf.CeilToInt(SourceWidth / 16.0f);
             threadGroupsY = Mathf.CeilToInt(SourceHeight / 16.0f);
 
-            threadGroupsX2 = Mathf.CeilToInt(Screen.width / 16.0f);
-            threadGroupsY2 = Mathf.CeilToInt(Screen.height / 16.0f);
-
             BloomInitialized = false;
             TAAInitialized = false;
             UpscalerInitialized = false;
             SharpenInitialized = false;
+            FXAAInitialized = false;
             InitRenderTexture();
             Initialized = true;
         }
@@ -209,6 +218,9 @@ namespace TrueTrace {
             TestBuffer.Add(1);
             ExposureBuffer?.Release(); ExposureBuffer = new ComputeBuffer(1, sizeof(float)); ExposureBuffer.SetData(TestBuffer);
 
+            FXAAShader.SetInt("screen_width", Screen.width);
+            FXAAShader.SetInt("screen_height", Screen.height);
+
             Bloom.SetInt("screen_width", Screen.width);
             Bloom.SetInt("screen_height", Screen.height);
             AutoExpose.SetInt("screen_width", Screen.width);
@@ -222,14 +234,11 @@ namespace TrueTrace {
             threadGroupsX = Mathf.CeilToInt(SourceWidth / 16.0f);
             threadGroupsY = Mathf.CeilToInt(SourceHeight / 16.0f);
 
-            threadGroupsX2 = Mathf.CeilToInt(Screen.width / 16.0f);
-            threadGroupsY2 = Mathf.CeilToInt(Screen.height / 16.0f);
-
 
             InitRenderTexture(true);
         }
 
-        public void ValidateInit(bool BloomInit, bool TAAInit, bool IsUpscaling, bool UseTAAU, bool SharpenInit) {
+        public void ValidateInit(bool BloomInit, bool TAAInit, bool IsUpscaling, bool UseTAAU, bool SharpenInit, bool FXAAInit) {
             if(!BloomInit) {
                 if(BloomInitialized) {
                     BloomIntermediate.ReleaseSafe();
@@ -263,6 +272,12 @@ namespace TrueTrace {
                         TAAB.ReleaseSafe();
                         TAAUInitialized = false;
                     }
+                }
+            }
+            if(!FXAAInitialized) {
+                if(FXAAInitialized) {
+                    FXAAFlopper.ReleaseSafe();
+                    FXAAInitialized = false;
                 }
             }
         }
@@ -366,7 +381,7 @@ namespace TrueTrace {
             AutoExpose.SetFloat("frame_time", Time.deltaTime);
             cmd.DispatchCompute(AutoExpose, AutoExposeKernel, 1, 1, 1);
             cmd.SetComputeTextureParam(AutoExpose, AutoExposeFinalizeKernel, "OutTex", _converged);
-            cmd.DispatchCompute(AutoExpose, AutoExposeFinalizeKernel, threadGroupsX2, threadGroupsY2, 1);
+            cmd.DispatchCompute(AutoExpose, AutoExposeFinalizeKernel, threadGroupsX, threadGroupsY, 1);
             cmd.EndSample("Auto Exposure");
 
 
@@ -389,7 +404,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorIn", _Final);
             cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorOut", TempTexTAA);
             cmd.BeginSample("TAA Prepare Kernel");
-            cmd.DispatchCompute(TAA, TAAPrepareKernel, threadGroupsX2, threadGroupsY2, 1);
+            cmd.DispatchCompute(TAA, TAAPrepareKernel, threadGroupsX, threadGroupsY, 1);
             cmd.EndSample("TAA Prepare Kernel");
 
 
@@ -399,14 +414,14 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(TAA, TAAKernel, "TAAPrevRead", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorOut", TempTexTAA2);
             cmd.BeginSample("TAA Main Kernel");
-            cmd.DispatchCompute(TAA, TAAKernel, threadGroupsX2, threadGroupsY2, 1);
+            cmd.DispatchCompute(TAA, TAAKernel, threadGroupsX, threadGroupsY, 1);
             cmd.EndSample("TAA Main Kernel");
 
             cmd.SetComputeTextureParam(TAA, TAAFinalizeKernel, "TAAPrev", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAFinalizeKernel, "ColorOut", _Final);
             cmd.SetComputeTextureParam(TAA, TAAFinalizeKernel, "ColorIn", TempTexTAA2);
             cmd.BeginSample("TAA Finalize Kernel");
-            cmd.DispatchCompute(TAA, TAAFinalizeKernel, threadGroupsX2, threadGroupsY2, 1);
+            cmd.DispatchCompute(TAA, TAAFinalizeKernel, threadGroupsX, threadGroupsY, 1);
             cmd.EndSample("TAA Finalize Kernel");
         }
 
@@ -447,7 +462,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "Output", UpScalerLightingDataTexture);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "FinalOutput", Output);
             cmd.BeginSample("Upsample Main Kernel");
-            cmd.DispatchCompute(Upscaler, UpsampleKernel, threadGroupsX2, threadGroupsY2, 1);
+            cmd.DispatchCompute(Upscaler, UpsampleKernel, threadGroupsX, threadGroupsY, 1);
             cmd.EndSample("Upsample Main Kernel");
 
 
@@ -456,7 +471,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel + 1, "Input", UpScalerLightingDataTexture);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel + 1, "FinalOutput", Output);
             cmd.BeginSample("Upsample Blur Kernel");
-            cmd.DispatchCompute(Upscaler, UpsampleKernel + 1, threadGroupsX2, threadGroupsY2, 1);
+            cmd.DispatchCompute(Upscaler, UpsampleKernel + 1, threadGroupsX, threadGroupsY, 1);
             cmd.EndSample("Upsample Blur Kernel");
             
 
@@ -474,7 +489,7 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(ToneMapper,"screen_height", Output.height);
             cmd.SetComputeTextureParam(ToneMapper, 0, "Result", Output);
             cmd.SetComputeTextureParam(ToneMapper, 0, "LUT", ToneMapSelection == 5 ? LUT2 : LUT);
-            cmd.DispatchCompute(ToneMapper, 0, threadGroupsX2, threadGroupsY2, 1);
+            cmd.DispatchCompute(ToneMapper, 0, threadGroupsX, threadGroupsY, 1);
             cmd.EndSample("ToneMap");
         }
         private void InitializeTAAU() {
@@ -499,7 +514,7 @@ namespace TrueTrace {
             TAAU.SetTextureFromGlobal(TAAUKernel, "Albedo", "_CameraGBufferTexture0");
             TAAU.SetTextureFromGlobal(TAAUKernel, "Albedo2", "_CameraGBufferTexture1");
             TAAU.SetTextureFromGlobal(TAAUKernel, "TEX_FLAT_MOTION", "_CameraMotionVectorsTexture");
-            cmd.DispatchCompute(TAAU, TAAUKernel, threadGroupsX2, threadGroupsY2, 1);
+            cmd.DispatchCompute(TAAU, TAAUKernel, threadGroupsX, threadGroupsY, 1);
             cmd.EndSample("TAAU");
         }
 
@@ -517,7 +532,24 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(Sharpen, 0, "Input", SharpenTex);
             cmd.SetComputeTextureParam(Sharpen, 0, "Result", Output);
             Sharpen.SetFloat("Sharpness", Sharpness);
-            cmd.DispatchCompute(Sharpen, 0, threadGroupsX2, threadGroupsY2, 1);
+            cmd.DispatchCompute(Sharpen, 0, threadGroupsX, threadGroupsY, 1);
+
+        }
+
+
+        private void InitializeFXAA() {
+            CommonFunctions.CreateRenderTexture(ref FXAAFlopper, Screen.width, Screen.height, CommonFunctions.RTFull4);
+            FXAAInitialized = true;
+        }
+        public void ExecuteFXAA(ref RenderTexture Output, CommandBuffer cmd) {
+            if(!FXAAInitialized) InitializeFXAA();
+            if (FXAAShader == null) { FXAAShader = Resources.Load<ComputeShader>("PostProcess/Compute/FXAA"); }
+            FXAAShader.SetInt("screen_width", Screen.width);
+            FXAAShader.SetInt("screen_height", Screen.height);
+            cmd.CopyTexture(Output, 0, 0, FXAAFlopper, 0, 0);
+            cmd.SetComputeTextureParam(FXAAShader, FXAAFXAAKernel, "Input", FXAAFlopper);
+            cmd.SetComputeTextureParam(FXAAShader, FXAAFXAAKernel, "Result", Output);
+            cmd.DispatchCompute(FXAAShader, FXAAFXAAKernel, threadGroupsX, threadGroupsY, 1);
 
         }
 

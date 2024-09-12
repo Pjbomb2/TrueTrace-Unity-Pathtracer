@@ -12,7 +12,14 @@ namespace TrueTrace {
             RayMaster.LocalTTSettings.UseASVGF = true;
             RayMaster.LocalTTSettings.UseOIDN = false;
             RayMaster.LocalTTSettings.Accumulate = true;
-            RayMaster.LocalTTSettings.OIDNFrameCount = 0;
+            RayMaster.LocalTTSettings.ClayMode = false;
+            RayMaster.LocalTTSettings.OIDNFrameCount = 50;
+        }
+        public void Exit() {
+            Application.Quit();
+        }
+        public void ToggleClay(bool BoolIn) {
+            RayMaster.LocalTTSettings.ClayMode = BoolIn;
         }
         public void ToggleASVGF(bool BoolIn) {
             RayMaster.LocalTTSettings.UseASVGF = BoolIn;
