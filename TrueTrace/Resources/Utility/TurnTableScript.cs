@@ -25,7 +25,7 @@ namespace TrueTrace {
             public int VerticalResolution;
             public Vector3 Center;
             public float Distance;
-            public float Pitch;
+            [Range(-89.9f, 89.9f)]public float Pitch;
         }
         public CamData[] CamSettings;
 

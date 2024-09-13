@@ -158,7 +158,7 @@ float4 fxaa_3_11(float2 uv, float2 uv_step) {
 void FXAA (uint3 id : SV_DispatchThreadID)
 {
     if(any(id.xy >= int2(screen_width, screen_height))) return;
-    float4 Output = fxaa_3_11(id.xy / float2(screen_width, screen_height), rcp(float2(screen_width, screen_height)));
+    float4 Output = fxaa_3_11((id.xy + 0.5f) / float2(screen_width, screen_height), rcp(float2(screen_width, screen_height)));
 
     Result[id.xy] = Output;
 }
