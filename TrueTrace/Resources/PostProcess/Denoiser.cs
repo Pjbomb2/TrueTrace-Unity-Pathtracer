@@ -196,8 +196,8 @@ namespace TrueTrace {
             TAA.SetInt("screen_height", Screen.height);
 
 
-            threadGroupsX = Mathf.CeilToInt(SourceWidth / 16.0f);
-            threadGroupsY = Mathf.CeilToInt(SourceHeight / 16.0f);
+            threadGroupsX = Mathf.CeilToInt(Screen.width / 16.0f);
+            threadGroupsY = Mathf.CeilToInt(Screen.height / 16.0f);
 
             BloomInitialized = false;
             TAAInitialized = false;
@@ -231,8 +231,8 @@ namespace TrueTrace {
             TAA.SetInt("screen_width", Screen.width);
             TAA.SetInt("screen_height", Screen.height);
 
-            threadGroupsX = Mathf.CeilToInt(SourceWidth / 16.0f);
-            threadGroupsY = Mathf.CeilToInt(SourceHeight / 16.0f);
+            threadGroupsX = Mathf.CeilToInt(Screen.width / 16.0f);
+            threadGroupsY = Mathf.CeilToInt(Screen.height / 16.0f);
 
 
             InitRenderTexture(true);
