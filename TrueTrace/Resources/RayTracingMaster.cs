@@ -18,7 +18,6 @@ namespace TrueTrace {
         private Denoiser Denoisers;
         private ASVGF ASVGFCode;
         private bool Abandon = false;
-        public bool DebugValue = false;
         #if UseOIDN
             private UnityDenoiserPlugin.DenoiserPluginWrapper OIDNDenoiser;
         #endif
@@ -169,7 +168,7 @@ namespace TrueTrace {
 
         [HideInInspector] public bool DoPanorama = false;
         [HideInInspector] public bool DoChainedImages = false;
-        [SerializeField] public TTSettings LocalTTSettings;
+        [HideInInspector] [SerializeField] public TTSettings LocalTTSettings;
 
         public static bool SceneIsRunning = false;
 
@@ -556,7 +555,6 @@ namespace TrueTrace {
             SetInt("MaterialCount", Assets.MatCount, cmd);
             SetInt("PartialRenderingFactor", LocalTTSettings.DoPartialRendering ? LocalTTSettings.PartialRenderingFactor : 1, cmd);
 
-            SetBool("DebugValue", DebugValue);
             SetBool("IsFocusing", IsFocusing);
             SetBool("DoPanorama", DoPanorama);
             SetBool("ClayMode", LocalTTSettings.ClayMode);
@@ -573,7 +571,7 @@ namespace TrueTrace {
             SetBool("DoPartialRendering", LocalTTSettings.DoPartialRendering);
             SetBool("UseTransmittanceInNEE", LocalTTSettings.UseTransmittanceInNEE);
             OIDNGuideWrite = (FramesSinceStart == LocalTTSettings.OIDNFrameCount);
-            SetBool("OIDNGuideWrite", OIDNGuideWrite);
+            SetBool("OIDNGuideWrite", OIDNGuideWrite && LocalTTSettings.UseOIDN);
             SetBool("DiffRes", LocalTTSettings.RenderScale != 1.0f);
             SetBool("DoPartialRendering", LocalTTSettings.DoPartialRendering);
             SetBool("DoExposure", LocalTTSettings.PPExposure);

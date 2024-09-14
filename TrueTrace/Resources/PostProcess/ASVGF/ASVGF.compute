@@ -643,29 +643,17 @@ void Gradient_Atrous(uint3 id : SV_DispatchThreadID)
 
 	float2 filtered_lf = 0;
 	float2 filtered_hf_spec = 0;
-	[branch] switch (iteration) {
-	case 0: filtered_lf = filter_image(TEX_ASVGF_GRAD_LF_PING, id.xy); filtered_hf_spec = filter_image(TEX_ASVGF_GRAD_HF_SPEC_PING, id.xy); break;
-	case 1: filtered_lf = filter_image(TEX_ASVGF_GRAD_LF_PONG, id.xy); filtered_hf_spec = filter_image(TEX_ASVGF_GRAD_HF_SPEC_PONG, id.xy); break;
-	case 2: filtered_lf = filter_image(TEX_ASVGF_GRAD_LF_PING, id.xy); filtered_hf_spec = filter_image(TEX_ASVGF_GRAD_HF_SPEC_PING, id.xy); break;
-	case 3: filtered_lf = filter_image(TEX_ASVGF_GRAD_LF_PONG, id.xy); break;
-	case 4: filtered_lf = filter_image(TEX_ASVGF_GRAD_LF_PING, id.xy); break;
-	case 5: filtered_lf = filter_image(TEX_ASVGF_GRAD_LF_PONG, id.xy); break;
-	case 6:
+	if(iteration < 3) {
+		IMG_ASVGF_GRAD_HF_SPEC_PING[ipos] = filter_image(TEX_ASVGF_GRAD_HF_SPEC_PING, id.xy);
+	}
+	if(iteration < 6) {
+		filtered_lf = filter_image(TEX_ASVGF_GRAD_LF_PING, id.xy);
+	} else {
 		filtered_lf = filter_image(TEX_ASVGF_GRAD_LF_PING, id.xy);
 		filtered_lf.x = get_gradient((exp(filtered_lf.x) - 1) * 1024.0f * 1024.0f, (exp(filtered_lf.y) - 1) * 1024.0f * 1024.0f);
 		filtered_lf.y = 0;
-		break;
 	}
-
-	[branch] switch (iteration) {
-	case 0: IMG_ASVGF_GRAD_LF_PONG[ipos] = filtered_lf; IMG_ASVGF_GRAD_HF_SPEC_PONG[ipos] = filtered_hf_spec; break;
-	case 1: IMG_ASVGF_GRAD_LF_PING[ipos] = filtered_lf; IMG_ASVGF_GRAD_HF_SPEC_PING[ipos] = filtered_hf_spec; break;
-	case 2: IMG_ASVGF_GRAD_LF_PONG[ipos] = filtered_lf; IMG_ASVGF_GRAD_HF_SPEC_PONG[ipos] = filtered_hf_spec; break;
-	case 3: IMG_ASVGF_GRAD_LF_PING[ipos] = filtered_lf; break;
-	case 4: IMG_ASVGF_GRAD_LF_PONG[ipos] = filtered_lf; break;
-	case 5: IMG_ASVGF_GRAD_LF_PING[ipos] = filtered_lf; break;
-	case 6: IMG_ASVGF_GRAD_LF_PONG[ipos] = filtered_lf; break;
-	}
+	IMG_ASVGF_GRAD_LF_PING[ipos] = filtered_lf;
 
 }
 
@@ -916,7 +904,6 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 	grad_lf = clamp(grad_lf, 0, 1);
 	float2 grad_hf_spec = TEX_ASVGF_GRAD_HF_SPEC_PONG[ipos / GRAD_DWN].rg;
 	grad_hf_spec = clamp(grad_hf_spec, 0, 1);
-
 	if (temporal_sample_valid_diff)
 	{
 		// Compute the antilag factors based on the gradients

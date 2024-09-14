@@ -70,7 +70,6 @@ void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadI
     GlobalRays[pixel_index] = globray;
 }
 
-bool DebugValue;
 bool DoPanorama;
 float2 Segment;
 #pragma kernel GeneratePanorama
@@ -80,10 +79,7 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
     const uint pixel_index = id.y * screen_width + id.x;
     float2 jitter = ((random(0, pixel_index) - 0.5));
     if(OIDNGuideWrite) jitter = 0;
-    float2 uv = float2((id.xy) / float2(screen_width, screen_height));
-    if(DebugValue) {
-        uv = float2((id.xy + jitter) / float2(screen_width, screen_height));
-    }
+    float2 uv = float2((id.xy + jitter) / float2(screen_width, screen_height));
     SmallerRay ray;
     if(DoPanorama) {
         uv.y = 1.0f - uv.y;
