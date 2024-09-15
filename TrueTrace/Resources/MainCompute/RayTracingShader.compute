@@ -28,6 +28,7 @@ float SecondaryBackgroundIntensity;
 bool ImprovedPrimaryHit;
 bool ClayMode;
 bool UseTransmittanceInNEE;
+float OIDNBlendRatio;
 //These are here purely for the Atrous
 #ifdef HardwareRT
     #include "UnityRayQuery.cginc"
@@ -847,7 +848,7 @@ RWStructuredBuffer<float3> NormalBuffer;
 [numthreads(16, 16, 1)]
 void OIDNtoTTKernel(uint3 id : SV_DispatchThreadID) {
     if(id.x >= screen_width || id.y >= screen_height) return;
-    Result[id.xy] = float4(OutputBuffer[id.x + id.y * screen_width], 1);
+    Result[id.xy] = float4(lerp(OutputBuffer[id.x + id.y * screen_width], Result[id.xy].xyz, 1.0f - OIDNBlendRatio), 1);
 }
 
 

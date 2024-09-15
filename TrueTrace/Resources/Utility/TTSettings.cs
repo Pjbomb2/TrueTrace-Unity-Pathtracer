@@ -46,6 +46,7 @@ namespace TrueTrace {
         [SerializeField] public Vector3 ClayColor = new Vector3(0.5f, 0.5f, 0.5f);
         [SerializeField] public Vector3 GroundColor = new Vector3(0.1f, 0.1f, 0.1f);
         [SerializeField] public int FireflyFrameCount = 0;
+        [SerializeField] public int FireflyFrameInterval = 1;
         [SerializeField] public float FireflyStrength = 1.0f;
         [SerializeField] public float FireflyOffset = 0.0f;
         [SerializeField] public int OIDNFrameCount = 0;
@@ -67,5 +68,6 @@ namespace TrueTrace {
         [SerializeField] public float SecondarySkyDesaturate = 0.0f;
         [SerializeField] public bool MatChangeResetsAccum = false;
         [SerializeField] public bool PPFXAA = false;
+        [SerializeField] public float OIDNBlendRatio = 1.0f;
     }
 }

@@ -11,6 +11,7 @@ using System.Reflection;
 namespace TrueTrace {
     public class PanoramaDoer : MonoBehaviour
     {
+        public bool DoPanorama = true;
         RayTracingMaster RayMaster;
         public Camera[] Cameras;
         public float TimeBetweenSegments = 10f;
@@ -22,6 +23,31 @@ namespace TrueTrace {
         public int HorizontalSegments = 10;
         private int CurrentSegment = 0;
         private Texture2D[] TexArray; 
+
+void AddResolution(int width, int height, string label)
+    {
+        Type gameViewSize = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSize");
+        Type gameViewSizes = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizes");
+        Type gameViewSizeType = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizeType");
+        Type generic = typeof(ScriptableSingleton<>).MakeGenericType(gameViewSizes);
+        MethodInfo getGroup = gameViewSizes.GetMethod("GetGroup");
+        object instance = generic.GetProperty("instance").GetValue(null, null);         
+        object group = getGroup.Invoke(instance, new object[] { (int)GameViewSizeGroupType.Standalone });       
+        Type[] types = new Type[] { gameViewSizeType, typeof(int), typeof(int), typeof(string)};
+        ConstructorInfo constructorInfo = gameViewSize.GetConstructor(types);
+        object entry = constructorInfo.Invoke(new object[] { 1, width, height, label });
+        MethodInfo addCustomSize = getGroup.ReturnType.GetMethod("AddCustomSize");
+        addCustomSize.Invoke(group, new object[] { entry });
+    }
+
+
+    void SetResolution(int index)
+    {
+        Type gameView = typeof(Editor).Assembly.GetType("UnityEditor.GameView");
+        PropertyInfo selectedSizeIndex = gameView.GetProperty("selectedSizeIndex", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        EditorWindow window = EditorWindow.GetWindow(gameView);
+        selectedSizeIndex.SetValue(window, index, null);
+    }
 
         void RemoveResolution(int index)
         {
@@ -54,6 +80,17 @@ namespace TrueTrace {
             Application.runInBackground = true;
             RayMaster.DoPanorama = false;
             RayMaster.DoChainedImages = false;
+            if(DoPanorama) {
+                AddResolution(Mathf.CeilToInt((float)FinalAtlasSize.x / (float)HorizontalSegments), FinalAtlasSize.y, "TempPanoramaSize");
+                SetResolution(GetCount() - 1);
+            } else {
+                AddResolution(FinalAtlasSize.x, FinalAtlasSize.y, "TempPanoramaSize");
+                SetResolution(GetCount() - 1);
+                HorizontalSegments = 1;
+            }
+            Init();
+            RayMaster.DoPanorama = DoPanorama;
+            RayMaster.DoChainedImages = true;
         }
         public void OnDisable() {
             if(RayMaster.DoChainedImages) RemoveResolution(GetCount() - 1);
@@ -96,6 +133,8 @@ namespace TrueTrace {
             if(!(Cameras == null || Cameras.Length == 0)) {
                 Cameras[0].gameObject.SetActive(true);
                 for(int i = 1; i < Cameras.Length; i++) Cameras[i].gameObject.SetActive(false);
+                Camera[] AllCameras = GameObject.FindObjectsOfType<Camera>();
+                for(int i = 0; i < AllCameras.Length; i++) if(!Cameras[0].Equals(AllCameras[i])) AllCameras[i].gameObject.SetActive(false);
             }
 
         }

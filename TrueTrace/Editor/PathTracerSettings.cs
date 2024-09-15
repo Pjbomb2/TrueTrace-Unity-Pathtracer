@@ -94,6 +94,7 @@ namespace TrueTrace {
          [SerializeField] public float SkyDesaturate = 0;
          [SerializeField] public float SecondarySkyDesaturate = 0;
          [SerializeField] public int FireflyFrameCount = 0;
+         [SerializeField] public int FireflyFrameInterval = 1;
          [SerializeField] public float FireflyStrength = 1.0f;
          [SerializeField] public float FireflyOffset = 0;
          [SerializeField] public int OIDNFrameCount = 0;
@@ -104,6 +105,7 @@ namespace TrueTrace {
          [SerializeField] public Vector2 HDRIScale = Vector2.one;
          [SerializeField] public bool UseTransmittanceInNEE = true;
          [SerializeField] public bool MatChangeResetsAccum = false;
+         [SerializeField] public float OIDNBlendRatio = 1.0f;
 
 
          public void SetGlobalDefines(string DefineToSet, bool SetValue) {
@@ -158,12 +160,7 @@ namespace TrueTrace {
             EditorPrefs.SetString("EditModeFunctions", data);
          }
 
-         [Shortcut("TTBVHBuild", KeyCode.None, ShortcutModifiers.Action)]
-         public static void BuildBVHShortcut() {
-            EditorUtility.SetDirty(GameObject.Find("Scene").GetComponent<AssetManager>());
-            BuildWatch.Start();
-            GameObject.Find("Scene").GetComponent<AssetManager>().EditorBuild();
-         }
+
          List<List<GameObject>> Objects;
          List<Mesh> SourceMeshes;
          private static TTStopWatch BuildWatch = new TTStopWatch("Total Scene Build Time");
@@ -1427,6 +1424,11 @@ Toolbar toolbar;
          Toggle ClayModeToggle = new Toggle() {value = ClayMode, text = "Use ClayMode"};
          ClayModeToggle.RegisterValueChangedCallback(evt => {ClayMode = evt.newValue; RayMaster.LocalTTSettings.ClayMode = ClayMode; if(evt.newValue) HardSettingsMenu.Insert(HardSettingsMenu.IndexOf(ClayModeToggle) + 1, ClayColorBox); else HardSettingsMenu.Remove(ClayColorBox);});
 
+         Slider OIDNBlendRatioSlider = new Slider() {label = "OIDN Blend Ratio: ", value = OIDNBlendRatio, highValue = 1.0f, lowValue = 0.0f};
+         OIDNBlendRatioSlider.style.width = 200;
+         OIDNBlendRatioSlider.ElementAt(0).style.minWidth = 65;
+         OIDNBlendRatioSlider.RegisterValueChangedCallback(evt => {OIDNBlendRatio = evt.newValue; RayMaster.LocalTTSettings.OIDNBlendRatio = OIDNBlendRatio;});
+
          ColorField ClayColorField = new ColorField();
          ClayColorField.label = "Clay Color: ";
          ClayColorField.value = new Color(ClayColor.x, ClayColor.y, ClayColor.z, 1.0f);
@@ -1511,6 +1513,7 @@ Toolbar toolbar;
          HardSettingsMenu.Add(DingToggle);
          HardSettingsMenu.Add(MaterialHelperToggle);
          HardSettingsMenu.Add(MatChangeResetsAccumToggle);
+         HardSettingsMenu.Add(OIDNBlendRatioSlider);
          if(ClayMode) HardSettingsMenu.Add(ClayColorBox);
          VisualElement Spacer = new VisualElement();
          Spacer.style.height = 10;
@@ -1604,7 +1607,20 @@ Toolbar toolbar;
             Cleared = true;
          }
 
-         [Shortcut("TTScreenShot", KeyCode.None, ShortcutModifiers.Action)]
+         [Shortcut("TrueTrace/ScreenShot", KeyCode.None, ShortcutModifiers.Action)]
+         private static void TakeScreenShotHotkey() {
+            if(Application.isPlaying) {
+               TakeScreenshot();
+            }
+         }
+
+         [Shortcut("TrueTrace/RebuildBVH", KeyCode.None, ShortcutModifiers.Action)]
+         private static void RebuildBVHHotkey() {
+            EditorUtility.SetDirty(GameObject.Find("Scene").GetComponent<AssetManager>());
+            BuildWatch.Start();
+            GameObject.Find("Scene").GetComponent<AssetManager>().EditorBuild();
+         }
+
          public static void TakeScreenshot() {
             ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + GameObject.Find("Scene").GetComponent<RayTracingMaster>().SampleCount + " Samples.png");
             UnityEditor.AssetDatabase.Refresh();
@@ -1612,53 +1628,7 @@ Toolbar toolbar;
          bool HasNoMore = false;
 
 
-void AddResolution(int width, int height, string label)
-    {
-        Type gameViewSize = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSize");
-        Type gameViewSizes = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizes");
-        Type gameViewSizeType = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizeType");
-        Type generic = typeof(ScriptableSingleton<>).MakeGenericType(gameViewSizes);
-        MethodInfo getGroup = gameViewSizes.GetMethod("GetGroup");
-        object instance = generic.GetProperty("instance").GetValue(null, null);         
-        object group = getGroup.Invoke(instance, new object[] { (int)GameViewSizeGroupType.Standalone });       
-        Type[] types = new Type[] { gameViewSizeType, typeof(int), typeof(int), typeof(string)};
-        ConstructorInfo constructorInfo = gameViewSize.GetConstructor(types);
-        object entry = constructorInfo.Invoke(new object[] { 1, width, height, label });
-        MethodInfo addCustomSize = getGroup.ReturnType.GetMethod("AddCustomSize");
-        addCustomSize.Invoke(group, new object[] { entry });
-    }
- void RemoveResolution(int index)
-    {
-        Type gameViewSizes = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizes");
-        Type generic = typeof(ScriptableSingleton<>).MakeGenericType(gameViewSizes);
-        MethodInfo getGroup = gameViewSizes.GetMethod("GetGroup");
-        object instance = generic.GetProperty("instance").GetValue(null, null);
-        object group = getGroup.Invoke(instance, new object[] { (int)GameViewSizeGroupType.Standalone });
-        MethodInfo removeCustomSize = getGroup.ReturnType.GetMethod("RemoveCustomSize");
-        removeCustomSize.Invoke(group, new object[] { index });
-    }
 
-    int GetCount()
-    {
-        Type gameViewSizes = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizes");
-        Type generic = typeof(ScriptableSingleton<>).MakeGenericType(gameViewSizes);
-        MethodInfo getGroup = gameViewSizes.GetMethod("GetGroup");
-        object instance = generic.GetProperty("instance").GetValue(null, null);
-        PropertyInfo currentGroupType = instance.GetType().GetProperty("currentGroupType");
-        GameViewSizeGroupType groupType = (GameViewSizeGroupType)(int)currentGroupType.GetValue(instance, null);
-        object group = getGroup.Invoke(instance, new object[] { (int)groupType });
-        MethodInfo getBuiltinCount = group.GetType().GetMethod("GetBuiltinCount");
-        MethodInfo getCustomCount = group.GetType().GetMethod("GetCustomCount");
-        return (int)getBuiltinCount.Invoke(group, null) + (int)getCustomCount.Invoke(group, null);   
-    }
-
-    void SetResolution(int index)
-    {
-        Type gameView = typeof(Editor).Assembly.GetType("UnityEditor.GameView");
-        PropertyInfo selectedSizeIndex = gameView.GetProperty("selectedSizeIndex", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        EditorWindow window = EditorWindow.GetWindow(gameView);
-        selectedSizeIndex.SetValue(window, index, null);
-    }
         public void CreateGUI() {
             HasNoMore = false;
             if(!PlayerPrefs.HasKey("ScreenShotPath")) {
@@ -1782,6 +1752,7 @@ void AddResolution(int width, int height, string label)
            SkyDesaturate = RayMaster.LocalTTSettings.SkyDesaturate;
            SecondarySkyDesaturate = RayMaster.LocalTTSettings.SecondarySkyDesaturate;
            FireflyFrameCount = RayMaster.LocalTTSettings.FireflyFrameCount;
+           FireflyFrameInterval = RayMaster.LocalTTSettings.FireflyFrameInterval;
            OIDNFrameCount = RayMaster.LocalTTSettings.OIDNFrameCount;
            RayMaster.IsFocusing = false;
          }
@@ -1793,34 +1764,7 @@ void AddResolution(int width, int height, string label)
            ScreenShotButton = new Button(() => TakeScreenshot()) {text = "Take Screenshot"};
            ScreenShotButton.style.minWidth = 100;
 
-           Button PanoramaButton = new Button(() => {
-               var TempPan = GameObject.Find("Scene").GetComponent<PanoramaDoer>();
-               if(TempPan != null) {
-                  AddResolution(Mathf.CeilToInt((float)TempPan.FinalAtlasSize.x / (float)TempPan.HorizontalSegments), TempPan.FinalAtlasSize.y, "TempPanoramaSize");
-                  SetResolution(GetCount() - 1);
-                  TempPan.Init();
-                  RayMaster.DoPanorama = true;
-                  RayMaster.DoChainedImages = true;
-               } else {
-                  Debug.LogError("You need to add the PanoramaDoer to the Scene Gameobject");
-               }
-            }) {text = "Create Panorama"};
-           PanoramaButton.style.minWidth = 105;
 
-           Button ChainedImageButton = new Button(() => {
-            var TempPan = GameObject.Find("Scene").GetComponent<PanoramaDoer>();
-               if(TempPan != null) {
-                  AddResolution(TempPan.FinalAtlasSize.x, TempPan.FinalAtlasSize.y, "TempPanoramaSize");
-                  SetResolution(GetCount() - 1);
-                  TempPan.HorizontalSegments = 1;
-                  TempPan.Init();
-                  RayMaster.DoPanorama = false;
-                  RayMaster.DoChainedImages = true;
-               } else {
-                  Debug.LogError("You need to add the PanoramaDoer to the Scene Gameobject");
-               }
-            }) {text = "Create Qued Screenshots"};
-           ChainedImageButton.style.minWidth = 105;
 
            
            ClearButton = new Button(() => {
@@ -1846,14 +1790,12 @@ void AddResolution(int width, int height, string label)
            ButtonField1.style.flexDirection = FlexDirection.Row;
            ButtonField1.Add(BVHBuild);
            ButtonField1.Add(ScreenShotButton);
-           ButtonField1.Add(PanoramaButton);
            MainSource.Add(ButtonField1);
 
            Box ButtonField2 = new Box();
            ButtonField2.style.flexDirection = FlexDirection.Row;
            ButtonField2.Add(ClearButton);
            ButtonField2.Add(QuickStartButton);
-           ButtonField2.Add(ChainedImageButton);
            MainSource.Add(ButtonField2);
 
            Box TopEnclosingBox = new Box();
@@ -2172,6 +2114,12 @@ void AddResolution(int width, int height, string label)
                FireflyFrameCountField.RegisterValueChangedCallback(evt => {FireflyFrameCount = evt.newValue; RayMaster.LocalTTSettings.FireflyFrameCount = FireflyFrameCount;});
                FireflyFrameCountField.style.maxWidth = 345;
                FireflyFoldout.Add(FireflyFrameCountField);
+
+               IntegerField FireflyFrameIntervalField = new IntegerField() {value = FireflyFrameInterval, label = "Anti-Firefly Frame Interval"};
+               FireflyFrameIntervalField.ElementAt(0).style.minWidth = 65;
+               FireflyFrameIntervalField.RegisterValueChangedCallback(evt => {FireflyFrameIntervalField.value = Mathf.Max(evt.newValue, 1); FireflyFrameInterval = Mathf.Max(evt.newValue, 1); RayMaster.LocalTTSettings.FireflyFrameInterval = FireflyFrameInterval;});
+               FireflyFrameIntervalField.style.maxWidth = 345;
+               FireflyFoldout.Add(FireflyFrameIntervalField);
          
                Slider FireflyStrengthSlider = new Slider() {label = "Anti Firefly Strength: ", value = FireflyStrength, highValue = 1.0f, lowValue = 0.0f};
                FireflyStrengthSlider.RegisterValueChangedCallback(evt => {FireflyStrength = evt.newValue; RayMaster.LocalTTSettings.FireflyStrength = FireflyStrength;});

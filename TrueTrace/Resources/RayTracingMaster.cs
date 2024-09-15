@@ -536,6 +536,7 @@ namespace TrueTrace {
             SetFloat("BackgroundIntensity", LocalTTSettings.BackgroundIntensity.x, cmd);
             SetFloat("SecondaryBackgroundIntensity", LocalTTSettings.BackgroundIntensity.y, cmd);
             SetFloat("LEMEnergyScale", LocalTTSettings.LEMEnergyScale, cmd);
+            SetFloat("OIDNBlendRatio", LocalTTSettings.OIDNBlendRatio, cmd);
 
             SetInt("AlbedoAtlasSize", Assets.AlbedoAtlasSize, cmd);
             SetInt("LightMeshCount", Assets.LightMeshCount, cmd);
@@ -1086,7 +1087,7 @@ namespace TrueTrace {
             cmd.BeginSample("Firefly Blit");
             if (_FireFlyMaterial == null)
                 _FireFlyMaterial = new Material(Shader.Find("Hidden/FireFlyPass"));
-            if(LocalTTSettings.DoFirefly && SampleCount > LocalTTSettings.FireflyFrameCount) {
+            if(LocalTTSettings.DoFirefly && SampleCount > LocalTTSettings.FireflyFrameCount && (SampleCount - LocalTTSettings.FireflyFrameCount) % LocalTTSettings.FireflyFrameInterval == 0) {
                 _FireFlyMaterial.SetFloat("_Strength", LocalTTSettings.FireflyStrength);
                 _FireFlyMaterial.SetFloat("_Offset", LocalTTSettings.FireflyOffset);
 
