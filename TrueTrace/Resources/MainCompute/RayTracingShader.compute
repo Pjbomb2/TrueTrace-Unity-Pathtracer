@@ -707,8 +707,20 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
         MaterialIndex = _MeshData[bestHit.mesh_id].MaterialOffset + AggTris[bestHit.triangle_id].MatDat;
         TempMat = _Materials[MaterialIndex];
 
-        if(TempMat.AlbedoTex.x > 0) TempMat.surfaceColor *= SampleTexture(BaseUv, SampleAlbedo, TempMat);
-        float3 TempCol = TempMat.surfaceColor;
+        float3 TempCol = 1;
+        if(TempMat.AlbedoTex.x > 0) TempCol = SampleTexture(BaseUv, SampleAlbedo, TempMat);
+        if(TempMat.SecondaryAlbedoTex.x > 0) {
+            if(TempMat.SecondaryAlbedoMask.x > 0) {
+                if(SampleTexture(BaseUv, SampleSecondaryAlbedoMask, TempMat).x > 0.5f) {
+                    TempCol *= SampleTexture(BaseUv, SampleSecondaryAlbedo, TempMat).xyz;
+
+                }
+            }
+        }
+
+       TempMat.surfaceColor *= TempCol;
+
+        TempCol = TempMat.surfaceColor;
         #ifndef DX11
             Unity_Hue_Degrees_float(TempCol, TempMat.Hue * 500.0f, TempMat.surfaceColor);
         #endif

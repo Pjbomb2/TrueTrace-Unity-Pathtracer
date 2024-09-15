@@ -101,6 +101,8 @@ struct MaterialData {//56
 	int2 AlphaTex;//80
 	int2 MatCapMask;
 	int2 MatCapTex;
+	int2 SecondaryAlbedoTex;
+	int2 SecondaryAlbedoMask;
 	float3 surfaceColor;
 	float emission;
 	float3 EmissionColor;
@@ -133,6 +135,7 @@ struct MaterialData {//56
 	float3 BlendColor;
 	float BlendFactor;
 	float2 SecondaryTexScale;
+    float4 SecondaryAlbedoTextureScale;
 	float Rotation;
 	float ColorBleed;
 };

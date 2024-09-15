@@ -64,6 +64,7 @@ namespace TrueTrace {
                     BlendColor = OBJtoWrite.BlendColor[Index],
                     BlendFactor = OBJtoWrite.BlendFactor[Index],
                     MainTexScaleOffset = OBJtoWrite.MainTexScaleOffset[Index],
+                    SecondaryAlbedoTexScaleOffset = OBJtoWrite.SecondaryAlbedoTexScaleOffset[Index],
                     SecondaryTextureScale = OBJtoWrite.SecondaryTextureScale[Index],
                     Rotation = OBJtoWrite.Rotation[Index],
                     Flags = OBJtoWrite.Flags[Index],

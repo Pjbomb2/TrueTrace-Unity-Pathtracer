@@ -225,6 +225,16 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 				UV = AlignUV(UV * MatTex.surfaceColor.xy + MatTex.transmittanceColor.xy, MatTex.AlbedoTexScale, MatTex.AlbedoTex);
 				FinalCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, UV, 0);
 			break;
+			case SampleSecondaryAlbedo:
+				#ifdef PointFiltering
+					FinalCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.SecondaryAlbedoTextureScale, MatTex.SecondaryAlbedoTex, MatTex.Rotation), 0);
+				#else
+					FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.SecondaryAlbedoTextureScale, MatTex.SecondaryAlbedoTex, MatTex.Rotation), 0);
+				#endif
+			break;
+			case SampleSecondaryAlbedoMask:
+				FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.SecondaryAlbedoMask, MatTex.Rotation), 0);
+			break;
 		}
 	#else//BINDLESS
 		//AlbedoTexScale, AlbedoTex, and Rotation dont worry about, thats just for transforming to the atlas 
@@ -248,6 +258,8 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 			case SampleMatCap: TextureIndexAndChannel = MatTex.MatCapTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 			case SampleMatCapMask: TextureIndexAndChannel = MatTex.MatCapMask; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 			case SampleTerrainAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; UV = (UV * MatTex.surfaceColor.xy + MatTex.transmittanceColor.xy) * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleSecondaryAlbedo: TextureIndexAndChannel = MatTex.SecondaryAlbedoTex; UV = UV * MatTex.SecondaryAlbedoTextureScale.xy + MatTex.SecondaryAlbedoTextureScale.zw; break;
+			case SampleSecondaryAlbedoMask: TextureIndexAndChannel = MatTex.SecondaryAlbedoMask; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 		}
 		int TextureIndex = TextureIndexAndChannel.x - 1;
 		int TextureReadChannel = TextureIndexAndChannel.y;//0-3 is rgba, 4 is to just read all
@@ -1443,8 +1455,8 @@ inline float3 CalcPos(uint4 TriData) {
 #define GridBias 2
 #define BucketCount 32
 #define PropDepth 4
-#define MinSampleToContribute 7
-#define MaxSampleCount 128
+#define MinSampleToContribute 0
+#define MaxSampleCount 32
 #define CacheCapacity (4 * 1024 * 1024)
 
 RWByteAddressBuffer VoxelDataBufferA;

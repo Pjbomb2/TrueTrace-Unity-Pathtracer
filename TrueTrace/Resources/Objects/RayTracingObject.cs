@@ -37,6 +37,7 @@ namespace TrueTrace {
 		[SerializeField] public float[] NormalStrength;
 		[SerializeField] public Vector3[] BlendColor;
 		[SerializeField] public Vector4[] MainTexScaleOffset;
+		[SerializeField] public Vector4[] SecondaryAlbedoTexScaleOffset;
 		[SerializeField] public Vector2[] SecondaryTextureScale;
 		[SerializeField] public float[] Rotation;
 		[SerializeField] public float[] BlendFactor;
@@ -219,6 +220,7 @@ namespace TrueTrace {
 
 			InitializeArray<Vector2>(ref SecondaryTextureScale, new Vector2(1,1), Index);
 			InitializeArray<Vector4>(ref MainTexScaleOffset, new Vector4(1,1,0,0), Index);
+			InitializeArray<Vector4>(ref SecondaryAlbedoTexScaleOffset, new Vector4(1,1,0,0), Index);
 			InitializeArray<Vector3>(ref BlendColor, new Vector3(1,1,1), Index);
 			InitializeArray<float>(ref BlendFactor, 0, Index);
 			InitializeArray<float>(ref Hue, 0, Index);

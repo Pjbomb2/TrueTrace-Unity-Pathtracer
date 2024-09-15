@@ -259,6 +259,7 @@ float3 GetSkyRadiance(
 	float3 sun_direction, inout float3 transmittance, inout float3 debug) {
 	// camera /= 2048.0f;
 	// camera.y = max(camera.y, 0);
+	camera.y = max(0.3f, camera.y);
 	camera.y += bottom_radius;
 
 	// Compute the distance to the top atmosphere boundary along the view ray,
@@ -316,6 +317,7 @@ float3 GetSkyTransmittance(
 	float3 camera, float3 view_ray, float shadow_length,
 	float3 sun_direction) {
 	// camera /= 2048.0f;
+	camera.y = max(0.3f, camera.y);
 	camera.y += bottom_radius;
 
 	// Compute the distance to the top atmosphere boundary along the view ray,

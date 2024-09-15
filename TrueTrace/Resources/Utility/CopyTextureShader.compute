@@ -34,7 +34,7 @@ void NormalMapKernel (uint3 id : SV_DispatchThreadID) {
     float4 Col = InputTex.SampleLevel(my_point_clamp_sampler, id.xy / InputSize, 0);
     Col.g = 1.0f - Col.g;
 
-    ResultDouble[id.xy + Offset] = (Col.r == 1) ? Col.ag : Col.rg;
+    ResultDouble[id.xy + Offset] = (Col.r >= 0.99f) ? Col.ag : Col.rg;
 
 }
 

@@ -15,7 +15,7 @@
 #define LBVH
 // #define FasterLightSampling
 #define AccurateEmissionTex
-// #define RadianceCache
+#define RadianceCache
 // #define ImprovedRadCacheSpecularResponse
 // #define HighSpeedRadCache
 #define IndirectRetraceWeighting
@@ -73,6 +73,8 @@
 #define SampleMatCap 7
 #define SampleMatCapMask 8
 #define SampleTerrainAlbedo 9
+#define SampleSecondaryAlbedo 10
+#define SampleSecondaryAlbedoMask 11
 
 bool GetFlag(int FlagVar, int flag) {
     return (((int)FlagVar >> flag) & (int)1) == 1;

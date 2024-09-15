@@ -878,25 +878,13 @@ Toolbar toolbar;
                                        RoughnessMax,
                                        AlphaTexture,
                                        MatCapTexture,
-                                       MatCapMask
+                                       MatCapMask,
+                                       SecondaryAlbedoTexture,
+                                       SecondaryAlbedoTextureMask
                                        };
 
       VisualElement MaterialPairingMenu;
       ObjectField InputMaterialField;
-      PopupField<string> BaseColorField;
-      PopupField<string> BaseColorTextureField;
-      PopupField<string> NormalTextureField;
-      PopupField<string> EmissionTextureField;
-      PopupField<string> MetallicRangeField;
-      PopupField<string> MetallicTextureField;
-      PopupField<string> MetallicChannelField;
-      PopupField<string> RoughnessRangeField;
-      PopupField<string> RoughnessTextureField;
-      PopupField<string> RoughnessChannelField;
-      PopupField<string> MetallicRemapMinField;
-      PopupField<string> MetallicRemapMaxField;
-      PopupField<string> RoughnessRemapMinField;
-      PopupField<string> RoughnessRemapMaxField;
       Toggle GlassToggle;
       Toggle CutoutToggle;
       Toggle SmoothnessToggle;
@@ -995,6 +983,20 @@ Toolbar toolbar;
                case((int)Properties.MatCapMask):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.MatCapMask,
+                     ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                  });  
+               break;
+               case((int)Properties.SecondaryAlbedoTexture):
+                  MatShader.AvailableTextures.Add(new TexturePairs() {
+                     Purpose = (int)TexturePurpose.SecondaryAlbedoTexture,
+                     ReadIndex = -4,
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                  });  
+               break;
+               case((int)Properties.SecondaryAlbedoTextureMask):
+                  MatShader.AvailableTextures.Add(new TexturePairs() {
+                     Purpose = (int)TexturePurpose.SecondaryAlbedoTextureMask,
                      ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
                      TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
                   });  
@@ -1169,6 +1171,8 @@ Toolbar toolbar;
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Alpha Texture(Single Component)"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "MatCap Texture"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "MatCap Mask(Single Component)"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Secondary Base Texture"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Secondary Base Texture Mask(Single Component)"));
 
          _graphView.AddElement(OutputNode);
          Vector2 Pos = new Vector2(30, 10);
@@ -1180,6 +1184,16 @@ Toolbar toolbar;
             DialogueNode ThisNode = new DialogueNode();
             Edge ThisEdge = new Edge();
             switch((int)MatShader.AvailableTextures[i].Purpose) {
+               case((int)TexturePurpose.SecondaryAlbedoTextureMask):
+                  Pos.y = 1300;
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName, MatShader.AvailableTextures[i].ReadIndex);
+                  ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.SecondaryAlbedoTextureMask] as Port);
+               break;
+               case((int)TexturePurpose.SecondaryAlbedoTexture):
+                  Pos.y = 1220;
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName);
+                  ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.SecondaryAlbedoTexture] as Port);
+               break;
                case((int)TexturePurpose.MatCapMask):
                   Pos.y = 1140;
                   ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName, MatShader.AvailableTextures[i].ReadIndex);
@@ -2283,6 +2297,7 @@ Toolbar toolbar;
                                        TempRTO.BlendColor[NameIndex] = Ray.BlendColor;
                                        TempRTO.BlendFactor[NameIndex] = Ray.BlendFactor;
                                        TempRTO.MainTexScaleOffset[NameIndex] = Ray.MainTexScaleOffset;
+                                       TempRTO.SecondaryAlbedoTexScaleOffset[NameIndex] = Ray.SecondaryAlbedoTexScaleOffset;
                                        TempRTO.SecondaryTextureScale[NameIndex] = Ray.SecondaryTextureScale;
                                        TempRTO.Rotation[NameIndex] = Ray.Rotation;
                                        TempRTO.Flags[NameIndex] = Ray.Flags;

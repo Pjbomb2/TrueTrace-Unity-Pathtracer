@@ -290,6 +290,10 @@ namespace TrueTrace {
         public List<Texture> MatCapMasks;
         public List<int> MatCapMaskChannelIndex;
         public List<Texture> MatCapTexs;
+        public List<Texture> SecondaryAlbedoTexMasks;
+        public List<int> SecondaryAlbedoTexMaskChannelIndex;
+        public List<Texture> SecondaryAlbedoTexs;
+
 
         #if AccurateLightTris
             List<Color[]> EmissionTexPixels;
@@ -352,10 +356,13 @@ namespace TrueTrace {
             AlphaTexs = new List<Texture>();
             MatCapTexs = new List<Texture>();
             MatCapMasks = new List<Texture>();
+            SecondaryAlbedoTexs = new List<Texture>();
+            SecondaryAlbedoTexMasks = new List<Texture>();
             RoughnessTexChannelIndex = new List<int>();
             MetallicTexChannelIndex = new List<int>();
             AlphaTexChannelIndex = new List<int>();
             MatCapMaskChannelIndex = new List<int>();
+            SecondaryAlbedoTexMaskChannelIndex = new List<int>();
             int CurMatIndex = 0;
             Mesh mesh;
             Vector4 Throwaway = Vector3.zero;
@@ -417,6 +424,15 @@ namespace TrueTrace {
                     for(int i2 = 0; i2 < TexCount; i2++) {
                         string TexName = RelevantMat.AvailableTextures[i2].TextureName;
                         switch((TexturePurpose)RelevantMat.AvailableTextures[i2].Purpose) {
+                            case(TexturePurpose.SecondaryAlbedoTextureMask):
+                                Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref SecondaryAlbedoTexMasks, ref TempIndex); 
+                                CurMat.SecondaryAlbedoMask.x = TempIndex; 
+                                if(Result == 1) SecondaryAlbedoTexMaskChannelIndex.Add(RelevantMat.AvailableTextures[i2].ReadIndex);
+                            break;
+                            case(TexturePurpose.SecondaryAlbedoTexture):
+                                Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref SecondaryAlbedoTexs, ref TempIndex); 
+                                CurMat.SecondaryAlbedoTex.x = TempIndex;
+                            break;
                             case(TexturePurpose.MatCapTex):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref MatCapTexs, ref TempIndex); 
                                 CurMat.MatCapTex.x = TempIndex;
@@ -458,6 +474,7 @@ namespace TrueTrace {
                     }
 
                     if(JustCreated) {
+                        CurMat.SecondaryAlbedoTextureScale = TempScale;
                         CurMat.AlbedoTextureScale = TempScale;
                         CurMat.SecondaryTextureScale = new Vector2(TempScale.x, TempScale.y);
                     }

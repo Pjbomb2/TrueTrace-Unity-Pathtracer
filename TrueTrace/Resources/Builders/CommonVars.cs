@@ -102,6 +102,8 @@ namespace CommonVars
         public Vector2Int AlphaTex;
         public Vector2Int MatCapMask;
         public Vector2Int MatCapTex;
+        public Vector2Int SecondaryAlbedoTex;
+        public Vector2Int SecondaryAlbedoMask;
         public Vector3 BaseColor;
         public float emission;
         public Vector3 EmissionColor;
@@ -134,6 +136,7 @@ namespace CommonVars
         public Vector3 BlendColor;
         public float BlendFactor;
         public Vector2 SecondaryTextureScale;
+        public Vector4 SecondaryAlbedoTextureScale;
         public float Rotation;
         public float ColorBleed;
     }
@@ -553,7 +556,7 @@ namespace CommonVars
         public int ReadIndex;
         public List<Vector3Int> TexObjList = new List<Vector3Int>();
     }   
-    public enum TexturePurpose {Albedo, Alpha, Normal, Emission, Metallic, Roughness, MatCapTex, MatCapMask};
+    public enum TexturePurpose {Albedo, Alpha, Normal, Emission, Metallic, Roughness, MatCapTex, MatCapMask, SecondaryAlbedoTexture, SecondaryAlbedoTextureMask};
 
     [System.Serializable]
     public class TexturePairs {
@@ -622,6 +625,7 @@ namespace CommonVars
         public Vector3 BlendColor;
         public float BlendFactor;
         public Vector4 MainTexScaleOffset;
+        public Vector4 SecondaryAlbedoTexScaleOffset;
         public Vector2 SecondaryTextureScale;
         public float Rotation;
         public int Flags;

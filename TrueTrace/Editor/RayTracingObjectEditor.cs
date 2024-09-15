@@ -78,6 +78,7 @@ namespace TrueTrace {
                     BlendColor = ThisOBJ.BlendColor[SaveIndex],
                     BlendFactor = ThisOBJ.BlendFactor[SaveIndex],
                     MainTexScaleOffset = ThisOBJ.MainTexScaleOffset[SaveIndex],
+                    SecondaryAlbedoTexScaleOffset = ThisOBJ.SecondaryAlbedoTexScaleOffset[SaveIndex],
                     SecondaryTextureScale = ThisOBJ.SecondaryTextureScale[SaveIndex],
                     Rotation = ThisOBJ.Rotation[SaveIndex],
                     Flags = ThisOBJ.Flags[SaveIndex],
@@ -192,6 +193,7 @@ namespace TrueTrace {
             t.BlendColor[Selected] = RayObj.BlendColor;
             t.BlendFactor[Selected] = RayObj.BlendFactor;
             t.MainTexScaleOffset[Selected] = RayObj.MainTexScaleOffset;
+            t.SecondaryAlbedoTexScaleOffset[Selected] = RayObj.SecondaryAlbedoTexScaleOffset;
             t.SecondaryTextureScale[Selected] = RayObj.SecondaryTextureScale;
             t.Rotation[Selected] = RayObj.Rotation;
             t.Flags[Selected] = RayObj.Flags;
@@ -254,6 +256,7 @@ namespace TrueTrace {
                     BlendColor = ThisOBJ.BlendColor[SaveIndex],
                     BlendFactor = ThisOBJ.BlendFactor[SaveIndex],
                     MainTexScaleOffset = ThisOBJ.MainTexScaleOffset[SaveIndex],
+                    SecondaryAlbedoTexScaleOffset = ThisOBJ.SecondaryAlbedoTexScaleOffset[SaveIndex],
                     SecondaryTextureScale = ThisOBJ.SecondaryTextureScale[SaveIndex],
                     Rotation = ThisOBJ.Rotation[SaveIndex],
                     Flags = ThisOBJ.Flags[SaveIndex],
@@ -621,6 +624,7 @@ namespace TrueTrace {
                             serializedObject.FindProperty("ColorBleed").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("ColorBleed: ", t.ColorBleed[Selected], 0, 1.0f);
                             EditorGUILayout.Space();
                             serializedObject.FindProperty("MainTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("MainTex Scale/Offset: ", t.MainTexScaleOffset[Selected]);
+                            serializedObject.FindProperty("SecondaryAlbedoTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Secondary Albedo Scale/Offset: ", t.SecondaryAlbedoTexScaleOffset[Selected]);
                             serializedObject.FindProperty("SecondaryTextureScale").GetArrayElementAtIndex(Selected).vector2Value = EditorGUILayout.Vector2Field("SecondaryTex Scale: ", t.SecondaryTextureScale[Selected]);
                             serializedObject.FindProperty("Rotation").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Texture Rotation: ", t.Rotation[Selected], 0, 1);
 
@@ -688,6 +692,7 @@ namespace TrueTrace {
                             t.BlendColor[i] = t.BlendColor[Selected];
                             t.BlendFactor[i] = t.BlendFactor[Selected];
                             t.MainTexScaleOffset[i] = t.MainTexScaleOffset[Selected];
+                            t.SecondaryAlbedoTexScaleOffset[i] = t.SecondaryAlbedoTexScaleOffset[Selected];
                             t.SecondaryTextureScale[i] = t.SecondaryTextureScale[Selected];
                             t.Rotation[i] = t.Rotation[Selected];
                             t.Flags[i] = Flag;
@@ -737,6 +742,7 @@ namespace TrueTrace {
                                 Obj.BlendColor[i] = t.BlendColor[Selected];
                                 Obj.BlendFactor[i] = t.BlendFactor[Selected];
                                 Obj.MainTexScaleOffset[i] = t.MainTexScaleOffset[Selected];
+                                Obj.SecondaryAlbedoTexScaleOffset[i] = t.SecondaryAlbedoTexScaleOffset[Selected];
                                 Obj.SecondaryTextureScale[i] = t.SecondaryTextureScale[Selected];
                                 Obj.Rotation[i] = t.Rotation[Selected];
                                 Obj.Flags[i] = Flag;
