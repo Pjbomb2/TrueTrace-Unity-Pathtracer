@@ -2033,7 +2033,7 @@ namespace TrueTrace {
                     TempMat.BlendColor = CurrentMaterial.BlendColor[Index];
                     TempMat.BlendFactor = CurrentMaterial.BlendFactor[Index];
                     TempMat.AlbedoTextureScale = CurrentMaterial.MainTexScaleOffset[Index];
-                    TempMat.SecondaryAlbedoTextureScale = CurrentMaterial.SecondaryAlbedoTexScaleOffset[Index];
+                    TempMat.SecondaryAlbedoTexScaleOffset = CurrentMaterial.SecondaryAlbedoTexScaleOffset[Index];
                     TempMat.SecondaryTextureScale = CurrentMaterial.SecondaryTextureScale[Index];
                     TempMat.Rotation = CurrentMaterial.Rotation[Index] * 3.14159f;
                     TempMat.ColorBleed = CurrentMaterial.ColorBleed[Index];

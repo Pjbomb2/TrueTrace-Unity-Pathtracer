@@ -474,7 +474,7 @@ namespace TrueTrace {
                     }
 
                     if(JustCreated) {
-                        CurMat.SecondaryAlbedoTextureScale = TempScale;
+                        CurMat.SecondaryAlbedoTexScaleOffset = TempScale;
                         CurMat.AlbedoTextureScale = TempScale;
                         CurMat.SecondaryTextureScale = new Vector2(TempScale.x, TempScale.y);
                     }

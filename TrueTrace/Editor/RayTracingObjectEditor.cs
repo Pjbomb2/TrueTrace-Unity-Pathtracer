@@ -618,6 +618,8 @@ namespace TrueTrace {
                             EditorGUILayout.EndHorizontal();
 
                             EditorGUILayout.Space();
+                            Flag = CommonFunctions.SetFlagStretch(Flag, 1, 3, (int)((RayTracingObject.BlendModes)EditorGUILayout.EnumPopup("Albedo Blend Mode: ", (RayTracingObject.BlendModes)Flag.GetFlagStretch(1, 3))));
+                            EditorGUILayout.Space();
                             serializedObject.FindProperty("UseKelvin").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Use Kelvin: ", t.UseKelvin[Selected]);
                             if(t.UseKelvin[Selected]) serializedObject.FindProperty("KelvinTemp").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Kelvin Temperature: ", t.KelvinTemp[Selected], 0, 20000);
                             EditorGUILayout.Space();

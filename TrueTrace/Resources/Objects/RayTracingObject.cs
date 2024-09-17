@@ -7,6 +7,7 @@ namespace TrueTrace {
 	[ExecuteInEditMode][System.Serializable]
 	public class RayTracingObject : MonoBehaviour {
 		public enum Options {Disney, Cutout, Fade};
+		public enum BlendModes {Lerp, Add, Multiply};
 		[SerializeField] public Options[] MaterialOptions;
 		[SerializeField] public Vector3[] TransmissionColor, BaseColor;
 		[SerializeField] public Vector2[] MetallicRemap, RoughnessRemap;
@@ -24,28 +25,28 @@ namespace TrueTrace {
 		[SerializeField] public float[] Flatness;
 		[SerializeField] public float[] DiffTrans;
 		[SerializeField] public float[] SpecTrans;
-		[SerializeField] public float[] Hue;
-		[SerializeField] public float[] Brightness;
-		[SerializeField] public float[] Saturation;
-		[SerializeField] public float[] Contrast;
 		[SerializeField] public bool[] FollowMaterial;
 		[SerializeField] public float[] ScatterDist;
-		[SerializeField] public Material[] SharedMaterials;
-		[SerializeField] public string[] Names;
 		[SerializeField] public float[] Specular;
 		[SerializeField] public float[] AlphaCutoff;
 		[SerializeField] public float[] NormalStrength;
+		[SerializeField] public float[] Hue;
+		[SerializeField] public float[] Saturation;
+		[SerializeField] public float[] Brightness;
+		[SerializeField] public float[] Contrast;
 		[SerializeField] public Vector3[] BlendColor;
+		[SerializeField] public float[] BlendFactor;
 		[SerializeField] public Vector4[] MainTexScaleOffset;
 		[SerializeField] public Vector4[] SecondaryAlbedoTexScaleOffset;
 		[SerializeField] public Vector2[] SecondaryTextureScale;
 		[SerializeField] public float[] Rotation;
-		[SerializeField] public float[] BlendFactor;
-		[SerializeField] public int Selected;
 		[SerializeField] public int[] Flags;
 		[SerializeField] public bool[] UseKelvin;
 		[SerializeField] public float[] KelvinTemp;
 		[SerializeField] public float[] ColorBleed; 
+		[SerializeField] public Material[] SharedMaterials;
+		[SerializeField] public string[] Names;
+		[SerializeField] public int Selected;
 		public int[] Indexes;
 		public bool NeedsToUpdate;
 		[SerializeField] public bool IsReady = false;

@@ -227,9 +227,9 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 			break;
 			case SampleSecondaryAlbedo:
 				#ifdef PointFiltering
-					FinalCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.SecondaryAlbedoTextureScale, MatTex.SecondaryAlbedoTex, MatTex.Rotation), 0);
+					FinalCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.SecondaryAlbedoTexScaleOffset, MatTex.SecondaryAlbedoTex, MatTex.Rotation), 0);
 				#else
-					FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.SecondaryAlbedoTextureScale, MatTex.SecondaryAlbedoTex, MatTex.Rotation), 0);
+					FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.SecondaryAlbedoTexScaleOffset, MatTex.SecondaryAlbedoTex, MatTex.Rotation), 0);
 				#endif
 			break;
 			case SampleSecondaryAlbedoMask:
@@ -258,7 +258,7 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 			case SampleMatCap: TextureIndexAndChannel = MatTex.MatCapTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 			case SampleMatCapMask: TextureIndexAndChannel = MatTex.MatCapMask; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 			case SampleTerrainAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; UV = (UV * MatTex.surfaceColor.xy + MatTex.transmittanceColor.xy) * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
-			case SampleSecondaryAlbedo: TextureIndexAndChannel = MatTex.SecondaryAlbedoTex; UV = UV * MatTex.SecondaryAlbedoTextureScale.xy + MatTex.SecondaryAlbedoTextureScale.zw; break;
+			case SampleSecondaryAlbedo: TextureIndexAndChannel = MatTex.SecondaryAlbedoTex; UV = UV * MatTex.SecondaryAlbedoTexScaleOffset.xy + MatTex.SecondaryAlbedoTexScaleOffset.zw; break;
 			case SampleSecondaryAlbedoMask: TextureIndexAndChannel = MatTex.SecondaryAlbedoMask; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 		}
 		int TextureIndex = TextureIndexAndChannel.x - 1;
