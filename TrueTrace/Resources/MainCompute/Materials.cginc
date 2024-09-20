@@ -625,7 +625,7 @@ static float3 SampleDisneyDiffuse(const MaterialData hitDat, float3 wo, bool thi
         refracted = true;
 
         if (thin) {
-            color = sqrt(color);
+            color = sqrt(color / PI) * PI;
         }
         else {
             extinction = CalculateExtinction(hitDat.transmittanceColor, hitDat.scatterDistance);

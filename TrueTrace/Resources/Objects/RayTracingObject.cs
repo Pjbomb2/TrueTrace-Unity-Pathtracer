@@ -44,6 +44,7 @@ namespace TrueTrace {
 		[SerializeField] public bool[] UseKelvin;
 		[SerializeField] public float[] KelvinTemp;
 		[SerializeField] public float[] ColorBleed; 
+		[SerializeField] public float[] AlbedoBlendFactor; 
 		[SerializeField] public Material[] SharedMaterials;
 		[SerializeField] public string[] Names;
 		[SerializeField] public int Selected;
@@ -258,6 +259,7 @@ namespace TrueTrace {
 			InitializeArray<bool>(ref UseKelvin, false, Index);
 			InitializeArray<float>(ref KelvinTemp, 0, Index);
 			InitializeArray<float>(ref ColorBleed, 1, Index);
+			InitializeArray<float>(ref AlbedoBlendFactor, 1, Index);
 
 			IsReady = true;
 			mesh = null;

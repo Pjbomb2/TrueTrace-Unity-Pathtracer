@@ -1,0 +1,547 @@
+//#pragma enable_d3d11_debug_symbols
+#include "FFTCommon.cginc"
+
+float IsForward;
+RWTexture2D<float4> SourceTexture;
+RWTexture2D<float4> FrequencyTexture;
+
+// ---------------------------------------------------------------------------------- //
+
+#pragma kernel FFTForwardHorizontal
+[numthreads(SourceTextureSize,1,1)]
+void FFTForwardHorizontal (uint3 id : SV_DispatchThreadID, uint3 tid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+    uint threadIndex = tid.x;//basically id % 512
+    uint groupIndex = gid.x;
+    uint2 uv = uint2(threadIndex, groupIndex);//uint2(id.x % 512, group ID, 512 groups, each has 512 threads)
+    float4 src = SourceTexture[uv];
+    
+    Complex inputs[4]  = { Complex(src.x, 0), Complex(src.y, 0), Complex(src.z, 0), Complex(src.w, 0) };
+    Complex outputs[4] = { Complex(0,0), Complex(0,0), Complex(0,0),Complex(0,0) };
+
+    for(uint channel=0; channel<4; channel++)
+    {
+        Complex f_n = inputs[channel];
+        Complex F_k = CooleyTukeyFFT(f_n, threadIndex, true);
+        outputs[channel] = F_k;
+    }
+
+    uint2 uvRG = uv;
+    uint2 uvBA = uint2(uv.x + SourceTextureSize, uv.y);
+    FrequencyTexture[uvRG] = float4(outputs[0], outputs[1]);
+    FrequencyTexture[uvBA] = float4(outputs[2], outputs[3]);
+}
+
+// ---------------------------------------------------------------------------------- //
+
+#pragma kernel FFTInverseHorizontal
+[numthreads(SourceTextureSize,1,1)]
+void FFTInverseHorizontal (uint3 id : SV_DispatchThreadID, uint3 tid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+    uint threadIndex = tid.x;
+    uint groupIndex = gid.x;
+    uint2 uv = uint2(threadIndex, groupIndex);
+    
+    uint2 uvRG = uv;
+    uint2 uvBA = uint2(uv.x + SourceTextureSize, uv.y);
+    float4 srcRG = FrequencyTexture[uvRG];
+    float4 srcBA = FrequencyTexture[uvBA];
+
+    Complex inputs[4]  = { srcRG.xy, srcRG.zw, srcBA.xy, srcBA.zw };
+    Complex outputs[4] = { Complex(0,0), Complex(0,0), Complex(0,0),Complex(0,0) };
+
+    for(uint channel=0; channel<4; channel++)
+    {
+        Complex F_k = inputs[channel];
+        Complex f_n = CooleyTukeyFFT(F_k, threadIndex, false);
+        outputs[channel] = f_n;
+    }
+
+    FrequencyTexture[uv] = float4(outputs[0].x, outputs[1].x, outputs[2].x, outputs[3].x);
+}
+
+// ---------------------------------------------------------------------------------- //
+
+#pragma kernel FFTVertical
+[numthreads(SourceTextureSize,1,1)]
+void FFTVertical (uint3 id : SV_DispatchThreadID, uint3 tid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+    uint threadIndex = tid.x;
+    uint groupIndex = gid.x;
+    uint2 uv = uint2(groupIndex, threadIndex);
+
+    uint2 uvRG = uv;
+    uint2 uvBA = uint2(uv.x + SourceTextureSize, uv.y);
+    float4 srcRG = FrequencyTexture[uvRG];
+    float4 srcBA = FrequencyTexture[uvBA];
+
+    Complex inputs[4]  = { srcRG.xy, srcRG.zw, srcBA.xy, srcBA.zw };
+    Complex outputs[4] = { Complex(0,0), Complex(0,0), Complex(0,0),Complex(0,0) };
+
+    for(uint channel=0; channel<4; channel++)
+    {
+        Complex f_n = inputs[channel];
+        Complex F_k = CooleyTukeyFFT(f_n, threadIndex, IsForward > 0);
+        outputs[channel] = F_k;
+    }
+
+    FrequencyTexture[uvRG] = float4(outputs[0], outputs[1]);
+    FrequencyTexture[uvBA] = float4(outputs[2], outputs[3]);
+}
+
+// ---------------------------------------------------------------------------------- //
+
+RWTexture2D<float4> SourceFrequencyTexture;
+RWTexture2D<float4> KernelFrequencyTexture;
+
+#pragma kernel Convolution
+[numthreads(8,8,1)]
+void Convolution (uint3 id : SV_DispatchThreadID, uint3 tid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+    uint2 uvRG = id.xy;
+    uint2 uvBA = uint2(id.x + SourceTextureSize, id.y);
+
+    float4 src1 = SourceFrequencyTexture[uvRG];
+    float4 src2 = SourceFrequencyTexture[uvBA];
+    float4 k1 = KernelFrequencyTexture[uvRG]; 
+    float4 k2 = KernelFrequencyTexture[uvBA];
+
+    Complex inputs[4]  = { src1.xy, src1.zw, src2.xy, src2.zw };
+    Complex kernels[4]  = { k1.xy, k1.zw, k2.xy, k2.zw };
+    Complex outputs[4] = { Complex(0,0), Complex(0,0), Complex(0,0),Complex(0,0) };
+
+    for(uint i=0; i<4; i++)
+    {
+        outputs[i] = ComplexMultiply(inputs[i], kernels[i]);
+    }
+
+    SourceFrequencyTexture[uvRG] = float4(outputs[0], outputs[1]);
+    SourceFrequencyTexture[uvBA] = float4(outputs[2], outputs[3]);
+}
+
+// ---------------------------------------------------------------------------------- //
+
+#pragma kernel KernelTransform
+[numthreads(8,8,1)]
+void KernelTransform (uint3 id : SV_DispatchThreadID, uint3 tid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+    uint halfN = SourceTextureSize / 2;
+    uint2 uvSrc = id.xy;
+    uint2 uvDst = (id.xy + uint2(halfN, halfN));
+    uvDst.x %= SourceTextureSize;
+    uvDst.y %= SourceTextureSize;
+    
+    float4 src = SourceTexture[uvSrc];
+    float4 dst = SourceTexture[uvDst];
+
+    SourceTexture[uvSrc] = dst;
+    SourceTexture[uvDst] = src;
+}
+
+// ---------------------------------------------------------------------------------- //
+
+#pragma kernel TwoForOneFFTForwardHorizontal
+[numthreads(SourceTextureSize,1,1)]
+void TwoForOneFFTForwardHorizontal (uint3 id : SV_DispatchThreadID, uint3 tid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+    uint threadIndex = tid.x;
+    uint groupIndex = gid.x;
+    uint2 uv = uint2(threadIndex, groupIndex);
+    float4 src = SourceTexture[uv];
+    
+    Complex inputs[2]  = { Complex(src.x, src.y), Complex(src.z, src.w) };
+    Complex outputs[4] = { Complex(0,0), Complex(0,0), Complex(0,0),Complex(0,0) };
+
+    for(uint channel=0; channel<2; channel++)
+    {
+        Complex z_n = inputs[channel];
+        Complex X_k = Complex(0, 0);
+        Complex Y_k = Complex(0, 0);
+        TwoForOneFFTForward(z_n, threadIndex, X_k, Y_k);
+        
+        outputs[channel * 2 + 0] = X_k;
+        outputs[channel * 2 + 1] = Y_k;
+    }
+
+    uint2 uvRG = uv;
+    uint2 uvBA = uint2(uv.x + SourceTextureSize, uv.y);
+    FrequencyTexture[uvRG] = float4(outputs[0], outputs[1]);
+    FrequencyTexture[uvBA] = float4(outputs[2], outputs[3]);
+}
+
+// ---------------------------------------------------------------------------------- //
+
+#pragma kernel TwoForOneFFTInverseHorizontal
+[numthreads(SourceTextureSize,1,1)]
+void TwoForOneFFTInverseHorizontal (uint3 id : SV_DispatchThreadID, uint3 tid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+    uint threadIndex = tid.x;
+    uint groupIndex = gid.x;
+    uint2 uv = uint2(threadIndex, groupIndex);
+
+    uint2 uvRG = uv;
+    uint2 uvBA = uint2(uv.x + SourceTextureSize, uv.y);
+    float4 srcRG = FrequencyTexture[uvRG];
+    float4 srcBA = FrequencyTexture[uvBA];
+
+    Complex inputs[4]  = { srcRG.xy, srcRG.zw, srcBA.xy, srcBA.zw };
+    float outputs[4] = { 0, 0, 0, 0 };
+
+    for(uint channel=0; channel<2; channel++)
+    {
+        Complex X_k = inputs[channel * 2 + 0];
+        Complex Y_k = inputs[channel * 2 + 1];
+        float x_n = 0;
+        float y_n = 0;
+        
+        TwoForOneFFTInverse(X_k, Y_k, threadIndex, x_n, y_n);
+        outputs[channel * 2 + 0] = x_n;
+        outputs[channel * 2 + 1] = y_n;
+    }
+
+    FrequencyTexture[uv] = float4(outputs[0], outputs[1], outputs[2], outputs[3]);
+}
+
+// ---------------------------------------------------------------------------------- //
+
+#pragma kernel TwoForOneFFTForwardHorizontalRadix8_1_thread_8_signal
+[numthreads(SourceTextureSize/8,1,1)]
+void TwoForOneFFTForwardHorizontalRadix8_1_thread_8_signal (uint3 id : SV_DispatchThreadID, uint3 tid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+    uint threadIndex = tid.x;
+    uint groupIndex = gid.x;
+    
+    Complex inputs[2][8];
+    Complex outputs[4][8];
+
+    // 一个线程处理 8 个输入信号
+    for(uint i=0; i<8; i++)
+    {
+        float4 src = SourceTexture[uint2(threadIndex * 8 + i, groupIndex)];
+        inputs[0][i] = src.rg;
+        inputs[1][i] = src.ba;
+    }
+
+    // 对 RG, BA 通道分别进行变换
+    for(uint channel=0; channel<2; channel++)
+    {
+        Radix8FFT_1_thread_8_signal(inputs[channel], threadIndex, true);
+
+        // split two-for-one
+        GroupMemoryBarrierWithGroupSync();
+        for(uint i=0; i<8; i++)
+        {
+            uint index = threadIndex * 8 + i;
+            uint rollIndex = (SourceTextureSize - index) % SourceTextureSize;
+
+            Complex Z_k = groupSharedBuffer[index] / float(sqrt(SourceTextureSize));
+            Complex Z_k_c = ComplexConjugate(groupSharedBuffer[rollIndex] / float(sqrt(SourceTextureSize)));
+
+            Complex X_k = (Z_k + Z_k_c) / 2;
+            Complex Y_k = ComplexMultiply(Complex(0, -1), (Z_k - Z_k_c) / 2);
+
+            outputs[channel * 2 + 0][i] = X_k;
+            outputs[channel * 2 + 1][i] = Y_k;
+        }
+    }
+
+    // 一个线程处理 8 个输入信号
+    for(uint i=0; i<8; i++)
+    {
+        uint2 uvRG = uint2(threadIndex * 8 + i, groupIndex);
+        uint2 uvBA = uint2(uvRG.x + SourceTextureSize, uvRG.y);
+
+        FrequencyTexture[uvRG] = float4(outputs[0][i], outputs[1][i]);
+        FrequencyTexture[uvBA] = float4(outputs[2][i], outputs[3][i]);
+    }
+}
+
+// ---------------------------------------------------------------------------------- //
+
+#pragma kernel FFTVerticalRadix8_1_thread_8_signal
+[numthreads(SourceTextureSize/8,1,1)]
+void FFTVerticalRadix8_1_thread_8_signal (uint3 id : SV_DispatchThreadID, uint3 tid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+    uint threadIndex = tid.x;
+    uint groupIndex = gid.x;
+    
+    Complex inputs[4][8];
+    Complex outputs[4][8];
+
+    // 一个线程处理 8 个输入信号
+    for(uint i=0; i<8; i++)
+    {
+        uint2 uvRG = uint2(groupIndex, threadIndex * 8 + i);
+        uint2 uvBA = uint2(groupIndex + SourceTextureSize, threadIndex * 8 + i);
+        float4 srcRG = FrequencyTexture[uvRG];
+        float4 srcBA = FrequencyTexture[uvBA];
+
+        inputs[0][i] = srcRG.rg;    // R
+        inputs[1][i] = srcRG.ba;    // G
+        inputs[2][i] = srcBA.rg;    // B
+        inputs[3][i] = srcBA.ba;    // A
+    }
+
+    // 对 R, G, B, A 通道分别进行变换
+    for(uint channel=0; channel<4; channel++)
+    {
+        Radix8FFT_1_thread_8_signal(inputs[channel], threadIndex, IsForward > 0);
+
+        GroupMemoryBarrierWithGroupSync();
+        for(uint i=0; i<8; i++)
+        {
+            uint index = threadIndex * 8 + i;
+            Complex F_k = groupSharedBuffer[index] / float(sqrt(SourceTextureSize));
+            outputs[channel][i] = F_k;
+        }
+    }
+
+    // 一个线程处理 8 个输入信号
+    for(uint i=0; i<8; i++)
+    {
+        uint2 uvRG = uint2(groupIndex, threadIndex * 8 + i);
+        uint2 uvBA = uint2(groupIndex + SourceTextureSize, threadIndex * 8 + i);
+
+        FrequencyTexture[uvRG] = float4(outputs[0][i], outputs[1][i]);
+        FrequencyTexture[uvBA] = float4(outputs[2][i], outputs[3][i]);
+    }
+}
+
+// ---------------------------------------------------------------------------------- //
+
+#pragma kernel TwoForOneFFTInverseHorizontalRadix8_1_thread_8_signal
+[numthreads(SourceTextureSize/8,1,1)]
+void TwoForOneFFTInverseHorizontalRadix8_1_thread_8_signal (uint3 id : SV_DispatchThreadID, uint3 tid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+    uint threadIndex = tid.x;
+    uint groupIndex = gid.x;
+    
+    Complex inputs[4][8];
+    float outputs[4][8];
+
+    // 一个线程处理 8 个输入信号
+    for(uint i=0; i<8; i++)
+    {
+        uint2 uvRG = uint2(threadIndex * 8 + i, groupIndex);
+        uint2 uvBA = uint2(threadIndex * 8 + i + SourceTextureSize, groupIndex);
+        float4 srcRG = FrequencyTexture[uvRG];
+        float4 srcBA = FrequencyTexture[uvBA];
+
+        inputs[0][i] = srcRG.rg;    // R
+        inputs[1][i] = srcRG.ba;    // G
+        inputs[2][i] = srcBA.rg;    // B
+        inputs[3][i] = srcBA.ba;    // A
+    }
+
+    // 对 RG, BA 通道分别进行变换
+    for(uint channel=0; channel<2; channel++)
+    {
+        // merge two-for-one
+        Complex twoForOneInput[8];
+        for(uint i=0; i<8; i++)
+        {
+            Complex X_k = inputs[channel * 2 + 0][i];
+            Complex Y_k = inputs[channel * 2 + 1][i];
+            Complex Z_k = X_k + ComplexMultiply(Complex(0, 1), Y_k);
+            twoForOneInput[i] = Z_k;
+        }
+
+        Radix8FFT_1_thread_8_signal(twoForOneInput, threadIndex, false);
+
+        // split two-for-one
+        GroupMemoryBarrierWithGroupSync();
+        for(uint i=0; i<8; i++)
+        {
+            uint index = threadIndex * 8 + i;
+            Complex z_n = groupSharedBuffer[index] / float(sqrt(SourceTextureSize));
+            float x_n = z_n.x;
+            float y_n = z_n.y;
+
+            outputs[channel * 2 + 0][i] = x_n;
+            outputs[channel * 2 + 1][i] = y_n;
+        }
+    }
+
+    // 一个线程处理 8 个输入信号
+    for(uint i=0; i<8; i++)
+    {
+        uint2 uv = uint2(threadIndex * 8 + i, groupIndex);
+        FrequencyTexture[uv] = float4(outputs[0][i], outputs[1][i], outputs[2][i], outputs[3][i]);
+    }
+}
+
+// ---------------------------------------------------------------------------------- //
+
+#pragma kernel TwoForOneFFTForwardHorizontalRadix8
+[numthreads(SourceTextureSize,1,1)]
+void TwoForOneFFTForwardHorizontalRadix8 (uint3 id : SV_DispatchThreadID, uint3 tid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+    uint threadIndex = tid.x;
+    uint groupIndex = gid.x;
+    
+    Complex inputs[2];
+    Complex outputs[4];
+
+    float4 src = SourceTexture[uint2(threadIndex, groupIndex)];
+    inputs[0] = src.rg;
+    inputs[1] = src.ba;
+
+    // 对 RG, BA 通道分别进行变换
+    for(uint channel=0; channel<2; channel++)
+    {
+        Radix8FFT(inputs[channel], threadIndex, true);
+
+        GroupMemoryBarrierWithGroupSync();
+
+        // split two-for-one
+        uint rollIndex = (SourceTextureSize - threadIndex) % SourceTextureSize;
+
+        Complex Z_k = groupSharedBuffer[threadIndex] / float(sqrt(SourceTextureSize));
+        Complex Z_k_c = ComplexConjugate(groupSharedBuffer[rollIndex] / float(sqrt(SourceTextureSize)));
+
+        Complex X_k = (Z_k + Z_k_c) / 2;
+        Complex Y_k = ComplexMultiply(Complex(0, -1), (Z_k - Z_k_c) / 2);
+
+        outputs[channel * 2 + 0] = X_k;
+        outputs[channel * 2 + 1] = Y_k;
+    }
+
+    uint2 uvRG = uint2(threadIndex, groupIndex);
+    uint2 uvBA = uint2(uvRG.x + SourceTextureSize, uvRG.y);
+
+    FrequencyTexture[uvRG] = float4(outputs[0], outputs[1]);
+    FrequencyTexture[uvBA] = float4(outputs[2], outputs[3]);
+}
+
+// ---------------------------------------------------------------------------------- //
+
+#pragma kernel FFTVerticalRadix8
+[numthreads(SourceTextureSize,1,1)]
+void FFTVerticalRadix8 (uint3 id : SV_DispatchThreadID, uint3 tid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+    uint threadIndex = tid.x;
+    uint groupIndex = gid.x;
+    
+    Complex inputs[4];
+    Complex outputs[4];
+
+    uint2 uvRG = uint2(groupIndex, threadIndex);
+    uint2 uvBA = uint2(groupIndex + SourceTextureSize, threadIndex);
+    float4 srcRG = FrequencyTexture[uvRG];
+    float4 srcBA = FrequencyTexture[uvBA];
+
+    inputs[0] = srcRG.rg;    // R
+    inputs[1] = srcRG.ba;    // G
+    inputs[2] = srcBA.rg;    // B
+    inputs[3] = srcBA.ba;    // A
+
+    // 对 R, G, B, A 通道分别进行变换
+    for(uint channel=0; channel<4; channel++)
+    {
+        Radix8FFT(inputs[channel], threadIndex, IsForward > 0);
+
+        GroupMemoryBarrierWithGroupSync();
+        Complex F_k = groupSharedBuffer[threadIndex] / float(sqrt(SourceTextureSize));
+        outputs[channel] = F_k;
+    }
+
+    FrequencyTexture[uvRG] = float4(outputs[0], outputs[1]);
+    FrequencyTexture[uvBA] = float4(outputs[2], outputs[3]);
+}
+
+// ---------------------------------------------------------------------------------- //
+
+#pragma kernel TwoForOneFFTInverseHorizontalRadix8
+[numthreads(SourceTextureSize,1,1)]
+void TwoForOneFFTInverseHorizontalRadix8 (uint3 id : SV_DispatchThreadID, uint3 tid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+    uint threadIndex = tid.x;
+    uint groupIndex = gid.x;
+    
+    Complex inputs[4];
+    float outputs[4];
+
+    uint2 uvRG = uint2(threadIndex, groupIndex);
+    uint2 uvBA = uint2(threadIndex + SourceTextureSize, groupIndex);
+    float4 srcRG = FrequencyTexture[uvRG];
+    float4 srcBA = FrequencyTexture[uvBA];
+
+    inputs[0] = srcRG.rg;    // R
+    inputs[1] = srcRG.ba;    // G
+    inputs[2] = srcBA.rg;    // B
+    inputs[3] = srcBA.ba;    // A
+
+    // 对 RG, BA 通道分别进行变换
+    for(uint channel=0; channel<2; channel++)
+    {
+        // merge two-for-one
+        Complex X_k = inputs[channel * 2 + 0];
+        Complex Y_k = inputs[channel * 2 + 1];
+        Complex Z_k = X_k + ComplexMultiply(Complex(0, 1), Y_k);
+
+        Radix8FFT(Z_k, threadIndex, false);
+
+        GroupMemoryBarrierWithGroupSync();
+
+        // split two-for-one
+        Complex z_n = groupSharedBuffer[threadIndex] / float(sqrt(SourceTextureSize));
+        float x_n = z_n.x;
+        float y_n = z_n.y;
+
+        outputs[channel * 2 + 0] = x_n;
+        outputs[channel * 2 + 1] = y_n;
+    }
+
+    uint2 uv = uint2(threadIndex, groupIndex);
+    FrequencyTexture[uv] = float4(outputs[0], outputs[1], outputs[2], outputs[3]);
+}
+
+// ---------------------------------------------------------------------------------- //
+
+/*
+[numthreads(SourceTextureSize,1,1)]
+void FFTForward (uint3 id : SV_DispatchThreadID, uint3 tid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+    // dft for validate
+    bool bIsHorizontal = IsHorizontal > 0;
+    bool bIsForward = IsForward > 0;
+
+    uint threadIndex = tid.x;
+    uint groupIndex = gid.y;
+    
+    {
+        uint k = threadIndex;
+        uint N = SourceTextureSize;
+        Complex F_k = Complex(0, 0);
+        // forward
+        for(int n=0; n<N; n++)
+        {
+            uint2 uv = bIsHorizontal ? uint2(n, groupIndex) : uint2(groupIndex, n);
+            Complex W = W_N_k(N, k * n);
+            Complex f_n = Complex(SourceTexture[uv].x, 0.0);
+
+            F_k += ComplexMultiply(f_n, W);
+        }
+
+        groupSharedBuffer[threadIndex] = F_k;
+        GroupMemoryBarrierWithGroupSync();
+    }
+    // idft for validate
+    {
+        uint n = threadIndex;
+        uint N = SourceTextureSize;
+        Complex f_n = Complex(0, 0);
+        // inverse
+        for(int k=0; k<N; k++)
+        {
+            uint2 uv = bIsHorizontal ? uint2(k, groupIndex) : uint2(groupIndex, k);
+            Complex W = ComplexConjugate(W_N_k(N, k * n));
+            Complex F_k = groupSharedBuffer[k];
+
+            f_n += ComplexMultiply(F_k, W);
+        }
+        uint2 uv = bIsHorizontal ? uint2(threadIndex, groupIndex) : uint2(groupIndex, threadIndex);
+        FrequencyTexture[uv] = float4(f_n / float(N), 0, 0);
+    }
+}
+    */

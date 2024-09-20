@@ -66,12 +66,6 @@ namespace TrueTrace {
                 }
                 if (RayMaster.FramesSinceStart >= MaxSamples || waitedTime >= TimeBetweenSegments) {
                     waitedTime = 0;
-                    if(!System.IO.Directory.Exists(Application.dataPath.Replace("/Assets", "") + "/TurnTables")) {
-                        System.IO.Directory.CreateDirectory(Application.dataPath.Replace("/Assets", "") + "/TurnTables");
-                    }
-                    if(!System.IO.Directory.Exists(Application.dataPath.Replace("/Assets", "") + "/TurnTables/" + CamSettings[CurrentCamera].Cam.gameObject.name.Replace(" ", ""))) {
-                        System.IO.Directory.CreateDirectory(Application.dataPath.Replace("/Assets", "") + "/TurnTables/" + CamSettings[CurrentCamera].Cam.gameObject.name.Replace(" ", ""));
-                    }
                     string SegmentNumber = "";
                     int TempSeg = CurrentSegment;
                     int[] NumSegments = new int[3];
@@ -85,7 +79,7 @@ namespace TrueTrace {
                             SegmentNumber += "_";
                         }
                     }
-                    ScreenCapture.CaptureScreenshot(Application.dataPath.Replace("/Assets", "") + "/TurnTables/" + CamSettings[CurrentCamera].Cam.gameObject.name.Replace(" ", "") + "/" + CamSettings[CurrentCamera].Cam.gameObject.name + "." + SegmentNumber + ".png");
+                    ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("TurnTablePath") + "/" + CamSettings[CurrentCamera].Cam.gameObject.name.Replace(" ", "") + "/" + CamSettings[CurrentCamera].Cam.gameObject.name + "." + SegmentNumber + ".png");
                     CurrentSegment++;
                     CamSettings[CurrentCamera].Cam.gameObject.transform.RotateAround(CamSettings[CurrentCamera].Center, Vector3.up, (360.0f / (float)CamSettings[CurrentCamera].HorizontalResolution));
                     RayMaster.SampleCount = 0;

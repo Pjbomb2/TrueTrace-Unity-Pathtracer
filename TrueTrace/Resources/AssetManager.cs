@@ -2037,6 +2037,7 @@ namespace TrueTrace {
                     TempMat.SecondaryTextureScale = CurrentMaterial.SecondaryTextureScale[Index];
                     TempMat.Rotation = CurrentMaterial.Rotation[Index] * 3.14159f;
                     TempMat.ColorBleed = CurrentMaterial.ColorBleed[Index];
+                    TempMat.AlbedoBlendFactor = CurrentMaterial.AlbedoBlendFactor[Index];
                     if(RayMaster.LocalTTSettings.MatChangeResetsAccum) {
                         RayMaster.SampleCount = 0;
                         RayMaster.FramesSinceStart = 0;

@@ -84,7 +84,8 @@ namespace TrueTrace {
                     Flags = ThisOBJ.Flags[SaveIndex],
                     UseKelvin = ThisOBJ.UseKelvin[SaveIndex],
                     KelvinTemp = ThisOBJ.KelvinTemp[SaveIndex],
-                    ColorBleed = ThisOBJ.ColorBleed[SaveIndex]
+                    ColorBleed = ThisOBJ.ColorBleed[SaveIndex],
+                    AlbedoBlendFactor = ThisOBJ.AlbedoBlendFactor[SaveIndex]
                 };
                 if(CopyIndex != -1) PresetRays.RayObj[CopyIndex] = TempRay;
                 else PresetRays.RayObj.Add(TempRay);
@@ -200,6 +201,7 @@ namespace TrueTrace {
             t.UseKelvin[Selected] = RayObj.UseKelvin;
             t.KelvinTemp[Selected] = RayObj.KelvinTemp;
             t.ColorBleed[Selected] = RayObj.ColorBleed;
+            t.AlbedoBlendFactor[Selected] = RayObj.AlbedoBlendFactor;
             t.CallMaterialEdited(true);
 
 
@@ -262,7 +264,8 @@ namespace TrueTrace {
                     Flags = ThisOBJ.Flags[SaveIndex],
                     UseKelvin = ThisOBJ.UseKelvin[SaveIndex],
                     KelvinTemp = ThisOBJ.KelvinTemp[SaveIndex],
-                    ColorBleed = ThisOBJ.ColorBleed[SaveIndex]
+                    ColorBleed = ThisOBJ.ColorBleed[SaveIndex],
+                    AlbedoBlendFactor = ThisOBJ.AlbedoBlendFactor[SaveIndex]
                 };
                 if(CopyIndex != -1) PresetRays.RayObj[CopyIndex] = TempRay;
                 else PresetRays.RayObj.Add(TempRay);
@@ -629,6 +632,7 @@ namespace TrueTrace {
                             serializedObject.FindProperty("SecondaryAlbedoTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Secondary Albedo Scale/Offset: ", t.SecondaryAlbedoTexScaleOffset[Selected]);
                             serializedObject.FindProperty("SecondaryTextureScale").GetArrayElementAtIndex(Selected).vector2Value = EditorGUILayout.Vector2Field("SecondaryTex Scale: ", t.SecondaryTextureScale[Selected]);
                             serializedObject.FindProperty("Rotation").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Texture Rotation: ", t.Rotation[Selected], 0, 1);
+                            serializedObject.FindProperty("AlbedoBlendFactor").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Albedo Blend Factor: ", t.AlbedoBlendFactor[Selected], 0, 1);
 
                         EditorGUILayout.EndVertical();
                     EditorGUILayout.EndHorizontal();
@@ -701,6 +705,7 @@ namespace TrueTrace {
                             t.UseKelvin[i] = t.UseKelvin[Selected];
                             t.KelvinTemp[i] = t.KelvinTemp[Selected];
                             t.ColorBleed[i] = t.ColorBleed[Selected];
+                            t.AlbedoBlendFactor[i] = t.AlbedoBlendFactor[Selected];
                             // Debug.Log(i);
                             t.CallMaterialEdited(true);
                         }
@@ -751,6 +756,7 @@ namespace TrueTrace {
                                 Obj.UseKelvin[i] = t.UseKelvin[Selected];
                                 Obj.KelvinTemp[i] = t.KelvinTemp[Selected];
                                 Obj.ColorBleed[i] = t.ColorBleed[Selected];
+                                Obj.AlbedoBlendFactor[i] = t.AlbedoBlendFactor[Selected];
                                 Obj.CallMaterialEdited(true);
                             }
                         }

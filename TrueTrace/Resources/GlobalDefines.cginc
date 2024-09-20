@@ -15,7 +15,7 @@
 #define LBVH
 // #define FasterLightSampling
 #define AccurateEmissionTex
-#define RadianceCache
+// #define RadianceCache
 // #define ImprovedRadCacheSpecularResponse
 // #define HighSpeedRadCache
 #define IndirectRetraceWeighting

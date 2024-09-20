@@ -139,6 +139,7 @@ namespace CommonVars
         public Vector4 SecondaryAlbedoTexScaleOffset;
         public float Rotation;
         public float ColorBleed;
+        public float AlbedoBlendFactor;
     }
 
     [System.Serializable]
@@ -632,6 +633,7 @@ namespace CommonVars
         public bool UseKelvin;
         public float KelvinTemp;
         public float ColorBleed;
+        public float AlbedoBlendFactor;
     }
     [System.Serializable]
     public class RayObjs
