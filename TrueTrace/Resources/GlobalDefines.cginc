@@ -15,14 +15,14 @@
 #define LBVH
 // #define FasterLightSampling
 #define AccurateEmissionTex
-// #define RadianceCache
+#define RadianceCache
 // #define ImprovedRadCacheSpecularResponse
 // #define HighSpeedRadCache
 #define IndirectRetraceWeighting
 #define TrueBlack
 // #define AdvancedRadCacheAlt
 // #define UseTextureLOD
-
+// #define vMFDiffuse
 
 //END OF DEFINES
 //DEBUG VIEW DEFINES

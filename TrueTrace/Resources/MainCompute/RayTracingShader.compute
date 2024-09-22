@@ -720,11 +720,11 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
                     TempCol = lerp(TempCol, SecondaryVal, AlbMaskVal);
                 break;
                 case 1:
-                    if(AlbMaskVal > 0.5f)
+                    if(AlbMaskVal > 0.5f || !(TempMat.SecondaryAlbedoMask.x > 0))
                         TempCol += SecondaryVal;
                 break;
                 case 2:
-                    if(AlbMaskVal > 0.5f)
+                    if(AlbMaskVal > 0.5f || !(TempMat.SecondaryAlbedoMask.x > 0))
                         TempCol *= SecondaryVal;
                 break;
             }

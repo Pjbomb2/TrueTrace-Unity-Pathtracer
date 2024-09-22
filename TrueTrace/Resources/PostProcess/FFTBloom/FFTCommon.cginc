@@ -1,5 +1,7 @@
+//https://github.com/AKGWSB/FFTConvolutionBloom/blob/main/Assets/Scripts/ConvolutionBloom.cs
 #ifndef __FFT_COMMON__
 #define __FFT_COMMON__
+#if !defined(FINALBLIT)
 
 #define PI 3.14159265
 #define Complex float2
@@ -36,15 +38,6 @@ uint ReverseBits32(uint bits)
 uint ReversLowerNBits(uint bits, uint N)
 {
 	return ReverseBits32(bits) >> (32 - N);
-}
-
-// 3bit 一组反转
-uint GetInputIndexRadix8(uint index)
-{
-	uint low3bits  = index & 0x7;
-	uint mid3bits  = (index & (0x7 << 3)) >> 3;
-	uint high3bits = (index & (0x7 << 6)) >> 6;
-	return (low3bits << 6) + (mid3bits << 3) + high3bits;
 }
 
 void SplitTwoForOne(in uint index, in Complex X_k, in Complex Y_k)
@@ -140,126 +133,130 @@ void TwoForOneFFTInverse(in Complex X_k, in Complex Y_k, in uint index, out floa
 	y_n = z_n.y;	// imag
 }
 
-void Radix8FFT_1_thread_8_signal(in Complex f_n[8], in uint threadIndex, in bool bIsForward)
-{
-	GroupMemoryBarrierWithGroupSync();
-	for(uint i=0; i<8; i++)
-	{
-		uint index = threadIndex * 8 + i;
-		uint inputIndex = GetInputIndexRadix8(index);
-		groupSharedBuffer[inputIndex] = f_n[i];
-	}
 
-	// 将 8 个长度为 N/8 的序列合成为 1 个长度为 N 的序列
-	for(uint N=8; N<=SourceTextureSize; N*=8)
-	{
-		// 一个线程处理 8 个输入信号, 但仅 sync 一次
-		GroupMemoryBarrierWithGroupSync();
-		Complex F_ks[8];
-		for(uint s=0; s<8; s++)
-		{
-			uint index = threadIndex * 8 + s;	// 当前输入信号的下标
-			uint i = index % N;					
-			uint k = index % (N / 8);
-			uint w = i / (N / 8);				
-			uint startIndex = index - i;		// 子序列起始下标
-
-			Complex F_0_k = groupSharedBuffer[startIndex + 0 * (N/8) + k];
-			Complex F_1_k = groupSharedBuffer[startIndex + 1 * (N/8) + k];
-			Complex F_2_k = groupSharedBuffer[startIndex + 2 * (N/8) + k];
-			Complex F_3_k = groupSharedBuffer[startIndex + 3 * (N/8) + k];
-			Complex F_4_k = groupSharedBuffer[startIndex + 4 * (N/8) + k];
-			Complex F_5_k = groupSharedBuffer[startIndex + 5 * (N/8) + k];
-			Complex F_6_k = groupSharedBuffer[startIndex + 6 * (N/8) + k];
-			Complex F_7_k = groupSharedBuffer[startIndex + 7 * (N/8) + k];
-
-			Complex F_k = Complex(0, 0);
-			if(bIsForward)
-			{
-				F_k += ComplexMultiply(ComplexMultiply(W_N_k(8, 0 * w), W_N_k(N, 0 * k)), F_0_k);
-				F_k += ComplexMultiply(ComplexMultiply(W_N_k(8, 1 * w), W_N_k(N, 1 * k)), F_1_k);
-				F_k += ComplexMultiply(ComplexMultiply(W_N_k(8, 2 * w), W_N_k(N, 2 * k)), F_2_k);
-				F_k += ComplexMultiply(ComplexMultiply(W_N_k(8, 3 * w), W_N_k(N, 3 * k)), F_3_k);
-				F_k += ComplexMultiply(ComplexMultiply(W_N_k(8, 4 * w), W_N_k(N, 4 * k)), F_4_k);
-				F_k += ComplexMultiply(ComplexMultiply(W_N_k(8, 5 * w), W_N_k(N, 5 * k)), F_5_k);
-				F_k += ComplexMultiply(ComplexMultiply(W_N_k(8, 6 * w), W_N_k(N, 6 * k)), F_6_k);
-				F_k += ComplexMultiply(ComplexMultiply(W_N_k(8, 7 * w), W_N_k(N, 7 * k)), F_7_k);
-			}
-			else
-			{
-				F_k += ComplexMultiply(ComplexConjugate(ComplexMultiply(W_N_k(8, 0 * w), W_N_k(N, 0 * k))), F_0_k);
-				F_k += ComplexMultiply(ComplexConjugate(ComplexMultiply(W_N_k(8, 1 * w), W_N_k(N, 1 * k))), F_1_k);
-				F_k += ComplexMultiply(ComplexConjugate(ComplexMultiply(W_N_k(8, 2 * w), W_N_k(N, 2 * k))), F_2_k);
-				F_k += ComplexMultiply(ComplexConjugate(ComplexMultiply(W_N_k(8, 3 * w), W_N_k(N, 3 * k))), F_3_k);
-				F_k += ComplexMultiply(ComplexConjugate(ComplexMultiply(W_N_k(8, 4 * w), W_N_k(N, 4 * k))), F_4_k);
-				F_k += ComplexMultiply(ComplexConjugate(ComplexMultiply(W_N_k(8, 5 * w), W_N_k(N, 5 * k))), F_5_k);
-				F_k += ComplexMultiply(ComplexConjugate(ComplexMultiply(W_N_k(8, 6 * w), W_N_k(N, 6 * k))), F_6_k);
-				F_k += ComplexMultiply(ComplexConjugate(ComplexMultiply(W_N_k(8, 7 * w), W_N_k(N, 7 * k))), F_7_k);
-			}
-
-			F_ks[s] = F_k;
-		}
-
-		GroupMemoryBarrierWithGroupSync();
-		for(uint s=0; s<8; s++)
-		{
-			uint index = threadIndex * 8 + s;
-			groupSharedBuffer[index] = F_ks[s];
-		}
-	}
-}
-
-void Radix8FFT(in Complex f_n, in uint index, in bool bIsForward)
-{
-	GroupMemoryBarrierWithGroupSync();
-	uint inputIndex = GetInputIndexRadix8(index);
-	groupSharedBuffer[inputIndex] = f_n;
-
-	// 将 8 个长度为 N/8 的序列合成为 1 个长度为 N 的序列
-	for(uint N=8; N<=SourceTextureSize; N*=8)
-	{
-		uint i = index % N;			
-		uint startIndex = index - i;	// 子序列起始下标		
-		uint w = i / (N / 8);			// 子序列序号
-		uint k = index % (N / 8);		// 取子序列的第几个元素
-		
-		GroupMemoryBarrierWithGroupSync();
-		Complex F_0_k = groupSharedBuffer[startIndex + 0 * (N/8) + k];
-		Complex F_1_k = groupSharedBuffer[startIndex + 1 * (N/8) + k];
-		Complex F_2_k = groupSharedBuffer[startIndex + 2 * (N/8) + k];
-		Complex F_3_k = groupSharedBuffer[startIndex + 3 * (N/8) + k];
-		Complex F_4_k = groupSharedBuffer[startIndex + 4 * (N/8) + k];
-		Complex F_5_k = groupSharedBuffer[startIndex + 5 * (N/8) + k];
-		Complex F_6_k = groupSharedBuffer[startIndex + 6 * (N/8) + k];
-		Complex F_7_k = groupSharedBuffer[startIndex + 7 * (N/8) + k];
-
-		Complex F_k = Complex(0, 0);
-		if(bIsForward)
-		{
-			F_k += ComplexMultiply(ComplexMultiply(W_N_k(8, 0 * w), W_N_k(N, 0 * k)), F_0_k);
-			F_k += ComplexMultiply(ComplexMultiply(W_N_k(8, 1 * w), W_N_k(N, 1 * k)), F_1_k);
-			F_k += ComplexMultiply(ComplexMultiply(W_N_k(8, 2 * w), W_N_k(N, 2 * k)), F_2_k);
-			F_k += ComplexMultiply(ComplexMultiply(W_N_k(8, 3 * w), W_N_k(N, 3 * k)), F_3_k);
-			F_k += ComplexMultiply(ComplexMultiply(W_N_k(8, 4 * w), W_N_k(N, 4 * k)), F_4_k);
-			F_k += ComplexMultiply(ComplexMultiply(W_N_k(8, 5 * w), W_N_k(N, 5 * k)), F_5_k);
-			F_k += ComplexMultiply(ComplexMultiply(W_N_k(8, 6 * w), W_N_k(N, 6 * k)), F_6_k);
-			F_k += ComplexMultiply(ComplexMultiply(W_N_k(8, 7 * w), W_N_k(N, 7 * k)), F_7_k);
-		}
-		else
-		{
-			F_k += ComplexMultiply(ComplexConjugate(ComplexMultiply(W_N_k(8, 0 * w), W_N_k(N, 0 * k))), F_0_k);
-			F_k += ComplexMultiply(ComplexConjugate(ComplexMultiply(W_N_k(8, 1 * w), W_N_k(N, 1 * k))), F_1_k);
-			F_k += ComplexMultiply(ComplexConjugate(ComplexMultiply(W_N_k(8, 2 * w), W_N_k(N, 2 * k))), F_2_k);
-			F_k += ComplexMultiply(ComplexConjugate(ComplexMultiply(W_N_k(8, 3 * w), W_N_k(N, 3 * k))), F_3_k);
-			F_k += ComplexMultiply(ComplexConjugate(ComplexMultiply(W_N_k(8, 4 * w), W_N_k(N, 4 * k))), F_4_k);
-			F_k += ComplexMultiply(ComplexConjugate(ComplexMultiply(W_N_k(8, 5 * w), W_N_k(N, 5 * k))), F_5_k);
-			F_k += ComplexMultiply(ComplexConjugate(ComplexMultiply(W_N_k(8, 6 * w), W_N_k(N, 6 * k))), F_6_k);
-			F_k += ComplexMultiply(ComplexConjugate(ComplexMultiply(W_N_k(8, 7 * w), W_N_k(N, 7 * k))), F_7_k);
-		}
-
-		GroupMemoryBarrierWithGroupSync();
-		groupSharedBuffer[index] = F_k;
-	}
-}
-
+#endif
 #endif  // __FFT_COMMON__
+
+#if defined(FINALBLIT)
+	#include "UnityCG.cginc"
+    float FFTBloomIntensity;
+    float FFTBloomThreshold;
+    float4 FFTBloomKernelGenParam;
+    float4 FFTBloomKernelGenParam1;
+	Texture2D _MainTex;
+    SamplerState my_linear_clamp_sampler;
+
+	float Luma(float3 color) {
+        return dot(color, float3(0.299f, 0.587f, 0.114f));
+    }
+
+	float WrapUV(float u) {
+	    if(u < 0 && u > -0.5)
+	        return u + 0.5;
+	    if(u > 0.5 && u < 1)
+	        return u - 0.5;
+	    return -1;
+	}
+
+	struct appdata {
+	    float4 vertex : POSITION;
+	    float2 uv : TEXCOORD0;
+	};
+
+	struct v2f {
+	    float2 uv : TEXCOORD0;
+	    float4 vertex : SV_POSITION;
+	};
+
+    v2f CommonVert (appdata v) {
+        v2f o;
+        o.vertex = UnityObjectToClipPos(v.vertex);
+        o.uv = v.uv;
+        return o;
+    }
+	float4 FinalBlitFrag (v2f i) : SV_Target {
+	    float aspect = _ScreenParams.x / _ScreenParams.y;
+	    float2 uv = i.uv;
+	    uv.x *= 0.5;
+	    if(_ScreenParams.x > _ScreenParams.y)
+	    {
+	        uv.y /= aspect;
+	    }
+	    else
+	    {
+	        uv.x *= aspect;
+	    }
+	    // uv.y *= 1 / aspect;
+	    return float4(_MainTex.SampleLevel(my_linear_clamp_sampler, uv, 0).rgb * FFTBloomIntensity, 1.0);
+	}
+
+    float4 SourceGenFrag (v2f i) : SV_Target
+    {
+        float2 uv = i.uv;
+        // uv.y = 1.0 - uv.y;
+        uv -= 2.0f * rcp(_ScreenParams.xy);
+        float aspect = _ScreenParams.x / _ScreenParams.y;
+        if(_ScreenParams.x > _ScreenParams.y)
+        {
+            uv.y *= aspect;
+        }
+        else
+        {
+            uv.x /= aspect;
+        }
+        if(any(uv.xy > 1.0)) return float4(0, 0, 0, 0);
+    #define USE_FILTER 1
+    #if USE_FILTER
+        float3 color = float3(0, 0, 0);
+        float weight = 0.0;
+        const float2 offsets[4] = {float2(-0.5, -0.5), float2(-0.5, +0.5), float2(+0.5, -0.5), float2(+0.5, +0.5)};
+        for(int i=0; i<4; i++)
+        {
+            float2 offset = 2.0 * offsets[i] / float2(1920.0f, 1080.0f);
+            float3 c = _MainTex.SampleLevel(my_linear_clamp_sampler, uv + offset, 0).rgb;
+            float lu = Luma(c);
+            float w = 1.0 / (1.0 + lu);
+            color += c * w;
+            weight += w;
+        }
+        color /= weight;
+    #else
+        float3 color = _MainTex.SampleLevel(my_linear_clamp_sampler, uv, 0).rgb;
+    #endif  // USE_FILTER
+
+        float luma = Luma(color);
+        float scale = saturate(luma - FFTBloomThreshold);
+        float3 finalColor = color * scale;
+        return float4(finalColor, 0.0);
+    }
+
+    float4 KernGenFrag (v2f i) : SV_Target {
+        float2 offset = FFTBloomKernelGenParam.xy;
+        float2 scale = FFTBloomKernelGenParam.zw;
+        float KernelDistanceExp = FFTBloomKernelGenParam1.x;
+        float KernelDistanceExpClampMin = FFTBloomKernelGenParam1.y;
+        float KernelDistanceExpScale = FFTBloomKernelGenParam1.z;
+        bool bUseLuminance = FFTBloomKernelGenParam1.w > 0.0f;
+
+        // 用来缩放那些不是 hdr 格式的滤波盒
+        float dis = (1.0 - length(i.uv - float2(0.5, 0.5)));
+        float kernelScale = max(pow(dis, KernelDistanceExp) * KernelDistanceExpScale, KernelDistanceExpClampMin); 
+
+        float2 xy = i.uv * 2 - 1;
+        xy /= scale;
+        xy = xy * 0.5 + 0.5;
+
+        float2 uv = xy - 0.5;
+        uv.x = WrapUV(uv.x);
+        uv.y = WrapUV(uv.y);
+
+        //return float4(_MainTex.Sample(my_linear_repeat_sampler, i.uv - 0.5).rgb, 0.0);
+        if(bUseLuminance)
+        {
+            float lum = Luma(_MainTex.SampleLevel(my_linear_clamp_sampler, xy, 0).rgb);
+            return float4(float3(lum, lum, lum) * kernelScale, 0.0);
+        }
+        return float4(_MainTex.SampleLevel(my_linear_clamp_sampler, xy, 0).rgb * kernelScale, 0.0);
+    }
+
+#endif

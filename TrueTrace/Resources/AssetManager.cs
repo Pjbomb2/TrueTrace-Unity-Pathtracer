@@ -25,7 +25,7 @@ namespace TrueTrace {
         [HideInInspector] public Texture2D IESAtlas;
         [HideInInspector] public Texture2D AlbedoAtlas;
         [HideInInspector] public Texture2D NormalAtlas;
-        public Texture2D SingleComponentAtlas;
+        [HideInInspector] public Texture2D SingleComponentAtlas;
         [HideInInspector] public Texture2D EmissiveAtlas;
         [HideInInspector] public Texture2D AlphaAtlas;
         [HideInInspector] public RenderTexture HeightmapAtlas;
@@ -34,13 +34,12 @@ namespace TrueTrace {
         private RenderTexture s_Prop_EncodeBCn_Temp;
         private ComputeShader CopyShader;
         private ComputeShader Refitter;
-        private ComputeShader LightRefitter;
         private int RefitLayer;
         private int NodeUpdater;
         private int NodeCompress;
         private int NodeInitializerKernel;
+        private int LightTLASRefitKernel;
 
-        private int LightBVHKernel;
 
 
         [HideInInspector] public int AlbedoAtlasSize;
@@ -869,8 +868,7 @@ namespace TrueTrace {
             
             UpdateMaterialDefinition();
             Refitter = Resources.Load<ComputeShader>("Utility/BVHRefitter");
-            LightRefitter = Resources.Load<ComputeShader>("Utility/LightBVHRefitter");
-            LightBVHKernel = LightRefitter.FindKernel("RefitKernel");
+            LightTLASRefitKernel = Refitter.FindKernel("TLASLightRefitKernel");
             RefitLayer = Refitter.FindKernel("RefitBVHLayer");
             NodeUpdater = Refitter.FindKernel("NodeUpdate");
             NodeCompress = Refitter.FindKernel("NodeCompress");
@@ -1075,10 +1073,16 @@ namespace TrueTrace {
             RemoveQue = new List<ParentObject>();
             RenderQue = new List<ParentObject>();
             RenderTransforms = new List<Transform>();
-            BuildQue = new List<ParentObject>(GetComponentsInChildren<ParentObject>());
+            BuildQue = new List<ParentObject>(GameObject.FindObjectsOfType<ParentObject>());
+            List<ParentObject> TempQue = new List<ParentObject>(InstanceData.GetComponentsInChildren<ParentObject>());
+            int QueCount = TempQue.Count;
+            for(int i = 0; i < QueCount; i++) {
+                int Index = BuildQue.IndexOf(TempQue[i]);
+                if(Index != -1) BuildQue.RemoveAt(Index);
+            }
             RunningTasks = 0;
             InstanceData.EditorBuild();
-            int QueCount = BuildQue.Count;
+            QueCount = BuildQue.Count;
             for(int i = QueCount - 1; i >= 0; i--) {
                 if(!BuildQue[i].enabled) BuildQue.RemoveAt(i);
             }
@@ -1725,17 +1729,17 @@ namespace TrueTrace {
                     if(LightBoxesBuffer == null || LightBoxesBuffer.count != LightAABBs.Length) LightBoxesBuffer = new ComputeBuffer(LightAABBs.Length, 56);
                     LightBoxesBuffer.SetData(LightAABBs);
                     cmd.BeginSample("LightRefitter");
-                    cmd.SetComputeBufferParam(LightRefitter, LightBVHKernel, "Transfers", LightBVHTransformsBuffer);
-                    cmd.SetComputeBufferParam(LightRefitter, LightBVHKernel, "LightNodesWrite", LightNodeBuffer);
-                    cmd.SetComputeBufferParam(LightRefitter, LightBVHKernel, "LightBounds", LightBoxesBuffer);
+                    cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "Transfers", LightBVHTransformsBuffer);
+                    cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "LightNodesWrite", LightNodeBuffer);
+                    cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "LightBounds", LightBoxesBuffer);
                     int ObjectOffset = 0;
                     for(int i = LBVH.WorkingSet.Length - 1; i >= 0; i--) {
                         var ObjOffVar = ObjectOffset;
                         var SetCount = LBVH.WorkingSet[i].count;
-                        cmd.SetComputeIntParam(LightRefitter, "SetCount", SetCount);
-                        cmd.SetComputeIntParam(LightRefitter, "ObjectOffset", ObjOffVar);
-                        cmd.SetComputeBufferParam(LightRefitter, LightBVHKernel, "WorkingSet", LBVH.WorkingSet[i]);
-                        cmd.DispatchCompute(LightRefitter, LightBVHKernel, (int)Mathf.Ceil(SetCount / (float)256.0f), 1, 1);
+                        cmd.SetComputeIntParam(Refitter, "SetCount", SetCount);
+                        cmd.SetComputeIntParam(Refitter, "ObjectOffset", ObjOffVar);
+                        cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "WorkingSet", LBVH.WorkingSet[i]);
+                        cmd.DispatchCompute(Refitter, LightTLASRefitKernel, (int)Mathf.Ceil(SetCount / (float)256.0f), 1, 1);
 
                         ObjectOffset += SetCount;
                     }
@@ -2063,6 +2067,7 @@ namespace TrueTrace {
             return HasChangedMaterials;
 
         }
+
 
     }
 }

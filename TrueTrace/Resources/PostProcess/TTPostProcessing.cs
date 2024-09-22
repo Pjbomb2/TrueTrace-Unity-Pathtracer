@@ -112,7 +112,7 @@ namespace TrueTrace {
                 TAAInitialized = false;
                 UpscalerInitialized = false;
                 SharpenInitialized = false;
-                ConvBloom.ClearAll();
+                if(ConvBloom != null) ConvBloom.ClearAll();
             }
             
         }
@@ -133,7 +133,7 @@ namespace TrueTrace {
             ExposureBuffer.ReleaseSafe();
             BloomIntermediate.ReleaseSafe();
             if(BloomSamplesDown != null) for(int i = 0; i < BloomSamplesDown.Length; i++) BloomSamplesDown[i].ReleaseSafe();
-            ConvBloom.ClearAll();
+            if(ConvBloom != null) ConvBloom.ClearAll();
         }
 
         void OnApplicationQuit()

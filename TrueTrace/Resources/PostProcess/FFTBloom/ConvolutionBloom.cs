@@ -14,25 +14,18 @@ namespace TrueTrace {
         public RenderTexture SourceFreqTexture;
         public RenderTexture m_kernelTexture;
         public RenderTexture KernelFreqTexture;
-        public Material KernelGenerateMaterial;
-        public Material SourceGenerateMaterial;
-        public Material FinalBlitMaterial;
+        public Material FFTBlitMaterial;
         public ComputeShader FFTShader;
 
         public Vector2 KernelPositionOffset = new Vector2(0, 0);
 
         public Texture2D KernelTexture;
 
-        private int kFFTForwardHorizontal;
-        private int kFFTInverseHorizontal;
         private int kFFTVertical;
         private int kConvolution;
         private int kKernelTransform;
         private int kTwoForOneFFTForwardHorizontal;
         private int kTwoForOneFFTInverseHorizontal;
-        private int kTwoForOneFFTForwardHorizontalRadix8;
-        private int kTwoForOneFFTInverseHorizontalRadix8;
-        private int kFFTVerticalRadix8;
 
         public void ClearAll() {
             m_sourceTexture.ReleaseSafe();
@@ -48,9 +41,7 @@ namespace TrueTrace {
         public void Init() {
 
             if (FFTShader == null) FFTShader = Resources.Load<ComputeShader>("PostProcess/FFTBloom/FFTCS");
-            if (KernelGenerateMaterial == null) KernelGenerateMaterial = new Material(Shader.Find("ConvolutionBloom/KernelGenerate"));
-            if (SourceGenerateMaterial == null) SourceGenerateMaterial = new Material(Shader.Find("ConvolutionBloom/SourceGenerate"));
-            if (FinalBlitMaterial == null) FinalBlitMaterial = new Material(Shader.Find("ConvolutionBloom/FinalBlit"));
+            if (FFTBlitMaterial == null) FFTBlitMaterial = new Material(Shader.Find("ConvolutionBloom/FFTBlit"));
 
             KernelTexture = Resources.Load<Texture2D>("PostProcess/FFTBloom/DefaultBloomKernel");
 
@@ -63,16 +54,11 @@ namespace TrueTrace {
             CommonFunctions.CreateRenderTexture(ref KernelFreqTexture, FFTSpaceSize * 2, FFTSpaceSize, CommonFunctions.RTFull4);
 
 
-            kFFTForwardHorizontal = FFTShader.FindKernel("FFTForwardHorizontal");
-            kFFTInverseHorizontal = FFTShader.FindKernel("FFTInverseHorizontal");
             kFFTVertical = FFTShader.FindKernel("FFTVertical");
             kConvolution = FFTShader.FindKernel("Convolution");
             kKernelTransform = FFTShader.FindKernel("KernelTransform");
             kTwoForOneFFTForwardHorizontal = FFTShader.FindKernel("TwoForOneFFTForwardHorizontal");
             kTwoForOneFFTInverseHorizontal = FFTShader.FindKernel("TwoForOneFFTInverseHorizontal");
-            kTwoForOneFFTForwardHorizontalRadix8 = FFTShader.FindKernel("TwoForOneFFTForwardHorizontalRadix8");
-            kTwoForOneFFTInverseHorizontalRadix8 = FFTShader.FindKernel("TwoForOneFFTInverseHorizontalRadix8");
-            kFFTVerticalRadix8 = FFTShader.FindKernel("FFTVerticalRadix8");
 
 
             Initialized = true;
@@ -88,14 +74,14 @@ namespace TrueTrace {
             Vector4 kernelGenParam1 = new Vector4(KernelDistanceExp, KernelDistanceExpClampMin, KernelDistanceExpScale, 1);
             cmd.SetGlobalVector("FFTBloomKernelGenParam1", kernelGenParam1);
 
-            cmd.Blit(KernelTexture, m_kernelTexture, KernelGenerateMaterial);
+            cmd.Blit(KernelTexture, m_kernelTexture, FFTBlitMaterial, 2);
 
 // 对 kernel 做变换
             cmd.SetComputeTextureParam(FFTShader, kKernelTransform, "SourceTexture", m_kernelTexture);
             cmd.DispatchCompute(FFTShader, kKernelTransform, 512 / 8, 256 / 8, 1); 
             
             // 降采样 scene color
-            cmd.Blit(destination, m_sourceTexture, SourceGenerateMaterial);
+            cmd.Blit(destination, m_sourceTexture, FFTBlitMaterial, 1);
 
             // 对卷积核做 FFT
             // 水平
@@ -142,7 +128,7 @@ namespace TrueTrace {
             cmd.EndSample("FFTInverseHorizontal");
 
             // final blit
-            cmd.Blit(SourceFreqTexture, destination, FinalBlitMaterial);
+            cmd.Blit(SourceFreqTexture, destination, FFTBlitMaterial, 0);
         }
 
 

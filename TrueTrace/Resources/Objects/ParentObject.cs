@@ -40,7 +40,6 @@ namespace TrueTrace {
         [HideInInspector] public MeshFilter[] DeformableMeshes;
         [HideInInspector] public int[] IndexCounts;
         [HideInInspector] public ComputeShader MeshRefit;
-        [HideInInspector] public ComputeShader LightMeshRefit;
         [HideInInspector] public bool HasStarted;
         [HideInInspector] public BVHNode8DataCompressed[] AggNodes;
         [HideInInspector] public int InstanceMeshIndex;
@@ -66,6 +65,8 @@ namespace TrueTrace {
         [HideInInspector] public int NodeUpdateKernel;
         [HideInInspector] public int NodeCompressKernel;
         [HideInInspector] public int NodeInitializerKernel;
+        [HideInInspector] public int LightTLASRefitKernel;
+        [HideInInspector] public int LightBLASRefitKernel;
 
         [HideInInspector] public int CompactedMeshData;
 
@@ -241,13 +242,14 @@ namespace TrueTrace {
             MeshCountChanged = true;
             HasCompleted = false;
             MeshRefit = Resources.Load<ComputeShader>("Utility/BVHRefitter");
-            LightMeshRefit = Resources.Load<ComputeShader>("Utility/LightBVHRefitter");
             ConstructKernel = MeshRefit.FindKernel("Construct");
             TransferKernel = MeshRefit.FindKernel("TransferKernel");
             RefitLayerKernel = MeshRefit.FindKernel("RefitLayer");
             NodeUpdateKernel = MeshRefit.FindKernel("NodeUpdate");
             NodeCompressKernel = MeshRefit.FindKernel("NodeCompress");
             NodeInitializerKernel = MeshRefit.FindKernel("NodeInitializer");
+            LightTLASRefitKernel = MeshRefit.FindKernel("TLASLightRefitKernel");
+            LightBLASRefitKernel = MeshRefit.FindKernel("BLASLightRefitKernel");
         }
         private bool NeedsToResetBuffers = true;
         public void SetUpBuffers()
@@ -881,7 +883,6 @@ namespace TrueTrace {
             {
                 cmd.SetComputeIntParam(MeshRefit, "TriBuffOffset", TriOffset);
                 cmd.SetComputeIntParam(MeshRefit, "LightTriBuffOffset", LightTriOffset);
-                cmd.SetComputeIntParam(LightMeshRefit, "LightTriBuffOffset", LightTriOffset);
                 cmd.BeginSample("ReMesh");
                 for (int i = 0; i < VertexBuffers.Length; i++) {
                     VertexBuffers[i].Release();
@@ -893,7 +894,7 @@ namespace TrueTrace {
                         VertexBuffers[i] = DeformableMeshes[i].sharedMesh.GetVertexBuffer(0);
                     }
                 }
-                if(HasLightTriangles) cmd.SetComputeBufferParam(LightMeshRefit, 1, "LightTriangles", RealizedLightTriBuffer);
+                if(HasLightTriangles) cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "LightTriangles", RealizedLightTriBuffer);
                 cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "ReverseStack", StackBuffer);
                 cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "Boxs", AABBBuffer);
                 cmd.SetComputeBufferParam(MeshRefit, TransferKernel, "LightTrianglesOut", RealizedLightTriBuffer);
@@ -945,18 +946,18 @@ namespace TrueTrace {
 
                 if(LightTriangles.Count != 0) {
                     cmd.BeginSample("LightRefitter");
-                    cmd.SetComputeMatrixParam(LightMeshRefit, "ToWorld", transform.localToWorldMatrix);
-                    cmd.SetComputeIntParam(LightMeshRefit, "TotalNodeOffset", LightNodeOffset);
-                    cmd.SetComputeBufferParam(LightMeshRefit, 1, "LightNodesWrite", RealizedLightNodeBuffer);
-                    cmd.SetComputeFloatParam(LightMeshRefit, "FloatMax", float.MaxValue);
+                    cmd.SetComputeIntParam(MeshRefit, "TotalNodeOffset", LightNodeOffset);
+                    cmd.SetComputeMatrixParam(MeshRefit, "ToWorld", transform.localToWorldMatrix);
+                    cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "LightNodesWrite", RealizedLightNodeBuffer);
+                    cmd.SetComputeFloatParam(MeshRefit, "FloatMax", float.MaxValue);
                     int ObjectOffset = LightNodeOffset;
                     for(int i = WorkingSet.Length - 1; i >= 0; i--) {
                         var ObjOffVar = ObjectOffset;
                         var SetCount = WorkingSet[i].count;
-                        cmd.SetComputeIntParam(LightMeshRefit, "SetCount", SetCount);
-                        cmd.SetComputeIntParam(LightMeshRefit, "ObjectOffset", ObjOffVar);
-                        cmd.SetComputeBufferParam(LightMeshRefit, 1, "WorkingSet", WorkingSet[i]);
-                        cmd.DispatchCompute(LightMeshRefit, 1, (int)Mathf.Ceil(SetCount / (float)256.0f), 1, 1);
+                        cmd.SetComputeIntParam(MeshRefit, "SetCount", SetCount);
+                        cmd.SetComputeIntParam(MeshRefit, "ObjectOffset", ObjOffVar);
+                        cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "WorkingSet", WorkingSet[i]);
+                        cmd.DispatchCompute(MeshRefit, LightBLASRefitKernel, (int)Mathf.Ceil(SetCount / (float)256.0f), 1, 1);
 
                         ObjectOffset += SetCount;
                     }

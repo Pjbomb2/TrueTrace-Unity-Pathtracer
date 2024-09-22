@@ -15,7 +15,7 @@ namespace TrueTrace {
         [HideInInspector] public AtmosphereGenerator Atmo;
         [HideInInspector] public AssetManager Assets;
         private ReSTIRASVGF ReSTIRASVGFCode;
-        public TTPostProcessing TTPostProc;
+        private TTPostProcessing TTPostProc;
         private ASVGF ASVGFCode;
         private bool Abandon = false;
         #if UseOIDN
