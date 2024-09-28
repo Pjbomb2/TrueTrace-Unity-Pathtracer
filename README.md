@@ -39,6 +39,7 @@
   <li>IES for spotlights</li>
   <li>True Bindless texturing(Thanks to Meetem)</li>
   <li>Convolution Bloom(Not mine)</li>
+  <li>Vulkan and Metal support(Your mileage may vary)</li>
 </ul>
 
 MASSIVE thanks to 
