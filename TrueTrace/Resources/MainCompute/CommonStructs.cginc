@@ -135,9 +135,10 @@ struct MaterialData {//56
 	float3 BlendColor;
 	float BlendFactor;
 	float2 SecondaryTexScale;
-    float4 SecondaryAlbedoTextureScale;
+    float4 SecondaryAlbedoTexScaleOffset;
 	float Rotation;
 	float ColorBleed;
+	float AlbedoBlendFactor;
 };
 
 StructuredBuffer<MaterialData> _Materials;

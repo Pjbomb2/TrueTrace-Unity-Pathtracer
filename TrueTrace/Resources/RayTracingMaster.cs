@@ -15,7 +15,7 @@ namespace TrueTrace {
         [HideInInspector] public AtmosphereGenerator Atmo;
         [HideInInspector] public AssetManager Assets;
         private ReSTIRASVGF ReSTIRASVGFCode;
-        private Denoiser Denoisers;
+        private TTPostProcessing TTPostProc;
         private ASVGF ASVGFCode;
         private bool Abandon = false;
         #if UseOIDN
@@ -70,7 +70,8 @@ namespace TrueTrace {
                     Flags = OBJtoWrite.Flags[Index],
                     UseKelvin = OBJtoWrite.UseKelvin[Index],
                     KelvinTemp = OBJtoWrite.KelvinTemp[Index],
-                    ColorBleed = OBJtoWrite.ColorBleed[Index]
+                    ColorBleed = OBJtoWrite.ColorBleed[Index],
+                    AlbedoBlendFactor = OBJtoWrite.AlbedoBlendFactor[Index]
                 };
                 if(WriteID == -1) {
                     raywrites.RayObj.Add(DataToWrite);
@@ -277,8 +278,8 @@ namespace TrueTrace {
 
             Atmo = new AtmosphereGenerator(6360, 6420, AtmoNumLayers);
             FramesSinceStart2 = 0;
-            Denoisers = new Denoiser();
-            Denoisers.Initialized = false;
+            TTPostProc = new TTPostProcessing();
+            TTPostProc.Initialized = false;
         }
         public void Awake() {
             LoadTT();
@@ -351,7 +352,7 @@ namespace TrueTrace {
             if(ASVGFCode != null) ASVGFCode.ClearAll();
             if(ReSTIRASVGFCode != null) ReSTIRASVGFCode.ClearAll();
             CurBounceInfoBuffer?.Release();
-            Denoisers.ClearAll();
+            TTPostProc.ClearAll();
             CDFX.ReleaseSafe();
             CDFY.ReleaseSafe();
             CDFTotalBuffer.ReleaseSafe();
@@ -474,7 +475,7 @@ namespace TrueTrace {
             else if ((!LocalTTSettings.UseASVGF || !LocalTTSettings.UseReSTIRGI) && ReSTIRASVGFCode.Initialized) ReSTIRASVGFCode.ClearAll();
             if (!LocalTTSettings.UseReSTIRGI && LocalTTSettings.UseASVGF && !ASVGFCode.Initialized) ASVGFCode.init(SourceWidth, SourceHeight);
             else if ((!LocalTTSettings.UseASVGF || LocalTTSettings.UseReSTIRGI) && ASVGFCode.Initialized) ASVGFCode.ClearAll();
-            if(Denoisers.Initialized == false) Denoisers.init(SourceWidth, SourceHeight);
+            if(TTPostProc.Initialized == false) TTPostProc.init(SourceWidth, SourceHeight);
 
             BufferSizes = new BufferSizeData[LocalTTSettings.bouncecount + 1];
             BufferSizes[0].tracerays = SourceWidth * SourceHeight;
@@ -577,7 +578,7 @@ namespace TrueTrace {
             SetBool("DiffRes", LocalTTSettings.RenderScale != 1.0f);
             SetBool("DoPartialRendering", LocalTTSettings.DoPartialRendering);
             SetBool("DoExposure", LocalTTSettings.PPExposure);
-            ShadingShader.SetBuffer(ShadeKernel, "Exposure", Denoisers.ExposureBuffer);
+            ShadingShader.SetBuffer(ShadeKernel, "Exposure", TTPostProc.ExposureBuffer);
 
             bool FlipFrame = (FramesSinceStart2 % 2 == 0);
 
@@ -802,8 +803,8 @@ namespace TrueTrace {
                 PrevResFactor = LocalTTSettings.RenderScale;
                 if(LocalTTSettings.UseASVGF && LocalTTSettings.UseReSTIRGI) {ReSTIRASVGFCode.ClearAll(); ReSTIRASVGFCode.init(SourceWidth, SourceHeight);}
                 if (LocalTTSettings.UseASVGF && !LocalTTSettings.UseReSTIRGI) {ASVGFCode.ClearAll(); ASVGFCode.init(SourceWidth, SourceHeight);}
-                if(Denoisers.Initialized) Denoisers.ClearAll();
-                Denoisers.init(SourceWidth, SourceHeight);
+                if(TTPostProc.Initialized) TTPostProc.ClearAll();
+                TTPostProc.init(SourceWidth, SourceHeight);
 
                 InitRenderTexture(true);
                 CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight * 2, 48);
@@ -948,7 +949,7 @@ namespace TrueTrace {
                     cmd.DispatchCompute(GenerateShader, ResolveKernel + 2, Mathf.CeilToInt((4.0f * 1024.0f * 1024.0f) / 256.0f), 1, 1);
                 cmd.EndSample("RadCacheClear");
             #endif
-            Denoisers.ValidateInit(LocalTTSettings.PPBloom, LocalTTSettings.PPTAA, SourceWidth != TargetWidth, LocalTTSettings.UseTAAU, LocalTTSettings.DoSharpen, LocalTTSettings.PPFXAA);
+            TTPostProc.ValidateInit(LocalTTSettings.PPBloom, LocalTTSettings.PPTAA, SourceWidth != TargetWidth, LocalTTSettings.UseTAAU, LocalTTSettings.DoSharpen, LocalTTSettings.PPFXAA);
             float CurrentSample;
             
             GenerateRays(cmd);
@@ -1060,7 +1061,7 @@ namespace TrueTrace {
             } else if(!(LocalTTSettings.UseReSTIRGI && LocalTTSettings.UseASVGF)) {
                 cmd.BeginSample("ASVGF");
                 SampleCount = 0;
-                ASVGFCode.Do(ref LightingBuffer, ref _converged, LocalTTSettings.RenderScale, ((FramesSinceStart2 % 2 == 0) ? ScreenSpaceInfo : ScreenSpaceInfoPrev), cmd, FramesSinceStart2, ref GIWorldPosA, LocalTTSettings.DoPartialRendering ? LocalTTSettings.PartialRenderingFactor : 1, Denoisers.ExposureBuffer, LocalTTSettings.PPExposure, LocalTTSettings.IndirectBoost, (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB);
+                ASVGFCode.Do(ref LightingBuffer, ref _converged, LocalTTSettings.RenderScale, ((FramesSinceStart2 % 2 == 0) ? ScreenSpaceInfo : ScreenSpaceInfoPrev), cmd, FramesSinceStart2, ref GIWorldPosA, LocalTTSettings.DoPartialRendering ? LocalTTSettings.PartialRenderingFactor : 1, TTPostProc.ExposureBuffer, LocalTTSettings.PPExposure, LocalTTSettings.IndirectBoost, (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB);
                 CurrentSample = 1;
                 cmd.EndSample("ASVGF");
             } else if(LocalTTSettings.UseReSTIRGI && LocalTTSettings.UseASVGF) {
@@ -1075,7 +1076,7 @@ namespace TrueTrace {
                                     FramesSinceStart2, 
                                     ref GIWorldPosA, 
                                     LocalTTSettings.DoPartialRendering ? LocalTTSettings.PartialRenderingFactor : 1, 
-                                    Denoisers.ExposureBuffer, 
+                                    TTPostProc.ExposureBuffer, 
                                     LocalTTSettings.PPExposure, 
                                     LocalTTSettings.IndirectBoost, 
                                     Gradients,
@@ -1100,14 +1101,14 @@ namespace TrueTrace {
 
             cmd.BeginSample("Post Processing");
             if (SourceWidth != TargetWidth) {
-                if (LocalTTSettings.UseTAAU) Denoisers.ExecuteTAAU(ref _FinalTex, ref _converged, cmd, FramesSinceStart2);
-                else Denoisers.ExecuteUpsample(ref _converged, ref _FinalTex, FramesSinceStart2, _currentSample, cmd, ((FramesSinceStart2 % 2 == 0) ? ScreenSpaceInfo : ScreenSpaceInfoPrev));//This is a postprocessing pass, but im treating it like its not one, need to move it to after the accumulation
+                if (LocalTTSettings.UseTAAU) TTPostProc.ExecuteTAAU(ref _FinalTex, ref _converged, cmd, FramesSinceStart2);
+                else TTPostProc.ExecuteUpsample(ref _converged, ref _FinalTex, FramesSinceStart2, _currentSample, cmd, ((FramesSinceStart2 % 2 == 0) ? ScreenSpaceInfo : ScreenSpaceInfoPrev));//This is a postprocessing pass, but im treating it like its not one, need to move it to after the accumulation
             }
             else cmd.CopyTexture(_converged, 0, 0, _FinalTex, 0, 0);
 
             if (LocalTTSettings.PPExposure) {
                 _FinalTex.GenerateMips();
-                Denoisers.ExecuteAutoExpose(ref _FinalTex, LocalTTSettings.Exposure, cmd, LocalTTSettings.ExposureAuto);
+                TTPostProc.ExecuteAutoExpose(ref _FinalTex, LocalTTSettings.Exposure, cmd, LocalTTSettings.ExposureAuto);
             }
 
             #if UseOIDN
@@ -1130,11 +1131,14 @@ namespace TrueTrace {
                 }
             #endif
 
-            if (LocalTTSettings.PPBloom) Denoisers.ExecuteBloom(ref _FinalTex, LocalTTSettings.BloomStrength, cmd);
-            if(LocalTTSettings.PPToneMap) Denoisers.ExecuteToneMap(ref _FinalTex, cmd, ref ToneMapTex, ref ToneMapTex2, LocalTTSettings.ToneMapper);
-            if (LocalTTSettings.PPTAA) Denoisers.ExecuteTAA(ref _FinalTex, _currentSample, cmd);
-            if (LocalTTSettings.PPFXAA) Denoisers.ExecuteFXAA(ref _FinalTex, cmd);
-            if (LocalTTSettings.DoSharpen) Denoisers.ExecuteSharpen(ref _FinalTex, LocalTTSettings.Sharpness, cmd);
+            if (LocalTTSettings.PPBloom) {
+                if(LocalTTSettings.ConvBloom) TTPostProc.ExecuteConvBloom(ref _FinalTex, LocalTTSettings.ConvStrength, LocalTTSettings.ConvBloomThreshold, LocalTTSettings.ConvBloomSize, LocalTTSettings.ConvBloomDistExp, LocalTTSettings.ConvBloomDistExpClampMin, LocalTTSettings.ConvBloomDistExpScale, cmd);
+                else TTPostProc.ExecuteBloom(ref _FinalTex, LocalTTSettings.BloomStrength, cmd);
+            }
+            if(LocalTTSettings.PPToneMap) TTPostProc.ExecuteToneMap(ref _FinalTex, cmd, ref ToneMapTex, ref ToneMapTex2, LocalTTSettings.ToneMapper);
+            if (LocalTTSettings.PPTAA) TTPostProc.ExecuteTAA(ref _FinalTex, _currentSample, cmd);
+            if (LocalTTSettings.PPFXAA) TTPostProc.ExecuteFXAA(ref _FinalTex, cmd);
+            if (LocalTTSettings.DoSharpen) TTPostProc.ExecuteSharpen(ref _FinalTex, LocalTTSettings.Sharpness, cmd);
             cmd.Blit(_FinalTex, destination);
             ClearOutRenderTexture(_DebugTex);
             cmd.EndSample("Post Processing");
@@ -1167,5 +1171,6 @@ namespace TrueTrace {
             }
             SceneIsRunning = true;
         }
+
     }
 }

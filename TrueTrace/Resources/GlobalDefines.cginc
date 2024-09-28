@@ -22,7 +22,7 @@
 #define TrueBlack
 // #define AdvancedRadCacheAlt
 // #define UseTextureLOD
-
+// #define vMFDiffuse
 
 //END OF DEFINES
 //DEBUG VIEW DEFINES
@@ -76,8 +76,16 @@
 #define SampleSecondaryAlbedo 10
 #define SampleSecondaryAlbedoMask 11
 
+#define BlendModeLerp 0
+#define BlendModeAdd 1
+#define BlendModeMult 2
+
 bool GetFlag(int FlagVar, int flag) {
     return (((int)FlagVar >> flag) & (int)1) == 1;
+}
+
+int GetFlagStretch(int FlagVar, int LeftOffset, int Stride) {
+    return ((FlagVar >> (32 - LeftOffset - Stride)) & ((1 << (Stride)) - 1));
 }
 
 #define MaxTraversalSamples 1000

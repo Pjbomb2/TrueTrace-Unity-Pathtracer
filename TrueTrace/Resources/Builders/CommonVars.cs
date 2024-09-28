@@ -136,9 +136,10 @@ namespace CommonVars
         public Vector3 BlendColor;
         public float BlendFactor;
         public Vector2 SecondaryTextureScale;
-        public Vector4 SecondaryAlbedoTextureScale;
+        public Vector4 SecondaryAlbedoTexScaleOffset;
         public float Rotation;
         public float ColorBleed;
+        public float AlbedoBlendFactor;
     }
 
     [System.Serializable]
@@ -632,6 +633,7 @@ namespace CommonVars
         public bool UseKelvin;
         public float KelvinTemp;
         public float ColorBleed;
+        public float AlbedoBlendFactor;
     }
     [System.Serializable]
     public class RayObjs
@@ -1023,6 +1025,16 @@ namespace CommonVars
 
 
         public enum Flags {IsEmissionMask, BaseIsMap, ReplaceBase, UseSmoothness, InvertSmoothnessTexture, IsBackground, ShadowCaster, Invisible, BackgroundBleed, Thin};
+        //0-9 Flags
+        //28-30 SecondaryAlbedoStride
+
+        public static int SetFlagStretch(this int FlagVar, int LeftOffset, int Stride, int Setter) {
+            return (FlagVar & ~(((1 << (Stride + 1)) - 1) << (int)(32 - LeftOffset - Stride))) | ((Setter & ((1 << (Stride)) - 1)) << (int)(32 - LeftOffset - Stride));
+        }
+
+        public static int GetFlagStretch(this int FlagVar, int LeftOffset, int Stride) {
+            return ((FlagVar >> (32 - LeftOffset - Stride)) & ((1 << (Stride)) - 1));
+        }
 
         public static void SetFlag(this int FlagVar, Flags flag, bool Setter) {
             FlagVar = (FlagVar & ~(1 << (int)flag)) | ((Setter ? 1 : 0) << (int)flag);

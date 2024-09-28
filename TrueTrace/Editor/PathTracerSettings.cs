@@ -106,6 +106,13 @@ namespace TrueTrace {
          [SerializeField] public bool UseTransmittanceInNEE = true;
          [SerializeField] public bool MatChangeResetsAccum = false;
          [SerializeField] public float OIDNBlendRatio = 1.0f;
+         [SerializeField] public bool ConvBloom = false;
+         [SerializeField] public float ConvStrength = 1.37f;
+         [SerializeField] public float ConvBloomThreshold = 13.23f;
+         [SerializeField] public Vector2 ConvBloomSize = Vector2.one;
+         [SerializeField] public float ConvBloomDistExp = 0;
+         [SerializeField] public float ConvBloomDistExpClampMin = 1;
+         [SerializeField] public float ConvBloomDistExpScale = 1;
 
 
          public void SetGlobalDefines(string DefineToSet, bool SetValue) {
@@ -231,7 +238,7 @@ namespace TrueTrace {
             GameObject[] AllObjects = GameObject.FindObjectsOfType<GameObject>();//("Untagged");
             foreach(GameObject obj in AllObjects) {
                
-               if(PrefabUtility.IsAnyPrefabInstanceRoot(obj)) PrefabUtility.UnpackPrefabInstance(obj, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+               try{if(PrefabUtility.IsAnyPrefabInstanceRoot(obj)) PrefabUtility.UnpackPrefabInstance(obj, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);} catch(System.Exception e) {}
             }
             foreach(GameObject obj in AllObjects) {
                
@@ -577,10 +584,10 @@ Toggle SkinToggle;
 Toggle BloomToggle;        
 [Delayed] FloatField ResField;
 Toggle TAAUToggle;
-FloatField AtmoScatterField;
+IntegerField AtmoScatterField;
 Toggle GIToggle;
-FloatField GIUpdateRateField;
-FloatField TeporalGIMCapField;
+IntegerField GIUpdateRateField;
+IntegerField TeporalGIMCapField;
 FloatField ReSTIRGISpatialRadiusField;
 Toggle TemporalGIToggle;
 Toggle SpatialGIToggle;
@@ -590,7 +597,7 @@ Toggle DoPartialRenderingToggle;
 Toggle DoFireflyToggle;
 Toggle SampleValidToggle;
 Toggle IndirectClampingToggle;
-FloatField RISCountField;
+IntegerField RISCountField;
 IntegerField OIDNFrameField;
 FloatField FocalSlider;
 
@@ -1439,9 +1446,10 @@ Toolbar toolbar;
          ClayModeToggle.RegisterValueChangedCallback(evt => {ClayMode = evt.newValue; RayMaster.LocalTTSettings.ClayMode = ClayMode; if(evt.newValue) HardSettingsMenu.Insert(HardSettingsMenu.IndexOf(ClayModeToggle) + 1, ClayColorBox); else HardSettingsMenu.Remove(ClayColorBox);});
 
          Slider OIDNBlendRatioSlider = new Slider() {label = "OIDN Blend Ratio: ", value = OIDNBlendRatio, highValue = 1.0f, lowValue = 0.0f};
-         OIDNBlendRatioSlider.style.width = 200;
-         OIDNBlendRatioSlider.ElementAt(0).style.minWidth = 65;
-         OIDNBlendRatioSlider.RegisterValueChangedCallback(evt => {OIDNBlendRatio = evt.newValue; RayMaster.LocalTTSettings.OIDNBlendRatio = OIDNBlendRatio;});
+            OIDNBlendRatioSlider.showInputField = true;        
+            OIDNBlendRatioSlider.style.width = 300;
+            OIDNBlendRatioSlider.ElementAt(0).style.minWidth = 65;
+            OIDNBlendRatioSlider.RegisterValueChangedCallback(evt => {OIDNBlendRatio = evt.newValue; RayMaster.LocalTTSettings.OIDNBlendRatio = OIDNBlendRatio;});
 
          ColorField ClayColorField = new ColorField();
          ClayColorField.label = "Clay Color: ";
@@ -1514,6 +1522,31 @@ Toolbar toolbar;
          ScreenShotBox.Add(PathLabel);
          ScreenShotBox.Add(AbsolutePath);
 
+
+         VisualElement PanoramaBox = new VisualElement();
+         PanoramaBox.style.flexDirection = FlexDirection.Row;
+         Label PanoramaLabel = new Label() {text = "Panorama Path: "};
+         PanoramaLabel.style.color = Color.black;
+         if(System.IO.Directory.Exists(PlayerPrefs.GetString("PanoramaPath"))) PanoramaLabel.style.backgroundColor = Color.green;
+         else PanoramaLabel.style.backgroundColor = Color.red;
+         TextField PanoramaAbsolutePath = new TextField();
+         PanoramaAbsolutePath.value = PlayerPrefs.GetString("PanoramaPath");
+         PanoramaAbsolutePath.RegisterValueChangedCallback(evt => {if(System.IO.Directory.Exists(evt.newValue)) {PanoramaLabel.style.backgroundColor = Color.green;} else {PanoramaLabel.style.backgroundColor = Color.red;} PlayerPrefs.SetString("PanoramaPath", evt.newValue);});
+         PanoramaBox.Add(PanoramaLabel);
+         PanoramaBox.Add(PanoramaAbsolutePath);
+
+         VisualElement TurnTableBox = new VisualElement();
+         TurnTableBox.style.flexDirection = FlexDirection.Row;
+         Label TurnTableLabel = new Label() {text = "Turn Table Path: "};
+         TurnTableLabel.style.color = Color.black;
+         if(System.IO.Directory.Exists(PlayerPrefs.GetString("TurnTablePath"))) TurnTableLabel.style.backgroundColor = Color.green;
+         else TurnTableLabel.style.backgroundColor = Color.red;
+         TextField TurnTableAbsolutePath = new TextField();
+         TurnTableAbsolutePath.value = PlayerPrefs.GetString("TurnTablePath");
+         TurnTableAbsolutePath.RegisterValueChangedCallback(evt => {if(System.IO.Directory.Exists(evt.newValue)) {TurnTableLabel.style.backgroundColor = Color.green;} else {TurnTableLabel.style.backgroundColor = Color.red;} PlayerPrefs.SetString("TurnTablePath", evt.newValue);});
+         TurnTableBox.Add(TurnTableLabel);
+         TurnTableBox.Add(TurnTableAbsolutePath);
+
          Button CorrectMatOptionsButton = new Button(() => FixRayObjects()) {text = "Correct Mat Options"};
 
          HardSettingsMenu.Add(RemoveTrueTraceButton);
@@ -1534,6 +1567,8 @@ Toolbar toolbar;
          HardSettingsMenu.Add(Spacer);
          HardSettingsMenu.Add(DoSavingToggle);
          HardSettingsMenu.Add(ScreenShotBox);
+         HardSettingsMenu.Add(PanoramaBox);
+         HardSettingsMenu.Add(TurnTableBox);
          // HardSettingsMenu.Add(CorrectMatOptionsButton);
       }
 
@@ -1648,14 +1683,30 @@ Toolbar toolbar;
             if(!PlayerPrefs.HasKey("ScreenShotPath")) {
                PlayerPrefs.SetString("ScreenShotPath",  Application.dataPath + "/ScreenShots");
             }
+            if(!PlayerPrefs.HasKey("PanoramaPath")) {
+               PlayerPrefs.SetString("PanoramaPath",  Application.dataPath + "/ScreenShots");
+            }
+            if(!PlayerPrefs.HasKey("TurnTablePath")) {
+               PlayerPrefs.SetString("TurnTablePath",  Application.dataPath + "/TurnTables");
+            }
+            if(!System.IO.Directory.Exists(PlayerPrefs.GetString("TurnTablePath"))) {
+               AssetDatabase.CreateFolder("Assets", "TurnTables");
+               PlayerPrefs.SetString("TurnTablePath",  Application.dataPath + "/TurnTables");
+            }
             if(!System.IO.Directory.Exists(PlayerPrefs.GetString("ScreenShotPath"))) {
                AssetDatabase.CreateFolder("Assets", "ScreenShots");
                PlayerPrefs.SetString("ScreenShotPath",  Application.dataPath + "/ScreenShots");
+            }
+            if(!System.IO.Directory.Exists(PlayerPrefs.GetString("PanoramaPath"))) {
+               AssetDatabase.CreateFolder("Assets", "ScreenShots");
+               PlayerPrefs.SetString("PanoramaPath",  Application.dataPath + "/ScreenShots");
             }
 
             DingNoise = Resources.Load("Utility/DING", typeof(AudioClip)) as AudioClip;
             OnFocus();
             MainSource = new VisualElement();
+            MainSource.style.justifyContent = Justify.FlexStart; // Align items to the start
+            MainSource.style.alignItems = Align.FlexStart; // Align content to start of the container
             HierarchyOptionsMenu = new VisualElement();
             MaterialPairingMenu = new VisualElement();
             SceneSettingsMenu = new VisualElement();
@@ -1769,6 +1820,13 @@ Toolbar toolbar;
            FireflyFrameInterval = RayMaster.LocalTTSettings.FireflyFrameInterval;
            OIDNFrameCount = RayMaster.LocalTTSettings.OIDNFrameCount;
            RayMaster.IsFocusing = false;
+           ConvBloom = RayMaster.LocalTTSettings.ConvBloom;
+           ConvStrength = RayMaster.LocalTTSettings.ConvStrength;
+           ConvBloomThreshold = RayMaster.LocalTTSettings.ConvBloomThreshold;
+           ConvBloomSize = RayMaster.LocalTTSettings.ConvBloomSize;
+           ConvBloomDistExp = RayMaster.LocalTTSettings.ConvBloomDistExp;
+           ConvBloomDistExpClampMin = RayMaster.LocalTTSettings.ConvBloomDistExpClampMin;
+           ConvBloomDistExpScale = RayMaster.LocalTTSettings.ConvBloomDistExpScale;
          }
 
            AddHardSettingsToMenu();
@@ -1814,7 +1872,7 @@ Toolbar toolbar;
 
            Box TopEnclosingBox = new Box();
                TopEnclosingBox.style.flexDirection = FlexDirection.Row;
-               FloatField BounceField = new FloatField() {value = (int)BounceCount, label = "Max Bounces"};
+               IntegerField BounceField = new IntegerField() {value = (int)BounceCount, label = "Max Bounces"};
                BounceField.ElementAt(0).style.minWidth = 75;
                BounceField.ElementAt(1).style.width = 25;
                BounceField.style.paddingRight = 40;
@@ -1845,7 +1903,7 @@ Toolbar toolbar;
            MainSource.Add(NEEToggle);
            VisualElement NEEBox = new VisualElement();
             Label RISLabel = new Label("RIS Count");
-            RISCountField = new FloatField() {value = RISCount};
+            RISCountField = new IntegerField() {value = RISCount};
             RISCountField.RegisterValueChangedCallback(evt => {RISCount = (int)evt.newValue; RayMaster.LocalTTSettings.RISCount = RISCount;});
             NEEBox.style.flexDirection = FlexDirection.Row;
             NEEBox.Add(RISLabel);
@@ -1933,17 +1991,51 @@ Toolbar toolbar;
 
 
          BloomToggle = new Toggle() {value = Bloom, text = "Enable Bloom"};
-           VisualElement BloomBox = new VisualElement();
-               Label BloomLabel = new Label("Bloom Strength");
-               Slider BloomSlider = new Slider() {value = BloomStrength, highValue = 0.9999f, lowValue = 0.25f};
-               BloomSlider.style.width = 100;
-               BloomToggle.RegisterValueChangedCallback(evt => {Bloom = evt.newValue; RayMaster.LocalTTSettings.PPBloom = Bloom; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(BloomToggle) + 1, BloomBox); else MainSource.Remove(BloomBox);});        
-               BloomSlider.RegisterValueChangedCallback(evt => {BloomStrength = evt.newValue; RayMaster.LocalTTSettings.BloomStrength = BloomStrength;});
-               MainSource.Add(BloomToggle);
-               BloomBox.style.flexDirection = FlexDirection.Row;
-               BloomBox.Add(BloomLabel);
-               BloomBox.Add(BloomSlider);
-           if(Bloom) MainSource.Add(BloomBox);
+            VisualElement BloomBox = new VisualElement();
+               Toggle ConvBloomToggle = new Toggle {value = ConvBloom, text = "Convolutional Bloom"};
+                  VisualElement StandardBloomBox = new VisualElement();
+                     StandardBloomBox.style.flexDirection = FlexDirection.Row;
+                     Label BloomLabel = new Label("Bloom Strength");
+                     Slider BloomSlider = new Slider() {value = BloomStrength, highValue = 0.9999f, lowValue = 0.25f};
+                        BloomSlider.style.width = 100;
+                        BloomSlider.RegisterValueChangedCallback(evt => {BloomStrength = evt.newValue; RayMaster.LocalTTSettings.BloomStrength = BloomStrength;});
+                  StandardBloomBox.Add(BloomLabel);
+                  StandardBloomBox.Add(BloomSlider);
+                  VisualElement ConvBloomBox = new VisualElement();
+                     Slider ConvBloomStrengthSlider = new Slider() {label = "Convolution Bloom Strength", value = ConvStrength, highValue = 10.0f, lowValue = 0.0f};
+                        ConvBloomStrengthSlider.style.width = 400;
+                        ConvBloomStrengthSlider.RegisterValueChangedCallback(evt => {ConvStrength = evt.newValue; RayMaster.LocalTTSettings.ConvStrength = ConvStrength;});
+                     Slider ConvBloomThresholdSlider = new Slider() {label = "Convolution Bloom Threshold", value = ConvBloomThreshold, highValue = 20.0f, lowValue = 0.0f};
+                        ConvBloomThresholdSlider.style.width = 400;
+                        ConvBloomThresholdSlider.RegisterValueChangedCallback(evt => {ConvBloomThreshold = evt.newValue; RayMaster.LocalTTSettings.ConvBloomThreshold = ConvBloomThreshold;});
+                     Vector2Field ConvBloomSizeField = new Vector2Field() {label = "Convolution Bloom Size", value = ConvBloomSize};
+                        ConvBloomSizeField.RegisterValueChangedCallback(evt => {ConvBloomSize = evt.newValue; RayMaster.LocalTTSettings.ConvBloomSize = ConvBloomSize;});
+                     VisualElement ConvDistExpBox = CreateHorizontalBox("Convolution Distance Container");
+                        FloatField ConvBloomDistExpField = new FloatField() {label = "Convolution Bloom Dist Exp", value = ConvBloomDistExp};
+                           ConvBloomDistExpField.RegisterValueChangedCallback(evt => {ConvBloomDistExp = evt.newValue; RayMaster.LocalTTSettings.ConvBloomDistExp = ConvBloomDistExp;});
+                        FloatField ConvBloomDistExpClampMinField = new FloatField() {label = "Convolution Bloom Dist Exp Clamp Min", value = ConvBloomDistExpClampMin};
+                           ConvBloomDistExpClampMinField.RegisterValueChangedCallback(evt => {ConvBloomDistExpClampMin = evt.newValue; RayMaster.LocalTTSettings.ConvBloomDistExpClampMin = ConvBloomDistExpClampMin;});
+                        FloatField ConvBloomDistExpScaleField = new FloatField() {label = "Convolution Bloom Dist Exp Scale", value = ConvBloomDistExpScale};
+                           ConvBloomDistExpScaleField.RegisterValueChangedCallback(evt => {ConvBloomDistExpScale = evt.newValue; RayMaster.LocalTTSettings.ConvBloomDistExpScale = ConvBloomDistExpScale;});
+                     ConvDistExpBox.Add(ConvBloomDistExpField);
+                     ConvDistExpBox.Add(ConvBloomDistExpClampMinField);
+                     ConvDistExpBox.Add(ConvBloomDistExpScaleField);
+
+
+                  ConvBloomBox.Add(ConvBloomStrengthSlider);
+                  ConvBloomBox.Add(ConvBloomThresholdSlider);
+                  ConvBloomBox.Add(ConvBloomSizeField);
+                  ConvBloomBox.Add(ConvDistExpBox);
+               BloomBox.Add(ConvBloomToggle);
+               if(ConvBloom) BloomBox.Add(ConvBloomBox);
+               else BloomBox.Add(StandardBloomBox);
+               ConvBloomToggle.RegisterValueChangedCallback(evt => {ConvBloom = evt.newValue; RayMaster.LocalTTSettings.ConvBloom = ConvBloom; if(evt.newValue) {BloomBox.Remove(StandardBloomBox); BloomBox.Insert(BloomBox.IndexOf(ConvBloomToggle) + 1, ConvBloomBox); } else {BloomBox.Remove(ConvBloomBox); BloomBox.Insert(BloomBox.IndexOf(ConvBloomToggle) + 1, StandardBloomBox); }});        
+            BloomToggle.RegisterValueChangedCallback(evt => {Bloom = evt.newValue; RayMaster.LocalTTSettings.PPBloom = Bloom; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(BloomToggle) + 1, BloomBox); else MainSource.Remove(BloomBox);});        
+         MainSource.Add(BloomToggle);
+         if(Bloom) {
+            MainSource.Add(BloomBox);
+
+         }
 
 
 
@@ -2030,7 +2122,7 @@ Toolbar toolbar;
                    SampleValidToggle.tooltip = "Confirms samples are mutually visable, reduces performance but improves indirect shadow quality";
                    Label GIUpdateRateLabel = new Label("Update Rate(0 is off)");
                    GIUpdateRateLabel.tooltip = "How often a pixel should validate its entire path, good for quickly changing lighting";
-                   GIUpdateRateField = new FloatField() {value = UpdateRate};
+                   GIUpdateRateField = new IntegerField() {value = UpdateRate};
                    SampleValidToggle.RegisterValueChangedCallback(evt => {SampleValid = evt.newValue; RayMaster.LocalTTSettings.DoReSTIRGIConnectionValidation = SampleValid;});
                    GIUpdateRateField.RegisterValueChangedCallback(evt => {UpdateRate = (int)evt.newValue; RayMaster.LocalTTSettings.ReSTIRGIUpdateRate = UpdateRate;});
                    TopGI.Add(SampleValidToggle);
@@ -2043,7 +2135,7 @@ Toolbar toolbar;
                    
                    Label TemporalGIMCapLabel = new Label("Temporal M Cap(0 is off)");
                    TemporalGIMCapLabel.tooltip = "Controls how long a sample is valid for, lower numbers update more quickly but have more noise, good for quickly changing scenes/lighting";
-                   TeporalGIMCapField = new FloatField() {value = GITemporalMCap};
+                   TeporalGIMCapField = new IntegerField() {value = GITemporalMCap};
                    TemporalGIToggle.RegisterValueChangedCallback(evt => {GITemporal = evt.newValue; RayMaster.LocalTTSettings.UseReSTIRGITemporal = GITemporal;});
                    TeporalGIMCapField.RegisterValueChangedCallback(evt => {GITemporalMCap = (int)evt.newValue; RayMaster.LocalTTSettings.ReSTIRGITemporalMCap = GITemporalMCap;});
                    TemporalGI.Add(TemporalGIToggle);
@@ -2158,7 +2250,7 @@ Toolbar toolbar;
 
            VisualElement AtmoBox = new VisualElement();
                AtmoBox.style.flexDirection = FlexDirection.Row;
-               AtmoScatterField = new FloatField("Atmospheric Scattering Samples") {value = AtmoScatter};
+               AtmoScatterField = new IntegerField("Atmospheric Scattering Samples") {value = AtmoScatter};
                AtmoScatterField.RegisterValueChangedCallback(evt => {AtmoScatter = (int)evt.newValue; RayMaster.AtmoNumLayers = AtmoScatter;});
                AtmoBox.Add(AtmoScatterField);
            MainSource.Add(AtmoBox);
@@ -2304,6 +2396,7 @@ Toolbar toolbar;
                                        TempRTO.UseKelvin[NameIndex] = Ray.UseKelvin;
                                        TempRTO.KelvinTemp[NameIndex] = Ray.KelvinTemp;
                                        TempRTO.ColorBleed[NameIndex] = Ray.ColorBleed;
+                                       TempRTO.AlbedoBlendFactor[NameIndex] = Ray.AlbedoBlendFactor;
                                        TempRTO.CallMaterialEdited();
                                     }
                                  }

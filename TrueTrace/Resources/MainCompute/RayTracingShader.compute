@@ -710,11 +710,23 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
         float3 TempCol = 1;
         if(TempMat.AlbedoTex.x > 0) TempCol = SampleTexture(BaseUv, SampleAlbedo, TempMat);
         if(TempMat.SecondaryAlbedoTex.x > 0) {
+            float AlbMaskVal = TempMat.AlbedoBlendFactor;
             if(TempMat.SecondaryAlbedoMask.x > 0) {
-                if(SampleTexture(BaseUv, SampleSecondaryAlbedoMask, TempMat).x > 0.5f) {
-                    TempCol *= SampleTexture(BaseUv, SampleSecondaryAlbedo, TempMat).xyz;
-
-                }
+                AlbMaskVal = SampleTexture(BaseUv, SampleSecondaryAlbedoMask, TempMat).x;
+            }
+            float3 SecondaryVal = SampleTexture(BaseUv, SampleSecondaryAlbedo, TempMat).xyz;
+            switch(GetFlagStretch(TempMat.Tag, 1, 3)) {
+                case 0:
+                    TempCol = lerp(TempCol, SecondaryVal, AlbMaskVal);
+                break;
+                case 1:
+                    if(AlbMaskVal > 0.5f || !(TempMat.SecondaryAlbedoMask.x > 0))
+                        TempCol += SecondaryVal;
+                break;
+                case 2:
+                    if(AlbMaskVal > 0.5f || !(TempMat.SecondaryAlbedoMask.x > 0))
+                        TempCol *= SecondaryVal;
+                break;
             }
         }
 

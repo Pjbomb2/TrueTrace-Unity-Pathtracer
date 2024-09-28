@@ -69,5 +69,12 @@ namespace TrueTrace {
         [SerializeField] public bool MatChangeResetsAccum = false;
         [SerializeField] public bool PPFXAA = false;
         [SerializeField] public float OIDNBlendRatio = 1.0f;
+        [SerializeField] public bool ConvBloom = false;
+        [SerializeField] public float ConvStrength = 1.37f;
+        [SerializeField] public float ConvBloomThreshold = 13.23f;
+        [SerializeField] public Vector2 ConvBloomSize = Vector2.one;
+        [SerializeField] public float ConvBloomDistExp = 0;
+        [SerializeField] public float ConvBloomDistExpClampMin = 1;
+        [SerializeField] public float ConvBloomDistExpScale = 1;
     }
 }

@@ -11,6 +11,8 @@ using System.Reflection;
 namespace TrueTrace {
     public class PanoramaDoer : MonoBehaviour
     {
+        public int Padding = 32;
+        float PaddingHalfValue = 0;
         public bool DoPanorama = true;
         RayTracingMaster RayMaster;
         public Camera[] Cameras;
@@ -81,7 +83,7 @@ void AddResolution(int width, int height, string label)
             RayMaster.DoPanorama = false;
             RayMaster.DoChainedImages = false;
             if(DoPanorama) {
-                AddResolution(Mathf.CeilToInt((float)FinalAtlasSize.x / (float)HorizontalSegments), FinalAtlasSize.y, "TempPanoramaSize");
+                AddResolution(Mathf.CeilToInt((float)FinalAtlasSize.x / (float)HorizontalSegments) + Padding, FinalAtlasSize.y, "TempPanoramaSize");
                 SetResolution(GetCount() - 1);
             } else {
                 AddResolution(FinalAtlasSize.x, FinalAtlasSize.y, "TempPanoramaSize");
@@ -95,20 +97,29 @@ void AddResolution(int width, int height, string label)
         public void OnDisable() {
             if(RayMaster.DoChainedImages) RemoveResolution(GetCount() - 1);
         }
-        private void FinalizePanorama() {
+        private void FinalizePanorama(Camera cam) {
             Color[] FinalAtlasData = new Color[FinalAtlasSize.x * FinalAtlasSize.y];
 
             for(int iter = 0; iter < HorizontalSegments; iter++) {
-                int width = TexArray[iter].width;
+                int width = TexArray[iter].width - Padding;
                 int height = TexArray[iter].height;
                 Color[] CurrentData = TexArray[iter].GetPixels(0);
                 int XOffset = iter * Mathf.CeilToInt((float)FinalAtlasSize.x / (float)HorizontalSegments);
                 // int YOffset = iter * Mathf.CeilToInt(5000.0f / 5000.0f);
-                for(int i = 0; i < width; i++) {
+                for(int i = 0; i < width + Padding; i++) {
                     for(int j = 0; j < height; j++) {
-                        int IndexChild = i + j * width;
-                        int IndexFinal = (i + XOffset) + (j) * FinalAtlasSize.x;
-                        FinalAtlasData[IndexFinal] = new Color(CurrentData[IndexChild].r, CurrentData[IndexChild].g, CurrentData[IndexChild].b, 1); 
+                        int IndexChild = i + j * (width + Padding);
+                        int IndexFinal = (i + XOffset - (Padding / 2)) + (j) * FinalAtlasSize.x;
+                        if(i >= Padding / 2 && iter != HorizontalSegments - 1) FinalAtlasData[IndexFinal] = new Color(CurrentData[IndexChild].r, CurrentData[IndexChild].g, CurrentData[IndexChild].b, 1); 
+                        else if(iter != 0 && iter != HorizontalSegments - 1) {
+                            float Ratio = 1;
+                            if(i < Padding / 2) {
+                                Ratio = 1.0f - ((float)i / (float)(Padding / 2));
+                            }
+                            FinalAtlasData[IndexFinal] = new Color((FinalAtlasData[IndexFinal].r * Ratio + CurrentData[IndexChild].r * (1.0f - Ratio)), (FinalAtlasData[IndexFinal].g * Ratio + CurrentData[IndexChild].g * (1.0f - Ratio)), (FinalAtlasData[IndexFinal].b * (Ratio) + CurrentData[IndexChild].b * (1.0f - Ratio)), 1); 
+                        } else if(iter == HorizontalSegments - 1 && i < width + (Padding / 2)) {
+                            FinalAtlasData[IndexFinal] = new Color(CurrentData[IndexChild].r, CurrentData[IndexChild].g, CurrentData[IndexChild].b, 1); 
+                        }
                     }
                 }
                 DestroyImmediate(TexArray[iter]);
@@ -116,7 +127,7 @@ void AddResolution(int width, int height, string label)
             Texture2D FinalAtlas = new Texture2D(FinalAtlasSize.x, FinalAtlasSize.y);
             FinalAtlas.SetPixels(FinalAtlasData, 0);
             FinalAtlas.Apply();
-            System.IO.File.WriteAllBytes(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ".png", FinalAtlas.EncodeToPNG()); 
+            System.IO.File.WriteAllBytes(PlayerPrefs.GetString("PanoramaPath") + "/" + cam.gameObject.name + ".png", FinalAtlas.EncodeToPNG()); 
         }
         public void Init() {
             RayMaster.SampleCount = 0;
@@ -148,7 +159,8 @@ void AddResolution(int width, int height, string label)
                     RayMaster.SampleCount = 0;
                     RayMaster.FramesSinceStart = 0;                    
                 }
-                RayMaster.CurrentHorizonalPatch = new Vector2((float)CurrentSegment / (float)HorizontalSegments, (float)(CurrentSegment + 1) / (float)HorizontalSegments);
+                PaddingHalfValue = (Padding / 2.0f) / (float)FinalAtlasSize.x;
+                RayMaster.CurrentHorizonalPatch = new Vector2((float)CurrentSegment / (float)HorizontalSegments - PaddingHalfValue, (float)(CurrentSegment + 1) / (float)HorizontalSegments + PaddingHalfValue);
                 waitedTime += Time.deltaTime;
                 if (RayMaster.FramesSinceStart >= MaxSamples || waitedTime >= TimeBetweenSegments) {
                     waitedTime = 0;
@@ -165,7 +177,7 @@ void AddResolution(int width, int height, string label)
                     if(CurrentSegment == HorizontalSegments) {
                         CurrentSegment = 0;
                         waitedTime = 0;
-                        FinalizePanorama();
+                        FinalizePanorama(Cameras[CurrentCamera]);
                         CurrentCamera++;
                         if(CurrentCamera < Cameras.Length) {
                             Cameras[CurrentCamera - 1].gameObject.SetActive(false);
@@ -185,6 +197,8 @@ void AddResolution(int width, int height, string label)
         }
         public void LateUpdate()
         {
+            RayMaster.DoPanorama = DoPanorama;
+            RayMaster.DoChainedImages = true;
             StartCoroutine(RecordFrame());
         }
     }

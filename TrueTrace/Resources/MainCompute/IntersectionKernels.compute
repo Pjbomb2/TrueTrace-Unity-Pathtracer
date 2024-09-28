@@ -282,7 +282,6 @@ void IntersectBVHShadow(int ray_index) {
 
         if(ray_index >= BufferSizes[CurBounce].shadow_rays) return;
 
-        bool hit = false;
         ShadowRayData ShadowRay = ShadowRaysBuffer[ray_index];
         float3 throughput = 1;
         #ifdef HardwareRT
@@ -405,8 +404,7 @@ void IntersectBVHShadow(int ray_index) {
                     triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
 
                     Reps++;
-                }
-                else {
+                } else {
                     triangle_group = current_group;
                     current_group = (uint)0;
                 }
@@ -442,24 +440,14 @@ void IntersectBVHShadow(int ray_index) {
                             uint triangle_index = firstbithigh(triangle_group.y);
                             triangle_group.y &= ~(1 << triangle_index);
 
-                            if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, max_distance, mesh_id, throughput, MatOffset)) {
-                                hit = true;
-                                break;
-                            }
+                            if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, max_distance, mesh_id, throughput, MatOffset)) return;
                         }
                     }
                 }
 
-                if (hit) {
-                    stack_size = 0;
-                    current_group.y = 0;
-                    ShadowRaysBuffer[ray_index].t = 0;
-                    break;
-                }
 
                 if ((current_group.y & 0xff000000) == 0) {
                     if (stack_size == 0) {//thread has finished traversing
-                        current_group.y = 0;
                         if(!TerrainExists) {
                             uint PixelIndex = ShadowRay.PixelIndex;
                             if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray2.origin + ray2.direction * abs(ShadowRaysBuffer[ray_index].t), 0);
@@ -467,7 +455,6 @@ void IntersectBVHShadow(int ray_index) {
                                 CacheBuffer[PixelIndex].CurrentIlluminance = EncodeRGB(DecodeRGB(CacheBuffer[PixelIndex].CurrentIlluminance) + unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput);// * abs(dot(i_octahedral_32(CacheBuffer[PixelIndex].Norm), ShadowRay.direction));
                             #endif
                             if (ShadowRay.t >= 0) {
-
                                 if (CurBounce == 0) {
                                     GlobalColors[PixelIndex].Direct += ShadowRay.illumination * throughput;
                                 } else {
