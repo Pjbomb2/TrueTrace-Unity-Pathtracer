@@ -38,6 +38,7 @@
   <li>Efficient Panorama Rendering</li>
   <li>IES for spotlights</li>
   <li>True Bindless texturing(Thanks to Meetem)</li>
+  <li>Convolution Bloom(Not mine)</li>
 </ul>
 
 MASSIVE thanks to 
@@ -45,6 +46,7 @@ MASSIVE thanks to
 for bringing bindless textures to unity!
 </br>[Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
 </br>[ebruneton](https://ebruneton.github.io/precomputed_atmospheric_scattering/)
+</br>[Convolutional Bloom](https://github.com/AKGWSB/FFTConvolutionBloom)
 </br>
 
 
