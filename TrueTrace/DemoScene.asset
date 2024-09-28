@@ -19,8 +19,8 @@ MonoBehaviour:
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 1
-  PPBloom: 1
+  Accumulate: 0
+  PPBloom: 0
   BloomStrength: 0.849
   PPDoF: 0
   DoFAperature: 0.403
@@ -75,7 +75,7 @@ MonoBehaviour:
   MatChangeResetsAccum: 1
   PPFXAA: 0
   OIDNBlendRatio: 1
-  ConvBloom: 1
+  ConvBloom: 0
   ConvStrength: 10
   ConvBloomThreshold: 4.69
   ConvBloomSize: {x: 1, y: 1}
