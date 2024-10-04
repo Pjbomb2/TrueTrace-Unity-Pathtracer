@@ -1426,7 +1426,6 @@ inline SH interpolate_lf(Texture2D<float4> img_lf_shY, Texture2D<float2> img_lf_
 	return sum_lf;
 }
 
-bool DiffRes;
 
 #ifdef HDRP
 	Texture2DArray<float4> DiffuseGBuffer;
@@ -1479,14 +1478,14 @@ void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGrou
 
 		float3 normal = i_octahedral_32(TEX_PT_NORMALS_A[ipos].y);
 		float4 base_color = float4(unpackRGBE(AlbedoColorB[ipos].x),(ReflRefracA[ipos] << 1) >> 30);// TEX_PT_BASE_COLOR_A.SampleLevel(sampler_trilinear_clamp, ipos / float2(screen_width, screen_height), 0);
-		if(DiffRes && base_color.w <= 2) base_color.xyz = 1;
+		if(UpscalerMethod != 0 && DiffRes && base_color.w <= 2) base_color.xyz = 1;
 		if(base_color.w == 1) base_color = float4(unpackRGBE(AlbedoColorB[ipos].x),1);
 		// Project the spherical harmonics lighting onto the actual surface normal
 		float3 projected_lf = project_SH_irradiance(filtered_lf, normal);
 
 		projected_lf *= 1024.0f;
 		
-		float3 final_color = composite_color(base_color, projected_lf, filtered_hf, filtered_spec, (DiffRes && base_color.w <= 2) ? 1 : unpackRGBE(AlbedoColorB[ipos].y), ipos);
+		float3 final_color = composite_color(base_color, projected_lf, filtered_hf, filtered_spec, (UpscalerMethod != 0 && DiffRes && base_color.w <= 2) ? 1 : unpackRGBE(AlbedoColorB[ipos].y), ipos);
 		// SH TempSH = irradiance_to_SH(final_color, i_octahedral_32(TEX_PT_NORMALS_A[ipos].x));
 		// final_color = project_SH_irradiance(TempSH, normal);
 		IMG_ASVGF_COLOR[ipos] = float4(final_color, 0);

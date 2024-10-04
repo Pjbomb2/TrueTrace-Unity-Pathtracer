@@ -650,6 +650,11 @@ namespace TrueTrace {
                 if (Tans.Count != 0) CurMeshData.Tangents.AddRange(Tans);
                 else CurMeshData.SetTansZero(mesh.vertexCount);
 
+                var Colors = new List<Color>();
+                mesh.GetColors(Colors);
+                if (Colors.Count != 0) CurMeshData.Colors.AddRange(Colors);
+                else CurMeshData.SetColorsZero(mesh.vertexCount);
+
                 var Norms = new List<Vector3>();
                 mesh.GetNormals(Norms);
                 CurMeshData.Normals.AddRange(Norms);
@@ -1079,6 +1084,9 @@ namespace TrueTrace {
                     Norm2 = TransMat * Vector3.Scale(Scale, CurMeshData.Normals[Index2]);
                     Norm3 = TransMat * Vector3.Scale(Scale, CurMeshData.Normals[Index3]);
 
+
+
+
                     #if TTLightMapping
                         LightMapTris[LightMapRendererIndex].Add(new LightMapTriData() {
                             pos0 = ParentMat * V1,
@@ -1094,9 +1102,9 @@ namespace TrueTrace {
                     #endif
 
 
-                    TempTri.tex0 = CurMeshData.UVs[Index1];
-                    TempTri.texedge1 = CurMeshData.UVs[Index2];
-                    TempTri.texedge2 = CurMeshData.UVs[Index3];
+                    TempTri.tex0 = ((uint)Mathf.FloatToHalf(CurMeshData.UVs[Index1].x) << 16) | Mathf.FloatToHalf(CurMeshData.UVs[Index1].y);
+                    TempTri.texedge1 = ((uint)Mathf.FloatToHalf(CurMeshData.UVs[Index2].x) << 16) | Mathf.FloatToHalf(CurMeshData.UVs[Index2].y);
+                    TempTri.texedge2 = ((uint)Mathf.FloatToHalf(CurMeshData.UVs[Index3].x) << 16) | Mathf.FloatToHalf(CurMeshData.UVs[Index3].y);
 
                     TempTri.pos0 = V1;
                     TempTri.posedge1 = V2 - V1;
@@ -1108,6 +1116,25 @@ namespace TrueTrace {
                     TempTri.tan0 = CommonFunctions.PackOctahedral(Tan1.normalized);
                     TempTri.tan1 = CommonFunctions.PackOctahedral(Tan2.normalized);
                     TempTri.tan2 = CommonFunctions.PackOctahedral(Tan3.normalized);
+                    
+                    TempTri.VertColA = CommonFunctions.packRGBE(CurMeshData.Colors[Index1]);
+                    TempTri.VertColB = CommonFunctions.packRGBE(CurMeshData.Colors[Index2]);
+                    TempTri.VertColC = CommonFunctions.packRGBE(CurMeshData.Colors[Index3]);
+
+                    // {
+                    //     Vector3 N = Norm1.normalized;
+                    //     Vector3 T = Tan1.normalized;
+                    //     Vector3 B = Vector3.Cross(N, T);
+
+                    //     uint EncodedQ = CommonFunctions.encodeQTangentUI32(T, B, N);
+                    //     Vector3 N2 = Vector3.zero;
+                    //     Vector3 T2 = Vector3.zero;
+
+                    //     CommonFunctions.decodeQTangentUI32(EncodedQ, ref T2, ref N2);
+                    //     if(Mathf.Abs(N.x - N2.x) > 0.01f || Mathf.Abs(N.y - N2.y) > 0.01f || Mathf.Abs(N.z - N2.z) > 0.01f) {
+                    //         Debug.Log("AAAA: " + N.normalized + "; " + N2.normalized);
+                    //     }
+                    // }
 
                     TempTri.MatDat = (uint)CurMeshData.MatDat[OffsetReal];
                     AggTriangles[OffsetReal] = TempTri;
@@ -1120,7 +1147,9 @@ namespace TrueTrace {
                         #if AccurateLightTris
                             if(_Materials[(int)TempTri.MatDat].EmissiveTex.x != 0) {
                                 int ThisIndex = _Materials[(int)TempTri.MatDat].EmissiveTex.x - 1;
-                                Vector2 UVV = (TempTri.tex0 + TempTri.texedge1 + TempTri.texedge2) / 3.0f;
+                                Vector2 UVV = (new Vector2(Mathf.HalfToFloat((ushort)(TempTri.tex0 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.tex0 & 0xFFFF))) + 
+                                                new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge1 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge1 & 0xFFFF))) + 
+                                                new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge2 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge2 & 0xFFFF)))) / 3.0f;
                                 int UVIndex3 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
                                 if(UVIndex3 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x)
                                     if(EmissionTexPixels[ThisIndex][UVIndex3].r < 0.1f && EmissionTexPixels[ThisIndex][UVIndex3].g < 0.1f && EmissionTexPixels[ThisIndex][UVIndex3].b < 0.1f) IsValid = false;

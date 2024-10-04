@@ -23,6 +23,7 @@
 // #define AdvancedRadCacheAlt
 // #define UseTextureLOD
 // #define vMFDiffuse
+#define AdvancedBackground
 
 //END OF DEFINES
 //DEBUG VIEW DEFINES

@@ -119,7 +119,7 @@ void IntersectBVH(int ray_index) {
                     #ifdef AdvancedAlphaMapped
                         if(CurBounce == 0 && GetFlag(_Materials[MaterialIndex].Tag, Invisible)) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
                         if(_Materials[MaterialIndex].MatType == CutoutIndex) {
-                            float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - bestHit.u - bestHit.v) + AggTris[tri_id].texedge1 * bestHit.u + AggTris[tri_id].texedge2 * bestHit.v;
+                            float2 BaseUv = TOHALF(AggTris[tri_id].tex0) * (1.0f - bestHit.u - bestHit.v) + TOHALF(AggTris[tri_id].texedge1) * bestHit.u + TOHALF(AggTris[tri_id].texedge2) * bestHit.v;
                             if(_Materials[MaterialIndex].AlphaTex.x > 0)
                                 if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
                         }
@@ -130,7 +130,7 @@ void IntersectBVH(int ray_index) {
                     #endif
                     #ifdef FadeMapping
                         if(_Materials[MaterialIndex].MatType == FadeIndex) {
-                            float2 BaseUv = AggTris[tri_id].tex0 * (1.0f - bestHit.u - bestHit.v) + AggTris[tri_id].texedge1 * bestHit.u + AggTris[tri_id].texedge2 * bestHit.v;
+                            float2 BaseUv = TOHALF(AggTris[tri_id].tex0) * (1.0f - bestHit.u - bestHit.v) + TOHALF(AggTris[tri_id].texedge1) * bestHit.u + TOHALF(AggTris[tri_id].texedge2) * bestHit.v;
                             if(_Materials[MaterialIndex].AlphaTex.x > 0)
                                 if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x - _Materials[MaterialIndex].AlphaCutoff <= RandNum) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
                         }
@@ -304,7 +304,7 @@ void IntersectBVHShadow(int ray_index) {
                     float v = q.CommittedTriangleBarycentrics().x;
                     int2 Indexes = int2(q.CommittedInstanceID(), q.CommittedGeometryIndex());
                     int triangle_id = q.CommittedPrimitiveIndex();
-                    #if defined(IgnoreBackfacing) || defined(AdvancedAlphaMapped) || defined(IgnoreGlassShadow)
+                    #if defined(IgnoreBackfacing) || defined(AdvancedAlphaMapped) || defined(IgnoreGlassShadow) || defined(AdvancedBackground)
                         int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
                         triangle_id += triangleOffset;
                         mesh_id = MeshOffsets[Indexes.x].y;
@@ -313,7 +313,7 @@ void IntersectBVHShadow(int ray_index) {
                     #endif
                     #ifdef AdvancedAlphaMapped
                         if(_Materials[MaterialIndex].MatType == CutoutIndex) {
-                            float2 BaseUv = AggTris[triangle_id].tex0 * (1.0f - u - v) + AggTris[triangle_id].texedge1 * u + AggTris[triangle_id].texedge2 * v;
+                            float2 BaseUv = TOHALF(AggTris[triangle_id].tex0) * (1.0f - u - v) + TOHALF(AggTris[triangle_id].texedge1) * u + TOHALF(AggTris[triangle_id].texedge2) * v;
                             if(_Materials[MaterialIndex].AlphaTex.x > 0)
                                 if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;}
                         }
@@ -325,7 +325,7 @@ void IntersectBVHShadow(int ray_index) {
                     #ifdef IgnoreGlassShadow
                         if(_Materials[MaterialIndex].specTrans == 1) {
                             #ifdef StainedGlassShadows
-                                float2 BaseUv = AggTris[triangle_id].tex0 * (1.0f - u - v) + AggTris[triangle_id].texedge1 * u + AggTris[triangle_id].texedge2 * v;
+                                float2 BaseUv = TOHALF(AggTris[triangle_id].tex0) * (1.0f - u - v) + TOHALF(AggTris[triangle_id].texedge1) * u + TOHALF(AggTris[triangle_id].texedge2) * v;
                                 float3 MatCol = _Materials[MaterialIndex].surfaceColor;
                                 if(_Materials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _Materials[MaterialIndex]) / 3.0f;
                                 MatCol = lerp(MatCol, _Materials[MaterialIndex].BlendColor, _Materials[MaterialIndex].BlendFactor);

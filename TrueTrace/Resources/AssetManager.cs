@@ -165,7 +165,7 @@ namespace TrueTrace {
         #endif
         public void ClearAll()
         {//My attempt at clearing memory
-            RunningTasks = 0;
+            // RunningTasks = 0;
             ParentObject[] ChildrenObjects = this.GetComponentsInChildren<ParentObject>();
             foreach (ParentObject obj in ChildrenObjects)
                 obj.ClearAll();

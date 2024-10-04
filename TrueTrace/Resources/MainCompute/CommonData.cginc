@@ -3,7 +3,7 @@
 #define EPSILON 1e-8
 
 #include "CommonStructs.cginc"
-
+#define TOHALF(x) float2(f16tof32(x >> 16), f16tof32(x & 0xFFFF))
 
 bool OIDNGuideWrite;
 
@@ -134,9 +134,9 @@ inline TrianglePos triangle_get_positions(const int ID) {
 
 inline TriangleUvs triangle_get_positions2(const int ID) {
 	TriangleUvs tri;
-	tri.pos0 = AggTris.Load(ID).tex0;
-	tri.posedge1 = AggTris.Load(ID).texedge1;
-	tri.posedge2 = AggTris.Load(ID).texedge2;
+	tri.pos0 = TOHALF(AggTris.Load(ID).tex0);
+	tri.posedge1 = TOHALF(AggTris.Load(ID).texedge1);
+	tri.posedge2 = TOHALF(AggTris.Load(ID).texedge2);
 	return tri;
 }
 
@@ -474,6 +474,81 @@ float3 unpackRGBE(uint x)
     return v;
 }
 
+float encode_diamond(float2 p)
+{
+    // Project to the unit diamond, then to the x-axis.
+    float x = p.x / (abs(p.x) + abs(p.y));
+
+    // Contract the x coordinate by a factor of 4 to represent all 4 quadrants in
+    // the unit range and remap
+    float py_sign = sign(p.y);
+    return -py_sign * 0.25f * x + 0.5f + py_sign * 0.25f;
+}
+
+float2 decode_diamond(float p)
+{
+    float2 v;
+
+    // Remap p to the appropriate segment on the diamond
+    float p_sign = sign(p - 0.5f);
+    v.x = -p_sign * 4.f * p + 1.f + p_sign * 2.f;
+    v.y = p_sign * (1.f - abs(v.x));
+
+    // Normalization extends the point on the diamond back to the unit circle
+    return normalize(v);
+}
+
+// Given a normal and tangent vector, encode the tangent as a single float that can be
+// subsequently quantized.
+float encode_tangent(float3 normal, float3 tangent)
+{
+    // First, find a canonical direction in the tangent plane
+    float3 t1;
+    if (abs(normal.y) > abs(normal.z))
+    {
+        // Pick a canonical direction orthogonal to n with z = 0
+        t1 = float3(normal.y, -normal.x, 0.f);
+    }
+    else
+    {
+        // Pick a canonical direction orthogonal to n with y = 0
+        t1 = float3(normal.z, 0.f, -normal.x);
+    }
+    t1 = normalize(t1);
+
+    // Construct t2 such that t1 and t2 span the plane
+    float3 t2 = cross(t1, normal);
+
+    // Decompose the tangent into two coordinates in the canonical basis
+    float2 packed_tangent = float2(dot(tangent, t1), dot(tangent, t2));
+
+    // Apply our diamond encoding to our two coordinates
+    return encode_diamond(packed_tangent);
+}
+
+float3 decode_tangent(float3 normal, float diamond_tangent)
+{
+    // As in the encode step, find our canonical tangent basis span(t1, t2)
+    float3 t1;
+    if (abs(normal.y) > abs(normal.z))
+    {
+        t1 = float3(normal.y, -normal.x, 0.f);
+    }
+    else
+    {
+        t1 = float3(normal.z, 0.f, -normal.x);
+    }
+    t1 = normalize(t1);
+
+    float3 t2 = cross(t1, normal);
+
+    // Recover the coordinates used with t1 and t2
+    float2 packed_tangent = decode_diamond(diamond_tangent);
+
+    return packed_tangent.x * t1 + packed_tangent.y * t2;
+}
+
+
 SmallerRay CreateCameraRay(float2 uv, uint pixel_index) {
 	// Transform the camera origin to world space
 	float3 origin = mul(CamToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
@@ -572,7 +647,7 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, float ma
 
         if (v >= 0.0f && u + v <= 1.0f) {
             float t = f * dot(tri.posedge2, q);
-            #ifdef AdvancedAlphaMapped
+            #if defined(AdvancedAlphaMapped) || defined(AdvancedBackground) || defined(IgnoreGlassShadow)
 				if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster)) return false; 
         		if(_Materials[MaterialIndex].MatType == CutoutIndex || _Materials[MaterialIndex].specTrans == 1) {
 	                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
@@ -1168,9 +1243,9 @@ void Unity_Saturation_float(float3 In, float Saturation, out float3 Out) {
     Out =  luma.xxx + Saturation.xxx * (In - luma.xxx);
 }
 
-void Unity_Contrast_float(float3 In, float Contrast, out float3 Out) {
+void Unity_Contrast_float(inout float3 A, float Contrast) {
     float midpoint = pow(0.5, 2.2);
-    Out =  (In - midpoint) * Contrast + midpoint;
+    A =  (A - midpoint) * Contrast + midpoint;
 }
 
 float3 DeSat(float3 In, float Saturation) {
@@ -1851,7 +1926,7 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
     #ifdef WhiteLights
         MatDat.surfaceColor = 0.5f;
     #else
-        float2 BaseUv = AggTris[AggTriIndex].tex0 * (1.0f - FinalUV.x - FinalUV.y) + AggTris[AggTriIndex].texedge1 * FinalUV.x + AggTris[AggTriIndex].texedge2 * FinalUV.y;
+        float2 BaseUv = TOHALF(AggTris[AggTriIndex].tex0) * (1.0f - FinalUV.x - FinalUV.y) + TOHALF(AggTris[AggTriIndex].texedge1) * FinalUV.x + TOHALF(AggTris[AggTriIndex].texedge2) * FinalUV.y;
         if(MatDat.AlbedoTex.x > 0)
         	MatDat.surfaceColor *= SampleTexture(BaseUv, SampleAlbedo, MatDat);
 
@@ -1862,8 +1937,7 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
         MatDat.surfaceColor *= MatDat.Brightness;
         TempCol = MatDat.surfaceColor;
         Unity_Saturation_float(TempCol, MatDat.Saturation, MatDat.surfaceColor);
-        TempCol = MatDat.surfaceColor;
-        Unity_Contrast_float(TempCol, MatDat.Contrast, MatDat.surfaceColor);
+        Unity_Contrast_float(MatDat.surfaceColor, MatDat.Contrast);
         MatDat.surfaceColor = saturate(MatDat.surfaceColor);
 
         if ((MatDat.EmissiveTex.x > 0 && MatDat.emission >= 0)) {

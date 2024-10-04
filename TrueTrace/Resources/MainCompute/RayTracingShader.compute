@@ -116,6 +116,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         Geomnorm = i_octahedral_32(asuint(PrevScreenData.x));
         norm = i_octahedral_32(asuint(PrevScreenData.y));
     }
+        // if(CurBounce == 0) _DebugTex[id.xy] = float4(GetTriangleTangent(hit.triangle_id, float2(hit.u, hit.v), Inverse) * 0.5f + 0.5f, 1.0f);
 
 
     {
@@ -558,6 +559,10 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 }
 static const ColData InitCol = { 1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0};
 
+float3 PrimaryBackgroundTintColor;
+float PrimaryBackgroundTint;
+float PrimaryBackgroundContrast;
+
 #ifdef DX11
 [numthreads(64, 1, 1)]
 #else
@@ -593,10 +598,17 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     #endif
 
 
-
-
-
+int MaterialIndex;
+#ifdef AdvancedBackground
+    bool BackgroundCheck = false;
+    if(bestHit.t != FarPlane && !(TerrainExists && (bestHit.mesh_id == 9999999))) {
+        MaterialIndex = _MeshData[bestHit.mesh_id].MaterialOffset + AggTris[bestHit.triangle_id].MatDat;
+        if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) && (Color.MetRoughIsSpec >> 31)) BackgroundCheck = true;
+    }
+    if (bestHit.t == FarPlane || BackgroundCheck) {//if ray goes into the void, sample skybox
+#else
     if (bestHit.t == FarPlane) {//if ray goes into the void, sample skybox
+#endif
         float3 Radiance, transmittance, debug = 0;
         float Stars;
         float2 uv;
@@ -619,15 +631,21 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
                 if(GetBounceData(Color.MetRoughIsSpec) <= 1) Radiance += Stars;
 
                 if (all(Radiance < 10000.0f)) {
-                    if (CurBounce == 0) Color.Direct = Color.throughput * DeSat(Radiance, 1.0f - TrueDeSat) * Intensity;
-                    else if (CurBounce == 1) Color.Direct += Color.throughput * DeSat(Radiance, 1.0f - TrueDeSat) * Intensity;
+                    Radiance = DeSat(Radiance, 1.0f - TrueDeSat);
+                    if(DoSecondary) {
+                        Unity_Contrast_float(Radiance, PrimaryBackgroundContrast);
+                        Radiance = lerp(Radiance, PrimaryBackgroundTintColor, PrimaryBackgroundTint);
+                    }
+                    Radiance *= Intensity;
+                    if (CurBounce == 0) Color.Direct = Color.throughput * Radiance;
+                    else if (CurBounce == 1) Color.Direct += Color.throughput * Radiance;
                     #ifdef RadianceCache
                         else if(!((CacheBuffer[pixel_index].pathLength >> 7) & 0x1) || (((Color.MetRoughIsSpec & 0x3800000) >> 23) >= 3)) Color.Indirect += Color.throughput * DeSat(Radiance, 1.0f - TrueDeSat) * Intensity;
                         else if(!UseReSTIRGI || ReSTIRGIUpdateRate == 0 || RandomNums[id.xy].z == 0) {
-                            AddMissToCache(CacheBuffer[pixel_index],  DeSat(Radiance, 1.0f - TrueDeSat) * Intensity);
+                            AddMissToCache(CacheBuffer[pixel_index], Radiance);
                         }
                     #else
-                        else Color.Indirect += Color.throughput * DeSat(Radiance, 1.0f - TrueDeSat) * Intensity;
+                        else Color.Indirect += Color.throughput * Radiance;
                     #endif
                 }
             break;
@@ -636,19 +654,31 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
                 uv = fmod(uv * HDRIScale + HDRILongLat / 360.0f, 1.0f);
                 if(UseNEE && CurBounce > 0)
                     mis = power_heuristic(GlobRay.last_pdf, HDRIParams.x * HDRIParams.y * equirectDirectionPdf(ray.direction) * (luminance(_SkyboxTexture.SampleLevel(my_linear_clamp_sampler, uv, 0).xyz) / TotSum[0]));
-                if (CurBounce == 0) Color.Direct = DeSat(_SkyboxTexture.SampleLevel(my_linear_clamp_sampler, uv, 0).xyz,1.0f - TrueDeSat) * Intensity;
-                if (CurBounce == 1) Color.Direct += DeSat(_SkyboxTexture.SampleLevel(my_linear_clamp_sampler, uv, 0).xyz,1.0f - TrueDeSat) * Intensity * mis;
-                else Color.Direct += Color.throughput * DeSat(_SkyboxTexture.SampleLevel(my_linear_clamp_sampler, uv, 0).xyz,1.0f - TrueDeSat) * Intensity * mis;
+                Radiance = DeSat(_SkyboxTexture.SampleLevel(my_linear_clamp_sampler, uv, 0).xyz,1.0f - TrueDeSat);
+                if(DoSecondary) {
+                    Unity_Contrast_float(Radiance, PrimaryBackgroundContrast);
+                    Radiance = lerp(Radiance, PrimaryBackgroundTintColor, PrimaryBackgroundTint);
+                }
+                Radiance *= Intensity;
+                if (CurBounce == 0) Color.Direct = Radiance;
+                else if (CurBounce == 1) Color.Direct += Radiance * mis;
+                else Color.Direct += Color.throughput * Radiance * mis;
                 #ifdef RadianceCache
-                    AddMissToCache(CacheBuffer[pixel_index],  DeSat(_SkyboxTexture.SampleLevel(my_linear_clamp_sampler, uv, 0).xyz,1.0f - TrueDeSat) * Intensity * mis);
+                    AddMissToCache(CacheBuffer[pixel_index], Radiance * mis);
                 #endif
             break;
             case 2:
-                if (CurBounce == 0) Color.Direct = DeSat(BackgroundColor * Intensity, 1.0f - TrueDeSat);
-                else if (CurBounce == 1) Color.Direct += DeSat((DoSecondary ? BackgroundColor : SecondaryBackgroundColor) * Intensity, 1.0f - TrueDeSat);
-                else Color.Indirect += Color.throughput * DeSat((DoSecondary ? BackgroundColor : SecondaryBackgroundColor) * Intensity, 1.0f - TrueDeSat);
+                Radiance = DeSat((DoSecondary ? BackgroundColor : SecondaryBackgroundColor), 1.0f - TrueDeSat);
+                if(DoSecondary) {
+                    Unity_Contrast_float(Radiance, PrimaryBackgroundContrast);
+                    Radiance = lerp(Radiance, PrimaryBackgroundTintColor, PrimaryBackgroundTint);
+                }
+                Radiance *= Intensity;
+                if (CurBounce == 0) Color.Direct = Radiance;
+                else if (CurBounce == 1) Color.Direct += Radiance;
+                else Color.Indirect += Color.throughput * Radiance;
                 #ifdef RadianceCache
-                    AddMissToCache(CacheBuffer[pixel_index],  (DoSecondary ? BackgroundColor : SecondaryBackgroundColor) * Intensity);
+                    AddMissToCache(CacheBuffer[pixel_index],  Radiance);
                 #endif
             break;
         }
@@ -669,7 +699,6 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
         return;
     }
     float2 BaseUv;
-    int MaterialIndex;
     bool HitTerrain = false;
     MaterialData TempMat;
     [branch]if (TerrainExists && (bestHit.mesh_id == 9999999)) {//if hit terrain
@@ -703,8 +732,10 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
         TempMat.surfaceColor = BaseCol;
         HitTerrain = true;
     } else {
-        BaseUv = AggTris[bestHit.triangle_id].tex0 * (1.0f - bestHit.u - bestHit.v) + AggTris[bestHit.triangle_id].texedge1 * bestHit.u + AggTris[bestHit.triangle_id].texedge2 * bestHit.v;
+        BaseUv = TOHALF(AggTris[bestHit.triangle_id].tex0) * (1.0f - bestHit.u - bestHit.v) + TOHALF(AggTris[bestHit.triangle_id].texedge1) * bestHit.u + TOHALF(AggTris[bestHit.triangle_id].texedge2) * bestHit.v;
+#ifndef AdvancedBackground
         MaterialIndex = _MeshData[bestHit.mesh_id].MaterialOffset + AggTris[bestHit.triangle_id].MatDat;
+#endif
         TempMat = _Materials[MaterialIndex];
 
         float3 TempCol = 1;
@@ -729,7 +760,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
                 break;
             }
         }
-
+        TempCol *= unpackRGBE(AggTris[bestHit.triangle_id].VertColA) * (1.0f - bestHit.u - bestHit.v) + unpackRGBE(AggTris[bestHit.triangle_id].VertColB) * bestHit.u + unpackRGBE(AggTris[bestHit.triangle_id].VertColC) * bestHit.v;
        TempMat.surfaceColor *= TempCol;
 
         TempCol = TempMat.surfaceColor;
@@ -739,8 +770,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
         TempMat.surfaceColor *= TempMat.Brightness;
         TempCol = TempMat.surfaceColor;
         Unity_Saturation_float(TempCol, TempMat.Saturation, TempMat.surfaceColor);
-        TempCol = TempMat.surfaceColor;
-        Unity_Contrast_float(TempCol, TempMat.Contrast, TempMat.surfaceColor);
+        Unity_Contrast_float(TempMat.surfaceColor, TempMat.Contrast);
         TempMat.surfaceColor = saturate(TempMat.surfaceColor);
         TempMat.surfaceColor = lerp(TempMat.surfaceColor, TempMat.BlendColor, TempMat.BlendFactor);
     }
@@ -817,14 +847,14 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
 #endif
 
 #pragma kernel kernel_finalize
-
+int UpscalerMethod;
 [numthreads(16, 16, 1)]
 void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation into its own kernel, improves performance
     if (id.x >= screen_width || id.y >= screen_height) return;
     int final_pixel_index = id.y * screen_width + id.x;
 
     float3 GBufferCol = 1;
-    [branch]if(DiffRes) {
+    [branch]if(DiffRes && UpscalerMethod != 0) {
         float2 UV = id.xy / float2(screen_width, screen_height);
         #ifdef HDRP
             float3 SpecularAlbedo = 0;

@@ -1,6 +1,8 @@
 #include "../MainCompute/CommonStructs.cginc"
 int screen_width;
 int screen_height;
+int UpscalerMethod;
+bool DiffRes;
 float4x4 CamToWorld;
 float4x4 CamInvProj;
 float4x4 CamToWorldPrev;

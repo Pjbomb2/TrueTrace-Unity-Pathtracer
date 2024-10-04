@@ -69,7 +69,7 @@ namespace TrueTrace {
          [SerializeField] public bool FXAA = false;
          [SerializeField] public bool ToneMap = false;
          [SerializeField] public int ToneMapIndex = 0;
-         [SerializeField] public bool TAAU = true;
+         [SerializeField] public int UpscalerMethod = 0;
          [SerializeField] public int AtmoScatter = 4;
          [SerializeField] public bool ShowFPS = true;
          [SerializeField] public float Exposure = 0;
@@ -80,10 +80,13 @@ namespace TrueTrace {
          [SerializeField] public bool ImprovedPrimaryHit = false;
          [SerializeField] public float ReSTIRGISpatialRadius = 50;
          [SerializeField] public int RISCount = 5;
-         [SerializeField] public int DenoiserSelection = 0;
+         [SerializeField] public int DenoiserMethod = 0;
          [SerializeField] public Color SceneBackgroundColor = new Color(1,1,1,1);
+         [SerializeField] public Color PrimaryBackgroundTintColor = new Color(1,1,1,1);
          [SerializeField] public Color SecondarySceneBackgroundColor = new Color(1,1,1,1);
          [SerializeField] public Vector2 BackgroundIntensity = Vector2.one;
+         [SerializeField] public float PrimaryBackgroundTint = 0.0f;
+         [SerializeField] public float PrimaryBackgroundContrast = 1.0f;
          [SerializeField] public float LightEnergyScale = 1;
          [SerializeField] public float LEMEnergyScale = 1;
          [SerializeField] public float IndirectBoost = 1;
@@ -98,7 +101,6 @@ namespace TrueTrace {
          [SerializeField] public float FireflyStrength = 1.0f;
          [SerializeField] public float FireflyOffset = 0;
          [SerializeField] public int OIDNFrameCount = 0;
-         [SerializeField] public bool UseOIDN = false;
          [SerializeField] public bool DoSharpen = false;
          [SerializeField] public float Sharpness = 1.0f;
          [SerializeField] public Vector2 HDRILongLat = Vector2.zero;
@@ -583,7 +585,6 @@ Toggle AccumToggle;
 Toggle SkinToggle;
 Toggle BloomToggle;        
 [Delayed] FloatField ResField;
-Toggle TAAUToggle;
 IntegerField AtmoScatterField;
 Toggle GIToggle;
 IntegerField GIUpdateRateField;
@@ -600,7 +601,7 @@ Toggle IndirectClampingToggle;
 IntegerField RISCountField;
 IntegerField OIDNFrameField;
 FloatField FocalSlider;
-
+PopupField<string> UpscalerField;
 
 private void StandardSet() {
          BounceCount = 7;
@@ -628,7 +629,6 @@ private void StandardSet() {
          TAA = false;
          FXAA = false;
          ToneMap = false;
-         TAAU = true;
          AtmoScatter = 4;
          ShowFPS = true;
          Exposure = 0;
@@ -728,9 +728,27 @@ Toolbar toolbar;
                BackgroundIntensityField = new FloatField() {value = BackgroundIntensity.x, label = "Primary Background Intensity"};
                BackgroundIntensityField.RegisterValueChangedCallback(evt => {BackgroundIntensity = new Vector2(evt.newValue, BackgroundIntensity.y); RayMaster.LocalTTSettings.BackgroundIntensity = BackgroundIntensity;});
                BackgroundIntensityField.style.maxWidth = 345;
+
+               Slider PrimaryBackgroundContrastSlider = new Slider() {label = "Background Contrast: ", value = PrimaryBackgroundContrast, highValue = 2.0f, lowValue = 0.0f};
+               PrimaryBackgroundContrastSlider.RegisterValueChangedCallback(evt => {PrimaryBackgroundContrast = evt.newValue; RayMaster.LocalTTSettings.PrimaryBackgroundContrast = PrimaryBackgroundContrast;});
+               PrimaryBackgroundContrastSlider.style.maxWidth = 345;
+               PrimaryBackgroundContrastSlider.showInputField = true;
+               
+               ColorField PrimaryBackgroundTintColorField = new ColorField() {label = "Tint Color"};
+               PrimaryBackgroundTintColorField.value = PrimaryBackgroundTintColor;
+               PrimaryBackgroundTintColorField.style.width = 250;
+               PrimaryBackgroundTintColorField.RegisterValueChangedCallback(evt => {PrimaryBackgroundTintColor = evt.newValue; RayMaster.LocalTTSettings.PrimaryBackgroundTintColor = new Vector3(PrimaryBackgroundTintColor.r,PrimaryBackgroundTintColor.g,PrimaryBackgroundTintColor.b);});
+
+               Slider PrimaryBackgroundTintSlider = new Slider() {label = "Tint Strength: ", value = PrimaryBackgroundTint, highValue = 1.0f, lowValue = 0.0f};
+               PrimaryBackgroundTintSlider.RegisterValueChangedCallback(evt => {PrimaryBackgroundTint = evt.newValue; RayMaster.LocalTTSettings.PrimaryBackgroundTint = PrimaryBackgroundTint;});
+               PrimaryBackgroundTintSlider.style.maxWidth = 345;
+
             PrimaryBackgroundFoldout.Add(BackgroundSettingsField);
             PrimaryBackgroundFoldout.Add(BackgroundIntensityField);
             PrimaryBackgroundFoldout.Add(SkyDesatSlider);
+            PrimaryBackgroundFoldout.Add(PrimaryBackgroundContrastSlider);
+            PrimaryBackgroundFoldout.Add(PrimaryBackgroundTintColorField);
+            PrimaryBackgroundFoldout.Add(PrimaryBackgroundTintSlider);
         }
 
 
@@ -1800,7 +1818,7 @@ Toolbar toolbar;
            FXAA = RayMaster.LocalTTSettings.PPFXAA;
            ToneMap = RayMaster.LocalTTSettings.PPToneMap;
            ToneMapIndex = RayMaster.LocalTTSettings.ToneMapper;
-           TAAU = RayMaster.LocalTTSettings.UseTAAU;
+           UpscalerMethod = RayMaster.LocalTTSettings.UpscalerMethod;
            DoPartialRendering = RayMaster.LocalTTSettings.DoPartialRendering;
            PartialRenderingFactor = RayMaster.LocalTTSettings.PartialRenderingFactor;
            DoFirefly = RayMaster.LocalTTSettings.DoFirefly;
@@ -1811,6 +1829,9 @@ Toolbar toolbar;
            SceneBackgroundColor = new Color(RayMaster.LocalTTSettings.SceneBackgroundColor.x, RayMaster.LocalTTSettings.SceneBackgroundColor.y, RayMaster.LocalTTSettings.SceneBackgroundColor.z, 1);
            SecondarySceneBackgroundColor = new Color(RayMaster.LocalTTSettings.SecondarySceneBackgroundColor.x, RayMaster.LocalTTSettings.SecondarySceneBackgroundColor.y, RayMaster.LocalTTSettings.SecondarySceneBackgroundColor.z, 1);
            BackgroundIntensity = RayMaster.LocalTTSettings.BackgroundIntensity;
+           PrimaryBackgroundTint = RayMaster.LocalTTSettings.PrimaryBackgroundTint;
+           PrimaryBackgroundTintColor = new Color(RayMaster.LocalTTSettings.PrimaryBackgroundTintColor.x, RayMaster.LocalTTSettings.PrimaryBackgroundTintColor.y, RayMaster.LocalTTSettings.PrimaryBackgroundTintColor.z, 1);
+           PrimaryBackgroundContrast = RayMaster.LocalTTSettings.PrimaryBackgroundContrast;
            IndirectBoost = RayMaster.LocalTTSettings.IndirectBoost;
            BackgroundType = RayMaster.LocalTTSettings.BackgroundType;
            SecondaryBackgroundType = RayMaster.LocalTTSettings.SecondaryBackgroundType;
@@ -1847,6 +1868,7 @@ Toolbar toolbar;
                EditorUtility.SetDirty(Instanced);
                Instanced.ClearAll();
                Cleared = true;
+               // Assets.RunningTasks = 0;
            } else Debug.Log("Cant Do This In Editor");}) {text = "Clear Parent Data"};
            ClearButton.style.minWidth = 145;
            QuickStartButton = new Button(() => QuickStart()) {text = "Auto Assign Scripts"};
@@ -1882,7 +1904,14 @@ Toolbar toolbar;
                ResField.ElementAt(0).style.minWidth = 75;
                ResField.ElementAt(1).style.width = 35;
                TopEnclosingBox.Add(ResField);
-               ResField.RegisterValueChangedCallback(evt => {RenderRes = evt.newValue; RenderRes = Mathf.Max(RenderRes, 0.1f); RenderRes = Mathf.Min(RenderRes, 1.0f); RayMaster.LocalTTSettings.RenderScale = RenderRes;});        
+               ResField.RegisterValueChangedCallback(evt => {
+                                                            ResField.value = Mathf.Max(Mathf.Min(evt.newValue, 1.0f), 0.1f);
+                                                            RenderRes = ResField.value; 
+                                                            RayMaster.LocalTTSettings.RenderScale = RenderRes; 
+                                                            if(MainSource.Children().Contains(UpscalerField)) {
+                                                               if(RenderRes == 1.0f) MainSource.Remove(UpscalerField);
+                                                            } else if(RenderRes != 1.0f) MainSource.Insert(MainSource.IndexOf(DoPartialRenderingToggle), UpscalerField);
+                                                         });        
                TopEnclosingBox.Add(AtlasField);
            MainSource.Add(TopEnclosingBox);
 
@@ -1925,65 +1954,40 @@ Toolbar toolbar;
                DenoiserSettings.Add("OIDN");
             #endif
             PopupField<string> DenoiserField = new PopupField<string>("<b>Denoiser</b>");
+            VisualElement DenoiserExtrasContainer = CreateHorizontalBox("Denoiser Extra Info Container");
+            #if !UseOIDN
+               RayMaster.LocalTTSettings.DenoiserMethod = Mathf.Min(RayMaster.LocalTTSettings.DenoiserMethod, 1);
+            #endif
+            DenoiserMethod = RayMaster.LocalTTSettings.DenoiserMethod;
             DenoiserField.ElementAt(0).style.minWidth = 55;
-            DenoiserField.style.width = 275;
+            DenoiserField.ElementAt(1).style.minWidth = 75;
+            DenoiserField.ElementAt(1).style.maxWidth = 75;
+            DenoiserField.style.width = 300;
             DenoiserField.choices = DenoiserSettings;
-            DenoiserField.index = DenoiserSelection;
+            DenoiserField.index = DenoiserMethod;
             DenoiserField.style.flexDirection = FlexDirection.Row;
+            DenoiserExtrasContainer.Clear();
             DenoiserField.RegisterValueChangedCallback(evt => {
-               DenoiserSelection = DenoiserField.index;
-               RayMaster.LocalTTSettings.UseASVGF = false;
-               RayMaster.LocalTTSettings.UseOIDN = false;
-               if(DenoiserField.Contains(OIDNFrameField)) DenoiserField.Remove(OIDNFrameField);
-               switch(DenoiserSelection) {
-                  case 0:
-                  break;
-                  case 1:
-                     RayMaster.LocalTTSettings.UseASVGF = true;
-                  break;
-                  case 2:
-                     #if UseOIDN
-                        RayMaster.LocalTTSettings.UseOIDN = true;
-                        OIDNFrameField = new IntegerField("Frames Before OIDN") {value = OIDNFrameCount};
-                        OIDNFrameField.ElementAt(0).style.minWidth = 95;
-                        OIDNFrameField.RegisterValueChangedCallback(evt => {OIDNFrameCount = (int)evt.newValue; RayMaster.LocalTTSettings.OIDNFrameCount = OIDNFrameCount;});
-                        DenoiserField.Add(OIDNFrameField);
-                     #else 
-                        RayMaster.LocalTTSettings.UseOIDN = false;
-                        DenoiserField.index = 0;
-                        DenoiserSelection = 0;
-                     #endif
-                  break;
-
-               } 
+               #if !UseOIDN
+                  DenoiserField.index = Mathf.Min(DenoiserField.index, 1);
+               #endif
+               DenoiserMethod = DenoiserField.index;
+               RayMaster.LocalTTSettings.DenoiserMethod = DenoiserMethod;
+               DenoiserExtrasContainer.Clear();
+               if(DenoiserMethod == 2) {
+                  OIDNFrameField = new IntegerField("Frames Before OIDN") {value = OIDNFrameCount};
+                  OIDNFrameField.ElementAt(0).style.minWidth = 95;
+                  OIDNFrameField.RegisterValueChangedCallback(evt => {OIDNFrameCount = (int)evt.newValue; RayMaster.LocalTTSettings.OIDNFrameCount = OIDNFrameCount;});
+                  DenoiserExtrasContainer.Add(OIDNFrameField);
+               }
             });
-            if(DenoiserField.Contains(OIDNFrameField)) DenoiserField.Remove(OIDNFrameField);
-            DenoiserSelection = DenoiserField.index;
-            if(RayMaster.LocalTTSettings.UseASVGF) {
-               DenoiserSelection = 1;
-            } else if(RayMaster.LocalTTSettings.UseOIDN) {
-               DenoiserSelection = 2;
-            }
-            switch(DenoiserSelection) {
-               case 0:
-               break;
-               case 1:
-                  RayMaster.LocalTTSettings.UseASVGF = true;
-               break;
-               case 2:
-                  #if UseOIDN
-                     RayMaster.LocalTTSettings.UseOIDN = true;
-                     OIDNFrameField = new IntegerField("Frames Before OIDN") {value = OIDNFrameCount};
-                     OIDNFrameField.ElementAt(0).style.minWidth = 95;
-                     OIDNFrameField.RegisterValueChangedCallback(evt => {OIDNFrameCount = (int)evt.newValue; RayMaster.LocalTTSettings.OIDNFrameCount = OIDNFrameCount;});
-                     DenoiserField.Add(OIDNFrameField);
-                  #else 
-                     RayMaster.LocalTTSettings.UseOIDN = false;
-                     DenoiserField.index = 0;
-                     DenoiserSelection = 0;
-                  #endif
-               break;
+            if(DenoiserMethod == 2) {
+               OIDNFrameField = new IntegerField("Frames Before OIDN") {value = OIDNFrameCount};
+               OIDNFrameField.ElementAt(0).style.minWidth = 95;
+               OIDNFrameField.RegisterValueChangedCallback(evt => {OIDNFrameCount = (int)evt.newValue; RayMaster.LocalTTSettings.OIDNFrameCount = OIDNFrameCount;});
+               DenoiserExtrasContainer.Add(OIDNFrameField);
             } 
+            DenoiserField.Add(DenoiserExtrasContainer);
 
             MainSource.Add(DenoiserField);
 
@@ -2196,10 +2200,24 @@ Toolbar toolbar;
            if(ToneMap) MainSource.Add(ToneMapFoldout);
 
 
-           TAAUToggle = new Toggle() {value = TAAU, text = "Enable TAAU"};
-           TAAUToggle.tooltip = "On = Temporal Anti Aliasing Upscaling; Off = Semi Custom Upscaler, performs slightly differently";
-           MainSource.Add(TAAUToggle);
-           TAAUToggle.RegisterValueChangedCallback(evt => {TAAU = evt.newValue; RayMaster.LocalTTSettings.UseTAAU = TAAU;});
+
+            List<string> UpscalerSettings = new List<string>();
+            UpscalerSettings.Add("Bilinear");
+            UpscalerSettings.Add("GSR");
+            UpscalerSettings.Add("TAAU");
+            UpscalerField = new PopupField<string>("<b>Upscaler</b>");
+            UpscalerField.ElementAt(0).style.minWidth = 55;
+            UpscalerField.ElementAt(1).style.minWidth = 75;
+            UpscalerField.ElementAt(1).style.maxWidth = 75;
+            UpscalerField.style.width = 275;
+            UpscalerField.choices = UpscalerSettings;
+            UpscalerField.index = UpscalerMethod;
+            UpscalerField.style.flexDirection = FlexDirection.Row;
+            UpscalerField.RegisterValueChangedCallback(evt => {
+               UpscalerMethod = UpscalerField.index;
+               RayMaster.LocalTTSettings.UpscalerMethod = UpscalerMethod; 
+            });
+            if(RenderRes != 1.0f) MainSource.Add(UpscalerField);
 
 
 
@@ -2207,7 +2225,7 @@ Toolbar toolbar;
                PartialRenderingFoldout.style.flexDirection = FlexDirection.Row;
                IntegerField PartialRenderingField = new IntegerField() {value = PartialRenderingFactor, label = "Partial Factor"};
                PartialRenderingField.ElementAt(0).style.minWidth = 65;
-               PartialRenderingField.RegisterValueChangedCallback(evt => {PartialRenderingFactor = evt.newValue; PartialRenderingFactor = Mathf.Max(PartialRenderingFactor, 1); RayMaster.LocalTTSettings.PartialRenderingFactor = PartialRenderingFactor;});
+               PartialRenderingField.RegisterValueChangedCallback(evt => {PartialRenderingField.value = Mathf.Max(2, evt.newValue); PartialRenderingFactor = PartialRenderingField.value; RayMaster.LocalTTSettings.PartialRenderingFactor = PartialRenderingFactor;});
                PartialRenderingFoldout.Add(PartialRenderingField);
            DoPartialRenderingToggle = new Toggle() {value = DoPartialRendering, text = "Use Partial Rendering"};
            MainSource.Add(DoPartialRenderingToggle);
@@ -2215,6 +2233,7 @@ Toolbar toolbar;
            if(DoPartialRendering) MainSource.Add(PartialRenderingFoldout);
 
             VisualElement FireflyFoldout = new VisualElement() {};
+            FireflyFoldout.style.minWidth = 300;
                IntegerField FireflyFrameCountField = new IntegerField() {value = FireflyFrameCount, label = "Frames Before Anti-Firefly"};
                FireflyFrameCountField.ElementAt(0).style.minWidth = 65;
                FireflyFrameCountField.RegisterValueChangedCallback(evt => {FireflyFrameCount = evt.newValue; RayMaster.LocalTTSettings.FireflyFrameCount = FireflyFrameCount;});
@@ -2251,7 +2270,7 @@ Toolbar toolbar;
            VisualElement AtmoBox = new VisualElement();
                AtmoBox.style.flexDirection = FlexDirection.Row;
                AtmoScatterField = new IntegerField("Atmospheric Scattering Samples") {value = AtmoScatter};
-               AtmoScatterField.RegisterValueChangedCallback(evt => {AtmoScatter = (int)evt.newValue; RayMaster.AtmoNumLayers = AtmoScatter;});
+               AtmoScatterField.RegisterValueChangedCallback(evt => {AtmoScatterField.value = Mathf.Max(evt.newValue, 1); AtmoScatter = AtmoScatterField.value; RayMaster.AtmoNumLayers = AtmoScatter;});
                AtmoBox.Add(AtmoScatterField);
            MainSource.Add(AtmoBox);
 

@@ -31,8 +31,8 @@ MonoBehaviour:
   PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
-  UseASVGF: 0
-  UseTAAU: 0
+  DenoiserMethod: 0
+  UpscalerMethod: 2
   ReSTIRGIUpdateRate: 7
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
@@ -41,7 +41,7 @@ MonoBehaviour:
   ReSTIRGISpatialRadius: 24
   ReSTIRGITemporalMCap: 4
   DoReSTIRGIConnectionValidation: 1
-  Exposure: 22.8
+  Exposure: 21.7
   DoPartialRendering: 0
   PartialRenderingFactor: 2
   DoFirefly: 0
@@ -55,16 +55,15 @@ MonoBehaviour:
   FireflyFrameInterval: 1
   FireflyStrength: 1
   FireflyOffset: 0
-  OIDNFrameCount: 50
-  UseOIDN: 0
+  OIDNFrameCount: 122
   DoSharpen: 0
-  Sharpness: 1
+  Sharpness: 0.94
   MainDesiredRes: 16384
   UseSkinning: 1
   LightEnergyScale: 1
   BackgroundType: 0
   BackgroundIntensity: {x: 1, y: 1}
-  SceneBackgroundColor: {x: 0, y: 0, z: 0}
+  SceneBackgroundColor: {x: 1, y: 1, z: 1}
   SecondaryBackgroundType: 0
   SecondarySceneBackgroundColor: {x: 0, y: 0, z: 0}
   HDRILongLat: {x: 0, y: 0}
@@ -82,3 +81,6 @@ MonoBehaviour:
   ConvBloomDistExp: 0
   ConvBloomDistExpClampMin: 1
   ConvBloomDistExpScale: 1
+  PrimaryBackgroundTintColor: {x: 0.32200065, y: 0.764151, z: 0.6593174}
+  PrimaryBackgroundTint: 0
+  PrimaryBackgroundContrast: 1

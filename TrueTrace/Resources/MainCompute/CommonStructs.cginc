@@ -7,9 +7,13 @@ struct CudaTriangle {
 
 	uint3 tans;
 
-	float2 tex0;
-	float2 texedge1;
-	float2 texedge2;
+	uint tex0;
+	uint texedge1;
+	uint texedge2;
+
+	uint VertColA;
+	uint VertColB;
+	uint VertColC;
 
 	uint MatDat;
 };

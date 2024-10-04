@@ -618,6 +618,7 @@ namespace TrueTrace {
                                 ConnectionSources.Add("Thin", GUILayoutUtility.GetLastRect()); // Store position
                                 ConnectionSourceNames.Add("Thin");
                                 Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.Invisible, EditorGUILayout.ToggleLeft("Invisible", Flag.GetFlag(CommonFunctions.Flags.Invisible), GUILayout.MaxWidth(135)));
+                                Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.IsBackground, EditorGUILayout.ToggleLeft("Is Background", Flag.GetFlag(CommonFunctions.Flags.IsBackground), GUILayout.MaxWidth(135)));
                             EditorGUILayout.EndHorizontal();
 
                             EditorGUILayout.Space();
