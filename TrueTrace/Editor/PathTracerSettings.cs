@@ -2377,6 +2377,7 @@ Toolbar toolbar;
                                     if(NameIndex == -1) {
                                        Debug.Log("Missing material marked for update");
                                     } else {
+                                       EditorUtility.SetDirty(TempRTO);
                                        TempRTO.MaterialOptions[NameIndex] = (RayTracingObject.Options)Ray.OptionID;
                                        TempRTO.TransmissionColor[NameIndex] = Ray.TransCol;
                                        TempRTO.BaseColor[NameIndex] = Ray.BaseCol;
