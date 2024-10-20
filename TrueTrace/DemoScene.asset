@@ -19,9 +19,9 @@ MonoBehaviour:
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 0
+  Accumulate: 1
   PPBloom: 0
-  BloomStrength: 0.849
+  BloomStrength: 0.839
   PPDoF: 0
   DoFAperature: 0.403
   DoFAperatureScale: 0.54

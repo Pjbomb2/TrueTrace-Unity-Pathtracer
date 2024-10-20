@@ -645,6 +645,18 @@ namespace CommonVars
         public float KelvinTemp;
         public float ColorBleed;
         public float AlbedoBlendFactor;
+
+        public string AlbedoGUID;
+        public string MetallicGUID;
+        public string RoughnessGUID;
+        public string EmissionGUID;
+        public string AlphaGUID;
+        public string MatCapGUID;
+        public string MatcapMaskGUID;
+        public string SecondaryAlbedoGUID;
+        public string SecondaryAlbedoMaskGUID;
+        public string NormalGUID;
+        public string ShaderName;
     }
     [System.Serializable]
     public class RayObjs
@@ -652,6 +664,20 @@ namespace CommonVars
         [System.Xml.Serialization.XmlElement("RayObjectDatas")]
         public List<RayObjectDatas> RayObj = new List<RayObjectDatas>();
     }
+    [System.Serializable]
+    public class RayObjFolder
+    {
+        public string FolderName = "";
+        public List<RayObjectDatas> ContainedPresets = new List<RayObjectDatas>();
+    }
+
+    [System.Serializable]
+    public class RayObjFolderMaster
+    {
+        [System.Xml.Serialization.XmlElement("RayObjFolder")]
+        public List<RayObjFolder> PresetFolders = new List<RayObjFolder>();
+    }
+
 
 
     public struct TTStopWatch {//stopwatch stuff

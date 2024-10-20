@@ -788,7 +788,7 @@ static float3 SampleDisneySpecTransmission(const MaterialData hitDat, float3 wo,
     forwardPdfW *= pdf;
     // -- convert wi back to world space
 
-    return G1v;// * exp(-CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0 ? 1 : hitDat.scatterDistance) * (hitDat.scatterDistance));
+    return G1v * 0.99f;// * exp(-CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0 ? 1 : hitDat.scatterDistance) * (hitDat.scatterDistance));
 }
 
 static float3 SampleDisneyDiffuse(const MaterialData hitDat, float3 wo, bool thin, out float forwardPdfW, out float3 wi, inout bool refracted, uint pixel_index)
@@ -1191,7 +1191,9 @@ bool SampleDisney(MaterialData hitDat, inout float3 v, bool thin, out float PDF,
         Case = 1;
     } else if(p <= P.x + P.y + P.z) {
         Case = 2;
-    } else Case = 3;
+    } else if(p <= P.x + P.y + P.z + P.w) {
+        Case = 3;
+    }
     switch(Case) {
         case 0:
             Reflection = SampleDisneyBRDF(hitDat, v, PDF, wi, pixel_index);            
@@ -1201,7 +1203,7 @@ bool SampleDisney(MaterialData hitDat, inout float3 v, bool thin, out float PDF,
         break;
         case 2:
             hitDat.surfaceColor *= PI;
-            Reflection = SampleDisneyDiffuse(hitDat, v, thin, PDF, wi, Refracted, pixel_index);// * P[2];
+            Reflection = SampleDisneyDiffuse(hitDat, v, thin, PDF, wi, Refracted, pixel_index) * (1.0f - P[3]);
         break;
         case 3:
             Reflection = SampleDisneySpecTransmission(hitDat, v, thin, PDF, wi, Refracted, pixel_index, GotFlipped);
@@ -1209,8 +1211,8 @@ bool SampleDisney(MaterialData hitDat, inout float3 v, bool thin, out float PDF,
     }
 
     v = normalize(ToWorld(TruTanMat, wi));
-    throughput = clamp(Reflection / P[Case], 0, 4.0f);
-    if(Case == 3) throughput = saturate(throughput);
+    if(Case != 3) throughput = clamp(Reflection / P[Case], 0, 4);
+    // if(Case == 3) throughput = saturate(throughput);
     PDF *= P[Case];
 
     return Reflection.x != -1 && PDF > 0;

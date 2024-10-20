@@ -239,7 +239,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             int WaterStageFlag = (Color.MetRoughIsSpec & 0x3800000) >> 23;
             if(GotFlipped) {
                 if((MaterialLobe == 2 && Refracted) || MaterialLobe == 3 || (WaterStageFlag == 2 || WaterStageFlag == 4)) {
-                    bsdfmodifier *= exp(-Color.InWaterDistance * CalculateExtinction((MaterialLobe == 2 && Refracted) ? (hitDat.transmittanceColor) : (1.0f - hitDat.surfaceColor), hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance));
+                    bsdf = exp(-Color.InWaterDistance * CalculateExtinction((MaterialLobe == 2 && Refracted) ? (hitDat.transmittanceColor) : (1.0f - (bsdf * hitDat.surfaceColor)), hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance));
+                    bsdfmodifier = bsdf;
                     if(!(WaterStageFlag == 2 || WaterStageFlag == 4)) WaterStageFlag = 3 + !Refracted;
                     Color.InWaterDistance = 0;
                 }
@@ -253,7 +254,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x3800000)) | (WaterStageFlag << 23);
         }
 
-        bsdf *= bsdfmodifier;
+        // bsdf *= bsdfmodifier;
         throughput *= bsdf;
     }
 
@@ -470,8 +471,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     }
                     #ifndef RadianceCache
                     #endif
-                        Illum *= Color.throughput;
-                        bsdf_diffuse *= Color.throughput;
+                        Illum *= Color.throughput * bsdfmodifier;
+                        bsdf_diffuse *= Color.throughput * bsdfmodifier;
 
                     if(LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) {
                         Illum *= pow(saturate(dot(to_light, -LightNorm)), MiscInfo.x);

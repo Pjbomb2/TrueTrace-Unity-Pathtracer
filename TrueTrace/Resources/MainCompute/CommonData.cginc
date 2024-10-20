@@ -1923,6 +1923,9 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
     int AggTriIndex = LightTriangles[MinIndex].TriTarget + MeshTriOffset;
     int MaterialIndex = AggTris[AggTriIndex].MatDat + MatOffset;
     MaterialData MatDat = _Materials[MaterialIndex];
+    #ifdef AdvancedBackground
+    	if(GetFlag(MatDat.Tag, IsBackground)) return -1;
+    #endif
     #ifdef WhiteLights
         MatDat.surfaceColor = 0.5f;
     #else

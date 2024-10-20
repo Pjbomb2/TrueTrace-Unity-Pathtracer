@@ -26,6 +26,16 @@ namespace TrueTrace {
         private int CurrentSegment = 0;
         private Texture2D[] TexArray; 
 
+        Matrix4x4 CalcProj(Camera cam) {
+            float Aspect = FinalAtlasSize.x / (float)FinalAtlasSize.y;
+            float YFOV = 1.0f / Mathf.Tan(cam.fieldOfView / (2.0f * (360.0f / (2.0f * 3.14159f))));
+            float XFOV = YFOV / Aspect;
+            Matrix4x4 TempProj = cam.projectionMatrix;
+            TempProj[0,0] = XFOV;
+            TempProj[1,1] = YFOV;
+            return TempProj;
+        }
+
 void AddResolution(int width, int height, string label)
     {
         Type gameViewSize = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSize");
@@ -86,9 +96,8 @@ void AddResolution(int width, int height, string label)
                 AddResolution(Mathf.CeilToInt((float)FinalAtlasSize.x / (float)HorizontalSegments) + Padding, FinalAtlasSize.y, "TempPanoramaSize");
                 SetResolution(GetCount() - 1);
             } else {
-                AddResolution(FinalAtlasSize.x, FinalAtlasSize.y, "TempPanoramaSize");
+                AddResolution(Mathf.CeilToInt((float)FinalAtlasSize.x / (float)HorizontalSegments) + Padding, FinalAtlasSize.y, "TempPanoramaSize");
                 SetResolution(GetCount() - 1);
-                HorizontalSegments = 1;
             }
             Init();
             RayMaster.DoPanorama = DoPanorama;
@@ -145,7 +154,13 @@ void AddResolution(int width, int height, string label)
                 Cameras[0].gameObject.SetActive(true);
                 for(int i = 1; i < Cameras.Length; i++) Cameras[i].gameObject.SetActive(false);
                 Camera[] AllCameras = GameObject.FindObjectsOfType<Camera>();
-                for(int i = 0; i < AllCameras.Length; i++) if(!Cameras[0].Equals(AllCameras[i])) AllCameras[i].gameObject.SetActive(false);
+                for(int i = 0; i < AllCameras.Length; i++) {
+                    if(!DoPanorama) {
+                        Cameras[i].projectionMatrix = CalcProj(Cameras[i]);
+                    }
+                    if(!Cameras[0].Equals(AllCameras[i])) AllCameras[i].gameObject.SetActive(false);
+
+                }
             }
 
         }
