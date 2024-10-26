@@ -21,7 +21,7 @@
   <li>OIDN for offline denoising</li>
   <li>PBR Texture Support</li>
   <li>Next Event Estimation with Multiple Importance Sampling</li>
-  <li>Efficient Light BVH from PBRT 4 for Next Event Estimation</li>
+  <li>Efficient Spherical Gaussian Light Tree for Next Event Estimation</li>
   <li>Support for all default unity lights(Using Next Event Estimation)</li>
   <li>Bloom, Depth of Field, AutoExposure, TAA, Tonemapping</li>
   <li>Precomputed Multiple Atmospheric Scattering for the sky</li>
@@ -48,6 +48,7 @@ for bringing bindless textures to unity!
 </br>[Ylitie et al](https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf)
 </br>[ebruneton](https://ebruneton.github.io/precomputed_atmospheric_scattering/)
 </br>[Convolutional Bloom](https://github.com/AKGWSB/FFTConvolutionBloom)
+</br>[Spherical Gaussian Light Tree](https://gpuopen.com/download/publications/Hierarchical_Light_Sampling_with_Accurate_Spherical_Gaussian_Lighting.pdf)
 </br>
 
 

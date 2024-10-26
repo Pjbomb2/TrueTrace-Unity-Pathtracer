@@ -7753,6 +7753,16 @@
         <TextureName>_MainTex</TextureName>
       </TexturePairs>
       <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_BumpMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>3</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MatcapMask</TextureName>
+      </TexturePairs>
+      <TexturePairs>
         <Purpose>1</Purpose>
         <ReadIndex>3</ReadIndex>
         <TextureName>_MainTex</TextureName>

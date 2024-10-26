@@ -79,6 +79,9 @@ namespace TrueTrace {
                             SegmentNumber += "_";
                         }
                     }
+                    if(!System.IO.Directory.Exists(PlayerPrefs.GetString("TurnTablePath") + "/" + CamSettings[CurrentCamera].Cam.gameObject.name.Replace(" ", ""))) {
+                        System.IO.Directory.CreateDirectory(PlayerPrefs.GetString("TurnTablePath") + "/" + CamSettings[CurrentCamera].Cam.gameObject.name.Replace(" ", ""));
+                    }
                     ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("TurnTablePath") + "/" + CamSettings[CurrentCamera].Cam.gameObject.name.Replace(" ", "") + "/" + CamSettings[CurrentCamera].Cam.gameObject.name + "." + SegmentNumber + ".png");
                     CurrentSegment++;
                     CamSettings[CurrentCamera].Cam.gameObject.transform.RotateAround(CamSettings[CurrentCamera].Center, Vector3.up, (360.0f / (float)CamSettings[CurrentCamera].HorizontalResolution));

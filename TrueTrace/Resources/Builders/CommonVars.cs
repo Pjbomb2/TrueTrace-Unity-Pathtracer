@@ -7,6 +7,52 @@ namespace CommonVars
     #pragma warning disable 4014
 
     [System.Serializable]
+    public struct BoundingSphere {
+       public Vector3 Center;
+       public float Radius;
+       
+       public void init() {
+        Center = Vector3.zero;
+        Radius = 0.0f;
+       }
+       public void Validate(float padding) {
+        Radius = Mathf.Max(Radius, padding);
+       }
+
+       public void Extend(Vector3 A) {
+        Radius = Mathf.Max(Radius, Vector3.Distance(Center, A));
+       }
+    }
+
+    [System.Serializable]
+    public struct LightBVHTransform {
+        public Matrix4x4 Transform;
+        public int SolidOffset;
+    }
+
+    [System.Serializable]
+    public struct GaussianTreeNode {
+        public BoundingSphere S;
+        public Vector3 axis;
+        public float variance;
+        public float sharpness;
+        public float intensity;
+        public int left;
+    }
+
+    [System.Serializable]
+    public struct UnpackedGaussianTreeNode {
+        public BoundingSphere S;
+        public float variance;
+        public Vector3 intensity;
+        public float sharpness;
+        public Vector3 axis;
+        public int left;
+        public int LightCount;
+        public int isLeaf;
+    }
+
+    [System.Serializable]
     public struct LightData
     {
         public Vector3 Radiance;
@@ -717,6 +763,13 @@ namespace CommonVars
     public static class CommonFunctions
     {
 
+        public static Vector4 ToVector4(Vector3 A, float B) {
+            return new Vector4(A.x, A.y, A.z, B);
+        }
+        public static Vector3 ToVector3(Vector4 A) {
+            return new Vector3(A.x, A.y, A.z);
+        }
+
         public static void DeepClean<T>(ref List<T> A) {
             if(A != null) {
                 A.Clear();
@@ -946,6 +999,18 @@ namespace CommonVars
             return (uint)(halfMaxUInt16 + temp.x * halfMaxUInt16 * sign.x) | ((uint)(halfMaxUInt16 + temp.y * halfMaxUInt16 * sign.y) << 16);
         }
 
+
+        public static Vector3 UnpackOctahedral(uint data) {
+            uint ivx = (uint)(data) & 65535u; 
+            uint ivy = (uint)(data>>16 ) & 65535u; 
+            Vector2 v = new Vector2(ivx/32767.5f, ivy/32767.5f) - Vector2.one;
+            Vector3 nor = new Vector3(v.x, v.y, 1.0f - Mathf.Abs(v.x) - Mathf.Abs(v.y)); // Rune Stubbe's version,
+            float t = Mathf.Max(-nor.z,0.0f);                     // much faster than original
+            nor.x += (nor.x >= 0) ? -t : t;
+            nor.y += (nor.y >= 0) ? -t : t;
+            return nor.normalized;
+        }
+
         public static readonly RenderTextureFormat RTFull4 = RenderTextureFormat.ARGBFloat;
         public static readonly RenderTextureFormat RTInt1 = RenderTextureFormat.RInt;
         public static readonly RenderTextureFormat RTInt2 = RenderTextureFormat.RGInt;
@@ -1023,6 +1088,11 @@ namespace CommonVars
             ThisTexArray.Create();
         }
 
+        public static int GetStride<T>() 
+            where T : struct
+        {
+            return System.Runtime.InteropServices.Marshal.SizeOf<T>();
+        }
 
         public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, List<T> data)
             where T : struct

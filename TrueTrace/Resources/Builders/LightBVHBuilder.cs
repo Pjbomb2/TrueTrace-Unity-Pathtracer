@@ -19,6 +19,10 @@ namespace TrueTrace {
                 this.cosTheta = cosTheta;
             }
         }
+
+        private float luminance(float r, float g, float b) { return 0.299f * r + 0.587f * g + 0.114f * b; }
+
+
         float Dot(ref Vector3 A, ref Vector3 B) {
             return A.x * B.x + A.y * B.y + A.z * B.z;
         }
@@ -129,8 +133,8 @@ namespace TrueTrace {
 
         private LightBounds[] LightTris;
         private NodeBounds[] nodes2;
-        public CompactLightBVHData[] nodes;
-
+        private CompactLightBVHData[] nodes;
+        public GaussianTreeNode[] SGTree;
 
         private int[] DimensionedIndices;
 
@@ -247,14 +251,7 @@ namespace TrueTrace {
             BuildRecursive(nodes2[nodesi].left + 1, ref node_index,first_index + split.index - first_index,first_index + index_count - split.index, Depth + 1);
         }
         public ComputeBuffer[] WorkingSet;
-        private List<int>[] Set;
-        void Refit(int Depth, int CurrentIndex) {
-            if(nodes2[CurrentIndex].aabb.cosTheta_e == 0) return;
-            Set[Depth].Add(CurrentIndex);
-            if(nodes2[CurrentIndex].isLeaf == 1) return;
-            Refit(Depth + 1, nodes2[CurrentIndex].left);
-            Refit(Depth + 1, nodes2[CurrentIndex].left + 1);
-        }
+
   
         private float AreaOfTriangle(Vector3 pt1, Vector3 pt2, Vector3 pt3)
         {
@@ -264,6 +261,24 @@ namespace TrueTrace {
             float s = (a + b + c) / 2.0f;
             return Mathf.Sqrt(s * (s - a) * (s - b) * (s - c));
         }
+
+        public List<int>[] Set;
+        void Refit(int Depth, int CurrentIndex) {
+            if(nodes2[CurrentIndex].aabb.cosTheta_e == 0) return;
+            Set[Depth].Add(CurrentIndex);
+            if(nodes2[CurrentIndex].isLeaf == 1) return;
+            Refit(Depth + 1, nodes2[CurrentIndex].left);
+            Refit(Depth + 1, nodes2[CurrentIndex].left + 1);
+        }
+
+        private void Refit2(int Depth, int CurrentIndex) {
+            if((2.0f * ((float)(nodes[CurrentIndex].cosTheta_oe >> 16) / 32767.0f) - 1.0f) == 0) return;
+            Set[Depth].Add(CurrentIndex);
+            if(nodes[CurrentIndex].left < 0) return;
+            Refit2(Depth + 1, nodes[CurrentIndex].left);
+            Refit2(Depth + 1, nodes[CurrentIndex].left + 1);
+        }
+
   
         public LightBVHBuilder(List<LightTriData> Tris, List<Vector3> Norms, float phi, List<float> LuminanceWeights) {//need to make sure incomming is transformed to world space already
             PrimCount = Tris.Count;          
@@ -337,10 +352,73 @@ namespace TrueTrace {
             ParentBound = nodes2[0];
             CommonFunctions.DeepClean(ref nodes2);
             CommonFunctions.DeepClean(ref LightTris);
+
+
+
+            {
+                SGTree = new GaussianTreeNode[nodes.Length];
+                Set = new List<int>[MaxDepth];
+                for(int i = 0; i < MaxDepth; i++) Set[i] = new List<int>();
+                Refit2(0, 0);
+                for(int i = MaxDepth - 1; i >= 0; i--) {
+                    int SetCount = Set[i].Count;
+                    for(int j = 0; j < SetCount; j++) {
+                        GaussianTreeNode TempNode = new GaussianTreeNode();
+                        int WriteIndex = Set[i][j];
+                        CompactLightBVHData LBVHNode = nodes[WriteIndex];
+                        Vector3 V;
+                        Vector3 mean;
+                        float variance;
+                        float intensity;
+                        float radius;
+                        if(LBVHNode.left < 0) {
+                            LightTriData ThisLight = Tris[-(LBVHNode.left+1)];
+
+                            float area = AreaOfTriangle(ThisLight.pos0, ThisLight.pos0 + ThisLight.posedge1, ThisLight.pos0 + ThisLight.posedge2);
+
+                            intensity = ThisLight.SourceEnergy * area;
+                            V = 0.5f * -Norms[-(LBVHNode.left+1)];//(Vector3.Cross(ThisLight.posedge1.normalized, ThisLight.posedge2.normalized).normalized);
+                            mean = (ThisLight.pos0 + (ThisLight.pos0 + ThisLight.posedge1) + (ThisLight.pos0 + ThisLight.posedge2)) / 3.0f;
+                            variance = (Vector3.Dot(ThisLight.posedge1, ThisLight.posedge1) + Vector3.Dot(ThisLight.posedge2, ThisLight.posedge2) - Vector3.Dot(ThisLight.posedge1, ThisLight.posedge2)) / 18.0f;
+                            radius = Mathf.Max(Mathf.Max(Vector3.Distance(mean, ThisLight.pos0), Vector3.Distance(mean, ThisLight.pos0 + ThisLight.posedge1)), Vector3.Distance(mean, ThisLight.pos0 + ThisLight.posedge2));
+                        } else {
+                            GaussianTreeNode LeftNode = SGTree[nodes[WriteIndex].left];    
+                            GaussianTreeNode RightNode = SGTree[nodes[WriteIndex].left + 1];
+
+                            float phi_left = LeftNode.intensity;    
+                            float phi_right = RightNode.intensity;    
+                            float w_left = phi_left / (phi_left + phi_right);
+                            float w_right = phi_right / (phi_left + phi_right);
+                            
+                            V = w_left * LeftNode.axis + w_right * RightNode.axis;//may be wrong, paper uses BAR_V(BAR_axis here), not just normalized V/axis
+
+                            mean = w_left * LeftNode.S.Center + w_right * RightNode.S.Center;
+                            variance = w_left * LeftNode.variance + w_right * RightNode.variance + w_left * w_right * Vector3.Dot(LeftNode.S.Center - RightNode.S.Center, LeftNode.S.Center - RightNode.S.Center);
+
+                            intensity = LeftNode.intensity + RightNode.intensity;
+                            radius = Mathf.Max(Vector3.Distance(mean, LeftNode.S.Center) + LeftNode.S.Radius, Vector3.Distance(mean, RightNode.S.Center) + RightNode.S.Radius);
+                        }
+                        TempNode.sharpness = ((3.0f * Vector3.Distance(Vector3.zero, V) - Mathf.Pow(Vector3.Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Vector3.Distance(Vector3.zero, V), 2));
+                        TempNode.axis = V;
+                        TempNode.S.Center = mean;
+                        TempNode.variance = variance;
+                        TempNode.intensity = intensity;
+                        TempNode.S.Radius = radius;
+
+                        TempNode.left = LBVHNode.left;
+                        SGTree[WriteIndex] = TempNode;
+                    }
+                }
+            }
+
+
+            CommonFunctions.DeepClean(ref nodes);
+
         }
 
 
-        public LightBVHBuilder(LightBounds[] Tris) {//need to make sure incomming is transformed to world space already
+
+        public LightBVHBuilder(LightBounds[] Tris,ref GaussianTreeNode[] SGTree, LightBVHTransform[] LightBVHTransforms, GaussianTreeNode[] SGTreeNodes) {//need to make sure incomming is transformed to world space already
             PrimCount = Tris.Length;          
             MaxDepth = 0;
             LightTris = Tris;  
@@ -402,8 +480,73 @@ namespace TrueTrace {
                 }
                 nodes[i] = TempNode;
             }
-            ParentBound = nodes2[0];
             CommonFunctions.DeepClean(ref nodes2);
+
+
+            {
+                for(int i = 0; i < MaxDepth; i++) Set[i] = new List<int>();
+                Refit2(0, 0);
+                for(int i = MaxDepth - 1; i >= 0; i--) {
+                    int SetCount = Set[i].Count;
+                    for(int j = 0; j < SetCount; j++) {
+                        GaussianTreeNode TempNode = new GaussianTreeNode();
+                        int WriteIndex = Set[i][j];
+                        CompactLightBVHData LBVHNode = nodes[WriteIndex];
+                        Vector3 V;
+                        Vector3 mean;
+                        float variance;
+                        float intensity;
+                        float radius;
+                        if(LBVHNode.left < 0) {
+                            TempNode = SGTreeNodes[-(LBVHNode.left+1)];
+                            TempNode.axis = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.axis, 1));
+                            TempNode.S.Center = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center, 1));
+                            float Scale = Vector3.Distance(Vector3.zero, new Vector3(Vector3.Distance(Vector3.zero, CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform.GetColumn(0))), Vector3.Distance(Vector3.zero, CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform.GetColumn(1))), Vector3.Distance(Vector3.zero, CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform.GetColumn(2)))));
+                            TempNode.intensity *= Scale;
+                            TempNode.S.Radius *= Scale;
+                            TempNode.variance *= Scale;
+                            // ThisLight.posedge1 = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(ThisLight.posedge1, 1));
+                            // ThisLight.posedge2 = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(ThisLight.posedge2, 1));
+
+                            
+
+                            // intensity = new Vector3(ThisLight.SourceEnergy, ThisLight.SourceEnergy, ThisLight.SourceEnergy) * area;
+                            // V = 0.5f * (Vector3.Cross(ThisLight.posedge1.normalized, ThisLight.posedge2.normalized).normalized);
+                            // mean = (ThisLight.pos0 + (ThisLight.pos0 + ThisLight.posedge1) + (ThisLight.pos0 + ThisLight.posedge2)) / 3.0f;
+                            // variance = (Vector3.Dot(ThisLight.posedge1, ThisLight.posedge1) + Vector3.Dot(ThisLight.posedge2, ThisLight.posedge2) - Vector3.Dot(ThisLight.posedge1, ThisLight.posedge2)) / 18.0f;
+                            // radius = Mathf.Max(Mathf.Max(Vector3.Distance(mean, ThisLight.pos0), Vector3.Distance(mean, ThisLight.pos0 + ThisLight.posedge1)), Vector3.Distance(mean, ThisLight.pos0 + ThisLight.posedge2));
+                        } else {
+                            GaussianTreeNode LeftNode = SGTree[nodes[WriteIndex].left];    
+                            GaussianTreeNode RightNode = SGTree[nodes[WriteIndex].left + 1];
+
+                            float phi_left = Mathf.Max(LeftNode.intensity, 0.00000001f);    
+                            float phi_right = Mathf.Max(RightNode.intensity, 0.00000001f);    
+                            float w_left = phi_left / (phi_left + phi_right);
+                            float w_right = phi_right / (phi_left + phi_right);
+                            
+                            V = w_left * LeftNode.axis + w_right * RightNode.axis;//may be wrong, paper uses BAR_V(BAR_axis here), not just normalized V/axis
+
+                            mean = w_left * LeftNode.S.Center + w_right * RightNode.S.Center;
+                            variance = w_left * LeftNode.variance + w_right * RightNode.variance + w_left * w_right * Vector3.Dot(LeftNode.S.Center - RightNode.S.Center, LeftNode.S.Center - RightNode.S.Center);
+
+                            intensity = LeftNode.intensity + RightNode.intensity;
+                            radius = Mathf.Max(Vector3.Distance(mean, LeftNode.S.Center) + LeftNode.S.Radius, Vector3.Distance(mean, RightNode.S.Center) + RightNode.S.Radius);
+                            TempNode.sharpness = ((3.0f * Vector3.Distance(Vector3.zero, V) - Mathf.Pow(Vector3.Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Vector3.Distance(Vector3.zero, V), 2));
+                            TempNode.axis = V;
+                            TempNode.S.Center = mean;
+                            TempNode.variance = variance;
+                            TempNode.intensity = intensity;
+                            TempNode.S.Radius = radius;
+                        }
+
+                        TempNode.left = LBVHNode.left;
+                        SGTree[WriteIndex] = TempNode;
+                    }
+                }
+            }
+            CommonFunctions.DeepClean(ref nodes);
+
+
         }
 
         public void ClearAll() {
@@ -415,6 +558,7 @@ namespace TrueTrace {
             CommonFunctions.DeepClean(ref temp);
             CommonFunctions.DeepClean(ref DimensionedIndices);
             CommonFunctions.DeepClean(ref FinalIndices);
+            CommonFunctions.DeepClean(ref SGTree);
         }
     }
 }

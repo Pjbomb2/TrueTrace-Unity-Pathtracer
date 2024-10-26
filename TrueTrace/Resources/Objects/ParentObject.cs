@@ -14,13 +14,15 @@ namespace TrueTrace {
     [System.Serializable]
     public class ParentObject : MonoBehaviour
     {
+
+
         public LightBVHBuilder LBVH;
         public Task AsyncTask;
         public int ExistsInQue = -1;
         public int QueInProgress = -1;
         public bool IsDeformable = false;
         [HideInInspector] public ComputeBuffer LightTriBuffer;
-        [HideInInspector] public ComputeBuffer LightNodeBuffer;
+        [HideInInspector] public ComputeBuffer SGTreeBuffer;
         [HideInInspector] public ComputeBuffer TriBuffer;
         [HideInInspector] public ComputeBuffer BVHBuffer;
         public string Name;
@@ -187,7 +189,7 @@ namespace TrueTrace {
             if (TriBuffer != null)
             {
                 LightTriBuffer?.Release();
-                LightNodeBuffer?.Release();
+                SGTreeBuffer?.ReleaseSafe();
                 TriBuffer?.Release();
                 BVHBuffer?.Release();
             }
@@ -221,7 +223,7 @@ namespace TrueTrace {
             }
             if (TriBuffer != null) {
                 LightTriBuffer.Release();
-                LightNodeBuffer.Release();
+                SGTreeBuffer.ReleaseSafe();
                 TriBuffer.Release();
                 BVHBuffer.Release();
             }
@@ -257,22 +259,22 @@ namespace TrueTrace {
             if (NeedsToResetBuffers)
             {
                 if (LightTriBuffer != null) LightTriBuffer.Release();
-                if (LightNodeBuffer != null) LightNodeBuffer.Release();
                 if (TriBuffer != null) TriBuffer.Release();
                 if (BVHBuffer != null) BVHBuffer.Release();
+                if (SGTreeBuffer != null) SGTreeBuffer.Release();
                   if(AggTriangles != null) {
                     if(LightTriangles.Count == 0) {
-                        LightTriBuffer = new ComputeBuffer(1, 44);
-                        LightNodeBuffer = new ComputeBuffer(1, 40);
+                        LightTriBuffer = new ComputeBuffer(1, CommonFunctions.GetStride<LightTriData>());
+                        SGTreeBuffer = new ComputeBuffer(1, CommonFunctions.GetStride<GaussianTreeNode>());
                     } else {
-                        LightTriBuffer = new ComputeBuffer(Mathf.Max(LightTriangles.Count,1), 44);
-                        LightNodeBuffer = new ComputeBuffer(Mathf.Max(LBVH.nodes.Length,1), 40);
+                        LightTriBuffer = new ComputeBuffer(Mathf.Max(LightTriangles.Count,1), CommonFunctions.GetStride<LightTriData>());
+                        SGTreeBuffer = new ComputeBuffer(Mathf.Max(LBVH.SGTree.Length,1), CommonFunctions.GetStride<GaussianTreeNode>());
                     }
                     TriBuffer = new ComputeBuffer(AggTriangles.Length, 88);
                     BVHBuffer = new ComputeBuffer(AggNodes.Length, 80);
                     if(HasLightTriangles) {
                         LightTriBuffer.SetData(LightTriangles);
-                        LightNodeBuffer.SetData(LBVH.nodes);
+                        SGTreeBuffer.SetData(LBVH.SGTree);
                     }
                     TriBuffer.SetData(AggTriangles);
                     BVHBuffer.SetData(AggNodes);
@@ -801,19 +803,26 @@ namespace TrueTrace {
                 LT.TriTarget = (uint)CWBVHIndicesBufferInverted[LT.TriTarget];
                 LightTriangles[i] = LT;
             }
-            if(LightTriangles.Count > 0) LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
+            if(LightTriangles.Count > 0) {
+                LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
+
+
+            }
 
 
         }
+
 
         public List<int>[] Set;
         private void Refit(int Depth, int CurrentIndex) {
-            if((2.0f * ((float)(LBVH.nodes[CurrentIndex].cosTheta_oe >> 16) / 32767.0f) - 1.0f) == 0) return;
+            // if((2.0f * ((float)(LBVH.SGTree[CurrentIndex].cosTheta_oe >> 16) / 32767.0f) - 1.0f) == 0) return;
             Set[Depth].Add(CurrentIndex);
-            if(LBVH.nodes[CurrentIndex].left < 0) return;
-            Refit(Depth + 1, LBVH.nodes[CurrentIndex].left);
-            Refit(Depth + 1, LBVH.nodes[CurrentIndex].left + 1);
+            if(LBVH.SGTree[CurrentIndex].left < 0) return;
+            Refit(Depth + 1, LBVH.SGTree[CurrentIndex].left);
+            Refit(Depth + 1, LBVH.SGTree[CurrentIndex].left + 1);
         }
+
+
 
         public void RefitMesh(ref ComputeBuffer RealizedAggNodes, ref ComputeBuffer RealizedTriBuffer, ref ComputeBuffer RealizedLightTriBuffer, ref ComputeBuffer RealizedLightNodeBuffer, CommandBuffer cmd)
         {
@@ -953,7 +962,7 @@ namespace TrueTrace {
                     cmd.BeginSample("LightRefitter");
                     cmd.SetComputeIntParam(MeshRefit, "TotalNodeOffset", LightNodeOffset);
                     cmd.SetComputeMatrixParam(MeshRefit, "ToWorld", transform.localToWorldMatrix);
-                    cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "LightNodesWrite", RealizedLightNodeBuffer);
+                    cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "SGTreeWrite", RealizedLightNodeBuffer);
                     cmd.SetComputeFloatParam(MeshRefit, "FloatMax", float.MaxValue);
                     int ObjectOffset = LightNodeOffset;
                     for(int i = WorkingSet.Length - 1; i >= 0; i--) {
@@ -1024,6 +1033,7 @@ namespace TrueTrace {
             return Mathf.Sqrt(s * (s - a) * (s - b) * (s - c));
         }
         private float luminance(float r, float g, float b) { return 0.299f * r + 0.587f * g + 0.114f * b; }
+        private float luminance(Vector3 A) { return Vector3.Dot(new Vector3(0.299f, 0.587f, 0.114f), A);}
 
         // Calculate the width and height of a triangle in 3D space
         public Vector2 CalculateTriangleWidthAndHeight(Vector3 pointA, Vector3 pointB, Vector3 pointC) {
@@ -1171,7 +1181,7 @@ namespace TrueTrace {
                                 posedge1 = TempTri.posedge1,
                                 posedge2 = TempTri.posedge2,
                                 TriTarget = (uint)(OffsetReal),
-                                SourceEnergy = radiance
+                                SourceEnergy = luminance(Radiance)
                                 });
                             IllumTriCount++;
                         }
@@ -1297,20 +1307,14 @@ namespace TrueTrace {
                 HasCompleted = false;
             }
         }
-        // Vector4 ToVector4(Vector3 A, float B) {
-        //     return new Vector4(A.x, A.y, A.z, B);
-        // }
-        // Vector3 ToVector3(Vector4 A) {
-        //     return new Vector3(A.x, A.y, A.z);
-        // }
 
         // public void OnDrawGizmos() {
 
         //     int LightTriCount = LightTriangles.Count;
         //     for(int i = 0; i < LightTriCount; i++) {
-        //         Vector3 Pos0 = ToVector3(this.transform.localToWorldMatrix * ToVector4(LightTriangles[i].pos0, 1));
-        //         Vector3 Pos1 = ToVector3(this.transform.localToWorldMatrix * ToVector4(LightTriangles[i].pos0 + LightTriangles[i].posedge1, 1));
-        //         Vector3 Pos2 = ToVector3(this.transform.localToWorldMatrix * ToVector4(LightTriangles[i].pos0 + LightTriangles[i].posedge2, 1));
+        //         Vector3 Pos0 = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LightTriangles[i].pos0, 1));
+        //         Vector3 Pos1 = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LightTriangles[i].pos0 + LightTriangles[i].posedge1, 1));
+        //         Vector3 Pos2 = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LightTriangles[i].pos0 + LightTriangles[i].posedge2, 1));
         //             Gizmos.DrawLine(Pos0, Pos1);
         //             Gizmos.DrawLine(Pos0, Pos2);
         //             Gizmos.DrawLine(Pos2, Pos1);

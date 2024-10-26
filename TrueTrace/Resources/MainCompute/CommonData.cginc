@@ -1031,6 +1031,346 @@ inline float AreaOfTriangle(float3 pt1, float3 pt2, float3 pt3) {
     return sqrt(s * (s - a) * (s - b) * (s - c));
 }
 
+static const float FLT_EPSILON = 1.192092896e-07f;
+
+
+inline float mulsign(const float x, const float y)
+{
+	return asfloat((asuint(y) & 0x80000000) ^ asuint(x));
+}
+
+inline float2 mulsign(const float2 x, const float2 y)
+{
+	return asfloat((asuint(y) & 0x80000000) ^ asuint(x));
+}
+
+inline float expm1(const float x)
+{
+	const float u = exp(x);
+
+	if (u == 1.0)
+	{
+		return x;
+	}
+
+	const float y = u - 1.0;
+
+	if (abs(x) < 1.0)
+	{
+		return y * x / log(u);
+	}
+
+	return y;
+}
+
+inline float erf2(const float x)
+{
+	// Early return for large |x|.
+	if (abs(x) >= 4.0)
+	{
+		return mulsign(1.0, x);
+	}
+
+	// Polynomial approximation based on the approximation posted in https://forums.developer.nvidia.com/t/optimized-version-of-single-precision-error-function-erff/40977
+	if (abs(x) > 1.0)
+	{
+		// The maximum error is smaller than the approximation described in Abramowitz and Stegun [1964 "Handbook of Mathematical Functions with Formulas, Graphs, and Mathematical Tables", 7.1.26, p.299].
+		const float A1 = 1.628459513;
+		const float A2 = 9.15674746e-1;
+		const float A3 = 1.54329389e-1;
+		const float A4 = -3.51759829e-2;
+		const float A5 = 5.66795561e-3;
+		const float A6 = -5.64874616e-4;
+		const float A7 = 2.58907676e-5;
+		const float a = abs(x);
+		const float y = 1.0 - exp2(-(((((((A7 * a + A6) * a + A5) * a + A4) * a + A3) * a + A2) * a + A1) * a));
+
+		return mulsign(y, x);
+	}
+
+	// The maximum error is smaller than the 6th order Taylor polynomial.
+	const float A1 = 1.128379121;
+	const float A2 = -3.76123011e-1;
+	const float A3 = 1.12799220e-1;
+	const float A4 = -2.67030653e-2;
+	const float A5 = 4.90735564e-3;
+	const float A6 = -5.58853149e-4;
+	const float x2 = x * x;
+
+	return (((((A6 * x2 + A5) * x2 + A4) * x2 + A3) * x2 + A2) * x2 + A1) * x;
+}
+
+inline float erfc(const float x)
+{
+	return 1.0 - erf2(x);
+}
+
+
+inline float vmf_hemispherical_integral ( float cosine , float sharpness ) {
+	// Interpolation factor [ Tokuyoshi 2022].
+	float steepness = sharpness * sqrt ((0.5 * sharpness + 0.65173288269070562) / (( sharpness + 1.3418280033141288) *
+	sharpness + 7.2216687798956709) ) ;
+	float v = saturate (0.5 + 0.5 * ( erf2( steepness * clamp ( cosine , -1.0 , 1.0) ) / erf2( steepness ) ) ) ;
+	// Interpolation between upper and lower hemispherical integrals .
+	float e = exp( - sharpness ) ;
+	return lerp (e , 1.0 , v ) / ( e + 1.0) ;
+}
+
+inline float VMFHemisphericalIntegral(const float cosine, const float sharpness)
+{
+	// Interpolation factor [Tokuyoshi 2022].
+	const float A = 0.6517328826907056171791055021459;
+	const float B = 1.3418280033141287699294252888649;
+	const float C = 7.2216687798956709087860872386955;
+	const float steepness = sharpness * sqrt((0.5 * sharpness + A) / ((sharpness + B) * sharpness + C));
+	const float lerpFactor = saturate(0.5 + 0.5 * (erf2(steepness * clamp(cosine, -1.0, 1.0)) / erf2(steepness)));
+
+	// Interpolation between upper and lower hemispherical integrals .
+	const float e = exp(-sharpness);
+
+	return lerp(e, 1.0, lerpFactor) / (e + 1.0);
+}
+
+
+struct SGLobe {
+	float3 axis ;
+	float sharpness ;
+	float logAmplitude ;
+};
+inline SGLobe sg_product ( float3 axis1 , float sharpness1 , float3 axis2 , float sharpness2 ) {
+	float3 axis = axis1 * sharpness1 + axis2 * sharpness2 ;
+	float sharpness = length ( axis ) ;
+	float cosine = clamp (dot( axis1 , axis2 ) , -1.0 , 1.0) ;
+	float sharpnessMin = min( sharpness1 , sharpness2 ) ;
+	float sharpnessRatio = sharpnessMin / max( sharpness1 , sharpness2 ) ;
+	float logAmplitude = 2.0 * sharpnessMin * ( cosine - 1.0) / (1.0 + sharpnessRatio + sqrt (2.0 * sharpnessRatio * cosine
+	+ sharpnessRatio * sharpnessRatio + 1.0) ) ;
+	SGLobe result = { axis / max( sharpness , EPSILON ) , sharpness , logAmplitude };
+	return result ;
+}
+static const float FLT_MAX = 3.402823466e+38f;
+
+
+// [Tokuyoshi et al. 2024 "Hierarchical Light Sampling with Accurate Spherical Gaussian Lighting (Supplementary Document)" Listing. 5]
+inline float UpperSGClampedCosineIntegralOverTwoPi(const float sharpness)
+{
+	if (sharpness <= 0.5)
+	{
+		// Taylor-series approximation for the numerical stability.
+		// TODO: Derive a faster polynomial approximation.
+		return (((((((-1.0 / 362880.0) * sharpness + 1.0 / 40320.0) * sharpness - 1.0 / 5040.0) * sharpness + 1.0 / 720.0) * sharpness - 1.0 / 120.0) * sharpness + 1.0 / 24.0) * sharpness - 1.0 / 6.0) * sharpness + 0.5;
+	}
+
+	return (expm1(-sharpness) + sharpness) / (sharpness * sharpness);
+}
+
+// [Tokuyoshi et al. 2024 "Hierarchical Light Sampling with Accurate Spherical Gaussian Lighting (Supplementary Document)" Listing. 6]
+inline float LowerSGClampedCosineIntegralOverTwoPi(const float sharpness)
+{
+	const float e = exp(-sharpness);
+
+	if (sharpness <= 0.5)
+	{
+		// Taylor-series approximation for the numerical stability.
+		// TODO: Derive a faster polynomial approximation.
+		return e * (((((((((1.0 / 403200.0) * sharpness - 1.0 / 45360.0) * sharpness + 1.0 / 5760.0) * sharpness - 1.0 / 840.0) * sharpness + 1.0 / 144.0) * sharpness - 1.0 / 30.0) * sharpness + 1.0 / 8.0) * sharpness - 1.0 / 3.0) * sharpness + 0.5);
+	}
+
+	return e * (-expm1(-sharpness) - sharpness * e) / (sharpness * sharpness);
+}
+
+// Approximate product integral of an SG and clamped cosine / pi.
+// [Tokuyoshi et al. 2024 "Hierarchical Light Sampling with Accurate Spherical Gaussian Lighting (Supplementary Document)" Listing. 7]
+inline float SGClampedCosineProductIntegralOverPi2024(const float cosine, const float sharpness)
+{
+	// Fitted approximation for t(sharpness).
+	const float A = 2.7360831611272558028247203765204;
+	const float B = 17.02129778174187535455530451145;
+	const float C = 4.0100826728510421403939290030394;
+	const float D = 15.219156263147210594866010069381;
+	const float E = 76.087896272360737270901154261082;
+	const float t = sharpness * sqrt(0.5 * ((sharpness + A) * sharpness + B) / (((sharpness + C) * sharpness + D) * sharpness + E));
+	const float tz = t * cosine;
+
+	// In this HLSL implementation, we roughly implement erfc(x) = 1 - erf2(x) which can have a numerical error for large x.
+	// Therefore, unlike the original impelemntation [Tokuyoshi et al. 2024], we clamp the lerp factor with the machine epsilon / 2 for a conservative approximation.
+	// This clamping is unnecessary for languages that have a precise erfc function (e.g., C++).
+	// The original implementation [Tokuyoshi et al. 2024] uses a precise erfc function and does not clamp the lerp factor.
+	const float INV_SQRTPI = 0.56418958354775628694807945156077; // = 1/sqrt(pi).
+	const float CLAMPING_THRESHOLD = 0.5 * FLT_EPSILON; // Set zero if a precise erfc function is available.
+	const float lerpFactor = saturate(max(0.5 * (cosine * erfc(-tz) + erfc(t)) - 0.5 * INV_SQRTPI * exp(-tz * tz) * expm1(t * t * (cosine * cosine - 1.0)) / t, CLAMPING_THRESHOLD));
+
+	// Interpolation between lower and upper hemispherical integrals.
+	const float lowerIntegral = LowerSGClampedCosineIntegralOverTwoPi(sharpness);
+	const float upperIntegral = UpperSGClampedCosineIntegralOverTwoPi(sharpness);
+
+	return 2.0 * lerp(lowerIntegral, upperIntegral, lerpFactor);
+}
+
+
+// Symmetry GGX using a 2x2 roughness matrix (i.e., Non-axis-aligned GGX w/o the Heaviside function).
+float SGGX(const float3 m, const float2x2 roughnessMat)
+{
+	const float det = max(determinant(roughnessMat), EPSILON); // TODO: Use Kahan's algorithm for precise determinant. [https://pharr.org/matt/blog/2019/11/03/difference-of-floats]
+	const float2x2 roughnessMatAdj = { roughnessMat._22, -roughnessMat._12, -roughnessMat._21, roughnessMat._11 };
+	const float length2 = dot(m.xz, mul(roughnessMatAdj, m.xz)) / det + m.y * m.y; // TODO: Use Kahan's algorithm for precise mul and dot. [https://pharr.org/matt/blog/2019/11/03/difference-of-floatshttps://pharr.org/matt/blog/2019/11/03/difference-of-floats]
+
+	return 1.0 / (PI * sqrt(det) * (length2 * length2));
+}
+
+// Non-axis-aligned GGX.
+// [Tokuyoshi and Kaplanyan 2021 "Stable Geometric Specular Antialiasing with Projected-Space NDF Filtering", Eq. 1]
+float GGX(const float3 m, const float2x2 roughnessMat)
+{
+	return (m.y > 0.0) ? SGGX(m, roughnessMat) : 0.0;
+}
+
+// Reflection lobe based the symmetric GGX VNDF.
+// [Tokuyoshi et al. 2024 "Hierarchical Light Sampling with Accurate Spherical Gaussian Lighting", Section 5.2]
+float SGGXReflectionPDF(const float3 wi, const float3 m, const float2x2 roughnessMat)
+{
+	return SGGX(m, roughnessMat) / max(4.0 * sqrt(dot(wi.xz, mul(roughnessMat, wi.xz)) + wi.y * wi.y), EPSILON); // TODO: Use Kahan's algorithm for precise mul and dot. [https://pharr.org/matt/blog/2019/11/03/difference-of-floats]
+}
+
+float3x3 buildTangentFrame(float3 normal, float3 tangent) {
+	float3 bitangent = normalize(cross(normal, tangent));
+	return float3x3(cross(bitangent, normal), normal, bitangent);
+}
+
+
+inline float expm1_over_x(const float x)
+{
+	const float u = exp(x);
+
+	if (u == 1.0)
+	{
+		return 1.0;
+	}
+
+	const float y = u - 1.0;
+
+	if (abs(x) < 1.0)
+	{
+		return y / log(u);
+	}
+
+	return y / x;
+}
+
+
+inline float SGIntegral(const float sharpness)
+{
+	return 4.0 * PI * expm1_over_x(-2.0 * sharpness);
+}
+
+
+	/*
+		is cross(B,N) = T?
+		if so, origional actually constructs the frame as TBN, so the swap between .y and .z should hold up well
+		I really need to bite the bullet and convert my materials and thus their tangent frames to use TBN instead of TNB, since everyone uses TBN
+		but Z->Up is just weird
+		if cross(B,N) = T, why do they use that to add the tangent to the frame? why not just use the tangent thats already in the function? is it a handedness or sign issue?
+
+
+		Unrelated: see if I can use the hypothesis tests for firefly detection...
+
+		Thank god the code snippets from the paper and for the determinant were in HLSL
+		i do NOT want to deal with re-swizzling the matrices....(side note, look into this to make sure I actually dont)
+
+	*/
+
+bool IsFinite(float x)
+{
+    return (asuint(x) & 0x7F800000) != 0x7F800000;
+}
+
+inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDir, const float3 p, const float3 n, const float2 projRoughness2, const float reflecSharpness, const float3x3 tangentFrame, int2 id, const float metallic) {
+	float3 to_light = TargetNode.position - p;
+	const float squareddist = dot(to_light, to_light);
+
+	float c = max(dot(n, -to_light) / sqrt(squareddist), 0);
+
+	// Compute the Jacobian J for the transformation between halfvetors and reflection vectors at halfvector = normal.
+	const float3 viewDirTS = mul(tangentFrame, viewDir);//their origional one constructs the tangent frame from N,T,BT, whereas mine constructs it from T,N,BT; problem? I converted all .y to .z and vice versa, but... 
+
+	const float vlen = length(viewDirTS.xz);
+	const float2 v = (vlen != 0.0) ? (viewDirTS.xz / vlen) : float2(1.0, 0.0);
+	const float2x2 reflecJacobianMat = mul(float2x2(v.x, -v.y, v.y, v.x), float2x2(0.5, 0.0, 0.0, 0.5 / viewDirTS.y));
+
+	// Compute JJ^T matrix.
+	const float2x2 jjMat = mul(reflecJacobianMat, transpose(reflecJacobianMat));
+	const float detJJ4 = 1.0 / (4.0 * viewDirTS.y * viewDirTS.y); // = 4 * determiant(JJ^T).
+
+	// Preprocess for the lobe visibility.
+	// Approximate the reflection lobe with an SG whose axis is the perfect specular reflection vector.
+	// We use a conservative sharpness to filter the visibility.
+	const float3 reflecVec = reflect(-viewDir, n) * reflecSharpness;
+
+	// TargetNode.variance = 0.5f * TargetNode.radius * TargetNode.radius;
+	float Variance = max(TargetNode.variance, (1.0f / pow(2, 31)) * squareddist);
+	Variance = Variance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
+	// float Variance = max(TargetNode.variance, squareddist);
+
+
+	to_light = normalize(to_light);
+	const SGLobe LightLobe = sg_product(normalize(TargetNode.axis), TargetNode.sharpness, to_light, squareddist / Variance);
+
+	// to_light = mul(tangentFrame, to_light);//their origional one constructs the tangent frame from N,T,BT, whereas mine constructs it from T,N,BT; problem? I converted all .y to .z and vice versa, but... 
+
+
+	const float emissive = (TargetNode.intensity) / (Variance * SGIntegral(TargetNode.sharpness));
+	// if(id.y > screen_height / 2) emissive = (TargetNode.intensity) / Variance;
+
+	const float amplitude = exp(LightLobe.logAmplitude);
+	const float cosine = clamp(dot(LightLobe.axis, n), -1.0, 1.0);
+	const float diffuseIllumination = amplitude * SGClampedCosineProductIntegralOverPi2024(cosine, LightLobe.sharpness);
+
+
+	const float3 prodVec = reflecVec + LightLobe.axis * LightLobe.sharpness; // Axis of the SG product lobe.
+	const float prodSharpness = length(prodVec);
+	const float3 prodDir = prodVec / prodSharpness;
+	const float LightLobeVariance = 1.0 / LightLobe.sharpness;
+	// if(id.y > screen_height / 2 + screen_height / 4) LightLobeVariance = LightLobeVariance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
+	
+	const float2x2 filteredProjRoughnessMat = float2x2(projRoughness2.x, 0.0, 0.0, projRoughness2.y) + 2.0 * LightLobeVariance * jjMat;
+
+
+
+	// Compute determinant(filteredProjRoughnessMat) in a numerically stable manner.
+	// See the supplementary document (Section 5.2) of the paper for the derivation.
+	const float det = projRoughness2.x * projRoughness2.y + 2.0 * LightLobeVariance * (projRoughness2.x * jjMat._11 + projRoughness2.y * jjMat._22) + LightLobeVariance * LightLobeVariance * detJJ4;
+
+	// NDF filtering in a numerically stable manner.
+	// See the supplementary document (Section 5.2) of the paper for the derivation.
+	const float tr = filteredProjRoughnessMat._11 + filteredProjRoughnessMat._22;
+	const float2x2 filteredRoughnessMat = IsFinite(1.0 + tr + det) ? min(filteredProjRoughnessMat + float2x2(det, 0.0, 0.0, det), FLT_MAX) / (1.0 + tr + det) : (float2x2(min(filteredProjRoughnessMat._11, FLT_MAX) / min(filteredProjRoughnessMat._11 + 1.0, FLT_MAX), 0.0, 0.0, min(filteredProjRoughnessMat._22, FLT_MAX) / min(filteredProjRoughnessMat._22 + 1.0, FLT_MAX)));
+
+	// Evaluate the filtered distribution.
+	const float3 halfvecUnormalized = viewDirTS + mul(tangentFrame, LightLobe.axis);
+	const float3 halfvec = halfvecUnormalized / max(length(halfvecUnormalized), EPSILON);
+	const float pdf = SGGXReflectionPDF(viewDirTS, halfvec, filteredRoughnessMat);
+
+	// Visibility of the SG light in the upper hemisphere.
+	const float visibility = VMFHemisphericalIntegral(dot(prodDir, n), prodSharpness);// * (dot(n, to_light) >= 0 || TargetNode.radius >= sqrt(squareddist));
+
+	// Eq. 12 of the paper.
+	const float specularIllumination = amplitude * visibility * pdf * SGIntegral(LightLobe.sharpness);
+
+
+	return max(emissive * (diffuseIllumination + metallic * specularIllumination), 0.f);
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 inline float cosSubClamped(float sinTheta_a, float cosTheta_a, float sinTheta_b, float cosTheta_b) {
 	if(cosTheta_a > cosTheta_b) return 1;
@@ -1079,9 +1419,9 @@ float Importance(const float3 p, const float3 n, LightBVHData node, bool HasHitT
     return max(importance, 0.f); // / (float) max(node.LightCount, 1);
 }
 
-int CalcInside(LightBVHData A, LightBVHData B, float3 p, int Index) {
-	bool Residency0 = all(p <= A.BBMax) && all(p >= A.BBMin);
-	bool Residency1 = all(p <= B.BBMax) && all(p >= B.BBMin);
+int CalcInside(GaussianTreeNode A, GaussianTreeNode B, float3 p, int Index) {
+	bool Residency0 = dot(p - A.position, p - A.position) <= A.radius * A.radius;
+	bool Residency1 = dot(p - B.position, p - B.position) <= B.radius * B.radius;
 	if(Residency0 && Residency1) {
 		return Index + 2;
 	} else if(Residency0) {
@@ -1091,7 +1431,7 @@ int CalcInside(LightBVHData A, LightBVHData B, float3 p, int Index) {
 	} else return -1;
 }
 
-void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, int pixel_index, int MeshIndex) {
+void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, int pixel_index, int MeshIndex, float2 sharpness, int2 id, float3 viewDir, float metallic) {
 	int node_index = 0;
 	int Reps = 0;
 	bool HasHitTLAS = false;
@@ -1100,14 +1440,20 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, int pixel
 	int stacksize = 0;
 	float RandNum = random(264, pixel_index).x;
 	
+
+	float3x3 tangentFrame = GetTangentSpace2(n);
+	const float2 roughness2 = sharpness * sharpness;
+	const float2 ProjRoughness2 = roughness2 / max(1.0 - roughness2, EPSILON);
+	const float reflecSharpness = (1.0 - max(roughness2.x, roughness2.y)) / max(2.0f * max(roughness2.x, roughness2.y), EPSILON);
+
 	while(Reps < 100) {
 		Reps++;
-		LightBVHData node = LightNodes[node_index];
-		if(node.left >= 0) {
+		GaussianTreeNode node = SGTree[node_index];
+		[branch]if(node.left >= 0) {
 			float2 ci = float2(
-				Importance(p, n, LightNodes[node.left + NodeOffset], HasHitTLAS),
-				Importance(p, n, LightNodes[node.left + 1 + NodeOffset], HasHitTLAS)
-			);
+					SGImportance(SGTree[node.left + NodeOffset], -viewDir, p, n, ProjRoughness2, reflecSharpness, tangentFrame, id, metallic),
+					SGImportance(SGTree[node.left + 1 + NodeOffset], -viewDir, p, n, ProjRoughness2, reflecSharpness, tangentFrame, id, metallic)
+				);
 			// if(ci.x == 0 && ci.y == 0) {pmf = -1; return;}
 
 		    float sumweights = (ci.x + ci.y);
@@ -1122,7 +1468,7 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, int pixel
             if(sum + ci[offset] <= up) sum += ci[offset++];
 
 
-			int Index = CalcInside(LightNodes[node.left + NodeOffset], LightNodes[node.left + NodeOffset + 1], p2, offset);
+			int Index = CalcInside(SGTree[node.left + NodeOffset], SGTree[node.left + NodeOffset + 1], p2, offset);
 			if(Index == -1) {
 				if(stacksize == 0) {return;}
 				float3 tempstack = stack[--stacksize];
@@ -1150,9 +1496,15 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, int pixel
 			    float scalez = length(mul(Inverse, float3(0,0,1)));
 			    float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
 				n = normalize(mul(_MeshData[MeshIndex].W2L, float4(n,0)).xyz / Scale);
+				viewDir = normalize(mul(_MeshData[MeshIndex].W2L, float4(viewDir,0)).xyz / Scale);
 				NodeOffset = _MeshData[MeshIndex].LightNodeOffset;
 				node_index = NodeOffset;
 				HasHitTLAS = true;
+				tangentFrame = GetTangentSpace2(n);//Need to maybe check to see if this holds up when the traversal backtracks due to dead end
+				if(MeshIndex != _LightMeshes[-(node.left+1)].LockedMeshIndex) {
+					lightPDF = 1;
+					return;
+				}
 			}
 		}
 	}
@@ -1160,38 +1512,47 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, int pixel
 	return;
 }
 
-int SampleLightBVH(float3 p, float3 n, inout float pmf, int pixel_index, inout int MeshIndex) {
+int SampleLightBVH(float3 p, float3 n, inout float pmf, int pixel_index, inout int MeshIndex, const float2 sharpness, int2 id, float3 viewDir, float metallic) {
 	int node_index = 0;
 	int Reps = 0;
 	bool HasHitTLAS = false;
 	int NodeOffset = 0;
 	int StartIndex = 0;
+
+	float3x3 tangentFrame = GetTangentSpace2(n);
+	const float2 roughness2 = sharpness * sharpness;
+	const float2 ProjRoughness2 = roughness2 / max(1.0 - roughness2, EPSILON);
+	const float reflecSharpness = (1.0 - max(roughness2.x, roughness2.y)) / max(2.0f * max(roughness2.x, roughness2.y), EPSILON);
+
 	while(Reps < 322) {
 		Reps++;
-		LightBVHData node = LightNodes[node_index];
+		GaussianTreeNode node = SGTree[node_index];
 		[branch]if(node.left >= 0) {
 			const float2 ci = float2(
-				Importance(p, n, LightNodes[node.left + NodeOffset], HasHitTLAS),
-				Importance(p, n, LightNodes[node.left + 1 + NodeOffset], HasHitTLAS)
+				SGImportance(SGTree[node.left + NodeOffset], -viewDir, p, n, ProjRoughness2, reflecSharpness, tangentFrame, id, metallic),
+				SGImportance(SGTree[node.left + 1 + NodeOffset], -viewDir, p, n, ProjRoughness2, reflecSharpness, tangentFrame, id, metallic)
 			);
 			if(ci.x == 0 && ci.y == 0) break;
 
 			bool Index = random(264 + Reps, pixel_index).x >= (ci.x / (ci.x + ci.y));
 			pmf /= ((ci[Index] / (ci.x + ci.y)));
 			node_index = node.left + Index + NodeOffset;
+			
 		} else {
 			[branch]if(HasHitTLAS) {
 				return -(node.left+1) + StartIndex;	
 			} else {
 				StartIndex = _LightMeshes[-(node.left+1)].StartIndex; 
 				MeshIndex = _LightMeshes[-(node.left+1)].LockedMeshIndex;
-				p = mul(_MeshData[MeshIndex].W2L, float4(p,1));
 			    float3x3 Inverse = (float3x3)inverse(_MeshData[MeshIndex].W2L);
 			    float scalex = length(mul(Inverse, float3(1,0,0)));
 			    float scaley = length(mul(Inverse, float3(0,1,0)));
 			    float scalez = length(mul(Inverse, float3(0,0,1)));
 			    float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
+				p = mul(_MeshData[MeshIndex].W2L, float4(p,1));
 				n = normalize(mul(_MeshData[MeshIndex].W2L, float4(n,0)).xyz / Scale);
+				viewDir = normalize(mul(_MeshData[MeshIndex].W2L, float4(viewDir,0)).xyz / Scale);
+				tangentFrame = GetTangentSpace2(n);
 				NodeOffset = _MeshData[MeshIndex].LightNodeOffset;
 				node_index = NodeOffset;
 				HasHitTLAS = true;
@@ -1862,7 +2223,7 @@ inline int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Nor
     return MinIndex;
 }
 
-inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float lightWeight, float3 Norm, float3 Position, float4x4 Transform, inout float3 Radiance, inout float3 FinalPos) {//Need to check these to make sure they arnt simply doing uniform sampling
+inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float lightWeight, float3 Norm, float3 Position, float4x4 Transform, inout float3 Radiance, inout float3 FinalPos, float2 sharpness, float3 viewDir, float metallic) {//Need to check these to make sure they arnt simply doing uniform sampling
 
     float2 TriangleUV;
     int MeshTriOffset = _MeshData[_LightMeshes[MeshIndex].LockedMeshIndex].TriOffset;
@@ -1911,7 +2272,7 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
         FinalPos += Position;
         lightWeight *= (wsum / max((CounCoun) * MinP_Hat, 0.000001f) * LightCount);
     #else
-        MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex);
+        MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, uint2(pixel_index % screen_width, pixel_index / screen_width), -viewDir, metallic);
         if(MinIndex == -1) return -1;
         MeshTriOffset = _MeshData[MeshIndex].TriOffset;
         MatOffset =_MeshData[MeshIndex].MaterialOffset;

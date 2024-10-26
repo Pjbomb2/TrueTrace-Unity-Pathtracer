@@ -20,6 +20,20 @@ struct CudaTriangle {
 
 StructuredBuffer<CudaTriangle> AggTris;
 
+struct GaussianTreeNode {
+	float3 position;
+	float radius;
+	float3 axis;
+	float variance;
+	float sharpness;
+	float intensity;
+	int left;
+};
+
+StructuredBuffer<GaussianTreeNode> SGTree;
+
+
+
 struct MyMeshDataCompacted {
 	float4x4 W2L;
 	int TriOffset;
@@ -49,6 +63,7 @@ struct LightTriData {
 	float3 posedge2;
 	uint TriTarget;
 	float SourceEnergy;
+	// uint NormalizedColor;
 };
 
 StructuredBuffer<LightTriData> LightTriangles;

@@ -21,14 +21,14 @@ MonoBehaviour:
   DoTLASUpdates: 1
   Accumulate: 1
   PPBloom: 0
-  BloomStrength: 0.839
+  BloomStrength: 0.372
   PPDoF: 0
   DoFAperature: 0.403
   DoFAperatureScale: 0.54
   DoFFocal: 5.1366353
   PPExposure: 0
   ExposureAuto: 0
-  PPToneMap: 0
+  PPToneMap: 1
   PPTAA: 0
   RenderScale: 1
   DenoiserMethod: 0
@@ -41,7 +41,7 @@ MonoBehaviour:
   ReSTIRGISpatialRadius: 24
   ReSTIRGITemporalMCap: 4
   DoReSTIRGIConnectionValidation: 1
-  Exposure: 21.7
+  Exposure: 50
   DoPartialRendering: 0
   PartialRenderingFactor: 2
   DoFirefly: 0
@@ -55,7 +55,7 @@ MonoBehaviour:
   FireflyFrameInterval: 1
   FireflyStrength: 1
   FireflyOffset: 0
-  OIDNFrameCount: 122
+  OIDNFrameCount: 0
   DoSharpen: 0
   Sharpness: 0.94
   MainDesiredRes: 16384
@@ -74,9 +74,9 @@ MonoBehaviour:
   MatChangeResetsAccum: 1
   PPFXAA: 0
   OIDNBlendRatio: 1
-  ConvBloom: 0
-  ConvStrength: 10
-  ConvBloomThreshold: 4.69
+  ConvBloom: 1
+  ConvStrength: 0.33
+  ConvBloomThreshold: 1.84
   ConvBloomSize: {x: 1, y: 1}
   ConvBloomDistExp: 0
   ConvBloomDistExpClampMin: 1

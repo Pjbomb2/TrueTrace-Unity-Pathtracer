@@ -154,7 +154,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
             float light_pdf = 1.0f / (SA * LightMeshCount);
             #if defined(LBVH) && !defined(FasterLightSampling)
-                CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id);
+                CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 0.5f, id, ray.direction, 0.5f);
             #else
                 light_pdf *= rcp(_MeshData[hit.mesh_id].LightTriCount);
             #endif
@@ -170,7 +170,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             }
             #endif
         }
-        if(CurBounce == 0 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -10000.0f;
+        if(UseASVGF && CurBounce == 0 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -10000.0f;
         if(luminance(EmissCol) > 12.0f) {
             if(CurBounce == 0) {
                 Color.Data = EmissCol;
@@ -386,7 +386,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 int MeshIndex = SelectLightMeshSmart(pixel_index, RunningWeight, pos);
                 float4x4 MeshTransformInverse = _MeshData[_LightMeshes[MeshIndex].LockedMeshIndex].W2L;
             #endif
-            AggTriIndex = SelectLight(pixel_index, MeshIndex, RunningWeight, norm, pos, MeshTransformInverse, Radiance, LightPosition);
+            float ax, ay;
+            CalculateAnisotropicParams(hitDat.roughness, hitDat.anisotropic, ax, ay);
+            AggTriIndex = SelectLight(pixel_index, MeshIndex, RunningWeight, norm, pos, MeshTransformInverse, Radiance, LightPosition, float2(ax, ay), -PrevDirection, (saturate(hitDat.metallic + hitDat.Specular + hitDat.clearcoat)));
             #ifdef LBVH
                 MeshTransformInverse = _MeshData[MeshIndex].W2L;
             #endif
@@ -469,10 +471,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                         Illum = (Radiance * bsdf_value) / NEE_pdf * RunningWeight * NEEMISWeight;
                         bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf * RunningWeight * NEEMISWeight;
                     }
-                    #ifndef RadianceCache
-                    #endif
-                        Illum *= Color.throughput * bsdfmodifier;
-                        bsdf_diffuse *= Color.throughput * bsdfmodifier;
+                    Illum *= Color.throughput * bsdfmodifier;
+                    bsdf_diffuse *= Color.throughput * bsdfmodifier;
 
                     if(LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) {
                         Illum *= pow(saturate(dot(to_light, -LightNorm)), MiscInfo.x);
