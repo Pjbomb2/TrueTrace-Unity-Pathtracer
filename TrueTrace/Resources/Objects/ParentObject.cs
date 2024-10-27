@@ -1181,7 +1181,7 @@ namespace TrueTrace {
                                 posedge1 = TempTri.posedge1,
                                 posedge2 = TempTri.posedge2,
                                 TriTarget = (uint)(OffsetReal),
-                                SourceEnergy = luminance(Radiance)
+                                SourceEnergy = _Materials[(int)TempTri.MatDat].emission
                                 });
                             IllumTriCount++;
                         }

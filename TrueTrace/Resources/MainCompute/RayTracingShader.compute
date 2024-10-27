@@ -471,8 +471,10 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                         Illum = (Radiance * bsdf_value) / NEE_pdf * RunningWeight * NEEMISWeight;
                         bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf * RunningWeight * NEEMISWeight;
                     }
-                    Illum *= Color.throughput * bsdfmodifier;
-                    bsdf_diffuse *= Color.throughput * bsdfmodifier;
+                    #ifndef RadianceCache
+                    #endif
+                        Illum *= Color.throughput * bsdfmodifier;
+                        bsdf_diffuse *= Color.throughput * bsdfmodifier;
 
                     if(LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) {
                         Illum *= pow(saturate(dot(to_light, -LightNorm)), MiscInfo.x);

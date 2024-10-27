@@ -499,12 +499,15 @@ namespace TrueTrace {
                         float radius;
                         if(LBVHNode.left < 0) {
                             TempNode = SGTreeNodes[-(LBVHNode.left+1)];
-                            TempNode.axis = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.axis, 1));
-                            TempNode.S.Center = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center, 1));
-                            float Scale = Vector3.Distance(Vector3.zero, new Vector3(Vector3.Distance(Vector3.zero, CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform.GetColumn(0))), Vector3.Distance(Vector3.zero, CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform.GetColumn(1))), Vector3.Distance(Vector3.zero, CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform.GetColumn(2)))));
-                            TempNode.intensity *= Scale;
-                            TempNode.S.Radius *= Scale;
+                            Vector3 ExtendedCenter = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center + new Vector3(TempNode.S.Radius, 0, 0), 1));
+                            Vector3 center = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center, 1));
+                            Vector3 Axis = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.axis, 0));
+                            float Scale = Vector3.Distance(center, ExtendedCenter) / TempNode.S.Radius;
+                            TempNode.axis = Axis;
+                            TempNode.S.Center = center;
                             TempNode.variance *= Scale;
+                            TempNode.S.Radius *= Scale;
+                            TempNode.intensity *= Scale;
                             // ThisLight.posedge1 = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(ThisLight.posedge1, 1));
                             // ThisLight.posedge2 = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(ThisLight.posedge2, 1));
 
@@ -519,8 +522,8 @@ namespace TrueTrace {
                             GaussianTreeNode LeftNode = SGTree[nodes[WriteIndex].left];    
                             GaussianTreeNode RightNode = SGTree[nodes[WriteIndex].left + 1];
 
-                            float phi_left = Mathf.Max(LeftNode.intensity, 0.00000001f);    
-                            float phi_right = Mathf.Max(RightNode.intensity, 0.00000001f);    
+                            float phi_left = LeftNode.intensity;    
+                            float phi_right = RightNode.intensity;    
                             float w_left = phi_left / (phi_left + phi_right);
                             float w_right = phi_right / (phi_left + phi_right);
                             
