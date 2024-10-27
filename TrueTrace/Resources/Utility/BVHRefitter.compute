@@ -428,7 +428,7 @@ void TLASLightRefitKernel (uint3 id : SV_DispatchThreadID)
         // SGTreeWrite[Index].left = SGTreeWrite[Transf.SolidOffset].left;
         
 
-        SGTreeWrite[Index].radius *= Scale;
+        SGTreeWrite[Index].radius = SGTreeWrite[Transf.SolidOffset].radius * Scale;
         SGTreeWrite[Index].intensity = SGTreeWrite[Transf.SolidOffset].intensity * Scale;
         return;
     }

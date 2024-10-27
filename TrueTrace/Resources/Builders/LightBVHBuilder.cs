@@ -21,7 +21,7 @@ namespace TrueTrace {
         }
 
         private float luminance(float r, float g, float b) { return 0.299f * r + 0.587f * g + 0.114f * b; }
-
+        TTStopWatch TTWatch;
 
         float Dot(ref Vector3 A, ref Vector3 B) {
             return A.x * B.x + A.y * B.y + A.z * B.z;
@@ -281,6 +281,8 @@ namespace TrueTrace {
 
   
         public LightBVHBuilder(List<LightTriData> Tris, List<Vector3> Norms, float phi, List<float> LuminanceWeights) {//need to make sure incomming is transformed to world space already
+            TTWatch = new TTStopWatch("LBVH FOR TRI COUNT: " + Tris.Count);
+            TTWatch.Start();
             PrimCount = Tris.Count;          
             MaxDepth = 0;
             LightTris = new LightBounds[PrimCount];  
@@ -353,8 +355,8 @@ namespace TrueTrace {
             CommonFunctions.DeepClean(ref nodes2);
             CommonFunctions.DeepClean(ref LightTris);
 
-
-
+            TTWatch.Stop("LBVH");
+            TTWatch.Start();
             {
                 SGTree = new GaussianTreeNode[nodes.Length];
                 Set = new List<int>[MaxDepth];
@@ -410,6 +412,7 @@ namespace TrueTrace {
                     }
                 }
             }
+            TTWatch.Stop("GAUSSIAN TREE");
 
 
             CommonFunctions.DeepClean(ref nodes);

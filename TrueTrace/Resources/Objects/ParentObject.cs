@@ -1154,6 +1154,7 @@ namespace TrueTrace {
 
                     if (_Materials[(int)TempTri.MatDat].emission > 0.0f) {
                         bool IsValid = true;
+                        Vector3 SecondaryBaseCol = Vector3.one;
                         #if AccurateLightTris
                             if(_Materials[(int)TempTri.MatDat].EmissiveTex.x != 0) {
                                 int ThisIndex = _Materials[(int)TempTri.MatDat].EmissiveTex.x - 1;
@@ -1161,8 +1162,10 @@ namespace TrueTrace {
                                                 new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge1 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge1 & 0xFFFF))) + 
                                                 new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge2 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge2 & 0xFFFF)))) / 3.0f;
                                 int UVIndex3 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
-                                if(UVIndex3 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x)
+                                if(UVIndex3 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
                                     if(EmissionTexPixels[ThisIndex][UVIndex3].r < 0.1f && EmissionTexPixels[ThisIndex][UVIndex3].g < 0.1f && EmissionTexPixels[ThisIndex][UVIndex3].b < 0.1f) IsValid = false;
+                                    else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex][UVIndex3].r, EmissionTexPixels[ThisIndex][UVIndex3].g, EmissionTexPixels[ThisIndex][UVIndex3].b);
+                                }
                             
                             }
                         #endif
@@ -1181,7 +1184,7 @@ namespace TrueTrace {
                                 posedge1 = TempTri.posedge1,
                                 posedge2 = TempTri.posedge2,
                                 TriTarget = (uint)(OffsetReal),
-                                SourceEnergy = _Materials[(int)TempTri.MatDat].emission
+                                SourceEnergy = Vector3.Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Vector3.Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol))
                                 });
                             IllumTriCount++;
                         }

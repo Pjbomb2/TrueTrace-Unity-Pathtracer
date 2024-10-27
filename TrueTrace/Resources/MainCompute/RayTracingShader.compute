@@ -154,7 +154,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
             float light_pdf = 1.0f / (SA * LightMeshCount);
             #if defined(LBVH) && !defined(FasterLightSampling)
-                CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 0.5f, id, ray.direction, 0.5f);
+                CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 0.5f, -ray.direction, 0.5f);
             #else
                 light_pdf *= rcp(_MeshData[hit.mesh_id].LightTriCount);
             #endif
@@ -171,7 +171,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             #endif
         }
         if(UseASVGF && CurBounce == 0 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -10000.0f;
-        if(luminance(EmissCol) > 12.0f) {
+        if(luminance(EmissCol) > 2.0f) {
             if(CurBounce == 0) {
                 Color.Data = EmissCol;
                 Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((1) << 26);  

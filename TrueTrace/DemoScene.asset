@@ -19,7 +19,7 @@ MonoBehaviour:
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 0
+  Accumulate: 1
   PPBloom: 0
   BloomStrength: 0.372
   PPDoF: 0

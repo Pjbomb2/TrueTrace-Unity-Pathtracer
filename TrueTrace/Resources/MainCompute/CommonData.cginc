@@ -1063,7 +1063,7 @@ inline float expm1(const float x)
 	return y;
 }
 
-inline float erf2(const float x)
+float erf2(const float x)
 {
 	// Early return for large |x|.
 	if (abs(x) >= 4.0)
@@ -1072,7 +1072,7 @@ inline float erf2(const float x)
 	}
 
 	// Polynomial approximation based on the approximation posted in https://forums.developer.nvidia.com/t/optimized-version-of-single-precision-error-function-erff/40977
-	if (abs(x) > 1.0)
+	[branch]if (abs(x) > 1.0)
 	{
 		// The maximum error is smaller than the approximation described in Abramowitz and Stegun [1964 "Handbook of Mathematical Functions with Formulas, Graphs, and Mathematical Tables", 7.1.26, p.299].
 		const float A1 = 1.628459513;
@@ -1086,18 +1086,19 @@ inline float erf2(const float x)
 		const float y = 1.0 - exp2(-(((((((A7 * a + A6) * a + A5) * a + A4) * a + A3) * a + A2) * a + A1) * a));
 
 		return mulsign(y, x);
+	} else {
+
+		// The maximum error is smaller than the 6th order Taylor polynomial.
+		const float A1 = 1.128379121;
+		const float A2 = -3.76123011e-1;
+		const float A3 = 1.12799220e-1;
+		const float A4 = -2.67030653e-2;
+		const float A5 = 4.90735564e-3;
+		const float A6 = -5.58853149e-4;
+		const float x2 = x * x;
+
+		return (((((A6 * x2 + A5) * x2 + A4) * x2 + A3) * x2 + A2) * x2 + A1) * x;
 	}
-
-	// The maximum error is smaller than the 6th order Taylor polynomial.
-	const float A1 = 1.128379121;
-	const float A2 = -3.76123011e-1;
-	const float A3 = 1.12799220e-1;
-	const float A4 = -2.67030653e-2;
-	const float A5 = 4.90735564e-3;
-	const float A6 = -5.58853149e-4;
-	const float x2 = x * x;
-
-	return (((((A6 * x2 + A5) * x2 + A4) * x2 + A3) * x2 + A2) * x2 + A1) * x;
 }
 
 inline float erfc(const float x)
@@ -1154,7 +1155,7 @@ static const float FLT_MAX = 3.402823466e+38f;
 // [Tokuyoshi et al. 2024 "Hierarchical Light Sampling with Accurate Spherical Gaussian Lighting (Supplementary Document)" Listing. 5]
 inline float UpperSGClampedCosineIntegralOverTwoPi(const float sharpness)
 {
-	if (sharpness <= 0.5)
+	[branch]if (sharpness <= 0.5)
 	{
 		// Taylor-series approximation for the numerical stability.
 		// TODO: Derive a faster polynomial approximation.
@@ -1169,7 +1170,7 @@ inline float LowerSGClampedCosineIntegralOverTwoPi(const float sharpness)
 {
 	const float e = exp(-sharpness);
 
-	if (sharpness <= 0.5)
+	[branch]if (sharpness <= 0.5)
 	{
 		// Taylor-series approximation for the numerical stability.
 		// TODO: Derive a faster polynomial approximation.
@@ -1183,20 +1184,14 @@ inline float LowerSGClampedCosineIntegralOverTwoPi(const float sharpness)
 // [Tokuyoshi et al. 2024 "Hierarchical Light Sampling with Accurate Spherical Gaussian Lighting (Supplementary Document)" Listing. 7]
 inline float SGClampedCosineProductIntegralOverPi2024(const float cosine, const float sharpness)
 {
-	// Fitted approximation for t(sharpness).
-	const float A = 2.7360831611272558028247203765204;
-	const float B = 17.02129778174187535455530451145;
-	const float C = 4.0100826728510421403939290030394;
-	const float D = 15.219156263147210594866010069381;
-	const float E = 76.087896272360737270901154261082;
-	const float t = sharpness * sqrt(0.5 * ((sharpness + A) * sharpness + B) / (((sharpness + C) * sharpness + D) * sharpness + E));
+	const float t = sharpness * sqrt(0.5 * ((sharpness + 2.7360831611272558028247203765204f) * sharpness + 17.02129778174187535455530451145f) / (((sharpness + 4.0100826728510421403939290030394f) * sharpness + 15.219156263147210594866010069381f) * sharpness + 76.087896272360737270901154261082f));
 	const float tz = t * cosine;
 
 	// In this HLSL implementation, we roughly implement erfc(x) = 1 - erf2(x) which can have a numerical error for large x.
 	// Therefore, unlike the original impelemntation [Tokuyoshi et al. 2024], we clamp the lerp factor with the machine epsilon / 2 for a conservative approximation.
 	// This clamping is unnecessary for languages that have a precise erfc function (e.g., C++).
 	// The original implementation [Tokuyoshi et al. 2024] uses a precise erfc function and does not clamp the lerp factor.
-	const float INV_SQRTPI = 0.56418958354775628694807945156077; // = 1/sqrt(pi).
+	const float INV_SQRTPI = 0.56418958354775628694807945156077f; // = 1/sqrt(pi).
 	const float CLAMPING_THRESHOLD = 0.5 * FLT_EPSILON; // Set zero if a precise erfc function is available.
 	const float lerpFactor = saturate(max(0.5 * (cosine * erfc(-tz) + erfc(t)) - 0.5 * INV_SQRTPI * exp(-tz * tz) * expm1(t * t * (cosine * cosine - 1.0)) / t, CLAMPING_THRESHOLD));
 
@@ -1284,11 +1279,11 @@ bool IsFinite(float x)
     return (asuint(x) & 0x7F800000) != 0x7F800000;
 }
 
-inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDir, const float3 p, const float3 n, const float2 projRoughness2, const float reflecSharpness, const float3x3 tangentFrame, int2 id, const float metallic) {
+inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDir, const float3 p, const float3 n, const float2 projRoughness2, const float reflecSharpness, const float3x3 tangentFrame, const float metallic) {
 	float3 to_light = TargetNode.position - p;
 	const float squareddist = dot(to_light, to_light);
 
-	float c = max(dot(n, -to_light) / sqrt(squareddist), 0);
+	const float c = max(dot(n, -to_light) / sqrt(squareddist), 0);
 
 	// Compute the Jacobian J for the transformation between halfvetors and reflection vectors at halfvector = normal.
 	const float3 viewDirTS = mul(tangentFrame, viewDir);//their origional one constructs the tangent frame from N,T,BT, whereas mine constructs it from T,N,BT; problem? I converted all .y to .z and vice versa, but... 
@@ -1315,11 +1310,8 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 	to_light = normalize(to_light);
 	const SGLobe LightLobe = sg_product(normalize(TargetNode.axis), TargetNode.sharpness, to_light, squareddist / Variance);
 
-	// to_light = mul(tangentFrame, to_light);//their origional one constructs the tangent frame from N,T,BT, whereas mine constructs it from T,N,BT; problem? I converted all .y to .z and vice versa, but... 
-
 
 	const float emissive = (TargetNode.intensity) / (Variance * SGIntegral(TargetNode.sharpness));
-	// if(id.y > screen_height / 2) emissive = (TargetNode.intensity) / Variance;
 
 	const float amplitude = exp(LightLobe.logAmplitude);
 	const float cosine = clamp(dot(LightLobe.axis, n), -1.0, 1.0);
@@ -1431,7 +1423,7 @@ int CalcInside(GaussianTreeNode A, GaussianTreeNode B, float3 p, int Index) {
 	} else return -1;
 }
 
-void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, int pixel_index, int MeshIndex, float2 sharpness, int2 id, float3 viewDir, float metallic) {
+void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic) {
 	int node_index = 0;
 	int Reps = 0;
 	bool HasHitTLAS = false;
@@ -1451,8 +1443,8 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, int pixel
 		GaussianTreeNode node = SGTree[node_index];
 		[branch]if(node.left >= 0) {
 			float2 ci = float2(
-					SGImportance(SGTree[node.left + NodeOffset], -viewDir, p, n, ProjRoughness2, reflecSharpness, tangentFrame, id, metallic),
-					SGImportance(SGTree[node.left + 1 + NodeOffset], -viewDir, p, n, ProjRoughness2, reflecSharpness, tangentFrame, id, metallic)
+					SGImportance(SGTree[node.left + NodeOffset], viewDir, p, n, ProjRoughness2, reflecSharpness, tangentFrame, metallic),
+					SGImportance(SGTree[node.left + 1 + NodeOffset], viewDir, p, n, ProjRoughness2, reflecSharpness, tangentFrame, metallic)
 				);
 			// if(ci.x == 0 && ci.y == 0) {pmf = -1; return;}
 
@@ -1512,7 +1504,7 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, int pixel
 	return;
 }
 
-int SampleLightBVH(float3 p, float3 n, inout float pmf, int pixel_index, inout int MeshIndex, const float2 sharpness, int2 id, float3 viewDir, float metallic) {
+int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, inout int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic) {
 	int node_index = 0;
 	int Reps = 0;
 	bool HasHitTLAS = false;
@@ -1524,13 +1516,13 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, int pixel_index, inout i
 	const float2 ProjRoughness2 = roughness2 / max(1.0 - roughness2, EPSILON);
 	const float reflecSharpness = (1.0 - max(roughness2.x, roughness2.y)) / max(2.0f * max(roughness2.x, roughness2.y), EPSILON);
 
-	while(Reps < 322) {
+	while(Reps < 122) {
 		Reps++;
 		GaussianTreeNode node = SGTree[node_index];
 		[branch]if(node.left >= 0) {
 			const float2 ci = float2(
-				SGImportance(SGTree[node.left + NodeOffset], -viewDir, p, n, ProjRoughness2, reflecSharpness, tangentFrame, id, metallic),
-				SGImportance(SGTree[node.left + 1 + NodeOffset], -viewDir, p, n, ProjRoughness2, reflecSharpness, tangentFrame, id, metallic)
+				SGImportance(SGTree[node.left + NodeOffset], viewDir, p, n, ProjRoughness2, reflecSharpness, tangentFrame, metallic),
+				SGImportance(SGTree[node.left + 1 + NodeOffset], viewDir, p, n, ProjRoughness2, reflecSharpness, tangentFrame, metallic)
 			);
 			if(ci.x == 0 && ci.y == 0) break;
 
@@ -2272,7 +2264,7 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
         FinalPos += Position;
         lightWeight *= (wsum / max((CounCoun) * MinP_Hat, 0.000001f) * LightCount);
     #else
-        MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, uint2(pixel_index % screen_width, pixel_index / screen_width), -viewDir, metallic);
+        MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic);
         if(MinIndex == -1) return -1;
         MeshTriOffset = _MeshData[MeshIndex].TriOffset;
         MatOffset =_MeshData[MeshIndex].MaterialOffset;
