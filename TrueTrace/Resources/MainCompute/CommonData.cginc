@@ -1034,34 +1034,19 @@ inline float AreaOfTriangle(float3 pt1, float3 pt2, float3 pt3) {
 static const float FLT_EPSILON = 1.192092896e-07f;
 
 
-inline float mulsign(const float x, const float y)
-{
-	return asfloat((asuint(y) & 0x80000000) ^ asuint(x));
-}
 
 inline float2 mulsign(const float2 x, const float2 y)
 {
 	return asfloat((asuint(y) & 0x80000000) ^ asuint(x));
 }
 
-inline float expm1(const float x)
-{
-	const float u = exp(x);
-
-	if (u == 1.0)
-	{
-		return x;
-	}
-
-	const float y = u - 1.0;
-
-	if (abs(x) < 1.0)
-	{
-		return y * x / log(u);
-	}
-
-	return y;
+inline float expm1(const float x) {
+    const float u = exp(x);
+    const float y = u - 1.0f;
+    return (u == 1.0f) ? x : (abs(x) < 1.0f ? y * x / log(u) : y);
 }
+
+
 
 float erf2(const float x)
 {
@@ -1101,7 +1086,7 @@ float erf2(const float x)
 	}
 }
 
-inline float erfc(const float x)
+float erfc(const float x)
 {
 	return 1.0 - erf2(x);
 }
@@ -1503,6 +1488,11 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 
 	return;
 }
+
+
+
+
+
 
 int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, inout int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic) {
 	int node_index = 0;

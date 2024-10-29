@@ -47,7 +47,10 @@ namespace TrueTrace {
                 if(CamSettings[0].Cam != null) CamSettings[0].Cam.gameObject.SetActive(true);
                 for(int i = 1; i < CamSettings.Length; i++) if(CamSettings[i].Cam != null) CamSettings[i].Cam.gameObject.SetActive(false);
                 Camera[] AllCameras = GameObject.FindObjectsOfType<Camera>();
-                for(int i = 0; i < AllCameras.Length; i++) if(!CamSettings[0].Cam.Equals(AllCameras[i])) AllCameras[i].gameObject.SetActive(false);
+                for(int i = 0; i < AllCameras.Length; i++) {
+                    if(!CamSettings[0].Cam.Equals(AllCameras[i])) AllCameras[i].gameObject.SetActive(false);
+                    // if(!AllCameras[i].gameObject.TryGetComponent(out RenderHandle ExistingHandle)) AllCameras[i].gameObject.AddComponent<RenderHandle>();
+                }
             }
 
         }

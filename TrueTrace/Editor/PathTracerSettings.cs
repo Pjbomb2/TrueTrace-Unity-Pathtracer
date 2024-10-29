@@ -116,6 +116,32 @@ namespace TrueTrace {
          [SerializeField] public float ConvBloomDistExpClampMin = 1;
          [SerializeField] public float ConvBloomDistExpScale = 1;
 
+         public bool GetGlobalDefine(string DefineToGet) {
+            string globalDefinesPath = TTPathFinder.GetGlobalDefinesPath();
+
+            if(File.Exists(globalDefinesPath)) {
+               string[] GlobalDefines = System.IO.File.ReadAllLines(globalDefinesPath);
+               int Index = -1;
+               for(int i = 0; i < GlobalDefines.Length; i++) {
+                  if(GlobalDefines[i].Equals("//END OF DEFINES")) break;
+                  string TempString = GlobalDefines[i].Replace("#define ", "");
+                  TempString = TempString.Replace("// ", "");
+                  if(TempString.Equals(DefineToGet)) {
+                     Index = i;
+                     break;
+                  }
+               }
+               if(Index == -1) {
+                  Debug.Log("Cant find define \"" + DefineToGet + "\"");
+                  return false;
+               }
+               bool CachedValue = true;
+               if(GlobalDefines[Index].Contains("// ")) CachedValue = false;
+               return CachedValue;
+            } else {Debug.Log("No GlobalDefinesFile");}
+            return false;
+         }
+
 
          public void SetGlobalDefines(string DefineToSet, bool SetValue) {
             string globalDefinesPath = TTPathFinder.GetGlobalDefinesPath();
@@ -1431,6 +1457,18 @@ Toolbar toolbar;
       Toggle OIDNToggle;
       Toggle MaterialHelperToggle;
       Toggle DX11Toggle;
+
+
+      private Toggle CustomToggle(string Label, string TargetDefine) {
+         // VisualElement CustTogContainer = CreateHorizontalBox("Custom Horizontal Toggle");
+            Toggle CustToggle = new Toggle() {value = GetGlobalDefine(TargetDefine), text = Label};
+            CustToggle.RegisterValueChangedCallback(evt => {SetGlobalDefines(TargetDefine, evt.newValue);});
+         return CustToggle;
+      }
+
+
+
+
       void ActiveDX11Overrides() {
          BindlessToggle.value = true; 
          HardwareRTToggle.value = false;
@@ -1587,6 +1625,21 @@ Toolbar toolbar;
          HardSettingsMenu.Add(ScreenShotBox);
          HardSettingsMenu.Add(PanoramaBox);
          HardSettingsMenu.Add(TurnTableBox);
+         
+
+
+         HardSettingsMenu.Add(CustomToggle("Fade Mapping", "FadeMapping"));
+         HardSettingsMenu.Add(CustomToggle("Stained Glass", "StainedGlassShadows"));
+         HardSettingsMenu.Add(CustomToggle("Ignore Backfacing Triangles", "IgnoreBackfacing"));
+         HardSettingsMenu.Add(CustomToggle("Use Light BVH", "LBVH"));
+         HardSettingsMenu.Add(CustomToggle("Quick RadCache Toggle", "RadianceCache"));
+         HardSettingsMenu.Add(CustomToggle("Use Texture LOD", "UseTextureLOD"));
+         HardSettingsMenu.Add(CustomToggle("Use vMF Diffuse", "vMFDiffuse"));
+         HardSettingsMenu.Add(CustomToggle("Use EON Diffuse", "EONDiffuse"));
+         HardSettingsMenu.Add(CustomToggle("Use Advanced Background", "AdvancedBackground"));
+
+
+
          // HardSettingsMenu.Add(CorrectMatOptionsButton);
       }
 

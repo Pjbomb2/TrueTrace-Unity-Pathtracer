@@ -40,17 +40,7 @@ namespace CommonVars
         public int left;
     }
 
-    [System.Serializable]
-    public struct UnpackedGaussianTreeNode {
-        public BoundingSphere S;
-        public float variance;
-        public Vector3 intensity;
-        public float sharpness;
-        public Vector3 axis;
-        public int left;
-        public int LightCount;
-        public int isLeaf;
-    }
+
 
     [System.Serializable]
     public struct LightData
