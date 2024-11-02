@@ -591,6 +591,7 @@ void BLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
 
         float area = AreaOfTriangle(LightTri.pos0, LightTri.pos0 + LightTri.posedge1, LightTri.pos0 + LightTri.posedge2);
 
+        if(area == 0) area = 0.000000001f;
         float intensity = LightTri.SourceEnergy * area;
         float3 V = 0.5f * normalize(cross(normalize(LightTri.posedge1), normalize(LightTri.posedge2)));
         float variance = (dot(LightTri.posedge1, LightTri.posedge1) + dot(LightTri.posedge2, LightTri.posedge2) - dot(LightTri.posedge1, LightTri.posedge2)) / 18.0f;

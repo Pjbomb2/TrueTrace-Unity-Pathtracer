@@ -26,7 +26,7 @@
 // #define vMFDiffuse
 #define EONDiffuse
 // #define AdvancedBackground
-#define UseBRDFLights
+// #define UseBRDFLights
 
 
 //END OF DEFINES

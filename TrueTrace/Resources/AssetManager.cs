@@ -2164,23 +2164,52 @@ namespace TrueTrace {
 
         }
 
-        // public float VarTest = 1.0f;
+        // private int DrawCount;
         // public GaussianTreeNode[] LightTree;
-        // public GaussianTreeNode[] LightTree2;
+        // private void Refit(int Depth, int CurrentIndex, bool HasHitTLAS, int node_offset, Matrix4x4 Transform) {
+        //     if((HasHitTLAS && LightTree[CurrentIndex].left < 0) || Depth > 20 || LightTree[CurrentIndex].intensity == 0) return;
+
+        //     int LeftIndex = LightTree[CurrentIndex].left;
+        //     HasHitTLAS = HasHitTLAS || LeftIndex < 0;
+
+        //         Vector3 Pos = CommonFunctions.ToVector3(Transform * CommonFunctions.ToVector4(LightTree[CurrentIndex].S.Center, 1));
+        //         float Radius = Vector3.Distance(Pos, CommonFunctions.ToVector3(Transform * CommonFunctions.ToVector4(LightTree[CurrentIndex].S.Center + new Vector3(LightTree[CurrentIndex].S.Radius, 0, 0), 1)));
+        //         Gizmos.DrawWireSphere(Pos, Radius);            
+        //     if(LeftIndex < 0) {
+        //         int MeshIndex = -(LeftIndex+1);
+        //         node_offset = MyMeshesCompacted[LightMeshes[MeshIndex].LockedMeshIndex].LightNodeOffset;
+        //         Transform = MyMeshesCompacted[LightMeshes[MeshIndex].LockedMeshIndex].Transform.inverse;
+        //         LeftIndex = 0;
+        //         return;
+        //     } else {
+        //         DrawCount++;
+        //         // if(CurrentIndex >= node_offset + LeftIndex) Debug.Log("EEE " + LeftIndex + ", " + node_offset);
+        //     }
+
+
+        //     Refit(Depth + 1, LeftIndex + node_offset, HasHitTLAS, node_offset, Transform);
+        //     Refit(Depth + 1, LeftIndex + node_offset + 1, HasHitTLAS, node_offset, Transform);
+        // }
+
+        // public float VarTest = 1.0f;
+        // // public GaussianTreeNode[] LightTree2;
         // public void OnDrawGizmos() {
         //     if(Application.isPlaying) {
-        //         int Count = LightTreeBuffer2.count;
+        //         DrawCount = 0;
+        //         int Count = LightTreeBuffer.count;
         //         LightTree = new GaussianTreeNode[Count];
-        //         LightTree2 = new GaussianTreeNode[Count];
-        //         LightTreeBuffer2.GetData(LightTree);
-        //         LightTreeBuffer.GetData(LightTree2);
-        //         for(int i = 2; i < Count; i++) {
-        //             Vector3 Pos = CommonFunctions.ToVector3(LightBVHTransforms[0].Transform * CommonFunctions.ToVector4(LightTree[i].S.Center, 1));
-        //             float Radius = Vector3.Distance(Pos, CommonFunctions.ToVector3(LightBVHTransforms[0].Transform * CommonFunctions.ToVector4(LightTree[i].S.Center + new Vector3(LightTree[i].S.Radius, 0, 0), 1)));
-        //             // if(LightTree[i].variance < LightTree[i].S.Radius * VarTest) Gizmos.DrawWireSphere(Pos, Radius);
-        //             Gizmos.DrawWireSphere(Pos, Radius);
+        //         // LightTree2 = new GaussianTreeNode[Count];
+        //         // LightTreeBuffer2.GetData(LightTree);
+        //         LightTreeBuffer.GetData(LightTree);
+        //         Refit(0, 0, false, 0, Matrix4x4.identity);
+        //         Debug.Log(DrawCount);
+        //         // for(int i = 2; i < Count; i++) {
+        //         //     Vector3 Pos = CommonFunctions.ToVector3(LightBVHTransforms[0].Transform * CommonFunctions.ToVector4(LightTree[i].S.Center, 1));
+        //         //     float Radius = Vector3.Distance(Pos, CommonFunctions.ToVector3(LightBVHTransforms[0].Transform * CommonFunctions.ToVector4(LightTree[i].S.Center + new Vector3(LightTree[i].S.Radius, 0, 0), 1)));
+        //         //     // if(LightTree[i].variance < LightTree[i].S.Radius * VarTest) Gizmos.DrawWireSphere(Pos, Radius);
+        //         //     Gizmos.DrawWireSphere(Pos, Radius);
 
-        //         }
+        //         // }
         //     }
         // }
 
