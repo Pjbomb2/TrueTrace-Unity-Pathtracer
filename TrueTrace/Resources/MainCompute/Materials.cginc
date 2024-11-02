@@ -1100,13 +1100,13 @@ static float4 CalculateLobePdfs(const MaterialData hitDat) {
     
     float4 P = float4(metallicBRDF + hitDat.Specular, 1.0f * saturate(hitDat.clearcoat), dielectricBRDF, specularBSDF);
     P /= (P.x + P.y + P.z + P.w);
-    float C = 0;
-    for(int i = 0; i < 4; i++) {
-        if(P[i] != 0) C++;
-    }
-    for(int i = 0; i < 4; i++) {
-        if(P[i] != 0) P[i] = 1.0f / C;
-    }
+    // float C = 0;
+    // for(int i = 0; i < 4; i++) {
+    //     if(P[i] != 0) C++;
+    // }
+    // for(int i = 0; i < 4; i++) {
+    //     if(P[i] != 0) P[i] = 1.0f / C;
+    // }
     return  P;
 }
 

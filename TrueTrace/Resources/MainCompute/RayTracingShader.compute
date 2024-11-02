@@ -160,18 +160,20 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             #endif
             float w = power_heuristic(max(last_pdf,0), light_pdf);
             if (CurBounce == 0) Color.Direct += EmissCol;
-            else if (CurBounce == 1) Color.Direct += EmissCol * w;
-            #ifndef RadianceCache
-                else Color.Indirect += Color.throughput * EmissCol * w;
-            #else
-            else {
-                if(!((CacheInstance.pathLength >> 7) & 0x1)) Color.Indirect += Color.throughput * EmissCol * w;
-                else CacheInstance.CurrentIlluminance = EncodeRGB(DecodeRGB(CacheInstance.CurrentIlluminance) + EmissCol * w);
-            }
+            #ifdef UseBRDFLights
+                else if (CurBounce == 1) Color.Direct += EmissCol * w;
+                #ifndef RadianceCache
+                    else Color.Indirect += Color.throughput * EmissCol * w;
+                #else
+                else {
+                    if(!((CacheInstance.pathLength >> 7) & 0x1)) Color.Indirect += Color.throughput * EmissCol * w;
+                    else CacheInstance.CurrentIlluminance = EncodeRGB(DecodeRGB(CacheInstance.CurrentIlluminance) + EmissCol * w);
+                }
+                #endif
             #endif
         }
         if(UseASVGF && CurBounce == 0 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -10000.0f;
-        if(luminance(EmissCol) > 2.0f) {
+        if(luminance(EmissCol) > 12.0f) {
             if(CurBounce == 0) {
                 Color.Data = EmissCol;
                 Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((1) << 26);  
@@ -334,7 +336,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         RunningWeight = selectionoptions;
         SelectedLightGroup = selections[min(floor(random(114, pixel_index).x * (float)selectionoptions), selectionoptions - 1)];
 
-        if (SelectedLightGroup == 1) {
+        if (SelectedLightGroup == 1) {//we only really need to precompute this, right? maybe we can do a similar optimization as ReSTIR DI?
             AggTriIndex = SelectUnityLight(pixel_index, RunningWeight, norm, pos, PrevDirection);
             LightData Light = _UnityLights[AggTriIndex];
             float sinPhi, cosPhi;
@@ -464,8 +466,12 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                             NEE_pdf /= LightMeshCount;
                         #endif
                         float NEEMISWeight = power_heuristic(NEE_pdf, bsdf_pdf);
-                        Illum = (Radiance * bsdf_value) / NEE_pdf * NEEMISWeight;
-                        bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf * NEEMISWeight;
+                        Illum = (Radiance * bsdf_value) / NEE_pdf;
+                        bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf;
+                        #ifdef UseBRDFLights
+                            Illum *= NEEMISWeight;
+                            bsdf_diffuse *= NEEMISWeight;
+                        #endif
                     } else {
                         NEE_pdf = HDRIParams.x * HDRIParams.y * equirectDirectionPdf(to_light) * (luminance(Radiance) / TotSum[0]);
                         float NEEMISWeight = power_heuristic(NEE_pdf, bsdf_pdf);
@@ -508,7 +514,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                         ShadowRayData ShadRay = {pos, 
                                                         packRGBE(bsdf_diffuse), 
                                                         to_light, 
-                                                        (LightFormat == DIRECTIONALLIGHT ? 10000.0f : distance_to_light - 0.01f) * (TempTemp ? 1 : -1),
+                                                        (LightFormat == DIRECTIONALLIGHT ? 10000.0f : distance_to_light - ShadowDistanceFudgeFactor) * (TempTemp ? 1 : -1),
                                                         Illum, 
                                                         pixel_index};
                         if(abs(ShadRay.t) > 0.001f) {
@@ -764,8 +770,8 @@ int MaterialIndex;
                 break;
             }
         }
-        TempCol *= unpackRGBE(AggTris[bestHit.triangle_id].VertColA) * (1.0f - bestHit.u - bestHit.v) + unpackRGBE(AggTris[bestHit.triangle_id].VertColB) * bestHit.u + unpackRGBE(AggTris[bestHit.triangle_id].VertColC) * bestHit.v;
-       TempMat.surfaceColor *= TempCol;
+        if(GetFlag(TempMat.Tag, VertexColors)) TempCol *= unpackRGBE(AggTris[bestHit.triangle_id].VertColA) * (1.0f - bestHit.u - bestHit.v) + unpackRGBE(AggTris[bestHit.triangle_id].VertColB) * bestHit.u + unpackRGBE(AggTris[bestHit.triangle_id].VertColC) * bestHit.v;
+        TempMat.surfaceColor *= TempCol;
 
         TempCol = TempMat.surfaceColor;
         #ifndef DX11
@@ -834,7 +840,6 @@ int MaterialIndex;
     GlobalColors[pixel_index] = Color;
 
 }
-
 
 
 

@@ -22,7 +22,7 @@ namespace TrueTrace {
         public int QueInProgress = -1;
         public bool IsDeformable = false;
         [HideInInspector] public ComputeBuffer LightTriBuffer;
-        [HideInInspector] public ComputeBuffer SGTreeBuffer;
+        [HideInInspector] public ComputeBuffer LightTreeBuffer;
         [HideInInspector] public ComputeBuffer TriBuffer;
         [HideInInspector] public ComputeBuffer BVHBuffer;
         public string Name;
@@ -67,7 +67,6 @@ namespace TrueTrace {
         [HideInInspector] public int NodeUpdateKernel;
         [HideInInspector] public int NodeCompressKernel;
         [HideInInspector] public int NodeInitializerKernel;
-        [HideInInspector] public int LightTLASRefitKernel;
         [HideInInspector] public int LightBLASRefitKernel;
 
         [HideInInspector] public int CompactedMeshData;
@@ -189,7 +188,7 @@ namespace TrueTrace {
             if (TriBuffer != null)
             {
                 LightTriBuffer?.Release();
-                SGTreeBuffer?.ReleaseSafe();
+                LightTreeBuffer?.ReleaseSafe();
                 TriBuffer?.Release();
                 BVHBuffer?.Release();
             }
@@ -223,7 +222,7 @@ namespace TrueTrace {
             }
             if (TriBuffer != null) {
                 LightTriBuffer.Release();
-                SGTreeBuffer.ReleaseSafe();
+                LightTreeBuffer.ReleaseSafe();
                 TriBuffer.Release();
                 BVHBuffer.Release();
             }
@@ -250,8 +249,11 @@ namespace TrueTrace {
             NodeUpdateKernel = MeshRefit.FindKernel("NodeUpdate");
             NodeCompressKernel = MeshRefit.FindKernel("NodeCompress");
             NodeInitializerKernel = MeshRefit.FindKernel("NodeInitializer");
-            LightTLASRefitKernel = MeshRefit.FindKernel("TLASLightRefitKernel");
+#if !DontUseSGTree
+            LightBLASRefitKernel = MeshRefit.FindKernel("BLASSGTreeRefitKernel");
+#else
             LightBLASRefitKernel = MeshRefit.FindKernel("BLASLightRefitKernel");
+#endif
         }
         private bool NeedsToResetBuffers = true;
         public void SetUpBuffers()
@@ -261,20 +263,33 @@ namespace TrueTrace {
                 if (LightTriBuffer != null) LightTriBuffer.Release();
                 if (TriBuffer != null) TriBuffer.Release();
                 if (BVHBuffer != null) BVHBuffer.Release();
-                if (SGTreeBuffer != null) SGTreeBuffer.Release();
+                if (LightTreeBuffer != null) LightTreeBuffer.Release();
                   if(AggTriangles != null) {
                     if(LightTriangles.Count == 0) {
                         LightTriBuffer = new ComputeBuffer(1, CommonFunctions.GetStride<LightTriData>());
-                        SGTreeBuffer = new ComputeBuffer(1, CommonFunctions.GetStride<GaussianTreeNode>());
+#if !DontUseSGTree
+                        LightTreeBuffer = new ComputeBuffer(1, CommonFunctions.GetStride<GaussianTreeNode>());
+#else
+                        LightTreeBuffer = new ComputeBuffer(1, CommonFunctions.GetStride<CompactLightBVHData>());
+#endif
                     } else {
                         LightTriBuffer = new ComputeBuffer(Mathf.Max(LightTriangles.Count,1), CommonFunctions.GetStride<LightTriData>());
-                        SGTreeBuffer = new ComputeBuffer(Mathf.Max(LBVH.SGTree.Length,1), CommonFunctions.GetStride<GaussianTreeNode>());
+#if !DontUseSGTree
+                        LightTreeBuffer = new ComputeBuffer(Mathf.Max(LBVH.SGTree.Length,1), CommonFunctions.GetStride<GaussianTreeNode>());
+#else
+                        LightTreeBuffer = new ComputeBuffer(Mathf.Max(LBVH.nodes.Length,1), CommonFunctions.GetStride<CompactLightBVHData>());
+#endif
                     }
                     TriBuffer = new ComputeBuffer(AggTriangles.Length, 88);
                     BVHBuffer = new ComputeBuffer(AggNodes.Length, 80);
                     if(HasLightTriangles) {
                         LightTriBuffer.SetData(LightTriangles);
-                        SGTreeBuffer.SetData(LBVH.SGTree);
+#if !DontUseSGTree
+                        LightTreeBuffer.SetData(LBVH.SGTree);
+#else
+                        LightTreeBuffer.SetData(LBVH.nodes);
+#endif
+
                     }
                     TriBuffer.SetData(AggTriangles);
                     BVHBuffer.SetData(AggNodes);
@@ -806,7 +821,6 @@ namespace TrueTrace {
             if(LightTriangles.Count > 0) {
                 LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
 
-
             }
 
 
@@ -815,11 +829,19 @@ namespace TrueTrace {
 
         public List<int>[] Set;
         private void Refit(int Depth, int CurrentIndex) {
-            // if((2.0f * ((float)(LBVH.SGTree[CurrentIndex].cosTheta_oe >> 16) / 32767.0f) - 1.0f) == 0) return;
+#if DontUseSGTree
+            if((2.0f * ((float)(LBVH.nodes[CurrentIndex].cosTheta_oe >> 16) / 32767.0f) - 1.0f) == 0) return;
+#endif
             Set[Depth].Add(CurrentIndex);
+#if !DontUseSGTree
             if(LBVH.SGTree[CurrentIndex].left < 0) return;
             Refit(Depth + 1, LBVH.SGTree[CurrentIndex].left);
             Refit(Depth + 1, LBVH.SGTree[CurrentIndex].left + 1);
+#else 
+            if(LBVH.nodes[CurrentIndex].left < 0) return;
+            Refit(Depth + 1, LBVH.nodes[CurrentIndex].left);
+            Refit(Depth + 1, LBVH.nodes[CurrentIndex].left + 1);
+#endif
         }
 
 
@@ -962,7 +984,11 @@ namespace TrueTrace {
                     cmd.BeginSample("LightRefitter");
                     cmd.SetComputeIntParam(MeshRefit, "TotalNodeOffset", LightNodeOffset);
                     cmd.SetComputeMatrixParam(MeshRefit, "ToWorld", transform.localToWorldMatrix);
+#if !DontUseSGTree
                     cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "SGTreeWrite", RealizedLightNodeBuffer);
+#else
+                    cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "LightNodesWrite", RealizedLightNodeBuffer);
+#endif
                     cmd.SetComputeFloatParam(MeshRefit, "FloatMax", float.MaxValue);
                     int ObjectOffset = LightNodeOffset;
                     for(int i = WorkingSet.Length - 1; i >= 0; i--) {
@@ -1045,7 +1071,7 @@ namespace TrueTrace {
             return new Vector2(width, height);
         }
 
-        public unsafe async Task BuildTotal() {
+        public unsafe void BuildTotal() {
             int IllumTriCount = 0;
             CudaTriangle TempTri = new CudaTriangle();
             Matrix4x4 ParentMatInv = CachedTransforms[0].WTL;
@@ -1171,7 +1197,6 @@ namespace TrueTrace {
                         #endif
                         if(IsValid) {
                             HasLightTriangles = true;
-                            LuminanceWeights.Add(_Materials[(int)TempTri.MatDat].emission);
                             Vector3 Radiance = _Materials[(int)TempTri.MatDat].emission * _Materials[(int)TempTri.MatDat].BaseColor;
                             float radiance = luminance(Radiance.x, Radiance.y, Radiance.z);
                             float area = AreaOfTriangle(ParentMat * V1, ParentMat * V2, ParentMat * V3);
@@ -1186,6 +1211,7 @@ namespace TrueTrace {
                                 TriTarget = (uint)(OffsetReal),
                                 SourceEnergy = Vector3.Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Vector3.Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol))
                                 });
+                            LuminanceWeights.Add(Vector3.Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Vector3.Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol)));
                             IllumTriCount++;
                         }
                     }
@@ -1324,6 +1350,20 @@ namespace TrueTrace {
         //     }
         // }
 
+
+
+        // public void OnDrawGizmos() {
+        //     if(LBVH != null && LBVH.SGTree != null) {
+        //         int Count = LBVH.SGTree.Length;
+        //         for(int i = 0; i < Count; i++) {
+        //             Vector3 Pos = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LBVH.SGTree[i].S.Center, 1));
+        //             float Radius = Vector3.Distance(Pos, CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LBVH.SGTree[i].S.Center + new Vector3(LBVH.SGTree[i].S.Radius, 0, 0), 1)));
+        //             // if(LightTree[i].variance < LightTree[i].S.Radius * VarTest) Gizmos.DrawWireSphere(Pos, Radius);
+        //             Gizmos.DrawWireSphere(Pos, Radius);
+
+        //         }
+        //     }
+        // }
     }
 
 

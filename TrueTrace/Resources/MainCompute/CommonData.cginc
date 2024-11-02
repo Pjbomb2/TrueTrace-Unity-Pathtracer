@@ -1170,7 +1170,7 @@ inline float LowerSGClampedCosineIntegralOverTwoPi(const float sharpness)
 inline float SGClampedCosineProductIntegralOverPi2024(const float cosine, const float sharpness)
 {
 	const float t = sharpness * sqrt(0.5 * ((sharpness + 2.7360831611272558028247203765204f) * sharpness + 17.02129778174187535455530451145f) / (((sharpness + 4.0100826728510421403939290030394f) * sharpness + 15.219156263147210594866010069381f) * sharpness + 76.087896272360737270901154261082f));
-	const float tz = t * cosine;
+	const float tz = t * cosine;//can these EVER GET NEGATIVE
 
 	// In this HLSL implementation, we roughly implement erfc(x) = 1 - erf2(x) which can have a numerical error for large x.
 	// Therefore, unlike the original impelemntation [Tokuyoshi et al. 2024], we clamp the lerp factor with the machine epsilon / 2 for a conservative approximation.
@@ -1178,7 +1178,58 @@ inline float SGClampedCosineProductIntegralOverPi2024(const float cosine, const 
 	// The original implementation [Tokuyoshi et al. 2024] uses a precise erfc function and does not clamp the lerp factor.
 	const float INV_SQRTPI = 0.56418958354775628694807945156077f; // = 1/sqrt(pi).
 	const float CLAMPING_THRESHOLD = 0.5 * FLT_EPSILON; // Set zero if a precise erfc function is available.
-	const float lerpFactor = saturate(max(0.5 * (cosine * erfc(-tz) + erfc(t)) - 0.5 * INV_SQRTPI * exp(-tz * tz) * expm1(t * t * (cosine * cosine - 1.0)) / t, CLAMPING_THRESHOLD));
+	
+	float ERFCTZ = 1.0f;
+	float ERFCT = 1.0f;
+	{
+		const float A1 = 1.628459513;
+		const float A2 = 9.15674746e-1;
+		const float A3 = 1.54329389e-1;
+		const float A4 = -3.51759829e-2;
+		const float A5 = 5.66795561e-3;
+		const float A6 = -5.64874616e-4;
+		const float A7 = 2.58907676e-5;
+
+		const float B1 = 1.128379121;
+		const float B2 = -3.76123011e-1;
+		const float B3 = 1.12799220e-1;
+		const float B4 = -2.67030653e-2;
+		const float B5 = 4.90735564e-3;
+		const float B6 = -5.58853149e-4;
+
+
+		if (abs(tz) >= 4.0) {
+			ERFCTZ = mulsign(1.0, -tz);
+		} else if (abs(tz) > 1.0) {
+			const float a = abs(tz);
+			const float y = 1.0 - exp2(-(((((((A7 * a + A6) * a + A5) * a + A4) * a + A3) * a + A2) * a + A1) * a));
+
+			ERFCTZ = mulsign(y, -tz);
+		} else {
+			const float x2 = tz * tz;
+			ERFCTZ = (((((B6 * x2 + B5) * x2 + B4) * x2 + B3) * x2 + B2) * x2 + B1) * -tz;
+		}
+
+		[branch]if (t >= 4.0) {
+			ERFCT = mulsign(1.0, t);
+		} else if (t > 1.0) {
+			const float y = 1.0 - exp2(-(((((((A7 * t + A6) * t + A5) * t + A4) * t + A3) * t + A2) * t + A1) * t));
+
+			ERFCT = mulsign(y, t);
+		} else {
+			const float x2 = t * t;
+			ERFCT = (((((B6 * x2 + B5) * x2 + B4) * x2 + B3) * x2 + B2) * x2 + B1) * t;
+		}
+		ERFCT = 1.0f - ERFCT;
+		ERFCTZ = 1.0f - ERFCTZ;
+
+
+
+	}
+
+
+
+	const float lerpFactor = saturate(max(0.5 * (cosine * ERFCTZ + ERFCT) - 0.5 * INV_SQRTPI * exp(-tz * tz) * expm1(t * t * (cosine * cosine - 1.0)) / t, CLAMPING_THRESHOLD));
 
 	// Interpolation between lower and upper hemispherical integrals.
 	const float lowerIntegral = LowerSGClampedCosineIntegralOverTwoPi(sharpness);
@@ -1189,7 +1240,7 @@ inline float SGClampedCosineProductIntegralOverPi2024(const float cosine, const 
 
 
 // Symmetry GGX using a 2x2 roughness matrix (i.e., Non-axis-aligned GGX w/o the Heaviside function).
-float SGGX(const float3 m, const float2x2 roughnessMat)
+inline float SGGX(const float3 m, const float2x2 roughnessMat)
 {
 	const float det = max(determinant(roughnessMat), EPSILON); // TODO: Use Kahan's algorithm for precise determinant. [https://pharr.org/matt/blog/2019/11/03/difference-of-floats]
 	const float2x2 roughnessMatAdj = { roughnessMat._22, -roughnessMat._12, -roughnessMat._21, roughnessMat._11 };
@@ -1198,23 +1249,11 @@ float SGGX(const float3 m, const float2x2 roughnessMat)
 	return 1.0 / (PI * sqrt(det) * (length2 * length2));
 }
 
-// Non-axis-aligned GGX.
-// [Tokuyoshi and Kaplanyan 2021 "Stable Geometric Specular Antialiasing with Projected-Space NDF Filtering", Eq. 1]
-float GGX(const float3 m, const float2x2 roughnessMat)
-{
-	return (m.y > 0.0) ? SGGX(m, roughnessMat) : 0.0;
-}
-
 // Reflection lobe based the symmetric GGX VNDF.
 // [Tokuyoshi et al. 2024 "Hierarchical Light Sampling with Accurate Spherical Gaussian Lighting", Section 5.2]
-float SGGXReflectionPDF(const float3 wi, const float3 m, const float2x2 roughnessMat)
+inline float SGGXReflectionPDF(const float3 wi, const float3 m, const float2x2 roughnessMat)
 {
 	return SGGX(m, roughnessMat) / max(4.0 * sqrt(dot(wi.xz, mul(roughnessMat, wi.xz)) + wi.y * wi.y), EPSILON); // TODO: Use Kahan's algorithm for precise mul and dot. [https://pharr.org/matt/blog/2019/11/03/difference-of-floats]
-}
-
-float3x3 buildTangentFrame(float3 normal, float3 tangent) {
-	float3 bitangent = normalize(cross(normal, tangent));
-	return float3x3(cross(bitangent, normal), normal, bitangent);
 }
 
 
@@ -1259,12 +1298,12 @@ inline float SGIntegral(const float sharpness)
 
 	*/
 
-bool IsFinite(float x)
+inline bool IsFinite(float x)
 {
     return (asuint(x) & 0x7F800000) != 0x7F800000;
 }
 
-inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDir, const float3 p, const float3 n, const float2 projRoughness2, const float reflecSharpness, const float3x3 tangentFrame, const float metallic) {
+inline float SGImportance(GaussianTreeNode TargetNode, const float3 viewDir, const float3 p, const float3 n, const float2 projRoughness2, const float reflecSharpness, const float3x3 tangentFrame, const float metallic) {
 	float3 to_light = TargetNode.position - p;
 	const float squareddist = dot(to_light, to_light);
 
@@ -1293,7 +1332,7 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 
 
 	to_light = normalize(to_light);
-	const SGLobe LightLobe = sg_product(normalize(TargetNode.axis), TargetNode.sharpness, to_light, squareddist / Variance);
+	const SGLobe LightLobe = sg_product((TargetNode.axis), TargetNode.sharpness, to_light, squareddist / Variance);
 
 
 	const float emissive = (TargetNode.intensity) / (Variance * SGIntegral(TargetNode.sharpness));
@@ -1306,7 +1345,7 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 	const float3 prodVec = reflecVec + LightLobe.axis * LightLobe.sharpness; // Axis of the SG product lobe.
 	const float prodSharpness = length(prodVec);
 	const float3 prodDir = prodVec / prodSharpness;
-	const float LightLobeVariance = 1.0 / LightLobe.sharpness;
+	const float LightLobeVariance = rcp(LightLobe.sharpness);
 	// if(id.y > screen_height / 2 + screen_height / 4) LightLobeVariance = LightLobeVariance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
 	
 	const float2x2 filteredProjRoughnessMat = float2x2(projRoughness2.x, 0.0, 0.0, projRoughness2.y) + 2.0 * LightLobeVariance * jjMat;
@@ -1396,9 +1435,15 @@ float Importance(const float3 p, const float3 n, LightBVHData node, bool HasHitT
     return max(importance, 0.f); // / (float) max(node.LightCount, 1);
 }
 
+#ifdef UseSGTree
 int CalcInside(GaussianTreeNode A, GaussianTreeNode B, float3 p, int Index) {
 	bool Residency0 = dot(p - A.position, p - A.position) <= A.radius * A.radius;
 	bool Residency1 = dot(p - B.position, p - B.position) <= B.radius * B.radius;
+#else
+int CalcInside(LightBVHData A, LightBVHData B, float3 p, int Index) {
+	bool Residency0 = all(p <= A.BBMax) && all(p >= A.BBMin);
+	bool Residency1 = all(p <= B.BBMax) && all(p >= B.BBMin);
+#endif
 	if(Residency0 && Residency1) {
 		return Index + 2;
 	} else if(Residency0) {
@@ -1425,12 +1470,23 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 
 	while(Reps < 100) {
 		Reps++;
+#ifdef UseSGTree
 		GaussianTreeNode node = SGTree[node_index];
+#else
+		LightBVHData node = SGTree[node_index];
+#endif
 		[branch]if(node.left >= 0) {
-			float2 ci = float2(
-					SGImportance(SGTree[node.left + NodeOffset], viewDir, p, n, ProjRoughness2, reflecSharpness, tangentFrame, metallic),
-					SGImportance(SGTree[node.left + 1 + NodeOffset], viewDir, p, n, ProjRoughness2, reflecSharpness, tangentFrame, metallic)
-				);
+#ifdef UseSGTree
+			const float2 ci = float2(
+				SGImportance(SGTree[node.left + NodeOffset], viewDir, p, n, ProjRoughness2, reflecSharpness, tangentFrame, metallic),
+				SGImportance(SGTree[node.left + 1 + NodeOffset], viewDir, p, n, ProjRoughness2, reflecSharpness, tangentFrame, metallic)
+			);
+#else
+			const float2 ci = float2(
+				Importance(p, n, SGTree[node.left + NodeOffset], HasHitTLAS),
+				Importance(p, n, SGTree[node.left + 1 + NodeOffset], HasHitTLAS)
+			);
+#endif
 			// if(ci.x == 0 && ci.y == 0) {pmf = -1; return;}
 
 		    float sumweights = (ci.x + ci.y);
@@ -1508,12 +1564,23 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 
 	while(Reps < 122) {
 		Reps++;
+#ifdef UseSGTree
 		GaussianTreeNode node = SGTree[node_index];
+#else
+		LightBVHData node = SGTree[node_index];
+#endif
 		[branch]if(node.left >= 0) {
+#ifdef UseSGTree
 			const float2 ci = float2(
 				SGImportance(SGTree[node.left + NodeOffset], viewDir, p, n, ProjRoughness2, reflecSharpness, tangentFrame, metallic),
 				SGImportance(SGTree[node.left + 1 + NodeOffset], viewDir, p, n, ProjRoughness2, reflecSharpness, tangentFrame, metallic)
 			);
+#else
+			const float2 ci = float2(
+				Importance(p, n, SGTree[node.left + NodeOffset], HasHitTLAS),
+				Importance(p, n, SGTree[node.left + 1 + NodeOffset], HasHitTLAS)
+			);
+#endif
 			if(ci.x == 0 && ci.y == 0) break;
 
 			bool Index = random(264 + Reps, pixel_index).x >= (ci.x / (ci.x + ci.y));

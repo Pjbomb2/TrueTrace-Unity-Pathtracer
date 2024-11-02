@@ -30,9 +30,20 @@ struct GaussianTreeNode {
 	int left;
 };
 
-StructuredBuffer<GaussianTreeNode> SGTree;
+struct LightBVHData {
+	float3 BBMax;
+	float3 BBMin;
+	uint w;
+	float phi;
+	uint cosTheta_oe;
+	int left;
+};
 
-
+#ifdef UseSGTree
+	StructuredBuffer<GaussianTreeNode> SGTree;
+#else 
+	StructuredBuffer<LightBVHData> SGTree;
+#endif
 
 struct MyMeshDataCompacted {
 	float4x4 W2L;
@@ -77,16 +88,7 @@ struct LightMeshData {//remove 74 bytes
 };
 StructuredBuffer<LightMeshData> _LightMeshes;
 
-struct LightBVHData {
-	float3 BBMax;
-	float3 BBMin;
-	uint w;
-	float phi;
-	uint cosTheta_oe;
-	int left;
-};
 
-StructuredBuffer<LightBVHData> LightNodes;
 
 
 struct LightData {

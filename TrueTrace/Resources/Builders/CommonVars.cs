@@ -40,6 +40,41 @@ namespace CommonVars
         public int left;
     }
 
+    [System.Serializable]
+    public struct GeneralizedGaussianTreeNode {
+        public CommonVars.BoundingSphere S;
+        public Vector3 axis;
+        public float variance;
+        public float sharpness;
+        public float intensity;
+        public CommonVars.AABB aabb;
+        public int LightCount;
+        public GeneralizedGaussianTreeNode(CommonVars.BoundingSphere S, Vector3 Axis, float Variance, float Sharpness, float Intensity, CommonVars.AABB aabb, int LightCount) {
+            this.S = S;
+            this.axis = Axis;
+            this.variance = Variance;
+            this.sharpness = Sharpness;
+            this.intensity = Intensity;
+            this.aabb = aabb;
+            this.LightCount = LightCount;
+
+        }
+
+    }
+
+
+    [System.Serializable]
+    public struct UnpackedGaussianTreeNode {
+        public GeneralizedGaussianTreeNode GC;
+        public int left;
+        public int isLeaf;
+        public UnpackedGaussianTreeNode(CommonVars.BoundingSphere S, Vector3 Axis, float Variance, float Sharpness, float Intensity, int left, int isleaf, int LightCount, CommonVars.AABB aabb) {
+            GC = new GeneralizedGaussianTreeNode(S, Axis, Variance, Sharpness, Intensity, aabb, LightCount);
+            this.left = left;
+            this.isLeaf = isleaf;
+        }
+    }
+
 
 
     [System.Serializable]
@@ -1121,8 +1156,8 @@ namespace CommonVars
         }
 
 
-        public enum Flags {IsEmissionMask, BaseIsMap, ReplaceBase, UseSmoothness, InvertSmoothnessTexture, IsBackground, ShadowCaster, Invisible, BackgroundBleed, Thin};
-        //0-9 Flags
+        public enum Flags {IsEmissionMask, BaseIsMap, ReplaceBase, UseSmoothness, InvertSmoothnessTexture, IsBackground, ShadowCaster, Invisible, BackgroundBleed, Thin, UseVertexColors};
+        //0-10 Flags
         //28-30 SecondaryAlbedoStride
 
         public static int SetFlagStretch(this int FlagVar, int LeftOffset, int Stride, int Setter) {

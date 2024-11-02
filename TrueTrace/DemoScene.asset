@@ -14,13 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   SceneName: TestA
   IndirectBoost: 1
-  bouncecount: 122
-  ClayMode: 1
+  bouncecount: 12
+  ClayMode: 0
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
   Accumulate: 1
-  PPBloom: 1
+  PPBloom: 0
   BloomStrength: 0.372
   PPDoF: 0
   DoFAperature: 0.079
@@ -31,7 +31,7 @@ MonoBehaviour:
   PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
-  DenoiserMethod: 1
+  DenoiserMethod: 0
   UpscalerMethod: 2
   ReSTIRGIUpdateRate: 7
   UseReSTIRGITemporal: 1
@@ -45,7 +45,7 @@ MonoBehaviour:
   DoPartialRendering: 0
   PartialRenderingFactor: 2
   DoFirefly: 0
-  ImprovedPrimaryHit: 1
+  ImprovedPrimaryHit: 0
   RISCount: 12
   ToneMapper: 5
   SkyDesaturate: 0
@@ -72,8 +72,8 @@ MonoBehaviour:
   UseTransmittanceInNEE: 0
   SecondarySkyDesaturate: 0
   MatChangeResetsAccum: 1
-  PPFXAA: 1
-  OIDNBlendRatio: 1
+  PPFXAA: 0
+  OIDNBlendRatio: 0.119
   ConvBloom: 1
   ConvStrength: 1.22
   ConvBloomThreshold: 0

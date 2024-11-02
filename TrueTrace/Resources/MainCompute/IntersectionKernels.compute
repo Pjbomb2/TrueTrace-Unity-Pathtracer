@@ -276,6 +276,7 @@ void IntersectBVHShadow(int ray_index) {
         SmallerRay ray2;
         float max_distance;
         int Reps = 0;
+        bool Hit = false;
     #endif
 
         int mesh_id = -1;
@@ -440,10 +441,15 @@ void IntersectBVHShadow(int ray_index) {
                             uint triangle_index = firstbithigh(triangle_group.y);
                             triangle_group.y &= ~(1 << triangle_index);
 
-                            if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, max_distance, mesh_id, throughput, MatOffset)) return;
+                            if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, max_distance, mesh_id, throughput, MatOffset)) {
+                                ShadowRaysBuffer[ray_index].t = 0;
+                                return;
+                            }
                         }
                     }
                 }
+
+
 
 
                 if ((current_group.y & 0xff000000) == 0) {

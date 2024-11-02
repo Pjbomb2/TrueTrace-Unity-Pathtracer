@@ -522,14 +522,16 @@ namespace TrueTrace {
 
 
          private void QuickStart() {
-            // RayTracingObject[] TempObjects = GameObject.FindObjectsOfType<RayTracingObject>();
-            // foreach(var a in TempObjects) {
-            //    DestroyImmediate(a);
-            // }         
             // ParentObject[] TempObjects2 = GameObject.FindObjectsOfType<ParentObject>();
             // foreach(var a in TempObjects2) {
             //    DestroyImmediate(a);
             // }
+            // RayTracingObject[] TempObjects = GameObject.FindObjectsOfType<RayTracingObject>();
+            // foreach(var a in TempObjects) {
+            //    // a.gameObject.AddComponent<ParentObject>();
+            //    // DestroyImmediate(a);
+            //    // if(a.gameObject.name.Contains("LOD") && !a.gameObject.name.Contains("LOD0")) DestroyImmediate(a);
+            // }         
 
             var LightObjects = GameObject.FindObjectsOfType<Light>(true);
             foreach(var LightObj in LightObjects) {
@@ -1454,6 +1456,7 @@ Toolbar toolbar;
 
       Toggle BindlessToggle;
       Toggle HardwareRTToggle;
+      Toggle GaussianTreeToggle;
       Toggle OIDNToggle;
       Toggle MaterialHelperToggle;
       Toggle DX11Toggle;
@@ -1485,11 +1488,16 @@ Toolbar toolbar;
       void AddHardSettingsToMenu() {
          definesList = GetDefines();
          SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
+         SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
          SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
          if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadianceCache", false);
          SetGlobalDefines("DX11", definesList.Contains("DX11Only"));
          HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
          HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("HardwareRT"); SetGlobalDefines("HardwareRT", true);} else {RemoveDefine("HardwareRT"); SetGlobalDefines("HardwareRT", false);}});
+
+         GaussianTreeToggle = new Toggle() {value = (definesList.Contains("DontUseSGTree")), text = "Use Old Light BVH instead of Gaussian Tree"};
+         GaussianTreeToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("DontUseSGTree"); SetGlobalDefines("UseSGTree", false);} else {RemoveDefine("DontUseSGTree"); SetGlobalDefines("UseSGTree", true);}});
+
 
          BindlessToggle = new Toggle() {value = (definesList.Contains("UseAtlas")), text = "Disable Bindless Textures"};
          BindlessToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("UseAtlas"); SetGlobalDefines("UseBindless", false);} else {RemoveDefine("UseAtlas"); SetGlobalDefines("UseBindless", true);}});
@@ -1500,12 +1508,6 @@ Toolbar toolbar;
 
          Toggle ClayModeToggle = new Toggle() {value = ClayMode, text = "Use ClayMode"};
          ClayModeToggle.RegisterValueChangedCallback(evt => {ClayMode = evt.newValue; RayMaster.LocalTTSettings.ClayMode = ClayMode; if(evt.newValue) HardSettingsMenu.Insert(HardSettingsMenu.IndexOf(ClayModeToggle) + 1, ClayColorBox); else HardSettingsMenu.Remove(ClayColorBox);});
-
-         Slider OIDNBlendRatioSlider = new Slider() {label = "OIDN Blend Ratio: ", value = OIDNBlendRatio, highValue = 1.0f, lowValue = 0.0f};
-            OIDNBlendRatioSlider.showInputField = true;        
-            OIDNBlendRatioSlider.style.width = 300;
-            OIDNBlendRatioSlider.ElementAt(0).style.minWidth = 65;
-            OIDNBlendRatioSlider.RegisterValueChangedCallback(evt => {OIDNBlendRatio = evt.newValue; RayMaster.LocalTTSettings.OIDNBlendRatio = OIDNBlendRatio;});
 
          ColorField ClayColorField = new ColorField();
          ClayColorField.label = "Clay Color: ";
@@ -1523,6 +1525,24 @@ Toolbar toolbar;
          Toggle RadCacheToggle = new Toggle() {value = (definesList.Contains("DisableRadianceCache")), text = "Disable Radiance Cache"};
          RadCacheToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {SetGlobalDefines("RadianceCache", false); AddDefine("DisableRadianceCache");} else {SetGlobalDefines("RadianceCache", true); RemoveDefine("DisableRadianceCache");}});
 
+
+         if(Application.isPlaying) {
+            HardwareRTToggle.SetEnabled(false);
+            BindlessToggle.SetEnabled(false);
+            GaussianTreeToggle.SetEnabled(false);
+            OIDNToggle.SetEnabled(false);
+            RadCacheToggle.SetEnabled(false);
+            NonAccurateLightTriToggle.SetEnabled(false);
+         } else {
+            HardwareRTToggle.SetEnabled(true);
+            BindlessToggle.SetEnabled(true);
+            GaussianTreeToggle.SetEnabled(true);
+            OIDNToggle.SetEnabled(true);
+            RadCacheToggle.SetEnabled(true);
+            NonAccurateLightTriToggle.SetEnabled(true);
+         }
+
+
          if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 || definesList.Contains("DX11Only")) {
             if(!definesList.Contains("DX11Only")) {
                ActiveDX11Overrides(); 
@@ -1533,6 +1553,13 @@ Toolbar toolbar;
          }
 
          DX11Toggle = new Toggle() {value = (definesList.Contains("DX11Only")), text = "Use DX11"};
+
+         if(Application.isPlaying) {
+            DX11Toggle.SetEnabled(false);
+         } else {
+            DX11Toggle.SetEnabled(true);
+         }
+
          DX11Toggle.RegisterValueChangedCallback(evt => {
             if(evt.newValue) {
                ActiveDX11Overrides(); 
@@ -1552,6 +1579,8 @@ Toolbar toolbar;
                } 
             }
          });
+
+
 
 
          Button RemoveTrueTraceButton = new Button(() => RemoveTrueTrace()) {text = "Remove TrueTrace Scripts From Scene"};
@@ -1608,6 +1637,7 @@ Toolbar toolbar;
          HardSettingsMenu.Add(RemoveTrueTraceButton);
          HardSettingsMenu.Add(HardwareRTToggle);
          HardSettingsMenu.Add(BindlessToggle);
+         HardSettingsMenu.Add(GaussianTreeToggle);
          HardSettingsMenu.Add(DX11Toggle);
          HardSettingsMenu.Add(OIDNToggle);
          HardSettingsMenu.Add(RadCacheToggle);
@@ -1616,7 +1646,6 @@ Toolbar toolbar;
          HardSettingsMenu.Add(DingToggle);
          HardSettingsMenu.Add(MaterialHelperToggle);
          HardSettingsMenu.Add(MatChangeResetsAccumToggle);
-         HardSettingsMenu.Add(OIDNBlendRatioSlider);
          if(ClayMode) HardSettingsMenu.Add(ClayColorBox);
          VisualElement Spacer = new VisualElement();
          Spacer.style.height = 10;
@@ -2015,7 +2044,7 @@ Toolbar toolbar;
             DenoiserField.ElementAt(0).style.minWidth = 55;
             DenoiserField.ElementAt(1).style.minWidth = 75;
             DenoiserField.ElementAt(1).style.maxWidth = 75;
-            DenoiserField.style.width = 300;
+            DenoiserField.style.width = 450;
             DenoiserField.choices = DenoiserSettings;
             DenoiserField.index = DenoiserMethod;
             DenoiserField.style.flexDirection = FlexDirection.Row;
@@ -2028,17 +2057,37 @@ Toolbar toolbar;
                RayMaster.LocalTTSettings.DenoiserMethod = DenoiserMethod;
                DenoiserExtrasContainer.Clear();
                if(DenoiserMethod == 2) {
-                  OIDNFrameField = new IntegerField("Frames Before OIDN") {value = OIDNFrameCount};
-                  OIDNFrameField.ElementAt(0).style.minWidth = 95;
+                  OIDNFrameField = new IntegerField("Frame Delay") {value = OIDNFrameCount};
+                  OIDNFrameField.ElementAt(0).style.minWidth = 65;
                   OIDNFrameField.RegisterValueChangedCallback(evt => {OIDNFrameCount = (int)evt.newValue; RayMaster.LocalTTSettings.OIDNFrameCount = OIDNFrameCount;});
+
+
+                  Slider OIDNBlendRatioSlider = new Slider() {label = "Blend Ratio: ", value = OIDNBlendRatio, highValue = 1.0f, lowValue = 0.0f};
+                  OIDNBlendRatioSlider.showInputField = true;        
+                  OIDNBlendRatioSlider.style.width = 200;
+                  OIDNBlendRatioSlider.ElementAt(0).style.minWidth = 65;
+                  OIDNBlendRatioSlider.RegisterValueChangedCallback(evt => {OIDNBlendRatio = evt.newValue; RayMaster.LocalTTSettings.OIDNBlendRatio = OIDNBlendRatio;});
+
                   DenoiserExtrasContainer.Add(OIDNFrameField);
+                  DenoiserExtrasContainer.Add(OIDNBlendRatioSlider);
                }
             });
             if(DenoiserMethod == 2) {
-               OIDNFrameField = new IntegerField("Frames Before OIDN") {value = OIDNFrameCount};
-               OIDNFrameField.ElementAt(0).style.minWidth = 95;
+               OIDNFrameField = new IntegerField("Frame Delay") {value = OIDNFrameCount};
+               OIDNFrameField.ElementAt(0).style.minWidth = 65;
                OIDNFrameField.RegisterValueChangedCallback(evt => {OIDNFrameCount = (int)evt.newValue; RayMaster.LocalTTSettings.OIDNFrameCount = OIDNFrameCount;});
+   
+
+               Slider OIDNBlendRatioSlider = new Slider() {label = "Blend Ratio: ", value = OIDNBlendRatio, highValue = 1.0f, lowValue = 0.0f};
+               OIDNBlendRatioSlider.showInputField = true;        
+               OIDNBlendRatioSlider.style.width = 200;
+               OIDNBlendRatioSlider.ElementAt(0).style.minWidth = 65;
+               OIDNBlendRatioSlider.RegisterValueChangedCallback(evt => {OIDNBlendRatio = evt.newValue; RayMaster.LocalTTSettings.OIDNBlendRatio = OIDNBlendRatio;});
+
+
+
                DenoiserExtrasContainer.Add(OIDNFrameField);
+               DenoiserExtrasContainer.Add(OIDNBlendRatioSlider);
             } 
             DenoiserField.Add(DenoiserExtrasContainer);
 

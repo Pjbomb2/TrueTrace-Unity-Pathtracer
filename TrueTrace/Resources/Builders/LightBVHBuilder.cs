@@ -126,15 +126,20 @@ namespace TrueTrace {
                                 (2.0f * theta_w * sinTheta_o -(float)System.Math.Cos(theta_o - 2.0f * theta_w) -
                                  2.0f * theta_o * sinTheta_o + b.cosTheta_o);
 
-
+            float Radius = Vector3.Distance((b.b.BBMax + b.b.BBMin) / 2.0f, b.b.BBMax);
+            float SA = 4.0f * Mathf.PI * Radius * Radius;
+            
             return b.phi * M_omega * Kr * surface_area(b.b) / (float)Mathf.Max(b.LightCount, 1);
         }
 
         private LightBounds[] LightTris;
         private NodeBounds[] nodes2;
+#if DontUseSGTree
+        public CompactLightBVHData[] nodes;
+#else
         private CompactLightBVHData[] nodes;
         public GaussianTreeNode[] SGTree;
-
+#endif
         private int[] DimensionedIndices;
 
         public struct ObjectSplit {
@@ -349,9 +354,10 @@ namespace TrueTrace {
                 nodes[i] = TempNode;
             }
             ParentBound = nodes2[0];
+            // ParentBound.aabb.phi /= (float)Mathf.Max(ParentBound.aabb.LightCount, 1);
             CommonFunctions.DeepClean(ref nodes2);
             CommonFunctions.DeepClean(ref LightTris);
-
+#if !DontUseSGTree
             {
                 SGTree = new GaussianTreeNode[nodes.Length];
                 Set = new List<int>[MaxDepth];
@@ -387,7 +393,7 @@ namespace TrueTrace {
                             float w_left = phi_left / (phi_left + phi_right);
                             float w_right = phi_right / (phi_left + phi_right);
                             
-                            V = w_left * LeftNode.axis + w_right * RightNode.axis;//may be wrong, paper uses BAR_V(BAR_axis here), not just normalized V/axis
+                            V = w_left * LeftNode.axis + w_right * RightNode.axis;
 
                             mean = w_left * LeftNode.S.Center + w_right * RightNode.S.Center;
                             variance = w_left * LeftNode.variance + w_right * RightNode.variance + w_left * w_right * Vector3.Dot(LeftNode.S.Center - RightNode.S.Center, LeftNode.S.Center - RightNode.S.Center);
@@ -408,9 +414,9 @@ namespace TrueTrace {
                 }
             }
 
-
+            // SGTree[0].intensity /= (float)Mathf.Max(ParentBound.aabb.LightCount, 1);
             CommonFunctions.DeepClean(ref nodes);
-
+#endif
         }
 
 
@@ -479,7 +485,7 @@ namespace TrueTrace {
             }
             CommonFunctions.DeepClean(ref nodes2);
 
-
+#if !DontUseSGTree
             {
                 for(int i = 0; i < MaxDepth; i++) Set[i] = new List<int>();
                 Refit2(0, 0);
@@ -505,16 +511,6 @@ namespace TrueTrace {
                             TempNode.variance *= Scale;
                             TempNode.S.Radius *= Scale;
                             TempNode.intensity *= Scale;
-                            // ThisLight.posedge1 = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(ThisLight.posedge1, 1));
-                            // ThisLight.posedge2 = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(ThisLight.posedge2, 1));
-
-                            
-
-                            // intensity = new Vector3(ThisLight.SourceEnergy, ThisLight.SourceEnergy, ThisLight.SourceEnergy) * area;
-                            // V = 0.5f * (Vector3.Cross(ThisLight.posedge1.normalized, ThisLight.posedge2.normalized).normalized);
-                            // mean = (ThisLight.pos0 + (ThisLight.pos0 + ThisLight.posedge1) + (ThisLight.pos0 + ThisLight.posedge2)) / 3.0f;
-                            // variance = (Vector3.Dot(ThisLight.posedge1, ThisLight.posedge1) + Vector3.Dot(ThisLight.posedge2, ThisLight.posedge2) - Vector3.Dot(ThisLight.posedge1, ThisLight.posedge2)) / 18.0f;
-                            // radius = Mathf.Max(Mathf.Max(Vector3.Distance(mean, ThisLight.pos0), Vector3.Distance(mean, ThisLight.pos0 + ThisLight.posedge1)), Vector3.Distance(mean, ThisLight.pos0 + ThisLight.posedge2));
                         } else {
                             GaussianTreeNode LeftNode = SGTree[nodes[WriteIndex].left];    
                             GaussianTreeNode RightNode = SGTree[nodes[WriteIndex].left + 1];
@@ -545,7 +541,7 @@ namespace TrueTrace {
                 }
             }
             CommonFunctions.DeepClean(ref nodes);
-
+#endif
 
         }
 
@@ -558,7 +554,9 @@ namespace TrueTrace {
             CommonFunctions.DeepClean(ref temp);
             CommonFunctions.DeepClean(ref DimensionedIndices);
             CommonFunctions.DeepClean(ref FinalIndices);
+#if !DontUseSGTree
             CommonFunctions.DeepClean(ref SGTree);
+#endif
         }
     }
 }
