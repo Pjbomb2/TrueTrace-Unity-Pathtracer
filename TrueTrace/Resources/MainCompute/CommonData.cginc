@@ -1308,7 +1308,7 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 	float3 to_light = TargetNode.position - p;
 	const float squareddist = dot(to_light, to_light);
 
-	const float c = max(dot(n, -to_light) / sqrt(squareddist), 0);
+	const float c = clamp(dot(n, -(to_light)) / sqrt(squareddist), 0, 1);
 
 	// Compute the Jacobian J for the transformation between halfvetors and reflection vectors at halfvector = normal.
 	const float3 viewDirTS = mul(tangentFrame, viewDir);//their origional one constructs the tangent frame from N,T,BT, whereas mine constructs it from T,N,BT; problem? I converted all .y to .z and vice versa, but... 
@@ -1327,7 +1327,7 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 	const float3 reflecVec = reflect(-viewDir, n) * reflecSharpness;
 
 	// TargetNode.variance = 0.5f * TargetNode.radius * TargetNode.radius;
-	const float Variance = max(TargetNode.variance, (1.0f / pow(2, 31)) * squareddist) * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
+	const float Variance = max(TargetNode.variance, (1.0f / pow(2, 31)) * squareddist);// * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
 	// Variance = Variance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
 	// float Variance = max(TargetNode.variance, squareddist);
 
@@ -1374,7 +1374,7 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 	const float specularIllumination = amplitude * visibility * pdf * SGIntegral(LightLobe.sharpness);
 
 
-	return max(emissive * (diffuseIllumination + metallic * specularIllumination), 0.f);
+	return max(emissive * (diffuseIllumination + specularIllumination), 0.f);
 }
 
 
@@ -1563,7 +1563,7 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 	const float2 ProjRoughness2 = roughness2 / max(1.0 - roughness2, EPSILON);
 	const float reflecSharpness = (1.0 - max(roughness2.x, roughness2.y)) / max(2.0f * max(roughness2.x, roughness2.y), EPSILON);
 	float RandNum = random(264 + Reps, pixel_index).x;
-	while(Reps < 122) {
+	while(Reps < 222) {
 		Reps++;
 #ifdef UseSGTree
 		GaussianTreeNode node = SGTree[node_index];

@@ -236,7 +236,7 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 	const uint4 ScreenInfo = asuint(ScreenSpaceInfo[id.xy]);
 	float3 TexBaseColor = Pixel.Data.xyz;
 	uint2 AlbCol = Pixel.Flags;
-	if(GetBounceData(Pixel.MetRoughIsSpec) != 1) AlbCol = packRGBE(max(unpackRGBE(AlbCol), 0.001f));
+	if(GetBounceData(Pixel.MetRoughIsSpec) != 1) AlbCol = packRGBE(max(unpackRGBE(AlbCol), 0.01f));
 	Pixel.Flags = packRGBE(max(unpackRGBE(Pixel.Flags), 0.01f));
 	float2 MetRough = FromColorSpecPacked(Pixel.MetRoughIsSpec);
 	if(GetBounceData(Pixel.MetRoughIsSpec) == 1) {
@@ -479,8 +479,8 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 		}
 	}
 
-	GlobalRaysMini[ipos.x + ipos.y * screen_width].origin -= CamDiff;
-	GlobalRaysMini[ipos.x + ipos.y * screen_width].direction = normalize(Pos - GlobalRaysMini[ipos.x + ipos.y * screen_width].origin);
+	// GlobalRaysMini[ipos.x + ipos.y * screen_width].origin -= CamDiff;
+	// GlobalRaysMini[ipos.x + ipos.y * screen_width].direction = normalize(Pos - GlobalRaysMini[ipos.x + ipos.y * screen_width].origin);
 
 	MetallicAWrite[ipos] = MetallicB[found_pos_prev];
 	ScreenSpaceInfoWrite[ipos] = float4(asfloat(TEX_PT_NORMALS_B[found_pos_prev].xy),0,0);
@@ -1125,7 +1125,7 @@ inline void filter_image(
 
 			float GNdotGN = max(0.0, dot(geo_normal_center, geo_normal));
 			w_lf *= pow(GNdotGN, 8);
-			float w_l = clamp(exp(-pow(abs(Weight2 - Weight1) / (1.0f + (Weight1)),1) * max(1.0f - LFVarianceA[p_lowres], 0)  * clamp(pow(hist_len_lf / 32.0f,2), Iter2 > 2 ? max(1.0f - LFVarianceA[p_lowres], 0) : 0, 1)),0.01f, 1.0f);
+			float w_l = clamp(exp(-pow(abs(Weight2 - Weight1) / (1.0f + (Weight1)),1) * max(1.0f - LFVarianceA[p_lowres], 0)  * clamp(pow(hist_len_lf / 32.0f,2), 0, 1)),0.01f, 1.0f);
 			if ((Weight1 + Weight2) / 2048.0f > 0.01f && Iter2 >= 1 && Iter2 < 5)
 				w_lf *= w_l;
 			// if(w_lf < 0.1f) continue;
