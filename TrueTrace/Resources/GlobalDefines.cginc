@@ -9,14 +9,14 @@
 #define IgnoreGlassShadow
 // #define IgnoreGlassMain
 // #define FadeMapping
-// #define PointFiltering
+#define PointFiltering
 #define StainedGlassShadows
 // #define IgnoreBackfacing
 // #define WhiteLights
 #define LBVH
 // #define FasterLightSampling
 #define AccurateEmissionTex
-// #define RadianceCache
+#define RadianceCache
 // #define ImprovedRadCacheSpecularResponse
 // #define HighSpeedRadCache
 #define IndirectRetraceWeighting
@@ -26,7 +26,7 @@
 // #define vMFDiffuse
 #define EONDiffuse
 // #define AdvancedBackground
-// #define UseBRDFLights
+#define UseBRDFLights
 
 
 //END OF DEFINES

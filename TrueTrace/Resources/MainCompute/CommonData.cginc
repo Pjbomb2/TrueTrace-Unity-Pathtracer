@@ -1105,9 +1105,9 @@ inline float vmf_hemispherical_integral ( float cosine , float sharpness ) {
 inline float VMFHemisphericalIntegral(const float cosine, const float sharpness)
 {
 	// Interpolation factor [Tokuyoshi 2022].
-	const float A = 0.6517328826907056171791055021459;
-	const float B = 1.3418280033141287699294252888649;
-	const float C = 7.2216687798956709087860872386955;
+	const float A = 0.6517328826907056171791055021459f;
+	const float B = 1.3418280033141287699294252888649f;
+	const float C = 7.2216687798956709087860872386955f;
 	const float steepness = sharpness * sqrt((0.5 * sharpness + A) / ((sharpness + B) * sharpness + C));
 	const float lerpFactor = saturate(0.5 + 0.5 * (erf2(steepness * clamp(cosine, -1.0, 1.0)) / erf2(steepness)));
 
@@ -1303,7 +1303,8 @@ inline bool IsFinite(float x)
     return (asuint(x) & 0x7F800000) != 0x7F800000;
 }
 
-inline float SGImportance(GaussianTreeNode TargetNode, const float3 viewDir, const float3 p, const float3 n, const float2 projRoughness2, const float reflecSharpness, const float3x3 tangentFrame, const float metallic) {
+inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDir, const float3 p, const float3 n, const float2 projRoughness2, const float reflecSharpness, const float3x3 tangentFrame, const float metallic) {
+	// if(TargetNode.intensity <= 0) return 0;	
 	float3 to_light = TargetNode.position - p;
 	const float squareddist = dot(to_light, to_light);
 
@@ -1326,8 +1327,8 @@ inline float SGImportance(GaussianTreeNode TargetNode, const float3 viewDir, con
 	const float3 reflecVec = reflect(-viewDir, n) * reflecSharpness;
 
 	// TargetNode.variance = 0.5f * TargetNode.radius * TargetNode.radius;
-	float Variance = max(TargetNode.variance, (1.0f / pow(2, 31)) * squareddist);
-	Variance = Variance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
+	const float Variance = max(TargetNode.variance, (1.0f / pow(2, 31)) * squareddist) * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
+	// Variance = Variance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
 	// float Variance = max(TargetNode.variance, squareddist);
 
 
@@ -1561,7 +1562,7 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 	const float2 roughness2 = sharpness * sharpness;
 	const float2 ProjRoughness2 = roughness2 / max(1.0 - roughness2, EPSILON);
 	const float reflecSharpness = (1.0 - max(roughness2.x, roughness2.y)) / max(2.0f * max(roughness2.x, roughness2.y), EPSILON);
-
+	float RandNum = random(264 + Reps, pixel_index).x;
 	while(Reps < 122) {
 		Reps++;
 #ifdef UseSGTree
@@ -1583,8 +1584,22 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 #endif
 			if(ci.x == 0 && ci.y == 0) break;
 
-			bool Index = random(264 + Reps, pixel_index).x >= (ci.x / (ci.x + ci.y));
-			pmf /= ((ci[Index] / (ci.x + ci.y)));
+
+		    float sumweights = (ci.x + ci.y);
+            float up = RandNum * sumweights;
+            if (up == sumweights)
+            {
+                up = asfloat(asuint(up) - 1);
+            }
+            int offset = 0;
+            float sum = 0;
+            if(sum + ci[offset] <= up) sum += ci[offset++];
+            if(sum + ci[offset] <= up) sum += ci[offset++];
+			
+			bool Index = RandNum >= (ci.x / sumweights);
+            RandNum = min((up - sum) / ci[Index], 1.0f - (1e-6));
+
+			pmf /= ((ci[Index] / sumweights));
 			node_index = node.left + Index + NodeOffset;
 			
 		} else {

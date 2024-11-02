@@ -14,12 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   SceneName: TestA
   IndirectBoost: 1
-  bouncecount: 2
+  bouncecount: 12
   ClayMode: 0
-  UseRussianRoulette: 0
+  UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 0
+  Accumulate: 1
   PPBloom: 0
   BloomStrength: 0.372
   PPDoF: 0
@@ -45,7 +45,7 @@ MonoBehaviour:
   DoPartialRendering: 0
   PartialRenderingFactor: 2
   DoFirefly: 0
-  ImprovedPrimaryHit: 0
+  ImprovedPrimaryHit: 1
   RISCount: 12
   ToneMapper: 5
   SkyDesaturate: 0
@@ -69,7 +69,7 @@ MonoBehaviour:
   HDRILongLat: {x: 0, y: 0}
   HDRIScale: {x: 1, y: 1}
   LEMEnergyScale: 1
-  UseTransmittanceInNEE: 0
+  UseTransmittanceInNEE: 1
   SecondarySkyDesaturate: 0
   MatChangeResetsAccum: 1
   PPFXAA: 0
