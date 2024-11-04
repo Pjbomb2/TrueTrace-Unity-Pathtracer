@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   SceneName: TestA
   IndirectBoost: 1
-  bouncecount: 12
+  bouncecount: 2
   ClayMode: 0
-  UseRussianRoulette: 1
+  UseRussianRoulette: 0
   UseNEE: 1
   DoTLASUpdates: 1
   Accumulate: 1
@@ -46,7 +46,7 @@ MonoBehaviour:
   PartialRenderingFactor: 2
   DoFirefly: 0
   ImprovedPrimaryHit: 1
-  RISCount: 12
+  RISCount: 0
   ToneMapper: 5
   SkyDesaturate: 0
   ClayColor: {x: 0.38679248, y: 0.38679248, z: 0.38679248}

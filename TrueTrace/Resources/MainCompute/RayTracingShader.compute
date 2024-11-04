@@ -343,7 +343,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             LightPosition = Light.Position;
             LightNorm = Light.Direction;
             LightFormat = Light.Type;
-            Radiance = Light.Radiance;
+            Radiance = Light.Radiance / PI;
             float3 RandVec = float3(random(115, pixel_index), random(116, pixel_index).x);
             MiscInfo = float3(Light.Softness * 120.0f + 1, Light.SpotAngle);
             if(LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) {
@@ -365,14 +365,16 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     if(UseTransmittanceInNEE) Radiance *= GetSkyTransmittance(pos, -LightNorm, 0, -LightNorm);
                 break;
                 case SPOTLIGHT:
+                    Radiance *= ((1.0f - MiscInfo.z * 0.0174533) + (MiscInfo.y * 0.0174533 - MiscInfo.z * 0.0174533) / 2.0f);
                     LightPosition += normalize(RandVec - 0.5f) * random(116, pixel_index).y * Light.Softness * 0.1f;//Soft Shadows
                 break;
                 case AREALIGHTQUAD:
                     RandVec.xy = RandVec.xy * Light.SpotAngle - Light.SpotAngle / 2.0f;
                     RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy);
                     LightPosition += ToWorld(GetTangentSpace2(LightNorm), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
-                    area = (Light.SpotAngle.x * Light.SpotAngle.y) / 2.0f;
+                    area = (Light.SpotAngle.x * Light.SpotAngle.y);
                     if(hitDat.MatType == 3) Radiance = 0;
+                    Radiance *= PI;
                 break;
                 case AREALIGHTDISK:
                     sincos(RandVec.x * 2.0f * PI, RandVec.x, RandVec.y);
@@ -398,9 +400,10 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             Radiance *= LEMEnergyScale;
             TrianglePos CurTri = triangle_get_positions(AggTriIndex);
             MeshTransformInverse = inverse(MeshTransformInverse);
-            float3 a1 = mul((float3x3)MeshTransformInverse, CurTri.posedge1).xyz;
-            float3 a2 = mul((float3x3)MeshTransformInverse, CurTri.posedge2).xyz;
-            area = AreaOfTriangle(float3(0,0,0), a1, a2);
+            float3 a0 = mul(MeshTransformInverse, float4(CurTri.pos0, 1)).xyz;
+            float3 a1 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge1, 1)).xyz;
+            float3 a2 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge2, 1)).xyz;
+            area = AreaOfTriangle(a0, a1, a2);
             LightPosition = mul(MeshTransformInverse, float4(LightPosition,1));
             LightNorm = normalize(mul((float3x3)MeshTransformInverse, normalize(cross(CurTri.posedge1, CurTri.posedge2))).xyz);
         } else {
@@ -457,9 +460,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     float NEE_pdf;
                     float3 Illum;
                     [branch]if (SelectedLightGroup == 1) {
-                        NEE_pdf = distance_to_light_squared * abs(dot(to_light, LightNorm)) / area;
-                        Illum = (Radiance * bsdf_value) / NEE_pdf * RunningWeight * ((LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) ? (MiscInfo.x) : 1.0f);
-                        bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf * RunningWeight * ((LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) ? (MiscInfo.x) : 1.0f);
+                        NEE_pdf = 1.0f / (abs(dot(to_light, LightNorm)) * area / distance_to_light_squared);
+                        Illum = (Radiance * bsdf_value) / NEE_pdf * RunningWeight;
+                        bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf * RunningWeight;
                     } else if(SelectedLightGroup == 0) {        
                         NEE_pdf = (1.0f / ((abs(dot(to_light, LightNorm)) * area) / distance_to_light_squared)) / RunningWeight;
                         #ifndef LBVH
