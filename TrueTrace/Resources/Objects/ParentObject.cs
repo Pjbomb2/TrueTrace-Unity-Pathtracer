@@ -36,7 +36,7 @@ namespace TrueTrace {
         [HideInInspector] public CudaTriangle[] AggTriangles;
         [HideInInspector] public Vector3 ParentScale;
         [HideInInspector] public List<LightTriData> LightTriangles;
-        [HideInInspector] public List<Vector3> LightTriNorms;
+        [HideInInspector] private List<Vector3> LightTriNorms;//Test to see if I can get rrid of this alltogether and just calculate the normal based off cross...
         [HideInInspector] public BVH8Builder BVH;
         [HideInInspector] public SkinnedMeshRenderer[] SkinnedMeshes;
         [HideInInspector] public MeshFilter[] DeformableMeshes;
@@ -46,15 +46,15 @@ namespace TrueTrace {
         [HideInInspector] public BVHNode8DataCompressed[] AggNodes;
         [HideInInspector] public int InstanceMeshIndex;
         [HideInInspector] public int LightEndIndex;
-        public AABB aabb_untransformed;
-        public AABB aabb;
+        [HideInInspector] public AABB aabb_untransformed;
+        [HideInInspector] public AABB aabb;
         [HideInInspector] public bool AllFull;
         [HideInInspector] public int AggIndexCount;
         [HideInInspector] public int AggBVHNodeCount;
-        public List<MaterialData> _Materials;
+        [HideInInspector] public List<MaterialData> _Materials;
         [HideInInspector] public int MatOffset;
         [HideInInspector] public StorableTransform[] CachedTransforms;
-        [HideInInspector] public MeshDat CurMeshData;
+        [HideInInspector] private MeshDat CurMeshData;
         public int TotalObjects;
         [HideInInspector] public List<MeshTransformVertexs> TransformIndexes;
         [HideInInspector] public bool HasCompleted;
@@ -90,18 +90,12 @@ namespace TrueTrace {
         private ComputeBuffer CWBVHIndicesBuffer;
         private ComputeBuffer[] WorkingBuffer;
         private ComputeBuffer[] WorkingSet;
-        public BVH2Builder BVH2;
-
-        #if TTLightMapping
-            public List<LightMapTriData>[] LightMapTris;
-            public List<int> LightMapTexIndex;
-            public List<int> PerRendererIndex;
-        #endif
+        private BVH2Builder BVH2;
 
         [HideInInspector] public Layer[] ForwardStack;
         [HideInInspector] public Layer2[] LayerStack;
         [HideInInspector] public List<NodeIndexPairData> NodePair;
-        [HideInInspector] public List<float> LuminanceWeights;
+        [HideInInspector] private List<float> LuminanceWeights;
 
         [HideInInspector] public int MaxRecur = 0;
         [HideInInspector] public int[] ToBVHIndex;
@@ -115,7 +109,6 @@ namespace TrueTrace {
         [HideInInspector] public List<BVHNode8DataFixed> SplitNodes;
 
         #if HardwareRT
-            public List<int> HWRTIndex;
             public Renderer[] Renderers;
         #endif
 
@@ -147,7 +140,6 @@ namespace TrueTrace {
             CommonFunctions.DeepClean(ref AggNodes);
             CommonFunctions.DeepClean(ref ForwardStack);
             CommonFunctions.DeepClean(ref LightTriNorms);
-            CommonFunctions.DeepClean(ref CWBVHIndicesBufferInverted);
             CommonFunctions.DeepClean(ref CWBVHIndicesBufferInverted);
             CommonFunctions.DeepClean(ref LuminanceWeights);
             if(TrianglesArray.IsCreated) TrianglesArray.Dispose();
@@ -650,7 +642,7 @@ namespace TrueTrace {
                     if(IsDeformable)
                       DeformableMeshes[i] = TempFilter;
                 } else if(CurrentObject.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempRend)) {
-                    TempRend.BakeMesh(mesh);
+                    mesh = TempRend.sharedMesh;
                     if (IsSkinnedGroup)
                         SkinnedMeshes[i] = TempRend;
                 }
@@ -1004,8 +996,7 @@ namespace TrueTrace {
                     cmd.EndSample("LightRefitter");
                 }
 
-                #if HardwareRT
-                #else
+                #if !HardwareRT
                     cmd.BeginSample("ReMesh Init");
                     cmd.SetComputeIntParam(MeshRefit, "NodeCount", NodePair.Count);
                     cmd.DispatchCompute(MeshRefit, NodeInitializerKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);

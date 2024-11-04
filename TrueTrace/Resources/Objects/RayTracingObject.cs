@@ -183,7 +183,7 @@ namespace TrueTrace {
 			 	SubMeshCount = (MeshRend.sharedMaterials).Length;
 			 	if(TryGetComponent<Renderer>(out Renderer Rend)) SharedMaterials = Rend.sharedMaterials;
 		 	} else if(TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer SkinnedRend)) {
-		 		SkinnedRend.BakeMesh(mesh);
+                mesh = SkinnedRend.sharedMesh;		 		
 			 	if(!SkinnedRend.enabled) mesh = null;
 				SubMeshCount = (SkinnedRend.sharedMaterials).Length;
 		 		SharedMaterials = SkinnedRend.sharedMaterials;

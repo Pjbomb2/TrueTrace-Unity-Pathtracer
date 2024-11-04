@@ -1486,104 +1486,132 @@ Toolbar toolbar;
       }
 
       void AddHardSettingsToMenu() {
-         definesList = GetDefines();
-         SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
-         SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
-         SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
-         if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadianceCache", false);
-         SetGlobalDefines("DX11", definesList.Contains("DX11Only"));
-         HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
-         HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("HardwareRT"); SetGlobalDefines("HardwareRT", true);} else {RemoveDefine("HardwareRT"); SetGlobalDefines("HardwareRT", false);}});
+         Button RemoveTrueTraceButton = new Button(() => RemoveTrueTrace()) {text = "Remove TrueTrace Scripts From Scene"};
+         
+         Label NonPlayLabel = new Label("-- THESE CANT BE MODIFIED ON THE FLY/DURING PLAY --");
+         
+         VisualElement NonPlayContainer = new VisualElement();
+         NonPlayContainer.style.paddingLeft = 10;
+            definesList = GetDefines();
+            SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
+            SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
+            SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
+            if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadianceCache", false);
+            SetGlobalDefines("DX11", definesList.Contains("DX11Only"));
+            HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
+            HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("HardwareRT"); SetGlobalDefines("HardwareRT", true);} else {RemoveDefine("HardwareRT"); SetGlobalDefines("HardwareRT", false);}});
 
-         GaussianTreeToggle = new Toggle() {value = (definesList.Contains("DontUseSGTree")), text = "Use Old Light BVH instead of Gaussian Tree"};
-         GaussianTreeToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("DontUseSGTree"); SetGlobalDefines("UseSGTree", false);} else {RemoveDefine("DontUseSGTree"); SetGlobalDefines("UseSGTree", true);}});
-
-
-         BindlessToggle = new Toggle() {value = (definesList.Contains("UseAtlas")), text = "Disable Bindless Textures"};
-         BindlessToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("UseAtlas"); SetGlobalDefines("UseBindless", false);} else {RemoveDefine("UseAtlas"); SetGlobalDefines("UseBindless", true);}});
-
-         Toggle NonAccurateLightTriToggle = new Toggle() {value = (definesList.Contains("AccurateLightTris")), text = "Enable Emissive Texture Aware Light BVH"};
-         NonAccurateLightTriToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("AccurateLightTris"); else RemoveDefine("AccurateLightTris");});
-         VisualElement ClayColorBox = new VisualElement();
-
-         Toggle ClayModeToggle = new Toggle() {value = ClayMode, text = "Use ClayMode"};
-         ClayModeToggle.RegisterValueChangedCallback(evt => {ClayMode = evt.newValue; RayMaster.LocalTTSettings.ClayMode = ClayMode; if(evt.newValue) HardSettingsMenu.Insert(HardSettingsMenu.IndexOf(ClayModeToggle) + 1, ClayColorBox); else HardSettingsMenu.Remove(ClayColorBox);});
-
-         ColorField ClayColorField = new ColorField();
-         ClayColorField.label = "Clay Color: ";
-         ClayColorField.value = new Color(ClayColor.x, ClayColor.y, ClayColor.z, 1.0f);
-         ClayColorField.style.width = 250;
-         ClayColorField.RegisterValueChangedCallback(evt => {ClayColor = new Vector3(evt.newValue.r, evt.newValue.g, evt.newValue.b); RayMaster.LocalTTSettings.ClayColor = ClayColor;});
-         ClayColorBox.Add(ClayColorField);
+            GaussianTreeToggle = new Toggle() {value = (definesList.Contains("DontUseSGTree")), text = "Use Old Light BVH instead of Gaussian Tree"};
+            GaussianTreeToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("DontUseSGTree"); SetGlobalDefines("UseSGTree", false);} else {RemoveDefine("DontUseSGTree"); SetGlobalDefines("UseSGTree", true);}});
 
 
+            BindlessToggle = new Toggle() {value = (definesList.Contains("UseAtlas")), text = "Disable Bindless Textures"};
+            BindlessToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("UseAtlas"); SetGlobalDefines("UseBindless", false);} else {RemoveDefine("UseAtlas"); SetGlobalDefines("UseBindless", true);}});
 
-         OIDNToggle = new Toggle() {value = (definesList.Contains("UseOIDN")), text = "Enable OIDN(Does NOT work with DX11 Only)"};
-         OIDNToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("UseOIDN"); else RemoveDefine("UseOIDN");});
+            Toggle NonAccurateLightTriToggle = new Toggle() {value = (definesList.Contains("AccurateLightTris")), text = "Enable Emissive Texture Aware Light BVH"};
+            NonAccurateLightTriToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("AccurateLightTris"); else RemoveDefine("AccurateLightTris");});
+            VisualElement ClayColorBox = new VisualElement();
 
+            Toggle ClayModeToggle = new Toggle() {value = ClayMode, text = "Use ClayMode"};
+            ClayModeToggle.RegisterValueChangedCallback(evt => {ClayMode = evt.newValue; RayMaster.LocalTTSettings.ClayMode = ClayMode; if(evt.newValue) HardSettingsMenu.Insert(HardSettingsMenu.IndexOf(ClayModeToggle) + 1, ClayColorBox); else HardSettingsMenu.Remove(ClayColorBox);});
 
-         Toggle RadCacheToggle = new Toggle() {value = (definesList.Contains("DisableRadianceCache")), text = "Disable Radiance Cache"};
-         RadCacheToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {SetGlobalDefines("RadianceCache", false); AddDefine("DisableRadianceCache");} else {SetGlobalDefines("RadianceCache", true); RemoveDefine("DisableRadianceCache");}});
-
-
-         if(Application.isPlaying) {
-            HardwareRTToggle.SetEnabled(false);
-            BindlessToggle.SetEnabled(false);
-            GaussianTreeToggle.SetEnabled(false);
-            OIDNToggle.SetEnabled(false);
-            RadCacheToggle.SetEnabled(false);
-            NonAccurateLightTriToggle.SetEnabled(false);
-         } else {
-            HardwareRTToggle.SetEnabled(true);
-            BindlessToggle.SetEnabled(true);
-            GaussianTreeToggle.SetEnabled(true);
-            OIDNToggle.SetEnabled(true);
-            RadCacheToggle.SetEnabled(true);
-            NonAccurateLightTriToggle.SetEnabled(true);
-         }
+            ColorField ClayColorField = new ColorField();
+            ClayColorField.label = "Clay Color: ";
+            ClayColorField.value = new Color(ClayColor.x, ClayColor.y, ClayColor.z, 1.0f);
+            ClayColorField.style.width = 250;
+            ClayColorField.RegisterValueChangedCallback(evt => {ClayColor = new Vector3(evt.newValue.r, evt.newValue.g, evt.newValue.b); RayMaster.LocalTTSettings.ClayColor = ClayColor;});
+            ClayColorBox.Add(ClayColorField);
 
 
-         if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 || definesList.Contains("DX11Only")) {
-            if(!definesList.Contains("DX11Only")) {
-               ActiveDX11Overrides(); 
+            OIDNToggle = new Toggle() {value = (definesList.Contains("UseOIDN")), text = "Enable OIDN(Does NOT work with DX11 Only)"};
+            OIDNToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("UseOIDN"); else RemoveDefine("UseOIDN");});
+
+
+            Toggle RadCacheToggle = new Toggle() {value = (definesList.Contains("DisableRadianceCache")), text = "FULLY Disable Radiance Cache"};
+            RadCacheToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {SetGlobalDefines("RadianceCache", false); AddDefine("DisableRadianceCache");} else {SetGlobalDefines("RadianceCache", true); RemoveDefine("DisableRadianceCache");}});
+
+
+            if(Application.isPlaying) {
+               HardwareRTToggle.SetEnabled(false);
+               BindlessToggle.SetEnabled(false);
+               GaussianTreeToggle.SetEnabled(false);
+               OIDNToggle.SetEnabled(false);
+               RadCacheToggle.SetEnabled(false);
+               NonAccurateLightTriToggle.SetEnabled(false);
+            } else {
+               HardwareRTToggle.SetEnabled(true);
+               BindlessToggle.SetEnabled(true);
+               GaussianTreeToggle.SetEnabled(true);
+               OIDNToggle.SetEnabled(true);
+               RadCacheToggle.SetEnabled(true);
+               NonAccurateLightTriToggle.SetEnabled(true);
             }
-            BindlessToggle.SetEnabled(false);
-            HardwareRTToggle.SetEnabled(false);
-            OIDNToggle.SetEnabled(false);
-         }
 
-         DX11Toggle = new Toggle() {value = (definesList.Contains("DX11Only")), text = "Use DX11"};
 
-         if(Application.isPlaying) {
-            DX11Toggle.SetEnabled(false);
-         } else {
-            DX11Toggle.SetEnabled(true);
-         }
-
-         DX11Toggle.RegisterValueChangedCallback(evt => {
-            if(evt.newValue) {
-               ActiveDX11Overrides(); 
+            if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 || definesList.Contains("DX11Only")) {
+               if(!definesList.Contains("DX11Only")) {
+                  ActiveDX11Overrides(); 
+               }
                BindlessToggle.SetEnabled(false);
                HardwareRTToggle.SetEnabled(false);
                OIDNToggle.SetEnabled(false);
-            } else {
-               if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11) {
-                  Debug.LogError("DX12 Not Found, Forcing DX11"); 
-                  DX11Toggle.value = true;
-               } else {
-                  OIDNToggle.SetEnabled(true);
-                  HardwareRTToggle.SetEnabled(true);
-                  BindlessToggle.SetEnabled(true);
-                  RemoveDefine("DX11Only"); 
-                  SetGlobalDefines("DX11", false); 
-               } 
             }
-         });
+
+            DX11Toggle = new Toggle() {value = (definesList.Contains("DX11Only")), text = "Use DX11"};
+
+            if(Application.isPlaying) {
+               DX11Toggle.SetEnabled(false);
+            } else {
+               DX11Toggle.SetEnabled(true);
+            }
+
+            DX11Toggle.RegisterValueChangedCallback(evt => {
+               if(evt.newValue) {
+                  ActiveDX11Overrides(); 
+                  BindlessToggle.SetEnabled(false);
+                  HardwareRTToggle.SetEnabled(false);
+                  OIDNToggle.SetEnabled(false);
+               } else {
+                  if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11) {
+                     Debug.LogError("DX12 Not Found, Forcing DX11"); 
+                     DX11Toggle.value = true;
+                  } else {
+                     OIDNToggle.SetEnabled(true);
+                     HardwareRTToggle.SetEnabled(true);
+                     BindlessToggle.SetEnabled(true);
+                     RemoveDefine("DX11Only"); 
+                     SetGlobalDefines("DX11", false); 
+                  } 
+               }
+            });
+
+         NonPlayContainer.Add(HardwareRTToggle);
+         NonPlayContainer.Add(BindlessToggle);
+         NonPlayContainer.Add(GaussianTreeToggle);
+         NonPlayContainer.Add(DX11Toggle);
+         NonPlayContainer.Add(OIDNToggle);
+         NonPlayContainer.Add(RadCacheToggle);
+         NonPlayContainer.Add(NonAccurateLightTriToggle);
+         NonPlayContainer.Add(new Label("-------------"));
+
+         Label PlayLabel = new Label("-- THESE CAN BE MODIFIED ON THE FLY/DURING PLAY --");
+         
+         VisualElement PlayContainer = new VisualElement();
+         PlayContainer.style.paddingLeft = 10;
+
+         PlayContainer.Add(CustomToggle("Fade Mapping", "FadeMapping"));
+         PlayContainer.Add(CustomToggle("Stained Glass", "StainedGlassShadows"));
+         PlayContainer.Add(CustomToggle("Ignore Backfacing Triangles", "IgnoreBackfacing"));
+         PlayContainer.Add(CustomToggle("Use Light BVH", "LBVH"));
+         PlayContainer.Add(CustomToggle("Quick RadCache Toggle", "RadianceCache"));
+         PlayContainer.Add(CustomToggle("Use Texture LOD", "UseTextureLOD"));
+         PlayContainer.Add(CustomToggle("Use vMF Diffuse", "vMFDiffuse"));
+         PlayContainer.Add(CustomToggle("Use EON Diffuse", "EONDiffuse"));
+         PlayContainer.Add(CustomToggle("Use Advanced Background", "AdvancedBackground"));
+         PlayContainer.Add(new Label("-------------"));
 
 
 
-
-         Button RemoveTrueTraceButton = new Button(() => RemoveTrueTrace()) {text = "Remove TrueTrace Scripts From Scene"};
          DingToggle = new Toggle() {value = DoDing, text = "Play Ding When Build Finishes"};
          DingToggle.RegisterValueChangedCallback(evt => {DoDing = evt.newValue; RayTracingMaster.DoDing = DoDing;});
 
@@ -1635,13 +1663,10 @@ Toolbar toolbar;
          Button CorrectMatOptionsButton = new Button(() => FixRayObjects()) {text = "Correct Mat Options"};
 
          HardSettingsMenu.Add(RemoveTrueTraceButton);
-         HardSettingsMenu.Add(HardwareRTToggle);
-         HardSettingsMenu.Add(BindlessToggle);
-         HardSettingsMenu.Add(GaussianTreeToggle);
-         HardSettingsMenu.Add(DX11Toggle);
-         HardSettingsMenu.Add(OIDNToggle);
-         HardSettingsMenu.Add(RadCacheToggle);
-         HardSettingsMenu.Add(NonAccurateLightTriToggle);
+         HardSettingsMenu.Add(NonPlayLabel);
+         HardSettingsMenu.Add(NonPlayContainer);
+         HardSettingsMenu.Add(PlayLabel);
+         HardSettingsMenu.Add(PlayContainer);
          HardSettingsMenu.Add(ClayModeToggle);
          HardSettingsMenu.Add(DingToggle);
          HardSettingsMenu.Add(MaterialHelperToggle);
@@ -1657,15 +1682,7 @@ Toolbar toolbar;
          
 
 
-         HardSettingsMenu.Add(CustomToggle("Fade Mapping", "FadeMapping"));
-         HardSettingsMenu.Add(CustomToggle("Stained Glass", "StainedGlassShadows"));
-         HardSettingsMenu.Add(CustomToggle("Ignore Backfacing Triangles", "IgnoreBackfacing"));
-         HardSettingsMenu.Add(CustomToggle("Use Light BVH", "LBVH"));
-         HardSettingsMenu.Add(CustomToggle("Quick RadCache Toggle", "RadianceCache"));
-         HardSettingsMenu.Add(CustomToggle("Use Texture LOD", "UseTextureLOD"));
-         HardSettingsMenu.Add(CustomToggle("Use vMF Diffuse", "vMFDiffuse"));
-         HardSettingsMenu.Add(CustomToggle("Use EON Diffuse", "EONDiffuse"));
-         HardSettingsMenu.Add(CustomToggle("Use Advanced Background", "AdvancedBackground"));
+
 
 
 

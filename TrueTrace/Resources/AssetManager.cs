@@ -1522,11 +1522,10 @@ namespace TrueTrace {
                 MeshOffsets = new List<Vector2>();
                 AccelStruct.ClearInstances();
                 for(int i = 0; i < RenderQue.Count; i++) {
-                    RenderQue[i].HWRTIndex = new List<int>();
                     foreach(var A in RenderQue[i].Renderers) {
                         MeshOffsets.Add(new Vector2(SubMeshOffsets.Count, i));
                         var B2 = A.gameObject;
-                        Mesh mesh = new Mesh();
+                        Mesh mesh = null;
                         if(B2.TryGetComponent<MeshFilter>(out MeshFilter TempFilter)) mesh = TempFilter.sharedMesh;
                         else if(B2.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin)) mesh = TempSkin.sharedMesh;
                         int SubMeshCount = mesh.subMeshCount;
