@@ -171,6 +171,7 @@ namespace TrueTrace {
                     Spec = ThisOBJ.Specular[SaveIndex],
                     AlphaCutoff = ThisOBJ.AlphaCutoff[SaveIndex],
                     NormStrength = ThisOBJ.NormalStrength[SaveIndex],
+                    DetailNormalStrength = ThisOBJ.DetailNormalStrength[SaveIndex],
                     Hue = ThisOBJ.Hue[SaveIndex],
                     Brightness = ThisOBJ.Brightness[SaveIndex],
                     Contrast = ThisOBJ.Contrast[SaveIndex],
@@ -179,6 +180,7 @@ namespace TrueTrace {
                     BlendFactor = ThisOBJ.BlendFactor[SaveIndex],
                     MainTexScaleOffset = ThisOBJ.MainTexScaleOffset[SaveIndex],
                     SecondaryAlbedoTexScaleOffset = ThisOBJ.SecondaryAlbedoTexScaleOffset[SaveIndex],
+                    SecondaryNormalTexScaleOffset = ThisOBJ.SecondaryNormalTexScaleOffset[SaveIndex],
                     SecondaryTextureScale = ThisOBJ.SecondaryTextureScale[SaveIndex],
                     Rotation = ThisOBJ.Rotation[SaveIndex],
                     Flags = ThisOBJ.Flags[SaveIndex],
@@ -186,6 +188,7 @@ namespace TrueTrace {
                     KelvinTemp = ThisOBJ.KelvinTemp[SaveIndex],
                     ColorBleed = ThisOBJ.ColorBleed[SaveIndex],
                     AlbedoBlendFactor = ThisOBJ.AlbedoBlendFactor[SaveIndex],
+                    SecondaryNormalTexBlend = ThisOBJ.SecondaryNormalTexBlend[SaveIndex],
                     
                     AlbedoGUID = AlbedoGUID,
                     MetallicGUID = MetallicGUID,
@@ -322,6 +325,7 @@ namespace TrueTrace {
             t.Specular[Selected] = RayObj.Spec;
             t.AlphaCutoff[Selected] = RayObj.AlphaCutoff;
             t.NormalStrength[Selected] = RayObj.NormStrength;
+            t.DetailNormalStrength[Selected] = RayObj.DetailNormalStrength;
             t.Hue[Selected] = RayObj.Hue;
             t.Brightness[Selected] = RayObj.Brightness;
             t.Contrast[Selected] = RayObj.Contrast;
@@ -330,6 +334,7 @@ namespace TrueTrace {
             t.BlendFactor[Selected] = RayObj.BlendFactor;
             t.MainTexScaleOffset[Selected] = RayObj.MainTexScaleOffset;
             t.SecondaryAlbedoTexScaleOffset[Selected] = RayObj.SecondaryAlbedoTexScaleOffset;
+            t.SecondaryNormalTexScaleOffset[Selected] = RayObj.SecondaryNormalTexScaleOffset;
             t.SecondaryTextureScale[Selected] = RayObj.SecondaryTextureScale;
             t.Rotation[Selected] = RayObj.Rotation;
             t.Flags[Selected] = RayObj.Flags;
@@ -337,6 +342,7 @@ namespace TrueTrace {
             t.KelvinTemp[Selected] = RayObj.KelvinTemp;
             t.ColorBleed[Selected] = RayObj.ColorBleed;
             t.AlbedoBlendFactor[Selected] = RayObj.AlbedoBlendFactor;
+            t.SecondaryNormalTexBlend[Selected] = RayObj.SecondaryNormalTexBlend;
 
             if(LoadTextures) {
                 Material TempMat = t.SharedMaterials[Selected];
@@ -564,6 +570,7 @@ namespace TrueTrace {
                     Spec = ThisOBJ.Specular[SaveIndex],
                     AlphaCutoff = ThisOBJ.AlphaCutoff[SaveIndex],
                     NormStrength = ThisOBJ.NormalStrength[SaveIndex],
+                    DetailNormalStrength = ThisOBJ.DetailNormalStrength[SaveIndex],
                     Hue = ThisOBJ.Hue[SaveIndex],
                     Brightness = ThisOBJ.Brightness[SaveIndex],
                     Contrast = ThisOBJ.Contrast[SaveIndex],
@@ -572,6 +579,7 @@ namespace TrueTrace {
                     BlendFactor = ThisOBJ.BlendFactor[SaveIndex],
                     MainTexScaleOffset = ThisOBJ.MainTexScaleOffset[SaveIndex],
                     SecondaryAlbedoTexScaleOffset = ThisOBJ.SecondaryAlbedoTexScaleOffset[SaveIndex],
+                    SecondaryNormalTexScaleOffset = ThisOBJ.SecondaryNormalTexScaleOffset[SaveIndex],
                     SecondaryTextureScale = ThisOBJ.SecondaryTextureScale[SaveIndex],
                     Rotation = ThisOBJ.Rotation[SaveIndex],
                     Flags = ThisOBJ.Flags[SaveIndex],
@@ -579,6 +587,7 @@ namespace TrueTrace {
                     KelvinTemp = ThisOBJ.KelvinTemp[SaveIndex],
                     ColorBleed = ThisOBJ.ColorBleed[SaveIndex],
                     AlbedoBlendFactor = ThisOBJ.AlbedoBlendFactor[SaveIndex],
+                    SecondaryNormalTexBlend = ThisOBJ.SecondaryNormalTexBlend[SaveIndex],
 
                     AlbedoGUID = AlbedoGUID,
                     MetallicGUID = MetallicGUID,
@@ -971,6 +980,13 @@ namespace TrueTrace {
                             serializedObject.FindProperty("SecondaryTextureScale").GetArrayElementAtIndex(Selected).vector2Value = EditorGUILayout.Vector2Field("SecondaryTex Scale: ", t.SecondaryTextureScale[Selected]);
                             serializedObject.FindProperty("Rotation").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Texture Rotation: ", t.Rotation[Selected], 0, 1);
                             serializedObject.FindProperty("AlbedoBlendFactor").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Albedo Blend Factor: ", t.AlbedoBlendFactor[Selected], 0, 1);
+                            serializedObject.FindProperty("SecondaryNormalTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Detail Normal Scale/Offset: ", t.SecondaryNormalTexScaleOffset[Selected]);
+                            serializedObject.FindProperty("SecondaryNormalTexBlend").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Detail Normal Blend Factor: ", t.SecondaryNormalTexBlend[Selected], 0, 1);
+
+
+                            serializedObject.FindProperty("DetailNormalStrength").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Detail Normalmap Strength: ", t.DetailNormalStrength[Selected], 0, 20.0f);
+                            ConnectionSources.Add("DetailNormalStrength", GUILayoutUtility.GetLastRect()); // Store position
+                            ConnectionSourceNames.Add("DetailNormalStrength");
 
                         EditorGUILayout.EndVertical();
                     EditorGUILayout.EndHorizontal();
@@ -1033,10 +1049,12 @@ namespace TrueTrace {
                             t.Specular[i] = t.Specular[Selected];
                             t.AlphaCutoff[i] = t.AlphaCutoff[Selected];
                             t.NormalStrength[i] = t.NormalStrength[Selected];
+                            t.DetailNormalStrength[i] = t.DetailNormalStrength[Selected];
                             t.BlendColor[i] = t.BlendColor[Selected];
                             t.BlendFactor[i] = t.BlendFactor[Selected];
                             t.MainTexScaleOffset[i] = t.MainTexScaleOffset[Selected];
                             t.SecondaryAlbedoTexScaleOffset[i] = t.SecondaryAlbedoTexScaleOffset[Selected];
+                            t.SecondaryNormalTexScaleOffset[i] = t.SecondaryNormalTexScaleOffset[Selected];
                             t.SecondaryTextureScale[i] = t.SecondaryTextureScale[Selected];
                             t.Rotation[i] = t.Rotation[Selected];
                             t.Flags[i] = Flag;
@@ -1044,6 +1062,7 @@ namespace TrueTrace {
                             t.KelvinTemp[i] = t.KelvinTemp[Selected];
                             t.ColorBleed[i] = t.ColorBleed[Selected];
                             t.AlbedoBlendFactor[i] = t.AlbedoBlendFactor[Selected];
+                            t.SecondaryNormalTexBlend[i] = t.SecondaryNormalTexBlend[Selected];
                             // Debug.Log(i);
                             t.CallMaterialEdited(true);
                         }
@@ -1084,10 +1103,12 @@ namespace TrueTrace {
                                 Obj.Specular[i] = t.Specular[Selected];
                                 Obj.AlphaCutoff[i] = t.AlphaCutoff[Selected];
                                 Obj.NormalStrength[i] = t.NormalStrength[Selected];
+                                Obj.DetailNormalStrength[i] = t.DetailNormalStrength[Selected];
                                 Obj.BlendColor[i] = t.BlendColor[Selected];
                                 Obj.BlendFactor[i] = t.BlendFactor[Selected];
                                 Obj.MainTexScaleOffset[i] = t.MainTexScaleOffset[Selected];
                                 Obj.SecondaryAlbedoTexScaleOffset[i] = t.SecondaryAlbedoTexScaleOffset[Selected];
+                                Obj.SecondaryNormalTexScaleOffset[i] = t.SecondaryNormalTexScaleOffset[Selected];
                                 Obj.SecondaryTextureScale[i] = t.SecondaryTextureScale[Selected];
                                 Obj.Rotation[i] = t.Rotation[Selected];
                                 Obj.Flags[i] = Flag;
@@ -1095,6 +1116,7 @@ namespace TrueTrace {
                                 Obj.KelvinTemp[i] = t.KelvinTemp[Selected];
                                 Obj.ColorBleed[i] = t.ColorBleed[Selected];
                                 Obj.AlbedoBlendFactor[i] = t.AlbedoBlendFactor[Selected];
+                                Obj.SecondaryNormalTexBlend[i] = t.SecondaryNormalTexBlend[Selected];
                                 Obj.CallMaterialEdited(true);
                             }
                         }

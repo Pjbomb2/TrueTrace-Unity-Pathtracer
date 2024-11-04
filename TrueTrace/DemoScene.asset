@@ -16,10 +16,10 @@ MonoBehaviour:
   IndirectBoost: 1
   bouncecount: 2
   ClayMode: 0
-  UseRussianRoulette: 0
+  UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 1
+  Accumulate: 0
   PPBloom: 0
   BloomStrength: 0.372
   PPDoF: 0
@@ -28,7 +28,7 @@ MonoBehaviour:
   DoFFocal: 2
   PPExposure: 0
   ExposureAuto: 0
-  PPToneMap: 0
+  PPToneMap: 1
   PPTAA: 0
   RenderScale: 1
   DenoiserMethod: 0
@@ -46,8 +46,8 @@ MonoBehaviour:
   PartialRenderingFactor: 2
   DoFirefly: 0
   ImprovedPrimaryHit: 1
-  RISCount: 0
-  ToneMapper: 5
+  RISCount: 12
+  ToneMapper: 0
   SkyDesaturate: 0
   ClayColor: {x: 0.38679248, y: 0.38679248, z: 0.38679248}
   GroundColor: {x: 0.11320752, y: 0.11320752, z: 0.11320752}

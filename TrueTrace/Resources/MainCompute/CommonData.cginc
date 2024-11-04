@@ -235,6 +235,9 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 			case SampleSecondaryAlbedoMask:
 				FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.SecondaryAlbedoMask, MatTex.Rotation), 0);
 			break;
+			case SampleDetailNormal:
+				FinalCol = _NormalAtlas.SampleLevel(sampler_NormalAtlas, AlignUV(UV, MatTex.SecondaryNormalTexScaleOffset, MatTex.SecondaryNormalTex, MatTex.Rotation), 0).xyxy;
+			break;
 		}
 	#else//BINDLESS
 		//AlbedoTexScale, AlbedoTex, and Rotation dont worry about, thats just for transforming to the atlas 
@@ -260,6 +263,7 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 			case SampleTerrainAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; UV = (UV * MatTex.surfaceColor.xy + MatTex.transmittanceColor.xy) * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 			case SampleSecondaryAlbedo: TextureIndexAndChannel = MatTex.SecondaryAlbedoTex; UV = UV * MatTex.SecondaryAlbedoTexScaleOffset.xy + MatTex.SecondaryAlbedoTexScaleOffset.zw; break;
 			case SampleSecondaryAlbedoMask: TextureIndexAndChannel = MatTex.SecondaryAlbedoMask; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleDetailNormal: TextureIndexAndChannel = MatTex.SecondaryNormalTex; UV = UV * MatTex.SecondaryNormalTexScaleOffset.xy + MatTex.SecondaryNormalTexScaleOffset.zw; break;
 		}
 		int TextureIndex = TextureIndexAndChannel.x - 1;
 		int TextureReadChannel = TextureIndexAndChannel.y;//0-3 is rgba, 4 is to just read all
@@ -278,7 +282,7 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 			#endif
 		#endif
 		if(TextureReadChannel != 4) FinalCol = FinalCol[TextureReadChannel];
-		if(TextureType == SampleNormal) {
+		if(TextureType == SampleNormal || TextureType == SampleDetailNormal) {
 			FinalCol.g = 1.0f - FinalCol.g;
 			FinalCol = (FinalCol.r >= 0.99f) ? FinalCol.agag : FinalCol.rgrg;
 

@@ -98,9 +98,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     [branch]if(CurBounce == 0 && UseReSTIRGI && ReSTIRGIUpdateRate != 0 && RandomNums[id].z != 0 && hitDat.specTrans == 0 && hitDat.diffTrans == 0) {
         norm = i_octahedral_32(asuint(RandomNums[id].w));
 #ifdef UseTextureLOD
-    } else if (CurBounce == 0 && !ClayMode && hitDat.NormalTex.x > 0) {//Handle Normal Maps
+    } else if (CurBounce == 0 && !ClayMode && (hitDat.NormalTex.x > 0 || hitDat.SecondaryNormalTex.x > 0)) {//Handle Normal Maps
 #else
-    } else if (!ClayMode && hitDat.NormalTex.x > 0) {//Handle Normal Maps
+    } else if (!ClayMode && (hitDat.NormalTex.x > 0 || hitDat.SecondaryNormalTex.x > 0)) {//Handle Normal Maps
 #endif
         float3 LocalTan = GetTriangleTangent(hit.triangle_id, float2(hit.u, hit.v), Inverse);
         float3 LocalBinorm = normalize(cross(Geomnorm, LocalTan));
@@ -108,6 +108,14 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
         float3 LocalNormIN = float3((hitDat.NormalStrength * Norm - (hitDat.NormalStrength / 2.0f)), 0.0f);
         LocalNormIN.z = 1.0 - 0.5 * dot(LocalNormIN, LocalNormIN);
+
+        if(hitDat.SecondaryNormalTex.x > 0) {
+            float2 DetailNorm = SampleTexture(BaseUv, SampleDetailNormal, hitDat);
+            float3 DetailLocalNormIN = float3((hitDat.DetailNormalStrength * DetailNorm - (hitDat.DetailNormalStrength / 2.0f)), 0.0f);
+            DetailLocalNormIN.z = 1.0 - 0.5 * dot(DetailLocalNormIN, DetailLocalNormIN);
+            LocalNormIN = lerp(LocalNormIN, DetailLocalNormIN, hitDat.SecondaryNormalTexBlend);
+        }
+
         norm = clamp(normalize(mul(normalize(LocalNormIN), float3x3(LocalTan, LocalBinorm, Geomnorm)).xyz),-1,1);
         if (abs(norm.x) == abs(norm.y) == abs(norm.z)) norm = Geomnorm;
         norm = i_octahedral_32(octahedral_32(norm));

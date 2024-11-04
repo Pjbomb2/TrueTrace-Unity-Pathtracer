@@ -57,6 +57,7 @@ namespace TrueTrace {
                     Spec = OBJtoWrite.Specular[Index],
                     AlphaCutoff = OBJtoWrite.AlphaCutoff[Index],
                     NormStrength = OBJtoWrite.NormalStrength[Index],
+                    DetailNormalStrength = OBJtoWrite.DetailNormalStrength[Index],
                     Hue = OBJtoWrite.Hue[Index],
                     Brightness = OBJtoWrite.Brightness[Index],
                     Contrast = OBJtoWrite.Contrast[Index],
@@ -71,6 +72,8 @@ namespace TrueTrace {
                     UseKelvin = OBJtoWrite.UseKelvin[Index],
                     KelvinTemp = OBJtoWrite.KelvinTemp[Index],
                     ColorBleed = OBJtoWrite.ColorBleed[Index],
+                    SecondaryNormalTexBlend = OBJtoWrite.SecondaryNormalTexBlend[Index],
+                    SecondaryNormalTexScaleOffset = OBJtoWrite.SecondaryNormalTexScaleOffset[Index],
                     AlbedoBlendFactor = OBJtoWrite.AlbedoBlendFactor[Index]
                 };
                 if(WriteID == -1) {

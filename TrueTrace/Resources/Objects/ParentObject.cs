@@ -291,6 +291,7 @@ namespace TrueTrace {
 
         public List<Texture> AlbedoTexs;
         public List<Texture> NormalTexs;
+        public List<Texture> SecondaryNormalTexs;
         public List<Texture> MetallicTexs;
         public List<int> MetallicTexChannelIndex;
         public List<Texture> RoughnessTexs;
@@ -361,6 +362,7 @@ namespace TrueTrace {
             _Materials.Clear();
             AlbedoTexs = new List<Texture>();
             NormalTexs = new List<Texture>();
+            SecondaryNormalTexs = new List<Texture>();
             MetallicTexs = new List<Texture>();
             RoughnessTexs = new List<Texture>();
             EmissionTexs = new List<Texture>();
@@ -435,6 +437,10 @@ namespace TrueTrace {
                     for(int i2 = 0; i2 < TexCount; i2++) {
                         string TexName = RelevantMat.AvailableTextures[i2].TextureName;
                         switch((TexturePurpose)RelevantMat.AvailableTextures[i2].Purpose) {
+                            case(TexturePurpose.SecondaryNormalTexture):
+                                Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref SecondaryNormalTexs, ref TempIndex); 
+                                CurMat.SecondaryNormalTex.x = TempIndex;
+                            break;                            
                             case(TexturePurpose.SecondaryAlbedoTextureMask):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref SecondaryAlbedoTexMasks, ref TempIndex); 
                                 CurMat.SecondaryAlbedoMask.x = TempIndex; 
@@ -485,6 +491,7 @@ namespace TrueTrace {
                     }
 
                     if(JustCreated) {
+                        CurMat.SecondaryNormalTexScaleOffset = TempScale;
                         CurMat.SecondaryAlbedoTexScaleOffset = TempScale;
                         CurMat.AlbedoTextureScale = TempScale;
                         CurMat.SecondaryTextureScale = new Vector2(TempScale.x, TempScale.y);

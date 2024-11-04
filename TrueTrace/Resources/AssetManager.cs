@@ -24,7 +24,7 @@ namespace TrueTrace {
         public int BindlessTextureCount;
         [HideInInspector] public Texture2D IESAtlas;
         [HideInInspector] public Texture2D AlbedoAtlas;
-        [HideInInspector] public Texture2D NormalAtlas;
+        public Texture2D NormalAtlas;
         [HideInInspector] public Texture2D SingleComponentAtlas;
         [HideInInspector] public Texture2D EmissiveAtlas;
         [HideInInspector] public Texture2D AlphaAtlas;
@@ -238,6 +238,7 @@ namespace TrueTrace {
                             case 7: _Materials[SelectedTex.TexObjList[j].x].MatCapTex = VectoredTexIndex; break;
                             case 9: _Materials[SelectedTex.TexObjList[j].x].SecondaryAlbedoTex = VectoredTexIndex; break;
                             case 10: _Materials[SelectedTex.TexObjList[j].x].SecondaryAlbedoMask = VectoredTexIndex; break;
+                            case 11: _Materials[SelectedTex.TexObjList[j].x].SecondaryNormalTex = VectoredTexIndex; break;
                             default: break;
                         }
                 }
@@ -355,7 +356,8 @@ namespace TrueTrace {
                     for(int j = 0; j < ListLength; j++) {
                         switch (TexIndex) {
                             case 2: 
-                                _Materials[SelectedTex.TexObjList[j].x].NormalTex = PackRect(RectSelect); 
+                                if(TempRect.TexType == 1) _Materials[SelectedTex.TexObjList[j].x].NormalTex = PackRect(RectSelect); 
+                                else if(TempRect.TexType == 11) _Materials[SelectedTex.TexObjList[j].x].SecondaryNormalTex = PackRect(RectSelect); 
                             break;
                             case 4: 
                                 if(TempRect.TexType == 4) _Materials[SelectedTex.TexObjList[j].x].MetallicTex = PackRect(RectSelect); 
@@ -549,6 +551,7 @@ namespace TrueTrace {
                     #if !DX11Only && !UseAtlas
                         if(TempMat.AlbedoTex.x != 0) KeyCheck(MatCount, Obj.AlbedoTexs[(int)TempMat.AlbedoTex.x-1], ref BindlessDict, ref BindlessRect, 4, 0);
                         if(TempMat.NormalTex.x != 0) KeyCheck(MatCount, Obj.NormalTexs[(int)TempMat.NormalTex.x-1], ref BindlessDict, ref BindlessRect, 4, 1);
+                        if(TempMat.SecondaryNormalTex.x != 0) KeyCheck(MatCount, Obj.SecondaryNormalTexs[(int)TempMat.SecondaryNormalTex.x-1], ref BindlessDict, ref BindlessRect, 4, 11);
                         if(TempMat.EmissiveTex.x != 0) KeyCheck(MatCount, Obj.EmissionTexs[(int)TempMat.EmissiveTex.x-1], ref BindlessDict, ref BindlessRect, 4, 2);
                         if(TempMat.AlphaTex.x != 0) KeyCheck(MatCount, Obj.AlphaTexs[(int)TempMat.AlphaTex.x-1], ref BindlessDict, ref BindlessRect, Obj.AlphaTexChannelIndex[(int)TempMat.AlphaTex.x-1], 3);
                         if(TempMat.MetallicTex.x != 0) KeyCheck(MatCount, Obj.MetallicTexs[(int)TempMat.MetallicTex.x-1], ref BindlessDict, ref BindlessRect, Obj.MetallicTexChannelIndex[(int)TempMat.MetallicTex.x-1], 4);
@@ -560,6 +563,7 @@ namespace TrueTrace {
                     #else
                         if(TempMat.AlbedoTex.x != 0) KeyCheck(MatCount, Obj.AlbedoTexs[(int)TempMat.AlbedoTex.x-1], ref AlbTextures, ref AlbRect, 0, 0);
                         if(TempMat.NormalTex.x != 0) KeyCheck(MatCount, Obj.NormalTexs[(int)TempMat.NormalTex.x-1], ref NormTextures, ref NormRect, 0, 1);
+                        if(TempMat.SecondaryNormalTex.x != 0) KeyCheck(MatCount, Obj.SecondaryNormalTexs[(int)TempMat.SecondaryNormalTex.x-1], ref NormTextures, ref NormRect, 0, 11);
                         if(TempMat.EmissiveTex.x != 0) KeyCheck(MatCount, Obj.EmissionTexs[(int)TempMat.EmissiveTex.x-1], ref EmisTextures, ref EmisRect, 0, 2);
                         if(TempMat.AlphaTex.x != 0) KeyCheck(MatCount, Obj.AlphaTexs[(int)TempMat.AlphaTex.x-1], ref AlphTextures, ref AlphRect, Obj.AlphaTexChannelIndex[(int)TempMat.AlphaTex.x-1], 3);
                         if(TempMat.MetallicTex.x != 0) KeyCheck(MatCount, Obj.MetallicTexs[(int)TempMat.MetallicTex.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.MetallicTexChannelIndex[(int)TempMat.MetallicTex.x-1], 4);
@@ -584,6 +588,7 @@ namespace TrueTrace {
                     #if !DX11Only && !UseAtlas
                         if(TempMat.AlbedoTex.x != 0) KeyCheck(MatCount, Obj.AlbedoTexs[(int)TempMat.AlbedoTex.x-1], ref BindlessDict, ref BindlessRect, 4, 0);
                         if(TempMat.NormalTex.x != 0) KeyCheck(MatCount, Obj.NormalTexs[(int)TempMat.NormalTex.x-1], ref BindlessDict, ref BindlessRect, 4, 1);
+                        if(TempMat.SecondaryNormalTex.x != 0) KeyCheck(MatCount, Obj.SecondaryNormalTexs[(int)TempMat.SecondaryNormalTex.x-1], ref BindlessDict, ref BindlessRect, 4, 11);
                         if(TempMat.EmissiveTex.x != 0) KeyCheck(MatCount, Obj.EmissionTexs[(int)TempMat.EmissiveTex.x-1], ref BindlessDict, ref BindlessRect, 4, 2);
                         if(TempMat.AlphaTex.x != 0) KeyCheck(MatCount, Obj.AlphaTexs[(int)TempMat.AlphaTex.x-1], ref BindlessDict, ref BindlessRect, Obj.AlphaTexChannelIndex[(int)TempMat.AlphaTex.x-1], 3);
                         if(TempMat.MetallicTex.x != 0) KeyCheck(MatCount, Obj.MetallicTexs[(int)TempMat.MetallicTex.x-1], ref BindlessDict, ref BindlessRect, Obj.MetallicTexChannelIndex[(int)TempMat.MetallicTex.x-1], 4);
@@ -595,6 +600,7 @@ namespace TrueTrace {
                     #else
                         if(TempMat.AlbedoTex.x != 0) KeyCheck(MatCount, Obj.AlbedoTexs[(int)TempMat.AlbedoTex.x-1], ref AlbTextures, ref AlbRect, 0, 0);
                         if(TempMat.NormalTex.x != 0) KeyCheck(MatCount, Obj.NormalTexs[(int)TempMat.NormalTex.x-1], ref NormTextures, ref NormRect, 0, 1);
+                        if(TempMat.SecondaryNormalTex.x != 0) KeyCheck(MatCount, Obj.SecondaryNormalTexs[(int)TempMat.SecondaryNormalTex.x-1], ref NormTextures, ref NormRect, 0, 11);
                         if(TempMat.EmissiveTex.x != 0) KeyCheck(MatCount, Obj.EmissionTexs[(int)TempMat.EmissiveTex.x-1], ref EmisTextures, ref EmisRect, 0, 2);
                         if(TempMat.AlphaTex.x != 0) KeyCheck(MatCount, Obj.AlphaTexs[(int)TempMat.AlphaTex.x-1], ref AlphTextures, ref AlphRect, Obj.AlphaTexChannelIndex[(int)TempMat.AlphaTex.x-1], 3);
                         if(TempMat.MetallicTex.x != 0) KeyCheck(MatCount, Obj.MetallicTexs[(int)TempMat.MetallicTex.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.MetallicTexChannelIndex[(int)TempMat.MetallicTex.x-1], 4);
@@ -1903,17 +1909,6 @@ namespace TrueTrace {
                         LightAABBs[i].b.BBMax = new_center + new_extent;
                         LightAABBs[i].w = (Mat * RenderQue[Index].LBVH.ParentBound.aabb.w).normalized;
                         
-                        // Vector3 ExtendedCenter = CommonFunctions.transform_position(Mat, RenderQue[Index].LBVH.SGTree[0].S.Center + new Vector3(RenderQue[Index].LBVH.SGTree[0].S.Radius, 0, 0));
-                        // Vector3 Center = CommonFunctions.transform_position(Mat, RenderQue[Index].LBVH.SGTree[0].S.Center);
-                        // float NewRadius = Vector3.Distance(Center, ExtendedCenter);
-                        // float Scale = NewRadius / RenderQue[Index].LBVH.SGTree[0].S.Radius;
-                        // Vector3 Axis = CommonFunctions.transform_direction(Mat, RenderQue[Index].LBVH.SGTree[0].axis);
-                        // SGTreeNodes[i].axis = Axis;
-                        // SGTreeNodes[i].S.Center = Center;
-                        // SGTreeNodes[i].S.Radius = NewRadius;
-                        // SGTreeNodes[i].variance = RenderQue[Index].LBVH.SGTree[0].variance * Scale;
-                        // SGTreeNodes[i].intensity = RenderQue[Index].LBVH.SGTree[0].intensity * Scale;
-
                     } else {
                         Index -= RendQueCount;
                         LightBVHTransforms[i].SolidOffset = InstanceRenderQue[Index].InstanceParent.LightNodeOffset; 
@@ -1924,17 +1919,6 @@ namespace TrueTrace {
                         LightAABBs[i].b.BBMax = new_center + new_extent;
                         LightAABBs[i].w = (Mat * InstanceRenderQue[Index].InstanceParent.LBVH.ParentBound.aabb.w).normalized;
 
-
-                        // Vector3 ExtendedCenter = CommonFunctions.transform_position(Mat, InstanceRenderQue[Index].InstanceParent.LBVH.SGTree[0].S.Center + new Vector3(InstanceRenderQue[Index].InstanceParent.LBVH.SGTree[0].S.Radius, 0, 0));
-                        // Vector3 Center = CommonFunctions.transform_position(Mat, InstanceRenderQue[Index].InstanceParent.LBVH.SGTree[0].S.Center);
-                        // float NewRadius = Vector3.Distance(Center, ExtendedCenter);
-                        // float Scale = NewRadius / InstanceRenderQue[Index].InstanceParent.LBVH.SGTree[0].S.Radius;
-                        // Vector3 Axis = CommonFunctions.transform_direction(Mat, InstanceRenderQue[Index].InstanceParent.LBVH.SGTree[0].axis);
-                        // SGTreeNodes[i].axis = Axis;
-                        // SGTreeNodes[i].S.Center = Center;
-                        // SGTreeNodes[i].S.Radius = NewRadius;
-                        // SGTreeNodes[i].variance = InstanceRenderQue[Index].InstanceParent.LBVH.SGTree[0].variance * Scale;
-                        // SGTreeNodes[i].intensity = InstanceRenderQue[Index].InstanceParent.LBVH.SGTree[0].intensity * Scale;
 
                     }
                 }
@@ -2123,6 +2107,8 @@ namespace TrueTrace {
                     TempMat.scatterDistance = CurrentMaterial.ScatterDist[Index];
                     TempMat.AlphaCutoff = CurrentMaterial.AlphaCutoff[Index];
                     TempMat.NormalStrength = CurrentMaterial.NormalStrength[Index];
+                    TempMat.DetailNormalStrength = CurrentMaterial.DetailNormalStrength[Index];
+                    TempMat.SecondaryNormalTexBlend = CurrentMaterial.SecondaryNormalTexBlend[Index];
                     TempMat.MetallicRemap = CurrentMaterial.MetallicRemap[Index];
                     TempMat.RoughnessRemap = CurrentMaterial.RoughnessRemap[Index];
                     TempMat.Hue = CurrentMaterial.Hue[Index];
@@ -2132,6 +2118,7 @@ namespace TrueTrace {
                     TempMat.BlendColor = CurrentMaterial.BlendColor[Index];
                     TempMat.BlendFactor = CurrentMaterial.BlendFactor[Index];
                     TempMat.AlbedoTextureScale = CurrentMaterial.MainTexScaleOffset[Index];
+                    TempMat.SecondaryNormalTexScaleOffset = CurrentMaterial.SecondaryNormalTexScaleOffset[Index];
                     TempMat.SecondaryAlbedoTexScaleOffset = CurrentMaterial.SecondaryAlbedoTexScaleOffset[Index];
                     TempMat.SecondaryTextureScale = CurrentMaterial.SecondaryTextureScale[Index];
                     TempMat.Rotation = CurrentMaterial.Rotation[Index] * 3.14159f;

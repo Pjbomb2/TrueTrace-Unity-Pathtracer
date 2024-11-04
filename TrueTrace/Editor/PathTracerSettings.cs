@@ -933,7 +933,8 @@ Toolbar toolbar;
                                        MatCapTexture,
                                        MatCapMask,
                                        SecondaryAlbedoTexture,
-                                       SecondaryAlbedoTextureMask
+                                       SecondaryAlbedoTextureMask,
+                                       SecondaryNormalTexture
                                        };
 
       VisualElement MaterialPairingMenu;
@@ -1054,6 +1055,13 @@ Toolbar toolbar;
                      TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
                   });  
                break;
+               case((int)Properties.SecondaryNormalTexture):
+                  MatShader.AvailableTextures.Add(new TexturePairs() {
+                     Purpose = (int)TexturePurpose.SecondaryNormalTexture,
+                     ReadIndex = -3,
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                  });  
+               break;
             }
          }
 
@@ -1154,7 +1162,7 @@ Toolbar toolbar;
          VerboseFloatProperties.Add("null");
          VerboseTextureProperties.Add("null");
          for(int i = 0; i < PropCount; i++) {
-            if(shader.GetPropertyType(i) == ShaderPropertyType.Texture) {TextureProperties.Add(shader.GetPropertyName(i)); VerboseTextureProperties.Add(shader.GetPropertyDescription(i));}
+            if(shader.GetPropertyType(i) == ShaderPropertyType.Texture) {TextureProperties.Add(shader.GetPropertyName(i)); VerboseTextureProperties.Add(shader.GetPropertyName(i));}
             if(shader.GetPropertyType(i) == ShaderPropertyType.Color) {ColorProperties.Add(shader.GetPropertyName(i)); VerboseColorProperties.Add(shader.GetPropertyDescription(i));}
             if(shader.GetPropertyType(i) == ShaderPropertyType.Float || shader.GetPropertyType(i) == ShaderPropertyType.Range) {FloatProperties.Add(shader.GetPropertyName(i)); VerboseFloatProperties.Add(shader.GetPropertyDescription(i));}
          }
@@ -1226,6 +1234,7 @@ Toolbar toolbar;
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "MatCap Mask(Single Component)"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Secondary Base Texture"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Secondary Base Texture Mask(Single Component)"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Detail Normal Texture"));
 
          _graphView.AddElement(OutputNode);
          Vector2 Pos = new Vector2(30, 10);
@@ -1237,6 +1246,12 @@ Toolbar toolbar;
             DialogueNode ThisNode = new DialogueNode();
             Edge ThisEdge = new Edge();
             switch((int)MatShader.AvailableTextures[i].Purpose) {
+               case((int)TexturePurpose.SecondaryNormalTexture):
+                  Pos.y = 1380;
+                  Debug.Log(MatShader.AvailableTextures[i].TextureName);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName);
+                  ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.SecondaryNormalTexture] as Port);
+               break;
                case((int)TexturePurpose.SecondaryAlbedoTextureMask):
                   Pos.y = 1300;
                   ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName, MatShader.AvailableTextures[i].ReadIndex);
@@ -2521,6 +2536,7 @@ Toolbar toolbar;
                                        TempRTO.Specular[NameIndex] = Ray.Spec;
                                        TempRTO.AlphaCutoff[NameIndex] = Ray.AlphaCutoff;
                                        TempRTO.NormalStrength[NameIndex] = Ray.NormStrength;
+                                       TempRTO.DetailNormalStrength[NameIndex] = Ray.DetailNormalStrength;
                                        TempRTO.Hue[NameIndex] = Ray.Hue;
                                        TempRTO.Brightness[NameIndex] = Ray.Brightness;
                                        TempRTO.Contrast[NameIndex] = Ray.Contrast;
@@ -2536,6 +2552,8 @@ Toolbar toolbar;
                                        TempRTO.KelvinTemp[NameIndex] = Ray.KelvinTemp;
                                        TempRTO.ColorBleed[NameIndex] = Ray.ColorBleed;
                                        TempRTO.AlbedoBlendFactor[NameIndex] = Ray.AlbedoBlendFactor;
+                                       TempRTO.SecondaryNormalTexScaleOffset[NameIndex] = Ray.SecondaryNormalTexScaleOffset;
+                                       TempRTO.SecondaryNormalTexBlend[NameIndex] = Ray.SecondaryNormalTexBlend;
                                        TempRTO.CallMaterialEdited();
                                     }
                                  }

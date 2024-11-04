@@ -124,6 +124,7 @@ struct MaterialData {//56
 	int2 MatCapTex;
 	int2 SecondaryAlbedoTex;
 	int2 SecondaryAlbedoMask;
+    int2 SecondaryNormalTex;
 	float3 surfaceColor;
 	float emission;
 	float3 EmissionColor;
@@ -160,6 +161,9 @@ struct MaterialData {//56
 	float Rotation;
 	float ColorBleed;
 	float AlbedoBlendFactor;
+	float4 SecondaryNormalTexScaleOffset;
+    float SecondaryNormalTexBlend;
+    float DetailNormalStrength;
 };
 
 StructuredBuffer<MaterialData> _Materials;

@@ -13,7 +13,7 @@
 #define StainedGlassShadows
 // #define IgnoreBackfacing
 // #define WhiteLights
-// #define LBVH
+#define LBVH
 // #define FasterLightSampling
 #define AccurateEmissionTex
 // #define RadianceCache
@@ -26,7 +26,7 @@
 // #define vMFDiffuse
 #define EONDiffuse
 // #define AdvancedBackground
-// #define UseBRDFLights
+#define UseBRDFLights
 
 
 //END OF DEFINES
@@ -85,6 +85,7 @@
 #define SampleTerrainAlbedo 9
 #define SampleSecondaryAlbedo 10
 #define SampleSecondaryAlbedoMask 11
+#define SampleDetailNormal 12
 
 #define BlendModeLerp 0
 #define BlendModeAdd 1

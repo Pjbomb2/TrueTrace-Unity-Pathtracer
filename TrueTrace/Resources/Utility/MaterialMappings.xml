@@ -33,6 +33,11 @@
         <ReadIndex>3</ReadIndex>
         <TextureName>_MainTex</TextureName>
       </TexturePairs>
+      <TexturePairs>
+        <Purpose>10</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_DetailNormalMap</TextureName>
+      </TexturePairs>
     </AvailableTextures>
     <MetallicRange>_Metallic</MetallicRange>
     <RoughnessRange>_Glossiness</RoughnessRange>
