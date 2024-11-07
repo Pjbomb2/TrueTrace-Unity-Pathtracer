@@ -633,7 +633,55 @@ static float3 CalculateExtinction2(float3 apparantColor, float scatterDistance)
     return 1.0f / (s * scatterDistance);
 }
 //shadow_triangle
-inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, float max_distance, int mesh_id, inout float3 throughput, const int MatOffset) {
+inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const float max_distance, inout float3 throughput, const int MatOffset) {
+    TrianglePos tri = triangle_get_positions(tri_id);
+  	TriangleUvs tri2 = triangle_get_positions2(tri_id);
+    int MaterialIndex = (MatOffset + AggTris[tri_id].MatDat);
+
+    float3 h = cross(ray.direction, tri.posedge2);
+    float  a = dot(tri.posedge1, h);
+
+    float  f = rcp(a);
+    float3 s = ray.origin - tri.pos0;
+    float  u = f * dot(s, h);
+
+    if (u >= 0.0f && u <= 1.0f) {
+        float3 q = cross(s, tri.posedge1);
+        float  v = f * dot(ray.direction, q);
+
+        if (v >= 0.0f && u + v <= 1.0f) {
+            float t = f * dot(tri.posedge2, q);
+            [branch] if (t > 0.0f && t < max_distance) {
+	            #if defined(AdvancedAlphaMapped) || defined(AdvancedBackground) || defined(IgnoreGlassShadow)
+					if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster)) return false; 
+	        		if(_Materials[MaterialIndex].MatType == CutoutIndex || _Materials[MaterialIndex].specTrans == 1) {
+		                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
+	                    if(_Materials[MaterialIndex].MatType == CutoutIndex && _Materials[MaterialIndex].AlphaTex.x > 0)
+	                        if( SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) return false;
+
+			            #ifdef IgnoreGlassShadow
+			                if(_Materials[MaterialIndex].specTrans == 1) {
+				            	#ifdef StainedGlassShadows
+				            		float3 MatCol = _Materials[MaterialIndex].surfaceColor;
+							        if(_Materials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _Materials[MaterialIndex]) / 3.0f;
+	        						MatCol = lerp(MatCol, _Materials[MaterialIndex].BlendColor, _Materials[MaterialIndex].BlendFactor);
+	        						float Dotter = abs(dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction));
+
+			    					throughput *= Dotter * sqrt(exp(-t * CalculateExtinction2(1.0f - MatCol, _Materials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _Materials[MaterialIndex].scatterDistance)));
+			    				#endif
+			                	return false;
+			                }
+			            #endif
+			        }
+	            #endif
+				return true;
+	        }
+        }
+    }
+
+    return false;
+}
+inline void triangle_intersect_dist(int tri_id, const SmallerRay ray, inout float max_distance, int mesh_id, const int MatOffset) {
     TrianglePos tri = triangle_get_positions(tri_id);
   	TriangleUvs tri2 = triangle_get_positions2(tri_id);
     int MaterialIndex = (MatOffset + AggTris[tri_id].MatDat);
@@ -652,11 +700,11 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, float ma
         if (v >= 0.0f && u + v <= 1.0f) {
             float t = f * dot(tri.posedge2, q);
             #if defined(AdvancedAlphaMapped) || defined(AdvancedBackground) || defined(IgnoreGlassShadow)
-				if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster)) return false; 
+				if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster)) return; 
         		if(_Materials[MaterialIndex].MatType == CutoutIndex || _Materials[MaterialIndex].specTrans == 1) {
 	                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
                     if(_Materials[MaterialIndex].MatType == CutoutIndex && _Materials[MaterialIndex].AlphaTex.x > 0)
-                        if( SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) return false;
+                        if( SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) return;
 
 		            #ifdef IgnoreGlassShadow
 		                if(_Materials[MaterialIndex].specTrans == 1) {
@@ -664,19 +712,24 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, float ma
 			            		float3 MatCol = _Materials[MaterialIndex].surfaceColor;
 						        if(_Materials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _Materials[MaterialIndex]) / 3.0f;
         						MatCol = lerp(MatCol, _Materials[MaterialIndex].BlendColor, _Materials[MaterialIndex].BlendFactor);
-		    					throughput *= sqrt(exp(-CalculateExtinction2(1.0f - MatCol, _Materials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _Materials[MaterialIndex].scatterDistance)));
 		    				#endif
-		                	return false;
+		                	return;
 		                }
 		            #endif
 		        }
             #endif
-            if (t > 0.0f && t < max_distance) return true;
+            if (t > 0.0f && t < max_distance) {
+            	max_distance = t;
+            	return;
+            }
         }
     }
 
-    return false;
+    return;
 }
+
+
+
 inline uint ray_get_octant_inv4(const float3 ray_direction) {
     return
         (ray_direction.x < 0.0f ? 0 : 0x04040404) |
@@ -765,6 +818,106 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
 }
 
 
+
+inline void Closest_Hit_Compute(SmallerRay ray, inout float MinDist) {
+        uint2 stack[16];
+        int stack_size = 0;
+        uint2 current_group;
+
+        uint oct_inv4;
+        int tlas_stack_size = -1;
+        int mesh_id = -1;
+        SmallerRay ray2;
+        int TriOffset = 0;
+        int NodeOffset = 0;
+
+        ray2 = ray;
+
+        oct_inv4 = ray_get_octant_inv4(ray.direction);
+
+        current_group.x = (uint)0;
+        current_group.y = (uint)0x80000000;
+        int MatOffset = 0;
+        int Reps = 0;
+        [loop] while (Reps < MaxTraversalSamples) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
+        	uint2 triangle_group;
+            [branch]if (current_group.y & 0xff000000) {
+                uint child_index_offset = firstbithigh(current_group.y);
+                
+                uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
+                uint relative_index = countbits(current_group.y & ~(0xffffffff << slot_index));
+                uint child_node_index = current_group.x + relative_index;
+                const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
+
+                current_group.y &= ~(1 << child_index_offset);
+
+                if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
+
+                uint hitmask = cwbvh_node_intersect(ray, oct_inv4, MinDist, TempNode);
+
+ 				current_group.y = (hitmask & 0xff000000) | ((TempNode.nodes[0].w >> 24) & 0xff);
+                triangle_group.y = (hitmask & 0x00ffffff);
+
+	            current_group.x = (TempNode.nodes[1].x) + NodeOffset;
+                triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
+                Reps++;
+            } else {
+                triangle_group = current_group;
+                current_group = (uint2)0;
+            }
+
+            if(triangle_group.y != 0) {
+                [branch]if (tlas_stack_size == -1) {//Transfer from Top Level Accelleration Structure to Bottom Level Accelleration Structure
+                    uint mesh_offset = firstbithigh(triangle_group.y);
+                    triangle_group.y &= ~(1 << mesh_offset);
+                    mesh_id = TLASBVH8Indices[triangle_group.x + mesh_offset];
+                    NodeOffset = _MeshData[mesh_id].NodeOffset;
+                    TriOffset = _MeshData[mesh_id].TriOffset;
+
+                    if (triangle_group.y != 0) stack[stack_size++] = triangle_group;
+
+                    if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
+
+                    tlas_stack_size = stack_size;
+
+                    int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
+
+                    MatOffset = _MeshData[mesh_id].MaterialOffset;
+                    ray.direction = (mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)).xyz;
+                    ray.origin = (mul(_MeshData[mesh_id].W2L, float4(ray.origin, 1))).xyz;
+
+                    oct_inv4 = ray_get_octant_inv4(ray.direction);
+
+                    current_group.x = (uint)root_index;
+                    current_group.y = (uint)0x80000000;
+                } else {
+					while (triangle_group.y != 0) {                        
+                        uint triangle_index = firstbithigh(triangle_group.y);
+                        triangle_group.y &= ~(1 << triangle_index);
+	                    triangle_intersect_dist(triangle_group.x + triangle_index, ray, MinDist, mesh_id, MatOffset);
+                    }
+                }
+            }
+
+            if ((current_group.y & 0xff000000) == 0) {
+                if (stack_size == 0) {//thread has finished traversing
+                    break;
+                }
+
+                if (stack_size == tlas_stack_size) {
+					NodeOffset = 0;
+                    TriOffset = 0;
+                    tlas_stack_size = -1;
+                    ray = ray2;
+                    oct_inv4 = ray_get_octant_inv4(ray.direction);
+                }
+                current_group = stack[--stack_size];
+            }
+        }
+        return;
+}
+
+
 inline bool VisabilityCheckCompute(SmallerRay ray, float dist) {
         uint2 stack[16];
         int stack_size = 0;
@@ -841,7 +994,7 @@ inline bool VisabilityCheckCompute(SmallerRay ray, float dist) {
 					while (triangle_group.y != 0) {                        
                         uint triangle_index = firstbithigh(triangle_group.y);
                         triangle_group.y &= ~(1 << triangle_index);
-	                    if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, dist, mesh_id, through, MatOffset)) {
+	                    if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, dist, through, MatOffset)) {
 							return false;
 	                    }
                     }

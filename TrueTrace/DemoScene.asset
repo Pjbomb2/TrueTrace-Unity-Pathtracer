@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   SceneName: TestA
   IndirectBoost: 1
-  bouncecount: 2
+  bouncecount: 12
   ClayMode: 0
   UseRussianRoulette: 1
   UseNEE: 1
@@ -31,7 +31,7 @@ MonoBehaviour:
   PPToneMap: 1
   PPTAA: 0
   RenderScale: 1
-  DenoiserMethod: 0
+  DenoiserMethod: 1
   UpscalerMethod: 2
   ReSTIRGIUpdateRate: 7
   UseReSTIRGITemporal: 1

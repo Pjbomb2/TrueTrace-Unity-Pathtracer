@@ -80,6 +80,14 @@
         <KelvinTemp>0</KelvinTemp>
         <ColorBleed>1</ColorBleed>
         <AlbedoBlendFactor>1</AlbedoBlendFactor>
+        <SecondaryNormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryNormalTexScaleOffset>
+        <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
+        <DetailNormalStrength>0</DetailNormalStrength>
         <AlbedoGUID>a0012119388d8ef48b08851ee2d5bac5</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
@@ -94,17 +102,17 @@
       </RayObjectDatas>
       <RayObjectDatas>
         <ID>0</ID>
-        <MatName>Glass 2</MatName>
+        <MatName>WaterA</MatName>
         <OptionID>0</OptionID>
         <TransCol>
-          <x>0</x>
-          <y>0</y>
-          <z>0</z>
-        </TransCol>
-        <BaseCol>
           <x>1</x>
           <y>1</y>
           <z>1</z>
+        </TransCol>
+        <BaseCol>
+          <x>0.3816601</x>
+          <y>0.571424</y>
+          <z>0.7830189</z>
         </BaseCol>
         <MetRemap>
           <x>0</x>
@@ -120,8 +128,8 @@
           <y>1</y>
           <z>1</z>
         </EmissCol>
-        <Rough>0</Rough>
-        <IOR>1</IOR>
+        <Rough>0.06</Rough>
+        <IOR>1.33</IOR>
         <Met>0</Met>
         <SpecTint>0</SpecTint>
         <Sheen>0</Sheen>
@@ -131,9 +139,9 @@
         <Anisotropic>0</Anisotropic>
         <Flatness>0</Flatness>
         <DiffTrans>0</DiffTrans>
-        <SpecTrans>0</SpecTrans>
-        <FollowMat>true</FollowMat>
-        <ScatterDist>0</ScatterDist>
+        <SpecTrans>1</SpecTrans>
+        <FollowMat>false</FollowMat>
+        <ScatterDist>1.99</ScatterDist>
         <Spec>0</Spec>
         <AlphaCutoff>0.1</AlphaCutoff>
         <NormStrength>1</NormStrength>
@@ -169,11 +177,19 @@
         <KelvinTemp>0</KelvinTemp>
         <ColorBleed>1</ColorBleed>
         <AlbedoBlendFactor>1</AlbedoBlendFactor>
-        <AlbedoGUID>a0012119388d8ef48b08851ee2d5bac5</AlbedoGUID>
+        <SecondaryNormalTexScaleOffset>
+          <x>1</x>
+          <y>1</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryNormalTexScaleOffset>
+        <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
+        <DetailNormalStrength>1</DetailNormalStrength>
+        <AlbedoGUID>null</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
         <EmissionGUID>null</EmissionGUID>
-        <AlphaGUID>a0012119388d8ef48b08851ee2d5bac5</AlphaGUID>
+        <AlphaGUID>null</AlphaGUID>
         <MatCapGUID>null</MatCapGUID>
         <MatcapMaskGUID>null</MatcapMaskGUID>
         <SecondaryAlbedoGUID>null</SecondaryAlbedoGUID>
@@ -263,6 +279,14 @@
         <KelvinTemp>0</KelvinTemp>
         <ColorBleed>1</ColorBleed>
         <AlbedoBlendFactor>1</AlbedoBlendFactor>
+        <SecondaryNormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryNormalTexScaleOffset>
+        <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
+        <DetailNormalStrength>0</DetailNormalStrength>
         <AlbedoGUID>a0012119388d8ef48b08851ee2d5bac5</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
@@ -352,6 +376,14 @@
         <KelvinTemp>0</KelvinTemp>
         <ColorBleed>1</ColorBleed>
         <AlbedoBlendFactor>1</AlbedoBlendFactor>
+        <SecondaryNormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryNormalTexScaleOffset>
+        <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
+        <DetailNormalStrength>0</DetailNormalStrength>
         <AlbedoGUID>a0012119388d8ef48b08851ee2d5bac5</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
@@ -446,6 +478,14 @@
         <KelvinTemp>0</KelvinTemp>
         <ColorBleed>1</ColorBleed>
         <AlbedoBlendFactor>1</AlbedoBlendFactor>
+        <SecondaryNormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryNormalTexScaleOffset>
+        <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
+        <DetailNormalStrength>0</DetailNormalStrength>
         <AlbedoGUID>d7ba42597aa599e43a1ec146acd8cf46</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
@@ -540,6 +580,14 @@
         <KelvinTemp>0</KelvinTemp>
         <ColorBleed>1</ColorBleed>
         <AlbedoBlendFactor>1</AlbedoBlendFactor>
+        <SecondaryNormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryNormalTexScaleOffset>
+        <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
+        <DetailNormalStrength>0</DetailNormalStrength>
         <AlbedoGUID>b73406b81b6cd484181dedc3f25e648f</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
@@ -629,6 +677,14 @@
         <KelvinTemp>0</KelvinTemp>
         <ColorBleed>1</ColorBleed>
         <AlbedoBlendFactor>1</AlbedoBlendFactor>
+        <SecondaryNormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryNormalTexScaleOffset>
+        <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
+        <DetailNormalStrength>0</DetailNormalStrength>
         <AlbedoGUID>29609964099711e45a99687857e420f5</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>

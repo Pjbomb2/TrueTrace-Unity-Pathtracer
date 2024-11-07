@@ -456,7 +456,7 @@ namespace TrueTrace {
             t.CallMaterialEdited(true);
 
 
-            OnInspectorGUI();
+            // OnInspectorGUI();
         }
 
         public void CopyFunction(RayTracingObject ThisOBJ, int SaveIndex) {

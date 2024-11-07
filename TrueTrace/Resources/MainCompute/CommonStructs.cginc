@@ -219,3 +219,15 @@ struct ColData {
 RWStructuredBuffer<ColData> GlobalColors;
 StructuredBuffer<ColData> PrevGlobalColorsA;
 RWStructuredBuffer<ColData> PrevGlobalColorsB;
+
+
+struct SDFData {
+    float3 A;
+    float3 B;
+    int Type;
+    int Operation;
+    float Smoothness;
+    float4 Transform;
+};
+
+StructuredBuffer<SDFData> SDFs;

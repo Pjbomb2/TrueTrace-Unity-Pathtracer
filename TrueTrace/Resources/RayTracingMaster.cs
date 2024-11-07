@@ -112,6 +112,8 @@ namespace TrueTrace {
         private RenderTexture CDFY;
 
         private RenderTexture Gradients;
+        public static TTSDFHandler OptionalSDFHandler;
+        private bool HasSDFHandler = false;
 
 
         private bool OIDNGuideWrite;
@@ -437,6 +439,7 @@ namespace TrueTrace {
             IntersectionShader.SetMatrix(Name, Mat);
             GenerateShader.SetMatrix(Name, Mat);
             ReSTIRGI.SetMatrix(Name, Mat);
+            if(HasSDFHandler) OptionalSDFHandler.GenShader.SetMatrix(Name, Mat);
         }
 
         private void SetVector(string Name, Vector3 IN, CommandBuffer cmd) {
@@ -444,6 +447,7 @@ namespace TrueTrace {
             cmd.SetComputeVectorParam(IntersectionShader, Name, IN);
             cmd.SetComputeVectorParam(GenerateShader, Name, IN);
             cmd.SetComputeVectorParam(ReSTIRGI, Name, IN);
+            if(HasSDFHandler) cmd.SetComputeVectorParam(OptionalSDFHandler.GenShader, Name, IN);
         }
 
         private void SetInt(string Name, int IN, CommandBuffer cmd) {
@@ -451,6 +455,7 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(IntersectionShader, Name, IN);
             cmd.SetComputeIntParam(GenerateShader, Name, IN);
             cmd.SetComputeIntParam(ReSTIRGI, Name, IN);
+            if(HasSDFHandler) cmd.SetComputeIntParam(OptionalSDFHandler.GenShader, Name, IN);
         }
 
         private void SetFloat(string Name, float IN, CommandBuffer cmd) {
@@ -458,6 +463,7 @@ namespace TrueTrace {
             cmd.SetComputeFloatParam(IntersectionShader, Name, IN);
             cmd.SetComputeFloatParam(GenerateShader, Name, IN);
             cmd.SetComputeFloatParam(ReSTIRGI, Name, IN);
+            if(HasSDFHandler) cmd.SetComputeFloatParam(OptionalSDFHandler.GenShader, Name, IN);
         }
 
         private void SetBool(string Name, bool IN) {
@@ -465,13 +471,14 @@ namespace TrueTrace {
             IntersectionShader.SetBool(Name, IN);
             GenerateShader.SetBool(Name, IN);
             ReSTIRGI.SetBool(Name, IN);
+            if(HasSDFHandler) OptionalSDFHandler.GenShader.SetBool(Name, IN);
         }
         Matrix4x4 CamInvProjPrev;
         Matrix4x4 CamToWorldPrev;
         Vector3 PrevPos;
         private Vector2 HDRIParams = Vector2.zero;
-        private void SetShaderParameters(CommandBuffer cmd)
-        {
+        private void SetShaderParameters(CommandBuffer cmd) {
+            HasSDFHandler = (OptionalSDFHandler != null);
             if(LocalTTSettings.RenderScale != 1.0f) _camera.renderingPath = RenderingPath.DeferredShading;
             _camera.depthTextureMode |= DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
             if(LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1 && !ReSTIRASVGFCode.Initialized) ReSTIRASVGFCode.init(SourceWidth, SourceHeight);
@@ -643,21 +650,13 @@ namespace TrueTrace {
             SetVector("HDRIParams", HDRIParams, cmd);
 
             GenerateShader.SetBuffer(GenASVGFKernel, "Rays", (FramesSinceStart2 % 2 == 0) ? RaysBuffer : RaysBufferB);
-            GenerateShader.SetTexture(GenASVGFKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
             GenerateShader.SetComputeBuffer(GenASVGFKernel, "GlobalRays", _RayBuffer);
-            GenerateShader.SetComputeBuffer(GenASVGFKernel, "GlobalColors", LightingBuffer);
-            GenerateShader.SetTexture(GenASVGFKernel, "WorldPosA", GIWorldPosA);
-            GenerateShader.SetTexture(GenASVGFKernel, "NEEPosA", FlipFrame ? GINEEPosA : GINEEPosB);
-            GenerateShader.SetComputeBuffer(GenASVGFKernel, "GlobalRays", _RayBuffer);
-            GenerateShader.SetComputeBuffer(GenASVGFKernel, "GlobalColors", LightingBuffer);
 
 
             GenerateShader.SetTexture(GenKernel, "RandomNums", (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB);
             GenerateShader.SetComputeBuffer(GenKernel, "GlobalRays", _RayBuffer);
-            GenerateShader.SetComputeBuffer(GenKernel, "GlobalColors", LightingBuffer);            
             GenerateShader.SetTexture(GenPanoramaKernel, "RandomNums", (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB);
             GenerateShader.SetComputeBuffer(GenPanoramaKernel, "GlobalRays", _RayBuffer);
-            GenerateShader.SetComputeBuffer(GenPanoramaKernel, "GlobalColors", LightingBuffer);            
 
             AssetManager.Assets.SetMeshTraceBuffers(IntersectionShader, TraceKernel);
             IntersectionShader.SetComputeBuffer(TraceKernel, "GlobalRays", _RayBuffer);
@@ -690,20 +689,10 @@ namespace TrueTrace {
                 GenerateShader.SetComputeBuffer(ResolveKernel + 1, "HashEntriesBuffer", HashBuffer);
                 GenerateShader.SetComputeBuffer(ResolveKernel + 1, "HashEntriesBufferA2", HashBufferB);
                 GenerateShader.SetComputeBuffer(ResolveKernel + 2, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
-                // GenerateShader.SetComputeBuffer(ResolveKernel + 2, "HashEntriesBufferB", HashBuffer);
-                // GenerateShader.SetComputeBuffer(ResolveKernel + 2, "HashEntriesBuffer", HashBufferB);
 
 
                 IntersectionShader.SetComputeBuffer(ShadowKernel, "CacheBuffer", CacheBuffer);
                 IntersectionShader.SetComputeBuffer(HeightmapShadowKernel, "CacheBuffer", CacheBuffer);
-                GenerateShader.SetComputeBuffer(GIReTraceKernel, "CacheBuffer", CacheBuffer);
-                GenerateShader.SetComputeBuffer(GenASVGFKernel, "CacheBuffer", CacheBuffer);
-                GenerateShader.SetComputeBuffer(GenASVGFKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
-                GenerateShader.SetComputeBuffer(GenKernel, "CacheBuffer", CacheBuffer);
-                GenerateShader.SetComputeBuffer(GenKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
-
-                GenerateShader.SetComputeBuffer(GenPanoramaKernel, "CacheBuffer", CacheBuffer);
-                GenerateShader.SetComputeBuffer(GenPanoramaKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
                 
                 ShadingShader.SetComputeBuffer(ShadeKernel, "CacheBuffer", CacheBuffer);
                 ShadingShader.SetComputeBuffer(ShadeKernel, "HashEntriesBuffer", HashBuffer);
@@ -747,15 +736,10 @@ namespace TrueTrace {
             #endif
 
             GenerateShader.SetComputeBuffer(GIReTraceKernel, "GlobalRays", _RayBuffer);
-            GenerateShader.SetComputeBuffer(GIReTraceKernel, "GlobalColors", LightingBuffer);
-            GenerateShader.SetTexture(GIReTraceKernel, "WorldPosA", GIWorldPosA);
-            GenerateShader.SetTexture(GIReTraceKernel, "NEEPosA", FlipFrame ? GINEEPosA : GINEEPosB);
             GenerateShader.SetComputeBuffer(GIReTraceKernel, "PrevGlobalColorsA", FlipFrame ? PrevLightingBufferA : PrevLightingBufferB);
-            GenerateShader.SetBuffer(GIReTraceKernel, "Rays", FlipFrame ? RaysBuffer : RaysBufferB);
             GenerateShader.SetTexture(GIReTraceKernel, "RandomNumsWrite", FlipFrame ? _RandomNums : _RandomNumsB);
             GenerateShader.SetTexture(GIReTraceKernel, "ReservoirA", !FlipFrame ? GIReservoirB : GIReservoirA);
             GenerateShader.SetTexture(GIReTraceKernel, "RandomNums", !FlipFrame ? _RandomNums : _RandomNumsB);
-            GenerateShader.SetTexture(GIReTraceKernel, "ScreenSpaceInfo", !FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
             
 
             AssetManager.Assets.SetMeshTraceBuffers(ReSTIRGI, ReSTIRGIKernel);
@@ -932,8 +916,8 @@ namespace TrueTrace {
         private void GenerateRays(CommandBuffer cmd) {
             if (LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI) {
                 cmd.BeginSample("ASVGF Reproject Pass");
-                ASVGFCode.shader.SetTexture(1, "ScreenSpaceInfoWrite", (FramesSinceStart2 % 2 == 0) ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
-                ASVGFCode.DoRNG(ref _RandomNums, ref _RandomNumsB, FramesSinceStart2, ref RaysBuffer, ref RaysBufferB, cmd, _PrimaryTriangleInfo, AssetManager.Assets.MeshDataBuffer, Assets.AggTriBuffer, MeshOrderChanged, Assets.TLASCWBVHIndexes);
+                    ASVGFCode.shader.SetTexture(1, "ScreenSpaceInfoWrite", (FramesSinceStart2 % 2 == 0) ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
+                    ASVGFCode.DoRNG(ref _RandomNums, ref _RandomNumsB, FramesSinceStart2, ref RaysBuffer, ref RaysBufferB, cmd, _PrimaryTriangleInfo, AssetManager.Assets.MeshDataBuffer, Assets.AggTriBuffer, MeshOrderChanged, Assets.TLASCWBVHIndexes);
                 cmd.EndSample("ASVGF Reproject Pass");
             }
 
@@ -943,9 +927,13 @@ namespace TrueTrace {
                 cmd.DispatchCompute(GenerateShader, GIReTraceKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 cmd.EndSample("ReSTIR GI Reproject");
             } else {
-                cmd.BeginSample("Primary Ray Generation");
-                cmd.DispatchCompute(GenerateShader, (DoChainedImages ? GenPanoramaKernel : ((LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI) ? GenASVGFKernel : GenKernel)), Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
-                cmd.EndSample("Primary Ray Generation");
+                if(HasSDFHandler) {
+                    OptionalSDFHandler.Run(cmd, (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB, _RayBuffer, SourceWidth, SourceHeight, DoChainedImages, LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI, (FramesSinceStart2 % 2 == 0) ? RaysBuffer : RaysBufferB);
+                } else {
+                    cmd.BeginSample("Primary Ray Generation");
+                       cmd.DispatchCompute(GenerateShader, (DoChainedImages ? GenPanoramaKernel : ((LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI) ? GenASVGFKernel : GenKernel)), Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+                    cmd.EndSample("Primary Ray Generation");
+                }
             }
         }
 

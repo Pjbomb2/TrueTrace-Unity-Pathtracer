@@ -34,6 +34,16 @@
         <TextureName>_MainTex</TextureName>
       </TexturePairs>
       <TexturePairs>
+        <Purpose>8</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_DetailAlbedoMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>9</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_DetailMask</TextureName>
+      </TexturePairs>
+      <TexturePairs>
         <Purpose>10</Purpose>
         <ReadIndex>-3</ReadIndex>
         <TextureName>_DetailNormalMap</TextureName>
