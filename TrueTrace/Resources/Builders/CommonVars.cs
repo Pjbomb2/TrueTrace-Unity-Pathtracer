@@ -38,6 +38,7 @@ namespace CommonVars
         public float sharpness;
         public float intensity;
         public int left;
+        // public float pad;
     }
 
     [System.Serializable]

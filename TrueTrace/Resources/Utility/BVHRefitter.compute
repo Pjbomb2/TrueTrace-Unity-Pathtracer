@@ -440,6 +440,31 @@ inline LightBVHData Union(const LightBVHData A, const LightBVHData B, int Left) 
 }
 
 
+inline float expm1_over_x(const float x)
+{
+	const float u = exp(x);
+
+	if (u == 1.0)
+	{
+		return 1.0;
+	}
+
+	const float y = u - 1.0;
+
+	if (abs(x) < 1.0)
+	{
+		return y / log(u);
+	}
+
+	return y / x;
+}
+
+
+inline float SGIntegral(const float sharpness)
+{
+	return 4.0 * 3.14159f * expm1_over_x(-2.0 * sharpness);
+}
+
 
 inline GaussianTreeNode UnionSG(const GaussianTreeNode LeftNode, const GaussianTreeNode RightNode, int Left) {
     
@@ -461,7 +486,7 @@ inline GaussianTreeNode UnionSG(const GaussianTreeNode LeftNode, const GaussianT
 	float sharpness = ((3.0f * VLength - VLength * VLength * VLength)) / (1.0f - VLength * VLength);
 
 
-	GaussianTreeNode Dat = {mean, radius, V, variance, sharpness, intensity, Left};
+	GaussianTreeNode Dat = {mean, radius, V, variance, sharpness, intensity, Left};//, intensity / (variance * SGIntegral(sharpness))};
     return Dat;
 }
 
@@ -510,6 +535,7 @@ void TLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
 
         SGTreeWrite[Index].radius = SGTreeWrite[Transf.SolidOffset].radius * Scale;
         SGTreeWrite[Index].intensity = SGTreeWrite[Transf.SolidOffset].intensity * Scale;
+        // SGTreeWrite[Index].pad = SGTreeWrite[Index].intensity / (SGTreeWrite[Index].variance * SGIntegral(SGTreeWrite[Index].sharpness));
         return;
     }
     GaussianTreeNode LeftNode = SGTreeWrite[Node.left];
@@ -600,6 +626,7 @@ void BLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
         SGTreeWrite[Index].radius = radius;
         SGTreeWrite[Index].intensity = intensity;
         SGTreeWrite[Index].variance = variance;
+        // SGTreeWrite[Index].pad = SGTreeWrite[Index].intensity / (SGTreeWrite[Index].variance * SGIntegral(SGTreeWrite[Index].sharpness));
         return;
     }
     GaussianTreeNode LeftNode = SGTreeWrite[Node.left + TotalNodeOffset];

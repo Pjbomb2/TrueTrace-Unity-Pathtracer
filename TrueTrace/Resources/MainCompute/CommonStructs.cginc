@@ -28,6 +28,7 @@ struct GaussianTreeNode {
 	float sharpness;
 	float intensity;
 	int left;
+	// float pad;
 };
 
 struct LightBVHData {

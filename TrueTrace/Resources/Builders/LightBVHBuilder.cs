@@ -279,7 +279,31 @@ namespace TrueTrace {
             Refit2(Depth + 1, nodes[CurrentIndex].left + 1);
         }
 
-  
+        float expm1_over_x(float x)
+        {
+            float u = Mathf.Exp(x);
+
+            if (u == 1.0f)
+            {
+                return 1.0f;
+            }
+
+            float y = u - 1.0f;
+
+            if (Mathf.Abs(x) < 1.0f)
+            {
+                return y / Mathf.Log(u);
+            }
+
+            return y / x;
+        }
+
+        float SGIntegral(float sharpness)
+        {
+            return 4.0f * Mathf.PI * expm1_over_x(-2.0f * sharpness);
+        }
+
+
         public unsafe LightBVHBuilder(List<LightTriData> Tris, List<Vector3> Norms, float phi, List<float> LuminanceWeights) {//need to make sure incomming is transformed to world space already
             PrimCount = Tris.Count;          
             MaxDepth = 0;
@@ -426,6 +450,7 @@ namespace TrueTrace {
                         TempNode.S.Radius = radius;
 
                         TempNode.left = LBVHNode.left;
+                        // TempNode.pad = intensity / (variance * SGIntegral(TempNode.sharpness));
                         SGTree[WriteIndex] = TempNode;
                     }
                 }
@@ -577,6 +602,7 @@ namespace TrueTrace {
                         }
 
                         TempNode.left = LBVHNode.left;
+                        // TempNode.pad = TempNode.intensity / (TempNode.variance * SGIntegral(TempNode.sharpness));
                         SGTree[WriteIndex] = TempNode;
                     }
                 }
