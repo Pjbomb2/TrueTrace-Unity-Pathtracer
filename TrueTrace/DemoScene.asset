@@ -19,20 +19,20 @@ MonoBehaviour:
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 0
+  Accumulate: 1
   PPBloom: 0
-  BloomStrength: 0.849
+  BloomStrength: 0.372
   PPDoF: 0
-  DoFAperature: 0.403
+  DoFAperature: 0.079
   DoFAperatureScale: 0.54
-  DoFFocal: 5.1366353
+  DoFFocal: 2
   PPExposure: 0
-  ExposureAuto: 0
+  ExposureAuto: 1
   PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
-  UseASVGF: 0
-  UseTAAU: 0
+  DenoiserMethod: 0
+  UpscalerMethod: 2
   ReSTIRGIUpdateRate: 7
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
@@ -41,7 +41,7 @@ MonoBehaviour:
   ReSTIRGISpatialRadius: 24
   ReSTIRGITemporalMCap: 4
   DoReSTIRGIConnectionValidation: 1
-  Exposure: 22.8
+  Exposure: 18.9
   DoPartialRendering: 0
   PartialRenderingFactor: 2
   DoFirefly: 0
@@ -49,14 +49,13 @@ MonoBehaviour:
   RISCount: 12
   ToneMapper: 0
   SkyDesaturate: 0
-  ClayColor: {x: 0.20754719, y: 0.20754719, z: 0.20754719}
+  ClayColor: {x: 0.38679248, y: 0.38679248, z: 0.38679248}
   GroundColor: {x: 0.11320752, y: 0.11320752, z: 0.11320752}
-  FireflyFrameCount: 12
+  FireflyFrameCount: 1222
   FireflyFrameInterval: 1
   FireflyStrength: 1
   FireflyOffset: 0
-  OIDNFrameCount: 50
-  UseOIDN: 0
+  OIDNFrameCount: 1222
   DoSharpen: 0
   Sharpness: 1
   MainDesiredRes: 16384
@@ -64,7 +63,7 @@ MonoBehaviour:
   LightEnergyScale: 1
   BackgroundType: 0
   BackgroundIntensity: {x: 1, y: 1}
-  SceneBackgroundColor: {x: 0, y: 0, z: 0}
+  SceneBackgroundColor: {x: 1, y: 1, z: 1}
   SecondaryBackgroundType: 0
   SecondarySceneBackgroundColor: {x: 0, y: 0, z: 0}
   HDRILongLat: {x: 0, y: 0}
@@ -74,11 +73,14 @@ MonoBehaviour:
   SecondarySkyDesaturate: 0
   MatChangeResetsAccum: 1
   PPFXAA: 0
-  OIDNBlendRatio: 1
-  ConvBloom: 0
-  ConvStrength: 10
-  ConvBloomThreshold: 4.69
+  OIDNBlendRatio: 0.119
+  ConvBloom: 1
+  ConvStrength: 0.18
+  ConvBloomThreshold: 0
   ConvBloomSize: {x: 1, y: 1}
   ConvBloomDistExp: 0
   ConvBloomDistExpClampMin: 1
   ConvBloomDistExpScale: 1
+  PrimaryBackgroundTintColor: {x: 0.32200065, y: 0.764151, z: 0.6593174}
+  PrimaryBackgroundTint: 0
+  PrimaryBackgroundContrast: 1

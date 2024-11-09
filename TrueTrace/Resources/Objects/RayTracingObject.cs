@@ -48,6 +48,9 @@ namespace TrueTrace {
 		[SerializeField] public Material[] SharedMaterials;
 		[SerializeField] public string[] Names;
 		[SerializeField] public int Selected;
+		[SerializeField] public float[] SecondaryNormalTexBlend;
+		[SerializeField] public float[] DetailNormalStrength;
+		[SerializeField] public Vector4[] SecondaryNormalTexScaleOffset;
 		public int[] Indexes;
 		public bool NeedsToUpdate;
 		[SerializeField] public bool IsReady = false;
@@ -183,7 +186,7 @@ namespace TrueTrace {
 			 	SubMeshCount = (MeshRend.sharedMaterials).Length;
 			 	if(TryGetComponent<Renderer>(out Renderer Rend)) SharedMaterials = Rend.sharedMaterials;
 		 	} else if(TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer SkinnedRend)) {
-		 		SkinnedRend.BakeMesh(mesh);
+                mesh = SkinnedRend.sharedMesh;		 		
 			 	if(!SkinnedRend.enabled) mesh = null;
 				SubMeshCount = (SkinnedRend.sharedMaterials).Length;
 		 		SharedMaterials = SkinnedRend.sharedMaterials;
@@ -223,6 +226,7 @@ namespace TrueTrace {
 			InitializeArray<Vector2>(ref SecondaryTextureScale, new Vector2(1,1), Index, NeedsRedo);
 			InitializeArray<Vector4>(ref MainTexScaleOffset, new Vector4(1,1,0,0), Index, NeedsRedo);
 			InitializeArray<Vector4>(ref SecondaryAlbedoTexScaleOffset, new Vector4(1,1,0,0), Index, NeedsRedo);
+			InitializeArray<Vector4>(ref SecondaryNormalTexScaleOffset, new Vector4(1,1,0,0), Index, NeedsRedo);
 			InitializeArray<Vector3>(ref BlendColor, new Vector3(1,1,1), Index, NeedsRedo);
 			InitializeArray<float>(ref BlendFactor, 0, Index, NeedsRedo);
 			InitializeArray<float>(ref Hue, 0, Index, NeedsRedo);
@@ -260,6 +264,8 @@ namespace TrueTrace {
 			InitializeArray<float>(ref KelvinTemp, 0, Index, NeedsRedo);
 			InitializeArray<float>(ref ColorBleed, 1, Index, NeedsRedo);
 			InitializeArray<float>(ref AlbedoBlendFactor, 1, Index, NeedsRedo);
+			InitializeArray<float>(ref SecondaryNormalTexBlend, 0, Index, NeedsRedo);
+			InitializeArray<float>(ref DetailNormalStrength, 1, Index, NeedsRedo);
 
 			IsReady = true;
 			mesh = null;

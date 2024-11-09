@@ -33,6 +33,21 @@
         <ReadIndex>3</ReadIndex>
         <TextureName>_MainTex</TextureName>
       </TexturePairs>
+      <TexturePairs>
+        <Purpose>8</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_DetailAlbedoMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>9</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_DetailMask</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>10</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_DetailNormalMap</TextureName>
+      </TexturePairs>
     </AvailableTextures>
     <MetallicRange>_Metallic</MetallicRange>
     <RoughnessRange>_Glossiness</RoughnessRange>
@@ -6475,12 +6490,7 @@
       <TexturePairs>
         <Purpose>3</Purpose>
         <ReadIndex>-4</ReadIndex>
-        <TextureName>_EmissionMask</TextureName>
-      </TexturePairs>
-      <TexturePairs>
-        <Purpose>4</Purpose>
-        <ReadIndex>0</ReadIndex>
-        <TextureName>_EmissionMask1</TextureName>
+        <TextureName>_EmissionMap</TextureName>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>
@@ -7634,8 +7644,8 @@
       </TexturePairs>
       <TexturePairs>
         <Purpose>1</Purpose>
-        <ReadIndex>0</ReadIndex>
-        <TextureName>_AlphaMask</TextureName>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>
@@ -7731,6 +7741,71 @@
         <Purpose>1</Purpose>
         <ReadIndex>0</ReadIndex>
         <TextureName>_ClippingMask</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>.poiyomi/Old Versions/8.1/Poiyomi Toon</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_BumpMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>3</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MatcapMask</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Hidden/.poiyomi/• Poiyomi Toon •/Sports_dingus_2D_View-Sports_dingus_2D_View</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_BumpMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>

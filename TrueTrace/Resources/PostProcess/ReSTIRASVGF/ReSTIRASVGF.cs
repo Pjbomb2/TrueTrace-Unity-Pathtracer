@@ -190,12 +190,14 @@ namespace TrueTrace {
                         RenderTexture Gradients,
                         RenderTexture PrimaryTriData,
                         ComputeBuffer MeshData,
-                        ComputeBuffer TriData)
+                        ComputeBuffer TriData,
+                        int UpscalerMethod)
         {
 
             camera = RayTracingMaster._camera;
             bool EvenFrame = CurFrame % 2 == 0;
             cmd.BeginSample("Dist Correct Kernel");
+            cmd.SetComputeIntParam(shader, "UpscalerMethod", UpscalerMethod);
             Vector3 Euler = camera.transform.eulerAngles;
             shader.SetMatrix("viewprojection", camera.projectionMatrix * camera.worldToCameraMatrix);
             camera.transform.eulerAngles = prevEuler; 

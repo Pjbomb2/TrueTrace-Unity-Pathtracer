@@ -7,6 +7,41 @@ namespace CommonVars
     #pragma warning disable 4014
 
     [System.Serializable]
+    public struct BoundingSphere {
+       public Vector3 Center;
+       public float Radius;
+       
+       public void init() {
+        Center = Vector3.zero;
+        Radius = 0.0f;
+       }
+       public void Validate(float padding) {
+        Radius = Mathf.Max(Radius, padding);
+       }
+
+       public void Extend(Vector3 A) {
+        Radius = Mathf.Max(Radius, Vector3.Distance(Center, A));
+       }
+    }
+
+    [System.Serializable]
+    public struct LightBVHTransform {
+        public Matrix4x4 Transform;
+        public int SolidOffset;
+    }
+
+    [System.Serializable]
+    public struct GaussianTreeNode {
+        public BoundingSphere S;
+        public Vector3 axis;
+        public float variance;
+        public float sharpness;
+        public float intensity;
+        public int left;
+    }
+
+
+    [System.Serializable]
     public struct LightData
     {
         public Vector3 Radiance;
@@ -48,6 +83,7 @@ namespace CommonVars
         public List<Vector3> Normals;
         public List<Vector4> Tangents;
         public List<Vector2> UVs;
+        public List<Color> Colors;
         #if TTLightMapping
             public List<Vector2> LightmapUVs;
         #endif
@@ -55,6 +91,10 @@ namespace CommonVars
 
         public void SetUvZero(int Count) {
             for (int i = 0; i < Count; i++) UVs.Add(new Vector2(0.0f, 0.0f));
+        }
+        public void SetColorsZero(int Count) {
+            Color TempCol = new Color(1,1,1,1);
+            for (int i = 0; i < Count; i++) Colors.Add(TempCol);
         }
         #if TTLightMapping
             public void AddLightmapUVs(Vector2[] LightUVs, Vector4 ScaleOffset) {
@@ -75,6 +115,7 @@ namespace CommonVars
             this.Verticies = new List<Vector3>(StartingSize);
             this.Normals = new List<Vector3>(StartingSize);
             this.Indices = new List<int>(StartingSize);
+            this.Colors = new List<Color>(StartingSize);
         }
         public void Clear() {
             if (Tangents != null) {
@@ -87,6 +128,7 @@ namespace CommonVars
                 CommonFunctions.DeepClean(ref Verticies);
                 CommonFunctions.DeepClean(ref Normals);
                 CommonFunctions.DeepClean(ref Indices);
+                CommonFunctions.DeepClean(ref Colors);
             }
         }
     }
@@ -104,6 +146,7 @@ namespace CommonVars
         public Vector2Int MatCapTex;
         public Vector2Int SecondaryAlbedoTex;
         public Vector2Int SecondaryAlbedoMask;
+        public Vector2Int SecondaryNormalTex;
         public Vector3 BaseColor;
         public float emission;
         public Vector3 EmissionColor;
@@ -140,6 +183,9 @@ namespace CommonVars
         public float Rotation;
         public float ColorBleed;
         public float AlbedoBlendFactor;
+        public Vector4 SecondaryNormalTexScaleOffset;
+        public float SecondaryNormalTexBlend;
+        public float DetailNormalStrength;
     }
 
     [System.Serializable]
@@ -507,9 +553,13 @@ namespace CommonVars
         public uint tan1;
         public uint tan2;
 
-        public Vector2 tex0;
-        public Vector2 texedge1;
-        public Vector2 texedge2;
+        public uint tex0;
+        public uint texedge1;
+        public uint texedge2;
+
+        public uint VertColA;
+        public uint VertColB;
+        public uint VertColC;
 
         public uint MatDat;
     }
@@ -557,7 +607,7 @@ namespace CommonVars
         public int ReadIndex;
         public List<Vector3Int> TexObjList = new List<Vector3Int>();
     }   
-    public enum TexturePurpose {Albedo, Alpha, Normal, Emission, Metallic, Roughness, MatCapTex, MatCapMask, SecondaryAlbedoTexture, SecondaryAlbedoTextureMask};
+    public enum TexturePurpose {Albedo, Alpha, Normal, Emission, Metallic, Roughness, MatCapTex, MatCapMask, SecondaryAlbedoTexture, SecondaryAlbedoTextureMask, SecondaryNormalTexture};
 
     [System.Serializable]
     public class TexturePairs {
@@ -634,6 +684,23 @@ namespace CommonVars
         public float KelvinTemp;
         public float ColorBleed;
         public float AlbedoBlendFactor;
+        public Vector4 SecondaryNormalTexScaleOffset;
+        public float SecondaryNormalTexBlend;
+        public float DetailNormalStrength;
+
+
+
+        public string AlbedoGUID;
+        public string MetallicGUID;
+        public string RoughnessGUID;
+        public string EmissionGUID;
+        public string AlphaGUID;
+        public string MatCapGUID;
+        public string MatcapMaskGUID;
+        public string SecondaryAlbedoGUID;
+        public string SecondaryAlbedoMaskGUID;
+        public string NormalGUID;
+        public string ShaderName;
     }
     [System.Serializable]
     public class RayObjs
@@ -641,6 +708,20 @@ namespace CommonVars
         [System.Xml.Serialization.XmlElement("RayObjectDatas")]
         public List<RayObjectDatas> RayObj = new List<RayObjectDatas>();
     }
+    [System.Serializable]
+    public class RayObjFolder
+    {
+        public string FolderName = "";
+        public List<RayObjectDatas> ContainedPresets = new List<RayObjectDatas>();
+    }
+
+    [System.Serializable]
+    public class RayObjFolderMaster
+    {
+        [System.Xml.Serialization.XmlElement("RayObjFolder")]
+        public List<RayObjFolder> PresetFolders = new List<RayObjFolder>();
+    }
+
 
 
     public struct TTStopWatch {//stopwatch stuff
@@ -679,6 +760,13 @@ namespace CommonVars
 
     public static class CommonFunctions
     {
+
+        public static Vector4 ToVector4(Vector3 A, float B) {
+            return new Vector4(A.x, A.y, A.z, B);
+        }
+        public static Vector3 ToVector3(Vector4 A) {
+            return new Vector3(A.x, A.y, A.z);
+        }
 
         public static void DeepClean<T>(ref List<T> A) {
             if(A != null) {
@@ -909,6 +997,18 @@ namespace CommonVars
             return (uint)(halfMaxUInt16 + temp.x * halfMaxUInt16 * sign.x) | ((uint)(halfMaxUInt16 + temp.y * halfMaxUInt16 * sign.y) << 16);
         }
 
+
+        public static Vector3 UnpackOctahedral(uint data) {
+            uint ivx = (uint)(data) & 65535u; 
+            uint ivy = (uint)(data>>16 ) & 65535u; 
+            Vector2 v = new Vector2(ivx/32767.5f, ivy/32767.5f) - Vector2.one;
+            Vector3 nor = new Vector3(v.x, v.y, 1.0f - Mathf.Abs(v.x) - Mathf.Abs(v.y)); // Rune Stubbe's version,
+            float t = Mathf.Max(-nor.z,0.0f);                     // much faster than original
+            nor.x += (nor.x >= 0) ? -t : t;
+            nor.y += (nor.y >= 0) ? -t : t;
+            return nor.normalized;
+        }
+
         public static readonly RenderTextureFormat RTFull4 = RenderTextureFormat.ARGBFloat;
         public static readonly RenderTextureFormat RTInt1 = RenderTextureFormat.RInt;
         public static readonly RenderTextureFormat RTInt2 = RenderTextureFormat.RGInt;
@@ -986,6 +1086,11 @@ namespace CommonVars
             ThisTexArray.Create();
         }
 
+        public static int GetStride<T>() 
+            where T : struct
+        {
+            return System.Runtime.InteropServices.Marshal.SizeOf<T>();
+        }
 
         public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, List<T> data)
             where T : struct
@@ -1024,8 +1129,8 @@ namespace CommonVars
         }
 
 
-        public enum Flags {IsEmissionMask, BaseIsMap, ReplaceBase, UseSmoothness, InvertSmoothnessTexture, IsBackground, ShadowCaster, Invisible, BackgroundBleed, Thin};
-        //0-9 Flags
+        public enum Flags {IsEmissionMask, BaseIsMap, ReplaceBase, UseSmoothness, InvertSmoothnessTexture, IsBackground, ShadowCaster, Invisible, BackgroundBleed, Thin, UseVertexColors};
+        //0-10 Flags
         //28-30 SecondaryAlbedoStride
 
         public static int SetFlagStretch(this int FlagVar, int LeftOffset, int Stride, int Setter) {
@@ -1047,6 +1152,111 @@ namespace CommonVars
         public static bool GetFlag(this int FlagVar, Flags flag) {
             return (((int)FlagVar >> (int)flag) & (int)1) == 1;
         }
+
+        public static uint packRGBE(Color v)
+        {
+            Vector3 va = new Vector3(Mathf.Max(0, v.r), Mathf.Max(0, v.g), Mathf.Max(0, v.b));
+            float max_abs = Mathf.Max(va.x, Mathf.Max(va.y, va.z));
+            if (max_abs == 0) return 0;
+
+            float exponent = Mathf.Floor(Mathf.Log(max_abs, 2));
+
+            uint result = (uint)(Mathf.Clamp(exponent + 20, 0, 31)) << 27;
+
+            float scale = Mathf.Pow(2.0f, -exponent) * 256.0f;
+            result |= (uint)(Mathf.Min(511, Mathf.Round(va.x * scale)));
+            result |= (uint)(Mathf.Min(511, Mathf.Round(va.y * scale))) << 9;
+            result |= (uint)(Mathf.Min(511, Mathf.Round(va.z * scale))) << 18;
+
+            return result;
+        }
+
+
+    public static uint encodeQTangentUI32(Vector3 T, Vector3 B, Vector3 N){
+        float determinant = T.x * ((B.y * N.z) - (N.y * B.z)) - B.x * ((T.y * N.z) - (N.y * T.z)) + N.x * ((T.y * B.z) - (B.y * T.z));
+
+      float r = (determinant < 0.0f) ? -1.0f : 1.0f; // Reflection matrix handling 
+      N *= r;
+    // #if 0
+    //   // When the input matrix is always a valid orthogonal tangent space matrix, we can simplify the quaternion calculation to just this:  
+    //   vec4 q = vec4(B.z - T.y, N.x - T.z, T.y - B.x, 1.0 + T.x + B.y + N.z);
+    // #else  
+      // Otherwise we have to handle all other possible cases as well.
+      float t = T.x + (B.y + N.z);
+      Vector4 q;
+      if(t > 2.9999999f){
+        q = new Vector4(0.0f, 0.0f, 0.0f, 1.0f);
+      }else if(t > 0.0000001f){
+        float s = Mathf.Sqrt(1.0f + t) * 2.0f;
+        q = new Vector4((B.z - N.y) / s, (N.x - T.z) / s, (T.y - B.x) / s, s * 0.25f);
+      }else if((T.x > B.y) && (T.x > N.z)){
+        float s = Mathf.Sqrt(1.0f + (T.x - (B.y + N.z))) * 2.0f;
+        q = new Vector4(s * 0.25f, (B.x + T.y) / s, (N.x + T.z) / s, (B.z - T.y) / s);    
+      }else if(B.y > N.z){
+        float s = Mathf.Sqrt(1.0f + (B.y - (T.x + N.z))) * 2.0f;
+        q = new Vector4((B.x + T.y) / s, (T.y + B.z) / s, (N.x - T.z) / s, s * 0.25f);
+        q = new Vector4(q.x, q.w, q.y, q.z);
+      }else{
+        float s = Mathf.Sqrt(1.0f + (N.z - (T.x + B.y))) * 2.0f;
+        q = new Vector4((N.x + T.z) / s, (T.y + B.z) / s, (T.y - B.x) / s, s * 0.25f); 
+        q = new Vector4(q.x, q.y, q.w, q.z);
+      }
+    // #endif  
+      q = q.normalized;
+      Vector4 qAbs = new Vector4(Mathf.Abs(q.x), Mathf.Abs(q.y), Mathf.Abs(q.z), Mathf.Abs(q.w));
+      int maxComponentIndex = (qAbs.x > qAbs.y) ? ((qAbs.x > qAbs.z) ? ((qAbs.x > qAbs.w) ? 0 : 3) : ((qAbs.z > qAbs.w) ? 2 : 3)) : ((qAbs.y > qAbs.z) ? ((qAbs.y > qAbs.w) ? 1 : 3) : ((qAbs.z > qAbs.w) ? 2 : 3)); 
+      float Mult = ((q[maxComponentIndex] < 0.0f) ? -1.0f : 1.0f) * 1.4142135623730951f;
+      switch(maxComponentIndex) {
+        case 0:
+            q = new Vector4(q.y, q.z, q.w, q.w);
+        break;
+        case 1:
+            q = new Vector4(q.x, q.z, q.w, q.w);
+        break;
+        case 2:
+            q = new Vector4(q.x, q.y, q.w, q.w);
+        break;
+        case 3:
+        break;
+      }
+      q = new Vector4(q.x * Mult, q.y * Mult, q.z * Mult, q.w);
+      return (((uint)(Mathf.Round(Mathf.Clamp(q.x * 511.0f, -511.0f, 511.0f) + 512.0f)) & 0x3ffu) << 0) | 
+             (((uint)(Mathf.Round(Mathf.Clamp(q.y * 511.0f, -511.0f, 511.0f) + 512.0f)) & 0x3ffu) << 10) | 
+             (((uint)(Mathf.Round(Mathf.Clamp(q.z * 255.0f, -255.0f, 255.0f) + 256.0f)) & 0x1ffu) << 20) |
+             (((uint)(((Vector3.Dot(Vector3.Cross(T, N), B) * r) < 0.0f) ? 1u : 0u) & 0x1u) << 29) | 
+             (((uint)(maxComponentIndex) & 0x3u) << 30);
+    }
+
+    public static void decodeQTangentUI32(uint v, ref Vector3 T, ref Vector3 N){
+        Vector4 q = new Vector4(
+            (((int)((v >> 0) & 0x3ffu) - 512) / 511.0f) * 0.7071067811865475f,
+            (((int)((v >> 10) & 0x3ffu) - 512) / 511.0f) * 0.7071067811865475f,
+            (((int)((v >> 20) & 0x1ffu) - 256) / 255.0f) * 0.7071067811865475f,
+            0
+            );
+        q.w = Mathf.Sqrt(1.0f - Mathf.Clamp(Vector3.Dot(new Vector3(q.x, q.y, q.z), new Vector3(q.x, q.y, q.z)), 0.0f, 1.0f));
+        switch((uint)((v >> 30) & 0x3u)) {
+            case 0:
+                q = new Vector4(q.w, q.x, q.y, q.z);
+            break;
+            case 1:
+                q = new Vector4(q.x, q.w, q.y, q.z);
+            break;
+            case 2:
+                q = new Vector4(q.x, q.y, q.w, q.z);
+            break;
+            case 3:
+            break;
+        }
+        q = q.normalized;
+        Vector3 t2 = new Vector3(q.x * 2.0f, q.y * 2.0f, q.z * 2.0f);
+        Vector3 tx = t2 * q.x;
+        Vector3 ty = t2 * q.y;
+        Vector3 tz = t2 * q.w;
+        T = (new Vector3(1.0f - (ty.y + (q.z * t2.z)), tx.y + tz.z, tx.z - tz.y)).normalized;
+        N = (new Vector3(tx.z + tz.y, ty.z - tz.x, 1.0f - (tx.x + ty.y))).normalized;
+        return;
+    }
 
     }
 }

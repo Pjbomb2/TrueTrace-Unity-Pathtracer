@@ -1,3 +1,4 @@
+#include "../GlobalDefines.cginc"
 #include "../MainCompute/CommonStructs.cginc"
 
 #pragma kernel CombineTriBuffers
@@ -58,6 +59,7 @@ void CombineLightBuffers(uint3 id : SV_DispatchThreadID)
 
 StructuredBuffer<LightBVHData> LightNodesIn;
 RWStructuredBuffer<LightBVHData> LightNodesOut;
+RWStructuredBuffer<LightBVHData> LightNodesOut2;
 
 [numthreads(372, 1, 1)]
 void CombineLightNodes(uint3 id : SV_DispatchThreadID)
@@ -66,5 +68,23 @@ void CombineLightNodes(uint3 id : SV_DispatchThreadID)
 		return;
 
 	LightNodesOut[id.x + Offset] = LightNodesIn[id.x];
+	LightNodesOut2[id.x + Offset] = LightNodesIn[id.x];
+
+}
+
+#pragma kernel CombineSGTreeNodes
+
+StructuredBuffer<GaussianTreeNode> SGNodesIn;
+RWStructuredBuffer<GaussianTreeNode> SGNodesOut;
+RWStructuredBuffer<GaussianTreeNode> SGNodesOut2;
+
+[numthreads(372, 1, 1)]
+void CombineSGTreeNodes(uint3 id : SV_DispatchThreadID)
+{
+	if (id.x >= Count)
+		return;
+
+	SGNodesOut[id.x + Offset] = SGNodesIn[id.x];
+	SGNodesOut2[id.x + Offset] = SGNodesIn[id.x];
 
 }

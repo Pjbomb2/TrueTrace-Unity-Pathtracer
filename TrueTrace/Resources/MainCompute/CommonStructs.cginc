@@ -7,14 +7,45 @@ struct CudaTriangle {
 
 	uint3 tans;
 
-	float2 tex0;
-	float2 texedge1;
-	float2 texedge2;
+	uint tex0;
+	uint texedge1;
+	uint texedge2;
+
+	uint VertColA;
+	uint VertColB;
+	uint VertColC;
 
 	uint MatDat;
 };
 
 StructuredBuffer<CudaTriangle> AggTris;
+
+struct GaussianTreeNode {
+	float3 position;
+	float radius;
+	float3 axis;
+	float variance;
+	float sharpness;
+	float intensity;
+	int left;
+};
+
+struct LightBVHData {
+	float3 BBMax;
+	float3 BBMin;
+	uint w;
+	float phi;
+	uint cosTheta_oe;
+	int left;
+};
+
+#ifdef UseSGTree
+	StructuredBuffer<GaussianTreeNode> SGTree;
+	StructuredBuffer<GaussianTreeNode> SGTreePrev;
+#else 
+	StructuredBuffer<LightBVHData> SGTree;
+	StructuredBuffer<LightBVHData> SGTreePrev;
+#endif
 
 struct MyMeshDataCompacted {
 	float4x4 W2L;
@@ -27,6 +58,7 @@ struct MyMeshDataCompacted {
 };
 
 StructuredBuffer<MyMeshDataCompacted> _MeshData;
+StructuredBuffer<MyMeshDataCompacted> _MeshDataPrev;
 
 struct TerrainData {
     float3 PositionOffset;
@@ -45,6 +77,7 @@ struct LightTriData {
 	float3 posedge2;
 	uint TriTarget;
 	float SourceEnergy;
+	// uint NormalizedColor;
 };
 
 StructuredBuffer<LightTriData> LightTriangles;
@@ -58,16 +91,7 @@ struct LightMeshData {//remove 74 bytes
 };
 StructuredBuffer<LightMeshData> _LightMeshes;
 
-struct LightBVHData {
-	float3 BBMax;
-	float3 BBMin;
-	uint w;
-	float phi;
-	uint cosTheta_oe;
-	int left;
-};
 
-StructuredBuffer<LightBVHData> LightNodes;
 
 
 struct LightData {
@@ -103,6 +127,7 @@ struct MaterialData {//56
 	int2 MatCapTex;
 	int2 SecondaryAlbedoTex;
 	int2 SecondaryAlbedoMask;
+    int2 SecondaryNormalTex;
 	float3 surfaceColor;
 	float emission;
 	float3 EmissionColor;
@@ -139,6 +164,9 @@ struct MaterialData {//56
 	float Rotation;
 	float ColorBleed;
 	float AlbedoBlendFactor;
+	float4 SecondaryNormalTexScaleOffset;
+    float SecondaryNormalTexBlend;
+    float DetailNormalStrength;
 };
 
 StructuredBuffer<MaterialData> _Materials;
@@ -194,3 +222,15 @@ struct ColData {
 RWStructuredBuffer<ColData> GlobalColors;
 StructuredBuffer<ColData> PrevGlobalColorsA;
 RWStructuredBuffer<ColData> PrevGlobalColorsB;
+
+
+struct SDFData {
+    float3 A;
+    float3 B;
+    int Type;
+    int Operation;
+    float Smoothness;
+    float4 Transform;
+};
+
+StructuredBuffer<SDFData> SDFs;

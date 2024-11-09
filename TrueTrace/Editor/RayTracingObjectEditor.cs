@@ -21,29 +21,129 @@ namespace TrueTrace {
         }
         public override Vector2 GetWindowSize()
         {
-            return new Vector2(460, 50);
+            return new Vector2(460, 300);
         }
-
+        Vector2 ScrollPosition;
+        string FolderName = "";
+        int CopyIndex;
+        int FolderIndex;
         public override void OnGUI(Rect rect) {
             // Debug.Log("ONINSPECTORGUI");
 
-            PresetName = GUILayout.TextField(PresetName, 32);
+            GUILayout.BeginHorizontal();
+                GUILayout.Label("Preset Name: ");
+                PresetName = GUILayout.TextField(PresetName, 32);
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+                GUILayout.Label("Folder Name: ");
+                FolderName = GUILayout.TextField(FolderName, 32);
+            GUILayout.EndHorizontal();
+
+            CopyIndex = -1;
+            FolderIndex = -1;
+            UnityEditor.AssetDatabase.Refresh();   
+            RayObjFolderMaster PresetMaster; 
+            using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets").text)) {
+                var serializer = new XmlSerializer(typeof(RayObjFolderMaster));
+                PresetMaster = serializer.Deserialize(A) as RayObjFolderMaster;
+                int FolderCount = PresetMaster.PresetFolders.Count;
+                GUILayout.BeginScrollView(ScrollPosition, GUILayout.Width(100), GUILayout.Height(200));
+                for(int i = 0; i < FolderCount; i++) {
+                    if(!PresetMaster.PresetFolders[i].FolderName.Equals("COPYPASTEBUFFER")) {
+                        if(GUILayout.Button(PresetMaster.PresetFolders[i].FolderName)) {
+                            FolderName = PresetMaster.PresetFolders[i].FolderName;
+                            FolderIndex = i;
+                        }                  
+                    }
+                }
+                GUILayout.EndScrollView();
+
+
+            }
             
             if(GUILayout.Button("Save Preset")) {
-                RayObjs PresetRays;
-                int CopyIndex = -1;
-                UnityEditor.AssetDatabase.Refresh();
-                using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets").text)) {
-                    var serializer = new XmlSerializer(typeof(RayObjs));
-                    PresetRays = serializer.Deserialize(A) as RayObjs;
-                    int RayReadCount = PresetRays.RayObj.Count;
-                    for(int i = 0; i < RayReadCount; i++) {
-                        if(PresetRays.RayObj[i].MatName.Equals(PresetName)) {
-                            CopyIndex = i;
-                            break;
+                int FolderCount = PresetMaster.PresetFolders.Count;
+                for(int j = 0; j < FolderCount; j++) {
+                     if(PresetMaster.PresetFolders[j].FolderName.Equals(FolderName)) {
+                        FolderIndex = j;
+                        break;
+                     }
+                }
+                if(FolderIndex == -1) {
+                    PresetMaster.PresetFolders.Add(new RayObjFolder() {
+                        FolderName = FolderName,
+                        ContainedPresets = new List<RayObjectDatas>()
+                    });
+                    FolderIndex = PresetMaster.PresetFolders.Count - 1;
+                }
+                int RayReadCount = PresetMaster.PresetFolders[FolderIndex].ContainedPresets.Count;
+                for(int j = 0; j < RayReadCount; j++) {
+                    if(PresetMaster.PresetFolders[FolderIndex].ContainedPresets[j].MatName.Equals(PresetName)) {
+                        CopyIndex = j;
+                        break;
+                    }
+                }
+
+                Material TempMat = ThisOBJ.SharedMaterials[SaveIndex];
+                int MatIndex = AssetManager.ShaderNames.IndexOf(TempMat.shader.name);
+                MaterialShader RelevantMat;
+                string AlbedoGUID = "null";
+                string MetallicGUID = "null";
+                string RoughnessGUID = "null";
+                string EmissionGUID = "null";
+                string AlphaGUID = "null";
+                string MatCapGUID = "null";
+                string MatcapMaskGUID = "null";
+                string SecondaryAlbedoGUID = "null";
+                string SecondaryAlbedoMaskGUID = "null";
+                string NormalGUID = "null";
+                if(MatIndex != -1) {
+                    RelevantMat = AssetManager.data.Material[MatIndex];
+                    int TexCount = RelevantMat.AvailableTextures.Count;
+                    for(int i2 = 0; i2 < TexCount; i2++) {
+                        string TexName = RelevantMat.AvailableTextures[i2].TextureName;
+                        if(TempMat.HasProperty(TexName) && TempMat.GetTexture(TexName) != null) {
+                            switch((TexturePurpose)RelevantMat.AvailableTextures[i2].Purpose) {
+                                case(TexturePurpose.SecondaryAlbedoTextureMask):
+                                    SecondaryAlbedoMaskGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                                case(TexturePurpose.SecondaryAlbedoTexture):
+                                    SecondaryAlbedoGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                                case(TexturePurpose.MatCapTex):
+                                    MatCapGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                                case(TexturePurpose.Normal):
+                                    NormalGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                                case(TexturePurpose.Emission):
+                                    EmissionGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                                case(TexturePurpose.Metallic):
+                                    MetallicGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                                case(TexturePurpose.Roughness):
+                                    RoughnessGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                                case(TexturePurpose.Alpha):
+                                    AlphaGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                                case(TexturePurpose.MatCapMask):
+                                    MatcapMaskGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                                case(TexturePurpose.Albedo):
+                                    AlbedoGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                            }
                         }
                     }
                 }
+                else Debug.LogError("FUCK: " + ThisOBJ.SharedMaterials[SaveIndex].shader.name);
+
+
+
+
+
                 RayObjectDatas TempRay = new RayObjectDatas() {
                     ID = 0,
                     MatName = PresetName,
@@ -71,6 +171,7 @@ namespace TrueTrace {
                     Spec = ThisOBJ.Specular[SaveIndex],
                     AlphaCutoff = ThisOBJ.AlphaCutoff[SaveIndex],
                     NormStrength = ThisOBJ.NormalStrength[SaveIndex],
+                    DetailNormalStrength = ThisOBJ.DetailNormalStrength[SaveIndex],
                     Hue = ThisOBJ.Hue[SaveIndex],
                     Brightness = ThisOBJ.Brightness[SaveIndex],
                     Contrast = ThisOBJ.Contrast[SaveIndex],
@@ -79,21 +180,35 @@ namespace TrueTrace {
                     BlendFactor = ThisOBJ.BlendFactor[SaveIndex],
                     MainTexScaleOffset = ThisOBJ.MainTexScaleOffset[SaveIndex],
                     SecondaryAlbedoTexScaleOffset = ThisOBJ.SecondaryAlbedoTexScaleOffset[SaveIndex],
+                    SecondaryNormalTexScaleOffset = ThisOBJ.SecondaryNormalTexScaleOffset[SaveIndex],
                     SecondaryTextureScale = ThisOBJ.SecondaryTextureScale[SaveIndex],
                     Rotation = ThisOBJ.Rotation[SaveIndex],
                     Flags = ThisOBJ.Flags[SaveIndex],
                     UseKelvin = ThisOBJ.UseKelvin[SaveIndex],
                     KelvinTemp = ThisOBJ.KelvinTemp[SaveIndex],
                     ColorBleed = ThisOBJ.ColorBleed[SaveIndex],
-                    AlbedoBlendFactor = ThisOBJ.AlbedoBlendFactor[SaveIndex]
+                    AlbedoBlendFactor = ThisOBJ.AlbedoBlendFactor[SaveIndex],
+                    SecondaryNormalTexBlend = ThisOBJ.SecondaryNormalTexBlend[SaveIndex],
+                    
+                    AlbedoGUID = AlbedoGUID,
+                    MetallicGUID = MetallicGUID,
+                    RoughnessGUID = RoughnessGUID,
+                    EmissionGUID = EmissionGUID,
+                    NormalGUID = NormalGUID,
+                    AlphaGUID = AlphaGUID,
+                    MatCapGUID = MatCapGUID,
+                    MatcapMaskGUID = MatcapMaskGUID,
+                    SecondaryAlbedoGUID = SecondaryAlbedoGUID,
+                    SecondaryAlbedoMaskGUID = SecondaryAlbedoMaskGUID,
+
+                    ShaderName = TempMat.shader.name
                 };
-                if(CopyIndex != -1) PresetRays.RayObj[CopyIndex] = TempRay;
-                else PresetRays.RayObj.Add(TempRay);
+                if(CopyIndex != -1) PresetMaster.PresetFolders[FolderIndex].ContainedPresets[CopyIndex] = TempRay;
+                else PresetMaster.PresetFolders[FolderIndex].ContainedPresets.Add(TempRay);
                 string materialPresetsPath = TTPathFinder.GetMaterialPresetsPath();
                 using(StreamWriter writer = new StreamWriter(materialPresetsPath)) {
-                    var serializer = new XmlSerializer(typeof(RayObjs));
-                    serializer.Serialize(writer.BaseStream, PresetRays);
-                    UnityEditor.AssetDatabase.Refresh();
+                    var serializer = new XmlSerializer(typeof(RayObjFolderMaster));
+                    serializer.Serialize(writer.BaseStream, PresetMaster);
                 }
                 this.editorWindow.Close();
             }
@@ -108,39 +223,62 @@ namespace TrueTrace {
         public LoadPopup(RayTracingObjectEditor editor) {
             this.SourceWindow = editor;
         }
-        private void CallEditorFunction(RayObjectDatas RayObj) {
+        private void CallEditorFunction(RayObjectDatas RayObj, bool LoadTextures) {
             if(SourceWindow != null) {
-                SourceWindow.LoadFunction(RayObj);
+                SourceWindow.LoadFunction(RayObj, LoadTextures);
             }
         }
         public override Vector2 GetWindowSize()
         {
             return new Vector2(460, 250);
         }
-
+        bool[] FoldoutBool;
         public override void OnGUI(Rect rect) {
-            RayObjs PresetRays;
+            RayObjFolderMaster PresetMaster;
             UnityEditor.AssetDatabase.Refresh();
             using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets").text)) {
-                var serializer = new XmlSerializer(typeof(RayObjs));
-                PresetRays = serializer.Deserialize(A) as RayObjs;
+                var serializer = new XmlSerializer(typeof(RayObjFolderMaster));
+                PresetMaster = serializer.Deserialize(A) as RayObjFolderMaster;
             }
-            int PresetLength = PresetRays.RayObj.Count;
+            int FolderLength = PresetMaster.PresetFolders.Count;
+            if(FoldoutBool == null) FoldoutBool = new bool[FolderLength];
             ScrollPosition = GUILayout.BeginScrollView(ScrollPosition, GUILayout.Width(460), GUILayout.Height(250));
             string materialPresetsPath = TTPathFinder.GetMaterialPresetsPath();
-            for(int i = 0; i < PresetLength; i++) {
-                GUILayout.BeginHorizontal();
-                    if(GUILayout.Button(PresetRays.RayObj[i].MatName)) {CallEditorFunction(PresetRays.RayObj[i]); this.editorWindow.Close();}
-                    if(GUILayout.Button("Delete")) {
-                        PresetRays.RayObj.RemoveAt(i);
-                        using(StreamWriter writer = new StreamWriter(materialPresetsPath)) {
-                            var serializer = new XmlSerializer(typeof(RayObjs));
-                            serializer.Serialize(writer.BaseStream, PresetRays);
-                            UnityEditor.AssetDatabase.Refresh();
+            for(int j = 0; j < FolderLength; j++) {
+                if(!PresetMaster.PresetFolders[j].FolderName.Equals("COPYPASTEBUFFER")) {
+                    GUILayout.BeginHorizontal();
+                        FoldoutBool[j] = EditorGUILayout.Foldout(FoldoutBool[j], PresetMaster.PresetFolders[j].FolderName);
+                        if(GUILayout.Button("Delete")) {
+                            PresetMaster.PresetFolders.RemoveAt(j);
+                            using(StreamWriter writer = new StreamWriter(materialPresetsPath)) {
+                                var serializer = new XmlSerializer(typeof(RayObjFolderMaster));
+                                serializer.Serialize(writer.BaseStream, PresetMaster);
+                                UnityEditor.AssetDatabase.Refresh();
+                            }
+                            OnGUI(new Rect(0,0,100,10));   
                         }
-                        OnGUI(new Rect(0,0,100,10));
+                    GUILayout.EndHorizontal();
+                    if(FoldoutBool[j]) {
+                         if (Selection.activeTransform) {
+                            int PresetLength = PresetMaster.PresetFolders[j].ContainedPresets.Count;
+                            for(int i = 0; i < PresetLength; i++) {
+                                GUILayout.BeginHorizontal();
+                                    if(GUILayout.Button(PresetMaster.PresetFolders[j].ContainedPresets[i].MatName)) {CallEditorFunction(PresetMaster.PresetFolders[j].ContainedPresets[i], true); this.editorWindow.Close();}
+                                    if(GUILayout.Button("Load Without Textures")) {CallEditorFunction(PresetMaster.PresetFolders[j].ContainedPresets[i], false); this.editorWindow.Close();}
+                                    if(GUILayout.Button("Delete")) {
+                                        PresetMaster.PresetFolders[j].ContainedPresets.RemoveAt(i);
+                                        using(StreamWriter writer = new StreamWriter(materialPresetsPath)) {
+                                            var serializer = new XmlSerializer(typeof(RayObjFolderMaster));
+                                            serializer.Serialize(writer.BaseStream, PresetMaster);
+                                            UnityEditor.AssetDatabase.Refresh();
+                                        }
+                                        OnGUI(new Rect(0,0,100,10));
+                                    }
+                                GUILayout.EndHorizontal();
+                            }
+                        }
                     }
-                GUILayout.EndHorizontal();
+                }
             }
             GUILayout.EndScrollView();
         }
@@ -162,7 +300,7 @@ namespace TrueTrace {
             (target as RayTracingObject).matfill();
         }
 
-        public void LoadFunction(RayObjectDatas RayObj) {
+        public void LoadFunction(RayObjectDatas RayObj, bool LoadTextures) {
             t.MaterialOptions[Selected] = (RayTracingObject.Options)RayObj.OptionID;
             t.TransmissionColor[Selected] = RayObj.TransCol;
             t.BaseColor[Selected] = RayObj.BaseCol;
@@ -187,6 +325,7 @@ namespace TrueTrace {
             t.Specular[Selected] = RayObj.Spec;
             t.AlphaCutoff[Selected] = RayObj.AlphaCutoff;
             t.NormalStrength[Selected] = RayObj.NormStrength;
+            t.DetailNormalStrength[Selected] = RayObj.DetailNormalStrength;
             t.Hue[Selected] = RayObj.Hue;
             t.Brightness[Selected] = RayObj.Brightness;
             t.Contrast[Selected] = RayObj.Contrast;
@@ -195,6 +334,7 @@ namespace TrueTrace {
             t.BlendFactor[Selected] = RayObj.BlendFactor;
             t.MainTexScaleOffset[Selected] = RayObj.MainTexScaleOffset;
             t.SecondaryAlbedoTexScaleOffset[Selected] = RayObj.SecondaryAlbedoTexScaleOffset;
+            t.SecondaryNormalTexScaleOffset[Selected] = RayObj.SecondaryNormalTexScaleOffset;
             t.SecondaryTextureScale[Selected] = RayObj.SecondaryTextureScale;
             t.Rotation[Selected] = RayObj.Rotation;
             t.Flags[Selected] = RayObj.Flags;
@@ -202,28 +342,207 @@ namespace TrueTrace {
             t.KelvinTemp[Selected] = RayObj.KelvinTemp;
             t.ColorBleed[Selected] = RayObj.ColorBleed;
             t.AlbedoBlendFactor[Selected] = RayObj.AlbedoBlendFactor;
+            t.SecondaryNormalTexBlend[Selected] = RayObj.SecondaryNormalTexBlend;
+
+            if(LoadTextures) {
+                Material TempMat = t.SharedMaterials[Selected];
+                int MatIndex = AssetManager.ShaderNames.IndexOf(TempMat.shader.name);
+                MaterialShader RelevantMat;
+                if(MatIndex != -1) {
+                    // if(TempMat.shader.name.Equals(RayObj.ShaderName)) {
+                        RelevantMat = AssetManager.data.Material[MatIndex];
+                        int TexCount = RelevantMat.AvailableTextures.Count;
+                        for(int i2 = 0; i2 < TexCount; i2++) {
+                            string TexName = RelevantMat.AvailableTextures[i2].TextureName;
+                            switch((TexturePurpose)RelevantMat.AvailableTextures[i2].Purpose) {
+                                case(TexturePurpose.Albedo):
+                                    if (TempMat.HasProperty(TexName)) {
+                                        if(!(RayObj.AlbedoGUID.Equals("null"))) {
+                                            Texture2D TextureAsset = (AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(RayObj.AlbedoGUID), typeof(Texture)) as Texture2D);
+                                            if(TextureAsset != null) TempMat.SetTexture(TexName, TextureAsset);
+                                            else Debug.LogError("Missing Texture Asset At " + AssetDatabase.GUIDToAssetPath(RayObj.AlbedoGUID));
+                                        } else TempMat.SetTexture(TexName, null);
+                                    }
+                                break;
+                                case(TexturePurpose.SecondaryAlbedoTextureMask):
+                                    if (TempMat.HasProperty(TexName)) {
+                                        if(!(RayObj.SecondaryAlbedoMaskGUID.Equals("null"))) {
+                                            Texture2D TextureAsset = (AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(RayObj.SecondaryAlbedoMaskGUID), typeof(Texture)) as Texture2D);
+                                            if(TextureAsset != null) TempMat.SetTexture(TexName, TextureAsset);
+                                            else Debug.LogError("Missing Texture Asset At " + AssetDatabase.GUIDToAssetPath(RayObj.SecondaryAlbedoMaskGUID));
+                                        } else TempMat.SetTexture(TexName, null);
+                                    }
+                                break;
+                                case(TexturePurpose.SecondaryAlbedoTexture):
+                                    if (TempMat.HasProperty(TexName)) {
+                                        if(!(RayObj.SecondaryAlbedoGUID.Equals("null"))) {
+                                            Texture2D TextureAsset = (AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(RayObj.SecondaryAlbedoGUID), typeof(Texture)) as Texture2D);
+                                            if(TextureAsset != null) TempMat.SetTexture(TexName, TextureAsset);
+                                            else Debug.LogError("Missing Texture Asset At " + AssetDatabase.GUIDToAssetPath(RayObj.SecondaryAlbedoGUID));
+                                        } else TempMat.SetTexture(TexName, null);
+                                    }
+                                break;
+                                case(TexturePurpose.MatCapTex):
+                                    if (TempMat.HasProperty(TexName)) {
+                                        if(!(RayObj.MatCapGUID.Equals("null"))) {
+                                            Texture2D TextureAsset = (AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(RayObj.MatCapGUID), typeof(Texture)) as Texture2D);
+                                            if(TextureAsset != null) TempMat.SetTexture(TexName, TextureAsset);
+                                            else Debug.LogError("Missing Texture Asset At " + AssetDatabase.GUIDToAssetPath(RayObj.MatCapGUID));
+                                        } else TempMat.SetTexture(TexName, null);
+                                    }
+                                break;
+                                case(TexturePurpose.Normal):
+                                    if (TempMat.HasProperty(TexName)) {
+                                        if(!(RayObj.NormalGUID.Equals("null"))) {
+                                            Texture2D TextureAsset = (AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(RayObj.NormalGUID), typeof(Texture)) as Texture2D);
+                                            if(TextureAsset != null) TempMat.SetTexture(TexName, TextureAsset);
+                                            else Debug.LogError("Missing Texture Asset At " + AssetDatabase.GUIDToAssetPath(RayObj.NormalGUID));
+                                        } else TempMat.SetTexture(TexName, null);
+                                    }
+                                break;
+                                case(TexturePurpose.Emission):
+                                    if (TempMat.HasProperty(TexName)) {
+                                        if(!(RayObj.EmissionGUID.Equals("null"))) {
+                                            Texture2D TextureAsset = (AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(RayObj.EmissionGUID), typeof(Texture)) as Texture2D);
+                                            if(TextureAsset != null) TempMat.SetTexture(TexName, TextureAsset);
+                                            else Debug.LogError("Missing Texture Asset At " + AssetDatabase.GUIDToAssetPath(RayObj.EmissionGUID));
+                                        } else TempMat.SetTexture(TexName, null);
+                                    }
+                                break;
+                                case(TexturePurpose.Metallic):
+                                    if (TempMat.HasProperty(TexName)) {
+                                        if(!(RayObj.MetallicGUID.Equals("null"))) {
+                                            Texture2D TextureAsset = (AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(RayObj.MetallicGUID), typeof(Texture)) as Texture2D);
+                                            if(TextureAsset != null) TempMat.SetTexture(TexName, TextureAsset);
+                                            else Debug.LogError("Missing Texture Asset At " + AssetDatabase.GUIDToAssetPath(RayObj.MetallicGUID));
+                                        } else TempMat.SetTexture(TexName, null);
+                                    }
+                                break;
+                                case(TexturePurpose.Roughness):
+                                    if (TempMat.HasProperty(TexName)) {
+                                        if(!(RayObj.RoughnessGUID.Equals("null"))) {
+                                            Texture2D TextureAsset = (AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(RayObj.RoughnessGUID), typeof(Texture)) as Texture2D);
+                                            if(TextureAsset != null) TempMat.SetTexture(TexName, TextureAsset);
+                                            else Debug.LogError("Missing Texture Asset At " + AssetDatabase.GUIDToAssetPath(RayObj.RoughnessGUID));
+                                        } else TempMat.SetTexture(TexName, null);
+                                    }
+                                break;
+                                case(TexturePurpose.Alpha):
+                                    if (TempMat.HasProperty(TexName)) {
+                                        if(!(RayObj.AlphaGUID.Equals("null"))) {
+                                            Texture2D TextureAsset = (AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(RayObj.AlphaGUID), typeof(Texture)) as Texture2D);
+                                            if(TextureAsset != null) TempMat.SetTexture(TexName, TextureAsset);
+                                            else Debug.LogError("Missing Texture Asset At " + AssetDatabase.GUIDToAssetPath(RayObj.AlphaGUID));
+                                        } else TempMat.SetTexture(TexName, null);
+                                    }
+                                break;
+                                case(TexturePurpose.MatCapMask):
+                                    if (TempMat.HasProperty(TexName)) {
+                                        if(!(RayObj.MatcapMaskGUID.Equals("null"))) {
+                                            Texture2D TextureAsset = (AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(RayObj.MatcapMaskGUID), typeof(Texture)) as Texture2D);
+                                            if(TextureAsset != null) TempMat.SetTexture(TexName, TextureAsset);
+                                            else Debug.LogError("Missing Texture Asset At " + AssetDatabase.GUIDToAssetPath(RayObj.MatcapMaskGUID));
+                                        } else TempMat.SetTexture(TexName, null);
+                                    }
+                                break;
+                            }
+                        }
+                    // }
+                } else Debug.LogError("FUCK: " + TempMat.shader.name);
+                // AssetManager.Assets.ForceUpdateAtlas();
+            }
+            // else Debug.LogError("FUCK: " + ThisOBJ.SharedMaterials[SaveIndex].shader.name);
+
             t.CallMaterialEdited(true);
 
 
-            OnInspectorGUI();
+            // OnInspectorGUI();
         }
 
         public void CopyFunction(RayTracingObject ThisOBJ, int SaveIndex) {
-                RayObjs PresetRays;
+                RayObjFolderMaster PresetMaster;
                 int CopyIndex = -1;
+                int FolderIndex = -1;
+                string FolderName = "COPYPASTEBUFFER";
                 string PresetName = "COPYPASTEBUFFER";
                 UnityEditor.AssetDatabase.Refresh();
                 using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets").text)) {
-                    var serializer = new XmlSerializer(typeof(RayObjs));
-                    PresetRays = serializer.Deserialize(A) as RayObjs;
-                    int RayReadCount = PresetRays.RayObj.Count;
+                    var serializer = new XmlSerializer(typeof(RayObjFolderMaster));
+                    PresetMaster = serializer.Deserialize(A) as RayObjFolderMaster;
+                    int RayReadCount = PresetMaster.PresetFolders.Count;
                     for(int i = 0; i < RayReadCount; i++) {
-                        if(PresetRays.RayObj[i].MatName.Equals(PresetName)) {
-                            CopyIndex = i;
+                        if(PresetMaster.PresetFolders[i].FolderName.Equals(FolderName)) {
+                            FolderIndex = i;
+                            int PresetCount = PresetMaster.PresetFolders[i].ContainedPresets.Count;
+                            for(int j = 0; j < PresetCount; j++) {
+                                if(PresetMaster.PresetFolders[i].ContainedPresets[j].MatName.Equals(PresetName)) {
+                                    CopyIndex = j;
+                                    break;
+                                }
+                            }
                             break;
                         }
                     }
                 }
+
+                Material TempMat = ThisOBJ.SharedMaterials[SaveIndex];
+                int MatIndex = AssetManager.ShaderNames.IndexOf(TempMat.shader.name);
+                MaterialShader RelevantMat;
+                string AlbedoGUID = "null";
+                string MetallicGUID = "null";
+                string RoughnessGUID = "null";
+                string EmissionGUID = "null";
+                string AlphaGUID = "null";
+                string MatCapGUID = "null";
+                string MatcapMaskGUID = "null";
+                string SecondaryAlbedoGUID = "null";
+                string SecondaryAlbedoMaskGUID = "null";
+                string NormalGUID = "null";
+                if(MatIndex != -1) {
+                    RelevantMat = AssetManager.data.Material[MatIndex];
+                    int TexCount = RelevantMat.AvailableTextures.Count;
+                    for(int i2 = 0; i2 < TexCount; i2++) {
+                        string TexName = RelevantMat.AvailableTextures[i2].TextureName;
+                        if(TempMat.HasProperty(TexName) && TempMat.GetTexture(TexName) != null) {
+                            switch((TexturePurpose)RelevantMat.AvailableTextures[i2].Purpose) {
+                                case(TexturePurpose.SecondaryAlbedoTextureMask):
+                                    SecondaryAlbedoMaskGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                                case(TexturePurpose.SecondaryAlbedoTexture):
+                                    SecondaryAlbedoGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                                case(TexturePurpose.MatCapTex):
+                                    MatCapGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                                case(TexturePurpose.Normal):
+                                    NormalGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                                case(TexturePurpose.Emission):
+                                    EmissionGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                                case(TexturePurpose.Metallic):
+                                    MetallicGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                                case(TexturePurpose.Roughness):
+                                    RoughnessGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                                case(TexturePurpose.Alpha):
+                                    AlphaGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                                case(TexturePurpose.MatCapMask):
+                                    MatcapMaskGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                                case(TexturePurpose.Albedo):
+                                    AlbedoGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
+                            }
+                        }
+                    }
+                }
+                else Debug.LogError("FUCK: " + ThisOBJ.SharedMaterials[SaveIndex].shader.name);
+
+
+
                 RayObjectDatas TempRay = new RayObjectDatas() {
                     ID = 0,
                     MatName = PresetName,
@@ -251,6 +570,7 @@ namespace TrueTrace {
                     Spec = ThisOBJ.Specular[SaveIndex],
                     AlphaCutoff = ThisOBJ.AlphaCutoff[SaveIndex],
                     NormStrength = ThisOBJ.NormalStrength[SaveIndex],
+                    DetailNormalStrength = ThisOBJ.DetailNormalStrength[SaveIndex],
                     Hue = ThisOBJ.Hue[SaveIndex],
                     Brightness = ThisOBJ.Brightness[SaveIndex],
                     Contrast = ThisOBJ.Contrast[SaveIndex],
@@ -259,40 +579,65 @@ namespace TrueTrace {
                     BlendFactor = ThisOBJ.BlendFactor[SaveIndex],
                     MainTexScaleOffset = ThisOBJ.MainTexScaleOffset[SaveIndex],
                     SecondaryAlbedoTexScaleOffset = ThisOBJ.SecondaryAlbedoTexScaleOffset[SaveIndex],
+                    SecondaryNormalTexScaleOffset = ThisOBJ.SecondaryNormalTexScaleOffset[SaveIndex],
                     SecondaryTextureScale = ThisOBJ.SecondaryTextureScale[SaveIndex],
                     Rotation = ThisOBJ.Rotation[SaveIndex],
                     Flags = ThisOBJ.Flags[SaveIndex],
                     UseKelvin = ThisOBJ.UseKelvin[SaveIndex],
                     KelvinTemp = ThisOBJ.KelvinTemp[SaveIndex],
                     ColorBleed = ThisOBJ.ColorBleed[SaveIndex],
-                    AlbedoBlendFactor = ThisOBJ.AlbedoBlendFactor[SaveIndex]
+                    AlbedoBlendFactor = ThisOBJ.AlbedoBlendFactor[SaveIndex],
+                    SecondaryNormalTexBlend = ThisOBJ.SecondaryNormalTexBlend[SaveIndex],
+
+                    AlbedoGUID = AlbedoGUID,
+                    MetallicGUID = MetallicGUID,
+                    RoughnessGUID = RoughnessGUID,
+                    EmissionGUID = EmissionGUID,
+                    NormalGUID = NormalGUID,
+                    AlphaGUID = AlphaGUID,
+                    MatCapGUID = MatCapGUID,
+                    MatcapMaskGUID = MatcapMaskGUID,
+                    SecondaryAlbedoGUID = SecondaryAlbedoGUID,
+                    SecondaryAlbedoMaskGUID = SecondaryAlbedoMaskGUID,
+
+                    ShaderName = TempMat.shader.name
                 };
-                if(CopyIndex != -1) PresetRays.RayObj[CopyIndex] = TempRay;
-                else PresetRays.RayObj.Add(TempRay);
+                if(CopyIndex != -1) PresetMaster.PresetFolders[FolderIndex].ContainedPresets[CopyIndex] = TempRay;
+                else PresetMaster.PresetFolders[FolderIndex].ContainedPresets.Add(TempRay);
                 string materialPresetsPath = TTPathFinder.GetMaterialPresetsPath();
                 using(StreamWriter writer = new StreamWriter(materialPresetsPath)) {
-                    var serializer = new XmlSerializer(typeof(RayObjs));
-                    serializer.Serialize(writer.BaseStream, PresetRays);
+                    var serializer = new XmlSerializer(typeof(RayObjFolderMaster));
+                    serializer.Serialize(writer.BaseStream, PresetMaster);
                     UnityEditor.AssetDatabase.Refresh();
                 }
         }
         public void PasteFunction() {
-            RayObjs PresetRays;
+            RayObjFolderMaster PresetMaster;
             UnityEditor.AssetDatabase.Refresh();
             using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets").text)) {
-                var serializer = new XmlSerializer(typeof(RayObjs));
-                PresetRays = serializer.Deserialize(A) as RayObjs;
+                var serializer = new XmlSerializer(typeof(RayObjFolderMaster));
+                PresetMaster = serializer.Deserialize(A) as RayObjFolderMaster;
             }
             int Index = -1;
-            int RayReadCount = PresetRays.RayObj.Count;
-            for(int i = 0; i < RayReadCount; i++) {
-                if(PresetRays.RayObj[i].MatName.Equals("COPYPASTEBUFFER")) {
-                    Index = i;
+            int FolderIndex = -1;
+
+
+            int FolderCount = PresetMaster.PresetFolders.Count;
+            for(int i = 0; i < FolderCount; i++) {
+                if(PresetMaster.PresetFolders[i].FolderName.Equals("COPYPASTEBUFFER")) {
+                    int PresetCount = PresetMaster.PresetFolders[i].ContainedPresets.Count;
+                    for(int j = 0; j < PresetCount; j++) {
+                        if(PresetMaster.PresetFolders[i].ContainedPresets[j].MatName.Equals("COPYPASTEBUFFER")) {
+                            Index = j;
+                            break;
+                        }
+                    }
+                    FolderIndex = i;
                     break;
                 }
             }
             if(Index == -1) return;
-            LoadFunction(PresetRays.RayObj[Index]);
+            LoadFunction(PresetMaster.PresetFolders[FolderIndex].ContainedPresets[Index], true);
         }
 
         Dictionary<string, List<string>> DictionaryLinks;
@@ -612,12 +957,14 @@ namespace TrueTrace {
                                 ConnectionSourceNames.Add("Smoothness");
                                 Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.InvertSmoothnessTexture, EditorGUILayout.ToggleLeft("Invert Roughness Tex", Flag.GetFlag(CommonFunctions.Flags.InvertSmoothnessTexture), GUILayout.MaxWidth(135)));
                                 Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.ShadowCaster, EditorGUILayout.ToggleLeft("Casts Shadows", Flag.GetFlag(CommonFunctions.Flags.ShadowCaster), GUILayout.MaxWidth(135)));
+                                Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.UseVertexColors, EditorGUILayout.ToggleLeft("Vertex Colors", Flag.GetFlag(CommonFunctions.Flags.UseVertexColors), GUILayout.MaxWidth(135)));
                             EditorGUILayout.EndHorizontal();
                             EditorGUILayout.BeginHorizontal();
                                 Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.Thin, EditorGUILayout.ToggleLeft("Thin", Flag.GetFlag(CommonFunctions.Flags.Thin), GUILayout.MaxWidth(135)));
                                 ConnectionSources.Add("Thin", GUILayoutUtility.GetLastRect()); // Store position
                                 ConnectionSourceNames.Add("Thin");
                                 Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.Invisible, EditorGUILayout.ToggleLeft("Invisible", Flag.GetFlag(CommonFunctions.Flags.Invisible), GUILayout.MaxWidth(135)));
+                                Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.IsBackground, EditorGUILayout.ToggleLeft("Is Background", Flag.GetFlag(CommonFunctions.Flags.IsBackground), GUILayout.MaxWidth(135)));
                             EditorGUILayout.EndHorizontal();
 
                             EditorGUILayout.Space();
@@ -633,6 +980,13 @@ namespace TrueTrace {
                             serializedObject.FindProperty("SecondaryTextureScale").GetArrayElementAtIndex(Selected).vector2Value = EditorGUILayout.Vector2Field("SecondaryTex Scale: ", t.SecondaryTextureScale[Selected]);
                             serializedObject.FindProperty("Rotation").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Texture Rotation: ", t.Rotation[Selected], 0, 1);
                             serializedObject.FindProperty("AlbedoBlendFactor").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Albedo Blend Factor: ", t.AlbedoBlendFactor[Selected], 0, 1);
+                            serializedObject.FindProperty("SecondaryNormalTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Detail Normal Scale/Offset: ", t.SecondaryNormalTexScaleOffset[Selected]);
+                            serializedObject.FindProperty("SecondaryNormalTexBlend").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Detail Normal Blend Factor: ", t.SecondaryNormalTexBlend[Selected], 0, 1);
+
+
+                            serializedObject.FindProperty("DetailNormalStrength").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Detail Normalmap Strength: ", t.DetailNormalStrength[Selected], 0, 20.0f);
+                            ConnectionSources.Add("DetailNormalStrength", GUILayoutUtility.GetLastRect()); // Store position
+                            ConnectionSourceNames.Add("DetailNormalStrength");
 
                         EditorGUILayout.EndVertical();
                     EditorGUILayout.EndHorizontal();
@@ -695,10 +1049,12 @@ namespace TrueTrace {
                             t.Specular[i] = t.Specular[Selected];
                             t.AlphaCutoff[i] = t.AlphaCutoff[Selected];
                             t.NormalStrength[i] = t.NormalStrength[Selected];
+                            t.DetailNormalStrength[i] = t.DetailNormalStrength[Selected];
                             t.BlendColor[i] = t.BlendColor[Selected];
                             t.BlendFactor[i] = t.BlendFactor[Selected];
                             t.MainTexScaleOffset[i] = t.MainTexScaleOffset[Selected];
                             t.SecondaryAlbedoTexScaleOffset[i] = t.SecondaryAlbedoTexScaleOffset[Selected];
+                            t.SecondaryNormalTexScaleOffset[i] = t.SecondaryNormalTexScaleOffset[Selected];
                             t.SecondaryTextureScale[i] = t.SecondaryTextureScale[Selected];
                             t.Rotation[i] = t.Rotation[Selected];
                             t.Flags[i] = Flag;
@@ -706,6 +1062,7 @@ namespace TrueTrace {
                             t.KelvinTemp[i] = t.KelvinTemp[Selected];
                             t.ColorBleed[i] = t.ColorBleed[Selected];
                             t.AlbedoBlendFactor[i] = t.AlbedoBlendFactor[Selected];
+                            t.SecondaryNormalTexBlend[i] = t.SecondaryNormalTexBlend[Selected];
                             // Debug.Log(i);
                             t.CallMaterialEdited(true);
                         }
@@ -746,10 +1103,12 @@ namespace TrueTrace {
                                 Obj.Specular[i] = t.Specular[Selected];
                                 Obj.AlphaCutoff[i] = t.AlphaCutoff[Selected];
                                 Obj.NormalStrength[i] = t.NormalStrength[Selected];
+                                Obj.DetailNormalStrength[i] = t.DetailNormalStrength[Selected];
                                 Obj.BlendColor[i] = t.BlendColor[Selected];
                                 Obj.BlendFactor[i] = t.BlendFactor[Selected];
                                 Obj.MainTexScaleOffset[i] = t.MainTexScaleOffset[Selected];
                                 Obj.SecondaryAlbedoTexScaleOffset[i] = t.SecondaryAlbedoTexScaleOffset[Selected];
+                                Obj.SecondaryNormalTexScaleOffset[i] = t.SecondaryNormalTexScaleOffset[Selected];
                                 Obj.SecondaryTextureScale[i] = t.SecondaryTextureScale[Selected];
                                 Obj.Rotation[i] = t.Rotation[Selected];
                                 Obj.Flags[i] = Flag;
@@ -757,6 +1116,7 @@ namespace TrueTrace {
                                 Obj.KelvinTemp[i] = t.KelvinTemp[Selected];
                                 Obj.ColorBleed[i] = t.ColorBleed[Selected];
                                 Obj.AlbedoBlendFactor[i] = t.AlbedoBlendFactor[Selected];
+                                Obj.SecondaryNormalTexBlend[i] = t.SecondaryNormalTexBlend[Selected];
                                 Obj.CallMaterialEdited(true);
                             }
                         }

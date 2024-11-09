@@ -644,55 +644,123 @@ float3 vMFDiffuseAlbedoMapping(float3 kd, float roughness)
 }
 
 
+
+static const float constant1_FON = 0.5f - 2.0f / (3.0f * PI);
+static const float constant2_FON = 2.0f / 3.0f - 28.0f / (15.0f * PI);
+float E_FON_exact(float mu, float r)
+{
+float AF = 1.0f / (1.0f + constant1_FON * r); // FON A coeff.
+float BF = r * AF; // FON B coeff.
+float Si = sqrt(1.0f - (mu * mu));
+float G = Si * (acos(mu) - Si * mu)
++ (2.0f / 3.0f) * ((Si / mu) * (1.0f - (Si * Si * Si)) - Si);
+return AF + (BF/PI) * G;
+}
+float E_FON_approx(float mu, float r)
+{
+float mucomp = 1.0f - mu;
+float mucomp2 = mucomp * mucomp;
+const float2x2 Gcoeffs = float2x2(0.0571085289f, -0.332181442f, 0.491881867f, 0.0714429953f);
+float GoverPi = dot(mul(Gcoeffs, float2(mucomp, mucomp2)), float2(1.0f, mucomp2));
+return (1.0f + r * GoverPi) / (1.0f + constant1_FON * r);
+}
+// Evaluates EON BRDF value, given inputs:
+// rho = single-scattering albedo parameter
+// r = roughness in [0, 1]
+// wi_local = direction of incident ray (directed away from vertex)
+// wo_local = direction of outgoing ray (directed away from vertex)
+// exact = flag to select exact or fast approx. version
+//
+// Note that this implementation assumes throughout that the directions are
+// specified in a local space where the z-direction aligns with the surface normal.
+float3 f_EON(float3 rho, float r, float3 wi_local, float3 wo_local, bool exact)
+{
+float mu_i = wi_local.y; // input angle cos
+float mu_o = wo_local.y; // output angle cos
+float s = dot(wi_local, wo_local) - mu_i * mu_o; // QON s term
+float sovertF = s > 0.0f ? s / max(mu_i, mu_o) : s; // FON s/t
+float AF = 1.0f / (1.0f + constant1_FON * r); // FON A coeff.
+float3 f_ss = (rho/PI) * AF * (1.0f + r * sovertF); // single-scatter
+float EFo = exact ? E_FON_exact(mu_o, r): // FON wo albedo (exact)
+E_FON_approx(mu_o, r); // FON wo albedo (approx)
+float EFi = exact ? E_FON_exact(mu_i, r): // FON wi albedo (exact)
+E_FON_approx(mu_i, r); // FON wi albedo (approx)
+float avgEF = AF * (1.0f + constant2_FON * r); // avg. albedo
+float3 rho_ms = (rho * rho) * avgEF / ((1.0f) - rho * (1.0f - avgEF));
+const float eps = 1.0e-7f;
+float3 f_ms = (rho_ms/PI) * max(eps, 1.0f - EFo) // multi-scatter lobe
+* max(eps, 1.0f - EFi)
+/ max(eps, 1.0f - avgEF);
+return f_ss + f_ms;
+}
+// Computes EON directional albedo:
+float3 E_EON(float3 rho, float r, float3 wi_local, bool exact)
+{
+float mu_i = wi_local.y; // input angle cos
+float AF = 1.0f / (1.0f + constant1_FON * r); // FON A coeff.
+float EF = exact ? E_FON_exact(mu_i, r): // FON wi albedo (exact)
+E_FON_approx(mu_i, r); // FON wi albedo (approx)
+float avgEF = AF * (1.0f + constant2_FON * r); // average albedo
+float3 rho_ms = (rho * rho) * avgEF / (1.0f - rho * (1.0f - avgEF));
+return rho * EF + rho_ms * (1.0f - EF);
+}
+
+
+
 static float3 EvaluateDisneyDiffuse(const MaterialData hitDat, const float3 wo, const float3 wm,
     const float3 wi, bool thin, int pixel_index)
 {
 
     float dotNL = AbsCosTheta(wi);
     float dotNV = AbsCosTheta(wo);
-    #ifdef vMFDiffuse
-        float cosThetaI = wi.y, sinThetaI = sqrt(1.0 - cosThetaI * cosThetaI);
-        float cosThetaO = wo.y, sinThetaO = sqrt(1.0 - cosThetaO * cosThetaO);
-
-        float cosPhiDiff = 0.0;
-        if (sinThetaI > 0.0 && sinThetaO > 0.0) {
-            /* Compute cos(phiO-phiI) using the half-angle formulae */
-            float sinPhiI = clamp(wi.z / sinThetaI, -1.0, 1.0),
-                  cosPhiI = clamp(wi.x / sinThetaI, -1.0, 1.0),
-                  sinPhiO = clamp(wo.z / sinThetaO, -1.0, 1.0),
-                  cosPhiO = clamp(wo.x / sinThetaO, -1.0, 1.0);
-            cosPhiDiff = cosPhiI * cosPhiO + sinPhiI * sinPhiO;
-        }
-        float phi = safeacos(cosPhiDiff);
-
-        float r = clamp(hitDat.roughness, 0.0, .9999);
-        float3 c = vMFDiffuseAlbedoMapping(hitDat.surfaceColor / PI, r);
-        return vMFdiffuseBRDF(dotNV, dotNL, phi, r, c) * PI;
+    #if defined(EONDiffuse)
+        return f_EON(hitDat.surfaceColor / PI, hitDat.roughness, wi, wo, true) * PI;
     #else
+        #if defined(vMFDiffuse)
+            float cosThetaI = wi.y, sinThetaI = sqrt(1.0 - cosThetaI * cosThetaI);
+            float cosThetaO = wo.y, sinThetaO = sqrt(1.0 - cosThetaO * cosThetaO);
+
+            float cosPhiDiff = 0.0;
+            if (sinThetaI > 0.0 && sinThetaO > 0.0) {
+                /* Compute cos(phiO-phiI) using the half-angle formulae */
+                float sinPhiI = clamp(wi.z / sinThetaI, -1.0, 1.0),
+                      cosPhiI = clamp(wi.x / sinThetaI, -1.0, 1.0),
+                      sinPhiO = clamp(wo.z / sinThetaO, -1.0, 1.0),
+                      cosPhiO = clamp(wo.x / sinThetaO, -1.0, 1.0);
+                cosPhiDiff = cosPhiI * cosPhiO + sinPhiI * sinPhiO;
+            }
+            float phi = safeacos(cosPhiDiff);
+
+            float r = clamp(hitDat.roughness, 0.0, .9999);
+            float3 c = vMFDiffuseAlbedoMapping(hitDat.surfaceColor / PI, r);
+            return vMFdiffuseBRDF(dotNV, dotNL, phi, r, c) * PI;
+
+        #else
 
 
-    float fl = SchlickWeight(dotNL);
-    float fv = SchlickWeight(dotNV);
+        float fl = SchlickWeight(dotNL);
+        float fv = SchlickWeight(dotNV);
 
-    float hanrahanKrueger = 0.0f;
+        float hanrahanKrueger = 0.0f;
 
-    if (thin && hitDat.flatness > 0.0f) {
-        float roughness = hitDat.roughness * hitDat.roughness;
+        if (thin && hitDat.flatness > 0.0f) {
+            float roughness = hitDat.roughness * hitDat.roughness;
 
-        float dotHL = dot(wm, wi);
-        float fss90 = dotHL * dotHL * roughness;
-        float fss = lerp(1.0f, fss90, fl) * lerp(1.0f, fss90, fv);
+            float dotHL = dot(wm, wi);
+            float fss90 = dotHL * dotHL * roughness;
+            float fss = lerp(1.0f, fss90, fl) * lerp(1.0f, fss90, fv);
 
-        float ss = 1.25f * (fss * (1.0f / (dotNL + dotNV) - 0.5f) + 0.5f);
-        hanrahanKrueger = ss;
-    }
+            float ss = 1.25f * (fss * (1.0f / (dotNL + dotNV) - 0.5f) + 0.5f);
+            hanrahanKrueger = ss;
+        }
 
-    float lambert = 1.0f;
-    float retro = EvaluateDisneyRetroDiffuse(hitDat, wo, wm, wi);
-    float subsurfaceApprox = lerp(lambert, hanrahanKrueger, thin ? hitDat.flatness : 0.0f);
+        float lambert = 1.0f;
+        float retro = EvaluateDisneyRetroDiffuse(hitDat, wo, wm, wi);
+        float subsurfaceApprox = lerp(lambert, hanrahanKrueger, thin ? hitDat.flatness : 0.0f);
 
 
-    return hitDat.surfaceColor * rcp(PI) * (retro + subsurfaceApprox * (1.0f - 0.5f * fl) * (1.0f - 0.5f * fv)) * (1.0f - hitDat.metallic);
+        return hitDat.surfaceColor * rcp(PI) * (retro + subsurfaceApprox * (1.0f - 0.5f * fl) * (1.0f - 0.5f * fv)) * (1.0f - hitDat.metallic);
+        #endif
     #endif
 }
 
@@ -788,7 +856,7 @@ static float3 SampleDisneySpecTransmission(const MaterialData hitDat, float3 wo,
     forwardPdfW *= pdf;
     // -- convert wi back to world space
 
-    return G1v;// * exp(-CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0 ? 1 : hitDat.scatterDistance) * (hitDat.scatterDistance));
+    return G1v * 0.99f;// * exp(-CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0 ? 1 : hitDat.scatterDistance) * (hitDat.scatterDistance));
 }
 
 static float3 SampleDisneyDiffuse(const MaterialData hitDat, float3 wo, bool thin, out float forwardPdfW, out float3 wi, inout bool refracted, uint pixel_index)
@@ -1191,7 +1259,9 @@ bool SampleDisney(MaterialData hitDat, inout float3 v, bool thin, out float PDF,
         Case = 1;
     } else if(p <= P.x + P.y + P.z) {
         Case = 2;
-    } else Case = 3;
+    } else if(p <= P.x + P.y + P.z + P.w) {
+        Case = 3;
+    }
     switch(Case) {
         case 0:
             Reflection = SampleDisneyBRDF(hitDat, v, PDF, wi, pixel_index);            
@@ -1201,7 +1271,7 @@ bool SampleDisney(MaterialData hitDat, inout float3 v, bool thin, out float PDF,
         break;
         case 2:
             hitDat.surfaceColor *= PI;
-            Reflection = SampleDisneyDiffuse(hitDat, v, thin, PDF, wi, Refracted, pixel_index);// * P[2];
+            Reflection = SampleDisneyDiffuse(hitDat, v, thin, PDF, wi, Refracted, pixel_index) * (1.0f - P[3]);
         break;
         case 3:
             Reflection = SampleDisneySpecTransmission(hitDat, v, thin, PDF, wi, Refracted, pixel_index, GotFlipped);
@@ -1209,8 +1279,9 @@ bool SampleDisney(MaterialData hitDat, inout float3 v, bool thin, out float PDF,
     }
 
     v = normalize(ToWorld(TruTanMat, wi));
-    throughput = clamp(Reflection / P[Case], 0, 4.0f);
-    if(Case == 3) throughput = saturate(throughput);
+    if(Case != 3) throughput = clamp(Reflection / P[Case], 0, 4);
+    else Reflection = throughput;
+    // if(Case == 3) throughput = saturate(throughput);
     PDF *= P[Case];
 
     return Reflection.x != -1 && PDF > 0;

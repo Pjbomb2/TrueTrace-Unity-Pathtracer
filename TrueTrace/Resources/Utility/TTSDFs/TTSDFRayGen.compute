@@ -1,0 +1,269 @@
+#include "../../GlobalDefines.cginc"
+#ifndef DX11
+    #pragma use_dxc
+#endif
+#include "../../MainCompute/CommonData.cginc"
+#ifdef HardwareRT
+    #include "UnityRayQuery.cginc"
+    #pragma require inlineraytracing
+    RaytracingAccelerationStructure myAccelerationStructure;
+#endif
+
+int SDFCount;
+float Scale;
+float MinStepSize;
+int MaxStepCount;
+
+inline float opXor(float d1, float d2 ){return max(min(d1,d2),-max(d1,d2));}
+inline float opSubtraction( float d1, float d2 ) {return max(-d1,d2);}
+inline float opIntersection( float d1, float d2 ){return max(d1,d2);}
+inline float sdSphere( float3 p, float s ) {return length(p)-s;}
+inline float opUnion( float d1, float d2 ) {return min(d1,d2);}
+inline float opSmoothUnion( float d1, float d2, float k ) {
+    float h = clamp( 0.5 + 0.5*(d2-d1)/k, 0.0, 1.0 );
+    return lerp( d2, d1, h ) - k*h*(1.0-h);
+}
+inline float sdBox( float3 p, float3 b ) {
+    float3 q = abs(p) - b;
+    return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+}
+inline float4 qmul(float4 q1, float4 q2) {
+    return float4(
+        q2.xyz * q1.w + q1.xyz * q2.w + cross(q1.xyz, q2.xyz),
+        q1.w * q2.w - dot(q1.xyz, q2.xyz)
+    );
+}
+inline float3 rotate_vector(float3 v, float4 r) {
+    float4 r_c = r * float4(-1, -1, -1, 1);
+    return qmul(r, qmul(float4(v, 0), r_c)).xyz;
+}
+
+float CustFramesSinceStart;
+inline float Map(float3 p) {
+    float MinDist = -sdSphere(p, Scale);
+    for(int i = 0; i < SDFCount; i++) {
+        float MinDist3;
+        SDFData TempSDF = SDFs[i];  
+        switch(SDFs[i].Type) {
+            case 0: MinDist3 = sdSphere(rotate_vector(p - TempSDF.A, TempSDF.Transform), 256.0f * saturate(CustFramesSinceStart / 260.0f)); break;//SDFs[i].B.x); break;
+            case 1: MinDist3 = sdBox(rotate_vector(p - TempSDF.A, TempSDF.Transform), TempSDF.B); break;
+            default: break;
+        }
+        switch(SDFs[i].Operation) {
+            case 0: MinDist = opSmoothUnion(MinDist, MinDist3, SDFs[i].Smoothness); break;
+            case 1: MinDist = opSubtraction(MinDist3, MinDist); break;
+            case 2: MinDist = opXor(MinDist3, MinDist); break;
+            case 3: MinDist = opIntersection(MinDist3, MinDist); break;
+            default: break;
+        }
+    }
+    return MinDist;
+}
+
+
+inline bool Traverse(float3 P, const float3 rayDir, float maxT, inout float TravT, inout float OuterT) {
+    bool HasHitNear = false;
+    bool HasHitFar = false;
+    float TempDist = 0;
+    int CurStep = 0;
+    float CurT = 0;
+    P = P - rayDir * 0.1f;// + (float3(0,0,6) * sin(curframe / 120.0f));
+
+    while(CurStep < MaxStepCount && TempDist < maxT && sdSphere(P, Scale) < 0.1f) {
+        CurT = Map(P);
+
+        if(CurT < MinStepSize) HasHitNear = true;
+        if(HasHitNear)
+            if(CurT > MinStepSize)
+                HasHitFar = true;
+
+        if(HasHitFar && CurT > MinStepSize) return true;
+
+        if(!HasHitNear) TravT += abs(CurT);
+        if(!HasHitFar) OuterT += abs(CurT);
+        TempDist += abs(CurT);
+        P += rayDir * max(abs(CurT), MinStepSize);
+        CurStep++;
+    }
+
+    return false;
+}
+
+
+
+inline void VisabilityCheck(SmallerRay ray, inout float dist) {
+    #ifdef HardwareRT
+        const uint rayFlags = RAY_FLAG_FORCE_OPAQUE  ;
+        UnityRayQuery<rayFlags> q;
+        RayDesc myRay;
+        myRay.Origin = ray.origin;
+        myRay.Direction = ray.direction;
+        myRay.TMin = 0;
+        myRay.TMax = dist;
+        while(true) {
+            q.TraceRayInline(myAccelerationStructure, rayFlags, 0x1, myRay);
+            while(q.Proceed()){}
+            
+            if(q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
+
+                float u = q.CommittedTriangleBarycentrics().y;
+                float v = q.CommittedTriangleBarycentrics().x;
+                int2 Indexes = int2(q.CommittedInstanceID(), q.CommittedGeometryIndex());
+                int triangle_id = q.CommittedPrimitiveIndex();
+                #ifdef AdvancedAlphaMapped
+                    int mesh_id;
+
+                    int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
+                    triangle_id += triangleOffset;
+                    mesh_id = MeshOffsets[Indexes.x].y;
+
+                    int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTris[triangle_id].MatDat);
+                    if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster)) {myRay.TMin = q.CommittedRayT() + 0.001f; continue;} 
+                    if(_Materials[MaterialIndex].MatType == CutoutIndex) {
+                        float2 BaseUv = AggTris[triangle_id].tex0 * (1.0f - u - v) + AggTris[triangle_id].texedge1 * u + AggTris[triangle_id].texedge2 * v;
+                        float2 Uv = AlignUV(BaseUv, _Materials[MaterialIndex].AlbedoTexScale, _Materials[MaterialIndex].AlbedoTex);
+                        if(_AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.001f; continue;}
+                    }
+                #endif
+                dist = myRay.TMin;
+                return;
+            }
+            return;
+        }
+    #else
+        Closest_Hit_Compute(ray, dist);
+    #endif
+}
+
+bool DoBackfacing;
+
+#pragma kernel Generate
+[numthreads(16, 16, 1)]
+void Generate(uint3 id : SV_DispatchThreadID) {
+
+    if (id.x >= screen_width || id.y >= screen_height) return;
+    const uint pixel_index = id.y * screen_width + id.x;
+    float2 jitter = ((random(0, pixel_index) - 0.5));
+    if(OIDNGuideWrite) jitter = 0;
+    float2 uv = float2((id.xy + jitter) / float2(screen_width, screen_height) * 2.0f - 1.0f);
+    SmallerRay ray = CreateCameraRay(uv, pixel_index);
+
+    float3 P = ray.origin + NearPlane * ray.direction;
+    float TruMinDist = 0;
+    int Reps2 = 0;
+    float3 PrevP = P;
+    while(Reps2 < 100 && sdSphere(P, Scale) < 0.1f) {
+        float TempDist = 0;
+        float OuterT = 0;
+        bool TempVal = Traverse(P, ray.direction, 10000.0f, TempDist, OuterT);
+        P += TempDist * ray.direction;
+        SmallerRay TempRay = CreateRay(P, ray.direction);
+        OuterT = OuterT - TempDist;
+        float TempOuter = OuterT;
+        VisabilityCheck(TempRay, OuterT);
+        TruMinDist = TempOuter;
+        if(TempVal || Reps2 == 0) PrevP = P;
+        if(TempOuter == OuterT) P += (OuterT + 0.1f) * ray.direction;
+        else break;
+        Reps2++;
+    }
+
+    P = PrevP;
+    if(DoBackfacing) TruMinDist = FarPlane;
+
+    RayData globray = {P, pixel_index, ray.direction, 0, 0,0,asuint(TruMinDist),0};
+    GlobalRays[pixel_index] = globray;
+}
+
+
+bool DoPanorama;
+float2 Segment;
+#pragma kernel GeneratePanorama
+[numthreads(16, 16, 1)]
+void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
+    if (id.x >= screen_width || id.y >= screen_height) return;
+    const uint pixel_index = id.y * screen_width + id.x;
+    float2 jitter = ((random(0, pixel_index) - 0.5));
+    if(OIDNGuideWrite) jitter = 0;
+    float2 uv = float2((id.xy + jitter) / float2(screen_width, screen_height));
+    SmallerRay ray;
+    if(DoPanorama) {
+        uv.y = 1.0f - uv.y;
+        uv.x = (uv.x * (Segment.y - Segment.x)) + Segment.x;
+        uv.x = 1.0f - uv.x;
+
+        ray = CreateRay(mul(CamToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz + NearPlane * normalize(equirectUvToDirection(uv)), normalize(equirectUvToDirection(uv)));
+    } else {
+        uv.x = ((uv.x * (Segment.y - Segment.x)) + Segment.x);
+        uv = (uv * 2.0f) - 1.0f;
+
+        ray = CreateCameraRay(uv, pixel_index);
+        ray.origin = ray.origin + NearPlane * ray.direction;
+    }
+
+    float3 P = ray.origin + NearPlane * ray.direction;
+    float TruMinDist = 0;
+    int Reps2 = 0;
+    float3 PrevP = P;
+    while(Reps2 < 100 && sdSphere(P, Scale) < 0.1f) {
+        float TempDist = 0;
+        float OuterT = 0;
+        bool TempVal = Traverse(P, ray.direction, 10000.0f, TempDist, OuterT);
+        P += TempDist * ray.direction;
+        SmallerRay TempRay = CreateRay(P, ray.direction);
+        OuterT = OuterT - TempDist;
+        float TempOuter = OuterT;
+        VisabilityCheck(TempRay, OuterT);
+        TruMinDist = TempOuter;
+        if(TempVal || Reps2 == 0) PrevP = P;
+        if(TempOuter == OuterT) P += (OuterT + 0.1f) * ray.direction;
+        else break;
+        Reps2++;
+    }
+
+    P = PrevP;
+    if(DoBackfacing) TruMinDist = FarPlane;
+
+    RayData globray = {P, pixel_index, ray.direction, 0, 0,0,asuint(TruMinDist),0};
+    GlobalRays[pixel_index] = globray;
+}
+
+
+#pragma kernel GenerateASVGF 
+
+
+[numthreads(16, 16, 1)]
+void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
+
+    if (id.x >= screen_width || id.y >= screen_height) return;
+    const uint pixel_index = id.y * screen_width + id.x;
+
+    SmallerRay ray = Rays[pixel_index];
+
+    float3 P = ray.origin + NearPlane * ray.direction;
+    float TruMinDist = 0;
+    int Reps2 = 0;
+    float3 PrevP = P;
+    while(Reps2 < 100 && sdSphere(P, Scale) < 0.1f) {
+        float TempDist = 0;
+        float OuterT = 0;
+        bool TempVal = Traverse(P, ray.direction, 10000.0f, TempDist, OuterT);
+        P += TempDist * ray.direction;
+        SmallerRay TempRay = CreateRay(P, ray.direction);
+        OuterT = OuterT - TempDist;
+        float TempOuter = OuterT;
+        VisabilityCheck(TempRay, OuterT);
+        TruMinDist = TempOuter;
+        if(TempVal || Reps2 == 0) PrevP = P;
+        if(TempOuter == OuterT) P += (OuterT + 0.1f) * ray.direction;
+        else break;
+        Reps2++;
+    }
+
+    P = PrevP;
+    if(DoBackfacing) TruMinDist = FarPlane;
+
+
+    RayData globray = {P, pixel_index, ray.direction, 0, 0,0,asuint(TruMinDist),0};
+    GlobalRays[pixel_index] = globray;
+}

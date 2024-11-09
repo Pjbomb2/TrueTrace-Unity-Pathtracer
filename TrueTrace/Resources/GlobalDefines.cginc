@@ -2,6 +2,7 @@
 // #define HDRP
 // #define DX11
 #define UseBindless
+#define UseSGTree
 //Dont modify above, CPU code will do automatically
 #define AdvancedAlphaMapped
 #define ExtraSampleValidation
@@ -23,6 +24,10 @@
 // #define AdvancedRadCacheAlt
 // #define UseTextureLOD
 // #define vMFDiffuse
+#define EONDiffuse
+// #define AdvancedBackground
+#define UseBRDFLights
+
 
 //END OF DEFINES
 //DEBUG VIEW DEFINES
@@ -50,7 +55,11 @@
 #define AREALIGHTDISK 4
 #define TRILIGHT 5
 
+
 #define NormalOffset 0.0001f
+#define ShadowDistanceFudgeFactor 0.0001f
+
+
 
 #define IsEmissionMask 0
 #define BaseIsMap 1
@@ -62,6 +71,7 @@
 #define Invisible 7
 #define BackgrounBleed 8
 #define Thin 9
+#define VertexColors 10
 
 #define SampleAlbedo 0
 #define SampleMetallic 1
@@ -75,6 +85,7 @@
 #define SampleTerrainAlbedo 9
 #define SampleSecondaryAlbedo 10
 #define SampleSecondaryAlbedoMask 11
+#define SampleDetailNormal 12
 
 #define BlendModeLerp 0
 #define BlendModeAdd 1
@@ -89,3 +100,4 @@ int GetFlagStretch(int FlagVar, int LeftOffset, int Stride) {
 }
 
 #define MaxTraversalSamples 1000
+#define ShadowDistanceFudgeFactor 0.0001f

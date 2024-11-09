@@ -25,8 +25,8 @@ namespace TrueTrace {
         [SerializeField] public bool PPToneMap = true;
         [SerializeField] public bool PPTAA = false;
         [SerializeField] public float RenderScale = 1.0f;
-        [SerializeField] public bool UseASVGF = false;
-        [SerializeField] public bool UseTAAU = true;
+        [SerializeField] public int DenoiserMethod = 0;
+        [SerializeField] public int UpscalerMethod = 0;
         [SerializeField] public int ReSTIRGIUpdateRate = 7;
         [SerializeField] public bool UseReSTIRGITemporal = true;
         [SerializeField] public bool UseReSTIRGISpatial = true;
@@ -50,7 +50,6 @@ namespace TrueTrace {
         [SerializeField] public float FireflyStrength = 1.0f;
         [SerializeField] public float FireflyOffset = 0.0f;
         [SerializeField] public int OIDNFrameCount = 0;
-        [SerializeField] public bool UseOIDN = false;
         [SerializeField] public bool DoSharpen = false;
         [SerializeField] public float Sharpness = 1.0f;
         [SerializeField] public int MainDesiredRes = 16384;
@@ -76,5 +75,9 @@ namespace TrueTrace {
         [SerializeField] public float ConvBloomDistExp = 0;
         [SerializeField] public float ConvBloomDistExpClampMin = 1;
         [SerializeField] public float ConvBloomDistExpScale = 1;
+        [SerializeField] public Vector3 PrimaryBackgroundTintColor = new Vector3(1.0f, 1.0f, 1.0f);
+        [SerializeField] public float PrimaryBackgroundTint = 0;
+        [SerializeField] public float PrimaryBackgroundContrast = 1;
+
     }
 }

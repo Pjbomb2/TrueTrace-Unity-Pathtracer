@@ -1,4 +1,5 @@
 #define KernelRatio 256
+#include "../GlobalDefines.cginc"
 #include "../MainCompute/CommonStructs.cginc"
 #pragma warning( disable : 3556)
 
@@ -336,7 +337,7 @@ void NodeInitializer(uint3 id : SV_DispatchThreadID)
 // ---------------------------------------------------------------------- //
 //Light BVH refits
 
-#pragma kernel TLASLightRefitKernel
+#pragma kernel TLASSGTreeRefitKernel
 
 
 
@@ -351,10 +352,17 @@ float3 i_octahedral_32( uint data ) {
 
 
 
+RWStructuredBuffer<GaussianTreeNode> SGTreeWrite;
 RWStructuredBuffer<LightBVHData> LightNodesWrite;
 StructuredBuffer<int> WorkingSet;
 int SetCount;
 int ObjectOffset;
+
+
+inline float luminance(const float3 a) {
+    return dot(float3(0.299f, 0.587f, 0.114f), a);
+}
+
 
 
 float AngleBetween(float3 v1, float3 v2) {
@@ -431,6 +439,57 @@ inline LightBVHData Union(const LightBVHData A, const LightBVHData B, int Left) 
     return Dat;
 }
 
+
+inline float expm1_over_x(const float x)
+{
+	const float u = exp(x);
+
+	if (u == 1.0)
+	{
+		return 1.0;
+	}
+
+	const float y = u - 1.0;
+
+	if (abs(x) < 1.0)
+	{
+		return y / log(u);
+	}
+
+	return y / x;
+}
+
+
+inline float SGIntegral(const float sharpness)
+{
+	return 4.0 * 3.14159f * expm1_over_x(-2.0 * sharpness);
+}
+
+
+inline GaussianTreeNode UnionSG(const GaussianTreeNode LeftNode, const GaussianTreeNode RightNode, int Left) {
+    
+    float phi_left = LeftNode.intensity;    
+    float phi_right = RightNode.intensity;    
+    float w_left = phi_left / (phi_left + phi_right);
+    float w_right = phi_right / (phi_left + phi_right);
+    
+    float3 V = w_left * LeftNode.axis + w_right * RightNode.axis;//may be wrong, paper uses BAR_V(BAR_axis here), not just normalized V/axis
+
+    float3 mean = w_left * LeftNode.position + w_right * RightNode.position;
+    float variance = w_left * LeftNode.variance + w_right * RightNode.variance + w_left * w_right * dot(LeftNode.position - RightNode.position, LeftNode.position - RightNode.position);
+
+    float intensity = LeftNode.intensity + RightNode.intensity;
+
+    float radius = max(distance(mean, LeftNode.position) + LeftNode.radius, distance(mean, RightNode.position) + RightNode.radius);
+
+    float VLength = length(V);
+	float sharpness = ((3.0f * VLength - VLength * VLength * VLength)) / (1.0f - VLength * VLength);
+
+
+	GaussianTreeNode Dat = {mean, radius, V, variance, sharpness, intensity, Left};
+    return Dat;
+}
+
 struct Transfer {
     float4x4 Transf2;
     int SolidOffset;
@@ -455,7 +514,42 @@ float3 transform_direction(float4x4 mat, float3 direction)
 }
 
 [numthreads(256,1,1)]
-void TLASLightRefitKernel (uint3 id : SV_DispatchThreadID)
+void TLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x > (uint)SetCount) return;
+    const int Index = WorkingSet[id.x];
+    GaussianTreeNode Node = SGTreeWrite[Index];
+    if(Node.left < 0) {
+        Transfer Transf = Transfers[-(Node.left+1)];
+        float3 ExtendedCenter = transform_position(Transf.Transf2, SGTreeWrite[Transf.SolidOffset].position + float3(SGTreeWrite[Transf.SolidOffset].radius, 0, 0));
+        float3 center = transform_position(Transf.Transf2, SGTreeWrite[Transf.SolidOffset].position);
+        float3 axis = transform_direction(Transf.Transf2, SGTreeWrite[Transf.SolidOffset].axis);
+        float Scale = length(center - ExtendedCenter) / SGTreeWrite[Transf.SolidOffset].radius;
+
+        SGTreeWrite[Index].position = center;
+        SGTreeWrite[Index].axis = axis;
+        SGTreeWrite[Index].variance = SGTreeWrite[Transf.SolidOffset].variance;
+        SGTreeWrite[Index].sharpness = SGTreeWrite[Transf.SolidOffset].sharpness;
+        
+
+        SGTreeWrite[Index].radius = SGTreeWrite[Transf.SolidOffset].radius * Scale;
+        SGTreeWrite[Index].intensity = SGTreeWrite[Transf.SolidOffset].intensity * Scale;
+        return;
+    }
+    GaussianTreeNode LeftNode = SGTreeWrite[Node.left];
+
+    SGTreeWrite[Index] = UnionSG(LeftNode, SGTreeWrite[Node.left + 1], Node.left);
+
+}
+
+
+
+
+
+#pragma kernel TLASLightBVHRefitKernel
+
+[numthreads(256,1,1)]
+void TLASLightBVHRefitKernel (uint3 id : SV_DispatchThreadID)
 {
     if(id.x > (uint)SetCount) return;
     const int Index = WorkingSet[id.x];
@@ -479,7 +573,22 @@ void TLASLightRefitKernel (uint3 id : SV_DispatchThreadID)
 
 
 
-#pragma kernel BLASLightRefitKernel
+
+float3 unpackRGBE(uint x)
+{
+    int exponent = int(x >> 27) - 20;
+    float scale = pow(2, exponent) / 256.0;
+
+    float3 v;
+    v.r = float(x & 0x1ff) * scale;
+    v.g = float((x >> 9) & 0x1ff) * scale;
+    v.b = float((x >> 18) & 0x1ff) * scale;
+
+    return v;
+}
+
+
+#pragma kernel BLASSGTreeRefitKernel
 
 int TotalNodeOffset;
 
@@ -491,6 +600,39 @@ inline float AreaOfTriangle(float3 pt1, float3 pt2, float3 pt3) {
     return sqrt(s * (s - a) * (s - b) * (s - c));
 }
 float4x4 ToWorld;
+
+[numthreads(256,1,1)]
+void BLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x > (uint)SetCount) return;
+    const int Index = WorkingSet[id.x] + TotalNodeOffset;
+    GaussianTreeNode Node = SGTreeWrite[Index];
+    if(Node.left < 0) {
+        LightTriData LightTri = LightTriangles[-(Node.left+1) + LightTriBuffOffset];
+        float3 mean = (LightTri.pos0 + (LightTri.pos0 + LightTri.posedge1) + (LightTri.pos0 + LightTri.posedge2)) / 3.0f;
+        float radius = max(max(distance(mean, LightTri.pos0), distance(mean, LightTri.pos0 + LightTri.posedge1)), distance(mean, LightTri.pos0 + LightTri.posedge2));
+
+
+        float area = AreaOfTriangle(LightTri.pos0, LightTri.pos0 + LightTri.posedge1, LightTri.pos0 + LightTri.posedge2);
+
+        if(area == 0) area = 0.000000001f;
+        float intensity = LightTri.SourceEnergy * area;
+        float3 V = 0.5f * normalize(cross(normalize(LightTri.posedge1), normalize(LightTri.posedge2)));
+        float variance = (dot(LightTri.posedge1, LightTri.posedge1) + dot(LightTri.posedge2, LightTri.posedge2) - dot(LightTri.posedge1, LightTri.posedge2)) / 18.0f;
+
+        SGTreeWrite[Index].position = mean;
+        SGTreeWrite[Index].radius = radius;
+        SGTreeWrite[Index].intensity = intensity;
+        SGTreeWrite[Index].variance = variance;
+        return;
+    }
+    GaussianTreeNode LeftNode = SGTreeWrite[Node.left + TotalNodeOffset];
+
+    SGTreeWrite[Index] = UnionSG(LeftNode, SGTreeWrite[Node.left + 1 + TotalNodeOffset], Node.left);
+
+}
+
+#pragma kernel BLASLightRefitKernel
 
 [numthreads(256,1,1)]
 void BLASLightRefitKernel (uint3 id : SV_DispatchThreadID)
@@ -518,5 +660,4 @@ void BLASLightRefitKernel (uint3 id : SV_DispatchThreadID)
     LightBVHData LeftNode = LightNodesWrite[Node.left + TotalNodeOffset];
 
     LightNodesWrite[Index] = Union(LeftNode, LightNodesWrite[Node.left + 1 + TotalNodeOffset], Node.left);
-
 }

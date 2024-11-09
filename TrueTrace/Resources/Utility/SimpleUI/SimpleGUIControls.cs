@@ -9,8 +9,7 @@ namespace TrueTrace {
         RayTracingMaster RayMaster;
         public void Start() {
             RayMaster = GameObject.Find("Scene").GetComponent<RayTracingMaster>();
-            RayMaster.LocalTTSettings.UseASVGF = true;
-            RayMaster.LocalTTSettings.UseOIDN = false;
+            RayMaster.LocalTTSettings.DenoiserMethod = 1;
             RayMaster.LocalTTSettings.Accumulate = true;
             RayMaster.LocalTTSettings.ClayMode = false;
             RayMaster.LocalTTSettings.OIDNFrameCount = 50;
@@ -22,8 +21,7 @@ namespace TrueTrace {
             RayMaster.LocalTTSettings.ClayMode = BoolIn;
         }
         public void ToggleASVGF(bool BoolIn) {
-            RayMaster.LocalTTSettings.UseASVGF = BoolIn;
-            RayMaster.LocalTTSettings.UseOIDN = !BoolIn;
+            RayMaster.LocalTTSettings.DenoiserMethod = BoolIn ? 1 : 2;
         }
         public void SetOIDNFrameCount(string StringIn) {
             int IntResult = 0;

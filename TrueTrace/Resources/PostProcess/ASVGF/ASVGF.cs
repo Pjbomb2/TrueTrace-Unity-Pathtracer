@@ -256,7 +256,19 @@ namespace TrueTrace {
         }
 
 
-        public void Do(ref ComputeBuffer _ColorBuffer, ref RenderTexture Output, float ResolutionRatio, RenderTexture ScreenSpaceInfo, CommandBuffer cmd, int CurFrame, ref RenderTexture WorldPosData, int PartialRenderingFactor, ComputeBuffer ExposureModifier, bool DoExposure, float IndirectBoost, RenderTexture RNGTex)
+        public void Do(ref ComputeBuffer _ColorBuffer, 
+                        ref RenderTexture Output, 
+                        float ResolutionRatio, 
+                        RenderTexture ScreenSpaceInfo, 
+                        CommandBuffer cmd, 
+                        int CurFrame, 
+                        ref RenderTexture WorldPosData, 
+                        int PartialRenderingFactor, 
+                        ComputeBuffer ExposureModifier, 
+                        bool DoExposure, 
+                        float IndirectBoost, 
+                        RenderTexture RNGTex,
+                        int UpscalerMethod)
         {
 
             camera = RayTracingMaster._camera;
@@ -264,6 +276,7 @@ namespace TrueTrace {
             cmd.BeginSample("ASVGF Copy Data Kernel");
             int MaxIterations = 4;
             cmd.SetComputeIntParam(shader, "MaxIterations", MaxIterations);
+            cmd.SetComputeIntParam(shader, "UpscalerMethod", UpscalerMethod);
             cmd.SetComputeFloatParam(shader, "ResRatio", ResolutionRatio);
             shader.SetBool("UseExposure", DoExposure);
             shader.SetFloat("IndirectBoost", IndirectBoost);

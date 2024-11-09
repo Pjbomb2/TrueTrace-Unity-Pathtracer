@@ -14,13 +14,15 @@ namespace TrueTrace {
     [System.Serializable]
     public class ParentObject : MonoBehaviour
     {
+
+
         public LightBVHBuilder LBVH;
         public Task AsyncTask;
         public int ExistsInQue = -1;
         public int QueInProgress = -1;
         public bool IsDeformable = false;
         [HideInInspector] public ComputeBuffer LightTriBuffer;
-        [HideInInspector] public ComputeBuffer LightNodeBuffer;
+        [HideInInspector] public ComputeBuffer LightTreeBuffer;
         [HideInInspector] public ComputeBuffer TriBuffer;
         [HideInInspector] public ComputeBuffer BVHBuffer;
         public string Name;
@@ -34,7 +36,7 @@ namespace TrueTrace {
         [HideInInspector] public CudaTriangle[] AggTriangles;
         [HideInInspector] public Vector3 ParentScale;
         [HideInInspector] public List<LightTriData> LightTriangles;
-        [HideInInspector] public List<Vector3> LightTriNorms;
+        [HideInInspector] private List<Vector3> LightTriNorms;//Test to see if I can get rrid of this alltogether and just calculate the normal based off cross...
         [HideInInspector] public BVH8Builder BVH;
         [HideInInspector] public SkinnedMeshRenderer[] SkinnedMeshes;
         [HideInInspector] public MeshFilter[] DeformableMeshes;
@@ -44,15 +46,15 @@ namespace TrueTrace {
         [HideInInspector] public BVHNode8DataCompressed[] AggNodes;
         [HideInInspector] public int InstanceMeshIndex;
         [HideInInspector] public int LightEndIndex;
-        public AABB aabb_untransformed;
-        public AABB aabb;
+        [HideInInspector] public AABB aabb_untransformed;
+        [HideInInspector] public AABB aabb;
         [HideInInspector] public bool AllFull;
         [HideInInspector] public int AggIndexCount;
         [HideInInspector] public int AggBVHNodeCount;
-        public List<MaterialData> _Materials;
+        [HideInInspector] public List<MaterialData> _Materials;
         [HideInInspector] public int MatOffset;
         [HideInInspector] public StorableTransform[] CachedTransforms;
-        [HideInInspector] public MeshDat CurMeshData;
+        [HideInInspector] private MeshDat CurMeshData;
         public int TotalObjects;
         [HideInInspector] public List<MeshTransformVertexs> TransformIndexes;
         [HideInInspector] public bool HasCompleted;
@@ -65,7 +67,6 @@ namespace TrueTrace {
         [HideInInspector] public int NodeUpdateKernel;
         [HideInInspector] public int NodeCompressKernel;
         [HideInInspector] public int NodeInitializerKernel;
-        [HideInInspector] public int LightTLASRefitKernel;
         [HideInInspector] public int LightBLASRefitKernel;
 
         [HideInInspector] public int CompactedMeshData;
@@ -89,18 +90,12 @@ namespace TrueTrace {
         private ComputeBuffer CWBVHIndicesBuffer;
         private ComputeBuffer[] WorkingBuffer;
         private ComputeBuffer[] WorkingSet;
-        public BVH2Builder BVH2;
-
-        #if TTLightMapping
-            public List<LightMapTriData>[] LightMapTris;
-            public List<int> LightMapTexIndex;
-            public List<int> PerRendererIndex;
-        #endif
+        private BVH2Builder BVH2;
 
         [HideInInspector] public Layer[] ForwardStack;
         [HideInInspector] public Layer2[] LayerStack;
         [HideInInspector] public List<NodeIndexPairData> NodePair;
-        [HideInInspector] public List<float> LuminanceWeights;
+        [HideInInspector] private List<float> LuminanceWeights;
 
         [HideInInspector] public int MaxRecur = 0;
         [HideInInspector] public int[] ToBVHIndex;
@@ -114,7 +109,6 @@ namespace TrueTrace {
         [HideInInspector] public List<BVHNode8DataFixed> SplitNodes;
 
         #if HardwareRT
-            public List<int> HWRTIndex;
             public Renderer[] Renderers;
         #endif
 
@@ -146,7 +140,6 @@ namespace TrueTrace {
             CommonFunctions.DeepClean(ref AggNodes);
             CommonFunctions.DeepClean(ref ForwardStack);
             CommonFunctions.DeepClean(ref LightTriNorms);
-            CommonFunctions.DeepClean(ref CWBVHIndicesBufferInverted);
             CommonFunctions.DeepClean(ref CWBVHIndicesBufferInverted);
             CommonFunctions.DeepClean(ref LuminanceWeights);
             if(TrianglesArray.IsCreated) TrianglesArray.Dispose();
@@ -187,7 +180,7 @@ namespace TrueTrace {
             if (TriBuffer != null)
             {
                 LightTriBuffer?.Release();
-                LightNodeBuffer?.Release();
+                LightTreeBuffer?.ReleaseSafe();
                 TriBuffer?.Release();
                 BVHBuffer?.Release();
             }
@@ -221,7 +214,7 @@ namespace TrueTrace {
             }
             if (TriBuffer != null) {
                 LightTriBuffer.Release();
-                LightNodeBuffer.Release();
+                LightTreeBuffer.ReleaseSafe();
                 TriBuffer.Release();
                 BVHBuffer.Release();
             }
@@ -248,8 +241,11 @@ namespace TrueTrace {
             NodeUpdateKernel = MeshRefit.FindKernel("NodeUpdate");
             NodeCompressKernel = MeshRefit.FindKernel("NodeCompress");
             NodeInitializerKernel = MeshRefit.FindKernel("NodeInitializer");
-            LightTLASRefitKernel = MeshRefit.FindKernel("TLASLightRefitKernel");
+#if !DontUseSGTree
+            LightBLASRefitKernel = MeshRefit.FindKernel("BLASSGTreeRefitKernel");
+#else
             LightBLASRefitKernel = MeshRefit.FindKernel("BLASLightRefitKernel");
+#endif
         }
         private bool NeedsToResetBuffers = true;
         public void SetUpBuffers()
@@ -257,22 +253,35 @@ namespace TrueTrace {
             if (NeedsToResetBuffers)
             {
                 if (LightTriBuffer != null) LightTriBuffer.Release();
-                if (LightNodeBuffer != null) LightNodeBuffer.Release();
                 if (TriBuffer != null) TriBuffer.Release();
                 if (BVHBuffer != null) BVHBuffer.Release();
+                if (LightTreeBuffer != null) LightTreeBuffer.Release();
                   if(AggTriangles != null) {
                     if(LightTriangles.Count == 0) {
-                        LightTriBuffer = new ComputeBuffer(1, 44);
-                        LightNodeBuffer = new ComputeBuffer(1, 40);
+                        LightTriBuffer = new ComputeBuffer(1, CommonFunctions.GetStride<LightTriData>());
+#if !DontUseSGTree
+                        LightTreeBuffer = new ComputeBuffer(1, CommonFunctions.GetStride<GaussianTreeNode>());
+#else
+                        LightTreeBuffer = new ComputeBuffer(1, CommonFunctions.GetStride<CompactLightBVHData>());
+#endif
                     } else {
-                        LightTriBuffer = new ComputeBuffer(Mathf.Max(LightTriangles.Count,1), 44);
-                        LightNodeBuffer = new ComputeBuffer(Mathf.Max(LBVH.nodes.Length,1), 40);
+                        LightTriBuffer = new ComputeBuffer(Mathf.Max(LightTriangles.Count,1), CommonFunctions.GetStride<LightTriData>());
+#if !DontUseSGTree
+                        LightTreeBuffer = new ComputeBuffer(Mathf.Max(LBVH.SGTree.Length,1), CommonFunctions.GetStride<GaussianTreeNode>());
+#else
+                        LightTreeBuffer = new ComputeBuffer(Mathf.Max(LBVH.nodes.Length,1), CommonFunctions.GetStride<CompactLightBVHData>());
+#endif
                     }
                     TriBuffer = new ComputeBuffer(AggTriangles.Length, 88);
                     BVHBuffer = new ComputeBuffer(AggNodes.Length, 80);
                     if(HasLightTriangles) {
                         LightTriBuffer.SetData(LightTriangles);
-                        LightNodeBuffer.SetData(LBVH.nodes);
+#if !DontUseSGTree
+                        LightTreeBuffer.SetData(LBVH.SGTree);
+#else
+                        LightTreeBuffer.SetData(LBVH.nodes);
+#endif
+
                     }
                     TriBuffer.SetData(AggTriangles);
                     BVHBuffer.SetData(AggNodes);
@@ -282,6 +291,7 @@ namespace TrueTrace {
 
         public List<Texture> AlbedoTexs;
         public List<Texture> NormalTexs;
+        public List<Texture> SecondaryNormalTexs;
         public List<Texture> MetallicTexs;
         public List<int> MetallicTexChannelIndex;
         public List<Texture> RoughnessTexs;
@@ -352,6 +362,7 @@ namespace TrueTrace {
             _Materials.Clear();
             AlbedoTexs = new List<Texture>();
             NormalTexs = new List<Texture>();
+            SecondaryNormalTexs = new List<Texture>();
             MetallicTexs = new List<Texture>();
             RoughnessTexs = new List<Texture>();
             EmissionTexs = new List<Texture>();
@@ -426,6 +437,10 @@ namespace TrueTrace {
                     for(int i2 = 0; i2 < TexCount; i2++) {
                         string TexName = RelevantMat.AvailableTextures[i2].TextureName;
                         switch((TexturePurpose)RelevantMat.AvailableTextures[i2].Purpose) {
+                            case(TexturePurpose.SecondaryNormalTexture):
+                                Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref SecondaryNormalTexs, ref TempIndex); 
+                                CurMat.SecondaryNormalTex.x = TempIndex;
+                            break;                            
                             case(TexturePurpose.SecondaryAlbedoTextureMask):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref SecondaryAlbedoTexMasks, ref TempIndex); 
                                 CurMat.SecondaryAlbedoMask.x = TempIndex; 
@@ -476,6 +491,7 @@ namespace TrueTrace {
                     }
 
                     if(JustCreated) {
+                        CurMat.SecondaryNormalTexScaleOffset = TempScale;
                         CurMat.SecondaryAlbedoTexScaleOffset = TempScale;
                         CurMat.AlbedoTextureScale = TempScale;
                         CurMat.SecondaryTextureScale = new Vector2(TempScale.x, TempScale.y);
@@ -633,7 +649,7 @@ namespace TrueTrace {
                     if(IsDeformable)
                       DeformableMeshes[i] = TempFilter;
                 } else if(CurrentObject.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempRend)) {
-                    TempRend.BakeMesh(mesh);
+                    mesh = TempRend.sharedMesh;
                     if (IsSkinnedGroup)
                         SkinnedMeshes[i] = TempRend;
                 }
@@ -649,6 +665,11 @@ namespace TrueTrace {
                 mesh.GetTangents(Tans);
                 if (Tans.Count != 0) CurMeshData.Tangents.AddRange(Tans);
                 else CurMeshData.SetTansZero(mesh.vertexCount);
+
+                var Colors = new List<Color>();
+                mesh.GetColors(Colors);
+                if (Colors.Count != 0) CurMeshData.Colors.AddRange(Colors);
+                else CurMeshData.SetColorsZero(mesh.vertexCount);
 
                 var Norms = new List<Vector3>();
                 mesh.GetNormals(Norms);
@@ -796,21 +817,35 @@ namespace TrueTrace {
                 LT.TriTarget = (uint)CWBVHIndicesBufferInverted[LT.TriTarget];
                 LightTriangles[i] = LT;
             }
-            if(LightTriangles.Count > 0) LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
+            if(LightTriangles.Count > 0) {
+                LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
+
+            }
 
 
         }
+
 
         public List<int>[] Set;
         private void Refit(int Depth, int CurrentIndex) {
+#if DontUseSGTree
             if((2.0f * ((float)(LBVH.nodes[CurrentIndex].cosTheta_oe >> 16) / 32767.0f) - 1.0f) == 0) return;
+#endif
             Set[Depth].Add(CurrentIndex);
+#if !DontUseSGTree
+            if(LBVH.SGTree[CurrentIndex].left < 0) return;
+            Refit(Depth + 1, LBVH.SGTree[CurrentIndex].left);
+            Refit(Depth + 1, LBVH.SGTree[CurrentIndex].left + 1);
+#else 
             if(LBVH.nodes[CurrentIndex].left < 0) return;
             Refit(Depth + 1, LBVH.nodes[CurrentIndex].left);
             Refit(Depth + 1, LBVH.nodes[CurrentIndex].left + 1);
+#endif
         }
 
-        public void RefitMesh(ref ComputeBuffer RealizedAggNodes, ref ComputeBuffer RealizedTriBuffer, ref ComputeBuffer RealizedLightTriBuffer, ref ComputeBuffer RealizedLightNodeBuffer, CommandBuffer cmd)
+
+
+        public void RefitMesh(ref ComputeBuffer RealizedAggNodes, ref ComputeBuffer RealizedTriBuffer, ref ComputeBuffer RealizedLightTriBuffer, ComputeBuffer RealizedLightNodeBuffer, CommandBuffer cmd)
         {
             #if HardwareRT
                 for(int i = 0; i < Renderers.Length; i++) AssetManager.Assets.AccelStruct.UpdateInstanceTransform(Renderers[i]);
@@ -948,7 +983,11 @@ namespace TrueTrace {
                     cmd.BeginSample("LightRefitter");
                     cmd.SetComputeIntParam(MeshRefit, "TotalNodeOffset", LightNodeOffset);
                     cmd.SetComputeMatrixParam(MeshRefit, "ToWorld", transform.localToWorldMatrix);
+#if !DontUseSGTree
+                    cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "SGTreeWrite", RealizedLightNodeBuffer);
+#else
                     cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "LightNodesWrite", RealizedLightNodeBuffer);
+#endif
                     cmd.SetComputeFloatParam(MeshRefit, "FloatMax", float.MaxValue);
                     int ObjectOffset = LightNodeOffset;
                     for(int i = WorkingSet.Length - 1; i >= 0; i--) {
@@ -964,8 +1003,7 @@ namespace TrueTrace {
                     cmd.EndSample("LightRefitter");
                 }
 
-                #if HardwareRT
-                #else
+                #if !HardwareRT
                     cmd.BeginSample("ReMesh Init");
                     cmd.SetComputeIntParam(MeshRefit, "NodeCount", NodePair.Count);
                     cmd.DispatchCompute(MeshRefit, NodeInitializerKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
@@ -1019,6 +1057,7 @@ namespace TrueTrace {
             return Mathf.Sqrt(s * (s - a) * (s - b) * (s - c));
         }
         private float luminance(float r, float g, float b) { return 0.299f * r + 0.587f * g + 0.114f * b; }
+        private float luminance(Vector3 A) { return Vector3.Dot(new Vector3(0.299f, 0.587f, 0.114f), A);}
 
         // Calculate the width and height of a triangle in 3D space
         public Vector2 CalculateTriangleWidthAndHeight(Vector3 pointA, Vector3 pointB, Vector3 pointC) {
@@ -1030,7 +1069,7 @@ namespace TrueTrace {
             return new Vector2(width, height);
         }
 
-        public unsafe async Task BuildTotal() {
+        public unsafe void BuildTotal() {
             int IllumTriCount = 0;
             CudaTriangle TempTri = new CudaTriangle();
             Matrix4x4 ParentMatInv = CachedTransforms[0].WTL;
@@ -1079,6 +1118,9 @@ namespace TrueTrace {
                     Norm2 = TransMat * Vector3.Scale(Scale, CurMeshData.Normals[Index2]);
                     Norm3 = TransMat * Vector3.Scale(Scale, CurMeshData.Normals[Index3]);
 
+
+
+
                     #if TTLightMapping
                         LightMapTris[LightMapRendererIndex].Add(new LightMapTriData() {
                             pos0 = ParentMat * V1,
@@ -1094,9 +1136,9 @@ namespace TrueTrace {
                     #endif
 
 
-                    TempTri.tex0 = CurMeshData.UVs[Index1];
-                    TempTri.texedge1 = CurMeshData.UVs[Index2];
-                    TempTri.texedge2 = CurMeshData.UVs[Index3];
+                    TempTri.tex0 = ((uint)Mathf.FloatToHalf(CurMeshData.UVs[Index1].x) << 16) | Mathf.FloatToHalf(CurMeshData.UVs[Index1].y);
+                    TempTri.texedge1 = ((uint)Mathf.FloatToHalf(CurMeshData.UVs[Index2].x) << 16) | Mathf.FloatToHalf(CurMeshData.UVs[Index2].y);
+                    TempTri.texedge2 = ((uint)Mathf.FloatToHalf(CurMeshData.UVs[Index3].x) << 16) | Mathf.FloatToHalf(CurMeshData.UVs[Index3].y);
 
                     TempTri.pos0 = V1;
                     TempTri.posedge1 = V2 - V1;
@@ -1108,6 +1150,25 @@ namespace TrueTrace {
                     TempTri.tan0 = CommonFunctions.PackOctahedral(Tan1.normalized);
                     TempTri.tan1 = CommonFunctions.PackOctahedral(Tan2.normalized);
                     TempTri.tan2 = CommonFunctions.PackOctahedral(Tan3.normalized);
+                    
+                    TempTri.VertColA = CommonFunctions.packRGBE(CurMeshData.Colors[Index1]);
+                    TempTri.VertColB = CommonFunctions.packRGBE(CurMeshData.Colors[Index2]);
+                    TempTri.VertColC = CommonFunctions.packRGBE(CurMeshData.Colors[Index3]);
+
+                    // {
+                    //     Vector3 N = Norm1.normalized;
+                    //     Vector3 T = Tan1.normalized;
+                    //     Vector3 B = Vector3.Cross(N, T);
+
+                    //     uint EncodedQ = CommonFunctions.encodeQTangentUI32(T, B, N);
+                    //     Vector3 N2 = Vector3.zero;
+                    //     Vector3 T2 = Vector3.zero;
+
+                    //     CommonFunctions.decodeQTangentUI32(EncodedQ, ref T2, ref N2);
+                    //     if(Mathf.Abs(N.x - N2.x) > 0.01f || Mathf.Abs(N.y - N2.y) > 0.01f || Mathf.Abs(N.z - N2.z) > 0.01f) {
+                    //         Debug.Log("AAAA: " + N.normalized + "; " + N2.normalized);
+                    //     }
+                    // }
 
                     TempTri.MatDat = (uint)CurMeshData.MatDat[OffsetReal];
                     AggTriangles[OffsetReal] = TempTri;
@@ -1117,19 +1178,43 @@ namespace TrueTrace {
 
                     if (_Materials[(int)TempTri.MatDat].emission > 0.0f) {
                         bool IsValid = true;
+                        Vector3 SecondaryBaseCol = Vector3.one;
                         #if AccurateLightTris
                             if(_Materials[(int)TempTri.MatDat].EmissiveTex.x != 0) {
                                 int ThisIndex = _Materials[(int)TempTri.MatDat].EmissiveTex.x - 1;
-                                Vector2 UVV = (TempTri.tex0 + TempTri.texedge1 + TempTri.texedge2) / 3.0f;
+                                Vector2 UVV = (new Vector2(Mathf.HalfToFloat((ushort)(TempTri.tex0 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.tex0 & 0xFFFF))) + 
+                                                new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge1 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge1 & 0xFFFF))) + 
+                                                new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge2 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge2 & 0xFFFF)))) / 3.0f;
                                 int UVIndex3 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
-                                if(UVIndex3 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x)
-                                    if(EmissionTexPixels[ThisIndex][UVIndex3].r < 0.1f && EmissionTexPixels[ThisIndex][UVIndex3].g < 0.1f && EmissionTexPixels[ThisIndex][UVIndex3].b < 0.1f) IsValid = false;
+                                UVV = new Vector2(Mathf.HalfToFloat((ushort)(TempTri.tex0 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.tex0 & 0xFFFF))); 
+                                int UVIndex2 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
+                                UVV = new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge1 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge1 & 0xFFFF))); 
+                                int UVIndex1 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
+                                UVV = new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge2 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge2 & 0xFFFF))); 
+                                int UVIndex0 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
+                                bool FoundTrue = false;
+                                if(UVIndex3 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
+                                    if(!(EmissionTexPixels[ThisIndex][UVIndex3].r < 0.01f && EmissionTexPixels[ThisIndex][UVIndex3].g < 0.01f && EmissionTexPixels[ThisIndex][UVIndex3].b < 0.01f)) FoundTrue = true;
+                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex][UVIndex3].r, EmissionTexPixels[ThisIndex][UVIndex3].g, EmissionTexPixels[ThisIndex][UVIndex3].b);
+                                }
+                                if(UVIndex2 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
+                                    if(!(EmissionTexPixels[ThisIndex][UVIndex2].r < 0.01f && EmissionTexPixels[ThisIndex][UVIndex2].g < 0.01f && EmissionTexPixels[ThisIndex][UVIndex2].b < 0.01f)) FoundTrue = true;
+                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex][UVIndex3].r, EmissionTexPixels[ThisIndex][UVIndex3].g, EmissionTexPixels[ThisIndex][UVIndex3].b);
+                                }
+                                if(UVIndex1 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
+                                    if(!(EmissionTexPixels[ThisIndex][UVIndex1].r < 0.01f && EmissionTexPixels[ThisIndex][UVIndex1].g < 0.01f && EmissionTexPixels[ThisIndex][UVIndex1].b < 0.01f)) FoundTrue = true;
+                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex][UVIndex3].r, EmissionTexPixels[ThisIndex][UVIndex3].g, EmissionTexPixels[ThisIndex][UVIndex3].b);
+                                }
+                                if(UVIndex0 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
+                                    if(!(EmissionTexPixels[ThisIndex][UVIndex0].r < 0.01f && EmissionTexPixels[ThisIndex][UVIndex0].g < 0.01f && EmissionTexPixels[ThisIndex][UVIndex0].b < 0.01f)) FoundTrue = true;
+                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex][UVIndex3].r, EmissionTexPixels[ThisIndex][UVIndex3].g, EmissionTexPixels[ThisIndex][UVIndex3].b);
+                                }
+                                IsValid = FoundTrue;
                             
                             }
                         #endif
                         if(IsValid) {
                             HasLightTriangles = true;
-                            LuminanceWeights.Add(_Materials[(int)TempTri.MatDat].emission);
                             Vector3 Radiance = _Materials[(int)TempTri.MatDat].emission * _Materials[(int)TempTri.MatDat].BaseColor;
                             float radiance = luminance(Radiance.x, Radiance.y, Radiance.z);
                             float area = AreaOfTriangle(ParentMat * V1, ParentMat * V2, ParentMat * V3);
@@ -1142,8 +1227,9 @@ namespace TrueTrace {
                                 posedge1 = TempTri.posedge1,
                                 posedge2 = TempTri.posedge2,
                                 TriTarget = (uint)(OffsetReal),
-                                SourceEnergy = radiance
+                                SourceEnergy = Vector3.Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Vector3.Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol))
                                 });
+                            LuminanceWeights.Add(Vector3.Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Vector3.Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol)));
                             IllumTriCount++;
                         }
                     }
@@ -1268,26 +1354,36 @@ namespace TrueTrace {
                 HasCompleted = false;
             }
         }
-        // Vector4 ToVector4(Vector3 A, float B) {
-        //     return new Vector4(A.x, A.y, A.z, B);
-        // }
-        // Vector3 ToVector3(Vector4 A) {
-        //     return new Vector3(A.x, A.y, A.z);
-        // }
 
         // public void OnDrawGizmos() {
 
-        //     int LightTriCount = LightTriangles.Count;
-        //     for(int i = 0; i < LightTriCount; i++) {
-        //         Vector3 Pos0 = ToVector3(this.transform.localToWorldMatrix * ToVector4(LightTriangles[i].pos0, 1));
-        //         Vector3 Pos1 = ToVector3(this.transform.localToWorldMatrix * ToVector4(LightTriangles[i].pos0 + LightTriangles[i].posedge1, 1));
-        //         Vector3 Pos2 = ToVector3(this.transform.localToWorldMatrix * ToVector4(LightTriangles[i].pos0 + LightTriangles[i].posedge2, 1));
-        //             Gizmos.DrawLine(Pos0, Pos1);
-        //             Gizmos.DrawLine(Pos0, Pos2);
-        //             Gizmos.DrawLine(Pos2, Pos1);
+        //     if(LightTriangles != null) {
+        //         int LightTriCount = LightTriangles.Count;
+        //         for(int i = 0; i < LightTriCount; i++) {
+        //             Vector3 Pos0 = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LightTriangles[i].pos0, 1));
+        //             Vector3 Pos1 = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LightTriangles[i].pos0 + LightTriangles[i].posedge1, 1));
+        //             Vector3 Pos2 = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LightTriangles[i].pos0 + LightTriangles[i].posedge2, 1));
+        //                 Gizmos.DrawLine(Pos0, Pos1);
+        //                 Gizmos.DrawLine(Pos0, Pos2);
+        //                 Gizmos.DrawLine(Pos2, Pos1);
+        //         }
         //     }
         // }
 
+
+
+        // public void OnDrawGizmos() {
+        //     if(LBVH != null && LBVH.SGTree != null) {
+        //         int Count = LBVH.SGTree.Length;
+        //         for(int i = 0; i < Count; i++) {
+        //             Vector3 Pos = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LBVH.SGTree[i].S.Center, 1));
+        //             float Radius = Vector3.Distance(Pos, CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LBVH.SGTree[i].S.Center + new Vector3(LBVH.SGTree[i].S.Radius, 0, 0), 1)));
+        //             // if(LightTree[i].variance < LightTree[i].S.Radius * VarTest) Gizmos.DrawWireSphere(Pos, Radius);
+        //             Gizmos.DrawWireSphere(Pos, Radius);
+
+        //         }
+        //     }
+        // }
     }
 
 
