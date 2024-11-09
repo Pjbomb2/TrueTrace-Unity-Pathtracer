@@ -486,7 +486,7 @@ inline GaussianTreeNode UnionSG(const GaussianTreeNode LeftNode, const GaussianT
 	float sharpness = ((3.0f * VLength - VLength * VLength * VLength)) / (1.0f - VLength * VLength);
 
 
-	GaussianTreeNode Dat = {mean, radius, V, variance, sharpness, intensity, Left};//, intensity / (variance * SGIntegral(sharpness))};
+	GaussianTreeNode Dat = {mean, radius, V, variance, sharpness, intensity, Left};
     return Dat;
 }
 
@@ -530,12 +530,10 @@ void TLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
         SGTreeWrite[Index].axis = axis;
         SGTreeWrite[Index].variance = SGTreeWrite[Transf.SolidOffset].variance;
         SGTreeWrite[Index].sharpness = SGTreeWrite[Transf.SolidOffset].sharpness;
-        // SGTreeWrite[Index].left = SGTreeWrite[Transf.SolidOffset].left;
         
 
         SGTreeWrite[Index].radius = SGTreeWrite[Transf.SolidOffset].radius * Scale;
         SGTreeWrite[Index].intensity = SGTreeWrite[Transf.SolidOffset].intensity * Scale;
-        // SGTreeWrite[Index].pad = SGTreeWrite[Index].intensity / (SGTreeWrite[Index].variance * SGIntegral(SGTreeWrite[Index].sharpness));
         return;
     }
     GaussianTreeNode LeftNode = SGTreeWrite[Node.left];
@@ -626,7 +624,6 @@ void BLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
         SGTreeWrite[Index].radius = radius;
         SGTreeWrite[Index].intensity = intensity;
         SGTreeWrite[Index].variance = variance;
-        // SGTreeWrite[Index].pad = SGTreeWrite[Index].intensity / (SGTreeWrite[Index].variance * SGIntegral(SGTreeWrite[Index].sharpness));
         return;
     }
     GaussianTreeNode LeftNode = SGTreeWrite[Node.left + TotalNodeOffset];

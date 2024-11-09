@@ -1675,7 +1675,7 @@ Toolbar toolbar;
          TurnTableBox.Add(TurnTableLabel);
          TurnTableBox.Add(TurnTableAbsolutePath);
 
-         Button CorrectMatOptionsButton = new Button(() => FixRayObjects()) {text = "Correct Mat Options"};
+         Button CorrectMatOptionsButton = new Button(() => FixRayObjects()) {text = "(Debug Button)Correct Mat Options"};
 
          HardSettingsMenu.Add(RemoveTrueTraceButton);
          HardSettingsMenu.Add(NonPlayLabel);
@@ -1694,6 +1694,7 @@ Toolbar toolbar;
          HardSettingsMenu.Add(ScreenShotBox);
          HardSettingsMenu.Add(PanoramaBox);
          HardSettingsMenu.Add(TurnTableBox);
+         HardSettingsMenu.Add(CorrectMatOptionsButton);
          
 
 

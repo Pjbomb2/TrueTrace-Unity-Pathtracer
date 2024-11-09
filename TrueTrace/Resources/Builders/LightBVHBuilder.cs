@@ -450,7 +450,6 @@ namespace TrueTrace {
                         TempNode.S.Radius = radius;
 
                         TempNode.left = LBVHNode.left;
-                        // TempNode.pad = intensity / (variance * SGIntegral(TempNode.sharpness));
                         SGTree[WriteIndex] = TempNode;
                     }
                 }
@@ -602,7 +601,6 @@ namespace TrueTrace {
                         }
 
                         TempNode.left = LBVHNode.left;
-                        // TempNode.pad = TempNode.intensity / (TempNode.variance * SGIntegral(TempNode.sharpness));
                         SGTree[WriteIndex] = TempNode;
                     }
                 }

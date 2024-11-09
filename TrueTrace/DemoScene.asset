@@ -27,8 +27,8 @@ MonoBehaviour:
   DoFAperatureScale: 0.54
   DoFFocal: 2
   PPExposure: 0
-  ExposureAuto: 0
-  PPToneMap: 1
+  ExposureAuto: 1
+  PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
   DenoiserMethod: 0
@@ -75,7 +75,7 @@ MonoBehaviour:
   PPFXAA: 0
   OIDNBlendRatio: 0.119
   ConvBloom: 1
-  ConvStrength: 1.22
+  ConvStrength: 0.18
   ConvBloomThreshold: 0
   ConvBloomSize: {x: 1, y: 1}
   ConvBloomDistExp: 0

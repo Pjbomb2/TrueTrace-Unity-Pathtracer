@@ -3,6 +3,11 @@
     #pragma use_dxc
 #endif
 #include "../../MainCompute/CommonData.cginc"
+#ifdef HardwareRT
+    #include "UnityRayQuery.cginc"
+    #pragma require inlineraytracing
+    RaytracingAccelerationStructure myAccelerationStructure;
+#endif
 
 int SDFCount;
 float Scale;
@@ -120,7 +125,7 @@ inline void VisabilityCheck(SmallerRay ray, inout float dist) {
                         if(_AlphaAtlas.SampleLevel(my_point_clamp_sampler, Uv, 0) < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.001f; continue;}
                     }
                 #endif
-                dist = myRay.TMax;
+                dist = myRay.TMin;
                 return;
             }
             return;

@@ -28,7 +28,6 @@ struct GaussianTreeNode {
 	float sharpness;
 	float intensity;
 	int left;
-	// float pad;
 };
 
 struct LightBVHData {
@@ -42,8 +41,10 @@ struct LightBVHData {
 
 #ifdef UseSGTree
 	StructuredBuffer<GaussianTreeNode> SGTree;
+	StructuredBuffer<GaussianTreeNode> SGTreePrev;
 #else 
 	StructuredBuffer<LightBVHData> SGTree;
+	StructuredBuffer<LightBVHData> SGTreePrev;
 #endif
 
 struct MyMeshDataCompacted {
@@ -57,6 +58,7 @@ struct MyMeshDataCompacted {
 };
 
 StructuredBuffer<MyMeshDataCompacted> _MeshData;
+StructuredBuffer<MyMeshDataCompacted> _MeshDataPrev;
 
 struct TerrainData {
     float3 PositionOffset;

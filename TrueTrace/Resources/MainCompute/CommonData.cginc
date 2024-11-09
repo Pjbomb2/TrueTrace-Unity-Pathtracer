@@ -633,6 +633,8 @@ static float3 CalculateExtinction2(float3 apparantColor, float scatterDistance)
     return 1.0f / (s * scatterDistance);
 }
 //shadow_triangle
+//triangle_shadow
+//putting these^ here cuz I ALWAYS ctrl + f for the WRONG term when trying to find this function...
 inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const float max_distance, inout float3 throughput, const int MatOffset) {
     TrianglePos tri = triangle_get_positions(tri_id);
   	TriangleUvs tri2 = triangle_get_positions2(tri_id);
@@ -665,9 +667,9 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const fl
 				            		float3 MatCol = _Materials[MaterialIndex].surfaceColor;
 							        if(_Materials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _Materials[MaterialIndex]) / 3.0f;
 	        						MatCol = lerp(MatCol, _Materials[MaterialIndex].BlendColor, _Materials[MaterialIndex].BlendFactor);
-	        						float Dotter = abs(dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction));
+									//float Dotter = abs(dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction));
 
-			    					throughput *= Dotter * sqrt(exp(-t * CalculateExtinction2(1.0f - MatCol, _Materials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _Materials[MaterialIndex].scatterDistance)));
+			    					throughput *= sqrt(exp(-CalculateExtinction2(1.0f - MatCol, _Materials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _Materials[MaterialIndex].scatterDistance)));
 			    				#endif
 			                	return false;
 			                }
@@ -1606,7 +1608,11 @@ int CalcInside(LightBVHData A, LightBVHData B, float3 p, int Index) {
 	} else return -1;
 }
 
-void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic) {
+#ifdef UseSGTree
+void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, StructuredBuffer<GaussianTreeNode> NodeBuffer, StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
+#else
+void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int pixel_index, const int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, StructuredBuffer<LightBVHData> NodeBuffer, StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
+#endif
 	int node_index = 0;
 	int Reps = 0;
 	bool HasHitTLAS = false;
@@ -1626,15 +1632,15 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 	while(Reps < 100) {
 		Reps++;
 #ifdef UseSGTree
-		GaussianTreeNode node = SGTree[node_index];
+		GaussianTreeNode node = NodeBuffer[node_index];
 #else
 		LightBVHData node = SGTree[node_index];
 #endif
 		[branch]if(node.left >= 0) {
 #ifdef UseSGTree
 			const float2 ci = float2(
-				SGImportance(SGTree[node.left + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame),
-				SGImportance(SGTree[node.left + 1 + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame)
+				SGImportance(NodeBuffer[node.left + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame),
+				SGImportance(NodeBuffer[node.left + 1 + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame)
 			);
 #else
 			const float2 ci = float2(
@@ -1676,19 +1682,19 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 			if(HasHitTLAS) {
 				return;	
 			} else {
-				p = mul(_MeshData[MeshIndex].W2L, float4(p,1));
-				p2 = mul(_MeshData[MeshIndex].W2L, float4(p2,1));
-			    float3x3 Inverse = (float3x3)inverse(_MeshData[MeshIndex].W2L);
+				p = mul(MeshBuffer[MeshIndex].W2L, float4(p,1));
+				p2 = mul(MeshBuffer[MeshIndex].W2L, float4(p2,1));
+			    float3x3 Inverse = (float3x3)inverse(MeshBuffer[MeshIndex].W2L);
 			    float scalex = length(mul(Inverse, float3(1,0,0)));
 			    float scaley = length(mul(Inverse, float3(0,1,0)));
 			    float scalez = length(mul(Inverse, float3(0,0,1)));
 			    float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
-				n = normalize(mul(_MeshData[MeshIndex].W2L, float4(n,0)).xyz / Scale);
-				viewDir = normalize(mul(_MeshData[MeshIndex].W2L, float4(viewDir,0)).xyz / Scale);
+				n = normalize(mul(MeshBuffer[MeshIndex].W2L, float4(n,0)).xyz / Scale);
+				viewDir = normalize(mul(MeshBuffer[MeshIndex].W2L, float4(viewDir,0)).xyz / Scale);
 				tangentFrame = GetTangentSpace2(n);//Need to maybe check to see if this holds up when the traversal backtracks due to dead end
 				viewDirTS = mul(tangentFrame, viewDir);
 				reflecVec = reflect(-viewDir, n) * reflecSharpness;
-				NodeOffset = _MeshData[MeshIndex].LightNodeOffset;
+				NodeOffset = MeshBuffer[MeshIndex].LightNodeOffset;
 				node_index = NodeOffset;
 				HasHitTLAS = true;
 				if(MeshIndex != _LightMeshes[-(node.left+1)].LockedMeshIndex) {
@@ -1706,8 +1712,11 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 
 
 
-
-int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, inout int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic) {
+#ifdef UseSGTree
+int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, inout int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, StructuredBuffer<GaussianTreeNode> NodeBuffer, StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
+#else
+int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, inout int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, StructuredBuffer<LightBVHData> NodeBuffer, StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
+#endif
 	int node_index = 0;
 	int Reps = 0;
 	bool HasHitTLAS = false;
@@ -1724,15 +1733,15 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 	while(Reps < 222) {
 		Reps++;
 #ifdef UseSGTree
-		GaussianTreeNode node = SGTree[node_index];
+		GaussianTreeNode node = NodeBuffer[node_index];
 #else
-		LightBVHData node = SGTree[node_index];
+		LightBVHData node = NodeBuffer[node_index];
 #endif
 		[branch]if(node.left >= 0) {
 #ifdef UseSGTree
 			const float2 ci = float2(
-				SGImportance(SGTree[node.left + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame),
-				SGImportance(SGTree[node.left + 1 + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame)
+				SGImportance(NodeBuffer[node.left + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame),
+				SGImportance(NodeBuffer[node.left + 1 + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame)
 			);
 #else
 			const float2 ci = float2(
@@ -1766,18 +1775,18 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 			} else {
 				StartIndex = _LightMeshes[-(node.left+1)].StartIndex; 
 				MeshIndex = _LightMeshes[-(node.left+1)].LockedMeshIndex;
-			    float3x3 Inverse = (float3x3)inverse(_MeshData[MeshIndex].W2L);
+			    float3x3 Inverse = (float3x3)inverse(MeshBuffer[MeshIndex].W2L);
 			    float scalex = length(mul(Inverse, float3(1,0,0)));
 			    float scaley = length(mul(Inverse, float3(0,1,0)));
 			    float scalez = length(mul(Inverse, float3(0,0,1)));
 			    float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
-				p = mul(_MeshData[MeshIndex].W2L, float4(p,1));
-				n = normalize(mul(_MeshData[MeshIndex].W2L, float4(n,0)).xyz / Scale);
-				viewDir = normalize(mul(_MeshData[MeshIndex].W2L, float4(viewDir,0)).xyz / Scale);
+				p = mul(MeshBuffer[MeshIndex].W2L, float4(p,1));
+				n = normalize(mul(MeshBuffer[MeshIndex].W2L, float4(n,0)).xyz / Scale);
+				viewDir = normalize(mul(MeshBuffer[MeshIndex].W2L, float4(viewDir,0)).xyz / Scale);
 				tangentFrame = GetTangentSpace2(n);
 				viewDirTS = mul(tangentFrame, viewDir);
 				reflecVec = reflect(-viewDir, n) * reflecSharpness;
-				NodeOffset = _MeshData[MeshIndex].LightNodeOffset;
+				NodeOffset = MeshBuffer[MeshIndex].LightNodeOffset;
 				node_index = NodeOffset;
 				HasHitTLAS = true;
 			}
@@ -2496,7 +2505,11 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
         FinalPos += Position;
         lightWeight *= (wsum / max((CounCoun) * MinP_Hat, 0.000001f) * LightCount);
     #else
-        MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic);
+		[branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) {
+	    	MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, SGTreePrev, _MeshDataPrev);
+		} else {
+        	MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, SGTree, _MeshData);
+		}
         if(MinIndex == -1) return -1;
         MeshTriOffset = _MeshData[MeshIndex].TriOffset;
         MatOffset =_MeshData[MeshIndex].MaterialOffset;
@@ -2594,3 +2607,19 @@ inline float3 temperature(float t)
         return float4(pal(LinearIndex), 1);
     }
 #endif
+
+
+float3 applyFog( in float3  col,   // color of pixel
+               in float t,     // distance to point
+               in float3  rd,    // camera to point
+               in float3  lig)  // sun direction
+{
+	float3 b =  0.0001f;//float3(0.1f, 0.1f, 0.1f);
+    float fogAmount = 1.0 - exp(-t*b);
+    float sunAmount = max( dot(rd, lig), 0.0 );
+    float3  fogColor  = lerp( float3(0.5,0.6,0.7), // blue
+                           float3(1.0,0.9,0.7), // yellow
+                           pow(sunAmount,8.0) );
+    return lerp( col, fogColor, fogAmount );
+    // return col*exp(-t*b) + fogColor*(1.0-exp(-t*b));
+}

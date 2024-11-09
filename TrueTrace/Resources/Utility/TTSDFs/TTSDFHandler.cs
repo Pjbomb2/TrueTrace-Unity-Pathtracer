@@ -263,7 +263,7 @@ namespace TrueTrace {
             VisualElement rootVisualElement = new VisualElement();
 
 
-            TwoPaneSplitView NewView = new TwoPaneSplitView(1, 250, TwoPaneSplitViewOrientation.Horizontal);
+            TwoPaneSplitView NewView = new TwoPaneSplitView(0, 250, TwoPaneSplitViewOrientation.Horizontal);
 
             NewView.style.minHeight = 1000;
 

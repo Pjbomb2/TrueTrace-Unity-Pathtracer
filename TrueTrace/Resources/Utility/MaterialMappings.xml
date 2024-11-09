@@ -6490,12 +6490,7 @@
       <TexturePairs>
         <Purpose>3</Purpose>
         <ReadIndex>-4</ReadIndex>
-        <TextureName>_EmissionMask</TextureName>
-      </TexturePairs>
-      <TexturePairs>
-        <Purpose>4</Purpose>
-        <ReadIndex>0</ReadIndex>
-        <TextureName>_EmissionMask1</TextureName>
+        <TextureName>_EmissionMap</TextureName>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>

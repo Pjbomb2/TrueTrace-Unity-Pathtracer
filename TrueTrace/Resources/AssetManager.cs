@@ -53,7 +53,8 @@ namespace TrueTrace {
         [HideInInspector] public ComputeBuffer BVH8AggregatedBuffer;
         [HideInInspector] public ComputeBuffer AggTriBuffer;
         [HideInInspector] public ComputeBuffer LightTriBuffer;
-        [HideInInspector] public ComputeBuffer LightTreeBuffer;
+        [HideInInspector] public ComputeBuffer LightTreeBufferA;
+        [HideInInspector] public ComputeBuffer LightTreeBufferB;
         [HideInInspector] public List<MyMeshDataCompacted> MyMeshesCompacted;
         [HideInInspector] public List<LightData> UnityLights;
         [HideInInspector] public InstancedManager InstanceData;
@@ -66,7 +67,8 @@ namespace TrueTrace {
         [HideInInspector] public bool DoHeightmap;
 
         [HideInInspector] public ComputeBuffer MaterialBuffer;
-        [HideInInspector] public ComputeBuffer MeshDataBuffer;
+        [HideInInspector] public ComputeBuffer MeshDataBufferA;
+        [HideInInspector] public ComputeBuffer MeshDataBufferB;
         [HideInInspector] public ComputeBuffer LightMeshBuffer;
         [HideInInspector] public ComputeBuffer UnityLightBuffer;
 
@@ -79,7 +81,8 @@ namespace TrueTrace {
             ThisShader.SetComputeBuffer(Kernel, "TLASBVH8Indices", TLASCWBVHIndexes);
             ThisShader.SetComputeBuffer(Kernel, "AggTris", AggTriBuffer);
             ThisShader.SetComputeBuffer(Kernel, "cwbvh_nodes", BVH8AggregatedBuffer);
-            ThisShader.SetComputeBuffer(Kernel, "_MeshData", MeshDataBuffer);
+            ThisShader.SetComputeBuffer(Kernel, "_MeshData", RayMaster.FramesSinceStart2 % 2 == 0 ? MeshDataBufferA : MeshDataBufferB);
+            ThisShader.SetComputeBuffer(Kernel, "_MeshDataPrev", RayMaster.FramesSinceStart2 % 2 == 1 ? MeshDataBufferA : MeshDataBufferB);
             ThisShader.SetComputeBuffer(Kernel, "_Materials", MaterialBuffer);
             ThisShader.SetTexture(Kernel, "_AlphaAtlas", AlphaAtlas);
             ThisShader.SetTexture(Kernel, "_IESAtlas", IESAtlas);
@@ -103,7 +106,8 @@ namespace TrueTrace {
             ThisShader.SetComputeBuffer(Kernel, "_UnityLights", UnityLightBuffer);
             ThisShader.SetComputeBuffer(Kernel, "LightTriangles", LightTriBuffer);
             ThisShader.SetComputeBuffer(Kernel, "_LightMeshes", LightMeshBuffer);
-            ThisShader.SetComputeBuffer(Kernel, "SGTree", LightTreeBuffer);
+            ThisShader.SetComputeBuffer(Kernel, "SGTree", RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB);
+            ThisShader.SetComputeBuffer(Kernel, "SGTreePrev", RayMaster.FramesSinceStart2 % 2 == 1 ? LightTreeBufferA : LightTreeBufferB);
             ThisShader.SetTexture(Kernel, "Heightmap", HeightmapAtlas);
         }
 
@@ -190,12 +194,14 @@ namespace TrueTrace {
 
             TerrainBuffer.ReleaseSafe();
             LightTriBuffer.ReleaseSafe();
-            LightTreeBuffer.ReleaseSafe();
+            LightTreeBufferA.ReleaseSafe();
+            LightTreeBufferB.ReleaseSafe();
             BVH8AggregatedBuffer.ReleaseSafe();
             AggTriBuffer.ReleaseSafe();
 
             MaterialBuffer.ReleaseSafe();
-            MeshDataBuffer.ReleaseSafe();
+            MeshDataBufferA.ReleaseSafe();
+            MeshDataBufferB.ReleaseSafe();
             LightMeshBuffer.ReleaseSafe();
             UnityLightBuffer.ReleaseSafe();
 
@@ -794,7 +800,8 @@ namespace TrueTrace {
             #endif
 
             LightTriBuffer.ReleaseSafe();
-            LightTreeBuffer.ReleaseSafe();
+            LightTreeBufferA.ReleaseSafe();
+            LightTreeBufferB.ReleaseSafe();
             BVH8AggregatedBuffer.ReleaseSafe();
             AggTriBuffer.ReleaseSafe();
 
@@ -920,7 +927,8 @@ namespace TrueTrace {
             UnityLightCount = 0;
             TerrainInfos = new List<TerrainDat>();
             LightTriBuffer.ReleaseSafe();
-            LightTreeBuffer.ReleaseSafe();
+            LightTreeBufferA.ReleaseSafe();
+            LightTreeBufferB.ReleaseSafe();
             BVH8AggregatedBuffer.ReleaseSafe();
             AggTriBuffer.ReleaseSafe();
             MeshFunctions = Resources.Load<ComputeShader>("Utility/GeneralMeshFunctions");
@@ -1201,7 +1209,8 @@ namespace TrueTrace {
                     BVH8AggregatedBuffer.Release();
                     AggTriBuffer.Release();
                     LightTriBuffer.Release();
-                    if(LightTreeBuffer != null) LightTreeBuffer.Release();
+                    if(LightTreeBufferA != null) LightTreeBufferA.Release();
+                    if(LightTreeBufferB != null) LightTreeBufferB.Release();
                 }
                 for (int i = 0; i < ParentsLength; i++)
                 {
@@ -1238,17 +1247,21 @@ namespace TrueTrace {
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBuffer, AggTriCount, 88);
                     CommonFunctions.CreateDynamicBuffer(ref LightTriBuffer, LightTriCount, CommonFunctions.GetStride<LightTriData>());
 #if !DontUseSGTree
-                    CommonFunctions.CreateDynamicBuffer(ref LightTreeBuffer, AggSGTreeNodeCount, CommonFunctions.GetStride<GaussianTreeNode>());
+                    CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount, CommonFunctions.GetStride<GaussianTreeNode>());
+                    CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferB, AggSGTreeNodeCount, CommonFunctions.GetStride<GaussianTreeNode>());
 #else
-                    CommonFunctions.CreateDynamicBuffer(ref LightTreeBuffer, AggSGTreeNodeCount, CommonFunctions.GetStride<CompactLightBVHData>());
+                    CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount, CommonFunctions.GetStride<CompactLightBVHData>());
+                    CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferB, AggSGTreeNodeCount, CommonFunctions.GetStride<CompactLightBVHData>());
 #endif
                     MeshFunctions.SetBuffer(TriangleBufferKernel, "OutCudaTriArray", AggTriBuffer);
                     MeshFunctions.SetBuffer(NodeBufferKernel, "OutAggNodes", BVH8AggregatedBuffer);
                     MeshFunctions.SetBuffer(LightBufferKernel, "LightTrianglesOut", LightTriBuffer);
 #if !DontUseSGTree
-                    MeshFunctions.SetBuffer(LightTreeNodeBufferKernel, "SGNodesOut", LightTreeBuffer);
+                    MeshFunctions.SetBuffer(LightTreeNodeBufferKernel, "SGNodesOut", LightTreeBufferA);
+                    MeshFunctions.SetBuffer(LightTreeNodeBufferKernel, "SGNodesOut2", LightTreeBufferB);
 #else
-                    MeshFunctions.SetBuffer(LightTreeNodeBufferKernel, "LightNodesOut", LightTreeBuffer);
+                    MeshFunctions.SetBuffer(LightTreeNodeBufferKernel, "LightNodesOut", LightTreeBufferA);
+                    MeshFunctions.SetBuffer(LightTreeNodeBufferKernel, "LightNodesOut2", LightTreeBufferB);
 #endif     
                     int MatOffset = 0;
                     int CurLightMesh = 0;
@@ -1418,7 +1431,7 @@ namespace TrueTrace {
             if (UseSkinning && didstart) {
                 for (int i = 0; i < ParentsLength; i++) {//Refit BVH's of skinned meshes
                     if (RenderQue[i].IsSkinnedGroup || RenderQue[i].IsDeformable) {
-                        RenderQue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBuffer, ref LightTriBuffer, ref LightTreeBuffer, cmd);
+                        RenderQue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBuffer, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, cmd);
                         if(i < MyMeshesCompacted.Count) {
                             MyMeshDataCompacted TempMesh2 = MyMeshesCompacted[i];
                             TempMesh2.Transform = RenderTransforms[i].worldToLocalMatrix;
@@ -1691,9 +1704,11 @@ namespace TrueTrace {
                     }
                     LBVH = new LightBVHBuilder(LightAABBs, ref SGTree, LightBVHTransforms, SGTreeNodes);
 #if !DontUseSGTree
-                    LightTreeBuffer.SetData(SGTree, 0, 0, SGTree.Length);
+                    LightTreeBufferA.SetData(SGTree, 0, 0, SGTree.Length);
+                    LightTreeBufferB.SetData(SGTree, 0, 0, SGTree.Length);
 #else
-                    LightTreeBuffer.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
+                    LightTreeBufferA.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
+                    LightTreeBufferB.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
 #endif
                 }
                 
@@ -1782,9 +1797,11 @@ namespace TrueTrace {
                 if(LightMeshCount > 0) {
                     LBVH = new LightBVHBuilder(LightAABBs, ref SGTree, LightBVHTransforms, SGTreeNodes);
 #if !DontUseSGTree
-                    LightTreeBuffer.SetData(SGTree, 0, 0, SGTree.Length);
+                    LightTreeBufferA.SetData(SGTree, 0, 0, SGTree.Length);
+                    LightTreeBufferB.SetData(SGTree, 0, 0, SGTree.Length);
 #else
-                    LightTreeBuffer.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
+                    LightTreeBufferA.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
+                    LightTreeBufferB.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
 #endif
                 }
                 LightBVHTransformsBuffer.ReleaseSafe();
@@ -1800,9 +1817,9 @@ namespace TrueTrace {
                     cmd.BeginSample("LightRefitter");
                     cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "Transfers", LightBVHTransformsBuffer);
 #if !DontUseSGTree
-                    cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "SGTreeWrite", LightTreeBuffer);
+                    cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "SGTreeWrite", RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB);
 #else
-                    cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "LightNodesWrite", LightTreeBuffer);
+                    cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "LightNodesWrite", RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB);
 #endif
                     int ObjectOffset = 0;
                     for(int i = LBVH.WorkingSet.Length - 1; i >= 0; i--) {
@@ -1925,9 +1942,11 @@ namespace TrueTrace {
                 if(LightMeshCount > 0) {
                     LBVH = new LightBVHBuilder(LightAABBs, ref SGTree, LightBVHTransforms, SGTreeNodes);
 #if !DontUseSGTree
-                    LightTreeBuffer.SetData(SGTree, 0, 0, SGTree.Length);
+                    LightTreeBufferA.SetData(SGTree, 0, 0, SGTree.Length);
+                    LightTreeBufferB.SetData(SGTree, 0, 0, SGTree.Length);
 #else
-                    LightTreeBuffer.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
+                    LightTreeBufferA.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
+                    LightTreeBufferB.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
 #endif
                 }
 
@@ -1982,7 +2001,8 @@ namespace TrueTrace {
                 #if !HardwareRT
                     BVH8AggregatedBuffer.SetData(TempBVHArray, 0, 0, TempBVHArray.Length);
                 #endif
-                CommonFunctions.CreateComputeBuffer(ref MeshDataBuffer, MyMeshesCompacted);
+                CommonFunctions.CreateComputeBuffer(ref MeshDataBufferA, MyMeshesCompacted);
+                CommonFunctions.CreateComputeBuffer(ref MeshDataBufferB, MyMeshesCompacted);
                 #if HardwareRT
                     CommonFunctions.CreateComputeBuffer(ref MeshIndexOffsets, MeshOffsets);
                     CommonFunctions.CreateComputeBuffer(ref SubMeshOffsetsBuffer, SubMeshOffsets);
@@ -2045,7 +2065,8 @@ namespace TrueTrace {
                 RefitTLAS(MeshAABBs, cmd);
                 cmd.EndSample("TLAS Refitting");
                 HasChangedMaterials = UpdateMaterials();
-                MeshDataBuffer.SetData(MyMeshesCompacted);
+                if(RayMaster.FramesSinceStart2 % 2 == 0) MeshDataBufferA.SetData(MyMeshesCompacted);
+                else MeshDataBufferB.SetData(MyMeshesCompacted);
             }
             if(HasChangedMaterials) MaterialBuffer.SetData(_Materials);
             LightMeshData CurLightMesh;

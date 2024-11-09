@@ -845,7 +845,7 @@ namespace TrueTrace {
 
 
 
-        public void RefitMesh(ref ComputeBuffer RealizedAggNodes, ref ComputeBuffer RealizedTriBuffer, ref ComputeBuffer RealizedLightTriBuffer, ref ComputeBuffer RealizedLightNodeBuffer, CommandBuffer cmd)
+        public void RefitMesh(ref ComputeBuffer RealizedAggNodes, ref ComputeBuffer RealizedTriBuffer, ref ComputeBuffer RealizedLightTriBuffer, ComputeBuffer RealizedLightNodeBuffer, CommandBuffer cmd)
         {
             #if HardwareRT
                 for(int i = 0; i < Renderers.Length; i++) AssetManager.Assets.AccelStruct.UpdateInstanceTransform(Renderers[i]);
@@ -1186,10 +1186,30 @@ namespace TrueTrace {
                                                 new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge1 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge1 & 0xFFFF))) + 
                                                 new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge2 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge2 & 0xFFFF)))) / 3.0f;
                                 int UVIndex3 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
+                                UVV = new Vector2(Mathf.HalfToFloat((ushort)(TempTri.tex0 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.tex0 & 0xFFFF))); 
+                                int UVIndex2 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
+                                UVV = new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge1 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge1 & 0xFFFF))); 
+                                int UVIndex1 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
+                                UVV = new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge2 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge2 & 0xFFFF))); 
+                                int UVIndex0 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
+                                bool FoundTrue = false;
                                 if(UVIndex3 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
-                                    if(EmissionTexPixels[ThisIndex][UVIndex3].r < 0.1f && EmissionTexPixels[ThisIndex][UVIndex3].g < 0.1f && EmissionTexPixels[ThisIndex][UVIndex3].b < 0.1f) IsValid = false;
-                                    else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex][UVIndex3].r, EmissionTexPixels[ThisIndex][UVIndex3].g, EmissionTexPixels[ThisIndex][UVIndex3].b);
+                                    if(!(EmissionTexPixels[ThisIndex][UVIndex3].r < 0.01f && EmissionTexPixels[ThisIndex][UVIndex3].g < 0.01f && EmissionTexPixels[ThisIndex][UVIndex3].b < 0.01f)) FoundTrue = true;
+                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex][UVIndex3].r, EmissionTexPixels[ThisIndex][UVIndex3].g, EmissionTexPixels[ThisIndex][UVIndex3].b);
                                 }
+                                if(UVIndex2 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
+                                    if(!(EmissionTexPixels[ThisIndex][UVIndex2].r < 0.01f && EmissionTexPixels[ThisIndex][UVIndex2].g < 0.01f && EmissionTexPixels[ThisIndex][UVIndex2].b < 0.01f)) FoundTrue = true;
+                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex][UVIndex3].r, EmissionTexPixels[ThisIndex][UVIndex3].g, EmissionTexPixels[ThisIndex][UVIndex3].b);
+                                }
+                                if(UVIndex1 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
+                                    if(!(EmissionTexPixels[ThisIndex][UVIndex1].r < 0.01f && EmissionTexPixels[ThisIndex][UVIndex1].g < 0.01f && EmissionTexPixels[ThisIndex][UVIndex1].b < 0.01f)) FoundTrue = true;
+                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex][UVIndex3].r, EmissionTexPixels[ThisIndex][UVIndex3].g, EmissionTexPixels[ThisIndex][UVIndex3].b);
+                                }
+                                if(UVIndex0 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
+                                    if(!(EmissionTexPixels[ThisIndex][UVIndex0].r < 0.01f && EmissionTexPixels[ThisIndex][UVIndex0].g < 0.01f && EmissionTexPixels[ThisIndex][UVIndex0].b < 0.01f)) FoundTrue = true;
+                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex][UVIndex3].r, EmissionTexPixels[ThisIndex][UVIndex3].g, EmissionTexPixels[ThisIndex][UVIndex3].b);
+                                }
+                                IsValid = FoundTrue;
                             
                             }
                         #endif
@@ -1337,14 +1357,16 @@ namespace TrueTrace {
 
         // public void OnDrawGizmos() {
 
-        //     int LightTriCount = LightTriangles.Count;
-        //     for(int i = 0; i < LightTriCount; i++) {
-        //         Vector3 Pos0 = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LightTriangles[i].pos0, 1));
-        //         Vector3 Pos1 = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LightTriangles[i].pos0 + LightTriangles[i].posedge1, 1));
-        //         Vector3 Pos2 = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LightTriangles[i].pos0 + LightTriangles[i].posedge2, 1));
-        //             Gizmos.DrawLine(Pos0, Pos1);
-        //             Gizmos.DrawLine(Pos0, Pos2);
-        //             Gizmos.DrawLine(Pos2, Pos1);
+        //     if(LightTriangles != null) {
+        //         int LightTriCount = LightTriangles.Count;
+        //         for(int i = 0; i < LightTriCount; i++) {
+        //             Vector3 Pos0 = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LightTriangles[i].pos0, 1));
+        //             Vector3 Pos1 = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LightTriangles[i].pos0 + LightTriangles[i].posedge1, 1));
+        //             Vector3 Pos2 = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LightTriangles[i].pos0 + LightTriangles[i].posedge2, 1));
+        //                 Gizmos.DrawLine(Pos0, Pos1);
+        //                 Gizmos.DrawLine(Pos0, Pos2);
+        //                 Gizmos.DrawLine(Pos2, Pos1);
+        //         }
         //     }
         // }
 

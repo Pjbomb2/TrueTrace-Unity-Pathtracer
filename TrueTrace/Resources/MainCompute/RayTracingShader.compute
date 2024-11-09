@@ -162,7 +162,11 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
             float light_pdf = 1.0f / (SA * LightMeshCount);
             #if defined(LBVH) && !defined(FasterLightSampling)
-                CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f);
+                [branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) {
+                    CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTreePrev, _MeshDataPrev);
+                } else {
+                    CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTree, _MeshData);
+                }
             #else
                 light_pdf *= rcp(_MeshData[hit.mesh_id].LightTriCount);
             #endif
@@ -502,6 +506,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                         bsdf_diffuse *= saturate(saturate(dot(to_light, -LightNorm)) * MiscInfo.y + MiscInfo.z);
                         Illum *= saturate(saturate(dot(to_light, -LightNorm)) * MiscInfo.y + MiscInfo.z);
                     }
+                    // if(id.x > screen_width / 2) Illum *= applyFog(1, 10000.0f, to_light, SunDir);
                     float maxillum = max(max(Illum.x, Illum.y), Illum.z);
                     if(DoExposure) maxillum *= Exposure[0];
                     if(!UseRussianRoulette || (CurBounce == 0 && ImprovedPrimaryHit)) maxillum = 1;
@@ -619,6 +624,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     #endif
 
 
+
 int MaterialIndex;
 #ifdef AdvancedBackground
     bool BackgroundCheck = false;
@@ -650,6 +656,7 @@ int MaterialIndex;
                 Stars *= max(12.0f * pow(1.0f - saturate(pow(RayleighPhaseFunction(dot(ray.direction, SunDir)) * MiePhaseFunction(0.8f, dot(ray.direction, SunDir)),0.1f)),2.0f) * transmittance * -dot(rayorig2, SunDir) / length(rayorig2), 0);
                 Stars = pow(saturate(Stars), 2.0f);
                 if(GetBounceData(Color.MetRoughIsSpec) <= 1) Radiance += Stars;
+                // if(id.x > screen_width / 2) Radiance = applyFog(Radiance, 500.0f, ray.direction, SunDir);
 
                 if (all(Radiance < 10000.0f)) {
                     Radiance = DeSat(Radiance, 1.0f - TrueDeSat);
@@ -719,6 +726,9 @@ int MaterialIndex;
         }
         return;
     }
+
+
+
     float2 BaseUv;
     bool HitTerrain = false;
     MaterialData TempMat;
@@ -795,7 +805,9 @@ int MaterialIndex;
         TempMat.surfaceColor = saturate(TempMat.surfaceColor);
         TempMat.surfaceColor = lerp(TempMat.surfaceColor, TempMat.BlendColor, TempMat.BlendFactor);
     }
-
+    {
+        // if(id.x > screen_width / 2) TempMat.surfaceColor = applyFog(TempMat.surfaceColor, bestHit.t, ray.direction, SunDir);
+    }
 
     #if DebugView != -1
         #if DebugView == DVMatID
