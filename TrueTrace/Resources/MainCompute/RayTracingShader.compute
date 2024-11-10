@@ -162,11 +162,12 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
             float light_pdf = 1.0f / (SA * LightMeshCount);
             #if defined(LBVH) && !defined(FasterLightSampling)
-                [branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) {
-                    CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTreePrev, _MeshDataPrev);
-                } else {
+                #ifdef DoubleBufferSGTree
+                    [branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTreePrev, _MeshDataPrev);
+                    else CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTree, _MeshData);
+                #else
                     CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTree, _MeshData);
-                }
+                #endif
             #else
                 light_pdf *= rcp(_MeshData[hit.mesh_id].LightTriCount);
             #endif
@@ -185,7 +186,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             #endif
         }
         if(UseASVGF && CurBounce == 0 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -10000.0f;
-        if(luminance(EmissCol) > 12.0f) {
+        if(luminance(EmissCol) > 2.0f) {
             if(CurBounce == 0) {
                 Color.Data = EmissCol;
                 Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((1) << 26);  
@@ -666,7 +667,7 @@ int MaterialIndex;
                     }
                     Radiance *= Intensity;
                     if (CurBounce == 0) Color.Direct = Color.throughput * Radiance;
-                    else if (CurBounce == 1) Color.Direct += Color.throughput * Radiance;
+                    else if (CurBounce == 1) Color.Indirect += Color.throughput * Radiance;
                     #ifdef RadianceCache
                         else if(!((CacheBuffer[pixel_index].pathLength >> 7) & 0x1) || (((Color.MetRoughIsSpec & 0x3800000) >> 23) >= 3)) Color.Indirect += Color.throughput * DeSat(Radiance, 1.0f - TrueDeSat) * Intensity;
                         else if(!UseReSTIRGI || ReSTIRGIUpdateRate == 0 || RandomNums[id.xy].z == 0) {

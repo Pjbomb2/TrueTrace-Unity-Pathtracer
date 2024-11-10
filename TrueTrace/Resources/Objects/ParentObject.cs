@@ -311,11 +311,31 @@ namespace TrueTrace {
             List<Color[]> EmissionTexPixels;
             List<Vector2> EmissionTexWidthHeight;
         #endif
+
+        private void TextureParseScaleOffset(Material Mat, string TexName, ref Vector4 ScaleOffset) {
+            if (Mat.HasProperty(TexName) && Mat.GetTexture(TexName) != null) {
+                Vector2 Offset = Mat.GetTextureOffset(TexName);
+                Vector2 Scale = Mat.GetTextureScale(TexName);
+                ScaleOffset = new Vector4(Scale.x, Scale.y, Offset.x, Offset.y);
+            }
+        }
         
+        private void TextureParseScale(Material Mat, string TexName, ref Vector2 Scale) {
+            if (Mat.HasProperty(TexName) && Mat.GetTexture(TexName) != null) {
+                Scale = Mat.GetTextureScale(TexName);
+            }
+        }
+
+        private void TextureParseOffset(Material Mat, string TexName, ref Vector2 Offset) {
+            if (Mat.HasProperty(TexName) && Mat.GetTexture(TexName) != null) {
+                Offset = Mat.GetTextureOffset(TexName);
+            }
+        }
+
         private int TextureParse(ref Vector4 RefMat, Material Mat, string TexName, ref List<Texture> Texs, ref int TextureIndex, bool IsEmission = false) {
             TextureIndex = 0;
             if (Mat.HasProperty(TexName) && Mat.GetTexture(TexName) != null) {
-                if(RefMat.x == 0) RefMat = new Vector4(Mat.mainTextureScale.x, Mat.mainTextureScale.y, Mat.mainTextureOffset.x, Mat.mainTextureOffset.y);
+                if(RefMat.x == 0) RefMat = new Vector4(Mat.GetTextureScale(TexName).x, Mat.GetTextureScale(TexName).y, Mat.GetTextureOffset(TexName).x, Mat.GetTextureOffset(TexName).y);
                 Texture Tex = Mat.GetTexture(TexName);
                 TextureIndex = Texs.IndexOf(Tex) + 1;
                 if (TextureIndex != 0) {
@@ -436,17 +456,32 @@ namespace TrueTrace {
                     int TexCount = RelevantMat.AvailableTextures.Count;
                     for(int i2 = 0; i2 < TexCount; i2++) {
                         string TexName = RelevantMat.AvailableTextures[i2].TextureName;
-                        switch((TexturePurpose)RelevantMat.AvailableTextures[i2].Purpose) {
+                        int ReadIndex = RelevantMat.AvailableTextures[i2].ReadIndex;
+                        int TexPurpose = RelevantMat.AvailableTextures[i2].Purpose;
+                        TexturePairs CurrentPair = RelevantMat.AvailableTextures[i2];
+                        if(CurrentPair.Fallback != null) {
+                            do {
+                                if(SharedMaterials[i].HasProperty(CurrentPair.TextureName) && SharedMaterials[i].GetTexture(CurrentPair.TextureName) != null) {
+                                    TexName = CurrentPair.TextureName;
+                                    ReadIndex = CurrentPair.ReadIndex;
+                                    break;
+                                }
+                                CurrentPair = CurrentPair.Fallback;
+                            } while(CurrentPair.Fallback != null);
+                        }
+                        switch((TexturePurpose)TexPurpose) {
                             case(TexturePurpose.SecondaryNormalTexture):
+                                if(JustCreated) TextureParseScaleOffset(SharedMaterials[i], TexName, ref obj.SecondaryNormalTexScaleOffset[i]);
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref SecondaryNormalTexs, ref TempIndex); 
                                 CurMat.SecondaryNormalTex.x = TempIndex;
                             break;                            
                             case(TexturePurpose.SecondaryAlbedoTextureMask):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref SecondaryAlbedoTexMasks, ref TempIndex); 
                                 CurMat.SecondaryAlbedoMask.x = TempIndex; 
-                                if(Result == 1) SecondaryAlbedoTexMaskChannelIndex.Add(RelevantMat.AvailableTextures[i2].ReadIndex);
+                                if(Result == 1) SecondaryAlbedoTexMaskChannelIndex.Add(ReadIndex);
                             break;
                             case(TexturePurpose.SecondaryAlbedoTexture):
+                                if(JustCreated) TextureParseScaleOffset(SharedMaterials[i], TexName, ref obj.SecondaryAlbedoTexScaleOffset[i]);
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref SecondaryAlbedoTexs, ref TempIndex); 
                                 CurMat.SecondaryAlbedoTex.x = TempIndex;
                             break;
@@ -455,6 +490,7 @@ namespace TrueTrace {
                                 CurMat.MatCapTex.x = TempIndex;
                             break;
                             case(TexturePurpose.Albedo):
+                                if(JustCreated) TextureParseScaleOffset(SharedMaterials[i], TexName, ref obj.MainTexScaleOffset[i]);
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref AlbedoTexs, ref TempIndex); 
                                 CurMat.AlbedoTex.x = TempIndex;
                             break;
@@ -470,22 +506,22 @@ namespace TrueTrace {
                             case(TexturePurpose.Metallic):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref MetallicTexs, ref TempIndex); 
                                 CurMat.MetallicTex.x = TempIndex; 
-                                if(Result == 1) MetallicTexChannelIndex.Add(RelevantMat.AvailableTextures[i2].ReadIndex);
+                                if(Result == 1) MetallicTexChannelIndex.Add(ReadIndex);
                             break;
                             case(TexturePurpose.Roughness):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref RoughnessTexs, ref TempIndex); 
                                 CurMat.RoughnessTex.x = TempIndex; 
-                                if(Result == 1) RoughnessTexChannelIndex.Add(RelevantMat.AvailableTextures[i2].ReadIndex);
+                                if(Result == 1) RoughnessTexChannelIndex.Add(ReadIndex);
                             break;
                             case(TexturePurpose.Alpha):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref AlphaTexs, ref TempIndex); 
                                 CurMat.AlphaTex.x = TempIndex; 
-                                if(Result == 1) AlphaTexChannelIndex.Add(RelevantMat.AvailableTextures[i2].ReadIndex);
+                                if(Result == 1) AlphaTexChannelIndex.Add(ReadIndex);
                             break;
                             case(TexturePurpose.MatCapMask):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref MatCapMasks, ref TempIndex); 
                                 CurMat.MatCapMask.x = TempIndex; 
-                                if(Result == 1) MatCapMaskChannelIndex.Add(RelevantMat.AvailableTextures[i2].ReadIndex);
+                                if(Result == 1) MatCapMaskChannelIndex.Add(ReadIndex);
                             break;
                         }
                     }

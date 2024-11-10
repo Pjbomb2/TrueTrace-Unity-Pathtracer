@@ -948,6 +948,23 @@ Toolbar toolbar;
       List<string> ColorProperties;
       List<string> FloatProperties;
       DialogueNode OutputNode;
+      TexturePairs ConnectChildren(ref List<TexturePairs> TargetList, int CurrentIndex) {
+         if(CurrentIndex > 0) {
+            return new TexturePairs() {
+                     Purpose = TargetList[CurrentIndex].Purpose,
+                     ReadIndex = TargetList[CurrentIndex].ReadIndex,
+                     TextureName = TargetList[CurrentIndex].TextureName,
+                     Fallback = ConnectChildren(ref TargetList, CurrentIndex - 1)
+                  };                   
+         } else {
+            return new TexturePairs() {
+                     Purpose = TargetList[CurrentIndex].Purpose,
+                     ReadIndex = TargetList[CurrentIndex].ReadIndex,
+                     TextureName = TargetList[CurrentIndex].TextureName,
+                     Fallback = null
+                  };                    
+         }
+      }
       void ConfirmMats() {
          
          MatShader.AvailableTextures = new List<TexturePairs>();
@@ -963,7 +980,76 @@ Toolbar toolbar;
 
 
          for(int i = 0; i < AvailableIndexes.Count; i++) {
-            switch((int)AvailableIndexes[i].PropertyIndex) {
+
+            int Prop = (int)AvailableIndexes[i].PropertyIndex;
+            List<TexturePairs> FallbackNodes = new List<TexturePairs>();
+            TexturePairs FallbackNode = null;
+            if(Prop != (int)Properties.AlbedoColor && Prop != (int)Properties.MetallicSlider && Prop != (int)Properties.MetallicMin && Prop != (int)Properties.MetallicMax && Prop != (int)Properties.RoughnessSlider && Prop != (int)Properties.RoughnessMin && Prop != (int)Properties.RoughnessMax) {
+               if((AvailableIndexes[i].inputContainer[0] as Port).connections.ToList().Count != 0) {
+                  int Purpose = 0;
+                  int ReadIndex = 0;
+                  switch(Prop) {
+                     case((int)Properties.AlbedoTexture):Purpose = (int)TexturePurpose.Albedo;break;
+                     case((int)Properties.NormalTexture):Purpose = (int)TexturePurpose.Normal;break;
+                     case((int)Properties.EmissionTexture):Purpose = (int)TexturePurpose.Emission;break;
+                     case((int)Properties.MetallicTexture):Purpose = (int)TexturePurpose.Metallic;break;
+                     case((int)Properties.RoughnessTexture):Purpose = (int)TexturePurpose.Roughness;break;
+                     case((int)Properties.AlphaTexture):Purpose = (int)TexturePurpose.Alpha;break;
+                     case((int)Properties.MatCapTexture):Purpose = (int)TexturePurpose.MatCapTex;break;
+                     case((int)Properties.MatCapMask):Purpose = (int)TexturePurpose.MatCapMask;break;
+                     case((int)Properties.SecondaryAlbedoTexture):Purpose = (int)TexturePurpose.SecondaryAlbedoTexture;break;
+                     case((int)Properties.SecondaryAlbedoTextureMask):Purpose = (int)TexturePurpose.SecondaryAlbedoTextureMask;break;
+                     case((int)Properties.SecondaryNormalTexture):Purpose = (int)TexturePurpose.SecondaryNormalTexture;break;
+                  }
+
+
+
+                  DialogueNode CurrentNode = ((((AvailableIndexes[i].inputContainer[0] as Port).connections.ToList())[0].output as Port).node as DialogueNode);
+                  switch(Prop) {
+                     case((int)Properties.AlbedoTexture):ReadIndex = -4;break;
+                     case((int)Properties.NormalTexture):ReadIndex = -3;break;
+                     case((int)Properties.EmissionTexture):ReadIndex = -4;break;
+                     case((int)Properties.MetallicTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);  break;
+                     case((int)Properties.RoughnessTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);  break;
+                     case((int)Properties.AlphaTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);break;
+                     case((int)Properties.MatCapTexture):ReadIndex = -4;break;
+                     case((int)Properties.MatCapMask):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);break;
+                     case((int)Properties.SecondaryAlbedoTexture):ReadIndex = -4;break;
+                     case((int)Properties.SecondaryAlbedoTextureMask):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);break;
+                     case((int)Properties.SecondaryNormalTexture):ReadIndex = -3;break;
+                  }
+                  FallbackNodes.Add(new TexturePairs() {
+                     Purpose = Purpose,
+                     ReadIndex = ReadIndex,
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(CurrentNode.title)]
+                  });                    
+                  while((CurrentNode.inputContainer[0] as Port).connections.ToList().Count != 0) {
+                     CurrentNode = ((((CurrentNode.inputContainer[0] as Port).connections.ToList())[0].output as Port).node as DialogueNode);
+                     switch(Prop) {
+                        case((int)Properties.AlbedoTexture):ReadIndex = -4;break;
+                        case((int)Properties.NormalTexture):ReadIndex = -3;break;
+                        case((int)Properties.EmissionTexture):ReadIndex = -4;break;
+                        case((int)Properties.MetallicTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);  break;
+                        case((int)Properties.RoughnessTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);  break;
+                        case((int)Properties.AlphaTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);break;
+                        case((int)Properties.MatCapTexture):ReadIndex = -4;break;
+                        case((int)Properties.MatCapMask):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);break;
+                        case((int)Properties.SecondaryAlbedoTexture):ReadIndex = -4;break;
+                        case((int)Properties.SecondaryAlbedoTextureMask):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);break;
+                        case((int)Properties.SecondaryNormalTexture):ReadIndex = -3;break;
+                     }
+                     FallbackNodes.Add(new TexturePairs() {
+                        Purpose = Purpose,
+                        ReadIndex = ReadIndex,
+                        TextureName = TextureProperties[VerboseTextureProperties.IndexOf(CurrentNode.title)]
+                     });                    
+                  }
+                  int RecurseCount = FallbackNodes.Count;
+                  FallbackNode = ConnectChildren(ref FallbackNodes, RecurseCount - 1);
+               } 
+            }
+
+            switch(Prop) {
                case((int)Properties.AlbedoColor):
                   MatShader.BaseColorValue = ColorProperties[VerboseColorProperties.IndexOf(AvailableIndexes[i].title)];
                break;
@@ -971,28 +1057,32 @@ Toolbar toolbar;
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.Albedo,
                      ReadIndex = -4,
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.NormalTexture):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.Normal,
                      ReadIndex = -3,
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.EmissionTexture):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.Emission,
                      ReadIndex = -4,
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.MetallicTexture):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.Metallic,
                      ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.MetallicSlider):
@@ -1008,7 +1098,8 @@ Toolbar toolbar;
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.Roughness,
                      ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.RoughnessSlider):
@@ -1024,42 +1115,48 @@ Toolbar toolbar;
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.Alpha,
                      ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.MatCapTexture):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.MatCapTex,
                      ReadIndex = -4,
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.MatCapMask):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.MatCapMask,
                      ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.SecondaryAlbedoTexture):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.SecondaryAlbedoTexture,
                      ReadIndex = -4,
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.SecondaryAlbedoTextureMask):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.SecondaryAlbedoTextureMask,
                      ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.SecondaryNormalTexture):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.SecondaryNormalTexture,
                      ReadIndex = -3,
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
             }
@@ -1098,6 +1195,9 @@ Toolbar toolbar;
            inputPort.portName = PropertyID;
            dialogueNode.outputContainer.Add(inputPort);
            if(T == typeof(Texture)) {
+           var FallbackPort = _graphView.GeneratePort(dialogueNode, Direction.Input, T, Port.Capacity.Multi);
+           FallbackPort.portName = PropertyID;
+           dialogueNode.inputContainer.Add(FallbackPort);
                if(InputElement != -1) {
                   PopupField<string> ChannelField = new PopupField<string>("Read Channel");
                   ChannelField.choices = ChannelProperties;               
@@ -1243,68 +1343,126 @@ Toolbar toolbar;
             AvailableTexturesPurposes.Add(MatShader.AvailableTextures[i].Purpose);
          }
          for(int i = 0; i < MatShader.AvailableTextures.Count; i++) {
+            Pos.x = 30;
             DialogueNode ThisNode = new DialogueNode();
             Edge ThisEdge = new Edge();
-            switch((int)MatShader.AvailableTextures[i].Purpose) {
+            TexturePairs CurrentPair = MatShader.AvailableTextures[i];
+            switch((int)CurrentPair.Purpose) {
                case((int)TexturePurpose.SecondaryNormalTexture):
                   Pos.y = 1380;
-                  Debug.Log(MatShader.AvailableTextures[i].TextureName);
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.SecondaryNormalTexture] as Port);
                break;
                case((int)TexturePurpose.SecondaryAlbedoTextureMask):
                   Pos.y = 1300;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName, MatShader.AvailableTextures[i].ReadIndex);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.SecondaryAlbedoTextureMask] as Port);
                break;
                case((int)TexturePurpose.SecondaryAlbedoTexture):
                   Pos.y = 1220;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.SecondaryAlbedoTexture] as Port);
                break;
                case((int)TexturePurpose.MatCapMask):
                   Pos.y = 1140;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName, MatShader.AvailableTextures[i].ReadIndex);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.MatCapMask] as Port);
                break;
                case((int)TexturePurpose.MatCapTex):
                   Pos.y = 1060;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.MatCapTexture] as Port);
                break;
                case((int)TexturePurpose.Alpha):
                   Pos.y = 980;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName, MatShader.AvailableTextures[i].ReadIndex);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.AlphaTexture] as Port);
                break;
                case((int)TexturePurpose.Metallic):
                   Pos.y = 340;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName, MatShader.AvailableTextures[i].ReadIndex);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.MetallicTexture] as Port);
                break;
                case((int)TexturePurpose.Roughness):
                   Pos.y = 660;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName, MatShader.AvailableTextures[i].ReadIndex);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.RoughnessTexture] as Port);
                break;
                case((int)TexturePurpose.Albedo):
                   Pos.y = 100;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.AlbedoTexture] as Port);
                break;
                case((int)TexturePurpose.Normal):
                   Pos.y = 180;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.NormalTexture] as Port);
                break;
                case((int)TexturePurpose.Emission):
                   Pos.y = 260;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.EmissionTexture] as Port);
                break;
             }
             _graphView.AddElement(ThisNode);
             _graphView.AddElement(ThisEdge);
+            if(CurrentPair.Fallback != null) {
+               do {
+                  DialogueNode PrevNode = ThisNode;
+                  CurrentPair = CurrentPair.Fallback;
+                  Pos.x -= 600;
+                  switch((int)CurrentPair.Purpose) {
+                     case((int)TexturePurpose.SecondaryNormalTexture):
+                        Pos.y = 1380;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
+                     break;
+                     case((int)TexturePurpose.SecondaryAlbedoTextureMask):
+                        Pos.y = 1300;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
+                     break;
+                     case((int)TexturePurpose.SecondaryAlbedoTexture):
+                        Pos.y = 1220;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
+                     break;
+                     case((int)TexturePurpose.MatCapMask):
+                        Pos.y = 1140;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
+                     break;
+                     case((int)TexturePurpose.MatCapTex):
+                        Pos.y = 1060;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
+                     break;
+                     case((int)TexturePurpose.Alpha):
+                        Pos.y = 980;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
+                     break;
+                     case((int)TexturePurpose.Metallic):
+                        Pos.y = 340;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
+                     break;
+                     case((int)TexturePurpose.Roughness):
+                        Pos.y = 660;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
+                     break;
+                     case((int)TexturePurpose.Albedo):
+                        Pos.y = 100;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
+                     break;
+                     case((int)TexturePurpose.Normal):
+                        Pos.y = 180;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
+                     break;
+                     case((int)TexturePurpose.Emission):
+                        Pos.y = 260;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
+                     break;
+                  }
+                        ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(PrevNode.inputContainer[0] as Port);
+
+                  _graphView.AddElement(ThisNode);
+                  _graphView.AddElement(ThisEdge);
+               }  while(CurrentPair.Fallback != null);
+            }
          }
 
          {

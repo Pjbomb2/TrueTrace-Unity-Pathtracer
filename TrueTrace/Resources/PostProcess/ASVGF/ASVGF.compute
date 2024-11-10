@@ -479,8 +479,8 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 		}
 	}
 
-	// GlobalRaysMini[ipos.x + ipos.y * screen_width].origin -= CamDiff;
-	// GlobalRaysMini[ipos.x + ipos.y * screen_width].direction = normalize(Pos - GlobalRaysMini[ipos.x + ipos.y * screen_width].origin);
+	GlobalRaysMini[ipos.x + ipos.y * screen_width].origin -= CamDiff;
+	GlobalRaysMini[ipos.x + ipos.y * screen_width].direction = normalize(Pos - GlobalRaysMini[ipos.x + ipos.y * screen_width].origin);
 
 	MetallicAWrite[ipos] = MetallicB[found_pos_prev];
 	ScreenSpaceInfoWrite[ipos] = float4(asfloat(TEX_PT_NORMALS_B[found_pos_prev].xy),0,0);
@@ -810,7 +810,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 						temporal_color_hf += TEX_ASVGF_HIST_COLOR_HF[p] * w_diff;
 						temporal_moments_histlen_hf += TEX_ASVGF_HIST_MOMENTS_HF_B[p].rgba * w_diff;
 						temporal_sum_w_diff += w_diff;
-						float w_spec = w[i];// * pow(max(dot_normals, 0), shininess);
+						float w_spec = w[i] * pow(max(dot_normals, 0), shininess);
 						temporal_color_histlen_spec += float4(unpackRGBE(asuint(TEX_ASVGF_FILTERED_SPEC_B[p].x)), TEX_ASVGF_FILTERED_SPEC_B[p].y) * w_spec;
 						temporal_sum_w_spec += w_spec;
 					} else if(dot(geo_normal_curr2, i_octahedral_32(norms.z)) > 0.9f) {

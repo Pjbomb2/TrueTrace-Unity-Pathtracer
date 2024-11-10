@@ -11,6 +11,7 @@ using System.Xml.Serialization;
 namespace TrueTrace {
     public class SavePopup : PopupWindowContent
     {
+       RayObjFolderMaster PresetMaster; 
         string PresetName = "Null";
         RayTracingObject ThisOBJ;
         int SaveIndex;
@@ -18,6 +19,7 @@ namespace TrueTrace {
         public SavePopup(RayTracingObject ThisOBJ, int SaveIndex) {
             this.ThisOBJ = ThisOBJ;
             this.SaveIndex = SaveIndex;
+            UpdateList();
         }
         public override Vector2 GetWindowSize()
         {
@@ -27,6 +29,20 @@ namespace TrueTrace {
         string FolderName = "";
         int CopyIndex;
         int FolderIndex;
+
+        void UpdateList() {
+            UnityEditor.AssetDatabase.Refresh();   
+            using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets").text)) {
+                var serializer = new XmlSerializer(typeof(RayObjFolderMaster));
+                PresetMaster = serializer.Deserialize(A) as RayObjFolderMaster;
+            }
+        }
+        void Init(Rect rect) {
+            UpdateList();
+            OnGUI(new Rect(0,0,100,10));
+        }
+
+
         public override void OnGUI(Rect rect) {
             // Debug.Log("ONINSPECTORGUI");
 
@@ -41,11 +57,8 @@ namespace TrueTrace {
 
             CopyIndex = -1;
             FolderIndex = -1;
-            UnityEditor.AssetDatabase.Refresh();   
-            RayObjFolderMaster PresetMaster; 
-            using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets").text)) {
-                var serializer = new XmlSerializer(typeof(RayObjFolderMaster));
-                PresetMaster = serializer.Deserialize(A) as RayObjFolderMaster;
+            
+            {
                 int FolderCount = PresetMaster.PresetFolders.Count;
                 GUILayout.BeginScrollView(ScrollPosition, GUILayout.Width(100), GUILayout.Height(200));
                 for(int i = 0; i < FolderCount; i++) {
@@ -57,9 +70,9 @@ namespace TrueTrace {
                     }
                 }
                 GUILayout.EndScrollView();
-
-
             }
+
+
             
             if(GUILayout.Button("Save Preset")) {
                 int FolderCount = PresetMaster.PresetFolders.Count;
@@ -220,8 +233,10 @@ namespace TrueTrace {
     {
         Vector2 ScrollPosition;
         RayTracingObjectEditor SourceWindow;
+        RayObjFolderMaster PresetMaster;
         public LoadPopup(RayTracingObjectEditor editor) {
             this.SourceWindow = editor;
+            UpdateList();
         }
         private void CallEditorFunction(RayObjectDatas RayObj, bool LoadTextures) {
             if(SourceWindow != null) {
@@ -233,13 +248,18 @@ namespace TrueTrace {
             return new Vector2(460, 250);
         }
         bool[] FoldoutBool;
-        public override void OnGUI(Rect rect) {
-            RayObjFolderMaster PresetMaster;
+        void UpdateList() {
             UnityEditor.AssetDatabase.Refresh();
             using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets").text)) {
                 var serializer = new XmlSerializer(typeof(RayObjFolderMaster));
                 PresetMaster = serializer.Deserialize(A) as RayObjFolderMaster;
             }
+        }
+        void Init(Rect rect) {
+            UpdateList();
+            OnGUI(new Rect(0,0,100,10));
+        }
+        public override void OnGUI(Rect rect) {
             int FolderLength = PresetMaster.PresetFolders.Count;
             if(FoldoutBool == null) FoldoutBool = new bool[FolderLength];
             ScrollPosition = GUILayout.BeginScrollView(ScrollPosition, GUILayout.Width(460), GUILayout.Height(250));
@@ -255,7 +275,7 @@ namespace TrueTrace {
                                 serializer.Serialize(writer.BaseStream, PresetMaster);
                                 UnityEditor.AssetDatabase.Refresh();
                             }
-                            OnGUI(new Rect(0,0,100,10));   
+                            Init(new Rect(0,0,100,10));   
                         }
                     GUILayout.EndHorizontal();
                     if(FoldoutBool[j]) {
@@ -272,7 +292,7 @@ namespace TrueTrace {
                                             serializer.Serialize(writer.BaseStream, PresetMaster);
                                             UnityEditor.AssetDatabase.Refresh();
                                         }
-                                        OnGUI(new Rect(0,0,100,10));
+                                        Init(new Rect(0,0,100,10));
                                     }
                                 GUILayout.EndHorizontal();
                             }

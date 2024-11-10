@@ -21,12 +21,13 @@
 // #define HighSpeedRadCache
 #define IndirectRetraceWeighting
 #define TrueBlack
-// #define AdvancedRadCacheAlt
+#define AdvancedRadCacheAlt
 // #define UseTextureLOD
 // #define vMFDiffuse
 #define EONDiffuse
 // #define AdvancedBackground
 #define UseBRDFLights
+#define DoubleBufferSGTree
 
 
 //END OF DEFINES

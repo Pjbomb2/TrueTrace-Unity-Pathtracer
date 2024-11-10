@@ -614,6 +614,7 @@ namespace CommonVars
         public int Purpose;
         public int ReadIndex;//negative is the amount of components the destination contains plus 1, for use later with another idea I had
         public string TextureName;
+        public TexturePairs Fallback;
     }
 
     [System.Serializable]

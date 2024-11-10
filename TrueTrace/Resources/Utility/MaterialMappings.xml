@@ -2541,7 +2541,22 @@
       <TexturePairs>
         <Purpose>0</Purpose>
         <ReadIndex>-4</ReadIndex>
-        <TextureName>_MainTex</TextureName>
+        <TextureName>_EmissionMap</TextureName>
+        <Fallback>
+          <Purpose>0</Purpose>
+          <ReadIndex>-4</ReadIndex>
+          <TextureName>_MainTex</TextureName>
+        </Fallback>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>3</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_ShadowStrengthMask</TextureName>
+        <Fallback>
+          <Purpose>3</Purpose>
+          <ReadIndex>-4</ReadIndex>
+          <TextureName>_ShadowborderBlurMask</TextureName>
+        </Fallback>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>
@@ -4961,6 +4976,21 @@
         <Purpose>3</Purpose>
         <ReadIndex>-4</ReadIndex>
         <TextureName>_EmissionMap</TextureName>
+        <Fallback>
+          <Purpose>3</Purpose>
+          <ReadIndex>-4</ReadIndex>
+          <TextureName>_EmissionMask1</TextureName>
+          <Fallback>
+            <Purpose>3</Purpose>
+            <ReadIndex>-4</ReadIndex>
+            <TextureName>_EmissionMap1</TextureName>
+            <Fallback>
+              <Purpose>3</Purpose>
+              <ReadIndex>-4</ReadIndex>
+              <TextureName>_EmissionMask</TextureName>
+            </Fallback>
+          </Fallback>
+        </Fallback>
       </TexturePairs>
       <TexturePairs>
         <Purpose>1</Purpose>

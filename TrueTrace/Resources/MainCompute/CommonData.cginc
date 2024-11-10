@@ -2505,11 +2505,12 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
         FinalPos += Position;
         lightWeight *= (wsum / max((CounCoun) * MinP_Hat, 0.000001f) * LightCount);
     #else
-		[branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) {
-	    	MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, SGTreePrev, _MeshDataPrev);
-		} else {
-        	MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, SGTree, _MeshData);
-		}
+    	#ifdef DoubleBufferSGTree
+			[branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, SGTreePrev, _MeshDataPrev);
+			else MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, SGTree, _MeshData);
+		#else
+			MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, SGTree, _MeshData);
+        #endif
         if(MinIndex == -1) return -1;
         MeshTriOffset = _MeshData[MeshIndex].TriOffset;
         MatOffset =_MeshData[MeshIndex].MaterialOffset;
