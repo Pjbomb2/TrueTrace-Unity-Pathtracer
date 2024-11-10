@@ -1271,22 +1271,22 @@ inline void filter_image(
 					Max = max(Max, Val);
 			}
 		}
-		if(ValidTaps > 1 && Min.x != 9999.0f) filtered_spec = clamp(filtered_spec, Min, Max);
+		filtered_spec = clamp(filtered_spec, Min, Max);
 	}
-	[branch]if (hist_len_hf > 0) {
+	[branch]if (hist_len_hf > 2 || spec_iteration == 0) {
 		// Compute luminance variance from the statistical moments: Var(X) = E[X^2] - E[X]^2
 		// The `asvgf_temporal` shader computes a combination of temporal and spatial (3x3) moments,
 		// and stores these into a texture. This shader will combine moments of the surrounding 
 		// pixels using the same weights as for colors, and the combined moments are used on the next iteration.
 		lum_mean_hf = filtered_moments.x;
 		float lum_variance_hf = max(1e-8, filtered_moments.y - filtered_moments.x * filtered_moments.x);
-		sigma_l_hf = min(hist_len_hf, 16) / (2.0 * lum_variance_hf);
+		sigma_l_hf = min(max(hist_len_hf - 2, 1), 16) / (2.0 * lum_variance_hf);
 	} else {
 		// If there is no history, treat all moments as invalid, because 3x3 spatial 
 		// is just not enough to get reasonable filtering. Ignore luminance in this case,
 		// and perform a depth-normal-guided bilateral blur.
 		lum_mean_hf = filtered_moments.x;
-		sigma_l_hf = 0.05f;
+		if(hist_len_hf > 1) sigma_l_hf = 0.005f;
 	}
 
 	// reduce the HF filter sensitivity to normals when the lighting is invalidated

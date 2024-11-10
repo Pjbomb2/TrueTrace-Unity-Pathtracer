@@ -1265,7 +1265,7 @@ namespace TrueTrace {
                                 TriTarget = (uint)(OffsetReal),
                                 SourceEnergy = Vector3.Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Vector3.Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol))
                                 });
-                            LuminanceWeights.Add(Vector3.Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Vector3.Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol)));
+                            LuminanceWeights.Add(_Materials[(int)TempTri.MatDat].emission);//Vector3.Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Vector3.Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol)));
                             IllumTriCount++;
                         }
                     }

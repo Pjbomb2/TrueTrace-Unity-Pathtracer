@@ -1461,12 +1461,12 @@ bool IsFinite(float x)
     return (asuint(x) & 0x7F800000) != 0x7F800000;
 }
 
-inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDirTS, const float3 p, const float3 n, const float2 projRoughness2, const float3 reflecVec, const float3x3 tangentFrame) {
+inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDirTS, const float3 p, const float3 n, const float2 projRoughness2, const float3 reflecVec, const float3x3 tangentFrame, float metallic) {
 	// if(TargetNode.intensity <= 0) return 0;	
 	float3 to_light = TargetNode.position - p;
 	const float squareddist = dot(to_light, to_light);
 
-	// const float c = clamp(dot(n, -(to_light)) / sqrt(squareddist), 0, 1);
+	const float c = clamp(dot(n, -(to_light)) / sqrt(squareddist), 0, 1);
 
 	// Compute the Jacobian J for the transformation between halfvetors and reflection vectors at halfvector = normal.
 	// const float3 viewDirTS = mul(tangentFrame, viewDir);//their origional one constructs the tangent frame from N,T,BT, whereas mine constructs it from T,N,BT; problem? I converted all .y to .z and vice versa, but... 
@@ -1481,8 +1481,8 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 
 
 	// TargetNode.variance = 0.5f * TargetNode.radius * TargetNode.radius;
-	const float Variance = max(TargetNode.variance, (1.0f / pow(2, 31)) * squareddist);// * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
-	// Variance = Variance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
+	float Variance = max(TargetNode.variance, (1.0f / pow(2, 31)) * squareddist);// * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
+	Variance = Variance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
 	// float Variance = max(TargetNode.variance, squareddist);
 
 
@@ -1528,7 +1528,7 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 	const float specularIllumination = amplitude * visibility * pdf * SGIntegral(LightLobe.sharpness);
 
 
-	return max(emissive * (diffuseIllumination + specularIllumination), 0.f);
+	return max(emissive * (diffuseIllumination + metallic * specularIllumination), 0.f);
 }
 
 
@@ -1639,13 +1639,13 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 		[branch]if(node.left >= 0) {
 #ifdef UseSGTree
 			const float2 ci = float2(
-				SGImportance(NodeBuffer[node.left + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame),
-				SGImportance(NodeBuffer[node.left + 1 + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame)
+				SGImportance(NodeBuffer[node.left + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic),
+				SGImportance(NodeBuffer[node.left + 1 + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic)
 			);
 #else
 			const float2 ci = float2(
-				Importance(p, n, SGTree[node.left + NodeOffset], HasHitTLAS),
-				Importance(p, n, SGTree[node.left + 1 + NodeOffset], HasHitTLAS)
+				Importance(p, n, NodeBuffer[node.left + NodeOffset], HasHitTLAS),
+				Importance(p, n, NodeBuffer[node.left + 1 + NodeOffset], HasHitTLAS)
 			);
 #endif
 			// if(ci.x == 0 && ci.y == 0) {pmf = -1; return;}
@@ -1740,13 +1740,13 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 		[branch]if(node.left >= 0) {
 #ifdef UseSGTree
 			const float2 ci = float2(
-				SGImportance(NodeBuffer[node.left + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame),
-				SGImportance(NodeBuffer[node.left + 1 + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame)
+				SGImportance(NodeBuffer[node.left + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic),
+				SGImportance(NodeBuffer[node.left + 1 + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic)
 			);
 #else
 			const float2 ci = float2(
-				Importance(p, n, SGTree[node.left + NodeOffset], HasHitTLAS),
-				Importance(p, n, SGTree[node.left + 1 + NodeOffset], HasHitTLAS)
+				Importance(p, n, NodeBuffer[node.left + NodeOffset], HasHitTLAS),
+				Importance(p, n, NodeBuffer[node.left + 1 + NodeOffset], HasHitTLAS)
 			);
 #endif
 			if(ci.x == 0 && ci.y == 0) break;

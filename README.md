@@ -41,6 +41,7 @@
   <li>Convolution Bloom(Not mine)</li>
   <li>Vulkan and Metal support(Your mileage may vary)</li>
   <li>Mesh slicing using SDFs(Does not modify meshes, for rendering cuts only, like cross-sections)</li>
+  <li>EON and vMF diffuse models</li>
 </ul>
 
 MASSIVE thanks to 
@@ -51,7 +52,8 @@ for bringing bindless textures to unity!
 </br>[Convolutional Bloom](https://github.com/AKGWSB/FFTConvolutionBloom)
 </br>[Spherical Gaussian Light Tree](https://gpuopen.com/download/publications/Hierarchical_Light_Sampling_with_Accurate_Spherical_Gaussian_Lighting.pdf)
 </br>[Light BVH(PBRT 4)](https://pbr-book.org/4ed/Light_Sources/Light_Sampling#x3-LightBoundingVolumeHierarchies)
-</br>
+</br>[vMF Diffuse Model](https://research.nvidia.com/publication/2024-07_vmf-diffuse-unified-rough-diffuse-brdf)
+</br>[EON Diffuse Model](https://arxiv.org/pdf/2410.18026)
 
 
 ### If you like what I do and want to support me or this project, Please consider becoming a Github Sponsor or a Patron at patreon.com/Pjbomb2!  This allows me to keep this free for everyone!
@@ -183,7 +185,8 @@ TrueTrace Options Description -
 
 ## GlobalDefines.cginc Settings
 <ul>
-  <li>AdvancedAlphaMapping - Enables or Disables the support of cutout objects(performance penalty)</li>
+  <li>Moved most important settings to TrueTrace -> Functionality Settings</li>  
+<!--   <li>AdvancedAlphaMapping - Enables or Disables the support of cutout objects(performance penalty)</li>
   <li>ExtraSampleValidation - Shoots an additional ray(2 instead of 1) in ReSTIR GI ray validation for sharper shadows</li>
   <li>IgnoreGlassShadow - Shadow Rays can pass through glass</li>
   <li>IgnoreGlassMain - Main Rays can pass through glass</li>
@@ -201,7 +204,7 @@ TrueTrace Options Description -
   <li>TrueBlack - Allows materials to be truely black, removes the bottom limit</li>
   <li>AdvancedRadCacheAlt - Experimental working set for the Radiance Cache, not recomended</li>
   <li>UseTextureLOD - (Only works with Bindless)Enables Texture LOD</li>
-  <li>DebugView - Replace that "DVNone" with any of the defines below, from "DVNone" to "DVGIView"</li>
+  <li>DebugView - Replace that "DVNone" with any of the defines below, from "DVNone" to "DVGIView"</li> -->
 </ul>
 
 

@@ -1239,6 +1239,7 @@ namespace TrueTrace {
                 if(LightTriCount == 0) {LightTriCount++; AggSGTreeNodeCount++;}
                 if (AggNodeCount != 0)
                 {//Accumulate the BVH nodes and triangles for all normal models
+                    if(MeshFunctions == null) MeshFunctions = Resources.Load<ComputeShader>("Utility/GeneralMeshFunctions");
                     LightAABBs = new LightBounds[LightMeshCount];
                     SGTreeNodes = new GaussianTreeNode[LightMeshCount];
                     SGTree = new GaussianTreeNode[LightMeshCount * 2];
@@ -1704,8 +1705,8 @@ namespace TrueTrace {
                     }
                     LBVH = new LightBVHBuilder(LightAABBs, ref SGTree, LightBVHTransforms, SGTreeNodes);
 #if !DontUseSGTree
-                    LightTreeBufferA.SetData(SGTree, 0, 0, SGTree.Length);
-                    LightTreeBufferB.SetData(SGTree, 0, 0, SGTree.Length);
+                    if(RayMaster.FramesSinceStart2 % 2 == 0) LightTreeBufferA.SetData(SGTree, 0, 0, SGTree.Length);
+                    else LightTreeBufferB.SetData(SGTree, 0, 0, SGTree.Length);
 #else
                     LightTreeBufferA.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
                     LightTreeBufferB.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
@@ -1797,8 +1798,8 @@ namespace TrueTrace {
                 if(LightMeshCount > 0) {
                     LBVH = new LightBVHBuilder(LightAABBs, ref SGTree, LightBVHTransforms, SGTreeNodes);
 #if !DontUseSGTree
-                    LightTreeBufferA.SetData(SGTree, 0, 0, SGTree.Length);
-                    LightTreeBufferB.SetData(SGTree, 0, 0, SGTree.Length);
+                    if(RayMaster.FramesSinceStart2 % 2 == 0) LightTreeBufferA.SetData(SGTree, 0, 0, SGTree.Length);
+                    else LightTreeBufferB.SetData(SGTree, 0, 0, SGTree.Length);
 #else
                     LightTreeBufferA.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
                     LightTreeBufferB.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
