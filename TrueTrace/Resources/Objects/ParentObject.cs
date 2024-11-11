@@ -1105,7 +1105,7 @@ namespace TrueTrace {
             return new Vector2(width, height);
         }
 
-        public unsafe void BuildTotal() {
+        public unsafe async Task BuildTotal() {
             int IllumTriCount = 0;
             CudaTriangle TempTri = new CudaTriangle();
             Matrix4x4 ParentMatInv = CachedTransforms[0].WTL;
@@ -1190,21 +1190,6 @@ namespace TrueTrace {
                     TempTri.VertColA = CommonFunctions.packRGBE(CurMeshData.Colors[Index1]);
                     TempTri.VertColB = CommonFunctions.packRGBE(CurMeshData.Colors[Index2]);
                     TempTri.VertColC = CommonFunctions.packRGBE(CurMeshData.Colors[Index3]);
-
-                    // {
-                    //     Vector3 N = Norm1.normalized;
-                    //     Vector3 T = Tan1.normalized;
-                    //     Vector3 B = Vector3.Cross(N, T);
-
-                    //     uint EncodedQ = CommonFunctions.encodeQTangentUI32(T, B, N);
-                    //     Vector3 N2 = Vector3.zero;
-                    //     Vector3 T2 = Vector3.zero;
-
-                    //     CommonFunctions.decodeQTangentUI32(EncodedQ, ref T2, ref N2);
-                    //     if(Mathf.Abs(N.x - N2.x) > 0.01f || Mathf.Abs(N.y - N2.y) > 0.01f || Mathf.Abs(N.z - N2.z) > 0.01f) {
-                    //         Debug.Log("AAAA: " + N.normalized + "; " + N2.normalized);
-                    //     }
-                    // }
 
                     TempTri.MatDat = (uint)CurMeshData.MatDat[OffsetReal];
                     AggTriangles[OffsetReal] = TempTri;
@@ -1407,6 +1392,19 @@ namespace TrueTrace {
         // }
 
 
+
+        // public void OnDrawGizmos() {
+        //     if(BVH2 != null && BVH2.VerboseNodes != null) {
+        //         int Count = BVH2.VerboseNodes.Length;
+        //         for(int i = 0; i < Count; i++) {
+        //             if(BVH2.VerboseNodes[i].count == 0) {
+        //                 Vector3 BBMax = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(BVH2.VerboseNodes[i].aabb.BBMax, 1));
+        //                 Vector3 BBMin = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(BVH2.VerboseNodes[i].aabb.BBMin, 1));
+        //                 Gizmos.DrawWireCube((BBMax + BBMin) / 2.0f, BBMax - BBMin);
+        //             }
+        //         }
+        //     }
+        // }
 
         // public void OnDrawGizmos() {
         //     if(LBVH != null && LBVH.SGTree != null) {

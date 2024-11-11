@@ -197,6 +197,21 @@ namespace CommonVars
     }
 
     [System.Serializable]
+    public struct BVHNodeVerbose
+    {
+        public AABB aabb;
+        public uint left;
+        public uint right;
+        public uint parent;
+        public uint count;
+        public uint triCount;
+
+        public bool isLeaf() {
+            return count != 0;
+        }
+    }
+
+    [System.Serializable]
     public struct TerrainDat
     {
         public Vector3 PositionOffset;
