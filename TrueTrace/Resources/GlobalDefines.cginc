@@ -22,7 +22,7 @@
 #define IndirectRetraceWeighting
 #define TrueBlack
 // #define AdvancedRadCacheAlt
-// #define UseTextureLOD
+#define UseTextureLOD
 // #define vMFDiffuse
 #define EONDiffuse
 // #define AdvancedBackground

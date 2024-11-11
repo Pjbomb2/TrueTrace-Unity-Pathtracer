@@ -1235,23 +1235,25 @@ namespace TrueTrace {
                             }
                         #endif
                         if(IsValid) {
-                            HasLightTriangles = true;
                             Vector3 Radiance = _Materials[(int)TempTri.MatDat].emission * _Materials[(int)TempTri.MatDat].BaseColor;
                             float radiance = luminance(Radiance.x, Radiance.y, Radiance.z);
                             float area = AreaOfTriangle(ParentMat * V1, ParentMat * V2, ParentMat * V3);
-                            float e = radiance * area;
-                            if(System.Double.IsNaN(area)) continue;
-                            TotEnergy += area;
-                            LightTriNorms.Add(((Norm1.normalized + Norm2.normalized + Norm3.normalized) / 3.0f).normalized);
-                            LightTriangles.Add(new LightTriData() {
-                                pos0 = TempTri.pos0,
-                                posedge1 = TempTri.posedge1,
-                                posedge2 = TempTri.posedge2,
-                                TriTarget = (uint)(OffsetReal),
-                                SourceEnergy = Vector3.Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Vector3.Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol))
-                                });
-                            LuminanceWeights.Add(_Materials[(int)TempTri.MatDat].emission);//Vector3.Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Vector3.Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol)));
-                            IllumTriCount++;
+                            if(area != 0) {
+                                HasLightTriangles = true;
+                                float e = radiance * area;
+                                if(System.Double.IsNaN(area)) continue;
+                                TotEnergy += area;
+                                LightTriNorms.Add(((Norm1.normalized + Norm2.normalized + Norm3.normalized) / 3.0f).normalized);
+                                LightTriangles.Add(new LightTriData() {
+                                    pos0 = TempTri.pos0,
+                                    posedge1 = TempTri.posedge1,
+                                    posedge2 = TempTri.posedge2,
+                                    TriTarget = (uint)(OffsetReal),
+                                    SourceEnergy = Vector3.Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Vector3.Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol))
+                                    });
+                                LuminanceWeights.Add(_Materials[(int)TempTri.MatDat].emission);//Vector3.Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Vector3.Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol)));
+                                IllumTriCount++;
+                            }
                         }
                     }
                     OffsetReal++;

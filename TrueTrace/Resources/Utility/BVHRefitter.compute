@@ -526,19 +526,19 @@ void TLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
         float3 axis = transform_direction(Transf.Transf2, SGTreeWrite[Transf.SolidOffset].axis);
         float Scale = length(center - ExtendedCenter) / SGTreeWrite[Transf.SolidOffset].radius;
 
-        // SGTreeWrite[Index].position = center;
-        // SGTreeWrite[Index].axis = axis;
-        // SGTreeWrite[Index].variance = SGTreeWrite[Transf.SolidOffset].variance * Scale;
-        // SGTreeWrite[Index].sharpness = SGTreeWrite[Transf.SolidOffset].sharpness;
+        SGTreeWrite[Index].position = center;
+        SGTreeWrite[Index].axis = axis;
+        SGTreeWrite[Index].variance = SGTreeWrite[Transf.SolidOffset].variance * Scale;
+        SGTreeWrite[Index].sharpness = SGTreeWrite[Transf.SolidOffset].sharpness;
         
 
-        // SGTreeWrite[Index].radius = SGTreeWrite[Transf.SolidOffset].radius * Scale;
-        // SGTreeWrite[Index].intensity = SGTreeWrite[Transf.SolidOffset].intensity * Scale;
+        SGTreeWrite[Index].radius = SGTreeWrite[Transf.SolidOffset].radius * Scale;
+        SGTreeWrite[Index].intensity = SGTreeWrite[Transf.SolidOffset].intensity * Scale;
         return;
     }
     GaussianTreeNode LeftNode = SGTreeWrite[Node.left];
 
-    // SGTreeWrite[Index] = UnionSG(LeftNode, SGTreeWrite[Node.left + 1], Node.left);
+    SGTreeWrite[Index] = UnionSG(LeftNode, SGTreeWrite[Node.left + 1], Node.left);
 
 }
 
