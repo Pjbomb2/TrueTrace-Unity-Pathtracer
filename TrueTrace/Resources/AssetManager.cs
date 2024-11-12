@@ -1753,6 +1753,7 @@ namespace TrueTrace {
 
                 TLASTask = Task.Run(() => CorrectRefit(Boxes));
             }
+            if(RayMaster.FramesSinceStart2 > 1) {
                 // cmd.BeginSample("TLAS Refit Init");
                 cmd.SetComputeIntParam(Refitter, "NodeCount", NodeBuffer.count);
                 cmd.SetComputeBufferParam(Refitter, NodeInitializerKernel, "AllNodes", NodeBuffer);
@@ -1792,6 +1793,7 @@ namespace TrueTrace {
                 cmd.DispatchCompute(Refitter, NodeCompress, (int)Mathf.Ceil(NodeBuffer.count / (float)256), 1, 1);
 
                 // cmd.EndSample("TLAS Refit Node Compress");
+            }
             #else
 
              if(CurFrame % 25 == 24) {
@@ -1873,7 +1875,7 @@ namespace TrueTrace {
                     if (RayLight.ThisLightData.Type == 1) SunDirection = RayLight.ThisLightData.Direction;
                     UnityLights[RayLight.ArrayIndex] = RayLight.ThisLightData;
                 }
-                cmd.SetBufferData(UnityLightBuffer, UnityLights);
+                UnityLightBuffer.SetData(UnityLights);
             }
 
                 // UnityEngine.Profiling.Profiler.BeginSample("Lights Update");

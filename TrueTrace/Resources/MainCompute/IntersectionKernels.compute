@@ -364,6 +364,9 @@ void IntersectBVHShadow(int ray_index) {
                             #endif
                             else GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)) * throughput);
                         }
+                    } else {
+                        ShadowRaysBuffer[ray_index].illumination *= throughput;
+                        ShadowRaysBuffer[ray_index].DiffuseIlluminance = packRGBE(unpackRGBE(ShadowRaysBuffer[ray_index].DiffuseIlluminance) * throughput);
                     }
                 }
                 break;
