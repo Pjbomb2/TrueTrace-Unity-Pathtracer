@@ -625,6 +625,11 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     #endif
 
 
+    #if DebugView != -1
+        #if DebugView == DVDepthView
+            if(CurBounce == 0) _DebugTex[id.xy] = bestHit.t / DepthDivisor;
+        #endif
+    #endif
 
 int MaterialIndex;
 #ifdef AdvancedBackground
@@ -819,6 +824,8 @@ int MaterialIndex;
             if(CurBounce == 0) _DebugTex[id.xy] = HandleDebug(bestHit.triangle_id);
         #elif DebugView == DVAlbID
             if(CurBounce == 0) _DebugTex[id.xy] = HandleDebug(TempMat.AlbedoTex.x);
+        #elif DebugView == DVDepthView
+            // if(CurBounce == 0) _DebugTex[id.xy] = bestHit.t / DepthDivisor;
         #endif
     #endif
 

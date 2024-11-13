@@ -28,7 +28,7 @@ namespace TrueTrace {
         [HideInInspector] public Texture2D SingleComponentAtlas;
         [HideInInspector] public Texture2D EmissiveAtlas;
         [HideInInspector] public Texture2D AlphaAtlas;
-        [HideInInspector] public RenderTexture HeightmapAtlas;
+        public RenderTexture HeightmapAtlas;
         [HideInInspector] public RenderTexture AlphaMapAtlas;
         private RenderTexture TempTex;
         private RenderTexture s_Prop_EncodeBCn_Temp;
@@ -270,6 +270,7 @@ namespace TrueTrace {
         } else {
             DesiredRes = 4;
         }
+        // DesiredRes = 1024;
         if(Atlas == null || Atlas.width != DesiredRes) {
             if(Atlas != null) Atlas.ReleaseSafe();
             int tempWidth = (DesiredRes + 3) / 4;
@@ -286,7 +287,7 @@ namespace TrueTrace {
             desc.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R32G32B32A32_SInt;
             switch(TexIndex) {
                 case 0://heightmap
-                    CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.RFloat, false);
+                    CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.RFloat, true);
                 break;
                 case 1://alphamap
                     CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.ARGBHalf, false);
@@ -405,6 +406,8 @@ namespace TrueTrace {
                         CopyShader.SetTexture(0, "InputTex", SelectedTex.Tex);
                         CopyShader.SetTexture(0, "ResultSingle", Atlas);
                         CopyShader.Dispatch(0, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 32.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 32.0f), 1);
+
+
                     break;
                     case 3://metallic
                     case 4://roughness
@@ -720,6 +723,17 @@ namespace TrueTrace {
             #endif
 
             PackAndCompact(HeightMapTextures, ref HeightmapAtlas, HeightMapRect.ToArray(), 16384, 0, 0);
+            // if(HeightMapRect.ToArray().Length != 0) {
+            //     for(int i = 0; i < 10; i++) {
+            //         CopyShader.SetInt("MipLevel", i);
+            //         CopyShader.SetVector("InputSize", new Vector2((HeightmapAtlas.width >> (i + 1)), (HeightmapAtlas.height >> (i + 1))));
+            //         CopyShader.SetTexture(7, "InputTex2", HeightmapAtlas, i);
+            //         CopyShader.SetTexture(7, "ResultSingle", HeightmapAtlas, i + 1);
+            //         CopyShader.Dispatch(7, (int)Mathf.CeilToInt((HeightmapAtlas.width >> (i + 1)) / 32.0f), (int)Mathf.CeilToInt((HeightmapAtlas.height >> (i + 1)) / 32.0f), 1);
+
+            //     }
+            // }
+
             PackAndCompact(AlphaMapTextures, ref AlphaMapAtlas, AlphaMapRect.ToArray(), 16384, 1);
             
             #if !DX11Only && !UseAtlas

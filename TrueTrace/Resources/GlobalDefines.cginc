@@ -43,6 +43,9 @@
 #define DVBVHView 4
 #define DVRadCache 5
 #define DVGIView 6
+#define DVDepthView 7
+
+#define DepthDivisor 1000.0f
 
 //Dont change the ones below
 #define DisneyIndex 0
