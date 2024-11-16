@@ -1866,7 +1866,7 @@ namespace TrueTrace {
                 UnityLightCount = 0;
                 foreach (RayTracingLights RayLight in RayTracingMaster._rayTracingLights) {
                     UnityLightCount++;
-                    RayLight.UpdateLight();
+                    RayLight.UpdateLight(true);
                     if (RayLight.ThisLightData.Type == 1) SunDirection = RayLight.ThisLightData.Direction;
                     RayLight.ArrayIndex = UnityLightCount - 1;
                     RayLight.ThisLightData.Radiance *= RayMaster.LocalTTSettings.LightEnergyScale;
@@ -1884,7 +1884,10 @@ namespace TrueTrace {
                 RayTracingLights RayLight;
                 for (int i = 0; i < LightCount; i++) {
                     RayLight = RayTracingMaster._rayTracingLights[i];
-                    RayLight.UpdateLight();
+                    if(RayLight.UpdateLight(false)) {
+                        RayMaster.SampleCount = 0;
+                        RayMaster.FramesSinceStart = 0;
+                    }
                     RayLight.ThisLightData.Radiance *= RayMaster.LocalTTSettings.LightEnergyScale;
                     if (RayLight.ThisLightData.Type == 1) SunDirection = RayLight.ThisLightData.Direction;
                     UnityLights[RayLight.ArrayIndex] = RayLight.ThisLightData;

@@ -84,6 +84,7 @@ namespace TrueTrace {
          [SerializeField] public Color SceneBackgroundColor = new Color(1,1,1,1);
          [SerializeField] public Color PrimaryBackgroundTintColor = new Color(1,1,1,1);
          [SerializeField] public Color SecondarySceneBackgroundColor = new Color(1,1,1,1);
+         [SerializeField] public Color FogColor = new Color(0.6f,0.6f,0.6f,1);
          [SerializeField] public Vector2 BackgroundIntensity = Vector2.one;
          [SerializeField] public float PrimaryBackgroundTint = 0.0f;
          [SerializeField] public float PrimaryBackgroundContrast = 1.0f;
@@ -108,6 +109,7 @@ namespace TrueTrace {
          [SerializeField] public bool UseTransmittanceInNEE = true;
          [SerializeField] public bool MatChangeResetsAccum = false;
          [SerializeField] public float OIDNBlendRatio = 1.0f;
+         [SerializeField] public float FogDensity = 0.0002f;
          [SerializeField] public bool ConvBloom = false;
          [SerializeField] public float ConvStrength = 1.37f;
          [SerializeField] public float ConvBloomThreshold = 13.23f;
@@ -1781,6 +1783,23 @@ Toolbar toolbar;
          PlayContainer.Add(CustomToggle("Use vMF Diffuse", "vMFDiffuse"));
          PlayContainer.Add(CustomToggle("Use EON Diffuse", "EONDiffuse"));
          PlayContainer.Add(CustomToggle("Use Advanced Background", "AdvancedBackground"));
+         PlayContainer.Add(CustomToggle("Multiscatter Fog", "Fog"));
+
+
+
+         Slider FogSlider = new Slider() {label = "Fog Density: ", value = FogDensity, highValue = 0.2f, lowValue = 0.000000001f};
+         FogSlider.showInputField = true;        
+         FogSlider.style.width = 200;
+         FogSlider.ElementAt(0).style.minWidth = 65;
+         FogSlider.RegisterValueChangedCallback(evt => {FogDensity = evt.newValue; RayMaster.LocalTTSettings.FogDensity = FogDensity;});
+         
+         ColorField FogColorField = new ColorField();
+         FogColorField.value = FogColor;
+         FogColorField.style.width = 150;
+         FogColorField.RegisterValueChangedCallback(evt => {FogColor = evt.newValue; RayMaster.LocalTTSettings.FogColor = new Vector3(FogColor.r,FogColor.g,FogColor.b);});
+
+         PlayContainer.Add(FogSlider);
+         PlayContainer.Add(FogColorField);
          PlayContainer.Add(new Label("-------------"));
 
 
@@ -1834,6 +1853,26 @@ Toolbar toolbar;
          TurnTableBox.Add(TurnTableAbsolutePath);
 
          Button CorrectMatOptionsButton = new Button(() => FixRayObjects()) {text = "(Debug Button)Correct Mat Options"};
+
+
+            // List<string> DebugSettings = new List<string>();
+            // DebugSettings.Add("None");
+            // DebugSettings.Add("Material ID");
+            // DebugSettings.Add("Mesh ID");
+            // DebugSettings.Add("Triangle ID");
+            // DebugSettings.Add("Albedo ID");
+            // DebugSettings.Add("BVH View");
+            // DebugSettings.Add("Radiance Cache");
+            // DebugSettings.Add("GI View");
+            // DebugSettings.Add("Depth View");
+            // PopupField<string> DebugSettingsField = new PopupField<string>("<b>Debug Views</b>");
+            // DebugSettingsField.ElementAt(0).style.minWidth = 65;
+            // DebugSettingsField.choices = DebugSettings;
+            // DebugSettingsField.index = ToneMapIndex;
+            // DebugSettingsField.RegisterValueChangedCallback(evt => {ToneMapIndex = ToneMapField.index; RayMaster.LocalTTSettings.ToneMapper = ToneMapIndex;});
+
+
+
 
          HardSettingsMenu.Add(RemoveTrueTraceButton);
          HardSettingsMenu.Add(NonPlayLabel);
@@ -1966,7 +2005,7 @@ Toolbar toolbar;
             UnityEditor.AssetDatabase.Refresh();
          }
          bool HasNoMore = false;
-
+Slider AperatureSlider;
 
 
         public void CreateGUI() {
@@ -2352,7 +2391,7 @@ Toolbar toolbar;
 
 
            Label AperatureLabel = new Label("Aperature Size");
-           Slider AperatureSlider = new Slider() {value = DoFAperature, highValue = 1, lowValue = 0};
+           AperatureSlider = new Slider() {value = DoFAperature, highValue = 1, lowValue = 0};
            AperatureSlider.style.width = 250;
            FloatField AperatureScaleField = new FloatField() {value = DoFAperatureScale, label = "Aperature Scale"};
            AperatureScaleField.ElementAt(0).style.minWidth = 65;
@@ -2626,6 +2665,17 @@ Toolbar toolbar;
                }
             }
             if(RayMaster != null) {
+                  // Debug.Log(Input.GetAxis("Mouse ScrollWheel"));
+               if(RayMaster.LocalTTSettings.PPDoF && ((Input.GetAxis("Mouse ScrollWheel") != 0 && Input.GetKey(KeyCode.LeftControl)))) {
+                  RayMaster.IsFocusingDelta = true;
+                  RayMaster.LocalTTSettings.DoFAperature += Input.GetAxis("Mouse ScrollWheel") * 0.1f;
+                  RayMaster.LocalTTSettings.DoFAperature = Mathf.Clamp(RayMaster.LocalTTSettings.DoFAperature, 0.0001f, 1);
+                  DoFAperature = RayMaster.LocalTTSettings.DoFAperature;
+                  AperatureSlider.value = RayMaster.LocalTTSettings.DoFAperature;
+               } else {
+                  RayMaster.IsFocusingDelta = false;
+               }
+
                if(RayMaster.LocalTTSettings.PPDoF && (FramesSinceDOF < 3 || (Input.GetMouseButton(2) && Input.GetKey(KeyCode.LeftControl)))) {
                   FramesSinceDOF++;
                   if(Input.mousePosition.x >= 0 && Input.mousePosition.x < RayMaster.SourceWidth && Input.mousePosition.y >= 0 && Input.mousePosition.y < RayMaster.SourceHeight) {

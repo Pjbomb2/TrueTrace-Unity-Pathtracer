@@ -303,6 +303,8 @@ namespace TrueTrace {
             return 4.0f * Mathf.PI * expm1_over_x(-2.0f * sharpness);
         }
 
+        public LightBVHBuilder() {}
+
 
         public unsafe LightBVHBuilder(List<LightTriData> Tris, List<Vector3> Norms, float phi, List<float> LuminanceWeights) {//need to make sure incomming is transformed to world space already
             PrimCount = Tris.Count;          

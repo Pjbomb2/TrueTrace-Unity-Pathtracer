@@ -6,6 +6,10 @@ using System.Threading.Tasks;
 using UnityEngine.Rendering;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using System;
+using System.IO;
+using System.Text;
+
 #pragma warning disable 1998
 
 
@@ -650,7 +654,14 @@ namespace TrueTrace {
 
             int VertCount = 0;
             CreateAtlas(ref VertCount);
-
+            // LoadFile();
+            // MeshCountChanged = false;
+            // HasCompleted = true;
+            // NeedsToUpdate = false;
+            // Debug.Log(Name + " Has Completed Building with " + AggTriangles.Length + " triangles");
+            // FailureCount = 0;
+            // return;
+            
             int submeshcount;
             Mesh mesh = new Mesh();
             RayTracingObject CurrentObject;
@@ -749,6 +760,7 @@ namespace TrueTrace {
                 });
                 RepCount += Mathf.Min(submeshcount, CurrentObject.Names.Length);
             }
+
         }
 
     private List<Vector3Int> IsLeafList;
@@ -1106,6 +1118,7 @@ namespace TrueTrace {
         }
 
         public unsafe async Task BuildTotal() {
+            // if(HasCompleted) return;
             int IllumTriCount = 0;
             CudaTriangle TempTri = new CudaTriangle();
             Matrix4x4 ParentMatInv = CachedTransforms[0].WTL;
@@ -1378,6 +1391,37 @@ namespace TrueTrace {
             }
         }
 
+        // public void SaveToFile() {
+        //     ParentData LoadedFile = new ParentData();
+        //     LoadedFile.SGTree = LBVH.SGTree;
+        //     LoadedFile.AggTriangles = AggTriangles;
+        //     // LoadedFile.AggNodes = AggNodes;
+        //     // LoadedFile.LightTriangles = LightTriangles;
+        //     string json = JsonUtility.ToJson(LoadedFile);
+        //     using(var stream = File.Open((Application.dataPath.Replace("/Assets", "")) + "/SavedFiles/" + gameObject.name + ".txt", FileMode.Create)) {
+        //         using(BinaryWriter A = new BinaryWriter(stream, Encoding.UTF8, false)) {
+        //             A.Write(json);
+        //         }
+        //     }
+        // }
+        // public void LoadFile() {
+        //     string json = "";
+        //     using(var stream = File.Open((Application.dataPath.Replace("/Assets", "")) + "/SavedFiles/" + gameObject.name + ".txt", FileMode.Open)) {
+        //         using(BinaryReader A = new BinaryReader(stream, Encoding.UTF8, false)) {
+        //             json = A.ReadString();
+        //             ParentData LoadedFile = JsonUtility.FromJson<ParentData>(json);
+        //             LBVH = new LightBVHBuilder();
+        //             LBVH.SGTree = LoadedFile.SGTree;
+        //             AggTriangles = LoadedFile.AggTriangles;
+        //             LightTriangles = LoadedFile.LightTriangles;
+        //             AggNodes = LoadedFile.AggNodes;
+        //             BVH = new BVH8Builder();
+        //             BVH.cwbvhnode_count = AggNodes.Length;
+        //             BVH.cwbvhindex_count = AggTriangles.Length;
+        //         }
+        //     }
+        // }
+
         // public void OnDrawGizmos() {
 
         //     if(LightTriangles != null) {
@@ -1423,7 +1467,13 @@ namespace TrueTrace {
     }
 
 
-
+    [System.Serializable]
+    public class ParentData {
+        public GaussianTreeNode[] SGTree;
+        public CudaTriangle[] AggTriangles;
+        public List<LightTriData> LightTriangles;
+        public BVHNode8DataCompressed[] AggNodes;
+    }
 
 
 

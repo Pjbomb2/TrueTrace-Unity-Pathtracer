@@ -412,6 +412,8 @@ namespace TrueTrace {
         //     // else return GetTriCount(ref verbose, verbose[Index].left) + GetTriCount(ref verbose, verbose[Index].right);
         // }
 
+        public BVH8Builder() {}//null constructor
+        
         public BVH8Builder(ref BVH2Builder BVH2) {//Bottom Level CWBVH Builder
             int BVH2NodesCount = BVH2.BVH2NodesArray.Length;
             int BVH2IndicesCount = BVH2.FinalIndices.Length;

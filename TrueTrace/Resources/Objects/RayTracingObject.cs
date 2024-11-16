@@ -263,9 +263,12 @@ namespace TrueTrace {
 			InitializeArray<bool>(ref UseKelvin, false, Index, NeedsRedo);
 			InitializeArray<float>(ref KelvinTemp, 0, Index, NeedsRedo);
 			InitializeArray<float>(ref ColorBleed, 1, Index, NeedsRedo);
-			InitializeArray<float>(ref AlbedoBlendFactor, 1, Index, NeedsRedo);
+			InitializeArray<float>(ref AlbedoBlendFactor, 0, Index, NeedsRedo);
 			InitializeArray<float>(ref SecondaryNormalTexBlend, 0, Index, NeedsRedo);
 			InitializeArray<float>(ref DetailNormalStrength, 1, Index, NeedsRedo);
+			// for(int i = 0; i < AlbedoBlendFactor.Length; i++) {
+			// 	AlbedoBlendFactor[i] = 0;
+			// }
 
 			IsReady = true;
 			mesh = null;

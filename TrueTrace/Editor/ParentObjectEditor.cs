@@ -18,7 +18,10 @@ namespace TrueTrace {
             VisualElement Root = new VisualElement();
             Toggle DeformableToggle = new Toggle() {value = t.IsDeformable, text = "Deformable Mesh"};
             DeformableToggle.RegisterValueChangedCallback(evt => {t.IsDeformable = evt.newValue;});
+            // Button ToFileButton = new Button(() => {t.SaveToFile();});
+            // ToFileButton.text = "To File";
             Root.Add(DeformableToggle);
+            // Root.Add(ToFileButton);
             return Root;
         }
     }

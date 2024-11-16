@@ -120,6 +120,7 @@ namespace TrueTrace {
 
         [HideInInspector] public RenderTexture ScreenSpaceInfo;
         [HideInInspector] public bool IsFocusing = false;
+        [HideInInspector] public bool IsFocusingDelta = false;
         private RenderTexture ScreenSpaceInfoPrev;
 
         private ComputeBuffer _RayBuffer;
@@ -372,7 +373,7 @@ namespace TrueTrace {
 
         private void RunUpdate() {
             ShadingShader.SetVector("SunDir", Assets.SunDirection);
-            if (!LocalTTSettings.Accumulate || IsFocusing) {
+            if (!LocalTTSettings.Accumulate || IsFocusing || IsFocusingDelta) {
                 SampleCount = 0;
                 FramesSinceStart = 0;
             }
@@ -511,6 +512,7 @@ namespace TrueTrace {
             var EB = CamInvProjPrev;
             CamInvProjPrev = _camera.projectionMatrix.inverse;
             CamToWorldPrev = _camera.cameraToWorldMatrix;
+            SetMatrix("viewprojection", _camera.projectionMatrix * _camera.worldToCameraMatrix);
             SetMatrix("CamInvProj", _camera.projectionMatrix.inverse);
             SetMatrix("CamToWorld", _camera.cameraToWorldMatrix);
             SetMatrix("CamInvProjPrev", EB);
@@ -534,6 +536,7 @@ namespace TrueTrace {
             SetVector("HDRILongLat", LocalTTSettings.HDRILongLat, cmd);
             SetVector("HDRIScale", LocalTTSettings.HDRIScale, cmd);
             SetVector("MousePos", Input.mousePosition, cmd);
+            SetVector("FogColor", LocalTTSettings.FogColor, cmd);
             if(LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI) ASVGFCode.shader.SetVector("CamDelta", E);
             if(LocalTTSettings.DenoiserMethod == 1 && LocalTTSettings.UseReSTIRGI) ReSTIRASVGFCode.shader.SetVector("CamDelta", E);
 
@@ -552,6 +555,7 @@ namespace TrueTrace {
             SetFloat("SecondaryBackgroundIntensity", LocalTTSettings.BackgroundIntensity.y, cmd);
             SetFloat("LEMEnergyScale", LocalTTSettings.LEMEnergyScale, cmd);
             SetFloat("OIDNBlendRatio", LocalTTSettings.OIDNBlendRatio, cmd);
+            SetFloat("FogDensity", LocalTTSettings.FogDensity, cmd);
 
             SetInt("AlbedoAtlasSize", Assets.AlbedoAtlasSize, cmd);
             SetInt("LightMeshCount", Assets.LightMeshCount, cmd);

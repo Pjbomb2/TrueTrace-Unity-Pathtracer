@@ -16,6 +16,7 @@
 #endif
 
 
+
 #pragma kernel kernel_shade
 
 int BackgroundType;
@@ -54,11 +55,39 @@ bool VisabilityCheck(SmallerRay ray, float dist) {
     #endif
 }
 
+float FogDensity;
+float3 FogColor;
+
+float3 SampleHomo(SmallerRay ray, float maxT, int pixel_index, inout float t, inout float pdf) {
+    float3 SigmaT = FogDensity * FogScale;
+    float3 SigmaS = SigmaT * FogColor;
+    float3 SigmaA = SigmaT - SigmaS;
+    uint channel = min(floor(random(33, pixel_index).x * 3), 2);
+    t = -log(1 - random(33, pixel_index).y) / SigmaT[channel];
+    bool m_internal = t < maxT;
+    t = min(t, maxT);
+    float3 Tr = exp(-t * SigmaT);
+
+
+    if(m_internal) {
+        SigmaT *= Tr;
+        pdf = (SigmaT.x + SigmaT.y + SigmaT.z) / 3.0f; 
+    } else {
+        pdf = (Tr.x + Tr.y + Tr.z) / 3.0f;
+    }
+    return m_internal ? SigmaS * Tr / pdf : (Tr / pdf);
+}
+
 #ifdef RadianceCache
 inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout PropogatedCacheData CacheInstance) {//main function
 #else
 inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData) {//main function
 #endif
+    #ifdef Fog
+        float3 SigmaT = FogDensity * FogScale;
+        float3 SigmaS = SigmaT * FogColor;
+        float3 SigmaA = SigmaT - SigmaS;
+    #endif
     bool CB = !DoPartialRendering;
     if(!CB) {
         CB = (int(id.x)/2 + int(id.y)/2 + curframe)%PartialRenderingFactor==0;
@@ -139,8 +168,22 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         }
     }
 
-
+    float3 bsdf = 1;
+    float3 bsdfmodifier = 1;
+    #ifdef Fog
+        bool DidScatter = false;
+        float VolumeBSDF;
+        float newT = hit.t;
+        bool Refracted = false;
+        int MaterialLobe = 2;
+        throughput *= SampleHomo(ray, hit.t, pixel_index, newT, VolumeBSDF);
+        // BsdfSample Thissample = initbsdf();
+        if(newT == hit.t) {
+    #endif
     [branch] if (hitDat.emission > 0.0f) {//if we hit a light, this ray is done
+#ifdef Fog
+        hitDat.emission *= exp(-hit.t * SigmaT);
+#endif
         #ifdef WhiteLights
             hitDat.surfaceColor = 0.5f;
         #endif
@@ -218,7 +261,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     
     int MaterialLobe = 2;
     bool Refracted = false;
-    float3 bsdf = 1;
     [branch] if(CurBounce == 0 && UseReSTIRGI && ReSTIRGIUpdateRate != 0 && RandomNums[id].z != 0) {
         #ifdef HDRP
             float2 MotionVector = MotionVectors[int3(id,0)].xy;
@@ -231,7 +273,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         MaterialLobe = RandomNums[id].z - 1;
         validBSDFSample = ReconstructBsdf(hitDat, PrevDirection, ray.direction, norm, pdf, bsdf, GetTangentSpace(norm), pixel_index, MaterialLobe);
     } else validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
-    float3 bsdfmodifier = 1;
     {
         if (CurBounce == 0) {
             float Metallic = saturate(hitDat.metallic + ((!UseASVGF || UseReSTIRGI) ? 0 : hitDat.Specular));
@@ -273,6 +314,21 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         // bsdf *= bsdfmodifier;
         throughput *= bsdf;
     }
+    #ifdef Fog
+        } else {
+            validBSDFSample = true;
+            pos = ray.origin + ray.direction * (newT * 0.99f);
+            ray.direction = normalize(SampleDirectionSphere(random(75, pixel_index).x, random(75, pixel_index).y));
+            pdf = 1.0f / (PI * 4.0f);
+            norm = ray.direction;
+            ray.origin = pos;
+            hitDat.surfaceColor = FogColor;
+            hitDat.metallic = 0;
+            hitDat.roughness = 1;
+            DidScatter = true;
+        }
+        pdf *= VolumeBSDF;
+    #endif
 
 
     ray.origin = USGNorm * NormalOffset + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
@@ -507,7 +563,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                         bsdf_diffuse *= saturate(saturate(dot(to_light, -LightNorm)) * MiscInfo.y + MiscInfo.z);
                         Illum *= saturate(saturate(dot(to_light, -LightNorm)) * MiscInfo.y + MiscInfo.z);
                     }
-                    // if(id.x > screen_width / 2) Illum *= applyFog(1, 10000.0f, to_light, SunDir);
+#ifdef Fog
+                    Illum *= exp(-((LightFormat == DIRECTIONALLIGHT ? 1.0f : distance_to_light - 0.01f) + newT) * SigmaT);
+#endif
                     float maxillum = max(max(Illum.x, Illum.y), Illum.z);
                     if(DoExposure) maxillum *= Exposure[0];
                     if(!UseRussianRoulette || (CurBounce == 0 && ImprovedPrimaryHit)) maxillum = 1;
@@ -652,17 +710,22 @@ int MaterialIndex;
         float Intensity = DoSecondary ? BackgroundIntensity : SecondaryBackgroundIntensity;
         float TrueDeSat = DoSecondary ? SkyDesaturate : SecondarySkyDesaturate;
         if(CurBounce != 0 && IndirectBoost < 1) Intensity *= rcp(IndirectBoost);
+        float3 Sun = 0;
+        // float4 curprojectedrefl = mul(viewprojection, float4(ray.origin + SunDir * FarPlane, 1));
+        // float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w));
         [branch]switch(DoSecondary ? BackgroundType : SecondaryBackgroundType) {
             case 0:
                 Radiance = GetSkyRadiance(ray.origin, ray.direction, 0, SunDir, transmittance, debug);
                 Radiance += debug;
                 Radiance = pow(1.0f - exp(-Radiance / 1.0f * 10.0f), 1.0f);
-                if (dot(ray.direction, SunDir) > cos(0.0235f / 2.0f)) Radiance += clamp((Radiance + transmittance * (1.5f / (PI * (0.0235f / 2.0f) * (0.0235f / 2.0f)))) / 100.0f, 0, 10.0f);
+                if (dot(ray.direction, SunDir) > cos(0.0235f / 2.0f)) {
+                    Sun = clamp((Radiance + transmittance * (1.5f / (PI * (0.0235f / 2.0f) * (0.0235f / 2.0f)))) / (CurBounce == 0 ? 10.0f : 100.0f), 0, CurBounce == 0 ? 1000.0f : 10.0f);
+                }
+                Radiance += Sun;
                 Stars = stars(ray.origin, ray.direction, toSpherical(ray.direction.xzy).yz, 0) * (1.0f - tanh_approx(0));
                 Stars *= max(12.0f * pow(1.0f - saturate(pow(RayleighPhaseFunction(dot(ray.direction, SunDir)) * MiePhaseFunction(0.8f, dot(ray.direction, SunDir)),0.1f)),2.0f) * transmittance * -dot(rayorig2, SunDir) / length(rayorig2), 0);
                 Stars = pow(saturate(Stars), 2.0f);
                 if(GetBounceData(Color.MetRoughIsSpec) <= 1) Radiance += Stars;
-                // if(id.x > screen_width / 2) Radiance = applyFog(Radiance, 500.0f, ray.direction, SunDir);
 
                 if (all(Radiance < 10000.0f)) {
                     Radiance = DeSat(Radiance, 1.0f - TrueDeSat);
@@ -810,9 +873,6 @@ int MaterialIndex;
         Unity_Contrast_float(TempMat.surfaceColor, TempMat.Contrast);
         TempMat.surfaceColor = saturate(TempMat.surfaceColor);
         TempMat.surfaceColor = lerp(TempMat.surfaceColor, TempMat.BlendColor, TempMat.BlendFactor);
-    }
-    {
-        // if(id.x > screen_width / 2) TempMat.surfaceColor = applyFog(TempMat.surfaceColor, bestHit.t, ray.direction, SunDir);
     }
 
     #if DebugView != -1

@@ -11,6 +11,8 @@ float4x4 CamToWorld;
 float4x4 CamInvProj;
 float4x4 CamToWorldPrev;
 float4x4 CamInvProjPrev;
+float4x4 viewprojection;
+
 
 float4x4 ViewMatrix;
 int MaxBounce;
@@ -2610,17 +2612,17 @@ inline float3 temperature(float t)
 #endif
 
 
-float3 applyFog( in float3  col,   // color of pixel
-               in float t,     // distance to point
-               in float3  rd,    // camera to point
-               in float3  lig)  // sun direction
+
+
+float3 SampleDirectionSphere(float u1, float u2)
 {
-	float3 b =  0.0001f;//float3(0.1f, 0.1f, 0.1f);
-    float fogAmount = 1.0 - exp(-t*b);
-    float sunAmount = max( dot(rd, lig), 0.0 );
-    float3  fogColor  = lerp( float3(0.5,0.6,0.7), // blue
-                           float3(1.0,0.9,0.7), // yellow
-                           pow(sunAmount,8.0) );
-    return lerp( col, fogColor, fogAmount );
-    // return col*exp(-t*b) + fogColor*(1.0-exp(-t*b));
+    float z = u1 * 2.0f - 1.0f;
+    float r = sqrt(max(0.0f, 1.0f - z * z));
+    float phi = 2 * PI * u2;
+    float x = r * cos(phi);
+    float y = r * sin(phi);
+
+    return float3(x, y, z);
 }
+
+

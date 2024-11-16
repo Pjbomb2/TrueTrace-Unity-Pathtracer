@@ -10,7 +10,7 @@
 // #define IgnoreGlassMain
 // #define FadeMapping
 // #define PointFiltering
-#define StainedGlassShadows
+// #define StainedGlassShadows
 // #define IgnoreBackfacing
 // #define WhiteLights
 #define LBVH
@@ -22,12 +22,13 @@
 #define IndirectRetraceWeighting
 #define TrueBlack
 // #define AdvancedRadCacheAlt
-#define UseTextureLOD
+// #define UseTextureLOD
 // #define vMFDiffuse
 #define EONDiffuse
 // #define AdvancedBackground
 #define UseBRDFLights
 #define DoubleBufferSGTree
+// #define Fog
 
 
 //END OF DEFINES
@@ -46,6 +47,9 @@
 #define DVDepthView 7
 
 #define DepthDivisor 1000.0f
+
+#define FogScale 4.0f
+
 
 //Dont change the ones below
 #define DisneyIndex 0

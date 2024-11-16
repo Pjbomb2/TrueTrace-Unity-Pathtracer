@@ -23,15 +23,15 @@ MonoBehaviour:
   PPBloom: 0
   BloomStrength: 0.372
   PPDoF: 0
-  DoFAperature: 0.079
+  DoFAperature: 0.0001
   DoFAperatureScale: 0.54
-  DoFFocal: 2
+  DoFFocal: 9.850411
   PPExposure: 0
   ExposureAuto: 1
   PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
-  DenoiserMethod: 0
+  DenoiserMethod: 2
   UpscalerMethod: 2
   ReSTIRGIUpdateRate: 7
   UseReSTIRGITemporal: 1
@@ -47,7 +47,7 @@ MonoBehaviour:
   DoFirefly: 0
   ImprovedPrimaryHit: 1
   RISCount: 12
-  ToneMapper: 0
+  ToneMapper: 1
   SkyDesaturate: 0
   ClayColor: {x: 0.38679248, y: 0.38679248, z: 0.38679248}
   GroundColor: {x: 0.11320752, y: 0.11320752, z: 0.11320752}
@@ -55,7 +55,7 @@ MonoBehaviour:
   FireflyFrameInterval: 1
   FireflyStrength: 1
   FireflyOffset: 0
-  OIDNFrameCount: 1222
+  OIDNFrameCount: 2
   DoSharpen: 0
   Sharpness: 1
   MainDesiredRes: 16384
@@ -73,9 +73,9 @@ MonoBehaviour:
   SecondarySkyDesaturate: 0
   MatChangeResetsAccum: 1
   PPFXAA: 0
-  OIDNBlendRatio: 0.119
+  OIDNBlendRatio: 1
   ConvBloom: 1
-  ConvStrength: 0.18
+  ConvStrength: 1.74
   ConvBloomThreshold: 0
   ConvBloomSize: {x: 1, y: 1}
   ConvBloomDistExp: 0
@@ -84,3 +84,5 @@ MonoBehaviour:
   PrimaryBackgroundTintColor: {x: 0.32200065, y: 0.764151, z: 0.6593174}
   PrimaryBackgroundTint: 0
   PrimaryBackgroundContrast: 1
+  FogDensity: 0.01
+  FogColor: {x: 0.8396226, y: 0.8396226, z: 0.8396226}

@@ -26,18 +26,23 @@ namespace TrueTrace {
             ThisLight = this.GetComponent<Light>();
             // ThisLight.shadows = LightShadows.None;
         }
-        public void UpdateLight() {
+        public bool UpdateLight(bool OverrideTransform) {
+            bool HasChanged = false;
             ThisLight.useColorTemperature = true;
             UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = true;
-            // if(transform.hasChanged || HasChanged) {
+            if(transform.hasChanged || OverrideTransform) {
+                HasChanged = true;
                 ThisLightData.Position = transform.position;
                 ThisLightData.Direction = (ThisLight.type == LightType.Directional) ? -transform.forward : (ThisLight.type == LightType.Spot) ? Vector3.Normalize(transform.forward) : transform.forward;
                 ThisLightData.ZAxisRotation = transform.localEulerAngles.z * 3.14159f / 180.0f;
                 transform.hasChanged = false;
-            // }
+            }
             Color TempCol;
             if(UseKelvin) TempCol = Mathf.CorrelatedColorTemperatureToRGB(KelvinTemperature);
             else TempCol = ThisLight.color;
+
+            if(!HasChanged && ThisLightData.Radiance != new Vector3(TempCol[0], TempCol[1], TempCol[2]) * ThisLight.intensity) HasChanged = true;
+            if(!HasChanged && ThisLightData.Type != ((ThisLight.type == LightType.Point) ? 0 : (ThisLight.type == LightType.Directional) ? 1 : (ThisLight.type == LightType.Spot) ? 2 : (ThisLight.type == LightType.Rectangle) ? 3 : 4)) HasChanged = true;
 
             ThisLightData.Radiance = new Vector3(TempCol[0], TempCol[1], TempCol[2]) * ThisLight.intensity;
             ThisLightData.Type = (ThisLight.type == LightType.Point) ? 0 : (ThisLight.type == LightType.Directional) ? 1 : (ThisLight.type == LightType.Spot) ? 2 : (ThisLight.type == LightType.Rectangle) ? 3 : 4;
@@ -45,23 +50,28 @@ namespace TrueTrace {
                 float innerCos = Mathf.Cos(Mathf.Deg2Rad * 0.5f * ThisLight.innerSpotAngle);
                 float outerCos = Mathf.Cos(Mathf.Deg2Rad * 0.5f * ThisLight.spotAngle);
                 float angleRangeInv = 1.0f / Mathf.Max(innerCos - outerCos, 0.001f);
+                if(!HasChanged && ThisLightData.SpotAngle != new Vector2(angleRangeInv, -outerCos * angleRangeInv)) HasChanged = true;
                 ThisLightData.SpotAngle = new Vector2(angleRangeInv, -outerCos * angleRangeInv);
             } else if(ThisLight.type == LightType.Rectangle) {
                 #if UNITY_EDITOR
+                    if(!HasChanged && ThisLightData.SpotAngle != ThisLight.areaSize) HasChanged = true;
                     ThisLightData.SpotAngle = ThisLight.areaSize;
                 #endif
             } else if(ThisLight.type == LightType.Disc) {
                 #if UNITY_EDITOR
+                    if(!HasChanged && ThisLightData.SpotAngle != ThisLight.areaSize) HasChanged = true;
                     ThisLightData.SpotAngle = ThisLight.areaSize;
                 #endif
             } else {
-                ThisLightData.SpotAngle = new Vector2(0.0f, 0.0f);
+                ThisLightData.SpotAngle = Vector2.zero;
             }
+            if(!HasChanged && ThisLightData.Softness != ShadowSoftness) HasChanged = true;
             ThisLightData.Softness = ShadowSoftness;
+            return HasChanged;
         }
 
         private void OnEnable() { 
-            UpdateLight();  
+            UpdateLight(true);  
             if(!RayTracingMaster._rayTracingLights.Contains(this)) RayTracingMaster.RegisterObject(this);
         }
 
