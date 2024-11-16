@@ -15,7 +15,8 @@ namespace TrueTrace {
         [SerializeField] [Range(1000.0f,20000.0f)] public float KelvinTemperature = 1000.0f;
         public Texture2D IESProfile;
 
-
+        Vector3 PrevCol;
+        float prevInten;
 
         public void Start() {
             ThisLightData = new LightData();
@@ -30,19 +31,24 @@ namespace TrueTrace {
             bool HasChanged = false;
             ThisLight.useColorTemperature = true;
             UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = true;
-            if(transform.hasChanged || OverrideTransform) {
-                HasChanged = true;
+            // if(transform.hasChanged || OverrideTransform) {
+                if(ThisLightData.Position != transform.position) HasChanged = true;
+                if(!HasChanged && ThisLightData.Direction != ((ThisLight.type == LightType.Directional) ? -transform.forward : (ThisLight.type == LightType.Spot) ? Vector3.Normalize(transform.forward) : transform.forward)) HasChanged = true;
+                if(!HasChanged && Mathf.Abs(ThisLightData.ZAxisRotation - transform.localEulerAngles.z * 3.14159f / 180.0f) > 0.0000001f) HasChanged = true;
                 ThisLightData.Position = transform.position;
                 ThisLightData.Direction = (ThisLight.type == LightType.Directional) ? -transform.forward : (ThisLight.type == LightType.Spot) ? Vector3.Normalize(transform.forward) : transform.forward;
                 ThisLightData.ZAxisRotation = transform.localEulerAngles.z * 3.14159f / 180.0f;
                 transform.hasChanged = false;
-            }
+            // }
             Color TempCol;
             if(UseKelvin) TempCol = Mathf.CorrelatedColorTemperatureToRGB(KelvinTemperature);
             else TempCol = ThisLight.color;
 
-            if(!HasChanged && ThisLightData.Radiance != new Vector3(TempCol[0], TempCol[1], TempCol[2]) * ThisLight.intensity) HasChanged = true;
+            if(!HasChanged && (PrevCol != new Vector3(TempCol[0], TempCol[1], TempCol[2]) || (prevInten != ThisLight.intensity))) HasChanged = true;
             if(!HasChanged && ThisLightData.Type != ((ThisLight.type == LightType.Point) ? 0 : (ThisLight.type == LightType.Directional) ? 1 : (ThisLight.type == LightType.Spot) ? 2 : (ThisLight.type == LightType.Rectangle) ? 3 : 4)) HasChanged = true;
+
+            prevInten = ThisLight.intensity;
+            PrevCol = new Vector3(TempCol[0], TempCol[1], TempCol[2]);
 
             ThisLightData.Radiance = new Vector3(TempCol[0], TempCol[1], TempCol[2]) * ThisLight.intensity;
             ThisLightData.Type = (ThisLight.type == LightType.Point) ? 0 : (ThisLight.type == LightType.Directional) ? 1 : (ThisLight.type == LightType.Spot) ? 2 : (ThisLight.type == LightType.Rectangle) ? 3 : 4;

@@ -20,15 +20,15 @@ MonoBehaviour:
   UseNEE: 1
   DoTLASUpdates: 1
   Accumulate: 1
-  PPBloom: 0
+  PPBloom: 1
   BloomStrength: 0.372
-  PPDoF: 0
-  DoFAperature: 0.0001
-  DoFAperatureScale: 0.54
-  DoFFocal: 9.850411
-  PPExposure: 0
-  ExposureAuto: 1
-  PPToneMap: 0
+  PPDoF: 1
+  DoFAperature: 0.15010014
+  DoFAperatureScale: 1
+  DoFFocal: 3.820374
+  PPExposure: 1
+  ExposureAuto: 0
+  PPToneMap: 1
   PPTAA: 0
   RenderScale: 1
   DenoiserMethod: 2
@@ -41,21 +41,21 @@ MonoBehaviour:
   ReSTIRGISpatialRadius: 24
   ReSTIRGITemporalMCap: 4
   DoReSTIRGIConnectionValidation: 1
-  Exposure: 18.9
+  Exposure: 2.2
   DoPartialRendering: 0
   PartialRenderingFactor: 2
-  DoFirefly: 0
+  DoFirefly: 1
   ImprovedPrimaryHit: 1
   RISCount: 12
   ToneMapper: 1
   SkyDesaturate: 0
   ClayColor: {x: 0.38679248, y: 0.38679248, z: 0.38679248}
   GroundColor: {x: 0.11320752, y: 0.11320752, z: 0.11320752}
-  FireflyFrameCount: 1222
-  FireflyFrameInterval: 1
-  FireflyStrength: 1
+  FireflyFrameCount: 200
+  FireflyFrameInterval: 200
+  FireflyStrength: 0.135
   FireflyOffset: 0
-  OIDNFrameCount: 2
+  OIDNFrameCount: 800
   DoSharpen: 0
   Sharpness: 1
   MainDesiredRes: 16384
@@ -72,9 +72,9 @@ MonoBehaviour:
   UseTransmittanceInNEE: 1
   SecondarySkyDesaturate: 0
   MatChangeResetsAccum: 1
-  PPFXAA: 0
+  PPFXAA: 1
   OIDNBlendRatio: 1
-  ConvBloom: 1
+  ConvBloom: 0
   ConvStrength: 1.74
   ConvBloomThreshold: 0
   ConvBloomSize: {x: 1, y: 1}

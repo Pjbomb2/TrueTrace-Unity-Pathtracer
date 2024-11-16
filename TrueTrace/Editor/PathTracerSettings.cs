@@ -2070,6 +2070,15 @@ Slider AperatureSlider;
                       A.customPasses.Add(new HDRPCompatability());
                   }
                #endif
+               #if UNITY_PIPELINE_URP
+                  GameObject NewObject = GameObject.Find("URPPASS");
+                  
+                  if(NewObject == null) {
+                      NewObject = new GameObject();
+                      NewObject.name = "URPPASS";
+                      NewObject.AddComponent<URPTTInjectPass>();
+                  }
+               #endif
             }
             Button MainSourceButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();});
             Button MaterialPairButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); InputMaterialField.value = null; MaterialPairingMenu.Add(InputMaterialField); rootVisualElement.Add(MaterialPairingMenu);});
