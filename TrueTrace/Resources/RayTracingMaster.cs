@@ -557,6 +557,7 @@ namespace TrueTrace {
             SetFloat("OIDNBlendRatio", LocalTTSettings.OIDNBlendRatio, cmd);
             SetFloat("FogDensity", LocalTTSettings.FogDensity, cmd);
 
+            SetInt("NonInstanceCount", Assets.NonInstanceCount, cmd);
             SetInt("AlbedoAtlasSize", Assets.AlbedoAtlasSize, cmd);
             SetInt("LightMeshCount", Assets.LightMeshCount, cmd);
             SetInt("unitylightcount", Assets.UnityLightCount, cmd);

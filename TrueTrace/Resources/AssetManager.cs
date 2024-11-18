@@ -1546,6 +1546,14 @@ namespace TrueTrace {
         ComputeBuffer BVHDataBuffer;
         ComputeBuffer LightBVHTransformsBuffer;
 
+        [System.Serializable]
+        public struct PerInstanceData {
+            public Matrix4x4 objectToWorld; // We must specify object-to-world transformation for each instance
+            public uint renderingLayerMask;
+            public uint CustomInstanceID;
+        }
+        public int NonInstanceCount = 0;
+        Dictionary<ParentObject, List<InstancedObject>> InstanceIndexes;
 
 
         unsafe public void ConstructNewTLAS() {
@@ -1555,7 +1563,8 @@ namespace TrueTrace {
                 SubMeshOffsets = new List<int>();
                 MeshOffsets = new List<Vector2>();
                 AccelStruct.ClearInstances();
-                for(int i = 0; i < RenderQue.Count; i++) {
+                int RendCount = RenderQue.Count;
+                for(int i = 0; i < RendCount; i++) {
                     foreach(var A in RenderQue[i].Renderers) {
                         MeshOffsets.Add(new Vector2(SubMeshOffsets.Count, i));
                         var B2 = A.gameObject;
@@ -1577,6 +1586,52 @@ namespace TrueTrace {
                             AccelStruct.AddInstance(A, B, true, false, (uint)((TempObj.SpecTrans[0] == 1) ? 0x2 : 0x1), (uint)MeshOffset);
                         MeshOffset++;
                     }
+                }
+
+                NonInstanceCount = MeshOffset;
+
+                int ExteriorCount = RendCount;
+
+
+                for(int i = 0; i < InstanceData.RenderQue.Count; i++) {
+                    if (InstanceIndexes.TryGetValue(InstanceData.RenderQue[i], out List<InstancedObject> ExistingList)) {
+                        InstanceData.RenderQue[i].RTAccelSubmeshOffsets = MeshOffset;
+                        for(int j = 0; j < ExistingList.Count; j++) {
+                            MeshOffsets.Add(new Vector2(SubMeshOffsets.Count, ExteriorCount + j));
+                        }
+                        Mesh mesh = new Mesh();
+                        if(InstanceData.RenderQue[i].TryGetComponent<MeshFilter>(out MeshFilter TempFilter)) mesh = TempFilter.sharedMesh;
+                        else if(InstanceData.RenderQue[i].TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin)) mesh = TempSkin.sharedMesh;
+                        int SubMeshCount = mesh.subMeshCount;
+                        for (int i2 = 0; i2 < SubMeshCount; ++i2)
+                        {//Add together all the submeshes in the mesh to consider it as one object
+                            SubMeshOffsets.Add(TotLength);
+                            int IndiceLength = (int)mesh.GetIndexCount(i2) / 3;
+                            TotLength += IndiceLength;
+                        }
+                        RayTracingSubMeshFlags[] B = new RayTracingSubMeshFlags[SubMeshCount];
+                        for(int i2 = 0; i2 < SubMeshCount; i2++) {
+                            B[i2] = RayTracingSubMeshFlags.Enabled | RayTracingSubMeshFlags.ClosestHitOnly;
+                        }
+
+                        RayTracingMeshInstanceConfig TempConfig = new RayTracingMeshInstanceConfig();
+                        TempConfig.subMeshFlags = B[0];
+                        TempConfig.mesh = mesh;
+                        InstanceData.RenderQue[i].TryGetComponent<MeshRenderer>(out MeshRenderer TempRend);
+                        TempConfig.material = TempRend.sharedMaterials[0];
+
+                        PerInstanceData[] InstanceDatas = new PerInstanceData[ExistingList.Count];
+                        for(int j = 0; j < ExistingList.Count; j++) {
+                            InstanceDatas[j].objectToWorld = ExistingList[j].transform.localToWorldMatrix;
+                            InstanceDatas[j].renderingLayerMask = 0xFF;
+                            InstanceDatas[j].CustomInstanceID = (uint)j;
+                        }
+                        InstanceData.RenderQue[i].RTAccelHandle = AccelStruct.AddInstances(TempConfig, InstanceDatas, -1, 0, (uint)MeshOffset);
+
+                        MeshOffset += ExistingList.Count;
+                        ExteriorCount += ExistingList.Count;
+                    }
+
                 }
             AccelStruct.Build();
             #else
@@ -1755,7 +1810,8 @@ namespace TrueTrace {
                 BoxesBuffer = new ComputeBuffer(MeshAABBs.Length, 24);
                 TLASCWBVHIndexes = new ComputeBuffer(MeshAABBs.Length, 4);
                 TLASCWBVHIndexes.SetData(TLASBVH8.cwbvh_indices);
-                 for (int i = 0; i < RenderQue.Count; i++) {
+                int RendCount = RenderQue.Count;
+                for (int i = 0; i < RendCount; i++) {
                     ParentObject TargetParent = RenderQue[i];
                     MeshAABBs[TargetParent.CompactedMeshData] = TargetParent.aabb;
                 }
@@ -1971,6 +2027,17 @@ namespace TrueTrace {
                 }
 
                 // UnityEngine.Profiling.Profiler.EndSample();
+                InstanceIndexes = new Dictionary<ParentObject, List<InstancedObject>>();
+
+                for(int i = 0; i < InstanceRenderQue.Count; i++) {
+                    if (InstanceIndexes.TryGetValue(InstanceRenderQue[i].InstanceParent, out List<InstancedObject> ExistingList)) {
+                        ExistingList.Add(InstanceRenderQue[i]);
+                    } else {
+                        List<InstancedObject> TempList = new List<InstancedObject>();
+                        TempList.Add(InstanceRenderQue[i]);
+                        InstanceIndexes.Add(InstanceRenderQue[i].InstanceParent, TempList);
+                    }
+                }
 
                 // UnityEngine.Profiling.Profiler.BeginSample("Remake Initial Instance Data A");
                 int InstanceCount = InstanceData.RenderQue.Count;
@@ -1986,30 +2053,58 @@ namespace TrueTrace {
                     MatOffset += InstanceData.RenderQue[i].MatOffset;
                     AggNodeCount += InstanceData.RenderQue[i].AggBVHNodeCount;//Can I replace this with just using aggregated_bvh_node_count below?
                     AggTriCount += InstanceData.RenderQue[i].AggIndexCount;
-                    aggregated_bvh_node_count += InstanceData.RenderQue[i].BVH.cwbvhnode_count;
+                    #if !HardwareRT
+                        aggregated_bvh_node_count += InstanceData.RenderQue[i].BVH.cwbvhnode_count;
+                    #endif
                 }
                 // UnityEngine.Profiling.Profiler.EndSample();
                 // UnityEngine.Profiling.Profiler.BeginSample("Remake Initial Instance Data B");
                 InstanceCount = InstanceRenderQue.Count;
                 int MeshCount = MeshDataCount;
-                for (int i = 0; i < InstanceCount; i++)
-                {
-                    int Index = InstanceRenderQue[i].InstanceParent.CompactedMeshData;
-                    MyMeshesCompacted.Add(new MyMeshDataCompacted() {
-                        mesh_data_bvh_offsets = Aggs[Index].mesh_data_bvh_offsets,
-                        Transform = InstanceRenderQue[i].transform.worldToLocalMatrix,
-                        AggIndexCount = Aggs[Index].AggIndexCount,
-                        AggNodeCount = Aggs[Index].AggNodeCount,
-                        MaterialOffset = Aggs[Index].MaterialOffset,
-                        LightTriCount = Aggs[Index].LightTriCount,
-                        LightNodeOffset = Aggs[Index].LightNodeOffset
+                #if HardwareRT
+                    int TempCount = 0;
+                    for(int i = 0; i < InstanceData.RenderQue.Count; i++) {
+                        if(InstanceIndexes.TryGetValue(InstanceData.RenderQue[i], out List<InstancedObject> TempList)) {
+                            for(int j = 0; j < TempList.Count; j++) {
+                                int Index = TempList[j].InstanceParent.CompactedMeshData;
+                                MyMeshesCompacted.Add(new MyMeshDataCompacted() {
+                                    mesh_data_bvh_offsets = Aggs[Index].mesh_data_bvh_offsets,
+                                    Transform = TempList[j].transform.worldToLocalMatrix,
+                                    AggIndexCount = Aggs[Index].AggIndexCount,
+                                    AggNodeCount = Aggs[Index].AggNodeCount,
+                                    MaterialOffset = Aggs[Index].MaterialOffset,
+                                    LightTriCount = Aggs[Index].LightTriCount,
+                                    LightNodeOffset = Aggs[Index].LightNodeOffset
 
-                    });
-                    InstanceRenderQue[i].CompactedMeshData = MeshCount + i;
-                    AABB aabb = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
-                    CreateAABB(InstanceRenderQue[i].transform, ref aabb);
-                    MeshAABBs[RenderQue.Count + i] = aabb;
-                }
+                                });
+                                TempList[j].CompactedMeshData = MeshCount + j;
+                                AABB aabb = TempList[j].InstanceParent.aabb_untransformed;
+                                CreateAABB(TempList[j].transform, ref aabb);
+                                MeshAABBs[RenderQue.Count + TempCount] = aabb;                        
+                                TempCount++;
+                            }
+                        }
+                    }
+                #else
+                    for (int i = 0; i < InstanceCount; i++)
+                    {
+                        int Index = InstanceRenderQue[i].InstanceParent.CompactedMeshData;
+                        MyMeshesCompacted.Add(new MyMeshDataCompacted() {
+                            mesh_data_bvh_offsets = Aggs[Index].mesh_data_bvh_offsets,
+                            Transform = InstanceRenderQue[i].transform.worldToLocalMatrix,
+                            AggIndexCount = Aggs[Index].AggIndexCount,
+                            AggNodeCount = Aggs[Index].AggNodeCount,
+                            MaterialOffset = Aggs[Index].MaterialOffset,
+                            LightTriCount = Aggs[Index].LightTriCount,
+                            LightNodeOffset = Aggs[Index].LightNodeOffset
+
+                        });
+                        InstanceRenderQue[i].CompactedMeshData = MeshCount + i;
+                        AABB aabb = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
+                        CreateAABB(InstanceRenderQue[i].transform, ref aabb);
+                        MeshAABBs[RenderQue.Count + i] = aabb;
+                    }
+                #endif
                 // UnityEngine.Profiling.Profiler.EndSample();
 
 
@@ -2061,6 +2156,20 @@ namespace TrueTrace {
 
                 // UnityEngine.Profiling.Profiler.BeginSample("Refit TLAS");
                 int ListCount = InstanceRenderQue.Count;
+                List<ParentObject> ObjsToUpdate = new List<ParentObject>();
+
+                // int UpdateCount = InstanceData.RenderQue.Count;
+                // for(int i = 0; i < UpdateCount; i++) {
+                //     if (InstanceIndexes.TryGetValue(InstanceData.RenderQue[i], out List<InstancedObject> ExistingList)) {
+                //         List<Matrix4x4> TargetInstances = new List<Matrix4x4>();
+                //         int Count2 = ExistingList.Count;
+                //         for(int i2 = 0; i2 < Count2; i2++) {
+                //             TargetInstances.Add(ExistingList[i2].gameObject.transform.worldToLocalMatrix);
+                //         }
+                //         Graphics.DrawMeshInstanced(InstanceData.RenderQue[i].gameObject.GetComponent<MeshFilter>().sharedMesh, 0, InstanceData.RenderQue[i].gameObject.GetComponent<MeshRenderer>().sharedMaterials[0], TargetInstances.ToArray());
+                //     }
+                // }
+
                 for (int i = 0; i < ListCount; i++)
                 {
                     if (InstanceRenderTransforms[i].hasChanged || ChangedLastFrame)
@@ -2073,14 +2182,47 @@ namespace TrueTrace {
                         AABB aabb = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
                         CreateAABB(TargetTransform, ref aabb);
                         MeshAABBs[InstanceRenderQue[i].CompactedMeshData] = aabb;
+                        if(!ObjsToUpdate.Contains(InstanceRenderQue[i].InstanceParent)) ObjsToUpdate.Add(InstanceRenderQue[i].InstanceParent);
                     }
                 }
 
-                AggNodeCount = 0;
-                // UnityEngine.Profiling.Profiler.EndSample();
                 #if HardwareRT
+                    int UpdateCount = ObjsToUpdate.Count;
+                    for(int i = 0; i < UpdateCount; i++) {
+                        if (InstanceIndexes.TryGetValue(ObjsToUpdate[i], out List<InstancedObject> ExistingList)) {
+                            AccelStruct.RemoveInstance(ObjsToUpdate[i].RTAccelHandle);
+
+                            Mesh mesh = new Mesh();
+                            if(ObjsToUpdate[i].TryGetComponent<MeshFilter>(out MeshFilter TempFilter)) mesh = TempFilter.sharedMesh;
+                            else if(ObjsToUpdate[i].TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin)) mesh = TempSkin.sharedMesh;
+                            int SubMeshCount = mesh.subMeshCount;
+
+                            RayTracingSubMeshFlags[] B = new RayTracingSubMeshFlags[SubMeshCount];
+                            for(int i2 = 0; i2 < SubMeshCount; i2++) {
+                                B[i2] = RayTracingSubMeshFlags.Enabled | RayTracingSubMeshFlags.ClosestHitOnly;
+                            }
+
+                            RayTracingMeshInstanceConfig TempConfig = new RayTracingMeshInstanceConfig();
+                            TempConfig.subMeshFlags = B[0];
+                            TempConfig.mesh = mesh;
+                            ObjsToUpdate[i].TryGetComponent<MeshRenderer>(out MeshRenderer TempRend);
+                            TempConfig.material = TempRend.sharedMaterials[0];
+
+                            int ExCount = ExistingList.Count;
+                            PerInstanceData[] InstanceDatas = new PerInstanceData[ExistingList.Count];
+                            for(int j = 0; j < ExCount; j++) {
+                                InstanceDatas[j].objectToWorld = ExistingList[j].transform.localToWorldMatrix;
+                                InstanceDatas[j].renderingLayerMask = 0xFF;
+                                InstanceDatas[j].CustomInstanceID = (uint)j;
+                            }
+                            ObjsToUpdate[i].RTAccelHandle = AccelStruct.AddInstances(TempConfig, InstanceDatas, -1, 0, (uint)ObjsToUpdate[i].RTAccelSubmeshOffsets);
+                        }
+
+                    }
                     AccelStruct.Build();
                 #endif
+                // UnityEngine.Profiling.Profiler.EndSample();
+                AggNodeCount = 0;
                 cmd.BeginSample("TLAS Refitting");
                 RefitTLAS(MeshAABBs, cmd);
                 cmd.EndSample("TLAS Refitting");

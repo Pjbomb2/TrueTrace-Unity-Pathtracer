@@ -255,6 +255,8 @@ namespace TrueTrace {
                   GameObject InstancedParent = Instantiate(Objects[i][0], new Vector3(0,-100,0), Quaternion.identity, InstanceStorage);
                   if(InstancedParent.GetComponent<ParentObject>() == null) InstancedParent.AddComponent<ParentObject>();
                   for(int i2 = Count - 1; i2 >= 0; i2--) {
+                     // DestroyImmediate(Objects[i][i2].GetComponent<MeshFilter>());
+                     // DestroyImmediate(Objects[i][i2].GetComponent<MeshRenderer>());
                      DestroyImmediate(Objects[i][i2].GetComponent<RayTracingObject>());
                      if(InstancedParent.GetComponent<ParentObject>()) DestroyImmediate(Objects[i][i2].GetComponent<ParentObject>());
                      Objects[i][i2].AddComponent<InstancedObject>();
@@ -1173,6 +1175,12 @@ Toolbar toolbar;
          AssetManager.data.Material[Index] = MatShader;
          string materialMappingsPath = TTPathFinder.GetMaterialMappingsPath();
          using(StreamWriter writer = new StreamWriter(materialMappingsPath)) {
+               // int AssetCount = AssetManager.data.Material.Count;
+               // int Counter = 0;
+               // for(int i = AssetCount - 1; i >= 0; i--) {//143
+               //    if(AssetManager.data.Material[i].Name.Contains("Hidden/.poiyomi/")) {AssetManager.data.Material.RemoveAt(i); Counter++;}
+               // }
+               // Debug.Log("Removed: " + Counter);
             var serializer = new XmlSerializer(typeof(Materials));
             serializer.Serialize(writer.BaseStream, AssetManager.data);
             AssetDatabase.Refresh();
@@ -1237,6 +1245,53 @@ Toolbar toolbar;
            return dialogueNode;
       }
 
+     private int CalcLevenshteinDistance2() {
+        string s = "AAAA";
+        string t = "AAAA";
+         // Special cases
+         if (s == t) return 0;
+         if (s.Length == 0) return t.Length;
+         if (t.Length == 0) return s.Length;
+         // Initialize the distance matrix
+         int[, ] distance = new int[s.Length + 1, t.Length + 1];
+         for (int i = 0; i <= s.Length; i++) distance[i, 0] = i;
+         for (int j = 0; j <= t.Length; j++) distance[0, j] = j;
+         // Calculate the distance
+         for (int i = 1; i <= s.Length; i++) {
+             for (int j = 1; j <= t.Length; j++) {
+                 int cost = (s[i - 1] == t[j - 1]) ? 0 : 1;
+                 distance[i, j] = Math.Min(Math.Min(distance[i - 1, j] + 1, distance[i, j - 1] + 1), distance[i - 1, j - 1] + cost);
+             }
+         }
+         // Return the distance
+         return distance[s.Length, t.Length];
+     }
+
+
+    private int CalcLevenshteinDistance() {
+        string InputVal = "AAAA";
+        string ComparativeVal = "AAAA";
+        if(InputVal.Equals(ComparativeVal)) return 0;
+        int InputLength = InputVal.Length;
+        int ComparativeLength = ComparativeVal.Length;
+        if(InputLength == 0) return ComparativeLength;
+        if(ComparativeLength == 0) return InputLength;
+
+        int[] Distances = new int[(InputLength + 1) * (ComparativeLength + 1)];
+        for (int i = 0; i <= InputLength; i++) Distances[i] = i;
+        for (int j = 0; j <= ComparativeLength; j++) Distances[j * (InputLength + 1)] = j;
+        // Calculate the distance
+        for (int i = 1; i <= InputLength; i++) {
+            for (int j = 1; j <= ComparativeLength; j++) {
+                int cost = (InputVal[i - 1] == ComparativeVal[j - 1]) ? 0 : 1;
+                Distances[i + j * (InputLength + 1)] = Math.Min(Math.Min(Distances[i + j * (InputLength + 1) - 1] + 1, Distances[i + (j - 1) * (InputLength + 1)] + 1), Distances[i + (j - 1) * (InputLength + 1) - 1] + cost);
+            }
+        }
+        // Return the distance
+        return Distances[InputLength + ComparativeLength * (InputLength + 1)];
+
+
+    }
 
 
       private DialogueGraphView _graphView;
@@ -2071,13 +2126,13 @@ Slider AperatureSlider;
                   }
                #endif
                #if UNITY_PIPELINE_URP
-                  // GameObject NewObject = GameObject.Find("URPPASS");
+                  GameObject NewObject = GameObject.Find("URPTTINJECTOR");
                   
-                  // if(NewObject == null) {
-                  //     NewObject = new GameObject();
-                  //     NewObject.name = "URPPASS";
-                  //     NewObject.AddComponent<URPTTInjectPass>();
-                  // }
+                  if(NewObject == null) {
+                      NewObject = new GameObject();
+                      NewObject.name = "URPTTINJECTOR";
+                      NewObject.AddComponent<UnityEngine.Rendering.Universal.InjectPathTracingPass>();
+                  }
                #endif
             }
             Button MainSourceButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();});

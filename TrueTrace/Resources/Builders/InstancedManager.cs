@@ -73,17 +73,6 @@ namespace TrueTrace {
         public void UpdateRenderAndBuildQues(ref bool NeedsToUpdate)
         {
 
-            // UnityEngine.Profiling.Profiler.BeginSample("Instaced AddQue");
-            int AddQueCount = AddQue.Count - 1;
-            for (int i = AddQueCount; i >= 0; i--)
-            {
-                var CurrentRep = BuildQue.Count;
-                BuildQue.Add(AddQue[i]);
-                AddQue.RemoveAt(i);
-                BuildQue[CurrentRep].LoadData();
-                CurrentlyActiveTasks.Add(Task.Run(() => BuildQue[CurrentRep].BuildTotal()));
-            }
-            // UnityEngine.Profiling.Profiler.EndSample();
             // UnityEngine.Profiling.Profiler.BeginSample("Instaced RemoveQue");
             int RemoveQueCount = RemoveQue.Count - 1;
             for (int i = RemoveQueCount; i >= 0; i--)
@@ -99,20 +88,15 @@ namespace TrueTrace {
                 RemoveQue.RemoveAt(i);
             }
             // UnityEngine.Profiling.Profiler.EndSample();
-            // UnityEngine.Profiling.Profiler.BeginSample("Instaced RenderQue");
-            int RenderQueCount = RenderQue.Count - 1;
-            for (int i = RenderQueCount; i >= 0; i--)
-            {//Demotes from Render Que to Build Que in case mesh has changed
-                if (RenderQue[i].NeedsToUpdate)
-                {
-                    RenderQue[i].ClearAll();
-                    RenderQue[i].LoadData();
-                    BuildQue.Add(RenderQue[i]);
-                    RenderQue.RemoveAt(i);
-                    var TempBuildQueCount = BuildQue.Count - 1;
-                    CurrentlyActiveTasks.Add(Task.Run(() => BuildQue[TempBuildQueCount].BuildTotal()));
-                    NeedsToUpdate = true;
-                }
+            // UnityEngine.Profiling.Profiler.BeginSample("Instaced AddQue");
+            int AddQueCount = AddQue.Count - 1;
+            for (int i = AddQueCount; i >= 0; i--)
+            {
+                var CurrentRep = BuildQue.Count;
+                BuildQue.Add(AddQue[i]);
+                AddQue.RemoveAt(i);
+                BuildQue[CurrentRep].LoadData();
+                CurrentlyActiveTasks.Add(Task.Run(() => BuildQue[CurrentRep].BuildTotal()));
             }
             // UnityEngine.Profiling.Profiler.EndSample();
             // UnityEngine.Profiling.Profiler.BeginSample("Instaced BuildQue");
@@ -136,6 +120,22 @@ namespace TrueTrace {
                         CurrentlyActiveTasks.RemoveAt(i);
                         NeedsToUpdate = true;
                     }
+                }
+            }
+            // UnityEngine.Profiling.Profiler.EndSample();
+            // UnityEngine.Profiling.Profiler.BeginSample("Instaced RenderQue");
+            int RenderQueCount = RenderQue.Count - 1;
+            for (int i = RenderQueCount; i >= 0; i--)
+            {//Demotes from Render Que to Build Que in case mesh has changed
+                if (RenderQue[i].NeedsToUpdate)
+                {
+                    RenderQue[i].ClearAll();
+                    RenderQue[i].LoadData();
+                    BuildQue.Add(RenderQue[i]);
+                    RenderQue.RemoveAt(i);
+                    var TempBuildQueCount = BuildQue.Count - 1;
+                    CurrentlyActiveTasks.Add(Task.Run(() => BuildQue[TempBuildQueCount].BuildTotal()));
+                    NeedsToUpdate = true;
                 }
             }
             // UnityEngine.Profiling.Profiler.EndSample();

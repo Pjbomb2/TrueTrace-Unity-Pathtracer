@@ -11,8 +11,9 @@ namespace TrueTrace {
     {
         private ParentObject PreviousInstance;
         public ParentObject InstanceParent;
-        [HideInInspector] public int CompactedMeshData;
-        [HideInInspector] public int ExistsInQue;
+        public int CompactedMeshData;
+        public int ExistsInQue;
+        public int QueInProgress;
         bool PrevInstance = false;
         public void UpdateInstance()
         {
@@ -41,8 +42,17 @@ namespace TrueTrace {
                 }
                 ExistsInQue = 3;
                 this.transform.hasChanged = true;
-                this.GetComponentInParent<AssetManager>().InstanceAddQue.Add(this);
-                this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
+                if(!AssetManager.Assets.InstanceRemoveQue.Contains(this)) {
+                    if(QueInProgress == 2) {
+                        AssetManager.Assets.InstanceUpdateQue.Remove(this);
+                    }
+                    AssetManager.Assets.InstanceAddQue.Add(this);
+                    QueInProgress = 3;
+                    ExistsInQue = 3;
+                }
+                AssetManager.Assets.ParentCountHasChanged = true;
+                // this.GetComponentInParent<AssetManager>().InstanceAddQue.Add(this);
+                // this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
             }
         }
 
@@ -54,16 +64,18 @@ namespace TrueTrace {
                     Destroy(this);
                     return;
                 }
-                if(!this.GetComponentInParent<AssetManager>().InstanceRemoveQue.Contains(this)) this.GetComponentInParent<AssetManager>().InstanceRemoveQue.Add(this);
-                this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
+                if(!AssetManager.Assets.InstanceRemoveQue.Contains(this)) {
+                    QueInProgress = -1;
+                    AssetManager.Assets.InstanceRemoveQue.Add(this);
+                }
+                AssetManager.Assets.ParentCountHasChanged = true;
             }
         }
         public void OnParentClear() {
-
-            this.GetComponentInParent<AssetManager>().InstanceUpdateQue.Add(this);
+            AssetManager.Assets.InstanceUpdateQue.Add(this);
             this.ExistsInQue = 3;
-            this.GetComponentInParent<AssetManager>().ParentCountHasChanged = true;
-            this.GetComponentInParent<AssetManager>().InstanceAddQue.Add(this);
+            AssetManager.Assets.ParentCountHasChanged = true;
+            AssetManager.Assets.InstanceAddQue.Add(this);
         }
     }
 }

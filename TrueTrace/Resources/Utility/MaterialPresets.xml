@@ -406,13 +406,13 @@
         <MatName>COPYPASTEBUFFER</MatName>
         <OptionID>0</OptionID>
         <TransCol>
-          <x>0</x>
-          <y>0</y>
-          <z>0</z>
+          <x>1</x>
+          <y>1</y>
+          <z>1</z>
         </TransCol>
         <BaseCol>
-          <x>0.513207555</x>
-          <y>0.570612252</y>
+          <x>1</x>
+          <y>1</y>
           <z>1</z>
         </BaseCol>
         <MetRemap>
@@ -429,20 +429,20 @@
           <y>1</y>
           <z>1</z>
         </EmissCol>
-        <Rough>0</Rough>
+        <Rough>1</Rough>
         <IOR>1</IOR>
         <Met>0</Met>
         <SpecTint>0</SpecTint>
-        <Sheen>0</Sheen>
-        <SheenTint>0</SheenTint>
-        <Clearcoat>0</Clearcoat>
+        <Sheen>5.1</Sheen>
+        <SheenTint>0.111</SheenTint>
+        <Clearcoat>0.178</Clearcoat>
         <ClearcoatGloss>0</ClearcoatGloss>
         <Anisotropic>0</Anisotropic>
-        <Flatness>0</Flatness>
+        <Flatness>1</Flatness>
         <DiffTrans>0</DiffTrans>
-        <SpecTrans>1</SpecTrans>
+        <SpecTrans>0</SpecTrans>
         <FollowMat>false</FollowMat>
-        <ScatterDist>0.04</ScatterDist>
+        <ScatterDist>0.1</ScatterDist>
         <Spec>0</Spec>
         <AlphaCutoff>0.1</AlphaCutoff>
         <NormStrength>1</NormStrength>
@@ -451,11 +451,11 @@
         <Brightness>1</Brightness>
         <Contrast>1</Contrast>
         <BlendColor>
-          <x>0.56078434</x>
-          <y>0.7579309</y>
+          <x>1</x>
+          <y>1</y>
           <z>1</z>
         </BlendColor>
-        <BlendFactor>1</BlendFactor>
+        <BlendFactor>0</BlendFactor>
         <MainTexScaleOffset>
           <x>1</x>
           <y>1</y>
@@ -477,26 +477,26 @@
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
         <ColorBleed>1</ColorBleed>
-        <AlbedoBlendFactor>1</AlbedoBlendFactor>
+        <AlbedoBlendFactor>0</AlbedoBlendFactor>
         <SecondaryNormalTexScaleOffset>
-          <x>0</x>
-          <y>0</y>
+          <x>1</x>
+          <y>1</y>
           <z>0</z>
           <w>0</w>
         </SecondaryNormalTexScaleOffset>
         <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
-        <DetailNormalStrength>0</DetailNormalStrength>
-        <AlbedoGUID>d7ba42597aa599e43a1ec146acd8cf46</AlbedoGUID>
+        <DetailNormalStrength>1</DetailNormalStrength>
+        <AlbedoGUID>747f2f5517e84f64283be0164841c971</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
         <EmissionGUID>null</EmissionGUID>
-        <AlphaGUID>d7ba42597aa599e43a1ec146acd8cf46</AlphaGUID>
-        <MatCapGUID>null</MatCapGUID>
+        <AlphaGUID>747f2f5517e84f64283be0164841c971</AlphaGUID>
+        <MatCapGUID>3c1b5b63bfcf1d64a85ae92a997559ad</MatCapGUID>
         <MatcapMaskGUID>null</MatcapMaskGUID>
         <SecondaryAlbedoGUID>null</SecondaryAlbedoGUID>
         <SecondaryAlbedoMaskGUID>null</SecondaryAlbedoMaskGUID>
-        <NormalGUID>null</NormalGUID>
-        <ShaderName>Standard</ShaderName>
+        <NormalGUID>4191dc8dbdf6e1241ad4ffb7efa62b0d</NormalGUID>
+        <ShaderName>.poiyomi/Old Versions/8.1/Poiyomi Toon</ShaderName>
       </RayObjectDatas>
     </ContainedPresets>
   </RayObjFolder>

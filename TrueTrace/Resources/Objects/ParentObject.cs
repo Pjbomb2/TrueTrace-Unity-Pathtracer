@@ -19,7 +19,8 @@ namespace TrueTrace {
     public class ParentObject : MonoBehaviour
     {
 
-
+        public int RTAccelHandle = 0;
+        public int RTAccelSubmeshOffsets = 0;
         public LightBVHBuilder LBVH;
         public Task AsyncTask;
         public int ExistsInQue = -1;
@@ -229,6 +230,13 @@ namespace TrueTrace {
         {
             if(this == null || this.gameObject == null) return;
             this.gameObject.isStatic = false;
+            {
+                if (this.GetComponentInParent<InstancedManager>() != null) {
+                    var Instances = FindObjectsOfType(typeof(InstancedObject)) as InstancedObject[];
+                    int Count = Instances.Length;
+                    for(int i = 0; i < Count; i++) if(Instances[i].InstanceParent == this) Instances[i].OnParentClear();
+                }
+            }
             Name = this.name;
             ThisTransform = this.transform;
             TransformIndexes = new List<MeshTransformVertexs>();
@@ -471,7 +479,7 @@ namespace TrueTrace {
                                     break;
                                 }
                                 CurrentPair = CurrentPair.Fallback;
-                            } while(CurrentPair.Fallback != null);
+                            } while(CurrentPair != null);
                         }
                         switch((TexturePurpose)TexPurpose) {
                             case(TexturePurpose.SecondaryNormalTexture):
@@ -1350,6 +1358,11 @@ namespace TrueTrace {
                 if (this.GetComponentInParent<InstancedManager>() != null) {
                     this.GetComponentInParent<InstancedManager>().AddQue.Add(this);
                     this.GetComponentInParent<InstancedManager>().ParentCountHasChanged = true;
+                    var Instances = FindObjectsOfType(typeof(InstancedObject)) as InstancedObject[];
+                    int Count = Instances.Length;
+                    for(int i = 0; i < Count; i++) {
+                        if(Instances[i].InstanceParent == this) Instances[i].OnParentClear();
+                    }
                 }
                 else {
                     if(!AssetManager.Assets.RemoveQue.Contains(this)) {
