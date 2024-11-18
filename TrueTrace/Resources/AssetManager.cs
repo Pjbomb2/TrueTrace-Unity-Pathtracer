@@ -287,7 +287,7 @@ namespace TrueTrace {
             desc.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R32G32B32A32_SInt;
             switch(TexIndex) {
                 case 0://heightmap
-                    CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.RFloat, true);
+                    CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.RFloat, false);
                 break;
                 case 1://alphamap
                     CreateRenderTexture(ref Atlas, DesiredRes, DesiredRes, RenderTextureFormat.ARGBHalf, false);
@@ -2207,9 +2207,9 @@ namespace TrueTrace {
         //         node_offset = MyMeshesCompacted[LightMeshes[MeshIndex].LockedMeshIndex].LightNodeOffset;
         //         Transform = MyMeshesCompacted[LightMeshes[MeshIndex].LockedMeshIndex].Transform.inverse;
         //         LeftIndex = 0;
-        //         return;
+        //         // return;
         //     } else {
-        //         DrawCount++;
+        //         // DrawCount++;
         //         // if(CurrentIndex >= node_offset + LeftIndex) Debug.Log("EEE " + LeftIndex + ", " + node_offset);
         //     }
 
@@ -2223,13 +2223,13 @@ namespace TrueTrace {
         // public void OnDrawGizmos() {
         //     if(Application.isPlaying) {
         //         DrawCount = 0;
-        //         int Count = LightTreeBuffer.count;
+        //         int Count = LightTreeBufferA.count;
         //         LightTree = new GaussianTreeNode[Count];
         //         // LightTree2 = new GaussianTreeNode[Count];
         //         // LightTreeBuffer2.GetData(LightTree);
-        //         LightTreeBuffer.GetData(LightTree);
+        //         LightTreeBufferA.GetData(LightTree);
         //         Refit(0, 0, false, 0, Matrix4x4.identity);
-        //         Debug.Log(DrawCount);
+        //         // Debug.Log(DrawCount);
         //         // for(int i = 2; i < Count; i++) {
         //         //     Vector3 Pos = CommonFunctions.ToVector3(LightBVHTransforms[0].Transform * CommonFunctions.ToVector4(LightTree[i].S.Center, 1));
         //         //     float Radius = Vector3.Distance(Pos, CommonFunctions.ToVector3(LightBVHTransforms[0].Transform * CommonFunctions.ToVector4(LightTree[i].S.Center + new Vector3(LightTree[i].S.Radius, 0, 0), 1)));

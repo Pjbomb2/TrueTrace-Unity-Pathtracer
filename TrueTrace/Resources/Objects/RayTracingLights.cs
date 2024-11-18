@@ -25,7 +25,7 @@ namespace TrueTrace {
         void Awake() {
             ThisLightData = new LightData();
             ThisLight = this.GetComponent<Light>();
-            // ThisLight.shadows = LightShadows.None;
+            ThisLight.shadows = LightShadows.None;
         }
         public bool UpdateLight(bool OverrideTransform) {
             bool HasChanged = false;

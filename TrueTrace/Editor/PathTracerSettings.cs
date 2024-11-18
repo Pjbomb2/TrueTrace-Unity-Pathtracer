@@ -2071,13 +2071,13 @@ Slider AperatureSlider;
                   }
                #endif
                #if UNITY_PIPELINE_URP
-                  GameObject NewObject = GameObject.Find("URPPASS");
+                  // GameObject NewObject = GameObject.Find("URPPASS");
                   
-                  if(NewObject == null) {
-                      NewObject = new GameObject();
-                      NewObject.name = "URPPASS";
-                      NewObject.AddComponent<URPTTInjectPass>();
-                  }
+                  // if(NewObject == null) {
+                  //     NewObject = new GameObject();
+                  //     NewObject.name = "URPPASS";
+                  //     NewObject.AddComponent<URPTTInjectPass>();
+                  // }
                #endif
             }
             Button MainSourceButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();});

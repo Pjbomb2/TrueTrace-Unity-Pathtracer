@@ -339,11 +339,6 @@ namespace TrueTrace {
             return 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z)); 
         }
 
-        float surface_area(Vector3 Min, Vector3 Max) {
-            Vector3 sizes = Max - Min;
-            return 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z)); 
-        }
-
         // int[] TriCounts;
         // AABB tempAABB = new AABB();
         // float surface_area2(ref BVHNode8Data Node, int i2) {
@@ -416,94 +411,6 @@ namespace TrueTrace {
         //     // else if(verbose[Index].left == 0) return 0;
         //     // else return GetTriCount(ref verbose, verbose[Index].left) + GetTriCount(ref verbose, verbose[Index].right);
         // }
-
-        // [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
-        // unsafe public struct BVHNode8 {
-        //     // 8-wide (aka 'shallow') BVH layout.  
-        //     [System.Runtime.InteropServices.FieldOffset(0)] public Vector3 aabbMin; 
-        //     [System.Runtime.InteropServices.FieldOffset(12)] public uint firstTri;
-        //     [System.Runtime.InteropServices.FieldOffset(16)] public Vector3 aabbMax; 
-        //     [System.Runtime.InteropServices.FieldOffset(28)] public uint triCount;
-        //     [System.Runtime.InteropServices.FieldOffset(32)] public fixed uint child[8];
-        //     [System.Runtime.InteropServices.FieldOffset(64)] public uint childCount; 
-        //     [System.Runtime.InteropServices.FieldOffset(68)] public uint dummy1;
-        //     [System.Runtime.InteropServices.FieldOffset(72)] public uint dummy2;
-        //     [System.Runtime.InteropServices.FieldOffset(76)] public uint dummy3; // dummies are for alignment.
-        //     public bool isLeaf() { return triCount > 0; }
-        // };
-
-
-        // BVHNode8[] bvh8Node;
-        // uint usedBVH8Nodes;
-        // uint usedBVHNodes;
-
-        // private int GetTriCount(int root) {
-        //     if(nodes[root].left < 0) return 1;
-        //     else return GetTriCount(nodes[root].left) + GetTriCount(nodes[root].left + 1);
-        // }
-
-        // private void ToGenBVH8(BVH2Builder BVH2) {
-        // // allocate space
-        //     uint spaceNeeded = (uint)BVH2.BVH2NodesArray.Length;
-        //     uint allocatedBVH8Nodes = 0;
-        //     usedBVHNodes = spaceNeeded;
-        //     if (allocatedBVH8Nodes < spaceNeeded) {
-
-        //         bvh8Node = new BVHNode8[spaceNeeded];
-        //         allocatedBVH8Nodes = spaceNeeded;
-        //     }
-        //     // create an mbvh node for each bvh2 node
-        //     for (uint i = 0; i < usedBVHNodes; i++) if (i != 1) {
-        //         BVHNode2Data orig = nodes[i];
-        //         BVHNode8 node8 = bvh8Node[i];
-        //         node8.aabbMin = orig.aabb.BBMin;
-        //         node8.aabbMax = orig.aabb.BBMax;
-        //         if (orig.left < 0) {node8.triCount = 1; node8.firstTri = (uint)(-(orig.left+1));}
-        //         else {node8.child[0] = (uint)orig.left; node8.child[1] = (uint)orig.left + 1; node8.childCount = 2;}
-        //         bvh8Node[i] = node8;
-        //     }
-        //     // collapse
-        //     uint[] stack = new uint[128];
-        //     uint stackPtr = 1;
-        //     uint nodeIdx = stack[0] = 0; // i.e., root node
-        //     BVHNode8 child;
-        //     while (true)
-        //     {
-        //         BVHNode8 node = bvh8Node[nodeIdx];
-        //         while (node.childCount < 8)
-        //         {
-        //             int bestChild = -1;
-        //             float bestChildSA = 0;
-        //             for (uint i = 0; i < node.childCount; i++)
-        //             {
-        //                 // see if we can adopt child i
-        //                 child = bvh8Node[node.child[i]];
-        //                 if ((!child.isLeaf()) && (node.childCount - 1 + child.childCount) <= 8)
-        //                 {
-        //                     float childSA = surface_area(child.aabbMin, child.aabbMax );
-        //                     if (childSA > bestChildSA) {bestChild = (int)i; bestChildSA = childSA;}
-        //                 }
-        //             }
-        //             if (bestChild == -1) break; // could not adopt
-        //             child = bvh8Node[node.child[bestChild]];
-        //             node.child[bestChild] = child.child[0];
-        //             for (uint i = 1; i < child.childCount; i++)
-        //                 node.child[node.childCount++] = child.child[i];
-        //         }
-        //         // we're done with the node; proceed with the children
-        //         for (uint i = 0; i < node.childCount; i++)
-        //         {
-        //             uint childIdx = node.child[i];
-        //             child = bvh8Node[childIdx];
-        //             if (!child.isLeaf()) stack[stackPtr++] = childIdx;
-        //         }
-        //         bvh8Node[nodeIdx] = node;
-        //         if (stackPtr == 0) break;
-        //         nodeIdx = stack[--stackPtr];
-        //     }
-        //     usedBVH8Nodes = usedBVHNodes; // there will be gaps / unused nodes though.
-        // }
-
 
         public BVH8Builder() {}//null constructor
         

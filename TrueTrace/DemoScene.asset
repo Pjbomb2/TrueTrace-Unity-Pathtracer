@@ -20,18 +20,18 @@ MonoBehaviour:
   UseNEE: 1
   DoTLASUpdates: 1
   Accumulate: 1
-  PPBloom: 1
+  PPBloom: 0
   BloomStrength: 0.372
-  PPDoF: 1
+  PPDoF: 0
   DoFAperature: 0.15010014
   DoFAperatureScale: 1
   DoFFocal: 3.820374
-  PPExposure: 1
-  ExposureAuto: 0
+  PPExposure: 0
+  ExposureAuto: 1
   PPToneMap: 1
-  PPTAA: 0
+  PPTAA: 1
   RenderScale: 1
-  DenoiserMethod: 2
+  DenoiserMethod: 1
   UpscalerMethod: 2
   ReSTIRGIUpdateRate: 7
   UseReSTIRGITemporal: 1
@@ -44,7 +44,7 @@ MonoBehaviour:
   Exposure: 2.2
   DoPartialRendering: 0
   PartialRenderingFactor: 2
-  DoFirefly: 1
+  DoFirefly: 0
   ImprovedPrimaryHit: 1
   RISCount: 12
   ToneMapper: 1
@@ -56,7 +56,7 @@ MonoBehaviour:
   FireflyStrength: 0.135
   FireflyOffset: 0
   OIDNFrameCount: 800
-  DoSharpen: 0
+  DoSharpen: 1
   Sharpness: 1
   MainDesiredRes: 16384
   UseSkinning: 1
@@ -72,7 +72,7 @@ MonoBehaviour:
   UseTransmittanceInNEE: 1
   SecondarySkyDesaturate: 0
   MatChangeResetsAccum: 1
-  PPFXAA: 1
+  PPFXAA: 0
   OIDNBlendRatio: 1
   ConvBloom: 0
   ConvStrength: 1.74
