@@ -65,6 +65,8 @@ namespace TrueTrace {
 
         public int ScreenWidth;
         public int ScreenHeight;
+        public int TargetWidth;
+        public int TargetHeight;
         public ComputeShader shader;
 
         private int CopyData;
@@ -128,10 +130,12 @@ namespace TrueTrace {
         }
 
         public int iter;
-        public void init(int ScreenWidth, int ScreenHeight)
+        public void init(int ScreenWidth, int ScreenHeight, int TargetWidth, int TargetHeight)
         {
             this.ScreenWidth = ScreenWidth;
             this.ScreenHeight = ScreenHeight;
+            this.TargetWidth = TargetWidth;
+            this.TargetHeight = TargetHeight;
             iter = 0;
             if (shader == null) { shader = Resources.Load<ComputeShader>("PostProcess/ASVGF/ASVGF"); }
             CopyData = shader.FindKernel("CopyData");
@@ -144,6 +148,9 @@ namespace TrueTrace {
             DistCorrect = shader.FindKernel("DistanceCorrectionKernel");
             shader.SetInt("screen_width", ScreenWidth);
             shader.SetInt("screen_height", ScreenHeight);
+
+            shader.SetInt("TargetWidth", TargetWidth);
+            shader.SetInt("TargetHeight", TargetHeight);
 
 
             CommonFunctions.CreateRenderTexture(ref ASVGF_HIST_COLOR_HF, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4);

@@ -84,9 +84,6 @@ namespace CommonVars
         public List<Vector4> Tangents;
         public List<Vector2> UVs;
         public List<Color> Colors;
-        #if TTLightMapping
-            public List<Vector2> LightmapUVs;
-        #endif
         public List<int> MatDat;
 
         public void SetUvZero(int Count) {
@@ -96,12 +93,6 @@ namespace CommonVars
             Color TempCol = new Color(1,1,1,1);
             for (int i = 0; i < Count; i++) Colors.Add(TempCol);
         }
-        #if TTLightMapping
-            public void AddLightmapUVs(Vector2[] LightUVs, Vector4 ScaleOffset) {
-                int Count = LightUVs.Length;
-                for (int i = 0; i < Count; i++) LightmapUVs.Add(new Vector2(LightUVs[i].x * ScaleOffset.x + ScaleOffset.z, LightUVs[i].y * ScaleOffset.y + ScaleOffset.w));
-            }
-        #endif
         public void SetTansZero(int Count) {
             for (int i = 0; i < Count; i++) Tangents.Add(new Vector4(0.0f, 0.0f, 0.0f, 0.0f));
         }
@@ -109,9 +100,6 @@ namespace CommonVars
             this.Tangents = new List<Vector4>(StartingSize);
             this.MatDat = new List<int>(StartingSize / 3);
             this.UVs = new List<Vector2>(StartingSize);
-            #if TTLightMapping
-                this.LightmapUVs = new List<Vector2>(StartingSize);
-            #endif
             this.Verticies = new List<Vector3>(StartingSize);
             this.Normals = new List<Vector3>(StartingSize);
             this.Indices = new List<int>(StartingSize);
@@ -122,9 +110,6 @@ namespace CommonVars
                 CommonFunctions.DeepClean(ref Tangents);
                 CommonFunctions.DeepClean(ref MatDat);
                 CommonFunctions.DeepClean(ref UVs);
-                #if TTLightMapping
-                    CommonFunctions.DeepClean(ref LightmapUVs);
-                #endif
                 CommonFunctions.DeepClean(ref Verticies);
                 CommonFunctions.DeepClean(ref Normals);
                 CommonFunctions.DeepClean(ref Indices);

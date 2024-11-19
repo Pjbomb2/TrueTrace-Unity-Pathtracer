@@ -9,6 +9,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using System;
 using System.IO;
 using System.Text;
+using System.Runtime.Serialization.Formatters.Binary;
 
 #pragma warning disable 1998
 
@@ -682,20 +683,6 @@ namespace TrueTrace {
             #endif
 
             CurMeshData.init(VertCount);
-            #if TTLightMapping
-                LightMapTexIndex = new List<int>();
-                PerRendererIndex = new List<int>();
-                for (int i = 0; i < TotalObjects; i++) {
-                    CurrentObject = ChildObjects[i];
-                    if(!LightMapTexIndex.Contains(CurrentObject.GetComponent<Renderer>().lightmapIndex)) LightMapTexIndex.Add(CurrentObject.GetComponent<Renderer>().lightmapIndex);
-
-                }
-                int LightMapCount = LightMapTexIndex.Count;
-                LightMapTris = new List<LightMapTriData>[LightMapCount];
-                for(int i = 0; i < LightMapCount; i++) {
-                    LightMapTris[i] = new List<LightMapTriData>();
-                }
-            #endif
 
             for (int i = 0; i < TotalObjects; i++) {
                 CurrentObject = ChildObjects[i];
@@ -709,9 +696,6 @@ namespace TrueTrace {
                         SkinnedMeshes[i] = TempRend;
                 }
                 submeshcount = mesh.subMeshCount;
-                #if TTLightMapping
-                    PerRendererIndex.Add(CurrentObject.GetComponent<Renderer>().lightmapIndex);
-                #endif
                 #if HardwareRT
                     if(CurrentObject.TryGetComponent<Renderer>(out Renderers[i])) {}
                 #endif
@@ -737,9 +721,6 @@ namespace TrueTrace {
                 if (MeshUvLength == mesh.vertexCount) CurMeshData.UVs.AddRange(mesh.uv);
                 else CurMeshData.SetUvZero(mesh.vertexCount);
                 // if(mesh.uv2.Length != mesh.vertexCount) Debug.Log("FUCKED: " + CurrentObject.name);
-                #if TTLightMapping
-                    CurMeshData.AddLightmapUVs(mesh.uv2, CurrentObject.GetComponent<Renderer>().lightmapScaleOffset);
-                #endif
 
                 int PreIndexLength = CurMeshData.Indices.Count;
                 CurMeshData.Indices.AddRange(mesh.triangles);
@@ -1137,9 +1118,6 @@ namespace TrueTrace {
             AggTriangles = new CudaTriangle[(TransformIndexes[TransformIndexes.Count - 1].VertexStart + TransformIndexes[TransformIndexes.Count - 1].VertexCount) / 3];
             int OffsetReal;
             for (int i = 0; i < TotalObjects; i++) {//Transforming so all child objects are in the same object space
-                #if TTLightMapping
-                    int LightMapRendererIndex = LightMapTexIndex.IndexOf(PerRendererIndex[i]);
-                #endif
                 Matrix4x4 ChildMat = CachedTransforms[i + 1].WTL.inverse;
                 Matrix4x4 TransMat = ParentMatInv * ChildMat;
                 Vector3 Ofst = CachedTransforms[i + 1].WTL * CachedTransforms[i + 1].Position;
@@ -1174,23 +1152,6 @@ namespace TrueTrace {
                     Norm1 = TransMat * Vector3.Scale(Scale, CurMeshData.Normals[Index1]);
                     Norm2 = TransMat * Vector3.Scale(Scale, CurMeshData.Normals[Index2]);
                     Norm3 = TransMat * Vector3.Scale(Scale, CurMeshData.Normals[Index3]);
-
-
-
-
-                    #if TTLightMapping
-                        LightMapTris[LightMapRendererIndex].Add(new LightMapTriData() {
-                            pos0 = ParentMat * V1,
-                            posedge1 = ParentMat * (V2 - V1),
-                            posedge2 = ParentMat * (V3 - V1),
-                            LMUV0 = CurMeshData.LightmapUVs[Index1],
-                            LMUV1 = CurMeshData.LightmapUVs[Index2],
-                            LMUV2 = CurMeshData.LightmapUVs[Index3],
-                            Norm1 = CommonFunctions.PackOctahedral((Vector3)(ParentMat * Norm1).normalized),
-                            Norm2 = CommonFunctions.PackOctahedral((Vector3)(ParentMat * Norm2).normalized),
-                            Norm3 = CommonFunctions.PackOctahedral((Vector3)(ParentMat * Norm3).normalized)
-                        });
-                    #endif
 
 
                     TempTri.tex0 = ((uint)Mathf.FloatToHalf(CurMeshData.UVs[Index1].x) << 16) | Mathf.FloatToHalf(CurMeshData.UVs[Index1].y);
@@ -1310,7 +1271,6 @@ namespace TrueTrace {
             TrianglesArray.Dispose();
             Debug.Log(Name + " Has Completed Building with " + AggTriangles.Length + " triangles");
             FailureCount = 0;
-            
         }
 
         public void UpdateData() {
@@ -1404,36 +1364,258 @@ namespace TrueTrace {
             }
         }
 
-        // public void SaveToFile() {
-        //     ParentData LoadedFile = new ParentData();
-        //     LoadedFile.SGTree = LBVH.SGTree;
-        //     LoadedFile.AggTriangles = AggTriangles;
-        //     // LoadedFile.AggNodes = AggNodes;
-        //     // LoadedFile.LightTriangles = LightTriangles;
-        //     string json = JsonUtility.ToJson(LoadedFile);
-        //     using(var stream = File.Open((Application.dataPath.Replace("/Assets", "")) + "/SavedFiles/" + gameObject.name + ".txt", FileMode.Create)) {
-        //         using(BinaryWriter A = new BinaryWriter(stream, Encoding.UTF8, false)) {
-        //             A.Write(json);
-        //         }
-        //     }
-        // }
-        // public void LoadFile() {
-        //     string json = "";
-        //     using(var stream = File.Open((Application.dataPath.Replace("/Assets", "")) + "/SavedFiles/" + gameObject.name + ".txt", FileMode.Open)) {
-        //         using(BinaryReader A = new BinaryReader(stream, Encoding.UTF8, false)) {
-        //             json = A.ReadString();
-        //             ParentData LoadedFile = JsonUtility.FromJson<ParentData>(json);
-        //             LBVH = new LightBVHBuilder();
-        //             LBVH.SGTree = LoadedFile.SGTree;
-        //             AggTriangles = LoadedFile.AggTriangles;
-        //             LightTriangles = LoadedFile.LightTriangles;
-        //             AggNodes = LoadedFile.AggNodes;
-        //             BVH = new BVH8Builder();
-        //             BVH.cwbvhnode_count = AggNodes.Length;
-        //             BVH.cwbvhindex_count = AggTriangles.Length;
-        //         }
-        //     }
-        // }
+        public void SaveToFile() {
+            // ParentData LoadedFile = new ParentData();
+            // LoadedFile.SGTree = LBVH.SGTree;
+            // LoadedFile.AggTriangles = AggTriangles;
+            // LoadedFile.AggNodes = AggNodes;
+            // LoadedFile.LightTriangles = LightTriangles;
+            // string json = JsonUtility.ToJson(LoadedFile);
+            using(var stream = File.Open((Application.dataPath.Replace("/Assets", "")) + "/SavedFiles/" + gameObject.name + ".txt", FileMode.Create, FileAccess.Write)) {
+                using (var writer = new BinaryWriter(stream))
+                {
+                    int TargetLength = (LBVH == null || LBVH.SGTree == null) ? 0 : LBVH.SGTree.Length;
+                    writer.Write(TargetLength);
+                    GaussianTreeNode SGNode;
+                    for(int i = 0; i < TargetLength; i++) {
+                        SGNode = LBVH.SGTree[i];
+                        writer.Write(SGNode.S.Center.x);
+                        writer.Write(SGNode.S.Center.y);
+                        writer.Write(SGNode.S.Center.z);
+                        writer.Write(SGNode.S.Radius);
+                        writer.Write(SGNode.axis.x);
+                        writer.Write(SGNode.axis.y);
+                        writer.Write(SGNode.axis.z);
+                        writer.Write(SGNode.variance);
+                        writer.Write(SGNode.sharpness);
+                        writer.Write(SGNode.intensity);
+                        writer.Write(SGNode.left);
+                    }
+
+
+                    TargetLength = LightTriangles.Count;
+                    writer.Write(TargetLength);
+                    LightTriData LightTri;
+                    for(int i = 0; i < TargetLength; i++) {
+                        LightTri = LightTriangles[i];
+                        writer.Write(LightTri.pos0.x);
+                        writer.Write(LightTri.pos0.y);
+                        writer.Write(LightTri.pos0.z);
+                        writer.Write(LightTri.posedge1.x);
+                        writer.Write(LightTri.posedge1.y);
+                        writer.Write(LightTri.posedge1.z);
+                        writer.Write(LightTri.posedge2.x);
+                        writer.Write(LightTri.posedge2.y);
+                        writer.Write(LightTri.posedge2.z);
+                        writer.Write(LightTri.TriTarget);
+                        writer.Write(LightTri.SourceEnergy);
+                    }
+
+
+                    TargetLength = AggTriangles.Length;
+                    writer.Write(TargetLength);
+                    CudaTriangle triangle;
+                    for(int i = 0; i < TargetLength; i++) {
+                        triangle = AggTriangles[i];
+                        writer.Write(triangle.pos0.x);
+                        writer.Write(triangle.pos0.y);
+                        writer.Write(triangle.pos0.z);
+
+                        writer.Write(triangle.posedge1.x);
+                        writer.Write(triangle.posedge1.y);
+                        writer.Write(triangle.posedge1.z);
+
+                        writer.Write(triangle.posedge2.x);
+                        writer.Write(triangle.posedge2.y);
+                        writer.Write(triangle.posedge2.z);
+
+                        writer.Write(triangle.norm0);
+                        writer.Write(triangle.norm1);
+                        writer.Write(triangle.norm2);
+
+                        writer.Write(triangle.tan0);
+                        writer.Write(triangle.tan1);
+                        writer.Write(triangle.tan2);
+
+                        writer.Write(triangle.tex0);
+                        writer.Write(triangle.texedge1);
+                        writer.Write(triangle.texedge2);
+
+                        writer.Write(triangle.VertColA);
+                        writer.Write(triangle.VertColB);
+                        writer.Write(triangle.VertColC);
+
+                        writer.Write(triangle.MatDat);
+                    }
+                    TargetLength = AggNodes.Length;
+                    writer.Write(TargetLength);
+                    BVHNode8DataCompressed CurNode;
+                    for(int i = 0; i < TargetLength; i++) {
+                        CurNode = AggNodes[i];
+                        writer.Write(CurNode.node_0x);
+                        writer.Write(CurNode.node_0y);
+                        writer.Write(CurNode.node_0z);
+                        writer.Write(CurNode.node_0w);
+                        writer.Write(CurNode.node_1x);
+                        writer.Write(CurNode.node_1y);
+                        writer.Write(CurNode.node_1z);
+                        writer.Write(CurNode.node_1w);
+                        writer.Write(CurNode.node_2x);
+                        writer.Write(CurNode.node_2y);
+                        writer.Write(CurNode.node_2z);
+                        writer.Write(CurNode.node_2w);
+                        writer.Write(CurNode.node_3x);
+                        writer.Write(CurNode.node_3y);
+                        writer.Write(CurNode.node_3z);
+                        writer.Write(CurNode.node_3w);
+                        writer.Write(CurNode.node_4x);
+                        writer.Write(CurNode.node_4y);
+                        writer.Write(CurNode.node_4z);
+                        writer.Write(CurNode.node_4w);
+                    }
+
+                    writer.Write(LBVH.ParentBound.aabb.b.BBMax.x);
+                    writer.Write(LBVH.ParentBound.aabb.b.BBMax.y);
+                    writer.Write(LBVH.ParentBound.aabb.b.BBMax.z);
+                    writer.Write(LBVH.ParentBound.aabb.b.BBMin.x);
+                    writer.Write(LBVH.ParentBound.aabb.b.BBMin.y);
+                    writer.Write(LBVH.ParentBound.aabb.b.BBMin.z);
+                    writer.Write(LBVH.ParentBound.aabb.w.x);
+                    writer.Write(LBVH.ParentBound.aabb.w.y);
+                    writer.Write(LBVH.ParentBound.aabb.w.z);
+                    writer.Write(LBVH.ParentBound.aabb.phi);
+                    writer.Write(LBVH.ParentBound.aabb.cosTheta_o);
+                    writer.Write(LBVH.ParentBound.aabb.cosTheta_e);
+                    writer.Write(LBVH.ParentBound.aabb.LightCount);
+                    writer.Write(LBVH.ParentBound.aabb.Pad1);
+                    writer.Write(LBVH.ParentBound.left);
+                    writer.Write(LBVH.ParentBound.isLeaf);
+
+                }
+            }
+        }
+        public void LoadFile() {
+            using(var stream = File.Open((Application.dataPath.Replace("/Assets", "")) + "/SavedFiles/" + gameObject.name + ".txt", FileMode.Open, FileAccess.Read)) {
+                using(BinaryReader reader = new BinaryReader(stream)) {
+                    int CurCount = reader.ReadInt32();
+                    LBVH = new LightBVHBuilder();
+                    LBVH.SGTree = new GaussianTreeNode[CurCount];
+                    for(int i = 0; i < CurCount; i++) {
+                        LBVH.SGTree[i] = new GaussianTreeNode
+                        {
+                            // Read BoundingSphere
+                            S = new CommonVars.BoundingSphere
+                            {
+                                Center = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()),
+                                Radius = reader.ReadSingle()
+                            },
+
+                            // Read other fields
+                            axis = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()),
+                            variance = reader.ReadSingle(),
+                            sharpness = reader.ReadSingle(),
+                            intensity = reader.ReadSingle(),
+                            left = reader.ReadInt32()
+                        };
+                    }
+                    CurCount = reader.ReadInt32();
+                    LightTriangles = new List<LightTriData>(CurCount);
+                    if(CurCount != 0) HasLightTriangles = true;
+                    for(int i = 0; i < CurCount; i++) {
+                        LightTriangles.Add(new LightTriData() {
+                            pos0 = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()),
+                            posedge1 = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()),
+                            posedge2 = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()),                            
+                            TriTarget = reader.ReadUInt32(),
+                            SourceEnergy = reader.ReadSingle()
+                        });
+                    }
+                    CurCount = reader.ReadInt32();
+                    AggTriangles = new CudaTriangle[CurCount];
+                    for(int i = 0; i < CurCount; i++) {
+                        AggTriangles[i] = new CudaTriangle
+                        {
+                            // Read Vector3 fields
+                            pos0 = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()),
+                            posedge1 = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()),
+                            posedge2 = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()),
+
+                            // Read uint fields
+                            norm0 = reader.ReadUInt32(),
+                            norm1 = reader.ReadUInt32(),
+                            norm2 = reader.ReadUInt32(),
+
+                            tan0 = reader.ReadUInt32(),
+                            tan1 = reader.ReadUInt32(),
+                            tan2 = reader.ReadUInt32(),
+
+                            tex0 = reader.ReadUInt32(),
+                            texedge1 = reader.ReadUInt32(),
+                            texedge2 = reader.ReadUInt32(),
+
+                            VertColA = reader.ReadUInt32(),
+                            VertColB = reader.ReadUInt32(),
+                            VertColC = reader.ReadUInt32(),
+
+                            MatDat = reader.ReadUInt32()
+                        };
+                    }
+
+                    CurCount = reader.ReadInt32();
+                    AggNodes = new BVHNode8DataCompressed[CurCount];
+                    for(int i = 0; i < CurCount; i++) {
+                        AggNodes[i] = new BVHNode8DataCompressed
+                        {
+                            node_0x = reader.ReadUInt32(),
+                            node_0y = reader.ReadUInt32(),
+                            node_0z = reader.ReadUInt32(),
+                            node_0w = reader.ReadUInt32(),
+                            node_1x = reader.ReadUInt32(),
+                            node_1y = reader.ReadUInt32(),
+                            node_1z = reader.ReadUInt32(),
+                            node_1w = reader.ReadUInt32(),
+                            node_2x = reader.ReadUInt32(),
+                            node_2y = reader.ReadUInt32(),
+                            node_2z = reader.ReadUInt32(),
+                            node_2w = reader.ReadUInt32(),
+                            node_3x = reader.ReadUInt32(),
+                            node_3y = reader.ReadUInt32(),
+                            node_3z = reader.ReadUInt32(),
+                            node_3w = reader.ReadUInt32(),
+                            node_4x = reader.ReadUInt32(),
+                            node_4y = reader.ReadUInt32(),
+                            node_4z = reader.ReadUInt32(),
+                            node_4w = reader.ReadUInt32()
+                        };
+                    }
+                    LBVH.ParentBound = new NodeBounds {
+                        aabb = new LightBounds {
+                            b = new AABB {
+                                BBMax = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()),
+                                BBMin = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle())
+                            },
+                            w = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()),
+                            phi = reader.ReadSingle(),
+                            cosTheta_o = reader.ReadSingle(),
+                            cosTheta_e = reader.ReadSingle(),
+                            LightCount = reader.ReadInt32(),
+                            Pad1 = reader.ReadSingle()
+                        },
+                        left = reader.ReadInt32(),
+                        isLeaf = reader.ReadInt32()
+                    };
+
+                    // var formatter = new BinaryFormatter();
+                    // ParentData LoadedFile = (ParentData)formatter.Deserialize(stream);
+                    
+                    // AggTriangles = LoadedFile.AggTriangles;
+                    // AggNodes = LoadedFile.AggNodes;
+                    BVH = new BVH8Builder();
+                    BVH.cwbvhnode_count = AggNodes.Length;
+                    BVH.cwbvhindex_count = AggTriangles.Length;
+                }
+            }
+        }
 
         // public void OnDrawGizmos() {
 
@@ -1483,8 +1665,8 @@ namespace TrueTrace {
     [System.Serializable]
     public class ParentData {
         public GaussianTreeNode[] SGTree;
-        public CudaTriangle[] AggTriangles;
         public List<LightTriData> LightTriangles;
+        public CudaTriangle[] AggTriangles;
         public BVHNode8DataCompressed[] AggNodes;
     }
 

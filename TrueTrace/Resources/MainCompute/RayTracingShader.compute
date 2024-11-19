@@ -88,13 +88,13 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         float3 SigmaS = SigmaT * FogColor;
         float3 SigmaA = SigmaT - SigmaS;
     #endif
-    bool CB = !DoPartialRendering;
-    if(!CB) {
-        CB = (int(id.x)/2 + int(id.y)/2 + curframe)%PartialRenderingFactor==0;
-        if(UseASVGF || (UseReSTIRGI && ReSTIRGIUpdateRate != 0)) {
-            if(RandomNums[id].z != 0 || RandomNums[id].w != 0) CB = true;
-        }
-    }
+    bool CB = true;//!DoPartialRendering;
+    // if(CurBounce == 0) {
+    //     CB = (int(id.x)/2 + int(id.y)/2 + curframe)%2==0;
+    //     if(UseASVGF || (UseReSTIRGI && ReSTIRGIUpdateRate != 0)) {
+    //         if(RandomNums[id].z != 0 || RandomNums[id].w != 0) CB = true;
+    //     }
+    // }
     float3 PrevOrigin = ray.origin;
     float3 pos = ray.direction * hit.t + ray.origin;
     float3 PrevDirection = ray.direction;
@@ -399,7 +399,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         int SelectedLightGroup = 0;//0 = primitive, 1 = point, spot, etc., 2 = skybox
         int selectionoptions = 0;
         int selections[3] = {0,0,0};
-        if(LightMeshCount != 0) selections[selectionoptions++] = 0;
+        if(LightMeshCount != 0 && LEMEnergyScale != 0) selections[selectionoptions++] = 0;
         if(unitylightcount != 0) selections[selectionoptions++] = 1;
         if(SecondaryBackgroundType == 1) selections[selectionoptions++] = 2;
         RunningWeight = selectionoptions;

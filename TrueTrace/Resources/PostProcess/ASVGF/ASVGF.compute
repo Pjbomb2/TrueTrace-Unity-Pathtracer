@@ -1488,11 +1488,12 @@ void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGrou
 		float3 final_color = composite_color(base_color, projected_lf, filtered_hf, filtered_spec, (UpscalerMethod != 0 && DiffRes && base_color.w <= 2) ? 1 : unpackRGBE(AlbedoColorB[ipos].y), ipos);
 		// SH TempSH = irradiance_to_SH(final_color, i_octahedral_32(TEX_PT_NORMALS_A[ipos].x));
 		// final_color = project_SH_irradiance(TempSH, normal);
-		IMG_ASVGF_COLOR[ipos] = float4(final_color, 0);
+		IMG_ASVGF_COLOR[ipos] = float4(final_color, (ReflRefracA[ipos] << 1) >> 30);
 	}
 } 
 
-
+int TargetWidth;
+int TargetHeight;
 RWTexture2D<half> TEX_PT_VIEW_DEPTH_AWRITE;//current frame depth
 float NearPlane;
 float3 Forward;
@@ -1500,7 +1501,7 @@ float3 Forward;
 float FetchDepth(float2 UV) {
     Ray ray = CreateCameraRay(UV * 2.0f - 1.0f);  
     #ifdef HDRP
-        float depth = 1.0f - (Depth[int3(UV * float2(screen_width, screen_height),0)].x);
+        float depth = 1.0f - (Depth[int3(UV * float2(TargetWidth, TargetHeight),0)].x);
     #else
         float depth = 1.0f - (Depth.SampleLevel(my_linear_clamp_sampler, UV, 0).x);
     #endif

@@ -159,10 +159,6 @@ namespace TrueTrace {
         [HideInInspector] public Vector3 SunDirection;
 
         private BVHNode8DataCompressed[] TempBVHArray;
-        #if TTLightMapping
-            public List<int> LightMapTexIndex;
-            public LightMapData[] LightMaps;
-        #endif
 
         [SerializeField] public int RunningTasks;
         #if HardwareRT
@@ -1102,11 +1098,7 @@ namespace TrueTrace {
             if (ChildrenUpdated || ParentCountHasChanged) MeshAABBs = new AABB[RenderQue.Count + InstanceRenderQue.Count];
         }
 
-        #if TTLightMapping
-            public void BuildCombined()
-        #else
-            public void EditorBuild()
-        #endif
+        public void EditorBuild()
         {//Forces all to rebuild
             Assets = this;
             ClearAll();
@@ -1144,11 +1136,8 @@ namespace TrueTrace {
             }
             didstart = false;
         }
-        #if TTLightMapping
-            public void EditorBuild()
-        #else
-            public void BuildCombined()
-        #endif
+        
+        public void BuildCombined()
         {//Only has unbuilt be built
             Assets = this;
             Terrains = new List<TerrainObject>(GetComponentsInChildren<TerrainObject>());
