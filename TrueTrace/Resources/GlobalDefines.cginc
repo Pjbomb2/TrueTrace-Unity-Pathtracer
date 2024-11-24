@@ -20,7 +20,7 @@
 // #define ImprovedRadCacheSpecularResponse
 // #define HighSpeedRadCache
 #define IndirectRetraceWeighting
-// #define TrueBlack
+#define TrueBlack
 // #define AdvancedRadCacheAlt
 // #define UseTextureLOD
 // #define vMFDiffuse

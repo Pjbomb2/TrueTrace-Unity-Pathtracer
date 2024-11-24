@@ -94,8 +94,8 @@ StructuredBuffer<float> Exposure;
 
 
 
-RWTexture2D<half4> ReservoirA;
-Texture2D<half4> ReservoirB;
+RWTexture2DArray<uint4> ReservoirA;
+Texture2DArray<uint4> ReservoirB;
 
 RWTexture2D<uint4> WorldPosA;
 Texture2D<uint4> WorldPosB;
@@ -2116,6 +2116,21 @@ inline float3 CalcPos(uint4 TriData) {
     float4x4 Inverse = inverse(Mesh.W2L);
     TriData.y += Mesh.TriOffset;
 	return mul(Inverse, float4(AggTris[TriData.y].pos0 + ((TriData.z & 0xffff) / 65535.0f) * AggTris[TriData.y].posedge1 + ((TriData.z >> 16) / 65535.0f) * AggTris[TriData.y].posedge2,1)).xyz;
+}
+
+inline float3 CalcNorm(uint4 TriData) {
+	// if(TriData.w > 0) return asfloat(TriData.xyz);
+
+    MyMeshDataCompacted Mesh = _MeshData[TriData.x];
+    TriData.y += Mesh.TriOffset;
+    float4x4 Inverse = inverse(Mesh.W2L);
+    float3 Geomnorm = GetTriangleNormal(TriData.y, float2(((TriData.z & 0xffff) / 65535.0f), ((TriData.z >> 16) / 65535.0f)), Inverse);
+    float3 USGNorm = mul(Inverse, cross(normalize(AggTris[TriData.y].posedge1), normalize(AggTris[TriData.y].posedge2)));
+    float wldScale = rsqrt(dot(USGNorm, USGNorm));
+    USGNorm = -mul(wldScale, USGNorm);
+    return Geomnorm;
+    // if(dot(USGNorm, Geomnorm) < 0) USGNorm *= -1;
+	// return mul(Inverse, float4(AggTris[TriData.y].pos0 + ((TriData.z & 0xffff) / 65535.0f) * AggTris[TriData.y].posedge1 + ((TriData.z >> 16) / 65535.0f) * AggTris[TriData.y].posedge2,1)).xyz;
 }
 
 

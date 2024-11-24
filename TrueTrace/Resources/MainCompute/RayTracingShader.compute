@@ -55,6 +55,7 @@ bool VisabilityCheck(SmallerRay ray, float dist) {
     #endif
 }
 
+
 float FogDensity;
 float3 FogColor;
 
@@ -228,7 +229,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 #endif
             #endif
         }
-        if(UseASVGF && CurBounce == 0 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -10000.0f;
+        if((UseASVGF || UseReSTIRGI) && CurBounce == 0 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -10000.0f;
         if(luminance(EmissCol) > 2.0f) {
             if(CurBounce == 0) {
                 Color.Data = EmissCol;
@@ -664,6 +665,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     RayHit bestHit = get2(GlobRay.hits);
     ray.origin = GlobRay.origin;
     ray.direction = GlobRay.direction;
+    if(CurBounce == 0 && UseReSTIRGI) ScreenSpaceInfo[id.xy].w = asfloat(0);
 
     #ifdef HardwareRT
         if(bestHit.mesh_id != 9999999) {
@@ -921,13 +923,14 @@ int MaterialIndex;
     #endif
     const bool InvalidateScreenSpaceInfo = ((!UseASVGF && CurBounce == 0));
     float4 PrevScreenData = InvalidateScreenSpaceInfo ? 0 : ScreenSpaceInfo[id.xy];
+    if(CurBounce == 0 && UseReSTIRGI) PrevScreenData.w = asfloat(0);
     float4 PrevPrev = PrevScreenData;
     #ifdef RadianceCache
         calcFinalColor(ray, Color, TempMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, CacheBuffer[pixel_index]);
     #else
         calcFinalColor(ray, Color, TempMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData);
     #endif
-    if((UseASVGF ^ InvalidateScreenSpaceInfo) && any(PrevPrev != PrevScreenData)) ScreenSpaceInfo[id.xy] = PrevScreenData;
+    if(CurBounce == 0 || ((UseASVGF ^ InvalidateScreenSpaceInfo) && any(PrevPrev != PrevScreenData))) ScreenSpaceInfo[id.xy] = PrevScreenData;
     GlobalColors[pixel_index] = Color;
 
 }
@@ -964,7 +967,7 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
             GBufferCol = ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo) == 0) ? 1 : ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo));
         #endif
     }
-    float3 res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? GlobalColors[final_pixel_index].Data.xyz : ((float)PartialRenderingFactor * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) * GlobalColors[final_pixel_index].Data.xyz + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f)) / GBufferCol);
+    float3 res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? GlobalColors[final_pixel_index].Data.xyz : ((float)PartialRenderingFactor * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) * GlobalColors[final_pixel_index].Data.xyz) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f) / GBufferCol);
     // float3 res = (GlobalColors[final_pixel_index].Data.w == 0) ? GlobalColors[final_pixel_index].Data.xyz : ((float)PartialRenderingFactor * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) * GlobalColors[final_pixel_index].Data.xyz) / GBufferCol);
     if (!all(res < 10000000)) res = 0;
     #if DebugView != -1

@@ -2138,7 +2138,7 @@ Slider AperatureSlider;
             Button MainSourceButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();});
             Button MaterialPairButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); InputMaterialField.value = null; MaterialPairingMenu.Add(InputMaterialField); rootVisualElement.Add(MaterialPairingMenu);});
             Button SceneSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(SceneSettingsMenu);});
-            Button HardSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(HardSettingsMenu);});
+            Button HardSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); HardSettingsMenu.Clear(); AddHardSettingsToMenu(); rootVisualElement.Add(HardSettingsMenu);});
             Button HierarchyOptionsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(HierarchyOptionsMenu);});
             toolbar.Add(MainSourceButton);
             toolbar.Add(MaterialPairButton);
@@ -2226,7 +2226,7 @@ Slider AperatureSlider;
            ConvBloomDistExpScale = RayMaster.LocalTTSettings.ConvBloomDistExpScale;
          }
 
-           AddHardSettingsToMenu();
+           // AddHardSettingsToMenu();
            AddHierarchyOptionsToMenu();
            BVHBuild = new Button(() => OnStartAsyncCombined()) {text = "Build Aggregated BVH"};
            BVHBuild.style.minWidth = 145;

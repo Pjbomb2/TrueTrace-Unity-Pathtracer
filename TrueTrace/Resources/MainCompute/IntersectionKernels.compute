@@ -89,6 +89,7 @@ void IntersectBVH(int ray_index) {
         bestHit = CreateRayHit();
         if(CurBounce == 0) bestHit.t = asfloat(GlobalRay.hits.z);
         float RandNum = random(43, GlobalRay.PixelIndex).x;
+
         #ifdef HardwareRT
             const uint rayFlags = RAY_FLAG_FORCE_OPAQUE  ;
             UnityRayQuery<rayFlags> q;

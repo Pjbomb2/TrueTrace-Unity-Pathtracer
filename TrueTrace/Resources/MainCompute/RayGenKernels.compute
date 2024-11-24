@@ -55,17 +55,17 @@ void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadI
     RayData globray = {ray.origin + NearPlane * ray.direction, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
     RandomNumsWrite[id.xy] = float4(frames_accumulated, pixel_index, 0, 0);
 
-    if(curframe % ReSTIRGIUpdateRate == pixel_index % ReSTIRGIUpdateRate) {
-        #ifdef HDRP
-            float2 MotionVector = MotionVectors[int3(id.xy,0)].xy;
-        #else
-            float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, uv, 0).xy;
-        #endif
-        int2 prevIndex = int2(floor(((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
-        if (RandomNums[prevIndex].z == 0 && ReservoirA[prevIndex].z != 3 && prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height && !((PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].MetRoughIsSpec >> 22) & 0x1)) {
-            RandomNumsWrite[id.xy] = float4(PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.yx, 1 + ReservoirA[prevIndex].z,  PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.z);
-        }
-    }
+    // if(curframe % ReSTIRGIUpdateRate == pixel_index % ReSTIRGIUpdateRate) {
+    //     #ifdef HDRP
+    //         float2 MotionVector = MotionVectors[int3(id.xy,0)].xy;
+    //     #else
+    //         float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, uv, 0).xy;
+    //     #endif
+    //     int2 prevIndex = int2(floor(((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
+    //     if (RandomNums[prevIndex].z == 0 && ReservoirA[prevIndex].z != 3 && prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height && !((PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].MetRoughIsSpec >> 22) & 0x1)) {
+    //         RandomNumsWrite[id.xy] = float4(PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.yx, 1 + ReservoirA[prevIndex].z,  PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.z);
+    //     }
+    // }
 
     GlobalRays[pixel_index] = globray;
 }
