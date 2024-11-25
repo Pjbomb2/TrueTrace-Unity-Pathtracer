@@ -6,7 +6,7 @@
 //Dont modify above, CPU code will do automatically
 #define AdvancedAlphaMapped
 #define ExtraSampleValidation
-#define IgnoreGlassShadow
+// #define IgnoreGlassShadow
 // #define IgnoreGlassMain
 // #define FadeMapping
 // #define PointFiltering
@@ -24,7 +24,7 @@
 // #define AdvancedRadCacheAlt
 // #define UseTextureLOD
 // #define vMFDiffuse
-// #define EONDiffuse
+#define EONDiffuse
 // #define AdvancedBackground
 #define UseBRDFLights
 #define DoubleBufferSGTree

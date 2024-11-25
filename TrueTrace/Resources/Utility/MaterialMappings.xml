@@ -4096,6 +4096,11 @@
         <Purpose>3</Purpose>
         <ReadIndex>-4</ReadIndex>
         <TextureName>_EmissionMap</TextureName>
+        <Fallback>
+          <Purpose>3</Purpose>
+          <ReadIndex>-4</ReadIndex>
+          <TextureName>_EmissionMask</TextureName>
+        </Fallback>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>
@@ -4321,6 +4326,21 @@
         <Purpose>0</Purpose>
         <ReadIndex>-4</ReadIndex>
         <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_BumpMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>3</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_EmissionMask</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>4</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_CubeMapMask</TextureName>
       </TexturePairs>
       <TexturePairs>
         <Purpose>1</Purpose>

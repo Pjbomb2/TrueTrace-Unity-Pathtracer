@@ -79,6 +79,24 @@ float3 SampleHomo(SmallerRay ray, float maxT, int pixel_index, inout float t, in
     return m_internal ? SigmaS * Tr / pdf : (Tr / pdf);
 }
 
+void sampleEquiAngular( float u, float maxDistance, float3 rOrigin, float3 rDirection, float3 lightPos, inout float dist, inout float pdf )
+{
+    // get coord of closest point to light along (infinite) ray
+    float delta = clamp(dot(lightPos - rOrigin, rDirection), 0.0, 1.0);
+    
+    // get distance this point is from light
+    float D = distance(rOrigin + delta * rDirection, lightPos);
+
+    // get angle of endpoints
+    float thetaA = atan((0.0 - delta) / D);
+    float thetaB = atan((maxDistance - delta) / D);
+
+    // take sample
+    float t = D * tan( lerp(thetaA, thetaB, u) );
+    dist = delta + t;
+    pdf = D / ( (thetaB - thetaA) * (D * D + t * t) );
+}
+
 #ifdef RadianceCache
 inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout PropogatedCacheData CacheInstance) {//main function
 #else
@@ -125,12 +143,10 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     Geomnorm = i_octahedral_32(octahedral_32(Geomnorm));
     norm = Geomnorm;
 
-    [branch]if(CurBounce == 0 && UseReSTIRGI && ReSTIRGIUpdateRate != 0 && RandomNums[id].z != 0 && hitDat.specTrans == 0 && hitDat.diffTrans == 0) {
-        norm = i_octahedral_32(asuint(RandomNums[id].w));
 #ifdef UseTextureLOD
-    } else if (CurBounce == 0 && !ClayMode && (hitDat.NormalTex.x > 0 || hitDat.SecondaryNormalTex.x > 0)) {//Handle Normal Maps
+    if (CurBounce == 0 && !ClayMode && (hitDat.NormalTex.x > 0 || hitDat.SecondaryNormalTex.x > 0)) {//Handle Normal Maps
 #else
-    } else if (!ClayMode && (hitDat.NormalTex.x > 0 || hitDat.SecondaryNormalTex.x > 0)) {//Handle Normal Maps
+    if (!ClayMode && (hitDat.NormalTex.x > 0 || hitDat.SecondaryNormalTex.x > 0)) {//Handle Normal Maps
 #endif
         float3 LocalTan = GetTriangleTangent(hit.triangle_id, float2(hit.u, hit.v), Inverse);
         float3 LocalBinorm = normalize(cross(Geomnorm, LocalTan));
@@ -237,7 +253,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 Color.Flags = packRGBE(EmissCol);
             }
             #ifdef RadianceCache
-                else if((!UseReSTIRGI || ReSTIRGIUpdateRate == 0 || RandomNums[id.xy].z == 0)) {
+                else  {
                     if(!AddHitToCache(CacheInstance, PrevOrigin, random(324, pixel_index).x)) return;
                     CacheInstance.CurrentIlluminance = 0;   
                 }
@@ -262,18 +278,19 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     
     int MaterialLobe = 2;
     bool Refracted = false;
-    [branch] if(CurBounce == 0 && UseReSTIRGI && ReSTIRGIUpdateRate != 0 && RandomNums[id].z != 0) {
-        #ifdef HDRP
-            float2 MotionVector = MotionVectors[int3(id,0)].xy;
-        #else
-           float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, (id) / float2(screen_width, screen_height) , 0).xy;
-        #endif
-        uint2 prevIndexDoub = int2(floor(((float2(id) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
+    // [branch] if(CurBounce == 0 && UseReSTIRGI && ReSTIRGIUpdateRate != 0 && RandomNums[id].z != 0) {
+    //     #ifdef HDRP
+    //         float2 MotionVector = MotionVectors[int3(id,0)].xy;
+    //     #else
+    //        float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, (id) / float2(screen_width, screen_height) , 0).xy;
+    //     #endif
+    //     uint2 prevIndexDoub = int2(floor(((float2(id) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
 
-        ray.direction = normalize(CalcPos(WorldPosB[prevIndexDoub]) - (pos + USGNorm * NormalOffset));
-        MaterialLobe = RandomNums[id].z - 1;
-        validBSDFSample = ReconstructBsdf(hitDat, PrevDirection, ray.direction, norm, pdf, bsdf, GetTangentSpace(norm), pixel_index, MaterialLobe);
-    } else validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
+    //     ray.direction = normalize(CalcPos(WorldPosB[prevIndexDoub]) - (pos + USGNorm * NormalOffset));
+    //     MaterialLobe = RandomNums[id].z - 1;
+    //     validBSDFSample = ReconstructBsdf(hitDat, PrevDirection, ray.direction, norm, pdf, bsdf, GetTangentSpace(norm), pixel_index, MaterialLobe);
+    // } else 
+    validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
     {
         if (CurBounce == 0) {
             float Metallic = saturate(hitDat.metallic + ((!UseASVGF || UseReSTIRGI) ? 0 : hitDat.Specular));
@@ -378,7 +395,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         if(CurBounce > 0) {
             if((CacheInstance.pathLength >> 6) & 0x1) {
                 CacheInstance.pathLength |= (1u << 7);
-                if((UseReSTIRGI && ReSTIRGIUpdateRate != 0 && RandomNums[id.xy].z != 0)) CacheInstance.CurrentIlluminance = EncodeRGB(DecodeRGB(CacheInstance.CurrentIlluminance) / (float)(ReSTIRGIUpdateRate - 1));
+                // if((UseReSTIRGI && ReSTIRGIUpdateRate != 0 && RandomNums[id.xy].z != 0)) CacheInstance.CurrentIlluminance = EncodeRGB(DecodeRGB(CacheInstance.CurrentIlluminance) / (float)(ReSTIRGIUpdateRate - 1));
                 if(!AddHitToCache(CacheInstance, PrevOrigin, random(324, pixel_index).y)) return;
                 CacheInstance.CurrentIlluminance = 0;
             }
@@ -453,6 +470,16 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     area = PI * Light.SpotAngle.x * Light.SpotAngle.x;
                 break;
             }
+            // float newt = hit.t;
+            // float newPDF = 1;
+            // sampleEquiAngular(random(321, pixel_index).x, hit.t, PrevOrigin, PrevDirection, LightPosition, newt, newPDF);
+            // if(hit.t != newt) {
+            //     pos = PrevOrigin + PrevDirection * newt;
+            //     norm = normalize(LightPosition - pos);
+            // }
+            //     // RunningWeight *= newPDF;
+
+
         } else if(SelectedLightGroup == 0) {
             #ifdef LBVH
                 int MeshIndex;
@@ -740,7 +767,7 @@ int MaterialIndex;
                     else if (CurBounce == 1) Color.Indirect += Color.throughput * Radiance;
                     #ifdef RadianceCache
                         else if(!((CacheBuffer[pixel_index].pathLength >> 7) & 0x1) || (((Color.MetRoughIsSpec & 0x3800000) >> 23) >= 3)) Color.Indirect += Color.throughput * DeSat(Radiance, 1.0f - TrueDeSat) * Intensity;
-                        else if(!UseReSTIRGI || ReSTIRGIUpdateRate == 0 || RandomNums[id.xy].z == 0) {
+                        else  {
                             AddMissToCache(CacheBuffer[pixel_index], Radiance);
                         }
                     #else
