@@ -195,7 +195,6 @@ namespace TrueTrace {
         private int HeightmapShadowKernel;
         private int ShadeKernel;
         private int FinalizeKernel;
-        private int GIReTraceKernel;
         private int TransferKernel;
         private int ReSTIRGIKernel;
         private int ReSTIRGISpatialKernel;
@@ -268,7 +267,6 @@ namespace TrueTrace {
             FinalizeKernel = ShadingShader.FindKernel("kernel_finalize");
             HeightmapShadowKernel = IntersectionShader.FindKernel("kernel_shadow_heightmap");
             HeightmapKernel = IntersectionShader.FindKernel("kernel_heightmap");
-            GIReTraceKernel = GenerateShader.FindKernel("GIReTraceKernel");
             TransferKernel = ShadingShader.FindKernel("TransferKernel");
             ReSTIRGIKernel = ReSTIRGI.FindKernel("ReSTIRGIKernel");
             ReSTIRGISpatialKernel = ReSTIRGI.FindKernel("ReSTIRGISpatial");
@@ -601,7 +599,6 @@ namespace TrueTrace {
             bool FlipFrame = (FramesSinceStart2 % 2 == 0);
 
 
-            GenerateShader.SetTextureFromGlobal(GIReTraceKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             ReSTIRGI.SetTextureFromGlobal(ReSTIRGIKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             ReSTIRGI.SetTextureFromGlobal(ReSTIRGISpatialKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             ShadingShader.SetTextureFromGlobal(ShadeKernel, "MotionVectors", "_CameraMotionVectorsTexture");
@@ -739,11 +736,6 @@ namespace TrueTrace {
                 ShadingShader.SetComputeBuffer(TTtoOIDNKernelPanorama, "GlobalColors", LightingBuffer);
             #endif
 
-            GenerateShader.SetComputeBuffer(GIReTraceKernel, "GlobalRays", _RayBuffer);
-            GenerateShader.SetComputeBuffer(GIReTraceKernel, "PrevGlobalColorsA", FlipFrame ? PrevLightingBufferA : PrevLightingBufferB);
-            GenerateShader.SetTexture(GIReTraceKernel, "RandomNumsWrite", FlipFrame ? _RandomNums : _RandomNumsB);
-            GenerateShader.SetTexture(GIReTraceKernel, "ReservoirA", !FlipFrame ? GIReservoirB : GIReservoirA);
-            GenerateShader.SetTexture(GIReTraceKernel, "RandomNums", !FlipFrame ? _RandomNums : _RandomNumsB);
             
 
             AssetManager.Assets.SetMeshTraceBuffers(ReSTIRGI, ReSTIRGIKernel);

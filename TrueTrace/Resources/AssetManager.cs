@@ -2224,7 +2224,7 @@ namespace TrueTrace {
                 if(RayMaster.FramesSinceStart2 % 2 == 0) MeshDataBufferA.SetData(MyMeshesCompacted);
                 else MeshDataBufferB.SetData(MyMeshesCompacted);
             }
-            InstanceData.RenderInstances();
+            // InstanceData.RenderInstances2();
             if(HasChangedMaterials) MaterialBuffer.SetData(_Materials);
             LightMeshData CurLightMesh;
             for (int i = 0; i < LightMeshCount; i++)

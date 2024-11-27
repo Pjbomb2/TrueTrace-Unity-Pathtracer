@@ -37,6 +37,7 @@ public class RenderHandle : MonoBehaviour
         CommandBuffer cmd = new CommandBuffer();
         cmd.name = "TrueTrace";
         RayMaster.RenderImage(destination, cmd);
+        // cmd.Blit(source, destination);
         Graphics.ExecuteCommandBuffer(cmd);
         cmd.Clear();
         cmd.Release();

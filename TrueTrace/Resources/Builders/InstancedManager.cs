@@ -25,6 +25,7 @@ namespace TrueTrace {
             public int SubMeshCount;
             public RenderParams[] LocalRendp;
             public InstanceTransformData[] InstTransfArray;
+            public ComputeBuffer InstTransfBuffer;
         }
         Dictionary<ParentObject, InstanceData> InstanceIndexes;
         public struct InstanceTransformData {
@@ -32,7 +33,12 @@ namespace TrueTrace {
             public Matrix4x4 prevObjectToWorld;
         }
 
+
+        GraphicsBuffer commandBuf;
+        GraphicsBuffer.IndirectDrawIndexedArgs[] commandData;
         public void InitRelationships() {
+            commandBuf = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments, 1, GraphicsBuffer.IndirectDrawIndexedArgs.size);
+            commandData = new GraphicsBuffer.IndirectDrawIndexedArgs[1];
             TempQue = new List<ParentObject>(this.GetComponentsInChildren<ParentObject>());
             InstanceIndexes = new Dictionary<ParentObject, InstanceData>();
             InstancedObject[] InstanceQues = GameObject.FindObjectsOfType<InstancedObject>();
@@ -49,10 +55,13 @@ namespace TrueTrace {
                     InstanceQues[i].InstanceParent.gameObject.TryGetComponent<MeshRenderer>(out MeshRenderer TempRend);
                     TempInst.SubMeshCount = TempInst.LocalMesh.subMeshCount;
                     TempInst.LocalRendp = new RenderParams[TempInst.SubMeshCount];
+                    Material NewMat = new Material(Shader.Find("Hidden/CustomMotionVectors"));
                     for(int i2 = 0; i2 < TempInst.SubMeshCount; i2++) {
-                        TempRend.sharedMaterials[i2].enableInstancing = true;
-                        TempInst.LocalRendp[i2] = new RenderParams(TempRend.sharedMaterials[i2]);
+                        NewMat.enableInstancing = true;
+                        TempInst.LocalRendp[i2] = new RenderParams(NewMat);
                         TempInst.LocalRendp[i2].motionVectorMode = MotionVectorGenerationMode.Object;
+                        TempInst.LocalRendp[i2].matProps = new MaterialPropertyBlock();
+                        TempInst.LocalRendp[i2].worldBounds = new Bounds(Vector3.zero, new Vector3(999999,999999,999999));
                     }
                     InstanceIndexes.Add(InstanceQues[i].InstanceParent, TempInst);
                 }
@@ -68,10 +77,22 @@ namespace TrueTrace {
         }
 
         public void Update() {
-            if(!Application.isPlaying) RenderInstances();
+            RenderInstances2();
         }
 
+        [ImageEffectOpaque]
+        private void OnRenderImage(RenderTexture source, RenderTexture destination) {
+            RenderInstances2();
+        }
+
+        ComputeBuffer TempBuf;
         public void RenderInstances() {
+        }
+        Matrix4x4 PrevVP;
+        Matrix4x4 CurVP;
+        public void RenderInstances2() {
+            PrevVP = CurVP;
+            CurVP = Camera.main.projectionMatrix * Camera.main.worldToCameraMatrix;
             if(InstanceIndexes == null || TempQue == null || TempQue.Count == 0) InitRelationships();
             int Coun1 = TempQue.Count;
             for(int i = 0; i < Coun1; i++) {
@@ -80,8 +101,15 @@ namespace TrueTrace {
                     for(int i2 = 0; i2 < Coun2; i2++) {
                         ExistingList.InstTransfArray[i2].prevObjectToWorld = ExistingList.InstTransfArray[i2].objectToWorld;
                         ExistingList.InstTransfArray[i2].objectToWorld = ExistingList.InstanceTargets[i2].transform.localToWorldMatrix;
+
                     }
-                    for(int i2 = 0; i2 < ExistingList.SubMeshCount; i2++) {try {Graphics.RenderMeshInstanced(ExistingList.LocalRendp[i2], TempQue[i].RenderImposters ? Resources.GetBuiltinResource<Mesh>("Cube.fbx") : ExistingList.LocalMesh, i2, ExistingList.InstTransfArray);} catch(System.Exception E) {}}
+                    CommonFunctions.CreateComputeBuffer(ref ExistingList.InstTransfBuffer, ExistingList.InstTransfArray);
+                    commandData[0].indexCountPerInstance = ExistingList.LocalMesh.GetIndexCount(0);
+                    commandData[0].instanceCount = (uint)Coun2;
+                    commandBuf.SetData(commandData);
+
+                    // for(int i2 = 0; i2 < ExistingList.SubMeshCount; i2++) {try {Graphics.RenderMeshInstanced(ExistingList.LocalRendp[i2], TempQue[i].RenderImposters ? Resources.GetBuiltinResource<Mesh>("Cube.fbx") : ExistingList.LocalMesh, i2, ExistingList.InstTransfArray);} catch(System.Exception E) {Debug.LogError(E);}}
+                    for(int i2 = 0; i2 < ExistingList.SubMeshCount; i2++) {ExistingList.LocalRendp[i2].matProps.SetMatrix("CurVP", CurVP); ExistingList.LocalRendp[i2].matProps.SetMatrix("_PreviousVP", PrevVP); ExistingList.LocalRendp[i2].matProps.SetBuffer("InstanceTransfs", ExistingList.InstTransfBuffer); try {Graphics.RenderMeshIndirect(ExistingList.LocalRendp[i2], TempQue[i].RenderImposters ? Resources.GetBuiltinResource<Mesh>("Cube.fbx") : ExistingList.LocalMesh, commandBuf, 1);} catch(System.Exception E) {Debug.LogError(E);}}
                 }
             }
         }
