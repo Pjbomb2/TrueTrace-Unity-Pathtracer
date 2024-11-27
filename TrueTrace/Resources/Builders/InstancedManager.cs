@@ -81,7 +81,7 @@ namespace TrueTrace {
                         ExistingList.InstTransfArray[i2].prevObjectToWorld = ExistingList.InstTransfArray[i2].objectToWorld;
                         ExistingList.InstTransfArray[i2].objectToWorld = ExistingList.InstanceTargets[i2].transform.localToWorldMatrix;
                     }
-                    for(int i2 = 0; i2 < ExistingList.SubMeshCount; i2++) {try {Graphics.RenderMeshInstanced(ExistingList.LocalRendp[i2], ExistingList.LocalMesh, i2, ExistingList.InstTransfArray);} catch(System.Exception E) {}}
+                    for(int i2 = 0; i2 < ExistingList.SubMeshCount; i2++) {try {Graphics.RenderMeshInstanced(ExistingList.LocalRendp[i2], TempQue[i].RenderImposters ? Resources.GetBuiltinResource<Mesh>("Cube.fbx") : ExistingList.LocalMesh, i2, ExistingList.InstTransfArray);} catch(System.Exception E) {}}
                 }
             }
         }

@@ -26,6 +26,7 @@ namespace TrueTrace {
         public Task AsyncTask;
         public int ExistsInQue = -1;
         public int QueInProgress = -1;
+        public bool RenderImposters = false;
         public bool IsDeformable = false;
         [HideInInspector] public ComputeBuffer LightTriBuffer;
         [HideInInspector] public ComputeBuffer LightTreeBuffer;
