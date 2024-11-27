@@ -278,18 +278,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     
     int MaterialLobe = 2;
     bool Refracted = false;
-    // [branch] if(CurBounce == 0 && UseReSTIRGI && ReSTIRGIUpdateRate != 0 && RandomNums[id].z != 0) {
-    //     #ifdef HDRP
-    //         float2 MotionVector = MotionVectors[int3(id,0)].xy;
-    //     #else
-    //        float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, (id) / float2(screen_width, screen_height) , 0).xy;
-    //     #endif
-    //     uint2 prevIndexDoub = int2(floor(((float2(id) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
-
-    //     ray.direction = normalize(CalcPos(WorldPosB[prevIndexDoub]) - (pos + USGNorm * NormalOffset));
-    //     MaterialLobe = RandomNums[id].z - 1;
-    //     validBSDFSample = ReconstructBsdf(hitDat, PrevDirection, ray.direction, norm, pdf, bsdf, GetTangentSpace(norm), pixel_index, MaterialLobe);
-    // } else 
     validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
     {
         if (CurBounce == 0) {
@@ -395,7 +383,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         if(CurBounce > 0) {
             if((CacheInstance.pathLength >> 6) & 0x1) {
                 CacheInstance.pathLength |= (1u << 7);
-                // if((UseReSTIRGI && ReSTIRGIUpdateRate != 0 && RandomNums[id.xy].z != 0)) CacheInstance.CurrentIlluminance = EncodeRGB(DecodeRGB(CacheInstance.CurrentIlluminance) / (float)(ReSTIRGIUpdateRate - 1));
                 if(!AddHitToCache(CacheInstance, PrevOrigin, random(324, pixel_index).y)) return;
                 CacheInstance.CurrentIlluminance = 0;
             }

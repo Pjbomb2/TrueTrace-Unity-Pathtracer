@@ -579,7 +579,6 @@ void IntersectShadowHeightmap(int ray_index) {
         if(!HitHeightmap) {
             uint PixelIndex = ShadowRaysBuffer[ray_index].PixelIndex;
             if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray.origin + ray.direction * abs(ShadowRaysBuffer[ray_index].t), 0);
-            // if(UseReSTIRGI && ReSTIRGIUpdateRate != 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] += float4(0,0,0,ShadowRay.DiffuseIlluminance);
             #ifdef RadianceCache
                 CacheBuffer[PixelIndex].CurrentIlluminance = EncodeRGB(DecodeRGB(CacheBuffer[PixelIndex].CurrentIlluminance) + unpackRGBE(ShadowRaysBuffer[ray_index].DiffuseIlluminance));// * abs(dot(i_octahedral_32(CacheBuffer[PixelIndex].Norm), ShadowRay.direction));
             #endif

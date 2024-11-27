@@ -42,22 +42,6 @@ void Generate(uint3 id : SV_DispatchThreadID) {
     GlobalRays[pixel_index] = globray;
 }
 
-
-
-#pragma kernel GIReTraceKernel
-[numthreads(16, 16, 1)]
-void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID, uint3 id3 : SV_GroupID, uint id4 : SV_GroupIndex) {
-    if (id.x >= screen_width || id.y >= screen_height) return;
-    const uint pixel_index = id.y * screen_width + id.x;
-
-    float2 uv = float2((id.xy) / float2(screen_width, screen_height));
-    SmallerRay ray = CreateCameraRay(uv * 2.0f - 1.0f, pixel_index);
-    RayData globray = {ray.origin + NearPlane * ray.direction, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
-    RandomNumsWrite[id.xy] = float4(frames_accumulated, pixel_index, 0, 0);
-
-    GlobalRays[pixel_index] = globray;
-}
-
 bool DoPanorama;
 float2 Segment;
 #pragma kernel GeneratePanorama

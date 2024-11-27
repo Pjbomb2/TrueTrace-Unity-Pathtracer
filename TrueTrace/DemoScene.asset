@@ -14,29 +14,28 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   SceneName: TestA
   IndirectBoost: 1
-  bouncecount: 32
+  bouncecount: 12
   ClayMode: 0
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 1
-  PPBloom: 1
+  Accumulate: 0
+  PPBloom: 0
   BloomStrength: 0.372
   PPDoF: 0
   DoFAperature: 0.15010014
   DoFAperatureScale: 1
   DoFFocal: 3.820374
-  PPExposure: 1
+  PPExposure: 0
   ExposureAuto: 0
   PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
-  DenoiserMethod: 0
+  DenoiserMethod: 1
   UpscalerMethod: 0
-  ReSTIRGIUpdateRate: 0
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
-  UseReSTIRGI: 0
+  UseReSTIRGI: 1
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
   ReSTIRGITemporalMCap: 20

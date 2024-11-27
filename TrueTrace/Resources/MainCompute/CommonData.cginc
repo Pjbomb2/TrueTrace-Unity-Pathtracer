@@ -364,7 +364,6 @@ uint pcg_hash(uint seed) {
 }
 
 bool UseASVGF;
-int ReSTIRGIUpdateRate;
 bool UseReSTIRGI;
 
 float2 randomNEE(uint samdim, uint pixel_index) {
@@ -380,7 +379,7 @@ float2 randomNEE(uint samdim, uint pixel_index) {
 }
 
 float2 random(uint samdim, uint pixel_index) {
-	[branch] if (UseASVGF || ReSTIRGIUpdateRate != 0) {
+	[branch] if (UseASVGF) {
 		uint2 pixid = uint2(pixel_index % screen_width, pixel_index / screen_width);
 		uint hash = pcg_hash(((uint)RandomNums[pixid].y * (uint)258 + samdim) * (MaxBounce + 1) + CurBounce);
 

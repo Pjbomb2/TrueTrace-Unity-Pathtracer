@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.Threading;
 
 namespace TrueTrace {
-    [System.Serializable]
+    [System.Serializable][ExecuteInEditMode]
     public class InstancedObject : MonoBehaviour
     {
         private ParentObject PreviousInstance;
@@ -34,7 +34,8 @@ namespace TrueTrace {
         }
         private void OnEnable()
         {
-            if (gameObject.scene.isLoaded)
+            GameObject.Find("InstancedStorage").GetComponent<InstancedManager>().InitRelationships();
+            if (gameObject.scene.isLoaded && Application.isPlaying)
             {
                 if(PrevInstance && InstanceParent == null) {
                     Destroy(this);
@@ -58,7 +59,7 @@ namespace TrueTrace {
 
         private void OnDisable()
         {
-            if (gameObject.scene.isLoaded)
+            if (gameObject.scene.isLoaded && Application.isPlaying)
             {
                 if(InstanceParent == null) {
                     Destroy(this);

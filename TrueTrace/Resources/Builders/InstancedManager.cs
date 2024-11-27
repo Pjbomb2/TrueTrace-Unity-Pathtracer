@@ -7,16 +7,84 @@ using System.Threading;
 #pragma warning disable 4014
 
 namespace TrueTrace {
-    [System.Serializable]
+    [System.Serializable][ExecuteInEditMode]
     public class InstancedManager : MonoBehaviour
     {
         [HideInInspector] public List<ParentObject> AddQue;
         [HideInInspector] public List<ParentObject> RemoveQue;
         [HideInInspector] public List<ParentObject> BuildQue;
         [HideInInspector] public List<ParentObject> RenderQue;
+        [HideInInspector] public List<ParentObject> TempQue;
         [HideInInspector] public List<Task> CurrentlyActiveTasks;
         [HideInInspector] public bool ParentCountHasChanged;
         [HideInInspector] public bool NeedsToUpdateTextures;
+
+        public struct InstanceData {
+            public List<InstancedObject> InstanceTargets;
+            public Mesh LocalMesh;
+            public int SubMeshCount;
+            public RenderParams[] LocalRendp;
+            public InstanceTransformData[] InstTransfArray;
+        }
+        Dictionary<ParentObject, InstanceData> InstanceIndexes;
+        public struct InstanceTransformData {
+            public Matrix4x4 objectToWorld;
+            public Matrix4x4 prevObjectToWorld;
+        }
+
+        public void InitRelationships() {
+            TempQue = new List<ParentObject>(this.GetComponentsInChildren<ParentObject>());
+            InstanceIndexes = new Dictionary<ParentObject, InstanceData>();
+            InstancedObject[] InstanceQues = GameObject.FindObjectsOfType<InstancedObject>();
+
+            int InstCount = InstanceQues.Length;
+            for(int i = 0; i < InstCount; i++) {
+                if (InstanceIndexes.TryGetValue(InstanceQues[i].InstanceParent, out InstanceData ExistingList)) {
+                    ExistingList.InstanceTargets.Add(InstanceQues[i]);
+                } else {
+                    InstanceData TempInst = new InstanceData();
+                    TempInst.InstanceTargets = new List<InstancedObject>();
+                    TempInst.InstanceTargets.Add(InstanceQues[i]);
+                    if(InstanceQues[i].InstanceParent.gameObject.TryGetComponent<MeshFilter>(out MeshFilter TempFilter)) TempInst.LocalMesh = TempFilter.sharedMesh;
+                    InstanceQues[i].InstanceParent.gameObject.TryGetComponent<MeshRenderer>(out MeshRenderer TempRend);
+                    TempInst.SubMeshCount = TempInst.LocalMesh.subMeshCount;
+                    TempInst.LocalRendp = new RenderParams[TempInst.SubMeshCount];
+                    for(int i2 = 0; i2 < TempInst.SubMeshCount; i2++) {
+                        TempRend.sharedMaterials[i2].enableInstancing = true;
+                        TempInst.LocalRendp[i2] = new RenderParams(TempRend.sharedMaterials[i2]);
+                        TempInst.LocalRendp[i2].motionVectorMode = MotionVectorGenerationMode.Object;
+                    }
+                    InstanceIndexes.Add(InstanceQues[i].InstanceParent, TempInst);
+                }
+            }
+            InstCount = TempQue.Count;
+            for(int i = 0; i < InstCount; i++) {
+                if (InstanceIndexes.TryGetValue(TempQue[i], out InstanceData ExistingList)) {
+                    ExistingList.InstTransfArray = new InstanceTransformData[ExistingList.InstanceTargets.Count];
+                    InstanceIndexes[TempQue[i]] = ExistingList;
+                }
+            }
+
+        }
+
+        public void Update() {
+            if(!Application.isPlaying) RenderInstances();
+        }
+
+        public void RenderInstances() {
+            if(InstanceIndexes == null || TempQue == null || TempQue.Count == 0) InitRelationships();
+            int Coun1 = TempQue.Count;
+            for(int i = 0; i < Coun1; i++) {
+                if (InstanceIndexes.TryGetValue(TempQue[i], out InstanceData ExistingList)) {
+                    int Coun2 = ExistingList.InstanceTargets.Count;
+                    for(int i2 = 0; i2 < Coun2; i2++) {
+                        ExistingList.InstTransfArray[i2].prevObjectToWorld = ExistingList.InstTransfArray[i2].objectToWorld;
+                        ExistingList.InstTransfArray[i2].objectToWorld = ExistingList.InstanceTargets[i2].transform.localToWorldMatrix;
+                    }
+                    for(int i2 = 0; i2 < ExistingList.SubMeshCount; i2++) {try {Graphics.RenderMeshInstanced(ExistingList.LocalRendp[i2], ExistingList.LocalMesh, i2, ExistingList.InstTransfArray);} catch(System.Exception E) {}}
+                }
+            }
+        }
 
         public void init()
         {

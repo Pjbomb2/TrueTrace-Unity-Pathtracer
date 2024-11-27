@@ -569,7 +569,6 @@ namespace TrueTrace {
             SetInt("ReSTIRGITemporalMCap", LocalTTSettings.ReSTIRGITemporalMCap, cmd);
             SetInt("curframe", FramesSinceStart2, cmd);
             SetInt("TerrainCount", Assets.Terrains.Count, cmd);
-            SetInt("ReSTIRGIUpdateRate", LocalTTSettings.UseReSTIRGI ? LocalTTSettings.ReSTIRGIUpdateRate : 0, cmd);
             SetInt("RISCount", LocalTTSettings.RISCount, cmd);
             SetInt("BackgroundType", LocalTTSettings.BackgroundType, cmd);
             SetInt("SecondaryBackgroundType", LocalTTSettings.SecondaryBackgroundType, cmd);
@@ -923,18 +922,12 @@ namespace TrueTrace {
             }
 
             SetInt("CurBounce", 0, cmd);
-            if(LocalTTSettings.UseReSTIRGI && LocalTTSettings.ReSTIRGIUpdateRate != 0) {
-                cmd.BeginSample("ReSTIR GI Reproject");
-                cmd.DispatchCompute(GenerateShader, GIReTraceKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
-                cmd.EndSample("ReSTIR GI Reproject");
+            if(HasSDFHandler) {
+                OptionalSDFHandler.Run(cmd, (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB, _RayBuffer, SourceWidth, SourceHeight, DoChainedImages, LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI, (FramesSinceStart2 % 2 == 0) ? RaysBuffer : RaysBufferB);
             } else {
-                if(HasSDFHandler) {
-                    OptionalSDFHandler.Run(cmd, (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB, _RayBuffer, SourceWidth, SourceHeight, DoChainedImages, LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI, (FramesSinceStart2 % 2 == 0) ? RaysBuffer : RaysBufferB);
-                } else {
-                    cmd.BeginSample("Primary Ray Generation");
-                       cmd.DispatchCompute(GenerateShader, (DoChainedImages ? GenPanoramaKernel : ((LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI) ? GenASVGFKernel : GenKernel)), Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
-                    cmd.EndSample("Primary Ray Generation");
-                }
+                cmd.BeginSample("Primary Ray Generation");
+                   cmd.DispatchCompute(GenerateShader, (DoChainedImages ? GenPanoramaKernel : ((LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI) ? GenASVGFKernel : GenKernel)), Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+                cmd.EndSample("Primary Ray Generation");
             }
         }
 

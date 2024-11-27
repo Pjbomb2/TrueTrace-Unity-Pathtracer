@@ -24,11 +24,11 @@ namespace TrueTrace {
         public int BindlessTextureCount;
         [HideInInspector] public Texture2D IESAtlas;
         [HideInInspector] public Texture2D AlbedoAtlas;
-        public Texture2D NormalAtlas;
+        [HideInInspector] public Texture2D NormalAtlas;
         [HideInInspector] public Texture2D SingleComponentAtlas;
         [HideInInspector] public Texture2D EmissiveAtlas;
         [HideInInspector] public Texture2D AlphaAtlas;
-        public RenderTexture HeightmapAtlas;
+        [HideInInspector] public RenderTexture HeightmapAtlas;
         [HideInInspector] public RenderTexture AlphaMapAtlas;
         private RenderTexture TempTex;
         private RenderTexture s_Prop_EncodeBCn_Temp;
@@ -1425,7 +1425,7 @@ namespace TrueTrace {
                 if (LightMeshCount == 0) { LightMeshes.Add(new LightMeshData() { }); }
 
 
-                if (!OnlyInstanceUpdated || _Materials.Length == 0) {
+                if (!OnlyInstanceUpdated || (_Materials == null || _Materials.Length == 0)) {
                     CreateAtlas(TotalMatCount, cmd);
                     // MaterialBuffer.ReleaseSafe();
                     CommonFunctions.CreateComputeBuffer(ref MaterialBuffer, _Materials);
@@ -1581,44 +1581,47 @@ namespace TrueTrace {
 
                 int ExteriorCount = RendCount;
 
-
-                for(int i = 0; i < InstanceData.RenderQue.Count; i++) {
+                int RendQueCount = InstanceData.RenderQue.Count;
+                for(int i = 0; i < RendQueCount; i++) {
+                    Mesh mesh = new Mesh();
+                    if(InstanceData.RenderQue[i].TryGetComponent<MeshFilter>(out MeshFilter TempFilter)) mesh = TempFilter.sharedMesh;
+                    else if(InstanceData.RenderQue[i].TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin)) mesh = TempSkin.sharedMesh;
+                    int SubMeshCount = mesh.subMeshCount;
+                    InstanceData.RenderQue[i].RTAccelHandle = new int[SubMeshCount];
+                    InstanceData.RenderQue[i].RTAccelSubmeshOffsets = new int[SubMeshCount];
                     if (InstanceIndexes.TryGetValue(InstanceData.RenderQue[i], out List<InstancedObject> ExistingList)) {
-                        InstanceData.RenderQue[i].RTAccelSubmeshOffsets = MeshOffset;
-                        for(int j = 0; j < ExistingList.Count; j++) {
-                            MeshOffsets.Add(new Vector2(SubMeshOffsets.Count, ExteriorCount + j));
+                        
+                        for(int i2 = 0; i2 < SubMeshCount; i2++) {
+                            for(int j = 0; j < ExistingList.Count; j++) {
+                                MeshOffsets.Add(new Vector2(SubMeshOffsets.Count + i2, ExteriorCount + j));
+                            }
+                            RayTracingMeshInstanceConfig TempConfig = new RayTracingMeshInstanceConfig();
+                            TempConfig.subMeshFlags = RayTracingSubMeshFlags.Enabled | RayTracingSubMeshFlags.ClosestHitOnly;
+                            TempConfig.mesh = mesh;
+                            TempConfig.subMeshIndex = (uint)i2;
+                            InstanceData.RenderQue[i].TryGetComponent<MeshRenderer>(out MeshRenderer TempRend);
+                            TempConfig.material = TempRend.sharedMaterials[i2];
+                            TempConfig.material.enableInstancing = true;
+
+                            PerInstanceData[] InstanceDatas = new PerInstanceData[ExistingList.Count];
+                            for(int j = 0; j < ExistingList.Count; j++) {
+                                InstanceDatas[j].objectToWorld = ExistingList[j].transform.localToWorldMatrix;
+                                InstanceDatas[j].renderingLayerMask = 0xFF;
+                                InstanceDatas[j].CustomInstanceID = (uint)j;
+                            }
+                            InstanceData.RenderQue[i].RTAccelHandle[i2] = AccelStruct.AddInstances(TempConfig, InstanceDatas, -1, 0, (uint)MeshOffset + (uint)ExistingList.Count * (uint)i2);
+                            InstanceData.RenderQue[i].RTAccelSubmeshOffsets[i2] = MeshOffset + ExistingList.Count * i2;
+
                         }
-                        Mesh mesh = new Mesh();
-                        if(InstanceData.RenderQue[i].TryGetComponent<MeshFilter>(out MeshFilter TempFilter)) mesh = TempFilter.sharedMesh;
-                        else if(InstanceData.RenderQue[i].TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin)) mesh = TempSkin.sharedMesh;
-                        int SubMeshCount = mesh.subMeshCount;
                         for (int i2 = 0; i2 < SubMeshCount; ++i2)
                         {//Add together all the submeshes in the mesh to consider it as one object
                             SubMeshOffsets.Add(TotLength);
                             int IndiceLength = (int)mesh.GetIndexCount(i2) / 3;
                             TotLength += IndiceLength;
                         }
-                        RayTracingSubMeshFlags[] B = new RayTracingSubMeshFlags[SubMeshCount];
-                        for(int i2 = 0; i2 < SubMeshCount; i2++) {
-                            B[i2] = RayTracingSubMeshFlags.Enabled | RayTracingSubMeshFlags.ClosestHitOnly;
-                        }
+                            MeshOffset += ExistingList.Count * SubMeshCount;
+                            ExteriorCount += ExistingList.Count * SubMeshCount;
 
-                        RayTracingMeshInstanceConfig TempConfig = new RayTracingMeshInstanceConfig();
-                        TempConfig.subMeshFlags = B[0];
-                        TempConfig.mesh = mesh;
-                        InstanceData.RenderQue[i].TryGetComponent<MeshRenderer>(out MeshRenderer TempRend);
-                        TempConfig.material = TempRend.sharedMaterials[0];
-
-                        PerInstanceData[] InstanceDatas = new PerInstanceData[ExistingList.Count];
-                        for(int j = 0; j < ExistingList.Count; j++) {
-                            InstanceDatas[j].objectToWorld = ExistingList[j].transform.localToWorldMatrix;
-                            InstanceDatas[j].renderingLayerMask = 0xFF;
-                            InstanceDatas[j].CustomInstanceID = (uint)j;
-                        }
-                        InstanceData.RenderQue[i].RTAccelHandle = AccelStruct.AddInstances(TempConfig, InstanceDatas, -1, 0, (uint)MeshOffset);
-
-                        MeshOffset += ExistingList.Count;
-                        ExteriorCount += ExistingList.Count;
                     }
 
                 }
@@ -2111,7 +2114,8 @@ namespace TrueTrace {
                     CommonFunctions.CreateComputeBuffer(ref MeshIndexOffsets, MeshOffsets);
                     CommonFunctions.CreateComputeBuffer(ref SubMeshOffsetsBuffer, SubMeshOffsets);
                 #endif
-            } else {
+            }
+             else {
                 // UnityEngine.Profiling.Profiler.BeginSample("Update Transforms");
                 Transform TargetTransform;
                 ParentObject TargetParent;
@@ -2159,6 +2163,7 @@ namespace TrueTrace {
                 //     }
                 // }
 
+
                 for (int i = 0; i < ListCount; i++)
                 {
                     if (InstanceRenderTransforms[i].hasChanged || ChangedLastFrame)
@@ -2179,32 +2184,32 @@ namespace TrueTrace {
                     int UpdateCount = ObjsToUpdate.Count;
                     for(int i = 0; i < UpdateCount; i++) {
                         if (InstanceIndexes.TryGetValue(ObjsToUpdate[i], out List<InstancedObject> ExistingList)) {
-                            AccelStruct.RemoveInstance(ObjsToUpdate[i].RTAccelHandle);
 
                             Mesh mesh = new Mesh();
                             if(ObjsToUpdate[i].TryGetComponent<MeshFilter>(out MeshFilter TempFilter)) mesh = TempFilter.sharedMesh;
                             else if(ObjsToUpdate[i].TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin)) mesh = TempSkin.sharedMesh;
                             int SubMeshCount = mesh.subMeshCount;
+                            for(int i2 = 0; i2 < SubMeshCount; i2++) AccelStruct.RemoveInstance(ObjsToUpdate[i].RTAccelHandle[i2]);
 
-                            RayTracingSubMeshFlags[] B = new RayTracingSubMeshFlags[SubMeshCount];
+
                             for(int i2 = 0; i2 < SubMeshCount; i2++) {
-                                B[i2] = RayTracingSubMeshFlags.Enabled | RayTracingSubMeshFlags.ClosestHitOnly;
-                            }
 
-                            RayTracingMeshInstanceConfig TempConfig = new RayTracingMeshInstanceConfig();
-                            TempConfig.subMeshFlags = B[0];
-                            TempConfig.mesh = mesh;
-                            ObjsToUpdate[i].TryGetComponent<MeshRenderer>(out MeshRenderer TempRend);
-                            TempConfig.material = TempRend.sharedMaterials[0];
+                                RayTracingMeshInstanceConfig TempConfig = new RayTracingMeshInstanceConfig();
+                                TempConfig.subMeshFlags = RayTracingSubMeshFlags.Enabled | RayTracingSubMeshFlags.ClosestHitOnly;
+                                TempConfig.mesh = mesh;
+                                TempConfig.subMeshIndex = (uint)i2;
+                                ObjsToUpdate[i].TryGetComponent<MeshRenderer>(out MeshRenderer TempRend);
+                                TempConfig.material = TempRend.sharedMaterials[i2];
 
-                            int ExCount = ExistingList.Count;
-                            PerInstanceData[] InstanceDatas = new PerInstanceData[ExistingList.Count];
-                            for(int j = 0; j < ExCount; j++) {
-                                InstanceDatas[j].objectToWorld = ExistingList[j].transform.localToWorldMatrix;
-                                InstanceDatas[j].renderingLayerMask = 0xFF;
-                                InstanceDatas[j].CustomInstanceID = (uint)j;
+                                int ExCount = ExistingList.Count;
+                                PerInstanceData[] InstanceDatas = new PerInstanceData[ExistingList.Count];
+                                for(int j = 0; j < ExCount; j++) {
+                                    InstanceDatas[j].objectToWorld = ExistingList[j].transform.localToWorldMatrix;
+                                    InstanceDatas[j].renderingLayerMask = 0xFF;
+                                    InstanceDatas[j].CustomInstanceID = (uint)j;
+                                }
+                                ObjsToUpdate[i].RTAccelHandle[i2] = AccelStruct.AddInstances(TempConfig, InstanceDatas, -1, 0, (uint)ObjsToUpdate[i].RTAccelSubmeshOffsets[i2]);
                             }
-                            ObjsToUpdate[i].RTAccelHandle = AccelStruct.AddInstances(TempConfig, InstanceDatas, -1, 0, (uint)ObjsToUpdate[i].RTAccelSubmeshOffsets);
                         }
 
                     }
@@ -2219,6 +2224,7 @@ namespace TrueTrace {
                 if(RayMaster.FramesSinceStart2 % 2 == 0) MeshDataBufferA.SetData(MyMeshesCompacted);
                 else MeshDataBufferB.SetData(MyMeshesCompacted);
             }
+            InstanceData.RenderInstances();
             if(HasChangedMaterials) MaterialBuffer.SetData(_Materials);
             LightMeshData CurLightMesh;
             for (int i = 0; i < LightMeshCount; i++)
@@ -2321,6 +2327,27 @@ namespace TrueTrace {
             return HasChangedMaterials;
 
         }
+
+        // public void Update() {
+
+        //         int Coun1 = InstanceData.RenderQue.Count;
+        //         for(int i = 0; i < Coun1; i++) {
+        //             if (InstanceIndexes.TryGetValue(InstanceData.RenderQue[i], out List<InstancedObject> ExistingList)) {
+        //                 int Coun2 = ExistingList.Count;
+        //                 Mesh mesh = new Mesh();
+        //                 if(InstanceData.RenderQue[i].TryGetComponent<MeshFilter>(out MeshFilter TempFilter)) mesh = TempFilter.sharedMesh;
+        //                 else if(InstanceData.RenderQue[i].TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin)) mesh = TempSkin.sharedMesh;
+        //                 Matrix4x4[] TransformList = new Matrix4x4[Coun2];
+        //                 InstanceData.RenderQue[i].TryGetComponent<MeshRenderer>(out MeshRenderer TempRend);
+        //                 TempRend.sharedMaterials[0].enableInstancing = true;
+        //                 RenderParams rendp = new RenderParams(TempRend.sharedMaterials[0]);
+        //                 for(int i2 = 0; i2 < Coun2; i2++) {
+        //                     TransformList[i2] = ExistingList[i2].transform.localToWorldMatrix;
+        //                 }
+        //                 Graphics.RenderMeshInstanced(rendp, mesh, 0, TransformList);
+        //             }
+        //         }
+        // }
 
         // private int DrawCount;
         // public GaussianTreeNode[] LightTree;

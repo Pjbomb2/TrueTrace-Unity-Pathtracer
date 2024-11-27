@@ -20,8 +20,8 @@ namespace TrueTrace {
     public class ParentObject : MonoBehaviour
     {
 
-        public int RTAccelHandle = 0;
-        public int RTAccelSubmeshOffsets = 0;
+        public int[] RTAccelHandle;
+        public int[] RTAccelSubmeshOffsets;
         public LightBVHBuilder LBVH;
         public Task AsyncTask;
         public int ExistsInQue = -1;
