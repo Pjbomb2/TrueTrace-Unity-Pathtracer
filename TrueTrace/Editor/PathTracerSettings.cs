@@ -60,8 +60,9 @@ namespace TrueTrace {
          [SerializeField] public bool ExposureAuto = false;
          [SerializeField] public bool ReSTIRGI = false;
          [SerializeField] public bool SampleValid = false;
+         [SerializeField] public int GIUpdateRate = 7;
          [SerializeField] public bool GITemporal = true;
-         [SerializeField] public int GITemporalMCap = 12;
+         [SerializeField] public int GITemporalMCap = 20;
          [SerializeField] public bool GISpatial = true;
          [SerializeField] public int GISpatialSampleCount = 24;
          [SerializeField] public bool TAA = false;
@@ -258,8 +259,8 @@ namespace TrueTrace {
                      DestroyImmediate(Objects[i][i2].GetComponent<MeshRenderer>());
                      DestroyImmediate(Objects[i][i2].GetComponent<RayTracingObject>());
                      if(InstancedParent.GetComponent<ParentObject>()) DestroyImmediate(Objects[i][i2].GetComponent<ParentObject>());
-                     Objects[i][i2].AddComponent<InstancedObject>();
-                     Objects[i][i2].GetComponent<InstancedObject>().InstanceParent = InstancedParent.GetComponent<ParentObject>();
+                     (Objects[i][i2].AddComponent<InstancedObject>()).InstanceParent = InstancedParent.GetComponent<ParentObject>();
+                     // Objects[i][i2].GetComponent<InstancedObject>().InstanceParent = InstancedParent.GetComponent<ParentObject>();
                   }
                }
             }
@@ -424,105 +425,6 @@ namespace TrueTrace {
 
 
          }
-         // public struct FlagObjects {
-         //    public List<FlagObjects> Children;
-         //    public GameObject Obj;
-         //    public bool HasSkinnedChild;
-         //    public bool HasSkinnedSelf;
-         //    public bool HasNormChild;
-         //    public bool HasNormSelf;
-         //    public bool HasPO;
-         //    public bool HasRTO;
-         //    public bool ChainedImportance;
-         //    public bool AlreadyHandled;
-         //    public bool IsEmpty;
-         // }
-         // public List<FlagObjects> Hierarchy;       
-
-         // FlagObjects Prepare(Transform Source) {
-         //    FlagObjects SourceObj = new FlagObjects();
-         //    SourceObj.Children = new List<FlagObjects>();
-         //    SourceObj.Obj = Source.gameObject;
-         //    if(Source.gameObject.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin)) {
-         //       SourceObj.HasSkinnedSelf = true;
-         //       SourceObj.ChainedImportance = true;
-         //    }
-         //    if(Source.gameObject.TryGetComponent<MeshRenderer>(out MeshRenderer TempRend)) {
-         //       SourceObj.HasNormSelf = true;
-         //       SourceObj.ChainedImportance = true;
-         //    }
-         //    SourceObj.IsEmpty = !Source.ChainedImportance;
-
-         //    if(Source.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempRTO)) SourceObj.HasRTO = true;
-         //    if(Source.gameObject.TryGetComponent<ParentObject>(out ParentObject TempPO)) SourceObj.HasPO = true;
-
-         //    int TransformCount = Source.transform.childCount;
-         //    for(int i = 0; i < TransformCount; i++) {
-         //       if(Source.GetChild(i).gameObject.activeInHierarchy) {
-         //          FlagObjects TempFlag = Prepare(Source.GetChild(i));
-         //          if(TempFlag.HasSkinnedSelf) SourceObj.HasSkinnedChild = true;
-         //          if(TempFlag.HasNormSelf) SourceObj.HasNormChild = true;
-         //          if(TempFlag.ChainedImportance) SourceObj.ChainedImportance = true;
-         //          SourceObj.Children.Add(TempFlag);
-         //       }
-         //    }
-         //    return SourceObj;
-         // }
-         // void Prune(ref FlagObjects Source) {
-         //    if(Source.Children == null) return;
-         //    int ChildCount = Source.Children.Count;
-         //    for(int i = ChildCount - 1; i >= 0; i--) {
-         //       if(Source.Children[i].ChainedImportance) Prune(ref Source.Children[i]);
-         //       else Source.Children.RemoveAt(i);
-         //    }
-         // }
-
-         // int Check(ref FlagObjects Source, FlagObjects Child) {
-         //    if(!(Child.HasPO && (Child.HasRTO || Child.HasSkinnedChild || Child.HasNormChild))) Source.ChildNeedsHandling = true;  
-         // }
-         // void Solve(ref FlagObjects Source) {
-         //    int ChildCount = Source.Children.Count;
-         //    for(int i = 0; i < ChildCount; i++) {
-         //       Solve(ref Source.Children[i]);
-         //    }
-
-         //    if(Source.HasNormSelf || Source.HasSkinnedSelf) {//check for material count not zero and mesh exists?
-         //       if(!Source.HasRTO) {
-         //          Source.Obj.AddComponent<RayTracingObject>();
-         //          Source.HasRTO = true;
-         //       }
-         //    }
-
-         //    bool ChildrenSafe = true;
-         //    bool UnhandledContainsSkinned = false;
-         //    bool UnhandledContainsNormal = false;
-         //    List<int> UnhandledChildrenIndexes = new List<int>();
-         //    for(int i = 0; i < ChildCount && ChildrenSafe; i++) {
-         //       if(!Source.Children[i].AlreadyHandled) {
-         //          UnhandledChildrenIndexes.Add(i); 
-         //          UnhandledContainsSkinned = UnhandledContainsSkinned || Source.Children[i].HasSkinnedSelf;
-         //          UnhandledContainsNormal = UnhandledContainsNormal || Source.Children[i].HasNormSelf;
-         //       }
-         //    }
-         //    int UnhandledCount = UnhandledChildrenIndexes.Count;
-         //    if(!Source.AlreadyHandled) {
-         //       if(UnhandledContainsSkinned && !Source.HasNormSelf) {
-         //          Source.Obj.AddComponent<ParentObject>();
-         //          Source.AlreadyHandled = true;     
-         //          for(int i = 0; i < UnhandledCount; i++) {
-         //             int Index = UnhandledChildrenIndexes[i];
-         //             if(Source.Children[Index].HasSkinnedSelf) {
-         //                Source.Children[Index].AlreadyHandled = true;
-         //             } else if(Source.Children[Index].HasNormSelf) {
-         //                Source.Children[Index].Obj.AddComponent<ParentObject>();
-         //                Source.Children[Index].AlreadyHandled = true;
-         //             }
-         //          }
-         //       } else if(UnhandledContainsSkinned && Source.HasNormSelf) {
-
-         //       }
-         //    }
-
 
          private void QuickStart() {
             // ParentObject[] TempObjects2 = GameObject.FindObjectsOfType<ParentObject>();
@@ -618,7 +520,8 @@ Toggle BloomToggle;
 [Delayed] FloatField ResField;
 IntegerField AtmoScatterField;
 Toggle GIToggle;
-IntegerField TeporalGIMCapField;
+IntegerField GIUpdateRateField;
+IntegerField TemporalGIMCapField;
 FloatField ReSTIRGISpatialRadiusField;
 Toggle TemporalGIToggle;
 Toggle SpatialGIToggle;
@@ -632,42 +535,6 @@ IntegerField RISCountField;
 IntegerField OIDNFrameField;
 FloatField FocalSlider;
 PopupField<string> UpscalerField;
-
-private void StandardSet() {
-         BounceCount = 7;
-         RenderRes = 1;
-         NEE = true;
-         Accumulate = true;
-         RR = true;
-         Moving = true;
-         MeshSkin = true;
-         Bloom = false;
-         BloomStrength = 0.5f;
-         DoF = false;
-         DoFAperature = 0.1f;
-         DoFAperatureScale = 1.0f;
-         DoFFocal = 0.1f;
-         DoExposure = false;
-         ExposureAuto = false;
-         ReSTIRGI = false;
-         SampleValid = false;
-         GITemporal = true;
-         GITemporalMCap = 488;
-         GISpatial = true;
-         GISpatialSampleCount = 12;
-         TAA = false;
-         FXAA = false;
-         ToneMap = false;
-         AtmoScatter = 4;
-         ShowFPS = true;
-         Exposure = 0;
-         AtlasSize = 16384;
-         DoPartialRendering = false;
-         DoFirefly = false;
-         ReSTIRGISpatialRadius = 30;
-         RISCount = 12;
-}
-
 
 
 VisualElement MainSource;
@@ -1970,7 +1837,11 @@ Toolbar toolbar;
 
           var E = Obj.GetComponentsInChildren<InstancedObject>();
           foreach(var a in E) {
-              DestroyImmediate(a);
+               GameObject TempOBJ = GameObject.Instantiate(a.InstanceParent.gameObject);
+               TempOBJ.transform.parent = a.gameObject.transform.parent;
+               TempOBJ.transform.position = a.gameObject.transform.position;
+               TempOBJ.transform.rotation = a.gameObject.transform.rotation;
+              DestroyImmediate(a.gameObject);
           }
           ParentData SourceParent = GrabChildren2(Obj.transform);
 
@@ -2184,6 +2055,7 @@ Slider AperatureSlider;
            GITemporal = RayMaster.LocalTTSettings.UseReSTIRGITemporal;
            GISpatial = RayMaster.LocalTTSettings.UseReSTIRGISpatial;
            SampleValid = RayMaster.LocalTTSettings.DoReSTIRGIConnectionValidation;
+           GIUpdateRate = RayMaster.LocalTTSettings.ReSTIRGIUpdateRate;
            GITemporalMCap = RayMaster.LocalTTSettings.ReSTIRGITemporalMCap;
            GISpatialSampleCount = RayMaster.LocalTTSettings.ReSTIRGISpatialCount;
            TAA = RayMaster.LocalTTSettings.PPTAA;
@@ -2516,8 +2388,14 @@ Slider AperatureSlider;
                    TopGI.style.flexDirection = FlexDirection.Row;
                    SampleValidToggle = new Toggle() {value = SampleValid, text = "Do Sample Connection Validation"};
                    SampleValidToggle.tooltip = "Confirms samples are mutually visable, reduces performance but improves indirect shadow quality";
+                   Label GIUpdateRateLabel = new Label("Update Rate(0 is off)");
+                   GIUpdateRateLabel.tooltip = "How often a pixel should validate its entire path, good for quickly changing lighting";
+                   GIUpdateRateField = new IntegerField() {value = GIUpdateRate};
                    SampleValidToggle.RegisterValueChangedCallback(evt => {SampleValid = evt.newValue; RayMaster.LocalTTSettings.DoReSTIRGIConnectionValidation = SampleValid;});
+                   GIUpdateRateField.RegisterValueChangedCallback(evt => {GIUpdateRate = (int)evt.newValue; RayMaster.LocalTTSettings.ReSTIRGIUpdateRate = GIUpdateRate;});
                    TopGI.Add(SampleValidToggle);
+                   TopGI.Add(GIUpdateRateField);
+                   TopGI.Add(GIUpdateRateLabel);
                EnclosingGI.Add(TopGI);
                Box TemporalGI = new Box();
                    TemporalGI.style.flexDirection = FlexDirection.Row;
@@ -2525,11 +2403,11 @@ Slider AperatureSlider;
                    
                    Label TemporalGIMCapLabel = new Label("Temporal M Cap(0 is off)");
                    TemporalGIMCapLabel.tooltip = "Controls how long a sample is valid for, lower numbers update more quickly but have more noise, good for quickly changing scenes/lighting";
-                   TeporalGIMCapField = new IntegerField() {value = GITemporalMCap};
+                   TemporalGIMCapField = new IntegerField() {value = GITemporalMCap};
                    TemporalGIToggle.RegisterValueChangedCallback(evt => {GITemporal = evt.newValue; RayMaster.LocalTTSettings.UseReSTIRGITemporal = GITemporal;});
-                   TeporalGIMCapField.RegisterValueChangedCallback(evt => {TeporalGIMCapField.value = Mathf.Min(Mathf.Max(evt.newValue, 1), 20); GITemporalMCap = (int)TeporalGIMCapField.value; RayMaster.LocalTTSettings.ReSTIRGITemporalMCap = GITemporalMCap;});
+                   TemporalGIMCapField.RegisterValueChangedCallback(evt => {TemporalGIMCapField.value = Mathf.Min(Mathf.Max(evt.newValue, 1), 60); GITemporalMCap = (int)TemporalGIMCapField.value; RayMaster.LocalTTSettings.ReSTIRGITemporalMCap = GITemporalMCap;});
                    TemporalGI.Add(TemporalGIToggle);
-                   TemporalGI.Add(TeporalGIMCapField);
+                   TemporalGI.Add(TemporalGIMCapField);
                    TemporalGI.Add(TemporalGIMCapLabel);
                EnclosingGI.Add(TemporalGI);
                Box SpatialGI = new Box();

@@ -32,7 +32,8 @@ namespace TrueTrace {
         [SerializeField] public bool UseReSTIRGI = false;
         [SerializeField] public int ReSTIRGISpatialCount = 24;
         [SerializeField] public float ReSTIRGISpatialRadius = 50.0f;
-        [SerializeField] public int ReSTIRGITemporalMCap = 4;
+        [SerializeField] public int ReSTIRGITemporalMCap = 20;
+        [SerializeField] public int ReSTIRGIUpdateRate = 7;
         [SerializeField] public bool DoReSTIRGIConnectionValidation = true;
         [SerializeField] public float Exposure = 1.0f;
         [SerializeField] public bool DoPartialRendering = false;

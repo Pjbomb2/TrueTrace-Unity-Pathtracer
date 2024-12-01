@@ -1620,7 +1620,7 @@ namespace TrueTrace {
                             TotLength += IndiceLength;
                         }
                             MeshOffset += ExistingList.Count * SubMeshCount;
-                            ExteriorCount += ExistingList.Count * SubMeshCount;
+                            ExteriorCount += ExistingList.Count;// * SubMeshCount;
 
                     }
 

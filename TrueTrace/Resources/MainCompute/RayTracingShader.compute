@@ -170,7 +170,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         Geomnorm = i_octahedral_32(asuint(PrevScreenData.x));
         norm = i_octahedral_32(asuint(PrevScreenData.y));
     }
-        // if(CurBounce == 0) _DebugTex[id.xy] = float4(GetTriangleTangent(hit.triangle_id, float2(hit.u, hit.v), Inverse) * 0.5f + 0.5f, 1.0f);
 
 
     {
@@ -278,7 +277,18 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     
     int MaterialLobe = 2;
     bool Refracted = false;
-    validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
+    [branch] if(CurBounce == 0 && UseReSTIRGI && ReSTIRGIUpdateRate != 0 && RandomNums[id].z != 0) {
+        #ifdef HDRP
+            float2 MotionVector = MotionVectors[int3(id,0)].xy;
+        #else
+           float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, (id) / float2(screen_width, screen_height) , 0).xy;
+        #endif
+        uint2 prevIndexDoub = int2(floor(((float2(id) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
+
+        ray.direction = normalize(CalcPos(WorldPosB[prevIndexDoub]) - (pos + USGNorm * NormalOffset));
+        MaterialLobe = RandomNums[id].z - 1;
+        validBSDFSample = ReconstructBsdf(hitDat, PrevDirection, ray.direction, norm, pdf, bsdf, GetTangentSpace(norm), pixel_index, MaterialLobe);
+        } else validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
     {
         if (CurBounce == 0) {
             float Metallic = saturate(hitDat.metallic + ((!UseASVGF || UseReSTIRGI) ? 0 : hitDat.Specular));
@@ -932,6 +942,8 @@ int MaterialIndex;
                     TempMat.emission *= luminance(EmissTex.xyz);
                 } else EmissCol *= EmissTex.xyz;
                 TempMat.surfaceColor = lerp(TempMat.surfaceColor, EmissCol, saturate(TempMat.emission) * GetFlag(TempMat.Tag, ReplaceBase));
+            } else {
+                TempMat.surfaceColor *= TempMat.EmissionColor;
             }
         }
     #endif
@@ -981,8 +993,7 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
             GBufferCol = ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo) == 0) ? 1 : ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo));
         #endif
     }
-    float3 res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? GlobalColors[final_pixel_index].Data.xyz : ((float)PartialRenderingFactor * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) * GlobalColors[final_pixel_index].Data.xyz) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f) / GBufferCol);
-    // float3 res = (GlobalColors[final_pixel_index].Data.w == 0) ? GlobalColors[final_pixel_index].Data.xyz : ((float)PartialRenderingFactor * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) * GlobalColors[final_pixel_index].Data.xyz) / GBufferCol);
+    float3 res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? GlobalColors[final_pixel_index].Data.xyz : ((float)PartialRenderingFactor * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * (UseReSTIRGI ? 1.0f : IndirectBoost)) * GlobalColors[final_pixel_index].Data.xyz) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f) / GBufferCol);
     if (!all(res < 10000000)) res = 0;
     #if DebugView != -1
         #if DebugView == DVGIView

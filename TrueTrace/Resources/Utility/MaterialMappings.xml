@@ -2026,14 +2026,34 @@
       <TexturePairs>
         <Purpose>0</Purpose>
         <ReadIndex>-4</ReadIndex>
-        <TextureName>_MainTex</TextureName>
+        <TextureName>_Albedo1</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_Normal1</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>4</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_Metallic1</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>8</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_Albedo2</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>10</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_Normal2</TextureName>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>
-    <RoughnessRange>null</RoughnessRange>
+    <RoughnessRange>_Smoothness1</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
-    <UsesSmoothness>false</UsesSmoothness>
+    <UsesSmoothness>true</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
     <MetallicRemapMin>null</MetallicRemapMin>
     <MetallicRemapMax>null</MetallicRemapMax>
@@ -2117,6 +2137,11 @@
         <Purpose>2</Purpose>
         <ReadIndex>-3</ReadIndex>
         <TextureName>_Normal</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_Albedo</TextureName>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>
@@ -2247,6 +2272,11 @@
         <Purpose>2</Purpose>
         <ReadIndex>-3</ReadIndex>
         <TextureName>_Normal</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_Albedo</TextureName>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>
@@ -4462,6 +4492,256 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+ <MaterialShader>
+    <Name>MarmosetUBER</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_BumpMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>3</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_EmissiveTex</TextureName>
+        <Fallback>
+          <Purpose>3</Purpose>
+          <ReadIndex>-4</ReadIndex>
+          <TextureName>_Illum</TextureName>
+        </Fallback>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>4</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_SpecTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>5</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_SpecTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>8</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_DetailDiffuseTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>9</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_DetailMask</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>10</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_DetailBumpTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>true</IsCutout>
+    <UsesSmoothness>true</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+ <MaterialShader>
+    <Name>UWE/Terrain/Triplanar</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_BumpMap</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+ <MaterialShader>
+    <Name>UWE/SIG Terrain Grass</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_BumpMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>true</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+ <MaterialShader>
+    <Name>UWE/SIG</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_BumpMap</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+ <MaterialShader>
+    <Name>FX/WBOIT-WaterPlane</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_BumpMap</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>true</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+ <MaterialShader>
+    <Name>UWE/SIG Triplanar with Capping</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_CapTexture</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_CapBumpMap</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+ <MaterialShader>
+    <Name>UWE/Terrain/Triplanar with Capping</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_CapTexture</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_CapBumpMap</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>UWE/SIG AlphaCutout + Noisey Wave</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_BumpMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>true</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
     <MetallicRemapMin>null</MetallicRemapMin>

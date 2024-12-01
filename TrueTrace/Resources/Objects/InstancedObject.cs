@@ -34,7 +34,8 @@ namespace TrueTrace {
         }
         private void OnEnable()
         {
-            GameObject.Find("InstancedStorage").GetComponent<InstancedManager>().InitRelationships();
+            InstancedManager.NeedsToReinit = true;
+            // GameObject.Find("InstancedStorage").GetComponent<InstancedManager>().InitRelationships();
             if (gameObject.scene.isLoaded && Application.isPlaying)
             {
                 if(PrevInstance && InstanceParent == null) {
@@ -47,7 +48,7 @@ namespace TrueTrace {
                     if(QueInProgress == 2) {
                         AssetManager.Assets.InstanceUpdateQue.Remove(this);
                     }
-                    AssetManager.Assets.InstanceAddQue.Add(this);
+                    if(!AssetManager.Assets.InstanceAddQue.Contains(this)) AssetManager.Assets.InstanceAddQue.Add(this);
                     QueInProgress = 3;
                     ExistsInQue = 3;
                 }
@@ -59,6 +60,8 @@ namespace TrueTrace {
 
         private void OnDisable()
         {
+            InstancedManager.NeedsToReinit = true;
+            // GameObject.Find("InstancedStorage").GetComponent<InstancedManager>().InitRelationships();
             if (gameObject.scene.isLoaded && Application.isPlaying)
             {
                 if(InstanceParent == null) {
@@ -76,7 +79,7 @@ namespace TrueTrace {
             AssetManager.Assets.InstanceUpdateQue.Add(this);
             this.ExistsInQue = 3;
             AssetManager.Assets.ParentCountHasChanged = true;
-            AssetManager.Assets.InstanceAddQue.Add(this);
+            if(!AssetManager.Assets.InstanceAddQue.Contains(this)) AssetManager.Assets.InstanceAddQue.Add(this);
         }
     }
 }

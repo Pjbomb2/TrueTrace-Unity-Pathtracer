@@ -32,6 +32,7 @@ bool DoPartialRendering;
 int PartialRenderingFactor;
 
 int unitylightcount;
+int ReSTIRGIUpdateRate;
 
 //Cam Info
 float3 Forward;
@@ -379,7 +380,7 @@ float2 randomNEE(uint samdim, uint pixel_index) {
 }
 
 float2 random(uint samdim, uint pixel_index) {
-	[branch] if (UseASVGF) {
+	[branch] if (UseASVGF || (UseReSTIRGI && ReSTIRGIUpdateRate != 0)) {
 		uint2 pixid = uint2(pixel_index % screen_width, pixel_index / screen_width);
 		uint hash = pcg_hash(((uint)RandomNums[pixid].y * (uint)258 + samdim) * (MaxBounce + 1) + CurBounce);
 
@@ -1483,7 +1484,7 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 
 	// TargetNode.variance = 0.5f * TargetNode.radius * TargetNode.radius;
 	float Variance = max(TargetNode.variance, (1.0f / pow(2, 31)) * squareddist);// * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
-	Variance = Variance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
+	// Variance = Variance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
 	// float Variance = max(TargetNode.variance, squareddist);
 
 
