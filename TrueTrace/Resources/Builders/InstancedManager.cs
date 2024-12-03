@@ -83,7 +83,7 @@ namespace TrueTrace {
                     for(int i2 = 0; i2 < Coun2; i2++) {
                         TempIden = Matrix4x4.identity;
                         ExistingList.InstTransfArray[i2].prevObjectToWorld = ExistingList.InstTransfArray[i2].objectToWorld;
-                        if(TempQue[i].RenderImposters) ExistingList.InstTransfArray[i2].objectToWorld.SetTRS(ExistingList.InstanceTargets[i2].transform.position, ExistingList.InstanceTargets[i2].transform.rotation, Vector3.Scale(ExistingList.InstanceTargets[i2].transform.lossyScale, TempBounds.extents * 2.0f));
+                        if(TempQue[i].RenderImposters) ExistingList.InstTransfArray[i2].objectToWorld.SetTRS(ExistingList.InstanceTargets[i2].transform.position +  Vector3.Scale(TempBounds.center, ExistingList.InstanceTargets[i2].transform.lossyScale), ExistingList.InstanceTargets[i2].transform.rotation, Vector3.Scale(ExistingList.InstanceTargets[i2].transform.lossyScale, TempBounds.extents * 2.0f));
                         else ExistingList.InstTransfArray[i2].objectToWorld = ExistingList.InstanceTargets[i2].transform.localToWorldMatrix;
                     }
 

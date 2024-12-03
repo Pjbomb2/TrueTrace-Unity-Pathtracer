@@ -1048,10 +1048,10 @@ inline float3 ReconstructDisneyBRDF(MaterialData hitDat, const float3 wo, float3
 
     float dotNL = CosTheta(wi);
     float dotNV = AbsCosTheta(wo);
-    if (dotNL <= 0.0f) {
-        Success = false;
-        return 0;
-    }
+    // if (dotNL <= 0.0f) {
+    //     Success = false;
+    //     return 0;
+    // }
 
     float ax, ay;
     CalculateAnisotropicParams(hitDat.roughness, hitDat.anisotropic, ax, ay);
@@ -1434,8 +1434,8 @@ float3 ReconstructDisney3(MaterialData hitDat, float3 wo, float3 wi, bool thin,
                 reflectance += col2 * clamp(d, 0.25f, 4.0f);// * forwardPdf;// * clamp(d, 0.25f, 2);
             }
             if(P.z > 0) { 
-                reflectance += ((EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin, pixel_index) + EvaluateSheen(hitDat, wo, wm, wi) / PI));
                 forwardPdf = AbsCosTheta(wi);
+                reflectance += ((EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin, pixel_index) + EvaluateSheen(hitDat, wo, wm, wi) / PI)) * (forwardPdf > 0);
                 Success = forwardPdf > 0;
             }
 

@@ -1484,7 +1484,7 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 
 	// TargetNode.variance = 0.5f * TargetNode.radius * TargetNode.radius;
 	float Variance = max(TargetNode.variance, (1.0f / pow(2, 31)) * squareddist);// * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
-	// Variance = Variance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
+	Variance = Variance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
 	// float Variance = max(TargetNode.variance, squareddist);
 
 

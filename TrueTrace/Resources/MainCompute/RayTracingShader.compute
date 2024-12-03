@@ -590,6 +590,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     }
 #ifdef Fog
                     Illum *= exp(-((LightFormat == DIRECTIONALLIGHT ? 1.0f : distance_to_light - 0.01f) + newT) * SigmaT);
+                    bsdf_diffuse *= exp(-((LightFormat == DIRECTIONALLIGHT ? 1.0f : distance_to_light - 0.01f) + newT) * SigmaT);
 #endif
                     float maxillum = max(max(Illum.x, Illum.y), Illum.z);
                     if(DoExposure) maxillum *= Exposure[0];
@@ -689,7 +690,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     RayHit bestHit = get2(GlobRay.hits);
     ray.origin = GlobRay.origin;
     ray.direction = GlobRay.direction;
-    if(CurBounce == 0 && UseReSTIRGI) ScreenSpaceInfo[id.xy].w = asfloat(0);
+    if(CurBounce == 0 && UseReSTIRGI) ScreenSpaceInfo[id.xy] = float4(ScreenSpaceInfo[id.xy].xyz, asfloat(0));
 
     #ifdef HardwareRT
         if(bestHit.mesh_id != 9999999) {

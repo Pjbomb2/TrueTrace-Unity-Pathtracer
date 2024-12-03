@@ -581,6 +581,8 @@ namespace TrueTrace {
         }
         public List<Transform> ChildObjectTransforms;
         public void LoadData() {
+            TTStopWatch TempWatch = new TTStopWatch("StopWatch For: " + gameObject.name);
+            TempWatch.Start();
             HasLightTriangles = false;
             NeedsToResetBuffers = true;
             ClearAll();
@@ -669,9 +671,13 @@ namespace TrueTrace {
                 DeformableMeshes = new MeshFilter[TotalObjects];
                 IndexCounts = new int[TotalObjects];
             }
-
+            TempWatch.Stop("Object Initialize");
+            TempWatch.Start();
             int VertCount = 0;
             CreateAtlas(ref VertCount);
+            TempWatch.Stop("Create Sub Atlas");
+            TempWatch.Start();
+
             // LoadFile();
             // MeshCountChanged = false;
             // HasCompleted = true;
@@ -828,6 +834,7 @@ namespace TrueTrace {
                 });
                 RepCount += Mathf.Min(submeshcount, CurrentObject.Names.Length);
             }
+            TempWatch.Stop("Object Mesh Loading");
 
         }
 

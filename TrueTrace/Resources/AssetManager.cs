@@ -1183,7 +1183,7 @@ namespace TrueTrace {
             // UnityEngine.Profiling.Profiler.EndSample();
 
             int ParentsLength = RenderQue.Count;
-            if (ChildrenUpdated || ParentCountHasChanged)
+            if (ChildrenUpdated || ParentCountHasChanged || MaterialBuffer == null)
             {
                 int CurNodeOffset = 2 * (ParentsLength + InstanceRenderQue.Count);
                 int AggTriCount = 0;
@@ -1448,7 +1448,7 @@ namespace TrueTrace {
             {//BINDLESS-TEST this spot is guarenteed to run once per frame, be very close to the begining of the commandbuffer, and is guarenteed to have the AlbedoArray filled
             #if !DX11Only && !UseAtlas
                 Shader.SetGlobalTexture("_BindlessTextures", Texture2D.whiteTexture);
-                bindlessTextures.UpdateDescriptors();
+                if(bindlessTextures != null) bindlessTextures.UpdateDescriptors();
             #endif
             }
 
