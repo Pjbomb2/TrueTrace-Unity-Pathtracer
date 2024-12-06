@@ -19,7 +19,11 @@
     #pragma require inlineraytracing
     RaytracingAccelerationStructure myAccelerationStructure;
 #endif
+#ifdef ReSTIRAdvancedValidation
+inline float VisabilityCheck(SmallerRay ray, float dist) {
+#else 
 inline bool VisabilityCheck(SmallerRay ray, float dist) {
+#endif
     #ifdef HardwareRT
         const uint rayFlags = RAY_FLAG_FORCE_OPAQUE  ;
         UnityRayQuery<rayFlags> q;
@@ -29,7 +33,7 @@ inline bool VisabilityCheck(SmallerRay ray, float dist) {
         myRay.TMin = 0;
         myRay.TMax = dist;
         while(true) {
-            q.TraceRayInline(myAccelerationStructure, rayFlags, 0x1, myRay);
+            q.TraceRayInline(myAccelerationStructure, rayFlags, 0xff, myRay);
             while(q.Proceed()){}
             
             if(q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
@@ -64,13 +68,23 @@ inline bool VisabilityCheck(SmallerRay ray, float dist) {
                     #endif
 
 
-
+        #ifdef ReSTIRAdvancedValidation
+                return q.CommittedRayT();
+            }
+            return dist;
+        #else
                 return false;
             }
             return true;
+        #endif
         }
     #else
+#ifdef ReSTIRAdvancedValidation
+    Closest_Hit_Compute(ray, dist);
+    return dist;
+#else
     return VisabilityCheckCompute(ray, dist);
+#endif
     #endif
 }
 
@@ -284,9 +298,20 @@ inline bool ReservoirMergeSpatial(uint2 SampleCoord, uint4 SampleReservoirPacked
     
     return ReservoirUpdate(SampleCoord, SampleRadiance.Color, SampleRadiance.Wsum, SampleRadiance.M, ReservoirStruct, Random);
 }
+int2 permutationSample(int2 samplePos, int2 jitter, uint sampleIndex) {
+    int2 result = samplePos;
+    uint sampleSeed = (frames_accumulated + sampleIndex) & 3u;
+    uint2 sequenceA = uint2(3u - sampleSeed, 1u + sampleSeed);
+    uint2 sequenceB = uint2(sequenceA.x ^ sampleSeed, sequenceA.y ^ sampleSeed) & 3u;
+    if(sampleIndex > 0) {
+        result = (result + jitter) ^ sequenceA;
+        result = (result + jitter) ^ sequenceB;
+        result -= jitter;
+    }
+    return result;
+}
 
-
-
+Texture2D<float2> Gradient;
 #define KernelSize 16
  int RandOffset;   
 [numthreads(KernelSize, KernelSize, 1)]
@@ -370,13 +395,17 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     float4 PrevGBuffer = PrevScreenSpaceInfo[prevIndex];
 
     float ShadowGuidanceWeight = exp(-abs(PrevGBuffer.z - GBuffer.z)) > 0.3f;//exp2(-min(RunningReservoir.Radiance.M, 20) * abs(PrevGBuffer.z - GBuffer.z));// ReservoirCenterOcclusion - ReservoirSampleOcclusion));
+    // if(id.y > screen_height / 2) {
+    //     ShadowGuidanceWeight = abs(PrevGBuffer.z / GBuffer.z - 1.0f) <= 0.03f;
+    // }
     ShadowGuidanceWeight *= abs(dot(SurfNorm, i_octahedral_32(asuint(PrevGBuffer.y))));
 
 
  const bool RetracedSample = ReSTIRGIUpdateRate != 0 && RandomNums[id.xy].z != 0;
     
 
-
+    // float CenterVis = Gradients[id.xy].x;
+    // float CenterVisNEE = Gradients[id.xy].y;
 
 
     float Mc = 1;
@@ -392,17 +421,13 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
                 UnpackRadianceData(PackA, bsdf, RunningReservoirB.Radiance);
 
     Valid2 = ReconstructBsdf2(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPosB[prevIndex]) - PrimaryHitPosition), SurfNorm, pdf, bsdf, GetTangentSpace(SurfNorm), pixel_index);
-    // Valid2 = EvaluateBsdf2(SurfaceMat, CameraRay.direction, normalize(NEEPosB[prevIndex].xyz - PrimaryHitPosition), SurfNorm, pdf, NEEbsdf, pixel_index);
 
             float3 LumA = (RunningReservoirB.Radiance.Color);
                 UnpackRadianceData(ReservoirB[int3(prevIndex, 0)].xy, bsdf, RunningReservoirBCopy.Radiance);
-                // UnpackRadianceData(ReservoirB[int3(prevIndex, 1)].xy, NEEbsdf, RunningReservoirCCopy.Radiance);
             float3 LumB = (RunningReservoirBCopy.Radiance.Color);
 
             if(abs(luminance(LumA) - luminance(LumB)) > 0.1f * max(luminance(LumA), luminance(LumB))) {
-                    RunningReservoirB.Radiance.M++;
-                    // RunningReservoirC.Radiance.M++;
-            
+                    RunningReservoirB.Radiance.M++;            
             } else {
                 float3 geo_normal_prev = i_octahedral_32(asuint(PrevGBuffer.x));//needs to be TEX_PT_GEO_NORMAL_B, but since for now I am not worrying about normal maps yet, it can use the same texture
                 
@@ -411,14 +436,10 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
 
                 if (ShadowGuidanceWeight > 0.99f) {
                     UnpackRadianceData(ReservoirB[int3(prevIndex, 0)].xy, bsdf, RunningReservoirB.Radiance);
-                    // UnpackRadianceData(ReservoirB[int3(prevIndex, 1)].xy, NEEbsdf, RunningReservoirC.Radiance);
                     UnpackRayData(ReservoirB[int3(prevIndex, 0)].zw, RunningReservoirB.Ray);
-                    // UnpackRayData(ReservoirB[int3(prevIndex, 1)].zw, RunningReservoirC.Ray);
                     WorldPos = WorldPosB[prevIndex];
-                    // NEEPos = NEEPosB[prevIndex];
-                    // RunningReservoirC.Radiance.M++;
                 };
-                    RunningReservoirB.Radiance.M++;
+                RunningReservoirB.Radiance.M++;
             }
             if(any(prevIndex >= int2(screen_width, screen_height) || prevIndex < 0)) {
                 RunningReservoirC = RunningReservoirCCopy2;//.Radiance.M = 1;
@@ -497,6 +518,8 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
                 // Mc *= 0.5f;
                 // McNEE *= 0.5f;
 
+                // float GradVisA = exp2(-20.0f * abs(Gradient[prevIndex].x))
+
                 bool MergedB = ReservoirMergeTemporal(prevIndex, ReservoirB[int3(prevIndex,0)].xyzw, 0, ShadowGuidanceWeight, bsdf2, randomNEE(127, pixel_index).x, RunningReservoirB, Mi);
                 if(MergedB) WorldPos = WorldPosB[prevIndex];
                 bool MergedC = ReservoirMergeTemporal(prevIndex, ReservoirB[int3(prevIndex,1)].xyzw, 0, ShadowGuidanceWeight, NEEbsdf2, randomNEE(127, pixel_index).y, RunningReservoirC, MiNEE);
@@ -555,7 +578,7 @@ inline float2 vogelDiskSample(int i, int num_samples, float r_offset, float phi_
     sincos(phi, sinc, phi);
     return r * float2(sinc,phi);
 }
-
+RWTexture2D<float2> GradientWrite;
 
 #pragma kernel ReSTIRGISpatial
 
@@ -599,7 +622,17 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     float3x3 TangSpace = GetTangentSpace(SurfNorm);
     bool Valid2 = ReconstructBsdf2(SurfaceMat, CameraRay.direction, normalize(CenterRayDir), SurfNorm, pdf, bsdf, TangSpace, pixel_index);
     Valid2 = EvaluateBsdf2(SurfaceMat, CameraRay.direction, normalize(CenterNEERayDir), SurfNorm, pdf, NEEbsdf, pixel_index);
+    const float2 UV = id.xy / float2(screen_width, screen_height);
 
+    #ifdef ReSTIRAdvancedValidation
+        #ifdef HDRP
+            float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, float3(UV,0), 0).xy;
+        #else
+             float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, UV, 0).xy;
+        #endif
+        int2 prevIndex = int2(floor(((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
+    #endif
+  
 
     const uint4 PackedCenterResA = ReservoirB[int3(id.xy,0)];
     const uint4 PackedCenterResB = ReservoirB[int3(id.xy,1)];
@@ -610,32 +643,43 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
 
     UnpackRayData(PackedCenterResA.zw, RunningReservoirB.Ray);
     UnpackRayData(PackedCenterResB.zw, RunningReservoirC.Ray);
+    #ifdef ReSTIRAdvancedValidation
+        float centerValid = Gradient[prevIndex].x;
+        float centerValidNEE = Gradient[prevIndex].y;
+    #endif
 
     const float ReservoirCenterOcclusion = ScreenSpaceInfoRead[id.xy].z;
     float Mc = 1;
     float McNEE = 1;
-    // float3 CenterNorm = CalcNorm(WorldPos);
+    float3 CenterNorm = CalcNorm(WorldPos);
     int ValidSamps = 0;
     int SampleCount = ReSTIRGISpatialCount;
     if(UseReSTIRGISpatial && Case != 3) {
         for (int i = 0; i < SampleCount; i++) {        
             float2 RandOffsets = randomNEE(i + 12, pixel_index);
             float2 RandOffsets2 = randomNEE(i + 32, pixel_index);
-            int2 CellTapCoord = id.xy + vogelDiskSample(i, SampleCount, RandOffsets.y, 2.0f * PI * RandOffsets.x) * GISpatialRadius;
-            
+            int2 CellTapCoord = vogelDiskSample(i, SampleCount, RandOffsets.y, 2.0f * PI * RandOffsets.x) * GISpatialRadius;
+            #ifdef ReSTIRAdvancedValidation
+                int2 CellPrev = prevIndex + CellTapCoord;
+            #endif
+            CellTapCoord += id.xy;
             if(all(CellTapCoord == id.xy) || any(CellTapCoord >= int2(screen_width, screen_height) || CellTapCoord < 0)) continue;
             float ReservoirSampleOcclusion = ScreenSpaceInfoRead[CellTapCoord].z;
             if(asuint(ScreenSpaceInfoRead[CellTapCoord].w) == 0) continue;
             float3 SampleSurfNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].y));
-            float ShadowGuidanceWeight = abs(ReservoirCenterOcclusion - ReservoirSampleOcclusion) / max(ReservoirCenterOcclusion, ReservoirSampleOcclusion) < 0.1f;
             float NormDiff = abs(dot(SurfNorm, SampleSurfNorm));
             if(NormDiff < 0.9f) continue;
+            float ShadowGuidanceWeight = abs(ReservoirCenterOcclusion - ReservoirSampleOcclusion) / max(ReservoirCenterOcclusion, ReservoirSampleOcclusion) < 0.1f;
+
+            // if(id.y > screen_height / 2) {
+            //     ShadowGuidanceWeight = abs(ReservoirSampleOcclusion / ReservoirCenterOcclusion - 1.0f) <= 0.03f;
+            // }
             const uint4 PackedReservoirA = ReservoirB[int3(CellTapCoord,0)];
             const uint4 PackedReservoirB = ReservoirB[int3(CellTapCoord,1)];
             float3 bsdf2;
             float3 NEEbsdf2;
             uint4 SampleWorldPos = WorldPosB[CellTapCoord];
-            // float3 SampleNorm = CalcNorm(SampleWorldPos);
+            float3 SampleNorm = CalcNorm(SampleWorldPos);
             float3 SampleNEEPos = NEEPosB[CellTapCoord].xyz;
             float3 SampleRayDir = CalcPos(SampleWorldPos) - PrimaryHitPosition;
             float3 SampleNEERayDir = SampleNEEPos - PrimaryHitPosition;
@@ -674,7 +718,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
             float Dist = length(SampleRayDir - CenterRayDir);
             [branch]if(Dist < 1.0f) {
                 RayDirWeight = lerp(1.0f - exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, SurfaceMat.roughness);
-                // RayDirWeight *= pow(abs(dot(SampleNorm, CenterNorm)), 122.0f);
+                RayDirWeight *= pow(abs(dot(SampleNorm, CenterNorm)), 122.0f);
             }
 
             Dist = length(SampleNEERayDir - CenterNEERayDir);
@@ -682,7 +726,13 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
                 RayDirWeight2 = lerp(1.0f - exp(-120.0f * abs(dot(SampleNEERayDir, CenterNEERayDir))), 1, SurfaceMat.roughness);
                 // RayDirWeight *= pow(abs(dot(-normalize(SampleNEERayDir), -normalize(CenterNEERayDir))), 122.0f);
             }
-
+            #ifdef ReSTIRAdvancedValidation
+                if(DoReSTIRGIConnectionValidation && SurfaceMat.diffTrans == 0) {
+                    const float2 Grad = Gradient[CellPrev];
+                    RayDirWeight *= exp2(-20.0f * abs(centerValid - Grad.x));
+                    RayDirWeight2 *= exp2(-20.0f * abs(centerValidNEE - Grad.y));
+                }
+            #endif
 
             bool MergedB = ReservoirMergeSpatial(CellTapCoord, PackedReservoirA, ShadowGuidanceWeight * NormDiff * RayDirWeight, bsdf2, RunningReservoirB, RandOffsets2.x, Mi);
             bool MergedC = ReservoirMergeSpatial(CellTapCoord, PackedReservoirB, ShadowGuidanceWeight * NormDiff * RayDirWeight2, NEEbsdf2, RunningReservoirC, RandOffsets2.y, MiNEE);
@@ -690,7 +740,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
                 WorldPos = SampleWorldPos;//WorldPosB[CellTapCoord];
                 CenterRayDir = SampleRayDir;
                 bsdf = bsdf2;
-                // CenterNorm = SampleNorm;
+                CenterNorm = SampleNorm;
             }
             [branch]if(MergedC) {
                 NEEPos = SampleNEEPos;
@@ -710,14 +760,18 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
 
 
     [branch]if (DoReSTIRGIConnectionValidation && Case != 3 && SurfaceMat.diffTrans == 0) {
+        float2 DistDist = 1;
         PrimaryHitPosition += GeomNorm * 0.001f;
-        float Distance = length(PrimaryHitPosition - NEEPos.xyz) - 0.25f;
+        float Distance = length(PrimaryHitPosition - NEEPos.xyz) - 0.025f;
         SmallerRay ray = CreateRay(PrimaryHitPosition, normalize(NEEPos.xyz - PrimaryHitPosition));
-
-        bool ConnectedlyVisable = dot(ray.direction, GeomNorm) > 0.0f;
         if (luminance(RunningReservoirC.Radiance.Color) != 0) {
-            if(ConnectedlyVisable) ConnectedlyVisable = VisabilityCheck(ray, Distance);
-            if (!ConnectedlyVisable) {
+        #ifdef ReSTIRAdvancedValidation
+            float TargDist = VisabilityCheck(ray, Distance);
+            if (TargDist != Distance) {
+                DistDist.y = exp(-abs(Distance - TargDist));
+        #else
+            if(!VisabilityCheck(ray, Distance)) {
+        #endif
                 RunningReservoirC.Radiance.Wsum = 0;
                 McNEE = 1;
             }
@@ -725,11 +779,26 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
         #ifdef ExtraSampleValidation
             Distance = length(PrimaryHitPosition - CalcPos(WorldPos)) - 0.025f;
             ray = CreateRay(PrimaryHitPosition, normalize(CalcPos(WorldPos) - PrimaryHitPosition));
-            ConnectedlyVisable = true;//dot(ray.direction, GeomNorm) > 0.0f;
-            if(ConnectedlyVisable && luminance(RunningReservoirB.Radiance.Color) != 0) ConnectedlyVisable = VisabilityCheck(ray, Distance);
-            if (!ConnectedlyVisable) {RunningReservoirB.Radiance.Wsum = 0; Mc = 1;}
+            
+            if(luminance(RunningReservoirB.Radiance.Color) != 0) {
+            #ifdef ReSTIRAdvancedValidation
+                float TargDist = VisabilityCheck(ray, Distance);
+                if (TargDist != Distance) {
+                    DistDist.x = exp(-abs(Distance - TargDist));
+            #else
+                if(!VisabilityCheck(ray, Distance)) {
+            #endif
+                    RunningReservoirB.Radiance.Wsum = 0; 
+                    Mc = 1;
+                }
+            }
+        #endif
+
+        #ifdef ReSTIRAdvancedValidation
+            GradientWrite[id.xy] = 1;//DistDist;
         #endif
     }
+
     Valid2 = ReconstructBsdf2(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, TangSpace, pixel_index);
     Valid2 = EvaluateBsdf2(SurfaceMat, CameraRay.direction, normalize(NEEPos - PrimaryHitPosition), SurfNorm, pdf, NEEbsdf, pixel_index);
 
@@ -740,7 +809,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     // RunningReservoirB.Radiance.W *= RunningReservoirB.Radiance.W < 100.0f;
     // RunningReservoirC.Radiance.W *= RunningReservoirC.Radiance.W < 100.0f;
 
-        GlobalColors[pixel_index].PrimaryNEERay = packRGBE(pow(RunningReservoirC.Radiance.Color * RunningReservoirC.Radiance.W * NEEbsdf,rcp(2.2f)));
+    GlobalColors[pixel_index].PrimaryNEERay = packRGBE(pow(RunningReservoirC.Radiance.Color * RunningReservoirC.Radiance.W * NEEbsdf,rcp(2.2f)));
 
     if(!(SurfaceMat.metallic == 1 && SurfaceMat.roughness == 0)) {
         GlobalColors[pixel_index].Direct = 0;

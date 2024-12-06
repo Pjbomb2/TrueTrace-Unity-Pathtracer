@@ -238,7 +238,7 @@ void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
     if (id.x >= screen_width || id.y >= screen_height) return;
     const uint pixel_index = id.y * screen_width + id.x;
 
-    SmallerRay ray = Rays[pixel_index];
+    RayData ray = GlobalRays[pixel_index];
 
     float3 P = ray.origin + NearPlane * ray.direction;
     float TruMinDist = 0;

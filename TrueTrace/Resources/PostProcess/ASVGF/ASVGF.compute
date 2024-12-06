@@ -4,6 +4,7 @@
 #pragma warning( disable : 3556)
 
 float ResRatio;
+float NearPlane;
 
 inline float4x4 inverse(float4x4 m) {
     float n11 = m[0][0], n12 = m[1][0], n13 = m[2][0], n14 = m[3][0];
@@ -396,7 +397,10 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 
 	if(ipos.x < screen_width && ipos.y < screen_height) {
 		RNGTexA[ipos] = float4(CurFrame, ipos.x + ipos.y * screen_width, 0, 0);
-		GlobalRaysMini[ipos.x + ipos.y * screen_width] = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
+	    const uint pixel_index = ipos.x + ipos.y * screen_width;
+	    Ray CamRay = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
+	    RayData globray = {CamRay.origin + NearPlane * CamRay.direction, pixel_index, CamRay.direction, 0, 0,0,asuint(FarPlane),0};
+	    GlobalRaysMini[pixel_index] = globray;
 	}
 	GroupMemoryBarrierWithGroupSync();
 
@@ -462,7 +466,9 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 	IMG_ASVGF_GRAD_HF_SPEC_PING[pos_grad] = found_prev_lum;
 
 	RNGTexA[ipos] = float4(RNGTexB[found_pos_prev].xyz, (ReflRefracB[found_pos_prev] >> 31) ? 2 : 1);
-	GlobalRaysMini[ipos.x + ipos.y * screen_width] = RayB[found_pos_prev.x + found_pos_prev.y * screen_width];
+	Ray PrevCamRay = CreateCameraRayPrev(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
+	GlobalRaysMini[ipos.x + ipos.y * screen_width].origin = PrevCamRay.origin;
+	GlobalRaysMini[ipos.x + ipos.y * screen_width].direction = PrevCamRay.direction;
 	uint4 Target = PrimaryTriData[found_pos_prev];
 	float3 Pos;
 	if(Target.w == 1) Pos = asfloat(Target.xyz);
@@ -1495,7 +1501,6 @@ void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGrou
 int TargetWidth;
 int TargetHeight;
 RWTexture2D<half> TEX_PT_VIEW_DEPTH_AWRITE;//current frame depth
-float NearPlane;
 float3 Forward;
 #pragma kernel DistanceCorrectionKernel
 float FetchDepth(float2 UV) {

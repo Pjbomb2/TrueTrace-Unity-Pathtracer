@@ -165,7 +165,7 @@ void IntersectBVH(int ray_index) {
             [loop]while (Reps < MaxTraversalSamples) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)          
                 uint2 triangle_group;
 
-                [branch]if (current_group.y & 0xff000000) {
+                [branch]if (current_group.y > 0x00FFFFFF) {
                     uint child_index_offset = firstbithigh(current_group.y);
 
                     uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
@@ -175,7 +175,7 @@ void IntersectBVH(int ray_index) {
 
                     current_group.y &= ~(1 << child_index_offset);
 
-                    if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
+                    if (current_group.y > 0x00FFFFFF) stack[stack_size++] = current_group;
 
                     uint hitmask = cwbvh_node_intersect(ray, oct_inv4, bestHit.t, TempNode);
 

@@ -193,7 +193,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         bool Refracted = false;
         int MaterialLobe = 2;
         throughput *= SampleHomo(ray, hit.t, pixel_index, newT, VolumeBSDF);
-        // BsdfSample Thissample = initbsdf();
         if(newT == hit.t) {
     #endif
     [branch] if (hitDat.emission > 0.0f) {//if we hit a light, this ray is done

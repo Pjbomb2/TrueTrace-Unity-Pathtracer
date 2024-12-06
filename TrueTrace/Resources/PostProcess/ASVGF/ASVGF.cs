@@ -202,7 +202,7 @@ namespace TrueTrace {
 
         Vector3 prevEuler;
         Vector3 PrevPos;
-        public void DoRNG(ref RenderTexture RNGTex, ref RenderTexture RNGTexB, int CurFrame, ref ComputeBuffer GlobalRays, ref ComputeBuffer GlobalRaysB, CommandBuffer cmd, RenderTexture PrimaryTriData, ComputeBuffer Meshes, ComputeBuffer Tris, bool UseBackupPointSelection, ComputeBuffer MeshIndexes)
+        public void DoRNG(ref RenderTexture RNGTex, ref RenderTexture RNGTexB, int CurFrame, ComputeBuffer GlobalRays, CommandBuffer cmd, RenderTexture PrimaryTriData, ComputeBuffer Meshes, ComputeBuffer Tris, bool UseBackupPointSelection, ComputeBuffer MeshIndexes)
         {
             if (shader == null) { shader = Resources.Load<ComputeShader>("PostProcess/ASVGF"); }
             camera = RayTracingMaster._camera;
@@ -211,6 +211,8 @@ namespace TrueTrace {
             shader.SetMatrix("viewprojection", camera.projectionMatrix * camera.worldToCameraMatrix);
             camera.transform.eulerAngles = prevEuler; 
             shader.SetMatrix("prevviewprojection", camera.projectionMatrix * camera.worldToCameraMatrix);
+            shader.SetMatrix("CamToWorldPrev", camera.cameraToWorldMatrix);
+            shader.SetMatrix("CamInvProjPrev", camera.projectionMatrix.inverse);
             camera.transform.eulerAngles = Euler; 
             prevEuler = Euler;
             shader.SetBool("UseBackupPointSelection", UseBackupPointSelection);
@@ -248,12 +250,11 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, Reproject, "ReflRefracB", (!EvenFrame ? ReflectedRefractedA : ReflectedRefractedB));
             cmd.SetComputeTextureParam(shader, Reproject, "MetallicB", (!EvenFrame ? MetallicA : MetallicB));
             cmd.SetComputeTextureParam(shader, Reproject, "PrimaryTriData", PrimaryTriData);
-            cmd.SetComputeBufferParam(shader, Reproject, "RayB", (!EvenFrame) ? GlobalRays : GlobalRaysB);
             cmd.SetComputeBufferParam(shader, Reproject, "_MeshData", Meshes);
             cmd.SetComputeBufferParam(shader, Reproject, "AggTris", Tris);
             cmd.SetComputeBufferParam(shader, Reproject, "MeshIndexes", MeshIndexes);
             shader.SetVector("CamDiff", PrevPos - camera.transform.position);
-            cmd.SetComputeBufferParam(shader, Reproject, "GlobalRaysMini", (EvenFrame) ? GlobalRays : GlobalRaysB);
+            cmd.SetComputeBufferParam(shader, Reproject, "GlobalRaysMini", GlobalRays);
 
 
 

@@ -6,6 +6,7 @@
 //Dont modify above, CPU code will do automatically
 #define AdvancedAlphaMapped
 #define ExtraSampleValidation
+#define ReSTIRAdvancedValidation
 #define IgnoreGlassShadow
 // #define IgnoreGlassMain
 // #define FadeMapping

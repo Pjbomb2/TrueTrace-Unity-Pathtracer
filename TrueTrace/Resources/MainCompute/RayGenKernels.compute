@@ -14,20 +14,12 @@ Texture2D<float3> NormalTex;
 Texture2D<float> Depth;
 #endif
 
-#pragma kernel GenerateASVGF 
 
 static const ColData InitCol = { 1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0};
 const static RayHit tempray = CreateRayHit();
 
-[numthreads(16, 16, 1)]
-void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
 
-    if (id.x >= screen_width || id.y >= screen_height) return;
-    const uint pixel_index = id.y * screen_width + id.x;
-    RayData globray = {Rays[pixel_index].origin + NearPlane * Rays[pixel_index].direction, pixel_index, Rays[pixel_index].direction, 0, 0,0,asuint(FarPlane),0};
-    GlobalRays[pixel_index] = globray;
-}
-
+bool UseASVGFAndReSTIR;
 #pragma kernel Generate
 [numthreads(16, 16, 1)]
 void Generate(uint3 id : SV_DispatchThreadID) {
@@ -35,7 +27,7 @@ void Generate(uint3 id : SV_DispatchThreadID) {
     if (id.x >= screen_width || id.y >= screen_height) return;
     const uint pixel_index = id.y * screen_width + id.x;
     float2 jitter = ((random(0, pixel_index) - 0.5));
-    if(OIDNGuideWrite) jitter = 0;
+    if(OIDNGuideWrite || UseASVGFAndReSTIR) jitter = 0;
     float2 uv = float2((id.xy + jitter) / float2(screen_width, screen_height) * 2.0f - 1.0f);
     SmallerRay ray = CreateCameraRay(uv, pixel_index);
     RayData globray = {ray.origin + NearPlane * ray.direction, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};

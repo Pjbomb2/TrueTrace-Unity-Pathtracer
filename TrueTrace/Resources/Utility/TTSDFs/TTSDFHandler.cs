@@ -73,7 +73,7 @@ namespace TrueTrace {
             GenASVGFKernel = GenShader.FindKernel("GenerateASVGF");
         }
 
-        public void Run(CommandBuffer cmd, RenderTexture _RandomNums, ComputeBuffer _RayBuffer, int SourceWidth, int SourceHeight, bool DoChainedImages, bool UseASVGF, ComputeBuffer ASVGFRaysBuffer) {
+        public void Run(CommandBuffer cmd, RenderTexture _RandomNums, ComputeBuffer _RayBuffer, int SourceWidth, int SourceHeight, bool DoChainedImages, bool UseASVGF) {
             FramesSinceStart++;
             if(GenShader != null && SDFs != null) {
                 CommonFunctions.CreateComputeBuffer<SDFVar>(ref SDFBuffer, SDFs);
@@ -89,7 +89,6 @@ namespace TrueTrace {
                 GenShader.SetComputeBuffer(GenKernel, "GlobalRays", _RayBuffer);
                 GenShader.SetComputeBuffer(GenPanoramaKernel, "GlobalRays", _RayBuffer);
                 GenShader.SetComputeBuffer(GenASVGFKernel, "GlobalRays", _RayBuffer);
-                GenShader.SetComputeBuffer(GenASVGFKernel, "Rays", ASVGFRaysBuffer);
 
                 GenShader.SetComputeBuffer(GenKernel, "SDFs", SDFBuffer);
                 GenShader.SetComputeBuffer(GenPanoramaKernel, "SDFs", SDFBuffer);
