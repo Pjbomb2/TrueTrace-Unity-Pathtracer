@@ -759,7 +759,7 @@ static float3 EvaluateDisneyDiffuse(const MaterialData hitDat, const float3 wo, 
         float subsurfaceApprox = lerp(lambert, hanrahanKrueger, thin ? hitDat.flatness : 0.0f);
 
 
-        return hitDat.surfaceColor * rcp(PI) * (retro + subsurfaceApprox * (1.0f - 0.5f * fl) * (1.0f - 0.5f * fv)) * (1.0f - hitDat.metallic);
+        return hitDat.surfaceColor * rcp(PI) * (retro + subsurfaceApprox * (1.0f - 0.5f * fl) * (1.0f - 0.5f * fv));// * (1.0f - hitDat.metallic);
         #endif
     #endif
 }
@@ -1350,8 +1350,6 @@ float3 ReconstructDisney2(MaterialData hitDat, float3 wo, float3 wi, bool thin,
     float4 P = CalculateLobePdfs(hitDat);
     
     bool upperHemisphere = dotNL > 0.0f && dotNV > 0.0f;
-   float ax, ay;
-                CalculateAnisotropicParams(hitDat.roughness, hitDat.anisotropic, ax, ay);
             if(P.x > 0) {
                 float3 col = ReconstructDisneyBRDF(hitDat, wo, wm, wi, forwardPdf, Success);
                 reflectance += col * Success;

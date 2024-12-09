@@ -157,7 +157,7 @@ namespace TrueTrace {
             Graphics.ConvertTexture(TerrainTile.terrainData.heightmapTexture, HeightMap);
             HeightMap.ReadPixels(new Rect(0, 0, HeightMap.width, HeightMap.height), 0, 0, true);
             HeightMap.Apply();//ReadPixels(new Rect(0,0,1,1)
-            AlphaMap = TerrainTile.terrainData.alphamapTextures[0];//new RenderTexture(TerrainTile.terrainData.alphamapResolution, TerrainTile.terrainData.alphamapResolution, 0, TerrainTile.terrainData.alphamapTextures[0].format, RenderTextureReadWrite.Linear);
+            AlphaMap = TerrainTile.terrainData.alphamapTextures != null ? TerrainTile.terrainData.alphamapTextures[0] : Texture2D.whiteTexture;//new RenderTexture(TerrainTile.terrainData.alphamapResolution, TerrainTile.terrainData.alphamapResolution, 0, TerrainTile.terrainData.alphamapTextures[0].format, RenderTextureReadWrite.Linear);
 
             HeightScale = TerrainTile.terrainData.heightmapScale.y;
             TerrainDimX = (int)TerrainTile.terrainData.size.x;

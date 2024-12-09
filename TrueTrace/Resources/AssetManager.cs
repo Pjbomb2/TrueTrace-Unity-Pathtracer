@@ -78,7 +78,9 @@ namespace TrueTrace {
         #endif
 
         public void SetMeshTraceBuffers(ComputeShader ThisShader, int Kernel) {
-            ThisShader.SetComputeBuffer(Kernel, "TLASBVH8Indices", TLASCWBVHIndexes);
+            #if !HardwareRT
+                ThisShader.SetComputeBuffer(Kernel, "TLASBVH8Indices", TLASCWBVHIndexes);
+            #endif
             ThisShader.SetComputeBuffer(Kernel, "AggTris", AggTriBuffer);
             ThisShader.SetComputeBuffer(Kernel, "cwbvh_nodes", BVH8AggregatedBuffer);
             ThisShader.SetComputeBuffer(Kernel, "_MeshData", RayMaster.FramesSinceStart2 % 2 == 0 ? MeshDataBufferA : MeshDataBufferB);

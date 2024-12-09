@@ -12,6 +12,7 @@ namespace TrueTrace {
     {
         [HideInInspector] public static Camera _camera;
         
+        public bool HDRPorURPRenderInScene = false;
         [HideInInspector] public AtmosphereGenerator Atmo;
         [HideInInspector] public AssetManager Assets;
         private ReSTIRASVGF ReSTIRASVGFCode;
@@ -198,6 +199,8 @@ namespace TrueTrace {
         private int TTtoOIDNKernel;
         private int OIDNtoTTKernel;
         private int TTtoOIDNKernelPanorama;
+        private int OverridenWidth = 1;
+        private int OverridenHeight = 1;
         #if !DisableRadianceCache
             private int ResolveKernel;
         #endif
@@ -230,6 +233,14 @@ namespace TrueTrace {
 
         public void TossCamera(Camera camera) {
             _camera = camera;
+            OverridenWidth = _camera.scaledPixelWidth;
+            OverridenHeight = _camera.scaledPixelHeight;
+
+        }
+
+        public void OverrideResolution(int ScreenWidth, int ScreenHeight) {
+            OverridenWidth = ScreenWidth;
+            OverridenHeight = ScreenHeight;
         }
         unsafe public void Start2()
         {
@@ -463,6 +474,17 @@ namespace TrueTrace {
         Matrix4x4 CamInvProjPrev;
         Matrix4x4 CamToWorldPrev;
         Vector3 PrevPos;
+
+        Matrix4x4 CalcProj(Camera cam) {
+            float Aspect = OverridenWidth / (float)OverridenHeight;
+            float YFOV = 1.0f / Mathf.Tan(cam.fieldOfView / (2.0f * (360.0f / (2.0f * 3.14159f))));
+            float XFOV = YFOV / Aspect;
+            Matrix4x4 TempProj = cam.projectionMatrix;
+            TempProj[0,0] = XFOV;
+            TempProj[1,1] = YFOV;
+            return TempProj;
+        }
+
         private Vector2 HDRIParams = Vector2.zero;
         private void SetShaderParameters(CommandBuffer cmd) {
             HasSDFHandler = (OptionalSDFHandler != null);
@@ -470,7 +492,7 @@ namespace TrueTrace {
             _camera.depthTextureMode |= DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
             if(LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1 && !ReSTIRASVGFCode.Initialized) ReSTIRASVGFCode.init(SourceWidth, SourceHeight);
             else if ((LocalTTSettings.DenoiserMethod != 1 || !LocalTTSettings.UseReSTIRGI) && ReSTIRASVGFCode.Initialized) ReSTIRASVGFCode.ClearAll();
-            if (!LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1 && !ASVGFCode.Initialized) ASVGFCode.init(SourceWidth, SourceHeight, _camera.scaledPixelWidth, _camera.scaledPixelHeight);
+            if (!LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1 && !ASVGFCode.Initialized) ASVGFCode.init(SourceWidth, SourceHeight, OverridenWidth, OverridenHeight);
             else if ((LocalTTSettings.DenoiserMethod != 1 || LocalTTSettings.UseReSTIRGI) && ASVGFCode.Initialized) ASVGFCode.ClearAll();
             if(TTPostProc.Initialized == false) TTPostProc.init(SourceWidth, SourceHeight);
 
@@ -496,10 +518,12 @@ namespace TrueTrace {
 
             var EA = CamToWorldPrev;
             var EB = CamInvProjPrev;
-            CamInvProjPrev = _camera.projectionMatrix.inverse;
+            Matrix4x4 ProjectionMatrix = CalcProj(_camera);
+
+            CamInvProjPrev = ProjectionMatrix.inverse;
             CamToWorldPrev = _camera.cameraToWorldMatrix;
-            SetMatrix("viewprojection", _camera.projectionMatrix * _camera.worldToCameraMatrix);
-            SetMatrix("CamInvProj", _camera.projectionMatrix.inverse);
+            SetMatrix("viewprojection", ProjectionMatrix * _camera.worldToCameraMatrix);
+            SetMatrix("CamInvProj", ProjectionMatrix.inverse);
             SetMatrix("CamToWorld", _camera.cameraToWorldMatrix);
             SetMatrix("CamInvProjPrev", EB);
             SetMatrix("CamToWorldPrev", EA);
@@ -769,9 +793,9 @@ namespace TrueTrace {
         private void ResetAllTextures() {
             // _camera.renderingPath = RenderingPath.DeferredShading;
             _camera.depthTextureMode |= DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
-            if(PrevResFactor != LocalTTSettings.RenderScale || TargetWidth != _camera.scaledPixelWidth) {
-                TargetWidth = _camera.scaledPixelWidth;
-                TargetHeight = _camera.scaledPixelHeight;
+            if(PrevResFactor != LocalTTSettings.RenderScale || TargetWidth != OverridenWidth) {
+                TargetWidth = OverridenWidth;
+                TargetHeight = OverridenHeight;
                 SourceWidth = (int)Mathf.Ceil((float)TargetWidth * LocalTTSettings.RenderScale);
                 SourceHeight = (int)Mathf.Ceil((float)TargetHeight * LocalTTSettings.RenderScale);
                 if (Mathf.Abs(SourceWidth - TargetWidth) < 2)

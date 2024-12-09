@@ -1506,7 +1506,7 @@ float3 Forward;
 float FetchDepth(float2 UV) {
     Ray ray = CreateCameraRay(UV * 2.0f - 1.0f);  
     #ifdef HDRP
-        float depth = 1.0f - (Depth[int3(UV * float2(TargetWidth, TargetHeight),0)].x);
+        float depth = 1.0f - (Depth.SampleLevel(my_linear_clamp_sampler, float3(UV, 1), 0).x);
     #else
         float depth = 1.0f - (Depth.SampleLevel(my_linear_clamp_sampler, UV, 0).x);
     #endif

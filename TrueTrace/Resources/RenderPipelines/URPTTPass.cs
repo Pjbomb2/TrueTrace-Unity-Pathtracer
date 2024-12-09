@@ -10,13 +10,10 @@ using UnityEngine.Experimental.Rendering;
     public class URPTTPass : ScriptableRenderPass {
         TrueTrace.RayTracingMaster RayMaster;
         RenderTexture MainTex;
-        RenderTexture MainTex2;
         #if UNITY_2021
             RenderTargetIdentifier m_CameraColorTarget;
-            RenderTargetIdentifier m_CameraColorTarget2;
         #else
             RTHandle m_CameraColorTarget;
-            RTHandle m_CameraColorTarget2;
         #endif
         ScriptableRenderer renderer;
 
@@ -33,14 +30,11 @@ using UnityEngine.Experimental.Rendering;
             renderingData.cameraData.camera.depthTextureMode = DepthTextureMode.MotionVectors | DepthTextureMode.Depth | DepthTextureMode.DepthNormals;
             #if UNITY_2021
                 m_CameraColorTarget = renderer.cameraColorTarget;
-                m_CameraColorTarget2 = renderer.cameraColorTarget;
             #else
                 m_CameraColorTarget = renderer.cameraColorTargetHandle;
-                m_CameraColorTarget2 = renderer.cameraColorTargetHandle;
             #endif
 
             if(MainTex == null) CreateRenderTexture(ref MainTex, renderingData.cameraData.camera);
-            if(MainTex2 == null) CreateRenderTexture(ref MainTex2, renderingData.cameraData.camera);
 
             ConfigureTarget(m_CameraColorTarget);
 
@@ -48,8 +42,7 @@ using UnityEngine.Experimental.Rendering;
 
         public URPTTPass(RenderPassEvent rpEvent) {
             RayMaster = GameObject.Find("Scene").GetComponent<TrueTrace.RayTracingMaster>();
-            // RayMaster.Start2();
-            // RayMaster.Assets.Start();
+            RayMaster.Start2();
             renderPassEvent = rpEvent;
         }
 
@@ -62,10 +55,9 @@ using UnityEngine.Experimental.Rendering;
             Shader.SetGlobalTexture("_CameraGBufferTexture2", Shader.GetGlobalTexture("_GBuffer2"));
             Shader.SetGlobalTexture("_CameraGBufferTexture0", Shader.GetGlobalTexture("_GBuffer0"));
             Shader.SetGlobalTexture("_CameraGBufferTexture1", Shader.GetGlobalTexture("_GBuffer1"));
+            RayMaster.TossCamera(renderingData.cameraData.camera);
             RayMaster.RenderImage(MainTex, cmd);
-            cmd.Blit(MainTex, m_CameraColorTarget2);
-            cmd.Blit(m_CameraColorTarget2, MainTex2);
-            cmd.Blit(MainTex2, m_CameraColorTarget);
+            cmd.Blit(MainTex, m_CameraColorTarget);
             context.ExecuteCommandBuffer(cmd);
             cmd.Clear();
             cmd.Release();

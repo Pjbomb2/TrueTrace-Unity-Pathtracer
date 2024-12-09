@@ -23,7 +23,7 @@ namespace TrueTrace {
    public class EditModeFunctions : EditorWindow {
         [MenuItem("TrueTrace/TrueTrace Settings")]
         public static void ShowWindow() {
-            GetWindow<EditModeFunctions>("TrueTrace Settings");
+            GetWindow<EditModeFunctions>("TrueTrace Settings").InitializeGlob();
         }
 
         public Toggle NEEToggle;
@@ -1577,6 +1577,21 @@ Toolbar toolbar;
          SetGlobalDefines("UseBindless", false);
          RemoveDefine("HardwareRT"); 
          SetGlobalDefines("HardwareRT", false);
+      }
+
+      void InitializeGlob() {
+            definesList = GetDefines();
+            SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
+            SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
+            SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
+            if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadianceCache", false);
+            SetGlobalDefines("DX11", definesList.Contains("DX11Only"));         
+
+            if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 || definesList.Contains("DX11Only")) {
+               if(!definesList.Contains("DX11Only")) {
+                  ActiveDX11Overrides(); 
+               }
+            }
       }
 
       void AddHardSettingsToMenu() {

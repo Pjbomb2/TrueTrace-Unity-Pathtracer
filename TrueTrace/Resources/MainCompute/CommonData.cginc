@@ -2111,7 +2111,7 @@ float3 FromColorSpecPacked(uint A) {
 }
 
 inline float3 CalcPos(uint4 TriData) {
-	if(TriData.w > 0) return asfloat(TriData.xyz);
+	if(TriData.w != 0) return asfloat(TriData.xyz);
     MyMeshDataCompacted Mesh = _MeshData[TriData.x];
     float4x4 Inverse = inverse(Mesh.W2L);
     TriData.y += Mesh.TriOffset;

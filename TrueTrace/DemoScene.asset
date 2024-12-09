@@ -19,7 +19,7 @@ MonoBehaviour:
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 0
+  Accumulate: 1
   PPBloom: 0
   BloomStrength: 0.372
   PPDoF: 0
@@ -28,26 +28,26 @@ MonoBehaviour:
   DoFFocal: 3.820374
   PPExposure: 0
   ExposureAuto: 0
-  PPToneMap: 0
+  PPToneMap: 1
   PPTAA: 0
   RenderScale: 1
   DenoiserMethod: 0
   UpscalerMethod: 0
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
-  UseReSTIRGI: 1
+  UseReSTIRGI: 0
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
   ReSTIRGITemporalMCap: 20
   ReSTIRGIUpdateRate: 0
-  DoReSTIRGIConnectionValidation: 0
-  Exposure: 0.6
+  DoReSTIRGIConnectionValidation: 1
+  Exposure: 26.7
   DoPartialRendering: 0
   PartialRenderingFactor: 2
   DoFirefly: 0
   ImprovedPrimaryHit: 1
   RISCount: 12
-  ToneMapper: 5
+  ToneMapper: 0
   SkyDesaturate: 0
   ClayColor: {x: 0.38679248, y: 0.38679248, z: 0.38679248}
   GroundColor: {x: 0.11320752, y: 0.11320752, z: 0.11320752}

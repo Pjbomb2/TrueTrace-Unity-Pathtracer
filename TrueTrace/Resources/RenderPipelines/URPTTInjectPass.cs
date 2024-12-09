@@ -9,7 +9,7 @@ namespace UnityEngine.Rendering.Universal
     public class InjectPathTracingPass : MonoBehaviour
     {
         public URPTTPass m_PathTracingPass = null;
-
+        TrueTrace.RayTracingMaster RayMaster;
         private void OnEnable() {
             RenderPipelineManager.beginCameraRendering += InjectPass;
         }
@@ -23,8 +23,9 @@ namespace UnityEngine.Rendering.Universal
         }
         private void InjectPass(ScriptableRenderContext renderContext, Camera currCamera) {
             if (m_PathTracingPass == null) CreateRenderPass();
-
-            if (Application.isPlaying) {
+            if(RayMaster == null) RayMaster = GameObject.Find("Scene").GetComponent<TrueTrace.RayTracingMaster>();
+             
+            if (Application.isPlaying || RayMaster.HDRPorURPRenderInScene) {
                 currCamera.depthTextureMode |= (DepthTextureMode.MotionVectors | DepthTextureMode.Depth);
                 var data = currCamera.GetUniversalAdditionalCameraData();
                 m_PathTracingPass.SetTarget(data.scriptableRenderer);

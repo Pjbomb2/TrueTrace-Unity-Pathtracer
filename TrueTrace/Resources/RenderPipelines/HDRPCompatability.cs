@@ -8,7 +8,6 @@ public class HDRPCompatability : CustomPass
 {
     RenderTexture MainTex;
     TrueTrace.RayTracingMaster RayMaster;
-    Material MainMat;
     private void CreateRenderTexture(ref RenderTexture ThisTex, Camera cam)
     {
         ThisTex = new RenderTexture(cam.pixelWidth, cam.pixelHeight, 0,
@@ -34,11 +33,11 @@ public class HDRPCompatability : CustomPass
 
     protected override void Execute(CustomPassContext ctx)
     {
-        if(Application.isPlaying && Camera.current == null) {
-            if(RayMaster == null) {
-                if(GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>().Length == 0) {RayMaster = null; return;}
-                RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
-            }
+        if(RayMaster == null) {
+            if(GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>().Length == 0) {RayMaster = null; return;}
+            RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
+        }
+        if((Application.isPlaying && Camera.current == null) || RayMaster.HDRPorURPRenderInScene) {
             if(MainTex == null || MainTex.width != ctx.hdCamera.camera.pixelWidth) {
                 if(MainTex != null) MainTex?.Release();
                 CreateRenderTexture(ref MainTex, ctx.hdCamera.camera);
@@ -52,7 +51,12 @@ public class HDRPCompatability : CustomPass
             ctx.cmd.BeginSample("TrueTrace");
             RayMaster.RenderImage(MainTex, ctx.cmd);
             ctx.propertyBlock.SetTexture("_MainTex", MainTex);
-            ctx.cmd.Blit(MainTex, ctx.cameraColorBuffer);
+
+            if(Application.isPlaying && Camera.current == null)
+                ctx.cmd.Blit(MainTex, ctx.cameraColorBuffer);
+            else
+                ctx.cmd.Blit(MainTex, ctx.cameraColorBuffer, new Vector2((float)ctx.cameraColorBuffer.referenceSize.x / (float) ctx.hdCamera.camera.pixelWidth, (float)ctx.cameraColorBuffer.referenceSize.y / (float) ctx.hdCamera.camera.pixelHeight), Vector2.zero);
+
             ctx.cmd.EndSample("TrueTrace");
          }
     }
