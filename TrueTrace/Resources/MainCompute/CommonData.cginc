@@ -1700,7 +1700,7 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 				node_index = NodeOffset;
 				HasHitTLAS = true;
 				if(MeshIndex != _LightMeshes[-(node.left+1)].LockedMeshIndex) {
-					lightPDF = 1;
+					lightPDF = 0;
 					return;
 				}
 			}
@@ -2111,20 +2111,20 @@ float3 FromColorSpecPacked(uint A) {
 }
 
 inline float3 CalcPos(uint4 TriData) {
-	if(TriData.w != 0) return asfloat(TriData.xyz);
+	if(TriData.w == 99993) return asfloat(TriData.xyz);
     MyMeshDataCompacted Mesh = _MeshData[TriData.x];
     float4x4 Inverse = inverse(Mesh.W2L);
     TriData.y += Mesh.TriOffset;
-	return mul(Inverse, float4(AggTris[TriData.y].pos0 + ((TriData.z & 0xffff) / 65535.0f) * AggTris[TriData.y].posedge1 + ((TriData.z >> 16) / 65535.0f) * AggTris[TriData.y].posedge2,1)).xyz;
+	return mul(Inverse, float4(AggTris[TriData.y].pos0 + asfloat(TriData.z) * AggTris[TriData.y].posedge1 + asfloat(TriData.w) * AggTris[TriData.y].posedge2,1)).xyz;
 }
 
 inline float3 CalcNorm(uint4 TriData) {
-	// if(TriData.w > 0) return asfloat(TriData.xyz);
+	if(TriData.w == 99993) return -normalize(asfloat(TriData.xyz));
 
     MyMeshDataCompacted Mesh = _MeshData[TriData.x];
     TriData.y += Mesh.TriOffset;
     float4x4 Inverse = inverse(Mesh.W2L);
-    float3 Geomnorm = GetTriangleNormal(TriData.y, float2(((TriData.z & 0xffff) / 65535.0f), ((TriData.z >> 16) / 65535.0f)), Inverse);
+    float3 Geomnorm = GetTriangleNormal(TriData.y, asfloat(TriData.zw), Inverse);
     float3 USGNorm = mul(Inverse, cross(normalize(AggTris[TriData.y].posedge1), normalize(AggTris[TriData.y].posedge2)));
     float wldScale = rsqrt(dot(USGNorm, USGNorm));
     USGNorm = -mul(wldScale, USGNorm);
@@ -2437,6 +2437,13 @@ inline int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Nor
                     RandVec.xy = RandVec.xy * light.SpotAngle - light.SpotAngle / 2.0f;
                     RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy);
                     light.Position += ToWorld(GetTangentSpace2(light.Direction), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
+                    // area = (light.SpotAngle.x * light.SpotAngle.y);
+                    light.Radiance *= PI;
+                    light.Radiance *= pow(saturate(dot(to_light, -light.Direction)), light.Softness * 120.0f + 1) * (light.SpotAngle.x * light.SpotAngle.y);
+
+                    // RandVec.xy = RandVec.xy * light.SpotAngle - light.SpotAngle / 2.0f;
+                    // RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy);
+                    // light.Position += ToWorld(GetTangentSpace2(light.Direction), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
                     // area = Light.SpotAngle.x * Light.SpotAngle.y;
                     // if(hitDat.MatType == 3) Radiance = 0;
                     // light.Radiance *= (light.SpotAngle.x * light.SpotAngle.y) / 2.0f;

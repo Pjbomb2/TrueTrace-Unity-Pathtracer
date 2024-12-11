@@ -742,47 +742,69 @@ namespace TrueTrace {
                     Debug.LogWarning("Object " + gameObject.name + " Is Using the GPU Mesh loading. Consider making this mesh read/writeable if possible, as GPU Loading takes additional RAM");
                     mesh.vertexBufferTarget |= GraphicsBuffer.Target.Raw;
                     UnityEngine.Rendering.VertexAttributeDescriptor[] Attributes = mesh.GetVertexAttributes();
-                    GraphicsBuffer MeshBuffer = mesh.GetVertexBuffer(Attributes[0].stream);
-                    int AttStrideTotal = 3;
-                    PerDataOffsets PerDataStride = new PerDataOffsets();
-                    for(int i2 = 0; i2 < Attributes.Length; i2++) {
-                        if(Attributes[i2].attribute == VertexAttribute.Tangent) {
-                            PerDataStride.TanStride = AttStrideTotal;
-                            AttStrideTotal += 4;
-                        }
-                        if(Attributes[i2].attribute == VertexAttribute.Normal) {
-                            PerDataStride.NormStride = AttStrideTotal;
-                            AttStrideTotal += 3;
-                        }
-                        if(Attributes[i2].attribute == VertexAttribute.TexCoord0) {
-                            PerDataStride.UVStride = AttStrideTotal;
-                            AttStrideTotal += 2;
-                        }
-                        if(Attributes[i2].attribute == VertexAttribute.Color) {
-                            PerDataStride.ColStride = AttStrideTotal;
-                            AttStrideTotal += 1;
+                    int VertBufCount = mesh.vertexBufferCount;
+                    List<Vector3Int>[] BufferIndexers = new List<Vector3Int>[VertBufCount];
+                    for(int i2 = 0; i2 < VertBufCount; i2++) BufferIndexers[i2] = new List<Vector3Int>();
+                    VertexAttribute[] AttsToCheck = {VertexAttribute.Position, VertexAttribute.Tangent, VertexAttribute.Normal, VertexAttribute.TexCoord0, VertexAttribute.Color};
+                    bool[] HasAttribute = new bool[AttsToCheck.Length];
+                    int AttToCheckLength = AttsToCheck.Length;
+                    int MaxStream = -1;
+                    for(int i2 = 0; i2 < AttToCheckLength; i2++) {
+                        int BufferIndex = mesh.GetVertexAttributeStream(AttsToCheck[i2]);
+                        MaxStream = Mathf.Max(MaxStream, BufferIndex);
+                        if(BufferIndex != -1) {
+                            HasAttribute[i2] = true;
+                            BufferIndexers[BufferIndex].Add(new Vector3Int(i2, mesh.GetVertexAttributeOffset(AttsToCheck[i2]) / 4, mesh.GetVertexAttributeDimension(AttsToCheck[i2])));
                         }
                     }
-                    Action<AsyncGPUReadbackRequest> checkOutput = (AsyncGPUReadbackRequest rq) => {
-                        NativeArray<float> Data = (rq.GetData<float>());//May want to convert this to a pointer
-                        int TotalStride = MeshBuffer.stride / 4;
-                        int VertCount = Data.Length / TotalStride;//mesh.vertexCount;
-                        for(int i2 = 0; i2 < VertCount; i2++) {
-                            int Index = i2 * TotalStride;
-                            CurMeshData.Verticies.Add(new Vector3(Data[Index], Data[Index + 1], Data[Index + 2]));
-                            if(PerDataStride.NormStride != 0) CurMeshData.Normals.Add(new Vector3(Data[Index + PerDataStride.NormStride], Data[Index + PerDataStride.NormStride + 1], Data[Index + PerDataStride.NormStride + 2]));
-                            else CurMeshData.Normals.Add(Vector3.one);
-                            if(PerDataStride.TanStride != 0) CurMeshData.Tangents.Add(new Vector4(Data[Index + PerDataStride.TanStride], Data[Index + PerDataStride.TanStride + 1], Data[Index + PerDataStride.TanStride + 2], Data[Index + PerDataStride.TanStride + 3]));
-                            else CurMeshData.Tangents.Add(Vector4.one);
-                            if(PerDataStride.UVStride != 0) CurMeshData.UVs.Add(new Vector2(Data[Index + PerDataStride.UVStride], Data[Index + PerDataStride.UVStride + 1]));
-                            else CurMeshData.UVs.Add(Vector2.one);
-                        }
-                        CurMeshData.SetColorsZero(VertCount);
+                    int TotVertCount = mesh.vertexCount;
+                    for(int i2 = 0; i2 < MaxStream+1; i2++) {
+                        int TempIndex = i2;
+                        if(BufferIndexers[i2].Count != 0) {
+                            GraphicsBuffer MeshBuffer = mesh.GetVertexBuffer(TempIndex);
+                            Action<AsyncGPUReadbackRequest> checkOutput = (AsyncGPUReadbackRequest rq) => {
+                                NativeArray<float> Data = (rq.GetData<float>());//May want to convert this to a pointer
+                                int TotalStride = MeshBuffer.stride / 4;
+                                int VertCount = Data.Length / TotalStride;//mesh.vertexCount;
+                                int VertOff = -1;
+                                int UVOff = -1;
+                                int TanOff = -1;
+                                int NormOff = -1;
+                                int ColOff = -1;
+                                int TempCoun = BufferIndexers[TempIndex].Count;
+                                for(int i3 = 0; i3 < TempCoun; i3++) {
+                                    switch(BufferIndexers[TempIndex][i3].x) {
+                                        case 0: VertOff = BufferIndexers[TempIndex][i3].y; break;
+                                        case 1: TanOff = BufferIndexers[TempIndex][i3].y; break;
+                                        case 2: NormOff = BufferIndexers[TempIndex][i3].y; break;
+                                        case 3: UVOff = BufferIndexers[TempIndex][i3].y; break;
+                                        case 4: ColOff = BufferIndexers[TempIndex][i3].y; break;
+                                    }
+                                }
+                                    // Debug.Log(VertCount);
+                                for(int i3 = 0; i3 < VertCount; i3++) {
+                                    int Index = i3 * TotalStride;
+                                    if(VertOff != -1) CurMeshData.Verticies.Add(new Vector3(Data[Index + VertOff], Data[Index + VertOff + 1], Data[Index + VertOff + 2]));
+                                    if(NormOff != -1) CurMeshData.Normals.Add(new Vector3(Data[Index + NormOff], Data[Index + NormOff + 1], Data[Index + NormOff + 2]));
+                                    if(TanOff != -1) CurMeshData.Tangents.Add(new Vector4(Data[Index + TanOff], Data[Index + TanOff + 1], Data[Index + TanOff + 2], Data[Index + TanOff + 3]));
+                                    if(UVOff != -1) CurMeshData.UVs.Add(new Vector2(Data[Index + UVOff], Data[Index + UVOff + 1]));
+                                }
 
-                        Data.Dispose();
-                        MeshBuffer.Release();
-                    };
-                    AsyncGPUReadback.Request(MeshBuffer, checkOutput);
+                                Data.Dispose();
+                                MeshBuffer.Release();
+                            };
+                            AsyncGPUReadback.Request(MeshBuffer, checkOutput);
+                        }
+                    }
+                    for(int i2 = 0; i2 < TotVertCount; i2++) {
+                        if(!HasAttribute[1]) CurMeshData.Tangents.Add(new Vector4(0,1,0,1));
+                        if(!HasAttribute[2]) CurMeshData.Normals.Add(Vector3.one);
+                        if(!HasAttribute[3]) CurMeshData.UVs.Add(Vector2.one);
+                    }
+                    CurMeshData.SetColorsZero(TotVertCount);
+
+
+
 
                     mesh.indexBufferTarget |= GraphicsBuffer.Target.Raw;
                     GraphicsBuffer indexesBuffer = mesh.GetIndexBuffer();
