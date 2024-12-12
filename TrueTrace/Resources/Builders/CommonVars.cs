@@ -327,6 +327,15 @@ namespace CommonVars
         public float cosTheta_e;
         public int LightCount;
         public float Pad1;
+        public void Clear() {
+            b.init();
+            w = new Vector3(0,0,0);
+            phi = 0;
+            cosTheta_e = 0;
+            cosTheta_o = 0;
+            LightCount = 0;
+            Pad1 = 0;
+        }
 
         public LightBounds(AABB aabb, Vector3 W, float Phi, float cosTheta_o, float cosTheta_e, int lc, int p1) {
             b = aabb;
@@ -815,7 +824,8 @@ namespace CommonVars
         unsafe public static void Aggregate(ref BVHNode8DataCompressed[] AggNodes, ref BVHNode8Data[] BVH8Nodes)
         {//Compress the CWBVH
             BVHNode8DataCompressed TempBVHNode = new BVHNode8DataCompressed();
-            for (int i = 0; i < BVH8Nodes.Length; ++i)
+            int BVHLength = BVH8Nodes.Length;
+            for (int i = 0; i < BVHLength; ++i)
             {
                 BVHNode8Data TempNode = BVH8Nodes[i];
                 TempBVHNode.node_0x = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(TempNode.p.x), 0);
@@ -845,9 +855,10 @@ namespace CommonVars
         public unsafe static void ConvertToSplitNodes(TrueTrace.BVH8Builder BVH, ref List<BVHNode8DataFixed> SplitNodes)
         {
             BVHNode8DataFixed NewNode = new BVHNode8DataFixed();
-            SplitNodes = new List<BVHNode8DataFixed>();
+            int BVHLength = BVH.BVH8Nodes.Length;
+            SplitNodes = new List<BVHNode8DataFixed>(BVHLength);
             BVHNode8Data SourceNode;
-            for (int i = 0; i < BVH.BVH8Nodes.Length; i++)
+            for (int i = 0; i < BVHLength; i++)
             {
                 SourceNode = BVH.BVH8Nodes[i];
                 NewNode.px = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(SourceNode.p.x), 0);

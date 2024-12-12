@@ -1939,7 +1939,7 @@ Toolbar toolbar;
          }
 
          public static void TakeScreenshot() {
-            ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + GameObject.Find("Scene").GetComponent<RayTracingMaster>().SampleCount + " Samples.png");
+            ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayTracingMaster.SampleCount + " Samples.png");
             UnityEditor.AssetDatabase.Refresh();
          }
          bool HasNoMore = false;
@@ -2729,7 +2729,7 @@ Slider AperatureSlider;
             }
 
             if(Assets != null && Instancer != null && RemainingObjectsField != null) RemainingObjectsField.value = Assets.RunningTasks + Instancer.RunningTasks;
-            if(RayMaster != null) SampleCountField.value = RayMaster.SampleCount;
+            if(RayMaster != null) SampleCountField.value = RayTracingMaster.SampleCount;
             
             if(Assets != null && Assets.NeedsToUpdateXML) {
                string materialMappingsPath = TTPathFinder.GetMaterialMappingsPath();

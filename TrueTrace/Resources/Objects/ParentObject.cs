@@ -387,6 +387,11 @@ namespace TrueTrace {
             return 2;
         }
 
+        private void MemorySafeClear<T>(ref List<T> TargList) {
+            if(TargList != null) TargList.Clear();
+            else TargList = new List<T>();
+        }
+
         public void CreateAtlas(ref int VertCount)
         {//Creates texture atlas
             #if AccurateLightTris
@@ -394,28 +399,30 @@ namespace TrueTrace {
                 EmissionTexWidthHeight = new List<Vector2>();
             #endif
             _Materials.Clear();
-            AlbedoTexs = new List<Texture>();
-            NormalTexs = new List<Texture>();
-            SecondaryNormalTexs = new List<Texture>();
-            MetallicTexs = new List<Texture>();
-            RoughnessTexs = new List<Texture>();
-            EmissionTexs = new List<Texture>();
-            AlphaTexs = new List<Texture>();
-            MatCapTexs = new List<Texture>();
-            MatCapMasks = new List<Texture>();
-            SecondaryAlbedoTexs = new List<Texture>();
-            SecondaryAlbedoTexMasks = new List<Texture>();
-            RoughnessTexChannelIndex = new List<int>();
-            MetallicTexChannelIndex = new List<int>();
-            AlphaTexChannelIndex = new List<int>();
-            MatCapMaskChannelIndex = new List<int>();
-            SecondaryAlbedoTexMaskChannelIndex = new List<int>();
+            MemorySafeClear<Texture>(ref AlbedoTexs);
+            MemorySafeClear<Texture>(ref NormalTexs);
+            MemorySafeClear<Texture>(ref SecondaryNormalTexs);
+            MemorySafeClear<Texture>(ref MetallicTexs);
+            MemorySafeClear<Texture>(ref RoughnessTexs);
+            MemorySafeClear<Texture>(ref EmissionTexs);
+            MemorySafeClear<Texture>(ref AlphaTexs);
+            MemorySafeClear<Texture>(ref MatCapTexs);
+            MemorySafeClear<Texture>(ref MatCapMasks);
+            MemorySafeClear<Texture>(ref SecondaryAlbedoTexs);
+            MemorySafeClear<Texture>(ref SecondaryAlbedoTexMasks);
+            MemorySafeClear<int>(ref RoughnessTexChannelIndex);
+            MemorySafeClear<int>(ref MetallicTexChannelIndex);
+            MemorySafeClear<int>(ref AlphaTexChannelIndex);
+            MemorySafeClear<int>(ref MatCapMaskChannelIndex);
+            MemorySafeClear<int>(ref SecondaryAlbedoTexMaskChannelIndex);
             int CurMatIndex = 0;
             Mesh mesh;
-            Vector4 Throwaway = Vector3.zero;
+            RayObjectTextureIndex TempObj = new RayObjectTextureIndex();
+            List<Material> DoneMats = new List<Material>();
+            Material[] SharedMaterials;// = new Material[1];
             foreach (RayTracingObject obj in ChildObjects) {
                 if(obj == null) Debug.Log("WTF");
-                List<Material> DoneMats = new List<Material>();
+                DoneMats.Clear();
                 if (obj.TryGetComponent<MeshFilter>(out MeshFilter TempMesh)) mesh = TempMesh.sharedMesh;
                 else if(obj.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin)) mesh = TempSkin.sharedMesh;
                 else mesh = null;
@@ -423,9 +430,9 @@ namespace TrueTrace {
                 if(mesh == null) Debug.Log("Missing Mesh: " + name);
                 obj.matfill();
                 VertCount += mesh.vertexCount;
-                Material[] SharedMaterials = new Material[1];
                 if(obj.TryGetComponent<Renderer>(out Renderer TempRend)) SharedMaterials = TempRend.sharedMaterials;
                 else if(obj.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkinRend)) SharedMaterials = TempSkinRend.sharedMaterials;
+                else SharedMaterials = new Material[1];
                 int SharedMatLength = Mathf.Min(obj.Indexes.Length, SharedMaterials.Length);
                 int Offset = 0;
 
@@ -436,7 +443,6 @@ namespace TrueTrace {
                     if (GotSentBack) Offset = DoneMats.IndexOf(SharedMaterials[i]);
                     else DoneMats.Add(SharedMaterials[i]);
 
-                    RayObjectTextureIndex TempObj = new RayObjectTextureIndex();
                     TempObj.Obj = obj;
                     TempObj.ObjIndex = i;
                     int Index = AssetManager.ShaderNames.IndexOf(SharedMaterials[i].shader.name);
@@ -581,8 +587,8 @@ namespace TrueTrace {
         }
         public List<Transform> ChildObjectTransforms;
         public void LoadData() {
-            TTStopWatch TempWatch = new TTStopWatch("StopWatch For: " + gameObject.name);
-            TempWatch.Start();
+            // TTStopWatch TempWatch = new TTStopWatch("StopWatch For: " + gameObject.name);
+            // TempWatch.Start();
             HasLightTriangles = false;
             NeedsToResetBuffers = true;
             ClearAll();
@@ -671,12 +677,12 @@ namespace TrueTrace {
                 DeformableMeshes = new MeshFilter[TotalObjects];
                 IndexCounts = new int[TotalObjects];
             }
-            TempWatch.Stop("Object Initialize");
-            TempWatch.Start();
+            // TempWatch.Stop("Object Initialize");
+            // TempWatch.Start();
             int VertCount = 0;
             CreateAtlas(ref VertCount);
-            TempWatch.Stop("Create Sub Atlas");
-            TempWatch.Start();
+            // TempWatch.Stop("Create Sub Atlas");
+            // TempWatch.Start();
 
             // LoadFile();
             // MeshCountChanged = false;
@@ -717,21 +723,23 @@ namespace TrueTrace {
                 int PreIndexLength = CurMeshData.Indices.Count;
                 int IndexOffset = CurMeshData.Verticies.Count;
                 if((!Application.isPlaying) || mesh.isReadable) {
-                    var Tans = new List<Vector4>();
+                    int VertCount2 = mesh.vertexCount;
+                    var Tans = new List<Vector4>(VertCount2);
                     mesh.GetTangents(Tans);
                     if (Tans.Count != 0) CurMeshData.Tangents.AddRange(Tans);
                     else CurMeshData.SetTansZero(mesh.vertexCount);
 
-                    var Colors = new List<Color>();
+                    var Colors = new List<Color>(VertCount2);
                     mesh.GetColors(Colors);
                     if (Colors.Count != 0) CurMeshData.Colors.AddRange(Colors);
                     else CurMeshData.SetColorsZero(mesh.vertexCount);
 
-                    var Norms = new List<Vector3>();
+                    var Norms = new List<Vector3>(VertCount2);
                     mesh.GetNormals(Norms);
                     CurMeshData.Normals.AddRange(Norms);
 
-                    CurMeshData.Verticies.AddRange(mesh.vertices);
+                    mesh.GetVertices(Norms);
+                    CurMeshData.Verticies.AddRange(Norms);
 
                     int MeshUvLength = mesh.uv.Length;
                     if (MeshUvLength == mesh.vertexCount) CurMeshData.UVs.AddRange(mesh.uv);
@@ -856,7 +864,7 @@ namespace TrueTrace {
                 });
                 RepCount += Mathf.Min(submeshcount, CurrentObject.Names.Length);
             }
-            TempWatch.Stop("Object Mesh Loading");
+            // TempWatch.Stop("Object Mesh Loading");
 
         }
 
@@ -1063,7 +1071,7 @@ namespace TrueTrace {
             {
                 cmd.SetComputeIntParam(MeshRefit, "TriBuffOffset", TriOffset);
                 cmd.SetComputeIntParam(MeshRefit, "LightTriBuffOffset", LightTriOffset);
-                cmd.BeginSample("ReMesh");
+                if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh");
                 for (int i = 0; i < VertexBuffers.Length; i++) {
                     VertexBuffers[i].Release();
                     if(IsSkinnedGroup) {
@@ -1091,7 +1099,7 @@ namespace TrueTrace {
                 cmd.SetComputeBufferParam(MeshRefit, NodeCompressKernel, "BVHNodes", BVHDataBuffer);
                 cmd.SetComputeBufferParam(MeshRefit, NodeCompressKernel, "AggNodes", RealizedAggNodes);
                 int CurVertOffset = 0;
-                cmd.BeginSample("ReMesh Accum");
+                if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Accum");
 
                 for (int i = 0; i < TotalObjects; i++)
                 {
@@ -1115,17 +1123,17 @@ namespace TrueTrace {
                     CurVertOffset += IndexCount;
                 }
 
-                cmd.EndSample("ReMesh Accum");
+                if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Accum");
 
-                cmd.BeginSample("ReMesh Light Transfer");
+                if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Light Transfer");
                 if(LightTriangles.Count != 0) {
                     cmd.SetComputeIntParam(MeshRefit, "gVertexCount", LightTriangles.Count);
                     cmd.DispatchCompute(MeshRefit, TransferKernel, (int)Mathf.Ceil(LightTriangles.Count / (float)KernelRatio), 1, 1);
                 }
-                cmd.EndSample("ReMesh Light Transfer");
+                if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Light Transfer");
 
                 if(LightTriangles.Count != 0) {
-                    cmd.BeginSample("LightRefitter");
+                    if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("LightRefitter");
                     cmd.SetComputeIntParam(MeshRefit, "TotalNodeOffset", LightNodeOffset);
                     cmd.SetComputeMatrixParam(MeshRefit, "ToWorld", transform.localToWorldMatrix);
 #if !DontUseSGTree
@@ -1145,36 +1153,36 @@ namespace TrueTrace {
 
                         ObjectOffset += SetCount;
                     }
-                    cmd.EndSample("LightRefitter");
+                    if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("LightRefitter");
                 }
 
                 #if !HardwareRT
-                    cmd.BeginSample("ReMesh Init");
+                    if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Init");
                     cmd.SetComputeIntParam(MeshRefit, "NodeCount", NodePair.Count);
                     cmd.DispatchCompute(MeshRefit, NodeInitializerKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
-                    cmd.EndSample("ReMesh Init");
+                    if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Init");
 
-                    cmd.BeginSample("ReMesh Refit");
+                    if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Refit");
                     for (int i = MaxRecur - 1; i >= 0; i--) {
                         var NodeCount2 = WorkingBuffer[i].count;
                         cmd.SetComputeIntParam(MeshRefit, "NodeCount", NodeCount2);
                         cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "WorkingBuffer", WorkingBuffer[i]);
                         cmd.DispatchCompute(MeshRefit, RefitLayerKernel, (int)Mathf.Ceil(NodeCount2 / (float)KernelRatio), 1, 1);
                     }
-                    cmd.EndSample("ReMesh Refit");
+                    if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Refit");
 
-                    cmd.BeginSample("ReMesh Update");
+                    if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Update");
                     cmd.SetComputeIntParam(MeshRefit, "NodeCount", NodePair.Count);
                     cmd.DispatchCompute(MeshRefit, NodeUpdateKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
-                    cmd.EndSample("ReMesh Update");
+                    if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Update");
 
-                    cmd.BeginSample("ReMesh Compress");
+                    if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Compress");
                     cmd.SetComputeIntParam(MeshRefit, "NodeCount", BVH.BVH8Nodes.Length);
                     cmd.SetComputeIntParam(MeshRefit, "NodeOffset", NodeOffset);
                     cmd.DispatchCompute(MeshRefit, NodeCompressKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
-                    cmd.EndSample("ReMesh Compress");
+                    if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Compress");
                 #endif
-                cmd.EndSample("ReMesh");
+                if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh");
             }
 
             if (!AllFull) {

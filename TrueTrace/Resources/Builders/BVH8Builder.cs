@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Assertions;
+// using UnityEngine.Assertions;
 using CommonVars;
 using Unity.Collections;
 
@@ -34,7 +34,7 @@ namespace TrueTrace {
 
             if(node.count > 0) {
                 num_primitives = (int)node.count;
-                Assert.IsTrue(num_primitives == 1);
+                // Assert.IsTrue(num_primitives == 1);
                 if(num_primitives != 1) {
                     Debug.Log("BVH NODE GREATER THAN 1 TRI AT NODE: " + node_index);
                     return -1;
@@ -138,10 +138,10 @@ namespace TrueTrace {
             int dist_left = decisions[node_index * 7 + i].dist_left;
             int dist_right = decisions[node_index * 7 + i].dist_right;
 
-            Assert.IsTrue(dist_left >= 0 && dist_left < 7);
-            Assert.IsTrue(dist_right >= 0 && dist_right < 7); 
+            // Assert.IsTrue(dist_left >= 0 && dist_left < 7);
+            // Assert.IsTrue(dist_right >= 0 && dist_right < 7); 
 
-            Assert.IsTrue(child_count < 8);
+            // Assert.IsTrue(child_count < 8);
 
             if(decisions[nodes[node_index].left * 7 + dist_left].Type == 2) {
                 get_children(nodes[node_index].left, dist_left, ref child_count, ref children);
@@ -157,10 +157,17 @@ namespace TrueTrace {
         }
         float[,] cost2;
         float[,] costpreset;
+        int[] children_copy;
+        int[] assignment;
+        bool[] slot_filled;
         void order_children(int node_index, ref int[] children, int child_count) {
             Vector3 p = (nodes[node_index].aabb.BBMax + nodes[node_index].aabb.BBMin) / 2.0f;
 
             cost2 = costpreset;//try moving these out into public variables, since they can be the same array, as they get overwritten every time, just need their values initialized to 0?
+            for(int i = 0; i < 8; i++) {
+                assignment[i] = -1;
+                slot_filled[i] = false;
+            }
 
             for(int c = 0; c < child_count; c++) {
                 for(int s = 0; s < 8; s++) {
@@ -172,8 +179,6 @@ namespace TrueTrace {
                 }
             }
 
-            int[] assignment = {-1, -1, -1, -1, -1, -1, -1, -1};
-            bool[] slot_filled = new bool[8];
 
             while(true) {
                 float min_cost = float.MaxValue;
@@ -200,14 +205,14 @@ namespace TrueTrace {
                 assignment[min_index] = min_slot;
             }
 
-            int[] children_copy = new int[8];
+            
             System.Array.Copy(children, children_copy, 8);
 
             for(int i = 0; i < 8; i++) children[i] = -1;
 
             for(int i = 0; i < child_count; i++) {
-                Assert.IsTrue(assignment[i] != -1);
-                Assert.IsTrue(children_copy[i] != -1);
+                // Assert.IsTrue(assignment[i] != -1);
+                // Assert.IsTrue(children_copy[i] != -1);
 
                 children[assignment[i]] = children_copy[i];
             }
@@ -216,7 +221,7 @@ namespace TrueTrace {
         int count_primitives(int node_index, ref int[] indices) {
 
             if(nodes[node_index].count > 0) {
-                Assert.IsTrue(nodes[node_index].count == 1);
+                // Assert.IsTrue(nodes[node_index].count == 1);
                 for(int i = 0; i < nodes[node_index].count; i++) {
                     cwbvh_indices[cwbvhindex_count++] = indices[nodes[node_index].left + i];
                 }
@@ -228,8 +233,7 @@ namespace TrueTrace {
         // float TotalCost;
         void collapse(ref int[] indices_bvh, int node_index_cwbvh, int node_index_bvh) {
           BVHNode8Data node = BVH8Nodes[node_index_cwbvh];
-          AABB aabb = new AABB();
-          aabb = nodes[node_index_bvh].aabb;
+          AABB aabb = nodes[node_index_bvh].aabb;
           
           node.p = aabb.BBMin;
 
@@ -252,9 +256,9 @@ namespace TrueTrace {
           u_ey = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(e.y), 0);
           u_ez = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(e.z), 0);
 
-          Assert.IsTrue((u_ex & 0b10000000011111111111111111111111) == 0);
-          Assert.IsTrue((u_ey & 0b10000000011111111111111111111111) == 0);
-          Assert.IsTrue((u_ez & 0b10000000011111111111111111111111) == 0);
+          // Assert.IsTrue((u_ex & 0b10000000011111111111111111111111) == 0);
+          // Assert.IsTrue((u_ey & 0b10000000011111111111111111111111) == 0);
+          // Assert.IsTrue((u_ez & 0b10000000011111111111111111111111) == 0);
 
           node.e[0] = System.Convert.ToByte(u_ex >> 23);
           node.e[1] = System.Convert.ToByte(u_ey >> 23);
@@ -267,7 +271,7 @@ namespace TrueTrace {
 
           get_children(node_index_bvh, 0, ref child_count, ref children);
 
-          Assert.IsTrue(child_count <= 8);
+          // Assert.IsTrue(child_count <= 8);
 
           order_children(node_index_bvh, ref children, child_count);
 
@@ -279,12 +283,11 @@ namespace TrueTrace {
           int node_internal_count = 0;
           int node_triangle_count = 0;
 
-          AABB child_aabb = new AABB();
           for(int i = 0; i < 8; i++) {
             int child_index = children[i];
             if(child_index == -1) continue;
 
-            child_aabb = nodes[child_index].aabb;
+            AABB child_aabb = nodes[child_index].aabb;
 
             node.quantized_min_x[i] = (byte)(uint)Mathf.Floor((child_aabb.BBMin.x - node.p.x) * one_over_e.x);
             node.quantized_min_y[i] = (byte)(uint)Mathf.Floor((child_aabb.BBMin.y - node.p.y) * one_over_e.y);
@@ -296,14 +299,14 @@ namespace TrueTrace {
           switch(decisions[child_index * 7].Type) {
             case 0: {
                 int triangle_count = count_primitives(child_index, ref indices_bvh);
-                Assert.IsTrue(triangle_count > 0 && triangle_count <= 3);
+                // Assert.IsTrue(triangle_count > 0 && triangle_count <= 3);
 
                 for(int j = 0; j < triangle_count; j++) {
                     node.meta[i] |= System.Convert.ToByte(1 << (j + 5));
                 }
                 node.meta[i] |= System.Convert.ToByte(node_triangle_count);
                 node_triangle_count += triangle_count;
-                Assert.IsTrue(node_triangle_count <= 24);
+                // Assert.IsTrue(node_triangle_count <= 24);
                 break;
             }
             case 1: {
@@ -315,14 +318,14 @@ namespace TrueTrace {
                 break;
             }
             default: {
-                Assert.IsTrue(false);
+                // Assert.IsTrue(false);
                 break;
             }
           }
           }
 
-          Assert.IsTrue(node.base_index_child + node_internal_count == cwbvhnode_count);
-          Assert.IsTrue(node.base_index_triangle + node_triangle_count == cwbvhindex_count);
+          // Assert.IsTrue(node.base_index_child + node_internal_count == cwbvhnode_count);
+          // Assert.IsTrue(node.base_index_triangle + node_triangle_count == cwbvhindex_count);
           BVH8Nodes[node_index_cwbvh] = node;
           for(int i = 0; i < 8; i++) {
             int child_index = children[i];
@@ -428,7 +431,9 @@ namespace TrueTrace {
             cwbvh_indices = new int[BVH2IndicesCount];
             
             nodes = BVH2.BVH2Nodes;
-            
+            assignment = new int[8];
+            slot_filled = new bool[8];
+            children_copy = new int[8];
             cwbvhindex_count = 0;
             cwbvhnode_count = 1;
             // TotalCost = 0;
@@ -457,7 +462,9 @@ namespace TrueTrace {
             decisions = (Decision*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(decisionsArray);
             
             nodes = BVH2.BVH2Nodes;
-
+            children_copy = new int[8];
+            assignment = new int[8];
+            slot_filled = new bool[8];
             BVH8Nodes = new BVHNode8Data[BVH2NodesCount];
             cwbvh_indices = new int[BVH2IndicesCount];
 

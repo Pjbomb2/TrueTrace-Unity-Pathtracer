@@ -1636,9 +1636,9 @@ namespace TrueTrace {
                 if (TempBVHArray == null || TLASBVH8.BVH8Nodes.Length != TempBVHArray.Length) TempBVHArray = new BVHNode8DataCompressed[TLASBVH8.BVH8Nodes.Length];
                 CommonFunctions.Aggregate(ref TempBVHArray, ref TLASBVH8.BVH8Nodes);
                 BVHNodeCount = TLASBVH8.BVH8Nodes.Length;
-                NodePair = new List<NodeIndexPairData>();
+                NodePair = new List<NodeIndexPairData>(TLASBVH8.cwbvhnode_count * 2 + 1);
                 NodePair.Add(new NodeIndexPairData());
-                IsLeafList = new List<Vector3Int>();
+                IsLeafList = new List<Vector3Int>(TLASBVH8.cwbvhnode_count * 2 + 1);
                 IsLeafList.Add(new Vector3Int(0,0,0));
                 DocumentNodes(0, 0, 1, 0, false, 0);
                 TempRecur++;
@@ -1711,18 +1711,21 @@ namespace TrueTrace {
                 if (TempBVHArray == null || TLASBVH8.BVH8Nodes.Length != TempBVHArray.Length) TempBVHArray = new BVHNode8DataCompressed[TLASBVH8.BVH8Nodes.Length];
                 CommonFunctions.Aggregate(ref TempBVHArray, ref TLASBVH8.BVH8Nodes);
 
-                NodePair = new List<NodeIndexPairData>();
+                if(NodePair == null) NodePair = new List<NodeIndexPairData>();
+                else NodePair.Clear();
                 NodePair.Add(new NodeIndexPairData());
-                IsLeafList = new List<Vector3Int>();
+                if(IsLeafList == null) IsLeafList = new List<Vector3Int>();
+                else IsLeafList.Clear();
                 IsLeafList.Add(new Vector3Int(0,0,0));
                 DocumentNodes(0, 0, 1, 0, false, 0);
                 TempRecur++;
                 int NodeCount = NodePair.Count;
-                ForwardStack = new Layer[NodeCount];
-                LayerStack = new Layer2[TempRecur];
+                if(ForwardStack == null) ForwardStack = new Layer[NodeCount];
+                if(LayerStack == null) LayerStack = new Layer2[TempRecur];
                 Layer PresetLayer = new Layer();
 
                 for (int i = 0; i < TempRecur; i++) {LayerStack[i] = new Layer2(); LayerStack[i].Slab = new List<int>();}
+                // for (int i = 0; i < TempRecur; i++) {if(LayerStack[i] == null) {LayerStack[i] = new Layer2(); LayerStack[i].Slab = new List<int>();} else {if(LayerStack[i].Slab != null) LayerStack[i].Slab.Clear(); else LayerStack[i].Slab = new List<int>();}}
                 for(int i = 0; i < 8; i++) PresetLayer.Children[i] = 0;
                 for (int i = 0; i < NodeCount; i++) {
                     ForwardStack[i] = PresetLayer;
@@ -1739,8 +1742,9 @@ namespace TrueTrace {
                     LayerStack[IsLeafList[i].y] = TempLayer;
                 }
                 CommonFunctions.ConvertToSplitNodes(TLASBVH8, ref SplitNodes);
-                List<Layer2> TempStack = new List<Layer2>();
-                for (int i = 0; i < LayerStack.Length; i++) if(LayerStack[i].Slab.Count != 0) TempStack.Add(LayerStack[i]);
+                int StackLength = LayerStack.Length;
+                List<Layer2> TempStack = new List<Layer2>(StackLength);
+                for (int i = 0; i < StackLength; i++) if(LayerStack[i].Slab.Count != 0) TempStack.Add(LayerStack[i]);
 
                 TempRecur = TempStack.Count;
                 LayerStack = TempStack.ToArray();
@@ -1766,6 +1770,7 @@ namespace TrueTrace {
                             LBVH.WorkingSet[i].ReleaseSafe();
                         }
                     }
+                    if(LBVH != null) LBVH.Dispose();
                     LBVH = new LightBVHBuilder(LightAABBs, ref SGTree, LightBVHTransforms, SGTreeNodes);
 #if !DontUseSGTree
                     if(RayMaster.FramesSinceStart2 % 2 == 0) LightTreeBufferA.SetData(SGTree, 0, 0, SGTree.Length);
@@ -1862,6 +1867,7 @@ namespace TrueTrace {
 
              if(CurFrame % 25 == 24) {
                 if(LightMeshCount > 0) {
+                    if(LBVH != null) LBVH.Dispose();
                     LBVH = new LightBVHBuilder(LightAABBs, ref SGTree, LightBVHTransforms, SGTreeNodes);
 #if !DontUseSGTree
                     if(RayMaster.FramesSinceStart2 % 2 == 0) LightTreeBufferA.SetData(SGTree, 0, 0, SGTree.Length);
@@ -1881,7 +1887,7 @@ namespace TrueTrace {
             #endif
                 if(LightAABBs != null && LightAABBs.Length != 0) {
                     LightBVHTransformsBuffer.SetData(LightBVHTransforms);
-                    cmd.BeginSample("LightRefitter");
+                    if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("LightRefitter");
                     cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "Transfers", LightBVHTransformsBuffer);
 #if !DontUseSGTree
                     cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "SGTreeWrite", RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB);
@@ -1899,7 +1905,7 @@ namespace TrueTrace {
 
                         ObjectOffset += SetCount;
                     }
-                    cmd.EndSample("LightRefitter");
+                    if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("LightRefitter");
                 }
         }
 
@@ -1935,7 +1941,7 @@ namespace TrueTrace {
                 for (int i = 0; i < LightCount; i++) {
                     RayLight = RayTracingMaster._rayTracingLights[i];
                     if(RayLight.UpdateLight(false)) {
-                        RayMaster.SampleCount = 0;
+                        RayTracingMaster.SampleCount = 0;
                         RayMaster.FramesSinceStart = 0;
                     }
                     RayLight.ThisLightData.Radiance *= RayMaster.LocalTTSettings.LightEnergyScale;
@@ -2010,6 +2016,7 @@ namespace TrueTrace {
                     }
                 }
                 if(LightMeshCount > 0) {
+                    if(LBVH != null) LBVH.Dispose();
                     LBVH = new LightBVHBuilder(LightAABBs, ref SGTree, LightBVHTransforms, SGTreeNodes);
 #if !DontUseSGTree
                     LightTreeBufferA.SetData(SGTree, 0, 0, SGTree.Length);
@@ -2219,9 +2226,9 @@ namespace TrueTrace {
                 #endif
                 // UnityEngine.Profiling.Profiler.EndSample();
                 AggNodeCount = 0;
-                cmd.BeginSample("TLAS Refitting");
+                if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("TLAS Refitting");
                 RefitTLAS(MeshAABBs, cmd);
-                cmd.EndSample("TLAS Refitting");
+                if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("TLAS Refitting");
                 HasChangedMaterials = UpdateMaterials();
                 if(RayMaster.FramesSinceStart2 % 2 == 0) MeshDataBufferA.SetData(MyMeshesCompacted);
                 else MeshDataBufferB.SetData(MyMeshesCompacted);
@@ -2305,7 +2312,7 @@ namespace TrueTrace {
                     TempMat.ColorBleed = CurrentMaterial.ColorBleed[Index];
                     TempMat.AlbedoBlendFactor = CurrentMaterial.AlbedoBlendFactor[Index];
                     if(RayMaster.LocalTTSettings.MatChangeResetsAccum) {
-                        RayMaster.SampleCount = 0;
+                        RayTracingMaster.SampleCount = 0;
                         RayMaster.FramesSinceStart = 0;
                     }
                     _Materials[CurrentMaterial.MaterialIndex[i3] + CurrentMaterial.MatOffset] = TempMat;

@@ -52,10 +52,7 @@ public class HDRPCompatability : CustomPass
             RayMaster.RenderImage(MainTex, ctx.cmd);
             ctx.propertyBlock.SetTexture("_MainTex", MainTex);
 
-            if(Application.isPlaying && Camera.current == null)
-                ctx.cmd.Blit(MainTex, ctx.cameraColorBuffer);
-            else
-                ctx.cmd.Blit(MainTex, ctx.cameraColorBuffer, new Vector2((float)ctx.cameraColorBuffer.referenceSize.x / (float) ctx.hdCamera.camera.pixelWidth, (float)ctx.cameraColorBuffer.referenceSize.y / (float) ctx.hdCamera.camera.pixelHeight), Vector2.zero);
+            ctx.cmd.Blit(MainTex, ctx.cameraColorBuffer, new Vector2((float)ctx.cameraColorBuffer.referenceSize.x / (float) ctx.hdCamera.camera.pixelWidth, (float)ctx.cameraColorBuffer.referenceSize.y / (float) ctx.hdCamera.camera.pixelHeight), Vector2.zero);
 
             ctx.cmd.EndSample("TrueTrace");
          }

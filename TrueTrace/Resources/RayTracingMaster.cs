@@ -11,7 +11,7 @@ namespace TrueTrace {
     public class RayTracingMaster : MonoBehaviour
     {
         [HideInInspector] public static Camera _camera;
-        
+        public static bool DoKernelProfiling = false;
         public bool HDRPorURPRenderInScene = false;
         [HideInInspector] public AtmosphereGenerator Atmo;
         [HideInInspector] public AssetManager Assets;
@@ -165,7 +165,7 @@ namespace TrueTrace {
 
         [HideInInspector] public int FramesSinceStart2;
         private BufferSizeData[] BufferSizes;
-        [SerializeField] [HideInInspector] public int SampleCount;
+        [SerializeField] [HideInInspector] public static int SampleCount;
 
         private int uFirstFrame = 1;
         [HideInInspector] public static bool DoDing = true;
@@ -401,7 +401,7 @@ namespace TrueTrace {
 
         public bool RebuildMeshObjectBuffers(CommandBuffer cmd)
         {
-            cmd.BeginSample("Full Update");
+            if(DoKernelProfiling) cmd.BeginSample("Full Update");
             if (uFirstFrame != 1) {
                 if (LocalTTSettings.DoTLASUpdates) {
                     int UpdateFlags = Assets.UpdateTLAS(cmd);
@@ -415,7 +415,7 @@ namespace TrueTrace {
                     } else return false;
                 }
             }
-            cmd.EndSample("Full Update");
+            if(DoKernelProfiling) cmd.EndSample("Full Update");
             if (!_meshObjectsNeedRebuilding) return true;
             _meshObjectsNeedRebuilding = false;
             FramesSinceStart = 0;
@@ -496,10 +496,16 @@ namespace TrueTrace {
             else if ((LocalTTSettings.DenoiserMethod != 1 || LocalTTSettings.UseReSTIRGI) && ASVGFCode.Initialized) ASVGFCode.ClearAll();
             if(TTPostProc.Initialized == false) TTPostProc.init(SourceWidth, SourceHeight);
 
-            BufferSizes = new BufferSizeData[LocalTTSettings.bouncecount + 1];
+            if(BufferSizes == null || BufferSizes.Length != LocalTTSettings.bouncecount + 1) BufferSizes = new BufferSizeData[LocalTTSettings.bouncecount + 1];
+            for(int i = 0; i < LocalTTSettings.bouncecount + 1; i++) {
+                BufferSizes[i].tracerays = 0;
+                BufferSizes[i].shadow_rays = 0;
+                BufferSizes[i].heightmap_rays = 0;
+                BufferSizes[i].Heightmap_shadow_rays = 0;     
+            }
             BufferSizes[0].tracerays = SourceWidth * SourceHeight;
             BufferSizes[0].heightmap_rays = SourceWidth * SourceHeight;
-            if(_BufferSizes == null) {
+            if(_BufferSizes == null || !_BufferSizes.IsValid()) {
                 _BufferSizes = new ComputeBuffer(LocalTTSettings.bouncecount + 1, 16);
             }
             if(_BufferSizes.count != LocalTTSettings.bouncecount + 1) {
@@ -625,7 +631,7 @@ namespace TrueTrace {
             if (SkyboxTexture == null) SkyboxTexture = new Texture2D(1,1, TextureFormat.RGBA32, false);
             if (SkyboxTexture != null)
             {
-                if(CDFTotalBuffer == null) {
+                if(CDFTotalBuffer == null || !CDFTotalBuffer.IsValid()) {
                     CDFTotalBuffer = new ComputeBuffer(1, 4);
                 }
                 if((LocalTTSettings.BackgroundType == 1 || LocalTTSettings.SecondaryBackgroundType == 1) && CDFX == null) {
@@ -922,133 +928,133 @@ namespace TrueTrace {
         
         private void GenerateRays(CommandBuffer cmd) {
             if (LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI) {
-                cmd.BeginSample("ASVGF Reproject Pass");
+                if(DoKernelProfiling) cmd.BeginSample("ASVGF Reproject Pass");
                     ASVGFCode.shader.SetTexture(1, "ScreenSpaceInfoWrite", (FramesSinceStart2 % 2 == 0) ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
                     ASVGFCode.DoRNG(ref _RandomNums, ref _RandomNumsB, FramesSinceStart2, _RayBuffer, cmd, _PrimaryTriangleInfo, FramesSinceStart2 % 2 == 0 ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, Assets.AggTriBuffer, MeshOrderChanged, Assets.TLASCWBVHIndexes);
-                cmd.EndSample("ASVGF Reproject Pass");
+                if(DoKernelProfiling) cmd.EndSample("ASVGF Reproject Pass");
             }
 
             SetInt("CurBounce", 0, cmd);
             if(LocalTTSettings.UseReSTIRGI && LocalTTSettings.ReSTIRGIUpdateRate != 0) {
-                cmd.BeginSample("ReSTIR GI Reproject");
+                if(DoKernelProfiling) cmd.BeginSample("ReSTIR GI Reproject");
                 cmd.DispatchCompute(GenerateShader, GIReTraceKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
-                cmd.EndSample("ReSTIR GI Reproject");
+                if(DoKernelProfiling) cmd.EndSample("ReSTIR GI Reproject");
             } else if(HasSDFHandler) {
                 OptionalSDFHandler.Run(cmd, (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB, _RayBuffer, SourceWidth, SourceHeight, DoChainedImages, LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI);
             } else if(LocalTTSettings.DenoiserMethod != 1 || LocalTTSettings.UseReSTIRGI) {
-                cmd.BeginSample("Primary Ray Generation");
+                if(DoKernelProfiling) cmd.BeginSample("Primary Ray Generation");
                    cmd.DispatchCompute(GenerateShader, (DoChainedImages ? GenPanoramaKernel : GenKernel), Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
-                cmd.EndSample("Primary Ray Generation");
+                if(DoKernelProfiling) cmd.EndSample("Primary Ray Generation");
             }
         }
 
         private void Render(RenderTexture destination, CommandBuffer cmd)
         {
             #if !DisableRadianceCache
-                cmd.BeginSample("RadCacheClear");
+                if(DoKernelProfiling) cmd.BeginSample("RadCacheClear");
                     cmd.DispatchCompute(GenerateShader, ResolveKernel + 2, Mathf.CeilToInt((4.0f * 1024.0f * 1024.0f) / 256.0f), 1, 1);
-                cmd.EndSample("RadCacheClear");
+                if(DoKernelProfiling) cmd.EndSample("RadCacheClear");
             #endif
             TTPostProc.ValidateInit(LocalTTSettings.PPBloom, LocalTTSettings.PPTAA, SourceWidth != TargetWidth, LocalTTSettings.UpscalerMethod == 2, LocalTTSettings.DoSharpen, LocalTTSettings.PPFXAA);
             float CurrentSample;
             
             GenerateRays(cmd);
 
-                cmd.BeginSample("Pathtracing Kernels");
+                if(DoKernelProfiling) cmd.BeginSample("Pathtracing Kernels");
 
                 for (int i = 0; i < LocalTTSettings.bouncecount; i++) {
-                    cmd.BeginSample("Bounce: " + i);
+                    if(DoKernelProfiling) cmd.BeginSample("Bounce: " + i);
                         var bouncebounce = i;
                         if(bouncebounce == 1) {
                             cmd.SetComputeTextureParam(IntersectionShader, TraceKernel, "_PrimaryTriangleInfo", GIWorldPosA);
                             cmd.SetComputeTextureParam(IntersectionShader, HeightmapKernel, "_PrimaryTriangleInfo", GIWorldPosA);
                         }
                         SetInt("CurBounce", bouncebounce, cmd);
-                        cmd.BeginSample("Transfer Kernel: " + i);
+                        if(DoKernelProfiling) cmd.BeginSample("Transfer Kernel: " + i);
                         cmd.SetComputeIntParam(ShadingShader, "Type", 0);
                         cmd.DispatchCompute(ShadingShader, TransferKernel, 1, 1, 1);
-                        cmd.EndSample("Transfer Kernel: " + i);
+                        if(DoKernelProfiling) cmd.EndSample("Transfer Kernel: " + i);
 
-                        cmd.BeginSample("Trace Kernel: " + i);
+                        if(DoKernelProfiling) cmd.BeginSample("Trace Kernel: " + i);
                         #if DX11Only
                             cmd.DispatchCompute(IntersectionShader, TraceKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
                         #else
                             cmd.DispatchCompute(IntersectionShader, TraceKernel, CurBounceInfoBuffer, 0);//784 is 28^2
                         #endif
-                        cmd.EndSample("Trace Kernel: " + i);
+                        if(DoKernelProfiling) cmd.EndSample("Trace Kernel: " + i);
 
 
                         if (Assets.Terrains.Count != 0) {
-                            cmd.BeginSample("HeightMap Trace Kernel: " + i);
+                            if(DoKernelProfiling) cmd.BeginSample("HeightMap Trace Kernel: " + i);
                             #if DX11Only
                                 cmd.DispatchCompute(IntersectionShader, HeightmapKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
                             #else
                                 cmd.DispatchCompute(IntersectionShader, HeightmapKernel, CurBounceInfoBuffer, 0);//784 is 28^2
                             #endif
-                            cmd.EndSample("HeightMap Trace Kernel: " + i);
+                            if(DoKernelProfiling) cmd.EndSample("HeightMap Trace Kernel: " + i);
                         }
 
-                        cmd.BeginSample("Shading Kernel: " + i);
+                        if(DoKernelProfiling) cmd.BeginSample("Shading Kernel: " + i);
                         #if DX11Only
                             cmd.DispatchCompute(ShadingShader, ShadeKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
                         #else
                             cmd.DispatchCompute(ShadingShader, ShadeKernel, CurBounceInfoBuffer, 0);
                         #endif
-                        cmd.EndSample("Shading Kernel: " + i);
+                        if(DoKernelProfiling) cmd.EndSample("Shading Kernel: " + i);
 
 
 
-                        cmd.BeginSample("Transfer Kernel 2: " + i);
+                        if(DoKernelProfiling) cmd.BeginSample("Transfer Kernel 2: " + i);
                         cmd.SetComputeIntParam(ShadingShader, "Type", 1);
                         cmd.DispatchCompute(ShadingShader, TransferKernel, 1, 1, 1);
-                        cmd.EndSample("Transfer Kernel 2: " + i);
+                        if(DoKernelProfiling) cmd.EndSample("Transfer Kernel 2: " + i);
                         if (LocalTTSettings.UseNEE) {
-                            cmd.BeginSample("Shadow Kernel: " + i);
+                            if(DoKernelProfiling) cmd.BeginSample("Shadow Kernel: " + i);
                             #if DX11Only
                                 cmd.DispatchCompute(IntersectionShader, ShadowKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
                             #else
                                 cmd.DispatchCompute(IntersectionShader, ShadowKernel, CurBounceInfoBuffer, 0);
                             #endif
-                            cmd.EndSample("Shadow Kernel: " + i);
+                            if(DoKernelProfiling) cmd.EndSample("Shadow Kernel: " + i);
                         }
                         if (LocalTTSettings.UseNEE && Assets.Terrains.Count != 0) {
-                            cmd.BeginSample("Heightmap Shadow Kernel: " + i);
+                            if(DoKernelProfiling) cmd.BeginSample("Heightmap Shadow Kernel: " + i);
                             #if DX11Only
                                 cmd.DispatchCompute(IntersectionShader, HeightmapShadowKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
                             #else
                                 cmd.DispatchCompute(IntersectionShader, HeightmapShadowKernel, CurBounceInfoBuffer, 0);
                             #endif
-                            cmd.EndSample("Heightmap Shadow Kernel: " + i);
+                            if(DoKernelProfiling) cmd.EndSample("Heightmap Shadow Kernel: " + i);
                         }
-                    cmd.EndSample("Bounce: " + i);
+                    if(DoKernelProfiling) cmd.EndSample("Bounce: " + i);
 
                 }
-            cmd.EndSample("Pathtracing Kernels");
+            if(DoKernelProfiling) cmd.EndSample("Pathtracing Kernels");
 
             #if !DisableRadianceCache
-                cmd.BeginSample("RadCache Resolve Kernel");
+                if(DoKernelProfiling) cmd.BeginSample("RadCache Resolve Kernel");
                     cmd.DispatchCompute(GenerateShader, ResolveKernel, Mathf.CeilToInt((4.0f * 1024.0f * 1024.0f) / 256.0f), 1, 1);
-                cmd.EndSample("RadCache Resolve Kernel");    
-                cmd.BeginSample("RadCache Copy Kernel");
+                if(DoKernelProfiling) cmd.EndSample("RadCache Resolve Kernel");    
+                if(DoKernelProfiling) cmd.BeginSample("RadCache Copy Kernel");
                     cmd.DispatchCompute(GenerateShader, ResolveKernel + 1, Mathf.CeilToInt((4.0f * 1024.0f * 1024.0f) / 256.0f), 1, 1);
-                cmd.EndSample("RadCache Copy Kernel");
+                if(DoKernelProfiling) cmd.EndSample("RadCache Copy Kernel");
             #endif
 
 
             if (LocalTTSettings.UseReSTIRGI) {
                 SetInt("CurBounce", 0, cmd);
-                cmd.BeginSample("ReSTIRGI Temporal Kernel");
+                if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Temporal Kernel");
                 cmd.DispatchCompute(ReSTIRGI, ReSTIRGIKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
-                cmd.EndSample("ReSTIRGI Temporal Kernel");
+                if(DoKernelProfiling) cmd.EndSample("ReSTIRGI Temporal Kernel");
 
-                cmd.BeginSample("ReSTIRGI Extra Spatial Kernel");
+                if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Extra Spatial Kernel");
                 cmd.DispatchCompute(ReSTIRGI, ReSTIRGISpatialKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
-                cmd.EndSample("ReSTIRGI Extra Spatial Kernel");
+                if(DoKernelProfiling) cmd.EndSample("ReSTIRGI Extra Spatial Kernel");
             }
 
             if (!(!LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1) && !(LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1))
             {
-                cmd.BeginSample("Finalize Kernel");
+                if(DoKernelProfiling) cmd.BeginSample("Finalize Kernel");
                 cmd.DispatchCompute(ShadingShader, FinalizeKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 CurrentSample = 1.0f / (FramesSinceStart + 1.0f);
                 SampleCount++;
@@ -1057,9 +1063,9 @@ namespace TrueTrace {
                     _addMaterial = new Material(Shader.Find("Hidden/Accumulate"));
                 _addMaterial.SetFloat("_Sample", CurrentSample);
                 cmd.Blit(_target, _converged, _addMaterial);
-                cmd.EndSample("Finalize Kernel");
+                if(DoKernelProfiling) cmd.EndSample("Finalize Kernel");
             } else if(!(LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1)) {
-                cmd.BeginSample("ASVGF");
+                if(DoKernelProfiling) cmd.BeginSample("ASVGF");
                 SampleCount = 0;
                 ASVGFCode.Do(ref LightingBuffer, 
                                 ref _converged, 
@@ -1075,9 +1081,9 @@ namespace TrueTrace {
                                 (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB, 
                                 LocalTTSettings.UpscalerMethod);
                 CurrentSample = 1;
-                cmd.EndSample("ASVGF");
+                if(DoKernelProfiling) cmd.EndSample("ASVGF");
             } else if(LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1) {
-                cmd.BeginSample("ReSTIR ASVGF");
+                if(DoKernelProfiling) cmd.BeginSample("ReSTIR ASVGF");
                 SampleCount = 0;
                 ReSTIRASVGFCode.Do(ref LightingBuffer,
                                     ref _converged, 
@@ -1097,9 +1103,9 @@ namespace TrueTrace {
                                     Assets.AggTriBuffer, 
                                     LocalTTSettings.UpscalerMethod);
                 CurrentSample = 1;
-                cmd.EndSample("ReSTIR ASVGF");
+                if(DoKernelProfiling) cmd.EndSample("ReSTIR ASVGF");
             }
-            cmd.BeginSample("Firefly Blit");
+            if(DoKernelProfiling) cmd.BeginSample("Firefly Blit");
             if (_FireFlyMaterial == null)
                 _FireFlyMaterial = new Material(Shader.Find("Hidden/FireFlyPass"));
             if(LocalTTSettings.DoFirefly && SampleCount > LocalTTSettings.FireflyFrameCount && (SampleCount - LocalTTSettings.FireflyFrameCount) % LocalTTSettings.FireflyFrameInterval == 0) {
@@ -1109,10 +1115,10 @@ namespace TrueTrace {
                 cmd.Blit(_converged, _target, _FireFlyMaterial);
                 cmd.Blit(_target, _converged);
             }
-            cmd.EndSample("Firefly Blit");
+            if(DoKernelProfiling) cmd.EndSample("Firefly Blit");
 
 
-            cmd.BeginSample("Post Processing");
+            if(DoKernelProfiling) cmd.BeginSample("Post Processing");
             if (SourceWidth != TargetWidth) {
                 switch(LocalTTSettings.UpscalerMethod) {
                     case 0://Bilinear
@@ -1163,7 +1169,7 @@ namespace TrueTrace {
             if (LocalTTSettings.DoSharpen) TTPostProc.ExecuteSharpen(ref _FinalTex, LocalTTSettings.Sharpness, cmd);
             cmd.Blit(_FinalTex, destination);
             ClearOutRenderTexture(_DebugTex);
-            cmd.EndSample("Post Processing");
+            if(DoKernelProfiling) cmd.EndSample("Post Processing");
             _currentSample++;
             FramesSinceStart++;
             FramesSinceStart2++;

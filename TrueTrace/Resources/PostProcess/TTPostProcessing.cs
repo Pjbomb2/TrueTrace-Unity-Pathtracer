@@ -310,7 +310,7 @@ namespace TrueTrace {
 
             Bloom.SetInt("screen_width", _camera.scaledPixelWidth);
             Bloom.SetInt("screen_height", _camera.scaledPixelHeight);
-            cmd.BeginSample("Bloom");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("Bloom");
             Bloom.SetFloat("strength", BloomStrength);
             cmd.SetComputeIntParam(Bloom, "screen_width", _camera.scaledPixelWidth);
             cmd.SetComputeIntParam(Bloom, "screen_height", _camera.scaledPixelHeight);
@@ -354,7 +354,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "InputTex", BloomSamplesDown[0]);
             cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OutputTex", _converged);
             cmd.DispatchCompute(Bloom, BloomUpsampleKernel, (int)Mathf.CeilToInt(_camera.scaledPixelWidth / 16.0f), (int)Mathf.CeilToInt(_camera.scaledPixelHeight / 16.0f), 1);
-            cmd.EndSample("Bloom");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("Bloom");
 
         }
 
@@ -371,7 +371,7 @@ namespace TrueTrace {
 
         public void ExecuteAutoExpose(ref RenderTexture _converged, float Exposure, CommandBuffer cmd, bool ExposureAuto)
         {//need to fix this so it doesnt create new textures every time
-            cmd.BeginSample("Auto Exposure");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("Auto Exposure");
             if(ExposureBuffer == null) {
                 List<float> TestBuffer = new List<float>();
                 TestBuffer.Add(1);
@@ -393,7 +393,7 @@ namespace TrueTrace {
             cmd.DispatchCompute(AutoExpose, AutoExposeKernel, 1, 1, 1);
             cmd.SetComputeTextureParam(AutoExpose, AutoExposeFinalizeKernel, "OutTex", _converged);
             cmd.DispatchCompute(AutoExpose, AutoExposeFinalizeKernel, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("Auto Exposure");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("Auto Exposure");
 
 
         }
@@ -414,9 +414,9 @@ namespace TrueTrace {
             TAA.SetTextureFromGlobal(TAAPrepareKernel, "DepthTex", "_CameraDepthTexture");
             cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorIn", _Final);
             cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorOut", TempTexTAA);
-            cmd.BeginSample("TAA Prepare Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("TAA Prepare Kernel");
             cmd.DispatchCompute(TAA, TAAPrepareKernel, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("TAA Prepare Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("TAA Prepare Kernel");
 
 
             cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorIn", TempTexTAA);
@@ -424,16 +424,16 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(TAA, TAAKernel, "TAAPrev", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAKernel, "TAAPrevRead", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorOut", TempTexTAA2);
-            cmd.BeginSample("TAA Main Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("TAA Main Kernel");
             cmd.DispatchCompute(TAA, TAAKernel, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("TAA Main Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("TAA Main Kernel");
 
             cmd.SetComputeTextureParam(TAA, TAAFinalizeKernel, "TAAPrev", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAFinalizeKernel, "ColorOut", _Final);
             cmd.SetComputeTextureParam(TAA, TAAFinalizeKernel, "ColorIn", TempTexTAA2);
-            cmd.BeginSample("TAA Finalize Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("TAA Finalize Kernel");
             cmd.DispatchCompute(TAA, TAAFinalizeKernel, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("TAA Finalize Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("TAA Finalize Kernel");
         }
 
         Matrix4x4 PreviousCameraMatrix;
@@ -472,18 +472,18 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "Input", Input);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "Output", UpScalerLightingDataTexture);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "FinalOutput", Output);
-            cmd.BeginSample("Upsample Main Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("Upsample Main Kernel");
             cmd.DispatchCompute(Upscaler, UpsampleKernel, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("Upsample Main Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("Upsample Main Kernel");
 
 
             Upscaler.SetTextureFromGlobal(UpsampleKernel + 1, "Albedo", "_CameraGBufferTexture0");
             Upscaler.SetTextureFromGlobal(UpsampleKernel + 1, "Albedo2", "_CameraGBufferTexture1");
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel + 1, "Input", UpScalerLightingDataTexture);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel + 1, "FinalOutput", Output);
-            cmd.BeginSample("Upsample Blur Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("Upsample Blur Kernel");
             cmd.DispatchCompute(Upscaler, UpsampleKernel + 1, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("Upsample Blur Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("Upsample Blur Kernel");
             
 
             PreviousCameraMatrix = _camera.cameraToWorldMatrix;
@@ -494,14 +494,14 @@ namespace TrueTrace {
 
         public void ExecuteToneMap(ref RenderTexture Output, CommandBuffer cmd, ref Texture3D LUT, ref Texture3D LUT2, int ToneMapSelection)
         {//need to fix this so it doesnt create new textures every time
-            cmd.BeginSample("ToneMap");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ToneMap");
             cmd.SetComputeIntParam(ToneMapper,"ToneMapSelection", ToneMapSelection);
             cmd.SetComputeIntParam(ToneMapper,"screen_width", Output.width);
             cmd.SetComputeIntParam(ToneMapper,"screen_height", Output.height);
             cmd.SetComputeTextureParam(ToneMapper, 0, "Result", Output);
             cmd.SetComputeTextureParam(ToneMapper, 0, "LUT", ToneMapSelection == 5 ? LUT2 : LUT);
             cmd.DispatchCompute(ToneMapper, 0, Mathf.CeilToInt((float)Output.width / 16.0f), Mathf.CeilToInt((float)Output.height / 16.0f), 1);
-            cmd.EndSample("ToneMap");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ToneMap");
         }
         private void InitializeTAAU() {
             CommonFunctions.CreateRenderTexture(ref TAAA, _camera.scaledPixelWidth, _camera.scaledPixelHeight, CommonFunctions.RTHalf4);
@@ -511,7 +511,7 @@ namespace TrueTrace {
         public void ExecuteTAAU(ref RenderTexture Output, ref RenderTexture Input, CommandBuffer cmd, int CurFrame)
         {//need to fix this so it doesnt create new textures every time
             if(!TAAUInitialized) InitializeTAAU();
-            cmd.BeginSample("TAAU");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("TAAU");
             bool IsEven = CurFrame % 2 == 0;
             cmd.SetComputeIntParam(TAAU,"source_width", SourceWidth);
             cmd.SetComputeIntParam(TAAU,"source_height", SourceHeight);
@@ -526,7 +526,7 @@ namespace TrueTrace {
             TAAU.SetTextureFromGlobal(TAAUKernel, "Albedo2", "_CameraGBufferTexture1");
             TAAU.SetTextureFromGlobal(TAAUKernel, "TEX_FLAT_MOTION", "_CameraMotionVectorsTexture");
             cmd.DispatchCompute(TAAU, TAAUKernel, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("TAAU");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("TAAU");
         }
 
 

@@ -38,7 +38,7 @@ namespace TrueTrace {
         }
 
         public void Init() {
-            RayMaster.SampleCount = 0;
+            RayTracingMaster.SampleCount = 0;
             RayMaster.FramesSinceStart = 0;          
             RayMaster._currentSample = 0;
             PrevImage = true;
@@ -60,7 +60,7 @@ namespace TrueTrace {
             yield return new WaitForEndOfFrame();
                 if(PrevImage) {
                     PrevImage = false;
-                    RayMaster.SampleCount = 0;
+                    RayTracingMaster.SampleCount = 0;
                     RayMaster.FramesSinceStart = 0;                    
                 }
                 waitedTime += Time.deltaTime;
@@ -88,7 +88,7 @@ namespace TrueTrace {
                     ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("TurnTablePath") + "/" + CamSettings[CurrentCamera].Cam.gameObject.name.Replace(" ", "") + "/" + CamSettings[CurrentCamera].Cam.gameObject.name + "." + SegmentNumber + ".png");
                     CurrentSegment++;
                     CamSettings[CurrentCamera].Cam.gameObject.transform.RotateAround(CamSettings[CurrentCamera].Center, Vector3.up, (360.0f / (float)CamSettings[CurrentCamera].HorizontalResolution));
-                    RayMaster.SampleCount = 0;
+                    RayTracingMaster.SampleCount = 0;
                     RayMaster.FramesSinceStart = 0;
                     RayMaster._currentSample = 0;
                     PrevImage = true;

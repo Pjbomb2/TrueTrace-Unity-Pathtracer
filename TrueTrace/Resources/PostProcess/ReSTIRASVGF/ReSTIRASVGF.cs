@@ -196,7 +196,7 @@ namespace TrueTrace {
 
             camera = RayTracingMaster._camera;
             bool EvenFrame = CurFrame % 2 == 0;
-            cmd.BeginSample("Dist Correct Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("Dist Correct Kernel");
             cmd.SetComputeIntParam(shader, "UpscalerMethod", UpscalerMethod);
             Vector3 Euler = camera.transform.eulerAngles;
             shader.SetMatrix("viewprojection", camera.projectionMatrix * camera.worldToCameraMatrix);
@@ -212,8 +212,8 @@ namespace TrueTrace {
             shader.SetTextureFromGlobal(DistanceCorrection, "Depth", "_CameraDepthTexture");
             cmd.SetComputeTextureParam(shader, DistanceCorrection, "TEX_PT_VIEW_DEPTH_AWRITE", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
             cmd.DispatchCompute(shader, DistanceCorrection, Mathf.CeilToInt((ScreenWidth) / 32.0f), Mathf.CeilToInt((ScreenHeight) / 32.0f), 1);
-            cmd.EndSample("Dist Correct Kernel");
-            cmd.BeginSample("ASVGF Copy Data Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("Dist Correct Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Copy Data Kernel");
             cmd.SetComputeIntParam(shader, "MaxIterations", 4);
             cmd.SetComputeFloatParam(shader, "ResRatio", ResolutionRatio);
             shader.SetBool("UseExposure", DoExposure);
@@ -247,8 +247,8 @@ namespace TrueTrace {
 
 
             cmd.DispatchCompute(shader, CopyData, Mathf.CeilToInt(ScreenWidth / 16.0f), Mathf.CeilToInt(ScreenHeight / 16.0f), 1);
-            cmd.EndSample("ASVGF Copy Data Kernel");
-            cmd.BeginSample("ASVGF Grad Compute Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Copy Data Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Grad Compute Kernel");
             shader.SetTextureFromGlobal(Gradient_Img, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
             cmd.SetComputeTextureParam(shader, Gradient_Img, "IMG_ASVGF_GRAD_LF_PING", ASVGF_GRAD_LF_PING);
             cmd.SetComputeTextureParam(shader, Gradient_Img, "TEX_ASVGF_GRAD_LF_PONG", ASVGF_GRAD_LF_PONG);
@@ -261,9 +261,9 @@ namespace TrueTrace {
 
 
             cmd.DispatchCompute(shader, Gradient_Img, Mathf.CeilToInt((ScreenWidth / 3.0f + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight / 3.0f + 15) / 16.0f), 1);
-            cmd.EndSample("ASVGF Grad Compute Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Grad Compute Kernel");
 
-            cmd.BeginSample("ASVGF Grad Atrous Kernels");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Grad Atrous Kernels");
             for (int i = 0; i < 7; i++)
             {
                 var e = i;
@@ -281,9 +281,9 @@ namespace TrueTrace {
 
                 cmd.DispatchCompute(shader, Gradient_Atrous, Mathf.CeilToInt((ScreenWidth / 3.0f + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight / 3.0f + 15) / 16.0f), 1);
             }
-            cmd.EndSample("ASVGF Grad Atrous Kernels");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Grad Atrous Kernels");
 
-            cmd.BeginSample("ASVGF Temporal Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Temporal Kernel");
             shader.SetTextureFromGlobal(Temporal, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
             cmd.SetComputeTextureParam(shader, Temporal, "MetallicA", (EvenFrame ? MetallicA : MetallicB));
             cmd.SetComputeTextureParam(shader, Temporal, "ReflectedRefractedTex", (EvenFrame ? ReflectedRefractedTex : ReflectedRefractedTexPrev));
@@ -315,17 +315,17 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, Temporal, "TEX_ASVGF_ATROUS_PONG_LF_COCG", ASVGF_ATROUS_PONG_LF_COCG);
             
             cmd.DispatchCompute(shader, Temporal, Mathf.CeilToInt((ScreenWidth + 14) / 15.0f), Mathf.CeilToInt((ScreenHeight + 14) / 15.0f), 1);
-            cmd.EndSample("ASVGF Temporal Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Temporal Kernel");
 
             shader.SetBool("DiffRes", ResolutionRatio != 1.0f);
             // cmd.CopyTexture((EvenFrame ? ASVGF_FILTERED_SPEC_A : ASVGF_FILTERED_SPEC_B), ASVGF_ATROUS_PING_SPEC);
-            cmd.BeginSample("COPY A");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("COPY A");
             cmd.SetComputeTextureParam(shader, DistanceCorrection + 1, "TEX_ASVGF_FILTERED_SPEC_B", (EvenFrame ? ASVGF_FILTERED_SPEC_A : ASVGF_FILTERED_SPEC_B));
             cmd.SetComputeTextureParam(shader, DistanceCorrection + 1, "IMG_ASVGF_ATROUS_PING_SPEC", ASVGF_ATROUS_PING_SPEC);
             cmd.DispatchCompute(shader, DistanceCorrection + 1, Mathf.CeilToInt((ScreenWidth) / 32.0f), Mathf.CeilToInt((ScreenHeight) / 32.0f), 1);
-            cmd.EndSample("COPY A");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("COPY A");
 
-            cmd.BeginSample("ASVGF Atrous LF: " + 0);
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Atrous LF: " + 0);
             cmd.SetComputeIntParam(shader, "iteration", 0);
             cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_PT_NORMALS_A", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
             cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_PT_VIEW_DEPTH_A", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
@@ -342,13 +342,13 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, Atrous_LF, "IMG_ASVGF_ATROUS_PONG_LF_COCG", ASVGF_ATROUS_PONG_LF_COCG);
             cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_ASVGF_HIST_MOMENTS_HF_A", (EvenFrame ? ASVGF_HIST_MOMENTS_HF_A : ASVGF_HIST_MOMENTS_HF_B));
             cmd.DispatchCompute(shader, Atrous_LF, Mathf.CeilToInt((ScreenWidth / 3.0f + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight / 3.0f + 15) / 16.0f), 1);
-            cmd.EndSample("ASVGF Atrous LF: " + 0);
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Atrous LF: " + 0);
 
 
             for (int i = 0; i < 4; i++)
             {
                 var e = i;
-                cmd.BeginSample("ASVGF Atrous LF " + (e + 1));
+                if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Atrous LF " + (e + 1));
                 cmd.SetComputeIntParam(shader, "iteration", e + 1);
                 cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_PT_NORMALS_A", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
                 cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_PT_VIEW_DEPTH_A", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
@@ -364,8 +364,8 @@ namespace TrueTrace {
                 cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_ASVGF_HIST_MOMENTS_HF_A", (EvenFrame ? ASVGF_HIST_MOMENTS_HF_A : ASVGF_HIST_MOMENTS_HF_B));
                 cmd.DispatchCompute(shader, Atrous_LF, Mathf.CeilToInt((ScreenWidth / 3.0f + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight / 3.0f + 15) / 16.0f), 1);
 
-                cmd.EndSample("ASVGF Atrous LF " + (e + 1));
-                cmd.BeginSample("ASVGF Atrous " + e);
+                if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Atrous LF " + (e + 1));
+                if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Atrous " + e);
 
                 cmd.SetComputeIntParam(shader, "spec_iteration", e);
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_PT_NORMALS_A", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
@@ -400,7 +400,7 @@ namespace TrueTrace {
                 cmd.SetComputeTextureParam(shader, Atrous, "AlbedoColorB", (EvenFrame ? AlbedoColorA : AlbedoColorB));
                 shader.SetTexture(Atrous, "ScreenSpaceInfo", ScreenSpaceInfo);
                 cmd.DispatchCompute(shader, Atrous, Mathf.CeilToInt((ScreenWidth + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight + 15) / 16.0f), 1);
-                cmd.EndSample("ASVGF Atrous " + e);
+                if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Atrous " + e);
 
             }
 
