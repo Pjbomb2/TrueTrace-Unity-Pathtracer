@@ -709,43 +709,45 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
             ValidSamps++;
         }
 
-    [branch]if (DoReSTIRGIConnectionValidation && Case != 3 && SurfaceMat.diffTrans == 0) {
+    [branch]if (DoReSTIRGIConnectionValidation && Case != 3) {
         float2 DistDist = 1;
-        PrimaryHitPosition += GeomNorm * 0.001f;
-        float Distance = length(PrimaryHitPosition - NEEPos.xyz) - 0.025f;
-        SmallerRay ray = CreateRay(PrimaryHitPosition, normalize(NEEPos.xyz - PrimaryHitPosition));
-        if (luminance(RunningReservoirC.Radiance.Color) != 0) {
-        #ifdef ReSTIRAdvancedValidation
-            float TargDist = VisabilityCheck(ray, Distance);
-            if (TargDist != Distance) {
-                DistDist.y = exp(-abs(Distance - TargDist));
-        #else
-            if(!VisabilityCheck(ray, Distance)) {
-        #endif
-                RunningReservoirC.Radiance.Wsum = 0;
-                RunningReservoirC.Radiance.M = 0;
-                McNEE = 1;
-            }
-        }
-        #ifdef ExtraSampleValidation
-            Distance = length(PrimaryHitPosition - CalcPos(WorldPos)) - 0.025f;
-            ray = CreateRay(PrimaryHitPosition, normalize(CalcPos(WorldPos) - PrimaryHitPosition));
-            
-            if(luminance(RunningReservoirB.Radiance.Color) != 0) {
+        if(SurfaceMat.diffTrans == 0) {
+            PrimaryHitPosition += GeomNorm * 0.001f;
+            float Distance = length(PrimaryHitPosition - NEEPos.xyz) - 0.025f;
+            SmallerRay ray = CreateRay(PrimaryHitPosition, normalize(NEEPos.xyz - PrimaryHitPosition));
+            if (luminance(RunningReservoirC.Radiance.Color) != 0) {
             #ifdef ReSTIRAdvancedValidation
                 float TargDist = VisabilityCheck(ray, Distance);
                 if (TargDist != Distance) {
-                    DistDist.x = exp(-abs(Distance - TargDist));
+                    DistDist.y = exp(-abs(Distance - TargDist));
             #else
                 if(!VisabilityCheck(ray, Distance)) {
             #endif
-                    RunningReservoirB.Radiance.Wsum = 0; 
-                    RunningReservoirB.Radiance.M = 0; 
-                    Mc = 1;
+                    RunningReservoirC.Radiance.Wsum = 0;
+                    RunningReservoirC.Radiance.M = 0;
+                    McNEE = 1;
                 }
             }
-        #endif
-        PrimaryHitPosition -= GeomNorm * 0.001f;
+            #ifdef ExtraSampleValidation
+                Distance = length(PrimaryHitPosition - CalcPos(WorldPos)) - 0.025f;
+                ray = CreateRay(PrimaryHitPosition, normalize(CalcPos(WorldPos) - PrimaryHitPosition));
+                
+                if(luminance(RunningReservoirB.Radiance.Color) != 0) {
+                #ifdef ReSTIRAdvancedValidation
+                    float TargDist = VisabilityCheck(ray, Distance);
+                    if (TargDist != Distance) {
+                        DistDist.x = exp(-abs(Distance - TargDist));
+                #else
+                    if(!VisabilityCheck(ray, Distance)) {
+                #endif
+                        RunningReservoirB.Radiance.Wsum = 0; 
+                        RunningReservoirB.Radiance.M = 0; 
+                        Mc = 1;
+                    }
+                }
+            #endif
+            PrimaryHitPosition -= GeomNorm * 0.001f;
+        }
 
         #ifdef ReSTIRAdvancedValidation
             GradientWrite[id.xy] = DistDist;

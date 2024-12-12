@@ -475,13 +475,14 @@ namespace TrueTrace {
         Matrix4x4 CamToWorldPrev;
         Vector3 PrevPos;
 
+        [HideInInspector] public Vector2 projectionScale = Vector2.one;
         Matrix4x4 CalcProj(Camera cam) {
             float Aspect = OverridenWidth / (float)OverridenHeight;
             float YFOV = 1.0f / Mathf.Tan(cam.fieldOfView / (2.0f * (360.0f / (2.0f * 3.14159f))));
             float XFOV = YFOV / Aspect;
             Matrix4x4 TempProj = cam.projectionMatrix;
-            TempProj[0,0] = XFOV;
-            TempProj[1,1] = YFOV;
+            TempProj[0,0] = XFOV * projectionScale.x;
+            TempProj[1,1] = YFOV * projectionScale.y;
             return TempProj;
         }
 

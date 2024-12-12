@@ -210,7 +210,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             #else
             else {
                 if(!((CacheInstance.pathLength >> 7) & 0x1)) Color.Indirect += Color.throughput * EmissCol;
-                else CacheInstance.CurrentIlluminance = EncodeRGB(DecodeRGB(CacheInstance.CurrentIlluminance) + EmissCol);
+                else CacheInstance.CurrentIlluminance = packRGBE(unpackRGBE(CacheInstance.CurrentIlluminance) + EmissCol);
             }
             #endif
         } else {
@@ -238,7 +238,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 #else
                 else {
                     if(!((CacheInstance.pathLength >> 7) & 0x1)) Color.Indirect += Color.throughput * EmissCol * w;
-                    else CacheInstance.CurrentIlluminance = EncodeRGB(DecodeRGB(CacheInstance.CurrentIlluminance) + EmissCol * w);
+                    else CacheInstance.CurrentIlluminance = packRGBE(unpackRGBE(CacheInstance.CurrentIlluminance) + EmissCol * w);
                 }
                 #endif
             #endif
@@ -372,7 +372,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             if((all(Color.Indirect == 0) || CurBounce < 3) && (hit.t >= CalcVoxelSize(ray.origin) * lerp(1.0f, 2.0f, random(326, pixel_index).x))) {// && (hit.t >= CalcVoxelSize(ray.origin) * lerp(1.0f, 2.0f, random(326, pixel_index).x))) {
             #endif
                 if(RetrieveCacheRadiance(CacheInstance, ray.origin, Refracted ? -norm : norm, res2)) {
-                    // CacheInstance.CurrentIlluminance = EncodeRGB(DecodeRGB(CacheInstance.CurrentIlluminance) + Color.Data * throughput * res2);//fabled "infinite bounce" - VERY hard to weight properly
+                    // CacheInstance.CurrentIlluminance = packRGBE(unpackRGBE(CacheInstance.CurrentIlluminance) + Color.Data * throughput * res2);//fabled "infinite bounce" - VERY hard to weight properly
                     Color.Indirect += (Color.throughput) * res2 * bsdfmodifier;
                     #ifdef HighSpeedRadCache
                         if(!all(Color.Indirect == 0)) {
@@ -640,9 +640,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 float3 bsdf2 = 1;
                 float bsdfpdf2 = 1;
                 if(!EvaluateBsdf2(hitDat, PrevDirection, ray.direction, norm, bsdfpdf2, bsdf2, pixel_index)) bsdf2 = 0;
-                CacheInstance.samples[0].x = EncodeRGB(clamp(bsdf2 * rcp(p),0,2));
+                CacheInstance.samples[0].x = packRGBE(clamp(bsdf2 * rcp(p),0,2));
             #else
-                CacheInstance.samples[0].x = EncodeRGB(clamp(bsdf * rcp(p),0,2));
+                CacheInstance.samples[0].x = packRGBE(clamp(bsdf * rcp(p),0,2));
             #endif
         #endif
     } else {
@@ -651,9 +651,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 float3 bsdf2 = 1;
                 float bsdfpdf2 = 1;
                 if(!EvaluateBsdf2(hitDat, PrevDirection, ray.direction, norm, bsdfpdf2, bsdf2, pixel_index)) bsdf2 = 0;
-                CacheInstance.samples[0].x = EncodeRGB(clamp(bsdf2,0,2));
+                CacheInstance.samples[0].x = packRGBE(clamp(bsdf2,0,2));
             #else
-                CacheInstance.samples[0].x = EncodeRGB(clamp(bsdf,0,2));
+                CacheInstance.samples[0].x = packRGBE(clamp(bsdf,0,2));
             #endif
         #endif
     }

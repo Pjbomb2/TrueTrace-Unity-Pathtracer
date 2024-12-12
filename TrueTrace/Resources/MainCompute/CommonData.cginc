@@ -758,12 +758,23 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
     float3 tmax3;
     uint child_bits;
     uint bit_index;
-        uint q_lo_x;
-        uint q_hi_x;
-        uint q_lo_y;
-        uint q_hi_y;
-        uint q_lo_z;
-        uint q_hi_z;
+    const bool3 RayDirBools = ray.direction < 0;
+    uint x_min = TempNode.nodes[2].x;
+    uint x_max = TempNode.nodes[2].y;
+    uint y_min = TempNode.nodes[3].x;
+    uint y_max = TempNode.nodes[3].y;
+    uint z_min = TempNode.nodes[4].x;
+    uint z_max = TempNode.nodes[4].y;
+    [branch]if(RayDirBools.x) {
+    	x_min ^= x_max; x_max ^= x_min; x_min ^= x_max;
+    }
+    [branch]if(RayDirBools.y) {
+    	y_min ^= y_max; y_max ^= y_min; y_min ^= y_max;
+    }
+    [branch]if(RayDirBools.z) {
+    	z_min ^= z_max; z_max ^= z_min; z_min ^= z_max;
+    }
+
     [unroll]
     for(int i = 0; i < 2; i++) {
         uint meta4 = (i == 0 ? TempNode.nodes[1].z : TempNode.nodes[1].w);
@@ -772,30 +783,8 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
         uint inner_mask4 = (is_inner4 >> 4) * 0xffu;
         uint bit_index4  = (meta4 ^ (oct_inv4 & inner_mask4)) & 0x1f1f1f1f;
         uint child_bits4 = (meta4 >> 5) & 0x07070707;
-        if(i == 0u) {
-	        q_lo_x = TempNode.nodes[2].x;
-	        q_hi_x = TempNode.nodes[2].y;
-	        q_lo_y = TempNode.nodes[3].x;
-	        q_hi_y = TempNode.nodes[3].y;
-	        q_lo_z = TempNode.nodes[4].x;
-	        q_hi_z = TempNode.nodes[4].y;
-	    } else {
-	        q_lo_x = TempNode.nodes[2].z;
-	        q_hi_x = TempNode.nodes[2].w;
-	        q_lo_y = TempNode.nodes[3].z;
-	        q_hi_y = TempNode.nodes[3].w;
-	        q_lo_z = TempNode.nodes[4].z;
-	        q_hi_z = TempNode.nodes[4].w;
-	    }
 
-        uint x_min = ray.direction.x < 0.0f ? q_hi_x : q_lo_x;
-        uint x_max = ray.direction.x < 0.0f ? q_lo_x : q_hi_x;
 
-        uint y_min = ray.direction.y < 0.0f ? q_hi_y : q_lo_y;
-        uint y_max = ray.direction.y < 0.0f ? q_lo_y : q_hi_y;
-
-        uint z_min = ray.direction.z < 0.0f ? q_hi_z : q_lo_z;
-        uint z_max = ray.direction.z < 0.0f ? q_lo_z : q_hi_z;
         [unroll]
         for(int j = 0; j < 4; j++) {
 
@@ -817,6 +806,25 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
                 hit_mask |= child_bits << bit_index;
             }
         }
+        if(i == 0) {
+	        x_min = TempNode.nodes[2].z;
+	        x_max = TempNode.nodes[2].w;
+	        y_min = TempNode.nodes[3].z;
+	        y_max = TempNode.nodes[3].w;
+	        z_min = TempNode.nodes[4].z;
+	        z_max = TempNode.nodes[4].w;
+
+	        [branch]if(RayDirBools.x) {
+	        	x_min ^= x_max; x_max ^= x_min; x_min ^= x_max;
+	        }
+	        [branch]if(RayDirBools.y) {
+	        	y_min ^= y_max; y_max ^= y_min; y_min ^= y_max;
+	        }
+	        [branch]if(RayDirBools.z) {
+	        	z_min ^= z_max; z_max ^= z_min; z_min ^= z_max;
+	        }
+    	}
+
     }
     return hit_mask;
 }
@@ -2210,58 +2218,6 @@ uint Hash32(uint2 HashValue) {
 #define PathLengthBits PropDepth
 #define PathLengthMask ((1u << PathLengthBits) - 1)
 
-
-float3 RTXDI_RGBToXYZInRec709(float3 c) {
-    static const float3x3 M = float3x3(
-        0.4123907992659595, 0.3575843393838780, 0.1804807884018343,
-        0.2126390058715104, 0.7151686787677559, 0.0721923153607337,
-        0.0193308187155918, 0.1191947797946259, 0.9505321522496608
-    );
-    return mul(M, c);
-}
-float3 RTXDI_XYZToRGBInRec709(float3 c) {
-    static const float3x3 M = float3x3(
-        3.240969941904522, -1.537383177570094, -0.4986107602930032,
-        -0.9692436362808803, 1.875967501507721, 0.04155505740717569,
-        0.05563007969699373, -0.2039769588889765, 1.056971514242878
-    );
-
-    return mul(M, c);
-}
-
-	uint EncodeRGB(float3 Col) {
-		float3 XYZ = RTXDI_RGBToXYZInRec709(Col);
-		float logY = 409.6 * (log2(XYZ.y) + 20.0);
-    	uint Le = uint(clamp(logY, 0.0, 16383.0));
-    	if(Le == 0) return 0;
-
-		float invDenom = 1.0 / (-2.0 * XYZ.x + 12.0 * XYZ.y + 3.0 * (XYZ.x + XYZ.y + XYZ.z));
-	    float2 uv = float2(4.0, 9.0) * XYZ.xy * invDenom;
-
-	    uint2 uve = uint2(clamp(820.0 * uv, 0.0, 511.0));
-
-	    return (Le << 18) | (uve.x << 9) | uve.y;
-	}
-
-	float3 DecodeRGB(uint packedColor) {
-		uint Le = packedColor >> 18;
-	    if (Le == 0) return float3(0, 0, 0);
-
-	    float logY = (float(Le) + 0.5) / 409.6 - 20.0;
-	    float Y = pow(2.0, logY);
-
-	    uint2 uve = uint2(packedColor >> 9, packedColor) & 0x1ff;
-	    float2 uv = (float2(uve)+0.5) / 820.0;
-
-	    float invDenom = 1.0 / (6.0 * uv.x - 16.0 * uv.y + 12.0);
-	    float2 xy = float2(9.0, 4.0) * uv * invDenom;
-
-	    float s = Y / xy.y;
-	    float3 XYZ = float3(s * xy.x, Y, s * (1.f - xy.x - xy.y));
-
-	    return max(RTXDI_XYZToRGBInRec709(XYZ), 0.0);
-	}
-
 	struct PropogatedCacheData {
 		uint2 samples[PropDepth];
 		uint throughput;//not needed, just padding, if I could remove one other uint, than I could bump prop_depth up to 5
@@ -2352,7 +2308,7 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 
 	inline bool AddHitToCache(inout PropogatedCacheData CurrentProp, float3 Pos, float random) {
 	    bool EarlyOut = false;
-	    float3 OrigLighting = clamp(DecodeRGB(CurrentProp.CurrentIlluminance), 0, 1200.0f);
+	    float3 OrigLighting = clamp(unpackRGBE(CurrentProp.CurrentIlluminance), 0, 1200.0f);
 	    float3 ModifiedLighting = OrigLighting;
 	    int PathLength = (CurrentProp.pathLength & PathLengthMask);
 
@@ -2364,7 +2320,7 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 	    }
 	    if(!EarlyOut) AddDataToCache(CacheEntry, uint4(OrigLighting * 1e3f, 1));
 	    for (int i = 0; i < PathLength; ++i) {
-	        ModifiedLighting *= DecodeRGB(CurrentProp.samples[i].x);
+	        ModifiedLighting *= unpackRGBE(CurrentProp.samples[i].x);
 	        AddDataToCache(CurrentProp.samples[i].y, uint4(ModifiedLighting * 1e3f, 0));
 	    }
         if(PathLength >= 3) CurrentProp.samples[3] = CurrentProp.samples[2];
@@ -2378,7 +2334,7 @@ float3 RTXDI_XYZToRGBInRec709(float3 c) {
 
 	inline void AddMissToCache(inout PropogatedCacheData CurrentProp, float3 radiance) {
 	    for (int i = 0; i < (CurrentProp.pathLength & PathLengthMask); ++i) {
-	        radiance *= DecodeRGB(CurrentProp.samples[i].x);
+	        radiance *= unpackRGBE(CurrentProp.samples[i].x);
 	        AddDataToCache(CurrentProp.samples[i].y, uint4(radiance * 1e3f, 0));
 	    }
 	}

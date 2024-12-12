@@ -346,7 +346,7 @@ void IntersectBVHShadow(int ray_index) {
                         uint PixelIndex = ShadowRay.PixelIndex;
                         if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray.origin + ray.direction * abs(ShadowRay.t),NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)].w);
                         #ifdef RadianceCache
-                            CacheBuffer[PixelIndex].CurrentIlluminance = EncodeRGB(DecodeRGB(CacheBuffer[PixelIndex].CurrentIlluminance) + unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput);// * abs(dot(i_octahedral_32(CacheBuffer[PixelIndex].Norm), ShadowRay.direction));
+                            CacheBuffer[PixelIndex].CurrentIlluminance = packRGBE(unpackRGBE(CacheBuffer[PixelIndex].CurrentIlluminance) + unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput);// * abs(dot(i_octahedral_32(CacheBuffer[PixelIndex].Norm), ShadowRay.direction));
                         #endif
                         if (ShadowRay.t >= 0) {
 
@@ -464,7 +464,7 @@ void IntersectBVHShadow(int ray_index) {
                             uint PixelIndex = ShadowRay.PixelIndex;
                             if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray2.origin + ray2.direction * abs(ShadowRaysBuffer[ray_index].t), 0);
                             #ifdef RadianceCache
-                                CacheBuffer[PixelIndex].CurrentIlluminance = EncodeRGB(DecodeRGB(CacheBuffer[PixelIndex].CurrentIlluminance) + unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput);// * abs(dot(i_octahedral_32(CacheBuffer[PixelIndex].Norm), ShadowRay.direction));
+                                CacheBuffer[PixelIndex].CurrentIlluminance = packRGBE(unpackRGBE(CacheBuffer[PixelIndex].CurrentIlluminance) + unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput);// * abs(dot(i_octahedral_32(CacheBuffer[PixelIndex].Norm), ShadowRay.direction));
                             #endif
                             if (ShadowRay.t >= 0) {
                                 if (CurBounce == 0) {
@@ -580,7 +580,7 @@ void IntersectShadowHeightmap(int ray_index) {
             uint PixelIndex = ShadowRaysBuffer[ray_index].PixelIndex;
             if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray.origin + ray.direction * abs(ShadowRaysBuffer[ray_index].t), 0);
             #ifdef RadianceCache
-                CacheBuffer[PixelIndex].CurrentIlluminance = EncodeRGB(DecodeRGB(CacheBuffer[PixelIndex].CurrentIlluminance) + unpackRGBE(ShadowRaysBuffer[ray_index].DiffuseIlluminance));// * abs(dot(i_octahedral_32(CacheBuffer[PixelIndex].Norm), ShadowRay.direction));
+                CacheBuffer[PixelIndex].CurrentIlluminance = packRGBE(unpackRGBE(CacheBuffer[PixelIndex].CurrentIlluminance) + unpackRGBE(ShadowRaysBuffer[ray_index].DiffuseIlluminance));// * abs(dot(i_octahedral_32(CacheBuffer[PixelIndex].Norm), ShadowRay.direction));
             #endif
             if (ShadowRaysBuffer[ray_index].t >= 0) {
 
