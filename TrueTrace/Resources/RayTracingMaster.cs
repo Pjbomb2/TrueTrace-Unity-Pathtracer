@@ -11,7 +11,7 @@ namespace TrueTrace {
     public class RayTracingMaster : MonoBehaviour
     {
         [HideInInspector] public static Camera _camera;
-        public static bool DoKernelProfiling = false;
+        public static bool DoKernelProfiling = true;
         public bool HDRPorURPRenderInScene = false;
         [HideInInspector] public AtmosphereGenerator Atmo;
         [HideInInspector] public AssetManager Assets;
@@ -775,10 +775,11 @@ namespace TrueTrace {
             ReSTIRGI.SetTexture(ReSTIRGIKernel, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
             ReSTIRGI.SetTexture(ReSTIRGIKernel, "PrimaryTriData", _PrimaryTriangleInfo);
             ReSTIRGI.SetComputeBuffer(ReSTIRGIKernel, "GlobalColors", LightingBuffer);
-            ReSTIRGI.SetTexture(ReSTIRGIKernel, "Gradient", !FlipFrame ? GradientsA : GradientsB);
+            ReSTIRGI.SetTexture(ReSTIRGIKernel, "Gradient", GradientsA);
+            ReSTIRGI.SetTexture(ReSTIRGIKernel, "GradientWrite", GradientsB);
 
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "GradientWrite", FlipFrame ? GradientsA : GradientsB);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "Gradient", !FlipFrame ? GradientsA : GradientsB);
+            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "GradientWrite", GradientsA);
+            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "Gradient", GradientsB);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "WorldPosC", GIWorldPosA);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "WorldPosB", FlipFrame ? GIWorldPosB : GIWorldPosC);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "NEEPosB", FlipFrame ? GINEEPosA : GINEEPosB);
@@ -1050,6 +1051,7 @@ namespace TrueTrace {
                 if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Extra Spatial Kernel");
                 cmd.DispatchCompute(ReSTIRGI, ReSTIRGISpatialKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 if(DoKernelProfiling) cmd.EndSample("ReSTIRGI Extra Spatial Kernel");
+                cmd.Blit(GradientsA, GradientsB);
             }
 
             if (!(!LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1) && !(LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1))

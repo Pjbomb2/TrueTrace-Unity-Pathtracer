@@ -1109,22 +1109,31 @@ inline float lum2(const float3 a) {
     return dot(float3(0.21f, 0.72f, 0.07f), a);
 }
 
+
+float3x3 adjoint(float4x4 m)
+{
+    return float3x3(cross(m[1].xyz, m[2].xyz), 
+                cross(m[2].xyz, m[0].xyz), 
+                cross(m[0].xyz, m[1].xyz));
+
+}
+
 inline float3 GetTriangleNormal(const uint TriIndex, const float2 TriUV, const float3x3 Inverse) {
     float3 Normal0 = i_octahedral_32(AggTris[TriIndex].norms.x);
     float3 Normal1 = i_octahedral_32(AggTris[TriIndex].norms.y);
     float3 Normal2 = i_octahedral_32(AggTris[TriIndex].norms.z);
-    Normal2 = mul(Inverse, (Normal0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Normal1 + TriUV.y * Normal2));
-    float wldScale = rsqrt(dot(Normal2, Normal2));
-    return mul(wldScale, Normal2);	
+    return normalize(mul(Inverse, (Normal0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Normal1 + TriUV.y * Normal2)).xyz);
+    // float wldScale = rsqrt(dot(Normal2, Normal2));
+    // return mul(wldScale, Normal2);	
 }
 
 inline float3 GetTriangleTangent(const uint TriIndex, const float2 TriUV, const float3x3 Inverse) {
     float3 Normal0 = i_octahedral_32(AggTris[TriIndex].tans.x);
     float3 Normal1 = i_octahedral_32(AggTris[TriIndex].tans.y);
     float3 Normal2 = i_octahedral_32(AggTris[TriIndex].tans.z);
-    Normal2 = mul(Inverse, (Normal0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Normal1 + TriUV.y * Normal2));
-    float wldScale = rsqrt(dot(Normal2, Normal2));
-    return mul(wldScale, Normal2);
+    return normalize(mul(Inverse, (Normal0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Normal1 + TriUV.y * Normal2)).xyz);
+    // float wldScale = rsqrt(dot(Normal2, Normal2));
+    // return mul(wldScale, Normal2);
 }
 
 inline float GetHeightRaw(float3 CurrentPos, const TerrainData Terrain) {
@@ -1686,13 +1695,13 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 			} else {
 				p = mul(MeshBuffer[MeshIndex].W2L, float4(p,1));
 				p2 = mul(MeshBuffer[MeshIndex].W2L, float4(p2,1));
-			    float3x3 Inverse = (float3x3)inverse(MeshBuffer[MeshIndex].W2L);
-			    float scalex = length(mul(Inverse, float3(1,0,0)));
-			    float scaley = length(mul(Inverse, float3(0,1,0)));
-			    float scalez = length(mul(Inverse, float3(0,0,1)));
-			    float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
-				n = normalize(mul(MeshBuffer[MeshIndex].W2L, float4(n,0)).xyz / Scale);
-				viewDir = normalize(mul(MeshBuffer[MeshIndex].W2L, float4(viewDir,0)).xyz / Scale);
+			    float3x3 Inverse = adjoint(MeshBuffer[MeshIndex].W2L);
+			    // float scalex = length(mul(Inverse, float3(1,0,0)));
+			    // float scaley = length(mul(Inverse, float3(0,1,0)));
+			    // float scalez = length(mul(Inverse, float3(0,0,1)));
+			    // float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
+				n = normalize(mul(Inverse, n).xyz);
+				viewDir = normalize(mul(Inverse, viewDir).xyz);
 				tangentFrame = GetTangentSpace2(n);//Need to maybe check to see if this holds up when the traversal backtracks due to dead end
 				viewDirTS = mul(tangentFrame, viewDir);
 				reflecVec = reflect(-viewDir, n) * reflecSharpness;
@@ -1777,14 +1786,14 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 			} else {
 				StartIndex = _LightMeshes[-(node.left+1)].StartIndex; 
 				MeshIndex = _LightMeshes[-(node.left+1)].LockedMeshIndex;
-			    float3x3 Inverse = (float3x3)inverse(MeshBuffer[MeshIndex].W2L);
-			    float scalex = length(mul(Inverse, float3(1,0,0)));
-			    float scaley = length(mul(Inverse, float3(0,1,0)));
-			    float scalez = length(mul(Inverse, float3(0,0,1)));
-			    float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
+			    float3x3 Inverse = adjoint(MeshBuffer[MeshIndex].W2L);
+			    // float scalex = length(mul(Inverse, float3(1,0,0)));
+			    // float scaley = length(mul(Inverse, float3(0,1,0)));
+			    // float scalez = length(mul(Inverse, float3(0,0,1)));
+			    // float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
 				p = mul(MeshBuffer[MeshIndex].W2L, float4(p,1));
-				n = normalize(mul(MeshBuffer[MeshIndex].W2L, float4(n,0)).xyz / Scale);
-				viewDir = normalize(mul(MeshBuffer[MeshIndex].W2L, float4(viewDir,0)).xyz / Scale);
+				n = normalize(mul(Inverse, n).xyz);
+				viewDir = normalize(mul(Inverse, viewDir).xyz);
 				tangentFrame = GetTangentSpace2(n);
 				viewDirTS = mul(tangentFrame, viewDir);
 				reflecVec = reflect(-viewDir, n) * reflecSharpness;
