@@ -1720,8 +1720,8 @@ namespace TrueTrace {
                 DocumentNodes(0, 0, 1, 0, false, 0);
                 TempRecur++;
                 int NodeCount = NodePair.Count;
-                if(ForwardStack == null) ForwardStack = new Layer[NodeCount];
-                if(LayerStack == null) LayerStack = new Layer2[TempRecur];
+                if(ForwardStack == null || ForwardStack.Length != NodeCount) ForwardStack = new Layer[NodeCount];
+                if(LayerStack == null || LayerStack.Length != TempRecur) LayerStack = new Layer2[TempRecur];
                 Layer PresetLayer = new Layer();
 
                 for (int i = 0; i < TempRecur; i++) {LayerStack[i] = new Layer2(); LayerStack[i].Slab = new List<int>();}
