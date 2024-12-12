@@ -66,11 +66,11 @@ namespace TrueTrace {
         [HideInInspector] public ComputeBuffer TerrainBuffer;
         [HideInInspector] public bool DoHeightmap;
 
-        [HideInInspector] public ComputeBuffer MaterialBuffer;
+        [HideInInspector] private ComputeBuffer MaterialBuffer;
         [HideInInspector] public ComputeBuffer MeshDataBufferA;
         [HideInInspector] public ComputeBuffer MeshDataBufferB;
-        [HideInInspector] public ComputeBuffer LightMeshBuffer;
-        [HideInInspector] public ComputeBuffer UnityLightBuffer;
+        [HideInInspector] private ComputeBuffer LightMeshBuffer;
+        [HideInInspector] private ComputeBuffer UnityLightBuffer;
 
         #if HardwareRT
             private ComputeBuffer MeshIndexOffsets;
@@ -83,8 +83,8 @@ namespace TrueTrace {
             #endif
             ThisShader.SetComputeBuffer(Kernel, "AggTris", AggTriBuffer);
             ThisShader.SetComputeBuffer(Kernel, "cwbvh_nodes", BVH8AggregatedBuffer);
-            ThisShader.SetComputeBuffer(Kernel, "_MeshData", RayMaster.FramesSinceStart2 % 2 == 0 ? MeshDataBufferA : MeshDataBufferB);
-            ThisShader.SetComputeBuffer(Kernel, "_MeshDataPrev", RayMaster.FramesSinceStart2 % 2 == 1 ? MeshDataBufferA : MeshDataBufferB);
+            ThisShader.SetComputeBuffer(Kernel, "_MeshData", (RayMaster.LocalTTSettings.DoTLASUpdates && (RayMaster.FramesSinceStart2 % 2 == 0)) ? MeshDataBufferA : MeshDataBufferB);
+            ThisShader.SetComputeBuffer(Kernel, "_MeshDataPrev", (RayMaster.LocalTTSettings.DoTLASUpdates && (RayMaster.FramesSinceStart2 % 2 == 1)) ? MeshDataBufferA : MeshDataBufferB);
             ThisShader.SetComputeBuffer(Kernel, "_Materials", MaterialBuffer);
             ThisShader.SetTexture(Kernel, "_AlphaAtlas", AlphaAtlas);
             ThisShader.SetTexture(Kernel, "_IESAtlas", IESAtlas);
@@ -108,8 +108,8 @@ namespace TrueTrace {
             ThisShader.SetComputeBuffer(Kernel, "_UnityLights", UnityLightBuffer);
             ThisShader.SetComputeBuffer(Kernel, "LightTriangles", LightTriBuffer);
             ThisShader.SetComputeBuffer(Kernel, "_LightMeshes", LightMeshBuffer);
-            ThisShader.SetComputeBuffer(Kernel, "SGTree", RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB);
-            ThisShader.SetComputeBuffer(Kernel, "SGTreePrev", RayMaster.FramesSinceStart2 % 2 == 1 ? LightTreeBufferA : LightTreeBufferB);
+            ThisShader.SetComputeBuffer(Kernel, "SGTree", (RayMaster.LocalTTSettings.DoTLASUpdates && (RayMaster.FramesSinceStart2 % 2 == 0)) ? LightTreeBufferA : LightTreeBufferB);
+            ThisShader.SetComputeBuffer(Kernel, "SGTreePrev", (RayMaster.LocalTTSettings.DoTLASUpdates && (RayMaster.FramesSinceStart2 % 2 == 1)) ? LightTreeBufferA : LightTreeBufferB);
             ThisShader.SetTexture(Kernel, "Heightmap", HeightmapAtlas);
         }
 

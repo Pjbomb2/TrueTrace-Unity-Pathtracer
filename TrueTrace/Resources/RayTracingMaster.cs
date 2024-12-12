@@ -11,7 +11,7 @@ namespace TrueTrace {
     public class RayTracingMaster : MonoBehaviour
     {
         [HideInInspector] public static Camera _camera;
-        public static bool DoKernelProfiling = true;
+        public static bool DoKernelProfiling = false;
         public bool HDRPorURPRenderInScene = false;
         [HideInInspector] public AtmosphereGenerator Atmo;
         [HideInInspector] public AssetManager Assets;
@@ -932,7 +932,7 @@ namespace TrueTrace {
             if (LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI) {
                 if(DoKernelProfiling) cmd.BeginSample("ASVGF Reproject Pass");
                     ASVGFCode.shader.SetTexture(1, "ScreenSpaceInfoWrite", (FramesSinceStart2 % 2 == 0) ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
-                    ASVGFCode.DoRNG(ref _RandomNums, ref _RandomNumsB, FramesSinceStart2, _RayBuffer, cmd, _PrimaryTriangleInfo, FramesSinceStart2 % 2 == 0 ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, Assets.AggTriBuffer, MeshOrderChanged, Assets.TLASCWBVHIndexes);
+                    ASVGFCode.DoRNG(ref _RandomNums, ref _RandomNumsB, FramesSinceStart2, _RayBuffer, cmd, _PrimaryTriangleInfo, (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 0)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, Assets.AggTriBuffer, MeshOrderChanged, Assets.TLASCWBVHIndexes);
                 if(DoKernelProfiling) cmd.EndSample("ASVGF Reproject Pass");
             }
 
@@ -1102,7 +1102,7 @@ namespace TrueTrace {
                                     LocalTTSettings.IndirectBoost, 
                                     GradientsA,
                                     _PrimaryTriangleInfo, 
-                                    FramesSinceStart2 % 2 == 0 ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, 
+                                    (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 0)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, 
                                     Assets.AggTriBuffer, 
                                     LocalTTSettings.UpscalerMethod);
                 CurrentSample = 1;
@@ -1192,7 +1192,8 @@ namespace TrueTrace {
                 if(RebuildMeshObjectBuffers(cmd)) {
                     InitRenderTexture();
                     SetShaderParameters(cmd);
-                    Render(destination, cmd);
+                    if(LocalTTSettings.MaxSampCount > SampleCount) Render(destination, cmd);
+                    else cmd.Blit(_FinalTex, destination);
                 }
                 uFirstFrame = 0;
             }

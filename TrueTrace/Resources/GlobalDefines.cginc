@@ -14,7 +14,7 @@
 // #define StainedGlassShadows
 // #define IgnoreBackfacing
 // #define WhiteLights
-#define LBVH
+// #define LBVH
 // #define FasterLightSampling
 #define AccurateEmissionTex
 // #define RadianceCache
@@ -25,7 +25,7 @@
 // #define AdvancedRadCacheAlt
 // #define UseTextureLOD
 // #define vMFDiffuse
-#define EONDiffuse
+// #define EONDiffuse
 // #define AdvancedBackground
 #define UseBRDFLights
 #define DoubleBufferSGTree

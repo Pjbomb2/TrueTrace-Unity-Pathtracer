@@ -42,6 +42,7 @@ namespace TrueTrace {
          [SerializeField] public Camera SelectedCamera;
          [SerializeField] public bool ClayMode = false;
          [SerializeField] public Vector3 ClayColor = new Vector3(0.5f,0.5f,0.5f);
+         [SerializeField] public int MaxSampCount = 99999999;
          [SerializeField] public Vector3 GroundColor = new Vector3(0.1f,0.1f,0.1f);
          [SerializeField] public int BounceCount = 7;
          [SerializeField] public float RenderRes = 1;
@@ -1621,6 +1622,7 @@ Toolbar toolbar;
             NonAccurateLightTriToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("AccurateLightTris"); else RemoveDefine("AccurateLightTris");});
             VisualElement ClayColorBox = new VisualElement();
 
+
             Toggle ClayModeToggle = new Toggle() {value = ClayMode, text = "Use ClayMode"};
             ClayModeToggle.RegisterValueChangedCallback(evt => {ClayMode = evt.newValue; RayMaster.LocalTTSettings.ClayMode = ClayMode; if(evt.newValue) HardSettingsMenu.Insert(HardSettingsMenu.IndexOf(ClayModeToggle) + 1, ClayColorBox); else HardSettingsMenu.Remove(ClayColorBox);});
 
@@ -1630,6 +1632,9 @@ Toolbar toolbar;
             ClayColorField.style.width = 250;
             ClayColorField.RegisterValueChangedCallback(evt => {ClayColor = new Vector3(evt.newValue.r, evt.newValue.g, evt.newValue.b); RayMaster.LocalTTSettings.ClayColor = ClayColor;});
             ClayColorBox.Add(ClayColorField);
+
+            IntegerField MaxSampField = new IntegerField() {value = MaxSampCount, label = "Maximum Sample Count"};
+            MaxSampField.RegisterValueChangedCallback(evt => {MaxSampCount = evt.newValue; MaxSampCount = Mathf.Min(Mathf.Max(MaxSampCount, 0), 99999999); MaxSampField.value = MaxSampCount; RayMaster.LocalTTSettings.MaxSampCount = MaxSampCount;});
 
 
             OIDNToggle = new Toggle() {value = (definesList.Contains("UseOIDN")), text = "Enable OIDN(Does NOT work with DX11 Only)"};
@@ -1822,6 +1827,7 @@ Toolbar toolbar;
          Spacer.style.height = 10;
          HardSettingsMenu.Add(Spacer);
          HardSettingsMenu.Add(DoSavingToggle);
+         HardSettingsMenu.Add(MaxSampField);
          HardSettingsMenu.Add(ScreenShotBox);
          HardSettingsMenu.Add(PanoramaBox);
          HardSettingsMenu.Add(TurnTableBox);

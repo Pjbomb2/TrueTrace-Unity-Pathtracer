@@ -86,3 +86,4 @@ MonoBehaviour:
   PrimaryBackgroundContrast: 1
   FogDensity: 0.01
   FogColor: {x: 0.8396226, y: 0.8396226, z: 0.8396226}
+  MaxSampCount: 99999999
