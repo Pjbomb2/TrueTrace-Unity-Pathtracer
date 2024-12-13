@@ -2154,220 +2154,6 @@ inline float3 CalcNorm(uint4 TriData) {
 
 
 
-#define WorldCacheScale 50.0f
-#define GridBias 2
-#define BucketCount 32
-#define PropDepth 4
-#define MinSampleToContribute 0
-#define MaxSampleCount 32
-#define CacheCapacity (4 * 1024 * 1024)
-
-RWByteAddressBuffer VoxelDataBufferA;
-ByteAddressBuffer VoxelDataBufferB;
-#define HashKeyValue uint3
-RWStructuredBuffer<HashKeyValue> HashEntriesBuffer;//May want to leave the last bit unused, so I can use it as a "written to" flag instead of having to compare both A and B components for empty
-RWStructuredBuffer<HashKeyValue> HashEntriesBufferA2;//May want to leave the last bit unused, so I can use it as a "written to" flag instead of having to compare both A and B components for empty
-StructuredBuffer<HashKeyValue> HashEntriesBufferB;//May want to leave the last bit unused, so I can use it as a "written to" flag instead of having to compare both A and B components for empty
-
-float CalcVoxelSize(float3 VertPos) {
-    uint GridLayer = clamp(floor(log2(distance(CamPos, VertPos)) + GridBias), 1, ((1u << 10) - 1));
-    return pow(2, GridLayer) / (float)(WorldCacheScale * 4);
-}
-
-int4 CalculateCellParams(float3 VertexPos) {
-	float LogData = log2(distance(CamPos, VertexPos));
-	uint Layer = clamp(floor(LogData) + GridBias, 1, ((1u << 10) - 1));
-	return int4(floor((VertexPos * WorldCacheScale * 4) / pow(2, Layer)), Layer);
-}
-
-uint2 CompressHash(uint4 CellParams, uint NormHash) {
-	uint2 HashValue;
-	HashValue.x = (CellParams.x & ((1u << 17) - 1)) | ((CellParams.y & ((1u << 17) - 1)) << 17);
-	HashValue.y = ((CellParams.y & ((1u << 17) - 1)) >> 15) | ((CellParams.z & ((1u << 17) - 1)) << 2) | ((CellParams.w & ((1u << 10) - 1)) << 19) | (NormHash << 29);
-	return HashValue;
-}
-
-uint2 ComputeHash(float3 Position, float3 Norm) {
-	uint4 CellParams = asuint(CalculateCellParams(Position));
-	uint NormHash =
-        (Norm.x >= 0 ? 1 : 0) +
-        (Norm.y >= 0 ? 2 : 0) +
-        (Norm.z >= 0 ? 4 : 0);
-
-	return CompressHash(CellParams, NormHash);
-}
-
-//Using third hash from here: http://burtleburtle.net/bob/hash/integer.html
-uint Hash32Bit(uint a) {
-  	a -= (a<<6);
-    a ^= (a>>17);
-    a -= (a<<9);
-    a ^= (a<<4);
-    a -= (a<<3);
-    a ^= (a<<10);
-    a ^= (a>>15);
-    return a;
-}
-
-uint Hash32(uint2 HashValue) {
-    return Hash32Bit(HashValue.x & 0xffffffff)
-         ^ Hash32Bit(HashValue.y & 0xffffffff);
-}
-
-
-#define PathLengthBits PropDepth
-#define PathLengthMask ((1u << PathLengthBits) - 1)
-
-	struct PropogatedCacheData {
-		uint2 samples[PropDepth];
-		uint throughput;//not needed, just padding, if I could remove one other uint, than I could bump prop_depth up to 5
-		uint pathLength;
-		uint CurrentIlluminance;
-		uint Norm;
-	};
-	RWStructuredBuffer<PropogatedCacheData> CacheBuffer;
-
-
-
-	struct GridVoxel {
-	    float3 radiance;
-	    uint sampleNum;
-	};
-
-	GridVoxel RetrieveCacheData(uint CacheEntry) {
-	    if (CacheEntry == 0xFFFFFFFF) return (GridVoxel)0;
-	    uint4 voxelDataPacked = VoxelDataBufferB.Load4(CacheEntry * 16);
-
-	    GridVoxel Voxel;
-		Voxel.radiance = voxelDataPacked.xyz / 1e3f;
-	    Voxel.sampleNum = (voxelDataPacked.w) & ((1u << 20) - 1);
-
-	    return Voxel;
-	}
-
-	void AddDataToCache(uint CacheEntry, uint4 Values) {
-	    if (CacheEntry == 0xFFFFFFFF) return;
-	    CacheEntry *= 16;
-	    [unroll]for(int i = 0; i < 4; i++)
-	    	if(Values[i] != 0) VoxelDataBufferA.InterlockedAdd(CacheEntry + 4 * i, Values[i]);
-	}
-
-
-	inline uint FindOpenHash(const uint2 HashValue) {
-		uint BucketIndex;
-		uint hash = Hash32(HashValue);
-	    uint HashIndex = hash % CacheCapacity;
-	    uint baseSlot = floor(HashIndex / (float)BucketCount) * BucketCount;
-	    uint temp = 0;
-		if(baseSlot < CacheCapacity) {
-			for(int i = 0; i < BucketCount; i++) {	
-				InterlockedExchange(HashEntriesBuffer[baseSlot + i].z, 0xAAAAAAAA, BucketIndex);
-				if(BucketIndex != 0xAAAAAAAA && HashEntriesBuffer[baseSlot + i].x == 0 && HashEntriesBuffer[baseSlot + i].y == 0) {
-					HashEntriesBuffer[baseSlot + i].xy = HashValue.xy;
-					// InterlockedExchange(HashEntriesBuffer[baseSlot + i].z, BucketIndex, temp);//May be bad
-					return baseSlot + i;
-				} else {
-					HashKeyValue OldHashValue = HashEntriesBuffer[baseSlot + i];
-					if((OldHashValue.x == 0 && OldHashValue.y == 0) || (OldHashValue.x == HashValue.x && OldHashValue.y == HashValue.y)) return baseSlot + i;
-				}
-			}
-		}
-		return 0;
-	}
-
-	inline bool HashGridFind(const uint2 HashValue, inout uint cacheEntry) {
-	    uint hash = Hash32(HashValue);
-	    uint HashIndex = hash % CacheCapacity;
-
-	    uint baseSlot = floor(HashIndex / (float)BucketCount) * BucketCount;
-	    for (uint i = 0; i < BucketCount; i++) {
-	        uint2 PrevHash = HashEntriesBufferB[baseSlot + i];//I am read and writing to the same hash buffer, this could be a problem
-
-	        if (PrevHash.x == HashValue.x && PrevHash.y == HashValue.y) {
-	            cacheEntry = baseSlot + i;
-	            return true;
-	        } else if (PrevHash.x == 0 && PrevHash.y == 0) break;
-	    }
-	    return false;
-	}
-
-
-	inline bool RetrieveCacheRadiance(PropogatedCacheData CurrentProp, float3 Pos, float3 Norm, out float3 radiance) {
-		uint2 HashValue = ComputeHash(Pos, Norm);
-	   	uint CacheEntry = 0xFFFFFFFF;
-	   	HashGridFind(HashValue, CacheEntry);
-
-	    GridVoxel voxelData = RetrieveCacheData(CacheEntry);
-	    if (voxelData.sampleNum > MinSampleToContribute) {
-	        radiance = voxelData.radiance / (float)voxelData.sampleNum;
-	        return true;
-	    }
-	    return false;
-	}
-
-
-	inline bool AddHitToCache(inout PropogatedCacheData CurrentProp, float3 Pos, float random) {
-	    bool EarlyOut = false;
-	    float3 OrigLighting = clamp(unpackRGBE(CurrentProp.CurrentIlluminance), 0, 1200.0f);
-	    float3 ModifiedLighting = OrigLighting;
-	    int PathLength = (CurrentProp.pathLength & PathLengthMask);
-
-	   	uint CacheEntry = FindOpenHash(ComputeHash(Pos, i_octahedral_32(CurrentProp.Norm)));
-	    if (random * 3.0f + 1.0f <= PathLength) {
-	        GridVoxel Voxel = RetrieveCacheData(CacheEntry);
-            EarlyOut = Voxel.sampleNum > MinSampleToContribute;
-	        if (EarlyOut) ModifiedLighting = Voxel.radiance / Voxel.sampleNum;
-	    }
-	    if(!EarlyOut) AddDataToCache(CacheEntry, uint4(OrigLighting * 1e3f, 1));
-	    for (int i = 0; i < PathLength; ++i) {
-	        ModifiedLighting *= unpackRGBE(CurrentProp.samples[i].x);
-	        AddDataToCache(CurrentProp.samples[i].y, uint4(ModifiedLighting * 1e3f, 0));
-	    }
-        if(PathLength >= 3) CurrentProp.samples[3] = CurrentProp.samples[2];
-        if(PathLength >= 2) CurrentProp.samples[2] = CurrentProp.samples[1];
-        if(PathLength >= 1) CurrentProp.samples[1] = CurrentProp.samples[0];
-	    CurrentProp.samples[0].y = CacheEntry;
-	    CurrentProp.pathLength = (CurrentProp.pathLength & ~PathLengthMask) | min(PathLength + 1, PropDepth - 1);
-
-	    return !EarlyOut;
-	}
-
-	inline void AddMissToCache(inout PropogatedCacheData CurrentProp, float3 radiance) {
-	    for (int i = 0; i < (CurrentProp.pathLength & PathLengthMask); ++i) {
-	        radiance *= unpackRGBE(CurrentProp.samples[i].x);
-	        AddDataToCache(CurrentProp.samples[i].y, uint4(radiance * 1e3f, 0));
-	    }
-	}
-
-	uint2 GetReprojectedHash(uint2 HashValue) {
-	    int3 gridPosition;
-	    gridPosition.x = int((HashValue.x) & ((1u << 17) - 1));
-	    gridPosition.y = int((((HashValue.y << 15)) | (HashValue.x >> 17)) & ((1u << 17) - 1));
-	    gridPosition.z = int((HashValue.y >> 2) & ((1u << 17) - 1));
-
-	    //checking 16th bit as thats the max resolution of the grid hash, and if its negative, cant you do this with msb?
-	    //This is faster than calling firstbithigh as you know the index to check, aka the highest possible bit based off of max grid resolution
-	    gridPosition = (gridPosition & (1 << (17 - 1))) ? (gridPosition | (~((1 << 17) - 1))) : gridPosition;
-
-	    int level = uint((HashValue.y >> 19) & ((1u << 10) - 1));
-
-	    float voxelSize = pow(2, level) / (WorldCacheScale * 4.0f);
-	    int3 CamPosDiff = floor(CamPos / voxelSize) - gridPosition;
-	    int3 CamPosDiffPrev = floor(PrevCamPos / voxelSize) - gridPosition;
-
-	    if (dot(CamPosDiff, CamPosDiff) < dot(CamPosDiffPrev, CamPosDiffPrev)) {
-	        gridPosition = floor(gridPosition / 2.0f);
-	        level = min(level + 1, ((1u << 10) - 1));
-	    } else {
-	        gridPosition = floor(gridPosition * 2);
-	        level = max(level - 1, 1);
-	    }
-
-	    return CompressHash(asuint(int4(gridPosition, level)), HashValue.y >> 29); 
-	}
-
-
-
 
 
 inline int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Norm, float3 Position, float3 RayDir) {
@@ -2612,4 +2398,94 @@ float3 SampleDirectionSphere(float u1, float u2)
     return float3(x, y, z);
 }
 
+#define WorldCacheScale 50.0f
+#define GridBias 2
+#define BucketCount 32
+#define PropDepth 4
+#define MinSampleToContribute 0
+#define MaxSampleCount 32
+#define CacheCapacity (4 * 1024 * 1024)
 
+
+/*
+
+
+
+	inline uint FindOpenHash(const uint2 HashValue) {
+		uint BucketIndex;
+		uint hash = Hash32(HashValue);
+	    uint HashIndex = hash % CacheCapacity;
+	    uint baseSlot = floor(HashIndex / (float)BucketCount) * BucketCount;
+	    uint temp = 0;
+		if(baseSlot < CacheCapacity) {
+			for(int i = 0; i < BucketCount; i++) {	
+				InterlockedExchange(HashEntriesBuffer[baseSlot + i].z, 0xAAAAAAAA, BucketIndex);
+				if(BucketIndex != 0xAAAAAAAA && HashEntriesBuffer[baseSlot + i].x == 0 && HashEntriesBuffer[baseSlot + i].y == 0) {
+					HashEntriesBuffer[baseSlot + i].xy = HashValue.xy;
+					// InterlockedExchange(HashEntriesBuffer[baseSlot + i].z, BucketIndex, temp);//May be bad
+					return baseSlot + i;
+				} else {
+					HashKeyValue OldHashValue = HashEntriesBuffer[baseSlot + i];
+					if((OldHashValue.x == 0 && OldHashValue.y == 0) || (OldHashValue.x == HashValue.x && OldHashValue.y == HashValue.y)) return baseSlot + i;
+				}
+			}
+		}
+		return 0;
+	}
+
+
+//Using third hash from here: http://burtleburtle.net/bob/hash/integer.html
+uint Hash32Bit(uint a) {
+  	a -= (a<<6);
+    a ^= (a>>17);
+    a -= (a<<9);
+    a ^= (a<<4);
+    a -= (a<<3);
+    a ^= (a<<10);
+    a ^= (a>>15);
+    return a;
+}
+
+uint Hash32(uint2 HashValue) {
+    return Hash32Bit(HashValue.x & 0xffffffff)
+         ^ Hash32Bit(HashValue.y & 0xffffffff);
+}
+
+
+uint -> 
+8 bit positions = 24 bits
+3 bit norm = 27 bits
+5 bit layer = 32 bits
+	GridLevel ->
+	inline uint InsertIntoOpenHash(const uint2 HashVal) {
+		x ^ y ^ z
+		xyz = pack into 15 bits each
+	}
+
+	inline uint FindOpenHash(const uint2 HashValue) {
+		uint BucketIndex;
+		uint hash = Hash32(HashValue);
+	    uint HashIndex = hash % CacheCapacity;
+	    uint baseSlot = floor(HashIndex / (float)BucketCount) * BucketCount;
+	    uint temp = 0;
+		if(baseSlot < CacheCapacity) {
+			for(int i = 0; i < BucketCount; i++) {	
+				InterlockedExchange(HashEntriesBuffer[baseSlot + i].z, 0xAAAAAAAA, BucketIndex);
+				if(BucketIndex != 0xAAAAAAAA && HashEntriesBuffer[baseSlot + i].x == 0 && HashEntriesBuffer[baseSlot + i].y == 0) {
+					HashEntriesBuffer[baseSlot + i].xy = HashValue.xy;
+					// InterlockedExchange(HashEntriesBuffer[baseSlot + i].z, BucketIndex, temp);//May be bad
+					return baseSlot + i;
+				} else {
+					HashKeyValue OldHashValue = HashEntriesBuffer[baseSlot + i];
+					if((OldHashValue.x == 0 && OldHashValue.y == 0) || (OldHashValue.x == HashValue.x && OldHashValue.y == HashValue.y)) return baseSlot + i;
+				}
+			}
+		}
+		return 0;
+	}
+
+	void GenHash(float3 Pos, float3 norm) {
+		
+	}
+
+*/

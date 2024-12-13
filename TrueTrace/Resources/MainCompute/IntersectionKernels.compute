@@ -345,24 +345,15 @@ void IntersectBVHShadow(int ray_index) {
                     if(!TerrainExists) {
                         uint PixelIndex = ShadowRay.PixelIndex;
                         if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray.origin + ray.direction * abs(ShadowRay.t),NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)].w);
-                        #ifdef RadianceCache
-                            CacheBuffer[PixelIndex].CurrentIlluminance = packRGBE(unpackRGBE(CacheBuffer[PixelIndex].CurrentIlluminance) + unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput);// * abs(dot(i_octahedral_32(CacheBuffer[PixelIndex].Norm), ShadowRay.direction));
-                        #endif
                         if (ShadowRay.t >= 0) {
 
                             if (CurBounce == 0) {
                                 GlobalColors[PixelIndex].Direct += ShadowRay.illumination * throughput;
                             } else {
-                                #if !defined(RadianceCache) || defined(ImprovedRadCacheSpecularResponse)
-                                    GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
-                                #endif
+                                GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
                             }
                         } else {
-                            #ifdef RadianceCache
-                                if(CurBounce != 0 &&  (UseReSTIRGI || GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == CurBounce + 1)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
-                            #else
-                                if(CurBounce != 0 && (!UseReSTIRGI && GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == 0)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;// * unpackRGBE(asuint(ShadowRay.DiffuseIlluminance));
-                            #endif
+                            if(CurBounce != 0 && (!UseReSTIRGI && GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == 0)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;// * unpackRGBE(asuint(ShadowRay.DiffuseIlluminance));
                             else GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)) * throughput);
                         }
                     } else {
@@ -463,23 +454,14 @@ void IntersectBVHShadow(int ray_index) {
                         if(!TerrainExists) {
                             uint PixelIndex = ShadowRay.PixelIndex;
                             if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray2.origin + ray2.direction * abs(ShadowRaysBuffer[ray_index].t), 0);
-                            #ifdef RadianceCache
-                                CacheBuffer[PixelIndex].CurrentIlluminance = packRGBE(unpackRGBE(CacheBuffer[PixelIndex].CurrentIlluminance) + unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput);// * abs(dot(i_octahedral_32(CacheBuffer[PixelIndex].Norm), ShadowRay.direction));
-                            #endif
                             if (ShadowRay.t >= 0) {
                                 if (CurBounce == 0) {
                                     GlobalColors[PixelIndex].Direct += ShadowRay.illumination * throughput;
                                 } else {
-                                    #if !defined(RadianceCache) || defined(ImprovedRadCacheSpecularResponse)
-                                        GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
-                                    #endif
+                                    GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
                                 }
                             } else {
-                                #ifdef RadianceCache
-                                    if(CurBounce != 0 &&  (UseReSTIRGI || GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == CurBounce + 1)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
-                                #else
-                                    if(CurBounce != 0 && (!UseReSTIRGI && GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == 0)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;// * unpackRGBE(asuint(ShadowRay.DiffuseIlluminance));
-                                #endif
+                                if(CurBounce != 0 && (!UseReSTIRGI && GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == 0)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;// * unpackRGBE(asuint(ShadowRay.DiffuseIlluminance));
                                 else GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)) * throughput);
                             }
                         } else {
@@ -579,17 +561,12 @@ void IntersectShadowHeightmap(int ray_index) {
         if(!HitHeightmap) {
             uint PixelIndex = ShadowRaysBuffer[ray_index].PixelIndex;
             if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray.origin + ray.direction * abs(ShadowRaysBuffer[ray_index].t), 0);
-            #ifdef RadianceCache
-                CacheBuffer[PixelIndex].CurrentIlluminance = packRGBE(unpackRGBE(CacheBuffer[PixelIndex].CurrentIlluminance) + unpackRGBE(ShadowRaysBuffer[ray_index].DiffuseIlluminance));// * abs(dot(i_octahedral_32(CacheBuffer[PixelIndex].Norm), ShadowRay.direction));
-            #endif
             if (ShadowRaysBuffer[ray_index].t >= 0) {
 
                 if (CurBounce == 0) {
                     GlobalColors[PixelIndex].Direct += ShadowRaysBuffer[ray_index].illumination;
                 } else {
-                    #ifndef RadianceCache
-                        GlobalColors[PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;
-                    #endif
+                    GlobalColors[PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;
                 }
             } else {
                 if(CurBounce != 0 && UseReSTIRGI) GlobalColors[PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;// * unpackRGBE(asuint(ShadowRay.DiffuseIlluminance));

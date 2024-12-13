@@ -14,18 +14,13 @@
 // #define StainedGlassShadows
 // #define IgnoreBackfacing
 // #define WhiteLights
-// #define LBVH
+#define LBVH
 // #define FasterLightSampling
 #define AccurateEmissionTex
-// #define RadianceCache
-// #define ImprovedRadCacheSpecularResponse
-// #define HighSpeedRadCache
-#define IndirectRetraceWeighting
 #define TrueBlack
-// #define AdvancedRadCacheAlt
 // #define UseTextureLOD
 // #define vMFDiffuse
-// #define EONDiffuse
+#define EONDiffuse
 // #define AdvancedBackground
 #define UseBRDFLights
 #define DoubleBufferSGTree
@@ -43,9 +38,8 @@
 #define DVTriID 2
 #define DVAlbID 3
 #define DVBVHView 4
-#define DVRadCache 5
-#define DVGIView 6
-#define DVDepthView 7
+#define DVGIView 5
+#define DVDepthView 6
 
 #define DepthDivisor 1000.0f
 

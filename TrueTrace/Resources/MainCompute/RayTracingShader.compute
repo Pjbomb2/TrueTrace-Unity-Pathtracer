@@ -97,11 +97,7 @@ void sampleEquiAngular( float u, float maxDistance, float3 rOrigin, float3 rDire
     pdf = D / ( (thetaB - thetaA) * (D * D + t * t) );
 }
 
-#ifdef RadianceCache
-inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout PropogatedCacheData CacheInstance) {//main function
-#else
 inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData) {//main function
-#endif
     #ifdef Fog
         float3 SigmaT = FogDensity * FogScale;
         float3 SigmaS = SigmaT * FogColor;
@@ -205,14 +201,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         float3 EmissCol = hitDat.surfaceColor * hitDat.emission * LEMEnergyScale;
         if (!UseNEE) {
             if (CurBounce <= 1) Color.Direct += EmissCol;
-            #ifndef RadianceCache
-                if(CurBounce > 1) Color.Indirect += Color.throughput * EmissCol;
-            #else
-            else {
-                if(!((CacheInstance.pathLength >> 7) & 0x1)) Color.Indirect += Color.throughput * EmissCol;
-                else CacheInstance.CurrentIlluminance = packRGBE(unpackRGBE(CacheInstance.CurrentIlluminance) + EmissCol);
-            }
-            #endif
+            if(CurBounce > 1) Color.Indirect += Color.throughput * EmissCol;
         } else {
             float3 a1 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTris[hit.triangle_id].posedge1).xyz;
             float3 a2 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTris[hit.triangle_id].posedge2).xyz;
@@ -233,14 +222,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             if (CurBounce == 0) Color.Direct += EmissCol;
             #ifdef UseBRDFLights
                 else if (CurBounce == 1) Color.Direct += EmissCol * w;
-                #ifndef RadianceCache
-                    else Color.Indirect += Color.throughput * EmissCol * w;
-                #else
-                else {
-                    if(!((CacheInstance.pathLength >> 7) & 0x1)) Color.Indirect += Color.throughput * EmissCol * w;
-                    else CacheInstance.CurrentIlluminance = packRGBE(unpackRGBE(CacheInstance.CurrentIlluminance) + EmissCol * w);
-                }
-                #endif
+                else Color.Indirect += Color.throughput * EmissCol * w;
             #endif
         }
         if((UseASVGF || UseReSTIRGI) && CurBounce == 0 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -10000.0f;
@@ -250,12 +232,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((1) << 26);  
                 Color.Flags = packRGBE(EmissCol);
             }
-            #ifdef RadianceCache
-                else  {
-                    if(!AddHitToCache(CacheInstance, PrevOrigin, random(324, pixel_index).x)) return;
-                    CacheInstance.CurrentIlluminance = 0;   
-                }
-            #endif
             return;
         }
     }
@@ -360,45 +336,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         Color.MetRoughIsSpec = ((Color.MetRoughIsSpec & ~(0x7C000000)) | (((CurBounce < 30 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.01f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
         throughput = 1;  
     }   
-    #ifdef RadianceCache
-        #if DebugView == DVRadCache
-            if(CurBounce == 0) _DebugTex[id.xy] = float4(ray.origin, asfloat(octahedral_32(norm)));
-        #endif
-        if(CurBounce > 0 && (CacheInstance.pathLength >> 5) & 0x1) {
-            float3 res2 = 0;
-            #ifdef AdvancedRadCacheAlt
-            if((hit.t >= CalcVoxelSize(ray.origin) * lerp(1.0f, 2.0f, random(326, pixel_index).x))) {// && (hit.t >= CalcVoxelSize(ray.origin) * lerp(1.0f, 2.0f, random(326, pixel_index).x))) {
-            #else
-            if((all(Color.Indirect == 0) || CurBounce < 3) && (hit.t >= CalcVoxelSize(ray.origin) * lerp(1.0f, 2.0f, random(326, pixel_index).x))) {// && (hit.t >= CalcVoxelSize(ray.origin) * lerp(1.0f, 2.0f, random(326, pixel_index).x))) {
-            #endif
-                if(RetrieveCacheRadiance(CacheInstance, ray.origin, Refracted ? -norm : norm, res2)) {
-                    // CacheInstance.CurrentIlluminance = packRGBE(unpackRGBE(CacheInstance.CurrentIlluminance) + Color.Data * throughput * res2);//fabled "infinite bounce" - VERY hard to weight properly
-                    Color.Indirect += (Color.throughput) * res2 * bsdfmodifier;
-                    #ifdef HighSpeedRadCache
-                        if(!all(Color.Indirect == 0)) {
-                            if(!((int(id.x)/2 + int(id.y)/2 + curframe)%7==0)) return;
-                            else throughput *= 7;
-                        }
-                    #endif
-                }
-            } else {
-                #ifdef HighSpeedRadCache
-                    if(!((int(id.x)/2 + int(id.y)/2 + curframe)%7==0)) return;
-                #endif
-            }
-            CacheInstance.pathLength |= (1u << 6);
-        } else if((!(MaterialLobe == 0 && hitDat.roughness < 0.2f) && MaterialLobe != 3)) CacheInstance.pathLength |= (1u << 5);
 
-        if(CurBounce > 0) {
-            if((CacheInstance.pathLength >> 6) & 0x1) {
-                CacheInstance.pathLength |= (1u << 7);
-                if(!AddHitToCache(CacheInstance, PrevOrigin, random(324, pixel_index).y)) return;
-                CacheInstance.CurrentIlluminance = 0;
-            }
-        }
-
-        CacheInstance.Norm = octahedral_32(Refracted ? -norm : norm);
-    #endif
     if (!validBSDFSample) return;//If the ray failed, we have no choice but to terminate this path
     pos = ray.origin;
       [branch] if ((UseNEE) && CurBounce < MaxBounce && (SecondaryBackgroundType == 1 || unitylightcount + LightMeshCount != 0)) {//Next event estimation
@@ -530,24 +468,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 float bsdf_pdf = 0.0f;
                 float3 bsdf_value = 0.0f;
                 float3 bsdf_diffuse = 0;
-                #ifndef RadianceCache
-                    if((UseReSTIRGI && CurBounce == 0) || (UseASVGF && (CurBounce == GetBounceData(Color.MetRoughIsSpec) - 2 && CurBounce > 0))) hitDat.surfaceColor = 1.0f;
-                #endif
-                bool validbsdfNEE;
-                #ifdef RadianceCache
-                    // if(CurBounce != 0) {
-                        // if(hitDat.roughness > 0.6f || CurBounce == 0) validbsdfNEE = EvaluateBsdf(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_diffuse, pixel_index);
-                        validbsdfNEE = EvaluateBsdf2(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_diffuse, pixel_index);
-                        // bsdf_value /= bsdf_pdf;
-                    //} else 
-                    bsdf_pdf = 0;
-                    validbsdfNEE = EvaluateBsdf(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_value, pixel_index);
-                #else
-                    validbsdfNEE = EvaluateBsdf(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_value, pixel_index);
-                #endif
-                #ifndef RadianceCache
-                    if((UseASVGF && (CurBounce == GetBounceData(Color.MetRoughIsSpec) - 2 && CurBounce > 0))) bsdf_value *= Color.Data.xyz;
-                #endif
+                if((UseReSTIRGI && CurBounce == 0) || (UseASVGF && (CurBounce == GetBounceData(Color.MetRoughIsSpec) - 2 && CurBounce > 0))) hitDat.surfaceColor = 1.0f;
+                bool validbsdfNEE = EvaluateBsdf(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_value, pixel_index);
+                if((UseASVGF && (CurBounce == GetBounceData(Color.MetRoughIsSpec) - 2 && CurBounce > 0))) bsdf_value *= Color.Data.xyz;
 
                 if (validbsdfNEE) {
                     float NEE_pdf;
@@ -574,8 +497,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                         Illum = (Radiance * bsdf_value) / NEE_pdf * RunningWeight * NEEMISWeight;
                         bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf * RunningWeight * NEEMISWeight;
                     }
-                    #ifndef RadianceCache
-                    #endif
                         Illum *= Color.throughput * bsdfmodifier;
                         bsdf_diffuse *= Color.throughput * bsdfmodifier;
 
@@ -596,21 +517,10 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     if(!UseRussianRoulette || (CurBounce == 0 && ImprovedPrimaryHit)) maxillum = 1;
                     Illum *= rcp(saturate(maxillum));
                     bsdf_diffuse *= rcp(saturate(maxillum));
-                        #ifdef RadianceCache
-                            if(!UseASVGF && CurBounce > 1 && (((CacheInstance.pathLength >> 5) & 0x1) && !((CacheInstance.pathLength >> 6) & 0x1))) {
-                                Illum *= Color.Data.xyz;
-                                // bsdf_diffuse *= Color.Data.xyz;
-                            }
-                        #endif
                     if(luminance(Illum) != 0 && maxillum > random(117, pixel_index).y) {//NEE russian roulette, massively improves performance while giivng the same result
                         uint index3;
-                        #ifdef RadianceCache
-                            bool TempTemp = !(((CacheInstance.pathLength >> 5) & 0x1) && !((CacheInstance.pathLength >> 6) & 0x1));
-                            if(UseReSTIRGI && !TempTemp && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
-                        #else
-                            bool TempTemp = (CurBounce != GetBounceData(Color.MetRoughIsSpec) - 2);
-                            if(UseReSTIRGI && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
-                        #endif            
+                        bool TempTemp = (CurBounce != GetBounceData(Color.MetRoughIsSpec) - 2);
+                        if(UseReSTIRGI && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
                         ShadowRayData ShadRay = {pos, 
                                                         packRGBE(bsdf_diffuse), 
                                                         to_light, 
@@ -635,27 +545,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         if (random(118, pixel_index).x > p)//Simple Russian Roulette
             return;
         throughput *= rcp(p);//rcp is a slightly faster but less accurate version of 1 / p, I decided the inaccuracy was worth the performance bump
-        #ifdef RadianceCache
-            #ifdef AdvancedRadCacheAlt
-                float3 bsdf2 = 1;
-                float bsdfpdf2 = 1;
-                if(!EvaluateBsdf2(hitDat, PrevDirection, ray.direction, norm, bsdfpdf2, bsdf2, pixel_index)) bsdf2 = 0;
-                CacheInstance.samples[0].x = packRGBE(clamp(bsdf2 * rcp(p),0,2));
-            #else
-                CacheInstance.samples[0].x = packRGBE(clamp(bsdf * rcp(p),0,2));
-            #endif
-        #endif
-    } else {
-        #ifdef RadianceCache
-            #ifdef AdvancedRadCacheAlt
-                float3 bsdf2 = 1;
-                float bsdfpdf2 = 1;
-                if(!EvaluateBsdf2(hitDat, PrevDirection, ray.direction, norm, bsdfpdf2, bsdf2, pixel_index)) bsdf2 = 0;
-                CacheInstance.samples[0].x = packRGBE(clamp(bsdf2,0,2));
-            #else
-                CacheInstance.samples[0].x = packRGBE(clamp(bsdf,0,2));
-            #endif
-        #endif
     }
     Color.throughput = throughput;
 
@@ -701,12 +590,6 @@ void kernel_shade(uint3 id : SV_DispatchThreadID) {
     #endif
     ColData Color = InitCol;
     if(CurBounce > 0) Color = GlobalColors[pixel_index];
-    #ifdef RadianceCache
-        else {
-            CacheBuffer[pixel_index].pathLength = 0;
-            CacheBuffer[pixel_index].CurrentIlluminance = 0;
-        }
-    #endif
 
 
     #if DebugView != -1
@@ -762,14 +645,7 @@ int MaterialIndex;
                     Radiance *= Intensity;
                     if (CurBounce == 0) Color.Direct = Color.throughput * Radiance;
                     else if (CurBounce == 1) Color.Indirect += Color.throughput * Radiance;
-                    #ifdef RadianceCache
-                        else if(!((CacheBuffer[pixel_index].pathLength >> 7) & 0x1) || (((Color.MetRoughIsSpec & 0x3800000) >> 23) >= 3)) Color.Indirect += Color.throughput * DeSat(Radiance, 1.0f - TrueDeSat) * Intensity;
-                        else  {
-                            AddMissToCache(CacheBuffer[pixel_index], Radiance);
-                        }
-                    #else
-                        else Color.Indirect += Color.throughput * Radiance;
-                    #endif
+                    else Color.Indirect += Color.throughput * Radiance;
                 }
             break;
             case 1:
@@ -786,9 +662,6 @@ int MaterialIndex;
                 if (CurBounce == 0) Color.Direct = Radiance;
                 else if (CurBounce == 1) Color.Direct += Radiance * mis;
                 else Color.Direct += Color.throughput * Radiance * mis;
-                #ifdef RadianceCache
-                    AddMissToCache(CacheBuffer[pixel_index], Radiance * mis);
-                #endif
             break;
             case 2:
                 Radiance = DeSat((DoSecondary ? BackgroundColor : SecondaryBackgroundColor), 1.0f - TrueDeSat);
@@ -800,9 +673,6 @@ int MaterialIndex;
                 if (CurBounce == 0) Color.Direct = Radiance;
                 else if (CurBounce == 1) Color.Direct += Radiance;
                 else Color.Indirect += Color.throughput * Radiance;
-                #ifdef RadianceCache
-                    AddMissToCache(CacheBuffer[pixel_index],  Radiance);
-                #endif
             break;
         }
         if(CurBounce == 0) {
@@ -951,11 +821,7 @@ int MaterialIndex;
     float4 PrevScreenData = InvalidateScreenSpaceInfo ? 0 : ScreenSpaceInfo[id.xy];
     if(CurBounce == 0 && UseReSTIRGI) PrevScreenData.w = asfloat(0);
     float4 PrevPrev = PrevScreenData;
-    #ifdef RadianceCache
-        calcFinalColor(ray, Color, TempMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, CacheBuffer[pixel_index]);
-    #else
-        calcFinalColor(ray, Color, TempMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData);
-    #endif
+    calcFinalColor(ray, Color, TempMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData);
     if(CurBounce == 0 || ((UseASVGF ^ InvalidateScreenSpaceInfo) && any(PrevPrev != PrevScreenData))) ScreenSpaceInfo[id.xy] = PrevScreenData;
     GlobalColors[pixel_index] = Color;
 
@@ -998,9 +864,6 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
     #if DebugView != -1
         #if DebugView == DVGIView
             res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? GlobalColors[final_pixel_index].Data.xyz : ((float)PartialRenderingFactor * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f)));
-        #elif defined(RadianceCache) && DebugView == DVRadCache
-            res = 0;
-            RetrieveCacheRadiance(CacheBuffer[final_pixel_index], _DebugTex[id.xy].xyz, i_octahedral_32(asuint(_DebugTex[id.xy].w)), res);
         #else
             res = _DebugTex[id.xy];
         #endif
