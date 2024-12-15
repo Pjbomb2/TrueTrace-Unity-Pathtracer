@@ -31,6 +31,14 @@ bool UseNEE;
 bool DoPartialRendering;
 int PartialRenderingFactor;
 
+
+/*
+Quick optimization settings:
+Partial rendering factor to 2
+
+
+*/
+
 int unitylightcount;
 int ReSTIRGIUpdateRate;
 
@@ -50,10 +58,6 @@ float3 MousePos;
 bool IsFocusing;
 
 RWStructuredBuffer<uint3> BufferData;
-
-RWTexture2D<half2> CorrectedDepthTex;
-Texture2D<half2> DepthTexA;
-Texture2D<half2> DepthTexB;
 
 #ifdef HardwareRT
 	StructuredBuffer<int> SubMeshOffsets;
@@ -2428,7 +2432,7 @@ inline uint Hash32Bit(uint a) {
 
 //double hash counting? take advantage of the hash collisions to store multiple values per hash?
 inline uint GenHash(float3 Pos, const float3 Norm) {
-    int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);
+    int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);//length() seems to work better, but I reallly wanna find a way to make Dot() work, as thats wayyyy faster
 
     Pos = floor(Pos * 200.0f / pow(2, Layer));
     uint3 Pos2 = asuint((int3)Pos);
@@ -2441,27 +2445,31 @@ inline uint GenHash(float3 Pos, const float3 Norm) {
         (Norm.z >= 0 ? 4 : 0);
 
     ThisHash |= (NormHash) << 29;
-    return Hash32Bit(ThisHash);
+    return ThisHash;
 }
 
+float GetVoxSize(float3 Pos) {
+    int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);
+    return pow(2, Layer) / 200.0f;
+}
 
 uint GenHashComputedNorm(float3 Pos, uint NormHash) {
-    int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);
+    int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);//length() seems to work better, but I reallly wanna find a way to make Dot() work, as thats wayyyy faster
 
     Pos = floor(Pos * 200.0f / pow(2, Layer));
     uint3 Pos2 = asuint((int3)Pos);
     uint ThisHash = ((Pos2.x & 255) << 0) | ((Pos2.y & 255) << 8) | ((Pos2.z & 255) << 16);
     ThisHash |= (Layer & 31) << 24;
 
-    ThisHash |= (NormHash) << 29;
-    return Hash32Bit(ThisHash);
+    ThisHash |= (NormHash) << 29;//we need to be fuckin doin the hash32bit IN THE HASH INDEX, OTHERWISE WE ARE SAVING THE SCRAMBLED HASH! AND CANT RECONSTRUCT WORLD POSITION!
+    return ThisHash;
 }
 
-bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
-    uint HashIndex = HashValue % CacheCapacity;
+inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
+    uint HashIndex = Hash32Bit(HashValue) % CacheCapacity;
 
     uint baseSlot = floor(HashIndex / (float)BucketCount) * BucketCount;
-    for (uint i = 0; i < BucketCount; i++) {
+    [unroll]for (uint i = 0; i < BucketCount; i++) {
         uint PrevHash = HashEntriesBufferB[baseSlot + i];//I am read and writing to the same hash buffer, this could be a problem
 
         if (PrevHash == HashValue) {
@@ -2475,35 +2483,40 @@ bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 
 	struct GridVoxel {
 	    float3 radiance;
-	    uint sampleNum;
+	    uint SampleNum;
+	    uint FrameNum;
 	};
 
 	GridVoxel RetrieveCacheData(uint CacheEntry2) {
 		uint CacheEntry = CacheEntry2;
-		if(!FindHashEntry(CacheEntry2, CacheEntry)) return (GridVoxel)0;
-	    uint4 voxelDataPacked = VoxelDataBufferB.Load4(CacheEntry * 16);
+		[branch]if(!FindHashEntry(CacheEntry2, CacheEntry)) return (GridVoxel)0;
+	    else {
+	    	uint4 voxelDataPacked = VoxelDataBufferB.Load4(CacheEntry * 16);
 
-	    GridVoxel Voxel;
-		Voxel.radiance = voxelDataPacked.xyz / 1e3f;
-	    Voxel.sampleNum = voxelDataPacked.w;
+		    GridVoxel Voxel;
+			Voxel.radiance = voxelDataPacked.xyz / 1e3f;
+		    Voxel.SampleNum = voxelDataPacked.w & 0x0000FFFF;
+		    Voxel.FrameNum = (voxelDataPacked.w >> 16) & 0x0000FFFF;
 
-	    return Voxel;
+		    return Voxel;
+		}
 	}
 
 	void AddVoxelData(uint CacheEntry, uint4 Values) {
 	    CacheEntry *= 16;
+	    // Values[3] |= Values[3] << 16;
 	    [unroll]for(int i = 0; i < 4; i++)
 	    	if(Values[i] != 0) VoxelDataBufferA.InterlockedAdd(CacheEntry + 4 * i, Values[i]);//move to gaussians later, requires a full compressor every bounce tho since I cant rely on interlockedadds
 	}
 
 	inline uint FindOpenEntryInHash(const uint HashValue) {
-		uint BucketIndex;
-	    uint HashIndex = HashValue % CacheCapacity;
+		uint BucketContents;
+	    uint HashIndex = Hash32Bit(HashValue) % CacheCapacity;
 	    uint baseSlot = floor(HashIndex / (float)BucketCount) * BucketCount;
 		if(baseSlot < CacheCapacity) {
-			for(int i = 0; i < BucketCount; i++) {	
-				InterlockedCompareExchange(HashEntriesBufferA[baseSlot + i], 0, HashValue, BucketIndex);
-				if(BucketIndex == 0 || BucketIndex == HashValue) {
+			[unroll]for(int i = 0; i < BucketCount; i++) {	
+				InterlockedCompareExchange(HashEntriesBufferA[baseSlot + i], 0, HashValue, BucketContents);
+				if(BucketContents == 0 || BucketContents == HashValue) {
 					return baseSlot + i;
 				}
 			}
@@ -2514,9 +2527,8 @@ bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 
 	inline bool AddHitToCacheFull(inout PropogatedCacheData CurrentProp, float3 Pos) {//Run every frame in shading due to 
 		float3 RunningIlluminance = unpackRGBE(CurrentProp.RunningIlluminance);
-		uint CurHash = GenHashComputedNorm(Pos, (CurrentProp.pathLength >> 3) & 7);
+		uint CurHash = FindOpenEntryInHash(GenHashComputedNorm(Pos, (CurrentProp.pathLength >> 3) & 7));
 		if(CurHash == 0) return false;
-		CurHash = FindOpenEntryInHash(CurHash);
 		uint ActualPropDepth = min(CurrentProp.pathLength & 7, PropDepth);
 		AddVoxelData(CurHash, uint4(RunningIlluminance * 1e3f, 1));
 		for(int i = 0; i < ActualPropDepth; i++) {

@@ -1281,6 +1281,89 @@ float3 EvaluateDisney2(MaterialData hitDat, float3 V, float3 L, bool thin,
     return reflectance;
 }
 
+float3 EvaluateDisney3(MaterialData hitDat, float3 V, float3 L, bool thin,
+    inout float forwardPdf, float3x3 TruTan, uint pixel_index)
+{
+    float3 wo = ToLocal(TruTan, V); // NDotL = L.z; NDotV = V.z; NDotH = H.z
+    float3 wi = ToLocal(TruTan, L); // NDotL = L.z; NDotV = V.z; NDotH = H.z
+
+    float3 wm = normalize(wo + wi);
+
+    float dotNV = CosTheta(wo);
+    float dotNL = CosTheta(wi);
+
+    float3 reflectance = 0;
+    forwardPdf = 0.0f;
+
+    float4 P = CalculateLobePdfs(hitDat);
+
+    float metallic = hitDat.metallic;
+    float specTrans = hitDat.specTrans;
+
+    float diffuseWeight = (1.0f - metallic) * (1.0f - specTrans);
+    float transWeight = (1.0f - metallic) * specTrans;
+
+    // -- Clearcoat
+    bool upperHemisphere = dotNL > 0.0f && dotNV > 0.0f;
+    if (upperHemisphere && hitDat.clearcoat > 0.0f) {
+
+        float forwardClearcoatPdfW;
+
+        float clearcoat = EvaluateDisneyClearcoat(hitDat.clearcoat, hitDat.clearcoatGloss, wo, wm, wi, forwardClearcoatPdfW);
+        reflectance += clearcoat;
+        forwardPdf += forwardClearcoatPdfW * P[1];
+    }
+
+    // -- Diffuse
+    if (diffuseWeight > 0.0f) {
+        float forwardDiffusePdfW = AbsCosTheta(wi);
+        float3 diffuse = EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin, pixel_index);
+        float3 sheen = EvaluateSheen(hitDat, wo, wm, wi);
+
+        reflectance += (diffuse + sheen / PI);
+
+        forwardPdf += forwardDiffusePdfW * P[2];
+    }
+
+    // -- specular
+    if (P.x > 0) {
+        float forwardMetallicPdfW;
+        hitDat.surfaceColor *= PI;
+        float3 specular = EvaluateDisneyBRDF(hitDat, wo, wm, wi, forwardMetallicPdfW, pixel_index);
+    // float3 specular = G1v * f * d;// / (4.0f * dotNV);
+
+        reflectance += specular / PI;// * abs(dotNL);
+        forwardPdf += forwardMetallicPdfW / (4.0f * abs(dot(wo, wm)));
+    }
+
+    // -- transmission
+    if (transWeight > 0.0f) {
+
+        // Scale roughness based on IOR (Burley 2015, Figure 15).
+        float rscaled = thin ? ThinTransmissionRoughness(hitDat.ior, hitDat.roughness) : hitDat.roughness;
+        float tax, tay;
+        CalculateAnisotropicParams(rscaled, hitDat.anisotropic, tax, tay);
+
+        float3 transmission = EvaluateDisneySpecTransmission(hitDat, wo, wm, wi, tax, tay, thin);
+        reflectance += transmission;
+
+        float forwardTransmissivePdfW;
+        GgxVndfAnisotropicPdf2(wi, wm, wo, tax, tay, forwardTransmissivePdfW);
+
+        float ni = wo.y > 0.0f ? 1.0f : hitDat.ior;
+        float nt = wo.y > 0.0f ? hitDat.ior : 1.0f;
+
+        float dotLH = dot(wm, wi);
+        float dotVH = dot(wm, wo);
+        forwardPdf += P[3] * forwardTransmissivePdfW / (pow(dotLH + (ni / nt) * dotVH, 2));
+    }
+
+
+    // reflectance = reflectance * abs(dotNL);
+
+    return reflectance;
+}
+
 
 float3 ReconstructDisney(MaterialData hitDat, float3 wo, float3 wi, bool thin,
     inout float forwardPdf, float3x3 TruTan, inout bool Success, uint pixel_index, int Case)
@@ -1432,6 +1515,13 @@ inline bool EvaluateBsdf(const MaterialData hitDat, float3 DirectionIn, float3 D
 inline bool EvaluateBsdf2(const MaterialData hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, inout float PDF, inout float3 bsdf_value, uint pixel_index) {
     bool validbsdf = false;
     bsdf_value = EvaluateDisney2(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, GetTangentSpace(Normal), pixel_index);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
+    validbsdf = PDF > 0;
+    return validbsdf;
+}
+
+inline bool EvaluateBsdf3(const MaterialData hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, inout float PDF, inout float3 bsdf_value, uint pixel_index) {
+    bool validbsdf = false;
+    bsdf_value = EvaluateDisney3(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, GetTangentSpace(Normal), pixel_index);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
     validbsdf = PDF > 0;
     return validbsdf;
 }

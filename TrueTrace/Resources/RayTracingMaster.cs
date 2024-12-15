@@ -11,7 +11,7 @@ namespace TrueTrace {
     public class RayTracingMaster : MonoBehaviour
     {
         [HideInInspector] public static Camera _camera;
-        public static bool DoKernelProfiling = true;
+        public static bool DoKernelProfiling = false;
         private bool OverriddenResolutionIsActive = false;
         public bool HDRPorURPRenderInScene = false;
         [HideInInspector] public AtmosphereGenerator Atmo;
@@ -716,7 +716,9 @@ namespace TrueTrace {
 
             #if !DisableRadianceCache
                 GenerateShader.SetComputeBuffer(ResolveKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
+                GenerateShader.SetComputeBuffer(ResolveKernel, "VoxelDataBufferB", !FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
                 GenerateShader.SetComputeBuffer(ResolveKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
+                GenerateShader.SetComputeBuffer(ResolveKernel, "HashEntriesBufferB", !FlipFrame ? HashBufferA : HashBufferB);
 
                 IntersectionShader.SetComputeBuffer(ShadowKernel, "CacheBuffer", CacheBuffer);
                 IntersectionShader.SetComputeBuffer(ShadowKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);

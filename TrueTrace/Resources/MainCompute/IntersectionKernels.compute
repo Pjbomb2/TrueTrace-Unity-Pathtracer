@@ -360,7 +360,7 @@ void IntersectBVHShadow(int ray_index) {
                                 #endif
                             }
                         } else {
-                            if(CurBounce != 0 && (!UseReSTIRGI && GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == 0)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;// * unpackRGBE(asuint(ShadowRay.DiffuseIlluminance));
+                            if(CurBounce != 0 && ((!UseReSTIRGI && GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == 0) || !UseASVGF)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;// * unpackRGBE(asuint(ShadowRay.DiffuseIlluminance));
                             else GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)) * throughput);
                         }
                     } else {

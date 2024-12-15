@@ -92,7 +92,39 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
 
 #pragma kernel CacheResolve
 [numthreads(256, 1, 1)]
-void CacheResolve(uint3 id : SV_DispatchThreadID) {
-    VoxelDataBufferA.Store4(id.x * 16, 0);
-    HashEntriesBufferA[id.x] = 0;
+void CacheResolve(uint3 id : SV_DispatchThreadID) {//we dont need to compress the hashes right? since we are only using 4, as long as we set ... no because we DO check for 0th
+#ifdef RadCache
+    //using the hash we should be able to reconstruct SOME kind of... oh
+    /*
+        WE STORE THE 8 BIT POSITIONS IN THE HASH BUFFER
+        we just need to reconstruct the actual hash from prev cam position data?
+
+    */
+
+    uint HashB = HashEntriesBufferB[id.x];
+    bool Valid = HashB != 0;
+    uint ResultantHash = 0;
+    uint4 ResultantVox = 0;
+    if(Valid) {
+        ResultantVox = VoxelDataBufferB.Load4(id.x * 16);
+        uint SampleCount = ResultantVox.w & 0x0000FFFF;
+        uint FrameCount = (ResultantVox.w >> 16) & 0x0000FFFF;
+        FrameCount++;
+        if(SampleCount > 500) {
+            float Ratio = 500.0f / (float)SampleCount;
+            SampleCount = floor(Ratio * (float)SampleCount);
+            ResultantVox.xyz = ResultantVox.xyz * Ratio;
+        }
+        if(FrameCount > 200) {
+            FrameCount = 0;
+            SampleCount = 0;
+            ResultantVox = 0;
+            ResultantHash = 0;
+        }
+        ResultantVox.w = (SampleCount | (FrameCount << 16));
+    }
+
+    HashEntriesBufferA[id.x] = ResultantHash;
+    VoxelDataBufferA.Store4(id.x * 16, ResultantVox);
+#endif
 }

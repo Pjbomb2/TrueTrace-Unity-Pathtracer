@@ -42,10 +42,10 @@ MonoBehaviour:
   ReSTIRGIUpdateRate: 0
   DoReSTIRGIConnectionValidation: 1
   Exposure: 8.8
-  DoPartialRendering: 0
+  DoPartialRendering: 1
   PartialRenderingFactor: 2
   DoFirefly: 0
-  ImprovedPrimaryHit: 1
+  ImprovedPrimaryHit: 0
   RISCount: 12
   ToneMapper: 0
   SkyDesaturate: 0

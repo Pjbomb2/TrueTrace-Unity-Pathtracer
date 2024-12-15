@@ -267,11 +267,11 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 
 	if (IsDiffuse) {
 		if(GetBounceData(Pixel.MetRoughIsSpec) != 1 && !InvalidReprojection) AlbCol.y = AlbedoColorB[pos_prev].y;
-		TempSH = irradiance_to_SH(Exposure * PartialRenderingFactor * IndirectBoost * clamp(Pixel.Indirect * Pixel.Data.xyz / 1024.0f,0,1200000.0f), asfloat(WorldPosData[id.xy].xyz));
-		HF = float4(PartialRenderingFactor * clamp(Exposure * (Pixel.Direct + NEEValue) * Pixel.Data.xyz,0,1200000.0f),1);
+		TempSH = irradiance_to_SH(Exposure * sqrt(PartialRenderingFactor) * IndirectBoost * clamp(Pixel.Indirect * Pixel.Data.xyz / 1024.0f,0,1200000.0f), asfloat(WorldPosData[id.xy].xyz));
+		HF = float4(sqrt(PartialRenderingFactor) * clamp(Exposure * (Pixel.Direct + NEEValue) * Pixel.Data.xyz,0,1200000.0f),1);
 	} else {
 		if(GetBounceData(Pixel.MetRoughIsSpec) != 1 && !InvalidReprojection) AlbCol.x = AlbedoColorB[pos_prev].x;
-		Spec = packRGBE(PartialRenderingFactor * clamp(Exposure * (Pixel.Direct + IndirectBoost * Pixel.Indirect + NEEValue) * Pixel.Data.xyz,0,1200000.0f));
+		Spec = packRGBE(sqrt(PartialRenderingFactor) * clamp(Exposure * (Pixel.Direct + IndirectBoost * Pixel.Indirect + NEEValue) * Pixel.Data.xyz,0,1200000.0f));
 	}
 	STORE_SH(TEX_PT_COLOR_LF_SHWrite, TEX_PT_COLOR_LF_COCGWrite, id.xy, TempSH);
 	TEX_PT_COLOR_HFWrite[id.xy] = HF;
