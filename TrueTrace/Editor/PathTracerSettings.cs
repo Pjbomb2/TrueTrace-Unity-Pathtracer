@@ -1585,6 +1585,7 @@ Toolbar toolbar;
             SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
             SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
             SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
+            if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
             SetGlobalDefines("DX11", definesList.Contains("DX11Only"));         
 
             if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 || definesList.Contains("DX11Only")) {
@@ -1605,6 +1606,7 @@ Toolbar toolbar;
             SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
             SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
             SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
+            if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
             SetGlobalDefines("DX11", definesList.Contains("DX11Only"));
             HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
             HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("HardwareRT"); SetGlobalDefines("HardwareRT", true);} else {RemoveDefine("HardwareRT"); SetGlobalDefines("HardwareRT", false);}});
@@ -1639,17 +1641,23 @@ Toolbar toolbar;
             OIDNToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("UseOIDN"); else RemoveDefine("UseOIDN");});
 
 
+            Toggle RadCacheToggle = new Toggle() {value = (definesList.Contains("DisableRadianceCache")), text = "FULLY Disable Radiance Cache"};
+            RadCacheToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {SetGlobalDefines("RadCache", false); AddDefine("DisableRadianceCache");} else {SetGlobalDefines("RadCache", true); RemoveDefine("DisableRadianceCache");}});
+
+
             if(Application.isPlaying) {
                HardwareRTToggle.SetEnabled(false);
                BindlessToggle.SetEnabled(false);
                GaussianTreeToggle.SetEnabled(false);
                OIDNToggle.SetEnabled(false);
+               RadCacheToggle.SetEnabled(false);
                NonAccurateLightTriToggle.SetEnabled(false);
             } else {
                HardwareRTToggle.SetEnabled(true);
                BindlessToggle.SetEnabled(true);
                GaussianTreeToggle.SetEnabled(true);
                OIDNToggle.SetEnabled(true);
+               RadCacheToggle.SetEnabled(true);
                NonAccurateLightTriToggle.SetEnabled(true);
             }
 
@@ -1696,6 +1704,7 @@ Toolbar toolbar;
          NonPlayContainer.Add(GaussianTreeToggle);
          NonPlayContainer.Add(DX11Toggle);
          NonPlayContainer.Add(OIDNToggle);
+         NonPlayContainer.Add(RadCacheToggle);
          NonPlayContainer.Add(NonAccurateLightTriToggle);
          NonPlayContainer.Add(new Label("-------------"));
 
@@ -1708,6 +1717,7 @@ Toolbar toolbar;
          PlayContainer.Add(CustomToggle("Stained Glass", "StainedGlassShadows"));
          PlayContainer.Add(CustomToggle("Ignore Backfacing Triangles", "IgnoreBackfacing"));
          PlayContainer.Add(CustomToggle("Use Light BVH", "LBVH"));
+         PlayContainer.Add(CustomToggle("Quick RadCache Toggle", "RadCache"));
          PlayContainer.Add(CustomToggle("Use Texture LOD", "UseTextureLOD"));
          PlayContainer.Add(CustomToggle("Use vMF Diffuse", "vMFDiffuse"));
          PlayContainer.Add(CustomToggle("Use EON Diffuse", "EONDiffuse"));

@@ -38,10 +38,10 @@ MonoBehaviour:
   UseReSTIRGI: 0
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
-  ReSTIRGITemporalMCap: 20
+  ReSTIRGITemporalMCap: 12
   ReSTIRGIUpdateRate: 0
   DoReSTIRGIConnectionValidation: 1
-  Exposure: 26.7
+  Exposure: 8.8
   DoPartialRendering: 0
   PartialRenderingFactor: 2
   DoFirefly: 0
@@ -63,7 +63,7 @@ MonoBehaviour:
   LightEnergyScale: 1
   BackgroundType: 0
   BackgroundIntensity: {x: 1, y: 1}
-  SceneBackgroundColor: {x: 1, y: 1, z: 1}
+  SceneBackgroundColor: {x: 0, y: 0, z: 0}
   SecondaryBackgroundType: 0
   SecondarySceneBackgroundColor: {x: 0, y: 0, z: 0}
   HDRILongLat: {x: 0, y: 0}

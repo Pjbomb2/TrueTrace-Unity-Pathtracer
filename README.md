@@ -33,6 +33,7 @@
   <li>Supports deformable standard meshes</li>
   <li>Supports unity heightmap terrain and heightmap trees</li>
   <li>Enironment Map Importance Sampling</li>
+  <li>Radiance Cache</li>
   <li>Material Preset System</li>
   <li>Efficient Panorama Rendering</li>
   <li>IES for spotlights</li>
@@ -133,6 +134,7 @@ for bringing bindless textures to unity!
   <li>Disable Bindless Textures - (DX12 Only, Disables bindless texturing, and uses the atlas fallback(Limits resolution).</li>
   <li>Use DX11 - Disables DX12 only toggles, but allows truetrace to run in DX11.</li>
   <li>Enable OIDN - (DX12 Only) Adds the OIDN denoiser to the Denoiser list in "Main Options"</li>
+  <li>Disable Radiance Cache - Not reccomended, but will free the memory usually used by the Radiance Cache</li>
   <li>Enable Emissive Texture Aware Light BVH - Allows for smarter/better sampling of emissive meshes by considering their emissive masks/textures; Can use lots of RAM.</li>
 </ul>
 
@@ -197,8 +199,10 @@ TrueTrace Options Description -
   <li>LBVH - Enable/Disable the light BVH</li>
   <li>FasterLightSampling - Uses an alternative method for calculating LBVH PDF that is a bit wrong, but much faster</li>
   <li>AccurateEmissionTex - Turn on/off emission textures</li>
+  <li>RadianceCache - Turn on/off the Radiance Cache</li>
   <li>IndirectRetraceWeighting - Adds indirect lighting into ReSTIR GI retracing/luminance validation</li>
   <li>TrueBlack - Allows materials to be truely black, removes the bottom limit</li>
+  <li>AdvancedRadCacheAlt - Experimental working set for the Radiance Cache, not recomended</li>
   <li>UseTextureLOD - (Only works with Bindless)Enables Texture LOD</li>
   <li>DebugView - Replace that "DVNone" with any of the defines below, from "DVNone" to "DVGIView"</li> -->
 </ul>

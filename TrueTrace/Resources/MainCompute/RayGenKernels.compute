@@ -88,3 +88,11 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
     RayData globray = {ray.origin, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
     GlobalRays[pixel_index] = globray;
 }
+
+
+#pragma kernel CacheResolve
+[numthreads(256, 1, 1)]
+void CacheResolve(uint3 id : SV_DispatchThreadID) {
+    VoxelDataBufferA.Store4(id.x * 16, 0);
+    HashEntriesBufferA[id.x] = 0;
+}

@@ -25,6 +25,7 @@
 #define UseBRDFLights
 #define DoubleBufferSGTree
 // #define Fog
+#define RadCache
 
 
 //END OF DEFINES
@@ -40,6 +41,7 @@
 #define DVBVHView 4
 #define DVGIView 5
 #define DVDepthView 6
+#define DVRadCache 7
 
 #define DepthDivisor 1000.0f
 

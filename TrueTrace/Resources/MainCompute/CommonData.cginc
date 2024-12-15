@@ -2375,15 +2375,14 @@ inline float3 temperature(float t)
 	    return a + b*cos( 6.28318*(c*t+d) );
 	}
 
-#if DebugView != -1
+// #if DebugView != -1
 	float4 HandleDebug(int Index) {
         static const float one_over_max_unsigned = asfloat(0x2f7fffff);
         uint hash = pcg_hash(32);
         float LinearIndex = hash_with(Index, hash) * one_over_max_unsigned;
         return float4(pal(LinearIndex), 1);
     }
-#endif
-
+// #endif
 
 
 
@@ -2398,44 +2397,24 @@ float3 SampleDirectionSphere(float u1, float u2)
     return float3(x, y, z);
 }
 
-#define WorldCacheScale 50.0f
-#define GridBias 2
-#define BucketCount 32
-#define PropDepth 4
-#define MinSampleToContribute 0
-#define MaxSampleCount 32
+#define BucketCount 4
+#define PropDepth 5
 #define CacheCapacity (4 * 1024 * 1024)
 
-
-/*
-
-
-
-	inline uint FindOpenHash(const uint2 HashValue) {
-		uint BucketIndex;
-		uint hash = Hash32(HashValue);
-	    uint HashIndex = hash % CacheCapacity;
-	    uint baseSlot = floor(HashIndex / (float)BucketCount) * BucketCount;
-	    uint temp = 0;
-		if(baseSlot < CacheCapacity) {
-			for(int i = 0; i < BucketCount; i++) {	
-				InterlockedExchange(HashEntriesBuffer[baseSlot + i].z, 0xAAAAAAAA, BucketIndex);
-				if(BucketIndex != 0xAAAAAAAA && HashEntriesBuffer[baseSlot + i].x == 0 && HashEntriesBuffer[baseSlot + i].y == 0) {
-					HashEntriesBuffer[baseSlot + i].xy = HashValue.xy;
-					// InterlockedExchange(HashEntriesBuffer[baseSlot + i].z, BucketIndex, temp);//May be bad
-					return baseSlot + i;
-				} else {
-					HashKeyValue OldHashValue = HashEntriesBuffer[baseSlot + i];
-					if((OldHashValue.x == 0 && OldHashValue.y == 0) || (OldHashValue.x == HashValue.x && OldHashValue.y == HashValue.y)) return baseSlot + i;
-				}
-			}
-		}
-		return 0;
-	}
+RWStructuredBuffer<uint> HashEntriesBufferA;
+StructuredBuffer<uint> HashEntriesBufferB;
+RWByteAddressBuffer VoxelDataBufferA;
+ByteAddressBuffer VoxelDataBufferB;
+struct PropogatedCacheData {
+	uint2 samples[PropDepth];
+	uint pathLength;//[0,2] = PathLength, [3,5] = Computed Norm//the NORMAL I STORE IT WITH ONLY NEEDS TO BE 3 FUCKKIN BITS, NOT A  WHOLE UINT OR DEDICATED NORMAL!
+	uint RunningIlluminance;//this gets cleared every bounce basically, since the last NEE and last bounce share the same normal
+};
+RWStructuredBuffer<PropogatedCacheData> CacheBuffer;
 
 
-//Using third hash from here: http://burtleburtle.net/bob/hash/integer.html
-uint Hash32Bit(uint a) {
+
+inline uint Hash32Bit(uint a) {
   	a -= (a<<6);
     a ^= (a>>17);
     a -= (a<<9);
@@ -2446,46 +2425,123 @@ uint Hash32Bit(uint a) {
     return a;
 }
 
-uint Hash32(uint2 HashValue) {
-    return Hash32Bit(HashValue.x & 0xffffffff)
-         ^ Hash32Bit(HashValue.y & 0xffffffff);
+
+//double hash counting? take advantage of the hash collisions to store multiple values per hash?
+inline uint GenHash(float3 Pos, const float3 Norm) {
+    int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);
+
+    Pos = floor(Pos * 200.0f / pow(2, Layer));
+    uint3 Pos2 = asuint((int3)Pos);
+    uint ThisHash = ((Pos2.x & 255) << 0) | ((Pos2.y & 255) << 8) | ((Pos2.z & 255) << 16);
+    ThisHash |= (Layer & 31) << 24;
+
+    uint NormHash =
+        (Norm.x >= 0 ? 1 : 0) +
+        (Norm.y >= 0 ? 2 : 0) +
+        (Norm.z >= 0 ? 4 : 0);
+
+    ThisHash |= (NormHash) << 29;
+    return Hash32Bit(ThisHash);
 }
 
 
-uint -> 
-8 bit positions = 24 bits
-3 bit norm = 27 bits
-5 bit layer = 32 bits
-	GridLevel ->
-	inline uint InsertIntoOpenHash(const uint2 HashVal) {
-		x ^ y ^ z
-		xyz = pack into 15 bits each
+uint GenHashComputedNorm(float3 Pos, uint NormHash) {
+    int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);
+
+    Pos = floor(Pos * 200.0f / pow(2, Layer));
+    uint3 Pos2 = asuint((int3)Pos);
+    uint ThisHash = ((Pos2.x & 255) << 0) | ((Pos2.y & 255) << 8) | ((Pos2.z & 255) << 16);
+    ThisHash |= (Layer & 31) << 24;
+
+    ThisHash |= (NormHash) << 29;
+    return Hash32Bit(ThisHash);
+}
+
+bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
+    uint HashIndex = HashValue % CacheCapacity;
+
+    uint baseSlot = floor(HashIndex / (float)BucketCount) * BucketCount;
+    for (uint i = 0; i < BucketCount; i++) {
+        uint PrevHash = HashEntriesBufferB[baseSlot + i];//I am read and writing to the same hash buffer, this could be a problem
+
+        if (PrevHash == HashValue) {
+            cacheEntry = baseSlot + i;
+            return true;
+        } else if (PrevHash == 0) break;
+    }
+    return false;
+}
+
+
+	struct GridVoxel {
+	    float3 radiance;
+	    uint sampleNum;
+	};
+
+	GridVoxel RetrieveCacheData(uint CacheEntry2) {
+		uint CacheEntry = CacheEntry2;
+		if(!FindHashEntry(CacheEntry2, CacheEntry)) return (GridVoxel)0;
+	    uint4 voxelDataPacked = VoxelDataBufferB.Load4(CacheEntry * 16);
+
+	    GridVoxel Voxel;
+		Voxel.radiance = voxelDataPacked.xyz / 1e3f;
+	    Voxel.sampleNum = voxelDataPacked.w;
+
+	    return Voxel;
 	}
 
-	inline uint FindOpenHash(const uint2 HashValue) {
+	void AddVoxelData(uint CacheEntry, uint4 Values) {
+	    CacheEntry *= 16;
+	    [unroll]for(int i = 0; i < 4; i++)
+	    	if(Values[i] != 0) VoxelDataBufferA.InterlockedAdd(CacheEntry + 4 * i, Values[i]);//move to gaussians later, requires a full compressor every bounce tho since I cant rely on interlockedadds
+	}
+
+	inline uint FindOpenEntryInHash(const uint HashValue) {
 		uint BucketIndex;
-		uint hash = Hash32(HashValue);
-	    uint HashIndex = hash % CacheCapacity;
+	    uint HashIndex = HashValue % CacheCapacity;
 	    uint baseSlot = floor(HashIndex / (float)BucketCount) * BucketCount;
-	    uint temp = 0;
 		if(baseSlot < CacheCapacity) {
 			for(int i = 0; i < BucketCount; i++) {	
-				InterlockedExchange(HashEntriesBuffer[baseSlot + i].z, 0xAAAAAAAA, BucketIndex);
-				if(BucketIndex != 0xAAAAAAAA && HashEntriesBuffer[baseSlot + i].x == 0 && HashEntriesBuffer[baseSlot + i].y == 0) {
-					HashEntriesBuffer[baseSlot + i].xy = HashValue.xy;
-					// InterlockedExchange(HashEntriesBuffer[baseSlot + i].z, BucketIndex, temp);//May be bad
+				InterlockedCompareExchange(HashEntriesBufferA[baseSlot + i], 0, HashValue, BucketIndex);
+				if(BucketIndex == 0 || BucketIndex == HashValue) {
 					return baseSlot + i;
-				} else {
-					HashKeyValue OldHashValue = HashEntriesBuffer[baseSlot + i];
-					if((OldHashValue.x == 0 && OldHashValue.y == 0) || (OldHashValue.x == HashValue.x && OldHashValue.y == HashValue.y)) return baseSlot + i;
 				}
 			}
 		}
 		return 0;
 	}
 
-	void GenHash(float3 Pos, float3 norm) {
-		
+
+	inline bool AddHitToCacheFull(inout PropogatedCacheData CurrentProp, float3 Pos) {//Run every frame in shading due to 
+		float3 RunningIlluminance = unpackRGBE(CurrentProp.RunningIlluminance);
+		uint CurHash = GenHashComputedNorm(Pos, (CurrentProp.pathLength >> 3) & 7);
+		if(CurHash == 0) return false;
+		CurHash = FindOpenEntryInHash(CurHash);
+		uint ActualPropDepth = min(CurrentProp.pathLength & 7, PropDepth);
+		AddVoxelData(CurHash, uint4(RunningIlluminance * 1e3f, 1));
+		for(int i = 0; i < ActualPropDepth; i++) {
+			RunningIlluminance *= unpackRGBE(CurrentProp.samples[i].x);
+			AddVoxelData(CurrentProp.samples[i].y, uint4(RunningIlluminance * 1e3f, 0));
+		}
+
+        if(ActualPropDepth >= 4) CurrentProp.samples[4] = CurrentProp.samples[3];
+        if(ActualPropDepth >= 3) CurrentProp.samples[3] = CurrentProp.samples[2];
+        if(ActualPropDepth >= 2) CurrentProp.samples[2] = CurrentProp.samples[1];
+        if(ActualPropDepth >= 1) CurrentProp.samples[1] = CurrentProp.samples[0];
+        CurrentProp.samples[0].y = CurHash;
+        CurrentProp.RunningIlluminance = 0;
+        return true;
 	}
 
-*/
+
+	inline void AddBSDFToCacheWithHit(inout PropogatedCacheData CurrentProp, float3 bsdf) {//Valid bounce case, add to shading AFTER AddHitToCache has been run.
+        CurrentProp.samples[0].x = packRGBE(bsdf);
+        CurrentProp.pathLength = (CurrentProp.pathLength & (~7)) | min((CurrentProp.pathLength & 7) + 1, PropDepth-1);
+	}
+	inline void AddSimpleNormFlagsToCache(inout PropogatedCacheData CurrentProp, float3 Norm) {
+        CurrentProp.pathLength = (CurrentProp.pathLength & (~56)) | ((((Norm.x >= 0 ? 1 : 0) + (Norm.y >= 0 ? 2 : 0) + (Norm.z >= 0 ? 4 : 0)) & 7) << 3);
+	
+	}
+
+
+
