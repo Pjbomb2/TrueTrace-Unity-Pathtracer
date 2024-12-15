@@ -23,7 +23,7 @@ namespace TrueTrace {
    public class EditModeFunctions : EditorWindow {
         [MenuItem("TrueTrace/TrueTrace Settings")]
         public static void ShowWindow() {
-            GetWindow<EditModeFunctions>("TrueTrace Settings").InitializeGlob();
+            GetWindow<EditModeFunctions>("TrueTrace Settings");
         }
 
         public Toggle NEEToggle;
@@ -493,6 +493,7 @@ namespace TrueTrace {
          public void OnFocus() {
            if(Assets == null) {
                if( GameObject.Find("Scene") != null) {
+                  InitializeGlob();
                   Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
                   if(Assets == null) {
                      Assets = GameObject.Find("Scene").AddComponent<AssetManager>();

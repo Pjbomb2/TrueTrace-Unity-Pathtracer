@@ -363,11 +363,8 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
 
     RunningReservoirBCopy2.Radiance.Color = (CenterCol.Indirect * IndirectBoost + CenterCol.Direct) * (ReSTIRGIUpdateRate != 0 ? ((float)(ReSTIRGIUpdateRate + 1) / ((float)(ReSTIRGIUpdateRate))) : 1);
     RunningReservoirBCopy2.Radiance.Wsum = luminance((CenterCol.Indirect * IndirectBoost + CenterCol.Direct) * bsdf * (ReSTIRGIUpdateRate != 0 ? ((float)(ReSTIRGIUpdateRate + 1) / ((float)(ReSTIRGIUpdateRate))) : 1));
-    // RunningReservoirBCopy2.Radiance.Color = CenterCol.Indirect * IndirectBoost + CenterCol.Direct;
-    // RunningReservoirBCopy2.Radiance.Wsum = luminance((CenterCol.Indirect * IndirectBoost + CenterCol.Direct) * bsdf);
     RunningReservoirBCopy2.Radiance.W = 1;
     RunningReservoirBCopy2.Radiance.M = 1;
-    // RunningReservoirBCopy2.Ray.OriginNormal = WorldPos.w > 0 ? -normalize(CalcPos(WorldPos) - PrimaryHitPosition) : CalcNorm(WorldPos);
     RunningReservoirBCopy2.Ray.Case = Case;
     RunningReservoirBCopy2.Ray.pixel_index = pixel_index;
     RunningReservoirBCopy2.Ray.FrameAccum = frames_accumulated;
@@ -379,7 +376,6 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     RunningReservoirCCopy2.Radiance.Wsum = luminance(pow(unpackRGBE(CenterCol.PrimaryNEERay),2.2f) * NEEbsdf);
     RunningReservoirCCopy2.Radiance.W = 1;
     RunningReservoirCCopy2.Radiance.M = 1;
-    // RunningReservoirCCopy2.Ray.OriginNormal = SurfNorm;
     RunningReservoirCCopy2.Ray.pixel_index = pixel_index;
     RunningReservoirCCopy2.Ray.FrameAccum = frames_accumulated;
     if(RetracedSample) RunningReservoirC = RunningReservoirCCopy2;
@@ -396,7 +392,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
 
     float4 PrevGBuffer = PrevScreenSpaceInfo[prevIndex];
 
-    float ShadowGuidanceWeight = exp(-abs(PrevGBuffer.z - GBuffer.z)) > 0.7f;
+    float ShadowGuidanceWeight = exp(-abs(PrevGBuffer.z - GBuffer.z)) > 0.9f;
 
     ShadowGuidanceWeight *= max(dot(SurfNorm, i_octahedral_32(asuint(PrevGBuffer.y))), 0);
 
@@ -616,6 +612,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     float Mc = 1;
     float McNEE = 1;
     float3 CenterNorm = CalcNorm(WorldPos);
+    // float3 CenterNorm = WorldPos.w == 99993 ? -normalize(CenterRayDir) : CalcNorm(WorldPos);
     int ValidSamps = 0;
     int SampleCount = ReSTIRGISpatialCount;
     if(UseReSTIRGISpatial && Case != 3) {
@@ -638,10 +635,11 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
             float3 bsdf2;
             float3 NEEbsdf2;
             uint4 SampleWorldPos = WorldPosB[CellTapCoord];
-            float3 SampleNorm = CalcNorm(SampleWorldPos);
             float3 SampleNEEPos = NEEPosB[CellTapCoord].xyz;
             float3 SampleRayDir = CalcPos(SampleWorldPos) - PrimaryHitPosition;
             float3 SampleNEERayDir = SampleNEEPos - PrimaryHitPosition;
+            float3 SampleNorm = CalcNorm(SampleWorldPos);
+            // float3 SampleNorm = SampleWorldPos.w == 99993 ? normalize(SampleRayDir) : CalcNorm(SampleWorldPos);
             Valid2 = ReconstructBsdf2(SurfaceMat, CameraRay.direction, normalize(SampleRayDir), SurfNorm, pdf, bsdf2, TangSpace, pixel_index);
             Valid2 = EvaluateBsdf2(SurfaceMat, CameraRay.direction, normalize(SampleNEERayDir), SurfNorm, pdf, NEEbsdf2, pixel_index);
             UnpackRadianceData(PackedReservoirA.xy, bsdf2, RunningReservoirBCopy.Radiance);

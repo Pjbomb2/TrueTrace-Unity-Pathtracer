@@ -67,27 +67,29 @@ namespace TrueTrace {
             }
 
         }
-
+        public bool DoRendering = true;
         public void Update() {
             RenderInstances();
         }
 
         public void RenderInstances() {
-            if(InstanceIndexes == null || TempQue == null || TempQue.Count == 0 || NeedsToReinit) InitRelationships();
-            int Coun1 = TempQue.Count;
-            for(int i = 0; i < Coun1; i++) {
-                if (InstanceIndexes.TryGetValue(TempQue[i], out InstanceData ExistingList)) {
-                    int Coun2 = ExistingList.InstanceTargets.Count;
-                    Bounds TempBounds = ExistingList.LocalMesh.bounds;
-                    Matrix4x4 TempIden;
-                    for(int i2 = 0; i2 < Coun2; i2++) {
-                        TempIden = Matrix4x4.identity;
-                        ExistingList.InstTransfArray[i2].prevObjectToWorld = ExistingList.InstTransfArray[i2].objectToWorld;
-                        if(TempQue[i].RenderImposters) ExistingList.InstTransfArray[i2].objectToWorld.SetTRS(ExistingList.InstanceTargets[i2].transform.position +  Vector3.Scale(TempBounds.center, ExistingList.InstanceTargets[i2].transform.lossyScale), ExistingList.InstanceTargets[i2].transform.rotation, Vector3.Scale(ExistingList.InstanceTargets[i2].transform.lossyScale, TempBounds.extents * 2.0f));
-                        else ExistingList.InstTransfArray[i2].objectToWorld = ExistingList.InstanceTargets[i2].transform.localToWorldMatrix;
-                    }
+            if(DoRendering) {
+                if(InstanceIndexes == null || TempQue == null || TempQue.Count == 0 || NeedsToReinit) InitRelationships();
+                int Coun1 = TempQue.Count;
+                for(int i = 0; i < Coun1; i++) {
+                    if (InstanceIndexes.TryGetValue(TempQue[i], out InstanceData ExistingList)) {
+                        int Coun2 = ExistingList.InstanceTargets.Count;
+                        Bounds TempBounds = ExistingList.LocalMesh.bounds;
+                        Matrix4x4 TempIden;
+                        for(int i2 = 0; i2 < Coun2; i2++) {
+                            TempIden = Matrix4x4.identity;
+                            ExistingList.InstTransfArray[i2].prevObjectToWorld = ExistingList.InstTransfArray[i2].objectToWorld;
+                            if(TempQue[i].RenderImposters) ExistingList.InstTransfArray[i2].objectToWorld.SetTRS(ExistingList.InstanceTargets[i2].transform.position +  Vector3.Scale(TempBounds.center, ExistingList.InstanceTargets[i2].transform.lossyScale), ExistingList.InstanceTargets[i2].transform.rotation, Vector3.Scale(ExistingList.InstanceTargets[i2].transform.lossyScale, TempBounds.extents * 2.0f));
+                            else ExistingList.InstTransfArray[i2].objectToWorld = ExistingList.InstanceTargets[i2].transform.localToWorldMatrix;
+                        }
 
-                    for(int i2 = 0; i2 < ExistingList.SubMeshCount; i2++) {try {Graphics.RenderMeshInstanced(ExistingList.LocalRendp, TempQue[i].RenderImposters ? Resources.GetBuiltinResource<Mesh>("Cube.fbx") : ExistingList.LocalMesh, i2, ExistingList.InstTransfArray);} catch(System.Exception E) {}}
+                        for(int i2 = 0; i2 < ExistingList.SubMeshCount; i2++) {try {Graphics.RenderMeshInstanced(ExistingList.LocalRendp, TempQue[i].RenderImposters ? Resources.GetBuiltinResource<Mesh>("Cube.fbx") : ExistingList.LocalMesh, i2, ExistingList.InstTransfArray);} catch(System.Exception E) {}}
+                    }
                 }
             }
         }

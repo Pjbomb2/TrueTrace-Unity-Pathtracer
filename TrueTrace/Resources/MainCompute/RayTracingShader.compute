@@ -357,13 +357,22 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         #endif
         // float pdf3 = 0;
         // ReconstructBsdf2(hitDat, PrevDirection, ray.direction, norm, pdf3, bsdf, GetTangentSpace2(norm), pixel_index);
-        [branch]if(luminance(Color.Indirect) == 0) {
+        [branch]if(luminance(Color.Indirect) <= 0.0) {// || CurBounce < 3 //This may make some situations more accurate
             if(GetBounceData(CachePathLength) != 0){
                 if(GetVoxSize(pos) / (GetVoxSize(pos) + hit.t) <= random(433, pixel_index).x) {
-                    GridVoxel TempVox = RetrieveCacheData(GenHash(pos, Refracted ? -Geomnorm : Geomnorm));
+                    GridVoxel TempVox = RetrieveCacheData(GenHash(pos, Geomnorm));
                     float3 Rad = TempVox.radiance / (float)max(TempVox.SampleNum,1);
-                    if(((CachePathLength >> 22) & 0x1)) Rad *= throughput;
-                    Color.Indirect += Rad;// * bsdf;
+                    if(((CachePathLength >> 22) & 0x1)) Rad *= Color.throughput;
+                    // Rad *= bsdf;
+                    if(MaterialLobe == 3) Color.Direct += Rad; 
+                    else Color.Indirect += Rad;
+                    if(Refracted) {
+                        TempVox = RetrieveCacheData(GenHash(pos, -Geomnorm));
+                        Rad = TempVox.radiance / (float)max(TempVox.SampleNum,1);
+                        if(((CachePathLength >> 22) & 0x1)) Rad *= Color.throughput;
+                    if(MaterialLobe == 3) Color.Direct += Rad; 
+                    else Color.Indirect += Rad;
+                    }
                     if(DoPartialRendering && luminance(Rad) != 0) {
                         if((int(id.x)/32 + int(id.y)/32 + curframe)%2==0) return;
                     }
@@ -943,11 +952,11 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
             GBufferCol = ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo) == 0) ? 1 : ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo));
         #endif
     }
-    float3 res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? GlobalColors[final_pixel_index].Data.xyz : (sqrt((float)PartialRenderingFactor) * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * (UseReSTIRGI ? 1.0f : IndirectBoost)) * GlobalColors[final_pixel_index].Data.xyz) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f) / GBufferCol);
+    float3 res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? GlobalColors[final_pixel_index].Data.xyz : (((float)PartialRenderingFactor) * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * (UseReSTIRGI ? 1.0f : IndirectBoost)) * GlobalColors[final_pixel_index].Data.xyz) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f) / GBufferCol);
     if (!all(res < 10000000)) res = 0;
     #if DebugView != -1
         #if DebugView == DVGIView
-            res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? GlobalColors[final_pixel_index].Data.xyz : (sqrt((float)PartialRenderingFactor) * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f)));
+            res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? GlobalColors[final_pixel_index].Data.xyz : (((float)PartialRenderingFactor) * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f)));
         #elif defined(RadCache) && DebugView == DVRadCache
             res = 0;
             float4 Dat = _DebugTex[id.xy];

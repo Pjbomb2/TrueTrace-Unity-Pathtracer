@@ -148,7 +148,7 @@ void IntersectBVH(int ray_index) {
             [branch]if(CurBounce == 0) {
                 _PrimaryTriangleInfo[TempUv] = uint4(MeshOffsets[Indexes.x].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y] - _MeshData[MeshOffsets[Indexes.x].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
             } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
-                _PrimaryTriangleInfo[TempUv] = ((UseReSTIRGI && bestHit.t != FarPlane) ? uint4(MeshOffsets[Indexes.x].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y] - _MeshData[MeshOffsets[Indexes.x].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v)) : ((UseASVGF || bestHit.t != FarPlane) ? uint4(asuint(ray.direction), 99993) : uint4(ray.direction * bestHit.t + ray.origin, 99993)));
+                _PrimaryTriangleInfo[TempUv] = ((UseReSTIRGI && bestHit.t != FarPlane) ? uint4(MeshOffsets[Indexes.x].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y] - _MeshData[MeshOffsets[Indexes.x].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v)) : ((UseASVGF || bestHit.t != FarPlane) ? uint4(asuint(ray.direction), 99993) : uint4(asuint(ray.direction * bestHit.t + ray.origin), 99993)));
             }
 
             if(CurBounce == 0 && bestHit.t == asfloat(GlobalRay.hits.z)) bestHit.t = FarPlane;
@@ -351,7 +351,11 @@ void IntersectBVHShadow(int ray_index) {
                         if (ShadowRay.t >= 0) {
 
                             if (CurBounce == 0) {
-                                GlobalColors[PixelIndex].Direct += ShadowRay.illumination * throughput;
+                                #ifdef RadCache
+                                    GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)) * throughput);
+                                #else
+                                    GlobalColors[PixelIndex].Direct += ShadowRay.illumination * throughput;
+                                #endif
                             } else {
                                 #ifdef RadCache
                                     if(GetBounceData(CacheBuffer[PixelIndex].pathLength) == 0) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
@@ -466,7 +470,11 @@ void IntersectBVHShadow(int ray_index) {
                             #endif
                             if (ShadowRay.t >= 0) {
                                 if (CurBounce == 0) {
-                                    GlobalColors[PixelIndex].Direct += ShadowRay.illumination * throughput;
+                                    #ifdef RadCache
+                                        GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)) * throughput);
+                                    #else
+                                        GlobalColors[PixelIndex].Direct += ShadowRay.illumination * throughput;
+                                    #endif
                                 } else {
                                     #ifdef RadCache
                                         if(GetBounceData(CacheBuffer[PixelIndex].pathLength) == 0) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
@@ -580,7 +588,11 @@ void IntersectShadowHeightmap(int ray_index) {
             #endif
             if (ShadowRaysBuffer[ray_index].t >= 0) {
                 if (CurBounce == 0) {
-                    GlobalColors[PixelIndex].Direct += ShadowRaysBuffer[ray_index].illumination;
+                    #ifdef RadCache
+                        GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRaysBuffer[ray_index].illumination,rcp(2.2f)));
+                    #else
+                        GlobalColors[PixelIndex].Direct += ShadowRaysBuffer[ray_index].illumination;
+                    #endif
                 } else {
                     #ifdef RadCache
                         if(GetBounceData(CacheBuffer[PixelIndex].pathLength) == 0) GlobalColors[PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;
@@ -589,7 +601,7 @@ void IntersectShadowHeightmap(int ray_index) {
                     #endif
                 }
             } else {
-                if(CurBounce != 0 && UseReSTIRGI) GlobalColors[PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;// * unpackRGBE(asuint(ShadowRay.DiffuseIlluminance));
+                if(CurBounce != 0 && ((!UseReSTIRGI && GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == 0) || !UseASVGF)) GlobalColors[PixelIndex].Indirect += ShadowRaysBuffer[ray_index].illumination;// * unpackRGBE(asuint(ShadowRay.DiffuseIlluminance));
                 else GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRaysBuffer[ray_index].illumination,rcp(2.2f)));
             }
         }

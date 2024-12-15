@@ -671,11 +671,12 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const fl
 			                if(_Materials[MaterialIndex].specTrans == 1) {
 				            	#ifdef StainedGlassShadows
 				            		float3 MatCol = _Materials[MaterialIndex].surfaceColor;
-							        if(_Materials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _Materials[MaterialIndex]) / 3.0f;
+							        if(_Materials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _Materials[MaterialIndex]);
 	        						MatCol = lerp(MatCol, _Materials[MaterialIndex].BlendColor, _Materials[MaterialIndex].BlendFactor);
 									//float Dotter = abs(dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction));
 
-			    					throughput *= sqrt(exp(-CalculateExtinction2(1.0f - MatCol, _Materials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _Materials[MaterialIndex].scatterDistance)));
+			    					// if(!GetFlag(_Materials[MaterialIndex].Tag, Thin)) throughput *= exp(-t * CalculateExtinction2(1.0f - MatCol, _Materials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _Materials[MaterialIndex].scatterDistance));
+			    					throughput *= exp(-CalculateExtinction2(1.0f - MatCol, _Materials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _Materials[MaterialIndex].scatterDistance));
 			    				#endif
 			                	return false;
 			                }
@@ -2431,7 +2432,7 @@ inline uint Hash32Bit(uint a) {
 
 
 //double hash counting? take advantage of the hash collisions to store multiple values per hash?
-inline uint GenHash(float3 Pos, const float3 Norm) {
+inline uint GenHash(float3 Pos, float3 Norm) {
     int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);//length() seems to work better, but I reallly wanna find a way to make Dot() work, as thats wayyyy faster
 
     Pos = floor(Pos * 200.0f / pow(2, Layer));
@@ -2439,6 +2440,7 @@ inline uint GenHash(float3 Pos, const float3 Norm) {
     uint ThisHash = ((Pos2.x & 255) << 0) | ((Pos2.y & 255) << 8) | ((Pos2.z & 255) << 16);
     ThisHash |= (Layer & 31) << 24;
 
+    Norm  = i_octahedral_32(octahedral_32(Norm));
     uint NormHash =
         (Norm.x >= 0 ? 1 : 0) +
         (Norm.y >= 0 ? 2 : 0) +
@@ -2546,11 +2548,25 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 	}
 
 
+	inline bool AddHitToCachePartial(inout PropogatedCacheData CurrentProp, float3 Pos) {//Run every frame in shading due to 
+		float3 RunningIlluminance = unpackRGBE(CurrentProp.RunningIlluminance);
+		uint CurHash = FindOpenEntryInHash(GenHashComputedNorm(Pos, (CurrentProp.pathLength >> 3) & 7));
+		if(CurHash == 0) return false;
+		uint ActualPropDepth = min(CurrentProp.pathLength & 7, PropDepth);
+		AddVoxelData(CurHash, uint4(RunningIlluminance * 1e3f, 1));
+        CurrentProp.RunningIlluminance = 0;
+        return true;
+	}
+
+
+
+
 	inline void AddBSDFToCacheWithHit(inout PropogatedCacheData CurrentProp, float3 bsdf) {//Valid bounce case, add to shading AFTER AddHitToCache has been run.
         CurrentProp.samples[0].x = packRGBE(bsdf);
-        CurrentProp.pathLength = (CurrentProp.pathLength & (~7)) | min((CurrentProp.pathLength & 7) + 1, PropDepth-1);
+        CurrentProp.pathLength = (CurrentProp.pathLength & (~7)) | min((CurrentProp.pathLength & 7) + 1, PropDepth);
 	}
 	inline void AddSimpleNormFlagsToCache(inout PropogatedCacheData CurrentProp, float3 Norm) {
+    	Norm  = i_octahedral_32(octahedral_32(Norm));
         CurrentProp.pathLength = (CurrentProp.pathLength & (~56)) | ((((Norm.x >= 0 ? 1 : 0) + (Norm.y >= 0 ? 2 : 0) + (Norm.z >= 0 ? 4 : 0)) & 7) << 3);
 	
 	}
