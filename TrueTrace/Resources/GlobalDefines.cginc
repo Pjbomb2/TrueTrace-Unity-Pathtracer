@@ -6,6 +6,7 @@
 //Dont modify above, CPU code will do automatically
 #define AdvancedAlphaMapped
 #define ExtraSampleValidation
+#define ReSTIRAdvancedValidation
 #define IgnoreGlassShadow
 // #define IgnoreGlassMain
 // #define FadeMapping
@@ -16,17 +17,15 @@
 #define LBVH
 // #define FasterLightSampling
 #define AccurateEmissionTex
-#define RadianceCache
-// #define ImprovedRadCacheSpecularResponse
-// #define HighSpeedRadCache
-#define IndirectRetraceWeighting
 #define TrueBlack
-// #define AdvancedRadCacheAlt
 // #define UseTextureLOD
 // #define vMFDiffuse
 #define EONDiffuse
 // #define AdvancedBackground
 #define UseBRDFLights
+#define DoubleBufferSGTree
+// #define Fog
+#define RadCache
 
 
 //END OF DEFINES
@@ -40,8 +39,14 @@
 #define DVTriID 2
 #define DVAlbID 3
 #define DVBVHView 4
-#define DVRadCache 5
-#define DVGIView 6
+#define DVGIView 5
+#define DVDepthView 6
+#define DVRadCache 7
+
+#define DepthDivisor 1000.0f
+
+#define FogScale 4.0f
+
 
 //Dont change the ones below
 #define DisneyIndex 0

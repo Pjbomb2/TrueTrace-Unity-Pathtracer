@@ -180,26 +180,26 @@ namespace TrueTrace {
             ExposureBuffer?.Release(); ExposureBuffer = new ComputeBuffer(1, sizeof(float)); ExposureBuffer.SetData(TestBuffer);
 
 
-            Bloom.SetInt("screen_width", Screen.width);
-            Bloom.SetInt("screen_height", Screen.height);
+            Bloom.SetInt("screen_width", _camera.scaledPixelWidth);
+            Bloom.SetInt("screen_height", _camera.scaledPixelHeight);
 
-            FXAAShader.SetInt("screen_width", Screen.width);
-            FXAAShader.SetInt("screen_height", Screen.height);
+            FXAAShader.SetInt("screen_width", _camera.scaledPixelWidth);
+            FXAAShader.SetInt("screen_height", _camera.scaledPixelHeight);
 
-            Sharpen.SetInt("screen_width", Screen.width);
-            Sharpen.SetInt("screen_height", Screen.height);
+            Sharpen.SetInt("screen_width", _camera.scaledPixelWidth);
+            Sharpen.SetInt("screen_height", _camera.scaledPixelHeight);
 
-            AutoExpose.SetInt("screen_width", Screen.width);
-            AutoExpose.SetInt("screen_height", Screen.height);
+            AutoExpose.SetInt("screen_width", _camera.scaledPixelWidth);
+            AutoExpose.SetInt("screen_height", _camera.scaledPixelHeight);
             AutoExpose.SetBuffer(AutoExposeKernel, "A", ExposureBuffer);
             AutoExpose.SetBuffer(AutoExposeFinalizeKernel, "A", ExposureBuffer);
 
-            TAA.SetInt("screen_width", Screen.width);
-            TAA.SetInt("screen_height", Screen.height);
+            TAA.SetInt("screen_width", _camera.scaledPixelWidth);
+            TAA.SetInt("screen_height", _camera.scaledPixelHeight);
 
 
-            threadGroupsX = Mathf.CeilToInt(Screen.width / 16.0f);
-            threadGroupsY = Mathf.CeilToInt(Screen.height / 16.0f);
+            threadGroupsX = Mathf.CeilToInt(_camera.scaledPixelWidth / 16.0f);
+            threadGroupsY = Mathf.CeilToInt(_camera.scaledPixelHeight / 16.0f);
 
             BloomInitialized = false;
             TAAInitialized = false;
@@ -220,21 +220,21 @@ namespace TrueTrace {
             TestBuffer.Add(1);
             ExposureBuffer?.Release(); ExposureBuffer = new ComputeBuffer(1, sizeof(float)); ExposureBuffer.SetData(TestBuffer);
 
-            FXAAShader.SetInt("screen_width", Screen.width);
-            FXAAShader.SetInt("screen_height", Screen.height);
+            FXAAShader.SetInt("screen_width", _camera.scaledPixelWidth);
+            FXAAShader.SetInt("screen_height", _camera.scaledPixelHeight);
 
-            Bloom.SetInt("screen_width", Screen.width);
-            Bloom.SetInt("screen_height", Screen.height);
-            AutoExpose.SetInt("screen_width", Screen.width);
-            AutoExpose.SetInt("screen_height", Screen.height);
+            Bloom.SetInt("screen_width", _camera.scaledPixelWidth);
+            Bloom.SetInt("screen_height", _camera.scaledPixelHeight);
+            AutoExpose.SetInt("screen_width", _camera.scaledPixelWidth);
+            AutoExpose.SetInt("screen_height", _camera.scaledPixelHeight);
             AutoExpose.SetBuffer(AutoExposeKernel, "A", ExposureBuffer);
             AutoExpose.SetBuffer(AutoExposeFinalizeKernel, "A", ExposureBuffer);
 
-            TAA.SetInt("screen_width", Screen.width);
-            TAA.SetInt("screen_height", Screen.height);
+            TAA.SetInt("screen_width", _camera.scaledPixelWidth);
+            TAA.SetInt("screen_height", _camera.scaledPixelHeight);
 
-            threadGroupsX = Mathf.CeilToInt(Screen.width / 16.0f);
-            threadGroupsY = Mathf.CeilToInt(Screen.height / 16.0f);
+            threadGroupsX = Mathf.CeilToInt(_camera.scaledPixelWidth / 16.0f);
+            threadGroupsY = Mathf.CeilToInt(_camera.scaledPixelHeight / 16.0f);
 
 
             InitRenderTexture(true);
@@ -288,8 +288,8 @@ namespace TrueTrace {
 
         private void InitBloom() {
             BloomSamplesDown = new RenderTexture[8];
-            int BloomWidth = Screen.width / 2;
-            int BloomHeight = Screen.height / 2;
+            int BloomWidth = _camera.scaledPixelWidth / 2;
+            int BloomHeight = _camera.scaledPixelHeight / 2;
             BloomWidths = new int[8];
             BloomHeights = new int[8];
             for (int i = 0; i < 8; i++)
@@ -300,7 +300,7 @@ namespace TrueTrace {
                 BloomWidth /= 2;
                 BloomHeight /= 2;
             }
-            CommonFunctions.CreateRenderTexture(ref BloomIntermediate, Screen.width, Screen.height, CommonFunctions.RTFull4);
+            CommonFunctions.CreateRenderTexture(ref BloomIntermediate, _camera.scaledPixelWidth, _camera.scaledPixelHeight, CommonFunctions.RTFull4);
             BloomInitialized = true;
         }
         public void ExecuteBloom(ref RenderTexture _converged, float BloomStrength, CommandBuffer cmd)
@@ -308,17 +308,17 @@ namespace TrueTrace {
             if(!BloomInitialized) InitBloom();
             if (Bloom == null) { Bloom = Resources.Load<ComputeShader>("PostProcess/Compute/Bloom"); }
 
-            Bloom.SetInt("screen_width", Screen.width);
-            Bloom.SetInt("screen_height", Screen.height);
-            cmd.BeginSample("Bloom");
+            Bloom.SetInt("screen_width", _camera.scaledPixelWidth);
+            Bloom.SetInt("screen_height", _camera.scaledPixelHeight);
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("Bloom");
             Bloom.SetFloat("strength", BloomStrength);
-            cmd.SetComputeIntParam(Bloom, "screen_width", Screen.width);
-            cmd.SetComputeIntParam(Bloom, "screen_height", Screen.height);
+            cmd.SetComputeIntParam(Bloom, "screen_width", _camera.scaledPixelWidth);
+            cmd.SetComputeIntParam(Bloom, "screen_height", _camera.scaledPixelHeight);
             cmd.SetComputeIntParam(Bloom, "TargetWidth", BloomWidths[0]);
             cmd.SetComputeIntParam(Bloom, "TargetHeight", BloomHeights[0]);
             cmd.SetComputeTextureParam(Bloom, BloomLowPassKernel, "InputTex", _converged);
             cmd.SetComputeTextureParam(Bloom, BloomLowPassKernel, "OutputTex", BloomSamplesDown[0]);
-            cmd.DispatchCompute(Bloom, BloomLowPassKernel, (int)Mathf.Ceil(BloomWidths[0] / 16.0f), (int)Mathf.Ceil(BloomHeights[0] / 16.0f), 1);
+            cmd.DispatchCompute(Bloom, BloomLowPassKernel, (int)Mathf.CeilToInt(BloomWidths[0] / 16.0f), (int)Mathf.CeilToInt(BloomHeights[0] / 16.0f), 1);
             for (int i = 1; i < 8; i++)
             {
                 // Debug.Log(BloomWidths[i]);
@@ -328,7 +328,7 @@ namespace TrueTrace {
                 cmd.SetComputeIntParam(Bloom, "screen_height", BloomHeights[i - 1]);
                 cmd.SetComputeTextureParam(Bloom, BloomDownsampleKernel, "InputTex", BloomSamplesDown[i - 1]);
                 cmd.SetComputeTextureParam(Bloom, BloomDownsampleKernel, "OutputTex", BloomSamplesDown[i]);
-                cmd.DispatchCompute(Bloom, BloomDownsampleKernel, (int)Mathf.Ceil(BloomWidths[i - 1] / 16.0f), (int)Mathf.Ceil(BloomHeights[i - 1] / 16.0f), 1);
+                cmd.DispatchCompute(Bloom, BloomDownsampleKernel, (int)Mathf.CeilToInt(BloomWidths[i - 1] / 16.0f), (int)Mathf.CeilToInt(BloomHeights[i - 1] / 16.0f), 1);
             }
             Bloom.SetBool("IsFinal", false);
 
@@ -342,19 +342,19 @@ namespace TrueTrace {
                 cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OutputTex", BloomSamplesDown[i - 1]);
                 // cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OrigTex", BloomSamplesDown[i - 1]);
 
-                cmd.DispatchCompute(Bloom, BloomUpsampleKernel, (int)Mathf.Ceil(BloomWidths[i - 1] / 16.0f), (int)Mathf.Ceil(BloomHeights[i - 1] / 16.0f), 1);
+                cmd.DispatchCompute(Bloom, BloomUpsampleKernel, (int)Mathf.CeilToInt(BloomWidths[i - 1] / 16.0f), (int)Mathf.CeilToInt(BloomHeights[i - 1] / 16.0f), 1);
             }
             cmd.Blit(_converged, BloomIntermediate);
-            cmd.SetComputeIntParam(Bloom, "TargetWidth", Screen.width);
-            cmd.SetComputeIntParam(Bloom, "TargetHeight", Screen.height);
+            cmd.SetComputeIntParam(Bloom, "TargetWidth", _camera.scaledPixelWidth);
+            cmd.SetComputeIntParam(Bloom, "TargetHeight", _camera.scaledPixelHeight);
             cmd.SetComputeIntParam(Bloom, "screen_width", BloomWidths[0]);
             cmd.SetComputeIntParam(Bloom, "screen_height", BloomHeights[0]);
             Bloom.SetBool("IsFinal", true);
             cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OrigTex", BloomIntermediate);
             cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "InputTex", BloomSamplesDown[0]);
             cmd.SetComputeTextureParam(Bloom, BloomUpsampleKernel, "OutputTex", _converged);
-            cmd.DispatchCompute(Bloom, BloomUpsampleKernel, (int)Mathf.Ceil(Screen.width / 16.0f), (int)Mathf.Ceil(Screen.height / 16.0f), 1);
-            cmd.EndSample("Bloom");
+            cmd.DispatchCompute(Bloom, BloomUpsampleKernel, (int)Mathf.CeilToInt(_camera.scaledPixelWidth / 16.0f), (int)Mathf.CeilToInt(_camera.scaledPixelHeight / 16.0f), 1);
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("Bloom");
 
         }
 
@@ -371,7 +371,7 @@ namespace TrueTrace {
 
         public void ExecuteAutoExpose(ref RenderTexture _converged, float Exposure, CommandBuffer cmd, bool ExposureAuto)
         {//need to fix this so it doesnt create new textures every time
-            cmd.BeginSample("Auto Exposure");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("Auto Exposure");
             if(ExposureBuffer == null) {
                 List<float> TestBuffer = new List<float>();
                 TestBuffer.Add(1);
@@ -382,8 +382,8 @@ namespace TrueTrace {
                 AutoExposeKernel = AutoExpose.FindKernel("AutoExpose");
                 AutoExposeFinalizeKernel = AutoExpose.FindKernel("AutoExposeFinalize");
             }
-            AutoExpose.SetInt("screen_width", Screen.width);
-            AutoExpose.SetInt("screen_height", Screen.height);
+            AutoExpose.SetInt("screen_width", _camera.scaledPixelWidth);
+            AutoExpose.SetInt("screen_height", _camera.scaledPixelHeight);
             AutoExpose.SetBuffer(AutoExposeKernel, "A", ExposureBuffer);
             AutoExpose.SetBuffer(AutoExposeFinalizeKernel, "A", ExposureBuffer);
             cmd.SetComputeTextureParam(AutoExpose, AutoExposeKernel, "InTex", _converged);
@@ -393,14 +393,14 @@ namespace TrueTrace {
             cmd.DispatchCompute(AutoExpose, AutoExposeKernel, 1, 1, 1);
             cmd.SetComputeTextureParam(AutoExpose, AutoExposeFinalizeKernel, "OutTex", _converged);
             cmd.DispatchCompute(AutoExpose, AutoExposeFinalizeKernel, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("Auto Exposure");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("Auto Exposure");
 
 
         }
         private void InitializeTAA() {
-            CommonFunctions.CreateRenderTexture(ref TempTexTAA, Screen.width, Screen.height, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref TempTexTAA2, Screen.width, Screen.height, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref _TAAPrev, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref TempTexTAA, _camera.scaledPixelWidth, _camera.scaledPixelHeight, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref TempTexTAA2, _camera.scaledPixelWidth, _camera.scaledPixelHeight, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref _TAAPrev, _camera.scaledPixelWidth, _camera.scaledPixelHeight, CommonFunctions.RTHalf4);
             TAAInitialized = true;
         }
         public void ExecuteTAA(ref RenderTexture _Final, int CurrentSamples, CommandBuffer cmd)
@@ -414,9 +414,9 @@ namespace TrueTrace {
             TAA.SetTextureFromGlobal(TAAPrepareKernel, "DepthTex", "_CameraDepthTexture");
             cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorIn", _Final);
             cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorOut", TempTexTAA);
-            cmd.BeginSample("TAA Prepare Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("TAA Prepare Kernel");
             cmd.DispatchCompute(TAA, TAAPrepareKernel, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("TAA Prepare Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("TAA Prepare Kernel");
 
 
             cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorIn", TempTexTAA);
@@ -424,23 +424,23 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(TAA, TAAKernel, "TAAPrev", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAKernel, "TAAPrevRead", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorOut", TempTexTAA2);
-            cmd.BeginSample("TAA Main Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("TAA Main Kernel");
             cmd.DispatchCompute(TAA, TAAKernel, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("TAA Main Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("TAA Main Kernel");
 
             cmd.SetComputeTextureParam(TAA, TAAFinalizeKernel, "TAAPrev", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAFinalizeKernel, "ColorOut", _Final);
             cmd.SetComputeTextureParam(TAA, TAAFinalizeKernel, "ColorIn", TempTexTAA2);
-            cmd.BeginSample("TAA Finalize Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("TAA Finalize Kernel");
             cmd.DispatchCompute(TAA, TAAFinalizeKernel, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("TAA Finalize Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("TAA Finalize Kernel");
         }
 
         Matrix4x4 PreviousCameraMatrix;
         Matrix4x4 PreviousCameraInverseMatrix;
         Matrix4x4 PrevProjInv;
         private void InitializeUpsampler() {
-            CommonFunctions.CreateRenderTexture(ref UpScalerLightingDataTexture, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref UpScalerLightingDataTexture, _camera.scaledPixelWidth, _camera.scaledPixelHeight, CommonFunctions.RTHalf4);
             UpscalerInitialized = true;
         }
         public void ExecuteUpsample(ref RenderTexture Input, ref RenderTexture Output, int curframe, int cursample, CommandBuffer cmd, RenderTexture ScreenSpaceInfo)
@@ -472,18 +472,18 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "Input", Input);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "Output", UpScalerLightingDataTexture);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "FinalOutput", Output);
-            cmd.BeginSample("Upsample Main Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("Upsample Main Kernel");
             cmd.DispatchCompute(Upscaler, UpsampleKernel, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("Upsample Main Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("Upsample Main Kernel");
 
 
             Upscaler.SetTextureFromGlobal(UpsampleKernel + 1, "Albedo", "_CameraGBufferTexture0");
             Upscaler.SetTextureFromGlobal(UpsampleKernel + 1, "Albedo2", "_CameraGBufferTexture1");
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel + 1, "Input", UpScalerLightingDataTexture);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel + 1, "FinalOutput", Output);
-            cmd.BeginSample("Upsample Blur Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("Upsample Blur Kernel");
             cmd.DispatchCompute(Upscaler, UpsampleKernel + 1, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("Upsample Blur Kernel");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("Upsample Blur Kernel");
             
 
             PreviousCameraMatrix = _camera.cameraToWorldMatrix;
@@ -494,24 +494,24 @@ namespace TrueTrace {
 
         public void ExecuteToneMap(ref RenderTexture Output, CommandBuffer cmd, ref Texture3D LUT, ref Texture3D LUT2, int ToneMapSelection)
         {//need to fix this so it doesnt create new textures every time
-            cmd.BeginSample("ToneMap");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ToneMap");
             cmd.SetComputeIntParam(ToneMapper,"ToneMapSelection", ToneMapSelection);
             cmd.SetComputeIntParam(ToneMapper,"screen_width", Output.width);
             cmd.SetComputeIntParam(ToneMapper,"screen_height", Output.height);
             cmd.SetComputeTextureParam(ToneMapper, 0, "Result", Output);
             cmd.SetComputeTextureParam(ToneMapper, 0, "LUT", ToneMapSelection == 5 ? LUT2 : LUT);
-            cmd.DispatchCompute(ToneMapper, 0, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("ToneMap");
+            cmd.DispatchCompute(ToneMapper, 0, Mathf.CeilToInt((float)Output.width / 16.0f), Mathf.CeilToInt((float)Output.height / 16.0f), 1);
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ToneMap");
         }
         private void InitializeTAAU() {
-            CommonFunctions.CreateRenderTexture(ref TAAA, Screen.width, Screen.height, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref TAAB, Screen.width, Screen.height, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref TAAA, _camera.scaledPixelWidth, _camera.scaledPixelHeight, CommonFunctions.RTHalf4);
+            CommonFunctions.CreateRenderTexture(ref TAAB, _camera.scaledPixelWidth, _camera.scaledPixelHeight, CommonFunctions.RTHalf4);
             TAAUInitialized = true;
         }
         public void ExecuteTAAU(ref RenderTexture Output, ref RenderTexture Input, CommandBuffer cmd, int CurFrame)
         {//need to fix this so it doesnt create new textures every time
             if(!TAAUInitialized) InitializeTAAU();
-            cmd.BeginSample("TAAU");
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("TAAU");
             bool IsEven = CurFrame % 2 == 0;
             cmd.SetComputeIntParam(TAAU,"source_width", SourceWidth);
             cmd.SetComputeIntParam(TAAU,"source_height", SourceHeight);
@@ -526,41 +526,41 @@ namespace TrueTrace {
             TAAU.SetTextureFromGlobal(TAAUKernel, "Albedo2", "_CameraGBufferTexture1");
             TAAU.SetTextureFromGlobal(TAAUKernel, "TEX_FLAT_MOTION", "_CameraMotionVectorsTexture");
             cmd.DispatchCompute(TAAU, TAAUKernel, threadGroupsX, threadGroupsY, 1);
-            cmd.EndSample("TAAU");
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("TAAU");
         }
 
 
         private void InitializeSharpen() {
-            CommonFunctions.CreateRenderTexture(ref SharpenTex, Screen.width, Screen.height, CommonFunctions.RTFull4);
+            CommonFunctions.CreateRenderTexture(ref SharpenTex, _camera.scaledPixelWidth, _camera.scaledPixelHeight, CommonFunctions.RTFull4);
             SharpenInitialized = true;
         }
         public void ExecuteSharpen(ref RenderTexture Output, float Sharpness, CommandBuffer cmd) {
             if(!SharpenInitialized) InitializeSharpen();
             if (Sharpen == null) { Sharpen = Resources.Load<ComputeShader>("PostProcess/Compute/Sharpen"); }
-            Sharpen.SetInt("screen_width", Screen.width);
-            Sharpen.SetInt("screen_height", Screen.height);
+            Sharpen.SetInt("screen_width", _camera.scaledPixelWidth);
+            Sharpen.SetInt("screen_height", _camera.scaledPixelHeight);
             cmd.CopyTexture(Output, 0, 0, SharpenTex, 0, 0);
             cmd.SetComputeTextureParam(Sharpen, 0, "Input", SharpenTex);
             cmd.SetComputeTextureParam(Sharpen, 0, "Result", Output);
             Sharpen.SetFloat("Sharpness", Sharpness);
-            cmd.DispatchCompute(Sharpen, 0, threadGroupsX, threadGroupsY, 1);
+            cmd.DispatchCompute(Sharpen, 0, Mathf.CeilToInt((float)Output.width / 16.0f), Mathf.CeilToInt((float)Output.height / 16.0f), 1);
 
         }
 
 
         private void InitializeFXAA() {
-            CommonFunctions.CreateRenderTexture(ref FXAAFlopper, Screen.width, Screen.height, CommonFunctions.RTFull4);
+            CommonFunctions.CreateRenderTexture(ref FXAAFlopper, _camera.scaledPixelWidth, _camera.scaledPixelHeight, CommonFunctions.RTFull4);
             FXAAInitialized = true;
         }
         public void ExecuteFXAA(ref RenderTexture Output, CommandBuffer cmd) {
             if(!FXAAInitialized) InitializeFXAA();
             if (FXAAShader == null) { FXAAShader = Resources.Load<ComputeShader>("PostProcess/Compute/FXAA"); }
-            FXAAShader.SetInt("screen_width", Screen.width);
-            FXAAShader.SetInt("screen_height", Screen.height);
+            FXAAShader.SetInt("screen_width", Output.width);
+            FXAAShader.SetInt("screen_height", Output.height);
             cmd.CopyTexture(Output, 0, 0, FXAAFlopper, 0, 0);
             cmd.SetComputeTextureParam(FXAAShader, FXAAFXAAKernel, "Input", FXAAFlopper);
             cmd.SetComputeTextureParam(FXAAShader, FXAAFXAAKernel, "Result", Output);
-            cmd.DispatchCompute(FXAAShader, FXAAFXAAKernel, threadGroupsX, threadGroupsY, 1);
+            cmd.DispatchCompute(FXAAShader, FXAAFXAAKernel, Mathf.CeilToInt((float)Output.width / 16.0f), Mathf.CeilToInt((float)Output.height / 16.0f), 1);
 
         }
 

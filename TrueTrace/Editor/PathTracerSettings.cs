@@ -42,6 +42,7 @@ namespace TrueTrace {
          [SerializeField] public Camera SelectedCamera;
          [SerializeField] public bool ClayMode = false;
          [SerializeField] public Vector3 ClayColor = new Vector3(0.5f,0.5f,0.5f);
+         [SerializeField] public int MaxSampCount = 99999999;
          [SerializeField] public Vector3 GroundColor = new Vector3(0.1f,0.1f,0.1f);
          [SerializeField] public int BounceCount = 7;
          [SerializeField] public float RenderRes = 1;
@@ -60,9 +61,9 @@ namespace TrueTrace {
          [SerializeField] public bool ExposureAuto = false;
          [SerializeField] public bool ReSTIRGI = false;
          [SerializeField] public bool SampleValid = false;
-         [SerializeField] public int UpdateRate = 7;
+         [SerializeField] public int GIUpdateRate = 7;
          [SerializeField] public bool GITemporal = true;
-         [SerializeField] public int GITemporalMCap = 12;
+         [SerializeField] public int GITemporalMCap = 20;
          [SerializeField] public bool GISpatial = true;
          [SerializeField] public int GISpatialSampleCount = 24;
          [SerializeField] public bool TAA = false;
@@ -84,6 +85,7 @@ namespace TrueTrace {
          [SerializeField] public Color SceneBackgroundColor = new Color(1,1,1,1);
          [SerializeField] public Color PrimaryBackgroundTintColor = new Color(1,1,1,1);
          [SerializeField] public Color SecondarySceneBackgroundColor = new Color(1,1,1,1);
+         [SerializeField] public Color FogColor = new Color(0.6f,0.6f,0.6f,1);
          [SerializeField] public Vector2 BackgroundIntensity = Vector2.one;
          [SerializeField] public float PrimaryBackgroundTint = 0.0f;
          [SerializeField] public float PrimaryBackgroundContrast = 1.0f;
@@ -108,6 +110,7 @@ namespace TrueTrace {
          [SerializeField] public bool UseTransmittanceInNEE = true;
          [SerializeField] public bool MatChangeResetsAccum = false;
          [SerializeField] public float OIDNBlendRatio = 1.0f;
+         [SerializeField] public float FogDensity = 0.0002f;
          [SerializeField] public bool ConvBloom = false;
          [SerializeField] public float ConvStrength = 1.37f;
          [SerializeField] public float ConvBloomThreshold = 13.23f;
@@ -253,10 +256,12 @@ namespace TrueTrace {
                   GameObject InstancedParent = Instantiate(Objects[i][0], new Vector3(0,-100,0), Quaternion.identity, InstanceStorage);
                   if(InstancedParent.GetComponent<ParentObject>() == null) InstancedParent.AddComponent<ParentObject>();
                   for(int i2 = Count - 1; i2 >= 0; i2--) {
+                     DestroyImmediate(Objects[i][i2].GetComponent<MeshFilter>());
+                     DestroyImmediate(Objects[i][i2].GetComponent<MeshRenderer>());
                      DestroyImmediate(Objects[i][i2].GetComponent<RayTracingObject>());
                      if(InstancedParent.GetComponent<ParentObject>()) DestroyImmediate(Objects[i][i2].GetComponent<ParentObject>());
-                     Objects[i][i2].AddComponent<InstancedObject>();
-                     Objects[i][i2].GetComponent<InstancedObject>().InstanceParent = InstancedParent.GetComponent<ParentObject>();
+                     (Objects[i][i2].AddComponent<InstancedObject>()).InstanceParent = InstancedParent.GetComponent<ParentObject>();
+                     // Objects[i][i2].GetComponent<InstancedObject>().InstanceParent = InstancedParent.GetComponent<ParentObject>();
                   }
                }
             }
@@ -421,105 +426,6 @@ namespace TrueTrace {
 
 
          }
-         // public struct FlagObjects {
-         //    public List<FlagObjects> Children;
-         //    public GameObject Obj;
-         //    public bool HasSkinnedChild;
-         //    public bool HasSkinnedSelf;
-         //    public bool HasNormChild;
-         //    public bool HasNormSelf;
-         //    public bool HasPO;
-         //    public bool HasRTO;
-         //    public bool ChainedImportance;
-         //    public bool AlreadyHandled;
-         //    public bool IsEmpty;
-         // }
-         // public List<FlagObjects> Hierarchy;       
-
-         // FlagObjects Prepare(Transform Source) {
-         //    FlagObjects SourceObj = new FlagObjects();
-         //    SourceObj.Children = new List<FlagObjects>();
-         //    SourceObj.Obj = Source.gameObject;
-         //    if(Source.gameObject.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin)) {
-         //       SourceObj.HasSkinnedSelf = true;
-         //       SourceObj.ChainedImportance = true;
-         //    }
-         //    if(Source.gameObject.TryGetComponent<MeshRenderer>(out MeshRenderer TempRend)) {
-         //       SourceObj.HasNormSelf = true;
-         //       SourceObj.ChainedImportance = true;
-         //    }
-         //    SourceObj.IsEmpty = !Source.ChainedImportance;
-
-         //    if(Source.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempRTO)) SourceObj.HasRTO = true;
-         //    if(Source.gameObject.TryGetComponent<ParentObject>(out ParentObject TempPO)) SourceObj.HasPO = true;
-
-         //    int TransformCount = Source.transform.childCount;
-         //    for(int i = 0; i < TransformCount; i++) {
-         //       if(Source.GetChild(i).gameObject.activeInHierarchy) {
-         //          FlagObjects TempFlag = Prepare(Source.GetChild(i));
-         //          if(TempFlag.HasSkinnedSelf) SourceObj.HasSkinnedChild = true;
-         //          if(TempFlag.HasNormSelf) SourceObj.HasNormChild = true;
-         //          if(TempFlag.ChainedImportance) SourceObj.ChainedImportance = true;
-         //          SourceObj.Children.Add(TempFlag);
-         //       }
-         //    }
-         //    return SourceObj;
-         // }
-         // void Prune(ref FlagObjects Source) {
-         //    if(Source.Children == null) return;
-         //    int ChildCount = Source.Children.Count;
-         //    for(int i = ChildCount - 1; i >= 0; i--) {
-         //       if(Source.Children[i].ChainedImportance) Prune(ref Source.Children[i]);
-         //       else Source.Children.RemoveAt(i);
-         //    }
-         // }
-
-         // int Check(ref FlagObjects Source, FlagObjects Child) {
-         //    if(!(Child.HasPO && (Child.HasRTO || Child.HasSkinnedChild || Child.HasNormChild))) Source.ChildNeedsHandling = true;  
-         // }
-         // void Solve(ref FlagObjects Source) {
-         //    int ChildCount = Source.Children.Count;
-         //    for(int i = 0; i < ChildCount; i++) {
-         //       Solve(ref Source.Children[i]);
-         //    }
-
-         //    if(Source.HasNormSelf || Source.HasSkinnedSelf) {//check for material count not zero and mesh exists?
-         //       if(!Source.HasRTO) {
-         //          Source.Obj.AddComponent<RayTracingObject>();
-         //          Source.HasRTO = true;
-         //       }
-         //    }
-
-         //    bool ChildrenSafe = true;
-         //    bool UnhandledContainsSkinned = false;
-         //    bool UnhandledContainsNormal = false;
-         //    List<int> UnhandledChildrenIndexes = new List<int>();
-         //    for(int i = 0; i < ChildCount && ChildrenSafe; i++) {
-         //       if(!Source.Children[i].AlreadyHandled) {
-         //          UnhandledChildrenIndexes.Add(i); 
-         //          UnhandledContainsSkinned = UnhandledContainsSkinned || Source.Children[i].HasSkinnedSelf;
-         //          UnhandledContainsNormal = UnhandledContainsNormal || Source.Children[i].HasNormSelf;
-         //       }
-         //    }
-         //    int UnhandledCount = UnhandledChildrenIndexes.Count;
-         //    if(!Source.AlreadyHandled) {
-         //       if(UnhandledContainsSkinned && !Source.HasNormSelf) {
-         //          Source.Obj.AddComponent<ParentObject>();
-         //          Source.AlreadyHandled = true;     
-         //          for(int i = 0; i < UnhandledCount; i++) {
-         //             int Index = UnhandledChildrenIndexes[i];
-         //             if(Source.Children[Index].HasSkinnedSelf) {
-         //                Source.Children[Index].AlreadyHandled = true;
-         //             } else if(Source.Children[Index].HasNormSelf) {
-         //                Source.Children[Index].Obj.AddComponent<ParentObject>();
-         //                Source.Children[Index].AlreadyHandled = true;
-         //             }
-         //          }
-         //       } else if(UnhandledContainsSkinned && Source.HasNormSelf) {
-
-         //       }
-         //    }
-
 
          private void QuickStart() {
             // ParentObject[] TempObjects2 = GameObject.FindObjectsOfType<ParentObject>();
@@ -587,6 +493,7 @@ namespace TrueTrace {
          public void OnFocus() {
            if(Assets == null) {
                if( GameObject.Find("Scene") != null) {
+                  InitializeGlob();
                   Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
                   if(Assets == null) {
                      Assets = GameObject.Find("Scene").AddComponent<AssetManager>();
@@ -616,7 +523,7 @@ Toggle BloomToggle;
 IntegerField AtmoScatterField;
 Toggle GIToggle;
 IntegerField GIUpdateRateField;
-IntegerField TeporalGIMCapField;
+IntegerField TemporalGIMCapField;
 FloatField ReSTIRGISpatialRadiusField;
 Toggle TemporalGIToggle;
 Toggle SpatialGIToggle;
@@ -630,43 +537,6 @@ IntegerField RISCountField;
 IntegerField OIDNFrameField;
 FloatField FocalSlider;
 PopupField<string> UpscalerField;
-
-private void StandardSet() {
-         BounceCount = 7;
-         RenderRes = 1;
-         NEE = true;
-         Accumulate = true;
-         RR = true;
-         Moving = true;
-         MeshSkin = true;
-         Bloom = false;
-         BloomStrength = 0.5f;
-         DoF = false;
-         DoFAperature = 0.1f;
-         DoFAperatureScale = 1.0f;
-         DoFFocal = 0.1f;
-         DoExposure = false;
-         ExposureAuto = false;
-         ReSTIRGI = false;
-         SampleValid = false;
-         UpdateRate = 7;
-         GITemporal = true;
-         GITemporalMCap = 488;
-         GISpatial = true;
-         GISpatialSampleCount = 12;
-         TAA = false;
-         FXAA = false;
-         ToneMap = false;
-         AtmoScatter = 4;
-         ShowFPS = true;
-         Exposure = 0;
-         AtlasSize = 16384;
-         DoPartialRendering = false;
-         DoFirefly = false;
-         ReSTIRGISpatialRadius = 30;
-         RISCount = 12;
-}
-
 
 
 VisualElement MainSource;
@@ -948,6 +818,23 @@ Toolbar toolbar;
       List<string> ColorProperties;
       List<string> FloatProperties;
       DialogueNode OutputNode;
+      TexturePairs ConnectChildren(ref List<TexturePairs> TargetList, int CurrentIndex) {
+         if(CurrentIndex > 0) {
+            return new TexturePairs() {
+                     Purpose = TargetList[CurrentIndex].Purpose,
+                     ReadIndex = TargetList[CurrentIndex].ReadIndex,
+                     TextureName = TargetList[CurrentIndex].TextureName,
+                     Fallback = ConnectChildren(ref TargetList, CurrentIndex - 1)
+                  };                   
+         } else {
+            return new TexturePairs() {
+                     Purpose = TargetList[CurrentIndex].Purpose,
+                     ReadIndex = TargetList[CurrentIndex].ReadIndex,
+                     TextureName = TargetList[CurrentIndex].TextureName,
+                     Fallback = null
+                  };                    
+         }
+      }
       void ConfirmMats() {
          
          MatShader.AvailableTextures = new List<TexturePairs>();
@@ -963,7 +850,76 @@ Toolbar toolbar;
 
 
          for(int i = 0; i < AvailableIndexes.Count; i++) {
-            switch((int)AvailableIndexes[i].PropertyIndex) {
+
+            int Prop = (int)AvailableIndexes[i].PropertyIndex;
+            List<TexturePairs> FallbackNodes = new List<TexturePairs>();
+            TexturePairs FallbackNode = null;
+            if(Prop != (int)Properties.AlbedoColor && Prop != (int)Properties.MetallicSlider && Prop != (int)Properties.MetallicMin && Prop != (int)Properties.MetallicMax && Prop != (int)Properties.RoughnessSlider && Prop != (int)Properties.RoughnessMin && Prop != (int)Properties.RoughnessMax) {
+               if((AvailableIndexes[i].inputContainer[0] as Port).connections.ToList().Count != 0) {
+                  int Purpose = 0;
+                  int ReadIndex = 0;
+                  switch(Prop) {
+                     case((int)Properties.AlbedoTexture):Purpose = (int)TexturePurpose.Albedo;break;
+                     case((int)Properties.NormalTexture):Purpose = (int)TexturePurpose.Normal;break;
+                     case((int)Properties.EmissionTexture):Purpose = (int)TexturePurpose.Emission;break;
+                     case((int)Properties.MetallicTexture):Purpose = (int)TexturePurpose.Metallic;break;
+                     case((int)Properties.RoughnessTexture):Purpose = (int)TexturePurpose.Roughness;break;
+                     case((int)Properties.AlphaTexture):Purpose = (int)TexturePurpose.Alpha;break;
+                     case((int)Properties.MatCapTexture):Purpose = (int)TexturePurpose.MatCapTex;break;
+                     case((int)Properties.MatCapMask):Purpose = (int)TexturePurpose.MatCapMask;break;
+                     case((int)Properties.SecondaryAlbedoTexture):Purpose = (int)TexturePurpose.SecondaryAlbedoTexture;break;
+                     case((int)Properties.SecondaryAlbedoTextureMask):Purpose = (int)TexturePurpose.SecondaryAlbedoTextureMask;break;
+                     case((int)Properties.SecondaryNormalTexture):Purpose = (int)TexturePurpose.SecondaryNormalTexture;break;
+                  }
+
+
+
+                  DialogueNode CurrentNode = ((((AvailableIndexes[i].inputContainer[0] as Port).connections.ToList())[0].output as Port).node as DialogueNode);
+                  switch(Prop) {
+                     case((int)Properties.AlbedoTexture):ReadIndex = -4;break;
+                     case((int)Properties.NormalTexture):ReadIndex = -3;break;
+                     case((int)Properties.EmissionTexture):ReadIndex = -4;break;
+                     case((int)Properties.MetallicTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);  break;
+                     case((int)Properties.RoughnessTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);  break;
+                     case((int)Properties.AlphaTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);break;
+                     case((int)Properties.MatCapTexture):ReadIndex = -4;break;
+                     case((int)Properties.MatCapMask):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);break;
+                     case((int)Properties.SecondaryAlbedoTexture):ReadIndex = -4;break;
+                     case((int)Properties.SecondaryAlbedoTextureMask):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);break;
+                     case((int)Properties.SecondaryNormalTexture):ReadIndex = -3;break;
+                  }
+                  FallbackNodes.Add(new TexturePairs() {
+                     Purpose = Purpose,
+                     ReadIndex = ReadIndex,
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(CurrentNode.title)]
+                  });                    
+                  while((CurrentNode.inputContainer[0] as Port).connections.ToList().Count != 0) {
+                     CurrentNode = ((((CurrentNode.inputContainer[0] as Port).connections.ToList())[0].output as Port).node as DialogueNode);
+                     switch(Prop) {
+                        case((int)Properties.AlbedoTexture):ReadIndex = -4;break;
+                        case((int)Properties.NormalTexture):ReadIndex = -3;break;
+                        case((int)Properties.EmissionTexture):ReadIndex = -4;break;
+                        case((int)Properties.MetallicTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);  break;
+                        case((int)Properties.RoughnessTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);  break;
+                        case((int)Properties.AlphaTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);break;
+                        case((int)Properties.MatCapTexture):ReadIndex = -4;break;
+                        case((int)Properties.MatCapMask):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);break;
+                        case((int)Properties.SecondaryAlbedoTexture):ReadIndex = -4;break;
+                        case((int)Properties.SecondaryAlbedoTextureMask):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);break;
+                        case((int)Properties.SecondaryNormalTexture):ReadIndex = -3;break;
+                     }
+                     FallbackNodes.Add(new TexturePairs() {
+                        Purpose = Purpose,
+                        ReadIndex = ReadIndex,
+                        TextureName = TextureProperties[VerboseTextureProperties.IndexOf(CurrentNode.title)]
+                     });                    
+                  }
+                  int RecurseCount = FallbackNodes.Count;
+                  FallbackNode = ConnectChildren(ref FallbackNodes, RecurseCount - 1);
+               } 
+            }
+
+            switch(Prop) {
                case((int)Properties.AlbedoColor):
                   MatShader.BaseColorValue = ColorProperties[VerboseColorProperties.IndexOf(AvailableIndexes[i].title)];
                break;
@@ -971,28 +927,32 @@ Toolbar toolbar;
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.Albedo,
                      ReadIndex = -4,
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.NormalTexture):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.Normal,
                      ReadIndex = -3,
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.EmissionTexture):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.Emission,
                      ReadIndex = -4,
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.MetallicTexture):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.Metallic,
                      ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.MetallicSlider):
@@ -1008,7 +968,8 @@ Toolbar toolbar;
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.Roughness,
                      ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.RoughnessSlider):
@@ -1024,42 +985,48 @@ Toolbar toolbar;
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.Alpha,
                      ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.MatCapTexture):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.MatCapTex,
                      ReadIndex = -4,
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.MatCapMask):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.MatCapMask,
                      ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.SecondaryAlbedoTexture):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.SecondaryAlbedoTexture,
                      ReadIndex = -4,
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.SecondaryAlbedoTextureMask):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.SecondaryAlbedoTextureMask,
                      ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
                case((int)Properties.SecondaryNormalTexture):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.SecondaryNormalTexture,
                      ReadIndex = -3,
-                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)]
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
                   });  
                break;
             }
@@ -1074,6 +1041,12 @@ Toolbar toolbar;
          AssetManager.data.Material[Index] = MatShader;
          string materialMappingsPath = TTPathFinder.GetMaterialMappingsPath();
          using(StreamWriter writer = new StreamWriter(materialMappingsPath)) {
+               // int AssetCount = AssetManager.data.Material.Count;
+               // int Counter = 0;
+               // for(int i = AssetCount - 1; i >= 0; i--) {//143
+               //    if(AssetManager.data.Material[i].Name.Contains("Hidden/.poiyomi/")) {AssetManager.data.Material.RemoveAt(i); Counter++;}
+               // }
+               // Debug.Log("Removed: " + Counter);
             var serializer = new XmlSerializer(typeof(Materials));
             serializer.Serialize(writer.BaseStream, AssetManager.data);
             AssetDatabase.Refresh();
@@ -1098,6 +1071,9 @@ Toolbar toolbar;
            inputPort.portName = PropertyID;
            dialogueNode.outputContainer.Add(inputPort);
            if(T == typeof(Texture)) {
+           var FallbackPort = _graphView.GeneratePort(dialogueNode, Direction.Input, T, Port.Capacity.Multi);
+           FallbackPort.portName = PropertyID;
+           dialogueNode.inputContainer.Add(FallbackPort);
                if(InputElement != -1) {
                   PopupField<string> ChannelField = new PopupField<string>("Read Channel");
                   ChannelField.choices = ChannelProperties;               
@@ -1135,6 +1111,53 @@ Toolbar toolbar;
            return dialogueNode;
       }
 
+     private int CalcLevenshteinDistance2() {
+        string s = "AAAA";
+        string t = "AAAA";
+         // Special cases
+         if (s == t) return 0;
+         if (s.Length == 0) return t.Length;
+         if (t.Length == 0) return s.Length;
+         // Initialize the distance matrix
+         int[, ] distance = new int[s.Length + 1, t.Length + 1];
+         for (int i = 0; i <= s.Length; i++) distance[i, 0] = i;
+         for (int j = 0; j <= t.Length; j++) distance[0, j] = j;
+         // Calculate the distance
+         for (int i = 1; i <= s.Length; i++) {
+             for (int j = 1; j <= t.Length; j++) {
+                 int cost = (s[i - 1] == t[j - 1]) ? 0 : 1;
+                 distance[i, j] = Math.Min(Math.Min(distance[i - 1, j] + 1, distance[i, j - 1] + 1), distance[i - 1, j - 1] + cost);
+             }
+         }
+         // Return the distance
+         return distance[s.Length, t.Length];
+     }
+
+
+    private int CalcLevenshteinDistance() {
+        string InputVal = "AAAA";
+        string ComparativeVal = "AAAA";
+        if(InputVal.Equals(ComparativeVal)) return 0;
+        int InputLength = InputVal.Length;
+        int ComparativeLength = ComparativeVal.Length;
+        if(InputLength == 0) return ComparativeLength;
+        if(ComparativeLength == 0) return InputLength;
+
+        int[] Distances = new int[(InputLength + 1) * (ComparativeLength + 1)];
+        for (int i = 0; i <= InputLength; i++) Distances[i] = i;
+        for (int j = 0; j <= ComparativeLength; j++) Distances[j * (InputLength + 1)] = j;
+        // Calculate the distance
+        for (int i = 1; i <= InputLength; i++) {
+            for (int j = 1; j <= ComparativeLength; j++) {
+                int cost = (InputVal[i - 1] == ComparativeVal[j - 1]) ? 0 : 1;
+                Distances[i + j * (InputLength + 1)] = Math.Min(Math.Min(Distances[i + j * (InputLength + 1) - 1] + 1, Distances[i + (j - 1) * (InputLength + 1)] + 1), Distances[i + (j - 1) * (InputLength + 1) - 1] + cost);
+            }
+        }
+        // Return the distance
+        return Distances[InputLength + ComparativeLength * (InputLength + 1)];
+
+
+    }
 
 
       private DialogueGraphView _graphView;
@@ -1243,68 +1266,126 @@ Toolbar toolbar;
             AvailableTexturesPurposes.Add(MatShader.AvailableTextures[i].Purpose);
          }
          for(int i = 0; i < MatShader.AvailableTextures.Count; i++) {
+            Pos.x = 30;
             DialogueNode ThisNode = new DialogueNode();
             Edge ThisEdge = new Edge();
-            switch((int)MatShader.AvailableTextures[i].Purpose) {
+            TexturePairs CurrentPair = MatShader.AvailableTextures[i];
+            switch((int)CurrentPair.Purpose) {
                case((int)TexturePurpose.SecondaryNormalTexture):
                   Pos.y = 1380;
-                  Debug.Log(MatShader.AvailableTextures[i].TextureName);
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.SecondaryNormalTexture] as Port);
                break;
                case((int)TexturePurpose.SecondaryAlbedoTextureMask):
                   Pos.y = 1300;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName, MatShader.AvailableTextures[i].ReadIndex);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.SecondaryAlbedoTextureMask] as Port);
                break;
                case((int)TexturePurpose.SecondaryAlbedoTexture):
                   Pos.y = 1220;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.SecondaryAlbedoTexture] as Port);
                break;
                case((int)TexturePurpose.MatCapMask):
                   Pos.y = 1140;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName, MatShader.AvailableTextures[i].ReadIndex);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.MatCapMask] as Port);
                break;
                case((int)TexturePurpose.MatCapTex):
                   Pos.y = 1060;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.MatCapTexture] as Port);
                break;
                case((int)TexturePurpose.Alpha):
                   Pos.y = 980;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName, MatShader.AvailableTextures[i].ReadIndex);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.AlphaTexture] as Port);
                break;
                case((int)TexturePurpose.Metallic):
                   Pos.y = 340;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName, MatShader.AvailableTextures[i].ReadIndex);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.MetallicTexture] as Port);
                break;
                case((int)TexturePurpose.Roughness):
                   Pos.y = 660;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName, MatShader.AvailableTextures[i].ReadIndex);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.RoughnessTexture] as Port);
                break;
                case((int)TexturePurpose.Albedo):
                   Pos.y = 100;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.AlbedoTexture] as Port);
                break;
                case((int)TexturePurpose.Normal):
                   Pos.y = 180;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.NormalTexture] as Port);
                break;
                case((int)TexturePurpose.Emission):
                   Pos.y = 260;
-                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, MatShader.AvailableTextures[i].TextureName);
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.EmissionTexture] as Port);
                break;
             }
             _graphView.AddElement(ThisNode);
             _graphView.AddElement(ThisEdge);
+            if(CurrentPair.Fallback != null) {
+               do {
+                  DialogueNode PrevNode = ThisNode;
+                  CurrentPair = CurrentPair.Fallback;
+                  Pos.x -= 600;
+                  switch((int)CurrentPair.Purpose) {
+                     case((int)TexturePurpose.SecondaryNormalTexture):
+                        Pos.y = 1380;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
+                     break;
+                     case((int)TexturePurpose.SecondaryAlbedoTextureMask):
+                        Pos.y = 1300;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
+                     break;
+                     case((int)TexturePurpose.SecondaryAlbedoTexture):
+                        Pos.y = 1220;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
+                     break;
+                     case((int)TexturePurpose.MatCapMask):
+                        Pos.y = 1140;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
+                     break;
+                     case((int)TexturePurpose.MatCapTex):
+                        Pos.y = 1060;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
+                     break;
+                     case((int)TexturePurpose.Alpha):
+                        Pos.y = 980;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
+                     break;
+                     case((int)TexturePurpose.Metallic):
+                        Pos.y = 340;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
+                     break;
+                     case((int)TexturePurpose.Roughness):
+                        Pos.y = 660;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
+                     break;
+                     case((int)TexturePurpose.Albedo):
+                        Pos.y = 100;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
+                     break;
+                     case((int)TexturePurpose.Normal):
+                        Pos.y = 180;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
+                     break;
+                     case((int)TexturePurpose.Emission):
+                        Pos.y = 260;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
+                     break;
+                  }
+                        ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(PrevNode.inputContainer[0] as Port);
+
+                  _graphView.AddElement(ThisNode);
+                  _graphView.AddElement(ThisEdge);
+               }  while(CurrentPair.Fallback != null);
+            }
          }
 
          {
@@ -1500,6 +1581,21 @@ Toolbar toolbar;
          SetGlobalDefines("HardwareRT", false);
       }
 
+      void InitializeGlob() {
+            definesList = GetDefines();
+            SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
+            SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
+            SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
+            if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
+            SetGlobalDefines("DX11", definesList.Contains("DX11Only"));         
+
+            if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 || definesList.Contains("DX11Only")) {
+               if(!definesList.Contains("DX11Only")) {
+                  // ActiveDX11Overrides(); 
+               }
+            }
+      }
+
       void AddHardSettingsToMenu() {
          Button RemoveTrueTraceButton = new Button(() => RemoveTrueTrace()) {text = "Remove TrueTrace Scripts From Scene"};
          
@@ -1511,7 +1607,7 @@ Toolbar toolbar;
             SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
             SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
             SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
-            if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadianceCache", false);
+            if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
             SetGlobalDefines("DX11", definesList.Contains("DX11Only"));
             HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
             HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("HardwareRT"); SetGlobalDefines("HardwareRT", true);} else {RemoveDefine("HardwareRT"); SetGlobalDefines("HardwareRT", false);}});
@@ -1527,6 +1623,7 @@ Toolbar toolbar;
             NonAccurateLightTriToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("AccurateLightTris"); else RemoveDefine("AccurateLightTris");});
             VisualElement ClayColorBox = new VisualElement();
 
+
             Toggle ClayModeToggle = new Toggle() {value = ClayMode, text = "Use ClayMode"};
             ClayModeToggle.RegisterValueChangedCallback(evt => {ClayMode = evt.newValue; RayMaster.LocalTTSettings.ClayMode = ClayMode; if(evt.newValue) HardSettingsMenu.Insert(HardSettingsMenu.IndexOf(ClayModeToggle) + 1, ClayColorBox); else HardSettingsMenu.Remove(ClayColorBox);});
 
@@ -1537,13 +1634,16 @@ Toolbar toolbar;
             ClayColorField.RegisterValueChangedCallback(evt => {ClayColor = new Vector3(evt.newValue.r, evt.newValue.g, evt.newValue.b); RayMaster.LocalTTSettings.ClayColor = ClayColor;});
             ClayColorBox.Add(ClayColorField);
 
+            IntegerField MaxSampField = new IntegerField() {value = MaxSampCount, label = "Maximum Sample Count"};
+            MaxSampField.RegisterValueChangedCallback(evt => {MaxSampCount = evt.newValue; MaxSampCount = Mathf.Min(Mathf.Max(MaxSampCount, 0), 99999999); MaxSampField.value = MaxSampCount; RayMaster.LocalTTSettings.MaxSampCount = MaxSampCount;});
+
 
             OIDNToggle = new Toggle() {value = (definesList.Contains("UseOIDN")), text = "Enable OIDN(Does NOT work with DX11 Only)"};
             OIDNToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("UseOIDN"); else RemoveDefine("UseOIDN");});
 
 
             Toggle RadCacheToggle = new Toggle() {value = (definesList.Contains("DisableRadianceCache")), text = "FULLY Disable Radiance Cache"};
-            RadCacheToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {SetGlobalDefines("RadianceCache", false); AddDefine("DisableRadianceCache");} else {SetGlobalDefines("RadianceCache", true); RemoveDefine("DisableRadianceCache");}});
+            RadCacheToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {SetGlobalDefines("RadCache", false); AddDefine("DisableRadianceCache");} else {SetGlobalDefines("RadCache", true); RemoveDefine("DisableRadianceCache");}});
 
 
             if(Application.isPlaying) {
@@ -1618,11 +1718,28 @@ Toolbar toolbar;
          PlayContainer.Add(CustomToggle("Stained Glass", "StainedGlassShadows"));
          PlayContainer.Add(CustomToggle("Ignore Backfacing Triangles", "IgnoreBackfacing"));
          PlayContainer.Add(CustomToggle("Use Light BVH", "LBVH"));
-         PlayContainer.Add(CustomToggle("Quick RadCache Toggle", "RadianceCache"));
+         PlayContainer.Add(CustomToggle("Quick RadCache Toggle", "RadCache"));
          PlayContainer.Add(CustomToggle("Use Texture LOD", "UseTextureLOD"));
          PlayContainer.Add(CustomToggle("Use vMF Diffuse", "vMFDiffuse"));
          PlayContainer.Add(CustomToggle("Use EON Diffuse", "EONDiffuse"));
          PlayContainer.Add(CustomToggle("Use Advanced Background", "AdvancedBackground"));
+         PlayContainer.Add(CustomToggle("Multiscatter Fog", "Fog"));
+
+
+
+         Slider FogSlider = new Slider() {label = "Fog Density: ", value = FogDensity, highValue = 0.2f, lowValue = 0.000000001f};
+         FogSlider.showInputField = true;        
+         FogSlider.style.width = 200;
+         FogSlider.ElementAt(0).style.minWidth = 65;
+         FogSlider.RegisterValueChangedCallback(evt => {FogDensity = evt.newValue; RayMaster.LocalTTSettings.FogDensity = FogDensity;});
+         
+         ColorField FogColorField = new ColorField();
+         FogColorField.value = FogColor;
+         FogColorField.style.width = 150;
+         FogColorField.RegisterValueChangedCallback(evt => {FogColor = evt.newValue; RayMaster.LocalTTSettings.FogColor = new Vector3(FogColor.r,FogColor.g,FogColor.b);});
+
+         PlayContainer.Add(FogSlider);
+         PlayContainer.Add(FogColorField);
          PlayContainer.Add(new Label("-------------"));
 
 
@@ -1677,6 +1794,26 @@ Toolbar toolbar;
 
          Button CorrectMatOptionsButton = new Button(() => FixRayObjects()) {text = "(Debug Button)Correct Mat Options"};
 
+
+            // List<string> DebugSettings = new List<string>();
+            // DebugSettings.Add("None");
+            // DebugSettings.Add("Material ID");
+            // DebugSettings.Add("Mesh ID");
+            // DebugSettings.Add("Triangle ID");
+            // DebugSettings.Add("Albedo ID");
+            // DebugSettings.Add("BVH View");
+            // DebugSettings.Add("Radiance Cache");
+            // DebugSettings.Add("GI View");
+            // DebugSettings.Add("Depth View");
+            // PopupField<string> DebugSettingsField = new PopupField<string>("<b>Debug Views</b>");
+            // DebugSettingsField.ElementAt(0).style.minWidth = 65;
+            // DebugSettingsField.choices = DebugSettings;
+            // DebugSettingsField.index = ToneMapIndex;
+            // DebugSettingsField.RegisterValueChangedCallback(evt => {ToneMapIndex = ToneMapField.index; RayMaster.LocalTTSettings.ToneMapper = ToneMapIndex;});
+
+
+
+
          HardSettingsMenu.Add(RemoveTrueTraceButton);
          HardSettingsMenu.Add(NonPlayLabel);
          HardSettingsMenu.Add(NonPlayContainer);
@@ -1691,6 +1828,7 @@ Toolbar toolbar;
          Spacer.style.height = 10;
          HardSettingsMenu.Add(Spacer);
          HardSettingsMenu.Add(DoSavingToggle);
+         HardSettingsMenu.Add(MaxSampField);
          HardSettingsMenu.Add(ScreenShotBox);
          HardSettingsMenu.Add(PanoramaBox);
          HardSettingsMenu.Add(TurnTableBox);
@@ -1721,7 +1859,11 @@ Toolbar toolbar;
 
           var E = Obj.GetComponentsInChildren<InstancedObject>();
           foreach(var a in E) {
-              DestroyImmediate(a);
+               GameObject TempOBJ = GameObject.Instantiate(a.InstanceParent.gameObject);
+               TempOBJ.transform.parent = a.gameObject.transform.parent;
+               TempOBJ.transform.position = a.gameObject.transform.position;
+               TempOBJ.transform.rotation = a.gameObject.transform.rotation;
+              DestroyImmediate(a.gameObject);
           }
           ParentData SourceParent = GrabChildren2(Obj.transform);
 
@@ -1804,11 +1946,11 @@ Toolbar toolbar;
          }
 
          public static void TakeScreenshot() {
-            ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + GameObject.Find("Scene").GetComponent<RayTracingMaster>().SampleCount + " Samples.png");
+            ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayTracingMaster.SampleCount + " Samples.png");
             UnityEditor.AssetDatabase.Refresh();
          }
          bool HasNoMore = false;
-
+Slider AperatureSlider;
 
 
         public void CreateGUI() {
@@ -1873,11 +2015,20 @@ Toolbar toolbar;
                       A.customPasses.Add(new HDRPCompatability());
                   }
                #endif
+               #if UNITY_PIPELINE_URP
+                  GameObject NewObject = GameObject.Find("URPTTINJECTOR");
+                  
+                  if(NewObject == null) {
+                      NewObject = new GameObject();
+                      NewObject.name = "URPTTINJECTOR";
+                      NewObject.AddComponent<UnityEngine.Rendering.Universal.InjectPathTracingPass>();
+                  }
+               #endif
             }
             Button MainSourceButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();});
             Button MaterialPairButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); InputMaterialField.value = null; MaterialPairingMenu.Add(InputMaterialField); rootVisualElement.Add(MaterialPairingMenu);});
             Button SceneSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(SceneSettingsMenu);});
-            Button HardSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(HardSettingsMenu);});
+            Button HardSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); HardSettingsMenu.Clear(); AddHardSettingsToMenu(); rootVisualElement.Add(HardSettingsMenu);});
             Button HierarchyOptionsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(HierarchyOptionsMenu);});
             toolbar.Add(MainSourceButton);
             toolbar.Add(MaterialPairButton);
@@ -1926,7 +2077,7 @@ Toolbar toolbar;
            GITemporal = RayMaster.LocalTTSettings.UseReSTIRGITemporal;
            GISpatial = RayMaster.LocalTTSettings.UseReSTIRGISpatial;
            SampleValid = RayMaster.LocalTTSettings.DoReSTIRGIConnectionValidation;
-           UpdateRate = RayMaster.LocalTTSettings.ReSTIRGIUpdateRate;
+           GIUpdateRate = RayMaster.LocalTTSettings.ReSTIRGIUpdateRate;
            GITemporalMCap = RayMaster.LocalTTSettings.ReSTIRGITemporalMCap;
            GISpatialSampleCount = RayMaster.LocalTTSettings.ReSTIRGISpatialCount;
            TAA = RayMaster.LocalTTSettings.PPTAA;
@@ -1965,7 +2116,7 @@ Toolbar toolbar;
            ConvBloomDistExpScale = RayMaster.LocalTTSettings.ConvBloomDistExpScale;
          }
 
-           AddHardSettingsToMenu();
+           // AddHardSettingsToMenu();
            AddHierarchyOptionsToMenu();
            BVHBuild = new Button(() => OnStartAsyncCombined()) {text = "Build Aggregated BVH"};
            BVHBuild.style.minWidth = 145;
@@ -2194,7 +2345,7 @@ Toolbar toolbar;
 
 
            Label AperatureLabel = new Label("Aperature Size");
-           Slider AperatureSlider = new Slider() {value = DoFAperature, highValue = 1, lowValue = 0};
+           AperatureSlider = new Slider() {value = DoFAperature, highValue = 1, lowValue = 0};
            AperatureSlider.style.width = 250;
            FloatField AperatureScaleField = new FloatField() {value = DoFAperatureScale, label = "Aperature Scale"};
            AperatureScaleField.ElementAt(0).style.minWidth = 65;
@@ -2261,9 +2412,9 @@ Toolbar toolbar;
                    SampleValidToggle.tooltip = "Confirms samples are mutually visable, reduces performance but improves indirect shadow quality";
                    Label GIUpdateRateLabel = new Label("Update Rate(0 is off)");
                    GIUpdateRateLabel.tooltip = "How often a pixel should validate its entire path, good for quickly changing lighting";
-                   GIUpdateRateField = new IntegerField() {value = UpdateRate};
+                   GIUpdateRateField = new IntegerField() {value = GIUpdateRate};
                    SampleValidToggle.RegisterValueChangedCallback(evt => {SampleValid = evt.newValue; RayMaster.LocalTTSettings.DoReSTIRGIConnectionValidation = SampleValid;});
-                   GIUpdateRateField.RegisterValueChangedCallback(evt => {UpdateRate = (int)evt.newValue; RayMaster.LocalTTSettings.ReSTIRGIUpdateRate = UpdateRate;});
+                   GIUpdateRateField.RegisterValueChangedCallback(evt => {GIUpdateRate = (int)evt.newValue; RayMaster.LocalTTSettings.ReSTIRGIUpdateRate = GIUpdateRate;});
                    TopGI.Add(SampleValidToggle);
                    TopGI.Add(GIUpdateRateField);
                    TopGI.Add(GIUpdateRateLabel);
@@ -2274,11 +2425,11 @@ Toolbar toolbar;
                    
                    Label TemporalGIMCapLabel = new Label("Temporal M Cap(0 is off)");
                    TemporalGIMCapLabel.tooltip = "Controls how long a sample is valid for, lower numbers update more quickly but have more noise, good for quickly changing scenes/lighting";
-                   TeporalGIMCapField = new IntegerField() {value = GITemporalMCap};
+                   TemporalGIMCapField = new IntegerField() {value = GITemporalMCap};
                    TemporalGIToggle.RegisterValueChangedCallback(evt => {GITemporal = evt.newValue; RayMaster.LocalTTSettings.UseReSTIRGITemporal = GITemporal;});
-                   TeporalGIMCapField.RegisterValueChangedCallback(evt => {GITemporalMCap = (int)evt.newValue; RayMaster.LocalTTSettings.ReSTIRGITemporalMCap = GITemporalMCap;});
+                   TemporalGIMCapField.RegisterValueChangedCallback(evt => {TemporalGIMCapField.value = Mathf.Min(Mathf.Max(evt.newValue, 1), 60); GITemporalMCap = (int)TemporalGIMCapField.value; RayMaster.LocalTTSettings.ReSTIRGITemporalMCap = GITemporalMCap;});
                    TemporalGI.Add(TemporalGIToggle);
-                   TemporalGI.Add(TeporalGIMCapField);
+                   TemporalGI.Add(TemporalGIMCapField);
                    TemporalGI.Add(TemporalGIMCapLabel);
                EnclosingGI.Add(TemporalGI);
                Box SpatialGI = new Box();
@@ -2468,6 +2619,17 @@ Toolbar toolbar;
                }
             }
             if(RayMaster != null) {
+                  // Debug.Log(Input.GetAxis("Mouse ScrollWheel"));
+               if(RayMaster.LocalTTSettings.PPDoF && ((Input.GetAxis("Mouse ScrollWheel") != 0 && Input.GetKey(KeyCode.LeftControl)))) {
+                  RayMaster.IsFocusingDelta = true;
+                  RayMaster.LocalTTSettings.DoFAperature += Input.GetAxis("Mouse ScrollWheel") * 0.1f;
+                  RayMaster.LocalTTSettings.DoFAperature = Mathf.Clamp(RayMaster.LocalTTSettings.DoFAperature, 0.0001f, 1);
+                  DoFAperature = RayMaster.LocalTTSettings.DoFAperature;
+                  AperatureSlider.value = RayMaster.LocalTTSettings.DoFAperature;
+               } else {
+                  RayMaster.IsFocusingDelta = false;
+               }
+
                if(RayMaster.LocalTTSettings.PPDoF && (FramesSinceDOF < 3 || (Input.GetMouseButton(2) && Input.GetKey(KeyCode.LeftControl)))) {
                   FramesSinceDOF++;
                   if(Input.mousePosition.x >= 0 && Input.mousePosition.x < RayMaster.SourceWidth && Input.mousePosition.y >= 0 && Input.mousePosition.y < RayMaster.SourceHeight) {
@@ -2574,7 +2736,7 @@ Toolbar toolbar;
             }
 
             if(Assets != null && Instancer != null && RemainingObjectsField != null) RemainingObjectsField.value = Assets.RunningTasks + Instancer.RunningTasks;
-            if(RayMaster != null) SampleCountField.value = RayMaster.SampleCount;
+            if(RayMaster != null) SampleCountField.value = RayTracingMaster.SampleCount;
             
             if(Assets != null && Assets.NeedsToUpdateXML) {
                string materialMappingsPath = TTPathFinder.GetMaterialMappingsPath();

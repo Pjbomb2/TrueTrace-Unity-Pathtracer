@@ -924,3 +924,20 @@ void BC4Kernel (uint2 dtid : SV_DispatchThreadID)
 }
 
 }
+
+RWTexture2D<half> InputTex2;
+#pragma kernel HeightmapCompressKernel
+int MipLevel;
+[numthreads(32,32,1)]
+void HeightmapCompressKernel (uint3 id : SV_DispatchThreadID) {
+    if(id.x >= InputSize.x || id.y >= InputSize.y) return;
+    float MaxVal = InputTex2[id.xy * 2];//InputTex.SampleLevel(my_point_clamp_sampler, (id.xy * 1.0f) / InputSize, 0).x;
+    // MaxVal = max(MaxVal, InputTex.SampleLevel(my_point_clamp_sampler, (id.xy * 1.0f + int2(1, 0)) / InputSize, 0).x);
+    // MaxVal = max(MaxVal, InputTex.SampleLevel(my_point_clamp_sampler, (id.xy * 1.0f + int2(1, 1)) / InputSize, 0).x);
+    MaxVal = max(MaxVal, InputTex2[id.xy * 2 + int2(1,0)]);//.SampleLevel(my_point_clamp_sampler, (id.xy * 1.0f + int2(0, 1)) / InputSize, 0).x);
+    MaxVal = max(MaxVal, InputTex2[id.xy * 2 + int2(1,1)]);//.SampleLevel(my_point_clamp_sampler, (id.xy * 1.0f + int2(0, 1)) / InputSize, 0).x);
+    MaxVal = max(MaxVal, InputTex2[id.xy * 2 + int2(0,1)]);//.SampleLevel(my_point_clamp_sampler, (id.xy * 1.0f + int2(0, 1)) / InputSize, 0).x);
+    // MaxVal = max(MaxVal, InputTex[id.xy * 2])//.SampleLevel(my_point_clamp_sampler, (id.xy * 1.0f + int2(0, 1)) / InputSize, 0).x);
+
+    ResultSingle[id.xy] = MaxVal;
+}

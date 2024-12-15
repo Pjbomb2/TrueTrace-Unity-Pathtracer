@@ -25,9 +25,7 @@ struct Ray {
     float3 direction;
 };
 
-RWStructuredBuffer<Ray> RayB;
-RWStructuredBuffer<Ray> GlobalRaysMini;
-
+RWStructuredBuffer<RayData> GlobalRaysMini;
 Ray CreateRay(float3 origin, float3 direction) {
     Ray ray;
     ray.origin = origin;

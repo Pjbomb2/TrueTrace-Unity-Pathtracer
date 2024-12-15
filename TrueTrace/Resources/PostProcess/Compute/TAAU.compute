@@ -335,9 +335,9 @@ void TAAU(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGroupI
     #endif
     // if(SpecularAlbedo.x == SpecularAlbedo.y && SpecularAlbedo.y == SpecularAlbedo.z) SpecularAlbedo = 0;
     #ifdef HDRP
-		IMG_TAA_OUTPUT[ipos] = float4(linear_color_output * ((all((Albedo[int3(ipos,0)].xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo[int3(ipos,0)].xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
+		IMG_TAA_OUTPUT[ipos] = (TEX_FLAT_COLOR.SampleLevel(my_linear_clamp_sampler, ipos / float2(target_width, target_height), 0).w == 1) ? float4(linear_color_output, 1) : float4(linear_color_output * ((all((Albedo[int3(ipos,0)].xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo[int3(ipos,0)].xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
 	#else
-		IMG_TAA_OUTPUT[ipos] = float4(linear_color_output * ((all((Albedo.SampleLevel(my_linear_clamp_sampler, ipos / float2(target_width, target_height), 0).xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo.SampleLevel(my_linear_clamp_sampler, ipos / float2(target_width, target_height), 0).xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
+		IMG_TAA_OUTPUT[ipos] = (TEX_FLAT_COLOR.SampleLevel(my_linear_clamp_sampler, ipos / float2(target_width, target_height), 0).w == 1) ? float4(linear_color_output, 1) : float4(linear_color_output * ((all((Albedo.SampleLevel(my_linear_clamp_sampler, ipos / float2(target_width, target_height), 0).xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo.SampleLevel(my_linear_clamp_sampler, ipos / float2(target_width, target_height), 0).xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
 	#endif
 }
 

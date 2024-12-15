@@ -14,20 +14,12 @@ Texture2D<float3> NormalTex;
 Texture2D<float> Depth;
 #endif
 
-#pragma kernel GenerateASVGF 
 
 static const ColData InitCol = { 1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0};
 const static RayHit tempray = CreateRayHit();
 
-[numthreads(16, 16, 1)]
-void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
 
-    if (id.x >= screen_width || id.y >= screen_height) return;
-    const uint pixel_index = id.y * screen_width + id.x;
-    RayData globray = {Rays[pixel_index].origin + NearPlane * Rays[pixel_index].direction, pixel_index, Rays[pixel_index].direction, 0, 0,0,asuint(FarPlane),0};
-    GlobalRays[pixel_index] = globray;
-}
-
+bool UseASVGFAndReSTIR;
 #pragma kernel Generate
 [numthreads(16, 16, 1)]
 void Generate(uint3 id : SV_DispatchThreadID) {
@@ -35,14 +27,12 @@ void Generate(uint3 id : SV_DispatchThreadID) {
     if (id.x >= screen_width || id.y >= screen_height) return;
     const uint pixel_index = id.y * screen_width + id.x;
     float2 jitter = ((random(0, pixel_index) - 0.5));
-    if(OIDNGuideWrite) jitter = 0;
+    if(OIDNGuideWrite || UseASVGFAndReSTIR) jitter = 0;
     float2 uv = float2((id.xy + jitter) / float2(screen_width, screen_height) * 2.0f - 1.0f);
     SmallerRay ray = CreateCameraRay(uv, pixel_index);
     RayData globray = {ray.origin + NearPlane * ray.direction, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
     GlobalRays[pixel_index] = globray;
 }
-
-
 
 #pragma kernel GIReTraceKernel
 [numthreads(16, 16, 1)]
@@ -62,8 +52,8 @@ void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadI
             float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, uv, 0).xy;
         #endif
         int2 prevIndex = int2(floor(((float2(id.xy) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
-        if (RandomNums[prevIndex].z == 0 && ReservoirA[prevIndex].z != 3 && prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height && !((PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].MetRoughIsSpec >> 22) & 0x1)) {
-            RandomNumsWrite[id.xy] = float4(PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.yx, 1 + ReservoirA[prevIndex].z,  PrevGlobalColorsA[prevIndex.x + prevIndex.y * screen_width].throughput.z);
+        if (RandomNums[prevIndex].z == 0 && (ReservoirA[uint3(prevIndex, 0)].w >> 24) != 3 && prevIndex.x >= 0 && prevIndex.x < screen_width && prevIndex.y >= 0 && prevIndex.y < screen_height) {
+            RandomNumsWrite[id.xy] = float4(int2((ReservoirA[uint3(prevIndex, 0)].w & 0x00FFFFFF), ReservoirA[uint3(prevIndex, 0)].z), (ReservoirA[uint3(prevIndex, 0)].w >> 24) + 1,  1);
         }
     }
 
@@ -100,120 +90,41 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
 }
 
 
+#pragma kernel CacheResolve
+[numthreads(256, 1, 1)]
+void CacheResolve(uint3 id : SV_DispatchThreadID) {//we dont need to compress the hashes right? since we are only using 4, as long as we set ... no because we DO check for 0th
+#ifdef RadCache
+    //using the hash we should be able to reconstruct SOME kind of... oh
+    /*
+        WE STORE THE 8 BIT POSITIONS IN THE HASH BUFFER
+        we just need to reconstruct the actual hash from prev cam position data?
 
-    groupshared bool ActiveData[256];
-    groupshared uint TotalCount[8];
-    #pragma kernel CacheResolve
-    [numthreads(256, 1, 1)]
-    void CacheResolve(uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID) {
-    #ifdef RadianceCache
-        HashEntriesBuffer[id.x].z = 0;
-        uint2 HashValue = HashEntriesBuffer[id.x];
-        bool Valid = !(id.x > CacheCapacity || (HashValue.x == 0 && HashValue.y == 0));
-        int GroupIndex = floor(GT.x / (float)BucketCount);
-        ActiveData[GT.x] = Valid;
-        TotalCount[GroupIndex] = 0;
-        GroupMemoryBarrierWithGroupSync();
-        uint4 SummedVoxel = 0;
-        [branch]if(ActiveData[GT.x]) {
-            uint4 VoxelCurr = VoxelDataBufferA.Load4(id.x * 16);
-            uint4 VoxelPrev = VoxelDataBufferB.Load4(id.x * 16);
-            uint FrameCounter = (VoxelPrev.w >> 20) & ((1u << 12) - 1);
-            SummedVoxel = VoxelCurr + VoxelPrev;
-            uint VoxelSampleCount = SummedVoxel.w & ((1u << 20) - 1);
+    */
 
-            if ((VoxelSampleCount < MaxSampleCount) && any(CamPos - PrevCamPos) && (VoxelCurr.w != 0)) {
-                uint2 SidelinedHashKey = GetReprojectedHash(HashValue);
-
-                uint cacheEntry = 0xFFFFFFFF;
-                if (HashGridFind(SidelinedHashKey, cacheEntry)) {
-                    uint4 SidelinedVoxelPrev = VoxelDataBufferB.Load4(cacheEntry * 16);
-                    uint SidelinedVoxelSampleCount = SidelinedVoxelPrev.w & ((1u << 20) - 1);
-                    if (SidelinedVoxelSampleCount > 0) {
-                        SummedVoxel.xyz += SidelinedVoxelPrev.xyz;
-                        VoxelSampleCount += SidelinedVoxelSampleCount;
-                    }
-                }
-            }
-
-            if (VoxelSampleCount > MaxSampleCount) {
-                SummedVoxel.xyz *= (float)MaxSampleCount / VoxelSampleCount;
-                VoxelSampleCount = MaxSampleCount;
-            }
-
-            SummedVoxel.w = VoxelSampleCount;
-
-            if ((VoxelCurr.w & ((1u << 20) - 1)) == 0) {
-                ++FrameCounter;
-                SummedVoxel.w |= ((FrameCounter & ((1u << 12) - 1)) << 20);
-            }
-
-            if (FrameCounter > MaxSampleCount)
-                SummedVoxel = 0;
-
-            if(SummedVoxel.w == 0) ActiveData[GT.x] = false;
-            else InterlockedAdd(TotalCount[GroupIndex], 1);
+    uint HashB = HashEntriesBufferB[id.x];
+    bool Valid = HashB != 0;
+    uint ResultantHash = 0;
+    uint4 ResultantVox = 0;
+    if(Valid) {
+        ResultantVox = VoxelDataBufferB.Load4(id.x * 16);
+        uint SampleCount = ResultantVox.w & 0x0000FFFF;
+        uint FrameCount = (ResultantVox.w >> 16) & 0x0000FFFF;
+        FrameCount++;
+        if(SampleCount > 500) {
+            float Ratio = 500.0f / (float)SampleCount;
+            SampleCount = floor(Ratio * (float)SampleCount);
+            ResultantVox.xyz = ResultantVox.xyz * Ratio;
         }
-
-        GroupMemoryBarrierWithGroupSync();
-        if(!Valid) return;
-
-        if(id.x % BucketCount >= TotalCount[GroupIndex]) {
-            VoxelDataBufferA.Store4(id.x * 16, 0);
-                
-            uint Offset = 0;
-            if(ActiveData[GT.x]) {
-                uint Prefix = 0;
-                for(int i = GroupIndex * BucketCount + TotalCount[GroupIndex] + 1; i < (GroupIndex + 1) * BucketCount; i++)
-                    if(ActiveData[i]) Prefix++;
-
-                uint Empty = 0;
-                while(Empty < TotalCount[GroupIndex]) {
-                    if(!ActiveData[Offset + GroupIndex * BucketCount]) {
-                        if (Empty == Prefix) {
-                            Offset += (id.x / BucketCount) * BucketCount;
-                            VoxelDataBufferA.Store4(Offset * 16, SummedVoxel);
-                            break;
-                        }
-                        Empty++;
-                    }
-                    Offset++;
-                }
-            }
-            HashEntriesBuffer[id.x].z = Offset ? Offset : 0xFFFFFFFF;
-        } else if(ActiveData[GT.x]) {
-            VoxelDataBufferA.Store4(id.x * 16, SummedVoxel);
-        } else {
-            VoxelDataBufferA.Store4(id.x * 16, 0);
-            
+        if(FrameCount > 200) {
+            FrameCount = 0;
+            SampleCount = 0;
+            ResultantVox = 0;
+            ResultantHash = 0;
         }
-    #endif
+        ResultantVox.w = (SampleCount | (FrameCount << 16));
     }
 
-
-    #pragma kernel ScreenCopy
-    [numthreads(256, 1, 1)]
-    void ScreenCopy(uint3 id : SV_DispatchThreadID) {
-    #ifdef RadianceCache
-        uint copyOffset = HashEntriesBuffer[id.x].z;
-        if (!(copyOffset == 0 || id.x >= CacheCapacity)) {
-            if (copyOffset == 0xFFFFFFFF) HashEntriesBuffer[id.x] = (HashKeyValue)0;
-            else if(copyOffset != 0) {
-                HashKeyValue HashValue = uint3(HashEntriesBuffer[id.x].xy,0);
-                HashEntriesBuffer[id.x] = (HashKeyValue)0;
-                HashEntriesBuffer[copyOffset] = HashValue;
-            }
-            HashEntriesBuffer[id.x].z = 0;
-        }
-        HashEntriesBufferA2[id.x] = HashEntriesBuffer[id.x];
-    #endif
-    }
-
-
-    #pragma kernel ScreenClear
-    [numthreads(256, 1, 1)]
-    void ScreenClear(uint3 id : SV_DispatchThreadID) {
-    #ifdef RadianceCache
-        VoxelDataBufferA.Store4(id.x * 16, 0);
-    #endif
-    }
+    HashEntriesBufferA[id.x] = ResultantHash;
+    VoxelDataBufferA.Store4(id.x * 16, ResultantVox);
+#endif
+}

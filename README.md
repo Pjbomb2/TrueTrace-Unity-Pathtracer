@@ -41,6 +41,7 @@
   <li>Convolution Bloom(Not mine)</li>
   <li>Vulkan and Metal support(Your mileage may vary)</li>
   <li>Mesh slicing using SDFs(Does not modify meshes, for rendering cuts only, like cross-sections)</li>
+  <li>EON and vMF diffuse models</li>
 </ul>
 
 MASSIVE thanks to 
@@ -51,8 +52,9 @@ for bringing bindless textures to unity!
 </br>[Convolutional Bloom](https://github.com/AKGWSB/FFTConvolutionBloom)
 </br>[Spherical Gaussian Light Tree](https://gpuopen.com/download/publications/Hierarchical_Light_Sampling_with_Accurate_Spherical_Gaussian_Lighting.pdf)
 </br>[Light BVH(PBRT 4)](https://pbr-book.org/4ed/Light_Sources/Light_Sampling#x3-LightBoundingVolumeHierarchies)
-</br>
-
+</br>[vMF Diffuse Model](https://research.nvidia.com/publication/2024-07_vmf-diffuse-unified-rough-diffuse-brdf)
+</br>[EON Diffuse Model](https://arxiv.org/pdf/2410.18026)
+</br>[URP Compatability script inspiration](https://github.com/Andyfanshen/CustomRayTracing/tree/RenderGraph-(URP-23.3-beta%2B))
 
 ### If you like what I do and want to support me or this project, Please consider becoming a Github Sponsor or a Patron at patreon.com/Pjbomb2!  This allows me to keep this free for everyone!
 ### You can contact me easiest through my discord server(above) or my twitter(https://x.com/Pjbomb2) with bugs, ideas, or thoughts on the project!
@@ -183,7 +185,8 @@ TrueTrace Options Description -
 
 ## GlobalDefines.cginc Settings
 <ul>
-  <li>AdvancedAlphaMapping - Enables or Disables the support of cutout objects(performance penalty)</li>
+  <li>Moved most important settings to TrueTrace -> Functionality Settings</li>  
+<!--   <li>AdvancedAlphaMapping - Enables or Disables the support of cutout objects(performance penalty)</li>
   <li>ExtraSampleValidation - Shoots an additional ray(2 instead of 1) in ReSTIR GI ray validation for sharper shadows</li>
   <li>IgnoreGlassShadow - Shadow Rays can pass through glass</li>
   <li>IgnoreGlassMain - Main Rays can pass through glass</li>
@@ -201,9 +204,17 @@ TrueTrace Options Description -
   <li>TrueBlack - Allows materials to be truely black, removes the bottom limit</li>
   <li>AdvancedRadCacheAlt - Experimental working set for the Radiance Cache, not recomended</li>
   <li>UseTextureLOD - (Only works with Bindless)Enables Texture LOD</li>
-  <li>DebugView - Replace that "DVNone" with any of the defines below, from "DVNone" to "DVGIView"</li>
+  <li>DebugView - Replace that "DVNone" with any of the defines below, from "DVNone" to "DVGIView"</li> -->
 </ul>
 
+
+## URP Setup
+<ul>
+  <li>In the Universal Renderer Asset being used, change the Rendering Path to Deferred, and turn on "Native RenderPass"</li>
+  <li>If using Unity 6000 or above, you need to go to Project Settings -> Graphics -> (at the bottom)Turn on Compatability Mode</li>
+  <li>In the camera, turn on PostProcessing, and turn the Anti-Aliasing to TAA(This is the only way I have found to reliably force motion vector generation in URP for some reason...)</li>
+  <li>Finally, add the "URPTTInjectPass" script to an empty gameobject</li>
+</ul>
 
 ## IES System
 <ul>
@@ -215,10 +226,10 @@ TrueTrace Options Description -
 # Known Bugs:
 </br>
 <ul>
-  <li>Report any you find! There WILL be bugs, I just dont know what they are</li>
+  <li>Please report any you find to the discord or to me directly.</li>
 </ul>
 
-# Huge thanks to these people for being sponsors/patrons:
+# Huge thanks to these people for being (monthly)sponsors/patrons:
 <ul>
   <li>Thanks to:</li>
   <ul>

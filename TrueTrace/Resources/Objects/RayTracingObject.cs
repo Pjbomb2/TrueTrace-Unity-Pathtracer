@@ -170,14 +170,14 @@ namespace TrueTrace {
 			return NeedsRedo;
 		}
 
-
+		private int[] Index;
 		public void matfill() {
 			TilingChanged = false;
 			WasDeleted = false;
 			#if UNITY_EDITOR
 				UnityEditor.GameObjectUtility.SetStaticEditorFlags(gameObject, UnityEditor.GameObjectUtility.GetStaticEditorFlags(gameObject) & ~UnityEditor.StaticEditorFlags.BatchingStatic);
 			#endif
-			 Mesh mesh = new Mesh();
+			 Mesh mesh = null;
 			 if(TryGetComponent<MeshRenderer>(out MeshRenderer MeshRend)) { 
 			 	if(TryGetComponent<MeshFilter>(out MeshFilter MeshFilt)) { 
 			 		mesh = MeshFilt.sharedMesh;
@@ -195,7 +195,6 @@ namespace TrueTrace {
 		 		WasDeleted = true;
 		 		return;
 		 	}
-// (Application.isPlaying && !mesh.isReadable) || 
 		 	if(mesh == null || SharedMaterials == null || SharedMaterials.Length == 0 || mesh.GetTopology(0) != MeshTopology.Triangles || mesh.vertexCount == 0) {
 		 		DestroyImmediate(this);
 		 		WasDeleted = true;
@@ -207,7 +206,8 @@ namespace TrueTrace {
 		 		WasDeleted = true;
 		 		return;
 		 	}
-			for(int i = 0; i < SharedMaterials.Length; i++) {	
+		 	int MatLength = SharedMaterials.Length;
+			for(int i = 0; i < MatLength; i++) {	
 				if(SharedMaterials[i] == null || SubMeshCount == 0) {
 					Debug.LogError("GameObject " + this.name + " is Missing a Material and will NOT be Included");
 					DestroyImmediate(this);
@@ -218,7 +218,9 @@ namespace TrueTrace {
 					SharedMaterials[i].shader = Shader.Find("Standard");
 				}
 			}
-			int[] Index = new int[SubMeshCount];
+			if(Index == null || Index.Length != SubMeshCount) Index = new int[SubMeshCount];
+			else {for(int i = 0; i < SubMeshCount; i++) Index[i] = 0;}
+			
 			bool NeedsRedo = InitializeArrayWithIndex(ref Names, "", SharedMaterials, ref Index);
 			InitializeArray<float>(ref Rotation, 0, Index, NeedsRedo);
 			InitializeArray<int>(ref Flags, 0, Index, NeedsRedo);
@@ -263,9 +265,10 @@ namespace TrueTrace {
 			InitializeArray<bool>(ref UseKelvin, false, Index, NeedsRedo);
 			InitializeArray<float>(ref KelvinTemp, 0, Index, NeedsRedo);
 			InitializeArray<float>(ref ColorBleed, 1, Index, NeedsRedo);
-			InitializeArray<float>(ref AlbedoBlendFactor, 1, Index, NeedsRedo);
+			InitializeArray<float>(ref AlbedoBlendFactor, 0, Index, NeedsRedo);
 			InitializeArray<float>(ref SecondaryNormalTexBlend, 0, Index, NeedsRedo);
 			InitializeArray<float>(ref DetailNormalStrength, 1, Index, NeedsRedo);
+
 
 			IsReady = true;
 			mesh = null;

@@ -27,13 +27,13 @@ namespace TrueTrace {
         [SerializeField] public float RenderScale = 1.0f;
         [SerializeField] public int DenoiserMethod = 0;
         [SerializeField] public int UpscalerMethod = 0;
-        [SerializeField] public int ReSTIRGIUpdateRate = 7;
         [SerializeField] public bool UseReSTIRGITemporal = true;
         [SerializeField] public bool UseReSTIRGISpatial = true;
         [SerializeField] public bool UseReSTIRGI = false;
         [SerializeField] public int ReSTIRGISpatialCount = 24;
         [SerializeField] public float ReSTIRGISpatialRadius = 50.0f;
-        [SerializeField] public int ReSTIRGITemporalMCap = 4;
+        [SerializeField] public int ReSTIRGITemporalMCap = 20;
+        [SerializeField] public int ReSTIRGIUpdateRate = 7;
         [SerializeField] public bool DoReSTIRGIConnectionValidation = true;
         [SerializeField] public float Exposure = 1.0f;
         [SerializeField] public bool DoPartialRendering = false;
@@ -78,6 +78,9 @@ namespace TrueTrace {
         [SerializeField] public Vector3 PrimaryBackgroundTintColor = new Vector3(1.0f, 1.0f, 1.0f);
         [SerializeField] public float PrimaryBackgroundTint = 0;
         [SerializeField] public float PrimaryBackgroundContrast = 1;
+        [SerializeField] public float FogDensity = 0.0002f;
+        [SerializeField] public Vector3 FogColor = new Vector3(0.6f, 0.6f, 0.6f);
+        [SerializeField] public int MaxSampCount = 99999999;
 
     }
 }

@@ -11,6 +11,8 @@ float4x4 CamToWorld;
 float4x4 CamInvProj;
 float4x4 CamToWorldPrev;
 float4x4 CamInvProjPrev;
+float4x4 viewprojection;
+
 
 float4x4 ViewMatrix;
 int MaxBounce;
@@ -29,7 +31,16 @@ bool UseNEE;
 bool DoPartialRendering;
 int PartialRenderingFactor;
 
+
+/*
+Quick optimization settings:
+Partial rendering factor to 2
+
+
+*/
+
 int unitylightcount;
+int ReSTIRGIUpdateRate;
 
 //Cam Info
 float3 Forward;
@@ -47,10 +58,6 @@ float3 MousePos;
 bool IsFocusing;
 
 RWStructuredBuffer<uint3> BufferData;
-
-RWTexture2D<half2> CorrectedDepthTex;
-Texture2D<half2> DepthTexA;
-Texture2D<half2> DepthTexB;
 
 #ifdef HardwareRT
 	StructuredBuffer<int> SubMeshOffsets;
@@ -92,8 +99,8 @@ StructuredBuffer<float> Exposure;
 
 
 
-RWTexture2D<half4> ReservoirA;
-Texture2D<half4> ReservoirB;
+RWTexture2DArray<uint4> ReservoirA;
+Texture2DArray<uint4> ReservoirB;
 
 RWTexture2D<uint4> WorldPosA;
 Texture2D<uint4> WorldPosB;
@@ -362,7 +369,6 @@ uint pcg_hash(uint seed) {
 }
 
 bool UseASVGF;
-int ReSTIRGIUpdateRate;
 bool UseReSTIRGI;
 
 float2 randomNEE(uint samdim, uint pixel_index) {
@@ -378,7 +384,7 @@ float2 randomNEE(uint samdim, uint pixel_index) {
 }
 
 float2 random(uint samdim, uint pixel_index) {
-	[branch] if (UseASVGF || ReSTIRGIUpdateRate != 0) {
+	[branch] if (UseASVGF || (UseReSTIRGI && ReSTIRGIUpdateRate != 0)) {
 		uint2 pixid = uint2(pixel_index % screen_width, pixel_index / screen_width);
 		uint hash = pcg_hash(((uint)RandomNums[pixid].y * (uint)258 + samdim) * (MaxBounce + 1) + CurBounce);
 
@@ -665,11 +671,12 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const fl
 			                if(_Materials[MaterialIndex].specTrans == 1) {
 				            	#ifdef StainedGlassShadows
 				            		float3 MatCol = _Materials[MaterialIndex].surfaceColor;
-							        if(_Materials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _Materials[MaterialIndex]) / 3.0f;
+							        if(_Materials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _Materials[MaterialIndex]);
 	        						MatCol = lerp(MatCol, _Materials[MaterialIndex].BlendColor, _Materials[MaterialIndex].BlendFactor);
 									//float Dotter = abs(dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction));
 
-			    					throughput *= sqrt(exp(-CalculateExtinction2(1.0f - MatCol, _Materials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _Materials[MaterialIndex].scatterDistance)));
+			    					// if(!GetFlag(_Materials[MaterialIndex].Tag, Thin)) throughput *= exp(-t * CalculateExtinction2(1.0f - MatCol, _Materials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _Materials[MaterialIndex].scatterDistance));
+			    					throughput *= exp(-CalculateExtinction2(1.0f - MatCol, _Materials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _Materials[MaterialIndex].scatterDistance));
 			    				#endif
 			                	return false;
 			                }
@@ -756,12 +763,23 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
     float3 tmax3;
     uint child_bits;
     uint bit_index;
-        uint q_lo_x;
-        uint q_hi_x;
-        uint q_lo_y;
-        uint q_hi_y;
-        uint q_lo_z;
-        uint q_hi_z;
+    const bool3 RayDirBools = ray.direction < 0;
+    uint x_min = TempNode.nodes[2].x;
+    uint x_max = TempNode.nodes[2].y;
+    uint y_min = TempNode.nodes[3].x;
+    uint y_max = TempNode.nodes[3].y;
+    uint z_min = TempNode.nodes[4].x;
+    uint z_max = TempNode.nodes[4].y;
+    [branch]if(RayDirBools.x) {
+    	x_min ^= x_max; x_max ^= x_min; x_min ^= x_max;
+    }
+    [branch]if(RayDirBools.y) {
+    	y_min ^= y_max; y_max ^= y_min; y_min ^= y_max;
+    }
+    [branch]if(RayDirBools.z) {
+    	z_min ^= z_max; z_max ^= z_min; z_min ^= z_max;
+    }
+
     [unroll]
     for(int i = 0; i < 2; i++) {
         uint meta4 = (i == 0 ? TempNode.nodes[1].z : TempNode.nodes[1].w);
@@ -770,30 +788,8 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
         uint inner_mask4 = (is_inner4 >> 4) * 0xffu;
         uint bit_index4  = (meta4 ^ (oct_inv4 & inner_mask4)) & 0x1f1f1f1f;
         uint child_bits4 = (meta4 >> 5) & 0x07070707;
-        if(i == 0u) {
-	        q_lo_x = TempNode.nodes[2].x;
-	        q_hi_x = TempNode.nodes[2].y;
-	        q_lo_y = TempNode.nodes[3].x;
-	        q_hi_y = TempNode.nodes[3].y;
-	        q_lo_z = TempNode.nodes[4].x;
-	        q_hi_z = TempNode.nodes[4].y;
-	    } else {
-	        q_lo_x = TempNode.nodes[2].z;
-	        q_hi_x = TempNode.nodes[2].w;
-	        q_lo_y = TempNode.nodes[3].z;
-	        q_hi_y = TempNode.nodes[3].w;
-	        q_lo_z = TempNode.nodes[4].z;
-	        q_hi_z = TempNode.nodes[4].w;
-	    }
 
-        uint x_min = ray.direction.x < 0.0f ? q_hi_x : q_lo_x;
-        uint x_max = ray.direction.x < 0.0f ? q_lo_x : q_hi_x;
 
-        uint y_min = ray.direction.y < 0.0f ? q_hi_y : q_lo_y;
-        uint y_max = ray.direction.y < 0.0f ? q_lo_y : q_hi_y;
-
-        uint z_min = ray.direction.z < 0.0f ? q_hi_z : q_lo_z;
-        uint z_max = ray.direction.z < 0.0f ? q_lo_z : q_hi_z;
         [unroll]
         for(int j = 0; j < 4; j++) {
 
@@ -815,6 +811,25 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
                 hit_mask |= child_bits << bit_index;
             }
         }
+        if(i == 0) {
+	        x_min = TempNode.nodes[2].z;
+	        x_max = TempNode.nodes[2].w;
+	        y_min = TempNode.nodes[3].z;
+	        y_max = TempNode.nodes[3].w;
+	        z_min = TempNode.nodes[4].z;
+	        z_max = TempNode.nodes[4].w;
+
+	        [branch]if(RayDirBools.x) {
+	        	x_min ^= x_max; x_max ^= x_min; x_min ^= x_max;
+	        }
+	        [branch]if(RayDirBools.y) {
+	        	y_min ^= y_max; y_max ^= y_min; y_min ^= y_max;
+	        }
+	        [branch]if(RayDirBools.z) {
+	        	z_min ^= z_max; z_max ^= z_min; z_min ^= z_max;
+	        }
+    	}
+
     }
     return hit_mask;
 }
@@ -1107,22 +1122,31 @@ inline float lum2(const float3 a) {
     return dot(float3(0.21f, 0.72f, 0.07f), a);
 }
 
+
+float3x3 adjoint(float4x4 m)
+{
+    return float3x3(cross(m[1].xyz, m[2].xyz), 
+                cross(m[2].xyz, m[0].xyz), 
+                cross(m[0].xyz, m[1].xyz));
+
+}
+
 inline float3 GetTriangleNormal(const uint TriIndex, const float2 TriUV, const float3x3 Inverse) {
     float3 Normal0 = i_octahedral_32(AggTris[TriIndex].norms.x);
     float3 Normal1 = i_octahedral_32(AggTris[TriIndex].norms.y);
     float3 Normal2 = i_octahedral_32(AggTris[TriIndex].norms.z);
-    Normal2 = mul(Inverse, (Normal0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Normal1 + TriUV.y * Normal2));
-    float wldScale = rsqrt(dot(Normal2, Normal2));
-    return mul(wldScale, Normal2);	
+    return normalize(mul(Inverse, (Normal0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Normal1 + TriUV.y * Normal2)).xyz);
+    // float wldScale = rsqrt(dot(Normal2, Normal2));
+    // return mul(wldScale, Normal2);	
 }
 
 inline float3 GetTriangleTangent(const uint TriIndex, const float2 TriUV, const float3x3 Inverse) {
     float3 Normal0 = i_octahedral_32(AggTris[TriIndex].tans.x);
     float3 Normal1 = i_octahedral_32(AggTris[TriIndex].tans.y);
     float3 Normal2 = i_octahedral_32(AggTris[TriIndex].tans.z);
-    Normal2 = mul(Inverse, (Normal0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Normal1 + TriUV.y * Normal2));
-    float wldScale = rsqrt(dot(Normal2, Normal2));
-    return mul(wldScale, Normal2);
+    return normalize(mul(Inverse, (Normal0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Normal1 + TriUV.y * Normal2)).xyz);
+    // float wldScale = rsqrt(dot(Normal2, Normal2));
+    // return mul(wldScale, Normal2);
 }
 
 inline float GetHeightRaw(float3 CurrentPos, const TerrainData Terrain) {
@@ -1461,12 +1485,12 @@ bool IsFinite(float x)
     return (asuint(x) & 0x7F800000) != 0x7F800000;
 }
 
-inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDirTS, const float3 p, const float3 n, const float2 projRoughness2, const float3 reflecVec, const float3x3 tangentFrame) {
+inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDirTS, const float3 p, const float3 n, const float2 projRoughness2, const float3 reflecVec, const float3x3 tangentFrame, float metallic) {
 	// if(TargetNode.intensity <= 0) return 0;	
 	float3 to_light = TargetNode.position - p;
 	const float squareddist = dot(to_light, to_light);
 
-	// const float c = clamp(dot(n, -(to_light)) / sqrt(squareddist), 0, 1);
+	const float c = clamp(dot(n, -(to_light)) / sqrt(squareddist), 0, 1);
 
 	// Compute the Jacobian J for the transformation between halfvetors and reflection vectors at halfvector = normal.
 	// const float3 viewDirTS = mul(tangentFrame, viewDir);//their origional one constructs the tangent frame from N,T,BT, whereas mine constructs it from T,N,BT; problem? I converted all .y to .z and vice versa, but... 
@@ -1481,8 +1505,8 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 
 
 	// TargetNode.variance = 0.5f * TargetNode.radius * TargetNode.radius;
-	const float Variance = max(TargetNode.variance, (1.0f / pow(2, 31)) * squareddist);// * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
-	// Variance = Variance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
+	float Variance = max(TargetNode.variance, (1.0f / pow(2, 31)) * squareddist);// * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
+	Variance = Variance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
 	// float Variance = max(TargetNode.variance, squareddist);
 
 
@@ -1528,7 +1552,7 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 	const float specularIllumination = amplitude * visibility * pdf * SGIntegral(LightLobe.sharpness);
 
 
-	return max(emissive * (diffuseIllumination + specularIllumination), 0.f);
+	return max(emissive * (diffuseIllumination + metallic * specularIllumination), 0.f);
 }
 
 
@@ -1639,13 +1663,13 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 		[branch]if(node.left >= 0) {
 #ifdef UseSGTree
 			const float2 ci = float2(
-				SGImportance(NodeBuffer[node.left + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame),
-				SGImportance(NodeBuffer[node.left + 1 + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame)
+				SGImportance(NodeBuffer[node.left + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic),
+				SGImportance(NodeBuffer[node.left + 1 + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic)
 			);
 #else
 			const float2 ci = float2(
-				Importance(p, n, SGTree[node.left + NodeOffset], HasHitTLAS),
-				Importance(p, n, SGTree[node.left + 1 + NodeOffset], HasHitTLAS)
+				Importance(p, n, NodeBuffer[node.left + NodeOffset], HasHitTLAS),
+				Importance(p, n, NodeBuffer[node.left + 1 + NodeOffset], HasHitTLAS)
 			);
 #endif
 			// if(ci.x == 0 && ci.y == 0) {pmf = -1; return;}
@@ -1684,13 +1708,13 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 			} else {
 				p = mul(MeshBuffer[MeshIndex].W2L, float4(p,1));
 				p2 = mul(MeshBuffer[MeshIndex].W2L, float4(p2,1));
-			    float3x3 Inverse = (float3x3)inverse(MeshBuffer[MeshIndex].W2L);
-			    float scalex = length(mul(Inverse, float3(1,0,0)));
-			    float scaley = length(mul(Inverse, float3(0,1,0)));
-			    float scalez = length(mul(Inverse, float3(0,0,1)));
-			    float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
-				n = normalize(mul(MeshBuffer[MeshIndex].W2L, float4(n,0)).xyz / Scale);
-				viewDir = normalize(mul(MeshBuffer[MeshIndex].W2L, float4(viewDir,0)).xyz / Scale);
+			    float3x3 Inverse = adjoint(MeshBuffer[MeshIndex].W2L);
+			    // float scalex = length(mul(Inverse, float3(1,0,0)));
+			    // float scaley = length(mul(Inverse, float3(0,1,0)));
+			    // float scalez = length(mul(Inverse, float3(0,0,1)));
+			    // float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
+				n = normalize(mul(Inverse, n).xyz);
+				viewDir = normalize(mul(Inverse, viewDir).xyz);
 				tangentFrame = GetTangentSpace2(n);//Need to maybe check to see if this holds up when the traversal backtracks due to dead end
 				viewDirTS = mul(tangentFrame, viewDir);
 				reflecVec = reflect(-viewDir, n) * reflecSharpness;
@@ -1698,7 +1722,7 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 				node_index = NodeOffset;
 				HasHitTLAS = true;
 				if(MeshIndex != _LightMeshes[-(node.left+1)].LockedMeshIndex) {
-					lightPDF = 1;
+					lightPDF = 0;
 					return;
 				}
 			}
@@ -1740,13 +1764,13 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 		[branch]if(node.left >= 0) {
 #ifdef UseSGTree
 			const float2 ci = float2(
-				SGImportance(NodeBuffer[node.left + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame),
-				SGImportance(NodeBuffer[node.left + 1 + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame)
+				SGImportance(NodeBuffer[node.left + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic),
+				SGImportance(NodeBuffer[node.left + 1 + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic)
 			);
 #else
 			const float2 ci = float2(
-				Importance(p, n, SGTree[node.left + NodeOffset], HasHitTLAS),
-				Importance(p, n, SGTree[node.left + 1 + NodeOffset], HasHitTLAS)
+				Importance(p, n, NodeBuffer[node.left + NodeOffset], HasHitTLAS),
+				Importance(p, n, NodeBuffer[node.left + 1 + NodeOffset], HasHitTLAS)
 			);
 #endif
 			if(ci.x == 0 && ci.y == 0) break;
@@ -1775,14 +1799,14 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 			} else {
 				StartIndex = _LightMeshes[-(node.left+1)].StartIndex; 
 				MeshIndex = _LightMeshes[-(node.left+1)].LockedMeshIndex;
-			    float3x3 Inverse = (float3x3)inverse(MeshBuffer[MeshIndex].W2L);
-			    float scalex = length(mul(Inverse, float3(1,0,0)));
-			    float scaley = length(mul(Inverse, float3(0,1,0)));
-			    float scalez = length(mul(Inverse, float3(0,0,1)));
-			    float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
+			    float3x3 Inverse = adjoint(MeshBuffer[MeshIndex].W2L);
+			    // float scalex = length(mul(Inverse, float3(1,0,0)));
+			    // float scaley = length(mul(Inverse, float3(0,1,0)));
+			    // float scalez = length(mul(Inverse, float3(0,0,1)));
+			    // float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
 				p = mul(MeshBuffer[MeshIndex].W2L, float4(p,1));
-				n = normalize(mul(MeshBuffer[MeshIndex].W2L, float4(n,0)).xyz / Scale);
-				viewDir = normalize(mul(MeshBuffer[MeshIndex].W2L, float4(viewDir,0)).xyz / Scale);
+				n = normalize(mul(Inverse, n).xyz);
+				viewDir = normalize(mul(Inverse, viewDir).xyz);
 				tangentFrame = GetTangentSpace2(n);
 				viewDirTS = mul(tangentFrame, viewDir);
 				reflecVec = reflect(-viewDir, n) * reflecSharpness;
@@ -2109,280 +2133,29 @@ float3 FromColorSpecPacked(uint A) {
 }
 
 inline float3 CalcPos(uint4 TriData) {
-	if(TriData.w > 0) return asfloat(TriData.xyz);
+	if(TriData.w == 99993) return asfloat(TriData.xyz);
     MyMeshDataCompacted Mesh = _MeshData[TriData.x];
     float4x4 Inverse = inverse(Mesh.W2L);
     TriData.y += Mesh.TriOffset;
-	return mul(Inverse, float4(AggTris[TriData.y].pos0 + ((TriData.z & 0xffff) / 65535.0f) * AggTris[TriData.y].posedge1 + ((TriData.z >> 16) / 65535.0f) * AggTris[TriData.y].posedge2,1)).xyz;
+	return mul(Inverse, float4(AggTris[TriData.y].pos0 + asfloat(TriData.z) * AggTris[TriData.y].posedge1 + asfloat(TriData.w) * AggTris[TriData.y].posedge2,1)).xyz;
+}
+
+inline float3 CalcNorm(uint4 TriData) {
+	if(TriData.w == 99993) return -normalize(asfloat(TriData.xyz));
+
+    MyMeshDataCompacted Mesh = _MeshData[TriData.x];
+    TriData.y += Mesh.TriOffset;
+    float4x4 Inverse = inverse(Mesh.W2L);
+    float3 Geomnorm = GetTriangleNormal(TriData.y, asfloat(TriData.zw), Inverse);
+    float3 USGNorm = mul(Inverse, cross(normalize(AggTris[TriData.y].posedge1), normalize(AggTris[TriData.y].posedge2)));
+    float wldScale = rsqrt(dot(USGNorm, USGNorm));
+    USGNorm = -mul(wldScale, USGNorm);
+    return Geomnorm;
+    // if(dot(USGNorm, Geomnorm) < 0) USGNorm *= -1;
+	// return mul(Inverse, float4(AggTris[TriData.y].pos0 + ((TriData.z & 0xffff) / 65535.0f) * AggTris[TriData.y].posedge1 + ((TriData.z >> 16) / 65535.0f) * AggTris[TriData.y].posedge2,1)).xyz;
 }
 
 
-
-
-
-#define WorldCacheScale 50.0f
-#define GridBias 2
-#define BucketCount 32
-#define PropDepth 4
-#define MinSampleToContribute 0
-#define MaxSampleCount 32
-#define CacheCapacity (4 * 1024 * 1024)
-
-RWByteAddressBuffer VoxelDataBufferA;
-ByteAddressBuffer VoxelDataBufferB;
-#define HashKeyValue uint3
-RWStructuredBuffer<HashKeyValue> HashEntriesBuffer;//May want to leave the last bit unused, so I can use it as a "written to" flag instead of having to compare both A and B components for empty
-RWStructuredBuffer<HashKeyValue> HashEntriesBufferA2;//May want to leave the last bit unused, so I can use it as a "written to" flag instead of having to compare both A and B components for empty
-StructuredBuffer<HashKeyValue> HashEntriesBufferB;//May want to leave the last bit unused, so I can use it as a "written to" flag instead of having to compare both A and B components for empty
-
-float CalcVoxelSize(float3 VertPos) {
-    uint GridLayer = clamp(floor(log2(distance(CamPos, VertPos)) + GridBias), 1, ((1u << 10) - 1));
-    return pow(2, GridLayer) / (float)(WorldCacheScale * 4);
-}
-
-int4 CalculateCellParams(float3 VertexPos) {
-	float LogData = log2(distance(CamPos, VertexPos));
-	uint Layer = clamp(floor(LogData) + GridBias, 1, ((1u << 10) - 1));
-	return int4(floor((VertexPos * WorldCacheScale * 4) / pow(2, Layer)), Layer);
-}
-
-uint2 CompressHash(uint4 CellParams, uint NormHash) {
-	uint2 HashValue;
-	HashValue.x = (CellParams.x & ((1u << 17) - 1)) | ((CellParams.y & ((1u << 17) - 1)) << 17);
-	HashValue.y = ((CellParams.y & ((1u << 17) - 1)) >> 15) | ((CellParams.z & ((1u << 17) - 1)) << 2) | ((CellParams.w & ((1u << 10) - 1)) << 19) | (NormHash << 29);
-	return HashValue;
-}
-
-uint2 ComputeHash(float3 Position, float3 Norm) {
-	uint4 CellParams = asuint(CalculateCellParams(Position));
-	uint NormHash =
-        (Norm.x >= 0 ? 1 : 0) +
-        (Norm.y >= 0 ? 2 : 0) +
-        (Norm.z >= 0 ? 4 : 0);
-
-	return CompressHash(CellParams, NormHash);
-}
-
-//Using third hash from here: http://burtleburtle.net/bob/hash/integer.html
-uint Hash32Bit(uint a) {
-  	a -= (a<<6);
-    a ^= (a>>17);
-    a -= (a<<9);
-    a ^= (a<<4);
-    a -= (a<<3);
-    a ^= (a<<10);
-    a ^= (a>>15);
-    return a;
-}
-
-uint Hash32(uint2 HashValue) {
-    return Hash32Bit(HashValue.x & 0xffffffff)
-         ^ Hash32Bit(HashValue.y & 0xffffffff);
-}
-
-
-#define PathLengthBits PropDepth
-#define PathLengthMask ((1u << PathLengthBits) - 1)
-
-
-float3 RTXDI_RGBToXYZInRec709(float3 c) {
-    static const float3x3 M = float3x3(
-        0.4123907992659595, 0.3575843393838780, 0.1804807884018343,
-        0.2126390058715104, 0.7151686787677559, 0.0721923153607337,
-        0.0193308187155918, 0.1191947797946259, 0.9505321522496608
-    );
-    return mul(M, c);
-}
-float3 RTXDI_XYZToRGBInRec709(float3 c) {
-    static const float3x3 M = float3x3(
-        3.240969941904522, -1.537383177570094, -0.4986107602930032,
-        -0.9692436362808803, 1.875967501507721, 0.04155505740717569,
-        0.05563007969699373, -0.2039769588889765, 1.056971514242878
-    );
-
-    return mul(M, c);
-}
-
-	uint EncodeRGB(float3 Col) {
-		float3 XYZ = RTXDI_RGBToXYZInRec709(Col);
-		float logY = 409.6 * (log2(XYZ.y) + 20.0);
-    	uint Le = uint(clamp(logY, 0.0, 16383.0));
-    	if(Le == 0) return 0;
-
-		float invDenom = 1.0 / (-2.0 * XYZ.x + 12.0 * XYZ.y + 3.0 * (XYZ.x + XYZ.y + XYZ.z));
-	    float2 uv = float2(4.0, 9.0) * XYZ.xy * invDenom;
-
-	    uint2 uve = uint2(clamp(820.0 * uv, 0.0, 511.0));
-
-	    return (Le << 18) | (uve.x << 9) | uve.y;
-	}
-
-	float3 DecodeRGB(uint packedColor) {
-		uint Le = packedColor >> 18;
-	    if (Le == 0) return float3(0, 0, 0);
-
-	    float logY = (float(Le) + 0.5) / 409.6 - 20.0;
-	    float Y = pow(2.0, logY);
-
-	    uint2 uve = uint2(packedColor >> 9, packedColor) & 0x1ff;
-	    float2 uv = (float2(uve)+0.5) / 820.0;
-
-	    float invDenom = 1.0 / (6.0 * uv.x - 16.0 * uv.y + 12.0);
-	    float2 xy = float2(9.0, 4.0) * uv * invDenom;
-
-	    float s = Y / xy.y;
-	    float3 XYZ = float3(s * xy.x, Y, s * (1.f - xy.x - xy.y));
-
-	    return max(RTXDI_XYZToRGBInRec709(XYZ), 0.0);
-	}
-
-	struct PropogatedCacheData {
-		uint2 samples[PropDepth];
-		uint throughput;//not needed, just padding, if I could remove one other uint, than I could bump prop_depth up to 5
-		uint pathLength;
-		uint CurrentIlluminance;
-		uint Norm;
-	};
-	RWStructuredBuffer<PropogatedCacheData> CacheBuffer;
-
-
-
-	struct GridVoxel {
-	    float3 radiance;
-	    uint sampleNum;
-	};
-
-	GridVoxel RetrieveCacheData(uint CacheEntry) {
-	    if (CacheEntry == 0xFFFFFFFF) return (GridVoxel)0;
-	    uint4 voxelDataPacked = VoxelDataBufferB.Load4(CacheEntry * 16);
-
-	    GridVoxel Voxel;
-		Voxel.radiance = voxelDataPacked.xyz / 1e3f;
-	    Voxel.sampleNum = (voxelDataPacked.w) & ((1u << 20) - 1);
-
-	    return Voxel;
-	}
-
-	void AddDataToCache(uint CacheEntry, uint4 Values) {
-	    if (CacheEntry == 0xFFFFFFFF) return;
-	    CacheEntry *= 16;
-	    [unroll]for(int i = 0; i < 4; i++)
-	    	if(Values[i] != 0) VoxelDataBufferA.InterlockedAdd(CacheEntry + 4 * i, Values[i]);
-	}
-
-
-	inline uint FindOpenHash(const uint2 HashValue) {
-		uint BucketIndex;
-		uint hash = Hash32(HashValue);
-	    uint HashIndex = hash % CacheCapacity;
-	    uint baseSlot = floor(HashIndex / (float)BucketCount) * BucketCount;
-	    uint temp = 0;
-		if(baseSlot < CacheCapacity) {
-			for(int i = 0; i < BucketCount; i++) {	
-				InterlockedExchange(HashEntriesBuffer[baseSlot + i].z, 0xAAAAAAAA, BucketIndex);
-				if(BucketIndex != 0xAAAAAAAA && HashEntriesBuffer[baseSlot + i].x == 0 && HashEntriesBuffer[baseSlot + i].y == 0) {
-					HashEntriesBuffer[baseSlot + i].xy = HashValue.xy;
-					// InterlockedExchange(HashEntriesBuffer[baseSlot + i].z, BucketIndex, temp);//May be bad
-					return baseSlot + i;
-				} else {
-					HashKeyValue OldHashValue = HashEntriesBuffer[baseSlot + i];
-					if((OldHashValue.x == 0 && OldHashValue.y == 0) || (OldHashValue.x == HashValue.x && OldHashValue.y == HashValue.y)) return baseSlot + i;
-				}
-			}
-		}
-		return 0;
-	}
-
-	inline bool HashGridFind(const uint2 HashValue, inout uint cacheEntry) {
-	    uint hash = Hash32(HashValue);
-	    uint HashIndex = hash % CacheCapacity;
-
-	    uint baseSlot = floor(HashIndex / (float)BucketCount) * BucketCount;
-	    for (uint i = 0; i < BucketCount; i++) {
-	        uint2 PrevHash = HashEntriesBufferB[baseSlot + i];//I am read and writing to the same hash buffer, this could be a problem
-
-	        if (PrevHash.x == HashValue.x && PrevHash.y == HashValue.y) {
-	            cacheEntry = baseSlot + i;
-	            return true;
-	        } else if (PrevHash.x == 0 && PrevHash.y == 0) break;
-	    }
-	    return false;
-	}
-
-
-	inline bool RetrieveCacheRadiance(PropogatedCacheData CurrentProp, float3 Pos, float3 Norm, out float3 radiance) {
-		uint2 HashValue = ComputeHash(Pos, Norm);
-	   	uint CacheEntry = 0xFFFFFFFF;
-	   	HashGridFind(HashValue, CacheEntry);
-
-	    GridVoxel voxelData = RetrieveCacheData(CacheEntry);
-	    if (voxelData.sampleNum > MinSampleToContribute) {
-	        radiance = voxelData.radiance / (float)voxelData.sampleNum;
-	        return true;
-	    }
-	    return false;
-	}
-
-
-	inline bool AddHitToCache(inout PropogatedCacheData CurrentProp, float3 Pos, float random) {
-	    bool EarlyOut = false;
-	    float3 OrigLighting = clamp(DecodeRGB(CurrentProp.CurrentIlluminance), 0, 1200.0f);
-	    float3 ModifiedLighting = OrigLighting;
-	    int PathLength = (CurrentProp.pathLength & PathLengthMask);
-
-	   	uint CacheEntry = FindOpenHash(ComputeHash(Pos, i_octahedral_32(CurrentProp.Norm)));
-	    if (random * 3.0f + 1.0f <= PathLength) {
-	        GridVoxel Voxel = RetrieveCacheData(CacheEntry);
-            EarlyOut = Voxel.sampleNum > MinSampleToContribute;
-	        if (EarlyOut) ModifiedLighting = Voxel.radiance / Voxel.sampleNum;
-	    }
-	    if(!EarlyOut) AddDataToCache(CacheEntry, uint4(OrigLighting * 1e3f, 1));
-	    for (int i = 0; i < PathLength; ++i) {
-	        ModifiedLighting *= DecodeRGB(CurrentProp.samples[i].x);
-	        AddDataToCache(CurrentProp.samples[i].y, uint4(ModifiedLighting * 1e3f, 0));
-	    }
-        if(PathLength >= 3) CurrentProp.samples[3] = CurrentProp.samples[2];
-        if(PathLength >= 2) CurrentProp.samples[2] = CurrentProp.samples[1];
-        if(PathLength >= 1) CurrentProp.samples[1] = CurrentProp.samples[0];
-	    CurrentProp.samples[0].y = CacheEntry;
-	    CurrentProp.pathLength = (CurrentProp.pathLength & ~PathLengthMask) | min(PathLength + 1, PropDepth - 1);
-
-	    return !EarlyOut;
-	}
-
-	inline void AddMissToCache(inout PropogatedCacheData CurrentProp, float3 radiance) {
-	    for (int i = 0; i < (CurrentProp.pathLength & PathLengthMask); ++i) {
-	        radiance *= DecodeRGB(CurrentProp.samples[i].x);
-	        AddDataToCache(CurrentProp.samples[i].y, uint4(radiance * 1e3f, 0));
-	    }
-	}
-
-	uint2 GetReprojectedHash(uint2 HashValue) {
-	    int3 gridPosition;
-	    gridPosition.x = int((HashValue.x) & ((1u << 17) - 1));
-	    gridPosition.y = int((((HashValue.y << 15)) | (HashValue.x >> 17)) & ((1u << 17) - 1));
-	    gridPosition.z = int((HashValue.y >> 2) & ((1u << 17) - 1));
-
-	    //checking 16th bit as thats the max resolution of the grid hash, and if its negative, cant you do this with msb?
-	    //This is faster than calling firstbithigh as you know the index to check, aka the highest possible bit based off of max grid resolution
-	    gridPosition = (gridPosition & (1 << (17 - 1))) ? (gridPosition | (~((1 << 17) - 1))) : gridPosition;
-
-	    int level = uint((HashValue.y >> 19) & ((1u << 10) - 1));
-
-	    float voxelSize = pow(2, level) / (WorldCacheScale * 4.0f);
-	    int3 CamPosDiff = floor(CamPos / voxelSize) - gridPosition;
-	    int3 CamPosDiffPrev = floor(PrevCamPos / voxelSize) - gridPosition;
-
-	    if (dot(CamPosDiff, CamPosDiff) < dot(CamPosDiffPrev, CamPosDiffPrev)) {
-	        gridPosition = floor(gridPosition / 2.0f);
-	        level = min(level + 1, ((1u << 10) - 1));
-	    } else {
-	        gridPosition = floor(gridPosition * 2);
-	        level = max(level - 1, 1);
-	    }
-
-	    return CompressHash(asuint(int4(gridPosition, level)), HashValue.y >> 29); 
-	}
 
 
 
@@ -2420,6 +2193,13 @@ inline int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Nor
                     RandVec.xy = RandVec.xy * light.SpotAngle - light.SpotAngle / 2.0f;
                     RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy);
                     light.Position += ToWorld(GetTangentSpace2(light.Direction), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
+                    // area = (light.SpotAngle.x * light.SpotAngle.y);
+                    light.Radiance *= PI;
+                    light.Radiance *= pow(saturate(dot(to_light, -light.Direction)), light.Softness * 120.0f + 1) * (light.SpotAngle.x * light.SpotAngle.y);
+
+                    // RandVec.xy = RandVec.xy * light.SpotAngle - light.SpotAngle / 2.0f;
+                    // RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy);
+                    // light.Position += ToWorld(GetTangentSpace2(light.Direction), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
                     // area = Light.SpotAngle.x * Light.SpotAngle.y;
                     // if(hitDat.MatType == 3) Radiance = 0;
                     // light.Radiance *= (light.SpotAngle.x * light.SpotAngle.y) / 2.0f;
@@ -2505,11 +2285,12 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
         FinalPos += Position;
         lightWeight *= (wsum / max((CounCoun) * MinP_Hat, 0.000001f) * LightCount);
     #else
-		[branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) {
-	    	MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, SGTreePrev, _MeshDataPrev);
-		} else {
-        	MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, SGTree, _MeshData);
-		}
+    	#ifdef DoubleBufferSGTree
+			[branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, SGTreePrev, _MeshDataPrev);
+			else MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, SGTree, _MeshData);
+		#else
+			MinIndex = SampleLightBVH(Position, Norm, lightWeight, pixel_index, MeshIndex, sharpness, viewDir, metallic, SGTree, _MeshData);
+        #endif
         if(MinIndex == -1) return -1;
         MeshTriOffset = _MeshData[MeshIndex].TriOffset;
         MatOffset =_MeshData[MeshIndex].MaterialOffset;
@@ -2599,27 +2380,196 @@ inline float3 temperature(float t)
 	    return a + b*cos( 6.28318*(c*t+d) );
 	}
 
-#if DebugView != -1
+// #if DebugView != -1
 	float4 HandleDebug(int Index) {
         static const float one_over_max_unsigned = asfloat(0x2f7fffff);
         uint hash = pcg_hash(32);
         float LinearIndex = hash_with(Index, hash) * one_over_max_unsigned;
         return float4(pal(LinearIndex), 1);
     }
-#endif
+// #endif
 
 
-float3 applyFog( in float3  col,   // color of pixel
-               in float t,     // distance to point
-               in float3  rd,    // camera to point
-               in float3  lig)  // sun direction
+
+float3 SampleDirectionSphere(float u1, float u2)
 {
-	float3 b =  0.0001f;//float3(0.1f, 0.1f, 0.1f);
-    float fogAmount = 1.0 - exp(-t*b);
-    float sunAmount = max( dot(rd, lig), 0.0 );
-    float3  fogColor  = lerp( float3(0.5,0.6,0.7), // blue
-                           float3(1.0,0.9,0.7), // yellow
-                           pow(sunAmount,8.0) );
-    return lerp( col, fogColor, fogAmount );
-    // return col*exp(-t*b) + fogColor*(1.0-exp(-t*b));
+    float z = u1 * 2.0f - 1.0f;
+    float r = sqrt(max(0.0f, 1.0f - z * z));
+    float phi = 2 * PI * u2;
+    float x = r * cos(phi);
+    float y = r * sin(phi);
+
+    return float3(x, y, z);
 }
+
+#define BucketCount 4
+#define PropDepth 5
+#define CacheCapacity (4 * 1024 * 1024)
+
+RWStructuredBuffer<uint> HashEntriesBufferA;
+StructuredBuffer<uint> HashEntriesBufferB;
+RWByteAddressBuffer VoxelDataBufferA;
+ByteAddressBuffer VoxelDataBufferB;
+struct PropogatedCacheData {
+	uint2 samples[PropDepth];
+	uint pathLength;//[0,2] = PathLength, [3,5] = Computed Norm//the NORMAL I STORE IT WITH ONLY NEEDS TO BE 3 FUCKKIN BITS, NOT A  WHOLE UINT OR DEDICATED NORMAL!
+	uint RunningIlluminance;//this gets cleared every bounce basically, since the last NEE and last bounce share the same normal
+};
+RWStructuredBuffer<PropogatedCacheData> CacheBuffer;
+
+
+
+inline uint Hash32Bit(uint a) {
+  	a -= (a<<6);
+    a ^= (a>>17);
+    a -= (a<<9);
+    a ^= (a<<4);
+    a -= (a<<3);
+    a ^= (a<<10);
+    a ^= (a>>15);
+    return a;
+}
+
+
+//double hash counting? take advantage of the hash collisions to store multiple values per hash?
+inline uint GenHash(float3 Pos, float3 Norm) {
+    int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);//length() seems to work better, but I reallly wanna find a way to make Dot() work, as thats wayyyy faster
+
+    Pos = floor(Pos * 200.0f / pow(2, Layer));
+    uint3 Pos2 = asuint((int3)Pos);
+    uint ThisHash = ((Pos2.x & 255) << 0) | ((Pos2.y & 255) << 8) | ((Pos2.z & 255) << 16);
+    ThisHash |= (Layer & 31) << 24;
+
+    Norm  = i_octahedral_32(octahedral_32(Norm));
+    uint NormHash =
+        (Norm.x >= 0 ? 1 : 0) +
+        (Norm.y >= 0 ? 2 : 0) +
+        (Norm.z >= 0 ? 4 : 0);
+
+    ThisHash |= (NormHash) << 29;
+    return ThisHash;
+}
+
+float GetVoxSize(float3 Pos) {
+    int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);
+    return pow(2, Layer) / 200.0f;
+}
+
+uint GenHashComputedNorm(float3 Pos, uint NormHash) {
+    int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);//length() seems to work better, but I reallly wanna find a way to make Dot() work, as thats wayyyy faster
+
+    Pos = floor(Pos * 200.0f / pow(2, Layer));
+    uint3 Pos2 = asuint((int3)Pos);
+    uint ThisHash = ((Pos2.x & 255) << 0) | ((Pos2.y & 255) << 8) | ((Pos2.z & 255) << 16);
+    ThisHash |= (Layer & 31) << 24;
+
+    ThisHash |= (NormHash) << 29;//we need to be fuckin doin the hash32bit IN THE HASH INDEX, OTHERWISE WE ARE SAVING THE SCRAMBLED HASH! AND CANT RECONSTRUCT WORLD POSITION!
+    return ThisHash;
+}
+
+inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
+    uint HashIndex = Hash32Bit(HashValue) % CacheCapacity;
+
+    uint baseSlot = floor(HashIndex / (float)BucketCount) * BucketCount;
+    [unroll]for (uint i = 0; i < BucketCount; i++) {
+        uint PrevHash = HashEntriesBufferB[baseSlot + i];//I am read and writing to the same hash buffer, this could be a problem
+
+        if (PrevHash == HashValue) {
+            cacheEntry = baseSlot + i;
+            return true;
+        } else if (PrevHash == 0) break;
+    }
+    return false;
+}
+
+
+	struct GridVoxel {
+	    float3 radiance;
+	    uint SampleNum;
+	    uint FrameNum;
+	};
+
+	GridVoxel RetrieveCacheData(uint CacheEntry2) {
+		uint CacheEntry = CacheEntry2;
+		[branch]if(!FindHashEntry(CacheEntry2, CacheEntry)) return (GridVoxel)0;
+	    else {
+	    	uint4 voxelDataPacked = VoxelDataBufferB.Load4(CacheEntry * 16);
+
+		    GridVoxel Voxel;
+			Voxel.radiance = voxelDataPacked.xyz / 1e3f;
+		    Voxel.SampleNum = voxelDataPacked.w & 0x0000FFFF;
+		    Voxel.FrameNum = (voxelDataPacked.w >> 16) & 0x0000FFFF;
+
+		    return Voxel;
+		}
+	}
+
+	void AddVoxelData(uint CacheEntry, uint4 Values) {
+	    CacheEntry *= 16;
+	    // Values[3] |= Values[3] << 16;
+	    [unroll]for(int i = 0; i < 4; i++)
+	    	if(Values[i] != 0) VoxelDataBufferA.InterlockedAdd(CacheEntry + 4 * i, Values[i]);//move to gaussians later, requires a full compressor every bounce tho since I cant rely on interlockedadds
+	}
+
+	inline uint FindOpenEntryInHash(const uint HashValue) {
+		uint BucketContents;
+	    uint HashIndex = Hash32Bit(HashValue) % CacheCapacity;
+	    uint baseSlot = floor(HashIndex / (float)BucketCount) * BucketCount;
+		if(baseSlot < CacheCapacity) {
+			[unroll]for(int i = 0; i < BucketCount; i++) {	
+				InterlockedCompareExchange(HashEntriesBufferA[baseSlot + i], 0, HashValue, BucketContents);
+				if(BucketContents == 0 || BucketContents == HashValue) {
+					return baseSlot + i;
+				}
+			}
+		}
+		return 0;
+	}
+
+
+	inline bool AddHitToCacheFull(inout PropogatedCacheData CurrentProp, float3 Pos) {//Run every frame in shading due to 
+		float3 RunningIlluminance = unpackRGBE(CurrentProp.RunningIlluminance);
+		uint CurHash = FindOpenEntryInHash(GenHashComputedNorm(Pos, (CurrentProp.pathLength >> 3) & 7));
+		if(CurHash == 0) return false;
+		uint ActualPropDepth = min(CurrentProp.pathLength & 7, PropDepth);
+		AddVoxelData(CurHash, uint4(RunningIlluminance * 1e3f, 1));
+		for(int i = 0; i < ActualPropDepth; i++) {
+			RunningIlluminance *= unpackRGBE(CurrentProp.samples[i].x);
+			AddVoxelData(CurrentProp.samples[i].y, uint4(RunningIlluminance * 1e3f, 0));
+		}
+
+        if(ActualPropDepth >= 4) CurrentProp.samples[4] = CurrentProp.samples[3];
+        if(ActualPropDepth >= 3) CurrentProp.samples[3] = CurrentProp.samples[2];
+        if(ActualPropDepth >= 2) CurrentProp.samples[2] = CurrentProp.samples[1];
+        if(ActualPropDepth >= 1) CurrentProp.samples[1] = CurrentProp.samples[0];
+        CurrentProp.samples[0].y = CurHash;
+        CurrentProp.RunningIlluminance = 0;
+        return true;
+	}
+
+
+	inline bool AddHitToCachePartial(inout PropogatedCacheData CurrentProp, float3 Pos) {//Run every frame in shading due to 
+		float3 RunningIlluminance = unpackRGBE(CurrentProp.RunningIlluminance);
+		uint CurHash = FindOpenEntryInHash(GenHashComputedNorm(Pos, (CurrentProp.pathLength >> 3) & 7));
+		if(CurHash == 0) return false;
+		uint ActualPropDepth = min(CurrentProp.pathLength & 7, PropDepth);
+		AddVoxelData(CurHash, uint4(RunningIlluminance * 1e3f, 1));
+        CurrentProp.RunningIlluminance = 0;
+        return true;
+	}
+
+
+
+
+	inline void AddBSDFToCacheWithHit(inout PropogatedCacheData CurrentProp, float3 bsdf) {//Valid bounce case, add to shading AFTER AddHitToCache has been run.
+        CurrentProp.samples[0].x = packRGBE(bsdf);
+        CurrentProp.pathLength = (CurrentProp.pathLength & (~7)) | min((CurrentProp.pathLength & 7) + 1, PropDepth);
+	}
+	inline void AddSimpleNormFlagsToCache(inout PropogatedCacheData CurrentProp, float3 Norm) {
+    	Norm  = i_octahedral_32(octahedral_32(Norm));
+        CurrentProp.pathLength = (CurrentProp.pathLength & (~56)) | ((((Norm.x >= 0 ? 1 : 0) + (Norm.y >= 0 ? 2 : 0) + (Norm.z >= 0 ? 4 : 0)) & 7) << 3);
+	
+	}
+
+
+

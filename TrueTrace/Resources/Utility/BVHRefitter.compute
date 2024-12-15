@@ -528,7 +528,7 @@ void TLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
 
         SGTreeWrite[Index].position = center;
         SGTreeWrite[Index].axis = axis;
-        SGTreeWrite[Index].variance = SGTreeWrite[Transf.SolidOffset].variance;
+        SGTreeWrite[Index].variance = SGTreeWrite[Transf.SolidOffset].variance * Scale;
         SGTreeWrite[Index].sharpness = SGTreeWrite[Transf.SolidOffset].sharpness;
         
 
@@ -620,10 +620,12 @@ void BLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
         float3 V = 0.5f * normalize(cross(normalize(LightTri.posedge1), normalize(LightTri.posedge2)));
         float variance = (dot(LightTri.posedge1, LightTri.posedge1) + dot(LightTri.posedge2, LightTri.posedge2) - dot(LightTri.posedge1, LightTri.posedge2)) / 18.0f;
 
+        SGTreeWrite[Index].sharpness = ((3.0f * length(V) - pow(length(V), 3))) / (1.0f - pow(length(V), 2));
         SGTreeWrite[Index].position = mean;
         SGTreeWrite[Index].radius = radius;
         SGTreeWrite[Index].intensity = intensity;
         SGTreeWrite[Index].variance = variance;
+        SGTreeWrite[Index].axis = V;
         return;
     }
     GaussianTreeNode LeftNode = SGTreeWrite[Node.left + TotalNodeOffset];
@@ -653,7 +655,10 @@ void BLASLightRefitKernel (uint3 id : SV_DispatchThreadID)
         LightNodesWrite[Index].BBMax = BBMax;
         LightNodesWrite[Index].BBMin = BBMin;
         LightNodesWrite[Index].w = octahedral_32(-normalize(cross(normalize(LightTri.posedge1), normalize(LightTri.posedge2))));
-        LightNodesWrite[Index].phi = max(LightTri.SourceEnergy * AreaOfTriangle(mul(ToWorld, float4(LightTri.pos0,1)), mul(ToWorld, float4(LightTri.pos0 + LightTri.posedge1,1)), mul(ToWorld, float4(LightTri.pos0 + LightTri.posedge2,1))),0.00000001f);   
+        float area = AreaOfTriangle(mul(ToWorld, float4(LightTri.pos0,1)), mul(ToWorld, float4(LightTri.pos0 + LightTri.posedge1,1)), mul(ToWorld, float4(LightTri.pos0 + LightTri.posedge2,1)));
+        if(area == 0) area = 0.000000001f;
+
+        LightNodesWrite[Index].phi = LightTri.SourceEnergy * area;   
         // LightNodesWrite[Index].phi = max(AreaOfTriangle(LightTri.pos0, LightTri.pos0 + LightTri.posedge1, LightTri.pos0 + LightTri.posedge2),0.00000001f);   
         return;
     }

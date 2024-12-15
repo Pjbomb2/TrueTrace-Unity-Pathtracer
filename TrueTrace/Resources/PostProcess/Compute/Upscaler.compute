@@ -197,7 +197,7 @@ void SgsrYuvH(
             pix.z = saturate((pix.z+deltaY));
         }
     }
-    pix.w = 1.0;  //assume alpha channel is not used
+    // pix.w = 1.0;  //assume alpha channel is not used
 
 }
 // #endif
@@ -257,10 +257,10 @@ void simpleblur (int3 id : SV_DispatchThreadID)
 
     #ifdef HDRP
         float3 SpecularAlbedo = 0;//Albedo2[int3(ipos,0)].xyz;
-        FinalOutput[id.xy] = float4(In * ((all((Albedo.SampleLevel(my_linear_clamp_sampler, float3(id.xy / float2(target_width, target_height),0), 0).xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo.SampleLevel(my_linear_clamp_sampler, float3(id.xy / float2(target_width, target_height),0), 0).xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
+        FinalOutput[id.xy] = (Input[id.xy].w == 1) ? float4(In, 1) : float4(In * ((all((Albedo.SampleLevel(my_linear_clamp_sampler, float3(id.xy / float2(target_width, target_height),0), 0).xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo.SampleLevel(my_linear_clamp_sampler, float3(id.xy / float2(target_width, target_height),0), 0).xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
     #else
         float3 SpecularAlbedo = Albedo2[id.xy].xyz;
-        FinalOutput[id.xy] = float4(In * ((all((Albedo.SampleLevel(my_linear_clamp_sampler, id.xy / float2(target_width, target_height), 0).xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo.SampleLevel(my_linear_clamp_sampler, id.xy / float2(target_width, target_height), 0).xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
+        FinalOutput[id.xy] = (Input[id.xy].w == 1) ? float4(In, 1) : float4(In * ((all((Albedo.SampleLevel(my_linear_clamp_sampler, id.xy / float2(target_width, target_height), 0).xyz + SpecularAlbedo) == 0) ? 1 : ((Albedo.SampleLevel(my_linear_clamp_sampler, id.xy / float2(target_width, target_height), 0).xyz + (max(SpecularAlbedo,0.04f) - 0.04f))))), 1);
     #endif
 
 }

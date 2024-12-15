@@ -84,9 +84,6 @@ namespace CommonVars
         public List<Vector4> Tangents;
         public List<Vector2> UVs;
         public List<Color> Colors;
-        #if TTLightMapping
-            public List<Vector2> LightmapUVs;
-        #endif
         public List<int> MatDat;
 
         public void SetUvZero(int Count) {
@@ -96,12 +93,6 @@ namespace CommonVars
             Color TempCol = new Color(1,1,1,1);
             for (int i = 0; i < Count; i++) Colors.Add(TempCol);
         }
-        #if TTLightMapping
-            public void AddLightmapUVs(Vector2[] LightUVs, Vector4 ScaleOffset) {
-                int Count = LightUVs.Length;
-                for (int i = 0; i < Count; i++) LightmapUVs.Add(new Vector2(LightUVs[i].x * ScaleOffset.x + ScaleOffset.z, LightUVs[i].y * ScaleOffset.y + ScaleOffset.w));
-            }
-        #endif
         public void SetTansZero(int Count) {
             for (int i = 0; i < Count; i++) Tangents.Add(new Vector4(0.0f, 0.0f, 0.0f, 0.0f));
         }
@@ -109,9 +100,6 @@ namespace CommonVars
             this.Tangents = new List<Vector4>(StartingSize);
             this.MatDat = new List<int>(StartingSize / 3);
             this.UVs = new List<Vector2>(StartingSize);
-            #if TTLightMapping
-                this.LightmapUVs = new List<Vector2>(StartingSize);
-            #endif
             this.Verticies = new List<Vector3>(StartingSize);
             this.Normals = new List<Vector3>(StartingSize);
             this.Indices = new List<int>(StartingSize);
@@ -122,9 +110,6 @@ namespace CommonVars
                 CommonFunctions.DeepClean(ref Tangents);
                 CommonFunctions.DeepClean(ref MatDat);
                 CommonFunctions.DeepClean(ref UVs);
-                #if TTLightMapping
-                    CommonFunctions.DeepClean(ref LightmapUVs);
-                #endif
                 CommonFunctions.DeepClean(ref Verticies);
                 CommonFunctions.DeepClean(ref Normals);
                 CommonFunctions.DeepClean(ref Indices);
@@ -194,6 +179,21 @@ namespace CommonVars
         public AABB aabb;
         public int left;
         public uint count;
+    }
+
+    [System.Serializable]
+    public struct BVHNodeVerbose
+    {
+        public AABB aabb;
+        public uint left;
+        public uint right;
+        public uint parent;
+        public uint count;
+        public uint triCount;
+
+        public bool isLeaf() {
+            return count != 0;
+        }
     }
 
     [System.Serializable]
@@ -327,6 +327,15 @@ namespace CommonVars
         public float cosTheta_e;
         public int LightCount;
         public float Pad1;
+        public void Clear() {
+            b.init();
+            w = new Vector3(0,0,0);
+            phi = 0;
+            cosTheta_e = 0;
+            cosTheta_o = 0;
+            LightCount = 0;
+            Pad1 = 0;
+        }
 
         public LightBounds(AABB aabb, Vector3 W, float Phi, float cosTheta_o, float cosTheta_e, int lc, int p1) {
             b = aabb;
@@ -614,6 +623,7 @@ namespace CommonVars
         public int Purpose;
         public int ReadIndex;//negative is the amount of components the destination contains plus 1, for use later with another idea I had
         public string TextureName;
+        public TexturePairs Fallback;
     }
 
     [System.Serializable]
@@ -814,7 +824,8 @@ namespace CommonVars
         unsafe public static void Aggregate(ref BVHNode8DataCompressed[] AggNodes, ref BVHNode8Data[] BVH8Nodes)
         {//Compress the CWBVH
             BVHNode8DataCompressed TempBVHNode = new BVHNode8DataCompressed();
-            for (int i = 0; i < BVH8Nodes.Length; ++i)
+            int BVHLength = BVH8Nodes.Length;
+            for (int i = 0; i < BVHLength; ++i)
             {
                 BVHNode8Data TempNode = BVH8Nodes[i];
                 TempBVHNode.node_0x = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(TempNode.p.x), 0);
@@ -844,9 +855,10 @@ namespace CommonVars
         public unsafe static void ConvertToSplitNodes(TrueTrace.BVH8Builder BVH, ref List<BVHNode8DataFixed> SplitNodes)
         {
             BVHNode8DataFixed NewNode = new BVHNode8DataFixed();
-            SplitNodes = new List<BVHNode8DataFixed>();
+            int BVHLength = BVH.BVH8Nodes.Length;
+            SplitNodes = new List<BVHNode8DataFixed>(BVHLength);
             BVHNode8Data SourceNode;
-            for (int i = 0; i < BVH.BVH8Nodes.Length; i++)
+            for (int i = 0; i < BVHLength; i++)
             {
                 SourceNode = BVH.BVH8Nodes[i];
                 NewNode.px = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(SourceNode.p.x), 0);

@@ -139,7 +139,7 @@ void AddResolution(int width, int height, string label)
             System.IO.File.WriteAllBytes(PlayerPrefs.GetString("PanoramaPath") + "/" + cam.gameObject.name + ".png", FinalAtlas.EncodeToPNG()); 
         }
         public void Init() {
-            RayMaster.SampleCount = 0;
+            RayTracingMaster.SampleCount = 0;
             RayMaster.FramesSinceStart = 0;          
             RayMaster._currentSample = 0;
             TexArray = new Texture2D[HorizontalSegments];
@@ -171,7 +171,7 @@ void AddResolution(int width, int height, string label)
             if(RayMaster.DoChainedImages && TexArray != null) {
                 if(PrevPanorama) {
                     PrevPanorama = false;
-                    RayMaster.SampleCount = 0;
+                    RayTracingMaster.SampleCount = 0;
                     RayMaster.FramesSinceStart = 0;                    
                 }
                 PaddingHalfValue = (Padding / 2.0f) / (float)FinalAtlasSize.x;
@@ -185,7 +185,7 @@ void AddResolution(int width, int height, string label)
                     ScreenCapture.CaptureScreenshot(Application.dataPath.Replace("/Assets", "") + "/TempPanoramas/" + CurrentSegment + ".png");
                     TexArray[CurrentSegment] = ScreenCapture.CaptureScreenshotAsTexture();
                     CurrentSegment++;
-                    RayMaster.SampleCount = 0;
+                    RayTracingMaster.SampleCount = 0;
                     RayMaster.FramesSinceStart = 0;
                     RayMaster._currentSample = 0;
                     PrevPanorama = true;
