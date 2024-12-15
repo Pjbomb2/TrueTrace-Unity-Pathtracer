@@ -1591,7 +1591,7 @@ Toolbar toolbar;
 
             if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 || definesList.Contains("DX11Only")) {
                if(!definesList.Contains("DX11Only")) {
-                  ActiveDX11Overrides(); 
+                  // ActiveDX11Overrides(); 
                }
             }
       }

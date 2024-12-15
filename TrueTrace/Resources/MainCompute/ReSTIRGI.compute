@@ -272,8 +272,9 @@ inline void RadianceDataInitialize(out RadianceData Radiance)
 
 inline void RayDataInitialize(out RayData2 Ray)
 {
-    // Ray.OriginNormal = 0;
-    // Ray.pixel_index = pixel_index;
+    Ray.FrameAccum = 0;
+    Ray.pixel_index = 0;
+    Ray.Case = 0;
 }
 
 
