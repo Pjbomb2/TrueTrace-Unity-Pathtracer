@@ -359,16 +359,16 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         // ReconstructBsdf2(hitDat, PrevDirection, ray.direction, norm, pdf3, bsdf, GetTangentSpace2(norm), pixel_index);
         [branch]if(luminance(Color.Indirect) <= 0.01f) {// || CurBounce < 3 //This may make some situations more accurate
             if(GetBounceData(CachePathLength) != 0){
-                // if(MaterialLobe != 3 && GetVoxSize(pos) / (GetVoxSize(pos) + hit.t) <= random(433, pixel_index).x) {
+                if(GetVoxSize(pos) / (GetVoxSize(pos) + hit.t) <= random(433, pixel_index).x) {
                     Geomnorm = i_octahedral_32(octahedral_32(Geomnorm));
                     GridVoxel TempVox = RetrieveCacheData(GenHash(pos, Geomnorm));
                     float3 Rad = TempVox.radiance / (float)max(TempVox.SampleNum,1);
-                    Color.Indirect += Rad * Color.throughput * 2.0f;// * bsdf;
+                    Color.Indirect += Rad * Color.throughput *  bsdf;// * 2.0f;// * bsdf;
 
                     if(MaterialLobe == 3) {
                         TempVox = RetrieveCacheData(GenHash(pos, i_octahedral_32(octahedral_32(-Geomnorm))));
                         Rad = TempVox.radiance / (float)max(TempVox.SampleNum,1);
-                        Color.Indirect += Rad * Color.throughput * 2.0f;// * bsdf;
+                        Color.Indirect += Rad * Color.throughput *  bsdf;// * 2.0f;// * bsdf;
                     }
                     #ifdef RadCache 
                         if(luminance(Color.Indirect) > 0.0) {
@@ -377,7 +377,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                         }
                     #endif
 
-                // }
+                }
             } else {
                 CachePathLength = ((CachePathLength & ~(0x7C000000)) | (((CurBounce < 30 && ((MaterialLobe == 3) || (MaterialLobe == 0 && hitDat.roughness < 0.2f))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
             }
@@ -517,6 +517,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 float3 bsdf_diffuse = 0;
                 #ifdef RadCache
                 float3 colcol = hitDat.surfaceColor;
+                    hitDat.surfaceColor =1 ;
                     bool validbsdfNEE = EvaluateBsdf3(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_diffuse, pixel_index);
                     bsdf_pdf = 0;
                     hitDat.surfaceColor = colcol;

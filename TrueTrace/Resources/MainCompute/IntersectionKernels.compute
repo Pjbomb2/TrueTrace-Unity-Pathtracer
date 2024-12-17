@@ -345,11 +345,11 @@ void IntersectBVHShadow(int ray_index) {
                     if(!TerrainExists) {
                         uint PixelIndex = ShadowRay.PixelIndex;
                         if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray.origin + ray.direction * abs(ShadowRay.t),NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)].w);
-                        if (ShadowRay.t >= 0) {
                         #ifdef RadCache
                             CacheBuffer[PixelIndex].RunningIlluminance = packRGBE(unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput + unpackRGBE(CacheBuffer[PixelIndex].RunningIlluminance));
                             AddHitToCachePartial(CacheBuffer[PixelIndex], ray.origin);
                         #endif
+                        if (ShadowRay.t >= 0) {
 
                             if (CurBounce == 0) {
                                 #ifdef RadCache
@@ -466,11 +466,11 @@ void IntersectBVHShadow(int ray_index) {
                         if(!TerrainExists) {
                             uint PixelIndex = ShadowRay.PixelIndex;
                             if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray2.origin + ray2.direction * abs(ShadowRaysBuffer[ray_index].t), 0);
-                            if (ShadowRay.t >= 0) {
                             #ifdef RadCache
                                 CacheBuffer[PixelIndex].RunningIlluminance = packRGBE(unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput + unpackRGBE(CacheBuffer[PixelIndex].RunningIlluminance));
                                 AddHitToCachePartial(CacheBuffer[PixelIndex], ray2.origin);
                             #endif
+                            if (ShadowRay.t >= 0) {
                                 if (CurBounce == 0) {
                                     #ifdef RadCache
                                         GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)) * throughput);

@@ -712,7 +712,7 @@ namespace TrueTrace {
                     if(IsDeformable)
                       DeformableMeshes[i] = TempFilter;
                 } else if(CurrentObject.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempRend)) {
-                    mesh = TempRend.sharedMesh;
+                    TempRend.BakeMesh(mesh);
                     if (IsSkinnedGroup)
                         SkinnedMeshes[i] = TempRend;
                 }

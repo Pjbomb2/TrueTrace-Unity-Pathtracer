@@ -2528,7 +2528,7 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 
 
 	inline bool AddHitToCacheFull(inout PropogatedCacheData CurrentProp, float3 Pos) {//Run every frame in shading due to 
-		float3 RunningIlluminance = unpackRGBE(CurrentProp.RunningIlluminance);
+		float3 RunningIlluminance = unpackRGBE(CurrentProp.RunningIlluminance) * 2.0f;
 		uint CurHash = FindOpenEntryInHash(GenHashComputedNorm(Pos, (CurrentProp.pathLength >> 3) & 7));
 		if(CurHash == 0) return false;
 		uint ActualPropDepth = min(CurrentProp.pathLength & 7, PropDepth);
@@ -2549,7 +2549,7 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 
 
 	inline bool AddHitToCachePartial(inout PropogatedCacheData CurrentProp, float3 Pos) {//Run every frame in shading due to 
-		float3 RunningIlluminance = unpackRGBE(CurrentProp.RunningIlluminance);
+		float3 RunningIlluminance = unpackRGBE(CurrentProp.RunningIlluminance) * 2.0f;
 		uint CurHash = FindOpenEntryInHash(GenHashComputedNorm(Pos, (CurrentProp.pathLength >> 3) & 7));
 		if(CurHash == 0) return false;
 		uint ActualPropDepth = min(CurrentProp.pathLength & 7, PropDepth);

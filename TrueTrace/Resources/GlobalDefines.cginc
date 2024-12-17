@@ -12,7 +12,7 @@
 // #define FadeMapping
 // #define PointFiltering
 #define StainedGlassShadows
-#define IgnoreBackfacing
+// #define IgnoreBackfacing
 // #define WhiteLights
 #define LBVH
 // #define FasterLightSampling
