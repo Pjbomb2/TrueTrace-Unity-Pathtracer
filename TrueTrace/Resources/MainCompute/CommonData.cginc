@@ -2554,10 +2554,22 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 		if(CurHash == 0) return false;
 		uint ActualPropDepth = min(CurrentProp.pathLength & 7, PropDepth);
 		AddVoxelData(CurHash, uint4(RunningIlluminance * 1e3f, 1));
+        for(int i = 0; i < ActualPropDepth; i++) {
+			RunningIlluminance *= unpackRGBE(CurrentProp.samples[i].x);
+			AddVoxelData(CurrentProp.samples[i].y, uint4(RunningIlluminance * 1e3f, 0));
+		}
         CurrentProp.RunningIlluminance = 0;
         return true;
 	}
 
+
+	inline void AddInitialHit(inout PropogatedCacheData CurrentProp, float3 bsdf, float3 Pos, float3 Norm) {//Valid bounce case, add to shading AFTER AddHitToCache has been run.
+        CurrentProp.samples[0].x = packRGBE(bsdf);
+    	Norm  = i_octahedral_32(octahedral_32(Norm));
+		CurrentProp.samples[0].y = FindOpenEntryInHash(GenHash(Pos, Norm));
+        CurrentProp.pathLength = (CurrentProp.pathLength & (~7)) | min((CurrentProp.pathLength & 7) + 1, PropDepth);
+        CurrentProp.pathLength = (CurrentProp.pathLength & (~56)) | ((((Norm.x >= 0 ? 1 : 0) + (Norm.y >= 0 ? 2 : 0) + (Norm.z >= 0 ? 4 : 0)) & 7) << 3);
+	}
 
 
 

@@ -1776,8 +1776,8 @@ namespace TrueTrace {
                     if(RayMaster.FramesSinceStart2 % 2 == 0) LightTreeBufferA.SetData(SGTree, 0, 0, SGTree.Length);
                     else LightTreeBufferB.SetData(SGTree, 0, 0, SGTree.Length);
 #else
-                    LightTreeBufferA.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
-                    LightTreeBufferB.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
+                    if(RayMaster.FramesSinceStart2 % 2 == 0) LightTreeBufferA.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
+                    else LightTreeBufferB.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
 #endif
                 }
                 
@@ -1873,8 +1873,8 @@ namespace TrueTrace {
                     if(RayMaster.FramesSinceStart2 % 2 == 0) LightTreeBufferA.SetData(SGTree, 0, 0, SGTree.Length);
                     else LightTreeBufferB.SetData(SGTree, 0, 0, SGTree.Length);
 #else
-                    LightTreeBufferA.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
-                    LightTreeBufferB.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
+                    if(RayMaster.FramesSinceStart2 % 2 == 0) LightTreeBufferA.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
+                    else LightTreeBufferB.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
 #endif
                 }
                 LightBVHTransformsBuffer.ReleaseSafe();

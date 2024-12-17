@@ -1320,7 +1320,7 @@ float3 EvaluateDisney3(MaterialData hitDat, float3 V, float3 L, bool thin,
         float3 diffuse = EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin, pixel_index);
         float3 sheen = EvaluateSheen(hitDat, wo, wm, wi);
 
-        reflectance += (diffuse + sheen / PI);
+        reflectance += (diffuse + sheen / PI) * abs(dotNL);
 
         forwardPdf += forwardDiffusePdfW * P[2];
     }
@@ -1345,7 +1345,7 @@ float3 EvaluateDisney3(MaterialData hitDat, float3 V, float3 L, bool thin,
         CalculateAnisotropicParams(rscaled, hitDat.anisotropic, tax, tay);
 
         float3 transmission = EvaluateDisneySpecTransmission(hitDat, wo, wm, wi, tax, tay, thin);
-        reflectance += transmission;
+        reflectance += 1;//transmission;
 
         float forwardTransmissivePdfW;
         GgxVndfAnisotropicPdf2(wi, wm, wo, tax, tay, forwardTransmissivePdfW);
@@ -1359,7 +1359,7 @@ float3 EvaluateDisney3(MaterialData hitDat, float3 V, float3 L, bool thin,
     }
 
 
-    // reflectance = reflectance * abs(dotNL);
+    reflectance = reflectance;
 
     return reflectance;
 }
