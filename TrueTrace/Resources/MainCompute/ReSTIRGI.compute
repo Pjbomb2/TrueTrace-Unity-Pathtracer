@@ -766,8 +766,8 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     Valid2 = ReconstructBsdf2(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, TangSpace, pixel_index);
     Valid2 = EvaluateBsdf2(SurfaceMat, CameraRay.direction, normalize(NEEPos - PrimaryHitPosition), SurfNorm, pdf, NEEbsdf, pixel_index);
 
-    RunningReservoirB.Radiance.W = RunningReservoirB.Radiance.Wsum / max((RunningReservoirB.Radiance.M) * luminance(RunningReservoirB.Radiance.Color * bsdf), 1e-7) ;
-    RunningReservoirC.Radiance.W = RunningReservoirC.Radiance.Wsum / max((RunningReservoirC.Radiance.M) * luminance(RunningReservoirC.Radiance.Color * NEEbsdf), 1e-7) ;
+    RunningReservoirB.Radiance.W = RunningReservoirB.Radiance.Wsum / max((RunningReservoirB.Radiance.M + (Case != 3 && UseReSTIRGISpatial) * (ReSTIRGISpatialCount - ValidSamps)) * luminance(RunningReservoirB.Radiance.Color * bsdf), 1e-7) ;
+    RunningReservoirC.Radiance.W = RunningReservoirC.Radiance.Wsum / max((RunningReservoirC.Radiance.M + (Case != 3 && UseReSTIRGISpatial) * (ReSTIRGISpatialCount - ValidSamps)) * luminance(RunningReservoirC.Radiance.Color * NEEbsdf), 1e-7) ;
     
     Valid2 = EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(NEEPos - PrimaryHitPosition), SurfNorm, pdf, NEEbsdf, pixel_index);
     // RunningReservoirB.Radiance.W *= RunningReservoirB.Radiance.W < 100.0f;
@@ -779,7 +779,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
         GlobalColors[pixel_index].Direct = 0;
         GlobalColors[pixel_index].Indirect = RunningReservoirB.Radiance.Color * RunningReservoirB.Radiance.W;
         if(GetBounceData(GlobalColors[pixel_index].MetRoughIsSpec) != 1) {
-            GlobalColors[pixel_index].Data.xyz = bsdf;
+            if(Case != 3) GlobalColors[pixel_index].Data.xyz = bsdf;
         }
     } else {
         GlobalColors[pixel_index].Indirect *= IndirectBoost;

@@ -30,8 +30,8 @@
       </TexturePairs>
       <TexturePairs>
         <Purpose>1</Purpose>
-        <ReadIndex>3</ReadIndex>
-        <TextureName>_MainTex</TextureName>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_DetailMask</TextureName>
       </TexturePairs>
       <TexturePairs>
         <Purpose>8</Purpose>

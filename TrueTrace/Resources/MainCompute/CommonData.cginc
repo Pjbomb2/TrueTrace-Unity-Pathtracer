@@ -1722,7 +1722,7 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 				node_index = NodeOffset;
 				HasHitTLAS = true;
 				if(MeshIndex != _LightMeshes[-(node.left+1)].LockedMeshIndex) {
-					lightPDF = 0;
+					// lightPDF = 1;
 					return;
 				}
 			}
@@ -2433,6 +2433,7 @@ inline uint Hash32Bit(uint a) {
 
 //double hash counting? take advantage of the hash collisions to store multiple values per hash?
 inline uint GenHash(float3 Pos, float3 Norm) {
+	Pos = abs(Pos) < 0.00001f ? 0.00001f : Pos;
     int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);//length() seems to work better, but I reallly wanna find a way to make Dot() work, as thats wayyyy faster
 
     Pos = floor(Pos * 200.0f / pow(2, Layer));
@@ -2451,11 +2452,13 @@ inline uint GenHash(float3 Pos, float3 Norm) {
 }
 
 float GetVoxSize(float3 Pos) {
+	Pos = abs(Pos) < 0.00001f ? 0.00001f : Pos;
     int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);
     return pow(2, Layer) / 200.0f;
 }
 
 uint GenHashComputedNorm(float3 Pos, uint NormHash) {
+	Pos = abs(Pos) < 0.00001f ? 0.00001f : Pos;
     int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);//length() seems to work better, but I reallly wanna find a way to make Dot() work, as thats wayyyy faster
 
     Pos = floor(Pos * 200.0f / pow(2, Layer));
@@ -2528,7 +2531,7 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 
 
 	inline bool AddHitToCacheFull(inout PropogatedCacheData CurrentProp, float3 Pos) {//Run every frame in shading due to 
-		float3 RunningIlluminance = unpackRGBE(CurrentProp.RunningIlluminance) * 2.0f;
+		float3 RunningIlluminance = unpackRGBE(CurrentProp.RunningIlluminance);
 		uint CurHash = FindOpenEntryInHash(GenHashComputedNorm(Pos, (CurrentProp.pathLength >> 3) & 7));
 		if(CurHash == 0) return false;
 		uint ActualPropDepth = min(CurrentProp.pathLength & 7, PropDepth);
@@ -2549,7 +2552,7 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 
 
 	inline bool AddHitToCachePartial(inout PropogatedCacheData CurrentProp, float3 Pos) {//Run every frame in shading due to 
-		float3 RunningIlluminance = unpackRGBE(CurrentProp.RunningIlluminance) * 2.0f;
+		float3 RunningIlluminance = unpackRGBE(CurrentProp.RunningIlluminance);
 		uint CurHash = FindOpenEntryInHash(GenHashComputedNorm(Pos, (CurrentProp.pathLength >> 3) & 7));
 		if(CurHash == 0) return false;
 		uint ActualPropDepth = min(CurrentProp.pathLength & 7, PropDepth);

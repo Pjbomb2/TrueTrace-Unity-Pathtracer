@@ -838,8 +838,6 @@ namespace TrueTrace {
                 CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight * 2, 48);
                 CommonFunctions.CreateDynamicBuffer(ref _ShadowBuffer, SourceWidth * SourceHeight, 48);
                 CommonFunctions.CreateDynamicBuffer(ref LightingBuffer, SourceWidth * SourceHeight, 64);
-                CommonFunctions.CreateRenderTexture(ref _RandomNums, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-                CommonFunctions.CreateRenderTexture(ref _RandomNumsB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 #if !DisableRadianceCache
                     CommonFunctions.CreateDynamicBuffer(ref CacheBuffer, SourceWidth * SourceHeight, 48);
                     CommonFunctions.CreateDynamicBuffer(ref VoxelDataBufferA, 4 * 1024 * 1024, 16, ComputeBufferType.Raw);
@@ -866,6 +864,20 @@ namespace TrueTrace {
                 // Release render texture if we already have one
                 if (_target != null)
                 {
+
+                    #if !DisableRadianceCache
+                        CacheBuffer.ReleaseSafe();
+                        VoxelDataBufferA.ReleaseSafe();
+                        VoxelDataBufferB.ReleaseSafe();
+                        HashBufferA.ReleaseSafe();
+                        HashBufferB.ReleaseSafe();
+                    #endif
+
+                    _RayBuffer.ReleaseSafe();
+                    _ShadowBuffer.ReleaseSafe();
+                    LightingBuffer.ReleaseSafe();
+                    _RandomNums.ReleaseSafe();
+                    _RandomNumsB.ReleaseSafe();
                     _target.Release();
                     _converged.Release();
                     _DebugTex.Release();
@@ -882,14 +894,15 @@ namespace TrueTrace {
                     ScreenSpaceInfoPrev.Release();
                     GradientsA.Release();
                     GradientsB.Release();
-                    _RandomNums.Release();
-                    _RandomNumsB.Release();
                     #if UseOIDN
                         ColorBuffer.Release();
                         OutputBuffer.Release();
                         AlbedoBuffer.Release();
                         NormalBuffer.Release();
-                        OIDNDenoiser.Dispose();
+                        if(OIDNDenoiser != null) {
+                            OIDNDenoiser.Dispose();
+                            OIDNDenoiser = null;
+                        }
                     #endif
                 }
 
@@ -1165,6 +1178,7 @@ namespace TrueTrace {
 
                     cmd.SetComputeBufferParam(ShadingShader, OIDNtoTTKernel, "OutputBuffer", OutputBuffer);
                     ShadingShader.SetTexture(OIDNtoTTKernel, "Result", _FinalTex);
+                    if(SampleCount > LocalTTSettings.OIDNFrameCount+1)
                     cmd.DispatchCompute(ShadingShader, OIDNtoTTKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);            
                 }
             #endif

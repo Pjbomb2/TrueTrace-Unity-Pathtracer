@@ -355,8 +355,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         #if DebugView == DVRadCache
             if(CurBounce == 0) _DebugTex[id.xy] = float4(ray.origin, asfloat(octahedral_32(Geomnorm)));
         #endif
-        // float pdf3 = 0;
-        // ReconstructBsdf2(hitDat, PrevDirection, ray.direction, norm, pdf3, bsdf, GetTangentSpace2(norm), pixel_index);
+        float pdf3 = 0;
+        ReconstructBsdf2(hitDat, PrevDirection, ray.direction, norm, pdf3, bsdf, GetTangentSpace2(norm), pixel_index);
         [branch]if(luminance(Color.Indirect) <= 0.01f) {// || CurBounce < 3 //This may make some situations more accurate
             if(GetBounceData(CachePathLength) != 0){
                 if(GetVoxSize(pos) / (GetVoxSize(pos) + hit.t) <= random(433, pixel_index).x) {
@@ -555,6 +555,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                         bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf * RunningWeight * NEEMISWeight;
                     }
                     Illum *= Color.throughput * bsdfmodifier;
+                    bsdf_diffuse *= bsdfmodifier;
 
                     if(LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) {
                         Illum *= pow(saturate(dot(to_light, -LightNorm)), MiscInfo.x);
@@ -915,13 +916,11 @@ int MaterialIndex;
     if(CurBounce == 0 || ((UseASVGF ^ InvalidateScreenSpaceInfo) && any(PrevPrev != PrevScreenData))) ScreenSpaceInfo[id.xy] = PrevScreenData;
     GlobalColors[pixel_index] = Color;
 #ifdef RadCache
+    if(CurBounce != 0) {
+        BSDFWRITTEN = AddHitToCacheFull(CacheBuffer[pixel_index], ray.origin);
+        if(BSDFWRITTEN) AddBSDFToCacheWithHit(CacheBuffer[pixel_index], bsdf);
+    }
     AddSimpleNormFlagsToCache(CacheBuffer[pixel_index], norm);
-    // if(CurBounce != 0) {
-        BSDFWRITTEN = AddHitToCacheFull(CacheBuffer[pixel_index], ray.origin + ray.direction * bestHit.t);
-        AddBSDFToCacheWithHit(CacheBuffer[pixel_index], bsdf);
-    // } else {
-        // AddInitialHit(CacheBuffer[pixel_index], bsdf, ray.origin + ray.direction * bestHit.t, norm);
-    // }
 #endif
 
 }
