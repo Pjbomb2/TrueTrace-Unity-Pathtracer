@@ -176,8 +176,6 @@ void Generate(uint3 id : SV_DispatchThreadID) {
 }
 
 
-bool DoPanorama;
-float2 Segment;
 #pragma kernel GeneratePanorama
 [numthreads(16, 16, 1)]
 void GeneratePanorama(uint3 id : SV_DispatchThreadID) {

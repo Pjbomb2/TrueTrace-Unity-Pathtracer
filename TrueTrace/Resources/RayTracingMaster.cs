@@ -11,7 +11,7 @@ namespace TrueTrace {
     public class RayTracingMaster : MonoBehaviour
     {
         [HideInInspector] public static Camera _camera;
-        public static bool DoKernelProfiling = false;
+        public static bool DoKernelProfiling = true;
         private bool OverriddenResolutionIsActive = false;
         public bool HDRPorURPRenderInScene = false;
         [HideInInspector] public AtmosphereGenerator Atmo;
@@ -102,6 +102,7 @@ namespace TrueTrace {
 
         private RenderTexture GIReservoirA;
         private RenderTexture GIReservoirB;
+        private RenderTexture GIReservoirC;
 
         private RenderTexture GIWorldPosA;
         private RenderTexture GIWorldPosB;
@@ -109,6 +110,7 @@ namespace TrueTrace {
 
         private RenderTexture GINEEPosA;
         private RenderTexture GINEEPosB;
+        private RenderTexture GINEEPosC;
 
         private RenderTexture CDFX;
         private RenderTexture CDFY;
@@ -202,6 +204,7 @@ namespace TrueTrace {
         private int TTtoOIDNKernelPanorama;
         #if !DisableRadianceCache
             private int ResolveKernel;
+            private int CompactKernel;
         #endif
         private int OverridenWidth = 1;
         private int OverridenHeight = 1;
@@ -296,6 +299,7 @@ namespace TrueTrace {
             TTtoOIDNKernelPanorama = ShadingShader.FindKernel("TTtoOIDNKernelPanorama");
             #if !DisableRadianceCache
                 ResolveKernel = GenerateShader.FindKernel("CacheResolve");
+                CompactKernel = GenerateShader.FindKernel("CacheCompact");
             #endif
             OIDNGuideWrite = false;
             ASVGFCode.Initialized = false;
@@ -719,6 +723,9 @@ namespace TrueTrace {
                 GenerateShader.SetComputeBuffer(ResolveKernel, "VoxelDataBufferB", !FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
                 GenerateShader.SetComputeBuffer(ResolveKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
                 GenerateShader.SetComputeBuffer(ResolveKernel, "HashEntriesBufferB", !FlipFrame ? HashBufferA : HashBufferB);
+                GenerateShader.SetComputeBuffer(CompactKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
+
+
 
                 IntersectionShader.SetComputeBuffer(ShadowKernel, "CacheBuffer", CacheBuffer);
                 IntersectionShader.SetComputeBuffer(ShadowKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
@@ -884,8 +891,10 @@ namespace TrueTrace {
                     _FinalTex.Release();
                     GIReservoirA.Release();
                     GIReservoirB.Release();
+                    GIReservoirC.Release();
                     GINEEPosA.Release();
                     GINEEPosB.Release();
+                    GINEEPosC.Release();
                     GIWorldPosA.Release();
                     GIWorldPosB.Release();
                     GIWorldPosC.Release();
@@ -931,8 +940,10 @@ namespace TrueTrace {
                 CommonFunctions.CreateRenderTexture(ref _converged, SourceWidth, SourceHeight, CommonFunctions.RTFull4, RenderTextureReadWrite.sRGB);
                 CommonFunctions.CreateRenderTextureArray(ref GIReservoirA, SourceWidth, SourceHeight, 2, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTextureArray(ref GIReservoirB, SourceWidth, SourceHeight, 2, CommonFunctions.RTFull4);
+                CommonFunctions.CreateRenderTextureArray(ref GIReservoirC, SourceWidth, SourceHeight, 2, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref GINEEPosA, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
                 CommonFunctions.CreateRenderTexture(ref GINEEPosB, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
+                CommonFunctions.CreateRenderTexture(ref GINEEPosC, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
                 CommonFunctions.CreateRenderTexture(ref GIWorldPosA, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref GIWorldPosB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref GIWorldPosC, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
@@ -985,6 +996,10 @@ namespace TrueTrace {
                 if(DoKernelProfiling) cmd.BeginSample("RadCacheClear");
                     cmd.DispatchCompute(GenerateShader, ResolveKernel, Mathf.CeilToInt((4.0f * 1024.0f * 1024.0f) / 256.0f), 1, 1);
                 if(DoKernelProfiling) cmd.EndSample("RadCacheClear");
+
+                if(DoKernelProfiling) cmd.BeginSample("RadCacheCompact");
+                    cmd.DispatchCompute(GenerateShader, CompactKernel, Mathf.CeilToInt((4.0f * 1024.0f * 1024.0f) / 256.0f), 1, 1);
+                if(DoKernelProfiling) cmd.EndSample("RadCacheCompact");
             #endif
             TTPostProc.ValidateInit(LocalTTSettings.PPBloom, LocalTTSettings.PPTAA, SourceWidth != TargetWidth, LocalTTSettings.UpscalerMethod == 2, LocalTTSettings.DoSharpen, LocalTTSettings.PPFXAA);
             float CurrentSample;
@@ -1068,10 +1083,28 @@ namespace TrueTrace {
                 if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Temporal Kernel");
                 cmd.DispatchCompute(ReSTIRGI, ReSTIRGIKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 if(DoKernelProfiling) cmd.EndSample("ReSTIRGI Temporal Kernel");
+            bool FlipFrame = (FramesSinceStart2 % 2 == 0);
 
                 if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Extra Spatial Kernel");
+                SetInt("CurPass", 0, cmd);
+                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "WorldPosB", FlipFrame ? GIWorldPosB : GIWorldPosC);
+                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "WorldPosA", GIWorldPosA);
+                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "NEEPosB", FlipFrame ? GINEEPosA : GINEEPosB);
+                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "NEEPosA", GINEEPosC);
+                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "ReservoirB", FlipFrame ? GIReservoirB : GIReservoirA);
+                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "ReservoirA", GIReservoirC);
                 cmd.DispatchCompute(ReSTIRGI, ReSTIRGISpatialKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 if(DoKernelProfiling) cmd.EndSample("ReSTIRGI Extra Spatial Kernel");
+
+                if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Extra Spatial Kernel 1");
+                SetInt("frames_accumulated", _currentSample * 2, cmd);
+                SetInt("CurPass", 1, cmd);
+                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "WorldPosB", GIWorldPosA);
+                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "NEEPosB", GINEEPosC);
+                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "ReservoirB", GIReservoirC);
+                cmd.DispatchCompute(ReSTIRGI, ReSTIRGISpatialKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+                if(DoKernelProfiling) cmd.EndSample("ReSTIRGI Extra Spatial Kernel 1");
+
                 cmd.Blit(GradientsA, GradientsB);
             }
 
@@ -1178,7 +1211,7 @@ namespace TrueTrace {
 
                     cmd.SetComputeBufferParam(ShadingShader, OIDNtoTTKernel, "OutputBuffer", OutputBuffer);
                     ShadingShader.SetTexture(OIDNtoTTKernel, "Result", _FinalTex);
-                    if(SampleCount > LocalTTSettings.OIDNFrameCount+1)
+                    if(SampleCount > LocalTTSettings.OIDNFrameCount+1 || LocalTTSettings.OIDNFrameCount == 0)
                     cmd.DispatchCompute(ShadingShader, OIDNtoTTKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);            
                 }
             #endif

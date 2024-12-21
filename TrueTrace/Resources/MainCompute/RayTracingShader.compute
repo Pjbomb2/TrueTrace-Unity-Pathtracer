@@ -359,9 +359,14 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         ReconstructBsdf2(hitDat, PrevDirection, ray.direction, norm, pdf3, bsdf, GetTangentSpace2(norm), pixel_index);
         [branch]if(luminance(Color.Indirect) <= 0.01f) {// || CurBounce < 3 //This may make some situations more accurate
             if(GetBounceData(CachePathLength) != 0){
-                if(GetVoxSize(pos) / (GetVoxSize(pos) + hit.t) <= random(433, pixel_index).x) {
+                #ifdef NonDirectionalRadCache
+                if(MaterialLobe != 3)
+                #endif
+                int Layer;
+                float VoxSize = GetVoxSize(pos, Layer);
+                if(VoxSize / (VoxSize + hit.t) <= random(433, pixel_index).x) {
                     Geomnorm = i_octahedral_32(octahedral_32(Geomnorm));
-                    GridVoxel TempVox = RetrieveCacheData(GenHash(pos, Geomnorm));
+                    GridVoxel TempVox = RetrieveCacheData(GenHashPrecompedLayer(pos, Layer, Geomnorm));
                     float3 Rad = TempVox.radiance / (float)max(TempVox.SampleNum,1);
                     Color.Indirect += Rad * Color.throughput *  bsdf;// * 2.0f;// * bsdf;
 
@@ -520,6 +525,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     hitDat.surfaceColor =1 ;
                     bool validbsdfNEE = EvaluateBsdf3(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_diffuse, pixel_index);
                     bsdf_pdf = 0;
+                    #ifdef NonDirectionalRadCache
+                        bsdf_diffuse = 1.0f / PI;
+                    #endif
                     hitDat.surfaceColor = colcol;
                     validbsdfNEE = EvaluateBsdf(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_value, pixel_index);
                 #else
@@ -573,7 +581,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     if(DoExposure) maxillum *= Exposure[0];
                     if(!UseRussianRoulette || (CurBounce == 0 && (ImprovedPrimaryHit || DoPartialRendering))) maxillum = 1;
                     Illum *= rcp(saturate(maxillum));
-                    bsdf_diffuse *= rcp(saturate(maxillum));
+                    #ifndef NonDirectionalRadCache
+                        bsdf_diffuse *= rcp(saturate(maxillum));
+                    #endif
                         // // #ifdef RadCache
                         // //     if(!UseASVGF && CurBounce > 1 && !(CurBounce != GetBounceData(CachePathLength) - 2)) {
                         // //         Illum *= Color.Data.xyz;
@@ -909,7 +919,8 @@ int MaterialIndex;
     float3 bsdf = 1;
     float3 norm = 0;
 #ifdef RadCache
-    calcFinalColor(ray, Color, TempMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, bsdf, norm, CacheBuffer[pixel_index].pathLength, GT.x);
+    uint PathLength = CacheBuffer[pixel_index].pathLength;
+    calcFinalColor(ray, Color, TempMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, bsdf, norm, PathLength, GT.x);
 #else
     calcFinalColor(ray, Color, TempMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, bsdf, norm);
 #endif
@@ -917,10 +928,14 @@ int MaterialIndex;
     GlobalColors[pixel_index] = Color;
 #ifdef RadCache
     if(CurBounce != 0) {
-        BSDFWRITTEN = AddHitToCacheFull(CacheBuffer[pixel_index], ray.origin);
-        if(BSDFWRITTEN) AddBSDFToCacheWithHit(CacheBuffer[pixel_index], bsdf);
+        BSDFWRITTEN = AddHitToCacheFull(CacheBuffer[pixel_index], PathLength, ray.origin, bsdf);
+        if(BSDFWRITTEN) {
+            PathLength = (PathLength & (~7)) | min((PathLength & 7) + 1, PropDepth);
+        }
     }
-    AddSimpleNormFlagsToCache(CacheBuffer[pixel_index], norm);
+    norm  = i_octahedral_32(octahedral_32(norm));
+    PathLength = (PathLength & (~56)) | ((((norm.x >= 0 ? 1 : 0) + (norm.y >= 0 ? 2 : 0) + (norm.z >= 0 ? 4 : 0)) & 7) << 3);
+    CacheBuffer[pixel_index].pathLength = PathLength;
 #endif
 
 }
@@ -971,6 +986,25 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
             res = _DebugTex[id.xy];
         #endif
     #endif
+
+
+    // #ifdef TEMP
+    //     #if 1
+
+    //         uint4 Target = PrimaryTriData[id.xy];
+    //         if(Target.w == 1) return asfloat(Target.xyz);
+    //         MaterialIndex = _MeshData[Target.x].MaterialOffset + AggTris[Target.y + _MeshData[Target.x].TriOffset].MatDat;
+
+
+
+    //         res = HandleDebug(MaterialIndex);
+    //         res = HandleDebug(Target.x);
+
+    //     #endif
+
+
+    // #endif
+
 
     Result[id.xy] = float4(res, 1.0f);
 }

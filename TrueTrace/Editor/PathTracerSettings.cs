@@ -1946,7 +1946,30 @@ Toolbar toolbar;
          }
 
          public static void TakeScreenshot() {
-            ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayTracingMaster.SampleCount + " Samples.png");
+           string SegmentNumber = "";
+           string FilePath = "";
+           int TempSeg = 1;
+            do {
+               SegmentNumber = "";
+               FilePath = "";
+               int TempTempSeg = TempSeg;
+              int[] NumSegments = new int[3];
+              for(int i = 0; i < 3; i++) {
+                  NumSegments[i] = ((TempTempSeg) % 10);
+                  TempTempSeg /= 10;
+              }
+              for(int i = 0; i < 3; i++) {
+                  SegmentNumber += NumSegments[2 - i];
+              }
+              TempSeg++;
+
+               FilePath = PlayerPrefs.GetString("ScreenShotPath") + "/" + SceneManager.GetActiveScene().name.Replace(" ", "") + "_" + RayTracingMaster._camera.name + "_" + SegmentNumber + ".png";
+            } while(System.IO.File.Exists(FilePath));
+           
+
+            ScreenCapture.CaptureScreenshot(FilePath);
+            
+            // ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayTracingMaster.SampleCount + " Samples.png");
             UnityEditor.AssetDatabase.Refresh();
          }
          bool HasNoMore = false;

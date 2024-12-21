@@ -26,6 +26,8 @@
 #define DoubleBufferSGTree
 // #define Fog
 #define RadCache
+// #define NonDirectionalRadCache
+#define ExpensiveReSTIR
 
 
 //END OF DEFINES

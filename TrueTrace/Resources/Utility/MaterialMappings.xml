@@ -30,8 +30,8 @@
       </TexturePairs>
       <TexturePairs>
         <Purpose>1</Purpose>
-        <ReadIndex>0</ReadIndex>
-        <TextureName>_DetailMask</TextureName>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
       </TexturePairs>
       <TexturePairs>
         <Purpose>8</Purpose>
@@ -4371,6 +4371,11 @@
         <Purpose>3</Purpose>
         <ReadIndex>-4</ReadIndex>
         <TextureName>_EmissionMask</TextureName>
+        <Fallback>
+          <Purpose>3</Purpose>
+          <ReadIndex>-4</ReadIndex>
+          <TextureName>_EmissionMap</TextureName>
+        </Fallback>
       </TexturePairs>
       <TexturePairs>
         <Purpose>4</Purpose>
@@ -4381,6 +4386,11 @@
         <Purpose>1</Purpose>
         <ReadIndex>0</ReadIndex>
         <TextureName>_ClippingMask</TextureName>
+        <Fallback>
+          <Purpose>1</Purpose>
+          <ReadIndex>3</ReadIndex>
+          <TextureName>_MainTex</TextureName>
+        </Fallback>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>

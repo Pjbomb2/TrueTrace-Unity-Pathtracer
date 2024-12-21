@@ -35,7 +35,7 @@ namespace TrueTrace {
             TempProj[1,1] = YFOV;
             return TempProj;
         }
-
+        int CurrentResIndex = 0;
 void AddResolution(int width, int height, string label)
     {
         Type gameViewSize = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSize");
@@ -60,6 +60,15 @@ void AddResolution(int width, int height, string label)
         EditorWindow window = EditorWindow.GetWindow(gameView);
         selectedSizeIndex.SetValue(window, index, null);
     }
+
+    int GetResolution()
+    {
+        Type gameView = typeof(Editor).Assembly.GetType("UnityEditor.GameView");
+        PropertyInfo selectedSizeIndex = gameView.GetProperty("selectedSizeIndex", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        EditorWindow window = EditorWindow.GetWindow(gameView);
+        return (int)selectedSizeIndex.GetValue(window);
+    }
+
 
         void RemoveResolution(int index)
         {
@@ -92,6 +101,7 @@ void AddResolution(int width, int height, string label)
             Application.runInBackground = true;
             RayMaster.DoPanorama = false;
             RayMaster.DoChainedImages = false;
+            CurrentResIndex = GetResolution();
             if(DoPanorama) {
                 AddResolution(Mathf.CeilToInt((float)FinalAtlasSize.x / (float)HorizontalSegments) + Padding, FinalAtlasSize.y, "TempPanoramaSize");
                 SetResolution(GetCount() - 1);
@@ -104,7 +114,10 @@ void AddResolution(int width, int height, string label)
             RayMaster.DoChainedImages = true;
         }
         public void OnDisable() {
-            if(RayMaster.DoChainedImages) RemoveResolution(GetCount() - 1);
+            if(RayMaster.DoChainedImages) {
+                SetResolution(CurrentResIndex);
+                RemoveResolution(GetCount() - 1);
+            }
         }
         private void FinalizePanorama(Camera cam) {
             Color[] FinalAtlasData = new Color[FinalAtlasSize.x * FinalAtlasSize.y];
@@ -136,7 +149,31 @@ void AddResolution(int width, int height, string label)
             Texture2D FinalAtlas = new Texture2D(FinalAtlasSize.x, FinalAtlasSize.y);
             FinalAtlas.SetPixels(FinalAtlasData, 0);
             FinalAtlas.Apply();
-            System.IO.File.WriteAllBytes(PlayerPrefs.GetString("PanoramaPath") + "/" + cam.gameObject.name + ".png", FinalAtlas.EncodeToPNG()); 
+
+           string SegmentNumber = "";
+           string FilePath = "";
+           int TempSeg = 1;
+            do {
+               SegmentNumber = "";
+               FilePath = "";
+               int TempTempSeg = TempSeg;
+              int[] NumSegments = new int[3];
+              for(int i = 0; i < 3; i++) {
+                  NumSegments[i] = ((TempTempSeg) % 10);
+                  TempTempSeg /= 10;
+              }
+              for(int i = 0; i < 3; i++) {
+                  SegmentNumber += NumSegments[2 - i];
+              }
+              TempSeg++;
+
+               FilePath = PlayerPrefs.GetString("ScreenShotPath") + "/" + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name.Replace(" ", "") + "_" + RayTracingMaster._camera.name + "_" + SegmentNumber + ".png";
+            } while(System.IO.File.Exists(FilePath));
+           
+
+            System.IO.File.WriteAllBytes(FilePath, FinalAtlas.EncodeToPNG());
+
+            // System.IO.File.WriteAllBytes(PlayerPrefs.GetString("PanoramaPath") + "/" + cam.gameObject.name + ".png", FinalAtlas.EncodeToPNG()); 
         }
         public void Init() {
             RayTracingMaster.SampleCount = 0;
