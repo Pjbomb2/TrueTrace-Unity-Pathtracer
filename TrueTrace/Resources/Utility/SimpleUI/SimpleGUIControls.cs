@@ -21,7 +21,7 @@ namespace TrueTrace {
             RayMaster.LocalTTSettings.ClayMode = BoolIn;
         }
         public void ToggleASVGF(bool BoolIn) {
-            RayMaster.LocalTTSettings.DenoiserMethod = BoolIn ? 1 : 2;
+            RayMaster.LocalTTSettings.DenoiserMethod = BoolIn ? 1 : 0;
         }
         public void SetOIDNFrameCount(string StringIn) {
             int IntResult = 0;
