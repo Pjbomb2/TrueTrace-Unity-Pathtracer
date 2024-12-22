@@ -21,7 +21,7 @@ namespace TrueTrace {
         private ASVGF ASVGFCode;
         private bool Abandon = false;
         #if UseOIDN
-            private UnityDenoiserPlugin.DenoiserPluginWrapper OIDNDenoiser;
+            private UnityDenoiserPlugin.DenoiserPluginWrapper OIDNDenoiser;			
         #endif
         [HideInInspector] public static bool DoSaving = true;
         public static RayObjs raywrites = new RayObjs();
@@ -628,7 +628,7 @@ namespace TrueTrace {
             SetBool("DoPartialRendering", LocalTTSettings.DoPartialRendering);
             SetBool("UseTransmittanceInNEE", LocalTTSettings.UseTransmittanceInNEE);
             OIDNGuideWrite = (FramesSinceStart == LocalTTSettings.OIDNFrameCount);
-            SetBool("OIDNGuideWrite", OIDNGuideWrite && LocalTTSettings.DenoiserMethod == 2);
+            SetBool("OIDNGuideWrite", OIDNGuideWrite && (LocalTTSettings.DenoiserMethod == 2 || LocalTTSettings.DenoiserMethod == 3));
             SetBool("DiffRes", LocalTTSettings.RenderScale != 1.0f);
             SetBool("DoPartialRendering", LocalTTSettings.DoPartialRendering);
             SetBool("DoExposure", LocalTTSettings.PPExposure);
@@ -925,7 +925,21 @@ namespace TrueTrace {
                         cleanAux = 1,
                         prefilterAux = 0
                     };
-                    OIDNDenoiser = new UnityDenoiserPlugin.DenoiserPluginWrapper(UnityDenoiserPlugin.DenoiserType.OIDN, cfg);
+					
+					UnityDenoiserPlugin.DenoiserType denoiserType;
+					switch (LocalTTSettings.DenoiserMethod) {
+						case 2:
+							denoiserType = UnityDenoiserPlugin.DenoiserType.OIDN;
+							break;
+						case 3:
+							denoiserType = UnityDenoiserPlugin.DenoiserType.OptiX;
+							break;
+						default:
+							denoiserType = UnityDenoiserPlugin.DenoiserType.OptiX;
+							break;
+					}					
+                    OIDNDenoiser = new UnityDenoiserPlugin.DenoiserPluginWrapper(denoiserType, cfg);
+					
                     ColorBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
                     OutputBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
                     AlbedoBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
@@ -1196,7 +1210,7 @@ namespace TrueTrace {
             }
 
             #if UseOIDN
-                if(LocalTTSettings.DenoiserMethod == 2 && SampleCount > LocalTTSettings.OIDNFrameCount) {
+                if((LocalTTSettings.DenoiserMethod == 2 || LocalTTSettings.DenoiserMethod == 3) && SampleCount > LocalTTSettings.OIDNFrameCount) {
                     if(DoChainedImages) {
                         cmd.SetComputeBufferParam(ShadingShader, TTtoOIDNKernelPanorama, "OutputBuffer", ColorBuffer);
                         ShadingShader.SetTexture(TTtoOIDNKernelPanorama, "Result", _FinalTex);
