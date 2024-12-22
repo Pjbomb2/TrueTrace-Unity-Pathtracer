@@ -2241,6 +2241,7 @@ Slider AperatureSlider;
             DenoiserSettings.Add("ASVGF");
             #if UseOIDN
                DenoiserSettings.Add("OIDN");
+			   DenoiserSettings.Add("OptiX");
             #endif
             PopupField<string> DenoiserField = new PopupField<string>("<b>Denoiser</b>");
             VisualElement DenoiserExtrasContainer = CreateHorizontalBox("Denoiser Extra Info Container");
@@ -2263,7 +2264,7 @@ Slider AperatureSlider;
                DenoiserMethod = DenoiserField.index;
                RayMaster.LocalTTSettings.DenoiserMethod = DenoiserMethod;
                DenoiserExtrasContainer.Clear();
-               if(DenoiserMethod == 2) {
+               if(DenoiserMethod == 2 || DenoiserMethod == 3) {
                   OIDNFrameField = new IntegerField("Frame Delay") {value = OIDNFrameCount};
                   OIDNFrameField.ElementAt(0).style.minWidth = 65;
                   OIDNFrameField.RegisterValueChangedCallback(evt => {OIDNFrameCount = (int)evt.newValue; RayMaster.LocalTTSettings.OIDNFrameCount = OIDNFrameCount;});
@@ -2279,7 +2280,7 @@ Slider AperatureSlider;
                   DenoiserExtrasContainer.Add(OIDNBlendRatioSlider);
                }
             });
-            if(DenoiserMethod == 2) {
+            if(DenoiserMethod == 2 || DenoiserMethod == 3) {
                OIDNFrameField = new IntegerField("Frame Delay") {value = OIDNFrameCount};
                OIDNFrameField.ElementAt(0).style.minWidth = 65;
                OIDNFrameField.RegisterValueChangedCallback(evt => {OIDNFrameCount = (int)evt.newValue; RayMaster.LocalTTSettings.OIDNFrameCount = OIDNFrameCount;});
