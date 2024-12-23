@@ -6,12 +6,8 @@
 
 #ifdef HDRP
 Texture2DArray<float2> MotionVectors;
-Texture2DArray<float3> NormalTex;
-Texture2DArray<float> Depth;
 #else
 Texture2D<float2> MotionVectors;
-Texture2D<float3> NormalTex;
-Texture2D<float> Depth;
 #endif
 
 

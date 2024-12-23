@@ -111,7 +111,7 @@ void IntersectBVH(int ray_index) {
                     bestHit.v = q.CommittedTriangleBarycentrics().x;
                     bestHit.mesh_id = uint(q.CommittedInstanceID() | (q.CommittedGeometryIndex() << 16));
                     bestHit.triangle_id = q.CommittedPrimitiveIndex();
-                    #if defined(AdvancedAlphaMapped) || defined(IgnoreBackfacing) || defined(FadeMapping)
+                    #if defined(AdvancedAlphaMapped) || defined(IgnoreBackfacing) || defined(FadeMapping) || defined(IgnoreGlassMain)
                         int2 Indexes = int2(bestHit.mesh_id & 0x0000FFFF, bestHit.mesh_id >> 16);
                         int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
                         int tri_id = bestHit.triangle_id + triangleOffset;
@@ -125,6 +125,9 @@ void IntersectBVH(int ray_index) {
                             if(_Materials[MaterialIndex].AlphaTex.x > 0)
                                 if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
                         }
+                    #endif
+                    #ifdef IgnoreGlassMain
+                        if(_Materials[MaterialIndex].specTrans == 1) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
                     #endif
                     #ifdef IgnoreBackfacing
                         TrianglePos tri = triangle_get_positions(tri_id);

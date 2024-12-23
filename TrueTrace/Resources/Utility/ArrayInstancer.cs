@@ -32,7 +32,7 @@ public class ArrayInstancer : MonoBehaviour
                     Vector2 UnitRandom = Random.insideUnitCircle * DiskRadiusPositionRandomize;
                     GameObject TempOBJ = GameObject.Instantiate(TargetObject);
                     TempOBJ.transform.parent = TargetObject.transform.parent;
-                    TempOBJ.transform.position += new Vector3((float)i * Spacing.x + UnitRandom.x, 0, (float)j * Spacing.y + UnitRandom.y);
+                    TempOBJ.transform.position = BasePosition + new Vector3((float)i * Spacing.x + UnitRandom.x, 0, (float)j * Spacing.y + UnitRandom.y);
                     TempOBJ.transform.eulerAngles += Vector3.Scale(new Vector3(Random.value * 2.0f - 1.0f, Random.value * 2.0f - 1.0f, Random.value * 2.0f - 1.0f), RotationRandomizeUpper - RotationRandomizeLower) + RotationRandomizeLower;
                     TempOBJ.transform.localScale = Vector3.Scale(new Vector3(Random.value, Random.value, Random.value), ScaleRandomizeUpper - ScaleRandomizeLower) + ScaleRandomizeLower;
                 }

@@ -19,7 +19,7 @@ MonoBehaviour:
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 0
+  Accumulate: 1
   PPBloom: 0
   BloomStrength: 0.372
   PPDoF: 0
@@ -38,10 +38,10 @@ MonoBehaviour:
   UseReSTIRGI: 0
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
-  ReSTIRGITemporalMCap: 12
+  ReSTIRGITemporalMCap: 60
   ReSTIRGIUpdateRate: 0
   DoReSTIRGIConnectionValidation: 1
-  Exposure: 0.4
+  Exposure: 9.9
   DoPartialRendering: 0
   PartialRenderingFactor: 2
   DoFirefly: 0
@@ -55,7 +55,7 @@ MonoBehaviour:
   FireflyFrameInterval: 1
   FireflyStrength: 0.18
   FireflyOffset: 0
-  OIDNFrameCount: 122
+  OIDNFrameCount: 0
   DoSharpen: 0
   Sharpness: 1
   MainDesiredRes: 16384

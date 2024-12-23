@@ -2084,6 +2084,7 @@ namespace TrueTrace {
                                 MeshAABBs[RenderQue.Count + TempCount] = aabb;                        
                                 TempCount++;
                             }
+                            MeshCount += TempList.Count;
                         }
                     }
                 #else

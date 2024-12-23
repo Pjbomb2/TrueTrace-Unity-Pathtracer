@@ -581,7 +581,7 @@ namespace TrueTrace {
                             TempNode.S.Center = center;
                             TempNode.variance *= Scale;
                             TempNode.S.Radius *= Scale;
-                            TempNode.intensity *= Scale;
+                            TempNode.intensity *= Scale * Scale;
                         } else {
                             GaussianTreeNode LeftNode = SGTree[nodes[WriteIndex].left];    
                             GaussianTreeNode RightNode = SGTree[nodes[WriteIndex].left + 1];
