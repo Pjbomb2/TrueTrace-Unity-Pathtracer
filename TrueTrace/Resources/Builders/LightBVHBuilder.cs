@@ -27,7 +27,35 @@ namespace TrueTrace {
 
         float Dot(ref Vector3 A, ref Vector3 B) {return A.x * B.x + A.y * B.y + A.z * B.z;}
         float Dot(Vector3 A) {return A.x * A.x + A.y * A.y + A.z * A.z;}
-        float Length(Vector3 A) {return (float)System.Math.Sqrt(Dot(A));}
+        float Length(Vector3 a) {return (float)Math.Sqrt(a.x * (double)a.x + a.y * (double)a.y + a.z * (double)a.z);}
+
+        public float Distance(Vector3 a, Vector3 b)
+        {
+            a.x -= b.x;
+            a.y -= b.y;
+            a.z -= b.z;
+            return (float)Math.Sqrt(a.x * (double)a.x + a.y * (double)a.y + a.z * (double)a.z);
+        }
+
+        public void Normalize(ref Vector3 a)
+        {
+            float num = (float)Math.Sqrt(a.x * (double)a.x + a.y * (double)a.y + a.z * (double)a.z);
+            if (num > 9.99999974737875E-06)
+            {
+                float inversed = 1 / num;
+                a.x *= inversed;
+                a.y *= inversed;
+                a.z *= inversed;
+            }
+            else
+            {
+                a.x = 0;
+                a.y = 0;
+                a.z = 0;
+            }
+        }
+
+
 
         public bool IsEmpty(ref LightBounds Cone) {return Cone.w == Vector3.zero;}
 
@@ -37,8 +65,8 @@ namespace TrueTrace {
             else return 2.0f * (float)System.Math.Asin(Length(v2 - v1) / 2.0f);
         }
 
-        private Matrix4x4 Rotate(float sinTheta, float cosTheta, Vector3 axis) {
-            Vector3 a = (axis).normalized;
+        private Matrix4x4 Rotate(float sinTheta, float cosTheta, Vector3 a) {
+            Normalize(ref a);
             Matrix4x4 m = Matrix4x4.identity;
             m[0,0] = a.x * a.x + (1 - a.x * a.x) * cosTheta;
             m[0,1] = a.x * a.y * (1 - cosTheta) - a.z * sinTheta;
@@ -64,21 +92,25 @@ namespace TrueTrace {
         }
 
         public void UnionCone(ref LightBounds A, ref LightBounds B) {
-            if(IsEmpty(ref A)) {A.w = B.w; A.cosTheta_o = B.cosTheta_o; return;}
-            if(IsEmpty(ref B)) return;
+            if(A.w.x == 0 && A.w.y == 0 && A.w.z == 0) {A.w = B.w; A.cosTheta_o = B.cosTheta_o; return;}
+            if(B.w.x == 0 && B.w.y == 0 && B.w.z == 0) return;
 
             float theta_a = (float)System.Math.Acos(Mathf.Clamp(A.cosTheta_o,-1.0f, 1.0f));
             float theta_b = (float)System.Math.Acos(Mathf.Clamp(B.cosTheta_o,-1.0f, 1.0f));
             float theta_d = AngleBetween(A.w, B.w);
-            if(System.Math.Min(theta_d + theta_b, 3.14159f) <= theta_a) return;
-            if(System.Math.Min(theta_d + theta_a, 3.14159f) <= theta_b) {A.w = B.w; A.cosTheta_o = B.cosTheta_o; return;}
+            float TempVar = 3.14159f;
+            if(theta_d + theta_b < TempVar) TempVar = theta_d + theta_b;
+            if(TempVar <= theta_a) return;
+            TempVar = 3.14159f;
+            if(theta_d + theta_a < TempVar) TempVar = theta_d + theta_a;
+            if(TempVar <= theta_b) {A.w = B.w; A.cosTheta_o = B.cosTheta_o; return;}
 
             float theta_o = (theta_a + theta_d + theta_b) / 2.0f;
             if(theta_o >= 3.14159f) {A.w = new Vector3(0,0,0); A.cosTheta_o = -1; return;}
 
             float theta_r = theta_o - theta_a;
             Vector3 wr = Vector3.Cross(A.w, B.w);
-            if(Vector3.Dot(wr, wr) == 0) {A.w = new Vector3(0,0,0); A.cosTheta_o = -1; return;}
+            if(Dot(ref wr, ref wr) == 0) {A.w = new Vector3(0,0,0); A.cosTheta_o = -1; return;}
             A.w = Rotate(theta_r, wr) * A.w;
             A.cosTheta_o =(float)System.Math.Cos(theta_o);
         }
@@ -91,31 +123,31 @@ namespace TrueTrace {
             if(A.phi == 0) {A = B; return;}
             if(B.phi == 0) return;
             UnionCone(ref A, ref B);
-            A.cosTheta_e = System.Math.Min(A.cosTheta_e, B.cosTheta_e);
+            if(B.cosTheta_e < A.cosTheta_e) A.cosTheta_e = B.cosTheta_e;
             A.b.Extend(ref B.b);
             A.phi += B.phi;
             A.LightCount += B.LightCount;
         }
 
-        private float surface_area(AABB aabb) {
-            Vector3 sizes = aabb.BBMax - aabb.BBMin;
+        private float surface_area(Vector3 sizes) {
             return 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z)); 
         }
 
         private float EvaluateCost(ref LightBounds b, float Kr, int dim) {
             float theta_o = (float)System.Math.Acos(b.cosTheta_o);
             float theta_e = (float)System.Math.Acos(b.cosTheta_e);
-            float theta_w = System.Math.Min(theta_o + theta_e, 3.14159f);
-            float sinTheta_o = Mathf.Sqrt(1.0f - b.cosTheta_o * b.cosTheta_o);
+            float theta_w = 3.14159f;
+            if(theta_o + theta_e < theta_w) theta_w = theta_o + theta_e;
+            float sinTheta_o = (float)System.Math.Sqrt(1.0f - b.cosTheta_o * b.cosTheta_o);
             float M_omega = 2.0f * 3.14159f * (1.0f - b.cosTheta_o) +
                             3.14159f / 2.0f *
                                 (2.0f * theta_w * sinTheta_o -(float)System.Math.Cos(theta_o - 2.0f * theta_w) -
                                  2.0f * theta_o * sinTheta_o + b.cosTheta_o);
 
-            float Radius = Vector3.Distance((b.b.BBMax + b.b.BBMin) / 2.0f, b.b.BBMax);
+            float Radius = Distance(new Vector3(b.b.BBMax.x + b.b.BBMin.x, b.b.BBMax.y + b.b.BBMin.y, b.b.BBMax.z + b.b.BBMin.z) / 2.0f, b.b.BBMax);
             float SA = 4.0f * Mathf.PI * Radius * Radius;
             
-            return b.phi * M_omega * Kr * surface_area(b.b) / (float)Mathf.Max(b.LightCount, 1);
+            return b.phi * M_omega * Kr * surface_area(new Vector3(b.b.BBMax.x - b.b.BBMin.x, b.b.BBMax.y - b.b.BBMin.y, b.b.BBMax.z - b.b.BBMin.z)) / (float)Mathf.Max(b.LightCount, 1);
         }
 
         private LightBounds* LightTris;
@@ -164,8 +196,10 @@ namespace TrueTrace {
             aabb_right.Clear();
 
             int Offset;
-            Vector3 Diagonal = parentBounds.BBMax - parentBounds.BBMin;
-            float Kr1 = System.Math.Max(System.Math.Max(Diagonal.x, Diagonal.y), Diagonal.z);
+            Vector3 Diagonal = new Vector3(parentBounds.BBMax.x - parentBounds.BBMin.x, parentBounds.BBMax.y - parentBounds.BBMin.y, parentBounds.BBMax.z - parentBounds.BBMin.z);
+            float Kr1 = Diagonal.x;
+            if(Kr1 < Diagonal.y) Kr1 = Diagonal.y;
+            if(Kr1 < Diagonal.z) Kr1 = Diagonal.z;
             for(int dimension = 0; dimension < 3; dimension++) {
                 float Kr = Kr1 / Diagonal[dimension];
                 Offset = PrimCount * dimension + first_index;
@@ -257,17 +291,18 @@ namespace TrueTrace {
   
         private float AreaOfTriangle(Vector3 pt1, Vector3 pt2, Vector3 pt3)
         {
-            float a = Vector3.Distance(pt1, pt2);
-            float b = Vector3.Distance(pt2, pt3);
-            float c = Vector3.Distance(pt3, pt1);
+            float a = Distance(pt1, pt2);
+            float b = Distance(pt2, pt3);
+            float c = Distance(pt3, pt1);
             float s = (a + b + c) / 2.0f;
             return Mathf.Sqrt(s * (s - a) * (s - b) * (s - c));
         }
 
+        public List<int>[] MainSet;
         public List<int>[] Set;
         void Refit(int Depth, int CurrentIndex) {
             if(nodes2[CurrentIndex].aabb.cosTheta_e == 0) return;
-            Set[Depth].Add(CurrentIndex);
+            MainSet[Depth].Add(CurrentIndex);
             if(nodes2[CurrentIndex].isLeaf == 1) return;
             Refit(Depth + 1, nodes2[CurrentIndex].left);
             Refit(Depth + 1, nodes2[CurrentIndex].left + 1);
@@ -423,7 +458,7 @@ namespace TrueTrace {
                             V = 0.5f * -Norms[-(LBVHNode.left+1)];//(Vector3.Cross(ThisLight.posedge1.normalized, ThisLight.posedge2.normalized).normalized);
                             mean = (ThisLight.pos0 + (ThisLight.pos0 + ThisLight.posedge1) + (ThisLight.pos0 + ThisLight.posedge2)) / 3.0f;
                             variance = (Vector3.Dot(ThisLight.posedge1, ThisLight.posedge1) + Vector3.Dot(ThisLight.posedge2, ThisLight.posedge2) - Vector3.Dot(ThisLight.posedge1, ThisLight.posedge2)) / 18.0f;
-                            radius = Mathf.Max(Mathf.Max(Vector3.Distance(mean, ThisLight.pos0), Vector3.Distance(mean, ThisLight.pos0 + ThisLight.posedge1)), Vector3.Distance(mean, ThisLight.pos0 + ThisLight.posedge2));
+                            radius = Mathf.Max(Mathf.Max(Distance(mean, ThisLight.pos0), Distance(mean, ThisLight.pos0 + ThisLight.posedge1)), Distance(mean, ThisLight.pos0 + ThisLight.posedge2));
                         } else {
                             GaussianTreeNode LeftNode = SGTree[nodes[WriteIndex].left];    
                             GaussianTreeNode RightNode = SGTree[nodes[WriteIndex].left + 1];
@@ -439,9 +474,9 @@ namespace TrueTrace {
                             variance = w_left * LeftNode.variance + w_right * RightNode.variance + w_left * w_right * Vector3.Dot(LeftNode.S.Center - RightNode.S.Center, LeftNode.S.Center - RightNode.S.Center);
 
                             intensity = LeftNode.intensity + RightNode.intensity;
-                            radius = Mathf.Max(Vector3.Distance(mean, LeftNode.S.Center) + LeftNode.S.Radius, Vector3.Distance(mean, RightNode.S.Center) + RightNode.S.Radius);
+                            radius = Mathf.Max(Distance(mean, LeftNode.S.Center) + LeftNode.S.Radius, Distance(mean, RightNode.S.Center) + RightNode.S.Radius);
                         }
-                        TempNode.sharpness = ((3.0f * Vector3.Distance(Vector3.zero, V) - Mathf.Pow(Vector3.Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Vector3.Distance(Vector3.zero, V), 2));
+                        TempNode.sharpness = ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
                         TempNode.axis = V;
                         TempNode.S.Center = mean;
                         TempNode.variance = variance;
@@ -531,14 +566,9 @@ namespace TrueTrace {
                 }
             }
             DimensionedIndicesArray.Dispose();
-            Set = new List<int>[MaxDepth];
-            WorkingSet = new ComputeBuffer[MaxDepth];
-            for(int i = 0; i < MaxDepth; i++) Set[i] = new List<int>();
+            MainSet = new List<int>[MaxDepth];
+            for(int i = 0; i < MaxDepth; i++) MainSet[i] = new List<int>();
             Refit(0, 0);
-            for(int i = 0; i < MaxDepth; i++) {
-                WorkingSet[i] = new ComputeBuffer(Set[i].Count, 4);
-                WorkingSet[i].SetData(Set[i]);
-            }
             nodes = new CompactLightBVHData[PrimCount * 2];
             for(int i = 0; i < PrimCount * 2; i++) {
                 CompactLightBVHData TempNode = new CompactLightBVHData();
@@ -558,6 +588,7 @@ namespace TrueTrace {
 
 #if !DontUseSGTree
             {
+                Set = new List<int>[MaxDepth];
                 for(int i = 0; i < MaxDepth; i++) Set[i] = new List<int>();
                 Refit2(0, 0);
                 GaussianTreeNode TempNode = new GaussianTreeNode();
@@ -576,7 +607,7 @@ namespace TrueTrace {
                             Vector3 ExtendedCenter = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center + new Vector3(TempNode.S.Radius, 0, 0), 1));
                             Vector3 center = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center, 1));
                             Vector3 Axis = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.axis, 0));
-                            float Scale = Vector3.Distance(center, ExtendedCenter) / TempNode.S.Radius;
+                            float Scale = Distance(center, ExtendedCenter) / TempNode.S.Radius;
                             TempNode.axis = Axis;
                             TempNode.S.Center = center;
                             TempNode.variance *= Scale;
@@ -597,8 +628,8 @@ namespace TrueTrace {
                             variance = w_left * LeftNode.variance + w_right * RightNode.variance + w_left * w_right * Vector3.Dot(LeftNode.S.Center - RightNode.S.Center, LeftNode.S.Center - RightNode.S.Center);
 
                             intensity = LeftNode.intensity + RightNode.intensity;
-                            radius = Mathf.Max(Vector3.Distance(mean, LeftNode.S.Center) + LeftNode.S.Radius, Vector3.Distance(mean, RightNode.S.Center) + RightNode.S.Radius);
-                            TempNode.sharpness = ((3.0f * Vector3.Distance(Vector3.zero, V) - Mathf.Pow(Vector3.Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Vector3.Distance(Vector3.zero, V), 2));
+                            radius = Mathf.Max(Distance(mean, LeftNode.S.Center) + LeftNode.S.Radius, Distance(mean, RightNode.S.Center) + RightNode.S.Radius);
+                            TempNode.sharpness = ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
                             TempNode.axis = V;
                             TempNode.S.Center = mean;
                             TempNode.variance = variance;

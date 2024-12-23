@@ -20,6 +20,41 @@ namespace TrueTrace {
     public class ParentObject : MonoBehaviour
     {
 
+        public float Distance(Vector3 a, Vector3 b)
+        {
+            a.x -= b.x;
+            a.y -= b.y;
+            a.z -= b.z;
+            return (float)Math.Sqrt(a.x * (double)a.x + a.y * (double)a.y + a.z * (double)a.z);
+        }
+        public static Vector3 Scale(Vector3 a, Vector3 b)
+        {
+            a.x *= b.x;
+            a.y *= b.y;
+            a.z *= b.z;
+            return a;
+        }
+
+        public void Normalize(ref Vector3 a)
+        {
+            float num = (float)Math.Sqrt(a.x * (double)a.x + a.y * (double)a.y + a.z * (double)a.z);
+            if (num > 9.99999974737875E-06)
+            {
+                float inversed = 1 / num;
+                a.x *= inversed;
+                a.y *= inversed;
+                a.z *= inversed;
+            }
+            else
+            {
+                a.x = 0;
+                a.y = 0;
+                a.z = 0;
+            }
+        }
+
+
+
         public int[] RTAccelHandle;
         public int[] RTAccelSubmeshOffsets;
         public LightBVHBuilder LBVH;
@@ -1203,9 +1238,9 @@ namespace TrueTrace {
 
         private float AreaOfTriangle(Vector3 pt1, Vector3 pt2, Vector3 pt3)
         {
-            float a = Vector3.Distance(pt1, pt2);
-            float b = Vector3.Distance(pt2, pt3);
-            float c = Vector3.Distance(pt3, pt1);
+            float a = Distance(pt1, pt2);
+            float b = Distance(pt2, pt3);
+            float c = Distance(pt3, pt1);
             float s = (a + b + c) / 2.0f;
             return Mathf.Sqrt(s * (s - a) * (s - b) * (s - c));
         }
@@ -1221,6 +1256,7 @@ namespace TrueTrace {
             float height = Vector3.Cross(sideAB, sideBC).magnitude;
             return new Vector2(width, height);
         }
+
 
         public unsafe async Task BuildTotal() {
             // if(HasCompleted) return;
@@ -1242,10 +1278,10 @@ namespace TrueTrace {
                 int IndexEnd = TransformIndexes[i].VertexStart + TransformIndexes[i].VertexCount;
                 OffsetReal = TransformIndexes[i].VertexStart / 3;
                 bool IsSingle = CachedTransforms[i + 1].WTL.inverse == ParentMat;
-                float scalex = Vector3.Distance(ChildMat * new Vector3(1,0,0), new Vector3(0,0,0));
-                float scaley = Vector3.Distance(ChildMat * new Vector3(0,1,0), new Vector3(0,0,0));
-                float scalez = Vector3.Distance(ChildMat * new Vector3(0,0,1), new Vector3(0,0,0));
-                Vector3 Scale = IsSingle ? new Vector3(1,1,1) : new Vector3(Mathf.Pow(1.0f / scalex, 2.0f), Mathf.Pow(1.0f / scaley, 2.0f), Mathf.Pow(1.0f / scalez, 2.0f));
+                float scalex = Distance(ChildMat * new Vector3(1,0,0), new Vector3(0,0,0));
+                float scaley = Distance(ChildMat * new Vector3(0,1,0), new Vector3(0,0,0));
+                float scalez = Distance(ChildMat * new Vector3(0,0,1), new Vector3(0,0,0));
+                Vector3 ScaleFactor = IsSingle ? new Vector3(1,1,1) : new Vector3(Mathf.Pow(1.0f / scalex, 2.0f), Mathf.Pow(1.0f / scaley, 2.0f), Mathf.Pow(1.0f / scalez, 2.0f));
                 for (int i3 = TransformIndexes[i].VertexStart; i3 < IndexEnd; i3 += 3) {//Transforming child meshes into the space of their parent
                     int Index1 = CurMeshData.Indices[i3] + IndexOffset;
                     int Index2 = CurMeshData.Indices[i3 + 2] + IndexOffset;
@@ -1265,9 +1301,9 @@ namespace TrueTrace {
                     Tan2 = TransMat * (Vector3)CurMeshData.Tangents[Index2];
                     Tan3 = TransMat * (Vector3)CurMeshData.Tangents[Index3];
                    
-                    Norm1 = TransMat * Vector3.Scale(Scale, CurMeshData.Normals[Index1]);
-                    Norm2 = TransMat * Vector3.Scale(Scale, CurMeshData.Normals[Index2]);
-                    Norm3 = TransMat * Vector3.Scale(Scale, CurMeshData.Normals[Index3]);
+                    Norm1 = TransMat * Scale(ScaleFactor, CurMeshData.Normals[Index1]);
+                    Norm2 = TransMat * Scale(ScaleFactor, CurMeshData.Normals[Index2]);
+                    Norm3 = TransMat * Scale(ScaleFactor, CurMeshData.Normals[Index3]);
 
 
                     TempTri.tex0 = ((uint)Mathf.FloatToHalf(CurMeshData.UVs[Index1].x) << 16) | Mathf.FloatToHalf(CurMeshData.UVs[Index1].y);
@@ -1277,13 +1313,19 @@ namespace TrueTrace {
                     TempTri.pos0 = V1;
                     TempTri.posedge1 = V2 - V1;
                     TempTri.posedge2 = V3 - V1;
-                    TempTri.norm0 = CommonFunctions.PackOctahedral(Norm1.normalized);
-                    TempTri.norm1 = CommonFunctions.PackOctahedral(Norm2.normalized);
-                    TempTri.norm2 = CommonFunctions.PackOctahedral(Norm3.normalized);
+                    Normalize(ref Norm1);
+                    Normalize(ref Norm2);
+                    Normalize(ref Norm3);
+                    TempTri.norm0 = CommonFunctions.PackOctahedral(Norm1);
+                    TempTri.norm1 = CommonFunctions.PackOctahedral(Norm2);
+                    TempTri.norm2 = CommonFunctions.PackOctahedral(Norm3);
+                    Normalize(ref Tan1);
+                    Normalize(ref Tan2);
+                    Normalize(ref Tan3);
 
-                    TempTri.tan0 = CommonFunctions.PackOctahedral(Tan1.normalized);
-                    TempTri.tan1 = CommonFunctions.PackOctahedral(Tan2.normalized);
-                    TempTri.tan2 = CommonFunctions.PackOctahedral(Tan3.normalized);
+                    TempTri.tan0 = CommonFunctions.PackOctahedral(Tan1);
+                    TempTri.tan1 = CommonFunctions.PackOctahedral(Tan2);
+                    TempTri.tan2 = CommonFunctions.PackOctahedral(Tan3);
                     
                     TempTri.VertColA = CommonFunctions.packRGBE(CurMeshData.Colors[Index1]);
                     TempTri.VertColB = CommonFunctions.packRGBE(CurMeshData.Colors[Index2]);
@@ -1347,9 +1389,9 @@ namespace TrueTrace {
                                     posedge1 = TempTri.posedge1,
                                     posedge2 = TempTri.posedge2,
                                     TriTarget = (uint)(OffsetReal),
-                                    SourceEnergy = Vector3.Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Vector3.Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol))
+                                    SourceEnergy = Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol))
                                     });
-                                LuminanceWeights.Add(_Materials[(int)TempTri.MatDat].emission);//Vector3.Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Vector3.Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol)));
+                                LuminanceWeights.Add(_Materials[(int)TempTri.MatDat].emission);//Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol)));
                                 IllumTriCount++;
                             }
                         }
@@ -1768,7 +1810,7 @@ namespace TrueTrace {
         //         int Count = LBVH.SGTree.Length;
         //         for(int i = 0; i < Count; i++) {
         //             Vector3 Pos = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LBVH.SGTree[i].S.Center, 1));
-        //             float Radius = Vector3.Distance(Pos, CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LBVH.SGTree[i].S.Center + new Vector3(LBVH.SGTree[i].S.Radius, 0, 0), 1)));
+        //             float Radius = Distance(Pos, CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LBVH.SGTree[i].S.Center + new Vector3(LBVH.SGTree[i].S.Radius, 0, 0), 1)));
         //             // if(LightTree[i].variance < LightTree[i].S.Radius * VarTest) Gizmos.DrawWireSphere(Pos, Radius);
         //             Gizmos.DrawWireSphere(Pos, Radius);
 

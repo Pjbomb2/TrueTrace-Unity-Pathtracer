@@ -1765,7 +1765,7 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 	float3 viewDirTS = mul(tangentFrame, viewDir);//their origional one constructs the tangent frame from N,T,BT, whereas mine constructs it from T,N,BT; problem? I converted all .y to .z and vice versa, but... 
 	float3 reflecVec = reflect(-viewDir, n) * reflecSharpness;
 	float RandNum = random(264 + Reps, pixel_index).x;
-	while(Reps < 222) {
+	while(Reps < 622) {
 		Reps++;
 #ifdef UseSGTree
 		GaussianTreeNode node = NodeBuffer[node_index];

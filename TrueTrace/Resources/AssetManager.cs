@@ -1531,6 +1531,7 @@ namespace TrueTrace {
         Layer2[] LayerStack;
         int[] CWBVHIndicesBufferInverted;
         ComputeBuffer[] WorkingBuffer;
+        ComputeBuffer[] LBVHWorkingSet;
         ComputeBuffer NodeBuffer;
         ComputeBuffer StackBuffer;
         ComputeBuffer ToBVHIndexBuffer;
@@ -1695,6 +1696,9 @@ namespace TrueTrace {
                 CurFrame = 0;
                 TLASTask = null;
             #endif
+
+            LBVHTLASTask = null;
+
             LightBVHTransformsBuffer.ReleaseSafe();
             if(LightBVHTransforms.Length != 0) {
                 LightBVHTransformsBuffer = new ComputeBuffer(LightBVHTransforms.Length, 68);
@@ -1750,6 +1754,13 @@ namespace TrueTrace {
                 LayerStack = TempStack.ToArray();
             return;
         }
+
+        Task LBVHTLASTask;
+        unsafe async void CorrectRefitLBVH(AABB[] Boxes) {
+            if(LBVH != null) LBVH.Dispose();
+            LBVH = new LightBVHBuilder(LightAABBs, ref SGTree, LightBVHTransforms, SGTreeNodes);
+            return;
+        }
         ComputeBuffer BoxesBuffer;
         int CurFrame = 0;
         int BVHNodeCount = 0;
@@ -1758,28 +1769,29 @@ namespace TrueTrace {
         public unsafe void RefitTLAS(AABB[] Boxes, CommandBuffer cmd)
         {
             CurFrame++;
+            if(LBVHTLASTask == null) LBVHTLASTask = Task.Run(() => CorrectRefitLBVH(Boxes));
             #if !HardwareRT
             if(TLASTask == null) TLASTask = Task.Run(() => CorrectRefit(Boxes));
 
              if(TLASTask.Status == TaskStatus.RanToCompletion && CurFrame % 25 == 24) {
                 MaxRecur = TempRecur; 
-                if(LightMeshCount > 0) {
-                    if(LBVH != null && LBVH.WorkingSet != null) {
-                        int Coun = LBVH.WorkingSet.Length - 1;
-                        for(int i = Coun; i >= 0; i--) {
-                            LBVH.WorkingSet[i].ReleaseSafe();
-                        }
-                    }
-                    if(LBVH != null) LBVH.Dispose();
-                    LBVH = new LightBVHBuilder(LightAABBs, ref SGTree, LightBVHTransforms, SGTreeNodes);
-#if !DontUseSGTree
-                    if(RayMaster.FramesSinceStart2 % 2 == 0) LightTreeBufferA.SetData(SGTree, 0, 0, SGTree.Length);
-                    else LightTreeBufferB.SetData(SGTree, 0, 0, SGTree.Length);
-#else
-                    if(RayMaster.FramesSinceStart2 % 2 == 0) LightTreeBufferA.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
-                    else LightTreeBufferB.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
-#endif
-                }
+//                 if(LightMeshCount > 0) {
+//                     if(LBVH != null && LBVHWorkingSet != null) {
+//                         int Coun = LBVHWorkingSet.Length - 1;
+//                         for(int i = Coun; i >= 0; i--) {
+//                             LBVHWorkingSet[i].ReleaseSafe();
+//                         }
+//                     }
+//                     if(LBVH != null) LBVH.Dispose();
+//                     LBVH = new LightBVHBuilder(LightAABBs, ref SGTree, LightBVHTransforms, SGTreeNodes);
+// #if !DontUseSGTree
+//                     if(RayMaster.FramesSinceStart2 % 2 == 0) LightTreeBufferA.SetData(SGTree, 0, 0, SGTree.Length);
+//                     else LightTreeBufferB.SetData(SGTree, 0, 0, SGTree.Length);
+// #else
+//                     if(RayMaster.FramesSinceStart2 % 2 == 0) LightTreeBufferA.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
+//                     else LightTreeBufferB.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
+// #endif
+//                 }
                 
                 if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
                 if (NodeBuffer != null) NodeBuffer.Release();
@@ -1863,12 +1875,17 @@ namespace TrueTrace {
 
                 // cmd.EndSample("TLAS Refit Node Compress");
             }
-            #else
+            // #else
+            #endif
 
-             if(CurFrame % 25 == 24) {
+             if(LBVHTLASTask.Status == TaskStatus.RanToCompletion && CurFrame % 25 == 24) {
                 if(LightMeshCount > 0) {
-                    if(LBVH != null) LBVH.Dispose();
-                    LBVH = new LightBVHBuilder(LightAABBs, ref SGTree, LightBVHTransforms, SGTreeNodes);
+                    if(LBVHWorkingSet != null) for(int i = 0; i < LBVHWorkingSet.Length; i++) LBVHWorkingSet[i].ReleaseSafe();
+                    LBVHWorkingSet = new ComputeBuffer[LBVH.MaxDepth];
+                    for(int i = 0; i < LBVH.MaxDepth; i++) {
+                        LBVHWorkingSet[i] = new ComputeBuffer(LBVH.MainSet[i].Count, 4);
+                        LBVHWorkingSet[i].SetData(LBVH.MainSet[i]);
+                    }
 #if !DontUseSGTree
                     if(RayMaster.FramesSinceStart2 % 2 == 0) LightTreeBufferA.SetData(SGTree, 0, 0, SGTree.Length);
                     else LightTreeBufferB.SetData(SGTree, 0, 0, SGTree.Length);
@@ -1882,9 +1899,10 @@ namespace TrueTrace {
                     LightBVHTransformsBuffer = new ComputeBuffer(LightBVHTransforms.Length, 68);
                     LightBVHTransformsBuffer.SetData(LightBVHTransforms);
                 }
+                LBVHTLASTask = Task.Run(() => CorrectRefitLBVH(Boxes));
             }
 
-            #endif
+            // #endif
                 if(LightAABBs != null && LightAABBs.Length != 0) {
                     LightBVHTransformsBuffer.SetData(LightBVHTransforms);
                     if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("LightRefitter");
@@ -1895,12 +1913,12 @@ namespace TrueTrace {
                     cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "LightNodesWrite", RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB);
 #endif
                     int ObjectOffset = 0;
-                    for(int i = LBVH.WorkingSet.Length - 1; i >= 0; i--) {
+                    for(int i = LBVHWorkingSet.Length - 1; i >= 0; i--) {
                         var ObjOffVar = ObjectOffset;
-                        var SetCount = LBVH.WorkingSet[i].count;
+                        var SetCount = LBVHWorkingSet[i].count;
                         cmd.SetComputeIntParam(Refitter, "SetCount", SetCount);
                         cmd.SetComputeIntParam(Refitter, "ObjectOffset", ObjOffVar);
-                        cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "WorkingSet", LBVH.WorkingSet[i]);
+                        cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "WorkingSet", LBVHWorkingSet[i]);
                         cmd.DispatchCompute(Refitter, LightTLASRefitKernel, (int)Mathf.Ceil(SetCount / (float)256.0f), 1, 1);
 
                         ObjectOffset += SetCount;
@@ -2018,6 +2036,14 @@ namespace TrueTrace {
                 if(LightMeshCount > 0) {
                     if(LBVH != null) LBVH.Dispose();
                     LBVH = new LightBVHBuilder(LightAABBs, ref SGTree, LightBVHTransforms, SGTreeNodes);
+
+                    if(LBVHWorkingSet != null) for(int i = 0; i < LBVHWorkingSet.Length; i++) LBVHWorkingSet[i].ReleaseSafe();
+                    LBVHWorkingSet = new ComputeBuffer[LBVH.MaxDepth];
+                    for(int i = 0; i < LBVH.MaxDepth; i++) {
+                        LBVHWorkingSet[i] = new ComputeBuffer(LBVH.MainSet[i].Count, 4);
+                        LBVHWorkingSet[i].SetData(LBVH.MainSet[i]);
+                    }
+
 #if !DontUseSGTree
                     LightTreeBufferA.SetData(SGTree, 0, 0, SGTree.Length);
                     LightTreeBufferB.SetData(SGTree, 0, 0, SGTree.Length);

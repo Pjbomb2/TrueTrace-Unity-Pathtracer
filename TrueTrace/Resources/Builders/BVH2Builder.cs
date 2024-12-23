@@ -50,14 +50,14 @@ namespace TrueTrace {
 
             int Offset;
             for(int dimension = 0; dimension < 3; dimension++) {
-                aabb_left.init();
                 aabb_right.init();
                 Offset = PrimCount * dimension + first_index;
                 for(int i = 1; i < index_count; i++) {
-                    aabb_left.Extend(ref Primitives[DimensionedIndices[Offset + i - 1]]);
+                    aabb_right.Extend(ref Primitives[DimensionedIndices[Offset + i - 1]]);
 
-                    SAH[i] = surface_area(ref aabb_left) * (float)i;
+                    SAH[i] = surface_area(ref aabb_right) * (float)i;
                 }
+                aabb_right.init();
 
                 for(int i = index_count - 1; i > 0; i--) {
                     aabb_right.Extend(ref Primitives[DimensionedIndices[Offset + i]]);
@@ -112,8 +112,8 @@ namespace TrueTrace {
         }
 
         float surface_area(ref AABB aabb) {
-            Vector3 sizes = aabb.BBMax - aabb.BBMin;
-            return 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z)); 
+            Vector3 d = new Vector3(aabb.BBMax.x - aabb.BBMin.x, aabb.BBMax.y - aabb.BBMin.y, aabb.BBMax.z - aabb.BBMin.z);
+            return (d.x + d.y) * d.z + d.x * d.y; 
         }
 
         public unsafe BVH2Builder(AABB* Triangles, int PrimCount) {//Bottom Level Acceleration Structure Builder
