@@ -662,7 +662,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
 
     #ifdef HardwareRT
         if(bestHit.mesh_id != 9999999) {
-            int2 Indexes = int2(bestHit.mesh_id & 0x0000FFFF, bestHit.mesh_id >> 16);
+            int2 Indexes = int2(bestHit.mesh_id & 0x7FFFFFF, bestHit.mesh_id >> 27);
             int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
             bestHit.triangle_id += triangleOffset;
             bestHit.mesh_id = MeshOffsets[Indexes.x].y;
@@ -703,9 +703,6 @@ int MaterialIndex;
         float3 rayorig2 = ray.origin;
         rayorig2.y += bottom_radius;
         bool DoSecondary = !(Color.MetRoughIsSpec >> 31);
-        // #ifdef RadCache
-        //     DoSecondary = DoSecondary || !(CacheBuffer[pixel_index].pathLength >> 31);
-        // #endif
         float Intensity = DoSecondary ? BackgroundIntensity : SecondaryBackgroundIntensity;
         float TrueDeSat = DoSecondary ? SkyDesaturate : SecondarySkyDesaturate;
         if(CurBounce != 0 && IndirectBoost < 1) Intensity *= rcp(IndirectBoost);
@@ -772,16 +769,7 @@ int MaterialIndex;
             Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((2) << 26);  
 
         }
-// #ifdef RadCache
-//         if(CurBounce != 0) {
-//             if(GetBounceData(CacheBuffer[pixel_index].pathLength) != 0) {
-                // BSDFWRITTEN = AddHitToCacheFull(CacheBuffer[pixel_index], ray.origin);
-                // GridVoxel TempVox = RetrieveCacheData(GenHashComputedNorm(ray.origin, (CacheBuffer[pixel_index].pathLength >> 3) & 7));
-                // float3 Rad = TempVox.radiance / (float)max(TempVox.SampleNum,1);
-                // Color.Indirect += Rad;
-//             }
-//         }
-// #endif
+
         GlobalColors[pixel_index] = Color;
         if(UseReSTIRGI && CurBounce == 1 && GetBounceData(Color.MetRoughIsSpec) == 0) {
             ScreenSpaceInfo[id.xy] = float4(ScreenSpaceInfo[id.xy].xyz, asfloat(packRGBE(max(Color.throughput, 0.005f)))); 

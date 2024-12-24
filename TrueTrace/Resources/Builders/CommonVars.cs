@@ -119,6 +119,13 @@ namespace CommonVars
     }
 
     [System.Serializable]
+    public struct PerInstanceData {
+        public Matrix4x4 objectToWorld; // We must specify object-to-world transformation for each instance
+        public uint renderingLayerMask;
+        public uint CustomInstanceID;
+    }
+
+    [System.Serializable]
     public struct MaterialData
     {
         public Vector2Int AlbedoTex;

@@ -55,6 +55,7 @@ namespace TrueTrace {
 
 
 
+        public PerInstanceData[] InstanceDatas;
         public int[] RTAccelHandle;
         public int[] RTAccelSubmeshOffsets;
         public LightBVHBuilder LBVH;
