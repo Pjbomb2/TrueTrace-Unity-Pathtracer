@@ -333,6 +333,9 @@ namespace TrueTrace {
                         UnityEditor.AssetDatabase.CreateAsset(LocalTTSettings, path + ".asset");
                         UnityEditor.AssetDatabase.SaveAssets();
                     }
+                #else 
+                    if(LocalTTSettings == null)
+                        LocalTTSettings = ScriptableObject.CreateInstance<TTSettings>();
                 #endif
             }
             #if UNITY_EDITOR

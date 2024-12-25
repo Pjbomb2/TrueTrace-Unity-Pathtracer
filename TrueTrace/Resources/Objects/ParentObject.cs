@@ -71,7 +71,6 @@ namespace TrueTrace {
         public string Name;
         [HideInInspector] public GraphicsBuffer[] VertexBuffers;
         [HideInInspector] public ComputeBuffer[] IndexBuffers;
-        [HideInInspector] public int[] CWBVHIndicesBufferInverted;
         [HideInInspector] public List<RayTracingObject> ChildObjects;
         [HideInInspector] public bool MeshCountChanged;
         private unsafe NativeArray<AABB> TrianglesArray;
@@ -183,7 +182,6 @@ namespace TrueTrace {
             CommonFunctions.DeepClean(ref AggNodes);
             CommonFunctions.DeepClean(ref ForwardStack);
             CommonFunctions.DeepClean(ref LightTriNorms);
-            CommonFunctions.DeepClean(ref CWBVHIndicesBufferInverted);
             CommonFunctions.DeepClean(ref LuminanceWeights);
             if(TrianglesArray.IsCreated) TrianglesArray.Dispose();
             if(BVH2 != null) {
@@ -197,6 +195,8 @@ namespace TrueTrace {
                 if(BVH2.SAHArray.IsCreated) BVH2.SAHArray.Dispose();
             }
             if(BVH != null) {
+                CommonFunctions.DeepClean(ref BVH.cwbvh_indices);
+                CommonFunctions.DeepClean(ref BVH.BVH8Nodes);
                 if(BVH.costArray.IsCreated) BVH.costArray.Dispose();
                 if(BVH.decisionsArray.IsCreated) BVH.decisionsArray.Dispose();
             }
@@ -953,17 +953,20 @@ namespace TrueTrace {
             MaxRecur = 0;
             BVH2 = new BVH2Builder(Triangles, TrianglesArray.Length);//Binary BVH Builder, and also the component that takes the longest to build
             this.BVH = new BVH8Builder(ref BVH2);
+            CommonFunctions.DeepClean(ref BVH2.FinalIndices);
             BVH2.BVH2NodesArray.Dispose();
             BVH2 = null;
             System.Array.Resize(ref BVH.BVH8Nodes, BVH.cwbvhnode_count);
             ToBVHIndex = new int[BVH.cwbvhnode_count];
 
-            CWBVHIndicesBufferInverted = new int[BVH.cwbvh_indices.Length];
-            int CWBVHIndicesBufferCount = CWBVHIndicesBufferInverted.Length;
+            int CWBVHIndicesBufferCount = BVH.cwbvh_indices.Length;
             #if !HardwareRT
-                for (int i = 0; i < CWBVHIndicesBufferCount; i++) CWBVHIndicesBufferInverted[BVH.cwbvh_indices[i]] = i;
+                NativeArray<int> InvertedBufferArray = new NativeArray<int>(BVH.cwbvh_indices, Unity.Collections.Allocator.TempJob);
+                int* InvertedBuffer = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(InvertedBufferArray);
+                for (int i = 0; i < CWBVHIndicesBufferCount; i++) BVH.cwbvh_indices[InvertedBuffer[i]] = i;
+                InvertedBufferArray.Dispose();
             #else
-                for (int i = 0; i < CWBVHIndicesBufferCount; i++) CWBVHIndicesBufferInverted[i] = i;
+                for (int i = 0; i < CWBVHIndicesBufferCount; i++) BVH.cwbvh_indices[i] = i;
             #endif
             if (IsSkinnedGroup || IsDeformable)
             {
@@ -1003,7 +1006,7 @@ namespace TrueTrace {
             int LightTriLength = LightTriangles.Count;
             for(int i = 0; i < LightTriLength; i++) {
                 LightTriData LT = LightTriangles[i];
-                LT.TriTarget = (uint)CWBVHIndicesBufferInverted[LT.TriTarget];
+                LT.TriTarget = (uint)BVH.cwbvh_indices[LT.TriTarget];
                 LightTriangles[i] = LT;
             }
             if(LightTriangles.Count > 0) {
@@ -1073,7 +1076,7 @@ namespace TrueTrace {
                 StackBuffer = new ComputeBuffer(ForwardStack.Length, 32);
                 StackBuffer.SetData(ForwardStack);
                 CWBVHIndicesBuffer = new ComputeBuffer(BVH.cwbvh_indices.Length, 4);
-                CWBVHIndicesBuffer.SetData(CWBVHIndicesBufferInverted);
+                CWBVHIndicesBuffer.SetData(BVH.cwbvh_indices);
                 BVHDataBuffer = new ComputeBuffer(AggNodes.Length, 260);
                 BVHDataBuffer.SetData(SplitNodes);
                 SplitNodes.Clear();
@@ -1408,7 +1411,7 @@ namespace TrueTrace {
                     int TriLength = AggTriangles.Length;
                     NativeArray<CudaTriangle> Vector3Array = new NativeArray<CudaTriangle>(AggTriangles, Unity.Collections.Allocator.TempJob);
                     CudaTriangle* VecPointer = (CudaTriangle*)NativeArrayUnsafeUtility.GetUnsafePtr(Vector3Array);
-                    for (int i = 0; i < TriLength; i++) AggTriangles[i] = VecPointer[BVH.cwbvh_indices[i]];
+                    for (int i = 0; i < TriLength; i++) AggTriangles[BVH.cwbvh_indices[i]] = VecPointer[i];
                     Vector3Array.Dispose();
                 }
                 AggNodes = new BVHNode8DataCompressed[BVH.BVH8Nodes.Length];

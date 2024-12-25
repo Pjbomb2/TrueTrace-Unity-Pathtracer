@@ -1752,8 +1752,7 @@ namespace TrueTrace {
         }
 
         Task LBVHTLASTask;
-        unsafe async void CorrectRefitLBVH(AABB[] Boxes) {
-            if(LBVH != null) LBVH.Dispose();
+        unsafe async void CorrectRefitLBVH() {
             LBVH = new LightBVHBuilder(LightAABBs, ref SGTree, LightBVHTransforms, SGTreeNodes);
             return;
         }
@@ -1765,7 +1764,7 @@ namespace TrueTrace {
         public unsafe void RefitTLAS(AABB[] Boxes, CommandBuffer cmd)
         {
             CurFrame++;
-            if(LBVHTLASTask == null) LBVHTLASTask = Task.Run(() => CorrectRefitLBVH(Boxes));
+            if(LightAABBs != null && LightAABBs.Length != 0 && LBVHTLASTask == null) LBVHTLASTask = Task.Run(() => CorrectRefitLBVH());
             #if !HardwareRT
             if(TLASTask == null) TLASTask = Task.Run(() => CorrectRefit(Boxes));
 
@@ -1873,7 +1872,7 @@ namespace TrueTrace {
             }
             #endif
 
-             if(LBVHTLASTask.Status == TaskStatus.RanToCompletion && CurFrame % 25 == 24) {
+             if(LightAABBs != null && LightAABBs.Length != 0 && LBVHTLASTask.Status == TaskStatus.RanToCompletion && CurFrame % 25 == 24) {
                 if(LightMeshCount > 0) {
                     if(LBVHWorkingSet != null) for(int i = 0; i < LBVHWorkingSet.Length; i++) LBVHWorkingSet[i].ReleaseSafe();
                     LBVHWorkingSet = new ComputeBuffer[LBVH.MaxDepth];
@@ -1893,7 +1892,8 @@ namespace TrueTrace {
                 if(LightBVHTransforms.Length != 0) {
                     LightBVHTransformsBuffer = new ComputeBuffer(LightBVHTransforms.Length, 68);
                 }
-                LBVHTLASTask = Task.Run(() => CorrectRefitLBVH(Boxes));
+                if(LBVH != null) LBVH.Dispose();
+                LBVHTLASTask = Task.Run(() => CorrectRefitLBVH());
             }
 
                 if(LightAABBs != null && LightAABBs.Length != 0) {

@@ -493,6 +493,8 @@ namespace TrueTrace {
 #endif
         }
         public void Dispose() {
+            ClearAll();
+            
             if(WorkingSet != null) {
                 int SetLength = WorkingSet.Length;
                 for(int i = 0; i < SetLength; i++) {

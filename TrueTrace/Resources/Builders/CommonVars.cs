@@ -1004,7 +1004,7 @@ namespace CommonVars
             Vector2 sign = new Vector2((nor.x >= 0.0f) ? 1.0f : -1.0f, (nor.y >= 0.0f) ? 1.0f : -1.0f);
             float absX = nor.x * sign.x;
             float absY = nor.y * sign.y;
-            float Tot = absX + absY + Mathf.Abs(nor.z);
+            float Tot = absX + absY + (float)System.Math.Abs(nor.z);
 
             Vector2 temp = new Vector2(absX / Tot, absY / Tot);
             if (nor.z < 0.0f)
