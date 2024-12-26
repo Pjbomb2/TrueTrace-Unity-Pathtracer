@@ -1410,12 +1410,14 @@ namespace TrueTrace {
                 }
                 AggNodes = new BVHNode8DataCompressed[BVH.cwbvhnode_count];
                 CommonFunctions.Aggregate(ref AggNodes, BVH);
+                BVH.BVH8NodesArray.Dispose();
             #else 
                 if(IsSkinnedGroup || IsDeformable) {
                     ConstructAABB();
                     Construct();
                     AggNodes = new BVHNode8DataCompressed[BVH.cwbvhnode_count];
                     CommonFunctions.Aggregate(ref AggNodes, BVH);
+                    BVH.BVH8NodesArray.Dispose();
                 } else {
                     AggNodes = new BVHNode8DataCompressed[1];
                     if(LightTriangles.Count > 0) LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);

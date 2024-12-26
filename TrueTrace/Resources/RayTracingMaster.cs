@@ -334,6 +334,7 @@ namespace TrueTrace {
                         UnityEditor.AssetDatabase.SaveAssets();
                     }
                 #else 
+                    LocalTTSettings = Resources.Load<TTSettings>(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
                     if(LocalTTSettings == null)
                         LocalTTSettings = ScriptableObject.CreateInstance<TTSettings>();
                 #endif
