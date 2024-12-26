@@ -23,10 +23,19 @@ namespace TrueTrace {
 
 
         public NativeArray<BVHNode2Data> BVH2NodesArray;
-        public NativeArray<int> DimensionedIndicesArray;
-        public NativeArray<int> tempArray;
-        public NativeArray<bool> indices_going_left_array;
-        public NativeArray<float> SAHArray;
+        private NativeArray<int> DimensionedIndicesArray;
+        private NativeArray<int> tempArray;
+        private NativeArray<bool> indices_going_left_array;
+        private NativeArray<float> SAHArray;
+
+        public void Dispose() {
+            if(BVH2NodesArray.IsCreated) BVH2NodesArray.Dispose();
+            if(DimensionedIndicesArray.IsCreated) DimensionedIndicesArray.Dispose();
+            if(tempArray.IsCreated) tempArray.Dispose();
+            if(indices_going_left_array.IsCreated) indices_going_left_array.Dispose();
+            if(SAHArray.IsCreated) SAHArray.Dispose();
+            
+        }
 
         public struct ObjectSplit {
             public int index;
@@ -112,6 +121,7 @@ namespace TrueTrace {
             Vector3 d = new Vector3(aabb.BBMax.x - aabb.BBMin.x, aabb.BBMax.y - aabb.BBMin.y, aabb.BBMax.z - aabb.BBMin.z);
             return (d.x + d.y) * d.z + d.x * d.y; 
         }
+
 
         public unsafe BVH2Builder(AABB* Triangles, int PrimCount) {//Bottom Level Acceleration Structure Builder
             this.PrimCount = PrimCount;

@@ -12,6 +12,7 @@ namespace TrueTrace {
     {
         [HideInInspector] public static Camera _camera;
         public static bool DoKernelProfiling = true;
+        private string TTSettingsGlobalOverride = "null";
         private bool OverriddenResolutionIsActive = false;
         public bool HDRPorURPRenderInScene = false;
         [HideInInspector] public AtmosphereGenerator Atmo;
@@ -323,27 +324,33 @@ namespace TrueTrace {
             LoadTT();
         }
         public void LoadTT() {
-            if(LocalTTSettings == null || !LocalTTSettings.name.Equals(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)) {
+            if(TTSettingsGlobalOverride.Equals("null")) {
+                if(LocalTTSettings == null || !LocalTTSettings.name.Equals(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)) {
+                    #if UNITY_EDITOR
+                        UnityEngine.SceneManagement.Scene CurrentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+                        string path = CurrentScene.path.Replace(".unity", "");
+                        LocalTTSettings = UnityEditor.AssetDatabase.LoadAssetAtPath(path + ".asset", typeof(TTSettings)) as TTSettings;
+                        if(LocalTTSettings == null) {
+                            LocalTTSettings = ScriptableObject.CreateInstance<TTSettings>();
+                            UnityEditor.AssetDatabase.CreateAsset(LocalTTSettings, path + ".asset");
+                            UnityEditor.AssetDatabase.SaveAssets();
+                        }
+                    #else 
+                        LocalTTSettings = Resources.Load<TTSettings>(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+                        if(LocalTTSettings == null)
+                            LocalTTSettings = ScriptableObject.CreateInstance<TTSettings>();
+                    #endif
+                }
                 #if UNITY_EDITOR
-                    UnityEngine.SceneManagement.Scene CurrentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
-                    string path = CurrentScene.path.Replace(".unity", "");
-                    LocalTTSettings = UnityEditor.AssetDatabase.LoadAssetAtPath(path + ".asset", typeof(TTSettings)) as TTSettings;
-                    if(LocalTTSettings == null) {
-                        LocalTTSettings = ScriptableObject.CreateInstance<TTSettings>();
-                        UnityEditor.AssetDatabase.CreateAsset(LocalTTSettings, path + ".asset");
-                        UnityEditor.AssetDatabase.SaveAssets();
-                    }
-                #else 
-                    LocalTTSettings = Resources.Load<TTSettings>(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
-                    if(LocalTTSettings == null)
-                        LocalTTSettings = ScriptableObject.CreateInstance<TTSettings>();
+                    UnityEditor.EditorUtility.SetDirty(LocalTTSettings);
                 #endif
-            }
-            #if UNITY_EDITOR
-                UnityEditor.EditorUtility.SetDirty(LocalTTSettings);
-            #endif
-            if(LocalTTSettings != null) {
-                LoadInitialSettings();
+                if(LocalTTSettings != null) {
+                    LoadInitialSettings();
+                }
+            } else {
+                LocalTTSettings = Resources.Load<TTSettings>(TTSettingsGlobalOverride);
+                if(LocalTTSettings == null)
+                    LocalTTSettings = ScriptableObject.CreateInstance<TTSettings>();
             }
         }
 

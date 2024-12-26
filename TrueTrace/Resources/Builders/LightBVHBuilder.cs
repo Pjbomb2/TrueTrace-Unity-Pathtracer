@@ -393,10 +393,10 @@ namespace TrueTrace {
 
             int nodeIndex = 2;
             BuildRecursive(0, ref nodeIndex,0,PrimCount, 1);
-            indices_going_left_array.Dispose();
-            tempArray.Dispose();
-            SAHArray.Dispose();
-            LightTrisArray.Dispose();
+            if(indices_going_left_array.IsCreated) indices_going_left_array.Dispose();
+            if(tempArray.IsCreated) tempArray.Dispose();
+            if(SAHArray.IsCreated) SAHArray.Dispose();
+            if(LightTrisArray.IsCreated) LightTrisArray.Dispose();
 
             for(int i = 0; i < PrimCount * 2; i++) {
                 if(nodes2[i].isLeaf == 1) {

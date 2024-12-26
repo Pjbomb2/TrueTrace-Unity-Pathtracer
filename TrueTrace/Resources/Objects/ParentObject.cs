@@ -185,11 +185,7 @@ namespace TrueTrace {
             CommonFunctions.DeepClean(ref LuminanceWeights);
             if(TrianglesArray.IsCreated) TrianglesArray.Dispose();
             if(BVH2 != null) {
-                if(BVH2.BVH2NodesArray.IsCreated) BVH2.BVH2NodesArray.Dispose();
-                if(BVH2.DimensionedIndicesArray.IsCreated) BVH2.DimensionedIndicesArray.Dispose();
-                if(BVH2.tempArray.IsCreated) BVH2.tempArray.Dispose();
-                if(BVH2.indices_going_left_array.IsCreated) BVH2.indices_going_left_array.Dispose();
-                if(BVH2.SAHArray.IsCreated) BVH2.SAHArray.Dispose();
+                BVH2.Dispose();
             }
             if(BVH != null) {
                 CommonFunctions.DeepClean(ref BVH.cwbvh_indices);
@@ -240,7 +236,7 @@ namespace TrueTrace {
         {
             if (VertexBuffers != null) {
                 for (int i = 0; i < Mathf.Max(SkinnedMeshes.Length, DeformableMeshes.Length); i++) {
-                    VertexBuffers[i].Release();
+                    if(VertexBuffers != null && VertexBuffers[i] != null) VertexBuffers[i].Release();
                     IndexBuffers[i].Release();
                     NodeBuffer.Release();
                     AABBBuffer.Release();
@@ -948,6 +944,7 @@ namespace TrueTrace {
             TrianglesArray.Dispose();
             this.BVH = new BVH8Builder(ref BVH2);
             CommonFunctions.DeepClean(ref BVH2.FinalIndices);
+            BVH2.Dispose();
             BVH2 = null;
 
             int CWBVHIndicesBufferCount = BVH.cwbvh_indices.Length;
@@ -1134,6 +1131,10 @@ namespace TrueTrace {
 
                 for (int i = 0; i < TotalObjects; i++)
                 {
+                    if(VertexBuffers[i] == null || !(VertexBuffers[i].IsValid())) {
+                        AllFull = false;
+                        return;
+                    }
                     var SkinnedRootBone = IsSkinnedGroup ? SkinnedMeshes[i].rootBone : this.transform;
                     if(SkinnedRootBone == null) SkinnedRootBone = SkinnedMeshes[i].gameObject.transform;
                     int IndexCount = IndexCounts[i];
