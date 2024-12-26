@@ -171,7 +171,6 @@ namespace TrueTrace {
         public void CallUpdate() {
             if ((QueInProgress == 0 || QueInProgress == 1) && !AssetManager.Assets.UpdateQue.Contains(this)) AssetManager.Assets.UpdateQue.Add(this);
         }  
-
         public void ClearAll() {
             CommonFunctions.DeepClean(ref _Materials);
             CommonFunctions.DeepClean(ref LightTriangles);
@@ -259,6 +258,7 @@ namespace TrueTrace {
                 TriBuffer.Release();
                 BVHBuffer.Release();
             }
+            ClearAll();
         }
 
 
@@ -1415,7 +1415,7 @@ namespace TrueTrace {
                     ConstructAABB();
                     Construct();
                     AggNodes = new BVHNode8DataCompressed[BVH.cwbvhnode_count];
-                    CommonFunctions.Aggregate(ref AggNodes, ref BVH.BVH8Nodes);
+                    CommonFunctions.Aggregate(ref AggNodes, BVH);
                 } else {
                     AggNodes = new BVHNode8DataCompressed[1];
                     if(LightTriangles.Count > 0) LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
@@ -1497,8 +1497,8 @@ namespace TrueTrace {
         private void OnDisable() {
             HasStarted = false;
             FailureCount = 0;
+            ClearAll();
             if (gameObject.scene.isLoaded) {
-                ClearAll();
                 if (this.GetComponentInParent<InstancedManager>() != null) {
                     this.GetComponentInParent<InstancedManager>().RemoveQue.Add(this);
                     this.GetComponentInParent<InstancedManager>().ParentCountHasChanged = true;

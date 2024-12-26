@@ -1214,7 +1214,8 @@ namespace TrueTrace {
 #else
                 for(int i = 0; i < ParentsLength; i++) if (RenderQue[i].LightTriangles.Count != 0) {LightMeshCount++; AggSGTreeNodeCount += RenderQue[i].LBVH.nodes.Length;}
 #endif
-                for (int i = 0; i < InstanceRenderQue.Count; i++) {if (InstanceRenderQue[i].InstanceParent.LightTriangles.Count != 0) LightMeshCount++;}
+                int InstanceQueCount = InstanceRenderQue.Count;
+                for (int i = 0; i < InstanceQueCount; i++) {if (InstanceRenderQue[i].InstanceParent.LightTriangles.Count != 0) LightMeshCount++;}
 
 
                 
@@ -1233,7 +1234,8 @@ namespace TrueTrace {
                     AggTriCount += RenderQue[i].AggTriangles.Length;
                     LightTriCount += RenderQue[i].LightTriangles.Count;
                 }
-                for (int i = 0; i < InstanceData.RenderQue.Count; i++)
+                InstanceQueCount = InstanceData.RenderQue.Count;
+                for (int i = 0; i < InstanceQueCount; i++)
                 {
                     TotalMatCount += InstanceData.RenderQue[i]._Materials.Count;
                     AggNodeCount += InstanceData.RenderQue[i].AggNodes.Length;
@@ -1298,7 +1300,7 @@ namespace TrueTrace {
                         cmd.DispatchCompute(MeshFunctions, NodeBufferKernel, (int)Mathf.Ceil(RenderQue[i].BVHBuffer.count / 372.0f), 1, 1);
                         // cmd.EndSample("AccumBufferNode");
 
-                        if (RenderQue[i].LightTriangles.Count != 0)
+                        if (RenderQue[i].HasLightTriangles)
                         {
                             cmd.SetComputeIntParam(MeshFunctions, "Offset", CurLightTriOffset);
                             cmd.SetComputeIntParam(MeshFunctions, "Count", RenderQue[i].LightTriBuffer.count);
@@ -1355,7 +1357,7 @@ namespace TrueTrace {
                         CurTriOffset += RenderQue[i].AggTriangles.Length;
                         MatOffset += RenderQue[i]._Materials.Count;
                     }
-                    int InstanceQueCount = InstanceData.RenderQue.Count;
+                    InstanceQueCount = InstanceData.RenderQue.Count;
                     for (int i = 0; i < InstanceQueCount; i++)
                     {//Accumulate the BVH nodes and triangles for all instanced models
                         InstanceData.RenderQue[i].UpdateData();
@@ -1374,7 +1376,7 @@ namespace TrueTrace {
                         cmd.SetComputeBufferParam(MeshFunctions, NodeBufferKernel, "InAggNodes", InstanceData.RenderQue[i].BVHBuffer);
                         cmd.DispatchCompute(MeshFunctions, NodeBufferKernel, (int)Mathf.Ceil(InstanceData.RenderQue[i].BVHBuffer.count / 372.0f), 1, 1);
                         // cmd.EndSample("AccumBufferInstanceNode");
-                        if (InstanceData.RenderQue[i].LightTriangles.Count != 0)
+                        if (InstanceData.RenderQue[i].HasLightTriangles)
                         {
                             cmd.SetComputeIntParam(MeshFunctions, "Offset", CurLightTriOffset);
                             cmd.SetComputeIntParam(MeshFunctions, "Count", InstanceData.RenderQue[i].LightTriBuffer.count);
@@ -1408,9 +1410,10 @@ namespace TrueTrace {
                         CurTriOffset += InstanceData.RenderQue[i].AggTriangles.Length;
 
                     }
-                    for (int i = 0; i < InstanceRenderQue.Count; i++)
+                    InstanceQueCount = InstanceRenderQue.Count;
+                    for (int i = 0; i < InstanceQueCount; i++)
                     {
-                        if (InstanceRenderQue[i].InstanceParent.LightTriangles.Count != 0)
+                        if (InstanceRenderQue[i].InstanceParent.HasLightTriangles)
                         {
                             LightTransforms.Add(InstanceRenderTransforms[i]);
                             LightMeshes.Add(new LightMeshData()
@@ -1679,7 +1682,8 @@ namespace TrueTrace {
                 }
                 CommonFunctions.ConvertToSplitNodes(TLASBVH8, ref SplitNodes);
                 List<Layer2> TempStack = new List<Layer2>();
-                for (int i = 0; i < LayerStack.Length; i++) if(LayerStack[i].Slab.Count != 0) TempStack.Add(LayerStack[i]);
+                int StackCount = LayerStack.Length;
+                for (int i = 0; i < StackCount; i++) if(LayerStack[i].Slab.Count != 0) TempStack.Add(LayerStack[i]);
                 MaxRecur = TempStack.Count;
 
                 if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i].ReleaseSafe();
@@ -1749,7 +1753,6 @@ namespace TrueTrace {
                 Layer PresetLayer = new Layer();
 
                 for (int i = 0; i < TempRecur; i++) {LayerStack[i] = new Layer2(); LayerStack[i].Slab = new List<int>();}
-                // for (int i = 0; i < TempRecur; i++) {if(LayerStack[i] == null) {LayerStack[i] = new Layer2(); LayerStack[i].Slab = new List<int>();} else {if(LayerStack[i].Slab != null) LayerStack[i].Slab.Clear(); else LayerStack[i].Slab = new List<int>();}}
                 for(int i = 0; i < 8; i++) PresetLayer.Children[i] = 0;
                 for (int i = 0; i < NodeCount; i++) {
                     ForwardStack[i] = PresetLayer;
@@ -1794,24 +1797,7 @@ namespace TrueTrace {
 
              if(TLASTask.Status == TaskStatus.RanToCompletion && CurFrame % 25 == 24) {
                 MaxRecur = TempRecur; 
-//                 if(LightMeshCount > 0) {
-//                     if(LBVH != null && LBVHWorkingSet != null) {
-//                         int Coun = LBVHWorkingSet.Length - 1;
-//                         for(int i = Coun; i >= 0; i--) {
-//                             LBVHWorkingSet[i].ReleaseSafe();
-//                         }
-//                     }
-//                     if(LBVH != null) LBVH.Dispose();
-//                     LBVH = new LightBVHBuilder(LightAABBs, ref SGTree, LightBVHTransforms, SGTreeNodes);
-// #if !DontUseSGTree
-//                     if(RayMaster.FramesSinceStart2 % 2 == 0) LightTreeBufferA.SetData(SGTree, 0, 0, SGTree.Length);
-//                     else LightTreeBufferB.SetData(SGTree, 0, 0, SGTree.Length);
-// #else
-//                     if(RayMaster.FramesSinceStart2 % 2 == 0) LightTreeBufferA.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
-//                     else LightTreeBufferB.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
-// #endif
-//                 }
-                
+
                 if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
                 if (NodeBuffer != null) NodeBuffer.Release();
                 if (StackBuffer != null) StackBuffer.Release();
@@ -2072,8 +2058,8 @@ namespace TrueTrace {
 
                 // UnityEngine.Profiling.Profiler.EndSample();
                 InstanceIndexes = new Dictionary<ParentObject, List<InstancedObject>>();
-
-                for(int i = 0; i < InstanceRenderQue.Count; i++) {
+                int InstanceCount = InstanceRenderQue.Count;
+                for(int i = 0; i < InstanceCount; i++) {
                     if (InstanceIndexes.TryGetValue(InstanceRenderQue[i].InstanceParent, out List<InstancedObject> ExistingList)) {
                         ExistingList.Add(InstanceRenderQue[i]);
                     } else {
@@ -2084,7 +2070,7 @@ namespace TrueTrace {
                 }
 
                 // UnityEngine.Profiling.Profiler.BeginSample("Remake Initial Instance Data A");
-                int InstanceCount = InstanceData.RenderQue.Count;
+                InstanceCount = InstanceData.RenderQue.Count;
                 for (int i = 0; i < InstanceCount; i++)
                 {
                     InstanceData.RenderQue[i].CompactedMeshData = i;
@@ -2103,13 +2089,14 @@ namespace TrueTrace {
                 }
                 // UnityEngine.Profiling.Profiler.EndSample();
                 // UnityEngine.Profiling.Profiler.BeginSample("Remake Initial Instance Data B");
-                InstanceCount = InstanceRenderQue.Count;
                 int MeshCount = MeshDataCount;
                 #if HardwareRT
                     int TempCount = 0;
-                    for(int i = 0; i < InstanceData.RenderQue.Count; i++) {
+                    InstanceCount = InstanceData.RenderQue.Count;
+                    for(int i = 0; i < InstanceCount; i++) {
                         if(InstanceIndexes.TryGetValue(InstanceData.RenderQue[i], out List<InstancedObject> TempList)) {
-                            for(int j = 0; j < TempList.Count; j++) {
+                            int ListCount = TempList.Count;
+                            for(int j = 0; j < ListCount; j++) {
                                 int Index = TempList[j].InstanceParent.CompactedMeshData;
                                 MyMeshesCompacted.Add(new MyMeshDataCompacted() {
                                     mesh_data_bvh_offsets = Aggs[Index].mesh_data_bvh_offsets,
@@ -2131,6 +2118,7 @@ namespace TrueTrace {
                         }
                     }
                 #else
+                    InstanceCount = InstanceRenderQue.Count;
                     for (int i = 0; i < InstanceCount; i++)
                     {
                         int Index = InstanceRenderQue[i].InstanceParent.CompactedMeshData;
@@ -2208,9 +2196,7 @@ namespace TrueTrace {
 
                 LightMeshData CurLightMesh;
                 if (LightMeshBuffer != null && LightMeshBuffer.IsValid() && LightMeshCount != 0 && LightMeshCount == LightMeshBuffer.count) {
-                    // LightMeshBuffer.SetData(LightMeshes);
-                    for (int i = 0; i < LightMeshCount; i++)
-                    {
+                    for (int i = 0; i < LightMeshCount; i++) {
                         if(LightTransforms[i].hasChanged) {
                             CurLightMesh = LightMeshes[i];
                             CurLightMesh.Center = LightTransforms[i].position;
@@ -2222,10 +2208,8 @@ namespace TrueTrace {
                     CommonFunctions.CreateComputeBuffer(ref LightMeshBuffer, LightMeshes);
                 }
 
-                for (int i = 0; i < ListCount; i++)
-                {
-                    if (InstanceRenderTransforms[i].hasChanged || ChangedLastFrame)
-                    {
+                for (int i = 0; i < ListCount; i++) {
+                    if (InstanceRenderTransforms[i].hasChanged || ChangedLastFrame) {
                         TargetTransform = InstanceRenderTransforms[i];
                          MyMeshDataCompacted TempMesh = MyMeshesCompacted[InstanceRenderQue[i].CompactedMeshData];
                         TempMesh.Transform = TargetTransform.worldToLocalMatrix;
