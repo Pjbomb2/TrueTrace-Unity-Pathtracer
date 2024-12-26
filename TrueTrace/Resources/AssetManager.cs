@@ -161,6 +161,7 @@ namespace TrueTrace {
         [HideInInspector] public Vector3 SunDirection;
 
         private BVHNode8DataCompressed[] TempBVHArray;
+        [HideInInspector] public BVH8Builder TLASBVH8;
 
         [SerializeField] public int RunningTasks;
         #if HardwareRT
@@ -180,6 +181,13 @@ namespace TrueTrace {
             CommonFunctions.DeepClean(ref LightMeshes);
             CommonFunctions.DeepClean(ref MyMeshesCompacted);
             CommonFunctions.DeepClean(ref UnityLights);
+
+            if(TLASBVH8 != null) {
+                CommonFunctions.DeepClean(ref TLASBVH8.cwbvh_indices);
+                if(TLASBVH8.BVH8NodesArray.IsCreated) TLASBVH8.BVH8NodesArray.Dispose();
+                if(TLASBVH8.costArray.IsCreated) TLASBVH8.costArray.Dispose();
+                if(TLASBVH8.decisionsArray.IsCreated) TLASBVH8.decisionsArray.Dispose();
+            }
 
             DestroyImmediate(IESAtlas);
             DestroyImmediate(AlbedoAtlas);
@@ -826,6 +834,7 @@ namespace TrueTrace {
             TerrainBuffer.ReleaseSafe();
             TLASCWBVHIndexes.ReleaseSafe();
             TerrainBuffer.ReleaseSafe();
+            ClearAll();
         }
 
         void OnDisable() {
@@ -1480,7 +1489,6 @@ namespace TrueTrace {
 
         AABB tempAABB;
         int[] ToBVHIndex;
-        [HideInInspector] public BVH8Builder TLASBVH8;
 
         int MaxRecur = 0;
         int TempRecur = 0;
@@ -1627,12 +1635,20 @@ namespace TrueTrace {
             AccelStruct.Build();
             #else
                 BVH2Builder BVH = new BVH2Builder(MeshAABBs);
+                if(TLASBVH8 != null) {
+                    CommonFunctions.DeepClean(ref TLASBVH8.cwbvh_indices);
+                    if(TLASBVH8.BVH8NodesArray.IsCreated) TLASBVH8.BVH8NodesArray.Dispose();
+                    if(TLASBVH8.costArray.IsCreated) TLASBVH8.costArray.Dispose();
+                    if(TLASBVH8.decisionsArray.IsCreated) TLASBVH8.decisionsArray.Dispose();
+                }
                 TLASBVH8 = new BVH8Builder(BVH);
-                System.Array.Resize(ref TLASBVH8.BVH8Nodes, TLASBVH8.cwbvhnode_count);
+                CommonFunctions.DeepClean(ref BVH.FinalIndices);
+                BVH = null;
+                // System.Array.Resize(ref TLASBVH8.BVH8Nodes, TLASBVH8.cwbvhnode_count);
                 ToBVHIndex = new int[TLASBVH8.cwbvhnode_count];
-                if (TempBVHArray == null || TLASBVH8.BVH8Nodes.Length != TempBVHArray.Length) TempBVHArray = new BVHNode8DataCompressed[TLASBVH8.BVH8Nodes.Length];
-                CommonFunctions.Aggregate(ref TempBVHArray, ref TLASBVH8.BVH8Nodes);
-                BVHNodeCount = TLASBVH8.BVH8Nodes.Length;
+                if (TempBVHArray == null || TLASBVH8.cwbvhnode_count != TempBVHArray.Length) TempBVHArray = new BVHNode8DataCompressed[TLASBVH8.cwbvhnode_count];
+                CommonFunctions.Aggregate(ref TempBVHArray, TLASBVH8);
+                BVHNodeCount = TLASBVH8.cwbvhnode_count;
                 NodePair = new List<NodeIndexPairData>(TLASBVH8.cwbvhnode_count * 2 + 1);
                 NodePair.Add(new NodeIndexPairData());
                 IsLeafList = new List<Vector3Int>(TLASBVH8.cwbvhnode_count * 2 + 1);
@@ -1705,11 +1721,19 @@ namespace TrueTrace {
         unsafe async void CorrectRefit(AABB[] Boxes) {
             TempRecur = 0;
             BVH2Builder BVH = new BVH2Builder(Boxes);
+            if(TLASBVH8 != null) {
+                CommonFunctions.DeepClean(ref TLASBVH8.cwbvh_indices);
+                if(TLASBVH8.BVH8NodesArray.IsCreated) TLASBVH8.BVH8NodesArray.Dispose();
+                if(TLASBVH8.costArray.IsCreated) TLASBVH8.costArray.Dispose();
+                if(TLASBVH8.decisionsArray.IsCreated) TLASBVH8.decisionsArray.Dispose();
+            }
             TLASBVH8 = new BVH8Builder(BVH);
-                System.Array.Resize(ref TLASBVH8.BVH8Nodes, TLASBVH8.cwbvhnode_count);
+                CommonFunctions.DeepClean(ref BVH.FinalIndices);
+                BVH = null;
+                // System.Array.Resize(ref TLASBVH8.BVH8Nodes, TLASBVH8.cwbvhnode_count);
                 ToBVHIndex = new int[TLASBVH8.cwbvhnode_count];
-                if (TempBVHArray == null || TLASBVH8.BVH8Nodes.Length != TempBVHArray.Length) TempBVHArray = new BVHNode8DataCompressed[TLASBVH8.BVH8Nodes.Length];
-                CommonFunctions.Aggregate(ref TempBVHArray, ref TLASBVH8.BVH8Nodes);
+                if (TempBVHArray == null || TLASBVH8.cwbvhnode_count != TempBVHArray.Length) TempBVHArray = new BVHNode8DataCompressed[TLASBVH8.cwbvhnode_count];
+                CommonFunctions.Aggregate(ref TempBVHArray, TLASBVH8);
 
                 if(NodePair == null) NodePair = new List<NodeIndexPairData>();
                 else NodePair.Clear();
@@ -1825,7 +1849,7 @@ namespace TrueTrace {
                 #if !HardwareRT
                     BVH8AggregatedBuffer.SetData(TempBVHArray, 0, 0, TempBVHArray.Length);
                 #endif
-                BVHNodeCount = TLASBVH8.BVH8Nodes.Length;
+                BVHNodeCount = TLASBVH8.cwbvhnode_count;
 
                 TLASTask = Task.Run(() => CorrectRefit(Boxes));
             }

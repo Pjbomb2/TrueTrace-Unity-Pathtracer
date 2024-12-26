@@ -12,7 +12,7 @@ namespace TrueTrace {
         private float* cost;
         private Decision* decisions;
         public int[] cwbvh_indices;
-        public BVHNode8Data[] BVH8Nodes;
+        public BVHNode8Data* BVH8Nodes;
         public int cwbvhindex_count;
         public int cwbvhnode_count;
         private BVHNode2Data* nodes;
@@ -20,6 +20,8 @@ namespace TrueTrace {
 
         public NativeArray<float> costArray;
         public NativeArray<Decision> decisionsArray;
+        public NativeArray<BVHNode8Data> BVH8NodesArraySecondary;
+        public NativeArray<BVHNode8Data> BVH8NodesArray;
         
         public struct Decision {
             public int Type;//Types: 0 is LEAF, 1 is INTERNAL, 2 is DISTRIBUTE
@@ -427,8 +429,6 @@ namespace TrueTrace {
             cost = (float*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(costArray);
             decisions = (Decision*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(decisionsArray);
             
-            BVH8Nodes = new BVHNode8Data[BVH2NodesCount];
-            cwbvh_indices = new int[BVH2IndicesCount];
             
             nodes = BVH2.BVH2Nodes;
             assignment = new int[8];
@@ -439,16 +439,20 @@ namespace TrueTrace {
             // TotalCost = 0;
             calculate_cost(0);
 
+            cwbvh_indices = new int[BVH2IndicesCount];
+            BVH8NodesArraySecondary = new NativeArray<BVHNode8Data>(BVH2NodesCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
+            BVH8Nodes = (BVHNode8Data*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(BVH8NodesArraySecondary);
+
             collapse(ref BVH2.FinalIndices, 0, 0);
-
-            // for(int i = 0; i < BVH2NodesCount * 7; i++) {
-            //     TotalCost += cost[i];
-            // }
-
-            // Debug.Log("CWBVH Cost: " + SAHCost(ref BVH8Nodes, 0));
-
+            BVH2.BVH2NodesArray.Dispose();
             costArray.Dispose();
             decisionsArray.Dispose();
+
+            BVH8NodesArray = new NativeArray<BVHNode8Data>(cwbvhnode_count, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            NativeArray<BVHNode8Data>.Copy(BVH8NodesArraySecondary, 0, BVH8NodesArray, 0, cwbvhnode_count);
+            BVH8NodesArraySecondary.Dispose();
+            BVH8Nodes = (BVHNode8Data*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(BVH8NodesArray);
+
         }
 
         public BVH8Builder(BVH2Builder BVH2) {//Top Level CWBVH Builder
@@ -465,19 +469,25 @@ namespace TrueTrace {
             children_copy = new int[8];
             assignment = new int[8];
             slot_filled = new bool[8];
-            BVH8Nodes = new BVHNode8Data[BVH2NodesCount];
-            cwbvh_indices = new int[BVH2IndicesCount];
-
 
             cwbvhindex_count = 0;
             cwbvhnode_count = 1;
 
             calculate_cost(0);
 
+            cwbvh_indices = new int[BVH2IndicesCount];
+            BVH8NodesArraySecondary = new NativeArray<BVHNode8Data>(BVH2NodesCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
+            BVH8Nodes = (BVHNode8Data*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(BVH8NodesArraySecondary);
+
             collapse(ref BVH2.FinalIndices, 0, 0);
             BVH2.BVH2NodesArray.Dispose();
             costArray.Dispose();
             decisionsArray.Dispose();
+
+            BVH8NodesArray = new NativeArray<BVHNode8Data>(cwbvhnode_count, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            NativeArray<BVHNode8Data>.Copy(BVH8NodesArraySecondary, 0, BVH8NodesArray, 0, cwbvhnode_count);
+            BVH8NodesArraySecondary.Dispose();
+            BVH8Nodes = (BVHNode8Data*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(BVH8NodesArray);
         }
     }
 }

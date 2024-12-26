@@ -76,44 +76,58 @@ namespace CommonVars
     }
 
     [System.Serializable]
-    public struct MeshDat
+    public unsafe struct MeshDat
     {
-        public List<int> Indices;
-        public List<Vector3> Verticies;
-        public List<Vector3> Normals;
-        public List<Vector4> Tangents;
-        public List<Vector2> UVs;
-        public List<Color> Colors;
+        
+        public int CurVertexOffset;
+        public Vector3* Verticies;
+        public Vector3* Normals;
+        public Vector4* Tangents;
+        public Vector2* UVs;
+        public Color* Colors;
+        public Unity.Collections.NativeArray<Vector3> VerticiesArray;
+        public Unity.Collections.NativeArray<Vector3> NormalsArray;
+        public Unity.Collections.NativeArray<Vector4> TangentsArray;
+        public Unity.Collections.NativeArray<Vector2> UVsArray;
+        public Unity.Collections.NativeArray<Color> ColorsArray;
         public List<int> MatDat;
+        public List<int> Indices;
 
         public void SetUvZero(int Count) {
-            for (int i = 0; i < Count; i++) UVs.Add(new Vector2(0.0f, 0.0f));
+            // for (int i = 0; i < Count; i++) UVs.Add(new Vector2(0.0f, 0.0f));
         }
         public void SetColorsZero(int Count) {
-            Color TempCol = new Color(1,1,1,1);
-            for (int i = 0; i < Count; i++) Colors.Add(TempCol);
+            // Color TempCol = new Color(1,1,1,1);
+            // for (int i = 0; i < Count; i++) Colors.Add(TempCol);
         }
         public void SetTansZero(int Count) {
-            for (int i = 0; i < Count; i++) Tangents.Add(new Vector4(0.0f, 0.0f, 0.0f, 0.0f));
+            // for (int i = 0; i < Count; i++) Tangents.Add(new Vector4(0.0f, 0.0f, 0.0f, 0.0f));
         }
         public void init(int StartingSize) {
-            this.Tangents = new List<Vector4>(StartingSize);
-            this.MatDat = new List<int>(StartingSize / 3);
-            this.UVs = new List<Vector2>(StartingSize);
-            this.Verticies = new List<Vector3>(StartingSize);
-            this.Normals = new List<Vector3>(StartingSize);
-            this.Indices = new List<int>(StartingSize);
-            this.Colors = new List<Color>(StartingSize);
+
+            UVsArray = new Unity.Collections.NativeArray<Vector2>(StartingSize, Unity.Collections.Allocator.Persistent, Unity.Collections.NativeArrayOptions.ClearMemory);
+            UVs = (Vector2*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(UVsArray);
+            VerticiesArray = new Unity.Collections.NativeArray<Vector3>(StartingSize, Unity.Collections.Allocator.Persistent, Unity.Collections.NativeArrayOptions.UninitializedMemory);
+            Verticies = (Vector3*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(VerticiesArray);
+            NormalsArray = new Unity.Collections.NativeArray<Vector3>(StartingSize, Unity.Collections.Allocator.Persistent, Unity.Collections.NativeArrayOptions.UninitializedMemory);
+            Normals = (Vector3*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(NormalsArray);
+            TangentsArray = new Unity.Collections.NativeArray<Vector4>(StartingSize, Unity.Collections.Allocator.Persistent, Unity.Collections.NativeArrayOptions.ClearMemory);
+            Tangents = (Vector4*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(TangentsArray);
+            ColorsArray = new Unity.Collections.NativeArray<Color>(StartingSize, Unity.Collections.Allocator.Persistent, Unity.Collections.NativeArrayOptions.ClearMemory);
+            Colors = (Color*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(ColorsArray);
+            Indices = new List<int>(StartingSize);
+            MatDat = new List<int>(StartingSize / 3);
+            CurVertexOffset = 0;
         }
         public void Clear() {
-            if (Tangents != null) {
-                CommonFunctions.DeepClean(ref Tangents);
-                CommonFunctions.DeepClean(ref MatDat);
-                CommonFunctions.DeepClean(ref UVs);
-                CommonFunctions.DeepClean(ref Verticies);
-                CommonFunctions.DeepClean(ref Normals);
+            if (TangentsArray != null) {
+                if(NormalsArray.IsCreated) NormalsArray.Dispose();
+                if(ColorsArray.IsCreated) ColorsArray.Dispose();
+                if(UVsArray.IsCreated) UVsArray.Dispose();
+                if(VerticiesArray.IsCreated) VerticiesArray.Dispose();
+                if(TangentsArray.IsCreated) TangentsArray.Dispose();
                 CommonFunctions.DeepClean(ref Indices);
-                CommonFunctions.DeepClean(ref Colors);
+                CommonFunctions.DeepClean(ref MatDat);
             }
         }
     }
@@ -828,13 +842,13 @@ namespace CommonVars
             }
         }
 
-        unsafe public static void Aggregate(ref BVHNode8DataCompressed[] AggNodes, ref BVHNode8Data[] BVH8Nodes)
+        unsafe public static void Aggregate(ref BVHNode8DataCompressed[] AggNodes, TrueTrace.BVH8Builder BVH)
         {//Compress the CWBVH
             BVHNode8DataCompressed TempBVHNode = new BVHNode8DataCompressed();
-            int BVHLength = BVH8Nodes.Length;
+            int BVHLength = BVH.cwbvhnode_count;
             for (int i = 0; i < BVHLength; ++i)
             {
-                BVHNode8Data TempNode = BVH8Nodes[i];
+                BVHNode8Data TempNode = BVH.BVH8Nodes[i];
                 TempBVHNode.node_0x = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(TempNode.p.x), 0);
                 TempBVHNode.node_0y = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(TempNode.p.y), 0);
                 TempBVHNode.node_0z = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(TempNode.p.z), 0);
@@ -862,7 +876,7 @@ namespace CommonVars
         public unsafe static void ConvertToSplitNodes(TrueTrace.BVH8Builder BVH, ref List<BVHNode8DataFixed> SplitNodes)
         {
             BVHNode8DataFixed NewNode = new BVHNode8DataFixed();
-            int BVHLength = BVH.BVH8Nodes.Length;
+            int BVHLength = BVH.cwbvhnode_count;
             SplitNodes = new List<BVHNode8DataFixed>(BVHLength);
             BVHNode8Data SourceNode;
             for (int i = 0; i < BVHLength; i++)
