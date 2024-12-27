@@ -797,6 +797,11 @@ namespace TrueTrace {
         public void Start() {
             Assets = this;
             SceneManager.sceneLoaded += OnSceneLoaded;
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
+        }
+
+        void OnSceneUnloaded(Scene scene) {
+            ClearAll();
         }
 
         void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
@@ -842,6 +847,7 @@ namespace TrueTrace {
             bindlessTextures?.Dispose();
             bindlessTextures = null;
             SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
         }
 
 

@@ -18,7 +18,7 @@
 // #define FasterLightSampling
 #define AccurateEmissionTex
 #define TrueBlack
-#define UseTextureLOD
+// #define UseTextureLOD
 // #define vMFDiffuse
 #define EONDiffuse
 // #define AdvancedBackground

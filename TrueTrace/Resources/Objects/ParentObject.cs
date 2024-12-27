@@ -187,11 +187,9 @@ namespace TrueTrace {
             if(BVH2 != null) {
                 BVH2.Dispose();
             }
+            BVH2 = null;
             if(BVH != null) {
-                CommonFunctions.DeepClean(ref BVH.cwbvh_indices);
-                if(BVH.BVH8NodesArray.IsCreated) BVH.BVH8NodesArray.Dispose();
-                if(BVH.costArray.IsCreated) BVH.costArray.Dispose();
-                if(BVH.decisionsArray.IsCreated) BVH.decisionsArray.Dispose();
+                BVH.Dispose();
             }
             BVH = null;
             CurMeshData.Clear();

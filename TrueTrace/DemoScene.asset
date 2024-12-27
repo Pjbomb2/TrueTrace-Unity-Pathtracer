@@ -35,16 +35,16 @@ MonoBehaviour:
   UpscalerMethod: 0
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
-  UseReSTIRGI: 1
+  UseReSTIRGI: 0
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
-  ReSTIRGITemporalMCap: 60
+  ReSTIRGITemporalMCap: 12
   ReSTIRGIUpdateRate: 0
-  DoReSTIRGIConnectionValidation: 1
+  DoReSTIRGIConnectionValidation: 0
   Exposure: 0.01
   DoPartialRendering: 0
   PartialRenderingFactor: 2
-  DoFirefly: 1
+  DoFirefly: 0
   ImprovedPrimaryHit: 1
   RISCount: 12
   ToneMapper: 0

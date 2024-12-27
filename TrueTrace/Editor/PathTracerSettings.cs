@@ -267,6 +267,57 @@ namespace TrueTrace {
             }
          }
 
+
+         private void ConstructInstancesSelective(Mesh SelectedMesh) {
+            SourceMeshes = new List<Mesh>();
+            SourceMeshes.Add(SelectedMesh);
+            Objects = new List<List<GameObject>>();
+            Objects.Add(new List<GameObject>());
+            ChildObjects = new List<Transform>();
+            Transform Source = GameObject.Find("Scene").transform;
+            Transform InstanceStorage = GameObject.Find("InstancedStorage").transform;
+            int ChildrenLeft = Source.childCount;
+            int CurrentChild = 0;
+            while(CurrentChild < ChildrenLeft) {
+               Transform CurrentObject = Source.GetChild(CurrentChild++);
+               if(CurrentObject.gameObject.activeInHierarchy) GrabChildren(CurrentObject); 
+            }
+
+            int ChildCount = ChildObjects.Count;
+            for(int i = ChildCount - 1; i >= 0; i--) {
+               if(ChildObjects[i].GetComponent<InstancedObject>() != null) {
+                  continue;
+               }
+               if(ChildObjects[i].GetComponent<RayTracingObject>() != null && ChildObjects[i].GetComponent<MeshFilter>() != null) {
+                     var mesh = ChildObjects[i].GetComponent<MeshFilter>().sharedMesh;
+                     if(SourceMeshes.Contains(mesh)) {
+                        int Index = SourceMeshes.IndexOf(mesh);
+                        Objects[Index].Add(ChildObjects[i].gameObject);
+                     } else {
+                        // SourceMeshes.Add(mesh);
+                        // Objects.Add(new List<GameObject>());
+                        // Objects[Objects.Count - 1].Add(ChildObjects[i].gameObject);
+                     }
+               }
+            }
+            int UniqueMeshCounts = SourceMeshes.Count;
+            for(int i = 0; i < UniqueMeshCounts; i++) {
+               if(Objects[i].Count > 1) {
+                  int Count = Objects[i].Count;
+                  GameObject InstancedParent = Instantiate(Objects[i][0], new Vector3(0,-100,0), Quaternion.identity, InstanceStorage);
+                  if(InstancedParent.GetComponent<ParentObject>() == null) InstancedParent.AddComponent<ParentObject>();
+                  for(int i2 = Count - 1; i2 >= 0; i2--) {
+                     DestroyImmediate(Objects[i][i2].GetComponent<MeshFilter>());
+                     DestroyImmediate(Objects[i][i2].GetComponent<MeshRenderer>());
+                     DestroyImmediate(Objects[i][i2].GetComponent<RayTracingObject>());
+                     if(InstancedParent.GetComponent<ParentObject>()) DestroyImmediate(Objects[i][i2].GetComponent<ParentObject>());
+                     (Objects[i][i2].AddComponent<InstancedObject>()).InstanceParent = InstancedParent.GetComponent<ParentObject>();
+                     // Objects[i][i2].GetComponent<InstancedObject>().InstanceParent = InstancedParent.GetComponent<ParentObject>();
+                  }
+               }
+            }
+         }
+
          private void OptimizeForStatic() {
             GameObject[] AllObjects = GameObject.FindObjectsOfType<GameObject>();//("Untagged");
             foreach(GameObject obj in AllObjects) {
@@ -1873,7 +1924,7 @@ Toolbar toolbar;
       void AddHierarchyOptionsToMenu() {
          SelectiveField = new ObjectField();
          SelectiveField.objectType = typeof(GameObject);
-         SelectiveField.label = "Selective Auto Assign Scripts";
+         SelectiveField.label = "Selected Object";
          HierarchyOptionsMenu.Add(SelectiveField);
          Button SelectiveAutoAssignButton = new Button(() => {
             ParentData SourceParent = GrabChildren2((SelectiveField.value as GameObject).transform);
@@ -1887,6 +1938,8 @@ Toolbar toolbar;
       
          ForceInstancesButton = new Button(() => {if(!Application.isPlaying) ConstructInstances(); else Debug.Log("Cant Do This In Editor");}) {text = "Force All Instances"};
          HierarchyOptionsMenu.Add(ForceInstancesButton);
+         Button ForceInstancesSelectiveButton = new Button(() => {if(!Application.isPlaying) {if((SelectiveField.value as GameObject).TryGetComponent<MeshFilter>(out MeshFilter TempFilter)) ConstructInstancesSelective(TempFilter.sharedMesh); else Debug.Log("Missing Valid Object With Mesh");} else Debug.Log("Cant Do This In Editor");}) {text = "Force Selected Mesh Into Instances"};
+         HierarchyOptionsMenu.Add(ForceInstancesSelectiveButton);
 
          StaticButton = new Button(() => {if(!Application.isPlaying) OptimizeForStatic(); else Debug.Log("Cant Do This In Editor");}) {text = "Make All Static"};
          StaticButton.style.minWidth = 105;

@@ -11,7 +11,7 @@ namespace TrueTrace {
     public class RayTracingMaster : MonoBehaviour
     {
         [HideInInspector] public static Camera _camera;
-        public static bool DoKernelProfiling = false;
+        public static bool DoKernelProfiling = true;
         private bool OverriddenResolutionIsActive = false;
         public bool HDRPorURPRenderInScene = false;
         [HideInInspector] public AtmosphereGenerator Atmo;
@@ -314,6 +314,7 @@ namespace TrueTrace {
             LoadTT();
         }
         public void Start() {
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
             DoPanorama = false;
             DoChainedImages = false;
             LoadTT();
@@ -368,22 +369,20 @@ namespace TrueTrace {
                 }
             #endif
         }
-        public void OnDisable() {
+
+
+
+        void OnSceneUnloaded(Scene scene) {
+            ClearAll();
+        }
+
+        public void ClearAll() {
             DoCheck = true;
+            if(TTPostProc != null) TTPostProc.ClearAll();
             _RayBuffer?.Release();
             LightingBuffer?.Release();
             _BufferSizes?.Release();
             _ShadowBuffer?.Release();
-            #if UseOIDN
-                ColorBuffer?.Release();
-                OutputBuffer?.Release();
-                AlbedoBuffer?.Release();
-                NormalBuffer?.Release();
-                if(OIDNDenoiser != null) {
-                    OIDNDenoiser.Dispose();
-                    OIDNDenoiser = null;
-                }
-            #endif
             if(ASVGFCode != null) ASVGFCode.ClearAll();
             if(ReSTIRASVGFCode != null) ReSTIRASVGFCode.ClearAll();
             CurBounceInfoBuffer?.Release();
@@ -398,6 +397,41 @@ namespace TrueTrace {
                 HashBufferA.ReleaseSafe();
                 HashBufferB.ReleaseSafe();
             #endif
+
+            _RandomNums.ReleaseSafe();
+            _RandomNumsB.ReleaseSafe();
+            _target.Release();
+            _converged.Release();
+            _DebugTex.Release();
+            _FinalTex.Release();
+            GIReservoirA.Release();
+            GIReservoirB.Release();
+            GIReservoirC.Release();
+            GINEEPosA.Release();
+            GINEEPosB.Release();
+            GINEEPosC.Release();
+            GIWorldPosA.Release();
+            GIWorldPosB.Release();
+            GIWorldPosC.Release();
+            _PrimaryTriangleInfo.Release();
+            ScreenSpaceInfo.Release();
+            ScreenSpaceInfoPrev.Release();
+            GradientsA.Release();
+            GradientsB.Release();
+            #if UseOIDN
+                ColorBuffer.Release();
+                OutputBuffer.Release();
+                AlbedoBuffer.Release();
+                NormalBuffer.Release();
+                if(OIDNDenoiser != null) {
+                    OIDNDenoiser.Dispose();
+                    OIDNDenoiser = null;
+                }
+            #endif       
+        }
+        public void OnDisable() {
+            ClearAll();
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
         }
 
         private void RunUpdate() {
@@ -812,9 +846,7 @@ namespace TrueTrace {
             ReSTIRGI.SetTexture(ReSTIRGIKernel, "Gradient", GradientsA);
             ReSTIRGI.SetTexture(ReSTIRGIKernel, "GradientWrite", GradientsB);
 
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "GradientWrite", GradientsA);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "Gradient", GradientsB);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "WorldPosC", GIWorldPosA);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "WorldPosB", FlipFrame ? GIWorldPosB : GIWorldPosC);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "NEEPosB", FlipFrame ? GINEEPosA : GINEEPosB);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "ReservoirB", FlipFrame ? GIReservoirB : GIReservoirA);
@@ -822,11 +854,23 @@ namespace TrueTrace {
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "PrimaryTriData", _PrimaryTriangleInfo);
+            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "WorldPosA", GIWorldPosA);
+            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "NEEPosA", GINEEPosC);
+            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "ReservoirA", GIReservoirC);
 
-
+            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "GradientWrite", GradientsA);
+            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "Gradient", GradientsB);
+            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "WorldPosB", GIWorldPosA);
+            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "NEEPosB", GINEEPosC);
+            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "ReservoirB", GIReservoirC);
+            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
+            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
+            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "PrimaryTriData", _PrimaryTriangleInfo);
+            ReSTIRGI.SetComputeBuffer(ReSTIRGISpatialKernel+1, "GlobalColors", LightingBuffer);
 
 
             AssetManager.Assets.SetMeshTraceBuffers(ReSTIRGI, ReSTIRGISpatialKernel);
+            AssetManager.Assets.SetMeshTraceBuffers(ReSTIRGI, ReSTIRGISpatialKernel+1);
 
             Shader.SetGlobalTexture("_DebugTex", _DebugTex);
         }
@@ -1105,28 +1149,20 @@ namespace TrueTrace {
             if (LocalTTSettings.UseReSTIRGI) {
                 SetInt("CurBounce", 0, cmd);
                 if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Temporal Kernel");
-                cmd.DispatchCompute(ReSTIRGI, ReSTIRGIKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+                cmd.DispatchCompute(ReSTIRGI, ReSTIRGIKernel, Mathf.CeilToInt(SourceWidth / 8.0f), Mathf.CeilToInt(SourceHeight / 8.0f), 1);
                 if(DoKernelProfiling) cmd.EndSample("ReSTIRGI Temporal Kernel");
             bool FlipFrame = (FramesSinceStart2 % 2 == 0);
 
                 if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Extra Spatial Kernel");
                 SetInt("CurPass", 0, cmd);
-                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "WorldPosB", FlipFrame ? GIWorldPosB : GIWorldPosC);
-                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "WorldPosA", GIWorldPosA);
-                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "NEEPosB", FlipFrame ? GINEEPosA : GINEEPosB);
-                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "NEEPosA", GINEEPosC);
-                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "ReservoirB", FlipFrame ? GIReservoirB : GIReservoirA);
-                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "ReservoirA", GIReservoirC);
-                cmd.DispatchCompute(ReSTIRGI, ReSTIRGISpatialKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+
+                cmd.DispatchCompute(ReSTIRGI, ReSTIRGISpatialKernel, Mathf.CeilToInt(SourceWidth / 8.0f), Mathf.CeilToInt(SourceHeight / 8.0f), 1);
                 if(DoKernelProfiling) cmd.EndSample("ReSTIRGI Extra Spatial Kernel");
 
                 if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Extra Spatial Kernel 1");
                 SetInt("frames_accumulated", _currentSample * 2, cmd);
                 SetInt("CurPass", 1, cmd);
-                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "WorldPosB", GIWorldPosA);
-                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "NEEPosB", GINEEPosC);
-                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "ReservoirB", GIReservoirC);
-                cmd.DispatchCompute(ReSTIRGI, ReSTIRGISpatialKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+                cmd.DispatchCompute(ReSTIRGI, ReSTIRGISpatialKernel+1, Mathf.CeilToInt(SourceWidth / 8.0f), Mathf.CeilToInt(SourceHeight / 8.0f), 1);
                 if(DoKernelProfiling) cmd.EndSample("ReSTIRGI Extra Spatial Kernel 1");
 
                 cmd.Blit(GradientsA, GradientsB);
