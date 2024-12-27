@@ -131,7 +131,7 @@ groupshared uint Hashes[64][BucketCount];
 
 [numthreads(64, BucketCount, 1)]
 void CacheCompact(uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID) {//we dont need to compress the hashes right? since we are only using 4, as long as we set ... no because we DO check for 0th
-
+#ifdef RadCache
     Hashes[GT.x][GT.y] = HashEntriesBufferA[id.x * BucketCount + GT.y];
     GroupMemoryBarrierWithGroupSync();
     if(GT.y == 0) {
@@ -155,6 +155,5 @@ void CacheCompact(uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID) {
     }
     GroupMemoryBarrierWithGroupSync();
     HashEntriesBufferA[id.x * BucketCount + GT.y] = Hashes[GT.x][GT.y];
-
-
+#endif
 }

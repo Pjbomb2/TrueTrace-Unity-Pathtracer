@@ -11,8 +11,7 @@ namespace TrueTrace {
     public class RayTracingMaster : MonoBehaviour
     {
         [HideInInspector] public static Camera _camera;
-        public static bool DoKernelProfiling = true;
-        private string TTSettingsGlobalOverride = "null";
+        public static bool DoKernelProfiling = false;
         private bool OverriddenResolutionIsActive = false;
         public bool HDRPorURPRenderInScene = false;
         [HideInInspector] public AtmosphereGenerator Atmo;
@@ -324,7 +323,7 @@ namespace TrueTrace {
             LoadTT();
         }
         public void LoadTT() {
-            if(TTSettingsGlobalOverride.Equals("null")) {
+            if(TTCPUDefines.fallbackTTSettingsName.Equals("null")) {
                 if(LocalTTSettings == null || !LocalTTSettings.name.Equals(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)) {
                     #if UNITY_EDITOR
                         UnityEngine.SceneManagement.Scene CurrentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
@@ -348,7 +347,7 @@ namespace TrueTrace {
                     LoadInitialSettings();
                 }
             } else {
-                LocalTTSettings = Resources.Load<TTSettings>(TTSettingsGlobalOverride);
+                LocalTTSettings = Resources.Load<TTSettings>(TTCPUDefines.fallbackTTSettingsName);
                 if(LocalTTSettings == null)
                     LocalTTSettings = ScriptableObject.CreateInstance<TTSettings>();
             }

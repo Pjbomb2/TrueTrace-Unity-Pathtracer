@@ -23,9 +23,9 @@ MonoBehaviour:
   PPBloom: 0
   BloomStrength: 0.372
   PPDoF: 0
-  DoFAperature: 0.15010014
+  DoFAperature: 0.09010013
   DoFAperatureScale: 1
-  DoFFocal: 3.820374
+  DoFFocal: 2.6470158
   PPExposure: 0
   ExposureAuto: 1
   PPToneMap: 1
@@ -35,7 +35,7 @@ MonoBehaviour:
   UpscalerMethod: 0
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
-  UseReSTIRGI: 0
+  UseReSTIRGI: 1
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
   ReSTIRGITemporalMCap: 60
@@ -44,7 +44,7 @@ MonoBehaviour:
   Exposure: 0.01
   DoPartialRendering: 0
   PartialRenderingFactor: 2
-  DoFirefly: 0
+  DoFirefly: 1
   ImprovedPrimaryHit: 1
   RISCount: 12
   ToneMapper: 0

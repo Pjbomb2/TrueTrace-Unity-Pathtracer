@@ -485,7 +485,7 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 		}
 	}
 
-	GlobalRaysMini[ipos.x + ipos.y * screen_width].origin -= CamDiff;
+	// GlobalRaysMini[ipos.x + ipos.y * screen_width].origin -= CamDiff;
 	GlobalRaysMini[ipos.x + ipos.y * screen_width].direction = normalize(Pos - GlobalRaysMini[ipos.x + ipos.y * screen_width].origin);
 
 	MetallicAWrite[ipos] = MetallicB[found_pos_prev];
@@ -1286,7 +1286,7 @@ inline void filter_image(
 		// pixels using the same weights as for colors, and the combined moments are used on the next iteration.
 		lum_mean_hf = filtered_moments.x;
 		float lum_variance_hf = max(1e-8, filtered_moments.y - filtered_moments.x * filtered_moments.x);
-		sigma_l_hf = min(max(hist_len_hf - 2, 1), 16) / (2.0 * lum_variance_hf);
+		sigma_l_hf = min(max(hist_len_hf - (spec_iteration == 0 ? 0 : 2), 1), 16) / (2.0 * lum_variance_hf);
 	} else {
 		// If there is no history, treat all moments as invalid, because 3x3 spatial 
 		// is just not enough to get reasonable filtering. Ignore luminance in this case,
