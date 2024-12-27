@@ -109,10 +109,10 @@ void IntersectBVH(int ray_index) {
                     bestHit.t = q.CommittedRayT();
                     bestHit.u = q.CommittedTriangleBarycentrics().y;
                     bestHit.v = q.CommittedTriangleBarycentrics().x;
-                    bestHit.mesh_id = uint(q.CommittedInstanceID() | (q.CommittedGeometryIndex() << 16));
+                    bestHit.mesh_id = uint(q.CommittedInstanceID() | (q.CommittedGeometryIndex() << 27));
                     bestHit.triangle_id = q.CommittedPrimitiveIndex();
-                    #if defined(AdvancedAlphaMapped) || defined(IgnoreBackfacing) || defined(FadeMapping)
-                        int2 Indexes = int2(bestHit.mesh_id & 0x0000FFFF, bestHit.mesh_id >> 16);
+                    #if defined(AdvancedAlphaMapped) || defined(IgnoreBackfacing) || defined(FadeMapping) || defined(IgnoreGlassMain)
+                        int2 Indexes = int2(bestHit.mesh_id & 0x7FFFFFF, bestHit.mesh_id >> 27);
                         int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
                         int tri_id = bestHit.triangle_id + triangleOffset;
                         int mesh_id = MeshOffsets[Indexes.x].y;
@@ -125,6 +125,9 @@ void IntersectBVH(int ray_index) {
                             if(_Materials[MaterialIndex].AlphaTex.x > 0)
                                 if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
                         }
+                    #endif
+                    #ifdef IgnoreGlassMain
+                        if(_Materials[MaterialIndex].specTrans == 1) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
                     #endif
                     #ifdef IgnoreBackfacing
                         TrianglePos tri = triangle_get_positions(tri_id);
@@ -144,7 +147,7 @@ void IntersectBVH(int ray_index) {
 
             int PixIndex = GlobalRay.PixelIndex;
             uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
-            int2 Indexes = int2(bestHit.mesh_id & 0x0000FFFF, bestHit.mesh_id >> 16);
+            int2 Indexes = int2(bestHit.mesh_id & 0x7FFFFFF, bestHit.mesh_id >> 27);
             [branch]if(CurBounce == 0) {
                 _PrimaryTriangleInfo[TempUv] = uint4(MeshOffsets[Indexes.x].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y] - _MeshData[MeshOffsets[Indexes.x].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
             } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
@@ -347,6 +350,7 @@ void IntersectBVHShadow(int ray_index) {
                         if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray.origin + ray.direction * abs(ShadowRay.t),NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)].w);
                         #ifdef RadCache
                             CacheBuffer[PixelIndex].RunningIlluminance = packRGBE(unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput + unpackRGBE(CacheBuffer[PixelIndex].RunningIlluminance));
+                            AddHitToCachePartial(CacheBuffer[PixelIndex], ray.origin);
                         #endif
                         if (ShadowRay.t >= 0) {
 
@@ -467,6 +471,7 @@ void IntersectBVHShadow(int ray_index) {
                             if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray2.origin + ray2.direction * abs(ShadowRaysBuffer[ray_index].t), 0);
                             #ifdef RadCache
                                 CacheBuffer[PixelIndex].RunningIlluminance = packRGBE(unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput + unpackRGBE(CacheBuffer[PixelIndex].RunningIlluminance));
+                                AddHitToCachePartial(CacheBuffer[PixelIndex], ray2.origin);
                             #endif
                             if (ShadowRay.t >= 0) {
                                 if (CurBounce == 0) {

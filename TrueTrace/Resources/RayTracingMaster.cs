@@ -21,7 +21,7 @@ namespace TrueTrace {
         private ASVGF ASVGFCode;
         private bool Abandon = false;
         #if UseOIDN
-            private UnityDenoiserPlugin.DenoiserPluginWrapper OIDNDenoiser;
+            private UnityDenoiserPlugin.DenoiserPluginWrapper OIDNDenoiser;			
         #endif
         [HideInInspector] public static bool DoSaving = true;
         public static RayObjs raywrites = new RayObjs();
@@ -102,6 +102,7 @@ namespace TrueTrace {
 
         private RenderTexture GIReservoirA;
         private RenderTexture GIReservoirB;
+        private RenderTexture GIReservoirC;
 
         private RenderTexture GIWorldPosA;
         private RenderTexture GIWorldPosB;
@@ -109,6 +110,7 @@ namespace TrueTrace {
 
         private RenderTexture GINEEPosA;
         private RenderTexture GINEEPosB;
+        private RenderTexture GINEEPosC;
 
         private RenderTexture CDFX;
         private RenderTexture CDFY;
@@ -202,6 +204,7 @@ namespace TrueTrace {
         private int TTtoOIDNKernelPanorama;
         #if !DisableRadianceCache
             private int ResolveKernel;
+            private int CompactKernel;
         #endif
         private int OverridenWidth = 1;
         private int OverridenHeight = 1;
@@ -296,6 +299,7 @@ namespace TrueTrace {
             TTtoOIDNKernelPanorama = ShadingShader.FindKernel("TTtoOIDNKernelPanorama");
             #if !DisableRadianceCache
                 ResolveKernel = GenerateShader.FindKernel("CacheResolve");
+                CompactKernel = GenerateShader.FindKernel("CacheCompact");
             #endif
             OIDNGuideWrite = false;
             ASVGFCode.Initialized = false;
@@ -319,23 +323,33 @@ namespace TrueTrace {
             LoadTT();
         }
         public void LoadTT() {
-            if(LocalTTSettings == null || !LocalTTSettings.name.Equals(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)) {
+            if(TTCPUDefines.fallbackTTSettingsName.Equals("null")) {
+                if(LocalTTSettings == null || !LocalTTSettings.name.Equals(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)) {
+                    #if UNITY_EDITOR
+                        UnityEngine.SceneManagement.Scene CurrentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+                        string path = CurrentScene.path.Replace(".unity", "");
+                        LocalTTSettings = UnityEditor.AssetDatabase.LoadAssetAtPath(path + ".asset", typeof(TTSettings)) as TTSettings;
+                        if(LocalTTSettings == null) {
+                            LocalTTSettings = ScriptableObject.CreateInstance<TTSettings>();
+                            UnityEditor.AssetDatabase.CreateAsset(LocalTTSettings, path + ".asset");
+                            UnityEditor.AssetDatabase.SaveAssets();
+                        }
+                    #else 
+                        LocalTTSettings = Resources.Load<TTSettings>(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+                        if(LocalTTSettings == null)
+                            LocalTTSettings = ScriptableObject.CreateInstance<TTSettings>();
+                    #endif
+                }
                 #if UNITY_EDITOR
-                    UnityEngine.SceneManagement.Scene CurrentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
-                    string path = CurrentScene.path.Replace(".unity", "");
-                    LocalTTSettings = UnityEditor.AssetDatabase.LoadAssetAtPath(path + ".asset", typeof(TTSettings)) as TTSettings;
-                    if(LocalTTSettings == null) {
-                        LocalTTSettings = ScriptableObject.CreateInstance<TTSettings>();
-                        UnityEditor.AssetDatabase.CreateAsset(LocalTTSettings, path + ".asset");
-                        UnityEditor.AssetDatabase.SaveAssets();
-                    }
+                    UnityEditor.EditorUtility.SetDirty(LocalTTSettings);
                 #endif
-            }
-            #if UNITY_EDITOR
-                UnityEditor.EditorUtility.SetDirty(LocalTTSettings);
-            #endif
-            if(LocalTTSettings != null) {
-                LoadInitialSettings();
+                if(LocalTTSettings != null) {
+                    LoadInitialSettings();
+                }
+            } else {
+                LocalTTSettings = Resources.Load<TTSettings>(TTCPUDefines.fallbackTTSettingsName);
+                if(LocalTTSettings == null)
+                    LocalTTSettings = ScriptableObject.CreateInstance<TTSettings>();
             }
         }
 
@@ -624,7 +638,7 @@ namespace TrueTrace {
             SetBool("DoPartialRendering", LocalTTSettings.DoPartialRendering);
             SetBool("UseTransmittanceInNEE", LocalTTSettings.UseTransmittanceInNEE);
             OIDNGuideWrite = (FramesSinceStart == LocalTTSettings.OIDNFrameCount);
-            SetBool("OIDNGuideWrite", OIDNGuideWrite && LocalTTSettings.DenoiserMethod == 2);
+            SetBool("OIDNGuideWrite", OIDNGuideWrite && (LocalTTSettings.DenoiserMethod == 2 || LocalTTSettings.DenoiserMethod == 3));
             SetBool("DiffRes", LocalTTSettings.RenderScale != 1.0f);
             SetBool("DoPartialRendering", LocalTTSettings.DoPartialRendering);
             SetBool("DoExposure", LocalTTSettings.PPExposure);
@@ -719,6 +733,9 @@ namespace TrueTrace {
                 GenerateShader.SetComputeBuffer(ResolveKernel, "VoxelDataBufferB", !FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
                 GenerateShader.SetComputeBuffer(ResolveKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
                 GenerateShader.SetComputeBuffer(ResolveKernel, "HashEntriesBufferB", !FlipFrame ? HashBufferA : HashBufferB);
+                GenerateShader.SetComputeBuffer(CompactKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
+
+
 
                 IntersectionShader.SetComputeBuffer(ShadowKernel, "CacheBuffer", CacheBuffer);
                 IntersectionShader.SetComputeBuffer(ShadowKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
@@ -838,8 +855,6 @@ namespace TrueTrace {
                 CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight * 2, 48);
                 CommonFunctions.CreateDynamicBuffer(ref _ShadowBuffer, SourceWidth * SourceHeight, 48);
                 CommonFunctions.CreateDynamicBuffer(ref LightingBuffer, SourceWidth * SourceHeight, 64);
-                CommonFunctions.CreateRenderTexture(ref _RandomNums, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-                CommonFunctions.CreateRenderTexture(ref _RandomNumsB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 #if !DisableRadianceCache
                     CommonFunctions.CreateDynamicBuffer(ref CacheBuffer, SourceWidth * SourceHeight, 48);
                     CommonFunctions.CreateDynamicBuffer(ref VoxelDataBufferA, 4 * 1024 * 1024, 16, ComputeBufferType.Raw);
@@ -866,14 +881,30 @@ namespace TrueTrace {
                 // Release render texture if we already have one
                 if (_target != null)
                 {
+
+                    #if !DisableRadianceCache
+                        CacheBuffer.ReleaseSafe();
+                        VoxelDataBufferA.ReleaseSafe();
+                        VoxelDataBufferB.ReleaseSafe();
+                        HashBufferA.ReleaseSafe();
+                        HashBufferB.ReleaseSafe();
+                    #endif
+
+                    _RayBuffer.ReleaseSafe();
+                    _ShadowBuffer.ReleaseSafe();
+                    LightingBuffer.ReleaseSafe();
+                    _RandomNums.ReleaseSafe();
+                    _RandomNumsB.ReleaseSafe();
                     _target.Release();
                     _converged.Release();
                     _DebugTex.Release();
                     _FinalTex.Release();
                     GIReservoirA.Release();
                     GIReservoirB.Release();
+                    GIReservoirC.Release();
                     GINEEPosA.Release();
                     GINEEPosB.Release();
+                    GINEEPosC.Release();
                     GIWorldPosA.Release();
                     GIWorldPosB.Release();
                     GIWorldPosC.Release();
@@ -882,14 +913,15 @@ namespace TrueTrace {
                     ScreenSpaceInfoPrev.Release();
                     GradientsA.Release();
                     GradientsB.Release();
-                    _RandomNums.Release();
-                    _RandomNumsB.Release();
                     #if UseOIDN
                         ColorBuffer.Release();
                         OutputBuffer.Release();
                         AlbedoBuffer.Release();
                         NormalBuffer.Release();
-                        OIDNDenoiser.Dispose();
+                        if(OIDNDenoiser != null) {
+                            OIDNDenoiser.Dispose();
+                            OIDNDenoiser = null;
+                        }
                     #endif
                 }
 
@@ -903,7 +935,21 @@ namespace TrueTrace {
                         cleanAux = 1,
                         prefilterAux = 0
                     };
-                    OIDNDenoiser = new UnityDenoiserPlugin.DenoiserPluginWrapper(UnityDenoiserPlugin.DenoiserType.OIDN, cfg);
+					
+					UnityDenoiserPlugin.DenoiserType denoiserType;
+					switch (LocalTTSettings.DenoiserMethod) {
+						case 2:
+							denoiserType = UnityDenoiserPlugin.DenoiserType.OIDN;
+							break;
+						case 3:
+							denoiserType = UnityDenoiserPlugin.DenoiserType.OptiX;
+							break;
+						default:
+							denoiserType = UnityDenoiserPlugin.DenoiserType.OptiX;
+							break;
+					}					
+                    OIDNDenoiser = new UnityDenoiserPlugin.DenoiserPluginWrapper(denoiserType, cfg);
+					
                     ColorBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
                     OutputBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
                     AlbedoBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
@@ -918,8 +964,10 @@ namespace TrueTrace {
                 CommonFunctions.CreateRenderTexture(ref _converged, SourceWidth, SourceHeight, CommonFunctions.RTFull4, RenderTextureReadWrite.sRGB);
                 CommonFunctions.CreateRenderTextureArray(ref GIReservoirA, SourceWidth, SourceHeight, 2, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTextureArray(ref GIReservoirB, SourceWidth, SourceHeight, 2, CommonFunctions.RTFull4);
+                CommonFunctions.CreateRenderTextureArray(ref GIReservoirC, SourceWidth, SourceHeight, 2, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref GINEEPosA, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
                 CommonFunctions.CreateRenderTexture(ref GINEEPosB, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
+                CommonFunctions.CreateRenderTexture(ref GINEEPosC, SourceWidth, SourceHeight, CommonFunctions.RTHalf4);
                 CommonFunctions.CreateRenderTexture(ref GIWorldPosA, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref GIWorldPosB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref GIWorldPosC, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
@@ -972,6 +1020,10 @@ namespace TrueTrace {
                 if(DoKernelProfiling) cmd.BeginSample("RadCacheClear");
                     cmd.DispatchCompute(GenerateShader, ResolveKernel, Mathf.CeilToInt((4.0f * 1024.0f * 1024.0f) / 256.0f), 1, 1);
                 if(DoKernelProfiling) cmd.EndSample("RadCacheClear");
+
+                if(DoKernelProfiling) cmd.BeginSample("RadCacheCompact");
+                    cmd.DispatchCompute(GenerateShader, CompactKernel, Mathf.CeilToInt((4.0f * 1024.0f * 1024.0f) / 256.0f), 1, 1);
+                if(DoKernelProfiling) cmd.EndSample("RadCacheCompact");
             #endif
             TTPostProc.ValidateInit(LocalTTSettings.PPBloom, LocalTTSettings.PPTAA, SourceWidth != TargetWidth, LocalTTSettings.UpscalerMethod == 2, LocalTTSettings.DoSharpen, LocalTTSettings.PPFXAA);
             float CurrentSample;
@@ -1055,10 +1107,28 @@ namespace TrueTrace {
                 if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Temporal Kernel");
                 cmd.DispatchCompute(ReSTIRGI, ReSTIRGIKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 if(DoKernelProfiling) cmd.EndSample("ReSTIRGI Temporal Kernel");
+            bool FlipFrame = (FramesSinceStart2 % 2 == 0);
 
                 if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Extra Spatial Kernel");
+                SetInt("CurPass", 0, cmd);
+                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "WorldPosB", FlipFrame ? GIWorldPosB : GIWorldPosC);
+                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "WorldPosA", GIWorldPosA);
+                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "NEEPosB", FlipFrame ? GINEEPosA : GINEEPosB);
+                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "NEEPosA", GINEEPosC);
+                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "ReservoirB", FlipFrame ? GIReservoirB : GIReservoirA);
+                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "ReservoirA", GIReservoirC);
                 cmd.DispatchCompute(ReSTIRGI, ReSTIRGISpatialKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 if(DoKernelProfiling) cmd.EndSample("ReSTIRGI Extra Spatial Kernel");
+
+                if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Extra Spatial Kernel 1");
+                SetInt("frames_accumulated", _currentSample * 2, cmd);
+                SetInt("CurPass", 1, cmd);
+                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "WorldPosB", GIWorldPosA);
+                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "NEEPosB", GINEEPosC);
+                cmd.SetComputeTextureParam(ReSTIRGI, ReSTIRGISpatialKernel, "ReservoirB", GIReservoirC);
+                cmd.DispatchCompute(ReSTIRGI, ReSTIRGISpatialKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+                if(DoKernelProfiling) cmd.EndSample("ReSTIRGI Extra Spatial Kernel 1");
+
                 cmd.Blit(GradientsA, GradientsB);
             }
 
@@ -1150,7 +1220,7 @@ namespace TrueTrace {
             }
 
             #if UseOIDN
-                if(LocalTTSettings.DenoiserMethod == 2 && SampleCount > LocalTTSettings.OIDNFrameCount) {
+                if((LocalTTSettings.DenoiserMethod == 2 || LocalTTSettings.DenoiserMethod == 3) && SampleCount > LocalTTSettings.OIDNFrameCount) {
                     if(DoChainedImages) {
                         cmd.SetComputeBufferParam(ShadingShader, TTtoOIDNKernelPanorama, "OutputBuffer", ColorBuffer);
                         ShadingShader.SetTexture(TTtoOIDNKernelPanorama, "Result", _FinalTex);
@@ -1165,6 +1235,7 @@ namespace TrueTrace {
 
                     cmd.SetComputeBufferParam(ShadingShader, OIDNtoTTKernel, "OutputBuffer", OutputBuffer);
                     ShadingShader.SetTexture(OIDNtoTTKernel, "Result", _FinalTex);
+                    if(SampleCount > LocalTTSettings.OIDNFrameCount+1 || LocalTTSettings.OIDNFrameCount == 0)
                     cmd.DispatchCompute(ShadingShader, OIDNtoTTKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);            
                 }
             #endif

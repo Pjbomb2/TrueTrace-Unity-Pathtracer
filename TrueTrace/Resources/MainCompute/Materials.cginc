@@ -903,7 +903,7 @@ static float3 SampleDisneyDiffuse(const MaterialData hitDat, float3 wo, bool thi
 
     float3 diffuse = EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin, pixel_index);
     forwardPdfW = abs(dotNL) * pdf;
-    return (sheen + (diffuse));// * extinction;
+    return (sheen / PI + (diffuse)) / (refracted ? 1 : pdf);// * extinction;
 }
 
 static float3 SampleDisneyBRDF(const MaterialData hitDat, float3 wo, out float forwardPdfW, out float3 wi, uint pixel_index)
@@ -1320,7 +1320,7 @@ float3 EvaluateDisney3(MaterialData hitDat, float3 V, float3 L, bool thin,
         float3 diffuse = EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin, pixel_index);
         float3 sheen = EvaluateSheen(hitDat, wo, wm, wi);
 
-        reflectance += (diffuse + sheen / PI);
+        reflectance += (diffuse + sheen / PI) * abs(dotNL);
 
         forwardPdf += forwardDiffusePdfW * P[2];
     }
@@ -1345,7 +1345,7 @@ float3 EvaluateDisney3(MaterialData hitDat, float3 V, float3 L, bool thin,
         CalculateAnisotropicParams(rscaled, hitDat.anisotropic, tax, tay);
 
         float3 transmission = EvaluateDisneySpecTransmission(hitDat, wo, wm, wi, tax, tay, thin);
-        reflectance += transmission;
+        reflectance += 1;//transmission;
 
         float forwardTransmissivePdfW;
         GgxVndfAnisotropicPdf2(wi, wm, wo, tax, tay, forwardTransmissivePdfW);
@@ -1359,7 +1359,7 @@ float3 EvaluateDisney3(MaterialData hitDat, float3 V, float3 L, bool thin,
     }
 
 
-    // reflectance = reflectance * abs(dotNL);
+    reflectance = reflectance;
 
     return reflectance;
 }
@@ -1498,7 +1498,10 @@ bool SampleDisney(MaterialData hitDat, inout float3 v, bool thin, out float PDF,
 
     v = normalize(ToWorld(TruTanMat, wi));
     if(Case != 3) throughput = clamp(Reflection / P[Case], 0, 4);
-    else Reflection = throughput;
+    else {
+        if(!thin) Reflection = throughput;
+        else throughput = Reflection;
+    }
     PDF *= P[Case];
 
     return Reflection.x != -1 && PDF > 0;

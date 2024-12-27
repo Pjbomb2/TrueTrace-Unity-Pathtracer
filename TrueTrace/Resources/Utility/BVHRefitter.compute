@@ -533,7 +533,7 @@ void TLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
         
 
         SGTreeWrite[Index].radius = SGTreeWrite[Transf.SolidOffset].radius * Scale;
-        SGTreeWrite[Index].intensity = SGTreeWrite[Transf.SolidOffset].intensity * Scale;
+        SGTreeWrite[Index].intensity = SGTreeWrite[Transf.SolidOffset].intensity * Scale * Scale;
         return;
     }
     GaussianTreeNode LeftNode = SGTreeWrite[Node.left];

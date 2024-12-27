@@ -1946,7 +1946,30 @@ Toolbar toolbar;
          }
 
          public static void TakeScreenshot() {
-            ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayTracingMaster.SampleCount + " Samples.png");
+           string SegmentNumber = "";
+           string FilePath = "";
+           int TempSeg = 1;
+            do {
+               SegmentNumber = "";
+               FilePath = "";
+               int TempTempSeg = TempSeg;
+              int[] NumSegments = new int[3];
+              for(int i = 0; i < 3; i++) {
+                  NumSegments[i] = ((TempTempSeg) % 10);
+                  TempTempSeg /= 10;
+              }
+              for(int i = 0; i < 3; i++) {
+                  SegmentNumber += NumSegments[2 - i];
+              }
+              TempSeg++;
+
+               FilePath = PlayerPrefs.GetString("ScreenShotPath") + "/" + SceneManager.GetActiveScene().name.Replace(" ", "") + "_" + RayTracingMaster._camera.name + "_" + SegmentNumber + ".png";
+            } while(System.IO.File.Exists(FilePath));
+           
+
+            ScreenCapture.CaptureScreenshot(FilePath);
+            
+            // ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayTracingMaster.SampleCount + " Samples.png");
             UnityEditor.AssetDatabase.Refresh();
          }
          bool HasNoMore = false;
@@ -2140,11 +2163,11 @@ Slider AperatureSlider;
            QuickStartButton = new Button(() => QuickStart()) {text = "Auto Assign Scripts"};
            QuickStartButton.style.minWidth = 111;
 
-           IntegerField AtlasField = new IntegerField() {value = AtlasSize, label = "Atlas Size"};
-           AtlasField.isDelayed = true;
-           AtlasField.RegisterValueChangedCallback(evt => {if(!Application.isPlaying) {AtlasSize = evt.newValue; AtlasSize = Mathf.Min(AtlasSize, 16384); AtlasSize = Mathf.Max(AtlasSize, 32); AtlasField.value = AtlasSize; Assets.MainDesiredRes = AtlasSize;} else AtlasField.value = AtlasSize;});
-               AtlasField.ElementAt(0).style.minWidth = 65;
-               AtlasField.ElementAt(1).style.width = 45;
+           // IntegerField AtlasField = new IntegerField() {value = AtlasSize, label = "Atlas Size"};
+           // AtlasField.isDelayed = true;
+           // AtlasField.RegisterValueChangedCallback(evt => {if(!Application.isPlaying) {AtlasSize = evt.newValue; AtlasSize = Mathf.Min(AtlasSize, 16384); AtlasSize = Mathf.Max(AtlasSize, 32); AtlasField.value = AtlasSize; Assets.MainDesiredRes = AtlasSize;} else AtlasField.value = AtlasSize;});
+           //     AtlasField.ElementAt(0).style.minWidth = 65;
+           //     AtlasField.ElementAt(1).style.width = 45;
 
            Box ButtonField1 = new Box();
            ButtonField1.style.flexDirection = FlexDirection.Row;
@@ -2178,7 +2201,7 @@ Slider AperatureSlider;
                                                                if(RenderRes == 1.0f) MainSource.Remove(UpscalerField);
                                                             } else if(RenderRes != 1.0f) MainSource.Insert(MainSource.IndexOf(DoPartialRenderingToggle), UpscalerField);
                                                          });        
-               TopEnclosingBox.Add(AtlasField);
+               // TopEnclosingBox.Add(AtlasField);
            MainSource.Add(TopEnclosingBox);
 
            RRToggle = new Toggle() {value = RR, text = "Use Russian Roulette"};
@@ -2218,6 +2241,7 @@ Slider AperatureSlider;
             DenoiserSettings.Add("ASVGF");
             #if UseOIDN
                DenoiserSettings.Add("OIDN");
+			   DenoiserSettings.Add("OptiX");
             #endif
             PopupField<string> DenoiserField = new PopupField<string>("<b>Denoiser</b>");
             VisualElement DenoiserExtrasContainer = CreateHorizontalBox("Denoiser Extra Info Container");
@@ -2240,7 +2264,7 @@ Slider AperatureSlider;
                DenoiserMethod = DenoiserField.index;
                RayMaster.LocalTTSettings.DenoiserMethod = DenoiserMethod;
                DenoiserExtrasContainer.Clear();
-               if(DenoiserMethod == 2) {
+               if(DenoiserMethod == 2 || DenoiserMethod == 3) {
                   OIDNFrameField = new IntegerField("Frame Delay") {value = OIDNFrameCount};
                   OIDNFrameField.ElementAt(0).style.minWidth = 65;
                   OIDNFrameField.RegisterValueChangedCallback(evt => {OIDNFrameCount = (int)evt.newValue; RayMaster.LocalTTSettings.OIDNFrameCount = OIDNFrameCount;});
@@ -2256,7 +2280,7 @@ Slider AperatureSlider;
                   DenoiserExtrasContainer.Add(OIDNBlendRatioSlider);
                }
             });
-            if(DenoiserMethod == 2) {
+            if(DenoiserMethod == 2 || DenoiserMethod == 3) {
                OIDNFrameField = new IntegerField("Frame Delay") {value = OIDNFrameCount};
                OIDNFrameField.ElementAt(0).style.minWidth = 65;
                OIDNFrameField.RegisterValueChangedCallback(evt => {OIDNFrameCount = (int)evt.newValue; RayMaster.LocalTTSettings.OIDNFrameCount = OIDNFrameCount;});
@@ -2444,10 +2468,10 @@ Slider AperatureSlider;
                    SpatialGISampleCountField.RegisterValueChangedCallback(evt => {GISpatialSampleCount = (int)evt.newValue; RayMaster.LocalTTSettings.ReSTIRGISpatialCount = GISpatialSampleCount;});
                    ReSTIRGISpatialRadiusField.RegisterValueChangedCallback(evt => {ReSTIRGISpatialRadius = (int)evt.newValue; RayMaster.LocalTTSettings.ReSTIRGISpatialRadius = ReSTIRGISpatialRadius;});
                    SpatialGI.Add(SpatialGIToggle);
-                   SpatialGI.Add(SpatialGISampleCountField);
-                   SpatialGI.Add(SpatialGISampleCountLabel);
-                   SpatialGI.Add(ReSTIRGISpatialRadiusField);
-                   SpatialGI.Add(ReSTIRGISpatialRadiusLabel);
+                   // SpatialGI.Add(SpatialGISampleCountField);
+                   // SpatialGI.Add(SpatialGISampleCountLabel);
+                   // SpatialGI.Add(ReSTIRGISpatialRadiusField);
+                   // SpatialGI.Add(ReSTIRGISpatialRadiusLabel);
                EnclosingGI.Add(SpatialGI);
            GIFoldout.Add(EnclosingGI);
            MainSource.Add(GIToggle);

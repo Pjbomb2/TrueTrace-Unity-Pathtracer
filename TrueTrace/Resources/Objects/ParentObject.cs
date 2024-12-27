@@ -20,6 +20,42 @@ namespace TrueTrace {
     public class ParentObject : MonoBehaviour
     {
 
+        public float Distance(Vector3 a, Vector3 b)
+        {
+            a.x -= b.x;
+            a.y -= b.y;
+            a.z -= b.z;
+            return (float)Math.Sqrt(a.x * (double)a.x + a.y * (double)a.y + a.z * (double)a.z);
+        }
+        public static Vector3 Scale(Vector3 a, Vector3 b)
+        {
+            a.x *= b.x;
+            a.y *= b.y;
+            a.z *= b.z;
+            return a;
+        }
+
+        public void Normalize(ref Vector3 a)
+        {
+            float num = (float)Math.Sqrt(a.x * (double)a.x + a.y * (double)a.y + a.z * (double)a.z);
+            if (num > 9.99999974737875E-06)
+            {
+                float inversed = 1 / num;
+                a.x *= inversed;
+                a.y *= inversed;
+                a.z *= inversed;
+            }
+            else
+            {
+                a.x = 0;
+                a.y = 0;
+                a.z = 0;
+            }
+        }
+
+
+
+        public PerInstanceData[] InstanceDatas;
         public int[] RTAccelHandle;
         public int[] RTAccelSubmeshOffsets;
         public LightBVHBuilder LBVH;
@@ -35,7 +71,6 @@ namespace TrueTrace {
         public string Name;
         [HideInInspector] public GraphicsBuffer[] VertexBuffers;
         [HideInInspector] public ComputeBuffer[] IndexBuffers;
-        [HideInInspector] public int[] CWBVHIndicesBufferInverted;
         [HideInInspector] public List<RayTracingObject> ChildObjects;
         [HideInInspector] public bool MeshCountChanged;
         private unsafe NativeArray<AABB> TrianglesArray;
@@ -130,12 +165,12 @@ namespace TrueTrace {
             public int VertexStart;
             public int VertexCount;
             public int IndexOffset;
+            public int IndexOffsetEnd;
         }
 
         public void CallUpdate() {
             if ((QueInProgress == 0 || QueInProgress == 1) && !AssetManager.Assets.UpdateQue.Contains(this)) AssetManager.Assets.UpdateQue.Add(this);
         }  
-
         public void ClearAll() {
             CommonFunctions.DeepClean(ref _Materials);
             CommonFunctions.DeepClean(ref LightTriangles);
@@ -147,20 +182,14 @@ namespace TrueTrace {
             CommonFunctions.DeepClean(ref AggNodes);
             CommonFunctions.DeepClean(ref ForwardStack);
             CommonFunctions.DeepClean(ref LightTriNorms);
-            CommonFunctions.DeepClean(ref CWBVHIndicesBufferInverted);
             CommonFunctions.DeepClean(ref LuminanceWeights);
             if(TrianglesArray.IsCreated) TrianglesArray.Dispose();
             if(BVH2 != null) {
-                if(BVH2.BVH2NodesArray.IsCreated) BVH2.BVH2NodesArray.Dispose();
-                if(BVH2.DimensionedIndicesArray.IsCreated) BVH2.DimensionedIndicesArray.Dispose();
-                if(BVH2.tempArray.IsCreated) BVH2.tempArray.Dispose();
-                if(BVH2.indices_going_left_array.IsCreated) BVH2.indices_going_left_array.Dispose();
-                if(BVH2.CentersX.IsCreated) BVH2.CentersX.Dispose();
-                if(BVH2.CentersY.IsCreated) BVH2.CentersY.Dispose();
-                if(BVH2.CentersZ.IsCreated) BVH2.CentersZ.Dispose();
-                if(BVH2.SAHArray.IsCreated) BVH2.SAHArray.Dispose();
+                BVH2.Dispose();
             }
             if(BVH != null) {
+                CommonFunctions.DeepClean(ref BVH.cwbvh_indices);
+                if(BVH.BVH8NodesArray.IsCreated) BVH.BVH8NodesArray.Dispose();
                 if(BVH.costArray.IsCreated) BVH.costArray.Dispose();
                 if(BVH.decisionsArray.IsCreated) BVH.decisionsArray.Dispose();
             }
@@ -207,7 +236,7 @@ namespace TrueTrace {
         {
             if (VertexBuffers != null) {
                 for (int i = 0; i < Mathf.Max(SkinnedMeshes.Length, DeformableMeshes.Length); i++) {
-                    VertexBuffers[i].Release();
+                    if(VertexBuffers != null && VertexBuffers[i] != null) VertexBuffers[i].Release();
                     IndexBuffers[i].Release();
                     NodeBuffer.Release();
                     AABBBuffer.Release();
@@ -225,6 +254,7 @@ namespace TrueTrace {
                 TriBuffer.Release();
                 BVHBuffer.Release();
             }
+            ClearAll();
         }
 
 
@@ -586,7 +616,7 @@ namespace TrueTrace {
             public int UVStride;
         }
         public List<Transform> ChildObjectTransforms;
-        public void LoadData() {
+        public unsafe void LoadData() {
             // TTStopWatch TempWatch = new TTStopWatch("StopWatch For: " + gameObject.name);
             // TempWatch.Start();
             HasLightTriangles = false;
@@ -677,12 +707,8 @@ namespace TrueTrace {
                 DeformableMeshes = new MeshFilter[TotalObjects];
                 IndexCounts = new int[TotalObjects];
             }
-            // TempWatch.Stop("Object Initialize");
-            // TempWatch.Start();
             int VertCount = 0;
             CreateAtlas(ref VertCount);
-            // TempWatch.Stop("Create Sub Atlas");
-            // TempWatch.Start();
 
             // LoadFile();
             // MeshCountChanged = false;
@@ -712,7 +738,7 @@ namespace TrueTrace {
                     if(IsDeformable)
                       DeformableMeshes[i] = TempFilter;
                 } else if(CurrentObject.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempRend)) {
-                    mesh = TempRend.sharedMesh;
+                    TempRend.BakeMesh(mesh);
                     if (IsSkinnedGroup)
                         SkinnedMeshes[i] = TempRend;
                 }
@@ -720,30 +746,28 @@ namespace TrueTrace {
                 #if HardwareRT
                     if(CurrentObject.TryGetComponent<Renderer>(out Renderers[i])) {}
                 #endif
+                int CurVertCount = mesh.vertexCount;
                 int PreIndexLength = CurMeshData.Indices.Count;
-                int IndexOffset = CurMeshData.Verticies.Count;
+                int IndexOffset = CurMeshData.CurVertexOffset;
                 if((!Application.isPlaying) || mesh.isReadable) {
                     int VertCount2 = mesh.vertexCount;
                     var Tans = new List<Vector4>(VertCount2);
                     mesh.GetTangents(Tans);
-                    if (Tans.Count != 0) CurMeshData.Tangents.AddRange(Tans);
-                    else CurMeshData.SetTansZero(mesh.vertexCount);
+                    if (Tans.Count != 0) NativeArray<Vector4>.Copy(Tans.ToArray(), 0, CurMeshData.TangentsArray, CurMeshData.CurVertexOffset, CurVertCount);
 
                     var Colors = new List<Color>(VertCount2);
                     mesh.GetColors(Colors);
-                    if (Colors.Count != 0) CurMeshData.Colors.AddRange(Colors);
-                    else CurMeshData.SetColorsZero(mesh.vertexCount);
+                    if (Colors.Count != 0) NativeArray<Color>.Copy(Colors.ToArray(), 0, CurMeshData.ColorsArray, CurMeshData.CurVertexOffset, CurVertCount);
 
                     var Norms = new List<Vector3>(VertCount2);
                     mesh.GetNormals(Norms);
-                    CurMeshData.Normals.AddRange(Norms);
+                    NativeArray<Vector3>.Copy(Norms.ToArray(), 0, CurMeshData.NormalsArray, CurMeshData.CurVertexOffset, CurVertCount);
 
                     mesh.GetVertices(Norms);
-                    CurMeshData.Verticies.AddRange(Norms);
+                    NativeArray<Vector3>.Copy(Norms.ToArray(), 0, CurMeshData.VerticiesArray, CurMeshData.CurVertexOffset, CurVertCount);
 
                     int MeshUvLength = mesh.uv.Length;
-                    if (MeshUvLength == mesh.vertexCount) CurMeshData.UVs.AddRange(mesh.uv);
-                    else CurMeshData.SetUvZero(mesh.vertexCount);
+                    if (MeshUvLength == CurVertCount) NativeArray<Vector2>.Copy(mesh.uv, 0, CurMeshData.UVsArray, CurMeshData.CurVertexOffset, CurVertCount);
 
                     CurMeshData.Indices.AddRange(mesh.triangles);
                 } else {
@@ -792,10 +816,10 @@ namespace TrueTrace {
                                     // Debug.Log(VertCount);
                                 for(int i3 = 0; i3 < VertCount; i3++) {
                                     int Index = i3 * TotalStride;
-                                    if(VertOff != -1) CurMeshData.Verticies.Add(new Vector3(Data[Index + VertOff], Data[Index + VertOff + 1], Data[Index + VertOff + 2]));
-                                    if(NormOff != -1) CurMeshData.Normals.Add(new Vector3(Data[Index + NormOff], Data[Index + NormOff + 1], Data[Index + NormOff + 2]));
-                                    if(TanOff != -1) CurMeshData.Tangents.Add(new Vector4(Data[Index + TanOff], Data[Index + TanOff + 1], Data[Index + TanOff + 2], Data[Index + TanOff + 3]));
-                                    if(UVOff != -1) CurMeshData.UVs.Add(new Vector2(Data[Index + UVOff], Data[Index + UVOff + 1]));
+                                    if(VertOff != -1) CurMeshData.Verticies[CurMeshData.CurVertexOffset + i3] = (new Vector3(Data[Index + VertOff], Data[Index + VertOff + 1], Data[Index + VertOff + 2]));
+                                    if(NormOff != -1) CurMeshData.Normals[CurMeshData.CurVertexOffset + i3] = (new Vector3(Data[Index + NormOff], Data[Index + NormOff + 1], Data[Index + NormOff + 2]));
+                                    if(TanOff != -1) CurMeshData.Tangents[CurMeshData.CurVertexOffset + i3] = (new Vector4(Data[Index + TanOff], Data[Index + TanOff + 1], Data[Index + TanOff + 2], Data[Index + TanOff + 3]));
+                                    if(UVOff != -1) CurMeshData.UVs[CurMeshData.CurVertexOffset + i3] = (new Vector2(Data[Index + UVOff], Data[Index + UVOff + 1]));
                                 }
 
                                 Data.Dispose();
@@ -804,12 +828,12 @@ namespace TrueTrace {
                             AsyncGPUReadback.Request(MeshBuffer, checkOutput);
                         }
                     }
-                    for(int i2 = 0; i2 < TotVertCount; i2++) {
-                        if(!HasAttribute[1]) CurMeshData.Tangents.Add(new Vector4(0,1,0,1));
-                        if(!HasAttribute[2]) CurMeshData.Normals.Add(Vector3.one);
-                        if(!HasAttribute[3]) CurMeshData.UVs.Add(Vector2.one);
-                    }
-                    CurMeshData.SetColorsZero(TotVertCount);
+                    // for(int i2 = 0; i2 < TotVertCount; i2++) {
+                    //     if(!HasAttribute[1]) CurMeshData.Tangents.Add(new Vector4(0,1,0,1));
+                    //     if(!HasAttribute[2]) CurMeshData.Normals.Add(Vector3.one);
+                    //     if(!HasAttribute[3]) CurMeshData.UVs.Add(Vector2.one);
+                    // }
+                    // CurMeshData.SetColorsZero(TotVertCount);
 
 
 
@@ -839,7 +863,7 @@ namespace TrueTrace {
                 AsyncGPUReadback.WaitAllRequests();
 
                 }
-
+                CurMeshData.CurVertexOffset += CurVertCount;
                 int TotalIndexLength = 0;
                 for (int i2 = 0; i2 < submeshcount; ++i2) {//Add together all the submeshes in the mesh to consider it as one object
                     int IndiceLength = (int)mesh.GetIndexCount(i2) / 3;
@@ -860,7 +884,8 @@ namespace TrueTrace {
                 TransformIndexes.Add(new MeshTransformVertexs() {
                     VertexStart = PreIndexLength,
                     VertexCount = CurMeshData.Indices.Count - PreIndexLength,
-                    IndexOffset = IndexOffset
+                    IndexOffset = IndexOffset,
+                    IndexOffsetEnd = CurMeshData.CurVertexOffset
                 });
                 RepCount += Mathf.Min(submeshcount, CurrentObject.Names.Length);
             }
@@ -916,21 +941,24 @@ namespace TrueTrace {
             tempAABB = new AABB();
             MaxRecur = 0;
             BVH2 = new BVH2Builder(Triangles, TrianglesArray.Length);//Binary BVH Builder, and also the component that takes the longest to build
+            TrianglesArray.Dispose();
             this.BVH = new BVH8Builder(ref BVH2);
-            BVH2.BVH2NodesArray.Dispose();
+            CommonFunctions.DeepClean(ref BVH2.FinalIndices);
+            BVH2.Dispose();
             BVH2 = null;
-            System.Array.Resize(ref BVH.BVH8Nodes, BVH.cwbvhnode_count);
-            ToBVHIndex = new int[BVH.cwbvhnode_count];
 
-            CWBVHIndicesBufferInverted = new int[BVH.cwbvh_indices.Length];
-            int CWBVHIndicesBufferCount = CWBVHIndicesBufferInverted.Length;
+            int CWBVHIndicesBufferCount = BVH.cwbvh_indices.Length;
             #if !HardwareRT
-                for (int i = 0; i < CWBVHIndicesBufferCount; i++) CWBVHIndicesBufferInverted[BVH.cwbvh_indices[i]] = i;
+                NativeArray<int> InvertedBufferArray = new NativeArray<int>(BVH.cwbvh_indices, Unity.Collections.Allocator.TempJob);
+                int* InvertedBuffer = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(InvertedBufferArray);
+                for (int i = 0; i < CWBVHIndicesBufferCount; i++) BVH.cwbvh_indices[InvertedBuffer[i]] = i;
+                InvertedBufferArray.Dispose();
             #else
-                for (int i = 0; i < CWBVHIndicesBufferCount; i++) CWBVHIndicesBufferInverted[i] = i;
+                for (int i = 0; i < CWBVHIndicesBufferCount; i++) BVH.cwbvh_indices[i] = i;
             #endif
             if (IsSkinnedGroup || IsDeformable)
             {
+                ToBVHIndex = new int[BVH.cwbvhnode_count];
                 NodePair = new List<NodeIndexPairData>();
                 NodePair.Add(new NodeIndexPairData());
                 IsLeafList = new List<Vector3Int>();
@@ -967,7 +995,7 @@ namespace TrueTrace {
             int LightTriLength = LightTriangles.Count;
             for(int i = 0; i < LightTriLength; i++) {
                 LightTriData LT = LightTriangles[i];
-                LT.TriTarget = (uint)CWBVHIndicesBufferInverted[LT.TriTarget];
+                LT.TriTarget = (uint)BVH.cwbvh_indices[LT.TriTarget];
                 LightTriangles[i] = LT;
             }
             if(LightTriangles.Count > 0) {
@@ -1037,7 +1065,7 @@ namespace TrueTrace {
                 StackBuffer = new ComputeBuffer(ForwardStack.Length, 32);
                 StackBuffer.SetData(ForwardStack);
                 CWBVHIndicesBuffer = new ComputeBuffer(BVH.cwbvh_indices.Length, 4);
-                CWBVHIndicesBuffer.SetData(CWBVHIndicesBufferInverted);
+                CWBVHIndicesBuffer.SetData(BVH.cwbvh_indices);
                 BVHDataBuffer = new ComputeBuffer(AggNodes.Length, 260);
                 BVHDataBuffer.SetData(SplitNodes);
                 SplitNodes.Clear();
@@ -1103,6 +1131,10 @@ namespace TrueTrace {
 
                 for (int i = 0; i < TotalObjects; i++)
                 {
+                    if(VertexBuffers[i] == null || !(VertexBuffers[i].IsValid())) {
+                        AllFull = false;
+                        return;
+                    }
                     var SkinnedRootBone = IsSkinnedGroup ? SkinnedMeshes[i].rootBone : this.transform;
                     if(SkinnedRootBone == null) SkinnedRootBone = SkinnedMeshes[i].gameObject.transform;
                     int IndexCount = IndexCounts[i];
@@ -1177,7 +1209,7 @@ namespace TrueTrace {
                     if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Update");
 
                     if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Compress");
-                    cmd.SetComputeIntParam(MeshRefit, "NodeCount", BVH.BVH8Nodes.Length);
+                    cmd.SetComputeIntParam(MeshRefit, "NodeCount", BVH.cwbvhnode_count);
                     cmd.SetComputeIntParam(MeshRefit, "NodeOffset", NodeOffset);
                     cmd.DispatchCompute(MeshRefit, NodeCompressKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
                     if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Compress");
@@ -1203,9 +1235,9 @@ namespace TrueTrace {
 
         private float AreaOfTriangle(Vector3 pt1, Vector3 pt2, Vector3 pt3)
         {
-            float a = Vector3.Distance(pt1, pt2);
-            float b = Vector3.Distance(pt2, pt3);
-            float c = Vector3.Distance(pt3, pt1);
+            float a = Distance(pt1, pt2);
+            float b = Distance(pt2, pt3);
+            float c = Distance(pt3, pt1);
             float s = (a + b + c) / 2.0f;
             return Mathf.Sqrt(s * (s - a) * (s - b) * (s - c));
         }
@@ -1221,6 +1253,7 @@ namespace TrueTrace {
             float height = Vector3.Cross(sideAB, sideBC).magnitude;
             return new Vector2(width, height);
         }
+
 
         public unsafe async Task BuildTotal() {
             // if(HasCompleted) return;
@@ -1242,52 +1275,60 @@ namespace TrueTrace {
                 int IndexEnd = TransformIndexes[i].VertexStart + TransformIndexes[i].VertexCount;
                 OffsetReal = TransformIndexes[i].VertexStart / 3;
                 bool IsSingle = CachedTransforms[i + 1].WTL.inverse == ParentMat;
-                float scalex = Vector3.Distance(ChildMat * new Vector3(1,0,0), new Vector3(0,0,0));
-                float scaley = Vector3.Distance(ChildMat * new Vector3(0,1,0), new Vector3(0,0,0));
-                float scalez = Vector3.Distance(ChildMat * new Vector3(0,0,1), new Vector3(0,0,0));
-                Vector3 Scale = IsSingle ? new Vector3(1,1,1) : new Vector3(Mathf.Pow(1.0f / scalex, 2.0f), Mathf.Pow(1.0f / scaley, 2.0f), Mathf.Pow(1.0f / scalez, 2.0f));
+                float scalex = Distance(ChildMat * new Vector3(1,0,0), new Vector3(0,0,0));
+                float scaley = Distance(ChildMat * new Vector3(0,1,0), new Vector3(0,0,0));
+                float scalez = Distance(ChildMat * new Vector3(0,0,1), new Vector3(0,0,0));
+                Vector3 ScaleFactor = IsSingle ? new Vector3(1,1,1) : new Vector3(Mathf.Pow(1.0f / scalex, 2.0f), Mathf.Pow(1.0f / scaley, 2.0f), Mathf.Pow(1.0f / scalez, 2.0f));
+                int InitOff = TransformIndexes[i].IndexOffset;
+                int IndEnd = TransformIndexes[i].IndexOffsetEnd;
+                for (int i3 = TransformIndexes[i].IndexOffset; i3 < IndEnd; i3++) {
+                    int TruOff = i3 - InitOff;
+                    V1 = CurMeshData.Verticies[i3] + Ofst;
+                    V1 = TransMat * V1;
+                    CurMeshData.Verticies[i3] = V1 - Ofst2;
+
+                    Tan1 = TransMat * (Vector3)CurMeshData.Tangents[i3];
+                    Normalize(ref Tan1);
+                    CurMeshData.TangentsArray.ReinterpretStore(i3, CommonFunctions.PackOctahedral(Tan1));
+
+                    Norm1 = TransMat * Scale(ScaleFactor, CurMeshData.Normals[i3]);
+                    Normalize(ref Norm1);
+                    CurMeshData.NormalsArray.ReinterpretStore(i3, CommonFunctions.PackOctahedral(Norm1));
+                    
+                    CurMeshData.ColorsArray.ReinterpretStore(i3, CommonFunctions.packRGBE(CurMeshData.Colors[i3]));
+                    
+                    CurMeshData.UVsArray.ReinterpretStore(i3, ((uint)Mathf.FloatToHalf(CurMeshData.UVs[i3].x) << 16) | Mathf.FloatToHalf(CurMeshData.UVs[i3].y));
+                }
+
+
                 for (int i3 = TransformIndexes[i].VertexStart; i3 < IndexEnd; i3 += 3) {//Transforming child meshes into the space of their parent
                     int Index1 = CurMeshData.Indices[i3] + IndexOffset;
                     int Index2 = CurMeshData.Indices[i3 + 2] + IndexOffset;
                     int Index3 = CurMeshData.Indices[i3 + 1] + IndexOffset;
 
-                    V1 = CurMeshData.Verticies[Index1] + Ofst;
-                    V2 = CurMeshData.Verticies[Index2] + Ofst;
-                    V3 = CurMeshData.Verticies[Index3] + Ofst;
-                    V1 = TransMat * V1;
-                    V2 = TransMat * V2;
-                    V3 = TransMat * V3;
-                    V1 = V1 - Ofst2;
-                    V2 = V2 - Ofst2;
-                    V3 = V3 - Ofst2;
+                    V1 = CurMeshData.Verticies[Index1];
+                    V2 = CurMeshData.Verticies[Index2];
+                    V3 = CurMeshData.Verticies[Index3];
 
-                    Tan1 = TransMat * (Vector3)CurMeshData.Tangents[Index1];
-                    Tan2 = TransMat * (Vector3)CurMeshData.Tangents[Index2];
-                    Tan3 = TransMat * (Vector3)CurMeshData.Tangents[Index3];
-                   
-                    Norm1 = TransMat * Vector3.Scale(Scale, CurMeshData.Normals[Index1]);
-                    Norm2 = TransMat * Vector3.Scale(Scale, CurMeshData.Normals[Index2]);
-                    Norm3 = TransMat * Vector3.Scale(Scale, CurMeshData.Normals[Index3]);
-
-
-                    TempTri.tex0 = ((uint)Mathf.FloatToHalf(CurMeshData.UVs[Index1].x) << 16) | Mathf.FloatToHalf(CurMeshData.UVs[Index1].y);
-                    TempTri.texedge1 = ((uint)Mathf.FloatToHalf(CurMeshData.UVs[Index2].x) << 16) | Mathf.FloatToHalf(CurMeshData.UVs[Index2].y);
-                    TempTri.texedge2 = ((uint)Mathf.FloatToHalf(CurMeshData.UVs[Index3].x) << 16) | Mathf.FloatToHalf(CurMeshData.UVs[Index3].y);
+                    TempTri.tex0 = CurMeshData.UVsArray.ReinterpretLoad<uint>(Index1);
+                    TempTri.texedge1 = CurMeshData.UVsArray.ReinterpretLoad<uint>(Index2);
+                    TempTri.texedge2 = CurMeshData.UVsArray.ReinterpretLoad<uint>(Index3);
 
                     TempTri.pos0 = V1;
                     TempTri.posedge1 = V2 - V1;
                     TempTri.posedge2 = V3 - V1;
-                    TempTri.norm0 = CommonFunctions.PackOctahedral(Norm1.normalized);
-                    TempTri.norm1 = CommonFunctions.PackOctahedral(Norm2.normalized);
-                    TempTri.norm2 = CommonFunctions.PackOctahedral(Norm3.normalized);
 
-                    TempTri.tan0 = CommonFunctions.PackOctahedral(Tan1.normalized);
-                    TempTri.tan1 = CommonFunctions.PackOctahedral(Tan2.normalized);
-                    TempTri.tan2 = CommonFunctions.PackOctahedral(Tan3.normalized);
+                    TempTri.norm0 = CurMeshData.NormalsArray.ReinterpretLoad<uint>(Index1);
+                    TempTri.norm1 = CurMeshData.NormalsArray.ReinterpretLoad<uint>(Index2);
+                    TempTri.norm2 = CurMeshData.NormalsArray.ReinterpretLoad<uint>(Index3);
+
+                    TempTri.tan0 = CurMeshData.TangentsArray.ReinterpretLoad<uint>(Index1);
+                    TempTri.tan1 = CurMeshData.TangentsArray.ReinterpretLoad<uint>(Index2);
+                    TempTri.tan2 = CurMeshData.TangentsArray.ReinterpretLoad<uint>(Index3);
                     
-                    TempTri.VertColA = CommonFunctions.packRGBE(CurMeshData.Colors[Index1]);
-                    TempTri.VertColB = CommonFunctions.packRGBE(CurMeshData.Colors[Index2]);
-                    TempTri.VertColC = CommonFunctions.packRGBE(CurMeshData.Colors[Index3]);
+                    TempTri.VertColA = CurMeshData.ColorsArray.ReinterpretLoad<uint>(Index1);
+                    TempTri.VertColB = CurMeshData.ColorsArray.ReinterpretLoad<uint>(Index2);
+                    TempTri.VertColC = CurMeshData.ColorsArray.ReinterpretLoad<uint>(Index3);
 
                     TempTri.MatDat = (uint)CurMeshData.MatDat[OffsetReal];
                     AggTriangles[OffsetReal] = TempTri;
@@ -1341,15 +1382,15 @@ namespace TrueTrace {
                                 float e = radiance * area;
                                 if(System.Double.IsNaN(area)) continue;
                                 TotEnergy += area;
-                                LightTriNorms.Add(((Norm1.normalized + Norm2.normalized + Norm3.normalized) / 3.0f).normalized);
+                                LightTriNorms.Add(((CommonFunctions.UnpackOctahedral(TempTri.norm0) + CommonFunctions.UnpackOctahedral(TempTri.norm1) + CommonFunctions.UnpackOctahedral(TempTri.norm2)) / 3.0f).normalized);
                                 LightTriangles.Add(new LightTriData() {
                                     pos0 = TempTri.pos0,
                                     posedge1 = TempTri.posedge1,
                                     posedge2 = TempTri.posedge2,
                                     TriTarget = (uint)(OffsetReal),
-                                    SourceEnergy = Vector3.Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Vector3.Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol))
+                                    SourceEnergy = Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol))
                                     });
-                                LuminanceWeights.Add(_Materials[(int)TempTri.MatDat].emission);//Vector3.Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Vector3.Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol)));
+                                LuminanceWeights.Add(_Materials[(int)TempTri.MatDat].emission);//Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol)));
                                 IllumTriCount++;
                             }
                         }
@@ -1365,17 +1406,19 @@ namespace TrueTrace {
                     int TriLength = AggTriangles.Length;
                     NativeArray<CudaTriangle> Vector3Array = new NativeArray<CudaTriangle>(AggTriangles, Unity.Collections.Allocator.TempJob);
                     CudaTriangle* VecPointer = (CudaTriangle*)NativeArrayUnsafeUtility.GetUnsafePtr(Vector3Array);
-                    for (int i = 0; i < TriLength; i++) AggTriangles[i] = VecPointer[BVH.cwbvh_indices[i]];
+                    for (int i = 0; i < TriLength; i++) AggTriangles[BVH.cwbvh_indices[i]] = VecPointer[i];
                     Vector3Array.Dispose();
                 }
-                AggNodes = new BVHNode8DataCompressed[BVH.BVH8Nodes.Length];
-                CommonFunctions.Aggregate(ref AggNodes, ref BVH.BVH8Nodes);
+                AggNodes = new BVHNode8DataCompressed[BVH.cwbvhnode_count];
+                CommonFunctions.Aggregate(ref AggNodes, BVH);
+                BVH.BVH8NodesArray.Dispose();
             #else 
                 if(IsSkinnedGroup || IsDeformable) {
                     ConstructAABB();
                     Construct();
-                    AggNodes = new BVHNode8DataCompressed[BVH.BVH8Nodes.Length];
-                    CommonFunctions.Aggregate(ref AggNodes, ref BVH.BVH8Nodes);
+                    AggNodes = new BVHNode8DataCompressed[BVH.cwbvhnode_count];
+                    CommonFunctions.Aggregate(ref AggNodes, BVH);
+                    BVH.BVH8NodesArray.Dispose();
                 } else {
                     AggNodes = new BVHNode8DataCompressed[1];
                     if(LightTriangles.Count > 0) LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
@@ -1384,7 +1427,6 @@ namespace TrueTrace {
             MeshCountChanged = false;
             HasCompleted = true;
             NeedsToUpdate = false;
-            TrianglesArray.Dispose();
             Debug.Log(Name + " Has Completed Building with " + AggTriangles.Length + " triangles");
             FailureCount = 0;
         }
@@ -1458,8 +1500,8 @@ namespace TrueTrace {
         private void OnDisable() {
             HasStarted = false;
             FailureCount = 0;
+            ClearAll();
             if (gameObject.scene.isLoaded) {
-                ClearAll();
                 if (this.GetComponentInParent<InstancedManager>() != null) {
                     this.GetComponentInParent<InstancedManager>().RemoveQue.Add(this);
                     this.GetComponentInParent<InstancedManager>().ParentCountHasChanged = true;
@@ -1768,7 +1810,7 @@ namespace TrueTrace {
         //         int Count = LBVH.SGTree.Length;
         //         for(int i = 0; i < Count; i++) {
         //             Vector3 Pos = CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LBVH.SGTree[i].S.Center, 1));
-        //             float Radius = Vector3.Distance(Pos, CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LBVH.SGTree[i].S.Center + new Vector3(LBVH.SGTree[i].S.Radius, 0, 0), 1)));
+        //             float Radius = Distance(Pos, CommonFunctions.ToVector3(this.transform.localToWorldMatrix * CommonFunctions.ToVector4(LBVH.SGTree[i].S.Center + new Vector3(LBVH.SGTree[i].S.Radius, 0, 0), 1)));
         //             // if(LightTree[i].variance < LightTree[i].S.Radius * VarTest) Gizmos.DrawWireSphere(Pos, Radius);
         //             Gizmos.DrawWireSphere(Pos, Radius);
 

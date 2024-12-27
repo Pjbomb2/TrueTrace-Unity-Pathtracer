@@ -57,7 +57,7 @@ for bringing bindless textures to unity!
 </br>[URP Compatability script inspiration](https://github.com/Andyfanshen/CustomRayTracing/tree/RenderGraph-(URP-23.3-beta%2B))
 
 ### If you like what I do and want to support me or this project, Please consider becoming a Github Sponsor or a Patron at patreon.com/Pjbomb2!  This allows me to keep this free for everyone!
-### You can contact me easiest through my discord server(above) or my twitter(https://x.com/Pjbomb2) with bugs, ideas, or thoughts on the project!
+### You can contact me easiest through my discord server(above) or my [twitter](https://x.com/Pjbomb2) with bugs, ideas, or thoughts on the project!
 
 
 ## Adding new objects
@@ -115,8 +115,8 @@ for bringing bindless textures to unity!
 
 ## Using Instancing
 <ul>
-  <li>THIS DOES NOT WORK WITH RT CORES</li>
-  <li>Firstly, all objects that will be the source of instanced objects will need to go under the InstancedStorage and can be arranged like normal objects(with regards to the layout of parentobject to raytracingobjects)</li>
+  <li>For use with HWRT, you need unity 6000.0.31f1 or LATER, otherwise this ONLY works with SWRT</li>
+  <li>Firstly, all objects that will be the source of instanced objects will need to go under the InstancedStorage and can be arranged as single dynamic objects(ParentObject + RayTracingObject script both go on the same gameobject as the mesh)</li>
   <li>Then, to instance the objects, you just need GameObjects with the InstanceObject script attatched to them under the Scene GameObject, and then drag the desired object instance from the hierarchy to the Instance Parent slot in the InstanceObject script</li>
 </ul>
 
@@ -131,11 +131,14 @@ for bringing bindless textures to unity!
 ## Functionality Settings Contents
 <ul>
   <li>Enable RT Cores - (DX12 Only, REQUIRES UNITY 2023 OR HIGHER)Enables Hardware RT for cards that support it.</li>
-  <li>Disable Bindless Textures - (DX12 Only, Disables bindless texturing, and uses the atlas fallback(Limits resolution).</li>
+  <li>Disable Bindless Textures - DX12 Only, Disables bindless texturing, and uses the atlas fallback(Limits resolution).</li>
+  <li>Use Old Light BVH Instead of Gaussian Tree - Disables the Gaussian Tree for higher performance but worse light sampling on metallics.</li>
   <li>Use DX11 - Disables DX12 only toggles, but allows truetrace to run in DX11.</li>
   <li>Enable OIDN - (DX12 Only) Adds the OIDN denoiser to the Denoiser list in "Main Options"</li>
-  <li>Disable Radiance Cache - Not reccomended, but will free the memory usually used by the Radiance Cache</li>
+  <li>FULLY Disable Radiance Cache - Will free the memory usually used by the Radiance Cache</li>
   <li>Enable Emissive Texture Aware Light BVH - Allows for smarter/better sampling of emissive meshes by considering their emissive masks/textures; Can use lots of RAM.</li>
+  <li>Use Light BVH - Toggles the use of EITHER the Light BVH or Gaussian Tree on/off; uses the RIS count of NEE if off. Turn off for maximum speed.</li>
+  <li>Quick Radcache Toggle - Toggles the radcache on/off. Useful for comparing to ground truth pathtracing.</li>
 </ul>
 
 
@@ -155,14 +158,18 @@ TrueTrace Options Description -
   <li>Allow Image Accumulation - Allows the image to accumulate while the camera is not moving</li>
   <li>Use Next Event Estimation - Enables shadow rays/NEE for direct light sampling</li>
     <ul>
-      <li>RIS Count - Number of RIS passes done for lights(select the best light out of X number of randomly selected lights, only works if LBVH is off in "GlobalDefines.cginc")</li>
+      <li>RIS Count - Number of RIS passes done for unity and mesh lights(for mesh lights, it only works if LBVH is off in "GlobalDefines.cginc")</li>
     </ul>
   <li>Allow Mesh Skinning - Turns on the ability for skinned meshes to be animated or deformed with respect to their armeture</li>
   <li>Denoiser - Allows you to switch between different denoisers</li>
   <li>Allow Bloom - Turns on or off Bloom</li>
   <li>Sharpness Filter - Contrast Adaptive Sharpening</li>
   <li>Enable DoF - Turns on or off Depth of Field, and its associated settings</li>
-  <li>Enable Auto/Manual Exposure - Turns on or off Exposure</li>
+    <ul>
+      <li>CTRL + Middle Mouse - Autofocuses to whatever object your mouse is hovering over in the game view</li>
+      <li>CTRL + Middle Mouse Scroll - Adjusts the Aperature Size</li>
+    </ul>
+  <li>Enable Auto/Manual Exposure - Turns on or off Exposure adjustment</li>
   <li>Use ReSTIR GI - Enables ReSTIR GI which is usually much higher quality(Works with Recur and SVGF denoisers)</li>
     <ul>
       <li>Do Sample Connection Validation - Confirms that two samples are mutually visable and throws it away if they are not</li>
@@ -170,41 +177,20 @@ TrueTrace Options Description -
       <li>Enable Temporal - Enables the Temporal pass of ReSTIR GI(allows samples to travel across time</li>
       <li>Temporal M Cap - How long a sample may live for, lower means lighting updates faster(until 0 which is the opposite) but more noise(recommended either 0 or around 12, but can be played with)</li>
       <li>Enable Spatial - Enables the Spatial pass of ReSTIR GI(Allows pixels to choose to use the neighboring pixels sample instead)</li>
-      <li>Spatial Sample Count - How many neighboring pixels are looked at(turn to 0 to make it adapative to sample count)</li>
-      <li>Minimum Spatial Radius - The minimum radius the spatial pass can sample from</li>
     </ul>
   <li>Enable TAA - Enables Temporal Antialiasing</li>
+  <li>Enable FXAA - Enables FXAA</li>
   <li>Enable Tonemapping - Turns on tonemapping, and allows you to select a specific tonemapper</li>
-  <li>Enable TAAU - Use TAAU for upscaling(if off, you use my semi custom upscaler instead)</li>
-  <li>Use Partial Rendering - Traces only 1 out of X rays</li>
-  <li>Use AntiFirefly - Enables RCRS filter for getting rid of those single bright pixels</li>
+  <li>Upscaler(ONLY when "Interal Resolution Ratio" is NOT 1) - Allows selection from one of a few upscaling methods</li>
+  <li>Use Partial Rendering - Traces only 1 out of (X*X) rays, improving performance</li>
+  <li>Enable AntiFirefly - Enables RCRS filter for getting rid of those single bright pixels</li>
+    <ul>
+      <li>Frames Before Anti-Firefly - Frames accumulated before triggering Anti-Firefly</li>
+      <li>Anti-Firefly Frame Interval - Anti-Firefly will run once every X frames, this is X</li>
+    </ul>
   <li>RR Ignores Primary Hit - Allows for an extra bounce basically, makes it so that dark objects arent noisier, but at the cost of performance</li>
   <li>Atmospheric Scatter Samples - Lower this to 1 if you keep crashing on entering play mode(controls how many atmospheric samples are precomputed)</li>
   <li>Current Samples - Shows how many samples have currently been accumulated</li>
-</ul>
-
-## GlobalDefines.cginc Settings
-<ul>
-  <li>Moved most important settings to TrueTrace -> Functionality Settings</li>  
-<!--   <li>AdvancedAlphaMapping - Enables or Disables the support of cutout objects(performance penalty)</li>
-  <li>ExtraSampleValidation - Shoots an additional ray(2 instead of 1) in ReSTIR GI ray validation for sharper shadows</li>
-  <li>IgnoreGlassShadow - Shadow Rays can pass through glass</li>
-  <li>IgnoreGlassMain - Main Rays can pass through glass</li>
-  <li>FadeMapping - Enables experimental Fade material type</li>
-  <li>HardwareRT - Turn on if your in Unity 2023 or higher and want to use Hardware RT cores</li>
-  <li>PointFiltering - Switch between point and linear filtering for albedo textures</li>
-  <li>StainedGlassShadows - Shadow rays passing through glass will be tinted to the glass color</li>
-  <li>IgnoreBackFacing - Culls backfacing triangles</li>
-  <li>WhiteLights - Forces all lights to be white</li>
-  <li>LBVH - Enable/Disable the light BVH</li>
-  <li>FasterLightSampling - Uses an alternative method for calculating LBVH PDF that is a bit wrong, but much faster</li>
-  <li>AccurateEmissionTex - Turn on/off emission textures</li>
-  <li>RadianceCache - Turn on/off the Radiance Cache</li>
-  <li>IndirectRetraceWeighting - Adds indirect lighting into ReSTIR GI retracing/luminance validation</li>
-  <li>TrueBlack - Allows materials to be truely black, removes the bottom limit</li>
-  <li>AdvancedRadCacheAlt - Experimental working set for the Radiance Cache, not recomended</li>
-  <li>UseTextureLOD - (Only works with Bindless)Enables Texture LOD</li>
-  <li>DebugView - Replace that "DVNone" with any of the defines below, from "DVNone" to "DVGIView"</li> -->
 </ul>
 
 
@@ -229,24 +215,29 @@ TrueTrace Options Description -
   <li>Please report any you find to the discord or to me directly.</li>
 </ul>
 
-# Huge thanks to these people for being (monthly)sponsors/patrons:
+# Huge thanks to these people for sponsoring me:
 <ul>
   <li>Thanks to:</li>
   <ul>
     <li>Patreon:</li>
     <ul>
-      <li>Niko Kudos:   $500</li> 
-      <li>Duong Nguyen: $5</li>
+      <li>Niko:         $500</li> 
+      <li>Duong:        $5</li>
       <li>MakIt3D:      $5</li>
       <li>Yanus:        $5</li>
-      <li>Andrew Varga: $3.34</li>
-      <li>DJ Huang:     $3</li>
+      <li>Hanmen:       $5</li>
+      <li>Andrew:       $3</li>
     </ul>
     <li>Github Sponsors:</li>
     <ul>
+      <li>Jhin:         $5</li>
+      <li>Kevin:        $5</li>
       <li>Omid:         $2</li>
     </ul>
     <li>Kofi:</li>
+    <ul>
+      <li>JiRo:         $20</li>
+    </ul>
   </ul>
 </ul>
 

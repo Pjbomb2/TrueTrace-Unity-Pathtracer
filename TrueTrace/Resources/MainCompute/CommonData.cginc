@@ -56,6 +56,8 @@ float focal_distance;
 float AperatureRadius;
 float3 MousePos;
 bool IsFocusing;
+float2 Segment;
+bool DoPanorama;
 
 RWStructuredBuffer<uint3> BufferData;
 
@@ -662,10 +664,19 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const fl
             [branch] if (t > 0.0f && t < max_distance) {
 	            #if defined(AdvancedAlphaMapped) || defined(AdvancedBackground) || defined(IgnoreGlassShadow)
 					if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster)) return false; 
-	        		if(_Materials[MaterialIndex].MatType == CutoutIndex || _Materials[MaterialIndex].specTrans == 1) {
+	        		if(_Materials[MaterialIndex].MatType == CutoutIndex || _Materials[MaterialIndex].specTrans == 1 || _Materials[MaterialIndex].MatType == FadeIndex) {
 		                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
+	        
 	                    if(_Materials[MaterialIndex].MatType == CutoutIndex && _Materials[MaterialIndex].AlphaTex.x > 0)
 	                        if( SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) return false;
+
+		                #ifdef FadeMapping
+		                    if(_Materials[MaterialIndex].MatType == FadeIndex) {
+		                        if(_Materials[MaterialIndex].AlphaTex.x > 0)
+		                            if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x - _Materials[MaterialIndex].AlphaCutoff <= 0.9f) return false;
+		                    }
+		                #endif
+
 
 			            #ifdef IgnoreGlassShadow
 			                if(_Materials[MaterialIndex].specTrans == 1) {
@@ -1722,7 +1733,7 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 				node_index = NodeOffset;
 				HasHitTLAS = true;
 				if(MeshIndex != _LightMeshes[-(node.left+1)].LockedMeshIndex) {
-					lightPDF = 0;
+					// lightPDF = 1;
 					return;
 				}
 			}
@@ -1754,7 +1765,7 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 	float3 viewDirTS = mul(tangentFrame, viewDir);//their origional one constructs the tangent frame from N,T,BT, whereas mine constructs it from T,N,BT; problem? I converted all .y to .z and vice versa, but... 
 	float3 reflecVec = reflect(-viewDir, n) * reflecSharpness;
 	float RandNum = random(264 + Reps, pixel_index).x;
-	while(Reps < 222) {
+	while(Reps < 622) {
 		Reps++;
 #ifdef UseSGTree
 		GaussianTreeNode node = NodeBuffer[node_index];
@@ -2132,6 +2143,20 @@ float3 FromColorSpecPacked(uint A) {
 		);
 }
 
+inline void CalcPosNorm(uint4 TriData, inout float3 Pos, inout float3 Norm) {
+	if(TriData.w == 99993) {
+		Pos = asfloat(TriData.xyz);
+		Norm = -normalize(asfloat(TriData.xyz));
+	} else {
+	    MyMeshDataCompacted Mesh = _MeshData[TriData.x];
+	    float4x4 Inverse = inverse(Mesh.W2L);
+	    TriData.y += Mesh.TriOffset;
+    	Norm = GetTriangleNormal(TriData.y, asfloat(TriData.zw), Inverse);
+		Pos = mul(Inverse, float4(AggTris[TriData.y].pos0 + asfloat(TriData.z) * AggTris[TriData.y].posedge1 + asfloat(TriData.w) * AggTris[TriData.y].posedge2,1)).xyz;		
+	}
+
+}
+
 inline float3 CalcPos(uint4 TriData) {
 	if(TriData.w == 99993) return asfloat(TriData.xyz);
     MyMeshDataCompacted Mesh = _MeshData[TriData.x];
@@ -2404,7 +2429,7 @@ float3 SampleDirectionSphere(float u1, float u2)
 
 #define BucketCount 4
 #define PropDepth 5
-#define CacheCapacity (4 * 1024 * 1024)
+#define CacheCapacity (BucketCount * 1024 * 1024)
 
 RWStructuredBuffer<uint> HashEntriesBufferA;
 StructuredBuffer<uint> HashEntriesBufferB;
@@ -2433,6 +2458,7 @@ inline uint Hash32Bit(uint a) {
 
 //double hash counting? take advantage of the hash collisions to store multiple values per hash?
 inline uint GenHash(float3 Pos, float3 Norm) {
+	Pos = abs(Pos) < 0.00001f ? 0.00001f : Pos;
     int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);//length() seems to work better, but I reallly wanna find a way to make Dot() work, as thats wayyyy faster
 
     Pos = floor(Pos * 200.0f / pow(2, Layer));
@@ -2450,12 +2476,31 @@ inline uint GenHash(float3 Pos, float3 Norm) {
     return ThisHash;
 }
 
-float GetVoxSize(float3 Pos) {
-    int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);
+inline uint GenHashPrecompedLayer(float3 Pos, const int Layer, const float3 Norm) {
+	Pos = abs(Pos) < 0.00001f ? 0.00001f : Pos;
+
+    Pos = floor(Pos * 200.0f / pow(2, Layer));
+    uint3 Pos2 = asuint((int3)Pos);
+    uint ThisHash = ((Pos2.x & 255) << 0) | ((Pos2.y & 255) << 8) | ((Pos2.z & 255) << 16);
+    ThisHash |= (Layer & 31) << 24;
+
+    uint NormHash =
+        (Norm.x >= 0 ? 1 : 0) +
+        (Norm.y >= 0 ? 2 : 0) +
+        (Norm.z >= 0 ? 4 : 0);
+
+    ThisHash |= (NormHash) << 29;
+    return ThisHash;
+}
+
+inline float GetVoxSize(float3 Pos, inout int Layer) {
+	Pos = abs(Pos) < 0.00001f ? 0.00001f : Pos;
+    Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);
     return pow(2, Layer) / 200.0f;
 }
 
-uint GenHashComputedNorm(float3 Pos, uint NormHash) {
+inline uint GenHashComputedNorm(float3 Pos, uint NormHash) {
+	Pos = abs(Pos) < 0.00001f ? 0.00001f : Pos;
     int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);//length() seems to work better, but I reallly wanna find a way to make Dot() work, as thats wayyyy faster
 
     Pos = floor(Pos * 200.0f / pow(2, Layer));
@@ -2489,7 +2534,7 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 	    uint FrameNum;
 	};
 
-	GridVoxel RetrieveCacheData(uint CacheEntry2) {
+	inline GridVoxel RetrieveCacheData(uint CacheEntry2) {
 		uint CacheEntry = CacheEntry2;
 		[branch]if(!FindHashEntry(CacheEntry2, CacheEntry)) return (GridVoxel)0;
 	    else {
@@ -2504,7 +2549,7 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 		}
 	}
 
-	void AddVoxelData(uint CacheEntry, uint4 Values) {
+	inline void AddVoxelData(uint CacheEntry, uint4 Values) {
 	    CacheEntry *= 16;
 	    // Values[3] |= Values[3] << 16;
 	    [unroll]for(int i = 0; i < 4; i++)
@@ -2527,11 +2572,11 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 	}
 
 
-	inline bool AddHitToCacheFull(inout PropogatedCacheData CurrentProp, float3 Pos) {//Run every frame in shading due to 
+	inline bool AddHitToCacheFull(inout PropogatedCacheData CurrentProp, inout uint PathLength, const float3 Pos, const float3 bsdf) {//Run every frame in shading due to 
 		float3 RunningIlluminance = unpackRGBE(CurrentProp.RunningIlluminance);
-		uint CurHash = FindOpenEntryInHash(GenHashComputedNorm(Pos, (CurrentProp.pathLength >> 3) & 7));
+		uint CurHash = FindOpenEntryInHash(GenHashComputedNorm(Pos, (PathLength >> 3) & 7));
 		if(CurHash == 0) return false;
-		uint ActualPropDepth = min(CurrentProp.pathLength & 7, PropDepth);
+		uint ActualPropDepth = min(PathLength & 7, PropDepth);
 		AddVoxelData(CurHash, uint4(RunningIlluminance * 1e3f, 1));
 		for(int i = 0; i < ActualPropDepth; i++) {
 			RunningIlluminance *= unpackRGBE(CurrentProp.samples[i].x);
@@ -2544,6 +2589,7 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
         if(ActualPropDepth >= 1) CurrentProp.samples[1] = CurrentProp.samples[0];
         CurrentProp.samples[0].y = CurHash;
         CurrentProp.RunningIlluminance = 0;
+        CurrentProp.samples[0].x = packRGBE(bsdf);
         return true;
 	}
 
@@ -2554,22 +2600,23 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 		if(CurHash == 0) return false;
 		uint ActualPropDepth = min(CurrentProp.pathLength & 7, PropDepth);
 		AddVoxelData(CurHash, uint4(RunningIlluminance * 1e3f, 1));
+        for(int i = 0; i < ActualPropDepth; i++) {
+			RunningIlluminance *= unpackRGBE(CurrentProp.samples[i].x);
+			AddVoxelData(CurrentProp.samples[i].y, uint4(RunningIlluminance * 1e3f, 0));
+		}
         CurrentProp.RunningIlluminance = 0;
         return true;
 	}
 
 
 
+bool plane_distance_disocclusion_check(float3 current_pos, float3 history_pos, float3 current_normal)
+{
+    float3  to_current    = current_pos - history_pos;
+    float dist_to_plane = abs(dot(to_current, current_normal));
 
-	inline void AddBSDFToCacheWithHit(inout PropogatedCacheData CurrentProp, float3 bsdf) {//Valid bounce case, add to shading AFTER AddHitToCache has been run.
-        CurrentProp.samples[0].x = packRGBE(bsdf);
-        CurrentProp.pathLength = (CurrentProp.pathLength & (~7)) | min((CurrentProp.pathLength & 7) + 1, PropDepth);
-	}
-	inline void AddSimpleNormFlagsToCache(inout PropogatedCacheData CurrentProp, float3 Norm) {
-    	Norm  = i_octahedral_32(octahedral_32(Norm));
-        CurrentProp.pathLength = (CurrentProp.pathLength & (~56)) | ((((Norm.x >= 0 ? 1 : 0) + (Norm.y >= 0 ? 2 : 0) + (Norm.z >= 0 ? 4 : 0)) & 7) << 3);
-	
-	}
+    return dist_to_plane > 0.01f;
+}
 
 
 

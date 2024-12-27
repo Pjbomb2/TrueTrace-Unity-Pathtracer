@@ -6,12 +6,8 @@
 
 #ifdef HDRP
 Texture2DArray<float2> MotionVectors;
-Texture2DArray<float3> NormalTex;
-Texture2DArray<float> Depth;
 #else
 Texture2D<float2> MotionVectors;
-Texture2D<float3> NormalTex;
-Texture2D<float> Depth;
 #endif
 
 
@@ -60,8 +56,6 @@ void GIReTraceKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadI
     GlobalRays[pixel_index] = globray;
 }
 
-bool DoPanorama;
-float2 Segment;
 #pragma kernel GeneratePanorama
 [numthreads(16, 16, 1)]
 void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
@@ -77,7 +71,6 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
         uv.x = 1.0f - uv.x;
 
         ray = CreateRay(mul(CamToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz + NearPlane * normalize(equirectUvToDirection(uv)), normalize(equirectUvToDirection(uv)));
-        _DebugTex[id.xy] = float4(uv, 0, 1);
     } else {
         uv.x = ((uv.x * (Segment.y - Segment.x)) + Segment.x);
         uv = (uv * 2.0f) - 1.0f;
@@ -88,7 +81,6 @@ void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
     RayData globray = {ray.origin, pixel_index, ray.direction, 0, 0,0,asuint(FarPlane),0};
     GlobalRays[pixel_index] = globray;
 }
-
 
 #pragma kernel CacheResolve
 [numthreads(256, 1, 1)]
@@ -106,25 +98,62 @@ void CacheResolve(uint3 id : SV_DispatchThreadID) {//we dont need to compress th
     uint ResultantHash = 0;
     uint4 ResultantVox = 0;
     if(Valid) {
-        ResultantVox = VoxelDataBufferB.Load4(id.x * 16);
-        uint SampleCount = ResultantVox.w & 0x0000FFFF;
-        uint FrameCount = (ResultantVox.w >> 16) & 0x0000FFFF;
-        FrameCount++;
-        if(SampleCount > 500) {
-            float Ratio = 500.0f / (float)SampleCount;
-            SampleCount = floor(Ratio * (float)SampleCount);
-            ResultantVox.xyz = ResultantVox.xyz * Ratio;
+        int idd = 0;
+        if(FindHashEntry(HashB, idd)) {
+            ResultantHash = HashB;
+            ResultantVox = VoxelDataBufferB.Load4(idd * 16);
+            uint SampleCount = ResultantVox.w & 0x0000FFFF;
+            uint FrameCount = (ResultantVox.w >> 16) & 0x0000FFFF;
+            FrameCount++;
+            if(SampleCount > 500) {
+                float Ratio = 500.0f / (float)SampleCount;
+                SampleCount = floor(Ratio * (float)SampleCount);
+                ResultantVox.xyz = ResultantVox.xyz * Ratio;
+            }
+            if(FrameCount > 90) {
+                FrameCount = 0;
+                SampleCount = 0;
+                ResultantVox = 0;
+                ResultantHash = 0;
+            }
+            ResultantVox.w = (SampleCount | (FrameCount << 16));
         }
-        if(FrameCount > 200) {
-            FrameCount = 0;
-            SampleCount = 0;
-            ResultantVox = 0;
-            ResultantHash = 0;
-        }
-        ResultantVox.w = (SampleCount | (FrameCount << 16));
     }
 
     HashEntriesBufferA[id.x] = ResultantHash;
     VoxelDataBufferA.Store4(id.x * 16, ResultantVox);
+#endif
+}
+
+
+#pragma kernel CacheCompact
+groupshared uint Hashes[64][BucketCount];
+
+[numthreads(64, BucketCount, 1)]
+void CacheCompact(uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID) {//we dont need to compress the hashes right? since we are only using 4, as long as we set ... no because we DO check for 0th
+#ifdef RadCache
+    Hashes[GT.x][GT.y] = HashEntriesBufferA[id.x * BucketCount + GT.y];
+    GroupMemoryBarrierWithGroupSync();
+    if(GT.y == 0) {
+        bool FoundZero = false;
+        bool FoundInconsistancy = false;
+        uint LocalBucket[BucketCount];
+        for(int i = 0; i < BucketCount; i++) LocalBucket[i] = 0;
+        uint CurCount = 0;
+        for(int i = 0; i < BucketCount; i++) {
+            if(Hashes[GT.x][i] == 0) FoundZero = true;
+            else {
+                LocalBucket[CurCount++] = Hashes[GT.x][i];
+                if(FoundZero) FoundInconsistancy = true;
+            }
+        }
+        if(FoundInconsistancy) {
+            for(int i = 0; i < BucketCount; i++) {
+                Hashes[GT.x][i] = LocalBucket[i];
+            }
+        }
+    }
+    GroupMemoryBarrierWithGroupSync();
+    HashEntriesBufferA[id.x * BucketCount + GT.y] = Hashes[GT.x][GT.y];
 #endif
 }

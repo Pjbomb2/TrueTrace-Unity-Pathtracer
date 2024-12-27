@@ -17,45 +17,45 @@ MonoBehaviour:
   bouncecount: 12
   ClayMode: 0
   UseRussianRoulette: 1
-  UseNEE: 0
+  UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 0
+  Accumulate: 1
   PPBloom: 0
   BloomStrength: 0.372
   PPDoF: 0
-  DoFAperature: 0.15010014
+  DoFAperature: 0.09010013
   DoFAperatureScale: 1
-  DoFFocal: 3.820374
+  DoFFocal: 2.6470158
   PPExposure: 0
-  ExposureAuto: 0
-  PPToneMap: 0
+  ExposureAuto: 1
+  PPToneMap: 1
   PPTAA: 0
   RenderScale: 1
   DenoiserMethod: 0
   UpscalerMethod: 0
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
-  UseReSTIRGI: 0
+  UseReSTIRGI: 1
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
-  ReSTIRGITemporalMCap: 12
+  ReSTIRGITemporalMCap: 60
   ReSTIRGIUpdateRate: 0
   DoReSTIRGIConnectionValidation: 1
-  Exposure: 8.8
+  Exposure: 0.01
   DoPartialRendering: 0
   PartialRenderingFactor: 2
-  DoFirefly: 0
+  DoFirefly: 1
   ImprovedPrimaryHit: 1
   RISCount: 12
   ToneMapper: 0
   SkyDesaturate: 0
-  ClayColor: {x: 0.38679248, y: 0.38679248, z: 0.38679248}
-  GroundColor: {x: 0.11320752, y: 0.11320752, z: 0.11320752}
+  ClayColor: {x: 1, y: 1, z: 1}
+  GroundColor: {x: 0.0754717, y: 0.0754717, z: 0.0754717}
   FireflyFrameCount: 24
   FireflyFrameInterval: 1
   FireflyStrength: 0.18
   FireflyOffset: 0
-  OIDNFrameCount: 122
+  OIDNFrameCount: 0
   DoSharpen: 0
   Sharpness: 1
   MainDesiredRes: 16384
@@ -84,6 +84,6 @@ MonoBehaviour:
   PrimaryBackgroundTintColor: {x: 0.32200065, y: 0.764151, z: 0.6593174}
   PrimaryBackgroundTint: 0
   PrimaryBackgroundContrast: 1
-  FogDensity: 0.008
-  FogColor: {x: 0.8396226, y: 0.8396226, z: 0.8396226}
+  FogDensity: 0.001
+  FogColor: {x: 1, y: 1, z: 1}
   MaxSampCount: 99999999
