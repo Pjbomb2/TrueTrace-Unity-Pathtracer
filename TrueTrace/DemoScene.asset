@@ -21,39 +21,39 @@ MonoBehaviour:
   DoTLASUpdates: 1
   Accumulate: 1
   PPBloom: 0
-  BloomStrength: 0.372
+  BloomStrength: 0.5
   PPDoF: 0
-  DoFAperature: 0.09010013
+  DoFAperature: 0.2
   DoFAperatureScale: 1
-  DoFFocal: 2.6470158
+  DoFFocal: 0.2
   PPExposure: 0
-  ExposureAuto: 1
+  ExposureAuto: 0
   PPToneMap: 1
   PPTAA: 0
   RenderScale: 1
   DenoiserMethod: 0
-  UpscalerMethod: 0
+  UpscalerMethod: 2
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
   UseReSTIRGI: 0
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
-  ReSTIRGITemporalMCap: 12
-  ReSTIRGIUpdateRate: 0
-  DoReSTIRGIConnectionValidation: 0
-  Exposure: 0.01
+  ReSTIRGITemporalMCap: 20
+  ReSTIRGIUpdateRate: 7
+  DoReSTIRGIConnectionValidation: 1
+  Exposure: 1
   DoPartialRendering: 0
-  PartialRenderingFactor: 2
+  PartialRenderingFactor: 1
   DoFirefly: 0
   ImprovedPrimaryHit: 1
   RISCount: 12
   ToneMapper: 0
   SkyDesaturate: 0
-  ClayColor: {x: 1, y: 1, z: 1}
-  GroundColor: {x: 0.0754717, y: 0.0754717, z: 0.0754717}
-  FireflyFrameCount: 24
+  ClayColor: {x: 0.5, y: 0.5, z: 0.5}
+  GroundColor: {x: 0.1, y: 0.1, z: 0.1}
+  FireflyFrameCount: 0
   FireflyFrameInterval: 1
-  FireflyStrength: 0.18
+  FireflyStrength: 1
   FireflyOffset: 0
   OIDNFrameCount: 0
   DoSharpen: 0
@@ -63,27 +63,27 @@ MonoBehaviour:
   LightEnergyScale: 1
   BackgroundType: 0
   BackgroundIntensity: {x: 1, y: 1}
-  SceneBackgroundColor: {x: 0, y: 0, z: 0}
+  SceneBackgroundColor: {x: 1, y: 1, z: 1}
   SecondaryBackgroundType: 0
-  SecondarySceneBackgroundColor: {x: 0, y: 0, z: 0}
+  SecondarySceneBackgroundColor: {x: 1, y: 1, z: 1}
   HDRILongLat: {x: 0, y: 0}
   HDRIScale: {x: 1, y: 1}
   LEMEnergyScale: 1
   UseTransmittanceInNEE: 1
   SecondarySkyDesaturate: 0
-  MatChangeResetsAccum: 1
+  MatChangeResetsAccum: 0
   PPFXAA: 0
-  OIDNBlendRatio: 0.59
-  ConvBloom: 1
-  ConvStrength: 0.13
-  ConvBloomThreshold: 0
+  OIDNBlendRatio: 1
+  ConvBloom: 0
+  ConvStrength: 1.37
+  ConvBloomThreshold: 13.23
   ConvBloomSize: {x: 1, y: 1}
   ConvBloomDistExp: 0
   ConvBloomDistExpClampMin: 1
   ConvBloomDistExpScale: 1
-  PrimaryBackgroundTintColor: {x: 0.32200065, y: 0.764151, z: 0.6593174}
+  PrimaryBackgroundTintColor: {x: 1, y: 1, z: 1}
   PrimaryBackgroundTint: 0
   PrimaryBackgroundContrast: 1
-  FogDensity: 0.001
-  FogColor: {x: 1, y: 1, z: 1}
+  FogDensity: 0.0002
+  FogColor: {x: 0.6, y: 0.6, z: 0.6}
   MaxSampCount: 99999999

@@ -602,7 +602,7 @@ Toolbar toolbar;
          OnFocus(); 
          if(Camera.main != null && Camera.main.gameObject.GetComponent<FlyCamera>() == null) Camera.main.gameObject.AddComponent<FlyCamera>();
 
-         rootVisualElement.Remove(RearrangeElement);
+         MainSource.Remove(RearrangeElement);
          CreateGUI(); 
          rootVisualElement.Add(MainSource); 
          Assets.UpdateMaterialDefinition();
@@ -1672,6 +1672,13 @@ Toolbar toolbar;
 
             Toggle NonAccurateLightTriToggle = new Toggle() {value = (definesList.Contains("AccurateLightTris")), text = "Enable Emissive Texture Aware Light BVH"};
             NonAccurateLightTriToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("AccurateLightTris"); else RemoveDefine("AccurateLightTris");});
+
+            Toggle LoadTTSettingsFromResourcesToggle = new Toggle() {value = (definesList.Contains("LoadTTSettingsFromResources")), text = "Load TTSettings from Global File"};
+            LoadTTSettingsFromResourcesToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("LoadTTSettingsFromResources"); else RemoveDefine("LoadTTSettingsFromResources");});
+
+            Toggle VerboseToggle = new Toggle() {value = (definesList.Contains("TTVerbose")), text = "Enable Verbose Logging"};
+            VerboseToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("TTVerbose"); else RemoveDefine("TTVerbose");});
+
             VisualElement ClayColorBox = new VisualElement();
 
 
@@ -1704,6 +1711,8 @@ Toolbar toolbar;
                OIDNToggle.SetEnabled(false);
                RadCacheToggle.SetEnabled(false);
                NonAccurateLightTriToggle.SetEnabled(false);
+               LoadTTSettingsFromResourcesToggle.SetEnabled(false);
+               VerboseToggle.SetEnabled(false);
             } else {
                HardwareRTToggle.SetEnabled(true);
                BindlessToggle.SetEnabled(true);
@@ -1711,6 +1720,8 @@ Toolbar toolbar;
                OIDNToggle.SetEnabled(true);
                RadCacheToggle.SetEnabled(true);
                NonAccurateLightTriToggle.SetEnabled(true);
+               LoadTTSettingsFromResourcesToggle.SetEnabled(true);
+               VerboseToggle.SetEnabled(true);
             }
 
 
@@ -1758,6 +1769,8 @@ Toolbar toolbar;
          NonPlayContainer.Add(OIDNToggle);
          NonPlayContainer.Add(RadCacheToggle);
          NonPlayContainer.Add(NonAccurateLightTriToggle);
+         NonPlayContainer.Add(LoadTTSettingsFromResourcesToggle);
+         NonPlayContainer.Add(VerboseToggle);
          NonPlayContainer.Add(new Label("-------------"));
 
          Label PlayLabel = new Label("-- THESE CAN BE MODIFIED ON THE FLY/DURING PLAY --");
@@ -1976,27 +1989,31 @@ Toolbar toolbar;
          }
 
          void SaveScene(Scene Current, string ThrowawayString) {
-            EditorUtility.SetDirty(Assets);
-            Assets.ClearAll();
+            if(Assets != null) {
+               EditorUtility.SetDirty(Assets);
+               Assets.ClearAll();
+            }
             InstancedManager Instanced = GameObject.Find("InstancedStorage").GetComponent<InstancedManager>();
-            EditorUtility.SetDirty(Instanced);
-            Instanced.ClearAll();
+            if(Instanced != null) {
+               EditorUtility.SetDirty(Instanced);
+               Instanced.ClearAll();
+            }
             Cleared = true;
          }
 
-         [Shortcut("TrueTrace/ScreenShot", KeyCode.None, ShortcutModifiers.Action)]
-         private static void TakeScreenShotHotkey() {
-            if(Application.isPlaying) {
-               TakeScreenshot();
-            }
-         }
+         // [Shortcut("TrueTrace/ScreenShot", KeyCode.None, ShortcutModifiers.Action)]
+         // private static void TakeScreenShotHotkey() {
+         //    if(Application.isPlaying) {
+         //       TakeScreenshot();
+         //    }
+         // }
 
-         [Shortcut("TrueTrace/RebuildBVH", KeyCode.None, ShortcutModifiers.Action)]
-         private static void RebuildBVHHotkey() {
-            EditorUtility.SetDirty(GameObject.Find("Scene").GetComponent<AssetManager>());
-            BuildWatch.Start();
-            GameObject.Find("Scene").GetComponent<AssetManager>().EditorBuild();
-         }
+         // [Shortcut("TrueTrace/RebuildBVH", KeyCode.None, ShortcutModifiers.Action)]
+         // private static void RebuildBVHHotkey() {
+         //    EditorUtility.SetDirty(GameObject.Find("Scene").GetComponent<AssetManager>());
+         //    BuildWatch.Start();
+         //    GameObject.Find("Scene").GetComponent<AssetManager>().EditorBuild();
+         // }
 
          public static void TakeScreenshot() {
            string SegmentNumber = "";
@@ -2069,13 +2086,31 @@ Slider AperatureSlider;
             MaterialPairingMenu.Add(InputMaterialField);
             toolbar = new Toolbar();
             rootVisualElement.Add(toolbar);
+            Button MainSourceButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();});
+            Button MaterialPairButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); InputMaterialField.value = null; MaterialPairingMenu.Add(InputMaterialField); rootVisualElement.Add(MaterialPairingMenu);});
+            Button SceneSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(SceneSettingsMenu);});
+            Button HardSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); HardSettingsMenu.Clear(); AddHardSettingsToMenu(); rootVisualElement.Add(HardSettingsMenu);});
+            Button HierarchyOptionsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(HierarchyOptionsMenu);});
+            MainSourceButton.text = "Main Options";
+            MaterialPairButton.text = "Material Pair Options";
+            SceneSettingsButton.text = "Scene Settings";
+            HardSettingsButton.text = "Functionality Settings";
+            HierarchyOptionsButton.text = "Hierarchy Options";
             if(Assets == null) {
+               toolbar.Add(MainSourceButton);
+               toolbar.Add(HardSettingsButton);
                RearrangeElement = new VisualElement();
                Button RearrangeButton = new Button(() => {UnityEditor.PopupWindow.Show(new Rect(0,0,10,10), new PopupWarningWindow());}) {text="Arrange Hierarchy"};
                RearrangeElement.Add(RearrangeButton);
-               rootVisualElement.Add(RearrangeElement);
+               MainSource.Add(RearrangeElement);
+               rootVisualElement.Add(MainSource);
                return;
             } else {
+               toolbar.Add(MainSourceButton);
+               toolbar.Add(MaterialPairButton);
+               toolbar.Add(SceneSettingsButton);
+               toolbar.Add(HardSettingsButton);
+               toolbar.Add(HierarchyOptionsButton);
                {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();}
                Assets.UpdateMaterialDefinition();
 
@@ -2101,21 +2136,6 @@ Slider AperatureSlider;
                   }
                #endif
             }
-            Button MainSourceButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();});
-            Button MaterialPairButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); InputMaterialField.value = null; MaterialPairingMenu.Add(InputMaterialField); rootVisualElement.Add(MaterialPairingMenu);});
-            Button SceneSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(SceneSettingsMenu);});
-            Button HardSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); HardSettingsMenu.Clear(); AddHardSettingsToMenu(); rootVisualElement.Add(HardSettingsMenu);});
-            Button HierarchyOptionsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(HierarchyOptionsMenu);});
-            toolbar.Add(MainSourceButton);
-            toolbar.Add(MaterialPairButton);
-            toolbar.Add(SceneSettingsButton);
-            toolbar.Add(HardSettingsButton);
-            toolbar.Add(HierarchyOptionsButton);
-            MainSourceButton.text = "Main Options";
-            MaterialPairButton.text = "Material Pair Options";
-            SceneSettingsButton.text = "Scene Settings";
-            HardSettingsButton.text = "Functionality Settings";
-            HierarchyOptionsButton.text = "Hierarchy Options";
 
             if(RayMaster != null && Assets != null) {
             AddNormalSettings();
@@ -2682,6 +2702,7 @@ Slider AperatureSlider;
         int AFrame = -1;
         int FramesSinceDOF = 0;
         void Update() {
+#if !ENABLE_INPUT_SYSTEM
             if(AFrame != -1) {
                RayTracingObjectEditor[] editors = (RayTracingObjectEditor[])Resources.FindObjectsOfTypeAll(typeof(RayTracingObjectEditor));
                if (editors.Length > 0) {
@@ -2722,6 +2743,7 @@ Slider AperatureSlider;
                   FramesSinceDOF = 3;
                }
             }
+#endif
             if(!Application.isPlaying) {
                if(RayTracingMaster.DoCheck && DoSaving) {
                   try{

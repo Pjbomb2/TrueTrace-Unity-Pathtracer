@@ -88,13 +88,18 @@
         <ReadIndex>3</ReadIndex>
         <TextureName>_MetallicGlossMap</TextureName>
       </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
     </AvailableTextures>
     <MetallicRange>_Metallic</MetallicRange>
-    <RoughnessRange>_GlossMapScale</RoughnessRange>
+    <RoughnessRange>_Glossiness</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
-    <UsesSmoothness>false</UsesSmoothness>
-    <BaseColorValue>null</BaseColorValue>
+    <UsesSmoothness>true</UsesSmoothness>
+    <BaseColorValue>_Color</BaseColorValue>
     <MetallicRemapMin>null</MetallicRemapMin>
     <MetallicRemapMax>null</MetallicRemapMax>
     <RoughnessRemapMin>null</RoughnessRemapMin>
@@ -8019,6 +8024,116 @@
     <IsCutout>true</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Bakery/Standard Noise</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_BumpMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>4</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_MetallicGlossMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>5</Purpose>
+        <ReadIndex>1</ReadIndex>
+        <TextureName>_MetallicGlossMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>_Metallic</MetallicRange>
+    <RoughnessRange>_Glossiness</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>true</UsesSmoothness>
+    <BaseColorValue>_Color</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Custom/waterBlocker</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Bakery/Standard Dissolve</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_BumpMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>3</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_EmissionMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>4</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_MetallicGlossMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>5</Purpose>
+        <ReadIndex>1</ReadIndex>
+        <TextureName>_MetallicGlossMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>_Metallic</MetallicRange>
+    <RoughnessRange>_Glossiness</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>true</UsesSmoothness>
+    <BaseColorValue>_Color</BaseColorValue>
     <MetallicRemapMin>null</MetallicRemapMin>
     <MetallicRemapMax>null</MetallicRemapMax>
     <RoughnessRemapMin>null</RoughnessRemapMin>

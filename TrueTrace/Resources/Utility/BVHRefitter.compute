@@ -467,7 +467,8 @@ inline float SGIntegral(const float sharpness)
 
 
 inline GaussianTreeNode UnionSG(const GaussianTreeNode LeftNode, const GaussianTreeNode RightNode, int Left) {
-    
+   	if(LeftNode.intensity == 0) return RightNode;
+   	if(RightNode.intensity == 0) return LeftNode;    
     float phi_left = LeftNode.intensity;    
     float phi_right = RightNode.intensity;    
     float w_left = phi_left / (phi_left + phi_right);
@@ -527,7 +528,7 @@ void TLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
         float Scale = length(center - ExtendedCenter) / SGTreeWrite[Transf.SolidOffset].radius;
 
         SGTreeWrite[Index].position = center;
-        SGTreeWrite[Index].axis = axis;
+        SGTreeWrite[Index].axis = axis / Scale;
         SGTreeWrite[Index].variance = SGTreeWrite[Transf.SolidOffset].variance * Scale;
         SGTreeWrite[Index].sharpness = SGTreeWrite[Transf.SolidOffset].sharpness;
         
@@ -615,7 +616,7 @@ void BLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
 
         float area = AreaOfTriangle(LightTri.pos0, LightTri.pos0 + LightTri.posedge1, LightTri.pos0 + LightTri.posedge2);
 
-        if(area == 0) area = 0.000000001f;
+        // if(area == 0) area = 0.000000001f;
         float intensity = LightTri.SourceEnergy * area;
         float3 V = 0.5f * normalize(cross(normalize(LightTri.posedge1), normalize(LightTri.posedge2)));
         float variance = (dot(LightTri.posedge1, LightTri.posedge1) + dot(LightTri.posedge2, LightTri.posedge2) - dot(LightTri.posedge1, LightTri.posedge2)) / 18.0f;

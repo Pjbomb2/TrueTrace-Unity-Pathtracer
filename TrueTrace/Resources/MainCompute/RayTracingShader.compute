@@ -868,6 +868,9 @@ int MaterialIndex;
         #endif
     #endif
 
+#ifdef FakedAO
+    if(CurBounce != 0 && bestHit.t < 1.0f) Color.throughput *= exp(-(1.0f - bestHit.t) * 12000.0f);
+#endif
 
     if (TempMat.specTrans != 1 && TempMat.MetallicTex.x > 0) TempMat.metallic = pow(SampleTexture(BaseUv, SampleMetallic, TempMat), rcp(2.2f));
     if (TempMat.RoughnessTex.x > 0) {

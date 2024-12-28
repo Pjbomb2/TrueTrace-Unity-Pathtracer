@@ -10,8 +10,10 @@ using System.Xml.Serialization;
 namespace TrueTrace {
     public class RayTracingMaster : MonoBehaviour
     {
+        public static RayTracingMaster RayMaster;
         [HideInInspector] public static Camera _camera;
         public static bool DoKernelProfiling = true;
+        [HideInInspector] [SerializeField] public string LocalTTSettingsName = "TTGlobalSettings";
         private bool OverriddenResolutionIsActive = false;
         public bool HDRPorURPRenderInScene = false;
         [HideInInspector] public AtmosphereGenerator Atmo;
@@ -177,7 +179,10 @@ namespace TrueTrace {
 
         [HideInInspector] public bool DoPanorama = false;
         [HideInInspector] public bool DoChainedImages = false;
-        [HideInInspector] [SerializeField] public TTSettings LocalTTSettings;
+        #if !LoadTTSettingsFromResources
+            [HideInInspector] 
+        #endif
+        [SerializeField] public TTSettings LocalTTSettings;
 
         public static bool SceneIsRunning = false;
 
@@ -260,6 +265,7 @@ namespace TrueTrace {
         }
         unsafe public void Start2()
         {
+            RayMaster = this;
             CurrentHorizonalPatch = new Vector2(0,1);
             LoadTT();
             // LoadInitialSettings();//Build only
@@ -311,9 +317,11 @@ namespace TrueTrace {
             TTPostProc.Initialized = false;
         }
         public void Awake() {
+            RayMaster = this;
             LoadTT();
         }
         public void Start() {
+            RayMaster = this;
             SceneManager.sceneUnloaded += OnSceneUnloaded;
             DoPanorama = false;
             DoChainedImages = false;
@@ -324,7 +332,7 @@ namespace TrueTrace {
             LoadTT();
         }
         public void LoadTT() {
-            if(TTCPUDefines.fallbackTTSettingsName.Equals("null")) {
+            #if !LoadTTSettingsFromResources
                 if(LocalTTSettings == null || !LocalTTSettings.name.Equals(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)) {
                     #if UNITY_EDITOR
                         UnityEngine.SceneManagement.Scene CurrentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
@@ -347,11 +355,28 @@ namespace TrueTrace {
                 if(LocalTTSettings != null) {
                     LoadInitialSettings();
                 }
-            } else {
-                LocalTTSettings = Resources.Load<TTSettings>(TTCPUDefines.fallbackTTSettingsName);
-                if(LocalTTSettings == null)
-                    LocalTTSettings = ScriptableObject.CreateInstance<TTSettings>();
-            }
+            #else
+                if(LocalTTSettings == null) {
+                    LocalTTSettings = Resources.Load<TTSettings>("Utility/TTSettingsStorage/" + LocalTTSettingsName);
+                    if(LocalTTSettings == null) {
+                        #if UNITY_EDITOR
+                            string path = "Assets/TrueTrace-Unity-Pathtracer/TrueTrace/Resources/Utility/TTSettingsStorage/" + LocalTTSettingsName;
+                            LocalTTSettings = ScriptableObject.CreateInstance<TTSettings>();
+                            UnityEditor.AssetDatabase.CreateAsset(LocalTTSettings, path + ".asset");
+                            UnityEditor.AssetDatabase.SaveAssets();
+                        #else 
+                            LocalTTSettings = ScriptableObject.CreateInstance<TTSettings>();
+                        #endif
+                    }
+                } else {
+                    if(!LocalTTSettings.name.Equals(LocalTTSettingsName)) {
+                        LocalTTSettingsName = LocalTTSettings.name;
+                    }
+                }
+                #if UNITY_EDITOR
+                    UnityEditor.EditorUtility.SetDirty(LocalTTSettings);
+                #endif
+            #endif
         }
 
         private void OnEnable() {
@@ -379,13 +404,13 @@ namespace TrueTrace {
         public void ClearAll() {
             DoCheck = true;
             if(TTPostProc != null) TTPostProc.ClearAll();
-            _RayBuffer?.Release();
-            LightingBuffer?.Release();
-            _BufferSizes?.Release();
-            _ShadowBuffer?.Release();
+            _RayBuffer.ReleaseSafe();
+            LightingBuffer.ReleaseSafe();
+            _BufferSizes.ReleaseSafe();
+            _ShadowBuffer.ReleaseSafe();
             if(ASVGFCode != null) ASVGFCode.ClearAll();
             if(ReSTIRASVGFCode != null) ReSTIRASVGFCode.ClearAll();
-            CurBounceInfoBuffer?.Release();
+            CurBounceInfoBuffer.ReleaseSafe();
             TTPostProc.ClearAll();
             CDFX.ReleaseSafe();
             CDFY.ReleaseSafe();
@@ -400,29 +425,29 @@ namespace TrueTrace {
 
             _RandomNums.ReleaseSafe();
             _RandomNumsB.ReleaseSafe();
-            _target.Release();
-            _converged.Release();
-            _DebugTex.Release();
-            _FinalTex.Release();
-            GIReservoirA.Release();
-            GIReservoirB.Release();
-            GIReservoirC.Release();
-            GINEEPosA.Release();
-            GINEEPosB.Release();
-            GINEEPosC.Release();
-            GIWorldPosA.Release();
-            GIWorldPosB.Release();
-            GIWorldPosC.Release();
-            _PrimaryTriangleInfo.Release();
-            ScreenSpaceInfo.Release();
-            ScreenSpaceInfoPrev.Release();
-            GradientsA.Release();
-            GradientsB.Release();
+            _target.ReleaseSafe();
+            _converged.ReleaseSafe();
+            _DebugTex.ReleaseSafe();
+            _FinalTex.ReleaseSafe();
+            GIReservoirA.ReleaseSafe();
+            GIReservoirB.ReleaseSafe();
+            GIReservoirC.ReleaseSafe();
+            GINEEPosA.ReleaseSafe();
+            GINEEPosB.ReleaseSafe();
+            GINEEPosC.ReleaseSafe();
+            GIWorldPosA.ReleaseSafe();
+            GIWorldPosB.ReleaseSafe();
+            GIWorldPosC.ReleaseSafe();
+            _PrimaryTriangleInfo.ReleaseSafe();
+            ScreenSpaceInfo.ReleaseSafe();
+            ScreenSpaceInfoPrev.ReleaseSafe();
+            GradientsA.ReleaseSafe();
+            GradientsB.ReleaseSafe();
             #if UseOIDN
-                ColorBuffer.Release();
-                OutputBuffer.Release();
-                AlbedoBuffer.Release();
-                NormalBuffer.Release();
+                ColorBuffer.ReleaseSafe();
+                OutputBuffer.ReleaseSafe();
+                AlbedoBuffer.ReleaseSafe();
+                NormalBuffer.ReleaseSafe();
                 if(OIDNDenoiser != null) {
                     OIDNDenoiser.Dispose();
                     OIDNDenoiser = null;
@@ -482,7 +507,7 @@ namespace TrueTrace {
             FramesSinceStart = 0;
 
 
-            if(CurBounceInfoBuffer != null) CurBounceInfoBuffer.Release();
+            if(CurBounceInfoBuffer != null) CurBounceInfoBuffer.ReleaseSafe();
             CurBounceInfoBuffer = new ComputeBuffer(1, 12);
             if(_RayBuffer == null || _RayBuffer.count != SourceWidth * SourceHeight) {
                 CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight * 2, 48);
@@ -571,7 +596,7 @@ namespace TrueTrace {
                 _BufferSizes = new ComputeBuffer(LocalTTSettings.bouncecount + 1, 16);
             }
             if(_BufferSizes.count != LocalTTSettings.bouncecount + 1) {
-                _BufferSizes.Release();
+                _BufferSizes.ReleaseSafe();
                 _BufferSizes = new ComputeBuffer(LocalTTSettings.bouncecount + 1, 16);
             }
             _BufferSizes.SetData(BufferSizes);
@@ -613,7 +638,11 @@ namespace TrueTrace {
             SetVector("Segment", CurrentHorizonalPatch, cmd);
             SetVector("HDRILongLat", LocalTTSettings.HDRILongLat, cmd);
             SetVector("HDRIScale", LocalTTSettings.HDRIScale, cmd);
+#if ENABLE_INPUT_SYSTEM
+            SetVector("MousePos", Vector2.zero, cmd);
+#else
             SetVector("MousePos", Input.mousePosition, cmd);
+#endif
             SetVector("FogColor", LocalTTSettings.FogColor, cmd);
             if(LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI) ASVGFCode.shader.SetVector("CamDelta", E);
             if(LocalTTSettings.DenoiserMethod == 1 && LocalTTSettings.UseReSTIRGI) ReSTIRASVGFCode.shader.SetVector("CamDelta", E);
@@ -715,7 +744,7 @@ namespace TrueTrace {
                     CDFCompute.SetBuffer(0, "CounterBuffer", CounterBuffer);
                     CDFCompute.SetBuffer(0, "TotalBuff", CDFTotalBuffer);
                     CDFCompute.Dispatch(0, 1, SkyboxTexture.height, 1);
-                    CounterBuffer.Release();
+                    CounterBuffer.ReleaseSafe();
                     HDRIParams = new Vector2(SkyboxTexture.width, SkyboxTexture.height);
                     ShadingShader.SetTexture(ShadeKernel, "CDFX", CDFX);
                     ShadingShader.SetTexture(ShadeKernel, "CDFY", CDFY);
@@ -939,29 +968,29 @@ namespace TrueTrace {
                     LightingBuffer.ReleaseSafe();
                     _RandomNums.ReleaseSafe();
                     _RandomNumsB.ReleaseSafe();
-                    _target.Release();
-                    _converged.Release();
-                    _DebugTex.Release();
-                    _FinalTex.Release();
-                    GIReservoirA.Release();
-                    GIReservoirB.Release();
-                    GIReservoirC.Release();
-                    GINEEPosA.Release();
-                    GINEEPosB.Release();
-                    GINEEPosC.Release();
-                    GIWorldPosA.Release();
-                    GIWorldPosB.Release();
-                    GIWorldPosC.Release();
-                    _PrimaryTriangleInfo.Release();
-                    ScreenSpaceInfo.Release();
-                    ScreenSpaceInfoPrev.Release();
-                    GradientsA.Release();
-                    GradientsB.Release();
+                    _target.ReleaseSafe();
+                    _converged.ReleaseSafe();
+                    _DebugTex.ReleaseSafe();
+                    _FinalTex.ReleaseSafe();
+                    GIReservoirA.ReleaseSafe();
+                    GIReservoirB.ReleaseSafe();
+                    GIReservoirC.ReleaseSafe();
+                    GINEEPosA.ReleaseSafe();
+                    GINEEPosB.ReleaseSafe();
+                    GINEEPosC.ReleaseSafe();
+                    GIWorldPosA.ReleaseSafe();
+                    GIWorldPosB.ReleaseSafe();
+                    GIWorldPosC.ReleaseSafe();
+                    _PrimaryTriangleInfo.ReleaseSafe();
+                    ScreenSpaceInfo.ReleaseSafe();
+                    ScreenSpaceInfoPrev.ReleaseSafe();
+                    GradientsA.ReleaseSafe();
+                    GradientsB.ReleaseSafe();
                     #if UseOIDN
-                        ColorBuffer.Release();
-                        OutputBuffer.Release();
-                        AlbedoBuffer.Release();
-                        NormalBuffer.Release();
+                        ColorBuffer.ReleaseSafe();
+                        OutputBuffer.ReleaseSafe();
+                        AlbedoBuffer.ReleaseSafe();
+                        NormalBuffer.ReleaseSafe();
                         if(OIDNDenoiser != null) {
                             OIDNDenoiser.Dispose();
                             OIDNDenoiser = null;

@@ -28,6 +28,7 @@
 #define RadCache
 // #define NonDirectionalRadCache
 #define ExpensiveReSTIR
+// #define FakedAO
 
 
 //END OF DEFINES

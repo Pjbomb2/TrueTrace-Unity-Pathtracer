@@ -1002,7 +1002,9 @@ namespace TrueTrace {
                 QueCount = BuildQue.Count;
                 for (int i = QueCount - 1; i >= 0; i--) {//Promotes from Build Que to Render Que
                     if (BuildQue[i].AsyncTask.IsFaulted) {//Fuck, something fucked up
+#if TTVerbose
                         Debug.LogError(BuildQue[i].AsyncTask.Exception + ", " + BuildQue[i].Name);
+#endif
                         BuildQue[i].FailureCount++;
                         BuildQue[i].ClearAll();
                         if(BuildQue[i].FailureCount > 6) {
@@ -1073,7 +1075,7 @@ namespace TrueTrace {
                 QueCount = InstanceRemoveQue.Count;
                  for (int i = QueCount - 1; i >= 0; i--) {
                     switch(InstanceRemoveQue[i].ExistsInQue) {
-                        default: Debug.Log("INSTANCES BROKE!"); break;
+                        default: Debug.LogError("Report this to the developer"); break;
                         case 0: {InstanceRenderTransforms.RemoveAt(InstanceRenderQue.IndexOf(InstanceRemoveQue[i])); InstanceRenderQue.Remove(InstanceRemoveQue[i]);} break;
                         case 1: InstanceBuildQue.Remove(InstanceRemoveQue[i]); break;
                         case 3: InstanceAddQue.Remove(InstanceRemoveQue[i]); break;
@@ -1256,8 +1258,10 @@ namespace TrueTrace {
 
                 CurSGNodeOffset = 2 * (LightMeshCount);
                 AggSGTreeNodeCount += CurSGNodeOffset;
+#if TTVerbose
                 Debug.Log("Light Tri Count: " + LightTriCount);
                 Debug.Log("Total Tri Count: " + AggTriCount);
+#endif
                 if(LightTriCount == 0) {LightTriCount++; AggSGTreeNodeCount++;}
                 if (AggNodeCount != 0)
                 {//Accumulate the BVH nodes and triangles for all normal models
@@ -2148,7 +2152,9 @@ namespace TrueTrace {
 
 
                 CommonFunctions.CreateComputeBuffer(ref LightMeshBuffer, LightMeshes);
+#if TTVerbose
                 Debug.Log("Total Object Count: " + MeshAABBs.Length);
+#endif
                 // UnityEngine.Profiling.Profiler.BeginSample("Update Materials");
                 HasChangedMaterials = UpdateMaterials();
                 // UnityEngine.Profiling.Profiler.EndSample();
