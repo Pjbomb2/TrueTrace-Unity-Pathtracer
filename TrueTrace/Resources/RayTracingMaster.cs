@@ -411,6 +411,7 @@ namespace TrueTrace {
             if(ASVGFCode != null) ASVGFCode.ClearAll();
             if(ReSTIRASVGFCode != null) ReSTIRASVGFCode.ClearAll();
             CurBounceInfoBuffer.ReleaseSafe();
+            Atmo.Dispose();
             TTPostProc.ClearAll();
             CDFX.ReleaseSafe();
             CDFY.ReleaseSafe();
@@ -827,6 +828,9 @@ namespace TrueTrace {
             AssetManager.Assets.SetLightData(ShadingShader, ShadeKernel);
             AssetManager.Assets.SetMeshTraceBuffers(ShadingShader, ShadeKernel);
             AssetManager.Assets.SetHeightmapTraceBuffers(ShadingShader, ShadeKernel);
+            // ShadingShader.SetTexture(ShadeKernel, "CloudShapeTex", Atmo.CloudShapeTex);
+            // ShadingShader.SetTexture(ShadeKernel, "CloudShapeDetailTex", Atmo.CloudShapeDetailTex);
+            // ShadingShader.SetTexture(ShadeKernel, "localWeatherTexture", Atmo.WeatherTex);
             ShadingShader.SetTexture(ShadeKernel, "WorldPosB", !FlipFrame ? GIWorldPosB : GIWorldPosC);
             ShadingShader.SetTexture(ShadeKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
             ShadingShader.SetTexture(ShadeKernel, "SingleComponentAtlas", Assets.SingleComponentAtlas);

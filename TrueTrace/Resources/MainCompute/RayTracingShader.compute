@@ -707,6 +707,16 @@ int MaterialIndex;
         float TrueDeSat = DoSecondary ? SkyDesaturate : SecondarySkyDesaturate;
         if(CurBounce != 0 && IndirectBoost < 1) Intensity *= rcp(IndirectBoost);
         float3 Sun = 0;
+  //       float weightedMeanDepth = 0;
+  // float rayNear;
+  // float rayFar;
+  // getRayNearFar(ray.direction, rayNear, rayFar);
+  // float3 skyirrad;
+  // float3 sunirrad = GetSunAndSkyIrradiance(ray.origin+float3(0,bottom_radius,0), ray.direction, SunDir, skyirrad);
+  // float3 rad2 = 0;
+  //  float2 globeUv = getGlobeUv(ray.origin);
+  // float mipLevel = length(globeUv * localWeatherFrequency);
+  // mipLevel = lerp(0.0, mipLevel, min(1.0, 0.2 * ray.origin.y / maxHeight));
         [branch]switch(DoSecondary ? BackgroundType : SecondaryBackgroundType) {
             case 0:
                 Radiance = GetSkyRadiance(ray.origin, ray.direction, 0, SunDir, transmittance, debug);
@@ -720,6 +730,24 @@ int MaterialIndex;
                 Stars *= max(12.0f * pow(1.0f - saturate(pow(RayleighPhaseFunction(dot(ray.direction, SunDir)) * MiePhaseFunction(0.8f, dot(ray.direction, SunDir)),0.1f)),2.0f) * transmittance * -dot(rayorig2, SunDir) / length(rayorig2), 0);
                 Stars = pow(saturate(Stars), 2.0f);
                 if(GetBounceData(Color.MetRoughIsSpec) <= 1) Radiance += Stars;
+
+
+                // rad2 = 
+                // marchToClouds(
+                //     (ray.origin+float3(0,bottom_radius,0)),
+                //     ray.direction,
+                //     rayFar - rayNear,
+                //     0,
+                //     0,
+                //     pow(2.0, mipLevel),
+                //     SunDir,
+                //     sunirrad,
+                //     skyirrad,
+                //     weightedMeanDepth
+                //   );
+                // Radiance *= weightedMeanDepth;
+                // Radiance += rad2 * transmittance;
+                // Radiance /= weightedMeanDepth;
 
                 if (all(Radiance < 10000.0f)) {
                     Radiance = DeSat(Radiance, 1.0f - TrueDeSat);
@@ -843,9 +871,7 @@ int MaterialIndex;
         TempMat.surfaceColor *= TempCol;
 
         TempCol = TempMat.surfaceColor;
-        #ifndef DX11
-            Unity_Hue_Degrees_float(TempCol, TempMat.Hue * 500.0f, TempMat.surfaceColor);
-        #endif
+        Unity_Hue_Degrees_float(TempCol, TempMat.Hue * 500.0f, TempMat.surfaceColor);
         TempMat.surfaceColor *= TempMat.Brightness;
         TempCol = TempMat.surfaceColor;
         Unity_Saturation_float(TempCol, TempMat.Saturation, TempMat.surfaceColor);

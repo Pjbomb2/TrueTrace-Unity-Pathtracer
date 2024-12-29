@@ -346,3 +346,472 @@ float3 GetSkyTransmittance(
 	return ray_r_mu_intersects_ground ? 0.0 :
 		(GetTransmittanceToTopAtmosphereBoundary(r, mu));
 }
+
+
+
+Texture3D<float4> CloudShapeDetailTex;
+Texture3D<float4> CloudShapeTex;
+Texture2D<float4> localWeatherTexture;
+SamplerState my_linear_repeat_sampler;
+
+// Scattering parameters
+#define albedo float3(0.98, 0.98, 0.98)
+#define powderScale 0.8
+#define powderExponent 200
+#define scatterAnisotropy1 0.6
+#define scatterAnisotropy2 -0.3
+#define scatterAnisotropyMix 0.5
+#define skyIrradianceScale 0.1
+
+// Raymarch to clouds
+#define maxIterations 500
+#define initialStepSize 100
+#define maxStepSize 1000
+#define maxRayDistance 1.5e5
+#define minDensity 1e-5
+#define minTransmittance 1e-2
+
+#define PI 3.14159265359
+#define PI2 6.28318530718
+#define PI_HALF 1.5707963267949
+#define RECIPROCAL_PI 0.31830988618
+#define RECIPROCAL_PI2 0.15915494
+#define LOG2 1.442695
+#define EPSILON 1e-6
+
+#define maxLayerHeights float4(1200,5000,8000,0)
+#define minLayerHeights float4(600,4500,6700,0)
+#define weatherExponents float4(1,1,3,1)
+#define localWeatherFrequency float2(200,150)
+#define coverage 0.3
+#define coverageFilterWidths float4(0.6,0.3,0.5,0)
+#define detailAmounts float4(1,0.8,0.3,0)
+#define extinctionCoeffs float4(0.3,0.1,0.005,0)
+#define shapeFrequency 0.0003
+#define MULTI_SCATTERING_OCTAVES 8
+#define ellipsoidCenter float3(0,0,0)
+#define minHeight 0
+#define maxHeight 8000
+
+float inverseLerp(const float x, const float y, const float a) {
+  return (a - x) / (y - x);
+}
+
+float2 inverseLerp(const float2 x, const float2 y, const float2 a) {
+  return (a - x) / (y - x);
+}
+
+float3 inverseLerp(const float3 x, const float3 y, const float3 a) {
+  return (a - x) / (y - x);
+}
+
+float4 inverseLerp(const float4 x, const float4 y, const float4 a) {
+  return (a - x) / (y - x);
+}
+
+float remap(const float x, const float min1, const float max1, const float min2, const float max2) {
+  return min2 + (x - min1) / (max1 - min1) * (max2 - min2);
+}
+
+float2 remap(const float2 x, const float2 min1, const float2 max1, const float2 min2, const float2 max2) {
+  return min2 + (x - min1) / (max1 - min1) * (max2 - min2);
+}
+
+float2 remap(const float2 x, const float min1, const float max1, const float min2, const float max2) {
+  return min2 + (x - min1) / (max1 - min1) * (max2 - min2);
+}
+
+float3 remap(const float3 x, const float3 min1, const float3 max1, const float3 min2, const float3 max2) {
+  return min2 + (x - min1) / (max1 - min1) * (max2 - min2);
+}
+
+float3 remap(const float3 x, const float min1, const float max1, const float min2, const float max2) {
+  return min2 + (x - min1) / (max1 - min1) * (max2 - min2);
+}
+
+float4 remap(const float4 x, const float4 min1, const float4 max1, const float4 min2, const float4 max2) {
+  return min2 + (x - min1) / (max1 - min1) * (max2 - min2);
+}
+
+float4 remap(const float4 x, const float min1, const float max1, const float min2, const float max2) {
+  return min2 + (x - min1) / (max1 - min1) * (max2 - min2);
+}
+
+
+float2 getGlobeUv(const float3 position) {
+  float2 st = normalize(position.yx);
+  float phi = atan(st.x / st.y);
+  float theta = asin(normalize(position).z);
+  return float2(phi * RECIPROCAL_PI2 + 0.5, theta * RECIPROCAL_PI + 0.5);
+}
+
+// float getMipLevel(const float2 uv) {
+//   float2 coord = uv * resolution;
+//   float2 ddx = dFdx(coord);
+//   float2 ddy = dFdy(coord);
+//   return max(0.0, 0.5 * log2(max(dot(ddx, ddx), dot(ddy, ddy))));
+// }
+
+struct WeatherSample {
+  float4 heightFraction; // Normalized height of each layer
+  float4 density;
+};
+
+float4 shapeAlteringFunction(const float4 heightFraction, const float bias) {
+  // Apply a semi-circle transform to round the clouds towards the top.
+  float4 biased = pow(heightFraction, bias);
+  float4 x = clamp(biased * 2.0 - 1.0, -1.0, 1.0);
+  return 1.0 - x * x;
+}
+
+WeatherSample sampleWeather(const float2 uv, const float height, const float mipLevel) {
+  WeatherSample weather;
+  weather.heightFraction = saturate(
+    remap(height, minLayerHeights, maxLayerHeights, 0.0, 1.0)
+  );
+
+  float4 localWeather = pow(
+    localWeatherTexture.SampleLevel(my_linear_repeat_sampler, uv * localWeatherFrequency, mipLevel),
+    weatherExponents
+  );
+  float4 heightScale = shapeAlteringFunction(weather.heightFraction, 0.4);
+
+  // Modulation to control weather by coverage parameter.
+  // Reference: https://github.com/Prograda/Skybolt/blob/master/Assets/Core/Shaders/Clouds.h#L63
+  float4 factor = 1.0 - coverage * heightScale;
+  weather.density = saturate(
+    remap(
+      lerp(localWeather, 1.0, coverageFilterWidths),
+      factor,
+      factor + coverageFilterWidths,
+      0.0,
+      1.0
+    )
+  );
+
+  return weather;
+}
+
+float sampleDensityDetail(WeatherSample weather, const float3 position, const float mipLevel) {
+  float4 density = weather.density;
+  if (mipLevel < 2.0) {
+    float shape = CloudShapeTex.SampleLevel(my_linear_repeat_sampler, position * shapeFrequency, 0.0).r;
+    // shape = pow(shape, 6.0) * 0.4; // Modulation for whippier shape
+    shape = 1.0 - shape; // Or invert for fluffy shape
+    density = lerp(density, saturate(remap(density, shape, 1.0, 0.0, 1.0)), detailAmounts);
+
+    #ifdef USE_DETAIL
+    if (mipLevel < 1.0) {
+      float detail = shapeDetailTexture.SampleLevel(my_linear_repeat_sampler, position * shapeDetailFrequency, 0.0).r;
+      // Fluffy at the top and whippy at the bottom.
+      float4 modifier = lerp(
+        float4(pow(detail, 6.0)),
+        float4(1.0 - detail),
+        saturate(remap(weather.heightFraction, 0.2, 0.4, 0.0, 1.0))
+      );
+      modifier = lerp(float4(0.0), modifier, detailAmounts);
+      density = saturate(
+        remap(density * 2.0, float4(modifier * 0.5), float4(1.0), float4(0.0), float4(1.0))
+      );
+    }
+    #endif
+  }
+  // Nicely decrease density at the bottom.
+  return saturate(dot(density, extinctionCoeffs * weather.heightFraction));
+}
+
+
+float2 henyeyGreenstein(const float2 g, const float cosTheta) {
+  float2 g2 = g * g;
+  const float reciprocalPi4 = 0.07957747154594767;
+  return reciprocalPi4 * ((1.0 - g2) / pow(1.0 + g2 - 2.0 * g * cosTheta, 1.5));
+}
+
+float phaseFunction(const float cosTheta, const float attenuation) {
+  float2 g = float2(scatterAnisotropy1, scatterAnisotropy2);
+  float2 weights = float2(1.0 - scatterAnisotropyMix, scatterAnisotropyMix);
+  return dot(henyeyGreenstein(g * attenuation, cosTheta), weights);
+}
+
+float sampleOpticalDepth(
+  const float3 rayOrigin,
+  const float3 rayDirection,
+  const int iterations,
+  const float mipLevel
+) {
+  float stepSize = 40.0 / float(iterations);
+  float opticalDepth = 0.0;
+  float stepScale = 1.0;
+  float prevStepScale = 0.0;
+  for (int i = 0; i < iterations; ++i) {
+    float3 position = rayOrigin + rayDirection * stepScale * stepSize;
+    float2 uv = getGlobeUv(position);
+    float height = length(position) - bottom_radius;
+    WeatherSample weather = sampleWeather(uv, height, mipLevel);
+    float density = sampleDensityDetail(weather, position, mipLevel);
+    opticalDepth += density * (stepScale - prevStepScale) * stepSize;
+    prevStepScale = stepScale;
+    stepScale *= 2.0;
+  }
+  return opticalDepth;
+}
+
+float multipleScattering(const float opticalDepth, const float cosTheta) {
+  // Multiple scattering approximation
+  // See: https://fpsunflower.github.io/ckulla/data/oz_volumes.pdf
+  // Attenuation (a), contribution (b) and phase attenuation (c).
+  float3 abc = 1.0;
+  const float3 attenuation = float3(0.5, 0.5, 0.8); // Should satisfy a <= b
+  float scattering = 0.0;
+  for (int octave = 0; octave < MULTI_SCATTERING_OCTAVES; ++octave) {
+    float beerLambert = exp(-opticalDepth * abc.y);
+    // A similar approximation is described in the Frostbite's paper, where
+    // phase angle is attenuated.
+    scattering += abc.x * beerLambert * phaseFunction(cosTheta, abc.z);
+    abc *= attenuation;
+  }
+  return scattering;
+}
+float raySphereSecondIntersection(
+  const float3 origin,
+  const float3 direction,
+  const float3 center,
+  const float radius
+) {
+  float3 a = origin - center;
+  float b = 2.0 * dot(direction, a);
+  float c = dot(a, a) - radius * radius;
+  float discriminant = b * b - 4.0 * c;
+  return discriminant < 0.0
+    ? -1.0
+    : (-b + sqrt(discriminant)) * 0.5;
+}
+
+
+float4 marchToClouds(const float3 rayOrigin, const float3 rayDirection, const float maxRayDistance2,
+  const float jitter,
+  const float3 jitterVector,
+  const float rayStartTexelsPerPixel,
+  const float3 sunDirection,
+  float3 sunIrradiance,
+  float3 skyIrradiance,
+  out float weightedMeanDepth
+) {
+  float3 radianceIntegral = 0.0;
+  float transmittanceIntegral = 1.0;
+  float weightedDistanceSum = 0.0;
+  float transmittanceSum = 0.0;
+
+  float stepSize = initialStepSize;
+  float rayDistance = stepSize * jitter;
+  float cosTheta = dot(sunDirection, rayDirection);
+
+  for (int i = 0; i < maxIterations; ++i) {
+    if (rayDistance > maxRayDistance2) {
+      break; // Termination
+    }
+    float3 position = rayOrigin + rayDirection * rayDistance;
+
+    // Sample a rough density.
+    float mipLevel = log2(max(1.0, rayStartTexelsPerPixel + rayDistance * 1e-5));
+    float height = length(position) - bottom_radius;
+    float2 uv = getGlobeUv(position);
+    WeatherSample weather = sampleWeather(uv, height, mipLevel);
+
+    if (any(weather.density > minDensity)) {
+      // Sample a detailed density.
+      float density = sampleDensityDetail(weather, position, mipLevel);
+      if (density > minDensity) {
+        // #ifdef ACCURATE_ATMOSPHERIC_IRRADIANCE
+        sunIrradiance = GetSunAndSkyIrradiance(
+          position,
+          rayDirection,
+          sunDirection,
+          skyIrradiance
+        );
+        // #endif // ACCURATE_ATMOSPHERIC_IRRADIANCE
+
+        // Distance to the top of the bottom layer along the sun direction.
+        // This matches the ray origin of BSM.
+        float distanceToTop = raySphereSecondIntersection(
+          position + ellipsoidCenter,
+          sunDirection,
+          ellipsoidCenter,
+          bottom_radius + maxLayerHeights.x
+        );
+
+        // Obtain the optical depth at the position from BSM.
+        float3 shadow = 0;//getShadow(position);
+        float frontDepth = shadow.x;
+        float meanExtinction = shadow.y;
+        float maxOpticalDepth = shadow.z;
+        float shadowOpticalDepth = min(
+          maxOpticalDepth,
+          meanExtinction * max(0.0, distanceToTop - frontDepth)
+        );
+
+        float sunOpticalDepth = 0.0;
+        if (mipLevel < 0.5) {
+          sunOpticalDepth = sampleOpticalDepth(position, sunDirection, 2, mipLevel);
+        } else {
+          sunOpticalDepth = sampleOpticalDepth(position, sunDirection, 1, mipLevel);
+        }
+        float opticalDepth = sunOpticalDepth + shadowOpticalDepth;
+        float scattering = multipleScattering(opticalDepth, cosTheta);
+        float3 radiance = (sunIrradiance * scattering + skyIrradiance * skyIrradianceScale) * density;
+
+        // Fudge factor for the irradiance from ground.
+        if (mipLevel < 0.5) {
+          float groundOpticalDepth = sampleOpticalDepth(
+            position,
+            -normalize(position),
+            2,
+            mipLevel
+          );
+          radiance += radiance * exp(-groundOpticalDepth - (height - minHeight) * 0.01);
+        }
+
+        #ifdef USE_POWDER
+        radiance *= 1.0 - powderScale * exp(-density * powderExponent);
+        #endif // USE_POWDER
+
+        // Energy-conserving analytical integration of scattered light
+        // See 5.6.3 in https://media.contentapi.ea.com/content/dam/eacom/frostbite/files/s2016-pbs-frostbite-sky-clouds-new.pdf
+        float transmittance = exp(-density * stepSize);
+        float clampedDensity = max(density, 1e-7);
+        float3 scatteringIntegral = (radiance - radiance * transmittance) / clampedDensity;
+        radianceIntegral += transmittanceIntegral * scatteringIntegral;
+        transmittanceIntegral *= transmittance;
+
+        // Aerial perspective affecting clouds
+        // See 5.9.1 in https://media.contentapi.ea.com/content/dam/eacom/frostbite/files/s2016-pbs-frostbite-sky-clouds-new.pdf
+        weightedDistanceSum += rayDistance * transmittanceIntegral;
+        transmittanceSum += transmittanceIntegral;
+      }
+
+      // Take a shorter step because we've already hit the clouds.
+      stepSize *= 1.005;
+      rayDistance += stepSize;
+    } else {
+      // Otherwise step longer in empty space.
+      // TODO: This produces some banding artifacts.
+      rayDistance += lerp(stepSize, maxStepSize, min(1.0, mipLevel));
+    }
+
+    if (transmittanceIntegral <= minTransmittance) {
+      break; // Early termination
+    }
+  }
+
+  // The final product of 5.9.1 and we'll evaluate this in aerial perspective.
+  weightedMeanDepth = transmittanceSum > 0.0 ? weightedDistanceSum / transmittanceSum : 0.0;
+
+  return float4(
+    radianceIntegral,
+    saturate(remap(transmittanceIntegral, minTransmittance, 1.0, 1.0, 0.0))
+  );
+}
+
+
+float raySphereFirstIntersection(
+  const float3 origin,
+  const float3 direction,
+  const float3 center,
+  const float radius
+) {
+  float3 a = origin - center;
+  float b = 2.0 * dot(direction, a);
+  float c = dot(a, a) - radius * radius;
+  float discriminant = b * b - 4.0 * c;
+  return discriminant < 0.0
+    ? -1.0
+    : (-b - sqrt(discriminant)) * 0.5;
+}
+
+
+void raySphereIntersections(
+  const float3 origin,
+  const float3 direction,
+  const float3 center,
+  const float radius,
+  out float intersection1,
+  out float intersection2
+) {
+  float3 a = origin - center;
+  float b = 2.0 * dot(direction, a);
+  float c = dot(a, a) - radius * radius;
+  float discriminant = b * b - 4.0 * c;
+  if (discriminant < 0.0) {
+    intersection1 = -1.0;
+    intersection2 = -1.0;
+    return;
+  } else {
+    float Q = sqrt(discriminant);
+    intersection1 = (-b - Q) * 0.5;
+    intersection2 = (-b + Q) * 0.5;
+  }
+}
+
+void getRayNearFar(const float3 rayDirection, out float rayNear, out float rayFar) {
+  bool intersectsGround =
+    raySphereFirstIntersection(CamPos, rayDirection, ellipsoidCenter, bottom_radius) >= 0.0;
+
+  if (CamPos.y < minHeight) {
+    if (intersectsGround) {
+      rayNear = -1.0;
+      return;
+    }
+    rayNear = raySphereSecondIntersection(
+      CamPos,
+      rayDirection,
+      ellipsoidCenter,
+      bottom_radius + minHeight
+    );
+    rayFar = raySphereSecondIntersection(
+      CamPos,
+      rayDirection,
+      ellipsoidCenter,
+      bottom_radius + maxHeight
+    );
+    rayFar = min(rayFar, maxRayDistance);
+  } else if (CamPos.y < maxHeight) {
+    rayNear = 0.0;
+    if (intersectsGround) {
+      rayFar = raySphereFirstIntersection(
+        CamPos,
+        rayDirection,
+        ellipsoidCenter,
+        bottom_radius + minHeight
+      );
+    } else {
+      rayFar = raySphereSecondIntersection(
+        CamPos,
+        rayDirection,
+        ellipsoidCenter,
+        bottom_radius + maxHeight
+      );
+    }
+  } else {
+    float intersection1;
+    float intersection2;
+    raySphereIntersections(
+      CamPos,
+      rayDirection,
+      ellipsoidCenter,
+      bottom_radius + maxHeight,
+      intersection1,
+      intersection2
+    );
+    rayNear = intersection1;
+    if (intersectsGround) {
+      rayFar = raySphereFirstIntersection(
+        CamPos,
+        rayDirection,
+        ellipsoidCenter,
+        bottom_radius + minHeight
+      );
+    } else {
+      rayFar = intersection2;
+    }
+  }
+}

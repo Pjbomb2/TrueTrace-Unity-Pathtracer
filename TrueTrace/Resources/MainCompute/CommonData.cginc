@@ -1847,8 +1847,8 @@ float3 LoadSurfaceInfo(int2 id) {
 void Unity_Hue_Degrees_float(float3 In, float Offset, out float3 Out) {
     // RGB to HSV
     float4 K = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
-    float4 P = lerp(float4(In.bg, K.wz), float4(In.gb, K.xy), step(In.b, In.g));
-    float4 Q = lerp(float4(P.xyw, In.r), float4(In.r, P.yzx), step(P.x, In.r));
+    float4 P = step(In.z, In.y) ? float4(In.yz, K.xy) : float4(In.zy, K.wz);
+    float4 Q = step(P.x, In.x) ? float4(In.x, P.yzx) : float4(P.xyw, In.x);
     float D = Q.x - min(Q.w, Q.y);
     float E = 1e-10;
     float V = (D == 0) ? Q.x : (Q.x + E);
@@ -2338,9 +2338,7 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
         	MatDat.surfaceColor *= SampleTexture(BaseUv, SampleAlbedo, MatDat);
 
         float3 TempCol = MatDat.surfaceColor;
-        #ifndef DX11
-            Unity_Hue_Degrees_float(TempCol, MatDat.Hue * 500.0f, MatDat.surfaceColor);
-        #endif
+        Unity_Hue_Degrees_float(TempCol, MatDat.Hue * 500.0f, MatDat.surfaceColor);
         MatDat.surfaceColor *= MatDat.Brightness;
         TempCol = MatDat.surfaceColor;
         Unity_Saturation_float(TempCol, MatDat.Saturation, MatDat.surfaceColor);

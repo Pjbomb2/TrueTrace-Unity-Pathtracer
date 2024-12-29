@@ -2835,7 +2835,7 @@ Slider AperatureSlider;
             }
 
             if(Assets != null && Instancer != null && RemainingObjectsField != null) RemainingObjectsField.value = Assets.RunningTasks + Instancer.RunningTasks;
-            if(RayMaster != null) SampleCountField.value = RayTracingMaster.SampleCount;
+            if(RayTracingMaster.RayMaster != null) SampleCountField.value = RayTracingMaster.SampleCount;
             
             if(Assets != null && Assets.NeedsToUpdateXML) {
                string materialMappingsPath = TTPathFinder.GetMaterialMappingsPath();

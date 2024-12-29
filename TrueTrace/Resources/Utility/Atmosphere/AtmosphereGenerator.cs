@@ -22,6 +22,12 @@ namespace TrueTrace {
 
         private RenderTexture DeltaMultiScatterTex;
 
+
+        public RenderTexture CloudShapeTex;
+        public RenderTexture CloudShapeDetailTex;
+        public RenderTexture WeatherTex;
+
+
         private ComputeShader Atmosphere;
         private ComputeBuffer rayleigh_densityC;
         private ComputeBuffer mie_densityC;
@@ -42,6 +48,15 @@ namespace TrueTrace {
             ThisShader.SetTexture(Kernel, "ScatteringTex", MultiScatterTex);
             ThisShader.SetTexture(Kernel, "TransmittanceTex", _TransmittanceLUT);
             ThisShader.SetTexture(Kernel, "IrradianceTex", IrradianceTex);
+        }
+
+        public void Dispose() {
+            if(_TransmittanceLUT != null) _TransmittanceLUT.Release();
+            if(MultiScatterTex != null) MultiScatterTex.Release();
+            if(IrradianceTex != null) IrradianceTex.Release();
+            if(CloudShapeTex != null) CloudShapeTex.Release();
+            if(CloudShapeDetailTex != null) CloudShapeDetailTex.Release();
+            if(WeatherTex != null) WeatherTex.Release();
         }
 
         public AtmosphereGenerator(float BottomRadius, float TopRadius, int MultiScatterIterations)
@@ -117,8 +132,9 @@ namespace TrueTrace {
             int IndirectIrradianceKernel = Atmosphere.FindKernel("IndirectIrradiance_Kernel");
             int ScatteringDensityKernel = Atmosphere.FindKernel("ScatteringDensity_kernel");
             int MultipleScatteringKernel = Atmosphere.FindKernel("MultiScatter_kernel");
-            int FirstCloudKernel = Atmosphere.FindKernel("FirstCloudKernel");
-            int SecondCloudKernel = Atmosphere.FindKernel("SecondCloudKernel");
+            int CloudShapeKernel = Atmosphere.FindKernel("CloudShapeKernel");
+            int CloudShapeDetailKernel = Atmosphere.FindKernel("CloudShapeDetailKernel");
+            int WeatherKernel = Atmosphere.FindKernel("WeatherKernel");
 
             CommonFunctions.CreateComputeBuffer(ref rayleigh_densityC, rayleigh_density);
             CommonFunctions.CreateComputeBuffer(ref mie_densityC, mie_density);
@@ -256,6 +272,39 @@ namespace TrueTrace {
             ScatteringTex.Release();
             DeltaScatteringTex.Release();
             DeltaMultiScatterTex.Release();
+
+
+            // CloudShapeTex = new RenderTexture(128, 128, 0,
+            // RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+            // CloudShapeTex.volumeDepth = 128;
+            // CloudShapeTex.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+            // CloudShapeTex.enableRandomWrite = true;
+            // CloudShapeTex.Create();
+
+            // CloudShapeDetailTex = new RenderTexture(32, 32, 0,
+            // RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+            // CloudShapeDetailTex.volumeDepth = 32;
+            // CloudShapeDetailTex.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+            // CloudShapeDetailTex.enableRandomWrite = true;
+            // CloudShapeDetailTex.Create();
+
+            // WeatherTex = new RenderTexture(512, 512, 0,
+            // RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+            // WeatherTex.useMipMap = true;
+            // WeatherTex.autoGenerateMips = false;
+            // WeatherTex.enableRandomWrite = true;
+            // WeatherTex.Create();
+
+            // Atmosphere.SetTexture(CloudShapeKernel, "CloudShapeTex", CloudShapeTex);
+            // Atmosphere.Dispatch(CloudShapeKernel, 128, 128, 128);
+
+            // Atmosphere.SetTexture(CloudShapeDetailKernel, "CloudShapeDetailTex", CloudShapeDetailTex);
+            // Atmosphere.Dispatch(CloudShapeDetailKernel, 32, 32, 32);
+
+            // Atmosphere.SetTexture(WeatherKernel, "WeatherTex", WeatherTex);
+            // Atmosphere.Dispatch(WeatherKernel, Mathf.CeilToInt(512.0f / 16.0f), Mathf.CeilToInt(512.0f / 16.0f), 1);
+
+            // WeatherTex.GenerateMips();
         }
 
 
