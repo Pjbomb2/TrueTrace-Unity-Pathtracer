@@ -3,8 +3,8 @@ static uint ScatteringTexMUSize = 128;
 static uint ScatteringTexMUSSize = 32;
 static uint ScatteringTexNUSize = 8;
 
-#define bottom_radius (6360 * 1000.0f)
-#define top_radius (6420 * 1000.0f)
+#define bottom_radius (6360000.0f)
+#define top_radius (6420000.0f)
 static uint TransmittanceTexWidth = 256;
 static uint TransmittanceTexHeight = 64;
 
@@ -383,7 +383,7 @@ SamplerState my_linear_repeat_sampler;
 #define minLayerHeights float4(600,4500,6700,0)
 #define weatherExponents float4(1,1,3,1)
 #define localWeatherFrequency float2(200,150)
-#define coverage 0.3
+#define coverage 0.5
 #define coverageFilterWidths float4(0.6,0.3,0.5,0)
 #define detailAmounts float4(1,0.8,0.3,0)
 #define extinctionCoeffs float4(0.3,0.1,0.005,0)
@@ -392,6 +392,8 @@ SamplerState my_linear_repeat_sampler;
 #define ellipsoidCenter float3(0,0,0)
 #define minHeight 0
 #define maxHeight 8000
+#define shapeDetailFrequency 0.007f
+#define minStepSize 100
 
 float inverseLerp(const float x, const float y, const float a) {
   return (a - x) / (y - x);
@@ -437,6 +439,44 @@ float4 remap(const float4 x, const float min1, const float max1, const float min
   return min2 + (x - min1) / (max1 - min1) * (max2 - min2);
 }
 
+
+float raySphereFirstIntersection(
+  const float3 origin,
+  const float3 direction,
+  const float3 center,
+  const float radius
+) {
+  float3 a = origin - center;
+  float b = 2.0 * dot(direction, a);
+  float c = dot(a, a) - radius * radius;
+  float discriminant = b * b - 4.0 * c;
+  return discriminant < 0.0
+    ? -1.0
+    : (-b - sqrt(discriminant)) * 0.5;
+}
+
+void getRayNearFar(
+  const float3 viewPosition,
+  const float3 rayDirection,
+  out float rayNear,
+  out float rayFar
+) {
+  rayNear = raySphereFirstIntersection(
+    viewPosition,
+    rayDirection,
+    ellipsoidCenter,
+    bottom_radius + maxLayerHeights.x
+  );
+  if (rayNear < 0.0) {
+    return;
+  }
+  rayFar = raySphereFirstIntersection(
+    viewPosition,
+    rayDirection,
+    ellipsoidCenter,
+    bottom_radius + minLayerHeights.x
+  );
+}
 
 float2 getGlobeUv(const float3 position) {
   float2 st = normalize(position.yx);
@@ -500,21 +540,21 @@ float sampleDensityDetail(WeatherSample weather, const float3 position, const fl
     shape = 1.0 - shape; // Or invert for fluffy shape
     density = lerp(density, saturate(remap(density, shape, 1.0, 0.0, 1.0)), detailAmounts);
 
-    #ifdef USE_DETAIL
+    // #ifdef USE_DETAIL
     if (mipLevel < 1.0) {
-      float detail = shapeDetailTexture.SampleLevel(my_linear_repeat_sampler, position * shapeDetailFrequency, 0.0).r;
+      float detail = CloudShapeDetailTex.SampleLevel(my_linear_repeat_sampler, position * shapeDetailFrequency, 0.0).r;
       // Fluffy at the top and whippy at the bottom.
       float4 modifier = lerp(
-        float4(pow(detail, 6.0)),
-        float4(1.0 - detail),
+        pow(detail, 6.0),
+        1.0 - detail,
         saturate(remap(weather.heightFraction, 0.2, 0.4, 0.0, 1.0))
       );
-      modifier = lerp(float4(0.0), modifier, detailAmounts);
+      modifier = lerp(0.0, modifier, detailAmounts);
       density = saturate(
-        remap(density * 2.0, float4(modifier * 0.5), float4(1.0), float4(0.0), float4(1.0))
+        remap(density * 2.0, modifier * 0.5, 1.0, 0.0, 1.0)
       );
     }
-    #endif
+    // #endif
   }
   // Nicely decrease density at the bottom.
   return saturate(dot(density, extinctionCoeffs * weather.heightFraction));
@@ -588,6 +628,206 @@ float raySphereSecondIntersection(
 }
 
 
+void applyAerialPerspective(const float3 camera, const float3 thispoint, inout float4 color) {
+  float3 transmittance;
+  float3 inscatter = GetSkyRadianceToPoint(
+    CamPos+float3(0,bottom_radius,0),
+    thispoint+float3(0,bottom_radius,0),
+    SunDir,
+    transmittance
+  );
+  color.rgb = lerp(color.rgb, color.rgb * transmittance + inscatter, color.a);
+}
+
+void swapIfBigger(inout float4 a, inout float4 b) {
+  if (a.w > b.w) {
+    float4 t = a;
+    a = b;
+    b = t;
+  }
+}
+
+
+float3 getPentagonalWeights(const float3 direction, const float3 v1, const float3 v2, const float3 v3) {
+  float d1 = dot(v1, direction);
+  float d2 = dot(v2, direction);
+  float d3 = dot(v3, direction);
+  float3 w = exp(float3(d1, d2, d3) * 40.0);
+  return w / (w.x + w.y + w.z);
+}
+
+
+void sortVertices(inout float3 a, inout float3 b, inout float3 c) {
+  const float3 base = float3(0.5, 0.5, 1.0);
+  float4 aw = float4(a, dot(a, base));
+  float4 bw = float4(b, dot(b, base));
+  float4 cw = float4(c, dot(c, base));
+  swapIfBigger(aw, bw);
+  swapIfBigger(bw, cw);
+  swapIfBigger(aw, bw);
+  a = aw.xyz;
+  b = bw.xyz;
+  c = cw.xyz;
+}
+
+void intersectStructuredPlanes(
+  const float3 normal,
+  const float3 rayOrigin,
+  const float3 rayDirection,
+  const float samplePeriod,
+  out float stepOffset,
+  out float stepSize
+) {
+  float NoD = dot(rayDirection, normal);
+  stepSize = samplePeriod / abs(NoD);
+
+  // Skips leftover bit to get from rayOrigin to first strata plane.
+  stepOffset = -fmod(dot(rayOrigin, normal), samplePeriod) / NoD;
+
+  // fmod() gives different results depending on if the arg is negative or
+  // positive. This line makes it consistent, and ensures the first sample is in
+  // front of the viewer.
+  if (stepOffset < 0.0) {
+    stepOffset += stepSize;
+  }
+}
+
+void getIcosahedralVertices(const float3 direction, out float3 v1, out float3 v2, out float3 v3) {
+  // Normalization scalers to fit dodecahedron to unit sphere.
+  const float a = 0.85065080835204; // phi / sqrt(2 + phi)
+  const float b = 0.5257311121191336; // 1 / sqrt(2 + phi)
+
+  // Derive the vertices of icosahedron where triangle intersects the direction.
+  // See: https://www.ppsloan.org/publications/AmbientDice.pdf
+  const float kT = 0.6180339887498948; // 1 / phi
+  const float kT2 = 0.38196601125010515; // 1 / phi^2
+  float3 absD = abs(direction);
+  float selector1 = dot(absD, float3(1.0, kT2, -kT));
+  float selector2 = dot(absD, float3(-kT, 1.0, kT2));
+  float selector3 = dot(absD, float3(kT2, -kT, 1.0));
+  v1 = selector1 > 0.0 ? float3(a, b, 0.0) : float3(-b, 0.0, a);
+  v2 = selector2 > 0.0 ? float3(0.0, a, b) : float3(a, -b, 0.0);
+  v3 = selector3 > 0.0 ? float3(b, 0.0, a) : float3(0.0, a, -b);
+  float3 octantSign = sign(direction);
+  v1 *= octantSign;
+  v2 *= octantSign;
+  v3 *= octantSign;
+}
+
+
+float3 getStructureNormal(
+  const float3 direction,
+  const float jitter,
+  out float3 a,
+  out float3 b,
+  out float3 c,
+  out float3 weights
+) {
+  getIcosahedralVertices(direction, a, b, c);
+  sortVertices(a, b, c);
+  weights = getPentagonalWeights(direction, a, b, c);
+  return jitter < weights.x
+    ? a
+    : jitter < weights.x + weights.y
+      ? b
+      : c;
+}
+
+float3 getStructureNormal(const float3 direction, const float jitter) {
+  float3 a, b, c, weights;
+  return getStructureNormal(direction, jitter, a, b, c, weights);
+}
+
+
+float4 marchToCloudsShadow(
+  float3 rayOrigin, // Relative to the ellipsoid center
+  float3 rayDirection,
+  float frustumRadius,
+  float maxRayDistance2,
+  float jitter2
+  ) {
+  // Setup structured volume sampling.
+  float3 normal = getStructureNormal(rayDirection, jitter2);
+  float rayDistance;
+  float stepSize;
+  intersectStructuredPlanes(
+    normal,
+    rayOrigin,
+    rayDirection,
+    clamp(maxRayDistance2 / float(maxIterations) * (frustumRadius * 1e-4), minStepSize, maxStepSize),
+    rayDistance,
+    stepSize
+  );
+
+  float extinctionSum = 0.0;
+  float maxOpticalDepth = 0.0;
+  float transmittanceIntegral = 1.0;
+  float weightedDistanceSum = 0.0;
+  float transmittanceSum = 0.0;
+
+  int sampleCount = 0;
+  for (int i = 0; i < maxIterations; ++i) {
+    if (rayDistance > maxRayDistance2) {
+      break; // Termination
+    }
+    float3 position = rayOrigin + rayDirection * rayDistance;
+
+    // Terminate the ray at the scene objects.
+    // if (intersectsSceneObjects(position)) {
+      // break;
+    // }
+
+    // Sample a rough density.
+    float mipLevel = 0.0; // TODO
+    float height = length(position) - bottom_radius;
+    float2 uv = getGlobeUv(position);
+    WeatherSample weather = sampleWeather(uv, height, mipLevel);
+
+    if (any(weather.density > minDensity)) {
+      // Sample a detailed density.
+      float density = sampleDensityDetail(weather, position, mipLevel);
+      if (density > minDensity) {
+        extinctionSum += density;
+        maxOpticalDepth += density * stepSize;
+        ++sampleCount;
+
+        float transmittance = exp(-density * stepSize);
+        transmittanceIntegral *= transmittance;
+
+        // Use the method of the Frostbite's 5.9.1 to obtain smooth front depth.
+        weightedDistanceSum += rayDistance * transmittanceIntegral;
+        transmittanceSum += transmittanceIntegral;
+      }
+
+      // Take a shorter step because we've already hit the clouds.
+      rayDistance += stepSize;
+    } else {
+      // Otherwise step longer in empty space.
+      // TODO
+      rayDistance += stepSize;
+    }
+
+    if (transmittanceIntegral <= minTransmittance) {
+      break; // Early termination
+    }
+  }
+
+  float frontDepth = maxRayDistance2;
+  float distanceToEllipsoid = 0.0;
+  if (transmittanceSum > 0.0) {
+    frontDepth = weightedDistanceSum / transmittanceSum;
+    distanceToEllipsoid = raySphereFirstIntersection(
+      rayOrigin + rayDirection * frontDepth,
+      rayDirection,
+      0.0,
+      bottom_radius
+    );
+  }
+  float meanExtinction = sampleCount > 0 ? extinctionSum / float(sampleCount) : 0.0;
+  return float4(frontDepth, meanExtinction, maxOpticalDepth, distanceToEllipsoid);
+}
+
+
 float4 marchToClouds(const float3 rayOrigin, const float3 rayDirection, const float maxRayDistance2,
   const float jitter,
   const float3 jitterVector,
@@ -595,6 +835,7 @@ float4 marchToClouds(const float3 rayOrigin, const float3 rayDirection, const fl
   const float3 sunDirection,
   float3 sunIrradiance,
   float3 skyIrradiance,
+  int pixel_index,
   out float weightedMeanDepth
 ) {
   float3 radianceIntegral = 0.0;
@@ -625,7 +866,7 @@ float4 marchToClouds(const float3 rayOrigin, const float3 rayDirection, const fl
         // #ifdef ACCURATE_ATMOSPHERIC_IRRADIANCE
         sunIrradiance = GetSunAndSkyIrradiance(
           position,
-          rayDirection,
+          float3(0,1,0),
           sunDirection,
           skyIrradiance
         );
@@ -640,8 +881,15 @@ float4 marchToClouds(const float3 rayOrigin, const float3 rayDirection, const fl
           bottom_radius + maxLayerHeights.x
         );
 
+			  float rayNear;
+			  float rayFar;
+			  getRayNearFar(position, -SunDir, rayNear, rayFar);
+			  // if (rayNear < 0.0) {
+			  //   discard;
+			  // }
+
         // Obtain the optical depth at the position from BSM.
-        float3 shadow = 0;//getShadow(position);
+        float3 shadow = marchToCloudsShadow(position, SunDir, 1222, rayFar - rayNear, random(377 + i, pixel_index).x);
         float frontDepth = shadow.x;
         float meanExtinction = shadow.y;
         float maxOpticalDepth = shadow.z;
@@ -658,7 +906,7 @@ float4 marchToClouds(const float3 rayOrigin, const float3 rayDirection, const fl
         }
         float opticalDepth = sunOpticalDepth + shadowOpticalDepth;
         float scattering = multipleScattering(opticalDepth, cosTheta);
-        float3 radiance = (sunIrradiance * scattering + skyIrradiance * skyIrradianceScale) * density;
+        float3 radiance = (2.0f * sunIrradiance * scattering + skyIrradiance * skyIrradianceScale) * density;
 
         // Fudge factor for the irradiance from ground.
         if (mipLevel < 0.5) {
@@ -671,9 +919,9 @@ float4 marchToClouds(const float3 rayOrigin, const float3 rayDirection, const fl
           radiance += radiance * exp(-groundOpticalDepth - (height - minHeight) * 0.01);
         }
 
-        #ifdef USE_POWDER
+        // #ifdef USE_POWDER
         radiance *= 1.0 - powderScale * exp(-density * powderExponent);
-        #endif // USE_POWDER
+        // #endif // USE_POWDER
 
         // Energy-conserving analytical integration of scattered light
         // See 5.6.3 in https://media.contentapi.ea.com/content/dam/eacom/frostbite/files/s2016-pbs-frostbite-sky-clouds-new.pdf
@@ -695,7 +943,7 @@ float4 marchToClouds(const float3 rayOrigin, const float3 rayDirection, const fl
     } else {
       // Otherwise step longer in empty space.
       // TODO: This produces some banding artifacts.
-      rayDistance += lerp(stepSize, maxStepSize, min(1.0, mipLevel));
+      rayDistance += stepSize;//, maxStepSize, min(1.0, mipLevel));
     }
 
     if (transmittanceIntegral <= minTransmittance) {
@@ -713,20 +961,6 @@ float4 marchToClouds(const float3 rayOrigin, const float3 rayDirection, const fl
 }
 
 
-float raySphereFirstIntersection(
-  const float3 origin,
-  const float3 direction,
-  const float3 center,
-  const float radius
-) {
-  float3 a = origin - center;
-  float b = 2.0 * dot(direction, a);
-  float c = dot(a, a) - radius * radius;
-  float discriminant = b * b - 4.0 * c;
-  return discriminant < 0.0
-    ? -1.0
-    : (-b - sqrt(discriminant)) * 0.5;
-}
 
 
 void raySphereIntersections(
@@ -815,3 +1049,4 @@ void getRayNearFar(const float3 rayDirection, out float rayNear, out float rayFa
     }
   }
 }
+

@@ -1104,17 +1104,17 @@ void WeatherKernel(uint3 id : SV_DispatchThreadID)
 	float cellCount = 2.0;
 	float4 noise =
 	float4(
-	1.0f - getPerlinNoise(thispoint, cellCount * 1.0, 8),
-	1.0f - getPerlinNoise(thispoint, cellCount * 2.0, 8),
-	1.0f - getPerlinNoise(thispoint, cellCount * 4.0, 8),
-	1.0f - getPerlinNoise(thispoint, cellCount * 8.0, 8)
+	1.0f - getPerlinNoise(thispoint, cellCount * 1.0, 2),
+	1.0f - getPerlinNoise(thispoint, cellCount * 2.0, 4),
+	getPerlinNoise(thispoint, cellCount * 0.5f, 8),
+	1.0f - getPerlinNoise(thispoint, cellCount * 8.0, 12)
 	);
 	float3 fbm = float3(
 	dot(noise.xyz, float3(0.625, 0.25, 0.125)),
 	dot(noise.yzw, float3(0.625, 0.25, 0.125)),
 	dot(noise.zw, float2(0.75, 0.25))
 	);
-	WeatherTex[id.xy] = float4(clamp((1.0f - abs(fbm)) * 2.0f,0,1), 1);//noise;//dot(fbm, float3(0.625, 0.25, 0.125));
+	WeatherTex[id.xy] = float4(clamp((1.0f - abs(fbm)) * float3(0.3f, 1.0f, 1.0f),0,1), 1);//noise;//dot(fbm, float3(0.625, 0.25, 0.125));
 
 
 }

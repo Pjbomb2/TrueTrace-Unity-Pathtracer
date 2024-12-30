@@ -707,16 +707,16 @@ int MaterialIndex;
         float TrueDeSat = DoSecondary ? SkyDesaturate : SecondarySkyDesaturate;
         if(CurBounce != 0 && IndirectBoost < 1) Intensity *= rcp(IndirectBoost);
         float3 Sun = 0;
-  //       float weightedMeanDepth = 0;
+        // float weightedMeanDepth = 0;
   // float rayNear;
   // float rayFar;
   // getRayNearFar(ray.direction, rayNear, rayFar);
   // float3 skyirrad;
-  // float3 sunirrad = GetSunAndSkyIrradiance(ray.origin+float3(0,bottom_radius,0), ray.direction, SunDir, skyirrad);
-  // float3 rad2 = 0;
+  // float3 sunirrad;// = GetSunAndSkyIrradiance(ray.origin+float3(0,bottom_radius,0), ray.direction, SunDir, skyirrad);
+  // float4 rad2 = 0;
   //  float2 globeUv = getGlobeUv(ray.origin);
   // float mipLevel = length(globeUv * localWeatherFrequency);
-  // mipLevel = lerp(0.0, mipLevel, min(1.0, 0.2 * ray.origin.y / maxHeight));
+  // mipLevel = 0;//lerp(0.0, mipLevel, min(1.0, 0.2 * ray.origin.y / maxHeight));
         [branch]switch(DoSecondary ? BackgroundType : SecondaryBackgroundType) {
             case 0:
                 Radiance = GetSkyRadiance(ray.origin, ray.direction, 0, SunDir, transmittance, debug);
@@ -737,16 +737,22 @@ int MaterialIndex;
                 //     (ray.origin+float3(0,bottom_radius,0)),
                 //     ray.direction,
                 //     rayFar - rayNear,
-                //     0,
-                //     0,
+                //     random(233, pixel_index).x,
+                //     float3(random(234, pixel_index), random(235, pixel_index).x),
                 //     pow(2.0, mipLevel),
                 //     SunDir,
                 //     sunirrad,
                 //     skyirrad,
+                //     pixel_index,
                 //     weightedMeanDepth
                 //   );
-                // Radiance *= weightedMeanDepth;
-                // Radiance += rad2 * transmittance;
+                // // Radiance *= exp(-weightedMeanDepth);
+                // if(weightedMeanDepth > 0) {
+                //     Radiance *= 1.0f - (rad2.a);
+                //     applyAerialPerspective(ray.origin, ray.origin + (weightedMeanDepth + rayNear) * ray.direction, rad2);
+                // }
+                //     Radiance += pow(1.0f - exp(-rad2 / 1.0f * 10.0f), 1.0f);
+                // Radiance += rad2;// * transmittance;
                 // Radiance /= weightedMeanDepth;
 
                 if (all(Radiance < 10000.0f)) {

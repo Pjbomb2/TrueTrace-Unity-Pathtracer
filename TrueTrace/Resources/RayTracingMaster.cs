@@ -16,7 +16,7 @@ namespace TrueTrace {
         [HideInInspector] [SerializeField] public string LocalTTSettingsName = "TTGlobalSettings";
         private bool OverriddenResolutionIsActive = false;
         public bool HDRPorURPRenderInScene = false;
-        [HideInInspector] public AtmosphereGenerator Atmo;
+        public AtmosphereGenerator Atmo;
         [HideInInspector] public AssetManager Assets;
         private ReSTIRASVGF ReSTIRASVGFCode;
         private TTPostProcessing TTPostProc;
