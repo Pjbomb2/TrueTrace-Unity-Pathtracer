@@ -456,6 +456,10 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     area = PI * Light.SpotAngle.x * Light.SpotAngle.x;
                 break;
             }
+
+
+
+          
             // float newt = hit.t;
             // float newPDF = 1;
             // sampleEquiAngular(random(321, pixel_index).x, hit.t, PrevOrigin, PrevDirection, LightPosition, newt, newPDF);
@@ -540,6 +544,45 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 if (validbsdfNEE) {
                     float NEE_pdf;
                     float3 Illum;
+
+
+
+  // if(LightFormat == DIRECTIONALLIGHT && CurBounce == 0) {
+  //             float rayNear;
+  //             float rayFar;
+  //             getRayNearFar(pos + float3(0,bottom_radius,0), SunDir, rayNear, rayFar);
+  //             // if (rayNear < 0.0) {
+  //             //   discard;
+  //             // }
+
+  //           float distanceToTop = raySphereSecondIntersection(
+  //             pos+float3(0,bottom_radius,0) + ellipsoidCenter,
+  //             SunDir,
+  //             ellipsoidCenter,
+  //             bottom_radius + maxLayerHeights.x
+  //           );
+
+  //               // Obtain the optical depth at the position from BSM.
+  //               float3 shadow = marchToCloudsShadow(pos + float3(0,bottom_radius,0), SunDir, 1222, rayFar - rayNear, random(377, pixel_index).x);
+  //               float frontDepth = shadow.x;
+  //               float meanExtinction = shadow.y;
+  //               float maxOpticalDepth = shadow.z;
+  //               float shadowOpticalDepth = min(
+  //                 maxOpticalDepth,
+  //                 meanExtinction * max(0.0, distanceToTop - frontDepth)
+  //               );
+
+  //               float sunOpticalDepth = 0.0;
+  //               if (0 < 0.5) {
+  //                 sunOpticalDepth = sampleOpticalDepth(pos+float3(0,bottom_radius,0), SunDir, 2, 0);
+  //               } else {
+  //                 sunOpticalDepth = sampleOpticalDepth(pos+float3(0,bottom_radius,0), SunDir, 1, 0);
+  //               }
+  //               float opticalDepth = sunOpticalDepth + shadowOpticalDepth;
+  //               float scattering = multipleScattering(opticalDepth, 1);
+  //               Radiance = (Radiance * scattering);
+  //           }
+
                     [branch]if (SelectedLightGroup == 1) {
                         NEE_pdf = 1.0f / (abs(dot(to_light, LightNorm)) * area / distance_to_light_squared);
                         Illum = (Radiance * bsdf_value) / NEE_pdf * RunningWeight;
@@ -707,7 +750,7 @@ int MaterialIndex;
         float TrueDeSat = DoSecondary ? SkyDesaturate : SecondarySkyDesaturate;
         if(CurBounce != 0 && IndirectBoost < 1) Intensity *= rcp(IndirectBoost);
         float3 Sun = 0;
-        // float weightedMeanDepth = 0;
+  //       float weightedMeanDepth = 0;
   // float rayNear;
   // float rayFar;
   // getRayNearFar(ray.direction, rayNear, rayFar);
@@ -731,29 +774,27 @@ int MaterialIndex;
                 Stars = pow(saturate(Stars), 2.0f);
                 if(GetBounceData(Color.MetRoughIsSpec) <= 1) Radiance += Stars;
 
-
-                // rad2 = 
-                // marchToClouds(
-                //     (ray.origin+float3(0,bottom_radius,0)),
-                //     ray.direction,
-                //     rayFar - rayNear,
-                //     random(233, pixel_index).x,
-                //     float3(random(234, pixel_index), random(235, pixel_index).x),
-                //     pow(2.0, mipLevel),
-                //     SunDir,
-                //     sunirrad,
-                //     skyirrad,
-                //     pixel_index,
-                //     weightedMeanDepth
-                //   );
-                // // Radiance *= exp(-weightedMeanDepth);
-                // if(weightedMeanDepth > 0) {
-                //     Radiance *= 1.0f - (rad2.a);
-                //     applyAerialPerspective(ray.origin, ray.origin + (weightedMeanDepth + rayNear) * ray.direction, rad2);
-                // }
-                //     Radiance += pow(1.0f - exp(-rad2 / 1.0f * 10.0f), 1.0f);
-                // Radiance += rad2;// * transmittance;
-                // Radiance /= weightedMeanDepth;
+                // if(CurBounce <= 1) {
+                //     rad2 = 
+                //     marchToClouds(
+                //         (ray.origin+float3(0,bottom_radius,0)),
+                //         ray.direction,
+                //         rayFar - rayNear,
+                //         random(233, pixel_index).x,
+                //         float3(random(234, pixel_index), random(235, pixel_index).x),
+                //         pow(2.0, 0),
+                //         SunDir,
+                //         sunirrad,
+                //         skyirrad,
+                //         pixel_index,
+                //         weightedMeanDepth
+                //       );
+                //     if(weightedMeanDepth > 0) {
+                //         Radiance *= 1.0f - (rad2.a);
+                //         applyAerialPerspective(ray.origin, ray.origin + (weightedMeanDepth + rayNear) * ray.direction, rad2);
+                //     }
+                //         Radiance += pow(1.0f - exp(-rad2 / 1.0f * 10.0f), 1.0f);
+                //     }
 
                 if (all(Radiance < 10000.0f)) {
                     Radiance = DeSat(Radiance, 1.0f - TrueDeSat);
@@ -901,7 +942,7 @@ int MaterialIndex;
     #endif
 
 #ifdef FakedAO
-    if(CurBounce != 0 && bestHit.t < 1.0f) Color.throughput *= exp(-(1.0f - bestHit.t) * 12000.0f);
+    if(TempMat.specTrans == 0 && CurBounce != 0 && bestHit.t < 1.0f) Color.throughput *= exp(-(1.0f - bestHit.t) * 12000.0f);
 #endif
 
     if (TempMat.specTrans != 1 && TempMat.MetallicTex.x > 0) TempMat.metallic = pow(SampleTexture(BaseUv, SampleMetallic, TempMat), rcp(2.2f));

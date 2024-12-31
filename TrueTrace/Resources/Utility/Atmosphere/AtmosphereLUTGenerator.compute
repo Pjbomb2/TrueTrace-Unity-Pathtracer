@@ -1096,7 +1096,8 @@ void CloudShapeDetailKernel(uint3 id : SV_DispatchThreadID)
 #pragma kernel WeatherKernel
 
 RWTexture2D<float4> WeatherTex;
-
+Texture2D<float4> CloudSampA;
+Texture2D<float4> CloudSampB;
 [numthreads(16, 16, 1)]
 void WeatherKernel(uint3 id : SV_DispatchThreadID)
 {
@@ -1114,7 +1115,7 @@ void WeatherKernel(uint3 id : SV_DispatchThreadID)
 	dot(noise.yzw, float3(0.625, 0.25, 0.125)),
 	dot(noise.zw, float2(0.75, 0.25))
 	);
-	WeatherTex[id.xy] = float4(clamp((1.0f - abs(fbm)) * float3(0.3f, 1.0f, 1.0f),0,1), 1);//noise;//dot(fbm, float3(0.625, 0.25, 0.125));
+	WeatherTex[id.xy] = float4(CloudSampA[id.xy].x, 0, CloudSampB[id.xy].x, 0);//float4(clamp((1.0f - abs(fbm)) * float3(0.3f, 1.0f, 1.0f),0,1), 1);//noise;//dot(fbm, float3(0.625, 0.25, 0.125));
 
 
 }

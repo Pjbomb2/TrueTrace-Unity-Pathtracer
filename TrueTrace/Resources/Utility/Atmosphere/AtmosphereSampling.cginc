@@ -379,21 +379,21 @@ SamplerState my_linear_repeat_sampler;
 #define LOG2 1.442695
 #define EPSILON 1e-6
 
-#define maxLayerHeights float4(1200,5000,8000,0)
-#define minLayerHeights float4(600,4500,6700,0)
+#define maxLayerHeights float4(1200,0,8000,0)
+#define minLayerHeights float4(600,0,6700,0)
 #define weatherExponents float4(1,1,3,1)
 #define localWeatherFrequency float2(200,150)
-#define coverage 0.5
-#define coverageFilterWidths float4(0.6,0.3,0.5,0)
-#define detailAmounts float4(1,0.8,0.3,0)
-#define extinctionCoeffs float4(0.3,0.1,0.005,0)
+#define coverage 0.2
+#define coverageFilterWidths float4(0.6,0,0.5,0)
+#define detailAmounts float4(1,0,0.3,0)
+#define extinctionCoeffs (float4(0.3,0,0.005,0) * 1.02f)
 #define shapeFrequency 0.0003
-#define MULTI_SCATTERING_OCTAVES 8
+#define MULTI_SCATTERING_OCTAVES 32
 #define ellipsoidCenter float3(0,0,0)
 #define minHeight 0
 #define maxHeight 8000
 #define shapeDetailFrequency 0.007f
-#define minStepSize 100
+#define minStepSize 10
 
 float inverseLerp(const float x, const float y, const float a) {
   return (a - x) / (y - x);
@@ -511,7 +511,7 @@ WeatherSample sampleWeather(const float2 uv, const float height, const float mip
   );
 
   float4 localWeather = pow(
-    localWeatherTexture.SampleLevel(my_linear_repeat_sampler, uv * localWeatherFrequency, mipLevel),
+    localWeatherTexture.SampleLevel(my_linear_repeat_sampler, uv * localWeatherFrequency + (curframe / 120000.0f), mipLevel),
     weatherExponents
   );
   float4 heightScale = shapeAlteringFunction(weather.heightFraction, 0.4);
@@ -603,7 +603,7 @@ float multipleScattering(const float opticalDepth, const float cosTheta) {
   float3 abc = 1.0;
   const float3 attenuation = float3(0.5, 0.5, 0.8); // Should satisfy a <= b
   float scattering = 0.0;
-  for (int octave = 0; octave < MULTI_SCATTERING_OCTAVES; ++octave) {
+  [loop]for (int octave = 0; octave < MULTI_SCATTERING_OCTAVES; ++octave) {
     float beerLambert = exp(-opticalDepth * abc.y);
     // A similar approximation is described in the Frostbite's paper, where
     // phase angle is attenuated.
@@ -800,10 +800,14 @@ float4 marchToCloudsShadow(
       }
 
       // Take a shorter step because we've already hit the clouds.
+      // stepSize *= 1.005f;
+      if(height > 5000) stepSize = 1000.0f;
       rayDistance += stepSize;
     } else {
       // Otherwise step longer in empty space.
       // TODO
+      // stepSize *= 1.005f;
+      if(height > 5000) stepSize = 1000.0f;
       rayDistance += stepSize;
     }
 
@@ -858,6 +862,7 @@ float4 marchToClouds(const float3 rayOrigin, const float3 rayDirection, const fl
     float height = length(position) - bottom_radius;
     float2 uv = getGlobeUv(position);
     WeatherSample weather = sampleWeather(uv, height, mipLevel);
+      if(height > 5000) stepSize = 1000.0f;
 
     if (any(weather.density > minDensity)) {
       // Sample a detailed density.
@@ -906,7 +911,7 @@ float4 marchToClouds(const float3 rayOrigin, const float3 rayDirection, const fl
         }
         float opticalDepth = sunOpticalDepth + shadowOpticalDepth;
         float scattering = multipleScattering(opticalDepth, cosTheta);
-        float3 radiance = (2.0f * sunIrradiance * scattering + skyIrradiance * skyIrradianceScale) * density;
+        float3 radiance = (6.0f * sunIrradiance * scattering + skyIrradiance * skyIrradianceScale) * density;
 
         // Fudge factor for the irradiance from ground.
         if (mipLevel < 0.5) {
@@ -939,11 +944,12 @@ float4 marchToClouds(const float3 rayOrigin, const float3 rayDirection, const fl
 
       // Take a shorter step because we've already hit the clouds.
       stepSize *= 1.005;
-      rayDistance += stepSize;
+      rayDistance += min(stepSize, maxStepSize);
     } else {
       // Otherwise step longer in empty space.
       // TODO: This produces some banding artifacts.
-      rayDistance += stepSize;//, maxStepSize, min(1.0, mipLevel));
+      stepSize *= 1.005;
+      rayDistance += min(stepSize, maxStepSize);//, maxStepSize, min(1.0, mipLevel));
     }
 
     if (transmittanceIntegral <= minTransmittance) {

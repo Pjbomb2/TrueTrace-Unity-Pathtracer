@@ -1006,6 +1006,11 @@ namespace CommonVars
             if (Buff != null) {Buff.Release(); Buff = null;}
         }
 
+        public static void ReleaseSafe(this GraphicsBuffer Buff)
+        {
+            if (Buff != null) {Buff.Release(); Buff = null;}
+        }
+
         static Vector2 msign(Vector2 v)
         {
             return new Vector2((v.x >= 0.0f) ? 1.0f : -1.0f, (v.y >= 0.0f) ? 1.0f : -1.0f);

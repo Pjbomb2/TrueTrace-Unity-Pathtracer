@@ -33,6 +33,9 @@ namespace TrueTrace {
         private ComputeBuffer mie_densityC;
         private ComputeBuffer absorption_densityC;
 
+        // public Texture2D CloudSampA;
+        // public Texture2D CloudSampB;
+
         private int SkyViewKernel;
 
         public struct DensityProfileLayer
@@ -274,37 +277,41 @@ namespace TrueTrace {
             DeltaMultiScatterTex.Release();
 
 
-            // CloudShapeTex = new RenderTexture(128, 128, 0,
-            // RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-            // CloudShapeTex.volumeDepth = 128;
-            // CloudShapeTex.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-            // CloudShapeTex.enableRandomWrite = true;
-            // CloudShapeTex.Create();
+//             CloudShapeTex = new RenderTexture(128, 128, 0,
+//             RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+//             CloudShapeTex.volumeDepth = 128;
+//             CloudShapeTex.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+//             CloudShapeTex.enableRandomWrite = true;
+//             CloudShapeTex.Create();
 
-            // CloudShapeDetailTex = new RenderTexture(32, 32, 0,
-            // RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-            // CloudShapeDetailTex.volumeDepth = 32;
-            // CloudShapeDetailTex.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-            // CloudShapeDetailTex.enableRandomWrite = true;
-            // CloudShapeDetailTex.Create();
+//             CloudShapeDetailTex = new RenderTexture(32, 32, 0,
+//             RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+//             CloudShapeDetailTex.volumeDepth = 32;
+//             CloudShapeDetailTex.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+//             CloudShapeDetailTex.enableRandomWrite = true;
+//             CloudShapeDetailTex.Create();
 
-            // WeatherTex = new RenderTexture(512, 512, 0,
-            // RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
-            // WeatherTex.useMipMap = true;
-            // WeatherTex.autoGenerateMips = false;
-            // WeatherTex.enableRandomWrite = true;
-            // WeatherTex.Create();
+//             WeatherTex = new RenderTexture(512, 512, 0,
+//             RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.sRGB);
+//             WeatherTex.useMipMap = true;
+//             WeatherTex.autoGenerateMips = false;
+//             WeatherTex.enableRandomWrite = true;
+//             WeatherTex.Create();
 
-            // Atmosphere.SetTexture(CloudShapeKernel, "CloudShapeTex", CloudShapeTex);
-            // Atmosphere.Dispatch(CloudShapeKernel, 128, 128, 128);
+//             Atmosphere.SetTexture(CloudShapeKernel, "CloudShapeTex", CloudShapeTex);
+//             Atmosphere.Dispatch(CloudShapeKernel, 128, 128, 128);
 
-            // Atmosphere.SetTexture(CloudShapeDetailKernel, "CloudShapeDetailTex", CloudShapeDetailTex);
-            // Atmosphere.Dispatch(CloudShapeDetailKernel, 32, 32, 32);
+//             Atmosphere.SetTexture(CloudShapeDetailKernel, "CloudShapeDetailTex", CloudShapeDetailTex);
+//             Atmosphere.Dispatch(CloudShapeDetailKernel, 32, 32, 32);
+            
+// CloudSampA = Resources.Load<Texture2D>("Utility/Atmosphere/GgAa20KbQAABHGm"); 
+// CloudSampB = Resources.Load<Texture2D>("Utility/Atmosphere/GgAa3ZuaIAAjUL8"); 
+//             Atmosphere.SetTexture(WeatherKernel, "WeatherTex", WeatherTex);
+//             Atmosphere.SetTexture(WeatherKernel, "CloudSampA", CloudSampA);
+//             Atmosphere.SetTexture(WeatherKernel, "CloudSampB", CloudSampB);
+//             Atmosphere.Dispatch(WeatherKernel, Mathf.CeilToInt(512.0f / 16.0f), Mathf.CeilToInt(512.0f / 16.0f), 1);
 
-            // Atmosphere.SetTexture(WeatherKernel, "WeatherTex", WeatherTex);
-            // Atmosphere.Dispatch(WeatherKernel, Mathf.CeilToInt(512.0f / 16.0f), Mathf.CeilToInt(512.0f / 16.0f), 1);
-
-            // WeatherTex.GenerateMips();
+//             WeatherTex.GenerateMips();
         }
 
 
