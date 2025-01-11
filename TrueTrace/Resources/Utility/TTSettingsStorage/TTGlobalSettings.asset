@@ -22,10 +22,10 @@ MonoBehaviour:
   Accumulate: 1
   PPBloom: 0
   BloomStrength: 0.5
-  PPDoF: 0
+  PPDoF: 1
   DoFAperature: 0.2
   DoFAperatureScale: 1
-  DoFFocal: 0.2
+  DoFFocal: 0.9822057
   PPExposure: 0
   ExposureAuto: 0
   PPToneMap: 1

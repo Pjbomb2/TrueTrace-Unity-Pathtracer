@@ -27,7 +27,6 @@ namespace TrueTrace {
         }
 
         public Toggle NEEToggle;
-        public Toggle DingToggle;
         public Button BVHBuild;
         public Button ScreenShotButton;
         public Button StaticButton;
@@ -38,7 +37,6 @@ namespace TrueTrace {
         public AssetManager Assets;
         public InstancedManager Instancer;
         private bool Cleared;
-        private AudioClip DingNoise;
          [SerializeField] public Camera SelectedCamera;
          [SerializeField] public bool ClayMode = false;
          [SerializeField] public Vector3 ClayColor = new Vector3(0.5f,0.5f,0.5f);
@@ -94,7 +92,6 @@ namespace TrueTrace {
          [SerializeField] public float IndirectBoost = 1;
          [SerializeField] public int BackgroundType = 0;
          [SerializeField] public int SecondaryBackgroundType = 0;
-         [SerializeField] public bool DoDing = true;
          [SerializeField] public bool DoSaving = true;
          [SerializeField] public float SkyDesaturate = 0;
          [SerializeField] public float SecondarySkyDesaturate = 0;
@@ -118,6 +115,17 @@ namespace TrueTrace {
          [SerializeField] public float ConvBloomDistExp = 0;
          [SerializeField] public float ConvBloomDistExpClampMin = 1;
          [SerializeField] public float ConvBloomDistExpScale = 1;
+         [SerializeField] public bool DoChromaAber = false;
+         [SerializeField] public float ChromaDistort = 0.3f;
+         [SerializeField] public bool DoBCS = false;
+         [SerializeField] public float Saturation = 1.0f;
+         [SerializeField] public float Contrast = 1.0f;
+         [SerializeField] public bool DoVignette = false;
+         [SerializeField] public float innerVignette = 0.5f;
+         [SerializeField] public float outerVignette = 1.2f;
+         [SerializeField] public float strengthVignette = 0.8f;
+         [SerializeField] public float curveVignette = 0.5f;
+         [SerializeField] public Color ColorVignette = Color.black;
 
          public bool GetGlobalDefine(string DefineToGet) {
             string globalDefinesPath = TTPathFinder.GetGlobalDefinesPath();
@@ -609,6 +617,7 @@ Toolbar toolbar;
       }
 
       VisualElement HardSettingsMenu;
+      VisualElement PostProcessingMenu;
       VisualElement SceneSettingsMenu;
       PopupField<string> BackgroundSettingsField;
       PopupField<string> SecondaryBackgroundSettingsField;
@@ -1808,8 +1817,6 @@ Toolbar toolbar;
 
 
 
-         DingToggle = new Toggle() {value = DoDing, text = "Play Ding When Build Finishes"};
-         DingToggle.RegisterValueChangedCallback(evt => {DoDing = evt.newValue; RayTracingMaster.DoDing = DoDing;});
 
          MaterialHelperToggle = new Toggle() {value = !(definesList.Contains("HIDEMATERIALREATIONS")), text = "Show Material Helper Lines"};
          MaterialHelperToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) RemoveDefine("HIDEMATERIALREATIONS"); else AddDefine("HIDEMATERIALREATIONS");});
@@ -1884,7 +1891,6 @@ Toolbar toolbar;
          HardSettingsMenu.Add(PlayLabel);
          HardSettingsMenu.Add(PlayContainer);
          HardSettingsMenu.Add(ClayModeToggle);
-         HardSettingsMenu.Add(DingToggle);
          HardSettingsMenu.Add(MaterialHelperToggle);
          HardSettingsMenu.Add(MatChangeResetsAccumToggle);
          if(ClayMode) HardSettingsMenu.Add(ClayColorBox);
@@ -1906,9 +1912,269 @@ Toolbar toolbar;
 
          // HardSettingsMenu.Add(CorrectMatOptionsButton);
       }
+      public class FloatSliderPair {
+         public VisualElement DynamicContainer;
+         public Label DynamicLabel;
+         public Slider DynamicSlider;
+         public FloatField DynamicField;
+      }
+      FloatSliderPair CreatePairedFloatSlider(string Name, float LowValue, float HighValue, ref float InitialValue, float SliderWidth = 100) {
+         FloatSliderPair NewPair = new FloatSliderPair();
+         NewPair.DynamicContainer = CreateHorizontalBox(Name + " Container");
+            NewPair.DynamicLabel = new Label(Name);
+            NewPair.DynamicSlider = new Slider() {value = InitialValue, highValue = HighValue, lowValue = LowValue};
+            NewPair.DynamicField = new FloatField() {value = InitialValue};
+            NewPair.DynamicSlider.style.width = SliderWidth;
+         NewPair.DynamicContainer.Add(NewPair.DynamicLabel);
+         NewPair.DynamicContainer.Add(NewPair.DynamicSlider);
+         NewPair.DynamicContainer.Add(NewPair.DynamicField);
+         return NewPair;
+      }
+
+      void AddPostProcessingToMenu() {
+
+         List<string> TonemapSettings = new List<string>();
+         TonemapSettings.Add("TonyMcToneFace");
+         TonemapSettings.Add("ACES Filmic");
+         TonemapSettings.Add("Uchimura");
+         TonemapSettings.Add("Reinhard");
+         TonemapSettings.Add("Uncharted 2");
+         TonemapSettings.Add("AgX");
+         PopupField<string> ToneMapField = new PopupField<string>("<b>Tonemapper</b>");
+         ToneMapField.ElementAt(0).style.minWidth = 65;
+         ToneMapField.choices = TonemapSettings;
+         ToneMapField.index = ToneMapIndex;
+         ToneMapField.RegisterValueChangedCallback(evt => {ToneMapIndex = ToneMapField.index; RayMaster.LocalTTSettings.ToneMapper = ToneMapIndex;});
+
+         Toggle ToneMapToggle = new Toggle() {value = ToneMap, text = "Enable Tonemapping"};
+         VisualElement ToneMapFoldout = new VisualElement() {};
+            ToneMapFoldout.style.flexDirection = FlexDirection.Row;
+            ToneMapFoldout.Add(ToneMapField);
+         PostProcessingMenu.Add(ToneMapToggle);
+         ToneMapToggle.RegisterValueChangedCallback(evt => {ToneMap = evt.newValue; RayMaster.LocalTTSettings.PPToneMap = ToneMap; if(evt.newValue) PostProcessingMenu.Insert(PostProcessingMenu.IndexOf(ToneMapToggle) + 1, ToneMapFoldout); else PostProcessingMenu.Remove(ToneMapFoldout);});
+         if(ToneMap) PostProcessingMenu.Add(ToneMapFoldout);
+
+         VisualElement SharpenFoldout = new VisualElement() {};
+            Slider SharpnessSlider = new Slider() {label = "Sharpness: ", value = Sharpness, highValue = 1.0f, lowValue = 0.0f};
+            SharpnessSlider.style.width = 200;
+            SharpnessSlider.RegisterValueChangedCallback(evt => {Sharpness = evt.newValue; RayMaster.LocalTTSettings.Sharpness = Sharpness;});
+            SharpenFoldout.Add(SharpnessSlider);
+         SharpnessSlider.ElementAt(0).style.minWidth = 65;
 
 
-      private VisualElement CreateHorizontalBox(string Name) {
+         Toggle SharpenToggle = new Toggle() {value = DoSharpen, text = "Use Sharpness Filter"};
+         PostProcessingMenu.Add(SharpenToggle);
+         SharpenToggle.RegisterValueChangedCallback(evt => {DoSharpen = evt.newValue; RayMaster.LocalTTSettings.DoSharpen = DoSharpen; if(evt.newValue) PostProcessingMenu.Insert(PostProcessingMenu.IndexOf(SharpenToggle) + 1, SharpenFoldout); else PostProcessingMenu.Remove(SharpenFoldout);});
+         if(DoSharpen) PostProcessingMenu.Add(SharpenFoldout);
+
+
+
+         BloomToggle = new Toggle() {value = Bloom, text = "Enable Bloom"};
+            VisualElement BloomBox = new VisualElement();
+               Toggle ConvBloomToggle = new Toggle {value = ConvBloom, text = "Convolutional Bloom"};
+                  VisualElement StandardBloomBox = new VisualElement();
+                     StandardBloomBox.style.flexDirection = FlexDirection.Row;
+                     Label BloomLabel = new Label("Bloom Strength");
+                     Slider BloomSlider = new Slider() {value = BloomStrength, highValue = 0.9999f, lowValue = 0.25f};
+                        BloomSlider.style.width = 100;
+                        BloomSlider.RegisterValueChangedCallback(evt => {BloomStrength = evt.newValue; RayMaster.LocalTTSettings.BloomStrength = BloomStrength;});
+                  StandardBloomBox.Add(BloomLabel);
+                  StandardBloomBox.Add(BloomSlider);
+                  VisualElement ConvBloomBox = new VisualElement();
+                     Slider ConvBloomStrengthSlider = new Slider() {label = "Convolution Bloom Strength", value = ConvStrength, highValue = 10.0f, lowValue = 0.0f};
+                        ConvBloomStrengthSlider.style.width = 400;
+                        ConvBloomStrengthSlider.RegisterValueChangedCallback(evt => {ConvStrength = evt.newValue; RayMaster.LocalTTSettings.ConvStrength = ConvStrength;});
+                     Slider ConvBloomThresholdSlider = new Slider() {label = "Convolution Bloom Threshold", value = ConvBloomThreshold, highValue = 20.0f, lowValue = 0.0f};
+                        ConvBloomThresholdSlider.style.width = 400;
+                        ConvBloomThresholdSlider.RegisterValueChangedCallback(evt => {ConvBloomThreshold = evt.newValue; RayMaster.LocalTTSettings.ConvBloomThreshold = ConvBloomThreshold;});
+                     Vector2Field ConvBloomSizeField = new Vector2Field() {label = "Convolution Bloom Size", value = ConvBloomSize};
+                        ConvBloomSizeField.RegisterValueChangedCallback(evt => {ConvBloomSize = evt.newValue; RayMaster.LocalTTSettings.ConvBloomSize = ConvBloomSize;});
+                     VisualElement ConvDistExpBox = CreateHorizontalBox("Convolution Distance Container");
+                        FloatField ConvBloomDistExpField = new FloatField() {label = "Convolution Bloom Dist Exp", value = ConvBloomDistExp};
+                           ConvBloomDistExpField.RegisterValueChangedCallback(evt => {ConvBloomDistExp = evt.newValue; RayMaster.LocalTTSettings.ConvBloomDistExp = ConvBloomDistExp;});
+                        FloatField ConvBloomDistExpClampMinField = new FloatField() {label = "Convolution Bloom Dist Exp Clamp Min", value = ConvBloomDistExpClampMin};
+                           ConvBloomDistExpClampMinField.RegisterValueChangedCallback(evt => {ConvBloomDistExpClampMin = evt.newValue; RayMaster.LocalTTSettings.ConvBloomDistExpClampMin = ConvBloomDistExpClampMin;});
+                        FloatField ConvBloomDistExpScaleField = new FloatField() {label = "Convolution Bloom Dist Exp Scale", value = ConvBloomDistExpScale};
+                           ConvBloomDistExpScaleField.RegisterValueChangedCallback(evt => {ConvBloomDistExpScale = evt.newValue; RayMaster.LocalTTSettings.ConvBloomDistExpScale = ConvBloomDistExpScale;});
+                     ConvDistExpBox.Add(ConvBloomDistExpField);
+                     ConvDistExpBox.Add(ConvBloomDistExpClampMinField);
+                     ConvDistExpBox.Add(ConvBloomDistExpScaleField);
+
+
+                  ConvBloomBox.Add(ConvBloomStrengthSlider);
+                  ConvBloomBox.Add(ConvBloomThresholdSlider);
+                  ConvBloomBox.Add(ConvBloomSizeField);
+                  ConvBloomBox.Add(ConvDistExpBox);
+               BloomBox.Add(ConvBloomToggle);
+               if(ConvBloom) BloomBox.Add(ConvBloomBox);
+               else BloomBox.Add(StandardBloomBox);
+               ConvBloomToggle.RegisterValueChangedCallback(evt => {ConvBloom = evt.newValue; RayMaster.LocalTTSettings.ConvBloom = ConvBloom; if(evt.newValue) {BloomBox.Remove(StandardBloomBox); BloomBox.Insert(BloomBox.IndexOf(ConvBloomToggle) + 1, ConvBloomBox); } else {BloomBox.Remove(ConvBloomBox); BloomBox.Insert(BloomBox.IndexOf(ConvBloomToggle) + 1, StandardBloomBox); }});        
+            BloomToggle.RegisterValueChangedCallback(evt => {Bloom = evt.newValue; RayMaster.LocalTTSettings.PPBloom = Bloom; if(evt.newValue) PostProcessingMenu.Insert(PostProcessingMenu.IndexOf(BloomToggle) + 1, BloomBox); else PostProcessingMenu.Remove(BloomBox);});        
+         PostProcessingMenu.Add(BloomToggle);
+         if(Bloom) {
+            PostProcessingMenu.Add(BloomBox);
+
+         }
+
+
+
+           Label AperatureLabel = new Label("Aperature Size");
+           AperatureSlider = new Slider() {value = DoFAperature, highValue = 1, lowValue = 0};
+           AperatureSlider.style.width = 250;
+           FloatField AperatureScaleField = new FloatField() {value = DoFAperatureScale, label = "Aperature Scale"};
+           AperatureScaleField.ElementAt(0).style.minWidth = 65;
+           AperatureScaleField.RegisterValueChangedCallback(evt => {DoFAperatureScale = evt.newValue; DoFAperatureScale = Mathf.Max(DoFAperatureScale, 0.0001f); RayMaster.LocalTTSettings.DoFAperatureScale = DoFAperatureScale; AperatureScaleField.value = DoFAperatureScale;});
+           Label FocalLabel = new Label("Focal Length");
+           FocalSlider = new FloatField() {value = DoFFocal};
+           FocalSlider.style.width = 150;
+           Label AutoFocLabel = new Label("Hold Middle Mouse + Left Control in game to focus");
+           // Button AutofocusButton = new Button(() => {IsFocusing = true;}) {text = "Autofocus DoF"};
+           // AutofocusButton.RegisterCallback<MouseEnterEvent>(evt => {});
+           // AutofocusButton.RegisterCallback<MouseLeaveEvent>(evt => {});
+
+
+           Box AperatureBox = new Box();
+           AperatureBox.Add(AperatureLabel);
+           AperatureBox.Add(AperatureSlider);
+           AperatureBox.Add(AperatureScaleField);
+           AperatureBox.style.flexDirection = FlexDirection.Row;
+           Box FocalBox = new Box();
+           FocalBox.Add(FocalLabel);
+           FocalBox.Add(FocalSlider);
+           FocalBox.Add(AutoFocLabel);
+           // FocalBox.Add(AutofocusButton);
+           FocalBox.style.flexDirection = FlexDirection.Row;
+
+           Toggle DoFToggle = new Toggle() {value = DoF, text = "Enable DoF"};
+           VisualElement DoFFoldout = new VisualElement();
+           DoFFoldout.Add(AperatureBox);
+           DoFFoldout.Add(FocalBox);
+           PostProcessingMenu.Add(DoFToggle);
+           DoFToggle.RegisterValueChangedCallback(evt => {DoF = evt.newValue; RayMaster.LocalTTSettings.PPDoF = DoF;if(evt.newValue) PostProcessingMenu.Insert(PostProcessingMenu.IndexOf(DoFToggle) + 1, DoFFoldout); else PostProcessingMenu.Remove(DoFFoldout);});        
+           AperatureSlider.RegisterValueChangedCallback(evt => {DoFAperature = evt.newValue; RayMaster.LocalTTSettings.DoFAperature = DoFAperature;});
+           FocalSlider.RegisterValueChangedCallback(evt => {DoFFocal = Mathf.Max(0.001f, evt.newValue); RayMaster.LocalTTSettings.DoFFocal = DoFFocal;});
+           if(DoF) PostProcessingMenu.Add(DoFFoldout);
+           
+           Toggle DoExposureToggle = new Toggle() {value = DoExposure, text = "Enable Auto/Manual Exposure"};
+           PostProcessingMenu.Add(DoExposureToggle);
+           VisualElement ExposureElement = new VisualElement();
+               ExposureElement.style.flexDirection = FlexDirection.Row;
+               Label ExposureLabel = new Label("Exposure");
+               Slider ExposureSlider = new Slider() {value = Exposure, highValue = 50.0f, lowValue = 0};
+               FloatField ExposureField = new FloatField() {value = Exposure};
+               Toggle ExposureAutoToggle = new Toggle() {value = ExposureAuto, text = "Auto(On)/Manual(Off)"};
+               ExposureAutoToggle.RegisterValueChangedCallback(evt => {ExposureAuto = evt.newValue; RayMaster.LocalTTSettings.ExposureAuto = ExposureAuto;});
+               DoExposureToggle.tooltip = "Slide to the left for Auto";
+               ExposureSlider.tooltip = "Slide to the left for Auto";
+               ExposureLabel.tooltip = "Slide to the left for Auto";
+               ExposureSlider.style.width = 100;
+               ExposureElement.Add(ExposureLabel);
+               ExposureElement.Add(ExposureSlider);
+               ExposureElement.Add(ExposureField);
+               ExposureElement.Add(ExposureAutoToggle);
+           DoExposureToggle.RegisterValueChangedCallback(evt => {DoExposure = evt.newValue; RayMaster.LocalTTSettings.PPExposure = DoExposure;if(evt.newValue) PostProcessingMenu.Insert(PostProcessingMenu.IndexOf(DoExposureToggle) + 1, ExposureElement); else PostProcessingMenu.Remove(ExposureElement);});
+           ExposureSlider.RegisterValueChangedCallback(evt => {Exposure = evt.newValue; ExposureField.value = Exposure; RayMaster.LocalTTSettings.Exposure = Exposure;});
+           ExposureField.RegisterValueChangedCallback(evt => {Exposure = evt.newValue; ExposureSlider.value = Exposure; RayMaster.LocalTTSettings.Exposure = Exposure;});
+            if(DoExposure) PostProcessingMenu.Add(ExposureElement);
+
+           TAAToggle = new Toggle() {value = TAA, text = "Enable TAA"};
+           PostProcessingMenu.Add(TAAToggle);
+           TAAToggle.RegisterValueChangedCallback(evt => {TAA = evt.newValue; RayMaster.LocalTTSettings.PPTAA = TAA;});
+
+           FXAAToggle = new Toggle() {value = FXAA, text = "Enable FXAA"};
+           PostProcessingMenu.Add(FXAAToggle);
+           FXAAToggle.RegisterValueChangedCallback(evt => {FXAA = evt.newValue; RayMaster.LocalTTSettings.PPFXAA = FXAA;});
+
+
+            Toggle BCSToggle = new Toggle() {value = DoBCS, text = "Enable Contast/Saturation Adjustment"};
+            VisualElement BCSContainer = new VisualElement();
+               VisualElement SaturationContainer = CreateHorizontalBox();
+                  Label SaturationLabel = new Label("Saturation");
+                  Slider SaturationSlider = new Slider() {value = Saturation, highValue = 2.0f, lowValue = 0};
+                  FloatField SaturationField = new FloatField() {value = Saturation};
+                  SaturationSlider.style.width = 100;
+                  SaturationSlider.RegisterValueChangedCallback(evt => {Saturation = evt.newValue; SaturationField.value = Saturation; RayMaster.LocalTTSettings.Saturation = Saturation;});
+                  SaturationField.RegisterValueChangedCallback(evt => {Saturation = evt.newValue; SaturationSlider.value = Saturation; RayMaster.LocalTTSettings.Saturation = Saturation;});
+               SaturationContainer.Add(SaturationLabel);
+               SaturationContainer.Add(SaturationSlider);
+               SaturationContainer.Add(SaturationField);
+
+               VisualElement ContrastContainer = CreateHorizontalBox();
+                  Label ContrastLabel = new Label("Contrast");
+                  Slider ContrastSlider = new Slider() {value = Contrast, highValue = 2.0f, lowValue = 0};
+                  FloatField ContrastField = new FloatField() {value = Contrast};
+                  ContrastSlider.style.width = 100;
+                  ContrastSlider.RegisterValueChangedCallback(evt => {Contrast = evt.newValue; ContrastField.value = Contrast; RayMaster.LocalTTSettings.Contrast = Contrast;});
+                  ContrastField.RegisterValueChangedCallback(evt => {Contrast = evt.newValue; ContrastSlider.value = Contrast; RayMaster.LocalTTSettings.Contrast = Contrast;});
+               ContrastContainer.Add(ContrastLabel);
+               ContrastContainer.Add(ContrastSlider);
+               ContrastContainer.Add(ContrastField);
+            BCSContainer.Add(SaturationContainer);
+            BCSContainer.Add(ContrastContainer);
+
+            PostProcessingMenu.Add(BCSToggle);
+            if(DoBCS) PostProcessingMenu.Add(BCSContainer);
+            BCSToggle.RegisterValueChangedCallback(evt => {DoBCS = evt.newValue; RayMaster.LocalTTSettings.DoBCS = DoBCS; if(evt.newValue) PostProcessingMenu.Insert(PostProcessingMenu.IndexOf(BCSToggle) + 1, BCSContainer); else PostProcessingMenu.Remove(BCSContainer);});
+
+
+            Toggle DoVignetteToggle = new Toggle() {value = DoVignette, text = "Enable Vignette"};
+            PostProcessingMenu.Add(DoVignetteToggle);
+            VisualElement VignetteContainer = new VisualElement();
+               FloatSliderPair VignetteStrengthContainer = CreatePairedFloatSlider("Vignette Strength", 0, 4, ref strengthVignette);
+               VignetteStrengthContainer.DynamicSlider.RegisterValueChangedCallback(evt => {strengthVignette = evt.newValue; VignetteStrengthContainer.DynamicField.value = strengthVignette; RayMaster.LocalTTSettings.strengthVignette = strengthVignette;});
+               VignetteStrengthContainer.DynamicField.RegisterValueChangedCallback(evt => {strengthVignette = evt.newValue; VignetteStrengthContainer.DynamicSlider.value = strengthVignette; RayMaster.LocalTTSettings.strengthVignette = strengthVignette;});
+
+               FloatSliderPair innerVignetteContainer = CreatePairedFloatSlider("Vignette Inner", 0, 4, ref innerVignette);
+               innerVignetteContainer.DynamicSlider.RegisterValueChangedCallback(evt => {innerVignette = evt.newValue; innerVignetteContainer.DynamicField.value =  innerVignette; RayMaster.LocalTTSettings.innerVignette = innerVignette;});
+               innerVignetteContainer.DynamicField.RegisterValueChangedCallback(evt =>  {innerVignette = evt.newValue; innerVignetteContainer.DynamicSlider.value = innerVignette; RayMaster.LocalTTSettings.innerVignette = innerVignette;});
+
+               FloatSliderPair outerVignetteContainer = CreatePairedFloatSlider("Vignette Outer", 0, 4, ref outerVignette);
+               outerVignetteContainer.DynamicSlider.RegisterValueChangedCallback(evt => {outerVignette = evt.newValue; outerVignetteContainer.DynamicField.value =  outerVignette; RayMaster.LocalTTSettings.outerVignette = outerVignette;});
+               outerVignetteContainer.DynamicField.RegisterValueChangedCallback(evt =>  {outerVignette = evt.newValue; outerVignetteContainer.DynamicSlider.value = outerVignette; RayMaster.LocalTTSettings.outerVignette = outerVignette;});
+
+               FloatSliderPair curveVignetteContainer = CreatePairedFloatSlider("Vignette Curve", 0, 4, ref curveVignette);
+               curveVignetteContainer.DynamicSlider.RegisterValueChangedCallback(evt => {curveVignette = evt.newValue; curveVignetteContainer.DynamicField.value =  curveVignette; RayMaster.LocalTTSettings.curveVignette = curveVignette;});
+               curveVignetteContainer.DynamicField.RegisterValueChangedCallback(evt =>  {curveVignette = evt.newValue; curveVignetteContainer.DynamicSlider.value = curveVignette; RayMaster.LocalTTSettings.curveVignette = curveVignette;});
+
+               ColorField VignetteColorField = new ColorField();
+               VignetteColorField.value = ColorVignette;
+               VignetteColorField.style.width = 150;
+               VignetteColorField.RegisterValueChangedCallback(evt => {ColorVignette = evt.newValue; RayMaster.LocalTTSettings.ColorVignette = new Vector3(ColorVignette.r,ColorVignette.g,ColorVignette.b);});
+
+
+            VignetteContainer.Add(innerVignetteContainer.DynamicContainer);
+            VignetteContainer.Add(outerVignetteContainer.DynamicContainer);
+            VignetteContainer.Add(VignetteStrengthContainer.DynamicContainer);
+            VignetteContainer.Add(curveVignetteContainer.DynamicContainer);
+            VignetteContainer.Add(VignetteColorField);
+
+            DoVignetteToggle.RegisterValueChangedCallback(evt => {DoVignette = evt.newValue; RayMaster.LocalTTSettings.DoVignette = DoVignette;if(evt.newValue) PostProcessingMenu.Insert(PostProcessingMenu.IndexOf(DoVignetteToggle) + 1, VignetteContainer); else PostProcessingMenu.Remove(VignetteContainer);});
+            if(DoVignette) PostProcessingMenu.Add(VignetteContainer);
+
+
+
+            Toggle DoChromaAberToggle = new Toggle() {value = DoChromaAber, text = "Enable Chomatic Aberation"};
+            PostProcessingMenu.Add(DoChromaAberToggle);
+            VisualElement ChromaAberContainer = CreateHorizontalBox();
+               Label ChromaAberLabel = new Label("Chromatic Aberation Strength");
+               Slider ChromaAberSlider = new Slider() {value = ChromaDistort, highValue = 50.0f, lowValue = 0};
+               FloatField ChromaAberField = new FloatField() {value = ChromaDistort};
+               ChromaAberSlider.RegisterValueChangedCallback(evt => {ChromaDistort = evt.newValue; ChromaAberField.value = ChromaDistort; RayMaster.LocalTTSettings.ChromaDistort = ChromaDistort;});
+               ChromaAberField.RegisterValueChangedCallback(evt =>  {ChromaDistort = evt.newValue; ChromaAberSlider.value = ChromaDistort; RayMaster.LocalTTSettings.ChromaDistort = ChromaDistort;});
+            ChromaAberSlider.style.width = 100;
+            ChromaAberContainer.Add(ChromaAberLabel);
+            ChromaAberContainer.Add(ChromaAberSlider);
+            ChromaAberContainer.Add(ChromaAberField);
+
+            DoChromaAberToggle.RegisterValueChangedCallback(evt => {DoChromaAber = evt.newValue; RayMaster.LocalTTSettings.DoChromaAber = DoChromaAber;if(evt.newValue) PostProcessingMenu.Insert(PostProcessingMenu.IndexOf(DoChromaAberToggle) + 1, ChromaAberContainer); else PostProcessingMenu.Remove(ChromaAberContainer);});
+            if(DoChromaAber) PostProcessingMenu.Add(ChromaAberContainer);
+
+
+
+      }
+
+
+      private VisualElement CreateHorizontalBox(string Name = "") {
          VisualElement HorizBox = new VisualElement();
          HorizBox.style.flexDirection = FlexDirection.Row;
          return HorizBox;
@@ -2070,7 +2336,6 @@ Slider AperatureSlider;
                PlayerPrefs.SetString("PanoramaPath",  Application.dataPath + "/ScreenShots");
             }
 
-            DingNoise = Resources.Load("Utility/DING", typeof(AudioClip)) as AudioClip;
             OnFocus();
             MainSource = new VisualElement();
             MainSource.style.justifyContent = Justify.FlexStart; // Align items to the start
@@ -2079,6 +2344,7 @@ Slider AperatureSlider;
             MaterialPairingMenu = new VisualElement();
             SceneSettingsMenu = new VisualElement();
             HardSettingsMenu = new VisualElement();
+            PostProcessingMenu = new VisualElement();
             InputMaterialField = new ObjectField();
             InputMaterialField.objectType = typeof(Material);
             InputMaterialField.label = "Drag a material with the desired shader here ->";
@@ -2087,11 +2353,13 @@ Slider AperatureSlider;
             toolbar = new Toolbar();
             rootVisualElement.Add(toolbar);
             Button MainSourceButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();});
+            Button PostProcessingButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); PostProcessingMenu.Clear(); AddPostProcessingToMenu(); rootVisualElement.Add(PostProcessingMenu);});
             Button MaterialPairButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); InputMaterialField.value = null; MaterialPairingMenu.Add(InputMaterialField); rootVisualElement.Add(MaterialPairingMenu);});
             Button SceneSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(SceneSettingsMenu);});
             Button HardSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); HardSettingsMenu.Clear(); AddHardSettingsToMenu(); rootVisualElement.Add(HardSettingsMenu);});
             Button HierarchyOptionsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(HierarchyOptionsMenu);});
             MainSourceButton.text = "Main Options";
+            PostProcessingButton.text = "Post Processing";
             MaterialPairButton.text = "Material Pair Options";
             SceneSettingsButton.text = "Scene Settings";
             HardSettingsButton.text = "Functionality Settings";
@@ -2107,6 +2375,7 @@ Slider AperatureSlider;
                return;
             } else {
                toolbar.Add(MainSourceButton);
+               toolbar.Add(PostProcessingButton);
                toolbar.Add(MaterialPairButton);
                toolbar.Add(SceneSettingsButton);
                toolbar.Add(HardSettingsButton);
@@ -2142,11 +2411,10 @@ Slider AperatureSlider;
            Assets.UseSkinning = MeshSkin;
            RayMaster.AtmoNumLayers = AtmoScatter;
            Assets.MainDesiredRes = AtlasSize;
-           RayMaster.LoadTT();
+           if(RayMaster.LocalTTSettings == null) RayMaster.LoadTT();
            LightEnergyScale = RayMaster.LocalTTSettings.LightEnergyScale;
            LEMEnergyScale = RayMaster.LocalTTSettings.LEMEnergyScale;
            RayTracingMaster.DoSaving = DoSaving;
-           RayTracingMaster.DoDing = DoDing;
            MatChangeResetsAccum = RayMaster.LocalTTSettings.MatChangeResetsAccum;
            UseTransmittanceInNEE = RayMaster.LocalTTSettings.UseTransmittanceInNEE;
            BounceCount = RayMaster.LocalTTSettings.bouncecount;
@@ -2210,6 +2478,15 @@ Slider AperatureSlider;
            ConvBloomDistExp = RayMaster.LocalTTSettings.ConvBloomDistExp;
            ConvBloomDistExpClampMin = RayMaster.LocalTTSettings.ConvBloomDistExpClampMin;
            ConvBloomDistExpScale = RayMaster.LocalTTSettings.ConvBloomDistExpScale;
+           DoBCS = RayMaster.LocalTTSettings.DoBCS;
+           Saturation = RayMaster.LocalTTSettings.Saturation;
+           Contrast = RayMaster.LocalTTSettings.Contrast;
+           DoVignette = RayMaster.LocalTTSettings.DoVignette;
+           innerVignette = RayMaster.LocalTTSettings.innerVignette;
+           outerVignette = RayMaster.LocalTTSettings.outerVignette;
+           strengthVignette = RayMaster.LocalTTSettings.strengthVignette;
+           curveVignette = RayMaster.LocalTTSettings.curveVignette;
+           ColorVignette = new Color(RayMaster.LocalTTSettings.ColorVignette.x,RayMaster.LocalTTSettings.ColorVignette.y,RayMaster.LocalTTSettings.ColorVignette.z,1);
          }
 
            // AddHardSettingsToMenu();
@@ -2377,128 +2654,14 @@ Slider AperatureSlider;
 
 
 
-         BloomToggle = new Toggle() {value = Bloom, text = "Enable Bloom"};
-            VisualElement BloomBox = new VisualElement();
-               Toggle ConvBloomToggle = new Toggle {value = ConvBloom, text = "Convolutional Bloom"};
-                  VisualElement StandardBloomBox = new VisualElement();
-                     StandardBloomBox.style.flexDirection = FlexDirection.Row;
-                     Label BloomLabel = new Label("Bloom Strength");
-                     Slider BloomSlider = new Slider() {value = BloomStrength, highValue = 0.9999f, lowValue = 0.25f};
-                        BloomSlider.style.width = 100;
-                        BloomSlider.RegisterValueChangedCallback(evt => {BloomStrength = evt.newValue; RayMaster.LocalTTSettings.BloomStrength = BloomStrength;});
-                  StandardBloomBox.Add(BloomLabel);
-                  StandardBloomBox.Add(BloomSlider);
-                  VisualElement ConvBloomBox = new VisualElement();
-                     Slider ConvBloomStrengthSlider = new Slider() {label = "Convolution Bloom Strength", value = ConvStrength, highValue = 10.0f, lowValue = 0.0f};
-                        ConvBloomStrengthSlider.style.width = 400;
-                        ConvBloomStrengthSlider.RegisterValueChangedCallback(evt => {ConvStrength = evt.newValue; RayMaster.LocalTTSettings.ConvStrength = ConvStrength;});
-                     Slider ConvBloomThresholdSlider = new Slider() {label = "Convolution Bloom Threshold", value = ConvBloomThreshold, highValue = 20.0f, lowValue = 0.0f};
-                        ConvBloomThresholdSlider.style.width = 400;
-                        ConvBloomThresholdSlider.RegisterValueChangedCallback(evt => {ConvBloomThreshold = evt.newValue; RayMaster.LocalTTSettings.ConvBloomThreshold = ConvBloomThreshold;});
-                     Vector2Field ConvBloomSizeField = new Vector2Field() {label = "Convolution Bloom Size", value = ConvBloomSize};
-                        ConvBloomSizeField.RegisterValueChangedCallback(evt => {ConvBloomSize = evt.newValue; RayMaster.LocalTTSettings.ConvBloomSize = ConvBloomSize;});
-                     VisualElement ConvDistExpBox = CreateHorizontalBox("Convolution Distance Container");
-                        FloatField ConvBloomDistExpField = new FloatField() {label = "Convolution Bloom Dist Exp", value = ConvBloomDistExp};
-                           ConvBloomDistExpField.RegisterValueChangedCallback(evt => {ConvBloomDistExp = evt.newValue; RayMaster.LocalTTSettings.ConvBloomDistExp = ConvBloomDistExp;});
-                        FloatField ConvBloomDistExpClampMinField = new FloatField() {label = "Convolution Bloom Dist Exp Clamp Min", value = ConvBloomDistExpClampMin};
-                           ConvBloomDistExpClampMinField.RegisterValueChangedCallback(evt => {ConvBloomDistExpClampMin = evt.newValue; RayMaster.LocalTTSettings.ConvBloomDistExpClampMin = ConvBloomDistExpClampMin;});
-                        FloatField ConvBloomDistExpScaleField = new FloatField() {label = "Convolution Bloom Dist Exp Scale", value = ConvBloomDistExpScale};
-                           ConvBloomDistExpScaleField.RegisterValueChangedCallback(evt => {ConvBloomDistExpScale = evt.newValue; RayMaster.LocalTTSettings.ConvBloomDistExpScale = ConvBloomDistExpScale;});
-                     ConvDistExpBox.Add(ConvBloomDistExpField);
-                     ConvDistExpBox.Add(ConvBloomDistExpClampMinField);
-                     ConvDistExpBox.Add(ConvBloomDistExpScaleField);
-
-
-                  ConvBloomBox.Add(ConvBloomStrengthSlider);
-                  ConvBloomBox.Add(ConvBloomThresholdSlider);
-                  ConvBloomBox.Add(ConvBloomSizeField);
-                  ConvBloomBox.Add(ConvDistExpBox);
-               BloomBox.Add(ConvBloomToggle);
-               if(ConvBloom) BloomBox.Add(ConvBloomBox);
-               else BloomBox.Add(StandardBloomBox);
-               ConvBloomToggle.RegisterValueChangedCallback(evt => {ConvBloom = evt.newValue; RayMaster.LocalTTSettings.ConvBloom = ConvBloom; if(evt.newValue) {BloomBox.Remove(StandardBloomBox); BloomBox.Insert(BloomBox.IndexOf(ConvBloomToggle) + 1, ConvBloomBox); } else {BloomBox.Remove(ConvBloomBox); BloomBox.Insert(BloomBox.IndexOf(ConvBloomToggle) + 1, StandardBloomBox); }});        
-            BloomToggle.RegisterValueChangedCallback(evt => {Bloom = evt.newValue; RayMaster.LocalTTSettings.PPBloom = Bloom; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(BloomToggle) + 1, BloomBox); else MainSource.Remove(BloomBox);});        
-         MainSource.Add(BloomToggle);
-         if(Bloom) {
-            MainSource.Add(BloomBox);
-
-         }
 
 
 
-            VisualElement SharpenFoldout = new VisualElement() {};
-               Slider SharpnessSlider = new Slider() {label = "Sharpness: ", value = Sharpness, highValue = 1.0f, lowValue = 0.0f};
-               SharpnessSlider.style.width = 200;
-               SharpnessSlider.RegisterValueChangedCallback(evt => {Sharpness = evt.newValue; RayMaster.LocalTTSettings.Sharpness = Sharpness;});
-               SharpenFoldout.Add(SharpnessSlider);
-            SharpnessSlider.ElementAt(0).style.minWidth = 65;
-
-
-            Toggle SharpenToggle = new Toggle() {value = DoSharpen, text = "Use Sharpness Filter"};
-            MainSource.Add(SharpenToggle);
-            SharpenToggle.RegisterValueChangedCallback(evt => {DoSharpen = evt.newValue; RayMaster.LocalTTSettings.DoSharpen = DoSharpen; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(SharpenToggle) + 1, SharpenFoldout); else MainSource.Remove(SharpenFoldout);});
-            if(DoSharpen) MainSource.Add(SharpenFoldout);
 
 
 
-           Label AperatureLabel = new Label("Aperature Size");
-           AperatureSlider = new Slider() {value = DoFAperature, highValue = 1, lowValue = 0};
-           AperatureSlider.style.width = 250;
-           FloatField AperatureScaleField = new FloatField() {value = DoFAperatureScale, label = "Aperature Scale"};
-           AperatureScaleField.ElementAt(0).style.minWidth = 65;
-           AperatureScaleField.RegisterValueChangedCallback(evt => {DoFAperatureScale = evt.newValue; DoFAperatureScale = Mathf.Max(DoFAperatureScale, 0.0001f); RayMaster.LocalTTSettings.DoFAperatureScale = DoFAperatureScale; AperatureScaleField.value = DoFAperatureScale;});
-           Label FocalLabel = new Label("Focal Length");
-           FocalSlider = new FloatField() {value = DoFFocal};
-           FocalSlider.style.width = 150;
-           Label AutoFocLabel = new Label("Hold Middle Mouse + Left Control in game to focus");
-           // Button AutofocusButton = new Button(() => {IsFocusing = true;}) {text = "Autofocus DoF"};
-           // AutofocusButton.RegisterCallback<MouseEnterEvent>(evt => {});
-           // AutofocusButton.RegisterCallback<MouseLeaveEvent>(evt => {});
 
 
-           Box AperatureBox = new Box();
-           AperatureBox.Add(AperatureLabel);
-           AperatureBox.Add(AperatureSlider);
-           AperatureBox.Add(AperatureScaleField);
-           AperatureBox.style.flexDirection = FlexDirection.Row;
-           Box FocalBox = new Box();
-           FocalBox.Add(FocalLabel);
-           FocalBox.Add(FocalSlider);
-           FocalBox.Add(AutoFocLabel);
-           // FocalBox.Add(AutofocusButton);
-           FocalBox.style.flexDirection = FlexDirection.Row;
-
-           Toggle DoFToggle = new Toggle() {value = DoF, text = "Enable DoF"};
-           VisualElement DoFFoldout = new VisualElement();
-           DoFFoldout.Add(AperatureBox);
-           DoFFoldout.Add(FocalBox);
-           MainSource.Add(DoFToggle);
-           DoFToggle.RegisterValueChangedCallback(evt => {DoF = evt.newValue; RayMaster.LocalTTSettings.PPDoF = DoF;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(DoFToggle) + 1, DoFFoldout); else MainSource.Remove(DoFFoldout);});        
-           AperatureSlider.RegisterValueChangedCallback(evt => {DoFAperature = evt.newValue; RayMaster.LocalTTSettings.DoFAperature = DoFAperature;});
-           FocalSlider.RegisterValueChangedCallback(evt => {DoFFocal = Mathf.Max(0.001f, evt.newValue); RayMaster.LocalTTSettings.DoFFocal = DoFFocal;});
-           if(DoF) MainSource.Add(DoFFoldout);
-           
-           Toggle DoExposureToggle = new Toggle() {value = DoExposure, text = "Enable Auto/Manual Exposure"};
-           MainSource.Add(DoExposureToggle);
-           VisualElement ExposureElement = new VisualElement();
-               ExposureElement.style.flexDirection = FlexDirection.Row;
-               Label ExposureLabel = new Label("Exposure");
-               Slider ExposureSlider = new Slider() {value = Exposure, highValue = 50.0f, lowValue = 0};
-               FloatField ExposureField = new FloatField() {value = Exposure};
-               Toggle ExposureAutoToggle = new Toggle() {value = ExposureAuto, text = "Auto(On)/Manual(Off)"};
-               ExposureAutoToggle.RegisterValueChangedCallback(evt => {ExposureAuto = evt.newValue; RayMaster.LocalTTSettings.ExposureAuto = ExposureAuto;});
-               DoExposureToggle.tooltip = "Slide to the left for Auto";
-               ExposureSlider.tooltip = "Slide to the left for Auto";
-               ExposureLabel.tooltip = "Slide to the left for Auto";
-               ExposureSlider.style.width = 100;
-               ExposureElement.Add(ExposureLabel);
-               ExposureElement.Add(ExposureSlider);
-               ExposureElement.Add(ExposureField);
-               ExposureElement.Add(ExposureAutoToggle);
-           DoExposureToggle.RegisterValueChangedCallback(evt => {DoExposure = evt.newValue; RayMaster.LocalTTSettings.PPExposure = DoExposure;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(DoExposureToggle) + 1, ExposureElement); else MainSource.Remove(ExposureElement);});
-           ExposureSlider.RegisterValueChangedCallback(evt => {Exposure = evt.newValue; ExposureField.value = Exposure; RayMaster.LocalTTSettings.Exposure = Exposure;});
-           ExposureField.RegisterValueChangedCallback(evt => {Exposure = evt.newValue; ExposureSlider.value = Exposure; RayMaster.LocalTTSettings.Exposure = Exposure;});
-            if(DoExposure) MainSource.Add(ExposureElement);
 
            GIToggle = new Toggle() {value = ReSTIRGI, text = "Use ReSTIR GI"};
            VisualElement GIFoldout = new VisualElement() {};
@@ -2550,37 +2713,9 @@ Slider AperatureSlider;
            MainSource.Add(GIToggle);
            GIToggle.RegisterValueChangedCallback(evt => {ReSTIRGI = evt.newValue; RayMaster.LocalTTSettings.UseReSTIRGI = ReSTIRGI;if(evt.newValue) MainSource.Insert(MainSource.IndexOf(GIToggle) + 1, GIFoldout); else MainSource.Remove(GIFoldout);});
            if(ReSTIRGI) MainSource.Add(GIFoldout);
-       
+      
 
-           TAAToggle = new Toggle() {value = TAA, text = "Enable TAA"};
-           MainSource.Add(TAAToggle);
-           TAAToggle.RegisterValueChangedCallback(evt => {TAA = evt.newValue; RayMaster.LocalTTSettings.PPTAA = TAA;});
-
-           FXAAToggle = new Toggle() {value = FXAA, text = "Enable FXAA"};
-           MainSource.Add(FXAAToggle);
-           FXAAToggle.RegisterValueChangedCallback(evt => {FXAA = evt.newValue; RayMaster.LocalTTSettings.PPFXAA = FXAA;});
-
-           
-            List<string> TonemapSettings = new List<string>();
-            TonemapSettings.Add("TonyMcToneFace");
-            TonemapSettings.Add("ACES Filmic");
-            TonemapSettings.Add("Uchimura");
-            TonemapSettings.Add("Reinhard");
-            TonemapSettings.Add("Uncharted 2");
-            TonemapSettings.Add("AgX");
-            PopupField<string> ToneMapField = new PopupField<string>("<b>Tonemapper</b>");
-            ToneMapField.ElementAt(0).style.minWidth = 65;
-            ToneMapField.choices = TonemapSettings;
-            ToneMapField.index = ToneMapIndex;
-            ToneMapField.RegisterValueChangedCallback(evt => {ToneMapIndex = ToneMapField.index; RayMaster.LocalTTSettings.ToneMapper = ToneMapIndex;});
-
-           Toggle ToneMapToggle = new Toggle() {value = ToneMap, text = "Enable Tonemapping"};
-            VisualElement ToneMapFoldout = new VisualElement() {};
-               ToneMapFoldout.style.flexDirection = FlexDirection.Row;
-               ToneMapFoldout.Add(ToneMapField);
-           MainSource.Add(ToneMapToggle);
-           ToneMapToggle.RegisterValueChangedCallback(evt => {ToneMap = evt.newValue; RayMaster.LocalTTSettings.PPToneMap = ToneMap; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(ToneMapToggle) + 1, ToneMapFoldout); else MainSource.Remove(ToneMapFoldout);});
-           if(ToneMap) MainSource.Add(ToneMapFoldout);
+         
 
 
 
@@ -2685,7 +2820,7 @@ Slider AperatureSlider;
                Box ReadyBox = new Box();
                ReadyBox.style.height = 18;
                ReadyBox.style.backgroundColor = Color.green;
-               RemainingObjectsField.RegisterValueChangedCallback(evt => {if(evt.newValue == 0) {ReadyBox.style.backgroundColor = Color.green; if(!Cleared) PlayClip(DingNoise);} else ReadyBox.style.backgroundColor = Color.red;});
+               RemainingObjectsField.RegisterValueChangedCallback(evt => {if(evt.newValue == 0) {ReadyBox.style.backgroundColor = Color.green;} else ReadyBox.style.backgroundColor = Color.red;});
                Label ReadyLabel = new Label("All Objects Built");
                ReadyLabel.style.color = Color.black;
                ReadyBox.style.alignItems = Align.Center;
@@ -2701,8 +2836,8 @@ Slider AperatureSlider;
         RayCastMaterialSelector TempTest;
         int AFrame = -1;
         int FramesSinceDOF = 0;
+        string PrevLocTTSettingsName = "";
         void Update() {
-#if !ENABLE_INPUT_SYSTEM
             if(AFrame != -1) {
                RayTracingObjectEditor[] editors = (RayTracingObjectEditor[])Resources.FindObjectsOfTypeAll(typeof(RayTracingObjectEditor));
                if (editors.Length > 0) {
@@ -2717,6 +2852,16 @@ Slider AperatureSlider;
                }
             }
             if(RayMaster != null) {
+               if(Application.isPlaying && RayTracingMaster.RayMaster != null && RayTracingMaster.RayMaster.LocalTTSettings != null) {
+                  if(!(PrevLocTTSettingsName.Equals(RayTracingMaster.RayMaster.LocalTTSettings.name))) {
+                     rootVisualElement.Clear();
+                     MainSource.Clear();
+                     CreateGUI();
+                  }
+                  PrevLocTTSettingsName = RayTracingMaster.RayMaster.LocalTTSettings.name;
+               }
+
+
                   // Debug.Log(Input.GetAxis("Mouse ScrollWheel"));
                if(RayMaster.LocalTTSettings.PPDoF && ((Input.GetAxis("Mouse ScrollWheel") != 0 && Input.GetKey(KeyCode.LeftControl)))) {
                   RayMaster.IsFocusingDelta = true;
@@ -2743,7 +2888,6 @@ Slider AperatureSlider;
                   FramesSinceDOF = 3;
                }
             }
-#endif
             if(!Application.isPlaying) {
                if(RayTracingMaster.DoCheck && DoSaving) {
                   try{
@@ -2848,28 +2992,8 @@ Slider AperatureSlider;
             Cleared = false;
         }
 
-      public static void PlayClip(AudioClip clip, int startSample = 0, bool loop = false)
-      {
-         float TimeElapsed = BuildWatch.GetSeconds();
-         BuildWatch.Stop();
-         if(RayTracingMaster.DoDing && TimeElapsed > 15.0f) {
-            Assembly unityEditorAssembly = typeof(AudioImporter).Assembly;
-        
-            System.Type audioUtilClass = unityEditorAssembly.GetType("UnityEditor.AudioUtil");
-            MethodInfo method = audioUtilClass.GetMethod(
-               "PlayPreviewClip",
-               BindingFlags.Static | BindingFlags.Public,
-               null,
-               new System.Type[] { typeof(AudioClip), typeof(int), typeof(bool) },
-               null
-            );
-            method.Invoke(
-               null,
-               new object[] { clip, startSample, loop }
-            );
-         }
       }
-   }
+
 
     public class PopupWarningWindow : PopupWindowContent
     {

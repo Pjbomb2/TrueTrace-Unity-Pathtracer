@@ -10,8 +10,10 @@ namespace TrueTrace {
             RayTracingMaster.RayMaster.LoadTT();
         }
         public static void SetTTSettings(TTSettings Settings) {
-            RayTracingMaster.RayMaster.LocalTTSettings = Settings;
-            RayTracingMaster.RayMaster.LocalTTSettingsName = Settings.name;
+            if(RayTracingMaster.RayMaster != null) {
+                RayTracingMaster.RayMaster.LocalTTSettings = Settings;
+                RayTracingMaster.RayMaster.LocalTTSettingsName = Settings.name;
+            }
         }
         public static void CallUpdatedTextureMappings(RayTracingObject TargetMat) {
             TargetMat.CallTilingScrolled();

@@ -1,0 +1,120 @@
+//https://www.shadertoy.com/view/wsdBWM
+
+float DISTORTION_AMOUNT;
+
+Texture2D<float4> Input;
+RWTexture2D<float4> Result;
+SamplerState my_linear_repeat_sampler;
+int screen_width;
+int screen_height;
+
+float2 PincushionDistortion(in float2 uv, float strength) 
+{
+    float2 st = uv - 0.5;
+    float uvA = atan2(st.x, st.y);
+    float uvD = dot(st, st);
+    return 0.5 + float2(sin(uvA), cos(uvA)) * sqrt(uvD) * (1.0 - strength * uvD);
+}
+
+float3 ChromaticAbberation(float2 uv) 
+{
+    float rChannel = Input.SampleLevel(my_linear_repeat_sampler, PincushionDistortion(uv, 0.3 * DISTORTION_AMOUNT),0).r;
+    float gChannel = Input.SampleLevel(my_linear_repeat_sampler, PincushionDistortion(uv, 0.15 * DISTORTION_AMOUNT),0).g;
+    float bChannel = Input.SampleLevel(my_linear_repeat_sampler, PincushionDistortion(uv, 0.075 * DISTORTION_AMOUNT),0).b;
+    float3 retColor = float3(rChannel, gChannel, bChannel);
+    return retColor;
+}
+#pragma kernel ChromaticAbberationKernel
+
+[numthreads(16,16,1)]
+void ChromaticAbberationKernel (uint3 id : SV_DispatchThreadID)
+{
+    Result[id.xy] = float4(ChromaticAbberation((float2)id.xy / float2(screen_width, screen_height)), Input[id.xy].w);
+}
+
+
+//https://www.shadertoy.com/view/XdcXzn
+
+float contrast;
+float saturation;
+
+
+
+float4x4 contrastMatrix( float contrast )
+{
+    float t = ( 1.0 - contrast ) / 2.0;
+    
+    // return float4x4( contrast, 0, 0, 0,
+    //              0, contrast, 0, 0,
+    //              0, 0, contrast, 0,
+    //              t, t, t, 1 );
+
+    return float4x4( contrast, 0, 0, t,
+                     0, contrast, 0, t,
+                     0, 0, contrast, t,
+                     0,0,0, 1 );
+
+}
+
+float4x4 saturationMatrix( float saturation )
+{
+    float3 luminance = float3( 0.3086, 0.6094, 0.0820 );
+    
+    float oneMinusSat = 1.0 - saturation;
+    
+    float3 red = luminance.x * oneMinusSat;
+    red+= float3( saturation, 0, 0 );
+    
+    float3 green = luminance.y * oneMinusSat;
+    green += float3( 0, saturation, 0 );
+    
+    float3 blue = luminance.z * oneMinusSat;
+    blue += float3( 0, 0, saturation );
+    
+
+
+    return float4x4( red.x, green.x, blue.x, 0,
+                    red.y, green.y, blue.y, 0,
+                    red.z, green.z, blue.z, 0,
+                    0,0,0,1);
+
+
+}
+
+
+
+
+
+
+#pragma kernel BSCKernel
+
+[numthreads(16,16,1)]
+void BSCKernel (uint3 id : SV_DispatchThreadID)
+{
+    Result[id.xy] = float4((mul(mul(contrastMatrix(contrast), saturationMatrix(saturation)), float4(Input[id.xy].xyz,1))).xyz, Input[id.xy].w);
+}
+
+//Inner radius
+float inner;
+float outer;
+float strength;
+float curvature;
+float3 Color;
+
+#pragma kernel VignetteKernel
+
+[numthreads(16,16,1)]
+void VignetteKernel (uint3 id : SV_DispatchThreadID)
+{
+    float2 uv = id.xy / float2(screen_width, screen_height);
+    float2 curve = pow(abs(uv*2.-1.),(1./curvature));
+    float edge = pow(length(curve),curvature);
+    float vignette = 1.-strength*smoothstep(inner,outer,edge);
+    float4 InputCol = Input[id.xy];
+    Result[id.xy] = float4(lerp(InputCol.xyz * Color, InputCol.xyz, vignette), InputCol.w);
+
+
+}
+
+
+

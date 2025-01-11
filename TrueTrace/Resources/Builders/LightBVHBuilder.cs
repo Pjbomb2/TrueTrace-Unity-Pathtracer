@@ -591,6 +591,7 @@ namespace TrueTrace {
                             Vector3 center = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center, 1));
                             Vector3 Axis = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.axis, 0));
                             float Scale = Distance(center, ExtendedCenter) / TempNode.S.Radius;
+                            TempNode.sharpness = ((3.0f * Distance(Vector3.zero, Axis / Scale) - Mathf.Pow(Distance(Vector3.zero, Axis / Scale), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, Axis / Scale), 2));
                             TempNode.axis = Axis / Scale;
                             TempNode.S.Center = center;
                             TempNode.variance *= Scale;

@@ -25,10 +25,10 @@ MonoBehaviour:
   PPDoF: 0
   DoFAperature: 0.2
   DoFAperatureScale: 1
-  DoFFocal: 0.2
+  DoFFocal: 5.2216897
   PPExposure: 0
-  ExposureAuto: 1
-  PPToneMap: 1
+  ExposureAuto: 0
+  PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
   DenoiserMethod: 0
@@ -40,8 +40,8 @@ MonoBehaviour:
   ReSTIRGISpatialRadius: 50
   ReSTIRGITemporalMCap: 20
   ReSTIRGIUpdateRate: 0
-  DoReSTIRGIConnectionValidation: 1
-  Exposure: 1
+  DoReSTIRGIConnectionValidation: 0
+  Exposure: 8.8
   DoPartialRendering: 0
   PartialRenderingFactor: 1
   DoFirefly: 0
@@ -50,7 +50,7 @@ MonoBehaviour:
   ToneMapper: 0
   SkyDesaturate: 0
   ClayColor: {x: 0.5, y: 0.5, z: 0.5}
-  GroundColor: {x: 0.1, y: 0.1, z: 0.1}
+  GroundColor: {x: 0.103773594, y: 0.103773594, z: 0.103773594}
   FireflyFrameCount: 0
   FireflyFrameInterval: 1
   FireflyStrength: 1
@@ -84,6 +84,17 @@ MonoBehaviour:
   PrimaryBackgroundTintColor: {x: 1, y: 1, z: 1}
   PrimaryBackgroundTint: 0
   PrimaryBackgroundContrast: 1
-  FogDensity: 0.0002
-  FogColor: {x: 0.6, y: 0.6, z: 0.6}
+  FogDensity: 0.045
+  FogColor: {x: 1, y: 1, z: 1}
   MaxSampCount: 99999999
+  DoChromaAber: 0
+  ChromaDistort: 9.5
+  DoBCS: 1
+  Saturation: 1
+  Contrast: 1
+  DoVignette: 0
+  innerVignette: 0.5
+  outerVignette: 1.2
+  strengthVignette: 0.8
+  curveVignette: 0.5
+  ColorVignette: {x: 0, y: 0, z: 0}

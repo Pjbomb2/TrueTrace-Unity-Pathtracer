@@ -1124,3 +1124,5 @@ void TTtoOIDNKernelPanorama(uint3 id : SV_DispatchThreadID) {
     }
     OutputBuffer[id.x + id.y * screen_width] = Result[id.xy].xyz;
 }
+
+

@@ -16,11 +16,12 @@ namespace TrueTrace {
         [HideInInspector] [SerializeField] public string LocalTTSettingsName = "TTGlobalSettings";
         private bool OverriddenResolutionIsActive = false;
         public bool HDRPorURPRenderInScene = false;
-        public AtmosphereGenerator Atmo;
+        [HideInInspector] public AtmosphereGenerator Atmo;
         [HideInInspector] public AssetManager Assets;
         private ReSTIRASVGF ReSTIRASVGFCode;
         private TTPostProcessing TTPostProc;
         private ASVGF ASVGFCode;
+        public static bool ImageIsModified = false;
         private bool Abandon = false;
         #if UseOIDN
             private UnityDenoiserPlugin.DenoiserPluginWrapper OIDNDenoiser;			
@@ -173,15 +174,14 @@ namespace TrueTrace {
         [SerializeField] [HideInInspector] public static int SampleCount;
 
         private int uFirstFrame = 1;
-        [HideInInspector] public static bool DoDing = true;
         [HideInInspector] public static bool DoCheck = false;
         [HideInInspector] public bool PrevReSTIRGI = false;
 
         [HideInInspector] public bool DoPanorama = false;
         [HideInInspector] public bool DoChainedImages = false;
-        #if !LoadTTSettingsFromResources
-            [HideInInspector] 
-        #endif
+        // #if !LoadTTSettingsFromResources
+        //     [HideInInspector] 
+        // #endif
         [SerializeField] public TTSettings LocalTTSettings;
 
         public static bool SceneIsRunning = false;
@@ -333,7 +333,7 @@ namespace TrueTrace {
         }
         public void LoadTT() {
             #if !LoadTTSettingsFromResources
-                if(LocalTTSettings == null || !LocalTTSettings.name.Equals(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)) {
+                if(LocalTTSettings == null || (!LocalTTSettings.name.Equals(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name) && !ImageIsModified)) {
                     #if UNITY_EDITOR
                         UnityEngine.SceneManagement.Scene CurrentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
                         string path = CurrentScene.path.Replace(".unity", "");
@@ -575,7 +575,7 @@ namespace TrueTrace {
 
         private Vector2 HDRIParams = Vector2.zero;
         private void SetShaderParameters(CommandBuffer cmd) {
-            HasSDFHandler = (OptionalSDFHandler != null);
+            HasSDFHandler = (OptionalSDFHandler != null) && OptionalSDFHandler.enabled && OptionalSDFHandler.gameObject.activeInHierarchy;
             if(LocalTTSettings.RenderScale != 1.0f) _camera.renderingPath = RenderingPath.DeferredShading;
             _camera.depthTextureMode |= DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
             if(LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1 && !ReSTIRASVGFCode.Initialized) ReSTIRASVGFCode.init(SourceWidth, SourceHeight);
@@ -639,11 +639,7 @@ namespace TrueTrace {
             SetVector("Segment", CurrentHorizonalPatch, cmd);
             SetVector("HDRILongLat", LocalTTSettings.HDRILongLat, cmd);
             SetVector("HDRIScale", LocalTTSettings.HDRIScale, cmd);
-#if ENABLE_INPUT_SYSTEM
-            SetVector("MousePos", Vector2.zero, cmd);
-#else
             SetVector("MousePos", Input.mousePosition, cmd);
-#endif
             SetVector("FogColor", LocalTTSettings.FogColor, cmd);
             if(LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI) ASVGFCode.shader.SetVector("CamDelta", E);
             if(LocalTTSettings.DenoiserMethod == 1 && LocalTTSettings.UseReSTIRGI) ReSTIRASVGFCode.shader.SetVector("CamDelta", E);
@@ -1022,7 +1018,7 @@ namespace TrueTrace {
 							denoiserType = UnityDenoiserPlugin.DenoiserType.OptiX;
 							break;
 						default:
-							denoiserType = UnityDenoiserPlugin.DenoiserType.OptiX;
+							denoiserType = UnityDenoiserPlugin.DenoiserType.OIDN;
 							break;
 					}					
                     OIDNDenoiser = new UnityDenoiserPlugin.DenoiserPluginWrapper(denoiserType, cfg);
@@ -1102,7 +1098,7 @@ namespace TrueTrace {
                     cmd.DispatchCompute(GenerateShader, CompactKernel, Mathf.CeilToInt((4.0f * 1024.0f * 1024.0f) / 256.0f), 1, 1);
                 if(DoKernelProfiling) cmd.EndSample("RadCacheCompact");
             #endif
-            TTPostProc.ValidateInit(LocalTTSettings.PPBloom, LocalTTSettings.PPTAA, SourceWidth != TargetWidth, LocalTTSettings.UpscalerMethod == 2, LocalTTSettings.DoSharpen, LocalTTSettings.PPFXAA);
+            TTPostProc.ValidateInit(LocalTTSettings.PPBloom, LocalTTSettings.PPTAA, SourceWidth != TargetWidth, LocalTTSettings.UpscalerMethod == 2, LocalTTSettings.DoSharpen, LocalTTSettings.PPFXAA, LocalTTSettings.DoChromaAber || LocalTTSettings.DoBCS || LocalTTSettings.DoVignette);
             float CurrentSample;
             
             GenerateRays(cmd);
@@ -1313,6 +1309,7 @@ namespace TrueTrace {
                 if(LocalTTSettings.ConvBloom) TTPostProc.ExecuteConvBloom(ref _FinalTex, LocalTTSettings.ConvStrength, LocalTTSettings.ConvBloomThreshold, LocalTTSettings.ConvBloomSize, LocalTTSettings.ConvBloomDistExp, LocalTTSettings.ConvBloomDistExpClampMin, LocalTTSettings.ConvBloomDistExpScale, cmd);
                 else TTPostProc.ExecuteBloom(ref _FinalTex, LocalTTSettings.BloomStrength, cmd);
             }
+            if(LocalTTSettings.DoChromaAber || LocalTTSettings.DoBCS || LocalTTSettings.DoVignette) TTPostProc.ExecuteCombinedPP(ref _FinalTex, cmd, LocalTTSettings.DoBCS, LocalTTSettings.DoVignette, LocalTTSettings.DoChromaAber, LocalTTSettings.Contrast, LocalTTSettings.Saturation, LocalTTSettings.ChromaDistort, LocalTTSettings.innerVignette, LocalTTSettings.outerVignette, LocalTTSettings.strengthVignette, LocalTTSettings.curveVignette, LocalTTSettings.ColorVignette);
             if(LocalTTSettings.PPToneMap) TTPostProc.ExecuteToneMap(ref _FinalTex, cmd, ref ToneMapTex, ref ToneMapTex2, LocalTTSettings.ToneMapper);
             if (LocalTTSettings.PPTAA) TTPostProc.ExecuteTAA(ref _FinalTex, _currentSample, cmd);
             if (LocalTTSettings.PPFXAA) TTPostProc.ExecuteFXAA(ref _FinalTex, cmd);

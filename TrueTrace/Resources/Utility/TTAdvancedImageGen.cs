@@ -42,9 +42,13 @@ namespace TrueTrace {
             }
             public List<CamData> CamSettings;
             public TurnTableData(ref List<CameraListData> CamList) {
+                CamSettings = new List<CamData>();
                 CameraList = CamList;
             }
-
+            public void SetInitialSettings(List<CameraListData> CamList) {
+                CameraList = CamList;
+                TTInterface.SetTTSettings(CameraList[0].CamSettings);
+            }
             public IEnumerator RecordFrame()
             {
                 yield return new WaitForEndOfFrame();
@@ -174,7 +178,10 @@ namespace TrueTrace {
                     }
                 }
             }
-
+            public void SetInitialSettings(List<CameraListData> CamList) {
+                CameraList = CamList;
+                TTInterface.SetTTSettings(CameraList[0].CamSettings);
+            }
             public void StitchSlices(Camera cam) {
                 Color[] FinalAtlasData = new Color[FinalAtlasSize.x * FinalAtlasSize.y];
 
@@ -338,6 +345,7 @@ namespace TrueTrace {
                 break;
             }            
             TTInterface.SetTTSettings(InitialSettings);
+            RayTracingMaster.ImageIsModified = false;
         }
 
         public void Init() {
@@ -353,7 +361,7 @@ namespace TrueTrace {
                 break;
             }            
         }
-
+        bool HasStarted = false;
         public void Start() {
             InitialSettings = RayTracingMaster.RayMaster.LocalTTSettings;
             InitCameras();
@@ -370,6 +378,7 @@ namespace TrueTrace {
                     SlicedImageSettings.TexArray = new Texture2D[SlicedImageSettings.HorizontalSegments];
                     SlicedImageSettings.PrevPanorama = true;
                     SlicedImageSettings.CameraList = CameraList;
+                    RayTracingMaster.ImageIsModified = true;
                 break;
                 case(ImageGenType.LargeScreenShot):
                     Application.runInBackground = true;
@@ -381,9 +390,11 @@ namespace TrueTrace {
                     SlicedImageSettings.TexArray = new Texture2D[SlicedImageSettings.HorizontalSegments];
                     SlicedImageSettings.PrevPanorama = true;
                     SlicedImageSettings.CameraList = CameraList;
+                    RayTracingMaster.ImageIsModified = true;
                 break;
                 case(ImageGenType.TurnTable):
                     TurnTableSettings.CameraList = CameraList;
+                    RayTracingMaster.ImageIsModified = true;
                 break;
             }
         }
@@ -396,9 +407,11 @@ namespace TrueTrace {
                 case(ImageGenType.Panorama):
                     RayTracingMaster.RayMaster.DoPanorama = SelectedFunctionality == ImageGenType.Panorama;
                     RayTracingMaster.RayMaster.DoChainedImages = true;
+                    if(!HasStarted) SlicedImageSettings.SetInitialSettings(CameraList);
                     StartCoroutine(SlicedImageSettings.RecordFrame());
                 break;
                 case(ImageGenType.TurnTable):
+                    if(!HasStarted) TurnTableSettings.SetInitialSettings(CameraList);
                     StartCoroutine(TurnTableSettings.RecordFrame());
                 break;
                 case(ImageGenType.TimedScreenShot):
@@ -413,6 +426,7 @@ namespace TrueTrace {
                 break;
 
             }
+            HasStarted = true;
         }
 
 
@@ -584,6 +598,7 @@ namespace TrueTrace {
                         break;
                         case(TTAdvancedImageGen.ImageGenType.Panorama):
                         case(TTAdvancedImageGen.ImageGenType.LargeScreenShot):
+                        case(TTAdvancedImageGen.ImageGenType.TurnTable):
                             ConstructCameraList();
                         break;
                         case(TTAdvancedImageGen.ImageGenType.TimedScreenShot):
@@ -595,6 +610,7 @@ namespace TrueTrace {
                 }
 
             } else {
+                GUILayout.Label("Selected Function: " + t.SelectedFunctionality.ToString());
                 switch(t.SelectedFunctionality) {
                     default:
                     break;

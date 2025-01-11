@@ -636,7 +636,7 @@ void applyAerialPerspective(const float3 camera, const float3 thispoint, inout f
     SunDir,
     transmittance
   );
-  color.rgb = lerp(color.rgb, color.rgb * transmittance + inscatter, color.a);
+  color.rgb = lerp(color.rgb, inscatter, color.a);
 }
 
 void swapIfBigger(inout float4 a, inout float4 b) {

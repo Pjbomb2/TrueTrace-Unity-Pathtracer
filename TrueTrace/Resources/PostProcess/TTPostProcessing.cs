@@ -17,12 +17,14 @@ namespace TrueTrace {
         private ComputeShader TAAU;
         private ComputeShader Sharpen;
         private ComputeShader FXAAShader;
+        private ComputeShader CombinedPPShader;
         bool BloomInitialized = false;
         bool TAAInitialized = false;
         bool UpscalerInitialized = false;
         bool TAAUInitialized = false;
         bool SharpenInitialized = false;
         bool FXAAInitialized = false;
+        bool CombinedPPInitialized = false;
 
         public RenderTexture FXAAFlopper;
         private int FXAAFXAAKernel;
@@ -39,6 +41,9 @@ namespace TrueTrace {
 
 
         private RenderTexture SharpenTex;
+        
+
+        private RenderTexture CombinedPPIntermediateTex;
 
 
 
@@ -87,6 +92,9 @@ namespace TrueTrace {
         private int TAAUKernel;
         private int TAAUCopyKernel;
 
+        private int BSCKernel;
+        private int VignetteKernel;
+        private int ChromaticAbberationKernel;
 
 
 
@@ -106,7 +114,9 @@ namespace TrueTrace {
                     TempTexTAA.ReleaseSafe();
                     TempTexTAA2.ReleaseSafe();
                     SharpenTex.ReleaseSafe();
+                    CombinedPPIntermediateTex.ReleaseSafe();
                     FXAAFlopper.ReleaseSafe();
+                    CombinedPPInitialized = false;
                     FXAAInitialized = false;
                 BloomInitialized = false;
                 TAAInitialized = false;
@@ -127,7 +137,7 @@ namespace TrueTrace {
 
             TAAA.ReleaseSafe();
             TAAB.ReleaseSafe();
-
+            CombinedPPIntermediateTex.ReleaseSafe();
             SharpenTex.ReleaseSafe();
 
             ExposureBuffer.ReleaseSafe();
@@ -155,12 +165,18 @@ namespace TrueTrace {
             if (TAAU == null) { TAAU = Resources.Load<ComputeShader>("PostProcess/Compute/TAAU"); }
             if (Sharpen == null) { Sharpen = Resources.Load<ComputeShader>("PostProcess/Compute/Sharpen"); }
             if (FXAAShader == null) { FXAAShader = Resources.Load<ComputeShader>("PostProcess/Compute/FXAA"); }
+            if (CombinedPPShader == null) {CombinedPPShader = Resources.Load<ComputeShader>("PostProcess/Compute/CombinedPP"); }
             ConvBloom = new ConvolutionBloom();
 
             TAAUKernel = TAAU.FindKernel("TAAU");
             TAAUCopyKernel = TAAU.FindKernel("Copy");
             
             FXAAFXAAKernel = FXAAShader.FindKernel("FXAA");
+
+            ChromaticAbberationKernel = CombinedPPShader.FindKernel("ChromaticAbberationKernel");
+            VignetteKernel = CombinedPPShader.FindKernel("VignetteKernel");
+            BSCKernel = CombinedPPShader.FindKernel("BSCKernel");
+
 
 
             BloomDownsampleKernel = Bloom.FindKernel("Downsample");
@@ -178,6 +194,9 @@ namespace TrueTrace {
             List<float> TestBuffer = new List<float>();
             TestBuffer.Add(1);
             ExposureBuffer?.Release(); ExposureBuffer = new ComputeBuffer(1, sizeof(float)); ExposureBuffer.SetData(TestBuffer);
+
+            CombinedPPShader.SetInt("screen_width", _camera.scaledPixelWidth);
+            CombinedPPShader.SetInt("screen_height", _camera.scaledPixelHeight);
 
 
             Bloom.SetInt("screen_width", _camera.scaledPixelWidth);
@@ -206,6 +225,7 @@ namespace TrueTrace {
             UpscalerInitialized = false;
             SharpenInitialized = false;
             FXAAInitialized = false;
+            CombinedPPInitialized = false;
             InitRenderTexture();
             Initialized = true;
         }
@@ -240,7 +260,7 @@ namespace TrueTrace {
             InitRenderTexture(true);
         }
 
-        public void ValidateInit(bool BloomInit, bool TAAInit, bool IsUpscaling, bool UseTAAU, bool SharpenInit, bool FXAAInit) {
+        public void ValidateInit(bool BloomInit, bool TAAInit, bool IsUpscaling, bool UseTAAU, bool SharpenInit, bool FXAAInit, bool CombinedPPInit) {
             if(!BloomInit) {
                 if(ConvBloom.Initialized) ConvBloom.ClearAll();
                 if(BloomInitialized) {
@@ -277,10 +297,16 @@ namespace TrueTrace {
                     }
                 }
             }
-            if(!FXAAInitialized) {
+            if(!FXAAInit) {
                 if(FXAAInitialized) {
                     FXAAFlopper.ReleaseSafe();
                     FXAAInitialized = false;
+                }
+            }
+            if(!CombinedPPInit) {
+                if(CombinedPPInitialized) {
+                    CombinedPPIntermediateTex.ReleaseSafe();
+                    CombinedPPInitialized = false;
                 }
             }
         }
@@ -561,6 +587,46 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(FXAAShader, FXAAFXAAKernel, "Input", FXAAFlopper);
             cmd.SetComputeTextureParam(FXAAShader, FXAAFXAAKernel, "Result", Output);
             cmd.DispatchCompute(FXAAShader, FXAAFXAAKernel, Mathf.CeilToInt((float)Output.width / 16.0f), Mathf.CeilToInt((float)Output.height / 16.0f), 1);
+
+        }
+
+        private void InitializeCombinedPP() {
+            CommonFunctions.CreateRenderTexture(ref CombinedPPIntermediateTex, _camera.scaledPixelWidth, _camera.scaledPixelHeight, CommonFunctions.RTFull4);
+            CombinedPPInitialized = true;
+        }
+        public void ExecuteCombinedPP(ref RenderTexture Output, CommandBuffer cmd, bool DoBCS, bool DoVignette, bool DoChromaAber, float Contrast, float Saturation, float ChromaDistort, float VignetteInner, float VignetteOuter, float VignetteStrength, float VignetteCurve, Vector3 VignetteColor) {
+            if(!CombinedPPInitialized) InitializeCombinedPP();
+            if (CombinedPPShader == null) { CombinedPPShader = Resources.Load<ComputeShader>("PostProcess/Compute/CombinedPP"); }
+            CombinedPPShader.SetInt("screen_width", Output.width);
+            CombinedPPShader.SetInt("screen_height", Output.height);
+            if(DoBCS) {
+                cmd.CopyTexture(Output, 0, 0, CombinedPPIntermediateTex, 0, 0);
+                CombinedPPShader.SetFloat("contrast", Contrast);
+                CombinedPPShader.SetFloat("saturation", Saturation);
+                cmd.SetComputeTextureParam(CombinedPPShader, BSCKernel, "Input", CombinedPPIntermediateTex);
+                cmd.SetComputeTextureParam(CombinedPPShader, BSCKernel, "Result", Output);
+                cmd.DispatchCompute(CombinedPPShader, BSCKernel, Mathf.CeilToInt((float)Output.width / 16.0f), Mathf.CeilToInt((float)Output.height / 16.0f), 1);
+
+            }
+            if(DoChromaAber) {
+                cmd.CopyTexture(Output, 0, 0, CombinedPPIntermediateTex, 0, 0);
+                CombinedPPShader.SetFloat("DISTORTION_AMOUNT", ChromaDistort);
+                cmd.SetComputeTextureParam(CombinedPPShader, ChromaticAbberationKernel, "Input", CombinedPPIntermediateTex);
+                cmd.SetComputeTextureParam(CombinedPPShader, ChromaticAbberationKernel, "Result", Output);
+                cmd.DispatchCompute(CombinedPPShader, ChromaticAbberationKernel, Mathf.CeilToInt((float)Output.width / 16.0f), Mathf.CeilToInt((float)Output.height / 16.0f), 1);
+            }
+            if(DoVignette) {
+                cmd.CopyTexture(Output, 0, 0, CombinedPPIntermediateTex, 0, 0);
+                CombinedPPShader.SetFloat("inner", VignetteInner);
+                CombinedPPShader.SetFloat("outer", VignetteOuter);
+                CombinedPPShader.SetFloat("strength", VignetteStrength);
+                CombinedPPShader.SetFloat("curvature", VignetteCurve);
+                CombinedPPShader.SetVector("Color", VignetteColor);
+                cmd.SetComputeTextureParam(CombinedPPShader, VignetteKernel, "Input", CombinedPPIntermediateTex);
+                cmd.SetComputeTextureParam(CombinedPPShader, VignetteKernel, "Result", Output);
+                cmd.DispatchCompute(CombinedPPShader, VignetteKernel, Mathf.CeilToInt((float)Output.width / 16.0f), Mathf.CeilToInt((float)Output.height / 16.0f), 1);
+            }
+
 
         }
 
