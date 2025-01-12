@@ -41,7 +41,7 @@ MonoBehaviour:
   ReSTIRGITemporalMCap: 20
   ReSTIRGIUpdateRate: 0
   DoReSTIRGIConnectionValidation: 0
-  Exposure: 8.8
+  Exposure: 41.7
   DoPartialRendering: 0
   PartialRenderingFactor: 1
   DoFirefly: 0
@@ -50,7 +50,7 @@ MonoBehaviour:
   ToneMapper: 0
   SkyDesaturate: 0
   ClayColor: {x: 0.5, y: 0.5, z: 0.5}
-  GroundColor: {x: 0.103773594, y: 0.103773594, z: 0.103773594}
+  GroundColor: {x: 0.11320752, y: 0.11320752, z: 0.11320752}
   FireflyFrameCount: 0
   FireflyFrameInterval: 1
   FireflyStrength: 1
@@ -74,7 +74,7 @@ MonoBehaviour:
   MatChangeResetsAccum: 0
   PPFXAA: 0
   OIDNBlendRatio: 1
-  ConvBloom: 1
+  ConvBloom: 0
   ConvStrength: 1.37
   ConvBloomThreshold: 0
   ConvBloomSize: {x: 1, y: 1}
@@ -84,12 +84,13 @@ MonoBehaviour:
   PrimaryBackgroundTintColor: {x: 1, y: 1, z: 1}
   PrimaryBackgroundTint: 0
   PrimaryBackgroundContrast: 1
-  FogDensity: 0.045
-  FogColor: {x: 1, y: 1, z: 1}
+  FogDensity: 0.022
+  FogHeight: 80
+  FogColor: {x: 0.9245283, y: 0.9245283, z: 0.9245283}
   MaxSampCount: 99999999
   DoChromaAber: 0
   ChromaDistort: 9.5
-  DoBCS: 1
+  DoBCS: 0
   Saturation: 1
   Contrast: 1
   DoVignette: 0

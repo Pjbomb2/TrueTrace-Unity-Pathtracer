@@ -82,6 +82,7 @@ namespace TrueTrace {
         [SerializeField] public float PrimaryBackgroundTint = 0;
         [SerializeField] public float PrimaryBackgroundContrast = 1;
         [SerializeField] public float FogDensity = 0.0002f;
+        [SerializeField] public float FogHeight = 80.0f;
         [SerializeField] public Vector3 FogColor = new Vector3(0.6f, 0.6f, 0.6f);
         [SerializeField] public int MaxSampCount = 99999999;
         [SerializeField] public bool DoChromaAber = false;

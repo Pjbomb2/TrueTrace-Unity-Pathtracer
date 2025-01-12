@@ -3,8 +3,8 @@ static uint ScatteringTexMUSize = 128;
 static uint ScatteringTexMUSSize = 32;
 static uint ScatteringTexNUSize = 8;
 
-#define bottom_radius (6360000.0f)
-#define top_radius (6420000.0f)
+#define bottom_radius (636000.0f)
+#define top_radius (642000.0f)
 static uint TransmittanceTexWidth = 256;
 static uint TransmittanceTexHeight = 64;
 

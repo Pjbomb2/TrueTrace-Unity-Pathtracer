@@ -108,6 +108,7 @@ namespace TrueTrace {
          [SerializeField] public bool MatChangeResetsAccum = false;
          [SerializeField] public float OIDNBlendRatio = 1.0f;
          [SerializeField] public float FogDensity = 0.0002f;
+         [SerializeField] public float FogHeight = 80.0f;
          [SerializeField] public bool ConvBloom = false;
          [SerializeField] public float ConvStrength = 1.37f;
          [SerializeField] public float ConvBloomThreshold = 13.23f;
@@ -1805,6 +1806,12 @@ Toolbar toolbar;
          FogSlider.style.width = 200;
          FogSlider.ElementAt(0).style.minWidth = 65;
          FogSlider.RegisterValueChangedCallback(evt => {FogDensity = evt.newValue; RayMaster.LocalTTSettings.FogDensity = FogDensity;});
+
+         Slider FogHeightSlider = new Slider() {label = "Fog Height: ", value = FogHeight, highValue = 80.0f, lowValue = 0.0f};
+         FogHeightSlider.showInputField = true;        
+         FogHeightSlider.style.width = 200;
+         FogHeightSlider.ElementAt(0).style.minWidth = 65;
+         FogHeightSlider.RegisterValueChangedCallback(evt => {FogHeight = evt.newValue; RayMaster.LocalTTSettings.FogHeight = FogHeight;});
          
          ColorField FogColorField = new ColorField();
          FogColorField.value = FogColor;
@@ -1812,6 +1819,7 @@ Toolbar toolbar;
          FogColorField.RegisterValueChangedCallback(evt => {FogColor = evt.newValue; RayMaster.LocalTTSettings.FogColor = new Vector3(FogColor.r,FogColor.g,FogColor.b);});
 
          PlayContainer.Add(FogSlider);
+         PlayContainer.Add(FogHeightSlider);
          PlayContainer.Add(FogColorField);
          PlayContainer.Add(new Label("-------------"));
 
@@ -2487,6 +2495,9 @@ Slider AperatureSlider;
            strengthVignette = RayMaster.LocalTTSettings.strengthVignette;
            curveVignette = RayMaster.LocalTTSettings.curveVignette;
            ColorVignette = new Color(RayMaster.LocalTTSettings.ColorVignette.x,RayMaster.LocalTTSettings.ColorVignette.y,RayMaster.LocalTTSettings.ColorVignette.z,1);
+           FogDensity = RayMaster.LocalTTSettings.FogDensity;
+           FogHeight = RayMaster.LocalTTSettings.FogHeight;
+           DoChromaAber = RayMaster.LocalTTSettings.DoChromaAber;
          }
 
            // AddHardSettingsToMenu();

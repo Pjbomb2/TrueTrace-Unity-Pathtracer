@@ -660,6 +660,7 @@ namespace TrueTrace {
             SetFloat("LEMEnergyScale", LocalTTSettings.LEMEnergyScale, cmd);
             SetFloat("OIDNBlendRatio", LocalTTSettings.OIDNBlendRatio, cmd);
             SetFloat("FogDensity", LocalTTSettings.FogDensity, cmd);
+            SetFloat("ScaleHeight", LocalTTSettings.FogHeight, cmd);
 
             SetInt("NonInstanceCount", Assets.NonInstanceCount, cmd);
             SetInt("AlbedoAtlasSize", Assets.AlbedoAtlasSize, cmd);

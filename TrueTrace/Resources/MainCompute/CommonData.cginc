@@ -2825,7 +2825,7 @@ float3 OptDepthSpherExpMedium(float r, float rRcp, float cosTheta, float dist, f
 // 'maxDist' is the maximum distance along the ray.
 float SampleSpherExpMedium(float optDepth, float r, float rRcp, float cosTheta, float R,
                            float2 seaLvlExt, float2 H, float2 n, // Air & aerosols
-                           float maxOptDepth, float maxDist, int2 id)
+                           float maxOptDepth, float maxDist)
 {
     const float  optDepthRcp = rcp(optDepth);
     const float2 Z           = R * n;
@@ -2955,3 +2955,6 @@ float3 MultipleOctaveScattering(float density, float mu) {
     }
     return luminance;
 }
+
+
+
