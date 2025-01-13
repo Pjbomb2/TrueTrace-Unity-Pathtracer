@@ -2165,7 +2165,7 @@ Toolbar toolbar;
             PostProcessingMenu.Add(DoChromaAberToggle);
             VisualElement ChromaAberContainer = CreateHorizontalBox();
                Label ChromaAberLabel = new Label("Chromatic Aberation Strength");
-               Slider ChromaAberSlider = new Slider() {value = ChromaDistort, highValue = 50.0f, lowValue = 0};
+               Slider ChromaAberSlider = new Slider() {value = ChromaDistort, highValue = 7.0f, lowValue = 0};
                FloatField ChromaAberField = new FloatField() {value = ChromaDistort};
                ChromaAberSlider.RegisterValueChangedCallback(evt => {ChromaDistort = evt.newValue; ChromaAberField.value = ChromaDistort; RayMaster.LocalTTSettings.ChromaDistort = ChromaDistort;});
                ChromaAberField.RegisterValueChangedCallback(evt =>  {ChromaDistort = evt.newValue; ChromaAberSlider.value = ChromaDistort; RayMaster.LocalTTSettings.ChromaDistort = ChromaDistort;});
