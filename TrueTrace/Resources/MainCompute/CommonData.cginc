@@ -182,7 +182,7 @@ inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotati
 	// BaseUV =fmod(abs(BaseUV), 1.0f);
 	if(Rotation != 0) {
 		float sinc, cosc;
-		sincos(Rotation, sinc, cosc);
+		sincos(Rotation / 180.0f, sinc, cosc);
 		BaseUV -= 0.5f;
 		float2 tempuv = BaseUV;
 		BaseUV.x = tempuv.x * cosc - tempuv.y * sinc;
@@ -253,7 +253,7 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 		int2 TextureIndexAndChannel = -1;// = MatTex.BindlessIndex;
 		if(MatTex.Rotation != 0) {
 			float sinc, cosc;
-			sincos(MatTex.Rotation, sinc, cosc);
+			sincos(MatTex.Rotation / 180.0f, sinc, cosc);
 			UV -= 0.5f;
 			float2 tempuv = UV;
 			UV.x = tempuv.x * cosc - tempuv.y * sinc;

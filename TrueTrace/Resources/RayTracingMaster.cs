@@ -22,7 +22,6 @@ namespace TrueTrace {
         private TTPostProcessing TTPostProc;
         private ASVGF ASVGFCode;
         public static bool ImageIsModified = false;
-        private bool Abandon = false;
         #if UseOIDN
             private UnityDenoiserPlugin.DenoiserPluginWrapper OIDNDenoiser;			
         #endif
@@ -1328,7 +1327,6 @@ namespace TrueTrace {
 
         public void RenderImage(RenderTexture destination, CommandBuffer cmd)
         {
-            Abandon = false;
             _camera.renderingPath = RenderingPath.DeferredShading;
             if (SceneIsRunning && Assets != null && Assets.RenderQue.Count > 0)
             {

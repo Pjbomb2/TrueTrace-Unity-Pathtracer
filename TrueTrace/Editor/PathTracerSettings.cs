@@ -127,6 +127,7 @@ namespace TrueTrace {
          [SerializeField] public float strengthVignette = 0.8f;
          [SerializeField] public float curveVignette = 0.5f;
          [SerializeField] public Color ColorVignette = Color.black;
+         [SerializeField] public bool ShowPostProcessMenu = true;
 
          public bool GetGlobalDefine(string DefineToGet) {
             string globalDefinesPath = TTPathFinder.GetGlobalDefinesPath();
@@ -1807,10 +1808,11 @@ Toolbar toolbar;
          FogSlider.ElementAt(0).style.minWidth = 65;
          FogSlider.RegisterValueChangedCallback(evt => {FogDensity = evt.newValue; RayMaster.LocalTTSettings.FogDensity = FogDensity;});
 
-         Slider FogHeightSlider = new Slider() {label = "Fog Height: ", value = FogHeight, highValue = 80.0f, lowValue = 0.0f};
+         Slider FogHeightSlider = new Slider() {label = "Fog Height: ", value = FogHeight, highValue = 80.0f, lowValue = 0.00001f};
          FogHeightSlider.showInputField = true;        
          FogHeightSlider.style.width = 200;
          FogHeightSlider.ElementAt(0).style.minWidth = 65;
+         FogHeightSlider.value = FogHeight;
          FogHeightSlider.RegisterValueChangedCallback(evt => {FogHeight = evt.newValue; RayMaster.LocalTTSettings.FogHeight = FogHeight;});
          
          ColorField FogColorField = new ColorField();
@@ -2094,7 +2096,7 @@ Toolbar toolbar;
            FXAAToggle.RegisterValueChangedCallback(evt => {FXAA = evt.newValue; RayMaster.LocalTTSettings.PPFXAA = FXAA;});
 
 
-            Toggle BCSToggle = new Toggle() {value = DoBCS, text = "Enable Contast/Saturation Adjustment"};
+            Toggle BCSToggle = new Toggle() {value = DoBCS, text = "Enable Contrast/Saturation Adjustment"};
             VisualElement BCSContainer = new VisualElement();
                VisualElement SaturationContainer = CreateHorizontalBox();
                   Label SaturationLabel = new Label("Saturation");
@@ -2361,13 +2363,11 @@ Slider AperatureSlider;
             toolbar = new Toolbar();
             rootVisualElement.Add(toolbar);
             Button MainSourceButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();});
-            Button PostProcessingButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); PostProcessingMenu.Clear(); AddPostProcessingToMenu(); rootVisualElement.Add(PostProcessingMenu);});
             Button MaterialPairButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); InputMaterialField.value = null; MaterialPairingMenu.Add(InputMaterialField); rootVisualElement.Add(MaterialPairingMenu);});
             Button SceneSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(SceneSettingsMenu);});
             Button HardSettingsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); HardSettingsMenu.Clear(); AddHardSettingsToMenu(); rootVisualElement.Add(HardSettingsMenu);});
             Button HierarchyOptionsButton = new Button(() => {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(HierarchyOptionsMenu);});
             MainSourceButton.text = "Main Options";
-            PostProcessingButton.text = "Post Processing";
             MaterialPairButton.text = "Material Pair Options";
             SceneSettingsButton.text = "Scene Settings";
             HardSettingsButton.text = "Functionality Settings";
@@ -2383,13 +2383,13 @@ Slider AperatureSlider;
                return;
             } else {
                toolbar.Add(MainSourceButton);
-               toolbar.Add(PostProcessingButton);
                toolbar.Add(MaterialPairButton);
                toolbar.Add(SceneSettingsButton);
                toolbar.Add(HardSettingsButton);
                toolbar.Add(HierarchyOptionsButton);
                {rootVisualElement.Clear(); rootVisualElement.Add(toolbar); rootVisualElement.Add(MainSource); MaterialPairingMenu.Clear();}
                Assets.UpdateMaterialDefinition();
+
 
                #if UNITY_PIPELINE_HDRP
                   GameObject NewObject = GameObject.Find("HDRPPASS");
@@ -2815,6 +2815,12 @@ Slider AperatureSlider;
            MainSource.Add(SampleShowToggle);
            SampleShowToggle.RegisterValueChangedCallback(evt => {ShowFPS = evt.newValue; if(evt.newValue) MainSource.Insert(MainSource.IndexOf(SampleShowToggle) + 1, SampleCountBox); else MainSource.Remove(SampleCountBox);});
            if(ShowFPS) MainSource.Add(SampleCountBox);
+
+
+            AddPostProcessingToMenu();
+            Foldout PostProcessingFoldout = new Foldout() {text = "Post Processing"};
+               PostProcessingFoldout.Add(PostProcessingMenu);
+            MainSource.Add(PostProcessingFoldout);
 
            Rect WindowRect = MainSource.layout;
            Box EnclosingBox = new Box();

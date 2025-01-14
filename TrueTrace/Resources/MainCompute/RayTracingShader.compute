@@ -67,12 +67,13 @@ float3 SampleHomo(SmallerRay ray, float maxT, int pixel_index, inout float t, in
     uint channel = min(floor(random(33, pixel_index).x * 3), 2);
     float A = 12.0000001f;
     // t = SampleRectExpMedium(exp(-(-log(1 - random(33, pixel_index).y))*SigmaT), ray.origin.y, ray.direction.y, 1.0f / SigmaT, 1.0f / H);/// SigmaT[channel];
-    t = SampleRectExpMedium(random(33, pixel_index).y, ray.origin.y, ray.direction.y, 1.0f / SigmaT, 1.0f / ScaleHeight);/// SigmaT[channel];
-    // t = SampleSpherExpMedium(random(33, pixel_index).y, ray.origin.y+bottom_radius, rcp(ray.origin.y+bottom_radius), ray.direction.y, bottom_radius, SigmaT, float2(1,ScaleHeight), 1.0f / float2(1,ScaleHeight), 1, maxT);/// SigmaT[channel];
+    t = SampleRectExpMedium(random(33, pixel_index).y/ SigmaT[channel], ray.origin.y, ray.direction.y, 1.0f / SigmaT, 1.0f / ScaleHeight);
+    // t = SampleSpherExpMedium(random(33, pixel_index).y, ray.origin.y+bottom_radius, rcp(ray.origin.y+bottom_radius), ray.direction.y, bottom_radius, float2(1,1), float2(1,ScaleHeight), 1.0f / float2(1,ScaleHeight), 1, t);/// SigmaT[channel];
     // t = -log(1 - random(33, pixel_index).y) / SigmaT[channel];
     bool m_internal = t < maxT;
     t = min(t, maxT);
-    float3 Tr = exp(-t * SigmaT);
+    // float3 Tr = exp(-t * SigmaT);
+    float3 Tr = exp(-SigmaT * OptDepthSpherExpMedium(ray.origin.y+bottom_radius, rcp(ray.origin.y+bottom_radius), ray.direction.y, t, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
 
 
     if(m_internal) {
@@ -204,6 +205,12 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     [branch] if (hitDat.emission > 0.0f) {//if we hit a light, this ray is done
 #ifdef Fog
     // if(CurBounce == 0) _DebugTex[id.xy] = float4(exp(-SigmaT * -OptDepthRectExpMedium(ray.origin.y, ray.direction.y, hit.t, SigmaT, 1.0f / H)), 1);
+        float3 Tr = exp(-SigmaT * OptDepthSpherExpMedium(ray.origin.y+bottom_radius, rcp(ray.origin.y+bottom_radius), ray.direction.y, hit.t, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
+        pdf = (Tr.x + Tr.y + Tr.z) / 3.0f;
+        hitDat.emission *= Tr;// / pdf;
+        // return exp(-t * OptDepthRectExpMedium(ray.origin.y, ray.direction.x, t, SigmaT, 1.0f / H));    
+        // return (Tr / pdf);
+
         // hitDat.emission *= exp(-hit.t * OptDepthRectExpMedium(ray.origin.y, ray.direction.y, hit.t, SigmaT, 1.0f / ScaleHeight));   
         // hitDat.emission *= exp(-OptDepthRectExpMedium(ray.origin.y, ray.direction.y, hit.t, SigmaT * 0.0001f, 1.0f / ScaleHeight));    
 
@@ -240,7 +247,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 light_pdf *= rcp(_MeshData[hit.mesh_id].LightTriCount);
             #endif
             #ifdef Fog
-                light_pdf *= (1.0f - VolumeBSDF);
+                // light_pdf *= (1.0f - VolumeBSDF);
             #endif
             float w = power_heuristic(max(last_pdf,0), light_pdf);
             if (CurBounce == 0) Color.Direct += EmissCol;
@@ -554,7 +561,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 #endif
                 #ifdef Fog
                     float temppdf = 1.0f / (PI * 4.0f);
-                    float3 Homo2 = exp(-distance_to_light * OptDepthRectExpMedium(pos.y, to_light.y, distance_to_light, SigmaT, 1.0f / ScaleHeight));
+                    float3 Homo2 = exp(-SigmaT * OptDepthSpherExpMedium(pos.y+bottom_radius, rcp(pos.y+bottom_radius), to_light.y, distance_to_light, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
+                    // float3 Homo2 = exp(-distance_to_light * OptDepthRectExpMedium(pos.y, to_light.y, distance_to_light, SigmaT, 1.0f / ScaleHeight));
                     Homo = Homo * Homo2;   
                     if(DidScatter) {
                         bsdf_value = Homo * temppdf;// * pdf;
@@ -782,7 +790,20 @@ int MaterialIndex;
     #ifdef Fog
       float rayNear;
       float rayFar = 100.0f;
+      rayFar = raySphereFirstIntersection(ray.origin + float3(0,bottom_radius,0), ray.direction, float3(0,0, 0), bottom_radius);
+      if(rayFar < 0) rayFar = -raySphereFirstIntersection(ray.origin+ float3(0,bottom_radius,0), ray.direction, float3(0,0, 0), top_radius);
+      rayFar = min(rayFar, FarPlane);
       // getRayNearFar(ray.direction, rayNear, rayFar);
+    //   if((ray.origin + ray.direction * rayFar).y < 0) {
+
+
+    //     float denom = dot(float3(0,1,0), ray.direction);
+    //     if (abs(denom) > 0.0001f) // your favorite epsilon
+    //     {
+    //         float t = dot(float3(0,1,0), (float3(0,0,0) - ray.origin)) / denom;
+    //         rayFar = min(rayFar, t);
+    //     }
+    // }
       // float3 skyirrad;
       // float3 sunirrad;// = GetSunAndSkyIrradiance(ray.origin+float3(0,bottom_radius,0), ray.direction, SunDir, skyirrad);
       // float4 rad2 = 0;
@@ -810,7 +831,7 @@ int MaterialIndex;
                 if (dot(ray.direction, SunDir) > cos(0.0235f / 2.0f)) {
                     Sun = clamp((Radiance + transmittance * (1.5f / (PI * (0.0235f / 2.0f) * (0.0235f / 2.0f)))) / (CurBounce == 0 ? 10.0f : 100.0f), 0, CurBounce == 0 ? 1000.0f : 10.0f);
                 }
-                if(CurBounce == 0) Radiance += Sun*12.0f;
+                Radiance += Sun;
                 Stars = stars(ray.origin, ray.direction, toSpherical(ray.direction.xzy).yz, 0) * (1.0f - tanh_approx(0));
                 Stars *= max(12.0f * pow(1.0f - saturate(pow(RayleighPhaseFunction(dot(ray.direction, SunDir)) * MiePhaseFunction(0.8f, dot(ray.direction, SunDir)),0.1f)),2.0f) * transmittance * -dot(rayorig2, SunDir) / length(rayorig2), 0);
                 Stars = pow(saturate(Stars), 2.0f);
@@ -950,8 +971,8 @@ int MaterialIndex;
                         TempCol += SecondaryVal;
                 break;
                 case 2:
-                    if(AlbMaskVal > 0.5f || !(TempMat.SecondaryAlbedoMask.x > 0))
-                        TempCol *= SecondaryVal;
+                    SecondaryVal *= TempCol;
+                    TempCol = lerp(TempCol, SecondaryVal, AlbMaskVal);
                 break;
             }
         }

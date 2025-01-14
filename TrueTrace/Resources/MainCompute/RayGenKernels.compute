@@ -105,8 +105,8 @@ void CacheResolve(uint3 id : SV_DispatchThreadID) {//we dont need to compress th
             uint SampleCount = ResultantVox.w & 0x0000FFFF;
             uint FrameCount = (ResultantVox.w >> 16) & 0x0000FFFF;
             FrameCount++;
-            if(SampleCount > 50000) {
-                float Ratio = 50000.0f / (float)SampleCount;
+            if(SampleCount > 500) {
+                float Ratio = 500.0f / (float)SampleCount;
                 SampleCount = floor(Ratio * (float)SampleCount);
                 ResultantVox.xyz = ResultantVox.xyz * Ratio;
             }

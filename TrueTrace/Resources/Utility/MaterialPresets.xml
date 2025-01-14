@@ -411,9 +411,9 @@
           <z>1</z>
         </TransCol>
         <BaseCol>
-          <x>1</x>
-          <y>1</y>
-          <z>1</z>
+          <x>0.3816601</x>
+          <y>0.571424</y>
+          <z>0.7830189</z>
         </BaseCol>
         <MetRemap>
           <x>0</x>
@@ -429,21 +429,21 @@
           <y>1</y>
           <z>1</z>
         </EmissCol>
-        <Rough>0.66</Rough>
-        <IOR>1.19</IOR>
+        <Rough>0.06</Rough>
+        <IOR>1.33</IOR>
         <Met>0</Met>
         <SpecTint>0</SpecTint>
-        <Sheen>7.1</Sheen>
-        <SheenTint>0.176</SheenTint>
-        <Clearcoat>0.311</Clearcoat>
-        <ClearcoatGloss>1</ClearcoatGloss>
+        <Sheen>0</Sheen>
+        <SheenTint>0</SheenTint>
+        <Clearcoat>0</Clearcoat>
+        <ClearcoatGloss>0</ClearcoatGloss>
         <Anisotropic>0</Anisotropic>
         <Flatness>0</Flatness>
         <DiffTrans>0</DiffTrans>
-        <SpecTrans>0</SpecTrans>
+        <SpecTrans>1</SpecTrans>
         <FollowMat>false</FollowMat>
-        <ScatterDist>0.1</ScatterDist>
-        <Spec>0.143</Spec>
+        <ScatterDist>1.99</ScatterDist>
+        <Spec>0</Spec>
         <AlphaCutoff>0.1</AlphaCutoff>
         <NormStrength>1</NormStrength>
         <Hue>0</Hue>
@@ -477,7 +477,7 @@
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
         <ColorBleed>1</ColorBleed>
-        <AlbedoBlendFactor>0</AlbedoBlendFactor>
+        <AlbedoBlendFactor>1</AlbedoBlendFactor>
         <SecondaryNormalTexScaleOffset>
           <x>1</x>
           <y>1</y>
@@ -486,7 +486,7 @@
         </SecondaryNormalTexScaleOffset>
         <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
         <DetailNormalStrength>1</DetailNormalStrength>
-        <AlbedoGUID>041ccda934077fb4eb81e3b6e1d79e32</AlbedoGUID>
+        <AlbedoGUID>null</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
         <EmissionGUID>null</EmissionGUID>
@@ -496,7 +496,7 @@
         <SecondaryAlbedoGUID>null</SecondaryAlbedoGUID>
         <SecondaryAlbedoMaskGUID>null</SecondaryAlbedoMaskGUID>
         <NormalGUID>null</NormalGUID>
-        <ShaderName>.poiyomi/Poiyomi 8.0/Poiyomi Pro</ShaderName>
+        <ShaderName>Standard</ShaderName>
       </RayObjectDatas>
     </ContainedPresets>
   </RayObjFolder>
