@@ -466,6 +466,29 @@ inline float SGIntegral(const float sharpness)
 }
 
 
+float VMFAxisLengthToSharpness(float axisLength)
+{
+    return axisLength * (3.0f - axisLength * axisLength) / (1.0f - axisLength * axisLength);
+}
+
+// Inverse of VMFAxisLengthToSharpness.
+float VMFSharpnessToAxisLength(float sharpness)
+{
+    // Solve x^3 - sx^2 - 3x + s = 0, where s = sharpness.
+    // For x in [0, 1] and s in [0, infty), this equation has only a single solution.
+    // [Xu and Wang 2015 "Realtime Rendering Glossy to Glossy Reflections in Screen Space"]
+    // We solve this cubic equation in a numerically stable manner.
+    // [Peters, C. 2016 "How to solve a cubic equation, revisited" https://momentsingraphics.de/CubicRoots.html]
+    float a = sharpness / 3.0f;
+    float b = a * a * a;
+    float c = sqrt(1.0f + 3.0f * (a * a) * (1.0f + a * a));
+    float theta = atan2(c, b) / 3.0f;
+    float d = -2.0f * sin(3.14159f / 6.0f - theta); // = sin(theta) * sqrt(3) - cos(theta).
+    return (sharpness > 33554432.0f) ? 1.0f : sqrt(1.0f + a * a) * d + a;
+}
+
+
+
 inline GaussianTreeNode UnionSG(const GaussianTreeNode LeftNode, const GaussianTreeNode RightNode, int Left) {
    	if(LeftNode.intensity == 0) return RightNode;
    	if(RightNode.intensity == 0) return LeftNode;    
@@ -474,7 +497,7 @@ inline GaussianTreeNode UnionSG(const GaussianTreeNode LeftNode, const GaussianT
     float w_left = phi_left / (phi_left + phi_right);
     float w_right = phi_right / (phi_left + phi_right);
     
-    float3 V = w_left * LeftNode.axis + w_right * RightNode.axis;//may be wrong, paper uses BAR_V(BAR_axis here), not just normalized V/axis
+    float3 V = w_left * LeftNode.axis * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * RightNode.axis * VMFSharpnessToAxisLength(RightNode.sharpness);//may be wrong, paper uses BAR_V(BAR_axis here), not just normalized V/axis
 
     float3 mean = w_left * LeftNode.position + w_right * RightNode.position;
     float variance = w_left * LeftNode.variance + w_right * RightNode.variance + w_left * w_right * dot(LeftNode.position - RightNode.position, LeftNode.position - RightNode.position);
@@ -483,8 +506,11 @@ inline GaussianTreeNode UnionSG(const GaussianTreeNode LeftNode, const GaussianT
 
     float radius = max(distance(mean, LeftNode.position) + LeftNode.radius, distance(mean, RightNode.position) + RightNode.radius);
 
-    float VLength = length(V);
-	float sharpness = ((3.0f * VLength - VLength * VLength * VLength)) / (1.0f - VLength * VLength);
+
+	float AxisLength = length(V);
+	if(AxisLength == 0) V = float3(0,1,0);
+	else V /= AxisLength;
+	float sharpness = min(VMFAxisLengthToSharpness(saturate(AxisLength)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
 
 
 	GaussianTreeNode Dat = {mean, radius, V, variance, sharpness, intensity, Left};
@@ -528,10 +554,9 @@ void TLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
         float Scale = length(center - ExtendedCenter) / SGTreeWrite[Transf.SolidOffset].radius;
 
         SGTreeWrite[Index].position = center;
-        SGTreeWrite[Index].axis = axis / Scale;
-        SGTreeWrite[Index].variance = SGTreeWrite[Transf.SolidOffset].variance * Scale;
-        SGTreeWrite[Index].sharpness = SGTreeWrite[Transf.SolidOffset].sharpness;
-        
+        SGTreeWrite[Index].sharpness = min(VMFAxisLengthToSharpness(saturate(VMFSharpnessToAxisLength(SGTreeWrite[Transf.SolidOffset].sharpness) / Scale)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
+        SGTreeWrite[Index].axis = axis;
+        SGTreeWrite[Index].variance = SGTreeWrite[Transf.SolidOffset].variance * Scale;        
 
         SGTreeWrite[Index].radius = SGTreeWrite[Transf.SolidOffset].radius * Scale;
         SGTreeWrite[Index].intensity = SGTreeWrite[Transf.SolidOffset].intensity * Scale * Scale;
@@ -621,7 +646,11 @@ void BLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
         float3 V = 0.5f * normalize(cross(normalize(LightTri.posedge1), normalize(LightTri.posedge2)));
         float variance = (dot(LightTri.posedge1, LightTri.posedge1) + dot(LightTri.posedge2, LightTri.posedge2) - dot(LightTri.posedge1, LightTri.posedge2)) / 18.0f;
 
-        SGTreeWrite[Index].sharpness = ((3.0f * length(V) - pow(length(V), 3))) / (1.0f - pow(length(V), 2));
+        float AxisLength = length(V);
+        if(AxisLength == 0) V = float3(0,1,0);
+        else V /= AxisLength;
+        SGTreeWrite[Index].sharpness = min(VMFAxisLengthToSharpness(saturate(AxisLength)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
+
         SGTreeWrite[Index].position = mean;
         SGTreeWrite[Index].radius = radius;
         SGTreeWrite[Index].intensity = intensity;

@@ -47,7 +47,7 @@ MonoBehaviour:
   DoFirefly: 0
   ImprovedPrimaryHit: 1
   RISCount: 12
-  ToneMapper: 5
+  ToneMapper: 0
   SkyDesaturate: 0
   ClayColor: {x: 0.5, y: 0.5, z: 0.5}
   GroundColor: {x: 0.11320752, y: 0.11320752, z: 0.11320752}
@@ -75,7 +75,7 @@ MonoBehaviour:
   PPFXAA: 0
   OIDNBlendRatio: 1
   ConvBloom: 1
-  ConvStrength: 0.66
+  ConvStrength: 0.3
   ConvBloomThreshold: 0
   ConvBloomSize: {x: 1, y: 1}
   ConvBloomDistExp: 0
@@ -84,7 +84,7 @@ MonoBehaviour:
   PrimaryBackgroundTintColor: {x: 1, y: 1, z: 1}
   PrimaryBackgroundTint: 0
   PrimaryBackgroundContrast: 1
-  FogDensity: 0.052
+  FogDensity: 0.2
   FogHeight: 80
   FogColor: {x: 1, y: 1, z: 1}
   MaxSampCount: 99999999

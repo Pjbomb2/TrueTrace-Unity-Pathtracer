@@ -804,8 +804,8 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
         [unroll]
         for(int j = 0; j < 4; j++) {
 
-            tmin3 = float3(((x_min >> (j * 8)) & 0xff), ((y_min >> (j * 8)) & 0xff), ((z_min >> (j * 8)) & 0xff));
-            tmax3 = float3(((x_max >> (j * 8)) & 0xff), ((y_max >> (j * 8)) & 0xff), ((z_max >> (j * 8)) & 0xff));
+            tmin3 = float3(((x_min >> (j * 8)) & 0xffu), ((y_min >> (j * 8)) & 0xffu), ((z_min >> (j * 8)) & 0xffu));
+            tmax3 = float3(((x_max >> (j * 8)) & 0xffu), ((y_max >> (j * 8)) & 0xffu), ((z_max >> (j * 8)) & 0xffu));
 
             tmin3 = mad(tmin3, adjusted_ray_direction_inv, adjusted_ray_origin);
             tmax3 = mad(tmax3, adjusted_ray_direction_inv, adjusted_ray_origin);
@@ -816,8 +816,8 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
             bool intersected = tmin < tmax;
             [branch]
             if (intersected) {
-                child_bits = (child_bits4 >> (j * 8)) & 0xff;
-                bit_index  = (bit_index4 >> (j * 8)) & 0xff;
+                child_bits = (child_bits4 >> (j * 8)) & 0xffu;
+                bit_index  = (bit_index4 >> (j * 8)) & 0xffu;
 
                 hit_mask |= child_bits << bit_index;
             }
@@ -1226,7 +1226,7 @@ inline float AreaOfTriangle(float3 pt1, float3 pt2, float3 pt3) {
 }
 
 static const float FLT_EPSILON = 1.192092896e-07f;
-
+static const float FLT_MIN = 1.175494351e-38f;
 
 
 inline float2 mulsign(const float2 x, const float2 y)
@@ -1316,17 +1316,18 @@ struct SGLobe {
 	float sharpness ;
 	float logAmplitude ;
 };
+
 inline SGLobe sg_product ( float3 axis1 , float sharpness1 , float3 axis2 , float sharpness2 ) {
 	float3 axis = axis1 * sharpness1 + axis2 * sharpness2 ;
 	float sharpness = length ( axis ) ;
-	float cosine = clamp (dot( axis1 , axis2 ) , -1.0 , 1.0) ;
-	float sharpnessMin = min( sharpness1 , sharpness2 ) ;
-	float sharpnessRatio = sharpnessMin / max( sharpness1 , sharpness2 ) ;
-	float logAmplitude = 2.0 * sharpnessMin * ( cosine - 1.0) / (1.0 + sharpnessRatio + sqrt (2.0 * sharpnessRatio * cosine
-	+ sharpnessRatio * sharpnessRatio + 1.0) ) ;
-	SGLobe result = { axis / max( sharpness , EPSILON ) , sharpness , logAmplitude };
+
+	float3 d = axis1 - axis2;
+	float len2 = dot(d, d);
+	float logAmplitude = -sharpness1 * sharpness2 * len2 / max(sharpness + sharpness1 + sharpness2, FLT_MIN);
+	SGLobe result = { axis / max( sharpness , FLT_MIN ) , sharpness , logAmplitude };
 	return result ;
 }
+
 static const float FLT_MAX = 3.402823466e+38f;
 
 
@@ -1523,7 +1524,6 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 
 	to_light = normalize(to_light);
 	const SGLobe LightLobe = sg_product((TargetNode.axis), TargetNode.sharpness, to_light, squareddist / Variance);
-
 
 	const float emissive = (TargetNode.intensity) / (Variance * SGIntegral(TargetNode.sharpness));
 

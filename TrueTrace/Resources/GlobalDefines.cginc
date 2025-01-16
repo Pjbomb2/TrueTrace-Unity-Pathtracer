@@ -29,6 +29,8 @@
 // #define NonDirectionalRadCache
 #define ExpensiveReSTIR
 // #define FakedAO
+// #define AutoDebugReading
+
 
 
 //END OF DEFINES
@@ -48,7 +50,7 @@
 
 #define DepthDivisor 1000.0f
 
-#define FogScale 4.0f
+#define FogScale 12.0f
 
 
 //Dont change the ones below

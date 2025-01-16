@@ -215,6 +215,7 @@ namespace TrueTrace {
          private void OnStartAsyncCombined() {
             EditorUtility.SetDirty(GameObject.Find("Scene").GetComponent<AssetManager>());
             BuildWatch.Start();
+            GameObject.Find("Scene").GetComponent<AssetManager>().ClearAll();
             GameObject.Find("Scene").GetComponent<AssetManager>().EditorBuild();
          }
 

@@ -1633,15 +1633,15 @@ namespace TrueTrace {
                             InstanceData.RenderQue[i].RTAccelSubmeshOffsets[i2] = MeshOffset + ExistingList.Count * i2;
 
                         }
-                        for (int i2 = 0; i2 < SubMeshCount; ++i2)
-                        {//Add together all the submeshes in the mesh to consider it as one object
-                            SubMeshOffsets.Add(TotLength);
-                            int IndiceLength = (int)mesh.GetIndexCount(i2) / 3;
-                            TotLength += IndiceLength;
-                        }
-                            MeshOffset += ExistingList.Count * SubMeshCount;
-                            ExteriorCount += ExistingList.Count;// * SubMeshCount;
+                        MeshOffset += ExistingList.Count * SubMeshCount;
+                        ExteriorCount += ExistingList.Count;// * SubMeshCount;
 
+                    }
+                    for (int i2 = 0; i2 < SubMeshCount; ++i2)
+                    {//Add together all the submeshes in the mesh to consider it as one object
+                        SubMeshOffsets.Add(TotLength);
+                        int IndiceLength = (int)mesh.GetIndexCount(i2) / 3;
+                        TotLength += IndiceLength;
                     }
 
                 }
