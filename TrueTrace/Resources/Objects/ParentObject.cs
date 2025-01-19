@@ -873,7 +873,7 @@ namespace TrueTrace {
                 int TotalIndexLength = 0;
                 for (int i2 = 0; i2 < submeshcount; ++i2) {//Add together all the submeshes in the mesh to consider it as one object
                     int IndiceLength = (int)mesh.GetIndexCount(i2) / 3;
-                    MatIndex = Mathf.Min(i2, CurrentObject.Names.Length) + RepCount;
+                    MatIndex = Mathf.Min(i2, CurrentObject.Names.Length-1) + RepCount;
                     TotalIndexLength += IndiceLength;
                     var SubMesh = new int[IndiceLength];
                     System.Array.Fill(SubMesh, MatIndex);

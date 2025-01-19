@@ -1006,7 +1006,7 @@ namespace TrueTrace {
                         guideNormal = 1,
                         temporalMode = 0,
                         cleanAux = 1,
-                        prefilterAux = 0
+                        prefilterAux = 1
                     };
 					
 					UnityDenoiserPlugin.DenoiserType denoiserType;

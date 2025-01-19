@@ -375,7 +375,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             if(CurBounce == 0) _DebugTex[id.xy] = float4(ray.origin, asfloat(octahedral_32(Geomnorm)));
         #endif
         float pdf3 = 0;
-        ReconstructBsdf2(hitDat, PrevDirection, ray.direction, Refracted ? -norm : norm, pdf3, bsdf, GetTangentSpace2(Refracted ? -norm : norm), pixel_index);
+        // ReconstructBsdf2(hitDat, PrevDirection, ray.direction, Refracted ? -norm : norm, pdf3, bsdf, GetTangentSpace2(Refracted ? -norm : norm), pixel_index);
         [branch]if(luminance(Color.Indirect) <= 0.01f) {// || CurBounce < 3 //This may make some situations more accurate
             if(GetBounceData(CachePathLength) != 0){
                 #ifdef NonDirectionalRadCache
@@ -544,13 +544,10 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 float3 bsdf_value = 0.0f;
                 float3 bsdf_diffuse = 0;
                 #ifdef RadCache
-                float3 colcol = hitDat.surfaceColor;
+                    float3 colcol = hitDat.surfaceColor;
                     hitDat.surfaceColor =1 ;
                     bool validbsdfNEE = EvaluateBsdf3(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_diffuse, pixel_index);
                     bsdf_pdf = 0;
-                    #ifdef NonDirectionalRadCache
-                        bsdf_diffuse = 1.0f / PI;
-                    #endif
                     hitDat.surfaceColor = colcol;
                     validbsdfNEE = EvaluateBsdf(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_value, pixel_index);
                 #else
@@ -561,79 +558,27 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 #ifdef Fog
                     float temppdf = 1.0f / (PI * 4.0f);
                     Homo = exp(-SigmaT * OptDepthSpherExpMedium(PrevOrigin.y+bottom_radius, rcp(PrevOrigin.y+bottom_radius), PrevDirection.y, newT, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
-                    
-
                     float3 Homo2 = exp(-SigmaT * OptDepthSpherExpMedium(pos.y+bottom_radius, rcp(pos.y+bottom_radius), to_light.y, distance_to_light, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
-                    
-
-                    // float3 Homo2 = exp(-distance_to_light * OptDepthRectExpMedium(pos.y, to_light.y, distance_to_light, SigmaT, 1.0f / ScaleHeight));
-                    float pdf3 = (Homo2.x + Homo2.y + Homo2.z) / 3.0f;
-                    // Homo2 /= pdf3;
                     if(DidScatter) {
                         SigmaT *= Homo;
-                        pdf3 = (SigmaT.x + SigmaT.y + SigmaT.z) / 3.0f; 
-                        Homo = SigmaS * Homo / pdf3;
-
-                        Homo = Homo * (Homo2) * (temppdf);   
-                        // m_internal ? SigmaS * Tr / pdf : (Tr / pdf);
-                        bsdf_value = 1.0f;//(temppdf);//FogColor * temppdf;// * pdf;
-                        bsdf_diffuse = 1.0f;//Homo * temppdf;// * pdf;
+                        float pdf3 = (SigmaT.x + SigmaT.y + SigmaT.z) / 3.0f; 
+                        Homo = SigmaS * Homo / pdf3 * (Homo2) * (temppdf);
+                        bsdf_value = Homo;
+                        bsdf_diffuse = Homo;
                         bsdf_pdf = VolumeBSDF * temppdf;
                         validbsdfNEE = true;
                     } else {
-                        pdf3 = (Homo.x + Homo.y + Homo.z) / 3.0f; 
-                        Homo = Homo / pdf3;
-                        Homo = Homo * Homo2;   
-                        // bsdf_value *= Homo * VolumeBSDF;
-                        // bsdf_diffuse *= Homo * VolumeBSDF;
+                        float pdf3 = (Homo.x + Homo.y + Homo.z) / 3.0f; 
+                        Homo = Homo / pdf3 * Homo2;
                         bsdf_pdf *= VolumeBSDF;
+                        bsdf_value *= Homo;
+                        bsdf_diffuse *= Homo;
                     }
-                    bsdf_value *= Homo;
-                    bsdf_diffuse *= Homo;
                 #endif
 
                 if (validbsdfNEE) {
                     float NEE_pdf;
                     float3 Illum;
-
-
-
-  // if(LightFormat == DIRECTIONALLIGHT && CurBounce == 0) {
-  //             float rayNear;
-  //             float rayFar;
-  //             getRayNearFar(pos + float3(0,bottom_radius,0), SunDir, rayNear, rayFar);
-  //             // if (rayNear < 0.0) {
-  //             //   discard;
-  //             // }
-
-  //           float distanceToTop = raySphereSecondIntersection(
-  //             pos+float3(0,bottom_radius,0) + ellipsoidCenter,
-  //             SunDir,
-  //             ellipsoidCenter,
-  //             bottom_radius + maxLayerHeights.x
-  //           );
-
-  //               // Obtain the optical depth at the position from BSM.
-  //               float3 shadow = marchToCloudsShadow(pos + float3(0,bottom_radius,0), SunDir, 1222, rayFar - rayNear, random(377, pixel_index).x);
-  //               float frontDepth = shadow.x;
-  //               float meanExtinction = shadow.y;
-  //               float maxOpticalDepth = shadow.z;
-  //               float shadowOpticalDepth = min(
-  //                 maxOpticalDepth,
-  //                 meanExtinction * max(0.0, distanceToTop - frontDepth)
-  //               );
-
-  //               float sunOpticalDepth = 0.0;
-  //               if (0 < 0.5) {
-  //                 sunOpticalDepth = sampleOpticalDepth(pos+float3(0,bottom_radius,0), SunDir, 2, 0);
-  //               } else {
-  //                 sunOpticalDepth = sampleOpticalDepth(pos+float3(0,bottom_radius,0), SunDir, 1, 0);
-  //               }
-  //               float opticalDepth = sunOpticalDepth + shadowOpticalDepth;
-  //               float scattering = multipleScattering(opticalDepth, 1);
-  //               Radiance = (Radiance * scattering);
-  //           }
-
                     [branch]if (SelectedLightGroup == 1) {
                         NEE_pdf = 1.0f / (abs(dot(to_light, LightNorm)) * area / distance_to_light_squared);
                         Illum = (Radiance * bsdf_value) / NEE_pdf * RunningWeight;
@@ -667,28 +612,16 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                         bsdf_diffuse *= saturate(saturate(dot(to_light, -LightNorm)) * MiscInfo.y + MiscInfo.z);
                         Illum *= saturate(saturate(dot(to_light, -LightNorm)) * MiscInfo.y + MiscInfo.z);
                     }
-#ifdef Fog
-                    // Illum *= Color.Data.xyz;//throughput;
-                    // Illum *= exp(-((LightFormat == DIRECTIONALLIGHT ? 1.0f : distance_to_light - 0.01f) + newT) * SigmaT);
-                    // bsdf_diffuse *= exp(-((LightFormat == DIRECTIONALLIGHT ? 1.0f : distance_to_light - 0.01f) + newT) * SigmaT);
-#endif
+
                     float maxillum = max(max(Illum.x, Illum.y), Illum.z);
                     if(DoExposure) maxillum *= Exposure[0];
                     if(!UseRussianRoulette || (CurBounce == 0 && (ImprovedPrimaryHit || DoPartialRendering))) maxillum = 1;
                     Illum *= rcp(saturate(maxillum));
-                    #ifndef NonDirectionalRadCache
-                        bsdf_diffuse *= rcp(saturate(maxillum));
-                    #endif
-                        // // #ifdef RadCache
-                        // //     if(!UseASVGF && CurBounce > 1 && !(CurBounce != GetBounceData(CachePathLength) - 2)) {
-                        // //         Illum *= Color.Data.xyz;
-                        // //     }
-                        // #endif
+
                     if(luminance(Illum) != 0 && maxillum > random(117, pixel_index).y) {//NEE russian roulette, massively improves performance while giivng the same result
                         uint index3;
                         #ifdef RadCache
                             bool TempTemp = (CurBounce != GetBounceData(CachePathLength) - 2);
-                            // if(!TempTemp && CurBounce != 0) Illum *= Color.Data;
                             if(UseReSTIRGI && !TempTemp && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
                         #else
                             bool TempTemp = (CurBounce != GetBounceData(Color.MetRoughIsSpec) - 2);
@@ -905,20 +838,6 @@ int MaterialIndex;
                     area = PI * Light.SpotAngle.x * Light.SpotAngle.x;
                 break;
             }
-
-
-
-          
-            // float newt = hit.t;
-            // float newPDF = 1;
-            // sampleEquiAngular(random(321, pixel_index).x, hit.t, PrevOrigin, PrevDirection, LightPosition, newt, newPDF);
-            // if(hit.t != newt) {
-            //     pos = PrevOrigin + PrevDirection * newt;
-            //     norm = normalize(LightPosition - pos);
-            // }
-            //     // RunningWeight *= newPDF;
-
-
         } else if(SelectedLightGroup == 0) {
             #ifdef LBVH
                 int MeshIndex;
@@ -967,16 +886,10 @@ int MaterialIndex;
         #else
             if(SurfaceCos > 0) {
         #endif
-                float bsdf_pdf = 0.0f;
-                float3 bsdf_value = 0.0f;
-                float3 bsdf_diffuse = 0;
-    float3 SigmaT = FogDensity * FogScale;
-    float3 SigmaS = SigmaT * FogColor;
-    float3 SigmaA = SigmaT - SigmaS;
+                    float3 SigmaT = FogDensity * FogScale;
+                    float3 SigmaS = SigmaT * FogColor;
                     float temppdf = 1.0f / (PI * 4.0f);
                     Homo = exp(-SigmaT * OptDepthSpherExpMedium(PrevOrigin.y+bottom_radius, rcp(PrevOrigin.y+bottom_radius), PrevDirection.y, newT, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
-                    
-
                     float3 Homo2 = exp(-SigmaT * OptDepthSpherExpMedium(pos.y+bottom_radius, rcp(pos.y+bottom_radius), to_light.y, distance_to_light, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
                     
 
@@ -989,55 +902,16 @@ int MaterialIndex;
 
                         Homo = Homo * (Homo2) * (temppdf);   
                         // m_internal ? SigmaS * Tr / pdf : (Tr / pdf);
-                        bsdf_value = 1.0f;//(temppdf);//FogColor * temppdf;// * pdf;
-                        bsdf_diffuse = 1.0f;//Homo * temppdf;// * pdf;
-                        bsdf_pdf = VolumeBSDF * temppdf;
                         bool validbsdfNEE = true;
 
-                    bsdf_value *= Homo;
-                    bsdf_diffuse *= Homo;
+                    float bsdf_pdf = VolumeBSDF * temppdf;
+                    float3 bsdf_value = Homo;
+                    float3 bsdf_diffuse = Homo;
 
                 if (validbsdfNEE) {
                     float NEE_pdf;
                     float3 Illum;
 
-
-
-  // if(LightFormat == DIRECTIONALLIGHT && CurBounce == 0) {
-  //             float rayNear;
-  //             float rayFar;
-  //             getRayNearFar(pos + float3(0,bottom_radius,0), SunDir, rayNear, rayFar);
-  //             // if (rayNear < 0.0) {
-  //             //   discard;
-  //             // }
-
-  //           float distanceToTop = raySphereSecondIntersection(
-  //             pos+float3(0,bottom_radius,0) + ellipsoidCenter,
-  //             SunDir,
-  //             ellipsoidCenter,
-  //             bottom_radius + maxLayerHeights.x
-  //           );
-
-  //               // Obtain the optical depth at the position from BSM.
-  //               float3 shadow = marchToCloudsShadow(pos + float3(0,bottom_radius,0), SunDir, 1222, rayFar - rayNear, random(377, pixel_index).x);
-  //               float frontDepth = shadow.x;
-  //               float meanExtinction = shadow.y;
-  //               float maxOpticalDepth = shadow.z;
-  //               float shadowOpticalDepth = min(
-  //                 maxOpticalDepth,
-  //                 meanExtinction * max(0.0, distanceToTop - frontDepth)
-  //               );
-
-  //               float sunOpticalDepth = 0.0;
-  //               if (0 < 0.5) {
-  //                 sunOpticalDepth = sampleOpticalDepth(pos+float3(0,bottom_radius,0), SunDir, 2, 0);
-  //               } else {
-  //                 sunOpticalDepth = sampleOpticalDepth(pos+float3(0,bottom_radius,0), SunDir, 1, 0);
-  //               }
-  //               float opticalDepth = sunOpticalDepth + shadowOpticalDepth;
-  //               float scattering = multipleScattering(opticalDepth, 1);
-  //               Radiance = (Radiance * scattering);
-  //           }
 
                     [branch]if (SelectedLightGroup == 1) {
                         NEE_pdf = 1.0f / (abs(dot(to_light, LightNorm)) * area / distance_to_light_squared);
@@ -1061,7 +935,7 @@ int MaterialIndex;
                         Illum = (Radiance * bsdf_value) / NEE_pdf * RunningWeight * NEEMISWeight;
                         bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf * RunningWeight * NEEMISWeight;
                     }
-                    Illum *= Color.throughput;// * bsdfmodifier;
+                    Illum *= Color.throughput;
 
                     if(LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) {
                         Illum *= pow(saturate(dot(to_light, -LightNorm)), MiscInfo.x);
@@ -1071,23 +945,10 @@ int MaterialIndex;
                         bsdf_diffuse *= saturate(saturate(dot(to_light, -LightNorm)) * MiscInfo.y + MiscInfo.z);
                         Illum *= saturate(saturate(dot(to_light, -LightNorm)) * MiscInfo.y + MiscInfo.z);
                     }
-#ifdef Fog
-                    // Illum *= Color.Data.xyz;//throughput;
-                    // Illum *= exp(-((LightFormat == DIRECTIONALLIGHT ? 1.0f : distance_to_light - 0.01f) + newT) * SigmaT);
-                    // bsdf_diffuse *= exp(-((LightFormat == DIRECTIONALLIGHT ? 1.0f : distance_to_light - 0.01f) + newT) * SigmaT);
-#endif
                     float maxillum = max(max(Illum.x, Illum.y), Illum.z);
                     if(DoExposure) maxillum *= Exposure[0];
                     if(!UseRussianRoulette || (CurBounce == 0 && (ImprovedPrimaryHit || DoPartialRendering))) maxillum = 1;
                     Illum *= rcp(saturate(maxillum));
-                    #ifndef NonDirectionalRadCache
-                        bsdf_diffuse *= rcp(saturate(maxillum));
-                    #endif
-                        // // #ifdef RadCache
-                        // //     if(!UseASVGF && CurBounce > 1 && !(CurBounce != GetBounceData(CachePathLength) - 2)) {
-                        // //         Illum *= Color.Data.xyz;
-                        // //     }
-                        // #endif
                     if(luminance(Illum) != 0 && maxillum > random(117, pixel_index).y) {//NEE russian roulette, massively improves performance while giivng the same result
                         uint index3;
                         #ifdef RadCache

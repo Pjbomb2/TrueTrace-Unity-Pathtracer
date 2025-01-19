@@ -1345,7 +1345,7 @@ float3 EvaluateDisney3(MaterialData hitDat, float3 V, float3 L, bool thin,
         CalculateAnisotropicParams(rscaled, hitDat.anisotropic, tax, tay);
 
         float3 transmission = EvaluateDisneySpecTransmission(hitDat, wo, wm, wi, tax, tay, thin);
-        reflectance += 1;//transmission;
+        reflectance += 0;//transmission;
 
         float forwardTransmissivePdfW;
         GgxVndfAnisotropicPdf2(wi, wm, wo, tax, tay, forwardTransmissivePdfW);
@@ -1441,7 +1441,7 @@ float3 ReconstructDisney2(MaterialData hitDat, float3 wo, float3 wi, bool thin,
                 reflectance += ReconstructDisneyClearcoat(hitDat.clearcoat, hitDat.clearcoatGloss, wo, wm, wi, forwardPdf, Success);
             }
             if(P.z > 0) { 
-                reflectance += P.z * ((EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin, pixel_index) + EvaluateSheen(hitDat, wo, wm, wi) / PI));
+                reflectance += (1.0f - P.w) * ((EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin, pixel_index) + EvaluateSheen(hitDat, wo, wm, wi) / PI));
                 forwardPdf += AbsCosTheta(wi);
                 Success = forwardPdf > 0;
             }

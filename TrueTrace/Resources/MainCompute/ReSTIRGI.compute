@@ -266,7 +266,7 @@ inline void RadianceDataInitialize(out RadianceData Radiance)
 {
     Radiance.Color = 0;
     Radiance.Wsum = 0;
-    Radiance.M = 1;
+    Radiance.M = 0;
     Radiance.W = 0;
 }
 
@@ -512,6 +512,8 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
             if(MergedB) WorldPos = WorldPosB[prevIndex];
             bool MergedC = ReservoirMergeTemporal(prevIndex, ReservoirB[int3(prevIndex,1)].xyzw, 0, ShadowGuidanceWeight, NEEbsdf2, randomNEE(127, pixel_index).y, RunningReservoirC, MiNEE);
             if(MergedC) NEEPos = NEEPosB[prevIndex];
+            RunningReservoirB.Radiance.M++;
+            RunningReservoirC.Radiance.M++;
         }
 
 
@@ -850,8 +852,8 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
     float3 NEEbsdf2;
     if(UseReSTIRGISpatial && Case != 3) {
         [loop]for (int i = 0; i < 5; i++) {        
-            float2 RandOffsets = randomNEE(i + 12, pixel_index);
-            float2 RandOffsets2 = randomNEE(i + 32, pixel_index);
+            float2 RandOffsets = randomNEE(i + 32, pixel_index);
+            float2 RandOffsets2 = randomNEE(i + 64, pixel_index);
         #ifdef ExpensiveReSTIR
             int2 CellOffset = vogelDiskSample(i, 5, RandOffsets.y, 2.0f * PI * RandOffsets.x) * 20.0f;
             int2 CellTapCoord = id.xy + CellOffset;
@@ -956,8 +958,8 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
     }
     Valid2 = ReconstructBsdf2(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPosB[id.xy]) - PrimaryHitPosition), SurfNorm, pdf, bsdf, TangSpace, pixel_index);
     Valid2 = EvaluateBsdf2(SurfaceMat, CameraRay.direction, normalize(NEEPosB[id.xy].xyz - PrimaryHitPosition), SurfNorm, pdf, NEEbsdf, pixel_index);
-    bool Merged3 = ReservoirMergeSpatial(id.xy, PackedCenterResA, 1, bsdf, RunningReservoirB, randomNEE(323, pixel_index).x, Mc);
-    bool Merged4 = ReservoirMergeSpatial(id.xy, PackedCenterResB, 1, NEEbsdf, RunningReservoirC, randomNEE(323, pixel_index).y, McNEE);
+    bool Merged3 = ReservoirMergeSpatial(id.xy, PackedCenterResA, 1, bsdf, RunningReservoirB, randomNEE(324, pixel_index).x, Mc);
+    bool Merged4 = ReservoirMergeSpatial(id.xy, PackedCenterResB, 1, NEEbsdf, RunningReservoirC, randomNEE(324, pixel_index).y, McNEE);
     if(Merged3) WorldPos = WorldPosB[id.xy];
     if(Merged4) NEEPos = NEEPosB[id.xy];
 
@@ -1013,8 +1015,8 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
     RunningReservoirB.Radiance.W = RunningReservoirB.Radiance.Wsum / max((RunningReservoirB.Radiance.M) * luminance(RunningReservoirB.Radiance.Color * bsdf), 1e-7) ;
     RunningReservoirC.Radiance.W = RunningReservoirC.Radiance.Wsum / max((RunningReservoirC.Radiance.M) * luminance(RunningReservoirC.Radiance.Color * NEEbsdf), 1e-7) ;
         Valid2 = EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(NEEPos - PrimaryHitPosition), SurfNorm, pdf, NEEbsdf, pixel_index);
-        // RunningReservoirB.Radiance.W *= RunningReservoirB.Radiance.W < 100.0f;
-        // RunningReservoirC.Radiance.W *= RunningReservoirC.Radiance.W < 100.0f;
+        RunningReservoirB.Radiance.W *= RunningReservoirB.Radiance.W < 100.0f;
+        RunningReservoirC.Radiance.W *= RunningReservoirC.Radiance.W < 100.0f;
 
         GlobalColors[pixel_index].PrimaryNEERay = packRGBE(pow(RunningReservoirC.Radiance.Color * RunningReservoirC.Radiance.W * NEEbsdf,rcp(2.2f)));
 

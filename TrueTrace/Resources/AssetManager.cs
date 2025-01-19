@@ -1626,7 +1626,7 @@ namespace TrueTrace {
                             TempConfig.mesh = mesh;
                             TempConfig.subMeshIndex = (uint)i2;
                             InstanceData.RenderQue[i].TryGetComponent<MeshRenderer>(out MeshRenderer TempRend);
-                            TempConfig.material = TempRend.sharedMaterials[i2];
+                            TempConfig.material = TempRend.sharedMaterials[Mathf.Min(i2, TempRend.sharedMaterials.Length - 1)];
                             TempConfig.material.enableInstancing = true;
 
                             InstanceData.RenderQue[i].RTAccelHandle[i2] = AccelStruct.AddInstances(TempConfig, InstanceData.RenderQue[i].InstanceDatas, -1, 0, (uint)MeshOffset + (uint)ExistingList.Count * (uint)i2);
@@ -2266,7 +2266,7 @@ namespace TrueTrace {
                                 TempConfig.mesh = mesh;
                                 TempConfig.subMeshIndex = (uint)i2;
                                 ObjsToUpdate[i].TryGetComponent<MeshRenderer>(out MeshRenderer TempRend);
-                                TempConfig.material = TempRend.sharedMaterials[i2];
+                                TempConfig.material = TempRend.sharedMaterials[Mathf.Min(i2, TempRend.sharedMaterials.Length - 1)];
 
                                 ObjsToUpdate[i].RTAccelHandle[i2] = AccelStruct.AddInstances(TempConfig, ObjsToUpdate[i].InstanceDatas, -1, 0, (uint)ObjsToUpdate[i].RTAccelSubmeshOffsets[i2]);
                             }

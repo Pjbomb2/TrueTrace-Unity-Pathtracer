@@ -2197,42 +2197,83 @@ Toolbar toolbar;
        private void UndoInstances() {
           GameObject Obj = SelectiveField.value as GameObject;
           if(Obj == null) return;
+          if(!Obj.scene.IsValid()) {
+            GameObject[] InstanceQues = PrefabUtility.FindAllInstancesOfPrefab(SelectiveField.value as GameObject);
+            int QueCount = InstanceQues.Length;
+            ParentObject OrigPObj = null;
+            RayTracingObject OrigRObj = null;
+            string OrigName = "";
+            if(QueCount > 0) {
+               InstancedObject[] TempVar = InstanceQues[0].GetComponentsInChildren<InstancedObject>();
+               if(TempVar != null && TempVar.Length != 0) {
+                  if(TempVar[0].InstanceParent != null) {
+                     OrigPObj = TempVar[0].InstanceParent.GetComponent<ParentObject>();
+                     OrigRObj = TempVar[0].InstanceParent.GetComponent<RayTracingObject>();
+                     OrigName = TempVar[0].InstanceParent.gameObject.name;
+                  }
+               }
+            }
+            for(int i = 0; i < QueCount; i++) {
+               InstancedObject[] TempVar = InstanceQues[i].GetComponentsInChildren<InstancedObject>();
+               if(TempVar != null && TempVar.Length != 0) {
+                  PrefabUtility.RevertPrefabInstance(InstanceQues[i],  InteractionMode.AutomatedAction);
+                  for(int i2 = 0; i2 < InstanceQues[i].transform.childCount; i2++) {
+                     if(OrigName.Contains(InstanceQues[i].transform.GetChild(i2).gameObject.name)) {
+                        InstanceQues[i].transform.GetChild(i2).gameObject.AddComponent<RayTracingObject>(OrigRObj);
+                        InstanceQues[i].transform.GetChild(i2).gameObject.AddComponent<ParentObject>();
+                     }
+                  }
+               }
+            }
+            DestroyImmediate(OrigPObj.gameObject);
+          } else {
+             var E = Obj.GetComponentsInChildren<InstancedObject>();
+             foreach(var a in E) {
+                  GameObject TempOBJ = GameObject.Instantiate(a.InstanceParent.gameObject);
+                  TempOBJ.transform.parent = a.gameObject.transform.parent;
+                  TempOBJ.transform.position = a.gameObject.transform.position;
+                  TempOBJ.transform.rotation = a.gameObject.transform.rotation;
+                 DestroyImmediate(a.gameObject);
+             }
+             ParentData SourceParent = GrabChildren2(Obj.transform);
 
-          var E = Obj.GetComponentsInChildren<InstancedObject>();
-          foreach(var a in E) {
-               GameObject TempOBJ = GameObject.Instantiate(a.InstanceParent.gameObject);
-               TempOBJ.transform.parent = a.gameObject.transform.parent;
-               TempOBJ.transform.position = a.gameObject.transform.position;
-               TempOBJ.transform.rotation = a.gameObject.transform.rotation;
-              DestroyImmediate(a.gameObject);
+             SolveChildren(SourceParent);
           }
-          ParentData SourceParent = GrabChildren2(Obj.transform);
+       }
 
-          SolveChildren(SourceParent);
+       VisualElement MakeSpacer(int Height = 30) {
+         VisualElement TempSpace = new VisualElement();
+         TempSpace.style.minHeight = 30;
+         TempSpace.style.maxHeight = 30;
+         return TempSpace;
        }
 
       void AddHierarchyOptionsToMenu() {
          SelectiveField = new ObjectField();
          SelectiveField.objectType = typeof(GameObject);
          SelectiveField.label = "Selected Object";
-         HierarchyOptionsMenu.Add(SelectiveField);
          Button SelectiveAutoAssignButton = new Button(() => {
             ParentData SourceParent = GrabChildren2((SelectiveField.value as GameObject).transform);
             SolveChildren(SourceParent);
             }) {text = "Selective Auto Assign"};
          Button ReplaceInstanceButton = new Button(() => UndoInstances()) {text = "Undo Selective Instances"};
-         HierarchyOptionsMenu.Add(SelectiveAutoAssignButton);
-         HierarchyOptionsMenu.Add(ReplaceInstanceButton);
 
          
       
          ForceInstancesButton = new Button(() => {if(!Application.isPlaying) ConstructInstances(); else Debug.Log("Cant Do This In Editor");}) {text = "Force All Instances"};
-         HierarchyOptionsMenu.Add(ForceInstancesButton);
          Button ForceInstancesSelectiveButton = new Button(() => {if(!Application.isPlaying) {if((SelectiveField.value as GameObject).TryGetComponent<MeshFilter>(out MeshFilter TempFilter)) ConstructInstancesSelective(TempFilter.sharedMesh); else Debug.Log("Missing Valid Object With Mesh");} else Debug.Log("Cant Do This In Editor");}) {text = "Force Selected Mesh Into Instances"};
-         HierarchyOptionsMenu.Add(ForceInstancesSelectiveButton);
 
          StaticButton = new Button(() => {if(!Application.isPlaying) OptimizeForStatic(); else Debug.Log("Cant Do This In Editor");}) {text = "Make All Static"};
          StaticButton.style.minWidth = 105;
+
+         HierarchyOptionsMenu.Add(SelectiveField);
+         HierarchyOptionsMenu.Add(ForceInstancesSelectiveButton);
+         HierarchyOptionsMenu.Add(ReplaceInstanceButton);
+         
+         HierarchyOptionsMenu.Add(MakeSpacer());
+
+         HierarchyOptionsMenu.Add(SelectiveAutoAssignButton);
+         HierarchyOptionsMenu.Add(ForceInstancesButton);
          HierarchyOptionsMenu.Add(StaticButton);
       }
 

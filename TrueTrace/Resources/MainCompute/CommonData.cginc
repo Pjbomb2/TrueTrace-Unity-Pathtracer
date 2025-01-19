@@ -374,7 +374,7 @@ bool UseASVGF;
 bool UseReSTIRGI;
 
 float2 randomNEE(uint samdim, uint pixel_index) {
-	uint hash = pcg_hash((pixel_index * (uint)258 + samdim) * (MaxBounce + 1) + CurBounce);
+	uint hash = pcg_hash((pixel_index * (uint)526 + samdim) * (MaxBounce + 1) + CurBounce);
 
 	static const float one_over_max_unsigned = asfloat(0x2f7fffff);
 
@@ -388,7 +388,7 @@ float2 randomNEE(uint samdim, uint pixel_index) {
 float2 random(uint samdim, uint pixel_index) {
 	[branch] if (UseASVGF || (UseReSTIRGI && ReSTIRGIUpdateRate != 0)) {
 		uint2 pixid = uint2(pixel_index % screen_width, pixel_index / screen_width);
-		uint hash = pcg_hash(((uint)RandomNums[pixid].y * (uint)258 + samdim) * (MaxBounce + 1) + CurBounce);
+		uint hash = pcg_hash(((uint)RandomNums[pixid].y * (uint)526 + samdim) * (MaxBounce + 1) + CurBounce);
 
 		const static float one_over_max_unsigned = asfloat(0x2f7fffff);
 
@@ -399,7 +399,7 @@ float2 random(uint samdim, uint pixel_index) {
 		return float2(x, y);
 	}
 	else {
-		uint hash = pcg_hash((pixel_index * (uint)258 + samdim) * (MaxBounce + 1) + CurBounce);
+		uint hash = pcg_hash((pixel_index * (uint)526 + samdim) * (MaxBounce + 1) + CurBounce);
 
 		const static float one_over_max_unsigned = asfloat(0x2f7fffff);
 

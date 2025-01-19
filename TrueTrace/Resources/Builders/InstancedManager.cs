@@ -34,10 +34,16 @@ namespace TrueTrace {
 
         public void InitRelationships() {
             NeedsToReinit = false;
-            TempQue = new List<ParentObject>(this.GetComponentsInChildren<ParentObject>());
+            TempQue = new List<ParentObject>(this.GetComponentsInChildren<ParentObject>(false));
             InstanceIndexes = new Dictionary<ParentObject, InstanceData>();
-            InstancedObject[] InstanceQues = GameObject.FindObjectsOfType<InstancedObject>();
+            InstancedObject[] InstanceQues = GameObject.FindObjectsOfType<InstancedObject>(false);
             int InstCount = InstanceQues.Length;
+            List<InstancedObject> TempObject2 = new List<InstancedObject>();
+            for(int i = 0; i < InstCount; i++) {
+                if(InstanceQues[i].InstanceParent != null) TempObject2.Add(InstanceQues[i]);
+            }
+            InstanceQues = TempObject2.ToArray();
+            InstCount = InstanceQues.Length;
             for(int i = 0; i < InstCount; i++) {
                 if (InstanceIndexes.TryGetValue(InstanceQues[i].InstanceParent, out InstanceData ExistingList)) {
                     ExistingList.InstanceTargets.Add(InstanceQues[i]);
@@ -81,6 +87,10 @@ namespace TrueTrace {
                         int Coun2 = ExistingList.InstanceTargets.Count;
                         Bounds TempBounds = ExistingList.LocalMesh.bounds;
                         Matrix4x4 TempIden;
+                        if(ExistingList.InstTransfArray == null) {
+                            NeedsToReinit = true;
+                            continue;
+                        }
                         for(int i2 = 0; i2 < Coun2; i2++) {
                             TempIden = Matrix4x4.identity;
                             ExistingList.InstTransfArray[i2].prevObjectToWorld = ExistingList.InstTransfArray[i2].objectToWorld;
