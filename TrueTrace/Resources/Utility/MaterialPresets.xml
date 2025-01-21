@@ -404,7 +404,7 @@
       <RayObjectDatas>
         <ID>0</ID>
         <MatName>COPYPASTEBUFFER</MatName>
-        <OptionID>1</OptionID>
+        <OptionID>2</OptionID>
         <TransCol>
           <x>1</x>
           <y>1</y>
@@ -439,10 +439,10 @@
         <ClearcoatGloss>0</ClearcoatGloss>
         <Anisotropic>0</Anisotropic>
         <Flatness>0</Flatness>
-        <DiffTrans>0.302</DiffTrans>
+        <DiffTrans>0.644</DiffTrans>
         <SpecTrans>0</SpecTrans>
         <FollowMat>false</FollowMat>
-        <ScatterDist>1.37</ScatterDist>
+        <ScatterDist>0.1</ScatterDist>
         <Spec>0</Spec>
         <AlphaCutoff>0.1</AlphaCutoff>
         <NormStrength>1</NormStrength>
@@ -473,7 +473,7 @@
           <y>1</y>
         </SecondaryTextureScale>
         <Rotation>0</Rotation>
-        <Flags>512</Flags>
+        <Flags>0</Flags>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
         <ColorBleed>1</ColorBleed>
@@ -486,17 +486,17 @@
         </SecondaryNormalTexScaleOffset>
         <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
         <DetailNormalStrength>1</DetailNormalStrength>
-        <AlbedoGUID>b329662f3af831a419fb0ca394253b3e</AlbedoGUID>
+        <AlbedoGUID>fa7f0741e64958441a9929db34f801be</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
         <EmissionGUID>null</EmissionGUID>
-        <AlphaGUID>b329662f3af831a419fb0ca394253b3e</AlphaGUID>
+        <AlphaGUID>fa7f0741e64958441a9929db34f801be</AlphaGUID>
         <MatCapGUID>null</MatCapGUID>
         <MatcapMaskGUID>null</MatcapMaskGUID>
         <SecondaryAlbedoGUID>null</SecondaryAlbedoGUID>
         <SecondaryAlbedoMaskGUID>null</SecondaryAlbedoMaskGUID>
         <NormalGUID>null</NormalGUID>
-        <ShaderName>Standard</ShaderName>
+        <ShaderName>Mobile/Particles/Alpha Blended</ShaderName>
       </RayObjectDatas>
     </ContainedPresets>
   </RayObjFolder>
