@@ -187,11 +187,9 @@ namespace TrueTrace {
             if(BVH2 != null) {
                 BVH2.Dispose();
             }
+            BVH2 = null;
             if(BVH != null) {
-                CommonFunctions.DeepClean(ref BVH.cwbvh_indices);
-                if(BVH.BVH8NodesArray.IsCreated) BVH.BVH8NodesArray.Dispose();
-                if(BVH.costArray.IsCreated) BVH.costArray.Dispose();
-                if(BVH.decisionsArray.IsCreated) BVH.decisionsArray.Dispose();
+                BVH.Dispose();
             }
             BVH = null;
             CurMeshData.Clear();
@@ -235,7 +233,10 @@ namespace TrueTrace {
         public void OnApplicationQuit()
         {
             if (VertexBuffers != null) {
-                for (int i = 0; i < Mathf.Max(SkinnedMeshes.Length, DeformableMeshes.Length); i++) {
+                int Leng = 0;
+                if(SkinnedMeshes != null) Leng = SkinnedMeshes.Length;
+                if(DeformableMeshes != null) Leng = Mathf.Max(Leng, DeformableMeshes.Length);
+                for (int i = 0; i < Leng; i++) {
                     if(VertexBuffers != null && VertexBuffers[i] != null) VertexBuffers[i].Release();
                     IndexBuffers[i].Release();
                     NodeBuffer.Release();
@@ -451,13 +452,13 @@ namespace TrueTrace {
             List<Material> DoneMats = new List<Material>();
             Material[] SharedMaterials;// = new Material[1];
             foreach (RayTracingObject obj in ChildObjects) {
-                if(obj == null) Debug.Log("WTF");
+                if(obj == null) Debug.LogError("Report this to the developer!");
                 DoneMats.Clear();
                 if (obj.TryGetComponent<MeshFilter>(out MeshFilter TempMesh)) mesh = TempMesh.sharedMesh;
                 else if(obj.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin)) mesh = TempSkin.sharedMesh;
                 else mesh = null;
 
-                if(mesh == null) Debug.Log("Missing Mesh: " + name);
+                if(mesh == null) Debug.LogError("Missing Mesh: " + name);
                 obj.matfill();
                 VertCount += mesh.vertexCount;
                 if(obj.TryGetComponent<Renderer>(out Renderer TempRend)) SharedMaterials = TempRend.sharedMaterials;
@@ -477,8 +478,9 @@ namespace TrueTrace {
                     TempObj.ObjIndex = i;
                     int Index = AssetManager.ShaderNames.IndexOf(SharedMaterials[i].shader.name);
                     if (Index == -1) {
+#if TTVerbose
                         Debug.Log("Adding Material To XML: " + SharedMaterials[i].shader.name);
-
+#endif
                         if (SharedMaterials[i].mainTexture != null) {
                             if (!AlbedoTexs.Contains(SharedMaterials[i].mainTexture)) {
                                 AlbedoTexs.Add(SharedMaterials[i].mainTexture);
@@ -490,7 +492,7 @@ namespace TrueTrace {
                     }
                     MaterialShader RelevantMat = AssetManager.data.Material[Index];
                     if(!RelevantMat.MetallicRange.Equals("null") && JustCreated) obj.Metallic[i] = SharedMaterials[i].GetFloat(RelevantMat.MetallicRange);
-                    if(!RelevantMat.RoughnessRange.Equals("null") && JustCreated) obj.Roughness[i] = SharedMaterials[i].GetFloat(RelevantMat.RoughnessRange);
+                    if(!RelevantMat.RoughnessRange.Equals("null") && JustCreated) obj.Roughness[i] = (RelevantMat.UsesSmoothness ? (1.0f - SharedMaterials[i].GetFloat(RelevantMat.RoughnessRange)) : SharedMaterials[i].GetFloat(RelevantMat.RoughnessRange));
                     if(RelevantMat.MetallicRemapMin != null && !RelevantMat.MetallicRemapMin.Equals("null") && JustCreated) obj.MetallicRemap[i] = new Vector2(SharedMaterials[i].GetFloat(RelevantMat.MetallicRemapMin), SharedMaterials[i].GetFloat(RelevantMat.MetallicRemapMax));
                     else if(JustCreated) obj.MetallicRemap[i] = new Vector2(0, 1);
                     if(RelevantMat.RoughnessRemapMin != null && !RelevantMat.RoughnessRemapMin.Equals("null") && JustCreated) obj.RoughnessRemap[i] = new Vector2(SharedMaterials[i].GetFloat(RelevantMat.RoughnessRemapMin), SharedMaterials[i].GetFloat(RelevantMat.RoughnessRemapMax));
@@ -670,8 +672,12 @@ namespace TrueTrace {
                             TempObj.matfill();
                             if(Target.TryGetComponent<RayTracingObject>(out RayTracingObject TempRayObj2)) {
                                 if(Target.TryGetComponent<MeshRenderer>(out MeshRenderer TempRenderer)) {
-                                    if(TempRenderer.enabled)
+                                    if(TempRenderer.enabled){
+                                        if(TempRenderer.rayTracingMode ==  UnityEngine.Experimental.Rendering.RayTracingMode.DynamicGeometry) {
+                                            IsDeformable = true;
+                                        }
                                         ChildObjectTransforms.Add(ChildTransf[i]);
+                                    }
                                 }
                             }
                         }
@@ -683,7 +689,14 @@ namespace TrueTrace {
                 if(ChildObjectTransforms[i].gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject Target))
                     if(ChildObjectTransforms[i] != this.transform) ChildObjects.Add(Target);
             }
-            if(TryGetComponent<RayTracingObject>(out RayTracingObject TempObj2)) ChildObjects.Add(TempObj2);
+            if(TryGetComponent<RayTracingObject>(out RayTracingObject TempObj2)) {
+                if(TryGetComponent<MeshRenderer>(out MeshRenderer TempRenderer)) {
+                    if(TempRenderer.rayTracingMode ==  UnityEngine.Experimental.Rendering.RayTracingMode.DynamicGeometry) {
+                        IsDeformable = true;
+                    }
+                }
+                ChildObjects.Add(TempObj2);
+            }
             TotalObjects = ChildObjects.Count;
             CachedTransforms = new StorableTransform[TotalObjects + 1];
             CachedTransforms[0].WTL = transf.worldToLocalMatrix;
@@ -813,7 +826,6 @@ namespace TrueTrace {
                                         case 4: ColOff = BufferIndexers[TempIndex][i3].y; break;
                                     }
                                 }
-                                    // Debug.Log(VertCount);
                                 for(int i3 = 0; i3 < VertCount; i3++) {
                                     int Index = i3 * TotalStride;
                                     if(VertOff != -1) CurMeshData.Verticies[CurMeshData.CurVertexOffset + i3] = (new Vector3(Data[Index + VertOff], Data[Index + VertOff + 1], Data[Index + VertOff + 2]));
@@ -828,12 +840,6 @@ namespace TrueTrace {
                             AsyncGPUReadback.Request(MeshBuffer, checkOutput);
                         }
                     }
-                    // for(int i2 = 0; i2 < TotVertCount; i2++) {
-                    //     if(!HasAttribute[1]) CurMeshData.Tangents.Add(new Vector4(0,1,0,1));
-                    //     if(!HasAttribute[2]) CurMeshData.Normals.Add(Vector3.one);
-                    //     if(!HasAttribute[3]) CurMeshData.UVs.Add(Vector2.one);
-                    // }
-                    // CurMeshData.SetColorsZero(TotVertCount);
 
 
 
@@ -867,7 +873,7 @@ namespace TrueTrace {
                 int TotalIndexLength = 0;
                 for (int i2 = 0; i2 < submeshcount; ++i2) {//Add together all the submeshes in the mesh to consider it as one object
                     int IndiceLength = (int)mesh.GetIndexCount(i2) / 3;
-                    MatIndex = Mathf.Min(i2, CurrentObject.Names.Length) + RepCount;
+                    MatIndex = Mathf.Min(i2, CurrentObject.Names.Length-1) + RepCount;
                     TotalIndexLength += IndiceLength;
                     var SubMesh = new int[IndiceLength];
                     System.Array.Fill(SubMesh, MatIndex);
@@ -1278,6 +1284,10 @@ namespace TrueTrace {
                 float scalex = Distance(ChildMat * new Vector3(1,0,0), new Vector3(0,0,0));
                 float scaley = Distance(ChildMat * new Vector3(0,1,0), new Vector3(0,0,0));
                 float scalez = Distance(ChildMat * new Vector3(0,0,1), new Vector3(0,0,0));
+                float Leng = Distance(new Vector3(scalex, scaley, scalez), new Vector3(0,0,0));
+                scalex /= Leng;
+                scaley /= Leng;
+                scalez /= Leng;
                 Vector3 ScaleFactor = IsSingle ? new Vector3(1,1,1) : new Vector3(Mathf.Pow(1.0f / scalex, 2.0f), Mathf.Pow(1.0f / scaley, 2.0f), Mathf.Pow(1.0f / scalez, 2.0f));
                 int InitOff = TransformIndexes[i].IndexOffset;
                 int IndEnd = TransformIndexes[i].IndexOffsetEnd;
@@ -1427,7 +1437,9 @@ namespace TrueTrace {
             MeshCountChanged = false;
             HasCompleted = true;
             NeedsToUpdate = false;
+#if TTVerbose
             Debug.Log(Name + " Has Completed Building with " + AggTriangles.Length + " triangles");
+#endif
             FailureCount = 0;
         }
 
@@ -1483,15 +1495,17 @@ namespace TrueTrace {
                     }
                 }
                 else {
-                    if(!AssetManager.Assets.RemoveQue.Contains(this)) {
-                        if(QueInProgress == 2) {
-                            AssetManager.Assets.UpdateQue.Remove(this);
+                    if(AssetManager.Assets != null) {
+                        if(!AssetManager.Assets.RemoveQue.Contains(this)) {
+                            if(QueInProgress == 2) {
+                                AssetManager.Assets.UpdateQue.Remove(this);
+                            }
+                            AssetManager.Assets.AddQue.Add(this);
+                            QueInProgress = 3;
+                            ExistsInQue = 3;
                         }
-                        AssetManager.Assets.AddQue.Add(this);
-                        QueInProgress = 3;
-                        ExistsInQue = 3;
+                        AssetManager.Assets.ParentCountHasChanged = true;
                     }
-                    AssetManager.Assets.ParentCountHasChanged = true;
                 }
                 HasCompleted = false;
             }

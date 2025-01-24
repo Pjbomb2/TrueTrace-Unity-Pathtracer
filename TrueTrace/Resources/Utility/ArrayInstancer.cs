@@ -22,6 +22,7 @@ public class ArrayInstancer : MonoBehaviour
 
     public float DiskRadiusPositionRandomize = 0;
     public int Seed = 3223;
+    public bool InstanceOverSurface = false;
 
     public void CreateInstancesARRAY() {
         Random.InitState(Seed);
@@ -32,9 +33,22 @@ public class ArrayInstancer : MonoBehaviour
                     Vector2 UnitRandom = Random.insideUnitCircle * DiskRadiusPositionRandomize;
                     GameObject TempOBJ = GameObject.Instantiate(TargetObject);
                     TempOBJ.transform.parent = TargetObject.transform.parent;
-                    TempOBJ.transform.position = BasePosition + new Vector3((float)i * Spacing.x + UnitRandom.x, 0, (float)j * Spacing.y + UnitRandom.y);
-                    TempOBJ.transform.eulerAngles += Vector3.Scale(new Vector3(Random.value * 2.0f - 1.0f, Random.value * 2.0f - 1.0f, Random.value * 2.0f - 1.0f), RotationRandomizeUpper - RotationRandomizeLower) + RotationRandomizeLower;
-                    TempOBJ.transform.localScale = Vector3.Scale(new Vector3(Random.value, Random.value, Random.value), ScaleRandomizeUpper - ScaleRandomizeLower) + ScaleRandomizeLower;
+
+                    Vector3 position = BasePosition + new Vector3((float)i * Spacing.x + UnitRandom.x, 0, (float)j * Spacing.y + UnitRandom.y);
+                if(InstanceOverSurface) {
+                    Ray ray = new Ray(position, new Vector3(0,-1,0));
+                    RaycastHit hit = new RaycastHit();
+                    if (Physics.Raycast(ray, out hit, 1000.0f)) {
+                        TempOBJ.transform.position = hit.point;                        
+                        TempOBJ.transform.eulerAngles = Quaternion.FromToRotation(Vector3.up, hit.normal).eulerAngles;
+                    }
+                } else {
+                    TempOBJ.transform.position = position;
+
+                }
+                TempOBJ.transform.eulerAngles += Vector3.Scale(new Vector3(Random.value * 2.0f - 1.0f, Random.value * 2.0f - 1.0f, Random.value * 2.0f - 1.0f), RotationRandomizeUpper - RotationRandomizeLower) + RotationRandomizeLower;
+                TempOBJ.transform.localScale = Vector3.Scale(new Vector3(Random.value, Random.value, Random.value), ScaleRandomizeUpper - ScaleRandomizeLower) + ScaleRandomizeLower;
+
                 }
             }
         }
@@ -43,12 +57,31 @@ public class ArrayInstancer : MonoBehaviour
     public void OnDrawGizmos() {
         Random.InitState(Seed);
         Vector3 BasePosition = this.transform.position;
+        Matrix4x4 PrevMat = Gizmos.matrix;
+        Quaternion TempQuant = new Quaternion();
         for(int i = 0; i < Resolution.x; i++) {
             for(int j = 0; j < Resolution.y; j++) {
                 Vector2 UnitRandom = Random.insideUnitCircle * DiskRadiusPositionRandomize;
-                Gizmos.DrawCube(BasePosition + new Vector3((float)i * Spacing.x + UnitRandom.x, 0, (float)j * Spacing.y + UnitRandom.y), Vector3.Scale(new Vector3(Random.value, Random.value, Random.value), ScaleRandomizeUpper - ScaleRandomizeLower) + ScaleRandomizeLower);
+                Vector3 position = BasePosition + new Vector3((float)i * Spacing.x + UnitRandom.x, 0, (float)j * Spacing.y + UnitRandom.y);
+                if(InstanceOverSurface) {
+                    Ray ray = new Ray(position, new Vector3(0,-1,0));
+                    RaycastHit hit = new RaycastHit();
+                    if (Physics.Raycast(ray, out hit, 1000.0f)) {
+                        Gizmos.matrix = PrevMat;
+                        Gizmos.DrawLine(hit.point, position);
+                        TempQuant = Quaternion.FromToRotation(transform.up, hit.normal);                        
+                    }
+                    TempQuant.eulerAngles = TempQuant.eulerAngles + Vector3.Scale(new Vector3(Random.value * 2.0f - 1.0f, Random.value * 2.0f - 1.0f, Random.value * 2.0f - 1.0f), RotationRandomizeUpper - RotationRandomizeLower) + RotationRandomizeLower;
+                    Gizmos.matrix = Matrix4x4.TRS(hit.point, TempQuant, Vector3.one);
+                    Gizmos.DrawCube(Vector3.zero, Vector3.Scale(new Vector3(Random.value, Random.value, Random.value), ScaleRandomizeUpper - ScaleRandomizeLower) + ScaleRandomizeLower);
+                } else {
+                    TempQuant.eulerAngles = Quaternion.identity.eulerAngles + Vector3.Scale(new Vector3(Random.value * 2.0f - 1.0f, Random.value * 2.0f - 1.0f, Random.value * 2.0f - 1.0f), RotationRandomizeUpper - RotationRandomizeLower) + RotationRandomizeLower;
+                    Gizmos.matrix = Matrix4x4.TRS(position, TempQuant, Vector3.one);
+                    Gizmos.DrawCube(Vector3.zero, Vector3.Scale(new Vector3(Random.value, Random.value, Random.value), ScaleRandomizeUpper - ScaleRandomizeLower) + ScaleRandomizeLower);
+                }
             }
         }
+        Gizmos.matrix = PrevMat;
     }
 
 }
@@ -159,6 +192,14 @@ namespace TrueTrace {
                 SeedContainer.Add(SeedLabel);
                 SeedContainer.Add(SeedField);
 
+                VisualElement IOSContainer = CreateHorizontalBox("IOS Container");
+                    Label IOSLabel = new Label("Instance Over Surface: ");
+                        IOSLabel.style.width = 200;
+                    Toggle IOSField = new Toggle() {value = t.InstanceOverSurface};
+                        IOSField.RegisterValueChangedCallback(evt => {t.InstanceOverSurface = evt.newValue;});
+                IOSContainer.Add(IOSLabel);
+                IOSContainer.Add(IOSField);
+
 
             RootElement.Add(InstanceToArrayButton);
             RootElement.Add(ObjectContainer);
@@ -198,6 +239,7 @@ namespace TrueTrace {
                 RootElement.Add(SpacerElement);
             }
             RootElement.Add(SeedContainer);
+            RootElement.Add(IOSContainer);
             return RootElement;
         }
     }

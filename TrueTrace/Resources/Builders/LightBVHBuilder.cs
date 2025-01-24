@@ -337,6 +337,29 @@ namespace TrueTrace {
             return 4.0f * Mathf.PI * expm1_over_x(-2.0f * sharpness);
         }
 
+        // Estimation of vMF sharpness (i.e., SG sharpness) from the average of directions in R^3.
+        // [Banerjee et al. 2005 "Clustering on the Unit Hypersphere using von Mises-Fisher Distributions"]
+        float VMFAxisLengthToSharpness(float axisLength)
+        {
+            return axisLength * (3.0f - axisLength * axisLength) / (1.0f - axisLength * axisLength);
+        }
+
+        // Inverse of VMFAxisLengthToSharpness.
+        float VMFSharpnessToAxisLength(float sharpness)
+        {
+            // Solve x^3 - sx^2 - 3x + s = 0, where s = sharpness.
+            // For x in [0, 1] and s in [0, infty), this equation has only a single solution.
+            // [Xu and Wang 2015 "Realtime Rendering Glossy to Glossy Reflections in Screen Space"]
+            // We solve this cubic equation in a numerically stable manner.
+            // [Peters, C. 2016 "How to solve a cubic equation, revisited" https://momentsingraphics.de/CubicRoots.html]
+            float a = sharpness / 3.0f;
+            float b = a * a * a;
+            float c = Mathf.Sqrt(1.0f + 3.0f * (a * a) * (1.0f + a * a));
+            float theta = Mathf.Atan2(c, b) / 3.0f;
+            float d = -2.0f * Mathf.Sin(Mathf.PI / 6.0f - theta); // = sin(theta) * sqrt(3) - cos(theta).
+            return (sharpness > 33554432.0f) ? 1.0f : Mathf.Sqrt(1.0f + a * a) * d + a;
+        }
+
 
 
         public unsafe LightBVHBuilder(List<LightTriData> Tris, List<Vector3> Norms, float phi, List<float> LuminanceWeights) {//need to make sure incomming is transformed to world space already
@@ -457,7 +480,7 @@ namespace TrueTrace {
                             float w_left = phi_left / (phi_left + phi_right);
                             float w_right = phi_right / (phi_left + phi_right);
                             
-                            V = w_left * LeftNode.axis + w_right * RightNode.axis;
+                            V = w_left * LeftNode.axis * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * RightNode.axis * VMFSharpnessToAxisLength(RightNode.sharpness);
 
                             mean = w_left * LeftNode.S.Center + w_right * RightNode.S.Center;
                             variance = w_left * LeftNode.variance + w_right * RightNode.variance + w_left * w_right * Vector3.Dot(LeftNode.S.Center - RightNode.S.Center, LeftNode.S.Center - RightNode.S.Center);
@@ -465,7 +488,10 @@ namespace TrueTrace {
                             intensity = LeftNode.intensity + RightNode.intensity;
                             radius = Mathf.Max(Distance(mean, LeftNode.S.Center) + LeftNode.S.Radius, Distance(mean, RightNode.S.Center) + RightNode.S.Radius);
                         }
-                        TempNode.sharpness = ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
+                        float AxisLength = Distance(Vector3.zero, V);
+                        if(AxisLength == 0) V = new Vector3(0,1,0);
+                        else V /= AxisLength;
+                        TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(AxisLength, 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
                         TempNode.axis = V;
                         TempNode.S.Center = mean;
                         TempNode.variance = variance;
@@ -591,6 +617,7 @@ namespace TrueTrace {
                             Vector3 center = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center, 1));
                             Vector3 Axis = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.axis, 0));
                             float Scale = Distance(center, ExtendedCenter) / TempNode.S.Radius;
+                            TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(VMFSharpnessToAxisLength(TempNode.sharpness) / Scale, 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
                             TempNode.axis = Axis;
                             TempNode.S.Center = center;
                             TempNode.variance *= Scale;
@@ -605,14 +632,20 @@ namespace TrueTrace {
                             float w_left = phi_left / (phi_left + phi_right);
                             float w_right = phi_right / (phi_left + phi_right);
                             
-                            V = w_left * LeftNode.axis + w_right * RightNode.axis;//may be wrong, paper uses BAR_V(BAR_axis here), not just normalized V/axis
+                            V = w_left * LeftNode.axis * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * RightNode.axis * VMFSharpnessToAxisLength(RightNode.sharpness);
+                            // V = w_left * LeftNode.axis + w_right * RightNode.axis;//may be wrong, paper uses BAR_V(BAR_axis here), not just normalized V/axis
 
                             mean = w_left * LeftNode.S.Center + w_right * RightNode.S.Center;
                             variance = w_left * LeftNode.variance + w_right * RightNode.variance + w_left * w_right * Vector3.Dot(LeftNode.S.Center - RightNode.S.Center, LeftNode.S.Center - RightNode.S.Center);
 
                             intensity = LeftNode.intensity + RightNode.intensity;
                             radius = Mathf.Max(Distance(mean, LeftNode.S.Center) + LeftNode.S.Radius, Distance(mean, RightNode.S.Center) + RightNode.S.Radius);
-                            TempNode.sharpness = ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
+
+                            float AxisLength = Distance(Vector3.zero, V);
+                            if(AxisLength == 0) V = new Vector3(0,1,0);
+                            else V /= AxisLength;
+                            TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(AxisLength, 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
+
                             TempNode.axis = V;
                             TempNode.S.Center = mean;
                             TempNode.variance = variance;

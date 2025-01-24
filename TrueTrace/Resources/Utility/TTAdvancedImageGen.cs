@@ -1,0 +1,712 @@
+#if UNITY_EDITOR
+using System.Collections;
+using System.Collections.Generic;
+using System;
+using UnityEngine;
+using UnityEditor;
+using System.Reflection;
+
+namespace TrueTrace {
+    [System.Serializable]
+    public class TTAdvancedImageGen : MonoBehaviour
+    {
+        public enum ImageGenType {NULL, Panorama, LargeScreenShot, TurnTable, TimedScreenShot};
+        [SerializeField] public ImageGenType SelectedFunctionality = ImageGenType.NULL;
+        private int CurrentResIndex;
+        private TTSettings InitialSettings;
+        [SerializeField] public int SamplesBetweenShots = 1000;
+        [SerializeField] public bool ResetSampCountAfterShot = false;
+        [Serializable]
+        public class CameraListData {
+            public Camera TargCam;
+            public TTSettings CamSettings;
+        }
+        [SerializeField] public List<CameraListData> CameraList;
+
+        [Serializable]
+        public class TurnTableData {
+            private int CurrentSegment = 0;
+            private int CurrentCamera = 0;
+            private float waitedTime = 0;
+            private bool PrevImage = false;
+            public bool Running = false;
+            public List<CameraListData> CameraList;
+            [System.Serializable]
+            public struct CamData {
+                public float TimeBetweenSegments;
+                public int MaxSamples;
+                public int HorizontalResolution;
+                public Vector3 Center;
+                public float Distance;
+                [Range(-89.9f, 89.9f)]public float Pitch;
+            }
+            public List<CamData> CamSettings;
+            public TurnTableData(ref List<CameraListData> CamList) {
+                CamSettings = new List<CamData>();
+                CameraList = CamList;
+            }
+            public void SetInitialSettings(List<CameraListData> CamList) {
+                CameraList = CamList;
+                TTInterface.SetTTSettings(CameraList[0].CamSettings);
+            }
+            public IEnumerator RecordFrame()
+            {
+                yield return new WaitForEndOfFrame();
+                    if(PrevImage) {
+                        PrevImage = false;
+                        RayTracingMaster.SampleCount = 0;
+                        RayTracingMaster.RayMaster.FramesSinceStart = 0;                    
+                    }
+                    waitedTime += Time.deltaTime;
+                    if(!Running) {
+                        Running = true;
+                    }
+                    if (RayTracingMaster.RayMaster.FramesSinceStart >= CamSettings[CurrentCamera].MaxSamples || waitedTime >= CamSettings[CurrentCamera].TimeBetweenSegments) {
+                        waitedTime = 0;
+                        string SegmentNumber = "";
+                        int TempSeg = CurrentSegment;
+                        int[] NumSegments = new int[3];
+                        for(int i = 0; i < 3; i++) {
+                            NumSegments[i] = ((TempSeg) % 10);
+                            TempSeg /= 10;
+                        }
+                        for(int i = 0; i < 3; i++) {
+                            SegmentNumber += NumSegments[2 - i];
+                            if(i < 2) {
+                                SegmentNumber += "_";
+                            }
+                        }
+                        if(!System.IO.Directory.Exists(PlayerPrefs.GetString("TurnTablePath") + "/" + CameraList[CurrentCamera].TargCam.gameObject.name.Replace(" ", ""))) {
+                            System.IO.Directory.CreateDirectory(PlayerPrefs.GetString("TurnTablePath") + "/" + CameraList[CurrentCamera].TargCam.gameObject.name.Replace(" ", ""));
+                        }
+                        ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("TurnTablePath") + "/" + CameraList[CurrentCamera].TargCam.gameObject.name.Replace(" ", "") + "/" + CameraList[CurrentCamera].TargCam.gameObject.name + "." + SegmentNumber + ".png");
+                        CurrentSegment++;
+                        CameraList[CurrentCamera].TargCam.gameObject.transform.RotateAround(CamSettings[CurrentCamera].Center, Vector3.up, (360.0f / (float)CamSettings[CurrentCamera].HorizontalResolution));
+                        RayTracingMaster.SampleCount = 0;
+                        RayTracingMaster.RayMaster.FramesSinceStart = 0;
+                        RayTracingMaster.RayMaster._currentSample = 0;
+                        PrevImage = true;
+                        if(CurrentSegment == CamSettings[CurrentCamera].HorizontalResolution) {
+                            CurrentSegment = 0;
+                            waitedTime = 0;
+                            CurrentCamera++;
+                            if(CurrentCamera < CamSettings.Count) {
+                                CameraList[CurrentCamera - 1].TargCam.gameObject.SetActive(false);
+                                CameraList[CurrentCamera].TargCam.gameObject.SetActive(true);
+                                RayTracingMaster.RayMaster.TossCamera(CameraList[CurrentCamera].TargCam);
+                                TTInterface.SetTTSettings(CameraList[CurrentCamera].CamSettings);
+                            } else {                            
+                                Application.runInBackground = false;
+                                EditorApplication.isPlaying = false;
+                            }
+
+                        }
+
+                    }
+            }
+
+        }
+
+        [SerializeField] public TurnTableData TurnTableSettings;
+
+
+        [Serializable]
+        public class SlicedImageData {
+            public Vector2Int FinalAtlasSize;
+            public int Padding;
+            public float TimeBetweenSegments;
+            public int MaxSamples;
+            public int HorizontalSegments;
+            public Texture2D[] TexArray; 
+            public bool PrevPanorama = false;
+            private float waitedTime = 0;
+            private int CurrentCamera = 0;
+            private int CurrentSegment = 0;
+            public List<CameraListData> CameraList;
+            public SlicedImageData(ref List<CameraListData> CamList) {
+                CameraList = CamList;
+                FinalAtlasSize = new Vector2Int(10000, 5000);
+                Padding = 32;
+                TimeBetweenSegments = 10f;
+                MaxSamples = 10000;
+                HorizontalSegments = 10;
+            }
+
+            public IEnumerator RecordFrame()
+            {
+                yield return new WaitForEndOfFrame();
+                if(TexArray != null) {
+                    if(PrevPanorama) {
+                        PrevPanorama = false;
+                        RayTracingMaster.SampleCount = 0;
+                        RayTracingMaster.RayMaster.FramesSinceStart = 0;                    
+                    }
+                    float PaddingHalfValue = (Padding / 2.0f) / (float)FinalAtlasSize.x;
+                    RayTracingMaster.RayMaster.CurrentHorizonalPatch = new Vector2((float)CurrentSegment / (float)HorizontalSegments - PaddingHalfValue, (float)(CurrentSegment + 1) / (float)HorizontalSegments + PaddingHalfValue);
+                    waitedTime += Time.deltaTime;
+                    if (RayTracingMaster.RayMaster.FramesSinceStart >= MaxSamples || waitedTime >= TimeBetweenSegments) {
+                        waitedTime = 0;
+                        if(!System.IO.Directory.Exists(Application.dataPath.Replace("/Assets", "") + "/TempPanoramas")) {
+                            System.IO.Directory.CreateDirectory(Application.dataPath.Replace("/Assets", "") + "/TempPanoramas");
+                        }
+                        ScreenCapture.CaptureScreenshot(Application.dataPath.Replace("/Assets", "") + "/TempPanoramas/" + CurrentSegment + ".png");
+                        TexArray[CurrentSegment] = ScreenCapture.CaptureScreenshotAsTexture();
+                        CurrentSegment++;
+                        RayTracingMaster.SampleCount = 0;
+                        RayTracingMaster.RayMaster.FramesSinceStart = 0;
+                        RayTracingMaster.RayMaster._currentSample = 0;
+                        PrevPanorama = true;
+                        if(CurrentSegment == HorizontalSegments) {
+                            CurrentSegment = 0;
+                            waitedTime = 0;
+                            StitchSlices(CameraList[CurrentCamera].TargCam);
+                            CurrentCamera++;
+                            if(CurrentCamera < CameraList.Count) {
+                                CameraList[CurrentCamera - 1].TargCam.gameObject.SetActive(false);
+                                CameraList[CurrentCamera].TargCam.gameObject.SetActive(true);
+                                RayTracingMaster.RayMaster.TossCamera(CameraList[CurrentCamera].TargCam);
+                                TTInterface.SetTTSettings(CameraList[CurrentCamera].CamSettings);
+                            } else {                            
+                                // RemoveResolution(GetCount() - 1);
+                                RayTracingMaster.RayMaster.DoPanorama = false;
+                                RayTracingMaster.RayMaster.DoChainedImages = false;
+                                Application.runInBackground = false;
+                                EditorApplication.isPlaying = false;
+                            }
+
+                        }
+                    }
+                }
+            }
+            public void SetInitialSettings(List<CameraListData> CamList) {
+                CameraList = CamList;
+                TTInterface.SetTTSettings(CameraList[0].CamSettings);
+            }
+            public void StitchSlices(Camera cam) {
+                Color[] FinalAtlasData = new Color[FinalAtlasSize.x * FinalAtlasSize.y];
+
+                for(int iter = 0; iter < HorizontalSegments; iter++) {
+                    int width = TexArray[iter].width - Padding;
+                    int height = TexArray[iter].height;
+                    Color[] CurrentData = TexArray[iter].GetPixels(0);
+                    int XOffset = iter * Mathf.CeilToInt((float)FinalAtlasSize.x / (float)HorizontalSegments);
+                    // int YOffset = iter * Mathf.CeilToInt(5000.0f / 5000.0f);
+                    for(int i = 0; i < width + Padding; i++) {
+                        for(int j = 0; j < height; j++) {
+                            int IndexChild = i + j * (width + Padding);
+                            int IndexFinal = (i + XOffset - (Padding / 2)) + (j) * FinalAtlasSize.x;
+                            if(i >= Padding / 2 && iter != HorizontalSegments - 1) FinalAtlasData[IndexFinal] = new Color(CurrentData[IndexChild].r, CurrentData[IndexChild].g, CurrentData[IndexChild].b, 1); 
+                            else if(iter != 0 && iter != HorizontalSegments - 1) {
+                                float Ratio = 1;
+                                if(i < Padding / 2) {
+                                    Ratio = 1.0f - ((float)i / (float)(Padding / 2));
+                                }
+                                FinalAtlasData[IndexFinal] = new Color((FinalAtlasData[IndexFinal].r * Ratio + CurrentData[IndexChild].r * (1.0f - Ratio)), (FinalAtlasData[IndexFinal].g * Ratio + CurrentData[IndexChild].g * (1.0f - Ratio)), (FinalAtlasData[IndexFinal].b * (Ratio) + CurrentData[IndexChild].b * (1.0f - Ratio)), 1); 
+                            } else if(iter == HorizontalSegments - 1 && i < width + (Padding / 2)) {
+                                FinalAtlasData[IndexFinal] = new Color(CurrentData[IndexChild].r, CurrentData[IndexChild].g, CurrentData[IndexChild].b, 1); 
+                            }
+                        }
+                    }
+                    DestroyImmediate(TexArray[iter]);
+                }
+                Texture2D FinalAtlas = new Texture2D(FinalAtlasSize.x, FinalAtlasSize.y);
+                FinalAtlas.SetPixels(FinalAtlasData, 0);
+                FinalAtlas.Apply();
+
+               string SegmentNumber = "";
+               string FilePath = "";
+               int TempSeg = 1;
+                do {
+                   SegmentNumber = "";
+                   FilePath = "";
+                   int TempTempSeg = TempSeg;
+                  int[] NumSegments = new int[3];
+                  for(int i = 0; i < 3; i++) {
+                      NumSegments[i] = ((TempTempSeg) % 10);
+                      TempTempSeg /= 10;
+                  }
+                  for(int i = 0; i < 3; i++) {
+                      SegmentNumber += NumSegments[2 - i];
+                  }
+                  TempSeg++;
+
+                   FilePath = PlayerPrefs.GetString("ScreenShotPath") + "/" + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name.Replace(" ", "") + "_" + RayTracingMaster._camera.name + "_" + SegmentNumber + ".png";
+                } while(System.IO.File.Exists(FilePath));
+               
+
+                System.IO.File.WriteAllBytes(FilePath, FinalAtlas.EncodeToPNG());
+
+                // System.IO.File.WriteAllBytes(PlayerPrefs.GetString("PanoramaPath") + "/" + cam.gameObject.name + ".png", FinalAtlas.EncodeToPNG()); 
+            }
+
+        }
+        [SerializeField] public SlicedImageData SlicedImageSettings;
+
+       
+        Matrix4x4 CalcProj(Camera cam) {
+            float Aspect = SlicedImageSettings.FinalAtlasSize.x / (float)SlicedImageSettings.FinalAtlasSize.y;
+            float YFOV = 1.0f / Mathf.Tan(cam.fieldOfView / (2.0f * (360.0f / (2.0f * 3.14159f))));
+            float XFOV = YFOV / Aspect;
+            Matrix4x4 TempProj = cam.projectionMatrix;
+            TempProj[0,0] = XFOV;
+            TempProj[1,1] = YFOV;
+            return TempProj;
+        }
+
+    void AddResolution(int width, int height, string label)
+    {
+        Type gameViewSize = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSize");
+        Type gameViewSizes = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizes");
+        Type gameViewSizeType = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizeType");
+        Type generic = typeof(ScriptableSingleton<>).MakeGenericType(gameViewSizes);
+        MethodInfo getGroup = gameViewSizes.GetMethod("GetGroup");
+        object instance = generic.GetProperty("instance").GetValue(null, null);         
+        object group = getGroup.Invoke(instance, new object[] { (int)GameViewSizeGroupType.Standalone });       
+        Type[] types = new Type[] { gameViewSizeType, typeof(int), typeof(int), typeof(string)};
+        ConstructorInfo constructorInfo = gameViewSize.GetConstructor(types);
+        object entry = constructorInfo.Invoke(new object[] { 1, width, height, label });
+        MethodInfo addCustomSize = getGroup.ReturnType.GetMethod("AddCustomSize");
+        addCustomSize.Invoke(group, new object[] { entry });
+    }
+
+
+    void SetResolution(int index)
+    {
+        Type gameView = typeof(Editor).Assembly.GetType("UnityEditor.GameView");
+        PropertyInfo selectedSizeIndex = gameView.GetProperty("selectedSizeIndex", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        EditorWindow window = EditorWindow.GetWindow(gameView);
+        selectedSizeIndex.SetValue(window, index, null);
+    }
+
+    int GetResolution()
+    {
+        Type gameView = typeof(Editor).Assembly.GetType("UnityEditor.GameView");
+        PropertyInfo selectedSizeIndex = gameView.GetProperty("selectedSizeIndex", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        EditorWindow window = EditorWindow.GetWindow(gameView);
+        return (int)selectedSizeIndex.GetValue(window);
+    }
+
+
+        void RemoveResolution(int index)
+        {
+            Type gameViewSizes = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizes");
+            Type generic = typeof(ScriptableSingleton<>).MakeGenericType(gameViewSizes);
+            MethodInfo getGroup = gameViewSizes.GetMethod("GetGroup");
+            object instance = generic.GetProperty("instance").GetValue(null, null);
+            object group = getGroup.Invoke(instance, new object[] { (int)GameViewSizeGroupType.Standalone });
+            MethodInfo removeCustomSize = getGroup.ReturnType.GetMethod("RemoveCustomSize");
+            removeCustomSize.Invoke(group, new object[] { index });
+        }
+
+        int GetCount()
+        {
+            Type gameViewSizes = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizes");
+            Type generic = typeof(ScriptableSingleton<>).MakeGenericType(gameViewSizes);
+            MethodInfo getGroup = gameViewSizes.GetMethod("GetGroup");
+            object instance = generic.GetProperty("instance").GetValue(null, null);
+            PropertyInfo currentGroupType = instance.GetType().GetProperty("currentGroupType");
+            GameViewSizeGroupType groupType = (GameViewSizeGroupType)(int)currentGroupType.GetValue(instance, null);
+            object group = getGroup.Invoke(instance, new object[] { (int)groupType });
+            MethodInfo getBuiltinCount = group.GetType().GetMethod("GetBuiltinCount");
+            MethodInfo getCustomCount = group.GetType().GetMethod("GetCustomCount");
+            return (int)getBuiltinCount.Invoke(group, null) + (int)getCustomCount.Invoke(group, null);   
+        }
+
+        private void InitCameras() {
+            RayTracingMaster.SampleCount = 0;
+            RayTracingMaster.RayMaster.FramesSinceStart = 0;          
+            RayTracingMaster.RayMaster._currentSample = 0;
+            // if(Cameras == null || Cameras.Length == 0) {
+            //     Cameras = new Camera[1];
+            //     if(RayTracingMaster._camera != null)
+            //         Cameras[0] = RayTracingMaster._camera;
+            // }
+            // if(/!(Cameras == null || Cameras.Length == 0)) {
+                Camera[] AllCameras = GameObject.FindObjectsOfType<Camera>();
+                for(int i = 0; i < AllCameras.Length; i++) {
+                    if(SelectedFunctionality == ImageGenType.LargeScreenShot) {
+                        AllCameras[i].projectionMatrix = CalcProj(AllCameras[i]);
+                    }
+                    AllCameras[i].gameObject.SetActive(false);
+
+                }
+                CameraList[0].TargCam.gameObject.SetActive(true);
+            // }
+        }
+
+        public void OnDisable() {
+            switch(SelectedFunctionality) {
+                default:
+                break;
+                case(ImageGenType.LargeScreenShot):
+                case(ImageGenType.Panorama):
+                    SetResolution(CurrentResIndex);
+                    RemoveResolution(GetCount() - 1);
+                break;
+            }            
+            TTInterface.SetTTSettings(InitialSettings);
+            RayTracingMaster.ImageIsModified = false;
+        }
+
+        public void Init() {
+            switch(SelectedFunctionality) {
+                default:
+                break;
+                case(ImageGenType.LargeScreenShot):
+                case(ImageGenType.Panorama):
+                    SlicedImageSettings = new SlicedImageData(ref CameraList);
+                break;
+                case(ImageGenType.TurnTable):
+                    TurnTableSettings = new TurnTableData(ref CameraList);
+                break;
+            }            
+        }
+        bool HasStarted = false;
+        public void Start() {
+            InitialSettings = RayTracingMaster.RayMaster.LocalTTSettings;
+            InitCameras();
+            switch(SelectedFunctionality) {
+                default:
+                break;
+                case(ImageGenType.Panorama):
+                    Application.runInBackground = true;
+                    RayTracingMaster.RayMaster.DoPanorama = true;
+                    RayTracingMaster.RayMaster.DoChainedImages = true;
+                    CurrentResIndex = GetResolution();
+                    AddResolution(Mathf.CeilToInt((float)SlicedImageSettings.FinalAtlasSize.x / (float)SlicedImageSettings.HorizontalSegments) + SlicedImageSettings.Padding, SlicedImageSettings.FinalAtlasSize.y, "TempPanoramaSize");
+                    SetResolution(GetCount() - 1);
+                    SlicedImageSettings.TexArray = new Texture2D[SlicedImageSettings.HorizontalSegments];
+                    SlicedImageSettings.PrevPanorama = true;
+                    SlicedImageSettings.CameraList = CameraList;
+                    RayTracingMaster.ImageIsModified = true;
+                break;
+                case(ImageGenType.LargeScreenShot):
+                    Application.runInBackground = true;
+                    RayTracingMaster.RayMaster.DoPanorama = false;
+                    RayTracingMaster.RayMaster.DoChainedImages = true;
+                    CurrentResIndex = GetResolution();
+                    AddResolution(Mathf.CeilToInt((float)SlicedImageSettings.FinalAtlasSize.x / (float)SlicedImageSettings.HorizontalSegments) + SlicedImageSettings.Padding, SlicedImageSettings.FinalAtlasSize.y, "TempPanoramaSize");
+                    SetResolution(GetCount() - 1);
+                    SlicedImageSettings.TexArray = new Texture2D[SlicedImageSettings.HorizontalSegments];
+                    SlicedImageSettings.PrevPanorama = true;
+                    SlicedImageSettings.CameraList = CameraList;
+                    RayTracingMaster.ImageIsModified = true;
+                break;
+                case(ImageGenType.TurnTable):
+                    TurnTableSettings.CameraList = CameraList;
+                    RayTracingMaster.ImageIsModified = true;
+                break;
+            }
+        }
+
+        public void LateUpdate() {
+            switch(SelectedFunctionality) {
+                default:
+                break;
+                case(ImageGenType.LargeScreenShot):
+                case(ImageGenType.Panorama):
+                    RayTracingMaster.RayMaster.DoPanorama = SelectedFunctionality == ImageGenType.Panorama;
+                    RayTracingMaster.RayMaster.DoChainedImages = true;
+                    if(!HasStarted) SlicedImageSettings.SetInitialSettings(CameraList);
+                    StartCoroutine(SlicedImageSettings.RecordFrame());
+                break;
+                case(ImageGenType.TurnTable):
+                    if(!HasStarted) TurnTableSettings.SetInitialSettings(CameraList);
+                    StartCoroutine(TurnTableSettings.RecordFrame());
+                break;
+                case(ImageGenType.TimedScreenShot):
+                    if(((RayTracingMaster.SampleCount % SamplesBetweenShots) == SamplesBetweenShots - 1 && !ResetSampCountAfterShot) || (RayTracingMaster.SampleCount >= SamplesBetweenShots && ResetSampCountAfterShot)) {
+                        ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayTracingMaster.SampleCount + " Samples.png");
+                        UnityEditor.AssetDatabase.Refresh();
+                        if(ResetSampCountAfterShot) {
+                            RayTracingMaster.SampleCount = 0;
+                            RayTracingMaster.RayMaster.FramesSinceStart = 0;
+                        }
+                    }
+                break;
+
+            }
+            HasStarted = true;
+        }
+
+
+    }
+
+
+    [CustomEditor(typeof(TTAdvancedImageGen))]
+    public class TTAdvancedImageGenEditor : Editor
+    {
+        // Custom in-scene UI for when ExampleScript
+        // component is selected.
+        float ttt = 0;
+        TTAdvancedImageGen t;
+        int SelectedCam = -1;
+        bool TurnTableShowAll = false;
+
+        private void ConstructCameraList() {
+            if(t.CameraList == null) t.CameraList = new List<TTAdvancedImageGen.CameraListData>();
+        }
+        Vector2 scrollPosition;
+        private void DisplayCameraList() {
+            GUIStyle TempStyle = new GUIStyle();
+            TempStyle.fixedWidth = 120;
+            scrollPosition = GUILayout.BeginScrollView(scrollPosition, GUILayout.Width(450), GUILayout.Height(100));
+                for(int i = 0; i < t.CameraList.Count; i++) {
+                    var A = i;
+                    GUILayout.BeginHorizontal();
+                    if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TurnTable) if(GUILayout.Button("Select", GUILayout.Width(50))) {SelectedCam = A;}
+                    TTAdvancedImageGen.CameraListData TempDat = t.CameraList[i];
+                        TempDat.TargCam = EditorGUILayout.ObjectField(TempDat.TargCam, typeof(Camera), true, GUILayout.Width(150)) as Camera;
+                        TempDat.CamSettings = EditorGUILayout.ObjectField(TempDat.CamSettings, typeof(TTSettings), true, GUILayout.Width(150)) as TTSettings;
+                    t.CameraList[i] = TempDat;
+                    if(GUILayout.Button("Delete", GUILayout.Width(50))) {
+                        if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TurnTable) {
+                            t.TurnTableSettings.CamSettings.RemoveAt(A);
+                        }
+                        t.CameraList.RemoveAt(A); 
+                        i--;
+                    }
+                    GUILayout.EndHorizontal();
+                }
+            GUILayout.EndScrollView();
+        }
+        private void AddNewCam() {
+            Camera TempCam = null;
+            TTSettings TempSet = null;
+            if(t.CameraList.Count != 0) {
+                if(t.CameraList[t.CameraList.Count - 1].TargCam != null) TempCam = t.CameraList[t.CameraList.Count - 1].TargCam;
+                if(t.CameraList[t.CameraList.Count - 1].CamSettings != null) TempSet = t.CameraList[t.CameraList.Count - 1].CamSettings;
+            }
+            t.CameraList.Add(new TTAdvancedImageGen.CameraListData() {
+                TargCam = TempCam,
+                CamSettings = TempSet//RayTracingMaster.RayMaster.LocalTTSettings
+            });
+            if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TurnTable) {
+                t.TurnTableSettings.CamSettings.Add(new TTAdvancedImageGen.TurnTableData.CamData() {
+                    HorizontalResolution = 10,
+                    Center = Vector3.one,
+                    Distance = 1.0f,
+                    Pitch = 0.0f,
+                    MaxSamples = 64,
+                    TimeBetweenSegments = 10.0f
+                });
+            }
+        }
+        private void DisplaySlicedSettings() {
+            GUILayout.BeginVertical(GUILayout.Width(345));
+                GUILayout.BeginHorizontal();
+                    GUILayout.Label("Final Atlas Size: ", GUILayout.Width(145));
+                    GUILayout.Label("W:", GUILayout.Width(25));
+                    if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.Panorama) {
+                        EditorGUI.BeginChangeCheck();
+                            t.SlicedImageSettings.FinalAtlasSize.x = EditorGUILayout.IntField(t.SlicedImageSettings.FinalAtlasSize.x, GUILayout.Width(100));
+                        if(EditorGUI.EndChangeCheck()) {
+                            t.SlicedImageSettings.FinalAtlasSize.y = t.SlicedImageSettings.FinalAtlasSize.x / 2;
+                        }
+                        GUILayout.Label("H:", GUILayout.Width(20));
+                        EditorGUILayout.LabelField((t.SlicedImageSettings.FinalAtlasSize.x / 2).ToString(), GUILayout.Width(100));
+                    } else {
+                        t.SlicedImageSettings.FinalAtlasSize.x = EditorGUILayout.IntField(t.SlicedImageSettings.FinalAtlasSize.x, GUILayout.Width(100));
+                        GUILayout.Label("H:", GUILayout.Width(20));
+                        t.SlicedImageSettings.FinalAtlasSize.y = EditorGUILayout.IntField(t.SlicedImageSettings.FinalAtlasSize.y, GUILayout.Width(100));
+                    }
+                GUILayout.EndHorizontal();
+                GUILayout.BeginHorizontal();
+                    GUILayout.Label("Maximum Time Per Slice: ", GUILayout.Width(175));
+                    t.SlicedImageSettings.TimeBetweenSegments = EditorGUILayout.FloatField(t.SlicedImageSettings.TimeBetweenSegments, GUILayout.Width(100));
+                    GUILayout.Label("s", GUILayout.Width(20));
+                GUILayout.EndHorizontal();
+                GUILayout.BeginHorizontal();
+                    GUILayout.Label("Maximum Samples Per Slice: ", GUILayout.Width(175));
+                    t.SlicedImageSettings.MaxSamples = EditorGUILayout.IntField(t.SlicedImageSettings.MaxSamples, GUILayout.Width(100));
+                GUILayout.EndHorizontal();
+
+                GUILayout.BeginHorizontal();
+                    GUILayout.Label("Slice Padding: ", GUILayout.Width(175));
+                    t.SlicedImageSettings.Padding = EditorGUILayout.IntField(t.SlicedImageSettings.Padding, GUILayout.Width(100));
+                GUILayout.EndHorizontal();
+                GUILayout.BeginHorizontal();
+                    GUILayout.Label("Slice Segments: ", GUILayout.Width(175));
+                    t.SlicedImageSettings.HorizontalSegments = EditorGUILayout.IntField(t.SlicedImageSettings.HorizontalSegments, GUILayout.Width(100));
+                GUILayout.EndHorizontal();
+
+                EditorGUILayout.Space();
+                GUILayout.BeginHorizontal();
+                    GUILayout.Label("Final Slice Size: ", GUILayout.Width(145));
+                    GUILayout.Label("W:", GUILayout.Width(25));
+                    EditorGUILayout.LabelField((Mathf.CeilToInt((float)t.SlicedImageSettings.FinalAtlasSize.x / (float)t.SlicedImageSettings.HorizontalSegments) + t.SlicedImageSettings.Padding).ToString(), GUILayout.Width(100));
+                    GUILayout.Label("H:", GUILayout.Width(20));
+                    EditorGUILayout.LabelField((t.SlicedImageSettings.FinalAtlasSize.y).ToString(), GUILayout.Width(100));
+                GUILayout.EndHorizontal();
+
+
+            GUILayout.EndVertical();
+        }
+
+        private void DisplayTurnTableSettings() {
+            GUILayout.BeginVertical(GUILayout.Width(345));
+                if(SelectedCam != -1 && SelectedCam < t.TurnTableSettings.CamSettings.Count) {
+                    TTAdvancedImageGen.TurnTableData.CamData TempDat = t.TurnTableSettings.CamSettings[SelectedCam];
+                    GUILayout.BeginHorizontal();
+                        GUILayout.Label("Camera " + SelectedCam, GUILayout.Width(175));
+                    GUILayout.EndHorizontal();
+
+                    GUILayout.BeginHorizontal();
+                        GUILayout.Label("Horizontal Resolution: ", GUILayout.Width(175));
+                        TempDat.HorizontalResolution = EditorGUILayout.IntField(TempDat.HorizontalResolution, GUILayout.Width(100));
+                    GUILayout.EndHorizontal();
+
+                    GUILayout.BeginHorizontal();
+                        GUILayout.Label("Center: ", GUILayout.Width(175));
+                        TempDat.Center = EditorGUILayout.Vector3Field("",TempDat.Center, GUILayout.Width(100));
+                    GUILayout.EndHorizontal();
+
+                    GUILayout.BeginHorizontal();
+                        GUILayout.Label("Distance: ", GUILayout.Width(175));
+                        TempDat.Distance = EditorGUILayout.FloatField(TempDat.Distance, GUILayout.Width(100));
+                    GUILayout.EndHorizontal();
+
+                    GUILayout.BeginHorizontal();
+                        GUILayout.Label("Pitch: ", GUILayout.Width(175));
+                        TempDat.Pitch = EditorGUILayout.FloatField(TempDat.Pitch, GUILayout.Width(100));
+                    GUILayout.EndHorizontal();
+                    GUILayout.BeginHorizontal();
+                        GUILayout.Label("Maximum Time Per Turn: ", GUILayout.Width(175));
+                        TempDat.TimeBetweenSegments = EditorGUILayout.FloatField(TempDat.TimeBetweenSegments, GUILayout.Width(100));
+                        GUILayout.Label("s", GUILayout.Width(20));
+                    GUILayout.EndHorizontal();
+                    GUILayout.BeginHorizontal();
+                        GUILayout.Label("Maximum Samples Per Turn: ", GUILayout.Width(175));
+                        TempDat.MaxSamples = EditorGUILayout.IntField(TempDat.MaxSamples, GUILayout.Width(100));
+                    GUILayout.EndHorizontal();
+                    t.TurnTableSettings.CamSettings[SelectedCam] = TempDat;
+                } else {
+                    EditorGUILayout.Space();
+                }
+            GUILayout.EndVertical();
+        }
+
+        public override void OnInspectorGUI() {
+            var t1 = (targets);
+            t =  t1[0] as TTAdvancedImageGen;
+            if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.NULL) {
+                EditorGUI.BeginChangeCheck();
+                    t.SelectedFunctionality = (TTAdvancedImageGen.ImageGenType)EditorGUILayout.EnumPopup("Functionality: ", t.SelectedFunctionality);
+                if(EditorGUI.EndChangeCheck()) {
+                    switch(t.SelectedFunctionality) {
+                        default:
+                        break;
+                        case(TTAdvancedImageGen.ImageGenType.Panorama):
+                        case(TTAdvancedImageGen.ImageGenType.LargeScreenShot):
+                        case(TTAdvancedImageGen.ImageGenType.TurnTable):
+                            ConstructCameraList();
+                        break;
+                        case(TTAdvancedImageGen.ImageGenType.TimedScreenShot):
+                            ConstructCameraList();
+                            AddNewCam();
+                        break;
+                    }                    
+                    t.Init();
+                }
+
+            } else {
+                GUILayout.Label("Selected Function: " + t.SelectedFunctionality.ToString());
+                switch(t.SelectedFunctionality) {
+                    default:
+                    break;
+                    case(TTAdvancedImageGen.ImageGenType.Panorama):
+                    case(TTAdvancedImageGen.ImageGenType.LargeScreenShot):
+                        if(GUILayout.Button("Add Camera")) AddNewCam();
+                        GUILayout.BeginHorizontal();
+                            DisplaySlicedSettings();
+                            DisplayCameraList();
+                        GUILayout.EndHorizontal();
+                    break;
+                    case(TTAdvancedImageGen.ImageGenType.TurnTable):
+                        if(GUILayout.Button("Add Camera")) AddNewCam();
+                        TurnTableShowAll = EditorGUILayout.ToggleLeft("Show All Sets", TurnTableShowAll, GUILayout.MaxWidth(135));
+                        t.TurnTableSettings.Running = EditorGUILayout.ToggleLeft("Running", t.TurnTableSettings.Running, GUILayout.MaxWidth(135));
+                        GUILayout.BeginHorizontal();
+                            DisplayTurnTableSettings();
+                            DisplayCameraList();
+                        GUILayout.EndHorizontal();
+                    break;
+                    case(TTAdvancedImageGen.ImageGenType.TimedScreenShot):
+                        GUILayout.BeginHorizontal();
+                            GUILayout.BeginVertical(GUILayout.Width(345));
+                                GUILayout.BeginHorizontal();
+                                    GUILayout.Label("Samples Between Shots: ", GUILayout.Width(175));
+                                    t.SamplesBetweenShots = EditorGUILayout.IntField(t.SamplesBetweenShots, GUILayout.Width(100));
+                                GUILayout.EndHorizontal();
+                                GUILayout.BeginHorizontal();
+                                    t.ResetSampCountAfterShot = EditorGUILayout.ToggleLeft("Reset Accumulation After Shot", t.ResetSampCountAfterShot, GUILayout.MaxWidth(135));
+                                GUILayout.EndHorizontal();
+                            GUILayout.EndVertical();
+                        DisplayCameraList();
+                        GUILayout.EndHorizontal();
+                    break;
+                }
+            }
+        }
+
+        Vector3 GetTangent(float RadsAlong) {
+            return (new Vector3(Mathf.Sin(Mathf.Deg2Rad * RadsAlong), 0, Mathf.Cos(Mathf.Deg2Rad * RadsAlong))).normalized;
+        }
+
+        Vector3 GetToVector(float Yaw, float Pitch) {
+            return new Vector3(Mathf.Cos(Mathf.Deg2Rad * Yaw) * Mathf.Cos(Mathf.Deg2Rad * Pitch), Mathf.Sin(Mathf.Deg2Rad * Pitch), Mathf.Sin(Mathf.Deg2Rad * Yaw) * Mathf.Cos(Mathf.Deg2Rad * Pitch));
+        }
+        public void OnSceneGUI()
+        {
+            var t = target as TTAdvancedImageGen;
+            if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TurnTable) {
+                var tr = t.transform;
+                var pos = tr.position;
+                float ArcLength = 5.0f;
+                if(!t.TurnTableSettings.Running) {
+                    ttt += Time.deltaTime;
+                    EditorGUI.BeginChangeCheck();
+                    if(t.TurnTableSettings.CamSettings != null) {
+                        int StartIndex = 0;
+                        int EndIndex = t.TurnTableSettings.CamSettings.Count;
+                        if(!TurnTableShowAll) {
+                            if(SelectedCam != -1 && SelectedCam < t.TurnTableSettings.CamSettings.Count) {
+                                StartIndex = SelectedCam;
+                                EndIndex = SelectedCam + 1;
+                            }
+                        }
+                        for(int i = StartIndex; i < EndIndex; i++) {
+                            if(t.CameraList[i].TargCam != null) {
+                                TTAdvancedImageGen.TurnTableData.CamData TempVar = t.TurnTableSettings.CamSettings[i];
+                                TempVar.Center = Handles.PositionHandle(TempVar.Center, Quaternion.identity);
+                                float yaw = 0;
+
+                                Vector3 Pos2 = TempVar.Center + GetToVector(yaw, TempVar.Pitch) * TempVar.Distance;
+                                t.CameraList[i].TargCam.transform.position = Pos2;
+
+
+                                int HorizSegments = TempVar.HorizontalResolution;
+                                Vector3 Pos3 = new Vector3(TempVar.Center.x, Pos2.y, TempVar.Center.z);
+                                    // Handles.DrawLine(Pos2, Pos2 + GetTangent(yaw), 0.01f);
+                                for(int i2 = 0; i2 < HorizSegments; i2++) {
+                                    Handles.DrawWireArc(Pos3, Vector3.up, GetTangent(90 + 360.0f / (float)HorizSegments * (float)i2 - (ArcLength / 2.0f)), ArcLength, Vector3.Distance(Pos3, Pos2));
+                                    Vector3 ToVector = GetToVector(90 + 360.0f / (float)HorizSegments * (float)i2, TempVar.Pitch);
+                                    t.CameraList[i].TargCam.transform.forward = ToVector;
+                                    Vector3 Pos4 = TempVar.Center + ToVector * TempVar.Distance;
+                                    Handles.ConeHandleCap(0, Pos4 - ToVector * 0.15f, t.CameraList[i].TargCam.transform.rotation, 0.2f,  EventType.Repaint);
+                                    Handles.DrawDottedLine(TempVar.Center, Pos4, 0.01f);
+                                    // Handles.ConeHandleCap(0, TempVar.Center - t.CameraList[i].TargCam.transform.forward * 0.1f, t.CameraList[i].TargCam.transform.rotation, 0.2f,  EventType.Repaint);
+                                }
+
+                                t.CameraList[i].TargCam.transform.forward = (TempVar.Center - Pos2).normalized;
+                                t.TurnTableSettings.CamSettings[i] = TempVar;
+                            }
+                        }
+                    }
+                    if (EditorGUI.EndChangeCheck()) {}
+                }
+            }
+        }
+    }
+}
+#endif

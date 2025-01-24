@@ -1,0 +1,89 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ce9a6213bc68c0458b33690315e1b16, type: 3}
+  m_Name: TTGlobalSettings 1
+  m_EditorClassIdentifier: 
+  SceneName: TestA
+  IndirectBoost: 1
+  bouncecount: 12
+  ClayMode: 0
+  UseRussianRoulette: 1
+  UseNEE: 1
+  DoTLASUpdates: 1
+  Accumulate: 1
+  PPBloom: 0
+  BloomStrength: 0.5
+  PPDoF: 1
+  DoFAperature: 0.2
+  DoFAperatureScale: 1
+  DoFFocal: 5.22169
+  PPExposure: 0
+  ExposureAuto: 0
+  PPToneMap: 1
+  PPTAA: 0
+  RenderScale: 1
+  DenoiserMethod: 0
+  UpscalerMethod: 0
+  UseReSTIRGITemporal: 1
+  UseReSTIRGISpatial: 1
+  UseReSTIRGI: 0
+  ReSTIRGISpatialCount: 24
+  ReSTIRGISpatialRadius: 50
+  ReSTIRGITemporalMCap: 20
+  ReSTIRGIUpdateRate: 7
+  DoReSTIRGIConnectionValidation: 1
+  Exposure: 1
+  DoPartialRendering: 0
+  PartialRenderingFactor: 1
+  DoFirefly: 0
+  ImprovedPrimaryHit: 0
+  RISCount: 12
+  ToneMapper: 0
+  SkyDesaturate: 0
+  ClayColor: {x: 0.5, y: 0.5, z: 0.5}
+  GroundColor: {x: 0.1, y: 0.1, z: 0.1}
+  FireflyFrameCount: 0
+  FireflyFrameInterval: 1
+  FireflyStrength: 1
+  FireflyOffset: 0
+  OIDNFrameCount: 0
+  DoSharpen: 0
+  Sharpness: 1
+  MainDesiredRes: 16384
+  UseSkinning: 1
+  LightEnergyScale: 1
+  BackgroundType: 0
+  BackgroundIntensity: {x: 1, y: 1}
+  SceneBackgroundColor: {x: 1, y: 1, z: 1}
+  SecondaryBackgroundType: 0
+  SecondarySceneBackgroundColor: {x: 1, y: 1, z: 1}
+  HDRILongLat: {x: 0, y: 0}
+  HDRIScale: {x: 1, y: 1}
+  LEMEnergyScale: 1
+  UseTransmittanceInNEE: 1
+  SecondarySkyDesaturate: 0
+  MatChangeResetsAccum: 0
+  PPFXAA: 0
+  OIDNBlendRatio: 1
+  ConvBloom: 0
+  ConvStrength: 1.37
+  ConvBloomThreshold: 13.23
+  ConvBloomSize: {x: 1, y: 1}
+  ConvBloomDistExp: 0
+  ConvBloomDistExpClampMin: 1
+  ConvBloomDistExpScale: 1
+  PrimaryBackgroundTintColor: {x: 1, y: 1, z: 1}
+  PrimaryBackgroundTint: 0
+  PrimaryBackgroundContrast: 1
+  FogDensity: 0.0002
+  FogColor: {x: 0.6, y: 0.6, z: 0.6}
+  MaxSampCount: 99999999

@@ -1,6 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace TrueTrace {
 
@@ -79,8 +82,49 @@ namespace TrueTrace {
         [SerializeField] public float PrimaryBackgroundTint = 0;
         [SerializeField] public float PrimaryBackgroundContrast = 1;
         [SerializeField] public float FogDensity = 0.0002f;
+        [SerializeField] public float FogHeight = 80.0f;
         [SerializeField] public Vector3 FogColor = new Vector3(0.6f, 0.6f, 0.6f);
         [SerializeField] public int MaxSampCount = 99999999;
+        [SerializeField] public bool DoChromaAber = false;
+        [SerializeField] public float ChromaDistort = 0.3f;
+        [SerializeField] public bool DoBCS = false;
+        [SerializeField] public float Saturation = 1.0f;
+        [SerializeField] public float Contrast = 1.0f;
+        [SerializeField] public bool DoVignette = false;
+        [SerializeField] public float innerVignette = 0.5f;
+        [SerializeField] public float outerVignette = 1.2f;
+        [SerializeField] public float strengthVignette = 0.8f;
+        [SerializeField] public float curveVignette = 0.5f;
+        [SerializeField] public Vector3 ColorVignette = Vector3.zero;
 
     }
+
+#if UNITY_EDITOR
+    [CustomEditor(typeof(TTSettings))]
+    public class TTSettingsEditor : Editor 
+    {
+        // SerializedProperty lookAtPoint;
+        
+        void OnEnable()
+        {
+            // lookAtPoint = serializedObject.FindProperty("lookAtPoint");
+        }
+
+        public override void OnInspectorGUI()
+        {
+
+            base.OnInspectorGUI();
+            var script = (TTSettings)target;
+
+            if(GUILayout.Button("Set For Modification", GUILayout.Height(40))) {
+                TTInterface.SetTTSettings(script);
+            }
+            // serializedObject.Update();
+            // EditorGUILayout.PropertyField(lookAtPoint);
+            // serializedObject.ApplyModifiedProperties();
+        }
+    }
+
+
+#endif
 }

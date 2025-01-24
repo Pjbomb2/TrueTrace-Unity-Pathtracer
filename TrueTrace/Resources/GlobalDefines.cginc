@@ -18,7 +18,7 @@
 // #define FasterLightSampling
 #define AccurateEmissionTex
 #define TrueBlack
-#define UseTextureLOD
+// #define UseTextureLOD
 // #define vMFDiffuse
 #define EONDiffuse
 // #define AdvancedBackground
@@ -26,8 +26,10 @@
 #define DoubleBufferSGTree
 // #define Fog
 #define RadCache
-// #define NonDirectionalRadCache
 #define ExpensiveReSTIR
+// #define FakedAO
+// #define AutoDebugReading
+
 
 
 //END OF DEFINES
@@ -47,7 +49,7 @@
 
 #define DepthDivisor 1000.0f
 
-#define FogScale 4.0f
+#define FogScale 12.0f
 
 
 //Dont change the ones below

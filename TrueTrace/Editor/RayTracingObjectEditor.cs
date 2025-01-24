@@ -777,13 +777,15 @@ namespace TrueTrace {
                     if(GUILayout.Button("Load Material Preset"))
                         UnityEditor.PopupWindow.Show(new Rect(0,0,100,10), new LoadPopup(this));
                 EditorGUILayout.EndHorizontal();
-
+                bool QuickPasted = false;
                 EditorGUILayout.BeginHorizontal();
                     if(GUILayout.Button("Quick Copy"))
                         CopyFunction(t, Selected);
 
-                    if(GUILayout.Button("Quick Paste"))
+                    if(GUILayout.Button("Quick Paste")) {
                         PasteFunction();
+                        QuickPasted = true;
+                    }
                 EditorGUILayout.EndHorizontal();
 
 
@@ -998,7 +1000,7 @@ namespace TrueTrace {
                             serializedObject.FindProperty("MainTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("MainTex Scale/Offset: ", t.MainTexScaleOffset[Selected]);
                             serializedObject.FindProperty("SecondaryAlbedoTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Secondary Albedo Scale/Offset: ", t.SecondaryAlbedoTexScaleOffset[Selected]);
                             serializedObject.FindProperty("SecondaryTextureScale").GetArrayElementAtIndex(Selected).vector2Value = EditorGUILayout.Vector2Field("SecondaryTex Scale: ", t.SecondaryTextureScale[Selected]);
-                            serializedObject.FindProperty("Rotation").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Texture Rotation: ", t.Rotation[Selected], 0, 1);
+                            serializedObject.FindProperty("Rotation").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Texture Rotation: ", t.Rotation[Selected], 0, 360);
                             serializedObject.FindProperty("AlbedoBlendFactor").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Albedo Blend Factor: ", t.AlbedoBlendFactor[Selected], 0, 1);
                             serializedObject.FindProperty("SecondaryNormalTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Detail Normal Scale/Offset: ", t.SecondaryNormalTexScaleOffset[Selected]);
                             serializedObject.FindProperty("SecondaryNormalTexBlend").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Detail Normal Blend Factor: ", t.SecondaryNormalTexBlend[Selected], 0, 1);
@@ -1029,7 +1031,7 @@ namespace TrueTrace {
                     MaterialWasChanged = true;
                 }
                 serializedObject.FindProperty("FollowMaterial").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Link Mat To Unity Material: ", t.FollowMaterial[Selected]);
-                serializedObject.ApplyModifiedProperties();
+                if(!QuickPasted) serializedObject.ApplyModifiedProperties();
 
                 if(MaterialWasChanged) {
                     string Name = TheseNames[Selected];

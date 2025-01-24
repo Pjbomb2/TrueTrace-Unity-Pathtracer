@@ -29,7 +29,7 @@ void FinalizeKernel (uint3 id : SV_DispatchThreadID)
     RayHit bestHit = get2(GlobalRays[0].hits);
     #ifdef HardwareRT
         if(bestHit.mesh_id != 9999999) {
-            int2 Indexes = int2(bestHit.mesh_id & 0x0000FFFF, bestHit.mesh_id >> 16);
+            int2 Indexes = int2(bestHit.mesh_id & 0x7FFFFFF, bestHit.mesh_id >> 27);
             int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
             bestHit.triangle_id += triangleOffset;
             bestHit.mesh_id = MeshOffsets[Indexes.x].y;

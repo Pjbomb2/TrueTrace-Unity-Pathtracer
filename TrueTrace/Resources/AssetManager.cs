@@ -797,6 +797,11 @@ namespace TrueTrace {
         public void Start() {
             Assets = this;
             SceneManager.sceneLoaded += OnSceneLoaded;
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
+        }
+
+        void OnSceneUnloaded(Scene scene) {
+            ClearAll();
         }
 
         void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
@@ -842,6 +847,7 @@ namespace TrueTrace {
             bindlessTextures?.Dispose();
             bindlessTextures = null;
             SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
         }
 
 
@@ -996,7 +1002,9 @@ namespace TrueTrace {
                 QueCount = BuildQue.Count;
                 for (int i = QueCount - 1; i >= 0; i--) {//Promotes from Build Que to Render Que
                     if (BuildQue[i].AsyncTask.IsFaulted) {//Fuck, something fucked up
+#if TTVerbose
                         Debug.LogError(BuildQue[i].AsyncTask.Exception + ", " + BuildQue[i].Name);
+#endif
                         BuildQue[i].FailureCount++;
                         BuildQue[i].ClearAll();
                         if(BuildQue[i].FailureCount > 6) {
@@ -1067,7 +1075,7 @@ namespace TrueTrace {
                 QueCount = InstanceRemoveQue.Count;
                  for (int i = QueCount - 1; i >= 0; i--) {
                     switch(InstanceRemoveQue[i].ExistsInQue) {
-                        default: Debug.Log("INSTANCES BROKE!"); break;
+                        default: Debug.LogError("Report this to the developer"); break;
                         case 0: {InstanceRenderTransforms.RemoveAt(InstanceRenderQue.IndexOf(InstanceRemoveQue[i])); InstanceRenderQue.Remove(InstanceRemoveQue[i]);} break;
                         case 1: InstanceBuildQue.Remove(InstanceRemoveQue[i]); break;
                         case 3: InstanceAddQue.Remove(InstanceRemoveQue[i]); break;
@@ -1250,8 +1258,10 @@ namespace TrueTrace {
 
                 CurSGNodeOffset = 2 * (LightMeshCount);
                 AggSGTreeNodeCount += CurSGNodeOffset;
+#if TTVerbose
                 Debug.Log("Light Tri Count: " + LightTriCount);
                 Debug.Log("Total Tri Count: " + AggTriCount);
+#endif
                 if(LightTriCount == 0) {LightTriCount++; AggSGTreeNodeCount++;}
                 if (AggNodeCount != 0)
                 {//Accumulate the BVH nodes and triangles for all normal models
@@ -1616,22 +1626,22 @@ namespace TrueTrace {
                             TempConfig.mesh = mesh;
                             TempConfig.subMeshIndex = (uint)i2;
                             InstanceData.RenderQue[i].TryGetComponent<MeshRenderer>(out MeshRenderer TempRend);
-                            TempConfig.material = TempRend.sharedMaterials[i2];
+                            TempConfig.material = TempRend.sharedMaterials[Mathf.Min(i2, TempRend.sharedMaterials.Length - 1)];
                             TempConfig.material.enableInstancing = true;
 
                             InstanceData.RenderQue[i].RTAccelHandle[i2] = AccelStruct.AddInstances(TempConfig, InstanceData.RenderQue[i].InstanceDatas, -1, 0, (uint)MeshOffset + (uint)ExistingList.Count * (uint)i2);
                             InstanceData.RenderQue[i].RTAccelSubmeshOffsets[i2] = MeshOffset + ExistingList.Count * i2;
 
                         }
-                        for (int i2 = 0; i2 < SubMeshCount; ++i2)
-                        {//Add together all the submeshes in the mesh to consider it as one object
-                            SubMeshOffsets.Add(TotLength);
-                            int IndiceLength = (int)mesh.GetIndexCount(i2) / 3;
-                            TotLength += IndiceLength;
-                        }
-                            MeshOffset += ExistingList.Count * SubMeshCount;
-                            ExteriorCount += ExistingList.Count;// * SubMeshCount;
+                        MeshOffset += ExistingList.Count * SubMeshCount;
+                        ExteriorCount += ExistingList.Count;// * SubMeshCount;
 
+                    }
+                    for (int i2 = 0; i2 < SubMeshCount; ++i2)
+                    {//Add together all the submeshes in the mesh to consider it as one object
+                        SubMeshOffsets.Add(TotLength);
+                        int IndiceLength = (int)mesh.GetIndexCount(i2) / 3;
+                        TotLength += IndiceLength;
                     }
 
                 }
@@ -2142,7 +2152,9 @@ namespace TrueTrace {
 
 
                 CommonFunctions.CreateComputeBuffer(ref LightMeshBuffer, LightMeshes);
+#if TTVerbose
                 Debug.Log("Total Object Count: " + MeshAABBs.Length);
+#endif
                 // UnityEngine.Profiling.Profiler.BeginSample("Update Materials");
                 HasChangedMaterials = UpdateMaterials();
                 // UnityEngine.Profiling.Profiler.EndSample();
@@ -2254,7 +2266,7 @@ namespace TrueTrace {
                                 TempConfig.mesh = mesh;
                                 TempConfig.subMeshIndex = (uint)i2;
                                 ObjsToUpdate[i].TryGetComponent<MeshRenderer>(out MeshRenderer TempRend);
-                                TempConfig.material = TempRend.sharedMaterials[i2];
+                                TempConfig.material = TempRend.sharedMaterials[Mathf.Min(i2, TempRend.sharedMaterials.Length - 1)];
 
                                 ObjsToUpdate[i].RTAccelHandle[i2] = AccelStruct.AddInstances(TempConfig, ObjsToUpdate[i].InstanceDatas, -1, 0, (uint)ObjsToUpdate[i].RTAccelSubmeshOffsets[i2]);
                             }
