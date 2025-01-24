@@ -42,6 +42,8 @@
   <li>Vulkan and Metal support(Your mileage may vary)</li>
   <li>Mesh slicing using SDFs(Does not modify meshes, for rendering cuts only, like cross-sections)</li>
   <li>EON and vMF diffuse models</li>
+  <li>Chromatic Aberation, Contrast/Saturation, Colored Vignette</li>
+  <li>Full Multiscatter Fog(Not realtime)</li>
 </ul>
 
 MASSIVE thanks to 
@@ -55,6 +57,10 @@ for bringing bindless textures to unity!
 </br>[vMF Diffuse Model](https://research.nvidia.com/publication/2024-07_vmf-diffuse-unified-rough-diffuse-brdf)
 </br>[EON Diffuse Model](https://arxiv.org/pdf/2410.18026)
 </br>[URP Compatability script inspiration](https://github.com/Andyfanshen/CustomRayTracing/tree/RenderGraph-(URP-23.3-beta%2B))
+</br>[Chromatic Aberation](https://www.shadertoy.com/view/wsdBWM)
+</br>[Contrast/Saturation](https://www.shadertoy.com/view/XdcXzn)
+</br>[Vignette Base](https://www.shadertoy.com/view/tt2cDK)
+</br>[Vignette Color](https://www.shadertoy.com/view/4lVGWw)
 
 ### If you like what I do and want to support me or this project, Please consider becoming a Github Sponsor or a Patron at patreon.com/Pjbomb2!  This allows me to keep this free for everyone!
 ### You can contact me easiest through my discord server(above) or my [twitter](https://x.com/Pjbomb2) with bugs, ideas, or thoughts on the project!
