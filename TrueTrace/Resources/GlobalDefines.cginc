@@ -9,7 +9,7 @@
 #define ReSTIRAdvancedValidation
 #define IgnoreGlassShadow
 // #define IgnoreGlassMain
-#define FadeMapping
+// #define FadeMapping
 // #define PointFiltering
 #define StainedGlassShadows
 // #define IgnoreBackfacing
@@ -25,8 +25,7 @@
 #define UseBRDFLights
 #define DoubleBufferSGTree
 // #define Fog
-// #define RadCache
-// #define NonDirectionalRadCache
+#define RadCache
 #define ExpensiveReSTIR
 // #define FakedAO
 // #define AutoDebugReading

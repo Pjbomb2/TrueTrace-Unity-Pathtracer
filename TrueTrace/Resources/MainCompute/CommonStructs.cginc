@@ -20,6 +20,11 @@ struct CudaTriangle {
 
 StructuredBuffer<CudaTriangle> AggTris;
 
+struct AABB {
+	float3 BBMax;
+	float3 BBMin;
+};
+
 struct GaussianTreeNode {
 	float3 position;
 	float radius;
