@@ -135,7 +135,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         USGNorm = Geomnorm;
     } else {
         Geomnorm = GetTriangleNormal(hit.triangle_id, float2(hit.u, hit.v), Inverse);
-        USGNorm = mul(Inverse, cross(normalize(AggTris[hit.triangle_id].posedge1), normalize(AggTris[hit.triangle_id].posedge2)));
+        USGNorm = mul(Inverse, cross(normalize(AggTrisA[hit.triangle_id].posedge1), normalize(AggTrisA[hit.triangle_id].posedge2)));
         float wldScale = rsqrt(dot(USGNorm, USGNorm));
         USGNorm = -mul(wldScale, USGNorm);
         if(dot(USGNorm, Geomnorm) < 0) USGNorm *= -1;
@@ -219,7 +219,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             hitDat.surfaceColor = 0.5f;
         #endif
         float3 EmissCol = hitDat.surfaceColor * hitDat.emission * LEMEnergyScale;
-        if (!UseNEE) {
+        if (!UseNEE || AggTrisB[hit.triangle_id].IsEmissive == 0) {
             if (CurBounce <= 1) Color.Direct += EmissCol;
             else if(CurBounce > 1) {
                 #ifdef RadCache
@@ -230,8 +230,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 #endif
             }
         } else {
-            float3 a1 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTris[hit.triangle_id].posedge1).xyz;
-            float3 a2 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTris[hit.triangle_id].posedge2).xyz;
+            float3 a1 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge1).xyz;
+            float3 a2 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge2).xyz;
             float a = AreaOfTriangle(float3(0,0,0), a1, a2);
             float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
             float light_pdf = 1.0f / (SA * LightMeshCount);
@@ -367,7 +367,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             Color.Data = float3((CurBounce == 0) ? max(throughput, 0.006f) : (max(throughput, 0.005f) * Color.Data.xyz));
         #endif
         PrevScreenData = float4(asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -Geomnorm : Geomnorm)), asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -norm : norm)),PrevScreenData.z + hit.t, asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 4) >> 4) : ((asuint(PrevScreenData.w) << 4) >> 4)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
-        Color.MetRoughIsSpec = ((Color.MetRoughIsSpec & ~(0x7C000000)) | (((CurBounce < 30 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.01f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
+        Color.MetRoughIsSpec = ((Color.MetRoughIsSpec & ~(0x7C000000)) | (((CurBounce < 5 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.01f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
         throughput = 1;  
     }
     #ifdef RadCache
@@ -617,6 +617,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     if(DoExposure) maxillum *= Exposure[0];
                     if(!UseRussianRoulette || (CurBounce == 0 && (ImprovedPrimaryHit || DoPartialRendering))) maxillum = 1;
                     Illum *= rcp(saturate(maxillum));
+                    bsdf_diffuse *= rcp(saturate(maxillum));
 
                     if(luminance(Illum) != 0 && maxillum > random(117, pixel_index).y) {//NEE russian roulette, massively improves performance while giivng the same result
                         uint index3;
@@ -717,7 +718,7 @@ int MaterialIndex;
 #ifdef AdvancedBackground
     bool BackgroundCheck = false;
     if(bestHit.t != FarPlane && !(TerrainExists && (bestHit.mesh_id == 9999999))) {
-        MaterialIndex = _MeshData[bestHit.mesh_id].MaterialOffset + AggTris[bestHit.triangle_id].MatDat;
+        MaterialIndex = _MeshData[bestHit.mesh_id].MaterialOffset + AggTrisA[bestHit.triangle_id].MatDat;
         if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) && (Color.MetRoughIsSpec >> 31)) BackgroundCheck = true;
     }
     if (bestHit.t == FarPlane || BackgroundCheck) {//if ray goes into the void, sample skybox
@@ -1104,9 +1105,9 @@ int MaterialIndex;
         TempMat.surfaceColor = BaseCol;
         HitTerrain = true;
     } else {
-        BaseUv = TOHALF(AggTris[bestHit.triangle_id].tex0) * (1.0f - bestHit.u - bestHit.v) + TOHALF(AggTris[bestHit.triangle_id].texedge1) * bestHit.u + TOHALF(AggTris[bestHit.triangle_id].texedge2) * bestHit.v;
+        BaseUv = TOHALF(AggTrisA[bestHit.triangle_id].tex0) * (1.0f - bestHit.u - bestHit.v) + TOHALF(AggTrisA[bestHit.triangle_id].texedge1) * bestHit.u + TOHALF(AggTrisA[bestHit.triangle_id].texedge2) * bestHit.v;
 #ifndef AdvancedBackground
-        MaterialIndex = _MeshData[bestHit.mesh_id].MaterialOffset + AggTris[bestHit.triangle_id].MatDat;
+        MaterialIndex = _MeshData[bestHit.mesh_id].MaterialOffset + AggTrisA[bestHit.triangle_id].MatDat;
 #endif
         TempMat = _Materials[MaterialIndex];
 
@@ -1132,7 +1133,7 @@ int MaterialIndex;
                 break;
             }
         }
-        if(GetFlag(TempMat.Tag, VertexColors)) TempCol *= unpackRGBE(AggTris[bestHit.triangle_id].VertColA) * (1.0f - bestHit.u - bestHit.v) + unpackRGBE(AggTris[bestHit.triangle_id].VertColB) * bestHit.u + unpackRGBE(AggTris[bestHit.triangle_id].VertColC) * bestHit.v;
+        if(GetFlag(TempMat.Tag, VertexColors)) TempCol *= unpackRGBE(AggTrisB[bestHit.triangle_id].VertColA) * (1.0f - bestHit.u - bestHit.v) + unpackRGBE(AggTrisB[bestHit.triangle_id].VertColB) * bestHit.u + unpackRGBE(AggTrisB[bestHit.triangle_id].VertColC) * bestHit.v;
         TempMat.surfaceColor *= TempCol;
 
         TempCol = TempMat.surfaceColor;

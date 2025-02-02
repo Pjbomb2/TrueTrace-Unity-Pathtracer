@@ -13,15 +13,7 @@ namespace TrueTrace {
             Debug.Log("EEE");
         }
         public NodeBounds ParentBound;
-        public struct DirectionCone {
-            public Vector3 W;
-            public float cosTheta;
 
-            public DirectionCone(Vector3 w, float cosTheta) {
-                W = w;
-                this.cosTheta = cosTheta;
-            }
-        }
 
         private float luminance(float r, float g, float b) { return 0.299f * r + 0.587f * g + 0.114f * b; }
 

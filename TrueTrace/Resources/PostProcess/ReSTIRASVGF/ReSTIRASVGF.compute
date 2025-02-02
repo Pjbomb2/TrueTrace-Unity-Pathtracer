@@ -228,7 +228,7 @@ float3 CalcPos(uint4 TriData) {
     UV.x = asfloat(TriData.z);
     UV.y = asfloat(TriData.w);
     float4x4 Inverse = inverse(Mesh.W2L);
-    return mul(Inverse, float4(AggTris[TriData.y].pos0 + UV.x * AggTris[TriData.y].posedge1 + UV.y * AggTris[TriData.y].posedge2,1)).xyz;
+    return mul(Inverse, float4(AggTrisA[TriData.y].pos0 + UV.x * AggTrisA[TriData.y].posedge1 + UV.y * AggTrisA[TriData.y].posedge2,1)).xyz;
 }
 
 
@@ -240,14 +240,14 @@ float3 CalcPos2(uint4 TriData) {
     UV.x = (TriData.z & 0xffff) / 65535.0f;
     UV.y = (TriData.z >> 16) / 65535.0f;
     float4x4 Inverse = inverse(Mesh.W2L);
-    return mul(Inverse, float4(AggTris[TriData.y].pos0 + UV.x * AggTris[TriData.y].posedge1 + UV.y * AggTris[TriData.y].posedge2,1)).xyz;
+    return mul(Inverse, float4(AggTrisA[TriData.y].pos0 + UV.x * AggTrisA[TriData.y].posedge1 + UV.y * AggTrisA[TriData.y].posedge2,1)).xyz;
 }
 
 int CalcMat(uint4 TriData) {
     if(TriData.w == 1) return -1;
     MyMeshDataCompacted Mesh = _MeshData[TriData.x];
     TriData.y += Mesh.TriOffset;
-    return AggTris[TriData.y].MatDat + Mesh.MaterialOffset;
+    return AggTrisA[TriData.y].MatDat + Mesh.MaterialOffset;
 }
 
 

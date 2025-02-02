@@ -317,7 +317,7 @@ namespace TrueTrace {
                         LightTreeBuffer = new ComputeBuffer(Mathf.Max(LBVH.nodes.Length,1), CommonFunctions.GetStride<CompactLightBVHData>());
 #endif
                     }
-                    TriBuffer = new ComputeBuffer(AggTriangles.Length, 88);
+                    TriBuffer = new ComputeBuffer(AggTriangles.Length, CommonFunctions.GetStride<CudaTriangle>());
                     BVHBuffer = new ComputeBuffer(AggNodes.Length, 80);
                     if(HasLightTriangles) {
                         LightTriBuffer.SetData(LightTriangles);
@@ -582,7 +582,8 @@ namespace TrueTrace {
                         CurMat.SecondaryNormalTexScaleOffset = TempScale;
                         CurMat.SecondaryAlbedoTexScaleOffset = TempScale;
                         CurMat.AlbedoTextureScale = TempScale;
-                        CurMat.SecondaryTextureScale = new Vector2(TempScale.x, TempScale.y);
+                        CurMat.SecondaryTextureScaleOffset = TempScale;
+                        CurMat.NormalTexScaleOffset = TempScale;
                     }
 
                     if(JustCreated && obj.EmissionColor[i].x == 0 && obj.EmissionColor[i].y == 0 && obj.EmissionColor[i].z == 0) obj.EmissionColor[i] = new Vector3(1,1,1);
@@ -1004,6 +1005,8 @@ namespace TrueTrace {
                 LT.TriTarget = (uint)BVH.cwbvh_indices[LT.TriTarget];
                 LightTriangles[i] = LT;
             }
+
+
             if(LightTriangles.Count > 0) {
                 LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
 
@@ -1032,7 +1035,7 @@ namespace TrueTrace {
 
 
 
-        public void RefitMesh(ref ComputeBuffer RealizedAggNodes, ref ComputeBuffer RealizedTriBuffer, ref ComputeBuffer RealizedLightTriBuffer, ComputeBuffer RealizedLightNodeBuffer, CommandBuffer cmd)
+        public void RefitMesh(ref ComputeBuffer RealizedAggNodes, ref ComputeBuffer RealizedTriBufferA, ref ComputeBuffer RealizedTriBufferB, ref ComputeBuffer RealizedLightTriBuffer, ComputeBuffer RealizedLightNodeBuffer, CommandBuffer cmd)
         {
             #if HardwareRT
                 for(int i = 0; i < Renderers.Length; i++) AssetManager.Assets.AccelStruct.UpdateInstanceTransform(Renderers[i]);
@@ -1120,9 +1123,9 @@ namespace TrueTrace {
                 cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "ReverseStack", StackBuffer);
                 cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "Boxs", AABBBuffer);
                 cmd.SetComputeBufferParam(MeshRefit, TransferKernel, "LightTrianglesOut", RealizedLightTriBuffer);
-                cmd.SetComputeBufferParam(MeshRefit, TransferKernel, "CudaTriArrayIN", RealizedTriBuffer);
-                cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "CudaTriArrayIN", TriBuffer);
-                cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "CudaTriArray", RealizedTriBuffer);
+                cmd.SetComputeBufferParam(MeshRefit, TransferKernel, "CudaTriArrayINA", RealizedTriBufferA);
+                cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "CudaTriArrayA", RealizedTriBufferA);
+                cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "CudaTriArrayB", RealizedTriBufferB);
                 cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "CWBVHIndices", CWBVHIndicesBuffer);
                 cmd.SetComputeBufferParam(MeshRefit, NodeInitializerKernel, "AllNodes", NodeBuffer);
                 cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "AllNodes", NodeBuffer);
@@ -1341,6 +1344,7 @@ namespace TrueTrace {
                     TempTri.VertColC = CurMeshData.ColorsArray.ReinterpretLoad<uint>(Index3);
 
                     TempTri.MatDat = (uint)CurMeshData.MatDat[OffsetReal];
+                    TempTri.IsEmissive = 0;
                     AggTriangles[OffsetReal] = TempTri;
                     Triangles[OffsetReal].Create(V1, V2);
                     Triangles[OffsetReal].Extend(V3);
@@ -1383,7 +1387,7 @@ namespace TrueTrace {
                             
                             }
                         #endif
-                        if(IsValid) {
+                        if(IsValid && _Materials[(int)TempTri.MatDat].emission > 1) {
                             Vector3 Radiance = _Materials[(int)TempTri.MatDat].emission * _Materials[(int)TempTri.MatDat].BaseColor;
                             float radiance = luminance(Radiance.x, Radiance.y, Radiance.z);
                             float area = AreaOfTriangle(ParentMat * V1, ParentMat * V2, ParentMat * V3);
@@ -1401,6 +1405,7 @@ namespace TrueTrace {
                                     SourceEnergy = Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol))
                                     });
                                 LuminanceWeights.Add(_Materials[(int)TempTri.MatDat].emission);//Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol)));
+                                AggTriangles[OffsetReal].IsEmissive = 1;
                                 IllumTriCount++;
                             }
                         }

@@ -225,7 +225,7 @@ namespace TrueTrace {
             shader.SetTexture(CopyData, "ScreenSpaceInfoPrev", ScreenSpaceInfoPrev);
             shader.SetTextureFromGlobal(CopyData, "MotionVectors", "_CameraMotionVectorsTexture");
             shader.SetInt("PartialRenderingFactor", PartialRenderingFactor);
-            shader.SetBuffer(CopyData, "AggTris", TriData);
+            shader.SetBuffer(CopyData, "AggTrisA", TriData);
             shader.SetBuffer(CopyData, "_MeshData", MeshData);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_COLOR_LF_SHWrite", InputLFSH);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_COLOR_LF_COCGWrite", InputLFCOCG);

@@ -35,6 +35,6 @@ void FinalizeKernel (uint3 id : SV_DispatchThreadID)
             bestHit.mesh_id = MeshOffsets[Indexes.x].y;
         }
     #endif
-    OutputBuffer[0] = _MeshData[bestHit.mesh_id].MaterialOffset + AggTris[bestHit.triangle_id].MatDat;
+    OutputBuffer[0] = _MeshData[bestHit.mesh_id].MaterialOffset + AggTrisA[bestHit.triangle_id].MatDat;
 
 }

@@ -46,12 +46,12 @@ inline bool VisabilityCheck(SmallerRay ray, float dist) {
                         int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
                         triangle_id += triangleOffset;
                         int mesh_id = MeshOffsets[Indexes.x].y;
-                        int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTris[triangle_id].MatDat);
+                        int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTrisA[triangle_id].MatDat);
                         if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster))  {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;} 
                     #endif
                     #ifdef AdvancedAlphaMapped
                         if(_Materials[MaterialIndex].MatType == CutoutIndex) {
-                            float2 BaseUv = TOHALF(AggTris[triangle_id].tex0) * (1.0f - u - v) + TOHALF(AggTris[triangle_id].texedge1) * u + TOHALF(AggTris[triangle_id].texedge2) * v;
+                            float2 BaseUv = TOHALF(AggTrisA[triangle_id].tex0) * (1.0f - u - v) + TOHALF(AggTrisA[triangle_id].texedge1) * u + TOHALF(AggTrisA[triangle_id].texedge2) * v;
                             if(_Materials[MaterialIndex].AlphaTex.x > 0)
                                 if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;}
                         }
@@ -404,7 +404,8 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
 
     float4 PrevGBuffer = PrevScreenSpaceInfo[prevIndex];
 
-    float ShadowGuidanceWeight = exp(-abs(PrevGBuffer.z - GBuffer.z)) > 0.9f;
+    float ShadowGuidanceWeight = !plane_distance_disocclusion_check(PrimaryHitPosition, LoadSurfaceInfoPrev(prevIndex), GeomNorm);// abs(ReservoirCenterOcclusion - ReservoirSampleOcclusion) / max(ReservoirCenterOcclusion, ReservoirSampleOcclusion) < 0.1f;
+    // float ShadowGuidanceWeight = exp(-abs(PrevGBuffer.z - GBuffer.z)) > 0.9f;
 
     ShadowGuidanceWeight *= max(dot(SurfNorm, i_octahedral_32(asuint(PrevGBuffer.y))), 0);
 
@@ -668,6 +669,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
             float NormDiff = max(dot(SurfNorm, SampleSurfNorm), 0);
             if(dot(GeomNorm, SampleGeomNorm) < 0.9f) continue;
             float ShadowGuidanceWeight = !plane_distance_disocclusion_check(PrimaryHitPosition, LoadSurfaceInfo(CellTapCoord), GeomNorm);// abs(ReservoirCenterOcclusion - ReservoirSampleOcclusion) / max(ReservoirCenterOcclusion, ReservoirSampleOcclusion) < 0.1f;
+            ShadowGuidanceWeight *= (ReservoirSampleOcclusion > 0 && ReservoirCenterOcclusion > 0);
             if(ShadowGuidanceWeight == 0) continue;
         #else
             float NormDiff = max(dot(SurfNorm, SampleSurfNorm), 0);
@@ -874,6 +876,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
             float NormDiff = max(dot(SurfNorm, SampleSurfNorm), 0);
             if(dot(GeomNorm, SampleGeomNorm) < 0.9f) continue;
             float ShadowGuidanceWeight = !plane_distance_disocclusion_check(PrimaryHitPosition, LoadSurfaceInfo(CellTapCoord), GeomNorm);// abs(ReservoirCenterOcclusion - ReservoirSampleOcclusion) / max(ReservoirCenterOcclusion, ReservoirSampleOcclusion) < 0.1f;
+            ShadowGuidanceWeight *= (ReservoirSampleOcclusion > 0 && ReservoirCenterOcclusion > 0);
             if(ShadowGuidanceWeight == 0) continue;
         #else
             float NormDiff = max(dot(SurfNorm, SampleSurfNorm), 0);

@@ -38,7 +38,12 @@ namespace TrueTrace {
 		[SerializeField] public float[] BlendFactor;
 		[SerializeField] public Vector4[] MainTexScaleOffset;
 		[SerializeField] public Vector4[] SecondaryAlbedoTexScaleOffset;
-		[SerializeField] public Vector2[] SecondaryTextureScale;
+		[SerializeField] public Vector4[] SecondaryTextureScaleOffset;
+		[SerializeField] public Vector4[] NormalTexScaleOffset;
+		[SerializeField] public float[] RotationNormal;
+		[SerializeField] public float[] RotationSecondary;
+		[SerializeField] public float[] RotationSecondaryDiffuse;
+		[SerializeField] public float[] RotationSecondaryNormal;
 		[SerializeField] public float[] Rotation;
 		[SerializeField] public int[] Flags;
 		[SerializeField] public bool[] UseKelvin;
@@ -223,9 +228,14 @@ namespace TrueTrace {
 			
 			bool NeedsRedo = InitializeArrayWithIndex(ref Names, "", SharedMaterials, ref Index);
 			InitializeArray<float>(ref Rotation, 0, Index, NeedsRedo);
+			InitializeArray<float>(ref RotationNormal, 0, Index, NeedsRedo);
+			InitializeArray<float>(ref RotationSecondary, 0, Index, NeedsRedo);
+			InitializeArray<float>(ref RotationSecondaryDiffuse, 0, Index, NeedsRedo);
+			InitializeArray<float>(ref RotationSecondaryNormal, 0, Index, NeedsRedo);
 			InitializeArray<int>(ref Flags, 0, Index, NeedsRedo);
 
-			InitializeArray<Vector2>(ref SecondaryTextureScale, new Vector2(1,1), Index, NeedsRedo);
+			InitializeArray<Vector4>(ref SecondaryTextureScaleOffset, new Vector4(1,1,0,0), Index, NeedsRedo);
+			InitializeArray<Vector4>(ref NormalTexScaleOffset, new Vector4(1,1,0,0), Index, NeedsRedo);
 			InitializeArray<Vector4>(ref MainTexScaleOffset, new Vector4(1,1,0,0), Index, NeedsRedo);
 			InitializeArray<Vector4>(ref SecondaryAlbedoTexScaleOffset, new Vector4(1,1,0,0), Index, NeedsRedo);
 			InitializeArray<Vector4>(ref SecondaryNormalTexScaleOffset, new Vector4(1,1,0,0), Index, NeedsRedo);

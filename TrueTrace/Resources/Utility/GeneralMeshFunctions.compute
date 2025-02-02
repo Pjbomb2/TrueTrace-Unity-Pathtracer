@@ -3,7 +3,31 @@
 
 #pragma kernel CombineTriBuffers
 
-RWStructuredBuffer<CudaTriangle> OutCudaTriArray;
+struct CudaTriangle {
+	float3 pos0;
+	float3 posedge1;
+	float3 posedge2;
+
+	uint3 norms;
+
+	uint3 tans;
+
+	uint tex0;
+	uint texedge1;
+	uint texedge2;
+
+	uint VertColA;
+	uint VertColB;
+	uint VertColC;
+
+	uint MatDat;
+
+	uint IsEmissive;
+};
+
+
+RWStructuredBuffer<CudaTriangleA> OutCudaTriArrayA;
+RWStructuredBuffer<CudaTriangleB> OutCudaTriArrayB;
 
 StructuredBuffer<CudaTriangle> InCudaTriArray;
 
@@ -16,7 +40,20 @@ void CombineTriBuffers(uint3 id : SV_DispatchThreadID)
 	if (id.x >= Count)
 		return;
 
-	OutCudaTriArray[id.x + Offset] = InCudaTriArray[id.x];
+	OutCudaTriArrayA[id.x + Offset].pos0 = InCudaTriArray[id.x].pos0;
+	OutCudaTriArrayA[id.x + Offset].posedge1 = InCudaTriArray[id.x].posedge1;
+	OutCudaTriArrayA[id.x + Offset].posedge2 = InCudaTriArray[id.x].posedge2;
+	OutCudaTriArrayA[id.x + Offset].tex0 = InCudaTriArray[id.x].tex0;
+	OutCudaTriArrayA[id.x + Offset].texedge1 = InCudaTriArray[id.x].texedge1;
+	OutCudaTriArrayA[id.x + Offset].texedge2 = InCudaTriArray[id.x].texedge2;
+	OutCudaTriArrayA[id.x + Offset].MatDat = InCudaTriArray[id.x].MatDat;
+	
+	OutCudaTriArrayB[id.x + Offset].norms = InCudaTriArray[id.x].norms;
+	OutCudaTriArrayB[id.x + Offset].tans = InCudaTriArray[id.x].tans;
+	OutCudaTriArrayB[id.x + Offset].VertColA = InCudaTriArray[id.x].VertColA;
+	OutCudaTriArrayB[id.x + Offset].VertColB = InCudaTriArray[id.x].VertColB;
+	OutCudaTriArrayB[id.x + Offset].VertColC = InCudaTriArray[id.x].VertColC;
+	OutCudaTriArrayB[id.x + Offset].IsEmissive = InCudaTriArray[id.x].IsEmissive;
 
 }
 

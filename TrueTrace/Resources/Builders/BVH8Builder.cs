@@ -344,78 +344,7 @@ namespace TrueTrace {
             return 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z)); 
         }
 
-        // int[] TriCounts;
-        // AABB tempAABB = new AABB();
-        // float surface_area2(ref BVHNode8Data Node, int i2) {
-        //     Vector3 e = Vector3.zero;
-        //     for(int i = 0; i < 3; i++) e[i] = (float)(System.Convert.ToSingle((int)(System.Convert.ToUInt32(Node.e[i]) << 23)));
-        //     float maxFactorX = Node.quantized_max_x[i2] * e.x;
-        //     float maxFactorY = Node.quantized_max_y[i2] * e.y;
-        //     float maxFactorZ = Node.quantized_max_z[i2] * e.z;
-        //     float minFactorX = Node.quantized_min_x[i2] * e.x;
-        //     float minFactorY = Node.quantized_min_y[i2] * e.y;
-        //     float minFactorZ = Node.quantized_min_z[i2] * e.z;
 
-        //     tempAABB.Create(new Vector3(maxFactorX, maxFactorY, maxFactorZ) + Node.p, new Vector3(minFactorX, minFactorY, minFactorZ) + Node.p);
-        //     Vector3 sizes = tempAABB.BBMax - tempAABB.BBMin;
-        //     return 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z));  
-        // }
-
-        // float surface_area3(ref BVHNode8Data Node) {
-        //     Vector3 e = Vector3.zero;
-        //     for(int i = 0; i < 3; i++) e[i] = (float)(System.Convert.ToSingle((int)(System.Convert.ToUInt32(Node.e[i]) << 23)));
-        //     float TotSurfArea = 0;
-        //     for(int i = 0; i < 3; i++) {
-        //         float maxFactorX = Node.quantized_max_x[i] * e.x;
-        //         float maxFactorY = Node.quantized_max_y[i] * e.y;
-        //         float maxFactorZ = Node.quantized_max_z[i] * e.z;
-        //         float minFactorX = Node.quantized_min_x[i] * e.x;
-        //         float minFactorY = Node.quantized_min_y[i] * e.y;
-        //         float minFactorZ = Node.quantized_min_z[i] * e.z;
-
-        //         tempAABB.Create(new Vector3(maxFactorX, maxFactorY, maxFactorZ) + Node.p, new Vector3(minFactorX, minFactorY, minFactorZ) + Node.p);
-        //         Vector3 sizes = tempAABB.BBMax - tempAABB.BBMin;
-        //         TotSurfArea += 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z));  
-        //     }
-        //     return TotSurfArea;
-        // }
-
-        // float SAHCost(ref BVHNode8Data[] Nodes, uint nodeIdx = 0 )
-        // {
-        //     // Determine the SAH cost of the tree. This provides an indication
-        //     // of the quality of the BVH: Lower is better.
-        //     BVHNode8Data n = Nodes[nodeIdx];
-        //     // if (n.isLeaf()) return 2.0f * surface_area2(ref n.aabb) * GetTriCount(ref Nodes, nodeIdx);
-        //     float cost = 0;
-        //     for(int i = 0; i < 8; i++) {
-        //         if ((n.meta[i] & 0b11111) < 24) {
-        //             cost += 2.0f * surface_area2(ref n, i) * 3.0f;
-        //         } else {
-        //             int child_offset = (byte)n.meta[i] & 0b11111;
-        //             int child_index = (int)n.base_index_child + child_offset - 24;
-        //             cost += 3.0f * surface_area2(ref n, i) + SAHCost(ref Nodes, (uint)child_index);
-        //         }
-        //     }
-        //     return nodeIdx == 0 ? (cost / surface_area3(ref n)) : cost;
-        // }
-
-        // int GetTriCount(ref BVHNode8Data[] Nodes, uint Index) {
-        //     int TotalTriCount = 0;
-        //     BVHNode8Data node = Nodes[Index];
-        //     for(int i = 0; i < 8; i++) {
-        //         if ((node.meta[i] & 0b11111) < 24) {
-        //             TotalTriCount += 3;//GetTriCount(ref Nodes, NodePair.Count - 1, CurrentNode, NextNode, -1, true, CurRecur + 1);
-        //         } else {
-        //             int child_offset = (byte)node.meta[i] & 0b11111;
-        //             int child_index = (int)node.base_index_child + child_offset - 24;
-        //             TotalTriCount += GetTriCount(ref Nodes, child_index);//DocumentNodes(NodePair.Count - 1, CurrentNode, NextNode, child_index, false, CurRecur + 1);
-        //         }
-        //     }
-        //     return TotalTriCount;
-        //     // if(verbose[Index].count == 1) return 1;
-        //     // else if(verbose[Index].left == 0) return 0;
-        //     // else return GetTriCount(ref verbose, verbose[Index].left) + GetTriCount(ref verbose, verbose[Index].right);
-        // }
 
         public BVH8Builder() {}//null constructor
         
@@ -451,7 +380,7 @@ namespace TrueTrace {
             cwbvh_indices = new int[BVH2IndicesCount];
             BVH8NodesArraySecondary = new NativeArray<BVHNode8Data>(BVH2NodesCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
             BVH8Nodes = (BVHNode8Data*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(BVH8NodesArraySecondary);
-
+// BVH8_CWBVH();
             collapse(ref BVH2.FinalIndices, 0, 0);
             BVH2.BVH2NodesArray.Dispose();
             costArray.Dispose();

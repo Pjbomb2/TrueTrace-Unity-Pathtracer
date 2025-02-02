@@ -251,7 +251,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, Reproject, "MetallicB", (!EvenFrame ? MetallicA : MetallicB));
             cmd.SetComputeTextureParam(shader, Reproject, "PrimaryTriData", PrimaryTriData);
             cmd.SetComputeBufferParam(shader, Reproject, "_MeshData", Meshes);
-            cmd.SetComputeBufferParam(shader, Reproject, "AggTris", Tris);
+            cmd.SetComputeBufferParam(shader, Reproject, "AggTrisA", Tris);
             cmd.SetComputeBufferParam(shader, Reproject, "MeshIndexes", MeshIndexes);
             shader.SetVector("CamDiff", PrevPos - camera.transform.position);
             cmd.SetComputeBufferParam(shader, Reproject, "GlobalRaysMini", GlobalRays);

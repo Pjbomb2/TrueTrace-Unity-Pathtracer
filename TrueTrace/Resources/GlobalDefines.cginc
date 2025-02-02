@@ -25,7 +25,7 @@
 #define UseBRDFLights
 #define DoubleBufferSGTree
 // #define Fog
-#define RadCache
+// #define RadCache
 #define ExpensiveReSTIR
 // #define FakedAO
 // #define AutoDebugReading
