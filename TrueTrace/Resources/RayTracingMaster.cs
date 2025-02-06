@@ -108,6 +108,8 @@ namespace TrueTrace {
         private RenderTexture _PrimaryTriangleInfoA;
         private RenderTexture _PrimaryTriangleInfoB;
 
+        // public RenderTexture TTMotionVectors;
+
         private RenderTexture GIReservoirA;
         private RenderTexture GIReservoirB;
         private RenderTexture GIReservoirC;
@@ -185,9 +187,7 @@ namespace TrueTrace {
 
         [HideInInspector] public bool DoPanorama = false;
         [HideInInspector] public bool DoChainedImages = false;
-        // #if !LoadTTSettingsFromResources
-        //     [HideInInspector] 
-        // #endif
+
         [SerializeField] public TTSettings LocalTTSettings;
 
         public static bool SceneIsRunning = false;
@@ -195,7 +195,7 @@ namespace TrueTrace {
         [HideInInspector] public Texture SkyboxTexture;
         private bool MeshOrderChanged = false;
 
-
+        [HideInInspector] public int MainDirectionalLight = -1;
         [HideInInspector] public int AtmoNumLayers = 4;
         private float PrevResFactor;
         private int GenKernel;
@@ -213,6 +213,7 @@ namespace TrueTrace {
         private int TTtoOIDNKernel;
         private int OIDNtoTTKernel;
         private int TTtoOIDNKernelPanorama;
+        // private int MVKernel;
         #if !DisableRadianceCache
             private int ResolveKernel;
             private int CompactKernel;
@@ -311,6 +312,7 @@ namespace TrueTrace {
             TTtoOIDNKernel = ShadingShader.FindKernel("TTtoOIDNKernel");
             OIDNtoTTKernel = ShadingShader.FindKernel("OIDNtoTTKernel");
             TTtoOIDNKernelPanorama = ShadingShader.FindKernel("TTtoOIDNKernelPanorama");
+            // MVKernel = ShadingShader.FindKernel("MVKernel");
             #if !DisableRadianceCache
                 ResolveKernel = GenerateShader.FindKernel("CacheResolve");
                 CompactKernel = GenerateShader.FindKernel("CacheCompact");
@@ -672,7 +674,9 @@ namespace TrueTrace {
             SetFloat("OIDNBlendRatio", LocalTTSettings.OIDNBlendRatio, cmd);
             SetFloat("FogDensity", LocalTTSettings.FogDensity, cmd);
             SetFloat("ScaleHeight", LocalTTSettings.FogHeight, cmd);
+            SetFloat("OrthoSize", _camera.orthographicSize, cmd);
 
+            SetInt("MainDirectionalLight", MainDirectionalLight, cmd);
             SetInt("NonInstanceCount", Assets.NonInstanceCount, cmd);
             SetInt("AlbedoAtlasSize", Assets.AlbedoAtlasSize, cmd);
             SetInt("LightMeshCount", Assets.LightMeshCount, cmd);
@@ -693,6 +697,7 @@ namespace TrueTrace {
             SetInt("UpscalerMethod", LocalTTSettings.UpscalerMethod, cmd);
             SetInt("ReSTIRGIUpdateRate", LocalTTSettings.UseReSTIRGI ? LocalTTSettings.ReSTIRGIUpdateRate : 0, cmd);
 
+            SetBool("IsOrtho", _camera.orthographic);
             SetBool("IsFocusing", IsFocusing);
             SetBool("DoPanorama", DoPanorama);
             SetBool("ClayMode", LocalTTSettings.ClayMode);
@@ -723,9 +728,7 @@ namespace TrueTrace {
             ReSTIRGI.SetTextureFromGlobal(ReSTIRGIKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             ReSTIRGI.SetTextureFromGlobal(ReSTIRGISpatialKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             ShadingShader.SetTextureFromGlobal(ShadeKernel, "MotionVectors", "_CameraMotionVectorsTexture");
-
-            ShadingShader.SetTextureFromGlobal(FinalizeKernel, "DiffuseGBuffer", "_CameraGBufferTexture0");
-            ShadingShader.SetTextureFromGlobal(FinalizeKernel, "SpecularGBuffer", "_CameraGBufferTexture1");
+            
 
 
             if (SkyboxTexture == null) SkyboxTexture = new Texture2D(1,1, TextureFormat.RGBA32, false);
@@ -771,6 +774,12 @@ namespace TrueTrace {
             }
             SetVector("HDRIParams", HDRIParams, cmd);
 
+            if(!_camera.orthographic) {
+                ShadingShader.SetTextureFromGlobal(FinalizeKernel, "DiffuseGBuffer", "_CameraGBufferTexture0");
+                ShadingShader.SetTextureFromGlobal(FinalizeKernel, "SpecularGBuffer", "_CameraGBufferTexture1");
+            } else {
+                
+            }
 
 
             GenerateShader.SetTexture(GenKernel, "RandomNums", (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB);
@@ -852,6 +861,12 @@ namespace TrueTrace {
 
             ShadingShader.SetBuffer(FinalizeKernel, "GlobalColors", LightingBuffer);
             ShadingShader.SetTexture(FinalizeKernel, "Result", _target);
+            
+
+            // AssetManager.Assets.SetMeshTraceBuffers(ShadingShader, MVKernel);
+            // ShadingShader.SetTexture(MVKernel, "PrimaryTriData", FlipFrame ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            // ShadingShader.SetTexture(MVKernel, "PrimaryTriDataPrev", !FlipFrame ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            // ShadingShader.SetTexture(MVKernel, "Result", _target);
 
             #if UseOIDN
                 ShadingShader.SetBuffer(TTtoOIDNKernel, "AlbedoBuffer", AlbedoBuffer);
@@ -1093,13 +1108,12 @@ namespace TrueTrace {
                 if(DoKernelProfiling) cmd.BeginSample("ReSTIR GI Reproject");
                 cmd.DispatchCompute(GenerateShader, GIReTraceKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 if(DoKernelProfiling) cmd.EndSample("ReSTIR GI Reproject");
-            } else if(HasSDFHandler) {
-                OptionalSDFHandler.Run(cmd, (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB, _RayBuffer, SourceWidth, SourceHeight, DoChainedImages, LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI);
             } else if(LocalTTSettings.DenoiserMethod != 1 || LocalTTSettings.UseReSTIRGI) {
                 if(DoKernelProfiling) cmd.BeginSample("Primary Ray Generation");
                    cmd.DispatchCompute(GenerateShader, (DoChainedImages ? GenPanoramaKernel : GenKernel), Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 if(DoKernelProfiling) cmd.EndSample("Primary Ray Generation");
             }
+            if(HasSDFHandler) OptionalSDFHandler.Run(cmd, (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB, _RayBuffer, SourceWidth, SourceHeight);
         }
 
         private void Render(RenderTexture destination, CommandBuffer cmd)

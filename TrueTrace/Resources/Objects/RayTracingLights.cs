@@ -2,6 +2,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using CommonVars;
+using UnityEditor;
+#if UNITY_EDITOR
+using UnityEngine.UIElements;
+using UnityEditor.UIElements;
+#endif
+
 
 namespace TrueTrace {
     [ExecuteInEditMode][System.Serializable][RequireComponent(typeof(Light))]
@@ -10,8 +16,9 @@ namespace TrueTrace {
         [HideInInspector] public LightData ThisLightData;
         [HideInInspector] public int ArrayIndex;
         [HideInInspector] public int IESIndex;
-        [Range(0,40)] public float ShadowSoftness = 0.0f;
+        [SerializeField] [Range(0,40)] public float ShadowSoftness = 0.0f;
         [SerializeField] public bool UseKelvin = false;
+        [SerializeField] public bool IsMainSun = false;
         [SerializeField] [Range(1000.0f,20000.0f)] public float KelvinTemperature = 1000.0f;
         public Texture2D IESProfile;
 
@@ -85,4 +92,81 @@ namespace TrueTrace {
             RayTracingMaster.UnregisterObject(this);
         }
     }
+
+
+#if UNITY_EDITOR
+    [CustomEditor(typeof(RayTracingLights))]
+    public class RayTracingLightsEditor : Editor
+    {
+        private VisualElement CreateVerticalBox(string Name) {
+            VisualElement VertBox = new VisualElement();
+            // VertBox.style.flexDirection = FlexDirection.Row;
+            return VertBox;
+        }
+
+        private VisualElement CreateHorizontalBox(string Name) {
+            VisualElement HorizBox = new VisualElement();
+            HorizBox.style.flexDirection = FlexDirection.Row;
+            return HorizBox;
+        }
+
+
+        public class FloatSliderPair {
+            public VisualElement DynamicContainer;
+            public Label DynamicLabel;
+            public Slider DynamicSlider;
+            public FloatField DynamicField;
+        }
+        FloatSliderPair CreatePairedFloatSlider(string Name, float LowValue, float HighValue, ref float InitialValue, float SliderWidth = 100) {
+            FloatSliderPair NewPair = new FloatSliderPair();
+            NewPair.DynamicContainer = CreateHorizontalBox(Name + " Container");
+            NewPair.DynamicLabel = new Label(Name);
+            NewPair.DynamicSlider = new Slider() {value = InitialValue, highValue = HighValue, lowValue = LowValue};
+            NewPair.DynamicField = new FloatField() {value = InitialValue};
+            NewPair.DynamicSlider.style.width = SliderWidth;
+            NewPair.DynamicContainer.Add(NewPair.DynamicLabel);
+            NewPair.DynamicContainer.Add(NewPair.DynamicSlider);
+            NewPair.DynamicContainer.Add(NewPair.DynamicField);
+            return NewPair;
+        }
+
+        public override VisualElement CreateInspectorGUI()
+        {
+            var t1 = (targets);
+            var t =  t1[0] as RayTracingLights;
+            VisualElement MainContainer = CreateVerticalBox("Main Container");
+                FloatSliderPair ShadowSoftnessSliderPair = CreatePairedFloatSlider("Shadow Softness", 0, 40, ref t.ShadowSoftness);
+                    ShadowSoftnessSliderPair.DynamicSlider.RegisterValueChangedCallback(evt => {t.ShadowSoftness = evt.newValue; ShadowSoftnessSliderPair.DynamicField.value = t.ShadowSoftness;});
+                    ShadowSoftnessSliderPair.DynamicField.RegisterValueChangedCallback(evt => {t.ShadowSoftness = evt.newValue; ShadowSoftnessSliderPair.DynamicSlider.value = t.ShadowSoftness;});
+                MainContainer.Add(ShadowSoftnessSliderPair.DynamicContainer);
+
+
+                Toggle UseKelvinToggle = new Toggle() {value = t.UseKelvin, text = "Use Kelvin For Color"};
+                MainContainer.Add(UseKelvinToggle);
+                VisualElement KelvinContainer = CreateVerticalBox("Kelvin Container");
+                    FloatSliderPair KelvinTemperatureSliderPair = CreatePairedFloatSlider("Kelvin Temperature", 1000.0f, 20000.0f, ref t.KelvinTemperature);
+                        KelvinTemperatureSliderPair.DynamicSlider.RegisterValueChangedCallback(evt => {t.KelvinTemperature = evt.newValue; KelvinTemperatureSliderPair.DynamicField.value = t.KelvinTemperature;});
+                        KelvinTemperatureSliderPair.DynamicField.RegisterValueChangedCallback(evt => {t.KelvinTemperature = evt.newValue; KelvinTemperatureSliderPair.DynamicSlider.value = t.KelvinTemperature;});
+                KelvinContainer.Add(KelvinTemperatureSliderPair.DynamicContainer);
+                UseKelvinToggle.RegisterValueChangedCallback(evt => {t.UseKelvin = evt.newValue; if(evt.newValue) MainContainer.Insert(MainContainer.IndexOf(UseKelvinToggle) + 1, KelvinContainer); else MainContainer.Remove(KelvinContainer);});
+                if(t.UseKelvin) MainContainer.Add(KelvinContainer);
+
+                Toggle IsMainSunToggle = new Toggle() {value = t.IsMainSun, text = "Is Sun"};
+                if(t.ThisLight.type == LightType.Directional)
+                    MainContainer.Add(IsMainSunToggle);
+                IsMainSunToggle.RegisterValueChangedCallback(evt => {t.IsMainSun = evt.newValue;});
+
+                ObjectField IESField = new ObjectField("IES Texture");
+                IESField.objectType = typeof(Texture2D);
+                IESField.value = t.IESProfile;
+                if(t.ThisLight.type == LightType.Spot)
+                    MainContainer.Add(IESField);
+                IESField.RegisterValueChangedCallback(evt => {t.IESProfile = evt.newValue as Texture2D;});
+
+
+            return MainContainer;
+        }
+
+    }
+#endif
 }

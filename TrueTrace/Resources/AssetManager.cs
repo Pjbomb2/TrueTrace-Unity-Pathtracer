@@ -1979,10 +1979,14 @@ namespace TrueTrace {
             {
                 UnityLights.Clear();
                 UnityLightCount = 0;
+                RayMaster.MainDirectionalLight = -1;
                 foreach (RayTracingLights RayLight in RayTracingMaster._rayTracingLights) {
                     UnityLightCount++;
                     RayLight.UpdateLight(true);
-                    if (RayLight.ThisLightData.Type == 1) SunDirection = RayLight.ThisLightData.Direction;
+                    if (RayLight.ThisLightData.Type == 1) {
+                        if(RayLight.IsMainSun) RayMaster.MainDirectionalLight = UnityLightCount - 1;
+                        SunDirection = RayLight.ThisLightData.Direction;
+                    }
                     RayLight.ArrayIndex = UnityLightCount - 1;
                     RayLight.ThisLightData.Radiance *= RayMaster.LocalTTSettings.LightEnergyScale;
                     RayLight.ThisLightData.IESTex = new Vector2Int(-1, 0);
@@ -2004,7 +2008,8 @@ namespace TrueTrace {
                         RayMaster.FramesSinceStart = 0;
                     }
                     RayLight.ThisLightData.Radiance *= RayMaster.LocalTTSettings.LightEnergyScale;
-                    if (RayLight.ThisLightData.Type == 1) SunDirection = RayLight.ThisLightData.Direction;
+                    if(RayLight.IsMainSun) RayMaster.MainDirectionalLight = i;
+                    if (RayLight.ThisLightData.Type == 1 && RayLight.IsMainSun) SunDirection = RayLight.ThisLightData.Direction;
                     UnityLights[RayLight.ArrayIndex] = RayLight.ThisLightData;
                 }
                 UnityLightBuffer.SetData(UnityLights);
