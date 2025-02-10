@@ -14,45 +14,6 @@ float4x4 CamInvProjPrev;
 float4x4 viewprojection;
 
 
-inline float4x4 inverse(float4x4 m) {
-    float n11 = m[0][0], n12 = m[1][0], n13 = m[2][0], n14 = m[3][0];
-    float n21 = m[0][1], n22 = m[1][1], n23 = m[2][1], n24 = m[3][1];
-    float n31 = m[0][2], n32 = m[1][2], n33 = m[2][2], n34 = m[3][2];
-    float n41 = m[0][3], n42 = m[1][3], n43 = m[2][3], n44 = m[3][3];
-
-    float t11 = n23 * n34 * n42 - n24 * n33 * n42 + n24 * n32 * n43 - n22 * n34 * n43 - n23 * n32 * n44 + n22 * n33 * n44;
-    float t12 = n14 * n33 * n42 - n13 * n34 * n42 - n14 * n32 * n43 + n12 * n34 * n43 + n13 * n32 * n44 - n12 * n33 * n44;
-    float t13 = n13 * n24 * n42 - n14 * n23 * n42 + n14 * n22 * n43 - n12 * n24 * n43 - n13 * n22 * n44 + n12 * n23 * n44;
-    float t14 = n14 * n23 * n32 - n13 * n24 * n32 - n14 * n22 * n33 + n12 * n24 * n33 + n13 * n22 * n34 - n12 * n23 * n34;
-
-    float det = n11 * t11 + n21 * t12 + n31 * t13 + n41 * t14;
-    float idet = 1.0f / det;
-
-    float4x4 ret;
-
-    ret[0][0] = t11 * idet;
-    ret[0][1] = (n24 * n33 * n41 - n23 * n34 * n41 - n24 * n31 * n43 + n21 * n34 * n43 + n23 * n31 * n44 - n21 * n33 * n44) * idet;
-    ret[0][2] = (n22 * n34 * n41 - n24 * n32 * n41 + n24 * n31 * n42 - n21 * n34 * n42 - n22 * n31 * n44 + n21 * n32 * n44) * idet;
-    ret[0][3] = (n23 * n32 * n41 - n22 * n33 * n41 - n23 * n31 * n42 + n21 * n33 * n42 + n22 * n31 * n43 - n21 * n32 * n43) * idet;
-
-    ret[1][0] = t12 * idet;
-    ret[1][1] = (n13 * n34 * n41 - n14 * n33 * n41 + n14 * n31 * n43 - n11 * n34 * n43 - n13 * n31 * n44 + n11 * n33 * n44) * idet;
-    ret[1][2] = (n14 * n32 * n41 - n12 * n34 * n41 - n14 * n31 * n42 + n11 * n34 * n42 + n12 * n31 * n44 - n11 * n32 * n44) * idet;
-    ret[1][3] = (n12 * n33 * n41 - n13 * n32 * n41 + n13 * n31 * n42 - n11 * n33 * n42 - n12 * n31 * n43 + n11 * n32 * n43) * idet;
-
-    ret[2][0] = t13 * idet;
-    ret[2][1] = (n14 * n23 * n41 - n13 * n24 * n41 - n14 * n21 * n43 + n11 * n24 * n43 + n13 * n21 * n44 - n11 * n23 * n44) * idet;
-    ret[2][2] = (n12 * n24 * n41 - n14 * n22 * n41 + n14 * n21 * n42 - n11 * n24 * n42 - n12 * n21 * n44 + n11 * n22 * n44) * idet;
-    ret[2][3] = (n13 * n22 * n41 - n12 * n23 * n41 - n13 * n21 * n42 + n11 * n23 * n42 + n12 * n21 * n43 - n11 * n22 * n43) * idet;
-
-    ret[3][0] = t14 * idet;
-    ret[3][1] = (n13 * n24 * n31 - n14 * n23 * n31 + n14 * n21 * n33 - n11 * n24 * n33 - n13 * n21 * n34 + n11 * n23 * n34) * idet;
-    ret[3][2] = (n14 * n22 * n31 - n12 * n24 * n31 - n14 * n21 * n32 + n11 * n24 * n32 + n12 * n21 * n34 - n11 * n22 * n34) * idet;
-    ret[3][3] = (n12 * n23 * n31 - n13 * n22 * n31 + n13 * n21 * n32 - n11 * n23 * n32 - n12 * n21 * n33 + n11 * n22 * n33) * idet;
-
-    return ret;
-}
-
 float4x4 ViewMatrix;
 int MaxBounce;
 int CurBounce;
@@ -61,7 +22,6 @@ uint screen_width;
 uint screen_height;
 int frames_accumulated;
 int curframe;//might be able to get rid of this
-int MainDirectionalLight;
 float LEMEnergyScale;
 
 bool UseLightBVH;
@@ -160,7 +120,6 @@ RWStructuredBuffer<SmallerRay> Rays;
 StructuredBuffer<SmallerRay> Rays2;
 
 Texture2D<uint4> PrimaryTriData;
-Texture2D<uint4> PrimaryTriDataPrev;
 StructuredBuffer<int> TLASBVH8Indices;
 
 int AlbedoAtlasSize;
@@ -607,9 +566,6 @@ float3 decode_tangent(float3 normal, float diamond_tangent)
 }
 
 
-bool IsOrtho;
-float OrthoSize;
-
 SmallerRay CreateCameraRay(float2 uv, uint pixel_index) {
 	// Transform the camera origin to world space
 	float3 origin = mul(CamToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
@@ -617,21 +573,8 @@ SmallerRay CreateCameraRay(float2 uv, uint pixel_index) {
 	// Invert the perspective projection of the view-space position
 	float3 direction = mul(CamInvProj, float4(uv, 0.0f, 1.0f)).xyz;
 	// Transform the direction from camera to world space and normalize
-
-	if(!IsOrtho) {
-		direction = mul(CamToWorld, float4(direction, 0.0f)).xyz;
-		direction = normalize(direction);
-
-	} else {
-		float4x4 TruProj = inverse(CamInvProj);
-		float orthoWidth = 1.0f / TruProj._m00;
-		float orthoHeight = 1.0f / TruProj._m11;
-		float Aspect = (float)screen_width / (float)screen_height;
-		origin = float3(uv.x * OrthoSize * Aspect, uv.y * OrthoSize, 0);
-		origin = mul(CamToWorld, float4(origin, 1)).xyz;
-
-		direction = Forward;//normalize(CamToWorld._m20_m21_m22);
-	}
+	direction = mul(CamToWorld, float4(direction, 0.0f)).xyz;
+	direction = normalize(direction);
 	uint2 id = uint2(pixel_index % screen_width, pixel_index / screen_width);
 	[branch] if (!OIDNGuideWrite && UseDoF && (!IsFocusing || dot(id - int2(MousePos.x, MousePos.y), id - int2(MousePos.x, MousePos.y)) > 6.0f)) {
 		float3 cameraForward = mul(CamInvProj, float4(0, 0, 0.0f, 1.0f)).xyz;
@@ -1240,7 +1183,44 @@ inline float3 GetHeightmapNormal(float3 Position, uint TerrainID) {
 	return normalize(cross(normalize(OffX - Center), normalize(OffY - Center)));
 }
 
+inline float4x4 inverse(float4x4 m) {
+    float n11 = m[0][0], n12 = m[1][0], n13 = m[2][0], n14 = m[3][0];
+    float n21 = m[0][1], n22 = m[1][1], n23 = m[2][1], n24 = m[3][1];
+    float n31 = m[0][2], n32 = m[1][2], n33 = m[2][2], n34 = m[3][2];
+    float n41 = m[0][3], n42 = m[1][3], n43 = m[2][3], n44 = m[3][3];
 
+    float t11 = n23 * n34 * n42 - n24 * n33 * n42 + n24 * n32 * n43 - n22 * n34 * n43 - n23 * n32 * n44 + n22 * n33 * n44;
+    float t12 = n14 * n33 * n42 - n13 * n34 * n42 - n14 * n32 * n43 + n12 * n34 * n43 + n13 * n32 * n44 - n12 * n33 * n44;
+    float t13 = n13 * n24 * n42 - n14 * n23 * n42 + n14 * n22 * n43 - n12 * n24 * n43 - n13 * n22 * n44 + n12 * n23 * n44;
+    float t14 = n14 * n23 * n32 - n13 * n24 * n32 - n14 * n22 * n33 + n12 * n24 * n33 + n13 * n22 * n34 - n12 * n23 * n34;
+
+    float det = n11 * t11 + n21 * t12 + n31 * t13 + n41 * t14;
+    float idet = 1.0f / det;
+
+    float4x4 ret;
+
+    ret[0][0] = t11 * idet;
+    ret[0][1] = (n24 * n33 * n41 - n23 * n34 * n41 - n24 * n31 * n43 + n21 * n34 * n43 + n23 * n31 * n44 - n21 * n33 * n44) * idet;
+    ret[0][2] = (n22 * n34 * n41 - n24 * n32 * n41 + n24 * n31 * n42 - n21 * n34 * n42 - n22 * n31 * n44 + n21 * n32 * n44) * idet;
+    ret[0][3] = (n23 * n32 * n41 - n22 * n33 * n41 - n23 * n31 * n42 + n21 * n33 * n42 + n22 * n31 * n43 - n21 * n32 * n43) * idet;
+
+    ret[1][0] = t12 * idet;
+    ret[1][1] = (n13 * n34 * n41 - n14 * n33 * n41 + n14 * n31 * n43 - n11 * n34 * n43 - n13 * n31 * n44 + n11 * n33 * n44) * idet;
+    ret[1][2] = (n14 * n32 * n41 - n12 * n34 * n41 - n14 * n31 * n42 + n11 * n34 * n42 + n12 * n31 * n44 - n11 * n32 * n44) * idet;
+    ret[1][3] = (n12 * n33 * n41 - n13 * n32 * n41 + n13 * n31 * n42 - n11 * n33 * n42 - n12 * n31 * n43 + n11 * n32 * n43) * idet;
+
+    ret[2][0] = t13 * idet;
+    ret[2][1] = (n14 * n23 * n41 - n13 * n24 * n41 - n14 * n21 * n43 + n11 * n24 * n43 + n13 * n21 * n44 - n11 * n23 * n44) * idet;
+    ret[2][2] = (n12 * n24 * n41 - n14 * n22 * n41 + n14 * n21 * n42 - n11 * n24 * n42 - n12 * n21 * n44 + n11 * n22 * n44) * idet;
+    ret[2][3] = (n13 * n22 * n41 - n12 * n23 * n41 - n13 * n21 * n42 + n11 * n23 * n42 + n12 * n21 * n43 - n11 * n22 * n43) * idet;
+
+    ret[3][0] = t14 * idet;
+    ret[3][1] = (n13 * n24 * n31 - n14 * n23 * n31 + n14 * n21 * n33 - n11 * n24 * n33 - n13 * n21 * n34 + n11 * n23 * n34) * idet;
+    ret[3][2] = (n14 * n22 * n31 - n12 * n24 * n31 - n14 * n21 * n32 + n11 * n24 * n32 + n12 * n21 * n34 - n11 * n22 * n34) * idet;
+    ret[3][3] = (n12 * n23 * n31 - n13 * n22 * n31 + n13 * n21 * n32 - n11 * n23 * n32 - n12 * n21 * n33 + n11 * n22 * n33) * idet;
+
+    return ret;
+}
 
 inline float AreaOfTriangle(float3 pt1, float3 pt2, float3 pt3) {
     float a = distance(pt1, pt2);
@@ -1739,29 +1719,29 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
             node_index = node.left + Index + NodeOffset;
             lightPDF *= ci[Index] / sumweights;
 		} else {
-			if(HasHitTLAS) {
+			// if(HasHitTLAS) {
 				return;	
-			} else {
-				p = mul(MeshBuffer[MeshIndex].W2L, float4(p,1));
-				p2 = mul(MeshBuffer[MeshIndex].W2L, float4(p2,1));
-			    float3x3 Inverse = adjoint(MeshBuffer[MeshIndex].W2L);
-			    // float scalex = length(mul(Inverse, float3(1,0,0)));
-			    // float scaley = length(mul(Inverse, float3(0,1,0)));
-			    // float scalez = length(mul(Inverse, float3(0,0,1)));
-			    // float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
-				n = normalize(mul(Inverse, n).xyz);
-				viewDir = normalize(mul(Inverse, viewDir).xyz);
-				tangentFrame = GetTangentSpace2(n);//Need to maybe check to see if this holds up when the traversal backtracks due to dead end
-				viewDirTS = mul(tangentFrame, viewDir);
-				reflecVec = reflect(-viewDir, n) * reflecSharpness;
-				NodeOffset = MeshBuffer[MeshIndex].LightNodeOffset;
-				node_index = NodeOffset;
-				HasHitTLAS = true;
-				if(MeshIndex != _LightMeshes[-(node.left+1)].LockedMeshIndex) {
-					// lightPDF = 1;
-					return;
-				}
-			}
+			// } else {
+			// 	p = mul(MeshBuffer[MeshIndex].W2L, float4(p,1));
+			// 	p2 = mul(MeshBuffer[MeshIndex].W2L, float4(p2,1));
+			//     float3x3 Inverse = adjoint(MeshBuffer[MeshIndex].W2L);
+			//     // float scalex = length(mul(Inverse, float3(1,0,0)));
+			//     // float scaley = length(mul(Inverse, float3(0,1,0)));
+			//     // float scalez = length(mul(Inverse, float3(0,0,1)));
+			//     // float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
+			// 	n = normalize(mul(Inverse, n).xyz);
+			// 	viewDir = normalize(mul(Inverse, viewDir).xyz);
+			// 	tangentFrame = GetTangentSpace2(n);//Need to maybe check to see if this holds up when the traversal backtracks due to dead end
+			// 	viewDirTS = mul(tangentFrame, viewDir);
+			// 	reflecVec = reflect(-viewDir, n) * reflecSharpness;
+			// 	NodeOffset = MeshBuffer[MeshIndex].LightNodeOffset;
+			// 	node_index = NodeOffset;
+			// 	HasHitTLAS = true;
+			// 	if(MeshIndex != _LightMeshes[-(node.left+1)].LockedMeshIndex) {
+			// 		// lightPDF = 1;
+			// 		return;
+			// 	}
+			// }
 		}
 	}
 
@@ -1830,43 +1810,32 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 			node_index = node.left + Index + NodeOffset;
 			
 		} else {
-			[branch]if(HasHitTLAS) {
-				return -(node.left+1) + StartIndex;	
-			} else {
-				StartIndex = _LightMeshes[-(node.left+1)].StartIndex; 
-				MeshIndex = _LightMeshes[-(node.left+1)].LockedMeshIndex;
-			    float3x3 Inverse = adjoint(MeshBuffer[MeshIndex].W2L);
-			    // float scalex = length(mul(Inverse, float3(1,0,0)));
-			    // float scaley = length(mul(Inverse, float3(0,1,0)));
-			    // float scalez = length(mul(Inverse, float3(0,0,1)));
-			    // float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
-				p = mul(MeshBuffer[MeshIndex].W2L, float4(p,1));
-				n = normalize(mul(Inverse, n).xyz);
-				viewDir = normalize(mul(Inverse, viewDir).xyz);
-				tangentFrame = GetTangentSpace2(n);
-				viewDirTS = mul(tangentFrame, viewDir);
-				reflecVec = reflect(-viewDir, n) * reflecSharpness;
-				NodeOffset = MeshBuffer[MeshIndex].LightNodeOffset;
-				node_index = NodeOffset;
-				HasHitTLAS = true;
-			}
+			// [branch]if(HasHitTLAS) {
+				MeshIndex = _LightMeshes[LightTriangles[-(node.left+1)].MeshOffset].LockedMeshIndex;
+				return -(node.left+1);	
+			// } else {
+				// StartIndex = _LightMeshes[-(node.left+1)].StartIndex; 
+				// MeshIndex = _LightMeshes[-(node.left+1)].LockedMeshIndex;
+			    // float3x3 Inverse = adjoint(MeshBuffer[MeshIndex].W2L);
+			    // // float scalex = length(mul(Inverse, float3(1,0,0)));
+			    // // float scaley = length(mul(Inverse, float3(0,1,0)));
+			    // // float scalez = length(mul(Inverse, float3(0,0,1)));
+			    // // float3 Scale = pow(rcp(float3(scalex, scaley, scalez)),2);
+				// p = mul(MeshBuffer[MeshIndex].W2L, float4(p,1));
+				// n = normalize(mul(Inverse, n).xyz);
+				// viewDir = normalize(mul(Inverse, viewDir).xyz);
+				// tangentFrame = GetTangentSpace2(n);
+				// viewDirTS = mul(tangentFrame, viewDir);
+				// reflecVec = reflect(-viewDir, n) * reflecSharpness;
+				// NodeOffset = MeshBuffer[MeshIndex].LightNodeOffset;
+				// node_index = NodeOffset;
+				// HasHitTLAS = true;
+			// }
 		}
 	}
 	return -1;
 }
 
-
-float3 LoadSurfaceInfoPrev(int2 id) {
-    uint4 Target = PrimaryTriDataPrev[id.xy];
-	if(Target.w == 1) return asfloat(Target.xyz);
-    MyMeshDataCompacted Mesh = _MeshData[Target.x];
-    Target.y += Mesh.TriOffset;
-    float2 TriUV;
-    TriUV.x = asfloat(Target.z);
-    TriUV.y = asfloat(Target.w);
-    float4x4 Inverse = inverse(Mesh.W2L);
-    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
-}
 
 float3 LoadSurfaceInfo(int2 id) {
     uint4 Target = PrimaryTriData[id.xy];

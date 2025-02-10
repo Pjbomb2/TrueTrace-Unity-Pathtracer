@@ -4237,22 +4237,12 @@
         <ReadIndex>0</ReadIndex>
         <TextureName>_Alpha</TextureName>
       </TexturePairs>
-      <TexturePairs>
-        <Purpose>8</Purpose>
-        <ReadIndex>-4</ReadIndex>
-        <TextureName>_Secondary_Diffuse</TextureName>
-      </TexturePairs>
-      <TexturePairs>
-        <Purpose>10</Purpose>
-        <ReadIndex>-3</ReadIndex>
-        <TextureName>_Secondary_Normal</TextureName>
-      </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
-    <UsesSmoothness>true</UsesSmoothness>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
     <MetallicRemapMin>null</MetallicRemapMin>
     <MetallicRemapMax>null</MetallicRemapMax>

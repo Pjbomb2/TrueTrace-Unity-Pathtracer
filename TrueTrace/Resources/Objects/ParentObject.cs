@@ -312,19 +312,19 @@ namespace TrueTrace {
                     } else {
                         LightTriBuffer = new ComputeBuffer(Mathf.Max(LightTriangles.Count,1), CommonFunctions.GetStride<LightTriData>());
 #if !DontUseSGTree
-                        LightTreeBuffer = new ComputeBuffer(Mathf.Max(LBVH.SGTree.Length,1), CommonFunctions.GetStride<GaussianTreeNode>());
+                        // LightTreeBuffer = new ComputeBuffer(Mathf.Max(LBVH.SGTree.Length,1), CommonFunctions.GetStride<GaussianTreeNode>());
 #else
-                        LightTreeBuffer = new ComputeBuffer(Mathf.Max(LBVH.nodes.Length,1), CommonFunctions.GetStride<CompactLightBVHData>());
+                        // LightTreeBuffer = new ComputeBuffer(Mathf.Max(LBVH.nodes.Length,1), CommonFunctions.GetStride<CompactLightBVHData>());
 #endif
                     }
-                    TriBuffer = new ComputeBuffer(AggTriangles.Length, CommonFunctions.GetStride<CudaTriangle>());
+                    TriBuffer = new ComputeBuffer(AggTriangles.Length, 88);
                     BVHBuffer = new ComputeBuffer(AggNodes.Length, 80);
                     if(HasLightTriangles) {
                         LightTriBuffer.SetData(LightTriangles);
 #if !DontUseSGTree
-                        LightTreeBuffer.SetData(LBVH.SGTree);
+                        // LightTreeBuffer.SetData(LBVH.SGTree);
 #else
-                        LightTreeBuffer.SetData(LBVH.nodes);
+                        // LightTreeBuffer.SetData(LBVH.nodes);
 #endif
 
                     }
@@ -1006,9 +1006,23 @@ namespace TrueTrace {
                 LightTriangles[i] = LT;
             }
 
-
+            // LightNodeTris = new CompactLightBVHData[LightTriangles.Count];
+            // int CurCoun = LightTriangles.Count;
+            // AABB TriAABB = new AABB();
+            // for(int i = 0; i < CurCoun; i++) {
+            //     TriAABB.init();
+            //     TriAABB.Extend(LightTriangles[i].pos0);
+            //     TriAABB.Extend(LightTriangles[i].pos0 + LightTriangles[i].posedge1);
+            //     TriAABB.Extend(LightTriangles[i].pos0 + LightTriangles[i].posedge2);
+            //     TriAABB.Validate(new Vector3(0.0001f,0.0001f,0.0001f));
+            //     DirectionCone tricone = new DirectionCone(-LightTriNorms[i], 1);
+            //     float ThisPhi = AreaOfTriangle(LightTriangles[i].pos0, LightTriangles[i].pos0 + LightTriangles[i].posedge1, LightTriangles[i].pos0 + LightTriangles[i].posedge2) * LuminanceWeights[i];
+            //     CompactLightBVHData TempBound = new CompactLightBVHData(TriAABB.BBMax, TriAABB.BBMin, CommonFunctions.PackOctahedral(tricone.W), ThisPhi, ((uint)Mathf.Floor(32767.0f * ((tricone.cosTheta + 1.0f) / 2.0f))) | ((uint)Mathf.Floor(32767.0f * (((float)System.Math.Cos(3.14159f / 2.0f) + 1.0f) / 2.0f)) << 16), (-i) - 1, 1);
+            //     LightNodeTris[i] = TempBound;
+            // }
+            
             if(LightTriangles.Count > 0) {
-                LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
+                // LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
 
             }
 
@@ -1344,7 +1358,6 @@ namespace TrueTrace {
                     TempTri.VertColC = CurMeshData.ColorsArray.ReinterpretLoad<uint>(Index3);
 
                     TempTri.MatDat = (uint)CurMeshData.MatDat[OffsetReal];
-                    TempTri.IsEmissive = 0;
                     AggTriangles[OffsetReal] = TempTri;
                     Triangles[OffsetReal].Create(V1, V2);
                     Triangles[OffsetReal].Extend(V3);
@@ -1387,7 +1400,7 @@ namespace TrueTrace {
                             
                             }
                         #endif
-                        if(IsValid && _Materials[(int)TempTri.MatDat].emission > 1) {
+                        if(IsValid) {
                             Vector3 Radiance = _Materials[(int)TempTri.MatDat].emission * _Materials[(int)TempTri.MatDat].BaseColor;
                             float radiance = luminance(Radiance.x, Radiance.y, Radiance.z);
                             float area = AreaOfTriangle(ParentMat * V1, ParentMat * V2, ParentMat * V3);
@@ -1405,7 +1418,6 @@ namespace TrueTrace {
                                     SourceEnergy = Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol))
                                     });
                                 LuminanceWeights.Add(_Materials[(int)TempTri.MatDat].emission);//Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol)));
-                                AggTriangles[OffsetReal].IsEmissive = 1;
                                 IllumTriCount++;
                             }
                         }
@@ -1436,7 +1448,7 @@ namespace TrueTrace {
                     BVH.BVH8NodesArray.Dispose();
                 } else {
                     AggNodes = new BVHNode8DataCompressed[1];
-                    if(LightTriangles.Count > 0) LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
+                    // if(LightTriangles.Count > 0) LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
                 }
             #endif
             MeshCountChanged = false;

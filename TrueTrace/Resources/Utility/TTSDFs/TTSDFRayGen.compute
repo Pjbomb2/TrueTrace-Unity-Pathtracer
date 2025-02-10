@@ -143,7 +143,10 @@ void Generate(uint3 id : SV_DispatchThreadID) {
 
     if (id.x >= screen_width || id.y >= screen_height) return;
     const uint pixel_index = id.y * screen_width + id.x;
-    SmallerRay ray = CreateRay(GlobalRays[pixel_index].origin, GlobalRays[pixel_index].direction);
+    float2 jitter = ((random(0, pixel_index) - 0.5));
+    if(OIDNGuideWrite) jitter = 0;
+    float2 uv = float2((id.xy + jitter) / float2(screen_width, screen_height) * 2.0f - 1.0f);
+    SmallerRay ray = CreateCameraRay(uv, pixel_index);
 
     float3 P = ray.origin + NearPlane * ray.direction;
     float TruMinDist = 0;
@@ -172,3 +175,93 @@ void Generate(uint3 id : SV_DispatchThreadID) {
     GlobalRays[pixel_index] = globray;
 }
 
+
+#pragma kernel GeneratePanorama
+[numthreads(16, 16, 1)]
+void GeneratePanorama(uint3 id : SV_DispatchThreadID) {
+    if (id.x >= screen_width || id.y >= screen_height) return;
+    const uint pixel_index = id.y * screen_width + id.x;
+    float2 jitter = ((random(0, pixel_index) - 0.5));
+    if(OIDNGuideWrite) jitter = 0;
+    float2 uv = float2((id.xy + jitter) / float2(screen_width, screen_height));
+    SmallerRay ray;
+    if(DoPanorama) {
+        uv.y = 1.0f - uv.y;
+        uv.x = (uv.x * (Segment.y - Segment.x)) + Segment.x;
+        uv.x = 1.0f - uv.x;
+
+        ray = CreateRay(mul(CamToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz + NearPlane * normalize(equirectUvToDirection(uv)), normalize(equirectUvToDirection(uv)));
+    } else {
+        uv.x = ((uv.x * (Segment.y - Segment.x)) + Segment.x);
+        uv = (uv * 2.0f) - 1.0f;
+
+        ray = CreateCameraRay(uv, pixel_index);
+        ray.origin = ray.origin + NearPlane * ray.direction;
+    }
+
+    float3 P = ray.origin + NearPlane * ray.direction;
+    float TruMinDist = 0;
+    int Reps2 = 0;
+    float3 PrevP = P;
+    while(Reps2 < 100 && sdSphere(P, Scale) < 0.1f) {
+        float TempDist = 0;
+        float OuterT = 0;
+        bool TempVal = Traverse(P, ray.direction, 10000.0f, TempDist, OuterT);
+        P += TempDist * ray.direction;
+        SmallerRay TempRay = CreateRay(P, ray.direction);
+        OuterT = OuterT - TempDist;
+        float TempOuter = OuterT;
+        VisabilityCheck(TempRay, OuterT);
+        TruMinDist = TempOuter;
+        if(TempVal || Reps2 == 0) PrevP = P;
+        if(TempOuter == OuterT) P += (OuterT + 0.1f) * ray.direction;
+        else break;
+        Reps2++;
+    }
+
+    P = PrevP;
+    if(DoBackfacing) TruMinDist = FarPlane;
+
+    RayData globray = {P, pixel_index, ray.direction, 0, 0,0,asuint(TruMinDist),0};
+    GlobalRays[pixel_index] = globray;
+}
+
+
+#pragma kernel GenerateASVGF 
+
+
+[numthreads(16, 16, 1)]
+void GenerateASVGF(uint3 id : SV_DispatchThreadID) {
+
+    if (id.x >= screen_width || id.y >= screen_height) return;
+    const uint pixel_index = id.y * screen_width + id.x;
+
+    RayData ray = GlobalRays[pixel_index];
+
+    float3 P = ray.origin + NearPlane * ray.direction;
+    float TruMinDist = 0;
+    int Reps2 = 0;
+    float3 PrevP = P;
+    while(Reps2 < 100 && sdSphere(P, Scale) < 0.1f) {
+        float TempDist = 0;
+        float OuterT = 0;
+        bool TempVal = Traverse(P, ray.direction, 10000.0f, TempDist, OuterT);
+        P += TempDist * ray.direction;
+        SmallerRay TempRay = CreateRay(P, ray.direction);
+        OuterT = OuterT - TempDist;
+        float TempOuter = OuterT;
+        VisabilityCheck(TempRay, OuterT);
+        TruMinDist = TempOuter;
+        if(TempVal || Reps2 == 0) PrevP = P;
+        if(TempOuter == OuterT) P += (OuterT + 0.1f) * ray.direction;
+        else break;
+        Reps2++;
+    }
+
+    P = PrevP;
+    if(DoBackfacing) TruMinDist = FarPlane;
+
+
+    RayData globray = {P, pixel_index, ray.direction, 0, 0,0,asuint(TruMinDist),0};
+    GlobalRays[pixel_index] = globray;
+}

@@ -1,0 +1,997 @@
+#pragma use_dxc
+#pragma multi_compile __ SORT_LARGE SORT_MED SORT_SMALL
+#include "../../../GlobalDefines.cginc"
+#include "../../../MainCompute/CommonStructs.cginc"
+    // #pragma enable_d3d11_debug_symbols
+    //64 bins gives full fat sweep SAH trace speeds! wtf!
+
+
+#if defined(SORT_LARGE)
+    #define ActiveQue 1
+#elif defined(SORT_SMALL)
+    #define ActiveQue 4
+#else
+    #define ActiveQue 1
+#endif
+
+#define BinCount 32
+#define BinBatchSize (128 / ActiveQue)
+#define QuesPerBin (BinBatchSize / BinCount)
+
+#define SortBatchSize 256
+#define ReductionCount 128
+#define ReductionBatchSize 16
+
+
+int CurRun;
+int SetCount;
+int PrimCount;
+#define LeftOffset (2 * PrimCount)
+//Is using #define like this slower? since it may require a second evaluation than the static int method?
+
+struct UintAABB {
+    uint3 BBMax;
+    uint3 BBMin;
+};
+
+struct ReadBackData {
+    int NodesI;
+    int FirstIndex;
+    int IndexCount;
+    int SecondaryInd;
+};
+StructuredBuffer<ReadBackData> ReadBackRead;
+RWStructuredBuffer<ReadBackData> ReadBackWrite;
+RWStructuredBuffer<ReadBackData> ReadBackWrite2;
+
+RWStructuredBuffer<LightBVHData> Nodes;
+StructuredBuffer<LightTriData> InputAABBBuffer;
+
+struct ObjectSplit {
+    int index;
+    int Dimension;
+    int BinIndex;
+};
+RWStructuredBuffer<ObjectSplit> SplitWrite;
+StructuredBuffer<ObjectSplit> SplitRead;
+
+StructuredBuffer<LightBVHData> Triangles;
+RWStructuredBuffer<uint> DimensionedIndices;
+RWStructuredBuffer<int> TempIndexes;
+RWStructuredBuffer<int4> LayerStridesBuffer; //A buffer that stores the start and size of each hierarchy layer nodes
+StructuredBuffer<uint> IndB;
+RWStructuredBuffer<uint4> DispatchSize;
+RWStructuredBuffer<LightBVHData> TrianglesWrite;
+globallycoherent RWStructuredBuffer<int> WorkGroup;
+
+
+
+float3 i_octahedral_32( uint data ) {
+    uint2 iv = uint2( data, data>>16u ) & 65535u; 
+    float2 v = iv/32767.5f - 1.0f;
+    float3 nor = float3(v, 1.0f - abs(v.x) - abs(v.y)); // Rune Stubbe's version,
+    float t = max(-nor.z,0.0);                     // much faster than original
+    nor.xy += (nor.xy>=0.0)?-t:t;                     // implementation of this
+    return normalize( nor );
+}
+
+uint octahedral_32(float3 nor) {
+    float oct = 1.0f / (abs(nor.x) + abs(nor.y) + abs(nor.z));
+    float t = saturate(-nor.z);
+    nor.xy = (nor.xy + (nor.xy > 0.0f ? t : -t)) * oct;
+    uint2 d = uint2(round(32767.5 + nor.xy*32767.5));  
+    return d.x|(d.y<<16u);
+}
+
+float3 transform_position(float4x4 mat, float3 position)
+{
+    return float3(
+        mat[0][0] * position.x + mat[0][1] * position.y + mat[0][2] * position.z + mat[0][3],
+        mat[1][0] * position.x + mat[1][1] * position.y + mat[1][2] * position.z + mat[1][3],
+        mat[2][0] * position.x + mat[2][1] * position.y + mat[2][2] * position.z + mat[2][3]);
+}
+float3 transform_direction(float4x4 mat, float3 direction)
+{
+    return float3(
+        abs(mat[0][0]) * direction.x + abs(mat[0][1]) * direction.y + abs(mat[0][2]) * direction.z,
+        abs(mat[1][0]) * direction.x + abs(mat[1][1]) * direction.y + abs(mat[1][2]) * direction.z,
+        abs(mat[2][0]) * direction.x + abs(mat[2][1]) * direction.y + abs(mat[2][2]) * direction.z
+    );
+}
+
+
+
+#pragma kernel CopySortedDimension
+[numthreads(1024,1,1)]
+void CopySortedDimension (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID)
+{
+    if(id.x >= PrimCount) return;
+    DimensionedIndices[id.x + PrimCount * CurRun] = IndB[id.x];
+}
+
+struct TransferData {
+    float4x4 Transf2;
+    int SolidOffset;
+};
+
+StructuredBuffer<TransferData> Transfers;
+uint CompCosTheta(float cosTheta_o, float cosTheta_e) {
+    return (uint)floor(32767.0f * ((cosTheta_o + 1.0f) / 2.0f)) | ((uint)floor(32767.0f * ((cosTheta_e + 1.0f) / 2.0f)) << 16);
+}
+
+inline float AreaOfTriangle(float3 pt1, float3 pt2, float3 pt3) {
+    float a = distance(pt1, pt2);
+    float b = distance(pt2, pt3);
+    float c = distance(pt3, pt1);
+    float s = (a + b + c) / 2.0f;
+    return sqrt(s * (s - a) * (s - b) * (s - c));
+}
+
+
+#pragma kernel InitializeModified
+[numthreads(1024,1,1)]
+void InitializeModified (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID)
+{
+    if(id.x >= PrimCount) return;
+    // LightBVHData Node = TrianglesWrite[id.x];
+
+    TransferData Transf = Transfers[InputAABBBuffer[id.x].MeshOffset];
+    float3 Pos0 = mul(Transf.Transf2, float4(InputAABBBuffer[id.x].pos0,1));
+    float3 Pos1 = mul(Transf.Transf2, float4(InputAABBBuffer[id.x].pos0 + InputAABBBuffer[id.x].posedge1,1));
+    float3 Pos2 = mul(Transf.Transf2, float4(InputAABBBuffer[id.x].pos0 + InputAABBBuffer[id.x].posedge2,1));
+
+    float3 BBMax = max(Pos0, max(Pos1, Pos2));
+    float3 BBMin = min(Pos0, min(Pos1, Pos2));
+    float Scale = 0.000001f;
+            for (int i2 = 0; i2 < 3; i2++)
+            {
+                if (BBMax[i2] - BBMin[i2] < Scale)
+                {
+                    BBMin[i2] -= Scale;
+                    BBMax[i2] += Scale;
+                }
+            }
+
+    TrianglesWrite[id.x].BBMax = BBMax;
+    TrianglesWrite[id.x].BBMin = BBMin;
+
+
+
+    TrianglesWrite[id.x].w = octahedral_32(-normalize(cross(normalize(Pos1 - Pos0), normalize(Pos2 - Pos0))));
+    TrianglesWrite[id.x].phi = InputAABBBuffer[id.x].SourceEnergy * AreaOfTriangle(Pos0, Pos1, Pos2);
+
+
+    TrianglesWrite[id.x].cosTheta_oe = CompCosTheta(-1, cos(3.14159f / 2.0f));
+    TrianglesWrite[id.x].left = (-id.x) - 1;
+    // Nodes[id.x].left = (-id.x) - 1;
+    TrianglesWrite[id.x].LightCount = 1;
+    return;
+}
+
+#pragma kernel InitializeModified2
+[numthreads(1024,1,1)]
+void InitializeModified2 (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID)
+{
+    // if(id.x >= PrimCount) return;
+    // float3 center = (InputAABBBuffer[id.x].BBMax + InputAABBBuffer[id.x].BBMin) / 2.0f;
+    // float3 extent = (InputAABBBuffer[id.x].BBMax - InputAABBBuffer[id.x].BBMin) / 2.0f;
+    // TrianglesWrite[id.x].BBMax = InputAABBBuffer[id.x].BBMax;//center + extent;
+    // TrianglesWrite[id.x].BBMin = InputAABBBuffer[id.x].BBMin;//center - extent;
+    // // float Scale = length(extent) / length(PrevExtent) ;
+    // TrianglesWrite[id.x].w = InputAABBBuffer[id.x].w;
+    // TrianglesWrite[id.x].phi = InputAABBBuffer[id.x].phi;// * (Nodes[id.x].LightCount / length(extent));// * (Scale * Scale);// * (float)Nodes[id.x].LightCount / length(extent);
+    // TrianglesWrite[id.x].cosTheta_oe = InputAABBBuffer[id.x].cosTheta_oe;
+    // TrianglesWrite[id.x].left = (-id.x) - 1;
+    // // Nodes[id.x].left = (-id.x) - 1;
+    // TrianglesWrite[id.x].LightCount = 1;
+    // return;
+}
+
+
+inline float surface_area(float3 sizes) {
+    return 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z));
+}
+
+
+inline float luminance(const float3 a) {
+    return dot(float3(0.299f, 0.587f, 0.114f), a);
+}
+
+
+
+
+
+
+float AngleBetween(float3 v1, float3 v2) {
+    if(dot(v1, v2) < 0) return 3.14159f - 2.0f * asin(length(v1 + v2) / 2.0f);
+    else return 2.0f * asin(length(v2 - v1) / 2.0f);
+}
+
+
+float4x4 Rotate(float sinTheta, float cosTheta, float3 axis) {
+    float3 a = normalize(axis);
+    float4x4 m;
+    m[0][0] = a.x * a.x + (1 - a.x * a.x) * cosTheta;
+    m[0][1] = a.x * a.y * (1 - cosTheta) - a.z * sinTheta;
+    m[0][2] = a.x * a.z * (1 - cosTheta) + a.y * sinTheta;
+    m[0][3] = 0;
+
+    m[1][0] = a.x * a.y * (1 - cosTheta) + a.z * sinTheta;
+    m[1][1] = a.y * a.y + (1 - a.y * a.y) * cosTheta;
+    m[1][2] = a.y * a.z * (1 - cosTheta) - a.x * sinTheta;
+    m[1][3] = 0;
+
+    m[2][0] = a.x * a.z * (1 - cosTheta) - a.y * sinTheta;
+    m[2][1] = a.y * a.z * (1 - cosTheta) + a.x * sinTheta;
+    m[2][2] = a.z * a.z + (1 - a.z * a.z) * cosTheta;
+    m[2][3] = 0;
+
+    m[3][0] = 0;
+    m[3][1] = 0;
+    m[3][2] = 0;
+    m[3][3] = 1;
+
+return mul(m, transpose(m));
+}
+
+float4x4 Rotate(float Theta, float3 axis) {
+    return Rotate(sin(Theta), cos(Theta), axis);
+}
+float GetCosThetaO(uint cosTheta) {
+    return (2.0f * ((float)(cosTheta & 0x0000FFFF) / 32767.0f) - 1.0f);
+}
+float GetCosThetaE(uint cosTheta) {
+    return (2.0f * ((float)(cosTheta >> 16) / 32767.0f) - 1.0f);
+}
+
+
+static const LightBVHData InitialAABB = {
+    -3.40282347E+38, -3.40282347E+38, -3.40282347E+38,
+    3.40282347E+38, 3.40282347E+38, 3.40282347E+38,
+    octahedral_32(float3(0,0,0)),
+    0,
+    CompCosTheta(-1, cos(3.14159f / 2.0f)),
+    0,
+    0
+}; //general node initializer, VS has really destroyed its format...
+
+
+inline float4 DoCone(float4 A, float4 B) {
+    if(all(A.xyz == i_octahedral_32(octahedral_32(float3(0,0,0))))) return B;
+    if(all(B.xyz == i_octahedral_32(octahedral_32(float3(0,0,0))))) return A;
+    
+    float theta_a = acos(A.w);
+    float theta_b = acos(B.w);
+    float theta_d = AngleBetween(A.xyz, B.xyz);
+    if(min(theta_d + theta_b, 3.14159f) <= theta_a) return A;
+    if(min(theta_d + theta_a, 3.14159f) <= theta_b) return B;
+
+    float theta_o = (theta_a + theta_d + theta_b) / 2.0f;
+    if(theta_o >= 3.14159f) return float4(0,0,0,-1);
+
+    float theta_r = theta_o - theta_a;
+    float3 wr = cross(A.xyz, B.xyz);
+    if(dot(wr, wr) == 0) return float4(0,0,0,-1);
+    float3 w = mul(Rotate(theta_r, wr), float4(A.xyz,0)).xyz;
+    return float4(w, cos(theta_o));
+}
+
+
+inline LightBVHData Union(LightBVHData A, LightBVHData B, int Left) {
+    if(A.phi == 0) {return B;}
+    if(B.phi == 0) {return A;}
+    float4 Cone = DoCone(float4(i_octahedral_32(A.w), GetCosThetaO(A.cosTheta_oe)), float4(i_octahedral_32(B.w), GetCosThetaO(B.cosTheta_oe)));
+    float cosTheta_o = Cone.w;
+    float cosTheta_e = min(GetCosThetaE(A.cosTheta_oe), GetCosThetaE(B.cosTheta_oe));
+    LightBVHData Dat = {max(A.BBMax, B.BBMax), min(A.BBMin, B.BBMin), octahedral_32(Cone.xyz), A.phi + B.phi, CompCosTheta(cosTheta_o, cosTheta_e), Left, A.LightCount + B.LightCount};
+    return Dat;
+}
+
+
+float EvaluateCost(const LightBVHData b, float Kr) {
+    const float cosTheta_o = GetCosThetaO(b.cosTheta_oe);
+    float theta_o = acos(cosTheta_o);
+    float theta_e = acos(GetCosThetaE(b.cosTheta_oe));
+    float theta_w = min(theta_o + theta_e, 3.14159f);
+    float sinTheta_o = sqrt(1.0f - cosTheta_o * cosTheta_o);
+    float M_omega = 2.0f * 3.14159f * (1.0f - cosTheta_o) +
+                    3.14159f / 2.0f *
+                        (2.0f * theta_w * sinTheta_o - cos(theta_o - 2.0f * theta_w) -
+                         2.0f * theta_o * sinTheta_o + cosTheta_o);
+
+    
+    return b.phi * M_omega * Kr * surface_area(b.BBMax - b.BBMin) / (float)max(b.LightCount, 1);
+}
+
+#pragma kernel Propogate
+
+/*
+    Layer Stride Buffer:
+        X => Min Layer Index
+        Y => Max Layer Index
+        Z => Layer Count
+*/
+[numthreads(64,1,1)]
+void Propogate (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID)
+{
+    const ReadBackData WorkGroupInput = ReadBackRead[id.x];
+    Nodes[0].left = 2;
+    if (WorkGroupInput.NodesI >= LeftOffset) return;
+
+    if (id.x >= WorkGroup[1] + (CurRun == 0 ? 1 : 0) || WorkGroupInput.IndexCount == 1 || (CurRun != 0 && WorkGroup[2] == 0)) {
+        if (!(id.x >= WorkGroup[1] + (CurRun == 0 ? 1 : 0) || (CurRun != 0 && WorkGroup[2] == 0))) {
+            InterlockedMax(LayerStridesBuffer[CurRun].y, WorkGroupInput.NodesI);
+            InterlockedMin(LayerStridesBuffer[CurRun].x, WorkGroupInput.NodesI);
+        }
+        return;
+    }
+    InterlockedMax(LayerStridesBuffer[CurRun].y, WorkGroupInput.NodesI);
+    InterlockedMin(LayerStridesBuffer[CurRun].x, WorkGroupInput.NodesI);
+
+    ObjectSplit FinalSplit = SplitRead[id.x];
+
+    int Offset = FinalSplit.Dimension * PrimCount;
+    int LeftIndex = Nodes[WorkGroupInput.NodesI].left;
+    if (LeftIndex < 0) return;
+    int Left = (LeftIndex - WorkGroup[3]);
+    // if (FinalSplit.index == WorkGroupInput.FirstIndex) FinalSplit.index += 1;
+    ReadBackData ReadData = { LeftIndex, WorkGroupInput.FirstIndex, FinalSplit.index - WorkGroupInput.FirstIndex, FinalSplit.Dimension };
+    ReadBackWrite[Left] = ReadData;
+    ReadBackData ReadData2 = { LeftIndex + 1, FinalSplit.index, (WorkGroupInput.FirstIndex + WorkGroupInput.IndexCount) - FinalSplit.index, WorkGroupInput.IndexCount };
+    ReadBackWrite[Left + 1] = ReadData2;
+}
+
+
+#pragma kernel Transfer
+
+[numthreads(1,1,1)]
+void Transfer (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID)
+{
+    DispatchSize[0] = uint4(ceil(WorkGroup[0] / 64.0f), 1, 1, 1);
+    DispatchSize[1] = uint4(ceil(WorkGroup[0] / 4.0f), 1, 1, 1);
+    DispatchSize[2] = uint4(ceil(WorkGroup[0] / (float) ActiveQue), 1, 1, 1);
+    WorkGroup[1] = WorkGroup[0];
+    WorkGroup[2] = WorkGroup[3];
+    WorkGroup[3] += WorkGroup[0];
+    WorkGroup[0] = 0;
+    if (CurRun != 0 && LayerStridesBuffer[CurRun].y == LeftOffset - 1) WorkGroup[2] = 0;
+    LayerStridesBuffer[CurRun].z = LayerStridesBuffer[CurRun].y - LayerStridesBuffer[CurRun].x;
+}
+
+
+
+#pragma kernel Sort
+
+
+groupshared int2 RL[4][SortBatchSize];
+[numthreads(4,SortBatchSize,1)]
+void Sort (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID)
+{
+    if (CurRun != 0 && WorkGroup[2] == 0) return;
+    RL[GT.x][GT.y] = 0;
+
+    GroupMemoryBarrierWithGroupSync();
+    bool OddSplit = id.x % 2 == 1;//The split-side I remember working well for data packing
+    int NewOffset = !OddSplit ? 0 : PrimCount;
+    int G = id.x - OddSplit;
+    const ReadBackData InputA = ReadBackWrite[G];
+    const ReadBackData InputB = ReadBackWrite[G + 1];
+    int FirstIndex = InputA.FirstIndex;
+    int IndexCount = InputB.SecondaryInd;
+
+    int BestDimension = InputA.SecondaryInd;
+    int2 Indexes;
+    [allow_uav_condition][branch]switch(BestDimension) {
+        case(0): Indexes = int2(1,2); break;
+        case(1): Indexes = int2(0,2); break;
+        case(2): Indexes = int2(0,1); break;
+    }
+    int Offset = Indexes[OddSplit] * PrimCount;
+
+    bool Valid = !(IndexCount == 1 || id.x >= WorkGroup[1] + (CurRun == 0 ? 1 : 0) || id.x >= max(WorkGroup[1],1));
+    int LeftCount;
+
+    int Spacing = max(1,ceil((float)IndexCount / (float)SortBatchSize));
+    int2 ThreadStrides = Spacing * int2(GT.y, GT.y + 1);
+    int StartIndex = FirstIndex + ThreadStrides.x;
+    int EndIndex = min(FirstIndex + ThreadStrides.y, FirstIndex + IndexCount);
+    if(Valid && GT.y != (SortBatchSize-1) && IndexCount > GT.y * Spacing) {
+        for(int i = StartIndex; i < EndIndex; i++) {
+            int Index = TempIndexes[i + NewOffset];
+            bool IsLeft = TempIndexes[Index + LeftOffset] == CurRun;
+            RL[GT.x][GT.y+1][IsLeft]++;
+        }
+    }
+
+    GroupMemoryBarrierWithGroupSync();
+    if(Valid && GT.y == 0) 
+        [unroll]for(int i = 1; i < SortBatchSize; i++)
+            RL[GT.x][i] += RL[GT.x][i - 1];
+        
+    GroupMemoryBarrierWithGroupSync();
+    if(Valid && GT.y != (SortBatchSize) && IndexCount > GT.y * Spacing) {
+        int2 TempRL = int2(FirstIndex + Offset + (InputB.FirstIndex - FirstIndex), FirstIndex + Offset) + RL[GT.x][GT.y];
+        for(int i = StartIndex; i < EndIndex; i++) {
+            int Index = TempIndexes[i + NewOffset];
+            bool IsLeft = TempIndexes[Index + LeftOffset] == CurRun;
+            DimensionedIndices[TempRL[IsLeft]++] = Index;
+        }
+    }
+}
+
+
+#pragma kernel SplitKernel
+
+//http://stereopsis.com/radix.html
+inline uint3 FloatToUint(float3 f) {
+    uint3 mask = -((int3) (asuint(f) >> 31)) | 0x80000000;
+    return asuint(f) ^ mask;
+}
+
+inline float3 UintToFloat(uint3 u) {
+    uint3 mask = ((u >> 31) - 1) | 0x80000000;
+    return asfloat(u ^ mask);
+}
+
+inline uint FloatToUint(float f) {
+    uint mask = -((int) (asuint(f) >> 31)) | 0x80000000;
+    return asuint(f) ^ mask;
+}
+
+inline float UintToFloat(uint u) {
+    uint mask = ((u >> 31) - 1) | 0x80000000;
+    return asfloat(u ^ mask);
+}
+
+
+RWStructuredBuffer<uint> DebugBuffer;
+
+groupshared ObjectSplit Split[3][ActiveQue];
+groupshared int2 BinStrides[BinCount][3][ActiveQue];
+groupshared LightBVHData BinAABBs[BinBatchSize][3][ActiveQue];
+groupshared LightBVHData MinAABB[3][ActiveQue];
+groupshared float SAH[BinCount][3][ActiveQue];
+groupshared float Costs[3][ActiveQue];
+groupshared int BestDimension[ActiveQue];
+groupshared bool LonelyBin[3][ActiveQue];
+groupshared uint LonelyBinMasks[4][3][ActiveQue];
+[numthreads(BinBatchSize,3,ActiveQue)]
+void SplitKernel (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, uint3 G : SV_GroupID)
+{
+    bool Valid = !(CurRun != 0 && WorkGroup[2] == 0);
+    if(Valid) {
+        if (GT.x == 0 && GT.y == 0) BestDimension[GT.z] = 0;
+        if(GT.x < 4) LonelyBinMasks[GT.x][GT.y][GT.z] = 0;
+
+        G.x = G.x * ActiveQue + GT.z;//FUCK WE DO SPLIT IT INTO ACTIVEQUE GROUP READS - I CAN OPTIMIZE IT BY DEDICATING DOUBLE THREAD COUNT TO CELLS WHOS ARE TAILS
+        if (GT.x < BinCount) SAH[GT.x][GT.y][GT.z] = 3.40282347E+38;
+        BinAABBs[GT.x][GT.y][GT.z] = InitialAABB;
+        if (GT.x == 0) {
+            LonelyBin[GT.y][GT.z] = true;
+            MinAABB[GT.y][GT.z] = InitialAABB;
+            Split[GT.y][GT.z] = (ObjectSplit)-1;
+            Split[GT.y][GT.z].Dimension = GT.y;
+            Costs[GT.y][GT.z] = 3.40282347E+38;
+            for (int i = 0; i < BinCount; i++) BinStrides[i][GT.y][GT.z] = int2(1, -1) * pow(2, 30);
+        }
+    }
+
+    ReadBackData WorkGroupInput = ReadBackRead[G.x];//these are not faster if put into groupshared...
+    const LightBVHData ParentAABB = Nodes[WorkGroupInput.NodesI];
+    GroupMemoryBarrierWithGroupSync();
+    if(G.x >= WorkGroup[1] + (CurRun == 0 ? 1 : 0) || WorkGroupInput.IndexCount == 1) Valid = false;
+    if (G.x <= WorkGroup[1] + (CurRun == 0 ? 1 : 0) && WorkGroupInput.IndexCount == 1) {
+        Nodes[WorkGroupInput.NodesI] = Triangles[DimensionedIndices[WorkGroupInput.FirstIndex]];
+        Valid = false;
+    }
+    const int Offset = GT.y * PrimCount;
+    
+
+    int Stride = max(ceil((float)(WorkGroupInput.IndexCount) / (float)(BinBatchSize)), 1);
+    int2 ThreadStrides = Stride * int2(GT.x, GT.x+1);
+    int StartIndex = WorkGroupInput.FirstIndex;
+    int EndIndex = WorkGroupInput.FirstIndex + WorkGroupInput.IndexCount;
+
+
+
+    if (Valid) {// / binbatchsize because we broke it into 2 chunks; WE ONLY PROCESS ONE CELL PER GROUP, NOT ACTIVEQUE COUNT CELLS -- NOPE WRONG
+        const float Min = ParentAABB.BBMin[GT.y];
+        const float Diff = rcp(ParentAABB.BBMax[GT.y] - Min) * (float) (BinCount);
+        if(WorkGroupInput.IndexCount > 10) {
+            int RepCount = 0;
+            int PrevMid = -1;
+            bool ValidBin = true;
+            if(GT.x < 32) {
+            while(StartIndex <= EndIndex) {
+                int Mid = StartIndex + (EndIndex - StartIndex) / 2;
+                const int Index = DimensionedIndices[Offset + Mid];
+                float Center = (Triangles[Index].BBMax[GT.y] + Triangles[Index].BBMin[GT.y]) / 2.0f - Min;            
+                int Bin = clamp(floor(Center * Diff), 0, BinCount - 1);
+                if(Bin > (GT.x % 32)) {
+                    EndIndex = Mid-1;
+                } else if(Bin < (GT.x % 32)) {
+                    StartIndex = Mid+1;
+                }
+                if(Bin == (GT.x % 32)) {
+                    PrevMid = Mid;
+                    break;
+                }
+                if(PrevMid == Mid) {
+                    ValidBin = false;
+                    break;
+                }
+                PrevMid = Mid;
+                    // if(GT.y == 0 && GT.z == 0) LayerStridesBuffer[GT.x % 32] = asuint(float4((float)RepCount, (float)Bin,(float)StartIndex, (float)EndIndex));
+            }
+            if(ValidBin && GT.x % BinCount != BinCount - 1) {
+                EndIndex = WorkGroupInput.FirstIndex + WorkGroupInput.IndexCount;
+                StartIndex = PrevMid;
+                int Prev2 = StartIndex;
+                // RepCount = 0;
+                PrevMid = -1;
+                // EndIndex = WorkGroupInput.FirstIndex + WorkGroupInput.IndexCount;
+                while(StartIndex <= EndIndex) {
+                    int Mid = StartIndex + (EndIndex - StartIndex) / 2;
+                    const int Index = DimensionedIndices[Offset + Mid];
+                    float Center = (Triangles[Index].BBMax[GT.y] + Triangles[Index].BBMin[GT.y]) / 2.0f - Min;            
+                    int Bin = clamp(floor(Center * Diff), 0, BinCount - 1);
+                    if(Bin > ((GT.x+1) % 32)) {
+                        EndIndex = Mid-1;
+                    } else if(Bin < ((GT.x+1) % 32)) {
+                        StartIndex = Mid+1;
+                    }
+                    if(Bin == ((GT.x+1) % 32)) {
+                        PrevMid = Mid;
+                        break;
+                    }
+                    if(PrevMid == Mid) {
+                        ValidBin = false;
+                        break;
+                    }
+                    PrevMid = Mid;
+                }
+                // if(GT.x < 32 && GT.y == 0 && GT.z == 0) LayerStridesBuffer[GT.x % 32] = asuint(float4((float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].x, (float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].y, (float)StartIndex, (float)EndIndex));
+                if(ValidBin) {
+                    StartIndex = Prev2-1;
+                    EndIndex = PrevMid+1;
+                    PrevMid = -1;
+                    // RepCount = 0;
+                    while(StartIndex <= EndIndex) {
+                        int Mid = StartIndex + (EndIndex - StartIndex) / 2;
+                        const int Index = DimensionedIndices[Offset + Mid];
+                        const int Index2 = DimensionedIndices[Offset + Mid-1];
+                        float Center = (Triangles[Index].BBMax[GT.y] + Triangles[Index].BBMin[GT.y]) / 2.0f - Min;            
+                        float Center2 = (Triangles[Index2].BBMax[GT.y] + Triangles[Index2].BBMin[GT.y]) / 2.0f - Min;            
+                        int Bin = clamp(floor(Center * Diff), 0, BinCount - 1);
+                        int Bin2 = clamp(floor(Center2 * Diff), 0, BinCount - 1);
+                        // if(GT.x < 32 && GT.y == 0 && GT.z == 0) LayerStridesBuffer[GT.x % 32] = asuint(float4((float)Bin, (float)Bin2, (float)Mid, (float)0));//asuint(float4((float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].x, (float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].y, (float)StartIndex, (float)EndIndex));
+                        if(Bin != Bin2) {
+                            BinStrides[(GT.x % BinCount) + 1][GT.y][GT.z].x = Offset + Mid;
+                            BinStrides[(GT.x % BinCount)][GT.y][GT.z].y = Offset + Mid - 1;
+                            break;
+                        }
+
+
+                        if(Bin == ((GT.x) % 32)) {
+                            StartIndex = Mid+1;
+                        } else {
+                            EndIndex = Mid-1;
+
+                        }
+                        if(PrevMid == Mid) {
+                            ValidBin = false;
+                            break;
+                        }
+                        PrevMid = Mid;
+
+                    }
+                }    
+                   
+                }
+
+
+
+                // for(int i = StartIndex; i <= EndIndex; i++){ 
+                //     const int Index = DimensionedIndices[Offset + i];
+                //     float Center = (Triangles[Index].BBMax[GT.y] + Triangles[Index].BBMin[GT.y]) / 2.0f - Min;            
+                //     int Bin = clamp(floor(Center * Diff), 0, BinCount - 1);
+                //     RepCount++;
+                //     if(Bin == (GT.x % BinCount) + 1) {
+                //         BinStrides[(GT.x % BinCount) + 1][GT.y][GT.z].x = Offset + i;
+                //         BinStrides[(GT.x % BinCount)][GT.y][GT.z].y = Offset + i - 1;
+
+                //         break;
+                //     }
+                // }
+            // if(GT.x < 32 && GT.y == 0 && GT.z == 0) LayerStridesBuffer[GT.x % 32] = asuint(float4((float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].x, (float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].y, (float)RepCount, (float)1));
+            }
+        } else {
+            StartIndex = WorkGroupInput.FirstIndex + ThreadStrides.x;
+            EndIndex = min(WorkGroupInput.FirstIndex + ThreadStrides.y, WorkGroupInput.FirstIndex + (WorkGroupInput.IndexCount));
+            for (int i = StartIndex; i < EndIndex; i++) {
+                const int Index = DimensionedIndices[Offset + i];
+                float Center = (Triangles[Index].BBMax[GT.y] + Triangles[Index].BBMin[GT.y]) / 2.0f - Min;
+                int Bin = clamp(floor(Center * Diff), 0, BinCount - 1);
+                if(BinStrides[Bin][GT.y][GT.z].x > Offset+i) InterlockedMin(BinStrides[Bin][GT.y][GT.z].x, Offset + i);
+                if(BinStrides[Bin][GT.y][GT.z].y < Offset+i) InterlockedMax(BinStrides[Bin][GT.y][GT.z].y, Offset + i);
+                // if(GT.y == 0 && GT.z == 0) InterlockedAdd(LayerStridesBuffer[Bin].w, 1);// = asuint(float4((float)RepCount, (float)Bin,(float)StartIndex, (float)EndIndex));
+    //Would a spinlock end up being more performant here rather than requiring accessing the data twice?
+
+                // [unroll] for(int i3 = 0; i3 < 3; i3++) {//these two lines replace a significant chunk of code, making it only N reads of Triangles instead of 2N, improves build performance massively
+                //     if(Triangles[Index].BBMax[i3] > UintToFloat(BinAABBs[Bin][GT.y][GT.z].BBMax[i3])) InterlockedMax(BinAABBs[Bin][GT.y][GT.z].BBMax[i3], FloatToUint(Triangles[Index].BBMax[i3]));
+                //     if(Triangles[Index].BBMin[i3] < UintToFloat(BinAABBs[Bin][GT.y][GT.z].BBMin[i3])) InterlockedMin(BinAABBs[Bin][GT.y][GT.z].BBMin[i3], FloatToUint(Triangles[Index].BBMin[i3]));
+                // }
+            }
+        }
+    }
+
+    GroupMemoryBarrierWithGroupSync();
+
+    if(WorkGroupInput.IndexCount > 10) {
+        if(GT.x == 31) {
+            [unroll]for(int i = 31; i >= 0; i--) {
+                if(BinStrides[i][GT.y][GT.z].y == -pow(2, 30) && BinStrides[i][GT.y][GT.z].x != pow(2, 30)) {
+                    BinStrides[i][GT.y][GT.z].y = WorkGroupInput.FirstIndex + WorkGroupInput.IndexCount + Offset - 1;
+                    break;
+                }
+            }
+        }
+    // GroupMemoryBarrierWithGroupSync();
+
+
+        if(GT.x < 32) {
+            if(BinStrides[GT.x][GT.y][GT.z].x == pow(2, 30) && BinStrides[GT.x][GT.y][GT.z].y != -pow(2, 30)) {
+                for(int i = GT.x; i >= 0; i--) {
+                    if(BinStrides[i][GT.y][GT.z].y != -pow(2, 30) && BinStrides[i][GT.y][GT.z].x != pow(2, 30)) {
+                        BinStrides[GT.x][GT.y][GT.z].x = BinStrides[i][GT.y][GT.z].y+1;
+                        break;
+                    }
+                }
+            }
+        }
+
+    // GroupMemoryBarrierWithGroupSync();
+
+    // if(WorkGroupInput.IndexCount > 10)
+        if(GT.x == 0) {
+            [unroll]for(int i = 0; i < 32; i++) {
+                if(BinStrides[i][GT.y][GT.z].y != -pow(2, 30) && BinStrides[i][GT.y][GT.z].x == pow(2, 30)) {
+                    BinStrides[i][GT.y][GT.z].x = WorkGroupInput.FirstIndex + Offset;
+                    break;
+                }
+            }
+        }
+    }
+    GroupMemoryBarrierWithGroupSync();
+
+    // if(G.x == 0 && CurRun == 0 && GT.y == 2 && GT.z == 0 && GT.x < 32) {
+    //     DebugBuffer[GT.x] = BinStrides[GT.x][GT.y][GT.z].y;
+    // }
+    // if(GT.x < 32 && GT.y == 0 && GT.z == 0) LayerStridesBuffer[GT.x % 32].xy = asuint(float2((float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].x, (float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].y));
+    LightBVHData TempAABB = InitialAABB;
+    if (Valid) {
+        int TruGTx = (GT.x % BinCount);
+        // int ThreadSubBin = floor((float)TruGTx / (float)BinCount);
+        int ThreadSubBin = floor((float)GT.x / (float)BinCount);
+        /*
+            GT.x 0->31
+
+            Theres GOTTA be a faster way to do this
+            All bins that are empty, their threads just sit IDLE
+
+        */
+        if (BinStrides[TruGTx][GT.y][GT.z].x <= BinStrides[TruGTx][GT.y][GT.z].y) {
+            InterlockedOr(LonelyBinMasks[floor((float)TruGTx / 32.0f)][GT.y][GT.z], 1 << (GT.x % 32));
+            const int2 Index = BinStrides[TruGTx][GT.y][GT.z];
+            int Count = max(Index.y - Index.x+1,1);
+            int Spacing = max(1, ceil((float)Count / (float) QuesPerBin));
+            ThreadStrides = Spacing * int2(ThreadSubBin.x, ThreadSubBin.x+1);
+            StartIndex = Index.x + ThreadStrides.x;
+            EndIndex = min(Index.x + ThreadStrides.y, Index.y+1);
+            for (int i = StartIndex; i < EndIndex; i++)
+                TempAABB = Union(TempAABB, Triangles[DimensionedIndices[i]], 0);
+            BinAABBs[GT.x][GT.y][GT.z] = TempAABB;
+        }
+    }
+    GroupMemoryBarrierWithGroupSync();
+    if(Valid && GT.x < BinCount)
+        [unroll]for (int i = 1; i < QuesPerBin; i++)
+            BinAABBs[GT.x][GT.y][GT.z] = Union(BinAABBs[GT.x][GT.y][GT.z], BinAABBs[GT.x + BinCount * i][GT.y][GT.z], 0);
+
+    GroupMemoryBarrierWithGroupSync();
+
+    if (Valid) {
+        if(GT.x == (BinBatchSize - 1)) {
+            LightBVHData RunningAABB = InitialAABB;//might be optimizable by converting to UintAABB to not require conversions from floattouint, but we still need for surface area...
+            int TriCount = 0;                
+            float3 Diagonal = ParentAABB.BBMax - ParentAABB.BBMin;
+            float Kr = max(Diagonal.x, max(Diagonal.y, Diagonal.z)) / Diagonal[GT.y];
+            [unroll]for (int i = 1; i < BinCount; i++) {
+                if (BinStrides[i - 1][GT.y][GT.z].x <= BinStrides[i - 1][GT.y][GT.z].y) {
+                    RunningAABB = Union(RunningAABB, BinAABBs[i - 1][GT.y][GT.z], 0);
+                    TriCount += max(BinStrides[i - 1][GT.y][GT.z].y - BinStrides[i - 1][GT.y][GT.z].x,1);
+                }
+                SAH[i][GT.y][GT.z] = (TriCount > 0 ? (EvaluateCost(RunningAABB, Kr) * (float) TriCount) : 3.40282347E+38);
+            }
+            RunningAABB = InitialAABB;
+            TempAABB = InitialAABB;
+            TriCount = 0;
+            [unroll]for (int i = BinCount - 1; i > 0; i--) {//just standard binning, directly pulled from how I do it in the full CPU sweep, but suited for sweep
+                if (BinStrides[i][GT.y][GT.z].x <= BinStrides[i][GT.y][GT.z].y) {
+                    RunningAABB = Union(RunningAABB, BinAABBs[i][GT.y][GT.z], 0);
+                    TriCount += max(BinStrides[i][GT.y][GT.z].y - BinStrides[i][GT.y][GT.z].x,1);
+                    float cost = mad(EvaluateCost(RunningAABB, Kr), (float)TriCount, SAH[i][GT.y][GT.z]);
+                    if (cost - Costs[GT.y][GT.z] < 0) {
+                        Costs[GT.y][GT.z] = cost;
+                        Split[GT.y][GT.z].index = BinStrides[i][GT.y][GT.z].x - Offset;
+                        Split[GT.y][GT.z].BinIndex = i;
+                        TempAABB = RunningAABB;
+                    }
+                }
+            }
+            MinAABB[GT.y][GT.z] = TempAABB;
+        } else if(GT.x == (BinBatchSize - 2)) {
+            int FullCount = 0;
+            [unroll]for(int i = 0; i < 4; i++)
+                FullCount += countbits(LonelyBinMasks[i][GT.y][GT.z]);
+            if(FullCount > 1) LonelyBin[GT.y][GT.z] = false;
+        } 
+    }
+    GroupMemoryBarrierWithGroupSync();
+    if (Valid && GT.x < BinCount) {
+        if (GT.x == 0 && GT.y == 0) {
+            BestDimension[GT.z] = 0;
+            float Cost = Costs[0][GT.z];
+            if (Costs[1][GT.z] - Cost < 0) {
+                BestDimension[GT.z] = 1;
+                Cost = Costs[1][GT.z];
+            }
+            if (Costs[2][GT.z] - Cost < 0) BestDimension[GT.z] = 2;
+            // BestDimension[GT.z] = 2;
+            if (LonelyBin[BestDimension[GT.z]][GT.z]) Split[BestDimension[GT.z]][GT.z].index = WorkGroupInput.IndexCount / 2 + WorkGroupInput.FirstIndex;
+        }
+    }
+    GroupMemoryBarrierWithGroupSync();
+    if (Valid) {
+        if (GT.y == BestDimension[GT.z]) {
+            if (GT.x == (BinBatchSize - 1)) {
+                EndIndex = Split[GT.y][GT.z].BinIndex;
+                TempAABB = InitialAABB;
+
+                if (LonelyBin[GT.y][GT.z]) EndIndex = BinCount;
+                
+                for (int i = 0; i < EndIndex; i++)
+                    if (BinStrides[i][GT.y][GT.z].x <= BinStrides[i][GT.y][GT.z].y)
+                        TempAABB = Union(TempAABB, BinAABBs[i][GT.y][GT.z], 0);
+                
+                if (LonelyBin[GT.y][GT.z]) MinAABB[GT.y][GT.z] = TempAABB;
+
+                int LeftIndex;
+                InterlockedAdd(WorkGroup[0], 2, LeftIndex);
+                LeftIndex += WorkGroup[3];
+                
+                Nodes[WorkGroupInput.NodesI].left = LeftIndex;
+                // if(LeftIndex + 1 < LeftOffset) {
+                    Nodes[LeftIndex] = TempAABB;
+                    Nodes[LeftIndex + 1] = MinAABB[GT.y][GT.z];
+                // }
+
+                // if(CurRun == 0) {
+                //     DebugBuffer[0] = Split[GT.y][GT.z].BinIndex;
+                //     DebugBuffer[1] = Split[GT.y][GT.z].index;
+                //     DebugBuffer[2] = GT.y;
+                // }
+                SplitWrite[G.x] = Split[GT.y][GT.z];
+            } else {
+                Stride = ceil(max(1.0f, (float)(Split[BestDimension[GT.z]][GT.z].index - WorkGroupInput.FirstIndex) / (float) (BinBatchSize - 1)));
+                ThreadStrides = Stride * int2(GT.x, GT.x + 1);
+                StartIndex = WorkGroupInput.FirstIndex + ThreadStrides.x;
+                EndIndex = min(WorkGroupInput.FirstIndex + ThreadStrides.y, Split[BestDimension[GT.z]][GT.z].index);
+                for (int i = StartIndex; i < EndIndex; i++)
+                    TempIndexes[DimensionedIndices[Offset + i] + LeftOffset] = CurRun;
+            }
+        } else {
+            int IndexY = 2;
+            if(BestDimension[GT.z] == 2) IndexY = 1;
+            int NewOffset = 0;
+            if (GT.y == IndexY) NewOffset = PrimCount;
+            ThreadStrides = Stride * int2(GT.x, GT.x+1);
+            StartIndex = WorkGroupInput.FirstIndex + ThreadStrides.x;
+            EndIndex = min(WorkGroupInput.FirstIndex + ThreadStrides.y, WorkGroupInput.FirstIndex + (WorkGroupInput.IndexCount));
+            for (int i = StartIndex; i < EndIndex; i++)
+                TempIndexes[i + NewOffset] = DimensionedIndices[i + Offset];
+        }
+    }
+}
+
+
+
+
+
+#pragma kernel InitializeKernel
+//Merge this with the index copy!
+[numthreads(512, 1, 1)]
+void InitializeKernel(uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, uint3 GID : SV_GroupID)
+{
+    if(id.x >= PrimCount) return;
+    Nodes[id.x] = Triangles[id.x];
+    Nodes[id.x + PrimCount] = InitialAABB;
+    TempIndexes[id.x * 3] = -1;
+    TempIndexes[id.x * 3 + 1] = -1;
+    TempIndexes[id.x * 3 + 2] = -1;
+    SplitWrite[id.x * 2] = (ObjectSplit)0;
+    SplitWrite[id.x * 2 + 1] = (ObjectSplit)0;
+    ReadBackWrite[id.x * 2] = (ReadBackData)0;
+    ReadBackWrite2[id.x * 2 + 1] = (ReadBackData)0;
+    if(id.x == 0) {
+        ReadBackWrite[0].IndexCount = PrimCount;
+        ReadBackWrite2[0].IndexCount = PrimCount;
+    }
+
+}
+
+#pragma kernel NodeBufferInitialization
+#define ThreadWorkload (ReductionCount / ReductionBatchSize)
+
+groupshared LightBVHData Node[ReductionCount];
+[numthreads(ReductionCount, 1, 1)] //root node AABB computation
+void NodeBufferInitialization(uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, uint3 GID : SV_GroupID)
+{
+    Node[GT.x] = InitialAABB;
+    GroupMemoryBarrierWithGroupSync();
+    
+    bool Valid = !(id.x * 2 > SetCount);
+    if (Valid) {
+        if (id.x * 2 + 1 == SetCount)  Node[GT.x] = Nodes[id.x * 2];
+        else {
+            Node[GT.x] = Union(Nodes[GT.x * 2], Nodes[id.x * 2 + 1], 0);
+            Nodes[id.x * 2 + 1] = InitialAABB;
+        }
+        Nodes[id.x * 2] = InitialAABB;
+    }
+    
+    GroupMemoryBarrierWithGroupSync();
+    if (GT.x < ReductionBatchSize)
+        for (int i = 1; i < ThreadWorkload; i++)
+            Node[GT.x * ThreadWorkload] = Union(Node[GT.x * ThreadWorkload], Node[GT.x * ThreadWorkload + i], 0);
+    GroupMemoryBarrierWithGroupSync();
+    if (GT.x == 0) {
+        for (int i = 1; i < ReductionBatchSize; i++)
+            Node[0] = Union(Node[0], Node[i * ThreadWorkload], 0);
+        Nodes[GID.x] = Node[0];
+    }
+    Nodes[0].left = 2;
+}
+
+
+#pragma kernel PostProcKernel
+RWStructuredBuffer<LightBVHData> SingularNodeBuffer;
+[numthreads(1, 1, 1)] //root node AABB computation
+void PostProcKernel(uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, uint3 GID : SV_GroupID)
+{
+    // if(id.x > PrimCount) return;
+
+    // if(Nodes[i]
+
+    SingularNodeBuffer[0] = Nodes[0];
+
+}
+
+
+
+#pragma kernel SGTreeKernel
+
+
+float expm1_over_x(float x) {
+    float u = exp(x);
+
+    if (u == 1.0f)
+        return 1.0f;
+
+    float y = u - 1.0f;
+
+    if (abs(x) < 1.0f)
+        return y / log(u);
+
+    return y / x;
+}
+
+float SGIntegral(float sharpness) {
+    return 4.0f * 3.14159f * expm1_over_x(-2.0f * sharpness);
+}
+
+// Estimation of vMF sharpness (i.e., SG sharpness) from the average of directions in R^3.
+// [Banerjee et al. 2005 "Clustering on the Unit Hypersphere using von Mises-Fisher Distributions"]
+float VMFAxisLengthToSharpness(float axisLength) {
+    return axisLength * (3.0f - axisLength * axisLength) / (1.0f - axisLength * axisLength);
+}
+
+// Inverse of VMFAxisLengthToSharpness.
+float VMFSharpnessToAxisLength(float sharpness) {
+    // Solve x^3 - sx^2 - 3x + s = 0, where s = sharpness.
+    // For x in [0, 1] and s in [0, infty), this equation has only a single solution.
+    // [Xu and Wang 2015 "Realtime Rendering Glossy to Glossy Reflections in Screen Space"]
+    // We solve this cubic equation in a numerically stable manner.
+    // [Peters, C. 2016 "How to solve a cubic equation, revisited" https://momentsingraphics.de/CubicRoots.html]
+    float a = sharpness / 3.0f;
+    float b = a * a * a;
+    float c = sqrt(1.0f + 3.0f * (a * a) * (1.0f + a * a));
+    float theta = atan2(c, b) / 3.0f;
+    float d = -2.0f * sin(3.14159f / 6.0f - theta); // = sin(theta) * sqrt(3) - cos(theta).
+    return (sharpness > 33554432.0f) ? 1.0f : sqrt(1.0f + a * a) * d + a;
+}
+
+
+RWStructuredBuffer<GaussianTreeNode> SGNodesBuffer;
+StructuredBuffer<LightBVHData> NodesRead;
+// RWStructuredBuffer<int4> LayerStridesBufferRead;
+[numthreads(256, 1, 1)] //root node AABB computation
+void SGTreeKernel(uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, uint3 GID : SV_GroupID)
+{
+    int4 CurStrideData = LayerStridesBuffer[CurRun];
+    if(id.x > CurStrideData.z || CurStrideData.y < 0) return;
+    id.x += CurStrideData.x;
+    int Left = NodesRead[id.x].left;
+    GaussianTreeNode CurTri;
+    if(Left < 0) {
+        TransferData Transf = Transfers[InputAABBBuffer[-(Left+1)].MeshOffset];
+        float3 Pos0 = mul(Transf.Transf2, float4(InputAABBBuffer[-(Left+1)].pos0,1));
+        float3 Pos1 = mul(Transf.Transf2, float4(InputAABBBuffer[-(Left+1)].pos0 + InputAABBBuffer[-(Left+1)].posedge1,1));
+        float3 Pos2 = mul(Transf.Transf2, float4(InputAABBBuffer[-(Left+1)].pos0 + InputAABBBuffer[-(Left+1)].posedge2,1));
+
+
+        float area = AreaOfTriangle(Pos0, Pos1, Pos2);
+        CurTri.intensity = InputAABBBuffer[-(Left+1)].SourceEnergy * area;
+
+
+        CurTri.axis = 0.5f * (normalize(cross(normalize(Pos1 - Pos0), normalize(Pos2 - Pos0))));
+        CurTri.position = (Pos0 + Pos1 + Pos2) / 3.0f;
+        CurTri.radius = max(distance(CurTri.position, Pos1), max(distance(CurTri.position, Pos2), distance(CurTri.position, Pos0)));
+        float3 posedge1 = Pos1 - Pos0;
+        float3 posedge2 = Pos2 - Pos0;
+        CurTri.variance = (dot(posedge1, posedge1) + dot(posedge2, posedge2) - dot(posedge1, posedge2)) / 18.0f;
+        float AxisLength = length(CurTri.axis);
+        if(AxisLength == 0) CurTri.axis = float3(0,1,0);
+        else CurTri.axis /= AxisLength;
+        CurTri.sharpness = min(VMFAxisLengthToSharpness(saturate(AxisLength)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
+    } else {
+        GaussianTreeNode LeftNode = SGNodesBuffer[Left];    
+        GaussianTreeNode RightNode = SGNodesBuffer[Left + 1];
+
+        float phi_left = LeftNode.intensity;    
+        float phi_right = RightNode.intensity;    
+        float w_left = phi_left / (phi_left + phi_right);
+        float w_right = phi_right / (phi_left + phi_right);
+        
+        float3 V = w_left * LeftNode.axis * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * RightNode.axis * VMFSharpnessToAxisLength(RightNode.sharpness);
+        // V = w_left * LeftNode.axis + w_right * RightNode.axis;//may be wrong, paper uses BAR_V(BAR_axis here), not just normalized V/axis
+
+        float3 mean = w_left * LeftNode.position + w_right * RightNode.position;
+        float variance = w_left * LeftNode.variance + w_right * RightNode.variance + w_left * w_right * dot(LeftNode.position - RightNode.position, LeftNode.position - RightNode.position);
+
+        float intensity = LeftNode.intensity + RightNode.intensity;
+        float radius = max(distance(mean, LeftNode.position) + LeftNode.radius, distance(mean, RightNode.position) + RightNode.radius);
+
+        float AxisLength = length(V);
+        if(AxisLength == 0) V = float3(0,1,0);
+        else V /= AxisLength;
+        CurTri.sharpness = min(VMFAxisLengthToSharpness(saturate(AxisLength)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
+
+        CurTri.axis = V;
+        CurTri.position = mean;
+        CurTri.variance = variance;
+        CurTri.intensity = intensity;
+        CurTri.radius = radius;
+    }
+    CurTri.left = Left;
+    SGNodesBuffer[id.x] = CurTri;
+}
+
+#pragma kernel Transfer2
+
+[numthreads(1,1,1)]
+void Transfer2 (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID)
+{
+    int Temp = ceil((float)(LayerStridesBuffer[CurRun].z+1) / 256.0f);
+    DispatchSize[0] = uint4(LayerStridesBuffer[CurRun].y < 0 ? 1 : Temp, 1, 1, 1);
+}

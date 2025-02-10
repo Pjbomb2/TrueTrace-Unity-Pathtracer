@@ -437,7 +437,7 @@ inline LightBVHData Union(const LightBVHData A, const LightBVHData B, int Left) 
     float4 Cone = DoCone(float4(i_octahedral_32(A.w), GetCosThetaO(A.cosTheta_oe)), float4(i_octahedral_32(B.w), GetCosThetaO(B.cosTheta_oe)));
     float cosTheta_o = Cone.w;
     float cosTheta_e = min(GetCosThetaE(A.cosTheta_oe), GetCosThetaE(B.cosTheta_oe));
-    LightBVHData Dat = {max(A.BBMax, B.BBMax), min(A.BBMin, B.BBMin), octahedral_32(Cone.xyz), A.phi + B.phi, CompCosTheta(cosTheta_o, cosTheta_e), Left};
+    LightBVHData Dat = {max(A.BBMax, B.BBMax), min(A.BBMin, B.BBMin), octahedral_32(Cone.xyz), A.phi + B.phi, CompCosTheta(cosTheta_o, cosTheta_e), Left, A.LightCount + B.LightCount};
     return Dat;
 }
 

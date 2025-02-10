@@ -404,8 +404,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
 
     float4 PrevGBuffer = PrevScreenSpaceInfo[prevIndex];
 
-    float ShadowGuidanceWeight = !plane_distance_disocclusion_check(PrimaryHitPosition, LoadSurfaceInfoPrev(prevIndex), GeomNorm);// abs(ReservoirCenterOcclusion - ReservoirSampleOcclusion) / max(ReservoirCenterOcclusion, ReservoirSampleOcclusion) < 0.1f;
-    // float ShadowGuidanceWeight = exp(-abs(PrevGBuffer.z - GBuffer.z)) > 0.9f;
+    float ShadowGuidanceWeight = exp(-abs(PrevGBuffer.z - GBuffer.z)) > 0.9f;
 
     ShadowGuidanceWeight *= max(dot(SurfNorm, i_octahedral_32(asuint(PrevGBuffer.y))), 0);
 
@@ -669,7 +668,6 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
             float NormDiff = max(dot(SurfNorm, SampleSurfNorm), 0);
             if(dot(GeomNorm, SampleGeomNorm) < 0.9f) continue;
             float ShadowGuidanceWeight = !plane_distance_disocclusion_check(PrimaryHitPosition, LoadSurfaceInfo(CellTapCoord), GeomNorm);// abs(ReservoirCenterOcclusion - ReservoirSampleOcclusion) / max(ReservoirCenterOcclusion, ReservoirSampleOcclusion) < 0.1f;
-            ShadowGuidanceWeight *= (ReservoirSampleOcclusion > 0 && ReservoirCenterOcclusion > 0);
             if(ShadowGuidanceWeight == 0) continue;
         #else
             float NormDiff = max(dot(SurfNorm, SampleSurfNorm), 0);
@@ -876,7 +874,6 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
             float NormDiff = max(dot(SurfNorm, SampleSurfNorm), 0);
             if(dot(GeomNorm, SampleGeomNorm) < 0.9f) continue;
             float ShadowGuidanceWeight = !plane_distance_disocclusion_check(PrimaryHitPosition, LoadSurfaceInfo(CellTapCoord), GeomNorm);// abs(ReservoirCenterOcclusion - ReservoirSampleOcclusion) / max(ReservoirCenterOcclusion, ReservoirSampleOcclusion) < 0.1f;
-            ShadowGuidanceWeight *= (ReservoirSampleOcclusion > 0 && ReservoirCenterOcclusion > 0);
             if(ShadowGuidanceWeight == 0) continue;
         #else
             float NormDiff = max(dot(SurfNorm, SampleSurfNorm), 0);

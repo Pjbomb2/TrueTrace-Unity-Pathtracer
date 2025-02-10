@@ -424,6 +424,7 @@ namespace TrueTrace {
                 CompactLightBVHData TempNode = new CompactLightBVHData();
                 TempNode.BBMax = nodes2[i].aabb.b.BBMax;
                 TempNode.BBMin = nodes2[i].aabb.b.BBMin;
+                TempNode.LightCount = nodes2[i].aabb.LightCount;
                 TempNode.w = CommonFunctions.PackOctahedral(nodes2[i].aabb.w);
                 TempNode.phi = nodes2[i].aabb.phi;
                 TempNode.cosTheta_oe = ((uint)Mathf.Floor(32767.0f * ((nodes2[i].aabb.cosTheta_o + 1.0f) / 2.0f))) | ((uint)Mathf.Floor(32767.0f * ((nodes2[i].aabb.cosTheta_e + 1.0f) / 2.0f)) << 16);

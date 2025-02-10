@@ -22,8 +22,6 @@ namespace TrueTrace {
             public int shadow_rays;
             public int heightmap_rays;
             public int Heightmap_shadow_rays;
-            public int TracedRays;
-            public int TracedRaysShadow;
         }
 
         public int CastRay(Camera _camera, int SourceWidth, int SourceHeight) {
@@ -32,7 +30,7 @@ namespace TrueTrace {
             BufferSizeData[] BufferSizes = new BufferSizeData[1];
             BufferSizes[0].tracerays = 1;
 
-            BufferSizeBuffer = new ComputeBuffer(1, 24);
+            BufferSizeBuffer = new ComputeBuffer(1, 16);
             BufferSizeBuffer.SetData(BufferSizes);
 
             CommonFunctions.CreateDynamicBuffer(ref GlobalRayBuffer, 1, 48);

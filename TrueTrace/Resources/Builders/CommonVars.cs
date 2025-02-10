@@ -341,6 +341,7 @@ namespace CommonVars
         public Vector3 posedge1;
         public Vector3 posedge2;
         public uint TriTarget;
+        public uint MeshOffset;
         public float SourceEnergy;
     }
 
@@ -399,14 +400,16 @@ namespace CommonVars
         public float phi;
         public uint cosTheta_oe;
         public int left;
+        public int LightCount;
 
-        public CompactLightBVHData(Vector3 BBMax, Vector3 BBMin, uint W, float Phi, uint cosTheta_oe, int left) {
+        public CompactLightBVHData(Vector3 BBMax, Vector3 BBMin, uint W, float Phi, uint cosTheta_oe, int left, int lc) {
             this.BBMax = BBMax;
             this.BBMin = BBMin;
             w = W;
             phi = Phi;
             this.cosTheta_oe = cosTheta_oe;
             this.left = left;
+            LightCount = lc;
         }
     };
 
@@ -616,7 +619,6 @@ namespace CommonVars
         public uint VertColC;
 
         public uint MatDat;
-        public uint IsEmissive;
     }
 
 
@@ -649,8 +651,6 @@ namespace CommonVars
         public uint VertColA;
         public uint VertColB;
         public uint VertColC;
-        
-        public uint IsEmissive;
     }
 
     [System.Serializable]

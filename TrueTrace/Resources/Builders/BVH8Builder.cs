@@ -344,6 +344,222 @@ namespace TrueTrace {
             return 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z)); 
         }
 
+        // int[] TriCounts;
+        // AABB tempAABB = new AABB();
+        // float surface_area2(ref BVHNode8Data Node, int i2) {
+        //     Vector3 e = Vector3.zero;
+        //     for(int i = 0; i < 3; i++) e[i] = (float)(System.Convert.ToSingle((int)(System.Convert.ToUInt32(Node.e[i]) << 23)));
+        //     float maxFactorX = Node.quantized_max_x[i2] * e.x;
+        //     float maxFactorY = Node.quantized_max_y[i2] * e.y;
+        //     float maxFactorZ = Node.quantized_max_z[i2] * e.z;
+        //     float minFactorX = Node.quantized_min_x[i2] * e.x;
+        //     float minFactorY = Node.quantized_min_y[i2] * e.y;
+        //     float minFactorZ = Node.quantized_min_z[i2] * e.z;
+
+        //     tempAABB.Create(new Vector3(maxFactorX, maxFactorY, maxFactorZ) + Node.p, new Vector3(minFactorX, minFactorY, minFactorZ) + Node.p);
+        //     Vector3 sizes = tempAABB.BBMax - tempAABB.BBMin;
+        //     return 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z));  
+        // }
+
+        // float surface_area3(ref BVHNode8Data Node) {
+        //     Vector3 e = Vector3.zero;
+        //     for(int i = 0; i < 3; i++) e[i] = (float)(System.Convert.ToSingle((int)(System.Convert.ToUInt32(Node.e[i]) << 23)));
+        //     float TotSurfArea = 0;
+        //     for(int i = 0; i < 3; i++) {
+        //         float maxFactorX = Node.quantized_max_x[i] * e.x;
+        //         float maxFactorY = Node.quantized_max_y[i] * e.y;
+        //         float maxFactorZ = Node.quantized_max_z[i] * e.z;
+        //         float minFactorX = Node.quantized_min_x[i] * e.x;
+        //         float minFactorY = Node.quantized_min_y[i] * e.y;
+        //         float minFactorZ = Node.quantized_min_z[i] * e.z;
+
+        //         tempAABB.Create(new Vector3(maxFactorX, maxFactorY, maxFactorZ) + Node.p, new Vector3(minFactorX, minFactorY, minFactorZ) + Node.p);
+        //         Vector3 sizes = tempAABB.BBMax - tempAABB.BBMin;
+        //         TotSurfArea += 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z));  
+        //     }
+        //     return TotSurfArea;
+        // }
+
+        // float SAHCost(ref BVHNode8Data[] Nodes, uint nodeIdx = 0 )
+        // {
+        //     // Determine the SAH cost of the tree. This provides an indication
+        //     // of the quality of the BVH: Lower is better.
+        //     BVHNode8Data n = Nodes[nodeIdx];
+        //     // if (n.isLeaf()) return 2.0f * surface_area2(ref n.aabb) * GetTriCount(ref Nodes, nodeIdx);
+        //     float cost = 0;
+        //     for(int i = 0; i < 8; i++) {
+        //         if ((n.meta[i] & 0b11111) < 24) {
+        //             cost += 2.0f * surface_area2(ref n, i) * 3.0f;
+        //         } else {
+        //             int child_offset = (byte)n.meta[i] & 0b11111;
+        //             int child_index = (int)n.base_index_child + child_offset - 24;
+        //             cost += 3.0f * surface_area2(ref n, i) + SAHCost(ref Nodes, (uint)child_index);
+        //         }
+        //     }
+        //     return nodeIdx == 0 ? (cost / surface_area3(ref n)) : cost;
+        // }
+
+        // int GetTriCount(ref BVHNode8Data[] Nodes, uint Index) {
+        //     int TotalTriCount = 0;
+        //     BVHNode8Data node = Nodes[Index];
+        //     for(int i = 0; i < 8; i++) {
+        //         if ((node.meta[i] & 0b11111) < 24) {
+        //             TotalTriCount += 3;//GetTriCount(ref Nodes, NodePair.Count - 1, CurrentNode, NextNode, -1, true, CurRecur + 1);
+        //         } else {
+        //             int child_offset = (byte)node.meta[i] & 0b11111;
+        //             int child_index = (int)node.base_index_child + child_offset - 24;
+        //             TotalTriCount += GetTriCount(ref Nodes, child_index);//DocumentNodes(NodePair.Count - 1, CurrentNode, NextNode, child_index, false, CurRecur + 1);
+        //         }
+        //     }
+        //     return TotalTriCount;
+        //     // if(verbose[Index].count == 1) return 1;
+        //     // else if(verbose[Index].left == 0) return 0;
+        //     // else return GetTriCount(ref verbose, verbose[Index].left) + GetTriCount(ref verbose, verbose[Index].right);
+        // }
+
+public struct MBVHNode
+    {
+        // 4-wide (aka 'shallow') BVH layout.
+        public Vector3 aabbMin;
+        public uint firstTri;
+        public Vector3 aabbMax;
+        public uint triCount;
+        unsafe public fixed uint child[8];
+        public uint childCount;
+        unsafe public fixed uint dummy[((30 - 8) & 3) + 1]; // dummies are for alignment.
+        public bool isLeaf() { return triCount > 0; }
+    };
+
+
+// unsafe void BVH8_CWBVH()
+// {
+//     MBVHNode*[] mbvhNode = new MBVHNode*[BVH8NodesArraySecondary.Length];
+//     // uint spaceNeeded = bvh8.triCount * 2 * 5; // CWBVH nodes use 80 bytes each.
+//     // if (spaceNeeded > allocatedBlocks)
+//     // {
+//         // allocatedBlocks = spaceNeeded;
+//     // }
+//     MBVHNode*[] stackNodePtr = new MBVHNode*[256];
+//     uint[] stackNodeAddr = new uint[256];
+//     uint stackPtr = 1;
+//     uint nodeDataPtr = 5;
+//     uint cwbvhnode_count = 0;
+//     stackNodePtr[0] = mbvhNode[0];
+//      stackNodeAddr[0] = 0;
+//     // start conversion
+//     while (stackPtr > 0)
+//     {
+//         MBVHNode* orig = stackNodePtr[--stackPtr];
+//         uint currentNodeAddr = stackNodeAddr[stackPtr];
+//         Vector3 nodeLo = orig->aabbMin, nodeHi = orig->aabbMax;
+//         // greedy child node ordering
+//         Vector3 nodeCentroid = (nodeLo + nodeHi) * 0.5f;
+//         float[,] cost = new float[8,8];
+//         int[] assignment = new int[8];
+//         bool[] isSlotEmpty = new bool[8];
+//         for (int s = 0; s < 8; s++)
+//         {
+//             isSlotEmpty[s] = true;
+//             assignment[s] = -1;
+//             Vector3 ds = new Vector3(
+//                 (((s >> 2) & 1) == 1) ? -1.0f : 1.0f,
+//                 (((s >> 1) & 1) == 1) ? -1.0f : 1.0f,
+//                 (((s >> 0) & 1) == 1) ? -1.0f : 1.0f
+//             );
+//             for (int i = 0; i < 8; i++) if (orig->child[i] == 0) cost[s,i] = 1e30f; else
+//             {
+//                 MBVHNode* child = mbvhNode[orig->child[i]];
+//                 // if (child->triCount > 3 /* must be leaf */) SplitBVHLeaf( orig->child[i], 3 );
+//                 Vector3 childCentroid = (child->aabbMin + child->aabbMax) * 0.5f;
+//                 cost[s,i] = Vector3.Dot( childCentroid - nodeCentroid, ds );
+//             }
+//         }
+//         while (true)
+//         {
+//             float minCost = 1e30f;
+//             int minEntryx = -1, minEntryy = -1;
+//             for (int s = 0; s < 8; s++) for (int i = 0; i < 8; i++)
+//                 if (assignment[i] == -1 && isSlotEmpty[s] && cost[s,i] < minCost) {
+//                     minCost = cost[s,i];
+//                     minEntryx = s;
+//                     minEntryy = i;
+//                 }
+//             if (minEntryx == -1 && minEntryy == -1) break;
+//             isSlotEmpty[minEntryx] = false;
+//             assignment[minEntryy] = minEntryx;
+//         }
+//         for (int i = 0; i < 8; i++) if (assignment[i] == -1) for (int s = 0; s < 8; s++) if (isSlotEmpty[s])
+//         {
+//             isSlotEmpty[s] = false;
+//             assignment[i] = s;
+//             break;
+//         }
+//         MBVHNode oldNode = *orig;
+//         for (int i = 0; i < 8; i++) orig->child[assignment[i]] = oldNode.child[i];
+//         // calculate quantization parameters for each axis
+//         int ex = (int)((sbyte)Mathf.Ceil( Mathf.Log( (nodeHi.x - nodeLo.x) / 255.0f, 2 ) ));
+//         int ey = (int)((sbyte)Mathf.Ceil( Mathf.Log( (nodeHi.y - nodeLo.y) / 255.0f, 2 ) ));
+//         int ez = (int)((sbyte)Mathf.Ceil( Mathf.Log( (nodeHi.z - nodeLo.z) / 255.0f, 2 ) ));
+//         // encode output
+//         int internalChildCount = 0, leafChildTriCount = 0, childBaseIndex = 0, triangleBaseIndex = 0;
+//         byte imask = 0;
+//         for (int i = 0; i < 8; i++)
+//         {
+//             if (orig->child[i] == 0) continue;
+//             MBVHNode* child = mbvhNode[orig->child[i]];
+//             int qlox = (int)Mathf.Floor( (child->aabbMin.x - nodeLo.x) / Mathf.Pow( 2, (float)ex ) );
+//             int qloy = (int)Mathf.Floor( (child->aabbMin.y - nodeLo.y) / Mathf.Pow( 2, (float)ey ) );
+//             int qloz = (int)Mathf.Floor( (child->aabbMin.z - nodeLo.z) / Mathf.Pow( 2, (float)ez ) );
+//             int qhix = (int)Mathf.Ceil( (child->aabbMax.x - nodeLo.x) / Mathf.Pow( 2, (float)ex ) );
+//             int qhiy = (int)Mathf.Ceil( (child->aabbMax.y - nodeLo.y) / Mathf.Pow( 2, (float)ey ) );
+//             int qhiz = (int)Mathf.Ceil( (child->aabbMax.z - nodeLo.z) / Mathf.Pow( 2, (float)ez ) );
+//             BVH8Nodes[currentNodeAddr].quantized_min_x[i] = (byte)qlox; BVH8Nodes[currentNodeAddr].quantized_max_x[i] = (byte)qhix;
+//             BVH8Nodes[currentNodeAddr].quantized_min_y[i] = (byte)qloy; BVH8Nodes[currentNodeAddr].quantized_max_y[i] = (byte)qhiy;
+//             BVH8Nodes[currentNodeAddr].quantized_min_z[i] = (byte)qloz; BVH8Nodes[currentNodeAddr].quantized_max_z[i] = (byte)qhiz;
+//             if (!child->isLeaf())
+//             {
+//                 // interior node, set params and push onto stack
+//                 uint childNodeAddr = nodeDataPtr;
+//                 if (internalChildCount++ == 0) childBaseIndex = (int)childNodeAddr / 5;
+//                 nodeDataPtr += 5; imask |= (byte)(1 << i);
+//                 // set the meta field - This calculation assumes children are stored contiguously.
+//                 BVH8Nodes[currentNodeAddr].meta[i] = (byte)((1 << 5) | (24 + (byte)i)); // I don't see how this accounts for empty children?
+//                 stackNodePtr[stackPtr] = child; stackNodeAddr[stackPtr++] = childNodeAddr; // counted in float4s
+//                 internalChildCount++;
+//                 continue;
+//             }
+//             // leaf node
+//             uint tcount = (uint)Mathf.Min( child->triCount, 3u ); // TODO: ensure that's the case; clamping for now.
+//             if (leafChildTriCount == 0) triangleBaseIndex = (int)cwbvhnode_count;
+//             int unaryEncodedTriCount = tcount == 1 ? 0b001 : tcount == 2 ? 0b011 : 0b111;
+//             // set the meta field - This calculation assumes children are stored contiguously.
+//             BVH8Nodes[currentNodeAddr].meta[i] = (byte)((unaryEncodedTriCount << 5) | leafChildTriCount);
+//             leafChildTriCount += (int)tcount;
+//             for (uint j = 0; j < tcount; j++)
+//             {
+//                 int primitiveIndex = -(nodes[child->firstTri + j].left+1);
+
+//                 // bvhvec4 t = bvh8.bvh.verts[primitiveIndex * 3 + 0];
+//                 // nodes[cwbvhnode_count + 0] = bvh8.bvh.verts[primitiveIndex * 3 + 2] - t;
+//                 // nodes[cwbvhnode_count + 1] = bvh8.bvh.verts[primitiveIndex * 3 + 1] - t;
+//                 cwbvh_indices[cwbvhnode_count] = primitiveIndex;
+//                 // t.w = *(float*)&primitiveIndex;
+//                 // nodes[cwbvhnode_count + 2] = t;
+//                 cwbvhnode_count += 1;
+//             }
+//         }
+//         // byte[] exyzAndimask = { *(byte*)&ex, *(byte*)&ey, *(byte*)&ez, imask };
+//         BVH8Nodes[currentNodeAddr].e[0] = (uint)ex;// = bvhvec4( nodeLo, *(float*)&exyzAndimask );
+//         BVH8Nodes[currentNodeAddr].e[1] = (uint)ey;// = bvhvec4( nodeLo, *(float*)&exyzAndimask );
+//         BVH8Nodes[currentNodeAddr].e[2] = (uint)ez;// = bvhvec4( nodeLo, *(float*)&exyzAndimask );
+//         BVH8Nodes[currentNodeAddr].imask = (uint)imask;// = bvhvec4( nodeLo, *(float*)&exyzAndimask );
+//         BVH8Nodes[currentNodeAddr].base_index_child = (uint)childBaseIndex;
+//         BVH8Nodes[currentNodeAddr].base_index_triangle = (uint)triangleBaseIndex;
+//     }
+//     // usedBlocks = nodeDataPtr;
+// }
+
+
 
 
         public BVH8Builder() {}//null constructor

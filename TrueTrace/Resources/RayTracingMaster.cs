@@ -105,10 +105,7 @@ namespace TrueTrace {
         private RenderTexture _FinalTex;
         private RenderTexture _RandomNums;
         private RenderTexture _RandomNumsB;
-        private RenderTexture _PrimaryTriangleInfoA;
-        private RenderTexture _PrimaryTriangleInfoB;
-
-        // public RenderTexture TTMotionVectors;
+        private RenderTexture _PrimaryTriangleInfo;
 
         private RenderTexture GIReservoirA;
         private RenderTexture GIReservoirB;
@@ -187,7 +184,9 @@ namespace TrueTrace {
 
         [HideInInspector] public bool DoPanorama = false;
         [HideInInspector] public bool DoChainedImages = false;
-
+        // #if !LoadTTSettingsFromResources
+        //     [HideInInspector] 
+        // #endif
         [SerializeField] public TTSettings LocalTTSettings;
 
         public static bool SceneIsRunning = false;
@@ -195,7 +194,7 @@ namespace TrueTrace {
         [HideInInspector] public Texture SkyboxTexture;
         private bool MeshOrderChanged = false;
 
-        [HideInInspector] public int MainDirectionalLight = -1;
+
         [HideInInspector] public int AtmoNumLayers = 4;
         private float PrevResFactor;
         private int GenKernel;
@@ -213,7 +212,6 @@ namespace TrueTrace {
         private int TTtoOIDNKernel;
         private int OIDNtoTTKernel;
         private int TTtoOIDNKernelPanorama;
-        // private int MVKernel;
         #if !DisableRadianceCache
             private int ResolveKernel;
             private int CompactKernel;
@@ -312,7 +310,6 @@ namespace TrueTrace {
             TTtoOIDNKernel = ShadingShader.FindKernel("TTtoOIDNKernel");
             OIDNtoTTKernel = ShadingShader.FindKernel("OIDNtoTTKernel");
             TTtoOIDNKernelPanorama = ShadingShader.FindKernel("TTtoOIDNKernelPanorama");
-            // MVKernel = ShadingShader.FindKernel("MVKernel");
             #if !DisableRadianceCache
                 ResolveKernel = GenerateShader.FindKernel("CacheResolve");
                 CompactKernel = GenerateShader.FindKernel("CacheCompact");
@@ -449,8 +446,7 @@ namespace TrueTrace {
             GIWorldPosA.ReleaseSafe();
             GIWorldPosB.ReleaseSafe();
             GIWorldPosC.ReleaseSafe();
-            _PrimaryTriangleInfoA.ReleaseSafe();
-            _PrimaryTriangleInfoB.ReleaseSafe();
+            _PrimaryTriangleInfo.ReleaseSafe();
             ScreenSpaceInfo.ReleaseSafe();
             ScreenSpaceInfoPrev.ReleaseSafe();
             GradientsA.ReleaseSafe();
@@ -674,9 +670,7 @@ namespace TrueTrace {
             SetFloat("OIDNBlendRatio", LocalTTSettings.OIDNBlendRatio, cmd);
             SetFloat("FogDensity", LocalTTSettings.FogDensity, cmd);
             SetFloat("ScaleHeight", LocalTTSettings.FogHeight, cmd);
-            SetFloat("OrthoSize", _camera.orthographicSize, cmd);
 
-            SetInt("MainDirectionalLight", MainDirectionalLight, cmd);
             SetInt("NonInstanceCount", Assets.NonInstanceCount, cmd);
             SetInt("AlbedoAtlasSize", Assets.AlbedoAtlasSize, cmd);
             SetInt("LightMeshCount", Assets.LightMeshCount, cmd);
@@ -697,7 +691,6 @@ namespace TrueTrace {
             SetInt("UpscalerMethod", LocalTTSettings.UpscalerMethod, cmd);
             SetInt("ReSTIRGIUpdateRate", LocalTTSettings.UseReSTIRGI ? LocalTTSettings.ReSTIRGIUpdateRate : 0, cmd);
 
-            SetBool("IsOrtho", _camera.orthographic);
             SetBool("IsFocusing", IsFocusing);
             SetBool("DoPanorama", DoPanorama);
             SetBool("ClayMode", LocalTTSettings.ClayMode);
@@ -728,7 +721,9 @@ namespace TrueTrace {
             ReSTIRGI.SetTextureFromGlobal(ReSTIRGIKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             ReSTIRGI.SetTextureFromGlobal(ReSTIRGISpatialKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             ShadingShader.SetTextureFromGlobal(ShadeKernel, "MotionVectors", "_CameraMotionVectorsTexture");
-            
+
+            ShadingShader.SetTextureFromGlobal(FinalizeKernel, "DiffuseGBuffer", "_CameraGBufferTexture0");
+            ShadingShader.SetTextureFromGlobal(FinalizeKernel, "SpecularGBuffer", "_CameraGBufferTexture1");
 
 
             if (SkyboxTexture == null) SkyboxTexture = new Texture2D(1,1, TextureFormat.RGBA32, false);
@@ -774,12 +769,6 @@ namespace TrueTrace {
             }
             SetVector("HDRIParams", HDRIParams, cmd);
 
-            if(!_camera.orthographic) {
-                ShadingShader.SetTextureFromGlobal(FinalizeKernel, "DiffuseGBuffer", "_CameraGBufferTexture0");
-                ShadingShader.SetTextureFromGlobal(FinalizeKernel, "SpecularGBuffer", "_CameraGBufferTexture1");
-            } else {
-                
-            }
 
 
             GenerateShader.SetTexture(GenKernel, "RandomNums", (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB);
@@ -790,7 +779,7 @@ namespace TrueTrace {
             AssetManager.Assets.SetMeshTraceBuffers(IntersectionShader, TraceKernel);
             IntersectionShader.SetComputeBuffer(TraceKernel, "GlobalRays", _RayBuffer);
             IntersectionShader.SetComputeBuffer(TraceKernel, "GlobalColors", LightingBuffer);
-            IntersectionShader.SetTexture(TraceKernel, "_PrimaryTriangleInfo", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            IntersectionShader.SetTexture(TraceKernel, "_PrimaryTriangleInfo", _PrimaryTriangleInfo);
 
 
             AssetManager.Assets.SetMeshTraceBuffers(IntersectionShader, ShadowKernel);
@@ -802,7 +791,7 @@ namespace TrueTrace {
 
             AssetManager.Assets.SetHeightmapTraceBuffers(IntersectionShader, HeightmapKernel);
             IntersectionShader.SetComputeBuffer(HeightmapKernel, "GlobalRays", _RayBuffer);
-            IntersectionShader.SetTexture(HeightmapKernel, "_PrimaryTriangleInfo", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            IntersectionShader.SetTexture(HeightmapKernel, "_PrimaryTriangleInfo", _PrimaryTriangleInfo);
 
             AssetManager.Assets.SetHeightmapTraceBuffers(IntersectionShader, HeightmapShadowKernel);
             IntersectionShader.SetComputeBuffer(HeightmapShadowKernel, "GlobalColors", LightingBuffer);
@@ -861,12 +850,6 @@ namespace TrueTrace {
 
             ShadingShader.SetBuffer(FinalizeKernel, "GlobalColors", LightingBuffer);
             ShadingShader.SetTexture(FinalizeKernel, "Result", _target);
-            
-
-            // AssetManager.Assets.SetMeshTraceBuffers(ShadingShader, MVKernel);
-            // ShadingShader.SetTexture(MVKernel, "PrimaryTriData", FlipFrame ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
-            // ShadingShader.SetTexture(MVKernel, "PrimaryTriDataPrev", !FlipFrame ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
-            // ShadingShader.SetTexture(MVKernel, "Result", _target);
 
             #if UseOIDN
                 ShadingShader.SetBuffer(TTtoOIDNKernel, "AlbedoBuffer", AlbedoBuffer);
@@ -897,8 +880,7 @@ namespace TrueTrace {
             ReSTIRGI.SetTexture(ReSTIRGIKernel, "PrevScreenSpaceInfo", FlipFrame ? ScreenSpaceInfoPrev : ScreenSpaceInfo);
             ReSTIRGI.SetTexture(ReSTIRGIKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
             ReSTIRGI.SetTexture(ReSTIRGIKernel, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
-            ReSTIRGI.SetTexture(ReSTIRGIKernel, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
-            ReSTIRGI.SetTexture(ReSTIRGIKernel, "PrimaryTriDataPrev", (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            ReSTIRGI.SetTexture(ReSTIRGIKernel, "PrimaryTriData", _PrimaryTriangleInfo);
             ReSTIRGI.SetComputeBuffer(ReSTIRGIKernel, "GlobalColors", LightingBuffer);
             ReSTIRGI.SetTexture(ReSTIRGIKernel, "Gradient", GradientsA);
             ReSTIRGI.SetTexture(ReSTIRGIKernel, "GradientWrite", GradientsB);
@@ -910,7 +892,7 @@ namespace TrueTrace {
             ReSTIRGI.SetComputeBuffer(ReSTIRGISpatialKernel, "GlobalColors", LightingBuffer);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "PrimaryTriData", _PrimaryTriangleInfo);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "WorldPosA", GIWorldPosA);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "NEEPosA", GINEEPosC);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "ReservoirA", GIReservoirC);
@@ -922,7 +904,7 @@ namespace TrueTrace {
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "ReservoirB", GIReservoirC);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "PrimaryTriData", _PrimaryTriangleInfo);
             ReSTIRGI.SetComputeBuffer(ReSTIRGISpatialKernel+1, "GlobalColors", LightingBuffer);
 
 
@@ -1009,8 +991,7 @@ namespace TrueTrace {
                     GIWorldPosA.ReleaseSafe();
                     GIWorldPosB.ReleaseSafe();
                     GIWorldPosC.ReleaseSafe();
-                    _PrimaryTriangleInfoA.ReleaseSafe();
-                    _PrimaryTriangleInfoB.ReleaseSafe();
+                    _PrimaryTriangleInfo.ReleaseSafe();
                     ScreenSpaceInfo.ReleaseSafe();
                     ScreenSpaceInfoPrev.ReleaseSafe();
                     GradientsA.ReleaseSafe();
@@ -1073,8 +1054,7 @@ namespace TrueTrace {
                 CommonFunctions.CreateRenderTexture(ref GIWorldPosA, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref GIWorldPosB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref GIWorldPosC, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-                CommonFunctions.CreateRenderTexture(ref _PrimaryTriangleInfoA, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-                CommonFunctions.CreateRenderTexture(ref _PrimaryTriangleInfoB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+                CommonFunctions.CreateRenderTexture(ref _PrimaryTriangleInfo, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref ScreenSpaceInfo, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref ScreenSpaceInfoPrev, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref GradientsA, SourceWidth, SourceHeight, CommonFunctions.RTHalf2);
@@ -1099,7 +1079,7 @@ namespace TrueTrace {
             if (LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI) {
                 if(DoKernelProfiling) cmd.BeginSample("ASVGF Reproject Pass");
                     ASVGFCode.shader.SetTexture(1, "ScreenSpaceInfoWrite", (FramesSinceStart2 % 2 == 0) ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
-                    ASVGFCode.DoRNG(ref _RandomNums, ref _RandomNumsB, FramesSinceStart2, _RayBuffer, cmd, (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB, (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 0)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, Assets.AggTriBufferA, MeshOrderChanged, Assets.TLASCWBVHIndexes);
+                    ASVGFCode.DoRNG(ref _RandomNums, ref _RandomNumsB, FramesSinceStart2, _RayBuffer, cmd, _PrimaryTriangleInfo, (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 0)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, Assets.AggTriBufferA, MeshOrderChanged, Assets.TLASCWBVHIndexes);
                 if(DoKernelProfiling) cmd.EndSample("ASVGF Reproject Pass");
             }
 
@@ -1108,12 +1088,13 @@ namespace TrueTrace {
                 if(DoKernelProfiling) cmd.BeginSample("ReSTIR GI Reproject");
                 cmd.DispatchCompute(GenerateShader, GIReTraceKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 if(DoKernelProfiling) cmd.EndSample("ReSTIR GI Reproject");
+            } else if(HasSDFHandler) {
+                OptionalSDFHandler.Run(cmd, (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB, _RayBuffer, SourceWidth, SourceHeight, DoChainedImages, LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI);
             } else if(LocalTTSettings.DenoiserMethod != 1 || LocalTTSettings.UseReSTIRGI) {
                 if(DoKernelProfiling) cmd.BeginSample("Primary Ray Generation");
                    cmd.DispatchCompute(GenerateShader, (DoChainedImages ? GenPanoramaKernel : GenKernel), Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 if(DoKernelProfiling) cmd.EndSample("Primary Ray Generation");
             }
-            if(HasSDFHandler) OptionalSDFHandler.Run(cmd, (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB, _RayBuffer, SourceWidth, SourceHeight);
         }
 
         private void Render(RenderTexture destination, CommandBuffer cmd)
@@ -1280,7 +1261,7 @@ namespace TrueTrace {
                                     LocalTTSettings.PPExposure, 
                                     LocalTTSettings.IndirectBoost, 
                                     GradientsA,
-                                    (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB, 
+                                    _PrimaryTriangleInfo, 
                                     (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 0)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, 
                                     Assets.AggTriBufferA, 
                                     LocalTTSettings.UpscalerMethod);

@@ -18,8 +18,6 @@ struct CudaTriangleB {
 	uint VertColA;
 	uint VertColB;
 	uint VertColC;
-
-	uint IsEmissive;
 };
 
 StructuredBuffer<CudaTriangleA> AggTrisA;
@@ -47,6 +45,7 @@ struct LightBVHData {
 	float phi;
 	uint cosTheta_oe;
 	int left;
+	int LightCount;
 };
 
 #ifdef UseSGTree
@@ -86,6 +85,7 @@ struct LightTriData {
 	float3 posedge1;
 	float3 posedge2;
 	uint TriTarget;
+	uint MeshOffset;
 	float SourceEnergy;
 	// uint NormalizedColor;
 };

@@ -857,70 +857,6 @@ namespace TrueTrace {
                 }
                 EditorGUILayout.EndFoldoutHeaderGroup();
 
-                EditorGUILayout.Space();
-                RayTracingMaster.RTOShowTex = EditorGUILayout.BeginFoldoutHeaderGroup(RayTracingMaster.RTOShowTex, "Textures", FoldoutStyle);
-                ConnectionSources.Add("TexturesContainer", GUILayoutUtility.GetLastRect()); // Store position
-                ConnectionSourceNames.Add("TexturesContainer");
-                if(RayTracingMaster.RTOShowTex) {
-                    EditorGUILayout.BeginHorizontal();
-                        EditorGUILayout.Space(12.0f, false);
-                        EditorGUILayout.BeginVertical();
-                            EditorGUILayout.BeginVertical();
-                                GUILayout.Label("Primary Diffuse", LabelStyleBolded);
-                                serializedObject.FindProperty("MainTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.MainTexScaleOffset[Selected]);
-                                serializedObject.FindProperty("Rotation").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.Rotation[Selected], 0, 360);
-                            EditorGUILayout.EndVertical();
-            
-                            EditorGUILayout.Space();
-                            EditorGUILayout.Space();
-                            EditorGUILayout.BeginVertical();
-                                GUILayout.Label("Secondary Diffuse", LabelStyleBolded);
-                                serializedObject.FindProperty("SecondaryAlbedoTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.SecondaryAlbedoTexScaleOffset[Selected]);
-                                serializedObject.FindProperty("RotationSecondaryDiffuse").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.RotationSecondaryDiffuse[Selected], 0, 360);
-                                Flag = CommonFunctions.SetFlagStretch(Flag, 1, 3, (int)((RayTracingObject.BlendModes)EditorGUILayout.EnumPopup("Blend Mode: ", (RayTracingObject.BlendModes)Flag.GetFlagStretch(1, 3))));
-                                serializedObject.FindProperty("AlbedoBlendFactor").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Blend Factor: ", t.AlbedoBlendFactor[Selected], 0, 1);
-                            EditorGUILayout.EndVertical();
-
-                            EditorGUILayout.Space();
-                            EditorGUILayout.Space();
-                            EditorGUILayout.BeginVertical();
-                                GUILayout.Label("Normal Map", LabelStyleBolded);
-                                serializedObject.FindProperty("NormalTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.NormalTexScaleOffset[Selected]);
-                                serializedObject.FindProperty("RotationNormal").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.RotationNormal[Selected], 0, 360);
-                                serializedObject.FindProperty("NormalStrength").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Strength: ", t.NormalStrength[Selected], 0, 20.0f);
-                                ConnectionSources.Add("NormalStrength", GUILayoutUtility.GetLastRect()); // Store position
-                                ConnectionSourceNames.Add("NormalStrength");
-                            EditorGUILayout.EndVertical();
-
-                            EditorGUILayout.Space();
-                            EditorGUILayout.Space();
-                            EditorGUILayout.BeginVertical();
-                                GUILayout.Label("Secondary Normal Map", LabelStyleBolded);
-                                serializedObject.FindProperty("SecondaryNormalTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.SecondaryNormalTexScaleOffset[Selected]);
-                                serializedObject.FindProperty("RotationSecondaryNormal").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.RotationSecondaryNormal[Selected], 0, 360);
-                                serializedObject.FindProperty("DetailNormalStrength").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Strength: ", t.DetailNormalStrength[Selected], 0, 20.0f);
-                                ConnectionSources.Add("DetailNormalStrength", GUILayoutUtility.GetLastRect()); // Store position
-                                ConnectionSourceNames.Add("DetailNormalStrength");
-                                serializedObject.FindProperty("SecondaryNormalTexBlend").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Blend Factor: ", t.SecondaryNormalTexBlend[Selected], 0, 1);
-                            EditorGUILayout.EndVertical();
-
-                            EditorGUILayout.Space();
-                            EditorGUILayout.Space();
-                            EditorGUILayout.BeginVertical();
-                                GUILayout.Label("Misc Maps", LabelStyleBolded);
-                                serializedObject.FindProperty("SecondaryTextureScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.SecondaryTextureScaleOffset[Selected]);
-                                serializedObject.FindProperty("RotationSecondary").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.RotationSecondary[Selected], 0, 360);
-                            EditorGUILayout.EndVertical();
-
-
-
-
-
-                        EditorGUILayout.EndVertical();
-                    EditorGUILayout.EndHorizontal();
-                }
-                EditorGUILayout.EndFoldoutHeaderGroup();
-
 
                 EditorGUILayout.Space();
                 RayTracingMaster.RTOShowEmission = EditorGUILayout.BeginFoldoutHeaderGroup(RayTracingMaster.RTOShowEmission, "Emission Settings", FoldoutStyle);
@@ -1083,7 +1019,69 @@ namespace TrueTrace {
 
 
 
-             
+                EditorGUILayout.Space();
+                RayTracingMaster.RTOShowTex = EditorGUILayout.BeginFoldoutHeaderGroup(RayTracingMaster.RTOShowTex, "Textures", FoldoutStyle);
+                ConnectionSources.Add("TexturesContainer", GUILayoutUtility.GetLastRect()); // Store position
+                ConnectionSourceNames.Add("TexturesContainer");
+                if(RayTracingMaster.RTOShowTex) {
+                    EditorGUILayout.BeginHorizontal();
+                        EditorGUILayout.Space(12.0f, false);
+                        EditorGUILayout.BeginVertical();
+                            EditorGUILayout.BeginVertical();
+                                GUILayout.Label("Primary Diffuse", LabelStyleBolded);
+                                serializedObject.FindProperty("MainTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.MainTexScaleOffset[Selected]);
+                                serializedObject.FindProperty("Rotation").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.Rotation[Selected], 0, 360);
+                            EditorGUILayout.EndVertical();
+            
+                            EditorGUILayout.Space();
+                            EditorGUILayout.Space();
+                            EditorGUILayout.BeginVertical();
+                                GUILayout.Label("Secondary Diffuse", LabelStyleBolded);
+                                serializedObject.FindProperty("SecondaryAlbedoTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.SecondaryAlbedoTexScaleOffset[Selected]);
+                                serializedObject.FindProperty("RotationSecondaryDiffuse").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.RotationSecondaryDiffuse[Selected], 0, 360);
+                                Flag = CommonFunctions.SetFlagStretch(Flag, 1, 3, (int)((RayTracingObject.BlendModes)EditorGUILayout.EnumPopup("Blend Mode: ", (RayTracingObject.BlendModes)Flag.GetFlagStretch(1, 3))));
+                                serializedObject.FindProperty("AlbedoBlendFactor").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Blend Factor: ", t.AlbedoBlendFactor[Selected], 0, 1);
+                            EditorGUILayout.EndVertical();
+
+                            EditorGUILayout.Space();
+                            EditorGUILayout.Space();
+                            EditorGUILayout.BeginVertical();
+                                GUILayout.Label("Normal Map", LabelStyleBolded);
+                                serializedObject.FindProperty("NormalTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.NormalTexScaleOffset[Selected]);
+                                serializedObject.FindProperty("RotationNormal").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.RotationNormal[Selected], 0, 360);
+                                serializedObject.FindProperty("NormalStrength").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Strength: ", t.NormalStrength[Selected], 0, 20.0f);
+                                ConnectionSources.Add("NormalStrength", GUILayoutUtility.GetLastRect()); // Store position
+                                ConnectionSourceNames.Add("NormalStrength");
+                            EditorGUILayout.EndVertical();
+
+                            EditorGUILayout.Space();
+                            EditorGUILayout.Space();
+                            EditorGUILayout.BeginVertical();
+                                GUILayout.Label("Secondary Normal Map", LabelStyleBolded);
+                                serializedObject.FindProperty("SecondaryNormalTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.SecondaryNormalTexScaleOffset[Selected]);
+                                serializedObject.FindProperty("RotationSecondaryNormal").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.RotationSecondaryNormal[Selected], 0, 360);
+                                serializedObject.FindProperty("DetailNormalStrength").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Strength: ", t.DetailNormalStrength[Selected], 0, 20.0f);
+                                ConnectionSources.Add("DetailNormalStrength", GUILayoutUtility.GetLastRect()); // Store position
+                                ConnectionSourceNames.Add("DetailNormalStrength");
+                                serializedObject.FindProperty("SecondaryNormalTexBlend").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Blend Factor: ", t.SecondaryNormalTexBlend[Selected], 0, 1);
+                            EditorGUILayout.EndVertical();
+
+                            EditorGUILayout.Space();
+                            EditorGUILayout.Space();
+                            EditorGUILayout.BeginVertical();
+                                GUILayout.Label("Misc Maps", LabelStyleBolded);
+                                serializedObject.FindProperty("SecondaryTextureScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.SecondaryTextureScaleOffset[Selected]);
+                                serializedObject.FindProperty("RotationSecondary").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.RotationSecondary[Selected], 0, 360);
+                            EditorGUILayout.EndVertical();
+
+
+
+
+
+                        EditorGUILayout.EndVertical();
+                    EditorGUILayout.EndHorizontal();
+                }
+                EditorGUILayout.EndFoldoutHeaderGroup();
 
 
 

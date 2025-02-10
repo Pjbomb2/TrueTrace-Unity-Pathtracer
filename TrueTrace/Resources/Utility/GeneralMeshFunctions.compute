@@ -21,8 +21,6 @@ struct CudaTriangle {
 	uint VertColC;
 
 	uint MatDat;
-
-	uint IsEmissive;
 };
 
 
@@ -53,7 +51,6 @@ void CombineTriBuffers(uint3 id : SV_DispatchThreadID)
 	OutCudaTriArrayB[id.x + Offset].VertColA = InCudaTriArray[id.x].VertColA;
 	OutCudaTriArrayB[id.x + Offset].VertColB = InCudaTriArray[id.x].VertColB;
 	OutCudaTriArrayB[id.x + Offset].VertColC = InCudaTriArray[id.x].VertColC;
-	OutCudaTriArrayB[id.x + Offset].IsEmissive = InCudaTriArray[id.x].IsEmissive;
 
 }
 
@@ -79,7 +76,7 @@ void CombineNodeBuffers(uint3 id : SV_DispatchThreadID)
 
 StructuredBuffer<LightTriData> LightTrianglesIn;
 RWStructuredBuffer<LightTriData> LightTrianglesOut;
-
+int CurMesh;
 [numthreads(372, 1, 1)]
 void CombineLightBuffers(uint3 id : SV_DispatchThreadID)
 {
@@ -87,6 +84,7 @@ void CombineLightBuffers(uint3 id : SV_DispatchThreadID)
 		return;
 
 	LightTrianglesOut[id.x + Offset] = LightTrianglesIn[id.x];
+	LightTrianglesOut[id.x + Offset].MeshOffset = CurMesh;
 
 }
 

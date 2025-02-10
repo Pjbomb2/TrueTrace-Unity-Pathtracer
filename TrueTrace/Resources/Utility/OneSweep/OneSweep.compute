@@ -1,0 +1,1361 @@
+/******************************************************************************
+ * GPUSorting
+ * OneSweep Implementation
+ *
+ * SPDX-License-Identifier: MIT
+ * Copyright Thomas Smith 4/28/2024
+ * https://github.com/b0nes164/GPUSorting
+ * 
+ * Based off of Research by:
+ *          Andy Adinets, Nvidia Corporation
+ *          Duane Merrill, Nvidia Corporation
+ *          https://research.nvidia.com/publication/2022-06_onesweep-faster-least-significant-digit-radix-sort-gpus
+ *
+ ******************************************************************************/
+/******************************************************************************
+ * GPUSorting
+ *
+ * SPDX-License-Identifier: MIT
+ * Copyright Thomas Smith 4/28/2024
+ * https://github.com/b0nes164/GPUSorting
+ *
+ ******************************************************************************/
+//Compiler Defines
+//#define SHOULD_ASCEND
+/******************************************************************************
+ * GPUSorting
+ *
+ * SPDX-License-Identifier: MIT
+ * Copyright Thomas Smith 4/28/2024
+ * https://github.com/b0nes164/GPUSorting
+ *
+ ******************************************************************************/
+#include "../../GlobalDefines.cginc"
+#include "../../MainCompute/CommonStructs.cginc"
+#pragma multi_compile __ SHOULD_ASCEND
+#pragma multi_compile __ IS_LIGHT
+
+#pragma use_dxc
+#pragma require wavebasic
+#pragma require waveballot
+
+#define KEYS_PER_THREAD     15U 
+#define D_DIM               256U
+#define PART_SIZE           3840U
+#define D_TOTAL_SMEM        4096U
+
+#define MAX_DISPATCH_DIM    65535U  //The max value of any given dispatch dimension
+#define RADIX               256U    //Number of digit bins
+#define RADIX_MASK          255U    //Mask of digit bins
+#define HALF_RADIX          128U    //For smaller waves where bit packing is necessary
+#define HALF_MASK           127U    // '' 
+#define RADIX_LOG           8U      //log2(RADIX)
+#define RADIX_PASSES        4U      //(Key width) / RADIX_LOG
+
+cbuffer cbGpuSorting : register(b0)
+{
+    uint e_numKeys;
+    uint e_radixShift;
+    uint e_threadBlocks;
+    uint padding;
+};
+
+
+inline uint FloatToUint(float f)
+{
+    uint mask = -((int) (asuint(f) >> 31)) | 0x80000000;
+    return asuint(f) ^ mask;
+}
+
+
+
+#pragma kernel InitKern
+int TriCount;
+int InputDim;
+#if defined(IS_LIGHT)
+    StructuredBuffer<LightBVHData> Input;
+#else
+    StructuredBuffer<AABB> Input;
+#endif
+
+RWStructuredBuffer<uint> b_sort;
+RWStructuredBuffer<uint> b_alt;
+
+RWStructuredBuffer<uint> b_sortPayload;
+RWStructuredBuffer<uint> b_altPayload;
+
+
+[numthreads(1024, 1, 1)]
+void InitKern(uint3 id : SV_DispatchThreadID) {
+    if(id.x >= TriCount) return;
+    // for(int i = 0; i < 4; i++) {
+        float Center = (Input[id.x].BBMax[InputDim] + Input[id.x].BBMin[InputDim]) / 2.0f;
+        b_sortPayload[id.x] = id.x;
+        b_sort[id.x] = FloatToUint(Center);
+    // }
+}
+
+
+groupshared uint g_d[D_TOTAL_SMEM]; //Shared memory for DigitBinningPass and DownSweep kernels
+
+struct KeyStruct
+{
+    uint k[KEYS_PER_THREAD];
+};
+
+struct OffsetStruct
+{
+    uint o[KEYS_PER_THREAD];
+};
+
+struct DigitStruct
+{
+    uint d[KEYS_PER_THREAD];
+};
+
+//*****************************************************************************
+//HELPER FUNCTIONS
+//*****************************************************************************
+inline uint getWaveIndex(uint gtid)
+{
+    return gtid / WaveGetLaneCount();
+}
+
+//Radix Tricks by Michael Herf
+//http://stereopsis.com/radix.html
+
+inline uint getWaveCountPass()
+{
+    return D_DIM / WaveGetLaneCount();
+}
+
+inline uint ExtractDigit(uint key)
+{
+    return key >> e_radixShift & RADIX_MASK;
+}
+
+inline uint ExtractDigit(uint key, uint shift)
+{
+    return key >> shift & RADIX_MASK;
+}
+
+inline uint ExtractPackedIndex(uint key)
+{
+    return key >> (e_radixShift + 1) & HALF_MASK;
+}
+
+inline uint ExtractPackedShift(uint key)
+{
+    return (key >> e_radixShift & 1) ? 16 : 0;
+}
+
+inline uint ExtractPackedValue(uint packed, uint key)
+{
+    return packed >> ExtractPackedShift(key) & 0xffff;
+}
+
+inline uint SubPartSizeWGE16()
+{
+    return KEYS_PER_THREAD * WaveGetLaneCount();
+}
+
+inline uint SharedOffsetWGE16(uint gtid)
+{
+    return WaveGetLaneIndex() + getWaveIndex(gtid) * SubPartSizeWGE16();
+}
+
+inline uint SubPartSizeWLT16(uint _serialIterations)
+{
+    return KEYS_PER_THREAD * WaveGetLaneCount() * _serialIterations;
+}
+
+inline uint SharedOffsetWLT16(uint gtid, uint _serialIterations)
+{
+    return WaveGetLaneIndex() +
+        (getWaveIndex(gtid) / _serialIterations * SubPartSizeWLT16(_serialIterations)) +
+        (getWaveIndex(gtid) % _serialIterations * WaveGetLaneCount());
+}
+
+inline uint DeviceOffsetWGE16(uint gtid, uint partIndex)
+{
+    return SharedOffsetWGE16(gtid) + partIndex * PART_SIZE;
+}
+
+inline uint DeviceOffsetWLT16(uint gtid, uint partIndex, uint serialIterations)
+{
+    return SharedOffsetWLT16(gtid, serialIterations) + partIndex * PART_SIZE;
+}
+
+inline uint GlobalHistOffset()
+{
+    return e_radixShift << 5;
+}
+
+inline uint WaveHistsSizeWGE16()
+{
+    return D_DIM / WaveGetLaneCount() * RADIX;
+}
+
+inline uint WaveHistsSizeWLT16()
+{
+    return D_TOTAL_SMEM;
+}
+
+//*****************************************************************************
+//FUNCTIONS COMMON TO THE DOWNSWEEP / DIGIT BINNING PASS
+//*****************************************************************************
+//If the size of  a wave is too small, we do not have enough space in
+//shared memory to assign a histogram to each wave, so instead,
+//some operations are peformed serially.
+inline uint SerialIterations()
+{
+    return (D_DIM / WaveGetLaneCount() + 31) >> 5;
+}
+
+inline void ClearWaveHists(uint gtid)
+{
+    const uint histsEnd = WaveGetLaneCount() >= 16 ?
+        WaveHistsSizeWGE16() : WaveHistsSizeWLT16();
+    for (uint i = gtid; i < histsEnd; i += D_DIM)
+        g_d[i] = 0;
+}
+
+inline void LoadKey(inout uint key, uint index)
+{
+    key = b_sort[index];
+}
+
+inline void LoadDummyKey(inout uint key)
+{
+    key = 0xffffffff;
+}
+
+inline KeyStruct LoadKeysWGE16(uint gtid, uint partIndex)
+{
+    KeyStruct keys;
+    [unroll]
+    for (uint i = 0, t = DeviceOffsetWGE16(gtid, partIndex);
+        i < KEYS_PER_THREAD;
+        ++i, t += WaveGetLaneCount())
+    {
+        LoadKey(keys.k[i], t);
+    }
+    return keys;
+}
+
+inline KeyStruct LoadKeysWLT16(uint gtid, uint partIndex, uint serialIterations)
+{
+    KeyStruct keys;
+    [unroll]
+    for (uint i = 0, t = DeviceOffsetWLT16(gtid, partIndex, serialIterations);
+        i < KEYS_PER_THREAD;
+        ++i, t += WaveGetLaneCount() * serialIterations)
+    {
+        LoadKey(keys.k[i], t);
+    }
+    return keys;
+}
+
+inline KeyStruct LoadKeysPartialWGE16(uint gtid, uint partIndex)
+{
+    KeyStruct keys;
+    [unroll]
+    for (uint i = 0, t = DeviceOffsetWGE16(gtid, partIndex);
+                 i < KEYS_PER_THREAD;
+                 ++i, t += WaveGetLaneCount())
+    {
+        if (t < e_numKeys)
+            LoadKey(keys.k[i], t);
+        else
+            LoadDummyKey(keys.k[i]);
+    }
+    return keys;
+}
+
+inline KeyStruct LoadKeysPartialWLT16(uint gtid, uint partIndex, uint serialIterations)
+{
+    KeyStruct keys;
+    [unroll]
+    for (uint i = 0, t = DeviceOffsetWLT16(gtid, partIndex, serialIterations);
+        i < KEYS_PER_THREAD;
+        ++i, t += WaveGetLaneCount() * serialIterations)
+    {
+        if (t < e_numKeys)
+            LoadKey(keys.k[i], t);
+        else
+            LoadDummyKey(keys.k[i]);
+    }
+    return keys;
+}
+
+inline uint WaveFlagsWGE16()
+{
+    return (WaveGetLaneCount() & 31) ?
+        (1U << WaveGetLaneCount()) - 1 : 0xffffffff;
+}
+
+inline uint WaveFlagsWLT16()
+{
+    return (1U << WaveGetLaneCount()) - 1;;
+}
+
+inline void WarpLevelMultiSplitWGE16(uint key, uint waveParts, inout uint4 waveFlags)
+{
+    [unroll]
+    for (uint k = 0; k < RADIX_LOG; ++k)
+    {
+        const bool t = key >> (k + e_radixShift) & 1;
+        const uint4 ballot = WaveActiveBallot(t);
+        for (uint wavePart = 0; wavePart < waveParts; ++wavePart)
+            waveFlags[wavePart] &= (t ? 0 : 0xffffffff) ^ ballot[wavePart];
+    }
+}
+
+inline void WarpLevelMultiSplitWLT16(uint key, inout uint waveFlags)
+{
+    [unroll]
+    for (uint k = 0; k < RADIX_LOG; ++k)
+    {
+        const bool t = key >> (k + e_radixShift) & 1;
+        waveFlags &= (t ? 0 : 0xffffffff) ^ (uint) WaveActiveBallot(t);
+    }
+}
+
+inline void CountPeerBits(
+    inout uint peerBits,
+    inout uint totalBits,
+    uint4 waveFlags,
+    uint waveParts)
+{
+    for (uint wavePart = 0; wavePart < waveParts; ++wavePart)
+    {
+        if (WaveGetLaneIndex() >= wavePart * 32)
+        {
+            const uint ltMask = WaveGetLaneIndex() >= (wavePart + 1) * 32 ?
+                0xffffffff : (1U << (WaveGetLaneIndex() & 31)) - 1;
+            peerBits += countbits(waveFlags[wavePart] & ltMask);
+        }
+        totalBits += countbits(waveFlags[wavePart]);
+    }
+}
+
+inline uint CountPeerBitsWLT16(
+    uint waveFlags,
+    uint ltMask)
+{
+    return countbits(waveFlags & ltMask);
+}
+
+inline uint FindLowestRankPeer(
+    uint4 waveFlags,
+    uint waveParts)
+{
+    uint lowestRankPeer = 0;
+    for (uint wavePart = 0; wavePart < waveParts; ++wavePart)
+    {
+        uint fbl = firstbitlow(waveFlags[wavePart]);
+        if (fbl == 0xffffffff)
+            lowestRankPeer += 32;
+        else
+            return lowestRankPeer + fbl;
+    }
+    return 0; //will never happen
+}
+
+inline OffsetStruct RankKeysWGE16(uint gtid, KeyStruct keys)
+{
+    OffsetStruct offsets;
+    const uint waveParts = (WaveGetLaneCount() + 31) / 32;
+    [unroll]
+    for (uint i = 0; i < KEYS_PER_THREAD; ++i)
+    {
+        uint4 waveFlags = WaveFlagsWGE16();
+        WarpLevelMultiSplitWGE16(keys.k[i], waveParts, waveFlags);
+        
+        const uint index = ExtractDigit(keys.k[i]) + (getWaveIndex(gtid.x) * RADIX);
+        const uint lowestRankPeer = FindLowestRankPeer(waveFlags, waveParts);
+        
+        uint peerBits = 0;
+        uint totalBits = 0;
+        CountPeerBits(peerBits, totalBits, waveFlags, waveParts);
+        
+        uint preIncrementVal;
+        if (peerBits == 0)
+            InterlockedAdd(g_d[index], totalBits, preIncrementVal);
+        offsets.o[i] = WaveReadLaneAt(preIncrementVal, lowestRankPeer) + peerBits;
+    }
+    
+    return offsets;
+}
+
+inline OffsetStruct RankKeysWLT16(uint gtid, KeyStruct keys, uint serialIterations)
+{
+    OffsetStruct offsets;
+    const uint ltMask = (1U << WaveGetLaneIndex()) - 1;
+    
+    [unroll]
+    for (uint i = 0; i < KEYS_PER_THREAD; ++i)
+    {
+        uint waveFlags = WaveFlagsWLT16();
+        WarpLevelMultiSplitWLT16(keys.k[i], waveFlags);
+        
+        const uint index = ExtractPackedIndex(keys.k[i]) +
+                (getWaveIndex(gtid.x) / serialIterations * HALF_RADIX);
+        
+        const uint peerBits = CountPeerBitsWLT16(waveFlags, ltMask);
+        for (uint k = 0; k < serialIterations; ++k)
+        {
+            if (getWaveIndex(gtid.x) % serialIterations == k)
+                offsets.o[i] = ExtractPackedValue(g_d[index], keys.k[i]) + peerBits;
+            
+            GroupMemoryBarrierWithGroupSync();
+            if (getWaveIndex(gtid.x) % serialIterations == k && peerBits == 0)
+            {
+                InterlockedAdd(g_d[index],
+                    countbits(waveFlags) << ExtractPackedShift(keys.k[i]));
+            }
+            GroupMemoryBarrierWithGroupSync();
+        }
+    }
+    
+    return offsets;
+}
+
+inline uint WaveHistInclusiveScanCircularShiftWGE16(uint gtid)
+{
+    uint histReduction = g_d[gtid];
+    for (uint i = gtid + RADIX; i < WaveHistsSizeWGE16(); i += RADIX)
+    {
+        histReduction += g_d[i];
+        g_d[i] = histReduction - g_d[i];
+    }
+    return histReduction;
+}
+
+inline uint WaveHistInclusiveScanCircularShiftWLT16(uint gtid)
+{
+    uint histReduction = g_d[gtid];
+    for (uint i = gtid + HALF_RADIX; i < WaveHistsSizeWLT16(); i += HALF_RADIX)
+    {
+        histReduction += g_d[i];
+        g_d[i] = histReduction - g_d[i];
+    }
+    return histReduction;
+}
+
+inline void WaveHistReductionExclusiveScanWGE16(uint gtid, uint histReduction)
+{
+    if (gtid < RADIX)
+    {
+        const uint laneMask = WaveGetLaneCount() - 1;
+        g_d[((WaveGetLaneIndex() + 1) & laneMask) + (gtid & ~laneMask)] = histReduction;
+    }
+    GroupMemoryBarrierWithGroupSync();
+                
+    if (gtid < RADIX / WaveGetLaneCount())
+    {
+        g_d[gtid * WaveGetLaneCount()] =
+            WavePrefixSum(g_d[gtid * WaveGetLaneCount()]);
+    }
+    GroupMemoryBarrierWithGroupSync();
+                
+    if (gtid < RADIX && WaveGetLaneIndex())
+        g_d[gtid] += WaveReadLaneAt(g_d[gtid - 1], 1);
+}
+
+//inclusive/exclusive prefix sum up the histograms,
+//use a blelloch scan for in place packed exclusive
+inline void WaveHistReductionExclusiveScanWLT16(uint gtid)
+{
+    uint shift = 1;
+    for (uint j = RADIX >> 2; j > 0; j >>= 1)
+    {
+        GroupMemoryBarrierWithGroupSync();
+        if (gtid < j)
+        {
+            g_d[((((gtid << 1) + 2) << shift) - 1) >> 1] +=
+                g_d[((((gtid << 1) + 1) << shift) - 1) >> 1] & 0xffff0000;
+        }
+        shift++;
+    }
+    GroupMemoryBarrierWithGroupSync();
+                
+    if (gtid == 0)
+        g_d[HALF_RADIX - 1] &= 0xffff;
+                
+    for (uint j = 1; j < RADIX >> 1; j <<= 1)
+    {
+        --shift;
+        GroupMemoryBarrierWithGroupSync();
+        if (gtid < j)
+        {
+            const uint t = ((((gtid << 1) + 1) << shift) - 1) >> 1;
+            const uint t2 = ((((gtid << 1) + 2) << shift) - 1) >> 1;
+            const uint t3 = g_d[t];
+            g_d[t] = (g_d[t] & 0xffff) | (g_d[t2] & 0xffff0000);
+            g_d[t2] += t3 & 0xffff0000;
+        }
+    }
+
+    GroupMemoryBarrierWithGroupSync();
+    if (gtid < HALF_RADIX)
+    {
+        const uint t = g_d[gtid];
+        g_d[gtid] = (t >> 16) + (t << 16) + (t & 0xffff0000);
+    }
+}
+
+inline void UpdateOffsetsWGE16(uint gtid, inout OffsetStruct offsets, KeyStruct keys)
+{
+    if (gtid >= WaveGetLaneCount())
+    {
+        const uint t = getWaveIndex(gtid) * RADIX;
+        [unroll]
+        for (uint i = 0; i < KEYS_PER_THREAD; ++i)
+        {
+            const uint t2 = ExtractDigit(keys.k[i]);
+            offsets.o[i] += g_d[t2 + t] + g_d[t2];
+        }
+    }
+    else
+    {
+        [unroll]
+        for (uint i = 0; i < KEYS_PER_THREAD; ++i)
+            offsets.o[i] += g_d[ExtractDigit(keys.k[i])];
+    }
+}
+
+inline void UpdateOffsetsWLT16(
+    uint gtid,
+    uint serialIterations,
+    inout OffsetStruct offsets,
+    KeyStruct keys)
+{
+    if (gtid >= WaveGetLaneCount() * serialIterations)
+    {
+        const uint t = getWaveIndex(gtid) / serialIterations * HALF_RADIX;
+        [unroll]
+        for (uint i = 0; i < KEYS_PER_THREAD; ++i)
+        {
+            const uint t2 = ExtractPackedIndex(keys.k[i]);
+            offsets.o[i] += ExtractPackedValue(g_d[t2 + t] + g_d[t2], keys.k[i]);
+        }
+    }
+    else
+    {
+        [unroll]
+        for (uint i = 0; i < KEYS_PER_THREAD; ++i)
+            offsets.o[i] += ExtractPackedValue(g_d[ExtractPackedIndex(keys.k[i])], keys.k[i]);
+    }
+}
+
+inline void ScatterKeysShared(OffsetStruct offsets, KeyStruct keys)
+{
+    [unroll]
+    for (uint i = 0; i < KEYS_PER_THREAD; ++i)
+        g_d[offsets.o[i]] = keys.k[i];
+}
+
+inline uint DescendingIndex(uint deviceIndex)
+{
+    return e_numKeys - deviceIndex - 1;
+}
+
+inline void WriteKey(uint deviceIndex, uint groupSharedIndex)
+{
+    b_alt[deviceIndex] = g_d[groupSharedIndex];
+}
+
+inline void LoadPayload(inout uint payload, uint deviceIndex)
+{
+    payload = b_sortPayload[deviceIndex];
+}
+
+inline void ScatterPayloadsShared(OffsetStruct offsets, KeyStruct payloads)
+{
+    ScatterKeysShared(offsets, payloads);
+}
+
+inline void WritePayload(uint deviceIndex, uint groupSharedIndex)
+{
+    b_altPayload[deviceIndex] = g_d[groupSharedIndex];
+}
+
+//*****************************************************************************
+//SCATTERING: FULL PARTITIONS
+//*****************************************************************************
+
+
+//KEY VALUE PAIRS
+inline void ScatterPairsKeyPhaseAscending(
+    uint gtid,
+    inout DigitStruct digits)
+{
+    [unroll]
+    for (uint i = 0, t = gtid; i < KEYS_PER_THREAD; ++i, t += D_DIM)
+    {
+        digits.d[i] = ExtractDigit(g_d[t]);
+        WriteKey(g_d[digits.d[i] + PART_SIZE] + t, t);
+    }
+}
+
+inline void ScatterPairsKeyPhaseDescending(
+    uint gtid,
+    inout DigitStruct digits)
+{
+    if (e_radixShift == 24)
+    {
+        [unroll]
+        for (uint i = 0, t = gtid; i < KEYS_PER_THREAD; ++i, t += D_DIM)
+        {
+            digits.d[i] = ExtractDigit(g_d[t]);
+            WriteKey(DescendingIndex(g_d[digits.d[i] + PART_SIZE] + t), t);
+        }
+    }
+    else
+    {
+        ScatterPairsKeyPhaseAscending(gtid, digits);
+    }
+}
+
+inline void LoadPayloadsWGE16(
+    uint gtid,
+    uint partIndex,
+    inout KeyStruct payloads)
+{
+    [unroll]
+    for (uint i = 0, t = DeviceOffsetWGE16(gtid, partIndex);
+        i < KEYS_PER_THREAD;
+        ++i, t += WaveGetLaneCount())
+    {
+        LoadPayload(payloads.k[i], t);
+    }
+}
+
+inline void LoadPayloadsWLT16(
+    uint gtid,
+    uint partIndex,
+    uint serialIterations,
+    inout KeyStruct payloads)
+{
+    [unroll]
+    for (uint i = 0, t = DeviceOffsetWLT16(gtid, partIndex, serialIterations);
+        i < KEYS_PER_THREAD;
+        ++i, t += WaveGetLaneCount() * serialIterations)
+    {
+        LoadPayload(payloads.k[i], t);
+    }
+}
+
+inline void ScatterPayloadsAscending(uint gtid, DigitStruct digits)
+{
+    [unroll]
+    for (uint i = 0, t = gtid; i < KEYS_PER_THREAD; ++i, t += D_DIM)
+        WritePayload(g_d[digits.d[i] + PART_SIZE] + t, t);
+}
+
+inline void ScatterPayloadsDescending(uint gtid, DigitStruct digits)
+{
+    if (e_radixShift == 24)
+    {
+        [unroll]
+        for (uint i = 0, t = gtid; i < KEYS_PER_THREAD; ++i, t += D_DIM)
+            WritePayload(DescendingIndex(g_d[digits.d[i] + PART_SIZE] + t), t);
+    }
+    else
+    {
+        ScatterPayloadsAscending(gtid, digits);
+    }
+}
+
+inline void ScatterPairsDevice(
+    uint gtid,
+    uint partIndex,
+    OffsetStruct offsets)
+{
+    DigitStruct digits;
+#if defined(SHOULD_ASCEND)
+    ScatterPairsKeyPhaseAscending(gtid, digits);
+#else
+    ScatterPairsKeyPhaseDescending(gtid, digits);
+#endif
+    GroupMemoryBarrierWithGroupSync();
+    
+    KeyStruct payloads;
+    if (WaveGetLaneCount() >= 16)
+        LoadPayloadsWGE16(gtid, partIndex, payloads);
+    else
+        LoadPayloadsWLT16(gtid, partIndex, SerialIterations(), payloads);
+    ScatterPayloadsShared(offsets, payloads);
+    GroupMemoryBarrierWithGroupSync();
+    
+#if defined(SHOULD_ASCEND)
+    ScatterPayloadsAscending(gtid, digits);
+#else
+    ScatterPayloadsDescending(gtid, digits);
+#endif
+}
+
+inline void ScatterDevice(
+    uint gtid,
+    uint partIndex,
+    OffsetStruct offsets)
+{
+    ScatterPairsDevice(
+        gtid,
+        partIndex,
+        offsets);
+}
+
+//*****************************************************************************
+//SCATTERING: PARTIAL PARTITIONS
+//*****************************************************************************
+
+
+//KEY VALUE PAIRS
+inline void ScatterPairsKeyPhaseAscendingPartial(
+    uint gtid,
+    uint finalPartSize,
+    inout DigitStruct digits)
+{
+    [unroll]
+    for (uint i = 0, t = gtid; i < KEYS_PER_THREAD; ++i, t += D_DIM)
+    {
+        if (t < finalPartSize)
+        {
+            digits.d[i] = ExtractDigit(g_d[t]);
+            WriteKey(g_d[digits.d[i] + PART_SIZE] + t, t);
+        }
+    }
+}
+
+inline void ScatterPairsKeyPhaseDescendingPartial(
+    uint gtid,
+    uint finalPartSize,
+    inout DigitStruct digits)
+{
+    if (e_radixShift == 24)
+    {
+        [unroll]
+        for (uint i = 0, t = gtid; i < KEYS_PER_THREAD; ++i, t += D_DIM)
+        {
+            if (t < finalPartSize)
+            {
+                digits.d[i] = ExtractDigit(g_d[t]);
+                WriteKey(DescendingIndex(g_d[digits.d[i] + PART_SIZE] + t), t);
+            }
+        }
+    }
+    else
+    {
+        ScatterPairsKeyPhaseAscendingPartial(gtid, finalPartSize, digits);
+    }
+}
+
+inline void LoadPayloadsPartialWGE16(
+    uint gtid,
+    uint partIndex,
+    inout KeyStruct payloads)
+{
+    [unroll]
+    for (uint i = 0, t = DeviceOffsetWGE16(gtid, partIndex);
+        i < KEYS_PER_THREAD;
+        ++i, t += WaveGetLaneCount())
+    {
+        if (t < e_numKeys)
+            LoadPayload(payloads.k[i], t);
+    }
+}
+
+inline void LoadPayloadsPartialWLT16(
+    uint gtid,
+    uint partIndex,
+    uint serialIterations,
+    inout KeyStruct payloads)
+{
+    [unroll]
+    for (uint i = 0, t = DeviceOffsetWLT16(gtid, partIndex, serialIterations);
+        i < KEYS_PER_THREAD;
+        ++i, t += WaveGetLaneCount() * serialIterations)
+    {
+        if (t < e_numKeys)
+            LoadPayload(payloads.k[i], t);
+    }
+}
+
+inline void ScatterPayloadsAscendingPartial(
+    uint gtid,
+    uint finalPartSize,
+    DigitStruct digits)
+{
+    [unroll]
+    for (uint i = 0, t = gtid; i < KEYS_PER_THREAD; ++i, t += D_DIM)
+    {
+        if (t < finalPartSize)
+            WritePayload(g_d[digits.d[i] + PART_SIZE] + t, t);
+    }
+}
+
+inline void ScatterPayloadsDescendingPartial(
+    uint gtid,
+    uint finalPartSize,
+    DigitStruct digits)
+{
+    if (e_radixShift == 24)
+    {
+        [unroll]
+        for (uint i = 0, t = gtid; i < KEYS_PER_THREAD; ++i, t += D_DIM)
+        {
+            if (t < finalPartSize)
+                WritePayload(DescendingIndex(g_d[digits.d[i] + PART_SIZE] + t), t);
+        }
+    }
+    else
+    {
+        ScatterPayloadsAscendingPartial(gtid, finalPartSize, digits);
+    }
+}
+
+inline void ScatterPairsDevicePartial(
+    uint gtid,
+    uint partIndex,
+    OffsetStruct offsets)
+{
+    DigitStruct digits;
+    const uint finalPartSize = e_numKeys - partIndex * PART_SIZE;
+#if defined(SHOULD_ASCEND)
+    ScatterPairsKeyPhaseAscendingPartial(gtid, finalPartSize, digits);
+#else
+    ScatterPairsKeyPhaseDescendingPartial(gtid, finalPartSize, digits);
+#endif
+    GroupMemoryBarrierWithGroupSync();
+    
+    KeyStruct payloads;
+    if (WaveGetLaneCount() >= 16)
+        LoadPayloadsPartialWGE16(gtid, partIndex, payloads);
+    else
+        LoadPayloadsPartialWLT16(gtid, partIndex, SerialIterations(), payloads);
+    ScatterPayloadsShared(offsets, payloads);
+    GroupMemoryBarrierWithGroupSync();
+    
+#if defined(SHOULD_ASCEND)
+    ScatterPayloadsAscendingPartial(gtid, finalPartSize, digits);
+#else
+    ScatterPayloadsDescendingPartial(gtid, finalPartSize, digits);
+#endif
+}
+
+inline void ScatterDevicePartial(
+    uint gtid,
+    uint partIndex,
+    OffsetStruct offsets)
+{
+    ScatterPairsDevicePartial(
+        gtid,
+        partIndex,
+        offsets);
+}
+
+#pragma kernel InitSweep
+#pragma kernel GlobalHistogram
+#pragma kernel Scan
+
+#define G_HIST_PART_SIZE    32768U  //The size of a GlobalHistogram partition tile.
+#define G_HIST_DIM          128U    //The number of threads in a global hist threadblock
+
+#define SEC_RADIX_START     256     //Offset for retrieving value from global histogram buffer
+#define THIRD_RADIX_START   512     //Offset for retrieving value from global histogram buffer
+#define FOURTH_RADIX_START  768     //Offset for retrieving value from global histogram buffer
+
+#define FLAG_NOT_READY      0       //Flag value inidicating neither inclusive sum, nor reduction of a partition tile is ready
+#define FLAG_REDUCTION      1       //Flag value indicating reduction of a partition tile is ready
+#define FLAG_INCLUSIVE      2       //Flag value indicating inclusive sum of a partition tile is ready
+#define FLAG_MASK           3       //Mask used to retrieve flag values
+
+#define MAX_SPIN_COUNT      1       //How much should we allow threadblocks to wait on preceeding tiles?
+
+RWStructuredBuffer<uint> b_globalHist;                  //buffer holding device level offsets for each binning pass
+globallycoherent RWStructuredBuffer<uint> b_passHist;   //buffer used to store reduced sums of partition tiles
+globallycoherent RWStructuredBuffer<uint> b_index;      //buffer used to atomically assign partition tile indexes
+
+groupshared uint4 g_gHist[RADIX * 2];   //Shared memory for GlobalHistogram
+groupshared uint g_scan[RADIX];         //Shared memory for Scan  
+
+inline uint CurrentPass()
+{
+    return e_radixShift >> 3;
+}
+
+inline uint PassHistOffset(uint index)
+{
+    return ((CurrentPass() * e_threadBlocks) + index) << RADIX_LOG;
+}
+
+[numthreads(256, 1, 1)]
+void InitSweep(uint3 id : SV_DispatchThreadID)
+{
+    const uint increment = 256 * 256;
+    const uint clearEnd = e_threadBlocks * RADIX * RADIX_PASSES;
+    for (uint i = id.x; i < clearEnd; i += increment)
+        b_passHist[i] = 0;
+
+    if (id.x < RADIX * RADIX_PASSES)
+        b_globalHist[id.x] = 0;
+    
+    if (id.x < RADIX_PASSES)
+        b_index[id.x] = 0;
+}
+
+//*****************************************************************************
+//GLOBAL HISTOGRAM KERNEL
+//*****************************************************************************
+//histogram, 64 threads to a histogram
+inline void HistogramDigitCounts(uint gtid, uint gid)
+{
+    const uint histOffset = gtid / 64 * RADIX;
+    const uint partitionEnd = gid == e_threadBlocks - 1 ?
+        e_numKeys : (gid + 1) * G_HIST_PART_SIZE;
+    
+    uint t;
+    for (uint i = gtid + gid * G_HIST_PART_SIZE; i < partitionEnd; i += G_HIST_DIM)
+    {
+        t = b_sort[i];
+        InterlockedAdd(g_gHist[ExtractDigit(t, 0) + histOffset].x, 1);
+        InterlockedAdd(g_gHist[ExtractDigit(t, 8) + histOffset].y, 1);
+        InterlockedAdd(g_gHist[ExtractDigit(t, 16) + histOffset].z, 1);
+        InterlockedAdd(g_gHist[ExtractDigit(t, 24) + histOffset].w, 1);
+    }
+}
+
+//reduce counts and atomically add to device
+inline void ReduceWriteDigitCounts(uint gtid)
+{
+    for (uint i = gtid; i < RADIX; i += G_HIST_DIM)
+    {
+        InterlockedAdd(b_globalHist[i], g_gHist[i].x + g_gHist[i + RADIX].x);
+        InterlockedAdd(b_globalHist[i + SEC_RADIX_START], g_gHist[i].y + g_gHist[i + RADIX].y);
+        InterlockedAdd(b_globalHist[i + THIRD_RADIX_START], g_gHist[i].z + g_gHist[i + RADIX].z);
+        InterlockedAdd(b_globalHist[i + FOURTH_RADIX_START], g_gHist[i].w + g_gHist[i + RADIX].w);
+    }
+}
+
+[numthreads(G_HIST_DIM, 1, 1)]
+void GlobalHistogram(uint3 gtid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+    //clear shared memory
+    const uint histsEnd = RADIX * 2;
+    for (uint i = gtid.x; i < histsEnd; i += G_HIST_DIM)
+        g_gHist[i] = 0;
+    GroupMemoryBarrierWithGroupSync();
+    
+    HistogramDigitCounts(gtid.x, gid.x);
+    GroupMemoryBarrierWithGroupSync();
+    
+    ReduceWriteDigitCounts(gtid.x);
+}
+
+//*****************************************************************************
+//SCAN KERNEL
+//*****************************************************************************
+inline void LoadInclusiveScan(uint gtid, uint gid)
+{
+    const uint t = b_globalHist[gtid + gid * RADIX];
+    g_scan[gtid] = t + WavePrefixSum(t);
+}
+
+inline void GlobalHistExclusiveScanWGE16(uint gtid, uint gid)
+{
+    GroupMemoryBarrierWithGroupSync();
+    if (gtid < (RADIX / WaveGetLaneCount()))
+    {
+        g_scan[(gtid + 1) * WaveGetLaneCount() - 1] +=
+            WavePrefixSum(g_scan[(gtid + 1) * WaveGetLaneCount() - 1]);
+    }
+    GroupMemoryBarrierWithGroupSync();
+        
+    const uint laneMask = WaveGetLaneCount() - 1;
+    const uint index = (WaveGetLaneIndex() + 1 & laneMask) + (gtid & ~laneMask);
+    b_passHist[index + gid * RADIX * e_threadBlocks] =
+        ((WaveGetLaneIndex() != laneMask ? g_scan[gtid] : 0) +
+        (gtid >= WaveGetLaneCount() ? WaveReadLaneAt(g_scan[gtid - 1], 0) : 0)) << 2 | FLAG_INCLUSIVE;
+}
+
+inline void GlobalHistExclusiveScanWLT16(uint gtid, uint gid)
+{
+    const uint passHistOffset = gid * RADIX * e_threadBlocks;
+    if (gtid < WaveGetLaneCount())
+    {
+        const uint circularLaneShift = WaveGetLaneIndex() + 1 &
+            WaveGetLaneCount() - 1;
+        b_passHist[circularLaneShift + passHistOffset] =
+            (circularLaneShift ? g_scan[gtid] : 0) << 2 | FLAG_INCLUSIVE;
+    }
+    GroupMemoryBarrierWithGroupSync();
+        
+    const uint laneLog = countbits(WaveGetLaneCount() - 1);
+    uint offset = laneLog;
+    uint j = WaveGetLaneCount();
+    for (; j < (RADIX >> 1); j <<= laneLog)
+    {
+        if (gtid < (RADIX >> offset))
+        {
+            g_scan[((gtid + 1) << offset) - 1] +=
+                WavePrefixSum(g_scan[((gtid + 1) << offset) - 1]);
+        }
+        GroupMemoryBarrierWithGroupSync();
+            
+        if ((gtid & ((j << laneLog) - 1)) >= j)
+        {
+            if (gtid < (j << laneLog))
+            {
+                b_passHist[gtid + passHistOffset] =
+                    (WaveReadLaneAt(g_scan[((gtid >> offset) << offset) - 1], 0) +
+                    ((gtid & (j - 1)) ? g_scan[gtid - 1] : 0)) << 2 | FLAG_INCLUSIVE;
+            }
+            else
+            {
+                if ((gtid + 1) & (j - 1))
+                {
+                    g_scan[gtid] +=
+                        WaveReadLaneAt(g_scan[((gtid >> offset) << offset) - 1], 0);
+                }
+            }
+        }
+        offset += laneLog;
+    }
+    GroupMemoryBarrierWithGroupSync();
+        
+    //If RADIX is not a power of lanecount
+    const uint index = gtid.x + j;
+    if (index < RADIX)
+    {
+        b_passHist[index + passHistOffset] =
+            (WaveReadLaneAt(g_scan[((index >> offset) << offset) - 1], 0) +
+            ((index & (j - 1)) ? g_scan[index - 1] : 0)) << 2 | FLAG_INCLUSIVE;
+    }
+}
+
+[numthreads(RADIX, 1, 1)]
+void Scan(uint3 gtid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+    LoadInclusiveScan(gtid.x, gid.x);
+    
+    if (WaveGetLaneCount() >= 16)
+        GlobalHistExclusiveScanWGE16(gtid.x, gid.x);
+    
+    if (WaveGetLaneCount() < 16)
+        GlobalHistExclusiveScanWLT16(gtid.x, gid.x);
+}
+
+//*****************************************************************************
+//DIGIT BINNING PASS KERNEL
+//*****************************************************************************
+inline void AssignPartitionTile(uint gtid, inout uint partitionIndex)
+{
+    if (!gtid)
+        InterlockedAdd(b_index[CurrentPass()], 1, g_d[D_TOTAL_SMEM - 1]);
+    GroupMemoryBarrierWithGroupSync();
+    partitionIndex = g_d[D_TOTAL_SMEM - 1];
+}
+
+//For OneSweep
+inline void DeviceBroadcastReductionsWGE16(uint gtid, uint partIndex, uint histReduction)
+{
+    if (partIndex < e_threadBlocks - 1)
+    {
+        InterlockedAdd(b_passHist[gtid + PassHistOffset(partIndex + 1)],
+            FLAG_REDUCTION | histReduction << 2);
+    }
+}
+
+inline void DeviceBroadcastReductionsWLT16(uint gtid, uint partIndex, uint histReduction)
+{
+    if (partIndex < e_threadBlocks - 1)
+    {
+        InterlockedAdd(b_passHist[(gtid << 1) + PassHistOffset(partIndex + 1)],
+            FLAG_REDUCTION | (histReduction & 0xffff) << 2);
+                
+        InterlockedAdd(b_passHist[(gtid << 1) + 1 + PassHistOffset(partIndex + 1)],
+            FLAG_REDUCTION | (histReduction >> 16 & 0xffff) << 2);
+    }
+}
+
+//For ForwardSweep
+inline void CASDeviceBroadcastReductionsWGE16(uint gtid, uint partIndex, uint histReduction)
+{
+    if (partIndex < e_threadBlocks - 1)
+    {
+        InterlockedCompareStore(b_passHist[gtid + PassHistOffset(partIndex + 1)], 0,
+            FLAG_REDUCTION | histReduction << 2);
+    }
+}
+
+inline void CASDeviceBroadcastReductionsWLT16(uint gtid, uint partIndex, uint histReduction)
+{
+    if (partIndex < e_threadBlocks - 1)
+    {
+        InterlockedCompareStore(b_passHist[gtid + PassHistOffset(partIndex + 1)], 0,
+            FLAG_REDUCTION | (histReduction & 0xffff) << 2);
+        
+        InterlockedCompareStore(b_passHist[gtid + PassHistOffset(partIndex + 1)], 0,
+            FLAG_REDUCTION | (histReduction >> 16 & 0xffff) << 2);
+    }
+}
+
+inline void Lookback(uint gtid, uint partIndex, uint exclusiveHistReduction)
+{
+    if (gtid < RADIX)
+    {
+        uint lookbackReduction = 0;
+        for (uint k = partIndex; k >= 0;)
+        {
+            const uint flagPayload = b_passHist[gtid + PassHistOffset(k)];
+            if ((flagPayload & FLAG_MASK) == FLAG_INCLUSIVE)
+            {
+                lookbackReduction += flagPayload >> 2;
+                if (partIndex < e_threadBlocks - 1)
+                {
+                    InterlockedAdd(b_passHist[gtid + PassHistOffset(partIndex + 1)],
+                        1 | lookbackReduction << 2);
+                }
+                g_d[gtid + PART_SIZE] = lookbackReduction - exclusiveHistReduction;
+                break;
+            }
+                    
+            if ((flagPayload & FLAG_MASK) == FLAG_REDUCTION)
+            {
+                lookbackReduction += flagPayload >> 2;
+                k--;
+            }
+        }
+    }
+}
+
+inline void InitializeLookbackFallback(uint gtid)
+{
+    if (gtid == 0)
+        g_d[0] = 0;
+    
+    if (gtid == 1)
+        g_d[1] = 0;
+}
+
+inline void FallbackHistogram(uint index)
+{
+    InterlockedAdd(g_d[ExtractDigit(b_sort[index], e_radixShift) + RADIX], 1);
+}
+
+inline void LookbackWithFallback(uint gtid, uint partIndex, uint exclusiveHistReduction)
+{
+    uint spinCount = 0;
+    uint lookbackReduction = 0;
+    bool lookbackComplete = gtid < RADIX ? false : true;
+    bool warpLookbackComplete = gtid < RADIX ? false : true;
+    uint lookbackIndex = (gtid & RADIX_MASK) + PassHistOffset(partIndex);
+    
+    while (g_d[0] < RADIX / WaveGetLaneCount())
+    {
+        //Try to read the preceeding tiles
+        uint flagPayload;
+        if (!warpLookbackComplete)
+        {
+            if (!lookbackComplete)
+            {
+                while (spinCount < MAX_SPIN_COUNT)
+                {
+                    flagPayload = b_passHist[lookbackIndex];
+                    if ((flagPayload & FLAG_MASK) > FLAG_NOT_READY)
+                        break;
+                    else
+                        spinCount++;
+                }
+            }
+            
+            //Did we encounter any deadlocks?
+            if (WaveActiveAnyTrue(spinCount == MAX_SPIN_COUNT) && !WaveGetLaneIndex())
+                InterlockedOr(g_d[1], 1);
+        }
+        GroupMemoryBarrierWithGroupSync();
+        
+        //Yes: fallback
+        if (g_d[1])
+        {
+            if (gtid < RADIX)
+                g_d[gtid + RADIX] = 0;
+            GroupMemoryBarrierWithGroupSync();
+            if (!gtid)
+                g_d[1] = 0;
+            
+            const uint fallbackEnd = PART_SIZE * ((lookbackIndex >> RADIX_LOG) - e_threadBlocks * CurrentPass());
+            for (uint i = gtid + PART_SIZE * ((lookbackIndex >> RADIX_LOG) - e_threadBlocks * CurrentPass() - 1); i < fallbackEnd; i += D_DIM)
+                FallbackHistogram(i);
+            GroupMemoryBarrierWithGroupSync();
+            
+            uint reduceOut;
+            if (gtid < RADIX)
+            {
+                InterlockedCompareExchange(b_passHist[gtid + PassHistOffset((lookbackIndex >> RADIX_LOG) - e_threadBlocks * CurrentPass())], 0,
+                    FLAG_REDUCTION | g_d[gtid + RADIX] << 2, reduceOut);
+            }
+            
+            if (!lookbackComplete)
+            {
+                if ((reduceOut & FLAG_MASK) == FLAG_INCLUSIVE)
+                {
+                    lookbackReduction += reduceOut >> 2;
+                    if (partIndex < e_threadBlocks - 1)
+                    {
+                        InterlockedAdd(b_passHist[gtid + PassHistOffset(partIndex + 1)],
+                            1 | lookbackReduction << 2);
+                    }
+                    lookbackComplete = true;
+                }
+                else
+                {
+                    lookbackReduction += g_d[gtid + RADIX];
+                }
+            }
+            
+            spinCount = 0;
+        }
+        else //No: proceed as normal
+        {
+            if (!lookbackComplete)
+            {
+                lookbackReduction += flagPayload >> 2;
+                if ((flagPayload & FLAG_MASK) == FLAG_INCLUSIVE)
+                {
+                    if (partIndex < e_threadBlocks - 1)
+                    {
+                        InterlockedAdd(b_passHist[gtid + PassHistOffset(partIndex + 1)],
+                            1 | lookbackReduction << 2);
+                    }
+                    lookbackComplete = true;
+                }
+                else
+                {
+                    spinCount = 0;
+                }
+            }
+        }
+        lookbackIndex -= RADIX; //The threadblock lookbacks in lockstep.
+        
+        //Have all digits completed their lookbacks?
+        if (!warpLookbackComplete)
+        {
+            warpLookbackComplete = WaveActiveAllTrue(lookbackComplete);
+            if (warpLookbackComplete && !WaveGetLaneIndex())
+                InterlockedAdd(g_d[0], 1);
+        }
+        GroupMemoryBarrierWithGroupSync();
+    }
+
+    //Post results into shared memory
+    if (gtid < RADIX)
+        g_d[gtid + PART_SIZE] = lookbackReduction - exclusiveHistReduction;
+}
+
+#pragma kernel DigitBinningPass
+
+[numthreads(D_DIM, 1, 1)]
+void DigitBinningPass(uint3 gtid : SV_GroupThreadID)
+{
+    uint partitionIndex;
+    KeyStruct keys;
+    OffsetStruct offsets;
+    
+    //WGT 16 can potentially skip some barriers
+    if (WaveGetLaneCount() > 16)
+    {
+        if (WaveHistsSizeWGE16() < PART_SIZE)
+            ClearWaveHists(gtid.x);
+
+        AssignPartitionTile(gtid.x, partitionIndex);
+        if (WaveHistsSizeWGE16() >= PART_SIZE)
+        {
+            GroupMemoryBarrierWithGroupSync();
+            ClearWaveHists(gtid.x);
+            GroupMemoryBarrierWithGroupSync();
+        }
+    }
+    
+    if (WaveGetLaneCount() <= 16)
+    {
+        AssignPartitionTile(gtid.x, partitionIndex);
+        GroupMemoryBarrierWithGroupSync();
+        ClearWaveHists(gtid.x);
+        GroupMemoryBarrierWithGroupSync();
+    }
+    
+    if (partitionIndex < e_threadBlocks - 1)
+    {
+        if (WaveGetLaneCount() >= 16)
+            keys = LoadKeysWGE16(gtid.x, partitionIndex);
+        
+        if (WaveGetLaneCount() < 16)
+            keys = LoadKeysWLT16(gtid.x, partitionIndex, SerialIterations());
+    }
+        
+    if (partitionIndex == e_threadBlocks - 1)
+    {
+        if (WaveGetLaneCount() >= 16)
+            keys = LoadKeysPartialWGE16(gtid.x, partitionIndex);
+        
+        if (WaveGetLaneCount() < 16)
+            keys = LoadKeysPartialWLT16(gtid.x, partitionIndex, SerialIterations());
+    }
+    
+    uint exclusiveHistReduction;
+    if (WaveGetLaneCount() >= 16)
+    {
+        offsets = RankKeysWGE16(gtid.x, keys);
+        GroupMemoryBarrierWithGroupSync();
+        
+        uint histReduction;
+        if (gtid.x < RADIX)
+        {
+            histReduction = WaveHistInclusiveScanCircularShiftWGE16(gtid.x);
+            DeviceBroadcastReductionsWGE16(gtid.x, partitionIndex, histReduction);
+            histReduction += WavePrefixSum(histReduction); //take advantage of barrier to begin scan
+        }
+        GroupMemoryBarrierWithGroupSync();
+
+        WaveHistReductionExclusiveScanWGE16(gtid.x, histReduction);
+        GroupMemoryBarrierWithGroupSync();
+            
+        UpdateOffsetsWGE16(gtid.x, offsets, keys);
+        if (gtid.x < RADIX)
+            exclusiveHistReduction = g_d[gtid.x]; //take advantage of barrier to grab value
+        GroupMemoryBarrierWithGroupSync();
+    }
+    
+    if (WaveGetLaneCount() < 16)
+    {
+        offsets = RankKeysWLT16(gtid.x, keys, SerialIterations());
+            
+        if (gtid.x < HALF_RADIX)
+        {
+            uint histReduction = WaveHistInclusiveScanCircularShiftWLT16(gtid.x);
+            g_d[gtid.x] = histReduction + (histReduction << 16); //take advantage of barrier to begin scan
+            DeviceBroadcastReductionsWLT16(gtid.x, partitionIndex, histReduction);
+        }
+            
+        WaveHistReductionExclusiveScanWLT16(gtid.x);
+        GroupMemoryBarrierWithGroupSync();
+            
+        UpdateOffsetsWLT16(gtid.x, SerialIterations(), offsets, keys);
+        if (gtid.x < RADIX) //take advantage of barrier to grab value
+            exclusiveHistReduction = g_d[gtid.x >> 1] >> ((gtid.x & 1) ? 16 : 0) & 0xffff;
+        GroupMemoryBarrierWithGroupSync();
+    }
+    
+    ScatterKeysShared(offsets, keys);
+    Lookback(gtid.x, partitionIndex, exclusiveHistReduction);
+    GroupMemoryBarrierWithGroupSync();
+    
+    if (partitionIndex < e_threadBlocks - 1)
+        ScatterDevice(gtid.x, partitionIndex, offsets);
+        
+    if (partitionIndex == e_threadBlocks - 1)
+        ScatterDevicePartial(gtid.x, partitionIndex, offsets);
+}
