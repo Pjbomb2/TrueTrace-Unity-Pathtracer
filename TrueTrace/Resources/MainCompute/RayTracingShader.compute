@@ -1164,6 +1164,9 @@ int MaterialIndex;
     if(TempMat.specTrans == 0 && CurBounce != 0 && bestHit.t < 1.0f) Color.throughput *= exp(-(1.0f - bestHit.t) * 12000.0f);
 #endif
 
+    const bool InvalidateScreenSpaceInfo = ((!UseASVGF && CurBounce == 0));
+    float4 PrevScreenData = InvalidateScreenSpaceInfo ? 0 : ScreenSpaceInfo[id.xy];
+
     if (TempMat.specTrans != 1 && TempMat.MetallicTex.x > 0) TempMat.metallic = pow(SampleTexture(BaseUv, SampleMetallic, TempMat), rcp(2.2f));
     if (TempMat.RoughnessTex.x > 0) {
         TempMat.roughness = saturate(pow(SampleTexture(BaseUv, SampleRoughness, TempMat), rcp(2.2f)));
@@ -1180,7 +1183,12 @@ int MaterialIndex;
     #ifndef TrueBlack
         TempMat.surfaceColor = max(TempMat.surfaceColor, 0.005f);
     #endif
-
+#ifdef ClampRoughnessToBounce
+    {
+        const uint Case = (asuint(PrevScreenData.w) << 1) >> 30;
+        if(CurBounce != 0 && Case != 3) TempMat.roughness = max(TempMat.roughness, saturate((float)CurBounce / 6.0f));
+    }
+#endif
     #ifndef WhiteLights
         if(TempMat.emission > 0) {
             if (TempMat.EmissiveTex.x > 0) {
@@ -1195,8 +1203,6 @@ int MaterialIndex;
             }
         }
     #endif
-    const bool InvalidateScreenSpaceInfo = ((!UseASVGF && CurBounce == 0));
-    float4 PrevScreenData = InvalidateScreenSpaceInfo ? 0 : ScreenSpaceInfo[id.xy];
     if(CurBounce == 0 && UseReSTIRGI) PrevScreenData.w = asfloat(0);
     float4 PrevPrev = PrevScreenData;
     float3 bsdf = 1;
