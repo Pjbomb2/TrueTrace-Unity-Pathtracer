@@ -133,7 +133,6 @@ inline float AreaOfTriangle(float3 pt1, float3 pt2, float3 pt3) {
 void InitializeModified (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID)
 {
     if(id.x >= PrimCount) return;
-    // LightBVHData Node = TrianglesWrite[id.x];
 
     TransferData Transf = Transfers[InputAABBBuffer[id.x].MeshOffset];
     float3 Pos0 = mul(Transf.Transf2, float4(InputAABBBuffer[id.x].pos0,1));
@@ -334,7 +333,6 @@ void Propogate (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID)
     int LeftIndex = Nodes[WorkGroupInput.NodesI].left;
     if (LeftIndex < 0) return;
     int Left = (LeftIndex - WorkGroup[3]);
-    // if (FinalSplit.index == WorkGroupInput.FirstIndex) FinalSplit.index += 1;
     ReadBackData ReadData = { LeftIndex, WorkGroupInput.FirstIndex, FinalSplit.index - WorkGroupInput.FirstIndex, FinalSplit.Dimension };
     ReadBackWrite[Left] = ReadData;
     ReadBackData ReadData2 = { LeftIndex + 1, FinalSplit.index, (WorkGroupInput.FirstIndex + WorkGroupInput.IndexCount) - FinalSplit.index, WorkGroupInput.IndexCount };
@@ -497,7 +495,7 @@ void SplitKernel (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, u
     if (Valid) {// / binbatchsize because we broke it into 2 chunks; WE ONLY PROCESS ONE CELL PER GROUP, NOT ACTIVEQUE COUNT CELLS -- NOPE WRONG
         const float Min = ParentAABB.BBMin[GT.y];
         const float Diff = rcp(ParentAABB.BBMax[GT.y] - Min) * (float) (BinCount);
-        if(WorkGroupInput.IndexCount > 10) {
+        if(WorkGroupInput.IndexCount > 10) {//Experiemental binary search barrier finding, reduces from 2N reads to N + 3log(N) reads, where N is element count
             int RepCount = 0;
             int PrevMid = -1;
             bool ValidBin = true;
@@ -591,7 +589,7 @@ void SplitKernel (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, u
 
 
 
-                // for(int i = StartIndex; i <= EndIndex; i++){ 
+                // for(int i = StartIndex; i <= EndIndex; i++){ //old baseline method for quality comparison as they SHOULD result in the EXACT same if done properly
                 //     const int Index = DimensionedIndices[Offset + i];
                 //     float Center = (Triangles[Index].BBMax[GT.y] + Triangles[Index].BBMin[GT.y]) / 2.0f - Min;            
                 //     int Bin = clamp(floor(Center * Diff), 0, BinCount - 1);
@@ -605,7 +603,7 @@ void SplitKernel (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, u
                 // }
             // if(GT.x < 32 && GT.y == 0 && GT.z == 0) LayerStridesBuffer[GT.x % 32] = asuint(float4((float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].x, (float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].y, (float)RepCount, (float)1));
             }
-        } else {
+        } else {//if we have less than 10 elements, I fall back to full 2N reads, as I havent finished the binary search to be fully stable yet
             StartIndex = WorkGroupInput.FirstIndex + ThreadStrides.x;
             EndIndex = min(WorkGroupInput.FirstIndex + ThreadStrides.y, WorkGroupInput.FirstIndex + (WorkGroupInput.IndexCount));
             for (int i = StartIndex; i < EndIndex; i++) {
@@ -636,7 +634,7 @@ void SplitKernel (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, u
                 }
             }
         }
-    // GroupMemoryBarrierWithGroupSync();
+    // GroupMemoryBarrierWithGroupSync(); // we MIGHT need these
 
 
         if(GT.x < 32) {
@@ -650,7 +648,7 @@ void SplitKernel (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, u
             }
         }
 
-    // GroupMemoryBarrierWithGroupSync();
+    // GroupMemoryBarrierWithGroupSync(); // we MIGHT need these
 
     // if(WorkGroupInput.IndexCount > 10)
         if(GT.x == 0) {
@@ -702,7 +700,7 @@ void SplitKernel (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, u
 
     if (Valid) {
         if(GT.x == (BinBatchSize - 1)) {
-            LightBVHData RunningAABB = InitialAABB;//might be optimizable by converting to UintAABB to not require conversions from floattouint, but we still need for surface area...
+            LightBVHData RunningAABB = InitialAABB;
             int TriCount = 0;                
             float3 Diagonal = ParentAABB.BBMax - ParentAABB.BBMin;
             float Kr = max(Diagonal.x, max(Diagonal.y, Diagonal.z)) / Diagonal[GT.y];

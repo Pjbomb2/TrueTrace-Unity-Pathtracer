@@ -62,7 +62,7 @@ StructuredBuffer<ObjectSplit> SplitRead;
 StructuredBuffer<AABB> Triangles;
 RWStructuredBuffer<uint> DimensionedIndices;
 RWStructuredBuffer<int> TempIndexes;
-RWStructuredBuffer<int4> LayerStridesBuffer; //A buffer that stores the start and size of each hierarchy layer nodes
+RWStructuredBuffer<int4> LayerStridesBuffer;
 StructuredBuffer<uint> IndB;
 RWStructuredBuffer<uint4> DispatchSize;
 globallycoherent RWStructuredBuffer<int> WorkGroup;
@@ -82,11 +82,11 @@ inline float surface_area(AABB aabb) {
     return (d.x + d.y) * d.z + d.x * d.y; 
 }
 
+static const AABB InitialAABB = {-3.40282347E+38,-3.40282347E+38,-3.40282347E+38,3.40282347E+38,3.40282347E+38,3.40282347E+38};
 
 #pragma kernel Propogate
 
 
-static const AABB InitialAABB = {-3.40282347E+38,-3.40282347E+38,-3.40282347E+38,3.40282347E+38,3.40282347E+38,3.40282347E+38};
 [numthreads(64,1,1)]
 void Propogate (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID)
 {
@@ -110,7 +110,6 @@ void Propogate (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID)
     int LeftIndex = Nodes[WorkGroupInput.NodesI].left;
     if (LeftIndex < 0) return;
     int Left = (LeftIndex - WorkGroup[3]);
-    // if (FinalSplit.index == WorkGroupInput.FirstIndex) FinalSplit.index += 1;
     ReadBackData ReadData = { LeftIndex, WorkGroupInput.FirstIndex, FinalSplit.index - WorkGroupInput.FirstIndex, FinalSplit.Dimension };
     ReadBackWrite[Left] = ReadData;
     ReadBackData ReadData2 = { LeftIndex + 1, FinalSplit.index, (WorkGroupInput.FirstIndex + WorkGroupInput.IndexCount) - FinalSplit.index, WorkGroupInput.IndexCount };
