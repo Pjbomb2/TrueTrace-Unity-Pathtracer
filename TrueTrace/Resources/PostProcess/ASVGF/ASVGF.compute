@@ -466,7 +466,7 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 	IMG_ASVGF_GRAD_HF_SPEC_PING[pos_grad] = found_prev_lum;
 
 	RNGTexA[ipos] = float4(RNGTexB[found_pos_prev].xyz, (ReflRefracB[found_pos_prev] >> 31) ? 2 : 1);
-	Ray PrevCamRay = CreateCameraRayPrev(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
+	Ray PrevCamRay = CreateCameraRayPrev(found_pos_prev / float2(screen_width, screen_height) * 2.0f - 1.0f);
 	GlobalRaysMini[ipos.x + ipos.y * screen_width].origin = PrevCamRay.origin;
 	GlobalRaysMini[ipos.x + ipos.y * screen_width].direction = PrevCamRay.direction;
 	uint4 Target = PrimaryTriData[found_pos_prev];
