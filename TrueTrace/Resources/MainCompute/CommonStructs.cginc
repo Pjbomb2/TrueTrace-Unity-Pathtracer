@@ -68,6 +68,7 @@ struct MyMeshDataCompacted {
 };
 
 StructuredBuffer<MyMeshDataCompacted> _MeshData;
+StructuredBuffer<MyMeshDataCompacted> _MeshDataB;
 StructuredBuffer<MyMeshDataCompacted> _MeshDataPrev;
 
 struct TerrainData {

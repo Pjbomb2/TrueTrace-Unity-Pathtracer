@@ -202,9 +202,16 @@ namespace TrueTrace {
 
         Vector3 prevEuler;
         Vector3 PrevPos;
-        public void DoRNG(ref RenderTexture RNGTex, ref RenderTexture RNGTexB, int CurFrame, ComputeBuffer GlobalRays, CommandBuffer cmd, RenderTexture PrimaryTriData, ComputeBuffer Meshes, ComputeBuffer Tris, bool UseBackupPointSelection, ComputeBuffer MeshIndexes)
+        public void DoRNG(ref RenderTexture RNGTex, ref RenderTexture RNGTexB, int CurFrame, ComputeBuffer GlobalRays, CommandBuffer cmd, RenderTexture PrimaryTriData, ComputeBuffer Meshes, ComputeBuffer Tris, bool UseBackupPointSelection, ComputeBuffer MeshIndexes, int ScreenWidth, int ScreenHeight)
         {
-            if (shader == null) { shader = Resources.Load<ComputeShader>("PostProcess/ASVGF"); }
+            // this.ScreenWidth = ScreenWidth;
+            // this.ScreenHeight = ScreenHeight;
+            // shader.SetInt("screen_width", ScreenWidth);
+            // shader.SetInt("screen_height", ScreenHeight);
+
+            // shader.SetInt("TargetWidth", ScreenWidth);
+            // shader.SetInt("TargetHeight", ScreenHeight);
+            if (shader == null) { shader = Resources.Load<ComputeShader>("PostProcess/ASVGF/ASVGF"); }
             camera = RayTracingMaster._camera;
             bool EvenFrame = CurFrame % 2 == 0;
             Vector3 Euler = camera.transform.eulerAngles;

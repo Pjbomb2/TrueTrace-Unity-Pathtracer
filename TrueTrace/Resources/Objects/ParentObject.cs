@@ -1232,6 +1232,13 @@ namespace TrueTrace {
                     if(IsSkinnedGroup) {
                         SkinnedMeshes[i].vertexBufferTarget |= GraphicsBuffer.Target.Raw;
                         VertexBuffers[i] = SkinnedMeshes[i].GetVertexBuffer();
+                        if(!SkinnedMeshes[i].gameObject.activeInHierarchy) {
+                            NeedsToUpdate = true;
+                            if((QueInProgress == 0 || QueInProgress == 1) && AssetManager.Assets != null && AssetManager.Assets.UpdateQue != null && !AssetManager.Assets.UpdateQue.Contains(this)) {
+                                QueInProgress = 2;
+                                AssetManager.Assets.UpdateQue.Add(this);
+                            }
+                        }
                     } else {
                         DeformableMeshes[i].sharedMesh.vertexBufferTarget |= GraphicsBuffer.Target.Raw;
                         VertexBuffers[i] = DeformableMeshes[i].sharedMesh.GetVertexBuffer(0);

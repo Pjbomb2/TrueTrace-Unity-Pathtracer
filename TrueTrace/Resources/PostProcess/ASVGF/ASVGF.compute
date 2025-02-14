@@ -482,10 +482,10 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 			UV.y = asfloat(Target.w);//(Target.z >> 16) / 65535.0f;
 			float4x4 Inverse = inverse(Mesh.W2L);
 			Pos = mul(Inverse, float4(AggTrisA[Target.y].pos0 + UV.x * AggTrisA[Target.y].posedge1 + UV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+	// GlobalRaysMini[ipos.x + ipos.y * screen_width].origin += CamDiff;
 		}
 	}
 
-	// GlobalRaysMini[ipos.x + ipos.y * screen_width].origin -= CamDiff;
 	GlobalRaysMini[ipos.x + ipos.y * screen_width].direction = normalize(Pos - GlobalRaysMini[ipos.x + ipos.y * screen_width].origin);
 
 	MetallicAWrite[ipos] = MetallicB[found_pos_prev];
@@ -1289,7 +1289,7 @@ inline void filter_image(
 		}
 		filtered_spec = clamp(filtered_spec, Min, Max);
 	}
-	// [branch]if (hist_len_hf > 2 || spec_iteration == 0) {
+	[branch]if (hist_len_hf > 2 || spec_iteration == 0) {
 		// Compute luminance variance from the statistical moments: Var(X) = E[X^2] - E[X]^2
 		// The `asvgf_temporal` shader computes a combination of temporal and spatial (3x3) moments,
 		// and stores these into a texture. This shader will combine moments of the surrounding 
@@ -1297,13 +1297,13 @@ inline void filter_image(
 		lum_mean_hf = filtered_moments.x;
 		float lum_variance_hf = max(1e-8, filtered_moments.y - filtered_moments.x * filtered_moments.x);
 		sigma_l_hf = min(max(hist_len_hf - (spec_iteration == 0 ? 0 : 2), 1), 16) / (2.0 * lum_variance_hf);
-	// } else {
+	} else {
 	// 	// If there is no history, treat all moments as invalid, because 3x3 spatial 
 	// 	// is just not enough to get reasonable filtering. Ignore luminance in this case,
 	// 	// and perform a depth-normal-guided bilateral blur.
-	// 	lum_mean_hf = filtered_moments.x;
-	// 	if(hist_len_hf > 1) sigma_l_hf = 0.005f;
-	// }
+		lum_mean_hf = filtered_moments.x;
+		if(hist_len_hf > 1) sigma_l_hf = 0.005f;
+	}
 
 	// reduce the HF filter sensitivity to normals when the lighting is invalidated
 	float normal_weight_scale = clamp(hist_len_hf / 8.0f, 0, 1);
