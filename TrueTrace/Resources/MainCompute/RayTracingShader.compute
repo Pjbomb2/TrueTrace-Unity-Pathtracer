@@ -268,6 +268,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 Color.Data = EmissCol;
                 Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((1) << 26);  
                 Color.Flags = packRGBE(EmissCol);
+                // PrevScreenData.w = asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 4) >> 4) : ((asuint(PrevScreenData.w) << 4) >> 4)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31)); 
+
             }
             return;
         }

@@ -234,6 +234,10 @@ namespace TrueTrace {
         int TexCount = DictTex.Count;
         if(TexCount != 0) {
             for (int i = 0; i < TexCount; i++) {
+                if(BindlessTextureCount > 2046) {
+                    Debug.LogError("TOO MANY TEXTURES, REPORT BACK TO DEVELOPER");
+                    return;
+                } else BindlessTextureCount++;
                 PackingRectangle TempRect = Rects[i];
                 int ID = TempRect.Id;
                 TexObj SelectedTex = DictTex[ID];
@@ -241,7 +245,7 @@ namespace TrueTrace {
                 var bindlessIdx = bindlessTextures.AppendRaw(SelectedTex.Tex);
 
                 for(int j = 0; j < ListLength; j++) {
-                        Vector2Int VectoredTexIndex = new Vector2Int(BindlessTextureCount + 1, SelectedTex.TexObjList[j].z);
+                        Vector2Int VectoredTexIndex = new Vector2Int(BindlessTextureCount, SelectedTex.TexObjList[j].z);
                         switch (SelectedTex.TexObjList[j].y) {
                             case 0: _Materials[SelectedTex.TexObjList[j].x].AlbedoTex = VectoredTexIndex; break;
                             case 1: _Materials[SelectedTex.TexObjList[j].x].NormalTex = VectoredTexIndex; break;
@@ -256,11 +260,6 @@ namespace TrueTrace {
                             case 11: _Materials[SelectedTex.TexObjList[j].x].SecondaryNormalTex = VectoredTexIndex; break;
                             default: break;
                         }
-                }
-                BindlessTextureCount++;
-                if(BindlessTextureCount > 2046) {
-                    Debug.LogError("TOO MANY TEXTURES, REPORT BACK TO DEVELOPER");
-                    return;
                 }
             }
         }
