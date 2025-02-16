@@ -44,6 +44,7 @@
   <li>EON and vMF diffuse models</li>
   <li>Chromatic Aberation, Contrast/Saturation, Colored Vignette</li>
   <li>Full Multiscatter Fog(Not realtime)</li>
+  <li>Orthographic Camera</li>
 </ul>
 
 MASSIVE thanks to 
@@ -100,7 +101,7 @@ for bringing bindless textures to unity!
 
 ## General Use/Notes
 <ul>
-  <li>DX12 is recommended, as it enables use of OIDN, Bindless texturing, RT Cores, and slightly higher performance</li>
+  <li>DX12 is recommended, as it enables use of OIDN, Bindless texturing, RT Cores, and higher performance</li>
   <li>The camera you want to render from, you attach the RenderHandler script to(if you have a camera tagged MainCamera, this will be done automatically)</li>
   <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building, a ding will sound when it completes if it takes longer than 15 seconds(Turn on Truetrace Settings -> Functionality Settings</li>
   <li>Objects can be added and removed at will simply by toggling the associated GameObject with a ParentObject script on/off in the hierarchy(clicking on parent objects with complex objects for children will lag), but they will take time to appear as the acceleration structure needs to  be rebuilt for them</li>
@@ -110,13 +111,9 @@ for bringing bindless textures to unity!
   <li>If you use HDRIs, or CubeMaps for the skybox, you need to format as the texture to a Texture2D in the inspector of the image, unity will convert it automatically, then put it in the slot in "Scene Settings" in the TrueTrace settings menu</li>
 </ul>
 
-## Creating Panoramas
+## Creating Non-Standard Images
 <ul>
-    <li>Attatch the "PanoramaDoer" script to the "Scene" gameobject in the hierarchy</li>
-    <li>Set your settings in the PanoramaDoer</li>
-    <li>Enter Play Mode like normal and click the "Create Panorama" button in TrueTrace Settings</li>
-    <li>The rest is automatic, from rendering, to stitching and will automatically exit play mode when finished</li>
-    <li>The final Panorama will be put in Assets -> Screenshots, and the intermediate slices are in Assets -> TempPanorama</li>
+    <li>Attatch the "TTAdvancedImageGen" script to any gameobject in the hierarchy, and fill out the settings you want.</li>
 </ul>
 
 ## Using Instancing
@@ -158,13 +155,12 @@ TrueTrace Options Description -
   <li>Remaining Objects - Objects still being processed</li>
   <li>Max Bounces - Sets the maximum number of bounces a ray can achieve</li>
   <li>Internal Resolution Ratio - Render scale in comparison to gameview size, turn to below 1 while in edit mode to decrease rendered resolution(to then be upscaled)</li>
-  <li>Atlas Size - Maximum size of the texture atlas used(All textures are packed into atlas's so I can send them to the GPU)</li>
   <li>Use Russian Roulette - Highly recommended to leave this on, kills rays that may not contribute much early, and thus greatly increases performance</li>
   <li>Enable Object Moving - Allows objects to be moved during play, and allows for added objects to spawn in when they are done building</li>
   <li>Allow Image Accumulation - Allows the image to accumulate while the camera is not moving</li>
   <li>Use Next Event Estimation - Enables shadow rays/NEE for direct light sampling</li>
     <ul>
-      <li>RIS Count - Number of RIS passes done for unity and mesh lights(for mesh lights, it only works if LBVH is off in "GlobalDefines.cginc")</li>
+      <li>RIS Count - Number of RIS passes done for unity and mesh lights(for mesh lights, it only works if Use Light BVH is off in Functionality Settings)</li>
     </ul>
   <li>Allow Mesh Skinning - Turns on the ability for skinned meshes to be animated or deformed with respect to their armeture</li>
   <li>Denoiser - Allows you to switch between different denoisers</li>
@@ -208,17 +204,11 @@ TrueTrace Options Description -
   <li>Finally, add the "URPTTInjectPass" script to an empty gameobject</li>
 </ul>
 
-## IES System
-<ul>
-    <li>Add the texture highlighted in the image below to the "IES Profile" slot in the raytracinglights component thats added to standard unity lights(directional, point, spot, etc. type lights)</li>
-</ul>
-
-![](/.Images/IESInstructions0.png)
-
 # Known Bugs:
 </br>
 <ul>
   <li>Please report any you find to the discord or to me directly.</li>
+  <li>If your in DX11 and the image displays black, make sure all TrueTrace compute shaders are set to "Caching Preprocessor".</li>
 </ul>
 
 # Huge thanks to these people for sponsoring me:
