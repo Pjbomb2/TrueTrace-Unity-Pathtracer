@@ -14,6 +14,45 @@ float4x4 CamInvProjPrev;
 float4x4 viewprojection;
 
 
+inline float4x4 inverse(float4x4 m) {
+    float n11 = m[0][0], n12 = m[1][0], n13 = m[2][0], n14 = m[3][0];
+    float n21 = m[0][1], n22 = m[1][1], n23 = m[2][1], n24 = m[3][1];
+    float n31 = m[0][2], n32 = m[1][2], n33 = m[2][2], n34 = m[3][2];
+    float n41 = m[0][3], n42 = m[1][3], n43 = m[2][3], n44 = m[3][3];
+
+    float t11 = n23 * n34 * n42 - n24 * n33 * n42 + n24 * n32 * n43 - n22 * n34 * n43 - n23 * n32 * n44 + n22 * n33 * n44;
+    float t12 = n14 * n33 * n42 - n13 * n34 * n42 - n14 * n32 * n43 + n12 * n34 * n43 + n13 * n32 * n44 - n12 * n33 * n44;
+    float t13 = n13 * n24 * n42 - n14 * n23 * n42 + n14 * n22 * n43 - n12 * n24 * n43 - n13 * n22 * n44 + n12 * n23 * n44;
+    float t14 = n14 * n23 * n32 - n13 * n24 * n32 - n14 * n22 * n33 + n12 * n24 * n33 + n13 * n22 * n34 - n12 * n23 * n34;
+
+    float det = n11 * t11 + n21 * t12 + n31 * t13 + n41 * t14;
+    float idet = 1.0f / det;
+
+    float4x4 ret;
+
+    ret[0][0] = t11 * idet;
+    ret[0][1] = (n24 * n33 * n41 - n23 * n34 * n41 - n24 * n31 * n43 + n21 * n34 * n43 + n23 * n31 * n44 - n21 * n33 * n44) * idet;
+    ret[0][2] = (n22 * n34 * n41 - n24 * n32 * n41 + n24 * n31 * n42 - n21 * n34 * n42 - n22 * n31 * n44 + n21 * n32 * n44) * idet;
+    ret[0][3] = (n23 * n32 * n41 - n22 * n33 * n41 - n23 * n31 * n42 + n21 * n33 * n42 + n22 * n31 * n43 - n21 * n32 * n43) * idet;
+
+    ret[1][0] = t12 * idet;
+    ret[1][1] = (n13 * n34 * n41 - n14 * n33 * n41 + n14 * n31 * n43 - n11 * n34 * n43 - n13 * n31 * n44 + n11 * n33 * n44) * idet;
+    ret[1][2] = (n14 * n32 * n41 - n12 * n34 * n41 - n14 * n31 * n42 + n11 * n34 * n42 + n12 * n31 * n44 - n11 * n32 * n44) * idet;
+    ret[1][3] = (n12 * n33 * n41 - n13 * n32 * n41 + n13 * n31 * n42 - n11 * n33 * n42 - n12 * n31 * n43 + n11 * n32 * n43) * idet;
+
+    ret[2][0] = t13 * idet;
+    ret[2][1] = (n14 * n23 * n41 - n13 * n24 * n41 - n14 * n21 * n43 + n11 * n24 * n43 + n13 * n21 * n44 - n11 * n23 * n44) * idet;
+    ret[2][2] = (n12 * n24 * n41 - n14 * n22 * n41 + n14 * n21 * n42 - n11 * n24 * n42 - n12 * n21 * n44 + n11 * n22 * n44) * idet;
+    ret[2][3] = (n13 * n22 * n41 - n12 * n23 * n41 - n13 * n21 * n42 + n11 * n23 * n42 + n12 * n21 * n43 - n11 * n22 * n43) * idet;
+
+    ret[3][0] = t14 * idet;
+    ret[3][1] = (n13 * n24 * n31 - n14 * n23 * n31 + n14 * n21 * n33 - n11 * n24 * n33 - n13 * n21 * n34 + n11 * n23 * n34) * idet;
+    ret[3][2] = (n14 * n22 * n31 - n12 * n24 * n31 - n14 * n21 * n32 + n11 * n24 * n32 + n12 * n21 * n34 - n11 * n22 * n34) * idet;
+    ret[3][3] = (n12 * n23 * n31 - n13 * n22 * n31 + n13 * n21 * n32 - n11 * n23 * n32 - n12 * n21 * n33 + n11 * n22 * n33) * idet;
+
+    return ret;
+}
+
 float4x4 ViewMatrix;
 int MaxBounce;
 int CurBounce;
@@ -22,6 +61,7 @@ uint screen_width;
 uint screen_height;
 int frames_accumulated;
 int curframe;//might be able to get rid of this
+int MainDirectionalLight;
 float LEMEnergyScale;
 
 bool UseLightBVH;
@@ -72,6 +112,8 @@ struct BufferSizeData {
 	int shadow_rays;
 	int heighmap_rays;
 	int heightmap_shadow_rays;
+	int TracedRays;
+	int TracedRaysShadow;
 };
 
 globallycoherent RWStructuredBuffer<BufferSizeData> BufferSizes;
@@ -118,6 +160,7 @@ RWStructuredBuffer<SmallerRay> Rays;
 StructuredBuffer<SmallerRay> Rays2;
 
 Texture2D<uint4> PrimaryTriData;
+Texture2D<uint4> PrimaryTriDataPrev;
 StructuredBuffer<int> TLASBVH8Indices;
 
 int AlbedoAtlasSize;
@@ -135,17 +178,17 @@ struct TriangleUvs {
 
 inline TrianglePos triangle_get_positions(const int ID) {
 	TrianglePos tri;
-	tri.pos0 = AggTris.Load(ID).pos0;
-	tri.posedge1 = AggTris.Load(ID).posedge1;
-	tri.posedge2 = AggTris.Load(ID).posedge2;
+	tri.pos0 = AggTrisA.Load(ID).pos0;
+	tri.posedge1 = AggTrisA.Load(ID).posedge1;
+	tri.posedge2 = AggTrisA.Load(ID).posedge2;
 	return tri;
 }
 
 inline TriangleUvs triangle_get_positions2(const int ID) {
 	TriangleUvs tri;
-	tri.pos0 = TOHALF(AggTris.Load(ID).tex0);
-	tri.posedge1 = TOHALF(AggTris.Load(ID).texedge1);
-	tri.posedge2 = TOHALF(AggTris.Load(ID).texedge2);
+	tri.pos0 = TOHALF(AggTrisA.Load(ID).tex0);
+	tri.posedge1 = TOHALF(AggTrisA.Load(ID).texedge1);
+	tri.posedge2 = TOHALF(AggTrisA.Load(ID).texedge2);
 	return tri;
 }
 
@@ -194,6 +237,18 @@ inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotati
 }
 
 
+inline void HandleRotation(inout float2 UV, float Rotation) {
+	if(Rotation != 0) {
+		float sinc, cosc;
+		sincos(Rotation / 180.0f, sinc, cosc);
+		UV -= 0.5f;
+		float2 tempuv = UV;
+		UV.x = tempuv.x * cosc - tempuv.y * sinc;
+		UV.y = tempuv.x * sinc + tempuv.y * cosc;
+		UV += 0.5f;
+	}
+}
+
 inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTex) {
 	float4 FinalCol = 0;
 	#if !defined(UseBindless) || defined(DX11)
@@ -206,16 +261,16 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 				#endif
 			break;
 			case SampleMetallic:
-				FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, float4(MatTex.SecondaryTexScale, MatTex.AlbedoTexScale.zw), MatTex.MetallicTex, MatTex.Rotation), 0);
+				FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.SecondaryTexScaleOffset, MatTex.MetallicTex, MatTex.RotationSecondary), 0);
 			break;
 			case SampleRoughness:
-				FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, float4(MatTex.SecondaryTexScale, MatTex.AlbedoTexScale.zw), MatTex.RoughnessTex, MatTex.Rotation), 0);
+				FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.SecondaryTexScaleOffset, MatTex.RoughnessTex, MatTex.RotationSecondary), 0);
 			break;
 			case SampleEmission:
 				FinalCol = _EmissiveAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.EmissiveTex, MatTex.Rotation), 0);
 			break;
 			case SampleNormal:
-				FinalCol = _NormalAtlas.SampleLevel(sampler_NormalAtlas, AlignUV(UV, float4(MatTex.SecondaryTexScale, MatTex.AlbedoTexScale.zw), MatTex.NormalTex, MatTex.Rotation), 0).xyxy;
+				FinalCol = _NormalAtlas.SampleLevel(sampler_NormalAtlas, AlignUV(UV, MatTex.NormalTexScaleOffset, MatTex.NormalTex, MatTex.RotationNormal), 0).xyxy;
 			break;
 			case SampleAlpha:
 				#ifdef PointFiltering
@@ -236,43 +291,34 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 			break;
 			case SampleSecondaryAlbedo:
 				#ifdef PointFiltering
-					FinalCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.SecondaryAlbedoTexScaleOffset, MatTex.SecondaryAlbedoTex, MatTex.Rotation), 0);
+					FinalCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.SecondaryAlbedoTexScaleOffset, MatTex.SecondaryAlbedoTex, MatTex.RotationSecondaryDiffuse), 0);
 				#else
-					FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.SecondaryAlbedoTexScaleOffset, MatTex.SecondaryAlbedoTex, MatTex.Rotation), 0);
+					FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.SecondaryAlbedoTexScaleOffset, MatTex.SecondaryAlbedoTex, MatTex.RotationSecondaryDiffuse), 0);
 				#endif
 			break;
 			case SampleSecondaryAlbedoMask:
 				FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.SecondaryAlbedoMask, MatTex.Rotation), 0);
 			break;
 			case SampleDetailNormal:
-				FinalCol = _NormalAtlas.SampleLevel(sampler_NormalAtlas, AlignUV(UV, MatTex.SecondaryNormalTexScaleOffset, MatTex.SecondaryNormalTex, MatTex.Rotation), 0).xyxy;
+				FinalCol = _NormalAtlas.SampleLevel(sampler_NormalAtlas, AlignUV(UV, MatTex.SecondaryNormalTexScaleOffset, MatTex.SecondaryNormalTex, MatTex.RotationSecondaryNormal), 0).xyxy;
 			break;
 		}
 	#else//BINDLESS
 		//AlbedoTexScale, AlbedoTex, and Rotation dont worry about, thats just for transforming to the atlas 
 		int2 TextureIndexAndChannel = -1;// = MatTex.BindlessIndex;
-		if(MatTex.Rotation != 0) {
-			float sinc, cosc;
-			sincos(MatTex.Rotation / 180.0f, sinc, cosc);
-			UV -= 0.5f;
-			float2 tempuv = UV;
-			UV.x = tempuv.x * cosc - tempuv.y * sinc;
-			UV.y = tempuv.x * sinc + tempuv.y * cosc;
-			UV += 0.5f;
-		}
 		switch(TextureType) {
-			case SampleAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
-			case SampleMetallic: TextureIndexAndChannel = MatTex.MetallicTex; UV = UV * MatTex.SecondaryTexScale.xy + MatTex.AlbedoTexScale.zw; break;
-			case SampleRoughness: TextureIndexAndChannel = MatTex.RoughnessTex; UV = UV * MatTex.SecondaryTexScale.xy + MatTex.AlbedoTexScale.zw; break;
-			case SampleEmission: TextureIndexAndChannel = MatTex.EmissiveTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
-			case SampleNormal: TextureIndexAndChannel = MatTex.NormalTex; UV = UV * MatTex.SecondaryTexScale.xy + MatTex.AlbedoTexScale.zw; break;
-			case SampleAlpha: TextureIndexAndChannel = MatTex.AlphaTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
-			case SampleMatCap: TextureIndexAndChannel = MatTex.MatCapTex; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
-			case SampleMatCapMask: TextureIndexAndChannel = MatTex.MatCapMask; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleMetallic: TextureIndexAndChannel = MatTex.MetallicTex; HandleRotation(UV, MatTex.RotationSecondary); UV = UV * MatTex.SecondaryTexScaleOffset.xy + MatTex.SecondaryTexScaleOffset.zw; break;
+			case SampleRoughness: TextureIndexAndChannel = MatTex.RoughnessTex; HandleRotation(UV, MatTex.RotationSecondary); UV = UV * MatTex.SecondaryTexScaleOffset.xy + MatTex.SecondaryTexScaleOffset.zw; break;
+			case SampleEmission: TextureIndexAndChannel = MatTex.EmissiveTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleNormal: TextureIndexAndChannel = MatTex.NormalTex; HandleRotation(UV, MatTex.RotationNormal); UV = UV * MatTex.NormalTexScaleOffset.xy + MatTex.NormalTexScaleOffset.zw; break;
+			case SampleAlpha: TextureIndexAndChannel = MatTex.AlphaTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleMatCap: TextureIndexAndChannel = MatTex.MatCapTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleMatCapMask: TextureIndexAndChannel = MatTex.MatCapMask; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 			case SampleTerrainAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; UV = (UV * MatTex.surfaceColor.xy + MatTex.transmittanceColor.xy) * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
-			case SampleSecondaryAlbedo: TextureIndexAndChannel = MatTex.SecondaryAlbedoTex; UV = UV * MatTex.SecondaryAlbedoTexScaleOffset.xy + MatTex.SecondaryAlbedoTexScaleOffset.zw; break;
-			case SampleSecondaryAlbedoMask: TextureIndexAndChannel = MatTex.SecondaryAlbedoMask; UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
-			case SampleDetailNormal: TextureIndexAndChannel = MatTex.SecondaryNormalTex; UV = UV * MatTex.SecondaryNormalTexScaleOffset.xy + MatTex.SecondaryNormalTexScaleOffset.zw; break;
+			case SampleSecondaryAlbedo: TextureIndexAndChannel = MatTex.SecondaryAlbedoTex; HandleRotation(UV, MatTex.RotationSecondaryDiffuse);  UV = UV * MatTex.SecondaryAlbedoTexScaleOffset.xy + MatTex.SecondaryAlbedoTexScaleOffset.zw; break;
+			case SampleSecondaryAlbedoMask: TextureIndexAndChannel = MatTex.SecondaryAlbedoMask; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleDetailNormal: TextureIndexAndChannel = MatTex.SecondaryNormalTex; HandleRotation(UV, MatTex.RotationSecondaryNormal); UV = UV * MatTex.SecondaryNormalTexScaleOffset.xy + MatTex.SecondaryNormalTexScaleOffset.zw; break;
 		}
 		int TextureIndex = TextureIndexAndChannel.x - 1;
 		int TextureReadChannel = TextureIndexAndChannel.y;//0-3 is rgba, 4 is to just read all
@@ -561,6 +607,9 @@ float3 decode_tangent(float3 normal, float diamond_tangent)
 }
 
 
+bool IsOrtho;
+float OrthoSize;
+
 SmallerRay CreateCameraRay(float2 uv, uint pixel_index) {
 	// Transform the camera origin to world space
 	float3 origin = mul(CamToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
@@ -568,8 +617,21 @@ SmallerRay CreateCameraRay(float2 uv, uint pixel_index) {
 	// Invert the perspective projection of the view-space position
 	float3 direction = mul(CamInvProj, float4(uv, 0.0f, 1.0f)).xyz;
 	// Transform the direction from camera to world space and normalize
-	direction = mul(CamToWorld, float4(direction, 0.0f)).xyz;
-	direction = normalize(direction);
+
+	if(!IsOrtho) {
+		direction = mul(CamToWorld, float4(direction, 0.0f)).xyz;
+		direction = normalize(direction);
+
+	} else {
+		float4x4 TruProj = inverse(CamInvProj);
+		float orthoWidth = 1.0f / TruProj._m00;
+		float orthoHeight = 1.0f / TruProj._m11;
+		float Aspect = (float)screen_width / (float)screen_height;
+		origin = float3(uv.x * OrthoSize * Aspect, uv.y * OrthoSize, 0);
+		origin = mul(CamToWorld, float4(origin, 1)).xyz;
+
+		direction = Forward;//normalize(CamToWorld._m20_m21_m22);
+	}
 	uint2 id = uint2(pixel_index % screen_width, pixel_index / screen_width);
 	[branch] if (!OIDNGuideWrite && UseDoF && (!IsFocusing || dot(id - int2(MousePos.x, MousePos.y), id - int2(MousePos.x, MousePos.y)) > 6.0f)) {
 		float3 cameraForward = mul(CamInvProj, float4(0, 0, 0.0f, 1.0f)).xyz;
@@ -646,7 +708,7 @@ static float3 CalculateExtinction2(float3 apparantColor, float scatterDistance)
 inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const float max_distance, inout float3 throughput, const int MatOffset) {
     TrianglePos tri = triangle_get_positions(tri_id);
   	TriangleUvs tri2 = triangle_get_positions2(tri_id);
-    int MaterialIndex = (MatOffset + AggTris[tri_id].MatDat);
+    int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
 
     float3 h = cross(ray.direction, tri.posedge2);
     float  a = dot(tri.posedge1, h);
@@ -704,7 +766,7 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const fl
 inline void triangle_intersect_dist(int tri_id, const SmallerRay ray, inout float max_distance, int mesh_id, const int MatOffset) {
     TrianglePos tri = triangle_get_positions(tri_id);
   	TriangleUvs tri2 = triangle_get_positions2(tri_id);
-    int MaterialIndex = (MatOffset + AggTris[tri_id].MatDat);
+    int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
 
     float3 h = cross(ray.direction, tri.posedge2);
     float  a = dot(tri.posedge1, h);
@@ -1143,18 +1205,18 @@ float3x3 adjoint(float4x4 m)
 }
 
 inline float3 GetTriangleNormal(const uint TriIndex, const float2 TriUV, const float3x3 Inverse) {
-    float3 Normal0 = i_octahedral_32(AggTris[TriIndex].norms.x);
-    float3 Normal1 = i_octahedral_32(AggTris[TriIndex].norms.y);
-    float3 Normal2 = i_octahedral_32(AggTris[TriIndex].norms.z);
+    float3 Normal0 = i_octahedral_32(AggTrisB[TriIndex].norms.x);
+    float3 Normal1 = i_octahedral_32(AggTrisB[TriIndex].norms.y);
+    float3 Normal2 = i_octahedral_32(AggTrisB[TriIndex].norms.z);
     return normalize(mul(Inverse, (Normal0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Normal1 + TriUV.y * Normal2)).xyz);
     // float wldScale = rsqrt(dot(Normal2, Normal2));
     // return mul(wldScale, Normal2);	
 }
 
 inline float3 GetTriangleTangent(const uint TriIndex, const float2 TriUV, const float3x3 Inverse) {
-    float3 Normal0 = i_octahedral_32(AggTris[TriIndex].tans.x);
-    float3 Normal1 = i_octahedral_32(AggTris[TriIndex].tans.y);
-    float3 Normal2 = i_octahedral_32(AggTris[TriIndex].tans.z);
+    float3 Normal0 = i_octahedral_32(AggTrisB[TriIndex].tans.x);
+    float3 Normal1 = i_octahedral_32(AggTrisB[TriIndex].tans.y);
+    float3 Normal2 = i_octahedral_32(AggTrisB[TriIndex].tans.z);
     return normalize(mul(Inverse, (Normal0 * (1.0f - TriUV.x - TriUV.y) + TriUV.x * Normal1 + TriUV.y * Normal2)).xyz);
     // float wldScale = rsqrt(dot(Normal2, Normal2));
     // return mul(wldScale, Normal2);
@@ -1178,44 +1240,7 @@ inline float3 GetHeightmapNormal(float3 Position, uint TerrainID) {
 	return normalize(cross(normalize(OffX - Center), normalize(OffY - Center)));
 }
 
-inline float4x4 inverse(float4x4 m) {
-    float n11 = m[0][0], n12 = m[1][0], n13 = m[2][0], n14 = m[3][0];
-    float n21 = m[0][1], n22 = m[1][1], n23 = m[2][1], n24 = m[3][1];
-    float n31 = m[0][2], n32 = m[1][2], n33 = m[2][2], n34 = m[3][2];
-    float n41 = m[0][3], n42 = m[1][3], n43 = m[2][3], n44 = m[3][3];
 
-    float t11 = n23 * n34 * n42 - n24 * n33 * n42 + n24 * n32 * n43 - n22 * n34 * n43 - n23 * n32 * n44 + n22 * n33 * n44;
-    float t12 = n14 * n33 * n42 - n13 * n34 * n42 - n14 * n32 * n43 + n12 * n34 * n43 + n13 * n32 * n44 - n12 * n33 * n44;
-    float t13 = n13 * n24 * n42 - n14 * n23 * n42 + n14 * n22 * n43 - n12 * n24 * n43 - n13 * n22 * n44 + n12 * n23 * n44;
-    float t14 = n14 * n23 * n32 - n13 * n24 * n32 - n14 * n22 * n33 + n12 * n24 * n33 + n13 * n22 * n34 - n12 * n23 * n34;
-
-    float det = n11 * t11 + n21 * t12 + n31 * t13 + n41 * t14;
-    float idet = 1.0f / det;
-
-    float4x4 ret;
-
-    ret[0][0] = t11 * idet;
-    ret[0][1] = (n24 * n33 * n41 - n23 * n34 * n41 - n24 * n31 * n43 + n21 * n34 * n43 + n23 * n31 * n44 - n21 * n33 * n44) * idet;
-    ret[0][2] = (n22 * n34 * n41 - n24 * n32 * n41 + n24 * n31 * n42 - n21 * n34 * n42 - n22 * n31 * n44 + n21 * n32 * n44) * idet;
-    ret[0][3] = (n23 * n32 * n41 - n22 * n33 * n41 - n23 * n31 * n42 + n21 * n33 * n42 + n22 * n31 * n43 - n21 * n32 * n43) * idet;
-
-    ret[1][0] = t12 * idet;
-    ret[1][1] = (n13 * n34 * n41 - n14 * n33 * n41 + n14 * n31 * n43 - n11 * n34 * n43 - n13 * n31 * n44 + n11 * n33 * n44) * idet;
-    ret[1][2] = (n14 * n32 * n41 - n12 * n34 * n41 - n14 * n31 * n42 + n11 * n34 * n42 + n12 * n31 * n44 - n11 * n32 * n44) * idet;
-    ret[1][3] = (n12 * n33 * n41 - n13 * n32 * n41 + n13 * n31 * n42 - n11 * n33 * n42 - n12 * n31 * n43 + n11 * n32 * n43) * idet;
-
-    ret[2][0] = t13 * idet;
-    ret[2][1] = (n14 * n23 * n41 - n13 * n24 * n41 - n14 * n21 * n43 + n11 * n24 * n43 + n13 * n21 * n44 - n11 * n23 * n44) * idet;
-    ret[2][2] = (n12 * n24 * n41 - n14 * n22 * n41 + n14 * n21 * n42 - n11 * n24 * n42 - n12 * n21 * n44 + n11 * n22 * n44) * idet;
-    ret[2][3] = (n13 * n22 * n41 - n12 * n23 * n41 - n13 * n21 * n42 + n11 * n23 * n42 + n12 * n21 * n43 - n11 * n22 * n43) * idet;
-
-    ret[3][0] = t14 * idet;
-    ret[3][1] = (n13 * n24 * n31 - n14 * n23 * n31 + n14 * n21 * n33 - n11 * n24 * n33 - n13 * n21 * n34 + n11 * n23 * n34) * idet;
-    ret[3][2] = (n14 * n22 * n31 - n12 * n24 * n31 - n14 * n21 * n32 + n11 * n24 * n32 + n12 * n21 * n34 - n11 * n22 * n34) * idet;
-    ret[3][3] = (n12 * n23 * n31 - n13 * n22 * n31 + n13 * n21 * n32 - n11 * n23 * n32 - n12 * n21 * n33 + n11 * n22 * n33) * idet;
-
-    return ret;
-}
 
 inline float AreaOfTriangle(float3 pt1, float3 pt2, float3 pt3) {
     float a = distance(pt1, pt2);
@@ -1831,6 +1856,18 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 }
 
 
+float3 LoadSurfaceInfoPrev(int2 id) {
+    uint4 Target = PrimaryTriDataPrev[id.xy];
+	if(Target.w == 1) return asfloat(Target.xyz);
+    MyMeshDataCompacted Mesh = _MeshData[Target.x];
+    Target.y += Mesh.TriOffset;
+    float2 TriUV;
+    TriUV.x = asfloat(Target.z);
+    TriUV.y = asfloat(Target.w);
+    float4x4 Inverse = inverse(Mesh.W2L);
+    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+}
+
 float3 LoadSurfaceInfo(int2 id) {
     uint4 Target = PrimaryTriData[id.xy];
 	if(Target.w == 1) return asfloat(Target.xyz);
@@ -1840,7 +1877,7 @@ float3 LoadSurfaceInfo(int2 id) {
     TriUV.x = asfloat(Target.z);
     TriUV.y = asfloat(Target.w);
     float4x4 Inverse = inverse(Mesh.W2L);
-    return mul(Inverse, float4(AggTris[Target.y].pos0 + TriUV.x * AggTris[Target.y].posedge1 + TriUV.y * AggTris[Target.y].posedge2,1)).xyz;
+    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
 }
 
 
@@ -2152,7 +2189,7 @@ inline void CalcPosNorm(uint4 TriData, inout float3 Pos, inout float3 Norm) {
 	    float4x4 Inverse = inverse(Mesh.W2L);
 	    TriData.y += Mesh.TriOffset;
     	Norm = GetTriangleNormal(TriData.y, asfloat(TriData.zw), Inverse);
-		Pos = mul(Inverse, float4(AggTris[TriData.y].pos0 + asfloat(TriData.z) * AggTris[TriData.y].posedge1 + asfloat(TriData.w) * AggTris[TriData.y].posedge2,1)).xyz;		
+		Pos = mul(Inverse, float4(AggTrisA[TriData.y].pos0 + asfloat(TriData.z) * AggTrisA[TriData.y].posedge1 + asfloat(TriData.w) * AggTrisA[TriData.y].posedge2,1)).xyz;		
 	}
 
 }
@@ -2162,7 +2199,7 @@ inline float3 CalcPos(uint4 TriData) {
     MyMeshDataCompacted Mesh = _MeshData[TriData.x];
     float4x4 Inverse = inverse(Mesh.W2L);
     TriData.y += Mesh.TriOffset;
-	return mul(Inverse, float4(AggTris[TriData.y].pos0 + asfloat(TriData.z) * AggTris[TriData.y].posedge1 + asfloat(TriData.w) * AggTris[TriData.y].posedge2,1)).xyz;
+	return mul(Inverse, float4(AggTrisA[TriData.y].pos0 + asfloat(TriData.z) * AggTrisA[TriData.y].posedge1 + asfloat(TriData.w) * AggTrisA[TriData.y].posedge2,1)).xyz;
 }
 
 inline float3 CalcNorm(uint4 TriData) {
@@ -2172,7 +2209,7 @@ inline float3 CalcNorm(uint4 TriData) {
     TriData.y += Mesh.TriOffset;
     float4x4 Inverse = inverse(Mesh.W2L);
     float3 Geomnorm = GetTriangleNormal(TriData.y, asfloat(TriData.zw), Inverse);
-    float3 USGNorm = mul(Inverse, cross(normalize(AggTris[TriData.y].posedge1), normalize(AggTris[TriData.y].posedge2)));
+    float3 USGNorm = mul(Inverse, cross(normalize(AggTrisA[TriData.y].posedge1), normalize(AggTrisA[TriData.y].posedge2)));
     float wldScale = rsqrt(dot(USGNorm, USGNorm));
     USGNorm = -mul(wldScale, USGNorm);
     return Geomnorm;
@@ -2325,7 +2362,7 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
         FinalPos = (LightTriangles[MinIndex].pos0 + LightTriangles[MinIndex].posedge1 * FinalUV.x + LightTriangles[MinIndex].posedge2 * FinalUV.y);
     #endif
     int AggTriIndex = LightTriangles[MinIndex].TriTarget + MeshTriOffset;
-    int MaterialIndex = AggTris[AggTriIndex].MatDat + MatOffset;
+    int MaterialIndex = AggTrisA[AggTriIndex].MatDat + MatOffset;
     MaterialData MatDat = _Materials[MaterialIndex];
     #ifdef AdvancedBackground
     	if(GetFlag(MatDat.Tag, IsBackground)) return -1;
@@ -2333,7 +2370,7 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
     #ifdef WhiteLights
         MatDat.surfaceColor = 0.5f;
     #else
-        float2 BaseUv = TOHALF(AggTris[AggTriIndex].tex0) * (1.0f - FinalUV.x - FinalUV.y) + TOHALF(AggTris[AggTriIndex].texedge1) * FinalUV.x + TOHALF(AggTris[AggTriIndex].texedge2) * FinalUV.y;
+        float2 BaseUv = TOHALF(AggTrisA[AggTriIndex].tex0) * (1.0f - FinalUV.x - FinalUV.y) + TOHALF(AggTrisA[AggTriIndex].texedge1) * FinalUV.x + TOHALF(AggTrisA[AggTriIndex].texedge2) * FinalUV.y;
         if(MatDat.AlbedoTex.x > 0)
         	MatDat.surfaceColor *= SampleTexture(BaseUv, SampleAlbedo, MatDat);
 

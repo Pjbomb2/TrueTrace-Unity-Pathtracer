@@ -184,7 +184,12 @@ namespace CommonVars
         public float Brightness;
         public Vector3 BlendColor;
         public float BlendFactor;
-        public Vector2 SecondaryTextureScale;
+        public Vector4 SecondaryTextureScaleOffset;
+        public Vector4 NormalTexScaleOffset;
+        public float RotationNormal;
+        public float RotationSecondary;
+        public float RotationSecondaryDiffuse;
+        public float RotationSecondaryNormal;
         public Vector4 SecondaryAlbedoTexScaleOffset;
         public float Rotation;
         public float ColorBleed;
@@ -376,6 +381,16 @@ namespace CommonVars
             public int isLeaf;
         }
 
+        public struct DirectionCone {
+            public Vector3 W;
+            public float cosTheta;
+
+            public DirectionCone(Vector3 w, float cosTheta) {
+                W = w;
+                this.cosTheta = cosTheta;
+            }
+        }
+
     [System.Serializable]
     public struct CompactLightBVHData {
         public Vector3 BBMax;
@@ -384,6 +399,15 @@ namespace CommonVars
         public float phi;
         public uint cosTheta_oe;
         public int left;
+
+        public CompactLightBVHData(Vector3 BBMax, Vector3 BBMin, uint W, float Phi, uint cosTheta_oe, int left) {
+            this.BBMax = BBMax;
+            this.BBMin = BBMin;
+            w = W;
+            phi = Phi;
+            this.cosTheta_oe = cosTheta_oe;
+            this.left = left;
+        }
     };
 
     [System.Serializable]
@@ -592,6 +616,41 @@ namespace CommonVars
         public uint VertColC;
 
         public uint MatDat;
+        public uint IsEmissive;
+    }
+
+
+    [System.Serializable]
+    public struct CudaTriangleA
+    {
+        public Vector3 pos0;
+        public Vector3 posedge1;
+        public Vector3 posedge2;
+
+        public uint tex0;
+        public uint texedge1;
+        public uint texedge2;
+
+        public uint MatDat;
+    }
+
+
+    [System.Serializable]
+    public struct CudaTriangleB
+    {
+        public uint norm0;
+        public uint norm1;
+        public uint norm2;
+
+        public uint tan0;
+        public uint tan1;
+        public uint tan2;
+     
+        public uint VertColA;
+        public uint VertColB;
+        public uint VertColC;
+        
+        public uint IsEmissive;
     }
 
     [System.Serializable]
@@ -708,7 +767,12 @@ namespace CommonVars
         public float BlendFactor;
         public Vector4 MainTexScaleOffset;
         public Vector4 SecondaryAlbedoTexScaleOffset;
-        public Vector2 SecondaryTextureScale;
+        public Vector4 SecondaryTextureScaleOffset;
+        public Vector4 NormalTexScaleOffset;
+        public float RotationNormal;
+        public float RotationSecondary;
+        public float RotationSecondaryDiffuse;
+        public float RotationSecondaryNormal;
         public float Rotation;
         public int Flags;
         public bool UseKelvin;

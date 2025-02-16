@@ -28,6 +28,7 @@
 #define RadCache
 #define ExpensiveReSTIR
 // #define FakedAO
+// #define ClampRoughnessToBounce
 // #define AutoDebugReading
 
 

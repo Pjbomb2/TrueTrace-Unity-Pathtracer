@@ -4237,12 +4237,22 @@
         <ReadIndex>0</ReadIndex>
         <TextureName>_Alpha</TextureName>
       </TexturePairs>
+      <TexturePairs>
+        <Purpose>8</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_Secondary_Diffuse</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>10</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_Secondary_Normal</TextureName>
+      </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
-    <UsesSmoothness>false</UsesSmoothness>
+    <UsesSmoothness>true</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
     <MetallicRemapMin>null</MetallicRemapMin>
     <MetallicRemapMax>null</MetallicRemapMax>
@@ -8242,6 +8252,71 @@
     <RoughnessRange>null</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>true</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Shader Graphs/Trimsheet2_Mask2</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_AlbedoTransparency</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>2</Purpose>
+        <ReadIndex>-3</ReadIndex>
+        <TextureName>_Normal</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>4</Purpose>
+        <ReadIndex>2</ReadIndex>
+        <TextureName>_AoRM</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>5</Purpose>
+        <ReadIndex>1</ReadIndex>
+        <TextureName>_AoRM</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_AlbedoTransparency</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
+    <UsesSmoothness>false</UsesSmoothness>
+    <BaseColorValue>null</BaseColorValue>
+    <MetallicRemapMin>null</MetallicRemapMin>
+    <MetallicRemapMax>null</MetallicRemapMax>
+    <RoughnessRemapMin>null</RoughnessRemapMin>
+    <RoughnessRemapMax>null</RoughnessRemapMax>
+  </MaterialShader>
+  <MaterialShader>
+    <Name>Shader Graphs/Mask_DirtBorderMetalBorder_Trimsheet2</Name>
+    <AvailableTextures>
+      <TexturePairs>
+        <Purpose>0</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
+      </TexturePairs>
+    </AvailableTextures>
+    <MetallicRange>null</MetallicRange>
+    <RoughnessRange>null</RoughnessRange>
+    <IsGlass>false</IsGlass>
+    <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>null</BaseColorValue>
     <MetallicRemapMin>null</MetallicRemapMin>

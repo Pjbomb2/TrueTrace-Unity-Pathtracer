@@ -28,8 +28,10 @@ struct BoundingBox {
 };
 RWStructuredBuffer<BoundingBox> Boxs;
 
-StructuredBuffer<CudaTriangle> CudaTriArrayIN;
-RWStructuredBuffer<CudaTriangle> CudaTriArray;
+StructuredBuffer<CudaTriangleA> CudaTriArrayINA;
+StructuredBuffer<CudaTriangleB> CudaTriArrayINB;
+RWStructuredBuffer<CudaTriangleA> CudaTriArrayA;
+RWStructuredBuffer<CudaTriangleB> CudaTriArrayB;
 
 uint octahedral_32(float3 nor) {
 	float oct = 1.0f / (abs(nor.x) + abs(nor.y) + abs(nor.z));
@@ -73,11 +75,11 @@ void Construct(uint3 id : SV_DispatchThreadID, uint3 gt : SV_GroupThreadID)
 			Boxs[id.x].BBMax = BBMax;
 			Boxs[id.x].BBMin = BBMin;
 		} else if(gt.y == 0) {
-			CudaTriArray[id.x + TriBuffOffset].pos0 = Pos[gt.x];
-			CudaTriArray[id.x + TriBuffOffset].posedge1 = Pos[gt.x + 2] - Pos[gt.x];
+			CudaTriArrayA[id.x + TriBuffOffset].pos0 = Pos[gt.x];
+			CudaTriArrayA[id.x + TriBuffOffset].posedge1 = Pos[gt.x + 2] - Pos[gt.x];
 		} else if(gt.y == 2) {
-			CudaTriArray[id.x + TriBuffOffset].posedge2 = Pos[gt.x + 1] - Pos[gt.x];
-			CudaTriArray[id.x + TriBuffOffset].norms = uint3(Norm[gt.x], Norm[gt.x + 2], Norm[gt.x + 1]);
+			CudaTriArrayA[id.x + TriBuffOffset].posedge2 = Pos[gt.x + 1] - Pos[gt.x];
+			CudaTriArrayB[id.x + TriBuffOffset].norms = uint3(Norm[gt.x], Norm[gt.x + 2], Norm[gt.x + 1]);
 		}
 	}
 
@@ -95,7 +97,7 @@ void TransferKernel(uint3 id : SV_DispatchThreadID)
 	if (id.x >= gVertexCount)
 		return;
 
-	CudaTriangle TempTri = CudaTriArrayIN[LightTrianglesOut[id.x + LightTriBuffOffset].TriTarget + TriBuffOffset];
+	CudaTriangleA TempTri = CudaTriArrayINA[LightTrianglesOut[id.x + LightTriBuffOffset].TriTarget + TriBuffOffset];
 
 	LightTrianglesOut[id.x + LightTriBuffOffset].pos0 = TempTri.pos0;
 	LightTrianglesOut[id.x + LightTriBuffOffset].posedge1 = TempTri.posedge1;

@@ -1,24 +1,29 @@
-struct CudaTriangle {
+struct CudaTriangleA {
 	float3 pos0;
 	float3 posedge1;
 	float3 posedge2;
-
-	uint3 norms;
-
-	uint3 tans;
 
 	uint tex0;
 	uint texedge1;
 	uint texedge2;
 
+	uint MatDat;
+};
+
+struct CudaTriangleB {
+	uint3 norms;
+
+	uint3 tans;
+
 	uint VertColA;
 	uint VertColB;
 	uint VertColC;
 
-	uint MatDat;
+	uint IsEmissive;
 };
 
-StructuredBuffer<CudaTriangle> AggTris;
+StructuredBuffer<CudaTriangleA> AggTrisA;
+StructuredBuffer<CudaTriangleB> AggTrisB;
 
 struct AABB {
 	float3 BBMax;
@@ -63,6 +68,7 @@ struct MyMeshDataCompacted {
 };
 
 StructuredBuffer<MyMeshDataCompacted> _MeshData;
+StructuredBuffer<MyMeshDataCompacted> _MeshDataB;
 StructuredBuffer<MyMeshDataCompacted> _MeshDataPrev;
 
 struct TerrainData {
@@ -164,7 +170,12 @@ struct MaterialData {//56
 	float Brightness;
 	float3 BlendColor;
 	float BlendFactor;
-	float2 SecondaryTexScale;
+		float4 SecondaryTexScaleOffset;
+		float4 NormalTexScaleOffset;
+		float RotationNormal;
+		float RotationSecondary;
+		float RotationSecondaryDiffuse;
+		float RotationSecondaryNormal;
     float4 SecondaryAlbedoTexScaleOffset;
 	float Rotation;
 	float ColorBleed;
@@ -173,6 +184,9 @@ struct MaterialData {//56
     float SecondaryNormalTexBlend;
     float DetailNormalStrength;
 };
+
+
+
 
 StructuredBuffer<MaterialData> _Materials;
 

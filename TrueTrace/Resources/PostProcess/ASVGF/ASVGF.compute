@@ -466,7 +466,7 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 	IMG_ASVGF_GRAD_HF_SPEC_PING[pos_grad] = found_prev_lum;
 
 	RNGTexA[ipos] = float4(RNGTexB[found_pos_prev].xyz, (ReflRefracB[found_pos_prev] >> 31) ? 2 : 1);
-	Ray PrevCamRay = CreateCameraRayPrev(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
+	Ray PrevCamRay = CreateCameraRayPrev(found_pos_prev / float2(screen_width, screen_height) * 2.0f - 1.0f);
 	GlobalRaysMini[ipos.x + ipos.y * screen_width].origin = PrevCamRay.origin;
 	GlobalRaysMini[ipos.x + ipos.y * screen_width].direction = PrevCamRay.direction;
 	uint4 Target = PrimaryTriData[found_pos_prev];
@@ -481,11 +481,11 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 			UV.x = asfloat(Target.z);//(Target.z & 0xffff) / 65535.0f;
 			UV.y = asfloat(Target.w);//(Target.z >> 16) / 65535.0f;
 			float4x4 Inverse = inverse(Mesh.W2L);
-			Pos = mul(Inverse, float4(AggTris[Target.y].pos0 + UV.x * AggTris[Target.y].posedge1 + UV.y * AggTris[Target.y].posedge2,1)).xyz;
+			Pos = mul(Inverse, float4(AggTrisA[Target.y].pos0 + UV.x * AggTrisA[Target.y].posedge1 + UV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+	// GlobalRaysMini[ipos.x + ipos.y * screen_width].origin += CamDiff;
 		}
 	}
 
-	// GlobalRaysMini[ipos.x + ipos.y * screen_width].origin -= CamDiff;
 	GlobalRaysMini[ipos.x + ipos.y * screen_width].direction = normalize(Pos - GlobalRaysMini[ipos.x + ipos.y * screen_width].origin);
 
 	MetallicAWrite[ipos] = MetallicB[found_pos_prev];
@@ -964,7 +964,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 		// float antilag = grad_hf_spec.y + motion_length * 0.001f;
 		float antilag_alpha_spec = clamp(lerp(0.0, antilag, 1), 0, 1);
 		float hist_len_spec = min(max(temporal_color_histlen_spec.a * pow(1.0 - antilag_alpha_spec, 10),0) + 1.0, 256.0);
-		float alpha_color_spec = max(0.01f, 1.0 / max(hist_len_spec,0));
+		float alpha_color_spec = max(0.01f, 1.0 / max(hist_len_spec,1));
 		alpha_color_spec = lerp(alpha_color_spec, 1.0, antilag_alpha_spec);
 		out_color_histlen_spec.rgb = lerp(temporal_color_histlen_spec.rgb, color_curr_spec.rgb, alpha_color_spec);
 		out_color_histlen_spec.a = hist_len_spec;
@@ -1234,6 +1234,14 @@ inline float RoughnessSquareToSpecPower(in float alpha) {
 	return max(0.01, 2.0f / (square(alpha) + 1e-4) - 2.0f);
 }
 
+bool plane_distance_disocclusion_check(float3 current_pos, float3 history_pos, float3 current_normal)
+{
+    float3  to_current    = current_pos - history_pos;
+    float dist_to_plane = abs(dot(to_current, current_normal));
+
+    return dist_to_plane > 0.01f;
+}
+
 inline void filter_image(
 	Texture2D<half4> img_hf,
 	Texture2D<uint> img_spec,
@@ -1253,6 +1261,8 @@ inline void filter_image(
 	// 	return;
 
 	const float depth_center = TEX_PT_VIEW_DEPTH_A[ipos];
+	Ray CenterRay = CreateCameraRay((float2)ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
+	float3 CenterPos = CenterRay.direction * depth_center + CenterRay.origin;
 
 	float lum_mean_hf = luminance(filtered_hf);
 	float sigma_l_hf = 0;
@@ -1288,9 +1298,9 @@ inline void filter_image(
 		float lum_variance_hf = max(1e-8, filtered_moments.y - filtered_moments.x * filtered_moments.x);
 		sigma_l_hf = min(max(hist_len_hf - (spec_iteration == 0 ? 0 : 2), 1), 16) / (2.0 * lum_variance_hf);
 	} else {
-		// If there is no history, treat all moments as invalid, because 3x3 spatial 
-		// is just not enough to get reasonable filtering. Ignore luminance in this case,
-		// and perform a depth-normal-guided bilateral blur.
+	// 	// If there is no history, treat all moments as invalid, because 3x3 spatial 
+	// 	// is just not enough to get reasonable filtering. Ignore luminance in this case,
+	// 	// and perform a depth-normal-guided bilateral blur.
 		lum_mean_hf = filtered_moments.x;
 		if(hist_len_hf > 1) sigma_l_hf = 0.005f;
 	}
@@ -1335,9 +1345,11 @@ inline void filter_image(
 			float3 c_hf = img_hf[p];
 			float3 c_spec = unpackRGBE(img_spec[p]);
 
+			Ray ray = CreateCameraRay((float2)p / float2(screen_width, screen_height) * 2.0f - 1.0f);
+			float3 pos = ray.direction * depth + ray.origin;
 
 			float dist_z = abs(depth_center - depth);
-			w_hf *= exp(-dist_z / step_size);
+			w_hf *= !plane_distance_disocclusion_check(CenterPos, pos, normal_center) * (exp(-abs(depth - depth_center) / depth_center));
 			w_hf *= wavelet_kernel[abs(xx)][abs(yy)];
 
 			float dist_l_hf = abs(lum_mean_hf - luminance(c_hf.rgb));

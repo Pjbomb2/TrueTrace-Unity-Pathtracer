@@ -43,8 +43,6 @@ namespace TrueTrace {
         private Material SDFMat;
 
         private int GenKernel;
-        private int GenPanoramaKernel;
-        private int GenASVGFKernel;
 
         public void Start() {
             Init();
@@ -69,11 +67,9 @@ namespace TrueTrace {
             }    
             if(GenShader == null) {GenShader = Resources.Load<ComputeShader>("Utility/TTSDFs/TTSDFRayGen"); }
             GenKernel = GenShader.FindKernel("Generate");
-            GenPanoramaKernel = GenShader.FindKernel("GeneratePanorama");
-            GenASVGFKernel = GenShader.FindKernel("GenerateASVGF");
         }
 
-        public void Run(CommandBuffer cmd, RenderTexture _RandomNums, ComputeBuffer _RayBuffer, int SourceWidth, int SourceHeight, bool DoChainedImages, bool UseASVGF) {
+        public void Run(CommandBuffer cmd, RenderTexture _RandomNums, ComputeBuffer _RayBuffer, int SourceWidth, int SourceHeight) {
             FramesSinceStart++;
             if(GenShader != null && SDFs != null) {
                 CommonFunctions.CreateComputeBuffer<SDFVar>(ref SDFBuffer, SDFs);
@@ -82,17 +78,10 @@ namespace TrueTrace {
                 SDFMat.SetVector("Scale", transform.localScale);
 
                 AssetManager.Assets.SetMeshTraceBuffers(GenShader, GenKernel);
-                AssetManager.Assets.SetMeshTraceBuffers(GenShader, GenPanoramaKernel);
-                AssetManager.Assets.SetMeshTraceBuffers(GenShader, GenASVGFKernel);
                 GenShader.SetTexture(GenKernel, "RandomNums", _RandomNums);
-                GenShader.SetTexture(GenPanoramaKernel, "RandomNums", _RandomNums);
                 GenShader.SetComputeBuffer(GenKernel, "GlobalRays", _RayBuffer);
-                GenShader.SetComputeBuffer(GenPanoramaKernel, "GlobalRays", _RayBuffer);
-                GenShader.SetComputeBuffer(GenASVGFKernel, "GlobalRays", _RayBuffer);
 
                 GenShader.SetComputeBuffer(GenKernel, "SDFs", SDFBuffer);
-                GenShader.SetComputeBuffer(GenPanoramaKernel, "SDFs", SDFBuffer);
-                GenShader.SetComputeBuffer(GenASVGFKernel, "SDFs", SDFBuffer);
                 GenShader.SetInt("SDFCount", SDFBuffer.count);
                 GenShader.SetBool("DoBackfacing", IntersectBackFacing);
                 GenShader.SetFloat("Scale", Mathf.Max(Mathf.Max(transform.localScale.x, transform.localScale.y), transform.localScale.z));
@@ -101,7 +90,7 @@ namespace TrueTrace {
                 GenShader.SetFloat("CustFramesSinceStart", FramesSinceStart);
 
                 cmd.BeginSample("Primary Ray Generation");
-                    cmd.DispatchCompute(GenShader, (UseASVGF ? GenASVGFKernel : (DoChainedImages ? GenPanoramaKernel : GenKernel)), Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+                    cmd.DispatchCompute(GenShader, GenKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 cmd.EndSample("Primary Ray Generation");
             }
         }
@@ -112,7 +101,7 @@ namespace TrueTrace {
                 SDFs[0].B = Vector3.one;
 
             }
-            this.transform.localScale = new Vector3(256.0f, 256.0f, 256.0f);
+            this.transform.localScale = new Vector3(2048.0f, 2048.0f, 2048.0f);
             this.transform.position = Vector3.zero;
             SDFMat = new Material(Shader.Find("Unlit/TTSDFShader"));
             if(TryGetComponent<MeshRenderer>(out Rend)) {

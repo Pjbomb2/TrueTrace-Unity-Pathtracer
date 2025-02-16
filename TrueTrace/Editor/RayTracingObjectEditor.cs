@@ -194,7 +194,12 @@ namespace TrueTrace {
                     MainTexScaleOffset = ThisOBJ.MainTexScaleOffset[SaveIndex],
                     SecondaryAlbedoTexScaleOffset = ThisOBJ.SecondaryAlbedoTexScaleOffset[SaveIndex],
                     SecondaryNormalTexScaleOffset = ThisOBJ.SecondaryNormalTexScaleOffset[SaveIndex],
-                    SecondaryTextureScale = ThisOBJ.SecondaryTextureScale[SaveIndex],
+                    SecondaryTextureScaleOffset = ThisOBJ.SecondaryTextureScaleOffset[SaveIndex],
+                    NormalTexScaleOffset = ThisOBJ.NormalTexScaleOffset[SaveIndex],
+                    RotationNormal = ThisOBJ.RotationNormal[SaveIndex],
+                    RotationSecondary = ThisOBJ.RotationSecondary[SaveIndex],
+                    RotationSecondaryDiffuse = ThisOBJ.RotationSecondaryDiffuse[SaveIndex],
+                    RotationSecondaryNormal = ThisOBJ.RotationSecondaryNormal[SaveIndex],
                     Rotation = ThisOBJ.Rotation[SaveIndex],
                     Flags = ThisOBJ.Flags[SaveIndex],
                     UseKelvin = ThisOBJ.UseKelvin[SaveIndex],
@@ -355,7 +360,12 @@ namespace TrueTrace {
             t.MainTexScaleOffset[Selected] = RayObj.MainTexScaleOffset;
             t.SecondaryAlbedoTexScaleOffset[Selected] = RayObj.SecondaryAlbedoTexScaleOffset;
             t.SecondaryNormalTexScaleOffset[Selected] = RayObj.SecondaryNormalTexScaleOffset;
-            t.SecondaryTextureScale[Selected] = RayObj.SecondaryTextureScale;
+            t.SecondaryTextureScaleOffset[Selected] = RayObj.SecondaryTextureScaleOffset;
+            t.NormalTexScaleOffset[Selected] = RayObj.NormalTexScaleOffset;
+            t.RotationNormal[Selected] = RayObj.RotationNormal;
+            t.RotationSecondary[Selected] = RayObj.RotationSecondary;
+            t.RotationSecondaryDiffuse[Selected] = RayObj.RotationSecondaryDiffuse;
+            t.RotationSecondaryNormal[Selected] = RayObj.RotationSecondaryNormal;
             t.Rotation[Selected] = RayObj.Rotation;
             t.Flags[Selected] = RayObj.Flags;
             t.UseKelvin[Selected] = RayObj.UseKelvin;
@@ -600,7 +610,12 @@ namespace TrueTrace {
                     MainTexScaleOffset = ThisOBJ.MainTexScaleOffset[SaveIndex],
                     SecondaryAlbedoTexScaleOffset = ThisOBJ.SecondaryAlbedoTexScaleOffset[SaveIndex],
                     SecondaryNormalTexScaleOffset = ThisOBJ.SecondaryNormalTexScaleOffset[SaveIndex],
-                    SecondaryTextureScale = ThisOBJ.SecondaryTextureScale[SaveIndex],
+                    SecondaryTextureScaleOffset = ThisOBJ.SecondaryTextureScaleOffset[SaveIndex],
+                    NormalTexScaleOffset = ThisOBJ.NormalTexScaleOffset[SaveIndex],
+                    RotationNormal = ThisOBJ.RotationNormal[SaveIndex],
+                    RotationSecondary = ThisOBJ.RotationSecondary[SaveIndex],
+                    RotationSecondaryDiffuse = ThisOBJ.RotationSecondaryDiffuse[SaveIndex],
+                    RotationSecondaryNormal = ThisOBJ.RotationSecondaryNormal[SaveIndex],
                     Rotation = ThisOBJ.Rotation[SaveIndex],
                     Flags = ThisOBJ.Flags[SaveIndex],
                     UseKelvin = ThisOBJ.UseKelvin[SaveIndex],
@@ -703,14 +718,14 @@ namespace TrueTrace {
                     "Roughness",
                     "Smoothness",
                     "RoughnessRemap",
-                    "MiscContainer",
+                    "FlagsContainer",
                     "Anisotropic",
                     "BaseColor",
                 });
                 DictionaryLinks.Add("Roughness", new List<string> {
                     "Smoothness",
                     "RoughnessRemap",
-                    "MiscContainer",
+                    "FlagsContainer",
                     "Thin",
                     "Flatness",
                 });
@@ -722,7 +737,7 @@ namespace TrueTrace {
                 DictionaryLinks.Add("Specular", new List<string> {
                     "Roughness",
                     "Smoothness",
-                    "MiscContainer",
+                    "FlagsContainer",
                     "RoughnessRemap",
                     "SpecularTint",
                     "Anisotropic",
@@ -740,7 +755,7 @@ namespace TrueTrace {
                     "BaseContainer",
                     "BaseColor",
                     "ScatterDist",
-                    "MiscContainer",
+                    "FlagsContainer",
                     "Thin",
                     "IOR",
                     "Smoothness",
@@ -750,7 +765,7 @@ namespace TrueTrace {
                 });
                 DictionaryLinks.Add("DiffTrans", new List<string> {
                     "BaseContainer",
-                    "MiscContainer",
+                    "FlagsContainer",
                     "BaseColor",
                     "ScatterDist",
                     "Thin",
@@ -763,7 +778,13 @@ namespace TrueTrace {
                 ConnectionSources = new Dictionary<string, Rect>();
                 ConnectionSourceNames = new List<string>();
                 GUIStyle FoldoutStyle = new GUIStyle(EditorStyles.foldoutHeader);
+                GUIStyle FoldoutStyleBolded = new GUIStyle(EditorStyles.foldoutHeader);
+                GUIStyle LabelStyleBolded = new GUIStyle(EditorStyles.label);
                 FoldoutStyle.fontSize = 15;
+                FoldoutStyleBolded.fontSize = 20;
+                FoldoutStyleBolded.fontStyle = FontStyle.Bold;
+                LabelStyleBolded.fontSize = 20;
+                LabelStyleBolded.fontStyle = FontStyle.Bold;
                 // FoldoutStyle.fontStyle = FontStyle.Italic;
                 var t1 = (targets);
                 t =  t1[0] as RayTracingObject;
@@ -825,15 +846,76 @@ namespace TrueTrace {
                             ConnectionSourceNames.Add("RoughnessRemap");
 
                             EditorGUILayout.Space();
-                            serializedObject.FindProperty("NormalStrength").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Normalmap Strength: ", t.NormalStrength[Selected], 0, 20.0f);
-                            ConnectionSources.Add("NormalStrength", GUILayoutUtility.GetLastRect()); // Store position
-                            ConnectionSourceNames.Add("NormalStrength");
                             if(t.MaterialOptions[Selected] == RayTracingObject.Options.Cutout || t.MaterialOptions[Selected] == RayTracingObject.Options.Fade) {
                                 serializedObject.FindProperty("AlphaCutoff").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Alpha Cutoff: ", t.AlphaCutoff[Selected], 0.01f, 1.0f);
                                 ConnectionSources.Add("AlphaCutoff", GUILayoutUtility.GetLastRect()); // Store position
                                 ConnectionSourceNames.Add("AlphaCutoff");
                             }
                 
+                        EditorGUILayout.EndVertical();
+                    EditorGUILayout.EndHorizontal();
+                }
+                EditorGUILayout.EndFoldoutHeaderGroup();
+
+                EditorGUILayout.Space();
+                RayTracingMaster.RTOShowTex = EditorGUILayout.BeginFoldoutHeaderGroup(RayTracingMaster.RTOShowTex, "Textures", FoldoutStyle);
+                ConnectionSources.Add("TexturesContainer", GUILayoutUtility.GetLastRect()); // Store position
+                ConnectionSourceNames.Add("TexturesContainer");
+                if(RayTracingMaster.RTOShowTex) {
+                    EditorGUILayout.BeginHorizontal();
+                        EditorGUILayout.Space(12.0f, false);
+                        EditorGUILayout.BeginVertical();
+                            EditorGUILayout.BeginVertical();
+                                GUILayout.Label("Primary Diffuse", LabelStyleBolded);
+                                serializedObject.FindProperty("MainTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.MainTexScaleOffset[Selected]);
+                                serializedObject.FindProperty("Rotation").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.Rotation[Selected], 0, 360);
+                            EditorGUILayout.EndVertical();
+            
+                            EditorGUILayout.Space();
+                            EditorGUILayout.Space();
+                            EditorGUILayout.BeginVertical();
+                                GUILayout.Label("Secondary Diffuse", LabelStyleBolded);
+                                serializedObject.FindProperty("SecondaryAlbedoTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.SecondaryAlbedoTexScaleOffset[Selected]);
+                                serializedObject.FindProperty("RotationSecondaryDiffuse").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.RotationSecondaryDiffuse[Selected], 0, 360);
+                                Flag = CommonFunctions.SetFlagStretch(Flag, 1, 3, (int)((RayTracingObject.BlendModes)EditorGUILayout.EnumPopup("Blend Mode: ", (RayTracingObject.BlendModes)Flag.GetFlagStretch(1, 3))));
+                                serializedObject.FindProperty("AlbedoBlendFactor").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Blend Factor: ", t.AlbedoBlendFactor[Selected], 0, 1);
+                            EditorGUILayout.EndVertical();
+
+                            EditorGUILayout.Space();
+                            EditorGUILayout.Space();
+                            EditorGUILayout.BeginVertical();
+                                GUILayout.Label("Normal Map", LabelStyleBolded);
+                                serializedObject.FindProperty("NormalTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.NormalTexScaleOffset[Selected]);
+                                serializedObject.FindProperty("RotationNormal").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.RotationNormal[Selected], 0, 360);
+                                serializedObject.FindProperty("NormalStrength").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Strength: ", t.NormalStrength[Selected], 0, 20.0f);
+                                ConnectionSources.Add("NormalStrength", GUILayoutUtility.GetLastRect()); // Store position
+                                ConnectionSourceNames.Add("NormalStrength");
+                            EditorGUILayout.EndVertical();
+
+                            EditorGUILayout.Space();
+                            EditorGUILayout.Space();
+                            EditorGUILayout.BeginVertical();
+                                GUILayout.Label("Secondary Normal Map", LabelStyleBolded);
+                                serializedObject.FindProperty("SecondaryNormalTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.SecondaryNormalTexScaleOffset[Selected]);
+                                serializedObject.FindProperty("RotationSecondaryNormal").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.RotationSecondaryNormal[Selected], 0, 360);
+                                serializedObject.FindProperty("DetailNormalStrength").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Strength: ", t.DetailNormalStrength[Selected], 0, 20.0f);
+                                ConnectionSources.Add("DetailNormalStrength", GUILayoutUtility.GetLastRect()); // Store position
+                                ConnectionSourceNames.Add("DetailNormalStrength");
+                                serializedObject.FindProperty("SecondaryNormalTexBlend").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Blend Factor: ", t.SecondaryNormalTexBlend[Selected], 0, 1);
+                            EditorGUILayout.EndVertical();
+
+                            EditorGUILayout.Space();
+                            EditorGUILayout.Space();
+                            EditorGUILayout.BeginVertical();
+                                GUILayout.Label("Misc Maps", LabelStyleBolded);
+                                serializedObject.FindProperty("SecondaryTextureScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.SecondaryTextureScaleOffset[Selected]);
+                                serializedObject.FindProperty("RotationSecondary").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.RotationSecondary[Selected], 0, 360);
+                            EditorGUILayout.EndVertical();
+
+
+
+
+
                         EditorGUILayout.EndVertical();
                     EditorGUILayout.EndHorizontal();
                 }
@@ -965,14 +1047,13 @@ namespace TrueTrace {
                 EditorGUILayout.EndFoldoutHeaderGroup();
 
                 EditorGUILayout.Space();
-                RayTracingMaster.RTOShowMisc = EditorGUILayout.BeginFoldoutHeaderGroup(RayTracingMaster.RTOShowMisc, "Misc", FoldoutStyle);
-                ConnectionSources.Add("MiscContainer", GUILayoutUtility.GetLastRect()); // Store position
-                ConnectionSourceNames.Add("MiscContainer");
-                if(RayTracingMaster.RTOShowMisc) {
+                RayTracingMaster.RTOShowFlag = EditorGUILayout.BeginFoldoutHeaderGroup(RayTracingMaster.RTOShowFlag, "Flags", FoldoutStyle);
+                ConnectionSources.Add("FlagsContainer", GUILayoutUtility.GetLastRect()); // Store position
+                ConnectionSourceNames.Add("FlagsContainer");
+                if(RayTracingMaster.RTOShowFlag) {
                     EditorGUILayout.BeginHorizontal();
                         EditorGUILayout.Space(12.0f, false);
                         EditorGUILayout.BeginVertical();
-                    
                             EditorGUILayout.BeginHorizontal();
                                 Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.UseSmoothness, EditorGUILayout.ToggleLeft("Use Smoothness", Flag.GetFlag(CommonFunctions.Flags.UseSmoothness), GUILayout.MaxWidth(135)));
                                 ConnectionSources.Add("Smoothness", GUILayoutUtility.GetLastRect()); // Store position
@@ -990,30 +1071,19 @@ namespace TrueTrace {
                             EditorGUILayout.EndHorizontal();
 
                             EditorGUILayout.Space();
-                            Flag = CommonFunctions.SetFlagStretch(Flag, 1, 3, (int)((RayTracingObject.BlendModes)EditorGUILayout.EnumPopup("Albedo Blend Mode: ", (RayTracingObject.BlendModes)Flag.GetFlagStretch(1, 3))));
-                            EditorGUILayout.Space();
                             serializedObject.FindProperty("UseKelvin").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Use Kelvin: ", t.UseKelvin[Selected]);
                             if(t.UseKelvin[Selected]) serializedObject.FindProperty("KelvinTemp").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Kelvin Temperature: ", t.KelvinTemp[Selected], 0, 20000);
                             EditorGUILayout.Space();
                             serializedObject.FindProperty("ColorBleed").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("ColorBleed: ", t.ColorBleed[Selected], 0, 1.0f);
                             EditorGUILayout.Space();
-                            serializedObject.FindProperty("MainTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("MainTex Scale/Offset: ", t.MainTexScaleOffset[Selected]);
-                            serializedObject.FindProperty("SecondaryAlbedoTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Secondary Albedo Scale/Offset: ", t.SecondaryAlbedoTexScaleOffset[Selected]);
-                            serializedObject.FindProperty("SecondaryTextureScale").GetArrayElementAtIndex(Selected).vector2Value = EditorGUILayout.Vector2Field("SecondaryTex Scale: ", t.SecondaryTextureScale[Selected]);
-                            serializedObject.FindProperty("Rotation").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Texture Rotation: ", t.Rotation[Selected], 0, 360);
-                            serializedObject.FindProperty("AlbedoBlendFactor").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Albedo Blend Factor: ", t.AlbedoBlendFactor[Selected], 0, 1);
-                            serializedObject.FindProperty("SecondaryNormalTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Detail Normal Scale/Offset: ", t.SecondaryNormalTexScaleOffset[Selected]);
-                            serializedObject.FindProperty("SecondaryNormalTexBlend").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Detail Normal Blend Factor: ", t.SecondaryNormalTexBlend[Selected], 0, 1);
-
-
-                            serializedObject.FindProperty("DetailNormalStrength").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Detail Normalmap Strength: ", t.DetailNormalStrength[Selected], 0, 20.0f);
-                            ConnectionSources.Add("DetailNormalStrength", GUILayoutUtility.GetLastRect()); // Store position
-                            ConnectionSourceNames.Add("DetailNormalStrength");
-
                         EditorGUILayout.EndVertical();
                     EditorGUILayout.EndHorizontal();
                 }
                 EditorGUILayout.EndFoldoutHeaderGroup();
+
+
+
+             
 
 
 
@@ -1077,7 +1147,12 @@ namespace TrueTrace {
                             t.MainTexScaleOffset[i] = t.MainTexScaleOffset[Selected];
                             t.SecondaryAlbedoTexScaleOffset[i] = t.SecondaryAlbedoTexScaleOffset[Selected];
                             t.SecondaryNormalTexScaleOffset[i] = t.SecondaryNormalTexScaleOffset[Selected];
-                            t.SecondaryTextureScale[i] = t.SecondaryTextureScale[Selected];
+                            t.SecondaryTextureScaleOffset[i] = t.SecondaryTextureScaleOffset[Selected];
+                            t.NormalTexScaleOffset[i] = t.NormalTexScaleOffset[Selected];
+                            t.RotationNormal[i] = t.RotationNormal[Selected];
+                            t.RotationSecondary[i] = t.RotationSecondary[Selected];
+                            t.RotationSecondaryDiffuse[i] = t.RotationSecondaryDiffuse[Selected];
+                            t.RotationSecondaryNormal[i] = t.RotationSecondaryNormal[Selected];
                             t.Rotation[i] = t.Rotation[Selected];
                             t.Flags[i] = Flag;
                             t.UseKelvin[i] = t.UseKelvin[Selected];
@@ -1131,7 +1206,12 @@ namespace TrueTrace {
                                 Obj.MainTexScaleOffset[i] = t.MainTexScaleOffset[Selected];
                                 Obj.SecondaryAlbedoTexScaleOffset[i] = t.SecondaryAlbedoTexScaleOffset[Selected];
                                 Obj.SecondaryNormalTexScaleOffset[i] = t.SecondaryNormalTexScaleOffset[Selected];
-                                Obj.SecondaryTextureScale[i] = t.SecondaryTextureScale[Selected];
+                                Obj.SecondaryTextureScaleOffset[i] = t.SecondaryTextureScaleOffset[Selected];
+                                Obj.NormalTexScaleOffset[i] = t.NormalTexScaleOffset[Selected];
+                                Obj.RotationNormal[i] = t.RotationNormal[Selected];
+                                Obj.RotationSecondary[i] = t.RotationSecondary[Selected];
+                                Obj.RotationSecondaryDiffuse[i] = t.RotationSecondaryDiffuse[Selected];
+                                Obj.RotationSecondaryNormal[i] = t.RotationSecondaryNormal[Selected];
                                 Obj.Rotation[i] = t.Rotation[Selected];
                                 Obj.Flags[i] = Flag;
                                 Obj.UseKelvin[i] = t.UseKelvin[Selected];
