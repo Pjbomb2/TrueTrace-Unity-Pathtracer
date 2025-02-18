@@ -382,6 +382,252 @@ float3 CamDiff;
 
 Texture2D<uint4> PrimaryTriData;
 
+struct TrianglePos {
+	float3 pos0;
+	float3 posedge1;
+	float3 posedge2;
+};
+
+inline TrianglePos triangle_get_positions(const int ID) {
+	TrianglePos tri;
+	tri.pos0 = AggTrisA.Load(ID).pos0;
+	tri.posedge1 = AggTrisA.Load(ID).posedge1;
+	tri.posedge2 = AggTrisA.Load(ID).posedge2;
+	return tri;
+}
+
+
+inline void triangle_intersect_dist(int tri_id, const Ray ray, inout float max_distance, int mesh_id, inout int MeshIndex) {
+    TrianglePos tri = triangle_get_positions(tri_id);
+
+    float3 h = cross(ray.direction, tri.posedge2);
+    float  a = dot(tri.posedge1, h);
+
+    float  f = rcp(a);
+    float3 s = ray.origin - tri.pos0;
+    float  u = f * dot(s, h);
+
+    if (u >= 0.0f && u <= 1.0f) {
+        float3 q = cross(s, tri.posedge1);
+        float  v = f * dot(ray.direction, q);
+
+        if (v >= 0.0f && u + v <= 1.0f) {
+            float t = f * dot(tri.posedge2, q);
+            if (t > 0.0f && t < max_distance) {
+            	max_distance = t;
+            	MeshIndex = mesh_id;
+            	return;
+            }
+        }
+    }
+
+    return;
+}
+StructuredBuffer<int> TLASBVH8Indices;
+
+
+
+inline uint ray_get_octant_inv4(const float3 ray_direction) {
+    return
+        (ray_direction.x < 0.0f ? 0 : 0x04040404) |
+        (ray_direction.y < 0.0f ? 0 : 0x02020202) |
+        (ray_direction.z < 0.0f ? 0 : 0x01010101);
+}
+
+inline uint cwbvh_node_intersect(const Ray ray, int oct_inv4, float max_distance, const BVHNode8Data TempNode) {
+    uint e_x = (TempNode.nodes[0].w) & 0xff;
+    uint e_y = (TempNode.nodes[0].w >> (8)) & 0xff;
+    uint e_z = (TempNode.nodes[0].w >> (16)) & 0xff;
+
+    const float3 adjusted_ray_direction_inv = float3(
+        asfloat(e_x << 23),
+        asfloat(e_y << 23),
+        asfloat(e_z << 23)
+        ) / ray.direction;
+    const float3 adjusted_ray_origin = (asfloat(TempNode.nodes[0].xyz) - ray.origin) / ray.direction;
+            
+    uint hit_mask = 0;
+    float3 tmin3;
+    float3 tmax3;
+    uint child_bits;
+    uint bit_index;
+    const bool3 RayDirBools = ray.direction < 0;
+    uint x_min = TempNode.nodes[2].x;
+    uint x_max = TempNode.nodes[2].y;
+    uint y_min = TempNode.nodes[3].x;
+    uint y_max = TempNode.nodes[3].y;
+    uint z_min = TempNode.nodes[4].x;
+    uint z_max = TempNode.nodes[4].y;
+    [branch]if(RayDirBools.x) {
+    	x_min ^= x_max; x_max ^= x_min; x_min ^= x_max;
+    }
+    [branch]if(RayDirBools.y) {
+    	y_min ^= y_max; y_max ^= y_min; y_min ^= y_max;
+    }
+    [branch]if(RayDirBools.z) {
+    	z_min ^= z_max; z_max ^= z_min; z_min ^= z_max;
+    }
+
+    [unroll]
+    for(int i = 0; i < 2; i++) {
+        uint meta4 = (i == 0 ? TempNode.nodes[1].z : TempNode.nodes[1].w);
+
+        uint is_inner4   = (meta4 & (meta4 << 1)) & 0x10101010;
+        uint inner_mask4 = (is_inner4 >> 4) * 0xffu;
+        uint bit_index4  = (meta4 ^ (oct_inv4 & inner_mask4)) & 0x1f1f1f1f;
+        uint child_bits4 = (meta4 >> 5) & 0x07070707;
+
+
+        [unroll]
+        for(int j = 0; j < 4; j++) {
+
+            tmin3 = float3(((x_min >> (j * 8)) & 0xffu), ((y_min >> (j * 8)) & 0xffu), ((z_min >> (j * 8)) & 0xffu));
+            tmax3 = float3(((x_max >> (j * 8)) & 0xffu), ((y_max >> (j * 8)) & 0xffu), ((z_max >> (j * 8)) & 0xffu));
+
+            tmin3 = mad(tmin3, adjusted_ray_direction_inv, adjusted_ray_origin);
+            tmax3 = mad(tmax3, adjusted_ray_direction_inv, adjusted_ray_origin);
+
+            float tmin = max(max(tmin3.x, tmin3.y), max(tmin3.z, 1e-8));
+            float tmax = min(min(tmax3.x, tmax3.y), min(tmax3.z, max_distance));
+            
+            bool intersected = tmin < tmax;
+            [branch]
+            if (intersected) {
+                child_bits = (child_bits4 >> (j * 8)) & 0xffu;
+                bit_index  = (bit_index4 >> (j * 8)) & 0xffu;
+
+                hit_mask |= child_bits << bit_index;
+            }
+        }
+        if(i == 0) {
+	        x_min = TempNode.nodes[2].z;
+	        x_max = TempNode.nodes[2].w;
+	        y_min = TempNode.nodes[3].z;
+	        y_max = TempNode.nodes[3].w;
+	        z_min = TempNode.nodes[4].z;
+	        z_max = TempNode.nodes[4].w;
+
+	        [branch]if(RayDirBools.x) {
+	        	x_min ^= x_max; x_max ^= x_min; x_min ^= x_max;
+	        }
+	        [branch]if(RayDirBools.y) {
+	        	y_min ^= y_max; y_max ^= y_min; y_min ^= y_max;
+	        }
+	        [branch]if(RayDirBools.z) {
+	        	z_min ^= z_max; z_max ^= z_min; z_min ^= z_max;
+	        }
+    	}
+
+    }
+    return hit_mask;
+}
+
+
+
+inline int Closest_Hit_Compute(Ray ray) {
+        uint2 stack[16];
+        int stack_size = 0;
+        uint2 current_group;
+
+        uint oct_inv4;
+        int tlas_stack_size = -1;
+        int mesh_id = -1;
+        Ray ray2;
+        int TriOffset = 0;
+        int NodeOffset = 0;
+        int ResultantMeshID = -1;
+
+        float MinDist = FarPlane;
+        ray2 = ray;
+
+        oct_inv4 = ray_get_octant_inv4(ray.direction);
+
+        current_group.x = (uint)0;
+        current_group.y = (uint)0x80000000;
+        int MatOffset = 0;
+        int Reps = 0;
+        [loop] while (Reps < MaxTraversalSamples) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
+        	uint2 triangle_group;
+            [branch]if (current_group.y & 0xff000000) {
+                uint child_index_offset = firstbithigh(current_group.y);
+                
+                uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
+                uint relative_index = countbits(current_group.y & ~(0xffffffff << slot_index));
+                uint child_node_index = current_group.x + relative_index;
+                const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
+
+                current_group.y &= ~(1 << child_index_offset);
+
+                if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
+
+                uint hitmask = cwbvh_node_intersect(ray, oct_inv4, MinDist, TempNode);
+
+ 				current_group.y = (hitmask & 0xff000000) | ((TempNode.nodes[0].w >> 24) & 0xff);
+                triangle_group.y = (hitmask & 0x00ffffff);
+
+	            current_group.x = (TempNode.nodes[1].x) + NodeOffset;
+                triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
+                Reps++;
+            } else {
+                triangle_group = current_group;
+                current_group = (uint2)0;
+            }
+
+            if(triangle_group.y != 0) {
+                [branch]if (tlas_stack_size == -1) {//Transfer from Top Level Accelleration Structure to Bottom Level Accelleration Structure
+                    uint mesh_offset = firstbithigh(triangle_group.y);
+                    triangle_group.y &= ~(1 << mesh_offset);
+                    mesh_id = TLASBVH8Indices[triangle_group.x + mesh_offset];
+                    NodeOffset = _MeshData[mesh_id].NodeOffset;
+                    TriOffset = _MeshData[mesh_id].TriOffset;
+
+                    if (triangle_group.y != 0) stack[stack_size++] = triangle_group;
+
+                    if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
+
+                    tlas_stack_size = stack_size;
+
+                    int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
+
+                    MatOffset = _MeshData[mesh_id].MaterialOffset;
+                    ray.direction = (mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)).xyz;
+                    ray.origin = (mul(_MeshData[mesh_id].W2L, float4(ray.origin, 1))).xyz;
+
+                    oct_inv4 = ray_get_octant_inv4(ray.direction);
+
+                    current_group.x = (uint)root_index;
+                    current_group.y = (uint)0x80000000;
+                } else {
+					while (triangle_group.y != 0) {                        
+                        uint triangle_index = firstbithigh(triangle_group.y);
+                        triangle_group.y &= ~(1 << triangle_index);
+	                    triangle_intersect_dist(triangle_group.x + triangle_index, ray, MinDist, mesh_id, ResultantMeshID);
+                    }
+                }
+            }
+
+            if ((current_group.y & 0xff000000) == 0) {
+                if (stack_size == 0) {//thread has finished traversing
+                    break;
+                }
+
+                if (stack_size == tlas_stack_size) {
+					NodeOffset = 0;
+                    TriOffset = 0;
+                    tlas_stack_size = -1;
+                    ray = ray2;
+                    oct_inv4 = ray_get_octant_inv4(ray.direction);
+                }
+                current_group = stack[--stack_size];
+            }
+        }
+        return ResultantMeshID;
+}
+
+
+
+
+
 bool UseBackupPointSelection;
 StructuredBuffer<uint> MeshIndexes;
 [numthreads(GROUP_SIZE_PIXELS, GROUP_SIZE_PIXELS, 1)]
@@ -456,6 +702,17 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 	// Final pass: store the gradient information and patch the surface parameters
 
 	ipos += found_offset;
+	Ray PrevCamRay = CreateCameraRayPrev(found_pos_prev / float2(screen_width, screen_height) * 2.0f - 1.0f);
+	Ray PrevCamRay2 = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
+	PrevCamRay.origin = PrevCamRay2.origin;
+	uint4 Target = PrimaryTriData[found_pos_prev];
+	// Ray Ray2 = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
+	// Ray2.origin += CamDiff;
+	// int ResultantMeshID = Closest_Hit_Compute(Ray2);
+	// if(Target.x != ResultantMeshID) {
+	// 	IMG_ASVGF_GRAD_SMPL_POS_A[pos_grad] = 0u;
+	// 	return;
+	// }
 
 	uint gradient_idx =
 		(1 << 31) /* mark sample as busy */
@@ -466,10 +723,8 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 	IMG_ASVGF_GRAD_HF_SPEC_PING[pos_grad] = found_prev_lum;
 
 	RNGTexA[ipos] = float4(RNGTexB[found_pos_prev].xyz, (ReflRefracB[found_pos_prev] >> 31) ? 2 : 1);
-	Ray PrevCamRay = CreateCameraRayPrev(found_pos_prev / float2(screen_width, screen_height) * 2.0f - 1.0f);
 	GlobalRaysMini[ipos.x + ipos.y * screen_width].origin = PrevCamRay.origin;
 	GlobalRaysMini[ipos.x + ipos.y * screen_width].direction = PrevCamRay.direction;
-	uint4 Target = PrimaryTriData[found_pos_prev];
 	float3 Pos;
 	if(Target.w == 1) Pos = asfloat(Target.xyz);
 	else { 
@@ -481,8 +736,13 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 			UV.x = asfloat(Target.z);//(Target.z & 0xffff) / 65535.0f;
 			UV.y = asfloat(Target.w);//(Target.z >> 16) / 65535.0f;
 			float4x4 Inverse = inverse(Mesh.W2L);
+			float4x4 InverseB = inverse(_MeshDataB[Target.x].W2L);
 			Pos = mul(Inverse, float4(AggTrisA[Target.y].pos0 + UV.x * AggTrisA[Target.y].posedge1 + UV.y * AggTrisA[Target.y].posedge2,1)).xyz;
-	// GlobalRaysMini[ipos.x + ipos.y * screen_width].origin += CamDiff;
+			float3 Pos2 = mul(InverseB, float4(AggTrisA[Target.y].pos0 + UV.x * AggTrisA[Target.y].posedge1 + UV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+			// if(Target.x == ResultantMeshID)
+			// if(any((Pos2 - Pos) != 0))
+				// GlobalRaysMini[ipos.x + ipos.y * screen_width].origin += CamDiff;
+			// Pos -= CamDiff;//Pos2;
 		}
 	}
 

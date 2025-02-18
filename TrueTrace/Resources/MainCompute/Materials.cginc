@@ -1063,8 +1063,10 @@ inline float3 ReconstructDisneyBRDF(MaterialData hitDat, const float3 wo, float3
     float gl = SeparableSmithGGXG1(wi, wm, ay, ax);
     float gv = SeparableSmithGGXG1(wo, wm, ay, ax);
     float G1v = SeparableSmithGGXG1(wo, wm, ay, ax);
-    fPdf *= 1.0f / (4 * abs(dot(wo, wm)));
-    float3 specular = G1v * f;// / (4.0f * dotNL * dotNV);//gl * gv * f / PI;// * fPdf / d * abs(dotNL) * PI * (4.0f * dotNL * dotNV);// * d / (4.0f * dotNL * dotNV);
+    float3 specular = gl * gv * f / abs(dotNL) * d / fPdf / PI;//gl * gv * f / PI;// * fPdf / d * abs(dotNL) * PI * (4.0f * dotNL * dotNV);// * d / (4.0f * dotNL * dotNV);
+    fPdf *= 1.0f / (4 * abs(dot(wo, wm)));    
+    // fPdf *= 1.0f / (4 * abs(dot(wo, wm)));
+    // float3 specular = G1v * f;// / (4.0f * dotNL * dotNV);//gl * gv * f / PI;// * fPdf / d * abs(dotNL) * PI * (4.0f * dotNL * dotNV);// * d / (4.0f * dotNL * dotNV);
     Success = (fPdf >= 0);
     return specular;
 }

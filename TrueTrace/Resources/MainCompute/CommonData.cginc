@@ -1688,24 +1688,28 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 	const float reflecSharpness = (1.0 - max(roughness2.x, roughness2.y)) / max(2.0f * max(roughness2.x, roughness2.y), EPSILON);
 	float3 viewDirTS = mul(tangentFrame, viewDir);//their origional one constructs the tangent frame from N,T,BT, whereas mine constructs it from T,N,BT; problem? I converted all .y to .z and vice versa, but... 
 	float3 reflecVec = reflect(-viewDir, n) * reflecSharpness;
+#ifdef UseSGTree
+	GaussianTreeNode node = NodeBuffer[node_index];
+#else
+	LightBVHData node = NodeBuffer[node_index];
+#endif
 
 	while(Reps < 100) {
 		Reps++;
-#ifdef UseSGTree
-		GaussianTreeNode node = NodeBuffer[node_index];
-#else
-		LightBVHData node = SGTree[node_index];
-#endif
 		[branch]if(node.left >= 0) {
 #ifdef UseSGTree
+			const GaussianTreeNode NodeA = NodeBuffer[node.left + NodeOffset];
+			const GaussianTreeNode NodeB = NodeBuffer[node.left + 1 + NodeOffset];
 			const float2 ci = float2(
-				SGImportance(NodeBuffer[node.left + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic),
-				SGImportance(NodeBuffer[node.left + 1 + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic)
+				SGImportance(NodeA, viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic),
+				SGImportance(NodeB, viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic)
 			);
 #else
+			const LightBVHData NodeA = NodeBuffer[node.left + NodeOffset];
+			const LightBVHData NodeB = NodeBuffer[node.left + 1 + NodeOffset];
 			const float2 ci = float2(
-				Importance(p, n, NodeBuffer[node.left + NodeOffset], HasHitTLAS),
-				Importance(p, n, NodeBuffer[node.left + 1 + NodeOffset], HasHitTLAS)
+				Importance(p, n, NodeA, HasHitTLAS),
+				Importance(p, n, NodeB, HasHitTLAS)
 			);
 #endif
 			// if(ci.x == 0 && ci.y == 0) {pmf = -1; return;}
@@ -1722,7 +1726,7 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
             if(sum + ci[offset] <= up) sum += ci[offset++];
 
 
-			int Index = CalcInside(SGTree[node.left + NodeOffset], SGTree[node.left + NodeOffset + 1], p2, offset);
+			int Index = CalcInside(NodeA, NodeB, p2, offset);
 			if(Index == -1) {
 				if(stacksize == 0) {return;}
 				float3 tempstack = stack[--stacksize];
@@ -1738,6 +1742,8 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
             RandNum = min((up - sum) / ci[Index], 1.0f - (1e-6));
             node_index = node.left + Index + NodeOffset;
             lightPDF *= ci[Index] / sumweights;
+			if(Index) node = NodeB;
+			else node = NodeA;
 		} else {
 			if(HasHitTLAS) {
 				return;	
@@ -1757,6 +1763,7 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 				NodeOffset = MeshBuffer[MeshIndex].LightNodeOffset;
 				node_index = NodeOffset;
 				HasHitTLAS = true;
+				node = NodeBuffer[node_index];
 				if(MeshIndex != _LightMeshes[-(node.left+1)].LockedMeshIndex) {
 					// lightPDF = 1;
 					return;
@@ -1773,9 +1780,9 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 
 
 #ifdef UseSGTree
-int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, inout int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, StructuredBuffer<GaussianTreeNode> NodeBuffer, StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
+inline int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, inout int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, const StructuredBuffer<GaussianTreeNode> NodeBuffer, const StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
 #else
-int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, inout int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, StructuredBuffer<LightBVHData> NodeBuffer, StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
+int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, inout int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, const StructuredBuffer<LightBVHData> NodeBuffer, const StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
 #endif
 	int node_index = 0;
 	int Reps = 0;
@@ -1790,20 +1797,24 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 	float3 viewDirTS = mul(tangentFrame, viewDir);//their origional one constructs the tangent frame from N,T,BT, whereas mine constructs it from T,N,BT; problem? I converted all .y to .z and vice versa, but... 
 	float3 reflecVec = reflect(-viewDir, n) * reflecSharpness;
 	float RandNum = random(264 + Reps, pixel_index).x;
+#ifdef UseSGTree
+	GaussianTreeNode node = NodeBuffer[0];
+#else
+	LightBVHData node = NodeBuffer[0];
+#endif
 	while(Reps < 622) {
 		Reps++;
-#ifdef UseSGTree
-		GaussianTreeNode node = NodeBuffer[node_index];
-#else
-		LightBVHData node = NodeBuffer[node_index];
-#endif
 		[branch]if(node.left >= 0) {
 #ifdef UseSGTree
+			const GaussianTreeNode NodeA = NodeBuffer[node.left + NodeOffset];
+			const GaussianTreeNode NodeB = NodeBuffer[node.left + 1 + NodeOffset];
 			const float2 ci = float2(
-				SGImportance(NodeBuffer[node.left + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic),
-				SGImportance(NodeBuffer[node.left + 1 + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic)
+				SGImportance(NodeA, viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic),
+				SGImportance(NodeB, viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic)
 			);
 #else
+			const LightBVHData NodeA = NodeBuffer[node.left + NodeOffset];
+			const LightBVHData NodeB = NodeBuffer[node.left + 1 + NodeOffset];
 			const float2 ci = float2(
 				Importance(p, n, NodeBuffer[node.left + NodeOffset], HasHitTLAS),
 				Importance(p, n, NodeBuffer[node.left + 1 + NodeOffset], HasHitTLAS)
@@ -1828,6 +1839,8 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 
 			pmf /= ((ci[Index] / sumweights));
 			node_index = node.left + Index + NodeOffset;
+			if(Index) node = NodeB;
+			else node = NodeA;
 			
 		} else {
 			[branch]if(HasHitTLAS) {
@@ -1849,6 +1862,7 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 				NodeOffset = MeshBuffer[MeshIndex].LightNodeOffset;
 				node_index = NodeOffset;
 				HasHitTLAS = true;
+				node = NodeBuffer[node_index];
 			}
 		}
 	}

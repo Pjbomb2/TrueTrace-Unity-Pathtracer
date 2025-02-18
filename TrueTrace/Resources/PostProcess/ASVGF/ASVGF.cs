@@ -202,7 +202,7 @@ namespace TrueTrace {
 
         Vector3 prevEuler;
         Vector3 PrevPos;
-        public void DoRNG(ref RenderTexture RNGTex, ref RenderTexture RNGTexB, int CurFrame, ComputeBuffer GlobalRays, CommandBuffer cmd, RenderTexture PrimaryTriData, ComputeBuffer Meshes, ComputeBuffer Tris, bool UseBackupPointSelection, ComputeBuffer MeshIndexes, int ScreenWidth, int ScreenHeight)
+        public void DoRNG(ref RenderTexture RNGTex, ref RenderTexture RNGTexB, int CurFrame, ComputeBuffer GlobalRays, CommandBuffer cmd, RenderTexture PrimaryTriData, ComputeBuffer Meshes, ComputeBuffer Tris, bool UseBackupPointSelection, ComputeBuffer MeshIndexes, int ScreenWidth, int ScreenHeight, ComputeBuffer MeshesB)
         {
             // this.ScreenWidth = ScreenWidth;
             // this.ScreenHeight = ScreenHeight;
@@ -215,13 +215,17 @@ namespace TrueTrace {
             camera = RayTracingMaster._camera;
             bool EvenFrame = CurFrame % 2 == 0;
             Vector3 Euler = camera.transform.eulerAngles;
+            Vector3 Pos = camera.transform.position;
             shader.SetMatrix("viewprojection", camera.projectionMatrix * camera.worldToCameraMatrix);
             camera.transform.eulerAngles = prevEuler; 
+            camera.transform.position = PrevPos; 
             shader.SetMatrix("prevviewprojection", camera.projectionMatrix * camera.worldToCameraMatrix);
             shader.SetMatrix("CamToWorldPrev", camera.cameraToWorldMatrix);
             shader.SetMatrix("CamInvProjPrev", camera.projectionMatrix.inverse);
             camera.transform.eulerAngles = Euler; 
+            camera.transform.position = Pos; 
             prevEuler = Euler;
+            PrevPos = Pos;
             shader.SetBool("UseBackupPointSelection", UseBackupPointSelection);
             shader.SetFloat("CameraDist", Vector3.Distance(camera.transform.position, PrevCamPos));
             shader.SetMatrix("CamToWorld", camera.cameraToWorldMatrix);
@@ -258,6 +262,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, Reproject, "MetallicB", (!EvenFrame ? MetallicA : MetallicB));
             cmd.SetComputeTextureParam(shader, Reproject, "PrimaryTriData", PrimaryTriData);
             cmd.SetComputeBufferParam(shader, Reproject, "_MeshData", Meshes);
+            cmd.SetComputeBufferParam(shader, Reproject, "_MeshDataB", Meshes);
             cmd.SetComputeBufferParam(shader, Reproject, "AggTrisA", Tris);
             cmd.SetComputeBufferParam(shader, Reproject, "MeshIndexes", MeshIndexes);
             shader.SetVector("CamDiff", PrevPos - camera.transform.position);

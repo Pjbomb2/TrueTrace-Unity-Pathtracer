@@ -70,10 +70,22 @@
           <z>0</z>
           <w>0</w>
         </SecondaryAlbedoTexScaleOffset>
-        <SecondaryTextureScale>
-          <x>1</x>
-          <y>1</y>
-        </SecondaryTextureScale>
+        <SecondaryTextureScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryTextureScaleOffset>
+        <NormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </NormalTexScaleOffset>
+        <RotationNormal>0</RotationNormal>
+        <RotationSecondary>0</RotationSecondary>
+        <RotationSecondaryDiffuse>0</RotationSecondaryDiffuse>
+        <RotationSecondaryNormal>0</RotationSecondaryNormal>
         <Rotation>0</Rotation>
         <Flags>0</Flags>
         <UseKelvin>false</UseKelvin>
@@ -167,10 +179,22 @@
           <z>0</z>
           <w>0</w>
         </SecondaryAlbedoTexScaleOffset>
-        <SecondaryTextureScale>
-          <x>1</x>
-          <y>1</y>
-        </SecondaryTextureScale>
+        <SecondaryTextureScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryTextureScaleOffset>
+        <NormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </NormalTexScaleOffset>
+        <RotationNormal>0</RotationNormal>
+        <RotationSecondary>0</RotationSecondary>
+        <RotationSecondaryDiffuse>0</RotationSecondaryDiffuse>
+        <RotationSecondaryNormal>0</RotationSecondaryNormal>
         <Rotation>0</Rotation>
         <Flags>0</Flags>
         <UseKelvin>false</UseKelvin>
@@ -269,10 +293,22 @@
           <z>0</z>
           <w>0</w>
         </SecondaryAlbedoTexScaleOffset>
-        <SecondaryTextureScale>
-          <x>1</x>
-          <y>1</y>
-        </SecondaryTextureScale>
+        <SecondaryTextureScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryTextureScaleOffset>
+        <NormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </NormalTexScaleOffset>
+        <RotationNormal>0</RotationNormal>
+        <RotationSecondary>0</RotationSecondary>
+        <RotationSecondaryDiffuse>0</RotationSecondaryDiffuse>
+        <RotationSecondaryNormal>0</RotationSecondaryNormal>
         <Rotation>0</Rotation>
         <Flags>0</Flags>
         <UseKelvin>false</UseKelvin>
@@ -366,10 +402,22 @@
           <z>0</z>
           <w>0</w>
         </SecondaryAlbedoTexScaleOffset>
-        <SecondaryTextureScale>
-          <x>1</x>
-          <y>1</y>
-        </SecondaryTextureScale>
+        <SecondaryTextureScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryTextureScaleOffset>
+        <NormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </NormalTexScaleOffset>
+        <RotationNormal>0</RotationNormal>
+        <RotationSecondary>0</RotationSecondary>
+        <RotationSecondaryDiffuse>0</RotationSecondaryDiffuse>
+        <RotationSecondaryNormal>0</RotationSecondaryNormal>
         <Rotation>0</Rotation>
         <Flags>0</Flags>
         <UseKelvin>false</UseKelvin>
@@ -468,10 +516,22 @@
           <z>0</z>
           <w>0</w>
         </SecondaryAlbedoTexScaleOffset>
-        <SecondaryTextureScale>
-          <x>1</x>
-          <y>1</y>
-        </SecondaryTextureScale>
+        <SecondaryTextureScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryTextureScaleOffset>
+        <NormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </NormalTexScaleOffset>
+        <RotationNormal>0</RotationNormal>
+        <RotationSecondary>0</RotationSecondary>
+        <RotationSecondaryDiffuse>0</RotationSecondaryDiffuse>
+        <RotationSecondaryNormal>0</RotationSecondaryNormal>
         <Rotation>0</Rotation>
         <Flags>0</Flags>
         <UseKelvin>false</UseKelvin>
@@ -570,10 +630,22 @@
           <z>0</z>
           <w>0</w>
         </SecondaryAlbedoTexScaleOffset>
-        <SecondaryTextureScale>
-          <x>1</x>
-          <y>1</y>
-        </SecondaryTextureScale>
+        <SecondaryTextureScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryTextureScaleOffset>
+        <NormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </NormalTexScaleOffset>
+        <RotationNormal>0</RotationNormal>
+        <RotationSecondary>0</RotationSecondary>
+        <RotationSecondaryDiffuse>0</RotationSecondaryDiffuse>
+        <RotationSecondaryNormal>0</RotationSecondaryNormal>
         <Rotation>0</Rotation>
         <Flags>0</Flags>
         <UseKelvin>false</UseKelvin>
@@ -667,10 +739,22 @@
           <z>1</z>
           <w>0</w>
         </SecondaryAlbedoTexScaleOffset>
-        <SecondaryTextureScale>
-          <x>2</x>
-          <y>4</y>
-        </SecondaryTextureScale>
+        <SecondaryTextureScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryTextureScaleOffset>
+        <NormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </NormalTexScaleOffset>
+        <RotationNormal>0</RotationNormal>
+        <RotationSecondary>0</RotationSecondary>
+        <RotationSecondaryDiffuse>0</RotationSecondaryDiffuse>
+        <RotationSecondaryNormal>0</RotationSecondaryNormal>
         <Rotation>0</Rotation>
         <Flags>0</Flags>
         <UseKelvin>false</UseKelvin>
@@ -769,10 +853,22 @@
           <z>0</z>
           <w>0</w>
         </SecondaryAlbedoTexScaleOffset>
-        <SecondaryTextureScale>
-          <x>1</x>
-          <y>1</y>
-        </SecondaryTextureScale>
+        <SecondaryTextureScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryTextureScaleOffset>
+        <NormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </NormalTexScaleOffset>
+        <RotationNormal>0</RotationNormal>
+        <RotationSecondary>0</RotationSecondary>
+        <RotationSecondaryDiffuse>0</RotationSecondaryDiffuse>
+        <RotationSecondaryNormal>0</RotationSecondaryNormal>
         <Rotation>0</Rotation>
         <Flags>512</Flags>
         <UseKelvin>false</UseKelvin>
@@ -871,10 +967,22 @@
           <z>0</z>
           <w>0</w>
         </SecondaryAlbedoTexScaleOffset>
-        <SecondaryTextureScale>
-          <x>1</x>
-          <y>1</y>
-        </SecondaryTextureScale>
+        <SecondaryTextureScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryTextureScaleOffset>
+        <NormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </NormalTexScaleOffset>
+        <RotationNormal>0</RotationNormal>
+        <RotationSecondary>0</RotationSecondary>
+        <RotationSecondaryDiffuse>0</RotationSecondaryDiffuse>
+        <RotationSecondaryNormal>0</RotationSecondaryNormal>
         <Rotation>0</Rotation>
         <Flags>0</Flags>
         <UseKelvin>false</UseKelvin>
@@ -968,10 +1076,22 @@
           <z>0</z>
           <w>0</w>
         </SecondaryAlbedoTexScaleOffset>
-        <SecondaryTextureScale>
-          <x>1</x>
-          <y>1</y>
-        </SecondaryTextureScale>
+        <SecondaryTextureScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryTextureScaleOffset>
+        <NormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </NormalTexScaleOffset>
+        <RotationNormal>0</RotationNormal>
+        <RotationSecondary>0</RotationSecondary>
+        <RotationSecondaryDiffuse>0</RotationSecondaryDiffuse>
+        <RotationSecondaryNormal>0</RotationSecondaryNormal>
         <Rotation>0</Rotation>
         <Flags>0</Flags>
         <UseKelvin>false</UseKelvin>
@@ -1070,10 +1190,22 @@
           <z>0</z>
           <w>0</w>
         </SecondaryAlbedoTexScaleOffset>
-        <SecondaryTextureScale>
-          <x>1</x>
-          <y>1</y>
-        </SecondaryTextureScale>
+        <SecondaryTextureScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryTextureScaleOffset>
+        <NormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </NormalTexScaleOffset>
+        <RotationNormal>0</RotationNormal>
+        <RotationSecondary>0</RotationSecondary>
+        <RotationSecondaryDiffuse>0</RotationSecondaryDiffuse>
+        <RotationSecondaryNormal>0</RotationSecondaryNormal>
         <Rotation>0</Rotation>
         <Flags>0</Flags>
         <UseKelvin>false</UseKelvin>
@@ -1172,10 +1304,22 @@
           <z>0</z>
           <w>0</w>
         </SecondaryAlbedoTexScaleOffset>
-        <SecondaryTextureScale>
-          <x>1</x>
-          <y>1</y>
-        </SecondaryTextureScale>
+        <SecondaryTextureScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryTextureScaleOffset>
+        <NormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </NormalTexScaleOffset>
+        <RotationNormal>0</RotationNormal>
+        <RotationSecondary>0</RotationSecondary>
+        <RotationSecondaryDiffuse>0</RotationSecondaryDiffuse>
+        <RotationSecondaryNormal>0</RotationSecondaryNormal>
         <Rotation>0</Rotation>
         <Flags>512</Flags>
         <UseKelvin>false</UseKelvin>
@@ -1269,10 +1413,22 @@
           <z>0</z>
           <w>0</w>
         </SecondaryAlbedoTexScaleOffset>
-        <SecondaryTextureScale>
-          <x>1</x>
-          <y>1</y>
-        </SecondaryTextureScale>
+        <SecondaryTextureScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryTextureScaleOffset>
+        <NormalTexScaleOffset>
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+          <w>0</w>
+        </NormalTexScaleOffset>
+        <RotationNormal>0</RotationNormal>
+        <RotationSecondary>0</RotationSecondary>
+        <RotationSecondaryDiffuse>0</RotationSecondaryDiffuse>
+        <RotationSecondaryNormal>0</RotationSecondaryNormal>
         <Rotation>0</Rotation>
         <Flags>512</Flags>
         <UseKelvin>false</UseKelvin>
@@ -1298,6 +1454,120 @@
         <SecondaryAlbedoMaskGUID>null</SecondaryAlbedoMaskGUID>
         <NormalGUID>67631cd853304ee45bfa2775f9c9fc9c</NormalGUID>
         <ShaderName>Real Ivy/Flat leaves</ShaderName>
+      </RayObjectDatas>
+    </ContainedPresets>
+  </RayObjFolder>
+  <RayObjFolder>
+    <FolderName>Temp</FolderName>
+    <ContainedPresets>
+      <RayObjectDatas>
+        <ID>0</ID>
+        <MatName>Temp</MatName>
+        <OptionID>1</OptionID>
+        <TransCol>
+          <x>1</x>
+          <y>1</y>
+          <z>1</z>
+        </TransCol>
+        <BaseCol>
+          <x>1</x>
+          <y>1</y>
+          <z>1</z>
+        </BaseCol>
+        <MetRemap>
+          <x>0</x>
+          <y>1</y>
+        </MetRemap>
+        <RoughRemap>
+          <x>0</x>
+          <y>1</y>
+        </RoughRemap>
+        <Emiss>12</Emiss>
+        <EmissCol>
+          <x>1</x>
+          <y>1</y>
+          <z>1</z>
+        </EmissCol>
+        <Rough>1</Rough>
+        <IOR>1</IOR>
+        <Met>0</Met>
+        <SpecTint>0</SpecTint>
+        <Sheen>15.4</Sheen>
+        <SheenTint>0.609</SheenTint>
+        <Clearcoat>0.423</Clearcoat>
+        <ClearcoatGloss>0.081</ClearcoatGloss>
+        <Anisotropic>0</Anisotropic>
+        <Flatness>1</Flatness>
+        <DiffTrans>0.139</DiffTrans>
+        <SpecTrans>0</SpecTrans>
+        <FollowMat>false</FollowMat>
+        <ScatterDist>5</ScatterDist>
+        <Spec>0</Spec>
+        <AlphaCutoff>0.1</AlphaCutoff>
+        <NormStrength>1</NormStrength>
+        <Hue>0</Hue>
+        <Saturation>1</Saturation>
+        <Brightness>1</Brightness>
+        <Contrast>1</Contrast>
+        <BlendColor>
+          <x>1</x>
+          <y>1</y>
+          <z>1</z>
+        </BlendColor>
+        <BlendFactor>0</BlendFactor>
+        <MainTexScaleOffset>
+          <x>1</x>
+          <y>1</y>
+          <z>0</z>
+          <w>0</w>
+        </MainTexScaleOffset>
+        <SecondaryAlbedoTexScaleOffset>
+          <x>1</x>
+          <y>1</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryAlbedoTexScaleOffset>
+        <SecondaryTextureScaleOffset>
+          <x>1</x>
+          <y>1</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryTextureScaleOffset>
+        <NormalTexScaleOffset>
+          <x>1</x>
+          <y>1</y>
+          <z>0</z>
+          <w>0</w>
+        </NormalTexScaleOffset>
+        <RotationNormal>0</RotationNormal>
+        <RotationSecondary>0</RotationSecondary>
+        <RotationSecondaryDiffuse>0</RotationSecondaryDiffuse>
+        <RotationSecondaryNormal>0</RotationSecondaryNormal>
+        <Rotation>0</Rotation>
+        <Flags>0</Flags>
+        <UseKelvin>false</UseKelvin>
+        <KelvinTemp>0</KelvinTemp>
+        <ColorBleed>1</ColorBleed>
+        <AlbedoBlendFactor>0</AlbedoBlendFactor>
+        <SecondaryNormalTexScaleOffset>
+          <x>1</x>
+          <y>1</y>
+          <z>0</z>
+          <w>0</w>
+        </SecondaryNormalTexScaleOffset>
+        <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
+        <DetailNormalStrength>1</DetailNormalStrength>
+        <AlbedoGUID>da9760237dcd7c84c84712518b5c1910</AlbedoGUID>
+        <MetallicGUID>null</MetallicGUID>
+        <RoughnessGUID>null</RoughnessGUID>
+        <EmissionGUID>1455022f0972ddb4892c1e07b24aac5c</EmissionGUID>
+        <AlphaGUID>da9760237dcd7c84c84712518b5c1910</AlphaGUID>
+        <MatCapGUID>null</MatCapGUID>
+        <MatcapMaskGUID>null</MatcapMaskGUID>
+        <SecondaryAlbedoGUID>null</SecondaryAlbedoGUID>
+        <SecondaryAlbedoMaskGUID>null</SecondaryAlbedoMaskGUID>
+        <NormalGUID>null</NormalGUID>
+        <ShaderName>Standard</ShaderName>
       </RayObjectDatas>
     </ContainedPresets>
   </RayObjFolder>

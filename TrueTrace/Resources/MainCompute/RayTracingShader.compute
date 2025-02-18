@@ -391,7 +391,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     float3 Rad = TempVox.radiance / (float)max(TempVox.SampleNum,1);
                     Color.Indirect += Rad * Color.throughput *  bsdf;// * 2.0f;// * bsdf;
 
-                    if(MaterialLobe == 3) {
+                    if(MaterialLobe == 3 || Refracted) {
                         TempVox = RetrieveCacheData(GenHash(pos, i_octahedral_32(octahedral_32(-Geomnorm))));
                         Rad = TempVox.radiance / (float)max(TempVox.SampleNum,1);
                         Color.Indirect += Rad * Color.throughput *  bsdf;// * 2.0f;// * bsdf;
