@@ -1462,13 +1462,13 @@ public static class CommandBufferExts
         public static int GetStride<T>() 
             where T : struct
         {
-            return System.Runtime.InteropServices.System.Runtime.InteropServices.Marshal.SizeOf<T>();
+            return System.Runtime.InteropServices.Marshal.SizeOf<T>();
         }
 
         public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, List<T> data)
             where T : struct
         {
-            int stride = System.Runtime.InteropServices.System.Runtime.InteropServices.Marshal.SizeOf<T>();
+            int stride = System.Runtime.InteropServices.Marshal.SizeOf<T>();
             if (buffer != null) {
                 if (data == null || data.Count == 0 || !buffer.IsValid() || buffer.count != data.Count || buffer.stride != stride) {
                     buffer.Release();
@@ -1485,7 +1485,7 @@ public static class CommandBufferExts
         public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, T[] data)
             where T : struct
         {
-            int stride = System.Runtime.InteropServices.System.Runtime.InteropServices.Marshal.SizeOf<T>();
+            int stride = System.Runtime.InteropServices.Marshal.SizeOf<T>();
             if (buffer != null) {
                 if (data == null || data.Length == 0 || !buffer.IsValid() || buffer.count != data.Length || buffer.stride != stride) {
                     buffer.Release();
