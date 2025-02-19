@@ -1,0 +1,151 @@
+{
+	"m_CompilationContext": {
+		"m_BuildTarget": {
+			"m_ExtendedPlatform": 0,
+			"m_IsEditor": 0,
+			"m_Platform": 0,
+			"m_SubTarget": 0
+		},
+		"m_CompilationFlags": 0,
+		"m_IncludeHash0": 0,
+		"m_IncludeHash1": 0,
+		"m_IncludeHash2": 0,
+		"m_IncludeHash3": 0,
+		"m_KernelMacros": [
+			
+		],
+		"m_Kernels": [
+			
+		],
+		"m_NeverUseDxcAPIs": 0,
+		"m_PlatformGroup": 0,
+		"m_Source": "",
+		"m_SourceFile": "",
+		"m_SourceFileName": "",
+		"m_SupportedAPIs": 0,
+		"m_UseDxcAPIs": 0
+	},
+	"m_CorrespondingSourceObject": { "m_FileID": 0, "m_PathID": 0 },
+	"m_Errors": [
+		
+	],
+	"m_HideFlags": 0,
+	"m_Name": "Sharpen",
+	"m_PrefabAsset": { "m_FileID": 0, "m_PathID": 0 },
+	"m_PrefabInstance": { "m_FileID": 0, "m_PathID": 0 },
+	"m_Variants": [
+		{
+			"m_CompilerPlatform": 0,
+			"m_ConstantBuffers": [
+				{
+					"m_ByteSize": 16,
+					"m_Name": "$Globals",
+					"m_Params": [
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "Sharpness",
+							"m_Offset": 0,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "screen_width",
+							"m_Offset": 4,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "screen_height",
+							"m_Offset": 8,
+							"m_RowCount": 1,
+							"m_Type": 1
+						}
+					]
+				}
+			],
+			"m_KernelParents": [
+				{
+					"m_DynamicKeywords": [
+						
+					],
+					"m_GlobalKeywords": [
+						
+					],
+					"m_LocalKeywords": [
+						
+					],
+					"m_Name": "CSMain",
+					"m_UniqueVariants": [
+						{
+							"m_BuiltinSamplers": [
+								{
+									"m_BindPoint": 0,
+									"m_Sampler": 84
+								}
+							],
+							"m_Cbs": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "$Globals",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_CbVariantIndices": [
+								0
+							],
+							"m_Code": "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",
+							"m_InBuffers": [
+								
+							],
+							"m_IsCompiled": false,
+							"m_Keywords": [
+								
+							],
+							"m_OutBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "Result",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": 2
+								}
+							],
+							"m_Requirements": 50241,
+							"m_Textures": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "Input",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": 2
+								}
+							],
+							"m_ThreadGroupSize": [
+								16,
+								16,
+								1
+							]
+						}
+					],
+					"m_VariantIndices": [
+						{
+							"Key": "",
+							"Value": 0
+						}
+					]
+				}
+			],
+			"m_NeedsReflectionData": false,
+			"m_ResourcesResolved": true,
+			"m_TargetLevel": 0,
+			"m_TargetRenderer": 18
+		}
+	]
+}

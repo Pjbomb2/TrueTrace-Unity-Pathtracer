@@ -93,10 +93,7 @@ namespace TrueTrace {
             }
         }
 
-        [HideInInspector] public ComputeShader ShadingShader;
-        private ComputeShader IntersectionShader;
-        private ComputeShader GenerateShader;
-        private ComputeShader ReSTIRGI;
+        // [HideInInspector] public ComputeShader ShadingShader;
         private ComputeShader CDFCompute;
 
         private RenderTexture _target;
@@ -198,21 +195,21 @@ namespace TrueTrace {
         [HideInInspector] public int MainDirectionalLight = -1;
         [HideInInspector] public int AtmoNumLayers = 4;
         private float PrevResFactor;
-        private int GenKernel;
-        private int GenPanoramaKernel;
-        private int TraceKernel;
-        private int ShadowKernel;
-        private int HeightmapKernel;
-        private int HeightmapShadowKernel;
-        private int ShadeKernel;
-        private int FinalizeKernel;
-        private int GIReTraceKernel;
-        private int TransferKernel;
-        private int ReSTIRGIKernel;
-        private int ReSTIRGISpatialKernel;
-        private int TTtoOIDNKernel;
-        private int OIDNtoTTKernel;
-        private int TTtoOIDNKernelPanorama;
+        // private int GenKernel;
+        // private int GenPanoramaKernel;
+        // private int TraceKernel;
+        // private int ShadowKernel;
+        // private int HeightmapKernel;
+        // private int HeightmapShadowKernel;
+        // private int ShadeKernel;
+        // private int FinalizeKernel;
+        // private int GIReTraceKernel;
+        // private int TransferKernel;
+        // private int ReSTIRGIKernel;
+        // private int ReSTIRGISpatialKernel;
+        // private int TTtoOIDNKernel;
+        // private int OIDNtoTTKernel;
+        // private int TTtoOIDNKernelPanorama;
         // private int MVKernel;
         #if !DisableRadianceCache
             private int ResolveKernel;
@@ -277,16 +274,13 @@ namespace TrueTrace {
             RayMaster = this;
             CurrentHorizonalPatch = new Vector2(0,1);
             LoadTT();
+            ShaderStuff.DX12ShadersInitialize(Application.dataPath + "/TrueTrace-Unity-Pathtracer/TrueTrace/Resources/shaderjsons");
             // LoadInitialSettings();//Build only
             Application.targetFrameRate = 165;
             ASVGFCode = new ASVGF();
             ReSTIRASVGFCode = new ReSTIRASVGF();
             ToneMapTex = Resources.Load<Texture3D>("Utility/ToneMapTex");
             ToneMapTex2 = Resources.Load<Texture3D>("Utility/AgXBC");
-            if (ShadingShader == null) {ShadingShader = Resources.Load<ComputeShader>("MainCompute/RayTracingShader"); }
-            if (IntersectionShader == null) {IntersectionShader = Resources.Load<ComputeShader>("MainCompute/IntersectionKernels"); }
-            if (GenerateShader == null) {GenerateShader = Resources.Load<ComputeShader>("MainCompute/RayGenKernels"); }
-            if (ReSTIRGI == null) {ReSTIRGI = Resources.Load<ComputeShader>("MainCompute/ReSTIRGI"); }
             TargetWidth = 1;
             TargetHeight = 1;
             SourceWidth = 1;
@@ -297,26 +291,26 @@ namespace TrueTrace {
             Assets.BuildCombined();
             uFirstFrame = 1;
             FramesSinceStart = 0;
-            GenKernel = GenerateShader.FindKernel("Generate");
-            GenPanoramaKernel = GenerateShader.FindKernel("GeneratePanorama");
-            TraceKernel = IntersectionShader.FindKernel("kernel_trace");
-            ShadowKernel = IntersectionShader.FindKernel("kernel_shadow");
-            ShadeKernel = ShadingShader.FindKernel("kernel_shade");
-            FinalizeKernel = ShadingShader.FindKernel("kernel_finalize");
-            HeightmapShadowKernel = IntersectionShader.FindKernel("kernel_shadow_heightmap");
-            HeightmapKernel = IntersectionShader.FindKernel("kernel_heightmap");
-            GIReTraceKernel = GenerateShader.FindKernel("GIReTraceKernel");
-            TransferKernel = ShadingShader.FindKernel("TransferKernel");
-            ReSTIRGIKernel = ReSTIRGI.FindKernel("ReSTIRGIKernel");
-            ReSTIRGISpatialKernel = ReSTIRGI.FindKernel("ReSTIRGISpatial");
-            TTtoOIDNKernel = ShadingShader.FindKernel("TTtoOIDNKernel");
-            OIDNtoTTKernel = ShadingShader.FindKernel("OIDNtoTTKernel");
-            TTtoOIDNKernelPanorama = ShadingShader.FindKernel("TTtoOIDNKernelPanorama");
+            // GenKernel = GenerateShader.FindKernel("Generate");
+            // GenPanoramaKernel = GenerateShader.FindKernel("GeneratePanorama");
+            // TraceKernel = IntersectionShader.FindKernel("kernel_trace");
+            // ShadowKernel = IntersectionShader.FindKernel("kernel_shadow");
+            // ShadeKernel = ShadingShader.FindKernel("kernel_shade");
+            // FinalizeKernel = ShadingShader.FindKernel("kernel_finalize");
+            // HeightmapShadowKernel = IntersectionShader.FindKernel("kernel_shadow_heightmap");
+            // HeightmapKernel = IntersectionShader.FindKernel("kernel_heightmap");
+            // GIReTraceKernel = GenerateShader.FindKernel("GIReTraceKernel");
+            // TransferKernel = ShadingShader.FindKernel("TransferKernel");
+            // ReSTIRGIKernel = ReSTIRGI.FindKernel("ReSTIRGIKernel");
+            // ReSTIRGISpatialKernel = ReSTIRGI.FindKernel("ReSTIRGISpatial");
+            // TTtoOIDNKernel = ShadingShader.FindKernel("TTtoOIDNKernel");
+            // OIDNtoTTKernel = ShadingShader.FindKernel("OIDNtoTTKernel");
+            // TTtoOIDNKernelPanorama = ShadingShader.FindKernel("TTtoOIDNKernelPanorama");
             // MVKernel = ShadingShader.FindKernel("MVKernel");
-            #if !DisableRadianceCache
-                ResolveKernel = GenerateShader.FindKernel("CacheResolve");
-                CompactKernel = GenerateShader.FindKernel("CacheCompact");
-            #endif
+            // #if !DisableRadianceCache
+            //     ResolveKernel = GenerateShader.FindKernel("CacheResolve");
+            //     CompactKernel = GenerateShader.FindKernel("CacheCompact");
+            // #endif
             OIDNGuideWrite = false;
             ASVGFCode.Initialized = false;
             ReSTIRASVGFCode.Initialized = false;
@@ -539,34 +533,34 @@ namespace TrueTrace {
         }
 
         private void SetVector(string Name, Vector3 IN, CommandBuffer cmd) {
-            cmd.SetComputeVectorParam(ShadingShader, Name, IN);
-            cmd.SetComputeVectorParam(IntersectionShader, Name, IN);
-            cmd.SetComputeVectorParam(GenerateShader, Name, IN);
-            cmd.SetComputeVectorParam(ReSTIRGI, Name, IN);
+            cmd.SetVector("RayTracingShader", Name, IN);
+            cmd.SetVector("IntersectionKernels", Name, IN);
+            cmd.SetVector("RayGenKernels", Name, IN);
+            cmd.SetVector("ReSTIRGI", Name, IN);
             if(HasSDFHandler) cmd.SetComputeVectorParam(OptionalSDFHandler.GenShader, Name, IN);
         }
 
         private void SetInt(string Name, int IN, CommandBuffer cmd) {
-            cmd.SetComputeIntParam(ShadingShader, Name, IN);
-            cmd.SetComputeIntParam(IntersectionShader, Name, IN);
-            cmd.SetComputeIntParam(GenerateShader, Name, IN);
-            cmd.SetComputeIntParam(ReSTIRGI, Name, IN);
+            cmd.SetInt("RayTracingShader", Name, IN);
+            cmd.SetInt("IntersectionKernels", Name, IN);
+            cmd.SetInt("RayGenKernels", Name, IN);
+            cmd.SetInt("ReSTIRGI", Name, IN);
             if(HasSDFHandler) cmd.SetComputeIntParam(OptionalSDFHandler.GenShader, Name, IN);
         }
 
         private void SetFloat(string Name, float IN, CommandBuffer cmd) {
-            cmd.SetComputeFloatParam(ShadingShader, Name, IN);
-            cmd.SetComputeFloatParam(IntersectionShader, Name, IN);
-            cmd.SetComputeFloatParam(GenerateShader, Name, IN);
-            cmd.SetComputeFloatParam(ReSTIRGI, Name, IN);
+            cmd.SetFloat("RayTracingShader", Name, IN);
+            cmd.SetFloat("IntersectionKernels", Name, IN);
+            cmd.SetFloat("RayGenKernels", Name, IN);
+            cmd.SetFloat("ReSTIRGI", Name, IN);
             if(HasSDFHandler) cmd.SetComputeFloatParam(OptionalSDFHandler.GenShader, Name, IN);
         }
 
-        private void SetBool(string Name, bool IN) {
-            ShadingShader.SetBool(Name, IN);
-            IntersectionShader.SetBool(Name, IN);
-            GenerateShader.SetBool(Name, IN);
-            ReSTIRGI.SetBool(Name, IN);
+        private void SetBool(string Name, bool IN, CommandBuffer cmd) {
+            cmd.SetBool("RayTracingShader", Name, IN ? 1 : 0);
+            cmd.SetBool("IntersectionKernels", Name, IN ? 1 : 0);
+            cmd.SetBool("RayGenKernels", Name, IN ? 1 : 0);
+            cmd.SetBool("ReSTIRGI", Name, IN ? 1 : 0);
             if(HasSDFHandler) OptionalSDFHandler.GenShader.SetBool(Name, IN);
         }
         Matrix4x4 CamInvProjPrev;

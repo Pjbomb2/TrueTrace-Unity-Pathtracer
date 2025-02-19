@@ -1,0 +1,1016 @@
+{
+	"m_CompilationContext": {
+		"m_BuildTarget": {
+			"m_ExtendedPlatform": 0,
+			"m_IsEditor": 0,
+			"m_Platform": 0,
+			"m_SubTarget": 0
+		},
+		"m_CompilationFlags": 0,
+		"m_IncludeHash0": 0,
+		"m_IncludeHash1": 0,
+		"m_IncludeHash2": 0,
+		"m_IncludeHash3": 0,
+		"m_KernelMacros": [
+			
+		],
+		"m_Kernels": [
+			
+		],
+		"m_NeverUseDxcAPIs": 0,
+		"m_PlatformGroup": 0,
+		"m_Source": "",
+		"m_SourceFile": "",
+		"m_SourceFileName": "",
+		"m_SupportedAPIs": 0,
+		"m_UseDxcAPIs": 0
+	},
+	"m_CorrespondingSourceObject": { "m_FileID": 0, "m_PathID": 0 },
+	"m_Errors": [
+		
+	],
+	"m_HideFlags": 0,
+	"m_Name": "RayGenKernels",
+	"m_PrefabAsset": { "m_FileID": 0, "m_PathID": 0 },
+	"m_PrefabInstance": { "m_FileID": 0, "m_PathID": 0 },
+	"m_Variants": [
+		{
+			"m_CompilerPlatform": 0,
+			"m_ConstantBuffers": [
+				{
+					"m_ByteSize": 736,
+					"m_Name": "$Globals",
+					"m_Params": [
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "OIDNGuideWrite",
+							"m_Offset": 0,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 4,
+							"m_Name": "CamToWorld",
+							"m_Offset": 16,
+							"m_RowCount": 4,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 4,
+							"m_Name": "CamInvProj",
+							"m_Offset": 80,
+							"m_RowCount": 4,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "MaxBounce",
+							"m_Offset": 400,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "CurBounce",
+							"m_Offset": 404,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "screen_width",
+							"m_Offset": 408,
+							"m_RowCount": 1,
+							"m_Type": 5
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "screen_height",
+							"m_Offset": 412,
+							"m_RowCount": 1,
+							"m_Type": 5
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "frames_accumulated",
+							"m_Offset": 416,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "ReSTIRGIUpdateRate",
+							"m_Offset": 460,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 3,
+							"m_Name": "Forward",
+							"m_Offset": 464,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 3,
+							"m_Name": "Right",
+							"m_Offset": 480,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 3,
+							"m_Name": "Up",
+							"m_Offset": 496,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "UseDoF",
+							"m_Offset": 556,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "focal_distance",
+							"m_Offset": 560,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "AperatureRadius",
+							"m_Offset": 564,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 3,
+							"m_Name": "MousePos",
+							"m_Offset": 576,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "IsFocusing",
+							"m_Offset": 588,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "FarPlane",
+							"m_Offset": 628,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "NearPlane",
+							"m_Offset": 632,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "UseASVGF",
+							"m_Offset": 636,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "UseReSTIRGI",
+							"m_Offset": 640,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "IsOrtho",
+							"m_Offset": 644,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "OrthoSize",
+							"m_Offset": 648,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "UseASVGFAndReSTIR",
+							"m_Offset": 728,
+							"m_RowCount": 1,
+							"m_Type": 2
+						}
+					]
+				},
+				{
+					"m_ByteSize": 736,
+					"m_Name": "$Globals",
+					"m_Params": [
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "OIDNGuideWrite",
+							"m_Offset": 0,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 4,
+							"m_Name": "CamToWorld",
+							"m_Offset": 16,
+							"m_RowCount": 4,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 4,
+							"m_Name": "CamInvProj",
+							"m_Offset": 80,
+							"m_RowCount": 4,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "MaxBounce",
+							"m_Offset": 400,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "CurBounce",
+							"m_Offset": 404,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "screen_width",
+							"m_Offset": 408,
+							"m_RowCount": 1,
+							"m_Type": 5
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "screen_height",
+							"m_Offset": 412,
+							"m_RowCount": 1,
+							"m_Type": 5
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "frames_accumulated",
+							"m_Offset": 416,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "curframe",
+							"m_Offset": 420,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "ReSTIRGIUpdateRate",
+							"m_Offset": 460,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 3,
+							"m_Name": "Forward",
+							"m_Offset": 464,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 3,
+							"m_Name": "Right",
+							"m_Offset": 480,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 3,
+							"m_Name": "Up",
+							"m_Offset": 496,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "UseDoF",
+							"m_Offset": 556,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "focal_distance",
+							"m_Offset": 560,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "AperatureRadius",
+							"m_Offset": 564,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 3,
+							"m_Name": "MousePos",
+							"m_Offset": 576,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "IsFocusing",
+							"m_Offset": 588,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "FarPlane",
+							"m_Offset": 628,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "NearPlane",
+							"m_Offset": 632,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "UseASVGF",
+							"m_Offset": 636,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "UseReSTIRGI",
+							"m_Offset": 640,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "IsOrtho",
+							"m_Offset": 644,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "OrthoSize",
+							"m_Offset": 648,
+							"m_RowCount": 1,
+							"m_Type": 0
+						}
+					]
+				},
+				{
+					"m_ByteSize": 736,
+					"m_Name": "$Globals",
+					"m_Params": [
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "OIDNGuideWrite",
+							"m_Offset": 0,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 4,
+							"m_Name": "CamToWorld",
+							"m_Offset": 16,
+							"m_RowCount": 4,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 4,
+							"m_Name": "CamInvProj",
+							"m_Offset": 80,
+							"m_RowCount": 4,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "MaxBounce",
+							"m_Offset": 400,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "CurBounce",
+							"m_Offset": 404,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "screen_width",
+							"m_Offset": 408,
+							"m_RowCount": 1,
+							"m_Type": 5
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "screen_height",
+							"m_Offset": 412,
+							"m_RowCount": 1,
+							"m_Type": 5
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "frames_accumulated",
+							"m_Offset": 416,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "ReSTIRGIUpdateRate",
+							"m_Offset": 460,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 3,
+							"m_Name": "Forward",
+							"m_Offset": 464,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 3,
+							"m_Name": "Right",
+							"m_Offset": 480,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 3,
+							"m_Name": "Up",
+							"m_Offset": 496,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "UseDoF",
+							"m_Offset": 556,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "focal_distance",
+							"m_Offset": 560,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "AperatureRadius",
+							"m_Offset": 564,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 3,
+							"m_Name": "MousePos",
+							"m_Offset": 576,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "IsFocusing",
+							"m_Offset": 588,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 2,
+							"m_Name": "Segment",
+							"m_Offset": 592,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "DoPanorama",
+							"m_Offset": 600,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "FarPlane",
+							"m_Offset": 628,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "NearPlane",
+							"m_Offset": 632,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "UseASVGF",
+							"m_Offset": 636,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "UseReSTIRGI",
+							"m_Offset": 640,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "IsOrtho",
+							"m_Offset": 644,
+							"m_RowCount": 1,
+							"m_Type": 2
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "OrthoSize",
+							"m_Offset": 648,
+							"m_RowCount": 1,
+							"m_Type": 0
+						}
+					]
+				}
+			],
+			"m_KernelParents": [
+				{
+					"m_DynamicKeywords": [
+						
+					],
+					"m_GlobalKeywords": [
+						
+					],
+					"m_LocalKeywords": [
+						
+					],
+					"m_Name": "Generate",
+					"m_UniqueVariants": [
+						{
+							"m_BuiltinSamplers": [
+								
+							],
+							"m_Cbs": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "$Globals",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_CbVariantIndices": [
+								0
+							],
+							"m_Code": "RFhCQ+GRMy8pdzt51wNsNznX5lMBAAAA9BEAAAYAAAA4AAAASAAAAFgAAABoAAAAAAEAABwBAABTRkkwCAAAAAAAAAAAAAAASVNHMQgAAAAAAAAACAAAAE9TRzEIAAAAAAAAAAgAAABQU1YwkAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP////8FAAAAAAAAAAAAAAAQAAAAEAAAAAEAAAADAAAAGAAAAAIAAAAAAAAAAAAAAAAAAAANAAAAAAAAAAMAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAQAAAAAAAAAAAAAAEhBU0gUAAAAAAAAAIE7VrQxUqbNIHDpOsEn2r9EWElM0BAAAGAABQA0BAAARFhJTAABAAAQAAAAuBAAAEJDwN4hDAAAKwQAAAuCIAACAAAAEwAAAAeBI5FByARJBhAyOZIBhAwlBQgZHgSLYoAYRQJCkgtCxBAyFDgIGEsKMmKISJAUIENGiKUAGTJC5EgOkBEjxFBBUYGM4YPligQxRgZRGAAACAAAABuM4P////8HQAKoDYbw/////wMgAdUGYvj/////AZAASRgAAAMAAAATgmBCIEwIBgAAAACJIAAAgAAAADIiiAkgZIUEEyOkhAQTI+OEoZAUEkyMjAuExEwQyMEIQAkACuYIwKAMwzAQMQNw03D5E/YQkr8S0kpMfnHbqDAMwxjmCBBC7hkuf8IeQvJDoBkWAgVJUY5BGYZhGIaBloIYg2EYhmFQUwZjMOgpxTAMw0DRUcPlT9hDSD63UcVKTD5y24gYhmEoxDQoA1FHDZc/YQ8h+dxGFSsx+cVtI8IwDKMQ1qAMdJXCGAzDoGyOICiGMiDDsBFXFGBQhmEYhgEhryjAoAyDYRgGQuBAwDACYczUBuPADuEwD/PgBrRQDvhAD/UgD+UgB6TAB/ZQDuNAD+8gD3xgDuzwDuFAD2wABnTgB2DgB3qgB+2QDvAwD79AD/kAD+WAgmEmMRgHdgiHeZgHN6CFcsAHeqgHeSgHOSAFPrCHchgHengHeeADc2CHdwgHemADMKADPwADP0DCSFI5jDAYwwjEcI40RZQw+SuAdcAEoOIcTgOdKQzGgR3CYR7mwQ1k4RZmgR7koR7GgR7qQR7KgRxEoR7MwRzKQR74QBbCIR9IIRzoIRz8AAUpqUkwDiMIxkwTOrzDPNADO4RDPrxDPdCDG5DBKbDDO4hDOLDDPKA8GFiWZVl2GIZhGAZjGIZhGIbhPM/zPAfDOId2GIZhGAbDGIbBGAzjHNu2HcidIwCFKQAAAAAAExRywId0YIc2aId5aANywIcNr1AObdAOelAObQAPejAHcqAHcyAHbZAOcaAHcyAHbZAOeKAHcyAHbZAOcWAHejAHctAG6TAHcqAHcyAHbZAOdkAHemAHdNAG5hAHdqAHcyAHbWAOcyAHejAHctAG5mAHdKAHdkAHbeAOeKAHcWAHejAHcqAHdkAHQ54AAAAAAAAAAAAAAIY8BBAAAQAAAAAAAAAMeRYgAAQAAAAAAAAAGPI0QAAEAAAAAAAAADDkeYAACAAAAAAAAABgyBMBARAAAAAAAAAAwJCHAgJAAAAAAAAAAIAhzwUEgAAAAAAAAAAAQ54MCIAAAAAAAAAAAIY8HBAAAgAAAAAAAAAMeTwgAAYAAAAAAAAAGPKAARAAAwAAAAAAAABkgQAADQAAADIemBQZEUyQjAkmR8YEQxpKYASgHIqhCEqiMAqscBcKoUBoGwEguEBonQGgdwaAzBkAAAB5GAAAUAAAABoDTJBGAhNEjwxv7O1NDCTG5cZFZgYGxwVHBgRFbKZmpizHhoYsZUMQTBAGZoIwNBuEgZggDM4GYTAojM1NEIZnw4AkxATBDDYCE4QBmiAM0QaBcDYkxMIQxNAQz4YAmiCsQTZBGKQJwnZNEIZpgzBUGxZCYghimCiKsjYE1wThDbQJwkBtQIiMIYhBAzYE2wYiwjhggiAARI7K3MrkwujKJghwgE0QhmqCMFgbBjEQg2EDQYBBGIzBhsL7gI4MSJHhuYy9udHJvbGZsb3duaCludHNrRjOwAyGFQMamMFQhY3Nrs0ljazMjW5KEFQhw3OxK5ObS3tzmxIQTcjwXOzC2OzK5KYERh0yPJc5tDCyMrmmN7IytilBUoYMz0WubO6tTm6sbG5KwNUhw3Mpc6OTy4N6S3Ojm5sSkAEAAAAAeRgAAFkAAAAzCIAcxOEcZhQBPYhDOITDjEKAB3l4B3OYcQzmAA/tEA70gA4zDEIewsEdzqEcZjAFPYhDOISDG8wDPchDPYwDPcx4jHRwB3sIB3lIh3BwB3pwA3Z4h3AghxnMEQ7skA7hMA9uMA/j8A7wUA4zEMQd3iEc2CEdwmEeZjCJO7yDO9BDObQDPLyDPIQDO8zwFHZgB3toBzdoh3JoBzeAh3CQh3BgB3YoB3b4BXZ4h3eAh18Ih3EYh3KYh3mYgSzu8A7u4A71wA7sMANiyKEc5KEczKEc5KEc3GEcyiEcxIEdymEG1pBDOchDOZhDOchDObjDOJRDOIgDO5TDL7yDPPyCO9QDO7DDDMQhB3xwA3ooh3aAhxnVQw744Abj8A7uQA/y8A7sYA7s8A734AbokA7uQA/zMCOCyAEf3IAcxOEc3MAewkEe2CEc8uEd6oEeZjAROeCDG4iDPJRDOKyDG4iDPAAAAHEgAAAyAAAABoCARENEwETYQjVcvvP4AVUURMROTkT4xW2bQjVcvvP4AVUURMROTkT4yG3bwTZcvvP4QkAVBRGVDjCUhAEImF/cthlsw+U7jy8EVFEQUekAQ0kYgID5yG1bgjRcvvP4QkQAExECzbAQNuAMl+88/uBMt1/ctiFIw+U7jz8R0YQAEeYXt20F0nD5zuNPRDQhQIT5yG2bQDVcvvP4E3FNVESUDjD4xW1bgDRcvvP40xERwCAOPnLbRvAMl+88PtUAEeYXtw0AAABhIAAARwIAABMEUSwQAAAAIgAAADSU3QxAcRVO6RUnQql7TyYX1P10s65CyS7fIwoUS2mznvYTlGJAjRJKVhKUXMkUYUDRlG5AORVUuRVSaZVCQZRB6RRRwZRGGRVP+RQQIeVRBCMA5VACZIwRgCAI4r8wRgCCIMiCwRjB7o8yCwZjBCAIgiAYjBGAIAjCvzADMAIwRvD//39fAAAjBgkAgmDAiYIYJH7gB3QwYpAAIAgG3CiMAfMHf1AHIwYJAIJgwJECGTigAAp2MGJgACAIBkQrhEEojBgYAAiCAeEKYjAKIwYHAIJgQKkCHQxmMJoQCMMNRDAGownDMNxQBGNQQ7CzDFAQVHFIBQmMGBwACIIBJQt8sKjBaEIwDDcErRAGIwYHAIJgQNXCHzhsMJoQAMMNASyEwYjBAYAgGFC4IArRH4wmBMNwQzALYVBEoIUEO5owARbgAghGE6pglkEYiHqqKsiaEYMGAEEwWMyhD7hdEIJVWIVVWIXRhCC4YJgKVEEqQKQCBCpgBamAFaCCWEALeAEGNQRYAcEVwIJUAAtYgcCjCQ9wwTAV5AJXQHAF6iAVnANWIHAZtgAV/AJXoHAF8CAVtANWIPAsAVFtMA5SQRhIBWEAFZSDVFAOUIE6oAX1AIMaAqyA4ArSQSpIB6xA4BGDAwBBMKBUgh5GgRxGEwKgAnngCgiuYCSkApDACgQ24x1AUAE+cAUKV5ASUoFJYAUCzxIQAxUDHQjCMFBhoIWgFsNAxWAmgo8MAxWGWwhsMQxUDKggWEMF/CAXGFWBLkgh/yAXGGVBL8jHiHCAjwniAJ8RgwMAQTCgyMIleqEnRhMCYMTgAEAQDCizgIlf0IfRhECoYNjhhkAswmC64RyQYLoBHRDhyMGoIwejjBDgY4QAnysHo44cjDJCoI8RAn1MoAf5mFAP8jEhH+Bjgj7AZ8TgAEAQDK67EIt4SIsRgwMAQTC48GIs5IElRhMCYDRBCEYTBmHE4ABAEAwuvjgLe6CL0YQAGE0QgtGEQRgxOAAQBIMLNNZCH2ZiNCEARhOEYDRhEGx55DNigAAgCAYZabgF8gRWBNCxRpLPiAECgCAYZKcRF4oUWHBAx55KPiMGCACCYJCpBl0wVWBBAp3RhHwIhhsC1ACDEYMDAEEwuF5DL1JCNUYTAmA0QQhGEwZhxOAAQBAMrtnwi5ZQjdGEABhNEILRhEEYTQADYDQhDILRBDEQZhkKgxkxOAAQBINLN0qDJthiNCEARhOEYDRhEMzB5DNigAAgCAaZb6DGYgUjBggAgmCQ/UZqFFRg0CafEQMEAEEwyMJjNZosGDFAABAEg0w8WOO4ApM8+YwYIAAIgkFGHq7xcMGIAQKAIBhk5fEaiRaMGCwACIJBsx5+cRDBQQQjBgYAgmDwrEdpBBYk8jHhkI8NhXxmCQ7rAz6gz4jBAYAgGFztgRtnURqjCYFggx7IxwJBPjbsgXxMDAT5jBggAAiCQSYfvPEJgXUBdIwMCvmMGCAACIJBVh+/EQZFYMEHHTMDRD4jBggAgmCQ4Yd4jAESWBAG0BkxOAAQBINrP8yjLlhjNCEARhOEYDRhEGYJjoEKwzJgoRioMCQDFoqBCsMxYKEYqDAYQw6KgQqDMeSgGKgwGEMOiqqLvaiyC76Y4YZxCBEwGDE4ABAEAypF5kM0cGM0IRiGGwISCYMiAh0xOAAQBAOqRe7DNMRjNCEYhhsCFAGDEYMDAEEwuF5EP1KjPEYTAuCCgUYThuCCgeoZoh4hShBkxAABQBAMohxZEUEILjBqOCLgDeErJtiCAp1lQJ5gNGE2AAtwBASjCbURzDIkCmmMGDQACILBQib7oRs5omUpkiIpkiKjCUFwwTAVoIhUkCNQwSEVHFDBikgFKwIVwAhasCMwqCHACgiu4EWkghfBsok00eGGIE3CoHBiTXa6QSfcQxhNmIALhqlgR7iChCtIuII2kQrUBCsQuIIdkQuMsmCRzyzBUu0xJlIBnUCJQSAViAFUYCZSgZlABWuCFtgJDGoIsAKCK1ATqUBNsOICVHS4ISCVMKi5EJWdbpiLFBFGDA4ABMGAchU8ORE0GU0IgArshCtIuIKEK0AVqaBUsAKBK7ATucAoCxb5zBIsAxWGKyQiowxUDLKQcMpAhSEyCacMVBh+kCCKBT4in9EEGgEsyBUQjCbYSDDLwDQlMmLQACAIBku58MmO6Mou6IKqqIqqqMpoQhBcMEwFqSIV6ApUcEgFB1TAKlIBq0AFsYIW8AoMagiwAoIrgBWpAFawLHXR4YZAXcJguiFzk2A0QQIuGKaCWYEKeIUrSLiChCtwF6lgXbACgSvgFbnAKAsY+cwSOOUm5CIV1AuUGARSgRhABeciFZwLVMAuaMG9wKCGACsguIJ1kQrWBSsOQkaHG4KSCYPpBjlIlWDE4ABAEAwol8GXU0GX0YQAsMBdQFDBvXAFCVeQcAUpIxWYDFYgcAX3IhcYZQEjn1kCZ6DCwANGaEYMDAAEweDpmXQJRgwMAATB4PEZmPmDEQMDAEEweH5GXUDBhEE+JhDyGTE4ABAEg+tnVCZX2GU0IQiMCORjhCCf0QQCsEAs5GOCWMjHBrGQjw1oAR8b0AI+NqAFfEYMDgAEweBSm5ohF3sZTQiA0QQhGE0YBBsa+djgyMeGRz42yAV8bJAL+NggF/AZMTgAEASDi25+xl3+ZTQhAEYThGA0YRBssORjwyUfGzD5mDLAx5QBPqYM8LFriI9dQ3zsGuIzYrAAIAgGTengzCAEgxCMGBgACILBUzo/E1gRyMcKQT5WDPKZJXgGKgzLcZljoMKwHJc5BioMy3GZY6DCYByXOQYqDMZxmWOgwmAclzlGDA4ABMHgYp27MZmyGU0IBAsK+ZhQyMeGQj42LPCxYYGPDQt8RhOQ4IJhRwwaAATBAAxkx25kxmRgpyCGmuGZEYMGAEEw8GbHbmTGZFbHZEAHdEBnZ0YMGgAEwQAMZMduZMZkTqdhlprhmRGDBgBBMAAD2bEbmTEZv6GZmqmZmtmZEYMGAEEw8GbHbmTGZMAGdmAngJ2fmSWAMCAGAAAABgAAAFsG7jGDLcNvPGewZRiPxwy2DGfymAEAAAAAAAAAAAAA",
+							"m_InBuffers": [
+								
+							],
+							"m_IsCompiled": false,
+							"m_Keywords": [
+								
+							],
+							"m_OutBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "GlobalRays",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_Requirements": 50241,
+							"m_Textures": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "RandomNums",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": 2
+								}
+							],
+							"m_ThreadGroupSize": [
+								16,
+								16,
+								1
+							]
+						}
+					],
+					"m_VariantIndices": [
+						{
+							"Key": "",
+							"Value": 0
+						}
+					]
+				},
+				{
+					"m_DynamicKeywords": [
+						
+					],
+					"m_GlobalKeywords": [
+						
+					],
+					"m_LocalKeywords": [
+						
+					],
+					"m_Name": "GIReTraceKernel",
+					"m_UniqueVariants": [
+						{
+							"m_BuiltinSamplers": [
+								{
+									"m_BindPoint": 0,
+									"m_Sampler": 85
+								}
+							],
+							"m_Cbs": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "$Globals",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_CbVariantIndices": [
+								1
+							],
+							"m_Code": "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",
+							"m_InBuffers": [
+								
+							],
+							"m_IsCompiled": false,
+							"m_Keywords": [
+								
+							],
+							"m_OutBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "GlobalRays",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								},
+								{
+									"m_BindPoint": 1,
+									"m_GeneratedName": "",
+									"m_Name": "ReservoirA",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": 5
+								},
+								{
+									"m_BindPoint": 2,
+									"m_GeneratedName": "",
+									"m_Name": "RandomNumsWrite",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": 2
+								}
+							],
+							"m_Requirements": 50241,
+							"m_Textures": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "RandomNums",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": 2
+								},
+								{
+									"m_BindPoint": 1,
+									"m_GeneratedName": "",
+									"m_Name": "MotionVectors",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": 2
+								}
+							],
+							"m_ThreadGroupSize": [
+								16,
+								16,
+								1
+							]
+						}
+					],
+					"m_VariantIndices": [
+						{
+							"Key": "",
+							"Value": 0
+						}
+					]
+				},
+				{
+					"m_DynamicKeywords": [
+						
+					],
+					"m_GlobalKeywords": [
+						
+					],
+					"m_LocalKeywords": [
+						
+					],
+					"m_Name": "GeneratePanorama",
+					"m_UniqueVariants": [
+						{
+							"m_BuiltinSamplers": [
+								
+							],
+							"m_Cbs": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "$Globals",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_CbVariantIndices": [
+								2
+							],
+							"m_Code": "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",
+							"m_InBuffers": [
+								
+							],
+							"m_IsCompiled": false,
+							"m_Keywords": [
+								
+							],
+							"m_OutBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "GlobalRays",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_Requirements": 50241,
+							"m_Textures": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "RandomNums",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": 2
+								}
+							],
+							"m_ThreadGroupSize": [
+								16,
+								16,
+								1
+							]
+						}
+					],
+					"m_VariantIndices": [
+						{
+							"Key": "",
+							"Value": 0
+						}
+					]
+				},
+				{
+					"m_DynamicKeywords": [
+						
+					],
+					"m_GlobalKeywords": [
+						
+					],
+					"m_LocalKeywords": [
+						
+					],
+					"m_Name": "CacheResolve",
+					"m_UniqueVariants": [
+						{
+							"m_BuiltinSamplers": [
+								
+							],
+							"m_Cbs": [
+								
+							],
+							"m_CbVariantIndices": [
+								
+							],
+							"m_Code": "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",
+							"m_InBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "HashEntriesBufferB",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								},
+								{
+									"m_BindPoint": 1,
+									"m_GeneratedName": "",
+									"m_Name": "VoxelDataBufferB",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_IsCompiled": false,
+							"m_Keywords": [
+								
+							],
+							"m_OutBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "HashEntriesBufferA",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								},
+								{
+									"m_BindPoint": 1,
+									"m_GeneratedName": "",
+									"m_Name": "VoxelDataBufferA",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_Requirements": 50241,
+							"m_Textures": [
+								
+							],
+							"m_ThreadGroupSize": [
+								256,
+								1,
+								1
+							]
+						}
+					],
+					"m_VariantIndices": [
+						{
+							"Key": "",
+							"Value": 0
+						}
+					]
+				},
+				{
+					"m_DynamicKeywords": [
+						
+					],
+					"m_GlobalKeywords": [
+						
+					],
+					"m_LocalKeywords": [
+						
+					],
+					"m_Name": "CacheCompact",
+					"m_UniqueVariants": [
+						{
+							"m_BuiltinSamplers": [
+								
+							],
+							"m_Cbs": [
+								
+							],
+							"m_CbVariantIndices": [
+								
+							],
+							"m_Code": "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",
+							"m_InBuffers": [
+								
+							],
+							"m_IsCompiled": false,
+							"m_Keywords": [
+								
+							],
+							"m_OutBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "HashEntriesBufferA",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_Requirements": 50241,
+							"m_Textures": [
+								
+							],
+							"m_ThreadGroupSize": [
+								64,
+								4,
+								1
+							]
+						}
+					],
+					"m_VariantIndices": [
+						{
+							"Key": "",
+							"Value": 0
+						}
+					]
+				}
+			],
+			"m_NeedsReflectionData": false,
+			"m_ResourcesResolved": true,
+			"m_TargetLevel": 0,
+			"m_TargetRenderer": 18
+		}
+	]
+}

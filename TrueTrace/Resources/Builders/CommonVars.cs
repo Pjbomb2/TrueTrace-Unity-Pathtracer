@@ -853,6 +853,277 @@ namespace CommonVars
     }
 
 
+public class ShaderStuff
+{
+    [System.Runtime.InteropServices.DllImport("GfxPluginDX12ShaderStuffTrueTrace")]
+    public static extern void DX12ShadersInitialize(string directory);
+    [System.Runtime.InteropServices.DllImport("GfxPluginDX12ShaderStuffTrueTrace")]
+    public static extern void SetBuffer(string kernel_name, string param_name, System.IntPtr val, int stride, int size);
+    [System.Runtime.InteropServices.DllImport("GfxPluginDX12ShaderStuffTrueTrace")]
+    public static extern void SetVector(string shader_name, string param_name, float x, float y, float z, float e);
+    [System.Runtime.InteropServices.DllImport("GfxPluginDX12ShaderStuffTrueTrace")]
+    public static extern void SetTexture(string kernel_name, string param_name, System.IntPtr val);
+    [System.Runtime.InteropServices.DllImport("GfxPluginDX12ShaderStuffTrueTrace")]
+    public static extern void KernelDispatch(string kernel_name, int x, int y, int z);
+    [System.Runtime.InteropServices.DllImport("GfxPluginDX12ShaderStuffTrueTrace")]
+    public static extern void SetBool(string shader_name, string param_name, bool val);
+    [System.Runtime.InteropServices.DllImport("GfxPluginDX12ShaderStuffTrueTrace")]
+    public static extern void SetInt(string shader_name, string param_name, int val);
+    [System.Runtime.InteropServices.DllImport("GfxPluginDX12ShaderStuffTrueTrace")]
+    public static extern void SetFloat(string shader_name, string param_name, float val);
+
+
+    private delegate void RenderEventDelegate(int eventID);
+    private static RenderEventDelegate RenderThreadHandle = new RenderEventDelegate(RunOnRenderThread);
+    public static System.IntPtr RenderThreadHandlePtr = System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(RenderThreadHandle);
+
+    private static string kernelname = "";
+    private static int x;
+    private static int y;
+    private static int z;
+    private static void RunOnRenderThread(int eventID)
+    {
+        KernelDispatch(kernelname, x, y, z);
+    }
+    private static void Dispatch(string kernel_name, int _x, int _y, int _z)
+    {
+        kernelname = kernel_name;
+        x = _x;
+        y = _y;
+        z = _z;
+        GL.IssuePluginEvent(RenderThreadHandlePtr, 0);
+    }
+}
+public static class CommandBufferExts
+{
+    public enum TYPES
+    {
+        SetBuffer,
+        SetVector,
+        SetTexture,
+        Dispatch,
+        SetBool,
+        SetInt,
+        SetFloat,
+    }
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    public struct DispatchData
+    {
+        public string kernel_name;
+        public int x;
+        public int y;
+        public int z;
+    }
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    public struct SetBufferData
+    {
+        public string kernel_name;
+        public string param_name;
+        public System.IntPtr val;
+        public int stride;
+        public int size;
+    }
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    public struct SetVectorData
+    {
+        public string shader_name;
+        public string param_name;
+        public float x;
+        public float y;
+        public float z;
+        public float e;
+    }
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    public struct SetTextureData
+    {
+        public string kernel_name;
+        public string param_name;
+        public System.IntPtr val;
+    }
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    public struct SetBoolData
+    {
+        public string shader_name;
+        public string param_name;
+        public bool val;
+    }
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    public struct SetIntData
+    {
+        public string shader_name;
+        public string param_name;
+        public int val;
+    }
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    public struct SetFloatData
+    {
+        public string shader_name;
+        public string param_name;
+        public float val;
+    }
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    public struct Data
+    {
+        public TYPES type;
+        public DispatchData dispatchData;
+        public SetBufferData setBufferData;
+        public SetVectorData setVectorData;
+        public SetTextureData setTextureData;
+        public SetBoolData setBoolData;
+        public SetIntData setIntData;
+        public SetFloatData setFloatData;
+    }
+    private delegate void RenderEventDelegate(int eventID, System.IntPtr data);
+    private static RenderEventDelegate EventHandlerDelegate = new RenderEventDelegate(EventHandler);
+    public static System.IntPtr EventHandlerPtr = System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(EventHandlerDelegate);
+    public static void EventHandler(int eventID, System.IntPtr data)
+    {
+        Data datastruct = (Data)System.Runtime.InteropServices.Marshal.PtrToStructure(data, typeof(Data));
+        switch(datastruct.type)
+        {
+            case TYPES.Dispatch:
+                ShaderStuff.KernelDispatch(datastruct.dispatchData.kernel_name, datastruct.dispatchData.x, datastruct.dispatchData.y, datastruct.dispatchData.z); break;
+            case TYPES.SetBuffer:
+                ShaderStuff.SetBuffer(datastruct.setBufferData.kernel_name, datastruct.setBufferData.param_name, datastruct.setBufferData.val, datastruct.setBufferData.stride, datastruct.setBufferData.size); break;
+            case TYPES.SetVector:
+                ShaderStuff.SetVector(datastruct.setVectorData.shader_name, datastruct.setVectorData.param_name, datastruct.setVectorData.x, datastruct.setVectorData.y, datastruct.setVectorData.z, datastruct.setVectorData.e); break;
+            case TYPES.SetTexture:
+                ShaderStuff.SetTexture(datastruct.setTextureData.kernel_name, datastruct.setTextureData.param_name, datastruct.setTextureData.val); break;
+            case TYPES.SetBool:
+                ShaderStuff.SetBool(datastruct.setBoolData.shader_name,datastruct.setBoolData.param_name,datastruct.setBoolData.val); break;
+            case TYPES.SetInt:
+                ShaderStuff.SetInt(datastruct.setIntData.shader_name, datastruct.setIntData.param_name, datastruct.setIntData.val); break;
+            case TYPES.SetFloat:
+                ShaderStuff.SetFloat(datastruct.setFloatData.shader_name, datastruct.setFloatData.param_name, datastruct.setFloatData.val); break;
+        }
+        System.Runtime.InteropServices.Marshal.FreeHGlobal(data);
+    }
+    public static void Dispatch(this UnityEngine.Rendering.CommandBuffer buf, string kernel_name, int x, int y, int z)
+    {
+        var data = new Data
+        {
+            type = TYPES.Dispatch,
+            dispatchData = new DispatchData
+            {
+                kernel_name = kernel_name,
+                x = x,
+                y = y,
+                z = z
+            }
+        };
+        var data_ptr = System.Runtime.InteropServices.Marshal.AllocHGlobal(System.Runtime.InteropServices.Marshal.SizeOf(data));
+        System.Runtime.InteropServices.Marshal.StructureToPtr(data, data_ptr, false);
+        buf.IssuePluginEventAndData(EventHandlerPtr, 0, data_ptr);
+    }
+
+    public static void SetBuffer(this UnityEngine.Rendering.CommandBuffer buf, string kernel_name, string param_name, ComputeBuffer buffer) {
+        buf.SetBuffer(kernel_name, param_name, buffer.GetNativeBufferPtr(), buffer.stride, buffer.count);
+    }
+
+
+    public static void SetBuffer(this UnityEngine.Rendering.CommandBuffer buf, string kernel_name, string param_name, System.IntPtr val, int stride, int size)
+    {
+        var data = new Data
+        {
+            type = TYPES.SetBuffer,
+            setBufferData = new SetBufferData
+            {
+                kernel_name = kernel_name,
+                param_name = param_name,
+                val = val,
+                stride = stride,
+                size = size
+            }
+        };
+        var data_ptr = System.Runtime.InteropServices.Marshal.AllocHGlobal(System.Runtime.InteropServices.Marshal.SizeOf(data));
+        System.Runtime.InteropServices.Marshal.StructureToPtr(data, data_ptr, false);
+        buf.IssuePluginEventAndData(EventHandlerPtr, 0, data_ptr);
+    }
+    public static void SetVector(this UnityEngine.Rendering.CommandBuffer buf, string shader_name, string param_name, Vector3 A)
+    {
+        var data = new Data
+        {
+            type = TYPES.SetVector,
+            setVectorData = new SetVectorData
+            {
+                shader_name = shader_name,
+                param_name = param_name,
+                x = A.x,
+                y = A.y,
+                z = A.z,
+                e = 0
+            }
+        };
+        var data_ptr = System.Runtime.InteropServices.Marshal.AllocHGlobal(System.Runtime.InteropServices.Marshal.SizeOf(data));
+        System.Runtime.InteropServices.Marshal.StructureToPtr(data, data_ptr, false);
+        buf.IssuePluginEventAndData(EventHandlerPtr, 0, data_ptr);
+    }
+    public static void SetTexture(this UnityEngine.Rendering.CommandBuffer buf, string kernel_name, string param_name, System.IntPtr val)
+    {
+        var data = new Data
+        {
+            type = TYPES.SetTexture,
+            setTextureData = new SetTextureData
+            {
+                kernel_name = kernel_name,
+                param_name = param_name,
+                val = val
+            }
+        };
+        var data_ptr = System.Runtime.InteropServices.Marshal.AllocHGlobal(System.Runtime.InteropServices.Marshal.SizeOf(data));
+        System.Runtime.InteropServices.Marshal.StructureToPtr(data, data_ptr, false);
+        buf.IssuePluginEventAndData(EventHandlerPtr, 0, data_ptr);
+    }
+    public static void SetBool(this UnityEngine.Rendering.CommandBuffer buf, string shader_name, string param_name, bool val)
+    {
+        var data = new Data
+        {
+            type = TYPES.SetBool,
+            setBoolData = new SetBoolData
+            {
+                shader_name = shader_name,
+                param_name = param_name,
+                val = val
+            }
+        };
+        var data_ptr = System.Runtime.InteropServices.Marshal.AllocHGlobal(System.Runtime.InteropServices.Marshal.SizeOf(data));
+        System.Runtime.InteropServices.Marshal.StructureToPtr(data, data_ptr, false);
+        buf.IssuePluginEventAndData(EventHandlerPtr, 0, data_ptr);
+    }
+    public static void SetInt(this UnityEngine.Rendering.CommandBuffer buf, string shader_name, string param_name, int val)
+    {
+        var data = new Data
+        {
+            type = TYPES.SetInt,
+            setIntData = new SetIntData
+            {
+                shader_name = shader_name,
+                param_name = param_name,
+                val = val
+            }
+        };
+        var data_ptr = System.Runtime.InteropServices.Marshal.AllocHGlobal(System.Runtime.InteropServices.Marshal.SizeOf(data));
+        System.Runtime.InteropServices.Marshal.StructureToPtr(data, data_ptr, false);
+        buf.IssuePluginEventAndData(EventHandlerPtr, 0, data_ptr);
+    }
+    public static void SetFloat(this UnityEngine.Rendering.CommandBuffer buf, string shader_name, string param_name, float val)
+    {
+        var data = new Data
+        {
+            type = TYPES.SetFloat,
+            setFloatData = new SetFloatData
+            {
+                shader_name = shader_name,
+                param_name = param_name,
+                val = val
+            }
+        };
+        var data_ptr = System.Runtime.InteropServices.Marshal.AllocHGlobal(System.Runtime.InteropServices.Marshal.SizeOf(data));
+        System.Runtime.InteropServices.Marshal.StructureToPtr(data, data_ptr, false);
+        buf.IssuePluginEventAndData(EventHandlerPtr, 0, data_ptr);
+    }
+}
+
     public static class CommonFunctions
     {
 
@@ -1191,13 +1462,13 @@ namespace CommonVars
         public static int GetStride<T>() 
             where T : struct
         {
-            return System.Runtime.InteropServices.Marshal.SizeOf<T>();
+            return System.Runtime.InteropServices.System.Runtime.InteropServices.Marshal.SizeOf<T>();
         }
 
         public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, List<T> data)
             where T : struct
         {
-            int stride = System.Runtime.InteropServices.Marshal.SizeOf<T>();
+            int stride = System.Runtime.InteropServices.System.Runtime.InteropServices.Marshal.SizeOf<T>();
             if (buffer != null) {
                 if (data == null || data.Count == 0 || !buffer.IsValid() || buffer.count != data.Count || buffer.stride != stride) {
                     buffer.Release();
@@ -1214,7 +1485,7 @@ namespace CommonVars
         public static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, T[] data)
             where T : struct
         {
-            int stride = System.Runtime.InteropServices.Marshal.SizeOf<T>();
+            int stride = System.Runtime.InteropServices.System.Runtime.InteropServices.Marshal.SizeOf<T>();
             if (buffer != null) {
                 if (data == null || data.Length == 0 || !buffer.IsValid() || buffer.count != data.Length || buffer.stride != stride) {
                     buffer.Release();

@@ -1,0 +1,437 @@
+{
+	"m_CompilationContext": {
+		"m_BuildTarget": {
+			"m_ExtendedPlatform": 0,
+			"m_IsEditor": 0,
+			"m_Platform": 0,
+			"m_SubTarget": 0
+		},
+		"m_CompilationFlags": 0,
+		"m_IncludeHash0": 0,
+		"m_IncludeHash1": 0,
+		"m_IncludeHash2": 0,
+		"m_IncludeHash3": 0,
+		"m_KernelMacros": [
+			
+		],
+		"m_Kernels": [
+			
+		],
+		"m_NeverUseDxcAPIs": 0,
+		"m_PlatformGroup": 0,
+		"m_Source": "",
+		"m_SourceFile": "",
+		"m_SourceFileName": "",
+		"m_SupportedAPIs": 0,
+		"m_UseDxcAPIs": 0
+	},
+	"m_CorrespondingSourceObject": { "m_FileID": 0, "m_PathID": 0 },
+	"m_Errors": [
+		
+	],
+	"m_HideFlags": 0,
+	"m_Name": "GeneralMeshFunctions",
+	"m_PrefabAsset": { "m_FileID": 0, "m_PathID": 0 },
+	"m_PrefabInstance": { "m_FileID": 0, "m_PathID": 0 },
+	"m_Variants": [
+		{
+			"m_CompilerPlatform": 0,
+			"m_ConstantBuffers": [
+				{
+					"m_ByteSize": 16,
+					"m_Name": "$Globals",
+					"m_Params": [
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "Offset",
+							"m_Offset": 0,
+							"m_RowCount": 1,
+							"m_Type": 5
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "Count",
+							"m_Offset": 4,
+							"m_RowCount": 1,
+							"m_Type": 5
+						}
+					]
+				}
+			],
+			"m_KernelParents": [
+				{
+					"m_DynamicKeywords": [
+						
+					],
+					"m_GlobalKeywords": [
+						
+					],
+					"m_LocalKeywords": [
+						
+					],
+					"m_Name": "CombineTriBuffers",
+					"m_UniqueVariants": [
+						{
+							"m_BuiltinSamplers": [
+								
+							],
+							"m_Cbs": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "$Globals",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_CbVariantIndices": [
+								0
+							],
+							"m_Code": "RFhCQ3E/54EgBD601/ZnOJhXm6ABAAAATAMAAAMAAAAsAAAAPAAAAEwAAABJU0dOCAAAAAAAAAAIAAAAT1NHTggAAAAAAAAACAAAAFNIRVj4AgAAUAAFAL4AAABqCAABWQAABEaOIAAAAAAAAQAAAKIAAAQAcBAAAAAAAFwAAACeAAAEAOARAAAAAAA0AAAAngAABADgEQABAAAAKAAAAF8AAAISAAIAaAAAAgQAAACbAAAEdAEAAAEAAAABAAAAUAAABxIAEAAAAAAACgACABqAIAAAAAAAAAAAAB8ABAMKABAAAAAAAD4AAAEVAAABHgAABxIAEAAAAAAACgACAAqAIAAAAAAAAAAAAKcAAIoC4wKAg5kZAPIAEAABAAAACgACAAFAAAAAAAAANnkQAAAAAACoAAAJcuARAAAAAAAKABAAAAAAAAFAAAAAAAAAlgcQAAEAAACnAACKAuMCgIOZGQDyABAAAgAAAAoAAgABQAAAEAAAAOZ0EAAAAAAANgAABWIAEAABAAAApgsQAAIAAACoAAAJcuARAAAAAAAKABAAAAAAAAFAAAAMAAAARgIQAAEAAACnAACKAuMCgIOZGQDyABAAAQAAAAoAAgABQAAAIAAAAEZ+EAAAAAAApwAAigLjAoCDmRkA8gAQAAMAAAAKAAIAAUAAADwAAACWfBAAAAAAADYAAAVCABAAAgAAAAoAEAABAAAANgAABYIAEAACAAAAKgAQAAMAAACoAAAJ8uARAAAAAAAKABAAAAAAAAFAAAAYAAAARg4QAAIAAACnAACKAuMCgIOZGQDyABAAAgAAAAoAAgABQAAATAAAAEZ+EAAAAAAANgAABUIAEAADAAAAKgAQAAIAAACoAAAJcuARAAAAAAAKABAAAAAAAAFAAAAoAAAARgIQAAMAAACoAAAJcuARAAEAAAAKABAAAAAAAAFAAAAAAAAAlgcQAAEAAACnAACKAuMCgIOZGQByABAAAwAAAAoAAgABQAAAMAAAAJZwEAAAAAAAqAAACfLgEQABAAAACgAQAAAAAAABQAAADAAAACYNEAADAAAAqAAACXLgEQABAAAACgAQAAAAAAABQAAAHAAAAEYDEAACAAAAPgAAAQ==",
+							"m_InBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "InCudaTriArray",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_IsCompiled": false,
+							"m_Keywords": [
+								
+							],
+							"m_OutBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "OutCudaTriArrayA",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								},
+								{
+									"m_BindPoint": 1,
+									"m_GeneratedName": "",
+									"m_Name": "OutCudaTriArrayB",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_Requirements": 50241,
+							"m_Textures": [
+								
+							],
+							"m_ThreadGroupSize": [
+								372,
+								1,
+								1
+							]
+						}
+					],
+					"m_VariantIndices": [
+						{
+							"Key": "",
+							"Value": 0
+						}
+					]
+				},
+				{
+					"m_DynamicKeywords": [
+						
+					],
+					"m_GlobalKeywords": [
+						
+					],
+					"m_LocalKeywords": [
+						
+					],
+					"m_Name": "CombineNodeBuffers",
+					"m_UniqueVariants": [
+						{
+							"m_BuiltinSamplers": [
+								
+							],
+							"m_Cbs": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "$Globals",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_CbVariantIndices": [
+								0
+							],
+							"m_Code": "RFhCQ57ASDSOcXSSF3q/ZfwswoQBAAAAfAIAAAMAAAAsAAAAPAAAAEwAAABJU0dOCAAAAAAAAAAIAAAAT1NHTggAAAAAAAAACAAAAFNIRVgoAgAAUAAFAIoAAABqCAABWQAABEaOIAAAAAAAAQAAAKIAAAQAcBAAAAAAAFAAAACeAAAEAOARAAAAAABQAAAAXwAAAhIAAgBoAAACBgAAAJsAAAR0AQAAAQAAAAEAAABQAAAHEgAQAAAAAAAKAAIAGoAgAAAAAAAAAAAAHwAEAwoAEAAAAAAAPgAAARUAAAEeAAAHEgAQAAAAAAAKAAIACoAgAAAAAAAAAAAApwAAigKDAoCDmRkA8gAQAAEAAAAKAAIAAUAAAAAAAABGfhAAAAAAAKcAAIoCgwKAg5kZAPIAEAACAAAACgACAAFAAAAQAAAARn4QAAAAAACnAACKAoMCgIOZGQDyABAAAwAAAAoAAgABQAAAIAAAAEZ+EAAAAAAApwAAigKDAoCDmRkA8gAQAAQAAAAKAAIAAUAAADAAAABGfhAAAAAAAKcAAIoCgwKAg5kZAPIAEAAFAAAACgACAAFAAABAAAAARn4QAAAAAACoAAAJ8uARAAAAAAAKABAAAAAAAAFAAAAAAAAARg4QAAEAAACoAAAJ8uARAAAAAAAKABAAAAAAAAFAAAAQAAAARg4QAAIAAACoAAAJ8uARAAAAAAAKABAAAAAAAAFAAAAgAAAARg4QAAMAAACoAAAJ8uARAAAAAAAKABAAAAAAAAFAAAAwAAAARg4QAAQAAACoAAAJ8uARAAAAAAAKABAAAAAAAAFAAABAAAAARg4QAAUAAAA+AAAB",
+							"m_InBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "InAggNodes",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_IsCompiled": false,
+							"m_Keywords": [
+								
+							],
+							"m_OutBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "OutAggNodes",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_Requirements": 50241,
+							"m_Textures": [
+								
+							],
+							"m_ThreadGroupSize": [
+								372,
+								1,
+								1
+							]
+						}
+					],
+					"m_VariantIndices": [
+						{
+							"Key": "",
+							"Value": 0
+						}
+					]
+				},
+				{
+					"m_DynamicKeywords": [
+						
+					],
+					"m_GlobalKeywords": [
+						
+					],
+					"m_LocalKeywords": [
+						
+					],
+					"m_Name": "CombineLightBuffers",
+					"m_UniqueVariants": [
+						{
+							"m_BuiltinSamplers": [
+								
+							],
+							"m_Cbs": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "$Globals",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_CbVariantIndices": [
+								0
+							],
+							"m_Code": "RFhCQyuIvldoHSs5gM4vw+zI9qkBAAAA5AEAAAMAAAAsAAAAPAAAAEwAAABJU0dOCAAAAAAAAAAIAAAAT1NHTggAAAAAAAAACAAAAFNIRViQAQAAUAAFAGQAAABqCAABWQAABEaOIAAAAAAAAQAAAKIAAAQAcBAAAAAAACwAAACeAAAEAOARAAAAAAAsAAAAXwAAAhIAAgBoAAACAwAAAJsAAAR0AQAAAQAAAAEAAABQAAAHEgAQAAAAAAAKAAIAGoAgAAAAAAAAAAAAHwAEAwoAEAAAAAAAPgAAARUAAAEeAAAHEgAQAAAAAAAKAAIACoAgAAAAAAAAAAAApwAAigJjAYCDmRkA8gAQAAEAAAAKAAIAAUAAAAAAAABGfhAAAAAAAKcAAIoCYwGAg5kZAPIAEAACAAAACgACAAFAAAAQAAAARn4QAAAAAACnAACKAmMBgIOZGQDiABAAAAAAAAoAAgABQAAAIAAAAAZ5EAAAAAAAqAAACfLgEQAAAAAACgAQAAAAAAABQAAAAAAAAEYOEAABAAAAqAAACfLgEQAAAAAACgAQAAAAAAABQAAAEAAAAEYOEAACAAAAqAAACXLgEQAAAAAACgAQAAAAAAABQAAAIAAAAJYHEAAAAAAAPgAAAQ==",
+							"m_InBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "LightTrianglesIn",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_IsCompiled": false,
+							"m_Keywords": [
+								
+							],
+							"m_OutBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "LightTrianglesOut",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_Requirements": 50241,
+							"m_Textures": [
+								
+							],
+							"m_ThreadGroupSize": [
+								372,
+								1,
+								1
+							]
+						}
+					],
+					"m_VariantIndices": [
+						{
+							"Key": "",
+							"Value": 0
+						}
+					]
+				},
+				{
+					"m_DynamicKeywords": [
+						
+					],
+					"m_GlobalKeywords": [
+						
+					],
+					"m_LocalKeywords": [
+						
+					],
+					"m_Name": "CombineLightNodes",
+					"m_UniqueVariants": [
+						{
+							"m_BuiltinSamplers": [
+								
+							],
+							"m_Cbs": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "$Globals",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_CbVariantIndices": [
+								0
+							],
+							"m_Code": "RFhCQzb27KWJncAls5YAaM+sOKMBAAAAYAIAAAMAAAAsAAAAPAAAAEwAAABJU0dOCAAAAAAAAAAIAAAAT1NHTggAAAAAAAAACAAAAFNIRVgMAgAAUAAFAIMAAABqCAABWQAABEaOIAAAAAAAAQAAAKIAAAQAcBAAAAAAACgAAACeAAAEAOARAAAAAAAoAAAAngAABADgEQABAAAAKAAAAF8AAAISAAIAaAAAAgMAAACbAAAEdAEAAAEAAAABAAAAUAAABxIAEAAAAAAACgACABqAIAAAAAAAAAAAAB8ABAMKABAAAAAAAD4AAAEVAAABHgAABxIAEAAAAAAACgACAAqAIAAAAAAAAAAAAKcAAIoCQwGAg5kZAPIAEAABAAAACgACAAFAAAAAAAAARn4QAAAAAACnAACKAkMBgIOZGQDyABAAAgAAAAoAAgABQAAAEAAAAEZ+EAAAAAAApwAAigJDAYCDmRkAYgAQAAAAAAAKAAIAAUAAACAAAAAGcRAAAAAAAKgAAAny4BEAAAAAAAoAEAAAAAAAAUAAAAAAAABGDhAAAQAAAKgAAAny4BEAAAAAAAoAEAAAAAAAAUAAABAAAABGDhAAAgAAAKgAAAky4BEAAAAAAAoAEAAAAAAAAUAAACAAAACWBRAAAAAAAKgAAAny4BEAAQAAAAoAEAAAAAAAAUAAAAAAAABGDhAAAQAAAKgAAAny4BEAAQAAAAoAEAAAAAAAAUAAABAAAABGDhAAAgAAAKgAAAky4BEAAQAAAAoAEAAAAAAAAUAAACAAAACWBRAAAAAAAD4AAAE=",
+							"m_InBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "LightNodesIn",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_IsCompiled": false,
+							"m_Keywords": [
+								
+							],
+							"m_OutBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "LightNodesOut",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								},
+								{
+									"m_BindPoint": 1,
+									"m_GeneratedName": "",
+									"m_Name": "LightNodesOut2",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_Requirements": 50241,
+							"m_Textures": [
+								
+							],
+							"m_ThreadGroupSize": [
+								372,
+								1,
+								1
+							]
+						}
+					],
+					"m_VariantIndices": [
+						{
+							"Key": "",
+							"Value": 0
+						}
+					]
+				},
+				{
+					"m_DynamicKeywords": [
+						
+					],
+					"m_GlobalKeywords": [
+						
+					],
+					"m_LocalKeywords": [
+						
+					],
+					"m_Name": "CombineSGTreeNodes",
+					"m_UniqueVariants": [
+						{
+							"m_BuiltinSamplers": [
+								
+							],
+							"m_Cbs": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "$Globals",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_CbVariantIndices": [
+								0
+							],
+							"m_Code": "RFhCQyL/+/7o1uwAo4pa/F+jE4cBAAAAYAIAAAMAAAAsAAAAPAAAAEwAAABJU0dOCAAAAAAAAAAIAAAAT1NHTggAAAAAAAAACAAAAFNIRVgMAgAAUAAFAIMAAABqCAABWQAABEaOIAAAAAAAAQAAAKIAAAQAcBAAAAAAACwAAACeAAAEAOARAAAAAAAsAAAAngAABADgEQABAAAALAAAAF8AAAISAAIAaAAAAgMAAACbAAAEdAEAAAEAAAABAAAAUAAABxIAEAAAAAAACgACABqAIAAAAAAAAAAAAB8ABAMKABAAAAAAAD4AAAEVAAABHgAABxIAEAAAAAAACgACAAqAIAAAAAAAAAAAAKcAAIoCYwGAg5kZAPIAEAABAAAACgACAAFAAAAAAAAARn4QAAAAAACnAACKAmMBgIOZGQDyABAAAgAAAAoAAgABQAAAEAAAAEZ+EAAAAAAApwAAigJjAYCDmRkA4gAQAAAAAAAKAAIAAUAAACAAAAAGeRAAAAAAAKgAAAny4BEAAAAAAAoAEAAAAAAAAUAAAAAAAABGDhAAAQAAAKgAAAny4BEAAAAAAAoAEAAAAAAAAUAAABAAAABGDhAAAgAAAKgAAAly4BEAAAAAAAoAEAAAAAAAAUAAACAAAACWBxAAAAAAAKgAAAny4BEAAQAAAAoAEAAAAAAAAUAAAAAAAABGDhAAAQAAAKgAAAny4BEAAQAAAAoAEAAAAAAAAUAAABAAAABGDhAAAgAAAKgAAAly4BEAAQAAAAoAEAAAAAAAAUAAACAAAACWBxAAAAAAAD4AAAE=",
+							"m_InBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "SGNodesIn",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_IsCompiled": false,
+							"m_Keywords": [
+								
+							],
+							"m_OutBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "SGNodesOut",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								},
+								{
+									"m_BindPoint": 1,
+									"m_GeneratedName": "",
+									"m_Name": "SGNodesOut2",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_Requirements": 50241,
+							"m_Textures": [
+								
+							],
+							"m_ThreadGroupSize": [
+								372,
+								1,
+								1
+							]
+						}
+					],
+					"m_VariantIndices": [
+						{
+							"Key": "",
+							"Value": 0
+						}
+					]
+				}
+			],
+			"m_NeedsReflectionData": false,
+			"m_ResourcesResolved": true,
+			"m_TargetLevel": 0,
+			"m_TargetRenderer": 18
+		}
+	]
+}

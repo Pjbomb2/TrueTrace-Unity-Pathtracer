@@ -1,0 +1,780 @@
+{
+	"m_CompilationContext": {
+		"m_BuildTarget": {
+			"m_ExtendedPlatform": 0,
+			"m_IsEditor": 0,
+			"m_Platform": 0,
+			"m_SubTarget": 0
+		},
+		"m_CompilationFlags": 0,
+		"m_IncludeHash0": 0,
+		"m_IncludeHash1": 0,
+		"m_IncludeHash2": 0,
+		"m_IncludeHash3": 0,
+		"m_KernelMacros": [
+			
+		],
+		"m_Kernels": [
+			
+		],
+		"m_NeverUseDxcAPIs": 0,
+		"m_PlatformGroup": 0,
+		"m_Source": "",
+		"m_SourceFile": "",
+		"m_SourceFileName": "",
+		"m_SupportedAPIs": 0,
+		"m_UseDxcAPIs": 0
+	},
+	"m_CorrespondingSourceObject": { "m_FileID": 0, "m_PathID": 0 },
+	"m_Errors": [
+		
+	],
+	"m_HideFlags": 0,
+	"m_Name": "WaveShaderV2",
+	"m_PrefabAsset": { "m_FileID": 0, "m_PathID": 0 },
+	"m_PrefabInstance": { "m_FileID": 0, "m_PathID": 0 },
+	"m_Variants": [
+		{
+			"m_CompilerPlatform": 0,
+			"m_ConstantBuffers": [
+				{
+					"m_ByteSize": 128,
+					"m_Name": "$Globals",
+					"m_Params": [
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 2,
+							"m_Name": "TextureDimensions",
+							"m_Offset": 0,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "Time",
+							"m_Offset": 12,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "PlaneDefaultY",
+							"m_Offset": 28,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "gVertexCount",
+							"m_Offset": 32,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "FakeWaterIntensity",
+							"m_Offset": 44,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "FakeWaterTiling",
+							"m_Offset": 48,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "DoFakeWaves",
+							"m_Offset": 52,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "DoRealWater",
+							"m_Offset": 56,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 4,
+							"m_Name": "LocalToWorld",
+							"m_Offset": 64,
+							"m_RowCount": 4,
+							"m_Type": 0
+						}
+					]
+				},
+				{
+					"m_ByteSize": 128,
+					"m_Name": "$Globals",
+					"m_Params": [
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 2,
+							"m_Name": "TextureDimensions",
+							"m_Offset": 0,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "Time",
+							"m_Offset": 12,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "gVertexCount",
+							"m_Offset": 32,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "FakeWaterIntensity",
+							"m_Offset": 44,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "FakeWaterTiling",
+							"m_Offset": 48,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "DoFakeWaves",
+							"m_Offset": 52,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "DoRealWater",
+							"m_Offset": 56,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "UseVertexNormals",
+							"m_Offset": 60,
+							"m_RowCount": 1,
+							"m_Type": 1
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 4,
+							"m_Name": "LocalToWorld",
+							"m_Offset": 64,
+							"m_RowCount": 4,
+							"m_Type": 0
+						}
+					]
+				},
+				{
+					"m_ByteSize": 128,
+					"m_Name": "$Globals",
+					"m_Params": [
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 2,
+							"m_Name": "TextureDimensions",
+							"m_Offset": 0,
+							"m_RowCount": 1,
+							"m_Type": 0
+						}
+					]
+				},
+				{
+					"m_ByteSize": 128,
+					"m_Name": "$Globals",
+					"m_Params": [
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 2,
+							"m_Name": "TextureDimensions",
+							"m_Offset": 0,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "gVertexCount",
+							"m_Offset": 32,
+							"m_RowCount": 1,
+							"m_Type": 1
+						}
+					]
+				},
+				{
+					"m_ByteSize": 128,
+					"m_Name": "$Globals",
+					"m_Params": [
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 2,
+							"m_Name": "TextureDimensions",
+							"m_Offset": 0,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 2,
+							"m_Name": "RelativeScale",
+							"m_Offset": 36,
+							"m_RowCount": 1,
+							"m_Type": 0
+						}
+					]
+				},
+				{
+					"m_ByteSize": 128,
+					"m_Name": "$Globals",
+					"m_Params": [
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 2,
+							"m_Name": "TextureDimensions",
+							"m_Offset": 0,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "PressureDamper",
+							"m_Offset": 20,
+							"m_RowCount": 1,
+							"m_Type": 0
+						},
+						{
+							"m_ArraySize": 0,
+							"m_ColCount": 1,
+							"m_Name": "WaveDeltaTime",
+							"m_Offset": 24,
+							"m_RowCount": 1,
+							"m_Type": 0
+						}
+					]
+				}
+			],
+			"m_KernelParents": [
+				{
+					"m_DynamicKeywords": [
+						
+					],
+					"m_GlobalKeywords": [
+						
+					],
+					"m_LocalKeywords": [
+						
+					],
+					"m_Name": "ApplyWaves",
+					"m_UniqueVariants": [
+						{
+							"m_BuiltinSamplers": [
+								{
+									"m_BindPoint": 0,
+									"m_Sampler": 85
+								}
+							],
+							"m_Cbs": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "$Globals",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_CbVariantIndices": [
+								0
+							],
+							"m_Code": "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",
+							"m_InBuffers": [
+								
+							],
+							"m_IsCompiled": false,
+							"m_Keywords": [
+								
+							],
+							"m_OutBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "bufVertices",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_Requirements": 50241,
+							"m_Textures": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "WaveTexB",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": 2
+								}
+							],
+							"m_ThreadGroupSize": [
+								256,
+								1,
+								1
+							]
+						}
+					],
+					"m_VariantIndices": [
+						{
+							"Key": "",
+							"Value": 0
+						}
+					]
+				},
+				{
+					"m_DynamicKeywords": [
+						
+					],
+					"m_GlobalKeywords": [
+						
+					],
+					"m_LocalKeywords": [
+						
+					],
+					"m_Name": "CalcNorms",
+					"m_UniqueVariants": [
+						{
+							"m_BuiltinSamplers": [
+								
+							],
+							"m_Cbs": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "$Globals",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_CbVariantIndices": [
+								1
+							],
+							"m_Code": "RFhCQ4acCyfQobHYS94q1Ab2T+wBAAAAPBIAAAMAAAAsAAAAPAAAAEwAAABJU0dOCAAAAAAAAAAIAAAAT1NHTggAAAAAAAAACAAAAFNIRVjoEQAAUAAFAHoEAABqCAABWQAABEaOIAAAAAAACAAAAKIAAAQAcBAAAAAAAAQAAACcGAAEAOARAAAAAABVVQAAnQAAAwDgEQABAAAAXwAAAhIAAgBoAAACCwAAAJsAAAQAAQAAAQAAAAEAAABQAAAHEgAQAAAAAAAKAAIACoAgAAAAAAACAAAAHwAEAwoAEAAAAAAAPgAAARUAAAEmAAAHANAAABIAEAAAAAAACgACAAFAAAADAAAApwAAiwIjAICDmRkAEgAQAAAAAAAKABAAAAAAAAFAAAAAAAAABnAQAAAAAAAjAAAOYgAQAAAAAAAGAAIAAkAAAAAAAAADAAAAAwAAAAAAAAACQAAAAAAAAAEAAAACAAAAAAAAAKcAAIsCIwCAg5kZACIAEAAAAAAAGgAQAAAAAAABQAAAAAAAAAZwEAAAAAAApwAAiwIjAICDmRkAQgAQAAAAAAAqABAAAAAAAAFAAAAAAAAABnAQAAAAAAAmAAALANAAAKIAEAAAAAAAVgEQAAAAAAACQAAAAAAAADAAAAAAAAAAMAAAAKUAAInCAgCAg5kZAHIAEAABAAAAOgAQAAAAAABG4hEAAQAAACMAAAkSABAAAAAAAAoAEAAAAAAAAUAAADAAAAABQAAAKAAAAKUAAInCAgCAg5kZAJIAEAAAAAAACgAQAAAAAAAG5BEAAQAAAKUAAInCAgCAg5kZAHIAEAACAAAAGgAQAAAAAABG4hEAAQAAAAAAAAhyABAAAgAAACYJEIBBAAAAAQAAACYJEAACAAAAEAAAByIAEAAAAAAARgIQAAIAAABGAhAAAgAAAEQAAAUiABAAAAAAABoAEAAAAAAAOAAAB3IAEAACAAAAVgUQAAAAAABGAhAAAgAAACYAAAgA0AAAIgAQAAAAAAAqABAAAAAAAAFAAAAwAAAApQAAicICAICDmRkAcgAQAAMAAAAaABAAAAAAAEbiEQABAAAAAAAACHIAEAADAAAAlgQQgEEAAAABAAAAlgQQAAMAAAAQAAAHIgAQAAAAAABGAhAAAwAAAEYCEAADAAAARAAABSIAEAAAAAAAGgAQAAAAAAA4AAAHcgAQAAMAAABWBRAAAAAAAEYCEAADAAAAOAAAB3IAEAAEAAAARgIQAAIAAABGAhAAAwAAADIAAApyABAAAgAAACYJEAACAAAAlgQQAAMAAABGAhCAQQAAAAQAAAAQAAAHIgAQAAAAAABGAhAAAgAAAEYCEAACAAAARAAABSIAEAAAAAAAGgAQAAAAAAA4AAAHcgAQAAMAAABWBRAAAAAAAEYCEAACAAAAOAAACKIAEAABAAAAVgUQAAEAAAAGiCAAAAAAAAUAAAAyAAAKMgAQAAEAAACGgCAAAAAAAAQAAAAGABAAAQAAANYFEAABAAAAMgAACjIAEAABAAAAhoAgAAAAAAAGAAAApgoQAAEAAABGABAAAQAAAAAAAAgyABAAAQAAAEYAEAABAAAAhoAgAAAAAAAHAAAAOAAACDIAEAAEAAAARgAQAAEAAAAGgCAAAAAAAAMAAAAPAAAHQgAQAAAAAABGABAABAAAAEYAEAAEAAAASwAABUIAEAAAAAAAKgAQAAAAAAA4AAAHQgAQAAAAAAAqABAAAAAAAAFAAADNzMw9NgAABcIAEAABAAAABgQQAAQAAAA2AAAFggAQAAIAAAABQAAAAAAAADYAAAWCABAAAwAAAAFAAAAAAIA/NgAACPIAEAAFAAAAAkAAAAAAAEAAAIA/AAAAAAAAAAAwAAABIQAABxIAEAAGAAAAOgAQAAUAAAABQAAAJQAAAAMABAMKABAABgAAAE0AAAcSABAABgAAABIAEAAHAAAAOgAQAAIAAAAyAAAKQgAQAAYAAAA6gCAAAAAAAAAAAAAKABAABQAAACoAEAAAAAAANgAABSIAEAAGAAAACgAQAAcAAAAPAAAHggAQAAYAAABGABAABgAAAOYKEAABAAAAMgAACUIAEAAGAAAAOgAQAAYAAAA6ABAAAwAAACoAEAAGAAAATQAABxIAEAAHAAAAEgAQAAgAAAAqABAABgAAAAAAAAdCABAABgAAAAoAEAAHAAAAAUAAAAAAgL84AAAHQgAQAAYAAAAqABAABgAAAAFAAAA7qrg/GQAABUIAEAAGAAAAKgAQAAYAAAA4AAAHggAQAAYAAAAKABAACAAAACoAEAAGAAAAOAAACDIAEAAGAAAA9g8QgEEAAAAGAAAARgAQAAYAAAA4AAAHMgAQAAYAAABWBRAABQAAAEYAEAAGAAAAMgAADMIAEAABAAAABgQQAAYAAAACQAAAAAAAAAAAAABcj8I+XI/CPqYOEAABAAAAMgAACUIAEAAFAAAAKgAQAAYAAAAaABAABQAAACoAEAAFAAAAOAAAB4IAEAADAAAAOgAQAAMAAAABQAAAPQqXPzgAAAoyABAABQAAAEYAEAAFAAAAAkAAAMP1iD/NzEw/AAAAAAAAAAAAAAAHggAQAAIAAAA6ABAAAgAAAAFAAADMDJpEHgAAB4IAEAAFAAAAOgAQAAUAAAABQAAAAQAAABYAAAE4AAAIQgAQAAAAAAAqABAABQAAADqAIAAAAAAAAgAAADgAAAcSABAABQAAACoAEAAAAAAAAUAAAGfaTD4yAAAN8gAQAAYAAABGBBAAAQAAAAaAIAAAAAAAAwAAAAJAAAAK1yO8AAAAgAAAAAAK1yM8DwAAB0IAEAAAAAAARgAQAAYAAABGABAABgAAAEsAAAVCABAAAAAAACoAEAAAAAAAOAAAB0IAEAAAAAAAKgAQAAAAAAABQAAAzczMPTYAAAXCABAAAQAAAAYEEAAGAAAANgAABYIAEAACAAAAAUAAAAAAAAA2AAAFggAQAAMAAAABQAAAAACAPzYAAAWCABAABQAAAAFAAAAAAABANgAACHIAEAAHAAAAAkAAAAAAgD8AAAAAAAAAAAAAAAAwAAABIQAAB4IAEAAHAAAAKgAQAAcAAAABQAAAJQAAAAMABAM6ABAABwAAAE0AAAcSABAACAAAABIAEAAJAAAAOgAQAAIAAAAyAAAKggAQAAcAAAA6gCAAAAAAAAAAAAA6ABAABQAAACoAEAAAAAAANgAABSIAEAAIAAAACgAQAAkAAAAPAAAHQgAQAAgAAABGABAACAAAAOYKEAABAAAAMgAACYIAEAAHAAAAKgAQAAgAAAA6ABAAAwAAADoAEAAHAAAATQAABxIAEAAJAAAAEgAQAAoAAAA6ABAABwAAAAAAAAeCABAABwAAAAoAEAAJAAAAAUAAAAAAgL84AAAHggAQAAcAAAA6ABAABwAAAAFAAAA7qrg/GQAABYIAEAAHAAAAOgAQAAcAAAA4AAAHQgAQAAgAAAAKABAACgAAADoAEAAHAAAAOAAACDIAEAAIAAAApgoQgEEAAAAIAAAARgAQAAgAAAA4AAAHMgAQAAgAAAAGABAABwAAAEYAEAAIAAAAMgAADMIAEAABAAAABgQQAAgAAAACQAAAAAAAAAAAAABcj8I+XI/CPqYOEAABAAAAMgAACSIAEAAHAAAAOgAQAAcAAAAKABAABwAAABoAEAAHAAAAOAAABxIAEAAHAAAACgAQAAcAAAABQAAAzcxMPzgAAAeCABAAAwAAADoAEAADAAAAAUAAAD0Klz84AAAHggAQAAUAAAA6ABAABQAAAAFAAADD9Yg/AAAAB4IAEAACAAAAOgAQAAIAAAABQAAAzAyaRB4AAAdCABAABwAAACoAEAAHAAAAAUAAAAEAAAAWAAABOAAACEIAEAAAAAAAGgAQAAcAAAA6gCAAAAAAAAIAAAA4AAAHQgAQAAQAAAAqABAAAAAAAAFAAABn2kw+MgAACoIAEAAEAAAACgAQAAEAAAAKgCAAAAAAAAMAAAABQAAACtcjvDYAAAViABAABQAAAFYEEAAEAAAAAAAACHIAEAAEAAAA1gYQgEEAAAAEAAAAlgQQAAUAAAAPAAAHQgAQAAAAAADmChAABgAAAOYKEAAGAAAASwAABUIAEAAAAAAAKgAQAAAAAAA4AAAHQgAQAAAAAAAqABAAAAAAAAFAAADNzMw9NgAABcIAEAABAAAApg4QAAYAAAA2AAAFggAQAAIAAAABQAAAAAAAADYAAAWCABAAAwAAAAFAAAAAAIA/NgAABYIAEAAEAAAAAUAAAAAAAEA2AAAFggAQAAUAAAABQAAAAACAPzYAAAgyABAABgAAAAJAAAAAAAAAAAAAAAAAAAAAAAAAMAAAASEAAAcSABAABwAAABoAEAAGAAAAAUAAACUAAAADAAQDCgAQAAcAAABNAAAHEgAQAAcAAAASABAACAAAADoAEAACAAAAMgAACkIAEAAHAAAAOoAgAAAAAAAAAAAAOgAQAAQAAAAqABAAAAAAADYAAAUiABAABwAAAAoAEAAIAAAADwAAB4IAEAAHAAAARgAQAAcAAADmChAAAQAAADIAAAlCABAABwAAADoAEAAHAAAAOgAQAAMAAAAqABAABwAAAE0AAAcSABAACAAAABIAEAAJAAAAKgAQAAcAAAAAAAAHQgAQAAcAAAAKABAACAAAAAFAAAAAAIC/OAAAB0IAEAAHAAAAKgAQAAcAAAABQAAAO6q4PxkAAAVCABAABwAAACoAEAAHAAAAOAAAB4IAEAAHAAAACgAQAAkAAAAqABAABwAAADgAAAgyABAABwAAAPYPEIBBAAAABwAAAEYAEAAHAAAAOAAABzIAEAAHAAAA9g8QAAUAAABGABAABwAAADIAAAzCABAAAQAAAAYEEAAHAAAAAkAAAAAAAAAAAAAAXI/CPlyPwj6mDhAAAQAAADIAAAkSABAABgAAACoAEAAHAAAAOgAQAAUAAAAKABAABgAAADgAAAeCABAABQAAADoAEAAFAAAAAUAAAM3MTD84AAAHggAQAAMAAAA6ABAAAwAAAAFAAAA9Cpc/OAAAB4IAEAAEAAAAOgAQAAQAAAABQAAAw/WIPwAAAAeCABAAAgAAADoAEAACAAAAAUAAAMwMmkQeAAAHIgAQAAYAAAAaABAABgAAAAFAAAABAAAAFgAAATgAAAhCABAAAAAAAAoAEAAGAAAAOoAgAAAAAAACAAAAOAAABxIAEAAGAAAAKgAQAAAAAAABQAAAZ9pMPjIAAA1iABAABgAAAFYEEAABAAAABoAgAAAAAAADAAAAAkAAAAAAAAAK1yM8AAAAAAAAAAAAAAAIcgAQAAEAAABGAhAABQAAAEYCEIBBAAAABgAAADgAAAdyABAABQAAAEYCEAABAAAARgIQAAQAAAAyAAAKcgAQAAEAAAAmCRAABAAAAJYEEAABAAAARgIQgEEAAAAFAAAAEAAAB0IAEAAAAAAARgIQAAEAAABGAhAAAQAAAEQAAAVCABAAAAAAACoAEAAAAAAAOAAAB3IAEAABAAAApgoQAAAAAABGAhAAAQAAACAAAAhCABAAAAAAADqAIAAAAAAAAwAAAAFAAAAAAAAAJwAACIIAEAABAAAAGoAgAAAAAAADAAAAAUAAAAAAAAABAAAHQgAQAAAAAAAqABAAAAAAADoAEAABAAAAMgAACXIAEAACAAAARgIQAAIAAABWBRAAAAAAAEYCEAABAAAAEAAAByIAEAAAAAAARgIQAAIAAABGAhAAAgAAAEQAAAUiABAAAAAAABoAEAAAAAAAOAAAB3IAEAACAAAAVgUQAAAAAABGAhAAAgAAADcAAAlyABAAAgAAAKYKEAAAAAAARgIQAAIAAABGAhAAAwAAADcAAApyABAAAQAAAPaPIAAAAAAAAwAAAEYCEAADAAAARgIQAAEAAAA3AAANcgAQAAEAAABWhSAAAAAAAAMAAABGAhAAAQAAAAJAAAAAAAAAAACAPwAAAAAAAAAANwAACnIAEAABAAAApoogAAAAAAADAAAARgIQAAIAAABGAhAAAQAAADgAAAjyABAAAAAAAMYPEAAAAAAARoUgAAAAAAAAAAAAHAAABfIAEAAAAAAARg4QAAAAAAA2AAAFggAQAAEAAAABQAAAAACAP6QAAAfy4BEAAAAAAEYOEAAAAAAARg4QAAEAAAA+AAAB",
+							"m_InBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "IndexBuffer",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_IsCompiled": false,
+							"m_Keywords": [
+								
+							],
+							"m_OutBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "WaveTexA",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": 2
+								},
+								{
+									"m_BindPoint": 1,
+									"m_GeneratedName": "",
+									"m_Name": "bufVertices",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_Requirements": 50241,
+							"m_Textures": [
+								
+							],
+							"m_ThreadGroupSize": [
+								256,
+								1,
+								1
+							]
+						}
+					],
+					"m_VariantIndices": [
+						{
+							"Key": "",
+							"Value": 0
+						}
+					]
+				},
+				{
+					"m_DynamicKeywords": [
+						
+					],
+					"m_GlobalKeywords": [
+						
+					],
+					"m_LocalKeywords": [
+						
+					],
+					"m_Name": "BlurNorms",
+					"m_UniqueVariants": [
+						{
+							"m_BuiltinSamplers": [
+								
+							],
+							"m_Cbs": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "$Globals",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_CbVariantIndices": [
+								2
+							],
+							"m_Code": "RFhCQxtunpVWsc3irBG+fo0DvcoBAAAAgAQAAAMAAAAsAAAAPAAAAEwAAABJU0dOCAAAAAAAAAAIAAAAT1NHTggAAAAAAAAACAAAAFNIRVgsBAAAUAAFAAsBAABqCAABWQAABEaOIAAAAAAAAQAAAFgYAAQAcBAAAAAAAFVVAACcGAAEAOARAAAAAABVVQAAXwAAAjIAAgBoAAACBgAAAJsAAAQQAAAAEAAAAAEAAABWAAAEMgAQAAAAAABGAAIAHQAACDIAEAAAAAAARgAQAAAAAABGgCAAAAAAAAAAAAA8AAAHEgAQAAAAAAAaABAAAAAAAAoAEAAAAAAAHwAEAwoAEAAAAAAAPgAAARUAAAE2AAAEMgAQAAAAAABGAAIANgAACMIAEAAAAAAAAkAAAAAAAAAAAAAAAAAAAAAAAAAtAACJwgAAgENVFQDyABAAAAAAAEYOEAAAAAAARn4QAAAAAAA2AAAIwgAQAAEAAAACQAAAAAAAAAAAAAAAAAAAAAAAADYAAAXyABAAAgAAAEYOEAAAAAAANgAABSIAEAADAAAAAUAAAP////8wAAABIgAAB0IAEAADAAAAAUAAAAEAAAAaABAAAwAAAAMABAMqABAAAwAAACAAAAdCABAAAwAAABoAEAADAAAAAUAAAAAAAAA2AAAF8gAQAAQAAABGDhAAAgAAADYAAAWCABAAAwAAAAFAAAD/////MAAAASIAAAcSABAABQAAAAFAAAABAAAAOgAQAAMAAAADAAQDCgAQAAUAAAAgAAAHEgAQAAUAAAA6ABAAAwAAAAFAAAAAAAAAAQAABxIAEAAFAAAAKgAQAAMAAAAKABAABQAAAB8ABAMKABAABQAAADYAAAiSABAAAwAAAAJAAAABAAAAAAAAAAAAAAABAAAABwAAARIAAAE2AAAFEgAQAAMAAAA6ABAAAwAAABUAAAEeAAAGMgAQAAEAAAAWBRAAAwAAAEYAAgArAAAFMgAQAAUAAABGABAAAQAAAB0AAAgyABAABQAAAEYAEAAFAAAARoAgAAAAAAAAAAAAIgAACsIAEAAFAAAABgQQAAEAAAACQAAAAAAAAAAAAAAAAAAAAAAAADwAAAcyABAABQAAAOYKEAAFAAAARgAQAAUAAAA8AAAHEgAQAAUAAAAaABAABQAAAAoAEAAFAAAAHwAEAwoAEAAFAAAAHgAAB4IAEAADAAAACgAQAAMAAAABQAAAAQAAAAcAAAEVAAABLQAAicIAAIBDVRUA8gAQAAUAAABGDhAAAQAAAEZ+EAAAAAAAAAAAB/IAEAAEAAAARg4QAAQAAABGDhAABQAAAB4AAAeCABAAAwAAAAoAEAADAAAAAUAAAAEAAAAWAAABNgAABfIAEAACAAAARg4QAAQAAAAeAAAHIgAQAAMAAAAaABAAAwAAAAFAAAABAAAAFgAAATgAAAryABAAAAAAAEYOEAACAAAAAkAAAAAAgD4AAIA+AACAPgAAgD6kAAAG8uARAAAAAABGBQIARg4QAAAAAAA+AAAB",
+							"m_InBuffers": [
+								
+							],
+							"m_IsCompiled": false,
+							"m_Keywords": [
+								
+							],
+							"m_OutBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "WaveTexA",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": 2
+								}
+							],
+							"m_Requirements": 50241,
+							"m_Textures": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "WaveTexB",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": 2
+								}
+							],
+							"m_ThreadGroupSize": [
+								16,
+								16,
+								1
+							]
+						}
+					],
+					"m_VariantIndices": [
+						{
+							"Key": "",
+							"Value": 0
+						}
+					]
+				},
+				{
+					"m_DynamicKeywords": [
+						
+					],
+					"m_GlobalKeywords": [
+						
+					],
+					"m_LocalKeywords": [
+						
+					],
+					"m_Name": "ApplyNorms",
+					"m_UniqueVariants": [
+						{
+							"m_BuiltinSamplers": [
+								
+							],
+							"m_Cbs": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "$Globals",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_CbVariantIndices": [
+								3
+							],
+							"m_Code": "RFhCQ7oL1BGkMGmbvtKoiB5EbdcBAAAA2AEAAAMAAAAsAAAAPAAAAEwAAABJU0dOCAAAAAAAAAAIAAAAT1NHTggAAAAAAAAACAAAAFNIRViEAQAAUAAFAGEAAABqCAABWQAABEaOIAAAAAAAAwAAAFgYAAQAcBAAAAAAAFVVAACdAAADAOARAAAAAABfAAACEgACAGgAAAICAAAAmwAABAABAAABAAAAAQAAAFAAAAcSABAAAAAAAAoAAgAKgCAAAAAAAAIAAAAfAAQDCgAQAAAAAAA+AAABFQAAASMAAAgSABAAAAAAAAoAAgABQAAAMAAAAAFAAAAoAAAApQAAicICAICDmRkAMgAQAAAAAAAKABAAAAAAAEbgEQAAAAAAIwAACEIAEAAAAAAACgACAAFAAAAwAAAAAUAAAAwAAAA4AAAIMgAQAAAAAABGABAAAAAAAEaAIAAAAAAAAAAAABwAAAUyABAAAQAAAEYAEAAAAAAANgAACMIAEAABAAAAAkAAAAAAAAAAAAAAAAAAAAAAAAAtAACJwgAAgENVFQCyABAAAAAAAEYOEAABAAAARnsQAAAAAACmAAAHcuARAAAAAAAqABAAAAAAAEYDEAAAAAAAPgAAAQ==",
+							"m_InBuffers": [
+								
+							],
+							"m_IsCompiled": false,
+							"m_Keywords": [
+								
+							],
+							"m_OutBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "bufVertices",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_Requirements": 50241,
+							"m_Textures": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "WaveTexB",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": 2
+								}
+							],
+							"m_ThreadGroupSize": [
+								256,
+								1,
+								1
+							]
+						}
+					],
+					"m_VariantIndices": [
+						{
+							"Key": "",
+							"Value": 0
+						}
+					]
+				},
+				{
+					"m_DynamicKeywords": [
+						
+					],
+					"m_GlobalKeywords": [
+						
+					],
+					"m_LocalKeywords": [
+						
+					],
+					"m_Name": "SanitizeWalls",
+					"m_UniqueVariants": [
+						{
+							"m_BuiltinSamplers": [
+								
+							],
+							"m_Cbs": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "$Globals",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_CbVariantIndices": [
+								2
+							],
+							"m_Code": "RFhCQ29e5qaH1bEOxhvURTphxdcBAAAAZAEAAAQAAAAwAAAAQAAAAFAAAABUAQAASVNHTggAAAAAAAAACAAAAE9TR04IAAAAAAAAAAgAAABTSEVY/AAAAFAABQA/AAAAaggAAVkAAARGjiAAAAAAAAEAAACcGAAEAOARAAAAAABVVQAAXwAAAjIAAgBoAAACAQAAAJsAAAQQAAAAEAAAAAEAAABWAAAEMgAQAAAAAABGAAIAHQAACDIAEAAAAAAARgAQAAAAAABGgCAAAAAAAAAAAAA8AAAHEgAQAAAAAAAaABAAAAAAAAoAEAAAAAAAHwAEAwoAEAAAAAAAPgAAARUAAAGjAACIwgAAgENVFQByABAAAAAAAEYFAgBG7hEAAAAAADYAAAWCABAAAAAAAAFAAAAAAAAApAAABvLgEQAAAAAARgUCAEYOEAAAAAAAPgAAAVNGSTAIAAAAAAgAAAAAAAA=",
+							"m_InBuffers": [
+								
+							],
+							"m_IsCompiled": false,
+							"m_Keywords": [
+								
+							],
+							"m_OutBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "WaveTexA",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": 2
+								}
+							],
+							"m_Requirements": 50241,
+							"m_Textures": [
+								
+							],
+							"m_ThreadGroupSize": [
+								16,
+								16,
+								1
+							]
+						}
+					],
+					"m_VariantIndices": [
+						{
+							"Key": "",
+							"Value": 0
+						}
+					]
+				},
+				{
+					"m_DynamicKeywords": [
+						
+					],
+					"m_GlobalKeywords": [
+						
+					],
+					"m_LocalKeywords": [
+						
+					],
+					"m_Name": "UpdateWalls",
+					"m_UniqueVariants": [
+						{
+							"m_BuiltinSamplers": [
+								
+							],
+							"m_Cbs": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "$Globals",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_CbVariantIndices": [
+								4
+							],
+							"m_Code": "RFhCQ1jzeG0SGcPVLC3innLvaIgBAAAAmAUAAAQAAAAwAAAAQAAAAFAAAACIBQAASVNHTggAAAAAAAAACAAAAE9TR04IAAAAAAAAAAgAAABTSEVYMAUAAFAABQBMAQAAaggAAVkAAARGjiAAAAAAAAMAAABYGAAEAHAQAAAAAABVVQAAnBgABADgEQAAAAAAVVUAAF8AAAIyAAIAaAAAAgQAAACbAAAEEAAAABAAAAABAAAAVgAABDIAEAAAAAAARgACAB0AAAgyABAAAAAAAEYAEAAAAAAARoAgAAAAAAAAAAAAPAAABxIAEAAAAAAAGgAQAAAAAAAKABAAAAAAAB8ABAMKABAAAAAAAD4AAAEVAAABDgAACTIAEAAAAAAAloUgAAAAAAACAAAARoAgAAAAAAAAAAAANgAACMIAEAABAAAAAkAAAAAAAAAAAAAAAAAAAAAAAAA2AAAIwgAQAAAAAAACQAAAAAAAAAAAAAAAAAAAAAAAADYAAAUSABAAAgAAAAFAAAD5////MAAAASIAAAdCABAAAgAAAAFAAAAHAAAACgAQAAIAAAADAAQDKgAQAAIAAAArAAAFEgAQAAMAAAAKABAAAgAAADYAAAXCABAAAgAAAKYOEAAAAAAANgAABSIAEAACAAAAAUAAAPn///8wAAABIgAAB0IAEAADAAAAAUAAAAcAAAAaABAAAgAAAAMABAMqABAAAwAAACsAAAUiABAAAwAAABoAEAACAAAAOAAAB2IAEAADAAAABgEQAAAAAAAGARAAAwAAAA8AAAciABAAAwAAAJYFEAADAAAAlgUQAAMAAAAAAAAHIgAQAAMAAAAaABAAAwAAAAFAAAAAAIA/DgAACiIAEAADAAAAAkAAAAAAgD8AAIA/AACAPwAAgD8aABAAAwAAAB4AAAYyABAAAQAAAEYAEAACAAAARgACAC0AAInCAACAQ1UVAEIAEAADAAAARg4QAAEAAABGexAAAAAAAKMAAInCAACAQ1UVABIAEAABAAAARgUQAAEAAAA26REAAAAAAAAAAAgSABAAAQAAAAoAEIBBAAAAAQAAACoAEAADAAAAMgAACUIAEAACAAAACgAQAAEAAAAaABAAAwAAACoAEAACAAAAAAAAB4IAEAACAAAAOgAQAAIAAAAaABAAAwAAAB4AAAciABAAAgAAABoAEAACAAAAAUAAAAEAAAAWAAABNgAABcIAEAAAAAAApg4QAAIAAAAeAAAHEgAQAAIAAAAKABAAAgAAAAFAAAABAAAAFgAAATkAAAcSABAAAAAAADoAEAAAAAAAAUAAAAAAAAAOAAAHIgAQAAAAAAAqABAAAAAAADoAEAAAAAAANwAACRIAEAAAAAAACgAQAAAAAAAaABAAAAAAACoAEAAAAAAANgAABkIAEAABAAAACgAQgIEAAAAAAAAAAAAAByIAEAAAAAAAKgAQAAEAAAABQAAAAACAPy8AAAUiABAAAAAAABoAEAAAAAAAMQAACEIAEAAAAAAAAUAAAAAAAAAKABCAQQAAAAAAAAAxAAAIEgAQAAAAAAAKABCAQQAAAAAAAAABQAAAAAAAAB4AAAgSABAAAAAAACoAEIBBAAAAAAAAAAoAEAAAAAAAKwAABRIAEAAAAAAACgAQAAAAAACjAACIwgAAgENVFQCyABAAAQAAAEYFAgBG7hEAAAAAADIAAAkyABAAAAAAAFYFEAAAAAAABgAQAAAAAABGABAAAQAAABgAAAdCABAAAAAAADoAEAABAAAAAUAAAAAAgD83AAAMMgAQAAEAAACmChAAAAAAAAJAAAAAAAAAAAAAAAAAAAAAAAAARgAQAAAAAACkAAAG8uARAAAAAABGBQIARg4QAAEAAAA+AAABU0ZJMAgAAAAACAAAAAAAAA==",
+							"m_InBuffers": [
+								
+							],
+							"m_IsCompiled": false,
+							"m_Keywords": [
+								
+							],
+							"m_OutBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "WaveTexA",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": 2
+								}
+							],
+							"m_Requirements": 50241,
+							"m_Textures": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "WaveTexB",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": 2
+								}
+							],
+							"m_ThreadGroupSize": [
+								16,
+								16,
+								1
+							]
+						}
+					],
+					"m_VariantIndices": [
+						{
+							"Key": "",
+							"Value": 0
+						}
+					]
+				},
+				{
+					"m_DynamicKeywords": [
+						
+					],
+					"m_GlobalKeywords": [
+						
+					],
+					"m_LocalKeywords": [
+						
+					],
+					"m_Name": "Simulate",
+					"m_UniqueVariants": [
+						{
+							"m_BuiltinSamplers": [
+								
+							],
+							"m_Cbs": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "$Globals",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": -1
+								}
+							],
+							"m_CbVariantIndices": [
+								5
+							],
+							"m_Code": "RFhCQ5nWhOQl3yeAA4KpBTEABaoBAAAAkAUAAAQAAAAwAAAAQAAAAFAAAACABQAASVNHTggAAAAAAAAACAAAAE9TR04IAAAAAAAAAAgAAABTSEVYKAUAAFAABQBKAQAAaggAAVkAAARGjiAAAAAAAAIAAABYGAAEAHAQAAAAAABVVQAAnBgABADgEQAAAAAAVVUAAF8AAAIyAAIAaAAAAgUAAACbAAAEEAAAABAAAAABAAAAVgAABDIAEAAAAAAARgACAB0AAAgyABAAAAAAAEYAEAAAAAAARoAgAAAAAAAAAAAAPAAABxIAEAAAAAAAGgAQAAAAAAAKABAAAAAAAB8ABAMKABAAAAAAAD4AAAEVAAABowAAiMIAAIBDVRUAEgAQAAAAAABGBQIANukRAAAAAAA5AAAHEgAQAAAAAAAKABAAAAAAAAFAAAAAAAAAHwAEAwoAEAAAAAAANgAABDIAEAAAAAAARgACADYAAAjCABAAAAAAAAJAAAAAAAAAAAAAAAAAAAAAAAAALQAAicIAAIBDVRUA8gAQAAAAAABGDhAAAAAAAEZ+EAAAAAAApAAABvLgEQAAAAAARgUCAEYOEAAAAAAAPgAAARUAAAE2AAAEMgAQAAAAAABGAAIANgAACMIAEAAAAAAAAkAAAAAAAAAAAAAAAAAAAAAAAAAtAACJwgAAgENVFQDyABAAAAAAAEYOEAAAAAAARn4QAAAAAAAeAAAJ8gAQAAEAAABGBAIAAkAAAP////8AAAAAAQAAAAAAAAA2AAAFMgAQAAIAAADmChAAAQAAADYAAAjCABAAAgAAAAJAAAAAAAAAAAAAAAAAAAAAAAAALQAAicIAAIBDVRUAEgAQAAIAAABGDhAAAgAAABZ+EAAAAAAANgAACMIAEAABAAAAAkAAAAAAAAAAAAAAAAAAAAAAAAAtAACJwgAAgENVFQASABAAAQAAAEYOEAABAAAAFn4QAAAAAAAeAAAJ8gAQAAMAAABGBAIAAkAAAAAAAAD/////AAAAAAEAAAA2AAAFMgAQAAQAAADmChAAAwAAADYAAAjCABAABAAAAAJAAAAAAAAAAAAAAAAAAAAAAAAALQAAicIAAIBDVRUAIgAQAAEAAABGDhAABAAAAEZ+EAAAAAAANgAACMIAEAADAAAAAkAAAAAAAAAAAAAAAAAAAAAAAAAtAACJwgAAgENVFQBCABAAAQAAAEYOEAADAAAAhn0QAAAAAAAyAAAJggAQAAEAAAAaABAAAAAAAAFAAAAAAADACgAQAAIAAAAAAAAHEgAQAAEAAAAKABAAAQAAADoAEAABAAAAOAAACBIAEAABAAAACgAQAAEAAAAqgCAAAAAAAAEAAAAyAAAJEgAQAAEAAAAKABAAAQAAAAFAAAAAAIA+CgAQAAAAAAAyAAAJIgAQAAEAAAAaABAAAAAAAAFAAAAAAADAGgAQAAEAAAAAAAAHIgAQAAEAAAAqABAAAQAAABoAEAABAAAAOAAACCIAEAABAAAAGgAQAAEAAAAqgCAAAAAAAAEAAAAyAAAJEgAQAAEAAAAaABAAAQAAAAFAAAAAAIA+CgAQAAEAAAAyAAAKIgAQAAEAAAAqgCAAAAAAAAEAAAAKABAAAQAAABoAEAAAAAAAOAAACDIAEAAAAAAAVgUQAAEAAABmiiAAAAAAAAEAAAAyAAAKEgAQAAEAAAAKABCAQQAAAAAAAAABQAAACtejOwoAEAABAAAAMgAACyIAEAABAAAAKoAggEEAAAAAAAAAAQAAAAFAAABvEgM7AUAAAAAAgD84AAAHEgAQAAAAAAAaABAAAQAAAAoAEAABAAAApAAABvLgEQAAAAAARgUCAEYOEAAAAAAAPgAAAVNGSTAIAAAAAAgAAAAAAAA=",
+							"m_InBuffers": [
+								
+							],
+							"m_IsCompiled": false,
+							"m_Keywords": [
+								
+							],
+							"m_OutBuffers": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "WaveTexA",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": 2
+								}
+							],
+							"m_Requirements": 50241,
+							"m_Textures": [
+								{
+									"m_BindPoint": 0,
+									"m_GeneratedName": "",
+									"m_Name": "WaveTexB",
+									"m_SamplerBindPoint": -1,
+									"m_TexDimension": 2
+								}
+							],
+							"m_ThreadGroupSize": [
+								16,
+								16,
+								1
+							]
+						}
+					],
+					"m_VariantIndices": [
+						{
+							"Key": "",
+							"Value": 0
+						}
+					]
+				}
+			],
+			"m_NeedsReflectionData": false,
+			"m_ResourcesResolved": true,
+			"m_TargetLevel": 0,
+			"m_TargetRenderer": 18
+		}
+	]
+}
