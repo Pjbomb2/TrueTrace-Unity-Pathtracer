@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   SceneName: TestA
   IndirectBoost: 1
-  bouncecount: 12
+  bouncecount: 2
   ClayMode: 0
   UseRussianRoulette: 1
   UseNEE: 1
@@ -38,14 +38,14 @@ MonoBehaviour:
   UseReSTIRGI: 1
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
-  ReSTIRGITemporalMCap: 20
+  ReSTIRGITemporalMCap: 12
   ReSTIRGIUpdateRate: 0
   DoReSTIRGIConnectionValidation: 0
   Exposure: 41.7
   DoPartialRendering: 0
   PartialRenderingFactor: 1
   DoFirefly: 0
-  ImprovedPrimaryHit: 1
+  ImprovedPrimaryHit: 0
   RISCount: 12
   ToneMapper: 0
   SkyDesaturate: 0
