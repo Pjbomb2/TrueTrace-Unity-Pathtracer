@@ -24,8 +24,8 @@
 // #define AdvancedBackground
 #define UseBRDFLights
 #define DoubleBufferSGTree
-// #define Fog
-// #define RadCache
+#define Fog
+#define RadCache
 #define ExpensiveReSTIR
 // #define FakedAO
 // #define ClampRoughnessToBounce
