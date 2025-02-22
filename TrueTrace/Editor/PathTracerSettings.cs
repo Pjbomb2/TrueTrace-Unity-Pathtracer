@@ -213,7 +213,7 @@ namespace TrueTrace {
          List<Mesh> SourceMeshes;
          private static TTStopWatch BuildWatch = new TTStopWatch("Total Scene Build Time");
          private void OnStartAsyncCombined() {
-            Debug.Log(Application.dataPath + "/TrueTrace-Unity-Pathtracer/TrueTrace/Resources/shaderjsons/shaderjsons");
+            Debug.Log(System.IO.Path.Join(Application.dataPath, "TrueTrace-Unity-Pathtracer",System.IO.Path.Join("TrueTrace",System.IO.Path.Join("Resources","shaderjsons","shaderjsons"))));
             EditorUtility.SetDirty(GameObject.Find("Scene").GetComponent<AssetManager>());
             BuildWatch.Start();
             GameObject.Find("Scene").GetComponent<AssetManager>().ClearAll();

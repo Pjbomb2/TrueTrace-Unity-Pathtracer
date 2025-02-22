@@ -8,7 +8,7 @@ using RectpackSharp;
 using System.IO;
 using System.Xml.Serialization;
 using System.Linq;
-using Meetem.Bindless;
+// using Meetem.Bindless;
 using UnityEngine.SceneManagement;
 using UnityEngine.Rendering;
 #pragma warning disable 4014
@@ -17,7 +17,7 @@ namespace TrueTrace {
     public class AssetManager : MonoBehaviour
     {//This handels all the data
 
-        private BindlessArray bindlessTextures;
+        // private BindlessArray bindlessTextures;
         public static AssetManager Assets;
         public int TotalParentObjectSize;
         //emissive, alpha, metallic, roughness
@@ -230,6 +230,7 @@ namespace TrueTrace {
         int B = (int)Mathf.Ceil(ThisRect.z * 16384.0f) | ((int)Mathf.Ceil(ThisRect.w * 16384.0f) << 15);
         return new Vector2Int(A, B);
     }
+            #if !DX11Only && !UseAtlas
     private void PackAndCompactBindless(Dictionary<int, TexObj> DictTex, PackingRectangle[] Rects, int TexIndex, int ReadIndex = -1) {
         int TexCount = DictTex.Count;
         if(TexCount != 0) {
@@ -266,7 +267,7 @@ namespace TrueTrace {
         }
 
     }
-
+#endif
 
     private void PackAndCompact(Dictionary<int, TexObj> DictTex, ref RenderTexture Atlas, PackingRectangle[] Rects, int DesiredRes, int TexIndex, int ReadIndex = -1) {
         Vector2 Scale = new Vector2(1,1);
@@ -794,7 +795,7 @@ namespace TrueTrace {
         }
         public void Awake() {
             Assets = this;
-            bindlessTextures = new BindlessArray();
+            // bindlessTextures = new BindlessArray();
         }
 
         public void Start() {
@@ -848,8 +849,8 @@ namespace TrueTrace {
 
         void OnDisable() {
             ClearAll();
-            bindlessTextures?.Dispose();
-            bindlessTextures = null;
+            // bindlessTextures?.Dispose();
+            // bindlessTextures = null;
             SceneManager.sceneLoaded -= OnSceneLoaded;
             SceneManager.sceneUnloaded -= OnSceneUnloaded;
         }

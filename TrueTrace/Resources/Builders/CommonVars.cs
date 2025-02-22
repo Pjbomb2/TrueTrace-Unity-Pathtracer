@@ -853,7 +853,7 @@ namespace CommonVars
     }
 
 
-public class ShaderStuff
+public static class ShaderStuff
 {
     [System.Runtime.InteropServices.DllImport("GfxPluginDX12ShaderStuffTrueTrace")]
     public static extern void DX12ShadersInitialize(string directory);

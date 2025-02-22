@@ -15,30 +15,31 @@ public class RenderHandle : MonoBehaviour
         gameObject.GetComponent<Camera>().renderingPath = RenderingPath.DeferredShading;
         gameObject.GetComponent<Camera>().depthTextureMode |= DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
         RayMaster.TossCamera(gameObject.GetComponent<Camera>());
-        RayMaster.Start2();
+            CommonVars.ShaderStuff.DX12ShadersInitialize(Application.dataPath + "/TrueTrace-Unity-Pathtracer/TrueTrace/Resources/shaderjsons/shaderjsons");
+        // RayMaster.Start2();
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
-        RayMaster.TossCamera(gameObject.GetComponent<Camera>());
-        RayMaster.Start2();
+        // RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
+        // RayMaster.TossCamera(gameObject.GetComponent<Camera>());
+        // RayMaster.Start2();
     }
     // [ImageEffectOpaque]
     private void OnRenderImage(RenderTexture source, RenderTexture destination) {
-        if(gameObject.GetComponent<Camera>() != Camera.current || (RayMaster == null && GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>().Length == 0)) {Graphics.Blit(source, destination); return;}
-        if(RayMaster == null) RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
-        RayMaster.TossCamera(gameObject.GetComponent<Camera>());
-        if(RayMaster == null) {
-            Start();
-        }
-        if(RayMaster == null) return;
-        CommandBuffer cmd = new CommandBuffer();
-        cmd.name = "TrueTrace";
-        RayMaster.RenderImage(destination, cmd);
-        Graphics.ExecuteCommandBuffer(cmd);
-        cmd.Clear();
-        cmd.Release();
+        // if(gameObject.GetComponent<Camera>() != Camera.current || (RayMaster == null && GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>().Length == 0)) {Graphics.Blit(source, destination); return;}
+        // if(RayMaster == null) RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
+        // RayMaster.TossCamera(gameObject.GetComponent<Camera>());
+        // if(RayMaster == null) {
+        //     Start();
+        // }
+        // if(RayMaster == null) return;
+        // CommandBuffer cmd = new CommandBuffer();
+        // cmd.name = "TrueTrace";
+        // RayMaster.RenderImage(destination, cmd);
+        // Graphics.ExecuteCommandBuffer(cmd);
+        // cmd.Clear();
+        // cmd.Release();
     }
 }
