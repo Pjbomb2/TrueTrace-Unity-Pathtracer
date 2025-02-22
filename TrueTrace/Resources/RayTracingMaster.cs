@@ -195,25 +195,25 @@ namespace TrueTrace {
         [HideInInspector] public int MainDirectionalLight = -1;
         [HideInInspector] public int AtmoNumLayers = 4;
         private float PrevResFactor;
-        // private int GenKernel;
-        // private int GenPanoramaKernel;
-        // private int TraceKernel;
-        // private int ShadowKernel;
-        // private int HeightmapKernel;
-        // private int HeightmapShadowKernel;
-        // private int ShadeKernel;
-        // private int FinalizeKernel;
-        // private int GIReTraceKernel;
-        // private int TransferKernel;
-        // private int ReSTIRGIKernel;
-        // private int ReSTIRGISpatialKernel;
-        // private int TTtoOIDNKernel;
-        // private int OIDNtoTTKernel;
-        // private int TTtoOIDNKernelPanorama;
-        // private int MVKernel;
+        private string GenKernel;
+        private string GenPanoramaKernel;
+        private string TraceKernel;
+        private string ShadowKernel;
+        private string HeightmapKernel;
+        private string HeightmapShadowKernel;
+        private string ShadeKernel;
+        private string FinalizeKernel;
+        private string GIReTraceKernel;
+        private string TransferKernel;
+        private string ReSTIRGIKernel;
+        private string ReSTIRGISpatialKernel;
+        private string TTtoOIDNKernel;
+        private string OIDNtoTTKernel;
+        private string TTtoOIDNKernelPanorama;
+        private string MVKernel;
         #if !DisableRadianceCache
-            private int ResolveKernel;
-            private int CompactKernel;
+            private string ResolveKernel;
+            private string CompactKernel;
         #endif
         private int OverridenWidth = 1;
         private int OverridenHeight = 1;
@@ -274,7 +274,7 @@ namespace TrueTrace {
             RayMaster = this;
             CurrentHorizonalPatch = new Vector2(0,1);
             LoadTT();
-            ShaderStuff.DX12ShadersInitialize(Application.dataPath + "/TrueTrace-Unity-Pathtracer/TrueTrace/Resources/shaderjsons");
+            ShaderStuff.DX12ShadersInitialize(Application.dataPath + "/TrueTrace-Unity-Pathtracer/TrueTrace/Resources/shaderjsons/shaderjsons");
             // LoadInitialSettings();//Build only
             Application.targetFrameRate = 165;
             ASVGFCode = new ASVGF();
@@ -291,26 +291,26 @@ namespace TrueTrace {
             Assets.BuildCombined();
             uFirstFrame = 1;
             FramesSinceStart = 0;
-            // GenKernel = GenerateShader.FindKernel("Generate");
-            // GenPanoramaKernel = GenerateShader.FindKernel("GeneratePanorama");
-            // TraceKernel = IntersectionShader.FindKernel("kernel_trace");
-            // ShadowKernel = IntersectionShader.FindKernel("kernel_shadow");
-            // ShadeKernel = ShadingShader.FindKernel("kernel_shade");
-            // FinalizeKernel = ShadingShader.FindKernel("kernel_finalize");
-            // HeightmapShadowKernel = IntersectionShader.FindKernel("kernel_shadow_heightmap");
-            // HeightmapKernel = IntersectionShader.FindKernel("kernel_heightmap");
-            // GIReTraceKernel = GenerateShader.FindKernel("GIReTraceKernel");
-            // TransferKernel = ShadingShader.FindKernel("TransferKernel");
-            // ReSTIRGIKernel = ReSTIRGI.FindKernel("ReSTIRGIKernel");
-            // ReSTIRGISpatialKernel = ReSTIRGI.FindKernel("ReSTIRGISpatial");
-            // TTtoOIDNKernel = ShadingShader.FindKernel("TTtoOIDNKernel");
-            // OIDNtoTTKernel = ShadingShader.FindKernel("OIDNtoTTKernel");
-            // TTtoOIDNKernelPanorama = ShadingShader.FindKernel("TTtoOIDNKernelPanorama");
-            // MVKernel = ShadingShader.FindKernel("MVKernel");
-            // #if !DisableRadianceCache
-            //     ResolveKernel = GenerateShader.FindKernel("CacheResolve");
-            //     CompactKernel = GenerateShader.FindKernel("CacheCompact");
-            // #endif
+            GenKernel = "Generate";
+            GenPanoramaKernel = "GeneratePanorama";
+            TraceKernel = "kernel_trace";
+            ShadowKernel = "kernel_shadow";
+            ShadeKernel = "kernel_shade";
+            FinalizeKernel = "kernel_finalize";
+            HeightmapShadowKernel = "kernel_shadow_heightmap";
+            HeightmapKernel = "kernel_heightmap";
+            GIReTraceKernel = "GIReTraceKernel";
+            TransferKernel = "TransferKernel";
+            ReSTIRGIKernel = "ReSTIRGIKernel";
+            ReSTIRGISpatialKernel = "ReSTIRGISpatial";
+            TTtoOIDNKernel = "TTtoOIDNKernel";
+            OIDNtoTTKernel = "OIDNtoTTKernel";
+            TTtoOIDNKernelPanorama = "TTtoOIDNKernelPanorama";
+            MVKernel = "MVKernel";
+            #if !DisableRadianceCache
+                ResolveKernel = "CacheResolve";
+                CompactKernel = "CacheCompact";
+            #endif
             OIDNGuideWrite = false;
             ASVGFCode.Initialized = false;
             ReSTIRASVGFCode.Initialized = false;
@@ -524,8 +524,8 @@ namespace TrueTrace {
 
        
         private void SetMatrix(string Name, Matrix4x4 Mat) {
-            // ShadingShader.SetMatrix(Name, Mat);
-            // IntersectionShader.SetMatrix(Name, Mat);
+            // cmd.SetMatrix(Name, Mat);
+            // cmd.SetMatrix(Name, Mat);
             // GenerateShader.SetMatrix(Name, Mat);
             // ReSTIRGI.SetMatrix(Name, Mat);
             // if(HasSDFHandler) OptionalSDFHandler.GenShader.SetMatrix(Name, Mat);
@@ -721,7 +721,7 @@ namespace TrueTrace {
             // GenerateShader.SetTextureFromGlobal(GIReTraceKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             // ReSTIRGI.SetTextureFromGlobal(ReSTIRGIKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             // ReSTIRGI.SetTextureFromGlobal(ReSTIRGISpatialKernel, "MotionVectors", "_CameraMotionVectorsTexture");
-            // ShadingShader.SetTextureFromGlobal(ShadeKernel, "MotionVectors", "_CameraMotionVectorsTexture");
+            // cmd.SetTextureFromGlobal(ShadeKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             cmd.SetTexture(ShadeKernel, "CDFY", Texture2D.whiteTexture.GetNativeTexturePtr());
             
 
@@ -753,26 +753,25 @@ namespace TrueTrace {
                 //     CDFCompute.Dispatch(0, 1, SkyboxTexture.height, 1);
                 //     CounterBuffer.ReleaseSafe();
                 //     HDRIParams = new Vector2(SkyboxTexture.width, SkyboxTexture.height);
-                //     ShadingShader.SetTexture(ShadeKernel, "CDFX", CDFX);
-                //     ShadingShader.SetTexture(ShadeKernel, "CDFY", CDFY);
+                //     cmd.SetTexture(ShadeKernel, "CDFX", CDFX);
+                //     cmd.SetTexture(ShadeKernel, "CDFY", CDFY);
                 // }
                 // if(LocalTTSettings.BackgroundType != 1 && LocalTTSettings.SecondaryBackgroundType != 1) {
                     cmd.SetTexture(ShadeKernel, "CDFX", SkyboxTexture.GetNativeTexturePtr());
                     cmd.SetTexture(ShadeKernel, "CDFY", SkyboxTexture.GetNativeTexturePtr());
                 // } else {
-                    // ShadingShader.SetTexture(ShadeKernel, "CDFX", CDFX);
-                    // ShadingShader.SetTexture(ShadeKernel, "CDFY", CDFY);
+                    // cmd.SetTexture(ShadeKernel, "CDFX", CDFX);
+                    // cmd.SetTexture(ShadeKernel, "CDFY", CDFY);
 
                 // }
                 cmd.SetBuffer(ShadeKernel, "TotSum", CDFTotalBuffer);
-                ShadingShader.SetBuffer(ShadeKernel, "TotSum", CDFTotalBuffer);
                 cmd.SetTexture(ShadeKernel, "_SkyboxTexture", SkyboxTexture.GetNativeTexturePtr());
             }
             SetVector("HDRIParams", HDRIParams, cmd);
 
             if(!_camera.orthographic) {
-                // ShadingShader.SetTextureFromGlobal(FinalizeKernel, "DiffuseGBuffer", "_CameraGBufferTexture0");
-                // ShadingShader.SetTextureFromGlobal(FinalizeKernel, "SpecularGBuffer", "_CameraGBufferTexture1");
+                // cmd.SetTextureFromGlobal(FinalizeKernel, "DiffuseGBuffer", "_CameraGBufferTexture0");
+                // cmd.SetTextureFromGlobal(FinalizeKernel, "SpecularGBuffer", "_CameraGBufferTexture1");
             } else {
                 
             }
@@ -782,147 +781,147 @@ namespace TrueTrace {
             cmd.SetBuffer(GenPanoramaKernel, "GlobalRays", _RayBuffer);
             cmd.SetTexture(GenPanoramaKernel, "RandomNums", ((FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB).GetNativeTexturePtr());
 
-            AssetManager.Assets.SetMeshTraceBuffers(IntersectionShader, TraceKernel);
-            IntersectionShader.SetComputeBuffer(TraceKernel, "GlobalRays", _RayBuffer);
-            IntersectionShader.SetComputeBuffer(TraceKernel, "GlobalColors", LightingBuffer);
-            IntersectionShader.SetTexture(TraceKernel, "_PrimaryTriangleInfo", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            AssetManager.Assets.SetMeshTraceBuffers(TraceKernel, cmd);
+            cmd.SetBuffer(TraceKernel, "GlobalRays", _RayBuffer);
+            cmd.SetBuffer(TraceKernel, "GlobalColors", LightingBuffer);
+            cmd.SetTexture(TraceKernel, "_PrimaryTriangleInfo", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
 
 
-            AssetManager.Assets.SetMeshTraceBuffers(IntersectionShader, ShadowKernel);
-            IntersectionShader.SetComputeBuffer(ShadowKernel, "ShadowRaysBuffer", _ShadowBuffer);
-            IntersectionShader.SetComputeBuffer(ShadowKernel, "GlobalColors", LightingBuffer);
-            IntersectionShader.SetTexture(ShadowKernel, "NEEPosA", FlipFrame ? GINEEPosA : GINEEPosB);
-            IntersectionShader.SetTexture(TraceKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
+            AssetManager.Assets.SetMeshTraceBuffers(ShadowKernel, cmd);
+            cmd.SetComputeBuffer(ShadowKernel, "ShadowRaysBuffer", _ShadowBuffer);
+            cmd.SetComputeBuffer(ShadowKernel, "GlobalColors", LightingBuffer);
+            cmd.SetTexture(ShadowKernel, "NEEPosA", FlipFrame ? GINEEPosA : GINEEPosB);
+            cmd.SetTexture(TraceKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
 
 
-            AssetManager.Assets.SetHeightmapTraceBuffers(IntersectionShader, HeightmapKernel);
-            IntersectionShader.SetComputeBuffer(HeightmapKernel, "GlobalRays", _RayBuffer);
-            IntersectionShader.SetTexture(HeightmapKernel, "_PrimaryTriangleInfo", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            AssetManager.Assets.SetHeightmapTraceBuffers(HeightmapKernel, cmd);
+            cmd.SetComputeBuffer(HeightmapKernel, "GlobalRays", _RayBuffer);
+            cmd.SetTexture(HeightmapKernel, "_PrimaryTriangleInfo", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
 
-            AssetManager.Assets.SetHeightmapTraceBuffers(IntersectionShader, HeightmapShadowKernel);
-            IntersectionShader.SetComputeBuffer(HeightmapShadowKernel, "GlobalColors", LightingBuffer);
-            IntersectionShader.SetComputeBuffer(HeightmapShadowKernel, "ShadowRaysBuffer", _ShadowBuffer);
-            IntersectionShader.SetTexture(HeightmapShadowKernel, "NEEPosA", FlipFrame ? GINEEPosA : GINEEPosB);
+            AssetManager.Assets.SetHeightmapTraceBuffers(HeightmapShadowKernel, cmd);
+            cmd.SetComputeBuffer(HeightmapShadowKernel, "GlobalColors", LightingBuffer);
+            cmd.SetComputeBuffer(HeightmapShadowKernel, "ShadowRaysBuffer", _ShadowBuffer);
+            cmd.SetTexture(HeightmapShadowKernel, "NEEPosA", FlipFrame ? GINEEPosA : GINEEPosB);
 
             #if !DisableRadianceCache
-                GenerateShader.SetComputeBuffer(ResolveKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
-                GenerateShader.SetComputeBuffer(ResolveKernel, "VoxelDataBufferB", !FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
-                GenerateShader.SetComputeBuffer(ResolveKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
-                GenerateShader.SetComputeBuffer(ResolveKernel, "HashEntriesBufferB", !FlipFrame ? HashBufferA : HashBufferB);
-                GenerateShader.SetComputeBuffer(CompactKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
+                cmd.SetComputeBuffer(ResolveKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
+                cmd.SetComputeBuffer(ResolveKernel, "VoxelDataBufferB", !FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
+                cmd.SetComputeBuffer(ResolveKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
+                cmd.SetComputeBuffer(ResolveKernel, "HashEntriesBufferB", !FlipFrame ? HashBufferA : HashBufferB);
+                cmd.SetComputeBuffer(CompactKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
 
 
 
-                IntersectionShader.SetComputeBuffer(ShadowKernel, "CacheBuffer", CacheBuffer);
-                IntersectionShader.SetComputeBuffer(ShadowKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
-                IntersectionShader.SetComputeBuffer(ShadowKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
+                cmd.SetComputeBuffer(ShadowKernel, "CacheBuffer", CacheBuffer);
+                cmd.SetComputeBuffer(ShadowKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
+                cmd.SetComputeBuffer(ShadowKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
 
-                IntersectionShader.SetComputeBuffer(HeightmapShadowKernel, "CacheBuffer", CacheBuffer);
-                IntersectionShader.SetComputeBuffer(HeightmapShadowKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
-                IntersectionShader.SetComputeBuffer(HeightmapShadowKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
+                cmd.SetComputeBuffer(HeightmapShadowKernel, "CacheBuffer", CacheBuffer);
+                cmd.SetComputeBuffer(HeightmapShadowKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
+                cmd.SetComputeBuffer(HeightmapShadowKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
                 
-                ShadingShader.SetComputeBuffer(ShadeKernel, "CacheBuffer", CacheBuffer);
-                ShadingShader.SetComputeBuffer(ShadeKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
-                ShadingShader.SetComputeBuffer(ShadeKernel, "HashEntriesBufferB", !FlipFrame ? HashBufferA : HashBufferB);
-                ShadingShader.SetComputeBuffer(ShadeKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
-                ShadingShader.SetComputeBuffer(ShadeKernel, "VoxelDataBufferB", !FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
+                cmd.SetComputeBuffer(ShadeKernel, "CacheBuffer", CacheBuffer);
+                cmd.SetComputeBuffer(ShadeKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
+                cmd.SetComputeBuffer(ShadeKernel, "HashEntriesBufferB", !FlipFrame ? HashBufferA : HashBufferB);
+                cmd.SetComputeBuffer(ShadeKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
+                cmd.SetComputeBuffer(ShadeKernel, "VoxelDataBufferB", !FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
                 
-                ShadingShader.SetComputeBuffer(FinalizeKernel, "CacheBuffer", CacheBuffer);
-                ShadingShader.SetComputeBuffer(FinalizeKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
-                ShadingShader.SetComputeBuffer(FinalizeKernel, "HashEntriesBufferB", !FlipFrame ? HashBufferA : HashBufferB);
-                ShadingShader.SetComputeBuffer(FinalizeKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
-                ShadingShader.SetComputeBuffer(FinalizeKernel, "VoxelDataBufferB", !FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
+                cmd.SetComputeBuffer(FinalizeKernel, "CacheBuffer", CacheBuffer);
+                cmd.SetComputeBuffer(FinalizeKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
+                cmd.SetComputeBuffer(FinalizeKernel, "HashEntriesBufferB", !FlipFrame ? HashBufferA : HashBufferB);
+                cmd.SetComputeBuffer(FinalizeKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
+                cmd.SetComputeBuffer(FinalizeKernel, "VoxelDataBufferB", !FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
             #endif
 
 
 
-            Atmo.AssignTextures(ShadingShader, ShadeKernel);
-            AssetManager.Assets.SetLightData(ShadingShader, ShadeKernel);
-            AssetManager.Assets.SetMeshTraceBuffers(ShadingShader, ShadeKernel);
-            AssetManager.Assets.SetHeightmapTraceBuffers(ShadingShader, ShadeKernel);
-            // ShadingShader.SetTexture(ShadeKernel, "CloudShapeTex", Atmo.CloudShapeTex);
-            // ShadingShader.SetTexture(ShadeKernel, "CloudShapeDetailTex", Atmo.CloudShapeDetailTex);
-            // ShadingShader.SetTexture(ShadeKernel, "localWeatherTexture", Atmo.WeatherTex);
-            ShadingShader.SetTexture(ShadeKernel, "WorldPosB", !FlipFrame ? GIWorldPosB : GIWorldPosC);
-            ShadingShader.SetTexture(ShadeKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
-            ShadingShader.SetTexture(ShadeKernel, "SingleComponentAtlas", Assets.SingleComponentAtlas);
-            ShadingShader.SetTexture(ShadeKernel, "_EmissiveAtlas", Assets.EmissiveAtlas);
-            ShadingShader.SetTexture(ShadeKernel, "_NormalAtlas", Assets.NormalAtlas);
-            ShadingShader.SetTexture(ShadeKernel, "ScreenSpaceInfo", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
-            ShadingShader.SetComputeBuffer(ShadeKernel, "GlobalColors", LightingBuffer);
-            ShadingShader.SetComputeBuffer(ShadeKernel, "GlobalRays", _RayBuffer);
-            ShadingShader.SetComputeBuffer(ShadeKernel, "ShadowRaysBuffer", _ShadowBuffer);
+            Atmo.AssignTextures(ShadeKernel, cmd);
+            AssetManager.Assets.SetLightData(ShadeKernel, cmd);
+            AssetManager.Assets.SetMeshTraceBuffers(ShadeKernel, cmd);
+            AssetManager.Assets.SetHeightmapTraceBuffers(ShadeKernel, cmd);
+            // cmd.SetTexture(ShadeKernel, "CloudShapeTex", Atmo.CloudShapeTex);
+            // cmd.SetTexture(ShadeKernel, "CloudShapeDetailTex", Atmo.CloudShapeDetailTex);
+            // cmd.SetTexture(ShadeKernel, "localWeatherTexture", Atmo.WeatherTex);
+            cmd.SetTexture(ShadeKernel, "WorldPosB", !FlipFrame ? GIWorldPosB : GIWorldPosC);
+            cmd.SetTexture(ShadeKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
+            cmd.SetTexture(ShadeKernel, "SingleComponentAtlas", Assets.SingleComponentAtlas);
+            cmd.SetTexture(ShadeKernel, "_EmissiveAtlas", Assets.EmissiveAtlas);
+            cmd.SetTexture(ShadeKernel, "_NormalAtlas", Assets.NormalAtlas);
+            cmd.SetTexture(ShadeKernel, "ScreenSpaceInfo", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
+            cmd.SetComputeBuffer(ShadeKernel, "GlobalColors", LightingBuffer);
+            cmd.SetComputeBuffer(ShadeKernel, "GlobalRays", _RayBuffer);
+            cmd.SetComputeBuffer(ShadeKernel, "ShadowRaysBuffer", _ShadowBuffer);
 
 
-            ShadingShader.SetBuffer(FinalizeKernel, "GlobalColors", LightingBuffer);
-            ShadingShader.SetTexture(FinalizeKernel, "Result", _target);
+            cmd.SetBuffer(FinalizeKernel, "GlobalColors", LightingBuffer);
+            cmd.SetTexture(FinalizeKernel, "Result", _target);
             
 
             // AssetManager.Assets.SetMeshTraceBuffers(ShadingShader, MVKernel);
-            // ShadingShader.SetTexture(MVKernel, "PrimaryTriData", FlipFrame ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
-            // ShadingShader.SetTexture(MVKernel, "PrimaryTriDataPrev", !FlipFrame ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
-            // ShadingShader.SetTexture(MVKernel, "Result", _target);
+            // cmd.SetTexture(MVKernel, "PrimaryTriData", FlipFrame ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            // cmd.SetTexture(MVKernel, "PrimaryTriDataPrev", !FlipFrame ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            // cmd.SetTexture(MVKernel, "Result", _target);
 
             #if UseOIDN
-                ShadingShader.SetBuffer(TTtoOIDNKernel, "AlbedoBuffer", AlbedoBuffer);
-                ShadingShader.SetBuffer(TTtoOIDNKernel, "NormalBuffer", NormalBuffer);
-                ShadingShader.SetTexture(TTtoOIDNKernel, "ScreenSpaceInfo", ScreenSpaceInfo);
-                ShadingShader.SetComputeBuffer(TTtoOIDNKernel, "GlobalColors", LightingBuffer);
-                ShadingShader.SetBuffer(TTtoOIDNKernelPanorama, "AlbedoBuffer", AlbedoBuffer);
-                ShadingShader.SetBuffer(TTtoOIDNKernelPanorama, "NormalBuffer", NormalBuffer);
-                ShadingShader.SetTexture(TTtoOIDNKernelPanorama, "ScreenSpaceInfo", ScreenSpaceInfo);
-                ShadingShader.SetComputeBuffer(TTtoOIDNKernelPanorama, "GlobalColors", LightingBuffer);
+                cmd.SetBuffer(TTtoOIDNKernel, "AlbedoBuffer", AlbedoBuffer);
+                cmd.SetBuffer(TTtoOIDNKernel, "NormalBuffer", NormalBuffer);
+                cmd.SetTexture(TTtoOIDNKernel, "ScreenSpaceInfo", ScreenSpaceInfo);
+                cmd.SetComputeBuffer(TTtoOIDNKernel, "GlobalColors", LightingBuffer);
+                cmd.SetBuffer(TTtoOIDNKernelPanorama, "AlbedoBuffer", AlbedoBuffer);
+                cmd.SetBuffer(TTtoOIDNKernelPanorama, "NormalBuffer", NormalBuffer);
+                cmd.SetTexture(TTtoOIDNKernelPanorama, "ScreenSpaceInfo", ScreenSpaceInfo);
+                cmd.SetComputeBuffer(TTtoOIDNKernelPanorama, "GlobalColors", LightingBuffer);
             #endif
 
-            GenerateShader.SetComputeBuffer(GIReTraceKernel, "GlobalRays", _RayBuffer);
-            GenerateShader.SetTexture(GIReTraceKernel, "RandomNumsWrite", FlipFrame ? _RandomNums : _RandomNumsB);
-            GenerateShader.SetTexture(GIReTraceKernel, "ReservoirA", !FlipFrame ? GIReservoirB : GIReservoirA);
-            GenerateShader.SetTexture(GIReTraceKernel, "RandomNums", !FlipFrame ? _RandomNums : _RandomNumsB);
+            cmd.SetComputeBuffer(GIReTraceKernel, "GlobalRays", _RayBuffer);
+            cmd.SetTexture(GIReTraceKernel, "RandomNumsWrite", FlipFrame ? _RandomNums : _RandomNumsB);
+            cmd.SetTexture(GIReTraceKernel, "ReservoirA", !FlipFrame ? GIReservoirB : GIReservoirA);
+            cmd.SetTexture(GIReTraceKernel, "RandomNums", !FlipFrame ? _RandomNums : _RandomNumsB);
 
             
 
-            AssetManager.Assets.SetMeshTraceBuffers(ReSTIRGI, ReSTIRGIKernel);
-            ReSTIRGI.SetTexture(ReSTIRGIKernel, "ReservoirA", FlipFrame ? GIReservoirB : GIReservoirA);
-            ReSTIRGI.SetTexture(ReSTIRGIKernel, "ReservoirB", !FlipFrame ? GIReservoirB : GIReservoirA);
-            ReSTIRGI.SetTexture(ReSTIRGIKernel, "WorldPosC", GIWorldPosA);
-            ReSTIRGI.SetTexture(ReSTIRGIKernel, "WorldPosA", FlipFrame ? GIWorldPosB : GIWorldPosC);
-            ReSTIRGI.SetTexture(ReSTIRGIKernel, "WorldPosB", !FlipFrame ? GIWorldPosB : GIWorldPosC);
-            ReSTIRGI.SetTexture(ReSTIRGIKernel, "NEEPosA", FlipFrame ? GINEEPosA : GINEEPosB);
-            ReSTIRGI.SetTexture(ReSTIRGIKernel, "NEEPosB", !FlipFrame ? GINEEPosA : GINEEPosB);
-            ReSTIRGI.SetTexture(ReSTIRGIKernel, "PrevScreenSpaceInfo", FlipFrame ? ScreenSpaceInfoPrev : ScreenSpaceInfo);
-            ReSTIRGI.SetTexture(ReSTIRGIKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
-            ReSTIRGI.SetTexture(ReSTIRGIKernel, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
-            ReSTIRGI.SetTexture(ReSTIRGIKernel, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
-            ReSTIRGI.SetTexture(ReSTIRGIKernel, "PrimaryTriDataPrev", (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
-            ReSTIRGI.SetComputeBuffer(ReSTIRGIKernel, "GlobalColors", LightingBuffer);
-            ReSTIRGI.SetTexture(ReSTIRGIKernel, "Gradient", GradientsA);
-            ReSTIRGI.SetTexture(ReSTIRGIKernel, "GradientWrite", GradientsB);
+            AssetManager.Assets.SetMeshTraceBuffers(ReSTIRGIKernel, cmd);
+            cmd.SetTexture(ReSTIRGIKernel, "ReservoirA", FlipFrame ? GIReservoirB : GIReservoirA);
+            cmd.SetTexture(ReSTIRGIKernel, "ReservoirB", !FlipFrame ? GIReservoirB : GIReservoirA);
+            cmd.SetTexture(ReSTIRGIKernel, "WorldPosC", GIWorldPosA);
+            cmd.SetTexture(ReSTIRGIKernel, "WorldPosA", FlipFrame ? GIWorldPosB : GIWorldPosC);
+            cmd.SetTexture(ReSTIRGIKernel, "WorldPosB", !FlipFrame ? GIWorldPosB : GIWorldPosC);
+            cmd.SetTexture(ReSTIRGIKernel, "NEEPosA", FlipFrame ? GINEEPosA : GINEEPosB);
+            cmd.SetTexture(ReSTIRGIKernel, "NEEPosB", !FlipFrame ? GINEEPosA : GINEEPosB);
+            cmd.SetTexture(ReSTIRGIKernel, "PrevScreenSpaceInfo", FlipFrame ? ScreenSpaceInfoPrev : ScreenSpaceInfo);
+            cmd.SetTexture(ReSTIRGIKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
+            cmd.SetTexture(ReSTIRGIKernel, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
+            cmd.SetTexture(ReSTIRGIKernel, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            cmd.SetTexture(ReSTIRGIKernel, "PrimaryTriDataPrev", (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            cmd.SetComputeBuffer(ReSTIRGIKernel, "GlobalColors", LightingBuffer);
+            cmd.SetTexture(ReSTIRGIKernel, "Gradient", GradientsA);
+            cmd.SetTexture(ReSTIRGIKernel, "GradientWrite", GradientsB);
 
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "Gradient", GradientsB);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "WorldPosB", FlipFrame ? GIWorldPosB : GIWorldPosC);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "NEEPosB", FlipFrame ? GINEEPosA : GINEEPosB);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "ReservoirB", FlipFrame ? GIReservoirB : GIReservoirA);
-            ReSTIRGI.SetComputeBuffer(ReSTIRGISpatialKernel, "GlobalColors", LightingBuffer);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "WorldPosA", GIWorldPosA);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "NEEPosA", GINEEPosC);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "ReservoirA", GIReservoirC);
+            cmd.SetTexture(ReSTIRGISpatialKernel, "Gradient", GradientsB);
+            cmd.SetTexture(ReSTIRGISpatialKernel, "WorldPosB", FlipFrame ? GIWorldPosB : GIWorldPosC);
+            cmd.SetTexture(ReSTIRGISpatialKernel, "NEEPosB", FlipFrame ? GINEEPosA : GINEEPosB);
+            cmd.SetTexture(ReSTIRGISpatialKernel, "ReservoirB", FlipFrame ? GIReservoirB : GIReservoirA);
+            cmd.SetComputeBuffer(ReSTIRGISpatialKernel, "GlobalColors", LightingBuffer);
+            cmd.SetTexture(ReSTIRGISpatialKernel, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
+            cmd.SetTexture(ReSTIRGISpatialKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
+            cmd.SetTexture(ReSTIRGISpatialKernel, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            cmd.SetTexture(ReSTIRGISpatialKernel, "WorldPosA", GIWorldPosA);
+            cmd.SetTexture(ReSTIRGISpatialKernel, "NEEPosA", GINEEPosC);
+            cmd.SetTexture(ReSTIRGISpatialKernel, "ReservoirA", GIReservoirC);
 
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "GradientWrite", GradientsA);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "Gradient", GradientsB);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "WorldPosB", GIWorldPosA);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "NEEPosB", GINEEPosC);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "ReservoirB", GIReservoirC);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
-            ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
-            ReSTIRGI.SetComputeBuffer(ReSTIRGISpatialKernel+1, "GlobalColors", LightingBuffer);
+            cmd.SetTexture(ReSTIRGISpatialKernel+"2", "GradientWrite", GradientsA);
+            cmd.SetTexture(ReSTIRGISpatialKernel+"2", "Gradient", GradientsB);
+            cmd.SetTexture(ReSTIRGISpatialKernel+"2", "WorldPosB", GIWorldPosA);
+            cmd.SetTexture(ReSTIRGISpatialKernel+"2", "NEEPosB", GINEEPosC);
+            cmd.SetTexture(ReSTIRGISpatialKernel+"2", "ReservoirB", GIReservoirC);
+            cmd.SetTexture(ReSTIRGISpatialKernel+"2", "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
+            cmd.SetTexture(ReSTIRGISpatialKernel+"2", "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
+            cmd.SetTexture(ReSTIRGISpatialKernel+"2", "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            cmd.SetComputeBuffer(ReSTIRGISpatialKernel+"2", "GlobalColors", LightingBuffer);
 
 
-            AssetManager.Assets.SetMeshTraceBuffers(ReSTIRGI, ReSTIRGISpatialKernel);
-            AssetManager.Assets.SetMeshTraceBuffers(ReSTIRGI, ReSTIRGISpatialKernel+1);
+            AssetManager.Assets.SetMeshTraceBuffers(ReSTIRGISpatialKernel, cmd);
+            AssetManager.Assets.SetMeshTraceBuffers(ReSTIRGISpatialKernel+"2", cmd);
 
             Shader.SetGlobalTexture("_DebugTex", _DebugTex);
         }
@@ -1101,25 +1100,24 @@ namespace TrueTrace {
             SetInt("CurBounce", 0, cmd);
             if(LocalTTSettings.UseReSTIRGI && LocalTTSettings.ReSTIRGIUpdateRate != 0) {
                 if(DoKernelProfiling) cmd.BeginSample("ReSTIR GI Reproject");
-                cmd.DispatchCompute(GenerateShader, GIReTraceKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+                cmd.DispatchCompute(GIReTraceKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 if(DoKernelProfiling) cmd.EndSample("ReSTIR GI Reproject");
             } else if(LocalTTSettings.DenoiserMethod != 1 || LocalTTSettings.UseReSTIRGI) {
                 if(DoKernelProfiling) cmd.BeginSample("Primary Ray Generation");
-                   cmd.DispatchCompute(GenerateShader, (DoChainedImages ? GenPanoramaKernel : GenKernel), Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+                   cmd.DispatchCompute((DoChainedImages ? GenPanoramaKernel : GenKernel), Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 if(DoKernelProfiling) cmd.EndSample("Primary Ray Generation");
             }
-            if(HasSDFHandler) OptionalSDFHandler.Run(cmd, (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB, _RayBuffer, SourceWidth, SourceHeight);
         }
 
         private void Render(RenderTexture destination, CommandBuffer cmd)
         {
             #if !DisableRadianceCache
                 if(DoKernelProfiling) cmd.BeginSample("RadCacheClear");
-                    cmd.DispatchCompute(GenerateShader, ResolveKernel, Mathf.CeilToInt((4.0f * 1024.0f * 1024.0f) / 256.0f), 1, 1);
+                    cmd.DispatchCompute(ResolveKernel, Mathf.CeilToInt((4.0f * 1024.0f * 1024.0f) / 256.0f), 1, 1);
                 if(DoKernelProfiling) cmd.EndSample("RadCacheClear");
 
                 if(DoKernelProfiling) cmd.BeginSample("RadCacheCompact");
-                    cmd.DispatchCompute(GenerateShader, CompactKernel, Mathf.CeilToInt((4.0f * 1024.0f * 1024.0f) / 256.0f), 1, 1);
+                    cmd.DispatchCompute(CompactKernel, Mathf.CeilToInt((4.0f * 1024.0f * 1024.0f) / 256.0f), 1, 1);
                 if(DoKernelProfiling) cmd.EndSample("RadCacheCompact");
             #endif
             TTPostProc.ValidateInit(LocalTTSettings.PPBloom, LocalTTSettings.PPTAA, SourceWidth != TargetWidth, LocalTTSettings.UpscalerMethod == 2, LocalTTSettings.DoSharpen, LocalTTSettings.PPFXAA, LocalTTSettings.DoChromaAber || LocalTTSettings.DoBCS || LocalTTSettings.DoVignette);
@@ -1133,23 +1131,23 @@ namespace TrueTrace {
                     if(DoKernelProfiling) cmd.BeginSample("Bounce: " + i);
                         var bouncebounce = i;
                         if(bouncebounce == 1) {
-                            cmd.SetComputeTextureParam(IntersectionShader, TraceKernel, "_PrimaryTriangleInfo", GIWorldPosA);
-                            cmd.SetComputeTextureParam(IntersectionShader, HeightmapKernel, "_PrimaryTriangleInfo", GIWorldPosA);
+                            cmd.SetTexture(TraceKernel, "_PrimaryTriangleInfo", GIWorldPosA);
+                            cmd.SetTexture(HeightmapKernel, "_PrimaryTriangleInfo", GIWorldPosA);
                         }
                         SetInt("CurBounce", bouncebounce, cmd);
                         if(DoKernelProfiling) cmd.BeginSample("Transfer Kernel: " + i);
-                        cmd.SetComputeIntParam(ShadingShader, "Type", 0);
-                        cmd.DispatchCompute(ShadingShader, TransferKernel, 1, 1, 1);
+                        cmd.SetInt("RayTracingShader", "Type", 0);
+                        cmd.DispatchCompute(TransferKernel, 1, 1, 1);
                         if(DoKernelProfiling) cmd.EndSample("Transfer Kernel: " + i);
 
                         if(DoKernelProfiling) cmd.BeginSample("Trace Kernel: " + i);
                         #if DX11Only
-                            cmd.DispatchCompute(IntersectionShader, TraceKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
+                            cmd.DispatchCompute(TraceKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
                         #else
                             #if HardwareRT
-                                cmd.DispatchCompute(IntersectionShader, TraceKernel, CurBounceInfoBuffer, 0);//784 is 28^2
+                                cmd.DispatchCompute(TraceKernel, CurBounceInfoBuffer, 0);//784 is 28^2
                             #else
-                                cmd.DispatchCompute(IntersectionShader, TraceKernel, 32, 32, 1);
+                                cmd.DispatchCompute(TraceKernel, 32, 32, 1);
                             #endif
                         #endif
                         if(DoKernelProfiling) cmd.EndSample("Trace Kernel: " + i);
@@ -1158,36 +1156,36 @@ namespace TrueTrace {
                         if (Assets.Terrains.Count != 0) {
                             if(DoKernelProfiling) cmd.BeginSample("HeightMap Trace Kernel: " + i);
                             #if DX11Only
-                                cmd.DispatchCompute(IntersectionShader, HeightmapKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
+                                cmd.DispatchCompute(HeightmapKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
                             #else
-                                cmd.DispatchCompute(IntersectionShader, HeightmapKernel, CurBounceInfoBuffer, 0);//784 is 28^2
+                                cmd.DispatchCompute(HeightmapKernel, CurBounceInfoBuffer, 0);//784 is 28^2
                             #endif
                             if(DoKernelProfiling) cmd.EndSample("HeightMap Trace Kernel: " + i);
                         }
 
                         if(DoKernelProfiling) cmd.BeginSample("Shading Kernel: " + i);
                         #if DX11Only
-                            cmd.DispatchCompute(ShadingShader, ShadeKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
+                            cmd.DispatchCompute(ShadeKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
                         #else
-                            cmd.DispatchCompute(ShadingShader, ShadeKernel, CurBounceInfoBuffer, 0);
+                            cmd.DispatchCompute(ShadeKernel, CurBounceInfoBuffer, 0);
                         #endif
                         if(DoKernelProfiling) cmd.EndSample("Shading Kernel: " + i);
 
 
 
                         if(DoKernelProfiling) cmd.BeginSample("Transfer Kernel 2: " + i);
-                        cmd.SetComputeIntParam(ShadingShader, "Type", 1);
-                        cmd.DispatchCompute(ShadingShader, TransferKernel, 1, 1, 1);
+                        cmd.SetInt("RayTracingShader", "Type", 1);
+                        cmd.DispatchCompute(TransferKernel, 1, 1, 1);
                         if(DoKernelProfiling) cmd.EndSample("Transfer Kernel 2: " + i);
                         if (LocalTTSettings.UseNEE) {
                             if(DoKernelProfiling) cmd.BeginSample("Shadow Kernel: " + i);
                             #if DX11Only
-                                cmd.DispatchCompute(IntersectionShader, ShadowKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
+                                cmd.DispatchCompute(ShadowKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
                             #else
                                 #if HardwareRT
-                                    cmd.DispatchCompute(IntersectionShader, ShadowKernel, CurBounceInfoBuffer, 0);
+                                    cmd.DispatchCompute(ShadowKernel, CurBounceInfoBuffer, 0);
                                 #else
-                                    cmd.DispatchCompute(IntersectionShader, ShadowKernel, 32, 32, 1);
+                                    cmd.DispatchCompute(ShadowKernel, 32, 32, 1);
                                 #endif
                             #endif
                             if(DoKernelProfiling) cmd.EndSample("Shadow Kernel: " + i);
@@ -1195,9 +1193,9 @@ namespace TrueTrace {
                         if (LocalTTSettings.UseNEE && Assets.Terrains.Count != 0) {
                             if(DoKernelProfiling) cmd.BeginSample("Heightmap Shadow Kernel: " + i);
                             #if DX11Only
-                                cmd.DispatchCompute(IntersectionShader, HeightmapShadowKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
+                                cmd.DispatchCompute(HeightmapShadowKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
                             #else
-                                cmd.DispatchCompute(IntersectionShader, HeightmapShadowKernel, CurBounceInfoBuffer, 0);
+                                cmd.DispatchCompute(HeightmapShadowKernel, CurBounceInfoBuffer, 0);
                             #endif
                             if(DoKernelProfiling) cmd.EndSample("Heightmap Shadow Kernel: " + i);
                         }
@@ -1210,20 +1208,20 @@ namespace TrueTrace {
             if (LocalTTSettings.UseReSTIRGI) {
                 SetInt("CurBounce", 0, cmd);
                 if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Temporal Kernel");
-                cmd.DispatchCompute(ReSTIRGI, ReSTIRGIKernel, Mathf.CeilToInt(SourceWidth / 8.0f), Mathf.CeilToInt(SourceHeight / 8.0f), 1);
+                cmd.DispatchCompute(ReSTIRGIKernel, Mathf.CeilToInt(SourceWidth / 8.0f), Mathf.CeilToInt(SourceHeight / 8.0f), 1);
                 if(DoKernelProfiling) cmd.EndSample("ReSTIRGI Temporal Kernel");
             bool FlipFrame = (FramesSinceStart2 % 2 == 0);
 
                 if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Extra Spatial Kernel");
                 SetInt("CurPass", 0, cmd);
 
-                cmd.DispatchCompute(ReSTIRGI, ReSTIRGISpatialKernel, Mathf.CeilToInt(SourceWidth / 8.0f), Mathf.CeilToInt(SourceHeight / 8.0f), 1);
+                cmd.DispatchCompute(ReSTIRGISpatialKernel, Mathf.CeilToInt(SourceWidth / 8.0f), Mathf.CeilToInt(SourceHeight / 8.0f), 1);
                 if(DoKernelProfiling) cmd.EndSample("ReSTIRGI Extra Spatial Kernel");
 
                 if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Extra Spatial Kernel 1");
                 SetInt("frames_accumulated", _currentSample * 2, cmd);
                 SetInt("CurPass", 1, cmd);
-                cmd.DispatchCompute(ReSTIRGI, ReSTIRGISpatialKernel+1, Mathf.CeilToInt(SourceWidth / 8.0f), Mathf.CeilToInt(SourceHeight / 8.0f), 1);
+                cmd.DispatchCompute(ReSTIRGISpatialKernel+"2", Mathf.CeilToInt(SourceWidth / 8.0f), Mathf.CeilToInt(SourceHeight / 8.0f), 1);
                 if(DoKernelProfiling) cmd.EndSample("ReSTIRGI Extra Spatial Kernel 1");
 
                 cmd.Blit(GradientsA, GradientsB);
@@ -1232,7 +1230,7 @@ namespace TrueTrace {
             if (!(!LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1) && !(LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1))
             {
                 if(DoKernelProfiling) cmd.BeginSample("Finalize Kernel");
-                cmd.DispatchCompute(ShadingShader, FinalizeKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+                cmd.DispatchCompute(FinalizeKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 CurrentSample = 1.0f / (FramesSinceStart + 1.0f);
                 SampleCount++;
 
@@ -1320,18 +1318,18 @@ namespace TrueTrace {
                 if((LocalTTSettings.DenoiserMethod == 2 || LocalTTSettings.DenoiserMethod == 3) && SampleCount > LocalTTSettings.OIDNFrameCount) {
                     if(DoChainedImages) {
                         cmd.SetComputeBufferParam(ShadingShader, TTtoOIDNKernelPanorama, "OutputBuffer", ColorBuffer);
-                        ShadingShader.SetTexture(TTtoOIDNKernelPanorama, "Result", _FinalTex);
+                        cmd.SetTexture(TTtoOIDNKernelPanorama, "Result", _FinalTex);
                         cmd.DispatchCompute(ShadingShader, TTtoOIDNKernelPanorama, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                     } else {
                         cmd.SetComputeBufferParam(ShadingShader, TTtoOIDNKernel, "OutputBuffer", ColorBuffer);
-                        ShadingShader.SetTexture(TTtoOIDNKernel, "Result", _FinalTex);
+                        cmd.SetTexture(TTtoOIDNKernel, "Result", _FinalTex);
                         cmd.DispatchCompute(ShadingShader, TTtoOIDNKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                     }
 
                     OIDNDenoiser.Render(cmd, ColorBuffer, OutputBuffer, AlbedoBuffer, NormalBuffer);
 
                     cmd.SetComputeBufferParam(ShadingShader, OIDNtoTTKernel, "OutputBuffer", OutputBuffer);
-                    ShadingShader.SetTexture(OIDNtoTTKernel, "Result", _FinalTex);
+                    cmd.SetTexture(OIDNtoTTKernel, "Result", _FinalTex);
                     if(SampleCount > LocalTTSettings.OIDNFrameCount+1 || LocalTTSettings.OIDNFrameCount == 0)
                     cmd.DispatchCompute(ShadingShader, OIDNtoTTKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);            
                 }

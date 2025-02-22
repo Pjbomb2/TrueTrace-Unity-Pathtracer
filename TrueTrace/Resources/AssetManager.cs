@@ -78,41 +78,41 @@ namespace TrueTrace {
             private ComputeBuffer SubMeshOffsetsBuffer;
         #endif
 
-        public void SetMeshTraceBuffers(ComputeShader ThisShader, int Kernel) {
+        public void SetMeshTraceBuffers(string Shader, CommandBuffer cmd) {
             #if !HardwareRT
-                ThisShader.SetComputeBuffer(Kernel, "TLASBVH8Indices", TLASCWBVHIndexes);
+                cmd.SetBuffer(Shader, "TLASBVH8Indices", TLASCWBVHIndexes);
             #endif
-            ThisShader.SetComputeBuffer(Kernel, "AggTrisA", AggTriBufferA);
-            ThisShader.SetComputeBuffer(Kernel, "AggTrisB", AggTriBufferB);
-            ThisShader.SetComputeBuffer(Kernel, "cwbvh_nodes", BVH8AggregatedBuffer);
-            ThisShader.SetComputeBuffer(Kernel, "_MeshData", (RayMaster.LocalTTSettings.DoTLASUpdates && (RayMaster.FramesSinceStart2 % 2 == 0)) ? MeshDataBufferA : MeshDataBufferB);
-            ThisShader.SetComputeBuffer(Kernel, "_MeshDataPrev", (RayMaster.LocalTTSettings.DoTLASUpdates && (RayMaster.FramesSinceStart2 % 2 == 1)) ? MeshDataBufferA : MeshDataBufferB);
-            ThisShader.SetComputeBuffer(Kernel, "_Materials", MaterialBuffer);
-            ThisShader.SetTexture(Kernel, "_AlphaAtlas", AlphaAtlas);
-            ThisShader.SetTexture(Kernel, "_IESAtlas", IESAtlas);
-            ThisShader.SetTexture(Kernel, "_TextureAtlas", AlbedoAtlas);
+            cmd.SetBuffer(Shader, "AggTrisA", AggTriBufferA);
+            cmd.SetBuffer(Shader, "AggTrisB", AggTriBufferB);
+            cmd.SetBuffer(Shader, "cwbvh_nodes", BVH8AggregatedBuffer);
+            cmd.SetBuffer(Shader, "_MeshData", (RayMaster.LocalTTSettings.DoTLASUpdates && (RayMaster.FramesSinceStart2 % 2 == 0)) ? MeshDataBufferA : MeshDataBufferB);
+            cmd.SetBuffer(Shader, "_MeshDataPrev", (RayMaster.LocalTTSettings.DoTLASUpdates && (RayMaster.FramesSinceStart2 % 2 == 1)) ? MeshDataBufferA : MeshDataBufferB);
+            cmd.SetBuffer(Shader, "_Materials", MaterialBuffer);
+            cmd.SetTexture(Shader, "_AlphaAtlas", AlphaAtlas.GetNativeTexturePtr());
+            cmd.SetTexture(Shader, "_IESAtlas", IESAtlas.GetNativeTexturePtr());
+            cmd.SetTexture(Shader, "_TextureAtlas", AlbedoAtlas.GetNativeTexturePtr());
             //BINDLESS-TEST Assign the albedo array here
             #if HardwareRT
                 ThisShader.SetRayTracingAccelerationStructure(Kernel, "myAccelerationStructure", AccelStruct);
-                ThisShader.SetBuffer(Kernel, "MeshOffsets", MeshIndexOffsets);
-                ThisShader.SetBuffer(Kernel, "SubMeshOffsets", SubMeshOffsetsBuffer);
+                cmd.SetBuffer(Shader, "MeshOffsets", MeshIndexOffsets);
+                cmd.SetBuffer(Shader, "SubMeshOffsets", SubMeshOffsetsBuffer);
             #endif
         }
 
-        public void SetHeightmapTraceBuffers(ComputeShader ThisShader, int Kernel) {
-            ThisShader.SetComputeBuffer(Kernel, "Terrains", TerrainBuffer);
-            ThisShader.SetComputeBuffer(Kernel, "_Materials", MaterialBuffer);
-            ThisShader.SetTexture(Kernel, "Heightmap", HeightmapAtlas);
-            ThisShader.SetTexture(Kernel, "TerrainAlphaMap", AlphaMapAtlas);
+        public void SetHeightmapTraceBuffers(string Shader, CommandBuffer cmd) {
+            cmd.SetBuffer(Shader, "Terrains", TerrainBuffer);
+            cmd.SetBuffer(Shader, "_Materials", MaterialBuffer);
+            cmd.SetTexture(Shader, "Heightmap", HeightmapAtlas.GetNativeTexturePtr());
+            cmd.SetTexture(Shader, "TerrainAlphaMap", AlphaMapAtlas.GetNativeTexturePtr());
         }
 
-        public void SetLightData(ComputeShader ThisShader, int Kernel) {
-            ThisShader.SetComputeBuffer(Kernel, "_UnityLights", UnityLightBuffer);
-            ThisShader.SetComputeBuffer(Kernel, "LightTriangles", LightTriBuffer);
-            ThisShader.SetComputeBuffer(Kernel, "_LightMeshes", LightMeshBuffer);
-            ThisShader.SetComputeBuffer(Kernel, "SGTree", (RayMaster.LocalTTSettings.DoTLASUpdates && (RayMaster.FramesSinceStart2 % 2 == 0)) ? LightTreeBufferA : LightTreeBufferB);
-            ThisShader.SetComputeBuffer(Kernel, "SGTreePrev", (RayMaster.LocalTTSettings.DoTLASUpdates && (RayMaster.FramesSinceStart2 % 2 == 1)) ? LightTreeBufferA : LightTreeBufferB);
-            ThisShader.SetTexture(Kernel, "Heightmap", HeightmapAtlas);
+        public void SetLightData(string Shader, CommandBuffer cmd) {
+            cmd.SetBuffer(Shader, "_UnityLights", UnityLightBuffer);
+            cmd.SetBuffer(Shader, "LightTriangles", LightTriBuffer);
+            cmd.SetBuffer(Shader, "_LightMeshes", LightMeshBuffer);
+            cmd.SetBuffer(Shader, "SGTree", (RayMaster.LocalTTSettings.DoTLASUpdates && (RayMaster.FramesSinceStart2 % 2 == 0)) ? LightTreeBufferA : LightTreeBufferB);
+            cmd.SetBuffer(Shader, "SGTreePrev", (RayMaster.LocalTTSettings.DoTLASUpdates && (RayMaster.FramesSinceStart2 % 2 == 1)) ? LightTreeBufferA : LightTreeBufferB);
+            cmd.SetTexture(Shader, "Heightmap", HeightmapAtlas.GetNativeTexturePtr());
         }
 
         private ComputeShader MeshFunctions;

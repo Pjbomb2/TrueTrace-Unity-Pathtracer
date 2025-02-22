@@ -47,10 +47,10 @@ namespace TrueTrace {
             public float constant_term;
         }
 
-        public void AssignTextures(ComputeShader ThisShader, int Kernel) {
-            ThisShader.SetTexture(Kernel, "ScatteringTex", MultiScatterTex);
-            ThisShader.SetTexture(Kernel, "TransmittanceTex", _TransmittanceLUT);
-            ThisShader.SetTexture(Kernel, "IrradianceTex", IrradianceTex);
+        public void AssignTextures(string Shader, CommandBuffer cmd) {
+            cmd.SetTexture(Shader, "ScatteringTex", MultiScatterTex);
+            cmd.SetTexture(Shader, "TransmittanceTex", _TransmittanceLUT);
+            cmd.SetTexture(Shader, "IrradianceTex", IrradianceTex);
         }
 
         public void Dispose() {

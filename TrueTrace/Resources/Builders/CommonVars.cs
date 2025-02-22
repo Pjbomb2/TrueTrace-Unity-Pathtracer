@@ -871,7 +871,8 @@ public class ShaderStuff
     public static extern void SetInt(string shader_name, string param_name, int val);
     [System.Runtime.InteropServices.DllImport("GfxPluginDX12ShaderStuffTrueTrace")]
     public static extern void SetFloat(string shader_name, string param_name, float val);
-
+    [System.Runtime.InteropServices.DllImport("GfxPluginDX12ShaderStuffTrueTrace")]
+    public static extern void KernelDispatchIndirect(string kernel_name, System.IntPtr arg_buf,int arg_off);
 
     private delegate void RenderEventDelegate(int eventID);
     private static RenderEventDelegate RenderThreadHandle = new RenderEventDelegate(RunOnRenderThread);
@@ -905,6 +906,7 @@ public static class CommandBufferExts
         SetBool,
         SetInt,
         SetFloat,
+        DispatchIndirect
     }
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     public struct DispatchData
@@ -962,6 +964,13 @@ public static class CommandBufferExts
         public float val;
     }
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    public struct DispatchIndirectData
+    {
+        public string kernel_name;
+        public System.IntPtr arg_buf;
+        public int arg_off;
+    }
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     public struct Data
     {
         public TYPES type;
@@ -972,6 +981,7 @@ public static class CommandBufferExts
         public SetBoolData setBoolData;
         public SetIntData setIntData;
         public SetFloatData setFloatData;
+        public DispatchIndirectData indirectData;
     }
     private delegate void RenderEventDelegate(int eventID, System.IntPtr data);
     private static RenderEventDelegate EventHandlerDelegate = new RenderEventDelegate(EventHandler);
@@ -995,6 +1005,8 @@ public static class CommandBufferExts
                 ShaderStuff.SetInt(datastruct.setIntData.shader_name, datastruct.setIntData.param_name, datastruct.setIntData.val); break;
             case TYPES.SetFloat:
                 ShaderStuff.SetFloat(datastruct.setFloatData.shader_name, datastruct.setFloatData.param_name, datastruct.setFloatData.val); break;
+            case TYPES.DispatchIndirect:
+                ShaderStuff.KernelDispatchIndirect(datastruct.indirectData.kernel_name, datastruct.indirectData.arg_buf, datastruct.indirectData.arg_off); break;
         }
         System.Runtime.InteropServices.Marshal.FreeHGlobal(data);
     }
@@ -1016,8 +1028,28 @@ public static class CommandBufferExts
         buf.IssuePluginEventAndData(EventHandlerPtr, 0, data_ptr);
     }
 
-    public static void SetBuffer(this UnityEngine.Rendering.CommandBuffer buf, string kernel_name, string param_name, ComputeBuffer buffer) {
-        buf.SetBuffer(kernel_name, param_name, buffer.GetNativeBufferPtr(), buffer.stride, buffer.count);
+    public static void DispatchCompute(this UnityEngine.Rendering.CommandBuffer buf, string kernel_name, int x, int y, int z) {
+        buf.Dispatch(kernel_name, x, y, z);
+    }
+    public static void DispatchIndirect(this UnityEngine.Rendering.CommandBuffer buf, string kernel_name, System.IntPtr arg_buf, int off)
+    {
+        var data = new Data
+        {
+            type = TYPES.DispatchIndirect,
+            indirectData = new DispatchIndirectData
+            {
+                kernel_name = kernel_name,
+                arg_buf = arg_buf,
+                arg_off = off
+            }
+        };
+        var data_ptr = System.Runtime.InteropServices.Marshal.AllocHGlobal(System.Runtime.InteropServices.Marshal.SizeOf(data));
+        System.Runtime.InteropServices.Marshal.StructureToPtr(data, data_ptr, false);
+        buf.IssuePluginEventAndData(EventHandlerPtr, 0, data_ptr);
+    }
+
+    public static void DispatchCompute(this UnityEngine.Rendering.CommandBuffer buf, string kernel_name, ComputeBuffer compbuff, int off) {
+        buf.DispatchIndirect(kernel_name, compbuff.GetNativeBufferPtr(), off);
     }
 
 
@@ -1039,6 +1071,15 @@ public static class CommandBufferExts
         System.Runtime.InteropServices.Marshal.StructureToPtr(data, data_ptr, false);
         buf.IssuePluginEventAndData(EventHandlerPtr, 0, data_ptr);
     }
+
+    public static void SetBuffer(this UnityEngine.Rendering.CommandBuffer buf, string kernel_name, string param_name, ComputeBuffer buffer) {
+        buf.SetBuffer(kernel_name, param_name, buffer.GetNativeBufferPtr(), buffer.stride, buffer.count);
+    }
+
+    public static void SetComputeBuffer(this UnityEngine.Rendering.CommandBuffer buf, string kernel_name, string param_name, ComputeBuffer buffer) {
+        buf.SetBuffer(kernel_name, param_name, buffer.GetNativeBufferPtr(), buffer.stride, buffer.count);
+    }
+
     public static void SetVector(this UnityEngine.Rendering.CommandBuffer buf, string shader_name, string param_name, Vector3 A)
     {
         var data = new Data
@@ -1073,6 +1114,15 @@ public static class CommandBufferExts
         var data_ptr = System.Runtime.InteropServices.Marshal.AllocHGlobal(System.Runtime.InteropServices.Marshal.SizeOf(data));
         System.Runtime.InteropServices.Marshal.StructureToPtr(data, data_ptr, false);
         buf.IssuePluginEventAndData(EventHandlerPtr, 0, data_ptr);
+    }
+
+    public static void SetTexture(this UnityEngine.Rendering.CommandBuffer buf, string kernel_name, string param_name, RenderTexture val)
+    {
+        buf.SetTexture(kernel_name, param_name, val.GetNativeTexturePtr());
+    }
+    public static void SetTexture(this UnityEngine.Rendering.CommandBuffer buf, string kernel_name, string param_name, Texture2D val)
+    {
+        buf.SetTexture(kernel_name, param_name, val.GetNativeTexturePtr());
     }
     public static void SetBool(this UnityEngine.Rendering.CommandBuffer buf, string shader_name, string param_name, bool val)
     {

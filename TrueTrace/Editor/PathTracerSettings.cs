@@ -213,6 +213,7 @@ namespace TrueTrace {
          List<Mesh> SourceMeshes;
          private static TTStopWatch BuildWatch = new TTStopWatch("Total Scene Build Time");
          private void OnStartAsyncCombined() {
+            Debug.Log(Application.dataPath + "/TrueTrace-Unity-Pathtracer/TrueTrace/Resources/shaderjsons/shaderjsons");
             EditorUtility.SetDirty(GameObject.Find("Scene").GetComponent<AssetManager>());
             BuildWatch.Start();
             GameObject.Find("Scene").GetComponent<AssetManager>().ClearAll();
@@ -2907,7 +2908,7 @@ Slider AperatureSlider;
             if(Application.isFocused && Input.GetMouseButton(2) && !Input.GetKey(KeyCode.LeftControl)) {
                if(Input.mousePosition.x >= 0 && Input.mousePosition.x < RayMaster.SourceWidth && Input.mousePosition.y >= 0 && Input.mousePosition.y < RayMaster.SourceHeight) {
                   if(TempTest == null) TempTest = new RayCastMaterialSelector();
-                  AFrame = TempTest.CastRay(RayTracingMaster._camera, RayMaster.SourceWidth, RayMaster.SourceHeight);
+                  // AFrame = TempTest.CastRay(RayTracingMaster._camera, RayMaster.SourceWidth, RayMaster.SourceHeight);
                }
             }
             if(RayMaster != null) {

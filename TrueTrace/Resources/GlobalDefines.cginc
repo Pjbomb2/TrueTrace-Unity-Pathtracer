@@ -1,7 +1,7 @@
 // #define HardwareRT
 // #define HDRP
 // #define DX11
-#define UseBindless
+// #define UseBindless
 #define UseSGTree
 //Dont modify above, CPU code will do automatically
 #define AdvancedAlphaMapped
@@ -25,7 +25,7 @@
 #define UseBRDFLights
 #define DoubleBufferSGTree
 // #define Fog
-#define RadCache
+// #define RadCache
 #define ExpensiveReSTIR
 // #define FakedAO
 // #define ClampRoughnessToBounce
