@@ -1874,6 +1874,20 @@ Toolbar toolbar;
          TurnTableBox.Add(TurnTableLabel);
          TurnTableBox.Add(TurnTableAbsolutePath);
 
+
+         VisualElement TimelineBox = new VisualElement();
+         TimelineBox.style.flexDirection = FlexDirection.Row;
+         Label TimelineLabel = new Label() {text = "Timeline Path: "};
+         TimelineLabel.style.color = Color.black;
+         if(System.IO.Directory.Exists(PlayerPrefs.GetString("TimelinePath"))) TimelineLabel.style.backgroundColor = Color.green;
+         else TimelineLabel.style.backgroundColor = Color.red;
+         TextField TimelineAbsolutePath = new TextField();
+         TimelineAbsolutePath.value = PlayerPrefs.GetString("TimelinePath");
+         TimelineAbsolutePath.RegisterValueChangedCallback(evt => {if(System.IO.Directory.Exists(evt.newValue)) {TimelineLabel.style.backgroundColor = Color.green;} else {TimelineLabel.style.backgroundColor = Color.red;} PlayerPrefs.SetString("TimelinePath", evt.newValue);});
+         TimelineBox.Add(TimelineLabel);
+         TimelineBox.Add(TimelineAbsolutePath);
+
+
          Button CorrectMatOptionsButton = new Button(() => FixRayObjects()) {text = "(Debug Button)Correct Mat Options"};
 
 
@@ -1913,6 +1927,7 @@ Toolbar toolbar;
          HardSettingsMenu.Add(ScreenShotBox);
          HardSettingsMenu.Add(PanoramaBox);
          HardSettingsMenu.Add(TurnTableBox);
+         HardSettingsMenu.Add(TimelineBox);
          HardSettingsMenu.Add(CorrectMatOptionsButton);
          
 
@@ -2372,6 +2387,9 @@ Slider AperatureSlider;
             if(!PlayerPrefs.HasKey("PanoramaPath")) {
                PlayerPrefs.SetString("PanoramaPath",  Application.dataPath + "/ScreenShots");
             }
+            if(!PlayerPrefs.HasKey("TimelinePath")) {
+               PlayerPrefs.SetString("TimelinePath",  Application.dataPath + "/TimelineFrames");
+            }
             if(!PlayerPrefs.HasKey("TurnTablePath")) {
                PlayerPrefs.SetString("TurnTablePath",  Application.dataPath + "/TurnTables");
             }
@@ -2386,6 +2404,10 @@ Slider AperatureSlider;
             if(!System.IO.Directory.Exists(PlayerPrefs.GetString("PanoramaPath"))) {
                AssetDatabase.CreateFolder("Assets", "ScreenShots");
                PlayerPrefs.SetString("PanoramaPath",  Application.dataPath + "/ScreenShots");
+            }
+            if(!System.IO.Directory.Exists(PlayerPrefs.GetString("TimelinePath"))) {
+               AssetDatabase.CreateFolder("Assets", "TimelineFrames");
+               PlayerPrefs.SetString("TimelinePath",  Application.dataPath + "/TimelineFrames");
             }
 
             OnFocus();
