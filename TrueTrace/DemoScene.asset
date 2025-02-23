@@ -34,7 +34,7 @@ MonoBehaviour:
   DenoiserMethod: 0
   UpscalerMethod: 2
   UseReSTIRGITemporal: 1
-  UseReSTIRGISpatial: 1
+  UseReSTIRGISpatial: 0
   UseReSTIRGI: 1
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
