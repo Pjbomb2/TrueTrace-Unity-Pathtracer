@@ -1357,24 +1357,24 @@ namespace TrueTrace {
 
         public void RenderImage(RenderTexture destination, CommandBuffer cmd)
         {
-            // _camera.renderingPath = RenderingPath.DeferredShading;
-            // if (SceneIsRunning && Assets != null && Assets.RenderQue.Count > 0)
-            // {
-            //     // ResetAllTextures();
-            //     // RunUpdate();
-            //     // if(RebuildMeshObjectBuffers(cmd)) {
-            //     //     InitRenderTexture();
-            //     //     SetShaderParameters(cmd);
-            //     //     if(LocalTTSettings.MaxSampCount > SampleCount) Render(destination, cmd);
-            //     //     else cmd.Blit(_FinalTex, destination);
-            //     // }
-            //     uFirstFrame = 0;
-            // }
-            // else
-            // {
-            //     try { int throwawayBool = AssetManager.Assets.UpdateTLAS(cmd); _meshObjectsNeedRebuilding = true;} catch (System.IndexOutOfRangeException) { }
-            // }
-            // SceneIsRunning = true;
+            _camera.renderingPath = RenderingPath.DeferredShading;
+            if (SceneIsRunning && Assets != null && Assets.RenderQue.Count > 0)
+            {
+                ResetAllTextures();
+                RunUpdate();
+                if(RebuildMeshObjectBuffers(cmd)) {
+                    InitRenderTexture();
+                    SetShaderParameters(cmd);
+                    if(LocalTTSettings.MaxSampCount > SampleCount) Render(destination, cmd);
+                    else cmd.Blit(_FinalTex, destination);
+                }
+                uFirstFrame = 0;
+            }
+            else
+            {
+                try { int throwawayBool = AssetManager.Assets.UpdateTLAS(cmd); _meshObjectsNeedRebuilding = true;} catch (System.IndexOutOfRangeException) { }
+            }
+            SceneIsRunning = true;
         }
 
     }

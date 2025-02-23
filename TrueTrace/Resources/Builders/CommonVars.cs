@@ -1082,6 +1082,12 @@ public static class CommandBufferExts
 
     public static void SetVector(this UnityEngine.Rendering.CommandBuffer buf, string shader_name, string param_name, Vector3 A)
     {
+        buf.SetVector(shader_name, param_name, A.x, A.y, A.z, 0);
+    }
+
+
+    public static void SetVector(this UnityEngine.Rendering.CommandBuffer buf, string shader_name, string param_name, float x, float y, float z, float e)
+    {
         var data = new Data
         {
             type = TYPES.SetVector,
@@ -1089,9 +1095,9 @@ public static class CommandBufferExts
             {
                 shader_name = shader_name,
                 param_name = param_name,
-                x = A.x,
-                y = A.y,
-                z = A.z,
+                x = x,
+                y = y,
+                z = z,
                 e = 0
             }
         };
