@@ -325,13 +325,14 @@ namespace TrueTrace {
             cmd.DispatchCompute(shader, DistanceCorrection + 1, Mathf.CeilToInt((ScreenWidth) / 32.0f), Mathf.CeilToInt((ScreenHeight) / 32.0f), 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("COPY A");
 
-            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Atrous LF: " + 0);
+              if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Atrous LF: " + 0);
             cmd.SetComputeIntParam(shader, "iteration", 0);
             cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_PT_NORMALS_A", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
             cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_PT_VIEW_DEPTH_A", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
             shader.SetTextureFromGlobal(Atrous_LF, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
 
 
+            cmd.SetComputeTextureParam(shader, Atrous_LF, "MetallicA", (EvenFrame ? MetallicA : MetallicB));
             cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_ASVGF_ATROUS_PING_LF_SH", ASVGF_ATROUS_PING_LF_SH);
             cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_ASVGF_ATROUS_PING_LF_COCG", ASVGF_ATROUS_PING_LF_COCG);
 
@@ -344,9 +345,47 @@ namespace TrueTrace {
             cmd.DispatchCompute(shader, Atrous_LF, Mathf.CeilToInt((ScreenWidth / 3.0f + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight / 3.0f + 15) / 16.0f), 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Atrous LF: " + 0);
 
+                cmd.SetComputeBufferParam(shader, Atrous, "GlobalColorsRead", _ColorBuffer);
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Atrous " + 0);
 
-            for (int i = 0; i < 4; i++)
-            {
+                cmd.SetComputeIntParam(shader, "spec_iteration", 0);
+                cmd.SetComputeTextureParam(shader, Atrous, "TEX_PT_NORMALS_A", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
+                cmd.SetComputeTextureParam(shader, Atrous, "TEX_PT_VIEW_DEPTH_A", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
+                shader.SetTextureFromGlobal(Atrous, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
+                cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_GRAD_HF_SPEC_PONG", ASVGF_GRAD_HF_SPEC_PONG);
+                cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_HIST_MOMENTS_HF_A", (EvenFrame ? ASVGF_HIST_MOMENTS_HF_A : ASVGF_HIST_MOMENTS_HF_B));
+                cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_HIST_COLOR_LF_SH_A", (EvenFrame ? ASVGF_HIST_COLOR_LF_SH_A : ASVGF_HIST_COLOR_LF_SH_B));
+                cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_HIST_COLOR_LF_COCG_A", (EvenFrame ? ASVGF_HIST_COLOR_LF_COCG_A : ASVGF_HIST_COLOR_LF_COCG_B));
+
+
+                cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_ATROUS_PING_HF", (0 == 1) ? ASVGF_HIST_COLOR_HF : ((0 % 2 == 0) ? ASVGF_ATROUS_PING_HF : ASVGF_ATROUS_PONG_HF));
+                cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_ATROUS_PING_SPEC", ((0 % 2 == 0) ? ASVGF_ATROUS_PING_SPEC : ASVGF_ATROUS_PONG_SPEC));
+                cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_ATROUS_PING_MOMENTS", ((0 % 2 == 0) ? ASVGF_ATROUS_PING_MOMENTS : ASVGF_ATROUS_PONG_MOMENTS));
+
+
+                cmd.SetComputeTextureParam(shader, Atrous, "IMG_ASVGF_ATROUS_PING_HF", (0 == 0) ? ASVGF_HIST_COLOR_HF : ((0 % 2 == 1) ? ASVGF_ATROUS_PING_HF : ASVGF_ATROUS_PONG_HF));
+                cmd.SetComputeTextureParam(shader, Atrous, "IMG_ASVGF_ATROUS_PING_SPEC", ((0 % 2 == 1) ? ASVGF_ATROUS_PING_SPEC : ASVGF_ATROUS_PONG_SPEC));
+                cmd.SetComputeTextureParam(shader, Atrous, "IMG_ASVGF_ATROUS_PING_MOMENTS", ((0 % 2 == 1) ? ASVGF_ATROUS_PING_MOMENTS : ASVGF_ATROUS_PONG_MOMENTS));
+
+
+                cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_ATROUS_PING_LF_SH", ASVGF_ATROUS_PONG_LF_SH);
+                cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_ATROUS_PING_LF_COCG", ASVGF_ATROUS_PONG_LF_COCG);
+                cmd.SetComputeTextureParam(shader, Atrous, "IMG_ASVGF_COLOR", Output);
+                cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_GRAD_LF_PONG", ASVGF_GRAD_LF_PONG);
+                cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_GRAD_HF_SPEC_PONG", ASVGF_GRAD_HF_SPEC_PONG);
+                cmd.SetComputeTextureParam(shader, Atrous, "MetallicA", (EvenFrame ? MetallicA : MetallicB));
+                cmd.SetComputeTextureParam(shader, Atrous, "MetallicB", (!EvenFrame ? MetallicA : MetallicB));
+                shader.SetTextureFromGlobal(Atrous, "DiffuseGBuffer", "_CameraGBufferTexture0");
+                shader.SetTextureFromGlobal(Atrous, "SpecularGBuffer", "_CameraGBufferTexture1");
+                shader.SetTextureFromGlobal(Atrous, "NormalTex", "_CameraGBufferTexture2");
+
+                cmd.SetComputeTextureParam(shader, Atrous, "AlbedoColorB", (EvenFrame ? AlbedoColorA : AlbedoColorB));
+                shader.SetTexture(Atrous, "ScreenSpaceInfo", ScreenSpaceInfo);
+                cmd.DispatchCompute(shader, Atrous, Mathf.CeilToInt((ScreenWidth + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight + 15) / 16.0f), 1);
+                if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Atrous " + 0);
+
+            int MaxIterations = 4;
+            for(int i = 0; i < 6; i++) {
                 var e = i;
                 if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Atrous LF " + (e + 1));
                 cmd.SetComputeIntParam(shader, "iteration", e + 1);
@@ -365,9 +404,15 @@ namespace TrueTrace {
                 cmd.DispatchCompute(shader, Atrous_LF, Mathf.CeilToInt((ScreenWidth / 3.0f + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight / 3.0f + 15) / 16.0f), 1);
 
                 if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Atrous LF " + (e + 1));
-                if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Atrous " + e);
+            }
 
-                cmd.SetComputeIntParam(shader, "spec_iteration", e);
+            for (int i = 0; i < MaxIterations; i++)
+            {
+                var e = i;
+
+                if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Atrous " + (e + 1));
+
+                cmd.SetComputeIntParam(shader, "spec_iteration", (e + 1));
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_PT_NORMALS_A", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_PT_VIEW_DEPTH_A", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
                 shader.SetTextureFromGlobal(Atrous, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
@@ -376,22 +421,24 @@ namespace TrueTrace {
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_HIST_COLOR_LF_SH_A", (EvenFrame ? ASVGF_HIST_COLOR_LF_SH_A : ASVGF_HIST_COLOR_LF_SH_B));
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_HIST_COLOR_LF_COCG_A", (EvenFrame ? ASVGF_HIST_COLOR_LF_COCG_A : ASVGF_HIST_COLOR_LF_COCG_B));
 
-                cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_ATROUS_PING_HF", (e == 1) ? ASVGF_HIST_COLOR_HF : ((e % 2 == 0) ? ASVGF_ATROUS_PING_HF : ASVGF_ATROUS_PONG_HF));
-                cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_ATROUS_PING_SPEC", ((e % 2 == 0) ? ASVGF_ATROUS_PING_SPEC : ASVGF_ATROUS_PONG_SPEC));
-                cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_ATROUS_PING_MOMENTS", ((e % 2 == 0) ? ASVGF_ATROUS_PING_MOMENTS : ASVGF_ATROUS_PONG_MOMENTS));
+
+                cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_ATROUS_PING_HF", ((e + 1) == 1) ? ASVGF_HIST_COLOR_HF : (((e + 1) % 2 == 0) ? ASVGF_ATROUS_PING_HF : ASVGF_ATROUS_PONG_HF));
+                cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_ATROUS_PING_SPEC", (((e + 1) % 2 == 0) ? ASVGF_ATROUS_PING_SPEC : ASVGF_ATROUS_PONG_SPEC));
+                cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_ATROUS_PING_MOMENTS", (((e + 1) % 2 == 0) ? ASVGF_ATROUS_PING_MOMENTS : ASVGF_ATROUS_PONG_MOMENTS));
 
 
-                cmd.SetComputeTextureParam(shader, Atrous, "IMG_ASVGF_ATROUS_PING_HF", (e == 0) ? ASVGF_HIST_COLOR_HF : ((e % 2 == 1) ? ASVGF_ATROUS_PING_HF : ASVGF_ATROUS_PONG_HF));
-                cmd.SetComputeTextureParam(shader, Atrous, "IMG_ASVGF_ATROUS_PING_SPEC", ((e % 2 == 1) ? ASVGF_ATROUS_PING_SPEC : ASVGF_ATROUS_PONG_SPEC));
-                cmd.SetComputeTextureParam(shader, Atrous, "IMG_ASVGF_ATROUS_PING_MOMENTS", ((e % 2 == 1) ? ASVGF_ATROUS_PING_MOMENTS : ASVGF_ATROUS_PONG_MOMENTS));
+                cmd.SetComputeTextureParam(shader, Atrous, "IMG_ASVGF_ATROUS_PING_HF", ((e + 1) == 0) ? ASVGF_HIST_COLOR_HF : (((e + 1) % 2 == 1) ? ASVGF_ATROUS_PING_HF : ASVGF_ATROUS_PONG_HF));
+                cmd.SetComputeTextureParam(shader, Atrous, "IMG_ASVGF_ATROUS_PING_SPEC", (((e + 1) % 2 == 1) ? ASVGF_ATROUS_PING_SPEC : ASVGF_ATROUS_PONG_SPEC));
+                cmd.SetComputeTextureParam(shader, Atrous, "IMG_ASVGF_ATROUS_PING_MOMENTS", (((e + 1) % 2 == 1) ? ASVGF_ATROUS_PING_MOMENTS : ASVGF_ATROUS_PONG_MOMENTS));
+
 
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_ATROUS_PING_LF_SH", ASVGF_ATROUS_PONG_LF_SH);
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_ATROUS_PING_LF_COCG", ASVGF_ATROUS_PONG_LF_COCG);
-                cmd.SetComputeBufferParam(shader, Atrous, "GlobalColorsRead", _ColorBuffer);
                 cmd.SetComputeTextureParam(shader, Atrous, "IMG_ASVGF_COLOR", Output);
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_GRAD_LF_PONG", ASVGF_GRAD_LF_PONG);
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_GRAD_HF_SPEC_PONG", ASVGF_GRAD_HF_SPEC_PONG);
                 cmd.SetComputeTextureParam(shader, Atrous, "MetallicA", (EvenFrame ? MetallicA : MetallicB));
+                cmd.SetComputeBufferParam(shader, Atrous, "GlobalColorsRead", _ColorBuffer);
                 cmd.SetComputeTextureParam(shader, Atrous, "MetallicB", (!EvenFrame ? MetallicA : MetallicB));
                 shader.SetTextureFromGlobal(Atrous, "DiffuseGBuffer", "_CameraGBufferTexture0");
                 shader.SetTextureFromGlobal(Atrous, "SpecularGBuffer", "_CameraGBufferTexture1");
@@ -400,10 +447,8 @@ namespace TrueTrace {
                 cmd.SetComputeTextureParam(shader, Atrous, "AlbedoColorB", (EvenFrame ? AlbedoColorA : AlbedoColorB));
                 shader.SetTexture(Atrous, "ScreenSpaceInfo", ScreenSpaceInfo);
                 cmd.DispatchCompute(shader, Atrous, Mathf.CeilToInt((ScreenWidth + 15) / 16.0f), Mathf.CeilToInt((ScreenHeight + 15) / 16.0f), 1);
-                if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Atrous " + e);
-
+                if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Atrous " + (e + 1));
             }
-
 
             iter++;
 
