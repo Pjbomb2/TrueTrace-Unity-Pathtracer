@@ -1972,8 +1972,10 @@ namespace TrueTrace {
             // if((2.0f * ((float)(nodes[CurrentIndex].cosTheta_oe >> 16) / 32767.0f) - 1.0f) == 0) return;
             // Set[Depth].Add(CurrentIndex);
 #if !DontUseSGTree
+            if(CurrentIndex >= SGTree.Length) return;
             if(SGTree[CurrentIndex].left < 0) {
 #else
+            if(CurrentIndex >= LBVH.nodes.Length) return;
             if(LBVH.nodes[CurrentIndex].left < 0) {
 #endif
                 MyMeshDataCompacted TempDat =  MyMeshesCompacted[LightMeshes[-(SGTree[CurrentIndex].left+1)].LockedMeshIndex];

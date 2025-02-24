@@ -1,7 +1,7 @@
 // #define HardwareRT
 // #define HDRP
 // #define DX11
-// #define UseBindless
+#define UseBindless
 #define UseSGTree
 //Dont modify above, CPU code will do automatically
 #define AdvancedAlphaMapped
