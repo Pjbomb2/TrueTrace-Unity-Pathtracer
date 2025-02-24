@@ -1512,14 +1512,22 @@ bool SampleDisney(MaterialData hitDat, inout float3 v, bool thin, out float PDF,
 
 inline bool EvaluateBsdf(const MaterialData hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, inout float PDF, inout float3 bsdf_value, uint pixel_index) {
     bool validbsdf = false;
-    bsdf_value = EvaluateDisney(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, GetTangentSpace(Normal), pixel_index);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
+    bsdf_value = max(EvaluateDisney(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, GetTangentSpace(Normal), pixel_index), 0);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
     validbsdf = PDF > 0;
     return validbsdf;
 }
 
 inline bool EvaluateBsdf2(const MaterialData hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, inout float PDF, inout float3 bsdf_value, uint pixel_index) {
     bool validbsdf = false;
-    bsdf_value = EvaluateDisney2(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, GetTangentSpace(Normal), pixel_index);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
+    bsdf_value = max(EvaluateDisney2(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, GetTangentSpace(Normal), pixel_index), 0);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
+    validbsdf = PDF > 0;
+    bsdf_value *= validbsdf;
+    return validbsdf;
+}
+
+inline bool ReconstructBsdf2(const MaterialData hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, inout float PDF, inout float3 bsdf_value, uint pixel_index) {
+    bool validbsdf = false;
+    bsdf_value = max(ReconstructDisney2(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, GetTangentSpace(Normal), validbsdf, pixel_index), 0);
     validbsdf = PDF > 0;
     return validbsdf;
 }

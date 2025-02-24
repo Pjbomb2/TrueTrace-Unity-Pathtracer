@@ -38,7 +38,7 @@ MonoBehaviour:
   UseReSTIRGI: 1
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
-  ReSTIRGITemporalMCap: 20
+  ReSTIRGITemporalMCap: 12
   ReSTIRGIUpdateRate: 0
   DoReSTIRGIConnectionValidation: 1
   Exposure: 41.7

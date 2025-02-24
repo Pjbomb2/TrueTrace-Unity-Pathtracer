@@ -221,30 +221,24 @@ Texture2D<uint2> AlbedoColorB;
 
 
 float3 CalcPos(uint4 TriData) {
-    if(TriData.w == 1) return asfloat(TriData.xyz);
+    if(TriData.w == 99993) return asfloat(TriData.xyz);
     MyMeshDataCompacted Mesh = _MeshData[TriData.x];
     TriData.y += Mesh.TriOffset;
-    float2 UV;
-    UV.x = asfloat(TriData.z);
-    UV.y = asfloat(TriData.w);
     float4x4 Inverse = inverse(Mesh.W2L);
-    return mul(Inverse, float4(AggTrisA[TriData.y].pos0 + UV.x * AggTrisA[TriData.y].posedge1 + UV.y * AggTrisA[TriData.y].posedge2,1)).xyz;
+    return mul(Inverse, float4(AggTrisA[TriData.y].pos0 + asfloat(TriData.z) * AggTrisA[TriData.y].posedge1 + asfloat(TriData.w) * AggTrisA[TriData.y].posedge2,1)).xyz;
 }
 
 
 float3 CalcPos2(uint4 TriData) {
-    if(TriData.w == 1) return asfloat(TriData.xyz);
+    if(TriData.w == 99993) return asfloat(TriData.xyz);
     MyMeshDataCompacted Mesh = _MeshData[TriData.x];
     TriData.y += Mesh.TriOffset;
-    float2 UV;
-    UV.x = (TriData.z & 0xffff) / 65535.0f;
-    UV.y = (TriData.z >> 16) / 65535.0f;
     float4x4 Inverse = inverse(Mesh.W2L);
-    return mul(Inverse, float4(AggTrisA[TriData.y].pos0 + UV.x * AggTrisA[TriData.y].posedge1 + UV.y * AggTrisA[TriData.y].posedge2,1)).xyz;
+    return mul(Inverse, float4(AggTrisA[TriData.y].pos0 + asfloat(TriData.z) * AggTrisA[TriData.y].posedge1 + asfloat(TriData.w) * AggTrisA[TriData.y].posedge2,1)).xyz;
 }
 
 int CalcMat(uint4 TriData) {
-    if(TriData.w == 1) return -1;
+    if(TriData.w == 99993) return -1;
     MyMeshDataCompacted Mesh = _MeshData[TriData.x];
     TriData.y += Mesh.TriOffset;
     return AggTrisA[TriData.y].MatDat + Mesh.MaterialOffset;
@@ -927,7 +921,7 @@ inline void filter_image(
     // Load the color of the target low-res pixel
     SH color_center_lf = load_SH(img_lf_shY, img_lf_CoCg, ipos_lowres);
     int Iter2 = STEPS[iteration - 1];
-    // const float CenterMetallic = MetallicA[ipos_hires].x;
+    const float CenterMetallic = MetallicA[ipos_hires].x;
 
     float3 geo_normal_center = i_octahedral_32(TEX_PT_NORMALS_A[ipos_hires].x);
     float depth_center = TEX_PT_VIEW_DEPTH_A[ipos_hires];
@@ -979,8 +973,8 @@ inline void filter_image(
             if ((Weight1 + Weight2) / 2048.0f > 0.01f && Iter2 >= 1 && Iter2 < 5)
                 w_lf *= w_l;
             // if(w_lf < 0.1f) continue;
-            // float2 MetRough = MetallicA[p_hires];
-            // w_lf *= 1.0f - clamp(abs(MetRough.x - CenterMetallic), 0, 1);
+            float2 MetRough = MetallicA[p_hires];
+            w_lf *= 1.0f - clamp(abs(MetRough.x - CenterMetallic), 0, 1);
             // The 4th iteration has filter footprint big enough to step over obstacles and produce noticeable light leaking.
             // Prevent that by throwing away samples that are too bright. This also helps make some shadows a bit sharper.
             if (iteration >= 3 && iteration <= 4)
@@ -1094,13 +1088,9 @@ inline void filter_image(
     float3 color_center_spec = unpackRGBE(img_spec[ipos]);
     float2 moments_center = img_moments[ipos].xy;
 
-    if (4 <= spec_iteration)
-    {
-        filtered_hf = color_center_hf;
-        filtered_spec = color_center_spec;
-        filtered_moments = moments_center;
-        return;
-    }
+    filtered_hf = color_center_hf;
+    filtered_spec = color_center_spec;
+    filtered_moments = moments_center;
 
     float depth_center = TEX_PT_VIEW_DEPTH_A[ipos].x;
     float fwidth_depth = TEX_PT_VIEW_DEPTH_A[ipos].y;
@@ -1343,14 +1333,14 @@ void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGrou
     filter_image(TEX_ASVGF_ATROUS_PING_HF, TEX_ASVGF_ATROUS_PING_SPEC, TEX_ASVGF_ATROUS_PING_MOMENTS, filtered_hf, filtered_spec, filtered_moments, ipos);
     
 
-    if(spec_iteration < 3) {
+    if(spec_iteration < 4) {
         IMG_ASVGF_ATROUS_PING_HF[ipos] = float4(filtered_hf,1);
         IMG_ASVGF_ATROUS_PING_SPEC[ipos] = packRGBE(filtered_spec);
         IMG_ASVGF_ATROUS_PING_MOMENTS[ipos] = filtered_moments;
     }
 
     // Perform compositing on the last iteration
-    if (spec_iteration == MaxIterations - 1)
+    if (spec_iteration == MaxIterations)
     {
         SH filtered_lf = interpolate_lf(TEX_ASVGF_ATROUS_PING_LF_SH, TEX_ASVGF_ATROUS_PING_LF_COCG, ipos);
 

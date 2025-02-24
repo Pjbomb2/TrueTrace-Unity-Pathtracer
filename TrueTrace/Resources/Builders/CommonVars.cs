@@ -332,6 +332,7 @@ namespace CommonVars
         public int mesh_data_bvh_offsets;
         public int LightTriCount;
         public int LightNodeOffset;
+        public uint PathFlags;
     }
 
     [System.Serializable]

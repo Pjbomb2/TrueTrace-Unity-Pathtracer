@@ -1967,6 +1967,29 @@ namespace TrueTrace {
                     if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("LightRefitter");
                 }
         }
+
+        private void Refit3(int Depth, int CurrentIndex, uint LRPath) {
+            // if((2.0f * ((float)(nodes[CurrentIndex].cosTheta_oe >> 16) / 32767.0f) - 1.0f) == 0) return;
+            // Set[Depth].Add(CurrentIndex);
+#if !DontUseSGTree
+            if(SGTree[CurrentIndex].left < 0) {
+#else
+            if(LBVH.nodes[CurrentIndex].left < 0) {
+#endif
+                MyMeshDataCompacted TempDat =  MyMeshesCompacted[LightMeshes[-(SGTree[CurrentIndex].left+1)].LockedMeshIndex];
+                TempDat.PathFlags = LRPath;
+                MyMeshesCompacted[LightMeshes[-(SGTree[CurrentIndex].left+1)].LockedMeshIndex] = TempDat;
+                return;
+            }
+#if !DontUseSGTree
+            Refit3(Depth + 1, SGTree[CurrentIndex].left, LRPath | (uint)(0 << Mathf.Min(Depth,31)));
+            Refit3(Depth + 1, SGTree[CurrentIndex].left + 1, LRPath | (uint)(1 << Mathf.Min(Depth,31)));
+#else
+            Refit3(Depth + 1, LBVH.nodes[CurrentIndex].left, LRPath | (uint)(0 << Mathf.Min(Depth,31)));
+            Refit3(Depth + 1, LBVH.nodes[CurrentIndex].left + 1, LRPath | (uint)(1 << Mathf.Min(Depth,31)));
+#endif
+        }
+
         private bool ChangedLastFrame = true;
         private RayTracingMaster RayMaster;
         public int UpdateTLAS(CommandBuffer cmd)
@@ -2194,6 +2217,7 @@ namespace TrueTrace {
                 #if !HardwareRT
                     BVH8AggregatedBuffer.SetData(TempBVHArray, 0, 0, TempBVHArray.Length);
                 #endif
+                Refit3(0,0,0);
                 CommonFunctions.CreateComputeBuffer(ref MeshDataBufferA, MyMeshesCompacted);
                 CommonFunctions.CreateComputeBuffer(ref MeshDataBufferB, MyMeshesCompacted);
                 #if HardwareRT

@@ -1693,7 +1693,7 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 #else
 	LightBVHData node = NodeBuffer[node_index];
 #endif
-
+	uint PathFlags = MeshBuffer[MeshIndex].PathFlags;
 	while(Reps < 100) {
 		Reps++;
 		[branch]if(node.left >= 0) {
@@ -1726,18 +1726,25 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
             if(sum + ci[offset] <= up) sum += ci[offset++];
 
 
-			int Index = CalcInside(NodeA, NodeB, p2, offset);
-			if(Index == -1) {
-				if(stacksize == 0) {return;}
-				float3 tempstack = stack[--stacksize];
-				node_index = tempstack.x;
-				lightPDF = tempstack.y;
-				RandNum = tempstack.z;
-				continue;
-			}
-			if(Index >= 2) {
-				Index -= 2;
-				stack[stacksize++] = float3(node.left + NodeOffset + !Index, lightPDF * (ci[!Index] / sumweights), min((up - sum) / ci[!Index], 1.0f - (1e-6)));
+			int Index;
+			if(!HasHitTLAS && Reps < 32) {
+				Index = (PathFlags >> Reps) & 0x1;
+			} else {
+
+				Index = CalcInside(NodeA, NodeB, p2, offset);
+
+				if(Index == -1) {
+					if(stacksize == 0) {return;}
+					float3 tempstack = stack[--stacksize];
+					node_index = tempstack.x;
+					lightPDF = tempstack.y;
+					RandNum = tempstack.z;
+					continue;
+				}
+				if(Index >= 2) {
+					Index -= 2;
+					stack[stacksize++] = float3(node.left + NodeOffset + !Index, lightPDF * (ci[!Index] / sumweights), min((up - sum) / ci[!Index], 1.0f - (1e-6)));
+				}
 			}
             RandNum = min((up - sum) / ci[Index], 1.0f - (1e-6));
             node_index = node.left + Index + NodeOffset;
@@ -1764,10 +1771,7 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 				node_index = NodeOffset;
 				HasHitTLAS = true;
 				node = NodeBuffer[node_index];
-				if(MeshIndex != _LightMeshes[-(node.left+1)].LockedMeshIndex) {
-					// lightPDF = 1;
-					return;
-				}
+
 			}
 		}
 	}
