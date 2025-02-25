@@ -565,7 +565,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
 
         #ifdef ExpensiveReSTIR
             float3 SampleGeomNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].x));
-            float NormDiff = max(dot(GeomNorm, SampleGeomNorm), 0);
+            float NormDiff = max(abs(dot(GeomNorm, SampleGeomNorm)), 0);
             if(NormDiff < 0.9f) continue;
             float ReservoirSampleOcclusion = ScreenSpaceInfoRead[CellTapCoord].z;
             float ShadowGuidanceWeight = !plane_distance_disocclusion_check(PrimaryHitPosition, LoadSurfaceInfo(CellTapCoord), GeomNorm);// abs(ReservoirCenterOcclusion - ReservoirSampleOcclusion) / max(ReservoirCenterOcclusion, ReservoirSampleOcclusion) < 0.1f;
@@ -587,7 +587,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
 
         #ifdef ExpensiveReSTIR
             float3 SampleGeomNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].x));
-            float NormDiff = max(dot(GeomNorm, SampleGeomNorm), 0);
+            float NormDiff = max(abs(dot(GeomNorm, SampleGeomNorm)), 0);
             float ShadowGuidanceWeight = !plane_distance_disocclusion_check(PrimaryHitPosition, LoadSurfaceInfo(CellTapCoord), GeomNorm);// abs(ReservoirCenterOcclusion - ReservoirSampleOcclusion) / max(ReservoirCenterOcclusion, ReservoirSampleOcclusion) < 0.1f;
         #else
             float3 SampleSurfNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].y));
@@ -793,7 +793,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
 
         #ifdef ExpensiveReSTIR
             float3 SampleGeomNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].x));
-            float NormDiff = max(dot(GeomNorm, SampleGeomNorm), 0);
+            float NormDiff = max(abs(dot(GeomNorm, SampleGeomNorm)), 0);
             if(NormDiff < 0.9f) continue;
             float ReservoirSampleOcclusion = ScreenSpaceInfoRead[CellTapCoord].z;
             float ShadowGuidanceWeight = !plane_distance_disocclusion_check(PrimaryHitPosition, LoadSurfaceInfo(CellTapCoord), GeomNorm);// abs(ReservoirCenterOcclusion - ReservoirSampleOcclusion) / max(ReservoirCenterOcclusion, ReservoirSampleOcclusion) < 0.1f;
@@ -817,7 +817,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
 
         #ifdef ExpensiveReSTIR
             float3 SampleGeomNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].x));
-            float NormDiff = max(dot(GeomNorm, SampleGeomNorm), 0);
+            float NormDiff = max(abs(dot(GeomNorm, SampleGeomNorm)), 0);
             float ShadowGuidanceWeight = !plane_distance_disocclusion_check(PrimaryHitPosition, LoadSurfaceInfo(CellTapCoord), GeomNorm);// abs(ReservoirCenterOcclusion - ReservoirSampleOcclusion) / max(ReservoirCenterOcclusion, ReservoirSampleOcclusion) < 0.1f;
         #else
             float3 SampleSurfNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].y));

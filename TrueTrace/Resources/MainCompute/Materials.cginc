@@ -1156,7 +1156,7 @@ float3 EvaluateDisney(MaterialData hitDat, float3 V, float3 L, bool thin,
         float3 diffuse = EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin, pixel_index);
         float3 sheen = EvaluateSheen(hitDat, wo, wm, wi);
 
-        reflectance += (diffuse + sheen / PI);// * P[2];
+        reflectance += (diffuse + sheen / PI)/ ((CosTheta(wi) >= 0) ? (1.0f - hitDat.diffTrans) : 1);// * P[2];
 
         forwardPdf += forwardDiffusePdfW * P[2];
     }
@@ -1239,7 +1239,7 @@ float3 EvaluateDisney2(MaterialData hitDat, float3 V, float3 L, bool thin,
         float3 diffuse = EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin, pixel_index);
         float3 sheen = EvaluateSheen(hitDat, wo, wm, wi);
 
-        reflectance += (diffuse + sheen / PI) * P[2];
+        reflectance += (diffuse + sheen / PI) * P[2]/ ((CosTheta(wi) >= 0) ? (1.0f - hitDat.diffTrans) : 1);
 
         forwardPdf += forwardDiffusePdfW * P[2];
     }
@@ -1443,7 +1443,7 @@ float3 ReconstructDisney2(MaterialData hitDat, float3 wo, float3 wi, bool thin,
                 reflectance += ReconstructDisneyClearcoat(hitDat.clearcoat, hitDat.clearcoatGloss, wo, wm, wi, forwardPdf, Success);
             }
             if(P.z > 0) { 
-                reflectance += (1.0f - P.w) * ((EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin, pixel_index) + EvaluateSheen(hitDat, wo, wm, wi) / PI));
+                reflectance += (1.0f - P.w) * ((EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin, pixel_index) + EvaluateSheen(hitDat, wo, wm, wi) / PI)) / ((CosTheta(wi) > 0) ? ((1.0f - hitDat.diffTrans) / P.z) : 1);
                 forwardPdf += AbsCosTheta(wi);
                 Success = forwardPdf > 0;
             }
@@ -1551,5 +1551,6 @@ inline bool ReconstructBsdf2(const MaterialData hitDat, float3 DirectionIn, floa
     bool validbsdf = false;
     PDF = 0;
     bsdf_value = max(ReconstructDisney2(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, TangentSpaceNorm, validbsdf, pixel_index), 0);
+    validbsdf = PDF > 0;
     return validbsdf;
 }

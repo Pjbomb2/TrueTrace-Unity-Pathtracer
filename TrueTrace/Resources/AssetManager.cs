@@ -1974,13 +1974,19 @@ namespace TrueTrace {
 #if !DontUseSGTree
             if(CurrentIndex >= SGTree.Length) return;
             if(SGTree[CurrentIndex].left < 0) {
+                MyMeshDataCompacted TempDat =  MyMeshesCompacted[LightMeshes[-(SGTree[CurrentIndex].left+1)].LockedMeshIndex];
 #else
             if(CurrentIndex >= LBVH.nodes.Length) return;
             if(LBVH.nodes[CurrentIndex].left < 0) {
+                MyMeshDataCompacted TempDat =  MyMeshesCompacted[LightMeshes[-(LBVH.nodes[CurrentIndex].left+1)].LockedMeshIndex];
+
 #endif
-                MyMeshDataCompacted TempDat =  MyMeshesCompacted[LightMeshes[-(SGTree[CurrentIndex].left+1)].LockedMeshIndex];
                 TempDat.PathFlags = LRPath;
+#if !DontUseSGTree
                 MyMeshesCompacted[LightMeshes[-(SGTree[CurrentIndex].left+1)].LockedMeshIndex] = TempDat;
+#else
+                MyMeshesCompacted[LightMeshes[-(LBVH.nodes[CurrentIndex].left+1)].LockedMeshIndex] = TempDat;
+#endif
                 return;
             }
 #if !DontUseSGTree

@@ -2890,13 +2890,13 @@
       </TexturePairs>
       <TexturePairs>
         <Purpose>4</Purpose>
-        <ReadIndex>0</ReadIndex>
-        <TextureName>_MetallicGlossMap</TextureName>
+        <ReadIndex>2</ReadIndex>
+        <TextureName>_PackedMap</TextureName>
       </TexturePairs>
       <TexturePairs>
         <Purpose>5</Purpose>
         <ReadIndex>1</ReadIndex>
-        <TextureName>_MetallicGlossMap</TextureName>
+        <TextureName>_PackedMap</TextureName>
       </TexturePairs>
       <TexturePairs>
         <Purpose>1</Purpose>
@@ -2918,7 +2918,7 @@
     <RoughnessRange>_Glossiness</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
-    <UsesSmoothness>true</UsesSmoothness>
+    <UsesSmoothness>false</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
     <MetallicRemapMin>null</MetallicRemapMin>
     <MetallicRemapMax>null</MetallicRemapMax>
