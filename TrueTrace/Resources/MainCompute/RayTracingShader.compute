@@ -145,7 +145,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     bool GotFlipped = dot(ray.direction, USGNorm) > 0.0f;
     if (GotFlipped) {USGNorm *= -1.0f; Geomnorm *= -1.0f;}//Backfacing surface
 
-    Geomnorm = i_octahedral_32(octahedral_32(Geomnorm));
+    // Geomnorm = i_octahedral_32(octahedral_32(Geomnorm));
     norm = Geomnorm;
 
 #ifdef UseTextureLOD

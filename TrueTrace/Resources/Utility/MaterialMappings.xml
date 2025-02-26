@@ -48,6 +48,11 @@
         <ReadIndex>-3</ReadIndex>
         <TextureName>_DetailNormalMap</TextureName>
       </TexturePairs>
+      <TexturePairs>
+        <Purpose>11</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_ParallaxMap</TextureName>
+      </TexturePairs>
     </AvailableTextures>
     <MetallicRange>_Metallic</MetallicRange>
     <RoughnessRange>_Glossiness</RoughnessRange>
@@ -2890,13 +2895,13 @@
       </TexturePairs>
       <TexturePairs>
         <Purpose>4</Purpose>
-        <ReadIndex>2</ReadIndex>
-        <TextureName>_PackedMap</TextureName>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_MetallicGlossMap</TextureName>
       </TexturePairs>
       <TexturePairs>
         <Purpose>5</Purpose>
         <ReadIndex>1</ReadIndex>
-        <TextureName>_PackedMap</TextureName>
+        <TextureName>_MetallicGlossMap</TextureName>
       </TexturePairs>
       <TexturePairs>
         <Purpose>1</Purpose>
@@ -2918,7 +2923,7 @@
     <RoughnessRange>_Glossiness</RoughnessRange>
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
-    <UsesSmoothness>false</UsesSmoothness>
+    <UsesSmoothness>true</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
     <MetallicRemapMin>null</MetallicRemapMin>
     <MetallicRemapMax>null</MetallicRemapMax>
@@ -3894,7 +3899,7 @@
         <Fallback>
           <Purpose>3</Purpose>
           <ReadIndex>-4</ReadIndex>
-          <TextureName>_EmissionMask</TextureName>
+          <TextureName>_EmissionMask1</TextureName>
           <Fallback>
             <Purpose>3</Purpose>
             <ReadIndex>-4</ReadIndex>
@@ -3902,7 +3907,7 @@
             <Fallback>
               <Purpose>3</Purpose>
               <ReadIndex>-4</ReadIndex>
-              <TextureName>_EmissionMask1</TextureName>
+              <TextureName>_EmissionMask</TextureName>
             </Fallback>
           </Fallback>
         </Fallback>
@@ -3921,21 +3926,6 @@
         <Purpose>7</Purpose>
         <ReadIndex>3</ReadIndex>
         <TextureName>_MatcapMask</TextureName>
-      </TexturePairs>
-      <TexturePairs>
-        <Purpose>8</Purpose>
-        <ReadIndex>-4</ReadIndex>
-        <TextureName>_DetailTex</TextureName>
-      </TexturePairs>
-      <TexturePairs>
-        <Purpose>9</Purpose>
-        <ReadIndex>0</ReadIndex>
-        <TextureName>_DetailMask</TextureName>
-      </TexturePairs>
-      <TexturePairs>
-        <Purpose>10</Purpose>
-        <ReadIndex>-3</ReadIndex>
-        <TextureName>_DetailNormalMap</TextureName>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>
@@ -8275,47 +8265,7 @@
     <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
-    <Name>Shader Graphs/Trimsheet2_Mask2</Name>
-    <AvailableTextures>
-      <TexturePairs>
-        <Purpose>0</Purpose>
-        <ReadIndex>-4</ReadIndex>
-        <TextureName>_AlbedoTransparency</TextureName>
-      </TexturePairs>
-      <TexturePairs>
-        <Purpose>2</Purpose>
-        <ReadIndex>-3</ReadIndex>
-        <TextureName>_Normal</TextureName>
-      </TexturePairs>
-      <TexturePairs>
-        <Purpose>4</Purpose>
-        <ReadIndex>2</ReadIndex>
-        <TextureName>_AoRM</TextureName>
-      </TexturePairs>
-      <TexturePairs>
-        <Purpose>5</Purpose>
-        <ReadIndex>1</ReadIndex>
-        <TextureName>_AoRM</TextureName>
-      </TexturePairs>
-      <TexturePairs>
-        <Purpose>1</Purpose>
-        <ReadIndex>3</ReadIndex>
-        <TextureName>_AlbedoTransparency</TextureName>
-      </TexturePairs>
-    </AvailableTextures>
-    <MetallicRange>null</MetallicRange>
-    <RoughnessRange>null</RoughnessRange>
-    <IsGlass>false</IsGlass>
-    <IsCutout>false</IsCutout>
-    <UsesSmoothness>false</UsesSmoothness>
-    <BaseColorValue>null</BaseColorValue>
-    <MetallicRemapMin>null</MetallicRemapMin>
-    <MetallicRemapMax>null</MetallicRemapMax>
-    <RoughnessRemapMin>null</RoughnessRemapMin>
-    <RoughnessRemapMax>null</RoughnessRemapMax>
-  </MaterialShader>
-  <MaterialShader>
-    <Name>Shader Graphs/Mask_DirtBorderMetalBorder_Trimsheet2</Name>
+    <Name>Hidden/Locked/.poiyomi/Old Versions/7.3/• Poiyomi Toon •/d3fa18400d93d0d44aca0e9ddaf938ce</Name>
     <AvailableTextures>
       <TexturePairs>
         <Purpose>0</Purpose>
@@ -8340,37 +8290,7 @@
     <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
-    <Name>Custom/SurfaceShader_VC</Name>
-    <AvailableTextures>
-      <TexturePairs>
-        <Purpose>0</Purpose>
-        <ReadIndex>-4</ReadIndex>
-        <TextureName>_MainTex</TextureName>
-      </TexturePairs>
-      <TexturePairs>
-        <Purpose>2</Purpose>
-        <ReadIndex>-3</ReadIndex>
-        <TextureName>_Normal</TextureName>
-      </TexturePairs>
-      <TexturePairs>
-        <Purpose>1</Purpose>
-        <ReadIndex>3</ReadIndex>
-        <TextureName>_MainTex</TextureName>
-      </TexturePairs>
-    </AvailableTextures>
-    <MetallicRange>null</MetallicRange>
-    <RoughnessRange>null</RoughnessRange>
-    <IsGlass>false</IsGlass>
-    <IsCutout>true</IsCutout>
-    <UsesSmoothness>false</UsesSmoothness>
-    <BaseColorValue>_Color</BaseColorValue>
-    <MetallicRemapMin>null</MetallicRemapMin>
-    <MetallicRemapMax>null</MetallicRemapMax>
-    <RoughnessRemapMin>null</RoughnessRemapMin>
-    <RoughnessRemapMax>null</RoughnessRemapMax>
-  </MaterialShader>
-  <MaterialShader>
-    <Name>Hidden/Locked/.poiyomi/Poiyomi 7.3/• Poiyomi Toon •/aa39594bbc5f3d341bbefae4d9cd039b</Name>
+    <Name>Hidden/Locked/.poiyomi/Old Versions/7.3/• Poiyomi Toon •/9a0c4e50501fae94f9c0ceac73ad3961</Name>
     <AvailableTextures>
       <TexturePairs>
         <Purpose>0</Purpose>
@@ -8395,7 +8315,7 @@
     <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
-    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/e54fdb2fdce353a4697be464d5009afd</Name>
+    <Name>Hidden/Locked/.poiyomi/Old Versions/7.3/• Poiyomi Toon •/684942b2735a2f540b81daaafa50139d</Name>
     <AvailableTextures>
       <TexturePairs>
         <Purpose>0</Purpose>
@@ -8420,7 +8340,7 @@
     <RoughnessRemapMax>null</RoughnessRemapMax>
   </MaterialShader>
   <MaterialShader>
-    <Name>Hidden/Locked/.poiyomi/Poiyomi 8.1/Poiyomi Pro/5d665ebeb9f3dbb44b072b37e1a3fa0c</Name>
+    <Name>Hidden/Locked/.poiyomi/Old Versions/7.3/• Poiyomi Toon •/3117cd4eede0d624980068b06073f796</Name>
     <AvailableTextures>
       <TexturePairs>
         <Purpose>0</Purpose>

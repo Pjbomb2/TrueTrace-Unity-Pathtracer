@@ -22,13 +22,13 @@
 // #define vMFDiffuse
 #define EONDiffuse
 // #define AdvancedBackground
-#define UseBRDFLights
+// #define UseBRDFLights
 #define DoubleBufferSGTree
 // #define Fog
 // #define RadCache
 #define ExpensiveReSTIR
 // #define FakedAO
-// #define ClampRoughnessToBounce
+#define ClampRoughnessToBounce
 // #define AutoDebugReading
 
 
