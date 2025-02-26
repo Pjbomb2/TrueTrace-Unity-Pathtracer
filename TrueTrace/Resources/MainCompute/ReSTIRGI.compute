@@ -546,7 +546,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     float3 bsdf2;
     float3 NEEbsdf2;
     float K = 0;
-    if(UseReSTIRGISpatial && Case != 3) {
+    if(UseReSTIRGISpatial && Case != 3 && !(SurfaceMat.metallic == 1 && SurfaceMat.roughness == 0)) {
         int3 CellTapCoords[6];
         [unroll]for (int i = 0; i < 6; i++) {        
             float2 RandOffsets = randomNEE(i + 12, pixel_index);
@@ -773,7 +773,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
     float3 bsdf2;
     float3 NEEbsdf2;
     float K = 0;
-    if(UseReSTIRGISpatial && Case != 3) {
+    if(UseReSTIRGISpatial && Case != 3 && !(SurfaceMat.metallic == 1 && SurfaceMat.roughness == 0)) {
 
         int3 CellTapCoords[5];
         [unroll]for (int i = 0; i < 5; i++) {        

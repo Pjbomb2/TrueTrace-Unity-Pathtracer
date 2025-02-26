@@ -1449,7 +1449,7 @@ namespace TrueTrace {
                 if (LightMeshCount == 0) { LightMeshes.Add(new LightMeshData() { }); }
 
 
-                if (!OnlyInstanceUpdated || (_Materials == null || _Materials.Length == 0)) {
+                if (!OnlyInstanceUpdated || (_Materials == null || _Materials.Length == 0) || (ChildrenUpdated && ParentCountHasChanged && OnlyInstanceUpdated)) {
                     CreateAtlas(TotalMatCount, cmd);
                     // MaterialBuffer.ReleaseSafe();
                     CommonFunctions.CreateComputeBuffer(ref MaterialBuffer, _Materials);
@@ -2416,10 +2416,10 @@ namespace TrueTrace {
                     TempMat.SecondaryAlbedoTexScaleOffset = CurrentMaterial.SecondaryAlbedoTexScaleOffset[Index];
                     TempMat.SecondaryTextureScaleOffset = CurrentMaterial.SecondaryTextureScaleOffset[Index];
                     TempMat.NormalTexScaleOffset = CurrentMaterial.NormalTexScaleOffset[Index];
-                    TempMat.RotationNormal = CurrentMaterial.RotationNormal[Index];
-                    TempMat.RotationSecondary = CurrentMaterial.RotationSecondary[Index];
-                    TempMat.RotationSecondaryDiffuse = CurrentMaterial.RotationSecondaryDiffuse[Index];
-                    TempMat.RotationSecondaryNormal = CurrentMaterial.RotationSecondaryNormal[Index];
+                    TempMat.RotationNormal = CurrentMaterial.RotationNormal[Index] * 3.14159f;
+                    TempMat.RotationSecondary = CurrentMaterial.RotationSecondary[Index] * 3.14159f;
+                    TempMat.RotationSecondaryDiffuse = CurrentMaterial.RotationSecondaryDiffuse[Index] * 3.14159f;
+                    TempMat.RotationSecondaryNormal = CurrentMaterial.RotationSecondaryNormal[Index] * 3.14159f;
                     TempMat.Rotation = CurrentMaterial.Rotation[Index] * 3.14159f;
                     TempMat.ColorBleed = CurrentMaterial.ColorBleed[Index];
                     TempMat.AlbedoBlendFactor = CurrentMaterial.AlbedoBlendFactor[Index];
