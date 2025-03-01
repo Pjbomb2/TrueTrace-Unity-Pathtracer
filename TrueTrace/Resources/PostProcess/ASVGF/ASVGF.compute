@@ -524,105 +524,105 @@ inline uint cwbvh_node_intersect(const Ray ray, int oct_inv4, float max_distance
 
 
 
-inline int Closest_Hit_Compute(Ray ray) {
-        uint2 stack[16];
-        int stack_size = 0;
-        uint2 current_group;
+// inline int Closest_Hit_Compute(Ray ray) {
+//         uint2 stack[16];
+//         int stack_size = 0;
+//         uint2 current_group;
 
-        uint oct_inv4;
-        int tlas_stack_size = -1;
-        int mesh_id = -1;
-        Ray ray2;
-        int TriOffset = 0;
-        int NodeOffset = 0;
-        int ResultantMeshID = -1;
+//         uint oct_inv4;
+//         int tlas_stack_size = -1;
+//         int mesh_id = -1;
+//         Ray ray2;
+//         int TriOffset = 0;
+//         int NodeOffset = 0;
+//         int ResultantMeshID = -1;
 
-        float MinDist = FarPlane;
-        ray2 = ray;
+//         float MinDist = FarPlane;
+//         ray2 = ray;
 
-        oct_inv4 = ray_get_octant_inv4(ray.direction);
+//         oct_inv4 = ray_get_octant_inv4(ray.direction);
 
-        current_group.x = (uint)0;
-        current_group.y = (uint)0x80000000;
-        int MatOffset = 0;
-        int Reps = 0;
-        [loop] while (Reps < MaxTraversalSamples) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
-        	uint2 triangle_group;
-            [branch]if (current_group.y & 0xff000000) {
-                uint child_index_offset = firstbithigh(current_group.y);
+//         current_group.x = (uint)0;
+//         current_group.y = (uint)0x80000000;
+//         int MatOffset = 0;
+//         int Reps = 0;
+//         [loop] while (Reps < MaxTraversalSamples) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
+//         	uint2 triangle_group;
+//             [branch]if (current_group.y & 0xff000000) {
+//                 uint child_index_offset = firstbithigh(current_group.y);
                 
-                uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
-                uint relative_index = countbits(current_group.y & ~(0xffffffff << slot_index));
-                uint child_node_index = current_group.x + relative_index;
-                const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
+//                 uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
+//                 uint relative_index = countbits(current_group.y & ~(0xffffffff << slot_index));
+//                 uint child_node_index = current_group.x + relative_index;
+//                 const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
 
-                current_group.y &= ~(1 << child_index_offset);
+//                 current_group.y &= ~(1 << child_index_offset);
 
-                if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
+//                 if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
 
-                uint hitmask = cwbvh_node_intersect(ray, oct_inv4, MinDist, TempNode);
+//                 uint hitmask = cwbvh_node_intersect(ray, oct_inv4, MinDist, TempNode);
 
- 				current_group.y = (hitmask & 0xff000000) | ((TempNode.nodes[0].w >> 24) & 0xff);
-                triangle_group.y = (hitmask & 0x00ffffff);
+//  				current_group.y = (hitmask & 0xff000000) | ((TempNode.nodes[0].w >> 24) & 0xff);
+//                 triangle_group.y = (hitmask & 0x00ffffff);
 
-	            current_group.x = (TempNode.nodes[1].x) + NodeOffset;
-                triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
-                Reps++;
-            } else {
-                triangle_group = current_group;
-                current_group = (uint2)0;
-            }
+// 	            current_group.x = (TempNode.nodes[1].x) + NodeOffset;
+//                 triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
+//                 Reps++;
+//             } else {
+//                 triangle_group = current_group;
+//                 current_group = (uint2)0;
+//             }
 
-            if(triangle_group.y != 0) {
-                [branch]if (tlas_stack_size == -1) {//Transfer from Top Level Accelleration Structure to Bottom Level Accelleration Structure
-                    uint mesh_offset = firstbithigh(triangle_group.y);
-                    triangle_group.y &= ~(1 << mesh_offset);
-                    mesh_id = TLASBVH8Indices[triangle_group.x + mesh_offset];
-                    NodeOffset = _MeshData[mesh_id].NodeOffset;
-                    TriOffset = _MeshData[mesh_id].TriOffset;
+//             if(triangle_group.y != 0) {
+//                 [branch]if (tlas_stack_size == -1) {//Transfer from Top Level Accelleration Structure to Bottom Level Accelleration Structure
+//                     uint mesh_offset = firstbithigh(triangle_group.y);
+//                     triangle_group.y &= ~(1 << mesh_offset);
+//                     mesh_id = TLASBVH8Indices[triangle_group.x + mesh_offset];
+//                     NodeOffset = _MeshData[mesh_id].NodeOffset;
+//                     TriOffset = _MeshData[mesh_id].TriOffset;
 
-                    if (triangle_group.y != 0) stack[stack_size++] = triangle_group;
+//                     if (triangle_group.y != 0) stack[stack_size++] = triangle_group;
 
-                    if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
+//                     if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
 
-                    tlas_stack_size = stack_size;
+//                     tlas_stack_size = stack_size;
 
-                    int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
+//                     int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
 
-                    MatOffset = _MeshData[mesh_id].MaterialOffset;
-                    ray.direction = (mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)).xyz;
-                    ray.origin = (mul(_MeshData[mesh_id].W2L, float4(ray.origin, 1))).xyz;
+//                     MatOffset = _MeshData[mesh_id].MaterialOffset;
+//                     ray.direction = (mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)).xyz;
+//                     ray.origin = (mul(_MeshData[mesh_id].W2L, float4(ray.origin, 1))).xyz;
 
-                    oct_inv4 = ray_get_octant_inv4(ray.direction);
+//                     oct_inv4 = ray_get_octant_inv4(ray.direction);
 
-                    current_group.x = (uint)root_index;
-                    current_group.y = (uint)0x80000000;
-                } else {
-					while (triangle_group.y != 0) {                        
-                        uint triangle_index = firstbithigh(triangle_group.y);
-                        triangle_group.y &= ~(1 << triangle_index);
-	                    triangle_intersect_dist(triangle_group.x + triangle_index, ray, MinDist, mesh_id, ResultantMeshID);
-                    }
-                }
-            }
+//                     current_group.x = (uint)root_index;
+//                     current_group.y = (uint)0x80000000;
+//                 } else {
+// 					while (triangle_group.y != 0) {                        
+//                         uint triangle_index = firstbithigh(triangle_group.y);
+//                         triangle_group.y &= ~(1 << triangle_index);
+// 	                    triangle_intersect_dist(triangle_group.x + triangle_index, ray, MinDist, mesh_id, ResultantMeshID);
+//                     }
+//                 }
+//             }
 
-            if ((current_group.y & 0xff000000) == 0) {
-                if (stack_size == 0) {//thread has finished traversing
-                    break;
-                }
+//             if ((current_group.y & 0xff000000) == 0) {
+//                 if (stack_size == 0) {//thread has finished traversing
+//                     break;
+//                 }
 
-                if (stack_size == tlas_stack_size) {
-					NodeOffset = 0;
-                    TriOffset = 0;
-                    tlas_stack_size = -1;
-                    ray = ray2;
-                    oct_inv4 = ray_get_octant_inv4(ray.direction);
-                }
-                current_group = stack[--stack_size];
-            }
-        }
-        return ResultantMeshID;
-}
+//                 if (stack_size == tlas_stack_size) {
+// 					NodeOffset = 0;
+//                     TriOffset = 0;
+//                     tlas_stack_size = -1;
+//                     ray = ray2;
+//                     oct_inv4 = ray_get_octant_inv4(ray.direction);
+//                 }
+//                 current_group = stack[--stack_size];
+//             }
+//         }
+//         return ResultantMeshID;
+// }
 
 
 

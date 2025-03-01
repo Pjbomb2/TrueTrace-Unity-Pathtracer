@@ -336,6 +336,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             }
 
             Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x3800000)) | (WaterStageFlag << 23);
+        } else if(Refracted && MaterialLobe != 3) {
+            bsdfmodifier *= sqrt(exp(-CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance)));
+
         }
 
         bsdf *= bsdfmodifier;

@@ -95,7 +95,7 @@ namespace TrueTrace {
 
 
 #if UNITY_EDITOR
-    [CustomEditor(typeof(RayTracingLights))]
+    [CustomEditor(typeof(RayTracingLights)), CanEditMultipleObjects]
     public class RayTracingLightsEditor : Editor
     {
         private VisualElement CreateVerticalBox(string Name) {
@@ -133,11 +133,12 @@ namespace TrueTrace {
         public override VisualElement CreateInspectorGUI()
         {
             var t1 = (targets);
+            int TargCount = t1.Length;
             var t =  t1[0] as RayTracingLights;
             VisualElement MainContainer = CreateVerticalBox("Main Container");
                 FloatSliderPair ShadowSoftnessSliderPair = CreatePairedFloatSlider("Shadow Softness", 0, 40, ref t.ShadowSoftness);
-                    ShadowSoftnessSliderPair.DynamicSlider.RegisterValueChangedCallback(evt => {t.ShadowSoftness = evt.newValue; ShadowSoftnessSliderPair.DynamicField.value = t.ShadowSoftness;});
-                    ShadowSoftnessSliderPair.DynamicField.RegisterValueChangedCallback(evt => {t.ShadowSoftness = evt.newValue; ShadowSoftnessSliderPair.DynamicSlider.value = t.ShadowSoftness;});
+                    ShadowSoftnessSliderPair.DynamicSlider.RegisterValueChangedCallback(evt => {for(int i = 0; i < TargCount; i++) (t1[i] as RayTracingLights).ShadowSoftness = evt.newValue; ShadowSoftnessSliderPair.DynamicField.value = t.ShadowSoftness;});
+                    ShadowSoftnessSliderPair.DynamicField.RegisterValueChangedCallback(evt => {for(int i = 0; i < TargCount; i++) (t1[i] as RayTracingLights).ShadowSoftness = evt.newValue; ShadowSoftnessSliderPair.DynamicSlider.value = t.ShadowSoftness;});
                 MainContainer.Add(ShadowSoftnessSliderPair.DynamicContainer);
 
 
@@ -145,23 +146,23 @@ namespace TrueTrace {
                 MainContainer.Add(UseKelvinToggle);
                 VisualElement KelvinContainer = CreateVerticalBox("Kelvin Container");
                     FloatSliderPair KelvinTemperatureSliderPair = CreatePairedFloatSlider("Kelvin Temperature", 1000.0f, 20000.0f, ref t.KelvinTemperature);
-                        KelvinTemperatureSliderPair.DynamicSlider.RegisterValueChangedCallback(evt => {t.KelvinTemperature = evt.newValue; KelvinTemperatureSliderPair.DynamicField.value = t.KelvinTemperature;});
-                        KelvinTemperatureSliderPair.DynamicField.RegisterValueChangedCallback(evt => {t.KelvinTemperature = evt.newValue; KelvinTemperatureSliderPair.DynamicSlider.value = t.KelvinTemperature;});
+                        KelvinTemperatureSliderPair.DynamicSlider.RegisterValueChangedCallback(evt => {for(int i = 0; i < TargCount; i++) (t1[i] as RayTracingLights).KelvinTemperature = evt.newValue; KelvinTemperatureSliderPair.DynamicField.value = t.KelvinTemperature;});
+                        KelvinTemperatureSliderPair.DynamicField.RegisterValueChangedCallback(evt => {for(int i = 0; i < TargCount; i++) (t1[i] as RayTracingLights).KelvinTemperature = evt.newValue; KelvinTemperatureSliderPair.DynamicSlider.value = t.KelvinTemperature;});
                 KelvinContainer.Add(KelvinTemperatureSliderPair.DynamicContainer);
-                UseKelvinToggle.RegisterValueChangedCallback(evt => {t.UseKelvin = evt.newValue; if(evt.newValue) MainContainer.Insert(MainContainer.IndexOf(UseKelvinToggle) + 1, KelvinContainer); else MainContainer.Remove(KelvinContainer);});
+                UseKelvinToggle.RegisterValueChangedCallback(evt => {for(int i = 0; i < TargCount; i++) (t1[i] as RayTracingLights).UseKelvin = evt.newValue; if(evt.newValue) MainContainer.Insert(MainContainer.IndexOf(UseKelvinToggle) + 1, KelvinContainer); else MainContainer.Remove(KelvinContainer);});
                 if(t.UseKelvin) MainContainer.Add(KelvinContainer);
 
                 Toggle IsMainSunToggle = new Toggle() {value = t.IsMainSun, text = "Is Sun"};
                 if(t.ThisLight.type == LightType.Directional)
                     MainContainer.Add(IsMainSunToggle);
-                IsMainSunToggle.RegisterValueChangedCallback(evt => {t.IsMainSun = evt.newValue;});
+                IsMainSunToggle.RegisterValueChangedCallback(evt => {for(int i = 0; i < TargCount; i++) (t1[i] as RayTracingLights).IsMainSun = evt.newValue;});
 
                 ObjectField IESField = new ObjectField("IES Texture");
                 IESField.objectType = typeof(Texture2D);
                 IESField.value = t.IESProfile;
                 if(t.ThisLight.type == LightType.Spot)
                     MainContainer.Add(IESField);
-                IESField.RegisterValueChangedCallback(evt => {t.IESProfile = evt.newValue as Texture2D;});
+                IESField.RegisterValueChangedCallback(evt => {for(int i = 0; i < TargCount; i++) (t1[i] as RayTracingLights).IESProfile = evt.newValue as Texture2D;});
 
 
             return MainContainer;

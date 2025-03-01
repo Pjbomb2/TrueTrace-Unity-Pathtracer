@@ -1443,7 +1443,7 @@ float3 ReconstructDisney2(MaterialData hitDat, float3 wo, float3 wi, bool thin,
                 reflectance += ReconstructDisneyClearcoat(hitDat.clearcoat, hitDat.clearcoatGloss, wo, wm, wi, forwardPdf, Success);
             }
             if(P.z > 0) { 
-                reflectance += (1.0f - P.w) * ((EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin, pixel_index) / ((CosTheta(wi) > 0) ? ((1.0f - hitDat.diffTrans) / P.z) : 1) + EvaluateSheen(hitDat, wo, wm, wi) / PI));
+                reflectance += (1.0f - P.w) * ((EvaluateDisneyDiffuse(hitDat, wo, wm, wi, thin, pixel_index) / ((CosTheta(wi) > 0) ? ((1.0f - hitDat.diffTrans)) : 1) + EvaluateSheen(hitDat, wo, wm, wi) / PI));
                 forwardPdf += AbsCosTheta(wi);
                 Success = forwardPdf > 0;
             }
