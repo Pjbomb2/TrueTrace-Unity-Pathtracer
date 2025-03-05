@@ -72,7 +72,7 @@ namespace TrueTrace {
             float mie_scale_height = 1200.0f;
             float ozone_scale_height = 22349.90f;
             float ozone_height = 35660.71f;
-            float density = 0.001f;
+            // float density = 0.001f;
             Vector3 ray_s = new Vector3(0.005802339f, 0.013557760f, 0.033100010f);
             Vector3 ray_a = new Vector3(0.0f, 0.0f, 0.0f);
             Vector3 ray_e = ray_s + ray_a;

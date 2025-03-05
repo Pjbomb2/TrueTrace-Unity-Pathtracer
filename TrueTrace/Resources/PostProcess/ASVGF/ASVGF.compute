@@ -231,7 +231,7 @@ int PartialRenderingFactor;
 [numthreads(16, 16, 1)]
 void CopyData(uint3 id : SV_DispatchThreadID)
 {
-	if(any(id.xy >= int2(screen_width, screen_height))) return;
+	if(any(id.xy >= uint2(screen_width, screen_height))) return;
 	int pixel_index = id.y * screen_width + id.x;
 	ColData Pixel = GlobalColorsRead[pixel_index];
 	const uint4 ScreenInfo = asuint(ScreenSpaceInfo[id.xy]);
@@ -1014,7 +1014,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 	// float4 curprojectedrefl = mul(viewprojection, float4(ray.origin + ray.direction * CenterDepth, 1));
 	// float4 prevprojectedrefl = mul(prevviewprojection, float4(ray.origin + ray.direction * CenterDepth, 1));
 	// float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
-	int MatIndex = (ReflRefracA[gl_GlobalInvocationID.xy] << 4) >> 4;
+	uint MatIndex = (ReflRefracA[gl_GlobalInvocationID.xy] << 4) >> 4;
 
 	float motion_length = length((motion.xy) * float2(screen_width, screen_height));
 
@@ -1789,7 +1789,7 @@ float FetchDepth(float2 UV) {
 
 [numthreads(32, 32, 1)]
 void DistanceCorrectionKernel(uint3 id : SV_DispatchThreadID) {
-    if(id.x > screen_width || id.y > screen_height) return;
+    if(id.x >= (uint)screen_width || id.y >= (uint)screen_height) return;
     float2 Uv = (id.xy + 0.5f) / float2(screen_width, screen_height);
 
     float CurDepth = FetchDepth(Uv);

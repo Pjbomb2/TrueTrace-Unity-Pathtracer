@@ -687,7 +687,7 @@ void BLASLightRefitKernel (uint3 id : SV_DispatchThreadID)
         LightNodesWrite[Index].BBMax = BBMax;
         LightNodesWrite[Index].BBMin = BBMin;
         LightNodesWrite[Index].w = octahedral_32(-normalize(cross(normalize(LightTri.posedge1), normalize(LightTri.posedge2))));
-        float area = AreaOfTriangle(mul(ToWorld, float4(LightTri.pos0,1)), mul(ToWorld, float4(LightTri.pos0 + LightTri.posedge1,1)), mul(ToWorld, float4(LightTri.pos0 + LightTri.posedge2,1)));
+        float area = AreaOfTriangle(mul(ToWorld, float4(LightTri.pos0,1)).xyz, mul(ToWorld, float4(LightTri.pos0 + LightTri.posedge1,1)).xyz, mul(ToWorld, float4(LightTri.pos0 + LightTri.posedge2,1)).xyz);
         if(area == 0) area = 0.000000001f;
 
         LightNodesWrite[Index].phi = LightTri.SourceEnergy * area;   

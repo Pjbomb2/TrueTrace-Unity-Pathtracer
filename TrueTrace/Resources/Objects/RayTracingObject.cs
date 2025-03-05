@@ -59,6 +59,7 @@ namespace TrueTrace {
 		public int[] Indexes;
 		public bool NeedsToUpdate;
 		[SerializeField] public bool IsReady = false;
+		[SerializeField] public bool InvisibleOverride = false;
 
 		[HideInInspector] public int[] MaterialIndex;
 		[HideInInspector] public int[] LocalMaterialIndex;

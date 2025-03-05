@@ -31,7 +31,7 @@ MonoBehaviour:
   PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
-  DenoiserMethod: 0
+  DenoiserMethod: 1
   UpscalerMethod: 2
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
@@ -39,7 +39,6 @@ MonoBehaviour:
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
   ReSTIRGITemporalMCap: 12
-  ReSTIRGIUpdateRate: 0
   DoReSTIRGIConnectionValidation: 1
   Exposure: 41.7
   DoPartialRendering: 0
@@ -84,7 +83,7 @@ MonoBehaviour:
   PrimaryBackgroundTintColor: {x: 1, y: 1, z: 1}
   PrimaryBackgroundTint: 0
   PrimaryBackgroundContrast: 1
-  FogDensity: 0.2
+  FogDensity: 0.008
   FogHeight: 80
   FogColor: {x: 1, y: 1, z: 1}
   MaxSampCount: 99999999

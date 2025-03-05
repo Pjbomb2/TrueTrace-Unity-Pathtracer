@@ -1094,13 +1094,15 @@ namespace TrueTrace {
                 serializedObject.FindProperty("Flags").GetArrayElementAtIndex(Selected).intValue = Flag;
 
 
-
+                bool A = EditorGUILayout.ToggleLeft("Override All Local \"Invisible\" Flags", t.InvisibleOverride, GUILayout.MaxWidth(225));
+                bool InvisibleOverrideTrigger = !(A ^ t.InvisibleOverride);
+                serializedObject.FindProperty("InvisibleOverride").boolValue = A;
 
                 bool MaterialWasChanged = false;
                 if(EditorGUI.EndChangeCheck()) {
                     MaterialWasChanged = true;
                 }
-                serializedObject.FindProperty("FollowMaterial").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Link Mat To Unity Material: ", t.FollowMaterial[Selected]);
+                serializedObject.FindProperty("FollowMaterial").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.ToggleLeft("Link Mat To Unity Material", t.FollowMaterial[Selected]);
                 if(!QuickPasted) serializedObject.ApplyModifiedProperties();
 
                 if(MaterialWasChanged) {
@@ -1112,7 +1114,7 @@ namespace TrueTrace {
                     }
                     for(int i = 0; i < TheseNames.Length; i++) {
                         if(Selected == i) continue;
-                        if(TheseNames[i].Equals(Name)) {
+                        if(TheseNames[i].Equals(Name) || InvisibleOverrideTrigger) {
                             t.MaterialOptions[i] = t.MaterialOptions[Selected];
                             t.BaseColor[i] = t.BaseColor[Selected];
                             t.TransmissionColor[i] = t.TransmissionColor[Selected];
@@ -1225,6 +1227,7 @@ namespace TrueTrace {
                     }
                     t.CallMaterialEdited();
                 }
+
             #if !HIDEMATERIALREATIONS
                 int LinkSourceCount = ConnectionSourceNames.Count;
                 for(int i = 0; i < LinkSourceCount; i++) {

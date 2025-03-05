@@ -693,6 +693,21 @@ inline bool rayBoxIntersection(const float3 ray_orig, const float3 ray_dir, cons
     return (t0 <= t1);
 }
 
+bool GetDist(float3 CurrentPos, out float2 uv, out float dist, const TerrainData Terrain) {
+    float3 b = float3(Terrain.TerrainDim.x, 0.01f, Terrain.TerrainDim.y);
+    float3 q = (abs(CurrentPos) - b);
+    q.x /= Terrain.TerrainDim.x;
+    q.z /= Terrain.TerrainDim.y;
+    uv = float2(min(CurrentPos.x / Terrain.TerrainDim.x, 1), min(CurrentPos.z / Terrain.TerrainDim.y, 1));
+    float h = Heightmap.SampleLevel(sampler_trilinear_clamp, uv * (Terrain.HeightMap.xy - Terrain.HeightMap.zw) + Terrain.HeightMap.zw, 0).x;
+    h *= Terrain.HeightScale * 2.0f;
+    q.y -= h;
+    q.y *= g;
+    float b2 = q.y;
+    q = max(0, q);
+    dist = length(q);
+    return b2 != abs(b2);
+}
 
 
 bool IntersectHeightMapShadow(SmallerRay ray, float MaxDist) {
@@ -705,7 +720,8 @@ bool IntersectHeightMapShadow(SmallerRay ray, float MaxDist) {
             float3 CurrentPos = ray.origin;
             int step_count = 0;
             float Dist = 0;
-            while (step_count < 2000 && Dist < MaxDist && all(ray.origin + ray.direction * Dist < float3(Terrain.TerrainDim.x, 1000, Terrain.TerrainDim.y)) && all(CurrentPos > 0)) {
+            bool RefinementPhase = false;
+            while (step_count < 2000 && Dist < MaxDist) {
                 CurrentPos = ray.origin + ray.direction * Dist;
                 float3 b = float3(Terrain.TerrainDim.x, 0.01f, Terrain.TerrainDim.y);
                 float3 q = (abs(CurrentPos) - b);
@@ -723,7 +739,16 @@ bool IntersectHeightMapShadow(SmallerRay ray, float MaxDist) {
                 if (dist < 0.0001f) {
                     return true;
                 }
-                Dist += dist;
+                if(!RefinementPhase) dist += (float)step_count / 200.0f;
+                Dist += dist / 2.0f;
+                if(Dist >= MaxDist || !(all(ray.origin + ray.direction * Dist < float3(Terrain.TerrainDim.x, 1000.0f, Terrain.TerrainDim.y)) && all(ray.origin + ray.direction * Dist > 0))) {
+                    if(RefinementPhase) break;
+                    float dist2;
+                    bool throwa = GetDist(ray.origin + ray.direction * Dist, uv, dist2, Terrain);
+                    dist -= (float)step_count / 200.0f;
+                    Dist -= (float)step_count / 200.0f;
+                    RefinementPhase = true;
+                }
 
             }
         }
@@ -779,21 +804,6 @@ void kernel_shadow_heightmap(uint3 id : SV_DispatchThreadID) {//If I move the fu
 }
 #pragma kernel kernel_heightmap
 
-bool GetDist(float3 CurrentPos, out float2 uv, out float dist, const TerrainData Terrain) {
-    float3 b = float3(Terrain.TerrainDim.x, 0.01f, Terrain.TerrainDim.y);
-    float3 q = (abs(CurrentPos) - b);
-    q.x /= Terrain.TerrainDim.x;
-    q.z /= Terrain.TerrainDim.y;
-    uv = float2(min(CurrentPos.x / Terrain.TerrainDim.x, 1), min(CurrentPos.z / Terrain.TerrainDim.y, 1));
-    float h = Heightmap.SampleLevel(sampler_trilinear_clamp, uv * (Terrain.HeightMap.xy - Terrain.HeightMap.zw) + Terrain.HeightMap.zw, 0).x;
-    h *= Terrain.HeightScale * 2.0f;
-    q.y -= h;
-    q.y *= g;
-    float b2 = q.y;
-    q = max(0, q);
-    dist = length(q);
-    return b2 != abs(b2);
-}
 
 float4 computeRayPatchIntersectionLinear(float3 r0, float3 rD, float4 _value, float4 Pd, float nextIntersection, float2 sizeBig, TerrainData Terrain, int2 id, inout int iterationCounter)
 {
@@ -1135,19 +1145,18 @@ void IntersectHeightMap(int ray_index) {
         float CurDist = 0;
         const TerrainData Terrain = Terrains[i];
         if (rayBoxIntersection(ray2.origin, ray.direction, Terrain.PositionOffset + 0.001f, Terrain.PositionOffset + float3(Terrain.TerrainDim.x, Terrain.TerrainDim.x, Terrain.TerrainDim.y) - 0.001f, bestHit.t, t0)) {
-            CurDist = 0;
+            CurDist = max(t0 + 0.0001f, 0);
             dist = FarPlane;
-            ray.origin = ray2.origin + ray.direction * max(t0 + 0.0001f, 0) - Terrain.PositionOffset;
+            ray.origin = ray2.origin + ray.direction * 0 - Terrain.PositionOffset;
             CurrentPos = ray.origin;
             float PrevDist = 0;
             step_count = 0;
                 CurrentPos = ray.origin + ray.direction * CurDist;
-            while (step_count++ < 2000 && CurDist < bestHit.t && all(CurrentPos < float3(Terrain.TerrainDim.x, 1000.0f, Terrain.TerrainDim.y)) && all(CurrentPos > 0)) {
+                bool RefinementPhase = false;
+            while (step_count++ < 2000 && CurDist < bestHit.t) {
                 bool throwa = GetDist(CurrentPos, uv, dist, Terrain);
                 if (dist < 0.0001f) {
                     if (throwa) {
-
-
                         float size = PrevDist / 2.0f;
                         float step = -1.0;
                         [unroll]for (int i=0; i < 12; i++) {
@@ -1156,25 +1165,6 @@ void IntersectHeightMap(int ray_index) {
                             if (GetDist(ray.origin + ray.direction * CurDist, uv, dist, Terrain)) step = -1.0;
                             else step = 1.0;
                         }
-
-                        // CurDist -= PrevDist /= 2;
-                        // for (int i = 0; i < 10; i++) {
-                        //     if (GetDist(ray.origin + ray.direction * CurDist, uv, dist, Terrain)) {
-                        //         CurDist -= PrevDist /= 2;
-                        //     }
-                        //     else {
-                        //         for (int i2 = 0; i2 < 10; i2++) {
-                        //             if (!GetDist(ray.origin + ray.direction * CurDist, uv, dist, Terrain)) {
-                        //                 CurDist += PrevDist /= 2;
-                        //             }
-                        //             else {
-                        //                 CurDist -= PrevDist;
-                        //                 break;
-                        //             }
-                        //         }
-                        //         break;
-                        //     }
-                        // }
                     }
 
                     int PixIndex = GlobalRays[ray_index].PixelIndex;
@@ -1182,7 +1172,7 @@ void IntersectHeightMap(int ray_index) {
 
                     bestHit.u = uv.x;
                     bestHit.v = uv.y;
-                    bestHit.t = CurDist + t0;
+                    bestHit.t = CurDist;
                     bestHit.triangle_id = i;
                     bestHit.mesh_id = 9999999;
                     [branch]if(CurBounce == 0) {
@@ -1193,8 +1183,17 @@ void IntersectHeightMap(int ray_index) {
                     set(ray_index, bestHit);
                     break;
                 }
-                PrevDist = dist;
+                if(!RefinementPhase) dist += (float)step_count / 200.0f;
                 CurDist += dist / 2.0f;
+                if(CurDist >= bestHit.t || !(all(ray.origin + ray.direction * CurDist < float3(Terrain.TerrainDim.x, 1000.0f, Terrain.TerrainDim.y)) && all(ray.origin + ray.direction * CurDist > 0))) {
+                    if(RefinementPhase) break;
+                    float dist2;
+                    throwa = GetDist(ray.origin + ray.direction * CurDist, uv, dist2, Terrain);
+                    dist -= (float)step_count / 200.0f;
+                    CurDist -= (float)step_count / 200.0f;
+                    RefinementPhase = true;
+                }
+                PrevDist = dist;
                 CurrentPos = ray.origin + ray.direction * CurDist;
             }
         }

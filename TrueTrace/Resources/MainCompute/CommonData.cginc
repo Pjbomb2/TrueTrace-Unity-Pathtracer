@@ -1,5 +1,5 @@
 #define ONE_OVER_PI 0.318309886548f
-#define PI 3.14159265f
+#define PI 3.14159265359f
 #define EPSILON 1e-8
 
 #include "CommonStructs.cginc"
@@ -80,7 +80,6 @@ Partial rendering factor to 2
 */
 
 int unitylightcount;
-int ReSTIRGIUpdateRate;
 
 //Cam Info
 float3 Forward;
@@ -432,7 +431,7 @@ float2 randomNEE(uint samdim, uint pixel_index) {
 }
 
 float2 random(uint samdim, uint pixel_index) {
-	[branch] if (UseASVGF || (UseReSTIRGI && ReSTIRGIUpdateRate != 0)) {
+	[branch] if (UseASVGF) {
 		uint2 pixid = uint2(pixel_index % screen_width, pixel_index / screen_width);
 		uint hash = pcg_hash(((uint)RandomNums[pixid].y * (uint)526 + samdim) * (MaxBounce + 1) + CurBounce);
 
@@ -632,7 +631,7 @@ SmallerRay CreateCameraRay(float2 uv, uint pixel_index) {
 
 		direction = Forward;//normalize(CamToWorld._m20_m21_m22);
 	}
-	uint2 id = uint2(pixel_index % screen_width, pixel_index / screen_width);
+	int2 id = int2(pixel_index % screen_width, pixel_index / screen_width);
 	[branch] if (!OIDNGuideWrite && UseDoF && (!IsFocusing || dot(id - int2(MousePos.x, MousePos.y), id - int2(MousePos.x, MousePos.y)) > 6.0f)) {
 		float3 cameraForward = mul(CamInvProj, float4(0, 0, 0.0f, 1.0f)).xyz;
 		// Transform the direction from camera to world space and normalize
@@ -2631,7 +2630,7 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 		if(CurHash == 0) return false;
 		uint ActualPropDepth = min(PathLength & 7, PropDepth);
 		AddVoxelData(CurHash, uint4(RunningIlluminance * 1e3f, 1));
-		for(int i = 0; i < ActualPropDepth; i++) {
+		for(uint i = 0; i < ActualPropDepth; i++) {
 			RunningIlluminance *= unpackRGBE(CurrentProp.samples[i].x);
 			AddVoxelData(CurrentProp.samples[i].y, uint4(RunningIlluminance * 1e3f, 0));
 		}
@@ -2653,7 +2652,7 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 		if(CurHash == 0) return false;
 		uint ActualPropDepth = min(CurrentProp.pathLength & 7, PropDepth);
 		AddVoxelData(CurHash, uint4(RunningIlluminance * 1e3f, 1));
-        for(int i = 0; i < ActualPropDepth; i++) {
+        for(uint i = 0; i < ActualPropDepth; i++) {
 			RunningIlluminance *= unpackRGBE(CurrentProp.samples[i].x);
 			AddVoxelData(CurrentProp.samples[i].y, uint4(RunningIlluminance * 1e3f, 0));
 		}

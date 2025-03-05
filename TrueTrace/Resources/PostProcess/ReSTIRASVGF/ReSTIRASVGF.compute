@@ -593,7 +593,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
     float4 prevprojectedrefl = mul(prevviewprojection, float4(ray.origin + ray.direction * depth_curr, 1));
     float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
 
-    int MatDat = (ReflectedRefractedTex[gl_GlobalInvocationID.xy] << 4) >> 4;
+    uint MatDat = (ReflectedRefractedTex[gl_GlobalInvocationID.xy] << 4) >> 4;
     bool ReflectedRefracted = ReflectedRefractedTex[gl_GlobalInvocationID.xy] >> 31;
     float motion_length = length((motion.xy + reflprojection) * float2(screen_width, screen_height));
     // float motion_length = length((motion.xy) * float2(screen_width, screen_height));
@@ -1376,7 +1376,7 @@ float FetchDepth(float2 UV) {
 RWTexture2D<half2> TEX_PT_VIEW_DEPTH_AWRITE;//current frame depth
 [numthreads(32, 32, 1)]
 void DistanceCorrectionKernel(uint3 id : SV_DispatchThreadID) {
-    if(id.x > screen_width || id.y > screen_height) return;
+    if(id.x >= (uint)screen_width || id.y >= (uint)screen_height) return;
     float2 Uv = (id.xy + 0.5f) / float2(screen_width, screen_height);
 
     float CurDepth = FetchDepth(Uv);

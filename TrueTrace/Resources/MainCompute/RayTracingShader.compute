@@ -116,7 +116,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     bool CB = true;
     if(DoPartialRendering && CurBounce == 0) {
         CB = (int(id.x)/PartialRenderingFactor + int(id.y)/PartialRenderingFactor + curframe)%2==0;
-        if(UseASVGF || (UseReSTIRGI && ReSTIRGIUpdateRate != 0)) {
+        if(UseASVGF) {
             if(hitDat.metallic == 1 || hitDat.specTrans == 1 || RandomNums[id].z != 0 || RandomNums[id].w != 0) CB = true;
         }
     }
@@ -203,17 +203,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     #endif
     [branch] if (hitDat.emission > 0.0f) {//if we hit a light, this ray is done
 #ifdef Fog
-    // if(CurBounce == 0) _DebugTex[id.xy] = float4(exp(-SigmaT * -OptDepthRectExpMedium(ray.origin.y, ray.direction.y, hit.t, SigmaT, 1.0f / H)), 1);
         float3 Tr = exp(-SigmaT * OptDepthSpherExpMedium(ray.origin.y+bottom_radius, rcp(ray.origin.y+bottom_radius), ray.direction.y, hit.t, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
         float pdf3 = (Tr.x + Tr.y + Tr.z) / 3.0f;
         hitDat.emission *= Tr;// / pdf3;// / pdf;
-        // return exp(-t * OptDepthRectExpMedium(ray.origin.y, ray.direction.x, t, SigmaT, 1.0f / H));    
-        // return (Tr / pdf);
-
-        // hitDat.emission *= exp(-hit.t * OptDepthRectExpMedium(ray.origin.y, ray.direction.y, hit.t, SigmaT, 1.0f / ScaleHeight));   
-        // hitDat.emission *= exp(-OptDepthRectExpMedium(ray.origin.y, ray.direction.y, hit.t, SigmaT * 0.0001f, 1.0f / ScaleHeight));    
-
-        // hitDat.emission *= exp(-hit.t * SigmaT);
 #endif
         #ifdef WhiteLights
             hitDat.surfaceColor = 0.5f;
@@ -245,9 +237,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             #else
                 light_pdf *= rcp(_MeshData[hit.mesh_id].LightTriCount);
             #endif
-            #ifdef Fog
-                // light_pdf *= (1.0f - VolumeBSDF);
-            #endif
             float w = power_heuristic(max(last_pdf,0), light_pdf);
             if (CurBounce == 0) Color.Direct += EmissCol;
             #ifdef UseBRDFLights
@@ -268,8 +257,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 Color.Data = EmissCol;
                 Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((1) << 26);  
                 Color.Flags = packRGBE(EmissCol);
-                // PrevScreenData.w = asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 4) >> 4) : ((asuint(PrevScreenData.w) << 4) >> 4)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31)); 
-
             }
             return;
         }
@@ -289,18 +276,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         hitDat.surfaceColor = ((lum * 255.0f) + (hitDat.ColorBleed *((hitDat.surfaceColor * 255.0f) - (lum * 255.0f)))) / 255.0f;
     }
     
-    [branch] if(CurBounce == 0 && UseReSTIRGI && ReSTIRGIUpdateRate != 0 && RandomNums[id].z != 0) {
-        #ifdef HDRP
-            float2 MotionVector = MotionVectors[int3(id,0)].xy;
-        #else
-           float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, (id) / float2(screen_width, screen_height) , 0).xy;
-        #endif
-        uint2 prevIndexDoub = int2(floor(((float2(id) + 0.5) * float2(rcp(screen_width), rcp(screen_height)) - MotionVector) * float2(screen_width, screen_height)));
-
-        ray.direction = normalize(CalcPos(WorldPosB[prevIndexDoub]) - (pos + USGNorm * NormalOffset));
-        MaterialLobe = RandomNums[id].z - 1;
-        validBSDFSample = ReconstructBsdf(hitDat, PrevDirection, ray.direction, norm, pdf, bsdf, GetTangentSpace(norm), pixel_index, MaterialLobe);
-        } else validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
+    validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
     {
         if (CurBounce == 0) {
             float Metallic = saturate(hitDat.metallic + ((!UseASVGF || UseReSTIRGI) ? 0 : hitDat.Specular));
@@ -481,19 +457,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 break;
             }
 
-
-
-          
-            // float newt = hit.t;
-            // float newPDF = 1;
-            // sampleEquiAngular(random(321, pixel_index).x, hit.t, PrevOrigin, PrevDirection, LightPosition, newt, newPDF);
-            // if(hit.t != newt) {
-            //     pos = PrevOrigin + PrevDirection * newt;
-            //     norm = normalize(LightPosition - pos);
-            // }
-            //     // RunningWeight *= newPDF;
-
-
         } else if(SelectedLightGroup == 0) {
             #ifdef LBVH
                 int MeshIndex;
@@ -656,7 +619,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         float p = saturate(max(AdjustedCol.x, max(AdjustedCol.y, AdjustedCol.z)));
         if (random(118, pixel_index).x > p)//Simple Russian Roulette
             return;
-        // bsdf *= rcp(p);//rcp is a slightly faster but less accurate version of 1 / p, I decided the inaccuracy was worth the performance bump
         throughput *= rcp(p);//rcp is a slightly faster but less accurate version of 1 / p, I decided the inaccuracy was worth the performance bump
     }
 
@@ -741,31 +703,12 @@ int MaterialIndex;
         float TrueDeSat = DoSecondary ? SkyDesaturate : SecondarySkyDesaturate;
         if(CurBounce != 0 && IndirectBoost < 1) Intensity *= rcp(IndirectBoost);
         float3 Sun = 0;
-  //       float weightedMeanDepth = 0;
     #ifdef Fog
-      float rayNear;
-      float rayFar = 100.0f;
-      rayFar = raySphereFirstIntersection(ray.origin + float3(0,bottom_radius,0), ray.direction, float3(0,0, 0), bottom_radius);
-      if(rayFar < 0) rayFar = -raySphereFirstIntersection(ray.origin+ float3(0,bottom_radius,0), ray.direction, float3(0,0, 0), top_radius);
-      rayFar = min(rayFar, FarPlane);
-      // getRayNearFar(ray.direction, rayNear, rayFar);
-    //   if((ray.origin + ray.direction * rayFar).y < 0) {
-
-
-    //     float denom = dot(float3(0,1,0), ray.direction);
-    //     if (abs(denom) > 0.0001f) // your favorite epsilon
-    //     {
-    //         float t = dot(float3(0,1,0), (float3(0,0,0) - ray.origin)) / denom;
-    //         rayFar = min(rayFar, t);
-    //     }
-    // }
-      // float3 skyirrad;
-      // float3 sunirrad;// = GetSunAndSkyIrradiance(ray.origin+float3(0,bottom_radius,0), ray.direction, SunDir, skyirrad);
-      // float4 rad2 = 0;
-      //  float2 globeUv = getGlobeUv(ray.origin);
-      // float mipLevel = length(globeUv * localWeatherFrequency);
-      // mipLevel = 0;//lerp(0.0, mipLevel, min(1.0, 0.2 * ray.origin.y / maxHeight));
-
+        float rayNear;
+        float rayFar = 100.0f;
+        rayFar = raySphereFirstIntersection(ray.origin + float3(0,bottom_radius,0), ray.direction, float3(0,0, 0), bottom_radius);
+        if(rayFar < 0) rayFar = -raySphereFirstIntersection(ray.origin+ float3(0,bottom_radius,0), ray.direction, float3(0,0, 0), top_radius);
+        rayFar = min(rayFar, FarPlane);
 
         float VolumeBSDF;
         float newT = rayFar;
@@ -999,27 +942,7 @@ int MaterialIndex;
                 Stars = pow(saturate(Stars), 2.0f);
                 if(GetBounceData(Color.MetRoughIsSpec) <= 1) Radiance += Stars;
 
-                // if(CurBounce <= 1) {
-                //     rad2 = 
-                //     marchToClouds(
-                //         (ray.origin+float3(0,bottom_radius,0)),
-                //         ray.direction,
-                //         rayFar - rayNear,
-                //         random(233, pixel_index).x,
-                //         float3(random(234, pixel_index), random(235, pixel_index).x),
-                //         pow(2.0, 0),
-                //         SunDir,
-                //         sunirrad,
-                //         skyirrad,
-                //         pixel_index,
-                //         weightedMeanDepth
-                //       );
-                //     if(weightedMeanDepth > 0) {
-                //         Radiance *= 1.0f - (rad2.a);
-                //         applyAerialPerspective(ray.origin, ray.origin + (weightedMeanDepth + rayNear) * ray.direction, rad2);
-                //     }
-                //         Radiance += pow(1.0f - exp(-rad2 / 1.0f * 10.0f), 1.0f);
-                //     }
+          
                 if (all(Radiance < 10000.0f)) {
                     Radiance = DeSat(Radiance, 1.0f - TrueDeSat);
                     if(DoSecondary) {
@@ -1178,7 +1101,6 @@ int MaterialIndex;
         TempMat.roughness = (GetFlag(TempMat.Tag, InvertSmoothnessTexture) ? (1.0f - TempMat.roughness) : TempMat.roughness);
     }
     TempMat.metallic = saturate(TempMat.metallic);
-    // TempMat.metallic = 1;
     if(!all(TempMat.MetallicRemap == float2(0,1))) TempMat.metallic = (TempMat.metallic * (TempMat.MetallicRemap.y - TempMat.MetallicRemap.x)) + TempMat.MetallicRemap.x;
     if(!all(TempMat.RoughnessRemap == float2(0,1))) {
         if(GetFlag(TempMat.Tag, UseSmoothness)) TempMat.roughness = (TempMat.roughness * ((1.0f - TempMat.RoughnessRemap.x) - (1.0f - TempMat.RoughnessRemap.y))) + (1.0f - TempMat.RoughnessRemap.y);

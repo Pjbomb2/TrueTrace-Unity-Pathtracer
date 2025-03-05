@@ -834,6 +834,8 @@ namespace TrueTrace {
             AggTriBufferB.ReleaseSafe();
 
             if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
+            if(LBVHWorkingSet != null) for(int i = 0; i < LBVHWorkingSet.Length; i++) LBVHWorkingSet[i]?.Release();
+            LightBVHTransformsBuffer.ReleaseSafe();
             NodeBuffer.ReleaseSafe();
             StackBuffer.ReleaseSafe();
             ToBVHIndexBuffer.ReleaseSafe();
@@ -2384,7 +2386,8 @@ namespace TrueTrace {
                     TempMat.TransmittanceColor = CurrentMaterial.TransmissionColor[Index];
                     TempMat.MatType = (int)CurrentMaterial.MaterialOptions[Index];
                     TempMat.EmissionColor = CurrentMaterial.EmissionColor[Index];
-                    TempMat.Tag = CurrentMaterial.Flags[Index];
+                    if(CurrentMaterial.InvisibleOverride) TempMat.Tag = CommonFunctions.SetFlagVar(CurrentMaterial.Flags[Index], CommonFunctions.Flags.Invisible, true);
+                    else TempMat.Tag = CurrentMaterial.Flags[Index];
 
                     TempMat.metallic = CurrentMaterial.Metallic[Index];
                     TempMat.specularTint = CurrentMaterial.SpecularTint[Index];

@@ -258,7 +258,6 @@ namespace TrueTrace {
             MatHierarchyView = new ScrollView();
 
             SideWindow = new VisualElement();
-            int ID = 0;
             var t = target as TTSDFHandler;
             int Count = t.SDFs.Length;
             for(int i = 0; i < Count; i++) {

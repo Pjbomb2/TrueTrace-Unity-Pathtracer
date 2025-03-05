@@ -1277,7 +1277,7 @@ namespace TrueTrace {
             CudaTriangle TempTri = new CudaTriangle();
             Matrix4x4 ParentMatInv = CachedTransforms[0].WTL;
             Matrix4x4 ParentMat = CachedTransforms[0].WTL.inverse;
-            Vector3 V1, V2, V3, Norm1, Norm2, Norm3, Tan1, Tan2, Tan3;
+            Vector3 V1, V2, V3, Norm1, Tan1;
             TrianglesArray = new NativeArray<AABB>((TransformIndexes[TransformIndexes.Count - 1].VertexStart + TransformIndexes[TransformIndexes.Count - 1].VertexCount) / 3, Unity.Collections.Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             Triangles = (AABB*)NativeArrayUnsafeUtility.GetUnsafePtr(TrianglesArray);
             AggTriangles = new CudaTriangle[(TransformIndexes[TransformIndexes.Count - 1].VertexStart + TransformIndexes[TransformIndexes.Count - 1].VertexCount) / 3];

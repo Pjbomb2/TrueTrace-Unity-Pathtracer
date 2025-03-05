@@ -22,7 +22,7 @@ inline float luminance(const float r, const float g, const float b) {
 }
 
 
-int Samples_Accumulated;
+uint Samples_Accumulated;
 [numthreads(16, 16, 1)]
 void kernel_taa_prepare(int3 id : SV_DispatchThreadID)
 {
@@ -109,7 +109,7 @@ float4 TAAA(int2 id) {
 		// On the first frame the history buffer will be black,
 		// in this case we don't perform temporal accumulation
 		// ColorOut[id.xy] = colour;
-		return float4(ycocg_to_rgb(ColorIn[id.xy].xyz), ColorIn[id.xy].w);
+		return float4(ycocg_to_rgb(colour.xyz), colour.w);
 	}
 	#ifdef HDRP
 		float2 screen_position_prev = (id.xy / float2(screen_width, screen_height) - MotionVectors[int3(id.xy,0)].xy) * 2.0f - 1.0f;

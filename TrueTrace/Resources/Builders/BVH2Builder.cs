@@ -45,7 +45,6 @@ namespace TrueTrace {
             public AABB aabb_right;
         }
 
-        AABB aabb_left;
         AABB aabb_right;
         void partition_sah(int first_index, int index_count) {
             split.cost = float.MaxValue;
@@ -153,7 +152,6 @@ namespace TrueTrace {
             indices_going_left = (bool*)NativeArrayUnsafeUtility.GetUnsafePtr(indices_going_left_array);
             tempArray = new NativeArray<int>(PrimCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
             temp = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(tempArray);
-            aabb_left = new AABB();
             aabb_right = new AABB();
             int nodeIndex = 2;
             BuildRecursive(0, ref nodeIndex,0,PrimCount);
@@ -195,7 +193,6 @@ namespace TrueTrace {
             Primitives = (AABB*)NativeArrayUnsafeUtility.GetUnsafePtr(PrimAABBs);
             tempArray = new NativeArray<int>(PrimCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
             temp = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(tempArray);
-            aabb_left = new AABB();
             aabb_right = new AABB();
             int nodeIndex = 2;
             BuildRecursive(0, ref nodeIndex,0,PrimCount);

@@ -4,7 +4,7 @@ float DISTORTION_AMOUNT;
 
 Texture2D<float4> Input;
 RWTexture2D<float4> Result;
-SamplerState my_linear_repeat_sampler;
+SamplerState my_point_repeat_sampler;
 int screen_width;
 int screen_height;
 
@@ -18,9 +18,9 @@ float2 PincushionDistortion(in float2 uv, float strength)
 
 float3 ChromaticAbberation(float2 uv) 
 {
-    float rChannel = Input.SampleLevel(my_linear_repeat_sampler, PincushionDistortion(uv, 0.3 * DISTORTION_AMOUNT),0).r;
-    float gChannel = Input.SampleLevel(my_linear_repeat_sampler, PincushionDistortion(uv, 0.15 * DISTORTION_AMOUNT),0).g;
-    float bChannel = Input.SampleLevel(my_linear_repeat_sampler, PincushionDistortion(uv, 0.075 * DISTORTION_AMOUNT),0).b;
+    float rChannel = Input.SampleLevel(my_point_repeat_sampler, PincushionDistortion(uv, 0.3 * DISTORTION_AMOUNT),0).r;
+    float gChannel = Input.SampleLevel(my_point_repeat_sampler, PincushionDistortion(uv, 0.15 * DISTORTION_AMOUNT),0).g;
+    float bChannel = Input.SampleLevel(my_point_repeat_sampler, PincushionDistortion(uv, 0.075 * DISTORTION_AMOUNT),0).b;
     float3 retColor = float3(rChannel, gChannel, bChannel);
     return retColor;
 }
