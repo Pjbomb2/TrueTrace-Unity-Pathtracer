@@ -128,6 +128,33 @@ struct BVHNode8Data {
 StructuredBuffer<BVHNode8Data> cwbvh_nodes;
 
 
+/*
+	MatType
+	AlphaTex
+	AlphaCutoff
+	SpecTrans
+	Tag
+	AlbedoTexScale
+	Rotation
+
+*/
+
+struct IntersectionMat {//56
+    int2 AlphaTex;//80
+    int2 AlbedoTex;//80
+    int Tag;
+    int MatType;//Can pack into tag
+    float specTrans;
+    float AlphaCutoff;
+    float4 AlbedoTexScale;
+    float3 surfaceColor;
+    float Rotation;
+    float scatterDistance;
+};
+
+StructuredBuffer<IntersectionMat> _IntersectionMaterials;
+
+
 struct MaterialData {//56
 	int2 AlbedoTex;//16
 	int2 NormalTex;//32

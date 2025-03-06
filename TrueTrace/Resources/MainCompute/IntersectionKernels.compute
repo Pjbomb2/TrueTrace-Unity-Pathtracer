@@ -35,26 +35,26 @@ inline void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ra
             if (t > 0 && t < ray_hit.t) {
                 //major slowdown
                 #ifdef AdvancedAlphaMapped
-                    if(_Materials[MaterialIndex].MatType == CutoutIndex) {
+                    if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
                         float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
-                        if(_Materials[MaterialIndex].AlphaTex.x > 0) 
-                            if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) return;
+                        if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) 
+                            if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return;
                     }
                 #endif
                 #ifdef IgnoreGlassMain
-                    if(_Materials[MaterialIndex].specTrans == 1) return;
+                    if(_IntersectionMaterials[MaterialIndex].specTrans == 1) return;
                 #endif
                 #ifdef IgnoreBackfacing
-                    if(_Materials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction) <= 0) return;
+                    if(_IntersectionMaterials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction) <= 0) return;
                 #endif
                 #ifdef FadeMapping
-                    if(_Materials[MaterialIndex].MatType == FadeIndex) {
+                    if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
                         float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
-                        if(_Materials[MaterialIndex].AlphaTex.x > 0)
-                            if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x - _Materials[MaterialIndex].AlphaCutoff <= RandNum) return;
+                        if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
+                            if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= RandNum) return;
                     }
                 #endif
-                if(CurBounce == 0 && GetFlag(_Materials[MaterialIndex].Tag, Invisible)) return;
+                if(CurBounce == 0 && GetFlag(_IntersectionMaterials[MaterialIndex].Tag, Invisible)) return;
                 ray_hit.t = t;
                 ray_hit.u = u;
                 ray_hit.v = v;
@@ -123,25 +123,25 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                         int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTrisA[tri_id].MatDat);
                     #endif
                     #ifdef AdvancedAlphaMapped
-                        if(CurBounce == 0 && GetFlag(_Materials[MaterialIndex].Tag, Invisible)) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
-                        if(_Materials[MaterialIndex].MatType == CutoutIndex) {
+                        if(CurBounce == 0 && GetFlag(_IntersectionMaterials[MaterialIndex].Tag, Invisible)) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
+                        if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
                             float2 BaseUv = TOHALF(AggTrisA[tri_id].tex0) * (1.0f - bestHit.u - bestHit.v) + TOHALF(AggTrisA[tri_id].texedge1) * bestHit.u + TOHALF(AggTrisA[tri_id].texedge2) * bestHit.v;
-                            if(_Materials[MaterialIndex].AlphaTex.x > 0)
-                                if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
+                            if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
+                                if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
                         }
                     #endif
                     #ifdef IgnoreGlassMain
-                        if(_Materials[MaterialIndex].specTrans == 1) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
+                        if(_IntersectionMaterials[MaterialIndex].specTrans == 1) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
                     #endif
                     #ifdef IgnoreBackfacing
                         TrianglePos tri = triangle_get_positions(tri_id);
-                        if(_Materials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)) <= 0) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
+                        if(_IntersectionMaterials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)) <= 0) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
                     #endif
                     #ifdef FadeMapping
-                        if(_Materials[MaterialIndex].MatType == FadeIndex) {
+                        if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
                             float2 BaseUv = TOHALF(AggTrisA[tri_id].tex0) * (1.0f - bestHit.u - bestHit.v) + TOHALF(AggTrisA[tri_id].texedge1) * bestHit.u + TOHALF(AggTrisA[tri_id].texedge2) * bestHit.v;
-                            if(_Materials[MaterialIndex].AlphaTex.x > 0)
-                                if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x - _Materials[MaterialIndex].AlphaCutoff <= RandNum) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
+                            if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
+                                if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= RandNum) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
                         }
                     #endif
                 }
@@ -177,13 +177,13 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
 #ifndef DX11
         [loop]do{
             Coun2++;
-            Reps = 0;
             bool                terminated = KilledNaturally;//(stack_size == 0 && current_group.y <= 0x00FFFFFF && triangle_group.y == 0);
             const uint  maskTerminated = WaveActiveBallot(terminated);
             const int           numTerminated = countbits(maskTerminated);
             const int           idxTerminated = countbits(maskTerminated & ((1u << GTx) - 1));
             KilledNaturally = false;
             if(terminated) {
+            Reps = 0;
                 current_group.y = 0b10000000000000000000000000000000;//(uint)0x80000000;
 #else
                 current_group.y = (uint)0x80000000;
@@ -395,27 +395,27 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
                         triangle_id += triangleOffset;
                         mesh_id = MeshOffsets[Indexes.x].y;
                         int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTrisA[triangle_id].MatDat);
-                        if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster))  {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;} 
+                        if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, IsBackground) || GetFlag(_IntersectionMaterials[MaterialIndex].Tag, ShadowCaster))  {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;} 
                     #endif
                     #ifdef AdvancedAlphaMapped
-                        if(_Materials[MaterialIndex].MatType == CutoutIndex) {
+                        if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
                             float2 BaseUv = TOHALF(AggTrisA[triangle_id].tex0) * (1.0f - u - v) + TOHALF(AggTrisA[triangle_id].texedge1) * u + TOHALF(AggTrisA[triangle_id].texedge2) * v;
-                            if(_Materials[MaterialIndex].AlphaTex.x > 0)
-                                if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;}
+                            if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
+                                if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;}
                         }
                     #endif
                     #ifdef IgnoreBackfacing
                         TrianglePos tri = triangle_get_positions(triangle_id);
-                        if(_Materials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)) <= 0) {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;}
+                        if(_IntersectionMaterials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)) <= 0) {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;}
                     #endif
                     #ifdef IgnoreGlassShadow
-                        if(_Materials[MaterialIndex].specTrans == 1) {
+                        if(_IntersectionMaterials[MaterialIndex].specTrans == 1) {
                             #ifdef StainedGlassShadows
                                 float2 BaseUv = TOHALF(AggTrisA[triangle_id].tex0) * (1.0f - u - v) + TOHALF(AggTrisA[triangle_id].texedge1) * u + TOHALF(AggTrisA[triangle_id].texedge2) * v;
-                                float3 MatCol = _Materials[MaterialIndex].surfaceColor;
-                                if(_Materials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _Materials[MaterialIndex]) / 3.0f;
-                                MatCol = lerp(MatCol, _Materials[MaterialIndex].BlendColor, _Materials[MaterialIndex].BlendFactor);
-                                throughput *= sqrt(exp(-CalculateExtinction2(1.0f - MatCol, _Materials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _Materials[MaterialIndex].scatterDistance)));
+                                float3 MatCol = _IntersectionMaterials[MaterialIndex].surfaceColor;
+                                if(_IntersectionMaterials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _IntersectionMaterials[MaterialIndex]) / 3.0f;
+                                // MatCol = lerp(MatCol, _IntersectionMaterials[MaterialIndex].BlendColor, _IntersectionMaterials[MaterialIndex].BlendFactor);
+                                throughput *= sqrt(exp(-CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance)));
                             #endif
                             myRay.TMin = q.CommittedRayT() + 0.0001f; 
                             continue;

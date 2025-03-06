@@ -1703,6 +1703,7 @@ Toolbar toolbar;
             ClayColorBox.Add(ClayColorField);
 
             IntegerField MaxSampField = new IntegerField() {value = MaxSampCount, label = "Maximum Sample Count"};
+            MaxSampField.style.width = 300;
             MaxSampField.RegisterValueChangedCallback(evt => {MaxSampCount = evt.newValue; MaxSampCount = Mathf.Min(Mathf.Max(MaxSampCount, 0), 99999999); MaxSampField.value = MaxSampCount; RayMaster.LocalTTSettings.MaxSampCount = MaxSampCount;});
 
 
@@ -1803,13 +1804,13 @@ Toolbar toolbar;
 
          Slider FogSlider = new Slider() {label = "Fog Density: ", value = FogDensity, highValue = 0.2f, lowValue = 0.000000001f};
          FogSlider.showInputField = true;        
-         FogSlider.style.width = 200;
+         FogSlider.style.width = 400;
          FogSlider.ElementAt(0).style.minWidth = 65;
          FogSlider.RegisterValueChangedCallback(evt => {FogDensity = evt.newValue; RayMaster.LocalTTSettings.FogDensity = FogDensity;});
 
          Slider FogHeightSlider = new Slider() {label = "Fog Height: ", value = FogHeight, highValue = 80.0f, lowValue = 0.00001f};
          FogHeightSlider.showInputField = true;        
-         FogHeightSlider.style.width = 200;
+         FogHeightSlider.style.width = 400;
          FogHeightSlider.ElementAt(0).style.minWidth = 65;
          FogHeightSlider.value = FogHeight;
          FogHeightSlider.RegisterValueChangedCallback(evt => {FogHeight = evt.newValue; RayMaster.LocalTTSettings.FogHeight = FogHeight;});

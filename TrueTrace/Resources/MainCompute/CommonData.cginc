@@ -248,6 +248,58 @@ inline void HandleRotation(inout float2 UV, float Rotation) {
 	}
 }
 
+
+
+inline float4 SampleTexture(float2 UV, int TextureType, const IntersectionMat MatTex) {
+	float4 FinalCol = 0;
+	#if !defined(UseBindless) || defined(DX11)
+		switch(TextureType) {
+			case SampleAlbedo:
+				#ifdef PointFiltering
+					FinalCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlbedoTex, MatTex.Rotation), 0);
+				#else
+					FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlbedoTex, MatTex.Rotation), 0);
+				#endif
+			break;
+			case SampleAlpha:
+				#ifdef PointFiltering
+					FinalCol = _AlphaAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlphaTex, MatTex.Rotation), 0);
+				#else
+					FinalCol = _AlphaAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlphaTex, MatTex.Rotation), 0);
+				#endif
+			break;
+		}
+	#else//BINDLESS
+		//AlbedoTexScale, AlbedoTex, and Rotation dont worry about, thats just for transforming to the atlas 
+		int2 TextureIndexAndChannel = -1;// = MatTex.BindlessIndex;
+		switch(TextureType) {
+			case SampleAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleAlpha: TextureIndexAndChannel = MatTex.AlphaTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+		}
+		int TextureIndex = TextureIndexAndChannel.x - 1;
+		int TextureReadChannel = TextureIndexAndChannel.y;//0-3 is rgba, 4 is to just read all
+
+		#ifdef UseTextureLOD
+			#ifdef PointFiltering
+				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
+			#else
+				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
+			#endif
+		#else
+			#ifdef PointFiltering
+				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+			#else
+				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
+			#endif
+		#endif
+		if(TextureReadChannel != 4) FinalCol = FinalCol[TextureReadChannel];
+
+
+
+	#endif
+	return FinalCol;
+}
+
 inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTex) {
 	float4 FinalCol = 0;
 	#if !defined(UseBindless) || defined(DX11)
@@ -724,31 +776,31 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const fl
             float t = f * dot(tri.posedge2, q);
             [branch] if (t > 0.0f && t < max_distance) {
 	            #if defined(AdvancedAlphaMapped) || defined(AdvancedBackground) || defined(IgnoreGlassShadow)
-					if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster)) return false; 
-	        		if(_Materials[MaterialIndex].MatType == CutoutIndex || _Materials[MaterialIndex].specTrans == 1 || _Materials[MaterialIndex].MatType == FadeIndex) {
+					if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, IsBackground) || GetFlag(_IntersectionMaterials[MaterialIndex].Tag, ShadowCaster)) return false; 
+	        		if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex || _IntersectionMaterials[MaterialIndex].specTrans == 1 || _IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
 		                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
 	        
-	                    if(_Materials[MaterialIndex].MatType == CutoutIndex && _Materials[MaterialIndex].AlphaTex.x > 0)
-	                        if( SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) return false;
+	                    if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex && _IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
+	                        if( SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return false;
 
 		                #ifdef FadeMapping
-		                    if(_Materials[MaterialIndex].MatType == FadeIndex) {
-		                        if(_Materials[MaterialIndex].AlphaTex.x > 0)
-		                            if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x - _Materials[MaterialIndex].AlphaCutoff <= 0.9f) return false;
+		                    if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
+		                        if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
+		                            if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= 0.9f) return false;
 		                    }
 		                #endif
 
 
 			            #ifdef IgnoreGlassShadow
-			                if(_Materials[MaterialIndex].specTrans == 1) {
+			                if(_IntersectionMaterials[MaterialIndex].specTrans == 1) {
 				            	#ifdef StainedGlassShadows
-				            		float3 MatCol = _Materials[MaterialIndex].surfaceColor;
-							        if(_Materials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _Materials[MaterialIndex]);
-	        						MatCol = lerp(MatCol, _Materials[MaterialIndex].BlendColor, _Materials[MaterialIndex].BlendFactor);
+				            		float3 MatCol = _IntersectionMaterials[MaterialIndex].surfaceColor;
+							        if(_IntersectionMaterials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _IntersectionMaterials[MaterialIndex]);
+	        						// MatCol = lerp(MatCol, _IntersectionMaterials[MaterialIndex].BlendColor, _IntersectionMaterials[MaterialIndex].BlendFactor);
 									//float Dotter = abs(dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction));
 
-			    					// if(!GetFlag(_Materials[MaterialIndex].Tag, Thin)) throughput *= exp(-t * CalculateExtinction2(1.0f - MatCol, _Materials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _Materials[MaterialIndex].scatterDistance));
-			    					throughput *= exp(-CalculateExtinction2(1.0f - MatCol, _Materials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _Materials[MaterialIndex].scatterDistance));
+			    					// if(!GetFlag(_IntersectionMaterials[MaterialIndex].Tag, Thin)) throughput *= exp(-t * CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance));
+			    					throughput *= exp(-CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance));
 			    				#endif
 			                	return false;
 			                }
@@ -781,18 +833,18 @@ inline void triangle_intersect_dist(int tri_id, const SmallerRay ray, inout floa
         if (v >= 0.0f && u + v <= 1.0f) {
             float t = f * dot(tri.posedge2, q);
             #if defined(AdvancedAlphaMapped) || defined(AdvancedBackground) || defined(IgnoreGlassShadow)
-				if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster)) return; 
-        		if(_Materials[MaterialIndex].MatType == CutoutIndex || _Materials[MaterialIndex].specTrans == 1) {
+				if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, IsBackground) || GetFlag(_IntersectionMaterials[MaterialIndex].Tag, ShadowCaster)) return; 
+        		if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex || _IntersectionMaterials[MaterialIndex].specTrans == 1) {
 	                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
-                    if(_Materials[MaterialIndex].MatType == CutoutIndex && _Materials[MaterialIndex].AlphaTex.x > 0)
-                        if( SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) return;
+                    if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex && _IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
+                        if( SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return;
 
 		            #ifdef IgnoreGlassShadow
-		                if(_Materials[MaterialIndex].specTrans == 1) {
+		                if(_IntersectionMaterials[MaterialIndex].specTrans == 1) {
 			            	#ifdef StainedGlassShadows
-			            		float3 MatCol = _Materials[MaterialIndex].surfaceColor;
-						        if(_Materials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _Materials[MaterialIndex]) / 3.0f;
-        						MatCol = lerp(MatCol, _Materials[MaterialIndex].BlendColor, _Materials[MaterialIndex].BlendFactor);
+			            		float3 MatCol = _IntersectionMaterials[MaterialIndex].surfaceColor;
+						        if(_IntersectionMaterials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _IntersectionMaterials[MaterialIndex]) / 3.0f;
+        						// MatCol = lerp(MatCol, _Materials[MaterialIndex].BlendColor, _Materials[MaterialIndex].BlendFactor);
 		    				#endif
 		                	return;
 		                }

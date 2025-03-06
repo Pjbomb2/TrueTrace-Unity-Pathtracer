@@ -140,6 +140,22 @@ namespace CommonVars
     }
 
     [System.Serializable]
+    public struct IntersectionMatData {//56
+        public Vector2Int AlphaTex;//80
+        public Vector2Int AlbedoTex;//80
+        public int Tag;
+        public int MatType;//Can pack into tag
+        public float specTrans;
+        public float AlphaCutoff;
+        public Vector4 AlbedoTexScale;
+        public Vector3 surfaceColor;
+        public float Rotation;
+        public float scatterDistance;
+    };
+
+
+
+    [System.Serializable]
     public struct MaterialData
     {
         public Vector2Int AlbedoTex;
@@ -252,75 +268,6 @@ namespace CommonVars
         [System.Runtime.InteropServices.FieldOffset(84)] public Vector3 p;
     }
 
-    [System.Serializable]
-    public struct BVHNode8DataFixed
-    {
-        public uint px;
-        public uint py;
-        public uint pz;
-        public uint e1;
-        public uint e2;
-        public uint e3;
-        public uint imask;
-        public uint base_index_child;
-        public uint base_index_triangle;
-        public uint meta1;
-        public uint meta2;
-        public uint meta3;
-        public uint meta4;
-        public uint meta5;
-        public uint meta6;
-        public uint meta7;
-        public uint meta8;
-        public uint quantized_min_x1;
-        public uint quantized_min_x2;
-        public uint quantized_min_x3;
-        public uint quantized_min_x4;
-        public uint quantized_min_x5;
-        public uint quantized_min_x6;
-        public uint quantized_min_x7;
-        public uint quantized_min_x8;
-        public uint quantized_max_x1;
-        public uint quantized_max_x2;
-        public uint quantized_max_x3;
-        public uint quantized_max_x4;
-        public uint quantized_max_x5;
-        public uint quantized_max_x6;
-        public uint quantized_max_x7;
-        public uint quantized_max_x8;
-        public uint quantized_min_y1;
-        public uint quantized_min_y2;
-        public uint quantized_min_y3;
-        public uint quantized_min_y4;
-        public uint quantized_min_y5;
-        public uint quantized_min_y6;
-        public uint quantized_min_y7;
-        public uint quantized_min_y8;
-        public uint quantized_max_y1;
-        public uint quantized_max_y2;
-        public uint quantized_max_y3;
-        public uint quantized_max_y4;
-        public uint quantized_max_y5;
-        public uint quantized_max_y6;
-        public uint quantized_max_y7;
-        public uint quantized_max_y8;
-        public uint quantized_min_z1;
-        public uint quantized_min_z2;
-        public uint quantized_min_z3;
-        public uint quantized_min_z4;
-        public uint quantized_min_z5;
-        public uint quantized_min_z6;
-        public uint quantized_min_z7;
-        public uint quantized_min_z8;
-        public uint quantized_max_z1;
-        public uint quantized_max_z2;
-        public uint quantized_max_z3;
-        public uint quantized_max_z4;
-        public uint quantized_max_z5;
-        public uint quantized_max_z6;
-        public uint quantized_max_z7;
-        public uint quantized_max_z8;
-    }
 
     [System.Serializable]
     public struct MyMeshDataCompacted
@@ -938,86 +885,6 @@ namespace CommonVars
             }
         }
 
-        public unsafe static void ConvertToSplitNodes(TrueTrace.BVH8Builder BVH, ref List<BVHNode8DataFixed> SplitNodes)
-        {
-            BVHNode8DataFixed NewNode = new BVHNode8DataFixed();
-            int BVHLength = BVH.cwbvhnode_count;
-            SplitNodes = new List<BVHNode8DataFixed>(BVHLength);
-            BVHNode8Data SourceNode;
-            for (int i = 0; i < BVHLength; i++)
-            {
-                SourceNode = BVH.BVH8Nodes[i];
-                NewNode.px = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(SourceNode.p.x), 0);
-                NewNode.py = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(SourceNode.p.y), 0);
-                NewNode.pz = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(SourceNode.p.z), 0);
-                NewNode.e1 = SourceNode.e[0];
-                NewNode.e2 = SourceNode.e[1];
-                NewNode.e3 = SourceNode.e[2];
-                NewNode.imask = SourceNode.imask;
-                NewNode.base_index_child = SourceNode.base_index_child;
-                NewNode.base_index_triangle = SourceNode.base_index_triangle;
-                NewNode.meta1 = (uint)SourceNode.meta[0];
-                NewNode.meta2 = (uint)SourceNode.meta[1];
-                NewNode.meta3 = (uint)SourceNode.meta[2];
-                NewNode.meta4 = (uint)SourceNode.meta[3];
-                NewNode.meta5 = (uint)SourceNode.meta[4];
-                NewNode.meta6 = (uint)SourceNode.meta[5];
-                NewNode.meta7 = (uint)SourceNode.meta[6];
-                NewNode.meta8 = (uint)SourceNode.meta[7];
-                NewNode.quantized_min_x1 = (uint)SourceNode.quantized_min_x[0];
-                NewNode.quantized_min_x2 = (uint)SourceNode.quantized_min_x[1];
-                NewNode.quantized_min_x3 = (uint)SourceNode.quantized_min_x[2];
-                NewNode.quantized_min_x4 = (uint)SourceNode.quantized_min_x[3];
-                NewNode.quantized_min_x5 = (uint)SourceNode.quantized_min_x[4];
-                NewNode.quantized_min_x6 = (uint)SourceNode.quantized_min_x[5];
-                NewNode.quantized_min_x7 = (uint)SourceNode.quantized_min_x[6];
-                NewNode.quantized_min_x8 = (uint)SourceNode.quantized_min_x[7];
-                NewNode.quantized_max_x1 = (uint)SourceNode.quantized_max_x[0];
-                NewNode.quantized_max_x2 = (uint)SourceNode.quantized_max_x[1];
-                NewNode.quantized_max_x3 = (uint)SourceNode.quantized_max_x[2];
-                NewNode.quantized_max_x4 = (uint)SourceNode.quantized_max_x[3];
-                NewNode.quantized_max_x5 = (uint)SourceNode.quantized_max_x[4];
-                NewNode.quantized_max_x6 = (uint)SourceNode.quantized_max_x[5];
-                NewNode.quantized_max_x7 = (uint)SourceNode.quantized_max_x[6];
-                NewNode.quantized_max_x8 = (uint)SourceNode.quantized_max_x[7];
-
-                NewNode.quantized_min_y1 = (uint)SourceNode.quantized_min_y[0];
-                NewNode.quantized_min_y2 = (uint)SourceNode.quantized_min_y[1];
-                NewNode.quantized_min_y3 = (uint)SourceNode.quantized_min_y[2];
-                NewNode.quantized_min_y4 = (uint)SourceNode.quantized_min_y[3];
-                NewNode.quantized_min_y5 = (uint)SourceNode.quantized_min_y[4];
-                NewNode.quantized_min_y6 = (uint)SourceNode.quantized_min_y[5];
-                NewNode.quantized_min_y7 = (uint)SourceNode.quantized_min_y[6];
-                NewNode.quantized_min_y8 = (uint)SourceNode.quantized_min_y[7];
-                NewNode.quantized_max_y1 = (uint)SourceNode.quantized_max_y[0];
-                NewNode.quantized_max_y2 = (uint)SourceNode.quantized_max_y[1];
-                NewNode.quantized_max_y3 = (uint)SourceNode.quantized_max_y[2];
-                NewNode.quantized_max_y4 = (uint)SourceNode.quantized_max_y[3];
-                NewNode.quantized_max_y5 = (uint)SourceNode.quantized_max_y[4];
-                NewNode.quantized_max_y6 = (uint)SourceNode.quantized_max_y[5];
-                NewNode.quantized_max_y7 = (uint)SourceNode.quantized_max_y[6];
-                NewNode.quantized_max_y8 = (uint)SourceNode.quantized_max_y[7];
-
-                NewNode.quantized_min_z1 = (uint)SourceNode.quantized_min_z[0];
-                NewNode.quantized_min_z2 = (uint)SourceNode.quantized_min_z[1];
-                NewNode.quantized_min_z3 = (uint)SourceNode.quantized_min_z[2];
-                NewNode.quantized_min_z4 = (uint)SourceNode.quantized_min_z[3];
-                NewNode.quantized_min_z5 = (uint)SourceNode.quantized_min_z[4];
-                NewNode.quantized_min_z6 = (uint)SourceNode.quantized_min_z[5];
-                NewNode.quantized_min_z7 = (uint)SourceNode.quantized_min_z[6];
-                NewNode.quantized_min_z8 = (uint)SourceNode.quantized_min_z[7];
-                NewNode.quantized_max_z1 = (uint)SourceNode.quantized_max_z[0];
-                NewNode.quantized_max_z2 = (uint)SourceNode.quantized_max_z[1];
-                NewNode.quantized_max_z3 = (uint)SourceNode.quantized_max_z[2];
-                NewNode.quantized_max_z4 = (uint)SourceNode.quantized_max_z[3];
-                NewNode.quantized_max_z5 = (uint)SourceNode.quantized_max_z[4];
-                NewNode.quantized_max_z6 = (uint)SourceNode.quantized_max_z[5];
-                NewNode.quantized_max_z7 = (uint)SourceNode.quantized_max_z[6];
-                NewNode.quantized_max_z8 = (uint)SourceNode.quantized_max_z[7];
-
-                SplitNodes.Add(NewNode);
-            }
-        }
         public static int NumberOfSetBits(int i)
         {
             i = i - ((i >> 1) & 0x55555555);

@@ -106,9 +106,6 @@ namespace TrueTrace {
         [HideInInspector] public int ConstructKernel;
         [HideInInspector] public int TransferKernel;
         [HideInInspector] public int RefitLayerKernel;
-        [HideInInspector] public int NodeUpdateKernel;
-        [HideInInspector] public int NodeCompressKernel;
-        [HideInInspector] public int NodeInitializerKernel;
         [HideInInspector] public int LightBLASRefitKernel;
 
         [HideInInspector] public int CompactedMeshData;
@@ -127,8 +124,6 @@ namespace TrueTrace {
         private ComputeBuffer AABBBuffer;
         private ComputeBuffer StackBuffer;
 
-        private ComputeBuffer BVHDataBuffer;
-        private ComputeBuffer ToBVHIndexBuffer;
         private ComputeBuffer CWBVHIndicesBuffer;
         private ComputeBuffer[] WorkingBuffer;
         private ComputeBuffer[] WorkingSet;
@@ -140,7 +135,6 @@ namespace TrueTrace {
         [HideInInspector] private List<float> LuminanceWeights;
 
         [HideInInspector] public int MaxRecur = 0;
-        [HideInInspector] public int[] ToBVHIndex;
 
         [HideInInspector] public AABB tempAABB;
 
@@ -148,7 +142,6 @@ namespace TrueTrace {
         public int TriOffset;
         public int LightTriOffset;
         public int LightNodeOffset;
-        [HideInInspector] public List<BVHNode8DataFixed> SplitNodes;
 
         #if HardwareRT
             public Renderer[] Renderers;
@@ -177,7 +170,6 @@ namespace TrueTrace {
             CommonFunctions.DeepClean(ref TransformIndexes);
             CommonFunctions.DeepClean(ref LayerStack);
             CommonFunctions.DeepClean(ref NodePair);
-            CommonFunctions.DeepClean(ref ToBVHIndex);
             CommonFunctions.DeepClean(ref AggTriangles);
             CommonFunctions.DeepClean(ref AggNodes);
             CommonFunctions.DeepClean(ref ForwardStack);
@@ -206,8 +198,6 @@ namespace TrueTrace {
                 AABBBuffer?.Release();
                 StackBuffer?.Release();
                 CWBVHIndicesBuffer?.Release();
-                BVHDataBuffer?.Release();
-                ToBVHIndexBuffer?.Release();
                 if(WorkingBuffer != null) for(int i2 = 0; i2 < WorkingBuffer.Length; i2++) WorkingBuffer[i2]?.Release();
                 if(WorkingSet != null) for(int i2 = 0; i2 < WorkingSet.Length; i2++) WorkingSet[i2]?.Release();
             }
@@ -243,8 +233,6 @@ namespace TrueTrace {
                     AABBBuffer.Release();
                     StackBuffer.Release();
                     CWBVHIndicesBuffer.Release();
-                    BVHDataBuffer.Release();
-                    ToBVHIndexBuffer.Release();
                     if(WorkingBuffer != null) for(int i2 = 0; i2 < WorkingBuffer.Length; i2++) WorkingBuffer[i2].Release();
                     if(WorkingSet != null) for(int i2 = 0; i2 < WorkingSet.Length; i2++) WorkingSet[i2]?.Release();
                 }
@@ -283,9 +271,6 @@ namespace TrueTrace {
             ConstructKernel = MeshRefit.FindKernel("Construct");
             TransferKernel = MeshRefit.FindKernel("TransferKernel");
             RefitLayerKernel = MeshRefit.FindKernel("RefitLayer");
-            NodeUpdateKernel = MeshRefit.FindKernel("NodeUpdate");
-            NodeCompressKernel = MeshRefit.FindKernel("NodeCompress");
-            NodeInitializerKernel = MeshRefit.FindKernel("NodeInitializer");
 #if !DontUseSGTree
             LightBLASRefitKernel = MeshRefit.FindKernel("BLASSGTreeRefitKernel");
 #else
@@ -590,14 +575,48 @@ namespace TrueTrace {
                     CurMat.MetallicRemap = obj.MetallicRemap[i];
                     CurMat.RoughnessRemap = obj.RoughnessRemap[i];
                     CurMat.BaseColor = (!obj.UseKelvin[i]) ? obj.BaseColor[i] : new Vector3(Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).r, Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).g, Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).b);
-                    CurMat.BaseColor = obj.BaseColor[i];
                     CurMat.emission = obj.emission[i];
                     CurMat.Roughness = obj.Roughness[i];
                     CurMat.specTrans = obj.SpecTrans[i];
                     CurMat.EmissionColor = obj.EmissionColor[i];
                     CurMat.ColorBleed = obj.ColorBleed[i];
                     CurMat.MatType = (int)obj.MaterialOptions[i];
+                    CurMat.TransmittanceColor = obj.TransmissionColor[i];
+                    CurMat.IOR = obj.IOR[i];
+                    CurMat.metallic = obj.Metallic[i];
+                    CurMat.specularTint = obj.SpecularTint[i];
+                    CurMat.sheen = obj.Sheen[i];
+                    CurMat.sheenTint = obj.SheenTint[i];
+                    CurMat.clearcoat = obj.ClearCoat[i];
+                    CurMat.clearcoatGloss = obj.ClearCoatGloss[i];
+                    CurMat.anisotropic = obj.Anisotropic[i];
+                    CurMat.flatness = obj.Flatness[i];
+                    CurMat.diffTrans = obj.DiffTrans[i];
+                    CurMat.scatterDistance = obj.ScatterDist[i];
+                    CurMat.Specular = obj.Specular[i];
+                    CurMat.AlphaCutoff = obj.AlphaCutoff[i];
+                    CurMat.NormalStrength = obj.NormalStrength[i];
+                    CurMat.Hue = obj.Hue[i];
+                    CurMat.Saturation = obj.Saturation[i];
+                    CurMat.Brightness = obj.Brightness[i];
+                    CurMat.Contrast = obj.Contrast[i];
+                    CurMat.BlendColor = obj.BlendColor[i];
+                    CurMat.BlendFactor = obj.BlendFactor[i];
+                    CurMat.AlbedoTextureScale = obj.MainTexScaleOffset[i];
+                    CurMat.SecondaryAlbedoTexScaleOffset = obj.SecondaryAlbedoTexScaleOffset[i];
+                    CurMat.SecondaryTextureScaleOffset = obj.SecondaryTextureScaleOffset[i];
+                    CurMat.NormalTexScaleOffset = obj.NormalTexScaleOffset[i];
+                    CurMat.RotationNormal = obj.RotationNormal[i] * 3.14159f;
+                    CurMat.RotationSecondary = obj.RotationSecondary[i] * 3.14159f;
+                    CurMat.RotationSecondaryDiffuse = obj.RotationSecondaryDiffuse[i] * 3.14159f;
+                    CurMat.RotationSecondaryNormal = obj.RotationSecondaryNormal[i] * 3.14159f;
+                    CurMat.Rotation = obj.Rotation[i] * 3.14159f;
+                    CurMat.AlbedoBlendFactor = obj.AlbedoBlendFactor[i];
+                    CurMat.SecondaryNormalTexBlend = obj.SecondaryNormalTexBlend[i];
+                    CurMat.DetailNormalStrength = obj.DetailNormalStrength[i];
+                    CurMat.SecondaryNormalTexScaleOffset = obj.SecondaryNormalTexScaleOffset[i];
                     if(JustCreated) obj.Flags[i] = CommonFunctions.SetFlagVar(obj.Flags[i], CommonFunctions.Flags.UseSmoothness, RelevantMat.UsesSmoothness);
+                    CurMat.Tag = obj.Flags[i];
                     if(i == obj.BaseColor.Length - 1) obj.JustCreated = false;
                     obj.Indexes[i] = Offset;
                     obj.MaterialIndex[i] = CurMatIndex;
@@ -906,7 +925,6 @@ namespace TrueTrace {
         MaxRecur = Mathf.Max(MaxRecur, CurRecur);
         IsLeafList[CurrentNode] = new Vector3Int(IsLeafList[CurrentNode].x, CurRecur, ParentNode);
         if (!IsLeafRecur) {
-            ToBVHIndex[NextBVH8Node] = CurrentNode;
             IsLeafList[CurrentNode] = new Vector3Int(0, IsLeafList[CurrentNode].y, IsLeafList[CurrentNode].z);
             BVHNode8Data node = BVH.BVH8Nodes[NextBVH8Node];
             NodeIndexPairData IndexPair = new NodeIndexPairData();
@@ -968,7 +986,6 @@ namespace TrueTrace {
 
             if (IsSkinnedGroup || IsDeformable)
             {
-                ToBVHIndex = new int[BVH.cwbvhnode_count];
                 NodePair = new List<NodeIndexPairData>();
                 NodePair.Add(new NodeIndexPairData());
                 IsLeafList = new List<Vector3Int>();
@@ -1000,7 +1017,6 @@ namespace TrueTrace {
                     TempLayer.Slab.Add(i);
                     LayerStack[IsLeafList[i].y] = TempLayer;
                 }
-                CommonFunctions.ConvertToSplitNodes(BVH, ref SplitNodes);
             }
             int LightTriLength = LightTriangles.Count;
             for(int i = 0; i < LightTriLength; i++) {
@@ -1078,12 +1094,6 @@ namespace TrueTrace {
                 StackBuffer.SetData(ForwardStack);
                 CWBVHIndicesBuffer = new ComputeBuffer(BVH.cwbvh_indices.Length, 4);
                 CWBVHIndicesBuffer.SetData(BVH.cwbvh_indices);
-                BVHDataBuffer = new ComputeBuffer(AggNodes.Length, 260);
-                BVHDataBuffer.SetData(SplitNodes);
-                SplitNodes.Clear();
-                SplitNodes.TrimExcess();
-                ToBVHIndexBuffer = new ComputeBuffer(ToBVHIndex.Length, 4);
-                ToBVHIndexBuffer.SetData(ToBVHIndex);
                 HasStarted = true;
                 WorkingBuffer = new ComputeBuffer[LayerStack.Length];
                 if(HasLightTriangles) {
@@ -1130,14 +1140,9 @@ namespace TrueTrace {
                 cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "CudaTriArrayA", RealizedTriBufferA);
                 cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "CudaTriArrayB", RealizedTriBufferB);
                 cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "CWBVHIndices", CWBVHIndicesBuffer);
-                cmd.SetComputeBufferParam(MeshRefit, NodeInitializerKernel, "AllNodes", NodeBuffer);
                 cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "AllNodes", NodeBuffer);
                 cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "Boxs", AABBBuffer);
-                cmd.SetComputeBufferParam(MeshRefit, NodeUpdateKernel, "AllNodes", NodeBuffer);
-                cmd.SetComputeBufferParam(MeshRefit, NodeUpdateKernel, "BVHNodes", BVHDataBuffer);
-                cmd.SetComputeBufferParam(MeshRefit, NodeUpdateKernel, "ToBVHIndex", ToBVHIndexBuffer);
-                cmd.SetComputeBufferParam(MeshRefit, NodeCompressKernel, "BVHNodes", BVHDataBuffer);
-                cmd.SetComputeBufferParam(MeshRefit, NodeCompressKernel, "AggNodes", RealizedAggNodes);
+                cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "AggNodes", RealizedAggNodes);
                 int CurVertOffset = 0;
                 if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Accum");
 
@@ -1201,12 +1206,8 @@ namespace TrueTrace {
                 }
 
                 #if !HardwareRT
-                    if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Init");
-                    cmd.SetComputeIntParam(MeshRefit, "NodeCount", NodePair.Count);
-                    cmd.DispatchCompute(MeshRefit, NodeInitializerKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
-                    if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Init");
-
                     if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Refit");
+                    cmd.SetComputeIntParam(MeshRefit, "NodeOffset", NodeOffset);
                     for (int i = MaxRecur - 1; i >= 0; i--) {
                         var NodeCount2 = WorkingBuffer[i].count;
                         cmd.SetComputeIntParam(MeshRefit, "NodeCount", NodeCount2);
@@ -1214,17 +1215,6 @@ namespace TrueTrace {
                         cmd.DispatchCompute(MeshRefit, RefitLayerKernel, (int)Mathf.Ceil(NodeCount2 / (float)KernelRatio), 1, 1);
                     }
                     if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Refit");
-
-                    if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Update");
-                    cmd.SetComputeIntParam(MeshRefit, "NodeCount", NodePair.Count);
-                    cmd.DispatchCompute(MeshRefit, NodeUpdateKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
-                    if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Update");
-
-                    if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Compress");
-                    cmd.SetComputeIntParam(MeshRefit, "NodeCount", BVH.cwbvhnode_count);
-                    cmd.SetComputeIntParam(MeshRefit, "NodeOffset", NodeOffset);
-                    cmd.DispatchCompute(MeshRefit, NodeCompressKernel, (int)Mathf.Ceil(NodePair.Count / (float)KernelRatio), 1, 1);
-                    if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Compress");
                 #endif
                 if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh");
             }

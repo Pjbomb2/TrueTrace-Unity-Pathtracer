@@ -31,7 +31,7 @@ MonoBehaviour:
   PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
-  DenoiserMethod: 1
+  DenoiserMethod: 0
   UpscalerMethod: 2
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
@@ -46,7 +46,7 @@ MonoBehaviour:
   DoFirefly: 0
   ImprovedPrimaryHit: 1
   RISCount: 12
-  ToneMapper: 0
+  ToneMapper: 1
   SkyDesaturate: 0
   ClayColor: {x: 0.5, y: 0.5, z: 0.5}
   GroundColor: {x: 0.11320752, y: 0.11320752, z: 0.11320752}
@@ -74,7 +74,7 @@ MonoBehaviour:
   PPFXAA: 0
   OIDNBlendRatio: 1
   ConvBloom: 1
-  ConvStrength: 0.3
+  ConvStrength: 7.03
   ConvBloomThreshold: 0
   ConvBloomSize: {x: 1, y: 1}
   ConvBloomDistExp: 0
@@ -90,7 +90,7 @@ MonoBehaviour:
   DoChromaAber: 0
   ChromaDistort: 0.14
   DoBCS: 0
-  Saturation: 1
+  Saturation: 1.96
   Contrast: 1
   DoVignette: 0
   innerVignette: 0.5
