@@ -844,6 +844,10 @@ namespace TrueTrace {
             TerrainBuffer.ReleaseSafe();
             TLASCWBVHIndexes.ReleaseSafe();
             TerrainBuffer.ReleaseSafe();
+            if(BVH != null) {
+                BVH.ClearAll();
+                BVH = null;
+            }
             ClearAll();
         }
 
@@ -1565,7 +1569,7 @@ namespace TrueTrace {
         public int NonInstanceCount = 0;
         Dictionary<ParentObject, List<InstancedObject>> InstanceIndexes;
 
-
+        BVH2Builder BVH;
         unsafe public void ConstructNewTLAS() {
 
             #if HardwareRT
@@ -1650,7 +1654,8 @@ namespace TrueTrace {
                 }
             AccelStruct.Build();
             #else
-                BVH2Builder BVH = new BVH2Builder(MeshAABBs);
+                if(BVH != null) BVH.ClearAll();
+                BVH = new BVH2Builder(MeshAABBs);
                 if(TLASBVH8 != null) {
                     CommonFunctions.DeepClean(ref TLASBVH8.cwbvh_indices);
                     if(TLASBVH8.BVH8NodesArray.IsCreated) TLASBVH8.BVH8NodesArray.Dispose();
@@ -1658,8 +1663,6 @@ namespace TrueTrace {
                     if(TLASBVH8.decisionsArray.IsCreated) TLASBVH8.decisionsArray.Dispose();
                 }
                 TLASBVH8 = new BVH8Builder(BVH);
-                CommonFunctions.DeepClean(ref BVH.FinalIndices);
-                BVH = null;
                 // System.Array.Resize(ref TLASBVH8.BVH8Nodes, TLASBVH8.cwbvhnode_count);
                 ToBVHIndex = new int[TLASBVH8.cwbvhnode_count];
                 if (TempBVHArray == null || TLASBVH8.cwbvhnode_count != TempBVHArray.Length) TempBVHArray = new BVHNode8DataCompressed[TLASBVH8.cwbvhnode_count];
@@ -1737,16 +1740,8 @@ namespace TrueTrace {
         Task TLASTask;
         unsafe async void CorrectRefit(AABB[] Boxes) {
             TempRecur = 0;
-            BVH2Builder BVH = new BVH2Builder(Boxes);
-            if(TLASBVH8 != null) {
-                CommonFunctions.DeepClean(ref TLASBVH8.cwbvh_indices);
-                if(TLASBVH8.BVH8NodesArray.IsCreated) TLASBVH8.BVH8NodesArray.Dispose();
-                if(TLASBVH8.costArray.IsCreated) TLASBVH8.costArray.Dispose();
-                if(TLASBVH8.decisionsArray.IsCreated) TLASBVH8.decisionsArray.Dispose();
-            }
-            TLASBVH8 = new BVH8Builder(BVH);
-                CommonFunctions.DeepClean(ref BVH.FinalIndices);
-                BVH = null;
+            BVH.NoAllocRebuild(Boxes);
+            TLASBVH8.NoAllocRebuild(BVH);
                 // System.Array.Resize(ref TLASBVH8.BVH8Nodes, TLASBVH8.cwbvhnode_count);
                 ToBVHIndex = new int[TLASBVH8.cwbvhnode_count];
                 if (TempBVHArray == null || TLASBVH8.cwbvhnode_count != TempBVHArray.Length) TempBVHArray = new BVHNode8DataCompressed[TLASBVH8.cwbvhnode_count];

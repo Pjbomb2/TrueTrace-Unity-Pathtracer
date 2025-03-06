@@ -1095,7 +1095,6 @@ namespace TrueTrace {
 
 
                 bool A = EditorGUILayout.ToggleLeft("Override All Local \"Invisible\" Flags", t.InvisibleOverride, GUILayout.MaxWidth(225));
-                bool InvisibleOverrideTrigger = !(A ^ t.InvisibleOverride);
                 serializedObject.FindProperty("InvisibleOverride").boolValue = A;
 
                 bool MaterialWasChanged = false;
@@ -1114,7 +1113,7 @@ namespace TrueTrace {
                     }
                     for(int i = 0; i < TheseNames.Length; i++) {
                         if(Selected == i) continue;
-                        if(TheseNames[i].Equals(Name) || InvisibleOverrideTrigger) {
+                        if(TheseNames[i].Equals(Name)) {
                             t.MaterialOptions[i] = t.MaterialOptions[Selected];
                             t.BaseColor[i] = t.BaseColor[Selected];
                             t.TransmissionColor[i] = t.TransmissionColor[Selected];

@@ -152,6 +152,10 @@ namespace TrueTrace {
         public void Load()
         {
             TerrainTile = this.gameObject.GetComponent<Terrain>();
+            if(TerrainTile.terrainData == null) {
+                DestroyImmediate(this);
+                return;
+            }
             HeightMap = new Texture2D(TerrainTile.terrainData.heightmapResolution, TerrainTile.terrainData.heightmapResolution, UnityEngine.Experimental.Rendering.GraphicsFormat.R16_UNorm, UnityEngine.Experimental.Rendering.TextureCreationFlags.None);
 
             Graphics.ConvertTexture(TerrainTile.terrainData.heightmapTexture, HeightMap);

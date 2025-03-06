@@ -9,19 +9,20 @@ namespace TrueTrace {
     [System.Serializable]
     unsafe public class BVH8Builder {
 
-        private float* cost;
-        private Decision* decisions;
+        public float* cost;
+        public Decision* decisions;
         public int[] cwbvh_indices;
         public BVHNode8Data* BVH8Nodes;
         public int cwbvhindex_count;
         public int cwbvhnode_count;
-        private BVHNode2Data* nodes;
+        public BVHNode2Data* nodes;
 
 
         public NativeArray<float> costArray;
         public NativeArray<Decision> decisionsArray;
         public NativeArray<BVHNode8Data> BVH8NodesArraySecondary;
         public NativeArray<BVHNode8Data> BVH8NodesArray;
+        public BVHNode8Data ZeroedData = new BVHNode8Data();
         
         public struct Decision {
             public int Type;//Types: 0 is LEAF, 1 is INTERNAL, 2 is DISTRIBUTE
@@ -356,7 +357,7 @@ namespace TrueTrace {
             CommonFunctions.DeepClean(ref cwbvh_indices);
 
         }
-
+        // public int PrevAlloc = 0;
         public BVH8Builder(ref BVH2Builder BVH2) {//Bottom Level CWBVH Builder
             int BVH2NodesCount = BVH2.BVH2NodesArray.Length;
             int BVH2IndicesCount = BVH2.FinalIndices.Length;
@@ -376,8 +377,9 @@ namespace TrueTrace {
             cwbvhnode_count = 1;
             // TotalCost = 0;
             calculate_cost(0);
-
+            //replace BVH2NodeCount with TriCount
             cwbvh_indices = new int[BVH2IndicesCount];
+            // PrevAlloc = BVH2NodesCount;
             BVH8NodesArraySecondary = new NativeArray<BVHNode8Data>(BVH2NodesCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
             BVH8Nodes = (BVHNode8Data*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(BVH8NodesArraySecondary);
 // BVH8_CWBVH();
@@ -398,8 +400,8 @@ namespace TrueTrace {
             int BVH2IndicesCount = BVH2.FinalIndices.Length;
             cost2 = new float[8,8];
             costpreset = new float[8,8];
-            costArray = new NativeArray<float>(BVH2NodesCount * 7,  Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
-            decisionsArray = new NativeArray<Decision>(BVH2NodesCount * 7,  Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
+            costArray = new NativeArray<float>(BVH2NodesCount * 7,  Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
+            decisionsArray = new NativeArray<Decision>(BVH2NodesCount * 7,  Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
             cost = (float*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(costArray);
             decisions = (Decision*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(decisionsArray);
             
@@ -414,18 +416,81 @@ namespace TrueTrace {
             calculate_cost(0);
 
             cwbvh_indices = new int[BVH2IndicesCount];
-            BVH8NodesArraySecondary = new NativeArray<BVHNode8Data>(BVH2NodesCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
-            BVH8Nodes = (BVHNode8Data*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(BVH8NodesArraySecondary);
+            BVH8NodesArray = new NativeArray<BVHNode8Data>(BVH2NodesCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
+            BVH8Nodes = (BVHNode8Data*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(BVH8NodesArray);
 
             collapse(ref BVH2.FinalIndices, 0, 0);
-            BVH2.BVH2NodesArray.Dispose();
-            costArray.Dispose();
-            decisionsArray.Dispose();
+            // BVH2.BVH2NodesArray.Dispose();
+            // costArray.Dispose();
+            // decisionsArray.Dispose();
 
-            BVH8NodesArray = new NativeArray<BVHNode8Data>(cwbvhnode_count, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-            NativeArray<BVHNode8Data>.Copy(BVH8NodesArraySecondary, 0, BVH8NodesArray, 0, cwbvhnode_count);
-            BVH8NodesArraySecondary.Dispose();
-            BVH8Nodes = (BVHNode8Data*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(BVH8NodesArray);
+            // BVH8NodesArray = new NativeArray<BVHNode8Data>(cwbvhnode_count, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            // NativeArray<BVHNode8Data>.Copy(BVH8NodesArraySecondary, 0, BVH8NodesArray, 0, cwbvhnode_count);
+            // BVH8NodesArraySecondary.Dispose();
+            // BVH8Nodes = (BVHNode8Data*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(BVH8NodesArray);
+        }
+        public void ClearAll() {
+            if(costArray.IsCreated) costArray.Dispose();
+            if(decisionsArray.IsCreated) decisionsArray.Dispose();            
+            if(BVH8NodesArray.IsCreated) BVH8NodesArray.Dispose();            
+        }
+
+
+        public void NoAllocRebuild(BVH2Builder BVH2) {//Top Level CWBVH Builder
+            int BVH2NodesCount = BVH2.BVH2NodesArray.Length;
+            int BVH2IndicesCount = BVH2.FinalIndices.Length;
+            for(int i = 0; i < 8; i++) {
+                for(int j = 0; j < 8; j++) {
+                    cost2[i,j] = 0;
+                    costpreset[i,j] = 0;
+                }
+                children_copy[i] = 0;
+                assignment[i] = 0;
+                slot_filled[i] = false;
+            }
+            cost = (float*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(costArray);
+            decisions = (Decision*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(decisionsArray);
+            for(int i = 0; i < BVH2NodesCount; i++) {
+                BVH8Nodes[i] = ZeroedData;
+            }
+            // for(int i = 0; i < BVH2NodesCount * 7; i++) {
+            //     cost[i] = 0;
+            //     decisions[i].Type = 0;
+            //     decisions[i].dist_left = 0;
+            //     decisions[i].dist_right = 0;
+            // }
+            // costArray = new NativeArray<float>(BVH2NodesCount * 7,  Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
+            // decisionsArray = new NativeArray<Decision>(BVH2NodesCount * 7,  Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
+            
+            // cwbvh_indices = new int[BVH2IndicesCount];
+            nodes = BVH2.BVH2Nodes;
+
+            cwbvhindex_count = 0;
+            cwbvhnode_count = 1;
+
+            calculate_cost(0);
+
+            // cwbvh_indices = new int[BVH2IndicesCount];
+            // if(BVH8NodesArray.Length != BVH2NodesCount) {
+            //     BVH8NodesArray = new NativeArray<BVHNode8Data>(BVH2NodesCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
+
+            // }
+            // BVH8Nodes = (BVHNode8Data*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(BVH8NodesArray);
+            // BVH8NodesArraySecondary = new NativeArray<BVHNode8Data>(BVH2NodesCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
+            // if(BVH2NodesCount != BVH8NodesArray.Length) {
+            //     BVH8NodesArray.Dispose();
+            //     BVH8NodesArray = new NativeArray<BVHNode8Data>(BVH2NodesCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
+            // }
+
+            collapse(ref BVH2.FinalIndices, 0, 0);
+            // BVH2.BVH2NodesArray.Dispose();
+            // costArray.Dispose();
+            // decisionsArray.Dispose();
+            // if(BVH8NodesArray.Length != cwbvhnode_count) 
+            // BVH8NodesArray = new NativeArray<BVHNode8Data>(cwbvhnode_count, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            // NativeArray<BVHNode8Data>.Copy(BVH8NodesArraySecondary, 0, BVH8NodesArray, 0, cwbvhnode_count);
+            // BVH8NodesArraySecondary.Dispose();
+            // BVH8Nodes = (BVHNode8Data*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(BVH8NodesArray);
         }
     }
 }

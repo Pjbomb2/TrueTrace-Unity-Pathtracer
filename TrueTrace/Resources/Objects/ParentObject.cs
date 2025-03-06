@@ -947,6 +947,7 @@ namespace TrueTrace {
 
             tempAABB = new AABB();
             MaxRecur = 0;
+            int PrevLength = TrianglesArray.Length;
             BVH2 = new BVH2Builder(Triangles, TrianglesArray.Length);//Binary BVH Builder, and also the component that takes the longest to build
             TrianglesArray.Dispose();
             this.BVH = new BVH8Builder(ref BVH2);
@@ -963,6 +964,8 @@ namespace TrueTrace {
             #else
                 for (int i = 0; i < CWBVHIndicesBufferCount; i++) BVH.cwbvh_indices[i] = i;
             #endif
+                    // Debug.LogError("Allocated: " + BVH.PrevAlloc + ", Actual: " + BVH.cwbvhnode_count + ", Orig Tri Count: " + PrevLength);
+
             if (IsSkinnedGroup || IsDeformable)
             {
                 ToBVHIndex = new int[BVH.cwbvhnode_count];
