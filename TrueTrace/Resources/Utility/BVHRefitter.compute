@@ -21,6 +21,61 @@ float3 Offset;
 
 float3 Scale;
 
+float3 transform_position(float4x4 mat, float3 position)
+{
+    return float3(
+        mat[0][0] * position.x + mat[0][1] * position.y + mat[0][2] * position.z + mat[0][3],
+        mat[1][0] * position.x + mat[1][1] * position.y + mat[1][2] * position.z + mat[1][3],
+        mat[2][0] * position.x + mat[2][1] * position.y + mat[2][2] * position.z + mat[2][3]);
+}
+float3 transform_direction(float4x4 mat, float3 direction)
+{
+    return float3(
+        abs(mat[0][0]) * direction.x + abs(mat[0][1]) * direction.y + abs(mat[0][2]) * direction.z,
+        abs(mat[1][0]) * direction.x + abs(mat[1][1]) * direction.y + abs(mat[1][2]) * direction.z,
+        abs(mat[2][0]) * direction.x + abs(mat[2][1]) * direction.y + abs(mat[2][2]) * direction.z
+    );
+}
+
+inline float4x4 inverse(float4x4 m) {
+    float n11 = m[0][0], n12 = m[1][0], n13 = m[2][0], n14 = m[3][0];
+    float n21 = m[0][1], n22 = m[1][1], n23 = m[2][1], n24 = m[3][1];
+    float n31 = m[0][2], n32 = m[1][2], n33 = m[2][2], n34 = m[3][2];
+    float n41 = m[0][3], n42 = m[1][3], n43 = m[2][3], n44 = m[3][3];
+
+    float t11 = n23 * n34 * n42 - n24 * n33 * n42 + n24 * n32 * n43 - n22 * n34 * n43 - n23 * n32 * n44 + n22 * n33 * n44;
+    float t12 = n14 * n33 * n42 - n13 * n34 * n42 - n14 * n32 * n43 + n12 * n34 * n43 + n13 * n32 * n44 - n12 * n33 * n44;
+    float t13 = n13 * n24 * n42 - n14 * n23 * n42 + n14 * n22 * n43 - n12 * n24 * n43 - n13 * n22 * n44 + n12 * n23 * n44;
+    float t14 = n14 * n23 * n32 - n13 * n24 * n32 - n14 * n22 * n33 + n12 * n24 * n33 + n13 * n22 * n34 - n12 * n23 * n34;
+
+    float det = n11 * t11 + n21 * t12 + n31 * t13 + n41 * t14;
+    float idet = 1.0f / det;
+
+    float4x4 ret;
+
+    ret[0][0] = t11 * idet;
+    ret[0][1] = (n24 * n33 * n41 - n23 * n34 * n41 - n24 * n31 * n43 + n21 * n34 * n43 + n23 * n31 * n44 - n21 * n33 * n44) * idet;
+    ret[0][2] = (n22 * n34 * n41 - n24 * n32 * n41 + n24 * n31 * n42 - n21 * n34 * n42 - n22 * n31 * n44 + n21 * n32 * n44) * idet;
+    ret[0][3] = (n23 * n32 * n41 - n22 * n33 * n41 - n23 * n31 * n42 + n21 * n33 * n42 + n22 * n31 * n43 - n21 * n32 * n43) * idet;
+
+    ret[1][0] = t12 * idet;
+    ret[1][1] = (n13 * n34 * n41 - n14 * n33 * n41 + n14 * n31 * n43 - n11 * n34 * n43 - n13 * n31 * n44 + n11 * n33 * n44) * idet;
+    ret[1][2] = (n14 * n32 * n41 - n12 * n34 * n41 - n14 * n31 * n42 + n11 * n34 * n42 + n12 * n31 * n44 - n11 * n32 * n44) * idet;
+    ret[1][3] = (n12 * n33 * n41 - n13 * n32 * n41 + n13 * n31 * n42 - n11 * n33 * n42 - n12 * n31 * n43 + n11 * n32 * n43) * idet;
+
+    ret[2][0] = t13 * idet;
+    ret[2][1] = (n14 * n23 * n41 - n13 * n24 * n41 - n14 * n21 * n43 + n11 * n24 * n43 + n13 * n21 * n44 - n11 * n23 * n44) * idet;
+    ret[2][2] = (n12 * n24 * n41 - n14 * n22 * n41 + n14 * n21 * n42 - n11 * n24 * n42 - n12 * n21 * n44 + n11 * n22 * n44) * idet;
+    ret[2][3] = (n13 * n22 * n41 - n12 * n23 * n41 - n13 * n21 * n42 + n11 * n23 * n42 + n12 * n21 * n43 - n11 * n22 * n43) * idet;
+
+    ret[3][0] = t14 * idet;
+    ret[3][1] = (n13 * n24 * n31 - n14 * n23 * n31 + n14 * n21 * n33 - n11 * n24 * n33 - n13 * n21 * n34 + n11 * n23 * n34) * idet;
+    ret[3][2] = (n14 * n22 * n31 - n12 * n24 * n31 - n14 * n21 * n32 + n11 * n24 * n32 + n12 * n21 * n34 - n11 * n22 * n34) * idet;
+    ret[3][3] = (n12 * n23 * n31 - n13 * n22 * n31 + n13 * n21 * n32 - n11 * n23 * n32 - n12 * n21 * n33 + n11 * n22 * n33) * idet;
+
+    return ret;
+}
+
 
 struct BoundingBox {
 	float3 BBMax;
@@ -288,8 +343,12 @@ void RefitBVHLayer(uint3 id : SV_DispatchThreadID)
 		int Start = Stack[i] / 24;
 		int End = Start + Stack[i] % 24;
 		for (i4 = Start; i4 < End; i4++) {
-			RunningMax = max(RunningMax, Boxs[TLASCWBVHIndices[i4]].BBMax);
-			RunningMin = min(RunningMin, Boxs[TLASCWBVHIndices[i4]].BBMin);
+
+	        float3 center = transform_position(inverse(_MeshData[TLASCWBVHIndices[i4]].W2L), (Boxs[TLASCWBVHIndices[i4]].BBMax + Boxs[TLASCWBVHIndices[i4]].BBMin) / 2.0f);
+	        float3 extent = transform_direction(inverse(_MeshData[TLASCWBVHIndices[i4]].W2L), (Boxs[TLASCWBVHIndices[i4]].BBMax - Boxs[TLASCWBVHIndices[i4]].BBMin) / 2.0f);
+
+			RunningMax = max(RunningMax, center + extent);
+			RunningMin = min(RunningMin, center - extent);
 		}
 	}
 
@@ -365,7 +424,14 @@ void RefitBVHLayer(uint3 id : SV_DispatchThreadID)
 
 }
 
-
+#pragma kernel UpdateGlobalBufferAABBKernel
+int TLASBoxesInput;
+[numthreads(1, 1, 1)]
+void UpdateGlobalBufferAABBKernel(uint3 id : SV_DispatchThreadID)
+{
+	Boxs[TLASBoxesInput].BBMax = AllNodes[0].BBMax;
+	Boxs[TLASBoxesInput].BBMin = AllNodes[0].BBMin;
+}
 
 // ---------------------------------------------------------------------- //
 //Light BVH refits
@@ -557,21 +623,8 @@ struct Transfer {
 
 StructuredBuffer<Transfer> Transfers;
 
-float3 transform_position(float4x4 mat, float3 position)
-{
-    return float3(
-        mat[0][0] * position.x + mat[0][1] * position.y + mat[0][2] * position.z + mat[0][3],
-        mat[1][0] * position.x + mat[1][1] * position.y + mat[1][2] * position.z + mat[1][3],
-        mat[2][0] * position.x + mat[2][1] * position.y + mat[2][2] * position.z + mat[2][3]);
-}
-float3 transform_direction(float4x4 mat, float3 direction)
-{
-    return float3(
-        abs(mat[0][0]) * direction.x + abs(mat[0][1]) * direction.y + abs(mat[0][2]) * direction.z,
-        abs(mat[1][0]) * direction.x + abs(mat[1][1]) * direction.y + abs(mat[1][2]) * direction.z,
-        abs(mat[2][0]) * direction.x + abs(mat[2][1]) * direction.y + abs(mat[2][2]) * direction.z
-    );
-}
+
+
 
 [numthreads(256,1,1)]
 void TLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
@@ -580,19 +633,20 @@ void TLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
     const int Index = WorkingSet[id.x];
     GaussianTreeNode Node = SGTreeWrite[Index];
     if(Node.left < 0) {
-        Transfer Transf = Transfers[-(Node.left+1)];
-        float3 ExtendedCenter = transform_position(Transf.Transf2, SGTreeWrite[Transf.SolidOffset].position + float3(SGTreeWrite[Transf.SolidOffset].radius, 0, 0));
-        float3 center = transform_position(Transf.Transf2, SGTreeWrite[Transf.SolidOffset].position);
-        float3 axis = transform_direction(Transf.Transf2, SGTreeWrite[Transf.SolidOffset].axis);
-        float Scale = length(center - ExtendedCenter) / SGTreeWrite[Transf.SolidOffset].radius;
+        int StartIndex = _MeshData[_LightMeshes[-(Node.left+1)].LockedMeshIndex].LightNodeOffset;
+        float4x4 TransfMat = inverse(_MeshData[_LightMeshes[-(Node.left+1)].LockedMeshIndex].W2L);
+        float3 ExtendedCenter = transform_position(TransfMat, SGTreeWrite[StartIndex].position + float3(SGTreeWrite[StartIndex].radius, 0, 0));
+        float3 center = transform_position(TransfMat, SGTreeWrite[StartIndex].position);
+        float3 axis = transform_direction(TransfMat, SGTreeWrite[StartIndex].axis);
+        float Scale = length(center - ExtendedCenter) / SGTreeWrite[StartIndex].radius;
 
         SGTreeWrite[Index].position = center;
-        SGTreeWrite[Index].sharpness = min(VMFAxisLengthToSharpness(saturate(VMFSharpnessToAxisLength(SGTreeWrite[Transf.SolidOffset].sharpness) / Scale)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
+        SGTreeWrite[Index].sharpness = min(VMFAxisLengthToSharpness(saturate(VMFSharpnessToAxisLength(SGTreeWrite[StartIndex].sharpness) / Scale)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
         SGTreeWrite[Index].axis = axis;
-        SGTreeWrite[Index].variance = SGTreeWrite[Transf.SolidOffset].variance * Scale;        
+        SGTreeWrite[Index].variance = SGTreeWrite[StartIndex].variance * Scale;        
 
-        SGTreeWrite[Index].radius = SGTreeWrite[Transf.SolidOffset].radius * Scale;
-        SGTreeWrite[Index].intensity = SGTreeWrite[Transf.SolidOffset].intensity * Scale * Scale;
+        SGTreeWrite[Index].radius = SGTreeWrite[StartIndex].radius * Scale;
+        SGTreeWrite[Index].intensity = SGTreeWrite[StartIndex].intensity * Scale * Scale;
         return;
     }
     GaussianTreeNode LeftNode = SGTreeWrite[Node.left];
@@ -614,14 +668,15 @@ void TLASLightBVHRefitKernel (uint3 id : SV_DispatchThreadID)
     const int Index = WorkingSet[id.x];
     LightBVHData Node = LightNodesWrite[Index];
     if(Node.left < 0) {
-        Transfer Transf = Transfers[-(Node.left+1)];
-        float3 center = transform_position(Transf.Transf2, (LightNodesWrite[Transf.SolidOffset].BBMax + LightNodesWrite[Transf.SolidOffset].BBMin) / 2.0f);
-        float3 extent = transform_direction(Transf.Transf2, (LightNodesWrite[Transf.SolidOffset].BBMax - LightNodesWrite[Transf.SolidOffset].BBMin) / 2.0f);
+        int StartIndex = _MeshData[_LightMeshes[-(Node.left+1)].LockedMeshIndex].LightNodeOffset;
+        float4x4 TransfMat = inverse(_MeshData[_LightMeshes[-(Node.left+1)].LockedMeshIndex].W2L);
+        float3 center = transform_position(TransfMat, (LightNodesWrite[StartIndex].BBMax + LightNodesWrite[StartIndex].BBMin) / 2.0f);
+        float3 extent = transform_direction(TransfMat, (LightNodesWrite[StartIndex].BBMax - LightNodesWrite[StartIndex].BBMin) / 2.0f);
         LightNodesWrite[Index].BBMax = center + extent;
         LightNodesWrite[Index].BBMin = center - extent;
-        LightNodesWrite[Index].w = octahedral_32(transform_direction(Transf.Transf2, i_octahedral_32(LightNodesWrite[Transf.SolidOffset].w)));
-        LightNodesWrite[Index].phi = max(LightNodesWrite[Transf.SolidOffset].phi,0.000000f);
-        LightNodesWrite[Index].cosTheta_oe = LightNodesWrite[Transf.SolidOffset].cosTheta_oe;
+        LightNodesWrite[Index].w = octahedral_32(transform_direction(TransfMat, i_octahedral_32(LightNodesWrite[StartIndex].w)));
+        LightNodesWrite[Index].phi = max(LightNodesWrite[StartIndex].phi,0.000000f);
+        LightNodesWrite[Index].cosTheta_oe = LightNodesWrite[StartIndex].cosTheta_oe;
         return;
     }
     LightBVHData LeftNode = LightNodesWrite[Node.left];

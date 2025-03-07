@@ -145,6 +145,7 @@ namespace TrueTrace {
         [HideInInspector] public List<LightMeshData> LightMeshes;
 
         [HideInInspector] public AABB[] MeshAABBs;
+        [HideInInspector] public AABB[] TransformedAABBs;
         [HideInInspector] public LightBounds[] LightAABBs;
         [HideInInspector] public GaussianTreeNode[] SGTreeNodes;
 
@@ -838,7 +839,6 @@ namespace TrueTrace {
 
             if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
             if(LBVHWorkingSet != null) for(int i = 0; i < LBVHWorkingSet.Length; i++) LBVHWorkingSet[i]?.Release();
-            LightBVHTransformsBuffer.ReleaseSafe();
             NodeBuffer.ReleaseSafe();
             StackBuffer.ReleaseSafe();
             BoxesBuffer.ReleaseSafe();
@@ -848,6 +848,10 @@ namespace TrueTrace {
             if(BVH != null) {
                 BVH.ClearAll();
                 BVH = null;
+            }
+            if(LBVH != null) {
+                LBVH.Dispose();
+                LBVH = null;
             }
             ClearAll();
         }
@@ -1114,15 +1118,13 @@ namespace TrueTrace {
             }
 
 
-            if (OnlyInstanceUpdated && !ChildrenUpdated)
-            {
-                ChildrenUpdated = true;
+            if (OnlyInstanceUpdated && !ChildrenUpdated) ChildrenUpdated = true;
+            else OnlyInstanceUpdated = false;
+
+            if (ChildrenUpdated || ParentCountHasChanged) {
+                MeshAABBs = new AABB[RenderQue.Count + InstanceRenderQue.Count];
+                TransformedAABBs = new AABB[RenderQue.Count + InstanceRenderQue.Count];
             }
-            else
-            {
-                OnlyInstanceUpdated = false;
-            }
-            if (ChildrenUpdated || ParentCountHasChanged) MeshAABBs = new AABB[RenderQue.Count + InstanceRenderQue.Count];
         }
 
         public void EditorBuild()
@@ -1456,7 +1458,6 @@ namespace TrueTrace {
 
                 if (!OnlyInstanceUpdated || (_Materials == null || _Materials.Length == 0) || (ChildrenUpdated && ParentCountHasChanged && OnlyInstanceUpdated)) {
                     CreateAtlas(TotalMatCount, cmd);
-                    // MaterialBuffer.ReleaseSafe();
                     int MatLeng = _Materials.Length;
                     IntersectionMats = new IntersectionMatData[_Materials.Length];
                     for(int i = 0; i < MatLeng; i++) {
@@ -1481,12 +1482,13 @@ namespace TrueTrace {
             if (UseSkinning && didstart) {
                 for (int i = 0; i < ParentsLength; i++) {//Refit BVH's of skinned meshes
                     if (RenderQue[i].IsSkinnedGroup || RenderQue[i].IsDeformable) {
-                        RenderQue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBufferA, ref AggTriBufferB, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, cmd);
+                        RenderQue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBufferA, ref AggTriBufferB, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, BoxesBuffer, i, cmd);
                         if(i < MyMeshesCompacted.Count) {
                             MyMeshDataCompacted TempMesh2 = MyMeshesCompacted[i];
                             TempMesh2.Transform = RenderTransforms[i].worldToLocalMatrix;
                             MyMeshesCompacted[i] = TempMesh2;
-                            MeshAABBs[i] = RenderQue[i].aabb;
+                            MeshAABBs[i] = RenderQue[i].aabb_untransformed;
+                            TransformedAABBs[i] = RenderQue[i].aabb;
                         }
                     }
                 }
@@ -1527,7 +1529,7 @@ namespace TrueTrace {
         int MaxRecur = 0;
         int TempRecur = 0;
         private List<Vector3Int> IsLeafList;
-        unsafe public void DocumentNodes(int CurrentNode, int ParentNode, int NextNode, int NextBVH8Node, bool IsLeafRecur, int CurRecur) {
+        unsafe public void DocumentNodes(int CurrentNode, int ParentNode, int NextNode, int NextBVH8Node, bool IsLeafRecur, int CurRecur) {//builds the data needed for TLAS refitting
             NodeIndexPairData CurrentPair = NodePair[CurrentNode];
             TempRecur = Mathf.Max(TempRecur, CurRecur);
             IsLeafList[CurrentNode] = new Vector3Int(IsLeafList[CurrentNode].x, CurRecur, ParentNode);
@@ -1574,7 +1576,6 @@ namespace TrueTrace {
         ComputeBuffer[] LBVHWorkingSet;
         ComputeBuffer NodeBuffer;
         ComputeBuffer StackBuffer;
-        ComputeBuffer LightBVHTransformsBuffer;
 
 
         public int NonInstanceCount = 0;
@@ -1666,7 +1667,7 @@ namespace TrueTrace {
             AccelStruct.Build();
             #else
                 if(BVH != null) BVH.ClearAll();
-                BVH = new BVH2Builder(MeshAABBs);
+                BVH = new BVH2Builder(TransformedAABBs);
                 if(TLASBVH8 != null) {
                     CommonFunctions.DeepClean(ref TLASBVH8.cwbvh_indices);
                     if(TLASBVH8.BVH8NodesArray.IsCreated) TLASBVH8.BVH8NodesArray.Dispose();
@@ -1726,6 +1727,7 @@ namespace TrueTrace {
                 StackBuffer = new ComputeBuffer(ForwardStack.Length, 32);
                 StackBuffer.SetData(ForwardStack);
                 BoxesBuffer = new ComputeBuffer(MeshAABBs.Length, 24);
+                BoxesBuffer.SetData(MeshAABBs);
                 TLASCWBVHIndexes = new ComputeBuffer(MeshAABBs.Length, 4);
                 TLASCWBVHIndexes.SetData(TLASBVH8.cwbvh_indices);
                 CurFrame = 0;
@@ -1734,11 +1736,6 @@ namespace TrueTrace {
 
             LBVHTLASTask = null;
 
-            LightBVHTransformsBuffer.ReleaseSafe();
-            if(LightBVHTransforms.Length != 0) {
-                LightBVHTransformsBuffer = new ComputeBuffer(LightBVHTransforms.Length, 68);
-                LightBVHTransformsBuffer.SetData(LightBVHTransforms);
-            }
         }
         Task TLASTask;
         unsafe async void CorrectRefit(AABB[] Boxes) {
@@ -1788,21 +1785,21 @@ namespace TrueTrace {
         }
 
         Task LBVHTLASTask;
+        LightBVHBuilder LBVH;
         unsafe async void CorrectRefitLBVH() {
-            LBVH = new LightBVHBuilder(LightAABBs, ref SGTree, LightBVHTransforms, SGTreeNodes);
+            LBVH.NoAllocRebuild(LightAABBs, ref SGTree, LightBVHTransforms, SGTreeNodes);
             return;
         }
         ComputeBuffer BoxesBuffer;
         int CurFrame = 0;
         int BVHNodeCount = 0;
-        LightBVHBuilder LBVH;
 
         public unsafe void RefitTLAS(AABB[] Boxes, CommandBuffer cmd)
         {
             CurFrame++;
             if(LightAABBs != null && LightAABBs.Length != 0 && LBVHTLASTask == null) LBVHTLASTask = Task.Run(() => CorrectRefitLBVH());
             #if !HardwareRT
-            if(TLASTask == null) TLASTask = Task.Run(() => CorrectRefit(Boxes));
+            if(TLASTask == null) TLASTask = Task.Run(() => CorrectRefit(TransformedAABBs));
 
              if(TLASTask.Status == TaskStatus.RanToCompletion && CurFrame % 25 == 24) {
                 MaxRecur = TempRecur; 
@@ -1812,15 +1809,10 @@ namespace TrueTrace {
                 if (StackBuffer != null) StackBuffer.Release();
                 if (BoxesBuffer != null) BoxesBuffer.Release();
                 if (TLASCWBVHIndexes != null) TLASCWBVHIndexes.Release();
-                if (LightBVHTransformsBuffer != null) LightBVHTransformsBuffer.Release();
                 WorkingBuffer = new ComputeBuffer[LayerStack.Length];
                 for (int i = 0; i < MaxRecur; i++) {
                     WorkingBuffer[i] = new ComputeBuffer(LayerStack[i].Slab.Count, 4);
                     WorkingBuffer[i].SetData(LayerStack[i].Slab);
-                }
-                if(LightBVHTransforms.Length != 0) {
-                    LightBVHTransformsBuffer = new ComputeBuffer(LightBVHTransforms.Length, 68);
-                    LightBVHTransformsBuffer.SetData(LightBVHTransforms);
                 }
                 BVHNodeCount = TLASBVH8.cwbvhnode_count;
                 NodeBuffer = new ComputeBuffer(NodePair.Count, 32);
@@ -1831,20 +1823,16 @@ namespace TrueTrace {
                 TLASCWBVHIndexes = new ComputeBuffer(MeshAABBs.Length, 4);
                 TLASCWBVHIndexes.SetData(TLASBVH8.cwbvh_indices);
                 int RendCount = RenderQue.Count;
-                for (int i = 0; i < RendCount; i++) {
-                    ParentObject TargetParent = RenderQue[i];
-                    MeshAABBs[TargetParent.CompactedMeshData] = TargetParent.aabb;
-                }
-                Boxes = MeshAABBs;
                 #if !HardwareRT
                     BVH8AggregatedBuffer.SetData(TempBVHArray, 0, 0, BVHNodeCount);
                 #endif
 
-                TLASTask = Task.Run(() => CorrectRefit(Boxes));
+                TLASTask = Task.Run(() => CorrectRefit(TransformedAABBs));
+                BoxesBuffer.SetData(MeshAABBs);
             }
             if(RayMaster.FramesSinceStart2 > 1) {
                 if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("TLAS Refit Refit");
-                BoxesBuffer.SetData(Boxes);
+                cmd.SetComputeBufferParam(Refitter, RefitLayer, "_MeshData", RayMaster.FramesSinceStart2 % 2 == 0 ? MeshDataBufferA : MeshDataBufferB);
                 cmd.SetComputeBufferParam(Refitter, RefitLayer, "AggNodes", BVH8AggregatedBuffer);
                 cmd.SetComputeBufferParam(Refitter, RefitLayer, "TLASCWBVHIndices", TLASCWBVHIndexes);
                 cmd.SetComputeBufferParam(Refitter, RefitLayer, "Boxs", BoxesBuffer);
@@ -1903,18 +1891,13 @@ namespace TrueTrace {
                     else LightTreeBufferB.SetData(LBVH.nodes, 0, 0, LBVH.nodes.Length);
 #endif
                 }
-                LightBVHTransformsBuffer.ReleaseSafe();
-                if(LightBVHTransforms.Length != 0) {
-                    LightBVHTransformsBuffer = new ComputeBuffer(LightBVHTransforms.Length, 68);
-                }
-                if(LBVH != null) LBVH.Dispose();
                 LBVHTLASTask = Task.Run(() => CorrectRefitLBVH());
             }
 
                 if(LightAABBs != null && LightAABBs.Length != 0) {
-                    LightBVHTransformsBuffer.SetData(LightBVHTransforms);
                     if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("LightRefitter");
-                    cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "Transfers", LightBVHTransformsBuffer);
+                    cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "_MeshData", RayMaster.FramesSinceStart2 % 2 == 0 ? MeshDataBufferA : MeshDataBufferB);
+                    cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "_LightMeshes", LightMeshBuffer);
 #if !DontUseSGTree
                     cmd.SetComputeBufferParam(Refitter, LightTLASRefitKernel, "SGTreeWrite", RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB);
 #else
@@ -2040,7 +2023,8 @@ namespace TrueTrace {
                     });
                     RenderQue[i].CompactedMeshData = i;
                     MatOffset += RenderQue[i].MatOffset;
-                    MeshAABBs[i] = RenderQue[i].aabb;
+                    MeshAABBs[i] = RenderQue[i].aabb_untransformed;
+                    TransformedAABBs[i] = RenderQue[i].aabb;
                     AggNodeCount += RenderQue[i].AggBVHNodeCount;//Can I replace this with just using aggregated_bvh_node_count below?
                     AggTriCount += RenderQue[i].AggIndexCount;
                     #if !HardwareRT
@@ -2149,9 +2133,8 @@ namespace TrueTrace {
 
                                 });
                                 TempList[j].CompactedMeshData = MeshCount + j;
-                                AABB aabb = TempList[j].InstanceParent.aabb_untransformed;
-                                CreateAABB(TempList[j].transform, ref aabb);
-                                MeshAABBs[RenderQue.Count + TempCount] = aabb;                        
+                                MeshAABBs[RenderQue.Count + TempCount] = TempList[j].InstanceParent.aabb_untransformed;                        
+                                TransformedAABBs[RenderQue.Count + TempCount] = TempList[j].InstanceParent.aabb;                        
                                 TempCount++;
                             }
                             MeshCount += TempList.Count;
@@ -2173,9 +2156,8 @@ namespace TrueTrace {
 
                         });
                         InstanceRenderQue[i].CompactedMeshData = MeshCount + i;
-                        AABB aabb = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
-                        CreateAABB(InstanceRenderQue[i].transform, ref aabb);
-                        MeshAABBs[RenderQue.Count + i] = aabb;
+                        MeshAABBs[RenderQue.Count + i] = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
+                        TransformedAABBs[RenderQue.Count + i] = InstanceRenderQue[i].InstanceParent.aabb;
                     }
                 #endif
                 // UnityEngine.Profiling.Profiler.EndSample();
@@ -2210,7 +2192,6 @@ namespace TrueTrace {
                     if (RenderTransforms[i].hasChanged)
                     {
                         TargetParent = RenderQue[i];
-                        // RenderTransforms[i].hasChanged = false;
                         if (TargetParent.IsSkinnedGroup || RenderQue[i].IsDeformable) continue;
                         TargetTransform = RenderTransforms[i];
                         TargetParent.UpdateAABB(TargetTransform);
@@ -2222,7 +2203,8 @@ namespace TrueTrace {
                                 AccelStruct.UpdateInstanceTransform(a);
                             }
                         #endif
-                        MeshAABBs[i] = TargetParent.aabb;
+                        MeshAABBs[i] = TargetParent.aabb_untransformed;
+                        TransformedAABBs[i] = TargetParent.aabb;
                     }
                 }
                 if(MeshDataCount != 1 && ClosedCount == MeshDataCount - 1) return 0;
@@ -2235,7 +2217,7 @@ namespace TrueTrace {
                 int ListCount = InstanceRenderQue.Count;
                 List<ParentObject> ObjsToUpdate = new List<ParentObject>();
 
-
+                // bool AnyHasChanged = false;
                 LightMeshData CurLightMesh;
                 if (LightMeshBuffer != null && LightMeshBuffer.IsValid() && LightMeshCount != 0 && LightMeshCount == LightMeshBuffer.count) {
                     for (int i = 0; i < LightMeshCount; i++) {
@@ -2244,8 +2226,12 @@ namespace TrueTrace {
                             CurLightMesh.Center = LightTransforms[i].position;
                             LightMeshes[i] = CurLightMesh;
                             LightMeshBuffer.SetData(LightMeshes, i, i, 1);
+                            // AnyHasChanged = true;
                         }
                     }
+                    // if(AnyHasChanged) {
+                    //     LightMeshBuffer.SetData(LightMeshes);
+                    // }
                 } else {
                     CommonFunctions.CreateComputeBuffer(ref LightMeshBuffer, LightMeshes);
                 }
@@ -2259,9 +2245,8 @@ namespace TrueTrace {
                     #if !HardwareRT
                         TargetTransform.hasChanged = false;
                     #endif
-                        AABB aabb = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
-                        CreateAABB(TargetTransform, ref aabb);
-                        MeshAABBs[InstanceRenderQue[i].CompactedMeshData] = aabb;
+                        MeshAABBs[InstanceRenderQue[i].CompactedMeshData] = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
+                        TransformedAABBs[InstanceRenderQue[i].CompactedMeshData] = InstanceRenderQue[i].InstanceParent.aabb;
                         if(!ObjsToUpdate.Contains(InstanceRenderQue[i].InstanceParent)) ObjsToUpdate.Add(InstanceRenderQue[i].InstanceParent);
                     }
                 }
@@ -2307,18 +2292,15 @@ namespace TrueTrace {
                 #endif
                 // UnityEngine.Profiling.Profiler.EndSample();
                 AggNodeCount = 0;
-                if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("TLAS Refitting");
-                RefitTLAS(MeshAABBs, cmd);
-                if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("TLAS Refitting");
                 HasChangedMaterials = UpdateMaterials();
                 if(RayMaster.FramesSinceStart2 % 2 == 0) MeshDataBufferA.SetData(MyMeshesCompacted);
                 else MeshDataBufferB.SetData(MyMeshesCompacted);
+                if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("TLAS Refitting");
+                RefitTLAS(MeshAABBs, cmd);
+                if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("TLAS Refitting");
             }
 
 
-
-
-            // InstanceData.RenderInstances2();
             if(HasChangedMaterials) MaterialBuffer.SetData(_Materials);
             if(HasChangedMaterials) IntersectionMaterialBuffer.SetData(IntersectionMats);
             if (!didstart) didstart = true;

@@ -106,6 +106,7 @@ namespace TrueTrace {
         [HideInInspector] public int ConstructKernel;
         [HideInInspector] public int TransferKernel;
         [HideInInspector] public int RefitLayerKernel;
+        [HideInInspector] public int UpdateGlobalBufferAABBKernel;
         [HideInInspector] public int LightBLASRefitKernel;
 
         [HideInInspector] public int CompactedMeshData;
@@ -271,6 +272,7 @@ namespace TrueTrace {
             ConstructKernel = MeshRefit.FindKernel("Construct");
             TransferKernel = MeshRefit.FindKernel("TransferKernel");
             RefitLayerKernel = MeshRefit.FindKernel("RefitLayer");
+            UpdateGlobalBufferAABBKernel = MeshRefit.FindKernel("UpdateGlobalBufferAABBKernel");
 #if !DontUseSGTree
             LightBLASRefitKernel = MeshRefit.FindKernel("BLASSGTreeRefitKernel");
 #else
@@ -1054,7 +1056,7 @@ namespace TrueTrace {
 
 
 
-        public void RefitMesh(ref ComputeBuffer RealizedAggNodes, ref ComputeBuffer RealizedTriBufferA, ref ComputeBuffer RealizedTriBufferB, ref ComputeBuffer RealizedLightTriBuffer, ComputeBuffer RealizedLightNodeBuffer, CommandBuffer cmd)
+        public void RefitMesh(ref ComputeBuffer RealizedAggNodes, ref ComputeBuffer RealizedTriBufferA, ref ComputeBuffer RealizedTriBufferB, ref ComputeBuffer RealizedLightTriBuffer, ComputeBuffer RealizedLightNodeBuffer, ComputeBuffer BoxesBuffer, int BoxesIndex, CommandBuffer cmd)
         {
             #if HardwareRT
                 for(int i = 0; i < Renderers.Length; i++) AssetManager.Assets.AccelStruct.UpdateInstanceTransform(Renderers[i]);
@@ -1095,7 +1097,9 @@ namespace TrueTrace {
                 CWBVHIndicesBuffer = new ComputeBuffer(BVH.cwbvh_indices.Length, 4);
                 CWBVHIndicesBuffer.SetData(BVH.cwbvh_indices);
                 HasStarted = true;
-                WorkingBuffer = new ComputeBuffer[LayerStack.Length];
+                int LayerLength = LayerStack.Length;
+                int VertLength = VertexBuffers.Length;
+                WorkingBuffer = new ComputeBuffer[LayerLength];
                 if(HasLightTriangles) {
                     Set = new List<int>[LBVH.MaxDepth];
                     WorkingSet = new ComputeBuffer[LBVH.MaxDepth];
@@ -1106,23 +1110,17 @@ namespace TrueTrace {
                         WorkingSet[i].SetData(Set[i]);
                     }
                 }
-                for (int i = 0; i < LayerStack.Length; i++) {
+                for (int i = 0; i < LayerLength; i++) {
                     WorkingBuffer[i] = new ComputeBuffer(LayerStack[i].Slab.Count, 4);
                     WorkingBuffer[i].SetData(LayerStack[i].Slab);
                 }
-                for (int i = 0; i < VertexBuffers.Length; i++) {
+                for (int i = 0; i < VertLength; i++) {
                     if (IndexBuffers[i] != null) IndexBuffers[i].Release();
                     int[] IndexBuffer = IsSkinnedGroup ? SkinnedMeshes[i].sharedMesh.triangles : DeformableMeshes[i].sharedMesh.triangles;
                     IndexBuffers[i] = new ComputeBuffer(IndexBuffer.Length, 4, ComputeBufferType.Raw);
                     IndexBuffers[i].SetData(IndexBuffer);
                 }
-            }
-            else if (AllFull)
-            {
-                cmd.SetComputeIntParam(MeshRefit, "TriBuffOffset", TriOffset);
-                cmd.SetComputeIntParam(MeshRefit, "LightTriBuffOffset", LightTriOffset);
-                if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh");
-                for (int i = 0; i < VertexBuffers.Length; i++) {
+                for (int i = 0; i < VertLength; i++) {
                     VertexBuffers[i].Release();
                     if(IsSkinnedGroup) {
                         SkinnedMeshes[i].vertexBufferTarget |= GraphicsBuffer.Target.Raw;
@@ -1132,6 +1130,12 @@ namespace TrueTrace {
                         VertexBuffers[i] = DeformableMeshes[i].sharedMesh.GetVertexBuffer(0);
                     }
                 }
+            }
+            else if (AllFull)
+            {
+                cmd.SetComputeIntParam(MeshRefit, "TriBuffOffset", TriOffset);
+                cmd.SetComputeIntParam(MeshRefit, "LightTriBuffOffset", LightTriOffset);
+                if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh");
                 if(HasLightTriangles) cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "LightTriangles", RealizedLightTriBuffer);
                 cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "ReverseStack", StackBuffer);
                 cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "Boxs", AABBBuffer);
@@ -1215,12 +1219,19 @@ namespace TrueTrace {
                         cmd.DispatchCompute(MeshRefit, RefitLayerKernel, (int)Mathf.Ceil(NodeCount2 / (float)KernelRatio), 1, 1);
                     }
                     if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Refit");
+                    if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Global AABB Update");
+                        cmd.SetComputeIntParam(MeshRefit, "TLASBoxesInput", BoxesIndex);
+                        cmd.SetComputeBufferParam(MeshRefit, UpdateGlobalBufferAABBKernel, "Boxs", BoxesBuffer);
+                        cmd.SetComputeBufferParam(MeshRefit, UpdateGlobalBufferAABBKernel, "AllNodes", NodeBuffer);
+                        cmd.DispatchCompute(MeshRefit, UpdateGlobalBufferAABBKernel, 1, 1, 1);
+                    if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Global AABB Update");
                 #endif
                 if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh");
             }
 
             if (!AllFull) {
-                for (int i = 0; i < VertexBuffers.Length; i++)
+                int VertLength = VertexBuffers.Length;
+                for (int i = 0; i < VertLength; i++)
                 {
                     if(IsSkinnedGroup) {
                         SkinnedMeshes[i].vertexBufferTarget |= GraphicsBuffer.Target.Raw;
