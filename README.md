@@ -198,10 +198,11 @@ TrueTrace Options Description -
 
 ## URP Setup
 <ul>
-  <li>In the Universal Renderer Asset being used, change the Rendering Path to Deferred, and turn on "Native RenderPass"</li>
   <li>If using Unity 6000 or above, you need to go to Project Settings -> Graphics -> (at the bottom)Turn on Compatability Mode</li>
+  <li>In the Universal Renderer Asset being used, change the Rendering Path to Deferred, and turn on "Native RenderPass"</li>
   <li>In the camera, turn on PostProcessing, and turn the Anti-Aliasing to TAA(This is the only way I have found to reliably force motion vector generation in URP for some reason...)</li>
   <li>Finally, add the "URPTTInjectPass" script to an empty gameobject</li>
+  <li>Reccomended - Go to the Universal Render Pipeline Asset you are using, and turn the render scale to 1</li>
 </ul>
 
 # Known Bugs:

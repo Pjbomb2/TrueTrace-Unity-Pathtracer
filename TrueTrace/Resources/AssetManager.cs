@@ -2133,8 +2133,10 @@ namespace TrueTrace {
 
                                 });
                                 TempList[j].CompactedMeshData = MeshCount + j;
-                                MeshAABBs[RenderQue.Count + TempCount] = TempList[j].InstanceParent.aabb_untransformed;                        
-                                TransformedAABBs[RenderQue.Count + TempCount] = TempList[j].InstanceParent.aabb;                        
+                                MeshAABBs[RenderQue.Count + TempCount] = TempList[j].InstanceParent.aabb_untransformed;      
+                                AABB aabb = TempList[j].InstanceParent.aabb_untransformed;
+                                CreateAABB(TempList[j].transform, ref aabb);                  
+                                TransformedAABBs[RenderQue.Count + TempCount] = aabb;                        
                                 TempCount++;
                             }
                             MeshCount += TempList.Count;
@@ -2156,8 +2158,11 @@ namespace TrueTrace {
 
                         });
                         InstanceRenderQue[i].CompactedMeshData = MeshCount + i;
+
                         MeshAABBs[RenderQue.Count + i] = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
-                        TransformedAABBs[RenderQue.Count + i] = InstanceRenderQue[i].InstanceParent.aabb;
+                        AABB aabb = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
+                        CreateAABB(InstanceRenderQue[i].transform, ref aabb);
+                        TransformedAABBs[RenderQue.Count + i] = aabb;
                     }
                 #endif
                 // UnityEngine.Profiling.Profiler.EndSample();
@@ -2246,7 +2251,9 @@ namespace TrueTrace {
                         TargetTransform.hasChanged = false;
                     #endif
                         MeshAABBs[InstanceRenderQue[i].CompactedMeshData] = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
-                        TransformedAABBs[InstanceRenderQue[i].CompactedMeshData] = InstanceRenderQue[i].InstanceParent.aabb;
+                        AABB aabb = InstanceRenderQue[i].InstanceParent.aabb_untransformed;
+                        CreateAABB(TargetTransform, ref aabb);
+                        TransformedAABBs[InstanceRenderQue[i].CompactedMeshData] = aabb;
                         if(!ObjsToUpdate.Contains(InstanceRenderQue[i].InstanceParent)) ObjsToUpdate.Add(InstanceRenderQue[i].InstanceParent);
                     }
                 }

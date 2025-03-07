@@ -161,6 +161,7 @@ namespace TrueTrace {
 
         private Texture3D ToneMapTex;
         private Texture3D ToneMapTex2;
+        private Texture3D ToneMapTex3;
         private Material _addMaterial;
         private Material _FireFlyMaterial;
         [HideInInspector] public int _currentSample = 0;
@@ -282,6 +283,7 @@ namespace TrueTrace {
             ReSTIRASVGFCode = new ReSTIRASVGF();
             ToneMapTex = Resources.Load<Texture3D>("Utility/ToneMapTex");
             ToneMapTex2 = Resources.Load<Texture3D>("Utility/AgXBC");
+            ToneMapTex3 = Resources.Load<Texture3D>("Utility/AgXMHC");
             if (ShadingShader == null) {ShadingShader = Resources.Load<ComputeShader>("MainCompute/RayTracingShader"); }
             if (IntersectionShader == null) {IntersectionShader = Resources.Load<ComputeShader>("MainCompute/IntersectionKernels"); }
             if (GenerateShader == null) {GenerateShader = Resources.Load<ComputeShader>("MainCompute/RayGenKernels"); }
@@ -1340,7 +1342,7 @@ namespace TrueTrace {
                 else TTPostProc.ExecuteBloom(ref _FinalTex, LocalTTSettings.BloomStrength, cmd);
             }
             if(LocalTTSettings.DoChromaAber || LocalTTSettings.DoBCS || LocalTTSettings.DoVignette) TTPostProc.ExecuteCombinedPP(ref _FinalTex, cmd, LocalTTSettings.DoBCS, LocalTTSettings.DoVignette, LocalTTSettings.DoChromaAber, LocalTTSettings.Contrast, LocalTTSettings.Saturation, LocalTTSettings.ChromaDistort, LocalTTSettings.innerVignette, LocalTTSettings.outerVignette, LocalTTSettings.strengthVignette, LocalTTSettings.curveVignette, LocalTTSettings.ColorVignette);
-            if(LocalTTSettings.PPToneMap) TTPostProc.ExecuteToneMap(ref _FinalTex, cmd, ref ToneMapTex, ref ToneMapTex2, LocalTTSettings.ToneMapper);
+            if(LocalTTSettings.PPToneMap) TTPostProc.ExecuteToneMap(ref _FinalTex, cmd, ref ToneMapTex, LocalTTSettings.ToneMapper == 6 ? ToneMapTex3 : ToneMapTex2, LocalTTSettings.ToneMapper);
             if (LocalTTSettings.PPTAA) TTPostProc.ExecuteTAA(ref _FinalTex, _currentSample, cmd);
             if (LocalTTSettings.PPFXAA) TTPostProc.ExecuteFXAA(ref _FinalTex, cmd);
             if (LocalTTSettings.DoSharpen) TTPostProc.ExecuteSharpen(ref _FinalTex, LocalTTSettings.Sharpness, cmd);

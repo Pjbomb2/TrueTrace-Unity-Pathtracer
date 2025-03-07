@@ -518,14 +518,14 @@ namespace TrueTrace {
         }
 
 
-        public void ExecuteToneMap(ref RenderTexture Output, CommandBuffer cmd, ref Texture3D LUT, ref Texture3D LUT2, int ToneMapSelection)
+        public void ExecuteToneMap(ref RenderTexture Output, CommandBuffer cmd, ref Texture3D LUT, Texture3D LUT2, int ToneMapSelection)
         {//need to fix this so it doesnt create new textures every time
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ToneMap");
             cmd.SetComputeIntParam(ToneMapper,"ToneMapSelection", ToneMapSelection);
             cmd.SetComputeIntParam(ToneMapper,"screen_width", Output.width);
             cmd.SetComputeIntParam(ToneMapper,"screen_height", Output.height);
             cmd.SetComputeTextureParam(ToneMapper, 0, "Result", Output);
-            cmd.SetComputeTextureParam(ToneMapper, 0, "LUT", ToneMapSelection == 5 ? LUT2 : LUT);
+            cmd.SetComputeTextureParam(ToneMapper, 0, "LUT", ToneMapSelection == 0 ? LUT : LUT2);
             cmd.DispatchCompute(ToneMapper, 0, Mathf.CeilToInt((float)Output.width / 16.0f), Mathf.CeilToInt((float)Output.height / 16.0f), 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ToneMap");
         }

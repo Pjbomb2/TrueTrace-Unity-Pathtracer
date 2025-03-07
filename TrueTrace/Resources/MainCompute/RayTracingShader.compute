@@ -252,14 +252,14 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             #endif
         }
         if((UseASVGF || UseReSTIRGI) && CurBounce == 0 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -10000.0f;
-        if(luminance(EmissCol) > 2.0f) {
+        // if(luminance(EmissCol)/> 2.0f) {
             if(CurBounce == 0) {
                 Color.Data = EmissCol;
                 Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((1) << 26);  
                 Color.Flags = packRGBE(EmissCol);
             }
             return;
-        }
+        // }
     }
    
     [branch]if(ClayMode) {
