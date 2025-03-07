@@ -1121,7 +1121,7 @@ namespace TrueTrace {
                     IndexBuffers[i].SetData(IndexBuffer);
                 }
                 for (int i = 0; i < VertLength; i++) {
-                    VertexBuffers[i].Release();
+                    // VertexBuffers[i].Release();
                     if(IsSkinnedGroup) {
                         SkinnedMeshes[i].vertexBufferTarget |= GraphicsBuffer.Target.Raw;
                         VertexBuffers[i] = SkinnedMeshes[i].GetVertexBuffer();
