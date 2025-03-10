@@ -912,6 +912,19 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
             float Distance = length(PrimaryHitPosition - NEEPos.xyz) - 0.025f;
             SmallerRay ray = CreateRay(PrimaryHitPosition, normalize(NEEPos.xyz - PrimaryHitPosition));
             if (luminance(RunningReservoirC.Radiance.Color) != 0) {
+                bool ValidSpot = true;
+                int AggTriIndex = asint(NEEPos.w);
+                if(AggTriIndex >= 0) {
+                    LightData Light = _UnityLights[AggTriIndex];
+                    float3 MiscInfo = float3(Light.Softness * 120.0f + 1, Light.SpotAngle);
+                    if(Light.Type == SPOTLIGHT) {
+                        RunningReservoirC.Radiance.Color *= saturate(saturate(dot(ray.direction, -Light.Direction)) * MiscInfo.y + MiscInfo.z);
+                    } else if(Light.Type == AREALIGHTQUAD) {
+                        RunningReservoirC.Radiance.Color *= pow(saturate(dot(ray.direction, -Light.Direction)), MiscInfo.x);
+                    }
+                }
+
+
             #ifdef ReSTIRAdvancedValidation
                 float TargDist = VisabilityCheck(ray, Distance);
                 if (TargDist != Distance) {

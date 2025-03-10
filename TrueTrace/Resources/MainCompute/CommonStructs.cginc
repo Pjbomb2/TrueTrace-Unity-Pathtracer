@@ -234,8 +234,8 @@ RWStructuredBuffer<RayData> GlobalRays;
 struct ShadowRayData {
 	float3 origin;
 	uint DiffuseIlluminance;
-	float3 direction;
-	float t;
+	float3 EndPoint;
+	int FIELD;
 	float3 illumination;
 	uint PixelIndex;
 };

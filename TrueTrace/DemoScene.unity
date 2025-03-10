@@ -12249,7 +12249,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -14673,12 +14673,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ThisLight: {fileID: 610660759}
   ThisLightData:
-    Radiance: {x: 0, y: 0, z: 0}
-    Position: {x: 0, y: 0, z: 0}
-    Direction: {x: 0, y: 0, z: 0}
-    Type: 0
+    Radiance: {x: 32, y: 32, z: 32}
+    Position: {x: -1.4816499, y: 5.724826, z: -1.1294421}
+    Direction: {x: -0.40884805, y: 0.8689685, z: -0.2788136}
+    Type: 1
     SpotAngle: {x: 0, y: 0}
-    ZAxisRotation: 0
+    ZAxisRotation: 0.066060774
     Softness: 0
     IESTex: {x: 0, y: 0}
   ArrayIndex: 0
@@ -35966,7 +35966,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e9c10216ea5531c4d82893474778943b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ToneMapTex2: {fileID: 0}
   LocalTTSettingsName: DemoSceneMain
   HDRPorURPRenderInScene: 0
   Atmo:
@@ -36032,7 +36031,6 @@ MonoBehaviour:
   RenderTransforms: []
   RenderQue: []
   BuildQue:
-  - {fileID: 0}
   - {fileID: 499686671}
   - {fileID: 1770588100}
   - {fileID: 1931085300}
@@ -52709,7 +52707,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -59064,7 +59062,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 3
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -59128,7 +59126,7 @@ MonoBehaviour:
   Roughness:
   - 0
   IOR:
-  - 1.43
+  - 1.49
   Metallic:
   - 0
   SpecularTint:
@@ -64175,7 +64173,7 @@ Camera:
   m_CullingMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_RenderingPath: 1
+  m_RenderingPath: 3
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
   m_TargetEye: 3

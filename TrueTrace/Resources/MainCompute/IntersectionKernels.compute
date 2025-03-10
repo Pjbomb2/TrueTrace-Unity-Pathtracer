@@ -375,11 +375,12 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
             RayDesc myRay;
             ShadowRay = ShadowRaysBuffer[ray_index];
             myRay.Origin = ShadowRaysBuffer[ray_index].origin;
-            myRay.Direction = ShadowRaysBuffer[ray_index].direction;
+            float ShadowRayT = length(ShadowRaysBuffer[ray_index].EndPoint - myRay.Origin);
+            myRay.Direction = normalize(ShadowRaysBuffer[ray_index].EndPoint - myRay.Origin);
             ray.origin = myRay.Origin;
             ray.direction = myRay.Direction;
             myRay.TMin = 0;
-            myRay.TMax = abs(ShadowRaysBuffer[ray_index].t);
+            myRay.TMax = ShadowRayT;
             while(true) {
                 q.TraceRayInline(myAccelerationStructure, rayFlags, 0xff, myRay);
                 while(q.Proceed()){}
@@ -422,16 +423,17 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
                         }
                     #endif
 
-                    ShadowRaysBuffer[ray_index].t = 0;
+                    ShadowRaysBuffer[ray_index].FIELD = -2;//WHY
                 } else {
                     if(!TerrainExists) {
-                        uint PixelIndex = ShadowRay.PixelIndex;
-                        if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray.origin + ray.direction * abs(ShadowRay.t),NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)].w);
+                        uint PixelIndex = ShadowRay.PixelIndex & 0xFFFFFFF;
+                        bool IsNotPrimaryNEERay = (ShadowRay.PixelIndex >> 30);
+                        if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray.origin + ray.direction * ShadowRayT,asfloat(ShadowRay.FIELD));
                         #ifdef RadCache
                             CacheBuffer[PixelIndex].RunningIlluminance = packRGBE(unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput + unpackRGBE(CacheBuffer[PixelIndex].RunningIlluminance));
                             AddHitToCachePartial(CacheBuffer[PixelIndex], ray.origin);
                         #endif
-                        if (ShadowRay.t >= 0) {
+                        if (IsNotPrimaryNEERay) {
 
                             if (CurBounce == 0) {
                                 #ifdef RadCache
@@ -503,9 +505,10 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
 #endif
                 ShadowRay = ShadowRaysBuffer[rayidx];
 
-                max_distance = abs(ShadowRay.t);
+                max_distance = length(ShadowRaysBuffer[rayidx].EndPoint - ShadowRay.origin);
                 ray.origin = ShadowRay.origin;
-                ray.direction = (ShadowRay.direction == 0 ? EPSILON : ShadowRay.direction);
+                ray.direction = normalize(ShadowRaysBuffer[rayidx].EndPoint - ShadowRay.origin);
+                ray.direction = (ray.direction == 0 ? EPSILON : ray.direction);
                 ray2 = ray;
                 TriOffset = 0;
                 MatOffset = 0;
@@ -585,7 +588,7 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
                                 triangle_group.y &= ~(1 << triangle_index);
 
                                 if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, max_distance, throughput, MatOffset)) {
-                                    ShadowRaysBuffer[rayidx].t = 0;
+                                    ShadowRaysBuffer[rayidx].FIELD = -2;//WHY
 #ifndef DX11
                                     KilledNaturally = true;
                                     break;
@@ -604,13 +607,14 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
                     if ((current_group.y & 0xff000000) == 0) {
                         if (stack_size == 0) {//thread has finished traversing
                             if(!TerrainExists) {
-                                uint PixelIndex = ShadowRay.PixelIndex;
-                                if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray2.origin + ray2.direction * abs(ShadowRaysBuffer[rayidx].t), 0);
+                                uint PixelIndex = ShadowRay.PixelIndex & 0xFFFFFFF;
+                                bool IsNotPrimaryNEERay = (ShadowRay.PixelIndex >> 30);
+                                if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray2.origin + ray2.direction * max_distance, asfloat(ShadowRay.FIELD));
                                 #ifdef RadCache
                                     CacheBuffer[PixelIndex].RunningIlluminance = packRGBE(unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput + unpackRGBE(CacheBuffer[PixelIndex].RunningIlluminance));
                                     AddHitToCachePartial(CacheBuffer[PixelIndex], ray2.origin);
                                 #endif
-                                if (ShadowRay.t >= 0) {
+                                if (IsNotPrimaryNEERay) {
                                     if (CurBounce == 0) {
                                         #ifdef RadCache
                                             GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)) * throughput);
@@ -760,18 +764,19 @@ bool IntersectHeightMapShadow(SmallerRay ray, float MaxDist) {
 void IntersectShadowHeightmap(int ray_index) {
     if(ray_index >= BufferSizes[CurBounce].shadow_rays) return;
     int pixel_index = ShadowRaysBuffer[ray_index].PixelIndex;
-    SmallerRay ray = CreateRay(ShadowRaysBuffer[ray_index].origin, ShadowRaysBuffer[ray_index].direction);
+    SmallerRay ray = CreateRay(ShadowRaysBuffer[ray_index].origin, normalize(ShadowRaysBuffer[ray_index].EndPoint - ShadowRaysBuffer[ray_index].origin));
     ray.direction = (ray.direction == 0 ? EPSILON : ray.direction);
     bool HitHeightmap = TerrainExists;
-    if(ShadowRaysBuffer[ray_index].t != 0) {
-        if (TerrainExists) HitHeightmap = IntersectHeightMapShadow(ray, abs(ShadowRaysBuffer[ray_index].t));                  
+    if(ShadowRaysBuffer[ray_index].FIELD != -2) {
+        if (TerrainExists) HitHeightmap = IntersectHeightMapShadow(ray, length(ShadowRaysBuffer[ray_index].EndPoint - ShadowRaysBuffer[ray_index].origin));                  
         if(!HitHeightmap) {
-            uint PixelIndex = ShadowRaysBuffer[ray_index].PixelIndex;
-            if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray.origin + ray.direction * abs(ShadowRaysBuffer[ray_index].t), 0);
+            uint PixelIndex = ShadowRaysBuffer[ray_index].PixelIndex & 0xFFFFFFF;
+            bool IsNotPrimaryNEERay = (ShadowRaysBuffer[ray_index].PixelIndex >> 30);
+            if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ShadowRaysBuffer[ray_index].EndPoint, 0);
             #ifdef RadCache
                 CacheBuffer[PixelIndex].RunningIlluminance = packRGBE(unpackRGBE(ShadowRaysBuffer[ray_index].DiffuseIlluminance) + unpackRGBE(CacheBuffer[PixelIndex].RunningIlluminance));
             #endif
-            if (ShadowRaysBuffer[ray_index].t >= 0) {
+            if (IsNotPrimaryNEERay) {
                 if (CurBounce == 0) {
                     #ifdef RadCache
                         GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRaysBuffer[ray_index].illumination,rcp(2.2f)));

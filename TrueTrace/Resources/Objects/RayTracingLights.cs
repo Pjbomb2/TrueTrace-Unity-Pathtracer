@@ -117,7 +117,7 @@ namespace TrueTrace {
             public Slider DynamicSlider;
             public FloatField DynamicField;
         }
-        FloatSliderPair CreatePairedFloatSlider(string Name, float LowValue, float HighValue, ref float InitialValue, float SliderWidth = 100) {
+        FloatSliderPair CreatePairedFloatSlider(string Name, float LowValue, float HighValue, ref float InitialValue, float SliderWidth = 200) {
             FloatSliderPair NewPair = new FloatSliderPair();
             NewPair.DynamicContainer = CreateHorizontalBox(Name + " Container");
             NewPair.DynamicLabel = new Label(Name);
@@ -136,7 +136,7 @@ namespace TrueTrace {
             int TargCount = t1.Length;
             var t =  t1[0] as RayTracingLights;
             VisualElement MainContainer = CreateVerticalBox("Main Container");
-                FloatSliderPair ShadowSoftnessSliderPair = CreatePairedFloatSlider("Shadow Softness", 0, 40, ref t.ShadowSoftness);
+                FloatSliderPair ShadowSoftnessSliderPair = CreatePairedFloatSlider(t.ThisLight.type == LightType.Rectangle ? "Shadow Sharpness" : "Shadow Softness", 0, 40, ref t.ShadowSoftness);
                     ShadowSoftnessSliderPair.DynamicSlider.RegisterValueChangedCallback(evt => {for(int i = 0; i < TargCount; i++) (t1[i] as RayTracingLights).ShadowSoftness = evt.newValue; ShadowSoftnessSliderPair.DynamicField.value = t.ShadowSoftness;});
                     ShadowSoftnessSliderPair.DynamicField.RegisterValueChangedCallback(evt => {for(int i = 0; i < TargCount; i++) (t1[i] as RayTracingLights).ShadowSoftness = evt.newValue; ShadowSoftnessSliderPair.DynamicSlider.value = t.ShadowSoftness;});
                 MainContainer.Add(ShadowSoftnessSliderPair.DynamicContainer);

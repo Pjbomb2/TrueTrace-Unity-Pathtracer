@@ -861,11 +861,6 @@ namespace TrueTrace {
             ShadingShader.SetTexture(FinalizeKernel, "Result", _target);
             
 
-            // AssetManager.Assets.SetMeshTraceBuffers(ShadingShader, MVKernel);
-            // ShadingShader.SetTexture(MVKernel, "PrimaryTriData", FlipFrame ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
-            // ShadingShader.SetTexture(MVKernel, "PrimaryTriDataPrev", !FlipFrame ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
-            // ShadingShader.SetTexture(MVKernel, "Result", _target);
-
             #if UseOIDN
                 ShadingShader.SetBuffer(TTtoOIDNKernel, "AlbedoBuffer", AlbedoBuffer);
                 ShadingShader.SetBuffer(TTtoOIDNKernel, "NormalBuffer", NormalBuffer);
@@ -909,6 +904,7 @@ namespace TrueTrace {
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "NEEPosA", GINEEPosC);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "ReservoirA", GIReservoirC);
 
+            AssetManager.Assets.SetLightData(ReSTIRGI, ReSTIRGISpatialKernel + 1);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "GradientWrite", GradientsA);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "Gradient", GradientsB);
             ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "WorldPosB", GIWorldPosA);

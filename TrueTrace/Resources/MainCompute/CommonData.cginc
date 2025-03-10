@@ -1790,6 +1790,7 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 					node_index = tempstack.x;
 					lightPDF = tempstack.y;
 					RandNum = tempstack.z;
+					node = NodeBuffer[node_index];
 					continue;
 				}
 				if(Index >= 2) {
