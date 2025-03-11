@@ -320,13 +320,13 @@
       </TexturePairs>
       <TexturePairs>
         <Purpose>1</Purpose>
-        <ReadIndex>3</ReadIndex>
+        <ReadIndex>0</ReadIndex>
         <TextureName>_MainTex</TextureName>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>
     <RoughnessRange>null</RoughnessRange>
-    <IsGlass>true</IsGlass>
+    <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
     <UsesSmoothness>true</UsesSmoothness>
     <BaseColorValue>_Color</BaseColorValue>
@@ -2127,6 +2127,11 @@
         <Purpose>5</Purpose>
         <ReadIndex>3</ReadIndex>
         <TextureName>_SpecGlossMap</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>1</Purpose>
+        <ReadIndex>3</ReadIndex>
+        <TextureName>_MainTex</TextureName>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>

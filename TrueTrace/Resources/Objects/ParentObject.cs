@@ -244,6 +244,15 @@ namespace TrueTrace {
                 TriBuffer.Release();
                 BVHBuffer.Release();
             }
+            #if AccurateLightTris
+                if(EmissionTexPixels != null) {
+                    int EmissTexLeng = EmissionTexPixels.Count;
+                    for(int i = 0; i < EmissTexLeng; i++) {
+                        EmissionTexPixels[i].pixels.Dispose();
+                    }
+                    EmissionTexPixels = null;
+                }
+            #endif
             ClearAll();
         }
 
@@ -340,7 +349,7 @@ namespace TrueTrace {
 
 
         #if AccurateLightTris
-            List<Color[]> EmissionTexPixels;
+            List<(Texture2D texture, NativeArray<Color32> pixels)> EmissionTexPixels;
             List<Vector2> EmissionTexWidthHeight;
         #endif
 
@@ -392,8 +401,9 @@ namespace TrueTrace {
                             RenderTexture.active = previous;
                             RenderTexture.ReleaseTemporary(tmp);
 
-                            EmissionTexPixels.Add(myTexture2D.GetPixels(0));
-                            DestroyImmediate(myTexture2D);
+                            var rawData = myTexture2D.GetRawTextureData<Color32>();
+                            EmissionTexPixels.Add((myTexture2D, rawData));
+                            // DestroyImmediate(myTexture2D);
                             EmissionTexWidthHeight.Add(new Vector2(Tex.width, Tex.height));
                         }
                     #endif
@@ -413,7 +423,14 @@ namespace TrueTrace {
         public void CreateAtlas(ref int VertCount)
         {//Creates texture atlas
             #if AccurateLightTris
-                EmissionTexPixels = new List<Color[]>();
+                if(EmissionTexPixels != null) {
+                    int EmissTexLeng = EmissionTexPixels.Count;
+                    for(int i = 0; i < EmissTexLeng; i++) {
+                        EmissionTexPixels[i].pixels.Dispose();
+                    }
+                    EmissionTexPixels = null;
+                }
+                EmissionTexPixels = new List<(Texture2D texture, NativeArray<Color32> pixels)>();
                 EmissionTexWidthHeight = new List<Vector2>();
             #endif
             _Materials.Clear();
@@ -1379,20 +1396,20 @@ namespace TrueTrace {
                                 int UVIndex0 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
                                 bool FoundTrue = false;
                                 if(UVIndex3 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
-                                    if(!(EmissionTexPixels[ThisIndex][UVIndex3].r < 0.01f && EmissionTexPixels[ThisIndex][UVIndex3].g < 0.01f && EmissionTexPixels[ThisIndex][UVIndex3].b < 0.01f)) FoundTrue = true;
-                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex][UVIndex3].r, EmissionTexPixels[ThisIndex][UVIndex3].g, EmissionTexPixels[ThisIndex][UVIndex3].b);
+                                    if(!(EmissionTexPixels[ThisIndex].pixels[UVIndex3].r < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex3].g < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex3].b < 0.01f)) FoundTrue = true;
+                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex].pixels[UVIndex3].r, EmissionTexPixels[ThisIndex].pixels[UVIndex3].g, EmissionTexPixels[ThisIndex].pixels[UVIndex3].b);
                                 }
                                 if(UVIndex2 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
-                                    if(!(EmissionTexPixels[ThisIndex][UVIndex2].r < 0.01f && EmissionTexPixels[ThisIndex][UVIndex2].g < 0.01f && EmissionTexPixels[ThisIndex][UVIndex2].b < 0.01f)) FoundTrue = true;
-                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex][UVIndex3].r, EmissionTexPixels[ThisIndex][UVIndex3].g, EmissionTexPixels[ThisIndex][UVIndex3].b);
+                                    if(!(EmissionTexPixels[ThisIndex].pixels[UVIndex2].r < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex2].g < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex2].b < 0.01f)) FoundTrue = true;
+                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex].pixels[UVIndex3].r, EmissionTexPixels[ThisIndex].pixels[UVIndex3].g, EmissionTexPixels[ThisIndex].pixels[UVIndex3].b);
                                 }
                                 if(UVIndex1 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
-                                    if(!(EmissionTexPixels[ThisIndex][UVIndex1].r < 0.01f && EmissionTexPixels[ThisIndex][UVIndex1].g < 0.01f && EmissionTexPixels[ThisIndex][UVIndex1].b < 0.01f)) FoundTrue = true;
-                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex][UVIndex3].r, EmissionTexPixels[ThisIndex][UVIndex3].g, EmissionTexPixels[ThisIndex][UVIndex3].b);
+                                    if(!(EmissionTexPixels[ThisIndex].pixels[UVIndex1].r < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex1].g < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex1].b < 0.01f)) FoundTrue = true;
+                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex].pixels[UVIndex3].r, EmissionTexPixels[ThisIndex].pixels[UVIndex3].g, EmissionTexPixels[ThisIndex].pixels[UVIndex3].b);
                                 }
                                 if(UVIndex0 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
-                                    if(!(EmissionTexPixels[ThisIndex][UVIndex0].r < 0.01f && EmissionTexPixels[ThisIndex][UVIndex0].g < 0.01f && EmissionTexPixels[ThisIndex][UVIndex0].b < 0.01f)) FoundTrue = true;
-                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex][UVIndex3].r, EmissionTexPixels[ThisIndex][UVIndex3].g, EmissionTexPixels[ThisIndex][UVIndex3].b);
+                                    if(!(EmissionTexPixels[ThisIndex].pixels[UVIndex0].r < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex0].g < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex0].b < 0.01f)) FoundTrue = true;
+                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex].pixels[UVIndex3].r, EmissionTexPixels[ThisIndex].pixels[UVIndex3].g, EmissionTexPixels[ThisIndex].pixels[UVIndex3].b);
                                 }
                                 IsValid = FoundTrue;
                             
@@ -1402,7 +1419,7 @@ namespace TrueTrace {
                             Vector3 Radiance = _Materials[(int)TempTri.MatDat].emission * _Materials[(int)TempTri.MatDat].BaseColor;
                             float radiance = luminance(Radiance.x, Radiance.y, Radiance.z);
                             float area = AreaOfTriangle(ParentMat * V1, ParentMat * V2, ParentMat * V3);
-                            if(area != 0) {
+                            if(area != 0 && radiance > 0) {
                                 HasLightTriangles = true;
                                 float e = radiance * area;
                                 if(System.Double.IsNaN(area)) continue;
@@ -1424,6 +1441,13 @@ namespace TrueTrace {
                     OffsetReal++;
                 }
             }
+            #if AccurateLightTris
+                int EmissTexLeng = EmissionTexPixels.Count;
+                for(int i = 0; i < EmissTexLeng; i++) {
+                    EmissionTexPixels[i].pixels.Dispose();
+                }
+                EmissionTexPixels = null;
+            #endif
             CurMeshData.Clear();
             #if !HardwareRT
                 ConstructAABB();
