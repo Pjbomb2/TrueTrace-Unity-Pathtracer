@@ -53,7 +53,7 @@ using UnityEngine.Experimental.Rendering;
 #if !TTCustomMotionVectors
             renderingData.cameraData.camera.depthTextureMode = DepthTextureMode.MotionVectors | DepthTextureMode.Depth;
             var motionVectors = Shader.GetGlobalTexture("_MotionVectorTexture");
-            Shader.SetGlobalTexture("TTMotionVectorTexture", motionVectors);
+            Shader.SetGlobalTexture("_CameraMotionVectorsTexture", motionVectors);
 #else
             renderingData.cameraData.camera.depthTextureMode = DepthTextureMode.Depth;
 #endif

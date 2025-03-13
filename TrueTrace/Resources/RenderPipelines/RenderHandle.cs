@@ -12,7 +12,6 @@ public class RenderHandle : MonoBehaviour
     {
         if(GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>().Length == 0) {RayMaster = null; return;}
         RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
-        Shader.SetGlobalTexture("TTMotionVectorTexture", Shader.GetGlobalTexture("_CameraMotionVectorsTexture"));
         // gameObject.GetComponent<Camera>().renderingPath = RenderingPath.DeferredShading;
         RayMaster.TossCamera(gameObject.GetComponent<Camera>());
         RayMaster.Start2();

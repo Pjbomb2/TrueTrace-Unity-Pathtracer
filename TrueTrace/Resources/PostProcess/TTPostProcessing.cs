@@ -436,7 +436,11 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(TAA,"Samples_Accumulated", CurrentSamples);
 
             TAA.SetFloat("FarPlane", _camera.farClipPlane);
+#if !TTCustomMotionVectors
+            TAA.SetTextureFromGlobal(TAAPrepareKernel, "MotionVectors", "_CameraMotionVectorsTexture");
+#else
             TAA.SetTextureFromGlobal(TAAPrepareKernel, "MotionVectors", "TTMotionVectorTexture");
+#endif       
             TAA.SetTextureFromGlobal(TAAPrepareKernel, "DepthTex", "_CameraDepthTexture");
             cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorIn", _Final);
             cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorOut", TempTexTAA);
@@ -446,7 +450,11 @@ namespace TrueTrace {
 
 
             cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorIn", TempTexTAA);
+#if !TTCustomMotionVectors
+            TAA.SetTextureFromGlobal(TAAKernel, "MotionVectors", "_CameraMotionVectorsTexture");
+#else
             TAA.SetTextureFromGlobal(TAAKernel, "MotionVectors", "TTMotionVectorTexture");
+#endif       
             cmd.SetComputeTextureParam(TAA, TAAKernel, "TAAPrev", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAKernel, "TAAPrevRead", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorOut", TempTexTAA2);
@@ -549,7 +557,11 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(TAAU, TAAUKernel, "IMG_TAA_OUTPUT", Output);
             TAAU.SetTextureFromGlobal(TAAUKernel, "Albedo", "_CameraGBufferTexture0");
             TAAU.SetTextureFromGlobal(TAAUKernel, "Albedo2", "_CameraGBufferTexture1");
+#if !TTCustomMotionVectors
+            TAAU.SetTextureFromGlobal(TAAUKernel, "TEX_FLAT_MOTION", "_CameraMotionVectorsTexture");
+#else
             TAAU.SetTextureFromGlobal(TAAUKernel, "TEX_FLAT_MOTION", "TTMotionVectorTexture");
+#endif       
             cmd.DispatchCompute(TAAU, TAAUKernel, threadGroupsX, threadGroupsY, 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("TAAU");
         }

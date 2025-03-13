@@ -50,7 +50,6 @@ public class HDRPCompatability : CustomPass
             }
 #if !TTCustomMotionVectors
         ctx.hdCamera.camera.depthTextureMode |= DepthTextureMode.MotionVectors | DepthTextureMode.Depth;
-        Shader.SetGlobalTexture("TTMotionVectorTexture", Shader.GetGlobalTexture("_CameraMotionVectorsTexture"));
 #else
         ctx.hdCamera.camera.depthTextureMode = DepthTextureMode.Depth;
 #endif

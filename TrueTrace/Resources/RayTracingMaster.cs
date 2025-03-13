@@ -731,9 +731,11 @@ namespace TrueTrace {
 
             bool FlipFrame = (FramesSinceStart2 % 2 == 0);
 
-
+#if !TTCustomMotionVectors
+            ReSTIRGI.SetTextureFromGlobal(ReSTIRGIKernel, "MotionVectors", "_CameraMotionVectorsTexture");
+#else
             ReSTIRGI.SetTextureFromGlobal(ReSTIRGIKernel, "MotionVectors", "TTMotionVectorTexture");
-            
+#endif       
 
 
             if (SkyboxTexture == null) SkyboxTexture = new Texture2D(1,1, TextureFormat.RGBA32, false);
