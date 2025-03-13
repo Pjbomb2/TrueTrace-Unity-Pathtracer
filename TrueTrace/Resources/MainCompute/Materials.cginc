@@ -139,8 +139,8 @@ float SeparableSmithGGXG1(const float3 w, const float3 wm, float ax, float ay)
 static void CalculateAnisotropicParams(float roughness, float anisotropic, inout float ax, inout float ay)
 {
     float aspect = sqrt(1.0f - 0.9f * anisotropic);
-    ax = max(0.000001f, (roughness * roughness) / aspect);
-    ay = max(0.000001f, (roughness * roughness) * aspect);
+    ay = max(0.000001f, (roughness * roughness) / aspect);
+    ax = max(0.000001f, (roughness * roughness) * aspect);
 }
 
 void GgxVndfAnisotropicPdf ( float3 wi , float3 wm , float3 wo, float ax, float ay, inout float pdf) {

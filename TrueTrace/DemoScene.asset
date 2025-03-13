@@ -31,7 +31,7 @@ MonoBehaviour:
   PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
-  DenoiserMethod: 1
+  DenoiserMethod: 0
   UpscalerMethod: 0
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
@@ -86,7 +86,7 @@ MonoBehaviour:
   FogDensity: 0.008
   FogHeight: 80
   FogColor: {x: 1, y: 1, z: 1}
-  MaxSampCount: 99999999
+  MaxSampCount: 9999999
   DoChromaAber: 0
   ChromaDistort: 0.14
   DoBCS: 0
