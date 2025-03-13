@@ -316,7 +316,6 @@ namespace TrueTrace {
             shader.SetBuffer(Atrous, "ExposureBuffer", ExposureModifier);
             shader.SetTexture(CopyData, "ScreenSpaceInfo", ScreenSpaceInfo);
             shader.SetTexture(Temporal, "ScreenSpaceInfo", ScreenSpaceInfo);
-            shader.SetTextureFromGlobal(CopyData, "MotionVectors", "TTMotionVectorTexture");
             shader.SetInt("PartialRenderingFactor", PartialRenderingFactor);
             cmd.SetComputeTextureParam(shader, CopyData, "WorldPosData", WorldPosData);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_COLOR_LF_SHWrite", PT_LF1);

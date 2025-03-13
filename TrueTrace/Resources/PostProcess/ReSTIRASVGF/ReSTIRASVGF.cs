@@ -223,7 +223,6 @@ namespace TrueTrace {
             shader.SetBuffer(Atrous, "ExposureBuffer", ExposureModifier);
             shader.SetTexture(CopyData, "ScreenSpaceInfo", ScreenSpaceInfo);
             shader.SetTexture(CopyData, "ScreenSpaceInfoPrev", ScreenSpaceInfoPrev);
-            shader.SetTextureFromGlobal(CopyData, "MotionVectors", "TTMotionVectorTexture");
             shader.SetInt("PartialRenderingFactor", PartialRenderingFactor);
             shader.SetBuffer(CopyData, "AggTrisA", TriData);
             shader.SetBuffer(CopyData, "_MeshData", MeshData);

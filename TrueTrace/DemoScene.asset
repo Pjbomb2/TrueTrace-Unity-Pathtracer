@@ -29,8 +29,8 @@ MonoBehaviour:
   PPExposure: 0
   ExposureAuto: 0
   PPToneMap: 0
-  PPTAA: 1
-  RenderScale: 0.5
+  PPTAA: 0
+  RenderScale: 1
   DenoiserMethod: 1
   UpscalerMethod: 0
   UseReSTIRGITemporal: 1
@@ -55,7 +55,7 @@ MonoBehaviour:
   FireflyStrength: 1
   FireflyOffset: 0
   OIDNFrameCount: 0
-  DoSharpen: 1
+  DoSharpen: 0
   Sharpness: 1
   MainDesiredRes: 16384
   UseSkinning: 1
