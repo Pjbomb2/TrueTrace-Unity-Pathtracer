@@ -436,7 +436,7 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(TAA,"Samples_Accumulated", CurrentSamples);
 
             TAA.SetFloat("FarPlane", _camera.farClipPlane);
-            TAA.SetTextureFromGlobal(TAAPrepareKernel, "MotionVectors", "_CameraMotionVectorsTexture");
+            TAA.SetTextureFromGlobal(TAAPrepareKernel, "MotionVectors", "TTMotionVectorTexture");
             TAA.SetTextureFromGlobal(TAAPrepareKernel, "DepthTex", "_CameraDepthTexture");
             cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorIn", _Final);
             cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorOut", TempTexTAA);
@@ -446,7 +446,7 @@ namespace TrueTrace {
 
 
             cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorIn", TempTexTAA);
-            TAA.SetTextureFromGlobal(TAAKernel, "MotionVectors", "_CameraMotionVectorsTexture");
+            TAA.SetTextureFromGlobal(TAAKernel, "MotionVectors", "TTMotionVectorTexture");
             cmd.SetComputeTextureParam(TAA, TAAKernel, "TAAPrev", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAKernel, "TAAPrevRead", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorOut", TempTexTAA2);
@@ -493,7 +493,6 @@ namespace TrueTrace {
             Upscaler.SetTextureFromGlobal(UpsampleKernel, "Albedo2", "_CameraGBufferTexture1");
             Upscaler.SetTextureFromGlobal(UpsampleKernel, "DepthTex", "_CameraDepthTexture");
             Upscaler.SetTextureFromGlobal(UpsampleKernel, "NormalTex", "_CameraGBufferTexture2");
-            Upscaler.SetTextureFromGlobal(UpsampleKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "SmallerGBuffer", ScreenSpaceInfo);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "Input", Input);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "Output", UpScalerLightingDataTexture);
@@ -550,7 +549,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(TAAU, TAAUKernel, "IMG_TAA_OUTPUT", Output);
             TAAU.SetTextureFromGlobal(TAAUKernel, "Albedo", "_CameraGBufferTexture0");
             TAAU.SetTextureFromGlobal(TAAUKernel, "Albedo2", "_CameraGBufferTexture1");
-            TAAU.SetTextureFromGlobal(TAAUKernel, "TEX_FLAT_MOTION", "_CameraMotionVectorsTexture");
+            TAAU.SetTextureFromGlobal(TAAUKernel, "TEX_FLAT_MOTION", "TTMotionVectorTexture");
             cmd.DispatchCompute(TAAU, TAAUKernel, threadGroupsX, threadGroupsY, 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("TAAU");
         }

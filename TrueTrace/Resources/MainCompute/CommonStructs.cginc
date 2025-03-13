@@ -23,6 +23,7 @@ struct CudaTriangleB {
 };
 
 StructuredBuffer<CudaTriangleA> AggTrisA;
+StructuredBuffer<CudaTriangleA> SkinnedMeshTriBufferPrev;
 StructuredBuffer<CudaTriangleB> AggTrisB;
 
 struct AABB {
@@ -66,6 +67,7 @@ struct MyMeshDataCompacted {
 	int LightTriCount;
 	int LightNodeOffset;
 	uint PathFlags;
+	int SkinnedOffset;
 };
 
 StructuredBuffer<MyMeshDataCompacted> _MeshData;

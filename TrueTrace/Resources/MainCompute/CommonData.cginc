@@ -132,6 +132,7 @@ struct RayHit {
 	int mesh_id;
 	int triangle_id;
 };
+RWTexture2D<float2> MVTexture;
 
 RWTexture2D<float4> ScreenSpaceInfo;
 Texture2D<float4> ScreenSpaceInfoRead;
@@ -1924,9 +1925,68 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 	}
 	return -1;
 }
+float4x4 prevviewprojection;
+
+float3 LoadSurfaceInfoCurrentInPrev(int2 id) {
+    uint4 Target = PrimaryTriData[id.xy];
+	if(Target.w == 1) return asfloat(Target.xyz);
+    MyMeshDataCompacted Mesh = _MeshDataPrev[Target.x];
+    Target.y += Mesh.TriOffset;
+    float2 TriUV;
+    TriUV.x = asfloat(Target.z);
+    TriUV.y = asfloat(Target.w);
+    float4x4 Inverse = inverse(Mesh.W2L);
+    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+}
+
+float3 LoadSurfaceInfoCurrentInPrev2(int2 id) {
+    uint4 Target = PrimaryTriData[id.xy];
+	if(Target.w == 1) return asfloat(Target.xyz);
+    MyMeshDataCompacted Mesh = _MeshDataPrev[Target.x];
+    float4x4 Inverse = inverse(Mesh.W2L);
+    float2 TriUV;
+    TriUV.x = asfloat(Target.z);
+    TriUV.y = asfloat(Target.w);
+    if(Mesh.SkinnedOffset == -1) {
+	    Target.y += Mesh.TriOffset;
+	    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+	} else {
+	    Target.y += Mesh.SkinnedOffset;
+	    return mul(Inverse, float4(SkinnedMeshTriBufferPrev[Target.y].pos0 + TriUV.x * SkinnedMeshTriBufferPrev[Target.y].posedge1 + TriUV.y * SkinnedMeshTriBufferPrev[Target.y].posedge2,1)).xyz;
+	}	    
+}
+
+float3 LoadSurfaceInfoPrev2(int2 id) {
+    uint4 Target = PrimaryTriDataPrev[id.xy];
+	if(Target.w == 1) return asfloat(Target.xyz);
+    MyMeshDataCompacted Mesh = _MeshDataPrev[Target.x];
+    float2 TriUV;
+    TriUV.x = asfloat(Target.z);
+    TriUV.y = asfloat(Target.w);
+    float4x4 Inverse = inverse(Mesh.W2L);
+    if(Mesh.SkinnedOffset == -1) {
+	    Target.y += Mesh.TriOffset;
+	    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+	} else {
+	    Target.y += Mesh.SkinnedOffset;
+	    return mul(Inverse, float4(SkinnedMeshTriBufferPrev[Target.y].pos0 + TriUV.x * SkinnedMeshTriBufferPrev[Target.y].posedge1 + TriUV.y * SkinnedMeshTriBufferPrev[Target.y].posedge2,1)).xyz;
+	}	    
+}
 
 
 float3 LoadSurfaceInfoPrev(int2 id) {
+    uint4 Target = PrimaryTriDataPrev[id.xy];
+	if(Target.w == 1) return asfloat(Target.xyz);
+    MyMeshDataCompacted Mesh = _MeshDataPrev[Target.x];
+    Target.y += Mesh.TriOffset;
+    float2 TriUV;
+    TriUV.x = asfloat(Target.z);
+    TriUV.y = asfloat(Target.w);
+    float4x4 Inverse = inverse(Mesh.W2L);
+    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+}
+
+float3 LoadSurfaceInfoPrevInCurrent(int2 id) {
     uint4 Target = PrimaryTriDataPrev[id.xy];
 	if(Target.w == 1) return asfloat(Target.xyz);
     MyMeshDataCompacted Mesh = _MeshData[Target.x];

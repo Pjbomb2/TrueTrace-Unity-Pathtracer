@@ -1649,6 +1649,7 @@ Toolbar toolbar;
             SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
             if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
             SetGlobalDefines("DX11", definesList.Contains("DX11Only"));         
+            SetGlobalDefines("TTCustomMotionVectors", definesList.Contains("TTCustomMotionVectors"));
 
             if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 || definesList.Contains("DX11Only")) {
                if(!definesList.Contains("DX11Only")) {
@@ -1666,6 +1667,7 @@ Toolbar toolbar;
          NonPlayContainer.style.paddingLeft = 10;
             definesList = GetDefines();
             SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
+            SetGlobalDefines("TTCustomMotionVectors", definesList.Contains("TTCustomMotionVectors"));
             SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
             SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
             if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
@@ -1679,6 +1681,9 @@ Toolbar toolbar;
 
             BindlessToggle = new Toggle() {value = (definesList.Contains("UseAtlas")), text = "Disable Bindless Textures"};
             BindlessToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("UseAtlas"); SetGlobalDefines("UseBindless", false);} else {RemoveDefine("UseAtlas"); SetGlobalDefines("UseBindless", true);}});
+
+            Toggle CustomMotionVectorToggle = new Toggle() {value = (definesList.Contains("TTCustomMotionVectors")), text = "Use Custom Motion Vectors(EXPERIMENTAL)"};
+            CustomMotionVectorToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("TTCustomMotionVectors"); SetGlobalDefines("TTCustomMotionVectors", true);} else {RemoveDefine("TTCustomMotionVectors"); SetGlobalDefines("TTCustomMotionVectors", false);}});
 
             Toggle NonAccurateLightTriToggle = new Toggle() {value = (definesList.Contains("AccurateLightTris")), text = "Enable Emissive Texture Aware Light BVH"};
             NonAccurateLightTriToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("AccurateLightTris"); else RemoveDefine("AccurateLightTris");});
@@ -1717,6 +1722,7 @@ Toolbar toolbar;
 
             if(Application.isPlaying) {
                HardwareRTToggle.SetEnabled(false);
+               CustomMotionVectorToggle.SetEnabled(false);
                BindlessToggle.SetEnabled(false);
                GaussianTreeToggle.SetEnabled(false);
                OIDNToggle.SetEnabled(false);
@@ -1726,6 +1732,7 @@ Toolbar toolbar;
                VerboseToggle.SetEnabled(false);
             } else {
                HardwareRTToggle.SetEnabled(true);
+               CustomMotionVectorToggle.SetEnabled(true);
                BindlessToggle.SetEnabled(true);
                GaussianTreeToggle.SetEnabled(true);
                OIDNToggle.SetEnabled(true);
@@ -1779,6 +1786,7 @@ Toolbar toolbar;
          NonPlayContainer.Add(DX11Toggle);
          NonPlayContainer.Add(OIDNToggle);
          NonPlayContainer.Add(RadCacheToggle);
+         NonPlayContainer.Add(CustomMotionVectorToggle);
          NonPlayContainer.Add(NonAccurateLightTriToggle);
          NonPlayContainer.Add(LoadTTSettingsFromResourcesToggle);
          NonPlayContainer.Add(VerboseToggle);

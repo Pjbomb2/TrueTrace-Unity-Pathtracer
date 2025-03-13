@@ -19,7 +19,7 @@ int OutputRead;
 bool IsHeightmap;
 [numthreads(32,32,1)]
 void SingleChannelKernel (uint3 id : SV_DispatchThreadID) {
-    if(id.x >= InputSize.x || id.y >= InputSize.y) return;
+    if(id.x >= (uint)InputSize.x || id.y >= (uint)InputSize.y) return;
     float4 A2 = InputTex.SampleLevel(my_point_clamp_sampler, id.xy / InputSize, 0);
     float A = A2[OutputRead];
     [branch]if(!IsHeightmap) A = pow(abs(A), 0.4545f);
@@ -30,7 +30,7 @@ void SingleChannelKernel (uint3 id : SV_DispatchThreadID) {
 
 [numthreads(32,32,1)]
 void NormalMapKernel (uint3 id : SV_DispatchThreadID) {
-    if(id.x >= InputSize.x || id.y >= InputSize.y) return;
+    if(id.x >= (uint)InputSize.x || id.y >= (uint)InputSize.y) return;
     float4 Col = InputTex.SampleLevel(my_point_clamp_sampler, id.xy / InputSize, 0);
     Col.g = 1.0f - Col.g;
 
@@ -52,7 +52,7 @@ float4 EncodeRGBM(float3 rgb )
 [numthreads(32,32,1)]
 void FullKernel (uint3 id : SV_DispatchThreadID)
 {
-    if(id.x >= InputSize.x || id.y >= InputSize.y) return;
+    if(id.x >= (uint)InputSize.x || id.y >= (uint)InputSize.y) return;
     float4 Col = InputTex.SampleLevel(my_point_clamp_sampler, id.xy / InputSize, 0);
     [branch]if(!ForceLossless) {
         Col = EncodeRGBM(Col.xyz);
@@ -66,7 +66,7 @@ void FullKernel (uint3 id : SV_DispatchThreadID)
 [numthreads(32,32,1)]
 void FullKernelSplit (uint3 id : SV_DispatchThreadID)
 {
-    if(id.x > ceil(InputSize.x) || id.y > ceil(InputSize.y)) return;
+    if(id.x > (uint)ceil(InputSize.x) || id.y > (uint)ceil(InputSize.y)) return;
     float4 Col = InputTex.SampleLevel(my_point_clamp_sampler, id.xy / floor(InputSize), 0);
     Col = EncodeRGBM(Col.xyz);
     // Col = pow(abs(Col), 0.4545f);
@@ -785,7 +785,7 @@ void Compress(uint3 groupID : SV_GroupID,
 {
     uint2 blockCoord = dispatchThreadID.xy;
 
-    if (all(blockCoord < ceil(rcp(TextureSizeRcp) / 4.0f)))
+    if (all(blockCoord < (uint2)ceil(rcp(TextureSizeRcp) / 4.0f)))
     {
         // Gather texels for current 4x4 block
         // 0 1 2 3
@@ -883,7 +883,7 @@ void LoadTexelBlockRGBA(uint2 tid, out float U[16], out float V[16])
 [numthreads(8,8,1)]
 void BC5Kernel (uint2 dtid : SV_DispatchThreadID)
 {
-    if (all(dtid < ceil(rcp(TextureSizeRcp) / 4.0f)))
+    if (all(dtid < (uint2)ceil(rcp(TextureSizeRcp) / 4.0f)))
     {
     float U[16];
     float V[16];
@@ -915,7 +915,7 @@ void LoadTexelBlockRGBA2(uint2 tid, out float U[16])
 [numthreads(8,8,1)]
 void BC4Kernel (uint2 dtid : SV_DispatchThreadID)
 {
-    if (all(dtid < ceil(rcp(TextureSizeRcp) / 4.0f)))
+    if (all(dtid < (uint2)ceil(rcp(TextureSizeRcp) / 4.0f)))
     {
     float U[16];
     LoadTexelBlockRGBA2(dtid, U);
@@ -930,7 +930,7 @@ RWTexture2D<half> InputTex2;
 int MipLevel;
 [numthreads(32,32,1)]
 void HeightmapCompressKernel (uint3 id : SV_DispatchThreadID) {
-    if(id.x >= InputSize.x || id.y >= InputSize.y) return;
+    if(id.x >= (uint)InputSize.x || id.y >= (uint)InputSize.y) return;
     float MaxVal = InputTex2[id.xy * 2];//InputTex.SampleLevel(my_point_clamp_sampler, (id.xy * 1.0f) / InputSize, 0).x;
     // MaxVal = max(MaxVal, InputTex.SampleLevel(my_point_clamp_sampler, (id.xy * 1.0f + int2(1, 0)) / InputSize, 0).x);
     // MaxVal = max(MaxVal, InputTex.SampleLevel(my_point_clamp_sampler, (id.xy * 1.0f + int2(1, 1)) / InputSize, 0).x);

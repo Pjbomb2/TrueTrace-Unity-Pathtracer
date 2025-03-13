@@ -30,6 +30,7 @@
 // #define FakedAO
 #define ClampRoughnessToBounce
 // #define AutoDebugReading
+// #define TTCustomMotionVectors
 
 
 

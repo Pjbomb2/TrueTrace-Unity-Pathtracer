@@ -11,6 +11,9 @@ ByteAddressBuffer bufVertices;
 ByteAddressBuffer bufIndexes;
 
 uint gVertexCount;
+int SkinnedOffset;
+
+RWStructuredBuffer<CudaTriangleA> SkinnedTriBuffer;
 
 int VertOffset;
 
@@ -131,9 +134,16 @@ void Construct(uint3 id : SV_DispatchThreadID, uint3 gt : SV_GroupThreadID)
 			Boxs[id.x].BBMax = BBMax;
 			Boxs[id.x].BBMin = BBMin;
 		} else if(gt.y == 0) {
+#ifdef TTCustomMotionVectors
+			SkinnedTriBuffer[id.x + SkinnedOffset].pos0 = CudaTriArrayA[id.x + TriBuffOffset].pos0;
+			SkinnedTriBuffer[id.x + SkinnedOffset].posedge1 = CudaTriArrayA[id.x + TriBuffOffset].posedge1;
+#endif
 			CudaTriArrayA[id.x + TriBuffOffset].pos0 = Pos[gt.x];
 			CudaTriArrayA[id.x + TriBuffOffset].posedge1 = Pos[gt.x + 2] - Pos[gt.x];
 		} else if(gt.y == 2) {
+#ifdef TTCustomMotionVectors
+			SkinnedTriBuffer[id.x + SkinnedOffset].posedge2 = CudaTriArrayA[id.x + TriBuffOffset].posedge2;
+#endif
 			CudaTriArrayA[id.x + TriBuffOffset].posedge2 = Pos[gt.x + 1] - Pos[gt.x];
 			CudaTriArrayB[id.x + TriBuffOffset].norms = uint3(Norm[gt.x], Norm[gt.x + 2], Norm[gt.x + 1]);
 		}

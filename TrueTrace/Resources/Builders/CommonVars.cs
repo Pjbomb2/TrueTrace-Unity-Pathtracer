@@ -280,6 +280,7 @@ namespace CommonVars
         public int LightTriCount;
         public int LightNodeOffset;
         public uint PathFlags;
+        public int SkinnedOffset;
     }
 
     [System.Serializable]

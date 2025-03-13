@@ -50,6 +50,9 @@ namespace TrueTrace {
         [HideInInspector] public IntersectionMatData[] IntersectionMats;
         [HideInInspector] public ComputeBuffer BVH8AggregatedBuffer;
         [HideInInspector] public ComputeBuffer AggTriBufferA;
+#if TTCustomMotionVectors
+        [HideInInspector] public ComputeBuffer SkinnedMeshAggTriBufferPrev;
+#endif
         [HideInInspector] public ComputeBuffer AggTriBufferB;
         [HideInInspector] public ComputeBuffer LightTriBuffer;
         [HideInInspector] public ComputeBuffer LightTreeBufferA;
@@ -82,6 +85,9 @@ namespace TrueTrace {
                 ThisShader.SetComputeBuffer(Kernel, "TLASBVH8Indices", TLASCWBVHIndexes);
             #endif
             ThisShader.SetComputeBuffer(Kernel, "AggTrisA", AggTriBufferA);
+#if TTCustomMotionVectors
+            ThisShader.SetComputeBuffer(Kernel, "SkinnedMeshTriBufferPrev", SkinnedMeshAggTriBufferPrev);
+#endif
             ThisShader.SetComputeBuffer(Kernel, "AggTrisB", AggTriBufferB);
             ThisShader.SetComputeBuffer(Kernel, "cwbvh_nodes", BVH8AggregatedBuffer);
             ThisShader.SetComputeBuffer(Kernel, "_MeshData", (RayMaster.LocalTTSettings.DoTLASUpdates && (RayMaster.FramesSinceStart2 % 2 == 0)) ? MeshDataBufferA : MeshDataBufferB);
@@ -209,6 +215,9 @@ namespace TrueTrace {
             LightTreeBufferB.ReleaseSafe();
             BVH8AggregatedBuffer.ReleaseSafe();
             AggTriBufferA.ReleaseSafe();
+#if TTCustomMotionVectors
+            SkinnedMeshAggTriBufferPrev.ReleaseSafe();
+#endif
             AggTriBufferB.ReleaseSafe();
 
             MaterialBuffer.ReleaseSafe();
@@ -835,6 +844,9 @@ namespace TrueTrace {
             LightTreeBufferB.ReleaseSafe();
             BVH8AggregatedBuffer.ReleaseSafe();
             AggTriBufferA.ReleaseSafe();
+#if TTCustomMotionVectors
+            SkinnedMeshAggTriBufferPrev.ReleaseSafe();
+#endif
             AggTriBufferB.ReleaseSafe();
 
             if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
@@ -969,6 +981,9 @@ namespace TrueTrace {
             LightTreeBufferB.ReleaseSafe();
             BVH8AggregatedBuffer.ReleaseSafe();
             AggTriBufferA.ReleaseSafe();
+#if TTCustomMotionVectors
+            SkinnedMeshAggTriBufferPrev.ReleaseSafe();
+#endif
             AggTriBufferB.ReleaseSafe();
             MeshFunctions = Resources.Load<ComputeShader>("Utility/GeneralMeshFunctions");
             TriangleBufferKernel = MeshFunctions.FindKernel("CombineTriBuffers");
@@ -1227,6 +1242,9 @@ namespace TrueTrace {
                 LightTransforms.Clear();
                 int TotalMatCount = 0;
                 int AggSGTreeNodeCount = 0;
+    int SkinnedMeshTriCount = 0;
+    int SkinnedMeshTriOffset = 0;
+
 #if !DontUseSGTree
                 for(int i = 0; i < ParentsLength; i++) if (RenderQue[i].LightTriangles.Count != 0) {LightMeshCount++; AggSGTreeNodeCount += RenderQue[i].LBVH.SGTree.Length;}
 #else
@@ -1241,6 +1259,9 @@ namespace TrueTrace {
                 {
                     BVH8AggregatedBuffer.Release();
                     AggTriBufferA.Release();
+#if TTCustomMotionVectors
+            SkinnedMeshAggTriBufferPrev.ReleaseSafe();
+#endif
                     AggTriBufferB.Release();
                     LightTriBuffer.Release();
                     if(LightTreeBufferA != null) LightTreeBufferA.Release();
@@ -1252,6 +1273,7 @@ namespace TrueTrace {
                     AggNodeCount += RenderQue[i].AggNodes.Length;
                     AggTriCount += RenderQue[i].AggTriangles.Length;
                     LightTriCount += RenderQue[i].LightTriangles.Count;
+                    if(RenderQue[i].IsSkinnedGroup || RenderQue[i].IsDeformable) SkinnedMeshTriCount += RenderQue[i].AggTriangles.Length;
                 }
                 InstanceQueCount = InstanceData.RenderQue.Count;
                 for (int i = 0; i < InstanceQueCount; i++)
@@ -1283,6 +1305,9 @@ namespace TrueTrace {
 
                     CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80);
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBufferA, AggTriCount, CommonFunctions.GetStride<CudaTriangleA>());
+#if TTCustomMotionVectors
+                    CommonFunctions.CreateDynamicBuffer(ref SkinnedMeshAggTriBufferPrev, (int)Mathf.Max(SkinnedMeshTriCount,1), CommonFunctions.GetStride<CudaTriangleA>());
+#endif
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBufferB, AggTriCount, CommonFunctions.GetStride<CudaTriangleB>());
                     CommonFunctions.CreateDynamicBuffer(ref LightTriBuffer, LightTriCount, CommonFunctions.GetStride<LightTriData>());
 #if !DontUseSGTree
@@ -1373,6 +1398,9 @@ namespace TrueTrace {
                         TotalParentObjectSize += RenderQue[i].BVHBuffer.count * RenderQue[i].BVHBuffer.stride;
                         RenderQue[i].NodeOffset = CurNodeOffset;
                         RenderQue[i].TriOffset = CurTriOffset;
+                        if(RenderQue[i].IsSkinnedGroup || RenderQue[i].IsDeformable) RenderQue[i].SkinnedOffset = SkinnedMeshTriOffset;
+                        else RenderQue[i].SkinnedOffset = -1;
+                        if(RenderQue[i].IsSkinnedGroup || RenderQue[i].IsDeformable) SkinnedMeshTriOffset += RenderQue[i].AggTriangles.Length;
                         CurNodeOffset += RenderQue[i].AggNodes.Length;
                         CurTriOffset += RenderQue[i].AggTriangles.Length;
                         MatOffset += RenderQue[i]._Materials.Count;
@@ -1482,7 +1510,11 @@ namespace TrueTrace {
             if (UseSkinning && didstart) {
                 for (int i = 0; i < ParentsLength; i++) {//Refit BVH's of skinned meshes
                     if (RenderQue[i].IsSkinnedGroup || RenderQue[i].IsDeformable) {
+#if TTCustomMotionVectors
+                        RenderQue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBufferA, ref AggTriBufferB, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, BoxesBuffer, i, SkinnedMeshAggTriBufferPrev, cmd);
+#else
                         RenderQue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBufferA, ref AggTriBufferB, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, BoxesBuffer, i, cmd);
+#endif
                         if(i < MyMeshesCompacted.Count) {
                             MyMeshDataCompacted TempMesh2 = MyMeshesCompacted[i];
                             TempMesh2.Transform = RenderTransforms[i].worldToLocalMatrix;
@@ -1828,7 +1860,15 @@ namespace TrueTrace {
                 #endif
 
                 TLASTask = Task.Run(() => CorrectRefit(TransformedAABBs));
-                BoxesBuffer.SetData(MeshAABBs);
+                cmd.SetBufferData(BoxesBuffer, MeshAABBs);
+                if (didstart) {
+                    int ParentsLength = RenderQue.Count;
+                    for (int i = 0; i < ParentsLength; i++) {//Refit BVH's of skinned meshes
+                        if (RenderQue[i].IsSkinnedGroup || RenderQue[i].IsDeformable) {
+                            RenderQue[i].ForceUpdateSkinnedAABB(BoxesBuffer, i, cmd);
+                        }
+                    }
+                }
             }
             if(RayMaster.FramesSinceStart2 > 1) {
                 if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("TLAS Refit Refit");
@@ -1926,7 +1966,7 @@ namespace TrueTrace {
             if(SGTree[CurrentIndex].left < 0) {
                 MyMeshDataCompacted TempDat =  MyMeshesCompacted[LightMeshes[-(SGTree[CurrentIndex].left+1)].LockedMeshIndex];
 #else
-            if(CurrentIndex >= LBVH.nodes.Length) return;
+            if(LBVH == null || LBVH.nodes == null || CurrentIndex >= LBVH.nodes.Length) return;
             if(LBVH.nodes[CurrentIndex].left < 0) {
                 MyMeshDataCompacted TempDat =  MyMeshesCompacted[LightMeshes[-(LBVH.nodes[CurrentIndex].left+1)].LockedMeshIndex];
 
@@ -2003,6 +2043,7 @@ namespace TrueTrace {
             int aggregated_bvh_node_count = 2 * (MeshDataCount + InstanceRenderQue.Count);
             int AggNodeCount = aggregated_bvh_node_count;
             int AggTriCount = 0;
+            int AggSkinnedOffset = 0;
             bool HasChangedMaterials = false;
             if(MeshAABBs.Length == 0) return -1;
             if (ChildrenUpdated || !didstart || OnlyInstanceUpdated || MyMeshesCompacted.Count == 0)
@@ -2019,7 +2060,8 @@ namespace TrueTrace {
                         AggNodeCount = AggNodeCount,
                         MaterialOffset = MatOffset,
                         LightTriCount = RenderQue[i].LightTriangles.Count,
-                        LightNodeOffset = RenderQue[i].LightNodeOffset
+                        LightNodeOffset = RenderQue[i].LightNodeOffset,
+                        SkinnedOffset = RenderQue[i].SkinnedOffset
                     });
                     RenderQue[i].CompactedMeshData = i;
                     MatOffset += RenderQue[i].MatOffset;
@@ -2129,8 +2171,8 @@ namespace TrueTrace {
                                     AggNodeCount = Aggs[Index].AggNodeCount,
                                     MaterialOffset = Aggs[Index].MaterialOffset,
                                     LightTriCount = Aggs[Index].LightTriCount,
-                                    LightNodeOffset = Aggs[Index].LightNodeOffset
-
+                                    LightNodeOffset = Aggs[Index].LightNodeOffset,
+                                    SkinnedOffset = -1
                                 });
                                 TempList[j].CompactedMeshData = MeshCount + j;
                                 MeshAABBs[RenderQue.Count + TempCount] = TempList[j].InstanceParent.aabb_untransformed;      
@@ -2300,8 +2342,9 @@ namespace TrueTrace {
                 // UnityEngine.Profiling.Profiler.EndSample();
                 AggNodeCount = 0;
                 HasChangedMaterials = UpdateMaterials();
-                if(RayMaster.FramesSinceStart2 % 2 == 0) MeshDataBufferA.SetData(MyMeshesCompacted);
-                else MeshDataBufferB.SetData(MyMeshesCompacted);
+                 // cmd.SetBufferData(MeshDataBufferA, MyMeshesCompacted);
+                if(RayMaster.FramesSinceStart2 % 2 == 0) cmd.SetBufferData(MeshDataBufferA, MyMeshesCompacted);
+                else cmd.SetBufferData(MeshDataBufferB, MyMeshesCompacted);
                 if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("TLAS Refitting");
                 RefitTLAS(MeshAABBs, cmd);
                 if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("TLAS Refitting");

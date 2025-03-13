@@ -320,7 +320,7 @@
       </TexturePairs>
       <TexturePairs>
         <Purpose>1</Purpose>
-        <ReadIndex>0</ReadIndex>
+        <ReadIndex>3</ReadIndex>
         <TextureName>_MainTex</TextureName>
       </TexturePairs>
     </AvailableTextures>

@@ -12263,6 +12263,7 @@ MonoBehaviour:
     BBMin: {x: 0, y: 0, z: 0}
   NodeOffset: 0
   TriOffset: 0
+  SkinnedOffset: 0
   LightTriOffset: 0
   LightNodeOffset: 0
   AlbedoTexs: []
@@ -36031,7 +36032,7 @@ MonoBehaviour:
   RenderTransforms: []
   RenderQue: []
   BuildQue:
-  - {fileID: 499686671}
+  - {fileID: 0}
   - {fileID: 1770588100}
   - {fileID: 1931085300}
   AddQue: []
@@ -52704,7 +52705,7 @@ MonoBehaviour:
   TransferKernel: 1
   RefitLayerKernel: 2
   UpdateGlobalBufferAABBKernel: 4
-  LightBLASRefitKernel: 7
+  LightBLASRefitKernel: 8
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 1
@@ -52721,6 +52722,7 @@ MonoBehaviour:
     BBMin: {x: 0, y: 0, z: 0}
   NodeOffset: 0
   TriOffset: 0
+  SkinnedOffset: 0
   LightTriOffset: 0
   LightNodeOffset: 0
   AlbedoTexs:
@@ -59059,7 +59061,7 @@ MonoBehaviour:
   TransferKernel: 1
   RefitLayerKernel: 2
   UpdateGlobalBufferAABBKernel: 4
-  LightBLASRefitKernel: 7
+  LightBLASRefitKernel: 8
   CompactedMeshData: 3
   InstanceReferences: 0
   NeedsToUpdate: 1
@@ -59076,6 +59078,7 @@ MonoBehaviour:
     BBMin: {x: 0, y: 0, z: 0}
   NodeOffset: 69865
   TriOffset: 786557
+  SkinnedOffset: 0
   LightTriOffset: 0
   LightNodeOffset: 0
   AlbedoTexs: []

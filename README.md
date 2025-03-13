@@ -139,6 +139,7 @@ for bringing bindless textures to unity!
   <li>Use DX11 - Disables DX12 only toggles, but allows truetrace to run in DX11.</li>
   <li>Enable OIDN - (DX12 Only) Adds the OIDN denoiser to the Denoiser list in "Main Options"</li>
   <li>FULLY Disable Radiance Cache - Will free the memory usually used by the Radiance Cache</li>
+  <li>Use Custom Motion Vectors - Uses custom motion vectors instead of unitys, allowing for easier URP use and Forward rendering</li>
   <li>Enable Emissive Texture Aware Light BVH - Allows for smarter/better sampling of emissive meshes by considering their emissive masks/textures; Can use lots of RAM.</li>
   <li>Use Light BVH - Toggles the use of EITHER the Light BVH or Gaussian Tree on/off; uses the RIS count of NEE if off. Turn off for maximum speed.</li>
   <li>Quick Radcache Toggle - Toggles the radcache on/off. Useful for comparing to ground truth pathtracing.</li>
@@ -164,14 +165,6 @@ TrueTrace Options Description -
     </ul>
   <li>Allow Mesh Skinning - Turns on the ability for skinned meshes to be animated or deformed with respect to their armeture</li>
   <li>Denoiser - Allows you to switch between different denoisers</li>
-  <li>Allow Bloom - Turns on or off Bloom</li>
-  <li>Sharpness Filter - Contrast Adaptive Sharpening</li>
-  <li>Enable DoF - Turns on or off Depth of Field, and its associated settings</li>
-    <ul>
-      <li>CTRL + Middle Mouse - Autofocuses to whatever object your mouse is hovering over in the game view</li>
-      <li>CTRL + Middle Mouse Scroll - Adjusts the Aperature Size</li>
-    </ul>
-  <li>Enable Auto/Manual Exposure - Turns on or off Exposure adjustment</li>
   <li>Use ReSTIR GI - Enables ReSTIR GI which is usually much higher quality(Works with Recur and SVGF denoisers)</li>
     <ul>
       <li>Do Sample Connection Validation - Confirms that two samples are mutually visable and throws it away if they are not</li>
@@ -180,9 +173,6 @@ TrueTrace Options Description -
       <li>Temporal M Cap - How long a sample may live for, lower means lighting updates faster(until 0 which is the opposite) but more noise(recommended either 0 or around 12, but can be played with)</li>
       <li>Enable Spatial - Enables the Spatial pass of ReSTIR GI(Allows pixels to choose to use the neighboring pixels sample instead)</li>
     </ul>
-  <li>Enable TAA - Enables Temporal Antialiasing</li>
-  <li>Enable FXAA - Enables FXAA</li>
-  <li>Enable Tonemapping - Turns on tonemapping, and allows you to select a specific tonemapper</li>
   <li>Upscaler(ONLY when "Interal Resolution Ratio" is NOT 1) - Allows selection from one of a few upscaling methods</li>
   <li>Use Partial Rendering - Traces only 1 out of (X*X) rays, improving performance</li>
   <li>Enable AntiFirefly - Enables RCRS filter for getting rid of those single bright pixels</li>
@@ -193,15 +183,31 @@ TrueTrace Options Description -
   <li>RR Ignores Primary Hit - Allows for an extra bounce basically, makes it so that dark objects arent noisier, but at the cost of performance</li>
   <li>Atmospheric Scatter Samples - Lower this to 1 if you keep crashing on entering play mode(controls how many atmospheric samples are precomputed)</li>
   <li>Current Samples - Shows how many samples have currently been accumulated</li>
+  <li>Enable Tonemapping - Turns on tonemapping, and allows you to select a specific tonemapper</li>
+  <li>Use Sharpness Filter - Contrast Adaptive Sharpening</li>
+  <li>Enable Bloom - Turns on or off Bloom</li>
+  <li>Enable DoF - Turns on or off Depth of Field, and its associated settings</li>
+    <ul>
+      <li>CTRL + Middle Mouse - Autofocuses to whatever object your mouse is hovering over in the game view</li>
+      <li>CTRL + Middle Mouse Scroll - Adjusts the Aperature Size</li>
+    </ul>
+  <li>Enable Auto/Manual Exposure - Turns on or off Exposure adjustment</li>
+  <li>Enable TAA - Enables Temporal Antialiasing</li>
+  <li>Enable FXAA - Enables FXAA</li>
 </ul>
 
 
 ## URP Setup
 <ul>
   <li>If using Unity 6000 or above, you need to go to Project Settings -> Graphics -> (at the bottom)Turn on Compatability Mode</li>
-  <li>In the Universal Renderer Asset being used, change the Rendering Path to Deferred, and turn on "Native RenderPass"</li>
-  <li>In the camera, turn on PostProcessing, and turn the Anti-Aliasing to TAA(This is the only way I have found to reliably force motion vector generation in URP for some reason...)</li>
-  <li>Finally, add the "URPTTInjectPass" script to an empty gameobject</li>
+  <li>In the Universal Renderer Asset being used turn on "Native RenderPass"</li>
+  <li>EITHER:</li>
+  <ul>
+    <li>In the camera, turn on PostProcessing, and turn the Anti-Aliasing to TAA(This is the only way I have found to reliably force motion vector generation in URP for some reason...)</li>
+    <li>OR</li>
+    <li>In Truetrace Settings -> Functionality Settings -> Turn ON "Use Custom Motion Vectors"</li>
+  </ul>
+  <li>Finally, add the "URPTTInjectPass" script to an empty gameobject if it has not been automatically added</li>
   <li>Reccomended - Go to the Universal Render Pipeline Asset you are using, and turn the render scale to 1</li>
 </ul>
 

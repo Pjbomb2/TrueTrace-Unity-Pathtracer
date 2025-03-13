@@ -141,6 +141,7 @@ namespace TrueTrace {
 
         public int NodeOffset;
         public int TriOffset;
+        public int SkinnedOffset;
         public int LightTriOffset;
         public int LightNodeOffset;
 
@@ -985,8 +986,10 @@ namespace TrueTrace {
             tempAABB = new AABB();
             MaxRecur = 0;
             int PrevLength = TrianglesArray.Length;
+            if(BVH2 != null) BVH2.Dispose();
             BVH2 = new BVH2Builder(Triangles, TrianglesArray.Length);//Binary BVH Builder, and also the component that takes the longest to build
             TrianglesArray.Dispose();
+            if(this.BVH != null) this.BVH.Dispose();
             this.BVH = new BVH8Builder(ref BVH2);
             CommonFunctions.DeepClean(ref BVH2.FinalIndices);
             BVH2.Dispose();
@@ -1073,7 +1076,11 @@ namespace TrueTrace {
 
 
 
+#if TTCustomMotionVectors
+        public void RefitMesh(ref ComputeBuffer RealizedAggNodes, ref ComputeBuffer RealizedTriBufferA, ref ComputeBuffer RealizedTriBufferB, ref ComputeBuffer RealizedLightTriBuffer, ComputeBuffer RealizedLightNodeBuffer, ComputeBuffer BoxesBuffer, int BoxesIndex, ComputeBuffer SkinnedMeshAggTriBufferPrev, CommandBuffer cmd)
+#else
         public void RefitMesh(ref ComputeBuffer RealizedAggNodes, ref ComputeBuffer RealizedTriBufferA, ref ComputeBuffer RealizedTriBufferB, ref ComputeBuffer RealizedLightTriBuffer, ComputeBuffer RealizedLightNodeBuffer, ComputeBuffer BoxesBuffer, int BoxesIndex, CommandBuffer cmd)
+#endif
         {
             #if HardwareRT
                 for(int i = 0; i < Renderers.Length; i++) AssetManager.Assets.AccelStruct.UpdateInstanceTransform(Renderers[i]);
@@ -1137,8 +1144,13 @@ namespace TrueTrace {
                     IndexBuffers[i] = new ComputeBuffer(IndexBuffer.Length, 4, ComputeBufferType.Raw);
                     IndexBuffers[i].SetData(IndexBuffer);
                 }
+
+            }
+            else if (AllFull)
+            {
+                int VertLength = VertexBuffers.Length;
                 for (int i = 0; i < VertLength; i++) {
-                    // VertexBuffers[i].Release();
+                    VertexBuffers[i].Release();
                     if(IsSkinnedGroup) {
                         SkinnedMeshes[i].vertexBufferTarget |= GraphicsBuffer.Target.Raw;
                         VertexBuffers[i] = SkinnedMeshes[i].GetVertexBuffer();
@@ -1147,11 +1159,9 @@ namespace TrueTrace {
                         VertexBuffers[i] = DeformableMeshes[i].sharedMesh.GetVertexBuffer(0);
                     }
                 }
-            }
-            else if (AllFull)
-            {
                 cmd.SetComputeIntParam(MeshRefit, "TriBuffOffset", TriOffset);
                 cmd.SetComputeIntParam(MeshRefit, "LightTriBuffOffset", LightTriOffset);
+                cmd.SetComputeIntParam(MeshRefit, "SkinnedOffset", SkinnedOffset);
                 if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh");
                 if(HasLightTriangles) cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "LightTriangles", RealizedLightTriBuffer);
                 cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "ReverseStack", StackBuffer);
@@ -1159,6 +1169,9 @@ namespace TrueTrace {
                 cmd.SetComputeBufferParam(MeshRefit, TransferKernel, "LightTrianglesOut", RealizedLightTriBuffer);
                 cmd.SetComputeBufferParam(MeshRefit, TransferKernel, "CudaTriArrayINA", RealizedTriBufferA);
                 cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "CudaTriArrayA", RealizedTriBufferA);
+#if TTCustomMotionVectors
+                cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "SkinnedTriBuffer", SkinnedMeshAggTriBufferPrev);
+#endif
                 cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "CudaTriArrayB", RealizedTriBufferB);
                 cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "CWBVHIndices", CWBVHIndicesBuffer);
                 cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "AllNodes", NodeBuffer);
@@ -1269,6 +1282,16 @@ namespace TrueTrace {
             }
         }
 
+        public void ForceUpdateSkinnedAABB(ComputeBuffer BoxesBuffer, int BoxesIndex, CommandBuffer cmd) {
+            #if !HardwareRT
+                if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Global AABB Update");
+                    cmd.SetComputeIntParam(MeshRefit, "TLASBoxesInput", BoxesIndex);
+                    cmd.SetComputeBufferParam(MeshRefit, UpdateGlobalBufferAABBKernel, "Boxs", BoxesBuffer);
+                    cmd.SetComputeBufferParam(MeshRefit, UpdateGlobalBufferAABBKernel, "AllNodes", NodeBuffer);
+                    cmd.DispatchCompute(MeshRefit, UpdateGlobalBufferAABBKernel, 1, 1, 1);
+                if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Global AABB Update");
+            #endif
+        }
 
         private float AreaOfTriangle(Vector3 pt1, Vector3 pt2, Vector3 pt3)
         {
@@ -1871,6 +1894,37 @@ namespace TrueTrace {
         //         }
         //     }
         // }
+
+
+
+        // public static Vector3 transform_position(Matrix4x4 matrix, Vector3 position)
+        // {
+        //     return new Vector3(
+        //         matrix[0, 0] * position.x + matrix[0, 1] * position.y + matrix[0, 2] * position.z + matrix[0, 3],
+        //         matrix[1, 0] * position.x + matrix[1, 1] * position.y + matrix[1, 2] * position.z + matrix[1, 3],
+        //         matrix[2, 0] * position.x + matrix[2, 1] * position.y + matrix[2, 2] * position.z + matrix[2, 3]
+        //     );
+        // }
+        // public static Vector3 transform_direction(Matrix4x4 matrix, Vector3 direction)
+        // {
+        //     return new Vector3(
+        //         Mathf.Abs(matrix[0, 0]) * direction.x + Mathf.Abs(matrix[0, 1]) * direction.y + Mathf.Abs(matrix[0, 2]) * direction.z,
+        //         Mathf.Abs(matrix[1, 0]) * direction.x + Mathf.Abs(matrix[1, 1]) * direction.y + Mathf.Abs(matrix[1, 2]) * direction.z,
+        //         Mathf.Abs(matrix[2, 0]) * direction.x + Mathf.Abs(matrix[2, 1]) * direction.y + Mathf.Abs(matrix[2, 2]) * direction.z
+        //     );
+        // }
+
+
+        // public void ExampleFunction() {
+        //     Matrix4x4 Mat = transform.localToWorldMatrix;
+        //     Vector3 new_center = CommonFunctions.transform_position(Mat, 0.5f * (LocalAABB.BBMax + LocalAABB.BBMin));
+        //     Vector3 new_extent = CommonFunctions.transform_direction(Mat, 0.5f * (LocalAABB.BBMax - LocalAABB.BBMin));
+
+        //     AABB WorldSpaceAABB = new AABB();
+        //     WorldSpaceAABB.BBMax = new_center + new_extent;
+        //     WorldSpaceAABB.BBMin = new_center - new_extent;
+        // }
+
     }
 
 

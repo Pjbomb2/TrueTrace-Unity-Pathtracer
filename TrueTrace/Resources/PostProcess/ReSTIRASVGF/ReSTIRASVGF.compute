@@ -46,12 +46,14 @@ inline float4x4 inverse(float4x4 m) {
 
 #ifdef HDRP
     Texture2DArray<float> Depth;
-    Texture2DArray<half4> NormalTex;
+#else
+    Texture2D<float> Depth;
+#endif
+
+#if defined(HDRP) && !defined(TTCustomMotionVectors)
     Texture2DArray<float2> TEX_PT_MOTION;
 #else
     Texture2D<float2> TEX_PT_MOTION;
-    Texture2D<half4> NormalTex;
-    Texture2D<float> Depth;
 #endif
 
 Texture2D<float4> TEX_PT_COLOR_LF_SH;
@@ -260,7 +262,7 @@ void CopyData(int3 id : SV_DispatchThreadID)
     TexBaseColor = (TexBaseColor > 0.005f ? rcp(TexBaseColor) : 0);
     float2 MetRough = FromColorSpecPacked(Pixel.MetRoughIsSpec);
     MetallicAWrite[id.xy] = MetRough;
-    #ifdef HDRP
+    #if defined(HDRP) && !defined(TTCustomMotionVectors)
         float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, int3(id.xy,0) / float3(screen_width, screen_height, 1), 0).xy;
     #else
         float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, id.xy / float2(screen_width, screen_height), 0).xy;
@@ -374,7 +376,7 @@ inline float get_gradient(float l_curr, float l_prev)
 inline float2 get_lf_gradient(int2 ipos)
 {
     // Find the same surface on the pvreious frame
-    #ifdef HDRP
+    #if defined(HDRP) && !defined(TTCustomMotionVectors)
         float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, int3(ipos,0) / float3(screen_width, screen_height, 1), 0).xy;
     #else
         float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, ipos / float2(screen_width, screen_height), 0).xy;
@@ -574,7 +576,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
     GroupMemoryBarrierWithGroupSync();
 
     int2 ipos = gl_GlobalInvocationID.xy;
-    #ifdef HDRP
+    #if defined(HDRP) && !defined(TTCustomMotionVectors)
         float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, int3(ipos,0) / float3(screen_width, screen_height, 1), 0).xy;
     #else
         float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, ipos / float2(screen_width, screen_height), 0).xy;
@@ -1296,14 +1298,6 @@ inline SH interpolate_lf(Texture2D<float4> img_lf_shY, Texture2D<float2> img_lf_
     return sum_lf;
 }
 
-
-#ifdef HDRP
-    Texture2DArray<float4> DiffuseGBuffer;
-    Texture2DArray<float4> SpecularGBuffer;
-#else
-    Texture2D<float4> DiffuseGBuffer;
-    Texture2D<float4> SpecularGBuffer;
-#endif
 
 float3 composite_color(float4 surf_base_color,
     float3 projected_lf, float3 high_freq, float3 specular, float3 SpecColor, int2 ipos)

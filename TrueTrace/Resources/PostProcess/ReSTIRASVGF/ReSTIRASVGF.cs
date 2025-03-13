@@ -223,7 +223,7 @@ namespace TrueTrace {
             shader.SetBuffer(Atrous, "ExposureBuffer", ExposureModifier);
             shader.SetTexture(CopyData, "ScreenSpaceInfo", ScreenSpaceInfo);
             shader.SetTexture(CopyData, "ScreenSpaceInfoPrev", ScreenSpaceInfoPrev);
-            shader.SetTextureFromGlobal(CopyData, "MotionVectors", "_CameraMotionVectorsTexture");
+            shader.SetTextureFromGlobal(CopyData, "MotionVectors", "TTMotionVectorTexture");
             shader.SetInt("PartialRenderingFactor", PartialRenderingFactor);
             shader.SetBuffer(CopyData, "AggTrisA", TriData);
             shader.SetBuffer(CopyData, "_MeshData", MeshData);
@@ -236,7 +236,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_NORMALS_B", (!EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
             cmd.SetComputeTextureParam(shader, CopyData, "SecondaryTriData", SecondaryTriData);
             cmd.SetComputeTextureParam(shader, CopyData, "PrimaryTriData", PrimaryTriData);
-            shader.SetTextureFromGlobal(CopyData, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
+            shader.SetTextureFromGlobal(CopyData, "TEX_PT_MOTION", "TTMotionVectorTexture");
 
             cmd.SetComputeTextureParam(shader, CopyData, "MetallicAWrite", (EvenFrame ? MetallicA : MetallicB));
             cmd.SetComputeTextureParam(shader, CopyData, "ReflectedRefractedTexWrite", (EvenFrame ? ReflectedRefractedTex : ReflectedRefractedTexPrev));
@@ -249,7 +249,7 @@ namespace TrueTrace {
             cmd.DispatchCompute(shader, CopyData, Mathf.CeilToInt(ScreenWidth / 16.0f), Mathf.CeilToInt(ScreenHeight / 16.0f), 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Copy Data Kernel");
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Grad Compute Kernel");
-            shader.SetTextureFromGlobal(Gradient_Img, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
+            shader.SetTextureFromGlobal(Gradient_Img, "TEX_PT_MOTION", "TTMotionVectorTexture");
             cmd.SetComputeTextureParam(shader, Gradient_Img, "IMG_ASVGF_GRAD_LF_PING", ASVGF_GRAD_LF_PING);
             cmd.SetComputeTextureParam(shader, Gradient_Img, "TEX_ASVGF_GRAD_LF_PONG", ASVGF_GRAD_LF_PONG);
             cmd.SetComputeTextureParam(shader, Gradient_Img, "TEX_PT_COLOR_LF_SH", InputLFSH);
@@ -284,7 +284,7 @@ namespace TrueTrace {
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Grad Atrous Kernels");
 
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Temporal Kernel");
-            shader.SetTextureFromGlobal(Temporal, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
+            shader.SetTextureFromGlobal(Temporal, "TEX_PT_MOTION", "TTMotionVectorTexture");
             cmd.SetComputeTextureParam(shader, Temporal, "MetallicA", (EvenFrame ? MetallicA : MetallicB));
             cmd.SetComputeTextureParam(shader, Temporal, "ReflectedRefractedTex", (EvenFrame ? ReflectedRefractedTex : ReflectedRefractedTexPrev));
             cmd.SetComputeTextureParam(shader, Temporal, "ReflectedRefractedTexPrev", (!EvenFrame ? ReflectedRefractedTex : ReflectedRefractedTexPrev));
@@ -329,7 +329,7 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(shader, "iteration", 0);
             cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_PT_NORMALS_A", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
             cmd.SetComputeTextureParam(shader, Atrous_LF, "TEX_PT_VIEW_DEPTH_A", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
-            shader.SetTextureFromGlobal(Atrous_LF, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
+            shader.SetTextureFromGlobal(Atrous_LF, "TEX_PT_MOTION", "TTMotionVectorTexture");
 
 
             cmd.SetComputeTextureParam(shader, Atrous_LF, "MetallicA", (EvenFrame ? MetallicA : MetallicB));
@@ -351,7 +351,7 @@ namespace TrueTrace {
                 cmd.SetComputeIntParam(shader, "spec_iteration", 0);
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_PT_NORMALS_A", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_PT_VIEW_DEPTH_A", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
-                shader.SetTextureFromGlobal(Atrous, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
+                shader.SetTextureFromGlobal(Atrous, "TEX_PT_MOTION", "TTMotionVectorTexture");
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_GRAD_HF_SPEC_PONG", ASVGF_GRAD_HF_SPEC_PONG);
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_HIST_MOMENTS_HF_A", (EvenFrame ? ASVGF_HIST_MOMENTS_HF_A : ASVGF_HIST_MOMENTS_HF_B));
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_HIST_COLOR_LF_SH_A", (EvenFrame ? ASVGF_HIST_COLOR_LF_SH_A : ASVGF_HIST_COLOR_LF_SH_B));
@@ -375,9 +375,6 @@ namespace TrueTrace {
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_GRAD_HF_SPEC_PONG", ASVGF_GRAD_HF_SPEC_PONG);
                 cmd.SetComputeTextureParam(shader, Atrous, "MetallicA", (EvenFrame ? MetallicA : MetallicB));
                 cmd.SetComputeTextureParam(shader, Atrous, "MetallicB", (!EvenFrame ? MetallicA : MetallicB));
-                shader.SetTextureFromGlobal(Atrous, "DiffuseGBuffer", "_CameraGBufferTexture0");
-                shader.SetTextureFromGlobal(Atrous, "SpecularGBuffer", "_CameraGBufferTexture1");
-                shader.SetTextureFromGlobal(Atrous, "NormalTex", "_CameraGBufferTexture2");
 
                 cmd.SetComputeTextureParam(shader, Atrous, "AlbedoColorB", (EvenFrame ? AlbedoColorA : AlbedoColorB));
                 shader.SetTexture(Atrous, "ScreenSpaceInfo", ScreenSpaceInfo);
@@ -415,7 +412,7 @@ namespace TrueTrace {
                 cmd.SetComputeIntParam(shader, "spec_iteration", (e + 1));
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_PT_NORMALS_A", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_PT_VIEW_DEPTH_A", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
-                shader.SetTextureFromGlobal(Atrous, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
+                shader.SetTextureFromGlobal(Atrous, "TEX_PT_MOTION", "TTMotionVectorTexture");
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_GRAD_HF_SPEC_PONG", ASVGF_GRAD_HF_SPEC_PONG);
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_HIST_MOMENTS_HF_A", (EvenFrame ? ASVGF_HIST_MOMENTS_HF_A : ASVGF_HIST_MOMENTS_HF_B));
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_ASVGF_HIST_COLOR_LF_SH_A", (EvenFrame ? ASVGF_HIST_COLOR_LF_SH_A : ASVGF_HIST_COLOR_LF_SH_B));
@@ -440,9 +437,6 @@ namespace TrueTrace {
                 cmd.SetComputeTextureParam(shader, Atrous, "MetallicA", (EvenFrame ? MetallicA : MetallicB));
                 cmd.SetComputeBufferParam(shader, Atrous, "GlobalColorsRead", _ColorBuffer);
                 cmd.SetComputeTextureParam(shader, Atrous, "MetallicB", (!EvenFrame ? MetallicA : MetallicB));
-                shader.SetTextureFromGlobal(Atrous, "DiffuseGBuffer", "_CameraGBufferTexture0");
-                shader.SetTextureFromGlobal(Atrous, "SpecularGBuffer", "_CameraGBufferTexture1");
-                shader.SetTextureFromGlobal(Atrous, "NormalTex", "_CameraGBufferTexture2");
 
                 cmd.SetComputeTextureParam(shader, Atrous, "AlbedoColorB", (EvenFrame ? AlbedoColorA : AlbedoColorB));
                 shader.SetTexture(Atrous, "ScreenSpaceInfo", ScreenSpaceInfo);

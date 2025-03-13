@@ -24,7 +24,6 @@ public class HDRPCompatability : CustomPass
     {
         if(GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>().Length == 0) {RayMaster = null; return;}
         RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
-        Shader.SetGlobalTexture("_CameraGBufferTexture2", Shader.GetGlobalTexture("_GBufferTexture2"));
         RayMaster.Start2();
         if(RayMaster.ShadingShader == null) {
             GameObject.Find("Scene").GetComponent<TrueTrace.AssetManager>().Start();
@@ -43,11 +42,18 @@ public class HDRPCompatability : CustomPass
                 CreateRenderTexture(ref MainTex, ctx.hdCamera.camera);
             }
             ctx.hdCamera.camera.renderingPath = RenderingPath.DeferredShading;
-            ctx.hdCamera.camera.depthTextureMode |= DepthTextureMode.MotionVectors | DepthTextureMode.Depth;
             RayMaster.TossCamera(ctx.hdCamera.camera);
-            Shader.SetGlobalTexture("_CameraGBufferTexture2", Shader.GetGlobalTexture("_GBufferTexture2"));
-            Shader.SetGlobalTexture("_CameraGBufferTexture0", Shader.GetGlobalTexture("_GBufferTexture0"));
-            Shader.SetGlobalTexture("_CameraGBufferTexture1", Shader.GetGlobalTexture("_GBufferTexture1"));
+            if(TrueTrace.RayTracingMaster._camera.renderingPath == RenderingPath.DeferredShading) {
+                Shader.SetGlobalTexture("_CameraGBufferTexture2", Shader.GetGlobalTexture("_GBufferTexture2"));
+                Shader.SetGlobalTexture("_CameraGBufferTexture0", Shader.GetGlobalTexture("_GBufferTexture0"));
+                Shader.SetGlobalTexture("_CameraGBufferTexture1", Shader.GetGlobalTexture("_GBufferTexture1"));
+            }
+#if !TTCustomMotionVectors
+        ctx.hdCamera.camera.depthTextureMode |= DepthTextureMode.MotionVectors | DepthTextureMode.Depth;
+        Shader.SetGlobalTexture("TTMotionVectorTexture", Shader.GetGlobalTexture("_CameraMotionVectorsTexture"));
+#else
+        ctx.hdCamera.camera.depthTextureMode = DepthTextureMode.Depth;
+#endif
             ctx.cmd.BeginSample("TrueTrace");
             RayMaster.RenderImage(MainTex, ctx.cmd);
             ctx.propertyBlock.SetTexture("_MainTex", MainTex);

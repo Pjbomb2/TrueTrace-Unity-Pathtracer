@@ -347,7 +347,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             Color.Flags = packRGBE((CurBounce == 0) ? max(hitDat.surfaceColor, 0.005f) : (unpackRGBE(Color.Flags) * max(hitDat.surfaceColor, 0.005f)));
             Color.Data = float3((CurBounce == 0) ? max(throughput, 0.006f) : (max(throughput, 0.005f) * Color.Data.xyz));
         #endif
-        PrevScreenData = float4(asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -Geomnorm : Geomnorm)), asfloat(octahedral_32(((hitDat.diffTrans != 0 && CurBounce == 0) && Refracted) ? -norm : norm)),PrevScreenData.z + hit.t, asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 4) >> 4) : ((asuint(PrevScreenData.w) << 4) >> 4)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
+        PrevScreenData = float4(asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -Geomnorm : Geomnorm)), asfloat(octahedral_32(((hitDat.diffTrans != 0 && CurBounce == 0) && Refracted) ? -norm : norm)), PrevScreenData.z + hit.t, asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 4) >> 4) : ((asuint(PrevScreenData.w) << 4) >> 4)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
         Color.MetRoughIsSpec = ((Color.MetRoughIsSpec & ~(0x7C000000)) | (((CurBounce < 20 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.01f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
         throughput = 1;  
     }
@@ -1288,12 +1288,49 @@ void TTtoOIDNKernelPanorama(uint3 id : SV_DispatchThreadID) {
 
 
 
+#pragma kernel MVKernel
+[numthreads(16, 16, 1)]
+void MVKernel(uint3 id : SV_DispatchThreadID) {
+    if(id.x >= screen_width || id.y >= screen_height) return;
 
-// #pragma kernel MVKernel
-// [numthreads(16, 16, 1)]
-// void MVKernel(uint3 id : SV_DispatchThreadID) {
-    
+        float3 OldPos = LoadSurfaceInfoPrev2(id.xy);
+        float3 NewPos = LoadSurfaceInfoPrevInCurrent(id.xy);
+
+                // float4 toCam = mul(viewprojection, float4(OldPos, 1));
+                // float2 reflprojection = (toCam.xy / toCam.w) * 0.5f + 0.5f;
+
+        float4 curprojectedrefl = mul(viewprojection, float4(NewPos, 1));
+        float4 prevprojectedrefl = mul(prevviewprojection, float4(OldPos, 1));
+        float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
+        int2 NeighbPos = id.xy + reflprojection * int2(screen_width, screen_height);
+        if(any(NeighbPos < 0 || NeighbPos >= int2(screen_width, screen_height))) return;
+        if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) MVTexture[NeighbPos] = (reflprojection);
+
+}
+
+#pragma kernel ResetMVKernel
+[numthreads(16, 16, 1)]
+void ResetMVKernel(uint3 id : SV_DispatchThreadID) {
+    if(id.x >= screen_width || id.y >= screen_height) return;
+    MVTexture[id.xy] = -10000.0f;
+
+}
 
 
+#pragma kernel RefineMVKernel
+[numthreads(16, 16, 1)]
+void RefineMVKernel(uint3 id : SV_DispatchThreadID) {
+    if(id.x >= screen_width || id.y >= screen_height) return;
 
-// }
+        float3 OldPos = LoadSurfaceInfoCurrentInPrev2(id.xy);
+        float3 NewPos = LoadSurfaceInfo(id.xy);
+
+                // float4 toCam = mul(viewprojection, float4(OldPos, 1));
+                // float2 reflprojection = (toCam.xy / toCam.w) * 0.5f + 0.5f;
+
+        float4 curprojectedrefl = mul(viewprojection, float4(NewPos, 1));
+        float4 prevprojectedrefl = mul(prevviewprojection, float4(OldPos, 1));
+        float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
+        if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) MVTexture[id.xy] = (reflprojection);
+
+}

@@ -23,7 +23,7 @@ namespace TrueTrace {
         private ASVGF ASVGFCode;
         public static bool ImageIsModified = false;
         #if UseOIDN
-            private UnityDenoiserPlugin.DenoiserPluginWrapper OIDNDenoiser;			
+            private UnityDenoiserPlugin.DenoiserPluginWrapper OIDNDenoiser;         
         #endif
         [HideInInspector] public static bool DoSaving = true;
         public static RayObjs raywrites = new RayObjs();
@@ -107,7 +107,9 @@ namespace TrueTrace {
         private RenderTexture _RandomNumsB;
         private RenderTexture _PrimaryTriangleInfoA;
         private RenderTexture _PrimaryTriangleInfoB;
-
+#if TTCustomMotionVectors
+        private RenderTexture MVTexture;
+#endif
         // public RenderTexture TTMotionVectors;
 
         private RenderTexture GIReservoirA;
@@ -213,7 +215,9 @@ namespace TrueTrace {
         private int TTtoOIDNKernel;
         private int OIDNtoTTKernel;
         private int TTtoOIDNKernelPanorama;
-        // private int MVKernel;
+#if TTCustomMotionVectors
+        private int MVKernel;
+#endif
         #if !DisableRadianceCache
             private int ResolveKernel;
             private int CompactKernel;
@@ -227,7 +231,6 @@ namespace TrueTrace {
         [System.NonSerialized] public int SourceHeight;
         private Vector3 PrevCamPosition;
         private bool PrevASVGF;
-        private Matrix4x4 PrevViewProjection;
 
 
         [System.Serializable]
@@ -312,7 +315,9 @@ namespace TrueTrace {
             TTtoOIDNKernel = ShadingShader.FindKernel("TTtoOIDNKernel");
             OIDNtoTTKernel = ShadingShader.FindKernel("OIDNtoTTKernel");
             TTtoOIDNKernelPanorama = ShadingShader.FindKernel("TTtoOIDNKernelPanorama");
-            // MVKernel = ShadingShader.FindKernel("MVKernel");
+#if TTCustomMotionVectors
+            MVKernel = ShadingShader.FindKernel("MVKernel");
+#endif
             #if !DisableRadianceCache
                 ResolveKernel = GenerateShader.FindKernel("CacheResolve");
                 CompactKernel = GenerateShader.FindKernel("CacheCompact");
@@ -451,6 +456,9 @@ namespace TrueTrace {
             GIWorldPosC.ReleaseSafe();
             _PrimaryTriangleInfoA.ReleaseSafe();
             _PrimaryTriangleInfoB.ReleaseSafe();
+#if TTCustomMotionVectors
+            MVTexture.ReleaseSafe();
+#endif
             ScreenSpaceInfo.ReleaseSafe();
             ScreenSpaceInfoPrev.ReleaseSafe();
             GradientsA.ReleaseSafe();
@@ -587,8 +595,8 @@ namespace TrueTrace {
         private Vector2 HDRIParams = Vector2.zero;
         private void SetShaderParameters(CommandBuffer cmd) {
             HasSDFHandler = (OptionalSDFHandler != null) && OptionalSDFHandler.enabled && OptionalSDFHandler.gameObject.activeInHierarchy;
-            if(LocalTTSettings.RenderScale != 1.0f) _camera.renderingPath = RenderingPath.DeferredShading;
-            _camera.depthTextureMode |= DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
+            if(LocalTTSettings.RenderScale != 1.0f && LocalTTSettings.UpscalerMethod != 0) _camera.renderingPath = RenderingPath.DeferredShading;
+            _camera.depthTextureMode |= DepthTextureMode.Depth;
             if(LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1 && !ReSTIRASVGFCode.Initialized) ReSTIRASVGFCode.init(SourceWidth, SourceHeight);
             else if ((LocalTTSettings.DenoiserMethod != 1 || !LocalTTSettings.UseReSTIRGI) && ReSTIRASVGFCode.Initialized) ReSTIRASVGFCode.ClearAll();
             if (!LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1 && !ASVGFCode.Initialized) ASVGFCode.init(SourceWidth, SourceHeight, OverridenWidth, OverridenHeight);
@@ -630,6 +638,7 @@ namespace TrueTrace {
             CamInvProjPrev = ProjectionMatrix.inverse;
             CamToWorldPrev = _camera.cameraToWorldMatrix;
             SetMatrix("viewprojection", ProjectionMatrix * _camera.worldToCameraMatrix);
+            SetMatrix("prevviewprojection", EB.inverse * EA.inverse);
             SetMatrix("CamInvProj", ProjectionMatrix.inverse);
             SetMatrix("CamToWorld", _camera.cameraToWorldMatrix);
             SetMatrix("CamInvProjPrev", EB);
@@ -723,9 +732,7 @@ namespace TrueTrace {
             bool FlipFrame = (FramesSinceStart2 % 2 == 0);
 
 
-            ReSTIRGI.SetTextureFromGlobal(ReSTIRGIKernel, "MotionVectors", "_CameraMotionVectorsTexture");
-            ReSTIRGI.SetTextureFromGlobal(ReSTIRGISpatialKernel, "MotionVectors", "_CameraMotionVectorsTexture");
-            ShadingShader.SetTextureFromGlobal(ShadeKernel, "MotionVectors", "_CameraMotionVectorsTexture");
+            ReSTIRGI.SetTextureFromGlobal(ReSTIRGIKernel, "MotionVectors", "TTMotionVectorTexture");
             
 
 
@@ -772,12 +779,12 @@ namespace TrueTrace {
             }
             SetVector("HDRIParams", HDRIParams, cmd);
 
-            if(!_camera.orthographic) {
-                ShadingShader.SetTextureFromGlobal(FinalizeKernel, "DiffuseGBuffer", "_CameraGBufferTexture0");
-                ShadingShader.SetTextureFromGlobal(FinalizeKernel, "SpecularGBuffer", "_CameraGBufferTexture1");
-            } else {
+            // if(!_camera.orthographic) {
+            //     ShadingShader.SetTextureFromGlobal(FinalizeKernel, "DiffuseGBuffer", "_CameraGBufferTexture0");
+            //     ShadingShader.SetTextureFromGlobal(FinalizeKernel, "SpecularGBuffer", "_CameraGBufferTexture1");
+            // } else {
                 
-            }
+            // }
 
 
             GenerateShader.SetTexture(GenKernel, "RandomNums", (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB);
@@ -837,7 +844,21 @@ namespace TrueTrace {
                 ShadingShader.SetComputeBuffer(FinalizeKernel, "VoxelDataBufferB", !FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
             #endif
 
+#if TTCustomMotionVectors
+            AssetManager.Assets.SetMeshTraceBuffers(ShadingShader, MVKernel);
+            ShadingShader.SetTexture(MVKernel, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            ShadingShader.SetTexture(MVKernel, "PrimaryTriDataPrev", (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            ShadingShader.SetTexture(MVKernel, "MVTexture", MVTexture);
 
+            AssetManager.Assets.SetMeshTraceBuffers(ShadingShader, MVKernel+2);
+            ShadingShader.SetTexture(MVKernel+2, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            ShadingShader.SetTexture(MVKernel+2, "PrimaryTriDataPrev", (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+            ShadingShader.SetTexture(MVKernel+2, "MVTexture", MVTexture);
+
+            ShadingShader.SetTexture(MVKernel + 1, "MVTexture", MVTexture);
+            ShadingShader.SetComputeBuffer(MVKernel, "GlobalColors", LightingBuffer);
+            ShadingShader.SetComputeBuffer(MVKernel + 2, "GlobalColors", LightingBuffer);
+#endif
 
             Atmo.AssignTextures(ShadingShader, ShadeKernel);
             AssetManager.Assets.SetLightData(ShadingShader, ShadeKernel);
@@ -924,7 +945,7 @@ namespace TrueTrace {
 
         private void ResetAllTextures() {
             // _camera.renderingPath = RenderingPath.DeferredShading;
-            _camera.depthTextureMode |= DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
+            _camera.depthTextureMode |= DepthTextureMode.Depth;
             if(PrevResFactor != LocalTTSettings.RenderScale || TargetWidth != OverridenWidth) {
                 TargetWidth = OverridenWidth;
                 TargetHeight = OverridenHeight;
@@ -1001,6 +1022,9 @@ namespace TrueTrace {
                     GIWorldPosC.ReleaseSafe();
                     _PrimaryTriangleInfoA.ReleaseSafe();
                     _PrimaryTriangleInfoB.ReleaseSafe();
+#if TTCustomMotionVectors
+                    MVTexture.ReleaseSafe();
+#endif
                     ScreenSpaceInfo.ReleaseSafe();
                     ScreenSpaceInfoPrev.ReleaseSafe();
                     GradientsA.ReleaseSafe();
@@ -1027,21 +1051,21 @@ namespace TrueTrace {
                         cleanAux = 1,
                         prefilterAux = 1
                     };
-					
-					UnityDenoiserPlugin.DenoiserType denoiserType;
-					switch (LocalTTSettings.DenoiserMethod) {
-						case 2:
-							denoiserType = UnityDenoiserPlugin.DenoiserType.OIDN;
-							break;
-						case 3:
-							denoiserType = UnityDenoiserPlugin.DenoiserType.OptiX;
-							break;
-						default:
-							denoiserType = UnityDenoiserPlugin.DenoiserType.OIDN;
-							break;
-					}					
+                    
+                    UnityDenoiserPlugin.DenoiserType denoiserType;
+                    switch (LocalTTSettings.DenoiserMethod) {
+                        case 2:
+                            denoiserType = UnityDenoiserPlugin.DenoiserType.OIDN;
+                            break;
+                        case 3:
+                            denoiserType = UnityDenoiserPlugin.DenoiserType.OptiX;
+                            break;
+                        default:
+                            denoiserType = UnityDenoiserPlugin.DenoiserType.OIDN;
+                            break;
+                    }                   
                     OIDNDenoiser = new UnityDenoiserPlugin.DenoiserPluginWrapper(denoiserType, cfg);
-					
+                    
                     ColorBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
                     OutputBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
                     AlbedoBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
@@ -1065,6 +1089,9 @@ namespace TrueTrace {
                 CommonFunctions.CreateRenderTexture(ref GIWorldPosC, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref _PrimaryTriangleInfoA, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref _PrimaryTriangleInfoB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+#if TTCustomMotionVectors
+                CommonFunctions.CreateRenderTexture(ref MVTexture, SourceWidth, SourceHeight, CommonFunctions.RTFull2);
+#endif
                 CommonFunctions.CreateRenderTexture(ref ScreenSpaceInfo, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref ScreenSpaceInfoPrev, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref GradientsA, SourceWidth, SourceHeight, CommonFunctions.RTHalf2);
@@ -1105,6 +1132,15 @@ namespace TrueTrace {
 
         private void Render(RenderTexture destination, CommandBuffer cmd)
         {
+#if TTCustomMotionVectors
+            if(DoKernelProfiling) cmd.BeginSample("TTMV");
+                cmd.DispatchCompute(ShadingShader, MVKernel+1, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+                cmd.DispatchCompute(ShadingShader, MVKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+            if(DoKernelProfiling) cmd.EndSample("TTMV");
+#endif            
+
+
+
             if(LocalTTSettings.MaxSampCount > SampleCount) {
                 #if !DisableRadianceCache
                     if(DoKernelProfiling) cmd.BeginSample("RadCacheClear");
@@ -1199,6 +1235,11 @@ namespace TrueTrace {
                     }
                 if(DoKernelProfiling) cmd.EndSample("Pathtracing Kernels");
 
+#if TTCustomMotionVectors
+            if(DoKernelProfiling) cmd.BeginSample("TTMV2");
+                cmd.DispatchCompute(ShadingShader, MVKernel+2, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+            if(DoKernelProfiling) cmd.EndSample("TTMV2");
+#endif
 
                 if (LocalTTSettings.UseReSTIRGI) {
                     SetInt("CurBounce", 0, cmd);
@@ -1357,13 +1398,16 @@ namespace TrueTrace {
 
         public void RenderImage(RenderTexture destination, CommandBuffer cmd)
         {
-            _camera.renderingPath = RenderingPath.DeferredShading;
+            // _camera.renderingPath = RenderingPath.DeferredShading;
             if (SceneIsRunning && Assets != null && Assets.RenderQue.Count > 0)
             {
                 ResetAllTextures();
                 RunUpdate();
                 if(RebuildMeshObjectBuffers(cmd)) {
                     InitRenderTexture();
+#if TTCustomMotionVectors
+        Shader.SetGlobalTexture("TTMotionVectorTexture", MVTexture);
+#endif
                     SetShaderParameters(cmd);
                     Render(destination, cmd);
                     // else cmd.Blit(_FinalTex, destination);

@@ -7,7 +7,7 @@
 #include "CommonData.cginc"
 #include "Materials.cginc"
 
-#ifdef HDRP
+#if defined(HDRP) && !defined(TTCustomMotionVectors)
     Texture2DArray<float2> MotionVectors;
 #else
     Texture2D<float2> MotionVectors;
@@ -364,7 +364,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     RunningReservoirC.Ray.FrameAccum = frames_accumulated;
 
 
-    #ifdef HDRP
+    #if defined(HDRP) && !defined(TTCustomMotionVectors)
         float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, float3(UV,0), 0).xy;
     #else
          float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, UV, 0).xy;
