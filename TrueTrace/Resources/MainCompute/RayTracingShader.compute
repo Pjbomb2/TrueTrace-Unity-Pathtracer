@@ -658,7 +658,7 @@ void kernel_shade(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
 
     #ifdef HardwareRT
         if(bestHit.mesh_id != 9999999) {
-            int2 Indexes = int2(bestHit.mesh_id & 0x7FFFFFF, bestHit.mesh_id >> 27);
+            int2 Indexes = int2(bestHit.mesh_id & 0x1FFFFFF, bestHit.mesh_id >> 25);
             int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
             bestHit.triangle_id += triangleOffset;
             bestHit.mesh_id = MeshOffsets[Indexes.x].y;
