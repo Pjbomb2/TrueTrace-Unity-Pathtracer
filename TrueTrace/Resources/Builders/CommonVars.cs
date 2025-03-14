@@ -184,6 +184,7 @@ namespace CommonVars
         public float clearcoat;
         public float clearcoatGloss;
         public float anisotropic;
+        public float anisotropicRotation;
         public float flatness;
         public float diffTrans;
         public float specTrans;
@@ -700,6 +701,7 @@ namespace CommonVars
         public float Clearcoat;
         public float ClearcoatGloss;
         public float Anisotropic;
+        public float AnisotropicRotation;
         public float Flatness;
         public float DiffTrans;
         public float SpecTrans;

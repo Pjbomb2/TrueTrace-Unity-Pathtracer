@@ -2004,8 +2004,10 @@ namespace TrueTrace {
                     UnityLightCount++;
                     RayLight.UpdateLight(true);
                     if (RayLight.ThisLightData.Type == 1) {
-                        if(RayLight.IsMainSun || RayMaster.MainDirectionalLight == -1) RayMaster.MainDirectionalLight = UnityLightCount - 1;
-                        SunDirection = RayLight.ThisLightData.Direction;
+                        if(RayLight.IsMainSun || RayMaster.MainDirectionalLight == -1) {
+                            RayMaster.MainDirectionalLight = UnityLightCount - 1;
+                            SunDirection = RayLight.ThisLightData.Direction;
+                        }
                     }
                     RayLight.ArrayIndex = UnityLightCount - 1;
                     RayLight.ThisLightData.Radiance *= RayMaster.LocalTTSettings.LightEnergyScale;
@@ -2021,6 +2023,7 @@ namespace TrueTrace {
             } else {
                 int LightCount = RayTracingMaster._rayTracingLights.Count;
                 RayTracingLights RayLight;
+                RayMaster.MainDirectionalLight = -1;
                 for (int i = 0; i < LightCount; i++) {
                     RayLight = RayTracingMaster._rayTracingLights[i];
                     if(RayLight.UpdateLight(false)) {
@@ -2028,8 +2031,12 @@ namespace TrueTrace {
                         RayMaster.FramesSinceStart = 0;
                     }
                     RayLight.ThisLightData.Radiance *= RayMaster.LocalTTSettings.LightEnergyScale;
-                    if(RayLight.IsMainSun || RayMaster.MainDirectionalLight == -1) RayMaster.MainDirectionalLight = i;
-                    if (RayLight.ThisLightData.Type == 1 && RayLight.IsMainSun) SunDirection = RayLight.ThisLightData.Direction;
+                    if(RayLight.ThisLightData.Type == 1) {
+                        if(RayLight.IsMainSun || RayMaster.MainDirectionalLight == -1) {
+                            RayMaster.MainDirectionalLight = i;
+                            SunDirection = RayLight.ThisLightData.Direction;
+                        }
+                    }
                     UnityLights[RayLight.ArrayIndex] = RayLight.ThisLightData;
                 }
                 UnityLightBuffer.SetData(UnityLights);
@@ -2396,6 +2403,7 @@ namespace TrueTrace {
                     TempMat.clearcoatGloss = CurrentMaterial.ClearCoatGloss[Index];
                     TempMat.specTrans = CurrentMaterial.SpecTrans[Index];
                     TempMat.anisotropic = CurrentMaterial.Anisotropic[Index];
+                    TempMat.anisotropicRotation = CurrentMaterial.AnisotropicRotation[Index] * 3.14159f;
                     TempMat.diffTrans = CurrentMaterial.DiffTrans[Index];
                     TempMat.flatness = CurrentMaterial.Flatness[Index];
                     TempMat.Specular = CurrentMaterial.Specular[Index];

@@ -426,6 +426,18 @@ float3x3 GetTangentSpace(float3 normal) {
     return float3x3(tangent, normal, binormal);
 }
 
+float3x3 build_rotated_ONB(const float3 N, float basis_rotation)
+{
+    float3 up = abs(N.z) < 0.9999999f ? float3(0.0f, 0.0f, 1.0f) : float3(1.0f, 0.0f, 0.0f);
+    float3 T = normalize(cross(up, N));
+
+    // Rodrigues' rotation
+    T = T * cos(basis_rotation) + cross(N, T) * sin(basis_rotation) + N * dot(N, T) * (1.0f - cos(basis_rotation));
+    float3 B = cross(N, T);
+    return float3x3(T, N, B);
+}
+
+
 float3x3 GetTangentSpace2(float3 normal) {
 
     float3 tangent = normalize(cross(normal, float3(0, 1, 0)));

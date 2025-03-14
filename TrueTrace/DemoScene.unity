@@ -192,6 +192,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -307,6 +309,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -424,6 +428,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -540,6 +546,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -655,6 +663,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -784,6 +794,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -911,6 +923,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -1048,6 +1062,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -1163,6 +1179,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -1293,6 +1311,9 @@ MonoBehaviour:
   - 0
   - 0
   Anisotropic:
+  - 0
+  - 0
+  AnisotropicRotation:
   - 0
   - 0
   Flatness:
@@ -1441,6 +1462,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -1562,6 +1585,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -1690,6 +1715,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -1832,6 +1859,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -1981,6 +2010,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -2110,6 +2141,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -2253,6 +2286,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -2368,6 +2403,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -2509,6 +2546,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -2638,6 +2677,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -2827,6 +2868,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -2975,6 +3018,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -3090,6 +3135,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -3227,6 +3274,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -3363,6 +3412,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -3478,6 +3529,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -3608,6 +3661,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -3752,6 +3807,9 @@ MonoBehaviour:
   - 0
   - 0
   Anisotropic:
+  - 0
+  - 0
+  AnisotropicRotation:
   - 0
   - 0
   Flatness:
@@ -3932,6 +3990,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -4072,6 +4132,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -4187,6 +4249,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -4309,6 +4373,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -4437,6 +4503,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -4572,6 +4640,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -4699,6 +4769,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -4865,6 +4937,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -5042,6 +5116,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -5184,6 +5260,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -5306,6 +5384,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -5427,6 +5507,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -5557,6 +5639,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -5694,6 +5778,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -5828,6 +5914,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -5950,6 +6038,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -6065,6 +6155,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -6234,6 +6326,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -6350,6 +6444,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -6465,6 +6561,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -6588,6 +6686,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -6710,6 +6810,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -6825,6 +6927,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -6994,6 +7098,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -7109,6 +7215,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -7252,6 +7360,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -7374,6 +7484,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -7489,6 +7601,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -7618,6 +7732,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -7740,6 +7856,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -7855,6 +7973,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -7977,6 +8097,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -8138,6 +8260,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -8259,6 +8383,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -8393,6 +8519,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -8550,6 +8678,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -8665,6 +8795,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -8805,6 +8937,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -8949,6 +9083,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -9099,6 +9235,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -9252,6 +9390,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -9374,6 +9514,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -9490,6 +9632,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -9605,6 +9749,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -9756,6 +9902,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -9872,6 +10020,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -9987,6 +10137,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -10154,6 +10306,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -10296,6 +10450,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -10424,6 +10580,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -10545,6 +10703,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -10681,6 +10841,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -10826,6 +10988,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -10961,6 +11125,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -11106,6 +11272,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -11221,6 +11389,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -11453,6 +11623,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -11593,6 +11765,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -11708,6 +11882,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -11875,6 +12051,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -11990,6 +12168,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -12329,6 +12509,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -12509,6 +12691,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -12624,6 +12808,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -12752,6 +12938,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -12889,6 +13077,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -13019,6 +13209,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -13134,6 +13326,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -13264,6 +13458,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -13517,6 +13713,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -13658,6 +13856,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -13813,6 +14013,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -13934,6 +14136,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -14119,6 +14323,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -14235,6 +14441,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -14350,6 +14558,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -14494,6 +14704,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -14821,6 +15033,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -14971,6 +15185,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -15107,6 +15323,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -15235,6 +15453,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -15350,6 +15570,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -15485,6 +15707,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -15600,6 +15824,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -15717,6 +15943,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -15832,6 +16060,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -15960,6 +16190,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -16135,6 +16367,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -16309,6 +16543,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -16438,6 +16674,9 @@ MonoBehaviour:
   - 0
   - 0
   Anisotropic:
+  - 0
+  - 0
+  AnisotropicRotation:
   - 0
   - 0
   Flatness:
@@ -16592,6 +16831,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -16708,6 +16949,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -16823,6 +17066,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -16959,6 +17204,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -17128,6 +17375,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -17243,6 +17492,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -17373,6 +17624,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -17516,6 +17769,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -17645,6 +17900,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -17776,6 +18033,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -17892,6 +18151,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -18007,6 +18268,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -18129,6 +18392,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -18258,6 +18523,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -18379,6 +18646,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -18502,6 +18771,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -18617,6 +18888,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -18734,6 +19007,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -18850,6 +19125,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -18965,6 +19242,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -19121,6 +19400,9 @@ MonoBehaviour:
   Anisotropic:
   - 0
   - 0
+  AnisotropicRotation:
+  - 0
+  - 0
   Flatness:
   - 0
   - 0
@@ -19273,6 +19555,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -19400,6 +19684,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -19534,6 +19820,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -19670,6 +19958,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -19851,6 +20141,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -19992,6 +20284,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -20135,6 +20429,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -20256,6 +20552,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -20390,6 +20688,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -20551,6 +20851,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -20667,6 +20969,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -20782,6 +21086,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -20913,6 +21219,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -21034,6 +21342,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -21157,6 +21467,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -21278,6 +21590,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -21406,6 +21720,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -21543,6 +21859,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -21671,6 +21989,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -21786,6 +22106,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -21908,6 +22230,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -22042,6 +22366,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -22221,6 +22547,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -22336,6 +22664,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -22508,6 +22838,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -22701,6 +23033,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -22816,6 +23150,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -22953,6 +23289,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -23089,6 +23427,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -23211,6 +23551,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -23327,6 +23669,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -23442,6 +23786,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -23585,6 +23931,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -23719,6 +24067,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -23834,6 +24184,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -23977,6 +24329,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -24092,6 +24446,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -24209,6 +24565,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -24324,6 +24682,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -24447,6 +24807,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -24562,6 +24924,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -24679,6 +25043,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -24795,6 +25161,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -24910,6 +25278,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -25032,6 +25402,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -25201,6 +25573,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -25336,6 +25710,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -25485,6 +25861,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -25626,6 +26004,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -25815,6 +26195,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -25971,6 +26353,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -26093,6 +26477,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -26208,6 +26594,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -26330,6 +26718,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -26519,6 +26909,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -26648,6 +27040,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -26785,6 +27179,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -26901,6 +27297,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -27016,6 +27414,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -27165,6 +27565,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -27298,6 +27700,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -27441,6 +27845,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -27563,6 +27969,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -27678,6 +28086,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -27829,6 +28239,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -27963,6 +28375,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -28078,6 +28492,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -28207,6 +28623,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -28322,6 +28740,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -28445,6 +28865,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -28567,6 +28989,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -28682,6 +29106,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -28818,6 +29244,9 @@ MonoBehaviour:
   - 0
   - 0
   Anisotropic:
+  - 0
+  - 0
+  AnisotropicRotation:
   - 0
   - 0
   Flatness:
@@ -28978,6 +29407,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -29093,6 +29524,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -29216,6 +29649,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -29331,6 +29766,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -29498,6 +29935,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -29640,6 +30079,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -29767,6 +30208,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -29912,6 +30355,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -30033,6 +30478,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -30200,6 +30647,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -30315,6 +30764,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -30444,6 +30895,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -30566,6 +31019,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -30681,6 +31136,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -30890,6 +31347,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -31025,6 +31484,9 @@ MonoBehaviour:
   - 0
   - 0
   Anisotropic:
+  - 0
+  - 0
+  AnisotropicRotation:
   - 0
   - 0
   Flatness:
@@ -31217,6 +31679,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -31373,6 +31837,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -31488,6 +31954,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -31637,6 +32105,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -31752,6 +32222,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -31889,6 +32361,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -32004,6 +32478,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -32171,6 +32647,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -32300,6 +32778,9 @@ MonoBehaviour:
   - 0
   - 0
   Anisotropic:
+  - 0
+  - 0
+  AnisotropicRotation:
   - 0
   - 0
   Flatness:
@@ -32448,6 +32929,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -32563,6 +33046,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -32700,6 +33185,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -32815,6 +33302,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -32964,6 +33453,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -33079,6 +33570,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -33196,6 +33689,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -33311,6 +33806,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -33454,6 +33951,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -33569,6 +34068,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -33710,6 +34211,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -33846,6 +34349,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -33968,6 +34473,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -34083,6 +34590,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -34205,6 +34714,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -34334,6 +34845,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -34449,6 +34962,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -34584,6 +35099,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -34699,6 +35216,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -34816,6 +35335,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -34931,6 +35452,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -35059,6 +35582,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -35214,6 +35739,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -35335,6 +35862,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -35458,6 +35987,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -35573,6 +36104,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -35702,6 +36235,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -35817,6 +36352,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -36032,6 +36569,7 @@ MonoBehaviour:
   RenderTransforms: []
   RenderQue: []
   BuildQue:
+  - {fileID: 0}
   - {fileID: 499686671}
   - {fileID: 1770588100}
   - {fileID: 1931085300}
@@ -36122,6 +36660,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -36250,6 +36790,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -36398,6 +36940,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -36553,6 +37097,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -36693,6 +37239,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -36808,6 +37356,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -36930,6 +37480,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -37091,6 +37643,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -37213,6 +37767,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -37328,6 +37884,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -37522,6 +38080,9 @@ MonoBehaviour:
   Anisotropic:
   - 0
   - 0
+  AnisotropicRotation:
+  - 0
+  - 0
   Flatness:
   - 0
   - 0
@@ -37668,6 +38229,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -37783,6 +38346,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -37920,6 +38485,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -38035,6 +38602,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -38166,6 +38735,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -38281,6 +38852,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -38430,6 +39003,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -38564,6 +39139,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -38685,6 +39262,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -38821,6 +39400,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -38994,6 +39575,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -39122,6 +39705,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -39237,6 +39822,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -39373,6 +39960,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -39528,6 +40117,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -39643,6 +40234,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -39774,6 +40367,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -39895,6 +40490,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -40025,6 +40622,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -40169,6 +40768,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -40316,6 +40917,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -40437,6 +41040,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -40588,6 +41193,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -40709,6 +41316,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -40832,6 +41441,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -40947,6 +41558,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -41084,6 +41697,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -41199,6 +41814,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -41316,6 +41933,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -41431,6 +42050,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -41561,6 +42182,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -44627,6 +45250,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -44742,6 +45367,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -44872,6 +45499,9 @@ MonoBehaviour:
   - 0
   - 0
   Anisotropic:
+  - 0
+  - 0
+  AnisotropicRotation:
   - 0
   - 0
   Flatness:
@@ -53288,6 +53918,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -53456,6 +54088,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -53597,6 +54231,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -53766,6 +54402,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -53927,6 +54565,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -54124,6 +54764,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -54265,6 +54907,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -54453,6 +55097,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -54662,6 +55308,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -54803,6 +55451,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -55032,6 +55682,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -55245,6 +55897,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -55532,6 +56186,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -55752,6 +56408,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -55893,6 +56551,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -56062,6 +56722,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -56217,6 +56879,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -56406,6 +57070,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -56547,6 +57213,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -56840,6 +57508,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -57002,6 +57672,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -57143,6 +57815,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -57286,6 +57960,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -57427,6 +58103,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -57583,6 +58261,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -57758,6 +58438,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -57919,6 +58601,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -58168,6 +58852,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -58309,6 +58995,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -58471,6 +59159,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -58779,6 +59469,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -59144,6 +59836,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -59322,6 +60016,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -59563,6 +60259,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -59757,6 +60455,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -59898,6 +60598,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -60074,6 +60776,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -60263,6 +60967,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -60418,6 +61124,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -60937,6 +61645,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -61078,6 +61788,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -61226,6 +61938,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -61389,6 +62103,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -61550,6 +62266,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -61733,6 +62451,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -61874,6 +62594,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -62017,6 +62739,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -62158,6 +62882,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -62353,6 +63079,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -62529,6 +63257,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -62670,6 +63400,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -62864,6 +63596,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -63067,6 +63801,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -63208,6 +63944,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -63521,6 +64259,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -63662,6 +64402,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -63819,6 +64561,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -63974,6 +64718,9 @@ MonoBehaviour:
   - 0
   - 0
   Anisotropic:
+  - 0
+  - 0
+  AnisotropicRotation:
   - 0
   - 0
   Flatness:
@@ -64340,6 +65087,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -64482,6 +65231,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -64623,6 +65374,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -64806,6 +65559,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -64947,6 +65702,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -65090,6 +65847,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -65231,6 +65990,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -65413,6 +66174,9 @@ MonoBehaviour:
   - 0
   - 0
   Anisotropic:
+  - 0
+  - 0
+  AnisotropicRotation:
   - 0
   - 0
   Flatness:
@@ -65713,6 +66477,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -65926,6 +66692,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -66181,6 +66949,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -66362,6 +67132,8 @@ MonoBehaviour:
   ClearCoatGloss:
   - 0
   Anisotropic:
+  - 0
+  AnisotropicRotation:
   - 0
   Flatness:
   - 0
@@ -66557,6 +67329,8 @@ MonoBehaviour:
   - 0
   Anisotropic:
   - 0
+  AnisotropicRotation:
+  - 0
   Flatness:
   - 0
   DiffTrans:
@@ -66712,6 +67486,9 @@ MonoBehaviour:
   - 0
   - 0
   Anisotropic:
+  - 0
+  - 0
+  AnisotropicRotation:
   - 0
   - 0
   Flatness:

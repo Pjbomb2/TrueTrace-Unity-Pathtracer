@@ -139,8 +139,8 @@ float SeparableSmithGGXG1(const float3 w, const float3 wm, float ax, float ay)
 static void CalculateAnisotropicParams(float roughness, float anisotropic, inout float ax, inout float ay)
 {
     float aspect = sqrt(1.0f - 0.9f * anisotropic);
-    ay = max(0.000001f, (roughness * roughness) / aspect);
-    ax = max(0.000001f, (roughness * roughness) * aspect);
+    ax = max(0.000001f, (roughness * roughness) / aspect);
+    ay = max(0.000001f, (roughness * roughness) * aspect);
 }
 
 void GgxVndfAnisotropicPdf ( float3 wi , float3 wm , float3 wo, float ax, float ay, inout float pdf) {
@@ -1472,7 +1472,7 @@ float3 ReconstructDisney2(MaterialData hitDat, float3 wo, float3 wi, bool thin,
 
 bool SampleDisney(MaterialData hitDat, inout float3 v, bool thin, out float PDF, inout float3 throughput, float3 norm, out int Case, uint pixel_index, out bool Refracted, bool GotFlipped)
 {
-    float3x3 TruTanMat = GetTangentSpace(norm);
+    float3x3 TruTanMat = build_rotated_ONB(norm, hitDat.anisotropicRotation);
     float4 P = CalculateLobePdfs(hitDat);//pSpecular, pClearcoat, pDiffuse, pTransmission
     v = ToLocal(TruTanMat, -v);
     Refracted = false;
@@ -1520,7 +1520,7 @@ bool SampleDisney(MaterialData hitDat, inout float3 v, bool thin, out float PDF,
 
 inline bool EvaluateBsdf(const MaterialData hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, inout float PDF, inout float3 bsdf_value, uint pixel_index) {
     bool validbsdf = false;
-    bsdf_value = max(EvaluateDisney(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, GetTangentSpace(Normal), pixel_index), 0);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
+    bsdf_value = max(EvaluateDisney(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, build_rotated_ONB(Normal, hitDat.anisotropicRotation), pixel_index), 0);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
     validbsdf = PDF > 0;
     return validbsdf;
 }
@@ -1535,14 +1535,14 @@ inline bool EvaluateBsdf2(const MaterialData hitDat, float3 DirectionIn, float3 
 
 inline bool ReconstructBsdf2(const MaterialData hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, inout float PDF, inout float3 bsdf_value, uint pixel_index) {
     bool validbsdf = false;
-    bsdf_value = max(ReconstructDisney2(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, GetTangentSpace(Normal), validbsdf, pixel_index), 0);
+    bsdf_value = max(ReconstructDisney2(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, build_rotated_ONB(Normal, hitDat.anisotropicRotation), validbsdf, pixel_index), 0);
     validbsdf = PDF > 0;
     return validbsdf;
 }
 
 inline bool EvaluateBsdf3(const MaterialData hitDat, float3 DirectionIn, float3 DirectionOut, float3 Normal, inout float PDF, inout float3 bsdf_value, uint pixel_index) {
     bool validbsdf = false;
-    bsdf_value = EvaluateDisney3(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, GetTangentSpace(Normal), pixel_index);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
+    bsdf_value = EvaluateDisney3(hitDat, -DirectionIn, DirectionOut, GetFlag(hitDat.Tag, Thin), PDF, build_rotated_ONB(Normal, hitDat.anisotropicRotation), pixel_index);// DisneyEval(mat, -PrevDirection, norm, to_light, bsdf_pdf, hitDat);
     validbsdf = PDF > 0;
     return validbsdf;
 }

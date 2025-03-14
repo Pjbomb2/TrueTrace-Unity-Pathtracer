@@ -22,6 +22,7 @@ namespace TrueTrace {
 		[SerializeField] public float[] ClearCoat;
 		[SerializeField] public float[] ClearCoatGloss;
 		[SerializeField] public float[] Anisotropic;
+		[SerializeField] public float[] AnisotropicRotation;
 		[SerializeField] public float[] Flatness;
 		[SerializeField] public float[] DiffTrans;
 		[SerializeField] public float[] SpecTrans;
@@ -264,6 +265,7 @@ namespace TrueTrace {
 			InitializeArray<float>(ref ClearCoat, 0.0f, Index, NeedsRedo);
 			InitializeArray<float>(ref ClearCoatGloss, 0.0f, Index, NeedsRedo);
 			InitializeArray<float>(ref Anisotropic, 0.0f, Index, NeedsRedo);
+			InitializeArray<float>(ref AnisotropicRotation, 0.0f, Index, NeedsRedo);
 			InitializeArray<float>(ref Flatness, 0.0f, Index, NeedsRedo);
 			InitializeArray<float>(ref DiffTrans, 0.0f, Index, NeedsRedo);
 			InitializeArray<float>(ref SpecTrans, 0.0f, Index, NeedsRedo);

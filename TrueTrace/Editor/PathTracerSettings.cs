@@ -2120,7 +2120,7 @@ Toolbar toolbar;
            FXAAToggle.RegisterValueChangedCallback(evt => {FXAA = evt.newValue; RayMaster.LocalTTSettings.PPFXAA = FXAA;});
 
 
-            Toggle BCSToggle = new Toggle() {value = DoBCS, text = "Enable Contrast/Saturation Adjustment"};
+            Toggle BCSToggle = new Toggle() {value = DoBCS, text = "Enable Saturation Adjustment"};
             VisualElement BCSContainer = new VisualElement();
                VisualElement SaturationContainer = CreateHorizontalBox();
                   Label SaturationLabel = new Label("Saturation");
@@ -2133,18 +2133,18 @@ Toolbar toolbar;
                SaturationContainer.Add(SaturationSlider);
                SaturationContainer.Add(SaturationField);
 
-               VisualElement ContrastContainer = CreateHorizontalBox();
-                  Label ContrastLabel = new Label("Contrast");
-                  Slider ContrastSlider = new Slider() {value = Contrast, highValue = 2.0f, lowValue = 0};
-                  FloatField ContrastField = new FloatField() {value = Contrast};
-                  ContrastSlider.style.width = 100;
-                  ContrastSlider.RegisterValueChangedCallback(evt => {Contrast = evt.newValue; ContrastField.value = Contrast; RayMaster.LocalTTSettings.Contrast = Contrast;});
-                  ContrastField.RegisterValueChangedCallback(evt => {Contrast = evt.newValue; ContrastSlider.value = Contrast; RayMaster.LocalTTSettings.Contrast = Contrast;});
-               ContrastContainer.Add(ContrastLabel);
-               ContrastContainer.Add(ContrastSlider);
-               ContrastContainer.Add(ContrastField);
+               // VisualElement ContrastContainer = CreateHorizontalBox();
+               //    Label ContrastLabel = new Label("Contrast");
+               //    Slider ContrastSlider = new Slider() {value = Contrast, highValue = 2.0f, lowValue = 0};
+               //    FloatField ContrastField = new FloatField() {value = Contrast};
+               //    ContrastSlider.style.width = 100;
+               //    ContrastSlider.RegisterValueChangedCallback(evt => {Contrast = evt.newValue; ContrastField.value = Contrast; RayMaster.LocalTTSettings.Contrast = Contrast;});
+               //    ContrastField.RegisterValueChangedCallback(evt => {Contrast = evt.newValue; ContrastSlider.value = Contrast; RayMaster.LocalTTSettings.Contrast = Contrast;});
+               // ContrastContainer.Add(ContrastLabel);
+               // ContrastContainer.Add(ContrastSlider);
+               // ContrastContainer.Add(ContrastField);
             BCSContainer.Add(SaturationContainer);
-            BCSContainer.Add(ContrastContainer);
+            // BCSContainer.Add(ContrastContainer);
 
             PostProcessingMenu.Add(BCSToggle);
             if(DoBCS) PostProcessingMenu.Add(BCSContainer);
@@ -3016,6 +3016,7 @@ Slider AperatureSlider;
                                        TempRTO.ClearCoat[NameIndex] = Ray.Clearcoat;
                                        TempRTO.ClearCoatGloss[NameIndex] = Ray.ClearcoatGloss;
                                        TempRTO.Anisotropic[NameIndex] = Ray.Anisotropic;
+                                       TempRTO.AnisotropicRotation[NameIndex] = Ray.AnisotropicRotation;
                                        TempRTO.Flatness[NameIndex] = Ray.Flatness;
                                        TempRTO.DiffTrans[NameIndex] = Ray.DiffTrans;
                                        TempRTO.SpecTrans[NameIndex] = Ray.SpecTrans;

@@ -53,6 +53,7 @@ namespace TrueTrace {
                     Clearcoat = OBJtoWrite.ClearCoat[Index],
                     ClearcoatGloss = OBJtoWrite.ClearCoatGloss[Index],
                     Anisotropic = OBJtoWrite.Anisotropic[Index],
+                    AnisotropicRotation = OBJtoWrite.AnisotropicRotation[Index],
                     Flatness = OBJtoWrite.Flatness[Index],
                     DiffTrans = OBJtoWrite.DiffTrans[Index],
                     SpecTrans = OBJtoWrite.SpecTrans[Index],

@@ -184,6 +184,7 @@ struct MaterialData {//56
 	float clearcoat;
 	float clearcoatGloss;
 	float anisotropic;
+	float anisotropicRotation;
 	float flatness;
 	float diffTrans;
 	float specTrans;

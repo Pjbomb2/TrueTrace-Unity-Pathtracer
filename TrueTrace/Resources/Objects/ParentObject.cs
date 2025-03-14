@@ -610,6 +610,7 @@ namespace TrueTrace {
                     CurMat.clearcoat = obj.ClearCoat[i];
                     CurMat.clearcoatGloss = obj.ClearCoatGloss[i];
                     CurMat.anisotropic = obj.Anisotropic[i];
+                    CurMat.anisotropicRotation = obj.AnisotropicRotation[i] * 3.14159f;
                     CurMat.flatness = obj.Flatness[i];
                     CurMat.diffTrans = obj.DiffTrans[i];
                     CurMat.scatterDistance = obj.ScatterDist[i];
