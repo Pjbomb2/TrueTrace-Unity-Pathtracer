@@ -230,6 +230,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         break;
         case 5:
         case 6:
+        case 7:
             result = AgX(result);
         break;
     };

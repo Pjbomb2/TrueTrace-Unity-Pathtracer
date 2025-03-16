@@ -176,6 +176,7 @@ namespace TrueTrace {
                     Clearcoat = ThisOBJ.ClearCoat[SaveIndex],
                     ClearcoatGloss = ThisOBJ.ClearCoatGloss[SaveIndex],
                     Anisotropic = ThisOBJ.Anisotropic[SaveIndex],
+                    AnisotropicRotation = ThisOBJ.AnisotropicRotation[SaveIndex],
                     Flatness = ThisOBJ.Flatness[SaveIndex],
                     DiffTrans = ThisOBJ.DiffTrans[SaveIndex],
                     SpecTrans = ThisOBJ.SpecTrans[SaveIndex],
@@ -342,6 +343,7 @@ namespace TrueTrace {
             t.ClearCoat[Selected] = RayObj.Clearcoat;
             t.ClearCoatGloss[Selected] = RayObj.ClearcoatGloss;
             t.Anisotropic[Selected] = RayObj.Anisotropic;
+            t.AnisotropicRotation[Selected] = RayObj.AnisotropicRotation;
             t.Flatness[Selected] = RayObj.Flatness;
             t.DiffTrans[Selected] = RayObj.DiffTrans;
             t.SpecTrans[Selected] = RayObj.SpecTrans;
@@ -592,6 +594,7 @@ namespace TrueTrace {
                     Clearcoat = ThisOBJ.ClearCoat[SaveIndex],
                     ClearcoatGloss = ThisOBJ.ClearCoatGloss[SaveIndex],
                     Anisotropic = ThisOBJ.Anisotropic[SaveIndex],
+                    AnisotropicRotation = ThisOBJ.AnisotropicRotation[SaveIndex],
                     Flatness = ThisOBJ.Flatness[SaveIndex],
                     DiffTrans = ThisOBJ.DiffTrans[SaveIndex],
                     SpecTrans = ThisOBJ.SpecTrans[SaveIndex],
@@ -985,6 +988,8 @@ namespace TrueTrace {
                             serializedObject.FindProperty("Anisotropic").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Anisotropic: ", t.Anisotropic[Selected], 0, 1);
                             ConnectionSources.Add("Anisotropic", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("Anisotropic");
+                            EditorGUILayout.Space();                        
+                            serializedObject.FindProperty("AnisotropicRotation").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Anisotropic Rotation: ", t.AnisotropicRotation[Selected], 0, 1);
                             EditorGUILayout.Space();
                             serializedObject.FindProperty("IOR").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("IOR: ", t.IOR[Selected], 1, 10);
                             ConnectionSources.Add("IOR", GUILayoutUtility.GetLastRect()); // Store position
@@ -1130,6 +1135,7 @@ namespace TrueTrace {
                             t.ClearCoat[i] = t.ClearCoat[Selected];
                             t.ClearCoatGloss[i] = t.ClearCoatGloss[Selected];
                             t.Anisotropic[i] = t.Anisotropic[Selected];
+                            t.AnisotropicRotation[i] = t.AnisotropicRotation[Selected];
                             t.Flatness[i] = t.Flatness[Selected];
                             t.DiffTrans[i] = t.DiffTrans[Selected];
                             t.SpecTrans[i] = t.SpecTrans[Selected];
@@ -1189,6 +1195,7 @@ namespace TrueTrace {
                                 Obj.ClearCoat[i] = t.ClearCoat[Selected];
                                 Obj.ClearCoatGloss[i] = t.ClearCoatGloss[Selected];
                                 Obj.Anisotropic[i] = t.Anisotropic[Selected];
+                                Obj.AnisotropicRotation[i] = t.AnisotropicRotation[Selected];
                                 Obj.Flatness[i] = t.Flatness[Selected];
                                 Obj.DiffTrans[i] = t.DiffTrans[Selected];
                                 Obj.SpecTrans[i] = t.SpecTrans[Selected];

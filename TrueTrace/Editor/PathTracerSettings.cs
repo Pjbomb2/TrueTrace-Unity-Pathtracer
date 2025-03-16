@@ -1974,6 +1974,7 @@ Toolbar toolbar;
          TonemapSettings.Add("Uncharted 2");
          TonemapSettings.Add("AgX BC");
          TonemapSettings.Add("AgX MHC");
+         TonemapSettings.Add("AgX Custom");
          PopupField<string> ToneMapField = new PopupField<string>("<b>Tonemapper</b>");
          ToneMapField.ElementAt(0).style.minWidth = 65;
          ToneMapField.choices = TonemapSettings;

@@ -6,16 +6,23 @@ using UnityEngine.Rendering;
 using System.IO;
 using System.Xml;
 using System.Xml.Serialization;
+using UnityEditor;
+#if UNITY_EDITOR
+using UnityEngine.UIElements;
+using UnityEditor.UIElements;
+#endif
+
 
 namespace TrueTrace {
     public class RayTracingMaster : MonoBehaviour
     {
         public static RayTracingMaster RayMaster;
         [HideInInspector] public static Camera _camera;
-        public static bool DoKernelProfiling = true;
+        public static bool DoKernelProfiling = false;
         [HideInInspector] [SerializeField] public string LocalTTSettingsName = "TTGlobalSettings";
         private bool OverriddenResolutionIsActive = false;
         public bool HDRPorURPRenderInScene = false;
+        public bool OverrideAGXWithCustomTexture = false;
         [HideInInspector] public AtmosphereGenerator Atmo;
         [HideInInspector] public AssetManager Assets;
         private ReSTIRASVGF ReSTIRASVGFCode;
@@ -165,6 +172,7 @@ namespace TrueTrace {
         private Texture3D ToneMapTex;
         private Texture3D ToneMapTex2;
         private Texture3D ToneMapTex3;
+        public Texture3D AGXCustomTex;
         private Material _addMaterial;
         private Material _FireFlyMaterial;
         [HideInInspector] public int _currentSample = 0;
@@ -1382,7 +1390,7 @@ namespace TrueTrace {
                 else TTPostProc.ExecuteBloom(ref _FinalTex, LocalTTSettings.BloomStrength, cmd);
             }
             if(LocalTTSettings.DoChromaAber || LocalTTSettings.DoBCS || LocalTTSettings.DoVignette) TTPostProc.ExecuteCombinedPP(ref _FinalTex, cmd, LocalTTSettings.DoBCS, LocalTTSettings.DoVignette, LocalTTSettings.DoChromaAber, LocalTTSettings.Contrast, LocalTTSettings.Saturation, LocalTTSettings.ChromaDistort, LocalTTSettings.innerVignette, LocalTTSettings.outerVignette, LocalTTSettings.strengthVignette, LocalTTSettings.curveVignette, LocalTTSettings.ColorVignette);
-            if(LocalTTSettings.PPToneMap) TTPostProc.ExecuteToneMap(ref _FinalTex, cmd, ref ToneMapTex, LocalTTSettings.ToneMapper == 6 ? ToneMapTex3 : ToneMapTex2, LocalTTSettings.ToneMapper);
+            if(LocalTTSettings.PPToneMap) TTPostProc.ExecuteToneMap(ref _FinalTex, cmd, ref ToneMapTex, LocalTTSettings.ToneMapper == 7 ? AGXCustomTex : (LocalTTSettings.ToneMapper == 6 ? ToneMapTex3 : ToneMapTex2), LocalTTSettings.ToneMapper);
             if (LocalTTSettings.PPTAA) TTPostProc.ExecuteTAA(ref _FinalTex, _currentSample, cmd);
             if (LocalTTSettings.PPFXAA) TTPostProc.ExecuteFXAA(ref _FinalTex, cmd);
             if (LocalTTSettings.DoSharpen) TTPostProc.ExecuteSharpen(ref _FinalTex, LocalTTSettings.Sharpness, cmd);
@@ -1425,4 +1433,74 @@ namespace TrueTrace {
         }
 
     }
+
+
+#if UNITY_EDITOR
+    [CustomEditor(typeof(RayTracingMaster))]
+    public class RayTracingMasterEditor : Editor
+    {
+        private VisualElement CreateVerticalBox(string Name) {
+            VisualElement VertBox = new VisualElement();
+            // VertBox.style.flexDirection = FlexDirection.Row;
+            return VertBox;
+        }
+
+        private VisualElement CreateHorizontalBox(string Name) {
+            VisualElement HorizBox = new VisualElement();
+            HorizBox.style.flexDirection = FlexDirection.Row;
+            return HorizBox;
+        }
+
+
+        public class FloatSliderPair {
+            public VisualElement DynamicContainer;
+            public Label DynamicLabel;
+            public Slider DynamicSlider;
+            public FloatField DynamicField;
+        }
+        FloatSliderPair CreatePairedFloatSlider(string Name, float LowValue, float HighValue, ref float InitialValue, float SliderWidth = 200) {
+            FloatSliderPair NewPair = new FloatSliderPair();
+            NewPair.DynamicContainer = CreateHorizontalBox(Name + " Container");
+            NewPair.DynamicLabel = new Label(Name);
+            NewPair.DynamicSlider = new Slider() {value = InitialValue, highValue = HighValue, lowValue = LowValue};
+            NewPair.DynamicField = new FloatField() {value = InitialValue};
+            NewPair.DynamicSlider.style.width = SliderWidth;
+            NewPair.DynamicContainer.Add(NewPair.DynamicLabel);
+            NewPair.DynamicContainer.Add(NewPair.DynamicSlider);
+            NewPair.DynamicContainer.Add(NewPair.DynamicField);
+            return NewPair;
+        }
+
+        public override VisualElement CreateInspectorGUI()
+        {
+            var t1 = (targets);
+            int TargCount = t1.Length;
+            var t =  t1[0] as RayTracingMaster;
+            VisualElement MainContainer = CreateVerticalBox("Main Container");
+                Toggle RenderInSceneToggle = new Toggle() {value = t.HDRPorURPRenderInScene, text = "Render in Scene View(HDRP/URP ONLY)"};
+                RenderInSceneToggle.RegisterValueChangedCallback(evt => {t.HDRPorURPRenderInScene = evt.newValue;});
+                MainContainer.Add(RenderInSceneToggle);
+
+                ObjectField LocalTTSettingsField = new ObjectField("Local TT Settings Override");
+                LocalTTSettingsField.objectType = typeof(TTSettings);
+                LocalTTSettingsField.value = t.LocalTTSettings;
+                LocalTTSettingsField.RegisterValueChangedCallback(evt => {t.LocalTTSettings = evt.newValue as TTSettings;});
+                MainContainer.Add(LocalTTSettingsField);
+                
+
+                // if(t.LocalTTSettings.ToneMapper == 7) {
+                    ObjectField OverrideAGX = new ObjectField("Custom AGX Tonemap Texture");
+                    OverrideAGX.objectType = typeof(Texture3D);
+                    OverrideAGX.value = t.AGXCustomTex;
+                    OverrideAGX.RegisterValueChangedCallback(evt => {t.AGXCustomTex = evt.newValue as Texture3D;});
+                    MainContainer.Add(OverrideAGX);
+                // }
+
+            return MainContainer;
+        }
+
+    }
+#endif
+
+
 }

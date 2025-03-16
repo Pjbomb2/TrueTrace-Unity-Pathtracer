@@ -205,6 +205,7 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
 #endif
                 [branch]if(CurBounce % 2 == 1) rayidx += screen_width * screen_height;
                 GlobalRay = GlobalRays[rayidx];
+                RandNum = random(43, GlobalRay.PixelIndex).x;
                 bestHit = CreateRayHit();
                 if(CurBounce == 0) bestHit.t = asfloat(GlobalRay.hits.z);
 

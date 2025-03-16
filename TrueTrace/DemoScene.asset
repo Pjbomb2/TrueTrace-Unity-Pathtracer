@@ -46,7 +46,7 @@ MonoBehaviour:
   DoFirefly: 0
   ImprovedPrimaryHit: 1
   RISCount: 12
-  ToneMapper: 5
+  ToneMapper: 4
   SkyDesaturate: 0
   ClayColor: {x: 0.5, y: 0.5, z: 0.5}
   GroundColor: {x: 0.11320752, y: 0.11320752, z: 0.11320752}

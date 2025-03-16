@@ -602,7 +602,7 @@ namespace TrueTrace {
                             Vector3 center = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center, 1));
                             Vector3 Axis = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.axis, 0));
                             float Scale = Distance(center, ExtendedCenter) / TempNode.S.Radius;
-                            TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(VMFSharpnessToAxisLength(TempNode.sharpness) / Scale, 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
+                            TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(VMFSharpnessToAxisLength(TempNode.sharpness), 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
                             TempNode.axis = Axis;
                             TempNode.S.Center = center;
                             TempNode.variance *= Scale;
@@ -740,7 +740,7 @@ namespace TrueTrace {
                             Vector3 center = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center, 1));
                             Vector3 Axis = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.axis, 0));
                             float Scale = Distance(center, ExtendedCenter) / TempNode.S.Radius;
-                            TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(VMFSharpnessToAxisLength(TempNode.sharpness) / Scale, 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
+                            TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(VMFSharpnessToAxisLength(TempNode.sharpness), 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
                             TempNode.axis = Axis;
                             TempNode.S.Center = center;
                             TempNode.variance *= Scale;

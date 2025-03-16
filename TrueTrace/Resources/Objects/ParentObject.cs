@@ -691,7 +691,7 @@ namespace TrueTrace {
                     GameObject Target = Temp[i].gameObject;
                     if(Target.activeInHierarchy) {
                         if(Target.TryGetComponent<RayTracingObject>(out RayTracingObject TempRayObj)) {
-                            if(!Target.TryGetComponent<ParentObject>(out ParentObject Paren2)) {
+                            if(TempRayObj.enabled && !Target.TryGetComponent<ParentObject>(out ParentObject Paren2)) {
                                 TempRayObj.matfill();
                                 if(Target.TryGetComponent<RayTracingObject>(out RayTracingObject TempRayObj2)) {
                                     ChildObjectTransforms.Add(Target.transform);
@@ -1565,6 +1565,11 @@ namespace TrueTrace {
                                 AssetManager.Assets.UpdateQue.Remove(this);
                             }
                             AssetManager.Assets.AddQue.Add(this);
+                            QueInProgress = 3;
+                            ExistsInQue = 3;
+                        } else if(ExistsInQue == 3 && QueInProgress == -1) {
+                            // AssetManager.Assets.AddQue.Add(this);
+                            AssetManager.Assets.RemoveQue.Remove(this);
                             QueInProgress = 3;
                             ExistsInQue = 3;
                         }
