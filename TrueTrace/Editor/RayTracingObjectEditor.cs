@@ -988,7 +988,7 @@ namespace TrueTrace {
                     RayTracingObject[] Objects = GameObject.FindObjectsOfType<RayTracingObject>();
                     string Name = t.Names[Selected];
                     foreach(var Obj in Objects) {
-                        for(int i = 0; i < Obj.MaterialOptions.Length; i++) {
+                        for(int i = 0; i < Obj.LocalMaterials.Length; i++) {
                             if(Obj.Names[i].Equals(Name)) {
                                 Obj.LocalMaterials[i] = t.LocalMaterials[Selected];
                                 Obj.CallMaterialEdited(true);

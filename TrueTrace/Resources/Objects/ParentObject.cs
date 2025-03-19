@@ -583,6 +583,12 @@ namespace TrueTrace {
                         }
                     }
 
+                    if(obj.LocalMaterials[i].TextureModifiers.MainTexScaleOffset.x == 0) obj.LocalMaterials[i].TextureModifiers.MainTexScaleOffset = new Vector4(1,1,0,0);
+                    if(obj.LocalMaterials[i].TextureModifiers.SecondaryTextureScaleOffset.x == 0) obj.LocalMaterials[i].TextureModifiers.SecondaryTextureScaleOffset = new Vector4(1,1,0,0);
+                    if(obj.LocalMaterials[i].TextureModifiers.NormalTexScaleOffset.x == 0) obj.LocalMaterials[i].TextureModifiers.NormalTexScaleOffset = new Vector4(1,1,0,0);
+                    if(obj.LocalMaterials[i].TextureModifiers.SecondaryAlbedoTexScaleOffset.x == 0) obj.LocalMaterials[i].TextureModifiers.SecondaryAlbedoTexScaleOffset = new Vector4(1,1,0,0);
+                    if(obj.LocalMaterials[i].TextureModifiers.SecondaryNormalTexScaleOffset.x == 0) obj.LocalMaterials[i].TextureModifiers.SecondaryNormalTexScaleOffset = new Vector4(1,1,0,0);
+
                     if(JustCreated && obj.LocalMaterials[i].EmissionColor.x == 0 && obj.LocalMaterials[i].EmissionColor.y == 0 && obj.LocalMaterials[i].EmissionColor.z == 0) obj.LocalMaterials[i].EmissionColor = new Vector3(1,1,1);
                     if(JustCreated) obj.LocalMaterials[i].Tag = CommonFunctions.SetFlagVar(obj.LocalMaterials[i].Tag, CommonFunctions.Flags.UseSmoothness, RelevantMat.UsesSmoothness);
                     CurMat.MatData = obj.LocalMaterials[i];

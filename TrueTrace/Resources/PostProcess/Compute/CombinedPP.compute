@@ -116,7 +116,7 @@ float4x4 saturationMatrix( float saturation )
 [numthreads(16,16,1)]
 void BSCKernel (uint3 id : SV_DispatchThreadID)
 {
-    Result[id.xy] = float4((mul(mul(contrastMatrix(contrast), saturationMatrix(saturation)), float4(Input[id.xy].xyz,1))).xyz, Input[id.xy].w);
+    Result[id.xy] = float4((mul(mul(contrastMatrix(1), saturationMatrix(saturation)), float4(Input[id.xy].xyz,1))).xyz, Input[id.xy].w);
 }
 
 //Inner radius

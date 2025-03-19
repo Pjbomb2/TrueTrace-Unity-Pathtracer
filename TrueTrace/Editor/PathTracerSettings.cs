@@ -1597,15 +1597,15 @@ Toolbar toolbar;
          }
          int RayObjCount = RayObjs.Count;
          for(int i = 0; i < RayObjCount; i++) {
-            int MatCount = RayObjs[i].MaterialOptions.Length;
+            int MatCount = RayObjs[i].LocalMaterials.Length;
             for(int i2 = 0; i2 < MatCount; i2++) {
-               if(RayObjs[i].MaterialOptions[i2] == RayTracingObject.Options.Cutout) {
-                  RayObjs[i].MaterialOptions[i2] = RayTracingObject.Options.Disney;
+               if(RayObjs[i].LocalMaterials[i2].MatType == 1) {
+                  RayObjs[i].LocalMaterials[i2].MatType = 0;
                   if(Application.isPlaying)
                      RayObjs[i].CallMaterialEdited(true);
                }
-               else if(RayObjs[i].MaterialOptions[i2] != RayTracingObject.Options.Disney) 
-                  RayObjs[i].MaterialOptions[i2] = RayTracingObject.Options.Disney;
+               else if(RayObjs[i].LocalMaterials[i2].MatType != 0) 
+                  RayObjs[i].LocalMaterials[i2].MatType = 0;
             }
          }
 
