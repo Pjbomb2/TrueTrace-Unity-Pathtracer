@@ -154,8 +154,8 @@ namespace TrueTrace {
 
 
             CommonFunctions.CreateRenderTexture(ref ASVGF_HIST_COLOR_HF, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref TEX_PT_NORMALS_A, ScreenWidth, ScreenHeight, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref TEX_PT_NORMALS_B, ScreenWidth, ScreenHeight, CommonFunctions.RTFull4);
+            CommonFunctions.CreateRenderTexture(ref TEX_PT_NORMALS_A, ScreenWidth, ScreenHeight, CommonFunctions.RTFull2);
+            CommonFunctions.CreateRenderTexture(ref TEX_PT_NORMALS_B, ScreenWidth, ScreenHeight, CommonFunctions.RTFull2);
 
             CommonFunctions.CreateRenderTexture(ref ASVGF_ATROUS_PING_LF_SH, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTFull4);
             CommonFunctions.CreateRenderTexture(ref ASVGF_ATROUS_PONG_LF_SH, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTFull4);

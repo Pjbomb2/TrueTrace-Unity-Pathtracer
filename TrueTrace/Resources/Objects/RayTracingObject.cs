@@ -9,58 +9,18 @@ namespace TrueTrace {
 		public enum Options {Disney, Cutout, Fade};
 		public enum BlendModes {Lerp, Add, Multiply};
 		[SerializeField] public Options[] MaterialOptions;
-		[SerializeField] public Vector3[] TransmissionColor, BaseColor;
-		[SerializeField] public Vector2[] MetallicRemap, RoughnessRemap;
-		[SerializeField] public float[] emission; 
-		[SerializeField] public Vector3[] EmissionColor;
-		[SerializeField] public float[] Roughness;
-		[SerializeField] public float[] IOR;
-		[SerializeField] public float[] Metallic;
-		[SerializeField] public float[] SpecularTint;
-		[SerializeField] public float[] Sheen;
-		[SerializeField] public float[] SheenTint;
-		[SerializeField] public float[] ClearCoat;
-		[SerializeField] public float[] ClearCoatGloss;
-		[SerializeField] public float[] Anisotropic;
-		[SerializeField] public float[] AnisotropicRotation;
-		[SerializeField] public float[] Flatness;
-		[SerializeField] public float[] DiffTrans;
-		[SerializeField] public float[] SpecTrans;
-		[SerializeField] public bool[] FollowMaterial;
-		[SerializeField] public float[] ScatterDist;
-		[SerializeField] public float[] Specular;
-		[SerializeField] public float[] AlphaCutoff;
-		[SerializeField] public float[] NormalStrength;
-		[SerializeField] public float[] Hue;
-		[SerializeField] public float[] Saturation;
-		[SerializeField] public float[] Brightness;
-		[SerializeField] public float[] Contrast;
-		[SerializeField] public Vector3[] BlendColor;
-		[SerializeField] public float[] BlendFactor;
-		[SerializeField] public Vector4[] MainTexScaleOffset;
-		[SerializeField] public Vector4[] SecondaryAlbedoTexScaleOffset;
-		[SerializeField] public Vector4[] SecondaryTextureScaleOffset;
-		[SerializeField] public Vector4[] NormalTexScaleOffset;
-		[SerializeField] public float[] RotationNormal;
-		[SerializeField] public float[] RotationSecondary;
-		[SerializeField] public float[] RotationSecondaryDiffuse;
-		[SerializeField] public float[] RotationSecondaryNormal;
-		[SerializeField] public float[] Rotation;
-		[SerializeField] public int[] Flags;
-		[SerializeField] public bool[] UseKelvin;
+
+		[SerializeField] public RayObjMat[] LocalMaterials;
 		[SerializeField] public float[] KelvinTemp;
-		[SerializeField] public float[] ColorBleed; 
-		[SerializeField] public float[] AlbedoBlendFactor; 
-		[SerializeField] public Material[] SharedMaterials;
-		[SerializeField] public string[] Names;
-		[SerializeField] public int Selected;
-		[SerializeField] public float[] SecondaryNormalTexBlend;
-		[SerializeField] public float[] DetailNormalStrength;
-		[SerializeField] public Vector4[] SecondaryNormalTexScaleOffset;
+		[SerializeField] public bool[] UseKelvin;
+	
 		public int[] Indexes;
 		public bool NeedsToUpdate;
 		[SerializeField] public bool IsReady = false;
 		[SerializeField] public bool InvisibleOverride = false;
+		[SerializeField] public bool[] FollowMaterial;
+		[SerializeField] public Material[] SharedMaterials;
+		[SerializeField] public string[] Names;
 
 		[HideInInspector] public int[] MaterialIndex;
 		[HideInInspector] public int[] LocalMaterialIndex;
@@ -71,7 +31,8 @@ namespace TrueTrace {
 
 		public void CallMaterialOverride() {
 			Material[] SharedMaterials = (GetComponent<Renderer>() != null) ? GetComponent<Renderer>().sharedMaterials : GetComponent<SkinnedMeshRenderer>().sharedMaterials;
-			for(int i = 0; i < Names.Length; i++) {
+			int NamLen = Names.Length;
+			for(int i = 0; i < NamLen; i++) {
 				Names[i] = SharedMaterials[i].name;
 				 if(FollowMaterial[i]) {
 					int Index = AssetManager.ShaderNames.IndexOf(SharedMaterials[i].shader.name);
@@ -80,10 +41,10 @@ namespace TrueTrace {
 					 	return;
 					 }
 					 MaterialShader RelevantMat = AssetManager.data.Material[Index];
-					if(!RelevantMat.MetallicRange.Equals("null")) Metallic[i] = SharedMaterials[i].GetFloat(RelevantMat.MetallicRange);
-                    if(!RelevantMat.RoughnessRange.Equals("null")) Roughness[i] = SharedMaterials[i].GetFloat(RelevantMat.RoughnessRange);
-                    if(!RelevantMat.BaseColorValue.Equals("null")) BaseColor[i] = new Vector3(SharedMaterials[i].GetColor(RelevantMat.BaseColorValue).r, SharedMaterials[i].GetColor(RelevantMat.BaseColorValue).g, SharedMaterials[i].GetColor(RelevantMat.BaseColorValue).b);
-                    else BaseColor[i] = Vector3.one;
+					if(!RelevantMat.MetallicRange.Equals("null")) LocalMaterials[i].Metallic = SharedMaterials[i].GetFloat(RelevantMat.MetallicRange);
+                    if(!RelevantMat.RoughnessRange.Equals("null")) LocalMaterials[i].Roughness = SharedMaterials[i].GetFloat(RelevantMat.RoughnessRange);
+                    if(!RelevantMat.BaseColorValue.Equals("null")) LocalMaterials[i].BaseColor = new Vector3(SharedMaterials[i].GetColor(RelevantMat.BaseColorValue).r, SharedMaterials[i].GetColor(RelevantMat.BaseColorValue).g, SharedMaterials[i].GetColor(RelevantMat.BaseColorValue).b);
+                    else LocalMaterials[i].BaseColor = Vector3.one;
 				 }
 
 			}
@@ -99,7 +60,8 @@ namespace TrueTrace {
 			CallMaterialOverride();
 			#if UNITY_EDITOR
 				if(Application.isPlaying && Do) {
-					for(int i = 0; i < Names.Length; i++) {
+					int NamLength = Names.Length;
+					for(int i = 0; i < NamLength; i++) {
 						RayTracingMaster.WriteString(this, Names[i]);
 					}
 				}
@@ -229,58 +191,13 @@ namespace TrueTrace {
 			else {for(int i = 0; i < SubMeshCount; i++) Index[i] = 0;}
 			
 			bool NeedsRedo = InitializeArrayWithIndex(ref Names, "", SharedMaterials, ref Index);
-			InitializeArray<float>(ref Rotation, 0, Index, NeedsRedo);
-			InitializeArray<float>(ref RotationNormal, 0, Index, NeedsRedo);
-			InitializeArray<float>(ref RotationSecondary, 0, Index, NeedsRedo);
-			InitializeArray<float>(ref RotationSecondaryDiffuse, 0, Index, NeedsRedo);
-			InitializeArray<float>(ref RotationSecondaryNormal, 0, Index, NeedsRedo);
-			InitializeArray<int>(ref Flags, 0, Index, NeedsRedo);
-
-			InitializeArray<Vector4>(ref SecondaryTextureScaleOffset, new Vector4(1,1,0,0), Index, NeedsRedo);
-			InitializeArray<Vector4>(ref NormalTexScaleOffset, new Vector4(1,1,0,0), Index, NeedsRedo);
-			InitializeArray<Vector4>(ref MainTexScaleOffset, new Vector4(1,1,0,0), Index, NeedsRedo);
-			InitializeArray<Vector4>(ref SecondaryAlbedoTexScaleOffset, new Vector4(1,1,0,0), Index, NeedsRedo);
-			InitializeArray<Vector4>(ref SecondaryNormalTexScaleOffset, new Vector4(1,1,0,0), Index, NeedsRedo);
-			InitializeArray<Vector3>(ref BlendColor, new Vector3(1,1,1), Index, NeedsRedo);
-			InitializeArray<float>(ref BlendFactor, 0, Index, NeedsRedo);
-			InitializeArray<float>(ref Hue, 0, Index, NeedsRedo);
-			InitializeArray<float>(ref Saturation, 1, Index, NeedsRedo);
-			InitializeArray<float>(ref Brightness, 1, Index, NeedsRedo);
-			InitializeArray<float>(ref Contrast, 1, Index, NeedsRedo);
-			InitializeArray<Vector2>(ref MetallicRemap, new Vector2(0,1), Index, NeedsRedo);
-			InitializeArray<Vector2>(ref RoughnessRemap, new Vector2(0,1), Index, NeedsRedo);
-			InitializeArray<float>(ref NormalStrength, 1, Index, NeedsRedo);
-			InitializeArray<float>(ref AlphaCutoff, 0.1f, Index, NeedsRedo);
-			InitializeArray<float>(ref ScatterDist, 0.1f, Index, NeedsRedo);
 			InitializeArray<int>(ref Indexes, 0, Index, NeedsRedo, Mathf.Max(mesh.subMeshCount, SubMeshCount));
-			InitializeArray<float>(ref Specular, 0, Index, NeedsRedo);
 			InitializeArray<bool>(ref FollowMaterial, true, Index, NeedsRedo);
-			InitializeArray<Vector3>(ref TransmissionColor, new Vector3(1,1,1), Index, NeedsRedo);
-			InitializeArray<Vector3>(ref EmissionColor, new Vector3(1,1,1), Index, NeedsRedo);
-			InitializeArray<float>(ref IOR, 1.0f, Index, NeedsRedo);
-			InitializeArray<float>(ref Metallic, 0.0f, Index, NeedsRedo);
-			InitializeArray<float>(ref SpecularTint, 0.0f, Index, NeedsRedo);
-			InitializeArray<float>(ref Sheen, 0.0f, Index, NeedsRedo);
-			InitializeArray<float>(ref SheenTint, 0.0f, Index, NeedsRedo);
-			InitializeArray<float>(ref ClearCoat, 0.0f, Index, NeedsRedo);
-			InitializeArray<float>(ref ClearCoatGloss, 0.0f, Index, NeedsRedo);
-			InitializeArray<float>(ref Anisotropic, 0.0f, Index, NeedsRedo);
-			InitializeArray<float>(ref AnisotropicRotation, 0.0f, Index, NeedsRedo);
-			InitializeArray<float>(ref Flatness, 0.0f, Index, NeedsRedo);
-			InitializeArray<float>(ref DiffTrans, 0.0f, Index, NeedsRedo);
-			InitializeArray<float>(ref SpecTrans, 0.0f, Index, NeedsRedo);
-			InitializeArray<Options>(ref MaterialOptions, Options.Disney, Index, NeedsRedo);
 			InitializeArray<int>(ref LocalMaterialIndex, 0, Index, NeedsRedo);
-			InitializeArray<float>(ref emission, 0, Index, NeedsRedo);
-			InitializeArray<float>(ref Roughness, 0, Index, NeedsRedo);
-			InitializeArray<Vector3>(ref BaseColor, new Vector3(1,1,1), Index, NeedsRedo);
 			InitializeArray<int>(ref MaterialIndex, 0, Index, NeedsRedo);
 			InitializeArray<bool>(ref UseKelvin, false, Index, NeedsRedo);
 			InitializeArray<float>(ref KelvinTemp, 0, Index, NeedsRedo);
-			InitializeArray<float>(ref ColorBleed, 1, Index, NeedsRedo);
-			InitializeArray<float>(ref AlbedoBlendFactor, 0, Index, NeedsRedo);
-			InitializeArray<float>(ref SecondaryNormalTexBlend, 0, Index, NeedsRedo);
-			InitializeArray<float>(ref DetailNormalStrength, 1, Index, NeedsRedo);
+			InitializeArray<RayObjMat>(ref LocalMaterials, CommonFunctions.ZeroConstructorMat(), Index, NeedsRedo);
 
 
 			IsReady = true;
@@ -288,11 +205,11 @@ namespace TrueTrace {
 		}
 
 		public void ResetData() {
-			emission = null;
-			Roughness = null;
-			TransmissionColor = null;
-			MaterialOptions = null;
-			BaseColor = null;
+			LocalMaterials = null;
+			// Roughness = null;
+			// TransmissionColor = null;
+			// MaterialOptions = null;
+			// BaseColor = null;
 		}
 		public void ForceUpdateParent() {
 			bool Fine = TryGetComponent<ParentObject>(out ParentObject ThisParent);

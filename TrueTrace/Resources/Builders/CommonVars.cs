@@ -153,10 +153,8 @@ namespace CommonVars
         public float scatterDistance;
     };
 
-
-
     [System.Serializable]
-    public struct MaterialData
+    public struct MatTextureData
     {
         public Vector2Int AlbedoTex;
         public Vector2Int NormalTex;
@@ -169,6 +167,38 @@ namespace CommonVars
         public Vector2Int SecondaryAlbedoTex;
         public Vector2Int SecondaryAlbedoMask;
         public Vector2Int SecondaryNormalTex;
+    }
+    [System.Serializable]
+    public struct MatTextureModifierData
+    {
+        public Vector4 MainTexScaleOffset;
+        public Vector4 SecondaryTextureScaleOffset;
+        public Vector4 NormalTexScaleOffset;
+        public Vector4 SecondaryAlbedoTexScaleOffset;
+        public Vector4 SecondaryNormalTexScaleOffset;
+        public float Rotation;
+        public float RotationNormal;
+        public float RotationSecondary;
+        public float RotationSecondaryDiffuse;
+        public float RotationSecondaryNormal;
+        public MatTextureModifierData(int a = 0) {
+            MainTexScaleOffset = new Vector4(1,1,0,0);
+            SecondaryTextureScaleOffset = new Vector4(1,1,0,0);
+            NormalTexScaleOffset = new Vector4(1,1,0,0);
+            SecondaryAlbedoTexScaleOffset = new Vector4(1,1,0,0);
+            SecondaryNormalTexScaleOffset = new Vector4(1,1,0,0);
+            Rotation = 0;
+            RotationNormal = 0;
+            RotationSecondary = 0;
+            RotationSecondaryDiffuse = 0;
+            RotationSecondaryNormal = 0;
+        }
+    }
+
+    [System.Serializable]
+    public struct RayObjMat
+    {
+        public MatTextureModifierData TextureModifiers;
         public Vector3 BaseColor;
         public float emission;
         public Vector3 EmissionColor;
@@ -177,20 +207,19 @@ namespace CommonVars
         public int MatType;
         public Vector3 TransmittanceColor;
         public float IOR;
-        public float metallic;
-        public float sheen;
-        public float sheenTint;
-        public float specularTint;
-        public float clearcoat;
-        public float clearcoatGloss;
-        public float anisotropic;
-        public float anisotropicRotation;
-        public float flatness;
-        public float diffTrans;
-        public float specTrans;
+        public float Metallic;
+        public float Sheen;
+        public float SheenTint;
+        public float SpecularTint;
+        public float Clearcoat;
+        public float ClearcoatGloss;
+        public float Anisotropic;
+        public float AnisotropicRotation;
+        public float Flatness;
+        public float DiffTrans;
+        public float SpecTrans;
         public float Specular;
-        public float scatterDistance;
-        public Vector4 AlbedoTextureScale;
+        public float ScatterDist;
         public Vector2 MetallicRemap;
         public Vector2 RoughnessRemap;
         public float AlphaCutoff;
@@ -201,20 +230,121 @@ namespace CommonVars
         public float Brightness;
         public Vector3 BlendColor;
         public float BlendFactor;
-        public Vector4 SecondaryTextureScaleOffset;
-        public Vector4 NormalTexScaleOffset;
-        public float RotationNormal;
-        public float RotationSecondary;
-        public float RotationSecondaryDiffuse;
-        public float RotationSecondaryNormal;
-        public Vector4 SecondaryAlbedoTexScaleOffset;
-        public float Rotation;
         public float ColorBleed;
         public float AlbedoBlendFactor;
-        public Vector4 SecondaryNormalTexScaleOffset;
         public float SecondaryNormalTexBlend;
         public float DetailNormalStrength;
     }
+
+    [System.Serializable]
+    public struct MaterialData
+    {
+        public MatTextureData Textures;
+        public RayObjMat MatData;
+        public MaterialData(int a = 0) {
+            Textures = new MatTextureData();
+            MatData = new RayObjMat();
+        }
+    }
+
+    [System.Serializable]
+    public struct RayObjectTextureIndex
+    {
+        public TrueTrace.RayTracingObject Obj;
+        public TrueTrace.TerrainObject Terrain;
+        public int ObjIndex;
+    }
+
+    [System.Serializable]
+    public class RayObjects
+    {
+        public List<RayObjectTextureIndex> RayObjectList = new List<RayObjectTextureIndex>();
+    }   
+
+    [System.Serializable]
+    public class TexObj
+    {
+        public Texture Tex;
+        public int ReadIndex;
+        public List<Vector3Int> TexObjList = new List<Vector3Int>();
+    }   
+    public enum TexturePurpose {Albedo, Alpha, Normal, Emission, Metallic, Roughness, MatCapTex, MatCapMask, SecondaryAlbedoTexture, SecondaryAlbedoTextureMask, SecondaryNormalTexture};
+
+    [System.Serializable]
+    public class TexturePairs {
+        public int Purpose;
+        public int ReadIndex;//negative is the amount of components the destination contains plus 1, for use later with another idea I had
+        public string TextureName;
+        public TexturePairs Fallback;
+    }
+
+    [System.Serializable]
+    public class MaterialShader
+    {
+        public string Name;
+        public List<TexturePairs> AvailableTextures;
+        public string MetallicRange;
+        public string RoughnessRange;
+        public bool IsGlass;
+        public bool IsCutout;
+        public bool UsesSmoothness;
+        public string BaseColorValue;
+        public string MetallicRemapMin;
+        public string MetallicRemapMax;
+        public string RoughnessRemapMin;
+        public string RoughnessRemapMax;
+    }
+    [System.Serializable]
+    public class Materials
+    {
+        [System.Xml.Serialization.XmlElement("MaterialShader")]
+        public List<MaterialShader> Material = new List<MaterialShader>();
+    }
+
+
+    [System.Serializable]
+    public class RayObjectDatas
+    {
+        public int ID;
+        public string MatName;
+        public int OptionID;
+        public RayObjMat MatData;
+
+        public string AlbedoGUID;
+        public string MetallicGUID;
+        public string RoughnessGUID;
+        public string EmissionGUID;
+        public string AlphaGUID;
+        public string MatCapGUID;
+        public string MatcapMaskGUID;
+        public string SecondaryAlbedoGUID;
+        public string SecondaryAlbedoMaskGUID;
+        public string NormalGUID;
+        public string ShaderName;
+    }
+    [System.Serializable]
+    public class RayObjs
+    {
+        [System.Xml.Serialization.XmlElement("RayObjectDatas")]
+        public List<RayObjectDatas> RayObj = new List<RayObjectDatas>();
+    }
+    [System.Serializable]
+    public class RayObjFolder
+    {
+        public string FolderName = "";
+        public List<RayObjectDatas> ContainedPresets = new List<RayObjectDatas>();
+    }
+
+    [System.Serializable]
+    public class RayObjFolderMaster
+    {
+        [System.Xml.Serialization.XmlElement("RayObjFolder")]
+        public List<RayObjFolder> PresetFolders = new List<RayObjFolder>();
+    }
+
+
+
+
 
     [System.Serializable]
     public struct BVHNode2Data
@@ -625,148 +755,7 @@ namespace CommonVars
         public List<int> Slab;
     }
 
-    [System.Serializable]
-    public struct RayObjectTextureIndex
-    {
-        public TrueTrace.RayTracingObject Obj;
-        public TrueTrace.TerrainObject Terrain;
-        public int ObjIndex;
-    }
 
-    [System.Serializable]
-    public class RayObjects
-    {
-        public List<RayObjectTextureIndex> RayObjectList = new List<RayObjectTextureIndex>();
-    }   
-
-    [System.Serializable]
-    public class TexObj
-    {
-        public Texture Tex;
-        public int ReadIndex;
-        public List<Vector3Int> TexObjList = new List<Vector3Int>();
-    }   
-    public enum TexturePurpose {Albedo, Alpha, Normal, Emission, Metallic, Roughness, MatCapTex, MatCapMask, SecondaryAlbedoTexture, SecondaryAlbedoTextureMask, SecondaryNormalTexture};
-
-    [System.Serializable]
-    public class TexturePairs {
-        public int Purpose;
-        public int ReadIndex;//negative is the amount of components the destination contains plus 1, for use later with another idea I had
-        public string TextureName;
-        public TexturePairs Fallback;
-    }
-
-    [System.Serializable]
-    public class MaterialShader
-    {
-        public string Name;
-        public List<TexturePairs> AvailableTextures;
-        public string MetallicRange;
-        public string RoughnessRange;
-        public bool IsGlass;
-        public bool IsCutout;
-        public bool UsesSmoothness;
-        public string BaseColorValue;
-        public string MetallicRemapMin;
-        public string MetallicRemapMax;
-        public string RoughnessRemapMin;
-        public string RoughnessRemapMax;
-    }
-    [System.Serializable]
-    public class Materials
-    {
-        [System.Xml.Serialization.XmlElement("MaterialShader")]
-        public List<MaterialShader> Material = new List<MaterialShader>();
-    }
-
-
-    [System.Serializable]
-    public class RayObjectDatas
-    {
-        public int ID;
-        public string MatName;
-        public int OptionID;
-        public Vector3 TransCol;
-        public Vector3 BaseCol;
-        public Vector2 MetRemap;
-        public Vector2 RoughRemap;
-        public float Emiss;
-        public Vector3 EmissCol;
-        public float Rough;
-        public float IOR;
-        public float Met;
-        public float SpecTint;
-        public float Sheen;
-        public float SheenTint;
-        public float Clearcoat;
-        public float ClearcoatGloss;
-        public float Anisotropic;
-        public float AnisotropicRotation;
-        public float Flatness;
-        public float DiffTrans;
-        public float SpecTrans;
-        public bool FollowMat;
-        public float ScatterDist;
-        public float Spec;
-        public float AlphaCutoff;
-        public float NormStrength;
-        public float Hue;
-        public float Saturation;
-        public float Brightness;
-        public float Contrast;
-        public Vector3 BlendColor;
-        public float BlendFactor;
-        public Vector4 MainTexScaleOffset;
-        public Vector4 SecondaryAlbedoTexScaleOffset;
-        public Vector4 SecondaryTextureScaleOffset;
-        public Vector4 NormalTexScaleOffset;
-        public float RotationNormal;
-        public float RotationSecondary;
-        public float RotationSecondaryDiffuse;
-        public float RotationSecondaryNormal;
-        public float Rotation;
-        public int Flags;
-        public bool UseKelvin;
-        public float KelvinTemp;
-        public float ColorBleed;
-        public float AlbedoBlendFactor;
-        public Vector4 SecondaryNormalTexScaleOffset;
-        public float SecondaryNormalTexBlend;
-        public float DetailNormalStrength;
-
-
-
-        public string AlbedoGUID;
-        public string MetallicGUID;
-        public string RoughnessGUID;
-        public string EmissionGUID;
-        public string AlphaGUID;
-        public string MatCapGUID;
-        public string MatcapMaskGUID;
-        public string SecondaryAlbedoGUID;
-        public string SecondaryAlbedoMaskGUID;
-        public string NormalGUID;
-        public string ShaderName;
-    }
-    [System.Serializable]
-    public class RayObjs
-    {
-        [System.Xml.Serialization.XmlElement("RayObjectDatas")]
-        public List<RayObjectDatas> RayObj = new List<RayObjectDatas>();
-    }
-    [System.Serializable]
-    public class RayObjFolder
-    {
-        public string FolderName = "";
-        public List<RayObjectDatas> ContainedPresets = new List<RayObjectDatas>();
-    }
-
-    [System.Serializable]
-    public class RayObjFolderMaster
-    {
-        [System.Xml.Serialization.XmlElement("RayObjFolder")]
-        public List<RayObjFolder> PresetFolders = new List<RayObjFolder>();
-    }
 
 
 
@@ -1145,6 +1134,60 @@ namespace CommonVars
 
             return result;
         }
+
+        public static RayObjMat ZeroConstructorMat() {
+            RayObjMat NewMat = new RayObjMat();
+            NewMat.TextureModifiers = new MatTextureModifierData();
+            
+            NewMat.TextureModifiers.MainTexScaleOffset = new Vector4(1,1,0,0);
+            NewMat.TextureModifiers.SecondaryTextureScaleOffset = new Vector4(1,1,0,0);
+            NewMat.TextureModifiers.NormalTexScaleOffset = new Vector4(1,1,0,0);
+            NewMat.TextureModifiers.SecondaryAlbedoTexScaleOffset = new Vector4(1,1,0,0);
+            NewMat.TextureModifiers.SecondaryNormalTexScaleOffset = new Vector4(1,1,0,0);
+            NewMat.TextureModifiers.Rotation = 0;
+            NewMat.TextureModifiers.RotationNormal = 0;
+            NewMat.TextureModifiers.RotationSecondary = 0;
+            NewMat.TextureModifiers.RotationSecondaryDiffuse = 0;
+            NewMat.TextureModifiers.RotationSecondaryNormal = 0;
+
+            NewMat.BaseColor = Vector3.one;
+            NewMat.emission = 0;
+            NewMat.EmissionColor = Vector3.one;
+            NewMat.Tag = 0;
+            NewMat.Roughness = 0;
+            NewMat.MatType = 0;
+            NewMat.TransmittanceColor = Vector3.one;
+            NewMat.IOR = 1;
+            NewMat.Metallic = 0;
+            NewMat.Sheen = 0;
+            NewMat.SheenTint = 0;
+            NewMat.SpecularTint = 0;
+            NewMat.Clearcoat = 0;
+            NewMat.ClearcoatGloss = 0;
+            NewMat.Anisotropic = 0;
+            NewMat.AnisotropicRotation = 0;
+            NewMat.Flatness = 0;
+            NewMat.DiffTrans = 0;
+            NewMat.SpecTrans = 0;
+            NewMat.Specular = 0;
+            NewMat.ScatterDist = 1;
+            NewMat.MetallicRemap = new Vector2(0,1);
+            NewMat.RoughnessRemap = new Vector2(0,1);
+            NewMat.AlphaCutoff = 0.1f;
+            NewMat.NormalStrength = 1;
+            NewMat.Hue = 0;
+            NewMat.Saturation = 1;
+            NewMat.Contrast = 1;
+            NewMat.Brightness = 1;
+            NewMat.BlendColor = Vector3.one;
+            NewMat.BlendFactor = 0;
+            NewMat.ColorBleed = 1;
+            NewMat.AlbedoBlendFactor = 0;
+            NewMat.SecondaryNormalTexBlend = 0;
+            NewMat.DetailNormalStrength = 1;
+            return NewMat;
+        }
+
 
         #if UNITY_EDITOR
            public static T GetCopyOf2<T>(this Component comp, T other) where T : Component

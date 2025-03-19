@@ -489,23 +489,23 @@ namespace TrueTrace {
                         if (SharedMaterials[i].mainTexture != null) {
                             if (!AlbedoTexs.Contains(SharedMaterials[i].mainTexture)) {
                                 AlbedoTexs.Add(SharedMaterials[i].mainTexture);
-                                CurMat.AlbedoTex.x = AlbedoTexs.Count;
+                                CurMat.Textures.AlbedoTex.x = AlbedoTexs.Count;
                             }
                         }
                         AssetManager.Assets.AddMaterial(SharedMaterials[i].shader);
                         Index = AssetManager.ShaderNames.IndexOf(SharedMaterials[i].shader.name);
                     }
                     MaterialShader RelevantMat = AssetManager.data.Material[Index];
-                    if(!RelevantMat.MetallicRange.Equals("null") && JustCreated) obj.Metallic[i] = SharedMaterials[i].GetFloat(RelevantMat.MetallicRange);
-                    if(!RelevantMat.RoughnessRange.Equals("null") && JustCreated) obj.Roughness[i] = (RelevantMat.UsesSmoothness ? (1.0f - SharedMaterials[i].GetFloat(RelevantMat.RoughnessRange)) : SharedMaterials[i].GetFloat(RelevantMat.RoughnessRange));
-                    if(RelevantMat.MetallicRemapMin != null && !RelevantMat.MetallicRemapMin.Equals("null") && JustCreated) obj.MetallicRemap[i] = new Vector2(SharedMaterials[i].GetFloat(RelevantMat.MetallicRemapMin), SharedMaterials[i].GetFloat(RelevantMat.MetallicRemapMax));
-                    else if(JustCreated) obj.MetallicRemap[i] = new Vector2(0, 1);
-                    if(RelevantMat.RoughnessRemapMin != null && !RelevantMat.RoughnessRemapMin.Equals("null") && JustCreated) obj.RoughnessRemap[i] = new Vector2(SharedMaterials[i].GetFloat(RelevantMat.RoughnessRemapMin), SharedMaterials[i].GetFloat(RelevantMat.RoughnessRemapMax));
-                    else if(JustCreated) obj.RoughnessRemap[i] = new Vector2(0, 1);
-                    if(!RelevantMat.BaseColorValue.Equals("null") && JustCreated) obj.BaseColor[i] = (Vector3)((Vector4)SharedMaterials[i].GetColor(RelevantMat.BaseColorValue));
-                    else if(JustCreated) obj.BaseColor[i] = new Vector3(1,1,1);
-                    if(RelevantMat.IsGlass && JustCreated || (JustCreated && RelevantMat.Name.Equals("Standard") && SharedMaterials[i].GetFloat("_Mode") == 3)) obj.SpecTrans[i] = 1f;
-                    if(RelevantMat.IsCutout || (RelevantMat.Name.Equals("Standard") && SharedMaterials[i].GetFloat("_Mode") == 1)) obj.MaterialOptions[i] = RayTracingObject.Options.Cutout;
+                    if(!RelevantMat.MetallicRange.Equals("null") && JustCreated) obj.LocalMaterials[i].Metallic = SharedMaterials[i].GetFloat(RelevantMat.MetallicRange);
+                    if(!RelevantMat.RoughnessRange.Equals("null") && JustCreated) obj.LocalMaterials[i].Roughness = (RelevantMat.UsesSmoothness ? (1.0f - SharedMaterials[i].GetFloat(RelevantMat.RoughnessRange)) : SharedMaterials[i].GetFloat(RelevantMat.RoughnessRange));
+                    if(RelevantMat.MetallicRemapMin != null && !RelevantMat.MetallicRemapMin.Equals("null") && JustCreated) obj.LocalMaterials[i].MetallicRemap = new Vector2(SharedMaterials[i].GetFloat(RelevantMat.MetallicRemapMin), SharedMaterials[i].GetFloat(RelevantMat.MetallicRemapMax));
+                    else if(JustCreated) obj.LocalMaterials[i].MetallicRemap = new Vector2(0, 1);
+                    if(RelevantMat.RoughnessRemapMin != null && !RelevantMat.RoughnessRemapMin.Equals("null") && JustCreated) obj.LocalMaterials[i].RoughnessRemap = new Vector2(SharedMaterials[i].GetFloat(RelevantMat.RoughnessRemapMin), SharedMaterials[i].GetFloat(RelevantMat.RoughnessRemapMax));
+                    else if(JustCreated) obj.LocalMaterials[i].RoughnessRemap = new Vector2(0, 1);
+                    if(!RelevantMat.BaseColorValue.Equals("null") && JustCreated) obj.LocalMaterials[i].BaseColor = (Vector3)((Vector4)SharedMaterials[i].GetColor(RelevantMat.BaseColorValue));
+                    else if(JustCreated) obj.LocalMaterials[i].BaseColor = new Vector3(1,1,1);
+                    if(RelevantMat.IsGlass && JustCreated || (JustCreated && RelevantMat.Name.Equals("Standard") && SharedMaterials[i].GetFloat("_Mode") == 3)) obj.LocalMaterials[i].SpecTrans = 1f;
+                    if(RelevantMat.IsCutout || (RelevantMat.Name.Equals("Standard") && SharedMaterials[i].GetFloat("_Mode") == 1)) obj.LocalMaterials[i].MatType = (int)RayTracingObject.Options.Cutout;
 
                     int TempIndex = 0;
                     Vector4 TempScale = new Vector4(1,1,0,0);
@@ -528,117 +528,66 @@ namespace TrueTrace {
                         }
                         switch((TexturePurpose)TexPurpose) {
                             case(TexturePurpose.SecondaryNormalTexture):
-                                if(JustCreated) TextureParseScaleOffset(SharedMaterials[i], TexName, ref obj.SecondaryNormalTexScaleOffset[i]);
+                                if(JustCreated) TextureParseScaleOffset(SharedMaterials[i], TexName, ref obj.LocalMaterials[i].TextureModifiers.SecondaryNormalTexScaleOffset);
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref SecondaryNormalTexs, ref TempIndex); 
-                                CurMat.SecondaryNormalTex.x = TempIndex;
+                                CurMat.Textures.SecondaryNormalTex.x = TempIndex;
                             break;                            
                             case(TexturePurpose.SecondaryAlbedoTextureMask):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref SecondaryAlbedoTexMasks, ref TempIndex); 
-                                CurMat.SecondaryAlbedoMask.x = TempIndex; 
+                                CurMat.Textures.SecondaryAlbedoMask.x = TempIndex; 
                                 if(Result == 1) SecondaryAlbedoTexMaskChannelIndex.Add(ReadIndex);
                             break;
                             case(TexturePurpose.SecondaryAlbedoTexture):
-                                if(JustCreated) TextureParseScaleOffset(SharedMaterials[i], TexName, ref obj.SecondaryAlbedoTexScaleOffset[i]);
+                                if(JustCreated) TextureParseScaleOffset(SharedMaterials[i], TexName, ref obj.LocalMaterials[i].TextureModifiers.SecondaryAlbedoTexScaleOffset);
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref SecondaryAlbedoTexs, ref TempIndex); 
-                                CurMat.SecondaryAlbedoTex.x = TempIndex;
+                                CurMat.Textures.SecondaryAlbedoTex.x = TempIndex;
                             break;
                             case(TexturePurpose.MatCapTex):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref MatCapTexs, ref TempIndex); 
-                                CurMat.MatCapTex.x = TempIndex;
+                                CurMat.Textures.MatCapTex.x = TempIndex;
                             break;
                             case(TexturePurpose.Albedo):
-                                if(JustCreated) TextureParseScaleOffset(SharedMaterials[i], TexName, ref obj.MainTexScaleOffset[i]);
+                                if(JustCreated) TextureParseScaleOffset(SharedMaterials[i], TexName, ref obj.LocalMaterials[i].TextureModifiers.MainTexScaleOffset);
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref AlbedoTexs, ref TempIndex); 
-                                CurMat.AlbedoTex.x = TempIndex;
+                                CurMat.Textures.AlbedoTex.x = TempIndex;
                             break;
                             case(TexturePurpose.Normal):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref NormalTexs, ref TempIndex); 
-                                CurMat.NormalTex.x = TempIndex;
+                                CurMat.Textures.NormalTex.x = TempIndex;
                             break;
                             case(TexturePurpose.Emission):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref EmissionTexs, ref TempIndex, true); 
-                                CurMat.EmissiveTex.x = TempIndex; 
-                                if(Result != 2 && JustCreated) obj.emission[i] = 12.0f;
+                                CurMat.Textures.EmissiveTex.x = TempIndex; 
+                                if(Result != 2 && JustCreated) obj.LocalMaterials[i].emission = 12.0f;
                             break;
                             case(TexturePurpose.Metallic):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref MetallicTexs, ref TempIndex); 
-                                CurMat.MetallicTex.x = TempIndex; 
+                                CurMat.Textures.MetallicTex.x = TempIndex; 
                                 if(Result == 1) MetallicTexChannelIndex.Add(ReadIndex);
                             break;
                             case(TexturePurpose.Roughness):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref RoughnessTexs, ref TempIndex); 
-                                CurMat.RoughnessTex.x = TempIndex; 
+                                CurMat.Textures.RoughnessTex.x = TempIndex; 
                                 if(Result == 1) RoughnessTexChannelIndex.Add(ReadIndex);
                             break;
                             case(TexturePurpose.Alpha):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref AlphaTexs, ref TempIndex); 
-                                CurMat.AlphaTex.x = TempIndex; 
+                                CurMat.Textures.AlphaTex.x = TempIndex; 
                                 if(Result == 1) AlphaTexChannelIndex.Add(ReadIndex);
                             break;
                             case(TexturePurpose.MatCapMask):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref MatCapMasks, ref TempIndex); 
-                                CurMat.MatCapMask.x = TempIndex; 
+                                CurMat.Textures.MatCapMask.x = TempIndex; 
                                 if(Result == 1) MatCapMaskChannelIndex.Add(ReadIndex);
                             break;
                         }
                     }
 
-                    if(JustCreated) {
-                        CurMat.SecondaryNormalTexScaleOffset = TempScale;
-                        CurMat.SecondaryAlbedoTexScaleOffset = TempScale;
-                        CurMat.AlbedoTextureScale = TempScale;
-                        CurMat.SecondaryTextureScaleOffset = TempScale;
-                        CurMat.NormalTexScaleOffset = TempScale;
-                    }
-
-                    if(JustCreated && obj.EmissionColor[i].x == 0 && obj.EmissionColor[i].y == 0 && obj.EmissionColor[i].z == 0) obj.EmissionColor[i] = new Vector3(1,1,1);
-                    CurMat.MetallicRemap = obj.MetallicRemap[i];
-                    CurMat.RoughnessRemap = obj.RoughnessRemap[i];
-                    CurMat.BaseColor = (!obj.UseKelvin[i]) ? obj.BaseColor[i] : new Vector3(Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).r, Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).g, Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).b);
-                    CurMat.emission = obj.emission[i];
-                    CurMat.Roughness = obj.Roughness[i];
-                    CurMat.specTrans = obj.SpecTrans[i];
-                    CurMat.EmissionColor = obj.EmissionColor[i];
-                    CurMat.ColorBleed = obj.ColorBleed[i];
-                    CurMat.MatType = (int)obj.MaterialOptions[i];
-                    CurMat.TransmittanceColor = obj.TransmissionColor[i];
-                    CurMat.IOR = obj.IOR[i];
-                    CurMat.metallic = obj.Metallic[i];
-                    CurMat.specularTint = obj.SpecularTint[i];
-                    CurMat.sheen = obj.Sheen[i];
-                    CurMat.sheenTint = obj.SheenTint[i];
-                    CurMat.clearcoat = obj.ClearCoat[i];
-                    CurMat.clearcoatGloss = obj.ClearCoatGloss[i];
-                    CurMat.anisotropic = obj.Anisotropic[i];
-                    CurMat.anisotropicRotation = obj.AnisotropicRotation[i] * 3.14159f;
-                    CurMat.flatness = obj.Flatness[i];
-                    CurMat.diffTrans = obj.DiffTrans[i];
-                    CurMat.scatterDistance = obj.ScatterDist[i];
-                    CurMat.Specular = obj.Specular[i];
-                    CurMat.AlphaCutoff = obj.AlphaCutoff[i];
-                    CurMat.NormalStrength = obj.NormalStrength[i];
-                    CurMat.Hue = obj.Hue[i];
-                    CurMat.Saturation = obj.Saturation[i];
-                    CurMat.Brightness = obj.Brightness[i];
-                    CurMat.Contrast = obj.Contrast[i];
-                    CurMat.BlendColor = obj.BlendColor[i];
-                    CurMat.BlendFactor = obj.BlendFactor[i];
-                    CurMat.AlbedoTextureScale = obj.MainTexScaleOffset[i];
-                    CurMat.SecondaryAlbedoTexScaleOffset = obj.SecondaryAlbedoTexScaleOffset[i];
-                    CurMat.SecondaryTextureScaleOffset = obj.SecondaryTextureScaleOffset[i];
-                    CurMat.NormalTexScaleOffset = obj.NormalTexScaleOffset[i];
-                    CurMat.RotationNormal = obj.RotationNormal[i] * 3.14159f;
-                    CurMat.RotationSecondary = obj.RotationSecondary[i] * 3.14159f;
-                    CurMat.RotationSecondaryDiffuse = obj.RotationSecondaryDiffuse[i] * 3.14159f;
-                    CurMat.RotationSecondaryNormal = obj.RotationSecondaryNormal[i] * 3.14159f;
-                    CurMat.Rotation = obj.Rotation[i] * 3.14159f;
-                    CurMat.AlbedoBlendFactor = obj.AlbedoBlendFactor[i];
-                    CurMat.SecondaryNormalTexBlend = obj.SecondaryNormalTexBlend[i];
-                    CurMat.DetailNormalStrength = obj.DetailNormalStrength[i];
-                    CurMat.SecondaryNormalTexScaleOffset = obj.SecondaryNormalTexScaleOffset[i];
-                    if(JustCreated) obj.Flags[i] = CommonFunctions.SetFlagVar(obj.Flags[i], CommonFunctions.Flags.UseSmoothness, RelevantMat.UsesSmoothness);
-                    CurMat.Tag = obj.Flags[i];
-                    if(i == obj.BaseColor.Length - 1) obj.JustCreated = false;
+                    if(JustCreated && obj.LocalMaterials[i].EmissionColor.x == 0 && obj.LocalMaterials[i].EmissionColor.y == 0 && obj.LocalMaterials[i].EmissionColor.z == 0) obj.LocalMaterials[i].EmissionColor = new Vector3(1,1,1);
+                    if(JustCreated) obj.LocalMaterials[i].Tag = CommonFunctions.SetFlagVar(obj.LocalMaterials[i].Tag, CommonFunctions.Flags.UseSmoothness, RelevantMat.UsesSmoothness);
+                    CurMat.MatData = obj.LocalMaterials[i];
+                    CurMat.MatData.BaseColor = (!obj.UseKelvin[i]) ? obj.LocalMaterials[i].BaseColor : new Vector3(Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).r, Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).g, Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).b);
+                    if(i == obj.LocalMaterials.Length - 1) obj.JustCreated = false;
                     obj.Indexes[i] = Offset;
                     obj.MaterialIndex[i] = CurMatIndex;
                     obj.LocalMaterialIndex[i] = CurMatIndex;
@@ -1402,12 +1351,12 @@ namespace TrueTrace {
                     Triangles[OffsetReal].Extend(V3);
                     Triangles[OffsetReal].Validate(ParentScale);
 
-                    if (_Materials[(int)TempTri.MatDat].emission > 0.0f) {
+                    if (_Materials[(int)TempTri.MatDat].MatData.emission > 0.0f) {
                         bool IsValid = true;
                         Vector3 SecondaryBaseCol = Vector3.one;
                         #if AccurateLightTris
-                            if(_Materials[(int)TempTri.MatDat].EmissiveTex.x != 0) {
-                                int ThisIndex = _Materials[(int)TempTri.MatDat].EmissiveTex.x - 1;
+                            if(_Materials[(int)TempTri.MatDat].Textures.EmissiveTex.x != 0) {
+                                int ThisIndex = _Materials[(int)TempTri.MatDat].Textures.EmissiveTex.x - 1;
                                 Vector2 UVV = (new Vector2(Mathf.HalfToFloat((ushort)(TempTri.tex0 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.tex0 & 0xFFFF))) + 
                                                 new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge1 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge1 & 0xFFFF))) + 
                                                 new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge2 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge2 & 0xFFFF)))) / 3.0f;
@@ -1439,8 +1388,8 @@ namespace TrueTrace {
                             
                             }
                         #endif
-                        if(IsValid && _Materials[(int)TempTri.MatDat].emission > 1) {
-                            Vector3 Radiance = _Materials[(int)TempTri.MatDat].emission * _Materials[(int)TempTri.MatDat].BaseColor;
+                        if(IsValid && _Materials[(int)TempTri.MatDat].MatData.emission > 1) {
+                            Vector3 Radiance = _Materials[(int)TempTri.MatDat].MatData.emission * _Materials[(int)TempTri.MatDat].MatData.BaseColor;
                             float radiance = luminance(Radiance.x, Radiance.y, Radiance.z);
                             float area = AreaOfTriangle(ParentMat * V1, ParentMat * V2, ParentMat * V3);
                             if(area != 0 && radiance > 0) {
@@ -1454,9 +1403,9 @@ namespace TrueTrace {
                                     posedge1 = TempTri.posedge1,
                                     posedge2 = TempTri.posedge2,
                                     TriTarget = (uint)(OffsetReal),
-                                    SourceEnergy = Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol))
+                                    SourceEnergy = Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].MatData.emission * Scale(_Materials[(int)TempTri.MatDat].MatData.BaseColor, SecondaryBaseCol))
                                     });
-                                LuminanceWeights.Add(_Materials[(int)TempTri.MatDat].emission);//Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol)));
+                                LuminanceWeights.Add(_Materials[(int)TempTri.MatDat].MatData.emission);//Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol)));
                                 AggTriangles[OffsetReal].IsEmissive = 1;
                                 IllumTriCount++;
                             }

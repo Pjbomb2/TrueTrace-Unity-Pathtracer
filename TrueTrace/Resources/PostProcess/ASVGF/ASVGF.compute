@@ -103,9 +103,9 @@ Texture2D<uint> ReflRefracB;
 Texture2D<half4> TEX_ASVGF_HIST_MOMENTS_HF_A;
 
 
-RWTexture2D<uint4> TEX_PT_NORMALS_AWrite;
-Texture2D<uint4> TEX_PT_NORMALS_A;
-Texture2D<uint4> TEX_PT_NORMALS_B;
+RWTexture2D<uint2> TEX_PT_NORMALS_AWrite;
+Texture2D<uint2> TEX_PT_NORMALS_A;
+Texture2D<uint2> TEX_PT_NORMALS_B;
 
 Texture2D<float4> TEX_ASVGF_HIST_COLOR_LF_SH_A;
 
@@ -281,10 +281,9 @@ void CopyData(uint3 id : SV_DispatchThreadID)
     MetallicAWrite[id.xy] = MetRough;//, ReflectedRefracted, asfloat((asuint(ScreenSpaceInfo[id.xy].w) << 3) >> 3));
     ReflRefracAWrite[id.xy] = (ReflectedRefracted << 31) | ((ScreenInfo.w << 4) >> 4) | ((min(GetBounceData(Pixel.MetRoughIsSpec), 3) << 29));
 	AlbedoColorA[id.xy] = AlbCol;
-	TEX_PT_NORMALS_AWrite[id.xy] = ScreenInfo.xyxy;
+	TEX_PT_NORMALS_AWrite[id.xy] = ScreenInfo.xy;
 	if(!(!ReflectedRefracted || InvalidReprojection)) {
-		if(IsDiffuse) TEX_PT_NORMALS_AWrite[id.xy] = uint4(ScreenInfo.xy, TEX_PT_NORMALS_B[pos_prev].zw);//GeoNorm, Norm
-		else TEX_PT_NORMALS_AWrite[id.xy] = uint4(TEX_PT_NORMALS_B[pos_prev].xy, ScreenInfo.xy);//GeoNorm, Norm
+		if(!IsDiffuse) TEX_PT_NORMALS_AWrite[id.xy] = TEX_PT_NORMALS_B[pos_prev].xy;//GeoNorm, Norm
 	}
 }
 
@@ -1023,7 +1022,6 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 	float shininess = clamp(2.0 / max(pow(MetallicA[ipos].y, 4), 0.001f) - 2.0, 0.0, 32.0);
 
 	float3 geo_normal_curr = i_octahedral_32(TEX_PT_NORMALS_A[ipos].x);
-	float3 geo_normal_curr2 = i_octahedral_32(TEX_PT_NORMALS_A[ipos].z);
 
 	// Try to get the history sample for all channels, including HF moments
 	bool temporal_sample_valid_diff = false;
@@ -1054,7 +1052,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 				continue;
 
 			float depth_prev = TEX_PT_VIEW_DEPTH_B[p].x;
-			uint4 norms = TEX_PT_NORMALS_B[p];
+			uint2 norms = TEX_PT_NORMALS_B[p];
 			bool ReflectedRefractedPrev = ReflRefracB[p] >> 31;
 			float3  normal_prev = i_octahedral_32(norms.y);
 			float3  geo_normal_prev = i_octahedral_32(norms.x);//needs to be TEX_PT_GEO_NORMAL_B, but since for now I am not worrying about normal maps yet, it can use the same texture
@@ -1079,10 +1077,6 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 						temporal_moments_histlen_hf += TEX_ASVGF_HIST_MOMENTS_HF_B[p].rgba * w_diff;
 						temporal_sum_w_diff += w_diff;
 						float w_spec = w[i] * pow(max(dot_normals, 0), shininess);
-						temporal_color_histlen_spec += float4(unpackRGBE(asuint(TEX_ASVGF_FILTERED_SPEC_B[p].x)), TEX_ASVGF_FILTERED_SPEC_B[p].y) * w_spec;
-						temporal_sum_w_spec += w_spec;
-					} else if(dot(geo_normal_curr2, i_octahedral_32(norms.z)) > 0.9f) {
-						float w_spec = w[i];// * pow(max(dot_normals, 0), shininess);
 						temporal_color_histlen_spec += float4(unpackRGBE(asuint(TEX_ASVGF_FILTERED_SPEC_B[p].x)), TEX_ASVGF_FILTERED_SPEC_B[p].y) * w_spec;
 						temporal_sum_w_spec += w_spec;
 					}

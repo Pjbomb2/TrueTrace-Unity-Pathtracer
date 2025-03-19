@@ -18,7 +18,7 @@ namespace TrueTrace {
     {
         public static RayTracingMaster RayMaster;
         [HideInInspector] public static Camera _camera;
-        public static bool DoKernelProfiling = false;
+        public static bool DoKernelProfiling = true;
         [HideInInspector] [SerializeField] public string LocalTTSettingsName = "TTGlobalSettings";
         private bool OverriddenResolutionIsActive = false;
         public bool HDRPorURPRenderInScene = false;
@@ -44,54 +44,7 @@ namespace TrueTrace {
                 RayObjectDatas DataToWrite = new RayObjectDatas() {
                     ID = ID,
                     MatName = NameIndex,
-                    OptionID = (int)OBJtoWrite.MaterialOptions[Index],
-                    TransCol = OBJtoWrite.TransmissionColor[Index],
-                    BaseCol = OBJtoWrite.BaseColor[Index],
-                    MetRemap = OBJtoWrite.MetallicRemap[Index],
-                    RoughRemap = OBJtoWrite.RoughnessRemap[Index],
-                    Emiss = OBJtoWrite.emission[Index],
-                    EmissCol = OBJtoWrite.EmissionColor[Index],
-                    Rough = OBJtoWrite.Roughness[Index],
-                    IOR = OBJtoWrite.IOR[Index],
-                    Met = OBJtoWrite.Metallic[Index],
-                    SpecTint = OBJtoWrite.SpecularTint[Index],
-                    Sheen = OBJtoWrite.Sheen[Index],
-                    SheenTint = OBJtoWrite.SheenTint[Index],
-                    Clearcoat = OBJtoWrite.ClearCoat[Index],
-                    ClearcoatGloss = OBJtoWrite.ClearCoatGloss[Index],
-                    Anisotropic = OBJtoWrite.Anisotropic[Index],
-                    AnisotropicRotation = OBJtoWrite.AnisotropicRotation[Index],
-                    Flatness = OBJtoWrite.Flatness[Index],
-                    DiffTrans = OBJtoWrite.DiffTrans[Index],
-                    SpecTrans = OBJtoWrite.SpecTrans[Index],
-                    FollowMat = OBJtoWrite.FollowMaterial[Index],
-                    ScatterDist = OBJtoWrite.ScatterDist[Index],
-                    Spec = OBJtoWrite.Specular[Index],
-                    AlphaCutoff = OBJtoWrite.AlphaCutoff[Index],
-                    NormStrength = OBJtoWrite.NormalStrength[Index],
-                    DetailNormalStrength = OBJtoWrite.DetailNormalStrength[Index],
-                    Hue = OBJtoWrite.Hue[Index],
-                    Brightness = OBJtoWrite.Brightness[Index],
-                    Contrast = OBJtoWrite.Contrast[Index],
-                    Saturation = OBJtoWrite.Saturation[Index],
-                    BlendColor = OBJtoWrite.BlendColor[Index],
-                    BlendFactor = OBJtoWrite.BlendFactor[Index],
-                    MainTexScaleOffset = OBJtoWrite.MainTexScaleOffset[Index],
-                    SecondaryAlbedoTexScaleOffset = OBJtoWrite.SecondaryAlbedoTexScaleOffset[Index],
-                    SecondaryTextureScaleOffset = OBJtoWrite.SecondaryTextureScaleOffset[Index],
-                    NormalTexScaleOffset = OBJtoWrite.NormalTexScaleOffset[Index],
-                    RotationNormal = OBJtoWrite.RotationNormal[Index],
-                    RotationSecondary = OBJtoWrite.RotationSecondary[Index],
-                    RotationSecondaryDiffuse = OBJtoWrite.RotationSecondaryDiffuse[Index],
-                    RotationSecondaryNormal = OBJtoWrite.RotationSecondaryNormal[Index],
-                    Rotation = OBJtoWrite.Rotation[Index],
-                    Flags = OBJtoWrite.Flags[Index],
-                    UseKelvin = OBJtoWrite.UseKelvin[Index],
-                    KelvinTemp = OBJtoWrite.KelvinTemp[Index],
-                    ColorBleed = OBJtoWrite.ColorBleed[Index],
-                    SecondaryNormalTexBlend = OBJtoWrite.SecondaryNormalTexBlend[Index],
-                    SecondaryNormalTexScaleOffset = OBJtoWrite.SecondaryNormalTexScaleOffset[Index],
-                    AlbedoBlendFactor = OBJtoWrite.AlbedoBlendFactor[Index]
+                    MatData = OBJtoWrite.LocalMaterials[Index]
                 };
                 if(WriteID == -1) {
                     raywrites.RayObj.Add(DataToWrite);

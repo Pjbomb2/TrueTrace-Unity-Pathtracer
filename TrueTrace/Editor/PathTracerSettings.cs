@@ -2626,8 +2626,8 @@ Slider AperatureSlider;
                ResField.ElementAt(0).style.minWidth = 75;
                ResField.ElementAt(1).style.width = 35;
                TopEnclosingBox.Add(ResField);
-               ResField.RegisterValueChangedCallback(evt => {
-                                                            ResField.value = Mathf.Max(Mathf.Min(evt.newValue, 1.0f), 0.1f);
+               ResField.RegisterCallback<FocusOutEvent>(evt => {
+                                                            ResField.value = Mathf.Max(Mathf.Min(ResField.value, 1.0f), 0.1f);
                                                             RenderRes = ResField.value; 
                                                             RayMaster.LocalTTSettings.RenderScale = RenderRes; 
                                                             if(MainSource.Children().Contains(UpscalerField)) {
@@ -3001,54 +3001,7 @@ Slider AperatureSlider;
                                        Debug.Log("Missing material marked for update");
                                     } else {
                                        EditorUtility.SetDirty(TempRTO);
-                                       TempRTO.MaterialOptions[NameIndex] = (RayTracingObject.Options)Ray.OptionID;
-                                       TempRTO.TransmissionColor[NameIndex] = Ray.TransCol;
-                                       TempRTO.BaseColor[NameIndex] = Ray.BaseCol;
-                                       TempRTO.MetallicRemap[NameIndex] = Ray.MetRemap;
-                                       TempRTO.RoughnessRemap[NameIndex] = Ray.RoughRemap;
-                                       TempRTO.emission[NameIndex] = Ray.Emiss;
-                                       TempRTO.EmissionColor[NameIndex] = Ray.EmissCol;
-                                       TempRTO.Roughness[NameIndex] = Ray.Rough;
-                                       TempRTO.IOR[NameIndex] = Ray.IOR;
-                                       TempRTO.Metallic[NameIndex] = Ray.Met;
-                                       TempRTO.SpecularTint[NameIndex] = Ray.SpecTint;
-                                       TempRTO.Sheen[NameIndex] = Ray.Sheen;
-                                       TempRTO.SheenTint[NameIndex] = Ray.SheenTint;
-                                       TempRTO.ClearCoat[NameIndex] = Ray.Clearcoat;
-                                       TempRTO.ClearCoatGloss[NameIndex] = Ray.ClearcoatGloss;
-                                       TempRTO.Anisotropic[NameIndex] = Ray.Anisotropic;
-                                       TempRTO.AnisotropicRotation[NameIndex] = Ray.AnisotropicRotation;
-                                       TempRTO.Flatness[NameIndex] = Ray.Flatness;
-                                       TempRTO.DiffTrans[NameIndex] = Ray.DiffTrans;
-                                       TempRTO.SpecTrans[NameIndex] = Ray.SpecTrans;
-                                       TempRTO.FollowMaterial[NameIndex] = Ray.FollowMat;
-                                       TempRTO.ScatterDist[NameIndex] = Ray.ScatterDist;
-                                       TempRTO.Specular[NameIndex] = Ray.Spec;
-                                       TempRTO.AlphaCutoff[NameIndex] = Ray.AlphaCutoff;
-                                       TempRTO.NormalStrength[NameIndex] = Ray.NormStrength;
-                                       TempRTO.DetailNormalStrength[NameIndex] = Ray.DetailNormalStrength;
-                                       TempRTO.Hue[NameIndex] = Ray.Hue;
-                                       TempRTO.Brightness[NameIndex] = Ray.Brightness;
-                                       TempRTO.Contrast[NameIndex] = Ray.Contrast;
-                                       TempRTO.Saturation[NameIndex] = Ray.Saturation;
-                                       TempRTO.BlendColor[NameIndex] = Ray.BlendColor;
-                                       TempRTO.BlendFactor[NameIndex] = Ray.BlendFactor;
-                                       TempRTO.MainTexScaleOffset[NameIndex] = Ray.MainTexScaleOffset;
-                                       TempRTO.SecondaryAlbedoTexScaleOffset[NameIndex] = Ray.SecondaryAlbedoTexScaleOffset;
-                                       TempRTO.SecondaryTextureScaleOffset[NameIndex] = Ray.SecondaryTextureScaleOffset;
-                                       TempRTO.NormalTexScaleOffset[NameIndex] = Ray.NormalTexScaleOffset;
-                                       TempRTO.RotationNormal[NameIndex] = Ray.RotationNormal;
-                                       TempRTO.RotationSecondary[NameIndex] = Ray.RotationSecondary;
-                                       TempRTO.RotationSecondaryDiffuse[NameIndex] = Ray.RotationSecondaryDiffuse;
-                                       TempRTO.RotationSecondaryNormal[NameIndex] = Ray.RotationSecondaryNormal;
-                                       TempRTO.Rotation[NameIndex] = Ray.Rotation;
-                                       TempRTO.Flags[NameIndex] = Ray.Flags;
-                                       TempRTO.UseKelvin[NameIndex] = Ray.UseKelvin;
-                                       TempRTO.KelvinTemp[NameIndex] = Ray.KelvinTemp;
-                                       TempRTO.ColorBleed[NameIndex] = Ray.ColorBleed;
-                                       TempRTO.AlbedoBlendFactor[NameIndex] = Ray.AlbedoBlendFactor;
-                                       TempRTO.SecondaryNormalTexScaleOffset[NameIndex] = Ray.SecondaryNormalTexScaleOffset;
-                                       TempRTO.SecondaryNormalTexBlend[NameIndex] = Ray.SecondaryNormalTexBlend;
+                                       TempRTO.LocalMaterials[NameIndex] = Ray.MatData;
                                        TempRTO.CallMaterialEdited();
                                     }
                                  }

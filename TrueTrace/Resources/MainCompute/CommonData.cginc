@@ -240,7 +240,7 @@ inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotati
 inline void HandleRotation(inout float2 UV, float Rotation) {
 	if(Rotation != 0) {
 		float sinc, cosc;
-		sincos(Rotation / 180.0f, sinc, cosc);
+		sincos(Rotation / 180.0f * 3.14159f, sinc, cosc);
 		UV -= 0.5f;
 		float2 tempuv = UV;
 		UV.x = tempuv.x * cosc - tempuv.y * sinc;
