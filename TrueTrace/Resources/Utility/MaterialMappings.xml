@@ -48,11 +48,6 @@
         <ReadIndex>-3</ReadIndex>
         <TextureName>_DetailNormalMap</TextureName>
       </TexturePairs>
-      <TexturePairs>
-        <Purpose>11</Purpose>
-        <ReadIndex>0</ReadIndex>
-        <TextureName>_ParallaxMap</TextureName>
-      </TexturePairs>
     </AvailableTextures>
     <MetallicRange>_Metallic</MetallicRange>
     <RoughnessRange>_Glossiness</RoughnessRange>

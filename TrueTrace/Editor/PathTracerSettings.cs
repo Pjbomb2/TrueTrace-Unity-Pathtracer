@@ -1135,14 +1135,18 @@ Toolbar toolbar;
            var FallbackPort = _graphView.GeneratePort(dialogueNode, Direction.Input, T, Port.Capacity.Multi);
            FallbackPort.portName = PropertyID;
            dialogueNode.inputContainer.Add(FallbackPort);
-               if(InputElement != -1) {
+           dialogueNode.inputContainer.Add(DropField);
+               // if(InputElement != -1) {
                   PopupField<string> ChannelField = new PopupField<string>("Read Channel");
                   ChannelField.choices = ChannelProperties;               
-                  ChannelField.index = InputElement;
+                  ChannelField.index = Mathf.Max(InputElement, 0);
                   dialogueNode.GUID = ChannelProperties[ChannelField.index];
                   dialogueNode.inputContainer.Add(ChannelField);
+                  ChannelField.visible = InputElement != -1;
+
+                  // Debug.Log(dialogueNode.inputContainer.childCount);
                   ChannelField.RegisterValueChangedCallback(evt => {dialogueNode.GUID = ChannelProperties[ChannelField.index];});
-               }
+               // }
                DropField.choices = TextureProperties;
                DropField.index = (int)Mathf.Max(TextureProperties.IndexOf(InitialValue),0);
                dialogueNode.title = VerboseTextureProperties[DropField.index];
@@ -1157,14 +1161,15 @@ Toolbar toolbar;
                DropField.index = (int)Mathf.Max(ColorProperties.IndexOf(InitialValue),0);
                dialogueNode.title = VerboseColorProperties[DropField.index];
                DropField.RegisterValueChangedCallback(evt => {dialogueNode.title = VerboseColorProperties[DropField.index];});
+               dialogueNode.inputContainer.Add(DropField);
            }else if(T == typeof(float)) {
                   DropField.choices = FloatProperties;
                   DropField.index = (int)Mathf.Max(FloatProperties.IndexOf(InitialValue),0);
                   dialogueNode.title = VerboseFloatProperties[DropField.index];
                   DropField.RegisterValueChangedCallback(evt => {dialogueNode.title = VerboseFloatProperties[DropField.index];});
+               dialogueNode.inputContainer.Add(DropField);
            }
 
-           dialogueNode.inputContainer.Add(DropField);
            dialogueNode.RefreshExpandedState();
            dialogueNode.RefreshPorts();
            dialogueNode.SetPosition(new Rect(Pos, new Vector2(50, 100)));
@@ -1301,23 +1306,25 @@ Toolbar toolbar;
             GUID = "Output"
          };
 
+         
+
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Color), Port.Capacity.Single, "Base Color"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Base Texture"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Normal Texture"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Emission Texture"));
-         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Metallic Texture(Single Component)"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Metallic Texture"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Metallic Range"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Metallic Min"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Metallic Max"));
-         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Roughness Texture(Single Component)"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Roughness Texture"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Roughness Range"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Roughness Min"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Roughness Max"));
-         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Alpha Texture(Single Component)"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Alpha Texture"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "MatCap Texture"));
-         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "MatCap Mask(Single Component)"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "MatCap Mask"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Secondary Base Texture"));
-         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Secondary Base Texture Mask(Single Component)"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Secondary Base Texture Mask"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Detail Normal Texture"));
 
          _graphView.AddElement(OutputNode);
@@ -1520,12 +1527,12 @@ Toolbar toolbar;
 
 
         var TextureNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Texture", typeof(Texture), new Vector2(0,0), "null"));}) {text = "Texture"};
-        var PartialTextureNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Texture", typeof(Texture), new Vector2(0,0), "null", 0));}) {text = "Texture(Single Component)"};
+        // var PartialTextureNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Texture", typeof(Texture), new Vector2(0,0), "null", 0));}) {text = "Texture"};
         var FloatNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Float", typeof(float), new Vector2(0,0), "null"));}) {text = "Float"};
         var ColorNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Color", typeof(Color), new Vector2(0,0), "null"));}) {text = "Color"};
 
         toolbar.Add(TextureNodeButton);//partial textures will be defined as according to the output they are connected to 
-        toolbar.Add(PartialTextureNodeButton);//partial textures will be defined as according to the output they are connected to 
+        // toolbar.Add(PartialTextureNodeButton);//partial textures will be defined as according to the output they are connected to 
         toolbar.Add(FloatNodeButton);
         toolbar.Add(ColorNodeButton);
         MaterialPairingMenu.Add(toolbar);
@@ -1814,14 +1821,14 @@ Toolbar toolbar;
          FogSlider.showInputField = true;        
          FogSlider.style.width = 400;
          FogSlider.ElementAt(0).style.minWidth = 65;
-         FogSlider.RegisterValueChangedCallback(evt => {FogDensity = evt.newValue; RayMaster.LocalTTSettings.FogDensity = FogDensity;});
+         FogSlider.RegisterCallback<FocusOutEvent>(evt => {FogDensity = FogSlider.value; RayMaster.LocalTTSettings.FogDensity = FogDensity;});        
 
          Slider FogHeightSlider = new Slider() {label = "Fog Height: ", value = FogHeight, highValue = 80.0f, lowValue = 0.00001f};
          FogHeightSlider.showInputField = true;        
          FogHeightSlider.style.width = 400;
          FogHeightSlider.ElementAt(0).style.minWidth = 65;
          FogHeightSlider.value = FogHeight;
-         FogHeightSlider.RegisterValueChangedCallback(evt => {FogHeight = evt.newValue; RayMaster.LocalTTSettings.FogHeight = FogHeight;});
+         FogHeightSlider.RegisterCallback<FocusOutEvent>(evt => {FogHeight = FogHeightSlider.value; RayMaster.LocalTTSettings.FogHeight = FogHeight;});        
          
          ColorField FogColorField = new ColorField();
          FogColorField.value = FogColor;
@@ -3067,10 +3074,45 @@ public class DialogueGraphView : GraphView
 {
 
     public DialogueGraphView() {
+      graphViewChanged = OnGraphViewChanged;
         this.AddManipulator(new ContentDragger());
         this.AddManipulator(new SelectionDragger());
         this.AddManipulator(new RectangleSelector());
     }
+
+    private bool CheckIfSingleComp(string PortName) {
+      return PortName.Contains("Mask") || PortName.Equals("Alpha Texture") || PortName.Equals("Metallic Texture") || PortName.Equals("Roughness Texture");
+    }
+    private UnityEditor.Experimental.GraphView.GraphViewChange OnGraphViewChanged(UnityEditor.Experimental.GraphView.GraphViewChange graphViewChange) {
+      if(graphViewChange.edgesToCreate != null)
+      foreach(var A in graphViewChange.edgesToCreate) {
+         if(A.output != null) {
+            Port OutPort = A.output;
+            if(OutPort.node != null) {
+               Node OutNode = OutPort.node;
+               if(OutNode.inputContainer.childCount >= 2) {
+                  try {
+                     Port InPort = A.input;
+                     Node InNode = InPort.node;
+                     if(CheckIfSingleComp(InPort.portName))
+                        ((PopupField<string>)OutNode.inputContainer[2]).visible = true;
+                     else
+                        ((PopupField<string>)OutNode.inputContainer[2]).visible = false;
+                  } catch (System.Exception E) {
+                     Debug.LogError(E);
+                  }
+
+               }
+
+            }
+         }
+         // if(OutNode.inputContainer.ElementAt(2) == typeof(PopupField)) 
+         // Debug.Log(OutNode.inputContainer.ElementAt(2));
+         // InNode.inputContainer[2].
+      }
+      return graphViewChange;
+    }
+
     public override List<Port> GetCompatiblePorts(Port startPort, NodeAdapter nodeAdapater) {
         var compatablePorts = new List<Port>();
 

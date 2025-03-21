@@ -179,14 +179,15 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
 
     {
-        [branch]if(hitDat.MatCapTex.x > 0 && hitDat.MatCapMask.x > 0) {
+        [branch]if(hitDat.MatCapTex.x > 0) {
             float3 worldViewUp = normalize(float3(0, 1, 0) - ray.direction * dot(ray.direction, float3(0, 1, 0)));
             float3 worldViewRight = normalize(cross(ray.direction, worldViewUp));
             
             float2 matcapUV = float2(dot(worldViewRight, norm), dot(worldViewUp, norm)) * 0.5f + 0.5;
 
             float4 matcap = SampleTexture(matcapUV, SampleMatCap, hitDat);
-            hitDat.surfaceColor = lerp(hitDat.surfaceColor, matcap.xyz, SampleTexture(BaseUv, SampleMatCapMask, hitDat).x);
+            if(hitDat.MatCapMask.x > 0) hitDat.surfaceColor = lerp(hitDat.surfaceColor, matcap.xyz, SampleTexture(BaseUv, SampleMatCapMask, hitDat).x);
+            else hitDat.surfaceColor = matcap.xyz;
         }
     }
 

@@ -1968,7 +1968,7 @@ float3 LoadSurfaceInfoCurrentInPrev2(int2 id) {
 	}	    
 }
 
-float3 LoadSurfaceInfoPrev2(int2 id) {
+inline float3 LoadSurfaceInfoPrev2(int2 id) {
     uint4 Target = PrimaryTriDataPrev[id.xy];
 	if(Target.w == 1) return asfloat(Target.xyz);
     MyMeshDataCompacted Mesh = _MeshDataPrev[Target.x];
@@ -1998,7 +1998,7 @@ float3 LoadSurfaceInfoPrev(int2 id) {
     return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
 }
 
-float3 LoadSurfaceInfoPrevInCurrent(int2 id) {
+inline float3 LoadSurfaceInfoPrevInCurrent(int2 id) {
     uint4 Target = PrimaryTriDataPrev[id.xy];
 	if(Target.w == 1) return asfloat(Target.xyz);
     MyMeshDataCompacted Mesh = _MeshData[Target.x];
