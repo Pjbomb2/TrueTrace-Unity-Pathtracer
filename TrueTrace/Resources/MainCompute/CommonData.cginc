@@ -1998,6 +1998,25 @@ float3 LoadSurfaceInfoPrev(int2 id) {
     return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
 }
 
+float3 LoadSurfaceInfoPrev3(int2 id) {
+    uint4 Target = PrimaryTriDataPrev[id.xy];
+	if(Target.w == 1) return asfloat(Target.xyz);
+    MyMeshDataCompacted Mesh = _MeshDataPrev[Target.x];
+    // Target.y += Mesh.TriOffset;
+    float2 TriUV;
+    TriUV.x = asfloat(Target.z);
+    TriUV.y = asfloat(Target.w);
+    float4x4 Inverse = inverse(Mesh.W2L);
+    if(Mesh.SkinnedOffset == -1) {
+	    Target.y += Mesh.TriOffset;
+	    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+	} else {
+	    Target.y += Mesh.SkinnedOffset;
+	    return mul(Inverse, float4(SkinnedMeshTriBufferPrev[Target.y].pos0 + TriUV.x * SkinnedMeshTriBufferPrev[Target.y].posedge1 + TriUV.y * SkinnedMeshTriBufferPrev[Target.y].posedge2,1)).xyz;
+	}	  
+}
+
+
 inline float3 LoadSurfaceInfoPrevInCurrent(int2 id) {
     uint4 Target = PrimaryTriDataPrev[id.xy];
 	if(Target.w == 1) return asfloat(Target.xyz);
@@ -2336,6 +2355,18 @@ inline void CalcPosNorm(uint4 TriData, inout float3 Pos, inout float3 Norm) {
 
 }
 
+inline void CalcPosOnly(uint4 TriData, inout float3 Pos) {
+	if(TriData.w == 99993) {
+		Pos = asfloat(TriData.xyz);
+	} else {
+	    MyMeshDataCompacted Mesh = _MeshData[TriData.x];
+	    float4x4 Inverse = inverse(Mesh.W2L);
+	    TriData.y += Mesh.TriOffset;
+		Pos = mul(Inverse, float4(AggTrisA[TriData.y].pos0 + asfloat(TriData.z) * AggTrisA[TriData.y].posedge1 + asfloat(TriData.w) * AggTrisA[TriData.y].posedge2,1)).xyz;		
+	}
+
+}
+
 inline float3 CalcPos(uint4 TriData) {
 	if(TriData.w == 99993) return asfloat(TriData.xyz);
     MyMeshDataCompacted Mesh = _MeshData[TriData.x];
@@ -2636,9 +2667,9 @@ inline uint Hash32Bit(uint a) {
 //double hash counting? take advantage of the hash collisions to store multiple values per hash?
 inline uint GenHash(float3 Pos, float3 Norm) {
 	Pos = abs(Pos) < 0.00001f ? 0.00001f : Pos;
-    int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);//length() seems to work better, but I reallly wanna find a way to make Dot() work, as thats wayyyy faster
+    int Layer = max(floor(log2(length(CamPos - Pos)) + 1), 1);//length() seems to work better, but I reallly wanna find a way to make Dot() work, as thats wayyyy faster
 
-    Pos = floor(Pos * 200.0f / pow(2, Layer));
+    Pos = floor(Pos * 35.0f / pow(2, Layer));
     uint3 Pos2 = asuint((int3)Pos);
     uint ThisHash = ((Pos2.x & 255) << 0) | ((Pos2.y & 255) << 8) | ((Pos2.z & 255) << 16);
     ThisHash |= (Layer & 31) << 24;
@@ -2656,7 +2687,7 @@ inline uint GenHash(float3 Pos, float3 Norm) {
 inline uint GenHashPrecompedLayer(float3 Pos, const int Layer, const float3 Norm) {
 	Pos = abs(Pos) < 0.00001f ? 0.00001f : Pos;
 
-    Pos = floor(Pos * 200.0f / pow(2, Layer));
+    Pos = floor(Pos * 35.0f / pow(2, Layer));
     uint3 Pos2 = asuint((int3)Pos);
     uint ThisHash = ((Pos2.x & 255) << 0) | ((Pos2.y & 255) << 8) | ((Pos2.z & 255) << 16);
     ThisHash |= (Layer & 31) << 24;
@@ -2672,15 +2703,15 @@ inline uint GenHashPrecompedLayer(float3 Pos, const int Layer, const float3 Norm
 
 inline float GetVoxSize(float3 Pos, inout int Layer) {
 	Pos = abs(Pos) < 0.00001f ? 0.00001f : Pos;
-    Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);
-    return pow(2, Layer) / 200.0f;
+    Layer = max(floor(log2(length(CamPos - Pos)) + 1), 1);
+    return pow(2, Layer) / 35.0f;
 }
 
 inline uint GenHashComputedNorm(float3 Pos, uint NormHash) {
 	Pos = abs(Pos) < 0.00001f ? 0.00001f : Pos;
-    int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);//length() seems to work better, but I reallly wanna find a way to make Dot() work, as thats wayyyy faster
+    int Layer = max(floor(log2(length(CamPos - Pos)) + 1), 1);//length() seems to work better, but I reallly wanna find a way to make Dot() work, as thats wayyyy faster
 
-    Pos = floor(Pos * 200.0f / pow(2, Layer));
+    Pos = floor(Pos * 35.0f / pow(2, Layer));
     uint3 Pos2 = asuint((int3)Pos);
     uint ThisHash = ((Pos2.x & 255) << 0) | ((Pos2.y & 255) << 8) | ((Pos2.z & 255) << 16);
     ThisHash |= (Layer & 31) << 24;
@@ -2719,8 +2750,8 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 
 		    GridVoxel Voxel;
 			Voxel.radiance = voxelDataPacked.xyz / 1e3f;
-		    Voxel.SampleNum = voxelDataPacked.w & 0x0000FFFF;
-		    Voxel.FrameNum = (voxelDataPacked.w >> 16) & 0x0000FFFF;
+		    Voxel.SampleNum = voxelDataPacked.w & 0x00FFFFFF;
+		    Voxel.FrameNum = (voxelDataPacked.w >> 24) & 0xFF;
 
 		    return Voxel;
 		}

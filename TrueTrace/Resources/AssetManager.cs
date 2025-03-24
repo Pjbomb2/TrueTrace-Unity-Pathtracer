@@ -1453,6 +1453,7 @@ namespace TrueTrace {
                         }
 
                         InstanceData.RenderQue[i].NodeOffset = CurNodeOffset;
+                        InstanceData.RenderQue[i].SkinnedOffset = -1;
                         InstanceData.RenderQue[i].TriOffset = CurTriOffset;
                         CurNodeOffset += InstanceData.RenderQue[i].AggNodes.Length;
                         CurTriOffset += InstanceData.RenderQue[i].AggTriangles.Length;
@@ -2203,7 +2204,8 @@ namespace TrueTrace {
                             AggNodeCount = Aggs[Index].AggNodeCount,
                             MaterialOffset = Aggs[Index].MaterialOffset,
                             LightTriCount = Aggs[Index].LightTriCount,
-                            LightNodeOffset = Aggs[Index].LightNodeOffset
+                            LightNodeOffset = Aggs[Index].LightNodeOffset,
+                            SkinnedOffset = -1
 
                         });
                         InstanceRenderQue[i].CompactedMeshData = MeshCount + i;

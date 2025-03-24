@@ -132,6 +132,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     float3 throughput = Color.throughput;
     [branch] if (TerrainExists && hit.mesh_id == 9999999) {
         Geomnorm = GetHeightmapNormal(pos, hit.triangle_id);
+        Geomnorm = i_octahedral_32(octahedral_32(Geomnorm));
         USGNorm = Geomnorm;
     } else {
         Geomnorm = GetTriangleNormal(hit.triangle_id, float2(hit.u, hit.v), Inverse);
@@ -145,7 +146,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     bool GotFlipped = dot(ray.direction, USGNorm) > 0.0f;
     if (GotFlipped) {USGNorm *= -1.0f; Geomnorm *= -1.0f;}//Backfacing surface
 
-    // Geomnorm = i_octahedral_32(octahedral_32(Geomnorm));
     norm = Geomnorm;
 
 #ifdef UseTextureLOD
@@ -392,7 +392,16 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     #endif
     if (!validBSDFSample) return;//If the ray failed, we have no choice but to terminate this path
     pos = ray.origin;
-      [branch] if (MaterialLobe != 3 && (UseNEE) && CurBounce < MaxBounce && (SecondaryBackgroundType == 1 || unitylightcount + LightMeshCount != 0)) {//Next event estimation
+
+#ifdef ReSTIRSampleReduction
+    bool D2 = true;
+    if(UseReSTIRGI && CurBounce == 0) {
+        D2 = (int(id.x)/1 + int(id.y)/1 + curframe)%2==0;
+    }
+    if(D2)
+#endif
+
+    [branch] if (MaterialLobe != 3 && (UseNEE) && CurBounce < MaxBounce && (SecondaryBackgroundType == 1 || unitylightcount + LightMeshCount != 0)) {//Next event estimation
         float3 LightNorm;
         float3 LightPosition;
         int LightFormat = TRILIGHT;
@@ -572,6 +581,13 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     }
                     Illum *= Color.throughput * bsdfmodifier;
                     bsdf_diffuse *= bsdfmodifier;
+#ifdef ReSTIRSampleReduction
+                    if(UseReSTIRGI && CurBounce == 0) {
+                        Illum *= 2.0f;
+                        bsdf_diffuse *= 2.0f;
+
+                    }
+#endif
 
                     if(LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) {
                         Illum *= pow(saturate(dot(to_light, -LightNorm)), MiscInfo.x) * (MiscInfo.x);
@@ -626,6 +642,13 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     Color.throughput = throughput;
 
     if(CB) {
+#ifdef ReSTIRSampleReduction
+        if(UseReSTIRGI && CurBounce == 0) {
+            CB = (int(id.x)/1 + int(id.y)/1 + curframe)%2==0;
+            if(!CB) return;
+            else Color.throughput *= 2.0f;
+        }
+#endif
         uint index2;//Congrats, the ray will continue its path
         InterlockedAdd(BufferSizes[CurBounce + 1].tracerays, 1, index2);
         const RayData GlobalRay = {ray.origin, pixel_index, ray.direction, pdf,set2(hit)};

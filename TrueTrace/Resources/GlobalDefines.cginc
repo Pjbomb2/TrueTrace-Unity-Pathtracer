@@ -31,6 +31,7 @@
 #define ClampRoughnessToBounce
 // #define AutoDebugReading
 // #define TTCustomMotionVectors
+// #define ReSTIRSampleReduction
 
 
 

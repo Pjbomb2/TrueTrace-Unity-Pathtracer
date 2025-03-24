@@ -776,6 +776,7 @@ void IntersectShadowHeightmap(int ray_index) {
             if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ShadowRaysBuffer[ray_index].EndPoint, 0);
             #ifdef RadCache
                 CacheBuffer[PixelIndex].RunningIlluminance = packRGBE(unpackRGBE(ShadowRaysBuffer[ray_index].DiffuseIlluminance) + unpackRGBE(CacheBuffer[PixelIndex].RunningIlluminance));
+                AddHitToCachePartial(CacheBuffer[PixelIndex], ShadowRaysBuffer[ray_index].origin);
             #endif
             if (IsNotPrimaryNEERay) {
                 if (CurBounce == 0) {
