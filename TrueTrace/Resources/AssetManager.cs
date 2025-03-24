@@ -1643,7 +1643,7 @@ namespace TrueTrace {
                             B[i2] = RayTracingSubMeshFlags.Enabled | RayTracingSubMeshFlags.ClosestHitOnly;
                         }
                         if(B2.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj))
-                            AccelStruct.AddInstance(A, B, true, false, (uint)((TempObj.SpecTrans[0] == 1) ? 0x2 : 0x1), (uint)MeshOffset);
+                            AccelStruct.AddInstance(A, B, true, false, (uint)((TempObj.LocalMaterials[0].SpecTrans == 1) ? 0x2 : 0x1), (uint)MeshOffset);
                         MeshOffset++;
                     }
                 }
@@ -2413,10 +2413,10 @@ namespace TrueTrace {
                     #if HardwareRT
                         var A = CurrentMaterial.gameObject.GetComponent<Renderer>();
                         if(A != null) {
-                            if(TempMat.MatData.specTrans == 1) AccelStruct.UpdateInstanceMask(A, 0x2);
+                            if(TempMat.MatData.SpecTrans == 1) AccelStruct.UpdateInstanceMask(A, 0x2);
                             else AccelStruct.UpdateInstanceMask(A, 0x1);
                         } else {
-                            if(TempMat.MatData.specTrans == 1) AccelStruct.UpdateInstanceMask(CurrentMaterial.gameObject.GetComponent<SkinnedMeshRenderer>(), 0x2);
+                            if(TempMat.MatData.SpecTrans == 1) AccelStruct.UpdateInstanceMask(CurrentMaterial.gameObject.GetComponent<SkinnedMeshRenderer>(), 0x2);
                             else AccelStruct.UpdateInstanceMask(CurrentMaterial.gameObject.GetComponent<SkinnedMeshRenderer>(), 0x1);
                         }
                     #endif
