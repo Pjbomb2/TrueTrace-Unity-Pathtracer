@@ -771,8 +771,6 @@ static float3 CalculateExtinction2(float3 apparantColor, float scatterDistance)
 //putting these^ here cuz I ALWAYS ctrl + f for the WRONG term when trying to find this function...
 inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const float max_distance, inout float3 throughput, const int MatOffset) {
     TrianglePos tri = triangle_get_positions(tri_id);
-  	TriangleUvs tri2 = triangle_get_positions2(tri_id);
-    int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
 
     float3 h = cross(ray.direction, tri.posedge2);
     float  a = dot(tri.posedge1, h);
@@ -781,56 +779,54 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const fl
     float3 s = ray.origin - tri.pos0;
     float  u = f * dot(s, h);
 
-    if (u >= 0.0f && u <= 1.0f) {
-        float3 q = cross(s, tri.posedge1);
-        float  v = f * dot(ray.direction, q);
+    float3 q = cross(s, tri.posedge1);
+    float  v = f * dot(ray.direction, q);
 
-        if (v >= 0.0f && u + v <= 1.0f) {
-            float t = f * dot(tri.posedge2, q);
-            [branch] if (t > 0.0f && t < max_distance) {
-	            #if defined(AdvancedAlphaMapped) || defined(AdvancedBackground) || defined(IgnoreGlassShadow)
-					if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, IsBackground) || GetFlag(_IntersectionMaterials[MaterialIndex].Tag, ShadowCaster)) return false; 
-	        		if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex || _IntersectionMaterials[MaterialIndex].specTrans == 1 || _IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
-		                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
-	        
-	                    if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex && _IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
-	                        if( SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return false;
+    [branch]if (u >= 0 && v >= 0.0f && u + v <= 1.0f) {
+        float t = f * dot(tri.posedge2, q);
 
-		                #ifdef FadeMapping
-		                    if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
-		                        if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
-		                            if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= 0.9f) return false;
-		                    }
-		                #endif
+        [branch]if (t > 0 && t < max_distance) {
+		  	const TriangleUvs tri2 = triangle_get_positions2(tri_id);
+		    const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
+            #if defined(AdvancedAlphaMapped) || defined(AdvancedBackground) || defined(IgnoreGlassShadow)
+				if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, IsBackground) || GetFlag(_IntersectionMaterials[MaterialIndex].Tag, ShadowCaster)) return false; 
+        		if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex || _IntersectionMaterials[MaterialIndex].specTrans == 1 || _IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
+	                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
+        
+                    if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex && _IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
+                        if( SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return false;
+
+	                #ifdef FadeMapping
+	                    if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
+	                        if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
+	                            if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= 0.9f) return false;
+	                    }
+	                #endif
 
 
-			            #ifdef IgnoreGlassShadow
-			                if(_IntersectionMaterials[MaterialIndex].specTrans == 1) {
-				            	#ifdef StainedGlassShadows
-				            		float3 MatCol = _IntersectionMaterials[MaterialIndex].surfaceColor;
-							        if(_IntersectionMaterials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _IntersectionMaterials[MaterialIndex]);
-	        						// MatCol = lerp(MatCol, _IntersectionMaterials[MaterialIndex].BlendColor, _IntersectionMaterials[MaterialIndex].BlendFactor);
-									//float Dotter = abs(dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction));
+		            #ifdef IgnoreGlassShadow
+		                if(_IntersectionMaterials[MaterialIndex].specTrans == 1) {
+			            	#ifdef StainedGlassShadows
+			            		float3 MatCol = _IntersectionMaterials[MaterialIndex].surfaceColor;
+						        if(_IntersectionMaterials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _IntersectionMaterials[MaterialIndex]);
+        						// MatCol = lerp(MatCol, _IntersectionMaterials[MaterialIndex].BlendColor, _IntersectionMaterials[MaterialIndex].BlendFactor);
+								//float Dotter = abs(dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction));
 
-			    					// if(!GetFlag(_IntersectionMaterials[MaterialIndex].Tag, Thin)) throughput *= exp(-t * CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance));
-			    					throughput *= exp(-CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance));
-			    				#endif
-			                	return false;
-			                }
-			            #endif
-			        }
-	            #endif
-				return true;
-	        }
+		    					// if(!GetFlag(_IntersectionMaterials[MaterialIndex].Tag, Thin)) throughput *= exp(-t * CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance));
+		    					throughput *= exp(-CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance));
+		    				#endif
+		                	return false;
+		                }
+		            #endif
+		        }
+            #endif
+			return true;
         }
     }
-
     return false;
 }
 inline void triangle_intersect_dist(int tri_id, const SmallerRay ray, inout float max_distance, int mesh_id, const int MatOffset) {
     TrianglePos tri = triangle_get_positions(tri_id);
-  	TriangleUvs tri2 = triangle_get_positions2(tri_id);
-    int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
 
     float3 h = cross(ray.direction, tri.posedge2);
     float  a = dot(tri.posedge1, h);
@@ -839,12 +835,15 @@ inline void triangle_intersect_dist(int tri_id, const SmallerRay ray, inout floa
     float3 s = ray.origin - tri.pos0;
     float  u = f * dot(s, h);
 
-    if (u >= 0.0f && u <= 1.0f) {
-        float3 q = cross(s, tri.posedge1);
-        float  v = f * dot(ray.direction, q);
+    float3 q = cross(s, tri.posedge1);
+    float  v = f * dot(ray.direction, q);
 
-        if (v >= 0.0f && u + v <= 1.0f) {
-            float t = f * dot(tri.posedge2, q);
+    [branch]if (u >= 0 && v >= 0.0f && u + v <= 1.0f) {
+        float t = f * dot(tri.posedge2, q);
+
+        [branch]if (t > 0 && t < max_distance) {
+		  	const TriangleUvs tri2 = triangle_get_positions2(tri_id);
+		    const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
             #if defined(AdvancedAlphaMapped) || defined(AdvancedBackground) || defined(IgnoreGlassShadow)
 				if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, IsBackground) || GetFlag(_IntersectionMaterials[MaterialIndex].Tag, ShadowCaster)) return; 
         		if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex || _IntersectionMaterials[MaterialIndex].specTrans == 1) {
@@ -864,10 +863,8 @@ inline void triangle_intersect_dist(int tri_id, const SmallerRay ray, inout floa
 		            #endif
 		        }
             #endif
-            if (t > 0.0f && t < max_distance) {
-            	max_distance = t;
-            	return;
-            }
+        	max_distance = t;
+        	return;
         }
     }
 

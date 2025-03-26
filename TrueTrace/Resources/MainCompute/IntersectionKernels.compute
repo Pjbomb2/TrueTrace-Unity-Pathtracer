@@ -13,10 +13,8 @@
 RWTexture2D<uint4> _PrimaryTriangleInfo;
 #pragma kernel kernel_trace 
 
-inline void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inout RayHit ray_hit, const int MatOffset, const float RandNum) {
+void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inout RayHit ray_hit, const int MatOffset, const float RandNum) {
     TrianglePos tri = triangle_get_positions(tri_id);
-    TriangleUvs tri2 = triangle_get_positions2(tri_id);
-    int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
 
     float3 h = cross(ray.direction, tri.posedge2);
     float  a = dot(tri.posedge1, h);
@@ -25,45 +23,46 @@ inline void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ra
     float3 s = ray.origin - tri.pos0;
     float  u = f * dot(s, h);
 
-    if (u >= 0.0f && u <= 1.0f) {
-        float3 q = cross(s, tri.posedge1);
-        float  v = f * dot(ray.direction, q);
+    float3 q = cross(s, tri.posedge1);
+    float  v = f * dot(ray.direction, q);
 
-        if (v >= 0.0f && u + v <= 1.0f) {
-            float t = f * dot(tri.posedge2, q);
+    [branch]if (u >= 0 && v >= 0.0f && u + v <= 1.0f) {
+        float t = f * dot(tri.posedge2, q);
 
-            if (t > 0 && t < ray_hit.t) {
-                //major slowdown
-                #ifdef AdvancedAlphaMapped
-                    if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
-                        float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
-                        if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) 
-                            if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return;
-                    }
-                #endif
-                #ifdef IgnoreGlassMain
-                    if(_IntersectionMaterials[MaterialIndex].specTrans == 1) return;
-                #endif
-                #ifdef IgnoreBackfacing
-                    if(_IntersectionMaterials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction) <= 0) return;
-                #endif
-                #ifdef FadeMapping
-                    if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
-                        float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
-                        if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
-                            if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= RandNum) return;
-                    }
-                #endif
-                if(CurBounce == 0 && GetFlag(_IntersectionMaterials[MaterialIndex].Tag, Invisible)) return;
-                ray_hit.t = t;
-                ray_hit.u = u;
-                ray_hit.v = v;
-                ray_hit.mesh_id = mesh_id;
-                ray_hit.triangle_id = tri_id;
-            }
+        [branch]if (t > 0 && t < ray_hit.t) {
+            const TriangleUvs tri2 = triangle_get_positions2(tri_id);
+            const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
+            //major slowdown
+            #ifdef AdvancedAlphaMapped
+                if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
+                    float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
+                    if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) 
+                        if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return;
+                }
+            #endif
+            #ifdef IgnoreGlassMain
+                if(_IntersectionMaterials[MaterialIndex].specTrans == 1) return;
+            #endif
+            #ifdef IgnoreBackfacing
+                if(_IntersectionMaterials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction) <= 0) return;
+            #endif
+            #ifdef FadeMapping
+                if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
+                    float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
+                    if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
+                        if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= RandNum) return;
+                }
+            #endif
+            if(CurBounce == 0 && GetFlag(_IntersectionMaterials[MaterialIndex].Tag, Invisible)) return;
+            ray_hit.t = t;
+            ray_hit.u = u;
+            ray_hit.v = v;
+            ray_hit.mesh_id = mesh_id;
+            ray_hit.triangle_id = tri_id;
         }
     }
 }
+
 #define YAmount 2
 groupshared int nextRayArray[YAmount];
 
