@@ -34,7 +34,7 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
             const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
             //major slowdown
             #ifdef AdvancedAlphaMapped
-                if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
+                [branch]if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
                     float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
                     if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) 
                         if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return;

@@ -251,7 +251,7 @@ inline void HandleRotation(inout float2 UV, float Rotation) {
 
 
 
-inline float4 SampleTexture(float2 UV, int TextureType, const IntersectionMat MatTex) {
+float4 SampleTexture(float2 UV, const int TextureType, const IntersectionMat MatTex) {
 	float4 FinalCol = 0;
 	#if !defined(UseBindless) || defined(DX11)
 		switch(TextureType) {
@@ -271,9 +271,8 @@ inline float4 SampleTexture(float2 UV, int TextureType, const IntersectionMat Ma
 			break;
 		}
 	#else//BINDLESS
-		//AlbedoTexScale, AlbedoTex, and Rotation dont worry about, thats just for transforming to the atlas 
-		int2 TextureIndexAndChannel = -1;// = MatTex.BindlessIndex;
-		switch(TextureType) {
+		int2 TextureIndexAndChannel = -1;
+		[branch] switch(TextureType) {
 			case SampleAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 			case SampleAlpha: TextureIndexAndChannel = MatTex.AlphaTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 		}
@@ -282,18 +281,21 @@ inline float4 SampleTexture(float2 UV, int TextureType, const IntersectionMat Ma
 
 		#ifdef UseTextureLOD
 			#ifdef PointFiltering
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
 			#else
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
 			#endif
 		#else
 			#ifdef PointFiltering
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
 			#else
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
 			#endif
 		#endif
-		if(TextureReadChannel != 4) FinalCol = FinalCol[TextureReadChannel];
 
 
 
@@ -301,7 +303,7 @@ inline float4 SampleTexture(float2 UV, int TextureType, const IntersectionMat Ma
 	return FinalCol;
 }
 
-inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTex) {
+inline float4 SampleTexture(float2 UV, const int TextureType, const MaterialData MatTex) {
 	float4 FinalCol = 0;
 	#if !defined(UseBindless) || defined(DX11)
 		switch(TextureType) {
@@ -358,7 +360,7 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 	#else//BINDLESS
 		//AlbedoTexScale, AlbedoTex, and Rotation dont worry about, thats just for transforming to the atlas 
 		int2 TextureIndexAndChannel = -1;// = MatTex.BindlessIndex;
-		switch(TextureType) {
+		[branch]switch(TextureType) {
 			case SampleAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 			case SampleMetallic: TextureIndexAndChannel = MatTex.MetallicTex; HandleRotation(UV, MatTex.RotationSecondary); UV = UV * MatTex.SecondaryTexScaleOffset.xy + MatTex.SecondaryTexScaleOffset.zw; break;
 			case SampleRoughness: TextureIndexAndChannel = MatTex.RoughnessTex; HandleRotation(UV, MatTex.RotationSecondary); UV = UV * MatTex.SecondaryTexScaleOffset.xy + MatTex.SecondaryTexScaleOffset.zw; break;
@@ -377,19 +379,22 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 
 		#ifdef UseTextureLOD
 			#ifdef PointFiltering
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
 			#else
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
 			#endif
 		#else
 			#ifdef PointFiltering
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
 			#else
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
 			#endif
 		#endif
-		if(TextureReadChannel != 4) FinalCol = FinalCol[TextureReadChannel];
-		if(TextureType == SampleNormal || TextureType == SampleDetailNormal) {
+		[branch] if(TextureType == SampleNormal || TextureType == SampleDetailNormal) {
 			FinalCol.g = 1.0f - FinalCol.g;
 			FinalCol = (FinalCol.r >= 0.99f) ? FinalCol.agag : FinalCol.rgrg;
 

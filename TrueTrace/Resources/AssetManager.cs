@@ -1457,6 +1457,7 @@ namespace TrueTrace {
                         InstanceData.RenderQue[i].TriOffset = CurTriOffset;
                         CurNodeOffset += InstanceData.RenderQue[i].AggNodes.Length;
                         CurTriOffset += InstanceData.RenderQue[i].AggTriangles.Length;
+                        MatOffset += InstanceData.RenderQue[i]._Materials.Count;
 
                     }
                     InstanceQueCount = InstanceRenderQue.Count;
@@ -1464,6 +1465,7 @@ namespace TrueTrace {
                     {
                         if (InstanceRenderQue[i].InstanceParent.HasLightTriangles)
                         {
+                            InstanceRenderQue[i].LightIndex = LightMeshes.Count;
                             LightTransforms.Add(InstanceRenderTransforms[i]);
                             LightMeshes.Add(new LightMeshData()
                             {
@@ -2182,6 +2184,11 @@ namespace TrueTrace {
                                     LightNodeOffset = Aggs[Index].LightNodeOffset,
                                     SkinnedOffset = -1
                                 });
+                                if(TempList[j].LightIndex != -1) {
+                                    LightMeshData TempDat = LightMeshes[TempList[j].LightIndex];
+                                    TempDat.LockedMeshIndex = MyMeshesCompacted.Count - 1;
+                                    LightMeshes[TempList[j].LightIndex] = TempDat;
+                                }
                                 TempList[j].CompactedMeshData = MeshCount + j;
                                 MeshAABBs[RenderQue.Count + TempCount] = TempList[j].InstanceParent.aabb_untransformed;      
                                 AABB aabb = TempList[j].InstanceParent.aabb_untransformed;
