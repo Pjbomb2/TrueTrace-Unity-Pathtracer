@@ -1234,7 +1234,7 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
     SmallerRay ray;
     #ifndef HardwareRT
         int Reps = 0;
-        int2 stack[24];
+        int2 stack[16];
         int stack_size = 0;
         int2 current_group;
         SmallerRay ray2;
@@ -1323,9 +1323,7 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
 #endif
 
             [loop]while (Reps < MaxTraversalSamples) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)          
-
                 [branch]if (asfloat(current_group.x) < bestHit.t) {
-
                     const cBVHData TempNode = cBVH[current_group.y];
 
                     [branch]if(TempNode.left >= 0) {
@@ -1345,55 +1343,52 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
 
                         float2 LocalDistances = -1;
                         int IterCount = 0;
-                        [loop]for(int i = 0; i < 2; i++) {
+                        [unroll]for(int i = 0; i < 2; i++) {
                                 tmin3 = float3(((minA[i]) & 0xffu), ((minA[i] >> 8) & 0xffu), ((minA[i] >> 16) & 0xffu));
                                 tmax3 = float3(((maxA[i]) & 0xffu), ((maxA[i] >> 8) & 0xffu), ((maxA[i] >> 16) & 0xffu));
-                                [unroll]for(int i2 = 0; i2 < 3; i2++) {
-                                    [branch]if(ray.direction[i2] < 0) {
-                                        float tempa = tmin3[i2];
-                                        tmin3[i2] = tmax3[i2];
-                                        tmax3[i2] = tempa;
-                                    }
-                                }
+
+
                                 tmin3 = mad(tmin3, adjusted_ray_direction_inv, adjusted_ray_origin);
                                 tmax3 = mad(tmax3, adjusted_ray_direction_inv, adjusted_ray_origin);
 
-                                float tmin = max(max(tmin3.x, tmin3.y), max(tmin3.z, EPSILON));
-                                float tmax = min(min(tmax3.x, tmax3.y), min(tmax3.z, bestHit.t));
+                                float3 tsmaller = min(tmin3, tmax3);
+                                float3 tbigger = max(tmin3, tmax3);
+                                            
+                                float tmin = max(tsmaller[0], max(tsmaller[1], tsmaller[2]));
+                                float tmax = min(tbigger[0], min(tbigger[1], tbigger[2]));
                                 
-                                bool intersected = tmin < tmax;
+                                bool intersected = tmax >= max(tmin, EPSILON) && tmin < bestHit.t;
                                 [branch]
                                 if (intersected) {
                                     IterCount++;
-                                    LocalDistances[i] = tmin;
+                                    LocalDistances[i] = min(max(tmin, EPSILON), tmax);
                                 }
                         }
                         if(IterCount == 2) {
                             if(LocalDistances[0] > LocalDistances[1]) {
                                 stack[stack_size++] = int2(asint(LocalDistances[0]), TempNode.left);
-                                stack[stack_size++] = int2(asint(LocalDistances[1]), TempNode.left+1);
+                                current_group = int2(asint(LocalDistances[1]), TempNode.left+1);
                             } else {
                                 stack[stack_size++] = int2(asint(LocalDistances[1]), TempNode.left+1);
-                                stack[stack_size++] = int2(asint(LocalDistances[0]), TempNode.left);
+                                current_group = int2(asint(LocalDistances[0]), TempNode.left);
                             }
                         } else if(IterCount == 1) {
-                            if(LocalDistances[0] == -1) {
-                                stack[stack_size++] = int2(asint(LocalDistances[1]), TempNode.left+1);
-                            } else {
-                                stack[stack_size++] = int2(asint(LocalDistances[0]), TempNode.left);
-                            }
-                        }
+                            if(LocalDistances[0] == -1) current_group = int2(asint(LocalDistances[1]), TempNode.left+1);
+                            else current_group = int2(asint(LocalDistances[0]), TempNode.left);
+                        } else current_group = -1;
                         node_memory_counter += 32;
                         node_traverse_counter += 2;
                         Reps++;
                     } else {
+                        current_group = -1;
                         triangle_memory_counter += 52;
                         triangle_traverse_counter += 1;
                         IntersectTriangle(0, -(TempNode.left+1), ray, bestHit, 0, RandNum);//Intersect Mesh Triangles
                     }
 
-                }
-              
+                } else current_group = -1;
+
+                [flatten]if(current_group.y == -1) {
                     [branch]if (stack_size == 0) {//thread has finished traversing
                         int PixIndex = GlobalRay.PixelIndex;
                         uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
@@ -1426,6 +1421,7 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
                    
                     current_group = stack[--stack_size];
                     stack_memory_counter += 2;
+                }
 #ifndef DX11
                     const static int Nd = 4;
                     const static int Nw = 16;
