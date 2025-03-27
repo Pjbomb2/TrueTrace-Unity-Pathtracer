@@ -26,6 +26,22 @@ StructuredBuffer<CudaTriangleA> AggTrisA;
 StructuredBuffer<CudaTriangleA> SkinnedMeshTriBufferPrev;
 StructuredBuffer<CudaTriangleB> AggTrisB;
 
+
+struct cBVHData
+{
+    uint A;
+    uint B;
+    uint C;
+    uint D;
+
+    uint3 p;
+    int left;
+};
+
+StructuredBuffer<cBVHData> cBVH;
+
+
+
 struct AABB {
 	float3 BBMax;
 	float3 BBMin;

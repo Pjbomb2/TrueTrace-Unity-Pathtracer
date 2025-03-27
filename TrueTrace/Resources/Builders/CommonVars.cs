@@ -344,6 +344,19 @@ namespace CommonVars
 
 
 
+    [System.Serializable]
+    public struct cBVHData
+    {
+        public uint A;
+        public uint B;
+        public uint C;
+        public uint D;
+
+        public uint pX;
+        public uint pY;
+        public uint pZ;
+        public int left;
+    }
 
 
     [System.Serializable]

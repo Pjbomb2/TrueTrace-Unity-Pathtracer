@@ -53,6 +53,9 @@ namespace TrueTrace {
 #if TTCustomMotionVectors
         [HideInInspector] public ComputeBuffer SkinnedMeshAggTriBufferPrev;
 #endif
+        [HideInInspector] public ComputeBuffer cBVHBuffer;
+        public cBVHData[] cBVH;
+
         [HideInInspector] public ComputeBuffer AggTriBufferB;
         [HideInInspector] public ComputeBuffer LightTriBuffer;
         [HideInInspector] public ComputeBuffer LightTreeBufferA;
@@ -90,6 +93,7 @@ namespace TrueTrace {
 #endif
             ThisShader.SetComputeBuffer(Kernel, "AggTrisB", AggTriBufferB);
             ThisShader.SetComputeBuffer(Kernel, "cwbvh_nodes", BVH8AggregatedBuffer);
+            ThisShader.SetComputeBuffer(Kernel, "cBVH", cBVHBuffer);
             ThisShader.SetComputeBuffer(Kernel, "_MeshData", (RayMaster.LocalTTSettings.DoTLASUpdates && (RayMaster.FramesSinceStart2 % 2 == 0)) ? MeshDataBufferA : MeshDataBufferB);
             ThisShader.SetComputeBuffer(Kernel, "_MeshDataPrev", (RayMaster.LocalTTSettings.DoTLASUpdates && (RayMaster.FramesSinceStart2 % 2 == 1)) ? MeshDataBufferA : MeshDataBufferB);
             ThisShader.SetComputeBuffer(Kernel, "_Materials", MaterialBuffer);
@@ -214,6 +218,7 @@ namespace TrueTrace {
             LightTreeBufferA.ReleaseSafe();
             LightTreeBufferB.ReleaseSafe();
             BVH8AggregatedBuffer.ReleaseSafe();
+            cBVHBuffer.ReleaseSafe();
             AggTriBufferA.ReleaseSafe();
 #if TTCustomMotionVectors
             SkinnedMeshAggTriBufferPrev.ReleaseSafe();
@@ -843,6 +848,7 @@ namespace TrueTrace {
             LightTreeBufferA.ReleaseSafe();
             LightTreeBufferB.ReleaseSafe();
             BVH8AggregatedBuffer.ReleaseSafe();
+            cBVHBuffer.ReleaseSafe();
             AggTriBufferA.ReleaseSafe();
 #if TTCustomMotionVectors
             SkinnedMeshAggTriBufferPrev.ReleaseSafe();
@@ -980,6 +986,7 @@ namespace TrueTrace {
             LightTreeBufferA.ReleaseSafe();
             LightTreeBufferB.ReleaseSafe();
             BVH8AggregatedBuffer.ReleaseSafe();
+            cBVHBuffer.ReleaseSafe();
             AggTriBufferA.ReleaseSafe();
 #if TTCustomMotionVectors
             SkinnedMeshAggTriBufferPrev.ReleaseSafe();
@@ -1298,6 +1305,9 @@ namespace TrueTrace {
                 if(LightTriCount == 0) {LightTriCount++; AggSGTreeNodeCount++;}
                 if (AggNodeCount != 0)
                 {//Accumulate the BVH nodes and triangles for all normal models
+
+                    cBVH = RenderQue[0].cBVH;
+                    CommonFunctions.CreateComputeBuffer(ref cBVHBuffer, RenderQue[0].cBVH);
                     if(MeshFunctions == null) MeshFunctions = Resources.Load<ComputeShader>("Utility/GeneralMeshFunctions");
                     LightAABBs = new LightBounds[LightMeshCount];
                     SGTreeNodes = new GaussianTreeNode[LightMeshCount];

@@ -177,6 +177,7 @@ namespace TrueTrace {
         private int TTtoOIDNKernel;
         private int OIDNtoTTKernel;
         private int TTtoOIDNKernelPanorama;
+        private int IntersectcBVHKernel;
 #if TTCustomMotionVectors
         private int MVKernel;
 #endif
@@ -277,6 +278,7 @@ namespace TrueTrace {
             TTtoOIDNKernel = ShadingShader.FindKernel("TTtoOIDNKernel");
             OIDNtoTTKernel = ShadingShader.FindKernel("OIDNtoTTKernel");
             TTtoOIDNKernelPanorama = ShadingShader.FindKernel("TTtoOIDNKernelPanorama");
+            IntersectcBVHKernel = IntersectionShader.FindKernel("IntersectcBVHKernel");
 #if TTCustomMotionVectors
             MVKernel = ShadingShader.FindKernel("MVKernel");
 #endif
@@ -587,6 +589,7 @@ namespace TrueTrace {
             ShadingShader.SetBuffer(ShadeKernel, "BufferSizes", _BufferSizes);
             ShadingShader.SetBuffer(TransferKernel, "BufferSizes", _BufferSizes);
             IntersectionShader.SetBuffer(TraceKernel, "BufferSizes", _BufferSizes);
+            IntersectionShader.SetBuffer(IntersectcBVHKernel, "BufferSizes", _BufferSizes);
             IntersectionShader.SetBuffer(ShadowKernel, "BufferSizes", _BufferSizes);
             IntersectionShader.SetBuffer(HeightmapShadowKernel, "BufferSizes", _BufferSizes);
             IntersectionShader.SetBuffer(HeightmapKernel, "BufferSizes", _BufferSizes);
@@ -761,12 +764,18 @@ namespace TrueTrace {
             IntersectionShader.SetComputeBuffer(TraceKernel, "GlobalColors", LightingBuffer);
             IntersectionShader.SetTexture(TraceKernel, "_PrimaryTriangleInfo", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
 
+            AssetManager.Assets.SetMeshTraceBuffers(IntersectionShader, IntersectcBVHKernel);
+            IntersectionShader.SetComputeBuffer(IntersectcBVHKernel, "GlobalRays", _RayBuffer);
+            IntersectionShader.SetComputeBuffer(IntersectcBVHKernel, "GlobalColors", LightingBuffer);
+            IntersectionShader.SetTexture(IntersectcBVHKernel, "_PrimaryTriangleInfo", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
+
 
             AssetManager.Assets.SetMeshTraceBuffers(IntersectionShader, ShadowKernel);
             IntersectionShader.SetComputeBuffer(ShadowKernel, "ShadowRaysBuffer", _ShadowBuffer);
             IntersectionShader.SetComputeBuffer(ShadowKernel, "GlobalColors", LightingBuffer);
             IntersectionShader.SetTexture(ShadowKernel, "NEEPosA", FlipFrame ? GINEEPosA : GINEEPosB);
             IntersectionShader.SetTexture(TraceKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
+            IntersectionShader.SetTexture(IntersectcBVHKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
 
 
             AssetManager.Assets.SetHeightmapTraceBuffers(IntersectionShader, HeightmapKernel);
@@ -1126,6 +1135,7 @@ namespace TrueTrace {
                         if(DoKernelProfiling) cmd.BeginSample("Bounce: " + i);
                             var bouncebounce = i;
                             if(bouncebounce == 1) {
+                                cmd.SetComputeTextureParam(IntersectionShader, IntersectcBVHKernel, "_PrimaryTriangleInfo", GIWorldPosA);
                                 cmd.SetComputeTextureParam(IntersectionShader, TraceKernel, "_PrimaryTriangleInfo", GIWorldPosA);
                                 cmd.SetComputeTextureParam(IntersectionShader, HeightmapKernel, "_PrimaryTriangleInfo", GIWorldPosA);
                             }
@@ -1143,6 +1153,7 @@ namespace TrueTrace {
                                     cmd.DispatchCompute(IntersectionShader, TraceKernel, CurBounceInfoBuffer, 0);//784 is 28^2
                                 #else
                                     cmd.DispatchCompute(IntersectionShader, TraceKernel, 32, 32, 1);
+                                    // cmd.DispatchCompute(IntersectionShader, IntersectcBVHKernel, 32, 32, 1);
                                 #endif
                             #endif
                             if(DoKernelProfiling) cmd.EndSample("Trace Kernel: " + i);

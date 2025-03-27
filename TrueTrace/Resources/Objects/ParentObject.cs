@@ -54,7 +54,7 @@ namespace TrueTrace {
         }
 
 
-
+        public cBVHData[] cBVH;
         public PerInstanceData[] InstanceDatas;
         public int[] RTAccelHandle;
         public int[] RTAccelSubmeshOffsets;
@@ -944,6 +944,7 @@ namespace TrueTrace {
             int PrevLength = TrianglesArray.Length;
             if(BVH2 != null) BVH2.Dispose();
             BVH2 = new BVH2Builder(Triangles, TrianglesArray.Length);//Binary BVH Builder, and also the component that takes the longest to build
+            cBVH = BVH2.cBVH;
             TrianglesArray.Dispose();
             if(this.BVH != null) this.BVH.Dispose();
             this.BVH = new BVH8Builder(ref BVH2);
@@ -956,6 +957,13 @@ namespace TrueTrace {
                 NativeArray<int> InvertedBufferArray = new NativeArray<int>(BVH.cwbvh_indices, Unity.Collections.Allocator.TempJob);
                 int* InvertedBuffer = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(InvertedBufferArray);
                 for (int i = 0; i < CWBVHIndicesBufferCount; i++) BVH.cwbvh_indices[InvertedBuffer[i]] = i;
+                int cBVHLength = cBVH.Length;
+                for (int i = 0; i < cBVHLength; i++) {
+                    if(cBVH[i].left < 0) {
+                        // Debug.Log("FFFF");
+                        cBVH[i].left = (-BVH.cwbvh_indices[-(cBVH[i].left+1)])-1;
+                    }    
+                }
                 InvertedBufferArray.Dispose();
             #else
                 for (int i = 0; i < CWBVHIndicesBufferCount; i++) BVH.cwbvh_indices[i] = i;

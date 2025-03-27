@@ -25,7 +25,7 @@
 #define UseBRDFLights
 #define DoubleBufferSGTree
 // #define Fog
-#define RadCache
+// #define RadCache
 #define ExpensiveReSTIR
 // #define FakedAO
 #define ClampRoughnessToBounce
@@ -37,7 +37,7 @@
 
 //END OF DEFINES
 //DEBUG VIEW DEFINES
-#define DebugView DVNone
+#define DebugView DVBVHView
 //Replace DVNone(^) with any of the DV Defines below
 
 #define DVNone -1
