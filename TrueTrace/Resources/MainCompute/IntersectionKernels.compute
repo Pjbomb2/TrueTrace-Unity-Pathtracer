@@ -34,7 +34,7 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
             const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
             //major slowdown
             #ifdef AdvancedAlphaMapped
-                if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
+                [branch]if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
                     float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
                     if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) 
                         if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return;
@@ -62,7 +62,6 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
         }
     }
 }
-
 #define YAmount 2
 groupshared int nextRayArray[YAmount];
 
@@ -1240,7 +1239,10 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
         SmallerRay ray2;
         int MatOffset = 0;
         int mesh_id = -1;
-
+        float tmin;
+        float tmax;
+        float3 tsmaller;
+        float3 tbigger;
         uint node_memory_counter = 0;
         uint triangle_memory_counter = 0;
         uint stack_memory_counter = 0;
@@ -1325,71 +1327,65 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
             [loop]while (Reps < MaxTraversalSamples) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)          
                 [branch]if (asfloat(current_group.x) < bestHit.t) {
                     const cBVHData TempNode = cBVH[current_group.y];
+                    Reps += 1;
 
-                    [branch]if(TempNode.left >= 0) {
-                        uint e_x = (TempNode.D) & 0xff;
-                        uint e_y = (TempNode.D >> (8)) & 0xff;
-                        uint e_z = (TempNode.D >> (16)) & 0xff;
+                    const uint imask = TempNode.D >> 24;
+                    const bool2 Leafs = bool2((imask & 0x80) != 0, (imask & 0x40) != 0);
+                    const float3 adjusted_ray_direction_inv = float3(
+                        asfloat((TempNode.D & 0xff) << 23),
+                        asfloat(((TempNode.D >> 8) & 0xff) << 23),
+                        asfloat(((TempNode.D >> 16) & 0xff) << 23)
+                        ) / ray.direction;
+                    const float3 adjusted_ray_origin = (asfloat(TempNode.p) - ray.origin) / ray.direction;
 
-                        const float3 adjusted_ray_direction_inv = float3(
-                            asfloat(e_x << 23),
-                            asfloat(e_y << 23),
-                            asfloat(e_z << 23)
-                            ) / ray.direction;
-                        const float3 adjusted_ray_origin = (asfloat(TempNode.p) - ray.origin) / ray.direction;
+                    uint minA = TempNode.A & 0x00FFFFFF;
+                    uint maxA = TempNode.B & 0x00FFFFFF;
+                    float2 LocalDistances = -1;
+                    int IterCount = 0;
+                    [unroll]for(int i = 0; i < 2; i++) {
+                        [branch]if(Leafs[i]) {
+                            IntersectTriangle(0, (i == 0) ? (minA | ((TempNode.B & 0x000000FF) << 24)) : TempNode.C, ray, bestHit, 0, RandNum);//Intersect Mesh Triangles
+                            triangle_memory_counter += 52;
+                            triangle_traverse_counter += 1;
+                        } else {
+                            tmin3 = float3(minA & 0xFF, (minA >> 8) & 0xFF, (minA >> 16) & 0xFF);
+                            tmax3 = float3(maxA & 0xFF, (maxA >> 8) & 0xFF, (maxA >> 16) & 0xFF);
+
+                            tmin3 = mad(tmin3, adjusted_ray_direction_inv, adjusted_ray_origin);
+                            tmax3 = mad(tmax3, adjusted_ray_direction_inv, adjusted_ray_origin);
+
+                            tsmaller = min(tmin3, tmax3);
+                            tbigger = max(tmin3, tmax3);
+                                        
+                            tmin = max(tsmaller[0], max(tsmaller[1], tsmaller[2]));
+                            tmax = min(tbigger[0], min(tbigger[1], tbigger[2]));
                             
-                        const uint2 minA = uint2(TempNode.A & 0x00FFFFFF, TempNode.C & 0x00FFFFFF);
-                        const uint2 maxA = uint2(TempNode.B & 0x00FFFFFF, ((TempNode.A) >> 24) | (((TempNode.B) >> 24) << 8) | (((TempNode.C) >> 24) << 16));
-
-                        float2 LocalDistances = -1;
-                        int IterCount = 0;
-                        [unroll]for(int i = 0; i < 2; i++) {
-                                tmin3 = float3(((minA[i]) & 0xffu), ((minA[i] >> 8) & 0xffu), ((minA[i] >> 16) & 0xffu));
-                                tmax3 = float3(((maxA[i]) & 0xffu), ((maxA[i] >> 8) & 0xffu), ((maxA[i] >> 16) & 0xffu));
-
-
-                                tmin3 = mad(tmin3, adjusted_ray_direction_inv, adjusted_ray_origin);
-                                tmax3 = mad(tmax3, adjusted_ray_direction_inv, adjusted_ray_origin);
-
-                                float3 tsmaller = min(tmin3, tmax3);
-                                float3 tbigger = max(tmin3, tmax3);
-                                            
-                                float tmin = max(tsmaller[0], max(tsmaller[1], tsmaller[2]));
-                                float tmax = min(tbigger[0], min(tbigger[1], tbigger[2]));
-                                
-                                bool intersected = tmax >= max(tmin, EPSILON) && tmin < bestHit.t;
-                                [branch]
-                                if (intersected) {
-                                    IterCount++;
-                                    LocalDistances[i] = min(max(tmin, EPSILON), tmax);
-                                }
-                        }
-                        if(IterCount == 2) {
-                            if(LocalDistances[0] > LocalDistances[1]) {
-                                stack[stack_size++] = int2(asint(LocalDistances[0]), TempNode.left);
-                                current_group = int2(asint(LocalDistances[1]), TempNode.left+1);
-                            } else {
-                                stack[stack_size++] = int2(asint(LocalDistances[1]), TempNode.left+1);
-                                current_group = int2(asint(LocalDistances[0]), TempNode.left);
+                            bool intersected = tmax >= max(tmin, 0) && tmin < bestHit.t;
+                            [branch]
+                            if (intersected) {
+                                IterCount++;
+                                LocalDistances[i] = min(max(tmin, 0), tmax);
                             }
-                        } else if(IterCount == 1) {
-                            if(LocalDistances[0] == -1) current_group = int2(asint(LocalDistances[1]), TempNode.left+1);
-                            else current_group = int2(asint(LocalDistances[0]), TempNode.left);
-                        } else current_group = -1;
-                        node_memory_counter += 32;
-                        node_traverse_counter += 2;
-                        Reps++;
-                    } else {
-                        current_group = -1;
-                        triangle_memory_counter += 52;
-                        triangle_traverse_counter += 1;
-                        IntersectTriangle(0, -(TempNode.left+1), ray, bestHit, 0, RandNum);//Intersect Mesh Triangles
+                        }
+                        minA = TempNode.C & 0x00FFFFFF;
+                        maxA = ((TempNode.A) >> 24) | (((TempNode.B) >> 24) << 8) | (((TempNode.C) >> 24) << 16);
                     }
+
+                    [branch]if(IterCount == 2) {
+                        const bool swap = LocalDistances.x <= LocalDistances.y;
+                        stack[stack_size++] = int2(asint(LocalDistances[swap]), TempNode.left + swap);
+                        current_group = int2(asint(LocalDistances[!swap]), TempNode.left + !swap);
+                    } else if(IterCount == 1) {
+                        [branch]if(LocalDistances[0] == -1) current_group = int2(asint(LocalDistances[1]), TempNode.left+(!(Leafs[0] ^ Leafs[1])));
+                        else current_group = int2(asint(LocalDistances[0]), TempNode.left);
+                    } else current_group = -1;
+                    node_memory_counter += 32;
+                    node_traverse_counter += 2;
 
                 } else current_group = -1;
 
                 [flatten]if(current_group.y == -1) {
-                    [branch]if (stack_size == 0) {//thread has finished traversing
+                    [flatten]if (stack_size == 0) {//thread has finished traversing
                         int PixIndex = GlobalRay.PixelIndex;
                         uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
                         [branch]if(CurBounce == 0) {

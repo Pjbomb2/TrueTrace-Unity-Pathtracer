@@ -961,7 +961,7 @@ namespace TrueTrace {
                 for (int i = 0; i < cBVHLength; i++) {
                     if(cBVH[i].left < 0) {
                         // Debug.Log("FFFF");
-                        cBVH[i].left = (-BVH.cwbvh_indices[-(cBVH[i].left+1)])-1;
+                        // cBVH[i].left = (-BVH.cwbvh_indices[-(cBVH[i].left+1)])-1;
                     }    
                 }
                 InvertedBufferArray.Dispose();
@@ -1443,7 +1443,7 @@ namespace TrueTrace {
                     int TriLength = AggTriangles.Length;
                     NativeArray<CudaTriangle> Vector3Array = new NativeArray<CudaTriangle>(AggTriangles, Unity.Collections.Allocator.TempJob);
                     CudaTriangle* VecPointer = (CudaTriangle*)NativeArrayUnsafeUtility.GetUnsafePtr(Vector3Array);
-                    for (int i = 0; i < TriLength; i++) AggTriangles[BVH.cwbvh_indices[i]] = VecPointer[i];
+                    // for (int i = 0; i < TriLength; i++) AggTriangles[BVH.cwbvh_indices[i]] = VecPointer[i];
                     Vector3Array.Dispose();
                 }
                 AggNodes = new BVHNode8DataCompressed[BVH.cwbvhnode_count];
@@ -1892,6 +1892,65 @@ namespace TrueTrace {
         //     AABB WorldSpaceAABB = new AABB();
         //     WorldSpaceAABB.BBMax = new_center + new_extent;
         //     WorldSpaceAABB.BBMin = new_center - new_extent;
+        // }
+        // public void RecursiveDraw(int Index, int CurDepth) {
+        //     if(CurDepth > 25) return;
+        //     try {
+        //     cBVHData TempNode = cBVH[Index];
+
+        //     uint imask = TempNode.D >> 24;
+        //     bool LeftLeaf = (imask >> 7) == 1;
+        //     bool RightLeaf = (imask >> 6) == 1;
+
+
+        //     uint e_x = (TempNode.D) & 0xff;
+        //     uint e_y = (TempNode.D >> (8)) & 0xff;
+        //     uint e_z = (TempNode.D >> (16)) & 0xff;
+
+        //     uint minAL = TempNode.A & 0x00FFFFFF;
+        //     uint minAR = TempNode.C & 0x00FFFFFF;
+        //     uint maxAL = TempNode.B & 0x00FFFFFF;
+        //     uint maxAR = ((TempNode.A) >> 24) | (((TempNode.B) >> 24) << 8) | (((TempNode.C) >> 24) << 16);
+
+
+
+        //     Vector3 e = new Vector3(
+        //                 System.BitConverter.ToSingle(System.BitConverter.GetBytes(e_x << 23),0),
+        //                 System.BitConverter.ToSingle(System.BitConverter.GetBytes(e_y << 23),0),
+        //                 System.BitConverter.ToSingle(System.BitConverter.GetBytes(e_z << 23),0)
+        //                 );
+
+        //     Vector3 p = new Vector3(
+        //                 System.BitConverter.ToSingle(System.BitConverter.GetBytes(TempNode.pX),0),
+        //                 System.BitConverter.ToSingle(System.BitConverter.GetBytes(TempNode.pY),0),
+        //                 System.BitConverter.ToSingle(System.BitConverter.GetBytes(TempNode.pZ),0)
+        //                 );
+
+        //     if(!LeftLeaf) {
+        //         Vector3 tmin3 = new Vector3(((minAL) & 0xffu), ((minAL >> 8) & 0xffu), ((minAL >> 16) & 0xffu));
+        //         Vector3 tmax3 = new Vector3(((maxAL) & 0xffu), ((maxAL >> 8) & 0xffu), ((maxAL >> 16) & 0xffu));
+        //         tmin3 = Vector3.Scale(tmin3, e) + p;
+        //         tmax3 = Vector3.Scale(tmax3, e) + p;
+        //         Gizmos.DrawWireCube((tmin3 + tmax3) / 2.0f, (tmax3 - tmin3));
+        //         RecursiveDraw(TempNode.left, CurDepth + 1);
+        //     }
+        //     if(!RightLeaf) {
+        //         Vector3 tmin3 = new Vector3(((minAR) & 0xffu), ((minAR >> 8) & 0xffu), ((minAR >> 16) & 0xffu));
+        //         Vector3 tmax3 = new Vector3(((maxAR) & 0xffu), ((maxAR >> 8) & 0xffu), ((maxAR >> 16) & 0xffu));
+        //         tmin3 = Vector3.Scale(tmin3, e) + p;
+        //         tmax3 = Vector3.Scale(tmax3, e) + p;
+
+        //         Gizmos.DrawWireCube((tmin3 + tmax3) / 2.0f, (tmax3 - tmin3));
+        //         if(LeftLeaf) RecursiveDraw(TempNode.left, CurDepth + 1);
+        //         else RecursiveDraw(TempNode.left + 1, CurDepth + 1);
+        //     }
+        //     } catch(System.Exception E) {
+        //         Debug.Log(Index);
+        //     }
+        // }
+
+        // public void OnDrawGizmos() {
+        //     if(cBVH != null) RecursiveDraw(0, 0);
         // }
 
     }

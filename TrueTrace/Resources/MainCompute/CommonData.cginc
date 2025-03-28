@@ -251,7 +251,7 @@ inline void HandleRotation(inout float2 UV, float Rotation) {
 
 
 
-inline float4 SampleTexture(float2 UV, int TextureType, const IntersectionMat MatTex) {
+float4 SampleTexture(float2 UV, const int TextureType, const IntersectionMat MatTex) {
 	float4 FinalCol = 0;
 	#if !defined(UseBindless) || defined(DX11)
 		switch(TextureType) {
@@ -271,9 +271,8 @@ inline float4 SampleTexture(float2 UV, int TextureType, const IntersectionMat Ma
 			break;
 		}
 	#else//BINDLESS
-		//AlbedoTexScale, AlbedoTex, and Rotation dont worry about, thats just for transforming to the atlas 
-		int2 TextureIndexAndChannel = -1;// = MatTex.BindlessIndex;
-		switch(TextureType) {
+		int2 TextureIndexAndChannel = -1;
+		[branch] switch(TextureType) {
 			case SampleAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 			case SampleAlpha: TextureIndexAndChannel = MatTex.AlphaTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 		}
@@ -282,18 +281,21 @@ inline float4 SampleTexture(float2 UV, int TextureType, const IntersectionMat Ma
 
 		#ifdef UseTextureLOD
 			#ifdef PointFiltering
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
 			#else
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
 			#endif
 		#else
 			#ifdef PointFiltering
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
 			#else
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
 			#endif
 		#endif
-		if(TextureReadChannel != 4) FinalCol = FinalCol[TextureReadChannel];
 
 
 
@@ -301,7 +303,7 @@ inline float4 SampleTexture(float2 UV, int TextureType, const IntersectionMat Ma
 	return FinalCol;
 }
 
-inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTex) {
+inline float4 SampleTexture(float2 UV, const int TextureType, const MaterialData MatTex) {
 	float4 FinalCol = 0;
 	#if !defined(UseBindless) || defined(DX11)
 		switch(TextureType) {
@@ -358,7 +360,7 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 	#else//BINDLESS
 		//AlbedoTexScale, AlbedoTex, and Rotation dont worry about, thats just for transforming to the atlas 
 		int2 TextureIndexAndChannel = -1;// = MatTex.BindlessIndex;
-		switch(TextureType) {
+		[branch]switch(TextureType) {
 			case SampleAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 			case SampleMetallic: TextureIndexAndChannel = MatTex.MetallicTex; HandleRotation(UV, MatTex.RotationSecondary); UV = UV * MatTex.SecondaryTexScaleOffset.xy + MatTex.SecondaryTexScaleOffset.zw; break;
 			case SampleRoughness: TextureIndexAndChannel = MatTex.RoughnessTex; HandleRotation(UV, MatTex.RotationSecondary); UV = UV * MatTex.SecondaryTexScaleOffset.xy + MatTex.SecondaryTexScaleOffset.zw; break;
@@ -377,19 +379,22 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 
 		#ifdef UseTextureLOD
 			#ifdef PointFiltering
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
 			#else
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
 			#endif
 		#else
 			#ifdef PointFiltering
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
 			#else
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
 			#endif
 		#endif
-		if(TextureReadChannel != 4) FinalCol = FinalCol[TextureReadChannel];
-		if(TextureType == SampleNormal || TextureType == SampleDetailNormal) {
+		[branch] if(TextureType == SampleNormal || TextureType == SampleDetailNormal) {
 			FinalCol.g = 1.0f - FinalCol.g;
 			FinalCol = (FinalCol.r >= 0.99f) ? FinalCol.agag : FinalCol.rgrg;
 
@@ -967,121 +972,6 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
     }
     return hit_mask;
 }
-
-// inline uint cbvh_node_intersect(const SmallerRay ray, float max_distance, const cBVHData TempNode) {
-//     uint e_x = (TempNode.D) & 0xff;
-//     uint e_y = (TempNode.D >> (8)) & 0xff;
-//     uint e_z = (TempNode.D >> (16)) & 0xff;
-
-//     const float3 adjusted_ray_direction_inv = float3(
-//         asfloat(e_x << 23),
-//         asfloat(e_y << 23),
-//         asfloat(e_z << 23)
-//         ) / ray.direction;
-//     const float3 adjusted_ray_origin = (asfloat(TempNode.p) - ray.origin) / ray.direction;
-            
-
-
-//     uint minA = TempNode.A & 0x00FFFFFF;
-//     uint maxA = TempNode.B & 0x00FFFFFF;
-//     uint minB = TempNode.C & 0x00FFFFFF;
-//     uint maxB = (TempNode.A >> 24) | ((TempNode.B & 0xFF000000) >> 16) | ((TempNode.C & 0xFF000000) >> 8);
-
-//     float3 tmin3;
-//     float3 tmax3;
-
-//             tmin3 = float3(((x_min >> (0 * 8)) & 0xffu), ((y_min >> (1 * 8)) & 0xffu), ((z_min >> (2 * 8)) & 0xffu));
-//             tmax3 = float3(((x_max >> (0 * 8)) & 0xffu), ((y_max >> (1 * 8)) & 0xffu), ((z_max >> (2 * 8)) & 0xffu));
-
-//             tmin3 = mad(tmin3, adjusted_ray_direction_inv, adjusted_ray_origin);
-//             tmax3 = mad(tmax3, adjusted_ray_direction_inv, adjusted_ray_origin);
-
-//             float tmin = max(max(tmin3.x, tmin3.y), max(tmin3.z, EPSILON));
-//             float tmax = min(min(tmax3.x, tmax3.y), min(tmax3.z, max_distance));
-            
-//             bool intersected = tmin < tmax;
-//             [branch]
-//             if (intersected) {
-//                 child_bits = (child_bits4 >> (j * 8)) & 0xffu;
-//                 bit_index  = (bit_index4 >> (j * 8)) & 0xffu;
-
-//                 hit_mask |= child_bits << bit_index;
-//             }
-
-//     uint hit_mask = 0;
-
-//     uint child_bits;
-//     uint bit_index;
-//     const bool3 RayDirBools = ray.direction < 0;
-//     uint x_min = TempNode.nodes[2].x;
-//     uint x_max = TempNode.nodes[2].y;
-//     uint y_min = TempNode.nodes[3].x;
-//     uint y_max = TempNode.nodes[3].y;
-//     uint z_min = TempNode.nodes[4].x;
-//     uint z_max = TempNode.nodes[4].y;
-//     [branch]if(RayDirBools.x) {
-//     	x_min ^= x_max; x_max ^= x_min; x_min ^= x_max;
-//     }
-//     [branch]if(RayDirBools.y) {
-//     	y_min ^= y_max; y_max ^= y_min; y_min ^= y_max;
-//     }
-//     [branch]if(RayDirBools.z) {
-//     	z_min ^= z_max; z_max ^= z_min; z_min ^= z_max;
-//     }
-
-//     [unroll]
-//     for(int i = 0; i < 2; i++) {
-//         uint meta4 = (i == 0 ? TempNode.nodes[1].z : TempNode.nodes[1].w);
-
-//         uint is_inner4   = (meta4 & (meta4 << 1)) & 0x10101010;
-//         uint inner_mask4 = (is_inner4 >> 4) * 0xffu;
-//         uint bit_index4  = (meta4 ^ (oct_inv4 & inner_mask4)) & 0x1f1f1f1f;
-//         uint child_bits4 = (meta4 >> 5) & 0x07070707;
-
-
-//         [unroll]
-//         for(int j = 0; j < 4; j++) {
-
-//             tmin3 = float3(((x_min >> (j * 8)) & 0xffu), ((y_min >> (j * 8)) & 0xffu), ((z_min >> (j * 8)) & 0xffu));
-//             tmax3 = float3(((x_max >> (j * 8)) & 0xffu), ((y_max >> (j * 8)) & 0xffu), ((z_max >> (j * 8)) & 0xffu));
-
-//             tmin3 = mad(tmin3, adjusted_ray_direction_inv, adjusted_ray_origin);
-//             tmax3 = mad(tmax3, adjusted_ray_direction_inv, adjusted_ray_origin);
-
-//             float tmin = max(max(tmin3.x, tmin3.y), max(tmin3.z, EPSILON));
-//             float tmax = min(min(tmax3.x, tmax3.y), min(tmax3.z, max_distance));
-            
-//             bool intersected = tmin < tmax;
-//             [branch]
-//             if (intersected) {
-//                 child_bits = (child_bits4 >> (j * 8)) & 0xffu;
-//                 bit_index  = (bit_index4 >> (j * 8)) & 0xffu;
-
-//                 hit_mask |= child_bits << bit_index;
-//             }
-//         }
-//         if(i == 0) {
-// 	        x_min = TempNode.nodes[2].z;
-// 	        x_max = TempNode.nodes[2].w;
-// 	        y_min = TempNode.nodes[3].z;
-// 	        y_max = TempNode.nodes[3].w;
-// 	        z_min = TempNode.nodes[4].z;
-// 	        z_max = TempNode.nodes[4].w;
-
-// 	        [branch]if(RayDirBools.x) {
-// 	        	x_min ^= x_max; x_max ^= x_min; x_min ^= x_max;
-// 	        }
-// 	        [branch]if(RayDirBools.y) {
-// 	        	y_min ^= y_max; y_max ^= y_min; y_min ^= y_max;
-// 	        }
-// 	        [branch]if(RayDirBools.z) {
-// 	        	z_min ^= z_max; z_max ^= z_min; z_min ^= z_max;
-// 	        }
-//     	}
-
-//     }
-//     return hit_mask;
-// }
 
 
 
@@ -3277,8 +3167,6 @@ float3 MultipleOctaveScattering(float density, float mu) {
     }
     return luminance;
 }
-
-
 
 float3 waveLengthToRGB(float Wavelength) {
     const float Gamma = 0.80;

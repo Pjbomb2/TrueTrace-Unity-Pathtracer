@@ -121,15 +121,76 @@ namespace TrueTrace {
             Vector3 d = new Vector3(aabb.BBMax.x - aabb.BBMin.x, aabb.BBMax.y - aabb.BBMin.y, aabb.BBMax.z - aabb.BBMin.z);
             return (d.x + d.y) * d.z + d.x * d.y; 
         }
+
+        void SimulTrav(int A, int B, int Depth) {
+            if(cBVHList[A].A != cBVH[B].A ||
+                cBVHList[A].B != cBVH[B].B ||
+                cBVHList[A].C != cBVH[B].C ||
+                cBVHList[A].D != cBVH[B].D
+                ) {
+                Debug.LogError("FUCKER: " + Depth + " : " + cBVHList[A].left + " : " + cBVH[B].left);
+                return;
+            }
+            if(BVH2Nodes[B].count > 0) return;
+
+            bool LeftLeaf =  BVH2Nodes[BVH2Nodes[B].left].count > 0;
+            bool RightLeaf =  BVH2Nodes[BVH2Nodes[B].left + 1].count > 0;
+
+            if(!LeftLeaf) SimulTrav(cBVHList[A].left, cBVHList[B].left, Depth + 1);
+            if(!RightLeaf) SimulTrav(cBVHList[A].left + (LeftLeaf ? (0) : (1)), cBVHList[B].left + 1, Depth + 1);
+        }
+
+        cBVHData[] cBVHList;
+
+
+        // void BuildRecursive(int nodesi, ref int node_index, int first_index, int index_count) {
+        //     BVH2Nodes[nodesi].left = node_index;
+
+        //     BVH2Nodes[BVH2Nodes[nodesi].left].aabb = split.aabb_left;
+        //     BVH2Nodes[BVH2Nodes[nodesi].left + 1].aabb = split.aabb_right;
+        //     node_index += 2;
+        //     int Index = split.index;
+        //     BuildRecursive(BVH2Nodes[nodesi].left, ref node_index, first_index, Index - first_index);
+        //     BuildRecursive(BVH2Nodes[nodesi].left + 1, ref node_index, Index, first_index + index_count - Index);
+        // }
+
+        void CompactCBVH(int nodesi, int SourceIndex, ref int CurrentIndex, int CurDepth) {
+            // Debug.Log(SourceIndex);
+            if(CurDepth > 100) return;
+            cBVHData TempNode = cBVH[SourceIndex];
+
+            uint imask = TempNode.D >> 24;
+            bool LeftLeaf = (imask >> 7) == 1;
+            bool RightLeaf = ((imask >> 6) & 0x1) == 1;
+            cBVHList[nodesi] = TempNode;
+            cBVHList[nodesi].left = CurrentIndex;
+            if(LeftLeaf && !RightLeaf) {
+                CurrentIndex += 1;
+                // Debug.Log(TempNode.left);
+                CompactCBVH(cBVHList[nodesi].left, TempNode.left + 1, ref CurrentIndex, CurDepth + 1);
+            } else if(!LeftLeaf && RightLeaf) {
+                CurrentIndex += 1;
+                // Debug.Log(TempNode.left);
+                CompactCBVH(cBVHList[nodesi].left, TempNode.left, ref CurrentIndex, CurDepth + 1);
+            } else if(!LeftLeaf && !RightLeaf) {
+                CurrentIndex += 2;
+                // Debug.Log(TempNode.left);
+                CompactCBVH(cBVHList[nodesi].left, TempNode.left, ref CurrentIndex, CurDepth + 1);
+                CompactCBVH(cBVHList[nodesi].left + 1, TempNode.left + 1, ref CurrentIndex, CurDepth + 1);
+            }
+       
+        }
+
+
     void ConvertToCBVH() {
             int BVHSize = BVH2NodesArray.Length;
             for(int i = 0; i < BVHSize; i++) {
                 BVHNode2Data ParentNode = BVH2Nodes[i];
+                if(ParentNode.count > 0) continue;
                 cBVH[i].pX = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(ParentNode.aabb.BBMin.x), 0);
                 cBVH[i].pY = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(ParentNode.aabb.BBMin.y), 0);
                 cBVH[i].pZ = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(ParentNode.aabb.BBMin.z), 0);
-                cBVH[i].left = ParentNode.count > 0 ? ((-FinalIndices[ParentNode.left]) - 1) : ParentNode.left;
-                if(ParentNode.count > 0) continue;
+                cBVH[i].left = ParentNode.left;
                 BVHNode2Data LeftNode = BVH2Nodes[ParentNode.left];
                 BVHNode2Data RightNode = BVH2Nodes[ParentNode.left + 1];
 
@@ -158,22 +219,56 @@ namespace TrueTrace {
                 uint Ey = System.Convert.ToByte(u_ey >> 23);
                 uint Ez = System.Convert.ToByte(u_ez >> 23);
 
-                uint A = (uint)(((byte)(uint)Mathf.Floor((LeftNode.aabb.BBMin.x - ParentNode.aabb.BBMin.x) * one_over_e.x)) | 
-                        (((byte)(uint)Mathf.Floor((LeftNode.aabb.BBMin.y - ParentNode.aabb.BBMin.y) * one_over_e.y)) << 8) |
-                        (((byte)(uint)Mathf.Floor((LeftNode.aabb.BBMin.z - ParentNode.aabb.BBMin.z) * one_over_e.z)) << 16) |
-                        (((byte)(uint)Mathf.Ceil((RightNode.aabb.BBMax.x - ParentNode.aabb.BBMin.x) * one_over_e.x)) << 24));
+                bool LeftLeaf = LeftNode.count > 0;
+                bool RightLeaf = RightNode.count > 0;
 
-                uint B = (uint)(((byte)(uint)Mathf.Ceil((LeftNode.aabb.BBMax.x - ParentNode.aabb.BBMin.x) * one_over_e.x)) | 
-                        (((byte)(uint)Mathf.Ceil((LeftNode.aabb.BBMax.y - ParentNode.aabb.BBMin.y) * one_over_e.y)) << 8) |
-                        (((byte)(uint)Mathf.Ceil((LeftNode.aabb.BBMax.z - ParentNode.aabb.BBMin.z) * one_over_e.z)) << 16) |
-                        (((byte)(uint)Mathf.Ceil((RightNode.aabb.BBMax.y - ParentNode.aabb.BBMin.y) * one_over_e.y)) << 24));
+                uint A;
+                uint B;
+                uint C;
 
-                uint C = (uint)(((byte)(uint)Mathf.Floor((RightNode.aabb.BBMin.x - ParentNode.aabb.BBMin.x) * one_over_e.x)) | 
-                        (((byte)(uint)Mathf.Floor((RightNode.aabb.BBMin.y - ParentNode.aabb.BBMin.y) * one_over_e.y)) << 8) |
-                        (((byte)(uint)Mathf.Floor((RightNode.aabb.BBMin.z - ParentNode.aabb.BBMin.z) * one_over_e.z)) << 16) |
-                        (((byte)(uint)Mathf.Ceil((RightNode.aabb.BBMax.z - ParentNode.aabb.BBMin.z) * one_over_e.z)) << 24));
 
-                uint D = (Ex | (Ey << 8) | (Ez << 16));
+                if(LeftLeaf && RightLeaf) {
+                    A = (uint)FinalIndices[LeftNode.left] & 0x00FFFFFF;
+                    B = ((uint)FinalIndices[LeftNode.left] & 0xFF000000) >> 24;
+                    C = (uint)FinalIndices[RightNode.left];
+                } else if(LeftLeaf) {
+                    A = (uint)(((uint)FinalIndices[LeftNode.left] & 0x00FFFFFF) |
+                            (((byte)(uint)Mathf.Ceil((RightNode.aabb.BBMax.x - ParentNode.aabb.BBMin.x) * one_over_e.x)) << 24));
+                    
+                    B = (uint)((((uint)FinalIndices[LeftNode.left] & 0xFF000000) >> 24) |
+                            (((byte)(uint)Mathf.Ceil((RightNode.aabb.BBMax.y - ParentNode.aabb.BBMin.y) * one_over_e.y)) << 24));
+                    C = (uint)(((byte)(uint)Mathf.Floor((RightNode.aabb.BBMin.x - ParentNode.aabb.BBMin.x) * one_over_e.x)) | 
+                            (((byte)(uint)Mathf.Floor((RightNode.aabb.BBMin.y - ParentNode.aabb.BBMin.y) * one_over_e.y)) << 8) |
+                            (((byte)(uint)Mathf.Floor((RightNode.aabb.BBMin.z - ParentNode.aabb.BBMin.z) * one_over_e.z)) << 16) |
+                            (((byte)(uint)Mathf.Ceil((RightNode.aabb.BBMax.z - ParentNode.aabb.BBMin.z) * one_over_e.z)) << 24));
+
+                } else if(RightLeaf) {
+                    A = (uint)(((byte)(uint)Mathf.Floor((LeftNode.aabb.BBMin.x - ParentNode.aabb.BBMin.x) * one_over_e.x)) | 
+                            (((byte)(uint)Mathf.Floor((LeftNode.aabb.BBMin.y - ParentNode.aabb.BBMin.y) * one_over_e.y)) << 8) |
+                            (((byte)(uint)Mathf.Floor((LeftNode.aabb.BBMin.z - ParentNode.aabb.BBMin.z) * one_over_e.z)) << 16));
+                    B = (uint)(((byte)(uint)Mathf.Ceil((LeftNode.aabb.BBMax.x - ParentNode.aabb.BBMin.x) * one_over_e.x)) | 
+                            (((byte)(uint)Mathf.Ceil((LeftNode.aabb.BBMax.y - ParentNode.aabb.BBMin.y) * one_over_e.y)) << 8) |
+                            (((byte)(uint)Mathf.Ceil((LeftNode.aabb.BBMax.z - ParentNode.aabb.BBMin.z) * one_over_e.z)) << 16));
+                    C = (uint)FinalIndices[RightNode.left];
+                } else {
+                    A = (uint)(((byte)(uint)Mathf.Floor((LeftNode.aabb.BBMin.x - ParentNode.aabb.BBMin.x) * one_over_e.x)) | 
+                            (((byte)(uint)Mathf.Floor((LeftNode.aabb.BBMin.y - ParentNode.aabb.BBMin.y) * one_over_e.y)) << 8) |
+                            (((byte)(uint)Mathf.Floor((LeftNode.aabb.BBMin.z - ParentNode.aabb.BBMin.z) * one_over_e.z)) << 16) |
+                            (((byte)(uint)Mathf.Ceil((RightNode.aabb.BBMax.x - ParentNode.aabb.BBMin.x) * one_over_e.x)) << 24));
+                    B = (uint)(((byte)(uint)Mathf.Ceil((LeftNode.aabb.BBMax.x - ParentNode.aabb.BBMin.x) * one_over_e.x)) | 
+                            (((byte)(uint)Mathf.Ceil((LeftNode.aabb.BBMax.y - ParentNode.aabb.BBMin.y) * one_over_e.y)) << 8) |
+                            (((byte)(uint)Mathf.Ceil((LeftNode.aabb.BBMax.z - ParentNode.aabb.BBMin.z) * one_over_e.z)) << 16) |
+                            (((byte)(uint)Mathf.Ceil((RightNode.aabb.BBMax.y - ParentNode.aabb.BBMin.y) * one_over_e.y)) << 24));
+                    C = (uint)(((byte)(uint)Mathf.Floor((RightNode.aabb.BBMin.x - ParentNode.aabb.BBMin.x) * one_over_e.x)) | 
+                            (((byte)(uint)Mathf.Floor((RightNode.aabb.BBMin.y - ParentNode.aabb.BBMin.y) * one_over_e.y)) << 8) |
+                            (((byte)(uint)Mathf.Floor((RightNode.aabb.BBMin.z - ParentNode.aabb.BBMin.z) * one_over_e.z)) << 16) |
+                            (((byte)(uint)Mathf.Ceil((RightNode.aabb.BBMax.z - ParentNode.aabb.BBMin.z) * one_over_e.z)) << 24));
+
+                }
+
+                uint imask = ((RightLeaf ? 1u : 0u) | ((LeftLeaf ? 1u : 0u) << 1)) << 6;
+
+                uint D = (Ex | (Ey << 8) | (Ez << 16) | (imask << 24));
 
                 cBVH[i].A = A;
                 cBVH[i].B = B;
@@ -187,6 +282,7 @@ namespace TrueTrace {
         public unsafe BVH2Builder(AABB* Triangles, int PrimCount) {//Bottom Level Acceleration Structure Builder
             this.PrimCount = PrimCount;
             cBVH = new cBVHData[PrimCount * 2];
+            cBVHList = new cBVHData[PrimCount];
             Primitives = Triangles;
             FinalIndices = new int[PrimCount];
             DimensionedIndicesArray = new NativeArray<int>(PrimCount * 3, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
@@ -225,6 +321,10 @@ namespace TrueTrace {
             NativeArray<int>.Copy(DimensionedIndicesArray, 0, FinalIndices, 0, PrimCount);
             DimensionedIndicesArray.Dispose();
             ConvertToCBVH();
+            int CurrentIndex = 2;
+            CompactCBVH(0, 0, ref CurrentIndex, 0);
+            // SimulTrav(0,0, 0);
+            cBVH = cBVHList;
         }
 
 
