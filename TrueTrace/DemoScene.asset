@@ -16,7 +16,7 @@ MonoBehaviour:
   IndirectBoost: 1
   bouncecount: 12
   ClayMode: 0
-  UseRussianRoulette: 1
+  UseRussianRoulette: 0
   UseNEE: 0
   DoTLASUpdates: 1
   Accumulate: 0

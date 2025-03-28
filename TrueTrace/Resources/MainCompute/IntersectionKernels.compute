@@ -1233,7 +1233,7 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
     SmallerRay ray;
     #ifndef HardwareRT
         int Reps = 0;
-        int2 stack[16];
+        int2 stack[32];
         int stack_size = 0;
         int2 current_group;
         SmallerRay ray2;
@@ -1327,7 +1327,6 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
             [loop]while (Reps < MaxTraversalSamples) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)          
                 [branch]if (asfloat(current_group.x) < bestHit.t) {
                     const cBVHData TempNode = cBVH[current_group.y];
-                    Reps += 1;
 
                     const uint imask = TempNode.D >> 24;
                     const bool2 Leafs = bool2((imask & 0x80) != 0, (imask & 0x40) != 0);
@@ -1360,7 +1359,7 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
                             tmin = max(tsmaller[0], max(tsmaller[1], tsmaller[2]));
                             tmax = min(tbigger[0], min(tbigger[1], tbigger[2]));
                             
-                            bool intersected = tmax >= max(tmin, 0) && tmin < bestHit.t;
+                            bool intersected = tmin < bestHit.t && tmax >= max(tmin, 0);
                             [branch]
                             if (intersected) {
                                 IterCount++;
@@ -1384,6 +1383,8 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
 
                 } else current_group = -1;
 
+
+
                 [flatten]if(current_group.y == -1) {
                     [flatten]if (stack_size == 0) {//thread has finished traversing
                         int PixIndex = GlobalRay.PixelIndex;
@@ -1400,7 +1401,7 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
 
                                 float heatmap_value = 781 - (781-380) * exp(-scaled_heatmap_value);
 
-                                // _DebugTex[TempUv] = float4(Reps / 43.0f, Reps > 80, 0, 1);
+                                // _DebugTex[TempUv] = float4(Reps / 43.0f, Reps > 16, 0, 1);
                                 _DebugTex[TempUv] = float4(waveLengthToRGB(heatmap_value), 1);
                             #endif
                         } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
