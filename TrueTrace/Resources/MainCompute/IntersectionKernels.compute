@@ -62,7 +62,7 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
         }
     }
 }
-#define YAmount 2
+#define YAmount 3
 groupshared int nextRayArray[YAmount];
 
 void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
@@ -1233,9 +1233,9 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
     SmallerRay ray;
     #ifndef HardwareRT
         int Reps = 0;
-        int2 stack[32];
+        int stack[32];
         int stack_size = 0;
-        int2 current_group;
+        int current_group;
         SmallerRay ray2;
         int MatOffset = 0;
         int mesh_id = -1;
@@ -1257,8 +1257,7 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
         float RandNum = random(43, GlobalRay.PixelIndex).x;
 
       
-            current_group.x = 122222;
-            current_group.y = 0;//(uint)0x80000000;
+            current_group = 0;
 #ifndef DX11
             int Coun2 = 0;
             if(ray_index == 0) {
@@ -1280,10 +1279,8 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
             if(terminated) {
             Reps = 0;
 #else
-                current_group.y = (uint)0x80000000;
 #endif
-                current_group.x = (uint)0;
-                current_group.y = 0;
+                current_group = 0;
 #ifndef DX11
                 if(idxTerminated == 0) {
                     InterlockedAdd(BufferSizes[CurBounce].TracedRays, numTerminated, nextRayArray[threadIdxy]);
@@ -1325,8 +1322,7 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
 #endif
 
             [loop]while (Reps < MaxTraversalSamples) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)          
-                [branch]if (asfloat(current_group.x) < bestHit.t) {
-                    const cBVHData TempNode = cBVH[current_group.y];
+                    const cBVHData TempNode = cBVH[current_group];
 
                     const uint imask = TempNode.D >> 24;
                     const bool2 Leafs = bool2((imask & 0x80) != 0, (imask & 0x40) != 0);
@@ -1363,7 +1359,7 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
                             [branch]
                             if (intersected) {
                                 IterCount++;
-                                LocalDistances[i] = min(max(tmin, 0), tmax);
+                                LocalDistances[i] = max(tmin, 0) + tmax;
                             }
                         }
                         minA = TempNode.C & 0x00FFFFFF;
@@ -1372,20 +1368,19 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
 
                     [branch]if(IterCount == 2) {
                         const bool swap = LocalDistances.x <= LocalDistances.y;
-                        stack[stack_size++] = int2(asint(LocalDistances[swap]), TempNode.left + swap);
-                        current_group = int2(asint(LocalDistances[!swap]), TempNode.left + !swap);
+                        stack[stack_size++] = TempNode.left + swap;
+                        current_group = TempNode.left + !swap;
                     } else if(IterCount == 1) {
-                        [branch]if(LocalDistances[0] == -1) current_group = int2(asint(LocalDistances[1]), TempNode.left+(!(Leafs[0] ^ Leafs[1])));
-                        else current_group = int2(asint(LocalDistances[0]), TempNode.left);
+                        [branch]if(LocalDistances[0] == -1) current_group = TempNode.left+(!(Leafs[0] ^ Leafs[1]));
+                        else current_group = TempNode.left;
                     } else current_group = -1;
                     node_memory_counter += 32;
                     node_traverse_counter += 2;
 
-                } else current_group = -1;
 
 
 
-                [flatten]if(current_group.y == -1) {
+                [flatten]if(current_group == -1) {
                     [flatten]if (stack_size == 0) {//thread has finished traversing
                         int PixIndex = GlobalRay.PixelIndex;
                         uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
@@ -1427,7 +1422,7 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
 #endif
             }
 #ifndef DX11
-    } while(Coun2 < 10000);
+    } while(Coun2 < 1000000);
 #endif
 }
 
