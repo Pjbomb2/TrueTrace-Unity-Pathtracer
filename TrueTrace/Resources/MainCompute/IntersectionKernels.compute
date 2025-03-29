@@ -47,7 +47,7 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
                 if(_IntersectionMaterials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction) <= 0) return;
             #endif
             #ifdef FadeMapping
-                if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
+                [branch]if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
                     float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
                     if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
                         if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= RandNum) return;
@@ -164,7 +164,6 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
             current_group.y = 0;//(uint)0x80000000;
             uint2 triangle_group = 0;
 #ifndef DX11
-            int Coun2 = 0;
             if(ray_index == 0) {
                 nextRayArray[threadIdxy] = BufferSizes[CurBounce].TracedRays;
             }
@@ -175,7 +174,6 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
             const static int A = BufferSizes[CurBounce].tracerays;
 #ifndef DX11
         [loop]do{
-            Coun2++;
             bool                terminated = KilledNaturally;//(stack_size == 0 && current_group.y <= 0x00FFFFFF && triangle_group.y == 0);
             const uint  maskTerminated = WaveActiveBallot(terminated);
             const int           numTerminated = countbits(maskTerminated);
@@ -466,7 +464,6 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
             current_group.y = 0;//(uint)0x80000000;
             uint2 triangle_group = 0;
 #ifndef DX11
-            int Coun2 = 0;
             if(ray_index == 0) {
                 nextRayArray[threadIdxy] = BufferSizes[CurBounce].TracedRaysShadow;
             }
@@ -478,7 +475,6 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
             float max_distance;
 #ifndef DX11
         [loop]do{
-            Coun2++;
             Reps = 0;
             bool                terminated = KilledNaturally;//(stack_size == 0 && current_group.y <= 0x00FFFFFF && triangle_group.y == 0);
             const uint  maskTerminated = WaveActiveBallot(terminated);
@@ -661,7 +657,7 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
 #endif
                 }
 #ifndef DX11
-        } while(Coun2 < 1000);
+        } while(true);
 #endif
         #endif
 }
