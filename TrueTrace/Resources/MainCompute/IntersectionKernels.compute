@@ -63,11 +63,7 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
     }
 }
 
-#ifdef GPU4090
-    #define YAmount 3
-#else
-    #define YAmount 2
-#endif
+#define YAmount 2
 groupshared int nextRayArray[YAmount];
 
 void IntersectBVH(int ray_index, int threadIdxy, int GTx) {

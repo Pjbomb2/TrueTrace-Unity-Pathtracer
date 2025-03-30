@@ -1027,7 +1027,12 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
     GlobalColors[pixel_index].PrimaryNEERay = packRGBE(pow(RunningReservoirC.Color * RunningReservoirC.W * NEEbsdf,rcp(2.2f)));
 
     GlobalColors[pixel_index].Direct = 0;
+#ifdef ReSTIRAdditionalAO
+    float Dist = length(SampleRayDir - CenterRayDir);
+    GlobalColors[pixel_index].Indirect = RunningReservoirB.Radiance.Color * RunningReservoirB.Radiance.W * (1.0f - exp(-(120.0f * (Dist + 0.01f) + 1.0f)));
+#else
     GlobalColors[pixel_index].Indirect = RunningReservoirB.Radiance.Color * RunningReservoirB.Radiance.W;
+#endif
     if(GetBounceData(GlobalColors[pixel_index].MetRoughIsSpec) != 1) {
         if(Case != 3) GlobalColors[pixel_index].Data.xyz = bsdf;
     }
