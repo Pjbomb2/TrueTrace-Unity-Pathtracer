@@ -122,23 +122,23 @@ namespace TrueTrace {
             return (d.x + d.y) * d.z + d.x * d.y; 
         }
 
-        void SimulTrav(int A, int B, int Depth) {
-            if(cBVHList[A].A != cBVH[B].A ||
-                cBVHList[A].B != cBVH[B].B ||
-                cBVHList[A].C != cBVH[B].C ||
-                cBVHList[A].D != cBVH[B].D
-                ) {
-                Debug.LogError("FUCKER: " + Depth + " : " + cBVHList[A].left + " : " + cBVH[B].left);
-                return;
-            }
-            if(BVH2Nodes[B].count > 0) return;
+        // void SimulTrav(int A, int B, int Depth) {
+        //     if(cBVHList[A].A != cBVH[B].A ||
+        //         cBVHList[A].B != cBVH[B].B ||
+        //         cBVHList[A].C != cBVH[B].C ||
+        //         cBVHList[A].D != cBVH[B].D
+        //         ) {
+        //         Debug.LogError("FUCKER: " + Depth + " : " + cBVHList[A].left + " : " + cBVH[B].left);
+        //         return;
+        //     }
+        //     if(BVH2Nodes[B].count > 0) return;
 
-            bool LeftLeaf =  BVH2Nodes[BVH2Nodes[B].left].count > 0;
-            bool RightLeaf =  BVH2Nodes[BVH2Nodes[B].left + 1].count > 0;
+        //     bool LeftLeaf =  BVH2Nodes[BVH2Nodes[B].left].count > 0;
+        //     bool RightLeaf =  BVH2Nodes[BVH2Nodes[B].left + 1].count > 0;
 
-            if(!LeftLeaf) SimulTrav(cBVHList[A].left, cBVHList[B].left, Depth + 1);
-            if(!RightLeaf) SimulTrav(cBVHList[A].left + (LeftLeaf ? (0) : (1)), cBVHList[B].left + 1, Depth + 1);
-        }
+        //     if(!LeftLeaf) SimulTrav(cBVHList[A].left, cBVHList[B].left, Depth + 1);
+        //     if(!RightLeaf) SimulTrav((uint)cBVHList[A].left + (LeftLeaf ? (0) : (1)), (uint)(cBVHList[B].left + 1), Depth + 1);
+        // }
 
         cBVHData[] cBVHList;
 
@@ -154,7 +154,7 @@ namespace TrueTrace {
         //     BuildRecursive(BVH2Nodes[nodesi].left + 1, ref node_index, Index, first_index + index_count - Index);
         // }
 
-        void CompactCBVH(int nodesi, int SourceIndex, ref int CurrentIndex, int CurDepth) {
+        void CompactCBVH(uint nodesi, int SourceIndex, ref int CurrentIndex, int CurDepth) {
             // Debug.Log(SourceIndex);
             if(CurDepth > 100) return;
             cBVHData TempNode = cBVH[SourceIndex];
@@ -163,20 +163,20 @@ namespace TrueTrace {
             bool LeftLeaf = (imask >> 7) == 1;
             bool RightLeaf = ((imask >> 6) & 0x1) == 1;
             cBVHList[nodesi] = TempNode;
-            cBVHList[nodesi].left = CurrentIndex;
+            cBVHList[nodesi].left = (uint)CurrentIndex;
             if(LeftLeaf && !RightLeaf) {
                 CurrentIndex += 1;
                 // Debug.Log(TempNode.left);
-                CompactCBVH(cBVHList[nodesi].left, TempNode.left + 1, ref CurrentIndex, CurDepth + 1);
+                CompactCBVH(cBVHList[nodesi].left, (int)TempNode.left + 1, ref CurrentIndex, CurDepth + 1);
             } else if(!LeftLeaf && RightLeaf) {
                 CurrentIndex += 1;
                 // Debug.Log(TempNode.left);
-                CompactCBVH(cBVHList[nodesi].left, TempNode.left, ref CurrentIndex, CurDepth + 1);
+                CompactCBVH(cBVHList[nodesi].left, (int)TempNode.left, ref CurrentIndex, CurDepth + 1);
             } else if(!LeftLeaf && !RightLeaf) {
                 CurrentIndex += 2;
                 // Debug.Log(TempNode.left);
-                CompactCBVH(cBVHList[nodesi].left, TempNode.left, ref CurrentIndex, CurDepth + 1);
-                CompactCBVH(cBVHList[nodesi].left + 1, TempNode.left + 1, ref CurrentIndex, CurDepth + 1);
+                CompactCBVH(cBVHList[nodesi].left, (int)TempNode.left, ref CurrentIndex, CurDepth + 1);
+                CompactCBVH(cBVHList[nodesi].left + 1, (int)TempNode.left + 1, ref CurrentIndex, CurDepth + 1);
             }
        
         }
@@ -190,7 +190,7 @@ namespace TrueTrace {
                 cBVH[i].pX = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(ParentNode.aabb.BBMin.x), 0);
                 cBVH[i].pY = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(ParentNode.aabb.BBMin.y), 0);
                 cBVH[i].pZ = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(ParentNode.aabb.BBMin.z), 0);
-                cBVH[i].left = ParentNode.left;
+                cBVH[i].left = (uint)ParentNode.left;
                 BVHNode2Data LeftNode = BVH2Nodes[ParentNode.left];
                 BVHNode2Data RightNode = BVH2Nodes[ParentNode.left + 1];
 

@@ -30,12 +30,12 @@ StructuredBuffer<CudaTriangleB> AggTrisB;
 struct cBVHData
 {
     uint A;
-    uint B;
     uint C;
+    uint B;
     uint D;
-
     uint3 p;
-    int left;
+    uint left;
+
 };
 
 StructuredBuffer<cBVHData> cBVH;

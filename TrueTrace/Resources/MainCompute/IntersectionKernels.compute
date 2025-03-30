@@ -13,7 +13,7 @@
 RWTexture2D<uint4> _PrimaryTriangleInfo;
 #pragma kernel kernel_trace 
 
-void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inout RayHit ray_hit, const int MatOffset, const float RandNum) {
+inline void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inout RayHit ray_hit, const int MatOffset, const float RandNum) {
     TrianglePos tri = triangle_get_positions(tri_id);
 
     float3 h = cross(ray.direction, tri.posedge2);
@@ -62,7 +62,7 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
         }
     }
 }
-#define YAmount 3
+#define YAmount 2
 groupshared int nextRayArray[YAmount];
 
 void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
@@ -1223,17 +1223,18 @@ void kernel_heightmap(uint3 id : SV_DispatchThreadID) {//If I move the function 
 
 
 #pragma kernel IntersectcBVHKernel
-
+groupshared int MaxNum;
 
 void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
     #ifdef HardwareRT
         if(ray_index >= BufferSizes[CurBounce].tracerays) return;
     #endif
+
     RayHit bestHit;
     SmallerRay ray;
     #ifndef HardwareRT
         int Reps = 0;
-        int stack[32];
+        int stack[16];
         int stack_size = 0;
         int current_group;
         SmallerRay ray2;
@@ -1243,15 +1244,14 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
         float tmax;
         float3 tsmaller;
         float3 tbigger;
-        uint node_memory_counter = 0;
-        uint triangle_memory_counter = 0;
-        uint stack_memory_counter = 0;
-        uint node_traverse_counter = 0;
-        uint triangle_traverse_counter = 0;
-
+        // uint node_memory_counter = 0;
+        // uint triangle_memory_counter = 0;
+        // uint stack_memory_counter = 0;
+        // uint node_traverse_counter = 0;
+        // uint triangle_traverse_counter = 0;
+        float3 DirInv;
     #endif
                         float3 tmin3;
-                        float3 tmax3;
         RayData GlobalRay;
         bestHit = CreateRayHit();
         float RandNum = random(43, GlobalRay.PixelIndex).x;
@@ -1267,7 +1267,6 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
             bool KilledNaturally = true;
 #endif
             int rayidx = 0;
-            const static int A = BufferSizes[CurBounce].tracerays;
 #ifndef DX11
         [loop]do{
             Coun2++;
@@ -1277,7 +1276,7 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
             const int           idxTerminated = countbits(maskTerminated & ((1u << GTx) - 1));
             KilledNaturally = false;
             if(terminated) {
-            Reps = 0;
+                Reps = 0;
 #else
 #endif
                 current_group = 0;
@@ -1289,10 +1288,10 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
 
 
                 rayidx = nextRayArray[threadIdxy] + idxTerminated;
-                if(rayidx >= A) break;
+                if(rayidx >= MaxNum) return;
 #else
                 rayidx = ray_index;
-                if(rayidx >= A) return;
+                if(rayidx >= MaxNum) return;
 #endif
                 [branch]if(CurBounce % 2 == 1) rayidx += screen_width * screen_height;
                 GlobalRay = GlobalRays[rayidx];
@@ -1304,16 +1303,16 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
                 ray.origin = GlobalRay.origin;
                 ray.direction = (GlobalRay.direction == 0 ? EPSILON : GlobalRay.direction);
                 ray2 = ray;
-
+                DirInv = rcp(ray.direction);
                 stack_size = 0;
                 MatOffset = 0;
                 mesh_id = -1;
 
-                node_memory_counter = 0;
-                triangle_memory_counter = 0;
-                stack_memory_counter = 0;
-                node_traverse_counter = 0;
-                triangle_traverse_counter = 0;
+                // node_memory_counter = 0;
+                // triangle_memory_counter = 0;
+                // stack_memory_counter = 0;
+                // node_traverse_counter = 0;
+                // triangle_traverse_counter = 0;
 
 #ifndef DX11
             }
@@ -1321,61 +1320,59 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
                 int lostLoopIterations = 0;
 #endif
 
-            [loop]while (Reps < MaxTraversalSamples) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)          
+            [loop]while (true) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)          
                     const cBVHData TempNode = cBVH[current_group];
 
+                    current_group = -1;
                     const uint imask = TempNode.D >> 24;
                     const bool2 Leafs = bool2((imask & 0x80) != 0, (imask & 0x40) != 0);
                     const float3 adjusted_ray_direction_inv = float3(
                         asfloat((TempNode.D & 0xff) << 23),
                         asfloat(((TempNode.D >> 8) & 0xff) << 23),
                         asfloat(((TempNode.D >> 16) & 0xff) << 23)
-                        ) / ray.direction;
-                    const float3 adjusted_ray_origin = (asfloat(TempNode.p) - ray.origin) / ray.direction;
+                        ) * DirInv;
+                    const float3 adjusted_ray_origin = (asfloat(TempNode.p) - ray.origin) * DirInv;
 
-                    uint minA = TempNode.A & 0x00FFFFFF;
-                    uint maxA = TempNode.B & 0x00FFFFFF;
+                    uint minA = TempNode.A;
+                    uint maxA = TempNode.B;
                     float2 LocalDistances = -1;
                     int IterCount = 0;
                     [unroll]for(int i = 0; i < 2; i++) {
                         [branch]if(Leafs[i]) {
-                            IntersectTriangle(0, (i == 0) ? (minA | ((TempNode.B & 0x000000FF) << 24)) : TempNode.C, ray, bestHit, 0, RandNum);//Intersect Mesh Triangles
-                            triangle_memory_counter += 52;
-                            triangle_traverse_counter += 1;
+                            IntersectTriangle(0, (i == 0) ? ((TempNode.A & 0x00FFFFFF) | ((TempNode.B & 0x000000FF) << 24)) : TempNode.C, ray, bestHit, 0, RandNum);//Intersect Mesh Triangles
+                            // triangle_memory_counter += 52;
+                            // triangle_traverse_counter += 1;
                         } else {
-                            tmin3 = float3(minA & 0xFF, (minA >> 8) & 0xFF, (minA >> 16) & 0xFF);
-                            tmax3 = float3(maxA & 0xFF, (maxA >> 8) & 0xFF, (maxA >> 16) & 0xFF);
+                            tmin3 = mad(float3(minA & 0xFF, (minA >> 8) & 0xFF, (minA >> 16) & 0xFF), adjusted_ray_direction_inv, adjusted_ray_origin);
+                            tbigger = mad(float3(maxA & 0xFF, (maxA >> 8) & 0xFF, (maxA >> 16) & 0xFF), adjusted_ray_direction_inv, adjusted_ray_origin);
 
-                            tmin3 = mad(tmin3, adjusted_ray_direction_inv, adjusted_ray_origin);
-                            tmax3 = mad(tmax3, adjusted_ray_direction_inv, adjusted_ray_origin);
-
-                            tsmaller = min(tmin3, tmax3);
-                            tbigger = max(tmin3, tmax3);
+                            tsmaller = min(tmin3, tbigger);
+                            tbigger = max(tmin3, tbigger);
                                         
-                            tmin = max(tsmaller[0], max(tsmaller[1], tsmaller[2]));
+                            tmin = max(max(tsmaller[0],0), max(tsmaller[1], tsmaller[2]));
                             tmax = min(tbigger[0], min(tbigger[1], tbigger[2]));
                             
-                            bool intersected = tmin < bestHit.t && tmax >= max(tmin, 0);
-                            [branch]
+                            bool intersected = tmin < bestHit.t && tmax >= tmin;
+                            [flatten]
                             if (intersected) {
                                 IterCount++;
-                                LocalDistances[i] = max(tmin, 0) + tmax;
+                                LocalDistances[i] = tmin + tmax;
                             }
                         }
-                        minA = TempNode.C & 0x00FFFFFF;
+                        minA = TempNode.C;
                         maxA = ((TempNode.A) >> 24) | (((TempNode.B) >> 24) << 8) | (((TempNode.C) >> 24) << 16);
                     }
-
                     [branch]if(IterCount == 2) {
-                        const bool swap = LocalDistances.x <= LocalDistances.y;
+                        bool swap = LocalDistances.x <= LocalDistances.y;
                         stack[stack_size++] = TempNode.left + swap;
+                        // stack_size = min(stack_size, 15);
                         current_group = TempNode.left + !swap;
                     } else if(IterCount == 1) {
                         [branch]if(LocalDistances[0] == -1) current_group = TempNode.left+(!(Leafs[0] ^ Leafs[1]));
                         else current_group = TempNode.left;
-                    } else current_group = -1;
-                    node_memory_counter += 32;
-                    node_traverse_counter += 2;
+                    };
+                    // node_memory_counter += 32;
+                    // node_traverse_counter += 2;
 
 
 
@@ -1388,16 +1385,16 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
                             _PrimaryTriangleInfo[TempUv] = uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
                             #if DebugView == DVBVHView
 
-                                uint memory_counter = node_memory_counter + triangle_memory_counter + stack_memory_counter;
-                                uint traverse_counter = node_traverse_counter + 6 * triangle_traverse_counter;
-                                uint total_counter = memory_counter / 64 + traverse_counter;
+                                // uint memory_counter = node_memory_counter + triangle_memory_counter + stack_memory_counter;
+                                // uint traverse_counter = node_traverse_counter + 6 * triangle_traverse_counter;
+                                // uint total_counter = memory_counter / 64 + traverse_counter;
 
-                                float scaled_heatmap_value = float(total_counter) / float(500);
+                                // float scaled_heatmap_value = float(total_counter) / float(500);
 
-                                float heatmap_value = 781 - (781-380) * exp(-scaled_heatmap_value);
+                                // float heatmap_value = 781 - (781-380) * exp(-scaled_heatmap_value);
 
                                 // _DebugTex[TempUv] = float4(Reps / 43.0f, Reps > 16, 0, 1);
-                                _DebugTex[TempUv] = float4(waveLengthToRGB(heatmap_value), 1);
+                                // _DebugTex[TempUv] = float4(waveLengthToRGB(heatmap_value), 1);
                             #endif
                         } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
                             _PrimaryTriangleInfo[TempUv] = ((UseReSTIRGI && bestHit.t != FarPlane) ? uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v)) : ((UseASVGF || bestHit.t != FarPlane) ? uint4(asuint(ray2.direction), 99993) : uint4(asuint(ray2.direction * bestHit.t + ray2.origin), 99993)));
@@ -1412,7 +1409,7 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
 
                    
                     current_group = stack[--stack_size];
-                    stack_memory_counter += 2;
+                    // stack_memory_counter += 2;
                 }
 #ifndef DX11
                     const static int Nd = 4;
@@ -1437,5 +1434,9 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
 #endif
 #endif
 void IntersectcBVHKernel(uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID) {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
+    if(GT.x == 0 && GT.y == 0) {
+        MaxNum = BufferSizes[CurBounce].tracerays;
+    }
+    GroupMemoryBarrierWithGroupSync();
     IntersectcBVH(id.x, GT.y, GT.x);
 }

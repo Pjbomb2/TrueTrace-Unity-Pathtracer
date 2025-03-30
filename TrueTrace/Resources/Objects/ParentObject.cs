@@ -959,10 +959,22 @@ namespace TrueTrace {
                 for (int i = 0; i < CWBVHIndicesBufferCount; i++) BVH.cwbvh_indices[InvertedBuffer[i]] = i;
                 int cBVHLength = cBVH.Length;
                 for (int i = 0; i < cBVHLength; i++) {
-                    if(cBVH[i].left < 0) {
-                        // Debug.Log("FFFF");
-                        // cBVH[i].left = (-BVH.cwbvh_indices[-(cBVH[i].left+1)])-1;
-                    }    
+
+                    uint imask = cBVH[i].D >> 24;
+                    bool LeftLeaf = ((imask >> 7) & 0x1) == 1;
+                    bool RightLeaf = ((imask >> 6) & 0x1) == 1;
+
+                    if(LeftLeaf) {
+                        uint LeftIndex = ((cBVH[i].B & 0x000000FF) << 24) | (cBVH[i].A & 0x00FFFFFF);
+                        LeftIndex = (uint)BVH.cwbvh_indices[LeftIndex];
+                        cBVH[i].B = (uint)((cBVH[i].B & (~0x000000FF)) | ((LeftIndex & 0xFF000000) >> 24));
+                        cBVH[i].A = (uint)((cBVH[i].A & (0xFF000000)) | ((LeftIndex & 0x00FFFFFF)));
+                    }
+                    if(RightLeaf) {
+                        uint RightIndex = cBVH[i].C;
+                        RightIndex = (uint)BVH.cwbvh_indices[RightIndex];
+                        cBVH[i].C = RightIndex;
+                    }
                 }
                 InvertedBufferArray.Dispose();
             #else
@@ -1443,7 +1455,7 @@ namespace TrueTrace {
                     int TriLength = AggTriangles.Length;
                     NativeArray<CudaTriangle> Vector3Array = new NativeArray<CudaTriangle>(AggTriangles, Unity.Collections.Allocator.TempJob);
                     CudaTriangle* VecPointer = (CudaTriangle*)NativeArrayUnsafeUtility.GetUnsafePtr(Vector3Array);
-                    // for (int i = 0; i < TriLength; i++) AggTriangles[BVH.cwbvh_indices[i]] = VecPointer[i];
+                    for (int i = 0; i < TriLength; i++) AggTriangles[BVH.cwbvh_indices[i]] = VecPointer[i];
                     Vector3Array.Dispose();
                 }
                 AggNodes = new BVHNode8DataCompressed[BVH.cwbvhnode_count];
