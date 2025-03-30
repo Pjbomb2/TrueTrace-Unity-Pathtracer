@@ -644,6 +644,9 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
                 
 
             float Dist = length(SampleRayDir - CenterRayDir);
+#ifdef ReSTIRRestrictSpatial
+                RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((1.0f - SurfaceMat.metallic) + SurfaceMat.roughness));
+#endif
             [branch]if(Dist < 1.0f) {
                 RayDirWeight = lerp(1.0f - exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, SurfaceMat.roughness);
                 RayDirWeight *= pow(abs(dot(SampleNorm, CenterNorm)), 122.0f);
@@ -879,6 +882,9 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
                 
 
             float Dist = length(SampleRayDir - CenterRayDir);
+#ifdef ReSTIRRestrictSpatial
+                RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((1.0f - SurfaceMat.metallic) + SurfaceMat.roughness));
+#endif
             [branch]if(Dist < 1.0f) {
                 RayDirWeight = lerp(1.0f - exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, SurfaceMat.roughness);
                 RayDirWeight *= pow(abs(dot(SampleNorm, CenterNorm)), 122.0f);

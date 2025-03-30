@@ -25,13 +25,14 @@
 #define UseBRDFLights
 #define DoubleBufferSGTree
 // #define Fog
-// #define RadCache
+#define RadCache
 #define ExpensiveReSTIR
 // #define FakedAO
 #define ClampRoughnessToBounce
 // #define AutoDebugReading
 // #define TTCustomMotionVectors
 // #define ReSTIRSampleReduction
+// #define ReSTIRRestrictSpatial
 
 
 
@@ -113,3 +114,6 @@ int GetFlagStretch(int FlagVar, int LeftOffset, int Stride) {
 
 #define MaxTraversalSamples 1000
 #define ShadowDistanceFudgeFactor 0.0001f
+
+//Massively improves SWRT performance(15-25%) on 4080, 4090, and other cards with a very large cache size
+// #define GPU4090
