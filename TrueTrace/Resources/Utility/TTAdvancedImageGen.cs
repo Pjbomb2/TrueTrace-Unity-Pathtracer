@@ -299,7 +299,7 @@ namespace TrueTrace {
                   }
                   TempSeg++;
 
-                   FilePath = PlayerPrefs.GetString("ScreenShotPath") + "/" + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name.Replace(" ", "") + "_" + RayTracingMaster._camera.name + "_" + SegmentNumber + ".png";
+                   FilePath = PlayerPrefs.GetString("PanoramaPath") + "/" + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name.Replace(" ", "") + "_" + RayTracingMaster._camera.name + "_" + SegmentNumber + ".png";
                 } while(System.IO.File.Exists(FilePath));
                
 

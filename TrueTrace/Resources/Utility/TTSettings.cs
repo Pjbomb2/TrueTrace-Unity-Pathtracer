@@ -67,7 +67,7 @@ namespace TrueTrace {
         [SerializeField] public float LEMEnergyScale = 1.0f;
         [SerializeField] public bool UseTransmittanceInNEE = true;
         [SerializeField] public float SecondarySkyDesaturate = 0.0f;
-        [SerializeField] public bool MatChangeResetsAccum = false;
+        [SerializeField] public bool MatChangeResetsAccum = true;
         [SerializeField] public bool PPFXAA = false;
         [SerializeField] public float OIDNBlendRatio = 1.0f;
         [SerializeField] public bool ConvBloom = false;
