@@ -1244,30 +1244,20 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
         float tmax;
         float3 tsmaller;
         float3 tbigger;
-        // uint node_memory_counter = 0;
-        // uint triangle_memory_counter = 0;
-        // uint stack_memory_counter = 0;
-        // uint node_traverse_counter = 0;
-        // uint triangle_traverse_counter = 0;
         float3 DirInv;
+        float3 tmin3;
     #endif
-                        float3 tmin3;
         RayData GlobalRay;
         bestHit = CreateRayHit();
         float RandNum = random(43, GlobalRay.PixelIndex).x;
 
       
-            current_group = 0;
+        int rayidx = 0;
 #ifndef DX11
-            int Coun2 = 0;
-            if(ray_index == 0) {
-                nextRayArray[threadIdxy] = BufferSizes[CurBounce].TracedRays;
-            }
-            GroupMemoryBarrier();
-            bool KilledNaturally = true;
-#endif
-            int rayidx = 0;
-#ifndef DX11
+        int Coun2 = 0;
+        if(ray_index == 0) nextRayArray[threadIdxy] = BufferSizes[CurBounce].TracedRays;
+        GroupMemoryBarrier();
+        bool KilledNaturally = true;
         [loop]do{
             Coun2++;
             bool                terminated = KilledNaturally;//(stack_size == 0 && current_group.y <= 0x00FFFFFF && triangle_group.y == 0);
@@ -1277,10 +1267,6 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
             KilledNaturally = false;
             if(terminated) {
                 Reps = 0;
-#else
-#endif
-                current_group = 0;
-#ifndef DX11
                 if(idxTerminated == 0) {
                     InterlockedAdd(BufferSizes[CurBounce].TracedRays, numTerminated, nextRayArray[threadIdxy]);
                 }
@@ -1288,17 +1274,16 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
 
 
                 rayidx = nextRayArray[threadIdxy] + idxTerminated;
-                if(rayidx >= MaxNum) return;
 #else
                 rayidx = ray_index;
-                if(rayidx >= MaxNum) return;
 #endif
+                if(rayidx >= MaxNum) return;
+                current_group = 0;
                 [branch]if(CurBounce % 2 == 1) rayidx += screen_width * screen_height;
                 GlobalRay = GlobalRays[rayidx];
                 RandNum = random(43, GlobalRay.PixelIndex).x;
                 bestHit = CreateRayHit();
                 if(CurBounce == 0) bestHit.t = asfloat(GlobalRay.hits.z);
-
 
                 ray.origin = GlobalRay.origin;
                 ray.direction = (GlobalRay.direction == 0 ? EPSILON : GlobalRay.direction);
@@ -1307,17 +1292,10 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
                 stack_size = 0;
                 MatOffset = 0;
                 mesh_id = -1;
-
-                // node_memory_counter = 0;
-                // triangle_memory_counter = 0;
-                // stack_memory_counter = 0;
-                // node_traverse_counter = 0;
-                // triangle_traverse_counter = 0;
-
 #ifndef DX11
             }
 
-                int lostLoopIterations = 0;
+            int lostLoopIterations = 0;
 #endif
 
             [loop]while (true) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)          
@@ -1340,8 +1318,6 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
                     [unroll]for(int i = 0; i < 2; i++) {
                         [branch]if(Leafs[i]) {
                             IntersectTriangle(0, (i == 0) ? ((TempNode.A & 0x00FFFFFF) | ((TempNode.B & 0x000000FF) << 24)) : TempNode.C, ray, bestHit, 0, RandNum);//Intersect Mesh Triangles
-                            // triangle_memory_counter += 52;
-                            // triangle_traverse_counter += 1;
                         } else {
                             tmin3 = mad(float3(minA & 0xFF, (minA >> 8) & 0xFF, (minA >> 16) & 0xFF), adjusted_ray_direction_inv, adjusted_ray_origin);
                             tbigger = mad(float3(maxA & 0xFF, (maxA >> 8) & 0xFF, (maxA >> 16) & 0xFF), adjusted_ray_direction_inv, adjusted_ray_origin);
@@ -1365,14 +1341,11 @@ void IntersectcBVH(int ray_index, int threadIdxy, int GTx) {
                     [branch]if(IterCount == 2) {
                         bool swap = LocalDistances.x <= LocalDistances.y;
                         stack[stack_size++] = TempNode.left + swap;
-                        // stack_size = min(stack_size, 15);
                         current_group = TempNode.left + !swap;
                     } else if(IterCount == 1) {
                         [branch]if(LocalDistances[0] == -1) current_group = TempNode.left+(!(Leafs[0] ^ Leafs[1]));
                         else current_group = TempNode.left;
                     };
-                    // node_memory_counter += 32;
-                    // node_traverse_counter += 2;
 
 
 

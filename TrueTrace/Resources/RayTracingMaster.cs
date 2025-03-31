@@ -1152,8 +1152,8 @@ namespace TrueTrace {
                                 #if HardwareRT
                                     cmd.DispatchCompute(IntersectionShader, TraceKernel, CurBounceInfoBuffer, 0);//784 is 28^2
                                 #else
-                                    cmd.DispatchCompute(IntersectionShader, TraceKernel, 64, 64, 1);
-                                    // cmd.DispatchCompute(IntersectionShader, IntersectcBVHKernel, 64, 64, 1);
+                                    // cmd.DispatchCompute(IntersectionShader, TraceKernel, 64, 64, 1);
+                                    cmd.DispatchCompute(IntersectionShader, IntersectcBVHKernel, 64, 64, 1);
                                 #endif
                             #endif
                             if(DoKernelProfiling) cmd.EndSample("Trace Kernel: " + i);
