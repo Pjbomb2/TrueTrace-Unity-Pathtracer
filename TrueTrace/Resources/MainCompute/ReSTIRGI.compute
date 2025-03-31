@@ -959,7 +959,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
 
     [branch]if (DoReSTIRGIConnectionValidation) {
         float2 DistDist = 1;
-        if(SurfaceMat.diffTrans == 0) {
+        if(SurfaceMat.specTrans == 0 && SurfaceMat.diffTrans == 0) {
             PrimaryHitPosition += GeomNorm * 0.001f;
             float Distance = length(PrimaryHitPosition - NEEPos.xyz) - 0.025f;
             SmallerRay ray = CreateRay(PrimaryHitPosition, normalize(NEEPos.xyz - PrimaryHitPosition));
