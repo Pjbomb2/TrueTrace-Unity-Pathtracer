@@ -61,7 +61,6 @@ namespace TrueTrace {
 
 
 
-        public Camera camera;
 
         public int ScreenWidth;
         public int ScreenHeight;
@@ -206,33 +205,32 @@ namespace TrueTrace {
         {
             // this.ScreenWidth = ScreenWidth;
             // this.ScreenHeight = ScreenHeight;
-            // shader.SetInt("screen_width", ScreenWidth);
-            // shader.SetInt("screen_height", ScreenHeight);
-
-            // shader.SetInt("TargetWidth", ScreenWidth);
-            // shader.SetInt("TargetHeight", ScreenHeight);
             if (shader == null) { shader = Resources.Load<ComputeShader>("PostProcess/ASVGF/ASVGF"); }
-            camera = RayTracingMaster._camera;
+            shader.SetInt("screen_width", ScreenWidth);
+            shader.SetInt("screen_height", ScreenHeight);
+
+            shader.SetInt("TargetWidth", ScreenWidth);
+            shader.SetInt("TargetHeight", ScreenHeight);
             bool EvenFrame = CurFrame % 2 == 0;
-            Vector3 Euler = camera.transform.eulerAngles;
-            Vector3 Pos = camera.transform.position;
-            shader.SetMatrix("viewprojection", camera.projectionMatrix * camera.worldToCameraMatrix);
-            camera.transform.eulerAngles = prevEuler; 
-            camera.transform.position = PrevPos; 
-            shader.SetMatrix("prevviewprojection", camera.projectionMatrix * camera.worldToCameraMatrix);
-            shader.SetMatrix("CamToWorldPrev", camera.cameraToWorldMatrix);
-            shader.SetMatrix("CamInvProjPrev", camera.projectionMatrix.inverse);
-            camera.transform.eulerAngles = Euler; 
-            camera.transform.position = Pos; 
+            Vector3 Euler = RayTracingMaster._camera.transform.eulerAngles;
+            Vector3 Pos = RayTracingMaster._camera.transform.position;
+            shader.SetMatrix("viewprojection", RayTracingMaster._camera.projectionMatrix * RayTracingMaster._camera.worldToCameraMatrix);
+            RayTracingMaster._camera.transform.eulerAngles = prevEuler; 
+            RayTracingMaster._camera.transform.position = PrevPos; 
+            shader.SetMatrix("prevviewprojection", RayTracingMaster._camera.projectionMatrix * RayTracingMaster._camera.worldToCameraMatrix);
+            shader.SetMatrix("CamToWorldPrev", RayTracingMaster._camera.cameraToWorldMatrix);
+            shader.SetMatrix("CamInvProjPrev", RayTracingMaster._camera.projectionMatrix.inverse);
+            RayTracingMaster._camera.transform.eulerAngles = Euler; 
+            RayTracingMaster._camera.transform.position = Pos; 
             prevEuler = Euler;
             PrevPos = Pos;
             shader.SetBool("UseBackupPointSelection", UseBackupPointSelection);
-            shader.SetFloat("CameraDist", Vector3.Distance(camera.transform.position, PrevCamPos));
-            shader.SetMatrix("CamToWorld", camera.cameraToWorldMatrix);
-            shader.SetMatrix("CamInvProj", camera.projectionMatrix.inverse);
-            shader.SetVector("Forward", camera.transform.forward);
-            shader.SetFloat("FarPlane", camera.farClipPlane);
-            shader.SetFloat("NearPlane", camera.nearClipPlane);
+            shader.SetFloat("CameraDist", Vector3.Distance(RayTracingMaster._camera.transform.position, PrevCamPos));
+            shader.SetMatrix("CamToWorld", RayTracingMaster._camera.cameraToWorldMatrix);
+            shader.SetMatrix("CamInvProj", RayTracingMaster._camera.projectionMatrix.inverse);
+            shader.SetVector("Forward", RayTracingMaster._camera.transform.forward);
+            shader.SetFloat("FarPlane", RayTracingMaster._camera.farClipPlane);
+            shader.SetFloat("NearPlane", RayTracingMaster._camera.nearClipPlane);
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("Dist Correct Kernel");
             shader.SetTextureFromGlobal(DistCorrect, "Depth", "_CameraDepthTexture");
 #if !TTCustomMotionVectors
@@ -274,14 +272,14 @@ namespace TrueTrace {
             cmd.SetComputeBufferParam(shader, Reproject, "_MeshDataB", Meshes);
             cmd.SetComputeBufferParam(shader, Reproject, "AggTrisA", Tris);
             cmd.SetComputeBufferParam(shader, Reproject, "MeshIndexes", MeshIndexes);
-            shader.SetVector("CamDiff", PrevPos - camera.transform.position);
+            shader.SetVector("CamDiff", PrevPos - RayTracingMaster._camera.transform.position);
             cmd.SetComputeBufferParam(shader, Reproject, "GlobalRaysMini", GlobalRays);
 
 
 
             cmd.DispatchCompute(shader, Reproject, Mathf.CeilToInt((ScreenWidth) / 24.0f), Mathf.CeilToInt((ScreenHeight) / 24.0f), 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Reproject Gradients Kernel");
-            PrevPos = camera.transform.position;
+            PrevPos = RayTracingMaster._camera.transform.position;
         }
 
 
@@ -300,7 +298,7 @@ namespace TrueTrace {
                         int UpscalerMethod)
         {
 
-            camera = RayTracingMaster._camera;
+            RayTracingMaster._camera = RayTracingMaster._camera;
             bool EvenFrame = CurFrame % 2 == 0;
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Copy Data Kernel");
             int MaxIterations = 4;
@@ -551,7 +549,7 @@ namespace TrueTrace {
 
             iter++;
 
-            PrevCamPos = camera.transform.position;
+            PrevCamPos = RayTracingMaster._camera.transform.position;
 
 
 

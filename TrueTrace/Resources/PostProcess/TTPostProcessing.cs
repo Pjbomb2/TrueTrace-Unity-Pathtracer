@@ -433,6 +433,8 @@ namespace TrueTrace {
         {//need to fix this so it doesnt create new textures every time
 
             if(!TAAInitialized) InitializeTAA();
+            TAA.SetInt("screen_width", _camera.scaledPixelWidth);
+            TAA.SetInt("screen_height", _camera.scaledPixelHeight);
             cmd.SetComputeIntParam(TAA,"Samples_Accumulated", CurrentSamples);
 
             TAA.SetFloat("FarPlane", _camera.farClipPlane);

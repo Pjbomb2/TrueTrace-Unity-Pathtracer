@@ -55,7 +55,7 @@ namespace TrueTrace {
                     calculate_cost(node.left) +
                     calculate_cost(node.left + 1);
                         {
-                            float cost_leaf = num_primitives <= 3 ? (float)num_primitives * surface_area(ref node.aabb) : float.MaxValue;
+                            float cost_leaf = num_primitives <= 1 ? (float)num_primitives * surface_area(ref node.aabb) : float.MaxValue;
 
                             float cost_distribute = float.MaxValue;
 

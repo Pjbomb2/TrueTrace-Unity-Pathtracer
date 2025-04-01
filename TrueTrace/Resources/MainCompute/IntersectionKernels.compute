@@ -238,13 +238,13 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
 
                     if (current_group.y > 0x00FFFFFF) stack[stack_size++] = current_group;
 
+                    current_group.x = (TempNode.nodes[1].x) + NodeOffset;
+                    triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
+
                     uint hitmask = cwbvh_node_intersect(ray, oct_inv4, bestHit.t, TempNode);
 
                     current_group.y = (hitmask & 0xff000000) | ((TempNode.nodes[0].w >> 24) & 0xff);
                     triangle_group.y = (hitmask & 0x00ffffff);
-
-                    current_group.x = (TempNode.nodes[1].x) + NodeOffset;
-                    triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
 
                     Reps++;
                 } else {
@@ -537,14 +537,14 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
 
                         if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
 
+                        current_group.x = (TempNode.nodes[1].x) + NodeOffset;
+                        triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
 
                         uint hitmask = cwbvh_node_intersect(ray, oct_inv4, max_distance, TempNode);
 
                         current_group.y = (hitmask & 0xff000000) | ((TempNode.nodes[0].w >> 24) & 0xff);
                         triangle_group.y = (hitmask & 0x00ffffff);
 
-                        current_group.x = (TempNode.nodes[1].x) + NodeOffset;
-                        triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
 
                         Reps++;
                     } else {

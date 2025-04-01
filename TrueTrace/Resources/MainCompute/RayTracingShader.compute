@@ -264,7 +264,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     }
    
     [branch]if(ClayMode) {
-        // if(hitDat.specTrans == 0)
         hitDat.surfaceColor = ClayColor;
         hitDat.metallic = 0;
         hitDat.clearcoat = 0;
