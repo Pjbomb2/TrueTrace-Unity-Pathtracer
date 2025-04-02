@@ -40,9 +40,6 @@ namespace TrueTrace {
         public RenderTexture ReflectedRefractedA;
         public RenderTexture ReflectedRefractedB;
 
-        public RenderTexture CorrectedDistanceTexA;
-        public RenderTexture CorrectedDistanceTexB;
-
 
         public RenderTexture LFVarianceA;
         public RenderTexture LFVarianceB;
@@ -122,8 +119,6 @@ namespace TrueTrace {
                 AlbedoColorB.Release();
                 LFVarianceA.Release();
                 LFVarianceB.Release();
-                CorrectedDistanceTexA.Release();
-                CorrectedDistanceTexB.Release();
             }
             Initialized = false;
         }
@@ -194,14 +189,12 @@ namespace TrueTrace {
             CommonFunctions.CreateRenderTexture(ref ASVGF_GRAD_LF_PONG, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTHalf2);
             CommonFunctions.CreateRenderTexture(ref ASVGF_GRAD_HF_SPEC_PING, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTHalf2);
             CommonFunctions.CreateRenderTexture(ref ASVGF_GRAD_HF_SPEC_PONG, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTHalf2);
-            CommonFunctions.CreateRenderTexture(ref CorrectedDistanceTexA, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf1);
-            CommonFunctions.CreateRenderTexture(ref CorrectedDistanceTexB, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf1);
             Initialized = true;
         }
 
         Vector3 prevEuler;
         Vector3 PrevPos;
-        public void DoRNG(ref RenderTexture RNGTex, ref RenderTexture RNGTexB, int CurFrame, ComputeBuffer GlobalRays, CommandBuffer cmd, RenderTexture PrimaryTriData, ComputeBuffer Meshes, ComputeBuffer Tris, bool UseBackupPointSelection, ComputeBuffer MeshIndexes, int ScreenWidth, int ScreenHeight, ComputeBuffer MeshesB)
+        public void DoRNG(ref RenderTexture RNGTex, ref RenderTexture RNGTexB, int CurFrame, ComputeBuffer GlobalRays, CommandBuffer cmd, RenderTexture PrimaryTriData, ComputeBuffer Meshes, ComputeBuffer Tris, bool UseBackupPointSelection, ComputeBuffer MeshIndexes, int ScreenWidth, int ScreenHeight, ComputeBuffer MeshesB, RenderTexture CorrectedDistanceTexA, RenderTexture CorrectedDistanceTexB)
         {
             // this.ScreenWidth = ScreenWidth;
             // this.ScreenHeight = ScreenHeight;
@@ -231,17 +224,14 @@ namespace TrueTrace {
             shader.SetVector("Forward", RayTracingMaster._camera.transform.forward);
             shader.SetFloat("FarPlane", RayTracingMaster._camera.farClipPlane);
             shader.SetFloat("NearPlane", RayTracingMaster._camera.nearClipPlane);
+#if !TTCustomMotionVectors
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("Dist Correct Kernel");
             shader.SetTextureFromGlobal(DistCorrect, "Depth", "_CameraDepthTexture");
-#if !TTCustomMotionVectors
             shader.SetTextureFromGlobal(DistCorrect, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
-#else
-            shader.SetTextureFromGlobal(DistCorrect, "TEX_PT_MOTION", "TTMotionVectorTexture");
-#endif       
             cmd.SetComputeTextureParam(shader, DistCorrect, "TEX_PT_VIEW_DEPTH_AWRITE", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
             cmd.DispatchCompute(shader, DistCorrect, Mathf.CeilToInt((ScreenWidth) / 32.0f), Mathf.CeilToInt((ScreenHeight) / 32.0f), 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("Dist Correct Kernel");
-
+#endif
 
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Reproject Gradients Kernel");
             cmd.SetComputeIntParam(shader, "CurFrame", CurFrame);
@@ -295,7 +285,9 @@ namespace TrueTrace {
                         bool DoExposure, 
                         float IndirectBoost, 
                         RenderTexture RNGTex,
-                        int UpscalerMethod)
+                        int UpscalerMethod, 
+                        RenderTexture CorrectedDistanceTexA, 
+                        RenderTexture CorrectedDistanceTexB)
         {
 
             RayTracingMaster._camera = RayTracingMaster._camera;

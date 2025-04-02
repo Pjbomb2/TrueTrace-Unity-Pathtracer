@@ -36,7 +36,7 @@ public class RenderHandle : MonoBehaviour
 #if !TTCustomMotionVectors
         TrueTrace.RayTracingMaster._camera.depthTextureMode |= DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
 #else
-        TrueTrace.RayTracingMaster._camera.depthTextureMode = DepthTextureMode.Depth;
+        TrueTrace.RayTracingMaster._camera.depthTextureMode = DepthTextureMode.None;
 #endif
         CommandBuffer cmd = new CommandBuffer();
         cmd.name = "TrueTrace";

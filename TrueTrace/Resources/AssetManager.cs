@@ -1242,8 +1242,8 @@ namespace TrueTrace {
                 LightTransforms.Clear();
                 int TotalMatCount = 0;
                 int AggSGTreeNodeCount = 0;
-    int SkinnedMeshTriCount = 0;
-    int SkinnedMeshTriOffset = 0;
+                int SkinnedMeshTriCount = 0;
+                int SkinnedMeshTriOffset = 0;
 
 #if !DontUseSGTree
                 for(int i = 0; i < ParentsLength; i++) if (RenderQue[i].LightTriangles.Count != 0) {LightMeshCount++; AggSGTreeNodeCount += RenderQue[i].LBVH.SGTree.Length;}
@@ -1510,24 +1510,6 @@ namespace TrueTrace {
                 }
             }
             ParentCountHasChanged = false;
-            if (UseSkinning && didstart) {
-                for (int i = 0; i < ParentsLength; i++) {//Refit BVH's of skinned meshes
-                    if (RenderQue[i].IsSkinnedGroup || RenderQue[i].IsDeformable) {
-#if TTCustomMotionVectors
-                        RenderQue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBufferA, ref AggTriBufferB, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, BoxesBuffer, i, SkinnedMeshAggTriBufferPrev, cmd);
-#else
-                        RenderQue[i].RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBufferA, ref AggTriBufferB, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, BoxesBuffer, i, cmd);
-#endif
-                        if(i < MyMeshesCompacted.Count) {
-                            MyMeshDataCompacted TempMesh2 = MyMeshesCompacted[i];
-                            TempMesh2.Transform = RenderTransforms[i].worldToLocalMatrix;
-                            MyMeshesCompacted[i] = TempMesh2;
-                            MeshAABBs[i] = RenderQue[i].aabb_untransformed;
-                            TransformedAABBs[i] = RenderQue[i].aabb;
-                        }
-                    }
-                }
-            }
             {//BINDLESS-TEST this spot is guarenteed to run once per frame, be very close to the begining of the commandbuffer, and is guarenteed to have the AlbedoArray filled
             #if !DX11Only && !UseAtlas
                 Shader.SetGlobalTexture("_BindlessTextures", Texture2D.whiteTexture);
@@ -1829,14 +1811,14 @@ namespace TrueTrace {
         int CurFrame = 0;
         int BVHNodeCount = 0;
 
-        public unsafe void RefitTLAS(AABB[] Boxes, CommandBuffer cmd)
+        public unsafe void RefitTLAS(AABB[] Boxes, CommandBuffer cmd, bool ReadyToRefit)
         {
             CurFrame++;
             if(LightAABBs != null && LightAABBs.Length != 0 && LBVHTLASTask == null) LBVHTLASTask = Task.Run(() => CorrectRefitLBVH());
             #if !HardwareRT
             if(TLASTask == null) TLASTask = Task.Run(() => CorrectRefit(TransformedAABBs));
 
-             if(TLASTask.Status == TaskStatus.RanToCompletion && CurFrame % 25 == 24) {
+             if(ReadyToRefit) {
                 MaxRecur = TempRecur; 
 
                 if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
@@ -2058,6 +2040,30 @@ namespace TrueTrace {
             if(MeshAABBs.Length == 0) return -1;
             if (ChildrenUpdated || !didstart || OnlyInstanceUpdated || MyMeshesCompacted.Count == 0)
             {
+
+            if (UseSkinning && didstart) {
+                ParentObject TempParent;
+                int CompactedCount = MyMeshesCompacted.Count;
+                for (int i = 0; i < MeshDataCount; i++) {//Refit BVH's of skinned meshes
+                    TempParent = RenderQue[i];
+                    if (TempParent.IsSkinnedGroup || TempParent.IsDeformable) {
+#if TTCustomMotionVectors
+                        TempParent.RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBufferA, ref AggTriBufferB, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, BoxesBuffer, i, SkinnedMeshAggTriBufferPrev, cmd);
+#else
+                        TempParent.RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBufferA, ref AggTriBufferB, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, BoxesBuffer, i, cmd);
+#endif
+                        if(i < CompactedCount) {
+                            MyMeshDataCompacted TempMesh2 = MyMeshesCompacted[i];
+                            TempMesh2.Transform = RenderTransforms[i].worldToLocalMatrix;
+                            MyMeshesCompacted[i] = TempMesh2;
+                            MeshAABBs[i] = TempParent.aabb_untransformed;
+                            TransformedAABBs[i] = TempParent.aabb;
+                        }
+                    }
+                }
+            }
+
+                
                 MyMeshesCompacted.Clear();// = new MyMeshDataCompacted[MeshDataCount + InstanceRenderQue.Count];
                 AggData[] Aggs = new AggData[InstanceData.RenderQue.Count];
                 // UnityEngine.Profiling.Profiler.BeginSample("Remake Initial Data");
@@ -2250,14 +2256,37 @@ namespace TrueTrace {
                 ParentObject TargetParent;
                 int ClosedCount = 0;
                 MyMeshDataCompacted TempMesh2;
+                bool ReadyToRefit = TLASTask != null && TLASTask.Status == TaskStatus.RanToCompletion && CurFrame % 25 == 24;
+                int CompactedCount = MyMeshesCompacted.Count;
                 for (int i = 0; i < MeshDataCount; i++)
                 {
-                    if (RenderTransforms[i].hasChanged)
+
+                    TargetParent = RenderQue[i];
+                    TargetTransform = RenderTransforms[i];
+                    if (TargetParent.IsSkinnedGroup || TargetParent.IsDeformable) {
+                        if (UseSkinning && didstart) {
+    #if TTCustomMotionVectors
+                            TargetParent.RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBufferA, ref AggTriBufferB, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, BoxesBuffer, i, SkinnedMeshAggTriBufferPrev, cmd);
+    #else
+                            TargetParent.RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBufferA, ref AggTriBufferB, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, BoxesBuffer, i, cmd);
+    #endif
+                            if(i < CompactedCount) {
+                                TempMesh2 = MyMeshesCompacted[i];
+                                TempMesh2.Transform = TargetTransform.worldToLocalMatrix;
+                                MyMeshesCompacted[i] = TempMesh2;
+                                MeshAABBs[i] = TargetParent.aabb_untransformed;
+                                TransformedAABBs[i] = TargetParent.aabb;
+                            }
+                        }
+                        continue;
+                    }
+
+
+                    if (TargetTransform.hasChanged || (ReadyToRefit && TargetParent.HasTransformChanged))
                     {
-                        TargetParent = RenderQue[i];
-                        if (TargetParent.IsSkinnedGroup || RenderQue[i].IsDeformable) continue;
-                        TargetTransform = RenderTransforms[i];
-                        TargetParent.UpdateAABB(TargetTransform);
+                        TargetParent.HasTransformChanged = true;
+                        TargetTransform = TargetTransform;
+                        TargetTransform.hasChanged = false;
                         TempMesh2 = MyMeshesCompacted[i];
                         TempMesh2.Transform = TargetTransform.worldToLocalMatrix;
                         MyMeshesCompacted[i] = TempMesh2;
@@ -2266,8 +2295,11 @@ namespace TrueTrace {
                                 AccelStruct.UpdateInstanceTransform(a);
                             }
                         #endif
-                        MeshAABBs[i] = TargetParent.aabb_untransformed;
-                        TransformedAABBs[i] = TargetParent.aabb;
+                        if(ReadyToRefit) {
+                            TargetParent.UpdateAABB(TargetTransform);
+                            MeshAABBs[i] = TargetParent.aabb_untransformed;
+                            TransformedAABBs[i] = TargetParent.aabb;
+                        }
                     }
                 }
                 if(MeshDataCount != 1 && ClosedCount == MeshDataCount - 1) return 0;
@@ -2362,7 +2394,7 @@ namespace TrueTrace {
                 if(RayMaster.FramesSinceStart2 % 2 == 0) cmd.SetBufferData(MeshDataBufferA, MyMeshesCompacted);
                 else cmd.SetBufferData(MeshDataBufferB, MyMeshesCompacted);
                 if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("TLAS Refitting");
-                RefitTLAS(MeshAABBs, cmd);
+                RefitTLAS(MeshAABBs, cmd, ReadyToRefit);
                 if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("TLAS Refitting");
             }
 

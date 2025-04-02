@@ -1308,7 +1308,7 @@ void TTtoOIDNKernelPanorama(uint3 id : SV_DispatchThreadID) {
     }
     OutputBuffer[id.x + id.y * screen_width] = Result[id.xy].xyz;
 }
-
+RWTexture2D<half> CorrectedDistanceTex;
 
 
 #pragma kernel MVKernel
@@ -1327,7 +1327,10 @@ void MVKernel(uint3 id : SV_DispatchThreadID) {
         float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
         int2 NeighbPos = id.xy + reflprojection * int2(screen_width, screen_height);
         if(any(NeighbPos < 0 || NeighbPos >= int2(screen_width, screen_height))) return;
-        if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) MVTexture[NeighbPos] = (reflprojection);
+        if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) {
+            CorrectedDistanceTex[NeighbPos] = length(NewPos - CamPos);
+            MVTexture[NeighbPos] = (reflprojection);
+        }
 
 }
 
@@ -1336,6 +1339,7 @@ void MVKernel(uint3 id : SV_DispatchThreadID) {
 void ResetMVKernel(uint3 id : SV_DispatchThreadID) {
     if(id.x >= screen_width || id.y >= screen_height) return;
     MVTexture[id.xy] = -10000.0f;
+    CorrectedDistanceTex[id.xy] = -10000.0f;
 
 }
 
@@ -1354,6 +1358,8 @@ void RefineMVKernel(uint3 id : SV_DispatchThreadID) {
         float4 curprojectedrefl = mul(viewprojection, float4(NewPos, 1));
         float4 prevprojectedrefl = mul(prevviewprojection, float4(OldPos, 1));
         float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
-        if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) MVTexture[id.xy] = (reflprojection);
-
+        if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) {
+            CorrectedDistanceTex[id.xy] = length(NewPos - CamPos);
+            MVTexture[id.xy] = (reflprojection);
+        }
 }

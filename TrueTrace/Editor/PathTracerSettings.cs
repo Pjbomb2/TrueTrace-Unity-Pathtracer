@@ -643,6 +643,7 @@ Toolbar toolbar;
 
 
          Foldout PrimaryBackgroundFoldout = new Foldout() {text = "Primary Background"};
+            PrimaryBackgroundFoldout.tooltip = "Sky used for direct lighting";
         { 
             {
 
@@ -711,7 +712,8 @@ Toolbar toolbar;
         }
 
 
-            Foldout SecondaryBackgroundFoldout = new Foldout() {text = "Secondary Background"};
+         Foldout SecondaryBackgroundFoldout = new Foldout() {text = "Secondary Background"};
+            SecondaryBackgroundFoldout.tooltip = "Sky used for indirect lighting";
          {
             {
                SecondaryInputHDRIField = new ObjectField();
@@ -767,18 +769,22 @@ Toolbar toolbar;
 
 
       UnityLightModifierField = new FloatField() {value = LightEnergyScale, label = "Unity Light Intensity Modifier"};
+         UnityLightModifierField.tooltip = "Global emission multiplier for spot/point/direction/area lights";
       UnityLightModifierField.RegisterValueChangedCallback(evt => {LightEnergyScale = evt.newValue; RayMaster.LocalTTSettings.LightEnergyScale = LightEnergyScale;});
       UnityLightModifierField.style.maxWidth = 345;
 
       FloatField LEMLightModifierField = new FloatField() {value = LEMEnergyScale, label = "LEM Light Intensity Modifier"};
+         LEMLightModifierField.tooltip = "Global emission multiplier for emissive meshes";
       LEMLightModifierField.RegisterValueChangedCallback(evt => {LEMEnergyScale = evt.newValue; RayMaster.LocalTTSettings.LEMEnergyScale = LEMEnergyScale;});
       LEMLightModifierField.style.maxWidth = 345;
 
       IndirectBoostField = new FloatField() {value = IndirectBoost, label = "Indirect Lighting Boost"};
+         IndirectBoostField.tooltip = "Global multiplier for indirection lighting strength";
       IndirectBoostField.RegisterValueChangedCallback(evt => {IndirectBoost = evt.newValue; RayMaster.LocalTTSettings.IndirectBoost = IndirectBoost;});
       IndirectBoostField.style.maxWidth = 345;
 
       ColorField GroundColorField = new ColorField();
+         GroundColorField.tooltip = "Ground color when using the procedural atmosphere";
       GroundColorField.label = "Ground Color: ";
       GroundColorField.value = new Color(GroundColor.x, GroundColor.y, GroundColor.z, 1.0f);
       GroundColorField.style.width = 250;
@@ -786,6 +792,7 @@ Toolbar toolbar;
 
 
       Toggle TransmittanceInNEEToggle = new Toggle() {value = RayMaster.LocalTTSettings.UseTransmittanceInNEE, text = "Apply Sky Transmittance to Sun"};
+         TransmittanceInNEEToggle.tooltip = "Determins if the color of the sun is automatically adjusted based on its position in the sky(like getting more red towards the horizon)";
       TransmittanceInNEEToggle.RegisterValueChangedCallback(evt => {UseTransmittanceInNEE = evt.newValue; RayMaster.LocalTTSettings.UseTransmittanceInNEE = UseTransmittanceInNEE;});
 
       SceneSettingsMenu.Add(PrimaryBackgroundFoldout);
@@ -1626,9 +1633,10 @@ Toolbar toolbar;
       Toggle DX11Toggle;
 
 
-      private Toggle CustomToggle(string Label, string TargetDefine) {
+      private Toggle CustomToggle(string Label, string TargetDefine, string tooltip = "") {
          // VisualElement CustTogContainer = CreateHorizontalBox("Custom Horizontal Toggle");
             Toggle CustToggle = new Toggle() {value = GetGlobalDefine(TargetDefine), text = Label};
+               CustToggle.tooltip = tooltip;
             CustToggle.RegisterValueChangedCallback(evt => {SetGlobalDefines(TargetDefine, evt.newValue);});
          return CustToggle;
       }
@@ -1683,28 +1691,35 @@ Toolbar toolbar;
             HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("HardwareRT"); SetGlobalDefines("HardwareRT", true);} else {RemoveDefine("HardwareRT"); SetGlobalDefines("HardwareRT", false);}});
 
             GaussianTreeToggle = new Toggle() {value = (definesList.Contains("DontUseSGTree")), text = "Use Old Light BVH instead of Gaussian Tree"};
+               GaussianTreeToggle.tooltip = "Gaussian tree is more expensive, but samples on metallic surfaces a LOT better";
             GaussianTreeToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("DontUseSGTree"); SetGlobalDefines("UseSGTree", false);} else {RemoveDefine("DontUseSGTree"); SetGlobalDefines("UseSGTree", true);}});
 
 
             BindlessToggle = new Toggle() {value = (definesList.Contains("UseAtlas")), text = "Disable Bindless Textures"};
+               BindlessToggle.tooltip = "Uses Atlas fallback, which increases VRAM/RAM use, and scales down texture resolution when needed";
             BindlessToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("UseAtlas"); SetGlobalDefines("UseBindless", false);} else {RemoveDefine("UseAtlas"); SetGlobalDefines("UseBindless", true);}});
 
-            Toggle CustomMotionVectorToggle = new Toggle() {value = (definesList.Contains("TTCustomMotionVectors")), text = "Use Custom Motion Vectors(EXPERIMENTAL)"};
+            Toggle CustomMotionVectorToggle = new Toggle() {value = (definesList.Contains("TTCustomMotionVectors")), text = "Remove Rasterization Requirement(EXPERIMENTAL)"};
+               CustomMotionVectorToggle.tooltip = "Removes the need for rasterized rendering(except when upscaling with TAAU), allowing you to turn it off in your camera for extra performance";
             CustomMotionVectorToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("TTCustomMotionVectors"); SetGlobalDefines("TTCustomMotionVectors", true);} else {RemoveDefine("TTCustomMotionVectors"); SetGlobalDefines("TTCustomMotionVectors", false);}});
 
             Toggle NonAccurateLightTriToggle = new Toggle() {value = (definesList.Contains("AccurateLightTris")), text = "Enable Emissive Texture Aware Light BVH"};
+               NonAccurateLightTriToggle.tooltip = "Uses more ram(rarely it can use a LOT), but allows for much better emissive mesh sampling if you make heavy use of emission masks";
             NonAccurateLightTriToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("AccurateLightTris"); else RemoveDefine("AccurateLightTris");});
 
             Toggle LoadTTSettingsFromResourcesToggle = new Toggle() {value = (definesList.Contains("LoadTTSettingsFromResources")), text = "Load TTSettings from Global File"};
+               LoadTTSettingsFromResourcesToggle.tooltip = "Replaces the per-scene TTSettings file with the one that is declared in the RayTracingMaster's inspector window";
             LoadTTSettingsFromResourcesToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("LoadTTSettingsFromResources"); else RemoveDefine("LoadTTSettingsFromResources");});
 
             Toggle VerboseToggle = new Toggle() {value = (definesList.Contains("TTVerbose")), text = "Enable Verbose Logging"};
+               VerboseToggle.tooltip = "More data";
             VerboseToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("TTVerbose"); else RemoveDefine("TTVerbose");});
 
             VisualElement ClayColorBox = new VisualElement();
 
 
             Toggle ClayModeToggle = new Toggle() {value = ClayMode, text = "Use ClayMode"};
+               ClayModeToggle.tooltip = "Disables normal mapping, and forces a constant albedo color, good for seeing light propogation";
             ClayModeToggle.RegisterValueChangedCallback(evt => {ClayMode = evt.newValue; RayMaster.LocalTTSettings.ClayMode = ClayMode; if(evt.newValue) HardSettingsMenu.Insert(HardSettingsMenu.IndexOf(ClayModeToggle) + 1, ClayColorBox); else HardSettingsMenu.Remove(ClayColorBox);});
 
             ColorField ClayColorField = new ColorField();
@@ -1715,15 +1730,18 @@ Toolbar toolbar;
             ClayColorBox.Add(ClayColorField);
 
             IntegerField MaxSampField = new IntegerField() {value = MaxSampCount, label = "Maximum Sample Count"};
+               MaxSampField.tooltip = "Truetrace will render up to this sample count, then idle";
             MaxSampField.style.width = 300;
             MaxSampField.RegisterValueChangedCallback(evt => {MaxSampCount = evt.newValue; MaxSampCount = Mathf.Min(Mathf.Max(MaxSampCount, 0), 99999999); MaxSampField.value = MaxSampCount; RayMaster.LocalTTSettings.MaxSampCount = MaxSampCount;});
 
 
             OIDNToggle = new Toggle() {value = (definesList.Contains("UseOIDN")), text = "Enable OIDN(Does NOT work with DX11 Only)"};
+               OIDNToggle.tooltip = "Allows access to the OIDN denoiser in the main menus \"Denoiser\" field";
             OIDNToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("UseOIDN"); else RemoveDefine("UseOIDN");});
 
 
             Toggle RadCacheToggle = new Toggle() {value = (definesList.Contains("DisableRadianceCache")), text = "FULLY Disable Radiance Cache"};
+               RadCacheToggle.tooltip = "Prevents use of the radcache entirely while this is enabled, as it frees up all resources/ram/vram the radiance cache uses";
             RadCacheToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {SetGlobalDefines("RadCache", false); AddDefine("DisableRadianceCache");} else {SetGlobalDefines("RadCache", true); RemoveDefine("DisableRadianceCache");}});
 
 
@@ -1804,16 +1822,16 @@ Toolbar toolbar;
          VisualElement PlayContainer = new VisualElement();
          PlayContainer.style.paddingLeft = 10;
 
-         PlayContainer.Add(CustomToggle("Fade Mapping", "FadeMapping"));
-         PlayContainer.Add(CustomToggle("Stained Glass", "StainedGlassShadows"));
-         PlayContainer.Add(CustomToggle("Ignore Backfacing Triangles", "IgnoreBackfacing"));
-         PlayContainer.Add(CustomToggle("Use Light BVH", "LBVH"));
-         PlayContainer.Add(CustomToggle("Quick RadCache Toggle", "RadCache"));
-         PlayContainer.Add(CustomToggle("Use Texture LOD", "UseTextureLOD"));
-         PlayContainer.Add(CustomToggle("Use vMF Diffuse", "vMFDiffuse"));
-         PlayContainer.Add(CustomToggle("Use EON Diffuse", "EONDiffuse"));
+         PlayContainer.Add(CustomToggle("Fade Mapping", "FadeMapping", "Allows for fade mapping"));
+         PlayContainer.Add(CustomToggle("Stained Glass", "StainedGlassShadows", "Simulates colored glass coloring shadow rays - Stained glass effect"));
+         PlayContainer.Add(CustomToggle("Ignore Backfacing Triangles", "IgnoreBackfacing", "Backfacing triangles wont get rendered"));
+         PlayContainer.Add(CustomToggle("Use Light BVH", "LBVH", "Quick toggle to switch between the active light tree(Gaussian tree or light bvh), and simple RIS, like the default unity lights use"));
+         PlayContainer.Add(CustomToggle("Quick RadCache Toggle", "RadCache", "Quick toggle for the radiance cache, does NOT affect memory used by the radiance cache, unlike the toggle above"));
+         PlayContainer.Add(CustomToggle("Use Texture LOD", "UseTextureLOD", "Bindless mode only - Uses a higher texture LOD for each bounce, which can help performance"));
+         PlayContainer.Add(CustomToggle("Use vMF Diffuse", "vMFDiffuse", "Different diffuse material model"));
+         PlayContainer.Add(CustomToggle("Use EON Diffuse", "EONDiffuse", "Different diffuse material model"));
          PlayContainer.Add(CustomToggle("Use Advanced Background", "AdvancedBackground"));
-         PlayContainer.Add(CustomToggle("Multiscatter Fog", "Fog"));
+         PlayContainer.Add(CustomToggle("Multiscatter Fog", "Fog", "Not realtime, as I have no denoiser for it yet"));
 
 
 
@@ -1848,6 +1866,7 @@ Toolbar toolbar;
 
 
          Toggle DoSavingToggle = new Toggle() {value = DoSaving, text = "Enable RayTacingObject Saving"};
+            DoSavingToggle.tooltip = "Allows saving any changes to your truetrace materials made during play mode";
          DoSavingToggle.RegisterValueChangedCallback(evt => {DoSaving = evt.newValue; RayTracingMaster.DoSaving = DoSaving;});
          Toggle MatChangeResetsAccumToggle = new Toggle() {value = MatChangeResetsAccum, text = "Material Change Resets Accumulation"};
          MatChangeResetsAccumToggle.RegisterValueChangedCallback(evt => {MatChangeResetsAccum = evt.newValue; RayMaster.LocalTTSettings.MatChangeResetsAccum = MatChangeResetsAccum;});

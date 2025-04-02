@@ -443,7 +443,6 @@ namespace TrueTrace {
 #else
             TAA.SetTextureFromGlobal(TAAPrepareKernel, "MotionVectors", "TTMotionVectorTexture");
 #endif       
-            TAA.SetTextureFromGlobal(TAAPrepareKernel, "DepthTex", "_CameraDepthTexture");
             cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorIn", _Final);
             cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorOut", TempTexTAA);
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("TAA Prepare Kernel");

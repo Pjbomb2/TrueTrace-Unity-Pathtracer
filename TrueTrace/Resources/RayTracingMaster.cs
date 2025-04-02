@@ -18,7 +18,7 @@ namespace TrueTrace {
     {
         public static RayTracingMaster RayMaster;
         [HideInInspector] public static Camera _camera;
-        public static bool DoKernelProfiling = true;
+        public static bool DoKernelProfiling = false;
         [HideInInspector] [SerializeField] public string LocalTTSettingsName = "TTGlobalSettings";
         private bool OverriddenResolutionIsActive = false;
         public bool HDRPorURPRenderInScene = false;
@@ -60,6 +60,9 @@ namespace TrueTrace {
         private ComputeShader ReSTIRGI;
         private ComputeShader CDFCompute;
 
+        public RenderTexture CorrectedDistanceTexA;
+        public RenderTexture CorrectedDistanceTexB;
+
         private RenderTexture _target;
         private RenderTexture _converged;
         private RenderTexture _DebugTex;
@@ -71,8 +74,6 @@ namespace TrueTrace {
 #if TTCustomMotionVectors
         private RenderTexture MVTexture;
 #endif
-        // public RenderTexture TTMotionVectors;
-
         private RenderTexture GIReservoirA;
         private RenderTexture GIReservoirB;
         private RenderTexture GIReservoirC;
@@ -425,6 +426,8 @@ namespace TrueTrace {
             ScreenSpaceInfoPrev.ReleaseSafe();
             GradientsA.ReleaseSafe();
             GradientsB.ReleaseSafe();
+            CorrectedDistanceTexA.Release();
+            CorrectedDistanceTexB.Release();
             #if UseOIDN
                 ColorBuffer.ReleaseSafe();
                 OutputBuffer.ReleaseSafe();
@@ -557,8 +560,10 @@ namespace TrueTrace {
         private Vector2 HDRIParams = Vector2.zero;
         private void SetShaderParameters(CommandBuffer cmd) {
             HasSDFHandler = (OptionalSDFHandler != null) && OptionalSDFHandler.enabled && OptionalSDFHandler.gameObject.activeInHierarchy;
-            if(LocalTTSettings.RenderScale != 1.0f && LocalTTSettings.UpscalerMethod != 0) _camera.renderingPath = RenderingPath.DeferredShading;
-            _camera.depthTextureMode |= DepthTextureMode.Depth;
+            if(LocalTTSettings.RenderScale != 1.0f && LocalTTSettings.UpscalerMethod != 0) {
+                _camera.renderingPath = RenderingPath.DeferredShading;
+                _camera.depthTextureMode |= DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
+            }
             if(LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1 && !ReSTIRASVGFCode.Initialized) ReSTIRASVGFCode.init(SourceWidth, SourceHeight);
             else if ((LocalTTSettings.DenoiserMethod != 1 || !LocalTTSettings.UseReSTIRGI) && ReSTIRASVGFCode.Initialized) ReSTIRASVGFCode.ClearAll();
             if (!LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1 && !ASVGFCode.Initialized) ASVGFCode.init(SourceWidth, SourceHeight, OverridenWidth, OverridenHeight);
@@ -813,13 +818,16 @@ namespace TrueTrace {
             ShadingShader.SetTexture(MVKernel, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
             ShadingShader.SetTexture(MVKernel, "PrimaryTriDataPrev", (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
             ShadingShader.SetTexture(MVKernel, "MVTexture", MVTexture);
+            ShadingShader.SetTexture(MVKernel, "CorrectedDistanceTex", (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTexA : CorrectedDistanceTexB);
 
             AssetManager.Assets.SetMeshTraceBuffers(ShadingShader, MVKernel+2);
             ShadingShader.SetTexture(MVKernel+2, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
             ShadingShader.SetTexture(MVKernel+2, "PrimaryTriDataPrev", (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
             ShadingShader.SetTexture(MVKernel+2, "MVTexture", MVTexture);
+            ShadingShader.SetTexture(MVKernel+2, "CorrectedDistanceTex", (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTexA : CorrectedDistanceTexB);
 
             ShadingShader.SetTexture(MVKernel + 1, "MVTexture", MVTexture);
+            ShadingShader.SetTexture(MVKernel+1, "CorrectedDistanceTex", (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTexA : CorrectedDistanceTexB);
             ShadingShader.SetComputeBuffer(MVKernel, "GlobalColors", LightingBuffer);
             ShadingShader.SetComputeBuffer(MVKernel + 2, "GlobalColors", LightingBuffer);
 #endif
@@ -909,7 +917,6 @@ namespace TrueTrace {
 
         private void ResetAllTextures() {
             // _camera.renderingPath = RenderingPath.DeferredShading;
-            _camera.depthTextureMode |= DepthTextureMode.Depth;
             if(PrevResFactor != LocalTTSettings.RenderScale || TargetWidth != OverridenWidth) {
                 TargetWidth = OverridenWidth;
                 TargetHeight = OverridenHeight;
@@ -993,6 +1000,8 @@ namespace TrueTrace {
                     ScreenSpaceInfoPrev.ReleaseSafe();
                     GradientsA.ReleaseSafe();
                     GradientsB.ReleaseSafe();
+                    CorrectedDistanceTexA.Release();
+                    CorrectedDistanceTexB.Release();
                     #if UseOIDN
                         ColorBuffer.ReleaseSafe();
                         OutputBuffer.ReleaseSafe();
@@ -1060,6 +1069,8 @@ namespace TrueTrace {
                 CommonFunctions.CreateRenderTexture(ref ScreenSpaceInfoPrev, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref GradientsA, SourceWidth, SourceHeight, CommonFunctions.RTHalf2);
                 CommonFunctions.CreateRenderTexture(ref GradientsB, SourceWidth, SourceHeight, CommonFunctions.RTHalf2);
+                CommonFunctions.CreateRenderTexture(ref CorrectedDistanceTexA, SourceWidth, SourceHeight, CommonFunctions.RTHalf1);
+                CommonFunctions.CreateRenderTexture(ref CorrectedDistanceTexB, SourceWidth, SourceHeight, CommonFunctions.RTHalf1);
                 // Reset sampling
                 _currentSample = 0;
                 uFirstFrame = 1;
@@ -1081,7 +1092,7 @@ namespace TrueTrace {
                 if(DoKernelProfiling) cmd.BeginSample("ASVGF Reproject Pass");
                     // AssetManager.Assets.SetMeshTraceBuffers(ASVGFCode.shader, 1);
                     ASVGFCode.shader.SetTexture(1, "ScreenSpaceInfoWrite", (FramesSinceStart2 % 2 == 0) ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
-                    ASVGFCode.DoRNG(ref _RandomNums, ref _RandomNumsB, FramesSinceStart2, _RayBuffer, cmd, (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB, (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 0)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, Assets.AggTriBufferA, MeshOrderChanged, Assets.TLASCWBVHIndexes, SourceWidth, SourceHeight, (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 1)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB);
+                    ASVGFCode.DoRNG(ref _RandomNums, ref _RandomNumsB, FramesSinceStart2, _RayBuffer, cmd, (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB, (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 0)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, Assets.AggTriBufferA, MeshOrderChanged, Assets.TLASCWBVHIndexes, SourceWidth, SourceHeight, (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 1)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, CorrectedDistanceTexA, CorrectedDistanceTexB);
                 if(DoKernelProfiling) cmd.EndSample("ASVGF Reproject Pass");
             }
 
@@ -1254,7 +1265,9 @@ namespace TrueTrace {
                                     LocalTTSettings.PPExposure, 
                                     LocalTTSettings.IndirectBoost, 
                                     (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB, 
-                                    LocalTTSettings.UpscalerMethod);
+                                    LocalTTSettings.UpscalerMethod, 
+                                    CorrectedDistanceTexA, 
+                                    CorrectedDistanceTexB);
                     CurrentSample = 1;
                     if(DoKernelProfiling) cmd.EndSample("ASVGF");
                 } else if(LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1) {
@@ -1276,7 +1289,9 @@ namespace TrueTrace {
                                         (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB, 
                                         (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 0)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, 
                                         Assets.AggTriBufferA, 
-                                        LocalTTSettings.UpscalerMethod);
+                                        LocalTTSettings.UpscalerMethod, 
+                                        CorrectedDistanceTexA, 
+                                        CorrectedDistanceTexB);
                     CurrentSample = 1;
                     if(DoKernelProfiling) cmd.EndSample("ReSTIR ASVGF");
                 }

@@ -1476,7 +1476,7 @@ namespace TrueTrace {
         }
         public Vector3 center;
         public Vector3 extent;
-
+        public bool HasTransformChanged = false;
         public void UpdateAABB(Transform transform) {//Update the Transformed AABB by getting the new Max/Min of the untransformed AABB after transforming it
             #if HardwareRT
                 for(int i = 0; i < Renderers.Length; i++) AssetManager.Assets.AccelStruct.UpdateInstanceTransform(Renderers[i]);
@@ -1489,6 +1489,7 @@ namespace TrueTrace {
                 aabb.BBMax = new_center + new_extent;
             #endif    
             transform.hasChanged = false;
+            HasTransformChanged = false;
         }
 
         private unsafe void ConstructAABB() {

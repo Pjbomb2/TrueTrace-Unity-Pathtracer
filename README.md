@@ -139,7 +139,7 @@ for bringing bindless textures to unity!
   <li>Use DX11 - Disables DX12 only toggles, but allows truetrace to run in DX11.</li>
   <li>Enable OIDN - (DX12 Only) Adds the OIDN denoiser to the Denoiser list in "Main Options"</li>
   <li>FULLY Disable Radiance Cache - Will free the memory usually used by the Radiance Cache</li>
-  <li>Use Custom Motion Vectors - Uses custom motion vectors instead of unitys, allowing for easier URP use and Forward rendering</li>
+  <li>Remove Rasterization Requirement - Truetrace stops using rasterization for anything(other than upscaling with TAAU), so you can turn off rasterization rendering in your cameras for extra performance</li>
   <li>Enable Emissive Texture Aware Light BVH - Allows for smarter/better sampling of emissive meshes by considering their emissive masks/textures; Can use lots of RAM.</li>
   <li>Use Light BVH - Toggles the use of EITHER the Light BVH or Gaussian Tree on/off; uses the RIS count of NEE if off. Turn off for maximum speed.</li>
   <li>Quick Radcache Toggle - Toggles the radcache on/off. Useful for comparing to ground truth pathtracing.</li>

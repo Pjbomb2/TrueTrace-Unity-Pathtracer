@@ -168,8 +168,6 @@ namespace TrueTrace {
             CommonFunctions.CreateRenderTexture(ref InputLFSH, ScreenWidth, ScreenHeight, CommonFunctions.RTFull4);
             CommonFunctions.CreateRenderTexture(ref InputLFCOCG, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf2);
             CommonFunctions.CreateRenderTexture(ref TEX_PT_COLOR_SPEC, ScreenWidth, ScreenHeight, CommonFunctions.RTFull1);
-            CommonFunctions.CreateRenderTexture(ref CorrectedDistanceTexA, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf2);
-            CommonFunctions.CreateRenderTexture(ref CorrectedDistanceTexB, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf2);
             Initialized = true;
         }
 
@@ -191,7 +189,9 @@ namespace TrueTrace {
                         RenderTexture PrimaryTriData,
                         ComputeBuffer MeshData,
                         ComputeBuffer TriData,
-                        int UpscalerMethod)
+                        int UpscalerMethod,
+                        RenderTexture CorrectedDistanceTexA,
+                        RenderTexture CorrectedDistanceTexB)
         {
 
             camera = RayTracingMaster._camera;
@@ -209,9 +209,11 @@ namespace TrueTrace {
             shader.SetFloat("NearPlane", camera.nearClipPlane);
             shader.SetMatrix("CamToWorld", camera.cameraToWorldMatrix);
             shader.SetMatrix("CamInvProj", camera.projectionMatrix.inverse);
+#if !TTCustomMotionVectors
             shader.SetTextureFromGlobal(DistanceCorrection, "Depth", "_CameraDepthTexture");
             cmd.SetComputeTextureParam(shader, DistanceCorrection, "TEX_PT_VIEW_DEPTH_AWRITE", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
             cmd.DispatchCompute(shader, DistanceCorrection, Mathf.CeilToInt((ScreenWidth) / 32.0f), Mathf.CeilToInt((ScreenHeight) / 32.0f), 1);
+#endif
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("Dist Correct Kernel");
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Copy Data Kernel");
             cmd.SetComputeIntParam(shader, "MaxIterations", 4);

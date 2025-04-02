@@ -51,7 +51,7 @@ public class HDRPCompatability : CustomPass
 #if !TTCustomMotionVectors
         ctx.hdCamera.camera.depthTextureMode |= DepthTextureMode.MotionVectors | DepthTextureMode.Depth;
 #else
-        ctx.hdCamera.camera.depthTextureMode = DepthTextureMode.Depth;
+        ctx.hdCamera.camera.depthTextureMode = DepthTextureMode.None;
 #endif
             ctx.cmd.BeginSample("TrueTrace");
             RayMaster.RenderImage(MainTex, ctx.cmd);

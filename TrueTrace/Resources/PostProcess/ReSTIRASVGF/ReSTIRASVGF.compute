@@ -67,8 +67,8 @@ RWTexture2D<half2> IMG_ASVGF_GRAD_LF_PING;
 RWTexture2D<half2> IMG_ASVGF_GRAD_LF_PONG;
 RWTexture2D<half2> IMG_ASVGF_GRAD_HF_SPEC_PING;
 RWTexture2D<half2> IMG_ASVGF_GRAD_HF_SPEC_PONG;
-Texture2D<half2> TEX_PT_VIEW_DEPTH_A;//current frame depth
-Texture2D<half2> TEX_PT_VIEW_DEPTH_B;//previous frame depth
+Texture2D<half> TEX_PT_VIEW_DEPTH_A;//current frame depth
+Texture2D<half> TEX_PT_VIEW_DEPTH_B;//previous frame depth
 
 Texture2D<float2> TEX_ASVGF_HIST_COLOR_LF_COCG_B;
 Texture2D<half4> TEX_ASVGF_HIST_COLOR_HF;
@@ -600,7 +600,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
     float motion_length = length((motion.xy + reflprojection) * float2(screen_width, screen_height));
     // float motion_length = length((motion.xy) * float2(screen_width, screen_height));
 
-    float CenterFDepth = TEX_PT_VIEW_DEPTH_A[ipos].y;
+    // float CenterFDepth = TEX_PT_VIEW_DEPTH_A[ipos].y;
 
     float shininess = clamp(2.0 / max(pow(MetallicA[ipos].y, 4), 0.001f) - 2.0, 0.0, 32.0);
 
@@ -640,7 +640,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
             float3  geo_normal_prev = i_octahedral_32(norms.x);//needs to be TEX_PT_GEO_NORMAL_B, but since for now I am not worrying about normal maps yet, it can use the same texture
             
 
-            float dist_depth = (abs(depth_curr - depth_prev) - CameraDist) / depth_curr * max(CenterFDepth,0.25f);
+            float dist_depth = (abs(depth_curr - depth_prev) - CameraDist) / depth_curr;// * max(CenterFDepth,0.25f);
             float dot_normals = dot(normal_curr, normal_prev);
             float dot_geo_normals = dot(geo_normal_curr, geo_normal_prev);
             if(((ReflectedRefractedTexPrev[p] << 4) >> 4) == MatDat)
@@ -716,7 +716,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
                 float lum_p_hf;
                 get_shared_data(int2(xx, yy), depth, normal, lum_p_hf, gl_LocalInvocationID);
                 // lum_p_hf += luminance(unpackRGBE(TEX_PT_COLOR_SPEC[p].x));
-                float dist_z = abs(depth_curr - depth) / abs(depth_curr) * CenterFDepth;// * FDepth[ipos] * 120.0f;
+                float dist_z = abs(depth_curr - depth) / abs(depth_curr);// * CenterFDepth;// * FDepth[ipos] * 120.0f;
                 if (dist_z < 2.0) {
                     float w_hf = clamp(pow(max(0.0, dot(normal, normal_curr)), 128.0),0,1);
 
@@ -840,7 +840,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
     float2 center_shared_pos = lowres_local_id * GRAD_DWN + 1;
     float3 center_normal = s_normal_lum[center_shared_pos.y + FILTER_RADIUS][center_shared_pos.x + FILTER_RADIUS].xyz;
     float center_depth = s_depth[center_shared_pos.y + FILTER_RADIUS][center_shared_pos.x + FILTER_RADIUS];
-    float depth_width = TEX_PT_VIEW_DEPTH_A[ipos].y;
+    // float depth_width = TEX_PT_VIEW_DEPTH_A[ipos].y;
 
     SH center_lf;
     center_lf.shY = s_lf_shy[center_shared_pos.y][center_shared_pos.x];
@@ -860,7 +860,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
             // float3 p_normal = s_normal_lum[center_shared_pos.y + FILTER_RADIUS + yy][center_shared_pos.x + FILTER_RADIUS + xx].xyz;
             float p_depth = s_depth[center_shared_pos.y + FILTER_RADIUS + yy][center_shared_pos.x + FILTER_RADIUS + xx];
 
-            float dist_depth = abs(p_depth - center_depth) * depth_width;
+            float dist_depth = abs(p_depth - center_depth);// * depth_width;
             if (dist_depth < 2)
             {
                 float w = 1;//pow(max(dot(p_normal, center_normal), 0), 8);
@@ -1095,7 +1095,7 @@ inline void filter_image(
     filtered_moments = moments_center;
 
     float depth_center = TEX_PT_VIEW_DEPTH_A[ipos].x;
-    float fwidth_depth = TEX_PT_VIEW_DEPTH_A[ipos].y;
+    // float fwidth_depth = TEX_PT_VIEW_DEPTH_A[ipos].y;
     Ray CenterRay = CreateCameraRay((float2)ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
     float3 CenterPos = CenterRay.direction * depth_center + CenterRay.origin;
 
@@ -1238,7 +1238,7 @@ inline SH interpolate_lf(Texture2D<float4> img_lf_shY, Texture2D<float2> img_lf_
 {
     // Target pixel parameters
     float depth_center = TEX_PT_VIEW_DEPTH_A[ipos].x;
-    float fwidth_depth = TEX_PT_VIEW_DEPTH_A[ipos].y;
+    // float fwidth_depth = TEX_PT_VIEW_DEPTH_A[ipos].y;
     float3 geo_normal_center = i_octahedral_32(TEX_PT_NORMALS_A[ipos].x);
 
 
@@ -1270,7 +1270,7 @@ inline SH interpolate_lf(Texture2D<float4> img_lf_shY, Texture2D<float2> img_lf_
         float p_w = w[i];
 
         // Compute depth and normal similarity between the target pixel and the low-res anchor pixel
-        float dist_depth = abs(p_depth - depth_center) * fwidth_depth;
+        float dist_depth = abs(p_depth - depth_center);// * fwidth_depth;
         p_w *= exp(-dist_depth);
         p_w *= pow(max(0.0, dot(geo_normal_center, p_geo_normal)), 8);
 
@@ -1378,7 +1378,7 @@ void DistanceCorrectionKernel(uint3 id : SV_DispatchThreadID) {
     float CurDepthY = FetchDepth(Uv + float2(0, rcp(screen_height) * 2.0f));
     float CurDepthX2 = FetchDepth(Uv - float2(rcp(screen_width) * 2.0f, 0));
     float CurDepthY2 = FetchDepth(Uv - float2(0, rcp(screen_height) * 2.0f));
-    TEX_PT_VIEW_DEPTH_AWRITE[id.xy] = float2(CurDepth, abs(CurDepth - CurDepthX) + abs(CurDepth - CurDepthY) + abs(CurDepth - CurDepthY2) + abs(CurDepth - CurDepthX2));
+    TEX_PT_VIEW_DEPTH_AWRITE[id.xy] = CurDepth;//, abs(CurDepth - CurDepthX) + abs(CurDepth - CurDepthY) + abs(CurDepth - CurDepthY2) + abs(CurDepth - CurDepthX2));
 }
 
 #pragma kernel TempCopyKernel

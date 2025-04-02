@@ -55,7 +55,7 @@ using UnityEngine.Experimental.Rendering;
             var motionVectors = Shader.GetGlobalTexture("_MotionVectorTexture");
             Shader.SetGlobalTexture("_CameraMotionVectorsTexture", motionVectors);
 #else
-            renderingData.cameraData.camera.depthTextureMode = DepthTextureMode.Depth;
+            renderingData.cameraData.camera.depthTextureMode = DepthTextureMode.None;
 #endif
             RayMaster.TossCamera(renderingData.cameraData.camera);
             if(TrueTrace.RayTracingMaster.RayMaster.LocalTTSettings.RenderScale != 1.0f && TrueTrace.RayTracingMaster.RayMaster.LocalTTSettings.UpscalerMethod != 0) {
