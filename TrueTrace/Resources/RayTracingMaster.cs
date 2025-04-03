@@ -62,8 +62,8 @@ namespace TrueTrace {
         private ComputeShader ReSTIRGI;
         private ComputeShader CDFCompute;
 
-        public RenderTexture CorrectedDistanceTexA;
-        public RenderTexture CorrectedDistanceTexB;
+        private RenderTexture CorrectedDistanceTexA;
+        private RenderTexture CorrectedDistanceTexB;
 
         private RenderTexture _target;
         private RenderTexture _converged;
@@ -428,8 +428,8 @@ namespace TrueTrace {
             ScreenSpaceInfoPrev.ReleaseSafe();
             GradientsA.ReleaseSafe();
             GradientsB.ReleaseSafe();
-            CorrectedDistanceTexA.Release();
-            CorrectedDistanceTexB.Release();
+            CorrectedDistanceTexA.ReleaseSafe();
+            CorrectedDistanceTexB.ReleaseSafe();
             #if UseOIDN
                 ColorBuffer.ReleaseSafe();
                 OutputBuffer.ReleaseSafe();
