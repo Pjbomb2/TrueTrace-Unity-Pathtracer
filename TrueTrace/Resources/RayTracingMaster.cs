@@ -44,6 +44,8 @@ namespace TrueTrace {
                 RayObjectDatas DataToWrite = new RayObjectDatas() {
                     ID = ID,
                     MatName = NameIndex,
+                    UseKelvin = OBJtoWrite.UseKelvin[Index],
+                    KelvinTemp = OBJtoWrite.KelvinTemp[Index],
                     MatData = OBJtoWrite.LocalMaterials[Index]
                 };
                 if(WriteID == -1) {

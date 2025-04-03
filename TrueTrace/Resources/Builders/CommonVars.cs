@@ -310,6 +310,9 @@ namespace CommonVars
         public int OptionID;
         public RayObjMat MatData;
 
+        public bool UseKelvin;
+        public float KelvinTemp;
+
         public string AlbedoGUID;
         public string MetallicGUID;
         public string RoughnessGUID;

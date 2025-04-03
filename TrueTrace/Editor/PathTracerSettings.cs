@@ -3028,6 +3028,8 @@ Slider AperatureSlider;
                                     } else {
                                        EditorUtility.SetDirty(TempRTO);
                                        TempRTO.LocalMaterials[NameIndex] = Ray.MatData;
+                                       TempRTO.UseKelvin[NameIndex] = Ray.UseKelvin;
+                                       TempRTO.KelvinTemp[NameIndex] = Ray.KelvinTemp;
                                        TempRTO.CallMaterialEdited();
                                     }
                                  }

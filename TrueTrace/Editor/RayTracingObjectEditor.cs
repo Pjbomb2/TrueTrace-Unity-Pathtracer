@@ -162,6 +162,9 @@ namespace TrueTrace {
                     MatName = PresetName,
                     MatData = ThisOBJ.LocalMaterials[SaveIndex],
                     
+                    UseKelvin = ThisOBJ.UseKelvin[SaveIndex],
+                    KelvinTemp = ThisOBJ.KelvinTemp[SaveIndex],
+
                     AlbedoGUID = AlbedoGUID,
                     MetallicGUID = MetallicGUID,
                     RoughnessGUID = RoughnessGUID,
@@ -281,6 +284,8 @@ namespace TrueTrace {
 
         public void LoadFunction(RayObjectDatas RayObj, bool LoadTextures) {
             t.LocalMaterials[Selected] = RayObj.MatData;
+            t.UseKelvin[Selected] = RayObj.UseKelvin;
+            t.KelvinTemp[Selected] = RayObj.KelvinTemp;
 
             if(LoadTextures) {
                 Material TempMat = t.SharedMaterials[Selected];
@@ -485,6 +490,9 @@ namespace TrueTrace {
                     ID = 0,
                     MatName = PresetName,
                     MatData = ThisOBJ.LocalMaterials[SaveIndex],
+
+                    UseKelvin = ThisOBJ.UseKelvin[SaveIndex],
+                    KelvinTemp = ThisOBJ.KelvinTemp[SaveIndex],
 
                     AlbedoGUID = AlbedoGUID,
                     MetallicGUID = MetallicGUID,
@@ -979,6 +987,8 @@ namespace TrueTrace {
                         if(Selected == i) continue;
                         if(TheseNames[i].Equals(Name)) {
                             t.LocalMaterials[i] = t.LocalMaterials[Selected];
+                            t.UseKelvin[i] = t.UseKelvin[Selected];
+                            t.KelvinTemp[i] = t.KelvinTemp[Selected];
                             t.CallMaterialEdited(true);
                         }
                     }
@@ -991,6 +1001,8 @@ namespace TrueTrace {
                         for(int i = 0; i < Obj.LocalMaterials.Length; i++) {
                             if(Obj.Names[i].Equals(Name)) {
                                 Obj.LocalMaterials[i] = t.LocalMaterials[Selected];
+                                t.UseKelvin[i] = t.UseKelvin[Selected];
+                                t.KelvinTemp[i] = t.KelvinTemp[Selected];
                                 Obj.CallMaterialEdited(true);
                             }
                         }

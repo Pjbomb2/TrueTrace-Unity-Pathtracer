@@ -121,6 +121,17 @@ namespace TrueTrace {
             return (d.x + d.y) * d.z + d.x * d.y; 
         }
 
+        // float TotalSAH = 0;
+        // private void TravDown(int Parent, int Depth) {
+        //     if(Depth > 30) return;
+        //     if(BVH2Nodes[Parent].left >= 0) {
+        //         TotalSAH += surface_area(ref BVH2Nodes[Parent].aabb);
+        //         TravDown(BVH2Nodes[Parent].left, Depth + 1);
+        //         TravDown(BVH2Nodes[Parent].left + 1, Depth + 1);
+        //     } else {
+        //         TotalSAH += 4.0f * surface_area(ref BVH2Nodes[Parent].aabb);
+        //     }
+        // }
 
         public unsafe BVH2Builder(AABB* Triangles, int PrimCount) {//Bottom Level Acceleration Structure Builder
             this.PrimCount = PrimCount;
@@ -155,6 +166,9 @@ namespace TrueTrace {
             aabb_right = new AABB();
             int nodeIndex = 2;
             BuildRecursive(0, ref nodeIndex,0,PrimCount);
+            // TotalSAH = 0;
+            // TravDown(0, 0);
+            // Debug.LogError("SAH Cost: " + TotalSAH / surface_area(ref BVH2Nodes[0].aabb));
             indices_going_left_array.Dispose();
             tempArray.Dispose();
             SAHArray.Dispose();
