@@ -34,6 +34,7 @@
 // #define ReSTIRSampleReduction
 // #define ReSTIRRestrictSpatial
 // #define ReSTIRAdditionalAO
+// #define ShadowGlassAttenuation
 
 
 

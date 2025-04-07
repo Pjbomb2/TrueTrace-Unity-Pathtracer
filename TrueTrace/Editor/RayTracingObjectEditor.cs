@@ -597,7 +597,20 @@ namespace TrueTrace {
                     "RoughnessRemap",
                     "FlagsContainer",
                     "Thin",
+                    "Anisotropic",
                     "Flatness",
+                });
+                DictionaryLinks.Add("Anisotropic", new List<string> {
+                    "Smoothness",
+                    "RoughnessRemap",
+                    "AnisotropicRotation",
+                    "Roughness",
+                });
+                DictionaryLinks.Add("AnisotropicRotation", new List<string> {
+                    "Smoothness",
+                    "RoughnessRemap",
+                    "Anisotropic",
+                    "Roughness",
                 });
                 DictionaryLinks.Add("Emission", new List<string> {
                     "BaseContainer",
@@ -857,6 +870,8 @@ namespace TrueTrace {
                             ConnectionSourceNames.Add("Anisotropic");
                             EditorGUILayout.Space();                        
                             serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("AnisotropicRotation").floatValue = EditorGUILayout.Slider("Anisotropic Rotation: ", t.LocalMaterials[Selected].AnisotropicRotation, 0, 180);
+                            ConnectionSources.Add("AnisotropicRotation", GUILayoutUtility.GetLastRect()); // Store position
+                            ConnectionSourceNames.Add("AnisotropicRotation");
                             EditorGUILayout.Space();
                             serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("IOR").floatValue = EditorGUILayout.Slider("IOR: ", t.LocalMaterials[Selected].IOR, 1, 10);
                             ConnectionSources.Add("IOR", GUILayoutUtility.GetLastRect()); // Store position
@@ -1001,8 +1016,10 @@ namespace TrueTrace {
                         for(int i = 0; i < Obj.LocalMaterials.Length; i++) {
                             if(Obj.Names[i].Equals(Name)) {
                                 Obj.LocalMaterials[i] = t.LocalMaterials[Selected];
-                                t.UseKelvin[i] = t.UseKelvin[Selected];
-                                t.KelvinTemp[i] = t.KelvinTemp[Selected];
+                                if(i < t.UseKelvin.Length){
+                                    t.UseKelvin[i] = t.UseKelvin[Selected];
+                                    t.KelvinTemp[i] = t.KelvinTemp[Selected];
+                                } 
                                 Obj.CallMaterialEdited(true);
                             }
                         }

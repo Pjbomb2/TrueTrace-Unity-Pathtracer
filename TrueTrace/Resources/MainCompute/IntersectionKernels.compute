@@ -65,7 +65,7 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
 
 #define YAmount 2
 groupshared int nextRayArray[YAmount];
-
+// groupshared uint2 KilledRays;
 void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
     #ifdef HardwareRT
         if(ray_index >= BufferSizes[CurBounce].tracerays) return;
@@ -173,7 +173,9 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
             int rayidx = 0;
             const static int A = BufferSizes[CurBounce].tracerays;
 #ifndef DX11
+    int Coun3 = 0;
         [loop]do{
+            Coun3++;
             bool                terminated = KilledNaturally;//(stack_size == 0 && current_group.y <= 0x00FFFFFF && triangle_group.y == 0);
             const uint  maskTerminated = WaveActiveBallot(terminated);
             const int           numTerminated = countbits(maskTerminated);
@@ -195,7 +197,10 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
 
 
                 rayidx = nextRayArray[threadIdxy] + idxTerminated;
-                if(rayidx >= A) break;
+                if(rayidx >= A) {
+                    // InterlockedOr(KilledRays[threadIdxy], 1 << GTx);
+                    break;
+                }
 #else
                 rayidx = ray_index;
                 if(rayidx >= A) return;
@@ -316,14 +321,15 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
 #ifndef DX11
                     const static int Nd = 4;
                     const static int Nw = 16;
-                    lostLoopIterations += countbits(~WaveActiveBallot(true)) - Nd;
+                    lostLoopIterations += countbits(~WaveActiveBallot(true)) - Nd;// - countbits(KilledRays.x) - countbits(KilledRays.y);
                     if(lostLoopIterations >= Nw) break;
 #endif
             }
 #ifndef DX11
-    } while(true);
+    } while(Coun3 < 1000);
 #endif
     #endif
+    // InterlockedOr(KilledRays[threadIdxy], 1 << GTx);
 }
 
 
@@ -337,6 +343,10 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
 #endif
 #endif
 void kernel_trace(uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID) {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
+    // if(GT.x == 0 && GT.y == 0) {
+    //     KilledRays = 0;
+    // }
+    // GroupMemoryBarrierWithGroupSync();
     IntersectBVH(id.x, GT.y, GT.x);
 }
 
@@ -474,7 +484,9 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
             const static int A = BufferSizes[CurBounce].shadow_rays;
             float max_distance;
 #ifndef DX11
+    int Coun2 = 0;
         [loop]do{
+            Coun2++;
             Reps = 0;
             bool                terminated = KilledNaturally;//(stack_size == 0 && current_group.y <= 0x00FFFFFF && triangle_group.y == 0);
             const uint  maskTerminated = WaveActiveBallot(terminated);
@@ -657,7 +669,7 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
 #endif
                 }
 #ifndef DX11
-        } while(true);
+        } while(Coun2 < 1000);
 #endif
         #endif
 }

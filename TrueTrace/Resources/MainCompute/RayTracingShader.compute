@@ -974,7 +974,11 @@ int MaterialIndex;
                     }
                     Radiance *= Intensity;
                     if (CurBounce == 0) Color.Direct = Color.throughput * Radiance;
+// #ifdef RadCache
+//                     else if(luminance(Color.Indirect) == 0) Color.Indirect += Color.throughput * Radiance;
+// #else
                     else Color.Indirect += Color.throughput * Radiance;
+// #endif
                 }
             break;
             case 1:
@@ -1004,6 +1008,12 @@ int MaterialIndex;
                 else Color.Indirect += Color.throughput * Radiance;
             break;
         }
+// #ifdef RadCache
+//         if(CurBounce > 0) {
+//             CacheBuffer[pixel_index].RunningIlluminance = packRGBE(Radiance);
+//             AddHitToCachePartial(CacheBuffer[pixel_index], ray.origin);
+//         }
+// #endif
         if(CurBounce == 0) {
             Color.Data = float3(Color.Direct);
             Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((1) << 26);  

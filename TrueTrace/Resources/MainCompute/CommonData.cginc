@@ -814,7 +814,20 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const fl
 			            	#ifdef StainedGlassShadows
 			            		float3 MatCol = _IntersectionMaterials[MaterialIndex].surfaceColor;
 						        if(_IntersectionMaterials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _IntersectionMaterials[MaterialIndex]);
+		    					
+#ifdef ShadowGlassAttenuation
+								// if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, Thin))
+			    				// 	throughput *= exp(-CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance));
+			    				// else {
+
+		    						float Dotter = (dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction));
+		    						// if(Dotter > 0)
+				    					throughput *= exp(-t * CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance));
+
+			    				// }
+#else
 		    					throughput *= exp(-CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance));
+#endif
 		    				#endif
 		                	return false;
 		                }
