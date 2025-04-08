@@ -1273,12 +1273,7 @@ namespace TrueTrace {
         public struct CurrentData {
             public CudaTriangle Tri;
             public AABB aabb;
-            public float ULimit;
-            public float VLimit;
-            public float WLimit;
-            public float UStart;
-            public float VStart;
-            public float WStart;
+            public int Depth;
         }
 
 
@@ -1290,7 +1285,7 @@ namespace TrueTrace {
             Vector3 d = new Vector3(aabb.BBMax.x - aabb.BBMin.x, aabb.BBMax.y - aabb.BBMin.y, aabb.BBMax.z - aabb.BBMin.z);
             return (d.x + d.y) * d.z + d.x * d.y; 
         }
-        public unsafe async Task BuildTotal() {
+        public unsafe void BuildTotal() {
             // if(HasCompleted) return;
             int IllumTriCount = 0;
             CudaTriangle TempTri = new CudaTriangle();
@@ -1440,7 +1435,7 @@ namespace TrueTrace {
                 }
             }
 
-List<CudaTriangle> NewTriangles = new List<CudaTriangle>();
+            List<CudaTriangle> NewTriangles = new List<CudaTriangle>();
             List<AABB> NewAABBs = new List<AABB>();
             int TriCount = TrianglesArray.Length;
             AABB TotalAABB = new AABB();
@@ -1449,39 +1444,30 @@ List<CudaTriangle> NewTriangles = new List<CudaTriangle>();
                 TotalAABB.Extend(ref Triangles[i]);
             }
             float TotalSurfaceArea = surface_area(ref TotalAABB);
-            float a = 1e-5f;
+            float a = 1e-2f;
+            int MaxDepth = 4;
             int BinCount = 32;
             List<CurrentData> ActiveList = new List<CurrentData>();
             CurrentData TempDat = new CurrentData();
             for(int i = 0; i < TriCount; i++) {
+                TempDat = new CurrentData();
                 TempDat.Tri = AggTriangles[i];
                 TempDat.aabb = Triangles[i];
-                TempDat.ULimit = 1.0f;
-                TempDat.VLimit = 1.0f;
-                TempDat.WLimit = 1.0f;
-                TempDat.UStart = 0.0f;
-                TempDat.VStart = 0.0f;
-                TempDat.WStart = 0.0f;
+                TempDat.Depth = 0;
                 ActiveList.Add(TempDat);
                 List<CudaTriangle> TempTriList = new List<CudaTriangle>();
                 List<AABB> TempAABBList = new List<AABB>();
-            int CurCount = 0;
-                while(ActiveList.Count != 0 && CurCount < 122222) {
+                int CurCount = 0;
+                while(ActiveList.Count != 0 && CurCount < 12222) {
                     CurCount++;
-                    if(CurCount == 122222) Debug.LogError("FUCK");
                     int UVWIndex = -1;
                     int MinDim = -1;
                     AABB MinAABBLeft = new AABB();
                     AABB MinAABBRight = new AABB();
-                    float[] Limits = new float[]{ActiveList[0].ULimit, ActiveList[0].VLimit, ActiveList[0].WLimit};
-                    float[] NewLimits = new float[]{ActiveList[0].ULimit, ActiveList[0].VLimit, ActiveList[0].WLimit};
-                    float[] NewFinalLimits = new float[]{ActiveList[0].ULimit, ActiveList[0].VLimit, ActiveList[0].WLimit};
-                    float[] Starts = new float[]{ActiveList[0].UStart, ActiveList[0].VStart, ActiveList[0].WStart};
-                    float[] NewStarts = new float[]{ActiveList[0].UStart, ActiveList[0].VStart, ActiveList[0].WStart};
-                    float[] NewFinalStarts = new float[]{ActiveList[0].UStart, ActiveList[0].VStart, ActiveList[0].WStart};
                     float CurrentSAH = surface_area(ActiveList[0].aabb);
-                    if(CurrentSAH / TotalSurfaceArea > a) {
+                    if(ActiveList[0].Depth < MaxDepth && CurrentSAH / TotalSurfaceArea > a) {
                         for(int dim = 0; dim < 3; dim++) {
+                            // if(ActiveList[0].aabb.BBMax[dim] - ActiveList[0].aabb.BBMin[dim] < ParentScale[dim] * 2.0f) continue;
                             for(int x = 1; x < BinCount; x++) {//X Dim
                                 float u = (float)x / (float)BinCount;
                                 Vector3 PlaneP0 = Vector3.zero;//Triangles[i].BBMin + new Vector3((Triangles[i].BBMax.x - Triangles[i].BBMin.x) * u, (Triangles[i].BBMax.y - Triangles[i].BBMin.y) / 2.0f, (Triangles[i].BBMax.z - Triangles[i].BBMin.z) / 2.0f);
@@ -1489,33 +1475,26 @@ List<CudaTriangle> NewTriangles = new List<CudaTriangle>();
                                 Vector3 PlaneP2 = Vector3.zero;//Triangles[i].BBMin + new Vector3((Triangles[i].BBMax.x - Triangles[i].BBMin.x) * u, (Triangles[i].BBMax.y - Triangles[i].BBMin.y), 0);
                                 GetPlanePoints(ActiveList[0].aabb, dim, u, ref PlaneP0, ref PlaneP1, ref PlaneP2);
                                 Vector3 N = Vector3.Cross(PlaneP1 - PlaneP0, PlaneP2 - PlaneP0);
-                                bool[] Points = new bool[4];
+                                bool[] Points = new bool[3];
                                 int CurPoint = 0;
                                 AABB AABBLeft = new AABB();
                                 AABB AABBRight = new AABB();
                                 AABBLeft.init();
                                 AABBRight.init();
-                                Vector3 P0LA = ActiveList[0].Tri.pos0 + ActiveList[0].Tri.posedge1 * Starts[0];
-                                Vector3 P0LB = ActiveList[0].Tri.pos0 + ActiveList[0].Tri.posedge1 * Limits[0];
+                                Vector3 P0LA = ActiveList[0].Tri.pos0;
+                                Vector3 P0LB = ActiveList[0].Tri.pos0 + ActiveList[0].Tri.posedge1;
 
+                                Vector3 P1LA = ActiveList[0].Tri.pos0;
+                                Vector3 P1LB = ActiveList[0].Tri.pos0 + ActiveList[0].Tri.posedge2;
 
-                                Vector3 P1LA = ActiveList[0].Tri.pos0 + ActiveList[0].Tri.posedge2 * Starts[1];
-                                Vector3 P1LB = ActiveList[0].Tri.pos0 + ActiveList[0].Tri.posedge2 * Limits[1];
-
-
-                                Vector3 P2LA = P0LB + (P1LB - P0LB) * Starts[2];
-                                Vector3 P2LB = P0LB + (P1LB - P0LB) * Limits[2];
-
-                                Vector3 P3LA = P0LA + (P1LA - P0LA) * Starts[2];
-                                Vector3 P3LB = P0LA + (P1LA - P0LA) * Limits[2];
-
+                                Vector3 P2LA = P0LB + (P1LB - P0LB);
+                                Vector3 P2LB = P0LB + (P1LB - P0LB);
 
                                 {
 
                                     float t = (Vector3.Dot(N, (P0LA - PlaneP0))) / (Vector3.Dot(-(P0LB - P0LA), N));
                                     if(t >= 0 && t <= 1.0f) {
                                         Points[0] = true;
-                                        NewLimits[0] = (t * (Limits[0] - Starts[0]) + Starts[0]);
                                         AABBLeft.Extend(P0LA + (P0LB - P0LA) * t);
                                         AABBRight.Extend(P0LA + (P0LB - P0LA) * t);
                                     }
@@ -1525,7 +1504,6 @@ List<CudaTriangle> NewTriangles = new List<CudaTriangle>();
                                     float t = (Vector3.Dot(N, (P1LA - PlaneP0))) / (Vector3.Dot(-(P1LB - P1LA), N));
                                     if(t >= 0 && t <= 1) {
                                         Points[1] = true;
-                                        NewLimits[1] = (t * (Limits[1] - Starts[1]) + Starts[1]);
                                         AABBLeft.Extend(P1LA + (P1LB - P1LA) * t);
                                         AABBRight.Extend(P1LA + (P1LB - P1LA) * t);
                                     }
@@ -1535,21 +1513,11 @@ List<CudaTriangle> NewTriangles = new List<CudaTriangle>();
                                     float t = (Vector3.Dot(N, (P2LA - PlaneP0))) / (Vector3.Dot(-(P2LB - P2LA), N));
                                     if(t >= 0 && t <= 1) {
                                         Points[2] = true;
-                                        NewLimits[2] = (t * (Limits[2] - Starts[2]) + Starts[2]);
                                         AABBLeft.Extend(P2LA + (P2LB - P2LA) * t);
                                         AABBRight.Extend(P2LA + (P2LB - P2LA) * t);
                                     }
                                 }
 
-                                {
-                                    float t = (Vector3.Dot(N, (P3LA - PlaneP0))) / (Vector3.Dot(-(P3LB - P3LA), N));
-                                    if(t >= 0 && t <= 1) {
-                                        Points[3] = true;
-                                        NewLimits[2] = (t * (Limits[2] - Starts[2]) + Starts[2]);
-                                        AABBLeft.Extend(P3LA + (P3LB - P3LA) * t);
-                                        AABBRight.Extend(P3LA + (P3LB - P3LA) * t);
-                                    }
-                                }
 
                                 if(Points[0] && Points[1]) {
                                     AABBRight.Extend(P0LB);
@@ -1557,53 +1525,30 @@ List<CudaTriangle> NewTriangles = new List<CudaTriangle>();
                                     AABBLeft.Extend(P0LA);
                                     AABBLeft.Extend(P1LA);
                                 } else if(Points[1] && Points[2]) {
-                                    AABBRight.Extend(P0LA);
                                     AABBRight.Extend(P1LB);
                                     AABBRight.Extend(P2LB);
                                     AABBLeft.Extend(P1LA);
-                                    AABBLeft.Extend(P0LB);
                                     AABBLeft.Extend(P2LA);
                                 } else if(Points[0] && Points[2]) {
-                                        AABBRight.Extend(P0LA);
-                                        AABBRight.Extend(P1LA);
-                                        AABBRight.Extend(P2LB);
-                                        AABBLeft.Extend(P1LB);
-                                        AABBLeft.Extend(P0LB);
-                                        AABBLeft.Extend(P2LA);
-                                } else if(Points[0] && Points[3]) {
-                                        AABBRight.Extend(P0LA);
-                                        AABBRight.Extend(Vector3.Max(P1LB, P1LA));
-                                        AABBRight.Extend(P3LB);
-                                        AABBLeft.Extend(Vector3.Min(P1LB, P1LA));
-                                        AABBLeft.Extend(P0LB);
-                                        AABBLeft.Extend(P3LA);
-                                }  else if(Points[1] && Points[3]) {
-                                        AABBRight.Extend(P1LA);
-                                        AABBRight.Extend(Vector3.Max(P0LB, P0LA));
-                                        AABBRight.Extend(P3LB);
-                                        AABBLeft.Extend(Vector3.Min(P0LB, P0LA));
-                                        AABBLeft.Extend(P1LB);
-                                        AABBLeft.Extend(P3LA);
-                                } else if(Points[2] && Points[3]) {
-                                        AABBRight.Extend(P0LA);
-                                        AABBRight.Extend(P0LB);
-                                        AABBLeft.Extend(P1LA);
-                                        AABBLeft.Extend(P1LB);
+                                    AABBRight.Extend(P0LA);
+                                    AABBRight.Extend(P2LB);
+                                    AABBLeft.Extend(P0LB);
+                                    AABBLeft.Extend(P2LA);                                        
                                 } else {
                                     continue;
                                 }
+                                AABBRight.BBMax = Vector3.Min(AABBRight.BBMax, ActiveList[0].aabb.BBMax);
+                                AABBRight.BBMin = Vector3.Max(AABBRight.BBMin, ActiveList[0].aabb.BBMin);
+                                AABBLeft.BBMin = Vector3.Max(AABBLeft.BBMin, ActiveList[0].aabb.BBMin);
+                                AABBLeft.BBMax = Vector3.Min(AABBLeft.BBMax, ActiveList[0].aabb.BBMax);
                                 AABBRight.Validate(ParentScale);
                                 AABBLeft.Validate(ParentScale);
-                                if(surface_area(ref AABBRight) + surface_area(ref AABBLeft) < CurrentSAH) {
+                                if(surface_area(ref AABBRight) + surface_area(ref AABBLeft) < CurrentSAH && AABBLeft.CheckValid(ParentScale) && AABBRight.CheckValid(ParentScale)) {
                                     CurrentSAH = surface_area(ref AABBRight) + surface_area(ref AABBLeft);
                                     MinDim = dim;
                                     UVWIndex = x;
                                     MinAABBLeft = AABBLeft;
                                     MinAABBRight = AABBRight;
-                                    NewFinalLimits[0] = NewLimits[0];
-                                    NewFinalLimits[1] = NewLimits[1];
-                                    NewFinalLimits[2] = NewLimits[2];
-                                    NewFinalStarts = NewStarts;
                                 }
 
                             }
@@ -1611,32 +1556,15 @@ List<CudaTriangle> NewTriangles = new List<CudaTriangle>();
                     }
 
                     if(MinDim != -1) {
-                        // TempAABBList.Add(MinAABBLeft);
-                        // TempAABBList.Add(MinAABBRight);
                         TempDat.aabb = MinAABBLeft;
                         TempDat.Tri = ActiveList[0].Tri;
-                        if(NewFinalLimits[0] != Starts[0]) TempDat.ULimit = NewFinalLimits[0];
-                        else TempDat.ULimit = Limits[0];
-                        if(NewFinalLimits[1] != Starts[1]) TempDat.VLimit = NewFinalLimits[1];
-                        else TempDat.VLimit = Limits[1];
-                        if(NewFinalLimits[2] != Starts[2]) TempDat.WLimit = NewFinalLimits[2];
-                        else TempDat.WLimit = Limits[2];
-                        TempDat.UStart = Starts[0];
-                        TempDat.VStart = Starts[1];
-                        TempDat.WStart = Starts[2];
+                        TempDat.Depth = ActiveList[0].Depth + 1;
                         ActiveList.Add(TempDat);
                         TempDat = new CurrentData();
                         TempDat.Tri = ActiveList[0].Tri;
+                        TempDat.Depth = ActiveList[0].Depth + 1;
                         TempDat.aabb = MinAABBRight;
-                        TempDat.UStart = NewFinalLimits[0];
-                        TempDat.VStart = NewFinalLimits[1];
-                        TempDat.WStart = NewFinalLimits[2];
-                        TempDat.ULimit = Limits[0];
-                        TempDat.VLimit = Limits[1];
-                        TempDat.WLimit = Limits[2];
                         ActiveList.Add(TempDat);
-                        // TempTriList.Add(ActiveList[0].Tri);
-                        // TempTriList.Add(ActiveList[0].Tri);
                     } else {
                         TempAABBList.Add(ActiveList[0].aabb);
                         TempTriList.Add(ActiveList[0].Tri);
@@ -1646,6 +1574,9 @@ List<CudaTriangle> NewTriangles = new List<CudaTriangle>();
                 NewAABBs.AddRange(TempAABBList);
                 NewTriangles.AddRange(TempTriList);
             }
+
+            Debug.Log("TRI COUNT: " + NewTriangles.Count);
+
 
             TrianglesArray.Dispose();
             TrianglesArray = new NativeArray<AABB>(NewAABBs.ToArray(), Unity.Collections.Allocator.Persistent);
@@ -1814,14 +1745,17 @@ List<CudaTriangle> NewTriangles = new List<CudaTriangle>();
         }
 
 
-        // public unsafe void OnDrawGizmos() {
-        //     int TriCount = TrianglesArray.Length;
-        //     for(int i = 2; i < TriCount; i++) {
-        //         Gizmos.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
-        //         Gizmos.DrawCube((Triangles[i].BBMax + Triangles[i].BBMin) / 2.0f, Triangles[i].BBMax - Triangles[i].BBMin);
-        //         Gizmos.DrawCube((Triangles[i].BBMax + Triangles[i].BBMin) / 2.0f, Triangles[i].BBMax - Triangles[i].BBMin);
-        //     }
-        // }
+        public unsafe void OnDrawGizmos() {
+            int TriCount = TrianglesArray.Length;
+            for(int i = 2; i < TriCount; i++) {
+                if(surface_area(Triangles[i]) < 0.0000001f) {
+                    Debug.LogError("FUCKER: " + i);
+                    Gizmos.color = Color.magenta;//new Color(0.5f, 0.5f, 0.5f, 0.5f);
+                    Gizmos.DrawCube((Triangles[i].BBMax + Triangles[i].BBMin) / 2.0f, Triangles[i].BBMax - Triangles[i].BBMin);
+                }
+                // Gizmos.DrawCube((Triangles[i].BBMax + Triangles[i].BBMin) / 2.0f, Triangles[i].BBMax - Triangles[i].BBMin);
+            }
+        }
 
         [Range(0,1)]public float GlobalUStart = 0;
         [Range(0,1)]public float GlobalVStart = 0;
@@ -1835,369 +1769,218 @@ List<CudaTriangle> NewTriangles = new List<CudaTriangle>();
         public int SELECTEDDIM = 0;
         public int SELECTEDX = 0;
 
-        public unsafe void OnDrawGizmos() {
-            // List<CudaTriangle> NewTriangles = new List<CudaTriangle>();
-            // List<AABB> NewAABBs = new List<AABB>();
-            // int TriCount = TrianglesArray.Length;
-            // AABB TotalAABB = new AABB();
-            // TotalAABB.init();
-            // for(int i = 0; i < TriCount; i++) {
-            //     TotalAABB.Extend(ref Triangles[i]);
-            // }
-            // float TotalSurfaceArea = surface_area(ref TotalAABB);
-            // float a = 1e-5f;
-            // int BinCount = 8;
-            // List<CurrentData> ActiveList = new List<CurrentData>();
-            // CurrentData TempDat = new CurrentData();
-            // for(int i = 0; i < TriCount; i++) {
-            //     TempDat.Tri = AggTriangles[i];
-            //     TempDat.aabb = Triangles[i];
-            //     TempDat.ULimit = 1.0f;
-            //     TempDat.VLimit = 1.0f;
-            //     TempDat.WLimit = 1.0f;
-            //     TempDat.UStart = 0.0f;
-            //     TempDat.VStart = 0.0f;
-            //     TempDat.WStart = 0.0f;
-            //     ActiveList.Add(TempDat);
-            //     List<CudaTriangle> TempTriList = new List<CudaTriangle>();
-            //     List<AABB> TempAABBList = new List<AABB>();
-            // int CurCount = 0;
-            //     while(ActiveList.Count != 0 && CurCount < 1222) {
-            //         CurCount++;
-            //         int UVWIndex = -1;
-            //         int MinDim = -1;
-            //         AABB MinAABBLeft = new AABB();
-            //         AABB MinAABBRight = new AABB();
-            //         float[] Limits = new float[]{ActiveList[0].ULimit, ActiveList[0].VLimit, ActiveList[0].WLimit};
-            //         float[] NewLimits = new float[]{ActiveList[0].ULimit, ActiveList[0].VLimit, ActiveList[0].WLimit};
-            //         float[] NewFinalLimits = new float[]{ActiveList[0].ULimit, ActiveList[0].VLimit, ActiveList[0].WLimit};
-            //         float[] Starts = new float[]{ActiveList[0].UStart, ActiveList[0].VStart, ActiveList[0].WStart};
-            //         float[] NewStarts = new float[]{ActiveList[0].UStart, ActiveList[0].VStart, ActiveList[0].WStart};
-            //         float[] NewFinalStarts = new float[]{ActiveList[0].UStart, ActiveList[0].VStart, ActiveList[0].WStart};
-            //         float CurrentSAH = surface_area(ActiveList[0].aabb);
-            //         // if(CurrentSAH / TotalSurfaceArea > a) {
-            //             for(int dim = 0; dim < 3; dim++) {
-            //                 for(int x = 1; x < BinCount; x++) {//X Dim
-            //                     float u = (float)x / (float)BinCount;
-            //                     Vector3 PlaneP0 = Vector3.zero;//Triangles[i].BBMin + new Vector3((Triangles[i].BBMax.x - Triangles[i].BBMin.x) * u, (Triangles[i].BBMax.y - Triangles[i].BBMin.y) / 2.0f, (Triangles[i].BBMax.z - Triangles[i].BBMin.z) / 2.0f);
-            //                     Vector3 PlaneP1 = Vector3.zero;//Triangles[i].BBMin + new Vector3((Triangles[i].BBMax.x - Triangles[i].BBMin.x) * u, (Triangles[i].BBMax.y - Triangles[i].BBMin.y), (Triangles[i].BBMax.z - Triangles[i].BBMin.z));
-            //                     Vector3 PlaneP2 = Vector3.zero;//Triangles[i].BBMin + new Vector3((Triangles[i].BBMax.x - Triangles[i].BBMin.x) * u, (Triangles[i].BBMax.y - Triangles[i].BBMin.y), 0);
-            //                     GetPlanePoints(ActiveList[0].aabb, dim, u, ref PlaneP0, ref PlaneP1, ref PlaneP2);
-            //                     Vector3 N = Vector3.Cross(PlaneP1 - PlaneP0, PlaneP2 - PlaneP0);
-            //                     bool[] Points = new bool[4];
-            //                     int CurPoint = 0;
-            //                     AABB AABBLeft = new AABB();
-            //                     AABB AABBRight = new AABB();
-            //                     AABBLeft.init();
-            //                     AABBRight.init();
-            //                     Vector3 P0LA = ActiveList[0].Tri.pos0 + ActiveList[0].Tri.posedge1 * Starts[0];
-            //                     Vector3 P0LB = ActiveList[0].Tri.pos0 + ActiveList[0].Tri.posedge1 * Limits[0];
+        // public unsafe void OnDrawGizmos() {
+        //     List<CudaTriangle> NewTriangles = new List<CudaTriangle>();
+        //     List<AABB> NewAABBs = new List<AABB>();
+        //     int TriCount = TrianglesArray.Length;
+        //     AABB TotalAABB = new AABB();
+        //     TotalAABB.init();
+        //     for(int i = 0; i < TriCount; i++) {
+        //         TotalAABB.Extend(ref Triangles[i]);
+        //     }
+        //     float TotalSurfaceArea = surface_area(ref TotalAABB);
+        //     float a = 1e-5f;
+        //     int BinCount = 8;
+        //     List<CurrentData> ActiveList = new List<CurrentData>();
+        //     CurrentData TempDat = new CurrentData();
+        //     for(int i = 0; i < TriCount; i++) {
+        //         TempDat.Tri = AggTriangles[i];
+        //         TempDat.aabb = Triangles[i];
+        //         TempDat.ULimit = 1.0f;
+        //         TempDat.VLimit = 1.0f;
+        //         TempDat.WLimit = 1.0f;
+        //         TempDat.UStart = 0.0f;
+        //         TempDat.VStart = 0.0f;
+        //         TempDat.WStart = 0.0f;
+        //         ActiveList.Add(TempDat);
+        //         List<CudaTriangle> TempTriList = new List<CudaTriangle>();
+        //         List<AABB> TempAABBList = new List<AABB>();
+        //     int CurCount = 0;
+        //         while(ActiveList.Count != 0 && CurCount < 12222) {
+        //             CurCount++;
+        //             int UVWIndex = -1;
+        //             int MinDim = -1;
+        //             AABB MinAABBLeft = new AABB();
+        //             AABB MinAABBRight = new AABB();
+        //             float[] Limits = new float[]{ActiveList[0].ULimit, ActiveList[0].VLimit, ActiveList[0].WLimit};
+        //             float[] NewLimits = new float[]{ActiveList[0].ULimit, ActiveList[0].VLimit, ActiveList[0].WLimit};
+        //             float[] NewFinalLimits = new float[]{ActiveList[0].ULimit, ActiveList[0].VLimit, ActiveList[0].WLimit};
+        //             float[] Starts = new float[]{ActiveList[0].UStart, ActiveList[0].VStart, ActiveList[0].WStart};
+        //             float[] NewStarts = new float[]{ActiveList[0].UStart, ActiveList[0].VStart, ActiveList[0].WStart};
+        //             float[] NewFinalStarts = new float[]{ActiveList[0].UStart, ActiveList[0].VStart, ActiveList[0].WStart};
+        //             float CurrentSAH = surface_area(ActiveList[0].aabb);
+        //             // if(CurrentSAH / TotalSurfaceArea > a) {
+        //                 for(int dim = 0; dim < 3; dim++) {
+        //                     for(int x = 1; x < BinCount; x++) {//X Dim
+        //                         float u = (float)x / (float)BinCount;
+        //                         Vector3 PlaneP0 = Vector3.zero;//Triangles[i].BBMin + new Vector3((Triangles[i].BBMax.x - Triangles[i].BBMin.x) * u, (Triangles[i].BBMax.y - Triangles[i].BBMin.y) / 2.0f, (Triangles[i].BBMax.z - Triangles[i].BBMin.z) / 2.0f);
+        //                         Vector3 PlaneP1 = Vector3.zero;//Triangles[i].BBMin + new Vector3((Triangles[i].BBMax.x - Triangles[i].BBMin.x) * u, (Triangles[i].BBMax.y - Triangles[i].BBMin.y), (Triangles[i].BBMax.z - Triangles[i].BBMin.z));
+        //                         Vector3 PlaneP2 = Vector3.zero;//Triangles[i].BBMin + new Vector3((Triangles[i].BBMax.x - Triangles[i].BBMin.x) * u, (Triangles[i].BBMax.y - Triangles[i].BBMin.y), 0);
+        //                         GetPlanePoints(ActiveList[0].aabb, dim, u, ref PlaneP0, ref PlaneP1, ref PlaneP2);
+        //                         Vector3 N = Vector3.Cross(PlaneP1 - PlaneP0, PlaneP2 - PlaneP0);
+        //                         bool[] Points = new bool[3];
+        //                         int CurPoint = 0;
+        //                         AABB AABBLeft = new AABB();
+        //                         AABB AABBRight = new AABB();
+        //                         AABBLeft.init();
+        //                         AABBRight.init();
+        //                         Vector3 P0LA = ActiveList[0].Tri.pos0;
+        //                         Vector3 P0LB = ActiveList[0].Tri.pos0 + ActiveList[0].Tri.posedge1;
 
 
-            //                     Vector3 P1LA = ActiveList[0].Tri.pos0 + ActiveList[0].Tri.posedge2 * Starts[1];
-            //                     Vector3 P1LB = ActiveList[0].Tri.pos0 + ActiveList[0].Tri.posedge2 * Limits[1];
+        //                         Vector3 P1LA = ActiveList[0].Tri.pos0;
+        //                         Vector3 P1LB = ActiveList[0].Tri.pos0 + ActiveList[0].Tri.posedge2;
 
 
-            //                     Vector3 P2LA = P0LB + (P1LB - P0LB) * Starts[2];
-            //                     Vector3 P2LB = P0LB + (P1LB - P0LB) * Limits[2];
+        //                         Vector3 P2LA = P0LB + (P1LB - P0LB);
+        //                         Vector3 P2LB = P0LB + (P1LB - P0LB);
 
-            //                     Vector3 P3LA = P0LA + (P1LA - P0LA) * Starts[2];
-            //                     Vector3 P3LB = P0LA + (P1LA - P0LA) * Limits[2];
+        //                         // if(CurCount == GlobalView) {
+        //                         //     // Debug.LogError(Starts[0] + " : " + Limits[0]);
+        //                         //     Gizmos.color = Color.green;
+        //                         //     Gizmos.DrawLine(P0LA, P0LB);
 
-            //                     if(CurCount == GlobalView) {
-            //                         // Debug.LogError(Starts[0] + " : " + Limits[0]);
-            //                         Gizmos.color = Color.green;
-            //                         Gizmos.DrawLine(P0LA, P0LB);
+        //                         //     Gizmos.color = Color.red;
+        //                         //     Gizmos.DrawLine(P1LA, P1LB);
 
-            //                         Gizmos.color = Color.red;
-            //                         Gizmos.DrawLine(P1LA, P1LB);
+        //                         //     Gizmos.color = Color.blue;
+        //                         //     Gizmos.DrawLine(P2LA, P2LB);
 
-            //                         Gizmos.color = Color.blue;
-            //                         Gizmos.DrawLine(P2LA, P2LB);
+        //                         //     // return;
+        //                         // }
+        //                         {
 
-            //                         Gizmos.color = Color.magenta;
-            //                         Gizmos.DrawLine(P3LA, P3LB);
-            //                         // return;
-            //                     }
+        //                             float t = (Vector3.Dot(N, (P0LA - PlaneP0))) / (Vector3.Dot(-(P0LB - P0LA), N));
+        //                             if(t >= 0 && t <= 1.0f) {
+        //                                 Points[0] = true;
+        //                                 NewLimits[0] = (t * (Limits[0] - Starts[0]) + Starts[0]);
+        //                                 AABBLeft.Extend(P0LA + (P0LB - P0LA) * t);
+        //                                 AABBRight.Extend(P0LA + (P0LB - P0LA) * t);
+        //                             }
+        //                         }
+        //                         {
+
+        //                             float t = (Vector3.Dot(N, (P1LA - PlaneP0))) / (Vector3.Dot(-(P1LB - P1LA), N));
+        //                             if(t >= 0 && t <= 1) {
+        //                                 Points[1] = true;
+        //                                 NewLimits[1] = (t * (Limits[1] - Starts[1]) + Starts[1]);
+        //                                 AABBLeft.Extend(P1LA + (P1LB - P1LA) * t);
+        //                                 AABBRight.Extend(P1LA + (P1LB - P1LA) * t);
+        //                             }
+        //                         }
+
+        //                         {
+        //                             float t = (Vector3.Dot(N, (P2LA - PlaneP0))) / (Vector3.Dot(-(P2LB - P2LA), N));
+        //                             if(t >= 0 && t <= 1) {
+        //                                 Points[2] = true;
+        //                                 NewLimits[2] = (t * (Limits[2] - Starts[2]) + Starts[2]);
+        //                                 AABBLeft.Extend(P2LA + (P2LB - P2LA) * t);
+        //                                 AABBRight.Extend(P2LA + (P2LB - P2LA) * t);
+        //                             }
+        //                         }
 
 
+        //                         if(Points[0] && Points[1]) {
+        //                             AABBRight.Extend(P0LB);
+        //                             AABBRight.Extend(P1LB);
+        //                             AABBLeft.Extend(P0LA);
+        //                             AABBLeft.Extend(P1LA);
+        //                         } else if(Points[1] && Points[2]) {
+        //                             AABBRight.Extend(P1LB);
+        //                             AABBRight.Extend(P2LB);
+        //                             AABBLeft.Extend(P1LA);
+        //                             AABBLeft.Extend(P2LA);
+        //                         } else if(Points[0] && Points[2]) {
+        //                             AABBRight.Extend(P0LA);
+        //                             AABBRight.Extend(P2LB);
+        //                             AABBLeft.Extend(P0LB);
+        //                             AABBLeft.Extend(P2LA);                                        
+        //                         } else {
+        //                             // if(CurCount == GlobalView) Debug.LogError("FUCKER : " + Points[0] + " : " + Points[1] + " : " + Points[2]);
+        //                                 // Gizmos.color = Color.white;
+        //                                 // Gizmos.DrawCube(PlaneP0, (PlaneP1 - PlaneP0) * 2.0f);
+        //                             continue;
+        //                         }
+        //                         AABBRight.Validate(ParentScale);
+        //                         AABBLeft.Validate(ParentScale);
+        //                         AABBRight.BBMax = Vector3.Min(AABBRight.BBMax, ActiveList[0].aabb.BBMax);
+        //                         AABBRight.BBMin = Vector3.Max(AABBRight.BBMin, ActiveList[0].aabb.BBMin);
+        //                         AABBLeft.BBMin = Vector3.Max(AABBLeft.BBMin, ActiveList[0].aabb.BBMin);
+        //                         AABBLeft.BBMax = Vector3.Min(AABBLeft.BBMax, ActiveList[0].aabb.BBMax);
+        //                         if(surface_area(ref AABBRight) + surface_area(ref AABBLeft) < CurrentSAH) {
+        //                             // if(CurCount == GlobalView) {
+        //                             //     Debug.LogError(Points[0] + " : " + Points[1] + " : " + Points[2] + " : " + x + " : " + dim);
+        //                             // }
+        //                             CurrentSAH = surface_area(ref AABBRight) + surface_area(ref AABBLeft);
+        //                             MinDim = dim;
+        //                             UVWIndex = x;
+        //                             MinAABBLeft = AABBLeft;
+        //                             MinAABBRight = AABBRight;
+        //                             NewFinalStarts = NewStarts;
+        //                         }
 
-            //                     {
+        //                     }
+        //                 // }
+        //             }
 
-            //                         float t = (Vector3.Dot(N, (P0LA - PlaneP0))) / (Vector3.Dot(-(P0LB - P0LA), N));
-            //                         if(t >= 0 && t <= 1.0f) {
-            //                             Points[0] = true;
-            //                             NewLimits[0] = (t * (Limits[0] - Starts[0]) + Starts[0]);
-            //                           //   if(CurCount == 3) {
-            //                           //       Gizmos.color = Color.green;
-            //                           //       Gizmos.DrawSphere(P0LA + (P0LB - P0LA) * t, 0.1f);
-            //                           //   }
-            //                           // if(CurCount == 3) {
-            //                           //   }
-            //                             AABBLeft.Extend(P0LA + (P0LB - P0LA) * t);
-            //                             AABBRight.Extend(P0LA + (P0LB - P0LA) * t);
-            //                         }
-            //                     }
-            //                     {
+        //             if(MinDim != -1) {
+        //                 if(CurCount == GlobalView) {
+        //                     SELECTEDDIM = MinDim;
+        //                     SELECTEDX = UVWIndex;
+        //                 }
+        //                 TempAABBList.Add(MinAABBLeft);
+        //                 TempAABBList.Add(MinAABBRight);
+        //                 if(CurCount == GlobalView)
+        //                         for(int k2 = 0; k2 < 3; k2++) 
+        //                             Debug.Log(Starts[k2] + " : " + NewFinalLimits[k2] +  " : " +  Limits[k2]);
+        //                 TempDat.aabb = MinAABBLeft;
+        //                 TempDat.Tri = ActiveList[0].Tri;
+        //                 if(NewFinalLimits[0] != Starts[0]) TempDat.ULimit = NewFinalLimits[0];
+        //                 else TempDat.ULimit = Limits[0];
+        //                 if(NewFinalLimits[1] != Starts[1]) TempDat.VLimit = NewFinalLimits[1];
+        //                 else TempDat.VLimit = Limits[1];
+        //                 if(NewFinalLimits[2] != Starts[2]) TempDat.WLimit = NewFinalLimits[2];
+        //                 else TempDat.WLimit = Limits[2];
+        //                 TempDat.UStart = Starts[0];
+        //                 TempDat.VStart = Starts[1];
+        //                 TempDat.WStart = Starts[2];
+        //                 ActiveList.Add(TempDat);
+        //                 TempDat = new CurrentData();
+        //                 TempDat.Tri = ActiveList[0].Tri;
+        //                 TempDat.aabb = MinAABBRight;
+        //                 TempDat.UStart = NewFinalLimits[0];
+        //                 TempDat.VStart = NewFinalLimits[1];
+        //                 TempDat.WStart = NewFinalLimits[2];
+        //                 TempDat.ULimit = Limits[0];
+        //                 TempDat.VLimit = Limits[1];
+        //                 TempDat.WLimit = Limits[2];
+        //                 ActiveList.Add(TempDat);
+        //                 // if(CurCount == GlobalView) {
+        //                 //     Gizmos.color = Color.white;
+        //                 //     Gizmos.DrawWireCube((ActiveList[0].aabb.BBMax + ActiveList[0].aabb.BBMin) / 2.0f, ActiveList[0].aabb.BBMax - ActiveList[0].aabb.BBMin);
 
-            //                         float t = (Vector3.Dot(N, (P1LA - PlaneP0))) / (Vector3.Dot(-(P1LB - P1LA), N));
-            //                         if(t >= 0 && t <= 1) {
-            //                             Points[1] = true;
-            //                             NewLimits[1] = (t * (Limits[1] - Starts[1]) + Starts[1]);
-            //                             // if(CurCount == 3 && x == 1 && dim == 1) {
-            //                             //     Gizmos.color = Color.red;
-            //                             //     Gizmos.DrawSphere(P1LA + (P1LB - P1LA) * t, 0.1f);
-            //                             // }
-            //                             AABBLeft.Extend(P1LA + (P1LB - P1LA) * t);
-            //                             AABBRight.Extend(P1LA + (P1LB - P1LA) * t);
-            //                         }
-            //                     }
+        //                 //     Gizmos.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+        //                 //     Gizmos.DrawCube((MinAABBLeft.BBMax + MinAABBLeft.BBMin) / 2.0f, MinAABBLeft.BBMax - MinAABBLeft.BBMin);
 
-            //                     {
-            //                         float t = (Vector3.Dot(N, (P2LA - PlaneP0))) / (Vector3.Dot(-(P2LB - P2LA), N));
-            //                         if(t >= 0 && t <= 1) {
-            //                             Points[2] = true;
-            //                             NewLimits[2] = (t * (Limits[2] - Starts[2]) + Starts[2]);
-            //                             // if(CurCount == 3 && x == 1 && dim == 1) {
-            //                             //     Gizmos.color = Color.blue;
-            //                             //     Gizmos.DrawSphere(P2LA + (P2LB - P2LA) * t, 0.1f);
-            //                             // }
-            //                             AABBLeft.Extend(P2LA + (P2LB - P2LA) * t);
-            //                             AABBRight.Extend(P2LA + (P2LB - P2LA) * t);
-            //                         }
-            //                     }
+        //                 //     Gizmos.color = new Color(0.75f, 0.5f, 0.0f, 0.5f);
+        //                 //     Gizmos.DrawCube((MinAABBRight.BBMax + MinAABBRight.BBMin) / 2.0f, MinAABBRight.BBMax - MinAABBRight.BBMin);
+        //                 // }
+        //                 TempTriList.Add(ActiveList[0].Tri);
+        //                 TempTriList.Add(ActiveList[0].Tri);
+        //             } else {
+        //                 Gizmos.color = Color.magenta;
+        //                     Gizmos.DrawCube((ActiveList[0].aabb.BBMax + ActiveList[0].aabb.BBMin) / 2.0f, ActiveList[0].aabb.BBMax - ActiveList[0].aabb.BBMin);
+        //                     // Gizmos.DrawCube((ActiveList[0].aabb.BBMax + ActiveList[0].aabb.BBMin) / 2.0f, ActiveList[0].aabb.BBMax - ActiveList[0].aabb.BBMin);
+        //                 TempAABBList.Add(ActiveList[0].aabb);
+        //                 TempTriList.Add(ActiveList[0].Tri);
+        //             }
+        //             ActiveList.RemoveAt(0);
+        //         }
+        //         NewAABBs.AddRange(TempAABBList);
+        //         NewTriangles.AddRange(TempTriList);
+        //     }
 
-            //                     {
-            //                         float t = (Vector3.Dot(N, (P3LA - PlaneP0))) / (Vector3.Dot(-(P3LB - P3LA), N));
-            //                         if(t >= 0 && t <= 1) {
-            //                             Points[3] = true;
-            //                             NewLimits[2] = (t * (Limits[2] - Starts[2]) + Starts[2]);
-            //                             // else NewLimits[2] = Mathf.Min((t * (Limits[2] - Starts[2]) + Starts[2]), NewLimits[2]);
-            //                             // if(CurCount == 3 && x == 1 && dim == 1) {
-            //                             //     Gizmos.color = Color.magenta;
-            //                             //     Gizmos.DrawSphere(P3LA + (P3LB - P3LA) * t, 0.1f);
-            //                             // }
-            //                             AABBLeft.Extend(P3LA + (P3LB - P3LA) * t);
-            //                             AABBRight.Extend(P3LA + (P3LB - P3LA) * t);
-            //                         }
-            //                     }
-
-            //                     if(Points[0] && Points[1]) {
-            //                         AABBRight.Extend(P0LB);
-            //                         AABBRight.Extend(P1LB);
-            //                         AABBLeft.Extend(P0LA);
-            //                         AABBLeft.Extend(P1LA);
-            //                     } else if(Points[1] && Points[2]) {
-            //                         AABBRight.Extend(P0LA);
-            //                         AABBRight.Extend(P1LB);
-            //                         AABBRight.Extend(P2LB);
-            //                         AABBLeft.Extend(P1LA);
-            //                         AABBLeft.Extend(P0LB);
-            //                         AABBLeft.Extend(P2LA);
-            //                         if(CurCount == GlobalView && x == SELECTEDX && dim == SELECTEDDIM) {
-            //                                 Gizmos.color = Color.green;
-            //                                 Gizmos.DrawSphere(P0LA, 0.1f);
-            //                                 Gizmos.DrawSphere(P0LB, 0.1f);
-            //                                 Gizmos.color = Color.red;
-            //                                 Gizmos.DrawSphere(P1LA, 0.2f);
-            //                                 Gizmos.DrawSphere(P1LB, 0.2f);
-            //                                 Gizmos.color = Color.blue;
-            //                                 Gizmos.DrawSphere(P2LA, 0.2f);
-            //                                 Gizmos.DrawSphere(P2LB, 0.2f);
-            //                             Gizmos.color = Color.magenta;
-            //                                 Gizmos.DrawSphere(P3LA, 0.2f);
-            //                                 Gizmos.DrawSphere(P3LB, 0.1f);
-            //                         }
-            //                     } else if(Points[0] && Points[2]) {
-            //                             // AABBRight.Extend(P0LA);
-            //                             // AABBRight.Extend(P1LA);
-            //                             // AABBRight.Extend(P2LB);
-            //                             // AABBLeft.Extend(P0LB);
-            //                             // AABBLeft.Extend(P2LA);
-
-            //                             AABBRight.Extend(P0LA);
-            //                             AABBRight.Extend(P1LA);
-            //                             AABBRight.Extend(P2LB);
-            //                             AABBLeft.Extend(P1LB);
-            //                             AABBLeft.Extend(P0LB);
-            //                             AABBLeft.Extend(P2LA);
-
-            //                         if(CurCount == GlobalView && x == SELECTEDX && dim == SELECTEDDIM) {
-            //                                 Gizmos.color = Color.green;
-            //                                 Gizmos.DrawSphere(P0LA, 0.2f);
-            //                                 Gizmos.DrawSphere(P0LB, 0.1f);
-            //                                 Gizmos.color = Color.red;
-            //                                 Gizmos.DrawSphere(P1LA, 0.2f);
-            //                                 Gizmos.DrawSphere(P1LB, 0.1f);
-            //                                 Gizmos.color = Color.blue;
-            //                                 Gizmos.DrawSphere(P2LA, 0.2f);
-            //                                 Gizmos.DrawSphere(P2LB, 0.2f);
-            //                                 Gizmos.color = Color.magenta;
-            //                                 Gizmos.DrawSphere(P3LA, 0.1f);
-            //                                 Gizmos.DrawSphere(P3LB, 0.1f);
-            //                         }
-
-            //                     } else if(Points[0] && Points[3]) {
-            //                             // AABBRight.Extend(P0LA);
-            //                             // AABBRight.Extend(P1LA);
-            //                             // AABBRight.Extend(P2LB);
-            //                             // AABBLeft.Extend(P0LB);
-            //                             // AABBLeft.Extend(P2LA);
-
-            //                             AABBRight.Extend(P0LA);
-            //                             AABBRight.Extend(Vector3.Max(P1LB, P1LA));
-            //                             AABBRight.Extend(P3LB);
-            //                             AABBLeft.Extend(Vector3.Min(P1LB, P1LA));
-            //                             AABBLeft.Extend(P0LB);
-            //                             AABBLeft.Extend(P3LA);
-
-            //                         if(CurCount == GlobalView && x == SELECTEDX && dim == SELECTEDDIM) {
-            //                                 Gizmos.color = Color.green;
-            //                                 Gizmos.DrawSphere(P0LA, 0.2f);
-            //                                 Gizmos.DrawSphere(P0LB, 0.2f);
-            //                                 Gizmos.color = Color.red;
-            //                                 Gizmos.DrawSphere(P1LA, 0.2f);
-            //                                 Gizmos.DrawSphere(P1LB, 0.1f);
-            //                                 Gizmos.color = Color.blue;
-            //                                 Gizmos.DrawSphere(P2LA, 0.1f);
-            //                                 Gizmos.DrawSphere(P2LB, 0.1f);
-            //                                 Gizmos.color = Color.magenta;
-            //                                 Gizmos.DrawSphere(P3LA, 0.2f);
-            //                                 Gizmos.DrawSphere(P3LB, 0.2f);
-            //                         }
-            //                     }  else if(Points[1] && Points[3]) {
-            //                             // AABBRight.Extend(P0LA);
-            //                             // AABBRight.Extend(P1LA);
-            //                             // AABBRight.Extend(P2LB);
-            //                             // AABBLeft.Extend(P0LB);
-            //                             // AABBLeft.Extend(P2LA);
-
-            //                         // if(CurCount == GlobalView && x == 3 && dim == 0) {
-            //                         //         Gizmos.color = Color.green;
-            //                         //         Gizmos.DrawSphere(P0LA, 0.1f);
-            //                         //         Gizmos.DrawSphere(P0LB, 0.1f);
-            //                         //         Gizmos.color = Color.red;
-            //                         //         Gizmos.DrawSphere(P1LA, 0.1f);
-            //                         //         Gizmos.DrawSphere(P1LB, 0.1f);
-            //                         //         Gizmos.color = Color.blue;
-            //                         //         Gizmos.DrawSphere(P2LA, 0.1f);
-            //                         //         Gizmos.DrawSphere(P2LB, 0.1f);
-            //                         //     Gizmos.color = Color.magenta;
-            //                         //         Gizmos.DrawSphere(P3LA, 0.1f);
-            //                         //         Gizmos.DrawSphere(P3LB, 0.1f);
-            //                         // }
-
-            //                             AABBRight.Extend(P1LA);
-            //                             AABBRight.Extend(Vector3.Max(P0LB, P0LA));
-            //                             AABBRight.Extend(P3LB);
-            //                             AABBLeft.Extend(Vector3.Min(P0LB, P0LA));
-            //                             AABBLeft.Extend(P1LB);
-            //                             AABBLeft.Extend(P3LA);
-            //                             // AABBLeft.BBMax = Vector3.Min(AABBLeft.BBMax, AABBRight.BBMin);
-            //                             if(CurCount == GlobalView && x == SELECTEDX && dim == SELECTEDDIM) {
-            //                                 Gizmos.color = Color.green;
-            //                                 Gizmos.DrawSphere(P0LA, 0.2f);
-            //                                 Gizmos.DrawSphere(P0LB, 0.1f);
-            //                                 Gizmos.color = Color.red;
-            //                                 Gizmos.DrawSphere(P1LA, 0.2f);
-            //                                 Gizmos.DrawSphere(P1LB, 0.2f);
-            //                                 Gizmos.color = Color.blue;
-            //                                 Gizmos.DrawSphere(P2LA, 0.1f);
-            //                                 Gizmos.DrawSphere(P2LB, 0.1f);
-            //                                 Gizmos.color = Color.magenta;
-            //                                 Gizmos.DrawSphere(P3LA, 0.2f);
-            //                                 Gizmos.DrawSphere(P3LB, 0.1f);
-            //                         }
-            //                     } else if(Points[2] && Points[3]) {
-            //                             AABBRight.Extend(P0LA);
-            //                             AABBRight.Extend(P0LB);
-            //                             AABBLeft.Extend(P1LA);
-            //                             AABBLeft.Extend(P1LB);
-            //                     } else {
-            //                         if(CurCount == GlobalView) Debug.LogError("FUCKER : " + Points[0] + " : " + Points[1] + " : " + Points[2] + " : " + Points[3]);
-            //                         continue;
-            //                     }
-            //                     AABBRight.Validate(ParentScale);
-            //                     AABBLeft.Validate(ParentScale);
-            //                     if(surface_area(ref AABBRight) + surface_area(ref AABBLeft) < CurrentSAH) {
-            //                         if(CurCount == GlobalView) {
-            //                             Debug.LogError(Points[0] + " : " + Points[1] + " : " + Points[2] + " : " + Points[3] + " : " + x + " : " + dim);
-            //                             // Gizmos.color = Color.white;
-            //                             // Gizmos.DrawCube(PlaneP0, (PlaneP1 - PlaneP0) * 2.0f);
-            //                         }
-            //                         CurrentSAH = surface_area(ref AABBRight) + surface_area(ref AABBLeft);
-            //                         MinDim = dim;
-            //                         UVWIndex = x;
-            //                         MinAABBLeft = AABBLeft;
-            //                         MinAABBRight = AABBRight;
-            //                         NewFinalLimits[0] = NewLimits[0];
-            //                         NewFinalLimits[1] = NewLimits[1];
-            //                         NewFinalLimits[2] = NewLimits[2];
-            //                         NewFinalStarts = NewStarts;
-            //                     }
-
-            //                 }
-            //             // }
-            //         }
-
-            //         if(MinDim != -1) {
-            //             if(CurCount == GlobalView) {
-            //                 SELECTEDDIM = MinDim;
-            //                 SELECTEDX = UVWIndex;
-            //             }
-            //             TempAABBList.Add(MinAABBLeft);
-            //             TempAABBList.Add(MinAABBRight);
-            //             if(CurCount == GlobalView)
-            //                     for(int k2 = 0; k2 < 3; k2++) 
-            //                         Debug.Log(Starts[k2] + " : " + NewFinalLimits[k2] +  " : " +  Limits[k2]);
-            //             TempDat.aabb = MinAABBLeft;
-            //             TempDat.Tri = ActiveList[0].Tri;
-            //             if(NewFinalLimits[0] != Starts[0]) TempDat.ULimit = NewFinalLimits[0];
-            //             else TempDat.ULimit = Limits[0];
-            //             if(NewFinalLimits[1] != Starts[1]) TempDat.VLimit = NewFinalLimits[1];
-            //             else TempDat.VLimit = Limits[1];
-            //             if(NewFinalLimits[2] != Starts[2]) TempDat.WLimit = NewFinalLimits[2];
-            //             else TempDat.WLimit = Limits[2];
-            //             TempDat.UStart = Starts[0];
-            //             TempDat.VStart = Starts[1];
-            //             TempDat.WStart = Starts[2];
-            //             ActiveList.Add(TempDat);
-            //             TempDat = new CurrentData();
-            //             TempDat.Tri = ActiveList[0].Tri;
-            //             TempDat.aabb = MinAABBRight;
-            //             TempDat.UStart = NewFinalLimits[0];
-            //             TempDat.VStart = NewFinalLimits[1];
-            //             TempDat.WStart = NewFinalLimits[2];
-            //             TempDat.ULimit = Limits[0];
-            //             TempDat.VLimit = Limits[1];
-            //             TempDat.WLimit = Limits[2];
-            //             ActiveList.Add(TempDat);
-            //             if(CurCount == GlobalView) {
-            //                 Gizmos.color = Color.white;
-            //                 Gizmos.DrawWireCube((ActiveList[0].aabb.BBMax + ActiveList[0].aabb.BBMin) / 2.0f, ActiveList[0].aabb.BBMax - ActiveList[0].aabb.BBMin);
-
-            //                 Gizmos.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
-            //                 Gizmos.DrawCube((MinAABBLeft.BBMax + MinAABBLeft.BBMin) / 2.0f, MinAABBLeft.BBMax - MinAABBLeft.BBMin);
-
-            //                 Gizmos.color = new Color(0.75f, 0.5f, 0.0f, 0.5f);
-            //                 Gizmos.DrawCube((MinAABBRight.BBMax + MinAABBRight.BBMin) / 2.0f, MinAABBRight.BBMax - MinAABBRight.BBMin);
-            //             }
-            //             TempTriList.Add(ActiveList[0].Tri);
-            //             TempTriList.Add(ActiveList[0].Tri);
-            //         } else {
-            //             Gizmos.color = Color.magenta;
-            //                 Gizmos.DrawCube((ActiveList[0].aabb.BBMax + ActiveList[0].aabb.BBMin) / 2.0f, ActiveList[0].aabb.BBMax - ActiveList[0].aabb.BBMin);
-            //                 // Gizmos.DrawCube((ActiveList[0].aabb.BBMax + ActiveList[0].aabb.BBMin) / 2.0f, ActiveList[0].aabb.BBMax - ActiveList[0].aabb.BBMin);
-            //             TempAABBList.Add(ActiveList[0].aabb);
-            //             TempTriList.Add(ActiveList[0].Tri);
-            //         }
-            //         ActiveList.RemoveAt(0);
-            //     }
-            //     NewAABBs.AddRange(TempAABBList);
-            //     NewTriangles.AddRange(TempTriList);
-            // }
-
-        }
+        // }
 
         // public void SaveToFile() {
         //     // ParentData LoadedFile = new ParentData();

@@ -622,6 +622,18 @@ namespace CommonVars
             }
         }
 
+        public bool CheckValid(Vector3 Scale)
+        {
+            for (int i2 = 0; i2 < 3; i2++)
+            {
+                if (BBMax[i2] - BBMin[i2] < Scale[i2] * 2.0f)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         public bool IsValid()
         {
             for (int i2 = 0; i2 < 3; i2++)
