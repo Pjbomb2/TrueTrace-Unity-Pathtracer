@@ -148,6 +148,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
     norm = Geomnorm;
 
+#ifndef DisableNormalMaps
 #ifdef UseTextureLOD
     if (CurBounce == 0 && !ClayMode && (hitDat.NormalTex.x > 0 || hitDat.SecondaryNormalTex.x > 0)) {//Handle Normal Maps
 #else
@@ -171,6 +172,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         if (abs(norm.x) == abs(norm.y) == abs(norm.z)) norm = Geomnorm;
         norm = i_octahedral_32(octahedral_32(norm));
     }
+#endif
     if(CurBounce == 0 && UseASVGF && !(hitDat.metallic == 1 && hitDat.roughness < 0.05f) && hitDat.specTrans != 1 && RandomNums[id].w == 1) {
         Geomnorm = i_octahedral_32(asuint(PrevScreenData.x));
         norm = i_octahedral_32(asuint(PrevScreenData.y));
@@ -974,11 +976,11 @@ int MaterialIndex;
                     }
                     Radiance *= Intensity;
                     if (CurBounce == 0) Color.Direct = Color.throughput * Radiance;
-// #ifdef RadCache
-//                     else if(luminance(Color.Indirect) == 0) Color.Indirect += Color.throughput * Radiance;
-// #else
+#ifdef RadCache
+                    else if(luminance(Color.Indirect) == 0) Color.Indirect += Color.throughput * Radiance;
+#else
                     else Color.Indirect += Color.throughput * Radiance;
-// #endif
+#endif
                 }
             break;
             case 1:
@@ -993,8 +995,12 @@ int MaterialIndex;
                 }
                 Radiance *= Intensity;
                 if (CurBounce == 0) Color.Direct = Radiance;
+#ifdef RadCache
+                else if(luminance(Color.Indirect) == 0) Color.Indirect += Color.throughput * Radiance;
+#else
                 else if (CurBounce == 1) Color.Direct += Radiance * mis;
                 else Color.Indirect += Color.throughput * Radiance * mis;
+#endif
             break;
             case 2:
                 Radiance = DeSat((DoSecondary ? BackgroundColor : SecondaryBackgroundColor), 1.0f - TrueDeSat);
@@ -1004,16 +1010,20 @@ int MaterialIndex;
                 }
                 Radiance *= Intensity;
                 if (CurBounce == 0) Color.Direct = Radiance;
-                else if (CurBounce == 1) Color.Direct += Radiance;
-                else Color.Indirect += Color.throughput * Radiance;
+#ifdef RadCache
+                else if(luminance(Color.Indirect) == 0) Color.Indirect += Color.throughput * Radiance;
+#else
+                else if (CurBounce == 1) Color.Direct += Radiance * mis;
+                else Color.Indirect += Color.throughput * Radiance * mis;
+#endif
             break;
         }
-// #ifdef RadCache
-//         if(CurBounce > 0) {
-//             CacheBuffer[pixel_index].RunningIlluminance = packRGBE(Radiance);
-//             AddHitToCachePartial(CacheBuffer[pixel_index], ray.origin);
-//         }
-// #endif
+#ifdef RadCache
+        if(CurBounce > 0) {
+            CacheBuffer[pixel_index].RunningIlluminance = packRGBE(Radiance);
+            AddHitToCachePartial(CacheBuffer[pixel_index], ray.origin);
+        }
+#endif
         if(CurBounce == 0) {
             Color.Data = float3(Color.Direct);
             Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((1) << 26);  
@@ -1157,7 +1167,7 @@ int MaterialIndex;
                 float3 EmissCol = lerp(TempMat.EmissionColor, TempMat.surfaceColor, GetFlag(TempMat.Tag, BaseIsMap));
                 float4 EmissTex = SampleTexture(BaseUv, SampleEmission, TempMat);
                 if(!GetFlag(TempMat.Tag, IsEmissionMask)) {//IS a mask
-                    TempMat.emission *= luminance(EmissTex.xyz);
+                    TempMat.emission *= luminance(EmissTex.xyz) * luminance(EmissTex.xyz) > 0.01f;
                 } else EmissCol *= EmissTex.xyz;
                 TempMat.surfaceColor = lerp(TempMat.surfaceColor, EmissCol, saturate(TempMat.emission) * GetFlag(TempMat.Tag, ReplaceBase));
             } else {

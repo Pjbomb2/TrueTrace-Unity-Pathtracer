@@ -35,6 +35,7 @@
 // #define ReSTIRRestrictSpatial
 // #define ReSTIRAdditionalAO
 // #define ShadowGlassAttenuation
+// #define DisableNormalMaps
 
 
 

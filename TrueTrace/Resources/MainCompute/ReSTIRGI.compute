@@ -672,20 +672,32 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
                     RayDirWeight *= ShadowGuidanceWeight * NormDiff;
                     RayDirWeight2 *= ShadowGuidanceWeight * NormDiff;
 
-                    float fx = RunningReservoirBCopy.Radiance.M * luminance(RunningReservoirBCopy.Radiance.Color * bsdf2);
-                    float gx = (fx + (RunningReservoirBCannon.Radiance.M / 6.0f) * luminance(RunningReservoirBCannon.Radiance.Color * bsdf2));
-                    float Mi = max(fx / gx,0) * RayDirWeight;
+                float fx = RunningReservoirBCopy.Radiance.M * luminance(RunningReservoirBCopy.Radiance.Color * bsdf2);
+                float gx = ((RunningReservoirBCannon.Radiance.M / 6.0f) * luminance(RunningReservoirBCannon.Radiance.Color * bsdf2));
+                float ratio = pow(min(fx / gx, gx / fx), 3.0f);
+                gx *= ratio;
+                gx += fx;
+                float Mi = max((fx / gx),0) * RayDirWeight;
 
-                    fx = RunningReservoirBCopy.Radiance.M * luminance(RunningReservoirBCannon.Radiance.Color * bsdf2);
-                    gx = (fx + (RunningReservoirBCannon.Radiance.M / 6.0f) * luminance(RunningReservoirBCannon.Radiance.Color * CannonBSDF));
+                fx = RunningReservoirBCopy.Radiance.M * luminance(RunningReservoirBCannon.Radiance.Color * bsdf2);
+                gx = ((RunningReservoirBCannon.Radiance.M / 6.0f) * luminance(RunningReservoirBCannon.Radiance.Color * CannonBSDF));
+                ratio = pow(min(fx / gx, gx / fx), 3.0f);
+                gx *= ratio;
+                gx += fx;
                     Mc = Mc + (1.0f - max(fx / gx,0) * RayDirWeight);
 
                     fx = RunningReservoirCCopy.M * luminance(RunningReservoirCCopy.Color * NEEbsdf2);
-                    gx = (fx + (RunningReservoirCCannon.M / 6.0f) * luminance(RunningReservoirCCannon.Color * NEEbsdf2));
+                    gx = ((RunningReservoirCCannon.M / 6.0f) * luminance(RunningReservoirCCannon.Color * NEEbsdf2));
+                ratio = pow(min(fx / gx, gx / fx), 3.0f);
+                gx *= ratio;
+                gx += fx;
                     float MiNEE = max(fx / gx,0) * RayDirWeight2;
 
                     fx = RunningReservoirCCopy.M * luminance(RunningReservoirCCannon.Color * NEEbsdf2);
-                    gx = (fx + (RunningReservoirCCannon.M / 6.0f) * luminance(RunningReservoirCCannon.Color * CannonNEEBSDF));
+                    gx = ((RunningReservoirCCannon.M / 6.0f) * luminance(RunningReservoirCCannon.Color * CannonNEEBSDF));
+                ratio = pow(min(fx / gx, gx / fx), 3.0f);
+                gx *= ratio;
+                gx += fx;
                     McNEE = McNEE + (1.0f - max(fx / gx,0) * RayDirWeight2);
             // }
 
@@ -911,22 +923,34 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
                 RayDirWeight2 *= ShadowGuidanceWeight * NormDiff;
 
                 float fx = RunningReservoirBCopy.Radiance.M * luminance(RunningReservoirBCopy.Radiance.Color * bsdf2);
-                float gx = (fx + (RunningReservoirBCannon.Radiance.M / 5.0f) * luminance(RunningReservoirBCannon.Radiance.Color * bsdf2));
-                float Mi = max(fx / gx,0) * RayDirWeight;
+                float gx = ((RunningReservoirBCannon.Radiance.M / 5.0f) * luminance(RunningReservoirBCannon.Radiance.Color * bsdf2));
+                float ratio = pow(min(fx / gx, gx / fx), 3.0f);
+                gx *= ratio;
+                gx += fx;
+                float Mi = max((fx / gx),0) * RayDirWeight;
 
                 fx = RunningReservoirBCopy.Radiance.M * luminance(RunningReservoirBCannon.Radiance.Color * bsdf2);
-                gx = (fx + (RunningReservoirBCannon.Radiance.M / 5.0f) * luminance(RunningReservoirBCannon.Radiance.Color * CannonBSDF));
-                Mc = Mc + (1.0f - max(fx / gx,0) * RayDirWeight);
+                gx = ((RunningReservoirBCannon.Radiance.M / 5.0f) * luminance(RunningReservoirBCannon.Radiance.Color * CannonBSDF));
+                ratio = pow(min(fx / gx, gx / fx), 3.0f);
+                gx *= ratio;
+                gx += fx;
+                Mc = Mc + (1.0f - max((fx / gx),0) * RayDirWeight);
 
 
 
 
                 fx = RunningReservoirCCopy.M * luminance(RunningReservoirCCopy.Color * NEEbsdf2);
-                gx = (fx + (RunningReservoirCCannon.M / 5.0f) * luminance(RunningReservoirCCannon.Color * NEEbsdf2));
+                gx = ((RunningReservoirCCannon.M / 5.0f) * luminance(RunningReservoirCCannon.Color * NEEbsdf2));
+                ratio = pow(min(fx / gx, gx / fx), 3.0f);
+                gx *= ratio;
+                gx += fx;
                 float MiNEE = max(fx / gx,0) * RayDirWeight2;
 
                 fx = RunningReservoirCCopy.M * luminance(RunningReservoirCCannon.Color * NEEbsdf2);
-                gx = (fx + (RunningReservoirCCannon.M / 5.0f) * luminance(RunningReservoirCCannon.Color * CannonNEEBSDF));
+                gx = ((RunningReservoirCCannon.M / 5.0f) * luminance(RunningReservoirCCannon.Color * CannonNEEBSDF));
+                ratio = pow(min(fx / gx, gx / fx), 3.0f);
+                gx *= ratio;
+                gx += fx;
                 McNEE = McNEE + (1.0f - max(fx / gx,0) * RayDirWeight2);
 
             // }

@@ -2415,17 +2415,16 @@ inline int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Nor
 	    return clamp(( random(11, pixel_index).x * unitylightcount), 0, unitylightcount - 1);
 
     }
-
+    const float3 RandVecMain = float3(random(115, pixel_index), random(116, pixel_index).x);
+    const float RandVecW = random(116, pixel_index).y;
     for(int i = 0; i < RISCount + 1; i++) {
+        float3 RandVec = RandVecMain;
         Rand = random(i + 11, pixel_index);
         Index = clamp((Rand.x * unitylightcount), 0, unitylightcount - 1);
         LightData light = _UnityLights[Index];
-        to_light = (light.Type == DIRECTIONALLIGHT ? (light.Direction * 120000.0f + Position) : light.Position) - Position;
-        LengthSquared = dot(to_light, to_light);
-        to_light /= sqrt(LengthSquared);
 
+        float3 MiscInfo = float3(light.Softness * 120.0f + 1, light.SpotAngle);
         if(light.Type == AREALIGHTQUAD|| light.Type == AREALIGHTDISK) {
-            float3 RandVec = float3(random(i + 292, pixel_index), random(i + 392, pixel_index).x);
             float sinPhi, cosPhi;
             sincos(light.ZAxisRotation, sinPhi, cosPhi);
             switch(light.Type) {
@@ -2433,34 +2432,34 @@ inline int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Nor
                     RandVec.xy = RandVec.xy * light.SpotAngle - light.SpotAngle / 2.0f;
                     RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy);
                     light.Position += ToWorld(GetTangentSpace2(light.Direction), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
-                    // area = (light.SpotAngle.x * light.SpotAngle.y);
-                    light.Radiance *= PI;
-                    light.Radiance *= pow(saturate(dot(to_light, -light.Direction)), light.Softness * 120.0f + 1) * (light.SpotAngle.x * light.SpotAngle.y);
-
-                    // RandVec.xy = RandVec.xy * light.SpotAngle - light.SpotAngle / 2.0f;
-                    // RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy);
-                    // light.Position += ToWorld(GetTangentSpace2(light.Direction), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
-                    // area = Light.SpotAngle.x * Light.SpotAngle.y;
-                    // if(hitDat.MatType == 3) Radiance = 0;
-                    // light.Radiance *= (light.SpotAngle.x * light.SpotAngle.y) / 2.0f;
+                    light.Radiance *= PI * ((light.SpotAngle.x * light.SpotAngle.y));
                 break;
                 case AREALIGHTDISK:
                     sincos(RandVec.x * 2.0f * PI, RandVec.x, RandVec.y);
                     RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy) * RandVec.z * light.SpotAngle.x;
                     light.Position += ToWorld(GetTangentSpace2(light.Direction), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
-                    // area = PI * Light.SpotAngle.x * Light.SpotAngle.x;
-                    // light.Radiance *= PI * light.SpotAngle.x * light.SpotAngle.x;
                 break;
             }
 
             to_light = light.Position - Position;
             LengthSquared = dot(to_light, to_light);
             to_light /= sqrt(LengthSquared);
+            light.Radiance *= pow(saturate(dot(to_light, -light.Direction)), MiscInfo.x) * (MiscInfo.x);
             float PDF = saturate(dot(to_light, -light.Direction));
             if(PDF > 0) p_hat = max(luminance(light.Radiance) / (LengthSquared * max(PDF, 0.1f)),0);
         	else p_hat = 0;
         } else {
-            p_hat = max(luminance(light.Radiance) / ((light.Type == DIRECTIONALLIGHT) ? 12.0f : LengthSquared) * ((light.Type == SPOTLIGHT) ? saturate((light.Softness * light.Softness) + saturate(dot(to_light, -light.Direction)) * light.SpotAngle.x + light.SpotAngle.y) : 1)* (dot(to_light, Norm) > 0),0);
+        	if(light.Type != DIRECTIONALLIGHT) {
+                light.Position += normalize(RandVec - 0.5f) * RandVecW * light.Softness * 0.1f;//Soft Shadows
+        	}
+	        to_light = (light.Type == DIRECTIONALLIGHT ? (light.Direction * 120000.0f + Position) : light.Position) - Position;
+        	LengthSquared = dot(to_light, to_light);
+        	to_light /= sqrt(LengthSquared);
+        	if(light.Type == SPOTLIGHT) {
+                light.Radiance *= ((1.0f - MiscInfo.z * 0.0174533) + (MiscInfo.y * 0.0174533 - MiscInfo.z * 0.0174533) / 2.0f);
+                light.Radiance *= saturate(saturate(dot(to_light, -light.Direction)) * MiscInfo.y + MiscInfo.z);
+        	}
+            p_hat = max(luminance(light.Radiance) / ((light.Type == DIRECTIONALLIGHT) ? 12.0f : LengthSquared) * (dot(to_light, Norm) > 0),0);
         	// float PDF = (((light.Type == DIRECTIONALLIGHT) ? 10.0f : LengthSquared) * ((light.Type == SPOTLIGHT) ? saturate(saturate(dot(to_light, -light.Direction)) * light.SpotAngle.x + light.SpotAngle.y) : 1)* (dot(to_light, Norm) > 0));
             // if(PDF > 0.01f) p_hat = max(luminance(light.Radiance) / PDF,0);
         	// else p_hat = 0;
@@ -2475,6 +2474,7 @@ inline int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Nor
     lightWeight *= (wsum / max((RISCount + 1) *MinP_Hat, 0.000001f)) * (float)unitylightcount;
     return MinIndex;
 }
+
 
 inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float lightWeight, float3 Norm, float3 Position, float4x4 Transform, inout float3 Radiance, inout float3 FinalPos, float2 sharpness, float3 viewDir, float metallic) {//Need to check these to make sure they arnt simply doing uniform sampling
 
