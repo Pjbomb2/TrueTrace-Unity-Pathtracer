@@ -32,7 +32,7 @@
 // #define AutoDebugReading
 // #define TTCustomMotionVectors
 // #define ReSTIRSampleReduction
-// #define ReSTIRRestrictSpatial
+#define ReSTIRRestrictSpatial
 // #define ReSTIRAdditionalAO
 // #define ShadowGlassAttenuation
 // #define DisableNormalMaps

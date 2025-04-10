@@ -425,7 +425,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
 
 
 
-        if(any(prevIndex >= int2(screen_width, screen_height) || prevIndex < 0) || (!((ReservoirB[int3(prevIndex, 0)].z >> 30) & 0x1))) {
+        if(PrevGBuffer.z <= 0 || any(prevIndex >= int2(screen_width, screen_height) || prevIndex < 0) || (!((ReservoirB[int3(prevIndex, 0)].z >> 30) & 0x1))) {
             RunningReservoirB.Radiance.W = 1;
             RunningReservoirB.Radiance.M = 1;
             if(!any(prevIndex >= int2(screen_width, screen_height) || prevIndex < 0)) {
@@ -456,7 +456,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
 
 
     int MaxM = ReSTIRGITemporalMCap;
-    if(Case == 3) MaxM = 5;
+    if(Case == 3) MaxM = min(5, MaxM);
     if (RunningReservoirB.Radiance.M > MaxM) {
         RunningReservoirB.Radiance.Wsum *= MaxM / RunningReservoirB.Radiance.M;
         RunningReservoirB.Radiance.M = MaxM; 

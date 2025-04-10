@@ -1257,11 +1257,11 @@ float3 SunDir;
 
 
 inline float luminance(const float3 a) {
-    return dot(float3(0.299f, 0.587f, 0.114f), a);
+    return dot(float3(0.299f, 0.587f, 0.114f), max(a,0));
 }
 
 inline float lum2(const float3 a) {
-    return dot(float3(0.21f, 0.72f, 0.07f), a);
+    return dot(float3(0.21f, 0.72f, 0.07f), max(a,0));
 }
 
 
