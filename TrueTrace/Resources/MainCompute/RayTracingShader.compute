@@ -254,6 +254,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 }
             #endif
         }
+        [branch]if(UseReSTIRGI && CurBounce == 1 && FromColorSpecPacked(Color.MetRoughIsSpec).x == 1) ScreenSpaceInfo[id.xy].z = -10000.0f;
         if((UseASVGF || UseReSTIRGI) && CurBounce == 0 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -10000.0f;
         if(hitDat.emission > 1.0f) {
             if(CurBounce == 0) {
