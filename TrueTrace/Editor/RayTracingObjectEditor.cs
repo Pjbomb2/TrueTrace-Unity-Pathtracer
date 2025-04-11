@@ -1017,8 +1017,8 @@ namespace TrueTrace {
                             if(Obj.Names[i].Equals(Name)) {
                                 Obj.LocalMaterials[i] = t.LocalMaterials[Selected];
                                 if(i < t.UseKelvin.Length){
-                                    t.UseKelvin[i] = t.UseKelvin[Selected];
-                                    t.KelvinTemp[i] = t.KelvinTemp[Selected];
+                                    Obj.UseKelvin[i] = t.UseKelvin[Selected];
+                                    Obj.KelvinTemp[i] = t.KelvinTemp[Selected];
                                 } 
                                 Obj.CallMaterialEdited(true);
                             }
