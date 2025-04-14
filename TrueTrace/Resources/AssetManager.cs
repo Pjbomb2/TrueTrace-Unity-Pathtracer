@@ -243,7 +243,7 @@ namespace TrueTrace {
         int B = (int)Mathf.Ceil(ThisRect.z * 16384.0f) | ((int)Mathf.Ceil(ThisRect.w * 16384.0f) << 15);
         return new Vector2Int(A, B);
     }
-    private void PackAndCompactBindless(Dictionary<int, TexObj> DictTex, PackingRectangle[] Rects, int TexIndex, int ReadIndex = -1) {
+    private void PackAndCompactBindless(Dictionary<int, TexObj> DictTex, int[] Rects, int TexIndex, int ReadIndex = -1) {
         int TexCount = DictTex.Count;
         if(TexCount != 0) {
             for (int i = 0; i < TexCount; i++) {
@@ -251,9 +251,7 @@ namespace TrueTrace {
                     Debug.LogError("TOO MANY TEXTURES, REPORT BACK TO DEVELOPER");
                     return;
                 } else BindlessTextureCount++;
-                PackingRectangle TempRect = Rects[i];
-                int ID = TempRect.Id;
-                TexObj SelectedTex = DictTex[ID];
+                TexObj SelectedTex = DictTex[Rects[i]];
                 int ListLength = SelectedTex.TexObjList.Count;
                 var bindlessIdx = bindlessTextures.AppendRaw(SelectedTex.Tex);
 
@@ -499,6 +497,23 @@ namespace TrueTrace {
             }
         }
 
+        private void KeyCheck(int MatIndex, Texture Tex, ref Dictionary<int, TexObj> DictTextures, ref List<int> PR, int ReadChannelIndex, int TexType) {
+            int index = Tex.GetInstanceID();
+            if (DictTextures.TryGetValue(index, out var existingTexObj)) {
+                existingTexObj.TexObjList.Add(new Vector3Int(MatIndex, TexType, ReadChannelIndex));
+            } else {
+                var newTexObj = new TexObj {
+                    Tex = Tex,
+                    ReadIndex = ReadChannelIndex
+                };
+
+                PR.Add(index);
+
+                newTexObj.TexObjList.Add(new Vector3Int(MatIndex, TexType, ReadChannelIndex));
+                DictTextures.Add(index, newTexObj);
+            }
+        }
+
         private void CreateAtlasIES() {//Creates texture atlas
             Dictionary<int, TexObj> IESMapTextures = new Dictionary<int, TexObj>();
             List<PackingRectangle> IESMapRect = new List<PackingRectangle>();
@@ -544,7 +559,7 @@ namespace TrueTrace {
                 if(bindlessTextures == null) bindlessTextures = new BindlessArray();
                 bindlessTextures.Clear();
                 Dictionary<int, TexObj> BindlessDict = new Dictionary<int, TexObj>();
-                List<PackingRectangle> BindlessRect = new List<PackingRectangle>();
+                List<int> BindlessRect = new List<int>();
             #else
                 Dictionary<int, TexObj> AlbTextures = new Dictionary<int, TexObj>();
                 Dictionary<int, TexObj> NormTextures = new Dictionary<int, TexObj>();
@@ -568,7 +583,6 @@ namespace TrueTrace {
             if (CopyShader == null) CopyShader = Resources.Load<ComputeShader>("Utility/CopyTextureShader");
 
             if(RenderQue.Count == 0) return;
-            int CurCount = RenderQue[0].AlbedoTexs.Count;
 
             foreach (ParentObject Obj in RenderQue) {
                 foreach (RayTracingObject Obj2 in Obj.ChildObjects) {
@@ -744,17 +758,6 @@ namespace TrueTrace {
             #endif
 
             PackAndCompact(HeightMapTextures, ref HeightmapAtlas, HeightMapRect.ToArray(), 16384, 0, 0);
-            // if(HeightMapRect.ToArray().Length != 0) {
-            //     for(int i = 0; i < 10; i++) {
-            //         CopyShader.SetInt("MipLevel", i);
-            //         CopyShader.SetVector("InputSize", new Vector2((HeightmapAtlas.width >> (i + 1)), (HeightmapAtlas.height >> (i + 1))));
-            //         CopyShader.SetTexture(7, "InputTex2", HeightmapAtlas, i);
-            //         CopyShader.SetTexture(7, "ResultSingle", HeightmapAtlas, i + 1);
-            //         CopyShader.Dispatch(7, (int)Mathf.CeilToInt((HeightmapAtlas.width >> (i + 1)) / 32.0f), (int)Mathf.CeilToInt((HeightmapAtlas.height >> (i + 1)) / 32.0f), 1);
-
-            //     }
-            // }
-
             PackAndCompact(AlphaMapTextures, ref AlphaMapAtlas, AlphaMapRect.ToArray(), 16384, 1);
             
             #if !DX11Only && !UseAtlas

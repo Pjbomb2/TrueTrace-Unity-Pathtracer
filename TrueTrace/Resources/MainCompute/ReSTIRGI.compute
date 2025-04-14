@@ -576,20 +576,13 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
         float3 GeomNorms[6];
         [loop]for (int i = 0; i < 6; i++) {        
             float2 RandOffsets = randomNEE(i + 12, pixel_index);
-        #ifdef ExpensiveReSTIR
             int2 CellOffset = vogelDiskSample(i, 6, RandOffsets.y, 2.0f * PI * RandOffsets.x) * 42.0f;
             int2 CellTapCoord = id.xy + CellOffset;
             if(CellTapCoord.x < 0 || CellTapCoord.x >= screen_width) CellTapCoord.x = id.x - CellOffset.x;
             if(CellTapCoord.y < 0 || CellTapCoord.y >= screen_height) CellTapCoord.y = id.y - CellOffset.y;
             if(all(CellTapCoord == id.xy)) continue;
-        #else
-            int2 CellTapCoord = vogelDiskSample(i, 6, RandOffsets.y, 2.0f * PI * RandOffsets.x) * 42.0f;
-            CellTapCoord += id.xy;
-            if(all(CellTapCoord == id.xy) || any(CellTapCoord >= int2(screen_width, screen_height) || CellTapCoord < 0)) continue;
-        #endif
             if(asuint(ScreenSpaceInfoRead[CellTapCoord].w) == 0) continue;
 
-        #ifdef ExpensiveReSTIR
             float3 SampleGeomNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].x));
             float NormDiff = max(abs(dot(GeomNorm, SampleGeomNorm)), 0);
             if(NormDiff < 0.9f) continue;
@@ -598,12 +591,6 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
             ShadowGuidanceWeight *= (ReservoirSampleOcclusion > 0 && ReservoirCenterOcclusion > 0);
             if(ShadowGuidanceWeight == 0) continue;
             GeomNorms[K] = SampleGeomNorm;
-        #else
-            float3 SampleSurfNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].y));
-            float NormDiff = max(dot(SurfNorm, SampleSurfNorm), 0);
-            if(NormDiff < 0.9f) continue;
-            GeomNorms[K] = SampleSurfNorm;
-        #endif
             CellTapCoords[K++] = int3(CellTapCoord, i);
 
         }
@@ -613,16 +600,9 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
             int2 CellTapCoord = CellTapCoords[i2];
             float2 RandOffsets2 = randomNEE(i + 32, pixel_index);
 
-        #ifdef ExpensiveReSTIR
             float3 SampleGeomNorm = GeomNorms[i2];
             float NormDiff = max(abs(dot(GeomNorm, SampleGeomNorm)), 0);
             float ShadowGuidanceWeight = 1;// abs(ReservoirCenterOcclusion - ReservoirSampleOcclusion) / max(ReservoirCenterOcclusion, ReservoirSampleOcclusion) < 0.1f;
-        #else
-            float3 SampleSurfNorm = GeomNorms[i2];
-            float NormDiff = max(dot(SurfNorm, SampleSurfNorm), 0);
-            float ReservoirSampleOcclusion = ScreenSpaceInfoRead[CellTapCoord].z;
-            float ShadowGuidanceWeight = abs(ReservoirCenterOcclusion - ReservoirSampleOcclusion) / max(ReservoirCenterOcclusion, ReservoirSampleOcclusion) < 0.1f;
-        #endif
 
             const uint4 PackedReservoirA = ReservoirB[int3(CellTapCoord,0)];
             const uint2 PackedReservoirB = ReservoirB[int3(CellTapCoord,1)];
@@ -645,7 +625,11 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
 
             float Dist = length(SampleRayDir - CenterRayDir);
 #ifdef ReSTIRRestrictSpatial
+        #ifdef SmartRestriction
+                RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((Case != 0) + SurfaceMat.roughness));
+        #else
                 RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((1.0f - SurfaceMat.metallic) + SurfaceMat.roughness));
+        #endif
 #endif
             [branch]if(Dist < 1.0f) {
                 RayDirWeight = lerp(1.0f - exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, SurfaceMat.roughness);
@@ -824,20 +808,13 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
         float3 GeomNorms[5];
         [loop]for (int i = 0; i < 5; i++) {        
             float2 RandOffsets = randomNEE(i + 48, pixel_index);
-        #ifdef ExpensiveReSTIR
             int2 CellOffset = vogelDiskSample(i, 5, RandOffsets.y, 2.0f * PI * RandOffsets.x) * 20.0f;
             int2 CellTapCoord = id.xy + CellOffset;
             if(CellTapCoord.x < 0 || CellTapCoord.x >= screen_width) CellTapCoord.x = id.x - CellOffset.x;
             if(CellTapCoord.y < 0 || CellTapCoord.y >= screen_height) CellTapCoord.y = id.y - CellOffset.y;
             if(all(CellTapCoord == id.xy)) continue;
-        #else
-            int2 CellTapCoord = vogelDiskSample(i, 5, RandOffsets.y, 2.0f * PI * RandOffsets.x) * 20.0f;
-            CellTapCoord += id.xy;
-            if(all(CellTapCoord == id.xy) || any(CellTapCoord >= int2(screen_width, screen_height) || CellTapCoord < 0)) continue;
-        #endif
             if(asuint(ScreenSpaceInfoRead[CellTapCoord].w) == 0) continue;
 
-        #ifdef ExpensiveReSTIR
             float3 SampleGeomNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].x));
             float NormDiff = max(abs(dot(GeomNorm, SampleGeomNorm)), 0);
             if(NormDiff < 0.9f) continue;
@@ -846,12 +823,6 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
             ShadowGuidanceWeight *= (ReservoirSampleOcclusion > 0 && ReservoirCenterOcclusion > 0);
             if(ShadowGuidanceWeight == 0) continue;
             GeomNorms[K] = SampleGeomNorm;
-        #else
-            float3 SampleSurfNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].y));
-            float NormDiff = max(dot(SurfNorm, SampleSurfNorm), 0);
-            if(NormDiff < 0.9f) continue;
-            GeomNorms[K] = SampleSurfNorm;
-        #endif
             CellTapCoords[K++] = int3(CellTapCoord, i);
 
         }
@@ -863,16 +834,9 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
             int2 CellTapCoord = CellTapCoords[i2];
             float2 RandOffsets2 = randomNEE(i + 64, pixel_index);
 
-        #ifdef ExpensiveReSTIR
             float3 SampleGeomNorm = GeomNorms[i2];
             float NormDiff = max(abs(dot(GeomNorm, SampleGeomNorm)), 0);
             float ShadowGuidanceWeight = 1;//!plane_distance_disocclusion_check(PrimaryHitPosition, CellPos[i2], GeomNorm);// abs(ReservoirCenterOcclusion - ReservoirSampleOcclusion) / max(ReservoirCenterOcclusion, ReservoirSampleOcclusion) < 0.1f;
-        #else
-            float3 SampleSurfNorm = GeomNorms[i2];
-            float NormDiff = max(dot(SurfNorm, SampleSurfNorm), 0);
-            float ReservoirSampleOcclusion = ScreenSpaceInfoRead[CellTapCoord].z;
-            float ShadowGuidanceWeight = abs(ReservoirCenterOcclusion - ReservoirSampleOcclusion) / max(ReservoirCenterOcclusion, ReservoirSampleOcclusion) < 0.1f;
-        #endif
 
             const uint4 PackedReservoirA = ReservoirB[int3(CellTapCoord,0)];
             const uint2 PackedReservoirB = ReservoirB[int3(CellTapCoord,1)];
@@ -895,7 +859,11 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
 
             float Dist = length(SampleRayDir - CenterRayDir);
 #ifdef ReSTIRRestrictSpatial
+        #ifdef SmartRestriction
+                RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((Case != 0) + SurfaceMat.roughness));
+        #else
                 RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((1.0f - SurfaceMat.metallic) + SurfaceMat.roughness));
+        #endif
 #endif
             [branch]if(Dist < 1.0f) {
                 RayDirWeight = lerp(1.0f - exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, SurfaceMat.roughness);
@@ -995,6 +963,10 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
                     float3 MiscInfo = float3(Light.Softness * 120.0f + 1, Light.SpotAngle);
                     if(Light.Type == SPOTLIGHT) {
                         RunningReservoirC.Color *= saturate(saturate(dot(ray.direction, -Light.Direction)) * MiscInfo.y + MiscInfo.z);
+                            float3 LocalLight = ToLocal(GetTangentSpace(Light.Direction), -ray.direction) * 0.5f + 0.5f;
+                            float2 AlignedUV = AlignUV(LocalLight.xz, float4(1,1,0,0), _UnityLights[AggTriIndex].IESTex);
+                            if(AlignedUV.x != -1) RunningReservoirC.Color *= _IESAtlas.SampleLevel(my_trilinear_repeat_sampler, AlignedUV, 0);
+
                     } else if(Light.Type == AREALIGHTQUAD) {
                         RunningReservoirC.Color *= pow(saturate(dot(ray.direction, -Light.Direction)), MiscInfo.x);
                     }

@@ -210,9 +210,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         float pdf3 = (Tr.x + Tr.y + Tr.z) / 3.0f;
         hitDat.emission *= Tr;// / pdf3;// / pdf;
 #endif
-        #ifdef WhiteLights
-            hitDat.surfaceColor = 0.5f;
-        #endif
         float3 EmissCol = hitDat.surfaceColor * hitDat.emission * LEMEnergyScale;
         if (!UseNEE || AggTrisB[hit.triangle_id].IsEmissive == 0) {
             if (CurBounce <= 1) Color.Direct += EmissCol;
@@ -230,7 +227,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             float a = AreaOfTriangle(float3(0,0,0), a1, a2);
             float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
             float light_pdf = 1.0f / (SA * LightMeshCount);
-            #if defined(LBVH) && !defined(FasterLightSampling)
+            #if defined(LBVH)
                 #ifdef DoubleBufferSGTree
                     [branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTreePrev, _MeshDataPrev);
                     else CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTree, _MeshData);
@@ -1132,10 +1129,6 @@ int MaterialIndex;
         #endif
     #endif
 
-#ifdef FakedAO
-    if(TempMat.specTrans == 0 && CurBounce != 0 && bestHit.t < 1.0f) Color.throughput *= exp(-(1.0f - bestHit.t) * 12000.0f);
-#endif
-
     const bool InvalidateScreenSpaceInfo = ((!UseASVGF && CurBounce == 0));
     float4 PrevScreenData = InvalidateScreenSpaceInfo ? 0 : ScreenSpaceInfo[id.xy];
 
@@ -1162,20 +1155,18 @@ int MaterialIndex;
         if(CurBounce != 0 && Case != 3) TempMat.roughness = max(TempMat.roughness, saturate((float)CurBounce / 6.0f));
     }
 #endif
-    #ifndef WhiteLights
-        if(TempMat.emission > 0) {
-            if (TempMat.EmissiveTex.x > 0) {
-                float3 EmissCol = lerp(TempMat.EmissionColor, TempMat.surfaceColor, GetFlag(TempMat.Tag, BaseIsMap));
-                float4 EmissTex = SampleTexture(BaseUv, SampleEmission, TempMat);
-                if(!GetFlag(TempMat.Tag, IsEmissionMask)) {//IS a mask
-                    TempMat.emission *= luminance(EmissTex.xyz) * luminance(EmissTex.xyz) > 0.01f;
-                } else EmissCol *= EmissTex.xyz;
-                TempMat.surfaceColor = lerp(TempMat.surfaceColor, EmissCol, saturate(TempMat.emission) * GetFlag(TempMat.Tag, ReplaceBase));
-            } else {
-                TempMat.surfaceColor *= TempMat.EmissionColor;
-            }
+    if(TempMat.emission > 0) {
+        if (TempMat.EmissiveTex.x > 0) {
+            float3 EmissCol = lerp(TempMat.EmissionColor, TempMat.surfaceColor, GetFlag(TempMat.Tag, BaseIsMap));
+            float4 EmissTex = SampleTexture(BaseUv, SampleEmission, TempMat);
+            if(!GetFlag(TempMat.Tag, IsEmissionMask)) {//IS a mask
+                TempMat.emission *= luminance(EmissTex.xyz) * luminance(EmissTex.xyz) > 0.01f;
+            } else EmissCol *= EmissTex.xyz;
+            TempMat.surfaceColor = lerp(TempMat.surfaceColor, EmissCol, saturate(TempMat.emission) * GetFlag(TempMat.Tag, ReplaceBase));
+        } else {
+            TempMat.surfaceColor *= TempMat.EmissionColor;
         }
-    #endif
+    }
     if(CurBounce == 0 && UseReSTIRGI) PrevScreenData.w = asfloat(0);
     float4 PrevPrev = PrevScreenData;
     float3 bsdf = 1;
@@ -1248,32 +1239,6 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
             res = _DebugTex[id.xy];
         #endif
     #endif
-
-
-    // #ifdef TEMP
-    //     #if 1
-
-    //         uint4 Target = PrimaryTriData[id.xy];
-    //         if(Target.w == 1) return asfloat(Target.xyz);
-    //         MaterialIndex = _MeshData[Target.x].MaterialOffset + AggTris[Target.y + _MeshData[Target.x].TriOffset].MatDat;
-
-
-
-    //         res = HandleDebug(MaterialIndex);
-    //         res = HandleDebug(Target.x);
-
-    //     #endif
-
-
-    // #endif
-
-
-#ifdef AutoDebugReading
-    if(_DebugTex[id.xy].w != 0) {
-        res = _DebugTex[id.xy];
-    }
-
-#endif
 
     Result[id.xy] = float4(res, 1.0f);
 }

@@ -2545,33 +2545,29 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
     #ifdef AdvancedBackground
     	if(GetFlag(MatDat.Tag, IsBackground)) return -1;
     #endif
-    #ifdef WhiteLights
-        MatDat.surfaceColor = 0.5f;
-    #else
-        float2 BaseUv = TOHALF(AggTrisA[AggTriIndex].tex0) * (1.0f - FinalUV.x - FinalUV.y) + TOHALF(AggTrisA[AggTriIndex].texedge1) * FinalUV.x + TOHALF(AggTrisA[AggTriIndex].texedge2) * FinalUV.y;
-        if(MatDat.AlbedoTex.x > 0)
-        	MatDat.surfaceColor *= SampleTexture(BaseUv, SampleAlbedo, MatDat);
+    float2 BaseUv = TOHALF(AggTrisA[AggTriIndex].tex0) * (1.0f - FinalUV.x - FinalUV.y) + TOHALF(AggTrisA[AggTriIndex].texedge1) * FinalUV.x + TOHALF(AggTrisA[AggTriIndex].texedge2) * FinalUV.y;
+    if(MatDat.AlbedoTex.x > 0)
+    	MatDat.surfaceColor *= SampleTexture(BaseUv, SampleAlbedo, MatDat);
 
-        float3 TempCol = MatDat.surfaceColor;
-        Unity_Hue_Degrees_float(TempCol, MatDat.Hue * 500.0f, MatDat.surfaceColor);
-        MatDat.surfaceColor *= MatDat.Brightness;
-        TempCol = MatDat.surfaceColor;
-        Unity_Saturation_float(TempCol, MatDat.Saturation, MatDat.surfaceColor);
-        Unity_Contrast_float(MatDat.surfaceColor, MatDat.Contrast);
-        MatDat.surfaceColor = saturate(MatDat.surfaceColor);
+    float3 TempCol = MatDat.surfaceColor;
+    Unity_Hue_Degrees_float(TempCol, MatDat.Hue * 500.0f, MatDat.surfaceColor);
+    MatDat.surfaceColor *= MatDat.Brightness;
+    TempCol = MatDat.surfaceColor;
+    Unity_Saturation_float(TempCol, MatDat.Saturation, MatDat.surfaceColor);
+    Unity_Contrast_float(MatDat.surfaceColor, MatDat.Contrast);
+    MatDat.surfaceColor = saturate(MatDat.surfaceColor);
 
-        if ((MatDat.EmissiveTex.x > 0 && MatDat.emission >= 0)) {
-            float3 EmissCol = lerp(MatDat.EmissionColor, MatDat.surfaceColor, GetFlag(MatDat.Tag, BaseIsMap));
-    		float4 EmissTex = SampleTexture(BaseUv, SampleEmission, MatDat);
-            if(!GetFlag(MatDat.Tag, IsEmissionMask)) {//IS a mask
-                MatDat.emission *= luminance(EmissTex.xyz);
-                
-                MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissCol, saturate(MatDat.emission) * GetFlag(MatDat.Tag, ReplaceBase));
-            } else {//is NOT a mask
-                MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissTex.xyz * EmissCol, saturate(MatDat.emission) * GetFlag(MatDat.Tag, ReplaceBase));
-            }            
-        }
-    #endif
+    if ((MatDat.EmissiveTex.x > 0 && MatDat.emission >= 0)) {
+        float3 EmissCol = lerp(MatDat.EmissionColor, MatDat.surfaceColor, GetFlag(MatDat.Tag, BaseIsMap));
+		float4 EmissTex = SampleTexture(BaseUv, SampleEmission, MatDat);
+        if(!GetFlag(MatDat.Tag, IsEmissionMask)) {//IS a mask
+            MatDat.emission *= luminance(EmissTex.xyz);
+            
+            MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissCol, saturate(MatDat.emission) * GetFlag(MatDat.Tag, ReplaceBase));
+        } else {//is NOT a mask
+            MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissTex.xyz * EmissCol, saturate(MatDat.emission) * GetFlag(MatDat.Tag, ReplaceBase));
+        }            
+    }
     Radiance = MatDat.emission * MatDat.surfaceColor;
     return AggTriIndex;
 }

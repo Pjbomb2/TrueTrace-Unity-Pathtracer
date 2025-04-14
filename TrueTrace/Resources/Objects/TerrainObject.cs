@@ -228,6 +228,7 @@ namespace TrueTrace {
                     TempGameObject.AddComponent<InstancedObject>();
                     TempGameObject.GetComponent<InstancedObject>().InstanceParent = GameObject.Find(TreeSources[Tree.prototypeIndex].name).GetComponent<ParentObject>();
                     TempGameObject.transform.position = new Vector3(Tree.position.x * TerrainDimX, Tree.position.y * HeightScale, Tree.position.z * TerrainDimY) + this.transform.position;
+                    TempGameObject.transform.localScale = new Vector3(Tree.widthScale, Tree.heightScale, Tree.widthScale);
 
                 }
             }
