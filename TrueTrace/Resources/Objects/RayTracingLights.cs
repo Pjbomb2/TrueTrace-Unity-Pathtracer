@@ -34,18 +34,20 @@ namespace TrueTrace {
             ThisLight = this.GetComponent<Light>();
             ThisLight.shadows = LightShadows.None;
         }
+        Transform LocalTransform;
         public bool UpdateLight(bool OverrideTransform) {
             bool HasChanged = false;
+            if(LocalTransform == null) LocalTransform = transform;
             ThisLight.useColorTemperature = true;
             UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = true;
-            // if(transform.hasChanged || OverrideTransform) {
-                if(ThisLightData.Position != transform.position) HasChanged = true;
-                if(!HasChanged && ThisLightData.Direction != ((ThisLight.type == LightType.Directional) ? -transform.forward : (ThisLight.type == LightType.Spot) ? Vector3.Normalize(transform.forward) : transform.forward)) HasChanged = true;
-                if(!HasChanged && Mathf.Abs(ThisLightData.ZAxisRotation - transform.localEulerAngles.z * 3.14159f / 180.0f) > 0.00001f) HasChanged = true;
-                ThisLightData.Position = transform.position;
-                ThisLightData.Direction = (ThisLight.type == LightType.Directional) ? -transform.forward : (ThisLight.type == LightType.Spot) ? Vector3.Normalize(transform.forward) : transform.forward;
-                ThisLightData.ZAxisRotation = transform.localEulerAngles.z * 3.14159f / 180.0f;
-                transform.hasChanged = false;
+            // if(LocalTransform.hasChanged || OverrideTransform) {
+                if(ThisLightData.Position != LocalTransform.position) HasChanged = true;
+                if(!HasChanged && ThisLightData.Direction != ((ThisLight.type == LightType.Directional) ? -LocalTransform.forward : (ThisLight.type == LightType.Spot) ? Vector3.Normalize(LocalTransform.forward) : LocalTransform.forward)) HasChanged = true;
+                if(!HasChanged && Mathf.Abs(ThisLightData.ZAxisRotation - LocalTransform.localEulerAngles.z * 3.14159f / 180.0f) > 0.00001f) HasChanged = true;
+                ThisLightData.Position = LocalTransform.position;
+                ThisLightData.Direction = (ThisLight.type == LightType.Directional) ? -LocalTransform.forward : (ThisLight.type == LightType.Spot) ? Vector3.Normalize(LocalTransform.forward) : LocalTransform.forward;
+                ThisLightData.ZAxisRotation = LocalTransform.localEulerAngles.z * 3.14159f / 180.0f;
+                LocalTransform.hasChanged = false;
             // }
             Color TempCol;
             if(UseKelvin) TempCol = Mathf.CorrelatedColorTemperatureToRGB(KelvinTemperature);

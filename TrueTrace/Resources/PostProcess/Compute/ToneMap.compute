@@ -254,12 +254,16 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             result = Uncharted2ToneMapping(result);
         break;
         case 5:
+            result = AgX(result);
+        break;
         case 6:
+            result = AgX(result);
+        break;
         case 7:
             result = AgX(result);
         break;
         case 8:
-            result = PBRNeutralToneMapping(result);
+            result = pow(PBRNeutralToneMapping(pow(result,rcp(2.2f))),(2.2f));
         break;
     };
     Result[id.xy] = float4(result, 1.0);
