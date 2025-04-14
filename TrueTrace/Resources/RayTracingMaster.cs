@@ -655,7 +655,7 @@ namespace TrueTrace {
             SetFloat("FogDensity", LocalTTSettings.FogDensity, cmd);
             SetFloat("ScaleHeight", LocalTTSettings.FogHeight, cmd);
             SetFloat("OrthoSize", _camera.orthographicSize, cmd);
-
+            SetFloat("LightEnergyScale", LocalTTSettings.LightEnergyScale, cmd);
             SetInt("MainDirectionalLight", MainDirectionalLight, cmd);
             SetInt("NonInstanceCount", Assets.NonInstanceCount, cmd);
             SetInt("AlbedoAtlasSize", Assets.AlbedoAtlasSize, cmd);

@@ -23,6 +23,7 @@ int BackgroundType;
 int SecondaryBackgroundType;
 float3 BackgroundColor;
 float IndirectBoost;
+float LightEnergyScale;
 float3 SecondaryBackgroundColor;
 float BackgroundIntensity;
 float SecondaryBackgroundIntensity;
@@ -465,7 +466,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     area = PI * Light.SpotAngle.x * Light.SpotAngle.x;
                 break;
             }
-
+            Radiance *= LightEnergyScale;
         } else if(SelectedLightGroup == 0) {
             #ifdef LBVH
                 int MeshIndex;
@@ -810,6 +811,7 @@ int MaterialIndex;
                     area = PI * Light.SpotAngle.x * Light.SpotAngle.x;
                 break;
             }
+            Radiance *= LightEnergyScale;
         } else if(SelectedLightGroup == 0) {
             #ifdef LBVH
                 int MeshIndex;

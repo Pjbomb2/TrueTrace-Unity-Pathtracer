@@ -1990,7 +1990,6 @@ namespace TrueTrace {
                 RayMaster.MainDirectionalLight = -1;
                 foreach (RayTracingLights RayLight in RayTracingMaster._rayTracingLights) {
                     UnityLightCount++;
-                    RayLight.UpdateLight(true);
                     if (RayLight.ThisLightData.Type == 1) {
                         if(RayLight.IsMainSun || RayMaster.MainDirectionalLight == -1) {
                             RayMaster.MainDirectionalLight = UnityLightCount - 1;
@@ -2014,20 +2013,19 @@ namespace TrueTrace {
                 RayMaster.MainDirectionalLight = -1;
                 for (int i = 0; i < LightCount; i++) {
                     RayLight = RayTracingMaster._rayTracingLights[i];
-                    if(RayLight.UpdateLight(false)) {
+                    if(RayLight.CallHasUpdated()) {
                         RayTracingMaster.SampleCount = 0;
                         RayMaster.FramesSinceStart = 0;
-                    }
-                    RayLight.ThisLightData.Radiance *= RayMaster.LocalTTSettings.LightEnergyScale;
-                    if(RayLight.ThisLightData.Type == 1) {
-                        if(RayLight.IsMainSun || RayMaster.MainDirectionalLight == -1) {
-                            RayMaster.MainDirectionalLight = i;
-                            SunDirection = RayLight.ThisLightData.Direction;
+                        if(RayLight.ThisLightData.Type == 1) {
+                            if(RayLight.IsMainSun || RayMaster.MainDirectionalLight == -1) {
+                                RayMaster.MainDirectionalLight = i;
+                                SunDirection = RayLight.ThisLightData.Direction;
+                            }
                         }
+                        UnityLights[RayLight.ArrayIndex] = RayLight.ThisLightData;
+                        UnityLightBuffer.SetData(UnityLights, RayLight.ArrayIndex, RayLight.ArrayIndex, 1);
                     }
-                    UnityLights[RayLight.ArrayIndex] = RayLight.ThisLightData;
                 }
-                UnityLightBuffer.SetData(UnityLights);
             }
 
                 // UnityEngine.Profiling.Profiler.BeginSample("Lights Update");
