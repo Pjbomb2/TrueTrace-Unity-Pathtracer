@@ -1997,7 +1997,6 @@ namespace TrueTrace {
                         }
                     }
                     RayLight.ArrayIndex = UnityLightCount - 1;
-                    RayLight.ThisLightData.Radiance *= RayMaster.LocalTTSettings.LightEnergyScale;
                     RayLight.ThisLightData.IESTex = new Vector2Int(-1, 0);
                     UnityLights.Add(RayLight.ThisLightData);
                 }

@@ -14,7 +14,7 @@ namespace TrueTrace {
     public class RayTracingLights : MonoBehaviour {
         public enum LightTypes {Point, Directional, Spot, AreaRect, AreaDisk};
         [HideInInspector] public Light ThisLight;
-        [HideInInspector] public LightData ThisLightData = new LightData();
+        [SerializeField] public LightData ThisLightData = new LightData();
         [HideInInspector] public int ArrayIndex;
         [HideInInspector] public int IESIndex;
         [SerializeField] [Range(0,40)] public float ShadowSoftness = 0.0f;
@@ -33,11 +33,19 @@ namespace TrueTrace {
         public void Start() {
             ThisLight = this.GetComponent<Light>();
             LocalTransform = transform;
+            if(!HasInitialized) {
+                Init();  
+                HasInitialized = true;
+            }
         }
         void Awake() {
             ThisLight = this.GetComponent<Light>();
             ThisLight.shadows = LightShadows.None;
             LocalTransform = transform;
+            if(!HasInitialized) {
+                Init();  
+                HasInitialized = true;
+            }
         }
         public void Init() {
             ThisLight = this.GetComponent<Light>();
@@ -54,15 +62,23 @@ namespace TrueTrace {
             Intensity = ThisLight.intensity;
             Col = new Vector3(TempCol[0], TempCol[1], TempCol[2]);
 
-            ThisLightData.Radiance = new Vector3(TempCol[0], TempCol[1], TempCol[2]) * ThisLight.intensity;
+            ThisLightData.Radiance = new Vector3(TempCol[0], TempCol[1], TempCol[2]) * Intensity;
+#if UNITY_PIPELINE_HDRP
+            ThisLightData.Type = (ThisLight.type == LightType.Point) ? 0 : (ThisLight.type == LightType.Directional) ? 1 : (ThisLight.type == LightType.Spot) ? 2 : (ThisLight.type == LightType.Rectangle || ThisLight.type == LightType.Box) ? 3 : 4;
+#else
             ThisLightData.Type = (ThisLight.type == LightType.Point) ? 0 : (ThisLight.type == LightType.Directional) ? 1 : (ThisLight.type == LightType.Spot) ? 2 : (ThisLight.type == LightType.Rectangle) ? 3 : 4;
+#endif
             SpotAngle = ThisLight.spotAngle;
             if(ThisLight.type == LightType.Spot) {
                 float innerCos = Mathf.Cos(Mathf.Deg2Rad * 0.5f * ThisLight.innerSpotAngle);
                 float outerCos = Mathf.Cos(Mathf.Deg2Rad * 0.5f * ThisLight.spotAngle);
                 float angleRangeInv = 1.0f / Mathf.Max(innerCos - outerCos, 0.001f);
                 ThisLightData.SpotAngle = new Vector2(angleRangeInv, -outerCos * angleRangeInv);
+#if UNITY_PIPELINE_HDRP
+            } else if(ThisLight.type == LightType.Rectangle || ThisLight.type == LightType.Box) {
+#else            
             } else if(ThisLight.type == LightType.Rectangle) {
+#endif
                 #if UNITY_EDITOR
                     ThisLightData.SpotAngle = ThisLight.areaSize;
                 #endif
@@ -75,6 +91,7 @@ namespace TrueTrace {
             }
             ThisLightData.Softness = ShadowSoftness;
             HasInitialized = true;
+            CallHasUpdated(true);
         }
 
         private void OnEnable() { 
@@ -94,11 +111,12 @@ namespace TrueTrace {
             if(NeedsToUpdate || LocalTransform.hasChanged || Override) {
 
                 ThisLightData.Position = LocalTransform.position;
+                Vector3 TempColVec = Col;
                 if(UseKelvin) {
                     Color TempCol = Mathf.CorrelatedColorTemperatureToRGB(KelvinTemperature);
-                    Col = new Vector3(TempCol.r, TempCol.g, TempCol.b);
+                    TempColVec = new Vector3(TempCol.r, TempCol.g, TempCol.b);
                 }
-                ThisLightData.Radiance = Col * Intensity;
+                ThisLightData.Radiance = TempColVec * Intensity;
                 if(ThisLightData.Type == 2) {
                     float innerCos = Mathf.Cos(Mathf.Deg2Rad * 0.5f * 1.0f);
                     float outerCos = Mathf.Cos(Mathf.Deg2Rad * 0.5f * SpotAngle);
