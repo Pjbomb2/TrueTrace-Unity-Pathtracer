@@ -1323,19 +1323,19 @@ namespace TrueTrace {
                     CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferB, AggSGTreeNodeCount, CommonFunctions.GetStride<CompactLightBVHData>());
     #endif
 #else
-                    if(BVH8AggregatedBuffer == null || AggNodeCount > BVH8AggregatedBuffer.count) CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80);
-                    if(AggTriBufferA == null || AggTriCount > AggTriBufferA.count) CommonFunctions.CreateDynamicBuffer(ref AggTriBufferA, AggTriCount, CommonFunctions.GetStride<CudaTriangleA>());
+                    if(BVH8AggregatedBuffer == null || !BVH8AggregatedBuffer.IsValid() || AggNodeCount > BVH8AggregatedBuffer.count) CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80);
+                    if(AggTriBufferA == null || !AggTriBufferA.IsValid() || AggTriCount > AggTriBufferA.count) CommonFunctions.CreateDynamicBuffer(ref AggTriBufferA, AggTriCount, CommonFunctions.GetStride<CudaTriangleA>());
     #if TTCustomMotionVectors
-                    if(SkinnedMeshAggTriBufferPrev == null || (int)Mathf.Max(SkinnedMeshTriCount,1) > SkinnedMeshAggTriBufferPrev.count) CommonFunctions.CreateDynamicBuffer(ref SkinnedMeshAggTriBufferPrev, (int)Mathf.Max(SkinnedMeshTriCount,1), CommonFunctions.GetStride<CudaTriangleA>());
+                    if(SkinnedMeshAggTriBufferPrev == null || !SkinnedMeshAggTriBufferPrev.IsValid() || (int)Mathf.Max(SkinnedMeshTriCount,1) > SkinnedMeshAggTriBufferPrev.count) CommonFunctions.CreateDynamicBuffer(ref SkinnedMeshAggTriBufferPrev, (int)Mathf.Max(SkinnedMeshTriCount,1), CommonFunctions.GetStride<CudaTriangleA>());
     #endif
-                    if(AggTriBufferB == null || AggTriCount > AggTriBufferB.count) CommonFunctions.CreateDynamicBuffer(ref AggTriBufferB, AggTriCount, CommonFunctions.GetStride<CudaTriangleB>());
-                    if(LightTriBuffer == null || LightTriCount > LightTriBuffer.count) CommonFunctions.CreateDynamicBuffer(ref LightTriBuffer, LightTriCount, CommonFunctions.GetStride<LightTriData>());
+                    if(AggTriBufferB == null || !AggTriBufferB.IsValid() || AggTriCount > AggTriBufferB.count) CommonFunctions.CreateDynamicBuffer(ref AggTriBufferB, AggTriCount, CommonFunctions.GetStride<CudaTriangleB>());
+                    if(LightTriBuffer == null || !LightTriBuffer.IsValid() || LightTriCount > LightTriBuffer.count) CommonFunctions.CreateDynamicBuffer(ref LightTriBuffer, LightTriCount, CommonFunctions.GetStride<LightTriData>());
     #if !DontUseSGTree
-                    if(LightTreeBufferA == null || AggSGTreeNodeCount > LightTreeBufferA.count) CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount, CommonFunctions.GetStride<GaussianTreeNode>());
-                    if(LightTreeBufferB == null || AggSGTreeNodeCount > LightTreeBufferB.count) CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferB, AggSGTreeNodeCount, CommonFunctions.GetStride<GaussianTreeNode>());
+                    if(LightTreeBufferA == null || !LightTreeBufferA.IsValid() || AggSGTreeNodeCount > LightTreeBufferA.count) CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount, CommonFunctions.GetStride<GaussianTreeNode>());
+                    if(LightTreeBufferB == null || !LightTreeBufferB.IsValid() || AggSGTreeNodeCount > LightTreeBufferB.count) CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferB, AggSGTreeNodeCount, CommonFunctions.GetStride<GaussianTreeNode>());
     #else
-                    if(LightTreeBufferA == null || AggSGTreeNodeCount > LightTreeBufferA.count) CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount, CommonFunctions.GetStride<CompactLightBVHData>());
-                    if(LightTreeBufferB == null || AggSGTreeNodeCount > LightTreeBufferB.count) CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferB, AggSGTreeNodeCount, CommonFunctions.GetStride<CompactLightBVHData>());
+                    if(LightTreeBufferA == null || !LightTreeBufferA.IsValid() || AggSGTreeNodeCount > LightTreeBufferA.count) CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount, CommonFunctions.GetStride<CompactLightBVHData>());
+                    if(LightTreeBufferB == null || !LightTreeBufferB.IsValid() || AggSGTreeNodeCount > LightTreeBufferB.count) CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferB, AggSGTreeNodeCount, CommonFunctions.GetStride<CompactLightBVHData>());
     #endif
 #endif
                     MeshFunctions.SetBuffer(TriangleBufferKernel, "OutCudaTriArrayA", AggTriBufferA);
@@ -1529,9 +1529,9 @@ namespace TrueTrace {
                     CommonFunctions.CreateComputeBuffer(ref IntersectionMaterialBuffer, IntersectionMats);
                     CommonFunctions.CreateComputeBuffer(ref MaterialBuffer, _Materials);
 #else
-                    if(IntersectionMaterialBuffer == null || IntersectionMats.Length > IntersectionMaterialBuffer.count) CommonFunctions.CreateComputeBuffer(ref IntersectionMaterialBuffer, IntersectionMats);
+                    if(IntersectionMaterialBuffer == null || !IntersectionMaterialBuffer.IsValid() || IntersectionMats.Length > IntersectionMaterialBuffer.count) CommonFunctions.CreateComputeBuffer(ref IntersectionMaterialBuffer, IntersectionMats);
                     else IntersectionMaterialBuffer.SetData(IntersectionMats, 0, 0, IntersectionMats.Length);
-                    if(MaterialBuffer == null || _Materials.Length > MaterialBuffer.count) CommonFunctions.CreateComputeBuffer(ref MaterialBuffer, _Materials);
+                    if(MaterialBuffer == null || !MaterialBuffer.IsValid() || _Materials.Length > MaterialBuffer.count) CommonFunctions.CreateComputeBuffer(ref MaterialBuffer, _Materials);
                     else MaterialBuffer.SetData(_Materials, 0, 0, _Materials.Length);
 #endif
                 }
