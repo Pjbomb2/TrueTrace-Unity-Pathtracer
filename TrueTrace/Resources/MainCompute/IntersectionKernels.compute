@@ -84,6 +84,13 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
         int TriOffset = 0;
         int MatOffset = 0;
         int mesh_id = -1;
+#if DebugView == DVBVHViewAdvanced
+        int stack_memory_counter;
+        int node_memory_counter;
+        int triangle_memory_counter;
+        int node_traverse_counter;
+        int triangle_traverse_counter;
+#endif
     #endif
 
         RayData GlobalRay;
@@ -223,6 +230,13 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                 MatOffset = 0;
                 mesh_id = -1;
                 oct_inv4 = ray_get_octant_inv4(ray.direction);
+    #if DebugView == DVBVHViewAdvanced
+                stack_memory_counter = 0;
+                node_memory_counter = 0;
+                triangle_memory_counter = 0;
+                node_traverse_counter = 0;
+                triangle_traverse_counter = 0;
+    #endif
 #ifndef DX11
             }
 
@@ -252,6 +266,10 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                     triangle_group.y = (hitmask & 0x00ffffff);
 
                     Reps++;
+    #if DebugView == DVBVHViewAdvanced
+                    node_memory_counter += 80;
+                    node_traverse_counter += 5;
+    #endif
                 } else {
                     triangle_group = current_group;
                     current_group = (uint)0;
@@ -285,6 +303,11 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                             uint triangle_index = firstbithigh(triangle_group.y);
                             triangle_group.y &= ~(1 << triangle_index);
                             IntersectTriangle(mesh_id, triangle_group.x + triangle_index, ray, bestHit, MatOffset, RandNum);//Intersect Mesh Triangles
+    #if DebugView == DVBVHViewAdvanced
+                            triangle_traverse_counter += 1;
+                            triangle_memory_counter += 52;
+    #endif
+
                         }
                     }
                 }
@@ -297,6 +320,13 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                             _PrimaryTriangleInfo[TempUv] = uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
                             #if DebugView == DVBVHView
                                 _DebugTex[TempUv] = float4(Reps / 43.0f, Reps > 80, 0, 1);
+                            #elif DebugView == DVBVHViewAdvanced
+                                int memory_counter = node_memory_counter + triangle_memory_counter + stack_memory_counter;
+                                int traverse_counter = node_traverse_counter + 6.0f * triangle_traverse_counter;
+                                int total_counter = memory_counter / 64.0f + traverse_counter;
+                                float scaled_heatmap_value = ((float)total_counter) / 500.0f;
+                                float heatmap_value = 781 - (781 - 380) * exp(-scaled_heatmap_value);
+                                _DebugTex[TempUv] = float4(waveLengthToRGB(heatmap_value), 1);
                             #endif
                         } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
                             _PrimaryTriangleInfo[TempUv] = ((UseReSTIRGI && bestHit.t != FarPlane) ? uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v)) : ((UseASVGF || bestHit.t != FarPlane) ? uint4(asuint(ray2.direction), 99993) : uint4(asuint(ray2.direction * bestHit.t + ray2.origin), 99993)));
@@ -317,6 +347,9 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                         oct_inv4 = ray_get_octant_inv4(ray.direction);
                     }
                     current_group = stack[--stack_size];
+    #if DebugView == DVBVHViewAdvanced
+                    stack_memory_counter += 8;
+    #endif
                 }
 #ifndef DX11
                     const static int Nd = 4;

@@ -1260,15 +1260,17 @@ namespace TrueTrace {
                 
                 if (BVH8AggregatedBuffer != null)
                 {
+#if StrictMemoryReduction
                     BVH8AggregatedBuffer.Release();
                     AggTriBufferA.Release();
-#if TTCustomMotionVectors
-            SkinnedMeshAggTriBufferPrev.ReleaseSafe();
-#endif
+    #if TTCustomMotionVectors
+                SkinnedMeshAggTriBufferPrev.ReleaseSafe();
+    #endif
                     AggTriBufferB.Release();
                     LightTriBuffer.Release();
                     if(LightTreeBufferA != null) LightTreeBufferA.Release();
                     if(LightTreeBufferB != null) LightTreeBufferB.Release();
+#endif
                 }
                 for (int i = 0; i < ParentsLength; i++)
                 {
@@ -1305,20 +1307,36 @@ namespace TrueTrace {
                     LightAABBs = new LightBounds[LightMeshCount];
                     SGTreeNodes = new GaussianTreeNode[LightMeshCount];
                     SGTree = new GaussianTreeNode[LightMeshCount * 2];
-
+#if StrictMemoryReduction
                     CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80);
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBufferA, AggTriCount, CommonFunctions.GetStride<CudaTriangleA>());
-#if TTCustomMotionVectors
+    #if TTCustomMotionVectors
                     CommonFunctions.CreateDynamicBuffer(ref SkinnedMeshAggTriBufferPrev, (int)Mathf.Max(SkinnedMeshTriCount,1), CommonFunctions.GetStride<CudaTriangleA>());
-#endif
+    #endif
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBufferB, AggTriCount, CommonFunctions.GetStride<CudaTriangleB>());
                     CommonFunctions.CreateDynamicBuffer(ref LightTriBuffer, LightTriCount, CommonFunctions.GetStride<LightTriData>());
-#if !DontUseSGTree
+    #if !DontUseSGTree
                     CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount, CommonFunctions.GetStride<GaussianTreeNode>());
                     CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferB, AggSGTreeNodeCount, CommonFunctions.GetStride<GaussianTreeNode>());
-#else
+    #else
                     CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount, CommonFunctions.GetStride<CompactLightBVHData>());
                     CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferB, AggSGTreeNodeCount, CommonFunctions.GetStride<CompactLightBVHData>());
+    #endif
+#else
+                    if(BVH8AggregatedBuffer == null || AggNodeCount > BVH8AggregatedBuffer.count) CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80);
+                    if(AggTriBufferA == null || AggTriCount > AggTriBufferA.count) CommonFunctions.CreateDynamicBuffer(ref AggTriBufferA, AggTriCount, CommonFunctions.GetStride<CudaTriangleA>());
+    #if TTCustomMotionVectors
+                    if(SkinnedMeshAggTriBufferPrev == null || (int)Mathf.Max(SkinnedMeshTriCount,1) > SkinnedMeshAggTriBufferPrev.count) CommonFunctions.CreateDynamicBuffer(ref SkinnedMeshAggTriBufferPrev, (int)Mathf.Max(SkinnedMeshTriCount,1), CommonFunctions.GetStride<CudaTriangleA>());
+    #endif
+                    if(AggTriBufferB == null || AggTriCount > AggTriBufferB.count) CommonFunctions.CreateDynamicBuffer(ref AggTriBufferB, AggTriCount, CommonFunctions.GetStride<CudaTriangleB>());
+                    if(LightTriBuffer == null || LightTriCount > LightTriBuffer.count) CommonFunctions.CreateDynamicBuffer(ref LightTriBuffer, LightTriCount, CommonFunctions.GetStride<LightTriData>());
+    #if !DontUseSGTree
+                    if(LightTreeBufferA == null || AggSGTreeNodeCount > LightTreeBufferA.count) CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount, CommonFunctions.GetStride<GaussianTreeNode>());
+                    if(LightTreeBufferB == null || AggSGTreeNodeCount > LightTreeBufferB.count) CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferB, AggSGTreeNodeCount, CommonFunctions.GetStride<GaussianTreeNode>());
+    #else
+                    if(LightTreeBufferA == null || AggSGTreeNodeCount > LightTreeBufferA.count) CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferA, AggSGTreeNodeCount, CommonFunctions.GetStride<CompactLightBVHData>());
+                    if(LightTreeBufferB == null || AggSGTreeNodeCount > LightTreeBufferB.count) CommonFunctions.CreateDynamicBuffer(ref LightTreeBufferB, AggSGTreeNodeCount, CommonFunctions.GetStride<CompactLightBVHData>());
+    #endif
 #endif
                     MeshFunctions.SetBuffer(TriangleBufferKernel, "OutCudaTriArrayA", AggTriBufferA);
                     MeshFunctions.SetBuffer(TriangleBufferKernel, "OutCudaTriArrayB", AggTriBufferB);
@@ -1507,9 +1525,15 @@ namespace TrueTrace {
                         IntersectionMats[i].scatterDistance = _Materials[i].MatData.ScatterDist;
                     }
 
-
+#if StrictMemoryReduction
                     CommonFunctions.CreateComputeBuffer(ref IntersectionMaterialBuffer, IntersectionMats);
                     CommonFunctions.CreateComputeBuffer(ref MaterialBuffer, _Materials);
+#else
+                    if(IntersectionMaterialBuffer == null || IntersectionMats.Length > IntersectionMaterialBuffer.count) CommonFunctions.CreateComputeBuffer(ref IntersectionMaterialBuffer, IntersectionMats);
+                    else IntersectionMaterialBuffer.SetData(IntersectionMats, 0, 0, IntersectionMats.Length);
+                    if(MaterialBuffer == null || _Materials.Length > MaterialBuffer.count) CommonFunctions.CreateComputeBuffer(ref MaterialBuffer, _Materials);
+                    else MaterialBuffer.SetData(_Materials, 0, 0, _Materials.Length);
+#endif
                 }
             }
             ParentCountHasChanged = false;
@@ -2391,8 +2415,10 @@ namespace TrueTrace {
                 AggNodeCount = 0;
                 HasChangedMaterials = UpdateMaterials();
                  // cmd.SetBufferData(MeshDataBufferA, MyMeshesCompacted);
+                cmd.BeginSample("MeshBufferSetter");
                 if(RayMaster.FramesSinceStart2 % 2 == 0) cmd.SetBufferData(MeshDataBufferA, MyMeshesCompacted);
                 else cmd.SetBufferData(MeshDataBufferB, MyMeshesCompacted);
+                cmd.EndSample("MeshBufferSetter");
                 if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("TLAS Refitting");
                 RefitTLAS(MeshAABBs, cmd, ReadyToRefit);
                 if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("TLAS Refitting");

@@ -178,6 +178,11 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         Geomnorm = i_octahedral_32(asuint(PrevScreenData.x));
         norm = i_octahedral_32(asuint(PrevScreenData.y));
     }
+#if DebugView == DVGeomNorm
+    if(CurBounce == 0) _DebugTex[id.xy] = float4(Geomnorm, 0);
+#elif DebugView == DVSurfNorm
+    if(CurBounce == 0) _DebugTex[id.xy] = float4(norm, 0);
+#endif
 
 
 

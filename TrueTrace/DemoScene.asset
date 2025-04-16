@@ -26,16 +26,16 @@ MonoBehaviour:
   DoFAperature: 0.2
   DoFAperatureScale: 1
   DoFFocal: 5.2216897
-  PPExposure: 1
+  PPExposure: 0
   ExposureAuto: 0
-  PPToneMap: 1
+  PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
   DenoiserMethod: 0
   UpscalerMethod: 0
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
-  UseReSTIRGI: 1
+  UseReSTIRGI: 0
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
   ReSTIRGITemporalMCap: 12
@@ -46,7 +46,7 @@ MonoBehaviour:
   DoFirefly: 0
   ImprovedPrimaryHit: 1
   RISCount: 12
-  ToneMapper: 7
+  ToneMapper: 0
   SkyDesaturate: 0
   ClayColor: {x: 0.5, y: 0.5, z: 0.5}
   GroundColor: {x: 0.11320752, y: 0.11320752, z: 0.11320752}

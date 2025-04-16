@@ -48,6 +48,9 @@
 #define DVGIView 5
 #define DVDepthView 6
 #define DVRadCache 7
+#define DVBVHViewAdvanced 8
+#define DVGeomNorm 9
+#define DVSurfNorm 10
 
 #define DepthDivisor 1000.0f
 

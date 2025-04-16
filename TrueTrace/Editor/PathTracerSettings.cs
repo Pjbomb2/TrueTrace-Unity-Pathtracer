@@ -1744,6 +1744,11 @@ Toolbar toolbar;
                RadCacheToggle.tooltip = "Prevents use of the radcache entirely while this is enabled, as it frees up all resources/ram/vram the radiance cache uses";
             RadCacheToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {SetGlobalDefines("RadCache", false); AddDefine("DisableRadianceCache");} else {SetGlobalDefines("RadCache", true); RemoveDefine("DisableRadianceCache");}});
 
+            Toggle StrictMemoryReductionToggle = new Toggle() {value = (definesList.Contains("StrictMemoryReduction")), text = "Enable Strict Memory Reduction(read tooltip)"};
+               StrictMemoryReductionToggle.tooltip = "Automatically shrinks buffer sizes for storing meshes when able to(takes more performance)";
+            StrictMemoryReductionToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("StrictMemoryReduction"); else RemoveDefine("StrictMemoryReduction");});
+
+
 
             if(Application.isPlaying) {
                HardwareRTToggle.SetEnabled(false);
@@ -1755,6 +1760,7 @@ Toolbar toolbar;
                NonAccurateLightTriToggle.SetEnabled(false);
                LoadTTSettingsFromResourcesToggle.SetEnabled(false);
                VerboseToggle.SetEnabled(false);
+               StrictMemoryReductionToggle.SetEnabled(false);
             } else {
                HardwareRTToggle.SetEnabled(true);
                CustomMotionVectorToggle.SetEnabled(true);
@@ -1765,6 +1771,7 @@ Toolbar toolbar;
                NonAccurateLightTriToggle.SetEnabled(true);
                LoadTTSettingsFromResourcesToggle.SetEnabled(true);
                VerboseToggle.SetEnabled(true);
+               StrictMemoryReductionToggle.SetEnabled(true);
             }
 
 
@@ -1815,6 +1822,7 @@ Toolbar toolbar;
          NonPlayContainer.Add(NonAccurateLightTriToggle);
          NonPlayContainer.Add(LoadTTSettingsFromResourcesToggle);
          NonPlayContainer.Add(VerboseToggle);
+         NonPlayContainer.Add(StrictMemoryReductionToggle);
          NonPlayContainer.Add(new Label("-------------"));
 
          Label PlayLabel = new Label("-- THESE CAN BE MODIFIED ON THE FLY/DURING PLAY --");
