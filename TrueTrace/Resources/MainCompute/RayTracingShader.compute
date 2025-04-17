@@ -19,6 +19,10 @@
 
 #pragma kernel kernel_shade
 
+RWTexture2D<float4> FirstDiffuseThroughputTex;
+RWTexture2D<uint4> FirstDiffusePosTex;
+RWTexture2D<float4> FirstDiffuseViewDirTex;
+
 int BackgroundType;
 int SecondaryBackgroundType;
 float3 BackgroundColor;
@@ -356,6 +360,13 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         PrevScreenData = float4(asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -Geomnorm : Geomnorm)), asfloat(octahedral_32(((hitDat.diffTrans != 0 || (hitDat.diffTrans != 0 && CurBounce == 1)) && Refracted) ? -norm : norm)), PrevScreenData.z + hit.t, asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 4) >> 4) : ((asuint(PrevScreenData.w) << 4) >> 4)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
         Color.MetRoughIsSpec = ((Color.MetRoughIsSpec & ~(0x7C000000)) | (((CurBounce < 20 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.01f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
         throughput = 1;  
+    }
+    if(MaterialLobe == 2) {
+        if(FirstDiffuseThroughputTex[id.xy].w == 0) {
+            FirstDiffuseThroughputTex[id.xy] = float4(throughput, 1);
+            FirstDiffusePosTex[id.xy] = uint4(hit.mesh_id, hit.triangle_id - _MeshData[hit.mesh_id].TriOffset, asuint(hit.u), asuint(hit.v));
+            FirstDiffuseViewDirTex[id.xy] = float4(PrevDirection, 1);
+        }
     }
     #ifdef RadCache
         #if DebugView == DVRadCache
@@ -695,6 +706,8 @@ void kernel_shade(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     #endif
     ColData Color = InitCol;
     bool BSDFWRITTEN = false;
+    if(CurBounce == 0)
+        FirstDiffuseThroughputTex[id.xy] = 0;
     if(CurBounce > 0) {
         Color = GlobalColors[pixel_index];
     } 

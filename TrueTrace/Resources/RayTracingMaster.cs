@@ -62,6 +62,12 @@ namespace TrueTrace {
         private ComputeShader ReSTIRGI;
         private ComputeShader CDFCompute;
 
+        public PhotonMapping PhotonMap;
+
+        public RenderTexture FirstDiffuseThroughputTex;
+        public RenderTexture FirstDiffusePosTex;
+        public RenderTexture FirstDiffuseViewDirTex;
+
         private RenderTexture CorrectedDistanceTexA;
         private RenderTexture CorrectedDistanceTexB;
 
@@ -260,6 +266,10 @@ namespace TrueTrace {
             TargetWidth = 1;
             TargetHeight = 1;
             SourceWidth = 1;
+            if(PhotonMap == null || !PhotonMap.Initialized) {
+                PhotonMap = new PhotonMapping();
+                PhotonMap.Init();
+            }
             SourceHeight = 1;
             PrevResFactor = LocalTTSettings.RenderScale;
             _meshObjectsNeedRebuilding = true;
@@ -432,6 +442,10 @@ namespace TrueTrace {
             GradientsB.ReleaseSafe();
             CorrectedDistanceTexA.ReleaseSafe();
             CorrectedDistanceTexB.ReleaseSafe();
+            FirstDiffuseThroughputTex.ReleaseSafe();
+            FirstDiffusePosTex.ReleaseSafe();
+            FirstDiffuseViewDirTex.ReleaseSafe();
+            if(PhotonMap != null) PhotonMap.ClearAll();
             #if UseOIDN
                 ColorBuffer.ReleaseSafe();
                 OutputBuffer.ReleaseSafe();
@@ -512,6 +526,7 @@ namespace TrueTrace {
             IntersectionShader.SetMatrix(Name, Mat);
             GenerateShader.SetMatrix(Name, Mat);
             ReSTIRGI.SetMatrix(Name, Mat);
+            PhotonMap.SPPMShader.SetMatrix(Name, Mat);
             if(HasSDFHandler) OptionalSDFHandler.GenShader.SetMatrix(Name, Mat);
         }
 
@@ -520,6 +535,7 @@ namespace TrueTrace {
             cmd.SetComputeVectorParam(IntersectionShader, Name, IN);
             cmd.SetComputeVectorParam(GenerateShader, Name, IN);
             cmd.SetComputeVectorParam(ReSTIRGI, Name, IN);
+            cmd.SetComputeVectorParam(PhotonMap.SPPMShader, Name, IN);
             if(HasSDFHandler) cmd.SetComputeVectorParam(OptionalSDFHandler.GenShader, Name, IN);
         }
 
@@ -528,6 +544,7 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(IntersectionShader, Name, IN);
             cmd.SetComputeIntParam(GenerateShader, Name, IN);
             cmd.SetComputeIntParam(ReSTIRGI, Name, IN);
+            cmd.SetComputeIntParam(PhotonMap.SPPMShader, Name, IN);
             if(HasSDFHandler) cmd.SetComputeIntParam(OptionalSDFHandler.GenShader, Name, IN);
         }
 
@@ -536,6 +553,7 @@ namespace TrueTrace {
             cmd.SetComputeFloatParam(IntersectionShader, Name, IN);
             cmd.SetComputeFloatParam(GenerateShader, Name, IN);
             cmd.SetComputeFloatParam(ReSTIRGI, Name, IN);
+            cmd.SetComputeFloatParam(PhotonMap.SPPMShader, Name, IN);
             if(HasSDFHandler) cmd.SetComputeFloatParam(OptionalSDFHandler.GenShader, Name, IN);
         }
 
@@ -544,6 +562,7 @@ namespace TrueTrace {
             IntersectionShader.SetBool(Name, IN);
             GenerateShader.SetBool(Name, IN);
             ReSTIRGI.SetBool(Name, IN);
+            PhotonMap.SPPMShader.SetBool(Name, IN);
             if(HasSDFHandler) OptionalSDFHandler.GenShader.SetBool(Name, IN);
         }
         Matrix4x4 CamInvProjPrev;
@@ -691,6 +710,7 @@ namespace TrueTrace {
             SetBool("UseASVGF", LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI);
             SetBool("UseASVGFAndReSTIR", LocalTTSettings.DenoiserMethod == 1 && LocalTTSettings.UseReSTIRGI);
             SetBool("TerrainExists", Assets.Terrains.Count != 0);
+            SetInt("TEMPTESTA", 0, cmd);
             SetBool("DoPartialRendering", LocalTTSettings.DoPartialRendering);
             SetBool("UseTransmittanceInNEE", LocalTTSettings.UseTransmittanceInNEE);
             OIDNGuideWrite = (FramesSinceStart == LocalTTSettings.OIDNFrameCount);
@@ -761,8 +781,10 @@ namespace TrueTrace {
 
 
             GenerateShader.SetTexture(GenKernel, "RandomNums", (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB);
+            GenerateShader.SetTexture(GenKernel, "RandomNumsWrite", (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB);
             GenerateShader.SetComputeBuffer(GenKernel, "GlobalRays", _RayBuffer);
             GenerateShader.SetTexture(GenPanoramaKernel, "RandomNums", (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB);
+            GenerateShader.SetTexture(GenPanoramaKernel, "RandomNumsWrite", (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB);
             GenerateShader.SetComputeBuffer(GenPanoramaKernel, "GlobalRays", _RayBuffer);
 
             AssetManager.Assets.SetMeshTraceBuffers(IntersectionShader, TraceKernel);
@@ -782,6 +804,7 @@ namespace TrueTrace {
                 IntersectionShader.SetTexture(HeightmapShadowKernel, "NEEPosA", GINEEPosA);
             }
             IntersectionShader.SetTexture(TraceKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
+            IntersectionShader.SetTexture(TraceKernel, "RandomNumsWrite", FlipFrame ? _RandomNums : _RandomNumsB);
 
 
             AssetManager.Assets.SetHeightmapTraceBuffers(IntersectionShader, HeightmapKernel);
@@ -849,6 +872,7 @@ namespace TrueTrace {
             // ShadingShader.SetTexture(ShadeKernel, "CloudShapeDetailTex", Atmo.CloudShapeDetailTex);
             // ShadingShader.SetTexture(ShadeKernel, "localWeatherTexture", Atmo.WeatherTex);
             ShadingShader.SetTexture(ShadeKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
+            ShadingShader.SetTexture(ShadeKernel, "RandomNumsWrite", FlipFrame ? _RandomNums : _RandomNumsB);
             ShadingShader.SetTexture(ShadeKernel, "SingleComponentAtlas", Assets.SingleComponentAtlas);
             ShadingShader.SetTexture(ShadeKernel, "_EmissiveAtlas", Assets.EmissiveAtlas);
             ShadingShader.SetTexture(ShadeKernel, "_NormalAtlas", Assets.NormalAtlas);
@@ -856,6 +880,13 @@ namespace TrueTrace {
             ShadingShader.SetComputeBuffer(ShadeKernel, "GlobalColors", LightingBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernel, "GlobalRays", _RayBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernel, "ShadowRaysBuffer", _ShadowBuffer);
+
+            ShadingShader.SetTexture(ShadeKernel, "FirstDiffuseThroughputTex", FirstDiffuseThroughputTex);
+            ShadingShader.SetTexture(ShadeKernel, "FirstDiffusePosTex", FirstDiffusePosTex);
+            ShadingShader.SetTexture(ShadeKernel, "FirstDiffuseViewDirTex", FirstDiffuseViewDirTex);
+
+
+
 
 
             ShadingShader.SetBuffer(FinalizeKernel, "GlobalColors", LightingBuffer);
@@ -886,6 +917,7 @@ namespace TrueTrace {
                 ReSTIRGI.SetTexture(ReSTIRGIKernel, "NEEPosB", !FlipFrame ? GINEEPosA : GINEEPosB);
                 ReSTIRGI.SetTexture(ReSTIRGIKernel, "PrevScreenSpaceInfo", FlipFrame ? ScreenSpaceInfoPrev : ScreenSpaceInfo);
                 ReSTIRGI.SetTexture(ReSTIRGIKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
+                ReSTIRGI.SetTexture(ReSTIRGIKernel, "RandomNumsWrite", FlipFrame ? _RandomNums : _RandomNumsB);
                 ReSTIRGI.SetTexture(ReSTIRGIKernel, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
                 ReSTIRGI.SetTexture(ReSTIRGIKernel, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
                 ReSTIRGI.SetTexture(ReSTIRGIKernel, "PrimaryTriDataPrev", (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
@@ -900,6 +932,7 @@ namespace TrueTrace {
                 ReSTIRGI.SetComputeBuffer(ReSTIRGISpatialKernel, "GlobalColors", LightingBuffer);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
+                ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "RandomNumsWrite", FlipFrame ? _RandomNums : _RandomNumsB);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "WorldPosA", GIWorldPosA);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "NEEPosA", GINEEPosC);
@@ -913,6 +946,7 @@ namespace TrueTrace {
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "ReservoirB", GIReservoirC);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
+                ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "RandomNumsWrite", FlipFrame ? _RandomNums : _RandomNumsB);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
                 ReSTIRGI.SetComputeBuffer(ReSTIRGISpatialKernel+1, "GlobalColors", LightingBuffer);
 
@@ -1003,6 +1037,9 @@ namespace TrueTrace {
                     GIWorldPosC.ReleaseSafe();
                     _PrimaryTriangleInfoA.ReleaseSafe();
                     _PrimaryTriangleInfoB.ReleaseSafe();
+                    FirstDiffuseThroughputTex.ReleaseSafe();
+                    FirstDiffusePosTex.ReleaseSafe();
+                    FirstDiffuseViewDirTex.ReleaseSafe();
 #if TTCustomMotionVectors
                     MVTexture.ReleaseSafe();
 #endif
@@ -1054,6 +1091,10 @@ namespace TrueTrace {
                     AlbedoBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
                     NormalBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
                 #endif
+
+                CommonFunctions.CreateRenderTexture(ref FirstDiffuseThroughputTex, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+                CommonFunctions.CreateRenderTexture(ref FirstDiffusePosTex, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+                CommonFunctions.CreateRenderTexture(ref FirstDiffuseViewDirTex, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
 
                 CommonFunctions.CreateRenderTexture(ref _RandomNums, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref _RandomNumsB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
@@ -1253,6 +1294,15 @@ namespace TrueTrace {
             if(DoKernelProfiling) cmd.EndSample("TTMV2");
 #endif
 
+                PhotonMap.Generate(cmd);
+                PhotonMap.Collect(cmd, 
+                    ref FirstDiffuseThroughputTex, 
+                    ref FirstDiffuseViewDirTex,
+                    ref FirstDiffusePosTex,
+                    ref _target,
+                    ref LightingBuffer,
+                    SourceWidth,
+                    SourceHeight);
                 if (LocalTTSettings.UseReSTIRGI) {
                     SetInt("CurBounce", 0, cmd);
                     if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Temporal Kernel");
@@ -1279,6 +1329,8 @@ namespace TrueTrace {
                 {
                     if(DoKernelProfiling) cmd.BeginSample("Finalize Kernel");
                     cmd.DispatchCompute(ShadingShader, FinalizeKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+
+
                     CurrentSample = 1.0f / (FramesSinceStart + 1.0f);
                     SampleCount++;
 
@@ -1440,72 +1492,72 @@ namespace TrueTrace {
     }
 
 
-#if UNITY_EDITOR
-    [CustomEditor(typeof(RayTracingMaster))]
-    public class RayTracingMasterEditor : Editor
-    {
-        private VisualElement CreateVerticalBox(string Name) {
-            VisualElement VertBox = new VisualElement();
-            // VertBox.style.flexDirection = FlexDirection.Row;
-            return VertBox;
-        }
+// #if UNITY_EDITOR
+//     [CustomEditor(typeof(RayTracingMaster))]
+//     public class RayTracingMasterEditor : Editor
+//     {
+//         private VisualElement CreateVerticalBox(string Name) {
+//             VisualElement VertBox = new VisualElement();
+//             // VertBox.style.flexDirection = FlexDirection.Row;
+//             return VertBox;
+//         }
 
-        private VisualElement CreateHorizontalBox(string Name) {
-            VisualElement HorizBox = new VisualElement();
-            HorizBox.style.flexDirection = FlexDirection.Row;
-            return HorizBox;
-        }
+//         private VisualElement CreateHorizontalBox(string Name) {
+//             VisualElement HorizBox = new VisualElement();
+//             HorizBox.style.flexDirection = FlexDirection.Row;
+//             return HorizBox;
+//         }
 
 
-        public class FloatSliderPair {
-            public VisualElement DynamicContainer;
-            public Label DynamicLabel;
-            public Slider DynamicSlider;
-            public FloatField DynamicField;
-        }
-        FloatSliderPair CreatePairedFloatSlider(string Name, float LowValue, float HighValue, ref float InitialValue, float SliderWidth = 200) {
-            FloatSliderPair NewPair = new FloatSliderPair();
-            NewPair.DynamicContainer = CreateHorizontalBox(Name + " Container");
-            NewPair.DynamicLabel = new Label(Name);
-            NewPair.DynamicSlider = new Slider() {value = InitialValue, highValue = HighValue, lowValue = LowValue};
-            NewPair.DynamicField = new FloatField() {value = InitialValue};
-            NewPair.DynamicSlider.style.width = SliderWidth;
-            NewPair.DynamicContainer.Add(NewPair.DynamicLabel);
-            NewPair.DynamicContainer.Add(NewPair.DynamicSlider);
-            NewPair.DynamicContainer.Add(NewPair.DynamicField);
-            return NewPair;
-        }
+//         public class FloatSliderPair {
+//             public VisualElement DynamicContainer;
+//             public Label DynamicLabel;
+//             public Slider DynamicSlider;
+//             public FloatField DynamicField;
+//         }
+//         FloatSliderPair CreatePairedFloatSlider(string Name, float LowValue, float HighValue, ref float InitialValue, float SliderWidth = 200) {
+//             FloatSliderPair NewPair = new FloatSliderPair();
+//             NewPair.DynamicContainer = CreateHorizontalBox(Name + " Container");
+//             NewPair.DynamicLabel = new Label(Name);
+//             NewPair.DynamicSlider = new Slider() {value = InitialValue, highValue = HighValue, lowValue = LowValue};
+//             NewPair.DynamicField = new FloatField() {value = InitialValue};
+//             NewPair.DynamicSlider.style.width = SliderWidth;
+//             NewPair.DynamicContainer.Add(NewPair.DynamicLabel);
+//             NewPair.DynamicContainer.Add(NewPair.DynamicSlider);
+//             NewPair.DynamicContainer.Add(NewPair.DynamicField);
+//             return NewPair;
+//         }
 
-        public override VisualElement CreateInspectorGUI()
-        {
-            var t1 = (targets);
-            int TargCount = t1.Length;
-            var t =  t1[0] as RayTracingMaster;
-            VisualElement MainContainer = CreateVerticalBox("Main Container");
-                Toggle RenderInSceneToggle = new Toggle() {value = t.HDRPorURPRenderInScene, text = "Render in Scene View(HDRP/URP ONLY)"};
-                RenderInSceneToggle.RegisterValueChangedCallback(evt => {t.HDRPorURPRenderInScene = evt.newValue;});
-                MainContainer.Add(RenderInSceneToggle);
+//         public override VisualElement CreateInspectorGUI()
+//         {
+//             var t1 = (targets);
+//             int TargCount = t1.Length;
+//             var t =  t1[0] as RayTracingMaster;
+//             VisualElement MainContainer = CreateVerticalBox("Main Container");
+//                 Toggle RenderInSceneToggle = new Toggle() {value = t.HDRPorURPRenderInScene, text = "Render in Scene View(HDRP/URP ONLY)"};
+//                 RenderInSceneToggle.RegisterValueChangedCallback(evt => {t.HDRPorURPRenderInScene = evt.newValue;});
+//                 MainContainer.Add(RenderInSceneToggle);
 
-                ObjectField LocalTTSettingsField = new ObjectField("Local TT Settings Override");
-                LocalTTSettingsField.objectType = typeof(TTSettings);
-                LocalTTSettingsField.value = t.LocalTTSettings;
-                LocalTTSettingsField.RegisterValueChangedCallback(evt => {t.LocalTTSettings = evt.newValue as TTSettings;});
-                MainContainer.Add(LocalTTSettingsField);
+//                 ObjectField LocalTTSettingsField = new ObjectField("Local TT Settings Override");
+//                 LocalTTSettingsField.objectType = typeof(TTSettings);
+//                 LocalTTSettingsField.value = t.LocalTTSettings;
+//                 LocalTTSettingsField.RegisterValueChangedCallback(evt => {t.LocalTTSettings = evt.newValue as TTSettings;});
+//                 MainContainer.Add(LocalTTSettingsField);
                 
 
-                // if(t.LocalTTSettings.ToneMapper == 7) {
-                    ObjectField OverrideAGX = new ObjectField("Custom AGX Tonemap Texture");
-                    OverrideAGX.objectType = typeof(Texture3D);
-                    OverrideAGX.value = t.AGXCustomTex;
-                    OverrideAGX.RegisterValueChangedCallback(evt => {t.AGXCustomTex = evt.newValue as Texture3D;});
-                    MainContainer.Add(OverrideAGX);
-                // }
+//                 // if(t.LocalTTSettings.ToneMapper == 7) {
+//                     ObjectField OverrideAGX = new ObjectField("Custom AGX Tonemap Texture");
+//                     OverrideAGX.objectType = typeof(Texture3D);
+//                     OverrideAGX.value = t.AGXCustomTex;
+//                     OverrideAGX.RegisterValueChangedCallback(evt => {t.AGXCustomTex = evt.newValue as Texture3D;});
+//                     MainContainer.Add(OverrideAGX);
+//                 // }
 
-            return MainContainer;
-        }
+//             return MainContainer;
+//         }
 
-    }
-#endif
+//     }
+// #endif
 
 
 }

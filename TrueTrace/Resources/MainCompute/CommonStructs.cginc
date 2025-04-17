@@ -284,3 +284,23 @@ struct SDFData {
 };
 
 StructuredBuffer<SDFData> SDFs;
+
+struct Photon {
+	float4 Pos;
+	float3 Flux;
+	uint InitialDirection;
+	float3 Dir;
+	float faceNPhi;
+};
+
+
+struct PhotonRayData {
+	float3 throughput;
+	uint Norm;
+	float3 origin;
+	bool terminated;
+	float3 direction;
+	bool diffuseHit;
+};
+
+RWStructuredBuffer<PhotonRayData> PhotonRays;

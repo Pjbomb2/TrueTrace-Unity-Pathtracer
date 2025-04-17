@@ -7,7 +7,7 @@
 #define AdvancedAlphaMapped
 #define ExtraSampleValidation
 #define ReSTIRAdvancedValidation
-#define IgnoreGlassShadow
+// #define IgnoreGlassShadow
 // #define IgnoreGlassMain
 // #define FadeMapping
 // #define PointFiltering
@@ -22,7 +22,7 @@
 #define UseBRDFLights
 #define DoubleBufferSGTree
 // #define Fog
-#define RadCache
+// #define RadCache
 #define ClampRoughnessToBounce
 // #define TTCustomMotionVectors
 // #define ReSTIRSampleReduction
