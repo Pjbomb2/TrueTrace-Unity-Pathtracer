@@ -264,10 +264,10 @@ inline void calcFinalColor(inout PhotonRayData ray, MaterialData hitDat, RayHit 
     bool Refracted = false;
     float3 bsdf = 1;
     float pdf = 1;
-    [branch] if (hitDat.emission > 0.0f) {
-        ray.terminated = true;
-        return;
-    }
+    // [branch] if (hitDat.emission > 0.0f) {
+    //     ray.terminated = true;
+    //     return;
+    // }
    
     validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
     {
@@ -465,18 +465,37 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     float pdf = 0.0f;
     if(SelectedLight.Type == POINTLIGHT) {
         LightPos = SelectedLight.Position;
-        LightDir = SampleDirectionSphere(random(12, pixel_index).x, random(12, pixel_index).y);
+        uint MeshIndex = 0;
+        float lightWeight = 1;
+        float3 Norm = SampleDirectionSphere(random(12, pixel_index).x, random(12, pixel_index).y);
+
+            int MinIndex = SampleLightBVH(LightPos, Norm, lightWeight, pixel_index, MeshIndex, 0, Norm, 0, SGTree, _MeshData);
+        int MeshTriOffset = _MeshData[MeshIndex].TriOffset;
+
+        float2 Rand2 = random(79, pixel_index);
+        float2 FinalUV = sample_triangle(Rand2.x, Rand2.y);
+        float3 LightPosition = (LightTriangles[MinIndex].pos0 + LightTriangles[MinIndex].posedge1 * FinalUV.x + LightTriangles[MinIndex].posedge2 * FinalUV.y);
+        int AggTriIndex = LightTriangles[MinIndex].TriTarget + MeshTriOffset;
+
+
+            float4x4 MeshTransformInverse = _MeshData[MeshIndex].W2L;
+            TrianglePos CurTri = triangle_get_positions(AggTriIndex);
+            MeshTransformInverse = inverse(MeshTransformInverse);
+            LightPosition = mul(MeshTransformInverse, float4(LightPosition,1));
+            LightDir = normalize(LightPosition - LightPos);
+
+        // LightDir = SampleDirectionSphere(random(12, pixel_index).x, random(12, pixel_index).y);
         float3 BBMAX = float3(UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMax.x), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMax.y), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMax.z));
         float3 BBMIN = float3(UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMin.x), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMin.y), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMin.z));
         float3 to_center = (BBMAX + BBMIN) / 2.0f - LightPos;
-        float3 axis = normalize(to_center);
-        float dist = sqrt(abs(dot(SelectedLight.Direction, (BBMAX + BBMIN) / 2.0f)));//(to_center);
+        float3 axis = normalize(to_center);//POINTLIGHT DOESNT HAVE A FUCKIN DIRECTION
+        float dist = length(to_center);//sqrt(abs(dot(SelectedLight.Direction, (BBMAX + BBMIN) / 2.0f)));//(to_center);
         float3 extents = 0.5f * (BBMAX - BBMIN);
         float aabbRadius = length(extents);
         float theta = atan(aabbRadius / dist);
         float sharpness = 1.0f / (theta * theta + 1e-5) * 2.0f;
         if(AABBBuff[1 - (PhotonFrames % 2)].PhotonCount > 0 && id.x % 2 == 0 && id.y % 2 == 0) {
-            LightDir = SampleSphericalGaussian(axis, sharpness, random(12, pixel_index));
+            LightDir = SampleSphericalGaussian(axis, sharpness * dist, random(12, pixel_index));
         }
         pdf = 1.0f / (4.0f * PI);
         // LightDir.y = -abs(LightDir.y);
@@ -637,7 +656,7 @@ float3 photonContribution(float3 Norm, float3 Pos, uint hash, inout int TotPhotC
     //get caustic or global photon
     uint photonCount = gHashCounter[hash];
     TotPhotCount += photonCount;
-    float radius = gCausticRadius / ((float)max(min(photonCount-3,5),1));
+    float radius = gCausticRadius;// / ((float)max(min(photonCount-3,5),1));
     uint2 texIdx = uint2(hash / gBucketYExtent, hash % gBucketYExtent);
     float4 photonPos = gHashBucketPos[texIdx];
     float4 photonDir = gHashBucketDir[texIdx];
@@ -665,7 +684,7 @@ float3 photonContribution(float3 Norm, float3 Pos, uint hash, inout int TotPhotC
     if(NdotL > kMinCosTheta){
         // let bsdf = gScene.materials.getBSDF(sd, lod);
         // float3 f_r = bsdf.eval(sd, -photonDir.xyz,sg) / NdotL;
-        radiance = 4.0f * photonFlux.xyz * photonCount * photonFlux.w * ((float)max(min(photonCount-3,5),1));
+        radiance = 4.0f * photonFlux.xyz * photonCount * photonFlux.w;// * ((float)max(min(photonCount-3,5),1));
     }
     return radiance;
 }
@@ -722,9 +741,9 @@ void kernel_collect(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
 
     // _DebugTex[equirectDirectionToUv(LightDir) * float2(screen_width, screen_height)] = 1;
 
-    GlobalColors[pixel_index].Direct += radiance;
-    // GlobalColors[pixel_index].Indirect = 0;
-    // GlobalColors[pixel_index].PrimaryNEERay = 0;
+    GlobalColors[pixel_index].Direct = radiance;
+    GlobalColors[pixel_index].Indirect = 0;
+    GlobalColors[pixel_index].PrimaryNEERay = 0;
     // float3 res = (GetBounceData(GlobalColors[pixel_index].MetRoughIsSpec) == 1) ? (GlobalColors[pixel_index].Data.xyz + pow(unpackRGBE(GlobalColors[pixel_index].PrimaryNEERay),2.2f)) : (((float)PartialRenderingFactor) * ((radiance * 3.0f + GlobalColors[pixel_index].Direct + GlobalColors[pixel_index].Indirect) * GlobalColors[pixel_index].Data.xyz) + pow(unpackRGBE(GlobalColors[pixel_index].PrimaryNEERay),2.2f));
 
     // Result[id.xy] = float4(res, 1);

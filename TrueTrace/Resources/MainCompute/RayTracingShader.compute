@@ -417,7 +417,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     if(D2)
 #endif
 
-    [branch] if (MaterialLobe != 3 && (UseNEE) && CurBounce < MaxBounce && (SecondaryBackgroundType == 1 || unitylightcount + LightMeshCount != 0)) {//Next event estimation
+    [branch] if (MaterialLobe != 3 && (UseNEE) && CurBounce < MaxBounce && (SecondaryBackgroundType == 1 || unitylightcount != 0)) {//Next event estimation
         float3 LightNorm;
         float3 LightPosition;
         int LightFormat = TRILIGHT;
@@ -429,7 +429,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         int SelectedLightGroup = 0;//0 = primitive, 1 = point, spot, etc., 2 = skybox
         int selectionoptions = 0;
         int selections[3] = {0,0,0};
-        if(LightMeshCount != 0 && LEMEnergyScale != 0) selections[selectionoptions++] = 0;
+        if(false && LightMeshCount != 0 && LEMEnergyScale != 0) selections[selectionoptions++] = 0;
         if(unitylightcount != 0) selections[selectionoptions++] = 1;
         if(SecondaryBackgroundType == 1) selections[selectionoptions++] = 2;
         RunningWeight = selectionoptions;
@@ -1175,6 +1175,7 @@ int MaterialIndex;
         if(CurBounce != 0 && Case != 3) TempMat.roughness = max(TempMat.roughness, saturate((float)CurBounce / 6.0f));
     }
 #endif
+    TempMat.emission = 0;
     if(TempMat.emission > 0) {
         if (TempMat.EmissiveTex.x > 0) {
             float3 EmissCol = lerp(TempMat.EmissionColor, TempMat.surfaceColor, GetFlag(TempMat.Tag, BaseIsMap));

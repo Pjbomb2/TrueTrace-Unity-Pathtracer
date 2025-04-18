@@ -1062,7 +1062,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -1143,7 +1143,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -5455,7 +5455,7 @@ MonoBehaviour:
     Roughness: 0
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
-    IOR: 1
+    IOR: 1.58
     Metallic: 0
     Sheen: 0
     SheenTint: 0
@@ -5466,9 +5466,9 @@ MonoBehaviour:
     AnisotropicRotation: 0
     Flatness: 0
     DiffTrans: 0
-    SpecTrans: 0
+    SpecTrans: 1
     Specular: 0
-    ScatterDist: 0
+    ScatterDist: 5
     MetallicRemap: {x: 0, y: 1}
     RoughnessRemap: {x: 0, y: 1}
     AlphaCutoff: 0.1
@@ -11428,7 +11428,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -11509,7 +11509,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -43958,7 +43958,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &501551679
 Transform:
   m_ObjectHideFlags: 0
@@ -44124,7 +44124,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -44988,7 +44988,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -45069,7 +45069,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -47253,7 +47253,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -47334,7 +47334,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -47683,7 +47683,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -47764,7 +47764,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -49376,7 +49376,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -49457,7 +49457,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -49839,6 +49839,135 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 1770587712}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &760336061
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 760336064}
+  - component: {fileID: 760336063}
+  - component: {fileID: 760336062}
+  m_Layer: 0
+  m_Name: Sun (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &760336062
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 760336061}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5316a6fd4d077f4ab8ce444f333d4fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ThisLight: {fileID: 760336063}
+  ThisLightData:
+    Radiance: {x: 32, y: 32, z: 32}
+    Position: {x: -1.4816499, y: 5.724826, z: -1.1294421}
+    Direction: {x: -0.40884805, y: 0.8689685, z: -0.2788136}
+    Type: 0
+    SpotAngle: {x: 0, y: 0}
+    ZAxisRotation: 0.066060774
+    Softness: 0
+    IESTex: {x: 0, y: 0}
+  ArrayIndex: 0
+  IESIndex: 0
+  ShadowSoftness: 0
+  UseKelvin: 0
+  IsMainSun: 1
+  KelvinTemperature: 1000
+  Intensity: 32
+  Col: {x: 1, y: 1, z: 1}
+  SpotAngle: 30
+  HasInitialized: 1
+  IESProfile: {fileID: 0}
+  NeedsToUpdate: 1
+--- !u!108 &760336063
+Light:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 760336061}
+  m_Enabled: 1
+  serializedVersion: 10
+  m_Type: 2
+  m_Shape: 0
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Intensity: 32
+  m_Range: 10
+  m_SpotAngle: 30
+  m_InnerSpotAngle: 21.80208
+  m_CookieSize: 10
+  m_Shadows:
+    m_Type: 0
+    m_Resolution: -1
+    m_CustomResolution: -1
+    m_Strength: 1
+    m_Bias: 0.05
+    m_NormalBias: 0.4
+    m_NearPlane: 0.2
+    m_CullingMatrixOverride:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: 0
+      e10: 0
+      e11: 1
+      e12: 0
+      e13: 0
+      e20: 0
+      e21: 0
+      e22: 1
+      e23: 0
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    m_UseCullingMatrixOverride: 0
+  m_Cookie: {fileID: 0}
+  m_DrawHalo: 0
+  m_Flare: {fileID: 0}
+  m_RenderMode: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingLayerMask: 1
+  m_Lightmapping: 4
+  m_LightShadowCasterMode: 0
+  m_AreaSize: {x: 1, y: 1}
+  m_BounceIntensity: 1
+  m_ColorTemperature: 6570
+  m_UseColorTemperature: 1
+  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_UseBoundingSphereOverride: 0
+  m_UseViewFrustumForShadowCasterCull: 1
+  m_ShadowRadius: 0
+  m_ShadowAngle: 0
+--- !u!4 &760336064
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 760336061}
+  m_LocalRotation: {x: -0.10366976, y: 0.53661424, z: -0.09031965, w: -0.8325504}
+  m_LocalPosition: {x: 5.1339493, y: 3.3786411, z: -0.8977621}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 5
+  m_LocalEulerAnglesHint: {x: 60.339, y: 55.708, z: 3.785}
 --- !u!4 &761934882 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1340929497133932227, guid: 16500a523b718314091d7e9b83146c62,
@@ -51519,7 +51648,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -51600,7 +51729,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -53263,7 +53392,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -53344,7 +53473,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -53641,7 +53770,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -53722,7 +53851,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -58153,7 +58282,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -58234,7 +58363,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -62886,7 +63015,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -62967,7 +63096,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -64419,7 +64548,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -64500,7 +64629,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -67272,7 +67401,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -67353,7 +67482,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -68186,7 +68315,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -68267,7 +68396,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -68339,6 +68468,7 @@ Transform:
   - {fileID: 499686670}
   - {fileID: 1931085298}
   - {fileID: 501551679}
+  - {fileID: 1928956517}
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -68432,8 +68562,9 @@ MonoBehaviour:
   RenderTransforms: []
   RenderQue: []
   BuildQue:
-  - {fileID: 501551680}
+  - {fileID: 0}
   - {fileID: 1770588100}
+  - {fileID: 1928956519}
   AddQue: []
   RemoveQue: []
   UpdateQue: []
@@ -69214,7 +69345,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -69295,7 +69426,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -69630,7 +69761,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -69711,7 +69842,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -91162,7 +91293,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -91243,7 +91374,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -91399,6 +91530,438 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 7297256389439473125, guid: 16500a523b718314091d7e9b83146c62, type: 3}
+--- !u!1 &1928956516
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1928956517}
+  - component: {fileID: 1928956523}
+  - component: {fileID: 1928956522}
+  - component: {fileID: 1928956521}
+  - component: {fileID: 1928956520}
+  - component: {fileID: 1928956519}
+  - component: {fileID: 1928956518}
+  m_Layer: 0
+  m_Name: Sphere
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1928956517
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1928956516}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.23, z: 0}
+  m_LocalScale: {x: 0.9200001, y: 0.9200001, z: 0.9200001}
+  m_ConstrainProportionsScale: 1
+  m_Children: []
+  m_Father: {fileID: 1568839224}
+  m_RootOrder: 4
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1928956518
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1928956516}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac3a0913ec2b2d4498eb09862b7f7526, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  RunTransforms: 1
+  HasUpdatedToRun: 0
+  InitialPosition: {x: 0, y: 0, z: 0}
+  Forward: {x: 0, y: 0, z: 0}
+  DoRotation: 0
+  RotationRespectsTransform: 0
+  RotationSpeed: 32
+  RotationAxis: 1
+  DoTranslation: 1
+  TranslationRespectsTransform: 0
+  TranslationSpeed: 0.15
+  TranslationDistance: 3
+  TranslationAxis: 0
+--- !u!114 &1928956519
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1928956516}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  InstanceDatas: []
+  RTAccelHandle: 
+  RTAccelSubmeshOffsets: 
+  LBVH:
+    ParentBound:
+      aabb:
+        b:
+          BBMax: {x: 0, y: 0, z: 0}
+          BBMin: {x: 0, y: 0, z: 0}
+        w: {x: 0, y: 0, z: 0}
+        phi: 0
+        cosTheta_o: 0
+        cosTheta_e: 0
+        LightCount: 0
+        Pad1: 0
+      left: 0
+      isLeaf: 0
+    SGTree: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
+    ZeroBound:
+      aabb:
+        b:
+          BBMax: {x: 0, y: 0, z: 0}
+          BBMin: {x: 0, y: 0, z: 0}
+        w: {x: 0, y: 0, z: 0}
+        phi: 0
+        cosTheta_o: 0
+        cosTheta_e: 0
+        LightCount: 0
+        Pad1: 0
+      left: 0
+      isLeaf: 0
+    ZeroBound2:
+      BBMax: {x: 0, y: 0, z: 0}
+      BBMin: {x: 0, y: 0, z: 0}
+      w: 0
+      phi: 0
+      cosTheta_oe: 0
+      left: 0
+  ExistsInQue: 1
+  QueInProgress: 1
+  RenderImposters: 0
+  IsDeformable: 0
+  Name: Sphere
+  ChildObjects:
+  - {fileID: 1928956520}
+  MeshCountChanged: 1
+  AggTriangles: []
+  ParentScale: {x: 0.0010869565, y: 0.0010869565, z: 0.0010869565}
+  LightTriangles: []
+  BVH:
+    cwbvh_indices: 
+    cwbvhindex_count: 0
+    cwbvhnode_count: 0
+    ZeroedData:
+      e: 000000000000000000000000
+      imask: 0
+      base_index_child: 0
+      base_index_triangle: 0
+      meta: 0000000000000000
+      quantized_min_x: 0000000000000000
+      quantized_max_x: 0000000000000000
+      quantized_min_y: 0000000000000000
+      quantized_max_y: 0000000000000000
+      quantized_min_z: 0000000000000000
+      quantized_max_z: 0000000000000000
+      p: {x: 0, y: 0, z: 0}
+  SkinnedMeshes: []
+  DeformableMeshes: []
+  IndexCounts: 
+  MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
+  HasStarted: 0
+  AggNodes: []
+  InstanceMeshIndex: 0
+  LightEndIndex: 0
+  aabb_untransformed:
+    BBMax: {x: 0.5, y: 0.5, z: 0.5}
+    BBMin: {x: -0.5, y: -0.5, z: -0.5}
+  aabb:
+    BBMax: {x: 0, y: 0, z: 0}
+    BBMin: {x: 0, y: 0, z: 0}
+  AllFull: 0
+  AggIndexCount: 0
+  AggBVHNodeCount: 0
+  _Materials: []
+  MatOffset: 1
+  CachedTransforms:
+  - WTL:
+      e00: 1.0869565
+      e01: 0
+      e02: 0
+      e03: -0
+      e10: 0
+      e11: 1.0869565
+      e12: 0
+      e13: -1.3369565
+      e20: 0
+      e21: 0
+      e22: 1.0869565
+      e23: -0
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    Position: {x: 0, y: 1.23, z: 0}
+  - WTL:
+      e00: 1.0869565
+      e01: 0
+      e02: 0
+      e03: -0
+      e10: 0
+      e11: 1.0869565
+      e12: 0
+      e13: -1.3369565
+      e20: 0
+      e21: 0
+      e22: 1.0869565
+      e23: -0
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    Position: {x: 0, y: 1.23, z: 0}
+  TotalObjects: 1
+  TransformIndexes: []
+  HasCompleted: 0
+  TotEnergy: 0
+  ThisTransform: {fileID: 1928956517}
+  ConstructKernel: 0
+  TransferKernel: 1
+  RefitLayerKernel: 2
+  UpdateGlobalBufferAABBKernel: 4
+  LightBLASRefitKernel: 7
+  CompactedMeshData: 0
+  InstanceReferences: 0
+  NeedsToUpdate: 0
+  FailureCount: 0
+  TotalTriangles: 0
+  IsSkinnedGroup: 0
+  HasLightTriangles: 0
+  ForwardStack: []
+  LayerStack: []
+  NodePair: []
+  MaxRecur: 0
+  tempAABB:
+    BBMax: {x: 0, y: 0, z: 0}
+    BBMin: {x: 0, y: 0, z: 0}
+  NodeOffset: 0
+  TriOffset: 0
+  SkinnedOffset: 0
+  LightTriOffset: 0
+  LightNodeOffset: 0
+  AlbedoTexs: []
+  NormalTexs: []
+  SecondaryNormalTexs: []
+  MetallicTexs: []
+  MetallicTexChannelIndex: 
+  RoughnessTexs: []
+  RoughnessTexChannelIndex: 
+  EmissionTexs: []
+  AlphaTexs: []
+  AlphaTexChannelIndex: 
+  MatCapMasks: []
+  MatCapMaskChannelIndex: 
+  MatCapTexs: []
+  SecondaryAlbedoTexMasks: []
+  SecondaryAlbedoTexMaskChannelIndex: 
+  SecondaryAlbedoTexs: []
+  ChildObjectTransforms:
+  - {fileID: 1928956517}
+  center: {x: 0, y: 0, z: 0}
+  extent: {x: 0.5, y: 0.5, z: 0.5}
+  HasTransformChanged: 0
+--- !u!114 &1928956520
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1928956516}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c103227aee5e4584a96e35173641b818, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  MaterialOptions: 
+  LocalMaterials:
+  - TextureModifiers:
+      MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
+      SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
+      NormalTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
+      SecondaryAlbedoTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
+      SecondaryNormalTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
+      Rotation: 0
+      RotationNormal: 0
+      RotationSecondary: 0
+      RotationSecondaryDiffuse: 0
+      RotationSecondaryNormal: 0
+    BaseColor: {x: 1, y: 1, z: 1}
+    emission: 0
+    EmissionColor: {x: 1, y: 1, z: 1}
+    Tag: 0
+    Roughness: 0
+    MatType: 0
+    TransmittanceColor: {x: 1, y: 1, z: 1}
+    IOR: 1.74
+    Metallic: 0
+    Sheen: 0
+    SheenTint: 0
+    SpecularTint: 0
+    Clearcoat: 0
+    ClearcoatGloss: 0
+    Anisotropic: 0
+    AnisotropicRotation: 0
+    Flatness: 0
+    DiffTrans: 0
+    SpecTrans: 1
+    Specular: 0
+    ScatterDist: 1
+    MetallicRemap: {x: 0, y: 1}
+    RoughnessRemap: {x: 0, y: 1}
+    AlphaCutoff: 0.1
+    NormalStrength: 1
+    Hue: 0
+    Saturation: 1
+    Contrast: 1
+    Brightness: 1
+    BlendColor: {x: 1, y: 1, z: 1}
+    BlendFactor: 0
+    ColorBleed: 1
+    AlbedoBlendFactor: 0
+    SecondaryNormalTexBlend: 0
+    DetailNormalStrength: 1
+  KelvinTemp:
+  - 0
+  UseKelvin: 00
+  TransmissionColor: []
+  BaseColor: []
+  MetallicRemap: []
+  RoughnessRemap: []
+  emission: []
+  EmissionColor: []
+  Roughness: []
+  IOR: []
+  Metallic: []
+  SpecularTint: []
+  Sheen: []
+  SheenTint: []
+  ClearCoat: []
+  ClearCoatGloss: []
+  Anisotropic: []
+  Flatness: []
+  DiffTrans: []
+  SpecTrans: []
+  ScatterDist: []
+  Specular: []
+  AlphaCutoff: []
+  NormalStrength: []
+  Hue: []
+  Saturation: []
+  Brightness: []
+  Contrast: []
+  BlendColor: []
+  BlendFactor: []
+  MainTexScaleOffset: []
+  SecondaryAlbedoTexScaleOffset: []
+  SecondaryTextureScaleOffset: []
+  NormalTexScaleOffset: []
+  RotationNormal: []
+  RotationSecondary: []
+  RotationSecondaryDiffuse: []
+  RotationSecondaryNormal: []
+  Rotation: []
+  Flags: 
+  ColorBleed: []
+  AlbedoBlendFactor: []
+  SecondaryNormalTexBlend: []
+  DetailNormalStrength: []
+  SecondaryNormalTexScaleOffset: []
+  Indexes: 00000000
+  NeedsToUpdate: 0
+  IsReady: 1
+  InvisibleOverride: 0
+  FollowMaterial: 00
+  SharedMaterials:
+  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  Names:
+  - Default-Material
+  MaterialIndex: 00000000
+  LocalMaterialIndex: 00000000
+  JustCreated: 0
+  TilingChanged: 0
+  MatOffset: 0
+--- !u!135 &1928956521
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1928956516}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.5
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!23 &1928956522
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1928956516}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &1928956523
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1928956516}
+  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!33 &1930033334 stripped
 MeshFilter:
   m_CorrespondingSourceObject: {fileID: -5475177374515950085, guid: 16500a523b718314091d7e9b83146c62,
@@ -92126,14 +92689,14 @@ MonoBehaviour:
       RotationSecondary: 0
       RotationSecondaryDiffuse: 0
       RotationSecondaryNormal: 0
-    BaseColor: {x: 1, y: 1, z: 1}
+    BaseColor: {x: 0.8113208, y: 0.8113208, z: 0.8113208}
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
     Roughness: 0
     MatType: 0
     TransmittanceColor: {x: 1, y: 1, z: 1}
-    IOR: 1.7
+    IOR: 1
     Metallic: 0
     Sheen: 0
     SheenTint: 0
@@ -92144,7 +92707,7 @@ MonoBehaviour:
     AnisotropicRotation: 0
     Flatness: 0
     DiffTrans: 0
-    SpecTrans: 1
+    SpecTrans: 0
     Specular: 0
     ScatterDist: 5
     MetallicRemap: {x: 0, y: 1}
@@ -94253,7 +94816,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -94334,7 +94897,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -95931,7 +96494,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -96012,7 +96575,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:
@@ -99509,7 +100072,7 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0.484
+    Roughness: 0.332
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
@@ -99590,7 +100153,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: fd740029ac3cc504da251fffac9f1662, type: 2}
   Names:

@@ -965,7 +965,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
                         RunningReservoirC.Color *= saturate(saturate(dot(ray.direction, -Light.Direction)) * MiscInfo.y + MiscInfo.z);
                             float3 LocalLight = ToLocal(GetTangentSpace(Light.Direction), -ray.direction) * 0.5f + 0.5f;
                             float2 AlignedUV = AlignUV(LocalLight.xz, float4(1,1,0,0), _UnityLights[AggTriIndex].IESTex);
-                            if(AlignedUV.x != -1) RunningReservoirC.Color *= _IESAtlas.SampleLevel(my_trilinear_repeat_sampler, AlignedUV, 0);
+                            if(AlignedUV.x != -1) RunningReservoirC.Color *= _IESAtlas.SampleLevel(my_linear_clamp_sampler, AlignedUV, 0);
 
                     } else if(Light.Type == AREALIGHTQUAD) {
                         RunningReservoirC.Color *= pow(saturate(dot(ray.direction, -Light.Direction)), MiscInfo.x);

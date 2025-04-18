@@ -1394,8 +1394,8 @@ namespace TrueTrace {
                             
                             }
                         #endif
-                        if(IsValid && _Materials[(int)TempTri.MatDat].MatData.emission > 1) {
-                            Vector3 Radiance = _Materials[(int)TempTri.MatDat].MatData.emission * _Materials[(int)TempTri.MatDat].MatData.BaseColor;
+                        if(IsValid && _Materials[(int)TempTri.MatDat].MatData.emission > 0) {
+                            Vector3 Radiance = _Materials[(int)TempTri.MatDat].MatData.emission * Vector3.one;//_Materials[(int)TempTri.MatDat].MatData.BaseColor;
                             float radiance = luminance(Radiance.x, Radiance.y, Radiance.z);
                             float area = AreaOfTriangle(ParentMat * V1, ParentMat * V2, ParentMat * V3);
                             if(area != 0 && radiance > 0) {
@@ -1409,7 +1409,7 @@ namespace TrueTrace {
                                     posedge1 = TempTri.posedge1,
                                     posedge2 = TempTri.posedge2,
                                     TriTarget = (uint)(OffsetReal),
-                                    SourceEnergy = Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].MatData.emission * Scale(_Materials[(int)TempTri.MatDat].MatData.BaseColor, SecondaryBaseCol))
+                                    SourceEnergy = _Materials[(int)TempTri.MatDat].MatData.emission//Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].MatData.emission * Scale(_Materials[(int)TempTri.MatDat].MatData.BaseColor, SecondaryBaseCol))
                                     });
                                 LuminanceWeights.Add(_Materials[(int)TempTri.MatDat].MatData.emission);//Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol)));
                                 AggTriangles[OffsetReal].IsEmissive = 1;
