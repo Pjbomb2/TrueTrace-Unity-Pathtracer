@@ -11,7 +11,7 @@
 // #define IgnoreGlassMain
 // #define FadeMapping
 // #define PointFiltering
-#define StainedGlassShadows
+// #define StainedGlassShadows
 // #define IgnoreBackfacing
 #define LBVH
 #define AccurateEmissionTex
@@ -22,7 +22,7 @@
 #define UseBRDFLights
 #define DoubleBufferSGTree
 // #define Fog
-// #define RadCache
+#define RadCache
 #define ClampRoughnessToBounce
 // #define TTCustomMotionVectors
 // #define ReSTIRSampleReduction

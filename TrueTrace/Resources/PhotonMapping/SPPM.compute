@@ -22,12 +22,32 @@ RWStructuredBuffer<uint> gHashCounter;
 #define LaunchDimsX 16
 #define LaunchDimsY 16
 
+struct AABBBuffData {
+    uint3 BBMax;
+    uint3 BBMin;
+    uint PhotonCount;
+};
+RWStructuredBuffer<AABBBuffData> AABBBuff;
+int PhotonFrames;
+
 int mNumBuckets;
 
+inline uint FloatToUint(float f) {
+    uint mask = -((int) (asuint(f) >> 31)) | 0x80000000;
+    return asuint(f) ^ mask;
+}
+
+inline float UintToFloat(uint u) {
+    uint mask = ((u >> 31) - 1) | 0x80000000;
+    return asfloat(u ^ mask);
+}
 #pragma kernel InitKernelA
 [numthreads(LaunchDimsX, LaunchDimsY, 1)]
 void InitKernelA(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     if(id.x > screen_width || id.y > screen_height) return;
+    AABBBuffData ZeroedBuff = {uint3(FloatToUint(-999999),FloatToUint(-999999), FloatToUint(-999999)), uint3(FloatToUint(999999),FloatToUint(999999), FloatToUint(999999)), 0};
+    // AABBBuffData ZeroedBuff = {uint3(FloatToUint(6.42),FloatToUint(0.598), FloatToUint(-14.93)), uint3(FloatToUint(6.42),FloatToUint(0.598), FloatToUint(-14.93)), 0};
+    AABBBuff[PhotonFrames % 2] = ZeroedBuff;
     gHashBucketPos[id.xy] = 0;
     gHashBucketFlux[id.xy] = 0;
     gHashBucketDir[id.xy] = 0;
@@ -195,7 +215,7 @@ inline RayHit IntersectBVH(SmallerRay GlobalRay, int pixel_index) {
 
 
 
-inline void calcFinalColor(inout PhotonRayData ray, MaterialData hitDat, RayHit hit, uint2 id, const uint pixel_index, int MaterialIndex, float2 BaseUv) {//main function
+inline void calcFinalColor(inout PhotonRayData ray, MaterialData hitDat, RayHit hit, uint2 id, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float3 surfCol, inout float scatDist) {//main function
     float3 PrevOrigin = ray.origin;
     float3 pos = ray.direction * hit.t + ray.origin;
     float3 PrevDirection = ray.direction;
@@ -218,7 +238,7 @@ inline void calcFinalColor(inout PhotonRayData ray, MaterialData hitDat, RayHit 
 
     norm = Geomnorm;
 
-
+    if ((hitDat.NormalTex.x > 0 || hitDat.SecondaryNormalTex.x > 0)) {//Handle Normal Maps
         float3 LocalTan = GetTriangleTangent(hit.triangle_id, float2(hit.u, hit.v), Inverse);
         float3 LocalBinorm = normalize(cross(Geomnorm, LocalTan));
         float2 Norm = SampleTexture(BaseUv, SampleNormal, hitDat);
@@ -236,6 +256,7 @@ inline void calcFinalColor(inout PhotonRayData ray, MaterialData hitDat, RayHit 
         norm = clamp(normalize(mul(normalize(LocalNormIN), float3x3(LocalTan, LocalBinorm, Geomnorm)).xyz),-1,1);
         if (abs(norm.x) == abs(norm.y) == abs(norm.z)) norm = Geomnorm;
         norm = i_octahedral_32(octahedral_32(norm));
+    }
 
 
     int MaterialLobe = 2;
@@ -254,6 +275,8 @@ inline void calcFinalColor(inout PhotonRayData ray, MaterialData hitDat, RayHit 
             Geomnorm *= -1;
             norm *= -1;
             USGNorm *= -1;
+            surfCol = hitDat.surfaceColor;
+            scatDist = hitDat.scatterDistance;
         }
         bsdf *= bsdfmodifier;
         throughput *= bsdf;
@@ -276,7 +299,7 @@ static const ColData InitCol = { 1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0};
 
 
 
-inline void FullTrace(inout PhotonRayData GlobRay, inout RayHit bestHit, int pixel_index, int2 id, int i) {
+inline void FullTrace(inout PhotonRayData GlobRay, inout RayHit bestHit, int pixel_index, int2 id, int i, inout float3 surfCol, inout float scatDist) {
         bestHit = IntersectBVH(CreateRay(GlobRay.origin, GlobRay.direction), pixel_index);
         int MaterialIndex;
         MaterialIndex = _MeshData[bestHit.mesh_id].MaterialOffset + AggTrisA[bestHit.triangle_id].MatDat;
@@ -319,7 +342,7 @@ inline void FullTrace(inout PhotonRayData GlobRay, inout RayHit bestHit, int pix
         TempMat.roughness = max(TempMat.roughness, 0.00001f);
         float3 bsdf = 1;
         float3 norm = 0;
-        calcFinalColor(GlobRay, TempMat, bestHit, id.xy, pixel_index, MaterialIndex, BaseUv);
+        calcFinalColor(GlobRay, TempMat, bestHit, id.xy, pixel_index, MaterialIndex, BaseUv, surfCol, scatDist);
 }
 
 
@@ -351,27 +374,163 @@ uint Photonhash(int3 cell)
 int mPGDDispatchX;
 int mMaxDispatchY;
 
+float3 sample_cone(float2 u, float cosTheta)
+{
+    float z = u.x * (1.f - cosTheta) + cosTheta;
+    float r = sqrt(1.f - z*z);
+    float phi = 2.0f * PI * u.y;
+    return float3(r * cos(phi), z, r * sin(phi));
+}
+
+
+float3 SampleSphericalGaussian(float3 sgaxis, float sharpness, float2 rand)
+{
+    float lambda = sharpness;
+    float cosTheta;
+
+    if (lambda > 1e-4)
+    {
+        float expTerm = exp(-2.0 * lambda);
+        cosTheta = 1.0 + log(1.0 - rand.x * (1.0 - expTerm)) / lambda;
+        cosTheta = clamp(cosTheta, -1.0, 1.0); // numerical stability
+    }
+    else
+    {
+        // Near-uniform sampling
+        cosTheta = 2.0 * rand.x - 1.0;
+    }
+
+    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+    float phi = 2.0 * 3.14159265 * rand.y;
+
+    // Sample direction in local coordinate system where Y is "up"
+    float3 localDir = float3(
+        sinTheta * cos(phi),
+        cosTheta,  // Y is "up" in local space
+        sinTheta * sin(phi)
+    );
+
+    // Build orthonormal basis around sg.axis
+    float3 axis = normalize(sgaxis);
+    float3 up = float3(0, 1, 0);
+    float3 T = normalize(cross(up, axis));
+    float3 B = cross(axis, T);
+
+    if (abs(dot(axis, up)) > 0.999f)
+    {
+        // axis is nearly aligned with up, so fall back
+        return axis * cosTheta + float3(1, 0, 0) * sinTheta * cos(phi) + float3(0, 0, 1) * sinTheta * sin(phi);
+    }
+
+    // Rotate local sample to align with sg.axis
+    return normalize(
+        T * localDir.x +
+        axis * localDir.y +
+        B * localDir.z
+    );
+}
+
+float SphericalGaussianPDF(float3 dir, float3 sgaxis, float sharpness)
+{
+    float lambda = sharpness;
+    float cosTheta = dot(normalize(dir), normalize(sgaxis));
+
+    // Avoid division by zero for small lambda
+    if (lambda < 1e-4)
+        return 1.0 / (4.0 * 3.14159265); // Uniform sphere
+
+    // Compute sinh(lambda) safely
+    float expPos = exp(lambda);
+    float expNeg = exp(-lambda);
+    float sinhLambda = 0.5 * (expPos - expNeg);
+
+    float normalization = lambda / (4.0 * 3.14159265 * sinhLambda);
+
+    return normalization * exp(lambda * cosTheta);
+}
+
 #pragma kernel kernel_gen
 [numthreads(32, 32, 1)]
 void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     PhotonRayData CurrentRay = {float3(1,1,1), 0, float3(0,0,0), false, float3(0,1,0), false};
     int pixel_index = id.x + id.y * screen_width;
-    LightData SelectedLight = _UnityLights[0];
+    RandomNumsWrite[id.xy] = uint4(12,0,0,0);
+    int Index = clamp(( random(11, pixel_index).x * unitylightcount), 0, unitylightcount - 1);
+    LightData SelectedLight = _UnityLights[Index];
     float3 LightPos = 0;
     float3 LightDir = 0;
     float3 LightInten = 0;
     float SpotAngle = 0;
     float LightArea = 1.0f;
     float pdf = 0.0f;
-    // if(SelectedLight.Type == POINTLIGHT) {
-        RandomNumsWrite[id.xy] = uint4(12,0,0,0);
+    if(SelectedLight.Type == POINTLIGHT) {
         LightPos = SelectedLight.Position;
         LightDir = SampleDirectionSphere(random(12, pixel_index).x, random(12, pixel_index).y);
+        float3 BBMAX = float3(UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMax.x), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMax.y), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMax.z));
+        float3 BBMIN = float3(UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMin.x), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMin.y), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMin.z));
+        float3 to_center = (BBMAX + BBMIN) / 2.0f - LightPos;
+        float3 axis = normalize(to_center);
+        float dist = sqrt(abs(dot(SelectedLight.Direction, (BBMAX + BBMIN) / 2.0f)));//(to_center);
+        float3 extents = 0.5f * (BBMAX - BBMIN);
+        float aabbRadius = length(extents);
+        float theta = atan(aabbRadius / dist);
+        float sharpness = 1.0f / (theta * theta + 1e-5) * 2.0f;
+        if(AABBBuff[1 - (PhotonFrames % 2)].PhotonCount > 0 && id.x % 2 == 0 && id.y % 2 == 0) {
+            LightDir = SampleSphericalGaussian(axis, sharpness, random(12, pixel_index));
+        }
+        pdf = 1.0f / (4.0f * PI);
         // LightDir.y = -abs(LightDir.y);
         LightInten = SelectedLight.Radiance;
-        pdf = 1.0f / (4.0f * PI);
         // SpotAngle = SpotAngle.y;
-    // }
+    } else if(SelectedLight.Type == SPOTLIGHT) {
+        LightPos = SelectedLight.Position;
+        float ConeAngle = -SelectedLight.SpotAngle.y / SelectedLight.SpotAngle.x;
+        LightDir = sample_cone(random(12, pixel_index), ConeAngle);
+        LightDir = ToWorld(GetTangentSpace(SelectedLight.Direction), LightDir);
+
+        float3 BBMAX = float3(UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMax.x), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMax.y), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMax.z));
+        float3 BBMIN = float3(UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMin.x), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMin.y), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMin.z));
+        float3 to_center = (BBMAX + BBMIN) / 2.0f - LightPos;
+        float3 axis = normalize(SelectedLight.Direction);
+        float dist = sqrt(abs(dot(SelectedLight.Direction, (BBMAX + BBMIN) / 2.0f)));//(to_center);
+        float3 extents = 0.5f * (BBMAX - BBMIN);
+        float aabbRadius = length(extents);
+        float theta = atan(aabbRadius / dist);
+        float sharpness = 1.0f / (theta * theta + 1e-5) * 2.0f;
+        if(AABBBuff[1 - (PhotonFrames % 2)].PhotonCount > 0 && id.x % 2 == 0 && id.y % 2 == 0) {
+            LightDir = SampleSphericalGaussian(axis, pow(sharpness * dist * 120.0f, ConeAngle), random(12, pixel_index));
+            // pdf = SphericalGaussianPDF(LightDir, axis, sharpness * dist * ConeAngle);
+        }
+        pdf = 1.0f / (4.0f * PI);
+        LightInten = SelectedLight.Radiance;
+    } else if(SelectedLight.Type = DIRECTIONALLIGHT) {
+        LightPos = SelectedLight.Direction * 100.0f;
+        // LightDir = sample_cone(random(12, pixel_index), 42.0f * (PI / 180.0f));
+        LightDir = -SelectedLight.Direction;//ToWorld(GetTangentSpace(SelectedLight.Direction), LightDir);
+        
+            float3 RandVec = float3(random(115, pixel_index), random(116, pixel_index).x);
+            // sincos(RandVec.x * 2.0f * PI, RandVec.x, RandVec.y);
+            // RandVec.xy *= RandVec.z * 1.0f;
+            LightDir = ToWorld(GetTangentSpace(-SelectedLight.Direction), normalize(float3(RandVec.x - 0.5f,12,RandVec.y - 0.5f)));// * length(RandVec.xy);
+            // LightPos = NewLightPos;
+
+
+        float3 BBMAX = float3(UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMax.x), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMax.y), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMax.z));
+        float3 BBMIN = float3(UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMin.x), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMin.y), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMin.z));
+        float3 to_center = (BBMAX + BBMIN) / 2.0f - LightPos;
+        float3 axis = normalize(SelectedLight.Direction);
+        float dist = dot(SelectedLight.Direction, (BBMAX + BBMIN) / 2.0f);//(to_center);
+        float3 extents = 0.5f * (BBMAX - BBMIN);
+        float aabbRadius = length(extents);
+        float theta = atan(aabbRadius / dist);
+        float sharpness = 1.0f / (theta * theta + 1e-5) * 2.0f;
+        if(id.x % 2 == 0 && id.y % 2 == 0) {
+            LightDir = SampleSphericalGaussian(axis, sharpness, random(12, pixel_index));
+        }
+        pdf = 1.0f / (4.0f * PI);
+
+        LightInten = SelectedLight.Radiance;
+    }
 
     Photon photon = {float4(0,0,0,0), float3(0,0,0), 1.0f, float3(0,0,0), 1.0f};
     float3 lightFlux = LightInten / float(mPGDDispatchX * mMaxDispatchY) * pdf;
@@ -383,10 +542,18 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     bool wasReflectedSpecular = false;
     bool reflectedDiffuse = false;
 int i;
+
+
+    float3 surfCol = 1;
+    float scatDist = 999999;
     [loop]for(i = 0; i < 7; i++) {
         RandomNumsWrite[id.xy] = uint4(i+1,0,0,0);
         photon.Flux = lightFlux * CurrentRay.throughput;
-        FullTrace(CurrentRay, bestHit, pixel_index, id, i);
+        FullTrace(CurrentRay, bestHit, pixel_index, id, i, surfCol, scatDist);
+
+        // if(scatDist != 999999) CurrentRay.throughput *= exp(-bestHit.t * CalculateExtinction(1.0f - (surfCol), scatDist == 0.0f ? 1.0f : scatDist));
+        // if(scatDist != 999999) photon.Flux *= exp(-bestHit.t * CalculateExtinction(1.0f - (surfCol), scatDist == 0.0f ? 1.0f : scatDist));
+
 
         if(CurrentRay.terminated) break;
 
@@ -413,7 +580,7 @@ int i;
             int3 cell = int3(floor(photon.Pos.xyz * cellScale));
             uint bucketIdx = Photonhash(cell) & (mNumBuckets - 1);
 
-            if (roulette || wasReflectedSpecular) {
+            if (wasReflectedSpecular) {
                 InterlockedAdd(gHashCounter[bucketIdx], 1u, photonIndex);
                 //Insert photon
                 float rnd = random(43 + i, pixel_index).x;
@@ -426,19 +593,26 @@ int i;
                 {
                     photon.InitialDirection = octahedral_32(LightDir);
                     gHashBucketPos[texIdx] = photon.Pos;
-                    gHashBucketFlux[texIdx] = float4(photon.Flux,1);// * (WSUM / max((photonIndex+1) * luminance(photon.Flux.xyz), 1e-7)) , asfloat(photon.InitialDirection));
+                    gHashBucketFlux[texIdx] = float4(photon.Flux, 1);//(WSUM / max((photonIndex+1) * luminance(photon.Flux.xyz), 1e-7)));
                     gHashBucketDir[texIdx] = float4(photon.Dir, asfloat(bucketIdx));
 
                 }
             }      
+            break;
 
+        } else if(i == 0) {
+            for(int j = 0; j < 3; j++) {
+                InterlockedMax(AABBBuff[PhotonFrames % 2].BBMax[j], FloatToUint(CurrentRay.origin[j]));
+                InterlockedMin(AABBBuff[PhotonFrames % 2].BBMin[j], FloatToUint(CurrentRay.origin[j]));
+            }
+                InterlockedAdd(AABBBuff[PhotonFrames % 2].PhotonCount, 1);
         }
 
         const float rrVal = luminance(CurrentRay.throughput);
         const float prob = max(0.f, 1.f - rrVal);
         float rnd = random(43 + i, pixel_index).y;
-        // if (rnd < prob) break;
-        // else CurrentRay.throughput /= (1.f - prob);
+        if (rnd < prob) break;
+        else CurrentRay.throughput /= (1.f - prob);
 
         // if(i == 0) _DebugTex[id.xy] =  TempMat.specTrans == 1;//float4(photon.Flux, 1);//float4(CurrentRay.throughput, 1);
         if(i == 0) wasReflectedSpecular = !reflectedDiffuse;
@@ -458,15 +632,16 @@ bool hitSphere(const float3 center, const float radius, const float3 p)
     return false;
 }
 
-float3 photonContribution(float3 Norm, float3 Pos, uint hash)
+float3 photonContribution(float3 Norm, float3 Pos, uint hash, inout int TotPhotCount)
 {
     //get caustic or global photon
-    float radius = gCausticRadius;
+    uint photonCount = gHashCounter[hash];
+    TotPhotCount += photonCount;
+    float radius = gCausticRadius / ((float)max(min(photonCount-3,5),1));
     uint2 texIdx = uint2(hash / gBucketYExtent, hash % gBucketYExtent);
     float4 photonPos = gHashBucketPos[texIdx];
     float4 photonDir = gHashBucketDir[texIdx];
     float4 photonFlux = gHashBucketFlux[texIdx];
-    uint photonCount = gHashCounter[hash];
 
     //Do face normal test if enabled
     // if(kUsePhotonFaceNormal){
@@ -490,13 +665,13 @@ float3 photonContribution(float3 Norm, float3 Pos, uint hash)
     if(NdotL > kMinCosTheta){
         // let bsdf = gScene.materials.getBSDF(sd, lod);
         // float3 f_r = bsdf.eval(sd, -photonDir.xyz,sg) / NdotL;
-        radiance = 4.0f * photonFlux.xyz * photonCount;
+        radiance = 4.0f * photonFlux.xyz * photonCount * photonFlux.w * ((float)max(min(photonCount-3,5),1));
     }
     return radiance;
 }
 
 
-float3 collectPhotons(float3 Norm, float3 Pos)
+float3 collectPhotons(float3 Norm, float3 Pos, inout int TotPhotCount)
 {
     float3 radiance = 0;
     
@@ -512,7 +687,7 @@ float3 collectPhotons(float3 Norm, float3 Pos)
             for (int x = gridCenter.x - gridRadius; x <= gridCenter.x + gridRadius; x++)
             {
                 uint b = Photonhash(int3(x, y, z)) & (mNumBuckets - 1);
-                radiance += photonContribution(Norm, Pos, b);        
+                radiance += photonContribution(Norm, Pos, b, TotPhotCount);        
             }
         }
     }
@@ -534,15 +709,22 @@ void kernel_collect(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     CalcPosNorm(PrimaryTriangleInfo[id.xy], Pos, Norm);
     float3 radiance = 0;
 
-    float3 causticRadiance = collectPhotons(-Norm, Pos);
+    int PhotCount = 0;
+    float3 causticRadiance = collectPhotons(-Norm, Pos, PhotCount);
     float w = 1.0f / (PI * gCausticRadius * gCausticRadius); //make this a constant
     radiance += w * causticRadiance;
     
     radiance *= thp;
 
-    GlobalColors[pixel_index].Direct = radiance;
-    GlobalColors[pixel_index].Indirect = 0;
-    GlobalColors[pixel_index].PrimaryNEERay = 0;
+    // float3 axis = equirectUvToDirection(float2(1.0f, 0.5f));//float3(0,1,0);
+    // float sharpness = 12.001f;
+    // float3 LightDir = SampleSphericalGaussian(axis, sharpness, random(12, pixel_index));
+
+    // _DebugTex[equirectDirectionToUv(LightDir) * float2(screen_width, screen_height)] = 1;
+
+    GlobalColors[pixel_index].Direct += radiance;
+    // GlobalColors[pixel_index].Indirect = 0;
+    // GlobalColors[pixel_index].PrimaryNEERay = 0;
     // float3 res = (GetBounceData(GlobalColors[pixel_index].MetRoughIsSpec) == 1) ? (GlobalColors[pixel_index].Data.xyz + pow(unpackRGBE(GlobalColors[pixel_index].PrimaryNEERay),2.2f)) : (((float)PartialRenderingFactor) * ((radiance * 3.0f + GlobalColors[pixel_index].Direct + GlobalColors[pixel_index].Indirect) * GlobalColors[pixel_index].Data.xyz) + pow(unpackRGBE(GlobalColors[pixel_index].PrimaryNEERay),2.2f));
 
     // Result[id.xy] = float4(res, 1);

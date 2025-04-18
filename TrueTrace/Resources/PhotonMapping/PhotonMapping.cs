@@ -11,14 +11,17 @@ namespace TrueTrace {
 
         public ComputeShader SPPMShader;
         ComputeBuffer mpCausticHashPhotonCounter;
+        ComputeBuffer AABBBuffA;
+        ComputeBuffer AABBBuffB;
         public RenderTexture mpCausticPosBucket;
         public RenderTexture mpCausticDirBucket;
         public RenderTexture RndNumWrt;
         public RenderTexture mpCausticFluxBucket;
         public RenderTexture ValidDir;
 
-        uint NumPhotons = 2000000;
-        int analyticPhotons = 2000000;
+        int FramesSinceStart = 0;
+        uint NumPhotons = 500000;
+        int analyticPhotons = 500000;
         float mAnalyticInvPdf;
         int NumAnalyticLights = 1;
         uint blockSize = 16;
@@ -38,17 +41,26 @@ namespace TrueTrace {
             mpCausticHashPhotonCounter.ReleaseSafe();
             mpCausticPosBucket.ReleaseSafe();
             RndNumWrt.ReleaseSafe();
+            AABBBuffA.ReleaseSafe();
+            AABBBuffB.ReleaseSafe();
             mpCausticDirBucket.ReleaseSafe();
             mpCausticFluxBucket.ReleaseSafe();
         }
 
         public void Init() {
+            FramesSinceStart = 0;
             if (SPPMShader == null) {SPPMShader = Resources.Load<ComputeShader>("PhotonMapping/SPPM"); }
             GenKernel = SPPMShader.FindKernel("kernel_gen");
             CollectKernel = SPPMShader.FindKernel("kernel_collect");
             Initialized = true;
 
-            mAnalyticInvPdf = 1.0f;
+
+            analyticPhotons += NumAnalyticLights - (analyticPhotons % NumAnalyticLights);
+
+            NumPhotons = (uint)analyticPhotons;
+
+            mAnalyticInvPdf = (((float)NumPhotons) * ((float)NumAnalyticLights)) / ((float)analyticPhotons);
+
             uint blockSizeSq = blockSize * blockSize;
             uint xPhotons = (uint)((float)NumPhotons / (float)mMaxDispatchY) + 1;
             xPhotons += (xPhotons % blockSize == 0 && analyticPhotons > 0) ? blockSize : (blockSize - (xPhotons % blockSize));
@@ -88,11 +100,14 @@ namespace TrueTrace {
             CommonFunctions.CreateRenderTexture(ref RndNumWrt, (int)Width, (int)Height, CommonFunctions.RTFull4);
             CommonFunctions.CreateRenderTexture(ref mpCausticFluxBucket, (int)Width, (int)Height, CommonFunctions.RTFull4);
             CommonFunctions.CreateDynamicBuffer(ref mpCausticHashPhotonCounter, (int)mNumBuckets, 4);
+            CommonFunctions.CreateDynamicBuffer(ref AABBBuffA, 2, 28);
 
 
         }
 
         public void Generate(CommandBuffer cmd) {
+            FramesSinceStart++;
+            cmd.SetComputeIntParam(SPPMShader, "PhotonFrames", FramesSinceStart);
             cmd.SetComputeIntParam(SPPMShader, "TEMPTESTA", 1);
             cmd.SetComputeIntParam(SPPMShader, "MaxBounce", (int)12);
             cmd.SetComputeIntParam(SPPMShader, "CurBounce", (int)1);
@@ -107,6 +122,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(SPPMShader, 0, "gHashBucketDir", mpCausticDirBucket);
             cmd.SetComputeTextureParam(SPPMShader, 0, "RandomNumsWrite", RndNumWrt);
             cmd.SetComputeBufferParam(SPPMShader, 0, "gHashCounter", mpCausticHashPhotonCounter);
+            cmd.SetComputeBufferParam(SPPMShader, 0, "AABBBuff", AABBBuffA);
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("SPPM Init A");
             cmd.DispatchCompute(SPPMShader, 0, Mathf.CeilToInt((float)Width / 16.0f), Mathf.CeilToInt((float)Height / 16.0f), 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("SPPM Init A");
@@ -123,6 +139,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "gHashBucketFlux", mpCausticFluxBucket);
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "RandomNumsWrite", RndNumWrt);
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "gHashBucketDir", mpCausticDirBucket);
+            cmd.SetComputeBufferParam(SPPMShader, GenKernel, "AABBBuff", AABBBuffA);
             cmd.SetComputeBufferParam(SPPMShader, GenKernel, "gHashCounter", mpCausticHashPhotonCounter);
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("SPPM Gen");
             cmd.DispatchCompute(SPPMShader, GenKernel, Mathf.CeilToInt((float)mPGDDispatchX / 32.0f), Mathf.CeilToInt((float)mMaxDispatchY / 32.0f), 1);
