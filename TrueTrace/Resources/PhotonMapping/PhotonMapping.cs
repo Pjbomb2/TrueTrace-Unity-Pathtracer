@@ -68,7 +68,7 @@ namespace TrueTrace {
             CollectKernel = SPPMShader.FindKernel("kernel_collect");
             Initialized = true;
 
-            CommonFunctions.CreateRenderTextureArray2(ref EquirectVisibilityTex, VisTexWidth, VisTexWidth / 2, 2, CommonFunctions.RTFull4);
+            CommonFunctions.CreateRenderTextureArray2(ref EquirectVisibilityTex, VisTexWidth, VisTexWidth / 2, 2, CommonFunctions.RTFull2);
             if(CDFTotalBuffer == null || !CDFTotalBuffer.IsValid()) {
                 CDFTotalBuffer = new ComputeBuffer(1, 4);
             }
@@ -79,13 +79,13 @@ namespace TrueTrace {
                 CommonFunctions.CreateRenderTexture(ref CDFX, VisTexWidth, VisTexWidth / 2, CommonFunctions.RTFull1);
                 CommonFunctions.CreateRenderTexture(ref CDFY, VisTexWidth / 2, 1, CommonFunctions.RTFull1);
                 CounterBuffer = new ComputeBuffer(1, 4);
-                CDFCompute.SetTexture(0, "Tex", EquirectVisibilityTex[0]);
-                CDFCompute.SetTexture(0, "CDFX", CDFX);
-                CDFCompute.SetTexture(0, "CDFY", CDFY);
+                CDFCompute.SetTexture(1, "Tex2", EquirectVisibilityTex[0]);
+                CDFCompute.SetTexture(1, "CDFX", CDFX);
+                CDFCompute.SetTexture(1, "CDFY", CDFY);
                 CDFCompute.SetInt("w", VisTexWidth);
                 CDFCompute.SetInt("h", VisTexWidth / 2);
-                CDFCompute.SetBuffer(0, "CounterBuffer", CounterBuffer);
-                CDFCompute.SetBuffer(0, "TotalBuff", CDFTotalBuffer);
+                CDFCompute.SetBuffer(1, "CounterBuffer", CounterBuffer);
+                CDFCompute.SetBuffer(1, "TotalBuff", CDFTotalBuffer);
 
             }
 
@@ -200,8 +200,10 @@ namespace TrueTrace {
             CDFTotalBuffer.SetData(CDFTotalInit);
             int[] CounterInit = new int[1];
             CounterBuffer.SetData(CounterInit);
-            cmd.SetComputeTextureParam(CDFCompute, 0, "Tex", !FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);
-            cmd.DispatchCompute(CDFCompute, 0, 1, VisTexWidth / 2, 1);
+            cmd.SetComputeTextureParam(CDFCompute, 1, "Tex2", !FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("SPPM CDF");
+            cmd.DispatchCompute(CDFCompute, 1, 1, VisTexWidth / 2, 1);
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("SPPM CDF");
 
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("SPPM Init D");
             cmd.SetComputeTextureParam(SPPMShader, 3, "VisTexB", FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);

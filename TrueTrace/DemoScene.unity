@@ -12493,7 +12493,7 @@ MonoBehaviour:
         Pad1: 0
       left: 2
       isLeaf: 0
-    nodes: []
+    SGTree: []
     PrimCount: 768
     FinalIndices: 
     MaxDepth: 12
@@ -31716,7 +31716,7 @@ MonoBehaviour:
         Pad1: 0
       left: 0
       isLeaf: 0
-    nodes: []
+    SGTree: []
     PrimCount: 0
     FinalIndices: 
     MaxDepth: 0
@@ -31836,7 +31836,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 1
+  NeedsToUpdate: 0
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -44366,14 +44366,14 @@ MonoBehaviour:
       RotationSecondary: 0
       RotationSecondaryDiffuse: 0
       RotationSecondaryNormal: 0
-    BaseColor: {x: 1, y: 1, z: 1}
+    BaseColor: {x: 0, y: 1, z: 0.22773886}
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
     Roughness: 0
     MatType: 0
     TransmittanceColor: {x: 1, y: 1, z: 1}
-    IOR: 1.27
+    IOR: 1.16
     Metallic: 0
     Sheen: 0
     SheenTint: 0
@@ -56277,7 +56277,7 @@ MonoBehaviour:
   RenderTransforms: []
   RenderQue: []
   BuildQue:
-  - {fileID: 0}
+  - {fileID: 501551680}
   - {fileID: 1770588100}
   - {fileID: 1928956519}
   AddQue: []
@@ -65439,7 +65439,7 @@ MonoBehaviour:
         Pad1: 0
       left: 2
       isLeaf: 0
-    nodes: []
+    SGTree: []
     PrimCount: 4864
     FinalIndices: 
     MaxDepth: 18
@@ -73138,7 +73138,7 @@ MonoBehaviour:
   TransferKernel: 1
   RefitLayerKernel: 2
   UpdateGlobalBufferAABBKernel: 4
-  LightBLASRefitKernel: 8
+  LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
@@ -79336,7 +79336,7 @@ MonoBehaviour:
         Pad1: 0
       left: 2
       isLeaf: 0
-    nodes: []
+    SGTree: []
     PrimCount: 768
     FinalIndices: 
     MaxDepth: 12
@@ -79453,7 +79453,7 @@ MonoBehaviour:
   TransferKernel: 1
   RefitLayerKernel: 2
   UpdateGlobalBufferAABBKernel: 4
-  LightBLASRefitKernel: 8
+  LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
   NeedsToUpdate: 0
@@ -79526,7 +79526,7 @@ MonoBehaviour:
     Roughness: 0
     MatType: 0
     TransmittanceColor: {x: 1, y: 1, z: 1}
-    IOR: 1.1
+    IOR: 1.42
     Metallic: 0
     Sheen: 0
     SheenTint: 0
@@ -79539,7 +79539,7 @@ MonoBehaviour:
     DiffTrans: 0
     SpecTrans: 1
     Specular: 0
-    ScatterDist: 1
+    ScatterDist: 5
     MetallicRemap: {x: 0, y: 1}
     RoughnessRemap: {x: 0, y: 1}
     AlphaCutoff: 0.1
@@ -79934,7 +79934,7 @@ MonoBehaviour:
         Pad1: 0
       left: 0
       isLeaf: 0
-    nodes: []
+    SGTree: []
     PrimCount: 0
     FinalIndices: 
     MaxDepth: 0
