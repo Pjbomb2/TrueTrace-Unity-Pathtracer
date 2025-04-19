@@ -466,10 +466,12 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     if(SelectedLight.Type == POINTLIGHT) {
         LightPos = SelectedLight.Position;
         uint MeshIndex = 0;
-        float lightWeight = 1;
+        float lightWeight = 1.0f;// / (4.0f * PI);
         float3 Norm = SampleDirectionSphere(random(12, pixel_index).x, random(12, pixel_index).y);
 
-            int MinIndex = SampleLightBVH(LightPos, Norm, lightWeight, pixel_index, MeshIndex, 0, Norm, 0, SGTree, _MeshData);
+            float ax, ay;
+            CalculateAnisotropicParams(0.4,0, ax, ay);
+            int MinIndex = SampleLightBVH(LightPos, Norm, lightWeight, pixel_index, MeshIndex, float2(ax,ay), Norm, 0, SGTree, _MeshData);
         int MeshTriOffset = _MeshData[MeshIndex].TriOffset;
 
         float2 Rand2 = random(79, pixel_index);
@@ -484,7 +486,22 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
             LightPosition = mul(MeshTransformInverse, float4(LightPosition,1));
             LightDir = normalize(LightPosition - LightPos);
 
-        // LightDir = SampleDirectionSphere(random(12, pixel_index).x, random(12, pixel_index).y);
+            float3 a0 = mul(MeshTransformInverse, float4(CurTri.pos0, 1)).xyz;
+            float3 a1 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge1, 1)).xyz;
+            float3 a2 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge2, 1)).xyz;
+            float3 LightNorm = normalize(mul((float3x3)MeshTransformInverse, normalize(cross(CurTri.posedge1, CurTri.posedge2))).xyz);
+
+
+            // if(pdf < 0.8f) {
+                // pdf = 1.0f / (4.0f * PI) * abs((dot(-Norm, LightNorm)) * (dot(LightDir, Norm))) / PI;
+                pdf = 1.0f / (4.0f * PI) * abs((dot(-Norm, LightDir)));// * abs((dot(-Norm, LightNorm)) * (dot(LightDir, Norm))) / PI;
+            // pdf /= rcp(AreaOfTriangle(a0, a1, a2)) / lightWeight;
+            // pdf =  1.0f / (lightWeight) * sqrt(dot(LightPos - LightPosition, LightPos - LightPosition)) *  abs((dot(-Norm, LightNorm)) * (dot(LightDir, Norm)));
+                // if(length(LightPos - LightPosition) > 1.0f) {
+                    // LightDir = SampleDirectionSphere(random(12, pixel_index).x, random(12, pixel_index).y);
+                    // pdf = 1.0f / (4.0f * PI);
+                // }
+            // }
         float3 BBMAX = float3(UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMax.x), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMax.y), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMax.z));
         float3 BBMIN = float3(UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMin.x), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMin.y), UintToFloat(AABBBuff[1 - (PhotonFrames % 2)].BBMin.z));
         float3 to_center = (BBMAX + BBMIN) / 2.0f - LightPos;
@@ -496,8 +513,9 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
         float sharpness = 1.0f / (theta * theta + 1e-5) * 2.0f;
         if(AABBBuff[1 - (PhotonFrames % 2)].PhotonCount > 0 && id.x % 2 == 0 && id.y % 2 == 0) {
             LightDir = SampleSphericalGaussian(axis, sharpness * dist, random(12, pixel_index));
-        }
         pdf = 1.0f / (4.0f * PI);
+        }
+            // pdf /= AreaOfTriangle(a0, a1, a2);
         // LightDir.y = -abs(LightDir.y);
         LightInten = SelectedLight.Radiance;
         // SpotAngle = SpotAngle.y;
