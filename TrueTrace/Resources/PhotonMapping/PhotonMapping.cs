@@ -19,6 +19,14 @@ namespace TrueTrace {
         public RenderTexture mpCausticFluxBucket;
         public RenderTexture ValidDir;
 
+        public RenderTexture CDFX;
+        public RenderTexture CDFY;
+        public RenderTexture[] EquirectVisibilityTex;
+
+        private ComputeShader CDFCompute;
+        private ComputeBuffer CDFTotalBuffer;
+        private int VisTexWidth = 1024;
+
         int FramesSinceStart = 0;
         uint NumPhotons = 500000;
         int analyticPhotons = 500000;
@@ -34,6 +42,8 @@ namespace TrueTrace {
         uint mNumBuckets;
         public bool Initialized = false;
 
+        ComputeBuffer CounterBuffer;
+
         int GenKernel;
         int CollectKernel;
 
@@ -45,15 +55,39 @@ namespace TrueTrace {
             AABBBuffB.ReleaseSafe();
             mpCausticDirBucket.ReleaseSafe();
             mpCausticFluxBucket.ReleaseSafe();
+            EquirectVisibilityTex.ReleaseSafe();
+            CDFX.ReleaseSafe();
+            CDFY.ReleaseSafe();
         }
 
         public void Init() {
+            VisTexWidth = 1024;
             FramesSinceStart = 0;
             if (SPPMShader == null) {SPPMShader = Resources.Load<ComputeShader>("PhotonMapping/SPPM"); }
             GenKernel = SPPMShader.FindKernel("kernel_gen");
             CollectKernel = SPPMShader.FindKernel("kernel_collect");
             Initialized = true;
 
+            CommonFunctions.CreateRenderTextureArray2(ref EquirectVisibilityTex, VisTexWidth, VisTexWidth / 2, 2, CommonFunctions.RTFull4);
+            if(CDFTotalBuffer == null || !CDFTotalBuffer.IsValid()) {
+                CDFTotalBuffer = new ComputeBuffer(1, 4);
+            }
+            if(CDFX == null) {
+                CDFX.ReleaseSafe();
+                CDFY.ReleaseSafe();
+                CDFCompute = Resources.Load<ComputeShader>("Utility/CDFCreator");
+                CommonFunctions.CreateRenderTexture(ref CDFX, VisTexWidth, VisTexWidth / 2, CommonFunctions.RTFull1);
+                CommonFunctions.CreateRenderTexture(ref CDFY, VisTexWidth / 2, 1, CommonFunctions.RTFull1);
+                CounterBuffer = new ComputeBuffer(1, 4);
+                CDFCompute.SetTexture(0, "Tex", EquirectVisibilityTex[0]);
+                CDFCompute.SetTexture(0, "CDFX", CDFX);
+                CDFCompute.SetTexture(0, "CDFY", CDFY);
+                CDFCompute.SetInt("w", VisTexWidth);
+                CDFCompute.SetInt("h", VisTexWidth / 2);
+                CDFCompute.SetBuffer(0, "CounterBuffer", CounterBuffer);
+                CDFCompute.SetBuffer(0, "TotalBuff", CDFTotalBuffer);
+
+            }
 
             analyticPhotons += NumAnalyticLights - (analyticPhotons % NumAnalyticLights);
 
@@ -100,13 +134,14 @@ namespace TrueTrace {
             CommonFunctions.CreateRenderTexture(ref RndNumWrt, (int)Width, (int)Height, CommonFunctions.RTFull4);
             CommonFunctions.CreateRenderTexture(ref mpCausticFluxBucket, (int)Width, (int)Height, CommonFunctions.RTFull4);
             CommonFunctions.CreateDynamicBuffer(ref mpCausticHashPhotonCounter, (int)mNumBuckets, 4);
-            CommonFunctions.CreateDynamicBuffer(ref AABBBuffA, 2, 28);
+            CommonFunctions.CreateDynamicBuffer(ref AABBBuffA, 2, 40);
 
 
         }
 
         public void Generate(CommandBuffer cmd) {
             FramesSinceStart++;
+            bool FlipFrame = (FramesSinceStart % 2) == 0;
             cmd.SetComputeIntParam(SPPMShader, "PhotonFrames", FramesSinceStart);
             cmd.SetComputeIntParam(SPPMShader, "TEMPTESTA", 1);
             cmd.SetComputeIntParam(SPPMShader, "MaxBounce", (int)12);
@@ -132,18 +167,47 @@ namespace TrueTrace {
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("SPPM Init B");
 
 
+
+
             AssetManager.Assets.SetLightData(SPPMShader, GenKernel);
             AssetManager.Assets.SetMeshTraceBuffers(SPPMShader, GenKernel);
             AssetManager.Assets.SetHeightmapTraceBuffers(SPPMShader, GenKernel);
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "gHashBucketPos", mpCausticPosBucket);
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "gHashBucketFlux", mpCausticFluxBucket);
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "RandomNumsWrite", RndNumWrt);
+            cmd.SetComputeTextureParam(SPPMShader, GenKernel, "VisTexA", FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);//READ
+            cmd.SetComputeTextureParam(SPPMShader, GenKernel, "VisTexB", !FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);//WRITE
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "gHashBucketDir", mpCausticDirBucket);
             cmd.SetComputeBufferParam(SPPMShader, GenKernel, "AABBBuff", AABBBuffA);
             cmd.SetComputeBufferParam(SPPMShader, GenKernel, "gHashCounter", mpCausticHashPhotonCounter);
+            cmd.SetComputeTextureParam(SPPMShader, GenKernel, "CDFX", CDFX);
+            cmd.SetComputeTextureParam(SPPMShader, GenKernel, "CDFY", CDFY);
+            cmd.SetComputeBufferParam(SPPMShader, GenKernel, "TotSum", CDFTotalBuffer);
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("SPPM Gen");
             cmd.DispatchCompute(SPPMShader, GenKernel, Mathf.CeilToInt((float)mPGDDispatchX / 32.0f), Mathf.CeilToInt((float)mMaxDispatchY / 32.0f), 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("SPPM Gen");
+
+
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("SPPM Init C");
+            cmd.SetComputeTextureParam(SPPMShader, 2, "VisTexB", !FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);
+            cmd.SetComputeTextureParam(SPPMShader, 2, "CDFXWRITE", CDFX);
+            cmd.SetComputeTextureParam(SPPMShader, 2, "CDFYWRITE", CDFY);
+            cmd.DispatchCompute(SPPMShader, 2, VisTexWidth / 32, VisTexWidth / 64, 1);
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("SPPM Init C");
+
+
+            float[] CDFTotalInit = new float[1];
+            CDFTotalBuffer.SetData(CDFTotalInit);
+            int[] CounterInit = new int[1];
+            CounterBuffer.SetData(CounterInit);
+            cmd.SetComputeTextureParam(CDFCompute, 0, "Tex", !FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);
+            cmd.DispatchCompute(CDFCompute, 0, 1, VisTexWidth / 2, 1);
+
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("SPPM Init D");
+            cmd.SetComputeTextureParam(SPPMShader, 3, "VisTexB", FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);
+            cmd.DispatchCompute(SPPMShader, 3, VisTexWidth / 32, VisTexWidth / 64, 1);
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("SPPM Init D");
+
         }
 
         public void Collect(CommandBuffer cmd, 

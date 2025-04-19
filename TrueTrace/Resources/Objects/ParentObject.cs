@@ -1357,48 +1357,48 @@ namespace TrueTrace {
                     Triangles[OffsetReal].Extend(V3);
                     Triangles[OffsetReal].Validate(ParentScale);
 
-                    // if (_Materials[(int)TempTri.MatDat].MatData.emission > 0.0f) {
-                    //     bool IsValid = true;
-                    //     Vector3 SecondaryBaseCol = Vector3.one;
-                    //     #if AccurateLightTris
-                    //         if(_Materials[(int)TempTri.MatDat].Textures.EmissiveTex.x != 0) {
-                    //             int ThisIndex = _Materials[(int)TempTri.MatDat].Textures.EmissiveTex.x - 1;
-                    //             Vector2 UVV = (new Vector2(Mathf.HalfToFloat((ushort)(TempTri.tex0 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.tex0 & 0xFFFF))) + 
-                    //                             new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge1 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge1 & 0xFFFF))) + 
-                    //                             new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge2 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge2 & 0xFFFF)))) / 3.0f;
-                    //             int UVIndex3 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
-                    //             UVV = new Vector2(Mathf.HalfToFloat((ushort)(TempTri.tex0 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.tex0 & 0xFFFF))); 
-                    //             int UVIndex2 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
-                    //             UVV = new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge1 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge1 & 0xFFFF))); 
-                    //             int UVIndex1 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
-                    //             UVV = new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge2 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge2 & 0xFFFF))); 
-                    //             int UVIndex0 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
-                    //             bool FoundTrue = false;
-                    //             if(UVIndex3 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
-                    //                 if(!(EmissionTexPixels[ThisIndex].pixels[UVIndex3].r < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex3].g < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex3].b < 0.01f)) FoundTrue = true;
-                    //                 // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex].pixels[UVIndex3].r, EmissionTexPixels[ThisIndex].pixels[UVIndex3].g, EmissionTexPixels[ThisIndex].pixels[UVIndex3].b);
-                    //             }
-                    //             if(UVIndex2 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
-                    //                 if(!(EmissionTexPixels[ThisIndex].pixels[UVIndex2].r < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex2].g < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex2].b < 0.01f)) FoundTrue = true;
-                    //                 // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex].pixels[UVIndex3].r, EmissionTexPixels[ThisIndex].pixels[UVIndex3].g, EmissionTexPixels[ThisIndex].pixels[UVIndex3].b);
-                    //             }
-                    //             if(UVIndex1 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
-                    //                 if(!(EmissionTexPixels[ThisIndex].pixels[UVIndex1].r < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex1].g < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex1].b < 0.01f)) FoundTrue = true;
-                    //                 // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex].pixels[UVIndex3].r, EmissionTexPixels[ThisIndex].pixels[UVIndex3].g, EmissionTexPixels[ThisIndex].pixels[UVIndex3].b);
-                    //             }
-                    //             if(UVIndex0 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
-                    //                 if(!(EmissionTexPixels[ThisIndex].pixels[UVIndex0].r < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex0].g < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex0].b < 0.01f)) FoundTrue = true;
-                    //                 // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex].pixels[UVIndex3].r, EmissionTexPixels[ThisIndex].pixels[UVIndex3].g, EmissionTexPixels[ThisIndex].pixels[UVIndex3].b);
-                    //             }
-                    //             IsValid = FoundTrue;
+                    if (_Materials[(int)TempTri.MatDat].MatData.emission > 0.0f) {
+                        bool IsValid = true;
+                        Vector3 SecondaryBaseCol = Vector3.one;
+                        #if AccurateLightTris
+                            if(_Materials[(int)TempTri.MatDat].Textures.EmissiveTex.x != 0) {
+                                int ThisIndex = _Materials[(int)TempTri.MatDat].Textures.EmissiveTex.x - 1;
+                                Vector2 UVV = (new Vector2(Mathf.HalfToFloat((ushort)(TempTri.tex0 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.tex0 & 0xFFFF))) + 
+                                                new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge1 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge1 & 0xFFFF))) + 
+                                                new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge2 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge2 & 0xFFFF)))) / 3.0f;
+                                int UVIndex3 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
+                                UVV = new Vector2(Mathf.HalfToFloat((ushort)(TempTri.tex0 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.tex0 & 0xFFFF))); 
+                                int UVIndex2 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
+                                UVV = new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge1 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge1 & 0xFFFF))); 
+                                int UVIndex1 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
+                                UVV = new Vector2(Mathf.HalfToFloat((ushort)(TempTri.texedge2 >> 16)), Mathf.HalfToFloat((ushort)(TempTri.texedge2 & 0xFFFF))); 
+                                int UVIndex0 = (int)Mathf.Max((Mathf.Floor(UVV.y * (EmissionTexWidthHeight[ThisIndex].y)) * EmissionTexWidthHeight[ThisIndex].x + Mathf.Floor(UVV.x * EmissionTexWidthHeight[ThisIndex].x)),0);
+                                bool FoundTrue = false;
+                                if(UVIndex3 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
+                                    if(!(EmissionTexPixels[ThisIndex].pixels[UVIndex3].r < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex3].g < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex3].b < 0.01f)) FoundTrue = true;
+                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex].pixels[UVIndex3].r, EmissionTexPixels[ThisIndex].pixels[UVIndex3].g, EmissionTexPixels[ThisIndex].pixels[UVIndex3].b);
+                                }
+                                if(UVIndex2 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
+                                    if(!(EmissionTexPixels[ThisIndex].pixels[UVIndex2].r < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex2].g < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex2].b < 0.01f)) FoundTrue = true;
+                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex].pixels[UVIndex3].r, EmissionTexPixels[ThisIndex].pixels[UVIndex3].g, EmissionTexPixels[ThisIndex].pixels[UVIndex3].b);
+                                }
+                                if(UVIndex1 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
+                                    if(!(EmissionTexPixels[ThisIndex].pixels[UVIndex1].r < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex1].g < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex1].b < 0.01f)) FoundTrue = true;
+                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex].pixels[UVIndex3].r, EmissionTexPixels[ThisIndex].pixels[UVIndex3].g, EmissionTexPixels[ThisIndex].pixels[UVIndex3].b);
+                                }
+                                if(UVIndex0 < EmissionTexWidthHeight[ThisIndex].y * EmissionTexWidthHeight[ThisIndex].x){
+                                    if(!(EmissionTexPixels[ThisIndex].pixels[UVIndex0].r < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex0].g < 0.01f && EmissionTexPixels[ThisIndex].pixels[UVIndex0].b < 0.01f)) FoundTrue = true;
+                                    // else SecondaryBaseCol = new Vector3(EmissionTexPixels[ThisIndex].pixels[UVIndex3].r, EmissionTexPixels[ThisIndex].pixels[UVIndex3].g, EmissionTexPixels[ThisIndex].pixels[UVIndex3].b);
+                                }
+                                IsValid = FoundTrue;
                             
-                    //         }
-                    //     #endif
-                        if(_Materials[(int)TempTri.MatDat].MatData.SpecTrans > 0 || (_Materials[(int)TempTri.MatDat].MatData.Metallic > 0 && _Materials[(int)TempTri.MatDat].MatData.Roughness < 0.3f)) {
-                            Vector3 Radiance = Vector3.one;//_Materials[(int)TempTri.MatDat].MatData.BaseColor;
+                            }
+                        #endif
+                        if(IsValid && _Materials[(int)TempTri.MatDat].MatData.emission > 0) {
+                            Vector3 Radiance = _Materials[(int)TempTri.MatDat].MatData.emission * Vector3.one;//_Materials[(int)TempTri.MatDat].MatData.BaseColor;
                             float radiance = luminance(Radiance.x, Radiance.y, Radiance.z);
                             float area = AreaOfTriangle(ParentMat * V1, ParentMat * V2, ParentMat * V3);
-                            if(area != 0) {
+                            if(area != 0 && radiance > 0) {
                                 HasLightTriangles = true;
                                 float e = radiance * area;
                                 if(System.Double.IsNaN(area)) continue;
@@ -1409,14 +1409,14 @@ namespace TrueTrace {
                                     posedge1 = TempTri.posedge1,
                                     posedge2 = TempTri.posedge2,
                                     TriTarget = (uint)(OffsetReal),
-                                    SourceEnergy = 1//_Materials[(int)TempTri.MatDat].MatData.emission//Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].MatData.emission * Scale(_Materials[(int)TempTri.MatDat].MatData.BaseColor, SecondaryBaseCol))
+                                    SourceEnergy = _Materials[(int)TempTri.MatDat].MatData.emission//Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].MatData.emission * Scale(_Materials[(int)TempTri.MatDat].MatData.BaseColor, SecondaryBaseCol))
                                     });
-                                LuminanceWeights.Add(1);//_Materials[(int)TempTri.MatDat].MatData.emission);//Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol)));
+                                LuminanceWeights.Add(_Materials[(int)TempTri.MatDat].MatData.emission);//Distance(Vector3.zero, _Materials[(int)TempTri.MatDat].emission * Scale(_Materials[(int)TempTri.MatDat].BaseColor, SecondaryBaseCol)));
                                 AggTriangles[OffsetReal].IsEmissive = 1;
                                 IllumTriCount++;
                             }
                         }
-                    // }
+                    }
                     OffsetReal++;
                 }
             }
