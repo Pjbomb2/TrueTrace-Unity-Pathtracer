@@ -671,7 +671,7 @@ int i;
 
         // if(scatDist != 999999) photon.Flux *= exp(-bestHit.t * CalculateExtinction(1.0f - (surfCol), scatDist == 0.0f ? 1.0f : scatDist));
 #ifdef StainedGlassShadows
-        if(!CurrentRay.diffuseHit && (scatDist != 999999 || WasLast)) {
+        if(!CurrentRay.diffuseHit && i > 0 && (scatDist != 999999 || WasLast)) {
             CurrentRay.throughput *= exp(-bestHit.t * CalculateExtinction(1.0f - (surfCol), scatDist == 0.0f ? 1.0f : scatDist * 12.0f));
             photon.Flux *= exp(-bestHit.t * CalculateExtinction(1.0f - (surfCol), scatDist == 0.0f ? 1.0f : scatDist * 12.0f));
         }

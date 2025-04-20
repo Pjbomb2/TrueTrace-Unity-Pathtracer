@@ -124,6 +124,7 @@ namespace TrueTrace {
                     ThisLightData.SpotAngle = new Vector2(angleRangeInv, -outerCos * angleRangeInv);
                 }
                 ThisLightData.Direction = (ThisLightData.Type == 1) ? -LocalTransform.forward : (ThisLightData.Type == 2) ? Vector3.Normalize(LocalTransform.forward) : LocalTransform.forward;
+                ThisLightData.Softness = ShadowSoftness;
                 ThisLightData.ZAxisRotation = LocalTransform.localEulerAngles.z * 3.14159f / 180.0f;
                 NeedsToUpdate = false;
                 LocalTransform.hasChanged = false;

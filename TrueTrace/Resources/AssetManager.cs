@@ -2036,15 +2036,15 @@ namespace TrueTrace {
                 RayMaster.MainDirectionalLight = -1;
                 for (int i = 0; i < LightCount; i++) {
                     RayLight = RayTracingMaster._rayTracingLights[i];
+                    if(RayLight.ThisLightData.Type == 1) {
+                        if(RayLight.IsMainSun || RayMaster.MainDirectionalLight == -1) {
+                            RayMaster.MainDirectionalLight = i;
+                            SunDirection = RayLight.ThisLightData.Direction;
+                        }
+                    }
                     if(RayLight.CallHasUpdated()) {
                         RayTracingMaster.SampleCount = 0;
                         RayMaster.FramesSinceStart = 0;
-                        if(RayLight.ThisLightData.Type == 1) {
-                            if(RayLight.IsMainSun || RayMaster.MainDirectionalLight == -1) {
-                                RayMaster.MainDirectionalLight = i;
-                                SunDirection = RayLight.ThisLightData.Direction;
-                            }
-                        }
                         UnityLights[RayLight.ArrayIndex] = RayLight.ThisLightData;
                         UnityLightBuffer.SetData(UnityLights, RayLight.ArrayIndex, RayLight.ArrayIndex, 1);
                     }
