@@ -68,11 +68,11 @@ namespace TrueTrace {
             CollectKernel = SPPMShader.FindKernel("kernel_collect");
             Initialized = true;
 
-            CommonFunctions.CreateRenderTextureArray2(ref EquirectVisibilityTex, VisTexWidth, VisTexWidth / 2, 2, CommonFunctions.RTFull2);
             if(CDFTotalBuffer == null || !CDFTotalBuffer.IsValid()) {
                 CDFTotalBuffer = new ComputeBuffer(1, 4);
             }
             if(CDFX == null) {
+                CommonFunctions.CreateRenderTextureArray2(ref EquirectVisibilityTex, VisTexWidth, VisTexWidth / 2, 2, CommonFunctions.RTFull2);
                 CDFX.ReleaseSafe();
                 CDFY.ReleaseSafe();
                 CDFCompute = Resources.Load<ComputeShader>("Utility/CDFCreator");
@@ -140,6 +140,7 @@ namespace TrueTrace {
         }
 
         public void Generate(CommandBuffer cmd) {
+            if(AABBBuffA == null || !AABBBuffA.IsValid() || mpCausticHashPhotonCounter == null || !mpCausticHashPhotonCounter.IsValid() || EquirectVisibilityTex == null || EquirectVisibilityTex[0] == null || EquirectVisibilityTex[1] == null) Init();
             FramesSinceStart++;
             bool FlipFrame = (FramesSinceStart % 2) == 0;
             cmd.SetComputeIntParam(SPPMShader, "PhotonFrames", FramesSinceStart);
@@ -194,6 +195,32 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(SPPMShader, 2, "CDFYWRITE", CDFY);
             cmd.DispatchCompute(SPPMShader, 2, VisTexWidth / 32, VisTexWidth / 64, 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("SPPM Init C");
+
+
+            if(CDFTotalBuffer == null || !CDFTotalBuffer.IsValid()) {
+                CDFTotalBuffer = new ComputeBuffer(1, 4);
+            }
+
+            if(CounterBuffer == null || !CounterBuffer.IsValid()) {
+                CounterBuffer = new ComputeBuffer(1, 4);
+            }
+
+            if(EquirectVisibilityTex == null || EquirectVisibilityTex[0] == null || EquirectVisibilityTex[1] == null) CommonFunctions.CreateRenderTextureArray2(ref EquirectVisibilityTex, VisTexWidth, VisTexWidth / 2, 2, CommonFunctions.RTFull2);
+                CDFCompute = Resources.Load<ComputeShader>("Utility/CDFCreator");
+            if(CDFX == null) {
+                CDFX.ReleaseSafe();
+                CDFY.ReleaseSafe();
+                CommonFunctions.CreateRenderTexture(ref CDFX, VisTexWidth, VisTexWidth / 2, CommonFunctions.RTFull1);
+                CommonFunctions.CreateRenderTexture(ref CDFY, VisTexWidth / 2, 1, CommonFunctions.RTFull1);
+
+            }
+                CDFCompute.SetTexture(1, "Tex2", EquirectVisibilityTex[0]);
+                CDFCompute.SetTexture(1, "CDFX", CDFX);
+                CDFCompute.SetTexture(1, "CDFY", CDFY);
+                CDFCompute.SetInt("w", VisTexWidth);
+                CDFCompute.SetInt("h", VisTexWidth / 2);
+                CDFCompute.SetBuffer(1, "CounterBuffer", CounterBuffer);
+                CDFCompute.SetBuffer(1, "TotalBuff", CDFTotalBuffer);
 
 
             float[] CDFTotalInit = new float[1];
