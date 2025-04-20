@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.12731749, g: 0.13414757, b: 0.1210787, a: 1}
+  m_IndirectSpecularColor: {r: 0.17879245, g: 0.22387409, b: 0.30576947, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -33906,7 +33906,7 @@ MonoBehaviour:
     Radiance: {x: 32, y: 32, z: 32}
     Position: {x: -1.4816499, y: 5.724826, z: -1.1294421}
     Direction: {x: -0.40884805, y: 0.8689685, z: -0.2788136}
-    Type: 0
+    Type: 1
     SpotAngle: {x: 0, y: 0}
     ZAxisRotation: 0.066060774
     Softness: 0
@@ -33932,7 +33932,7 @@ Light:
   m_GameObject: {fileID: 610660757}
   m_Enabled: 1
   serializedVersion: 10
-  m_Type: 2
+  m_Type: 1
   m_Shape: 0
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Intensity: 32
@@ -33992,8 +33992,8 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 610660757}
-  m_LocalRotation: {x: 0.012284666, y: -0.644979, z: 0.019894287, w: 0.7638426}
-  m_LocalPosition: {x: 1.4490688, y: 9.13, z: 0.18470068}
+  m_LocalRotation: {x: 0.29151693, y: -0.62828493, z: 0.36833778, w: 0.62016386}
+  m_LocalPosition: {x: 3.4832604, y: 1.1009426, z: 0.7286829}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -44366,14 +44366,14 @@ MonoBehaviour:
       RotationSecondary: 0
       RotationSecondaryDiffuse: 0
       RotationSecondaryNormal: 0
-    BaseColor: {x: 0, y: 1, z: 0.22773886}
+    BaseColor: {x: 0, y: 1, z: 0.23315763}
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
     Roughness: 0
     MatType: 0
     TransmittanceColor: {x: 1, y: 1, z: 1}
-    IOR: 1.16
+    IOR: 1.09
     Metallic: 0
     Sheen: 0
     SheenTint: 0
@@ -44386,7 +44386,7 @@ MonoBehaviour:
     DiffTrans: 0
     SpecTrans: 1
     Specular: 0
-    ScatterDist: 5
+    ScatterDist: 0.32
     MetallicRemap: {x: 0, y: 1}
     RoughnessRemap: {x: 0, y: 1}
     AlphaCutoff: 0.1
@@ -79519,14 +79519,14 @@ MonoBehaviour:
       RotationSecondary: 0
       RotationSecondaryDiffuse: 0
       RotationSecondaryNormal: 0
-    BaseColor: {x: 1, y: 1, z: 1}
+    BaseColor: {x: 1, y: 0, z: 0}
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
     Roughness: 0
     MatType: 0
     TransmittanceColor: {x: 1, y: 1, z: 1}
-    IOR: 1.42
+    IOR: 1.04
     Metallic: 0
     Sheen: 0
     SheenTint: 0
@@ -79539,7 +79539,7 @@ MonoBehaviour:
     DiffTrans: 0
     SpecTrans: 1
     Specular: 0
-    ScatterDist: 5
+    ScatterDist: 2.35
     MetallicRemap: {x: 0, y: 1}
     RoughnessRemap: {x: 0, y: 1}
     AlphaCutoff: 0.1

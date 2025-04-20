@@ -73,6 +73,31 @@ namespace TrueTrace {
 		[HideInInspector] public int MatOffset = 0;
 		private bool WasDeleted = false;
 
+
+		public void UpdateParentChain() {
+			bool Fine = TryGetComponent<ParentObject>(out ParentObject ThisParent);
+			Fine = transform.parent.TryGetComponent<ParentObject>(out ParentObject ParParent) || Fine;
+	    	if(gameObject.scene.isLoaded && Fine) {
+	    		if(WasDeleted) return;
+		    	if(ThisParent != null) {
+		    		int IndexLength = LocalMaterialIndex.Length;
+		    		for(int i = 0; i < IndexLength; i++) {
+		    			MaterialData TempMat = ThisParent._Materials[LocalMaterialIndex[i]];
+		    			TempMat.MatData = LocalMaterials[i];
+		    			ThisParent._Materials[LocalMaterialIndex[i]] = TempMat;
+		    		}
+
+		    	} else if(ParParent != null) {
+		    		int IndexLength = LocalMaterialIndex.Length;
+		    		for(int i = 0; i < IndexLength; i++) {
+		    			MaterialData TempMat = ParParent._Materials[LocalMaterialIndex[i]];
+		    			TempMat.MatData = LocalMaterials[i];
+		    			ParParent._Materials[LocalMaterialIndex[i]] = TempMat;
+		    		}
+	    		}
+	    	}			
+		}
+
 		public void CallMaterialOverride() {
 			Material[] SharedMaterials = (GetComponent<Renderer>() != null) ? GetComponent<Renderer>().sharedMaterials : GetComponent<SkinnedMeshRenderer>().sharedMaterials;
 			int NamLen = Names.Length;
@@ -98,7 +123,10 @@ namespace TrueTrace {
 
 		public void CallMaterialEdited(bool Do = false) {
 			if(Application.isPlaying) {
-				if(gameObject.activeInHierarchy && AssetManager.Assets != null) AssetManager.Assets.MaterialsChanged.Add(this);
+				if(gameObject.activeInHierarchy && AssetManager.Assets != null) {
+					AssetManager.Assets.MaterialsChanged.Add(this);
+					UpdateParentChain();
+				}
 			}
 			System.Array.Fill(FollowMaterial, false);
 			CallMaterialOverride();
@@ -380,6 +408,8 @@ namespace TrueTrace {
 	    		}
 	    	}			
 		}
+
+
 	    private void OnEnable() {
 			bool Fine = TryGetComponent<ParentObject>(out ParentObject ThisParent);
 			if(transform.parent != null) Fine = transform.parent.TryGetComponent<ParentObject>(out ParentObject ParParent) || Fine;

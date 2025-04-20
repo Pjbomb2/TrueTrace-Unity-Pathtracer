@@ -74,7 +74,7 @@ MonoBehaviour:
   PPFXAA: 0
   OIDNBlendRatio: 1
   ConvBloom: 1
-  ConvStrength: 7.03
+  ConvStrength: 0
   ConvBloomThreshold: 0
   ConvBloomSize: {x: 1, y: 1}
   ConvBloomDistExp: 0

@@ -1,3 +1,7 @@
+#define COLOREDGLASS
+#define ACCURATECAUSTICS
+#define gCausticRadius 0.005f
+
 // #include "UnityCG.cginc"
 #include "../GlobalDefines.cginc"
 
@@ -21,7 +25,6 @@ RWTexture2D<float4> gHashBucketFlux;
 RWTexture2D<float4> gHashBucketDir;
 RWStructuredBuffer<uint> gHashCounter;
 
-#define gCausticRadius 0.005f
 #define gCausticHashScaleFactor (1.0f / gCausticRadius)
 
 #define gBucketYExtent 512
@@ -408,7 +411,7 @@ inline void calcFinalColor(inout PhotonRayData ray, MaterialData hitDat, RayHit 
             USGNorm *= -1;
             surfCol = hitDat.surfaceColor;
             if(!GotFlipped) scatDist = hitDat.scatterDistance;
-            else scatDist = 999999;
+            // else scatDist = 999999;
         }
         bsdf *= bsdfmodifier;
         throughput *= bsdf;
@@ -604,7 +607,7 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
             float3 A = SampleLIPhoton(pixel_index, pdf, Dir2);
             LightDir = normalize(Dir2 * 122.0f + LightDir);
             // LightDir = normalize(Dir2);// * 12.0f + LightDir);
-            // pdf = 1.0f / (4.0f * PI) * pdf;
+            pdf = pdf;
         }
         LightInten = SelectedLight.Radiance;// * 2.0f * PI;
         // if(all(LightInten <= 0.000001f)) return;
@@ -615,14 +618,17 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
         LightDir = ToWorld(GetTangentSpace(SelectedLight.Direction), LightDir);
         pdf = 1.0f / (4.0f * PI);
 
+                pdf = (2.0f * PI * (1.0f - ConeAngle)) / (4.0f * PI);
         LightInten = SelectedLight.Radiance;
         if(AABBBuff[1 - (PhotonFrames % 2)].PhotonCount > 0 && id.x % 2 == 0 && id.y % 2 == 0) {
             float3 Dir2;
             float3 A = SampleLIPhoton(pixel_index, pdf, Dir2);
             Dir2 = normalize(Dir2);
-            if(saturate(saturate(dot(-Dir2, -SelectedLight.Direction)) * SelectedLight.SpotAngle.x + SelectedLight.SpotAngle.y) > 0.0000f) LightDir = Dir2;
-            else pdf = 1.0f / (4.0f * PI);
-            // pdf = 1.0f / (4.0f * PI) * pdf;
+            if(saturate(saturate(dot(-Dir2, -SelectedLight.Direction)) * SelectedLight.SpotAngle.x + SelectedLight.SpotAngle.y) > 0.0000f) {
+            LightDir = normalize(Dir2 * 122.0f + LightDir);
+                // LightDir = Dir2;
+                pdf = pdf = (2.0f * PI * (1.0f - ConeAngle)) / (4.0f * PI) * pdf;
+            } else pdf = (2.0f * PI * (1.0f - ConeAngle)) / (4.0f * PI);
         }
         // pdf /= 2.0f;
     } else if(SelectedLight.Type = DIRECTIONALLIGHT) {
@@ -631,20 +637,23 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
         LightDir = -SelectedLight.Direction;//ToWorld(GetTangentSpace(SelectedLight.Direction), LightDir);
         
             float3 RandVec = float3(random(115, pixel_index), random(116, pixel_index).x);
-            // sincos(RandVec.x * 2.0f * PI, RandVec.x, RandVec.y);
-            // RandVec.xy *= RandVec.z * 1.0f;
-            LightDir = ToWorld(GetTangentSpace(-SelectedLight.Direction), normalize(float3(RandVec.x - 0.5f,1,RandVec.y - 0.5f)));// * length(RandVec.xy);
-            // LightPos = NewLightPos;
+            // LightDir = ToWorld(GetTangentSpace(-SelectedLight.Direction), normalize(float3(RandVec.x - 0.5f,1,RandVec.y - 0.5f)));// * length(RandVec.xy);
+
+                    float cosPhi = 1;
+                    float sinPhi = 1;
+                     sincos(RandVec.x * 2.0f * PI, RandVec.x, RandVec.y);
+                    RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy) * RandVec.z * 100.f;
+                    LightDir = normalize(ToWorld(GetTangentSpace2(-SelectedLight.Direction), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy) - LightPos);
 
 
+        pdf = 100.0f / (4.0f * PI);
         if(AABBBuff[1 - (PhotonFrames % 2)].PhotonCount > 0 && id.x % 2 == 0 && id.y % 2 == 0) {
             float3 Dir2;
             float3 A = SampleLIPhoton(pixel_index, pdf, Dir2);
-            // LightDir = normalize(Dir2 * 12.0f + LightDir);
-            LightDir = normalize(Dir2);// * 12.0f + LightDir);
-            // pdf = 1.0f / (4.0f * PI) * pdf;
+            LightDir = normalize(Dir2 * 122.0f + LightDir);
+            // LightDir = normalize(Dir2);// * 12.0f + LightDir);
+            pdf = 100.0f / pdf / (4.0f * PI);
         }
-        pdf = 1.0f / (4.0f * PI);
 
         LightInten = SelectedLight.Radiance;
     }
@@ -670,10 +679,10 @@ int i;
         FullTrace(CurrentRay, bestHit, pixel_index, id, i, surfCol, scatDist);
 
         // if(scatDist != 999999) photon.Flux *= exp(-bestHit.t * CalculateExtinction(1.0f - (surfCol), scatDist == 0.0f ? 1.0f : scatDist));
-#ifdef StainedGlassShadows
+#ifdef COLOREDGLASS
         if(!CurrentRay.diffuseHit && i > 0 && (scatDist != 999999 || WasLast)) {
-            CurrentRay.throughput *= exp(-bestHit.t * CalculateExtinction(1.0f - (surfCol), scatDist == 0.0f ? 1.0f : scatDist * 12.0f));
-            photon.Flux *= exp(-bestHit.t * CalculateExtinction(1.0f - (surfCol), scatDist == 0.0f ? 1.0f : scatDist * 12.0f));
+            CurrentRay.throughput *= exp(-bestHit.t * CalculateExtinction(1.0f - (surfCol), scatDist == 0.0f ? 1.0f : scatDist));
+            photon.Flux *= exp(-bestHit.t * CalculateExtinction(1.0f - (surfCol), scatDist == 0.0f ? 1.0f : scatDist));
         }
 #endif
             WasLast = scatDist != 999999;
@@ -799,7 +808,11 @@ float3 photonContribution(float3 Norm, float3 Pos, uint hash, inout int TotPhotC
     if(NdotL > kMinCosTheta){
         // let bsdf = gScene.materials.getBSDF(sd, lod);
         // float3 f_r = bsdf.eval(sd, -photonDir.xyz,sg) / NdotL;
+#ifdef ACCURATECAUSTICS
+        radiance = rcp(NdotL) * photonFlux.xyz * photonCount * photonFlux.w ;//* ((float)max(min(photonCount-3,5),1));
+#else
         radiance = 4.0f * photonFlux.xyz * photonCount * photonFlux.w ;//* ((float)max(min(photonCount-3,5),1));
+#endif
     }
     return radiance;
 }
