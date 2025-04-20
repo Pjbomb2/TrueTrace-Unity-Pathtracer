@@ -12613,7 +12613,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -15103,12 +15103,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ThisLight: {fileID: 610660759}
   ThisLightData:
-    Radiance: {x: 0, y: 0, z: 0}
-    Position: {x: 0, y: 0, z: 0}
-    Direction: {x: 0, y: 0, z: 0}
-    Type: 0
+    Radiance: {x: 32, y: 32, z: 32}
+    Position: {x: -1.4816499, y: 5.724826, z: -1.1294421}
+    Direction: {x: -0.40884805, y: 0.8689685, z: -0.2788136}
+    Type: 1
     SpotAngle: {x: 0, y: 0}
-    ZAxisRotation: 0
+    ZAxisRotation: 0.066060774
     Softness: 0
     IESTex: {x: 0, y: 0}
   ArrayIndex: 0
@@ -15117,7 +15117,12 @@ MonoBehaviour:
   UseKelvin: 0
   IsMainSun: 1
   KelvinTemperature: 1000
+  Intensity: 32
+  Col: {x: 1, y: 1, z: 1}
+  SpotAngle: 30
+  HasInitialized: 1
   IESProfile: {fileID: 0}
+  NeedsToUpdate: 0
 --- !u!108 &610660759
 Light:
   m_ObjectHideFlags: 0
@@ -23764,7 +23769,7 @@ MonoBehaviour:
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
-    Metallic: 0
+    Metallic: 0.35899997
     Sheen: 0
     SheenTint: 0
     SpecularTint: 0
@@ -53987,7 +53992,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -60468,7 +60473,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 3
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0

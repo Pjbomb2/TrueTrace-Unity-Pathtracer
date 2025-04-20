@@ -427,7 +427,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         if (SelectedLightGroup == 1) {//we only really need to precompute this, right? maybe we can do a similar optimization as ReSTIR DI?
             AggTriIndex = SelectUnityLight(pixel_index, RunningWeight, norm, pos, PrevDirection);
             LightData Light = _UnityLights[AggTriIndex];
-            float sinPhi, cosPhi;
+            float sinPhi, cosPhi = 1;
             LightPosition = Light.Position;
             LightNorm = Light.Direction;
             LightFormat = Light.Type;
@@ -773,7 +773,7 @@ int MaterialIndex;
         if (SelectedLightGroup == 1) {//we only really need to precompute this, right? maybe we can do a similar optimization as ReSTIR DI?
             AggTriIndex = SelectUnityLight(pixel_index, RunningWeight, norm, pos, PrevDirection);
             LightData Light = _UnityLights[AggTriIndex];
-            float sinPhi, cosPhi;
+            float sinPhi, cosPhi = 1;
             LightPosition = Light.Position;
             LightNorm = Light.Direction;
             LightFormat = Light.Type;
