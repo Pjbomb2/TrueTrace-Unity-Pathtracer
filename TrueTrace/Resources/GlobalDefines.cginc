@@ -22,7 +22,7 @@
 #define UseBRDFLights
 #define DoubleBufferSGTree
 // #define Fog
-#define RadCache
+// #define RadCache
 #define ClampRoughnessToBounce
 // #define TTCustomMotionVectors
 // #define ReSTIRSampleReduction
