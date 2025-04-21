@@ -209,9 +209,9 @@ Texture2D<half4> _EmissiveAtlas;
 Texture2D<half> _IESAtlas;
 Texture2D<half> Heightmap;
 
+SamplerState my_trilinear_repeat_sampler;
+SamplerState my_point_repeat_sampler;
 #if defined(UseBindless) && !defined(DX11)
-	SamplerState my_trilinear_repeat_sampler;
-	SamplerState my_point_repeat_sampler;
 	Texture2D<float4> _BindlessTextures[2048] : register(t31);
 #endif
 
