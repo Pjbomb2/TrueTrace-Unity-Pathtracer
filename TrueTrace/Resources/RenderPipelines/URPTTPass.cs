@@ -27,7 +27,7 @@ using UnityEngine.Experimental.Rendering;
             ThisTex.Create();
         }
         public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData) {
-            renderingData.cameraData.camera.depthTextureMode = DepthTextureMode.MotionVectors | DepthTextureMode.Depth | DepthTextureMode.DepthNormals;
+            renderingData.cameraData.camera.depthTextureMode = DepthTextureMode.Depth;
             #if UNITY_2021
                 m_CameraColorTarget = renderer.cameraColorTarget;
             #else
@@ -50,12 +50,19 @@ using UnityEngine.Experimental.Rendering;
             CommandBuffer cmd = new CommandBuffer();
             cmd.name = "TrueTrace";
             
+#if !TTCustomMotionVectors
+            renderingData.cameraData.camera.depthTextureMode = DepthTextureMode.MotionVectors | DepthTextureMode.Depth;
             var motionVectors = Shader.GetGlobalTexture("_MotionVectorTexture");
             Shader.SetGlobalTexture("_CameraMotionVectorsTexture", motionVectors);
-            Shader.SetGlobalTexture("_CameraGBufferTexture2", Shader.GetGlobalTexture("_GBuffer2"));
-            Shader.SetGlobalTexture("_CameraGBufferTexture0", Shader.GetGlobalTexture("_GBuffer0"));
-            Shader.SetGlobalTexture("_CameraGBufferTexture1", Shader.GetGlobalTexture("_GBuffer1"));
+#else
+            renderingData.cameraData.camera.depthTextureMode = DepthTextureMode.None;
+#endif
             RayMaster.TossCamera(renderingData.cameraData.camera);
+            if(TrueTrace.RayTracingMaster.RayMaster.LocalTTSettings.RenderScale != 1.0f && TrueTrace.RayTracingMaster.RayMaster.LocalTTSettings.UpscalerMethod != 0) {
+                Shader.SetGlobalTexture("_CameraGBufferTexture2", Shader.GetGlobalTexture("_GBuffer2"));
+                Shader.SetGlobalTexture("_CameraGBufferTexture0", Shader.GetGlobalTexture("_GBuffer0"));
+                Shader.SetGlobalTexture("_CameraGBufferTexture1", Shader.GetGlobalTexture("_GBuffer1"));
+            }
             RayMaster.RenderImage(MainTex, cmd);
             cmd.Blit(MainTex, m_CameraColorTarget);
             context.ExecuteCommandBuffer(cmd);

@@ -12,8 +12,7 @@ public class RenderHandle : MonoBehaviour
     {
         if(GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>().Length == 0) {RayMaster = null; return;}
         RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
-        gameObject.GetComponent<Camera>().renderingPath = RenderingPath.DeferredShading;
-        gameObject.GetComponent<Camera>().depthTextureMode |= DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
+        // gameObject.GetComponent<Camera>().renderingPath = RenderingPath.DeferredShading;
         RayMaster.TossCamera(gameObject.GetComponent<Camera>());
         RayMaster.Start2();
         SceneManager.sceneLoaded += OnSceneLoaded;
@@ -34,6 +33,11 @@ public class RenderHandle : MonoBehaviour
             Start();
         }
         if(RayMaster == null) return;
+#if !TTCustomMotionVectors
+        TrueTrace.RayTracingMaster._camera.depthTextureMode |= DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
+#else
+        TrueTrace.RayTracingMaster._camera.depthTextureMode = DepthTextureMode.None;
+#endif
         CommandBuffer cmd = new CommandBuffer();
         cmd.name = "TrueTrace";
         RayMaster.RenderImage(destination, cmd);

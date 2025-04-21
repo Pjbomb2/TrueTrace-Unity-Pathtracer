@@ -152,6 +152,10 @@ namespace TrueTrace {
         public void Load()
         {
             TerrainTile = this.gameObject.GetComponent<Terrain>();
+            if(TerrainTile.terrainData == null) {
+                DestroyImmediate(this);
+                return;
+            }
             HeightMap = new Texture2D(TerrainTile.terrainData.heightmapResolution, TerrainTile.terrainData.heightmapResolution, UnityEngine.Experimental.Rendering.GraphicsFormat.R16_UNorm, UnityEngine.Experimental.Rendering.TextureCreationFlags.None);
 
             Graphics.ConvertTexture(TerrainTile.terrainData.heightmapTexture, HeightMap);
@@ -173,19 +177,19 @@ namespace TrueTrace {
             {
                 MaterialData MatDat = new MaterialData();
                 int TempIndex = 0;
-                TextureParse(ref AlbedoTexs, ref TempIndex, TerrainTile.terrainData.terrainLayers[i].diffuseTexture); MatDat.AlbedoTex.x = TempIndex;
-                TextureParse(ref NormalTexs, ref TempIndex, TerrainTile.terrainData.terrainLayers[i].normalMapTexture); MatDat.NormalTex.x = TempIndex;
-                TextureParse(ref MaskTexs, ref TempIndex, TerrainTile.terrainData.terrainLayers[i].maskMapTexture); MatDat.MetallicTex.x = TempIndex;
-                TextureParse(ref MaskTexs, ref TempIndex, TerrainTile.terrainData.terrainLayers[i].maskMapTexture); MatDat.RoughnessTex.x = TempIndex;
+                TextureParse(ref AlbedoTexs, ref TempIndex, TerrainTile.terrainData.terrainLayers[i].diffuseTexture); MatDat.Textures.AlbedoTex.x = TempIndex;
+                TextureParse(ref NormalTexs, ref TempIndex, TerrainTile.terrainData.terrainLayers[i].normalMapTexture); MatDat.Textures.NormalTex.x = TempIndex;
+                TextureParse(ref MaskTexs, ref TempIndex, TerrainTile.terrainData.terrainLayers[i].maskMapTexture); MatDat.Textures.MetallicTex.x = TempIndex;
+                TextureParse(ref MaskTexs, ref TempIndex, TerrainTile.terrainData.terrainLayers[i].maskMapTexture); MatDat.Textures.RoughnessTex.x = TempIndex;
 
-                MatDat.metallic = TerrainTile.terrainData.terrainLayers[i].metallic;
-                MatDat.Specular = 0;//TerrainTile.terrainData.terrainLayers[i].smoothness,
-                MatDat.IOR = 1;//TerrainTile.terrainData.terrainLayers[i].smoothness != 0 ? 1.33f : 1,
-                MatDat.BaseColor = new Vector3(TerrainTile.terrainData.size.x / TerrainTile.terrainData.terrainLayers[i].tileSize.x, TerrainTile.terrainData.size.z / TerrainTile.terrainData.terrainLayers[i].tileSize.y, 0);
-                MatDat.TransmittanceColor = new Vector3(TerrainTile.terrainData.terrainLayers[i].tileOffset.x / TerrainTile.terrainData.terrainLayers[i].tileSize.x, TerrainTile.terrainData.terrainLayers[i].tileOffset.y / TerrainTile.terrainData.terrainLayers[i].tileSize.y, 0);
-                MatDat.MatType = 1;
-                MatDat.Tag.SetFlag(CommonFunctions.Flags.UseSmoothness, true);
-                MatDat.AlbedoTextureScale = new Vector4(1,1,0,0);
+                MatDat.MatData.Metallic = TerrainTile.terrainData.terrainLayers[i].metallic;
+                MatDat.MatData.Specular = 0;//TerrainTile.terrainData.terrainLayers[i].smoothness,
+                MatDat.MatData.IOR = 1;//TerrainTile.terrainData.terrainLayers[i].smoothness != 0 ? 1.33f : 1,
+                MatDat.MatData.BaseColor = new Vector3(TerrainTile.terrainData.size.x / TerrainTile.terrainData.terrainLayers[i].tileSize.x, TerrainTile.terrainData.size.z / TerrainTile.terrainData.terrainLayers[i].tileSize.y, 0);
+                MatDat.MatData.TransmittanceColor = new Vector3(TerrainTile.terrainData.terrainLayers[i].tileOffset.x / TerrainTile.terrainData.terrainLayers[i].tileSize.x, TerrainTile.terrainData.terrainLayers[i].tileOffset.y / TerrainTile.terrainData.terrainLayers[i].tileSize.y, 0);
+                MatDat.MatData.MatType = 1;
+                MatDat.MatData.Tag.SetFlag(CommonFunctions.Flags.UseSmoothness, true);
+                MatDat.MatData.TextureModifiers.MainTexScaleOffset = new Vector4(1,1,0,0);
                 Materials.Add(MatDat);
             }
 
@@ -224,6 +228,7 @@ namespace TrueTrace {
                     TempGameObject.AddComponent<InstancedObject>();
                     TempGameObject.GetComponent<InstancedObject>().InstanceParent = GameObject.Find(TreeSources[Tree.prototypeIndex].name).GetComponent<ParentObject>();
                     TempGameObject.transform.position = new Vector3(Tree.position.x * TerrainDimX, Tree.position.y * HeightScale, Tree.position.z * TerrainDimY) + this.transform.position;
+                    TempGameObject.transform.localScale = new Vector3(Tree.widthScale, Tree.heightScale, Tree.widthScale);
 
                 }
             }

@@ -205,7 +205,32 @@ inline float3 AgX(float3 stimulus) {
 
     return LUT.SampleLevel(sampler_linear_clamp, uv, 0).xyz;
 }
+
+
+
+float3 PBRNeutralToneMapping( float3 color ) {
+  const float startCompression = 0.8 - 0.04;
+  const float desaturation = 0.15;
+
+  float x = min(color.r, min(color.g, color.b));
+  float offset = x < 0.08 ? x - 6.25 * x * x : 0.04;
+  color -= offset;
+
+  float peak = max(color.r, max(color.g, color.b));
+  if (peak < startCompression) return color;
+
+  const float d = 1. - startCompression;
+  float newPeak = 1. - d * d / (peak + d - startCompression);
+  color *= newPeak / peak;
+
+  float g = 1. - 1. / (desaturation * (peak - newPeak) + 1.);
+  return lerp(color, newPeak * float3(1, 1, 1), g);
+}
+
 int screen_width;
+
+
+
 
 [numthreads(16,16,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
@@ -230,6 +255,15 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         break;
         case 5:
             result = AgX(result);
+        break;
+        case 6:
+            result = AgX(result);
+        break;
+        case 7:
+            result = AgX(result);
+        break;
+        case 8:
+            result = pow(PBRNeutralToneMapping(pow(result,rcp(2.2f))),(2.2f));
         break;
     };
     Result[id.xy] = float4(result, 1.0);

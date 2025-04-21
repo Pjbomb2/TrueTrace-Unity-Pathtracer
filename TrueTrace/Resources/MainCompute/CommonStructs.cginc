@@ -23,6 +23,7 @@ struct CudaTriangleB {
 };
 
 StructuredBuffer<CudaTriangleA> AggTrisA;
+StructuredBuffer<CudaTriangleA> SkinnedMeshTriBufferPrev;
 StructuredBuffer<CudaTriangleB> AggTrisB;
 
 struct AABB {
@@ -65,6 +66,8 @@ struct MyMeshDataCompacted {
 	int mesh_data_bvh_offsets;//could I convert this an int4?
 	int LightTriCount;
 	int LightNodeOffset;
+	uint PathFlags;
+	int SkinnedOffset;
 };
 
 StructuredBuffer<MyMeshDataCompacted> _MeshData;
@@ -127,60 +130,88 @@ struct BVHNode8Data {
 StructuredBuffer<BVHNode8Data> cwbvh_nodes;
 
 
+/*
+	MatType
+	AlphaTex
+	AlphaCutoff
+	SpecTrans
+	Tag
+	AlbedoTexScale
+	Rotation
+
+*/
+
+struct IntersectionMat {//56
+    int2 AlphaTex;//80
+    int2 AlbedoTex;//80
+    int Tag;
+    int MatType;//Can pack into tag
+    float specTrans;
+    float AlphaCutoff;
+    float4 AlbedoTexScale;
+    float3 surfaceColor;
+    float Rotation;
+    float scatterDistance;
+};
+
+StructuredBuffer<IntersectionMat> _IntersectionMaterials;
+
+
 struct MaterialData {//56
-	int2 AlbedoTex;//16
-	int2 NormalTex;//32
-	int2 EmissiveTex;//48
-	int2 MetallicTex;//64
-	int2 RoughnessTex;//80
-	int2 AlphaTex;//80
-	int2 MatCapMask;
-	int2 MatCapTex;
-	int2 SecondaryAlbedoTex;
-	int2 SecondaryAlbedoMask;
+    int2 AlbedoTex;
+    int2 NormalTex;
+    int2 EmissiveTex;
+    int2 MetallicTex;
+    int2 RoughnessTex;
+    int2 AlphaTex;
+    int2 MatCapMask;
+    int2 MatCapTex;
+    int2 SecondaryAlbedoTex;
+    int2 SecondaryAlbedoMask;
     int2 SecondaryNormalTex;
-	float3 surfaceColor;
-	float emission;
-	float3 EmissionColor;
-	uint Tag;
-	float roughness;
-	int MatType;//Can pack into tag
-	float3 transmittanceColor;
-	float ior;
-	float metallic;
-	float sheen;
-	float sheenTint;
-	float specularTint;
-	float clearcoat;
-	float clearcoatGloss;
-	float anisotropic;
-	float flatness;
-	float diffTrans;
-	float specTrans;
-	float Specular;
-	float scatterDistance;
-	float4 AlbedoTexScale;
-	float2 MetallicRemap;
-	float2 RoughnessRemap;
-	float AlphaCutoff;
-	float NormalStrength;
-	float Hue;
-	float Saturation;
-	float Contrast;
-	float Brightness;
-	float3 BlendColor;
-	float BlendFactor;
-		float4 SecondaryTexScaleOffset;
-		float4 NormalTexScaleOffset;
-		float RotationNormal;
-		float RotationSecondary;
-		float RotationSecondaryDiffuse;
-		float RotationSecondaryNormal;
+    float4 AlbedoTexScale;
+    float4 SecondaryTexScaleOffset;
+    float4 NormalTexScaleOffset;
     float4 SecondaryAlbedoTexScaleOffset;
-	float Rotation;
-	float ColorBleed;
-	float AlbedoBlendFactor;
-	float4 SecondaryNormalTexScaleOffset;
+    float4 SecondaryNormalTexScaleOffset;
+    float Rotation;
+    float RotationNormal;
+    float RotationSecondary;
+    float RotationSecondaryDiffuse;
+    float RotationSecondaryNormal;
+    float3 surfaceColor;
+    float emission;
+    float3 EmissionColor;
+    int Tag;
+    float roughness;
+    int MatType;
+    float3 transmittanceColor;
+    float ior;
+    float metallic;
+    float sheen;
+    float sheenTint;
+    float specularTint;
+    float clearcoat;
+    float clearcoatGloss;
+    float anisotropic;
+    float anisotropicRotation;
+    float flatness;
+    float diffTrans;
+    float specTrans;
+    float Specular;
+    float scatterDistance;
+    float2 MetallicRemap;
+    float2 RoughnessRemap;
+    float AlphaCutoff;
+    float NormalStrength;
+    float Hue;
+    float Saturation;
+    float Contrast;
+    float Brightness;
+    float3 BlendColor;
+    float BlendFactor;
+    float ColorBleed;
+    float AlbedoBlendFactor;
     float SecondaryNormalTexBlend;
     float DetailNormalStrength;
 };
@@ -206,8 +237,8 @@ RWStructuredBuffer<RayData> GlobalRays;
 struct ShadowRayData {
 	float3 origin;
 	uint DiffuseIlluminance;
-	float3 direction;
-	float t;
+	float3 EndPoint;
+	int FIELD;
 	float3 illumination;
 	uint PixelIndex;
 };

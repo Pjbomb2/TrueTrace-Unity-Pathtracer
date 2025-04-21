@@ -9,7 +9,7 @@ static uint TransmittanceTexWidth = 256;
 static uint TransmittanceTexHeight = 64;
 
 float RayleighPhaseFunction(float nu) {
-	float k = 3.0 / (16.0 * PI);
+	float k = 3.0 / (16.0 * 3.14159265359);
 	return k * (1.0 + nu * nu);
 }
 float GetTextureCoordFromUnitRange(float x, int texture_size) {
@@ -17,7 +17,7 @@ float GetTextureCoordFromUnitRange(float x, int texture_size) {
 }
 
 float MiePhaseFunction(float g, float nu) {
-	float k = 3.0 / (8.0 * PI) * (1.0 - g * g) / (2.0 + g * g);
+	float k = 3.0 / (8.0 * 3.14159265359) * (1.0 - g * g) / (2.0 + g * g);
 	return k * (1.0 + nu * nu) / pow(1.0 + g * g - 2.0 * g * nu, 1.5);
 }
 
@@ -301,7 +301,7 @@ float3 GetSkyRadiance(
 			float3 sun_irradiance = GetSunAndSkyIrradiance(Position, Normal, sun_direction, sky_irradiance);
 			float3 trans;
 			float3 in_scatter = GetSkyRadianceToPoint(camera, Position, sun_direction, trans);
-			debug = (GroundColor * (1.0f / PI) * (sun_irradiance + sky_irradiance)) * trans + in_scatter;
+			debug = (GroundColor * (1.0f / 3.14159265359) * (sun_irradiance + sky_irradiance)) * trans + in_scatter;
 		}
 	return scattering * RayleighPhaseFunction(nu) + single_mie_scattering *
 		MiePhaseFunction(0.8f, nu);
@@ -371,13 +371,11 @@ SamplerState my_linear_repeat_sampler;
 #define minDensity 1e-5
 #define minTransmittance 1e-2
 
-#define PI 3.14159265359
 #define PI2 6.28318530718
 #define PI_HALF 1.5707963267949
 #define RECIPROCAL_PI 0.31830988618
 #define RECIPROCAL_PI2 0.15915494
 #define LOG2 1.442695
-#define EPSILON 1e-6
 
 #define maxLayerHeights float4(1200,0,8000,0)
 #define minLayerHeights float4(600,0,6700,0)

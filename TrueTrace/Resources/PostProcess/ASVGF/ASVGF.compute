@@ -50,14 +50,16 @@ inline float4x4 inverse(float4x4 m) {
 
 
 #ifdef HDRP
-	Texture2DArray<half4> NormalTex;
-	Texture2DArray<float2> TEX_PT_MOTION;
     Texture2DArray<float> Depth;
 #else
-	Texture2D<float2> TEX_PT_MOTION;
-	Texture2D<half4> NormalTex;
     Texture2D<float> Depth;
 #endif
+#if defined(HDRP) && !defined(TTCustomMotionVectors)
+	Texture2DArray<float2> TEX_PT_MOTION;
+#else
+	Texture2D<float2> TEX_PT_MOTION;
+#endif
+
 RWTexture2D<float4> TEX_PT_COLOR_LF_SHWrite;
 Texture2D<float4> TEX_PT_COLOR_LF_SH;
 RWTexture2D<half4> TEX_PT_COLOR_HFWrite;
@@ -101,9 +103,9 @@ Texture2D<uint> ReflRefracB;
 Texture2D<half4> TEX_ASVGF_HIST_MOMENTS_HF_A;
 
 
-RWTexture2D<uint4> TEX_PT_NORMALS_AWrite;
-Texture2D<uint4> TEX_PT_NORMALS_A;
-Texture2D<uint4> TEX_PT_NORMALS_B;
+RWTexture2D<uint2> TEX_PT_NORMALS_AWrite;
+Texture2D<uint2> TEX_PT_NORMALS_A;
+Texture2D<uint2> TEX_PT_NORMALS_B;
 
 Texture2D<float4> TEX_ASVGF_HIST_COLOR_LF_SH_A;
 
@@ -231,7 +233,7 @@ int PartialRenderingFactor;
 [numthreads(16, 16, 1)]
 void CopyData(uint3 id : SV_DispatchThreadID)
 {
-	if(any(id.xy >= int2(screen_width, screen_height))) return;
+	if(any(id.xy >= uint2(screen_width, screen_height))) return;
 	int pixel_index = id.y * screen_width + id.x;
 	ColData Pixel = GlobalColorsRead[pixel_index];
 	const uint4 ScreenInfo = asuint(ScreenSpaceInfo[id.xy]);
@@ -246,7 +248,7 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 		Pixel.PrimaryNEERay = 0;
 	}
 
-	#ifdef HDRP
+	#if defined(HDRP) && !defined(TTCustomMotionVectors)
 		float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, int3(id.xy,0) / float3(screen_width, screen_height, 1), 0).xy;
 	#else
 		float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, id.xy / float2(screen_width, screen_height), 0).xy;
@@ -279,10 +281,9 @@ void CopyData(uint3 id : SV_DispatchThreadID)
     MetallicAWrite[id.xy] = MetRough;//, ReflectedRefracted, asfloat((asuint(ScreenSpaceInfo[id.xy].w) << 3) >> 3));
     ReflRefracAWrite[id.xy] = (ReflectedRefracted << 31) | ((ScreenInfo.w << 4) >> 4) | ((min(GetBounceData(Pixel.MetRoughIsSpec), 3) << 29));
 	AlbedoColorA[id.xy] = AlbCol;
-	TEX_PT_NORMALS_AWrite[id.xy] = ScreenInfo.xyxy;
+	TEX_PT_NORMALS_AWrite[id.xy] = ScreenInfo.xy;
 	if(!(!ReflectedRefracted || InvalidReprojection)) {
-		if(IsDiffuse) TEX_PT_NORMALS_AWrite[id.xy] = uint4(ScreenInfo.xy, TEX_PT_NORMALS_B[pos_prev].zw);//GeoNorm, Norm
-		else TEX_PT_NORMALS_AWrite[id.xy] = uint4(TEX_PT_NORMALS_B[pos_prev].xy, ScreenInfo.xy);//GeoNorm, Norm
+		if(!IsDiffuse) TEX_PT_NORMALS_AWrite[id.xy] = TEX_PT_NORMALS_B[pos_prev].xy;//GeoNorm, Norm
 	}
 }
 
@@ -333,7 +334,7 @@ inline void reproject_pixel(int2 p, int field_left, int field_right, int2 gl_Loc
 	s_reprojected_pixels[local_pos.y][local_pos.x] = 0;
 
 	// Compute the previous frame position of this surface
-	#ifdef HDRP
+	#if defined(HDRP) && !defined(TTCustomMotionVectors)
 		float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, int3(p,0) / float3(screen_width, screen_height, 1), 0).xy;
 	#else
 		float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, p / float2(screen_width, screen_height), 0).xy;
@@ -381,6 +382,10 @@ inline void reproject_pixel(int2 p, int field_left, int field_right, int2 gl_Loc
 float3 CamDiff;
 
 Texture2D<uint4> PrimaryTriData;
+
+
+
+
 
 bool UseBackupPointSelection;
 StructuredBuffer<uint> MeshIndexes;
@@ -456,6 +461,17 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 	// Final pass: store the gradient information and patch the surface parameters
 
 	ipos += found_offset;
+	Ray PrevCamRay = CreateCameraRayPrev(found_pos_prev / float2(screen_width, screen_height) * 2.0f - 1.0f);
+	Ray PrevCamRay2 = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
+	PrevCamRay.origin = PrevCamRay2.origin;
+	uint4 Target = PrimaryTriData[found_pos_prev];
+	// Ray Ray2 = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
+	// Ray2.origin += CamDiff;
+	// int ResultantMeshID = Closest_Hit_Compute(Ray2);
+	// if(Target.x != ResultantMeshID) {
+	// 	IMG_ASVGF_GRAD_SMPL_POS_A[pos_grad] = 0u;
+	// 	return;
+	// }
 
 	uint gradient_idx =
 		(1 << 31) /* mark sample as busy */
@@ -466,10 +482,8 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 	IMG_ASVGF_GRAD_HF_SPEC_PING[pos_grad] = found_prev_lum;
 
 	RNGTexA[ipos] = float4(RNGTexB[found_pos_prev].xyz, (ReflRefracB[found_pos_prev] >> 31) ? 2 : 1);
-	Ray PrevCamRay = CreateCameraRayPrev(found_pos_prev / float2(screen_width, screen_height) * 2.0f - 1.0f);
 	GlobalRaysMini[ipos.x + ipos.y * screen_width].origin = PrevCamRay.origin;
 	GlobalRaysMini[ipos.x + ipos.y * screen_width].direction = PrevCamRay.direction;
-	uint4 Target = PrimaryTriData[found_pos_prev];
 	float3 Pos;
 	if(Target.w == 1) Pos = asfloat(Target.xyz);
 	else { 
@@ -481,8 +495,13 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 			UV.x = asfloat(Target.z);//(Target.z & 0xffff) / 65535.0f;
 			UV.y = asfloat(Target.w);//(Target.z >> 16) / 65535.0f;
 			float4x4 Inverse = inverse(Mesh.W2L);
+			float4x4 InverseB = inverse(_MeshDataB[Target.x].W2L);
 			Pos = mul(Inverse, float4(AggTrisA[Target.y].pos0 + UV.x * AggTrisA[Target.y].posedge1 + UV.y * AggTrisA[Target.y].posedge2,1)).xyz;
-	// GlobalRaysMini[ipos.x + ipos.y * screen_width].origin += CamDiff;
+			float3 Pos2 = mul(InverseB, float4(AggTrisA[Target.y].pos0 + UV.x * AggTrisA[Target.y].posedge1 + UV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+			// if(Target.x == ResultantMeshID)
+			// if(any((Pos2 - Pos) != 0))
+				// GlobalRaysMini[ipos.x + ipos.y * screen_width].origin += CamDiff;
+			// Pos -= CamDiff;//Pos2;
 		}
 	}
 
@@ -515,7 +534,7 @@ inline float get_gradient(float l_curr, float l_prev)
 inline float2 get_lf_gradient(int2 ipos)
 {
 	// Find the same surface on the pvreious frame
-	#ifdef HDRP
+	#if defined(HDRP) && !defined(TTCustomMotionVectors)
 		float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, int3(ipos,0) / float3(screen_width, screen_height, 1), 0).xy;
 	#else
 		float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, ipos / float2(screen_width, screen_height), 0).xy;
@@ -735,7 +754,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 	GroupMemoryBarrierWithGroupSync();
 
 	int2 ipos = gl_GlobalInvocationID.xy;
-	#ifdef HDRP
+	#if defined(HDRP) && !defined(TTCustomMotionVectors)
 		float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, int3(ipos,0) / float3(screen_width, screen_height, 1), 0).xy;
 	#else
 		float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, ipos / float2(screen_width, screen_height), 0).xy;
@@ -754,14 +773,13 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 	// float4 curprojectedrefl = mul(viewprojection, float4(ray.origin + ray.direction * CenterDepth, 1));
 	// float4 prevprojectedrefl = mul(prevviewprojection, float4(ray.origin + ray.direction * CenterDepth, 1));
 	// float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
-	int MatIndex = (ReflRefracA[gl_GlobalInvocationID.xy] << 4) >> 4;
+	uint MatIndex = (ReflRefracA[gl_GlobalInvocationID.xy] << 4) >> 4;
 
 	float motion_length = length((motion.xy) * float2(screen_width, screen_height));
 
 	float shininess = clamp(2.0 / max(pow(MetallicA[ipos].y, 4), 0.001f) - 2.0, 0.0, 32.0);
 
 	float3 geo_normal_curr = i_octahedral_32(TEX_PT_NORMALS_A[ipos].x);
-	float3 geo_normal_curr2 = i_octahedral_32(TEX_PT_NORMALS_A[ipos].z);
 
 	// Try to get the history sample for all channels, including HF moments
 	bool temporal_sample_valid_diff = false;
@@ -792,7 +810,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 				continue;
 
 			float depth_prev = TEX_PT_VIEW_DEPTH_B[p].x;
-			uint4 norms = TEX_PT_NORMALS_B[p];
+			uint2 norms = TEX_PT_NORMALS_B[p];
 			bool ReflectedRefractedPrev = ReflRefracB[p] >> 31;
 			float3  normal_prev = i_octahedral_32(norms.y);
 			float3  geo_normal_prev = i_octahedral_32(norms.x);//needs to be TEX_PT_GEO_NORMAL_B, but since for now I am not worrying about normal maps yet, it can use the same texture
@@ -817,10 +835,6 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 						temporal_moments_histlen_hf += TEX_ASVGF_HIST_MOMENTS_HF_B[p].rgba * w_diff;
 						temporal_sum_w_diff += w_diff;
 						float w_spec = w[i] * pow(max(dot_normals, 0), shininess);
-						temporal_color_histlen_spec += float4(unpackRGBE(asuint(TEX_ASVGF_FILTERED_SPEC_B[p].x)), TEX_ASVGF_FILTERED_SPEC_B[p].y) * w_spec;
-						temporal_sum_w_spec += w_spec;
-					} else if(dot(geo_normal_curr2, i_octahedral_32(norms.z)) > 0.9f) {
-						float w_spec = w[i];// * pow(max(dot_normals, 0), shininess);
 						temporal_color_histlen_spec += float4(unpackRGBE(asuint(TEX_ASVGF_FILTERED_SPEC_B[p].x)), TEX_ASVGF_FILTERED_SPEC_B[p].y) * w_spec;
 						temporal_sum_w_spec += w_spec;
 					}
@@ -1445,13 +1459,7 @@ inline SH interpolate_lf(Texture2D<float4> img_lf_shY, Texture2D<float2> img_lf_
 }
 
 
-#ifdef HDRP
-	Texture2DArray<float4> DiffuseGBuffer;
-	Texture2DArray<float4> SpecularGBuffer;
-#else
-	Texture2D<float4> DiffuseGBuffer;
-	Texture2D<float4> SpecularGBuffer;
-#endif
+
 
 float3 composite_color(float4 surf_base_color,
 	float3 projected_lf, float3 high_freq, float3 specular, float3 SpecColor, int2 ipos)
@@ -1529,7 +1537,7 @@ float FetchDepth(float2 UV) {
 
 [numthreads(32, 32, 1)]
 void DistanceCorrectionKernel(uint3 id : SV_DispatchThreadID) {
-    if(id.x > screen_width || id.y > screen_height) return;
+    if(id.x >= (uint)screen_width || id.y >= (uint)screen_height) return;
     float2 Uv = (id.xy + 0.5f) / float2(screen_width, screen_height);
 
     float CurDepth = FetchDepth(Uv);

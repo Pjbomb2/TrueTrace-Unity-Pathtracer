@@ -13,23 +13,24 @@
 // #define PointFiltering
 #define StainedGlassShadows
 // #define IgnoreBackfacing
-// #define WhiteLights
 #define LBVH
-// #define FasterLightSampling
 #define AccurateEmissionTex
 #define TrueBlack
 // #define UseTextureLOD
-// #define vMFDiffuse
 #define EONDiffuse
 // #define AdvancedBackground
 #define UseBRDFLights
 #define DoubleBufferSGTree
 // #define Fog
 #define RadCache
-#define ExpensiveReSTIR
-// #define FakedAO
-// #define ClampRoughnessToBounce
-// #define AutoDebugReading
+#define ClampRoughnessToBounce
+// #define TTCustomMotionVectors
+// #define ReSTIRSampleReduction
+// #define ReSTIRRestrictSpatial
+// #define SmartRestriction
+// #define ReSTIRAdditionalAO
+// #define ShadowGlassAttenuation
+// #define DisableNormalMaps
 
 
 
@@ -47,6 +48,9 @@
 #define DVGIView 5
 #define DVDepthView 6
 #define DVRadCache 7
+#define DVBVHViewAdvanced 8
+#define DVGeomNorm 9
+#define DVSurfNorm 10
 
 #define DepthDivisor 1000.0f
 
@@ -66,6 +70,7 @@
 #define TRILIGHT 5
 
 
+#define MaxTraversalSamples 1000
 #define NormalOffset 0.0001f
 #define ShadowDistanceFudgeFactor 0.0001f
 
@@ -109,5 +114,4 @@ int GetFlagStretch(int FlagVar, int LeftOffset, int Stride) {
     return ((FlagVar >> (32 - LeftOffset - Stride)) & ((1 << (Stride)) - 1));
 }
 
-#define MaxTraversalSamples 1000
-#define ShadowDistanceFudgeFactor 0.0001f
+

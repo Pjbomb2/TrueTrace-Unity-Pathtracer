@@ -10,7 +10,7 @@ namespace TrueTrace {
     [System.Serializable]
     public class TTAdvancedImageGen : MonoBehaviour
     {
-        public enum ImageGenType {NULL, Panorama, LargeScreenShot, TurnTable, TimedScreenShot};
+        public enum ImageGenType {NULL, Panorama, LargeScreenShot, TurnTable, TimedScreenShot, TimelineShooter};
         [SerializeField] public ImageGenType SelectedFunctionality = ImageGenType.NULL;
         private int CurrentResIndex;
         private TTSettings InitialSettings;
@@ -20,6 +20,7 @@ namespace TrueTrace {
         public class CameraListData {
             public Camera TargCam;
             public TTSettings CamSettings;
+            public UnityEngine.Playables.PlayableDirector OptionalDirector;
         }
         [SerializeField] public List<CameraListData> CameraList;
 
@@ -109,6 +110,74 @@ namespace TrueTrace {
 
         [SerializeField] public TurnTableData TurnTableSettings;
 
+
+        [Serializable]
+        public class TimelineShooterData {
+            private int CurrentCamera = 0;
+            private int CurrentFrame = 0;
+            private bool IsBetweenFrame;
+            private bool IsRendering = false;
+            private bool FinishedRendering = false;
+            public List<CameraListData> CameraList;
+            [System.Serializable]
+            public struct CamData {
+                public int SamplesPerShot;
+                public int StartFrame;
+                public int EndFrame;
+                public int TotalFrames;
+            }
+            public List<CamData> CamSettings;
+            public TimelineShooterData(ref List<CameraListData> CamList) {
+                CamSettings = new List<CamData>();
+                CameraList = CamList;
+            }
+            public void SetInitialSettings(List<CameraListData> CamList) {
+                Application.runInBackground = true;
+                CameraList = CamList;
+                foreach(var A in CameraList) {
+                    A.OptionalDirector.timeUpdateMode = UnityEngine.Playables.DirectorUpdateMode.Manual;
+                    A.OptionalDirector.playOnAwake = false;
+                }
+                CurrentFrame = CamSettings[0].StartFrame;
+                TTInterface.SetTTSettings(CameraList[0].CamSettings);
+            }
+
+
+            public IEnumerator RecordFrame()
+            {
+                yield return new WaitForEndOfFrame();
+                float _animTotalDuration = (float)CameraList[CurrentCamera].OptionalDirector.duration;
+                float _animCurrentTime = ((float)CurrentFrame / (float)CamSettings[CurrentCamera].TotalFrames) * _animTotalDuration;
+                CameraList[CurrentCamera].OptionalDirector.time = _animCurrentTime;
+                CameraList[CurrentCamera].OptionalDirector.Evaluate();
+                Debug.Log(CurrentFrame);
+                if((RayTracingMaster.SampleCount >= CamSettings[CurrentCamera].SamplesPerShot)) {
+                    ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("TimelinePath") + "/" + RayTracingMaster._camera.name + "_" + CurrentFrame + ".png");
+                    UnityEditor.AssetDatabase.Refresh();
+                    RayTracingMaster.SampleCount = 0;
+                    RayTracingMaster.RayMaster.FramesSinceStart = 0;
+                    IsRendering = false;
+                    CurrentFrame++;
+                }
+                if(CurrentFrame > CamSettings[CurrentCamera].EndFrame) {
+                    CurrentCamera++;
+                    if(CurrentCamera < CamSettings.Count) {
+                        CameraList[CurrentCamera - 1].TargCam.gameObject.SetActive(false);
+                        CameraList[CurrentCamera].TargCam.gameObject.SetActive(true);
+                        RayTracingMaster.RayMaster.TossCamera(CameraList[CurrentCamera].TargCam);
+                        TTInterface.SetTTSettings(CameraList[CurrentCamera].CamSettings);
+                        CurrentFrame = CamSettings[CurrentCamera].StartFrame;
+                    } else {                            
+                        Application.runInBackground = false;
+                        EditorApplication.isPlaying = false;
+                    }
+                }
+            }
+
+
+
+        }
+        [SerializeField] public TimelineShooterData TimelineSettings;
 
         [Serializable]
         public class SlicedImageData {
@@ -230,7 +299,7 @@ namespace TrueTrace {
                   }
                   TempSeg++;
 
-                   FilePath = PlayerPrefs.GetString("ScreenShotPath") + "/" + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name.Replace(" ", "") + "_" + RayTracingMaster._camera.name + "_" + SegmentNumber + ".png";
+                   FilePath = PlayerPrefs.GetString("PanoramaPath") + "/" + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name.Replace(" ", "") + "_" + RayTracingMaster._camera.name + "_" + SegmentNumber + ".png";
                 } while(System.IO.File.Exists(FilePath));
                
 
@@ -359,6 +428,9 @@ namespace TrueTrace {
                 case(ImageGenType.TurnTable):
                     TurnTableSettings = new TurnTableData(ref CameraList);
                 break;
+                case(ImageGenType.TimelineShooter):
+                    TimelineSettings = new TimelineShooterData(ref CameraList);
+                break;
             }            
         }
         bool HasStarted = false;
@@ -396,6 +468,10 @@ namespace TrueTrace {
                     TurnTableSettings.CameraList = CameraList;
                     RayTracingMaster.ImageIsModified = true;
                 break;
+                case(ImageGenType.TimelineShooter):
+                    TimelineSettings.CameraList = CameraList;
+                    RayTracingMaster.ImageIsModified = true;
+                break;
             }
         }
 
@@ -423,6 +499,10 @@ namespace TrueTrace {
                             RayTracingMaster.RayMaster.FramesSinceStart = 0;
                         }
                     }
+                break;
+                case(ImageGenType.TimelineShooter):
+                    if(!HasStarted) TimelineSettings.SetInitialSettings(CameraList);
+                    StartCoroutine(TimelineSettings.RecordFrame());
                 break;
 
             }
@@ -454,14 +534,18 @@ namespace TrueTrace {
                 for(int i = 0; i < t.CameraList.Count; i++) {
                     var A = i;
                     GUILayout.BeginHorizontal();
-                    if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TurnTable) if(GUILayout.Button("Select", GUILayout.Width(50))) {SelectedCam = A;}
+                    if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TurnTable || t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TimelineShooter) if(GUILayout.Button("Select", GUILayout.Width(50))) {SelectedCam = A;}
                     TTAdvancedImageGen.CameraListData TempDat = t.CameraList[i];
                         TempDat.TargCam = EditorGUILayout.ObjectField(TempDat.TargCam, typeof(Camera), true, GUILayout.Width(150)) as Camera;
                         TempDat.CamSettings = EditorGUILayout.ObjectField(TempDat.CamSettings, typeof(TTSettings), true, GUILayout.Width(150)) as TTSettings;
+                        if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TimelineShooter) TempDat.OptionalDirector = EditorGUILayout.ObjectField(TempDat.OptionalDirector, typeof(UnityEngine.Playables.PlayableDirector), true, GUILayout.Width(150)) as UnityEngine.Playables.PlayableDirector;
                     t.CameraList[i] = TempDat;
                     if(GUILayout.Button("Delete", GUILayout.Width(50))) {
                         if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TurnTable) {
                             t.TurnTableSettings.CamSettings.RemoveAt(A);
+                        }
+                        if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TimelineShooter) {
+                            t.TimelineSettings.CamSettings.RemoveAt(A);
                         }
                         t.CameraList.RemoveAt(A); 
                         i--;
@@ -477,10 +561,19 @@ namespace TrueTrace {
                 if(t.CameraList[t.CameraList.Count - 1].TargCam != null) TempCam = t.CameraList[t.CameraList.Count - 1].TargCam;
                 if(t.CameraList[t.CameraList.Count - 1].CamSettings != null) TempSet = t.CameraList[t.CameraList.Count - 1].CamSettings;
             }
-            t.CameraList.Add(new TTAdvancedImageGen.CameraListData() {
-                TargCam = TempCam,
-                CamSettings = TempSet//RayTracingMaster.RayMaster.LocalTTSettings
-            });
+            TTAdvancedImageGen.CameraListData TempElement = new TTAdvancedImageGen.CameraListData();
+            TempElement.TargCam = TempCam;
+            TempElement.CamSettings = TempSet;
+            // if(TempCam.TryGetComponent<UnityEngine.Playables.PlayableDirector>(out UnityEngine.Playables.PlayableDirector TempDir)) TempElement.OptionalDirector = TempDir;
+            t.CameraList.Add(TempElement);
+            if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TimelineShooter) {
+                t.TimelineSettings.CamSettings.Add(new TTAdvancedImageGen.TimelineShooterData.CamData() {
+                    SamplesPerShot = 300,
+                    StartFrame = 0,
+                    EndFrame = 500,
+                    TotalFrames = 500
+                });
+            }
             if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TurnTable) {
                 t.TurnTableSettings.CamSettings.Add(new TTAdvancedImageGen.TurnTableData.CamData() {
                     HorizontalResolution = 10,
@@ -542,6 +635,42 @@ namespace TrueTrace {
 
             GUILayout.EndVertical();
         }
+
+
+        private void DisplayTimelineSettings() {
+            GUILayout.BeginVertical(GUILayout.Width(345));
+                if(SelectedCam != -1 && SelectedCam < t.TimelineSettings.CamSettings.Count) {
+                    TTAdvancedImageGen.TimelineShooterData.CamData TempDat = t.TimelineSettings.CamSettings[SelectedCam];
+                    GUILayout.BeginHorizontal();
+                        GUILayout.Label("Camera " + SelectedCam, GUILayout.Width(175));
+                    GUILayout.EndHorizontal();
+
+                    GUILayout.BeginHorizontal();
+                        GUILayout.Label("Samples Per Shot: ", GUILayout.Width(175));
+                        TempDat.SamplesPerShot = EditorGUILayout.IntField(TempDat.SamplesPerShot, GUILayout.Width(100));
+                    GUILayout.EndHorizontal();
+
+                    GUILayout.BeginHorizontal();
+                        GUILayout.Label("Start Frame: ", GUILayout.Width(175));
+                        TempDat.StartFrame = EditorGUILayout.IntField(TempDat.StartFrame, GUILayout.Width(100));
+                    GUILayout.EndHorizontal();
+
+                    GUILayout.BeginHorizontal();
+                        GUILayout.Label("End Frame: ", GUILayout.Width(175));
+                        TempDat.EndFrame = EditorGUILayout.IntField(TempDat.EndFrame, GUILayout.Width(100));
+                    GUILayout.EndHorizontal();
+
+                    GUILayout.BeginHorizontal();
+                        GUILayout.Label("Total Frames: ", GUILayout.Width(175));
+                        TempDat.TotalFrames = EditorGUILayout.IntField(TempDat.TotalFrames, GUILayout.Width(100));
+                    GUILayout.EndHorizontal();
+                    t.TimelineSettings.CamSettings[SelectedCam] = TempDat;
+                } else {
+                    EditorGUILayout.Space();
+                }
+            GUILayout.EndVertical();
+        }
+
 
         private void DisplayTurnTableSettings() {
             GUILayout.BeginVertical(GUILayout.Width(345));
@@ -605,6 +734,9 @@ namespace TrueTrace {
                             ConstructCameraList();
                             AddNewCam();
                         break;
+                        case(TTAdvancedImageGen.ImageGenType.TimelineShooter):
+                            ConstructCameraList();
+                        break;
                     }                    
                     t.Init();
                 }
@@ -643,6 +775,13 @@ namespace TrueTrace {
                                 GUILayout.EndHorizontal();
                             GUILayout.EndVertical();
                         DisplayCameraList();
+                        GUILayout.EndHorizontal();
+                    break;
+                    case(TTAdvancedImageGen.ImageGenType.TimelineShooter):
+                        if(GUILayout.Button("Add Camera")) AddNewCam();
+                        GUILayout.BeginHorizontal();
+                            DisplayTimelineSettings();
+                            DisplayCameraList();
                         GUILayout.EndHorizontal();
                     break;
                 }

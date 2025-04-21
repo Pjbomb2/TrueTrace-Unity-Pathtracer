@@ -433,11 +433,16 @@ namespace TrueTrace {
         {//need to fix this so it doesnt create new textures every time
 
             if(!TAAInitialized) InitializeTAA();
+            TAA.SetInt("screen_width", _camera.scaledPixelWidth);
+            TAA.SetInt("screen_height", _camera.scaledPixelHeight);
             cmd.SetComputeIntParam(TAA,"Samples_Accumulated", CurrentSamples);
 
             TAA.SetFloat("FarPlane", _camera.farClipPlane);
+#if !TTCustomMotionVectors
             TAA.SetTextureFromGlobal(TAAPrepareKernel, "MotionVectors", "_CameraMotionVectorsTexture");
-            TAA.SetTextureFromGlobal(TAAPrepareKernel, "DepthTex", "_CameraDepthTexture");
+#else
+            TAA.SetTextureFromGlobal(TAAPrepareKernel, "MotionVectors", "TTMotionVectorTexture");
+#endif       
             cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorIn", _Final);
             cmd.SetComputeTextureParam(TAA, TAAPrepareKernel, "ColorOut", TempTexTAA);
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("TAA Prepare Kernel");
@@ -446,7 +451,11 @@ namespace TrueTrace {
 
 
             cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorIn", TempTexTAA);
+#if !TTCustomMotionVectors
             TAA.SetTextureFromGlobal(TAAKernel, "MotionVectors", "_CameraMotionVectorsTexture");
+#else
+            TAA.SetTextureFromGlobal(TAAKernel, "MotionVectors", "TTMotionVectorTexture");
+#endif       
             cmd.SetComputeTextureParam(TAA, TAAKernel, "TAAPrev", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAKernel, "TAAPrevRead", _TAAPrev);
             cmd.SetComputeTextureParam(TAA, TAAKernel, "ColorOut", TempTexTAA2);
@@ -493,7 +502,6 @@ namespace TrueTrace {
             Upscaler.SetTextureFromGlobal(UpsampleKernel, "Albedo2", "_CameraGBufferTexture1");
             Upscaler.SetTextureFromGlobal(UpsampleKernel, "DepthTex", "_CameraDepthTexture");
             Upscaler.SetTextureFromGlobal(UpsampleKernel, "NormalTex", "_CameraGBufferTexture2");
-            Upscaler.SetTextureFromGlobal(UpsampleKernel, "MotionVectors", "_CameraMotionVectorsTexture");
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "SmallerGBuffer", ScreenSpaceInfo);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "Input", Input);
             cmd.SetComputeTextureParam(Upscaler, UpsampleKernel, "Output", UpScalerLightingDataTexture);
@@ -518,14 +526,14 @@ namespace TrueTrace {
         }
 
 
-        public void ExecuteToneMap(ref RenderTexture Output, CommandBuffer cmd, ref Texture3D LUT, ref Texture3D LUT2, int ToneMapSelection)
+        public void ExecuteToneMap(ref RenderTexture Output, CommandBuffer cmd, ref Texture3D LUT, Texture3D LUT2, int ToneMapSelection)
         {//need to fix this so it doesnt create new textures every time
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ToneMap");
             cmd.SetComputeIntParam(ToneMapper,"ToneMapSelection", ToneMapSelection);
             cmd.SetComputeIntParam(ToneMapper,"screen_width", Output.width);
             cmd.SetComputeIntParam(ToneMapper,"screen_height", Output.height);
             cmd.SetComputeTextureParam(ToneMapper, 0, "Result", Output);
-            cmd.SetComputeTextureParam(ToneMapper, 0, "LUT", ToneMapSelection == 5 ? LUT2 : LUT);
+            cmd.SetComputeTextureParam(ToneMapper, 0, "LUT", ToneMapSelection == 0 ? LUT : LUT2);
             cmd.DispatchCompute(ToneMapper, 0, Mathf.CeilToInt((float)Output.width / 16.0f), Mathf.CeilToInt((float)Output.height / 16.0f), 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ToneMap");
         }
@@ -550,7 +558,11 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(TAAU, TAAUKernel, "IMG_TAA_OUTPUT", Output);
             TAAU.SetTextureFromGlobal(TAAUKernel, "Albedo", "_CameraGBufferTexture0");
             TAAU.SetTextureFromGlobal(TAAUKernel, "Albedo2", "_CameraGBufferTexture1");
+#if !TTCustomMotionVectors
             TAAU.SetTextureFromGlobal(TAAUKernel, "TEX_FLAT_MOTION", "_CameraMotionVectorsTexture");
+#else
+            TAAU.SetTextureFromGlobal(TAAUKernel, "TEX_FLAT_MOTION", "TTMotionVectorTexture");
+#endif       
             cmd.DispatchCompute(TAAU, TAAUKernel, threadGroupsX, threadGroupsY, 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("TAAU");
         }

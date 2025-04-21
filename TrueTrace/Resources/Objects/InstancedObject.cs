@@ -14,6 +14,7 @@ namespace TrueTrace {
         public int CompactedMeshData;
         public int ExistsInQue;
         public int QueInProgress;
+        public int LightIndex = -1;
         bool PrevInstance = false;
         public void UpdateInstance()
         {

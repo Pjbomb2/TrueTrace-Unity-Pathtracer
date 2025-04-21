@@ -41,8 +41,8 @@
   <li>Convolution Bloom(Not mine)</li>
   <li>Vulkan and Metal support(Your mileage may vary)</li>
   <li>Mesh slicing using SDFs(Does not modify meshes, for rendering cuts only, like cross-sections)</li>
-  <li>EON and vMF diffuse models</li>
-  <li>Chromatic Aberation, Contrast/Saturation, Colored Vignette</li>
+  <li>Lambert or EON diffuse models</li>
+  <li>Chromatic Aberation, Saturation, Colored Vignette</li>
   <li>Full Multiscatter Fog(Not realtime)</li>
   <li>Orthographic Camera</li>
 </ul>
@@ -106,7 +106,7 @@ for bringing bindless textures to unity!
   <li>The green/red rectangle shows when the acceleration structure is done building, and thus ready to render, red means that its not done, and green means its done building, a ding will sound when it completes if it takes longer than 15 seconds(Turn on Truetrace Settings -> Functionality Settings</li>
   <li>Objects can be added and removed at will simply by toggling the associated GameObject with a ParentObject script on/off in the hierarchy(clicking on parent objects with complex objects for children will lag), but they will take time to appear as the acceleration structure needs to  be rebuilt for them</li>
   <li>Emissive meshes need to be have a non-zero emissive value when they are built or rebuilt to work with NEE, but after that can have their emissiveness changed at will</li>
-  <li>To set up PBR with the DEFAULT material, all textures go into their proper names, but Roughness goes into the Occlusion texture(This can be changed in the MaterialPairing menu)</li>
+  <li>To set up PBR with the DEFAULT BIRP material, all textures go into their proper names, but Roughness goes into the Occlusion texture(This can be changed in the MaterialPairing menu)</li>
   <li>If you are using blendshapes to change geometry of a skinned mesh, you may need to go to the import settings of it(in the inspector), turn off Legacy Blendshape Normals, and make sure all normals are imported, not calculated, otherwise the normals for blendshapes might be wrong</li>
   <li>If you use HDRIs, or CubeMaps for the skybox, you need to format as the texture to a Texture2D in the inspector of the image, unity will convert it automatically, then put it in the slot in "Scene Settings" in the TrueTrace settings menu</li>
 </ul>
@@ -125,22 +125,28 @@ for bringing bindless textures to unity!
 
 ## Linking Shader Textures to TrueTrace
 <ul>
+  <li>You only need to do this once per SHADER, not once per material. Unconfigured shaders will just appear white in truetrace</li>
   <li>In the PathTracingSettings, click the tab called "Material Pair Options"</li>
   <li>Drag any material that has the shader you want to pair into the material slot that appears</li>
-  <li>From here, you will see 4 buttons, click those to add the input type and connect it to the output tab.  Do this with the default material for an example</li>
+  <li>From here, you will see 3 buttons, click those to add the input type and connect it to the output tab.  Do this with the any material using the default shader for an example</li>
   <li>Once this is done, click "Apply Material Links" and rebuild the BVH in the "Main Options" tab to update the objects in the scene</li>
 </ul>
 
 ## Functionality Settings Contents
 <ul>
+  <li>NOTE FIRST: MOST OF THESE IN THIS TABLE NOW HAVE TOOLTIPS THAT APPEAR IF YOU HOVER OVER THEM!</li>
   <li>Enable RT Cores - (DX12 Only, REQUIRES UNITY 2023 OR HIGHER)Enables Hardware RT for cards that support it.</li>
-  <li>Disable Bindless Textures - DX12 Only, Disables bindless texturing, and uses the atlas fallback(Limits resolution).</li>
+  <li>Disable Bindless Textures - DX11(/vulkan/metal) compatability, Disables bindless texturing, and uses the atlas fallback(Limits resolution).</li>
   <li>Use Old Light BVH Instead of Gaussian Tree - Disables the Gaussian Tree for higher performance but worse light sampling on metallics.</li>
-  <li>Use DX11 - Disables DX12 only toggles, but allows truetrace to run in DX11.</li>
+  <li>Use DX11 - Disables DX12 only toggles, but allows truetrace to run in DX11(/vulkan/metal).</li>
   <li>Enable OIDN - (DX12 Only) Adds the OIDN denoiser to the Denoiser list in "Main Options"</li>
   <li>FULLY Disable Radiance Cache - Will free the memory usually used by the Radiance Cache</li>
+  <li>Remove Rasterization Requirement - Truetrace stops using rasterization for anything(other than upscaling with TAAU), so you can turn off rasterization rendering in your cameras for extra performance</li>
   <li>Enable Emissive Texture Aware Light BVH - Allows for smarter/better sampling of emissive meshes by considering their emissive masks/textures; Can use lots of RAM.</li>
-  <li>Use Light BVH - Toggles the use of EITHER the Light BVH or Gaussian Tree on/off; uses the RIS count of NEE if off. Turn off for maximum speed.</li>
+  <li>Enable Verbose Logging - Truetrace will yell more information into the console.</li>
+  <li>Fade Mapping - Not super compatable with realtime denoisers, but allows for surfaces with variable transparency, based on alpha texture.</li>
+  <li>Stained Glass - Whether or not to color shadow rays that pass through colored glass, dictated by material parameters: Thin, Albedo, Scatter Distance.</li>
+  <li>Use Light BVH - Toggles the use of EITHER the Light BVH or Gaussian Tree on/off; uses the RIS count of NEE if off. Turn off for maximum speed, but poor emissive mesh sampling quality.</li>
   <li>Quick Radcache Toggle - Toggles the radcache on/off. Useful for comparing to ground truth pathtracing.</li>
 </ul>
 
@@ -164,25 +170,13 @@ TrueTrace Options Description -
     </ul>
   <li>Allow Mesh Skinning - Turns on the ability for skinned meshes to be animated or deformed with respect to their armeture</li>
   <li>Denoiser - Allows you to switch between different denoisers</li>
-  <li>Allow Bloom - Turns on or off Bloom</li>
-  <li>Sharpness Filter - Contrast Adaptive Sharpening</li>
-  <li>Enable DoF - Turns on or off Depth of Field, and its associated settings</li>
-    <ul>
-      <li>CTRL + Middle Mouse - Autofocuses to whatever object your mouse is hovering over in the game view</li>
-      <li>CTRL + Middle Mouse Scroll - Adjusts the Aperature Size</li>
-    </ul>
-  <li>Enable Auto/Manual Exposure - Turns on or off Exposure adjustment</li>
   <li>Use ReSTIR GI - Enables ReSTIR GI which is usually much higher quality(Works with Recur and SVGF denoisers)</li>
     <ul>
       <li>Do Sample Connection Validation - Confirms that two samples are mutually visable and throws it away if they are not</li>
-      <li>Update Rate - How many pixels per frame get re-traced to ensure they are still valid paths(7 or 33 is a good number to aim for here at 1080p)</li>]
-      <li>Enable Temporal - Enables the Temporal pass of ReSTIR GI(allows samples to travel across time</li>
+      <li>Enable Temporal - Enables the Temporal pass of ReSTIR GI(allows samples to travel across time, current useless)</li>
       <li>Temporal M Cap - How long a sample may live for, lower means lighting updates faster(until 0 which is the opposite) but more noise(recommended either 0 or around 12, but can be played with)</li>
       <li>Enable Spatial - Enables the Spatial pass of ReSTIR GI(Allows pixels to choose to use the neighboring pixels sample instead)</li>
     </ul>
-  <li>Enable TAA - Enables Temporal Antialiasing</li>
-  <li>Enable FXAA - Enables FXAA</li>
-  <li>Enable Tonemapping - Turns on tonemapping, and allows you to select a specific tonemapper</li>
   <li>Upscaler(ONLY when "Interal Resolution Ratio" is NOT 1) - Allows selection from one of a few upscaling methods</li>
   <li>Use Partial Rendering - Traces only 1 out of (X*X) rays, improving performance</li>
   <li>Enable AntiFirefly - Enables RCRS filter for getting rid of those single bright pixels</li>
@@ -191,17 +185,34 @@ TrueTrace Options Description -
       <li>Anti-Firefly Frame Interval - Anti-Firefly will run once every X frames, this is X</li>
     </ul>
   <li>RR Ignores Primary Hit - Allows for an extra bounce basically, makes it so that dark objects arent noisier, but at the cost of performance</li>
-  <li>Atmospheric Scatter Samples - Lower this to 1 if you keep crashing on entering play mode(controls how many atmospheric samples are precomputed)</li>
+  <li>Atmospheric Scatter Samples - controls how many multiscatter atmospheric samples are precomputed</li>
   <li>Current Samples - Shows how many samples have currently been accumulated</li>
+  <li>Enable Tonemapping - Turns on tonemapping, and allows you to select a specific tonemapper</li>
+  <li>Use Sharpness Filter - Contrast Adaptive Sharpening</li>
+  <li>Enable Bloom - Turns on or off Bloom</li>
+  <li>Enable DoF - Turns on or off Depth of Field, and its associated settings</li>
+    <ul>
+      <li>CTRL + Middle Mouse - Autofocuses to whatever object your mouse is hovering over in the game view</li>
+      <li>CTRL + Middle Mouse Scroll - Adjusts the Aperature Size</li>
+    </ul>
+  <li>Enable Auto/Manual Exposure - Turns on or off Exposure adjustment</li>
+  <li>Enable TAA - Enables Temporal Antialiasing</li>
+  <li>Enable FXAA - Enables FXAA</li>
 </ul>
 
 
 ## URP Setup
 <ul>
-  <li>In the Universal Renderer Asset being used, change the Rendering Path to Deferred, and turn on "Native RenderPass"</li>
   <li>If using Unity 6000 or above, you need to go to Project Settings -> Graphics -> (at the bottom)Turn on Compatability Mode</li>
-  <li>In the camera, turn on PostProcessing, and turn the Anti-Aliasing to TAA(This is the only way I have found to reliably force motion vector generation in URP for some reason...)</li>
-  <li>Finally, add the "URPTTInjectPass" script to an empty gameobject</li>
+  <li>In the Universal Renderer Asset being used turn on "Native RenderPass"</li>
+  <li>EITHER:</li>
+  <ul>
+    <li>In the camera, turn on PostProcessing, and turn the Anti-Aliasing to TAA(This is the only way I have found to reliably force motion vector generation in URP for some reason...)</li>
+    <li>OR</li>
+    <li>In Truetrace Settings -> Functionality Settings -> Turn ON "Use Custom Motion Vectors"</li>
+  </ul>
+  <li>Finally, add the "URPTTInjectPass" script to an empty gameobject if it has not been automatically added</li>
+  <li>Reccomended - Go to the Universal Render Pipeline Asset you are using, and turn the render scale to 1</li>
 </ul>
 
 # Known Bugs:
@@ -227,12 +238,10 @@ TrueTrace Options Description -
     <li>Github Sponsors:</li>
     <ul>
       <li>Jhin:         $5</li>
-      <li>Kevin:        $5</li>
       <li>Omid:         $2</li>
     </ul>
     <li>Kofi:</li>
     <ul>
-      <li>JiRo:         $20</li>
     </ul>
   </ul>
 </ul>

@@ -160,54 +160,11 @@ namespace TrueTrace {
                 RayObjectDatas TempRay = new RayObjectDatas() {
                     ID = 0,
                     MatName = PresetName,
-                    OptionID = (int)ThisOBJ.MaterialOptions[SaveIndex],
-                    TransCol = ThisOBJ.TransmissionColor[SaveIndex],
-                    BaseCol = ThisOBJ.BaseColor[SaveIndex],
-                    MetRemap = ThisOBJ.MetallicRemap[SaveIndex],
-                    RoughRemap = ThisOBJ.RoughnessRemap[SaveIndex],
-                    Emiss = ThisOBJ.emission[SaveIndex],
-                    EmissCol = ThisOBJ.EmissionColor[SaveIndex],
-                    Rough = ThisOBJ.Roughness[SaveIndex],
-                    IOR = ThisOBJ.IOR[SaveIndex],
-                    Met = ThisOBJ.Metallic[SaveIndex],
-                    SpecTint = ThisOBJ.SpecularTint[SaveIndex],
-                    Sheen = ThisOBJ.Sheen[SaveIndex],
-                    SheenTint = ThisOBJ.SheenTint[SaveIndex],
-                    Clearcoat = ThisOBJ.ClearCoat[SaveIndex],
-                    ClearcoatGloss = ThisOBJ.ClearCoatGloss[SaveIndex],
-                    Anisotropic = ThisOBJ.Anisotropic[SaveIndex],
-                    Flatness = ThisOBJ.Flatness[SaveIndex],
-                    DiffTrans = ThisOBJ.DiffTrans[SaveIndex],
-                    SpecTrans = ThisOBJ.SpecTrans[SaveIndex],
-                    FollowMat = ThisOBJ.FollowMaterial[SaveIndex],
-                    ScatterDist = ThisOBJ.ScatterDist[SaveIndex],
-                    Spec = ThisOBJ.Specular[SaveIndex],
-                    AlphaCutoff = ThisOBJ.AlphaCutoff[SaveIndex],
-                    NormStrength = ThisOBJ.NormalStrength[SaveIndex],
-                    DetailNormalStrength = ThisOBJ.DetailNormalStrength[SaveIndex],
-                    Hue = ThisOBJ.Hue[SaveIndex],
-                    Brightness = ThisOBJ.Brightness[SaveIndex],
-                    Contrast = ThisOBJ.Contrast[SaveIndex],
-                    Saturation = ThisOBJ.Saturation[SaveIndex],
-                    BlendColor = ThisOBJ.BlendColor[SaveIndex],
-                    BlendFactor = ThisOBJ.BlendFactor[SaveIndex],
-                    MainTexScaleOffset = ThisOBJ.MainTexScaleOffset[SaveIndex],
-                    SecondaryAlbedoTexScaleOffset = ThisOBJ.SecondaryAlbedoTexScaleOffset[SaveIndex],
-                    SecondaryNormalTexScaleOffset = ThisOBJ.SecondaryNormalTexScaleOffset[SaveIndex],
-                    SecondaryTextureScaleOffset = ThisOBJ.SecondaryTextureScaleOffset[SaveIndex],
-                    NormalTexScaleOffset = ThisOBJ.NormalTexScaleOffset[SaveIndex],
-                    RotationNormal = ThisOBJ.RotationNormal[SaveIndex],
-                    RotationSecondary = ThisOBJ.RotationSecondary[SaveIndex],
-                    RotationSecondaryDiffuse = ThisOBJ.RotationSecondaryDiffuse[SaveIndex],
-                    RotationSecondaryNormal = ThisOBJ.RotationSecondaryNormal[SaveIndex],
-                    Rotation = ThisOBJ.Rotation[SaveIndex],
-                    Flags = ThisOBJ.Flags[SaveIndex],
+                    MatData = ThisOBJ.LocalMaterials[SaveIndex],
+                    
                     UseKelvin = ThisOBJ.UseKelvin[SaveIndex],
                     KelvinTemp = ThisOBJ.KelvinTemp[SaveIndex],
-                    ColorBleed = ThisOBJ.ColorBleed[SaveIndex],
-                    AlbedoBlendFactor = ThisOBJ.AlbedoBlendFactor[SaveIndex],
-                    SecondaryNormalTexBlend = ThisOBJ.SecondaryNormalTexBlend[SaveIndex],
-                    
+
                     AlbedoGUID = AlbedoGUID,
                     MetallicGUID = MetallicGUID,
                     RoughnessGUID = RoughnessGUID,
@@ -326,53 +283,9 @@ namespace TrueTrace {
         }
 
         public void LoadFunction(RayObjectDatas RayObj, bool LoadTextures) {
-            t.MaterialOptions[Selected] = (RayTracingObject.Options)RayObj.OptionID;
-            t.TransmissionColor[Selected] = RayObj.TransCol;
-            t.BaseColor[Selected] = RayObj.BaseCol;
-            t.MetallicRemap[Selected] = RayObj.MetRemap;
-            t.RoughnessRemap[Selected] = RayObj.RoughRemap;
-            t.emission[Selected] = RayObj.Emiss;
-            t.EmissionColor[Selected] = RayObj.EmissCol;
-            t.Roughness[Selected] = RayObj.Rough;
-            t.IOR[Selected] = RayObj.IOR;
-            t.Metallic[Selected] = RayObj.Met;
-            t.SpecularTint[Selected] = RayObj.SpecTint;
-            t.Sheen[Selected] = RayObj.Sheen;
-            t.SheenTint[Selected] = RayObj.SheenTint;
-            t.ClearCoat[Selected] = RayObj.Clearcoat;
-            t.ClearCoatGloss[Selected] = RayObj.ClearcoatGloss;
-            t.Anisotropic[Selected] = RayObj.Anisotropic;
-            t.Flatness[Selected] = RayObj.Flatness;
-            t.DiffTrans[Selected] = RayObj.DiffTrans;
-            t.SpecTrans[Selected] = RayObj.SpecTrans;
-            t.FollowMaterial[Selected] = RayObj.FollowMat;
-            t.ScatterDist[Selected] = RayObj.ScatterDist;
-            t.Specular[Selected] = RayObj.Spec;
-            t.AlphaCutoff[Selected] = RayObj.AlphaCutoff;
-            t.NormalStrength[Selected] = RayObj.NormStrength;
-            t.DetailNormalStrength[Selected] = RayObj.DetailNormalStrength;
-            t.Hue[Selected] = RayObj.Hue;
-            t.Brightness[Selected] = RayObj.Brightness;
-            t.Contrast[Selected] = RayObj.Contrast;
-            t.Saturation[Selected] = RayObj.Saturation;
-            t.BlendColor[Selected] = RayObj.BlendColor;
-            t.BlendFactor[Selected] = RayObj.BlendFactor;
-            t.MainTexScaleOffset[Selected] = RayObj.MainTexScaleOffset;
-            t.SecondaryAlbedoTexScaleOffset[Selected] = RayObj.SecondaryAlbedoTexScaleOffset;
-            t.SecondaryNormalTexScaleOffset[Selected] = RayObj.SecondaryNormalTexScaleOffset;
-            t.SecondaryTextureScaleOffset[Selected] = RayObj.SecondaryTextureScaleOffset;
-            t.NormalTexScaleOffset[Selected] = RayObj.NormalTexScaleOffset;
-            t.RotationNormal[Selected] = RayObj.RotationNormal;
-            t.RotationSecondary[Selected] = RayObj.RotationSecondary;
-            t.RotationSecondaryDiffuse[Selected] = RayObj.RotationSecondaryDiffuse;
-            t.RotationSecondaryNormal[Selected] = RayObj.RotationSecondaryNormal;
-            t.Rotation[Selected] = RayObj.Rotation;
-            t.Flags[Selected] = RayObj.Flags;
+            t.LocalMaterials[Selected] = RayObj.MatData;
             t.UseKelvin[Selected] = RayObj.UseKelvin;
             t.KelvinTemp[Selected] = RayObj.KelvinTemp;
-            t.ColorBleed[Selected] = RayObj.ColorBleed;
-            t.AlbedoBlendFactor[Selected] = RayObj.AlbedoBlendFactor;
-            t.SecondaryNormalTexBlend[Selected] = RayObj.SecondaryNormalTexBlend;
 
             if(LoadTextures) {
                 Material TempMat = t.SharedMaterials[Selected];
@@ -576,53 +489,10 @@ namespace TrueTrace {
                 RayObjectDatas TempRay = new RayObjectDatas() {
                     ID = 0,
                     MatName = PresetName,
-                    OptionID = (int)ThisOBJ.MaterialOptions[SaveIndex],
-                    TransCol = ThisOBJ.TransmissionColor[SaveIndex],
-                    BaseCol = ThisOBJ.BaseColor[SaveIndex],
-                    MetRemap = ThisOBJ.MetallicRemap[SaveIndex],
-                    RoughRemap = ThisOBJ.RoughnessRemap[SaveIndex],
-                    Emiss = ThisOBJ.emission[SaveIndex],
-                    EmissCol = ThisOBJ.EmissionColor[SaveIndex],
-                    Rough = ThisOBJ.Roughness[SaveIndex],
-                    IOR = ThisOBJ.IOR[SaveIndex],
-                    Met = ThisOBJ.Metallic[SaveIndex],
-                    SpecTint = ThisOBJ.SpecularTint[SaveIndex],
-                    Sheen = ThisOBJ.Sheen[SaveIndex],
-                    SheenTint = ThisOBJ.SheenTint[SaveIndex],
-                    Clearcoat = ThisOBJ.ClearCoat[SaveIndex],
-                    ClearcoatGloss = ThisOBJ.ClearCoatGloss[SaveIndex],
-                    Anisotropic = ThisOBJ.Anisotropic[SaveIndex],
-                    Flatness = ThisOBJ.Flatness[SaveIndex],
-                    DiffTrans = ThisOBJ.DiffTrans[SaveIndex],
-                    SpecTrans = ThisOBJ.SpecTrans[SaveIndex],
-                    FollowMat = ThisOBJ.FollowMaterial[SaveIndex],
-                    ScatterDist = ThisOBJ.ScatterDist[SaveIndex],
-                    Spec = ThisOBJ.Specular[SaveIndex],
-                    AlphaCutoff = ThisOBJ.AlphaCutoff[SaveIndex],
-                    NormStrength = ThisOBJ.NormalStrength[SaveIndex],
-                    DetailNormalStrength = ThisOBJ.DetailNormalStrength[SaveIndex],
-                    Hue = ThisOBJ.Hue[SaveIndex],
-                    Brightness = ThisOBJ.Brightness[SaveIndex],
-                    Contrast = ThisOBJ.Contrast[SaveIndex],
-                    Saturation = ThisOBJ.Saturation[SaveIndex],
-                    BlendColor = ThisOBJ.BlendColor[SaveIndex],
-                    BlendFactor = ThisOBJ.BlendFactor[SaveIndex],
-                    MainTexScaleOffset = ThisOBJ.MainTexScaleOffset[SaveIndex],
-                    SecondaryAlbedoTexScaleOffset = ThisOBJ.SecondaryAlbedoTexScaleOffset[SaveIndex],
-                    SecondaryNormalTexScaleOffset = ThisOBJ.SecondaryNormalTexScaleOffset[SaveIndex],
-                    SecondaryTextureScaleOffset = ThisOBJ.SecondaryTextureScaleOffset[SaveIndex],
-                    NormalTexScaleOffset = ThisOBJ.NormalTexScaleOffset[SaveIndex],
-                    RotationNormal = ThisOBJ.RotationNormal[SaveIndex],
-                    RotationSecondary = ThisOBJ.RotationSecondary[SaveIndex],
-                    RotationSecondaryDiffuse = ThisOBJ.RotationSecondaryDiffuse[SaveIndex],
-                    RotationSecondaryNormal = ThisOBJ.RotationSecondaryNormal[SaveIndex],
-                    Rotation = ThisOBJ.Rotation[SaveIndex],
-                    Flags = ThisOBJ.Flags[SaveIndex],
+                    MatData = ThisOBJ.LocalMaterials[SaveIndex],
+
                     UseKelvin = ThisOBJ.UseKelvin[SaveIndex],
                     KelvinTemp = ThisOBJ.KelvinTemp[SaveIndex],
-                    ColorBleed = ThisOBJ.ColorBleed[SaveIndex],
-                    AlbedoBlendFactor = ThisOBJ.AlbedoBlendFactor[SaveIndex],
-                    SecondaryNormalTexBlend = ThisOBJ.SecondaryNormalTexBlend[SaveIndex],
 
                     AlbedoGUID = AlbedoGUID,
                     MetallicGUID = MetallicGUID,
@@ -727,7 +597,20 @@ namespace TrueTrace {
                     "RoughnessRemap",
                     "FlagsContainer",
                     "Thin",
+                    "Anisotropic",
                     "Flatness",
+                });
+                DictionaryLinks.Add("Anisotropic", new List<string> {
+                    "Smoothness",
+                    "RoughnessRemap",
+                    "AnisotropicRotation",
+                    "Roughness",
+                });
+                DictionaryLinks.Add("AnisotropicRotation", new List<string> {
+                    "Smoothness",
+                    "RoughnessRemap",
+                    "Anisotropic",
+                    "Roughness",
                 });
                 DictionaryLinks.Add("Emission", new List<string> {
                     "BaseContainer",
@@ -814,8 +697,8 @@ namespace TrueTrace {
 
                 EditorGUILayout.Space();
                 EditorGUI.BeginChangeCheck();
-                t.MaterialOptions[Selected] = (RayTracingObject.Options)EditorGUILayout.EnumPopup("Material Type: ", t.MaterialOptions[Selected]);
-                int Flag = t.Flags[Selected];
+                t.LocalMaterials[Selected].MatType = (int)(RayTracingObject.Options)EditorGUILayout.EnumPopup("Material Type: ", (RayTracingObject.Options)t.LocalMaterials[Selected].MatType);
+                int Flag = t.LocalMaterials[Selected].Tag;
                
 
                 RayTracingMaster.RTOShowBase = EditorGUILayout.BeginFoldoutHeaderGroup(RayTracingMaster.RTOShowBase, "Basic Settings", FoldoutStyle);
@@ -825,29 +708,29 @@ namespace TrueTrace {
                     EditorGUILayout.BeginHorizontal();
                         EditorGUILayout.Space(12.0f, false);
                         EditorGUILayout.BeginVertical();
-                            Color BaseCol = EditorGUILayout.ColorField("Base Color", new Color(t.BaseColor[Selected].x, t.BaseColor[Selected].y, t.BaseColor[Selected].z, 1));
+                            Color BaseCol = EditorGUILayout.ColorField("Base Color", new Color(t.LocalMaterials[Selected].BaseColor.x, t.LocalMaterials[Selected].BaseColor.y, t.LocalMaterials[Selected].BaseColor.z, 1));
                             ConnectionSources.Add("BaseColor", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("BaseColor");
-                            serializedObject.FindProperty("BaseColor").GetArrayElementAtIndex(Selected).vector3Value = new Vector3(BaseCol.r, BaseCol.g, BaseCol.b);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("BaseColor").vector3Value = new Vector3(BaseCol.r, BaseCol.g, BaseCol.b);
 
-                            serializedObject.FindProperty("Metallic").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Metallic: ", t.Metallic[Selected], 0, 1);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("Metallic").floatValue = EditorGUILayout.Slider("Metallic: ", t.LocalMaterials[Selected].Metallic, 0, 1);
                             ConnectionSources.Add("Metallic", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("Metallic");
-                            EditorGUILayout.MinMaxSlider("Metallic Remap: ", ref t.MetallicRemap[Selected].x, ref t.MetallicRemap[Selected].y, 0, 1);
+                            EditorGUILayout.MinMaxSlider("Metallic Remap: ", ref t.LocalMaterials[Selected].MetallicRemap.x, ref t.LocalMaterials[Selected].MetallicRemap.y, 0, 1);
                             ConnectionSources.Add("MetallicRemap", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("MetallicRemap");
 
-                            if(Flag.GetFlag(CommonFunctions.Flags.UseSmoothness)) serializedObject.FindProperty("Roughness").GetArrayElementAtIndex(Selected).floatValue = 1.0f - EditorGUILayout.Slider("Smoothness: ", 1.0f - t.Roughness[Selected], 0, 1);
-                            else serializedObject.FindProperty("Roughness").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Roughness: ", t.Roughness[Selected], 0, 1);
+                            if(Flag.GetFlag(CommonFunctions.Flags.UseSmoothness)) serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("Roughness").floatValue = 1.0f - EditorGUILayout.Slider("Smoothness: ", 1.0f - t.LocalMaterials[Selected].Roughness, 0, 1);
+                            else serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("Roughness").floatValue = EditorGUILayout.Slider("Roughness: ", t.LocalMaterials[Selected].Roughness, 0, 1);
                             ConnectionSources.Add("Roughness", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("Roughness");
-                            EditorGUILayout.MinMaxSlider("Roughness Remap: ", ref t.RoughnessRemap[Selected].x, ref t.RoughnessRemap[Selected].y, 0, 1);
+                            EditorGUILayout.MinMaxSlider("Roughness Remap: ", ref t.LocalMaterials[Selected].RoughnessRemap.x, ref t.LocalMaterials[Selected].RoughnessRemap.y, 0, 1);
                             ConnectionSources.Add("RoughnessRemap", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("RoughnessRemap");
 
                             EditorGUILayout.Space();
-                            if(t.MaterialOptions[Selected] == RayTracingObject.Options.Cutout || t.MaterialOptions[Selected] == RayTracingObject.Options.Fade) {
-                                serializedObject.FindProperty("AlphaCutoff").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Alpha Cutoff: ", t.AlphaCutoff[Selected], 0.01f, 1.0f);
+                            if(t.LocalMaterials[Selected].MatType == 1 || t.LocalMaterials[Selected].MatType == 2) {
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("AlphaCutoff").floatValue = EditorGUILayout.Slider("Alpha Cutoff: ", t.LocalMaterials[Selected].AlphaCutoff, 0.01f, 1.0f);
                                 ConnectionSources.Add("AlphaCutoff", GUILayoutUtility.GetLastRect()); // Store position
                                 ConnectionSourceNames.Add("AlphaCutoff");
                             }
@@ -867,27 +750,27 @@ namespace TrueTrace {
                         EditorGUILayout.BeginVertical();
                             EditorGUILayout.BeginVertical();
                                 GUILayout.Label("Primary Diffuse", LabelStyleBolded);
-                                serializedObject.FindProperty("MainTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.MainTexScaleOffset[Selected]);
-                                serializedObject.FindProperty("Rotation").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.Rotation[Selected], 0, 360);
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("MainTexScaleOffset").vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.LocalMaterials[Selected].TextureModifiers.MainTexScaleOffset);
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("Rotation").floatValue = EditorGUILayout.Slider("Rotation: ", t.LocalMaterials[Selected].TextureModifiers.Rotation, 0, 360);
                             EditorGUILayout.EndVertical();
             
                             EditorGUILayout.Space();
                             EditorGUILayout.Space();
                             EditorGUILayout.BeginVertical();
                                 GUILayout.Label("Secondary Diffuse", LabelStyleBolded);
-                                serializedObject.FindProperty("SecondaryAlbedoTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.SecondaryAlbedoTexScaleOffset[Selected]);
-                                serializedObject.FindProperty("RotationSecondaryDiffuse").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.RotationSecondaryDiffuse[Selected], 0, 360);
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("SecondaryAlbedoTexScaleOffset").vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.LocalMaterials[Selected].TextureModifiers.SecondaryAlbedoTexScaleOffset);
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("RotationSecondaryDiffuse").floatValue = EditorGUILayout.Slider("Rotation: ", t.LocalMaterials[Selected].TextureModifiers.RotationSecondaryDiffuse, 0, 360);
                                 Flag = CommonFunctions.SetFlagStretch(Flag, 1, 3, (int)((RayTracingObject.BlendModes)EditorGUILayout.EnumPopup("Blend Mode: ", (RayTracingObject.BlendModes)Flag.GetFlagStretch(1, 3))));
-                                serializedObject.FindProperty("AlbedoBlendFactor").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Blend Factor: ", t.AlbedoBlendFactor[Selected], 0, 1);
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("AlbedoBlendFactor").floatValue = EditorGUILayout.Slider("Blend Factor: ", t.LocalMaterials[Selected].AlbedoBlendFactor, 0, 1);
                             EditorGUILayout.EndVertical();
 
                             EditorGUILayout.Space();
                             EditorGUILayout.Space();
                             EditorGUILayout.BeginVertical();
                                 GUILayout.Label("Normal Map", LabelStyleBolded);
-                                serializedObject.FindProperty("NormalTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.NormalTexScaleOffset[Selected]);
-                                serializedObject.FindProperty("RotationNormal").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.RotationNormal[Selected], 0, 360);
-                                serializedObject.FindProperty("NormalStrength").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Strength: ", t.NormalStrength[Selected], 0, 20.0f);
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("NormalTexScaleOffset").vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.LocalMaterials[Selected].TextureModifiers.NormalTexScaleOffset);
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("RotationNormal").floatValue = EditorGUILayout.Slider("Rotation: ", t.LocalMaterials[Selected].TextureModifiers.RotationNormal, 0, 360);
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("NormalStrength").floatValue = EditorGUILayout.Slider("Strength: ", t.LocalMaterials[Selected].NormalStrength, 0, 20.0f);
                                 ConnectionSources.Add("NormalStrength", GUILayoutUtility.GetLastRect()); // Store position
                                 ConnectionSourceNames.Add("NormalStrength");
                             EditorGUILayout.EndVertical();
@@ -896,20 +779,20 @@ namespace TrueTrace {
                             EditorGUILayout.Space();
                             EditorGUILayout.BeginVertical();
                                 GUILayout.Label("Secondary Normal Map", LabelStyleBolded);
-                                serializedObject.FindProperty("SecondaryNormalTexScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.SecondaryNormalTexScaleOffset[Selected]);
-                                serializedObject.FindProperty("RotationSecondaryNormal").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.RotationSecondaryNormal[Selected], 0, 360);
-                                serializedObject.FindProperty("DetailNormalStrength").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Strength: ", t.DetailNormalStrength[Selected], 0, 20.0f);
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("SecondaryNormalTexScaleOffset").vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.LocalMaterials[Selected].TextureModifiers.SecondaryNormalTexScaleOffset);
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("RotationSecondaryNormal").floatValue = EditorGUILayout.Slider("Rotation: ", t.LocalMaterials[Selected].TextureModifiers.RotationSecondaryNormal, 0, 360);
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("DetailNormalStrength").floatValue = EditorGUILayout.Slider("Strength: ", t.LocalMaterials[Selected].DetailNormalStrength, 0, 20.0f);
                                 ConnectionSources.Add("DetailNormalStrength", GUILayoutUtility.GetLastRect()); // Store position
                                 ConnectionSourceNames.Add("DetailNormalStrength");
-                                serializedObject.FindProperty("SecondaryNormalTexBlend").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Blend Factor: ", t.SecondaryNormalTexBlend[Selected], 0, 1);
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("SecondaryNormalTexBlend").floatValue = EditorGUILayout.Slider("Blend Factor: ", t.LocalMaterials[Selected].SecondaryNormalTexBlend, 0, 1);
                             EditorGUILayout.EndVertical();
 
                             EditorGUILayout.Space();
                             EditorGUILayout.Space();
                             EditorGUILayout.BeginVertical();
                                 GUILayout.Label("Misc Maps", LabelStyleBolded);
-                                serializedObject.FindProperty("SecondaryTextureScaleOffset").GetArrayElementAtIndex(Selected).vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.SecondaryTextureScaleOffset[Selected]);
-                                serializedObject.FindProperty("RotationSecondary").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Rotation: ", t.RotationSecondary[Selected], 0, 360);
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("SecondaryTextureScaleOffset").vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.LocalMaterials[Selected].TextureModifiers.SecondaryTextureScaleOffset);
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("RotationSecondary").floatValue = EditorGUILayout.Slider("Rotation: ", t.LocalMaterials[Selected].TextureModifiers.RotationSecondary, 0, 360);
                             EditorGUILayout.EndVertical();
 
 
@@ -936,13 +819,13 @@ namespace TrueTrace {
                                 Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.ReplaceBase, EditorGUILayout.ToggleLeft("Replace Base Color", Flag.GetFlag(CommonFunctions.Flags.ReplaceBase), GUILayout.MaxWidth(135)));
                             EditorGUILayout.EndHorizontal();
 
-                            serializedObject.FindProperty("emission").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.FloatField("Emission: ", t.emission[Selected]);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("emission").floatValue = EditorGUILayout.FloatField("Emission: ", t.LocalMaterials[Selected].emission);
                             ConnectionSources.Add("Emission", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("Emission");
-                            Color EmissCol = EditorGUILayout.ColorField("Emission Color", new Color(t.EmissionColor[Selected].x, t.EmissionColor[Selected].y, t.EmissionColor[Selected].z, 1));
+                            Color EmissCol = EditorGUILayout.ColorField("Emission Color", new Color(t.LocalMaterials[Selected].EmissionColor.x, t.LocalMaterials[Selected].EmissionColor.y, t.LocalMaterials[Selected].EmissionColor.z, 1));
                             ConnectionSources.Add("EmissionColor", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("EmissionColor");
-                            serializedObject.FindProperty("EmissionColor").GetArrayElementAtIndex(Selected).vector3Value = new Vector3(EmissCol.r, EmissCol.g, EmissCol.b);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("EmissionColor").vector3Value = new Vector3(EmissCol.r, EmissCol.g, EmissCol.b);
                 
                         EditorGUILayout.EndVertical();
                     EditorGUILayout.EndHorizontal();
@@ -961,49 +844,53 @@ namespace TrueTrace {
                         EditorGUILayout.Space(12.0f, false);
                         EditorGUILayout.BeginVertical();
 
-                            serializedObject.FindProperty("Specular").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Specular: ", t.Specular[Selected], 0, 1);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("Specular").floatValue = EditorGUILayout.Slider("Specular: ", t.LocalMaterials[Selected].Specular, 0, 1);
                             ConnectionSources.Add("Specular", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("Specular");
-                            serializedObject.FindProperty("SpecularTint").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Specular Tint: ", t.SpecularTint[Selected], 0, 1);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("SpecularTint").floatValue = EditorGUILayout.Slider("Specular Tint: ", t.LocalMaterials[Selected].SpecularTint, 0, 1);
                             ConnectionSources.Add("SpecularTint", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("SpecularTint");
                             EditorGUILayout.Space();
-                            serializedObject.FindProperty("ClearCoat").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Clearcoat: ", t.ClearCoat[Selected], 0, 1);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("Clearcoat").floatValue = EditorGUILayout.Slider("Clearcoat: ", t.LocalMaterials[Selected].Clearcoat, 0, 1);
                             ConnectionSources.Add("ClearCoat", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("ClearCoat");
-                            serializedObject.FindProperty("ClearCoatGloss").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Clearcoat Gloss: ", t.ClearCoatGloss[Selected], 0, 1);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("ClearcoatGloss").floatValue = EditorGUILayout.Slider("Clearcoat Gloss: ", t.LocalMaterials[Selected].ClearcoatGloss, 0, 1);
                             ConnectionSources.Add("ClearCoatGloss", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("ClearCoatGloss");
                             EditorGUILayout.Space();
-                            serializedObject.FindProperty("Sheen").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Sheen: ", t.Sheen[Selected], 0, 100);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("Sheen").floatValue = EditorGUILayout.Slider("Sheen: ", t.LocalMaterials[Selected].Sheen, 0, 100);
                             ConnectionSources.Add("Sheen", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("Sheen");
-                            serializedObject.FindProperty("SheenTint").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Sheen Tint: ", t.SheenTint[Selected], 0, 1);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("SheenTint").floatValue = EditorGUILayout.Slider("Sheen Tint: ", t.LocalMaterials[Selected].SheenTint, 0, 1);
                             ConnectionSources.Add("SheenTint", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("SheenTint");
                             EditorGUILayout.Space();                        
-                            serializedObject.FindProperty("Anisotropic").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Anisotropic: ", t.Anisotropic[Selected], 0, 1);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("Anisotropic").floatValue = EditorGUILayout.Slider("Anisotropic: ", t.LocalMaterials[Selected].Anisotropic, 0, 1);
                             ConnectionSources.Add("Anisotropic", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("Anisotropic");
+                            EditorGUILayout.Space();                        
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("AnisotropicRotation").floatValue = EditorGUILayout.Slider("Anisotropic Rotation: ", t.LocalMaterials[Selected].AnisotropicRotation, 0, 180);
+                            ConnectionSources.Add("AnisotropicRotation", GUILayoutUtility.GetLastRect()); // Store position
+                            ConnectionSourceNames.Add("AnisotropicRotation");
                             EditorGUILayout.Space();
-                            serializedObject.FindProperty("IOR").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("IOR: ", t.IOR[Selected], 1, 10);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("IOR").floatValue = EditorGUILayout.Slider("IOR: ", t.LocalMaterials[Selected].IOR, 1, 10);
                             ConnectionSources.Add("IOR", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("IOR");
-                            serializedObject.FindProperty("SpecTrans").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Glass: ", t.SpecTrans[Selected], 0, 1);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("SpecTrans").floatValue = EditorGUILayout.Slider("Glass: ", t.LocalMaterials[Selected].SpecTrans, 0, 1);
                             ConnectionSources.Add("SpecTrans", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("SpecTrans");
-                            serializedObject.FindProperty("ScatterDist").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Scatter Distance: ", t.ScatterDist[Selected], 0, 5);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("ScatterDist").floatValue = EditorGUILayout.Slider("Scatter Distance: ", t.LocalMaterials[Selected].ScatterDist, 0, 5);
                             ConnectionSources.Add("ScatterDist", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("ScatterDist");
                             EditorGUILayout.Space();
-                            serializedObject.FindProperty("DiffTrans").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Diffuse Transmission: ", t.DiffTrans[Selected], 0, 1);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("DiffTrans").floatValue = EditorGUILayout.Slider("Diffuse Transmission: ", t.LocalMaterials[Selected].DiffTrans, 0, 1);
                             ConnectionSources.Add("DiffTrans", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("DiffTrans");
-                            serializedObject.FindProperty("TransmissionColor").GetArrayElementAtIndex(Selected).vector3Value = EditorGUILayout.Vector3Field("Transmission Color: ", t.TransmissionColor[Selected]);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TransmittanceColor").vector3Value = EditorGUILayout.Vector3Field("Transmission Color: ", t.LocalMaterials[Selected].TransmittanceColor);
                             ConnectionSources.Add("TransmissionColor", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("TransmissionColor");
                             EditorGUILayout.Space();
-                            serializedObject.FindProperty("Flatness").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Flatness: ", t.Flatness[Selected], 0, 1);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("Flatness").floatValue = EditorGUILayout.Slider("Flatness: ", t.LocalMaterials[Selected].Flatness, 0, 1);
                             ConnectionSources.Add("Flatness", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("Flatness");
 
@@ -1021,23 +908,23 @@ namespace TrueTrace {
                         EditorGUILayout.Space(12.0f, false);
                         EditorGUILayout.BeginVertical();
                     
-                            serializedObject.FindProperty("Hue").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Hue Shift: ", t.Hue[Selected], 0, 1);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("Hue").floatValue = EditorGUILayout.Slider("Hue Shift: ", t.LocalMaterials[Selected].Hue, 0, 1);
                             ConnectionSources.Add("Hue", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("Hue");
-                            serializedObject.FindProperty("Brightness").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Brightness: ", t.Brightness[Selected], 0, 5);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("Brightness").floatValue = EditorGUILayout.Slider("Brightness: ", t.LocalMaterials[Selected].Brightness, 0, 5);
                             ConnectionSources.Add("Brightness", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("Brightness");
-                            serializedObject.FindProperty("Saturation").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Saturation: ", t.Saturation[Selected], 0, 5);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("Saturation").floatValue = EditorGUILayout.Slider("Saturation: ", t.LocalMaterials[Selected].Saturation, 0, 5);
                             ConnectionSources.Add("Saturation", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("Saturation");
-                            serializedObject.FindProperty("Contrast").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Contrast: ", t.Contrast[Selected], 0, 2);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("Contrast").floatValue = EditorGUILayout.Slider("Contrast: ", t.LocalMaterials[Selected].Contrast, 0, 2);
                             ConnectionSources.Add("Contrast", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("Contrast");
-                            Color BlendColor = EditorGUILayout.ColorField("Blend Color", new Color(t.BlendColor[Selected].x, t.BlendColor[Selected].y, t.BlendColor[Selected].z, 1));
-                            serializedObject.FindProperty("BlendColor").GetArrayElementAtIndex(Selected).vector3Value = new Vector3(BlendColor.r, BlendColor.g, BlendColor.b);
+                            Color BlendColor = EditorGUILayout.ColorField("Blend Color", new Color(t.LocalMaterials[Selected].BlendColor.x, t.LocalMaterials[Selected].BlendColor.y, t.LocalMaterials[Selected].BlendColor.z, 1));
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("BlendColor").vector3Value = new Vector3(BlendColor.r, BlendColor.g, BlendColor.b);
                             ConnectionSources.Add("BlendColor", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("BlendColor");
-                            serializedObject.FindProperty("BlendFactor").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Blend Factor: ", t.BlendFactor[Selected], 0, 1);      
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("BlendFactor").floatValue = EditorGUILayout.Slider("Blend Factor: ", t.LocalMaterials[Selected].BlendFactor, 0, 1);      
                             ConnectionSources.Add("BlendFactor", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("BlendFactor");
 
@@ -1074,7 +961,7 @@ namespace TrueTrace {
                             serializedObject.FindProperty("UseKelvin").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Use Kelvin: ", t.UseKelvin[Selected]);
                             if(t.UseKelvin[Selected]) serializedObject.FindProperty("KelvinTemp").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Kelvin Temperature: ", t.KelvinTemp[Selected], 0, 20000);
                             EditorGUILayout.Space();
-                            serializedObject.FindProperty("ColorBleed").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("ColorBleed: ", t.ColorBleed[Selected], 0, 1.0f);
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("ColorBleed").floatValue = EditorGUILayout.Slider("ColorBleed: ", t.LocalMaterials[Selected].ColorBleed, 0, 1.0f);
                             EditorGUILayout.Space();
                         EditorGUILayout.EndVertical();
                     EditorGUILayout.EndHorizontal();
@@ -1091,16 +978,17 @@ namespace TrueTrace {
 
 
 
-                serializedObject.FindProperty("Flags").GetArrayElementAtIndex(Selected).intValue = Flag;
+                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("Tag").intValue = Flag;
 
 
-
+                bool A = EditorGUILayout.ToggleLeft("Override All Local \"Invisible\" Flags", t.InvisibleOverride, GUILayout.MaxWidth(225));
+                serializedObject.FindProperty("InvisibleOverride").boolValue = A;
 
                 bool MaterialWasChanged = false;
                 if(EditorGUI.EndChangeCheck()) {
                     MaterialWasChanged = true;
                 }
-                serializedObject.FindProperty("FollowMaterial").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Link Mat To Unity Material: ", t.FollowMaterial[Selected]);
+                serializedObject.FindProperty("FollowMaterial").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.ToggleLeft("Link Mat To Unity Material", t.FollowMaterial[Selected]);
                 if(!QuickPasted) serializedObject.ApplyModifiedProperties();
 
                 if(MaterialWasChanged) {
@@ -1113,54 +1001,9 @@ namespace TrueTrace {
                     for(int i = 0; i < TheseNames.Length; i++) {
                         if(Selected == i) continue;
                         if(TheseNames[i].Equals(Name)) {
-                            t.MaterialOptions[i] = t.MaterialOptions[Selected];
-                            t.BaseColor[i] = t.BaseColor[Selected];
-                            t.TransmissionColor[i] = t.TransmissionColor[Selected];
-                            t.emission[i] = t.emission[Selected];
-                            t.EmissionColor[i] = t.EmissionColor[Selected];
-                            t.Roughness[i] = t.Roughness[Selected];
-                            t.RoughnessRemap[i] = t.RoughnessRemap[Selected];
-                            t.MetallicRemap[i] = t.MetallicRemap[Selected];
-                            t.IOR[i] = t.IOR[Selected];
-                            t.Metallic[i] = t.Metallic[Selected];
-                            t.SpecularTint[i] = t.SpecularTint[Selected];
-                            t.Sheen[i] = t.Sheen[Selected];
-                            t.SheenTint[i] = t.SheenTint[Selected];
-                            t.ClearCoat[i] = t.ClearCoat[Selected];
-                            t.ClearCoatGloss[i] = t.ClearCoatGloss[Selected];
-                            t.Anisotropic[i] = t.Anisotropic[Selected];
-                            t.Flatness[i] = t.Flatness[Selected];
-                            t.DiffTrans[i] = t.DiffTrans[Selected];
-                            t.SpecTrans[i] = t.SpecTrans[Selected];
-                            t.Hue[i] = t.Hue[Selected];
-                            t.Brightness[i] = t.Brightness[Selected];
-                            t.Saturation[i] = t.Saturation[Selected];
-                            t.Contrast[i] = t.Contrast[Selected];
-                            t.FollowMaterial[i] = t.FollowMaterial[Selected];
-                            t.ScatterDist[i] = t.ScatterDist[Selected];
-                            t.Specular[i] = t.Specular[Selected];
-                            t.AlphaCutoff[i] = t.AlphaCutoff[Selected];
-                            t.NormalStrength[i] = t.NormalStrength[Selected];
-                            t.DetailNormalStrength[i] = t.DetailNormalStrength[Selected];
-                            t.BlendColor[i] = t.BlendColor[Selected];
-                            t.BlendFactor[i] = t.BlendFactor[Selected];
-                            t.MainTexScaleOffset[i] = t.MainTexScaleOffset[Selected];
-                            t.SecondaryAlbedoTexScaleOffset[i] = t.SecondaryAlbedoTexScaleOffset[Selected];
-                            t.SecondaryNormalTexScaleOffset[i] = t.SecondaryNormalTexScaleOffset[Selected];
-                            t.SecondaryTextureScaleOffset[i] = t.SecondaryTextureScaleOffset[Selected];
-                            t.NormalTexScaleOffset[i] = t.NormalTexScaleOffset[Selected];
-                            t.RotationNormal[i] = t.RotationNormal[Selected];
-                            t.RotationSecondary[i] = t.RotationSecondary[Selected];
-                            t.RotationSecondaryDiffuse[i] = t.RotationSecondaryDiffuse[Selected];
-                            t.RotationSecondaryNormal[i] = t.RotationSecondaryNormal[Selected];
-                            t.Rotation[i] = t.Rotation[Selected];
-                            t.Flags[i] = Flag;
+                            t.LocalMaterials[i] = t.LocalMaterials[Selected];
                             t.UseKelvin[i] = t.UseKelvin[Selected];
                             t.KelvinTemp[i] = t.KelvinTemp[Selected];
-                            t.ColorBleed[i] = t.ColorBleed[Selected];
-                            t.AlbedoBlendFactor[i] = t.AlbedoBlendFactor[Selected];
-                            t.SecondaryNormalTexBlend[i] = t.SecondaryNormalTexBlend[Selected];
-                            // Debug.Log(i);
                             t.CallMaterialEdited(true);
                         }
                     }
@@ -1170,61 +1013,20 @@ namespace TrueTrace {
                     RayTracingObject[] Objects = GameObject.FindObjectsOfType<RayTracingObject>();
                     string Name = t.Names[Selected];
                     foreach(var Obj in Objects) {
-                        for(int i = 0; i < Obj.MaterialOptions.Length; i++) {
+                        for(int i = 0; i < Obj.LocalMaterials.Length; i++) {
                             if(Obj.Names[i].Equals(Name)) {
-                                Obj.MaterialOptions[i] = t.MaterialOptions[Selected];
-                                Obj.BaseColor[i] = t.BaseColor[Selected];
-                                Obj.TransmissionColor[i] = t.TransmissionColor[Selected];
-                                Obj.emission[i] = t.emission[Selected];
-                                Obj.EmissionColor[i] = t.EmissionColor[Selected];
-                                Obj.Roughness[i] = t.Roughness[Selected];
-                                Obj.RoughnessRemap[i] = t.RoughnessRemap[Selected];
-                                Obj.MetallicRemap[i] = t.MetallicRemap[Selected];
-                                Obj.IOR[i] = t.IOR[Selected];
-                                Obj.Metallic[i] = t.Metallic[Selected];
-                                Obj.SpecularTint[i] = t.SpecularTint[Selected];
-                                Obj.Sheen[i] = t.Sheen[Selected];
-                                Obj.SheenTint[i] = t.SheenTint[Selected];
-                                Obj.ClearCoat[i] = t.ClearCoat[Selected];
-                                Obj.ClearCoatGloss[i] = t.ClearCoatGloss[Selected];
-                                Obj.Anisotropic[i] = t.Anisotropic[Selected];
-                                Obj.Flatness[i] = t.Flatness[Selected];
-                                Obj.DiffTrans[i] = t.DiffTrans[Selected];
-                                Obj.SpecTrans[i] = t.SpecTrans[Selected];
-                                Obj.Hue[i] = t.Hue[Selected];
-                                Obj.Brightness[i] = t.Brightness[Selected];
-                                Obj.Saturation[i] = t.Saturation[Selected];
-                                Obj.Contrast[i] = t.Contrast[Selected];
-                                Obj.FollowMaterial[i] = t.FollowMaterial[Selected];
-                                Obj.ScatterDist[i] = t.ScatterDist[Selected];
-                                Obj.Specular[i] = t.Specular[Selected];
-                                Obj.AlphaCutoff[i] = t.AlphaCutoff[Selected];
-                                Obj.NormalStrength[i] = t.NormalStrength[Selected];
-                                Obj.DetailNormalStrength[i] = t.DetailNormalStrength[Selected];
-                                Obj.BlendColor[i] = t.BlendColor[Selected];
-                                Obj.BlendFactor[i] = t.BlendFactor[Selected];
-                                Obj.MainTexScaleOffset[i] = t.MainTexScaleOffset[Selected];
-                                Obj.SecondaryAlbedoTexScaleOffset[i] = t.SecondaryAlbedoTexScaleOffset[Selected];
-                                Obj.SecondaryNormalTexScaleOffset[i] = t.SecondaryNormalTexScaleOffset[Selected];
-                                Obj.SecondaryTextureScaleOffset[i] = t.SecondaryTextureScaleOffset[Selected];
-                                Obj.NormalTexScaleOffset[i] = t.NormalTexScaleOffset[Selected];
-                                Obj.RotationNormal[i] = t.RotationNormal[Selected];
-                                Obj.RotationSecondary[i] = t.RotationSecondary[Selected];
-                                Obj.RotationSecondaryDiffuse[i] = t.RotationSecondaryDiffuse[Selected];
-                                Obj.RotationSecondaryNormal[i] = t.RotationSecondaryNormal[Selected];
-                                Obj.Rotation[i] = t.Rotation[Selected];
-                                Obj.Flags[i] = Flag;
-                                Obj.UseKelvin[i] = t.UseKelvin[Selected];
-                                Obj.KelvinTemp[i] = t.KelvinTemp[Selected];
-                                Obj.ColorBleed[i] = t.ColorBleed[Selected];
-                                Obj.AlbedoBlendFactor[i] = t.AlbedoBlendFactor[Selected];
-                                Obj.SecondaryNormalTexBlend[i] = t.SecondaryNormalTexBlend[Selected];
+                                Obj.LocalMaterials[i] = t.LocalMaterials[Selected];
+                                if(i < t.UseKelvin.Length){
+                                    Obj.UseKelvin[i] = t.UseKelvin[Selected];
+                                    Obj.KelvinTemp[i] = t.KelvinTemp[Selected];
+                                } 
                                 Obj.CallMaterialEdited(true);
                             }
                         }
                     }
                     t.CallMaterialEdited();
                 }
+
             #if !HIDEMATERIALREATIONS
                 int LinkSourceCount = ConnectionSourceNames.Count;
                 for(int i = 0; i < LinkSourceCount; i++) {

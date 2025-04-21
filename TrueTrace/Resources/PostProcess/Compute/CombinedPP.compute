@@ -4,9 +4,33 @@ float DISTORTION_AMOUNT;
 
 Texture2D<float4> Input;
 RWTexture2D<float4> Result;
-SamplerState my_linear_repeat_sampler;
+SamplerState my_point_repeat_sampler;
 int screen_width;
 int screen_height;
+
+// float3 UnityChromaAber(float2 uv) {
+//     float2 coords = 2.0 * uv - 1.0;
+//     float2 end = uv - coords * dot(coords, coords) * DISTORTION_AMOUNT;
+//     float2 diff = end - uv;
+//     float ChromaMaxSamples = 12.0f;
+//     int samples = clamp(int(length(float2(screen_width, screen_height) * diff / 2.0)), 3, ChromaMaxSamples);
+//     float2 delta = diff / samples;
+//     float2 pos = uv;
+//     float3 sum = 0.0, filterSum = 0.0;
+
+//     for (int i = 0; i < samples; i++)
+//     {
+//         float t = (i + 0.5) / samples;
+//         float3 s = SAMPLE_TEXTURE2D_X_LOD(_InputTexture, sampler_LinearClamp, ClampAndScaleUVForBilinearPostProcessTexture(SCREEN_COORD_REMOVE_SCALEBIAS(DistortUV(pos))), 0.0).xyz;
+//         float3 filter = SAMPLE_TEXTURE2D_LOD(_ChromaSpectralLut, sampler_ChromaSpectralLut, float2(t, 0.0), 0).xyz;
+
+//         sum += s * filter;
+//         filterSum += filter;
+//         pos += delta;
+//     }
+
+//     color.xyz = sum / filterSum;
+// }
 
 float2 PincushionDistortion(in float2 uv, float strength) 
 {
@@ -16,11 +40,12 @@ float2 PincushionDistortion(in float2 uv, float strength)
     return 0.5 + float2(sin(uvA), cos(uvA)) * sqrt(uvD) * (1.0 - strength * uvD);
 }
 
+
 float3 ChromaticAbberation(float2 uv) 
 {
-    float rChannel = Input.SampleLevel(my_linear_repeat_sampler, PincushionDistortion(uv, 0.3 * DISTORTION_AMOUNT),0).r;
-    float gChannel = Input.SampleLevel(my_linear_repeat_sampler, PincushionDistortion(uv, 0.15 * DISTORTION_AMOUNT),0).g;
-    float bChannel = Input.SampleLevel(my_linear_repeat_sampler, PincushionDistortion(uv, 0.075 * DISTORTION_AMOUNT),0).b;
+    float rChannel = Input.SampleLevel(my_point_repeat_sampler, PincushionDistortion(uv, 0.3 * DISTORTION_AMOUNT),0).r;
+    float gChannel = Input.SampleLevel(my_point_repeat_sampler, PincushionDistortion(uv, 0.15 * DISTORTION_AMOUNT),0).g;
+    float bChannel = Input.SampleLevel(my_point_repeat_sampler, PincushionDistortion(uv, 0.075 * DISTORTION_AMOUNT),0).b;
     float3 retColor = float3(rChannel, gChannel, bChannel);
     return retColor;
 }
@@ -91,7 +116,7 @@ float4x4 saturationMatrix( float saturation )
 [numthreads(16,16,1)]
 void BSCKernel (uint3 id : SV_DispatchThreadID)
 {
-    Result[id.xy] = float4((mul(mul(contrastMatrix(contrast), saturationMatrix(saturation)), float4(Input[id.xy].xyz,1))).xyz, Input[id.xy].w);
+    Result[id.xy] = float4((mul(mul(contrastMatrix(1), saturationMatrix(saturation)), float4(Input[id.xy].xyz,1))).xyz, Input[id.xy].w);
 }
 
 //Inner radius

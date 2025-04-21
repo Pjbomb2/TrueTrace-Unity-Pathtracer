@@ -52,44 +52,33 @@ namespace TrueTrace {
         public bool IsEmpty(ref LightBounds Cone) {return Cone.w == Vector3.zero;}
 
 
-        private float AngleBetween(Vector3 v1, Vector3 v2) {
-            if(Dot(ref v1, ref v2) < 0) return 3.14159f - 2.0f * (float)System.Math.Asin(Length(v1 + v2) / 2.0f);
-            else return 2.0f * (float)System.Math.Asin(Length(v2 - v1) / 2.0f);
+
+        private void RotateRodrigues(ref Vector3 v, float angle, ref Vector3 axis) {
+            float axisLenSq = Dot(ref axis, ref axis);
+            if (axisLenSq == 0f) return;
+
+            float invLen = 1f / Mathf.Sqrt(axisLenSq);
+            axis = axis * invLen;
+
+            float cos = Mathf.Cos(angle);
+            float sin = Mathf.Sin(angle);
+
+            float dot = Dot(ref axis, ref v);
+            Vector3 cross = Vector3.Cross(axis, v);
+
+            v = v * cos + cross * sin + axis * dot * (1f - cos);
         }
-
-        private Matrix4x4 Rotate(float sinTheta, float cosTheta, Vector3 a) {
-            Normalize(ref a);
-            Matrix4x4 m = Matrix4x4.identity;
-            m[0,0] = a.x * a.x + (1 - a.x * a.x) * cosTheta;
-            m[0,1] = a.x * a.y * (1 - cosTheta) - a.z * sinTheta;
-            m[0,2] = a.x * a.z * (1 - cosTheta) + a.y * sinTheta;
-            m[0,3] = 0;
-
-            m[1,0] = a.x * a.y * (1 - cosTheta) + a.z * sinTheta;
-            m[1,1] = a.y * a.y + (1 - a.y * a.y) * cosTheta;
-            m[1,2] = a.y * a.z * (1 - cosTheta) - a.x * sinTheta;
-            m[1,3] = 0;
-
-            m[2,0] = a.x * a.z * (1 - cosTheta) - a.y * sinTheta;
-            m[2,1] = a.y * a.z * (1 - cosTheta) + a.x * sinTheta;
-            m[2,2] = a.z * a.z + (1 - a.z * a.z) * cosTheta;
-            m[2,3] = 0;
-
-            return m * m.transpose;
+        private float AngleBetween(ref Vector3 v1, ref Vector3 v2) {
+            if(Dot(ref v1, ref v2) < 0) return 3.14159f - 2.0f * (float)System.Math.Asin(Length(v1 + v2) * 0.5f);
+            else return 2.0f * (float)System.Math.Asin(Length(v2 - v1) * 0.5f);
         }
-
-        private Matrix4x4 Rotate(float Theta, Vector3 axis) {
-
-            return Rotate((float)System.Math.Sin(Theta),(float)System.Math.Cos(Theta), axis);
-        }
-
         public void UnionCone(ref LightBounds A, ref LightBounds B) {
             if(A.w.x == 0 && A.w.y == 0 && A.w.z == 0) {A.w = B.w; A.cosTheta_o = B.cosTheta_o; return;}
             if(B.w.x == 0 && B.w.y == 0 && B.w.z == 0) return;
 
             float theta_a = (float)System.Math.Acos(Mathf.Clamp(A.cosTheta_o,-1.0f, 1.0f));
             float theta_b = (float)System.Math.Acos(Mathf.Clamp(B.cosTheta_o,-1.0f, 1.0f));
-            float theta_d = AngleBetween(A.w, B.w);
+            float theta_d = AngleBetween(ref A.w, ref B.w);
             float TempVar = 3.14159f;
             if(theta_d + theta_b < TempVar) TempVar = theta_d + theta_b;
             if(TempVar <= theta_a) return;
@@ -97,13 +86,13 @@ namespace TrueTrace {
             if(theta_d + theta_a < TempVar) TempVar = theta_d + theta_a;
             if(TempVar <= theta_b) {A.w = B.w; A.cosTheta_o = B.cosTheta_o; return;}
 
-            float theta_o = (theta_a + theta_d + theta_b) / 2.0f;
-            if(theta_o >= 3.14159f) {A.w = new Vector3(0,0,0); A.cosTheta_o = -1; return;}
+            float theta_o = (theta_a + theta_d + theta_b) * 0.5f;
+            if(theta_o >= 3.14159f) {A.w = Vector3.zero; A.cosTheta_o = -1; return;}
 
             float theta_r = theta_o - theta_a;
             Vector3 wr = Vector3.Cross(A.w, B.w);
-            if(Dot(ref wr, ref wr) == 0) {A.w = new Vector3(0,0,0); A.cosTheta_o = -1; return;}
-            A.w = Rotate(theta_r, wr) * A.w;
+            if(Dot(ref wr, ref wr) == 0) {A.w = Vector3.zero; A.cosTheta_o = -1; return;}
+            RotateRodrigues(ref A.w, theta_r, ref wr);
             A.cosTheta_o =(float)System.Math.Cos(theta_o);
         }
 
@@ -111,7 +100,7 @@ namespace TrueTrace {
 
     
 
-        private void Union(ref LightBounds A, LightBounds B) {
+        private void Union(ref LightBounds A, ref LightBounds B) {
             if(A.phi == 0) {A = B; return;}
             if(B.phi == 0) return;
             UnionCone(ref A, ref B);
@@ -136,10 +125,10 @@ namespace TrueTrace {
                                 (2.0f * theta_w * sinTheta_o -(float)System.Math.Cos(theta_o - 2.0f * theta_w) -
                                  2.0f * theta_o * sinTheta_o + b.cosTheta_o);
 
-            float Radius = Distance(new Vector3(b.b.BBMax.x + b.b.BBMin.x, b.b.BBMax.y + b.b.BBMin.y, b.b.BBMax.z + b.b.BBMin.z) / 2.0f, b.b.BBMax);
-            float SA = 4.0f * Mathf.PI * Radius * Radius;
             
-            return b.phi * M_omega * Kr * surface_area(new Vector3(b.b.BBMax.x - b.b.BBMin.x, b.b.BBMax.y - b.b.BBMin.y, b.b.BBMax.z - b.b.BBMin.z)) / (float)Mathf.Max(b.LightCount, 1);
+            int LightCoun = b.LightCount;
+            if(LightCoun < 1) LightCoun = 1;
+            return b.phi * M_omega * Kr * surface_area(b.b.BBMax - b.b.BBMin) / (float)LightCoun;
         }
 
         private LightBounds* LightTris;
@@ -195,7 +184,7 @@ namespace TrueTrace {
                 aabb_left = LightTris[DimensionedIndices[Offset]];
                 SAH[1] = EvaluateCost(ref aabb_left, Kr, dimension);
                 for(int i = 2; i < index_count; i++) {
-                    Union(ref aabb_left, LightTris[DimensionedIndices[Offset + i - 1]]);
+                    Union(ref aabb_left, ref LightTris[DimensionedIndices[Offset + i - 1]]);
 
                     SAH[i] = EvaluateCost(ref aabb_left, Kr, dimension) * (float)i;
                 }
@@ -215,7 +204,7 @@ namespace TrueTrace {
 
 
                 for(int i = index_count - 2; i > 0; i--) {
-                    Union(ref aabb_right, LightTris[DimensionedIndices[Offset + i]]);
+                    Union(ref aabb_right, ref LightTris[DimensionedIndices[Offset + i]]);
 
                     float cost = SAH[i] + EvaluateCost(ref aabb_right, Kr, dimension) * (float)(index_count - i);
 
@@ -233,11 +222,11 @@ namespace TrueTrace {
             if(split.cost == float.MaxValue) {
                 split.index = first_index + (index_count) / 2;
                 for(int i = split.index; i < index_count + first_index; i++) {
-                    Union(ref split.aabb_right, LightTris[DimensionedIndices[Offset + i]]);
+                    Union(ref split.aabb_right, ref LightTris[DimensionedIndices[Offset + i]]);
                 }
             }
             split.aabb_left = LightTris[DimensionedIndices[Offset + first_index]];
-            for(int i = first_index + 1; i < split.index; i++) Union(ref split.aabb_left, LightTris[DimensionedIndices[Offset + i]]);
+            for(int i = first_index + 1; i < split.index; i++) Union(ref split.aabb_left, ref LightTris[DimensionedIndices[Offset + i]]);
         }
         public int MaxDepth;
         void BuildRecursive(int nodesi, ref int node_index, int first_index, int index_count, int Depth) {
@@ -385,7 +374,7 @@ namespace TrueTrace {
                 LightTris[i] = TempBound;
                 FinalIndices[i] = i;
                 SAH[i] = (TriAABB.BBMax.x - TriAABB.BBMin.x) / 2.0f + TriAABB.BBMin.x;
-                Union(ref nodes2[0].aabb, TempBound);
+                Union(ref nodes2[0].aabb, ref TempBound);
             }
 
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
@@ -515,13 +504,13 @@ namespace TrueTrace {
             PrimCount = Tris.Length;          
             MaxDepth = 0;
             
-            LightTrisArray = new NativeArray<LightBounds>(Tris, Unity.Collections.Allocator.TempJob);
+            LightTrisArray = new NativeArray<LightBounds>(Tris, Unity.Collections.Allocator.Persistent);
             LightTris = (LightBounds*)NativeArrayUnsafeUtility.GetUnsafePtr(LightTrisArray);
-            SAHArray = new NativeArray<float>(PrimCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-            DimensionedIndicesArray = new NativeArray<int>(PrimCount * 3, Unity.Collections.Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            SAHArray = new NativeArray<float>(PrimCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            DimensionedIndicesArray = new NativeArray<int>(PrimCount * 3, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
 
 
-            nodes2Array = new NativeArray<NodeBounds>(PrimCount * 2, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
+            nodes2Array = new NativeArray<NodeBounds>(PrimCount * 2, Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
             nodes2 = (NodeBounds*)NativeArrayUnsafeUtility.GetUnsafePtr(nodes2Array);
             DimensionedIndices = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(DimensionedIndicesArray);
             SAH = (float*)NativeArrayUnsafeUtility.GetUnsafePtr(SAHArray);
@@ -532,7 +521,7 @@ namespace TrueTrace {
             for(int i = 0; i < PrimCount; i++) {
                 FinalIndices[i] = i;
                 SAH[i] = (Tris[i].b.BBMax.x - Tris[i].b.BBMin.x) / 2.0f + Tris[i].b.BBMin.x;
-                Union(ref nodes2[0].aabb, Tris[i]);
+                Union(ref nodes2[0].aabb, ref Tris[i]);
             }
 
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
@@ -543,30 +532,24 @@ namespace TrueTrace {
             for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (Tris[i].b.BBMax.z - Tris[i].b.BBMin.z) / 2.0f + Tris[i].b.BBMin.z;}
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount * 2, PrimCount);
-            CommonFunctions.DeepClean(ref FinalIndices);
 
 
             aabb_left = new LightBounds();
             aabb_right = new LightBounds();
 
-            indices_going_left_array = new NativeArray<bool>(PrimCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
+            indices_going_left_array = new NativeArray<bool>(PrimCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
             indices_going_left = (bool*)NativeArrayUnsafeUtility.GetUnsafePtr(indices_going_left_array);
-            tempArray = new NativeArray<int>(PrimCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
+            tempArray = new NativeArray<int>(PrimCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.ClearMemory);
             temp = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(tempArray);
 
             int nodeIndex = 2;
             BuildRecursive(0, ref nodeIndex,0,PrimCount, 1);
-            LightTrisArray.Dispose();
-            indices_going_left_array.Dispose();
-            tempArray.Dispose();
-            SAHArray.Dispose();
 
             for(int i = 0; i < PrimCount * 2; i++) {
                 if(nodes2[i].isLeaf == 1) {
                     nodes2[i].left = DimensionedIndices[nodes2[i].left];
                 }
             }
-            DimensionedIndicesArray.Dispose();
             MainSet = new List<int>[MaxDepth];
             for(int i = 0; i < MaxDepth; i++) MainSet[i] = new List<int>();
             Refit(0, 0);
@@ -585,7 +568,6 @@ namespace TrueTrace {
                 }
                 nodes[i] = TempNode;
             }
-            nodes2Array.Dispose();
 
 #if !DontUseSGTree
             {
@@ -609,7 +591,7 @@ namespace TrueTrace {
                             Vector3 center = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center, 1));
                             Vector3 Axis = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.axis, 0));
                             float Scale = Distance(center, ExtendedCenter) / TempNode.S.Radius;
-                            TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(VMFSharpnessToAxisLength(TempNode.sharpness) / Scale, 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
+                            TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(VMFSharpnessToAxisLength(TempNode.sharpness), 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
                             TempNode.axis = Axis;
                             TempNode.S.Center = center;
                             TempNode.variance *= Scale;
@@ -650,19 +632,162 @@ namespace TrueTrace {
                     }
                 }
             }
-            CommonFunctions.DeepClean(ref nodes);
 #endif
 
         }
 
+        public NodeBounds ZeroBound = new NodeBounds();
+        public CompactLightBVHData ZeroBound2 = new CompactLightBVHData();
+
+
+   public void NoAllocRebuild(LightBounds[] Tris,ref GaussianTreeNode[] SGTree, LightBVHTransform[] LightBVHTransforms, GaussianTreeNode[] SGTreeNodes) {//need to make sure incomming is transformed to world space already
+            PrimCount = Tris.Length;          
+            MaxDepth = 0;
+            NativeArray<LightBounds>.Copy(Tris, 0, LightTrisArray, 0, PrimCount);
+            LightTris = (LightBounds*)NativeArrayUnsafeUtility.GetUnsafePtr(LightTrisArray);
+
+
+            nodes2 = (NodeBounds*)NativeArrayUnsafeUtility.GetUnsafePtr(nodes2Array);
+            DimensionedIndices = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(DimensionedIndicesArray);
+            SAH = (float*)NativeArrayUnsafeUtility.GetUnsafePtr(SAHArray);
+
+
+
+            for(int i = 0; i < PrimCount; i++) {
+                indices_going_left[i] = false;
+                temp[i] = 0;
+                nodes[i] = ZeroBound2;
+                nodes[i + PrimCount] = ZeroBound2;
+                nodes2[i] = ZeroBound;
+                nodes2[i + PrimCount] = ZeroBound;
+                FinalIndices[i] = i;
+                SAH[i] = (Tris[i].b.BBMax.x - Tris[i].b.BBMin.x) / 2.0f + Tris[i].b.BBMin.x;
+                Union(ref nodes2[0].aabb, ref Tris[i]);
+            }
+
+            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
+            NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, 0, PrimCount);
+            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (Tris[i].b.BBMax.y - Tris[i].b.BBMin.y) / 2.0f + Tris[i].b.BBMin.y;}
+            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
+            NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount, PrimCount);
+            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (Tris[i].b.BBMax.z - Tris[i].b.BBMin.z) / 2.0f + Tris[i].b.BBMin.z;}
+            System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
+            NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount * 2, PrimCount);
+
+
+            aabb_left = new LightBounds();
+            aabb_right = new LightBounds();
+
+            indices_going_left = (bool*)NativeArrayUnsafeUtility.GetUnsafePtr(indices_going_left_array);
+            temp = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(tempArray);
+
+            int nodeIndex = 2;
+            BuildRecursive(0, ref nodeIndex,0,PrimCount, 1);
+
+            for(int i = 0; i < PrimCount * 2; i++) {
+                if(nodes2[i].isLeaf == 1) {
+                    nodes2[i].left = DimensionedIndices[nodes2[i].left];
+                }
+            }
+            MainSet = new List<int>[MaxDepth];
+            for(int i = 0; i < MaxDepth; i++) MainSet[i] = new List<int>();
+            Refit(0, 0);
+            for(int i = 0; i < PrimCount * 2; i++) {
+                CompactLightBVHData TempNode = new CompactLightBVHData();
+                TempNode.BBMax = nodes2[i].aabb.b.BBMax;
+                TempNode.BBMin = nodes2[i].aabb.b.BBMin;
+                TempNode.w = CommonFunctions.PackOctahedral(nodes2[i].aabb.w);
+                TempNode.phi = nodes2[i].aabb.phi;
+                TempNode.cosTheta_oe = ((uint)Mathf.Floor(32767.0f * ((nodes2[i].aabb.cosTheta_o + 1.0f) / 2.0f))) | ((uint)Mathf.Floor(32767.0f * ((nodes2[i].aabb.cosTheta_e + 1.0f) / 2.0f)) << 16);
+                if(nodes2[i].isLeaf == 1) {
+                    TempNode.left = (-nodes2[i].left) - 1;
+                } else {
+                    TempNode.left = nodes2[i].left;
+                }
+                nodes[i] = TempNode;
+            }
+
+#if !DontUseSGTree
+            {
+                Set = new List<int>[MaxDepth];
+                for(int i = 0; i < MaxDepth; i++) Set[i] = new List<int>();
+                Refit2(0, 0);
+                GaussianTreeNode TempNode = new GaussianTreeNode();
+                for(int i = MaxDepth - 1; i >= 0; i--) {
+                    int SetCount = Set[i].Count;
+                    for(int j = 0; j < SetCount; j++) {
+                        int WriteIndex = Set[i][j];
+                        CompactLightBVHData LBVHNode = nodes[WriteIndex];
+                        Vector3 V;
+                        Vector3 mean;
+                        float variance;
+                        float intensity;
+                        float radius;
+                        if(LBVHNode.left < 0) {
+                            TempNode = SGTreeNodes[-(LBVHNode.left+1)];
+                            Vector3 ExtendedCenter = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center + new Vector3(TempNode.S.Radius, 0, 0), 1));
+                            Vector3 center = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.S.Center, 1));
+                            Vector3 Axis = CommonFunctions.ToVector3(LightBVHTransforms[-(LBVHNode.left+1)].Transform * CommonFunctions.ToVector4(TempNode.axis, 0));
+                            float Scale = Distance(center, ExtendedCenter) / TempNode.S.Radius;
+                            TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(VMFSharpnessToAxisLength(TempNode.sharpness), 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
+                            TempNode.axis = Axis;
+                            TempNode.S.Center = center;
+                            TempNode.variance *= Scale;
+                            TempNode.S.Radius *= Scale;
+                            TempNode.intensity *= Scale * Scale;
+                        } else {
+                            GaussianTreeNode LeftNode = SGTree[nodes[WriteIndex].left];    
+                            GaussianTreeNode RightNode = SGTree[nodes[WriteIndex].left + 1];
+
+                            float phi_left = LeftNode.intensity;    
+                            float phi_right = RightNode.intensity;    
+                            float w_left = phi_left / (phi_left + phi_right);
+                            float w_right = phi_right / (phi_left + phi_right);
+                            
+                            V = w_left * LeftNode.axis * VMFSharpnessToAxisLength(LeftNode.sharpness) + w_right * RightNode.axis * VMFSharpnessToAxisLength(RightNode.sharpness);
+                            // V = w_left * LeftNode.axis + w_right * RightNode.axis;//may be wrong, paper uses BAR_V(BAR_axis here), not just normalized V/axis
+
+                            mean = w_left * LeftNode.S.Center + w_right * RightNode.S.Center;
+                            variance = w_left * LeftNode.variance + w_right * RightNode.variance + w_left * w_right * Vector3.Dot(LeftNode.S.Center - RightNode.S.Center, LeftNode.S.Center - RightNode.S.Center);
+
+                            intensity = LeftNode.intensity + RightNode.intensity;
+                            radius = Mathf.Max(Distance(mean, LeftNode.S.Center) + LeftNode.S.Radius, Distance(mean, RightNode.S.Center) + RightNode.S.Radius);
+
+                            float AxisLength = Distance(Vector3.zero, V);
+                            if(AxisLength == 0) V = new Vector3(0,1,0);
+                            else V /= AxisLength;
+                            TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(AxisLength, 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
+
+                            TempNode.axis = V;
+                            TempNode.S.Center = mean;
+                            TempNode.variance = variance;
+                            TempNode.intensity = intensity;
+                            TempNode.S.Radius = radius;
+                        }
+
+                        TempNode.left = LBVHNode.left;
+                        SGTree[WriteIndex] = TempNode;
+                    }
+                }
+            }
+#endif
+
+        }
+
+
+
         public void ClearAll() {
+            if(LightTrisArray.IsCreated) LightTrisArray.Dispose();
+            if(indices_going_left_array.IsCreated) indices_going_left_array.Dispose();
+            if(tempArray.IsCreated) tempArray.Dispose();
+            if(SAHArray.IsCreated) SAHArray.Dispose();
+            if(DimensionedIndicesArray.IsCreated) DimensionedIndicesArray.Dispose();
+            if(nodes2Array.IsCreated) nodes2Array.Dispose();
             // LightTrisArray.Dispose();
-            // nodes2Array.Dispose();
             // // nodesArray.Dispose();
             // SAHArray.Dispose();
             // indices_going_left_array.Dispose();
             // tempArray.Dispose();
-            // DimensionedIndicesArray.Dispose();
             CommonFunctions.DeepClean(ref FinalIndices);
             CommonFunctions.DeepClean(ref nodes);
 #if !DontUseSGTree

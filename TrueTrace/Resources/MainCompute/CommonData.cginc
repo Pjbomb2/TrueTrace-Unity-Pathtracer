@@ -1,5 +1,5 @@
 #define ONE_OVER_PI 0.318309886548f
-#define PI 3.14159265f
+#define PI 3.14159265359f
 #define EPSILON 1e-8
 
 #include "CommonStructs.cginc"
@@ -80,7 +80,6 @@ Partial rendering factor to 2
 */
 
 int unitylightcount;
-int ReSTIRGIUpdateRate;
 
 //Cam Info
 float3 Forward;
@@ -133,6 +132,7 @@ struct RayHit {
 	int mesh_id;
 	int triangle_id;
 };
+RWTexture2D<float2> MVTexture;
 
 RWTexture2D<float4> ScreenSpaceInfo;
 Texture2D<float4> ScreenSpaceInfoRead;
@@ -240,7 +240,7 @@ inline float2 AlignUV(float2 BaseUV, float4 TexScale, int2 TexDim2, float Rotati
 inline void HandleRotation(inout float2 UV, float Rotation) {
 	if(Rotation != 0) {
 		float sinc, cosc;
-		sincos(Rotation / 180.0f, sinc, cosc);
+		sincos(Rotation / 180.0f * 3.14159f, sinc, cosc);
 		UV -= 0.5f;
 		float2 tempuv = UV;
 		UV.x = tempuv.x * cosc - tempuv.y * sinc;
@@ -249,7 +249,61 @@ inline void HandleRotation(inout float2 UV, float Rotation) {
 	}
 }
 
-inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTex) {
+
+
+float4 SampleTexture(float2 UV, const int TextureType, const IntersectionMat MatTex) {
+	float4 FinalCol = 0;
+	#if !defined(UseBindless) || defined(DX11)
+		switch(TextureType) {
+			case SampleAlbedo:
+				#ifdef PointFiltering
+					FinalCol = _TextureAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlbedoTex, MatTex.Rotation), 0);
+				#else
+					FinalCol = _TextureAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlbedoTex, MatTex.Rotation), 0);
+				#endif
+			break;
+			case SampleAlpha:
+				#ifdef PointFiltering
+					FinalCol = _AlphaAtlas.SampleLevel(my_point_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlphaTex, MatTex.Rotation), 0);
+				#else
+					FinalCol = _AlphaAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.AlphaTex, MatTex.Rotation), 0);
+				#endif
+			break;
+		}
+	#else//BINDLESS
+		int2 TextureIndexAndChannel = -1;
+		[branch] switch(TextureType) {
+			case SampleAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+			case SampleAlpha: TextureIndexAndChannel = MatTex.AlphaTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
+		}
+		int TextureIndex = TextureIndexAndChannel.x - 1;
+		int TextureReadChannel = TextureIndexAndChannel.y;//0-3 is rgba, 4 is to just read all
+
+		#ifdef UseTextureLOD
+			#ifdef PointFiltering
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
+			#else
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
+			#endif
+		#else
+			#ifdef PointFiltering
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+			#else
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
+			#endif
+		#endif
+
+
+
+	#endif
+	return FinalCol;
+}
+
+inline float4 SampleTexture(float2 UV, const int TextureType, const MaterialData MatTex) {
 	float4 FinalCol = 0;
 	#if !defined(UseBindless) || defined(DX11)
 		switch(TextureType) {
@@ -306,7 +360,7 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 	#else//BINDLESS
 		//AlbedoTexScale, AlbedoTex, and Rotation dont worry about, thats just for transforming to the atlas 
 		int2 TextureIndexAndChannel = -1;// = MatTex.BindlessIndex;
-		switch(TextureType) {
+		[branch]switch(TextureType) {
 			case SampleAlbedo: TextureIndexAndChannel = MatTex.AlbedoTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 			case SampleMetallic: TextureIndexAndChannel = MatTex.MetallicTex; HandleRotation(UV, MatTex.RotationSecondary); UV = UV * MatTex.SecondaryTexScaleOffset.xy + MatTex.SecondaryTexScaleOffset.zw; break;
 			case SampleRoughness: TextureIndexAndChannel = MatTex.RoughnessTex; HandleRotation(UV, MatTex.RotationSecondary); UV = UV * MatTex.SecondaryTexScaleOffset.xy + MatTex.SecondaryTexScaleOffset.zw; break;
@@ -325,19 +379,22 @@ inline float4 SampleTexture(float2 UV, int TextureType, const MaterialData MatTe
 
 		#ifdef UseTextureLOD
 			#ifdef PointFiltering
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
 			#else
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
 			#endif
 		#else
 			#ifdef PointFiltering
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
 			#else
-				FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
+				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0)[TextureReadChannel];
+				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
 			#endif
 		#endif
-		if(TextureReadChannel != 4) FinalCol = FinalCol[TextureReadChannel];
-		if(TextureType == SampleNormal || TextureType == SampleDetailNormal) {
+		[branch] if(TextureType == SampleNormal || TextureType == SampleDetailNormal) {
 			FinalCol.g = 1.0f - FinalCol.g;
 			FinalCol = (FinalCol.r >= 0.99f) ? FinalCol.agag : FinalCol.rgrg;
 
@@ -373,6 +430,18 @@ float3x3 GetTangentSpace(float3 normal) {
 
     return float3x3(tangent, normal, binormal);
 }
+
+float3x3 build_rotated_ONB(const float3 N, float basis_rotation)
+{
+    float3 up = abs(N.z) < 0.9999999f ? float3(0.0f, 0.0f, 1.0f) : float3(1.0f, 0.0f, 0.0f);
+    float3 T = normalize(cross(up, N));
+
+    // Rodrigues' rotation
+    T = T * cos(basis_rotation) + cross(N, T) * sin(basis_rotation) + N * dot(N, T) * (1.0f - cos(basis_rotation));
+    float3 B = cross(N, T);
+    return float3x3(T, N, B);
+}
+
 
 float3x3 GetTangentSpace2(float3 normal) {
 
@@ -432,7 +501,7 @@ float2 randomNEE(uint samdim, uint pixel_index) {
 }
 
 float2 random(uint samdim, uint pixel_index) {
-	[branch] if (UseASVGF || (UseReSTIRGI && ReSTIRGIUpdateRate != 0)) {
+	[branch] if (UseASVGF) {
 		uint2 pixid = uint2(pixel_index % screen_width, pixel_index / screen_width);
 		uint hash = pcg_hash(((uint)RandomNums[pixid].y * (uint)526 + samdim) * (MaxBounce + 1) + CurBounce);
 
@@ -632,7 +701,7 @@ SmallerRay CreateCameraRay(float2 uv, uint pixel_index) {
 
 		direction = Forward;//normalize(CamToWorld._m20_m21_m22);
 	}
-	uint2 id = uint2(pixel_index % screen_width, pixel_index / screen_width);
+	int2 id = int2(pixel_index % screen_width, pixel_index / screen_width);
 	[branch] if (!OIDNGuideWrite && UseDoF && (!IsFocusing || dot(id - int2(MousePos.x, MousePos.y), id - int2(MousePos.x, MousePos.y)) > 6.0f)) {
 		float3 cameraForward = mul(CamInvProj, float4(0, 0, 0.0f, 1.0f)).xyz;
 		// Transform the direction from camera to world space and normalize
@@ -707,8 +776,6 @@ static float3 CalculateExtinction2(float3 apparantColor, float scatterDistance)
 //putting these^ here cuz I ALWAYS ctrl + f for the WRONG term when trying to find this function...
 inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const float max_distance, inout float3 throughput, const int MatOffset) {
     TrianglePos tri = triangle_get_positions(tri_id);
-  	TriangleUvs tri2 = triangle_get_positions2(tri_id);
-    int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
 
     float3 h = cross(ray.direction, tri.posedge2);
     float  a = dot(tri.posedge1, h);
@@ -717,93 +784,94 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const fl
     float3 s = ray.origin - tri.pos0;
     float  u = f * dot(s, h);
 
-    if (u >= 0.0f && u <= 1.0f) {
-        float3 q = cross(s, tri.posedge1);
-        float  v = f * dot(ray.direction, q);
+    float3 q = cross(s, tri.posedge1);
+    float  v = f * dot(ray.direction, q);
 
-        if (v >= 0.0f && u + v <= 1.0f) {
-            float t = f * dot(tri.posedge2, q);
-            [branch] if (t > 0.0f && t < max_distance) {
-	            #if defined(AdvancedAlphaMapped) || defined(AdvancedBackground) || defined(IgnoreGlassShadow)
-					if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster)) return false; 
-	        		if(_Materials[MaterialIndex].MatType == CutoutIndex || _Materials[MaterialIndex].specTrans == 1 || _Materials[MaterialIndex].MatType == FadeIndex) {
-		                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
-	        
-	                    if(_Materials[MaterialIndex].MatType == CutoutIndex && _Materials[MaterialIndex].AlphaTex.x > 0)
-	                        if( SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) return false;
+    [branch]if (u >= 0 && v >= 0.0f && u + v <= 1.0f) {
+        float t = f * dot(tri.posedge2, q);
 
-		                #ifdef FadeMapping
-		                    if(_Materials[MaterialIndex].MatType == FadeIndex) {
-		                        if(_Materials[MaterialIndex].AlphaTex.x > 0)
-		                            if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x - _Materials[MaterialIndex].AlphaCutoff <= 0.9f) return false;
-		                    }
-		                #endif
-
-
-			            #ifdef IgnoreGlassShadow
-			                if(_Materials[MaterialIndex].specTrans == 1) {
-				            	#ifdef StainedGlassShadows
-				            		float3 MatCol = _Materials[MaterialIndex].surfaceColor;
-							        if(_Materials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _Materials[MaterialIndex]);
-	        						MatCol = lerp(MatCol, _Materials[MaterialIndex].BlendColor, _Materials[MaterialIndex].BlendFactor);
-									//float Dotter = abs(dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction));
-
-			    					// if(!GetFlag(_Materials[MaterialIndex].Tag, Thin)) throughput *= exp(-t * CalculateExtinction2(1.0f - MatCol, _Materials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _Materials[MaterialIndex].scatterDistance));
-			    					throughput *= exp(-CalculateExtinction2(1.0f - MatCol, _Materials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _Materials[MaterialIndex].scatterDistance));
-			    				#endif
-			                	return false;
-			                }
-			            #endif
-			        }
-	            #endif
-				return true;
-	        }
-        }
-    }
-
-    return false;
-}
-inline void triangle_intersect_dist(int tri_id, const SmallerRay ray, inout float max_distance, int mesh_id, const int MatOffset) {
-    TrianglePos tri = triangle_get_positions(tri_id);
-  	TriangleUvs tri2 = triangle_get_positions2(tri_id);
-    int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
-
-    float3 h = cross(ray.direction, tri.posedge2);
-    float  a = dot(tri.posedge1, h);
-
-    float  f = rcp(a);
-    float3 s = ray.origin - tri.pos0;
-    float  u = f * dot(s, h);
-
-    if (u >= 0.0f && u <= 1.0f) {
-        float3 q = cross(s, tri.posedge1);
-        float  v = f * dot(ray.direction, q);
-
-        if (v >= 0.0f && u + v <= 1.0f) {
-            float t = f * dot(tri.posedge2, q);
+        [branch]if (t > 0 && t < max_distance) {
+		  	const TriangleUvs tri2 = triangle_get_positions2(tri_id);
+		    const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
             #if defined(AdvancedAlphaMapped) || defined(AdvancedBackground) || defined(IgnoreGlassShadow)
-				if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster)) return; 
-        		if(_Materials[MaterialIndex].MatType == CutoutIndex || _Materials[MaterialIndex].specTrans == 1) {
+				if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, IsBackground) || GetFlag(_IntersectionMaterials[MaterialIndex].Tag, ShadowCaster)) return false; 
+        		[branch] if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex || _IntersectionMaterials[MaterialIndex].specTrans == 1 || _IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
 	                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
-                    if(_Materials[MaterialIndex].MatType == CutoutIndex && _Materials[MaterialIndex].AlphaTex.x > 0)
-                        if( SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) return;
+        
+                    if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex && _IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
+                        if( SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return false;
+
+	                #ifdef FadeMapping
+	                    if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
+	                        if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
+	                            if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= 0.9f) return false;
+	                    }
+	                #endif
+
 
 		            #ifdef IgnoreGlassShadow
-		                if(_Materials[MaterialIndex].specTrans == 1) {
+		                if(_IntersectionMaterials[MaterialIndex].specTrans == 1) {
 			            	#ifdef StainedGlassShadows
-			            		float3 MatCol = _Materials[MaterialIndex].surfaceColor;
-						        if(_Materials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _Materials[MaterialIndex]) / 3.0f;
-        						MatCol = lerp(MatCol, _Materials[MaterialIndex].BlendColor, _Materials[MaterialIndex].BlendFactor);
+			            		float3 MatCol = _IntersectionMaterials[MaterialIndex].surfaceColor;
+						        if(_IntersectionMaterials[MaterialIndex].AlbedoTex.x > 0) MatCol *= SampleTexture(BaseUv, SampleAlbedo, _IntersectionMaterials[MaterialIndex]);
+		    					
+#ifdef ShadowGlassAttenuation
+								// if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, Thin))
+			    				// 	throughput *= exp(-CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance));
+			    				// else {
+
+		    						float Dotter = (dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), ray.direction));
+		    						// if(Dotter > 0)
+				    					throughput *= exp(-t * CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance));
+
+			    				// }
+#else
+		    					throughput *= exp(-CalculateExtinction2(1.0f - MatCol, _IntersectionMaterials[MaterialIndex].scatterDistance == 0.0f ? 1.0f : _IntersectionMaterials[MaterialIndex].scatterDistance));
+#endif
 		    				#endif
-		                	return;
+		                	return false;
 		                }
 		            #endif
 		        }
             #endif
-            if (t > 0.0f && t < max_distance) {
-            	max_distance = t;
-            	return;
-            }
+			return true;
+        }
+    }
+    return false;
+}
+inline void triangle_intersect_dist(int tri_id, const SmallerRay ray, inout float max_distance, int mesh_id, const int MatOffset) {
+    TrianglePos tri = triangle_get_positions(tri_id);
+
+    float3 h = cross(ray.direction, tri.posedge2);
+    float  a = dot(tri.posedge1, h);
+
+    float  f = rcp(a);
+    float3 s = ray.origin - tri.pos0;
+    float  u = f * dot(s, h);
+
+    float3 q = cross(s, tri.posedge1);
+    float  v = f * dot(ray.direction, q);
+
+    [branch]if (u >= 0 && v >= 0.0f && u + v <= 1.0f) {
+        float t = f * dot(tri.posedge2, q);
+
+        [branch]if (t > 0 && t < max_distance) {
+		  	const TriangleUvs tri2 = triangle_get_positions2(tri_id);
+		    const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
+            #if defined(AdvancedAlphaMapped) || defined(AdvancedBackground)
+				if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, IsBackground) || GetFlag(_IntersectionMaterials[MaterialIndex].Tag, ShadowCaster)) return; 
+        		[branch] if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
+	                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
+                    if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex && _IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
+                        if( SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return;
+
+		        }
+            #endif
+            #ifdef IgnoreGlassShadow
+                if(_IntersectionMaterials[MaterialIndex].specTrans == 1) return;
+            #endif
+        	max_distance = t;
+        	return;
         }
     }
 
@@ -931,7 +999,7 @@ inline void Closest_Hit_Compute(SmallerRay ray, inout float MinDist) {
         int Reps = 0;
         [loop] while (Reps < MaxTraversalSamples) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
         	uint2 triangle_group;
-            [branch]if (current_group.y & 0xff000000) {
+            [branch]if (current_group.y > 0x00FFFFFF) {
                 uint child_index_offset = firstbithigh(current_group.y);
                 
                 uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
@@ -943,13 +1011,14 @@ inline void Closest_Hit_Compute(SmallerRay ray, inout float MinDist) {
 
                 if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
 
+	            current_group.x = (TempNode.nodes[1].x) + NodeOffset;
+                triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
+
                 uint hitmask = cwbvh_node_intersect(ray, oct_inv4, MinDist, TempNode);
 
  				current_group.y = (hitmask & 0xff000000) | ((TempNode.nodes[0].w >> 24) & 0xff);
                 triangle_group.y = (hitmask & 0x00ffffff);
 
-	            current_group.x = (TempNode.nodes[1].x) + NodeOffset;
-                triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
                 Reps++;
             } else {
                 triangle_group = current_group;
@@ -965,7 +1034,6 @@ inline void Closest_Hit_Compute(SmallerRay ray, inout float MinDist) {
                     TriOffset = _MeshData[mesh_id].TriOffset;
 
                     if (triangle_group.y != 0) stack[stack_size++] = triangle_group;
-
                     if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
 
                     tlas_stack_size = stack_size;
@@ -1043,13 +1111,14 @@ inline bool VisabilityCheckCompute(SmallerRay ray, float dist) {
 
                 if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
 
+	            current_group.x = (TempNode.nodes[1].x) + NodeOffset;
+                triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
+                
                 uint hitmask = cwbvh_node_intersect(ray, oct_inv4, dist, TempNode);
 
  				current_group.y = (hitmask & 0xff000000) | ((TempNode.nodes[0].w >> 24) & 0xff);
                 triangle_group.y = (hitmask & 0x00ffffff);
 
-	            current_group.x = (TempNode.nodes[1].x) + NodeOffset;
-                triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
                 Reps++;
             } else {
                 triangle_group = current_group;
@@ -1188,11 +1257,11 @@ float3 SunDir;
 
 
 inline float luminance(const float3 a) {
-    return dot(float3(0.299f, 0.587f, 0.114f), a);
+    return dot(float3(0.299f, 0.587f, 0.114f), max(a,0));
 }
 
 inline float lum2(const float3 a) {
-    return dot(float3(0.21f, 0.72f, 0.07f), a);
+    return dot(float3(0.21f, 0.72f, 0.07f), max(a,0));
 }
 
 
@@ -1688,24 +1757,28 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 	const float reflecSharpness = (1.0 - max(roughness2.x, roughness2.y)) / max(2.0f * max(roughness2.x, roughness2.y), EPSILON);
 	float3 viewDirTS = mul(tangentFrame, viewDir);//their origional one constructs the tangent frame from N,T,BT, whereas mine constructs it from T,N,BT; problem? I converted all .y to .z and vice versa, but... 
 	float3 reflecVec = reflect(-viewDir, n) * reflecSharpness;
-
+#ifdef UseSGTree
+	GaussianTreeNode node = NodeBuffer[node_index];
+#else
+	LightBVHData node = NodeBuffer[node_index];
+#endif
+	uint PathFlags = MeshBuffer[MeshIndex].PathFlags;
 	while(Reps < 100) {
 		Reps++;
-#ifdef UseSGTree
-		GaussianTreeNode node = NodeBuffer[node_index];
-#else
-		LightBVHData node = SGTree[node_index];
-#endif
 		[branch]if(node.left >= 0) {
 #ifdef UseSGTree
+			const GaussianTreeNode NodeA = NodeBuffer[node.left + NodeOffset];
+			const GaussianTreeNode NodeB = NodeBuffer[node.left + 1 + NodeOffset];
 			const float2 ci = float2(
-				SGImportance(NodeBuffer[node.left + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic),
-				SGImportance(NodeBuffer[node.left + 1 + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic)
+				SGImportance(NodeA, viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic),
+				SGImportance(NodeB, viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic)
 			);
 #else
+			const LightBVHData NodeA = NodeBuffer[node.left + NodeOffset];
+			const LightBVHData NodeB = NodeBuffer[node.left + 1 + NodeOffset];
 			const float2 ci = float2(
-				Importance(p, n, NodeBuffer[node.left + NodeOffset], HasHitTLAS),
-				Importance(p, n, NodeBuffer[node.left + 1 + NodeOffset], HasHitTLAS)
+				Importance(p, n, NodeA, HasHitTLAS),
+				Importance(p, n, NodeB, HasHitTLAS)
 			);
 #endif
 			// if(ci.x == 0 && ci.y == 0) {pmf = -1; return;}
@@ -1722,22 +1795,32 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
             if(sum + ci[offset] <= up) sum += ci[offset++];
 
 
-			int Index = CalcInside(SGTree[node.left + NodeOffset], SGTree[node.left + NodeOffset + 1], p2, offset);
-			if(Index == -1) {
-				if(stacksize == 0) {return;}
-				float3 tempstack = stack[--stacksize];
-				node_index = tempstack.x;
-				lightPDF = tempstack.y;
-				RandNum = tempstack.z;
-				continue;
-			}
-			if(Index >= 2) {
-				Index -= 2;
-				stack[stacksize++] = float3(node.left + NodeOffset + !Index, lightPDF * (ci[!Index] / sumweights), min((up - sum) / ci[!Index], 1.0f - (1e-6)));
+			int Index;
+			if(!HasHitTLAS && Reps < 32) {
+				Index = (PathFlags >> Reps) & 0x1;
+			} else {
+
+				Index = CalcInside(NodeA, NodeB, p2, offset);
+
+				if(Index == -1) {
+					if(stacksize == 0) {return;}
+					float3 tempstack = stack[--stacksize];
+					node_index = tempstack.x;
+					lightPDF = tempstack.y;
+					RandNum = tempstack.z;
+					node = NodeBuffer[node_index];
+					continue;
+				}
+				if(Index >= 2) {
+					Index -= 2;
+					stack[stacksize++] = float3(node.left + NodeOffset + !Index, lightPDF * (ci[!Index] / sumweights), min((up - sum) / ci[!Index], 1.0f - (1e-6)));
+				}
 			}
             RandNum = min((up - sum) / ci[Index], 1.0f - (1e-6));
             node_index = node.left + Index + NodeOffset;
             lightPDF *= ci[Index] / sumweights;
+			if(Index) node = NodeB;
+			else node = NodeA;
 		} else {
 			if(HasHitTLAS) {
 				return;	
@@ -1757,10 +1840,8 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 				NodeOffset = MeshBuffer[MeshIndex].LightNodeOffset;
 				node_index = NodeOffset;
 				HasHitTLAS = true;
-				if(MeshIndex != _LightMeshes[-(node.left+1)].LockedMeshIndex) {
-					// lightPDF = 1;
-					return;
-				}
+				node = NodeBuffer[node_index];
+
 			}
 		}
 	}
@@ -1773,9 +1854,9 @@ void CalcLightPDF(inout float lightPDF, float3 p, float3 p2, float3 n, const int
 
 
 #ifdef UseSGTree
-int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, inout int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, StructuredBuffer<GaussianTreeNode> NodeBuffer, StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
+inline int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, inout int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, const StructuredBuffer<GaussianTreeNode> NodeBuffer, const StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
 #else
-int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, inout int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, StructuredBuffer<LightBVHData> NodeBuffer, StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
+int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, inout int MeshIndex, const float2 sharpness, float3 viewDir, const float metallic, const StructuredBuffer<LightBVHData> NodeBuffer, const StructuredBuffer<MyMeshDataCompacted> MeshBuffer) {
 #endif
 	int node_index = 0;
 	int Reps = 0;
@@ -1790,20 +1871,24 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 	float3 viewDirTS = mul(tangentFrame, viewDir);//their origional one constructs the tangent frame from N,T,BT, whereas mine constructs it from T,N,BT; problem? I converted all .y to .z and vice versa, but... 
 	float3 reflecVec = reflect(-viewDir, n) * reflecSharpness;
 	float RandNum = random(264 + Reps, pixel_index).x;
+#ifdef UseSGTree
+	GaussianTreeNode node = NodeBuffer[0];
+#else
+	LightBVHData node = NodeBuffer[0];
+#endif
 	while(Reps < 622) {
 		Reps++;
-#ifdef UseSGTree
-		GaussianTreeNode node = NodeBuffer[node_index];
-#else
-		LightBVHData node = NodeBuffer[node_index];
-#endif
 		[branch]if(node.left >= 0) {
 #ifdef UseSGTree
+			const GaussianTreeNode NodeA = NodeBuffer[node.left + NodeOffset];
+			const GaussianTreeNode NodeB = NodeBuffer[node.left + 1 + NodeOffset];
 			const float2 ci = float2(
-				SGImportance(NodeBuffer[node.left + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic),
-				SGImportance(NodeBuffer[node.left + 1 + NodeOffset], viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic)
+				SGImportance(NodeA, viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic),
+				SGImportance(NodeB, viewDirTS, p, n, ProjRoughness2, reflecVec, tangentFrame, metallic)
 			);
 #else
+			const LightBVHData NodeA = NodeBuffer[node.left + NodeOffset];
+			const LightBVHData NodeB = NodeBuffer[node.left + 1 + NodeOffset];
 			const float2 ci = float2(
 				Importance(p, n, NodeBuffer[node.left + NodeOffset], HasHitTLAS),
 				Importance(p, n, NodeBuffer[node.left + 1 + NodeOffset], HasHitTLAS)
@@ -1828,6 +1913,8 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 
 			pmf /= ((ci[Index] / sumweights));
 			node_index = node.left + Index + NodeOffset;
+			if(Index) node = NodeB;
+			else node = NodeA;
 			
 		} else {
 			[branch]if(HasHitTLAS) {
@@ -1849,14 +1936,93 @@ int SampleLightBVH(float3 p, float3 n, inout float pmf, const int pixel_index, i
 				NodeOffset = MeshBuffer[MeshIndex].LightNodeOffset;
 				node_index = NodeOffset;
 				HasHitTLAS = true;
+				node = NodeBuffer[node_index];
 			}
 		}
 	}
 	return -1;
 }
+float4x4 prevviewprojection;
+
+float3 LoadSurfaceInfoCurrentInPrev(int2 id) {
+    uint4 Target = PrimaryTriData[id.xy];
+	if(Target.w == 1) return asfloat(Target.xyz);
+    MyMeshDataCompacted Mesh = _MeshDataPrev[Target.x];
+    Target.y += Mesh.TriOffset;
+    float2 TriUV;
+    TriUV.x = asfloat(Target.z);
+    TriUV.y = asfloat(Target.w);
+    float4x4 Inverse = inverse(Mesh.W2L);
+    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+}
+
+float3 LoadSurfaceInfoCurrentInPrev2(int2 id) {
+    uint4 Target = PrimaryTriData[id.xy];
+	if(Target.w == 1) return asfloat(Target.xyz);
+    MyMeshDataCompacted Mesh = _MeshDataPrev[Target.x];
+    float4x4 Inverse = inverse(Mesh.W2L);
+    float2 TriUV;
+    TriUV.x = asfloat(Target.z);
+    TriUV.y = asfloat(Target.w);
+    if(Mesh.SkinnedOffset == -1) {
+	    Target.y += Mesh.TriOffset;
+	    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+	} else {
+	    Target.y += Mesh.SkinnedOffset;
+	    return mul(Inverse, float4(SkinnedMeshTriBufferPrev[Target.y].pos0 + TriUV.x * SkinnedMeshTriBufferPrev[Target.y].posedge1 + TriUV.y * SkinnedMeshTriBufferPrev[Target.y].posedge2,1)).xyz;
+	}	    
+}
+
+inline float3 LoadSurfaceInfoPrev2(int2 id) {
+    uint4 Target = PrimaryTriDataPrev[id.xy];
+	if(Target.w == 1) return asfloat(Target.xyz);
+    MyMeshDataCompacted Mesh = _MeshDataPrev[Target.x];
+    float2 TriUV;
+    TriUV.x = asfloat(Target.z);
+    TriUV.y = asfloat(Target.w);
+    float4x4 Inverse = inverse(Mesh.W2L);
+    if(Mesh.SkinnedOffset == -1) {
+	    Target.y += Mesh.TriOffset;
+	    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+	} else {
+	    Target.y += Mesh.SkinnedOffset;
+	    return mul(Inverse, float4(SkinnedMeshTriBufferPrev[Target.y].pos0 + TriUV.x * SkinnedMeshTriBufferPrev[Target.y].posedge1 + TriUV.y * SkinnedMeshTriBufferPrev[Target.y].posedge2,1)).xyz;
+	}	    
+}
 
 
 float3 LoadSurfaceInfoPrev(int2 id) {
+    uint4 Target = PrimaryTriDataPrev[id.xy];
+	if(Target.w == 1) return asfloat(Target.xyz);
+    MyMeshDataCompacted Mesh = _MeshDataPrev[Target.x];
+    Target.y += Mesh.TriOffset;
+    float2 TriUV;
+    TriUV.x = asfloat(Target.z);
+    TriUV.y = asfloat(Target.w);
+    float4x4 Inverse = inverse(Mesh.W2L);
+    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+}
+
+float3 LoadSurfaceInfoPrev3(int2 id) {
+    uint4 Target = PrimaryTriDataPrev[id.xy];
+	if(Target.w == 1) return asfloat(Target.xyz);
+    MyMeshDataCompacted Mesh = _MeshDataPrev[Target.x];
+    // Target.y += Mesh.TriOffset;
+    float2 TriUV;
+    TriUV.x = asfloat(Target.z);
+    TriUV.y = asfloat(Target.w);
+    float4x4 Inverse = inverse(Mesh.W2L);
+    if(Mesh.SkinnedOffset == -1) {
+	    Target.y += Mesh.TriOffset;
+	    return mul(Inverse, float4(AggTrisA[Target.y].pos0 + TriUV.x * AggTrisA[Target.y].posedge1 + TriUV.y * AggTrisA[Target.y].posedge2,1)).xyz;
+	} else {
+	    Target.y += Mesh.SkinnedOffset;
+	    return mul(Inverse, float4(SkinnedMeshTriBufferPrev[Target.y].pos0 + TriUV.x * SkinnedMeshTriBufferPrev[Target.y].posedge1 + TriUV.y * SkinnedMeshTriBufferPrev[Target.y].posedge2,1)).xyz;
+	}	  
+}
+
+
+inline float3 LoadSurfaceInfoPrevInCurrent(int2 id) {
     uint4 Target = PrimaryTriDataPrev[id.xy];
 	if(Target.w == 1) return asfloat(Target.xyz);
     MyMeshDataCompacted Mesh = _MeshData[Target.x];
@@ -2194,6 +2360,18 @@ inline void CalcPosNorm(uint4 TriData, inout float3 Pos, inout float3 Norm) {
 
 }
 
+inline void CalcPosOnly(uint4 TriData, inout float3 Pos) {
+	if(TriData.w == 99993) {
+		Pos = asfloat(TriData.xyz);
+	} else {
+	    MyMeshDataCompacted Mesh = _MeshData[TriData.x];
+	    float4x4 Inverse = inverse(Mesh.W2L);
+	    TriData.y += Mesh.TriOffset;
+		Pos = mul(Inverse, float4(AggTrisA[TriData.y].pos0 + asfloat(TriData.z) * AggTrisA[TriData.y].posedge1 + asfloat(TriData.w) * AggTrisA[TriData.y].posedge2,1)).xyz;		
+	}
+
+}
+
 inline float3 CalcPos(uint4 TriData) {
 	if(TriData.w == 99993) return asfloat(TriData.xyz);
     MyMeshDataCompacted Mesh = _MeshData[TriData.x];
@@ -2237,17 +2415,16 @@ inline int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Nor
 	    return clamp(( random(11, pixel_index).x * unitylightcount), 0, unitylightcount - 1);
 
     }
-
+    const float3 RandVecMain = float3(random(115, pixel_index), random(116, pixel_index).x);
+    const float RandVecW = random(116, pixel_index).y;
     for(int i = 0; i < RISCount + 1; i++) {
+        float3 RandVec = RandVecMain;
         Rand = random(i + 11, pixel_index);
         Index = clamp((Rand.x * unitylightcount), 0, unitylightcount - 1);
         LightData light = _UnityLights[Index];
-        to_light = (light.Type == DIRECTIONALLIGHT ? (light.Direction * 120000.0f + Position) : light.Position) - Position;
-        LengthSquared = dot(to_light, to_light);
-        to_light /= sqrt(LengthSquared);
 
+        float3 MiscInfo = float3(light.Softness * 120.0f + 1, light.SpotAngle);
         if(light.Type == AREALIGHTQUAD|| light.Type == AREALIGHTDISK) {
-            float3 RandVec = float3(random(i + 292, pixel_index), random(i + 392, pixel_index).x);
             float sinPhi, cosPhi;
             sincos(light.ZAxisRotation, sinPhi, cosPhi);
             switch(light.Type) {
@@ -2255,34 +2432,34 @@ inline int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Nor
                     RandVec.xy = RandVec.xy * light.SpotAngle - light.SpotAngle / 2.0f;
                     RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy);
                     light.Position += ToWorld(GetTangentSpace2(light.Direction), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
-                    // area = (light.SpotAngle.x * light.SpotAngle.y);
-                    light.Radiance *= PI;
-                    light.Radiance *= pow(saturate(dot(to_light, -light.Direction)), light.Softness * 120.0f + 1) * (light.SpotAngle.x * light.SpotAngle.y);
-
-                    // RandVec.xy = RandVec.xy * light.SpotAngle - light.SpotAngle / 2.0f;
-                    // RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy);
-                    // light.Position += ToWorld(GetTangentSpace2(light.Direction), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
-                    // area = Light.SpotAngle.x * Light.SpotAngle.y;
-                    // if(hitDat.MatType == 3) Radiance = 0;
-                    // light.Radiance *= (light.SpotAngle.x * light.SpotAngle.y) / 2.0f;
+                    light.Radiance *= PI * ((light.SpotAngle.x * light.SpotAngle.y));
                 break;
                 case AREALIGHTDISK:
                     sincos(RandVec.x * 2.0f * PI, RandVec.x, RandVec.y);
                     RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy) * RandVec.z * light.SpotAngle.x;
                     light.Position += ToWorld(GetTangentSpace2(light.Direction), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
-                    // area = PI * Light.SpotAngle.x * Light.SpotAngle.x;
-                    // light.Radiance *= PI * light.SpotAngle.x * light.SpotAngle.x;
                 break;
             }
 
             to_light = light.Position - Position;
             LengthSquared = dot(to_light, to_light);
             to_light /= sqrt(LengthSquared);
+            light.Radiance *= pow(saturate(dot(to_light, -light.Direction)), MiscInfo.x) * (MiscInfo.x);
             float PDF = saturate(dot(to_light, -light.Direction));
             if(PDF > 0) p_hat = max(luminance(light.Radiance) / (LengthSquared * max(PDF, 0.1f)),0);
         	else p_hat = 0;
         } else {
-            p_hat = max(luminance(light.Radiance) / ((light.Type == DIRECTIONALLIGHT) ? 12.0f : LengthSquared) * ((light.Type == SPOTLIGHT) ? saturate((light.Softness * light.Softness) + saturate(dot(to_light, -light.Direction)) * light.SpotAngle.x + light.SpotAngle.y) : 1)* (dot(to_light, Norm) > 0),0);
+        	if(light.Type != DIRECTIONALLIGHT) {
+                light.Position += normalize(RandVec - 0.5f) * RandVecW * light.Softness * 0.1f;//Soft Shadows
+        	}
+	        to_light = (light.Type == DIRECTIONALLIGHT ? (light.Direction * 120000.0f + Position) : light.Position) - Position;
+        	LengthSquared = dot(to_light, to_light);
+        	to_light /= sqrt(LengthSquared);
+        	if(light.Type == SPOTLIGHT) {
+                light.Radiance *= ((1.0f - MiscInfo.z * 0.0174533) + (MiscInfo.y * 0.0174533 - MiscInfo.z * 0.0174533) / 2.0f);
+                light.Radiance *= saturate(saturate(dot(to_light, -light.Direction)) * MiscInfo.y + MiscInfo.z);
+        	}
+            p_hat = max(luminance(light.Radiance) / ((light.Type == DIRECTIONALLIGHT) ? 12.0f : LengthSquared) * (dot(to_light, Norm) > 0),0);
         	// float PDF = (((light.Type == DIRECTIONALLIGHT) ? 10.0f : LengthSquared) * ((light.Type == SPOTLIGHT) ? saturate(saturate(dot(to_light, -light.Direction)) * light.SpotAngle.x + light.SpotAngle.y) : 1)* (dot(to_light, Norm) > 0));
             // if(PDF > 0.01f) p_hat = max(luminance(light.Radiance) / PDF,0);
         	// else p_hat = 0;
@@ -2297,6 +2474,7 @@ inline int SelectUnityLight(int pixel_index, inout float lightWeight, float3 Nor
     lightWeight *= (wsum / max((RISCount + 1) *MinP_Hat, 0.000001f)) * (float)unitylightcount;
     return MinIndex;
 }
+
 
 inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float lightWeight, float3 Norm, float3 Position, float4x4 Transform, inout float3 Radiance, inout float3 FinalPos, float2 sharpness, float3 viewDir, float metallic) {//Need to check these to make sure they arnt simply doing uniform sampling
 
@@ -2367,33 +2545,29 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
     #ifdef AdvancedBackground
     	if(GetFlag(MatDat.Tag, IsBackground)) return -1;
     #endif
-    #ifdef WhiteLights
-        MatDat.surfaceColor = 0.5f;
-    #else
-        float2 BaseUv = TOHALF(AggTrisA[AggTriIndex].tex0) * (1.0f - FinalUV.x - FinalUV.y) + TOHALF(AggTrisA[AggTriIndex].texedge1) * FinalUV.x + TOHALF(AggTrisA[AggTriIndex].texedge2) * FinalUV.y;
-        if(MatDat.AlbedoTex.x > 0)
-        	MatDat.surfaceColor *= SampleTexture(BaseUv, SampleAlbedo, MatDat);
+    float2 BaseUv = TOHALF(AggTrisA[AggTriIndex].tex0) * (1.0f - FinalUV.x - FinalUV.y) + TOHALF(AggTrisA[AggTriIndex].texedge1) * FinalUV.x + TOHALF(AggTrisA[AggTriIndex].texedge2) * FinalUV.y;
+    if(MatDat.AlbedoTex.x > 0)
+    	MatDat.surfaceColor *= SampleTexture(BaseUv, SampleAlbedo, MatDat);
 
-        float3 TempCol = MatDat.surfaceColor;
-        Unity_Hue_Degrees_float(TempCol, MatDat.Hue * 500.0f, MatDat.surfaceColor);
-        MatDat.surfaceColor *= MatDat.Brightness;
-        TempCol = MatDat.surfaceColor;
-        Unity_Saturation_float(TempCol, MatDat.Saturation, MatDat.surfaceColor);
-        Unity_Contrast_float(MatDat.surfaceColor, MatDat.Contrast);
-        MatDat.surfaceColor = saturate(MatDat.surfaceColor);
+    float3 TempCol = MatDat.surfaceColor;
+    Unity_Hue_Degrees_float(TempCol, MatDat.Hue * 500.0f, MatDat.surfaceColor);
+    MatDat.surfaceColor *= MatDat.Brightness;
+    TempCol = MatDat.surfaceColor;
+    Unity_Saturation_float(TempCol, MatDat.Saturation, MatDat.surfaceColor);
+    Unity_Contrast_float(MatDat.surfaceColor, MatDat.Contrast);
+    MatDat.surfaceColor = saturate(MatDat.surfaceColor);
 
-        if ((MatDat.EmissiveTex.x > 0 && MatDat.emission >= 0)) {
-            float3 EmissCol = lerp(MatDat.EmissionColor, MatDat.surfaceColor, GetFlag(MatDat.Tag, BaseIsMap));
-    		float4 EmissTex = SampleTexture(BaseUv, SampleEmission, MatDat);
-            if(!GetFlag(MatDat.Tag, IsEmissionMask)) {//IS a mask
-                MatDat.emission *= luminance(EmissTex.xyz);
-                
-                MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissCol, saturate(MatDat.emission) * GetFlag(MatDat.Tag, ReplaceBase));
-            } else {//is NOT a mask
-                MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissTex.xyz * EmissCol, saturate(MatDat.emission) * GetFlag(MatDat.Tag, ReplaceBase));
-            }            
-        }
-    #endif
+    if ((MatDat.EmissiveTex.x > 0 && MatDat.emission >= 0)) {
+        float3 EmissCol = lerp(MatDat.EmissionColor, MatDat.surfaceColor, GetFlag(MatDat.Tag, BaseIsMap));
+		float4 EmissTex = SampleTexture(BaseUv, SampleEmission, MatDat);
+        if(!GetFlag(MatDat.Tag, IsEmissionMask)) {//IS a mask
+            MatDat.emission *= luminance(EmissTex.xyz);
+            
+            MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissCol, saturate(MatDat.emission) * GetFlag(MatDat.Tag, ReplaceBase));
+        } else {//is NOT a mask
+            MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissTex.xyz * EmissCol, saturate(MatDat.emission) * GetFlag(MatDat.Tag, ReplaceBase));
+        }            
+    }
     Radiance = MatDat.emission * MatDat.surfaceColor;
     return AggTriIndex;
 }
@@ -2494,9 +2668,9 @@ inline uint Hash32Bit(uint a) {
 //double hash counting? take advantage of the hash collisions to store multiple values per hash?
 inline uint GenHash(float3 Pos, float3 Norm) {
 	Pos = abs(Pos) < 0.00001f ? 0.00001f : Pos;
-    int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);//length() seems to work better, but I reallly wanna find a way to make Dot() work, as thats wayyyy faster
+    int Layer = max(floor(log2(length(CamPos - Pos)) + 1), 1);//length() seems to work better, but I reallly wanna find a way to make Dot() work, as thats wayyyy faster
 
-    Pos = floor(Pos * 200.0f / pow(2, Layer));
+    Pos = floor(Pos * 35.0f / pow(2, Layer));
     uint3 Pos2 = asuint((int3)Pos);
     uint ThisHash = ((Pos2.x & 255) << 0) | ((Pos2.y & 255) << 8) | ((Pos2.z & 255) << 16);
     ThisHash |= (Layer & 31) << 24;
@@ -2514,7 +2688,7 @@ inline uint GenHash(float3 Pos, float3 Norm) {
 inline uint GenHashPrecompedLayer(float3 Pos, const int Layer, const float3 Norm) {
 	Pos = abs(Pos) < 0.00001f ? 0.00001f : Pos;
 
-    Pos = floor(Pos * 200.0f / pow(2, Layer));
+    Pos = floor(Pos * 35.0f / pow(2, Layer));
     uint3 Pos2 = asuint((int3)Pos);
     uint ThisHash = ((Pos2.x & 255) << 0) | ((Pos2.y & 255) << 8) | ((Pos2.z & 255) << 16);
     ThisHash |= (Layer & 31) << 24;
@@ -2530,15 +2704,15 @@ inline uint GenHashPrecompedLayer(float3 Pos, const int Layer, const float3 Norm
 
 inline float GetVoxSize(float3 Pos, inout int Layer) {
 	Pos = abs(Pos) < 0.00001f ? 0.00001f : Pos;
-    Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);
-    return pow(2, Layer) / 200.0f;
+    Layer = max(floor(log2(length(CamPos - Pos)) + 1), 1);
+    return pow(2, Layer) / 35.0f;
 }
 
 inline uint GenHashComputedNorm(float3 Pos, uint NormHash) {
 	Pos = abs(Pos) < 0.00001f ? 0.00001f : Pos;
-    int Layer = max(floor(log2(length(CamPos - Pos)) + 4), 1);//length() seems to work better, but I reallly wanna find a way to make Dot() work, as thats wayyyy faster
+    int Layer = max(floor(log2(length(CamPos - Pos)) + 1), 1);//length() seems to work better, but I reallly wanna find a way to make Dot() work, as thats wayyyy faster
 
-    Pos = floor(Pos * 200.0f / pow(2, Layer));
+    Pos = floor(Pos * 35.0f / pow(2, Layer));
     uint3 Pos2 = asuint((int3)Pos);
     uint ThisHash = ((Pos2.x & 255) << 0) | ((Pos2.y & 255) << 8) | ((Pos2.z & 255) << 16);
     ThisHash |= (Layer & 31) << 24;
@@ -2577,8 +2751,8 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 
 		    GridVoxel Voxel;
 			Voxel.radiance = voxelDataPacked.xyz / 1e3f;
-		    Voxel.SampleNum = voxelDataPacked.w & 0x0000FFFF;
-		    Voxel.FrameNum = (voxelDataPacked.w >> 16) & 0x0000FFFF;
+		    Voxel.SampleNum = voxelDataPacked.w & 0x00FFFFFF;
+		    Voxel.FrameNum = (voxelDataPacked.w >> 24) & 0xFF;
 
 		    return Voxel;
 		}
@@ -2613,7 +2787,7 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 		if(CurHash == 0) return false;
 		uint ActualPropDepth = min(PathLength & 7, PropDepth);
 		AddVoxelData(CurHash, uint4(RunningIlluminance * 1e3f, 1));
-		for(int i = 0; i < ActualPropDepth; i++) {
+		for(uint i = 0; i < ActualPropDepth; i++) {
 			RunningIlluminance *= unpackRGBE(CurrentProp.samples[i].x);
 			AddVoxelData(CurrentProp.samples[i].y, uint4(RunningIlluminance * 1e3f, 0));
 		}
@@ -2635,7 +2809,7 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 		if(CurHash == 0) return false;
 		uint ActualPropDepth = min(CurrentProp.pathLength & 7, PropDepth);
 		AddVoxelData(CurHash, uint4(RunningIlluminance * 1e3f, 1));
-        for(int i = 0; i < ActualPropDepth; i++) {
+        for(uint i = 0; i < ActualPropDepth; i++) {
 			RunningIlluminance *= unpackRGBE(CurrentProp.samples[i].x);
 			AddVoxelData(CurrentProp.samples[i].y, uint4(RunningIlluminance * 1e3f, 0));
 		}
@@ -2995,3 +3169,53 @@ float3 MultipleOctaveScattering(float density, float mu) {
 
 
 
+float3 waveLengthToRGB(float Wavelength) {
+    const float Gamma = 0.80;
+
+    float factor;
+    float Red, Green, Blue;
+
+    if((Wavelength >= 380) && (Wavelength < 440)) {
+        Red = -(Wavelength - 440) / (440 - 380);
+        Green = 0.0;
+        Blue = 1.0;
+    } else if((Wavelength >= 440) && (Wavelength < 490)) {
+        Red = 0.0;
+        Green = (Wavelength - 440) / (490 - 440);
+        Blue = 1.0;
+    } else if((Wavelength >= 490) && (Wavelength < 510)) {
+        Red = 0.0;
+        Green = 1.0;
+        Blue = -(Wavelength - 510) / (510 - 490);
+    } else if((Wavelength >= 510) && (Wavelength < 580)) {
+        Red = (Wavelength - 510) / (580 - 510);
+        Green = 1.0;
+        Blue = 0.0;
+    } else if((Wavelength >= 580) && (Wavelength < 645)) {
+        Red = 1.0;
+        Green = -(Wavelength - 645) / (645 - 580);
+        Blue = 0.0;
+    } else if((Wavelength >= 645) && (Wavelength < 781)) { 
+        Red = 1.0;
+        Green = 0.0;
+        Blue = 0.0;
+    } else {
+        Red = 0.0;
+        Green = 0.0;
+        Blue = 0.0;
+    }
+
+    // Let the intensity fall off near the vision limits
+
+    if((Wavelength >= 380) && (Wavelength < 420)) {
+        factor = 0.3 + 0.7 * (Wavelength - 380) / (420 - 380);
+    } else if((Wavelength >= 420) && (Wavelength < 701)) {
+        factor = 1.0;
+    } else if((Wavelength >= 701) && (Wavelength < 781)) {
+        factor = 0.3 + 0.7 * (780 - Wavelength) / (780 - 700);
+    } else {
+        factor = 0.0;
+    }
+
+    return pow(float3(Red, Green, Blue) * factor, Gamma);
+}

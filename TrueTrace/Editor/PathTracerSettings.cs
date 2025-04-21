@@ -59,7 +59,6 @@ namespace TrueTrace {
          [SerializeField] public bool ExposureAuto = false;
          [SerializeField] public bool ReSTIRGI = false;
          [SerializeField] public bool SampleValid = false;
-         [SerializeField] public int GIUpdateRate = 7;
          [SerializeField] public bool GITemporal = true;
          [SerializeField] public int GITemporalMCap = 20;
          [SerializeField] public bool GISpatial = true;
@@ -584,7 +583,6 @@ Toggle BloomToggle;
 [Delayed] FloatField ResField;
 IntegerField AtmoScatterField;
 Toggle GIToggle;
-IntegerField GIUpdateRateField;
 IntegerField TemporalGIMCapField;
 FloatField ReSTIRGISpatialRadiusField;
 Toggle TemporalGIToggle;
@@ -645,6 +643,7 @@ Toolbar toolbar;
 
 
          Foldout PrimaryBackgroundFoldout = new Foldout() {text = "Primary Background"};
+            PrimaryBackgroundFoldout.tooltip = "Sky used for direct lighting";
         { 
             {
 
@@ -713,7 +712,8 @@ Toolbar toolbar;
         }
 
 
-            Foldout SecondaryBackgroundFoldout = new Foldout() {text = "Secondary Background"};
+         Foldout SecondaryBackgroundFoldout = new Foldout() {text = "Secondary Background"};
+            SecondaryBackgroundFoldout.tooltip = "Sky used for indirect lighting";
          {
             {
                SecondaryInputHDRIField = new ObjectField();
@@ -769,18 +769,22 @@ Toolbar toolbar;
 
 
       UnityLightModifierField = new FloatField() {value = LightEnergyScale, label = "Unity Light Intensity Modifier"};
+         UnityLightModifierField.tooltip = "Global emission multiplier for spot/point/direction/area lights";
       UnityLightModifierField.RegisterValueChangedCallback(evt => {LightEnergyScale = evt.newValue; RayMaster.LocalTTSettings.LightEnergyScale = LightEnergyScale;});
       UnityLightModifierField.style.maxWidth = 345;
 
       FloatField LEMLightModifierField = new FloatField() {value = LEMEnergyScale, label = "LEM Light Intensity Modifier"};
+         LEMLightModifierField.tooltip = "Global emission multiplier for emissive meshes";
       LEMLightModifierField.RegisterValueChangedCallback(evt => {LEMEnergyScale = evt.newValue; RayMaster.LocalTTSettings.LEMEnergyScale = LEMEnergyScale;});
       LEMLightModifierField.style.maxWidth = 345;
 
       IndirectBoostField = new FloatField() {value = IndirectBoost, label = "Indirect Lighting Boost"};
+         IndirectBoostField.tooltip = "Global multiplier for indirection lighting strength";
       IndirectBoostField.RegisterValueChangedCallback(evt => {IndirectBoost = evt.newValue; RayMaster.LocalTTSettings.IndirectBoost = IndirectBoost;});
       IndirectBoostField.style.maxWidth = 345;
 
       ColorField GroundColorField = new ColorField();
+         GroundColorField.tooltip = "Ground color when using the procedural atmosphere";
       GroundColorField.label = "Ground Color: ";
       GroundColorField.value = new Color(GroundColor.x, GroundColor.y, GroundColor.z, 1.0f);
       GroundColorField.style.width = 250;
@@ -788,6 +792,7 @@ Toolbar toolbar;
 
 
       Toggle TransmittanceInNEEToggle = new Toggle() {value = RayMaster.LocalTTSettings.UseTransmittanceInNEE, text = "Apply Sky Transmittance to Sun"};
+         TransmittanceInNEEToggle.tooltip = "Determins if the color of the sun is automatically adjusted based on its position in the sky(like getting more red towards the horizon)";
       TransmittanceInNEEToggle.RegisterValueChangedCallback(evt => {UseTransmittanceInNEE = evt.newValue; RayMaster.LocalTTSettings.UseTransmittanceInNEE = UseTransmittanceInNEE;});
 
       SceneSettingsMenu.Add(PrimaryBackgroundFoldout);
@@ -1137,14 +1142,18 @@ Toolbar toolbar;
            var FallbackPort = _graphView.GeneratePort(dialogueNode, Direction.Input, T, Port.Capacity.Multi);
            FallbackPort.portName = PropertyID;
            dialogueNode.inputContainer.Add(FallbackPort);
-               if(InputElement != -1) {
+           dialogueNode.inputContainer.Add(DropField);
+               // if(InputElement != -1) {
                   PopupField<string> ChannelField = new PopupField<string>("Read Channel");
                   ChannelField.choices = ChannelProperties;               
-                  ChannelField.index = InputElement;
+                  ChannelField.index = Mathf.Max(InputElement, 0);
                   dialogueNode.GUID = ChannelProperties[ChannelField.index];
                   dialogueNode.inputContainer.Add(ChannelField);
+                  ChannelField.visible = InputElement != -1;
+
+                  // Debug.Log(dialogueNode.inputContainer.childCount);
                   ChannelField.RegisterValueChangedCallback(evt => {dialogueNode.GUID = ChannelProperties[ChannelField.index];});
-               }
+               // }
                DropField.choices = TextureProperties;
                DropField.index = (int)Mathf.Max(TextureProperties.IndexOf(InitialValue),0);
                dialogueNode.title = VerboseTextureProperties[DropField.index];
@@ -1159,14 +1168,15 @@ Toolbar toolbar;
                DropField.index = (int)Mathf.Max(ColorProperties.IndexOf(InitialValue),0);
                dialogueNode.title = VerboseColorProperties[DropField.index];
                DropField.RegisterValueChangedCallback(evt => {dialogueNode.title = VerboseColorProperties[DropField.index];});
+               dialogueNode.inputContainer.Add(DropField);
            }else if(T == typeof(float)) {
                   DropField.choices = FloatProperties;
                   DropField.index = (int)Mathf.Max(FloatProperties.IndexOf(InitialValue),0);
                   dialogueNode.title = VerboseFloatProperties[DropField.index];
                   DropField.RegisterValueChangedCallback(evt => {dialogueNode.title = VerboseFloatProperties[DropField.index];});
+               dialogueNode.inputContainer.Add(DropField);
            }
 
-           dialogueNode.inputContainer.Add(DropField);
            dialogueNode.RefreshExpandedState();
            dialogueNode.RefreshPorts();
            dialogueNode.SetPosition(new Rect(Pos, new Vector2(50, 100)));
@@ -1303,23 +1313,25 @@ Toolbar toolbar;
             GUID = "Output"
          };
 
+         
+
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Color), Port.Capacity.Single, "Base Color"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Base Texture"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Normal Texture"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Emission Texture"));
-         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Metallic Texture(Single Component)"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Metallic Texture"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Metallic Range"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Metallic Min"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Metallic Max"));
-         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Roughness Texture(Single Component)"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Roughness Texture"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Roughness Range"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Roughness Min"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Roughness Max"));
-         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Alpha Texture(Single Component)"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Alpha Texture"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "MatCap Texture"));
-         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "MatCap Mask(Single Component)"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "MatCap Mask"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Secondary Base Texture"));
-         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Secondary Base Texture Mask(Single Component)"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Secondary Base Texture Mask"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Detail Normal Texture"));
 
          _graphView.AddElement(OutputNode);
@@ -1522,12 +1534,12 @@ Toolbar toolbar;
 
 
         var TextureNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Texture", typeof(Texture), new Vector2(0,0), "null"));}) {text = "Texture"};
-        var PartialTextureNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Texture", typeof(Texture), new Vector2(0,0), "null", 0));}) {text = "Texture(Single Component)"};
+        // var PartialTextureNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Texture", typeof(Texture), new Vector2(0,0), "null", 0));}) {text = "Texture"};
         var FloatNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Float", typeof(float), new Vector2(0,0), "null"));}) {text = "Float"};
         var ColorNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Color", typeof(Color), new Vector2(0,0), "null"));}) {text = "Color"};
 
         toolbar.Add(TextureNodeButton);//partial textures will be defined as according to the output they are connected to 
-        toolbar.Add(PartialTextureNodeButton);//partial textures will be defined as according to the output they are connected to 
+        // toolbar.Add(PartialTextureNodeButton);//partial textures will be defined as according to the output they are connected to 
         toolbar.Add(FloatNodeButton);
         toolbar.Add(ColorNodeButton);
         MaterialPairingMenu.Add(toolbar);
@@ -1599,15 +1611,15 @@ Toolbar toolbar;
          }
          int RayObjCount = RayObjs.Count;
          for(int i = 0; i < RayObjCount; i++) {
-            int MatCount = RayObjs[i].MaterialOptions.Length;
+            int MatCount = RayObjs[i].LocalMaterials.Length;
             for(int i2 = 0; i2 < MatCount; i2++) {
-               if(RayObjs[i].MaterialOptions[i2] == RayTracingObject.Options.Cutout) {
-                  RayObjs[i].MaterialOptions[i2] = RayTracingObject.Options.Disney;
+               if(RayObjs[i].LocalMaterials[i2].MatType == 1) {
+                  RayObjs[i].LocalMaterials[i2].MatType = 0;
                   if(Application.isPlaying)
                      RayObjs[i].CallMaterialEdited(true);
                }
-               else if(RayObjs[i].MaterialOptions[i2] != RayTracingObject.Options.Disney) 
-                  RayObjs[i].MaterialOptions[i2] = RayTracingObject.Options.Disney;
+               else if(RayObjs[i].LocalMaterials[i2].MatType != 0) 
+                  RayObjs[i].LocalMaterials[i2].MatType = 0;
             }
          }
 
@@ -1621,9 +1633,10 @@ Toolbar toolbar;
       Toggle DX11Toggle;
 
 
-      private Toggle CustomToggle(string Label, string TargetDefine) {
+      private Toggle CustomToggle(string Label, string TargetDefine, string tooltip = "") {
          // VisualElement CustTogContainer = CreateHorizontalBox("Custom Horizontal Toggle");
             Toggle CustToggle = new Toggle() {value = GetGlobalDefine(TargetDefine), text = Label};
+               CustToggle.tooltip = tooltip;
             CustToggle.RegisterValueChangedCallback(evt => {SetGlobalDefines(TargetDefine, evt.newValue);});
          return CustToggle;
       }
@@ -1651,6 +1664,7 @@ Toolbar toolbar;
             SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
             if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
             SetGlobalDefines("DX11", definesList.Contains("DX11Only"));         
+            SetGlobalDefines("TTCustomMotionVectors", definesList.Contains("TTCustomMotionVectors"));
 
             if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 || definesList.Contains("DX11Only")) {
                if(!definesList.Contains("DX11Only")) {
@@ -1668,6 +1682,7 @@ Toolbar toolbar;
          NonPlayContainer.style.paddingLeft = 10;
             definesList = GetDefines();
             SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
+            SetGlobalDefines("TTCustomMotionVectors", definesList.Contains("TTCustomMotionVectors"));
             SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
             SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
             if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
@@ -1676,25 +1691,35 @@ Toolbar toolbar;
             HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("HardwareRT"); SetGlobalDefines("HardwareRT", true);} else {RemoveDefine("HardwareRT"); SetGlobalDefines("HardwareRT", false);}});
 
             GaussianTreeToggle = new Toggle() {value = (definesList.Contains("DontUseSGTree")), text = "Use Old Light BVH instead of Gaussian Tree"};
+               GaussianTreeToggle.tooltip = "Gaussian tree is more expensive, but samples on metallic surfaces a LOT better";
             GaussianTreeToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("DontUseSGTree"); SetGlobalDefines("UseSGTree", false);} else {RemoveDefine("DontUseSGTree"); SetGlobalDefines("UseSGTree", true);}});
 
 
             BindlessToggle = new Toggle() {value = (definesList.Contains("UseAtlas")), text = "Disable Bindless Textures"};
+               BindlessToggle.tooltip = "Uses Atlas fallback, which increases VRAM/RAM use, and scales down texture resolution when needed";
             BindlessToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("UseAtlas"); SetGlobalDefines("UseBindless", false);} else {RemoveDefine("UseAtlas"); SetGlobalDefines("UseBindless", true);}});
 
+            Toggle CustomMotionVectorToggle = new Toggle() {value = (definesList.Contains("TTCustomMotionVectors")), text = "Remove Rasterization Requirement(EXPERIMENTAL)"};
+               CustomMotionVectorToggle.tooltip = "Removes the need for rasterized rendering(except when upscaling with TAAU), allowing you to turn it off in your camera for extra performance";
+            CustomMotionVectorToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("TTCustomMotionVectors"); SetGlobalDefines("TTCustomMotionVectors", true);} else {RemoveDefine("TTCustomMotionVectors"); SetGlobalDefines("TTCustomMotionVectors", false);}});
+
             Toggle NonAccurateLightTriToggle = new Toggle() {value = (definesList.Contains("AccurateLightTris")), text = "Enable Emissive Texture Aware Light BVH"};
+               NonAccurateLightTriToggle.tooltip = "Uses more ram(rarely it can use a LOT), but allows for much better emissive mesh sampling if you make heavy use of emission masks";
             NonAccurateLightTriToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("AccurateLightTris"); else RemoveDefine("AccurateLightTris");});
 
             Toggle LoadTTSettingsFromResourcesToggle = new Toggle() {value = (definesList.Contains("LoadTTSettingsFromResources")), text = "Load TTSettings from Global File"};
+               LoadTTSettingsFromResourcesToggle.tooltip = "Replaces the per-scene TTSettings file with the one that is declared in the RayTracingMaster's inspector window";
             LoadTTSettingsFromResourcesToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("LoadTTSettingsFromResources"); else RemoveDefine("LoadTTSettingsFromResources");});
 
             Toggle VerboseToggle = new Toggle() {value = (definesList.Contains("TTVerbose")), text = "Enable Verbose Logging"};
+               VerboseToggle.tooltip = "More data";
             VerboseToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("TTVerbose"); else RemoveDefine("TTVerbose");});
 
             VisualElement ClayColorBox = new VisualElement();
 
 
             Toggle ClayModeToggle = new Toggle() {value = ClayMode, text = "Use ClayMode"};
+               ClayModeToggle.tooltip = "Disables normal mapping, and forces a constant albedo color, good for seeing light propogation";
             ClayModeToggle.RegisterValueChangedCallback(evt => {ClayMode = evt.newValue; RayMaster.LocalTTSettings.ClayMode = ClayMode; if(evt.newValue) HardSettingsMenu.Insert(HardSettingsMenu.IndexOf(ClayModeToggle) + 1, ClayColorBox); else HardSettingsMenu.Remove(ClayColorBox);});
 
             ColorField ClayColorField = new ColorField();
@@ -1705,19 +1730,29 @@ Toolbar toolbar;
             ClayColorBox.Add(ClayColorField);
 
             IntegerField MaxSampField = new IntegerField() {value = MaxSampCount, label = "Maximum Sample Count"};
+               MaxSampField.tooltip = "Truetrace will render up to this sample count, then idle";
+            MaxSampField.style.width = 300;
             MaxSampField.RegisterValueChangedCallback(evt => {MaxSampCount = evt.newValue; MaxSampCount = Mathf.Min(Mathf.Max(MaxSampCount, 0), 99999999); MaxSampField.value = MaxSampCount; RayMaster.LocalTTSettings.MaxSampCount = MaxSampCount;});
 
 
             OIDNToggle = new Toggle() {value = (definesList.Contains("UseOIDN")), text = "Enable OIDN(Does NOT work with DX11 Only)"};
+               OIDNToggle.tooltip = "Allows access to the OIDN denoiser in the main menus \"Denoiser\" field";
             OIDNToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("UseOIDN"); else RemoveDefine("UseOIDN");});
 
 
             Toggle RadCacheToggle = new Toggle() {value = (definesList.Contains("DisableRadianceCache")), text = "FULLY Disable Radiance Cache"};
+               RadCacheToggle.tooltip = "Prevents use of the radcache entirely while this is enabled, as it frees up all resources/ram/vram the radiance cache uses";
             RadCacheToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {SetGlobalDefines("RadCache", false); AddDefine("DisableRadianceCache");} else {SetGlobalDefines("RadCache", true); RemoveDefine("DisableRadianceCache");}});
+
+            Toggle StrictMemoryReductionToggle = new Toggle() {value = (definesList.Contains("StrictMemoryReduction")), text = "Enable Strict Memory Reduction(read tooltip)"};
+               StrictMemoryReductionToggle.tooltip = "Automatically shrinks buffer sizes for storing meshes when able to(takes more performance)";
+            StrictMemoryReductionToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("StrictMemoryReduction"); else RemoveDefine("StrictMemoryReduction");});
+
 
 
             if(Application.isPlaying) {
                HardwareRTToggle.SetEnabled(false);
+               CustomMotionVectorToggle.SetEnabled(false);
                BindlessToggle.SetEnabled(false);
                GaussianTreeToggle.SetEnabled(false);
                OIDNToggle.SetEnabled(false);
@@ -1725,8 +1760,10 @@ Toolbar toolbar;
                NonAccurateLightTriToggle.SetEnabled(false);
                LoadTTSettingsFromResourcesToggle.SetEnabled(false);
                VerboseToggle.SetEnabled(false);
+               StrictMemoryReductionToggle.SetEnabled(false);
             } else {
                HardwareRTToggle.SetEnabled(true);
+               CustomMotionVectorToggle.SetEnabled(true);
                BindlessToggle.SetEnabled(true);
                GaussianTreeToggle.SetEnabled(true);
                OIDNToggle.SetEnabled(true);
@@ -1734,6 +1771,7 @@ Toolbar toolbar;
                NonAccurateLightTriToggle.SetEnabled(true);
                LoadTTSettingsFromResourcesToggle.SetEnabled(true);
                VerboseToggle.SetEnabled(true);
+               StrictMemoryReductionToggle.SetEnabled(true);
             }
 
 
@@ -1780,9 +1818,11 @@ Toolbar toolbar;
          NonPlayContainer.Add(DX11Toggle);
          NonPlayContainer.Add(OIDNToggle);
          NonPlayContainer.Add(RadCacheToggle);
+         NonPlayContainer.Add(CustomMotionVectorToggle);
          NonPlayContainer.Add(NonAccurateLightTriToggle);
          NonPlayContainer.Add(LoadTTSettingsFromResourcesToggle);
          NonPlayContainer.Add(VerboseToggle);
+         NonPlayContainer.Add(StrictMemoryReductionToggle);
          NonPlayContainer.Add(new Label("-------------"));
 
          Label PlayLabel = new Label("-- THESE CAN BE MODIFIED ON THE FLY/DURING PLAY --");
@@ -1790,31 +1830,30 @@ Toolbar toolbar;
          VisualElement PlayContainer = new VisualElement();
          PlayContainer.style.paddingLeft = 10;
 
-         PlayContainer.Add(CustomToggle("Fade Mapping", "FadeMapping"));
-         PlayContainer.Add(CustomToggle("Stained Glass", "StainedGlassShadows"));
-         PlayContainer.Add(CustomToggle("Ignore Backfacing Triangles", "IgnoreBackfacing"));
-         PlayContainer.Add(CustomToggle("Use Light BVH", "LBVH"));
-         PlayContainer.Add(CustomToggle("Quick RadCache Toggle", "RadCache"));
-         PlayContainer.Add(CustomToggle("Use Texture LOD", "UseTextureLOD"));
-         PlayContainer.Add(CustomToggle("Use vMF Diffuse", "vMFDiffuse"));
-         PlayContainer.Add(CustomToggle("Use EON Diffuse", "EONDiffuse"));
+         PlayContainer.Add(CustomToggle("Fade Mapping", "FadeMapping", "Allows for fade mapping"));
+         PlayContainer.Add(CustomToggle("Stained Glass", "StainedGlassShadows", "Simulates colored glass coloring shadow rays - Stained glass effect"));
+         PlayContainer.Add(CustomToggle("Ignore Backfacing Triangles", "IgnoreBackfacing", "Backfacing triangles wont get rendered"));
+         PlayContainer.Add(CustomToggle("Use Light BVH", "LBVH", "Quick toggle to switch between the active light tree(Gaussian tree or light bvh), and simple RIS, like the default unity lights use"));
+         PlayContainer.Add(CustomToggle("Quick RadCache Toggle", "RadCache", "Quick toggle for the radiance cache, does NOT affect memory used by the radiance cache, unlike the toggle above"));
+         PlayContainer.Add(CustomToggle("Use Texture LOD", "UseTextureLOD", "Bindless mode only - Uses a higher texture LOD for each bounce, which can help performance"));
+         PlayContainer.Add(CustomToggle("Use EON Diffuse", "EONDiffuse", "Different diffuse material model"));
          PlayContainer.Add(CustomToggle("Use Advanced Background", "AdvancedBackground"));
-         PlayContainer.Add(CustomToggle("Multiscatter Fog", "Fog"));
+         PlayContainer.Add(CustomToggle("Multiscatter Fog", "Fog", "Not realtime, as I have no denoiser for it yet"));
 
 
 
          Slider FogSlider = new Slider() {label = "Fog Density: ", value = FogDensity, highValue = 0.2f, lowValue = 0.000000001f};
          FogSlider.showInputField = true;        
-         FogSlider.style.width = 200;
+         FogSlider.style.width = 400;
          FogSlider.ElementAt(0).style.minWidth = 65;
-         FogSlider.RegisterValueChangedCallback(evt => {FogDensity = evt.newValue; RayMaster.LocalTTSettings.FogDensity = FogDensity;});
+         FogSlider.RegisterCallback<FocusOutEvent>(evt => {FogDensity = FogSlider.value; RayMaster.LocalTTSettings.FogDensity = FogDensity;});        
 
          Slider FogHeightSlider = new Slider() {label = "Fog Height: ", value = FogHeight, highValue = 80.0f, lowValue = 0.00001f};
          FogHeightSlider.showInputField = true;        
-         FogHeightSlider.style.width = 200;
+         FogHeightSlider.style.width = 400;
          FogHeightSlider.ElementAt(0).style.minWidth = 65;
          FogHeightSlider.value = FogHeight;
-         FogHeightSlider.RegisterValueChangedCallback(evt => {FogHeight = evt.newValue; RayMaster.LocalTTSettings.FogHeight = FogHeight;});
+         FogHeightSlider.RegisterCallback<FocusOutEvent>(evt => {FogHeight = FogHeightSlider.value; RayMaster.LocalTTSettings.FogHeight = FogHeight;});        
          
          ColorField FogColorField = new ColorField();
          FogColorField.value = FogColor;
@@ -1834,6 +1873,7 @@ Toolbar toolbar;
 
 
          Toggle DoSavingToggle = new Toggle() {value = DoSaving, text = "Enable RayTacingObject Saving"};
+            DoSavingToggle.tooltip = "Allows saving any changes to your truetrace materials made during play mode";
          DoSavingToggle.RegisterValueChangedCallback(evt => {DoSaving = evt.newValue; RayTracingMaster.DoSaving = DoSaving;});
          Toggle MatChangeResetsAccumToggle = new Toggle() {value = MatChangeResetsAccum, text = "Material Change Resets Accumulation"};
          MatChangeResetsAccumToggle.RegisterValueChangedCallback(evt => {MatChangeResetsAccum = evt.newValue; RayMaster.LocalTTSettings.MatChangeResetsAccum = MatChangeResetsAccum;});
@@ -1874,6 +1914,20 @@ Toolbar toolbar;
          TurnTableBox.Add(TurnTableLabel);
          TurnTableBox.Add(TurnTableAbsolutePath);
 
+
+         VisualElement TimelineBox = new VisualElement();
+         TimelineBox.style.flexDirection = FlexDirection.Row;
+         Label TimelineLabel = new Label() {text = "Timeline Path: "};
+         TimelineLabel.style.color = Color.black;
+         if(System.IO.Directory.Exists(PlayerPrefs.GetString("TimelinePath"))) TimelineLabel.style.backgroundColor = Color.green;
+         else TimelineLabel.style.backgroundColor = Color.red;
+         TextField TimelineAbsolutePath = new TextField();
+         TimelineAbsolutePath.value = PlayerPrefs.GetString("TimelinePath");
+         TimelineAbsolutePath.RegisterValueChangedCallback(evt => {if(System.IO.Directory.Exists(evt.newValue)) {TimelineLabel.style.backgroundColor = Color.green;} else {TimelineLabel.style.backgroundColor = Color.red;} PlayerPrefs.SetString("TimelinePath", evt.newValue);});
+         TimelineBox.Add(TimelineLabel);
+         TimelineBox.Add(TimelineAbsolutePath);
+
+
          Button CorrectMatOptionsButton = new Button(() => FixRayObjects()) {text = "(Debug Button)Correct Mat Options"};
 
 
@@ -1913,6 +1967,7 @@ Toolbar toolbar;
          HardSettingsMenu.Add(ScreenShotBox);
          HardSettingsMenu.Add(PanoramaBox);
          HardSettingsMenu.Add(TurnTableBox);
+         HardSettingsMenu.Add(TimelineBox);
          HardSettingsMenu.Add(CorrectMatOptionsButton);
          
 
@@ -1950,7 +2005,10 @@ Toolbar toolbar;
          TonemapSettings.Add("Uchimura");
          TonemapSettings.Add("Reinhard");
          TonemapSettings.Add("Uncharted 2");
-         TonemapSettings.Add("AgX");
+         TonemapSettings.Add("AgX BC");
+         TonemapSettings.Add("AgX MHC");
+         TonemapSettings.Add("AgX Custom");
+         TonemapSettings.Add("PBR Neutral");
          PopupField<string> ToneMapField = new PopupField<string>("<b>Tonemapper</b>");
          ToneMapField.ElementAt(0).style.minWidth = 65;
          ToneMapField.choices = TonemapSettings;
@@ -2097,7 +2155,7 @@ Toolbar toolbar;
            FXAAToggle.RegisterValueChangedCallback(evt => {FXAA = evt.newValue; RayMaster.LocalTTSettings.PPFXAA = FXAA;});
 
 
-            Toggle BCSToggle = new Toggle() {value = DoBCS, text = "Enable Contrast/Saturation Adjustment"};
+            Toggle BCSToggle = new Toggle() {value = DoBCS, text = "Enable Saturation Adjustment"};
             VisualElement BCSContainer = new VisualElement();
                VisualElement SaturationContainer = CreateHorizontalBox();
                   Label SaturationLabel = new Label("Saturation");
@@ -2110,18 +2168,18 @@ Toolbar toolbar;
                SaturationContainer.Add(SaturationSlider);
                SaturationContainer.Add(SaturationField);
 
-               VisualElement ContrastContainer = CreateHorizontalBox();
-                  Label ContrastLabel = new Label("Contrast");
-                  Slider ContrastSlider = new Slider() {value = Contrast, highValue = 2.0f, lowValue = 0};
-                  FloatField ContrastField = new FloatField() {value = Contrast};
-                  ContrastSlider.style.width = 100;
-                  ContrastSlider.RegisterValueChangedCallback(evt => {Contrast = evt.newValue; ContrastField.value = Contrast; RayMaster.LocalTTSettings.Contrast = Contrast;});
-                  ContrastField.RegisterValueChangedCallback(evt => {Contrast = evt.newValue; ContrastSlider.value = Contrast; RayMaster.LocalTTSettings.Contrast = Contrast;});
-               ContrastContainer.Add(ContrastLabel);
-               ContrastContainer.Add(ContrastSlider);
-               ContrastContainer.Add(ContrastField);
+               // VisualElement ContrastContainer = CreateHorizontalBox();
+               //    Label ContrastLabel = new Label("Contrast");
+               //    Slider ContrastSlider = new Slider() {value = Contrast, highValue = 2.0f, lowValue = 0};
+               //    FloatField ContrastField = new FloatField() {value = Contrast};
+               //    ContrastSlider.style.width = 100;
+               //    ContrastSlider.RegisterValueChangedCallback(evt => {Contrast = evt.newValue; ContrastField.value = Contrast; RayMaster.LocalTTSettings.Contrast = Contrast;});
+               //    ContrastField.RegisterValueChangedCallback(evt => {Contrast = evt.newValue; ContrastSlider.value = Contrast; RayMaster.LocalTTSettings.Contrast = Contrast;});
+               // ContrastContainer.Add(ContrastLabel);
+               // ContrastContainer.Add(ContrastSlider);
+               // ContrastContainer.Add(ContrastField);
             BCSContainer.Add(SaturationContainer);
-            BCSContainer.Add(ContrastContainer);
+            // BCSContainer.Add(ContrastContainer);
 
             PostProcessingMenu.Add(BCSToggle);
             if(DoBCS) PostProcessingMenu.Add(BCSContainer);
@@ -2372,6 +2430,9 @@ Slider AperatureSlider;
             if(!PlayerPrefs.HasKey("PanoramaPath")) {
                PlayerPrefs.SetString("PanoramaPath",  Application.dataPath + "/ScreenShots");
             }
+            if(!PlayerPrefs.HasKey("TimelinePath")) {
+               PlayerPrefs.SetString("TimelinePath",  Application.dataPath + "/TimelineFrames");
+            }
             if(!PlayerPrefs.HasKey("TurnTablePath")) {
                PlayerPrefs.SetString("TurnTablePath",  Application.dataPath + "/TurnTables");
             }
@@ -2386,6 +2447,10 @@ Slider AperatureSlider;
             if(!System.IO.Directory.Exists(PlayerPrefs.GetString("PanoramaPath"))) {
                AssetDatabase.CreateFolder("Assets", "ScreenShots");
                PlayerPrefs.SetString("PanoramaPath",  Application.dataPath + "/ScreenShots");
+            }
+            if(!System.IO.Directory.Exists(PlayerPrefs.GetString("TimelinePath"))) {
+               AssetDatabase.CreateFolder("Assets", "TimelineFrames");
+               PlayerPrefs.SetString("TimelinePath",  Application.dataPath + "/TimelineFrames");
             }
 
             OnFocus();
@@ -2491,7 +2556,6 @@ Slider AperatureSlider;
            GITemporal = RayMaster.LocalTTSettings.UseReSTIRGITemporal;
            GISpatial = RayMaster.LocalTTSettings.UseReSTIRGISpatial;
            SampleValid = RayMaster.LocalTTSettings.DoReSTIRGIConnectionValidation;
-           GIUpdateRate = RayMaster.LocalTTSettings.ReSTIRGIUpdateRate;
            GITemporalMCap = RayMaster.LocalTTSettings.ReSTIRGITemporalMCap;
            GISpatialSampleCount = RayMaster.LocalTTSettings.ReSTIRGISpatialCount;
            TAA = RayMaster.LocalTTSettings.PPTAA;
@@ -2596,8 +2660,8 @@ Slider AperatureSlider;
                ResField.ElementAt(0).style.minWidth = 75;
                ResField.ElementAt(1).style.width = 35;
                TopEnclosingBox.Add(ResField);
-               ResField.RegisterValueChangedCallback(evt => {
-                                                            ResField.value = Mathf.Max(Mathf.Min(evt.newValue, 1.0f), 0.1f);
+               ResField.RegisterCallback<FocusOutEvent>(evt => {
+                                                            ResField.value = Mathf.Max(Mathf.Min(ResField.value, 1.0f), 0.1f);
                                                             RenderRes = ResField.value; 
                                                             RayMaster.LocalTTSettings.RenderScale = RenderRes; 
                                                             if(MainSource.Children().Contains(UpscalerField)) {
@@ -2723,14 +2787,8 @@ Slider AperatureSlider;
                    TopGI.style.flexDirection = FlexDirection.Row;
                    SampleValidToggle = new Toggle() {value = SampleValid, text = "Do Sample Connection Validation"};
                    SampleValidToggle.tooltip = "Confirms samples are mutually visable, reduces performance but improves indirect shadow quality";
-                   Label GIUpdateRateLabel = new Label("Update Rate(0 is off)");
-                   GIUpdateRateLabel.tooltip = "How often a pixel should validate its entire path, good for quickly changing lighting";
-                   GIUpdateRateField = new IntegerField() {value = GIUpdateRate};
                    SampleValidToggle.RegisterValueChangedCallback(evt => {SampleValid = evt.newValue; RayMaster.LocalTTSettings.DoReSTIRGIConnectionValidation = SampleValid;});
-                   GIUpdateRateField.RegisterValueChangedCallback(evt => {GIUpdateRate = (int)evt.newValue; RayMaster.LocalTTSettings.ReSTIRGIUpdateRate = GIUpdateRate;});
                    TopGI.Add(SampleValidToggle);
-                   TopGI.Add(GIUpdateRateField);
-                   TopGI.Add(GIUpdateRateLabel);
                EnclosingGI.Add(TopGI);
                Box TemporalGI = new Box();
                    TemporalGI.style.flexDirection = FlexDirection.Row;
@@ -2977,53 +3035,9 @@ Slider AperatureSlider;
                                        Debug.Log("Missing material marked for update");
                                     } else {
                                        EditorUtility.SetDirty(TempRTO);
-                                       TempRTO.MaterialOptions[NameIndex] = (RayTracingObject.Options)Ray.OptionID;
-                                       TempRTO.TransmissionColor[NameIndex] = Ray.TransCol;
-                                       TempRTO.BaseColor[NameIndex] = Ray.BaseCol;
-                                       TempRTO.MetallicRemap[NameIndex] = Ray.MetRemap;
-                                       TempRTO.RoughnessRemap[NameIndex] = Ray.RoughRemap;
-                                       TempRTO.emission[NameIndex] = Ray.Emiss;
-                                       TempRTO.EmissionColor[NameIndex] = Ray.EmissCol;
-                                       TempRTO.Roughness[NameIndex] = Ray.Rough;
-                                       TempRTO.IOR[NameIndex] = Ray.IOR;
-                                       TempRTO.Metallic[NameIndex] = Ray.Met;
-                                       TempRTO.SpecularTint[NameIndex] = Ray.SpecTint;
-                                       TempRTO.Sheen[NameIndex] = Ray.Sheen;
-                                       TempRTO.SheenTint[NameIndex] = Ray.SheenTint;
-                                       TempRTO.ClearCoat[NameIndex] = Ray.Clearcoat;
-                                       TempRTO.ClearCoatGloss[NameIndex] = Ray.ClearcoatGloss;
-                                       TempRTO.Anisotropic[NameIndex] = Ray.Anisotropic;
-                                       TempRTO.Flatness[NameIndex] = Ray.Flatness;
-                                       TempRTO.DiffTrans[NameIndex] = Ray.DiffTrans;
-                                       TempRTO.SpecTrans[NameIndex] = Ray.SpecTrans;
-                                       TempRTO.FollowMaterial[NameIndex] = Ray.FollowMat;
-                                       TempRTO.ScatterDist[NameIndex] = Ray.ScatterDist;
-                                       TempRTO.Specular[NameIndex] = Ray.Spec;
-                                       TempRTO.AlphaCutoff[NameIndex] = Ray.AlphaCutoff;
-                                       TempRTO.NormalStrength[NameIndex] = Ray.NormStrength;
-                                       TempRTO.DetailNormalStrength[NameIndex] = Ray.DetailNormalStrength;
-                                       TempRTO.Hue[NameIndex] = Ray.Hue;
-                                       TempRTO.Brightness[NameIndex] = Ray.Brightness;
-                                       TempRTO.Contrast[NameIndex] = Ray.Contrast;
-                                       TempRTO.Saturation[NameIndex] = Ray.Saturation;
-                                       TempRTO.BlendColor[NameIndex] = Ray.BlendColor;
-                                       TempRTO.BlendFactor[NameIndex] = Ray.BlendFactor;
-                                       TempRTO.MainTexScaleOffset[NameIndex] = Ray.MainTexScaleOffset;
-                                       TempRTO.SecondaryAlbedoTexScaleOffset[NameIndex] = Ray.SecondaryAlbedoTexScaleOffset;
-                                       TempRTO.SecondaryTextureScaleOffset[NameIndex] = Ray.SecondaryTextureScaleOffset;
-                                       TempRTO.NormalTexScaleOffset[NameIndex] = Ray.NormalTexScaleOffset;
-                                       TempRTO.RotationNormal[NameIndex] = Ray.RotationNormal;
-                                       TempRTO.RotationSecondary[NameIndex] = Ray.RotationSecondary;
-                                       TempRTO.RotationSecondaryDiffuse[NameIndex] = Ray.RotationSecondaryDiffuse;
-                                       TempRTO.RotationSecondaryNormal[NameIndex] = Ray.RotationSecondaryNormal;
-                                       TempRTO.Rotation[NameIndex] = Ray.Rotation;
-                                       TempRTO.Flags[NameIndex] = Ray.Flags;
+                                       TempRTO.LocalMaterials[NameIndex] = Ray.MatData;
                                        TempRTO.UseKelvin[NameIndex] = Ray.UseKelvin;
                                        TempRTO.KelvinTemp[NameIndex] = Ray.KelvinTemp;
-                                       TempRTO.ColorBleed[NameIndex] = Ray.ColorBleed;
-                                       TempRTO.AlbedoBlendFactor[NameIndex] = Ray.AlbedoBlendFactor;
-                                       TempRTO.SecondaryNormalTexScaleOffset[NameIndex] = Ray.SecondaryNormalTexScaleOffset;
-                                       TempRTO.SecondaryNormalTexBlend[NameIndex] = Ray.SecondaryNormalTexBlend;
                                        TempRTO.CallMaterialEdited();
                                     }
                                  }
@@ -3089,10 +3103,45 @@ public class DialogueGraphView : GraphView
 {
 
     public DialogueGraphView() {
+      graphViewChanged = OnGraphViewChanged;
         this.AddManipulator(new ContentDragger());
         this.AddManipulator(new SelectionDragger());
         this.AddManipulator(new RectangleSelector());
     }
+
+    private bool CheckIfSingleComp(string PortName) {
+      return PortName.Contains("Mask") || PortName.Equals("Alpha Texture") || PortName.Equals("Metallic Texture") || PortName.Equals("Roughness Texture");
+    }
+    private UnityEditor.Experimental.GraphView.GraphViewChange OnGraphViewChanged(UnityEditor.Experimental.GraphView.GraphViewChange graphViewChange) {
+      if(graphViewChange.edgesToCreate != null)
+      foreach(var A in graphViewChange.edgesToCreate) {
+         if(A.output != null) {
+            Port OutPort = A.output;
+            if(OutPort.node != null) {
+               Node OutNode = OutPort.node;
+               if(OutNode.inputContainer.childCount >= 2) {
+                  try {
+                     Port InPort = A.input;
+                     Node InNode = InPort.node;
+                     if(CheckIfSingleComp(InPort.portName))
+                        ((PopupField<string>)OutNode.inputContainer[2]).visible = true;
+                     else
+                        ((PopupField<string>)OutNode.inputContainer[2]).visible = false;
+                  } catch (System.Exception E) {
+                     Debug.LogError(E);
+                  }
+
+               }
+
+            }
+         }
+         // if(OutNode.inputContainer.ElementAt(2) == typeof(PopupField)) 
+         // Debug.Log(OutNode.inputContainer.ElementAt(2));
+         // InNode.inputContainer[2].
+      }
+      return graphViewChange;
+    }
+
     public override List<Port> GetCompatiblePorts(Port startPort, NodeAdapter nodeAdapater) {
         var compatablePorts = new List<Port>();
 

@@ -36,7 +36,6 @@ namespace TrueTrace {
         [SerializeField] public int ReSTIRGISpatialCount = 24;
         [SerializeField] public float ReSTIRGISpatialRadius = 50.0f;
         [SerializeField] public int ReSTIRGITemporalMCap = 20;
-        [SerializeField] public int ReSTIRGIUpdateRate = 7;
         [SerializeField] public bool DoReSTIRGIConnectionValidation = true;
         [SerializeField] public float Exposure = 1.0f;
         [SerializeField] public bool DoPartialRendering = false;
@@ -68,7 +67,7 @@ namespace TrueTrace {
         [SerializeField] public float LEMEnergyScale = 1.0f;
         [SerializeField] public bool UseTransmittanceInNEE = true;
         [SerializeField] public float SecondarySkyDesaturate = 0.0f;
-        [SerializeField] public bool MatChangeResetsAccum = false;
+        [SerializeField] public bool MatChangeResetsAccum = true;
         [SerializeField] public bool PPFXAA = false;
         [SerializeField] public float OIDNBlendRatio = 1.0f;
         [SerializeField] public bool ConvBloom = false;
