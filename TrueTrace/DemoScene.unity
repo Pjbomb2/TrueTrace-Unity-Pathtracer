@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.1774876, g: 0.2222052, b: 0.30441606, a: 1}
+  m_IndirectSpecularColor: {r: 0.17605689, g: 0.22033103, b: 0.302659, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -12485,9 +12485,9 @@ MonoBehaviour:
         b:
           BBMax: {x: 0.5, y: 0.5, z: 0.5}
           BBMin: {x: -0.5, y: -0.5, z: -0.5}
-        w: {x: -0.263612, y: 0.9558199, z: 0.13006341}
+        w: {x: -0.7714121, y: 0.39507377, z: 0.49883944}
         phi: 378.83908
-        cosTheta_o: -0.9960918
+        cosTheta_o: -0.9970375
         cosTheta_e: 0.0000012675908
         LightCount: 768
         Pad1: 0
@@ -12613,7 +12613,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 1
+  NeedsToUpdate: 0
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -15117,12 +15117,12 @@ MonoBehaviour:
   UseKelvin: 0
   IsMainSun: 1
   KelvinTemperature: 1000
-  Intensity: 32
+  Intensity: 122
   Col: {x: 1, y: 1, z: 1}
   SpotAngle: 30
   HasInitialized: 1
   IESProfile: {fileID: 0}
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
 --- !u!108 &610660759
 Light:
   m_ObjectHideFlags: 0
@@ -15135,7 +15135,7 @@ Light:
   m_Type: 1
   m_Shape: 0
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 32
+  m_Intensity: 122
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -15192,14 +15192,14 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 610660757}
-  m_LocalRotation: {x: 0.45743093, y: 0.38903746, z: -0.20943484, w: 0.77171487}
+  m_LocalRotation: {x: 0.49363983, y: 0.3759464, z: -0.22951967, w: 0.7498698}
   m_LocalPosition: {x: -1.4816499, y: 5.724826, z: -1.1294421}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 1
-  m_LocalEulerAnglesHint: {x: 60.339, y: 55.708, z: 3.785}
+  m_LocalEulerAnglesHint: {x: 65.91, y: 55.708, z: 3.785}
 --- !u!4 &611049998 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -4090820614514019212, guid: 16500a523b718314091d7e9b83146c62,
@@ -23769,7 +23769,7 @@ MonoBehaviour:
     MatType: 0
     TransmittanceColor: {x: 0, y: 0, z: 0}
     IOR: 1
-    Metallic: 0.35899997
+    Metallic: 0
     Sheen: 0
     SheenTint: 0
     SpecularTint: 0
@@ -53992,7 +53992,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 1
+  NeedsToUpdate: 0
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -60473,7 +60473,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 3
   InstanceReferences: 0
-  NeedsToUpdate: 1
+  NeedsToUpdate: 0
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0

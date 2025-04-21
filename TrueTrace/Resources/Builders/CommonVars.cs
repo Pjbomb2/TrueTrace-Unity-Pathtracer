@@ -856,9 +856,9 @@ namespace CommonVars
             for (int i = 0; i < BVHLength; ++i)
             {
                 BVHNode8Data TempNode = BVH.BVH8Nodes[i];
-                TempBVHNode.node_0x = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(TempNode.p.x), 0);
-                TempBVHNode.node_0y = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(TempNode.p.y), 0);
-                TempBVHNode.node_0z = System.BitConverter.ToUInt32(System.BitConverter.GetBytes(TempNode.p.z), 0);
+                TempBVHNode.node_0x = *(uint*)&TempNode.p.x;
+                TempBVHNode.node_0y = *(uint*)&TempNode.p.y;
+                TempBVHNode.node_0z = *(uint*)&TempNode.p.z;
                 TempBVHNode.node_0w = (TempNode.e[0] | (TempNode.e[1] << 8) | (TempNode.e[2] << 16) | (TempNode.imask << 24));
                 TempBVHNode.node_1x = TempNode.base_index_child;
                 TempBVHNode.node_1y = TempNode.base_index_triangle;
