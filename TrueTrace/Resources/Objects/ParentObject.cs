@@ -943,10 +943,16 @@ namespace TrueTrace {
             MaxRecur = 0;
             int PrevLength = TrianglesArray.Length;
             if(BVH2 != null) BVH2.Dispose();
+            // TTStopWatch BVH2Watch = new TTStopWatch("BVH2");
+            // BVH2Watch.Start();
             BVH2 = new BVH2Builder(Triangles, TrianglesArray.Length);//Binary BVH Builder, and also the component that takes the longest to build
+            // BVH2Watch.Stop();
             TrianglesArray.Dispose();
             if(this.BVH != null) this.BVH.Dispose();
+            // TTStopWatch BVH8Watch = new TTStopWatch("BVH8");
+            // BVH8Watch.Start();
             this.BVH = new BVH8Builder(ref BVH2);
+            // BVH8Watch.Stop();
             CommonFunctions.DeepClean(ref BVH2.FinalIndices);
             BVH2.Dispose();
             BVH2 = null;
@@ -1005,8 +1011,10 @@ namespace TrueTrace {
 
 
             if(LightTriangles.Count > 0) {
+                // TTStopWatch LBVHWatch = new TTStopWatch("LBVH");
+                // LBVHWatch.Start();
                 LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
-
+                // LBVHWatch.Stop();
             }
 
 
@@ -1199,10 +1207,12 @@ namespace TrueTrace {
                     if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Refit");
                     cmd.SetComputeIntParam(MeshRefit, "NodeOffset", NodeOffset);
                     for (int i = MaxRecur - 1; i >= 0; i--) {
+                        if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Refit: " + i);
                         var NodeCount2 = WorkingBuffer[i].count;
                         cmd.SetComputeIntParam(MeshRefit, "NodeCount", NodeCount2);
                         cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "WorkingBuffer", WorkingBuffer[i]);
                         cmd.DispatchCompute(MeshRefit, RefitLayerKernel, (int)Mathf.Ceil(NodeCount2 / (float)KernelRatio), 1, 1);
+                        if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Refit: " + i);
                     }
                     if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Refit");
                     if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Global AABB Update");
@@ -1282,6 +1292,8 @@ namespace TrueTrace {
             Triangles = (AABB*)NativeArrayUnsafeUtility.GetUnsafePtr(TrianglesArray);
             AggTriangles = new CudaTriangle[(TransformIndexes[TransformIndexes.Count - 1].VertexStart + TransformIndexes[TransformIndexes.Count - 1].VertexCount) / 3];
             int OffsetReal;
+            // TTStopWatch AccumWatch = new TTStopWatch("Accum");
+            // AccumWatch.Start();
             for (int i = 0; i < TotalObjects; i++) {//Transforming so all child objects are in the same object space
                 Matrix4x4 ChildMat = CachedTransforms[i + 1].WTL.inverse;
                 Matrix4x4 TransMat = ParentMatInv * ChildMat;
@@ -1420,6 +1432,7 @@ namespace TrueTrace {
                     OffsetReal++;
                 }
             }
+            // AccumWatch.Stop();
             #if AccurateLightTris
                 int EmissTexLeng = EmissionTexPixels.Count;
                 for(int i = 0; i < EmissTexLeng; i++) {
@@ -1430,7 +1443,10 @@ namespace TrueTrace {
             CurMeshData.Clear();
             #if !HardwareRT
                 ConstructAABB();
+                // TTStopWatch ConstructWatch = new TTStopWatch("Construct");
+                // ConstructWatch.Start();
                 Construct();
+                // ConstructWatch.Stop();
                 {//Compile Triangles
                     int TriLength = AggTriangles.Length;
                     NativeArray<CudaTriangle> Vector3Array = new NativeArray<CudaTriangle>(AggTriangles, Unity.Collections.Allocator.TempJob);

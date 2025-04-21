@@ -952,7 +952,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
     [branch]if (DoReSTIRGIConnectionValidation) {
         float2 DistDist = 1;
         if(SurfaceMat.specTrans == 0 && SurfaceMat.diffTrans == 0) {
-            PrimaryHitPosition += GeomNorm * 0.001f;
+            PrimaryHitPosition += GeomNorm * 0.0001f;
             float Distance = length(PrimaryHitPosition - NEEPos.xyz) - 0.025f;
             SmallerRay ray = CreateRay(PrimaryHitPosition, normalize(NEEPos.xyz - PrimaryHitPosition));
             if (luminance(RunningReservoirC.Color) != 0) {
@@ -975,10 +975,10 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
 
             #ifdef ReSTIRAdvancedValidation
                 float TargDist = VisabilityCheck(ray, Distance);
-                if (TargDist != Distance) {
+                if (TargDist != Distance || dot(ray.direction, GeomNorm) < 0) {
                     DistDist.y = exp(-abs(Distance - TargDist));
             #else
-                if(!VisabilityCheck(ray, Distance)) {
+                if(!VisabilityCheck(ray, Distance) || dot(ray.direction, GeomNorm) < 0) {
             #endif
                     RunningReservoirC.Wsum = 0;
                     RunningReservoirC.M = 0;
@@ -992,10 +992,10 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
                 if(luminance(RunningReservoirB.Radiance.Color) != 0) {
                 #ifdef ReSTIRAdvancedValidation
                     float TargDist = VisabilityCheck(ray, Distance);
-                    if (TargDist != Distance) {
+                    if (TargDist != Distance || dot(ray.direction, GeomNorm) < 0) {
                         DistDist.x = exp(-abs(Distance - TargDist));
                 #else
-                    if(!VisabilityCheck(ray, Distance)) {
+                    if(!VisabilityCheck(ray, Distance) || dot(ray.direction, GeomNorm) < 0) {
                 #endif
                         RunningReservoirB.Radiance.Wsum = 0; 
                         RunningReservoirB.Radiance.M = 0; 
@@ -1003,7 +1003,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
                     }
                 }
             #endif
-            PrimaryHitPosition -= GeomNorm * 0.001f;
+            PrimaryHitPosition -= GeomNorm * 0.0001f;
         }
 
         #ifdef ReSTIRAdvancedValidation

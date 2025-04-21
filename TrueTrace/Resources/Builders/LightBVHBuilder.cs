@@ -52,44 +52,33 @@ namespace TrueTrace {
         public bool IsEmpty(ref LightBounds Cone) {return Cone.w == Vector3.zero;}
 
 
-        private float AngleBetween(Vector3 v1, Vector3 v2) {
-            if(Dot(ref v1, ref v2) < 0) return 3.14159f - 2.0f * (float)System.Math.Asin(Length(v1 + v2) / 2.0f);
-            else return 2.0f * (float)System.Math.Asin(Length(v2 - v1) / 2.0f);
+
+        private void RotateRodrigues(ref Vector3 v, float angle, ref Vector3 axis) {
+            float axisLenSq = Dot(ref axis, ref axis);
+            if (axisLenSq == 0f) return;
+
+            float invLen = 1f / Mathf.Sqrt(axisLenSq);
+            axis = axis * invLen;
+
+            float cos = Mathf.Cos(angle);
+            float sin = Mathf.Sin(angle);
+
+            float dot = Dot(ref axis, ref v);
+            Vector3 cross = Vector3.Cross(axis, v);
+
+            v = v * cos + cross * sin + axis * dot * (1f - cos);
         }
-
-        private Matrix4x4 Rotate(float sinTheta, float cosTheta, Vector3 a) {
-            Normalize(ref a);
-            Matrix4x4 m = Matrix4x4.identity;
-            m[0,0] = a.x * a.x + (1 - a.x * a.x) * cosTheta;
-            m[0,1] = a.x * a.y * (1 - cosTheta) - a.z * sinTheta;
-            m[0,2] = a.x * a.z * (1 - cosTheta) + a.y * sinTheta;
-            m[0,3] = 0;
-
-            m[1,0] = a.x * a.y * (1 - cosTheta) + a.z * sinTheta;
-            m[1,1] = a.y * a.y + (1 - a.y * a.y) * cosTheta;
-            m[1,2] = a.y * a.z * (1 - cosTheta) - a.x * sinTheta;
-            m[1,3] = 0;
-
-            m[2,0] = a.x * a.z * (1 - cosTheta) - a.y * sinTheta;
-            m[2,1] = a.y * a.z * (1 - cosTheta) + a.x * sinTheta;
-            m[2,2] = a.z * a.z + (1 - a.z * a.z) * cosTheta;
-            m[2,3] = 0;
-
-            return m * m.transpose;
+        private float AngleBetween(ref Vector3 v1, ref Vector3 v2) {
+            if(Dot(ref v1, ref v2) < 0) return 3.14159f - 2.0f * (float)System.Math.Asin(Length(v1 + v2) * 0.5f);
+            else return 2.0f * (float)System.Math.Asin(Length(v2 - v1) * 0.5f);
         }
-
-        private Matrix4x4 Rotate(float Theta, Vector3 axis) {
-
-            return Rotate((float)System.Math.Sin(Theta),(float)System.Math.Cos(Theta), axis);
-        }
-
         public void UnionCone(ref LightBounds A, ref LightBounds B) {
             if(A.w.x == 0 && A.w.y == 0 && A.w.z == 0) {A.w = B.w; A.cosTheta_o = B.cosTheta_o; return;}
             if(B.w.x == 0 && B.w.y == 0 && B.w.z == 0) return;
 
             float theta_a = (float)System.Math.Acos(Mathf.Clamp(A.cosTheta_o,-1.0f, 1.0f));
             float theta_b = (float)System.Math.Acos(Mathf.Clamp(B.cosTheta_o,-1.0f, 1.0f));
-            float theta_d = AngleBetween(A.w, B.w);
+            float theta_d = AngleBetween(ref A.w, ref B.w);
             float TempVar = 3.14159f;
             if(theta_d + theta_b < TempVar) TempVar = theta_d + theta_b;
             if(TempVar <= theta_a) return;
@@ -97,13 +86,13 @@ namespace TrueTrace {
             if(theta_d + theta_a < TempVar) TempVar = theta_d + theta_a;
             if(TempVar <= theta_b) {A.w = B.w; A.cosTheta_o = B.cosTheta_o; return;}
 
-            float theta_o = (theta_a + theta_d + theta_b) / 2.0f;
-            if(theta_o >= 3.14159f) {A.w = new Vector3(0,0,0); A.cosTheta_o = -1; return;}
+            float theta_o = (theta_a + theta_d + theta_b) * 0.5f;
+            if(theta_o >= 3.14159f) {A.w = Vector3.zero; A.cosTheta_o = -1; return;}
 
             float theta_r = theta_o - theta_a;
             Vector3 wr = Vector3.Cross(A.w, B.w);
-            if(Dot(ref wr, ref wr) == 0) {A.w = new Vector3(0,0,0); A.cosTheta_o = -1; return;}
-            A.w = Rotate(theta_r, wr) * A.w;
+            if(Dot(ref wr, ref wr) == 0) {A.w = Vector3.zero; A.cosTheta_o = -1; return;}
+            RotateRodrigues(ref A.w, theta_r, ref wr);
             A.cosTheta_o =(float)System.Math.Cos(theta_o);
         }
 
@@ -111,7 +100,7 @@ namespace TrueTrace {
 
     
 
-        private void Union(ref LightBounds A, LightBounds B) {
+        private void Union(ref LightBounds A, ref LightBounds B) {
             if(A.phi == 0) {A = B; return;}
             if(B.phi == 0) return;
             UnionCone(ref A, ref B);
@@ -136,10 +125,10 @@ namespace TrueTrace {
                                 (2.0f * theta_w * sinTheta_o -(float)System.Math.Cos(theta_o - 2.0f * theta_w) -
                                  2.0f * theta_o * sinTheta_o + b.cosTheta_o);
 
-            float Radius = Distance(new Vector3(b.b.BBMax.x + b.b.BBMin.x, b.b.BBMax.y + b.b.BBMin.y, b.b.BBMax.z + b.b.BBMin.z) / 2.0f, b.b.BBMax);
-            float SA = 4.0f * Mathf.PI * Radius * Radius;
             
-            return b.phi * M_omega * Kr * surface_area(new Vector3(b.b.BBMax.x - b.b.BBMin.x, b.b.BBMax.y - b.b.BBMin.y, b.b.BBMax.z - b.b.BBMin.z)) / (float)Mathf.Max(b.LightCount, 1);
+            int LightCoun = b.LightCount;
+            if(LightCoun < 1) LightCoun = 1;
+            return b.phi * M_omega * Kr * surface_area(b.b.BBMax - b.b.BBMin) / (float)LightCoun;
         }
 
         private LightBounds* LightTris;
@@ -195,7 +184,7 @@ namespace TrueTrace {
                 aabb_left = LightTris[DimensionedIndices[Offset]];
                 SAH[1] = EvaluateCost(ref aabb_left, Kr, dimension);
                 for(int i = 2; i < index_count; i++) {
-                    Union(ref aabb_left, LightTris[DimensionedIndices[Offset + i - 1]]);
+                    Union(ref aabb_left, ref LightTris[DimensionedIndices[Offset + i - 1]]);
 
                     SAH[i] = EvaluateCost(ref aabb_left, Kr, dimension) * (float)i;
                 }
@@ -215,7 +204,7 @@ namespace TrueTrace {
 
 
                 for(int i = index_count - 2; i > 0; i--) {
-                    Union(ref aabb_right, LightTris[DimensionedIndices[Offset + i]]);
+                    Union(ref aabb_right, ref LightTris[DimensionedIndices[Offset + i]]);
 
                     float cost = SAH[i] + EvaluateCost(ref aabb_right, Kr, dimension) * (float)(index_count - i);
 
@@ -233,11 +222,11 @@ namespace TrueTrace {
             if(split.cost == float.MaxValue) {
                 split.index = first_index + (index_count) / 2;
                 for(int i = split.index; i < index_count + first_index; i++) {
-                    Union(ref split.aabb_right, LightTris[DimensionedIndices[Offset + i]]);
+                    Union(ref split.aabb_right, ref LightTris[DimensionedIndices[Offset + i]]);
                 }
             }
             split.aabb_left = LightTris[DimensionedIndices[Offset + first_index]];
-            for(int i = first_index + 1; i < split.index; i++) Union(ref split.aabb_left, LightTris[DimensionedIndices[Offset + i]]);
+            for(int i = first_index + 1; i < split.index; i++) Union(ref split.aabb_left, ref LightTris[DimensionedIndices[Offset + i]]);
         }
         public int MaxDepth;
         void BuildRecursive(int nodesi, ref int node_index, int first_index, int index_count, int Depth) {
@@ -385,7 +374,7 @@ namespace TrueTrace {
                 LightTris[i] = TempBound;
                 FinalIndices[i] = i;
                 SAH[i] = (TriAABB.BBMax.x - TriAABB.BBMin.x) / 2.0f + TriAABB.BBMin.x;
-                Union(ref nodes2[0].aabb, TempBound);
+                Union(ref nodes2[0].aabb, ref TempBound);
             }
 
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
@@ -532,7 +521,7 @@ namespace TrueTrace {
             for(int i = 0; i < PrimCount; i++) {
                 FinalIndices[i] = i;
                 SAH[i] = (Tris[i].b.BBMax.x - Tris[i].b.BBMin.x) / 2.0f + Tris[i].b.BBMin.x;
-                Union(ref nodes2[0].aabb, Tris[i]);
+                Union(ref nodes2[0].aabb, ref Tris[i]);
             }
 
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
@@ -673,7 +662,7 @@ namespace TrueTrace {
                 nodes2[i + PrimCount] = ZeroBound;
                 FinalIndices[i] = i;
                 SAH[i] = (Tris[i].b.BBMax.x - Tris[i].b.BBMin.x) / 2.0f + Tris[i].b.BBMin.x;
-                Union(ref nodes2[0].aabb, Tris[i]);
+                Union(ref nodes2[0].aabb, ref Tris[i]);
             }
 
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});

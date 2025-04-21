@@ -19,9 +19,6 @@ namespace TrueTrace {
         public float* SAH;
         public AABB* Primitives;
         
-        // public BVHNodeVerbose[] VerboseNodes;
-
-
         public NativeArray<BVHNode2Data> BVH2NodesArray;
         public NativeArray<int> DimensionedIndicesArray;
         public NativeArray<int> tempArray;
@@ -54,20 +51,32 @@ namespace TrueTrace {
             split.aabb_right.init();
 
             int Offset;
+            float left_cost;
+            float cost;
+            int first_right;
+            int i;
             for(int dimension = 0; dimension < 3; dimension++) {
                 aabb_right.init();
                 Offset = PrimCount * dimension + first_index;
-                for(int i = 1; i < index_count; i++) {
+                first_right = index_count;
+                for(i = 1; i < index_count; i++) {
                     aabb_right.Extend(ref Primitives[DimensionedIndices[Offset + i - 1]]);
-
                     SAH[i] = surface_area(ref aabb_right) * (float)i;
+                    if(SAH[i] > split.cost) {
+                        first_right = i + 1;
+                        break;
+                    }
                 }
                 aabb_right.init();
-
-                for(int i = index_count - 1; i > 0; i--) {
+                for(i = index_count - 1; i >= first_right; i--)
                     aabb_right.Extend(ref Primitives[DimensionedIndices[Offset + i]]);
 
-                    float cost = SAH[i] + surface_area(ref aabb_right) * (float)(index_count - i);
+                for(i = first_right - 1; i > 0; i--) {
+                    aabb_right.Extend(ref Primitives[DimensionedIndices[Offset + i]]);
+
+                    left_cost = surface_area(ref aabb_right) * (float)(index_count - i);
+                    if(left_cost >= split.cost) break;
+                    cost = SAH[i] + left_cost;
 
                     if(cost <= split.cost) {
                         split.cost = cost;
@@ -78,7 +87,7 @@ namespace TrueTrace {
                 }
             }
             Offset = split.dimension * PrimCount;
-            for(int i = first_index; i < split.index; i++) split.aabb_left.Extend(ref Primitives[DimensionedIndices[Offset + i]]);
+            for(i = first_index; i < split.index; i++) split.aabb_left.Extend(ref Primitives[DimensionedIndices[Offset + i]]);
         }
         void BuildRecursive(int nodesi, ref int node_index, int first_index, int index_count) {
             if(index_count == 1) {

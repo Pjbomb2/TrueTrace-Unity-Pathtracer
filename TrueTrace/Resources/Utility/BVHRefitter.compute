@@ -203,7 +203,7 @@ StructuredBuffer<int> WorkingBuffer;
 [numthreads(KernelRatio, 1, 1)]
 void RefitLayer(uint3 id : SV_DispatchThreadID)
 {
-	if (id.x > NodeCount)
+	if (id.x >= NodeCount)
 		return;
 		id.x = WorkingBuffer[id.x];
 	float3 RunningMax = -99999999.0f;//AllNodes[id.x].BBMax;
@@ -317,7 +317,7 @@ StructuredBuffer<int> TLASCWBVHIndices;
 [numthreads(KernelRatio, 1, 1)]
 void RefitBVHLayer(uint3 id : SV_DispatchThreadID)
 {
-	if (id.x > NodeCount)
+	if (id.x >= NodeCount)
 		return;
 		id.x = WorkingBuffer[id.x];
 	float3 RunningMax = -99999999.0f;//AllNodes[id.x].BBMax;
@@ -639,7 +639,7 @@ StructuredBuffer<Transfer> Transfers;
 [numthreads(256,1,1)]
 void TLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
 {
-    if(id.x > (uint)SetCount) return;
+    if(id.x >= (uint)SetCount) return;
     const int Index = WorkingSet[id.x];
     GaussianTreeNode Node = SGTreeWrite[Index];
     if(Node.left < 0) {
@@ -674,7 +674,7 @@ void TLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
 [numthreads(256,1,1)]
 void TLASLightBVHRefitKernel (uint3 id : SV_DispatchThreadID)
 {
-    if(id.x > (uint)SetCount) return;
+    if(id.x >= (uint)SetCount) return;
     const int Index = WorkingSet[id.x];
     LightBVHData Node = LightNodesWrite[Index];
     if(Node.left < 0) {
@@ -728,7 +728,7 @@ float4x4 ToWorld;
 [numthreads(256,1,1)]
 void BLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
 {
-    if(id.x > (uint)SetCount) return;
+    if(id.x >= (uint)SetCount) return;
     const int Index = WorkingSet[id.x] + TotalNodeOffset;
     GaussianTreeNode Node = SGTreeWrite[Index];
     if(Node.left < 0) {
@@ -767,7 +767,7 @@ void BLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
 [numthreads(256,1,1)]
 void BLASLightRefitKernel (uint3 id : SV_DispatchThreadID)
 {
-    if(id.x > (uint)SetCount) return;
+    if(id.x >= (uint)SetCount) return;
     const int Index = WorkingSet[id.x] + TotalNodeOffset;
     LightBVHData Node = LightNodesWrite[Index];
     if(Node.left < 0) {
