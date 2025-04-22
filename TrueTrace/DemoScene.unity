@@ -12613,7 +12613,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -15114,9 +15114,9 @@ MonoBehaviour:
   ArrayIndex: 0
   IESIndex: 0
   ShadowSoftness: 0
-  UseKelvin: 0
+  UseKelvin: 1
   IsMainSun: 1
-  KelvinTemperature: 1000
+  KelvinTemperature: 7734
   Intensity: 122
   Col: {x: 1, y: 1, z: 1}
   SpotAngle: 30
@@ -37133,7 +37133,8 @@ MonoBehaviour:
   - {fileID: 1931085300}
   AddQue: []
   RemoveQue: []
-  UpdateQue: []
+  UpdateQue:
+  - {fileID: 1770588100}
   InstanceRenderQue: []
   InstanceUpdateQue: []
   InstanceRenderTransforms: []
@@ -46315,7 +46316,7 @@ MonoBehaviour:
       cosTheta_oe: 0
       left: 0
   ExistsInQue: 1
-  QueInProgress: 1
+  QueInProgress: 2
   RenderImposters: 0
   IsDeformable: 0
   Name: sponza
@@ -53992,7 +53993,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -60473,7 +60474,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 3
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0

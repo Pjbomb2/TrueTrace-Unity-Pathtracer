@@ -32,6 +32,9 @@ namespace TrueTrace {
 
         public void Start() {
             ThisLight = this.GetComponent<Light>();
+#if UNITY_PIPELINE_HDRP
+            this.GetComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>().includeForRayTracing = false;
+#endif
             LocalTransform = transform;
             if(!HasInitialized) {
                 Init();  
@@ -40,6 +43,9 @@ namespace TrueTrace {
         }
         void Awake() {
             ThisLight = this.GetComponent<Light>();
+#if UNITY_PIPELINE_HDRP
+            this.GetComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>().includeForRayTracing = false;
+#endif
             ThisLight.shadows = LightShadows.None;
             LocalTransform = transform;
             if(!HasInitialized) {
@@ -49,6 +55,9 @@ namespace TrueTrace {
         }
         public void Init() {
             ThisLight = this.GetComponent<Light>();
+#if UNITY_PIPELINE_HDRP
+            this.GetComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>().includeForRayTracing = false;
+#endif
             ThisLight.useColorTemperature = true;
             UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = true;
                 ThisLightData.Position = transform.position;
@@ -63,10 +72,10 @@ namespace TrueTrace {
             Col = new Vector3(TempCol[0], TempCol[1], TempCol[2]);
 
             ThisLightData.Radiance = new Vector3(TempCol[0], TempCol[1], TempCol[2]) * Intensity;
-#if UNITY_PIPELINE_HDRP
-            ThisLightData.Type = (ThisLight.type == LightType.Point) ? 0 : (ThisLight.type == LightType.Directional) ? 1 : (ThisLight.type == LightType.Spot) ? 2 : (ThisLight.type == LightType.Rectangle || ThisLight.type == LightType.Box) ? 3 : 4;
-#else
+#if UNITY_2021 || UNITY_2022 || !UNITY_PIPELINE_HDRP
             ThisLightData.Type = (ThisLight.type == LightType.Point) ? 0 : (ThisLight.type == LightType.Directional) ? 1 : (ThisLight.type == LightType.Spot) ? 2 : (ThisLight.type == LightType.Rectangle) ? 3 : 4;
+#else
+            ThisLightData.Type = (ThisLight.type == LightType.Point) ? 0 : (ThisLight.type == LightType.Directional) ? 1 : (ThisLight.type == LightType.Spot) ? 2 : (ThisLight.type == LightType.Rectangle || ThisLight.type == LightType.Box) ? 3 : 4;
 #endif
             SpotAngle = ThisLight.spotAngle;
             if(ThisLight.type == LightType.Spot) {
@@ -74,10 +83,10 @@ namespace TrueTrace {
                 float outerCos = Mathf.Cos(Mathf.Deg2Rad * 0.5f * ThisLight.spotAngle);
                 float angleRangeInv = 1.0f / Mathf.Max(innerCos - outerCos, 0.001f);
                 ThisLightData.SpotAngle = new Vector2(angleRangeInv, -outerCos * angleRangeInv);
-#if UNITY_PIPELINE_HDRP
-            } else if(ThisLight.type == LightType.Rectangle || ThisLight.type == LightType.Box) {
-#else            
+#if UNITY_2021 || UNITY_2022 || !UNITY_PIPELINE_HDRP
             } else if(ThisLight.type == LightType.Rectangle) {
+#else            
+            } else if(ThisLight.type == LightType.Rectangle || ThisLight.type == LightType.Box) {
 #endif
                 #if UNITY_EDITOR
                     ThisLightData.SpotAngle = ThisLight.areaSize;
@@ -106,11 +115,14 @@ namespace TrueTrace {
             RayTracingMaster.UnregisterObject(this);
         }
 
-
+        Vector3 NewDir;
         public bool CallHasUpdated(bool Override = false) {
+            // NewDir = (ThisLightData.Type == 1) ? -LocalTransform.forward : LocalTransform.forward;
+            // if(LocalTransform.position != ThisLightData.Position || NewDir != ThisLightData.Direction) Override = true;
+            // if(NeedsToUpdate || Override) {
             if(NeedsToUpdate || LocalTransform.hasChanged || Override) {
-
                 ThisLightData.Position = LocalTransform.position;
+                // ThisLightData.Direction = NewDir;
                 Vector3 TempColVec = Col;
                 if(UseKelvin) {
                     Color TempCol = Mathf.CorrelatedColorTemperatureToRGB(KelvinTemperature);
@@ -123,7 +135,7 @@ namespace TrueTrace {
                     float angleRangeInv = 1.0f / Mathf.Max(innerCos - outerCos, 0.001f);
                     ThisLightData.SpotAngle = new Vector2(angleRangeInv, -outerCos * angleRangeInv);
                 }
-                ThisLightData.Direction = (ThisLightData.Type == 1) ? -LocalTransform.forward : (ThisLightData.Type == 2) ? Vector3.Normalize(LocalTransform.forward) : LocalTransform.forward;
+                ThisLightData.Direction = (ThisLightData.Type == 1) ? -LocalTransform.forward : LocalTransform.forward;
                 ThisLightData.Softness = ShadowSoftness;
                 ThisLightData.ZAxisRotation = LocalTransform.localEulerAngles.z * 3.14159f / 180.0f;
                 NeedsToUpdate = false;
@@ -162,6 +174,7 @@ namespace TrueTrace {
             NewPair.DynamicContainer = CreateHorizontalBox(Name + " Container");
             NewPair.DynamicLabel = new Label(Name);
             NewPair.DynamicSlider = new Slider() {value = InitialValue, highValue = HighValue, lowValue = LowValue};
+            NewPair.DynamicSlider.value = InitialValue;
             NewPair.DynamicField = new FloatField() {value = InitialValue};
             NewPair.DynamicSlider.style.width = SliderWidth;
             NewPair.DynamicContainer.Add(NewPair.DynamicLabel);

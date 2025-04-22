@@ -682,6 +682,7 @@ Toolbar toolbar;
                   });
                }
                Slider SkyDesatSlider = new Slider() {label = "SkyDesat: ", value = SkyDesaturate, highValue = 1.0f, lowValue = 0.0f};
+               SkyDesatSlider.value = SkyDesaturate;
                SkyDesatSlider.RegisterValueChangedCallback(evt => {SkyDesaturate = evt.newValue; RayMaster.LocalTTSettings.SkyDesaturate = SkyDesaturate;});
                SkyDesatSlider.style.maxWidth = 345;
 
@@ -690,6 +691,7 @@ Toolbar toolbar;
                BackgroundIntensityField.style.maxWidth = 345;
 
                Slider PrimaryBackgroundContrastSlider = new Slider() {label = "Background Contrast: ", value = PrimaryBackgroundContrast, highValue = 2.0f, lowValue = 0.0f};
+               PrimaryBackgroundContrastSlider.value = PrimaryBackgroundContrast;
                PrimaryBackgroundContrastSlider.RegisterValueChangedCallback(evt => {PrimaryBackgroundContrast = evt.newValue; RayMaster.LocalTTSettings.PrimaryBackgroundContrast = PrimaryBackgroundContrast;});
                PrimaryBackgroundContrastSlider.style.maxWidth = 345;
                PrimaryBackgroundContrastSlider.showInputField = true;
@@ -700,6 +702,7 @@ Toolbar toolbar;
                PrimaryBackgroundTintColorField.RegisterValueChangedCallback(evt => {PrimaryBackgroundTintColor = evt.newValue; RayMaster.LocalTTSettings.PrimaryBackgroundTintColor = new Vector3(PrimaryBackgroundTintColor.r,PrimaryBackgroundTintColor.g,PrimaryBackgroundTintColor.b);});
 
                Slider PrimaryBackgroundTintSlider = new Slider() {label = "Tint Strength: ", value = PrimaryBackgroundTint, highValue = 1.0f, lowValue = 0.0f};
+               PrimaryBackgroundTintSlider.value = PrimaryBackgroundTint;
                PrimaryBackgroundTintSlider.RegisterValueChangedCallback(evt => {PrimaryBackgroundTint = evt.newValue; RayMaster.LocalTTSettings.PrimaryBackgroundTint = PrimaryBackgroundTint;});
                PrimaryBackgroundTintSlider.style.maxWidth = 345;
 
@@ -754,6 +757,7 @@ Toolbar toolbar;
             SecondaryBackgroundIntensityField.style.maxWidth = 345;
             
             Slider SecondarySkyDesatSlider = new Slider() {label = "Secondary SkyDesat: ", value = SecondarySkyDesaturate, highValue = 1.0f, lowValue = 0.0f};
+            SecondarySkyDesatSlider.value = SecondarySkyDesaturate;
             SecondarySkyDesatSlider.RegisterValueChangedCallback(evt => {SecondarySkyDesaturate = evt.newValue; RayMaster.LocalTTSettings.SecondarySkyDesaturate = SecondarySkyDesaturate;});
             SecondarySkyDesatSlider.style.maxWidth = 345;
 
@@ -805,6 +809,7 @@ Toolbar toolbar;
       VisualElement HDRILongElement = new VisualElement();
          HDRILongElement.style.flexDirection = FlexDirection.Row;
          Slider HDRILongSlider = new Slider() {label = "HDRI Horizontal Offset: ", value = HDRILongLat.x, highValue = 360.0f, lowValue = 0.0f};
+         HDRILongSlider.value = HDRILongLat.x;
          HDRILongSlider.style.minWidth = 345;
          HDRILongSlider.style.maxWidth = 345;
          FloatField HDRILongField = new FloatField() {value = HDRILongLat.x};
@@ -819,6 +824,7 @@ Toolbar toolbar;
       VisualElement HDRILatElement = new VisualElement();
          HDRILatElement.style.flexDirection = FlexDirection.Row;
          Slider HDRILatSlider = new Slider() {label = "HDRI Vertical Offset: ", value = HDRILongLat.y, highValue = 360.0f, lowValue = 0.0f};
+         HDRILatSlider.value = HDRILongLat.y;
          HDRILatSlider.style.minWidth = 345;
          HDRILatSlider.style.maxWidth = 345;
          FloatField HDRILatField = new FloatField() {value = HDRILongLat.y};
@@ -1843,12 +1849,14 @@ Toolbar toolbar;
 
 
          Slider FogSlider = new Slider() {label = "Fog Density: ", value = FogDensity, highValue = 0.2f, lowValue = 0.000000001f};
+         FogSlider.value = FogDensity;
          FogSlider.showInputField = true;        
          FogSlider.style.width = 400;
          FogSlider.ElementAt(0).style.minWidth = 65;
          FogSlider.RegisterCallback<FocusOutEvent>(evt => {FogDensity = FogSlider.value; RayMaster.LocalTTSettings.FogDensity = FogDensity;});        
 
          Slider FogHeightSlider = new Slider() {label = "Fog Height: ", value = FogHeight, highValue = 80.0f, lowValue = 0.00001f};
+         FogHeightSlider.value = FogHeight;
          FogHeightSlider.showInputField = true;        
          FogHeightSlider.style.width = 400;
          FogHeightSlider.ElementAt(0).style.minWidth = 65;
@@ -1989,6 +1997,7 @@ Toolbar toolbar;
          NewPair.DynamicContainer = CreateHorizontalBox(Name + " Container");
             NewPair.DynamicLabel = new Label(Name);
             NewPair.DynamicSlider = new Slider() {value = InitialValue, highValue = HighValue, lowValue = LowValue};
+            NewPair.DynamicSlider.value = InitialValue;
             NewPair.DynamicField = new FloatField() {value = InitialValue};
             NewPair.DynamicSlider.style.width = SliderWidth;
          NewPair.DynamicContainer.Add(NewPair.DynamicLabel);
@@ -2025,6 +2034,7 @@ Toolbar toolbar;
 
          VisualElement SharpenFoldout = new VisualElement() {};
             Slider SharpnessSlider = new Slider() {label = "Sharpness: ", value = Sharpness, highValue = 1.0f, lowValue = 0.0f};
+            SharpnessSlider.value = Sharpness;
             SharpnessSlider.style.width = 200;
             SharpnessSlider.RegisterValueChangedCallback(evt => {Sharpness = evt.newValue; RayMaster.LocalTTSettings.Sharpness = Sharpness;});
             SharpenFoldout.Add(SharpnessSlider);
@@ -2045,15 +2055,18 @@ Toolbar toolbar;
                      StandardBloomBox.style.flexDirection = FlexDirection.Row;
                      Label BloomLabel = new Label("Bloom Strength");
                      Slider BloomSlider = new Slider() {value = BloomStrength, highValue = 0.9999f, lowValue = 0.25f};
+                        BloomSlider.value = BloomStrength;
                         BloomSlider.style.width = 100;
                         BloomSlider.RegisterValueChangedCallback(evt => {BloomStrength = evt.newValue; RayMaster.LocalTTSettings.BloomStrength = BloomStrength;});
                   StandardBloomBox.Add(BloomLabel);
                   StandardBloomBox.Add(BloomSlider);
                   VisualElement ConvBloomBox = new VisualElement();
                      Slider ConvBloomStrengthSlider = new Slider() {label = "Convolution Bloom Strength", value = ConvStrength, highValue = 10.0f, lowValue = 0.0f};
+                        ConvBloomStrengthSlider.value = ConvStrength;
                         ConvBloomStrengthSlider.style.width = 400;
                         ConvBloomStrengthSlider.RegisterValueChangedCallback(evt => {ConvStrength = evt.newValue; RayMaster.LocalTTSettings.ConvStrength = ConvStrength;});
                      Slider ConvBloomThresholdSlider = new Slider() {label = "Convolution Bloom Threshold", value = ConvBloomThreshold, highValue = 20.0f, lowValue = 0.0f};
+                        ConvBloomThresholdSlider.value = ConvBloomThreshold;
                         ConvBloomThresholdSlider.style.width = 400;
                         ConvBloomThresholdSlider.RegisterValueChangedCallback(evt => {ConvBloomThreshold = evt.newValue; RayMaster.LocalTTSettings.ConvBloomThreshold = ConvBloomThreshold;});
                      Vector2Field ConvBloomSizeField = new Vector2Field() {label = "Convolution Bloom Size", value = ConvBloomSize};
@@ -2089,12 +2102,14 @@ Toolbar toolbar;
 
            Label AperatureLabel = new Label("Aperature Size");
            AperatureSlider = new Slider() {value = DoFAperature, highValue = 1, lowValue = 0};
+           AperatureSlider.value = DoFAperature;
            AperatureSlider.style.width = 250;
            FloatField AperatureScaleField = new FloatField() {value = DoFAperatureScale, label = "Aperature Scale"};
            AperatureScaleField.ElementAt(0).style.minWidth = 65;
            AperatureScaleField.RegisterValueChangedCallback(evt => {DoFAperatureScale = evt.newValue; DoFAperatureScale = Mathf.Max(DoFAperatureScale, 0.0001f); RayMaster.LocalTTSettings.DoFAperatureScale = DoFAperatureScale; AperatureScaleField.value = DoFAperatureScale;});
            Label FocalLabel = new Label("Focal Length");
            FocalSlider = new FloatField() {value = DoFFocal};
+           FocalSlider.value = DoFFocal;
            FocalSlider.style.width = 150;
            Label AutoFocLabel = new Label("Hold Middle Mouse + Left Control in game to focus");
            // Button AutofocusButton = new Button(() => {IsFocusing = true;}) {text = "Autofocus DoF"};
@@ -2130,6 +2145,7 @@ Toolbar toolbar;
                ExposureElement.style.flexDirection = FlexDirection.Row;
                Label ExposureLabel = new Label("Exposure");
                Slider ExposureSlider = new Slider() {value = Exposure, highValue = 50.0f, lowValue = 0};
+               ExposureSlider.value = Exposure;
                FloatField ExposureField = new FloatField() {value = Exposure};
                Toggle ExposureAutoToggle = new Toggle() {value = ExposureAuto, text = "Auto(On)/Manual(Off)"};
                ExposureAutoToggle.RegisterValueChangedCallback(evt => {ExposureAuto = evt.newValue; RayMaster.LocalTTSettings.ExposureAuto = ExposureAuto;});
@@ -2160,6 +2176,7 @@ Toolbar toolbar;
                VisualElement SaturationContainer = CreateHorizontalBox();
                   Label SaturationLabel = new Label("Saturation");
                   Slider SaturationSlider = new Slider() {value = Saturation, highValue = 2.0f, lowValue = 0};
+                  SaturationSlider.value = Saturation;
                   FloatField SaturationField = new FloatField() {value = Saturation};
                   SaturationSlider.style.width = 100;
                   SaturationSlider.RegisterValueChangedCallback(evt => {Saturation = evt.newValue; SaturationField.value = Saturation; RayMaster.LocalTTSettings.Saturation = Saturation;});
@@ -2227,6 +2244,7 @@ Toolbar toolbar;
             VisualElement ChromaAberContainer = CreateHorizontalBox();
                Label ChromaAberLabel = new Label("Chromatic Aberation Strength");
                Slider ChromaAberSlider = new Slider() {value = ChromaDistort, highValue = 7.0f, lowValue = 0};
+               ChromaAberSlider.value = ChromaDistort;
                FloatField ChromaAberField = new FloatField() {value = ChromaDistort};
                ChromaAberSlider.RegisterValueChangedCallback(evt => {ChromaDistort = evt.newValue; ChromaAberField.value = ChromaDistort; RayMaster.LocalTTSettings.ChromaDistort = ChromaDistort;});
                ChromaAberField.RegisterValueChangedCallback(evt =>  {ChromaDistort = evt.newValue; ChromaAberSlider.value = ChromaDistort; RayMaster.LocalTTSettings.ChromaDistort = ChromaDistort;});
@@ -2360,7 +2378,7 @@ Toolbar toolbar;
 
          void EvaluateScene(Scene Current, Scene Next) {
             rootVisualElement.Clear();
-            MainSource.Clear();
+            if(MainSource != null) MainSource.Clear();
             CreateGUI();
          }
 
@@ -2738,6 +2756,7 @@ Slider AperatureSlider;
 
 
                   Slider OIDNBlendRatioSlider = new Slider() {label = "Blend Ratio: ", value = OIDNBlendRatio, highValue = 1.0f, lowValue = 0.0f};
+                  OIDNBlendRatioSlider.value = OIDNBlendRatio;
                   OIDNBlendRatioSlider.showInputField = true;        
                   OIDNBlendRatioSlider.style.width = 200;
                   OIDNBlendRatioSlider.ElementAt(0).style.minWidth = 65;
@@ -2754,6 +2773,7 @@ Slider AperatureSlider;
    
 
                Slider OIDNBlendRatioSlider = new Slider() {label = "Blend Ratio: ", value = OIDNBlendRatio, highValue = 1.0f, lowValue = 0.0f};
+               OIDNBlendRatioSlider.value = OIDNBlendRatio;
                OIDNBlendRatioSlider.showInputField = true;        
                OIDNBlendRatioSlider.style.width = 200;
                OIDNBlendRatioSlider.ElementAt(0).style.minWidth = 65;
@@ -2876,6 +2896,7 @@ Slider AperatureSlider;
                FireflyFoldout.Add(FireflyFrameIntervalField);
          
                Slider FireflyStrengthSlider = new Slider() {label = "Anti Firefly Strength: ", value = FireflyStrength, highValue = 1.0f, lowValue = 0.0f};
+               FireflyStrengthSlider.value = FireflyStrength;
                FireflyStrengthSlider.RegisterValueChangedCallback(evt => {FireflyStrength = evt.newValue; RayMaster.LocalTTSettings.FireflyStrength = FireflyStrength;});
                FireflyStrengthSlider.style.maxWidth = 345;
                FireflyFoldout.Add(FireflyStrengthSlider);
