@@ -2360,7 +2360,7 @@ Toolbar toolbar;
 
          void EvaluateScene(Scene Current, Scene Next) {
             rootVisualElement.Clear();
-            MainSource.Clear();
+            if(MainSource != null) MainSource.Clear();
             CreateGUI();
          }
 

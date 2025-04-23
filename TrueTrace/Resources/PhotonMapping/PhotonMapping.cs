@@ -25,13 +25,13 @@ namespace TrueTrace {
 
         private ComputeShader CDFCompute;
         private ComputeBuffer CDFTotalBuffer;
-        private int VisTexWidth = 1024;
+        public int PerLightVisSize = 128;
+        public bool RunVis = false;
 
         int FramesSinceStart = 0;
-        uint NumPhotons = 500000;
-        int analyticPhotons = 500000;
+        uint NumPhotons = 2000000;
+        int analyticPhotons = 2000000;
         float mAnalyticInvPdf;
-        int NumAnalyticLights = 1;
         uint blockSize = 16;
         uint mMaxDispatchY = 512;
         uint mPGDDispatchX;
@@ -41,9 +41,8 @@ namespace TrueTrace {
         uint Height;
         uint mNumBuckets;
         public bool Initialized = false;
-
         ComputeBuffer CounterBuffer;
-
+        int PrevLightCount;
         int GenKernel;
         int CollectKernel;
 
@@ -61,7 +60,11 @@ namespace TrueTrace {
         }
 
         public void Init() {
-            VisTexWidth = 1024;
+            if (SPPMShader == null) {SPPMShader = Resources.Load<ComputeShader>("PhotonMapping/SPPM"); }
+                CDFCompute = Resources.Load<ComputeShader>("Utility/CDFCreator");
+            if(AssetManager.Assets == null || AssetManager.Assets.UnityLightCount == 0) return;
+            ClearAll();
+            RunVis = false;
             FramesSinceStart = 0;
             if (SPPMShader == null) {SPPMShader = Resources.Load<ComputeShader>("PhotonMapping/SPPM"); }
             GenKernel = SPPMShader.FindKernel("kernel_gen");
@@ -71,37 +74,34 @@ namespace TrueTrace {
             if(CDFTotalBuffer == null || !CDFTotalBuffer.IsValid()) {
                 CDFTotalBuffer = new ComputeBuffer(1, 4);
             }
-            if(CDFX == null) {
-                CommonFunctions.CreateRenderTextureArray2(ref EquirectVisibilityTex, VisTexWidth, VisTexWidth / 2, 2, CommonFunctions.RTFull2);
+                CommonFunctions.CreateRenderTextureArray2(ref EquirectVisibilityTex, PerLightVisSize * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)), PerLightVisSize / 2 * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)), 2, CommonFunctions.RTFull4);
                 CDFX.ReleaseSafe();
                 CDFY.ReleaseSafe();
-                CDFCompute = Resources.Load<ComputeShader>("Utility/CDFCreator");
-                CommonFunctions.CreateRenderTexture(ref CDFX, VisTexWidth, VisTexWidth / 2, CommonFunctions.RTFull1);
-                CommonFunctions.CreateRenderTexture(ref CDFY, VisTexWidth / 2, 1, CommonFunctions.RTFull1);
+                CommonFunctions.CreateRenderTexture(ref CDFX, PerLightVisSize * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)), PerLightVisSize / 2 * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)), CommonFunctions.RTFull1);
+                CommonFunctions.CreateRenderTexture(ref CDFY, PerLightVisSize / 2 * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)), 1, CommonFunctions.RTFull1);
                 CounterBuffer = new ComputeBuffer(1, 4);
-                CDFCompute.SetTexture(1, "Tex2", EquirectVisibilityTex[0]);
-                CDFCompute.SetTexture(1, "CDFX", CDFX);
-                CDFCompute.SetTexture(1, "CDFY", CDFY);
-                CDFCompute.SetInt("w", VisTexWidth);
-                CDFCompute.SetInt("h", VisTexWidth / 2);
-                CDFCompute.SetBuffer(1, "CounterBuffer", CounterBuffer);
-                CDFCompute.SetBuffer(1, "TotalBuff", CDFTotalBuffer);
+                CDFCompute.SetTexture(0, "Tex", EquirectVisibilityTex[0]);
+                CDFCompute.SetTexture(0, "CDFX", CDFX);
+                CDFCompute.SetTexture(0, "CDFY", CDFY);
+                CDFCompute.SetInt("w", PerLightVisSize * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)));
+                CDFCompute.SetInt("h", PerLightVisSize / 2 * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)));
+                CDFCompute.SetBuffer(0, "CounterBuffer", CounterBuffer);
+                CDFCompute.SetBuffer(0, "TotalBuff", CDFTotalBuffer);
 
-            }
 
-            analyticPhotons += NumAnalyticLights - (analyticPhotons % NumAnalyticLights);
+            analyticPhotons += AssetManager.Assets.UnityLightCount - (analyticPhotons % AssetManager.Assets.UnityLightCount);
 
             NumPhotons = (uint)analyticPhotons;
 
-            mAnalyticInvPdf = (((float)NumPhotons) * ((float)NumAnalyticLights)) / ((float)analyticPhotons);
+            mAnalyticInvPdf = (((float)NumPhotons) * ((float)AssetManager.Assets.UnityLightCount)) / ((float)analyticPhotons);
 
             uint blockSizeSq = blockSize * blockSize;
             uint xPhotons = (uint)((float)NumPhotons / (float)mMaxDispatchY) + 1;
             xPhotons += (xPhotons % blockSize == 0 && analyticPhotons > 0) ? blockSize : (blockSize - (xPhotons % blockSize));
 
-            if(NumAnalyticLights > 0) {
+            if(AssetManager.Assets.UnityLightCount > 0) {
                 uint numCurrentLight = 0;
-                uint step = (uint)((float)analyticPhotons / (float)NumAnalyticLights);
+                uint step = (uint)((float)analyticPhotons / (float)AssetManager.Assets.UnityLightCount);
                 bool stop = false;
                 for(uint i = 0; i <= analyticPhotons / blockSizeSq; i++) {
                     if(stop) break;
@@ -140,7 +140,11 @@ namespace TrueTrace {
         }
 
         public void Generate(CommandBuffer cmd) {
-            if(AABBBuffA == null || !AABBBuffA.IsValid() || mpCausticHashPhotonCounter == null || !mpCausticHashPhotonCounter.IsValid() || EquirectVisibilityTex == null || EquirectVisibilityTex[0] == null || EquirectVisibilityTex[1] == null) Init();
+            if (SPPMShader == null) {SPPMShader = Resources.Load<ComputeShader>("PhotonMapping/SPPM"); }
+                CDFCompute = Resources.Load<ComputeShader>("Utility/CDFCreator");
+            if(AssetManager.Assets == null || AssetManager.Assets.UnityLightCount == 0) return;
+            if(PrevLightCount != AssetManager.Assets.UnityLightCount || RunVis || AABBBuffA == null || !AABBBuffA.IsValid() || mpCausticHashPhotonCounter == null || !mpCausticHashPhotonCounter.IsValid() || EquirectVisibilityTex == null || EquirectVisibilityTex[0] == null || EquirectVisibilityTex[1] == null) Init();
+            PrevLightCount = AssetManager.Assets.UnityLightCount;
             FramesSinceStart++;
             bool FlipFrame = (FramesSinceStart % 2) == 0;
             cmd.SetComputeIntParam(SPPMShader, "PhotonFrames", FramesSinceStart);
@@ -152,6 +156,7 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(SPPMShader, "mMaxDispatchY", (int)mMaxDispatchY);
             cmd.SetComputeIntParam(SPPMShader, "screen_height", (int)Height);
             cmd.SetComputeIntParam(SPPMShader, "mNumBuckets", (int)mNumBuckets);
+            cmd.SetComputeFloatParam(SPPMShader, "CDFWIDTH", (float)PerLightVisSize);
 
             cmd.SetComputeTextureParam(SPPMShader, 0, "gHashBucketPos", mpCausticPosBucket);
             cmd.SetComputeTextureParam(SPPMShader, 0, "gHashBucketFlux", mpCausticFluxBucket);
@@ -192,8 +197,9 @@ namespace TrueTrace {
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("SPPM Init C");
             cmd.SetComputeTextureParam(SPPMShader, 2, "VisTexB", !FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);
             cmd.SetComputeTextureParam(SPPMShader, 2, "CDFXWRITE", CDFX);
+            cmd.SetComputeBufferParam(SPPMShader, 2, "AABBBuff", AABBBuffA);
             cmd.SetComputeTextureParam(SPPMShader, 2, "CDFYWRITE", CDFY);
-            cmd.DispatchCompute(SPPMShader, 2, VisTexWidth / 32, VisTexWidth / 64, 1);
+            cmd.DispatchCompute(SPPMShader, 2, PerLightVisSize / 32 * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)), PerLightVisSize / 64 * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)), 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("SPPM Init C");
 
 
@@ -205,36 +211,36 @@ namespace TrueTrace {
                 CounterBuffer = new ComputeBuffer(1, 4);
             }
 
-            if(EquirectVisibilityTex == null || EquirectVisibilityTex[0] == null || EquirectVisibilityTex[1] == null) CommonFunctions.CreateRenderTextureArray2(ref EquirectVisibilityTex, VisTexWidth, VisTexWidth / 2, 2, CommonFunctions.RTFull2);
+            if(EquirectVisibilityTex == null || EquirectVisibilityTex[0] == null || EquirectVisibilityTex[1] == null) CommonFunctions.CreateRenderTextureArray2(ref EquirectVisibilityTex, PerLightVisSize * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)), PerLightVisSize / 2 * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)), 2, CommonFunctions.RTFull2);
                 CDFCompute = Resources.Load<ComputeShader>("Utility/CDFCreator");
             if(CDFX == null) {
                 CDFX.ReleaseSafe();
                 CDFY.ReleaseSafe();
-                CommonFunctions.CreateRenderTexture(ref CDFX, VisTexWidth, VisTexWidth / 2, CommonFunctions.RTFull1);
-                CommonFunctions.CreateRenderTexture(ref CDFY, VisTexWidth / 2, 1, CommonFunctions.RTFull1);
+                CommonFunctions.CreateRenderTexture(ref CDFX, PerLightVisSize * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)), PerLightVisSize / 2 * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)), CommonFunctions.RTFull1);
+                CommonFunctions.CreateRenderTexture(ref CDFY, PerLightVisSize / 2 * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)), 1, CommonFunctions.RTFull1);
 
             }
-                CDFCompute.SetTexture(1, "Tex2", EquirectVisibilityTex[0]);
-                CDFCompute.SetTexture(1, "CDFX", CDFX);
-                CDFCompute.SetTexture(1, "CDFY", CDFY);
-                CDFCompute.SetInt("w", VisTexWidth);
-                CDFCompute.SetInt("h", VisTexWidth / 2);
-                CDFCompute.SetBuffer(1, "CounterBuffer", CounterBuffer);
-                CDFCompute.SetBuffer(1, "TotalBuff", CDFTotalBuffer);
+                CDFCompute.SetTexture(0, "Tex", EquirectVisibilityTex[0]);
+                CDFCompute.SetTexture(0, "CDFX", CDFX);
+                CDFCompute.SetTexture(0, "CDFY", CDFY);
+                CDFCompute.SetInt("w", PerLightVisSize * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)));
+                CDFCompute.SetInt("h", PerLightVisSize / 2 * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)));
+                CDFCompute.SetBuffer(0, "CounterBuffer", CounterBuffer);
+                CDFCompute.SetBuffer(0, "TotalBuff", CDFTotalBuffer);
 
 
             float[] CDFTotalInit = new float[1];
             CDFTotalBuffer.SetData(CDFTotalInit);
             int[] CounterInit = new int[1];
             CounterBuffer.SetData(CounterInit);
-            cmd.SetComputeTextureParam(CDFCompute, 1, "Tex2", !FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);
+            cmd.SetComputeTextureParam(CDFCompute, 0, "Tex", !FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("SPPM CDF");
-            cmd.DispatchCompute(CDFCompute, 1, 1, VisTexWidth / 2, 1);
+            cmd.DispatchCompute(CDFCompute, 0, 1, PerLightVisSize / 2 * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)), 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("SPPM CDF");
 
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("SPPM Init D");
             cmd.SetComputeTextureParam(SPPMShader, 3, "VisTexB", FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);
-            cmd.DispatchCompute(SPPMShader, 3, VisTexWidth / 32, VisTexWidth / 64, 1);
+            cmd.DispatchCompute(SPPMShader, 3, PerLightVisSize / 32 * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)), PerLightVisSize / 64 * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)), 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("SPPM Init D");
 
         }
