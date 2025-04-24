@@ -28,12 +28,15 @@ namespace TrueTrace {
         public Texture2D IESProfile;
         public bool NeedsToUpdate = false;
         Transform LocalTransform;
-
+#if UNITY_PIPELINE_HDRP
+        public UnityEngine.Rendering.HighDefinition.HDAdditionalLightData LightDat;
+#endif
 
         public void Start() {
             ThisLight = this.GetComponent<Light>();
 #if UNITY_PIPELINE_HDRP
-            this.GetComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>().includeForRayTracing = false;
+            LightDat = this.GetComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>();
+            LightDat.includeForRayTracing = false;
 #endif
             LocalTransform = transform;
             if(!HasInitialized) {
@@ -44,7 +47,8 @@ namespace TrueTrace {
         void Awake() {
             ThisLight = this.GetComponent<Light>();
 #if UNITY_PIPELINE_HDRP
-            this.GetComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>().includeForRayTracing = false;
+            LightDat = this.GetComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>();
+            LightDat.includeForRayTracing = false;
 #endif
             ThisLight.shadows = LightShadows.None;
             LocalTransform = transform;
@@ -56,7 +60,8 @@ namespace TrueTrace {
         public void Init() {
             ThisLight = this.GetComponent<Light>();
 #if UNITY_PIPELINE_HDRP
-            this.GetComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>().includeForRayTracing = false;
+            LightDat = this.GetComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>();
+            LightDat.includeForRayTracing = false;
 #endif
             ThisLight.useColorTemperature = true;
             UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = true;
@@ -85,12 +90,19 @@ namespace TrueTrace {
                 ThisLightData.SpotAngle = new Vector2(angleRangeInv, -outerCos * angleRangeInv);
 #if UNITY_2021 || UNITY_2022 || !UNITY_PIPELINE_HDRP
             } else if(ThisLight.type == LightType.Rectangle) {
-#else            
-            } else if(ThisLight.type == LightType.Rectangle || ThisLight.type == LightType.Box) {
-#endif
                 #if UNITY_EDITOR
                     ThisLightData.SpotAngle = ThisLight.areaSize;
                 #endif
+#else            
+            } else if(ThisLight.type == LightType.Rectangle || ThisLight.type == LightType.Box) {
+                #if UNITY_EDITOR
+                    #if UNITY_PIPELINE_HDRP
+                        ThisLightData.SpotAngle = new Vector2(LightDat.shapeWidth, LightDat.shapeHeight);
+                    #else
+                        ThisLightData.SpotAngle = ThisLight.areaSize;
+                    #endif
+                #endif
+#endif
             } else if(ThisLight.type == LightType.Disc) {
                 #if UNITY_EDITOR
                     ThisLightData.SpotAngle = ThisLight.areaSize;
@@ -104,6 +116,10 @@ namespace TrueTrace {
         }
 
         private void OnEnable() { 
+#if UNITY_PIPELINE_HDRP
+            LightDat = this.GetComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>();
+            LightDat.includeForRayTracing = false;
+#endif
             if(!HasInitialized) {
                 Init();  
                 HasInitialized = true;
@@ -190,6 +206,9 @@ namespace TrueTrace {
             var t =  t1[0] as RayTracingLights;
             bool HasUpdated = false;
             if(!t.HasInitialized) t.Init();
+        #if UNITY_PIPELINE_HDRP
+            if(t.LightDat == null) t.Init();
+        #endif
             VisualElement MainContainer = CreateVerticalBox("Main Container");
 
                 List<string> LightTypeSettings = new List<string>();
@@ -252,18 +271,26 @@ namespace TrueTrace {
                 } else if(t.ThisLightData.Type == 3) {
                     #if UNITY_EDITOR
                         VisualElement LightWidthContainer = CreateHorizontalBox("Light Width Container");
-                            Label LightWidthLabel = new Label("Width: ");
-                            FloatField LightWidthField = new FloatField() {value = t.ThisLightData.SpotAngle.x};
+                            // Label LightWidthLabel = new Label("Width: ");
+                            FloatField LightWidthField = new FloatField() {label = "Width: ", value = t.ThisLightData.SpotAngle.x};
+#if !(UNITY_2021 || UNITY_2022) && UNITY_PIPELINE_HDRP
+                            LightWidthField.RegisterValueChangedCallback(evt => {for(int i = 0; i < TargCount; i++) {(t1[i] as RayTracingLights).LightDat.shapeWidth = evt.newValue; (t1[i] as RayTracingLights).ThisLightData.SpotAngle.x = evt.newValue; (t1[i] as RayTracingLights).NeedsToUpdate = true;}});
+#else
                             LightWidthField.RegisterValueChangedCallback(evt => {for(int i = 0; i < TargCount; i++) {(t1[i] as RayTracingLights).ThisLight.areaSize = new Vector2(evt.newValue, (t1[i] as RayTracingLights).ThisLight.areaSize.y); (t1[i] as RayTracingLights).ThisLightData.SpotAngle.x = evt.newValue; (t1[i] as RayTracingLights).NeedsToUpdate = true;}});
-                            LightWidthContainer.Add(LightWidthLabel);
+#endif
+                            // LightWidthContainer.Add(LightWidthLabel);
                             LightWidthContainer.Add(LightWidthField);
                         MainContainer.Add(LightWidthContainer);
 
                         VisualElement LightHeightContainer = CreateHorizontalBox("Light Height Container");
-                            Label LightHeightLabel = new Label("Height: ");
-                            FloatField LightHeightField = new FloatField() {value = t.ThisLightData.SpotAngle.y};
+                            // Label LightHeightLabel = new Label("Height: ");
+                            FloatField LightHeightField = new FloatField() {label = "Height: ", value = t.ThisLightData.SpotAngle.y};
+#if !(UNITY_2021 || UNITY_2022) && UNITY_PIPELINE_HDRP
+                            LightHeightField.RegisterValueChangedCallback(evt => {for(int i = 0; i < TargCount; i++) {(t1[i] as RayTracingLights).LightDat.shapeHeight = evt.newValue; (t1[i] as RayTracingLights).ThisLightData.SpotAngle.y = evt.newValue; (t1[i] as RayTracingLights).NeedsToUpdate = true;}});
+#else
                             LightHeightField.RegisterValueChangedCallback(evt => {for(int i = 0; i < TargCount; i++) {(t1[i] as RayTracingLights).ThisLight.areaSize = new Vector2((t1[i] as RayTracingLights).ThisLight.areaSize.x, evt.newValue); (t1[i] as RayTracingLights).ThisLightData.SpotAngle.y = evt.newValue; (t1[i] as RayTracingLights).NeedsToUpdate = true;}});
-                            LightHeightContainer.Add(LightHeightLabel);
+#endif
+                            // LightHeightContainer.Add(LightHeightLabel);
                             LightHeightContainer.Add(LightHeightField);
                         MainContainer.Add(LightHeightContainer);
                     #endif

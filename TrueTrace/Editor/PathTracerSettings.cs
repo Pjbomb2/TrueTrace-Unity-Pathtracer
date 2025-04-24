@@ -1693,8 +1693,13 @@ Toolbar toolbar;
             SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
             if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
             SetGlobalDefines("DX11", definesList.Contains("DX11Only"));
+            SetGlobalDefines("RasterizedDirect", definesList.Contains("RasterizedDirect"));
+
+
             HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
             HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("HardwareRT"); SetGlobalDefines("HardwareRT", true);} else {RemoveDefine("HardwareRT"); SetGlobalDefines("HardwareRT", false);}});
+
+
 
             GaussianTreeToggle = new Toggle() {value = (definesList.Contains("DontUseSGTree")), text = "Use Old Light BVH instead of Gaussian Tree"};
                GaussianTreeToggle.tooltip = "Gaussian tree is more expensive, but samples on metallic surfaces a LOT better";
@@ -1708,6 +1713,10 @@ Toolbar toolbar;
             Toggle CustomMotionVectorToggle = new Toggle() {value = (definesList.Contains("TTCustomMotionVectors")), text = "Remove Rasterization Requirement(EXPERIMENTAL)"};
                CustomMotionVectorToggle.tooltip = "Removes the need for rasterized rendering(except when upscaling with TAAU), allowing you to turn it off in your camera for extra performance";
             CustomMotionVectorToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("TTCustomMotionVectors"); SetGlobalDefines("TTCustomMotionVectors", true);} else {RemoveDefine("TTCustomMotionVectors"); SetGlobalDefines("TTCustomMotionVectors", false);}});
+
+            Toggle RasterizedDirectToggle = new Toggle() {value = (definesList.Contains("RasterizedDirect")), text = "Use Rasterized Lighting for Direct"};
+               RasterizedDirectToggle.tooltip = "Removes the need for rasterized rendering(except when upscaling with TAAU), allowing you to turn it off in your camera for extra performance";
+            RasterizedDirectToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("RasterizedDirect"); SetGlobalDefines("RasterizedDirect", true);} else {RemoveDefine("RasterizedDirect"); SetGlobalDefines("RasterizedDirect", false);}});
 
             Toggle NonAccurateLightTriToggle = new Toggle() {value = (definesList.Contains("AccurateLightTris")), text = "Enable Emissive Texture Aware Light BVH"};
                NonAccurateLightTriToggle.tooltip = "Uses more ram(rarely it can use a LOT), but allows for much better emissive mesh sampling if you make heavy use of emission masks";
@@ -1759,6 +1768,7 @@ Toolbar toolbar;
             if(Application.isPlaying) {
                HardwareRTToggle.SetEnabled(false);
                CustomMotionVectorToggle.SetEnabled(false);
+               RasterizedDirectToggle.SetEnabled(false);
                BindlessToggle.SetEnabled(false);
                GaussianTreeToggle.SetEnabled(false);
                OIDNToggle.SetEnabled(false);
@@ -1770,6 +1780,7 @@ Toolbar toolbar;
             } else {
                HardwareRTToggle.SetEnabled(true);
                CustomMotionVectorToggle.SetEnabled(true);
+               RasterizedDirectToggle.SetEnabled(true);
                BindlessToggle.SetEnabled(true);
                GaussianTreeToggle.SetEnabled(true);
                OIDNToggle.SetEnabled(true);
@@ -1825,6 +1836,7 @@ Toolbar toolbar;
          NonPlayContainer.Add(OIDNToggle);
          NonPlayContainer.Add(RadCacheToggle);
          NonPlayContainer.Add(CustomMotionVectorToggle);
+         NonPlayContainer.Add(RasterizedDirectToggle);
          NonPlayContainer.Add(NonAccurateLightTriToggle);
          NonPlayContainer.Add(LoadTTSettingsFromResourcesToggle);
          NonPlayContainer.Add(VerboseToggle);

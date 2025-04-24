@@ -184,7 +184,6 @@ struct NodeIndexPairData {
 
 RWStructuredBuffer<NodeIndexPairData> AllNodes;
 
-StructuredBuffer<int2> TriPair;
 
 
 #pragma kernel RefitLayer

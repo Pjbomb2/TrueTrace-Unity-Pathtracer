@@ -12613,7 +12613,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 1
+  NeedsToUpdate: 0
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -15141,7 +15141,7 @@ Light:
   m_InnerSpotAngle: 21.80208
   m_CookieSize: 10
   m_Shadows:
-    m_Type: 0
+    m_Type: 1
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
@@ -37133,8 +37133,7 @@ MonoBehaviour:
   - {fileID: 1931085300}
   AddQue: []
   RemoveQue: []
-  UpdateQue:
-  - {fileID: 1770588100}
+  UpdateQue: []
   InstanceRenderQue: []
   InstanceUpdateQue: []
   InstanceRenderTransforms: []
@@ -46316,7 +46315,7 @@ MonoBehaviour:
       cosTheta_oe: 0
       left: 0
   ExistsInQue: 1
-  QueInProgress: 2
+  QueInProgress: 1
   RenderImposters: 0
   IsDeformable: 0
   Name: sponza
@@ -53993,7 +53992,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 1
+  NeedsToUpdate: 0
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -60474,7 +60473,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 3
   InstanceReferences: 0
-  NeedsToUpdate: 1
+  NeedsToUpdate: 0
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -60544,7 +60543,7 @@ MonoBehaviour:
     Roughness: 0
     MatType: 0
     TransmittanceColor: {x: 1, y: 1, z: 1}
-    IOR: 1.43
+    IOR: 1
     Metallic: 0
     Sheen: 0
     SheenTint: 0
@@ -65699,7 +65698,7 @@ Camera:
   m_CullingMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_RenderingPath: 1
+  m_RenderingPath: 3
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
   m_TargetEye: 3

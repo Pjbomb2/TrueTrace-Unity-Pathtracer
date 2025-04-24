@@ -3,6 +3,7 @@
 // #define DX11
 #define UseBindless
 #define UseSGTree
+// #define RasterizedDirect
 //Dont modify above, CPU code will do automatically
 #define AdvancedAlphaMapped
 #define ExtraSampleValidation

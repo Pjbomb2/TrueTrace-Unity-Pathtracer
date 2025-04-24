@@ -297,7 +297,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         } else if (GetBounceData(Color.MetRoughIsSpec) <= 1 && MaterialLobe == 3) {
             Color.MetRoughIsSpec = ToColorSpecPackedAdd(float3(0, 0, 3), Color.MetRoughIsSpec);
         }
-        if (MaterialLobe != 3 && !(MaterialLobe == 0 && hitDat.roughness < 0.2f)) {
+        if (MaterialLobe != 3 && !(MaterialLobe == 0 && hitDat.roughness < 0.5f)) {
             Color.MetRoughIsSpec |= 1 << 31;
         }
         Color.InWaterDistance += hit.t;
@@ -419,7 +419,11 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         int selectionoptions = 0;
         int selections[3] = {0,0,0};
         if(LightMeshCount != 0 && LEMEnergyScale != 0) selections[selectionoptions++] = 0;
+#ifdef RasterizedDirect
+        if(CurBounce != 0 && unitylightcount != 0) selections[selectionoptions++] = 1;
+#else
         if(unitylightcount != 0) selections[selectionoptions++] = 1;
+#endif
         if(SecondaryBackgroundType == 1) selections[selectionoptions++] = 2;
         RunningWeight = selectionoptions;
         SelectedLightGroup = selections[min(floor(random(114, pixel_index).x * (float)selectionoptions), selectionoptions - 1)];
@@ -463,12 +467,14 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     area = (Light.SpotAngle.x * Light.SpotAngle.y);
                     if(hitDat.MatType == 3) Radiance = 0;
                     Radiance *= PI;
+                    if(MaterialLobe == 0 && hitDat.roughness <= 0.5f) AggTriIndex = -1;
                 break;
                 case AREALIGHTDISK:
                     sincos(RandVec.x * 2.0f * PI, RandVec.x, RandVec.y);
                     RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy) * RandVec.z * Light.SpotAngle.x;
                     LightPosition += ToWorld(GetTangentSpace2(LightNorm), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
                     area = PI * Light.SpotAngle.x * Light.SpotAngle.x;
+                    if(MaterialLobe == 0 && hitDat.roughness <= 0.5f) AggTriIndex = -1;
                 break;
             }
             Radiance *= LightEnergyScale;

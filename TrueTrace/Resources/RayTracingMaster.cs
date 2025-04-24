@@ -18,7 +18,7 @@ namespace TrueTrace {
     {
         public static RayTracingMaster RayMaster;
         [HideInInspector] public static Camera _camera;
-        public static bool DoKernelProfiling = false;
+        public static bool DoKernelProfiling = true;
         [HideInInspector] [SerializeField] public string LocalTTSettingsName = "TTGlobalSettings";
         private bool OverriddenResolutionIsActive = false;
         public bool HDRPorURPRenderInScene = false;
@@ -1142,6 +1142,7 @@ namespace TrueTrace {
             if(HasSDFHandler) OptionalSDFHandler.Run(cmd, (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB, _RayBuffer, SourceWidth, SourceHeight);
         }
 
+
         private void Render(RenderTexture destination, CommandBuffer cmd)
         {
 #if TTCustomMotionVectors
@@ -1399,6 +1400,7 @@ namespace TrueTrace {
             if (LocalTTSettings.PPTAA) TTPostProc.ExecuteTAA(ref _FinalTex, _currentSample, cmd);
             if (LocalTTSettings.PPFXAA) TTPostProc.ExecuteFXAA(ref _FinalTex, cmd);
             if (LocalTTSettings.DoSharpen) TTPostProc.ExecuteSharpen(ref _FinalTex, LocalTTSettings.Sharpness, cmd);
+
             cmd.Blit(_FinalTex, destination);
             ClearOutRenderTexture(_DebugTex);
             if(DoKernelProfiling) cmd.EndSample("Post Processing");
