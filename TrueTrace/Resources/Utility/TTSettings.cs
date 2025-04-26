@@ -46,6 +46,9 @@ namespace TrueTrace {
         [SerializeField] public int ToneMapper = 0;
         [SerializeField] public float SkyDesaturate = 0.0f;
         [SerializeField] public Vector3 ClayColor = new Vector3(0.5f, 0.5f, 0.5f);
+        [SerializeField] public float ClayMetalOverride = 0.0f;
+        [SerializeField] public float ClayRoughnessOverride = 0.0f;
+        [SerializeField] public bool DoClayMetalRoughOverride = false;
         [SerializeField] public Vector3 GroundColor = new Vector3(0.1f, 0.1f, 0.1f);
         [SerializeField] public int FireflyFrameCount = 0;
         [SerializeField] public int FireflyFrameInterval = 1;

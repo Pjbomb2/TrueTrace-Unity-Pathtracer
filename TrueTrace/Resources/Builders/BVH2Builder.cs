@@ -44,7 +44,7 @@ namespace TrueTrace {
 
         AABB aabb_right;
         void partition_sah(int first_index, int index_count) {
-            split.cost = float.MaxValue;
+            split.cost = float.MaxValue;//SA * (float)index_count;
             split.index = -1;
             split.dimension = -1;
             split.aabb_left.init();
@@ -87,7 +87,16 @@ namespace TrueTrace {
                 }
             }
             Offset = split.dimension * PrimCount;
-            for(i = first_index; i < split.index; i++) split.aabb_left.Extend(ref Primitives[DimensionedIndices[Offset + i]]);
+            int Index;
+            int Index2 = split.index;
+            for(i = first_index; i < Index2; i++) {
+                Index = DimensionedIndices[Offset + i];
+                split.aabb_left.Extend(ref Primitives[Index]);
+                indices_going_left[Index] = true;
+            }
+
+
+
         }
         void BuildRecursive(int nodesi, ref int node_index, int first_index, int index_count) {
             if(index_count == 1) {
@@ -99,7 +108,45 @@ namespace TrueTrace {
             partition_sah(first_index, index_count);
             int Offset = split.dimension * PrimCount;
             int IndexEnd = first_index + index_count;
-            for(int i = first_index; i < IndexEnd; i++) indices_going_left[DimensionedIndices[Offset + i]] = i < split.index;
+            for(int i = split.index; i < IndexEnd; i++) indices_going_left[DimensionedIndices[Offset + i]] = false;
+
+            // ObjectSplit TempSplit = split;
+
+            // bool LeftSmaller = surface_area(ref split.aabb_left) < surface_area(ref split.aabb_right);
+            // AABB SmallerBox = LeftSmaller ? split.aabb_left : split.aabb_right;
+            // int start = LeftSmaller ? split.index : first_index;
+            // int end = LeftSmaller ? (first_index + index_count) : split.index;
+            // int FoundAny = 0;
+            // int Total = 0;
+            // for(int i = start; i < end; i++) {
+            //     AABB mergedBox = SmallerBox;
+            //     mergedBox.Extend(ref Primitives[DimensionedIndices[Offset + i]]);
+            //     Total++;
+            //     if(mergedBox.BBMax == SmallerBox.BBMax && mergedBox.BBMin == SmallerBox.BBMin) {
+            //         FoundAny++;
+            //         indices_going_left[DimensionedIndices[Offset + i]] = LeftSmaller;
+            //     } 
+            // }
+            // if(FoundAny != 0) {
+            //     if(FoundAny == Total) {
+            //         Debug.LogError(Total + " : " + index_count);
+            //         split = TempSplit;
+            //         for(int i = first_index; i < IndexEnd; i++) indices_going_left[DimensionedIndices[Offset + i]] = i < split.index;
+            //     } else {
+            //         split.aabb_right.init();
+            //         split.aabb_left.init();
+            //         split.index = first_index;
+            //         for(int i = first_index; i < IndexEnd; i++) {
+            //             if(!indices_going_left[DimensionedIndices[Offset + i]]) {
+            //                 split.aabb_right.Extend(ref Primitives[DimensionedIndices[Offset + i]]);
+            //             } else {
+            //                 split.aabb_left.Extend(ref Primitives[DimensionedIndices[Offset + i]]);
+            //                 split.index++;
+            //             }
+            //         }
+            //     }
+            // }
+
 
             for(int dim = 0; dim < 3; dim++) {
                 if(dim == split.dimension) continue;
@@ -130,19 +177,52 @@ namespace TrueTrace {
             return (d.x + d.y) * d.z + d.x * d.y; 
         }
 
-        // float TotalSAH = 0;
-        // private float TravDown(int Parent, int Depth) {
-        //     if(Depth > 30) return 0;
-        //     float TempSAH = 0;
-        //     if(BVH2Nodes[Parent].count == 0) {
-        //         TempSAH += TravDown(BVH2Nodes[Parent].left, Depth + 1) * surface_area(ref BVH2Nodes[BVH2Nodes[Parent].left].aabb) / surface_area(ref BVH2Nodes[Parent].aabb);
-        //         TempSAH += TravDown(BVH2Nodes[Parent].left + 1, Depth + 1) * surface_area(ref BVH2Nodes[BVH2Nodes[Parent].left  +1].aabb) / surface_area(ref BVH2Nodes[Parent].aabb);
-        //         TempSAH += 1;
-        //     } else {
-        //         TempSAH += 4.0f ;
-        //     }
-        //     return TempSAH;
-        // }
+        float HalfArea(ref AABB aabb) {
+            Vector3 d = new Vector3(aabb.BBMax.x - aabb.BBMin.x, aabb.BBMax.y - aabb.BBMin.y, aabb.BBMax.z - aabb.BBMin.z);
+
+            float x = d.x + d.y;
+            float y = d.z;
+            float z = d.x * d.y;
+            float area = x * y + z;
+
+            return area;//d.x * d.y + d.y * d.z + d.z * d.x; 
+        }
+
+        float TotalSAH = 0;
+        private float TravDown(int Parent, int Depth) {
+            if(Depth > 30) return 0;
+            float TempSAH = 0;
+            if(BVH2Nodes[Parent].count == 0) {
+                TempSAH += TravDown(BVH2Nodes[Parent].left, Depth + 1) * surface_area(ref BVH2Nodes[BVH2Nodes[Parent].left].aabb) / surface_area(ref BVH2Nodes[Parent].aabb);
+                TempSAH += TravDown(BVH2Nodes[Parent].left + 1, Depth + 1) * surface_area(ref BVH2Nodes[BVH2Nodes[Parent].left  +1].aabb) / surface_area(ref BVH2Nodes[Parent].aabb);
+                TempSAH += 1;
+            } else {
+                TempSAH += 4.0f ;
+            }
+            return TempSAH;
+        }
+
+        public float ComputeGlobalCost(int NodeCount)
+        {
+            float cost = 0.0f;
+
+
+            float rootArea = HalfArea(ref BVH2Nodes[0].aabb);
+            for (int i = 2; i < NodeCount; i++)
+            {
+                float probHitNode = HalfArea(ref BVH2Nodes[i].aabb) / rootArea;
+
+                if (BVH2Nodes[i].count == 0)
+                {
+                    cost += 1.0f * probHitNode;
+                }
+                else
+                {
+                    cost += 1.0f * 1.0f * probHitNode;
+                }
+            }
+            return cost;
+        }
 
         public unsafe BVH2Builder(AABB* Triangles, int PrimCount) {//Bottom Level Acceleration Structure Builder
             this.PrimCount = PrimCount;
@@ -157,6 +237,7 @@ namespace TrueTrace {
             BVH2Nodes[0].aabb.init();
             for(int i = 0; i < PrimCount; i++) {
                 FinalIndices[i] = i;
+                // Centers[i] = (AggTriangles[i].pos0 + AggTriangles[i].pos0 + AggTriangles[i].posedge1 + AggTriangles[i].pos0 + AggTriangles[i].posedge2) / 3.0f;
                 SAH[i] = (Triangles[i].BBMax.x - Triangles[i].BBMin.x) / 2.0f + Triangles[i].BBMin.x;
                 BVH2Nodes[0].aabb.Extend(ref Triangles[i]);
             }
@@ -176,9 +257,13 @@ namespace TrueTrace {
             temp = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(tempArray);
             aabb_right = new AABB();
             int nodeIndex = 2;
+            // TTStopWatch TempWatch = new TTStopWatch("BVH2");
+            // TempWatch.Start();
             BuildRecursive(0, ref nodeIndex,0,PrimCount);
+            // TempWatch.Stop();
             // TotalSAH = TravDown(0, 0);
-            // Debug.LogError("SAH Cost: " + TotalSAH);
+            // float TotalSAH2 = ComputeGlobalCost(nodeIndex);
+            // Debug.LogError("SAH Cost: " + TotalSAH + " : Killers: " + TotalSAH2);
             indices_going_left_array.Dispose();
             tempArray.Dispose();
             SAHArray.Dispose();

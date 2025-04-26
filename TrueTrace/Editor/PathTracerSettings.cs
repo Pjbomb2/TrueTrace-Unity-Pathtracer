@@ -40,6 +40,10 @@ namespace TrueTrace {
          [SerializeField] public Camera SelectedCamera;
          [SerializeField] public bool ClayMode = false;
          [SerializeField] public Vector3 ClayColor = new Vector3(0.5f,0.5f,0.5f);
+         [SerializeField] public float ClayMetalOverride = 0.0f;
+         [SerializeField] public float ClayRoughnessOverride = 0.0f;
+         [SerializeField] public bool DoClayMetalRoughOverride = false;
+
          [SerializeField] public int MaxSampCount = 99999999;
          [SerializeField] public Vector3 GroundColor = new Vector3(0.1f,0.1f,0.1f);
          [SerializeField] public int BounceCount = 7;
@@ -1640,7 +1644,6 @@ Toolbar toolbar;
 
 
       private Toggle CustomToggle(string Label, string TargetDefine, string tooltip = "") {
-         // VisualElement CustTogContainer = CreateHorizontalBox("Custom Horizontal Toggle");
             Toggle CustToggle = new Toggle() {value = GetGlobalDefine(TargetDefine), text = Label};
                CustToggle.tooltip = tooltip;
             CustToggle.RegisterValueChangedCallback(evt => {SetGlobalDefines(TargetDefine, evt.newValue);});
@@ -1691,6 +1694,7 @@ Toolbar toolbar;
             SetGlobalDefines("TTCustomMotionVectors", definesList.Contains("TTCustomMotionVectors"));
             SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
             SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
+            SetGlobalDefines("MultiMapScreenshot", definesList.Contains("MultiMapScreenshot"));
             if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
             SetGlobalDefines("DX11", definesList.Contains("DX11Only"));
             SetGlobalDefines("RasterizedDirect", definesList.Contains("RasterizedDirect"));
@@ -1730,7 +1734,14 @@ Toolbar toolbar;
                VerboseToggle.tooltip = "More data";
             VerboseToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("TTVerbose"); else RemoveDefine("TTVerbose");});
 
+            Toggle MultiMapScreenshotToggle = new Toggle() {value = (definesList.Contains("MultiMapScreenshot")), text = "Save Multiple Maps on Screenshot"};
+               MultiMapScreenshotToggle.tooltip = "Save Mat ID and Mesh ID when taking a screenshot";
+            MultiMapScreenshotToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("MultiMapScreenshot"); SetGlobalDefines("MultiMapScreenshot", true);} else {RemoveDefine("MultiMapScreenshot"); SetGlobalDefines("MultiMapScreenshot", false);}});
+
             VisualElement ClayColorBox = new VisualElement();
+
+
+
 
 
             Toggle ClayModeToggle = new Toggle() {value = ClayMode, text = "Use ClayMode"};
@@ -1743,6 +1754,19 @@ Toolbar toolbar;
             ClayColorField.style.width = 250;
             ClayColorField.RegisterValueChangedCallback(evt => {ClayColor = new Vector3(evt.newValue.r, evt.newValue.g, evt.newValue.b); RayMaster.LocalTTSettings.ClayColor = ClayColor;});
             ClayColorBox.Add(ClayColorField);
+            ClayColorBox.Add(CustomToggle("Clay Metal Override", "ClayMetalOverride", "Allows you to override metallic/roughness in in clay mode(blame Yanus)"));
+            
+            FloatSliderPair ClayMetallicContainer = CreatePairedFloatSlider("Metallilc Override", 0, 1, ref ClayMetalOverride);
+            ClayMetallicContainer.DynamicSlider.RegisterValueChangedCallback(evt => {ClayMetalOverride = evt.newValue; ClayMetallicContainer.DynamicField.value = ClayMetalOverride; RayMaster.LocalTTSettings.ClayMetalOverride = ClayMetalOverride;});
+            ClayMetallicContainer.DynamicField.RegisterValueChangedCallback(evt => {ClayMetalOverride = evt.newValue; ClayMetallicContainer.DynamicSlider.value = ClayMetalOverride; RayMaster.LocalTTSettings.ClayMetalOverride = ClayMetalOverride;});
+            ClayColorBox.Add(ClayMetallicContainer.DynamicContainer);
+
+            FloatSliderPair ClayRoughnessContainer = CreatePairedFloatSlider("Roughness Override", 0, 1, ref ClayRoughnessOverride);
+            ClayRoughnessContainer.DynamicSlider.RegisterValueChangedCallback(evt => {ClayRoughnessOverride = evt.newValue; ClayRoughnessContainer.DynamicField.value = ClayRoughnessOverride; RayMaster.LocalTTSettings.ClayRoughnessOverride = ClayRoughnessOverride;});
+            ClayRoughnessContainer.DynamicField.RegisterValueChangedCallback(evt => {ClayRoughnessOverride = evt.newValue; ClayRoughnessContainer.DynamicSlider.value = ClayRoughnessOverride; RayMaster.LocalTTSettings.ClayRoughnessOverride = ClayRoughnessOverride;});
+            ClayColorBox.Add(ClayRoughnessContainer.DynamicContainer);
+
+
 
             IntegerField MaxSampField = new IntegerField() {value = MaxSampCount, label = "Maximum Sample Count"};
                MaxSampField.tooltip = "Truetrace will render up to this sample count, then idle";
@@ -1777,6 +1801,7 @@ Toolbar toolbar;
                LoadTTSettingsFromResourcesToggle.SetEnabled(false);
                VerboseToggle.SetEnabled(false);
                StrictMemoryReductionToggle.SetEnabled(false);
+               MultiMapScreenshotToggle.SetEnabled(false);
             } else {
                HardwareRTToggle.SetEnabled(true);
                CustomMotionVectorToggle.SetEnabled(true);
@@ -1789,6 +1814,7 @@ Toolbar toolbar;
                LoadTTSettingsFromResourcesToggle.SetEnabled(true);
                VerboseToggle.SetEnabled(true);
                StrictMemoryReductionToggle.SetEnabled(true);
+               MultiMapScreenshotToggle.SetEnabled(true);
             }
 
 
@@ -1841,6 +1867,7 @@ Toolbar toolbar;
          NonPlayContainer.Add(LoadTTSettingsFromResourcesToggle);
          NonPlayContainer.Add(VerboseToggle);
          NonPlayContainer.Add(StrictMemoryReductionToggle);
+         NonPlayContainer.Add(MultiMapScreenshotToggle);
          NonPlayContainer.Add(new Label("-------------"));
 
          Label PlayLabel = new Label("-- THESE CAN BE MODIFIED ON THE FLY/DURING PLAY --");
@@ -2421,6 +2448,22 @@ Toolbar toolbar;
          //    GameObject.Find("Scene").GetComponent<AssetManager>().EditorBuild();
          // }
 
+      public static void SaveTexture (RenderTexture RefTex, string Path) {
+         Texture2D tex = new Texture2D(RefTex.width, RefTex.height, TextureFormat.RGBAFloat, false);
+         RenderTexture.active = RefTex;
+         tex.ReadPixels(new Rect(0, 0, RefTex.width, RefTex.height), 0, 0);
+         tex.Apply();
+         Color[] ArrayA = tex.GetPixels(0);
+         int Coun = ArrayA.Length;
+         for(int i = 0; i < Coun; i++) {
+            ArrayA[i].a = 1.0f;
+         }
+         tex.SetPixels(ArrayA, 0);
+         tex.Apply();
+         byte[] bytes = tex.EncodeToPNG();
+         System.IO.File.WriteAllBytes(Path, bytes);
+      }
+
          public static void TakeScreenshot() {
            string SegmentNumber = "";
            string FilePath = "";
@@ -2444,6 +2487,10 @@ Toolbar toolbar;
            
 
             ScreenCapture.CaptureScreenshot(FilePath);
+            #if MultiMapScreenshot
+               SaveTexture(RayTracingMaster.RayMaster.MultiMapMatIDTexture, FilePath.Replace(".png", "") + "_MatID.png");
+               SaveTexture(RayTracingMaster.RayMaster.MultiMapMeshIDTexture, FilePath.Replace(".png", "") + "_MeshID.png");
+            #endif
             
             // ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayTracingMaster.SampleCount + " Samples.png");
             UnityEditor.AssetDatabase.Refresh();
@@ -2574,6 +2621,8 @@ Slider AperatureSlider;
            HDRILongLat = RayMaster.LocalTTSettings.HDRILongLat;
            BloomStrength = RayMaster.LocalTTSettings.BloomStrength;
            DoF = RayMaster.LocalTTSettings.PPDoF;
+           ClayMetalOverride = RayMaster.LocalTTSettings.ClayMetalOverride;
+           ClayRoughnessOverride = RayMaster.LocalTTSettings.ClayRoughnessOverride;
            ClayColor = RayMaster.LocalTTSettings.ClayColor;
            GroundColor = RayMaster.LocalTTSettings.GroundColor;
            DoFAperature = RayMaster.LocalTTSettings.DoFAperature;

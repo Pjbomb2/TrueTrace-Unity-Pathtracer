@@ -15,6 +15,11 @@
     Texture2D<float2> MotionVectors;
 #endif
 
+#ifdef MultiMapScreenshot
+    RWTexture2D<float4> MultiMapMatIDTexture;
+    RWTexture2D<float4> MultiMapMeshIDTexture;
+#endif
+
 
 
 #pragma kernel kernel_shade
@@ -271,7 +276,15 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
    
     [branch]if(ClayMode) {
         hitDat.surfaceColor = ClayColor;
+#ifdef ClayMetalOverride
+        if(hitDat.specTrans == 0) {
+            hitDat.metallic = ClayMetalOverrideValue;
+            hitDat.roughness = ClayRoughnessOverrideValue;
+        }
+
+#else
         hitDat.metallic = 0;
+#endif
         hitDat.clearcoat = 0;
         hitDat.sheen = 0;
         hitDat.Specular = 0;
@@ -1128,6 +1141,12 @@ int MaterialIndex;
         TempMat.surfaceColor = lerp(TempMat.surfaceColor, TempMat.BlendColor, TempMat.BlendFactor);
     }
 
+    #ifdef MultiMapScreenshot
+        if(CurBounce == 0) {
+            MultiMapMatIDTexture[id.xy] = HandleDebug(MaterialIndex);
+            MultiMapMeshIDTexture[id.xy] = HandleDebug(bestHit.mesh_id);
+        }
+    #endif
     #if DebugView != -1
         #if DebugView == DVMatID
             if(CurBounce == 0) _DebugTex[id.xy] = HandleDebug(MaterialIndex);

@@ -32,6 +32,8 @@
 // #define ReSTIRAdditionalAO
 // #define ShadowGlassAttenuation
 // #define DisableNormalMaps
+// #define MultiMapScreenshot
+// #define ClayMetalOverride
 
 
 

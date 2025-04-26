@@ -16,11 +16,11 @@ MonoBehaviour:
   IndirectBoost: 1
   bouncecount: 12
   ClayMode: 0
-  UseRussianRoulette: 1
+  UseRussianRoulette: 0
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 1
-  PPBloom: 1
+  Accumulate: 0
+  PPBloom: 0
   BloomStrength: 0.5
   PPDoF: 0
   DoFAperature: 0.2
@@ -30,8 +30,8 @@ MonoBehaviour:
   ExposureAuto: 0
   PPToneMap: 0
   PPTAA: 0
-  RenderScale: 0.25
-  DenoiserMethod: 1
+  RenderScale: 1
+  DenoiserMethod: 0
   UpscalerMethod: 2
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
@@ -49,6 +49,9 @@ MonoBehaviour:
   ToneMapper: 0
   SkyDesaturate: 0
   ClayColor: {x: 0.5, y: 0.5, z: 0.5}
+  ClayMetalOverride: 1
+  ClayRoughnessOverride: 0.3
+  DoClayMetalRoughOverride: 0
   GroundColor: {x: 0.11320752, y: 0.11320752, z: 0.11320752}
   FireflyFrameCount: 0
   FireflyFrameInterval: 1
@@ -59,7 +62,7 @@ MonoBehaviour:
   Sharpness: 1
   MainDesiredRes: 16384
   UseSkinning: 1
-  LightEnergyScale: 12
+  LightEnergyScale: 1
   BackgroundType: 0
   BackgroundIntensity: {x: 1, y: 1}
   SceneBackgroundColor: {x: 1, y: 1, z: 1}
