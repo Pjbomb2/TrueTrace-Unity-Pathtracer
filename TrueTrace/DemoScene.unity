@@ -15114,9 +15114,9 @@ MonoBehaviour:
   ArrayIndex: 0
   IESIndex: 0
   ShadowSoftness: 0
-  UseKelvin: 0
+  UseKelvin: 1
   IsMainSun: 1
-  KelvinTemperature: 1000
+  KelvinTemperature: 7734
   Intensity: 122
   Col: {x: 1, y: 1, z: 1}
   SpotAngle: 30
@@ -60543,7 +60543,7 @@ MonoBehaviour:
     Roughness: 0
     MatType: 0
     TransmittanceColor: {x: 1, y: 1, z: 1}
-    IOR: 1.43
+    IOR: 1.31
     Metallic: 0
     Sheen: 0
     SheenTint: 0
@@ -65698,7 +65698,7 @@ Camera:
   m_CullingMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_RenderingPath: 1
+  m_RenderingPath: 3
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
   m_TargetEye: 3

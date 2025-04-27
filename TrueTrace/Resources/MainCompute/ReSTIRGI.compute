@@ -797,7 +797,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
     float Mc = 1;
     float McNEE = 1;
     float3 CenterNorm = UnpackDirection24bit(PackedCenterResA.z);
-    float3 SampleRayDir;
+    float3 SampleRayDir = 0;
     float3 SampleNorm;
     float3 bsdf2;
     float3 NEEbsdf2;
@@ -975,10 +975,10 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
 
             #ifdef ReSTIRAdvancedValidation
                 float TargDist = VisabilityCheck(ray, Distance);
-                if (TargDist != Distance || dot(ray.direction, GeomNorm) < 0) {
+                if (TargDist != Distance || dot(ray.direction, GeomNorm) <= 0) {
                     DistDist.y = exp(-abs(Distance - TargDist));
             #else
-                if(!VisabilityCheck(ray, Distance) || dot(ray.direction, GeomNorm) < 0) {
+                if(!VisabilityCheck(ray, Distance) || dot(ray.direction, GeomNorm) <= 0) {
             #endif
                     RunningReservoirC.Wsum = 0;
                     RunningReservoirC.M = 0;
@@ -992,10 +992,10 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
                 if(luminance(RunningReservoirB.Radiance.Color) != 0) {
                 #ifdef ReSTIRAdvancedValidation
                     float TargDist = VisabilityCheck(ray, Distance);
-                    if (TargDist != Distance || dot(ray.direction, GeomNorm) < 0) {
+                    if (TargDist != Distance || dot(ray.direction, GeomNorm) <= 0) {
                         DistDist.x = exp(-abs(Distance - TargDist));
                 #else
-                    if(!VisabilityCheck(ray, Distance) || dot(ray.direction, GeomNorm) < 0) {
+                    if(!VisabilityCheck(ray, Distance) || dot(ray.direction, GeomNorm) <= 0) {
                 #endif
                         RunningReservoirB.Radiance.Wsum = 0; 
                         RunningReservoirB.Radiance.M = 0; 
@@ -1024,7 +1024,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
 
     GlobalColors[pixel_index].Direct = 0;
 #ifdef ReSTIRAdditionalAO
-    if(Case != 3) {
+    if(Case != 3 && any(SampleRayDir != 0)) {
         float Dist = length(SampleRayDir - CenterRayDir);
         GlobalColors[pixel_index].Indirect = RunningReservoirB.Radiance.Color * RunningReservoirB.Radiance.W * (1.0f - exp(-(120.0f * (Dist + 0.01f) + 1.0f)));
     } else {

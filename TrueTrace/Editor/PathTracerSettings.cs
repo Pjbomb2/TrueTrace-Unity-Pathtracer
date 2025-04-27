@@ -40,6 +40,10 @@ namespace TrueTrace {
          [SerializeField] public Camera SelectedCamera;
          [SerializeField] public bool ClayMode = false;
          [SerializeField] public Vector3 ClayColor = new Vector3(0.5f,0.5f,0.5f);
+         [SerializeField] public float ClayMetalOverride = 0.0f;
+         [SerializeField] public float ClayRoughnessOverride = 0.0f;
+         [SerializeField] public bool DoClayMetalRoughOverride = false;
+
          [SerializeField] public int MaxSampCount = 99999999;
          [SerializeField] public Vector3 GroundColor = new Vector3(0.1f,0.1f,0.1f);
          [SerializeField] public int BounceCount = 7;
@@ -682,6 +686,7 @@ Toolbar toolbar;
                   });
                }
                Slider SkyDesatSlider = new Slider() {label = "SkyDesat: ", value = SkyDesaturate, highValue = 1.0f, lowValue = 0.0f};
+               SkyDesatSlider.value = SkyDesaturate;
                SkyDesatSlider.RegisterValueChangedCallback(evt => {SkyDesaturate = evt.newValue; RayMaster.LocalTTSettings.SkyDesaturate = SkyDesaturate;});
                SkyDesatSlider.style.maxWidth = 345;
 
@@ -690,6 +695,7 @@ Toolbar toolbar;
                BackgroundIntensityField.style.maxWidth = 345;
 
                Slider PrimaryBackgroundContrastSlider = new Slider() {label = "Background Contrast: ", value = PrimaryBackgroundContrast, highValue = 2.0f, lowValue = 0.0f};
+               PrimaryBackgroundContrastSlider.value = PrimaryBackgroundContrast;
                PrimaryBackgroundContrastSlider.RegisterValueChangedCallback(evt => {PrimaryBackgroundContrast = evt.newValue; RayMaster.LocalTTSettings.PrimaryBackgroundContrast = PrimaryBackgroundContrast;});
                PrimaryBackgroundContrastSlider.style.maxWidth = 345;
                PrimaryBackgroundContrastSlider.showInputField = true;
@@ -700,6 +706,7 @@ Toolbar toolbar;
                PrimaryBackgroundTintColorField.RegisterValueChangedCallback(evt => {PrimaryBackgroundTintColor = evt.newValue; RayMaster.LocalTTSettings.PrimaryBackgroundTintColor = new Vector3(PrimaryBackgroundTintColor.r,PrimaryBackgroundTintColor.g,PrimaryBackgroundTintColor.b);});
 
                Slider PrimaryBackgroundTintSlider = new Slider() {label = "Tint Strength: ", value = PrimaryBackgroundTint, highValue = 1.0f, lowValue = 0.0f};
+               PrimaryBackgroundTintSlider.value = PrimaryBackgroundTint;
                PrimaryBackgroundTintSlider.RegisterValueChangedCallback(evt => {PrimaryBackgroundTint = evt.newValue; RayMaster.LocalTTSettings.PrimaryBackgroundTint = PrimaryBackgroundTint;});
                PrimaryBackgroundTintSlider.style.maxWidth = 345;
 
@@ -754,6 +761,7 @@ Toolbar toolbar;
             SecondaryBackgroundIntensityField.style.maxWidth = 345;
             
             Slider SecondarySkyDesatSlider = new Slider() {label = "Secondary SkyDesat: ", value = SecondarySkyDesaturate, highValue = 1.0f, lowValue = 0.0f};
+            SecondarySkyDesatSlider.value = SecondarySkyDesaturate;
             SecondarySkyDesatSlider.RegisterValueChangedCallback(evt => {SecondarySkyDesaturate = evt.newValue; RayMaster.LocalTTSettings.SecondarySkyDesaturate = SecondarySkyDesaturate;});
             SecondarySkyDesatSlider.style.maxWidth = 345;
 
@@ -805,6 +813,7 @@ Toolbar toolbar;
       VisualElement HDRILongElement = new VisualElement();
          HDRILongElement.style.flexDirection = FlexDirection.Row;
          Slider HDRILongSlider = new Slider() {label = "HDRI Horizontal Offset: ", value = HDRILongLat.x, highValue = 360.0f, lowValue = 0.0f};
+         HDRILongSlider.value = HDRILongLat.x;
          HDRILongSlider.style.minWidth = 345;
          HDRILongSlider.style.maxWidth = 345;
          FloatField HDRILongField = new FloatField() {value = HDRILongLat.x};
@@ -819,6 +828,7 @@ Toolbar toolbar;
       VisualElement HDRILatElement = new VisualElement();
          HDRILatElement.style.flexDirection = FlexDirection.Row;
          Slider HDRILatSlider = new Slider() {label = "HDRI Vertical Offset: ", value = HDRILongLat.y, highValue = 360.0f, lowValue = 0.0f};
+         HDRILatSlider.value = HDRILongLat.y;
          HDRILatSlider.style.minWidth = 345;
          HDRILatSlider.style.maxWidth = 345;
          FloatField HDRILatField = new FloatField() {value = HDRILongLat.y};
@@ -1634,7 +1644,6 @@ Toolbar toolbar;
 
 
       private Toggle CustomToggle(string Label, string TargetDefine, string tooltip = "") {
-         // VisualElement CustTogContainer = CreateHorizontalBox("Custom Horizontal Toggle");
             Toggle CustToggle = new Toggle() {value = GetGlobalDefine(TargetDefine), text = Label};
                CustToggle.tooltip = tooltip;
             CustToggle.RegisterValueChangedCallback(evt => {SetGlobalDefines(TargetDefine, evt.newValue);});
@@ -1685,10 +1694,16 @@ Toolbar toolbar;
             SetGlobalDefines("TTCustomMotionVectors", definesList.Contains("TTCustomMotionVectors"));
             SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
             SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
+            SetGlobalDefines("MultiMapScreenshot", definesList.Contains("MultiMapScreenshot"));
             if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
             SetGlobalDefines("DX11", definesList.Contains("DX11Only"));
+            SetGlobalDefines("RasterizedDirect", definesList.Contains("RasterizedDirect"));
+
+
             HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
             HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("HardwareRT"); SetGlobalDefines("HardwareRT", true);} else {RemoveDefine("HardwareRT"); SetGlobalDefines("HardwareRT", false);}});
+
+
 
             GaussianTreeToggle = new Toggle() {value = (definesList.Contains("DontUseSGTree")), text = "Use Old Light BVH instead of Gaussian Tree"};
                GaussianTreeToggle.tooltip = "Gaussian tree is more expensive, but samples on metallic surfaces a LOT better";
@@ -1703,6 +1718,10 @@ Toolbar toolbar;
                CustomMotionVectorToggle.tooltip = "Removes the need for rasterized rendering(except when upscaling with TAAU), allowing you to turn it off in your camera for extra performance";
             CustomMotionVectorToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("TTCustomMotionVectors"); SetGlobalDefines("TTCustomMotionVectors", true);} else {RemoveDefine("TTCustomMotionVectors"); SetGlobalDefines("TTCustomMotionVectors", false);}});
 
+            Toggle RasterizedDirectToggle = new Toggle() {value = (definesList.Contains("RasterizedDirect")), text = "Use Rasterized Lighting for Direct"};
+               RasterizedDirectToggle.tooltip = "Removes the need for rasterized rendering(except when upscaling with TAAU), allowing you to turn it off in your camera for extra performance";
+            RasterizedDirectToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("RasterizedDirect"); SetGlobalDefines("RasterizedDirect", true);} else {RemoveDefine("RasterizedDirect"); SetGlobalDefines("RasterizedDirect", false);}});
+
             Toggle NonAccurateLightTriToggle = new Toggle() {value = (definesList.Contains("AccurateLightTris")), text = "Enable Emissive Texture Aware Light BVH"};
                NonAccurateLightTriToggle.tooltip = "Uses more ram(rarely it can use a LOT), but allows for much better emissive mesh sampling if you make heavy use of emission masks";
             NonAccurateLightTriToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("AccurateLightTris"); else RemoveDefine("AccurateLightTris");});
@@ -1715,7 +1734,14 @@ Toolbar toolbar;
                VerboseToggle.tooltip = "More data";
             VerboseToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("TTVerbose"); else RemoveDefine("TTVerbose");});
 
+            Toggle MultiMapScreenshotToggle = new Toggle() {value = (definesList.Contains("MultiMapScreenshot")), text = "Save Multiple Maps on Screenshot"};
+               MultiMapScreenshotToggle.tooltip = "Save Mat ID and Mesh ID when taking a screenshot";
+            MultiMapScreenshotToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("MultiMapScreenshot"); SetGlobalDefines("MultiMapScreenshot", true);} else {RemoveDefine("MultiMapScreenshot"); SetGlobalDefines("MultiMapScreenshot", false);}});
+
             VisualElement ClayColorBox = new VisualElement();
+
+
+
 
 
             Toggle ClayModeToggle = new Toggle() {value = ClayMode, text = "Use ClayMode"};
@@ -1728,6 +1754,19 @@ Toolbar toolbar;
             ClayColorField.style.width = 250;
             ClayColorField.RegisterValueChangedCallback(evt => {ClayColor = new Vector3(evt.newValue.r, evt.newValue.g, evt.newValue.b); RayMaster.LocalTTSettings.ClayColor = ClayColor;});
             ClayColorBox.Add(ClayColorField);
+            ClayColorBox.Add(CustomToggle("Clay Metal Override", "ClayMetalOverride", "Allows you to override metallic/roughness in in clay mode(blame Yanus)"));
+            
+            FloatSliderPair ClayMetallicContainer = CreatePairedFloatSlider("Metallilc Override", 0, 1, ref ClayMetalOverride);
+            ClayMetallicContainer.DynamicSlider.RegisterValueChangedCallback(evt => {ClayMetalOverride = evt.newValue; ClayMetallicContainer.DynamicField.value = ClayMetalOverride; RayMaster.LocalTTSettings.ClayMetalOverride = ClayMetalOverride;});
+            ClayMetallicContainer.DynamicField.RegisterValueChangedCallback(evt => {ClayMetalOverride = evt.newValue; ClayMetallicContainer.DynamicSlider.value = ClayMetalOverride; RayMaster.LocalTTSettings.ClayMetalOverride = ClayMetalOverride;});
+            ClayColorBox.Add(ClayMetallicContainer.DynamicContainer);
+
+            FloatSliderPair ClayRoughnessContainer = CreatePairedFloatSlider("Roughness Override", 0, 1, ref ClayRoughnessOverride);
+            ClayRoughnessContainer.DynamicSlider.RegisterValueChangedCallback(evt => {ClayRoughnessOverride = evt.newValue; ClayRoughnessContainer.DynamicField.value = ClayRoughnessOverride; RayMaster.LocalTTSettings.ClayRoughnessOverride = ClayRoughnessOverride;});
+            ClayRoughnessContainer.DynamicField.RegisterValueChangedCallback(evt => {ClayRoughnessOverride = evt.newValue; ClayRoughnessContainer.DynamicSlider.value = ClayRoughnessOverride; RayMaster.LocalTTSettings.ClayRoughnessOverride = ClayRoughnessOverride;});
+            ClayColorBox.Add(ClayRoughnessContainer.DynamicContainer);
+
+
 
             IntegerField MaxSampField = new IntegerField() {value = MaxSampCount, label = "Maximum Sample Count"};
                MaxSampField.tooltip = "Truetrace will render up to this sample count, then idle";
@@ -1753,6 +1792,7 @@ Toolbar toolbar;
             if(Application.isPlaying) {
                HardwareRTToggle.SetEnabled(false);
                CustomMotionVectorToggle.SetEnabled(false);
+               RasterizedDirectToggle.SetEnabled(false);
                BindlessToggle.SetEnabled(false);
                GaussianTreeToggle.SetEnabled(false);
                OIDNToggle.SetEnabled(false);
@@ -1761,9 +1801,11 @@ Toolbar toolbar;
                LoadTTSettingsFromResourcesToggle.SetEnabled(false);
                VerboseToggle.SetEnabled(false);
                StrictMemoryReductionToggle.SetEnabled(false);
+               MultiMapScreenshotToggle.SetEnabled(false);
             } else {
                HardwareRTToggle.SetEnabled(true);
                CustomMotionVectorToggle.SetEnabled(true);
+               RasterizedDirectToggle.SetEnabled(true);
                BindlessToggle.SetEnabled(true);
                GaussianTreeToggle.SetEnabled(true);
                OIDNToggle.SetEnabled(true);
@@ -1772,6 +1814,7 @@ Toolbar toolbar;
                LoadTTSettingsFromResourcesToggle.SetEnabled(true);
                VerboseToggle.SetEnabled(true);
                StrictMemoryReductionToggle.SetEnabled(true);
+               MultiMapScreenshotToggle.SetEnabled(true);
             }
 
 
@@ -1819,10 +1862,12 @@ Toolbar toolbar;
          NonPlayContainer.Add(OIDNToggle);
          NonPlayContainer.Add(RadCacheToggle);
          NonPlayContainer.Add(CustomMotionVectorToggle);
+         NonPlayContainer.Add(RasterizedDirectToggle);
          NonPlayContainer.Add(NonAccurateLightTriToggle);
          NonPlayContainer.Add(LoadTTSettingsFromResourcesToggle);
          NonPlayContainer.Add(VerboseToggle);
          NonPlayContainer.Add(StrictMemoryReductionToggle);
+         NonPlayContainer.Add(MultiMapScreenshotToggle);
          NonPlayContainer.Add(new Label("-------------"));
 
          Label PlayLabel = new Label("-- THESE CAN BE MODIFIED ON THE FLY/DURING PLAY --");
@@ -1843,12 +1888,14 @@ Toolbar toolbar;
 
 
          Slider FogSlider = new Slider() {label = "Fog Density: ", value = FogDensity, highValue = 0.2f, lowValue = 0.000000001f};
+         FogSlider.value = FogDensity;
          FogSlider.showInputField = true;        
          FogSlider.style.width = 400;
          FogSlider.ElementAt(0).style.minWidth = 65;
          FogSlider.RegisterCallback<FocusOutEvent>(evt => {FogDensity = FogSlider.value; RayMaster.LocalTTSettings.FogDensity = FogDensity;});        
 
          Slider FogHeightSlider = new Slider() {label = "Fog Height: ", value = FogHeight, highValue = 80.0f, lowValue = 0.00001f};
+         FogHeightSlider.value = FogHeight;
          FogHeightSlider.showInputField = true;        
          FogHeightSlider.style.width = 400;
          FogHeightSlider.ElementAt(0).style.minWidth = 65;
@@ -1989,6 +2036,7 @@ Toolbar toolbar;
          NewPair.DynamicContainer = CreateHorizontalBox(Name + " Container");
             NewPair.DynamicLabel = new Label(Name);
             NewPair.DynamicSlider = new Slider() {value = InitialValue, highValue = HighValue, lowValue = LowValue};
+            NewPair.DynamicSlider.value = InitialValue;
             NewPair.DynamicField = new FloatField() {value = InitialValue};
             NewPair.DynamicSlider.style.width = SliderWidth;
          NewPair.DynamicContainer.Add(NewPair.DynamicLabel);
@@ -2025,6 +2073,7 @@ Toolbar toolbar;
 
          VisualElement SharpenFoldout = new VisualElement() {};
             Slider SharpnessSlider = new Slider() {label = "Sharpness: ", value = Sharpness, highValue = 1.0f, lowValue = 0.0f};
+            SharpnessSlider.value = Sharpness;
             SharpnessSlider.style.width = 200;
             SharpnessSlider.RegisterValueChangedCallback(evt => {Sharpness = evt.newValue; RayMaster.LocalTTSettings.Sharpness = Sharpness;});
             SharpenFoldout.Add(SharpnessSlider);
@@ -2045,15 +2094,18 @@ Toolbar toolbar;
                      StandardBloomBox.style.flexDirection = FlexDirection.Row;
                      Label BloomLabel = new Label("Bloom Strength");
                      Slider BloomSlider = new Slider() {value = BloomStrength, highValue = 0.9999f, lowValue = 0.25f};
+                        BloomSlider.value = BloomStrength;
                         BloomSlider.style.width = 100;
                         BloomSlider.RegisterValueChangedCallback(evt => {BloomStrength = evt.newValue; RayMaster.LocalTTSettings.BloomStrength = BloomStrength;});
                   StandardBloomBox.Add(BloomLabel);
                   StandardBloomBox.Add(BloomSlider);
                   VisualElement ConvBloomBox = new VisualElement();
                      Slider ConvBloomStrengthSlider = new Slider() {label = "Convolution Bloom Strength", value = ConvStrength, highValue = 10.0f, lowValue = 0.0f};
+                        ConvBloomStrengthSlider.value = ConvStrength;
                         ConvBloomStrengthSlider.style.width = 400;
                         ConvBloomStrengthSlider.RegisterValueChangedCallback(evt => {ConvStrength = evt.newValue; RayMaster.LocalTTSettings.ConvStrength = ConvStrength;});
                      Slider ConvBloomThresholdSlider = new Slider() {label = "Convolution Bloom Threshold", value = ConvBloomThreshold, highValue = 20.0f, lowValue = 0.0f};
+                        ConvBloomThresholdSlider.value = ConvBloomThreshold;
                         ConvBloomThresholdSlider.style.width = 400;
                         ConvBloomThresholdSlider.RegisterValueChangedCallback(evt => {ConvBloomThreshold = evt.newValue; RayMaster.LocalTTSettings.ConvBloomThreshold = ConvBloomThreshold;});
                      Vector2Field ConvBloomSizeField = new Vector2Field() {label = "Convolution Bloom Size", value = ConvBloomSize};
@@ -2089,12 +2141,14 @@ Toolbar toolbar;
 
            Label AperatureLabel = new Label("Aperature Size");
            AperatureSlider = new Slider() {value = DoFAperature, highValue = 1, lowValue = 0};
+           AperatureSlider.value = DoFAperature;
            AperatureSlider.style.width = 250;
            FloatField AperatureScaleField = new FloatField() {value = DoFAperatureScale, label = "Aperature Scale"};
            AperatureScaleField.ElementAt(0).style.minWidth = 65;
            AperatureScaleField.RegisterValueChangedCallback(evt => {DoFAperatureScale = evt.newValue; DoFAperatureScale = Mathf.Max(DoFAperatureScale, 0.0001f); RayMaster.LocalTTSettings.DoFAperatureScale = DoFAperatureScale; AperatureScaleField.value = DoFAperatureScale;});
            Label FocalLabel = new Label("Focal Length");
            FocalSlider = new FloatField() {value = DoFFocal};
+           FocalSlider.value = DoFFocal;
            FocalSlider.style.width = 150;
            Label AutoFocLabel = new Label("Hold Middle Mouse + Left Control in game to focus");
            // Button AutofocusButton = new Button(() => {IsFocusing = true;}) {text = "Autofocus DoF"};
@@ -2130,6 +2184,7 @@ Toolbar toolbar;
                ExposureElement.style.flexDirection = FlexDirection.Row;
                Label ExposureLabel = new Label("Exposure");
                Slider ExposureSlider = new Slider() {value = Exposure, highValue = 50.0f, lowValue = 0};
+               ExposureSlider.value = Exposure;
                FloatField ExposureField = new FloatField() {value = Exposure};
                Toggle ExposureAutoToggle = new Toggle() {value = ExposureAuto, text = "Auto(On)/Manual(Off)"};
                ExposureAutoToggle.RegisterValueChangedCallback(evt => {ExposureAuto = evt.newValue; RayMaster.LocalTTSettings.ExposureAuto = ExposureAuto;});
@@ -2160,6 +2215,7 @@ Toolbar toolbar;
                VisualElement SaturationContainer = CreateHorizontalBox();
                   Label SaturationLabel = new Label("Saturation");
                   Slider SaturationSlider = new Slider() {value = Saturation, highValue = 2.0f, lowValue = 0};
+                  SaturationSlider.value = Saturation;
                   FloatField SaturationField = new FloatField() {value = Saturation};
                   SaturationSlider.style.width = 100;
                   SaturationSlider.RegisterValueChangedCallback(evt => {Saturation = evt.newValue; SaturationField.value = Saturation; RayMaster.LocalTTSettings.Saturation = Saturation;});
@@ -2227,6 +2283,7 @@ Toolbar toolbar;
             VisualElement ChromaAberContainer = CreateHorizontalBox();
                Label ChromaAberLabel = new Label("Chromatic Aberation Strength");
                Slider ChromaAberSlider = new Slider() {value = ChromaDistort, highValue = 7.0f, lowValue = 0};
+               ChromaAberSlider.value = ChromaDistort;
                FloatField ChromaAberField = new FloatField() {value = ChromaDistort};
                ChromaAberSlider.RegisterValueChangedCallback(evt => {ChromaDistort = evt.newValue; ChromaAberField.value = ChromaDistort; RayMaster.LocalTTSettings.ChromaDistort = ChromaDistort;});
                ChromaAberField.RegisterValueChangedCallback(evt =>  {ChromaDistort = evt.newValue; ChromaAberSlider.value = ChromaDistort; RayMaster.LocalTTSettings.ChromaDistort = ChromaDistort;});
@@ -2360,7 +2417,7 @@ Toolbar toolbar;
 
          void EvaluateScene(Scene Current, Scene Next) {
             rootVisualElement.Clear();
-            MainSource.Clear();
+            if(MainSource != null) MainSource.Clear();
             CreateGUI();
          }
 
@@ -2391,6 +2448,22 @@ Toolbar toolbar;
          //    GameObject.Find("Scene").GetComponent<AssetManager>().EditorBuild();
          // }
 
+      public static void SaveTexture (RenderTexture RefTex, string Path) {
+         Texture2D tex = new Texture2D(RefTex.width, RefTex.height, TextureFormat.RGBAFloat, false);
+         RenderTexture.active = RefTex;
+         tex.ReadPixels(new Rect(0, 0, RefTex.width, RefTex.height), 0, 0);
+         tex.Apply();
+         Color[] ArrayA = tex.GetPixels(0);
+         int Coun = ArrayA.Length;
+         for(int i = 0; i < Coun; i++) {
+            ArrayA[i].a = 1.0f;
+         }
+         tex.SetPixels(ArrayA, 0);
+         tex.Apply();
+         byte[] bytes = tex.EncodeToPNG();
+         System.IO.File.WriteAllBytes(Path, bytes);
+      }
+
          public static void TakeScreenshot() {
            string SegmentNumber = "";
            string FilePath = "";
@@ -2414,6 +2487,10 @@ Toolbar toolbar;
            
 
             ScreenCapture.CaptureScreenshot(FilePath);
+            #if MultiMapScreenshot
+               SaveTexture(RayTracingMaster.RayMaster.MultiMapMatIDTexture, FilePath.Replace(".png", "") + "_MatID.png");
+               SaveTexture(RayTracingMaster.RayMaster.MultiMapMeshIDTexture, FilePath.Replace(".png", "") + "_MeshID.png");
+            #endif
             
             // ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayTracingMaster.SampleCount + " Samples.png");
             UnityEditor.AssetDatabase.Refresh();
@@ -2544,6 +2621,8 @@ Slider AperatureSlider;
            HDRILongLat = RayMaster.LocalTTSettings.HDRILongLat;
            BloomStrength = RayMaster.LocalTTSettings.BloomStrength;
            DoF = RayMaster.LocalTTSettings.PPDoF;
+           ClayMetalOverride = RayMaster.LocalTTSettings.ClayMetalOverride;
+           ClayRoughnessOverride = RayMaster.LocalTTSettings.ClayRoughnessOverride;
            ClayColor = RayMaster.LocalTTSettings.ClayColor;
            GroundColor = RayMaster.LocalTTSettings.GroundColor;
            DoFAperature = RayMaster.LocalTTSettings.DoFAperature;
@@ -2738,6 +2817,7 @@ Slider AperatureSlider;
 
 
                   Slider OIDNBlendRatioSlider = new Slider() {label = "Blend Ratio: ", value = OIDNBlendRatio, highValue = 1.0f, lowValue = 0.0f};
+                  OIDNBlendRatioSlider.value = OIDNBlendRatio;
                   OIDNBlendRatioSlider.showInputField = true;        
                   OIDNBlendRatioSlider.style.width = 200;
                   OIDNBlendRatioSlider.ElementAt(0).style.minWidth = 65;
@@ -2754,6 +2834,7 @@ Slider AperatureSlider;
    
 
                Slider OIDNBlendRatioSlider = new Slider() {label = "Blend Ratio: ", value = OIDNBlendRatio, highValue = 1.0f, lowValue = 0.0f};
+               OIDNBlendRatioSlider.value = OIDNBlendRatio;
                OIDNBlendRatioSlider.showInputField = true;        
                OIDNBlendRatioSlider.style.width = 200;
                OIDNBlendRatioSlider.ElementAt(0).style.minWidth = 65;
@@ -2876,6 +2957,7 @@ Slider AperatureSlider;
                FireflyFoldout.Add(FireflyFrameIntervalField);
          
                Slider FireflyStrengthSlider = new Slider() {label = "Anti Firefly Strength: ", value = FireflyStrength, highValue = 1.0f, lowValue = 0.0f};
+               FireflyStrengthSlider.value = FireflyStrength;
                FireflyStrengthSlider.RegisterValueChangedCallback(evt => {FireflyStrength = evt.newValue; RayMaster.LocalTTSettings.FireflyStrength = FireflyStrength;});
                FireflyStrengthSlider.style.maxWidth = 345;
                FireflyFoldout.Add(FireflyStrengthSlider);

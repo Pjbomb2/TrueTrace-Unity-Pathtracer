@@ -18,7 +18,7 @@ namespace TrueTrace {
     {
         public static RayTracingMaster RayMaster;
         [HideInInspector] public static Camera _camera;
-        public static bool DoKernelProfiling = false;
+        public static bool DoKernelProfiling = true;
         [HideInInspector] [SerializeField] public string LocalTTSettingsName = "TTGlobalSettings";
         private bool OverriddenResolutionIsActive = false;
         public bool HDRPorURPRenderInScene = false;
@@ -73,6 +73,12 @@ namespace TrueTrace {
         private RenderTexture _RandomNumsB;
         private RenderTexture _PrimaryTriangleInfoA;
         private RenderTexture _PrimaryTriangleInfoB;
+#if MultiMapScreenshot
+        [HideInInspector] public RenderTexture MultiMapMatIDTextureInitial;
+        [HideInInspector] public RenderTexture MultiMapMatIDTexture;
+        [HideInInspector] public RenderTexture MultiMapMeshIDTextureInitial;
+        [HideInInspector] public RenderTexture MultiMapMeshIDTexture;
+#endif
 #if TTCustomMotionVectors
         private RenderTexture MVTexture;
 #endif
@@ -423,6 +429,12 @@ namespace TrueTrace {
             GIWorldPosC.ReleaseSafe();
             _PrimaryTriangleInfoA.ReleaseSafe();
             _PrimaryTriangleInfoB.ReleaseSafe();
+#if MultiMapScreenshot
+            MultiMapMatIDTexture.ReleaseSafe();
+            MultiMapMatIDTextureInitial.ReleaseSafe();
+            MultiMapMeshIDTexture.ReleaseSafe();
+            MultiMapMeshIDTextureInitial.ReleaseSafe();
+#endif
 #if TTCustomMotionVectors
             MVTexture.ReleaseSafe();
 #endif
@@ -656,6 +668,8 @@ namespace TrueTrace {
             SetFloat("ScaleHeight", LocalTTSettings.FogHeight, cmd);
             SetFloat("OrthoSize", _camera.orthographicSize, cmd);
             SetFloat("LightEnergyScale", LocalTTSettings.LightEnergyScale, cmd);
+            SetFloat("ClayMetalOverrideValue", LocalTTSettings.ClayMetalOverride, cmd);
+            SetFloat("ClayRoughnessOverrideValue", LocalTTSettings.ClayRoughnessOverride, cmd);
             SetInt("MainDirectionalLight", MainDirectionalLight, cmd);
             SetInt("NonInstanceCount", Assets.NonInstanceCount, cmd);
             SetInt("AlbedoAtlasSize", Assets.AlbedoAtlasSize, cmd);
@@ -856,6 +870,11 @@ namespace TrueTrace {
             ShadingShader.SetComputeBuffer(ShadeKernel, "GlobalColors", LightingBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernel, "GlobalRays", _RayBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernel, "ShadowRaysBuffer", _ShadowBuffer);
+
+#if MultiMapScreenshot
+            ShadingShader.SetTexture(ShadeKernel, "MultiMapMatIDTexture", MultiMapMatIDTextureInitial);
+            ShadingShader.SetTexture(ShadeKernel, "MultiMapMeshIDTexture", MultiMapMeshIDTextureInitial);
+#endif
 
 
             ShadingShader.SetBuffer(FinalizeKernel, "GlobalColors", LightingBuffer);
@@ -1078,6 +1097,13 @@ namespace TrueTrace {
                 CommonFunctions.CreateRenderTexture(ref GIWorldPosA, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref _PrimaryTriangleInfoA, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref _PrimaryTriangleInfoB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+#if MultiMapScreenshot
+                CommonFunctions.CreateRenderTexture(ref MultiMapMatIDTexture, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+                CommonFunctions.CreateRenderTexture(ref MultiMapMatIDTextureInitial, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+                CommonFunctions.CreateRenderTexture(ref MultiMapMeshIDTexture, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+                CommonFunctions.CreateRenderTexture(ref MultiMapMeshIDTextureInitial, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+#endif
+
 #if TTCustomMotionVectors
                 CommonFunctions.CreateRenderTexture(ref MVTexture, SourceWidth, SourceHeight, CommonFunctions.RTFull2);
 #endif
@@ -1141,6 +1167,7 @@ namespace TrueTrace {
             }
             if(HasSDFHandler) OptionalSDFHandler.Run(cmd, (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB, _RayBuffer, SourceWidth, SourceHeight);
         }
+
 
         private void Render(RenderTexture destination, CommandBuffer cmd)
         {
@@ -1286,6 +1313,11 @@ namespace TrueTrace {
                         _addMaterial = new Material(Shader.Find("Hidden/Accumulate"));
                     _addMaterial.SetFloat("_Sample", CurrentSample);
                     cmd.Blit(_target, _converged, _addMaterial);
+#if MultiMapScreenshot
+                    cmd.Blit(MultiMapMatIDTextureInitial, MultiMapMatIDTexture, _addMaterial);
+                    cmd.Blit(MultiMapMeshIDTextureInitial, MultiMapMeshIDTexture, _addMaterial);
+#endif
+
                     if(DoKernelProfiling) cmd.EndSample("Finalize Kernel");
                 } else if(!(LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1)) {
                     if(DoKernelProfiling) cmd.BeginSample("ASVGF");
@@ -1399,6 +1431,7 @@ namespace TrueTrace {
             if (LocalTTSettings.PPTAA) TTPostProc.ExecuteTAA(ref _FinalTex, _currentSample, cmd);
             if (LocalTTSettings.PPFXAA) TTPostProc.ExecuteFXAA(ref _FinalTex, cmd);
             if (LocalTTSettings.DoSharpen) TTPostProc.ExecuteSharpen(ref _FinalTex, LocalTTSettings.Sharpness, cmd);
+
             cmd.Blit(_FinalTex, destination);
             ClearOutRenderTexture(_DebugTex);
             if(DoKernelProfiling) cmd.EndSample("Post Processing");

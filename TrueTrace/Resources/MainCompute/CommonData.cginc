@@ -98,6 +98,9 @@ bool IsFocusing;
 float2 Segment;
 bool DoPanorama;
 
+float ClayMetalOverrideValue;
+float ClayRoughnessOverrideValue;
+
 RWStructuredBuffer<uint3> BufferData;
 
 #ifdef HardwareRT

@@ -111,6 +111,20 @@ for bringing bindless textures to unity!
   <li>If you use HDRIs, or CubeMaps for the skybox, you need to format as the texture to a Texture2D in the inspector of the image, unity will convert it automatically, then put it in the slot in "Scene Settings" in the TrueTrace settings menu</li>
 </ul>
 
+## URP Setup
+<ul>
+  <li>If using Unity 6000 or above, you need to go to Project Settings -> Graphics -> (at the bottom)Turn on Compatability Mode</li>
+  <li>In the Universal Renderer Asset being used turn on "Native RenderPass"</li>
+  <li>EITHER:</li>
+  <ul>
+    <li>In the camera, turn on PostProcessing, and turn the Anti-Aliasing to TAA(This is the only way I have found to reliably force motion vector generation in URP for some reason...)</li>
+    <li>OR</li>
+    <li>In Truetrace Settings -> Functionality Settings -> Turn ON "Use Custom Motion Vectors"</li>
+  </ul>
+  <li>Finally, add the "URPTTInjectPass" script to an empty gameobject if it has not been automatically added</li>
+  <li>Reccomended - Go to the Universal Render Pipeline Asset you are using, and turn the render scale to 1</li>
+</ul>
+
 ## Creating Non-Standard Images
 <ul>
     <li>Attatch the "TTAdvancedImageGen" script to any gameobject in the hierarchy, and fill out the settings you want.</li>
@@ -200,20 +214,56 @@ TrueTrace Options Description -
   <li>Enable FXAA - Enables FXAA</li>
 </ul>
 
-
-## URP Setup
+## Advanced Options
+GlobalDefines.cginc Description - 
 <ul>
-  <li>If using Unity 6000 or above, you need to go to Project Settings -> Graphics -> (at the bottom)Turn on Compatability Mode</li>
-  <li>In the Universal Renderer Asset being used turn on "Native RenderPass"</li>
-  <li>EITHER:</li>
+  <li>NOTE: THIS IS REFERING TO THE FILE "GlobalDefines.cginc" WHICH INCLUDES EXTRA FUNCTIONALITY</li>
+  <li>To access: TrueTrace-Unity-Pathtracer -> TrueTrace -> Resources -> GlobalDefines.cginc(the blue one)</li>
+  <li>Options(Toggle them by removing/adding "//" in front of each #define:</li>
+  <li>DONT MODIFY DIRECTLY:</li>
   <ul>
-    <li>In the camera, turn on PostProcessing, and turn the Anti-Aliasing to TAA(This is the only way I have found to reliably force motion vector generation in URP for some reason...)</li>
-    <li>OR</li>
-    <li>In Truetrace Settings -> Functionality Settings -> Turn ON "Use Custom Motion Vectors"</li>
+    <li>HardwareRT - This is handled from the CPU side under Functionality Settings</li>
+    <li>HDRP - This is handled from the CPU side automatically</li>
+    <li>DX11 - This is handled from the CPU side automatically/Under Functionality Settings</li>
+    <li>UseBindless - This is handled from the CPU side automatically/Under Functionality Settings</li>
+    <li>UseSGTree - This is handled from the CPU side under Functionality Settings</li>
+    <li>TTCustomMotionVectors - This is handled from the CPU side under Functionality Settings; named "Remove Rasterization Requirement"</li>
+    <li>MultiMapScreenshot - This is handled from the CPU side under Functionality Settings; named "Save Multiple Maps On Screenshot"; Truetrace will also save images of material ID and mesh ID maps when using TTAdvancedImageGen or the Screenshot button</li>
   </ul>
-  <li>Finally, add the "URPTTInjectPass" script to an empty gameobject if it has not been automatically added</li>
-  <li>Reccomended - Go to the Universal Render Pipeline Asset you are using, and turn the render scale to 1</li>
+  <li>These are fine to modify yourself:</li>
+  <ul>
+    <li>AdvancedAlphaMapped - Allows for cutout objects to be evaluated during traversal, saving performance for cutout objects but can degrade performance otherwise; best left ON</li>
+    <li>ExtraSampleValidation - Allows ReSTIR to shoot 2 shadow rays, one for direct, one for indirect; is a lot more expensive(in SWRT) but can be worth it</li>
+    <li>ReSTIRAdvancedValidation - Uses a special small trick to make more use of ReSTIR shadow rays in later frames</li>
+    <li>IgnoreGlassShadow - Allows NEE rays to pass through glass</li>
+    <li>IgnoreGlassMain - Turning this on basically removes glass from the scene</li>
+    <li>FadeMapping - Allows the use of FadeMapping in the Material Options, not stable in denoising(also accessable from Functionality Settings)</li>
+    <li>PointFiltering - Samples textures with a point filter, instead of linear or trilinear</li>
+    <li>StainedGlassShadow - Paired with "IgnoreGlassShadow", allows colored glass to color these shadow rays that pass through them(also accessable from Functionality Settings)</li>
+    <li>IgnoreBackfacing - Rays will not intersect triangle facing away from the ray(also accessable from Functionality Settings)</li>
+    <li>LBVH - Whether or not to use RIS for triangle sampling or one of the light trees(also accessable from Functionality Settings)</li>
+    <li>AccurateEmissionTex - Whether or not to sample emission textues</li>
+    <li>TrueBlack - Legacy option, allows for actual black, which used to cause issues but no longer does</li>
+    <li>UseTextureLOD - When bindless is on, this allows for dumb sampling of texture LOD's(also accessable from Functionality Settings)</li>
+    <li>EONDiffuse - Whether to use Lambert diffuse model or EON diffuse model(also accessable from Functionality Settings)</li>
+    <li>AdvancedBackground - Allows selected surfaces to instead be treated as hitting the skybox(also accessable from Functionality Settings)</li>
+    <li>UseBRDFLights - Whether to use MIS when using NEE or not; Turning off CAN help massively with fireflies</li>
+    <li>DoubleBufferSGTree - Allows ASVGF to better sample moving emissive meshes, but is a lot more expensive with asvgf on</li>
+    <li>Fog - Toggles multiscatter fog, not denoiser compatable(also accessable from Functionality Settings)</li>
+    <li>RadCache - Quick toggle for the Radiance Cache(also accessable from Functionality Settings)</li>
+    <li>ClampRoughnessToBounce - Clamps the material roughness to be higher for each bounce, helps fight fireflies</li>
+    <li>RasterizedDirect - Experimental, BIRP only, will make truetrace only contribnute to indirect, and use unity rasterization for direct</li>
+    <li>ReSTIRSampleReduction - Experiemental, only pathtraces half the rays and lets ReSTIR fill in the gaps</li>
+    <li>ReSTIRRestrictSpatial - Experiemental option to allow for cleaner reflections in near-mirrors</li>
+    <li>SmartRestriction - Additional cleanup ontop of previous define</li>
+    <li>ReSTIRAdditionalAO - Adds fake AO through restir, can help with brightened corners</li>
+    <li>ShadowGlassAttenuation - Advancement of "StainedGlassShadow"; still experimental</li>
+    <li>DisableNormalMaps - Debug thing</li>
+    <li>ClayMetalOverride - Allows for clay mode to also define a constant metallic/roughness</li>
+  </ul>
 </ul>
+
+
 
 # Known Bugs:
 </br>

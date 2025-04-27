@@ -1408,6 +1408,7 @@ inline SH interpolate_lf(Texture2D<float4> img_lf_shY, Texture2D<float2> img_lf_
 
 	SH sum_lf = init_SH();
 	float sum_w = 0;
+	const float CenterMetallic = MetallicA[ipos].x;
 
 	// 4 bilinear taps
 	const int2 off[4] = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } };
@@ -1425,9 +1426,11 @@ inline SH interpolate_lf(Texture2D<float4> img_lf_shY, Texture2D<float2> img_lf_
 		// Low-res pixel parameters
 		float p_depth = TEX_PT_VIEW_DEPTH_A[p_hires];
 		float3 p_geo_normal = i_octahedral_32(TEX_PT_NORMALS_A[p_hires].x);
+		float NeighborMet = MetallicA[p_hires].x;
 
 		// Start with bilinear weight
 		float p_w = w[i];
+		p_w *= 1.0f - clamp(abs(NeighborMet - CenterMetallic), 0, 1);
 
 		// Compute depth and normal similarity between the target pixel and the low-res anchor pixel
 		float dist_depth = abs(p_depth - depth_center.x);// * depth_center.y * 1.0f;
