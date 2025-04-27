@@ -8,7 +8,7 @@ using UnityEngine.UIElements;
 using UnityEditor.UIElements;
 #endif
 
-
+namespace TrueTrace {
 [ExecuteInEditMode][System.Serializable][RequireComponent(typeof(MeshRenderer))]
 public class WaveV2 : MonoBehaviour
 {
@@ -136,9 +136,9 @@ public class WaveV2 : MonoBehaviour
                 VoxelizeCamera.orthographicSize = Mathf.Max(Max2.x - Min2.x, Max2.z - Min2.z) / 2.0f;
 
 
-                ChildObject.AddComponent<TrueTrace.RayTracingObject>();
-                ChildParentObject.AddComponent<TrueTrace.ParentObject>();
-                ChildParentObject.GetComponent<TrueTrace.ParentObject>().IsDeformable = true;
+                ChildObject.AddComponent<RayTracingObject>();
+                ChildParentObject.AddComponent<ParentObject>();
+                ChildParentObject.GetComponent<ParentObject>().IsDeformable = true;
                 RunTemp = true;
             }
             Run = true;
@@ -334,7 +334,6 @@ public class WaveV2 : MonoBehaviour
 #if UNITY_EDITOR
 
 
-namespace TrueTrace {
     [CustomEditor(typeof(WaveV2))]
     public class WaveV2Editor : Editor
     {
@@ -462,6 +461,6 @@ namespace TrueTrace {
             return MainContainer;
         }
     }
-}
 
 #endif
+}

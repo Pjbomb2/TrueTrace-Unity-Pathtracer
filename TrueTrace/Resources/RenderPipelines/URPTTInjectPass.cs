@@ -3,13 +3,13 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
-namespace UnityEngine.Rendering.Universal
+namespace TrueTrace
 {
     [ExecuteInEditMode]
     public class InjectPathTracingPass : MonoBehaviour
     {
         public URPTTPass m_PathTracingPass = null;
-        TrueTrace.RayTracingMaster RayMaster;
+        RayTracingMaster RayMaster;
         private void OnEnable() {
             RenderPipelineManager.beginCameraRendering += InjectPass;
         }
@@ -23,7 +23,7 @@ namespace UnityEngine.Rendering.Universal
         }
         private void InjectPass(ScriptableRenderContext renderContext, Camera currCamera) {
             if (m_PathTracingPass == null) CreateRenderPass();
-            if(RayMaster == null) RayMaster = GameObject.Find("Scene").GetComponent<TrueTrace.RayTracingMaster>();
+            if(RayMaster == null) RayMaster = GameObject.Find("Scene").GetComponent<RayTracingMaster>();
              
             if (Application.isPlaying || RayMaster.HDRPorURPRenderInScene) {
                 currCamera.depthTextureMode |= (DepthTextureMode.MotionVectors | DepthTextureMode.Depth);

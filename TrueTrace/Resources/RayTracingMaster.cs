@@ -18,7 +18,7 @@ namespace TrueTrace {
     {
         public static RayTracingMaster RayMaster;
         [HideInInspector] public static Camera _camera;
-        public static bool DoKernelProfiling = true;
+        public static bool DoKernelProfiling = false;
         [HideInInspector] [SerializeField] public string LocalTTSettingsName = "TTGlobalSettings";
         private bool OverriddenResolutionIsActive = false;
         public bool HDRPorURPRenderInScene = false;
@@ -30,7 +30,7 @@ namespace TrueTrace {
         private ASVGF ASVGFCode;
         public static bool ImageIsModified = false;
         #if UseOIDN
-            private UnityDenoiserPlugin.DenoiserPluginWrapper OIDNDenoiser;         
+            private DenoiserPlugin.DenoiserPluginWrapper OIDNDenoiser;         
         #endif
         [HideInInspector] public static bool DoSaving = true;
         public static RayObjs raywrites = new RayObjs();
@@ -1044,7 +1044,7 @@ namespace TrueTrace {
                 }
 
                 #if UseOIDN
-                    UnityDenoiserPlugin.DenoiserConfig cfg = new UnityDenoiserPlugin.DenoiserConfig() {
+                    DenoiserPlugin.DenoiserConfig cfg = new DenoiserPlugin.DenoiserConfig() {
                         imageWidth = SourceWidth,
                         imageHeight = SourceHeight,
                         guideAlbedo = 1,
@@ -1054,19 +1054,19 @@ namespace TrueTrace {
                         prefilterAux = 1
                     };
                     
-                    UnityDenoiserPlugin.DenoiserType denoiserType;
+                    DenoiserPlugin.DenoiserType denoiserType;
                     switch (LocalTTSettings.DenoiserMethod) {
                         case 2:
-                            denoiserType = UnityDenoiserPlugin.DenoiserType.OIDN;
+                            denoiserType = DenoiserPlugin.DenoiserType.OIDN;
                             break;
                         case 3:
-                            denoiserType = UnityDenoiserPlugin.DenoiserType.OptiX;
+                            denoiserType = DenoiserPlugin.DenoiserType.OptiX;
                             break;
                         default:
-                            denoiserType = UnityDenoiserPlugin.DenoiserType.OIDN;
+                            denoiserType = DenoiserPlugin.DenoiserType.OIDN;
                             break;
                     }                   
-                    OIDNDenoiser = new UnityDenoiserPlugin.DenoiserPluginWrapper(denoiserType, cfg);
+                    OIDNDenoiser = new DenoiserPlugin.DenoiserPluginWrapper(denoiserType, cfg);
                     
                     ColorBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
                     OutputBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);

@@ -2593,7 +2593,7 @@ Slider AperatureSlider;
                   if(NewObject == null) {
                       NewObject = new GameObject();
                       NewObject.name = "URPTTINJECTOR";
-                      NewObject.AddComponent<UnityEngine.Rendering.Universal.InjectPathTracingPass>();
+                      NewObject.AddComponent<InjectPathTracingPass>();
                   }
                #endif
             }

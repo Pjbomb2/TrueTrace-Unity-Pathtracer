@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace UnityDenoiserPlugin
+namespace DenoiserPlugin
 {
     public enum DenoiserType
     {
