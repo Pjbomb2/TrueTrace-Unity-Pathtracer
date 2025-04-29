@@ -50,7 +50,7 @@ inline float4x4 inverse(float4x4 m) {
     Texture2D<float> Depth;
 #endif
 
-#if defined(HDRP) && !defined(TTCustomMotionVectors)
+#if defined(HDRP) || defined(TTCustomMotionVectors)
     Texture2DArray<float2> TEX_PT_MOTION;
 #else
     Texture2D<float2> TEX_PT_MOTION;
@@ -262,7 +262,7 @@ void CopyData(int3 id : SV_DispatchThreadID)
     TexBaseColor = (TexBaseColor > 0.005f ? rcp(TexBaseColor) : 0);
     float2 MetRough = FromColorSpecPacked(Pixel.MetRoughIsSpec);
     MetallicAWrite[id.xy] = MetRough;
-    #if defined(HDRP) && !defined(TTCustomMotionVectors)
+    #if defined(HDRP) || defined(TTCustomMotionVectors)
         float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, int3(id.xy,0) / float3(screen_width, screen_height, 1), 0).xy;
     #else
         float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, id.xy / float2(screen_width, screen_height), 0).xy;
@@ -376,7 +376,7 @@ inline float get_gradient(float l_curr, float l_prev)
 inline float2 get_lf_gradient(int2 ipos)
 {
     // Find the same surface on the pvreious frame
-    #if defined(HDRP) && !defined(TTCustomMotionVectors)
+    #if defined(HDRP) || defined(TTCustomMotionVectors)
         float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, int3(ipos,0) / float3(screen_width, screen_height, 1), 0).xy;
     #else
         float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, ipos / float2(screen_width, screen_height), 0).xy;
@@ -576,7 +576,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
     GroupMemoryBarrierWithGroupSync();
 
     int2 ipos = gl_GlobalInvocationID.xy;
-    #if defined(HDRP) && !defined(TTCustomMotionVectors)
+    #if defined(HDRP) || defined(TTCustomMotionVectors)
         float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, int3(ipos,0) / float3(screen_width, screen_height, 1), 0).xy;
     #else
         float2 motion = -TEX_PT_MOTION.SampleLevel(my_linear_clamp_sampler, ipos / float2(screen_width, screen_height), 0).xy;

@@ -366,7 +366,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             Color.Flags = packRGBE((CurBounce == 0) ? max(hitDat.surfaceColor, 0.005f) : (unpackRGBE(Color.Flags) * max(hitDat.surfaceColor, 0.005f)));
             Color.Data = float3((CurBounce == 0) ? max(throughput, 0.006f) : (max(throughput, 0.005f) * Color.Data.xyz));
         #endif
-        PrevScreenData = float4(asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -Geomnorm : Geomnorm)), asfloat(octahedral_32(((hitDat.diffTrans != 0 || (hitDat.diffTrans != 0 && CurBounce == 1)) && Refracted) ? -norm : norm)), PrevScreenData.z + hit.t, asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 4) >> 4) : ((asuint(PrevScreenData.w) << 4) >> 4)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
+        PrevScreenData = float4(asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -Geomnorm : Geomnorm)), asfloat(octahedral_32(((hitDat.diffTrans != 0 || (hitDat.diffTrans != 0 && CurBounce == 1)) && Refracted) ? -norm : norm)), PrevScreenData.z + hit.t, asfloat((CurBounce == 0 ? (((uint)(MaterialIndex << 5) >> 4) | (MaterialLobe == 3)) : ((asuint(PrevScreenData.w) << 4) >> 4)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
         Color.MetRoughIsSpec = ((Color.MetRoughIsSpec & ~(0x7C000000)) | (((CurBounce < 20 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.01f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
         throughput = 1;  
     }
@@ -1327,6 +1327,7 @@ void TTtoOIDNKernelPanorama(uint3 id : SV_DispatchThreadID) {
     OutputBuffer[id.x + id.y * screen_width] = Result[id.xy].xyz;
 }
 RWTexture2D<half> CorrectedDistanceTex;
+Texture2D<half> CorrectedDistanceTexPrev;
 
 
 #pragma kernel MVKernel
@@ -1347,7 +1348,7 @@ void MVKernel(uint3 id : SV_DispatchThreadID) {
         if(any(NeighbPos < 0 || NeighbPos >= int2(screen_width, screen_height))) return;
         if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) {
             CorrectedDistanceTex[NeighbPos] = length(NewPos - CamPos);
-            MVTexture[NeighbPos] = (reflprojection);
+            MVTexture[int3(NeighbPos, 0)] = (reflprojection);
         }
 
 }
@@ -1356,9 +1357,84 @@ void MVKernel(uint3 id : SV_DispatchThreadID) {
 [numthreads(16, 16, 1)]
 void ResetMVKernel(uint3 id : SV_DispatchThreadID) {
     if(id.x >= screen_width || id.y >= screen_height) return;
-    MVTexture[id.xy] = -10000.0f;
+    MVTexture[int3(id.xy, 0)] = -10000.0f;
+    MVTexture[int3(id.xy, 1)] = -10000.0f;
     CorrectedDistanceTex[id.xy] = -10000.0f;
 
+}
+
+
+
+float3 proj_point_in_plane(float3 p, float3 v0, float3 n, out float d) {
+ d = dot(n, p - v0);
+ return p - (n * d);
+}
+
+float3 find_reflection_incident_point(float3 p0, float3 p1, float3 v0, float3 n) {
+ float d0 = 0;
+ float d1 = 0;
+ float3 proj_p0 = proj_point_in_plane(p0, v0, n, d0);
+ float3 proj_p1 = proj_point_in_plane(p1, v0, n, d1);
+
+ if(d1 < d0)
+  return (proj_p0 - proj_p1) * d1/(d0+d1) + proj_p1;
+ else
+  return (proj_p1 - proj_p0) * d0/(d0+d1) + proj_p0;
+}
+
+float3 ss_to_view(float3 ss_pos) {
+    // ss_pos.xy is in [0,1] UV space
+    float2 ndc_xy = ss_pos.xy * 2.0 - 1.0; // Convert UV to NDC [-1,1]
+    
+    float4 clip_pos = float4(ndc_xy, ss_pos.z, 1.0); // clip-space position
+    float4 view_pos = mul(CamInvProj, clip_pos);
+    
+    return view_pos.xyz / view_pos.w; // perspective divide
+}
+
+float3 view_to_ss(float3 view_pos) {
+    float4 clip_pos = mul(inverse(CamInvProj), float4(view_pos, 1.0));
+    float2 ndc = clip_pos.xy / clip_pos.w;
+    float2 ss = ndc * 0.5 + 0.5; // convert from [-1,1] to [0,1]
+    return float3(ss, clip_pos.z / clip_pos.w); // or view_pos.z depending on depth mode
+}
+
+float3 world_to_prev_view(float3 v, int is_position)
+{
+    if (is_position == 1) {
+        // For a position (includes translation)
+        float4 prev_view_pos = mul(inverse(CamToWorldPrev), float4(v, 1.0));
+        return prev_view_pos.xyz;
+    } else {
+        // For a normal/direction (no translation)
+        float4 prev_view_vec = mul(inverse(CamToWorldPrev), float4(v, 0.0));
+        return prev_view_vec.xyz;
+    }
+}
+
+
+float2 find_previous_reflection_position(
+ float3 ss_pos, float3 ss_ray,
+ float2 surface_motion_vector, float2 reflection_motion_vector,
+ float3 world_normal) {
+ float3 ss_p0 = 0;
+ ss_p0.xy = ss_pos.xy - surface_motion_vector;
+ ss_p0.z = CorrectedDistanceTexPrev.SampleLevel(my_linear_clamp_sampler, ss_p0.xy, 0).r;
+
+ float3 ss_p1 = 0;
+ ss_p1.xy = ss_ray.xy - reflection_motion_vector;
+ ss_p1.z = CorrectedDistanceTexPrev.SampleLevel(my_linear_clamp_sampler, ss_p1.xy, 0).r;
+
+ float3 view_n = normalize(world_to_prev_view(world_normal, 0));
+ float3 view_p0 = float3(0,0,0);
+ float3 view_v0 = ss_to_view(ss_p0);
+ float3 view_p1 = ss_to_view(ss_p1);
+
+ float3 view_intersection = 
+  find_reflection_incident_point(view_p0, view_p1, view_v0, view_n);
+ float3 ss_intersection = view_to_ss(view_intersection);
+
+ return ss_intersection.xy;
 }
 
 
@@ -1367,8 +1443,13 @@ void ResetMVKernel(uint3 id : SV_DispatchThreadID) {
 void RefineMVKernel(uint3 id : SV_DispatchThreadID) {
     if(id.x >= screen_width || id.y >= screen_height) return;
 
+        float3 NormA;
+        float3 NormB;
+
+
         float3 OldPos = LoadSurfaceInfoCurrentInPrev2(id.xy);
-        float3 NewPos = LoadSurfaceInfo(id.xy);
+        float3 NewPos = LoadSurfaceInfo2(id.xy, NormA);
+
 
                 // float4 toCam = mul(viewprojection, float4(OldPos, 1));
                 // float2 reflprojection = (toCam.xy / toCam.w) * 0.5f + 0.5f;
@@ -1378,6 +1459,44 @@ void RefineMVKernel(uint3 id : SV_DispatchThreadID) {
         float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
         if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) {
             CorrectedDistanceTex[id.xy] = length(NewPos - CamPos);// / 120.0f;
-            MVTexture[id.xy] = (reflprojection);
+            MVTexture[int3(id.xy, 0)] = (reflprojection);
+
+
+            float3 NewDir = normalize(NewPos - CamPos);
+            float3 NewDirB = normalize(LoadSecondarySurfaceInfo(id.xy) - NewPos);
+            float3 OldDir = normalize(OldPos - PrevCamPos);
+            float3 OldDirB = normalize(LoadSecondarySurfaceInfoCurrentInPrev2(id.xy) - OldPos);
+
+            float LengthA = length(CamPos - NewPos);
+            float LengthB = length(NewPos - LoadSecondarySurfaceInfo(id.xy));
+
+            float LengthC = length(PrevCamPos - OldPos);
+            float LengthD = length(OldPos - LoadSecondarySurfaceInfoCurrentInPrev2(id.xy));
+
+            float NewLength = LengthA + LengthB;//lerp(0, LengthB, saturate(pow(LengthA / (LengthA + LengthB), 1.0f)));// * (abs(dot(NewDirB, NewDir)))));// + lerp(0, length(NewPos - LoadSecondarySurfaceInfo(id.xy)), length(CamPos - NewPos) / (length(CamPos - NewPos) + length(NewPos - LoadSecondarySurfaceInfo(id.xy))));
+            float OldLength = LengthC + LengthD;//lerp(0, LengthD, saturate(pow(LengthC / (LengthC + LengthD), 1.0f)));// * (abs(dot(OldDirB, OldDir)))));// + lerp(0, length(NewPos - LoadSecondarySurfaceInfo(id.xy)), length(CamPos - NewPos) / (length(CamPos - NewPos) + length(NewPos - LoadSecondarySurfaceInfo(id.xy))));
+            // // length(OldPos - LoadSecondarySurfaceInfoCurrentInPrev2(id.xy));
+
+            NewPos = CamPos + NewDir * NewLength;
+            OldPos = PrevCamPos + OldDir * OldLength;
+
+            curprojectedrefl = mul(viewprojection, float4(LoadSecondarySurfaceInfo(id.xy), 1));
+            prevprojectedrefl = mul(prevviewprojection, float4(LoadSecondarySurfaceInfoCurrentInPrev2(id.xy), 1));
+
+            float2 UV = id.xy / float2(screen_width, screen_height);
+            float2 UV2 = UV;// - reflprojection;
+            reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
+
+
+            float2 Temp = find_previous_reflection_position(float3(UV,0), float3(UV2,0), MVTexture[int3(id.xy, 0)], reflprojection, NormA);
+            reflprojection = (id.xy / float2(screen_width, screen_height)) - Temp;
+            _DebugTex[id.xy] = float4(Temp, 0, 1);
+
+            // float2 pos_prev_Spec = ((((float2(id.xy)+0.5f) * float2(rcp(screen_width), rcp(screen_height)) + reflprojection) * float2(screen_width, screen_height)));// + (random(54, gl_GlobalInvocationID) - 0.5f) * 0.2f;
+            // float3 OldPos2 = LoadSurfaceInfoPrev3(pos_prev_Spec, NormB);
+            // if(FromColorSpecPacked(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec).y < 0.25f && dot(NormB, NormA) > 0.9999)
+                MVTexture[int3(id.xy, 1)] = (reflprojection);
+            // else
+            //     MVTexture[int3(id.xy, 1)] = MVTexture[int3(id.xy, 0)];
         }
 }

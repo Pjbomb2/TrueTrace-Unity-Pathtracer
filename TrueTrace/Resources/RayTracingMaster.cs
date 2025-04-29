@@ -783,7 +783,9 @@ namespace TrueTrace {
             IntersectionShader.SetComputeBuffer(TraceKernel, "GlobalRays", _RayBuffer);
             IntersectionShader.SetComputeBuffer(TraceKernel, "GlobalColors", LightingBuffer);
             IntersectionShader.SetTexture(TraceKernel, "_PrimaryTriangleInfo", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
-
+#if TTReflectedMotionVectors
+            IntersectionShader.SetTexture(TraceKernel, "_SecondaryTriangleInfo", GIWorldPosB);
+#endif
 
             AssetManager.Assets.SetMeshTraceBuffers(IntersectionShader, ShadowKernel);
             IntersectionShader.SetComputeBuffer(ShadowKernel, "ShadowRaysBuffer", _ShadowBuffer);
@@ -801,7 +803,9 @@ namespace TrueTrace {
             AssetManager.Assets.SetHeightmapTraceBuffers(IntersectionShader, HeightmapKernel);
             IntersectionShader.SetComputeBuffer(HeightmapKernel, "GlobalRays", _RayBuffer);
             IntersectionShader.SetTexture(HeightmapKernel, "_PrimaryTriangleInfo", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
-
+#if TTReflectedMotionVectors
+            IntersectionShader.SetTexture(HeightmapKernel, "_SecondaryTriangleInfo", GIWorldPosB);
+#endif
             AssetManager.Assets.SetHeightmapTraceBuffers(IntersectionShader, HeightmapShadowKernel);
             IntersectionShader.SetComputeBuffer(HeightmapShadowKernel, "GlobalColors", LightingBuffer);
             IntersectionShader.SetComputeBuffer(HeightmapShadowKernel, "ShadowRaysBuffer", _ShadowBuffer);
@@ -847,7 +851,11 @@ namespace TrueTrace {
             ShadingShader.SetTexture(MVKernel+2, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
             ShadingShader.SetTexture(MVKernel+2, "PrimaryTriDataPrev", (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
             ShadingShader.SetTexture(MVKernel+2, "MVTexture", MVTexture);
+#if TTReflectedMotionVectors
+            ShadingShader.SetTexture(MVKernel+2, "WorldPosB", GIWorldPosB);
+#endif
             ShadingShader.SetTexture(MVKernel+2, "CorrectedDistanceTex", (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTexA : CorrectedDistanceTexB);
+            ShadingShader.SetTexture(MVKernel+2, "CorrectedDistanceTexPrev", (FramesSinceStart2 % 2 == 1) ? CorrectedDistanceTexA : CorrectedDistanceTexB);
 
             ShadingShader.SetTexture(MVKernel + 1, "MVTexture", MVTexture);
             ShadingShader.SetTexture(MVKernel+1, "CorrectedDistanceTex", (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTexA : CorrectedDistanceTexB);
@@ -1012,6 +1020,7 @@ namespace TrueTrace {
                     _FinalTex.ReleaseSafe();
                     GINEEPosC.ReleaseSafe();
                     GIWorldPosA.ReleaseSafe();
+                    GIWorldPosB.ReleaseSafe();
                     ReSTIRInitialized = false;
                     GIReservoirA.ReleaseSafe();
                     GIReservoirB.ReleaseSafe();
@@ -1091,6 +1100,10 @@ namespace TrueTrace {
                     CommonFunctions.CreateRenderTexture(ref GradientsA, SourceWidth, SourceHeight, CommonFunctions.RTHalf2);
                     CommonFunctions.CreateRenderTexture(ref GradientsB, SourceWidth, SourceHeight, CommonFunctions.RTHalf2);
                     ReSTIRInitialized = true;
+                } else {
+#if TTReflectedMotionVectors
+                    CommonFunctions.CreateRenderTexture(ref GIWorldPosB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+#endif
                 }
 
                 CommonFunctions.CreateRenderTexture(ref GINEEPosA, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
@@ -1105,7 +1118,7 @@ namespace TrueTrace {
 #endif
 
 #if TTCustomMotionVectors
-                CommonFunctions.CreateRenderTexture(ref MVTexture, SourceWidth, SourceHeight, CommonFunctions.RTFull2);
+                CommonFunctions.CreateRenderTextureArray(ref MVTexture, SourceWidth, SourceHeight, 2, CommonFunctions.RTHalf2);
 #endif
                 CommonFunctions.CreateRenderTexture(ref ScreenSpaceInfo, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref ScreenSpaceInfoPrev, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
@@ -1153,7 +1166,7 @@ namespace TrueTrace {
         private void GenerateRays(CommandBuffer cmd) {
             if (LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI) {
                 if(DoKernelProfiling) cmd.BeginSample("ASVGF Reproject Pass");
-                    // AssetManager.Assets.SetMeshTraceBuffers(ASVGFCode.shader, 1);
+                    AssetManager.Assets.SetMeshTraceBuffers(ASVGFCode.shader, 0);
                     ASVGFCode.shader.SetTexture(1, "ScreenSpaceInfoWrite", (FramesSinceStart2 % 2 == 0) ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
                     ASVGFCode.DoRNG(ref _RandomNums, ref _RandomNumsB, FramesSinceStart2, _RayBuffer, cmd, (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB, (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 0)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, Assets.AggTriBufferA, MeshOrderChanged, Assets.TLASCWBVHIndexes, SourceWidth, SourceHeight, (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 1)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, CorrectedDistanceTexA, CorrectedDistanceTexB);
                 if(DoKernelProfiling) cmd.EndSample("ASVGF Reproject Pass");
@@ -1328,6 +1341,7 @@ namespace TrueTrace {
                                     ((FramesSinceStart2 % 2 == 0) ? ScreenSpaceInfo : ScreenSpaceInfoPrev), 
                                     cmd, 
                                     FramesSinceStart2, 
+                                    (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB, 
                                     ref GIWorldPosA, 
                                     LocalTTSettings.DoPartialRendering ? LocalTTSettings.PartialRenderingFactor : 1, 
                                     TTPostProc.ExposureBuffer, 

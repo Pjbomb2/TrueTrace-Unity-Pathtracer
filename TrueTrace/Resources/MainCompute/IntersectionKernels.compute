@@ -11,6 +11,9 @@
 #endif
 
 RWTexture2D<uint4> _PrimaryTriangleInfo;
+#ifdef TTReflectedMotionVectors
+RWTexture2D<uint4> _SecondaryTriangleInfo;
+#endif
 #pragma kernel kernel_trace 
 
 void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inout RayHit ray_hit, const int MatOffset, const float RandNum) {
@@ -163,6 +166,9 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                 _PrimaryTriangleInfo[TempUv] = uint4(MeshOffsets[Indexes.x].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y] - _MeshData[MeshOffsets[Indexes.x].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
             } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
                 _PrimaryTriangleInfo[TempUv] = ((UseReSTIRGI && bestHit.t != FarPlane) ? uint4(MeshOffsets[Indexes.x].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y] - _MeshData[MeshOffsets[Indexes.x].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v)) : ((UseASVGF || bestHit.t != FarPlane) ? uint4(asuint(ray.direction), 99993) : uint4(asuint(ray.direction * bestHit.t + ray.origin), 99993)));
+#ifdef TTReflectedMotionVectors
+                if(UseASVGF && (GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0)) _SecondaryTriangleInfo[TempUv] = (bestHit.t != FarPlane) ? uint4(MeshOffsets[Indexes.x].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y] - _MeshData[MeshOffsets[Indexes.x].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v)) : uint4(asuint(ray.direction), 99993);
+#endif
             }
 
             if(CurBounce == 0 && bestHit.t == asfloat(GlobalRay.hits.z)) bestHit.t = FarPlane;
@@ -331,6 +337,9 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                             #endif
                         } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
                             _PrimaryTriangleInfo[TempUv] = ((UseReSTIRGI && bestHit.t != FarPlane) ? uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v)) : ((UseASVGF || bestHit.t != FarPlane) ? uint4(asuint(ray2.direction), 99993) : uint4(asuint(ray2.direction * bestHit.t + ray2.origin), 99993)));
+#ifdef TTReflectedMotionVectors
+                            if(UseASVGF && (GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0)) _SecondaryTriangleInfo[TempUv] = (bestHit.t != FarPlane) ? uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v)) : uint4(asuint(ray2.direction), 99993);
+#endif
                         }
                         if(CurBounce == 0 && bestHit.t == asfloat(GlobalRay.hits.z)) bestHit.t = FarPlane;
                         set(rayidx, bestHit);

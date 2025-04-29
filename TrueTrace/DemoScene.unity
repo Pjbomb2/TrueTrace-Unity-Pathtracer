@@ -60540,23 +60540,23 @@ MonoBehaviour:
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
-    Roughness: 0
+    Roughness: 0.19
     MatType: 0
     TransmittanceColor: {x: 1, y: 1, z: 1}
-    IOR: 1.31
-    Metallic: 0
+    IOR: 1
+    Metallic: 1
     Sheen: 0
     SheenTint: 0
     SpecularTint: 0
     Clearcoat: 0
     ClearcoatGloss: 0
-    Anisotropic: 0
-    AnisotropicRotation: 0
+    Anisotropic: 1
+    AnisotropicRotation: 63
     Flatness: 0
     DiffTrans: 0
-    SpecTrans: 1
+    SpecTrans: 0
     Specular: 0
-    ScatterDist: 1.84
+    ScatterDist: 0
     MetallicRemap: {x: 0, y: 1}
     RoughnessRemap: {x: 0, y: 1}
     AlphaCutoff: 0.1

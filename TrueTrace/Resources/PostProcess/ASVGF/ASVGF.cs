@@ -279,6 +279,7 @@ namespace TrueTrace {
                         RenderTexture ScreenSpaceInfo, 
                         CommandBuffer cmd, 
                         int CurFrame, 
+                        RenderTexture PrimaryPosData, 
                         ref RenderTexture WorldPosData, 
                         int PartialRenderingFactor, 
                         ComputeBuffer ExposureModifier, 
@@ -307,7 +308,9 @@ namespace TrueTrace {
             shader.SetTexture(CopyData, "ScreenSpaceInfo", ScreenSpaceInfo);
             shader.SetTexture(Temporal, "ScreenSpaceInfo", ScreenSpaceInfo);
             shader.SetInt("PartialRenderingFactor", PartialRenderingFactor);
+            cmd.SetComputeTextureParam(shader, CopyData, "PrimaryPosData", PrimaryPosData);
             cmd.SetComputeTextureParam(shader, CopyData, "WorldPosData", WorldPosData);
+            cmd.SetComputeTextureParam(shader, Atrous, "WorldPosData", WorldPosData);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_COLOR_LF_SHWrite", PT_LF1);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_COLOR_LF_COCGWrite", PT_LF2);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_COLOR_HFWrite", TEX_PT_COLOR_HF);

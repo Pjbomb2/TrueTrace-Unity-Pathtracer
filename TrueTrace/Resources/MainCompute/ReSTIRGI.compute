@@ -7,7 +7,7 @@
 #include "CommonData.cginc"
 #include "Materials.cginc"
 
-#if defined(HDRP) && !defined(TTCustomMotionVectors)
+#if defined(HDRP) || defined(TTCustomMotionVectors)
     Texture2DArray<float2> MotionVectors;
 #else
     Texture2D<float2> MotionVectors;
@@ -354,7 +354,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
 
 
     const float4 GBuffer = ScreenSpaceInfoRead[id.xy];
-    const int MatIndex = (asuint(GBuffer.w) << 4) >> 4;
+    const int MatIndex = (asuint(GBuffer.w) << 4) >> 5;
     const uint Case = (asuint(GBuffer.w) << 1) >> 30;
     const float3 GeomNorm = i_octahedral_32(asuint(GBuffer.x));
     const float3 SurfNorm = i_octahedral_32(asuint(GBuffer.y));
@@ -405,7 +405,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     // RunningReservoirC.Ray.FrameAccum = frames_accumulated;
 
 
-    #if defined(HDRP) && !defined(TTCustomMotionVectors)
+    #if defined(HDRP) || defined(TTCustomMotionVectors)
         float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, float3(UV,0), 0).xy;
     #else
          float2 MotionVector = MotionVectors.SampleLevel(my_linear_clamp_sampler, UV, 0).xy;
@@ -500,7 +500,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     const int pixel_index = id.x + id.y * screen_width;
 
     const float4 GBuffer = ScreenSpaceInfoRead[id.xy];
-    const int MatIndex = (asuint(GBuffer.w) << 4) >> 4;
+    const int MatIndex = (asuint(GBuffer.w) << 4) >> 5;
     const float3 GeomNorm = i_octahedral_32(asuint(GBuffer.x));
     const float3 SurfNorm = i_octahedral_32(asuint(GBuffer.y));
     float3 PrimaryHitPosition = LoadSurfaceInfo(id.xy);
@@ -730,7 +730,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
     const int pixel_index = id.x + id.y * screen_width;
 
     const float4 GBuffer = ScreenSpaceInfoRead[id.xy];
-    const int MatIndex = (asuint(GBuffer.w) << 4) >> 4;
+    const int MatIndex = (asuint(GBuffer.w) << 4) >> 5;
     const float3 GeomNorm = i_octahedral_32(asuint(GBuffer.x));
     const float3 SurfNorm = i_octahedral_32(asuint(GBuffer.y));
     float3 PrimaryHitPosition = LoadSurfaceInfo(id.xy);

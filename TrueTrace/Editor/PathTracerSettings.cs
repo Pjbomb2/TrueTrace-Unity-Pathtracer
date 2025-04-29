@@ -1674,6 +1674,7 @@ Toolbar toolbar;
             if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
             SetGlobalDefines("DX11", definesList.Contains("DX11Only"));         
             SetGlobalDefines("TTCustomMotionVectors", definesList.Contains("TTCustomMotionVectors"));
+            SetGlobalDefines("TTReflectedMotionVectors", definesList.Contains("TTReflectedMotionVectors"));
 
             if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 || definesList.Contains("DX11Only")) {
                if(!definesList.Contains("DX11Only")) {
@@ -1692,6 +1693,7 @@ Toolbar toolbar;
             definesList = GetDefines();
             SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
             SetGlobalDefines("TTCustomMotionVectors", definesList.Contains("TTCustomMotionVectors"));
+            SetGlobalDefines("TTReflectedMotionVectors", definesList.Contains("TTReflectedMotionVectors"));
             SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
             SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
             SetGlobalDefines("MultiMapScreenshot", definesList.Contains("MultiMapScreenshot"));
@@ -1717,6 +1719,10 @@ Toolbar toolbar;
             Toggle CustomMotionVectorToggle = new Toggle() {value = (definesList.Contains("TTCustomMotionVectors")), text = "Remove Rasterization Requirement(EXPERIMENTAL)"};
                CustomMotionVectorToggle.tooltip = "Removes the need for rasterized rendering(except when upscaling with TAAU), allowing you to turn it off in your camera for extra performance";
             CustomMotionVectorToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("TTCustomMotionVectors"); SetGlobalDefines("TTCustomMotionVectors", true);} else {RemoveDefine("TTCustomMotionVectors"); SetGlobalDefines("TTCustomMotionVectors", false);}});
+
+            Toggle ReflectedMotionVectorToggle = new Toggle() {value = (definesList.Contains("TTReflectedMotionVectors")), text = "ASVGF will use reflected motion vectors for metallics"};
+               ReflectedMotionVectorToggle.tooltip = "Requires \"Remove Rasterization Requirement\", will allow for much better metallic reprojection in ASVGF";
+            ReflectedMotionVectorToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("TTReflectedMotionVectors"); SetGlobalDefines("TTReflectedMotionVectors", true);} else {RemoveDefine("TTReflectedMotionVectors"); SetGlobalDefines("TTReflectedMotionVectors", false);}});
 
             Toggle RasterizedDirectToggle = new Toggle() {value = (definesList.Contains("RasterizedDirect")), text = "Use Rasterized Lighting for Direct"};
                RasterizedDirectToggle.tooltip = "Removes the need for rasterized rendering(except when upscaling with TAAU), allowing you to turn it off in your camera for extra performance";
@@ -1792,6 +1798,7 @@ Toolbar toolbar;
             if(Application.isPlaying) {
                HardwareRTToggle.SetEnabled(false);
                CustomMotionVectorToggle.SetEnabled(false);
+               ReflectedMotionVectorToggle.SetEnabled(false);
                RasterizedDirectToggle.SetEnabled(false);
                BindlessToggle.SetEnabled(false);
                GaussianTreeToggle.SetEnabled(false);
@@ -1805,6 +1812,7 @@ Toolbar toolbar;
             } else {
                HardwareRTToggle.SetEnabled(true);
                CustomMotionVectorToggle.SetEnabled(true);
+               ReflectedMotionVectorToggle.SetEnabled(true);
                RasterizedDirectToggle.SetEnabled(true);
                BindlessToggle.SetEnabled(true);
                GaussianTreeToggle.SetEnabled(true);
@@ -1862,6 +1870,7 @@ Toolbar toolbar;
          NonPlayContainer.Add(OIDNToggle);
          NonPlayContainer.Add(RadCacheToggle);
          NonPlayContainer.Add(CustomMotionVectorToggle);
+         NonPlayContainer.Add(ReflectedMotionVectorToggle);
          NonPlayContainer.Add(RasterizedDirectToggle);
          NonPlayContainer.Add(NonAccurateLightTriToggle);
          NonPlayContainer.Add(LoadTTSettingsFromResourcesToggle);
