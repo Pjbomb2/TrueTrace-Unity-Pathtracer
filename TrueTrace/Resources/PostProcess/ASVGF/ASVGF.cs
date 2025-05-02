@@ -224,6 +224,8 @@ namespace TrueTrace {
             shader.SetVector("Forward", RayTracingMaster._camera.transform.forward);
             shader.SetFloat("FarPlane", RayTracingMaster._camera.farClipPlane);
             shader.SetFloat("NearPlane", RayTracingMaster._camera.nearClipPlane);
+            shader.SetVector("PrevCamPos", PrevCamPos);
+            shader.SetVector("CamPos", RayTracingMaster._camera.transform.position);
 #if !TTCustomMotionVectors
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("Dist Correct Kernel");
             shader.SetTextureFromGlobal(DistCorrect, "Depth", "_CameraDepthTexture");
@@ -308,6 +310,7 @@ namespace TrueTrace {
             shader.SetTexture(Temporal, "ScreenSpaceInfo", ScreenSpaceInfo);
             shader.SetInt("PartialRenderingFactor", PartialRenderingFactor);
             cmd.SetComputeTextureParam(shader, CopyData, "WorldPosData", WorldPosData);
+            cmd.SetComputeTextureParam(shader, Atrous, "WorldPosData", WorldPosData);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_COLOR_LF_SHWrite", PT_LF1);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_COLOR_LF_COCGWrite", PT_LF2);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_COLOR_HFWrite", TEX_PT_COLOR_HF);
@@ -315,6 +318,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, CopyData, "RNGTexB", RNGTex);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_NORMALS_AWrite", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_VIEW_DEPTH_B", !EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
+            cmd.SetComputeTextureParam(shader, CopyData, "WRITEDEPTHOVERRIDE", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_NORMALS_B", (!EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
             cmd.SetComputeTextureParam(shader, CopyData, "ReflRefracB", (!EvenFrame ? ReflectedRefractedA : ReflectedRefractedB));
 #if !TTCustomMotionVectors

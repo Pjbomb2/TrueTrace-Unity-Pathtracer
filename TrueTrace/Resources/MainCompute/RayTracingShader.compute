@@ -343,8 +343,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         } else {
             validBSDFSample = true;
             pos = ray.origin + ray.direction * (newT * 0.99f);
-            ray.direction = normalize(SampleDirectionSphere(random(75, pixel_index).x, random(75, pixel_index).y));
-            pdf = 1.0f / (PI * 4.0f);
+            ray.direction = normalize(phase_draine_sample(random(75, pixel_index), ray.direction.xzy, DRAINE_G, DRAINE_A)).xzy;//normalize(SampleDirectionSphere(random(75, pixel_index).x, random(75, pixel_index).y));
+            pdf = phase_draine_eval(dot(ray.direction.xzy, PrevDirection.xzy), DRAINE_G, DRAINE_A);
             norm = ray.direction;
             ray.origin = pos;
             hitDat.surfaceColor = FogColor;
@@ -367,7 +367,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             Color.Data = float3((CurBounce == 0) ? max(throughput, 0.006f) : (max(throughput, 0.005f) * Color.Data.xyz));
         #endif
         PrevScreenData = float4(asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -Geomnorm : Geomnorm)), asfloat(octahedral_32(((hitDat.diffTrans != 0 || (hitDat.diffTrans != 0 && CurBounce == 1)) && Refracted) ? -norm : norm)), PrevScreenData.z + hit.t, asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 4) >> 4) : ((asuint(PrevScreenData.w) << 4) >> 4)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
-        Color.MetRoughIsSpec = ((Color.MetRoughIsSpec & ~(0x7C000000)) | (((CurBounce < 20 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.01f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
+        Color.MetRoughIsSpec = ((Color.MetRoughIsSpec & ~(0x7C000000)) | (((CurBounce < 20 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.03f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
         throughput = 1;  
     }
     #ifdef RadCache
@@ -558,6 +558,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     if((UseASVGF && (CurBounce == GetBounceData(Color.MetRoughIsSpec) - 2 && CurBounce > 0))) bsdf_value *= Color.Data.xyz;
                 #endif
                 #ifdef Fog
+                    // float temppdf = phase_draine_eval(dot(to_light.xzy, PrevDirection.xzy), DRAINE_G, DRAINE_A);
                     float temppdf = 1.0f / (PI * 4.0f);
                     Homo = exp(-SigmaT * OptDepthSpherExpMedium(PrevOrigin.y+bottom_radius, rcp(PrevOrigin.y+bottom_radius), PrevDirection.y, newT, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
                     float3 Homo2 = exp(-SigmaT * OptDepthSpherExpMedium(pos.y+bottom_radius, rcp(pos.y+bottom_radius), to_light.y, distance_to_light, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
@@ -1163,6 +1164,7 @@ int MaterialIndex;
 
     const bool InvalidateScreenSpaceInfo = ((!UseASVGF && CurBounce == 0));
     float4 PrevScreenData = InvalidateScreenSpaceInfo ? 0 : ScreenSpaceInfo[id.xy];
+    if(UseASVGF && CurBounce == 0) PrevScreenData.z = 0;
 
     if (TempMat.specTrans != 1 && TempMat.MetallicTex.x > 0) TempMat.metallic = pow(SampleTexture(BaseUv, SampleMetallic, TempMat), rcp(2.2f));
     if (TempMat.RoughnessTex.x > 0) {
@@ -1372,12 +1374,20 @@ void RefineMVKernel(uint3 id : SV_DispatchThreadID) {
 
                 // float4 toCam = mul(viewprojection, float4(OldPos, 1));
                 // float2 reflprojection = (toCam.xy / toCam.w) * 0.5f + 0.5f;
-
+        float3 NewPos2 = NewPos;
+#if defined(TTReflectionMotionVectors)
+        if(all(NewPos == OldPos)) {
+                float NewDepth = max(ScreenSpaceInfo[id.xy].z - length(NewPos - CamPos),0);
+                float OldDepth = max(ScreenSpaceInfo[id.xy].z - length(OldPos - CamPos),0);
+                NewPos += normalize(NewPos - CamPos) * NewDepth;
+                OldPos += normalize(OldPos - CamPos) * OldDepth;
+        }
+#endif
         float4 curprojectedrefl = mul(viewprojection, float4(NewPos, 1));
         float4 prevprojectedrefl = mul(prevviewprojection, float4(OldPos, 1));
         float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
         if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) {
-            CorrectedDistanceTex[id.xy] = length(NewPos - CamPos);// / 120.0f;
+            CorrectedDistanceTex[id.xy] = length(NewPos2 - CamPos);// / 120.0f;
             MVTexture[id.xy] = (reflprojection);
         }
 }

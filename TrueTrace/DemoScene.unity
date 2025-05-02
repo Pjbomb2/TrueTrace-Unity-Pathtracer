@@ -12613,7 +12613,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 1
+  NeedsToUpdate: 0
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -53992,7 +53992,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 1
+  NeedsToUpdate: 0
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -60473,7 +60473,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 3
   InstanceReferences: 0
-  NeedsToUpdate: 1
+  NeedsToUpdate: 0
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0

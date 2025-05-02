@@ -3,8 +3,10 @@
 // #define DX11
 #define UseBindless
 #define UseSGTree
-// #define TTCustomMotionVectors
+#define TTCustomMotionVectors
+#define TTReflectionMotionVectors
 // #define MultiMapScreenshot
+// #define RasterizedDirect
 //Dont modify above, CPU code will do automatically
 #define AdvancedAlphaMapped
 #define ExtraSampleValidation
@@ -25,12 +27,12 @@
 #define DoubleBufferSGTree
 // #define Fog
 #define RadCache
-#define ClampRoughnessToBounce
-// #define RasterizedDirect
+// #define ClampRoughnessToBounce
 // #define ReSTIRSampleReduction
 // #define ReSTIRRestrictSpatial
 // #define SmartRestriction
 // #define ReSTIRAdditionalAO
+// #define RestirPreventCrossMatBlur
 // #define ShadowGlassAttenuation
 // #define DisableNormalMaps
 // #define ClayMetalOverride

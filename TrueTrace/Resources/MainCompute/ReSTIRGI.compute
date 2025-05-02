@@ -582,7 +582,9 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
             if(CellTapCoord.y < 0 || CellTapCoord.y >= screen_height) CellTapCoord.y = id.y - CellOffset.y;
             if(all(CellTapCoord == id.xy)) continue;
             if(asuint(ScreenSpaceInfoRead[CellTapCoord].w) == 0) continue;
-
+#ifdef RestirPreventCrossMatBlur
+            if(SurfaceMat.metallic > 0 && ((asuint(ScreenSpaceInfoRead[CellTapCoord].w) << 4) >> 4) != MatIndex) continue;
+#endif
             float3 SampleGeomNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].x));
             float NormDiff = max(abs(dot(GeomNorm, SampleGeomNorm)), 0);
             if(NormDiff < 0.9f) continue;
@@ -815,6 +817,9 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
             if(all(CellTapCoord == id.xy)) continue;
             if(asuint(ScreenSpaceInfoRead[CellTapCoord].w) == 0) continue;
 
+#ifdef RestirPreventCrossMatBlur
+            if(SurfaceMat.metallic > 0 && ((asuint(ScreenSpaceInfoRead[CellTapCoord].w) << 4) >> 4) != MatIndex) continue;
+#endif
             float3 SampleGeomNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].x));
             float NormDiff = max(abs(dot(GeomNorm, SampleGeomNorm)), 0);
             if(NormDiff < 0.9f) continue;

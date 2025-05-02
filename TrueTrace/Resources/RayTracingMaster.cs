@@ -18,7 +18,7 @@ namespace TrueTrace {
     {
         public static RayTracingMaster RayMaster;
         [HideInInspector] public static Camera _camera;
-        public static bool DoKernelProfiling = false;
+        public static bool DoKernelProfiling = true;
         [HideInInspector] [SerializeField] public string LocalTTSettingsName = "TTGlobalSettings";
         private bool OverriddenResolutionIsActive = false;
         public bool HDRPorURPRenderInScene = false;
@@ -853,6 +853,7 @@ namespace TrueTrace {
             ShadingShader.SetTexture(MVKernel+1, "CorrectedDistanceTex", (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTexA : CorrectedDistanceTexB);
             ShadingShader.SetComputeBuffer(MVKernel, "GlobalColors", LightingBuffer);
             ShadingShader.SetComputeBuffer(MVKernel + 2, "GlobalColors", LightingBuffer);
+            ShadingShader.SetTexture(MVKernel + 2, "ScreenSpaceInfo", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
 #endif
 
             Atmo.AssignTextures(ShadingShader, ShadeKernel);

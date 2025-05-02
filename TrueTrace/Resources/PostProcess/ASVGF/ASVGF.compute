@@ -267,6 +267,7 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 	uint Spec = 0;
 	bool IsDiffuse = !((ScreenInfo.w >> 31) & 0x1) && (FromColorSpecPacked(Pixel.MetRoughIsSpec).z == 2 || MetRough.y >= 0.6f);
 
+
 	if (IsDiffuse) {
 		if(GetBounceData(Pixel.MetRoughIsSpec) != 1 && !InvalidReprojection) AlbCol.y = AlbedoColorB[pos_prev].y;
 		TempSH = irradiance_to_SH(Exposure * (PartialRenderingFactor) * IndirectBoost * clamp(Pixel.Indirect * Pixel.Data.xyz / 1024.0f,0,1200000.0f), asfloat(WorldPosData[id.xy].xyz));
@@ -463,6 +464,9 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 	ipos += found_offset;
 	Ray PrevCamRay = CreateCameraRayPrev(found_pos_prev / float2(screen_width, screen_height) * 2.0f - 1.0f);
 	Ray PrevCamRay2 = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
+	// if(ipos.x > screen_width / 2) PrevCamRay.origin = PrevCamRay2.origin;
+#if !defined(TTReflectionMotionVectors) || !defined(TTCustomMotionVectors)
+#endif
 	PrevCamRay.origin = PrevCamRay2.origin;
 	uint4 Target = PrimaryTriData[found_pos_prev];
 	// Ray Ray2 = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
@@ -585,8 +589,8 @@ void Gradient_Img(uint3 gl_GlobalInvocationID : SV_DispatchThreadID)
 
 		float3 curr_hf = TEX_PT_COLOR_HFWrite[grad_sample_pos_curr];
 		float3 curr_spec = unpackRGBE(TEX_PT_COLOR_SPECWrite[grad_sample_pos_curr]);
-		TEX_PT_COLOR_HFWrite[grad_sample_pos_curr] = 0;//TEX_PT_COLOR_HFWrite[grad_sample_pos_curr + 1];
-		TEX_PT_COLOR_SPECWrite[grad_sample_pos_curr] = 0;//TEX_PT_COLOR_SPECWrite[grad_sample_pos_curr + 1];
+		// TEX_PT_COLOR_HFWrite[grad_sample_pos_curr] = 0;//TEX_PT_COLOR_HFWrite[grad_sample_pos_curr + 1];
+		// TEX_PT_COLOR_SPECWrite[grad_sample_pos_curr] = 0;//TEX_PT_COLOR_SPECWrite[grad_sample_pos_curr + 1];
 
 		grad_hf = get_gradient(luminance(curr_hf), prev_hf_spec_lum.x);
 		grad_spec = get_gradient(luminance(curr_spec), prev_hf_spec_lum.y);
@@ -1479,6 +1483,85 @@ RWTexture2D<uint> IMG_ASVGF_ATROUS_PING_SPEC;
 Texture2D<uint> TEX_ASVGF_ATROUS_PING_SPEC;
 RWTexture2D<float4> IMG_ASVGF_COLOR;
 
+
+#define pt_fake_roughness_threshold 0.2f
+
+
+float3 SH_to_irradiance(SH sh)
+{
+    float   Y       = sh.shY.w / 0.282095;
+
+    float   T       = Y - sh.CoCg.y * 0.5;
+    float   G       = sh.CoCg.y + T;
+    float   B       = T - sh.CoCg.x * 0.5;
+    float   R       = B + sh.CoCg.x;
+
+	return max(exp(float3(R, G, B)) - 1, 0.0);
+}
+
+void get_reflectivity(float3 base_color, float metallic, inout float3 o_albedo, inout float3 o_base_reflectivity)
+{
+    const float dielectric_specular = 0.04;
+    o_albedo = lerp(base_color * (1.0 - dielectric_specular), 0, metallic);
+    o_base_reflectivity = lerp(dielectric_specular, base_color, metallic);
+}
+
+
+
+float G_Smith_over_4_NdotV(float roughness, float NdotV, float NdotL)
+{
+    float alpha = square(roughness);
+    float g1 = NdotL / (NdotL + sqrt(square(alpha) + (1.0 - square(alpha)) * square(NdotL)));
+    float g2 =   1.0 / (NdotV + sqrt(square(alpha) + (1.0 - square(alpha)) * square(NdotV)));
+    return g1 * g2;
+}
+
+
+
+float3 schlick_fresnel(float3 F0, float HdotV, float specular_factor)
+{
+    float3 F = F0 + (1.0 - F0) * pow(1 - HdotV, 5);
+    F *= specular_factor;
+    F = clamp(F, 0.0, 1.0);
+    return F;
+}
+
+float3 GGX_times_NdotL(float3 V, float3 L, float3 N, float roughness, float3 F0, float NoH_offset, float specular_factor, inout float3 F)
+{
+    float3 H = normalize(L - V);
+    
+    float NoL = max(0, dot(N, L));
+    float VoH = max(0, -dot(V, H));
+    float NoV = max(0, -dot(N, V));
+    float NoH = clamp(dot(N, H) + NoH_offset, 0, 1);
+    
+    F = schlick_fresnel(F0, VoH, specular_factor);
+
+    if (NoL > 0 && VoH > 0)
+    {
+        float G = G_Smith_over_4_NdotV(roughness, NoV, NoL);
+        float alpha = square(max(roughness, 0.02));
+        float D = square(alpha) / (3.14159f * square(square(NoH) * square(alpha) + (1 - square(NoH))));
+
+        // GGX BRDF = D*G*F / (4*NoL*NoV)
+        // NoL = 1 by function definition, cancelled out in the rendering integral
+        // NoV and 4 are cancelled out with the same terms in G
+        return F * (D * G);
+    }
+
+    return 0;
+}
+
+float3 demodulate_specular(float3 base_reflectivity, float3 specular)
+{
+    // if (global_ubo.flt_enable == 0)
+        // return specular;
+
+    return specular / max(0.01, base_reflectivity);
+}
+
+
+
 [numthreads(16, 16, 1)]
 void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGroupID : SV_GroupID, uint gl_LocalInvocationIndex : SV_GroupIndex, uint3 gl_LocalInvocationID : SV_GroupThreadID)
 {
@@ -1510,6 +1593,60 @@ void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGrou
 		if(UpscalerMethod != 0 && DiffRes && base_color.w <= 2) base_color.xyz = 1;
 		if(base_color.w == 1) base_color = float4(unpackRGBE(AlbedoColorB[ipos].x),1);
 		// Project the spherical harmonics lighting onto the actual surface normal
+
+
+		// float3 Test = 0;
+		// {
+		// 	float2 metrough = MetallicA[ipos].xy;
+		// 	float metallic = metrough.x;
+		// 	float roughness = metrough.y;
+
+		// 	float fake_specular_weight = smoothstep(pt_fake_roughness_threshold, pt_fake_roughness_threshold + 0.1f, roughness);
+		// 	if(filtered_lf.shY.w > 0 && fake_specular_weight > 0) {
+	    // 		Ray CamRay = CreateCameraRay(ipos / float2(screen_width, screen_height) * 2.0f - 1.0f);
+		// 		float3 view_direction = -asfloat(WorldPosData[ipos.xy].xyz);
+
+		// 		float3 incoming_direction = filtered_lf.shY.xyz / filtered_lf.shY.w * (0.282095 / 0.488603);
+
+
+		// 		float3 normal2 = normal * (dot(view_direction, normal) < 0) ? -1 : 1;
+
+		// 		float incoming_length = length(incoming_direction);
+		// 		float directionality = incoming_length;
+		// 		float scale = 1;
+
+		// 		if(directionality >= 1) {
+		// 			incoming_direction /= incoming_length;
+		// 		} else {
+		// 			incoming_direction = lerp(reflect(view_direction, normal2), incoming_direction / (incoming_length + 1e-6), directionality);
+		// 			roughness = lerp(1, roughness, pow(directionality, 3));
+		// 			scale = pow(roughness + 1, 3);
+		// 		}
+
+		// 		float3 color = SH_to_irradiance(filtered_lf) * 1024.0f;
+
+		// 		float3 albedo, base_reflectivity;
+		// 		get_reflectivity(base_color.rgb, metallic, albedo, base_reflectivity);
+
+		// 		float specular_factor = 0.5f;
+
+		// 		float3 F;
+
+		// 		float3 brdf = GGX_times_NdotL(view_direction, incoming_direction, normal2, roughness, base_reflectivity, 0, specular_factor, F);
+
+		// 		float3 fake_specular = color * fake_specular_weight * brdf * scale;
+		// 		Test = brdf;
+		// 		fake_specular = demodulate_specular(base_reflectivity, fake_specular);
+		// 		if(ipos.x > screen_width / 2) filtered_spec += fake_specular;
+
+		// 	}
+
+		// }
+
+
+
+
+
 		float3 projected_lf = project_SH_irradiance(filtered_lf, normal);
 
 		projected_lf *= 1024.0f;

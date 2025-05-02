@@ -3222,3 +3222,56 @@ float3 waveLengthToRGB(float Wavelength) {
 
     return pow(float3(Red, Green, Blue) * factor, Gamma);
 }
+
+#define DRAINE_G 0.65
+#define DRAINE_A 32.0
+
+
+float phase_draine_eval(const float u, const float g, const float a)
+{
+    return ((1 - g*g)*(1 + a*u*u))/(4.*(1 + (a*(1 + 2*g*g))/3.) * PI * pow(1 + g*g - 2*g*u,1.5));
+}
+
+// sample: (sample an exact deflection cosine)
+//   xi = a uniform random real in [0,1]
+float phase_draine_sample(const float xi, const float g, const float a)
+{
+    const float g2 = g * g;
+    const float g3 = g * g2;
+    const float g4 = g2 * g2;
+    const float g6 = g2 * g4;
+    const float pgp1_2 = (1 + g2) * (1 + g2);
+    const float T1 = (-1 + g2) * (4 * g2 + a * pgp1_2);
+    const float T1a = -a + a * g4;
+    const float T1a3 = T1a * T1a * T1a;
+    const float T2 = -1296 * (-1 + g2) * (a - a * g2) * (T1a) * (4 * g2 + a * pgp1_2);
+    const float T3 = 3 * g2 * (1 + g * (-1 + 2 * xi)) + a * (2 + g2 + g3 * (1 + 2 * g2) * (-1 + 2 * xi));
+    const float T4a = 432 * T1a3 + T2 + 432 * (a - a * g2) * T3 * T3;
+    const float T4b = -144 * a * g2 + 288 * a * g4 - 144 * a * g6;
+    const float T4b3 = T4b * T4b * T4b;
+    const float T4 = T4a + sqrt(-4 * T4b3 + T4a * T4a);
+    const float T4p3 = pow(T4, 1.0 / 3.0);
+    const float T6 = (2 * T1a + (48 * pow(2, 1.0 / 3.0) *
+        (-(a * g2) + 2 * a * g4 - a * g6)) / T4p3 + T4p3 / (3. * pow(2, 1.0 / 3.0))) / (a - a * g2);
+    const float T5 = 6 * (1 + g2) + T6;
+    return (1 + g2 - pow(-0.5 * sqrt(T5) + sqrt(6 * (1 + g2) - (8 * T3) / (a * (-1 + g2) * sqrt(T5)) - T6) / 2., 2)) / (2. * g);
+}
+
+float3x3 make_frame(const float3 z) {
+    const float sign = (z.z >= 0) ? 1 : -1;
+    const float a = -1.0 / (sign + z.z);
+    const float b = z.x * z.y * a;
+    float3 A = float3(1.0 + sign * z.x * z.x * a, sign * b, -sign * z.x);
+    float3 B = float3(b, sign + z.y * z.y * a, -z.y);
+    return float3x3(float3(A.x,B.x,z.x), float3(A.y,B.y,z.y), float3(A.z,B.z,z.z));
+    // return float3x3(float3(1.0 + sign * z.x * z.x * a, sign * b, -sign * z.x),
+                // float3(b, sign + z.y * z.y * a, -z.y),
+                // z);
+}
+
+
+float3 phase_draine_sample(const float2 xi, const float3 wi, const float g, const float a) {
+    const float deflection_cos = phase_draine_sample(xi.x, g, a);
+    const float z2 = sqrt(1.0 - deflection_cos * deflection_cos);
+    return mul(make_frame(wi), float3(z2 * cos(2.0f * PI * xi.y), z2 * sin(2.0f * PI * xi.y), deflection_cos));
+}

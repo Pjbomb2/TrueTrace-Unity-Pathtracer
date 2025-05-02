@@ -1671,6 +1671,7 @@ Toolbar toolbar;
             SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
             SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
             SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
+            // SetGlobalDefines("TTReflectionMotionVectors", definesList.Contains("TTReflectionMotionVectors"));
             if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
             SetGlobalDefines("DX11", definesList.Contains("DX11Only"));         
             SetGlobalDefines("TTCustomMotionVectors", definesList.Contains("TTCustomMotionVectors"));
@@ -1694,6 +1695,7 @@ Toolbar toolbar;
             SetGlobalDefines("TTCustomMotionVectors", definesList.Contains("TTCustomMotionVectors"));
             SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
             SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
+            // SetGlobalDefines("TTReflectionMotionVectors", definesList.Contains("TTReflectionMotionVectors"));
             SetGlobalDefines("MultiMapScreenshot", definesList.Contains("MultiMapScreenshot"));
             if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
             SetGlobalDefines("DX11", definesList.Contains("DX11Only"));
@@ -1717,6 +1719,10 @@ Toolbar toolbar;
             Toggle CustomMotionVectorToggle = new Toggle() {value = (definesList.Contains("TTCustomMotionVectors")), text = "Remove Rasterization Requirement(EXPERIMENTAL)"};
                CustomMotionVectorToggle.tooltip = "Removes the need for rasterized rendering(except when upscaling with TAAU), allowing you to turn it off in your camera for extra performance";
             CustomMotionVectorToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("TTCustomMotionVectors"); SetGlobalDefines("TTCustomMotionVectors", true);} else {RemoveDefine("TTCustomMotionVectors"); SetGlobalDefines("TTCustomMotionVectors", false);}});
+
+            // Toggle ReflectionMotionVectorToggle = new Toggle() {value = (definesList.Contains("TTReflectionMotionVectors")), text = "Accurate Mirror Motion Vectors(Experiemental)"};
+            //    ReflectionMotionVectorToggle.tooltip = "A better way to calculate motion vectors for reflections in mirrors and such for ASVGF, requires \"RemoveRasterizationRequirement\"";
+            // ReflectionMotionVectorToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("TTReflectionMotionVectors"); SetGlobalDefines("TTReflectionMotionVectors", true);} else {RemoveDefine("TTReflectionMotionVectors"); SetGlobalDefines("TTReflectionMotionVectors", false);}});
 
             Toggle RasterizedDirectToggle = new Toggle() {value = (definesList.Contains("RasterizedDirect")), text = "Use Rasterized Lighting for Direct"};
                RasterizedDirectToggle.tooltip = "Removes the need for rasterized rendering(except when upscaling with TAAU), allowing you to turn it off in your camera for extra performance";
@@ -1792,6 +1798,7 @@ Toolbar toolbar;
             if(Application.isPlaying) {
                HardwareRTToggle.SetEnabled(false);
                CustomMotionVectorToggle.SetEnabled(false);
+               // ReflectionMotionVectorToggle.SetEnabled(false);
                RasterizedDirectToggle.SetEnabled(false);
                BindlessToggle.SetEnabled(false);
                GaussianTreeToggle.SetEnabled(false);
@@ -1805,6 +1812,7 @@ Toolbar toolbar;
             } else {
                HardwareRTToggle.SetEnabled(true);
                CustomMotionVectorToggle.SetEnabled(true);
+               // ReflectionMotionVectorToggle.SetEnabled(true);
                RasterizedDirectToggle.SetEnabled(true);
                BindlessToggle.SetEnabled(true);
                GaussianTreeToggle.SetEnabled(true);
@@ -1862,6 +1870,7 @@ Toolbar toolbar;
          NonPlayContainer.Add(OIDNToggle);
          NonPlayContainer.Add(RadCacheToggle);
          NonPlayContainer.Add(CustomMotionVectorToggle);
+         // NonPlayContainer.Add(ReflectionMotionVectorToggle);
          NonPlayContainer.Add(RasterizedDirectToggle);
          NonPlayContainer.Add(NonAccurateLightTriToggle);
          NonPlayContainer.Add(LoadTTSettingsFromResourcesToggle);
@@ -1875,6 +1884,7 @@ Toolbar toolbar;
          VisualElement PlayContainer = new VisualElement();
          PlayContainer.style.paddingLeft = 10;
 
+         PlayContainer.Add(CustomToggle("Accurate Mirror Motion Vectors(Experiemental)", "TTReflectionMotionVectors", "A better way to calculate motion vectors for reflections in mirrors and such for ASVGF, requires \"RemoveRasterizationRequirement\""));
          PlayContainer.Add(CustomToggle("Fade Mapping", "FadeMapping", "Allows for fade mapping"));
          PlayContainer.Add(CustomToggle("Stained Glass", "StainedGlassShadows", "Simulates colored glass coloring shadow rays - Stained glass effect"));
          PlayContainer.Add(CustomToggle("Ignore Backfacing Triangles", "IgnoreBackfacing", "Backfacing triangles wont get rendered"));
@@ -1884,7 +1894,6 @@ Toolbar toolbar;
          PlayContainer.Add(CustomToggle("Use EON Diffuse", "EONDiffuse", "Different diffuse material model"));
          PlayContainer.Add(CustomToggle("Use Advanced Background", "AdvancedBackground"));
          PlayContainer.Add(CustomToggle("Multiscatter Fog", "Fog", "Not realtime, as I have no denoiser for it yet"));
-
 
 
          Slider FogSlider = new Slider() {label = "Fog Density: ", value = FogDensity, highValue = 0.2f, lowValue = 0.000000001f};
