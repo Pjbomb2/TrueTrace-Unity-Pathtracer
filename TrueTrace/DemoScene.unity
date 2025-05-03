@@ -12486,7 +12486,7 @@ MonoBehaviour:
           BBMax: {x: 0.5, y: 0.5, z: 0.5}
           BBMin: {x: -0.5, y: -0.5, z: -0.5}
         w: {x: -0.7714121, y: 0.39507377, z: 0.49883944}
-        phi: 378.83908
+        phi: 37.262863
         cosTheta_o: -0.9970375
         cosTheta_e: 0.0000012675908
         LightCount: 768
@@ -12677,7 +12677,7 @@ MonoBehaviour:
       RotationSecondaryDiffuse: 0
       RotationSecondaryNormal: 0
     BaseColor: {x: 1, y: 1, z: 1}
-    emission: 12
+    emission: 122
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
     Roughness: 0
@@ -20182,7 +20182,7 @@ MonoBehaviour:
       RotationSecondary: 0
       RotationSecondaryDiffuse: 0
       RotationSecondaryNormal: 0
-    BaseColor: {x: 1, y: 1, z: 1}
+    BaseColor: {x: 0, y: 0, z: 0}
     emission: 0
     EmissionColor: {x: 1, y: 1, z: 1}
     Tag: 0
@@ -20267,7 +20267,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
   Names:
@@ -37536,10 +37536,10 @@ MonoBehaviour:
   RenderTransforms: []
   RenderQue: []
   BuildQue:
+  - {fileID: 0}
   - {fileID: 499686671}
   - {fileID: 806668473}
   - {fileID: 1770588100}
-  - {fileID: 1931085300}
   AddQue: []
   RemoveQue: []
   UpdateQue: []
@@ -60717,7 +60717,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1931085298
 Transform:
   m_ObjectHideFlags: 0
@@ -60793,14 +60793,218 @@ MonoBehaviour:
   Name: Cube
   ChildObjects:
   - {fileID: 1931085301}
-  MeshCountChanged: 1
-  AggTriangles: []
+  MeshCountChanged: 0
+  AggTriangles:
+  - pos0: {x: 0.5, y: 0.5, z: -0.5}
+    posedge1: {x: -1, y: -1, z: 0}
+    posedge2: {x: 0, y: -1, z: 0}
+    norm0: 4294967295
+    norm1: 4294967295
+    norm2: 4294967295
+    tan0: 2147418112
+    tan1: 2147418112
+    tan2: 2147418112
+    tex0: 0
+    texedge1: 1006648320
+    texedge2: 15360
+    VertColA: 0
+    VertColB: 0
+    VertColC: 0
+    MatDat: 0
+    IsEmissive: 0
+  - pos0: {x: 0.5, y: 0.5, z: -0.5}
+    posedge1: {x: -1, y: 0, z: 0}
+    posedge2: {x: -1, y: -1, z: 0}
+    norm0: 4294967295
+    norm1: 4294967295
+    norm2: 4294967295
+    tan0: 2147418112
+    tan1: 2147418112
+    tan2: 2147418112
+    tex0: 0
+    texedge1: 1006632960
+    texedge2: 1006648320
+    VertColA: 0
+    VertColB: 0
+    VertColC: 0
+    MatDat: 0
+    IsEmissive: 0
+  - pos0: {x: 0.5, y: -0.5, z: -0.5}
+    posedge1: {x: -1, y: 0, z: 1}
+    posedge2: {x: 0, y: 0, z: 1}
+    norm0: 32767
+    norm1: 32767
+    norm2: 32767
+    tan0: 2147418112
+    tan1: 2147418112
+    tan2: 2147418112
+    tex0: 0
+    texedge1: 1006648320
+    texedge2: 15360
+    VertColA: 0
+    VertColB: 0
+    VertColC: 0
+    MatDat: 0
+    IsEmissive: 0
+  - pos0: {x: 0.5, y: -0.5, z: -0.5}
+    posedge1: {x: -1, y: 0, z: 0}
+    posedge2: {x: -1, y: 0, z: 1}
+    norm0: 32767
+    norm1: 32767
+    norm2: 32767
+    tan0: 2147418112
+    tan1: 2147418112
+    tan2: 2147418112
+    tex0: 0
+    texedge1: 1006632960
+    texedge2: 1006648320
+    VertColA: 0
+    VertColB: 0
+    VertColC: 0
+    MatDat: 0
+    IsEmissive: 0
+  - pos0: {x: 0.5, y: 0.5, z: 0.5}
+    posedge1: {x: -1, y: 0, z: -1}
+    posedge2: {x: 0, y: 0, z: -1}
+    norm0: 4294934527
+    norm1: 4294934527
+    norm2: 4294934527
+    tan0: 2147418112
+    tan1: 2147418112
+    tan2: 2147418112
+    tex0: 0
+    texedge1: 1006648320
+    texedge2: 15360
+    VertColA: 0
+    VertColB: 0
+    VertColC: 0
+    MatDat: 0
+    IsEmissive: 0
+  - pos0: {x: 0.5, y: 0.5, z: 0.5}
+    posedge1: {x: -1, y: 0, z: 0}
+    posedge2: {x: -1, y: 0, z: -1}
+    norm0: 4294934527
+    norm1: 4294934527
+    norm2: 4294934527
+    tan0: 2147418112
+    tan1: 2147418112
+    tan2: 2147418112
+    tex0: 0
+    texedge1: 1006632960
+    texedge2: 1006648320
+    VertColA: 0
+    VertColB: 0
+    VertColC: 0
+    MatDat: 0
+    IsEmissive: 0
+  - pos0: {x: -0.5, y: -0.5, z: 0.5}
+    posedge1: {x: 0, y: 1, z: -1}
+    posedge2: {x: 0, y: 1, z: 0}
+    norm0: 2147418112
+    norm1: 2147418112
+    norm2: 2147418112
+    tan0: 4294967295
+    tan1: 4294967295
+    tan2: 4294967295
+    tex0: 0
+    texedge1: 1006648320
+    texedge2: 15360
+    VertColA: 0
+    VertColB: 0
+    VertColC: 0
+    MatDat: 0
+    IsEmissive: 0
+  - pos0: {x: -0.5, y: -0.5, z: 0.5}
+    posedge1: {x: 0, y: 0, z: -1}
+    posedge2: {x: 0, y: 1, z: -1}
+    norm0: 2147418112
+    norm1: 2147418112
+    norm2: 2147418112
+    tan0: 4294967295
+    tan1: 4294967295
+    tan2: 4294967295
+    tex0: 0
+    texedge1: 1006632960
+    texedge2: 1006648320
+    VertColA: 0
+    VertColB: 0
+    VertColC: 0
+    MatDat: 0
+    IsEmissive: 0
+  - pos0: {x: 0.5, y: -0.5, z: -0.5}
+    posedge1: {x: 0, y: 1, z: 1}
+    posedge2: {x: 0, y: 1, z: 0}
+    norm0: 2147483647
+    norm1: 2147483647
+    norm2: 2147483647
+    tan0: 2147450879
+    tan1: 2147450879
+    tan2: 2147450879
+    tex0: 0
+    texedge1: 1006648320
+    texedge2: 15360
+    VertColA: 0
+    VertColB: 0
+    VertColC: 0
+    MatDat: 0
+    IsEmissive: 0
+  - pos0: {x: 0.5, y: -0.5, z: -0.5}
+    posedge1: {x: 0, y: 0, z: 1}
+    posedge2: {x: 0, y: 1, z: 1}
+    norm0: 2147483647
+    norm1: 2147483647
+    norm2: 2147483647
+    tan0: 2147450879
+    tan1: 2147450879
+    tan2: 2147450879
+    tex0: 0
+    texedge1: 1006632960
+    texedge2: 1006648320
+    VertColA: 0
+    VertColB: 0
+    VertColC: 0
+    MatDat: 0
+    IsEmissive: 0
+  - pos0: {x: 0.5, y: -0.5, z: 0.5}
+    posedge1: {x: -1, y: 1, z: 0}
+    posedge2: {x: 0, y: 1, z: 0}
+    norm0: 2147450879
+    norm1: 2147450879
+    norm2: 2147450879
+    tan0: 2147418112
+    tan1: 2147418112
+    tan2: 2147418112
+    tex0: 0
+    texedge1: 1006648320
+    texedge2: 15360
+    VertColA: 0
+    VertColB: 0
+    VertColC: 0
+    MatDat: 0
+    IsEmissive: 0
+  - pos0: {x: 0.5, y: -0.5, z: 0.5}
+    posedge1: {x: -1, y: 0, z: 0}
+    posedge2: {x: -1, y: 1, z: 0}
+    norm0: 2147450879
+    norm1: 2147450879
+    norm2: 2147450879
+    tan0: 2147418112
+    tan1: 2147418112
+    tan2: 2147418112
+    tex0: 0
+    texedge1: 1006632960
+    texedge2: 1006648320
+    VertColA: 0
+    VertColB: 0
+    VertColC: 0
+    MatDat: 0
+    IsEmissive: 0
   ParentScale: {x: 0.001, y: 0.001, z: 0.001}
   LightTriangles: []
   BVH:
-    cwbvh_indices: 
-    cwbvhindex_count: 0
-    cwbvhnode_count: 0
+    cwbvh_indices: 0a0000000b00000004000000050000000000000001000000020000000300000006000000070000000800000009000000
+    cwbvhindex_count: 12
+    cwbvhnode_count: 1
     ZeroedData:
       e: 000000000000000000000000
       imask: 0
@@ -60819,7 +61023,27 @@ MonoBehaviour:
   IndexCounts: 
   MeshRefit: {fileID: 7200000, guid: 8375b50c4fc272d41ab1b7c55b853562, type: 3}
   HasStarted: 0
-  AggNodes: []
+  AggNodes:
+  - node_0x: 3204465033
+    node_0y: 3204465033
+    node_0z: 3204465033
+    node_0w: 7895160
+    node_1x: 1
+    node_1y: 0
+    node_1z: 1717854816
+    node_1w: 27240
+    node_2x: 0
+    node_2y: 25264513
+    node_2z: 128
+    node_2w: 33153
+    node_3x: 8388608
+    node_3y: 2172715393
+    node_3z: 0
+    node_3w: 33153
+    node_4x: 0
+    node_4y: 2172748033
+    node_4z: 32768
+    node_4w: 33153
   InstanceMeshIndex: 0
   LightEndIndex: 0
   aabb_untransformed:
@@ -60831,7 +61055,66 @@ MonoBehaviour:
   AllFull: 0
   AggIndexCount: 12
   AggBVHNodeCount: 1
-  _Materials: []
+  _Materials:
+  - Textures:
+      AlbedoTex: {x: 0, y: 0}
+      NormalTex: {x: 0, y: 0}
+      EmissiveTex: {x: 0, y: 0}
+      MetallicTex: {x: 0, y: 0}
+      RoughnessTex: {x: 0, y: 0}
+      AlphaTex: {x: 0, y: 0}
+      MatCapMask: {x: 0, y: 0}
+      MatCapTex: {x: 0, y: 0}
+      SecondaryAlbedoTex: {x: 0, y: 0}
+      SecondaryAlbedoMask: {x: 0, y: 0}
+      SecondaryNormalTex: {x: 0, y: 0}
+    MatData:
+      TextureModifiers:
+        MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
+        SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
+        NormalTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
+        SecondaryAlbedoTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
+        SecondaryNormalTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
+        Rotation: 0
+        RotationNormal: 0
+        RotationSecondary: 0
+        RotationSecondaryDiffuse: 0
+        RotationSecondaryNormal: 0
+      BaseColor: {x: 1, y: 1, z: 1}
+      emission: 0
+      EmissionColor: {x: 1, y: 1, z: 1}
+      Tag: 0
+      Roughness: 0
+      MatType: 0
+      TransmittanceColor: {x: 1, y: 1, z: 1}
+      IOR: 1.31
+      Metallic: 0
+      Sheen: 0
+      SheenTint: 0
+      SpecularTint: 0
+      Clearcoat: 0
+      ClearcoatGloss: 0
+      Anisotropic: 0
+      AnisotropicRotation: 0
+      Flatness: 0
+      DiffTrans: 0
+      SpecTrans: 1
+      Specular: 0
+      ScatterDist: 1.84
+      MetallicRemap: {x: 0, y: 1}
+      RoughnessRemap: {x: 0, y: 1}
+      AlphaCutoff: 0.1
+      NormalStrength: 1
+      Hue: 0
+      Saturation: 1
+      Contrast: 1
+      Brightness: 1
+      BlendColor: {x: 1, y: 1, z: 1}
+      BlendFactor: 0
+      ColorBleed: 1
+      AlbedoBlendFactor: 0
+      SecondaryNormalTexBlend: 0
+      DetailNormalStrength: 1
   MatOffset: 1
   CachedTransforms:
   - WTL:
@@ -60871,8 +61154,12 @@ MonoBehaviour:
       e33: 1
     Position: {x: 0, y: 1.05, z: 0}
   TotalObjects: 1
-  TransformIndexes: []
-  HasCompleted: 0
+  TransformIndexes:
+  - VertexStart: 0
+    VertexCount: 36
+    IndexOffset: 0
+    IndexOffsetEnd: 24
+  HasCompleted: 1
   TotEnergy: 0
   ThisTransform: {fileID: 1931085298}
   ConstructKernel: 0
@@ -60882,7 +61169,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 3
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -60952,7 +61239,7 @@ MonoBehaviour:
     Roughness: 0
     MatType: 0
     TransmittanceColor: {x: 1, y: 1, z: 1}
-    IOR: 1.31
+    IOR: 1.16
     Metallic: 0
     Sheen: 0
     SheenTint: 0
@@ -60965,7 +61252,7 @@ MonoBehaviour:
     DiffTrans: 0
     SpecTrans: 1
     Specular: 0
-    ScatterDist: 1.84
+    ScatterDist: 5
     MetallicRemap: {x: 0, y: 1}
     RoughnessRemap: {x: 0, y: 1}
     AlphaCutoff: 0.1

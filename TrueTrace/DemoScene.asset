@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   SceneName: TestA
   IndirectBoost: 1
-  bouncecount: 6
+  bouncecount: 12
   ClayMode: 0
   UseRussianRoulette: 0
   UseNEE: 0
@@ -44,7 +44,7 @@ MonoBehaviour:
   DoPartialRendering: 0
   PartialRenderingFactor: 1
   DoFirefly: 0
-  ImprovedPrimaryHit: 1
+  ImprovedPrimaryHit: 0
   RISCount: 12
   ToneMapper: 0
   SkyDesaturate: 0

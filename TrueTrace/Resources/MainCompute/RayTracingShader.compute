@@ -223,17 +223,21 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
 
 
+    if(hitDat.specTrans == 1 || (hitDat.metallic == 1 && hitDat.roughness < 0.01f)) {
+
+        }else
+    
     if(CurBounce > 0) {
         {
 
             float3 lc_incident;//
             if(hitDat.emission > 0.0f) {
-            float3 a1 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge1).xyz;
-            float3 a2 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge2).xyz;
-            float a = AreaOfTriangle(float3(0,0,0), a1, a2);
-            float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
-            float light_pdf = 1.0f / (SA * LightMeshCount);
-            float3 EmissCol = hitDat.surfaceColor * hitDat.emission * LEMEnergyScale;
+                float3 a1 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge1).xyz;
+                float3 a2 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge2).xyz;
+                float a = AreaOfTriangle(float3(0,0,0), a1, a2);
+                float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
+                float light_pdf = 1.0f / (SA * LightMeshCount);
+                float3 EmissCol = hitDat.surfaceColor * hitDat.emission * LEMEnergyScale;
                 lc_incident = EmissCol;
             } else {
                 int Layer;
@@ -357,7 +361,11 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
 
 
-
+    if(hitDat.specTrans == 1 || (hitDat.metallic == 1 && hitDat.roughness < 0.01f)) {
+        validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
+        MCPrevData[pixel_index].A = uint4(1,1,1,octahedral_32(Refracted ? -Geomnorm : Geomnorm));
+        MCPrevData[pixel_index].mcState = (MCState)0;
+        } else 
 
     if(CurBounce >= 0) {
         MCState mc_state;
@@ -425,6 +433,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             float3 bsdf2;
             const float3x3 TangSpace = build_rotated_ONB(norm, hitDat.anisotropicRotation);
             validBSDFSample = EvaluateBsdf(hitDat, PrevDirection, ray.direction, norm, pdf, bsdf, pixel_index);//, pixel_index, TangSpace);
+            pdf = max(pdf, 0.001f);
             // validBSDFSample = true;
             // Valid2 = ReconstructBsdf2(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, TangSpace, pixel_index);
             // Valid2 = EvaluateBsdf2(SurfaceMat, CameraRay.direction, normalize(NEEPos - PrimaryHitPosition), SurfNorm, pdf, NEEbsdf, pixel_index, TangSpace);
@@ -1447,8 +1456,8 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
     #endif
 
     MCState mc_state;
-    mc_adaptive_load(mc_state, _DebugTex[id.xy].xyz, i_octahedral_32(asuint(_DebugTex[id.xy].w)), randomNEE(322, final_pixel_index).x, randomNEE(322, final_pixel_index).y);
-    // res = mc_state.sum_w * 0.1;//(mc_state_get_vmf(mc_state, _DebugTex[id.xy].xyz).xyz + 1) / 2.0f;
+    mc_adaptive_load(mc_state, _DebugTex[id.xy].xzy, i_octahedral_32(asuint(_DebugTex[id.xy].w)).xzy, randomNEE(322, final_pixel_index).x, randomNEE(322, final_pixel_index).y);
+    // res = (mc_state_get_vmf(mc_state, _DebugTex[id.xy].xzy).xzy);
 
     Result[id.xy] = float4(res, 1.0f);
 }
