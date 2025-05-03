@@ -110,10 +110,12 @@ void sampleEquiAngular( float u, float maxDistance, float3 rOrigin, float3 rDire
     pdf = D / ( (thetaB - thetaA) * (D * D + t * t) );
 }
 #ifdef RadCache
-inline void calcFinalColor(inout SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout float3 bsdf, inout float3 Geomnorm, inout uint CachePathLength, int GTX) {//main function
+inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout float3 bsdf, inout float3 Geomnorm, inout uint CachePathLength, int GTX) {//main function
 #else
 inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout float3 bsdf, inout float3 Geomnorm) {//main function
 #endif
+
+
     #ifdef Fog
         float3 SigmaT = FogDensity * FogScale;
         float3 SigmaS = SigmaT * FogColor;
@@ -189,6 +191,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     if(CurBounce == 0) _DebugTex[id.xy] = float4(norm, 0);
 #endif
 
+    if(CurBounce == 0) MCPrevData[pixel_index].A = uint4(0,0,0,octahedral_32(Geomnorm));
 
 
     {
@@ -215,6 +218,54 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         throughput *= Homo;
         if(newT == hit.t) {
     #endif
+
+
+
+
+
+    if(CurBounce > 0) {
+        {
+
+            float3 lc_incident;//
+            if(hitDat.emission > 0.0f) {
+            float3 a1 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge1).xyz;
+            float3 a2 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge2).xyz;
+            float a = AreaOfTriangle(float3(0,0,0), a1, a2);
+            float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
+            float light_pdf = 1.0f / (SA * LightMeshCount);
+            float3 EmissCol = hitDat.surfaceColor * hitDat.emission * LEMEnergyScale;
+                lc_incident = EmissCol;
+            } else {
+                int Layer;
+                float VoxSize = GetVoxSize(pos, Layer);
+                GridVoxel TempVox = RetrieveCacheData(GenHashPrecompedLayer(pos, Layer, Geomnorm));
+                float3 Rad = TempVox.radiance / (float)max(TempVox.SampleNum,1);
+                lc_incident = throughput * Rad;
+            }
+            // multiply albedo?
+            const float mc_f = yuv_luminance(lc_incident / asfloat(MCPrevData[pixel_index].A.z));
+            if (!isinf(mc_f) && !isnan(mc_f)) {
+                CacheBuffer[pixel_index].RunningIlluminance = packRGBE(lc_incident * asfloat(MCPrevData[pixel_index].A.y) / max(asfloat(MCPrevData[pixel_index].A.z), 10));
+               bool BSDFWRITTEN = AddHitToCacheFull(CacheBuffer[pixel_index], CachePathLength, PrevOrigin, 1);
+
+                if (random(311, pixel_index).y * asfloat(MCPrevData[pixel_index].A.x) < mc_f * MC_SAMPLES) {
+                    // == XorShift32(rng_state) < mc_f / (score_sum / MC_SAMPLES)
+                    mc_state_add_sample(MCPrevData[pixel_index].mcState, PrevOrigin.xzy, mc_f, pos.xzy, 0);
+                    mc_static_save(MCPrevData[pixel_index].mcState, PrevOrigin.xzy, i_octahedral_32(MCPrevData[pixel_index].A.w).xzy, random(309, pixel_index).x);
+                    mc_adaptive_save(MCPrevData[pixel_index].mcState, PrevOrigin.xzy, i_octahedral_32(MCPrevData[pixel_index].A.w).xzy, random(310, pixel_index).x, random(310, pixel_index).y);
+                }
+            }
+        }
+    }
+
+
+
+
+
+
+
+
+
     [branch] if (hitDat.emission > 0.0f) {//if we hit a light, this ray is done
 #ifdef Fog
         float3 Tr = exp(-SigmaT * OptDepthSpherExpMedium(ray.origin.y+bottom_radius, rcp(ray.origin.y+bottom_radius), ray.direction.y, hit.t, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
@@ -268,8 +319,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
 
 
-        ray.origin = pos;
-        bsdf = 1;
+
         [branch]if(UseReSTIRGI && CurBounce == 1 && FromColorSpecPacked(Color.MetRoughIsSpec).x == 1 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -100000.0f;
         if((UseASVGF || UseReSTIRGI) && CurBounce == 0 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -10000.0f;
         if(hitDat.emission > 1.0f) {
@@ -307,71 +357,81 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
 
 
-    MCState mc_state;
-    uint mc_buffer_index;
 
-    // SAMPLE NEXT OUTGOING DIRECTION
-    float score_sum = 0;
-    float wo_p = 0;
-    {
-        float scores[MC_SAMPLES];
-        float4 vmfs[MC_SAMPLES];
+
+    if(CurBounce >= 0) {
+        MCState mc_state;
+        uint mc_buffer_index;
+
+        // SAMPLE NEXT OUTGOING DIRECTION
+        float score_sum = 0;
+        float wo_p = 0;
+        float wodotn;
         {
-            [unroll]
-            for (int i = 0; i < MC_SAMPLES; i++) {
-                const bool adaptive_grid = random(312 + i, pixel_index).x < MC_SAMPLES_ADAPTIVE_PROB;
-                
-                uint buffer_index, hash;
-                int s = 1;
-                if (adaptive_grid) {
-                    mc_adaptive_buffer_index(s == 0 ? ray.origin : PrevOrigin, Geomnorm, buffer_index, hash, random(312 + MC_SAMPLES + i, pixel_index).x, random(312 + MC_SAMPLES + i, pixel_index).y);
-                } else {
-                    mc_static_buffer_index(s == 0 ? ray.origin : PrevOrigin, buffer_index, hash, random(312 + MC_SAMPLES + i, pixel_index).x);
-                }
+            float scores[MC_SAMPLES];
+            float4 vmfs[MC_SAMPLES];
+            {
+                [unroll]
+                for (int i = 0; i < MC_SAMPLES; i++) {
+                    const bool adaptive_grid = random(312 + i, pixel_index).x < MC_SAMPLES_ADAPTIVE_PROB;
+                    
+                    uint buffer_index, hash;
+                    int s = 1;
+                    if (adaptive_grid) {
+                        mc_adaptive_buffer_index(pos.xzy, Geomnorm.xzy, buffer_index, hash, random(312 + MC_SAMPLES + i, pixel_index).x, random(312 + MC_SAMPLES + i, pixel_index).y);
+                    } else {
+                        mc_static_buffer_index(pos.xzy, buffer_index, hash, random(312 + MC_SAMPLES + i, pixel_index).x);
+                    }
 
-                MCState state = mc_states[buffer_index];
+                    MCState state = mc_states[buffer_index];
 
-                if (adaptive_grid) {
-                    mc_adaptive_finalize_load(state, hash);
-                } else {
-                    mc_static_finalize_load(state, hash, pos, Geomnorm);
-                }
+                    if (adaptive_grid) {
+                        mc_adaptive_finalize_load(state, hash);
+                    } else {
+                        mc_static_finalize_load(state, hash, pos.xzy, Geomnorm.xzy);
+                    }
 
-                scores[i] = state.sum_w;
-                score_sum += state.sum_w;
-                vmfs[i] = mc_state_get_vmf(state, pos);
-                if (random(312 + i, pixel_index).y < scores[i] / score_sum) {
-                    // we use here that comparison with NaN is false, that happens if candidate_score == 0 and sum == 0; 
-                    mc_state = state;
-                    mc_buffer_index = buffer_index;
-                    ray.direction = vmf_sample(vmfs[i].xyz, vmfs[i].w, random(312 + MC_SAMPLES * 2 + i, pixel_index));
+                    scores[i] = state.sum_w;
+                    score_sum += state.sum_w;
+                    vmfs[i] = mc_state_get_vmf(state, pos.xzy);
+                    if (random(312 + i, pixel_index).y < scores[i] / score_sum) {
+                        // we use here that comparison with NaN is false, that happens if candidate_score == 0 and sum == 0; 
+                        mc_state = state;
+                        mc_buffer_index = buffer_index;
+                        ray.direction = vmf_sample(vmfs[i].xyz, vmfs[i].w, random(312 + MC_SAMPLES * 2 + i, pixel_index)).xzy;
+                    }
                 }
             }
+            wodotn = dot(ray.direction, Geomnorm);
+
+            if (score_sum == 0 || random(311, pixel_index).x < SURF_BSDF_P) {
+                // BSDF Sampling
+                // wo = bsdf_ggx_diffuse_mix_sample(current_hit.wi, current_hit.normal, bsdf_ggx_roughness_to_alpha(current_hit.roughness), XorShift32Vec3(rng_state));
+                validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
+                mc_state = (MCState)0;
+            } // else {VMF Sampling // wo = set above }
+            // wodotn = dot(ray.direction, Geomnorm);
+
+            // ray is below geometric surface
+            if (wodotn <= 1e-3 || dot(ray.direction, Geomnorm) <= 1e-3)
+                return;
+
+            // Multiple importance sampling
+            [[unroll]]
+            for (int i = 0; i < MC_SAMPLES; i++) {
+                // score_sum > 0 ? results in black artifacts
+                wo_p += (scores[i] > 0 ? scores[i] * (vmf_pdf(ray.direction.xzy, vmfs[i].xyz, vmfs[i].w)) / score_sum : 0);
+            }
+            float3 bsdf2;
+            const float3x3 TangSpace = build_rotated_ONB(norm, hitDat.anisotropicRotation);
+            validBSDFSample = EvaluateBsdf(hitDat, PrevDirection, ray.direction, norm, pdf, bsdf, pixel_index);//, pixel_index, TangSpace);
+            // validBSDFSample = true;
+            // Valid2 = ReconstructBsdf2(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, TangSpace, pixel_index);
+            // Valid2 = EvaluateBsdf2(SurfaceMat, CameraRay.direction, normalize(NEEPos - PrimaryHitPosition), SurfNorm, pdf, NEEbsdf, pixel_index, TangSpace);
+
+            wo_p = (score_sum > 0 ? SURF_BSDF_P : 1.0) * pdf + (1 - SURF_BSDF_P) * wo_p;
+
         }
-
-        if (score_sum == 0 || random(311, pixel_index).x < SURF_BSDF_P) {
-            // BSDF Sampling
-            // wo = bsdf_ggx_diffuse_mix_sample(current_hit.wi, current_hit.normal, bsdf_ggx_roughness_to_alpha(current_hit.roughness), XorShift32Vec3(rng_state));
-            validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
-            mc_state = (MCState)0;
-        } // else {VMF Sampling // wo = set above }
-        // wodotn = dot(ray.direction, Geomnorm);
-
-        // ray is below geometric surface
-        // if (wodotn <= 1e-3 || dot(ray.direction, Geomnorm) <= 1e-3)
-        //     break;
-
-        // Multiple importance sampling
-        [[unroll]]
-        for (int i = 0; i < MC_SAMPLES; i++) {
-            // score_sum > 0 ? results in black artifacts
-            wo_p += (scores[i] > 0 ? scores[i] * (vmf_pdf(ray.direction, vmfs[i].xyz, vmfs[i].w)) / score_sum : 0);
-        }
-        float3 bsdf2;
-        validBSDFSample = EvaluateBsdf(hitDat, PrevDirection, ray.direction, norm, pdf, bsdf2, pixel_index);
-        pdf = (score_sum > 0 ? SURF_BSDF_P : 1.0) * pdf + (1 - SURF_BSDF_P) * wo_p;
-
-    }
 
 
 
@@ -381,33 +441,12 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
 
     
-        {
-            int Layer;
-            float VoxSize = GetVoxSize(pos, Layer);
-            GridVoxel TempVox = RetrieveCacheData(GenHashPrecompedLayer(pos, Layer, Geomnorm));
-            float3 Rad = TempVox.radiance / (float)max(TempVox.SampleNum,1);
-            float3 lc_incident = throughput * Rad;
-            // multiply albedo?
-            const float mc_f = yuv_luminance(lc_incident);
-            if (!isinf(mc_f) && !isnan(mc_f)) {
-                // BSDFWRITTEN = AddHitToCacheFull(CacheBuffer[pixel_index], PathLength, pos, bsdf);
-                // light_cache_update(pos, Geomnorm, lc_incident * bsdf / max(pdf, 10));
-
-                if (random(311, pixel_index).y * score_sum < mc_f * MC_SAMPLES) {
-                    // == XorShift32(rng_state) < mc_f / (score_sum / MC_SAMPLES)
-                    SmallerRay newRay = CreateRay(pos + USGNorm * NormalOffset, ray.direction);
-                    float NewDist = FarPlane;
-                    Closest_Hit_Compute(newRay, NewDist);
-                    float3 NewPos = newRay.origin + newRay.direction * NewDist;
-                    mc_state_add_sample(mc_state, pos, mc_f, NewPos, 0);
-                    mc_static_save(mc_state, pos, Geomnorm, random(309, pixel_index).x);
-                    mc_adaptive_save(mc_state, pos, Geomnorm, random(310, pixel_index).x, random(310, pixel_index).y);
-                }
-            }
-        }
+      
 
 
-
+        MCPrevData[pixel_index].A = uint4(asuint(score_sum),asuint(wodotn),asuint(wo_p),octahedral_32(Geomnorm));
+        MCPrevData[pixel_index].mcState = mc_state;
+    }
 
 
 
@@ -1348,10 +1387,10 @@ int MaterialIndex;
     GlobalColors[pixel_index] = Color;
 #ifdef RadCache
     // if(CurBounce != 0) {
-        BSDFWRITTEN = AddHitToCacheFull(CacheBuffer[pixel_index], PathLength, ray.origin, bsdf);
-        if(BSDFWRITTEN) {
+        // BSDFWRITTEN = AddHitToCacheFull(CacheBuffer[pixel_index], PathLength, ray.origin, bsdf);
+        // if(BSDFWRITTEN) {
             PathLength = (PathLength & (~7)) | min((PathLength & 7) + 1, PropDepth);
-        }
+        // }
     // }
     norm  = i_octahedral_32(octahedral_32(norm));
     PathLength = (PathLength & (~56)) | ((((norm.x >= 0 ? 1 : 0) + (norm.y >= 0 ? 2 : 0) + (norm.z >= 0 ? 4 : 0)) & 7) << 3);
@@ -1409,7 +1448,7 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
 
     MCState mc_state;
     mc_adaptive_load(mc_state, _DebugTex[id.xy].xyz, i_octahedral_32(asuint(_DebugTex[id.xy].w)), randomNEE(322, final_pixel_index).x, randomNEE(322, final_pixel_index).y);
-    // res = (mc_state_get_vmf(mc_state, _DebugTex[id.xy].xyz).xyz);
+    // res = mc_state.sum_w * 0.1;//(mc_state_get_vmf(mc_state, _DebugTex[id.xy].xyz).xyz + 1) / 2.0f;
 
     Result[id.xy] = float4(res, 1.0f);
 }

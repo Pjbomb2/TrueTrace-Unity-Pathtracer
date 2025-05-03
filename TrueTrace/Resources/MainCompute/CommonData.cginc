@@ -3318,7 +3318,7 @@ inline float yuv_luminance(float3 color) {
     return dot(color, float3(0.299, 0.587, 0.114));
 }
 
-#define mc_target_grid_width(pos) (2 * MC_ADAPTIVE_GRID_TAN_ALPHA_HALF * distance(CamPos, pos))
+#define mc_target_grid_width(pos) (2 * MC_ADAPTIVE_GRID_TAN_ALPHA_HALF * distance(CamPos.xzy, pos))
 
 #define mc_adaptive_target_level_for_pos(pos) uint(round(MC_ADAPTIVE_GRID_STEPS_PER_UNIT_SIZE * pow(max(mc_target_grid_width(pos) - MC_ADAPTIVE_GRID_MIN_WIDTH, 0), 1 / MC_ADAPTIVE_GRID_POWER)))
 

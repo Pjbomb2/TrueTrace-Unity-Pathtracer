@@ -111,6 +111,7 @@ namespace TrueTrace {
         private RenderTexture ScreenSpaceInfoPrev;
 
         private ComputeBuffer StaticMCBuffer;
+        private ComputeBuffer MCPrevDataBuffer;
 
 
         private ComputeBuffer _RayBuffer;
@@ -397,6 +398,7 @@ namespace TrueTrace {
             if(TTPostProc != null) TTPostProc.ClearAll();
             _RayBuffer.ReleaseSafe();
             StaticMCBuffer.ReleaseSafe();
+            MCPrevDataBuffer.ReleaseSafe();
             LightingBuffer.ReleaseSafe();
             _BufferSizes.ReleaseSafe();
             _ShadowBuffer.ReleaseSafe();
@@ -874,6 +876,7 @@ namespace TrueTrace {
             ShadingShader.SetTexture(ShadeKernel, "ScreenSpaceInfo", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
             ShadingShader.SetComputeBuffer(ShadeKernel, "GlobalColors", LightingBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernel, "mc_states", StaticMCBuffer);
+            ShadingShader.SetComputeBuffer(ShadeKernel, "MCPrevData", MCPrevDataBuffer);
             ShadingShader.SetComputeBuffer(FinalizeKernel, "mc_states", StaticMCBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernel, "GlobalRays", _RayBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernel, "ShadowRaysBuffer", _ShadowBuffer);
@@ -971,6 +974,7 @@ namespace TrueTrace {
 
                 InitRenderTexture(true);
                 CommonFunctions.CreateDynamicBuffer(ref StaticMCBuffer, 800009 + 32777259, 44);
+                CommonFunctions.CreateDynamicBuffer(ref MCPrevDataBuffer, SourceWidth * SourceHeight, 60);
                 CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight * 2, 48);
                 CommonFunctions.CreateDynamicBuffer(ref _ShadowBuffer, SourceWidth * SourceHeight, 48);
                 CommonFunctions.CreateDynamicBuffer(ref LightingBuffer, SourceWidth * SourceHeight, 64);
@@ -1011,6 +1015,7 @@ namespace TrueTrace {
 
                     _RayBuffer.ReleaseSafe();
                     StaticMCBuffer.ReleaseSafe();
+                    MCPrevDataBuffer.ReleaseSafe();
                     _ShadowBuffer.ReleaseSafe();
                     LightingBuffer.ReleaseSafe();
                     _RandomNums.ReleaseSafe();

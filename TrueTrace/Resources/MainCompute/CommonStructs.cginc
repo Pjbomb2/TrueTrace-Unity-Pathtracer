@@ -300,3 +300,11 @@ struct MCState {
 };
 
 RWStructuredBuffer<MCState> mc_states;
+
+
+
+struct MCData {
+	uint4 A;
+	MCState mcState;
+};
+RWStructuredBuffer<MCData> MCPrevData;
