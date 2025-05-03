@@ -3275,3 +3275,236 @@ float3 phase_draine_sample(const float2 xi, const float3 wi, const float g, cons
     const float z2 = sqrt(1.0 - deflection_cos * deflection_cos);
     return mul(make_frame(wi), float3(z2 * cos(2.0f * PI * xi.y), z2 * sin(2.0f * PI * xi.y), deflection_cos));
 }
+
+
+#define CLTIME 0
+#define MCSTATETIME 0
+
+#define MC_STATIC_BUFFER_SIZE 800009
+#define MC_ADAPTIVE_BUFFER_SIZE 32777259
+
+#define TWO_PI (2.0f * PI)
+
+#define merian_square(x) ((x) * (x))
+
+#define DIR_GUIDE_PRIOR 0.2f
+
+#define ML_MAX_N 1024
+#define ML_MIN_ALPHA .01
+
+#define GRID_PRIME_X 1
+#define GRID_PRIME_Y 2654435761
+#define GRID_PRIME_Z 805459861
+
+#define GRID_PRIME_X_2 74763401
+#define GRID_PRIME_Y_2 2254437599
+#define GRID_PRIME_Z_2 508460413
+
+#define MC_ADAPTIVE_GRID_STEPS_PER_UNIT_SIZE 4.743416490252569
+#define MC_ADAPTIVE_GRID_TAN_ALPHA_HALF 0.002
+
+#define MC_STATIC_GRID_WIDTH 25.3
+#define MC_ADAPTIVE_GRID_MIN_WIDTH 0.01
+#define MC_ADAPTIVE_GRID_POWER 4.0
+
+#define MC_SAMPLES_ADAPTIVE_PROB 0.7
+#define MC_SAMPLES 5
+#define SURF_BSDF_P 0.15
+
+#define MERIAN_QUAKE_GRID_TYPE_EXPONENTIAL 0
+#define MERIAN_QUAKE_GRID_TYPE_QUADRATIC 1
+
+inline float yuv_luminance(float3 color) {
+    return dot(color, float3(0.299, 0.587, 0.114));
+}
+
+#define mc_target_grid_width(pos) (2 * MC_ADAPTIVE_GRID_TAN_ALPHA_HALF * distance(CamPos, pos))
+
+#define mc_adaptive_target_level_for_pos(pos) uint(round(MC_ADAPTIVE_GRID_STEPS_PER_UNIT_SIZE * pow(max(mc_target_grid_width(pos) - MC_ADAPTIVE_GRID_MIN_WIDTH, 0), 1 / MC_ADAPTIVE_GRID_POWER)))
+
+ #define mc_grid_width_for_level(level) (pow(level / MC_ADAPTIVE_GRID_STEPS_PER_UNIT_SIZE, MC_ADAPTIVE_GRID_POWER) + MC_ADAPTIVE_GRID_MIN_WIDTH)
+
+uint cubemap_side(const float3 w) {
+    if (abs(w.x) > abs(w.y) && abs(w.x) > abs(w.z)) {
+        return w.x >= 0 ? 0 : 1;
+    } else if (abs(w.y) > abs(w.x) && abs(w.y) > abs(w.z)) {
+        return w.y >= 0 ? 2 : 3;
+    } else {
+        return w.z >= 0 ? 4 : 5;
+    }
+}
+
+uint pack32(uint A, uint B) {
+	return (A & 0xFFFFu) | ((B & 0xFFFFu) << 16);
+}
+
+
+uint hash_grid_normal_level(const uint3 index, const float3 normal, const uint level, const uint modulus) {
+    const uint cube = cubemap_side(normal);
+    return ((index.x * GRID_PRIME_X) ^ (index.y * GRID_PRIME_Y) ^ (index.z * GRID_PRIME_Z) ^ (pack32(cube, level) * 723850877)) % modulus;
+}
+
+uint hash2_grid_level(const int3 index, const uint level) {
+    return (index.x * GRID_PRIME_X_2) ^ (index.y * GRID_PRIME_Y_2) ^ (index.z * GRID_PRIME_Z_2) ^ (9351217 * level + 13 * level);
+}
+
+int3 grid_idx_upper(const float3 pos, const float cell_width) {
+    return int3(ceil(pos / cell_width));
+}
+
+int3 grid_idx_lower(const float3 pos, const float cell_width) {
+    return int3(floor(pos / cell_width));
+}
+
+int3 grid_idx_interpolate(const float3 pos, const float cell_width, const float random) {
+    const float3 grid_pos = frac(pos / cell_width);
+    float bary_sum = 0;
+    
+    // (0, 0, 0)
+    bary_sum += grid_pos.x * grid_pos.y * grid_pos.z;
+    if (random <= bary_sum)
+        return grid_idx_upper(pos, cell_width);
+
+    bary_sum += grid_pos.x * grid_pos.y * (1. - grid_pos.z);
+    if (random <= bary_sum)
+        return lerp(grid_idx_upper(pos, cell_width), grid_idx_lower(pos, cell_width), bool3(0, 0, 1));
+
+    bary_sum += grid_pos.x * (1. - grid_pos.y) * grid_pos.z;
+    if (random <= bary_sum)
+        return lerp(grid_idx_upper(pos, cell_width), grid_idx_lower(pos, cell_width), bool3(0, 1, 0));
+
+    bary_sum += grid_pos.x * (1. - grid_pos.y) * (1. - grid_pos.z);
+    if (random <= bary_sum)
+        return lerp(grid_idx_upper(pos, cell_width), grid_idx_lower(pos, cell_width), bool3(0, 1, 1));
+
+    bary_sum += (1. - grid_pos.x) * grid_pos.y * grid_pos.z;
+    if (random <= bary_sum)
+        return lerp(grid_idx_upper(pos, cell_width), grid_idx_lower(pos, cell_width), bool3(1, 0, 0));
+
+    bary_sum += (1. - grid_pos.x) * grid_pos.y * (1. - grid_pos.z);
+    if (random <= bary_sum)
+        return lerp(grid_idx_upper(pos, cell_width), grid_idx_lower(pos, cell_width), bool3(1, 0, 1));
+
+    bary_sum += (1. - grid_pos.x) * (1. - grid_pos.y) * grid_pos.z;
+    if (random <= bary_sum)
+        return lerp(grid_idx_upper(pos, cell_width), grid_idx_lower(pos, cell_width), bool3(1, 1, 0));
+
+    // (1, 1, 1)
+    return grid_idx_lower(pos, cell_width);
+}
+
+
+#define mc_adpative_grid_idx_for_level_closest(level, pos) grid_idx_closest(pos, mc_grid_width_for_level(level))
+
+#define mc_adaptive_grid_idx_for_level_interpolate(level, pos, randomX) grid_idx_interpolate(pos, mc_grid_width_for_level(level), randomX)
+
+
+#define mc_state_get_vmf(mc_state, pos) float4(mc_state_dir(mc_state, pos), mc_state_kappa(mc_state, pos))
+
+#define mc_state_dir(mc_state, pos) normalize((mc_state.sum_w > 0.0 ? mc_state.w_tgt / mc_state.sum_w : mc_state.w_tgt) - pos)
+
+#define mc_state_pos(mc_state) (mc_state.sum_w > 0.0 ? mc_state.w_tgt / mc_state.sum_w : mc_state.w_tgt)
+
+#define mc_state_prior(mc_state, pos) (max(0.0001, DIR_GUIDE_PRIOR / merian_square(distance((pos), mc_state_pos(mc_state)))))
+
+#define mc_state_mean_cos(mc_state, pos) ((mc_state.N * mc_state.N * clamp(mc_state.w_cos / mc_state.sum_w, 0.0, 0.9999999)) / (mc_state.N * mc_state.N + mc_state_prior(mc_state, pos)))
+
+
+
+
+uint hash_grid(const uint3 index, const uint modulus) {
+    return ((index.x * GRID_PRIME_X) ^ (index.y * GRID_PRIME_Y) ^ (index.z * GRID_PRIME_Z)) % modulus;
+}
+
+uint hash2_grid(const int3 index) {
+    return (index.x * GRID_PRIME_X_2) ^ (index.y * GRID_PRIME_Y_2) ^ (index.z * GRID_PRIME_Z_2);
+}
+
+void mc_static_buffer_index(const float3 pos, out uint buffer_index, out uint hash, float random) {
+    const int3 grid_idx = grid_idx_interpolate(pos, MC_STATIC_GRID_WIDTH, random);
+    buffer_index = hash_grid(grid_idx, MC_STATIC_BUFFER_SIZE) + MC_ADAPTIVE_BUFFER_SIZE;
+    hash = hash2_grid(grid_idx);
+}
+
+
+void mc_static_finalize_load(inout MCState mc_state, const uint hash, const float3 pos, const float3 normal) {
+    mc_state.sum_w *= float(hash == mc_state.hash);
+    mc_state.sum_w *= float(dot(normal, mc_state_dir(mc_state, pos)) > 0.);
+    mc_state.w_tgt += mc_state.sum_w * (CLTIME - MCSTATETIME) * mc_state.mv;
+}
+
+
+float mc_state_kappa(const MCState mc_state, const float3 pos) {
+    const float r = mc_state_mean_cos(mc_state, pos);
+    return (3.0 * r - r * r * r) / (1.0 - r * r);
+}
+
+float3 vmf_sample(const float kappa, const float2 random) {
+    const float w = 1.0 + log(random.x + (1.0 - random.x) * exp(-2.0 * kappa)) / kappa;
+    const float2 v = float2(sin(TWO_PI * random.y), cos(TWO_PI * random.y));
+    return float3(sqrt(1.0 - w * w) * v, w);
+}
+
+float3 vmf_sample(const float3 z, const float kappa, const float2 random) {
+    return mul(make_frame(z), vmf_sample(kappa, random));
+}
+
+void mc_state_add_sample(inout MCState mc_state,
+                         const float3 pos,         // position where the ray started
+                         const float w,          // goodness
+                         const float3 target, const float3 target_mv) {    // ray hit point
+
+    mc_state.N = min(mc_state.N + 1, ML_MAX_N);
+    const float alpha = max(1.0 / mc_state.N, ML_MIN_ALPHA);
+
+    mc_state.sum_w = lerp(mc_state.sum_w, w,          alpha);
+    mc_state.w_tgt = lerp(mc_state.w_tgt, w * target, alpha);
+    mc_state.w_cos = min(lerp(mc_state.w_cos, w * max(0, dot(normalize(target - pos), mc_state_dir(mc_state, pos))), alpha), mc_state.sum_w);
+    //mc_state.w_cos = min(length(lerp(mc_state.w_cos * mc_state_dir(mc_state, pos), w * normalize(target - pos), alpha)), mc_state.sum_w);
+
+    mc_state.mv = target_mv;
+    mc_state.T = CLTIME;//params.cl_time;
+}
+
+#define mc_adaptive_level_for_pos(pos, random) (mc_adaptive_target_level_for_pos(pos) + uint((-log2(1.0 - random))))
+
+void mc_adaptive_buffer_index(const float3 pos, const float3 normal, out uint buffer_index, out uint hash, float randomX, float randomY) {
+    const uint level = mc_adaptive_level_for_pos(pos, randomX);
+    const int3 grid_idx = mc_adaptive_grid_idx_for_level_interpolate(level, pos, randomY);
+    buffer_index = hash_grid_normal_level(grid_idx, normal, level, MC_ADAPTIVE_BUFFER_SIZE);
+    hash = hash2_grid_level(grid_idx, level);
+}
+
+void mc_adaptive_finalize_load(inout MCState mc_state, const uint hash) {
+    mc_state.sum_w *= float(hash == mc_state.hash);
+    mc_state.w_tgt += mc_state.sum_w * (CLTIME - MCSTATETIME) * mc_state.mv;
+}
+
+void mc_adaptive_load(out MCState mc_state, const float3 pos, const float3 normal, float randomX, float randomY) {
+    uint buffer_index, hash;
+    mc_adaptive_buffer_index(pos, normal, buffer_index, hash, randomX, randomY);
+    mc_state = mc_states[buffer_index];
+    mc_adaptive_finalize_load(mc_state, hash);
+}
+
+void mc_adaptive_save(in MCState mc_state, const float3 pos, const float3 normal, float randomX, float randomY) {
+    uint buffer_index, hash;
+    mc_adaptive_buffer_index(pos, normal, buffer_index, hash, randomX, randomY);
+
+    mc_state.hash = hash;
+    mc_states[buffer_index] = mc_state;
+}
+
+
+void mc_static_save(in MCState mc_state, const float3 pos, const float3 normal, float random) {
+    uint buffer_index, hash;
+    mc_static_buffer_index(pos, buffer_index, hash, random);
+
+    mc_state.hash = hash;
+    mc_states[buffer_index] = mc_state;
+}
+
+float vmf_pdf(const float3 w, const float3 mu, const float kappa) {
+    if (kappa < 1e-4) return (1.0f / (TWO_PI * TWO_PI));
+    return kappa / (TWO_PI * (1.0 - exp(-2.0 * kappa))) * exp(kappa * (dot(w, mu) - 1.0));
+}

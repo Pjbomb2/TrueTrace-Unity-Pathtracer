@@ -284,3 +284,19 @@ struct SDFData {
 };
 
 StructuredBuffer<SDFData> SDFs;
+
+
+
+struct MCState {
+    float3 w_tgt;
+    float sum_w;
+    uint N;
+    float w_cos;
+
+    float3 mv;
+    float T;
+
+    uint hash; // grid_idx and level
+};
+
+RWStructuredBuffer<MCState> mc_states;

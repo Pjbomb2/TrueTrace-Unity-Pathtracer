@@ -110,7 +110,7 @@ void sampleEquiAngular( float u, float maxDistance, float3 rOrigin, float3 rDire
     pdf = D / ( (thetaB - thetaA) * (D * D + t * t) );
 }
 #ifdef RadCache
-inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout float3 bsdf, inout float3 Geomnorm, inout uint CachePathLength, int GTX) {//main function
+inline void calcFinalColor(inout SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout float3 bsdf, inout float3 Geomnorm, inout uint CachePathLength, int GTX) {//main function
 #else
 inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout float3 bsdf, inout float3 Geomnorm) {//main function
 #endif
@@ -227,7 +227,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             else if(CurBounce > 1) {
                 #ifdef RadCache
                     if(GetBounceData(CachePathLength) != 0) CacheBuffer[pixel_index].RunningIlluminance = packRGBE(unpackRGBE(CacheBuffer[pixel_index].RunningIlluminance) + EmissCol);
-                    else Color.Indirect += Color.throughput * EmissCol;
+                    Color.Indirect += Color.throughput * EmissCol;
                 #else
                     Color.Indirect += Color.throughput * EmissCol;
                 #endif
@@ -262,6 +262,14 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 }
             #endif
         }
+
+
+
+
+
+
+        ray.origin = pos;
+        bsdf = 1;
         [branch]if(UseReSTIRGI && CurBounce == 1 && FromColorSpecPacked(Color.MetRoughIsSpec).x == 1 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -100000.0f;
         if((UseASVGF || UseReSTIRGI) && CurBounce == 0 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -10000.0f;
         if(hitDat.emission > 1.0f) {
@@ -295,7 +303,125 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         hitDat.surfaceColor = ((lum * 255.0f) + (hitDat.ColorBleed *((hitDat.surfaceColor * 255.0f) - (lum * 255.0f)))) / 255.0f;
     }
     
-    validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
+    
+
+
+
+    MCState mc_state;
+    uint mc_buffer_index;
+
+    // SAMPLE NEXT OUTGOING DIRECTION
+    float score_sum = 0;
+    float wo_p = 0;
+    {
+        float scores[MC_SAMPLES];
+        float4 vmfs[MC_SAMPLES];
+        {
+            [unroll]
+            for (int i = 0; i < MC_SAMPLES; i++) {
+                const bool adaptive_grid = random(312 + i, pixel_index).x < MC_SAMPLES_ADAPTIVE_PROB;
+                
+                uint buffer_index, hash;
+                int s = 1;
+                if (adaptive_grid) {
+                    mc_adaptive_buffer_index(s == 0 ? ray.origin : PrevOrigin, Geomnorm, buffer_index, hash, random(312 + MC_SAMPLES + i, pixel_index).x, random(312 + MC_SAMPLES + i, pixel_index).y);
+                } else {
+                    mc_static_buffer_index(s == 0 ? ray.origin : PrevOrigin, buffer_index, hash, random(312 + MC_SAMPLES + i, pixel_index).x);
+                }
+
+                MCState state = mc_states[buffer_index];
+
+                if (adaptive_grid) {
+                    mc_adaptive_finalize_load(state, hash);
+                } else {
+                    mc_static_finalize_load(state, hash, pos, Geomnorm);
+                }
+
+                scores[i] = state.sum_w;
+                score_sum += state.sum_w;
+                vmfs[i] = mc_state_get_vmf(state, pos);
+                if (random(312 + i, pixel_index).y < scores[i] / score_sum) {
+                    // we use here that comparison with NaN is false, that happens if candidate_score == 0 and sum == 0; 
+                    mc_state = state;
+                    mc_buffer_index = buffer_index;
+                    ray.direction = vmf_sample(vmfs[i].xyz, vmfs[i].w, random(312 + MC_SAMPLES * 2 + i, pixel_index));
+                }
+            }
+        }
+
+        if (score_sum == 0 || random(311, pixel_index).x < SURF_BSDF_P) {
+            // BSDF Sampling
+            // wo = bsdf_ggx_diffuse_mix_sample(current_hit.wi, current_hit.normal, bsdf_ggx_roughness_to_alpha(current_hit.roughness), XorShift32Vec3(rng_state));
+            validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
+            mc_state = (MCState)0;
+        } // else {VMF Sampling // wo = set above }
+        // wodotn = dot(ray.direction, Geomnorm);
+
+        // ray is below geometric surface
+        // if (wodotn <= 1e-3 || dot(ray.direction, Geomnorm) <= 1e-3)
+        //     break;
+
+        // Multiple importance sampling
+        [[unroll]]
+        for (int i = 0; i < MC_SAMPLES; i++) {
+            // score_sum > 0 ? results in black artifacts
+            wo_p += (scores[i] > 0 ? scores[i] * (vmf_pdf(ray.direction, vmfs[i].xyz, vmfs[i].w)) / score_sum : 0);
+        }
+        float3 bsdf2;
+        validBSDFSample = EvaluateBsdf(hitDat, PrevDirection, ray.direction, norm, pdf, bsdf2, pixel_index);
+        pdf = (score_sum > 0 ? SURF_BSDF_P : 1.0) * pdf + (1 - SURF_BSDF_P) * wo_p;
+
+    }
+
+
+
+
+
+
+
+
+    
+        {
+            int Layer;
+            float VoxSize = GetVoxSize(pos, Layer);
+            GridVoxel TempVox = RetrieveCacheData(GenHashPrecompedLayer(pos, Layer, Geomnorm));
+            float3 Rad = TempVox.radiance / (float)max(TempVox.SampleNum,1);
+            float3 lc_incident = throughput * Rad;
+            // multiply albedo?
+            const float mc_f = yuv_luminance(lc_incident);
+            if (!isinf(mc_f) && !isnan(mc_f)) {
+                // BSDFWRITTEN = AddHitToCacheFull(CacheBuffer[pixel_index], PathLength, pos, bsdf);
+                // light_cache_update(pos, Geomnorm, lc_incident * bsdf / max(pdf, 10));
+
+                if (random(311, pixel_index).y * score_sum < mc_f * MC_SAMPLES) {
+                    // == XorShift32(rng_state) < mc_f / (score_sum / MC_SAMPLES)
+                    SmallerRay newRay = CreateRay(pos + USGNorm * NormalOffset, ray.direction);
+                    float NewDist = FarPlane;
+                    Closest_Hit_Compute(newRay, NewDist);
+                    float3 NewPos = newRay.origin + newRay.direction * NewDist;
+                    mc_state_add_sample(mc_state, pos, mc_f, NewPos, 0);
+                    mc_static_save(mc_state, pos, Geomnorm, random(309, pixel_index).x);
+                    mc_adaptive_save(mc_state, pos, Geomnorm, random(310, pixel_index).x, random(310, pixel_index).y);
+                }
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     {
         if (CurBounce == 0) {
             float Metallic = saturate(hitDat.metallic + ((!UseASVGF || UseReSTIRGI) ? 0 : hitDat.Specular));
@@ -356,6 +482,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     #endif
 
 
+
     ray.origin = USGNorm * NormalOffset + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
     throughput = max(throughput, 0);
     [branch] if (CurBounce == 0 || GetBounceData(Color.MetRoughIsSpec) == 0) {//Setting textures for denosier to use
@@ -370,44 +497,50 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         Color.MetRoughIsSpec = ((Color.MetRoughIsSpec & ~(0x7C000000)) | (((CurBounce < 20 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.03f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
         throughput = 1;  
     }
+    if(CurBounce == 0) _DebugTex[id.xy] = float4(ray.origin, asfloat(octahedral_32(Geomnorm)));
     #ifdef RadCache
         #if DebugView == DVRadCache
-            if(CurBounce == 0) _DebugTex[id.xy] = float4(ray.origin, asfloat(octahedral_32(Geomnorm)));
         #endif
         float pdf3 = 0;
+
+
+
+
+
         // ReconstructBsdf2(hitDat, PrevDirection, ray.direction, Refracted ? -norm : norm, pdf3, bsdf, GetTangentSpace2(Refracted ? -norm : norm), pixel_index);
-        [branch]if(luminance(Color.Indirect) <= 0.01f) {// || CurBounce < 3 //This may make some situations more accurate
-            if(GetBounceData(CachePathLength) != 0){
-                #ifdef NonDirectionalRadCache
-                if(MaterialLobe != 3)
-                #endif
-                int Layer;
-                float VoxSize = GetVoxSize(pos, Layer);
-                if(VoxSize / (VoxSize + hit.t) <= random(433, pixel_index).x) {
-                    Geomnorm = i_octahedral_32(octahedral_32(Geomnorm));
-                    GridVoxel TempVox = RetrieveCacheData(GenHashPrecompedLayer(pos, Layer, Geomnorm));
-                    float3 Rad = TempVox.radiance / (float)max(TempVox.SampleNum,1);
-                    Color.Indirect += Rad * Color.throughput *  bsdf;// * 2.0f;// * bsdf;
+        // [branch]if(luminance(Color.Indirect) <= 0.01f) {// || CurBounce < 3 //This may make some situations more accurate
+        //     if(GetBounceData(CachePathLength) != 0){
+                // #ifdef NonDirectionalRadCache
+                // if(MaterialLobe != 3)
+                // #endif
+                // int Layer;
+                // float VoxSize = GetVoxSize(pos, Layer);
+                // if(VoxSize / (VoxSize + hit.t) <= random(433, pixel_index).x) {
+                //     Geomnorm = i_octahedral_32(octahedral_32(Geomnorm));
+                //     GridVoxel TempVox = RetrieveCacheData(GenHashPrecompedLayer(pos, Layer, Geomnorm));
+                //     float3 Rad = TempVox.radiance / (float)max(TempVox.SampleNum,1);
+                //     Color.Indirect += Rad * Color.throughput *  bsdf;// * 2.0f;// * bsdf;
 
-                    if(MaterialLobe == 3 || Refracted) {
-                        TempVox = RetrieveCacheData(GenHash(pos, i_octahedral_32(octahedral_32(-Geomnorm))));
-                        Rad = TempVox.radiance / (float)max(TempVox.SampleNum,1);
-                        Color.Indirect += Rad * Color.throughput *  bsdf;// * 2.0f;// * bsdf;
-                    }
-                    #ifdef RadCache 
-                        if(luminance(Color.Indirect) > 0.0) {
-                            if(GTX.x % 2 == 0) return;
-                            else throughput *= 2.0f;
-                        }
-                    #endif
+                //     if(MaterialLobe == 3 || Refracted) {
+                //         TempVox = RetrieveCacheData(GenHash(pos, i_octahedral_32(octahedral_32(-Geomnorm))));
+                //         Rad = TempVox.radiance / (float)max(TempVox.SampleNum,1);
+                //         Color.Indirect += Rad * Color.throughput *  bsdf;// * 2.0f;// * bsdf;
+                //     }
+                //     #ifdef RadCache 
+                //         if(luminance(Color.Indirect) > 0.0) {
+                //             if(GTX.x % 2 == 0) return;
+                //             else throughput *= 2.0f;
+                //         }
+                //     #endif
 
-                }
-            } else {
+                // }
+            // } else {
                 CachePathLength = ((CachePathLength & ~(0x7C000000)) | (((CurBounce < 30 && ((MaterialLobe == 3) || (MaterialLobe == 0 && hitDat.roughness < 0.2f))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
-            }
+            // }
             CachePathLength = (CachePathLength & ~64) | ((MaterialLobe == 3) << 6);
-        }
+        // }
     #endif
+    // PrevScreenData.x = asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -Geomnorm : Geomnorm)); 
     if (!validBSDFSample) return;//If the ray failed, we have no choice but to terminate this path
     pos = ray.origin;
 
@@ -1214,12 +1347,12 @@ int MaterialIndex;
     if(CurBounce == 0 || ((UseASVGF ^ InvalidateScreenSpaceInfo) && any(PrevPrev != PrevScreenData))) ScreenSpaceInfo[id.xy] = PrevScreenData;
     GlobalColors[pixel_index] = Color;
 #ifdef RadCache
-    if(CurBounce != 0) {
+    // if(CurBounce != 0) {
         BSDFWRITTEN = AddHitToCacheFull(CacheBuffer[pixel_index], PathLength, ray.origin, bsdf);
         if(BSDFWRITTEN) {
             PathLength = (PathLength & (~7)) | min((PathLength & 7) + 1, PropDepth);
         }
-    }
+    // }
     norm  = i_octahedral_32(octahedral_32(norm));
     PathLength = (PathLength & (~56)) | ((((norm.x >= 0 ? 1 : 0) + (norm.y >= 0 ? 2 : 0) + (norm.z >= 0 ? 4 : 0)) & 7) << 3);
     CacheBuffer[pixel_index].pathLength = PathLength;
@@ -1273,6 +1406,10 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
             res = _DebugTex[id.xy];
         #endif
     #endif
+
+    MCState mc_state;
+    mc_adaptive_load(mc_state, _DebugTex[id.xy].xyz, i_octahedral_32(asuint(_DebugTex[id.xy].w)), randomNEE(322, final_pixel_index).x, randomNEE(322, final_pixel_index).y);
+    // res = (mc_state_get_vmf(mc_state, _DebugTex[id.xy].xyz).xyz);
 
     Result[id.xy] = float4(res, 1.0f);
 }
