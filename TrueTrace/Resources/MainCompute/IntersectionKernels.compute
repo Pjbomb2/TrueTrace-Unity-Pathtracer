@@ -161,7 +161,7 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
             int2 Indexes = int2(bestHit.mesh_id & 0x1FFFFFF, bestHit.mesh_id >> 25);
             [branch]if(CurBounce == 0) {
                 _PrimaryTriangleInfo[TempUv] = uint4(MeshOffsets[Indexes.x].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y] - _MeshData[MeshOffsets[Indexes.x].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
-            } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
+            } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == 2) {
                 _PrimaryTriangleInfo[TempUv] = ((UseReSTIRGI && bestHit.t != FarPlane) ? uint4(MeshOffsets[Indexes.x].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y] - _MeshData[MeshOffsets[Indexes.x].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v)) : ((UseASVGF || bestHit.t != FarPlane) ? uint4(asuint(ray.direction), 99993) : uint4(asuint(ray.direction * bestHit.t + ray.origin), 99993)));
             }
 
@@ -329,7 +329,7 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                                 float heatmap_value = 781 - (781 - 380) * exp(-scaled_heatmap_value);
                                 _DebugTex[TempUv] = float4(waveLengthToRGB(heatmap_value), 1);
                             #endif
-                        } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
+                        } else if(2 == 0 || CurBounce + 1 == 2) {
                             _PrimaryTriangleInfo[TempUv] = ((UseReSTIRGI && bestHit.t != FarPlane) ? uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v)) : ((UseASVGF || bestHit.t != FarPlane) ? uint4(asuint(ray2.direction), 99993) : uint4(asuint(ray2.direction * bestHit.t + ray2.origin), 99993)));
                         }
                         if(CurBounce == 0 && bestHit.t == asfloat(GlobalRay.hits.z)) bestHit.t = FarPlane;
@@ -485,7 +485,7 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
                                 #endif
                             } else {
                                 #ifdef RadCache
-                                    if(GetBounceData(CacheBuffer[PixelIndex].pathLength) == 0) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
+                                    if(2 == 0) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
                                 #else
                                     GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
                                 #endif

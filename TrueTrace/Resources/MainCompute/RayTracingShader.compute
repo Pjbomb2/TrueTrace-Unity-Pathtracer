@@ -266,7 +266,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         if((UseASVGF || UseReSTIRGI) && CurBounce == 0 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -10000.0f;
         if(hitDat.emission > 1.0f) {
             if(CurBounce == 0) {
-                Color.Data = EmissCol;
+                Color.DataCol = packRGBE(normalize(EmissCol));
+                Color.DataInten = length(EmissCol);
                 Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((1) << 26);  
                 Color.Flags = packRGBE(EmissCol);
             }
@@ -307,7 +308,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             Geomnorm *= -1;
             norm *= -1;
             USGNorm *= -1;
-        } else if (GetBounceData(Color.MetRoughIsSpec) <= 1 && MaterialLobe == 3) {
+        } else if (Color.DataSecondary == 1 && MaterialLobe == 3) {
             Color.MetRoughIsSpec = ToColorSpecPackedAdd(float3(0, 0, 3), Color.MetRoughIsSpec);
         }
         if (MaterialLobe != 3 && !(MaterialLobe == 0 && hitDat.roughness < 0.5f)) {
@@ -359,17 +360,39 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     ray.origin = USGNorm * NormalOffset + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
     throughput = max(throughput, 0);
     [branch] if (CurBounce == 0 || GetBounceData(Color.MetRoughIsSpec) == 0) {//Setting textures for denosier to use
-        #ifdef TrueBlack
-            Color.Flags = packRGBE((CurBounce == 0) ? hitDat.surfaceColor : (unpackRGBE(Color.Flags) * hitDat.surfaceColor));
-            Color.Data = float3((CurBounce == 0) ? throughput : (throughput * Color.Data.xyz));
-        #else
-            Color.Flags = packRGBE((CurBounce == 0) ? max(hitDat.surfaceColor, 0.005f) : (unpackRGBE(Color.Flags) * max(hitDat.surfaceColor, 0.005f)));
-            Color.Data = float3((CurBounce == 0) ? max(throughput, 0.006f) : (max(throughput, 0.005f) * Color.Data.xyz));
-        #endif
-        PrevScreenData = float4(asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -Geomnorm : Geomnorm)), asfloat(octahedral_32(((hitDat.diffTrans != 0 || (hitDat.diffTrans != 0 && CurBounce == 1)) && Refracted) ? -norm : norm)), PrevScreenData.z + hit.t, asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 4) >> 4) : ((asuint(PrevScreenData.w) << 4) >> 4)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
-        Color.MetRoughIsSpec = ((Color.MetRoughIsSpec & ~(0x7C000000)) | (((CurBounce < 20 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.03f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
-        throughput = 1;  
+        // if(CurBounce == 0) {
+            #ifdef TrueBlack
+                Color.Flags = packRGBE((CurBounce == 0) ? hitDat.surfaceColor : (unpackRGBE(Color.Flags) * hitDat.surfaceColor));
+                float3 A = (CurBounce == 0) ? throughput : (throughput * unpackRGBE(Color.DataCol) * Color.DataInten);
+                Color.DataCol = packRGBE(normalize(A));
+                Color.DataInten = length(A);
+            #else
+                // float3 A = (CurBounce == 0) ? max(throughput, 0.006f) : (max(throughput, 0.005f) * Color.Data().xyz));
+                // Color.DataCol = packRGBE(normalize(A));
+                // Color.DataInten = length(A);
+                // Color.Data = float3((CurBounce == 0) ? max(throughput, 0.006f) : (max(throughput, 0.005f) * Color.Data().xyz));
+            #endif
+            PrevScreenData = float4(asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -Geomnorm : Geomnorm)), asfloat(octahedral_32(((hitDat.diffTrans != 0 || (hitDat.diffTrans != 0 && CurBounce == 1)) && Refracted) ? -norm : norm)), PrevScreenData.z + hit.t, asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 4) >> 4) : ((asuint(PrevScreenData.w) << 4) >> 4)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
+            Color.MetRoughIsSpec = ((Color.MetRoughIsSpec & ~(0x7C000000)) | (((CurBounce < 20 && false && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.03f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
+            throughput = 1;  
+        // } else if(GetBounceData(Color.MetRoughIsSpec) == 0) {
+        //     PrevScreenData.z += hit.t;
+        //     Color.MetRoughIsSpec = ((Color.MetRoughIsSpec & ~(0x7C000000)) | (((CurBounce < 20 && true && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.03f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
+
+        // }
     }
+    if(Color.DataSecondary == 1) {
+        if((CurBounce < 20 && true && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.03f && CurBounce == 0)))) {
+            if(CurBounce != 0) PrevScreenData.z += hit.t;   
+        }
+        else {
+            Color.DataSecondary = packRGBE(bsdf);
+            if(CurBounce != 0) PrevScreenData.z += hit.t;
+        }
+
+    }
+
+
     #ifdef RadCache
         #if DebugView == DVRadCache
             if(CurBounce == 0) _DebugTex[id.xy] = float4(ray.origin, asfloat(octahedral_32(Geomnorm)));
@@ -555,7 +578,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 #else
                     if((UseReSTIRGI && CurBounce == 0) || (UseASVGF && (CurBounce == GetBounceData(Color.MetRoughIsSpec) - 2 && CurBounce > 0))) hitDat.surfaceColor = 1.0f;
                     bool validbsdfNEE = EvaluateBsdf(hitDat, PrevDirection, to_light, norm, bsdf_pdf, bsdf_value, pixel_index);
-                    if((UseASVGF && (CurBounce == GetBounceData(Color.MetRoughIsSpec) - 2 && CurBounce > 0))) bsdf_value *= Color.Data.xyz;
+                    if((UseASVGF && (CurBounce == GetBounceData(Color.MetRoughIsSpec) - 2 && CurBounce > 0))) bsdf_value *= unpackRGBE(Color.DataCol) * Color.DataInten;
                 #endif
                 #ifdef Fog
                     // float temppdf = phase_draine_eval(dot(to_light.xzy, PrevDirection.xzy), DRAINE_G, DRAINE_A);
@@ -632,10 +655,10 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     if(luminance(Illum) != 0 && maxillum > random(117, pixel_index).y) {//NEE russian roulette, massively improves performance while giivng the same result
                         uint index3;
                         #ifdef RadCache
-                            bool TempTemp = (CurBounce != GetBounceData(CachePathLength) - 2);
+                            bool TempTemp = (CurBounce != 2 - 2);
                             if(UseReSTIRGI && !TempTemp && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
                         #else
-                            bool TempTemp = (CurBounce != GetBounceData(Color.MetRoughIsSpec) - 2);
+                            bool TempTemp = (CurBounce != 2 - 2);
                             if(UseReSTIRGI && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
                         #endif
                         ShadowRayData ShadRay = {pos, 
@@ -657,7 +680,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     if(Refracted) Geomnorm *= -1;
 
     if (CurBounce > 0 && UseRussianRoulette && GetBounceData(Color.MetRoughIsSpec) != 0) {
-        float3 AdjustedCol = throughput * (ImprovedPrimaryHit ? 1.0f : Color.Data.xyz);
+        float3 AdjustedCol = throughput * (ImprovedPrimaryHit ? 1.0f : Color.Data().xyz);
         float p = saturate(max(AdjustedCol.x, max(AdjustedCol.y, AdjustedCol.z)));
         if (random(118, pixel_index).x > p)//Simple Russian Roulette
             return;
@@ -681,7 +704,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         GlobalRays[index2] = GlobalRay;
     }
 }
-static const ColData InitCol = { 1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0};
+static const ColData InitCol = { 1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0};
 
 float3 PrimaryBackgroundTintColor;
 float PrimaryBackgroundTint;
@@ -1050,7 +1073,8 @@ int MaterialIndex;
         }
 #endif
         if(CurBounce == 0) {
-            Color.Data = float3(Color.Direct);
+            Color.DataCol = packRGBE(normalize(Color.Direct));
+            Color.DataInten = length(Color.Direct);
             Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((1) << 26);  
             Color.Flags = packRGBE(Color.Direct);
         }
@@ -1164,7 +1188,7 @@ int MaterialIndex;
 
     const bool InvalidateScreenSpaceInfo = ((!UseASVGF && CurBounce == 0));
     float4 PrevScreenData = InvalidateScreenSpaceInfo ? 0 : ScreenSpaceInfo[id.xy];
-    if(UseASVGF && CurBounce == 0) PrevScreenData.z = 0;
+    if(true && CurBounce == 0) PrevScreenData.z = 0;
 
     if (TempMat.specTrans != 1 && TempMat.MetallicTex.x > 0) TempMat.metallic = pow(SampleTexture(BaseUv, SampleMetallic, TempMat), rcp(2.2f));
     if (TempMat.RoughnessTex.x > 0) {
@@ -1211,7 +1235,7 @@ int MaterialIndex;
 #else
     calcFinalColor(ray, Color, TempMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, bsdf, norm);
 #endif
-    if(CurBounce == 0 || ((UseASVGF ^ InvalidateScreenSpaceInfo) && any(PrevPrev != PrevScreenData))) ScreenSpaceInfo[id.xy] = PrevScreenData;
+    if(CurBounce == 0 || ((true ^ InvalidateScreenSpaceInfo) && any(PrevPrev != PrevScreenData))) ScreenSpaceInfo[id.xy] = PrevScreenData;
     GlobalColors[pixel_index] = Color;
 #ifdef RadCache
     if(CurBounce != 0) {
@@ -1259,11 +1283,11 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
             // GBufferCol = ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo) == 0) ? 1 : ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo));
         #endif
     }
-    float3 res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? (GlobalColors[final_pixel_index].Data.xyz + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f)) : (((float)PartialRenderingFactor) * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * (UseReSTIRGI ? 1.0f : IndirectBoost)) * GlobalColors[final_pixel_index].Data.xyz) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f) / GBufferCol);
+    float3 res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? (GlobalColors[final_pixel_index].Data().xyz + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f)) : (((float)PartialRenderingFactor) * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * (UseReSTIRGI ? 1.0f : IndirectBoost)) * GlobalColors[final_pixel_index].Data().xyz) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f) / GBufferCol);
     if (!all(res < 10000000)) res = 0;
     #if DebugView != -1
         #if DebugView == DVGIView
-            res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? GlobalColors[final_pixel_index].Data.xyz : (((float)PartialRenderingFactor) * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f)));
+            res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? GlobalColors[final_pixel_index].Data().xyz : (((float)PartialRenderingFactor) * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f)));
         #elif defined(RadCache) && DebugView == DVRadCache
             res = 0;
             float4 Dat = _DebugTex[id.xy];
@@ -1386,6 +1410,7 @@ void RefineMVKernel(uint3 id : SV_DispatchThreadID) {
         float4 curprojectedrefl = mul(viewprojection, float4(NewPos, 1));
         float4 prevprojectedrefl = mul(prevviewprojection, float4(OldPos, 1));
         float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
+        _DebugTex[id.xy] = ScreenSpaceInfo[id.xy].z;//float4(reflprojection * 12.0f, 0, 1);
         if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) {
             CorrectedDistanceTex[id.xy] = length(NewPos2 - CamPos);// / 120.0f;
             MVTexture[id.xy] = (reflprojection);

@@ -252,8 +252,28 @@ struct ColData {
 	uint PrimaryNEERay;
 	uint Flags;
 	uint MetRoughIsSpec;
-	float3 Data;//could compress down to one uint for the color, and store the bounce flag in the existing metroughisspec flag, its already 14 bits for metallic and roughness, which is very unneeded
+	uint DataCol;//could compress down to one uint for the color, and store the bounce flag in the existing metroughisspec flag, its already 14 bits for metallic and roughness, which is very unneeded
+	float DataInten;//could compress down to one uint for the color, and store the bounce flag in the existing metroughisspec flag, its already 14 bits for metallic and roughness, which is very unneeded
+	uint DataSecondary;//could compress down to one uint for the color, and store the bounce flag in the existing metroughisspec flag, its already 14 bits for metallic and roughness, which is very unneeded
 	float InWaterDistance;
+
+
+	float3 unpackRGBE(uint x)
+	{
+	    int exponent = int(x >> 27) - 20;
+	    float scale = pow(2, exponent) / 256.0;
+
+	    float3 v;
+	    v.r = float(x & 0x1ff) * scale;
+	    v.g = float((x >> 9) & 0x1ff) * scale;
+	    v.b = float((x >> 18) & 0x1ff) * scale;
+
+	    return v;
+	}
+
+	float3 Data() {
+		return unpackRGBE(DataCol) * DataInten;
+	}
 };
 
 /*

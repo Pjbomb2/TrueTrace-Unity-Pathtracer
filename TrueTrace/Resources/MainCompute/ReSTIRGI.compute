@@ -361,7 +361,7 @@ void ReSTIRGIKernel(uint3 id : SV_DispatchThreadID, uint3 id2 : SV_GroupThreadID
     float3 PrimaryHitPosition = LoadSurfaceInfo(id.xy);
 
     const ColData CenterCol = GlobalColors[pixel_index];
-    float3 Data = CenterCol.Data;
+    float3 Data = CenterCol.Data();
     uint4 WorldPos = WorldPosC[id.xy];
     float4 NEEPos = NEEPosA[id.xy];
     MaterialData SurfaceMat = _Materials[MatIndex];
@@ -516,7 +516,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
         CameraRay = CreateRay(mul(CamToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz + NearPlane * normalize(equirectUvToDirection(uv)), normalize(equirectUvToDirection(uv)));
     }
     const ColData CenterCol = GlobalColors[pixel_index];
-    const float3 Data = CenterCol.Data;
+    const float3 Data = CenterCol.Data();
     uint MetRoughIsSpec = CenterCol.MetRoughIsSpec;
     MaterialData SurfaceMat = _Materials[MatIndex];
     const uint Flag = CenterCol.Flags;
@@ -748,7 +748,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
         CameraRay = CreateRay(mul(CamToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz + NearPlane * normalize(equirectUvToDirection(uv)), normalize(equirectUvToDirection(uv)));
     }
     const ColData CenterCol = GlobalColors[pixel_index];
-    const float3 Data = CenterCol.Data;
+    const float3 Data = CenterCol.Data();
     uint MetRoughIsSpec = CenterCol.MetRoughIsSpec;
     MaterialData SurfaceMat = _Materials[MatIndex];
     const uint Flag = CenterCol.Flags;
@@ -1027,7 +1027,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
 
     GlobalColors[pixel_index].PrimaryNEERay = packRGBE(pow(RunningReservoirC.Color * RunningReservoirC.W * NEEbsdf,rcp(2.2f)));
 
-    GlobalColors[pixel_index].Direct = 0;
+    GlobalColors[pixel_index].Direct = RunningReservoirB.Radiance.Color * RunningReservoirB.Radiance.W;
 #ifdef ReSTIRAdditionalAO
     if(Case != 3 && any(SampleRayDir != 0)) {
         float Dist = length(SampleRayDir - CenterRayDir);
@@ -1036,9 +1036,12 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
         GlobalColors[pixel_index].Indirect = RunningReservoirB.Radiance.Color * RunningReservoirB.Radiance.W;
     }
 #else
-    GlobalColors[pixel_index].Indirect = RunningReservoirB.Radiance.Color * RunningReservoirB.Radiance.W;
+    GlobalColors[pixel_index].Direct = 0;//RunningReservoirB.Radiance.Color * RunningReservoirB.Radiance.W;
 #endif
     if(GetBounceData(GlobalColors[pixel_index].MetRoughIsSpec) != 1) {
-        if(Case != 3) GlobalColors[pixel_index].Data.xyz = bsdf;
+        // if(Case != 3) {
+        //     GlobalColors[pixel_index].DataCol = packRGBE(normalize(bsdf));
+        //     GlobalColors[pixel_index].DataInten = length(bsdf);
+        // }
     }
 }
