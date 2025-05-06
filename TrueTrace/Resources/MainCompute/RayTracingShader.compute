@@ -427,7 +427,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     }
                 }
             }
-            wodotn = dot(ray.direction, Geomnorm);
 
             if (score_sum == 0 || random(311, pixel_index).x < SURF_BSDF_P) {
                 // BSDF Sampling
@@ -435,6 +434,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
                 mc_state = (MCState)0;
             } // else {VMF Sampling // wo = set above }
+            wodotn = dot(ray.direction, Geomnorm);
             // wodotn = dot(ray.direction, Geomnorm);
 
             // ray is below geometric surface
@@ -450,12 +450,12 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             float3 bsdf2;
             const float3x3 TangSpace = build_rotated_ONB(norm, hitDat.anisotropicRotation);
             validBSDFSample = EvaluateBsdf(hitDat, PrevDirection, ray.direction, norm, pdf, bsdf, pixel_index);//, pixel_index, TangSpace);
-            pdf = max(pdf, 0.001f);
+            // pdf = max(pdf, 0.001f);
             // validBSDFSample = true;
             // Valid2 = ReconstructBsdf2(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, TangSpace, pixel_index);
             // Valid2 = EvaluateBsdf2(SurfaceMat, CameraRay.direction, normalize(NEEPos - PrimaryHitPosition), SurfNorm, pdf, NEEbsdf, pixel_index, TangSpace);
 
-            wo_p = (score_sum > 0 ? SURF_BSDF_P : 1.0) * 1 + (1 - SURF_BSDF_P) * wo_p;
+            wo_p = (score_sum > 0 ? SURF_BSDF_P : 1.0) * pdf + (1 - SURF_BSDF_P) * wo_p;
 
         }
 
