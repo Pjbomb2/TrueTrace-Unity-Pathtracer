@@ -305,6 +305,16 @@ RWStructuredBuffer<MCState> mc_states;
 
 struct MCData {
 	uint4 A;
+	uint4 B;
 	MCState mcState;
 };
 RWStructuredBuffer<MCData> MCPrevData;
+
+struct LightCacheVertex {
+    uint hash; // grid_idx and level
+    uint lock;
+    float3 irr;
+    uint N;
+};
+
+RWStructuredBuffer<LightCacheVertex> light_cache;

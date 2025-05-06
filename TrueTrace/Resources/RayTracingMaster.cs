@@ -112,6 +112,7 @@ namespace TrueTrace {
 
         private ComputeBuffer StaticMCBuffer;
         private ComputeBuffer MCPrevDataBuffer;
+        private ComputeBuffer LightCache;
 
 
         private ComputeBuffer _RayBuffer;
@@ -399,6 +400,7 @@ namespace TrueTrace {
             _RayBuffer.ReleaseSafe();
             StaticMCBuffer.ReleaseSafe();
             MCPrevDataBuffer.ReleaseSafe();
+            LightCache.ReleaseSafe();
             LightingBuffer.ReleaseSafe();
             _BufferSizes.ReleaseSafe();
             _ShadowBuffer.ReleaseSafe();
@@ -877,6 +879,8 @@ namespace TrueTrace {
             ShadingShader.SetComputeBuffer(ShadeKernel, "GlobalColors", LightingBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernel, "mc_states", StaticMCBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernel, "MCPrevData", MCPrevDataBuffer);
+            ShadingShader.SetComputeBuffer(ShadeKernel, "light_cache", LightCache);
+            ShadingShader.SetComputeBuffer(FinalizeKernel, "light_cache", LightCache);
             ShadingShader.SetComputeBuffer(FinalizeKernel, "mc_states", StaticMCBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernel, "GlobalRays", _RayBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernel, "ShadowRaysBuffer", _ShadowBuffer);
@@ -973,8 +977,15 @@ namespace TrueTrace {
                 TTPostProc.init(SourceWidth, SourceHeight);
 
                 InitRenderTexture(true);
+                uint[] TempDat = new uint[(800009 + 32777259) * 11];
                 CommonFunctions.CreateDynamicBuffer(ref StaticMCBuffer, 800009 + 32777259, 44);
-                CommonFunctions.CreateDynamicBuffer(ref MCPrevDataBuffer, SourceWidth * SourceHeight, 60);
+                StaticMCBuffer.SetData(TempDat);
+                TempDat = new uint[SourceWidth * SourceHeight * 19];
+                CommonFunctions.CreateDynamicBuffer(ref MCPrevDataBuffer, SourceWidth * SourceHeight, 76);
+                MCPrevDataBuffer.SetData(TempDat);
+                TempDat = new uint[4000000 * 6];
+                CommonFunctions.CreateDynamicBuffer(ref LightCache, 4000000, 24);
+                LightCache.SetData(TempDat);
                 CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight * 2, 48);
                 CommonFunctions.CreateDynamicBuffer(ref _ShadowBuffer, SourceWidth * SourceHeight, 48);
                 CommonFunctions.CreateDynamicBuffer(ref LightingBuffer, SourceWidth * SourceHeight, 64);
@@ -1016,6 +1027,7 @@ namespace TrueTrace {
                     _RayBuffer.ReleaseSafe();
                     StaticMCBuffer.ReleaseSafe();
                     MCPrevDataBuffer.ReleaseSafe();
+                    LightCache.ReleaseSafe();
                     _ShadowBuffer.ReleaseSafe();
                     LightingBuffer.ReleaseSafe();
                     _RandomNums.ReleaseSafe();
