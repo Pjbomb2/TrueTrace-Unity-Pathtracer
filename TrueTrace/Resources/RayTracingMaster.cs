@@ -794,6 +794,11 @@ namespace TrueTrace {
 
 
             AssetManager.Assets.SetMeshTraceBuffers(IntersectionShader, ShadowKernel);
+
+            IntersectionShader.SetComputeBuffer(ShadowKernel, "mc_states", StaticMCBuffer);
+            IntersectionShader.SetComputeBuffer(ShadowKernel, "MCPrevData", MCPrevDataBuffer);
+            IntersectionShader.SetComputeBuffer(ShadowKernel, "light_cache", LightCache);
+
             IntersectionShader.SetComputeBuffer(ShadowKernel, "ShadowRaysBuffer", _ShadowBuffer);
             IntersectionShader.SetComputeBuffer(ShadowKernel, "GlobalColors", LightingBuffer);
             if(LocalTTSettings.UseReSTIRGI && ReSTIRInitialized) {

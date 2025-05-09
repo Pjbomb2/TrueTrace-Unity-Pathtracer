@@ -3277,8 +3277,8 @@ float3 phase_draine_sample(const float2 xi, const float3 wi, const float g, cons
 }
 
 
-#define CLTIME 0
-#define MCSTATETIME 0
+#define CLTIME 0.1f
+#define MCSTATETIME 0.2f
 
 #define MC_STATIC_BUFFER_SIZE 800009
 #define MC_ADAPTIVE_BUFFER_SIZE 32777259
@@ -3292,7 +3292,7 @@ float3 phase_draine_sample(const float2 xi, const float3 wi, const float g, cons
 #define ML_MAX_N 1024
 #define ML_MIN_ALPHA .01
 
-#define GRID_PRIME_X 1
+#define GRID_PRIME_X 508460413
 #define GRID_PRIME_Y 2654435761
 #define GRID_PRIME_Z 805459861
 
@@ -3318,19 +3318,19 @@ inline float yuv_luminance(float3 color) {
     return dot(color, float3(0.299, 0.587, 0.114));
 }
 
-#define mc_target_grid_width(pos) (2 * MC_ADAPTIVE_GRID_TAN_ALPHA_HALF * distance(CamPos.xzy, pos))
+#define mc_target_grid_width(pos) (2 * MC_ADAPTIVE_GRID_TAN_ALPHA_HALF * distance(CamPos, pos))
 
 #define mc_adaptive_target_level_for_pos(pos) uint(round(MC_ADAPTIVE_GRID_STEPS_PER_UNIT_SIZE * pow(max(mc_target_grid_width(pos) - MC_ADAPTIVE_GRID_MIN_WIDTH, 0), 1 / MC_ADAPTIVE_GRID_POWER)))
 
  #define mc_grid_width_for_level(level) (pow(level / MC_ADAPTIVE_GRID_STEPS_PER_UNIT_SIZE, MC_ADAPTIVE_GRID_POWER) + MC_ADAPTIVE_GRID_MIN_WIDTH)
 
 uint cubemap_side(const float3 w) {
-    if (abs(w.x) > abs(w.y) && abs(w.x) > abs(w.z)) {
+    if (abs(w.x) > abs(w.z) && abs(w.x) > abs(w.y)) {
         return w.x >= 0 ? 0 : 1;
-    } else if (abs(w.y) > abs(w.x) && abs(w.y) > abs(w.z)) {
-        return w.y >= 0 ? 2 : 3;
+    } else if (abs(w.z) > abs(w.x) && abs(w.z) > abs(w.y)) {
+        return w.z >= 0 ? 2 : 3;
     } else {
-        return w.z >= 0 ? 4 : 5;
+        return w.y >= 0 ? 4 : 5;
     }
 }
 
@@ -3341,11 +3341,11 @@ uint pack32(uint A, uint B) {
 
 uint hash_grid_normal_level(const uint3 index, const float3 normal, const uint level, const uint modulus) {
     const uint cube = cubemap_side(normal);
-    return ((index.x * GRID_PRIME_X) ^ (index.y * GRID_PRIME_Y) ^ (index.z * GRID_PRIME_Z) ^ (pack32(cube, level) * 723850877)) % modulus;
+    return ((index.x * GRID_PRIME_X) ^ (index.z * GRID_PRIME_Y) ^ (index.y * GRID_PRIME_Z) ^ (pack32(cube, level) * 723850877)) % modulus;
 }
 
 uint hash2_grid_level(const int3 index, const uint level) {
-    return (index.x * GRID_PRIME_X_2) ^ (index.y * GRID_PRIME_Y_2) ^ (index.z * GRID_PRIME_Z_2) ^ (9351217 * level + 13 * level);
+    return (index.x * GRID_PRIME_X_2) ^ (index.z * GRID_PRIME_Y_2) ^ (index.y * GRID_PRIME_Z_2) ^ (9351217 * level + 13 * level);
 }
 
 int3 grid_idx_upper(const float3 pos, const float cell_width) {
@@ -3413,11 +3413,11 @@ int3 grid_idx_interpolate(const float3 pos, const float cell_width, const float 
 
 
 uint hash_grid(const uint3 index, const uint modulus) {
-    return ((index.x * GRID_PRIME_X) ^ (index.y * GRID_PRIME_Y) ^ (index.z * GRID_PRIME_Z)) % modulus;
+    return ((index.x * GRID_PRIME_X) ^ (index.z * GRID_PRIME_Y) ^ (index.y * GRID_PRIME_Z)) % modulus;
 }
 
 uint hash2_grid(const int3 index) {
-    return (index.x * GRID_PRIME_X_2) ^ (index.y * GRID_PRIME_Y_2) ^ (index.z * GRID_PRIME_Z_2);
+    return (index.x * GRID_PRIME_X_2) ^ (index.z * GRID_PRIME_Y_2) ^ (index.y * GRID_PRIME_Z_2);
 }
 
 void mc_static_buffer_index(const float3 pos, out uint buffer_index, out uint hash, float random) {
@@ -3430,7 +3430,7 @@ void mc_static_buffer_index(const float3 pos, out uint buffer_index, out uint ha
 void mc_static_finalize_load(inout MCState mc_state, const uint hash, const float3 pos, const float3 normal) {
     mc_state.sum_w *= float(hash == mc_state.hash);
     mc_state.sum_w *= float(dot(normal, mc_state_dir(mc_state, pos)) > 0.);
-    mc_state.w_tgt += mc_state.sum_w * (CLTIME - MCSTATETIME) * mc_state.mv;
+    mc_state.w_tgt += mc_state.sum_w * (frames_accumulated - mc_state.T) * mc_state.mv;
 }
 
 
@@ -3440,13 +3440,13 @@ float mc_state_kappa(const MCState mc_state, const float3 pos) {
 }
 
 float3 vmf_sample(const float kappa, const float2 random) {
-    const float w = 1.0 + log(random.x + (1.0 - random.x) * exp(-2.0 * kappa)) / kappa;
+    const float w = 1.0f + log(random.x + (1.0 - random.x) * exp(-2.0 * kappa)) / kappa;
     const float2 v = float2(sin(TWO_PI * random.y), cos(TWO_PI * random.y));
     return float3(sqrt(1.0 - w * w) * v, w);
 }
 
 float3 vmf_sample(const float3 z, const float kappa, const float2 random) {
-    return mul(make_frame(z), vmf_sample(kappa, random));
+    return mul(make_frame(z.xzy), vmf_sample(kappa, random)).xzy;
 }
 
 void mc_state_add_sample(inout MCState mc_state,
@@ -3455,7 +3455,7 @@ void mc_state_add_sample(inout MCState mc_state,
                          const float3 target, const float3 target_mv) {    // ray hit point
 
     mc_state.N = min(mc_state.N + 1, ML_MAX_N);
-    const float alpha = max(1.0 / mc_state.N, ML_MIN_ALPHA);
+    const float alpha = max(1.0f / mc_state.N, ML_MIN_ALPHA);
 
     mc_state.sum_w = lerp(mc_state.sum_w, w,          alpha);
     mc_state.w_tgt = lerp(mc_state.w_tgt, w * target, alpha);
@@ -3463,7 +3463,7 @@ void mc_state_add_sample(inout MCState mc_state,
     //mc_state.w_cos = min(length(lerp(mc_state.w_cos * mc_state_dir(mc_state, pos), w * normalize(target - pos), alpha)), mc_state.sum_w);
 
     mc_state.mv = target_mv;
-    mc_state.T = CLTIME;//params.cl_time;
+    mc_state.T = frames_accumulated;//params.cl_time;
 }
 
 #define mc_adaptive_level_for_pos(pos, random) (mc_adaptive_target_level_for_pos(pos) + uint((-log2(1.0 - random))))
@@ -3477,7 +3477,7 @@ void mc_adaptive_buffer_index(const float3 pos, const float3 normal, out uint bu
 
 void mc_adaptive_finalize_load(inout MCState mc_state, const uint hash) {
     mc_state.sum_w *= float(hash == mc_state.hash);
-    mc_state.w_tgt += mc_state.sum_w * (CLTIME - MCSTATETIME) * mc_state.mv;
+    mc_state.w_tgt += mc_state.sum_w * (frames_accumulated - mc_state.T) * mc_state.mv;
 }
 
 void mc_adaptive_load(out MCState mc_state, const float3 pos, const float3 normal, float randomX, float randomY) {
@@ -3519,7 +3519,7 @@ float vmf_pdf(const float3 w, const float3 mu, const float kappa) {
 #define LC_GRID_MIN_WIDTH 0.01f
 #define LC_GRID_POWER  2.0f
 
-#define lc_target_grid_width(pos) (2.0f * LC_GRID_TAN_ALPHA_HALF * distance(CamPos.xzy+1000.0f, pos))
+#define lc_target_grid_width(pos) (2.0f * LC_GRID_TAN_ALPHA_HALF * distance(CamPos, pos))
 
 #define lc_level_for_pos(pos) uint(round(LC_GRID_STEPS_PER_UNIT_SIZE * pow(max(lc_target_grid_width(pos) - LC_GRID_MIN_WIDTH, 0), 1.0f / LC_GRID_POWER)))
 
@@ -3531,7 +3531,7 @@ float vmf_pdf(const float3 w, const float3 mu, const float kappa) {
 
 void light_cache_get_level(inout float3 irr, inout uint N, const uint level, float3 pos, const float3 normal, float rand) {
     const int3 grid_idx = lc_grid_idx_for_level_interpolate(level, pos, rand);
-    const uint buf_idx = hash_grid_normal_level(grid_idx, normal, level, LIGHT_CACHE_BUFFER_SIZE);
+    const uint buf_idx = hash_grid_normal_level(asuint(grid_idx), normal, level, LIGHT_CACHE_BUFFER_SIZE);
     const LightCacheVertex vtx = light_cache[buf_idx];
 
     if (vtx.hash == hash2_grid_level(grid_idx, level)
@@ -3546,7 +3546,7 @@ void light_cache_get_level(inout float3 irr, inout uint N, const uint level, flo
 }
 
 float3 light_cache_get(float3 pos, const float3 normal, float rand) {
-	pos += 1000.0f;
+	// pos += 1000.0f;
     const uint level = lc_level_for_pos(pos);
     float3 irr; uint N;
     light_cache_get_level(irr, N, level, pos, normal, rand);
@@ -3554,10 +3554,10 @@ float3 light_cache_get(float3 pos, const float3 normal, float rand) {
 }
 
 void light_cache_update(float3 pos, const float3 normal, const float3 irr, float randX, float randY) {
-	pos += 1000.0f;
+	// pos += 1000.0f;
     const uint level = lc_level_for_pos(pos);
     const int3 grid_idx = lc_grid_idx_for_level_interpolate(level, pos, randX);
-    const uint buf_idx = hash_grid_normal_level(grid_idx, normal, level, LIGHT_CACHE_BUFFER_SIZE);
+    const uint buf_idx = hash_grid_normal_level(asuint(grid_idx), normal, level, LIGHT_CACHE_BUFFER_SIZE);
     
     uint old;
     InterlockedExchange(light_cache[buf_idx].lock, frames_accumulated, old);

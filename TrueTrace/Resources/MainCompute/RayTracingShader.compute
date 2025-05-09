@@ -190,8 +190,12 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 #elif DebugView == DVSurfNorm
     if(CurBounce == 0) _DebugTex[id.xy] = float4(norm, 0);
 #endif
+        Geomnorm = i_octahedral_32(octahedral_32(Geomnorm));
+    if(CurBounce == 0) _DebugTex[id.xy] = float4(pos, asfloat(octahedral_32(Geomnorm)));
 
-    if(CurBounce == 0) MCPrevData[pixel_index].A = uint4(0,0,0,octahedral_32(Geomnorm));
+    if(CurBounce == 0) {
+        MCPrevData[pixel_index].A = uint4(asuint(0.0f),asuint(1.0f),asuint(1.0f),octahedral_32(Geomnorm));
+    }
 
 
     {
@@ -223,9 +227,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
 
 
-    if(hitDat.specTrans == 1 || (hitDat.metallic == 1 && hitDat.roughness < 0.01f)) {
+    // if(hitDat.specTrans == 1 || (hitDat.metallic == 1 && hitDat.roughness < 0.01f)) {
 
-        }else
+    //     }else
     
     if(CurBounce > 0) {
         {
@@ -248,12 +252,12 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 lc_incident = throughput * Rad;
                 */
 
-                lc_incident = throughput * Color.Data.xyz * light_cache_get(pos.xzy, Geomnorm.xzy, random(307, pixel_index).x).rgb;
+                lc_incident = throughput * Color.Data.xyz * light_cache_get(pos, Geomnorm, random(307, pixel_index).x).rgb;
             }
             // multiply albedo?
             const float mc_f = yuv_luminance(lc_incident / asfloat(MCPrevData[pixel_index].A.z));
             if (!isinf(mc_f) && !isnan(mc_f)) {
-                light_cache_update(PrevOrigin.xzy, i_octahedral_32(MCPrevData[pixel_index].A.w).xzy, lc_incident * unpackRGBE(MCPrevData[pixel_index].B.x) * asfloat(MCPrevData[pixel_index].A.y) / max(asfloat(MCPrevData[pixel_index].A.z), 10), random(308, pixel_index).x, random(308, pixel_index).y);
+                light_cache_update(PrevOrigin, i_octahedral_32(MCPrevData[pixel_index].A.w), lc_incident * unpackRGBE(MCPrevData[pixel_index].B.x) * asfloat(MCPrevData[pixel_index].A.y) / max(asfloat(MCPrevData[pixel_index].A.z), 10), random(308, pixel_index).x, random(308, pixel_index).y);
 
                 /*
                 CacheBuffer[pixel_index].RunningIlluminance = packRGBE(lc_incident * asfloat(MCPrevData[pixel_index].A.y) / max(asfloat(MCPrevData[pixel_index].A.z), 10));
@@ -262,14 +266,10 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
                 if (random(311, pixel_index).y * asfloat(MCPrevData[pixel_index].A.x) < mc_f * MC_SAMPLES) {
 
-                MyMeshDataCompacted Mesh = _MeshDataPrev[hit.mesh_id];
-                float4x4 Inverse = inverse(Mesh.W2L);
-                    float3 OldPos = mul(Inverse, float4(AggTrisA[hit.triangle_id].pos0 + hit.u * AggTrisA[hit.triangle_id].posedge1 + hit.v * AggTrisA[hit.triangle_id].posedge2,1)).xyz;
-
                     // == XorShift32(rng_state) < mc_f / (score_sum / MC_SAMPLES)
-                    mc_state_add_sample(MCPrevData[pixel_index].mcState, PrevOrigin.xzy, mc_f, pos.xzy, 0);//(pos - OldPos).xzy);
-                    mc_static_save(MCPrevData[pixel_index].mcState, PrevOrigin.xzy, i_octahedral_32(MCPrevData[pixel_index].A.w).xzy, random(309, pixel_index).x);
-                    mc_adaptive_save(MCPrevData[pixel_index].mcState, PrevOrigin.xzy, i_octahedral_32(MCPrevData[pixel_index].A.w).xzy, random(310, pixel_index).x, random(310, pixel_index).y);
+                    mc_state_add_sample(MCPrevData[pixel_index].mcState, PrevOrigin, mc_f, pos, 0);//(pos - OldPos).xzy);
+                    mc_static_save(MCPrevData[pixel_index].mcState, PrevOrigin, i_octahedral_32(MCPrevData[pixel_index].A.w), random(309, pixel_index).x);
+                    mc_adaptive_save(MCPrevData[pixel_index].mcState, PrevOrigin, i_octahedral_32(MCPrevData[pixel_index].A.w), random(310, pixel_index).x, random(310, pixel_index).y);
                 }
             }
         }
@@ -279,7 +279,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
 
 
-
+        if(CurBounce == 0) {
+            MCPrevData[pixel_index].B.y = asuint(1.0f);
+        }
 
 
 
@@ -289,9 +291,12 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         float pdf3 = (Tr.x + Tr.y + Tr.z) / 3.0f;
         hitDat.emission *= Tr;// / pdf3;// / pdf;
 #endif
-        float3 EmissCol = hitDat.surfaceColor * hitDat.emission * LEMEnergyScale;
-        if(CurBounce > 0) EmissCol  /= asfloat(MCPrevData[pixel_index].B.y);
-        if (!UseNEE || AggTrisB[hit.triangle_id].IsEmissive == 0) {
+        float3 EmissCol = hitDat.surfaceColor * hitDat.emission * LEMEnergyScale;// * (asfloat(MCPrevData[pixel_index].A) != 0);
+        // _DebugTex[id.xy] = float4(1.0f / asfloat(MCPrevData[pixel_index].B.y), 1.0f / asfloat(MCPrevData[pixel_index].A.z), 1.0f / asfloat(MCPrevData[pixel_index].A.x), 1);//float4(EmissCol / 120.0f, 1);
+        if(1.0f / asfloat(MCPrevData[pixel_index].A.z) <= 0.9f) {
+            if(CurBounce > 0) EmissCol  /= asfloat(MCPrevData[pixel_index].B.y);
+        } else return;
+        // if (!UseNEE || AggTrisB[hit.triangle_id].IsEmissive == 0) {
             if (CurBounce <= 1) Color.Direct += EmissCol;
             else if(CurBounce > 1) {
                 #ifdef RadCache
@@ -301,36 +306,36 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     Color.Indirect += Color.throughput * EmissCol;
                 #endif
             }
-        } else {
-            float3 a1 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge1).xyz;
-            float3 a2 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge2).xyz;
-            float a = AreaOfTriangle(float3(0,0,0), a1, a2);
-            float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
-            float light_pdf = 1.0f / (SA * LightMeshCount);
-            #if defined(LBVH)
-                #ifdef DoubleBufferSGTree
-                    [branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTreePrev, _MeshDataPrev);
-                    else CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTree, _MeshData);
-                #else
-                    CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTree, _MeshData);
-                #endif
-            #else
-                light_pdf *= rcp(_MeshData[hit.mesh_id].LightTriCount);
-            #endif
-            float w = power_heuristic(max(last_pdf,0), light_pdf);
-            if (CurBounce == 0) Color.Direct += EmissCol;
-            #ifdef UseBRDFLights
-                else if (CurBounce == 1) Color.Direct += EmissCol * w;
-                else {
-                    #ifdef RadCache
-                        if(GetBounceData(CachePathLength) != 0) CacheBuffer[pixel_index].RunningIlluminance = packRGBE(unpackRGBE(CacheBuffer[pixel_index].RunningIlluminance) + EmissCol * w);
-                        else Color.Indirect += Color.throughput * EmissCol * w;
-                    #else
-                        Color.Indirect += Color.throughput * EmissCol * w;
-                    #endif
-                }
-            #endif
-        }
+        // } else {
+        //     float3 a1 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge1).xyz;
+        //     float3 a2 = mul((float3x3)inverse(_MeshData[hit.mesh_id].W2L), AggTrisA[hit.triangle_id].posedge2).xyz;
+        //     float a = AreaOfTriangle(float3(0,0,0), a1, a2);
+        //     float SA = abs(dot(norm, ray.direction)) * a / (hit.t * hit.t);
+        //     float light_pdf = 1.0f / (SA * LightMeshCount);
+        //     #if defined(LBVH)
+        //         #ifdef DoubleBufferSGTree
+        //             [branch]if(UseASVGF && RandomNums[uint2(pixel_index % screen_width, pixel_index / screen_width)].w == 1) CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTreePrev, _MeshDataPrev);
+        //             else CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTree, _MeshData);
+        //         #else
+        //             CalcLightPDF(light_pdf, ray.origin, pos, ray.direction, pixel_index, hit.mesh_id, 1.0, -ray.direction, 0.0f, SGTree, _MeshData);
+        //         #endif
+        //     #else
+        //         light_pdf *= rcp(_MeshData[hit.mesh_id].LightTriCount);
+        //     #endif
+        //     float w = power_heuristic(max(last_pdf,0), light_pdf);
+        //     if (CurBounce == 0) Color.Direct += EmissCol;
+        //     #ifdef UseBRDFLights
+        //         else if (CurBounce == 1) Color.Direct += EmissCol * w;
+        //         else {
+        //             #ifdef RadCache
+        //                 if(GetBounceData(CachePathLength) != 0) CacheBuffer[pixel_index].RunningIlluminance = packRGBE(unpackRGBE(CacheBuffer[pixel_index].RunningIlluminance) + EmissCol * w);
+        //                 else Color.Indirect += Color.throughput * EmissCol * w;
+        //             #else
+        //                 Color.Indirect += Color.throughput * EmissCol * w;
+        //             #endif
+        //         }
+        //     #endif
+        // }
 
 
 
@@ -373,18 +378,16 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     
     
 
-        if(CurBounce == 0) {
-            MCPrevData[pixel_index].B.y = asuint(1.0f);
-        }
 
 
-    if(hitDat.specTrans == 1 || (hitDat.metallic == 1 && hitDat.roughness < 0.01f)) {
-        validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
-        MCPrevData[pixel_index].A = uint4(1,1,1,octahedral_32(Refracted ? -Geomnorm : Geomnorm));
-        MCPrevData[pixel_index].mcState = (MCState)0;
-        } else 
 
-    if(CurBounce >= 0) {
+    // if(hitDat.specTrans == 1 || (hitDat.metallic == 1 && hitDat.roughness < 0.01f)) {
+        // validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
+        // MCPrevData[pixel_index].A = uint4(1,asuint(1.0f),asuint(1.0f),octahedral_32(Refracted ? -Geomnorm : Geomnorm));
+        // MCPrevData[pixel_index].mcState = (MCState)0;
+    //     } else 
+
+    // if(CurBounce >= 0) {
         MCState mc_state;
         uint mc_buffer_index;
 
@@ -403,9 +406,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     uint buffer_index, hash;
                     int s = 1;
                     if (adaptive_grid) {
-                        mc_adaptive_buffer_index(pos.xzy, Geomnorm.xzy, buffer_index, hash, random(312 + MC_SAMPLES + i, pixel_index).x, random(312 + MC_SAMPLES + i, pixel_index).y);
+                        mc_adaptive_buffer_index(pos, Geomnorm, buffer_index, hash, random(312 + MC_SAMPLES + i, pixel_index).x, random(312 + MC_SAMPLES + i, pixel_index).y);
                     } else {
-                        mc_static_buffer_index(pos.xzy, buffer_index, hash, random(312 + MC_SAMPLES + i, pixel_index).x);
+                        mc_static_buffer_index(pos, buffer_index, hash, random(312 + MC_SAMPLES + i, pixel_index).x);
                     }
 
                     MCState state = mc_states[buffer_index];
@@ -413,17 +416,20 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                     if (adaptive_grid) {
                         mc_adaptive_finalize_load(state, hash);
                     } else {
-                        mc_static_finalize_load(state, hash, pos.xzy, Geomnorm.xzy);
+                        mc_static_finalize_load(state, hash, pos, Geomnorm);
                     }
 
                     scores[i] = state.sum_w;
                     score_sum += state.sum_w;
-                    vmfs[i] = mc_state_get_vmf(state, pos.xzy);
+                    vmfs[i] = mc_state_get_vmf(state, pos);
+                    // if(any(isnan(vmfs[i])) || score_sum == 0) continue;
                     if (random(312 + i, pixel_index).y < scores[i] / score_sum) {
                         // we use here that comparison with NaN is false, that happens if candidate_score == 0 and sum == 0; 
+                        float3 C = vmf_sample(vmfs[i].xyz, vmfs[i].w, random(312 + MC_SAMPLES * 2 + i, pixel_index));
+                        // if(any(isnan(C))) _DebugTex[id.xy] = 1;//continue;
                         mc_state = state;
                         mc_buffer_index = buffer_index;
-                        ray.direction = vmf_sample(vmfs[i].xyz, vmfs[i].w, random(312 + MC_SAMPLES * 2 + i, pixel_index)).xzy;
+                        ray.direction = C;
                     }
                 }
             }
@@ -432,7 +438,13 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 // BSDF Sampling
                 // wo = bsdf_ggx_diffuse_mix_sample(current_hit.wi, current_hit.normal, bsdf_ggx_roughness_to_alpha(current_hit.roughness), XorShift32Vec3(rng_state));
                 validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
-                mc_state = (MCState)0;
+                mc_state.w_tgt = 0;
+                mc_state.sum_w = 0;
+                mc_state.N = 0;
+                mc_state.w_cos = 0;
+                mc_state.mv = 0;
+                mc_state.T = 0;
+                mc_state.hash = 0;
             } // else {VMF Sampling // wo = set above }
             wodotn = dot(ray.direction, Geomnorm);
             // wodotn = dot(ray.direction, Geomnorm);
@@ -442,14 +454,23 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 return;
 
             // Multiple importance sampling
-            [[unroll]]
+            [unroll]
             for (int i = 0; i < MC_SAMPLES; i++) {
                 // score_sum > 0 ? results in black artifacts
-                wo_p += (scores[i] > 0 ? scores[i] * (vmf_pdf(ray.direction.xzy, vmfs[i].xyz, vmfs[i].w)) / score_sum : 0);
+                float A = (scores[i] > 0 ? scores[i] * (vmf_pdf(ray.direction, vmfs[i].xyz, vmfs[i].w)) / score_sum : 0);
+                // if(isnan(A)) continue;
+                wo_p += A;
             }
-            float3 bsdf2;
-            const float3x3 TangSpace = build_rotated_ONB(norm, hitDat.anisotropicRotation);
-            validBSDFSample = EvaluateBsdf(hitDat, PrevDirection, ray.direction, norm, pdf, bsdf, pixel_index);//, pixel_index, TangSpace);
+            float pdf2;
+            if(score_sum != 0) {
+
+                validBSDFSample = EvaluateBsdf(hitDat, PrevDirection, ray.direction, norm, pdf, bsdf, pixel_index);//, pixel_index, TangSpace);
+                const float3x3 TangSpace = build_rotated_ONB(norm, hitDat.anisotropicRotation);
+                validBSDFSample = ReconstructBsdf2(hitDat, PrevDirection, ray.direction, norm, pdf2, bsdf, TangSpace, pixel_index);
+                pdf2 = pdf;
+                bsdf *= pdf2;
+
+            }
             // pdf = max(pdf, 0.001f);
             // validBSDFSample = true;
             // Valid2 = ReconstructBsdf2(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, TangSpace, pixel_index);
@@ -460,7 +481,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         }
 
 
-
+bsdf = clamp(bsdf, 0, 1.0f);
 
 
 
@@ -473,7 +494,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         MCPrevData[pixel_index].B.x = packRGBE(bsdf);
         MCPrevData[pixel_index].B.y = asuint(asfloat(MCPrevData[pixel_index].B.y) * wo_p);
         MCPrevData[pixel_index].mcState = mc_state;
-    }
+    // }
 
 
 
@@ -563,7 +584,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         Color.MetRoughIsSpec = ((Color.MetRoughIsSpec & ~(0x7C000000)) | (((CurBounce < 20 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.03f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
         throughput = 1;  
     }
-    if(CurBounce == 0) _DebugTex[id.xy] = float4(ray.origin, asfloat(octahedral_32(Geomnorm)));
     #ifdef RadCache
         #if DebugView == DVRadCache
         #endif
@@ -1473,11 +1493,12 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
         #endif
     #endif
 
-    MCState mc_state;
-    mc_adaptive_load(mc_state, _DebugTex[id.xy].xzy, i_octahedral_32(asuint(_DebugTex[id.xy].w)).xzy, randomNEE(322, final_pixel_index).x, randomNEE(322, final_pixel_index).y);
-    // res = (mc_state_get_vmf(mc_state, _DebugTex[id.xy].xzy).xzy);
-    // res = light_cache_get(_DebugTex[id.xy].xzy, i_octahedral_32(asuint(_DebugTex[id.xy].w)).xzy, randomNEE(322, final_pixel_index).x) * 5.0f;
-
+    // MCState mc_state;
+    // mc_adaptive_load(mc_state, _DebugTex[id.xy], i_octahedral_32(asuint(_DebugTex[id.xy].w)), randomNEE(322, final_pixel_index).x, randomNEE(322, final_pixel_index).y);
+    // res = (mc_state_get_vmf(mc_state, _DebugTex[id.xy]));
+    // res = mc_state.sum_w * 0.1;
+    res = light_cache_get(_DebugTex[id.xy], i_octahedral_32(asuint(_DebugTex[id.xy].w)), randomNEE(322, final_pixel_index).x) * 5.0f;
+    // res = _DebugTex[id.xy];
     Result[id.xy] = float4(res, 1.0f);
 }
 
