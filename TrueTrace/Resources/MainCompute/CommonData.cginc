@@ -3339,7 +3339,8 @@ uint pack32(uint A, uint B) {
 }
 
 
-uint hash_grid_normal_level(const uint3 index, const float3 normal, const uint level, const uint modulus) {
+uint hash_grid_normal_level(const int3 index2, const float3 normal, const uint level, const uint modulus) {
+    uint3 index = asuint(index2);
     const uint cube = cubemap_side(normal);
     return ((index.x * GRID_PRIME_X) ^ (index.z * GRID_PRIME_Y) ^ (index.y * GRID_PRIME_Z) ^ (pack32(cube, level) * 723850877)) % modulus;
 }
@@ -3412,7 +3413,8 @@ int3 grid_idx_interpolate(const float3 pos, const float cell_width, const float 
 
 
 
-uint hash_grid(const uint3 index, const uint modulus) {
+uint hash_grid(const int3 index2, const uint modulus) {
+	uint3 index = asuint(index2);
     return ((index.x * GRID_PRIME_X) ^ (index.z * GRID_PRIME_Y) ^ (index.y * GRID_PRIME_Z)) % modulus;
 }
 
@@ -3519,7 +3521,8 @@ float vmf_pdf(const float3 w, const float3 mu, const float kappa) {
 #define LC_GRID_MIN_WIDTH 0.01f
 #define LC_GRID_POWER  2.0f
 
-#define lc_target_grid_width(pos) (2.0f * LC_GRID_TAN_ALPHA_HALF * distance(CamPos, pos))
+
+#define lc_target_grid_width(pos) (2.0f * LC_GRID_TAN_ALPHA_HALF * distance(CamPos+1000.0f, pos))
 
 #define lc_level_for_pos(pos) uint(round(LC_GRID_STEPS_PER_UNIT_SIZE * pow(max(lc_target_grid_width(pos) - LC_GRID_MIN_WIDTH, 0), 1.0f / LC_GRID_POWER)))
 
@@ -3531,7 +3534,7 @@ float vmf_pdf(const float3 w, const float3 mu, const float kappa) {
 
 void light_cache_get_level(inout float3 irr, inout uint N, const uint level, float3 pos, const float3 normal, float rand) {
     const int3 grid_idx = lc_grid_idx_for_level_interpolate(level, pos, rand);
-    const uint buf_idx = hash_grid_normal_level(asuint(grid_idx), normal, level, LIGHT_CACHE_BUFFER_SIZE);
+    const uint buf_idx = hash_grid_normal_level(grid_idx, normal, level, LIGHT_CACHE_BUFFER_SIZE);
     const LightCacheVertex vtx = light_cache[buf_idx];
 
     if (vtx.hash == hash2_grid_level(grid_idx, level)
@@ -3545,8 +3548,15 @@ void light_cache_get_level(inout float3 irr, inout uint N, const uint level, flo
     }
 }
 
+uint light_cache_get2(float3 pos, const float3 normal, float rand) {
+    const uint level = lc_level_for_pos(pos);
+    const int3 grid_idx = lc_grid_idx_for_level_interpolate(level, pos, rand);
+    const uint buf_idx = hash_grid_normal_level(grid_idx, normal, level, LIGHT_CACHE_BUFFER_SIZE);
+    return buf_idx;
+}
+
 float3 light_cache_get(float3 pos, const float3 normal, float rand) {
-	// pos += 1000.0f;
+	pos += 1000.0f;
     const uint level = lc_level_for_pos(pos);
     float3 irr; uint N;
     light_cache_get_level(irr, N, level, pos, normal, rand);
@@ -3554,10 +3564,10 @@ float3 light_cache_get(float3 pos, const float3 normal, float rand) {
 }
 
 void light_cache_update(float3 pos, const float3 normal, const float3 irr, float randX, float randY) {
-	// pos += 1000.0f;
+	pos += 1000.0f;
     const uint level = lc_level_for_pos(pos);
     const int3 grid_idx = lc_grid_idx_for_level_interpolate(level, pos, randX);
-    const uint buf_idx = hash_grid_normal_level(asuint(grid_idx), normal, level, LIGHT_CACHE_BUFFER_SIZE);
+    const uint buf_idx = hash_grid_normal_level(grid_idx, normal, level, LIGHT_CACHE_BUFFER_SIZE);
     
     uint old;
     InterlockedExchange(light_cache[buf_idx].lock, frames_accumulated, old);

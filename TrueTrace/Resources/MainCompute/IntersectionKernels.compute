@@ -650,7 +650,31 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
                         if (stack_size == 0) {//thread has finished traversing
                             if(!TerrainExists) {
                                 uint PixelIndex = ShadowRay.PixelIndex & 0xFFFFFFF;
+                                uint pixel_index = PixelIndex;
                                 bool IsNotPrimaryNEERay = (ShadowRay.PixelIndex >> 30);
+
+
+                                // if(CurBounce > 0) {
+
+                                //     float3 lc_incident;
+                                //     lc_incident = pow(ShadowRay.illumination,rcp(2.2f)) * throughput;
+                                //     // multiply albedo?
+                                //     const float mc_f = yuv_luminance(lc_incident / asfloat(MCPrevData[pixel_index].B.z));
+                                //     if (!isinf(mc_f) && !isnan(mc_f)) {
+                                //         light_cache_update(ray2.origin, i_octahedral_32(MCPrevData[pixel_index].A.w), lc_incident * asfloat(MCPrevData[pixel_index].B.w) / max(asfloat(MCPrevData[pixel_index].B.z), 10), random(323, pixel_index).x, random(323, pixel_index).y);
+
+                                //         // if (random(324, pixel_index).y * asfloat(MCPrevData[pixel_index].A.x) < mc_f * MC_SAMPLES) {
+
+                                //         //     // == XorShift32(rng_state) < mc_f / (score_sum / MC_SAMPLES)
+                                //         //     mc_state_add_sample(MCPrevData[pixel_index].mcState, ray2.origin, mc_f, ray2.origin + ray2.direction * max_distance, 0);//(pos - OldPos).xzy);
+                                //         //     mc_static_save(MCPrevData[pixel_index].mcState, ray2.origin, i_octahedral_32(MCPrevData[pixel_index].A.w), random(324, pixel_index).x);
+                                //         //     mc_adaptive_save(MCPrevData[pixel_index].mcState, ray2.origin, i_octahedral_32(MCPrevData[pixel_index].A.w), random(325, pixel_index).x, random(325, pixel_index).y);
+                                //         // }
+                                //     }
+                                // }
+
+
+
                                 if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray2.origin + ray2.direction * max_distance, asfloat(ShadowRay.FIELD));
                                 #ifdef RadCache
                                     CacheBuffer[PixelIndex].RunningIlluminance = packRGBE(unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput + unpackRGBE(CacheBuffer[PixelIndex].RunningIlluminance));

@@ -809,6 +809,7 @@ namespace TrueTrace {
                 IntersectionShader.SetTexture(HeightmapShadowKernel, "NEEPosA", GINEEPosA);
             }
             IntersectionShader.SetTexture(TraceKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
+            IntersectionShader.SetTexture(ShadowKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
 
 
             AssetManager.Assets.SetHeightmapTraceBuffers(IntersectionShader, HeightmapKernel);
