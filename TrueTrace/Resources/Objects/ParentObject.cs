@@ -936,8 +936,59 @@ namespace TrueTrace {
         NodePair[CurrentNode] = CurrentPair;
     }
 
+
+
+
         unsafe public void Construct()
         {
+
+            // List<AABB> NewAABBs = new List<AABB>(TrianglesArray);
+
+            // const float alpha = 0.01f; // 1.0 => no splits; 0.0 => infinite splits
+            // float globalArea = aabb_untransformed.ComputeSurfaceArea();
+
+            // List<AABB> bounds = new List<AABB>(NewAABBs.Count);
+            // List<int> originalTriIds = new List<int>(NewAABBs.Count);
+
+            // AABB[] stack = new AABB[64];
+
+            // int Coun = NewAABBs.Count;
+            // for (int i = 0; i < Coun; i++)
+            // {
+            //     CudaTriangle triangle = AggTriangles[i];
+
+            //     int stackPtr = 0;
+            //     stack[stackPtr++] = new AABB(triangle);
+            //     while (stackPtr > 0)
+            //     {
+            //         AABB box = stack[--stackPtr];
+
+            //         float percentGlobalArea = box.ComputeSurfaceArea() / globalArea;
+            //         bool doSplit = percentGlobalArea > alpha;
+
+            //         if (doSplit)
+            //         {
+            //             int axis = box.LargestAxis();
+            //             float pos = (box.BBMin[axis] + box.BBMax[axis]) * 0.5f;
+
+            //             AABB[] lrBox = triangle.Split(axis, pos);
+
+            //             lrBox[0].ShrinkToFit(box);
+            //             lrBox[1].ShrinkToFit(box);
+
+            //             stack[stackPtr++] = lrBox[0];
+            //             stack[stackPtr++] = lrBox[1];
+            //         }
+            //         else
+            //         {
+            //             bounds.Add(box);
+            //             originalTriIds.Add(i);
+            //         }
+            //     }
+            // }
+
+            // return (bounds.ToArray(), originalTriIds.ToArray());
+
 
             tempAABB = new AABB();
             MaxRecur = 0;

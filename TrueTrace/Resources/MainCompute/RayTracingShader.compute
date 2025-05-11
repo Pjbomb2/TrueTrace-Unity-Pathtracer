@@ -216,6 +216,10 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         if(newT == hit.t) {
     #endif
     [branch] if (hitDat.emission > 0.0f) {//if we hit a light, this ray is done
+    #ifdef IgnoreBackfacingEmissive
+        if(GotFlipped) return;
+    #endif    
+
 #ifdef Fog
         float3 Tr = exp(-SigmaT * OptDepthSpherExpMedium(ray.origin.y+bottom_radius, rcp(ray.origin.y+bottom_radius), ray.direction.y, hit.t, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
         float pdf3 = (Tr.x + Tr.y + Tr.z) / 3.0f;
@@ -537,7 +541,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             }
             
             float SurfaceCos = dot(to_light, norm);//YES KEEP THIS, IT NOT ONLY IMPROVES PERFORMANCE BUT IT ALSO HELPS KEEPS THINGS LESS BIASED AS OTHERWISE THE NORMAL OFFSET CAN RESULT IN WRONG VISABILITY!
-        #ifdef IgnoreBackfacing
+        #ifdef IgnoreBackfacingEmissive
             if(SurfaceCos > 0 && (dot(to_light, LightNorm) > 0 || LightFormat != TRILIGHT)) {
         #else
             if(SurfaceCos > 0) {
@@ -880,7 +884,7 @@ int MaterialIndex;
             }
             
             float SurfaceCos = dot(to_light, norm);//YES KEEP THIS, IT NOT ONLY IMPROVES PERFORMANCE BUT IT ALSO HELPS KEEPS THINGS LESS BIASED AS OTHERWISE THE NORMAL OFFSET CAN RESULT IN WRONG VISABILITY!
-        #ifdef IgnoreBackfacing
+        #ifdef IgnoreBackfacingEmissive
             if(SurfaceCos > 0 && (dot(to_light, LightNorm) > 0 || LightFormat != TRILIGHT)) {
         #else
             if(SurfaceCos > 0) {

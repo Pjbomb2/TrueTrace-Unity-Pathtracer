@@ -46,7 +46,7 @@ MonoBehaviour:
   DoFirefly: 0
   ImprovedPrimaryHit: 1
   RISCount: 12
-  ToneMapper: 0
+  ToneMapper: 7
   SkyDesaturate: 0
   ClayColor: {x: 0.5, y: 0.5, z: 0.5}
   ClayMetalOverride: 1

@@ -505,6 +505,28 @@ namespace CommonVars
             BBMin = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
         }
 
+        public AABB(CudaTriangle Tri) { 
+            BBMax = Vector3.Max(Vector3.Max(Tri.pos0, Tri.pos0 + Tri.posedge1), Tri.pos0 + Tri.posedge2);
+            BBMin = Vector3.Min(Vector3.Min(Tri.pos0, Tri.pos0 + Tri.posedge1), Tri.pos0 + Tri.posedge2);
+        }
+        public int LargestAxis() {
+            Vector3 Sizes = BBMax - BBMin;
+            int Lorge = 0;
+            float Lorgest = Sizes.x;
+            if(Sizes.y > Lorgest) {
+                Lorgest = Sizes.y;
+                Lorge = 1;
+            }
+            if(Sizes.z > Lorgest) {
+                Lorge = 2;
+            }
+            return Lorge;
+        }
+
+        public void ShrinkToFit(AABB SideAABB) {
+            BBMax = Vector3.Min(BBMax, SideAABB.BBMax);
+            BBMin = Vector3.Max(BBMin, SideAABB.BBMin);
+        }
         public void Create(Vector3 A, Vector3 B)
         {
             this.BBMax = A;//new Vector3(System.Math.Max(A.x, B.x), System.Math.Max(A.y, B.y), System.Math.Max(A.z, B.z));
@@ -700,6 +722,42 @@ namespace CommonVars
 
         public uint MatDat;
         public uint IsEmissive;
+
+        Vector3 split_edge(int axis, float position, Vector3 a, Vector3 b) {
+            float t = (position - a[axis]) / (b[axis] - a[axis]);
+            return a + t * (b - a);
+        }
+        AABB[] split(int axis, float position) {
+            Vector3[] p = { pos0, pos0 + posedge1, pos0 + posedge2 };
+            AABB left  = new AABB();
+            AABB right = new AABB();
+            bool q0 = p[0][axis] <= position;
+            bool q1 = p[1][axis] <= position;
+            bool q2 = p[2][axis] <= position;
+            if (q0) left.Extend(p[0]);
+            else    right.Extend(p[0]);
+            if (q1) left.Extend(p[1]);
+            else    right.Extend(p[1]);
+            if (q2) left.Extend(p[2]);
+            else    right.Extend(p[2]);
+            if (q0 ^ q1) {
+                Vector3 m = split_edge(axis, position, p[0], p[1]);
+                left.Extend(m);
+                right.Extend(m);
+            }
+            if (q1 ^ q2) {
+                Vector3 m = split_edge(axis, position, p[1], p[2]);
+                left.Extend(m);
+                right.Extend(m);
+            }
+            if (q2 ^ q0) {
+                Vector3 m = split_edge(axis, position, p[2], p[0]);
+                left.Extend(m);
+                right.Extend(m);
+            }
+            return new AABB[] {left, right};
+        }
+
     }
 
 
