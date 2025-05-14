@@ -54,7 +54,14 @@ namespace TrueTrace {
         }
 
 
-
+        private float AreaOfTriangle(Vector3 pt1, Vector3 pt2, Vector3 pt3)
+        {
+            float a = Distance(pt1, pt2);
+            float b = Distance(pt2, pt3);
+            float c = Distance(pt3, pt1);
+            float s = (a + b + c) / 2.0f;
+            return Mathf.Sqrt(s * (s - a) * (s - b) * (s - c));
+        }
         public PerInstanceData[] InstanceDatas;
         public int[] RTAccelHandle;
         public int[] RTAccelSubmeshOffsets;
@@ -936,59 +943,143 @@ namespace TrueTrace {
         NodePair[CurrentNode] = CurrentPair;
     }
 
+            int GetSplitCount(float priority, float totalPriority, int triangleCount)
+            {
+                float shareOfTris = priority / totalPriority * triangleCount;
+                int splitCount = 1 + (int)(shareOfTris * 0.4f);
 
+                return splitCount;
+            }
+
+            float Priority(AABB triBox, CudaTriangle triangle)
+            {
+                return Mathf.Pow(triBox.LargestExtent(triBox.LargestAxis()) * (triBox.HalfArea() * 2.0f - Vector3.Distance(Vector3.Cross(triangle.posedge1, triangle.posedge2),Vector3.zero) * 0.5f), 1f / 3f);
+            }
+            public struct SplitData {
+                public AABB box;
+                public int splitsLeft;
+            }
 
 
         unsafe public void Construct()
         {
 
-            // List<AABB> NewAABBs = new List<AABB>(TrianglesArray);
+#if TTTriSplitting && !HardwareRT
+            if(!IsSkinnedGroup && !IsDeformable) {
+                int Coun = AggTriangles.Length;
+                int Splits = 0;
+                Vector3 globalSize = aabb_untransformed.BBMax - aabb_untransformed.BBMin;
 
-            // const float alpha = 0.01f; // 1.0 => no splits; 0.0 => infinite splits
-            // float globalArea = aabb_untransformed.ComputeSurfaceArea();
+                float totalPriority = 0.0f;
+                for (int i = 0; i < Coun; i++)
+                {
+                    CudaTriangle triangle = AggTriangles[i];
+                    totalPriority += Priority(new AABB(triangle), triangle);
+                }
 
-            // List<AABB> bounds = new List<AABB>(NewAABBs.Count);
-            // List<int> originalTriIds = new List<int>(NewAABBs.Count);
+                int referenceCount = 0;
+                for (int i = 0; i < Coun; i++)
+                {
+                    CudaTriangle triangle = AggTriangles[i];
+                    float priority = Priority(new AABB(triangle), triangle);
+                    int splitCount = GetSplitCount(priority, totalPriority, Coun);
 
-            // AABB[] stack = new AABB[64];
+                    referenceCount += splitCount;
+                }
+                Splits = referenceCount - Coun;
 
-            // int Coun = NewAABBs.Count;
-            // for (int i = 0; i < Coun; i++)
-            // {
-            //     CudaTriangle triangle = AggTriangles[i];
+                TrianglesArray = new NativeArray<AABB>(referenceCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+                Triangles = (AABB*)NativeArrayUnsafeUtility.GetUnsafePtr(TrianglesArray);
 
-            //     int stackPtr = 0;
-            //     stack[stackPtr++] = new AABB(triangle);
-            //     while (stackPtr > 0)
-            //     {
-            //         AABB box = stack[--stackPtr];
+                int[] originalTriIds = new int[referenceCount];
+                Vector3[] centers = new Vector3[referenceCount];
+                CudaTriangle[] NewTris = new CudaTriangle[referenceCount];
+                int[] ReverseIndexes = new int[Coun];
+                int counter = 0;
 
-            //         float percentGlobalArea = box.ComputeSurfaceArea() / globalArea;
-            //         bool doSplit = percentGlobalArea > alpha;
+                SplitData[] stack = new SplitData[64];
+                for (int i = 0; i < Coun; i++)
+                {
+                    CudaTriangle triangle = AggTriangles[i];
+                    AABB triBox = new AABB(triangle);
 
-            //         if (doSplit)
-            //         {
-            //             int axis = box.LargestAxis();
-            //             float pos = (box.BBMin[axis] + box.BBMax[axis]) * 0.5f;
+                    float priority = Priority(triBox, triangle);
+                    int splitCount = GetSplitCount(priority, totalPriority, Coun);
 
-            //             AABB[] lrBox = triangle.Split(axis, pos);
+                    int stackPtr = 0;
+                    stack[stackPtr++] = new SplitData() {box = triBox, splitsLeft = splitCount};
+                    while (stackPtr > 0)
+                    {
+                        SplitData TempSplit = stack[--stackPtr];
 
-            //             lrBox[0].ShrinkToFit(box);
-            //             lrBox[1].ShrinkToFit(box);
+                        if (TempSplit.splitsLeft == 1)
+                        {
+                            Triangles[counter] = TempSplit.box;
+                            NewTris[counter] = triangle;
+                            ReverseIndexes[i] = counter;
+                            originalTriIds[counter] = i;
+                            centers[counter] = (TempSplit.box.BBMax + TempSplit.box.BBMin) * 0.5f; 
+                            counter++;
+                            continue;
+                        }
 
-            //             stack[stackPtr++] = lrBox[0];
-            //             stack[stackPtr++] = lrBox[1];
-            //         }
-            //         else
-            //         {
-            //             bounds.Add(box);
-            //             originalTriIds.Add(i);
-            //         }
-            //     }
-            // }
+                        int splitAxis = TempSplit.box.LargestAxis();
+                        float largestExtent = (TempSplit.box.BBMax - TempSplit.box.BBMin)[splitAxis];
 
-            // return (bounds.ToArray(), originalTriIds.ToArray());
+                        float depth = Mathf.Min(-1.0f, Mathf.Floor(Mathf.Log(largestExtent / globalSize[splitAxis], 2)));
+                        float cellSize = Mathf.Pow(2f, depth) * globalSize[splitAxis];
+                        if (cellSize + 0.0001f >= largestExtent)
+                        {
+                            cellSize *= 0.5f;
+                        }
 
+                        float midPos = (TempSplit.box.BBMin[splitAxis] + TempSplit.box.BBMax[splitAxis]) * 0.5f;
+                        float splitPos = aabb_untransformed.BBMin[splitAxis] + Mathf.Round((midPos - aabb_untransformed.BBMin[splitAxis]) / cellSize) * cellSize;
+                        if (splitPos < TempSplit.box.BBMin[splitAxis] || splitPos > TempSplit.box.BBMax[splitAxis])
+                        {
+                            splitPos = midPos;
+                        }
+
+                        AABB[] lrBox = triangle.Split(splitAxis, splitPos);
+                        lrBox[0].ShrinkToFit(TempSplit.box);
+                        lrBox[1].ShrinkToFit(TempSplit.box);
+
+                        float leftExtent = lrBox[0].LargestExtent(lrBox[0].LargestAxis());
+                        float rightExtent = lrBox[1].LargestExtent(lrBox[1].LargestAxis());
+                        
+                        int leftCount = (int)(TempSplit.splitsLeft * (leftExtent / (leftExtent + rightExtent)));
+                        leftCount = Mathf.Max(leftCount, 1);
+                        leftCount = Mathf.Min(TempSplit.splitsLeft - 1, leftCount);
+
+                        int rightCount = TempSplit.splitsLeft - leftCount;
+
+                        SplitData A = new SplitData();
+                        A.box = lrBox[0];
+                        A.splitsLeft = leftCount;
+                        SplitData B = new SplitData();
+                        B.box = lrBox[1];
+                        B.splitsLeft = rightCount;
+                        stack[stackPtr++] = A;
+                        stack[stackPtr++] = B;
+                    }
+                }
+
+                for(int i = 0; i < referenceCount; i++) {
+                    Triangles[i].Validate(ParentScale);
+                }
+                int Coun2 = LightTriangles.Count;
+                for(int i = 0; i < Coun2; i++) {
+                    LightTriData TempTri = LightTriangles[i];
+                    TempTri.TriTarget = (uint)ReverseIndexes[TempTri.TriTarget];
+                    LightTriangles[i] = TempTri;                
+                }
+
+
+
+                AggTriangles = NewTris;
+                Debug.Log(Splits);
+            }
+#endif
 
             tempAABB = new AABB();
             MaxRecur = 0;
@@ -1310,14 +1401,7 @@ namespace TrueTrace {
             #endif
         }
 
-        private float AreaOfTriangle(Vector3 pt1, Vector3 pt2, Vector3 pt3)
-        {
-            float a = Distance(pt1, pt2);
-            float b = Distance(pt2, pt3);
-            float c = Distance(pt3, pt1);
-            float s = (a + b + c) / 2.0f;
-            return Mathf.Sqrt(s * (s - a) * (s - b) * (s - c));
-        }
+
         private float luminance(float r, float g, float b) { return 0.299f * r + 0.587f * g + 0.114f * b; }
         private float luminance(Vector3 A) { return Vector3.Dot(new Vector3(0.299f, 0.587f, 0.114f), A);}
 
@@ -1339,12 +1423,22 @@ namespace TrueTrace {
             Matrix4x4 ParentMatInv = CachedTransforms[0].WTL;
             Matrix4x4 ParentMat = CachedTransforms[0].WTL.inverse;
             Vector3 V1, V2, V3, Norm1, Tan1;
+#if TTTriSplitting
+    aabb_untransformed = new AABB();
+    aabb_untransformed.init();
+    if(IsSkinnedGroup || IsDeformable) {
+#endif
             TrianglesArray = new NativeArray<AABB>((TransformIndexes[TransformIndexes.Count - 1].VertexStart + TransformIndexes[TransformIndexes.Count - 1].VertexCount) / 3, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             Triangles = (AABB*)NativeArrayUnsafeUtility.GetUnsafePtr(TrianglesArray);
+#if TTTriSplitting
+    }
+#endif
             AggTriangles = new CudaTriangle[(TransformIndexes[TransformIndexes.Count - 1].VertexStart + TransformIndexes[TransformIndexes.Count - 1].VertexCount) / 3];
             int OffsetReal;
             // TTStopWatch AccumWatch = new TTStopWatch("Accum");
             // AccumWatch.Start();
+            aabb_untransformed = new AABB();
+            aabb_untransformed.init();
             for (int i = 0; i < TotalObjects; i++) {//Transforming so all child objects are in the same object space
                 Matrix4x4 ChildMat = CachedTransforms[i + 1].WTL.inverse;
                 Matrix4x4 TransMat = ParentMatInv * ChildMat;
@@ -1416,10 +1510,20 @@ namespace TrueTrace {
                     TempTri.MatDat = (uint)CurMeshData.MatDat[OffsetReal];
                     TempTri.IsEmissive = 0;
                     AggTriangles[OffsetReal] = TempTri;
+#if TTTriSplitting
+    if(IsSkinnedGroup || IsDeformable) {
+#endif
                     Triangles[OffsetReal].Create(V1, V2);
                     Triangles[OffsetReal].Extend(V3);
                     Triangles[OffsetReal].Validate(ParentScale);
-
+                    aabb_untransformed.Extend(ref Triangles[OffsetReal]);
+#if TTTriSplitting
+    } else {
+                    aabb_untransformed.Extend(V1);
+                    aabb_untransformed.Extend(V2);
+                    aabb_untransformed.Extend(V3);
+    }
+#endif
                     if (_Materials[(int)TempTri.MatDat].MatData.emission > 0.0f) {
                         bool IsValid = true;
                         Vector3 SecondaryBaseCol = Vector3.one;
@@ -1492,8 +1596,10 @@ namespace TrueTrace {
                 EmissionTexPixels = null;
             #endif
             CurMeshData.Clear();
+            aabb_untransformed.Validate(ParentScale);
+            center = 0.5f * (aabb_untransformed.BBMin + aabb_untransformed.BBMax);
+            extent = 0.5f * (aabb_untransformed.BBMax - aabb_untransformed.BBMin);
             #if !HardwareRT
-                ConstructAABB();
                 // TTStopWatch ConstructWatch = new TTStopWatch("Construct");
                 // ConstructWatch.Start();
                 Construct();
@@ -1510,7 +1616,6 @@ namespace TrueTrace {
                 BVH.BVH8NodesArray.Dispose();
             #else 
                 if(IsSkinnedGroup || IsDeformable) {
-                    ConstructAABB();
                     Construct();
                     AggNodes = new BVHNode8DataCompressed[BVH.cwbvhnode_count];
                     CommonFunctions.Aggregate(ref AggNodes, BVH);

@@ -1048,7 +1048,7 @@ int MaterialIndex;
             break;
         }
 #ifdef RadCache
-        if(CurBounce > 0 && luminance(Radiance) > 0) {
+        if(!DoSecondary && CurBounce > 0 && luminance(Radiance) > 0) {
             CacheBuffer[pixel_index].RunningIlluminance = packRGBE(Radiance);
             AddHitToCachePartial(CacheBuffer[pixel_index], ray.origin);
         }

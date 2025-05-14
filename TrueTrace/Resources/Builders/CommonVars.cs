@@ -508,6 +508,7 @@ namespace CommonVars
         public AABB(CudaTriangle Tri) { 
             BBMax = Vector3.Max(Vector3.Max(Tri.pos0, Tri.pos0 + Tri.posedge1), Tri.pos0 + Tri.posedge2);
             BBMin = Vector3.Min(Vector3.Min(Tri.pos0, Tri.pos0 + Tri.posedge1), Tri.pos0 + Tri.posedge2);
+            // this.Validate(new Vector3(0.1f,0.1f,0.1f));
         }
         public int LargestAxis() {
             Vector3 Sizes = BBMax - BBMin;
@@ -521,6 +522,11 @@ namespace CommonVars
                 Lorge = 2;
             }
             return Lorge;
+        }
+
+        public float LargestExtent(int Axis) {
+            Vector3 Sizes = BBMax - BBMin;
+            return Sizes[Axis];
         }
 
         public void ShrinkToFit(AABB SideAABB) {
@@ -727,10 +733,12 @@ namespace CommonVars
             float t = (position - a[axis]) / (b[axis] - a[axis]);
             return a + t * (b - a);
         }
-        AABB[] split(int axis, float position) {
+        public AABB[] Split(int axis, float position) {
             Vector3[] p = { pos0, pos0 + posedge1, pos0 + posedge2 };
             AABB left  = new AABB();
+            left.init();
             AABB right = new AABB();
+            right.init();
             bool q0 = p[0][axis] <= position;
             bool q1 = p[1][axis] <= position;
             bool q2 = p[2][axis] <= position;
@@ -755,7 +763,12 @@ namespace CommonVars
                 left.Extend(m);
                 right.Extend(m);
             }
-            return new AABB[] {left, right};
+            AABB[] RetAABB = new AABB[2];
+            // left.Validate(new Vector3(0.0001f,0.0001f,0.0001f));
+            // right.Validate(new Vector3(0.0001f,0.0001f,0.0001f));
+            RetAABB[0] = left;
+            RetAABB[1] = right;
+            return RetAABB;
         }
 
     }

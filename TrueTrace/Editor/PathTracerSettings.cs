@@ -1641,6 +1641,7 @@ Toolbar toolbar;
       Toggle OIDNToggle;
       Toggle MaterialHelperToggle;
       Toggle DX11Toggle;
+      Toggle TriangleSplittingToggle;
 
 
       private Toggle CustomToggle(string Label, string TargetDefine, string tooltip = "") {
@@ -1649,7 +1650,6 @@ Toolbar toolbar;
             CustToggle.RegisterValueChangedCallback(evt => {SetGlobalDefines(TargetDefine, evt.newValue);});
          return CustToggle;
       }
-
 
 
 
@@ -1703,7 +1703,7 @@ Toolbar toolbar;
 
 
             HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
-            HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("HardwareRT"); SetGlobalDefines("HardwareRT", true);} else {RemoveDefine("HardwareRT"); SetGlobalDefines("HardwareRT", false);}});
+            HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {RemoveDefine("TTTriSplitting"); TriangleSplittingToggle.SetEnabled(false); AddDefine("HardwareRT"); SetGlobalDefines("HardwareRT", true);} else {TriangleSplittingToggle.SetEnabled(true); RemoveDefine("HardwareRT"); SetGlobalDefines("HardwareRT", false);}});
 
 
 
@@ -1735,6 +1735,10 @@ Toolbar toolbar;
             Toggle LoadTTSettingsFromResourcesToggle = new Toggle() {value = (definesList.Contains("LoadTTSettingsFromResources")), text = "Load TTSettings from Global File"};
                LoadTTSettingsFromResourcesToggle.tooltip = "Replaces the per-scene TTSettings file with the one that is declared in the RayTracingMaster's inspector window";
             LoadTTSettingsFromResourcesToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("LoadTTSettingsFromResources"); else RemoveDefine("LoadTTSettingsFromResources");});
+
+            TriangleSplittingToggle = new Toggle() {value = (definesList.Contains("TTTriSplitting")), text = "Enable Triangle Splitting"};
+               TriangleSplittingToggle.tooltip = "Enables Triangle Splitting for SWRT";
+            TriangleSplittingToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) AddDefine("TTTriSplitting"); else RemoveDefine("TTTriSplitting");});
 
             Toggle VerboseToggle = new Toggle() {value = (definesList.Contains("TTVerbose")), text = "Enable Verbose Logging"};
                VerboseToggle.tooltip = "More data";
@@ -1807,6 +1811,7 @@ Toolbar toolbar;
                NonAccurateLightTriToggle.SetEnabled(false);
                LoadTTSettingsFromResourcesToggle.SetEnabled(false);
                VerboseToggle.SetEnabled(false);
+               TriangleSplittingToggle.SetEnabled(false);
                StrictMemoryReductionToggle.SetEnabled(false);
                MultiMapScreenshotToggle.SetEnabled(false);
             } else {
@@ -1821,11 +1826,19 @@ Toolbar toolbar;
                NonAccurateLightTriToggle.SetEnabled(true);
                LoadTTSettingsFromResourcesToggle.SetEnabled(true);
                VerboseToggle.SetEnabled(true);
+               TriangleSplittingToggle.SetEnabled(true);
                StrictMemoryReductionToggle.SetEnabled(true);
                MultiMapScreenshotToggle.SetEnabled(true);
             }
 
-
+            if(definesList.Contains("HardwareRT")) {
+               if(definesList.Contains("TTTriSplitting")) {
+                  RemoveDefine("TTTriSplitting");
+               }
+               TriangleSplittingToggle.SetEnabled(false);
+            } else if(!Application.isPlaying) {
+               TriangleSplittingToggle.SetEnabled(true);
+            }
             if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 || definesList.Contains("DX11Only")) {
                if(!definesList.Contains("DX11Only")) {
                   ActiveDX11Overrides(); 
@@ -1875,6 +1888,7 @@ Toolbar toolbar;
          NonPlayContainer.Add(NonAccurateLightTriToggle);
          NonPlayContainer.Add(LoadTTSettingsFromResourcesToggle);
          NonPlayContainer.Add(VerboseToggle);
+         NonPlayContainer.Add(TriangleSplittingToggle);
          NonPlayContainer.Add(StrictMemoryReductionToggle);
          NonPlayContainer.Add(MultiMapScreenshotToggle);
          NonPlayContainer.Add(new Label("-------------"));
