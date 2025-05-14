@@ -27,7 +27,7 @@
 #define DoubleBufferSGTree
 // #define Fog
 #define RadCache
-#define ClampRoughnessToBounce
+// #define ClampRoughnessToBounce
 // #define ReSTIRSampleReduction
 // #define ReSTIRRestrictSpatial
 // #define SmartRestriction
