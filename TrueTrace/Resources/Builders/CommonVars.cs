@@ -1165,7 +1165,7 @@ namespace CommonVars
         }
 
 
-        public enum Flags {IsEmissionMask, BaseIsMap, ReplaceBase, UseSmoothness, InvertSmoothnessTexture, IsBackground, ShadowCaster, Invisible, BackgroundBleed, Thin, UseVertexColors};
+        public enum Flags {IsEmissionMask, BaseIsMap, ReplaceBase, UseSmoothness, InvertSmoothnessTexture, IsBackground, ShadowCaster, Invisible, BackgroundBleed, Thin, UseVertexColors, InvertAlpha};
         //0-10 Flags
         //28-30 SecondaryAlbedoStride
 

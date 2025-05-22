@@ -364,10 +364,18 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     throughput = max(throughput, 0);
     [branch] if (CurBounce == 0 || GetBounceData(Color.MetRoughIsSpec) == 0) {//Setting textures for denosier to use
         #ifdef TrueBlack
+#ifdef AltFadeMapping
+            Color.Flags = packRGBE((unpackRGBE(Color.Flags) * hitDat.surfaceColor));
+#else
             Color.Flags = packRGBE((CurBounce == 0) ? hitDat.surfaceColor : (unpackRGBE(Color.Flags) * hitDat.surfaceColor));
+#endif
             Color.Data = float3((CurBounce == 0) ? throughput : (throughput * Color.Data.xyz));
         #else
+#ifdef AltFadeMapping
+            Color.Flags = packRGBE((unpackRGBE(Color.Flags) * max(hitDat.surfaceColor, 0.005f)));
+#else
             Color.Flags = packRGBE((CurBounce == 0) ? max(hitDat.surfaceColor, 0.005f) : (unpackRGBE(Color.Flags) * max(hitDat.surfaceColor, 0.005f)));
+#endif
             Color.Data = float3((CurBounce == 0) ? max(throughput, 0.006f) : (max(throughput, 0.005f) * Color.Data.xyz));
         #endif
         PrevScreenData = float4(asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -Geomnorm : Geomnorm)), asfloat(octahedral_32(((hitDat.diffTrans != 0 || (hitDat.diffTrans != 0 && CurBounce == 1)) && Refracted) ? -norm : norm)), PrevScreenData.z + hit.t, asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 4) >> 4) : ((asuint(PrevScreenData.w) << 4) >> 4)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
@@ -728,6 +736,9 @@ void kernel_shade(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
         CacheBuffer[pixel_index].RunningIlluminance = 0;
     }
 #endif
+#ifdef AltFadeMapping
+    Color.Flags = GlobalColors[pixel_index].Flags;
+#endif
     #if DebugView != -1
         #if DebugView == DVDepthView
             if(CurBounce == 0) _DebugTex[id.xy] = bestHit.t / DepthDivisor;
@@ -777,205 +788,205 @@ int MaterialIndex;
             float3 norm = ray.direction;
             float3 pos = ray.origin;
             if(CurBounce == 0) {
-        float3 LightNorm;
-        float3 LightPosition;
-        int LightFormat = TRILIGHT;
-        float3 Radiance;
-        float RunningWeight = 1;
-        float area = 1;
-        float3 MiscInfo = 0;
-        int AggTriIndex = 0;
-        int SelectedLightGroup = 0;//0 = primitive, 1 = point, spot, etc., 2 = skybox
-        int selectionoptions = 0;
-        int selections[3] = {0,0,0};
-        if(LightMeshCount != 0 && LEMEnergyScale != 0) selections[selectionoptions++] = 0;
-        if(unitylightcount != 0) selections[selectionoptions++] = 1;
-        if(SecondaryBackgroundType == 1) selections[selectionoptions++] = 2;
-        RunningWeight = selectionoptions;
-        SelectedLightGroup = selections[min(floor(random(114, pixel_index).x * (float)selectionoptions), selectionoptions - 1)];
+                    float3 LightNorm;
+                    float3 LightPosition;
+                    int LightFormat = TRILIGHT;
+                    float3 Radiance;
+                    float RunningWeight = 1;
+                    float area = 1;
+                    float3 MiscInfo = 0;
+                    int AggTriIndex = 0;
+                    int SelectedLightGroup = 0;//0 = primitive, 1 = point, spot, etc., 2 = skybox
+                    int selectionoptions = 0;
+                    int selections[3] = {0,0,0};
+                    if(LightMeshCount != 0 && LEMEnergyScale != 0) selections[selectionoptions++] = 0;
+                    if(unitylightcount != 0) selections[selectionoptions++] = 1;
+                    if(SecondaryBackgroundType == 1) selections[selectionoptions++] = 2;
+                    RunningWeight = selectionoptions;
+                    SelectedLightGroup = selections[min(floor(random(114, pixel_index).x * (float)selectionoptions), selectionoptions - 1)];
 
-        if (SelectedLightGroup == 1) {//we only really need to precompute this, right? maybe we can do a similar optimization as ReSTIR DI?
-            AggTriIndex = SelectUnityLight(pixel_index, RunningWeight, norm, pos, PrevDirection);
-            LightData Light = _UnityLights[AggTriIndex];
-            float sinPhi, cosPhi = 1;
-            LightPosition = Light.Position;
-            LightNorm = Light.Direction;
-            LightFormat = Light.Type;
-            Radiance = Light.Radiance / PI;
-            float3 RandVec = float3(random(115, pixel_index), random(116, pixel_index).x);
-            MiscInfo = float3(Light.Softness * 120.0f + 1, Light.SpotAngle);
-            if(LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) {
-                sincos(Light.ZAxisRotation, sinPhi, cosPhi);
-            }
-            [branch] switch (LightFormat) {
-                case POINTLIGHT:
-                    LightNorm = normalize(pos - LightPosition);
-                    LightPosition += normalize(RandVec - 0.5f) * random(116, pixel_index).y * Light.Softness * 0.1f;//Soft Shadows
-                break;
-                case DIRECTIONALLIGHT:
-                    LightPosition = pos + LightNorm;
-                    LightNorm = -LightNorm;
-                     sincos(RandVec.x * 2.0f * PI, RandVec.x, RandVec.y);
-                    RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy) * RandVec.z * Light.Softness* 0.01f;
-                    if(Light.Softness* 0.01f > 0.001f) {
-                        LightPosition += ToWorld(GetTangentSpace2(LightNorm), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
-                    }
-                    if(UseTransmittanceInNEE) Radiance *= GetSkyTransmittance(pos, -LightNorm, 0, -LightNorm);
-                break;
-                case SPOTLIGHT:
-                    Radiance *= ((1.0f - MiscInfo.z * 0.0174533) + (MiscInfo.y * 0.0174533 - MiscInfo.z * 0.0174533) / 2.0f);
-                    LightPosition += normalize(RandVec - 0.5f) * random(116, pixel_index).y * Light.Softness * 0.1f;//Soft Shadows
-                break;
-                case AREALIGHTQUAD:
-                    RandVec.xy = RandVec.xy * Light.SpotAngle - Light.SpotAngle / 2.0f;
-                    RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy);
-                    LightPosition += ToWorld(GetTangentSpace2(LightNorm), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
-                    area = (Light.SpotAngle.x * Light.SpotAngle.y);
-                    Radiance *= PI;
-                break;
-                case AREALIGHTDISK:
-                    sincos(RandVec.x * 2.0f * PI, RandVec.x, RandVec.y);
-                    RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy) * RandVec.z * Light.SpotAngle.x;
-                    LightPosition += ToWorld(GetTangentSpace2(LightNorm), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
-                    area = PI * Light.SpotAngle.x * Light.SpotAngle.x;
-                break;
-            }
-            Radiance *= LightEnergyScale;
-        } else if(SelectedLightGroup == 0) {
-            #ifdef LBVH
-                int MeshIndex;
-                float4x4 MeshTransformInverse;
-            #else
-                int MeshIndex = SelectLightMeshSmart(pixel_index, RunningWeight, pos);
-                float4x4 MeshTransformInverse = _MeshData[_LightMeshes[MeshIndex].LockedMeshIndex].W2L;
-            #endif
-            AggTriIndex = SelectLight(pixel_index, MeshIndex, RunningWeight, norm, pos, MeshTransformInverse, Radiance, LightPosition, 0, -PrevDirection, 0);
-            #ifdef LBVH
-                MeshTransformInverse = _MeshData[MeshIndex].W2L;
-            #endif
-            Radiance *= LEMEnergyScale;
-            TrianglePos CurTri = triangle_get_positions(AggTriIndex);
-            MeshTransformInverse = inverse(MeshTransformInverse);
-            float3 a0 = mul(MeshTransformInverse, float4(CurTri.pos0, 1)).xyz;
-            float3 a1 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge1, 1)).xyz;
-            float3 a2 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge2, 1)).xyz;
-            area = AreaOfTriangle(a0, a1, a2);
-            LightPosition = mul(MeshTransformInverse, float4(LightPosition,1));
-            LightNorm = normalize(mul((float3x3)MeshTransformInverse, normalize(cross(CurTri.posedge1, CurTri.posedge2))).xyz);
-        } else {
-            LightFormat = DIRECTIONALLIGHT;
-            AggTriIndex = 0;
-            Radiance = SampleLI(pixel_index, RunningWeight, LightNorm) * SecondaryBackgroundIntensity;
-            LightPosition = pos - LightNorm;
-        }
-
-
-        if(AggTriIndex != -1) {
-            float3 to_light = LightPosition - pos;
-
-            float distance_to_light_squared = dot(to_light, to_light);
-            float distance_to_light = sqrt(max(distance_to_light_squared, 0.0f));
-
-            to_light = to_light / distance_to_light;
-            if(LightFormat == SPOTLIGHT) {
-                float3 LocalLight = ToLocal(GetTangentSpace(LightNorm), -to_light) * 0.5f + 0.5f;
-                float2 AlignedUV = AlignUV(LocalLight.xz, float4(1,1,0,0), _UnityLights[AggTriIndex].IESTex);
-                if(AlignedUV.x != -1) Radiance *= _IESAtlas.SampleLevel(my_point_clamp_sampler, AlignedUV, 0);
-            }
-            
-            float SurfaceCos = dot(to_light, norm);//YES KEEP THIS, IT NOT ONLY IMPROVES PERFORMANCE BUT IT ALSO HELPS KEEPS THINGS LESS BIASED AS OTHERWISE THE NORMAL OFFSET CAN RESULT IN WRONG VISABILITY!
-        #ifdef IgnoreBackfacingEmissive
-            if(SurfaceCos > 0 && (dot(to_light, LightNorm) > 0 || LightFormat != TRILIGHT)) {
-        #else
-            if(SurfaceCos > 0) {
-        #endif
-                    float3 SigmaT = FogDensity * FogScale;
-                    float3 SigmaS = SigmaT * FogColor;
-                    float temppdf = 1.0f / (PI * 4.0f);
-                    Homo = exp(-SigmaT * OptDepthSpherExpMedium(PrevOrigin.y+bottom_radius, rcp(PrevOrigin.y+bottom_radius), PrevDirection.y, newT, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
-                    float3 Homo2 = exp(-SigmaT * OptDepthSpherExpMedium(pos.y+bottom_radius, rcp(pos.y+bottom_radius), to_light.y, distance_to_light, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
-                    
-
-                    // float3 Homo2 = exp(-distance_to_light * OptDepthRectExpMedium(pos.y, to_light.y, distance_to_light, SigmaT, 1.0f / ScaleHeight));
-                    float pdf3 = (Homo2.x + Homo2.y + Homo2.z) / 3.0f;
-                    // Homo2 /= pdf3;
-                        SigmaT *= Homo;
-                        pdf3 = (SigmaT.x + SigmaT.y + SigmaT.z) / 3.0f; 
-                        Homo = SigmaS * Homo / pdf3;
-
-                        Homo = Homo * (Homo2) * (temppdf);   
-                        // m_internal ? SigmaS * Tr / pdf : (Tr / pdf);
-                        bool validbsdfNEE = true;
-
-                    float bsdf_pdf = VolumeBSDF * temppdf;
-                    float3 bsdf_value = Homo;
-                    float3 bsdf_diffuse = Homo;
-
-                if (validbsdfNEE) {
-                    float NEE_pdf;
-                    float3 Illum;
-
-
-                    [branch]if (SelectedLightGroup == 1) {
-                        NEE_pdf = 1.0f / (abs(dot(to_light, LightNorm)) * area / distance_to_light_squared);
-                        Illum = (Radiance * bsdf_value) / NEE_pdf * RunningWeight;
-                        bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf * RunningWeight;
-                    } else if(SelectedLightGroup == 0) {        
-                        NEE_pdf = (1.0f / ((abs(dot(to_light, LightNorm)) * area) / distance_to_light_squared)) / RunningWeight;
-                        #ifndef LBVH
-                            NEE_pdf /= LightMeshCount;
-                        #endif
-                        float NEEMISWeight = power_heuristic(NEE_pdf, bsdf_pdf);
-                        Illum = (Radiance * bsdf_value) / NEE_pdf;
-                        bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf;
-                        #ifdef UseBRDFLights
-                            Illum *= NEEMISWeight;
-                            bsdf_diffuse *= NEEMISWeight;
-                        #endif
-                    } else {
-                        NEE_pdf = HDRIParams.x * HDRIParams.y * equirectDirectionPdf(to_light) * (luminance(Radiance) / TotSum[0]);
-                        float NEEMISWeight = power_heuristic(NEE_pdf, bsdf_pdf);
-                        Illum = (Radiance * bsdf_value) / NEE_pdf * RunningWeight * NEEMISWeight;
-                        bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf * RunningWeight * NEEMISWeight;
-                    }
-                    Illum *= Color.throughput;
-
-                    if(LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) {
-                        Illum *= pow(saturate(dot(to_light, -LightNorm)), MiscInfo.x);
-                        bsdf_diffuse *= pow(saturate(dot(to_light, -LightNorm)), MiscInfo.x);
-                    }
-                    if (LightFormat == SPOTLIGHT) {
-                        bsdf_diffuse *= saturate(saturate(dot(to_light, -LightNorm)) * MiscInfo.y + MiscInfo.z);
-                        Illum *= saturate(saturate(dot(to_light, -LightNorm)) * MiscInfo.y + MiscInfo.z);
-                    }
-                    float maxillum = max(max(Illum.x, Illum.y), Illum.z);
-                    if(DoExposure) maxillum *= Exposure[0];
-                    if(!UseRussianRoulette || (CurBounce == 0 && (ImprovedPrimaryHit || DoPartialRendering))) maxillum = 1;
-                    Illum *= rcp(saturate(maxillum));
-                    if(luminance(Illum) != 0 && maxillum > random(117, pixel_index).y) {//NEE russian roulette, massively improves performance while giivng the same result
-                        uint index3;
-                        #ifdef RadCache
-                            bool TempTemp = (CurBounce != GetBounceData(CacheBuffer[pixel_index].pathLength) - 2);
-                            // if(!TempTemp && CurBounce != 0) Illum *= Color.Data;
-                            if(UseReSTIRGI && !TempTemp && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
-                        #else
-                            bool TempTemp = (CurBounce != GetBounceData(Color.MetRoughIsSpec) - 2);
-                            if(UseReSTIRGI && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
-                        #endif
-                        ShadowRayData ShadRay = {pos, 
-                                                        packRGBE(bsdf_diffuse), 
-                                                        pos + to_light * (LightFormat == DIRECTIONALLIGHT ? 10000.0f : distance_to_light - ShadowDistanceFudgeFactor),
-                                                        LightFormat == TRILIGHT ? -1 : AggTriIndex,
-                                                        Illum, 
-                                                        pixel_index & 0xFFFFFFF};
-                        if((LightFormat == DIRECTIONALLIGHT ? 10000.0f : distance_to_light - ShadowDistanceFudgeFactor) > 0.001f) {
-                            InterlockedAdd(BufferSizes[CurBounce].shadow_rays, 1, index3);
-                            ShadowRaysBuffer[index3] = ShadRay;
+                    if (SelectedLightGroup == 1) {//we only really need to precompute this, right? maybe we can do a similar optimization as ReSTIR DI?
+                        AggTriIndex = SelectUnityLight(pixel_index, RunningWeight, norm, pos, PrevDirection);
+                        LightData Light = _UnityLights[AggTriIndex];
+                        float sinPhi, cosPhi = 1;
+                        LightPosition = Light.Position;
+                        LightNorm = Light.Direction;
+                        LightFormat = Light.Type;
+                        Radiance = Light.Radiance / PI;
+                        float3 RandVec = float3(random(115, pixel_index), random(116, pixel_index).x);
+                        MiscInfo = float3(Light.Softness * 120.0f + 1, Light.SpotAngle);
+                        if(LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) {
+                            sincos(Light.ZAxisRotation, sinPhi, cosPhi);
                         }
+                        [branch] switch (LightFormat) {
+                            case POINTLIGHT:
+                                LightNorm = normalize(pos - LightPosition);
+                                LightPosition += normalize(RandVec - 0.5f) * random(116, pixel_index).y * Light.Softness * 0.1f;//Soft Shadows
+                            break;
+                            case DIRECTIONALLIGHT:
+                                LightPosition = pos + LightNorm;
+                                LightNorm = -LightNorm;
+                                 sincos(RandVec.x * 2.0f * PI, RandVec.x, RandVec.y);
+                                RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy) * RandVec.z * Light.Softness* 0.01f;
+                                if(Light.Softness* 0.01f > 0.001f) {
+                                    LightPosition += ToWorld(GetTangentSpace2(LightNorm), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
+                                }
+                                if(UseTransmittanceInNEE) Radiance *= GetSkyTransmittance(pos, -LightNorm, 0, -LightNorm);
+                            break;
+                            case SPOTLIGHT:
+                                Radiance *= ((1.0f - MiscInfo.z * 0.0174533) + (MiscInfo.y * 0.0174533 - MiscInfo.z * 0.0174533) / 2.0f);
+                                LightPosition += normalize(RandVec - 0.5f) * random(116, pixel_index).y * Light.Softness * 0.1f;//Soft Shadows
+                            break;
+                            case AREALIGHTQUAD:
+                                RandVec.xy = RandVec.xy * Light.SpotAngle - Light.SpotAngle / 2.0f;
+                                RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy);
+                                LightPosition += ToWorld(GetTangentSpace2(LightNorm), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
+                                area = (Light.SpotAngle.x * Light.SpotAngle.y);
+                                Radiance *= PI;
+                            break;
+                            case AREALIGHTDISK:
+                                sincos(RandVec.x * 2.0f * PI, RandVec.x, RandVec.y);
+                                RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy) * RandVec.z * Light.SpotAngle.x;
+                                LightPosition += ToWorld(GetTangentSpace2(LightNorm), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy);
+                                area = PI * Light.SpotAngle.x * Light.SpotAngle.x;
+                            break;
+                        }
+                        Radiance *= LightEnergyScale;
+                    } else if(SelectedLightGroup == 0) {
+                        #ifdef LBVH
+                            int MeshIndex;
+                            float4x4 MeshTransformInverse;
+                        #else
+                            int MeshIndex = SelectLightMeshSmart(pixel_index, RunningWeight, pos);
+                            float4x4 MeshTransformInverse = _MeshData[_LightMeshes[MeshIndex].LockedMeshIndex].W2L;
+                        #endif
+                        AggTriIndex = SelectLight(pixel_index, MeshIndex, RunningWeight, norm, pos, MeshTransformInverse, Radiance, LightPosition, 0, -PrevDirection, 0);
+                        #ifdef LBVH
+                            MeshTransformInverse = _MeshData[MeshIndex].W2L;
+                        #endif
+                        Radiance *= LEMEnergyScale;
+                        TrianglePos CurTri = triangle_get_positions(AggTriIndex);
+                        MeshTransformInverse = inverse(MeshTransformInverse);
+                        float3 a0 = mul(MeshTransformInverse, float4(CurTri.pos0, 1)).xyz;
+                        float3 a1 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge1, 1)).xyz;
+                        float3 a2 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge2, 1)).xyz;
+                        area = AreaOfTriangle(a0, a1, a2);
+                        LightPosition = mul(MeshTransformInverse, float4(LightPosition,1));
+                        LightNorm = normalize(mul((float3x3)MeshTransformInverse, normalize(cross(CurTri.posedge1, CurTri.posedge2))).xyz);
+                    } else {
+                        LightFormat = DIRECTIONALLIGHT;
+                        AggTriIndex = 0;
+                        Radiance = SampleLI(pixel_index, RunningWeight, LightNorm) * SecondaryBackgroundIntensity;
+                        LightPosition = pos - LightNorm;
                     }
+
+
+                    if(AggTriIndex != -1) {
+                        float3 to_light = LightPosition - pos;
+
+                        float distance_to_light_squared = dot(to_light, to_light);
+                        float distance_to_light = sqrt(max(distance_to_light_squared, 0.0f));
+
+                        to_light = to_light / distance_to_light;
+                        if(LightFormat == SPOTLIGHT) {
+                            float3 LocalLight = ToLocal(GetTangentSpace(LightNorm), -to_light) * 0.5f + 0.5f;
+                            float2 AlignedUV = AlignUV(LocalLight.xz, float4(1,1,0,0), _UnityLights[AggTriIndex].IESTex);
+                            if(AlignedUV.x != -1) Radiance *= _IESAtlas.SampleLevel(my_point_clamp_sampler, AlignedUV, 0);
+                        }
+                        
+                        float SurfaceCos = dot(to_light, norm);//YES KEEP THIS, IT NOT ONLY IMPROVES PERFORMANCE BUT IT ALSO HELPS KEEPS THINGS LESS BIASED AS OTHERWISE THE NORMAL OFFSET CAN RESULT IN WRONG VISABILITY!
+                    #ifdef IgnoreBackfacingEmissive
+                        if(SurfaceCos > 0 && (dot(to_light, LightNorm) > 0 || LightFormat != TRILIGHT)) {
+                    #else
+                        if(SurfaceCos > 0) {
+                    #endif
+                                float3 SigmaT = FogDensity * FogScale;
+                                float3 SigmaS = SigmaT * FogColor;
+                                float temppdf = 1.0f / (PI * 4.0f);
+                                Homo = exp(-SigmaT * OptDepthSpherExpMedium(PrevOrigin.y+bottom_radius, rcp(PrevOrigin.y+bottom_radius), PrevDirection.y, newT, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
+                                float3 Homo2 = exp(-SigmaT * OptDepthSpherExpMedium(pos.y+bottom_radius, rcp(pos.y+bottom_radius), to_light.y, distance_to_light, bottom_radius, SigmaT, ScaleHeight, 1.0f / ScaleHeight));    
+                                
+
+                                // float3 Homo2 = exp(-distance_to_light * OptDepthRectExpMedium(pos.y, to_light.y, distance_to_light, SigmaT, 1.0f / ScaleHeight));
+                                float pdf3 = (Homo2.x + Homo2.y + Homo2.z) / 3.0f;
+                                // Homo2 /= pdf3;
+                                    SigmaT *= Homo;
+                                    pdf3 = (SigmaT.x + SigmaT.y + SigmaT.z) / 3.0f; 
+                                    Homo = SigmaS * Homo / pdf3;
+
+                                    Homo = Homo * (Homo2) * (temppdf);   
+                                    // m_internal ? SigmaS * Tr / pdf : (Tr / pdf);
+                                    bool validbsdfNEE = true;
+
+                                float bsdf_pdf = VolumeBSDF * temppdf;
+                                float3 bsdf_value = Homo;
+                                float3 bsdf_diffuse = Homo;
+
+                            if (validbsdfNEE) {
+                                float NEE_pdf;
+                                float3 Illum;
+
+
+                                [branch]if (SelectedLightGroup == 1) {
+                                    NEE_pdf = 1.0f / (abs(dot(to_light, LightNorm)) * area / distance_to_light_squared);
+                                    Illum = (Radiance * bsdf_value) / NEE_pdf * RunningWeight;
+                                    bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf * RunningWeight;
+                                } else if(SelectedLightGroup == 0) {        
+                                    NEE_pdf = (1.0f / ((abs(dot(to_light, LightNorm)) * area) / distance_to_light_squared)) / RunningWeight;
+                                    #ifndef LBVH
+                                        NEE_pdf /= LightMeshCount;
+                                    #endif
+                                    float NEEMISWeight = power_heuristic(NEE_pdf, bsdf_pdf);
+                                    Illum = (Radiance * bsdf_value) / NEE_pdf;
+                                    bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf;
+                                    #ifdef UseBRDFLights
+                                        Illum *= NEEMISWeight;
+                                        bsdf_diffuse *= NEEMISWeight;
+                                    #endif
+                                } else {
+                                    NEE_pdf = HDRIParams.x * HDRIParams.y * equirectDirectionPdf(to_light) * (luminance(Radiance) / TotSum[0]);
+                                    float NEEMISWeight = power_heuristic(NEE_pdf, bsdf_pdf);
+                                    Illum = (Radiance * bsdf_value) / NEE_pdf * RunningWeight * NEEMISWeight;
+                                    bsdf_diffuse = (Radiance * bsdf_diffuse) / NEE_pdf * RunningWeight * NEEMISWeight;
+                                }
+                                Illum *= Color.throughput;
+
+                                if(LightFormat == AREALIGHTQUAD || LightFormat == AREALIGHTDISK) {
+                                    Illum *= pow(saturate(dot(to_light, -LightNorm)), MiscInfo.x);
+                                    bsdf_diffuse *= pow(saturate(dot(to_light, -LightNorm)), MiscInfo.x);
+                                }
+                                if (LightFormat == SPOTLIGHT) {
+                                    bsdf_diffuse *= saturate(saturate(dot(to_light, -LightNorm)) * MiscInfo.y + MiscInfo.z);
+                                    Illum *= saturate(saturate(dot(to_light, -LightNorm)) * MiscInfo.y + MiscInfo.z);
+                                }
+                                float maxillum = max(max(Illum.x, Illum.y), Illum.z);
+                                if(DoExposure) maxillum *= Exposure[0];
+                                if(!UseRussianRoulette || (CurBounce == 0 && (ImprovedPrimaryHit || DoPartialRendering))) maxillum = 1;
+                                Illum *= rcp(saturate(maxillum));
+                                if(luminance(Illum) != 0 && maxillum > random(117, pixel_index).y) {//NEE russian roulette, massively improves performance while giivng the same result
+                                    uint index3;
+                                    #ifdef RadCache
+                                        bool TempTemp = (CurBounce != GetBounceData(CacheBuffer[pixel_index].pathLength) - 2);
+                                        // if(!TempTemp && CurBounce != 0) Illum *= Color.Data;
+                                        if(UseReSTIRGI && !TempTemp && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
+                                    #else
+                                        bool TempTemp = (CurBounce != GetBounceData(Color.MetRoughIsSpec) - 2);
+                                        if(UseReSTIRGI && CurBounce == 0) Illum *= (bsdf_value == 0) ? 1 : rcp(bsdf_value);                    
+                                    #endif
+                                    ShadowRayData ShadRay = {pos, 
+                                                                    packRGBE(bsdf_diffuse), 
+                                                                    pos + to_light * (LightFormat == DIRECTIONALLIGHT ? 10000.0f : distance_to_light - ShadowDistanceFudgeFactor),
+                                                                    LightFormat == TRILIGHT ? -1 : AggTriIndex,
+                                                                    Illum, 
+                                                                    pixel_index & 0xFFFFFFF};
+                                    if((LightFormat == DIRECTIONALLIGHT ? 10000.0f : distance_to_light - ShadowDistanceFudgeFactor) > 0.001f) {
+                                        InterlockedAdd(BufferSizes[CurBounce].shadow_rays, 1, index3);
+                                        ShadowRaysBuffer[index3] = ShadRay;
+                                    }
+                                }
+                            }
+                        }
                 }
-            }
-    }
 
             }
 
@@ -1191,6 +1202,7 @@ int MaterialIndex;
     {
         const uint Case = (asuint(PrevScreenData.w) << 1) >> 30;
         if(CurBounce != 0 && Case != 3) TempMat.roughness = max(TempMat.roughness, saturate((float)CurBounce / 6.0f));
+        if(CurBounce != 0 && Case != 3) TempMat.clearcoat = max(min(TempMat.clearcoat, TempMat.clearcoat - saturate((float)CurBounce / 6.0f)),0);
     }
 #endif
     if(TempMat.emission > 0) {

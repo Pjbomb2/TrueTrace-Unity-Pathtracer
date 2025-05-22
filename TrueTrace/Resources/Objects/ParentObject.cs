@@ -1047,7 +1047,7 @@ namespace TrueTrace {
                         float leftExtent = lrBox[0].LargestExtent(lrBox[0].LargestAxis());
                         float rightExtent = lrBox[1].LargestExtent(lrBox[1].LargestAxis());
                         
-                        int leftCount = (int)(TempSplit.splitsLeft * (leftExtent / (leftExtent + rightExtent)));
+                        int leftCount = (int)Mathf.Round(TempSplit.splitsLeft * (leftExtent / (leftExtent + rightExtent)));
                         leftCount = Mathf.Max(leftCount, 1);
                         leftCount = Mathf.Min(TempSplit.splitsLeft - 1, leftCount);
 

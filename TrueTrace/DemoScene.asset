@@ -17,7 +17,7 @@ MonoBehaviour:
   bouncecount: 12
   ClayMode: 0
   UseRussianRoulette: 1
-  UseNEE: 0
+  UseNEE: 1
   DoTLASUpdates: 1
   Accumulate: 1
   PPBloom: 0

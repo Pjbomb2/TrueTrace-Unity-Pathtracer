@@ -542,7 +542,7 @@ namespace TrueTrace {
                 }
             }
             if(Index == -1) return;
-            LoadFunction(PresetMaster.PresetFolders[FolderIndex].ContainedPresets[Index], true);
+            LoadFunction(PresetMaster.PresetFolders[FolderIndex].ContainedPresets[Index], Event.current.shift);
         }
 
         Dictionary<string, List<string>> DictionaryLinks;
@@ -955,6 +955,7 @@ namespace TrueTrace {
                                 ConnectionSourceNames.Add("Thin");
                                 Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.Invisible, EditorGUILayout.ToggleLeft("Invisible", Flag.GetFlag(CommonFunctions.Flags.Invisible), GUILayout.MaxWidth(135)));
                                 Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.IsBackground, EditorGUILayout.ToggleLeft("Is Background", Flag.GetFlag(CommonFunctions.Flags.IsBackground), GUILayout.MaxWidth(135)));
+                                Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.InvertAlpha, EditorGUILayout.ToggleLeft("Invert Alpha", Flag.GetFlag(CommonFunctions.Flags.InvertAlpha), GUILayout.MaxWidth(135)));
                             EditorGUILayout.EndHorizontal();
 
                             EditorGUILayout.Space();

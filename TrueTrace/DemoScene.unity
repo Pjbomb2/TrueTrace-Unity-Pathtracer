@@ -12613,7 +12613,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -36723,7 +36723,7 @@ MonoBehaviour:
   NeedsToUpdate: 0
   IsReady: 1
   InvisibleOverride: 0
-  FollowMaterial: 01
+  FollowMaterial: 00
   SharedMaterials:
   - {fileID: 2100000, guid: cde703b8b028ec2479a28a422f3b2004, type: 2}
   Names:
@@ -47112,7 +47112,7 @@ MonoBehaviour:
   LightEndIndex: 0
   aabb_untransformed:
     BBMax: {x: 1920.9459, y: 1429.4332, z: 1105.426}
-    BBMin: {x: -1799.9081, y: -126.542496, z: -1182.8071}
+    BBMin: {x: -1799.9081, y: -126.4425, z: -1182.8071}
   aabb:
     BBMax: {x: 0, y: 0, z: 0}
     BBMin: {x: 0, y: 0, z: 0}
@@ -53992,7 +53992,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -54455,8 +54455,8 @@ MonoBehaviour:
   - {fileID: 407059350}
   - {fileID: 290148810}
   - {fileID: 582978298}
-  center: {x: 60.51892, y: 651.4454, z: -38.69055}
-  extent: {x: 1860.427, y: 777.98785, z: 1144.1166}
+  center: {x: 60.51892, y: 651.49536, z: -38.69055}
+  extent: {x: 1860.427, y: 777.93787, z: 1144.1166}
   HasTransformChanged: 0
 --- !u!4 &1770588101 stripped
 Transform:
@@ -60414,8 +60414,8 @@ MonoBehaviour:
   InstanceMeshIndex: 0
   LightEndIndex: 0
   aabb_untransformed:
-    BBMax: {x: 0.501, y: 0.501, z: 0.501}
-    BBMin: {x: -0.501, y: -0.501, z: -0.501}
+    BBMax: {x: 0.5, y: 0.5, z: 0.5}
+    BBMin: {x: -0.5, y: -0.5, z: -0.5}
   aabb:
     BBMax: {x: 3.074679, y: 2.031, z: 3.2144024}
     BBMin: {x: -3.074679, y: 1.029, z: -3.2144024}
@@ -60473,7 +60473,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 3
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -60509,7 +60509,7 @@ MonoBehaviour:
   ChildObjectTransforms:
   - {fileID: 1931085298}
   center: {x: 0, y: 0, z: 0}
-  extent: {x: 0.501, y: 0.501, z: 0.501}
+  extent: {x: 0.5, y: 0.5, z: 0.5}
   HasTransformChanged: 0
 --- !u!114 &1931085301
 MonoBehaviour:

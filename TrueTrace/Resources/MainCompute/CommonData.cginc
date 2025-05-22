@@ -801,13 +801,17 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const fl
         		[branch] if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex || _IntersectionMaterials[MaterialIndex].specTrans == 1 || _IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
 	                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
         
-                    if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex && _IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
-                        if( SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return false;
+                    if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex && _IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) {
+                    	float Alph = SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x;
+                        if((GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return false;
+                    }
 
 	                #ifdef FadeMapping
 	                    if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
-	                        if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
-	                            if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= 0.9f) return false;
+	                        if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) {
+	                        	float Alph = SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x;
+	                            if((GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= 0.9f) return false;
+	                        }
 	                    }
 	                #endif
 
@@ -865,8 +869,10 @@ inline void triangle_intersect_dist(int tri_id, const SmallerRay ray, inout floa
 				if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, IsBackground) || GetFlag(_IntersectionMaterials[MaterialIndex].Tag, ShadowCaster)) return; 
         		[branch] if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
 	                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
-                    if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex && _IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
-                        if( SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return;
+                    if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex && _IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) {
+                    	float Alph = SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x;
+                        if((GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return;
+                    }
 
 		        }
             #endif

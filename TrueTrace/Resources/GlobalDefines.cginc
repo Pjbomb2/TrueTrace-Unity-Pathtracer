@@ -27,7 +27,7 @@
 #define DoubleBufferSGTree
 // #define Fog
 #define RadCache
-#define ClampRoughnessToBounce
+// #define ClampRoughnessToBounce
 // #define ReSTIRSampleReduction
 // #define ReSTIRRestrictSpatial
 // #define SmartRestriction
@@ -37,7 +37,7 @@
 // #define DisableNormalMaps
 // #define ClayMetalOverride
 // #define IgnoreBackfacingEmissive
-
+// #define AltFadeMapping
 
 
 //END OF DEFINES
@@ -93,6 +93,7 @@
 #define BackgrounBleed 8
 #define Thin 9
 #define VertexColors 10
+#define InvertAlpha 11
 
 #define SampleAlbedo 0
 #define SampleMetallic 1

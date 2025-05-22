@@ -46,9 +46,9 @@
             <RotationSecondaryNormal>0</RotationSecondaryNormal>
           </TextureModifiers>
           <BaseColor>
-            <x>1</x>
-            <y>1</y>
-            <z>1</z>
+            <x>0.2264151</x>
+            <y>0.2264151</y>
+            <z>0.2264151</z>
           </BaseColor>
           <emission>0</emission>
           <EmissionColor>
@@ -57,27 +57,27 @@
             <z>1</z>
           </EmissionColor>
           <Tag>0</Tag>
-          <Roughness>0</Roughness>
+          <Roughness>0.734</Roughness>
           <MatType>0</MatType>
           <TransmittanceColor>
-            <x>1</x>
-            <y>1</y>
-            <z>1</z>
+            <x>12</x>
+            <y>0</y>
+            <z>0</z>
           </TransmittanceColor>
-          <IOR>1</IOR>
-          <Metallic>0</Metallic>
-          <Sheen>0</Sheen>
+          <IOR>2.08</IOR>
+          <Metallic>0.683</Metallic>
+          <Sheen>31.5</Sheen>
           <SheenTint>0</SheenTint>
           <SpecularTint>0</SpecularTint>
-          <Clearcoat>0</Clearcoat>
+          <Clearcoat>0.461</Clearcoat>
           <ClearcoatGloss>0</ClearcoatGloss>
           <Anisotropic>0</Anisotropic>
           <AnisotropicRotation>0</AnisotropicRotation>
           <Flatness>0</Flatness>
-          <DiffTrans>0</DiffTrans>
+          <DiffTrans>0.653</DiffTrans>
           <SpecTrans>0</SpecTrans>
           <Specular>0</Specular>
-          <ScatterDist>1</ScatterDist>
+          <ScatterDist>0.04</ScatterDist>
           <MetallicRemap>
             <x>0</x>
             <y>1</y>
@@ -87,11 +87,11 @@
             <y>1</y>
           </RoughnessRemap>
           <AlphaCutoff>0.1</AlphaCutoff>
-          <NormalStrength>1</NormalStrength>
+          <NormalStrength>0.8</NormalStrength>
           <Hue>0</Hue>
-          <Saturation>1</Saturation>
+          <Saturation>0</Saturation>
           <Contrast>1</Contrast>
-          <Brightness>1</Brightness>
+          <Brightness>2.83</Brightness>
           <BlendColor>
             <x>1</x>
             <y>1</y>
@@ -104,17 +104,17 @@
           <DetailNormalStrength>1</DetailNormalStrength>
         </MatData>
         <UseKelvin>false</UseKelvin>
-        <KelvinTemp>5272</KelvinTemp>
-        <AlbedoGUID>20334f87f2cec4f458a850cf4c6d7d5e</AlbedoGUID>
+        <KelvinTemp>0</KelvinTemp>
+        <AlbedoGUID>87c2039a572795241856ebe52bafc76e</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
         <EmissionGUID>null</EmissionGUID>
-        <AlphaGUID>20334f87f2cec4f458a850cf4c6d7d5e</AlphaGUID>
+        <AlphaGUID>87c2039a572795241856ebe52bafc76e</AlphaGUID>
         <MatCapGUID>null</MatCapGUID>
         <MatcapMaskGUID>null</MatcapMaskGUID>
         <SecondaryAlbedoGUID>null</SecondaryAlbedoGUID>
         <SecondaryAlbedoMaskGUID>null</SecondaryAlbedoMaskGUID>
-        <NormalGUID>null</NormalGUID>
+        <NormalGUID>a072fb9ec7ea75a4f8806d5750e1cbf3</NormalGUID>
         <ShaderName>Standard</ShaderName>
       </RayObjectDatas>
     </ContainedPresets>
