@@ -3422,7 +3422,7 @@ uint hash2_grid(const int3 index) {
     return (index.x * GRID_PRIME_X_2) ^ (index.z * GRID_PRIME_Y_2) ^ (index.y * GRID_PRIME_Z_2);
 }
 
-void mc_static_buffer_index(const float3 pos, out uint buffer_index, out uint hash, float random) {
+void mc_static_buffer_index(const float3 pos, inout uint buffer_index, inout uint hash, float random) {
     const int3 grid_idx = grid_idx_interpolate(pos, MC_STATIC_GRID_WIDTH, random);
     buffer_index = hash_grid(grid_idx, MC_STATIC_BUFFER_SIZE) + MC_ADAPTIVE_BUFFER_SIZE;
     hash = hash2_grid(grid_idx);
@@ -3470,7 +3470,7 @@ void mc_state_add_sample(inout MCState mc_state,
 
 #define mc_adaptive_level_for_pos(pos, random) (mc_adaptive_target_level_for_pos(pos) + uint((-log2(1.0 - random))))
 
-void mc_adaptive_buffer_index(const float3 pos, const float3 normal, out uint buffer_index, out uint hash, float randomX, float randomY) {
+void mc_adaptive_buffer_index(const float3 pos, const float3 normal, inout uint buffer_index, inout uint hash, float randomX, float randomY) {
     const uint level = mc_adaptive_level_for_pos(pos, randomX);
     const int3 grid_idx = mc_adaptive_grid_idx_for_level_interpolate(level, pos, randomY);
     buffer_index = hash_grid_normal_level(grid_idx, normal, level, MC_ADAPTIVE_BUFFER_SIZE);
@@ -3482,7 +3482,7 @@ void mc_adaptive_finalize_load(inout MCState mc_state, const uint hash) {
     mc_state.w_tgt += mc_state.sum_w * (frames_accumulated - mc_state.T) * mc_state.mv;
 }
 
-void mc_adaptive_load(out MCState mc_state, const float3 pos, const float3 normal, float randomX, float randomY) {
+void mc_adaptive_load(inout MCState mc_state, const float3 pos, const float3 normal, float randomX, float randomY) {
     uint buffer_index, hash;
     mc_adaptive_buffer_index(pos, normal, buffer_index, hash, randomX, randomY);
     mc_state = mc_states[buffer_index];
@@ -3522,7 +3522,7 @@ float vmf_pdf(const float3 w, const float3 mu, const float kappa) {
 #define LC_GRID_POWER  2.0f
 
 
-#define lc_target_grid_width(pos) (2.0f * LC_GRID_TAN_ALPHA_HALF * distance(CamPos+1000.0f, pos))
+#define lc_target_grid_width(pos) (2.0f * LC_GRID_TAN_ALPHA_HALF * distance(CamPos, pos))
 
 #define lc_level_for_pos(pos) uint(round(LC_GRID_STEPS_PER_UNIT_SIZE * pow(max(lc_target_grid_width(pos) - LC_GRID_MIN_WIDTH, 0), 1.0f / LC_GRID_POWER)))
 
@@ -3556,7 +3556,7 @@ uint light_cache_get2(float3 pos, const float3 normal, float rand) {
 }
 
 float3 light_cache_get(float3 pos, const float3 normal, float rand) {
-	pos += 1000.0f;
+	// pos += 1000.0f;
     const uint level = lc_level_for_pos(pos);
     float3 irr; uint N;
     light_cache_get_level(irr, N, level, pos, normal, rand);
@@ -3564,7 +3564,7 @@ float3 light_cache_get(float3 pos, const float3 normal, float rand) {
 }
 
 void light_cache_update(float3 pos, const float3 normal, const float3 irr, float randX, float randY) {
-	pos += 1000.0f;
+	// pos += 1000.0f;
     const uint level = lc_level_for_pos(pos);
     const int3 grid_idx = lc_grid_idx_for_level_interpolate(level, pos, randX);
     const uint buf_idx = hash_grid_normal_level(grid_idx, normal, level, LIGHT_CACHE_BUFFER_SIZE);
@@ -3592,4 +3592,24 @@ void light_cache_update(float3 pos, const float3 normal, const float3 irr, float
     light_cache[buf_idx] = vtx;
 
     light_cache[buf_idx].lock = 0;
+}
+
+bool mc_light_missing(const MCState mc_state, const float mc_f, const float3 wo, const float3 pos) {
+
+    if (mc_f > 0.5 * mc_state.sum_w) {
+        return false;
+    }
+
+    if (frames_accumulated == mc_state.T) {
+        return false;
+    }
+
+    const float Cos = dot(wo, mc_state_dir(mc_state, pos));
+
+    if (Cos < 0.9 + 0.1 * mc_state_mean_cos(mc_state, pos)) {
+        // light might still be there 
+        return false;
+    }
+
+    return true;
 }
