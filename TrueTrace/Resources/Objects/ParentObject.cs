@@ -19,7 +19,9 @@ namespace TrueTrace {
     [System.Serializable]
     public class ParentObject : MonoBehaviour
     {
-
+    #if TTExtraVerbose && TTVerbose
+        TTStopWatch MainWatch;
+    #endif
         public float Distance(Vector3 a, Vector3 b)
         {
             a.x -= b.x;
@@ -622,8 +624,6 @@ namespace TrueTrace {
         }
         public List<Transform> ChildObjectTransforms;
         public unsafe void LoadData() {
-            // TTStopWatch TempWatch = new TTStopWatch("StopWatch For: " + gameObject.name);
-            // TempWatch.Start();
             HasLightTriangles = false;
             NeedsToResetBuffers = true;
             ClearAll();
@@ -898,7 +898,6 @@ namespace TrueTrace {
                 });
                 RepCount += Mathf.Min(submeshcount, CurrentObject.Names.Length);
             }
-            // TempWatch.Stop("Object Mesh Loading");
 
         }
 
@@ -966,6 +965,9 @@ namespace TrueTrace {
 
 #if TTTriSplitting && !HardwareRT
             if(!IsSkinnedGroup && !IsDeformable) {
+#if TTExtraVerbose && TTVerbose
+                MainWatch.Start();
+#endif
                 int Coun = AggTriangles.Length;
                 int Splits = 0;
                 Vector3 globalSize = aabb_untransformed.BBMax - aabb_untransformed.BBMin;
@@ -1028,6 +1030,11 @@ namespace TrueTrace {
 
                         float depth = Mathf.Min(-1.0f, Mathf.Floor(Mathf.Log(largestExtent / globalSize[splitAxis], 2)));
                         float cellSize = Mathf.Pow(2f, depth) * globalSize[splitAxis];
+                        
+                        // int floatBits = Unsafe.BitCast<float, int>(alpha);
+                        // floatBits &= 255 << 23;
+
+                        // float cellSize = Unsafe.BitCast<int, float>(floatBits);
                         if (cellSize + 0.0001f >= largestExtent)
                         {
                             cellSize *= 0.5f;
@@ -1077,7 +1084,9 @@ namespace TrueTrace {
 
 
                 AggTriangles = NewTris;
-                Debug.Log(Splits);
+#if TTExtraVerbose && TTVerbose
+                MainWatch.Stop("Triangle Presplitting for " + Splits + " new triangles");
+#endif
             }
 #endif
 
@@ -1085,16 +1094,22 @@ namespace TrueTrace {
             MaxRecur = 0;
             int PrevLength = TrianglesArray.Length;
             if(BVH2 != null) BVH2.Dispose();
-            // TTStopWatch BVH2Watch = new TTStopWatch("BVH2");
-            // BVH2Watch.Start();
+#if TTExtraVerbose && TTVerbose
+            MainWatch.Start();
+#endif
             BVH2 = new BVH2Builder(Triangles, TrianglesArray.Length);//Binary BVH Builder, and also the component that takes the longest to build
-            // BVH2Watch.Stop();
+#if TTExtraVerbose && TTVerbose
+            MainWatch.Stop("Binary BVH");
+#endif
             TrianglesArray.Dispose();
             if(this.BVH != null) this.BVH.Dispose();
-            // TTStopWatch BVH8Watch = new TTStopWatch("BVH8");
-            // BVH8Watch.Start();
+#if TTExtraVerbose && TTVerbose
+            MainWatch.Start();
+#endif
             this.BVH = new BVH8Builder(ref BVH2);
-            // BVH8Watch.Stop();
+#if TTExtraVerbose && TTVerbose
+            MainWatch.Stop("CWBVH Conversion");
+#endif
             CommonFunctions.DeepClean(ref BVH2.FinalIndices);
             BVH2.Dispose();
             BVH2 = null;
@@ -1153,10 +1168,13 @@ namespace TrueTrace {
 
 
             if(LightTriangles.Count > 0) {
-                // TTStopWatch LBVHWatch = new TTStopWatch("LBVH");
-                // LBVHWatch.Start();
+#if TTExtraVerbose && TTVerbose
+                MainWatch.Start();
+#endif
                 LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
-                // LBVHWatch.Stop();
+#if TTExtraVerbose && TTVerbose
+                MainWatch.Stop("Light BVH for " + LightTriangles.Count + " Emissive triangles");
+#endif
             }
 
 
@@ -1417,6 +1435,9 @@ namespace TrueTrace {
 
 
         public unsafe async Task BuildTotal() {
+#if TTExtraVerbose && TTVerbose
+            MainWatch = new TTStopWatch(Name);
+#endif
             // if(HasCompleted) return;
             int IllumTriCount = 0;
             CudaTriangle TempTri = new CudaTriangle();
@@ -1433,10 +1454,11 @@ namespace TrueTrace {
 #if TTTriSplitting
     }
 #endif
+#if TTExtraVerbose && TTVerbose
+            MainWatch.Start();
+#endif
             AggTriangles = new CudaTriangle[(TransformIndexes[TransformIndexes.Count - 1].VertexStart + TransformIndexes[TransformIndexes.Count - 1].VertexCount) / 3];
-            int OffsetReal;
-            // TTStopWatch AccumWatch = new TTStopWatch("Accum");
-            // AccumWatch.Start();
+            int OffsetReal = 0;
             aabb_untransformed = new AABB();
             aabb_untransformed.init();
             for (int i = 0; i < TotalObjects; i++) {//Transforming so all child objects are in the same object space
@@ -1587,7 +1609,9 @@ namespace TrueTrace {
                     OffsetReal++;
                 }
             }
-            // AccumWatch.Stop();
+#if TTExtraVerbose && TTVerbose
+          MainWatch.Stop("Format Conversion for " + OffsetReal + " triangles");
+#endif
             #if AccurateLightTris
                 int EmissTexLeng = EmissionTexPixels.Count;
                 for(int i = 0; i < EmissTexLeng; i++) {
@@ -1600,10 +1624,7 @@ namespace TrueTrace {
             center = 0.5f * (aabb_untransformed.BBMin + aabb_untransformed.BBMax);
             extent = 0.5f * (aabb_untransformed.BBMax - aabb_untransformed.BBMin);
             #if !HardwareRT
-                // TTStopWatch ConstructWatch = new TTStopWatch("Construct");
-                // ConstructWatch.Start();
                 Construct();
-                // ConstructWatch.Stop();
                 {//Compile Triangles
                     int TriLength = AggTriangles.Length;
                     NativeArray<CudaTriangle> Vector3Array = new NativeArray<CudaTriangle>(AggTriangles, Unity.Collections.Allocator.TempJob);
