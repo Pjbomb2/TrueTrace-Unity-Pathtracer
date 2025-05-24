@@ -348,6 +348,8 @@ namespace TrueTrace {
         public List<Texture> RoughnessTexs;
         public List<int> RoughnessTexChannelIndex;
         public List<Texture> EmissionTexs;
+        public List<Texture> DiffTransTexs;
+        public List<int> DiffTransTexChannelIndex;
         public List<Texture> AlphaTexs;
         public List<int> AlphaTexChannelIndex;
         public List<Texture> MatCapMasks;
@@ -451,6 +453,7 @@ namespace TrueTrace {
             MemorySafeClear<Texture>(ref RoughnessTexs);
             MemorySafeClear<Texture>(ref EmissionTexs);
             MemorySafeClear<Texture>(ref AlphaTexs);
+            MemorySafeClear<Texture>(ref DiffTransTexs);
             MemorySafeClear<Texture>(ref MatCapTexs);
             MemorySafeClear<Texture>(ref MatCapMasks);
             MemorySafeClear<Texture>(ref SecondaryAlbedoTexs);
@@ -458,6 +461,7 @@ namespace TrueTrace {
             MemorySafeClear<int>(ref RoughnessTexChannelIndex);
             MemorySafeClear<int>(ref MetallicTexChannelIndex);
             MemorySafeClear<int>(ref AlphaTexChannelIndex);
+            MemorySafeClear<int>(ref DiffTransTexChannelIndex);
             MemorySafeClear<int>(ref MatCapMaskChannelIndex);
             MemorySafeClear<int>(ref SecondaryAlbedoTexMaskChannelIndex);
             int CurMatIndex = 0;
@@ -511,6 +515,7 @@ namespace TrueTrace {
                     else if(JustCreated) obj.LocalMaterials[i].MetallicRemap = new Vector2(0, 1);
                     if(RelevantMat.RoughnessRemapMin != null && !RelevantMat.RoughnessRemapMin.Equals("null") && JustCreated) obj.LocalMaterials[i].RoughnessRemap = new Vector2(SharedMaterials[i].GetFloat(RelevantMat.RoughnessRemapMin), SharedMaterials[i].GetFloat(RelevantMat.RoughnessRemapMax));
                     else if(JustCreated) obj.LocalMaterials[i].RoughnessRemap = new Vector2(0, 1);
+                    if(JustCreated || obj.LocalMaterials[i].DiffTransRemap.x == 0 && obj.LocalMaterials[i].DiffTransRemap.y == 0) obj.LocalMaterials[i].DiffTransRemap = new Vector2(0, 1);
                     if(!RelevantMat.BaseColorValue.Equals("null") && JustCreated) obj.LocalMaterials[i].BaseColor = (Vector3)((Vector4)SharedMaterials[i].GetColor(RelevantMat.BaseColorValue));
                     else if(JustCreated) obj.LocalMaterials[i].BaseColor = new Vector3(1,1,1);
                     if(RelevantMat.IsGlass && JustCreated || (JustCreated && RelevantMat.Name.Equals("Standard") && SharedMaterials[i].GetFloat("_Mode") == 3)) obj.LocalMaterials[i].SpecTrans = 1f;
@@ -583,6 +588,11 @@ namespace TrueTrace {
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref AlphaTexs, ref TempIndex); 
                                 CurMat.Textures.AlphaTex.x = TempIndex; 
                                 if(Result == 1) AlphaTexChannelIndex.Add(ReadIndex);
+                            break;
+                            case(TexturePurpose.DiffTransTex):
+                                Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref DiffTransTexs, ref TempIndex); 
+                                CurMat.Textures.DiffTransTex.x = TempIndex; 
+                                if(Result == 1) DiffTransTexChannelIndex.Add(ReadIndex);
                             break;
                             case(TexturePurpose.MatCapMask):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref MatCapMasks, ref TempIndex); 

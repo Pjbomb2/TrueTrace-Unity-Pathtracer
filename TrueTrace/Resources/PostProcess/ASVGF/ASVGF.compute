@@ -809,7 +809,14 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 		};
 		[unroll]for (int i = 0; i < 4; i++) {
 			int2 p = int2(pos_ld)+off[i];
-
+			bool Lowered = false;
+		    if (any(round(p) > int2(screen_width, screen_height) - 1) || any(round(p) < 0)) {
+		        // Intersect motion vector with image:
+		        const float tmin = max(min(p.x / motion.x, (p.x - screen_width - 1) / motion.x),
+		                               min(p.y / motion.y, (p.y - screen_height - 1) / motion.y));
+		        p = p - motion * tmin;
+		        Lowered = true;
+		    }
 			if (p.x < 0 || p.y < 0 || p.x >= screen_width || p.y >= screen_height)
 				continue;
 
@@ -834,12 +841,15 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 						SH hist_color_lf = load_SH(TEX_ASVGF_HIST_COLOR_LF_SH_B, TEX_ASVGF_HIST_COLOR_LF_COCG_B, p);
 						accumulate_SH(temporal_color_lf, hist_color_lf, w_diff);
 		
+						float4 TempA = TEX_ASVGF_HIST_MOMENTS_HF_B[p].rgba;
+						if(Lowered) TempA.ba = min(TempA.ba, 1);
+						TempA *= w_diff;
+						temporal_moments_histlen_hf += TempA;
 
 						temporal_color_hf += TEX_ASVGF_HIST_COLOR_HF[p] * w_diff;
-						temporal_moments_histlen_hf += TEX_ASVGF_HIST_MOMENTS_HF_B[p].rgba * w_diff;
 						temporal_sum_w_diff += w_diff;
 						float w_spec = w[i] * pow(max(dot_normals, 0), shininess);
-						temporal_color_histlen_spec += float4(unpackRGBE(asuint(TEX_ASVGF_FILTERED_SPEC_B[p].x)), TEX_ASVGF_FILTERED_SPEC_B[p].y) * w_spec;
+						temporal_color_histlen_spec += float4(unpackRGBE(asuint(TEX_ASVGF_FILTERED_SPEC_B[p].x)), Lowered ? (min(TEX_ASVGF_FILTERED_SPEC_B[p].y,1)) : TEX_ASVGF_FILTERED_SPEC_B[p].y) * w_spec;
 						temporal_sum_w_spec += w_spec;
 					}
 				}
@@ -852,9 +862,12 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 					SH hist_color_lf = load_SH(TEX_ASVGF_HIST_COLOR_LF_SH_B, TEX_ASVGF_HIST_COLOR_LF_COCG_B, p);
 					accumulate_SH(temporal_color_lf, hist_color_lf, w_diff);
 
+					float4 TempA = TEX_ASVGF_HIST_MOMENTS_HF_B[p].rgba;
+					if(Lowered) TempA.ba = min(TempA.ba, 1);
+					TempA *= w_diff;
 					temporal_color_hf += TEX_ASVGF_HIST_COLOR_HF[p] * w_diff;
-					temporal_color_histlen_spec += float4(unpackRGBE(asuint(TEX_ASVGF_FILTERED_SPEC_B[p].x)), TEX_ASVGF_FILTERED_SPEC_B[p].y) * w_spec;
-					temporal_moments_histlen_hf += TEX_ASVGF_HIST_MOMENTS_HF_B[p].rgba * w_diff;
+					temporal_color_histlen_spec += float4(unpackRGBE(asuint(TEX_ASVGF_FILTERED_SPEC_B[p].x)), Lowered ? (min(TEX_ASVGF_FILTERED_SPEC_B[p].y,1)) : TEX_ASVGF_FILTERED_SPEC_B[p].y) * w_spec;
+					temporal_moments_histlen_hf += TempA;
 					temporal_sum_w_diff += w_diff;
 					temporal_sum_w_spec += w_spec;
 				}	
@@ -1314,7 +1327,7 @@ inline void filter_image(
 		// pixels using the same weights as for colors, and the combined moments are used on the next iteration.
 		lum_mean_hf = filtered_moments.x;
 		float lum_variance_hf = max(1e-8, filtered_moments.y - filtered_moments.x * filtered_moments.x);
-		sigma_l_hf = min(max(hist_len_hf - (spec_iteration == 0 ? 0 : 2), 1), 16) / (2.0 * lum_variance_hf);
+		sigma_l_hf = min(max(hist_len_hf, 1), 16) / (2.0 * lum_variance_hf);
 	} else {
 	// 	// If there is no history, treat all moments as invalid, because 3x3 spatial 
 	// 	// is just not enough to get reasonable filtering. Ignore luminance in this case,

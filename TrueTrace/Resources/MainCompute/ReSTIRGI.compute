@@ -1039,6 +1039,8 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
     GlobalColors[pixel_index].Indirect = RunningReservoirB.Radiance.Color * RunningReservoirB.Radiance.W;
 #endif
     if(GetBounceData(GlobalColors[pixel_index].MetRoughIsSpec) != 1) {
+        SmallerRay ray = CreateRay(PrimaryHitPosition, normalize(CalcPos(WorldPos) - PrimaryHitPosition));
+        if(GetFlag(SurfaceMat.Tag, Thin) && dot(GeomNorm, ray.direction) < 0 && Case == 2) bsdf *= sqrt(exp(-CalculateExtinction(SurfaceMat.transmittanceColor, SurfaceMat.scatterDistance == 0.0f ? 1.0f : SurfaceMat.scatterDistance)));
         if(Case != 3) GlobalColors[pixel_index].Data.xyz = bsdf;
     }
 }

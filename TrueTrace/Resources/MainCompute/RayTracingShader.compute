@@ -336,7 +336,8 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
             Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x3800000)) | (WaterStageFlag << 23);
         } else if(Refracted && MaterialLobe != 3) {
-            bsdfmodifier *= sqrt(exp(-CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance)));
+            bsdfmodifier *= sqrt(exp(-CalculateExtinction((MaterialLobe == 2 && Refracted) ? (hitDat.transmittanceColor) : (1.0f - (bsdf * hitDat.surfaceColor)), hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance)));
+            // bsdfmodifier *= sqrt(exp(-CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance)));
 
         }
 
@@ -1192,6 +1193,10 @@ int MaterialIndex;
         if(GetFlag(TempMat.Tag, UseSmoothness)) TempMat.roughness = (TempMat.roughness * ((1.0f - TempMat.RoughnessRemap.x) - (1.0f - TempMat.RoughnessRemap.y))) + (1.0f - TempMat.RoughnessRemap.y);
         else TempMat.roughness = (TempMat.roughness * (TempMat.RoughnessRemap.y - TempMat.RoughnessRemap.x)) + TempMat.RoughnessRemap.x;
     }
+    if(TempMat.DiffTransTex.x > 0) {
+        TempMat.diffTrans = saturate(pow(SampleTexture(BaseUv, SampleDiffTrans, TempMat), rcp(2.2f)));
+    }
+    if(!all(TempMat.DiffTransRemap == float2(0,1))) TempMat.diffTrans = (TempMat.diffTrans * (TempMat.DiffTransRemap.y - TempMat.DiffTransRemap.x)) + TempMat.DiffTransRemap.x;
 
 
     TempMat.roughness = max(TempMat.roughness, 0.00001f);

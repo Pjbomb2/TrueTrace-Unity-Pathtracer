@@ -167,6 +167,7 @@ namespace CommonVars
         public Vector2Int SecondaryAlbedoTex;
         public Vector2Int SecondaryAlbedoMask;
         public Vector2Int SecondaryNormalTex;
+        public Vector2Int DiffTransTex;
     }
     [System.Serializable]
     public struct MatTextureModifierData
@@ -234,6 +235,7 @@ namespace CommonVars
         public float AlbedoBlendFactor;
         public float SecondaryNormalTexBlend;
         public float DetailNormalStrength;
+        public Vector2 DiffTransRemap;
     }
 
     [System.Serializable]
@@ -268,7 +270,7 @@ namespace CommonVars
         public int ReadIndex;
         public List<Vector3Int> TexObjList = new List<Vector3Int>();
     }   
-    public enum TexturePurpose {Albedo, Alpha, Normal, Emission, Metallic, Roughness, MatCapTex, MatCapMask, SecondaryAlbedoTexture, SecondaryAlbedoTextureMask, SecondaryNormalTexture};
+    public enum TexturePurpose {Albedo, Alpha, Normal, Emission, Metallic, Roughness, MatCapTex, MatCapMask, SecondaryAlbedoTexture, SecondaryAlbedoTextureMask, SecondaryNormalTexture, DiffTransTex};
 
     [System.Serializable]
     public class TexturePairs {
@@ -323,6 +325,7 @@ namespace CommonVars
         public string SecondaryAlbedoGUID;
         public string SecondaryAlbedoMaskGUID;
         public string NormalGUID;
+        public string DiffTransGUID;
         public string ShaderName;
     }
     [System.Serializable]
@@ -1259,6 +1262,7 @@ namespace CommonVars
             NewMat.AlbedoBlendFactor = 0;
             NewMat.SecondaryNormalTexBlend = 0;
             NewMat.DetailNormalStrength = 1;
+            NewMat.DiffTransRemap = new Vector2(0,1);
             return NewMat;
         }
 

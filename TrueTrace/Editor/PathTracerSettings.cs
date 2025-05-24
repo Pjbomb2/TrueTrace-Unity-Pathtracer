@@ -882,7 +882,8 @@ Toolbar toolbar;
                                        MatCapMask,
                                        SecondaryAlbedoTexture,
                                        SecondaryAlbedoTextureMask,
-                                       SecondaryNormalTexture
+                                       SecondaryNormalTexture,
+                                       DiffTransTexture
                                        };
 
       VisualElement MaterialPairingMenu;
@@ -948,6 +949,7 @@ Toolbar toolbar;
                      case((int)Properties.SecondaryAlbedoTexture):Purpose = (int)TexturePurpose.SecondaryAlbedoTexture;break;
                      case((int)Properties.SecondaryAlbedoTextureMask):Purpose = (int)TexturePurpose.SecondaryAlbedoTextureMask;break;
                      case((int)Properties.SecondaryNormalTexture):Purpose = (int)TexturePurpose.SecondaryNormalTexture;break;
+                     case((int)Properties.DiffTransTexture):Purpose = (int)TexturePurpose.DiffTransTex;break;
                   }
 
 
@@ -965,6 +967,7 @@ Toolbar toolbar;
                      case((int)Properties.SecondaryAlbedoTexture):ReadIndex = -4;break;
                      case((int)Properties.SecondaryAlbedoTextureMask):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);break;
                      case((int)Properties.SecondaryNormalTexture):ReadIndex = -3;break;
+                     case((int)Properties.DiffTransTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);  break;
                   }
                   FallbackNodes.Add(new TexturePairs() {
                      Purpose = Purpose,
@@ -985,6 +988,7 @@ Toolbar toolbar;
                         case((int)Properties.SecondaryAlbedoTexture):ReadIndex = -4;break;
                         case((int)Properties.SecondaryAlbedoTextureMask):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);break;
                         case((int)Properties.SecondaryNormalTexture):ReadIndex = -3;break;
+                        case((int)Properties.DiffTransTexture):ReadIndex = ChannelProperties.IndexOf(CurrentNode.GUID);  break;
                      }
                      FallbackNodes.Add(new TexturePairs() {
                         Purpose = Purpose,
@@ -1028,6 +1032,14 @@ Toolbar toolbar;
                case((int)Properties.MetallicTexture):
                   MatShader.AvailableTextures.Add(new TexturePairs() {
                      Purpose = (int)TexturePurpose.Metallic,
+                     ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
+                     TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
+                     Fallback = FallbackNode
+                  });  
+               break;
+               case((int)Properties.DiffTransTexture):
+                  MatShader.AvailableTextures.Add(new TexturePairs() {
+                     Purpose = (int)TexturePurpose.DiffTransTex,
                      ReadIndex = ChannelProperties.IndexOf(AvailableIndexes[i].GUID),
                      TextureName = TextureProperties[VerboseTextureProperties.IndexOf(AvailableIndexes[i].title)],
                      Fallback = FallbackNode
@@ -1343,6 +1355,7 @@ Toolbar toolbar;
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Secondary Base Texture"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Secondary Base Texture Mask"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "Detail Normal Texture"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "DiffTrans Texture"));
 
          _graphView.AddElement(OutputNode);
          Vector2 Pos = new Vector2(30, 10);
@@ -1411,6 +1424,11 @@ Toolbar toolbar;
                   ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName);
                   ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.EmissionTexture] as Port);
                break;
+               case((int)TexturePurpose.DiffTransTex):
+                  Pos.y = 1460;
+                  ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
+                  ThisEdge = (ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.DiffTransTexture] as Port);
+               break;
             }
             _graphView.AddElement(ThisNode);
             _graphView.AddElement(ThisEdge);
@@ -1446,6 +1464,10 @@ Toolbar toolbar;
                      break;
                      case((int)TexturePurpose.Metallic):
                         Pos.y = 340;
+                        ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
+                     break;
+                     case((int)TexturePurpose.DiffTransTex):
+                        Pos.y = 1460;
                         ThisNode = CreateInputNode("Texture", typeof(Texture), Pos, CurrentPair.TextureName, CurrentPair.ReadIndex);
                      break;
                      case((int)TexturePurpose.Roughness):
@@ -3224,7 +3246,7 @@ public class DialogueGraphView : GraphView
     }
 
     private bool CheckIfSingleComp(string PortName) {
-      return PortName.Contains("Mask") || PortName.Equals("Alpha Texture") || PortName.Equals("Metallic Texture") || PortName.Equals("Roughness Texture");
+      return PortName.Contains("Mask") || PortName.Equals("Alpha Texture") || PortName.Equals("Metallic Texture") || PortName.Equals("Roughness Texture") || PortName.Equals("DiffTrans Texture");
     }
     private UnityEditor.Experimental.GraphView.GraphViewChange OnGraphViewChanged(UnityEditor.Experimental.GraphView.GraphViewChange graphViewChange) {
       if(graphViewChange.edgesToCreate != null)
