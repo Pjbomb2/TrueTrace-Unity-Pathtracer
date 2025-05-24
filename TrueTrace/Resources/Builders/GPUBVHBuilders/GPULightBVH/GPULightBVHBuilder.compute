@@ -278,7 +278,7 @@ inline LightBVHData Union(LightBVHData A, LightBVHData B, int Left) {
 }
 
 
-float EvaluateCost(const LightBVHData b, float Kr) {
+inline float EvaluateCost(const LightBVHData b, float Kr) {
     const float cosTheta_o = GetCosThetaO(b.cosTheta_oe);
     float theta_o = acos(cosTheta_o);
     float theta_e = acos(GetCosThetaE(b.cosTheta_oe));
@@ -351,6 +351,13 @@ void Transfer (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID)
 
 
 #pragma kernel Sort
+inline int2 GetChunkRangeSimple(const int N, const int M, const int i) {
+    int quotient = N / M;
+    int remainder = N % M;
+    int start = quotient * i + (i < remainder ? i : remainder);
+    int leng = quotient + (i < remainder ? 1 : 0);
+    return int2(start, leng);
+}
 
 
 groupshared int2 RL[4][SortBatchSize];
@@ -381,11 +388,14 @@ void Sort (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID)
     bool Valid = !(IndexCount == 1 || id.x >= WorkGroup[1] + (CurRun == 0 ? 1 : 0) || id.x >= max(WorkGroup[1],1));
     int LeftCount;
 
-    int Spacing = max(1,ceil((float)IndexCount / (float)SortBatchSize));
-    int2 ThreadStrides = Spacing * int2(GT.y, GT.y + 1);
-    int StartIndex = FirstIndex + ThreadStrides.x;
-    int EndIndex = min(FirstIndex + ThreadStrides.y, FirstIndex + IndexCount);
-    if(Valid && GT.y != (SortBatchSize-1) && IndexCount > GT.y * Spacing) {
+    // int Spacing = max(1,ceil((float)IndexCount / (float)SortBatchSize));
+    // int2 ThreadStrides = Spacing * int2(GT.y, GT.y + 1);
+    // int StartIndex = FirstIndex + ThreadStrides.x;
+    // int EndIndex = min(FirstIndex + ThreadStrides.y, FirstIndex + IndexCount);
+    int2 A = GetChunkRangeSimple(IndexCount, SortBatchSize, GT.y);
+    int StartIndex = FirstIndex + A.x;
+    int EndIndex = FirstIndex + A.x + A.y;
+    if(Valid && GT.y != (SortBatchSize-1)) {
         for(int i = StartIndex; i < EndIndex; i++) {
             int Index = TempIndexes[i + NewOffset];
             bool IsLeft = TempIndexes[Index + LeftOffset] == CurRun;
@@ -399,7 +409,7 @@ void Sort (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID)
             RL[GT.x][i] += RL[GT.x][i - 1];
         
     GroupMemoryBarrierWithGroupSync();
-    if(Valid && GT.y != (SortBatchSize) && IndexCount > GT.y * Spacing) {
+    if(Valid && GT.y != (SortBatchSize)) {
         int2 TempRL = int2(FirstIndex + Offset + (InputB.FirstIndex - FirstIndex), FirstIndex + Offset) + RL[GT.x][GT.y];
         for(int i = StartIndex; i < EndIndex; i++) {
             int Index = TempIndexes[i + NewOffset];
@@ -487,117 +497,121 @@ void SplitKernel (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, u
     if (Valid) {// / binbatchsize because we broke it into 2 chunks; WE ONLY PROCESS ONE CELL PER GROUP, NOT ACTIVEQUE COUNT CELLS -- NOPE WRONG
         const float Min = ParentAABB.BBMin[GT.y];
         const float Diff = rcp(ParentAABB.BBMax[GT.y] - Min) * (float) (BinCount);
-        if(WorkGroupInput.IndexCount > 10) {//Experiemental binary search barrier finding, reduces from 2N reads to N + 3log(N) reads, where N is element count
-            int RepCount = 0;
-            int PrevMid = -1;
-            bool ValidBin = true;
-            if(GT.x < 32) {
-            while(StartIndex <= EndIndex) {
-                int Mid = StartIndex + (EndIndex - StartIndex) / 2;
-                const int Index = DimensionedIndices[Offset + Mid];
-                float Center = (Triangles[Index].BBMax[GT.y] + Triangles[Index].BBMin[GT.y]) / 2.0f - Min;            
-                int Bin = clamp(floor(Center * Diff), 0, BinCount - 1);
-                if(Bin > (GT.x % 32)) {
-                    EndIndex = Mid-1;
-                } else if(Bin < (GT.x % 32)) {
-                    StartIndex = Mid+1;
-                }
-                if(Bin == (GT.x % 32)) {
-                    PrevMid = Mid;
-                    break;
-                }
-                if(PrevMid == Mid) {
-                    ValidBin = false;
-                    break;
-                }
-                PrevMid = Mid;
-                    // if(GT.y == 0 && GT.z == 0) LayerStridesBuffer[GT.x % 32] = asuint(float4((float)RepCount, (float)Bin,(float)StartIndex, (float)EndIndex));
-            }
-            if(ValidBin && GT.x % BinCount != BinCount - 1) {
-                EndIndex = WorkGroupInput.FirstIndex + WorkGroupInput.IndexCount;
-                StartIndex = PrevMid;
-                int Prev2 = StartIndex;
-                // RepCount = 0;
-                PrevMid = -1;
-                // EndIndex = WorkGroupInput.FirstIndex + WorkGroupInput.IndexCount;
-                while(StartIndex <= EndIndex) {
-                    int Mid = StartIndex + (EndIndex - StartIndex) / 2;
-                    const int Index = DimensionedIndices[Offset + Mid];
-                    float Center = (Triangles[Index].BBMax[GT.y] + Triangles[Index].BBMin[GT.y]) / 2.0f - Min;            
-                    int Bin = clamp(floor(Center * Diff), 0, BinCount - 1);
-                    if(Bin > ((GT.x+1) % 32)) {
-                        EndIndex = Mid-1;
-                    } else if(Bin < ((GT.x+1) % 32)) {
-                        StartIndex = Mid+1;
-                    }
-                    if(Bin == ((GT.x+1) % 32)) {
-                        PrevMid = Mid;
-                        break;
-                    }
-                    if(PrevMid == Mid) {
-                        ValidBin = false;
-                        break;
-                    }
-                    PrevMid = Mid;
-                }
-                // if(GT.x < 32 && GT.y == 0 && GT.z == 0) LayerStridesBuffer[GT.x % 32] = asuint(float4((float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].x, (float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].y, (float)StartIndex, (float)EndIndex));
-                if(ValidBin) {
-                    StartIndex = Prev2-1;
-                    EndIndex = PrevMid+1;
-                    PrevMid = -1;
-                    // RepCount = 0;
-                    while(StartIndex <= EndIndex) {
-                        int Mid = StartIndex + (EndIndex - StartIndex) / 2;
-                        const int Index = DimensionedIndices[Offset + Mid];
-                        const int Index2 = DimensionedIndices[Offset + Mid-1];
-                        float Center = (Triangles[Index].BBMax[GT.y] + Triangles[Index].BBMin[GT.y]) / 2.0f - Min;            
-                        float Center2 = (Triangles[Index2].BBMax[GT.y] + Triangles[Index2].BBMin[GT.y]) / 2.0f - Min;            
-                        int Bin = clamp(floor(Center * Diff), 0, BinCount - 1);
-                        int Bin2 = clamp(floor(Center2 * Diff), 0, BinCount - 1);
-                        // if(GT.x < 32 && GT.y == 0 && GT.z == 0) LayerStridesBuffer[GT.x % 32] = asuint(float4((float)Bin, (float)Bin2, (float)Mid, (float)0));//asuint(float4((float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].x, (float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].y, (float)StartIndex, (float)EndIndex));
-                        if(Bin != Bin2) {
-                            BinStrides[(GT.x % BinCount) + 1][GT.y][GT.z].x = Offset + Mid;
-                            BinStrides[(GT.x % BinCount)][GT.y][GT.z].y = Offset + Mid - 1;
-                            break;
-                        }
+        // if(WorkGroupInput.IndexCount > 10) {//Experiemental binary search barrier finding, reduces from 2N reads to N + 3log(N) reads, where N is element count
+        //     int RepCount = 0;
+        //     int PrevMid = -1;
+        //     bool ValidBin = true;
+        //     if(GT.x < 32) {
+        //     while(StartIndex <= EndIndex) {
+        //         int Mid = StartIndex + (EndIndex - StartIndex) / 2;
+        //         const int Index = DimensionedIndices[Offset + Mid];
+        //         float Center = (Triangles[Index].BBMax[GT.y] + Triangles[Index].BBMin[GT.y]) / 2.0f - Min;            
+        //         int Bin = clamp(floor(Center * Diff), 0, BinCount - 1);
+        //         if(Bin > (GT.x % 32)) {
+        //             EndIndex = Mid-1;
+        //         } else if(Bin < (GT.x % 32)) {
+        //             StartIndex = Mid+1;
+        //         }
+        //         if(Bin == (GT.x % 32)) {
+        //             PrevMid = Mid;
+        //             break;
+        //         }
+        //         if(PrevMid == Mid) {
+        //             ValidBin = false;
+        //             break;
+        //         }
+        //         PrevMid = Mid;
+        //             // if(GT.y == 0 && GT.z == 0) LayerStridesBuffer[GT.x % 32] = asuint(float4((float)RepCount, (float)Bin,(float)StartIndex, (float)EndIndex));
+        //     }
+        //     if(ValidBin && GT.x % BinCount != BinCount - 1) {
+        //         EndIndex = WorkGroupInput.FirstIndex + WorkGroupInput.IndexCount;
+        //         StartIndex = PrevMid;
+        //         int Prev2 = StartIndex;
+        //         // RepCount = 0;
+        //         PrevMid = -1;
+        //         // EndIndex = WorkGroupInput.FirstIndex + WorkGroupInput.IndexCount;
+        //         while(StartIndex <= EndIndex) {
+        //             int Mid = StartIndex + (EndIndex - StartIndex) / 2;
+        //             const int Index = DimensionedIndices[Offset + Mid];
+        //             float Center = (Triangles[Index].BBMax[GT.y] + Triangles[Index].BBMin[GT.y]) / 2.0f - Min;            
+        //             int Bin = clamp(floor(Center * Diff), 0, BinCount - 1);
+        //             if(Bin > ((GT.x+1) % 32)) {
+        //                 EndIndex = Mid-1;
+        //             } else if(Bin < ((GT.x+1) % 32)) {
+        //                 StartIndex = Mid+1;
+        //             }
+        //             if(Bin == ((GT.x+1) % 32)) {
+        //                 PrevMid = Mid;
+        //                 break;
+        //             }
+        //             if(PrevMid == Mid) {
+        //                 ValidBin = false;
+        //                 break;
+        //             }
+        //             PrevMid = Mid;
+        //         }
+        //         // if(GT.x < 32 && GT.y == 0 && GT.z == 0) LayerStridesBuffer[GT.x % 32] = asuint(float4((float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].x, (float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].y, (float)StartIndex, (float)EndIndex));
+        //         if(ValidBin) {
+        //             StartIndex = Prev2-1;
+        //             EndIndex = PrevMid+1;
+        //             PrevMid = -1;
+        //             // RepCount = 0;
+        //             while(StartIndex <= EndIndex) {
+        //                 int Mid = StartIndex + (EndIndex - StartIndex) / 2;
+        //                 const int Index = DimensionedIndices[Offset + Mid];
+        //                 const int Index2 = DimensionedIndices[Offset + Mid-1];
+        //                 float Center = (Triangles[Index].BBMax[GT.y] + Triangles[Index].BBMin[GT.y]) / 2.0f - Min;            
+        //                 float Center2 = (Triangles[Index2].BBMax[GT.y] + Triangles[Index2].BBMin[GT.y]) / 2.0f - Min;            
+        //                 int Bin = clamp(floor(Center * Diff), 0, BinCount - 1);
+        //                 int Bin2 = clamp(floor(Center2 * Diff), 0, BinCount - 1);
+        //                 // if(GT.x < 32 && GT.y == 0 && GT.z == 0) LayerStridesBuffer[GT.x % 32] = asuint(float4((float)Bin, (float)Bin2, (float)Mid, (float)0));//asuint(float4((float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].x, (float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].y, (float)StartIndex, (float)EndIndex));
+        //                 if(Bin != Bin2) {
+        //                     BinStrides[(GT.x % BinCount) + 1][GT.y][GT.z].x = Offset + Mid;
+        //                     BinStrides[(GT.x % BinCount)][GT.y][GT.z].y = Offset + Mid - 1;
+        //                     break;
+        //                 }
 
 
-                        if(Bin == ((GT.x) % 32)) {
-                            StartIndex = Mid+1;
-                        } else {
-                            EndIndex = Mid-1;
+        //                 if(Bin == ((GT.x) % 32)) {
+        //                     StartIndex = Mid+1;
+        //                 } else {
+        //                     EndIndex = Mid-1;
 
-                        }
-                        if(PrevMid == Mid) {
-                            ValidBin = false;
-                            break;
-                        }
-                        PrevMid = Mid;
+        //                 }
+        //                 if(PrevMid == Mid) {
+        //                     ValidBin = false;
+        //                     break;
+        //                 }
+        //                 PrevMid = Mid;
 
-                    }
-                }    
+        //             }
+        //         }    
                    
-                }
+        //         }
 
 
 
-                // for(int i = StartIndex; i <= EndIndex; i++){ //old baseline method for quality comparison as they SHOULD result in the EXACT same if done properly
-                //     const int Index = DimensionedIndices[Offset + i];
-                //     float Center = (Triangles[Index].BBMax[GT.y] + Triangles[Index].BBMin[GT.y]) / 2.0f - Min;            
-                //     int Bin = clamp(floor(Center * Diff), 0, BinCount - 1);
-                //     RepCount++;
-                //     if(Bin == (GT.x % BinCount) + 1) {
-                //         BinStrides[(GT.x % BinCount) + 1][GT.y][GT.z].x = Offset + i;
-                //         BinStrides[(GT.x % BinCount)][GT.y][GT.z].y = Offset + i - 1;
+        //         // for(int i = StartIndex; i <= EndIndex; i++){ //old baseline method for quality comparison as they SHOULD result in the EXACT same if done properly
+        //         //     const int Index = DimensionedIndices[Offset + i];
+        //         //     float Center = (Triangles[Index].BBMax[GT.y] + Triangles[Index].BBMin[GT.y]) / 2.0f - Min;            
+        //         //     int Bin = clamp(floor(Center * Diff), 0, BinCount - 1);
+        //         //     RepCount++;
+        //         //     if(Bin == (GT.x % BinCount) + 1) {
+        //         //         BinStrides[(GT.x % BinCount) + 1][GT.y][GT.z].x = Offset + i;
+        //         //         BinStrides[(GT.x % BinCount)][GT.y][GT.z].y = Offset + i - 1;
 
-                //         break;
-                //     }
-                // }
-            // if(GT.x < 32 && GT.y == 0 && GT.z == 0) LayerStridesBuffer[GT.x % 32] = asuint(float4((float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].x, (float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].y, (float)RepCount, (float)1));
-            }
-        } else {//if we have less than 10 elements, I fall back to full 2N reads, as I havent finished the binary search to be fully stable yet
-            StartIndex = WorkGroupInput.FirstIndex + ThreadStrides.x;
-            EndIndex = min(WorkGroupInput.FirstIndex + ThreadStrides.y, WorkGroupInput.FirstIndex + (WorkGroupInput.IndexCount));
+        //         //         break;
+        //         //     }
+        //         // }
+        //     // if(GT.x < 32 && GT.y == 0 && GT.z == 0) LayerStridesBuffer[GT.x % 32] = asuint(float4((float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].x, (float)BinStrides[(GT.x % BinCount)][GT.y][GT.z].y, (float)RepCount, (float)1));
+        //     }
+        // } else {//if we have less than 10 elements, I fall back to full 2N reads, as I havent finished the binary search to be fully stable yet
+            int2 A = GetChunkRangeSimple(WorkGroupInput.IndexCount, BinBatchSize, GT.x);
+            StartIndex = WorkGroupInput.FirstIndex + A.x;
+            EndIndex = WorkGroupInput.FirstIndex + A.x + A.y;
+
+            // StartIndex = WorkGroupInput.FirstIndex + ThreadStrides.x;
+            // EndIndex = min(WorkGroupInput.FirstIndex + ThreadStrides.y, WorkGroupInput.FirstIndex + (WorkGroupInput.IndexCount));
             for (int i = StartIndex; i < EndIndex; i++) {
                 const int Index = DimensionedIndices[Offset + i];
                 float Center = (Triangles[Index].BBMax[GT.y] + Triangles[Index].BBMin[GT.y]) / 2.0f - Min;
@@ -612,46 +626,46 @@ void SplitKernel (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, u
                 //     if(Triangles[Index].BBMin[i3] < UintToFloat(BinAABBs[Bin][GT.y][GT.z].BBMin[i3])) InterlockedMin(BinAABBs[Bin][GT.y][GT.z].BBMin[i3], FloatToUint(Triangles[Index].BBMin[i3]));
                 // }
             }
-        }
+        // }
     }
 
-    GroupMemoryBarrierWithGroupSync();
+    // GroupMemoryBarrierWithGroupSync();
 
-    if(WorkGroupInput.IndexCount > 10) {
-        if(GT.x == 31) {
-            [unroll]for(int i = 31; i >= 0; i--) {
-                if(BinStrides[i][GT.y][GT.z].y == -pow(2, 30) && BinStrides[i][GT.y][GT.z].x != pow(2, 30)) {
-                    BinStrides[i][GT.y][GT.z].y = WorkGroupInput.FirstIndex + WorkGroupInput.IndexCount + Offset - 1;
-                    break;
-                }
-            }
-        }
-    // GroupMemoryBarrierWithGroupSync(); // we MIGHT need these
+    // if(WorkGroupInput.IndexCount > 10) {
+    //     if(GT.x == 31) {
+    //         [unroll]for(int i = 31; i >= 0; i--) {
+    //             if(BinStrides[i][GT.y][GT.z].y == -pow(2, 30) && BinStrides[i][GT.y][GT.z].x != pow(2, 30)) {
+    //                 BinStrides[i][GT.y][GT.z].y = WorkGroupInput.FirstIndex + WorkGroupInput.IndexCount + Offset - 1;
+    //                 break;
+    //             }
+    //         }
+    //     }
+    // // GroupMemoryBarrierWithGroupSync(); // we MIGHT need these
 
 
-        if(GT.x < 32) {
-            if(BinStrides[GT.x][GT.y][GT.z].x == pow(2, 30) && BinStrides[GT.x][GT.y][GT.z].y != -pow(2, 30)) {
-                for(int i = GT.x; i >= 0; i--) {
-                    if(BinStrides[i][GT.y][GT.z].y != -pow(2, 30) && BinStrides[i][GT.y][GT.z].x != pow(2, 30)) {
-                        BinStrides[GT.x][GT.y][GT.z].x = BinStrides[i][GT.y][GT.z].y+1;
-                        break;
-                    }
-                }
-            }
-        }
+    //     if(GT.x < 32) {
+    //         if(BinStrides[GT.x][GT.y][GT.z].x == pow(2, 30) && BinStrides[GT.x][GT.y][GT.z].y != -pow(2, 30)) {
+    //             for(int i = GT.x; i >= 0; i--) {
+    //                 if(BinStrides[i][GT.y][GT.z].y != -pow(2, 30) && BinStrides[i][GT.y][GT.z].x != pow(2, 30)) {
+    //                     BinStrides[GT.x][GT.y][GT.z].x = BinStrides[i][GT.y][GT.z].y+1;
+    //                     break;
+    //                 }
+    //             }
+    //         }
+    //     }
 
-    // GroupMemoryBarrierWithGroupSync(); // we MIGHT need these
+    // // GroupMemoryBarrierWithGroupSync(); // we MIGHT need these
 
-    // if(WorkGroupInput.IndexCount > 10)
-        if(GT.x == 0) {
-            [unroll]for(int i = 0; i < 32; i++) {
-                if(BinStrides[i][GT.y][GT.z].y != -pow(2, 30) && BinStrides[i][GT.y][GT.z].x == pow(2, 30)) {
-                    BinStrides[i][GT.y][GT.z].x = WorkGroupInput.FirstIndex + Offset;
-                    break;
-                }
-            }
-        }
-    }
+    // // if(WorkGroupInput.IndexCount > 10)
+    //     if(GT.x == 0) {
+    //         [unroll]for(int i = 0; i < 32; i++) {
+    //             if(BinStrides[i][GT.y][GT.z].y != -pow(2, 30) && BinStrides[i][GT.y][GT.z].x == pow(2, 30)) {
+    //                 BinStrides[i][GT.y][GT.z].x = WorkGroupInput.FirstIndex + Offset;
+    //                 break;
+    //             }
+    //         }
+    //     }
+    // }
     GroupMemoryBarrierWithGroupSync();
 
     // if(G.x == 0 && CurRun == 0 && GT.y == 2 && GT.z == 0 && GT.x < 32) {
@@ -673,11 +687,16 @@ void SplitKernel (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, u
         if (BinStrides[TruGTx][GT.y][GT.z].x <= BinStrides[TruGTx][GT.y][GT.z].y) {
             InterlockedOr(LonelyBinMasks[floor((float)TruGTx / 32.0f)][GT.y][GT.z], 1 << (GT.x % 32));
             const int2 Index = BinStrides[TruGTx][GT.y][GT.z];
-            int Count = max(Index.y - Index.x+1,1);
-            int Spacing = max(1, ceil((float)Count / (float) QuesPerBin));
-            ThreadStrides = Spacing * int2(ThreadSubBin.x, ThreadSubBin.x+1);
-            StartIndex = Index.x + ThreadStrides.x;
-            EndIndex = min(Index.x + ThreadStrides.y, Index.y+1);
+
+            int2 A = GetChunkRangeSimple(Index.y - Index.x, QuesPerBin, ThreadSubBin);
+            StartIndex = Index.x + A.x;
+            EndIndex = Index.x + A.x + A.y;
+
+            // int Count = max(Index.y - Index.x+1,1);
+            // int Spacing = max(1, ceil((float)Count / (float) QuesPerBin));
+            // ThreadStrides = Spacing * int2(ThreadSubBin.x, ThreadSubBin.x+1);
+            // StartIndex = Index.x + ThreadStrides.x;
+            // EndIndex = min(Index.x + ThreadStrides.y, Index.y+1);
             for (int i = StartIndex; i < EndIndex; i++)
                 TempAABB = Union(TempAABB, Triangles[DimensionedIndices[i]], 0);
             BinAABBs[GT.x][GT.y][GT.z] = TempAABB;
@@ -742,9 +761,9 @@ void SplitKernel (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, u
         }
     }
     GroupMemoryBarrierWithGroupSync();
-    if (Valid) {
-        if (GT.y == BestDimension[GT.z]) {
-            if (GT.x == (BinBatchSize - 1)) {
+    [branch]if (Valid) {
+        [branch]if (GT.y == BestDimension[GT.z]) {
+            [branch]if (GT.x == (BinBatchSize - 1)) {
                 EndIndex = Split[GT.y][GT.z].BinIndex;
                 TempAABB = InitialAABB;
 
@@ -773,10 +792,14 @@ void SplitKernel (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, u
                 // }
                 SplitWrite[G.x] = Split[GT.y][GT.z];
             } else {
-                Stride = ceil(max(1.0f, (float)(Split[BestDimension[GT.z]][GT.z].index - WorkGroupInput.FirstIndex) / (float) (BinBatchSize - 1)));
-                ThreadStrides = Stride * int2(GT.x, GT.x + 1);
-                StartIndex = WorkGroupInput.FirstIndex + ThreadStrides.x;
-                EndIndex = min(WorkGroupInput.FirstIndex + ThreadStrides.y, Split[BestDimension[GT.z]][GT.z].index);
+                // Stride = ceil(max(1.0f, (float)(Split[BestDimension[GT.z]][GT.z].index - WorkGroupInput.FirstIndex) / (float) (BinBatchSize - 1)));
+                // ThreadStrides = Stride * int2(GT.x, GT.x + 1);
+                // StartIndex = WorkGroupInput.FirstIndex + ThreadStrides.x;
+                // EndIndex = min(WorkGroupInput.FirstIndex + ThreadStrides.y, Split[BestDimension[GT.z]][GT.z].index);
+                int2 A = GetChunkRangeSimple(Split[BestDimension[GT.z]][GT.z].index - WorkGroupInput.FirstIndex, BinBatchSize - 1, GT.x);
+                StartIndex = WorkGroupInput.FirstIndex + A.x;
+                EndIndex = WorkGroupInput.FirstIndex + A.x + A.y;
+
                 for (int i = StartIndex; i < EndIndex; i++)
                     TempIndexes[DimensionedIndices[Offset + i] + LeftOffset] = CurRun;
             }
@@ -785,9 +808,13 @@ void SplitKernel (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, u
             if(BestDimension[GT.z] == 2) IndexY = 1;
             int NewOffset = 0;
             if (GT.y == IndexY) NewOffset = PrimCount;
-            ThreadStrides = Stride * int2(GT.x, GT.x+1);
-            StartIndex = WorkGroupInput.FirstIndex + ThreadStrides.x;
-            EndIndex = min(WorkGroupInput.FirstIndex + ThreadStrides.y, WorkGroupInput.FirstIndex + (WorkGroupInput.IndexCount));
+            // ThreadStrides = Stride * int2(GT.x, GT.x+1);
+            // StartIndex = WorkGroupInput.FirstIndex + ThreadStrides.x;
+            // EndIndex = min(WorkGroupInput.FirstIndex + ThreadStrides.y, WorkGroupInput.FirstIndex + (WorkGroupInput.IndexCount));
+            int2 A = GetChunkRangeSimple(WorkGroupInput.IndexCount, BinBatchSize, GT.x);
+            StartIndex = WorkGroupInput.FirstIndex + A.x;
+            EndIndex = WorkGroupInput.FirstIndex + A.x + A.y;
+
             for (int i = StartIndex; i < EndIndex; i++)
                 TempIndexes[i + NewOffset] = DimensionedIndices[i + Offset];
         }

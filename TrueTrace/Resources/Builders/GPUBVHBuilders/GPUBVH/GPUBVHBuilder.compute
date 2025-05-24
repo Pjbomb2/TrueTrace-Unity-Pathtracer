@@ -133,7 +133,13 @@ void Transfer (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID)
     LayerStridesBuffer[CurRun].z = LayerStridesBuffer[CurRun].y - LayerStridesBuffer[CurRun].x;
 }
 
-
+int2 GetChunkRangeSimple(int N, int M, int i) {
+    int quotient = N / M;
+    int remainder = N % M;
+    int start = quotient * i + (i < remainder ? i : remainder);
+    int leng = quotient + (i < remainder ? 1 : 0);
+    return int2(start, leng);
+}
 
 #pragma kernel Sort
 
@@ -166,11 +172,16 @@ void Sort (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID)
     bool Valid = !(IndexCount == 1 || id.x >= WorkGroup[1] + (CurRun == 0 ? 1 : 0) || id.x >= max(WorkGroup[1],1));
     int LeftCount;
 
-    int Spacing = max(1,ceil((float)IndexCount / (float)SortBatchSize));
-    int2 ThreadStrides = Spacing * int2(GT.y, GT.y + 1);
-    int StartIndex = FirstIndex + ThreadStrides.x;
-    int EndIndex = min(FirstIndex + ThreadStrides.y, FirstIndex + IndexCount);
-    if(Valid && GT.y != (SortBatchSize-1) && IndexCount > GT.y * Spacing) {
+    // int Spacing = max(1,ceil((float)IndexCount / (float)SortBatchSize));
+    // int2 ThreadStrides = Spacing * int2(GT.y, GT.y + 1);
+    // int StartIndex = FirstIndex + ThreadStrides.x;
+    // int EndIndex = min(FirstIndex + ThreadStrides.y, FirstIndex + IndexCount);
+
+    int2 A = GetChunkRangeSimple(IndexCount, SortBatchSize, GT.y);
+    int StartIndex = FirstIndex + A.x;
+    int EndIndex = FirstIndex + A.x + A.y;
+
+    if(Valid && GT.y != (SortBatchSize-1)) {
         for(int i = StartIndex; i < EndIndex; i++) {
             int Index = TempIndexes[i + NewOffset];
             bool IsLeft = TempIndexes[Index + LeftOffset] == CurRun;
@@ -184,7 +195,7 @@ void Sort (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID)
             RL[GT.x][i] += RL[GT.x][i - 1];
         
     GroupMemoryBarrierWithGroupSync();
-    if(Valid && GT.y != (SortBatchSize) && IndexCount > GT.y * Spacing) {
+    if(Valid && GT.y != (SortBatchSize)) {
         int2 TempRL = int2(FirstIndex + Offset + (InputB.FirstIndex - FirstIndex), FirstIndex + Offset) + RL[GT.x][GT.y];
         for(int i = StartIndex; i < EndIndex; i++) {
             int Index = TempIndexes[i + NewOffset];
@@ -260,10 +271,15 @@ void SplitKernel (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, u
         Valid = false;
     }
     const int Offset = GT.y * PrimCount;
-    int Stride = max(ceil((float)(WorkGroupInput.IndexCount) / (float)(BinBatchSize)), 1);
-    int2 ThreadStrides = Stride * int2(GT.x, GT.x+1);
-    int StartIndex = WorkGroupInput.FirstIndex + ThreadStrides.x;
-    int EndIndex = min(WorkGroupInput.FirstIndex + ThreadStrides.y, WorkGroupInput.FirstIndex + (WorkGroupInput.IndexCount));
+    // int Stride = max(ceil((float)(WorkGroupInput.IndexCount) / (float)(BinBatchSize)), 1);
+    // int2 ThreadStrides = Stride * int2(GT.x, GT.x+1);
+    // int StartIndex = WorkGroupInput.FirstIndex + ThreadStrides.x;
+    // int EndIndex = min(WorkGroupInput.FirstIndex + ThreadStrides.y, WorkGroupInput.FirstIndex + (WorkGroupInput.IndexCount));
+
+    int2 A = GetChunkRangeSimple(WorkGroupInput.IndexCount, BinBatchSize, GT.x);
+    int StartIndex = WorkGroupInput.FirstIndex + A.x;
+    int EndIndex = WorkGroupInput.FirstIndex + A.x + A.y;
+
 
     if (Valid) {
         const float Min = ParentAABB.BBMin[GT.y];
@@ -362,10 +378,14 @@ void SplitKernel (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, u
                
                 SplitWrite[G.x] = Split[GT.y][GT.z];
             } else {
-                Stride = ceil(max(1.0f, (float)(Split[BestDimension[GT.z]][GT.z].index - WorkGroupInput.FirstIndex) / (float) (BinBatchSize - 1)));
-                ThreadStrides = Stride * int2(GT.x, GT.x + 1);
-                StartIndex = WorkGroupInput.FirstIndex + ThreadStrides.x;
-                EndIndex = min(WorkGroupInput.FirstIndex + ThreadStrides.y, Split[BestDimension[GT.z]][GT.z].index);
+                // Stride = ceil(max(1.0f, (float)(Split[BestDimension[GT.z]][GT.z].index - WorkGroupInput.FirstIndex) / (float) (BinBatchSize - 1)));
+                // ThreadStrides = Stride * int2(GT.x, GT.x + 1);
+                // StartIndex = WorkGroupInput.FirstIndex + ThreadStrides.x;
+                // EndIndex = min(WorkGroupInput.FirstIndex + ThreadStrides.y, Split[BestDimension[GT.z]][GT.z].index);
+
+                int2 A = GetChunkRangeSimple(Split[BestDimension[GT.z]][GT.z].index - WorkGroupInput.FirstIndex, BinBatchSize - 1, GT.x);
+                int StartIndex = WorkGroupInput.FirstIndex + A.x;
+                int EndIndex = WorkGroupInput.FirstIndex + A.x + A.y;
                 for (int i = StartIndex; i < EndIndex; i++)
                     TempIndexes[DimensionedIndices[Offset + i] + LeftOffset] = CurRun;
             }
@@ -374,9 +394,13 @@ void SplitKernel (uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID, u
             if(BestDimension[GT.z] == 2) IndexY = 1;
             int NewOffset = 0;
             if (GT.y == IndexY) NewOffset = PrimCount;
-            ThreadStrides = Stride * int2(GT.x, GT.x+1);
-            StartIndex = WorkGroupInput.FirstIndex + ThreadStrides.x;
-            EndIndex = min(WorkGroupInput.FirstIndex + ThreadStrides.y, WorkGroupInput.FirstIndex + (WorkGroupInput.IndexCount));
+            // ThreadStrides = Stride * int2(GT.x, GT.x+1);
+            // StartIndex = WorkGroupInput.FirstIndex + ThreadStrides.x;
+            // EndIndex = min(WorkGroupInput.FirstIndex + ThreadStrides.y, WorkGroupInput.FirstIndex + (WorkGroupInput.IndexCount));
+            int2 A = GetChunkRangeSimple(WorkGroupInput.IndexCount, BinBatchSize, GT.x);
+            int StartIndex = WorkGroupInput.FirstIndex + A.x;
+            int EndIndex = WorkGroupInput.FirstIndex + A.x + A.y;
+
             for (int i = StartIndex; i < EndIndex; i++)
                 TempIndexes[i + NewOffset] = DimensionedIndices[i + Offset];
         }
