@@ -1031,7 +1031,7 @@ namespace TrueTrace {
                         float depth = Mathf.Min(-1.0f, Mathf.Floor(Mathf.Log(largestExtent / globalSize[splitAxis], 2)));
                         float cellSize = Mathf.Pow(2f, depth) * globalSize[splitAxis];
                         
-                        // int floatBits = Unsafe.BitCast<float, int>(alpha);
+                        // int floatBits = Unsafe.BitCast<float, int>(largestExtent / globalSize[splitAxis]);
                         // floatBits &= 255 << 23;
 
                         // float cellSize = Unsafe.BitCast<int, float>(floatBits);

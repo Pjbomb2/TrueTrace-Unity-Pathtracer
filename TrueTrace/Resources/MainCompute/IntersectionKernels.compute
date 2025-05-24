@@ -55,7 +55,7 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
                         float Alph = SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x;
 #ifdef AltFadeMapping
                         throughput *= lerp(1, SampleTexture(BaseUv, SampleAlbedo, _IntersectionMaterials[MaterialIndex]), (GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) + _IntersectionMaterials[MaterialIndex].AlphaCutoff);
-                        return
+                        return;
 #else
                         if((GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= RandNum) return;
 #endif
