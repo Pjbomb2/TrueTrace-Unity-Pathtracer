@@ -1531,7 +1531,7 @@ inline void filter_image(
 			if (normal_weight_spec > 0) w_spec *= pow(NdotN, normal_weight_spec);
 
 			// w_spec *= 1.0f - pow(clamp(abs(MetRough.x - CenterMetallic), 0, 1), step_size);
-			if(spec_iteration != 0)  w_spec *= pow(1.0f - length(ray.direction - CenterRay.direction) / abs(depth_center * depth), 32.0f * step_size);
+			if(spec_iteration != 0)  w_spec *= saturate(pow(1.0f - length(ray.direction - CenterRay.direction) / max(abs(depth_center * depth), 0.0001f), 32.0f * step_size) + 1e-3);
 			// if(spec_iteration != 0)  w_spec *= pow(1.0f - (1.0f - 10.0f * roughness_center) * length(ray.direction - CenterRay.direction) / abs(depth_center * depth_center), 32.0f * step_size);
 
 			float2 c_mom = img_moments[p].xy;

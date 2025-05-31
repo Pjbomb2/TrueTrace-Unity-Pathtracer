@@ -1072,7 +1072,7 @@ inline void filter_image(
                 w_spec *= pow(NdotN, normal_weight_spec);
             }
             // w_spec *= pow(clamp(abs(MetallicA[p].x - CenterMetallic), 0, 1), step_size);
-            if(spec_iteration != 0)  w_spec *= pow(1.0f - length(ray.direction - CenterRay.direction) / abs(depth_center * depth_center), 32.0f * step_size);
+            if(spec_iteration != 0)  w_spec *= saturate(pow(1.0f - length(ray.direction - CenterRay.direction) / max(abs(depth_center * depth), 0.0001f), 32.0f * step_size) + 1e-3);
 
             filtered_hf += c_hf.rgb * w_hf;
             filtered_spec += c_spec.rgb * w_spec;

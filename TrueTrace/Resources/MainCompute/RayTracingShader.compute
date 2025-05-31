@@ -1098,6 +1098,9 @@ int MaterialIndex;
             Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((2) << 26);  
 
         }
+        // if(GetBounceData(asuint(PSRGBuff[id.xy].w)) == 0) {
+        //     PSRGBuff[id.xy].w = asfloat(((asuint(PSRGBuff[id.xy].w) & ~(0x7C000000))) |  ((2) << 26));
+        // }  
 
         GlobalColors[pixel_index] = Color;
         if(UseReSTIRGI && CurBounce == 1 && GetBounceData(Color.MetRoughIsSpec) == 0) {
