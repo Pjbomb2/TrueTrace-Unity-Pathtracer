@@ -27,7 +27,7 @@ namespace TrueTrace {
         [HideInInspector] public AssetManager Assets;
         private ReSTIRASVGF ReSTIRASVGFCode;
         private TTPostProcessing TTPostProc;
-        private ASVGF ASVGFCode;
+        public ASVGF ASVGFCode;
         public static bool ImageIsModified = false;
         #if UseOIDN
             private DenoiserPlugin.DenoiserPluginWrapper OIDNDenoiser;         
@@ -86,6 +86,9 @@ namespace TrueTrace {
         private RenderTexture GIReservoirB;
         private RenderTexture GIReservoirC;
 
+
+        public RenderTexture PSRGBuff;
+
         private RenderTexture GIWorldPosA;
         private RenderTexture GIWorldPosB;
         private RenderTexture GIWorldPosC;
@@ -127,8 +130,6 @@ namespace TrueTrace {
             private ComputeBuffer CacheBuffer;
             private ComputeBuffer VoxelDataBufferA;
             private ComputeBuffer VoxelDataBufferB;
-            private ComputeBuffer HashBufferA;
-            private ComputeBuffer HashBufferB;
         #endif
 
         private Texture3D ToneMapTex;
@@ -408,8 +409,6 @@ namespace TrueTrace {
                 CacheBuffer.ReleaseSafe();
                 VoxelDataBufferA.ReleaseSafe();
                 VoxelDataBufferB.ReleaseSafe();
-                HashBufferA.ReleaseSafe();
-                HashBufferB.ReleaseSafe();
             #endif
 
             _RandomNums.ReleaseSafe();
@@ -809,29 +808,21 @@ namespace TrueTrace {
             #if !DisableRadianceCache
                 GenerateShader.SetComputeBuffer(ResolveKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
                 GenerateShader.SetComputeBuffer(ResolveKernel, "VoxelDataBufferB", !FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
-                GenerateShader.SetComputeBuffer(ResolveKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
-                GenerateShader.SetComputeBuffer(ResolveKernel, "HashEntriesBufferB", !FlipFrame ? HashBufferA : HashBufferB);
-                GenerateShader.SetComputeBuffer(CompactKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
+                GenerateShader.SetComputeBuffer(CompactKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
 
 
 
                 IntersectionShader.SetComputeBuffer(ShadowKernel, "CacheBuffer", CacheBuffer);
-                IntersectionShader.SetComputeBuffer(ShadowKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
                 IntersectionShader.SetComputeBuffer(ShadowKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
 
                 IntersectionShader.SetComputeBuffer(HeightmapShadowKernel, "CacheBuffer", CacheBuffer);
-                IntersectionShader.SetComputeBuffer(HeightmapShadowKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
                 IntersectionShader.SetComputeBuffer(HeightmapShadowKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
                 
                 ShadingShader.SetComputeBuffer(ShadeKernel, "CacheBuffer", CacheBuffer);
-                ShadingShader.SetComputeBuffer(ShadeKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
-                ShadingShader.SetComputeBuffer(ShadeKernel, "HashEntriesBufferB", !FlipFrame ? HashBufferA : HashBufferB);
                 ShadingShader.SetComputeBuffer(ShadeKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
                 ShadingShader.SetComputeBuffer(ShadeKernel, "VoxelDataBufferB", !FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
                 
                 ShadingShader.SetComputeBuffer(FinalizeKernel, "CacheBuffer", CacheBuffer);
-                ShadingShader.SetComputeBuffer(FinalizeKernel, "HashEntriesBufferA", FlipFrame ? HashBufferA : HashBufferB);
-                ShadingShader.SetComputeBuffer(FinalizeKernel, "HashEntriesBufferB", !FlipFrame ? HashBufferA : HashBufferB);
                 ShadingShader.SetComputeBuffer(FinalizeKernel, "VoxelDataBufferA", FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
                 ShadingShader.SetComputeBuffer(FinalizeKernel, "VoxelDataBufferB", !FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
             #endif
@@ -847,6 +838,7 @@ namespace TrueTrace {
             ShadingShader.SetTexture(MVKernel+2, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
             ShadingShader.SetTexture(MVKernel+2, "PrimaryTriDataPrev", (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
             ShadingShader.SetTexture(MVKernel+2, "MVTexture", MVTexture);
+            ShadingShader.SetTexture(MVKernel+2, "PSRGBuff", PSRGBuff);
             ShadingShader.SetTexture(MVKernel+2, "CorrectedDistanceTex", (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTexA : CorrectedDistanceTexB);
 
             ShadingShader.SetTexture(MVKernel + 1, "MVTexture", MVTexture);
@@ -871,6 +863,7 @@ namespace TrueTrace {
             ShadingShader.SetComputeBuffer(ShadeKernel, "GlobalColors", LightingBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernel, "GlobalRays", _RayBuffer);
             ShadingShader.SetComputeBuffer(ShadeKernel, "ShadowRaysBuffer", _ShadowBuffer);
+            ShadingShader.SetTexture(ShadeKernel, "PSRGBuff", PSRGBuff);
 
 #if MultiMapScreenshot
             ShadingShader.SetTexture(ShadeKernel, "MultiMapMatIDTexture", MultiMapMatIDTextureInitial);
@@ -969,15 +962,10 @@ namespace TrueTrace {
                 CommonFunctions.CreateDynamicBuffer(ref LightingBuffer, SourceWidth * SourceHeight, 64);
                 #if !DisableRadianceCache
                     CommonFunctions.CreateDynamicBuffer(ref CacheBuffer, SourceWidth * SourceHeight, 48);
-                    CommonFunctions.CreateDynamicBuffer(ref VoxelDataBufferA, 4 * 1024 * 1024, 16, ComputeBufferType.Raw);
-                    CommonFunctions.CreateDynamicBuffer(ref VoxelDataBufferB, 4 * 1024 * 1024, 16, ComputeBufferType.Raw);
-                    CommonFunctions.CreateDynamicBuffer(ref HashBufferA, 4 * 1024 * 1024, 4);
-                    CommonFunctions.CreateDynamicBuffer(ref HashBufferB, 4 * 1024 * 1024, 4);
+                    CommonFunctions.CreateDynamicBuffer(ref VoxelDataBufferA, 4 * 1024 * 1024 + 1024 * 1024, 16, ComputeBufferType.Raw);
+                    CommonFunctions.CreateDynamicBuffer(ref VoxelDataBufferB, 4 * 1024 * 1024 + 1024 * 1024, 16, ComputeBufferType.Raw);
 
-                    int[] EEE = new int[4 * 1024 * 1024];
-                    HashBufferA.SetData(EEE);
-                    HashBufferB.SetData(EEE);
-                    int[] EEEE = new int[4 * 1024 * 1024 * 4];
+                    int[] EEEE = new int[4 * 1024 * 1024 * 4 + 1024 * 1024];
                     VoxelDataBufferA.SetData(EEEE);
                     VoxelDataBufferB.SetData(EEEE);
                 #endif
@@ -998,8 +986,6 @@ namespace TrueTrace {
                         CacheBuffer.ReleaseSafe();
                         VoxelDataBufferA.ReleaseSafe();
                         VoxelDataBufferB.ReleaseSafe();
-                        HashBufferA.ReleaseSafe();
-                        HashBufferB.ReleaseSafe();
                     #endif
 
                     _RayBuffer.ReleaseSafe();
@@ -1021,6 +1007,7 @@ namespace TrueTrace {
                     GINEEPosB.ReleaseSafe();
                     GIWorldPosB.ReleaseSafe();
                     GIWorldPosC.ReleaseSafe();
+                    PSRGBuff.ReleaseSafe();
                     _PrimaryTriangleInfoA.ReleaseSafe();
                     _PrimaryTriangleInfoB.ReleaseSafe();
 #if TTCustomMotionVectors
@@ -1130,6 +1117,7 @@ namespace TrueTrace {
                 CommonFunctions.CreateRenderTexture(ref GIWorldPosC, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 ReSTIRInitialized = true;
             }
+            CommonFunctions.CreateRenderTexture(ref PSRGBuff, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
             if(!LocalTTSettings.UseReSTIRGI && ReSTIRInitialized) {
                 GIReservoirA.ReleaseSafe();
                 GIReservoirB.ReleaseSafe();
@@ -1153,10 +1141,16 @@ namespace TrueTrace {
         
         private void GenerateRays(CommandBuffer cmd) {
             if (LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI) {
+#if TTCustomMotionVectors
+            if(DoKernelProfiling) cmd.BeginSample("TTMV");
+                cmd.DispatchCompute(ShadingShader, MVKernel+1, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+                cmd.DispatchCompute(ShadingShader, MVKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
+            if(DoKernelProfiling) cmd.EndSample("TTMV");
+#endif            
                 if(DoKernelProfiling) cmd.BeginSample("ASVGF Reproject Pass");
                     // AssetManager.Assets.SetMeshTraceBuffers(ASVGFCode.shader, 1);
                     ASVGFCode.shader.SetTexture(1, "ScreenSpaceInfoWrite", (FramesSinceStart2 % 2 == 0) ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
-                    ASVGFCode.DoRNG(ref _RandomNums, ref _RandomNumsB, FramesSinceStart2, _RayBuffer, cmd, (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB, (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 0)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, Assets.AggTriBufferA, MeshOrderChanged, Assets.TLASCWBVHIndexes, SourceWidth, SourceHeight, (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 1)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, CorrectedDistanceTexA, CorrectedDistanceTexB);
+                    ASVGFCode.DoRNG(ref _RandomNums, ref _RandomNumsB, FramesSinceStart2, _RayBuffer, cmd, (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB, (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 0)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, Assets.AggTriBufferA, MeshOrderChanged, Assets.TLASCWBVHIndexes, SourceWidth, SourceHeight, (LocalTTSettings.DoTLASUpdates && (FramesSinceStart2 % 2 == 1)) ? AssetManager.Assets.MeshDataBufferA : AssetManager.Assets.MeshDataBufferB, CorrectedDistanceTexA, CorrectedDistanceTexB, LightingBuffer);
                 if(DoKernelProfiling) cmd.EndSample("ASVGF Reproject Pass");
             }
 
@@ -1172,12 +1166,6 @@ namespace TrueTrace {
 
         private void Render(RenderTexture destination, CommandBuffer cmd)
         {
-#if TTCustomMotionVectors
-            if(DoKernelProfiling) cmd.BeginSample("TTMV");
-                cmd.DispatchCompute(ShadingShader, MVKernel+1, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
-                cmd.DispatchCompute(ShadingShader, MVKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
-            if(DoKernelProfiling) cmd.EndSample("TTMV");
-#endif            
 
 
 
@@ -1361,7 +1349,8 @@ namespace TrueTrace {
                                         Assets.AggTriBufferA, 
                                         LocalTTSettings.UpscalerMethod, 
                                         CorrectedDistanceTexA, 
-                                        CorrectedDistanceTexB);
+                                        CorrectedDistanceTexB,
+                                        PSRGBuff);
                     CurrentSample = 1;
                     if(DoKernelProfiling) cmd.EndSample("ReSTIR ASVGF");
                 }

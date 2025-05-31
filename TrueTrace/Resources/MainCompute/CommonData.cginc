@@ -2652,9 +2652,10 @@ float3 SampleDirectionSphere(float u1, float u2)
 #define BucketCount 4
 #define PropDepth 5
 #define CacheCapacity (BucketCount * 1024 * 1024)
+static const uint HashOffset = (4 * 1024 * 1024 * 16);
 
-RWStructuredBuffer<uint> HashEntriesBufferA;
-StructuredBuffer<uint> HashEntriesBufferB;
+
+
 RWByteAddressBuffer VoxelDataBufferA;
 ByteAddressBuffer VoxelDataBufferB;
 struct PropogatedCacheData {
@@ -2739,8 +2740,7 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 
     uint baseSlot = floor(HashIndex / (float)BucketCount) * BucketCount;
     [unroll]for (uint i = 0; i < BucketCount; i++) {
-        uint PrevHash = HashEntriesBufferB[baseSlot + i];//I am read and writing to the same hash buffer, this could be a problem
-
+        uint PrevHash = VoxelDataBufferB.Load(HashOffset + (baseSlot + i) * 4);//I am read and writing to the same hash buffer, this could be a problem
         if (PrevHash == HashValue) {
             cacheEntry = baseSlot + i;
             return true;
@@ -2784,7 +2784,7 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 	    uint baseSlot = floor(HashIndex / (float)BucketCount) * BucketCount;
 		if(baseSlot < CacheCapacity) {
 			[unroll]for(int i = 0; i < BucketCount; i++) {	
-				InterlockedCompareExchange(HashEntriesBufferA[baseSlot + i], 0, HashValue, BucketContents);
+				VoxelDataBufferA.InterlockedCompareExchange(HashOffset + (baseSlot + i) * 4, 0, HashValue, BucketContents);
 				if(BucketContents == 0 || BucketContents == HashValue) {
 					return baseSlot + i;
 				}

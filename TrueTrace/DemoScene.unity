@@ -209,6 +209,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -329,6 +330,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -449,6 +451,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -569,6 +572,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -689,6 +693,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -821,6 +826,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -953,6 +959,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -1093,6 +1100,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -1213,6 +1221,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -1333,6 +1342,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -1379,6 +1389,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   - 0
@@ -1502,6 +1513,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -1628,6 +1640,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -1760,6 +1773,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -1906,6 +1920,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2058,6 +2073,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2192,6 +2208,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2338,6 +2355,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2458,6 +2476,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2602,6 +2621,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2736,6 +2756,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2928,6 +2949,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3080,6 +3102,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3200,6 +3223,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3340,6 +3364,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3480,6 +3505,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3600,6 +3626,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3734,6 +3761,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3868,6 +3896,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -3914,6 +3943,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   - 0
@@ -4069,6 +4099,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -4213,6 +4244,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -4333,6 +4365,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -4459,6 +4492,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -4591,6 +4625,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -4729,6 +4764,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -4861,6 +4897,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5031,6 +5068,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5211,6 +5249,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5357,6 +5396,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5483,6 +5523,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5609,6 +5650,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5743,6 +5785,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5883,6 +5926,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6021,6 +6065,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6147,6 +6192,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6267,6 +6313,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6439,6 +6486,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6559,6 +6607,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6679,6 +6728,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6805,6 +6855,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6931,6 +6982,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7051,6 +7103,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7223,6 +7276,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7343,6 +7397,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7489,6 +7544,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7615,6 +7671,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7735,6 +7792,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7867,6 +7925,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7993,6 +8052,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8113,6 +8173,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8239,6 +8300,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8403,6 +8465,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8529,6 +8592,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8667,6 +8731,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8827,6 +8892,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8947,6 +9013,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9091,6 +9158,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9239,6 +9307,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9393,6 +9462,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9549,6 +9619,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9675,6 +9746,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9795,6 +9867,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9915,6 +9988,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10069,6 +10143,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10189,6 +10264,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10309,6 +10385,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10479,6 +10556,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10625,6 +10703,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10757,6 +10836,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10883,6 +10963,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11023,6 +11104,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11171,6 +11253,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11311,6 +11394,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11459,6 +11543,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11579,6 +11664,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11814,6 +11900,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11958,6 +12045,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -12078,6 +12166,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -12248,6 +12337,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -12368,6 +12458,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -12638,6 +12729,8 @@ MonoBehaviour:
   RoughnessTexs: []
   RoughnessTexChannelIndex: 
   EmissionTexs: []
+  DiffTransTexs: []
+  DiffTransTexChannelIndex: 
   AlphaTexs: []
   AlphaTexChannelIndex: 
   MatCapMasks: []
@@ -12711,6 +12804,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -12895,6 +12989,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13015,6 +13110,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13147,6 +13243,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13287,6 +13384,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13421,6 +13519,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13541,6 +13640,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13675,6 +13775,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13931,6 +14032,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -14077,6 +14179,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -14235,6 +14338,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -14361,6 +14465,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -14549,6 +14654,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -14669,6 +14775,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -14789,6 +14896,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -14937,6 +15045,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -15272,6 +15381,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -15426,6 +15536,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -15566,6 +15677,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -15698,6 +15810,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -15818,6 +15931,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -15956,6 +16070,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16076,6 +16191,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16196,6 +16312,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16316,6 +16433,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16448,6 +16566,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16626,6 +16745,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16804,6 +16924,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16924,6 +17045,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -16970,6 +17092,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   - 0
@@ -17099,6 +17222,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17219,6 +17343,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17339,6 +17464,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17479,6 +17605,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17651,6 +17778,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17771,6 +17899,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17905,6 +18034,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18051,6 +18181,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18185,6 +18316,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18319,6 +18451,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18439,6 +18572,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18559,6 +18693,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18685,6 +18820,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18817,6 +18953,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18943,6 +19080,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19069,6 +19207,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19189,6 +19328,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19309,6 +19449,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19429,6 +19570,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19549,6 +19691,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19693,6 +19836,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -19739,6 +19883,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   - 0
@@ -19868,6 +20013,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20000,6 +20146,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20138,6 +20285,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20278,6 +20426,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20462,6 +20611,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20608,6 +20758,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20754,6 +20905,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20880,6 +21032,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21018,6 +21171,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21182,6 +21336,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21302,6 +21457,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21422,6 +21578,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21556,6 +21713,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21682,6 +21840,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21808,6 +21967,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21934,6 +22094,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22066,6 +22227,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22206,6 +22368,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22338,6 +22501,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22458,6 +22622,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22584,6 +22749,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22722,6 +22888,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22904,6 +23071,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23024,6 +23192,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23200,6 +23369,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23396,6 +23566,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23516,6 +23687,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23656,6 +23828,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23796,6 +23969,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23922,6 +24096,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24042,6 +24217,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24162,6 +24338,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24308,6 +24485,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24446,6 +24624,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24566,6 +24745,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24712,6 +24892,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24832,6 +25013,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24952,6 +25134,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25072,6 +25255,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25198,6 +25382,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25318,6 +25503,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25438,6 +25624,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25558,6 +25745,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25678,6 +25866,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25804,6 +25993,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25976,6 +26166,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26116,6 +26307,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26268,6 +26460,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26414,6 +26607,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26606,6 +26800,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26766,6 +26961,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26892,6 +27088,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27012,6 +27209,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27138,6 +27336,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27330,6 +27529,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27464,6 +27664,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27604,6 +27805,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27724,6 +27926,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27844,6 +28047,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27996,6 +28200,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28134,6 +28339,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28280,6 +28486,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28406,6 +28613,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28526,6 +28734,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28680,6 +28889,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28818,6 +29028,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28938,6 +29149,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29070,6 +29282,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29190,6 +29403,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29316,6 +29530,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29442,6 +29657,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29562,6 +29778,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29688,6 +29905,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -29734,6 +29952,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   - 0
@@ -29869,6 +30088,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29989,6 +30209,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30115,6 +30336,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30235,6 +30457,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30405,6 +30628,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30551,6 +30775,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30683,6 +30908,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30831,6 +31057,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30957,6 +31184,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31127,6 +31355,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31247,6 +31476,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31379,6 +31609,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31505,6 +31736,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31625,6 +31857,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31837,6 +32070,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31963,6 +32197,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -32009,6 +32244,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   - 0
@@ -32176,6 +32412,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -32336,6 +32573,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -32456,6 +32694,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -32608,6 +32847,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -32728,6 +32968,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -32868,6 +33109,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -32988,6 +33230,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -33158,6 +33401,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -33278,6 +33522,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -33324,6 +33569,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   - 0
@@ -33447,6 +33693,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -33567,6 +33814,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -33707,6 +33955,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -33827,6 +34076,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -33979,6 +34229,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34099,6 +34350,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34219,6 +34471,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34339,6 +34592,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34485,6 +34739,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34605,6 +34860,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34749,6 +35005,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34889,6 +35146,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35015,6 +35273,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35135,6 +35394,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35261,6 +35521,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35393,6 +35654,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35513,6 +35775,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35651,6 +35914,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35771,6 +36035,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35891,6 +36156,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36011,6 +36277,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36143,6 +36410,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36301,6 +36569,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36427,6 +36696,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36553,6 +36823,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36673,6 +36944,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36805,6 +37077,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36925,6 +37198,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37072,7 +37346,58 @@ MonoBehaviour:
     CloudShapeDetailTex: {fileID: 0}
     WeatherTex: {fileID: 0}
   Assets: {fileID: 0}
+  ASVGFCode:
+    Initialized: 0
+    ASVGF_HIST_COLOR_HF: {fileID: 0}
+    ASVGF_ATROUS_PING_LF_SH: {fileID: 0}
+    ASVGF_ATROUS_PONG_LF_SH: {fileID: 0}
+    ASVGF_ATROUS_PING_LF_COCG: {fileID: 0}
+    ASVGF_ATROUS_PONG_LF_COCG: {fileID: 0}
+    ASVGF_ATROUS_PING_HF: {fileID: 0}
+    ASVGF_ATROUS_PONG_HF: {fileID: 0}
+    ASVGF_ATROUS_PING_SPEC: {fileID: 0}
+    ASVGF_ATROUS_PONG_SPEC: {fileID: 0}
+    ASVGF_ATROUS_PING_MOMENTS: {fileID: 0}
+    ASVGF_ATROUS_PONG_MOMENTS: {fileID: 0}
+    ASVGF_GRAD_LF_PING: {fileID: 0}
+    ASVGF_GRAD_LF_PONG: {fileID: 0}
+    ASVGF_GRAD_HF_SPEC_PING: {fileID: 0}
+    ASVGF_GRAD_HF_SPEC_PONG: {fileID: 0}
+    ASVGF_FILTERED_SPEC_A: {fileID: 0}
+    ASVGF_FILTERED_SPEC_B: {fileID: 0}
+    ASVGF_HIST_MOMENTS_HF_A: {fileID: 0}
+    ASVGF_HIST_MOMENTS_HF_B: {fileID: 0}
+    ASVGF_HIST_COLOR_LF_SH_A: {fileID: 0}
+    ASVGF_HIST_COLOR_LF_SH_B: {fileID: 0}
+    ASVGF_HIST_COLOR_LF_COCG_A: {fileID: 0}
+    ASVGF_HIST_COLOR_LF_COCG_B: {fileID: 0}
+    ASVGF_GRAD_SMPL_POS_A: {fileID: 0}
+    ASVGF_GRAD_SMPL_POS_B: {fileID: 0}
+    MetallicA: {fileID: 0}
+    MetallicB: {fileID: 0}
+    Quartiles: {fileID: 0}
+    ReflectedRefractedA: {fileID: 0}
+    ReflectedRefractedB: {fileID: 0}
+    LFVarianceA: {fileID: 0}
+    LFVarianceB: {fileID: 0}
+    TEX_PT_NORMALS_A: {fileID: 0}
+    TEX_PT_NORMALS_B: {fileID: 0}
+    AlbedoColorA: {fileID: 0}
+    AlbedoColorB: {fileID: 0}
+    PT_LF1: {fileID: 0}
+    PT_LF2: {fileID: 0}
+    TEX_PT_COLOR_HF: {fileID: 0}
+    TEX_PT_COLOR_SPEC: {fileID: 0}
+    ScreenWidth: 0
+    ScreenHeight: 0
+    TargetWidth: 0
+    TargetHeight: 0
+    shader: {fileID: 0}
+    Reproject: 0
+    Gradient_Img: 0
+    iter: 0
   ShadingShader: {fileID: 0}
+  PSRGBuff: {fileID: 0}
   ScreenSpaceInfo: {fileID: 0}
   IsFocusing: 0
   IsFocusingDelta: 0
@@ -37236,6 +37561,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37368,6 +37694,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37520,6 +37847,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37678,6 +38006,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37822,6 +38151,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37942,6 +38272,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38068,6 +38399,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38232,6 +38564,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38358,6 +38691,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38478,6 +38812,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38660,6 +38995,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -38706,6 +39042,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   - 0
@@ -38829,6 +39166,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38949,6 +39287,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -39089,6 +39428,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -39209,6 +39549,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -39343,6 +39684,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -39463,6 +39805,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -39615,6 +39958,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -39753,6 +40097,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -39879,6 +40224,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40019,6 +40365,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40195,6 +40542,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40327,6 +40675,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40447,6 +40796,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40587,6 +40937,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40745,6 +41096,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40865,6 +41217,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40999,6 +41352,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41125,6 +41479,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41259,6 +41614,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41407,6 +41763,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41557,6 +41914,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41683,6 +42041,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41837,6 +42196,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41963,6 +42323,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42089,6 +42450,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42209,6 +42571,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42349,6 +42712,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42469,6 +42833,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42589,6 +42954,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42709,6 +43075,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42843,6 +43210,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -45912,6 +46280,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -46032,6 +46401,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -46152,6 +46522,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -46198,6 +46569,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   - 0
@@ -54041,6 +54413,8 @@ MonoBehaviour:
   RoughnessTexs: []
   RoughnessTexChannelIndex: 
   EmissionTexs: []
+  DiffTransTexs: []
+  DiffTransTexChannelIndex: 
   AlphaTexs:
   - {fileID: 2800000, guid: 294cefe14e8faad40ae86fda92b23b16, type: 3}
   - {fileID: 2800000, guid: 9036d3c2894ec644b84edb1a53e12485, type: 3}
@@ -54590,6 +54964,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -54762,6 +55137,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -54908,6 +55284,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -55080,6 +55457,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -55246,6 +55624,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -55446,6 +55825,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -55592,6 +55972,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -55784,6 +56165,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -55996,6 +56378,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -56142,6 +56525,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -56374,6 +56758,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -56592,6 +56977,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -56882,6 +57268,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -57106,6 +57493,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -57252,6 +57640,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -57424,6 +57813,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -57584,6 +57974,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -57776,6 +58167,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -57922,6 +58314,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -58218,6 +58611,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -58384,6 +58778,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -58530,6 +58925,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -58676,6 +59072,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -58822,6 +59219,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -58982,6 +59380,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -59160,6 +59559,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -59326,6 +59726,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -59578,6 +59979,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -59724,6 +60126,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -59890,6 +60293,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -60202,6 +60606,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -60498,6 +60903,8 @@ MonoBehaviour:
   RoughnessTexs: []
   RoughnessTexChannelIndex: 
   EmissionTexs: []
+  DiffTransTexs: []
+  DiffTransTexChannelIndex: 
   AlphaTexs: []
   AlphaTexChannelIndex: 
   MatCapMasks: []
@@ -60571,6 +60978,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 0
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -60754,6 +61162,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -60998,6 +61407,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -61196,6 +61606,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -61342,6 +61753,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -61522,6 +61934,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -61714,6 +62127,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -61874,6 +62288,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -62396,6 +62811,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -62542,6 +62958,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -62694,6 +63111,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -62860,6 +63278,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -63026,6 +63445,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -63212,6 +63632,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -63358,6 +63779,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -63504,6 +63926,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -63650,6 +64073,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -63848,6 +64272,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -64028,6 +64453,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -64174,6 +64600,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -64372,6 +64799,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -64578,6 +65006,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -64724,6 +65153,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -65040,6 +65470,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -65186,6 +65617,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -65346,6 +65778,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -65492,6 +65925,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -65538,6 +65972,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   - 0
@@ -65879,6 +66314,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -66025,6 +66461,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -66171,6 +66608,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -66357,6 +66795,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -66503,6 +66942,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -66649,6 +67089,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -66795,6 +67236,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -66967,6 +67409,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -67013,6 +67456,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   - 0
@@ -67288,6 +67732,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -67506,6 +67951,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -67764,6 +68210,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -67950,6 +68397,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -68148,6 +68596,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -68294,6 +68743,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -68340,6 +68790,7 @@ MonoBehaviour:
     AlbedoBlendFactor: 1
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
   KelvinTemp:
   - 0
   - 0

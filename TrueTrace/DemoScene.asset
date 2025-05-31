@@ -19,7 +19,7 @@ MonoBehaviour:
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 1
+  Accumulate: 0
   PPBloom: 0
   BloomStrength: 0.5
   PPDoF: 0
@@ -31,14 +31,14 @@ MonoBehaviour:
   PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
-  DenoiserMethod: 0
+  DenoiserMethod: 1
   UpscalerMethod: 2
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
   UseReSTIRGI: 0
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
-  ReSTIRGITemporalMCap: 12
+  ReSTIRGITemporalMCap: 4
   DoReSTIRGIConnectionValidation: 1
   Exposure: 5.4
   DoPartialRendering: 0

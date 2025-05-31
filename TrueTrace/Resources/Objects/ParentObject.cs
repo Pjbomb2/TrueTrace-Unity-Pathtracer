@@ -1336,7 +1336,9 @@ namespace TrueTrace {
                     cmd.SetComputeIntParam(MeshRefit, "gVertexCount", IndexCount);
                     cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "bufVertices", VertexBuffers[i]);
                     cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "bufIndexes", IndexBuffers[i]);
+                    // if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Accum " + i + " : " + IndexCount);
                     cmd.DispatchCompute(MeshRefit, ConstructKernel, (int)Mathf.Ceil(IndexCount / (float)KernelRatio), 1, 1);
+                    // if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Accum " + i + " : " + IndexCount);
                     CurVertOffset += IndexCount;
                 }
 
@@ -2057,6 +2059,26 @@ namespace TrueTrace {
         //             Gizmos.DrawWireSphere(Pos, Radius);
 
         //         }
+        //     }
+        // }
+
+        // public unsafe void DrawRecursive(int Target, int depth) {
+        //     if(BVH2.BVH2Nodes[Target].count != 0 || depth > 50) return;
+        //     Gizmos.DrawWireCube((BVH2.BVH2Nodes[Target].aabb.BBMax + BVH2.BVH2Nodes[Target].aabb.BBMin) / 2.0f, BVH2.BVH2Nodes[Target].aabb.BBMax - BVH2.BVH2Nodes[Target].aabb.BBMin);
+        //     DrawRecursive(BVH2.BVH2Nodes[Target].left, depth + 1);
+        //     DrawRecursive(BVH2.BVH2Nodes[Target].left + 1, depth + 1);
+        // }
+
+        // public unsafe void DrawRecursive2(uint Target, int depth) {
+        //     if(BVH2.OptimizerNodes[Target].triCount != 0 || depth > 50) return;
+        //     Gizmos.DrawWireCube((BVH2.OptimizerNodes[Target].aabbMax + BVH2.OptimizerNodes[Target].aabbMin) / 2.0f, BVH2.OptimizerNodes[Target].aabbMax - BVH2.OptimizerNodes[Target].aabbMin);
+        //     DrawRecursive2(BVH2.OptimizerNodes[Target].left, depth + 1);
+        //     DrawRecursive2(BVH2.OptimizerNodes[Target].right, depth + 1);
+        // }
+
+        // public void OnDrawGizmos() {
+        //     if(BVH2 != null) {
+        //         DrawRecursive(0, 0);
         //     }
         // }
 

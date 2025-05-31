@@ -36,6 +36,7 @@ namespace TrueTrace {
         public RenderTexture ASVGF_GRAD_SMPL_POS_B;
         public RenderTexture MetallicA;
         public RenderTexture MetallicB;
+        public RenderTexture Quartiles;
 
         public RenderTexture ReflectedRefractedA;
         public RenderTexture ReflectedRefractedB;
@@ -73,6 +74,7 @@ namespace TrueTrace {
         private int Atrous_LF;
         private int Atrous;
         private int DistCorrect;
+        private int CalcQuart;
         private Vector3 PrevCamPos;
 
         public void ClearAll()
@@ -119,6 +121,7 @@ namespace TrueTrace {
                 AlbedoColorB.Release();
                 LFVarianceA.Release();
                 LFVarianceB.Release();
+                Quartiles.Release();
             }
             Initialized = false;
         }
@@ -140,6 +143,7 @@ namespace TrueTrace {
             Atrous_LF = shader.FindKernel("Atrous_LF");
             Atrous = shader.FindKernel("Atrous");
             DistCorrect = shader.FindKernel("DistanceCorrectionKernel");
+            CalcQuart = shader.FindKernel("CalcPerc");
             shader.SetInt("screen_width", ScreenWidth);
             shader.SetInt("screen_height", ScreenHeight);
 
@@ -181,20 +185,21 @@ namespace TrueTrace {
             CommonFunctions.CreateRenderTexture(ref ReflectedRefractedB, ScreenWidth, ScreenHeight, CommonFunctions.RTFull1);
             CommonFunctions.CreateRenderTexture(ref ASVGF_HIST_MOMENTS_HF_B, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4);
             CommonFunctions.CreateRenderTexture(ref ASVGF_HIST_MOMENTS_HF_A, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf4);
-            CommonFunctions.CreateRenderTexture(ref LFVarianceA, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTHalf1);
-            CommonFunctions.CreateRenderTexture(ref LFVarianceB, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTHalf1);
+            CommonFunctions.CreateRenderTexture(ref LFVarianceA, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTHalf2);
+            CommonFunctions.CreateRenderTexture(ref LFVarianceB, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTHalf2);
             CommonFunctions.CreateRenderTexture(ref ASVGF_ATROUS_PONG_MOMENTS, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf2);
             CommonFunctions.CreateRenderTexture(ref ASVGF_ATROUS_PING_MOMENTS, ScreenWidth, ScreenHeight, CommonFunctions.RTHalf2);
             CommonFunctions.CreateRenderTexture(ref ASVGF_GRAD_LF_PING, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTHalf2);
             CommonFunctions.CreateRenderTexture(ref ASVGF_GRAD_LF_PONG, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTHalf2);
             CommonFunctions.CreateRenderTexture(ref ASVGF_GRAD_HF_SPEC_PING, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTHalf2);
             CommonFunctions.CreateRenderTexture(ref ASVGF_GRAD_HF_SPEC_PONG, ScreenWidth / 3, ScreenHeight / 3, CommonFunctions.RTHalf2);
+            CommonFunctions.CreateRenderTexture(ref Quartiles, ScreenWidth / 8, ScreenHeight / 8, CommonFunctions.RTFull2);
             Initialized = true;
         }
 
         Vector3 prevEuler;
         Vector3 PrevPos;
-        public void DoRNG(ref RenderTexture RNGTex, ref RenderTexture RNGTexB, int CurFrame, ComputeBuffer GlobalRays, CommandBuffer cmd, RenderTexture PrimaryTriData, ComputeBuffer Meshes, ComputeBuffer Tris, bool UseBackupPointSelection, ComputeBuffer MeshIndexes, int ScreenWidth, int ScreenHeight, ComputeBuffer MeshesB, RenderTexture CorrectedDistanceTexA, RenderTexture CorrectedDistanceTexB)
+        public void DoRNG(ref RenderTexture RNGTex, ref RenderTexture RNGTexB, int CurFrame, ComputeBuffer GlobalRays, CommandBuffer cmd, RenderTexture PrimaryTriData, ComputeBuffer Meshes, ComputeBuffer Tris, bool UseBackupPointSelection, ComputeBuffer MeshIndexes, int ScreenWidth, int ScreenHeight, ComputeBuffer MeshesB, RenderTexture CorrectedDistanceTexA, RenderTexture CorrectedDistanceTexB, ComputeBuffer _ColorBuffer)
         {
             // this.ScreenWidth = ScreenWidth;
             // this.ScreenHeight = ScreenHeight;
@@ -243,6 +248,7 @@ namespace TrueTrace {
 #else
             shader.SetTextureFromGlobal(Reproject, "TEX_PT_MOTION", "TTMotionVectorTexture");
 #endif       
+            cmd.SetComputeBufferParam(shader, Reproject, "GlobalColorsRead", _ColorBuffer);
             cmd.SetComputeTextureParam(shader, Reproject, "TEX_PT_VIEW_DEPTH_A", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
             cmd.SetComputeTextureParam(shader, Reproject, "TEX_PT_VIEW_DEPTH_B", !EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
             cmd.SetComputeTextureParam(shader, Reproject, "TEX_PT_NORMALS_B", (!EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
@@ -334,6 +340,19 @@ namespace TrueTrace {
 
             cmd.DispatchCompute(shader, CopyData, Mathf.CeilToInt(ScreenWidth / 16.0f), Mathf.CeilToInt(ScreenHeight / 16.0f), 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Copy Data Kernel");
+
+            if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Quart Kernel");
+            cmd.SetComputeTextureParam(shader, CalcQuart, "TEX_PT_COLOR_SPECWrite", TEX_PT_COLOR_SPEC);
+            cmd.SetComputeTextureParam(shader, CalcQuart, "TEX_PT_COLOR_LF_SH", PT_LF1);
+            cmd.SetComputeTextureParam(shader, CalcQuart, "TEX_PT_COLOR_HF", TEX_PT_COLOR_HF);
+            cmd.SetComputeTextureParam(shader, CalcQuart, "img_quartiles", Quartiles);
+            cmd.DispatchCompute(shader, CalcQuart, Mathf.CeilToInt(ScreenWidth / 8.0f), Mathf.CeilToInt(ScreenHeight / 8.0f), 1);
+            if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Quart Kernel");
+
+
+
+
+
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Grad Compute Kernel");
 #if !TTCustomMotionVectors
             shader.SetTextureFromGlobal(Gradient_Img, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
@@ -378,6 +397,7 @@ namespace TrueTrace {
 #else
             shader.SetTextureFromGlobal(Temporal, "TEX_PT_MOTION", "TTMotionVectorTexture");
 #endif       
+            cmd.SetComputeTextureParam(shader, Temporal, "quart_read", Quartiles);
             cmd.SetComputeTextureParam(shader, Temporal, "ReflRefracA", (EvenFrame ? ReflectedRefractedA : ReflectedRefractedB));
             cmd.SetComputeTextureParam(shader, Temporal, "ReflRefracB", (!EvenFrame ? ReflectedRefractedA : ReflectedRefractedB));
             cmd.SetComputeTextureParam(shader, Temporal, "MetallicA", (EvenFrame ? MetallicA : MetallicB));

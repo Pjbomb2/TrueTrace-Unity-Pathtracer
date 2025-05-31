@@ -21,7 +21,7 @@
 #endif
 
 
-
+RWTexture2D<float4> PSRGBuff;
 #pragma kernel kernel_shade
 
 int BackgroundType;
@@ -110,9 +110,9 @@ void sampleEquiAngular( float u, float maxDistance, float3 rOrigin, float3 rDire
     pdf = D / ( (thetaB - thetaA) * (D * D + t * t) );
 }
 #ifdef RadCache
-inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout float3 bsdf, inout float3 Geomnorm, inout uint CachePathLength, int GTX) {//main function
+inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout float3 bsdf, inout float3 Geomnorm, inout uint CachePathLength, int GTX, inout float4 PSRScreenData) {//main function
 #else
-inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout float3 bsdf, inout float3 Geomnorm) {//main function
+inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hitDat, RayHit hit, uint2 id, const float last_pdf, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float4 PrevScreenData, inout float3 bsdf, inout float3 Geomnorm, inout float4 PSRScreenData) {//main function
 #endif
     #ifdef Fog
         float3 SigmaT = FogDensity * FogScale;
@@ -266,12 +266,19 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 }
             #endif
         }
-        [branch]if(UseReSTIRGI && CurBounce == 1 && FromColorSpecPacked(Color.MetRoughIsSpec).x == 1 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -100000.0f;
-        if((UseASVGF || UseReSTIRGI) && CurBounce == 0 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) PrevScreenData.z = -10000.0f;
+        [branch]if(UseReSTIRGI && CurBounce == 1 && FromColorSpecPacked(Color.MetRoughIsSpec).x == 1 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) {
+            PrevScreenData.z = -100000.0f;
+            PSRScreenData.z = -100000.0f;
+        }
+        if((UseASVGF || UseReSTIRGI) && CurBounce == 0 && !(id.x == screen_width / 2 && id.y == screen_height / 2)) {
+            PrevScreenData.z = -10000.0f;
+            PSRScreenData.z = -100000.0f;
+        }
         if(hitDat.emission > 1.0f) {
             if(CurBounce == 0) {
                 Color.Data = EmissCol;
                 Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((1) << 26);  
+                PSRScreenData.w = asfloat((asuint(PSRScreenData.w) & ~(0x7C000000)) |  ((1) << 26));  
                 Color.Flags = packRGBE(EmissCol);
             }
             return;
@@ -303,19 +310,31 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     {
         if (CurBounce == 0) {
             float Metallic = saturate(hitDat.metallic + ((!UseASVGF || UseReSTIRGI) ? 0 : hitDat.Specular));
-            if (MaterialLobe == 3) Color.MetRoughIsSpec = ToColorSpecPackedAdd(float3(0, Refracted ? 0.6f : 0.39f, 2 + !Refracted), Color.MetRoughIsSpec);
-            else Color.MetRoughIsSpec = ToColorSpecPackedAdd(float3(Metallic, hitDat.roughness, MaterialLobe), Color.MetRoughIsSpec);
+            if (MaterialLobe == 3) {
+                Color.MetRoughIsSpec = ToColorSpecPackedAdd(float3(0, Refracted ? 0.6f : 0.39f, 2 + !Refracted), Color.MetRoughIsSpec);
+                PSRScreenData.w = asfloat(ToColorSpecPackedAdd(float3(0, Refracted ? 0.6f : 0.39f, 2 + !Refracted), asuint(PSRScreenData.w)));
+            } else {
+                Color.MetRoughIsSpec = ToColorSpecPackedAdd(float3(Metallic, hitDat.roughness, MaterialLobe), Color.MetRoughIsSpec);
+                PSRScreenData.w = asfloat(ToColorSpecPackedAdd(float3(Metallic, hitDat.roughness, MaterialLobe), asuint(PSRScreenData.w)));
+            }
         }
 
         if (Refracted) {
             Geomnorm *= -1;
             norm *= -1;
             USGNorm *= -1;
-        } else if (GetBounceData(Color.MetRoughIsSpec) <= 1 && MaterialLobe == 3) {
-            Color.MetRoughIsSpec = ToColorSpecPackedAdd(float3(0, 0, 3), Color.MetRoughIsSpec);
+        } else {
+            if (GetBounceData(Color.MetRoughIsSpec) <= 1 && MaterialLobe == 3) {
+                Color.MetRoughIsSpec = ToColorSpecPackedAdd(float3(0, 0, 3), Color.MetRoughIsSpec);
+            }
+            if (GetBounceData(asuint(PSRScreenData.w)) <= 1 && MaterialLobe == 3) {
+                PSRScreenData.w = asfloat(ToColorSpecPackedAdd(float3(0, 0, 3), asuint(PSRScreenData.w)));
+            }
         }
         if (MaterialLobe != 3 && !(MaterialLobe == 0 && hitDat.roughness < 0.5f)) {
             Color.MetRoughIsSpec |= 1 << 31;
+            PSRScreenData.w = asfloat(asuint(PSRScreenData.w) | (1 << 31));
+
         }
         Color.InWaterDistance += hit.t;
         if(!GetFlag(hitDat.Tag, Thin)) {
@@ -335,6 +354,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             }
 
             Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x3800000)) | (WaterStageFlag << 23);
+            PSRScreenData.w = asfloat((asuint(PSRScreenData.w) & ~(0x3800000)) | (WaterStageFlag << 23));
         } else if(Refracted && MaterialLobe != 3) {
             bsdfmodifier *= sqrt(exp(-CalculateExtinction((MaterialLobe == 2 && Refracted) ? (hitDat.transmittanceColor) : (1.0f - (bsdf * hitDat.surfaceColor)), hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance)));
             // bsdfmodifier *= sqrt(exp(-CalculateExtinction(1.0f - hitDat.surfaceColor, hitDat.scatterDistance == 0.0f ? 1.0f : hitDat.scatterDistance)));
@@ -360,6 +380,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         pdf *= VolumeBSDF;
     #endif
 
+    [branch] if (CurBounce == 0 || GetBounceData(asuint(PSRScreenData.w)) == 0) {//Setting textures for denosier to use
+        PSRScreenData = float4(asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -norm : norm)), asfloat(packRGBE((CurBounce == 0) ? hitDat.surfaceColor : (unpackRGBE(asuint(PSRScreenData.y)) * hitDat.surfaceColor))), PSRScreenData.z + hit.t, asfloat((((asuint(PSRScreenData.w) & ~(0x7C000000)) & ~(0x400000)) | (((CurBounce < 20 && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.03f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22))); 
+    }
 
     ray.origin = USGNorm * NormalOffset + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
     throughput = max(throughput, 0);
@@ -669,7 +692,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
     if(Refracted) Geomnorm *= -1;
 
-    if (CurBounce > 0 && UseRussianRoulette && GetBounceData(Color.MetRoughIsSpec) != 0) {
+    if (CurBounce > 0 && UseRussianRoulette && GetBounceData(asuint(PSRScreenData.w)) != 0) {
         float3 AdjustedCol = throughput * (ImprovedPrimaryHit ? 1.0f : Color.Data.xyz);
         float p = saturate(max(AdjustedCol.x, max(AdjustedCol.y, AdjustedCol.z)));
         if (random(118, pixel_index).x > p)//Simple Russian Roulette
@@ -1181,6 +1204,7 @@ int MaterialIndex;
     const bool InvalidateScreenSpaceInfo = ((!UseASVGF && CurBounce == 0));
     float4 PrevScreenData = InvalidateScreenSpaceInfo ? 0 : ScreenSpaceInfo[id.xy];
     if(UseASVGF && CurBounce == 0) PrevScreenData.z = 0;
+    float4 PSRScreenData = InvalidateScreenSpaceInfo ? 0 : PSRGBuff[id.xy];
 
     if (TempMat.specTrans != 1 && TempMat.MetallicTex.x > 0) TempMat.metallic = pow(SampleTexture(BaseUv, SampleMetallic, TempMat), rcp(2.2f));
     if (TempMat.RoughnessTex.x > 0) {
@@ -1223,16 +1247,19 @@ int MaterialIndex;
         }
     }
     if(CurBounce == 0 && UseReSTIRGI) PrevScreenData.w = asfloat(0);
+    if(CurBounce == 0) PSRScreenData.w = asfloat(0);
     float4 PrevPrev = PrevScreenData;
+    float4 PrevPrevPSR = PSRScreenData;
     float3 bsdf = 1;
     float3 norm = 0;
 #ifdef RadCache
     uint PathLength = CacheBuffer[pixel_index].pathLength;
-    calcFinalColor(ray, Color, TempMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, bsdf, norm, PathLength, GT.x);
+    calcFinalColor(ray, Color, TempMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, bsdf, norm, PathLength, GT.x, PSRScreenData);
 #else
-    calcFinalColor(ray, Color, TempMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, bsdf, norm);
+    calcFinalColor(ray, Color, TempMat, bestHit, id.xy, GlobRay.last_pdf, pixel_index, MaterialIndex, BaseUv, PrevScreenData, bsdf, norm, PSRScreenData);
 #endif
     if(CurBounce == 0 || ((UseASVGF ^ InvalidateScreenSpaceInfo) && any(PrevPrev != PrevScreenData))) ScreenSpaceInfo[id.xy] = PrevScreenData;
+    if(CurBounce == 0 || ((true ^ InvalidateScreenSpaceInfo) && any(PrevPrevPSR != PSRScreenData))) PSRGBuff[id.xy] = PSRScreenData;
     GlobalColors[pixel_index] = Color;
 #ifdef RadCache
     if(CurBounce != 0) {
@@ -1398,8 +1425,8 @@ void RefineMVKernel(uint3 id : SV_DispatchThreadID) {
         float3 NewPos2 = NewPos;
 #if defined(TTReflectionMotionVectors)
         if(all(NewPos == OldPos)) {
-                float NewDepth = max(ScreenSpaceInfo[id.xy].z - length(NewPos - CamPos),0);
-                float OldDepth = max(ScreenSpaceInfo[id.xy].z - length(OldPos - CamPos),0);
+                float NewDepth = max(PSRGBuff[id.xy].z - length(NewPos - CamPos),0);
+                float OldDepth = max(PSRGBuff[id.xy].z - length(OldPos - CamPos),0);
                 NewPos += normalize(NewPos - CamPos) * NewDepth;
                 OldPos += normalize(OldPos - CamPos) * OldDepth;
         }
