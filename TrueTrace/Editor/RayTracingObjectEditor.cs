@@ -72,7 +72,7 @@ namespace TrueTrace {
                 GUILayout.EndScrollView();
             }
 
-            GUILayout.Label ("", GUILayout.Width ( 100 ), GUILayout.Height ( 1500 ) );
+            // GUILayout.Label ("", GUILayout.Width ( 100 ), GUILayout.Height ( 1500 ) );
             
             if(GUILayout.Button("Save Preset")) {
                 int FolderCount = PresetMaster.PresetFolders.Count;

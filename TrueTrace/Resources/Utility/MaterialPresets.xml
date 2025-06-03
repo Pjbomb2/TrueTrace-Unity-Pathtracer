@@ -56,15 +56,15 @@
             <y>1</y>
             <z>1</z>
           </EmissionColor>
-          <Tag>512</Tag>
-          <Roughness>0.4472136</Roughness>
-          <MatType>1</MatType>
+          <Tag>0</Tag>
+          <Roughness>0</Roughness>
+          <MatType>0</MatType>
           <TransmittanceColor>
             <x>1</x>
             <y>1</y>
             <z>1</z>
           </TransmittanceColor>
-          <IOR>1</IOR>
+          <IOR>1.59</IOR>
           <Metallic>0</Metallic>
           <Sheen>0</Sheen>
           <SheenTint>0</SheenTint>
@@ -74,10 +74,10 @@
           <Anisotropic>0</Anisotropic>
           <AnisotropicRotation>0</AnisotropicRotation>
           <Flatness>0</Flatness>
-          <DiffTrans>0.404</DiffTrans>
-          <SpecTrans>0</SpecTrans>
+          <DiffTrans>0</DiffTrans>
+          <SpecTrans>1</SpecTrans>
           <Specular>0</Specular>
-          <ScatterDist>1.33</ScatterDist>
+          <ScatterDist>1</ScatterDist>
           <MetallicRemap>
             <x>0</x>
             <y>1</y>
@@ -99,7 +99,7 @@
           </BlendColor>
           <BlendFactor>0</BlendFactor>
           <ColorBleed>1</ColorBleed>
-          <AlbedoBlendFactor>1</AlbedoBlendFactor>
+          <AlbedoBlendFactor>0</AlbedoBlendFactor>
           <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
           <DetailNormalStrength>1</DetailNormalStrength>
           <DiffTransRemap>
@@ -109,16 +109,16 @@
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
-        <AlbedoGUID>f1822fb7c54917b4ba6aa5c9c394e8ea</AlbedoGUID>
+        <AlbedoGUID>null</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
         <EmissionGUID>null</EmissionGUID>
-        <AlphaGUID>f1822fb7c54917b4ba6aa5c9c394e8ea</AlphaGUID>
+        <AlphaGUID>null</AlphaGUID>
         <MatCapGUID>null</MatCapGUID>
         <MatcapMaskGUID>null</MatcapMaskGUID>
         <SecondaryAlbedoGUID>null</SecondaryAlbedoGUID>
         <SecondaryAlbedoMaskGUID>null</SecondaryAlbedoMaskGUID>
-        <NormalGUID>3df03732f4bc28549b4938b2deee42e8</NormalGUID>
+        <NormalGUID>null</NormalGUID>
         <DiffTransGUID>null</DiffTransGUID>
         <ShaderName>Standard</ShaderName>
       </RayObjectDatas>
