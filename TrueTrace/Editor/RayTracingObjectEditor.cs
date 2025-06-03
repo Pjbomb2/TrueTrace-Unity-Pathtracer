@@ -60,7 +60,7 @@ namespace TrueTrace {
             
             {
                 int FolderCount = PresetMaster.PresetFolders.Count;
-                GUILayout.BeginScrollView(ScrollPosition, GUILayout.Width(100), GUILayout.Height(200));
+                ScrollPosition = GUILayout.BeginScrollView(ScrollPosition, GUILayout.Width(100), GUILayout.Height(200));
                 for(int i = 0; i < FolderCount; i++) {
                     if(!PresetMaster.PresetFolders[i].FolderName.Equals("COPYPASTEBUFFER")) {
                         if(GUILayout.Button(PresetMaster.PresetFolders[i].FolderName)) {
@@ -72,7 +72,7 @@ namespace TrueTrace {
                 GUILayout.EndScrollView();
             }
 
-
+            GUILayout.Label ("", GUILayout.Width ( 100 ), GUILayout.Height ( 1500 ) );
             
             if(GUILayout.Button("Save Preset")) {
                 int FolderCount = PresetMaster.PresetFolders.Count;

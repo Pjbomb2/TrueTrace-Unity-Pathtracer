@@ -83,15 +83,17 @@ void CacheResolve(uint3 id : SV_DispatchThreadID) {//we dont need to compress th
             if(SampleCount > 500) {
                 float Ratio = 500.0f / (float)SampleCount;
                 SampleCount = floor(Ratio * (float)SampleCount);
-                ResultantVox.xyz = ResultantVox.xyz * Ratio;
+                float3 Dat = (float3)ResultantVox.xyz / 1e3f;
+                Dat *= Ratio;
+                ResultantVox.xyz = Dat * 1e3f;
             }
             if(FrameCount > 90) {
+                ResultantVox.xyz = (((float3)ResultantVox.xyz / 1e3f) / (float)(SampleCount + FrameCount)) * 1e3f;
                 FrameCount = 0;
-                SampleCount = 0;
-                ResultantVox = 0;
-                ResultantHash = 0;
+                SampleCount = 1;
+                // ResultantHash = 0;
             }
-            ResultantVox.w = (SampleCount | (FrameCount << 24));
+            ResultantVox.w = (SampleCount | ((FrameCount & 0xFF) << 24));
         }
     }
 

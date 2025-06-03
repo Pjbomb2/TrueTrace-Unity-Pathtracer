@@ -518,6 +518,10 @@ namespace TrueTrace {
                     if(JustCreated || obj.LocalMaterials[i].DiffTransRemap.x == 0 && obj.LocalMaterials[i].DiffTransRemap.y == 0) obj.LocalMaterials[i].DiffTransRemap = new Vector2(0, 1);
                     if(!RelevantMat.BaseColorValue.Equals("null") && JustCreated) obj.LocalMaterials[i].BaseColor = (Vector3)((Vector4)SharedMaterials[i].GetColor(RelevantMat.BaseColorValue));
                     else if(JustCreated) obj.LocalMaterials[i].BaseColor = new Vector3(1,1,1);
+                    if(RelevantMat.EmissionColorValue != null && !RelevantMat.EmissionColorValue.Equals("null") && JustCreated) obj.LocalMaterials[i].EmissionColor = (Vector3)((Vector4)SharedMaterials[i].GetColor(RelevantMat.EmissionColorValue));
+                    else if(JustCreated) obj.LocalMaterials[i].EmissionColor = new Vector3(1,1,1);
+                    if(RelevantMat.EmissionIntensityValue != null && !RelevantMat.EmissionIntensityValue.Equals("null") && JustCreated) obj.LocalMaterials[i].emission = (SharedMaterials[i].GetFloat(RelevantMat.EmissionIntensityValue));
+                    else if(JustCreated) obj.LocalMaterials[i].emission = 0;
                     if(RelevantMat.IsGlass && JustCreated || (JustCreated && RelevantMat.Name.Equals("Standard") && SharedMaterials[i].GetFloat("_Mode") == 3)) obj.LocalMaterials[i].SpecTrans = 1f;
                     if(RelevantMat.IsCutout || (RelevantMat.Name.Equals("Standard") && SharedMaterials[i].GetFloat("_Mode") == 1)) obj.LocalMaterials[i].MatType = (int)RayTracingObject.Options.Cutout;
 
@@ -572,7 +576,7 @@ namespace TrueTrace {
                             case(TexturePurpose.Emission):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref EmissionTexs, ref TempIndex, true); 
                                 CurMat.Textures.EmissiveTex.x = TempIndex; 
-                                if(Result != 2 && JustCreated) obj.LocalMaterials[i].emission = 12.0f;
+                                if(Result != 2 && JustCreated && obj.LocalMaterials[i].emission == 0) obj.LocalMaterials[i].emission = 12.0f;
                             break;
                             case(TexturePurpose.Metallic):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref MetallicTexs, ref TempIndex); 

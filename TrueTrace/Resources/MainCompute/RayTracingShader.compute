@@ -381,7 +381,9 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     #endif
 
     [branch] if (CurBounce == 0 || GetBounceData(asuint(PSRScreenData.w)) == 0) {//Setting textures for denosier to use
-        PSRScreenData = float4(asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -norm : norm)), asfloat(packRGBE((CurBounce == 0) ? hitDat.surfaceColor : (unpackRGBE(asuint(PSRScreenData.y)) * hitDat.surfaceColor))), PSRScreenData.z + hit.t, asfloat((((asuint(PSRScreenData.w) & ~(0x7C000000)) & ~(0x400000)) | (((CurBounce < 20 && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.03f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22))); 
+        float3 Col = hitDat.surfaceColor;
+        if(MaterialLobe == 3) Col = bsdf;
+        PSRScreenData = float4(asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -norm : norm)), asfloat(packRGBE((CurBounce == 0) ? Col : (unpackRGBE(asuint(PSRScreenData.y)) * Col))), PSRScreenData.z + hit.t, asfloat((((asuint(PSRScreenData.w) & ~(0x7C000000)) & ~(0x400000)) | (((CurBounce < 20 && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.03f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22))); 
     }
 
     ray.origin = USGNorm * NormalOffset + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
@@ -1224,6 +1226,18 @@ int MaterialIndex;
         TempMat.diffTrans = saturate(pow(SampleTexture(BaseUv, SampleDiffTrans, TempMat), rcp(2.2f)));
     }
     if(!all(TempMat.DiffTransRemap == float2(0,1))) TempMat.diffTrans = (TempMat.diffTrans * (TempMat.DiffTransRemap.y - TempMat.DiffTransRemap.x)) + TempMat.DiffTransRemap.x;
+
+
+#ifdef MoreAO
+    if(GetBounceData(asuint(PSRScreenData.w)) == CurBounce + 1) {
+        if(FromColorSpecPacked(asuint(PSRScreenData.w)).z == 2 || FromColorSpecPacked(asuint(PSRScreenData.w)).z == 1)
+        if(bestHit.t < aoRadius) {
+            float ao = bestHit.t / aoRadius;
+            ao /= GlobRay.last_pdf;
+            Color.throughput *= saturate(lerp(1, ao, aoStrength));
+        }
+    }
+#endif
 
 
     TempMat.roughness = max(TempMat.roughness, 0.00001f);

@@ -31,13 +31,13 @@
 // #define ReSTIRSampleReduction
 // #define ReSTIRRestrictSpatial
 // #define SmartRestriction
-// #define ReSTIRAdditionalAO
 // #define RestirPreventCrossMatBlur
 // #define ShadowGlassAttenuation
 // #define DisableNormalMaps
 // #define ClayMetalOverride
 // #define IgnoreBackfacingEmissive
 // #define AltFadeMapping
+// #define MoreAO
 
 
 //END OF DEFINES

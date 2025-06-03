@@ -917,7 +917,9 @@ namespace TrueTrace {
                 MetallicRemapMin = "null",
                 MetallicRemapMax = "null",
                 RoughnessRemapMin = "null",
-                RoughnessRemapMax = "null"
+                RoughnessRemapMax = "null",
+                EmissionIntensityValue = "null",
+                EmissionColorValue = "null"
             });
             ShaderNames.Add(shader.name);
             NeedsToUpdateXML = true;

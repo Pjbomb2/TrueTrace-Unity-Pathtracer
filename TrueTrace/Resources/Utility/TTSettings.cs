@@ -98,6 +98,8 @@ namespace TrueTrace {
         [SerializeField] public float strengthVignette = 0.8f;
         [SerializeField] public float curveVignette = 0.5f;
         [SerializeField] public Vector3 ColorVignette = Vector3.zero;
+        [SerializeField] public float aoStrength = 1.0f;
+        [SerializeField] public float aoRadius = 2.0f;
 
     }
 

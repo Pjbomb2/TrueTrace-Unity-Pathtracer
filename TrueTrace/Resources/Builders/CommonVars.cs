@@ -295,6 +295,8 @@ namespace CommonVars
         public string MetallicRemapMax;
         public string RoughnessRemapMin;
         public string RoughnessRemapMax;
+        public string EmissionColorValue;
+        public string EmissionIntensityValue;
     }
     [System.Serializable]
     public class Materials

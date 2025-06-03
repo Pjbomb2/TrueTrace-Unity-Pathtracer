@@ -974,10 +974,11 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
 
                     } else if(Light.Type == AREALIGHTQUAD) {
                         RunningReservoirC.Color *= pow(saturate(dot(ray.direction, -Light.Direction)), MiscInfo.x);
-                    } else if(Light.Type == DIRECTIONALLIGHT) {
-                        Distance = 1000.0f;
-                        ray = CreateRay(PrimaryHitPosition, Light.Direction);
-                    }
+                    } 
+                    // else if(Light.Softness == 0 && Light.Type == DIRECTIONALLIGHT) {
+                    //     Distance = 1000.0f;
+                    //     ray = CreateRay(PrimaryHitPosition, Light.Direction);
+                    // }
                 }
 
 
@@ -1030,17 +1031,8 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
 
     GlobalColors[pixel_index].PrimaryNEERay = packRGBE(pow(RunningReservoirC.Color * RunningReservoirC.W * NEEbsdf,rcp(2.2f)));
 
-#ifdef ReSTIRAdditionalAO
-    if(Case != 3 && any(SampleRayDir != 0)) {
-        float Dist = length(SampleRayDir - CenterRayDir);
-        GlobalColors[pixel_index].Indirect = RunningReservoirB.Radiance.Color * RunningReservoirB.Radiance.W * (1.0f - exp(-(120.0f * (Dist + 0.01f) + 1.0f)));
-    } else {
-        GlobalColors[pixel_index].Indirect = RunningReservoirB.Radiance.Color * RunningReservoirB.Radiance.W;
-    }
-#else
     GlobalColors[pixel_index].Indirect = 0;
     GlobalColors[pixel_index].Direct = RunningReservoirB.Radiance.Color * RunningReservoirB.Radiance.W;
-#endif
     if(GetBounceData(GlobalColors[pixel_index].MetRoughIsSpec) != 1) {
         SmallerRay ray = CreateRay(PrimaryHitPosition, normalize(CalcPos(WorldPos) - PrimaryHitPosition));
         if(GetFlag(SurfaceMat.Tag, Thin) && dot(GeomNorm, ray.direction) < 0 && Case == 2) bsdf *= sqrt(exp(-CalculateExtinction(SurfaceMat.transmittanceColor, SurfaceMat.scatterDistance == 0.0f ? 1.0f : SurfaceMat.scatterDistance)));

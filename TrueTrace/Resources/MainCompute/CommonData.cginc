@@ -108,6 +108,8 @@ RWStructuredBuffer<uint3> BufferData;
 	StructuredBuffer<float2> MeshOffsets;
 #endif
 
+float aoStrength;
+float aoRadius;
 
 struct BufferSizeData {
 	int tracerays;
@@ -2763,7 +2765,7 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 	    	uint4 voxelDataPacked = VoxelDataBufferB.Load4(CacheEntry * 16);
 
 		    GridVoxel Voxel;
-			Voxel.radiance = voxelDataPacked.xyz / 1e3f;
+			Voxel.radiance = (float3)voxelDataPacked.xyz / 1e3f;
 		    Voxel.SampleNum = voxelDataPacked.w & 0x00FFFFFF;
 		    Voxel.FrameNum = (voxelDataPacked.w >> 24) & 0xFF;
 

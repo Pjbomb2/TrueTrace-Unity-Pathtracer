@@ -32,7 +32,7 @@ MonoBehaviour:
   PPTAA: 0
   RenderScale: 1
   DenoiserMethod: 1
-  UpscalerMethod: 2
+  UpscalerMethod: 0
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
   UseReSTIRGI: 0
@@ -46,7 +46,7 @@ MonoBehaviour:
   DoFirefly: 0
   ImprovedPrimaryHit: 1
   RISCount: 12
-  ToneMapper: 7
+  ToneMapper: 0
   SkyDesaturate: 0
   ClayColor: {x: 0.5, y: 0.5, z: 0.5}
   ClayMetalOverride: 1
@@ -74,7 +74,7 @@ MonoBehaviour:
   UseTransmittanceInNEE: 1
   SecondarySkyDesaturate: 0
   MatChangeResetsAccum: 1
-  PPFXAA: 0
+  PPFXAA: 1
   OIDNBlendRatio: 1
   ConvBloom: 1
   ConvStrength: 0.04
@@ -101,3 +101,5 @@ MonoBehaviour:
   strengthVignette: 0.8
   curveVignette: 0.5
   ColorVignette: {x: 0, y: 0, z: 0}
+  aoStrength: 1
+  aoRadius: 2
