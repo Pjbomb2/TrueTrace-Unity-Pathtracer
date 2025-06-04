@@ -16,7 +16,7 @@ MonoBehaviour:
   IndirectBoost: 1
   bouncecount: 12
   ClayMode: 0
-  UseRussianRoulette: 0
+  UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
   Accumulate: 0
@@ -31,14 +31,14 @@ MonoBehaviour:
   PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
-  DenoiserMethod: 0
-  UpscalerMethod: 2
+  DenoiserMethod: 1
+  UpscalerMethod: 0
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
   UseReSTIRGI: 0
   ReSTIRGISpatialCount: 24
   ReSTIRGISpatialRadius: 50
-  ReSTIRGITemporalMCap: 12
+  ReSTIRGITemporalMCap: 4
   DoReSTIRGIConnectionValidation: 1
   Exposure: 5.4
   DoPartialRendering: 0
@@ -74,7 +74,7 @@ MonoBehaviour:
   UseTransmittanceInNEE: 1
   SecondarySkyDesaturate: 0
   MatChangeResetsAccum: 1
-  PPFXAA: 0
+  PPFXAA: 1
   OIDNBlendRatio: 1
   ConvBloom: 1
   ConvStrength: 0.04
@@ -101,3 +101,5 @@ MonoBehaviour:
   strengthVignette: 0.8
   curveVignette: 0.5
   ColorVignette: {x: 0, y: 0, z: 0}
+  aoStrength: 1
+  aoRadius: 2

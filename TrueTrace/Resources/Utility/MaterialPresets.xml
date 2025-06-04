@@ -56,17 +56,17 @@
             <y>1</y>
             <z>1</z>
           </EmissionColor>
-          <Tag>0</Tag>
-          <Roughness>0</Roughness>
-          <MatType>0</MatType>
+          <Tag>512</Tag>
+          <Roughness>0.294</Roughness>
+          <MatType>1</MatType>
           <TransmittanceColor>
-            <x>1</x>
-            <y>1</y>
-            <z>1</z>
+            <x>0</x>
+            <y>0</y>
+            <z>0</z>
           </TransmittanceColor>
           <IOR>1</IOR>
           <Metallic>0</Metallic>
-          <Sheen>0</Sheen>
+          <Sheen>3</Sheen>
           <SheenTint>0</SheenTint>
           <SpecularTint>0</SpecularTint>
           <Clearcoat>0</Clearcoat>
@@ -74,10 +74,10 @@
           <Anisotropic>0</Anisotropic>
           <AnisotropicRotation>0</AnisotropicRotation>
           <Flatness>0</Flatness>
-          <DiffTrans>0</DiffTrans>
+          <DiffTrans>0.665</DiffTrans>
           <SpecTrans>0</SpecTrans>
           <Specular>0</Specular>
-          <ScatterDist>1</ScatterDist>
+          <ScatterDist>4.32</ScatterDist>
           <MetallicRemap>
             <x>0</x>
             <y>1</y>
@@ -102,19 +102,24 @@
           <AlbedoBlendFactor>0</AlbedoBlendFactor>
           <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
           <DetailNormalStrength>1</DetailNormalStrength>
+          <DiffTransRemap>
+            <x>0</x>
+            <y>1</y>
+          </DiffTransRemap>
         </MatData>
         <UseKelvin>false</UseKelvin>
-        <KelvinTemp>5272</KelvinTemp>
-        <AlbedoGUID>20334f87f2cec4f458a850cf4c6d7d5e</AlbedoGUID>
-        <MetallicGUID>null</MetallicGUID>
+        <KelvinTemp>0</KelvinTemp>
+        <AlbedoGUID>4a44cd3eece831745b7543a5d1443e17</AlbedoGUID>
+        <MetallicGUID>36c0f41d623914a4d994ec3b6897dd95</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
         <EmissionGUID>null</EmissionGUID>
-        <AlphaGUID>20334f87f2cec4f458a850cf4c6d7d5e</AlphaGUID>
+        <AlphaGUID>4a44cd3eece831745b7543a5d1443e17</AlphaGUID>
         <MatCapGUID>null</MatCapGUID>
         <MatcapMaskGUID>null</MatcapMaskGUID>
         <SecondaryAlbedoGUID>null</SecondaryAlbedoGUID>
         <SecondaryAlbedoMaskGUID>null</SecondaryAlbedoMaskGUID>
-        <NormalGUID>null</NormalGUID>
+        <NormalGUID>6b5ee01858dcf084f9a9403dd2e47493</NormalGUID>
+        <DiffTransGUID>null</DiffTransGUID>
         <ShaderName>Standard</ShaderName>
       </RayObjectDatas>
     </ContainedPresets>
@@ -221,6 +226,10 @@
           <AlbedoBlendFactor>0</AlbedoBlendFactor>
           <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
           <DetailNormalStrength>0</DetailNormalStrength>
+          <DiffTransRemap>
+            <x>0</x>
+            <y>0</y>
+          </DiffTransRemap>
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
@@ -335,6 +344,10 @@
           <AlbedoBlendFactor>0</AlbedoBlendFactor>
           <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
           <DetailNormalStrength>1</DetailNormalStrength>
+          <DiffTransRemap>
+            <x>0</x>
+            <y>0</y>
+          </DiffTransRemap>
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
@@ -449,6 +462,10 @@
           <AlbedoBlendFactor>0</AlbedoBlendFactor>
           <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
           <DetailNormalStrength>1</DetailNormalStrength>
+          <DiffTransRemap>
+            <x>0</x>
+            <y>0</y>
+          </DiffTransRemap>
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
@@ -568,6 +585,10 @@
           <AlbedoBlendFactor>0</AlbedoBlendFactor>
           <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
           <DetailNormalStrength>0</DetailNormalStrength>
+          <DiffTransRemap>
+            <x>0</x>
+            <y>0</y>
+          </DiffTransRemap>
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
@@ -687,6 +708,10 @@
           <AlbedoBlendFactor>0</AlbedoBlendFactor>
           <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
           <DetailNormalStrength>0</DetailNormalStrength>
+          <DiffTransRemap>
+            <x>0</x>
+            <y>0</y>
+          </DiffTransRemap>
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
@@ -801,6 +826,10 @@
           <AlbedoBlendFactor>0</AlbedoBlendFactor>
           <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
           <DetailNormalStrength>0</DetailNormalStrength>
+          <DiffTransRemap>
+            <x>0</x>
+            <y>0</y>
+          </DiffTransRemap>
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
@@ -920,6 +949,10 @@
           <AlbedoBlendFactor>0</AlbedoBlendFactor>
           <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
           <DetailNormalStrength>0</DetailNormalStrength>
+          <DiffTransRemap>
+            <x>0</x>
+            <y>0</y>
+          </DiffTransRemap>
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
@@ -1039,6 +1072,10 @@
           <AlbedoBlendFactor>0</AlbedoBlendFactor>
           <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
           <DetailNormalStrength>0</DetailNormalStrength>
+          <DiffTransRemap>
+            <x>0</x>
+            <y>0</y>
+          </DiffTransRemap>
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
@@ -1158,6 +1195,10 @@
           <AlbedoBlendFactor>0</AlbedoBlendFactor>
           <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
           <DetailNormalStrength>0</DetailNormalStrength>
+          <DiffTransRemap>
+            <x>0</x>
+            <y>0</y>
+          </DiffTransRemap>
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
@@ -1277,6 +1318,10 @@
           <AlbedoBlendFactor>0</AlbedoBlendFactor>
           <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
           <DetailNormalStrength>1</DetailNormalStrength>
+          <DiffTransRemap>
+            <x>0</x>
+            <y>0</y>
+          </DiffTransRemap>
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
@@ -1391,6 +1436,10 @@
           <AlbedoBlendFactor>0</AlbedoBlendFactor>
           <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
           <DetailNormalStrength>1</DetailNormalStrength>
+          <DiffTransRemap>
+            <x>0</x>
+            <y>0</y>
+          </DiffTransRemap>
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
@@ -1405,6 +1454,249 @@
         <SecondaryAlbedoMaskGUID>null</SecondaryAlbedoMaskGUID>
         <NormalGUID>null</NormalGUID>
         <ShaderName>.poiyomi/Old Versions/9.1/Poiyomi Pro</ShaderName>
+      </RayObjectDatas>
+    </ContainedPresets>
+  </RayObjFolder>
+  <RayObjFolder>
+    <FolderName>Translucent</FolderName>
+    <ContainedPresets>
+      <RayObjectDatas>
+        <ID>0</ID>
+        <MatName>Hair</MatName>
+        <OptionID>0</OptionID>
+        <MatData>
+          <TextureModifiers>
+            <MainTexScaleOffset>
+              <x>1</x>
+              <y>1</y>
+              <z>0</z>
+              <w>0</w>
+            </MainTexScaleOffset>
+            <SecondaryTextureScaleOffset>
+              <x>1</x>
+              <y>1</y>
+              <z>0</z>
+              <w>0</w>
+            </SecondaryTextureScaleOffset>
+            <NormalTexScaleOffset>
+              <x>1</x>
+              <y>1</y>
+              <z>0</z>
+              <w>0</w>
+            </NormalTexScaleOffset>
+            <SecondaryAlbedoTexScaleOffset>
+              <x>1</x>
+              <y>1</y>
+              <z>0</z>
+              <w>0</w>
+            </SecondaryAlbedoTexScaleOffset>
+            <SecondaryNormalTexScaleOffset>
+              <x>1</x>
+              <y>1</y>
+              <z>0</z>
+              <w>0</w>
+            </SecondaryNormalTexScaleOffset>
+            <Rotation>0</Rotation>
+            <RotationNormal>0</RotationNormal>
+            <RotationSecondary>0</RotationSecondary>
+            <RotationSecondaryDiffuse>0</RotationSecondaryDiffuse>
+            <RotationSecondaryNormal>0</RotationSecondaryNormal>
+          </TextureModifiers>
+          <BaseColor>
+            <x>1</x>
+            <y>1</y>
+            <z>1</z>
+          </BaseColor>
+          <emission>0</emission>
+          <EmissionColor>
+            <x>1</x>
+            <y>1</y>
+            <z>1</z>
+          </EmissionColor>
+          <Tag>0</Tag>
+          <Roughness>0</Roughness>
+          <MatType>0</MatType>
+          <TransmittanceColor>
+            <x>1</x>
+            <y>1</y>
+            <z>1</z>
+          </TransmittanceColor>
+          <IOR>1</IOR>
+          <Metallic>0</Metallic>
+          <Sheen>0</Sheen>
+          <SheenTint>0</SheenTint>
+          <SpecularTint>0</SpecularTint>
+          <Clearcoat>0</Clearcoat>
+          <ClearcoatGloss>0</ClearcoatGloss>
+          <Anisotropic>0</Anisotropic>
+          <AnisotropicRotation>0</AnisotropicRotation>
+          <Flatness>0</Flatness>
+          <DiffTrans>0.776</DiffTrans>
+          <SpecTrans>0</SpecTrans>
+          <Specular>0</Specular>
+          <ScatterDist>0.06</ScatterDist>
+          <MetallicRemap>
+            <x>0</x>
+            <y>1</y>
+          </MetallicRemap>
+          <RoughnessRemap>
+            <x>0</x>
+            <y>1</y>
+          </RoughnessRemap>
+          <AlphaCutoff>0.1</AlphaCutoff>
+          <NormalStrength>1</NormalStrength>
+          <Hue>0</Hue>
+          <Saturation>1</Saturation>
+          <Contrast>1</Contrast>
+          <Brightness>1</Brightness>
+          <BlendColor>
+            <x>1</x>
+            <y>1</y>
+            <z>1</z>
+          </BlendColor>
+          <BlendFactor>0</BlendFactor>
+          <ColorBleed>1</ColorBleed>
+          <AlbedoBlendFactor>0</AlbedoBlendFactor>
+          <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
+          <DetailNormalStrength>1</DetailNormalStrength>
+          <DiffTransRemap>
+            <x>0</x>
+            <y>1</y>
+          </DiffTransRemap>
+        </MatData>
+        <UseKelvin>false</UseKelvin>
+        <KelvinTemp>0</KelvinTemp>
+        <AlbedoGUID>2718676ffa386f649ad76de6aa0fda4f</AlbedoGUID>
+        <MetallicGUID>null</MetallicGUID>
+        <RoughnessGUID>null</RoughnessGUID>
+        <EmissionGUID>null</EmissionGUID>
+        <AlphaGUID>2718676ffa386f649ad76de6aa0fda4f</AlphaGUID>
+        <MatCapGUID>null</MatCapGUID>
+        <MatcapMaskGUID>null</MatcapMaskGUID>
+        <SecondaryAlbedoGUID>null</SecondaryAlbedoGUID>
+        <SecondaryAlbedoMaskGUID>null</SecondaryAlbedoMaskGUID>
+        <NormalGUID>null</NormalGUID>
+        <DiffTransGUID>null</DiffTransGUID>
+        <ShaderName>Standard</ShaderName>
+      </RayObjectDatas>
+      <RayObjectDatas>
+        <ID>0</ID>
+        <MatName>Frosted Glass</MatName>
+        <OptionID>0</OptionID>
+        <MatData>
+          <TextureModifiers>
+            <MainTexScaleOffset>
+              <x>1</x>
+              <y>1</y>
+              <z>0</z>
+              <w>0</w>
+            </MainTexScaleOffset>
+            <SecondaryTextureScaleOffset>
+              <x>1</x>
+              <y>1</y>
+              <z>0</z>
+              <w>0</w>
+            </SecondaryTextureScaleOffset>
+            <NormalTexScaleOffset>
+              <x>1</x>
+              <y>1</y>
+              <z>0</z>
+              <w>0</w>
+            </NormalTexScaleOffset>
+            <SecondaryAlbedoTexScaleOffset>
+              <x>1</x>
+              <y>1</y>
+              <z>0</z>
+              <w>0</w>
+            </SecondaryAlbedoTexScaleOffset>
+            <SecondaryNormalTexScaleOffset>
+              <x>1</x>
+              <y>1</y>
+              <z>0</z>
+              <w>0</w>
+            </SecondaryNormalTexScaleOffset>
+            <Rotation>0</Rotation>
+            <RotationNormal>0</RotationNormal>
+            <RotationSecondary>0</RotationSecondary>
+            <RotationSecondaryDiffuse>0</RotationSecondaryDiffuse>
+            <RotationSecondaryNormal>0</RotationSecondaryNormal>
+          </TextureModifiers>
+          <BaseColor>
+            <x>1</x>
+            <y>1</y>
+            <z>1</z>
+          </BaseColor>
+          <emission>4</emission>
+          <EmissionColor>
+            <x>0.198077589</x>
+            <y>0.7925993</y>
+            <z>0.9811321</z>
+          </EmissionColor>
+          <Tag>516</Tag>
+          <Roughness>0.173</Roughness>
+          <MatType>0</MatType>
+          <TransmittanceColor>
+            <x>1</x>
+            <y>1</y>
+            <z>1</z>
+          </TransmittanceColor>
+          <IOR>1.64</IOR>
+          <Metallic>0</Metallic>
+          <Sheen>0</Sheen>
+          <SheenTint>0</SheenTint>
+          <SpecularTint>0</SpecularTint>
+          <Clearcoat>0</Clearcoat>
+          <ClearcoatGloss>0</ClearcoatGloss>
+          <Anisotropic>0</Anisotropic>
+          <AnisotropicRotation>0</AnisotropicRotation>
+          <Flatness>0</Flatness>
+          <DiffTrans>0</DiffTrans>
+          <SpecTrans>1</SpecTrans>
+          <Specular>0</Specular>
+          <ScatterDist>0.16</ScatterDist>
+          <MetallicRemap>
+            <x>0</x>
+            <y>1</y>
+          </MetallicRemap>
+          <RoughnessRemap>
+            <x>0</x>
+            <y>1</y>
+          </RoughnessRemap>
+          <AlphaCutoff>0.1</AlphaCutoff>
+          <NormalStrength>1</NormalStrength>
+          <Hue>0</Hue>
+          <Saturation>1</Saturation>
+          <Contrast>1</Contrast>
+          <Brightness>1</Brightness>
+          <BlendColor>
+            <x>1</x>
+            <y>1</y>
+            <z>1</z>
+          </BlendColor>
+          <BlendFactor>0</BlendFactor>
+          <ColorBleed>1</ColorBleed>
+          <AlbedoBlendFactor>0</AlbedoBlendFactor>
+          <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
+          <DetailNormalStrength>1</DetailNormalStrength>
+          <DiffTransRemap>
+            <x>0</x>
+            <y>1</y>
+          </DiffTransRemap>
+        </MatData>
+        <UseKelvin>false</UseKelvin>
+        <KelvinTemp>0</KelvinTemp>
+        <AlbedoGUID>null</AlbedoGUID>
+        <MetallicGUID>null</MetallicGUID>
+        <RoughnessGUID>null</RoughnessGUID>
+        <EmissionGUID>70a41961453a8b64bae4ec01a24b2eb2</EmissionGUID>
+        <AlphaGUID>null</AlphaGUID>
+        <MatCapGUID>null</MatCapGUID>
+        <MatcapMaskGUID>null</MatcapMaskGUID>
+        <SecondaryAlbedoGUID>null</SecondaryAlbedoGUID>
+        <SecondaryAlbedoMaskGUID>null</SecondaryAlbedoMaskGUID>
+        <NormalGUID>ee39a73faafcfa448bb31144f2b06499</NormalGUID>
+        <DiffTransGUID>null</DiffTransGUID>
+        <ShaderName>Standard</ShaderName>
       </RayObjectDatas>
     </ContainedPresets>
   </RayObjFolder>

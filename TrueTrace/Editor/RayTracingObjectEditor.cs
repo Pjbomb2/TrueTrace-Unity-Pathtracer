@@ -60,7 +60,7 @@ namespace TrueTrace {
             
             {
                 int FolderCount = PresetMaster.PresetFolders.Count;
-                GUILayout.BeginScrollView(ScrollPosition, GUILayout.Width(100), GUILayout.Height(200));
+                ScrollPosition = GUILayout.BeginScrollView(ScrollPosition, GUILayout.Width(100), GUILayout.Height(200));
                 for(int i = 0; i < FolderCount; i++) {
                     if(!PresetMaster.PresetFolders[i].FolderName.Equals("COPYPASTEBUFFER")) {
                         if(GUILayout.Button(PresetMaster.PresetFolders[i].FolderName)) {
@@ -72,7 +72,7 @@ namespace TrueTrace {
                 GUILayout.EndScrollView();
             }
 
-
+            // GUILayout.Label ("", GUILayout.Width ( 100 ), GUILayout.Height ( 1500 ) );
             
             if(GUILayout.Button("Save Preset")) {
                 int FolderCount = PresetMaster.PresetFolders.Count;
@@ -102,6 +102,7 @@ namespace TrueTrace {
                 MaterialShader RelevantMat;
                 string AlbedoGUID = "null";
                 string MetallicGUID = "null";
+                string DiffTransGUID = "null";
                 string RoughnessGUID = "null";
                 string EmissionGUID = "null";
                 string AlphaGUID = "null";
@@ -135,6 +136,9 @@ namespace TrueTrace {
                                 case(TexturePurpose.Metallic):
                                     MetallicGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
                                 break;
+                                case(TexturePurpose.DiffTransTex):
+                                    DiffTransGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
                                 case(TexturePurpose.Roughness):
                                     RoughnessGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
                                 break;
@@ -167,6 +171,7 @@ namespace TrueTrace {
 
                     AlbedoGUID = AlbedoGUID,
                     MetallicGUID = MetallicGUID,
+                    DiffTransGUID = DiffTransGUID,
                     RoughnessGUID = RoughnessGUID,
                     EmissionGUID = EmissionGUID,
                     NormalGUID = NormalGUID,
@@ -361,6 +366,15 @@ namespace TrueTrace {
                                         } else TempMat.SetTexture(TexName, null);
                                     }
                                 break;
+                                case(TexturePurpose.DiffTransTex):
+                                    if (TempMat.HasProperty(TexName)) {
+                                        if(!(RayObj.DiffTransGUID.Equals("null"))) {
+                                            Texture2D TextureAsset = (AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(RayObj.DiffTransGUID), typeof(Texture)) as Texture2D);
+                                            if(TextureAsset != null) TempMat.SetTexture(TexName, TextureAsset);
+                                            else Debug.LogError("Missing Texture Asset At " + AssetDatabase.GUIDToAssetPath(RayObj.DiffTransGUID));
+                                        } else TempMat.SetTexture(TexName, null);
+                                    }
+                                break;
                                 case(TexturePurpose.Roughness):
                                     if (TempMat.HasProperty(TexName)) {
                                         if(!(RayObj.RoughnessGUID.Equals("null"))) {
@@ -433,6 +447,7 @@ namespace TrueTrace {
                 MaterialShader RelevantMat;
                 string AlbedoGUID = "null";
                 string MetallicGUID = "null";
+                string DiffTransGUID = "null";
                 string RoughnessGUID = "null";
                 string EmissionGUID = "null";
                 string AlphaGUID = "null";
@@ -466,6 +481,9 @@ namespace TrueTrace {
                                 case(TexturePurpose.Metallic):
                                     MetallicGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
                                 break;
+                                case(TexturePurpose.DiffTransTex):
+                                    DiffTransGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
+                                break;
                                 case(TexturePurpose.Roughness):
                                     RoughnessGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(TempMat.GetTexture(TexName)));
                                 break;
@@ -496,6 +514,7 @@ namespace TrueTrace {
 
                     AlbedoGUID = AlbedoGUID,
                     MetallicGUID = MetallicGUID,
+                    DiffTransGUID = DiffTransGUID,
                     RoughnessGUID = RoughnessGUID,
                     EmissionGUID = EmissionGUID,
                     NormalGUID = NormalGUID,
@@ -542,7 +561,7 @@ namespace TrueTrace {
                 }
             }
             if(Index == -1) return;
-            LoadFunction(PresetMaster.PresetFolders[FolderIndex].ContainedPresets[Index], true);
+            LoadFunction(PresetMaster.PresetFolders[FolderIndex].ContainedPresets[Index], Event.current.shift);
         }
 
         Dictionary<string, List<string>> DictionaryLinks;
@@ -655,6 +674,7 @@ namespace TrueTrace {
                     "Smoothness",
                     "Roughness",
                     "TransmissionColor",
+                    "DiffTransRemap",
                 });
 
             }
@@ -793,6 +813,11 @@ namespace TrueTrace {
                                 GUILayout.Label("Misc Maps", LabelStyleBolded);
                                 serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("SecondaryTextureScaleOffset").vector4Value = EditorGUILayout.Vector4Field("Scale/Offset: ", t.LocalMaterials[Selected].TextureModifiers.SecondaryTextureScaleOffset);
                                 serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TextureModifiers").FindPropertyRelative("RotationSecondary").floatValue = EditorGUILayout.Slider("Rotation: ", t.LocalMaterials[Selected].TextureModifiers.RotationSecondary, 0, 360);
+
+                                EditorGUILayout.MinMaxSlider("DiffTrans Remap: ", ref t.LocalMaterials[Selected].DiffTransRemap.x, ref t.LocalMaterials[Selected].DiffTransRemap.y, 0, 1);
+                                ConnectionSources.Add("DiffTransRemap", GUILayoutUtility.GetLastRect()); // Store position
+                                ConnectionSourceNames.Add("DiffTransRemap");
+
                             EditorGUILayout.EndVertical();
 
 
@@ -886,6 +911,8 @@ namespace TrueTrace {
                             serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("DiffTrans").floatValue = EditorGUILayout.Slider("Diffuse Transmission: ", t.LocalMaterials[Selected].DiffTrans, 0, 1);
                             ConnectionSources.Add("DiffTrans", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("DiffTrans");
+
+
                             serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("TransmittanceColor").vector3Value = EditorGUILayout.Vector3Field("Transmission Color: ", t.LocalMaterials[Selected].TransmittanceColor);
                             ConnectionSources.Add("TransmissionColor", GUILayoutUtility.GetLastRect()); // Store position
                             ConnectionSourceNames.Add("TransmissionColor");
@@ -955,6 +982,7 @@ namespace TrueTrace {
                                 ConnectionSourceNames.Add("Thin");
                                 Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.Invisible, EditorGUILayout.ToggleLeft("Invisible", Flag.GetFlag(CommonFunctions.Flags.Invisible), GUILayout.MaxWidth(135)));
                                 Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.IsBackground, EditorGUILayout.ToggleLeft("Is Background", Flag.GetFlag(CommonFunctions.Flags.IsBackground), GUILayout.MaxWidth(135)));
+                                Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.InvertAlpha, EditorGUILayout.ToggleLeft("Invert Alpha", Flag.GetFlag(CommonFunctions.Flags.InvertAlpha), GUILayout.MaxWidth(135)));
                             EditorGUILayout.EndHorizontal();
 
                             EditorGUILayout.Space();

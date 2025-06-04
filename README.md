@@ -1,6 +1,6 @@
 # TrueTrace: A High Performance Compute Shader based Unity Pathtracer
 
-![](/.Images/Yanus0.png)
+![](/.Images/Yanus1.png)
 ### A passion projects that has been going on for a while with the goal of bringing at least interactive path-tracing to everyone in unity, regardless of their hardware
 # Discord Server: https://discord.gg/4Yh7AZuhcD
 ## Demo:  https://drive.google.com/file/d/1sb_zRycX23AlC3QQ9LfqrtEZzBj47Z-Y/view?usp=sharing
@@ -298,15 +298,16 @@ GlobalDefines.cginc Description -
 
 # Sample Images(Taken from various stages of development)
 
+![](/.Images/Yanus2.png)
+![](/.Images/Yanus0.png)
+![](/.Images/ModernBistro.png)
+![](/.Images/NewSponza3V2.png)
+![](/.Images/NewSponza2V2.png)
 ![](/.Images/Arch2.png)
 ![](/.Images/CommonRender.png)
-![](/.Images/SunTemple1.png)
-![](/.Images/ModernBistro.png)
 ![](/.Images/ArchViz5.png)
 ![](/.Images/ArchViz4.png)
 ![](/.Images/Loft1.png)
-![](/.Images/NewSponza3V2.png)
-![](/.Images/NewSponza2V2.png)
 ![](/.Images/Cornell.png)
 ![](/.Images/Lego.png)
 ![](/.Images/SpaceShip.png)

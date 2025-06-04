@@ -269,6 +269,7 @@ namespace TrueTrace {
                             case 9: _Materials[SelectedTex.TexObjList[j].x].Textures.SecondaryAlbedoTex = VectoredTexIndex; break;
                             case 10: _Materials[SelectedTex.TexObjList[j].x].Textures.SecondaryAlbedoMask = VectoredTexIndex; break;
                             case 11: _Materials[SelectedTex.TexObjList[j].x].Textures.SecondaryNormalTex = VectoredTexIndex; break;
+                            case 12: _Materials[SelectedTex.TexObjList[j].x].Textures.DiffTransTex = VectoredTexIndex; break;
                             default: break;
                         }
                 }
@@ -319,6 +320,7 @@ namespace TrueTrace {
                         NormalAtlas = new Texture2D(DesiredRes,DesiredRes, TextureFormat.BC5, 1, false);
                     }
                 break;
+                case 12://DiffTransMap
                 case 3://metallicmap
                 case 4://roughnessmap
                     desc.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R32G32_SInt;
@@ -390,6 +392,7 @@ namespace TrueTrace {
                                 else if(TempRect.TexType == 5)  _Materials[SelectedTex.TexObjList[j].x].Textures.RoughnessTex = PackRect(RectSelect);
                                 else if(TempRect.TexType == 6)  _Materials[SelectedTex.TexObjList[j].x].Textures.MatCapMask = PackRect(RectSelect);
                                 else if(TempRect.TexType == 10)  _Materials[SelectedTex.TexObjList[j].x].Textures.SecondaryAlbedoMask = PackRect(RectSelect);
+                                else if(TempRect.TexType == 12) _Materials[SelectedTex.TexObjList[j].x].Textures.DiffTransTex = PackRect(RectSelect); 
                             break;
                             case 5: 
                                 _Materials[SelectedTex.TexObjList[j].x].Textures.EmissiveTex = PackRect(RectSelect); 
@@ -432,6 +435,7 @@ namespace TrueTrace {
                     case 4://roughness
                     case 7://alpha
                     case 8://IES
+                    case 12:
                         CopyShader.SetTexture(6, "SingleInput", SelectedTex.Tex);
                         CopyShader.SetTexture(6, "SingleOutput", Atlas);
                         CopyShader.Dispatch(6, (int)Mathf.CeilToInt(TempRect.Width * Scale.x / 4.0f), (int)Mathf.CeilToInt(TempRect.Height * Scale.y / 4.0f), 1);
@@ -604,6 +608,7 @@ namespace TrueTrace {
                         if(TempMat.Textures.MatCapTex.x != 0) KeyCheck(MatCount, Obj.MatCapTexs[(int)TempMat.Textures.MatCapTex.x-1], ref BindlessDict, ref BindlessRect, 4, 7);
                         if(TempMat.Textures.SecondaryAlbedoTex.x != 0) KeyCheck(MatCount, Obj.SecondaryAlbedoTexs[(int)TempMat.Textures.SecondaryAlbedoTex.x-1], ref BindlessDict, ref BindlessRect, 4, 9);
                         if(TempMat.Textures.SecondaryAlbedoMask.x != 0) KeyCheck(MatCount, Obj.SecondaryAlbedoTexMasks[(int)TempMat.Textures.SecondaryAlbedoMask.x-1], ref BindlessDict, ref BindlessRect, Obj.SecondaryAlbedoTexMaskChannelIndex[(int)TempMat.Textures.SecondaryAlbedoMask.x-1], 10);
+                        if(TempMat.Textures.DiffTransTex.x != 0) KeyCheck(MatCount, Obj.DiffTransTexs[(int)TempMat.Textures.DiffTransTex.x-1], ref BindlessDict, ref BindlessRect, Obj.DiffTransTexChannelIndex[(int)TempMat.Textures.DiffTransTex.x-1], 12);
                     #else
                         if(TempMat.Textures.AlbedoTex.x != 0) KeyCheck(MatCount, Obj.AlbedoTexs[(int)TempMat.Textures.AlbedoTex.x-1], ref AlbTextures, ref AlbRect, 0, 0);
                         if(TempMat.Textures.NormalTex.x != 0) KeyCheck(MatCount, Obj.NormalTexs[(int)TempMat.Textures.NormalTex.x-1], ref NormTextures, ref NormRect, 0, 1);
@@ -616,6 +621,7 @@ namespace TrueTrace {
                         if(TempMat.Textures.MatCapTex.x != 0) KeyCheck(MatCount, Obj.MatCapTexs[(int)TempMat.Textures.MatCapTex.x-1], ref AlbTextures, ref AlbRect, 0, 7);
                         if(TempMat.Textures.SecondaryAlbedoTex.x != 0) KeyCheck(MatCount, Obj.SecondaryAlbedoTexs[(int)TempMat.Textures.SecondaryAlbedoTex.x-1], ref AlbTextures, ref AlbRect, 0, 9);
                         if(TempMat.Textures.SecondaryAlbedoMask.x != 0) KeyCheck(MatCount, Obj.SecondaryAlbedoTexMasks[(int)TempMat.Textures.SecondaryAlbedoMask.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.SecondaryAlbedoTexMaskChannelIndex[(int)TempMat.Textures.SecondaryAlbedoMask.x-1], 10);
+                        if(TempMat.Textures.DiffTransTex.x != 0) KeyCheck(MatCount, Obj.DiffTransTexs[(int)TempMat.Textures.DiffTransTex.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.DiffTransTexChannelIndex[(int)TempMat.Textures.DiffTransTex.x-1], 12);
                     #endif
                     _Materials[MatCount] = TempMat;
                     MatCount++;
@@ -641,6 +647,7 @@ namespace TrueTrace {
                         if(TempMat.Textures.MatCapTex.x != 0) KeyCheck(MatCount, Obj.MatCapTexs[(int)TempMat.Textures.MatCapTex.x-1], ref BindlessDict, ref BindlessRect, 4, 7);
                         if(TempMat.Textures.SecondaryAlbedoTex.x != 0) KeyCheck(MatCount, Obj.SecondaryAlbedoTexs[(int)TempMat.Textures.SecondaryAlbedoTex.x-1], ref BindlessDict, ref BindlessRect, 4, 9);
                         if(TempMat.Textures.SecondaryAlbedoMask.x != 0) KeyCheck(MatCount, Obj.SecondaryAlbedoTexMasks[(int)TempMat.Textures.SecondaryAlbedoMask.x-1], ref BindlessDict, ref BindlessRect, Obj.SecondaryAlbedoTexMaskChannelIndex[(int)TempMat.Textures.SecondaryAlbedoMask.x-1], 10);
+                        if(TempMat.Textures.DiffTransTex.x != 0) KeyCheck(MatCount, Obj.DiffTransTexs[(int)TempMat.Textures.DiffTransTex.x-1], ref BindlessDict, ref BindlessRect, Obj.DiffTransTexChannelIndex[(int)TempMat.Textures.DiffTransTex.x-1], 12);
                     #else
                         if(TempMat.Textures.AlbedoTex.x != 0) KeyCheck(MatCount, Obj.AlbedoTexs[(int)TempMat.Textures.AlbedoTex.x-1], ref AlbTextures, ref AlbRect, 0, 0);
                         if(TempMat.Textures.NormalTex.x != 0) KeyCheck(MatCount, Obj.NormalTexs[(int)TempMat.Textures.NormalTex.x-1], ref NormTextures, ref NormRect, 0, 1);
@@ -653,6 +660,7 @@ namespace TrueTrace {
                         if(TempMat.Textures.MatCapTex.x != 0) KeyCheck(MatCount, Obj.MatCapTexs[(int)TempMat.Textures.MatCapTex.x-1], ref AlbTextures, ref AlbRect, 0, 7);
                         if(TempMat.Textures.SecondaryAlbedoTex.x != 0) KeyCheck(MatCount, Obj.SecondaryAlbedoTexs[(int)TempMat.Textures.SecondaryAlbedoTex.x-1], ref AlbTextures, ref AlbRect, 0, 9);
                         if(TempMat.Textures.SecondaryAlbedoMask.x != 0) KeyCheck(MatCount, Obj.SecondaryAlbedoTexMasks[(int)TempMat.Textures.SecondaryAlbedoMask.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.SecondaryAlbedoTexMaskChannelIndex[(int)TempMat.Textures.SecondaryAlbedoMask.x-1], 10);
+                        if(TempMat.Textures.DiffTransTex.x != 0) KeyCheck(MatCount, Obj.DiffTransTexs[(int)TempMat.Textures.DiffTransTex.x-1], ref SingleComponentTexture, ref SingleComponentRect, Obj.DiffTransTexChannelIndex[(int)TempMat.Textures.DiffTransTex.x-1], 12);
                     #endif
                     _Materials[MatCount] = TempMat;
                     MatCount++;
@@ -909,7 +917,9 @@ namespace TrueTrace {
                 MetallicRemapMin = "null",
                 MetallicRemapMax = "null",
                 RoughnessRemapMin = "null",
-                RoughnessRemapMax = "null"
+                RoughnessRemapMax = "null",
+                EmissionIntensityValue = "null",
+                EmissionColorValue = "null"
             });
             ShaderNames.Add(shader.name);
             NeedsToUpdateXML = true;

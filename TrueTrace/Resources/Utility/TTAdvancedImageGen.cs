@@ -54,6 +54,7 @@ namespace TrueTrace {
 #if MultiMapScreenshot
             public bool SaveImgMap;
 #endif
+            public bool ActivateCam;
             public UnityEngine.Playables.PlayableDirector OptionalDirector;
         }
         [SerializeField] public List<CameraListData> CameraList;
@@ -96,39 +97,41 @@ namespace TrueTrace {
                     if(!Running) {
                         Running = true;
                     }
-                    if (RayTracingMaster.RayMaster.FramesSinceStart >= CamSettings[CurrentCamera].MaxSamples || waitedTime >= CamSettings[CurrentCamera].TimeBetweenSegments) {
-                        waitedTime = 0;
-                        string SegmentNumber = "";
-                        int TempSeg = CurrentSegment;
-                        int[] NumSegments = new int[3];
-                        for(int i = 0; i < 3; i++) {
-                            NumSegments[i] = ((TempSeg) % 10);
-                            TempSeg /= 10;
-                        }
-                        for(int i = 0; i < 3; i++) {
-                            SegmentNumber += NumSegments[2 - i];
-                            if(i < 2) {
-                                SegmentNumber += "_";
+                    if (!CameraList[CurrentCamera].ActivateCam || RayTracingMaster.RayMaster.FramesSinceStart >= CamSettings[CurrentCamera].MaxSamples || waitedTime >= CamSettings[CurrentCamera].TimeBetweenSegments) {
+                        if(CameraList[CurrentCamera].ActivateCam) {
+                            waitedTime = 0;
+                            string SegmentNumber = "";
+                            int TempSeg = CurrentSegment;
+                            int[] NumSegments = new int[3];
+                            for(int i = 0; i < 3; i++) {
+                                NumSegments[i] = ((TempSeg) % 10);
+                                TempSeg /= 10;
                             }
-                        }
-                        if(!System.IO.Directory.Exists(PlayerPrefs.GetString("TurnTablePath") + "/" + CameraList[CurrentCamera].TargCam.gameObject.name.Replace(" ", ""))) {
-                            System.IO.Directory.CreateDirectory(PlayerPrefs.GetString("TurnTablePath") + "/" + CameraList[CurrentCamera].TargCam.gameObject.name.Replace(" ", ""));
-                        }
-                        string Path = PlayerPrefs.GetString("TurnTablePath") + "/" + CameraList[CurrentCamera].TargCam.gameObject.name.Replace(" ", "") + "/" + CameraList[CurrentCamera].TargCam.gameObject.name + "." + SegmentNumber + ".png";
-                        ScreenCapture.CaptureScreenshot(Path);
-                        #if MultiMapScreenshot
-                            if(CameraList[CurrentCamera].SaveImgMap) {
-                               SaveTexture(RayTracingMaster.RayMaster.MultiMapMatIDTexture, Path.Replace(".png", "") + "_MatID.png");
-                               SaveTexture(RayTracingMaster.RayMaster.MultiMapMeshIDTexture, Path.Replace(".png", "") + "_MeshID.png");
+                            for(int i = 0; i < 3; i++) {
+                                SegmentNumber += NumSegments[2 - i];
+                                if(i < 2) {
+                                    SegmentNumber += "_";
+                                }
                             }
-                        #endif
-                        CurrentSegment++;
-                        CameraList[CurrentCamera].TargCam.gameObject.transform.RotateAround(CamSettings[CurrentCamera].Center, Vector3.up, (360.0f / (float)CamSettings[CurrentCamera].HorizontalResolution));
-                        RayTracingMaster.SampleCount = 0;
-                        RayTracingMaster.RayMaster.FramesSinceStart = 0;
-                        RayTracingMaster.RayMaster._currentSample = 0;
-                        PrevImage = true;
-                        if(CurrentSegment == CamSettings[CurrentCamera].HorizontalResolution) {
+                            if(!System.IO.Directory.Exists(PlayerPrefs.GetString("TurnTablePath") + "/" + CameraList[CurrentCamera].TargCam.gameObject.name.Replace(" ", ""))) {
+                                System.IO.Directory.CreateDirectory(PlayerPrefs.GetString("TurnTablePath") + "/" + CameraList[CurrentCamera].TargCam.gameObject.name.Replace(" ", ""));
+                            }
+                            string Path = PlayerPrefs.GetString("TurnTablePath") + "/" + CameraList[CurrentCamera].TargCam.gameObject.name.Replace(" ", "") + "/" + CameraList[CurrentCamera].TargCam.gameObject.name + "." + SegmentNumber + ".png";
+                            ScreenCapture.CaptureScreenshot(Path);
+                            #if MultiMapScreenshot
+                                if(CameraList[CurrentCamera].SaveImgMap) {
+                                   SaveTexture(RayTracingMaster.RayMaster.MultiMapMatIDTexture, Path.Replace(".png", "") + "_MatID.png");
+                                   SaveTexture(RayTracingMaster.RayMaster.MultiMapMeshIDTexture, Path.Replace(".png", "") + "_MeshID.png");
+                                }
+                            #endif
+                            CurrentSegment++;
+                            CameraList[CurrentCamera].TargCam.gameObject.transform.RotateAround(CamSettings[CurrentCamera].Center, Vector3.up, (360.0f / (float)CamSettings[CurrentCamera].HorizontalResolution));
+                            RayTracingMaster.SampleCount = 0;
+                            RayTracingMaster.RayMaster.FramesSinceStart = 0;
+                            RayTracingMaster.RayMaster._currentSample = 0;
+                            PrevImage = true;
+                        }
+                        if(CameraList[CurrentCamera].ActivateCam || CurrentSegment == CamSettings[CurrentCamera].HorizontalResolution) {
                             CurrentSegment = 0;
                             waitedTime = 0;
                             CurrentCamera++;
@@ -191,7 +194,6 @@ namespace TrueTrace {
                 float _animCurrentTime = ((float)CurrentFrame / (float)CamSettings[CurrentCamera].TotalFrames) * _animTotalDuration;
                 CameraList[CurrentCamera].OptionalDirector.time = _animCurrentTime;
                 CameraList[CurrentCamera].OptionalDirector.Evaluate();
-                Debug.Log(CurrentFrame);
                 if((RayTracingMaster.SampleCount >= CamSettings[CurrentCamera].SamplesPerShot)) {
                     string Path = PlayerPrefs.GetString("TimelinePath") + "/" + RayTracingMaster._camera.name + "_" + CurrentFrame + ".png";
                     ScreenCapture.CaptureScreenshot(Path);
@@ -207,7 +209,7 @@ namespace TrueTrace {
                     IsRendering = false;
                     CurrentFrame++;
                 }
-                if(CurrentFrame > CamSettings[CurrentCamera].EndFrame) {
+                if(!CameraList[CurrentCamera].ActivateCam || CurrentFrame > CamSettings[CurrentCamera].EndFrame) {
                     CurrentCamera++;
                     if(CurrentCamera < CamSettings.Count) {
                         CameraList[CurrentCamera - 1].TargCam.gameObject.SetActive(false);
@@ -265,34 +267,50 @@ namespace TrueTrace {
                     float PaddingHalfValue = (Padding / 2.0f) / (float)FinalAtlasSize.x;
                     RayTracingMaster.RayMaster.CurrentHorizonalPatch = new Vector2((float)CurrentSegment / (float)HorizontalSegments - PaddingHalfValue, (float)(CurrentSegment + 1) / (float)HorizontalSegments + PaddingHalfValue);
                     waitedTime += Time.deltaTime;
-                    if (RayTracingMaster.RayMaster.FramesSinceStart >= MaxSamples || waitedTime >= TimeBetweenSegments) {
-                        waitedTime = 0;
-                        if(!System.IO.Directory.Exists(Application.dataPath.Replace("/Assets", "") + "/TempPanoramas")) {
-                            System.IO.Directory.CreateDirectory(Application.dataPath.Replace("/Assets", "") + "/TempPanoramas");
-                        }
-                        ScreenCapture.CaptureScreenshot(Application.dataPath.Replace("/Assets", "") + "/TempPanoramas/" + CurrentSegment + ".png");
-                        TexArray[CurrentSegment] = ScreenCapture.CaptureScreenshotAsTexture();
-                        #if MultiMapScreenshot
-                            if(CameraList[CurrentCamera].SaveImgMap) {
-                                MatTexArray[CurrentSegment] = ConvertTexture(RayTracingMaster.RayMaster.MultiMapMatIDTexture);
-                                MeshTexArray[CurrentSegment] = ConvertTexture(RayTracingMaster.RayMaster.MultiMapMeshIDTexture);
-                            }
-                        #endif
-
-
-                        CurrentSegment++;
-                        RayTracingMaster.SampleCount = 0;
-                        RayTracingMaster.RayMaster.FramesSinceStart = 0;
-                        RayTracingMaster.RayMaster._currentSample = 0;
-                        PrevPanorama = true;
-                        if(CurrentSegment == HorizontalSegments) {
-                            CurrentSegment = 0;
+                    if (!CameraList[CurrentCamera].ActivateCam || RayTracingMaster.RayMaster.FramesSinceStart >= MaxSamples || waitedTime >= TimeBetweenSegments) {
+                        if(CameraList[CurrentCamera].ActivateCam) {
                             waitedTime = 0;
-                        #if MultiMapScreenshot
-                            StitchSlices(CameraList[CurrentCamera].TargCam, CameraList[CurrentCamera].SaveImgMap);
-                        #else
-                            StitchSlices(CameraList[CurrentCamera].TargCam);
-                        #endif
+                            if(!System.IO.Directory.Exists(Application.dataPath.Replace("/Assets", "") + "/TempPanoramas")) {
+                                System.IO.Directory.CreateDirectory(Application.dataPath.Replace("/Assets", "") + "/TempPanoramas");
+                            }
+                            ScreenCapture.CaptureScreenshot(Application.dataPath.Replace("/Assets", "") + "/TempPanoramas/" + CurrentSegment + ".png");
+                            TexArray[CurrentSegment] = ScreenCapture.CaptureScreenshotAsTexture();
+                            #if MultiMapScreenshot
+                                if(CameraList[CurrentCamera].SaveImgMap) {
+                                    MatTexArray[CurrentSegment] = ConvertTexture(RayTracingMaster.RayMaster.MultiMapMatIDTexture);
+                                    MeshTexArray[CurrentSegment] = ConvertTexture(RayTracingMaster.RayMaster.MultiMapMeshIDTexture);
+                                }
+                            #endif
+
+
+                            CurrentSegment++;
+                            RayTracingMaster.SampleCount = 0;
+                            RayTracingMaster.RayMaster.FramesSinceStart = 0;
+                            RayTracingMaster.RayMaster._currentSample = 0;
+                            PrevPanorama = true;
+                            if(CurrentSegment == HorizontalSegments) {
+                                CurrentSegment = 0;
+                                waitedTime = 0;
+                            #if MultiMapScreenshot
+                                StitchSlices(CameraList[CurrentCamera].TargCam, CameraList[CurrentCamera].SaveImgMap);
+                            #else
+                                StitchSlices(CameraList[CurrentCamera].TargCam);
+                            #endif
+                                CurrentCamera++;
+                                if(CurrentCamera < CameraList.Count) {
+                                    CameraList[CurrentCamera - 1].TargCam.gameObject.SetActive(false);
+                                    CameraList[CurrentCamera].TargCam.gameObject.SetActive(true);
+                                    RayTracingMaster.RayMaster.TossCamera(CameraList[CurrentCamera].TargCam);
+                                    TTInterface.SetTTSettings(CameraList[CurrentCamera].CamSettings);
+                                } else {                            
+                                    // RemoveResolution(GetCount() - 1);
+                                    RayTracingMaster.RayMaster.DoPanorama = false;
+                                    RayTracingMaster.RayMaster.DoChainedImages = false;
+                                    Application.runInBackground = false;
+                                    EditorApplication.isPlaying = false;
+                                }
+                            }
+                        } else {
                             CurrentCamera++;
                             if(CurrentCamera < CameraList.Count) {
                                 CameraList[CurrentCamera - 1].TargCam.gameObject.SetActive(false);
@@ -306,8 +324,8 @@ namespace TrueTrace {
                                 Application.runInBackground = false;
                                 EditorApplication.isPlaying = false;
                             }
-
                         }
+
                     }
                 }
             }
@@ -677,6 +695,7 @@ namespace TrueTrace {
                     GUILayout.BeginHorizontal();
                     if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TurnTable || t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TimelineShooter) if(GUILayout.Button("Select", GUILayout.Width(50))) {SelectedCam = A;}
                     TTAdvancedImageGen.CameraListData TempDat = t.CameraList[i];
+                        TempDat.ActivateCam = EditorGUILayout.ToggleLeft("", TempDat.ActivateCam, GUILayout.MaxWidth(15));
                         TempDat.TargCam = EditorGUILayout.ObjectField(TempDat.TargCam, typeof(Camera), true, GUILayout.Width(150)) as Camera;
                         TempDat.CamSettings = EditorGUILayout.ObjectField(TempDat.CamSettings, typeof(TTSettings), true, GUILayout.Width(150)) as TTSettings;
                         if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TimelineShooter) TempDat.OptionalDirector = EditorGUILayout.ObjectField(TempDat.OptionalDirector, typeof(UnityEngine.Playables.PlayableDirector), true, GUILayout.Width(150)) as UnityEngine.Playables.PlayableDirector;
@@ -710,6 +729,7 @@ namespace TrueTrace {
             TTAdvancedImageGen.CameraListData TempElement = new TTAdvancedImageGen.CameraListData();
             TempElement.TargCam = TempCam;
             TempElement.CamSettings = TempSet;
+            TempElement.ActivateCam = true;
             // if(TempCam.TryGetComponent<UnityEngine.Playables.PlayableDirector>(out UnityEngine.Playables.PlayableDirector TempDir)) TempElement.OptionalDirector = TempDir;
             t.CameraList.Add(TempElement);
             if(t.SelectedFunctionality == TTAdvancedImageGen.ImageGenType.TimelineShooter) {

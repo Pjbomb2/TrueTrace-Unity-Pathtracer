@@ -13,7 +13,7 @@
 RWTexture2D<uint4> _PrimaryTriangleInfo;
 #pragma kernel kernel_trace 
 
-void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inout RayHit ray_hit, const int MatOffset, const float RandNum) {
+void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inout RayHit ray_hit, const int MatOffset, const float RandNum, inout float3 throughput) {
     TrianglePos tri = triangle_get_positions(tri_id);
 
     float3 h = cross(ray.direction, tri.posedge2);
@@ -36,8 +36,10 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
             #ifdef AdvancedAlphaMapped
                 [branch]if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
                     float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
-                    if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) 
-                        if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return;
+                    if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) { 
+                        float Alph = SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x;
+                        if((GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return;
+                    }
                 }
             #endif
             #ifdef IgnoreGlassMain
@@ -49,8 +51,15 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
             #ifdef FadeMapping
                 [branch]if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
                     float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
-                    if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
-                        if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= RandNum) return;
+                    if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) {
+                        float Alph = SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x;
+#ifdef AltFadeMapping
+                        throughput *= lerp(1, SampleTexture(BaseUv, SampleAlbedo, _IntersectionMaterials[MaterialIndex]), (GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) + _IntersectionMaterials[MaterialIndex].AlphaCutoff);
+                        return;
+#else
+                        if((GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= RandNum) return;
+#endif
+                    }
                 }
             #endif
             if(CurBounce == 0 && GetFlag(_IntersectionMaterials[MaterialIndex].Tag, Invisible)) return;
@@ -72,6 +81,7 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
     #endif
     RayHit bestHit;
     SmallerRay ray;
+    float3 throughput = 1;
     #ifndef HardwareRT
         int Reps = 0;
         uint2 stack[16];
@@ -133,8 +143,10 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                         if(CurBounce == 0 && GetFlag(_IntersectionMaterials[MaterialIndex].Tag, Invisible)) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
                         if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
                             float2 BaseUv = TOHALF(AggTrisA[tri_id].tex0) * (1.0f - bestHit.u - bestHit.v) + TOHALF(AggTrisA[tri_id].texedge1) * bestHit.u + TOHALF(AggTrisA[tri_id].texedge2) * bestHit.v;
-                            if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
-                                if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
+                            if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) {
+                                float Alph = SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x;
+                                if((GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) < _IntersectionMaterials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
+                            }
                         }
                     #endif
                     #ifdef IgnoreGlassMain
@@ -147,8 +159,15 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                     #ifdef FadeMapping
                         if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
                             float2 BaseUv = TOHALF(AggTrisA[tri_id].tex0) * (1.0f - bestHit.u - bestHit.v) + TOHALF(AggTrisA[tri_id].texedge1) * bestHit.u + TOHALF(AggTrisA[tri_id].texedge2) * bestHit.v;
-                            if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
-                                if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= RandNum) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
+                            if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) {
+                                float Alph = SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x;
+#ifdef AltFadeMapping           
+                                throughput *= lerp(1, SampleTexture(BaseUv, SampleAlbedo, _IntersectionMaterials[MaterialIndex]), (GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) + _IntersectionMaterials[MaterialIndex].AlphaCutoff);
+                                myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;
+#else
+                                if((GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= RandNum) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
+#endif
+                            }
                         }
                     #endif
                 }
@@ -161,6 +180,9 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
             int2 Indexes = int2(bestHit.mesh_id & 0x1FFFFFF, bestHit.mesh_id >> 25);
             [branch]if(CurBounce == 0) {
                 _PrimaryTriangleInfo[TempUv] = uint4(MeshOffsets[Indexes.x].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y] - _MeshData[MeshOffsets[Indexes.x].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
+#ifdef AltFadeMapping
+                GlobalColors[PixIndex].Flags = packRGBE(throughput);
+#endif
             } else if(GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec) == 0 || CurBounce + 1 == GetBounceData(GlobalColors[PixIndex].MetRoughIsSpec)) {
                 _PrimaryTriangleInfo[TempUv] = ((UseReSTIRGI && bestHit.t != FarPlane) ? uint4(MeshOffsets[Indexes.x].y, bestHit.triangle_id + SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y] - _MeshData[MeshOffsets[Indexes.x].y].TriOffset, asuint(bestHit.u), asuint(bestHit.v)) : ((UseASVGF || bestHit.t != FarPlane) ? uint4(asuint(ray.direction), 99993) : uint4(asuint(ray.direction * bestHit.t + ray.origin), 99993)));
             }
@@ -190,7 +212,7 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
             const int           idxTerminated = countbits(maskTerminated & ((1u << GTx) - 1));
             KilledNaturally = false;
             if(terminated) {
-            Reps = 0;
+                Reps = 0;
                 current_group.y = 0b10000000000000000000000000000000;//(uint)0x80000000;
 #else
                 current_group.y = (uint)0x80000000;
@@ -231,6 +253,7 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                 MatOffset = 0;
                 mesh_id = -1;
                 oct_inv4 = ray_get_octant_inv4(ray.direction);
+                throughput = 1;
     #if DebugView == DVBVHViewAdvanced
                 stack_memory_counter = 0;
                 node_memory_counter = 0;
@@ -303,7 +326,7 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                         while (triangle_group.y != 0) {
                             uint triangle_index = firstbithigh(triangle_group.y);
                             triangle_group.y &= ~(1 << triangle_index);
-                            IntersectTriangle(mesh_id, triangle_group.x + triangle_index, ray, bestHit, MatOffset, RandNum);//Intersect Mesh Triangles
+                            IntersectTriangle(mesh_id, triangle_group.x + triangle_index, ray, bestHit, MatOffset, RandNum, throughput);//Intersect Mesh Triangles
     #if DebugView == DVBVHViewAdvanced
                             triangle_traverse_counter += 1;
                             triangle_memory_counter += 52;
@@ -317,8 +340,12 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                     if (stack_size == 0) {//thread has finished traversing
                         int PixIndex = GlobalRay.PixelIndex;
                         uint2 TempUv = uint2(PixIndex % screen_width, PixIndex / screen_width);
+                        GlobalColors[PixIndex].throughput *= throughput;
                         [branch]if(CurBounce == 0) {
                             _PrimaryTriangleInfo[TempUv] = uint4(bestHit.mesh_id, bestHit.triangle_id - _MeshData[bestHit.mesh_id].TriOffset, asuint(bestHit.u), asuint(bestHit.v));
+#ifdef AltFadeMapping
+                GlobalColors[PixIndex].Flags = packRGBE(throughput);
+#endif
                             #if DebugView == DVBVHView
                                 _DebugTex[TempUv] = float4(Reps / 43.0f, Reps > 80, 0, 1);
                             #elif DebugView == DVBVHViewAdvanced
@@ -443,8 +470,10 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
                     #ifdef AdvancedAlphaMapped
                         if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
                             float2 BaseUv = TOHALF(AggTrisA[triangle_id].tex0) * (1.0f - u - v) + TOHALF(AggTrisA[triangle_id].texedge1) * u + TOHALF(AggTrisA[triangle_id].texedge2) * v;
-                            if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
-                                if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;}
+                            if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) {
+                                float Alph = SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x;
+                                if((GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) < _IntersectionMaterials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;}
+                            }
                         }
                     #endif
                     #ifdef IgnoreBackfacing

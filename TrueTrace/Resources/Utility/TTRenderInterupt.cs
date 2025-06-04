@@ -8,8 +8,8 @@ namespace TrueTrace {
     {
         RayTracingMaster RayMaster;
         public void Initialize(Camera Cam) {
-            if(GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>().Length == 0) {RayMaster = null; return;}
-            RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
+            if(GameObject.FindObjectsOfType<RayTracingMaster>().Length == 0) {RayMaster = null; return;}
+            RayMaster = GameObject.FindObjectsOfType<RayTracingMaster>()[0];
             Cam.renderingPath = RenderingPath.DeferredShading;
             Cam.depthTextureMode |= DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
             RayMaster.TossCamera(Cam);
@@ -18,7 +18,7 @@ namespace TrueTrace {
         }
 
         public void RenderToRenderTexture(RenderTexture RefTex, Camera TargCam) {
-            if(RayMaster == null) RayMaster = GameObject.FindObjectsOfType<TrueTrace.RayTracingMaster>()[0];
+            if(RayMaster == null) RayMaster = GameObject.FindObjectsOfType<RayTracingMaster>()[0];
             RayMaster.TossCamera(TargCam);
             RayMaster.OverrideResolution(RefTex.width, RefTex.height);
             if(RayMaster == null) return;

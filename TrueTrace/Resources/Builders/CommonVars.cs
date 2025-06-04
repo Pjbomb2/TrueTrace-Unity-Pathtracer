@@ -167,6 +167,7 @@ namespace CommonVars
         public Vector2Int SecondaryAlbedoTex;
         public Vector2Int SecondaryAlbedoMask;
         public Vector2Int SecondaryNormalTex;
+        public Vector2Int DiffTransTex;
     }
     [System.Serializable]
     public struct MatTextureModifierData
@@ -234,6 +235,7 @@ namespace CommonVars
         public float AlbedoBlendFactor;
         public float SecondaryNormalTexBlend;
         public float DetailNormalStrength;
+        public Vector2 DiffTransRemap;
     }
 
     [System.Serializable]
@@ -268,7 +270,7 @@ namespace CommonVars
         public int ReadIndex;
         public List<Vector3Int> TexObjList = new List<Vector3Int>();
     }   
-    public enum TexturePurpose {Albedo, Alpha, Normal, Emission, Metallic, Roughness, MatCapTex, MatCapMask, SecondaryAlbedoTexture, SecondaryAlbedoTextureMask, SecondaryNormalTexture};
+    public enum TexturePurpose {Albedo, Alpha, Normal, Emission, Metallic, Roughness, MatCapTex, MatCapMask, SecondaryAlbedoTexture, SecondaryAlbedoTextureMask, SecondaryNormalTexture, DiffTransTex};
 
     [System.Serializable]
     public class TexturePairs {
@@ -293,6 +295,8 @@ namespace CommonVars
         public string MetallicRemapMax;
         public string RoughnessRemapMin;
         public string RoughnessRemapMax;
+        public string EmissionColorValue;
+        public string EmissionIntensityValue;
     }
     [System.Serializable]
     public class Materials
@@ -323,6 +327,7 @@ namespace CommonVars
         public string SecondaryAlbedoGUID;
         public string SecondaryAlbedoMaskGUID;
         public string NormalGUID;
+        public string DiffTransGUID;
         public string ShaderName;
     }
     [System.Serializable]
@@ -505,6 +510,34 @@ namespace CommonVars
             BBMin = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
         }
 
+        public AABB(CudaTriangle Tri) { 
+            BBMax = Vector3.Max(Vector3.Max(Tri.pos0, Tri.pos0 + Tri.posedge1), Tri.pos0 + Tri.posedge2);
+            BBMin = Vector3.Min(Vector3.Min(Tri.pos0, Tri.pos0 + Tri.posedge1), Tri.pos0 + Tri.posedge2);
+            // this.Validate(new Vector3(0.1f,0.1f,0.1f));
+        }
+        public int LargestAxis() {
+            Vector3 Sizes = BBMax - BBMin;
+            int Lorge = 0;
+            float Lorgest = Sizes.x;
+            if(Sizes.y > Lorgest) {
+                Lorgest = Sizes.y;
+                Lorge = 1;
+            }
+            if(Sizes.z > Lorgest) {
+                Lorge = 2;
+            }
+            return Lorge;
+        }
+
+        public float LargestExtent(int Axis) {
+            Vector3 Sizes = BBMax - BBMin;
+            return Sizes[Axis];
+        }
+
+        public void ShrinkToFit(AABB SideAABB) {
+            BBMax = Vector3.Min(BBMax, SideAABB.BBMax);
+            BBMin = Vector3.Max(BBMin, SideAABB.BBMin);
+        }
         public void Create(Vector3 A, Vector3 B)
         {
             this.BBMax = A;//new Vector3(System.Math.Max(A.x, B.x), System.Math.Max(A.y, B.y), System.Math.Max(A.z, B.z));
@@ -700,6 +733,49 @@ namespace CommonVars
 
         public uint MatDat;
         public uint IsEmissive;
+
+        Vector3 split_edge(int axis, float position, Vector3 a, Vector3 b) {
+            float t = (position - a[axis]) / (b[axis] - a[axis]);
+            return a + t * (b - a);
+        }
+        public AABB[] Split(int axis, float position) {
+            Vector3[] p = { pos0, pos0 + posedge1, pos0 + posedge2 };
+            AABB left  = new AABB();
+            left.init();
+            AABB right = new AABB();
+            right.init();
+            bool q0 = p[0][axis] <= position;
+            bool q1 = p[1][axis] <= position;
+            bool q2 = p[2][axis] <= position;
+            if (q0) left.Extend(p[0]);
+            else    right.Extend(p[0]);
+            if (q1) left.Extend(p[1]);
+            else    right.Extend(p[1]);
+            if (q2) left.Extend(p[2]);
+            else    right.Extend(p[2]);
+            if (q0 ^ q1) {
+                Vector3 m = split_edge(axis, position, p[0], p[1]);
+                left.Extend(m);
+                right.Extend(m);
+            }
+            if (q1 ^ q2) {
+                Vector3 m = split_edge(axis, position, p[1], p[2]);
+                left.Extend(m);
+                right.Extend(m);
+            }
+            if (q2 ^ q0) {
+                Vector3 m = split_edge(axis, position, p[2], p[0]);
+                left.Extend(m);
+                right.Extend(m);
+            }
+            AABB[] RetAABB = new AABB[2];
+            // left.Validate(new Vector3(0.0001f,0.0001f,0.0001f));
+            // right.Validate(new Vector3(0.0001f,0.0001f,0.0001f));
+            RetAABB[0] = left;
+            RetAABB[1] = right;
+            return RetAABB;
+        }
+
     }
 
 
@@ -1094,7 +1170,7 @@ namespace CommonVars
         }
 
 
-        public enum Flags {IsEmissionMask, BaseIsMap, ReplaceBase, UseSmoothness, InvertSmoothnessTexture, IsBackground, ShadowCaster, Invisible, BackgroundBleed, Thin, UseVertexColors};
+        public enum Flags {IsEmissionMask, BaseIsMap, ReplaceBase, UseSmoothness, InvertSmoothnessTexture, IsBackground, ShadowCaster, Invisible, BackgroundBleed, Thin, UseVertexColors, InvertAlpha};
         //0-10 Flags
         //28-30 SecondaryAlbedoStride
 
@@ -1188,6 +1264,7 @@ namespace CommonVars
             NewMat.AlbedoBlendFactor = 0;
             NewMat.SecondaryNormalTexBlend = 0;
             NewMat.DetailNormalStrength = 1;
+            NewMat.DiffTransRemap = new Vector2(0,1);
             return NewMat;
         }
 
