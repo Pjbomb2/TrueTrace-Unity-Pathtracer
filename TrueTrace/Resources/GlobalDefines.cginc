@@ -27,11 +27,9 @@
 #define DoubleBufferSGTree
 // #define Fog
 #define RadCache
-// #define ClampRoughnessToBounce
+#define ClampRoughnessToBounce
 // #define ReSTIRSampleReduction
-// #define ReSTIRRestrictSpatial
-// #define SmartRestriction
-// #define RestirPreventCrossMatBlur
+// #define ReSTIRReflectionRefinement
 // #define ShadowGlassAttenuation
 // #define DisableNormalMaps
 // #define ClayMetalOverride

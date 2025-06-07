@@ -1327,7 +1327,8 @@ namespace TrueTrace {
                                     (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB, 
                                     LocalTTSettings.UpscalerMethod, 
                                     CorrectedDistanceTexA, 
-                                    CorrectedDistanceTexB);
+                                    CorrectedDistanceTexB,
+                                    PSRGBuff);
                     CurrentSample = 1;
                     if(DoKernelProfiling) cmd.EndSample("ASVGF");
                 } else if(LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1) {

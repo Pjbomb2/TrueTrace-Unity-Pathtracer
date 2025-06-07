@@ -232,7 +232,7 @@ SH irradiance_to_SH(float3 color, float3 dir)
 RWTexture2D<uint2> AlbedoColorA;
 Texture2D<uint2> AlbedoColorB;
 
-
+Texture2D<uint4> PSRGBuff;
 
 float4x4 viewprojection;
 float4x4 prevviewprojection;
@@ -246,6 +246,7 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 	const uint4 ScreenInfo = asuint(ScreenSpaceInfo[id.xy]);
 	float3 TexBaseColor = Pixel.Data.xyz;
 	uint2 AlbCol = Pixel.Flags;
+    // uint2 AlbCol = asuint(PSRGBuff[id.xy].y);
 	if(GetBounceData(Pixel.MetRoughIsSpec) != 1) AlbCol = packRGBE(max(unpackRGBE(AlbCol), 0.01f));
 	Pixel.Flags = packRGBE(max(unpackRGBE(Pixel.Flags), 0.01f));
 	float2 MetRough = FromColorSpecPacked(Pixel.MetRoughIsSpec);

@@ -582,7 +582,7 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
             if(CellTapCoord.y < 0 || CellTapCoord.y >= screen_height) CellTapCoord.y = id.y - CellOffset.y;
             if(all(CellTapCoord == id.xy)) continue;
             if(asuint(ScreenSpaceInfoRead[CellTapCoord].w) == 0) continue;
-#ifdef RestirPreventCrossMatBlur
+#ifdef ReSTIRReflectionRefinement
             if(SurfaceMat.metallic > 0 && ((asuint(ScreenSpaceInfoRead[CellTapCoord].w) << 4) >> 4) != MatIndex) continue;
 #endif
             float3 SampleGeomNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].x));
@@ -626,12 +626,8 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
                 
 
             float Dist = length(SampleRayDir - CenterRayDir);
-#ifdef ReSTIRRestrictSpatial
-        #ifdef SmartRestriction
-                RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((Case != 0) + SurfaceMat.roughness));
-        #else
-                RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((1.0f - SurfaceMat.metallic) + SurfaceMat.roughness));
-        #endif
+#ifdef ReSTIRReflectionRefinement
+            RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((Case != 0) + SurfaceMat.roughness));
 #endif
             [branch]if(Dist < 1.0f) {
                 RayDirWeight = lerp(1.0f - exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, SurfaceMat.roughness);
@@ -711,8 +707,8 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     Valid2 = ReconstructBsdf2(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, TangSpace, pixel_index);
     Valid2 = EvaluateBsdf2(SurfaceMat, CameraRay.direction, normalize(NEEPos - PrimaryHitPosition), SurfNorm, pdf, NEEbsdf, pixel_index, TangSpace);
 
-    RunningReservoirB.Radiance.W = (luminance(RunningReservoirB.Radiance.Color * bsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirB.Radiance.Color * bsdf)) * (1.0f / (1.0f + K))) * RunningReservoirB.Radiance.Wsum);// / max((RunningReservoirB.Radiance.M) * luminance(RunningReservoirB.Radiance.Color * bsdf), 1e-7) ;
-    RunningReservoirC.W = (luminance(RunningReservoirC.Color * NEEbsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirC.Color * NEEbsdf)) * (1.0f / (1.0f + K))) * RunningReservoirC.Wsum);//RunningReservoirC.Radiance.Wsum / max((RunningReservoirC.Radiance.M) * luminance(RunningReservoirC.Radiance.Color * NEEbsdf), 1e-7) ;       
+    RunningReservoirB.Radiance.W = clamp((luminance(RunningReservoirB.Radiance.Color * bsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirB.Radiance.Color * bsdf)) * (1.0f / (1.0f + K))) * RunningReservoirB.Radiance.Wsum), 0, 10000.0f);// / max((RunningReservoirB.Radiance.M) * luminance(RunningReservoirB.Radiance.Color * bsdf), 1e-7) ;
+    RunningReservoirC.W = clamp((luminance(RunningReservoirC.Color * NEEbsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirC.Color * NEEbsdf)) * (1.0f / (1.0f + K))) * RunningReservoirC.Wsum), 0, 10000.0f);//RunningReservoirC.Radiance.Wsum / max((RunningReservoirC.Radiance.M) * luminance(RunningReservoirC.Radiance.Color * NEEbsdf), 1e-7) ;       
 
     WorldPosA[id.xy] = WorldPos;
     NEEPosA[id.xy] = NEEPos;
@@ -817,7 +813,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
             if(all(CellTapCoord == id.xy)) continue;
             if(asuint(ScreenSpaceInfoRead[CellTapCoord].w) == 0) continue;
 
-#ifdef RestirPreventCrossMatBlur
+#ifdef ReSTIRReflectionRefinement
             if(SurfaceMat.metallic > 0 && ((asuint(ScreenSpaceInfoRead[CellTapCoord].w) << 4) >> 4) != MatIndex) continue;
 #endif
             float3 SampleGeomNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].x));
@@ -863,12 +859,8 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
                 
 
             float Dist = length(SampleRayDir - CenterRayDir);
-#ifdef ReSTIRRestrictSpatial
-        #ifdef SmartRestriction
-                RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((Case != 0) + SurfaceMat.roughness));
-        #else
-                RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((1.0f - SurfaceMat.metallic) + SurfaceMat.roughness));
-        #endif
+#ifdef ReSTIRReflectionRefinement
+            RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((Case != 0) + SurfaceMat.roughness));
 #endif
             [branch]if(Dist < 1.0f) {
                 RayDirWeight = lerp(1.0f - exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, SurfaceMat.roughness);
@@ -1023,8 +1015,8 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
     Valid2 = ReconstructBsdf2(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, TangSpace, pixel_index);
     Valid2 = EvaluateBsdf2(SurfaceMat, CameraRay.direction, normalize(NEEPos - PrimaryHitPosition), SurfNorm, pdf, NEEbsdf, pixel_index, TangSpace);
 
-    RunningReservoirB.Radiance.W = (luminance(RunningReservoirB.Radiance.Color * bsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirB.Radiance.Color * bsdf)) * (1.0f / (1.0f + K))) * RunningReservoirB.Radiance.Wsum);// / max((RunningReservoirB.Radiance.M) * luminance(RunningReservoirB.Radiance.Color * bsdf), 1e-7) ;
-    RunningReservoirC.W = (luminance(RunningReservoirC.Color * NEEbsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirC.Color * NEEbsdf)) * (1.0f / (1.0f + K))) * RunningReservoirC.Wsum);//RunningReservoirC.Radiance.Wsum / max((RunningReservoirC.Radiance.M) * luminance(RunningReservoirC.Radiance.Color * NEEbsdf), 1e-7) ;       
+    RunningReservoirB.Radiance.W = clamp((luminance(RunningReservoirB.Radiance.Color * bsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirB.Radiance.Color * bsdf)) * (1.0f / (1.0f + K))) * RunningReservoirB.Radiance.Wsum),0,1000.0f);// / max((RunningReservoirB.Radiance.M) * luminance(RunningReservoirB.Radiance.Color * bsdf), 1e-7) ;
+    RunningReservoirC.W = clamp((luminance(RunningReservoirC.Color * NEEbsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirC.Color * NEEbsdf)) * (1.0f / (1.0f + K))) * RunningReservoirC.Wsum),0,1000.0f);//RunningReservoirC.Radiance.Wsum / max((RunningReservoirC.Radiance.M) * luminance(RunningReservoirC.Radiance.Color * NEEbsdf), 1e-7) ;       
     Valid2 = EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(NEEPos - PrimaryHitPosition), SurfNorm, pdf, NEEbsdf, pixel_index);
     RunningReservoirB.Radiance.W *= RunningReservoirB.Radiance.W < 100.0f;
     RunningReservoirC.W *= RunningReservoirC.W < 100.0f;
