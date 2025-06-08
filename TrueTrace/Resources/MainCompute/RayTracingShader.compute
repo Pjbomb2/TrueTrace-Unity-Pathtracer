@@ -1462,6 +1462,7 @@ RWTexture2D<float4> RRDiffAlbedoTex;
 RWTexture2D<float4> RRSpecAlbedoTex;
 RWTexture2D<float4> RRNormTex;
 RWTexture2D<float> RRRoughTex;
+RWTexture2D<float> RRDistTex;
 
 
 #pragma kernel TTToRR
@@ -1471,8 +1472,9 @@ void TTToRR(uint3 id : SV_DispatchThreadID) {
     const int pixel_index = id.x + id.y * screen_width;
     const ColData TempCol = GlobalColors[pixel_index];
     RRDiffAlbedoTex[id.xy] = float4(unpackRGBE(asuint(PSRGBuff[id.xy].y)),1);// TempCol.Data.xyz, 1);
-    RRSpecAlbedoTex[id.xy] = float4(TempCol.Data.xyz, 1);
+    RRSpecAlbedoTex[id.xy] = float4(unpackRGBE(asuint(PSRGBuff[id.xy].y)), 1);
     RRNormTex[id.xy] = float4(i_octahedral_32(asuint(ScreenSpaceInfo[id.xy].y)), 1);
-    RRRoughTex[id.xy] = 1;//float4(i_octahedral_32(asuint(ScreenSpaceInfo[id.xy].y)), 1);
+    RRRoughTex[id.xy] = saturate(FromColorSpecPacked(TempCol.MetRoughIsSpec).y + (1.0f - FromColorSpecPacked(TempCol.MetRoughIsSpec).x));//float4(i_octahedral_32(asuint(ScreenSpaceInfo[id.xy].y)), 1);
+    RRDistTex[id.xy] = PSRGBuff[id.xy].z;//ScreenSpaceInfo[id.xy].z;//PSRGBuff[id.xy].z;
 
 }

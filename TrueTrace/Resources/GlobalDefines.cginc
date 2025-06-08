@@ -4,7 +4,7 @@
 #define UseBindless
 #define UseSGTree
 #define TTCustomMotionVectors
-// #define TTReflectionMotionVectors
+#define TTReflectionMotionVectors
 // #define MultiMapScreenshot
 // #define RasterizedDirect
 //Dont modify above, CPU code will do automatically
@@ -26,7 +26,7 @@
 #define UseBRDFLights
 #define DoubleBufferSGTree
 // #define Fog
-// #define RadCache
+#define RadCache
 // #define ClampRoughnessToBounce
 // #define ReSTIRSampleReduction
 // #define ReSTIRRestrictSpatial

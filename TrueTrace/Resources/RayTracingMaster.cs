@@ -99,6 +99,7 @@ namespace TrueTrace {
         public RenderTexture RRSpecAlbedoTex;
         public RenderTexture RRNormTex;
         public RenderTexture RRRoughTex;
+        public RenderTexture RRDistTex;
 
 
         private RenderTexture GIWorldPosA;
@@ -1030,6 +1031,7 @@ namespace TrueTrace {
                     RRSpecAlbedoTex.ReleaseSafe();
                     RRNormTex.ReleaseSafe();
                     RRRoughTex.ReleaseSafe();
+                    RRDistTex.ReleaseSafe();
                     _PrimaryTriangleInfoA.ReleaseSafe();
                     _PrimaryTriangleInfoB.ReleaseSafe();
 #if TTCustomMotionVectors
@@ -1115,6 +1117,7 @@ namespace TrueTrace {
             CommonFunctions.CreateRenderTexture(ref RRSpecAlbedoTex, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
             CommonFunctions.CreateRenderTexture(ref RRNormTex, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
             CommonFunctions.CreateRenderTexture(ref RRRoughTex, SourceWidth, SourceHeight, CommonFunctions.RTFull1);
+            CommonFunctions.CreateRenderTexture(ref RRDistTex, SourceWidth, SourceHeight, CommonFunctions.RTFull1);
             if(!LocalTTSettings.UseReSTIRGI && ReSTIRInitialized) {
                 GIReservoirA.ReleaseSafe();
                 GIReservoirB.ReleaseSafe();
@@ -1488,6 +1491,7 @@ namespace TrueTrace {
                     ShadingShader.SetTexture(MVKernel+3, "RRSpecAlbedoTex", RRSpecAlbedoTex);
                     ShadingShader.SetTexture(MVKernel+3, "RRNormTex", RRNormTex);
                     ShadingShader.SetTexture(MVKernel+3, "RRRoughTex", RRRoughTex);
+                    ShadingShader.SetTexture(MVKernel+3, "RRDistTex", RRDistTex);
                     ShadingShader.SetTexture(MVKernel+3, "PSRGBuff", PSRGBuff);
                     ShadingShader.SetBuffer(MVKernel+3, "GlobalColors", LightingBuffer);
                     cmd.DispatchCompute(ShadingShader, MVKernel+3, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);            
@@ -1498,14 +1502,14 @@ namespace TrueTrace {
                     // Basic input/output
                     dlssEvalParams.pInColor = _target.GetNativeTexturePtr();
                     dlssEvalParams.pInOutput = _FinalTex.GetNativeTexturePtr();
-                    dlssEvalParams.pInDepth = CorrectedDistanceTexA.GetNativeTexturePtr();
+                    dlssEvalParams.pInDepth = RRDistTex.GetNativeTexturePtr();
                     dlssEvalParams.pInMotionVectors = MVTexture.GetNativeTexturePtr();
 
 
                     dlssEvalParams.pInDiffuseAlbedo = RRDiffAlbedoTex.GetNativeTexturePtr();
                     dlssEvalParams.pInSpecularAlbedo = RRSpecAlbedoTex.GetNativeTexturePtr();
                     dlssEvalParams.pInNormals = RRNormTex.GetNativeTexturePtr();
-                    dlssEvalParams.pInRoughness = Texture2D.whiteTexture.GetNativeTexturePtr();
+                    dlssEvalParams.pInRoughness = RRRoughTex.GetNativeTexturePtr();
 
                     dlssEvalParams.InJitterOffsetX = 0;//-(cameraSample.x - 0.5f);
                     dlssEvalParams.InJitterOffsetY = 0;//-(cameraSample.y - 0.5f);
