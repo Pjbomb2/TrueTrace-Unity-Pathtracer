@@ -28,10 +28,10 @@ MonoBehaviour:
   DoFFocal: 5.2216897
   PPExposure: 0
   ExposureAuto: 0
-  PPToneMap: 1
+  PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
-  DenoiserMethod: 1
+  DenoiserMethod: 4
   UpscalerMethod: 0
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
@@ -40,7 +40,7 @@ MonoBehaviour:
   ReSTIRGISpatialRadius: 50
   ReSTIRGITemporalMCap: 4
   DoReSTIRGIConnectionValidation: 1
-  Exposure: 3.7
+  Exposure: 5.4
   DoPartialRendering: 0
   PartialRenderingFactor: 1
   DoFirefly: 0
@@ -74,7 +74,7 @@ MonoBehaviour:
   UseTransmittanceInNEE: 1
   SecondarySkyDesaturate: 0
   MatChangeResetsAccum: 1
-  PPFXAA: 0
+  PPFXAA: 1
   OIDNBlendRatio: 1
   ConvBloom: 1
   ConvStrength: 0.04

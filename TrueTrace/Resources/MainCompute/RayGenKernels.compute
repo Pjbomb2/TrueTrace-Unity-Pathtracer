@@ -21,13 +21,6 @@ bool UseASVGFAndReSTIR;
 void Generate(uint3 id : SV_DispatchThreadID) {
 
     if (id.x >= screen_width || id.y >= screen_height) return;
-    // if(id.y == 0 && id.x < MaxBounce + 1) {
-    //     BufferSizes[id.x] = (BufferSizeData)0;
-    //     if(id.x == 0) {
-    //         BufferSizes[id.x].tracerays = screen_width * screen_height;
-    //         BufferSizes[id.x].heighmap_rays = screen_width * screen_height;
-    //     }
-    // }
     const uint pixel_index = id.y * screen_width + id.x;
     float2 jitter = ((random(0, pixel_index) - 0.5));
     if(OIDNGuideWrite || UseASVGFAndReSTIR) jitter = 0;

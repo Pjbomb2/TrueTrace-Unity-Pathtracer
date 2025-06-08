@@ -16,6 +16,12 @@ using UnityEditor.UIElements;
 namespace TrueTrace {
     public class RayTracingMaster : MonoBehaviour
     {
+
+ private int m_dlssHandle = DenoiserPlugin.DlssSdk.DLSS_INVALID_FEATURE_HANDLE;
+        private System.IntPtr m_dlssParameters = System.IntPtr.Zero;
+        private bool m_dlssInitialized = false;
+
+
         public static RayTracingMaster RayMaster;
         [HideInInspector] public static Camera _camera;
         public static bool DoKernelProfiling = true;
@@ -79,8 +85,8 @@ namespace TrueTrace {
         [HideInInspector] public RenderTexture MultiMapMeshIDTextureInitial;
         [HideInInspector] public RenderTexture MultiMapMeshIDTexture;
 #endif
-#if TTCustomMotionVectors
         private RenderTexture MVTexture;
+#if TTCustomMotionVectors
 #endif
         private RenderTexture GIReservoirA;
         private RenderTexture GIReservoirB;
@@ -88,6 +94,12 @@ namespace TrueTrace {
 
 
         public RenderTexture PSRGBuff;
+
+        public RenderTexture RRDiffAlbedoTex;
+        public RenderTexture RRSpecAlbedoTex;
+        public RenderTexture RRNormTex;
+        public RenderTexture RRRoughTex;
+
 
         private RenderTexture GIWorldPosA;
         private RenderTexture GIWorldPosB;
@@ -187,8 +199,8 @@ namespace TrueTrace {
         private int TTtoOIDNKernel;
         private int OIDNtoTTKernel;
         private int TTtoOIDNKernelPanorama;
-#if TTCustomMotionVectors
         private int MVKernel;
+#if TTCustomMotionVectors
 #endif
         #if !DisableRadianceCache
             private int ResolveKernel;
@@ -448,6 +460,8 @@ namespace TrueTrace {
                 OutputBuffer.ReleaseSafe();
                 AlbedoBuffer.ReleaseSafe();
                 NormalBuffer.ReleaseSafe();
+                DenoiserPlugin.DlssSdk.DLSS_Shutdown();
+
                 if(OIDNDenoiser != null) {
                     OIDNDenoiser.Dispose();
                     OIDNDenoiser = null;
@@ -878,14 +892,14 @@ namespace TrueTrace {
             
 
             #if UseOIDN
-                ShadingShader.SetBuffer(TTtoOIDNKernel, "AlbedoBuffer", AlbedoBuffer);
-                ShadingShader.SetBuffer(TTtoOIDNKernel, "NormalBuffer", NormalBuffer);
-                ShadingShader.SetTexture(TTtoOIDNKernel, "ScreenSpaceInfo", ScreenSpaceInfo);
-                ShadingShader.SetComputeBuffer(TTtoOIDNKernel, "GlobalColors", LightingBuffer);
-                ShadingShader.SetBuffer(TTtoOIDNKernelPanorama, "AlbedoBuffer", AlbedoBuffer);
-                ShadingShader.SetBuffer(TTtoOIDNKernelPanorama, "NormalBuffer", NormalBuffer);
-                ShadingShader.SetTexture(TTtoOIDNKernelPanorama, "ScreenSpaceInfo", ScreenSpaceInfo);
-                ShadingShader.SetComputeBuffer(TTtoOIDNKernelPanorama, "GlobalColors", LightingBuffer);
+                // ShadingShader.SetBuffer(TTtoOIDNKernel, "AlbedoBuffer", AlbedoBuffer);
+                // ShadingShader.SetBuffer(TTtoOIDNKernel, "NormalBuffer", NormalBuffer);
+                // ShadingShader.SetTexture(TTtoOIDNKernel, "ScreenSpaceInfo", ScreenSpaceInfo);
+                // ShadingShader.SetComputeBuffer(TTtoOIDNKernel, "GlobalColors", LightingBuffer);
+                // ShadingShader.SetBuffer(TTtoOIDNKernelPanorama, "AlbedoBuffer", AlbedoBuffer);
+                // ShadingShader.SetBuffer(TTtoOIDNKernelPanorama, "NormalBuffer", NormalBuffer);
+                // ShadingShader.SetTexture(TTtoOIDNKernelPanorama, "ScreenSpaceInfo", ScreenSpaceInfo);
+                // ShadingShader.SetComputeBuffer(TTtoOIDNKernelPanorama, "GlobalColors", LightingBuffer);
             #endif
 
 
@@ -936,10 +950,11 @@ namespace TrueTrace {
                 AssetManager.Assets.SetMeshTraceBuffers(ReSTIRGI, ReSTIRGISpatialKernel+1);
             }
 
+
             Shader.SetGlobalTexture("_DebugTex", _DebugTex);
         }
 
-        private void ResetAllTextures() {
+        private void ResetAllTextures(CommandBuffer cmd) {
             // _camera.renderingPath = RenderingPath.DeferredShading;
             if(PrevResFactor != LocalTTSettings.RenderScale || TargetWidth != OverridenWidth) {
                 TargetWidth = OverridenWidth;
@@ -958,7 +973,7 @@ namespace TrueTrace {
                 if(TTPostProc.Initialized) TTPostProc.ClearAll();
                 TTPostProc.init(SourceWidth, SourceHeight);
 
-                InitRenderTexture(true);
+                InitRenderTexture(cmd, true);
                 CommonFunctions.CreateDynamicBuffer(ref _RayBuffer, SourceWidth * SourceHeight * 2, 48);
                 CommonFunctions.CreateDynamicBuffer(ref _ShadowBuffer, SourceWidth * SourceHeight, 48);
                 CommonFunctions.CreateDynamicBuffer(ref LightingBuffer, SourceWidth * SourceHeight, 64);
@@ -976,10 +991,11 @@ namespace TrueTrace {
         }
 
 
-        private void InitRenderTexture(bool ForceReset = false)
+        private void InitRenderTexture(CommandBuffer cmd, bool ForceReset = false)
         {
             if (ForceReset || _target == null || _target.width != SourceWidth || _target.height != SourceHeight)
             {
+                Debug.Log("AAAA " + _target == null);
                 // Release render texture if we already have one
                 if (_target != null)
                 {
@@ -1010,6 +1026,10 @@ namespace TrueTrace {
                     GIWorldPosB.ReleaseSafe();
                     GIWorldPosC.ReleaseSafe();
                     PSRGBuff.ReleaseSafe();
+                    RRDiffAlbedoTex.ReleaseSafe();
+                    RRSpecAlbedoTex.ReleaseSafe();
+                    RRNormTex.ReleaseSafe();
+                    RRRoughTex.ReleaseSafe();
                     _PrimaryTriangleInfoA.ReleaseSafe();
                     _PrimaryTriangleInfoB.ReleaseSafe();
 #if TTCustomMotionVectors
@@ -1022,6 +1042,7 @@ namespace TrueTrace {
                     CorrectedDistanceTexA.Release();
                     CorrectedDistanceTexB.Release();
                     #if UseOIDN
+                        DenoiserPlugin.DlssSdk.DLSS_Shutdown();
                         ColorBuffer.ReleaseSafe();
                         OutputBuffer.ReleaseSafe();
                         AlbedoBuffer.ReleaseSafe();
@@ -1033,36 +1054,7 @@ namespace TrueTrace {
                     #endif
                 }
 
-                #if UseOIDN
-                    DenoiserPlugin.DenoiserConfig cfg = new DenoiserPlugin.DenoiserConfig() {
-                        imageWidth = SourceWidth,
-                        imageHeight = SourceHeight,
-                        guideAlbedo = 1,
-                        guideNormal = 1,
-                        temporalMode = 0,
-                        cleanAux = 1,
-                        prefilterAux = 1
-                    };
-                    
-                    DenoiserPlugin.DenoiserType denoiserType;
-                    switch (LocalTTSettings.DenoiserMethod) {
-                        case 2:
-                            denoiserType = DenoiserPlugin.DenoiserType.OIDN;
-                            break;
-                        case 3:
-                            denoiserType = DenoiserPlugin.DenoiserType.OptiX;
-                            break;
-                        default:
-                            denoiserType = DenoiserPlugin.DenoiserType.OIDN;
-                            break;
-                    }                   
-                    OIDNDenoiser = new DenoiserPlugin.DenoiserPluginWrapper(denoiserType, cfg);
-                    
-                    ColorBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
-                    OutputBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
-                    AlbedoBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
-                    NormalBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
-                #endif
+
 
                 CommonFunctions.CreateRenderTexture(ref _RandomNums, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref _RandomNumsB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
@@ -1106,7 +1098,6 @@ namespace TrueTrace {
                 uFirstFrame = 1;
                 FramesSinceStart = 0;
                 FramesSinceStart2 = 0;
-            }
             if(LocalTTSettings.UseReSTIRGI && !ReSTIRInitialized) {
                 CommonFunctions.CreateRenderTexture(ref GradientsA, SourceWidth, SourceHeight, CommonFunctions.RTHalf2);
                 CommonFunctions.CreateRenderTexture(ref GradientsB, SourceWidth, SourceHeight, CommonFunctions.RTHalf2);
@@ -1120,6 +1111,10 @@ namespace TrueTrace {
                 ReSTIRInitialized = true;
             }
             CommonFunctions.CreateRenderTexture(ref PSRGBuff, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+            CommonFunctions.CreateRenderTexture(ref RRDiffAlbedoTex, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+            CommonFunctions.CreateRenderTexture(ref RRSpecAlbedoTex, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+            CommonFunctions.CreateRenderTexture(ref RRNormTex, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+            CommonFunctions.CreateRenderTexture(ref RRRoughTex, SourceWidth, SourceHeight, CommonFunctions.RTFull1);
             if(!LocalTTSettings.UseReSTIRGI && ReSTIRInitialized) {
                 GIReservoirA.ReleaseSafe();
                 GIReservoirB.ReleaseSafe();
@@ -1131,6 +1126,82 @@ namespace TrueTrace {
                 GradientsA.ReleaseSafe();
                 GradientsB.ReleaseSafe();
             }
+
+                #if UseOIDN
+                    if(LocalTTSettings.DenoiserMethod == 2 || LocalTTSettings.DenoiserMethod == 3) {
+                        DenoiserPlugin.DenoiserConfig cfg = new DenoiserPlugin.DenoiserConfig() {
+                            imageWidth = SourceWidth,
+                            imageHeight = SourceHeight,
+                            guideAlbedo = 1,
+                            guideNormal = 1,
+                            temporalMode = 0,
+                            cleanAux = 1,
+                            prefilterAux = 1
+                        };
+                        
+                        DenoiserPlugin.DenoiserType denoiserType;
+                        switch (LocalTTSettings.DenoiserMethod) {
+                            case 2:
+                                denoiserType = DenoiserPlugin.DenoiserType.OIDN;
+                                break;
+                            case 3:
+                                denoiserType = DenoiserPlugin.DenoiserType.OptiX;
+                                break;
+                            case 4:
+                                denoiserType = DenoiserPlugin.DenoiserType.OptiX;
+                                break;
+                            default:
+                                denoiserType = DenoiserPlugin.DenoiserType.OIDN;
+                                break;
+                        }                   
+                        OIDNDenoiser = new DenoiserPlugin.DenoiserPluginWrapper(denoiserType, cfg);
+                    } else if(LocalTTSettings.DenoiserMethod == 4) {
+                        Debug.Log("FFFFFFF");
+                        DenoiserPlugin.DlssSdk.DLSS_Init();
+                        var result = DenoiserPlugin.DlssSdk.DLSS_AllocateParameters_D3D12(out m_dlssParameters);
+                            if (!DenoiserPlugin.DlssSdk.NVSDK_NGX_SUCCEED(result))
+                            {
+                                Debug.LogError($"[PathTracer] Failed to allocate DLSS parameters: {result}");
+                                // return false;
+                            }
+                            var dlssCreateParams = new DenoiserPlugin.DlssSdk.NVSDK_NGX_DLSSD_Create_Params
+                            {
+                                InWidth = (uint)TargetWidth,
+                                InHeight = (uint)TargetHeight,
+                                InTargetWidth = (uint)TargetWidth,  // For Ray Reconstruction, output size equals input size
+                                InTargetHeight = (uint)TargetHeight,
+                                InPerfQualityValue = DenoiserPlugin.DlssSdk.NVSDK_NGX_PerfQuality_Value.NVSDK_NGX_PerfQuality_Value_MaxQuality,
+                                InFeatureCreateFlags = (int)(DenoiserPlugin.DlssSdk.NVSDK_NGX_DLSS_Feature_Flags.NVSDK_NGX_DLSS_Feature_Flags_IsHDR |
+                                                             DenoiserPlugin.DlssSdk.NVSDK_NGX_DLSS_Feature_Flags.NVSDK_NGX_DLSS_Feature_Flags_DepthInverted |
+                                                             DenoiserPlugin.DlssSdk.NVSDK_NGX_DLSS_Feature_Flags.NVSDK_NGX_DLSS_Feature_Flags_MVLowRes |
+                                                             DenoiserPlugin.DlssSdk.NVSDK_NGX_DLSS_Feature_Flags.NVSDK_NGX_DLSS_Feature_Flags_AutoExposure),
+                                InEnableOutputSubrects = 0,
+                                InRoughnessMode = DenoiserPlugin.DlssSdk.NVSDK_NGX_DLSS_Roughness_Mode.NVSDK_NGX_DLSS_Roughness_Mode_Unpacked,
+                                InUseHWDepth = DenoiserPlugin.DlssSdk.NVSDK_NGX_DLSS_Depth_Type.NVSDK_NGX_DLSS_Depth_Type_HW
+                            };
+                            DenoiserPlugin.DlssSdk.NGX_D3D12_CREATE_DLSSD_EXT(cmd, 1, 1, out m_dlssHandle, m_dlssParameters, ref dlssCreateParams);
+
+                            if (m_dlssHandle == DenoiserPlugin.DlssSdk.DLSS_INVALID_FEATURE_HANDLE)
+                            {
+                                Debug.LogError("[PathTracer] Failed to create DLSS Ray Reconstruction Feature");
+                                DenoiserPlugin.DlssSdk.DLSS_DestroyParameters_D3D12(m_dlssParameters);
+                                m_dlssParameters = System.IntPtr.Zero;
+                                // return false;
+                            }
+
+
+
+                            // DenoiserPlugin.DlssSdk.NVSDK_NGX_Result result = DenoiserPlugin.DlssSdk.DLSS_Init();
+                    }
+                        ColorBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
+                        OutputBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
+                        AlbedoBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
+                        NormalBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
+
+                #endif
+
+}
+
         }
         public void ClearOutRenderTexture(RenderTexture renderTexture)
         {
@@ -1293,9 +1364,6 @@ namespace TrueTrace {
                     cmd.Blit(GradientsA, GradientsB);
                 }
 
-                if (!(!LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1) && !(LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1))
-                {
-                    if(DoKernelProfiling) cmd.BeginSample("Finalize Kernel");
                     cmd.DispatchCompute(ShadingShader, FinalizeKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                     CurrentSample = 1.0f / (FramesSinceStart + 1.0f);
                     SampleCount++;
@@ -1304,6 +1372,9 @@ namespace TrueTrace {
                         _addMaterial = new Material(Shader.Find("Hidden/Accumulate"));
                     _addMaterial.SetFloat("_Sample", CurrentSample);
                     cmd.Blit(_target, _converged, _addMaterial);
+                if (!(!LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1) && !(LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1))
+                {
+                    if(DoKernelProfiling) cmd.BeginSample("Finalize Kernel");
 #if MultiMapScreenshot
                     cmd.Blit(MultiMapMatIDTextureInitial, MultiMapMatIDTexture, _addMaterial);
                     cmd.Blit(MultiMapMeshIDTextureInitial, MultiMapMeshIDTexture, _addMaterial);
@@ -1327,8 +1398,7 @@ namespace TrueTrace {
                                     (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB, 
                                     LocalTTSettings.UpscalerMethod, 
                                     CorrectedDistanceTexA, 
-                                    CorrectedDistanceTexB,
-                                    PSRGBuff);
+                                    CorrectedDistanceTexB);
                     CurrentSample = 1;
                     if(DoKernelProfiling) cmd.EndSample("ASVGF");
                 } else if(LocalTTSettings.UseReSTIRGI && LocalTTSettings.DenoiserMethod == 1) {
@@ -1412,6 +1482,52 @@ namespace TrueTrace {
                     ShadingShader.SetTexture(OIDNtoTTKernel, "Result", _FinalTex);
                     if(SampleCount > LocalTTSettings.OIDNFrameCount+1 || LocalTTSettings.OIDNFrameCount == 0)
                     cmd.DispatchCompute(ShadingShader, OIDNtoTTKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);            
+                } else if(LocalTTSettings.DenoiserMethod == 4) {
+                    ShadingShader.SetTexture(MVKernel+3, "ScreenSpaceInfo", (FramesSinceStart2 % 2 == 0) ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
+                    ShadingShader.SetTexture(MVKernel+3, "RRDiffAlbedoTex", RRDiffAlbedoTex);
+                    ShadingShader.SetTexture(MVKernel+3, "RRSpecAlbedoTex", RRSpecAlbedoTex);
+                    ShadingShader.SetTexture(MVKernel+3, "RRNormTex", RRNormTex);
+                    ShadingShader.SetTexture(MVKernel+3, "RRRoughTex", RRRoughTex);
+                    ShadingShader.SetTexture(MVKernel+3, "PSRGBuff", PSRGBuff);
+                    ShadingShader.SetBuffer(MVKernel+3, "GlobalColors", LightingBuffer);
+                    cmd.DispatchCompute(ShadingShader, MVKernel+3, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);            
+
+
+                    var dlssEvalParams = new DenoiserPlugin.DlssSdk.NVSDK_NGX_D3D12_DLSSD_Eval_Params();
+                                
+                    // Basic input/output
+                    dlssEvalParams.pInColor = _target.GetNativeTexturePtr();
+                    dlssEvalParams.pInOutput = _FinalTex.GetNativeTexturePtr();
+                    dlssEvalParams.pInDepth = CorrectedDistanceTexA.GetNativeTexturePtr();
+                    dlssEvalParams.pInMotionVectors = MVTexture.GetNativeTexturePtr();
+
+
+                    dlssEvalParams.pInDiffuseAlbedo = RRDiffAlbedoTex.GetNativeTexturePtr();
+                    dlssEvalParams.pInSpecularAlbedo = RRSpecAlbedoTex.GetNativeTexturePtr();
+                    dlssEvalParams.pInNormals = RRNormTex.GetNativeTexturePtr();
+                    dlssEvalParams.pInRoughness = Texture2D.whiteTexture.GetNativeTexturePtr();
+
+                    dlssEvalParams.InJitterOffsetX = 0;//-(cameraSample.x - 0.5f);
+                    dlssEvalParams.InJitterOffsetY = 0;//-(cameraSample.y - 0.5f);
+
+                    dlssEvalParams.InReset = 0;
+                    dlssEvalParams.InIndicatorInvertXAxis = 0;
+                    dlssEvalParams.InIndicatorInvertYAxis = 1;
+
+                    dlssEvalParams.InRenderSubrectDimensions.Width = (uint)TargetWidth;
+                    dlssEvalParams.InRenderSubrectDimensions.Height = (uint)TargetHeight;
+
+                    dlssEvalParams.InMVScaleX = -TargetWidth;
+                    dlssEvalParams.InMVScaleY = -TargetHeight;
+                    dlssEvalParams.InWorldToViewMatrix = _camera.worldToCameraMatrix.transpose;
+                    dlssEvalParams.InViewToClipMatrix = _camera.projectionMatrix.transpose;
+
+                    DenoiserPlugin.DlssSdk.NGX_D3D12_EVALUATE_DLSSD_EXT(cmd, m_dlssHandle, m_dlssParameters, ref dlssEvalParams);
+
+            // CommonFunctions.CreateRenderTexture(ref RRDiffAlbedoTex, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+            // CommonFunctions.CreateRenderTexture(ref RRSpecAlbedoTex, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+            // CommonFunctions.CreateRenderTexture(ref RRNormTex, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
+            // CommonFunctions.CreateRenderTexture(ref RRRoughTex, SourceWidth, SourceHeight, CommonFunctions.RTFull1);
                 }
             #endif
 
@@ -1443,10 +1559,10 @@ namespace TrueTrace {
             // _camera.renderingPath = RenderingPath.DeferredShading;
             if (SceneIsRunning && Assets != null && Assets.RenderQue.Count > 0)
             {
-                ResetAllTextures();
+                ResetAllTextures(cmd);
                 RunUpdate();
                 if(RebuildMeshObjectBuffers(cmd)) {
-                    InitRenderTexture();
+                    InitRenderTexture(cmd);
 #if TTCustomMotionVectors
         Shader.SetGlobalTexture("TTMotionVectorTexture", MVTexture);
 #endif

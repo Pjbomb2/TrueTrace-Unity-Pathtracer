@@ -295,8 +295,7 @@ namespace TrueTrace {
                         RenderTexture RNGTex,
                         int UpscalerMethod, 
                         RenderTexture CorrectedDistanceTexA, 
-                        RenderTexture CorrectedDistanceTexB,
-                        RenderTexture PSRGbuffer)
+                        RenderTexture CorrectedDistanceTexB)
         {
 
             RayTracingMaster._camera = RayTracingMaster._camera;
@@ -320,7 +319,6 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, Atrous, "WorldPosData", WorldPosData);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_COLOR_LF_SHWrite", PT_LF1);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_COLOR_LF_COCGWrite", PT_LF2);
-            cmd.SetComputeTextureParam(shader, CopyData, "PSRGBuff", PSRGbuffer);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_COLOR_HFWrite", TEX_PT_COLOR_HF);
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_COLOR_SPECWrite", TEX_PT_COLOR_SPEC);
             cmd.SetComputeTextureParam(shader, CopyData, "RNGTexB", RNGTex);
