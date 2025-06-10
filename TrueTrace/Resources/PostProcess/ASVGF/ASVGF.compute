@@ -245,10 +245,11 @@ void CopyData(uint3 id : SV_DispatchThreadID)
 	ColData Pixel = GlobalColorsRead[pixel_index];
 	const uint4 ScreenInfo = asuint(ScreenSpaceInfo[id.xy]);
 	float3 TexBaseColor = Pixel.Data.xyz;
-	uint2 AlbCol = Pixel.Flags;
-    // uint2 AlbCol = asuint(PSRGBuff[id.xy].y);
+	// uint2 AlbCol = Pixel.Flags;
+    uint2 AlbCol = asuint(PSRGBuff[id.xy].y);
 	if(GetBounceData(Pixel.MetRoughIsSpec) != 1) AlbCol = packRGBE(max(unpackRGBE(AlbCol), 0.01f));
-	Pixel.Flags = packRGBE(max(unpackRGBE(Pixel.Flags), 0.01f));
+    Pixel.Flags = packRGBE(max(unpackRGBE(asuint(PSRGBuff[id.xy].y)), 0.01f));
+	// Pixel.Flags = packRGBE(max(unpackRGBE(Pixel.Flags), 0.01f));
 	float2 MetRough = FromColorSpecPacked(Pixel.MetRoughIsSpec);
 	if(GetBounceData(Pixel.MetRoughIsSpec) == 1) {
 		Pixel.Direct = float3(0,0,0);
@@ -290,7 +291,9 @@ void CopyData(uint3 id : SV_DispatchThreadID)
     MetallicAWrite[id.xy] = MetRough;//, ReflectedRefracted, asfloat((asuint(ScreenSpaceInfo[id.xy].w) << 3) >> 3));
     ReflRefracAWrite[id.xy] = (ReflectedRefracted << 31) | ((ScreenInfo.w << 4) >> 4) | ((min(GetBounceData(Pixel.MetRoughIsSpec), 3) << 29));
 	AlbedoColorA[id.xy] = AlbCol;
+	// Pixel.Flags = packRGBE(max(unpackRGBE(Pixel.Flags), 0.01f));
 	TEX_PT_NORMALS_AWrite[id.xy] = ScreenInfo.xy;
+	// TEX_PT_NORMALS_AWrite[id.xy] = asuint(PSRGBuff[id.xy].xx);// ScreenInfo.xy;
 	if(!(!ReflectedRefracted || InvalidReprojection)) {
 		if(!IsDiffuse) TEX_PT_NORMALS_AWrite[id.xy] = TEX_PT_NORMALS_B[pos_prev].xy;//GeoNorm, Norm
 	}

@@ -279,6 +279,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 Color.Data = EmissCol;
                 Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((1) << 26);  
                 PSRScreenData.w = asfloat((asuint(PSRScreenData.w) & ~(0x7C000000)) |  ((1) << 26));  
+                PSRScreenData.y = asfloat(packRGBE(EmissCol));  
                 Color.Flags = packRGBE(EmissCol);
             }
             return;
@@ -1094,15 +1095,18 @@ int MaterialIndex;
             Color.Data = float3(Color.Direct);
             Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((1) << 26);  
             Color.Flags = packRGBE(Color.Direct);
+            PSRGBuff[id.xy].y = asfloat(packRGBE(Color.Direct));  
+
         }
         if(GetBounceData(Color.MetRoughIsSpec) == 0) {
             ScreenSpaceInfo[id.xy] = float4(ScreenSpaceInfo[id.xy].xyz, asfloat((asuint(ScreenSpaceInfo[id.xy].w) << 1) >> 1));//PrevScreenData.z + hit.t, asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 2) >> 2) : ((asuint(PrevScreenData.w) << 3) >> 3)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
             Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((2) << 26);  
 
         }
-        // if(GetBounceData(asuint(PSRGBuff[id.xy].w)) == 0) {
-        //     PSRGBuff[id.xy].w = asfloat(((asuint(PSRGBuff[id.xy].w) & ~(0x7C000000))) |  ((2) << 26));
-        // }  
+        if(GetBounceData(asuint(PSRGBuff[id.xy].w)) == 0) {
+            // PSRGBuff[id.xy].w = asfloat(((asuint(PSRGBuff[id.xy].w) & ~(0x7C000000))) |  ((2) << 26));
+            PSRGBuff[id.xy].z += 100.0f;//;
+        }  
 
         GlobalColors[pixel_index] = Color;
         if(UseReSTIRGI && CurBounce == 1 && GetBounceData(Color.MetRoughIsSpec) == 0) {
