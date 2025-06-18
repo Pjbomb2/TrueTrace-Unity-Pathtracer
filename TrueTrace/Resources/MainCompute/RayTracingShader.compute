@@ -1020,6 +1020,33 @@ int MaterialIndex;
 
         }
     #endif
+
+  float2 rayNearFar = float2(0,10000.0f);//getRayNearFar(intersections);
+  // float rayDistanceToScene = 100000.0f;//getRayDistanceToScene(rayDirection);
+  // if (rayDistanceToScene >= 0.0) {
+  //   rayNearFar.y = min(rayNearFar.y, rayDistanceToScene);
+  //   // #ifdef SHADOW_LENGTH
+  //   // shadowRayNearFar.y = min(shadowRayNearFar.y, rayDistanceToScene);
+  //   // #endif // SHADOW_LENGTH
+  //   #ifdef HAZE
+  //   hazeRayNearFar.y = min(hazeRayNearFar.y, rayDistanceToScene);
+  //   #endif // HAZE
+  // }
+    float rayNear;
+  float rayFar;
+  getRayNearFar(ray.direction, rayNear, rayFar);
+     float2 globeUv = getGlobeUv(ray.origin);
+  float mipLevel = length(globeUv * localWeatherFrequency);
+  float4 rad2;
+  float weightedMeanDepth;
+  int3 tempcount = int3(1,1,1);
+  float3 skyirrad;
+  float3 sunirrad = GetSunAndSkyIrradiance(ray.origin+float3(0,bottom_radius,0), ray.direction, SunDir, skyirrad);
+  float frontdepth = 0;
+        // float4 A = marchClouds(ray.origin, ray.direction, rayNearFar, dot(SunDir, ray.direction), 0, 1, frontdepth, tempcount);
+        float4 A;
+        int3 temp;
+        float weight;
         [branch]switch(DoSecondary ? BackgroundType : SecondaryBackgroundType) {
             case 0:
                 Radiance = GetSkyRadiance(ray.origin, ray.direction, 0, SunDir, transmittance, debug);
@@ -1034,7 +1061,42 @@ int MaterialIndex;
                 Stars = pow(saturate(Stars), 2.0f);
                 if(GetBounceData(Color.MetRoughIsSpec) <= 1) Radiance += Stars;
 
-          
+
+                // rad2 = 
+                // marchToClouds(
+                //     (ray.origin+float3(0,bottom_radius,0)),
+                //     ray.direction,
+                //     rayFar - rayNear,
+                //     random(233, pixel_index).x,
+                //     float3(random(234, pixel_index), random(235, pixel_index).x),
+                //     pow(2.0, mipLevel),
+                //     SunDir,
+                //     sunirrad,
+                //     skyirrad,
+                //     pixel_index,
+                //     weightedMeanDepth
+                //   );
+
+                rad2 = 
+                marchClouds(
+                    (ray.origin),
+                    ray.direction,
+                    float2(rayNear, rayFar),
+                    dot(SunDir, ray.direction),
+                    1,
+                    1,
+                    frontdepth,
+                    temp
+                  );
+                // Radiance *= exp(-weightedMeanDepth);
+                // if(weightedMeanDepth > 0) {
+                //     Radiance *= 1.0f - (rad2.a);
+                //     applyAerialPerspective(ray.origin, ray.origin + (weightedMeanDepth + rayNear) * ray.direction, rad2);
+                // }
+                //     Radiance += pow(1.0f - exp(-rad2 / 1.0f * 10.0f), 1.0f);
+                Radiance += rad2;// * transmittance;
+                // Radiance /= weightedMeanDepth;
+
                 if (all(Radiance < 10000.0f)) {
                     Radiance = DeSat(Radiance, 1.0f - TrueDeSat);
                     if(DoSecondary) {

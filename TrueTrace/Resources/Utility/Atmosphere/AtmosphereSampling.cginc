@@ -3,8 +3,8 @@ static uint ScatteringTexMUSize = 128;
 static uint ScatteringTexMUSSize = 32;
 static uint ScatteringTexNUSize = 8;
 
-#define bottom_radius (636000.0f)
-#define top_radius (642000.0f)
+#define bottom_radius (6360000.0f)
+#define top_radius (6420000.0f)
 static uint TransmittanceTexWidth = 256;
 static uint TransmittanceTexHeight = 64;
 
@@ -232,7 +232,7 @@ float3 GetSkyRadianceToPoint(
 		r_p, mu_p, mu_s_p, nu, ray_r_mu_intersects_ground,
 		single_mie_scattering_p);
 
-	// Combine the lookup results to get the scattering between camera and point.
+	// Combine the lookup results to get the scattering between camera and thispoint.
 	float3  shadow_transmittance = transmittance;
 	scattering = scattering - shadow_transmittance * scattering_p;
 	single_mie_scattering = single_mie_scattering - shadow_transmittance * single_mie_scattering_p;
@@ -352,6 +352,7 @@ float3 GetSkyTransmittance(
 Texture3D<float4> CloudShapeDetailTex;
 Texture3D<float4> CloudShapeTex;
 Texture2D<float4> localWeatherTexture;
+Texture2D<float4> TurbulenceTex;
 SamplerState my_linear_repeat_sampler;
 
 // Scattering parameters
@@ -377,12 +378,16 @@ SamplerState my_linear_repeat_sampler;
 #define RECIPROCAL_PI2 0.15915494
 #define LOG2 1.442695
 
-#define maxLayerHeights float4(1200,0,8000,0)
-#define minLayerHeights float4(600,0,6700,0)
+#define EPSILON 1e-6
+
+
+#define maxLayerHeights float4(1200,5000,8000,0)
+
+#define minLayerHeights float4(600,4500,6700,0)
 #define weatherExponents float4(1,1,3,1)
-#define localWeatherFrequency float2(200,150)
-#define coverage 0.2
-#define coverageFilterWidths float4(0.6,0,0.5,0)
+#define localWeatherFrequency float2(100,100)
+#define coverage 0.4
+#define coverageFilterWidths float4(0.6,0.3,0.5,0.9)
 #define detailAmounts float4(1,0,0.3,0)
 #define extinctionCoeffs (float4(0.3,0,0.005,0) * 1.02f)
 #define shapeFrequency 0.0003
@@ -390,8 +395,29 @@ SamplerState my_linear_repeat_sampler;
 #define ellipsoidCenter float3(0,0,0)
 #define minHeight 0
 #define maxHeight 8000
-#define shapeDetailFrequency 0.007f
-#define minStepSize 10
+#define shapeDetailFrequency 0.006f
+#define minStepSize 100
+
+#define maxIterationCount 500
+#define perspectiveStepScale 101
+#define minExtinction 1e5
+#define maxIterationCountToGround 3
+#define maxIterationCountToSun 2
+#define minSecondaryStepSize 100
+#define secondaryStepScale 2
+#define turbulenceDisplacement 350
+#define shapeOffset float3(0,0,0)
+#define shapeDetailOffset float3(0,0,0)
+#define shapeAmounts float4(1,1,1,1)
+#define densityScales float4(0.2,0.1,1e-3,0.05)
+#define scatteringCoefficient 1
+#define absorptionCoefficient 0
+#define shadowTopHeight 0
+#define RECIPROCAL_PI4 (0.07957747154594767)
+
+
+
+#define localWeatherOffset float3(0,0,0)
 
 float inverseLerp(const float x, const float y, const float a) {
   return (a - x) / (y - x);
@@ -530,6 +556,94 @@ WeatherSample sampleWeather(const float2 uv, const float height, const float mip
   return weather;
 }
 
+float4 getLayerDensity(const float4 heightFraction) {
+  // prettier-ignore
+  return 1;
+  // return densityProfile.expTerms * exp(densityProfile.exponents * heightFraction) +
+  //   densityProfile.linearTerms * heightFraction +
+  //   densityProfile.constantTerms;
+}
+struct MediaSample {
+  float density;
+  float4 weight;
+  float scattering;
+  float extinction;
+};
+
+MediaSample sampleMedia(
+  const WeatherSample weather,
+  const float3 position,
+  const float2 uv,
+  const float mipLevel,
+  const float jitter,
+  out int3 sampleCount
+) {
+  float4 density = weather.density;
+
+  // TODO: Define in physical length.
+  float3 surfaceNormal = normalize(position);
+  float localWeatherSpeed = length(localWeatherOffset);
+  float3 evolution = -surfaceNormal * localWeatherSpeed * 2e4;
+
+  float3 turbulence = 0.0;
+
+  // #ifdef TURBULENCE
+  float2 turbulenceUv = uv * localWeatherFrequency * localWeatherFrequency;
+  turbulence =
+    turbulenceDisplacement *
+    (TurbulenceTex.SampleLevel(my_linear_repeat_sampler, turbulenceUv, 0).rgb * 2.0 - 1.0) *
+    dot(density, saturate(remap(weather.heightFraction, 0.3, 0.0,0,1)));
+  // #endif // TURBULENCE
+
+  float3 shapePosition = (position + evolution + turbulence) * shapeFrequency + shapeOffset;
+  float shape = CloudShapeTex.SampleLevel(my_linear_repeat_sampler, shapePosition,0).r;
+  density = saturate(remap(density, (1.0 - shape) * shapeAmounts, 1.0,0,1));
+
+  // #ifdef DEBUG_SHOW_SAMPLE_COUNT
+  // ++sampleCount.y;
+  // #endif // DEBUG_SHOW_SAMPLE_COUNT
+
+  // #ifdef SHAPE_DETAIL
+  if (mipLevel * 0.5 + (jitter - 0.5) * 0.5 < 0.5) {
+    float3 detailPosition = (position + turbulence) * shapeDetailFrequency + shapeDetailOffset;
+    float detail = CloudShapeDetailTex.SampleLevel(my_linear_repeat_sampler, detailPosition,0).r;
+    // Fluffy at the top and whippy at the bottom.
+    float4 modifier = lerp(
+      (pow(detail, 6.0)),
+      (1.0 - detail),
+      saturate(remap(weather.heightFraction, 0.2, 0.4,0,1))
+    );
+    modifier = lerp(0.0, modifier, detailAmounts);
+    density = saturate(remap(density * 2.0, modifier * 0.5, 1.0,0,1));
+
+    // #ifdef DEBUG_SHOW_SAMPLE_COUNT
+    // ++sampleCount.z;
+    // #endif // DEBUG_SHOW_SAMPLE_COUNT
+  }
+  // #endif // SHAPE_DETAIL
+
+  // Apply the density profiles.
+  density = saturate(density * densityScales * getLayerDensity(weather.heightFraction));
+
+  MediaSample media;
+  float densitySum = density.x + density.y + density.z + density.w;
+  media.weight = density / densitySum;
+  media.scattering = densitySum * scatteringCoefficient;
+  media.extinction = densitySum * absorptionCoefficient + media.scattering;
+  return media;
+}
+
+MediaSample sampleMedia(
+  const WeatherSample weather,
+  const float3 position,
+  const float2 uv,
+  const float mipLevel,
+  const float jitter
+) {
+  int3 sampleCount;
+  return sampleMedia(weather, position, uv, mipLevel, jitter, sampleCount);
+}
+
 float sampleDensityDetail(WeatherSample weather, const float3 position, const float mipLevel) {
   float4 density = weather.density;
   if (mipLevel < 2.0) {
@@ -634,7 +748,7 @@ void applyAerialPerspective(const float3 camera, const float3 thispoint, inout f
     SunDir,
     transmittance
   );
-  color.rgb = lerp(color.rgb, inscatter, color.a);
+ color.rgb = lerp(color.rgb, color.rgb * transmittance + inscatter, color.a);
 }
 
 void swapIfBigger(inout float4 a, inout float4 b) {
@@ -860,7 +974,7 @@ float4 marchToClouds(const float3 rayOrigin, const float3 rayDirection, const fl
     float height = length(position) - bottom_radius;
     float2 uv = getGlobeUv(position);
     WeatherSample weather = sampleWeather(uv, height, mipLevel);
-      if(height > 5000) stepSize = 1000.0f;
+      // if(height > 5000) stepSize = 1000.0f;
 
     if (any(weather.density > minDensity)) {
       // Sample a detailed density.
@@ -910,7 +1024,6 @@ float4 marchToClouds(const float3 rayOrigin, const float3 rayDirection, const fl
         float opticalDepth = sunOpticalDepth + shadowOpticalDepth;
         float scattering = multipleScattering(opticalDepth, cosTheta);
         float3 radiance = (6.0f * sunIrradiance * scattering + skyIrradiance * skyIrradianceScale) * density;
-
         // Fudge factor for the irradiance from ground.
         if (mipLevel < 0.5) {
           float groundOpticalDepth = sampleOpticalDepth(
@@ -942,12 +1055,13 @@ float4 marchToClouds(const float3 rayOrigin, const float3 rayDirection, const fl
 
       // Take a shorter step because we've already hit the clouds.
       stepSize *= 1.005;
-      rayDistance += min(stepSize, maxStepSize);
+      rayDistance += stepSize;//min(stepSize, maxStepSize);
     } else {
       // Otherwise step longer in empty space.
       // TODO: This produces some banding artifacts.
       stepSize *= 1.005;
-      rayDistance += min(stepSize, maxStepSize);//, maxStepSize, min(1.0, mipLevel));
+      rayDistance += stepSize;//min(stepSize, maxStepSize);
+      // rayDistance += min(stepSize, maxStepSize);//, maxStepSize, min(1.0, mipLevel));
     }
 
     if (transmittanceIntegral <= minTransmittance) {
@@ -1054,3 +1168,288 @@ void getRayNearFar(const float3 rayDirection, out float rayNear, out float rayFa
   }
 }
 
+
+float3 getCloudsSunSkyIrradiance(const float3 position, const float height, inout float3 skyIrradiance) {
+  return GetSunAndSkyIrradiance(
+    position,
+    float3(0,1,0),
+    SunDir,
+    skyIrradiance
+  );
+}
+
+float marchOpticalDepth(
+  const float3 rayOrigin,
+  const float3 rayDirection,
+  const int LocalmaxIterationCount,
+  const float mipLevel,
+  const float jitter,
+  out float rayDistance
+) {
+  int iterationCount = int(
+    max(0.0, remap(mipLevel, 0.0, 1.0, float(LocalmaxIterationCount + 1), 1.0) - jitter)
+  );
+  if (iterationCount == 0) {
+    // Fudge factor to approximate the mean optical depth.
+    // TODO: Remove it.
+    return 0.5;
+  }
+  float stepSize = minSecondaryStepSize / float(iterationCount);
+  float nextDistance = stepSize * jitter;
+  float opticalDepth = 0.0;
+  for (int i = 0; i < iterationCount; ++i) {
+    rayDistance = nextDistance;
+    float3 position = rayDistance * rayDirection + rayOrigin;
+    float2 uv = getGlobeUv(position);
+    float height = length(position) - bottom_radius;
+    WeatherSample weather = sampleWeather(uv, height, mipLevel);
+    MediaSample media = sampleMedia(weather, position, uv, mipLevel, jitter);
+    opticalDepth += media.extinction * stepSize;
+    nextDistance += stepSize;
+    stepSize *= secondaryStepScale;
+  }
+  return opticalDepth;
+}
+
+float marchOpticalDepth(
+  const float3 rayOrigin,
+  const float3 rayDirection,
+  const int LocalmaxIterationCount,
+  const float mipLevel,
+  const float jitter
+) {
+  float rayDistance;
+  return marchOpticalDepth(
+    rayOrigin,
+    rayDirection,
+    LocalmaxIterationCount,
+    mipLevel,
+    jitter,
+    rayDistance
+  );
+}
+
+
+
+float approximateMultipleScattering(const float opticalDepth, const float cosTheta) {
+  // Multiple scattering approximation
+  // See: https://fpsunflower.github.io/ckulla/data/oz_volumes.pdf
+  // a: attenuation, b: contribution, c: phase attenuation
+  float3 coeffs = 1.0; // [a, b, c]
+  const float3 attenuation = float3(0.5, 0.5, 0.5); // Should satisfy a <= b
+  float scattering = 0.0;
+  float beerLambert;
+  [unroll]for (int i = 0; i < 12; ++i) {
+    // #if UNROLLED_LOOP_INDEX < MULTI_SCATTERING_OCTAVES
+    beerLambert = exp(-opticalDepth * coeffs.y);
+    scattering += coeffs.x * beerLambert * phaseFunction(cosTheta, coeffs.z);
+    coeffs *= attenuation;
+    // #endif // UNROLLED_LOOP_INDEX < MULTI_SCATTERING_OCTAVES
+  }
+  return scattering;
+}
+
+float3 getGroundSunSkyIrradiance(
+  const float3 position,
+  const float3 surfaceNormal,
+  const float height,
+  inout float3 skyIrradiance
+) {
+  return GetSunAndSkyIrradiance(
+    (position - surfaceNormal * height),
+    surfaceNormal,
+    SunDir,
+    skyIrradiance
+  );
+}
+
+float3 approximateIrradianceFromGround(
+  const float3 position,
+  const float3 surfaceNormal,
+  const float height,
+  const float mipLevel,
+  const float jitter
+) {
+  float opticalDepthToGround = marchOpticalDepth(
+    position,
+    -surfaceNormal,
+    maxIterationCountToGround,
+    mipLevel,
+    jitter
+  );
+  float3 skyIrradiance;
+  float3 sunIrradiance = getGroundSunSkyIrradiance(position, surfaceNormal, height, skyIrradiance);
+  const float groundAlbedo = 0.3;
+  float3 groundIrradiance = skyIrradiance + (1.0 - coverage) * sunIrradiance;
+  float3 bouncedRadiance = groundAlbedo * RECIPROCAL_PI * groundIrradiance;
+  return bouncedRadiance * exp(-opticalDepthToGround);
+}
+
+bool insideLayerIntervals(const float height) {
+  bool3 gt = (height > minLayerHeights);
+  bool3 lt = (height < maxLayerHeights);
+  return any(bool3(gt.x && lt.x, gt.y && lt.y, gt.z && lt.z));
+}
+
+// void getRayNearFar(
+//   const float3 sunPosition,
+//   const float3 rayDirection,
+//   inout float rayNear,
+//   inout float rayFar
+// ) {
+//   float4 firstIntersections = raySphereFirstIntersection(
+//     sunPosition,
+//     rayDirection,
+//     0.0,
+//     bottomRadius + float4(shadowTopHeight, shadowBottomHeight, 0.0, 0.0)
+//   );
+//   rayNear = max(0.0, firstIntersections.x);
+//   rayFar = firstIntersections.y;
+//   if (rayFar < 0.0) {
+//     rayFar = 1e6;
+//   }
+// }
+
+
+
+float4 marchClouds(
+  const float3 rayOrigin,
+  const float3 rayDirection,
+  const float2 rayNearFar,
+  const float cosTheta,
+  const float jitter,
+  const float rayStartTexelsPerPixel,
+  inout float frontDepth,
+  inout int3 sampleCount
+) {
+  float3 radianceIntegral = 0.0;
+  float transmittanceIntegral = 1.0;
+  float weightedDistanceSum = 0.0;
+  float transmittanceSum = 0.0;
+
+  float LocalmaxRayDistance = rayNearFar.y - rayNearFar.x;
+  float stepSize = minStepSize + (perspectiveStepScale - 1.0) * rayNearFar.x;
+  // I don't understand why spatial aliasing remains unless doubling the jitter.
+  float rayDistance = stepSize * jitter * 2.0;
+
+  for (int i = 0; i < maxIterationCount; ++i) {
+    if (rayDistance > LocalmaxRayDistance) {
+      break; // Termination
+    }
+
+    float3 position = rayDistance * rayDirection + rayOrigin;
+    float height = length(position) - bottom_radius;
+    float mipLevel = log2(max(1.0, rayStartTexelsPerPixel + rayDistance * 1e-5));
+
+    // #if !defined(DEBUG_MARCH_INTERVALS)
+    // if (insideLayerIntervals(height)) {
+    //   stepSize *= perspectiveStepScale;
+    //   rayDistance += lerp(stepSize, maxStepSize, min(1.0, mipLevel));
+    //   continue;
+    // }
+    // #endif // !defined(DEBUG_MARCH_INTERVALS)
+
+    // Sample rough weather.
+    float2 uv = getGlobeUv(position);
+    WeatherSample weather = sampleWeather(uv, height, mipLevel);
+
+
+
+    if (!any(weather.density > minDensity)) {
+      // Step longer in empty space.
+      // TODO: This produces banding artifacts.
+      // Possible improvement: Binary search refinement
+      stepSize *= perspectiveStepScale;
+      rayDistance += lerp(stepSize, maxStepSize, min(1.0, mipLevel));
+      continue;
+    }
+
+    // Sample detailed participating media.
+    MediaSample media = sampleMedia(weather, position, uv, mipLevel, jitter, sampleCount);
+
+    if (media.extinction > minExtinction) {
+      float3 skyIrradiance;
+      float3 sunIrradiance = getCloudsSunSkyIrradiance(position, height, skyIrradiance);
+      float3 surfaceNormal = normalize(position);
+
+      // March optical depth to the sun for finer details, which BSM lacks.
+      float sunRayDistance = 0.0;
+      float opticalDepth = marchOpticalDepth(
+        position,
+        SunDir,
+        maxIterationCountToSun,
+        mipLevel,
+        jitter,
+        sunRayDistance
+      );
+
+      if (height < shadowTopHeight) {
+        // Obtain the optical depth from BSM at the ray position.
+        opticalDepth += 1;//
+        // sampleShadowOpticalDepth(
+        //   position,
+        //   // Take account of only positions further than the marched ray
+        //   // distance.
+        //   sunRayDistance,
+        //   // Apply PCF only when the sun is close to the horizon.
+        //   maxShadowFilterRadius * remapClamped(dot(sunDirection, surfaceNormal), 0.1, 0.0),
+        //   jitter
+        // );
+      }
+
+      float3 radiance = sunIrradiance * approximateMultipleScattering(opticalDepth, cosTheta);
+
+      #ifdef GROUND_IRRADIANCE
+      // Fudge factor for the irradiance from ground.
+      if (height < shadowTopHeight && mipLevel < 0.5) {
+        float3 groundIrradiance = approximateIrradianceFromGround(
+          position,
+          surfaceNormal,
+          height,
+          mipLevel,
+          jitter
+        );
+        radiance += groundIrradiance * RECIPROCAL_PI4 * groundIrradianceScale;
+      }
+      #endif // GROUND_IRRADIANCE
+
+      // Crude approximation of sky gradient. Better than none in the shadows.
+      float skyGradient = dot(weather.heightFraction * 0.5 + 0.5, media.weight);
+      radiance += skyIrradiance * RECIPROCAL_PI4 * skyGradient * skyIrradianceScale;
+
+      // Finally multiply by scattering.
+      radiance *= media.scattering;
+
+      // #ifdef POWDER
+      radiance *= 1.0 - powderScale * exp(-media.extinction * powderExponent);
+      // #endif // POWDER
+
+      // Energy-conserving analytical integration of scattered light
+      // See 5.6.3 in https://media.contentapi.ea.com/content/dam/eacom/frostbite/files/s2016-pbs-frostbite-sky-clouds-new.pdf
+      float transmittance = exp(-media.extinction * stepSize);
+      float clampedExtinction = max(media.extinction, 1e-7);
+      float3 scatteringIntegral = (radiance - radiance * transmittance) / clampedExtinction;
+      radianceIntegral += transmittanceIntegral * scatteringIntegral;
+      transmittanceIntegral *= transmittance;
+
+      // Aerial perspective affecting clouds
+      // See 5.9.1 in https://media.contentapi.ea.com/content/dam/eacom/frostbite/files/s2016-pbs-frostbite-sky-clouds-new.pdf
+      weightedDistanceSum += rayDistance * transmittanceIntegral;
+      transmittanceSum += transmittanceIntegral;
+    }
+
+    if (transmittanceIntegral <= minTransmittance) {
+      break; // Early termination
+    }
+
+radianceIntegral++;
+    // Take a shorter step because we've already hit the clouds.
+    stepSize *= perspectiveStepScale;
+    rayDistance += stepSize;
+  }
+
+  // The final product of 5.9.1 and we'll evaluate this in aerial perspective.
+  frontDepth = transmittanceSum > 0.0 ? weightedDistanceSum / transmittanceSum : -1.0;
+
+  return float4(radianceIntegral, saturate(remap(transmittanceIntegral, 1.0, minTransmittance,0,1)));
+}

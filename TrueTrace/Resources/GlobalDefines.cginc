@@ -3,8 +3,8 @@
 // #define DX11
 #define UseBindless
 #define UseSGTree
-// #define TTCustomMotionVectors
-// #define TTReflectionMotionVectors
+#define TTCustomMotionVectors
+#define TTReflectionMotionVectors
 // #define MultiMapScreenshot
 // #define RasterizedDirect
 //Dont modify above, CPU code will do automatically
