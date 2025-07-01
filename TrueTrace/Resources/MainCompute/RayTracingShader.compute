@@ -119,13 +119,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         float3 SigmaS = SigmaT * FogColor;
         float3 SigmaA = SigmaT - SigmaS;
     #endif
-    bool CB = true;
-    if(DoPartialRendering && CurBounce == 0) {
-        CB = (int(id.x)/PartialRenderingFactor + int(id.y)/PartialRenderingFactor + curframe)%2==0;
-        if(UseASVGF) {
-            if(hitDat.metallic == 1 || hitDat.specTrans == 1 || RandomNums[id].z != 0 || RandomNums[id].w != 0) CB = true;
-        }
-    }
     float3 PrevOrigin = ray.origin;
     float3 pos = ray.direction * hit.t + ray.origin;
     float3 PrevDirection = ray.direction;
@@ -704,6 +697,14 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     }
 
     Color.throughput = throughput;
+
+    bool CB = true;
+    if(MaterialLobe == 2 && DoPartialRendering && CurBounce == 0) {
+        CB = (int(id.x)/PartialRenderingFactor + int(id.y)/PartialRenderingFactor + curframe)%2==0;
+        if(UseASVGF) {
+            if(hitDat.metallic == 1 || hitDat.specTrans == 1 || RandomNums[id].z != 0 || RandomNums[id].w != 0) CB = true;
+        }
+    }
 
     if(CB) {
 #ifdef ReSTIRSampleReduction
@@ -1300,16 +1301,6 @@ int MaterialIndex;
 
 
 
-#ifdef HDRP
-    Texture2DArray<float4> DiffuseGBuffer;
-    Texture2DArray<float4> SpecularGBuffer;
-    Texture2DArray<float4> NormalTexture;
-#else
-    Texture2D<float4> DiffuseGBuffer;
-    Texture2D<float4> SpecularGBuffer;
-    Texture2D<float4> NormalTexture;
-#endif
-
 #pragma kernel kernel_finalize
 int UpscalerMethod;
 [numthreads(16, 16, 1)]
@@ -1317,22 +1308,16 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
     if (id.x >= screen_width || id.y >= screen_height) return;
     int final_pixel_index = id.y * screen_width + id.x;
 
-    float3 GBufferCol = 1;
-    [branch]if(DiffRes && UpscalerMethod != 0) {
-        float2 UV = id.xy / float2(screen_width, screen_height);
-        #ifdef HDRP
-            float3 SpecularAlbedo = 0;
-            // GBufferCol = ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, float3(UV, 0), 0).xyz + SpecularAlbedo) == 0) ? 1 : (DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, float3(UV, 0), 0).xyz + SpecularAlbedo);
-        #else
-            // float3 SpecularAlbedo = SpecularGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0);
-            // GBufferCol = ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo) == 0) ? 1 : ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo));
-        #endif
+    int LocalRenderingFactor = PartialRenderingFactor;
+    if(FromColorSpecPacked(GlobalColors[final_pixel_index].MetRoughIsSpec).z != 2) {
+        LocalRenderingFactor = 1;
     }
-    float3 res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? (GlobalColors[final_pixel_index].Data.xyz + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f)) : (((float)PartialRenderingFactor) * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * (UseReSTIRGI ? 1.0f : IndirectBoost)) * GlobalColors[final_pixel_index].Data.xyz) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f) / GBufferCol);
+
+    float3 res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? (GlobalColors[final_pixel_index].Data.xyz + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f)) : (((float)LocalRenderingFactor) * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * (UseReSTIRGI ? 1.0f : IndirectBoost)) * GlobalColors[final_pixel_index].Data.xyz) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f));
     if (!all(res < 10000000)) res = 0;
     #if DebugView != -1
         #if DebugView == DVGIView
-            res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? GlobalColors[final_pixel_index].Data.xyz : (((float)PartialRenderingFactor) * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f)));
+            res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? GlobalColors[final_pixel_index].Data.xyz : (((float)LocalRenderingFactor) * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f)));
         #elif defined(RadCache) && DebugView == DVRadCache
             res = 0;
             float4 Dat = _DebugTex[id.xy];
