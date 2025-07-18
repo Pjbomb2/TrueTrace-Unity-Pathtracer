@@ -1062,7 +1062,7 @@ namespace TrueTrace {
 
                         float midPos = (TempSplit.box.BBMin[splitAxis] + TempSplit.box.BBMax[splitAxis]) * 0.5f;
                         float splitPos = aabb_untransformed.BBMin[splitAxis] + Mathf.Round((midPos - aabb_untransformed.BBMin[splitAxis]) / cellSize) * cellSize;
-                        if (splitPos < TempSplit.box.BBMin[splitAxis] || splitPos > TempSplit.box.BBMax[splitAxis])
+                        if (splitPos <= TempSplit.box.BBMin[splitAxis] || splitPos >= TempSplit.box.BBMax[splitAxis])
                         {
                             splitPos = midPos;
                         }
