@@ -1234,7 +1234,7 @@ int MaterialIndex;
 
 
 #ifdef MoreAO
-    if(GetBounceData(asuint(PSRScreenData.w)) == CurBounce + 1) {
+    if(GetBounceData(asuint(PSRScreenData.w)) == 2 && TempMat.diffTrans == 0) {
         if(FromColorSpecPacked(asuint(PSRScreenData.w)).z == 2 || FromColorSpecPacked(asuint(PSRScreenData.w)).z == 1)
         if(bestHit.t < aoRadius) {
             float ao = bestHit.t / aoRadius;
