@@ -3,8 +3,8 @@
 // #define DX11
 #define UseBindless
 #define UseSGTree
-// #define TTCustomMotionVectors
-// #define TTReflectionMotionVectors
+#define TTCustomMotionVectors
+#define TTReflectionMotionVectors
 // #define MultiMapScreenshot
 // #define RasterizedDirect
 //Dont modify above, CPU code will do automatically
@@ -20,7 +20,7 @@
 #define LBVH
 #define AccurateEmissionTex
 #define TrueBlack
-// #define UseTextureLOD
+#define UseTextureLOD
 #define EONDiffuse
 // #define AdvancedBackground
 #define UseBRDFLights
@@ -29,7 +29,7 @@
 #define RadCache
 #define ClampRoughnessToBounce
 // #define ReSTIRSampleReduction
-// #define ReSTIRReflectionRefinement
+#define ReSTIRReflectionRefinement
 // #define ShadowGlassAttenuation
 // #define DisableNormalMaps
 // #define ClayMetalOverride

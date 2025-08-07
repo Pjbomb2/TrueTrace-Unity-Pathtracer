@@ -911,7 +911,7 @@ inline void filter_image(
     // }
 
     // reduce the HF filter sensitivity to normals when the lighting is invalidated
- float normal_weight_scale = clamp(hist_len_hf / 8.0f, 0, 1);
+    float normal_weight_scale = clamp(hist_len_hf / 8.0f, 0, 1);
 
     float normal_weight_hf = 12;
     const float CenterMetallic = MetallicA[ipos].x;
@@ -964,7 +964,8 @@ inline void filter_image(
 
             float dist_z = abs(depth_center - depth);
             // w *= lerp(!plane_distance_disocclusion_check(CenterPos, pos, normal_center), exp(-dist_z), saturate(step_size / 20.0f));
-            w *= !plane_distance_disocclusion_check(CenterPos, pos, normal_center, pow((1.0f + dist_z) * sqrt(step_size), 2.0f));// * (exp(-abs(depth - depth_center) / depth_center));
+            w *= !plane_distance_disocclusion_check(CenterPos, pos, normal_center) * (exp(-abs(depth - depth_center) / depth_center));
+            // else w *= !plane_distance_disocclusion_check(CenterPos, pos, normal_center, pow((1.0f + dist_z) * sqrt(step_size), 2.0f));// * (exp(-abs(depth - depth_center) / depth_center));
             // w *= !plane_distance_disocclusion_check(CenterPos, pos, normal_center);// * (exp(-abs(depth - depth_center) / depth_center));
             w *= wavelet_kernel[abs(xx)][abs(yy)];
 
@@ -983,7 +984,9 @@ inline void filter_image(
             w_hf *= exp(-dist_l_hf * dist_l_hf * sigma_l_hf);
 
             w_hf *= 1.0f - clamp(abs(MetallicA[p].x - CenterMetallic),0,1);
-            float w_spec = w_hf;
+            float w_spec = 0;
+            w_spec = w_hf * max(0, 1.0f - 10.0f * abs(MetallicA[p].y - roughness_center));
+            // else w_spec = w_hf;
 
             w_spec *= spec_filter_width_scale;
 
