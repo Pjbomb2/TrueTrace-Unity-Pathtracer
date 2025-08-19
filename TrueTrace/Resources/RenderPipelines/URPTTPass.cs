@@ -35,15 +35,22 @@ namespace TrueTrace {
                 m_CameraColorTarget = renderer.cameraColorTargetHandle;
             #endif
 
-            if(MainTex == null) CreateRenderTexture(ref MainTex, renderingData.cameraData.camera);
-
+            if(MainTex == null || MainTex.width != renderingData.cameraData.camera.pixelWidth || MainTex.height != renderingData.cameraData.camera.pixelHeight) {
+                if(MainTex != null) {
+                    MainTex.Release();
+                    Object.DestroyImmediate(MainTex);
+                }
+                CreateRenderTexture(ref MainTex, renderingData.cameraData.camera);
+            }
             ConfigureTarget(m_CameraColorTarget);
 
         }
 
         public URPTTPass(RenderPassEvent rpEvent) {
             RayMaster = GameObject.Find("Scene").GetComponent<RayTracingMaster>();
-            RayMaster.Start2();
+            if(Application.isPlaying) {
+                RayMaster.Start2();
+            }
             renderPassEvent = rpEvent;
         }
 
@@ -69,6 +76,14 @@ namespace TrueTrace {
             context.ExecuteCommandBuffer(cmd);
             cmd.Clear();
             cmd.Release();
+        }
+
+        public void Cleanup() {
+            if(MainTex != null) {
+                MainTex.Release();
+                Object.DestroyImmediate(MainTex);
+                MainTex = null;
+            }
         }
     }   
 }

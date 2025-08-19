@@ -941,7 +941,7 @@ namespace TrueTrace {
 
         private void ResetAllTextures() {
             // _camera.renderingPath = RenderingPath.DeferredShading;
-            if(PrevResFactor != LocalTTSettings.RenderScale || TargetWidth != OverridenWidth) {
+            if(PrevResFactor != LocalTTSettings.RenderScale || TargetWidth != OverridenWidth || TargetHeight != OverridenHeight) {
                 TargetWidth = OverridenWidth;
                 TargetHeight = OverridenHeight;
                 SourceWidth = (int)Mathf.Ceil((float)TargetWidth * LocalTTSettings.RenderScale);

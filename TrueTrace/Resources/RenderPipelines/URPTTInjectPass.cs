@@ -16,9 +16,20 @@ namespace TrueTrace
 
         private void OnDisable() {
             RenderPipelineManager.beginCameraRendering -= InjectPass;
+            CleanupPass();
+        }
+        private void OnDestroy() {
+            CleanupPass();
+        }
+        private void CleanupPass() {
+            if(m_PathTracingPass != null) {
+                m_PathTracingPass.Cleanup();
+                m_PathTracingPass = null;
+            }
         }
 
         private void CreateRenderPass() {
+            CleanupPass();
             m_PathTracingPass = new URPTTPass(RenderPassEvent.BeforeRenderingPostProcessing);
         }
         private void InjectPass(ScriptableRenderContext renderContext, Camera currCamera) {
