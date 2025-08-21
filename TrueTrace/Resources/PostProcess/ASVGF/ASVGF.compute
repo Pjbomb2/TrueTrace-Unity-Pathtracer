@@ -374,8 +374,9 @@ inline void reproject_pixel(int2 p, int field_left, int field_right, int2 gl_Loc
 	// 1) Carrying forward the same random number sequence over multiple frames introduces bias.
 	// 2) Gradient pixels use light lists from the previous frame. If the same pixel was used
 	// as a gradient for more than one frame, we would need to keep the light lists from 2+ frames behind.
-	if (all((pos_grad_prev * GRAD_DWN + stratum_prev == pp)))
+	if (all((pos_grad_prev * GRAD_DWN + stratum_prev == pp))) {
 		return;
+	}
 
 	// Load the data for surface matching
 	// uint cluster_curr = TEX_PT_CLUSTER_A[p].x;
@@ -384,7 +385,10 @@ inline void reproject_pixel(int2 p, int field_left, int field_right, int2 gl_Loc
 	float depth_prev = TEX_PT_VIEW_DEPTH_B[pp];
 
 	float dist_depth = (abs(depth_curr - depth_prev) - CameraDist) / abs(depth_curr);
-
+	if (dist_depth < 0.1f)
+	{
+		s_reprojected_pixels[local_pos.y][local_pos.x] = float4(pp, 0,0);
+	}
 	// Compare the surfaces
 	if (dist_depth < 0.1f)
 	{
@@ -466,6 +470,16 @@ void Reproject(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkG
 				found_pos_prev = int2(reprojected_pixel.xy);
 				found = true;
 			}
+		}
+	}
+	if(!found) {
+		int2 tempoffset = int2((CurFrame % 3), (CurFrame % 9) / 3);
+		int2 p = local_pos * GRAD_DWN + tempoffset;
+		if(all(s_reprojected_pixels[p.y][p.x].xy != float2(0,0))) {
+			found_offset = tempoffset;
+			found = true;
+			found_prev_lum = s_reprojected_pixels[p.y][p.x].zw;
+			found_pos_prev = int2(s_reprojected_pixels[p.y][p.x].xy);
 		}
 	}
 
@@ -969,7 +983,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
 	// Load the target pixel colors for all channels
 	float3 color_curr_hf = TEX_PT_COLOR_HF[ipos];
 
- if(true || ipos.y > screen_height / 2) {
+ // if(true || ipos.y > screen_height / 2) {
     float max_l = 99999999.0f;
     // if (pc.firefly_filter_enable != 0) {
       max_l = min(max_l, pcfirefly_bias + percentiles.y + pcfirefly_ipr_factor * (percentiles.y - percentiles.x));
@@ -980,7 +994,7 @@ void Temporal(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGr
       color_curr_hf *= factor;
       spatial_moments_hf *= float2(factor, factor * factor);
     }
-  }
+  // }
 
  // if(true || ipos.y > screen_height / 2) {
  //    float max_l = 99999999.0f;

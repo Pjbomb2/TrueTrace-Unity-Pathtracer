@@ -689,7 +689,7 @@ namespace TrueTrace {
         private void DisplayCameraList() {
             GUIStyle TempStyle = new GUIStyle();
             TempStyle.fixedWidth = 120;
-            scrollPosition = GUILayout.BeginScrollView(scrollPosition, GUILayout.Width(450), GUILayout.Height(100));
+            scrollPosition = GUILayout.BeginScrollView(scrollPosition, GUILayout.Width(450), GUILayout.Height(300));
                 for(int i = 0; i < t.CameraList.Count; i++) {
                     var A = i;
                     GUILayout.BeginHorizontal();

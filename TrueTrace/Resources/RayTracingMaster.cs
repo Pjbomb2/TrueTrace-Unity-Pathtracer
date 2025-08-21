@@ -656,7 +656,6 @@ namespace TrueTrace {
             SetFloat("focal_distance", LocalTTSettings.DoFFocal, cmd);
             SetFloat("AperatureRadius", LocalTTSettings.DoFAperature * LocalTTSettings.DoFAperatureScale, cmd);
             SetFloat("IndirectBoost", LocalTTSettings.IndirectBoost, cmd);
-            SetFloat("GISpatialRadius", LocalTTSettings.ReSTIRGISpatialRadius, cmd);
             SetFloat("SkyDesaturate", LocalTTSettings.SkyDesaturate, cmd);
             SetFloat("SecondarySkyDesaturate", LocalTTSettings.SecondarySkyDesaturate, cmd);
             SetFloat("BackgroundIntensity", LocalTTSettings.BackgroundIntensity.x, cmd);
@@ -680,7 +679,6 @@ namespace TrueTrace {
             SetInt("screen_height", SourceHeight, cmd);
             SetInt("MaxBounce", LocalTTSettings.bouncecount - 1, cmd);
             SetInt("frames_accumulated", _currentSample, cmd);
-            SetInt("ReSTIRGISpatialCount", LocalTTSettings.ReSTIRGISpatialCount, cmd);
             SetInt("ReSTIRGITemporalMCap", LocalTTSettings.ReSTIRGITemporalMCap, cmd);
             SetInt("curframe", FramesSinceStart2, cmd);
             SetInt("TerrainCount", Assets.Terrains.Count, cmd);

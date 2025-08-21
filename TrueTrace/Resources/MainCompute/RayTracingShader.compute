@@ -219,7 +219,11 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         hitDat.emission *= Tr;// / pdf3;// / pdf;
 #endif
         float3 EmissCol = hitDat.surfaceColor * hitDat.emission * LEMEnergyScale;
-        if (!UseNEE || AggTrisB[hit.triangle_id].IsEmissive == 0) {
+        bool UseBSDFLight = !UseNEE || AggTrisB[hit.triangle_id].IsEmissive == 0;
+        #ifndef UseBRDFLights
+            UseBSDFLight = UseBSDFLight || GetBounceData(asuint(PSRScreenData.w)) == 0;
+        #endif
+        if (UseBSDFLight) {
             if (CurBounce <= 1) Color.Direct += EmissCol;
             else if(CurBounce > 1) {
                 #ifdef RadCache

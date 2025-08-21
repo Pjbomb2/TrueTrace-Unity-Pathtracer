@@ -31,15 +31,13 @@ MonoBehaviour:
   PPToneMap: 1
   PPTAA: 0
   RenderScale: 1
-  DenoiserMethod: 1
+  DenoiserMethod: 0
   UpscalerMethod: 0
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
   UseReSTIRGI: 0
-  ReSTIRGISpatialCount: 24
-  ReSTIRGISpatialRadius: 50
   ReSTIRGITemporalMCap: 4
-  DoReSTIRGIConnectionValidation: 1
+  DoReSTIRGIConnectionValidation: 0
   Exposure: 3.7
   DoPartialRendering: 0
   PartialRenderingFactor: 1
