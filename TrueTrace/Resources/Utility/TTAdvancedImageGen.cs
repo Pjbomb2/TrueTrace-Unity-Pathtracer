@@ -270,10 +270,10 @@ namespace TrueTrace {
                     if (!CameraList[CurrentCamera].ActivateCam || RayTracingMaster.RayMaster.FramesSinceStart >= MaxSamples || waitedTime >= TimeBetweenSegments) {
                         if(CameraList[CurrentCamera].ActivateCam) {
                             waitedTime = 0;
-                            if(!System.IO.Directory.Exists(Application.dataPath.Replace("/Assets", "") + "/TempPanoramas")) {
-                                System.IO.Directory.CreateDirectory(Application.dataPath.Replace("/Assets", "") + "/TempPanoramas");
+                            if(!System.IO.Directory.Exists(Application.dataPath.Replace("/Assets", "") + "/TrueTrace/TempPanoramas")) {
+                                System.IO.Directory.CreateDirectory(Application.dataPath.Replace("/Assets", "") + "/TrueTrace/TempPanoramas");
                             }
-                            ScreenCapture.CaptureScreenshot(Application.dataPath.Replace("/Assets", "") + "/TempPanoramas/" + CurrentSegment + ".png");
+                            ScreenCapture.CaptureScreenshot(Application.dataPath.Replace("/Assets", "") + "/TrueTrace/TempPanoramas/" + CurrentSegment + ".png");
                             TexArray[CurrentSegment] = ScreenCapture.CaptureScreenshotAsTexture();
                             #if MultiMapScreenshot
                                 if(CameraList[CurrentCamera].SaveImgMap) {

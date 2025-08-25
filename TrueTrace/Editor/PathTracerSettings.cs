@@ -2614,33 +2614,37 @@ Slider AperatureSlider;
 
         public void CreateGUI() {
             HasNoMore = false;
+            string BasePath = Application.dataPath.Replace("/Assets", "");
+            if(!System.IO.Directory.Exists(BasePath + "/TrueTrace")) {
+               System.IO.Directory.CreateDirectory(BasePath + "/TrueTrace");
+            }
             if(!PlayerPrefs.HasKey("ScreenShotPath")) {
-               PlayerPrefs.SetString("ScreenShotPath",  Application.dataPath + "/ScreenShots");
+               PlayerPrefs.SetString("ScreenShotPath",  BasePath + "/TrueTrace/ScreenShots");
             }
             if(!PlayerPrefs.HasKey("PanoramaPath")) {
-               PlayerPrefs.SetString("PanoramaPath",  Application.dataPath + "/ScreenShots");
+               PlayerPrefs.SetString("PanoramaPath",  BasePath + "/TrueTrace/ScreenShots");
             }
             if(!PlayerPrefs.HasKey("TimelinePath")) {
-               PlayerPrefs.SetString("TimelinePath",  Application.dataPath + "/TimelineFrames");
+               PlayerPrefs.SetString("TimelinePath",  BasePath + "/TrueTrace/TimelineFrames");
             }
             if(!PlayerPrefs.HasKey("TurnTablePath")) {
-               PlayerPrefs.SetString("TurnTablePath",  Application.dataPath + "/TurnTables");
+               PlayerPrefs.SetString("TurnTablePath",  BasePath + "/TrueTrace/TurnTables");
             }
             if(!System.IO.Directory.Exists(PlayerPrefs.GetString("TurnTablePath"))) {
-               AssetDatabase.CreateFolder("Assets", "TurnTables");
-               PlayerPrefs.SetString("TurnTablePath",  Application.dataPath + "/TurnTables");
+               System.IO.Directory.CreateDirectory(BasePath + "/TrueTrace/TurnTables");
+               PlayerPrefs.SetString("TurnTablePath",  BasePath + "/TrueTrace/TurnTables");
             }
             if(!System.IO.Directory.Exists(PlayerPrefs.GetString("ScreenShotPath"))) {
-               AssetDatabase.CreateFolder("Assets", "ScreenShots");
-               PlayerPrefs.SetString("ScreenShotPath",  Application.dataPath + "/ScreenShots");
+               System.IO.Directory.CreateDirectory(BasePath + "/TrueTrace/ScreenShots");
+               PlayerPrefs.SetString("ScreenShotPath",  BasePath + "/TrueTrace/ScreenShots");
             }
             if(!System.IO.Directory.Exists(PlayerPrefs.GetString("PanoramaPath"))) {
-               AssetDatabase.CreateFolder("Assets", "ScreenShots");
-               PlayerPrefs.SetString("PanoramaPath",  Application.dataPath + "/ScreenShots");
+               System.IO.Directory.CreateDirectory(BasePath + "/TrueTrace/ScreenShots");
+               PlayerPrefs.SetString("PanoramaPath",  BasePath + "/TrueTrace/ScreenShots");
             }
             if(!System.IO.Directory.Exists(PlayerPrefs.GetString("TimelinePath"))) {
-               AssetDatabase.CreateFolder("Assets", "TimelineFrames");
-               PlayerPrefs.SetString("TimelinePath",  Application.dataPath + "/TimelineFrames");
+               System.IO.Directory.CreateDirectory(BasePath + "/TrueTrace/TimelineFrames");
+               PlayerPrefs.SetString("TimelinePath",  BasePath + "/TrueTrace/TimelineFrames");
             }
 
             OnFocus();
