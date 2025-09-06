@@ -1439,6 +1439,24 @@ inline SGLobe sg_product ( float3 axis1 , float sharpness1 , float3 axis2 , floa
 
 static const float FLT_MAX = 3.402823466e+38f;
 
+inline float expm1_over_x(const float x)
+{
+	const float u = exp(x);
+
+	if (u == 1.0)
+	{
+		return 1.0;
+	}
+
+	const float y = u - 1.0;
+
+	if (abs(x) < 1.0)
+	{
+		return y * rcp(log(u));
+	}
+
+	return y * rcp(x);
+}
 
 // [Tokuyoshi et al. 2024 "Hierarchical Light Sampling with Accurate Spherical Gaussian Lighting (Supplementary Document)" Listing. 5]
 inline float UpperSGClampedCosineIntegralOverTwoPi(const float sharpness)
@@ -1450,7 +1468,8 @@ inline float UpperSGClampedCosineIntegralOverTwoPi(const float sharpness)
 		return (((((((-1.0 / 362880.0) * sharpness + 1.0 / 40320.0) * sharpness - 1.0 / 5040.0) * sharpness + 1.0 / 720.0) * sharpness - 1.0 / 120.0) * sharpness + 1.0 / 24.0) * sharpness - 1.0 / 6.0) * sharpness + 0.5;
 	}
 
-	return (expm1(-sharpness) + sharpness) * rcp(sharpness * sharpness);
+	// return (expm1(-sharpness) + sharpness) * rcp(sharpness * sharpness);
+	return (1.0f - expm1_over_x(-sharpness)) / sharpness;
 }
 
 // [Tokuyoshi et al. 2024 "Hierarchical Light Sampling with Accurate Spherical Gaussian Lighting (Supplementary Document)" Listing. 6]
@@ -1465,7 +1484,8 @@ inline float LowerSGClampedCosineIntegralOverTwoPi(const float sharpness)
 		return e * (((((((((1.0 / 403200.0) * sharpness - 1.0 / 45360.0) * sharpness + 1.0 / 5760.0) * sharpness - 1.0 / 840.0) * sharpness + 1.0 / 144.0) * sharpness - 1.0 / 30.0) * sharpness + 1.0 / 8.0) * sharpness - 1.0 / 3.0) * sharpness + 0.5);
 	}
 
-	return e * (-expm1(-sharpness) - sharpness * e) * rcp(sharpness * sharpness);
+	// return e * (-expm1(-sharpness) - sharpness * e) * rcp(sharpness * sharpness);
+	return e * (expm1_over_x(-sharpness) - e) / sharpness;
 }
 
 // Approximate product integral of an SG and clamped cosine / pi.
@@ -1560,24 +1580,6 @@ inline float SGGXReflectionPDF(const float3 wi, const float3 m, const float2x2 r
 }
 
 
-inline float expm1_over_x(const float x)
-{
-	const float u = exp(x);
-
-	if (u == 1.0)
-	{
-		return 1.0;
-	}
-
-	const float y = u - 1.0;
-
-	if (abs(x) < 1.0)
-	{
-		return y * rcp(log(u));
-	}
-
-	return y * rcp(x);
-}
 
 
 inline float SGIntegral(const float sharpness)
@@ -1641,9 +1643,6 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 	const float diffuseIllumination = amplitude * SGClampedCosineProductIntegralOverPi2024(cosine, LightLobe.sharpness);
 
 
-	const float3 prodVec = reflecVec + LightLobe.axis * LightLobe.sharpness; // Axis of the SG product lobe.
-	const float prodSharpness = length(prodVec);
-	const float3 prodDir = prodVec / prodSharpness;
 	const float LightLobeVariance = rcp(LightLobe.sharpness);
 	// if(id.y > screen_height / 2 + screen_height / 4) LightLobeVariance = LightLobeVariance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
 	
@@ -1664,6 +1663,10 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 	const float3 halfvecUnormalized = viewDirTS + mul(tangentFrame, LightLobe.axis);
 	const float3 halfvec = halfvecUnormalized * rsqrt(max(dot(halfvecUnormalized, halfvecUnormalized), EPSILON));
 	const float pdf = SGGXReflectionPDF(viewDirTS, halfvec, filteredRoughnessMat);
+
+	const float3 prodVec = reflecVec + LightLobe.axis * LightLobe.sharpness; // Axis of the SG product lobe.
+	const float prodSharpness = length(prodVec);
+	const float3 prodDir = prodVec / prodSharpness;
 
 	// Visibility of the SG light in the upper hemisphere.
 	const float visibility = VMFHemisphericalIntegral(dot(prodDir, n), prodSharpness);// * (dot(n, to_light) >= 0 || TargetNode.radius >= sqrt(squareddist));
@@ -1750,6 +1753,11 @@ int CalcInside(LightBVHData A, LightBVHData B, float3 p, int Index) {
 	} else if(Residency1) {
 		return 1;
 	} else return -1;
+}
+
+float3 DominantVisibleGGXNormal(const float3 wi, const float2 roughness)
+{
+	return normalize(float3(roughness * roughness * wi.xy, wi.z + length(float3(roughness * wi.xy, wi.z))));
 }
 
 #ifdef UseSGTree

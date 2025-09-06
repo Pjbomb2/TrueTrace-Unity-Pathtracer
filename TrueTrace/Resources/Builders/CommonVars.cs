@@ -52,6 +52,7 @@ namespace CommonVars
         public float ZAxisRotation;
         public float Softness;
         public Vector2Int IESTex;
+        public Vector4 IESTexScale;
     }
 
     [System.Serializable]

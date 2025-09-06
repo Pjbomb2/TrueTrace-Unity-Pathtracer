@@ -58,7 +58,7 @@ namespace TrueTrace {
             CommandBuffer cmd = new CommandBuffer();
             cmd.name = "TrueTrace";
             
-#if !TTCustomMotionVectors
+#if TTDisableCustomMotionVectors
             renderingData.cameraData.camera.depthTextureMode = DepthTextureMode.MotionVectors | DepthTextureMode.Depth;
             var motionVectors = Shader.GetGlobalTexture("_MotionVectorTexture");
             Shader.SetGlobalTexture("_CameraMotionVectorsTexture", motionVectors);

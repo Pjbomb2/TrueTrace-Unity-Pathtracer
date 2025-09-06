@@ -79,7 +79,7 @@ namespace TrueTrace {
         [HideInInspector] public RenderTexture MultiMapMeshIDTextureInitial;
         [HideInInspector] public RenderTexture MultiMapMeshIDTexture;
 #endif
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
         private RenderTexture MVTexture;
 #endif
         private RenderTexture GIReservoirA;
@@ -187,7 +187,7 @@ namespace TrueTrace {
         private int TTtoOIDNKernel;
         private int OIDNtoTTKernel;
         private int TTtoOIDNKernelPanorama;
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
         private int MVKernel;
 #endif
         #if !DisableRadianceCache
@@ -288,7 +288,7 @@ namespace TrueTrace {
             TTtoOIDNKernel = ShadingShader.FindKernel("TTtoOIDNKernel");
             OIDNtoTTKernel = ShadingShader.FindKernel("OIDNtoTTKernel");
             TTtoOIDNKernelPanorama = ShadingShader.FindKernel("TTtoOIDNKernelPanorama");
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
             MVKernel = ShadingShader.FindKernel("MVKernel");
 #endif
             #if !DisableRadianceCache
@@ -434,7 +434,7 @@ namespace TrueTrace {
             MultiMapMeshIDTexture.ReleaseSafe();
             MultiMapMeshIDTextureInitial.ReleaseSafe();
 #endif
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
             MVTexture.ReleaseSafe();
 #endif
             ScreenSpaceInfo.ReleaseSafe();
@@ -715,7 +715,7 @@ namespace TrueTrace {
 
             bool FlipFrame = (FramesSinceStart2 % 2 == 0);
 
-#if !TTCustomMotionVectors
+#if TTDisableCustomMotionVectors
             ReSTIRGI.SetTextureFromGlobal(ReSTIRGIKernel, "MotionVectors", "_CameraMotionVectorsTexture");
 #else
             ReSTIRGI.SetTextureFromGlobal(ReSTIRGIKernel, "MotionVectors", "TTMotionVectorTexture");
@@ -827,7 +827,7 @@ namespace TrueTrace {
                 ShadingShader.SetComputeBuffer(FinalizeKernel, "VoxelDataBufferB", !FlipFrame ? VoxelDataBufferA : VoxelDataBufferB);
             #endif
 
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
             AssetManager.Assets.SetMeshTraceBuffers(ShadingShader, MVKernel);
             ShadingShader.SetTexture(MVKernel, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
             ShadingShader.SetTexture(MVKernel, "PrimaryTriDataPrev", (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
@@ -1010,7 +1010,7 @@ namespace TrueTrace {
                     PSRGBuff.ReleaseSafe();
                     _PrimaryTriangleInfoA.ReleaseSafe();
                     _PrimaryTriangleInfoB.ReleaseSafe();
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
                     MVTexture.ReleaseSafe();
 #endif
                     ScreenSpaceInfo.ReleaseSafe();
@@ -1092,7 +1092,7 @@ namespace TrueTrace {
                 CommonFunctions.CreateRenderTexture(ref MultiMapMeshIDTextureInitial, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
 #endif
 
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
                 CommonFunctions.CreateRenderTexture(ref MVTexture, SourceWidth, SourceHeight, CommonFunctions.RTFull2);
 #endif
                 CommonFunctions.CreateRenderTexture(ref ScreenSpaceInfo, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
@@ -1141,7 +1141,7 @@ namespace TrueTrace {
         
         private void GenerateRays(CommandBuffer cmd) {
             if (LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI) {
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
             if(DoKernelProfiling) cmd.BeginSample("TTMV");
                 cmd.DispatchCompute(ShadingShader, MVKernel+1, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
                 cmd.DispatchCompute(ShadingShader, MVKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
@@ -1263,7 +1263,7 @@ namespace TrueTrace {
                     }
                 if(DoKernelProfiling) cmd.EndSample("Pathtracing Kernels");
 
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
             if(DoKernelProfiling) cmd.BeginSample("TTMV2");
                 cmd.DispatchCompute(ShadingShader, MVKernel+2, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
             if(DoKernelProfiling) cmd.EndSample("TTMV2");
@@ -1445,7 +1445,7 @@ namespace TrueTrace {
                 RunUpdate();
                 if(RebuildMeshObjectBuffers(cmd)) {
                     InitRenderTexture();
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
         Shader.SetGlobalTexture("TTMotionVectorTexture", MVTexture);
 #endif
                     SetShaderParameters(cmd);

@@ -23,6 +23,7 @@ namespace TrueTrace {
         [SerializeField] [Range(1000.0f,20000.0f)] public float KelvinTemperature = 1000.0f;
         [SerializeField] public float Intensity;
         [SerializeField] public Vector3 Col;
+        [SerializeField] public Vector4 IESTexScaleOffset;
         [SerializeField] public float SpotAngle;
         [SerializeField] public bool HasInitialized = false;
         public Texture2D IESProfile;
@@ -88,6 +89,7 @@ namespace TrueTrace {
                 float outerCos = Mathf.Cos(Mathf.Deg2Rad * 0.5f * ThisLight.spotAngle);
                 float angleRangeInv = 1.0f / Mathf.Max(innerCos - outerCos, 0.001f);
                 ThisLightData.SpotAngle = new Vector2(angleRangeInv, -outerCos * angleRangeInv);
+                ThisLightData.IESTexScale = new Vector4(1,1,0,0);
 #if UNITY_2021 || UNITY_2022 || !UNITY_PIPELINE_HDRP
             } else if(ThisLight.type == LightType.Rectangle) {
                 #if UNITY_EDITOR
@@ -150,6 +152,7 @@ namespace TrueTrace {
                     float outerCos = Mathf.Cos(Mathf.Deg2Rad * 0.5f * SpotAngle);
                     float angleRangeInv = 1.0f / Mathf.Max(innerCos - outerCos, 0.001f);
                     ThisLightData.SpotAngle = new Vector2(angleRangeInv, -outerCos * angleRangeInv);
+                    ThisLightData.IESTexScale = IESTexScaleOffset;
                 }
                 ThisLightData.Direction = (ThisLightData.Type == 1) ? -LocalTransform.forward : LocalTransform.forward;
                 ThisLightData.Softness = ShadowSoftness;
@@ -328,12 +331,23 @@ namespace TrueTrace {
                     MainContainer.Add(IsMainSunToggle);
                 IsMainSunToggle.RegisterValueChangedCallback(evt => {for(int i = 0; i < TargCount; i++) {(t1[i] as RayTracingLights).IsMainSun = evt.newValue; (t1[i] as RayTracingLights).NeedsToUpdate = true;}});
 
+                Vector2Field IESScaleField = new Vector2Field("IES Scale");
+                Vector2Field IESOffsetField = new Vector2Field("IES Offset");
+                IESScaleField.value = new Vector2(t.IESTexScaleOffset.x, t.IESTexScaleOffset.y);
+                IESOffsetField.value = new Vector2(t.IESTexScaleOffset.z, t.IESTexScaleOffset.w);
+
                 ObjectField IESField = new ObjectField("IES Texture");
                 IESField.objectType = typeof(Texture2D);
                 IESField.value = t.IESProfile;
-                if(t.ThisLight.type == LightType.Spot)
+                if(t.ThisLight.type == LightType.Spot) {
                     MainContainer.Add(IESField);
+                    MainContainer.Add(IESScaleField);
+                    MainContainer.Add(IESOffsetField);
+
+                }
                 IESField.RegisterValueChangedCallback(evt => {for(int i = 0; i < TargCount; i++) {(t1[i] as RayTracingLights).IESProfile = evt.newValue as Texture2D; (t1[i] as RayTracingLights).NeedsToUpdate = true;}});
+                IESScaleField.RegisterValueChangedCallback(evt => {for(int i = 0; i < TargCount; i++) {(t1[i] as RayTracingLights).IESTexScaleOffset = new Vector4(evt.newValue.x, evt.newValue.y, (t1[i] as RayTracingLights).IESTexScaleOffset.z, (t1[i] as RayTracingLights).IESTexScaleOffset.w); (t1[i] as RayTracingLights).NeedsToUpdate = true;}});
+                IESOffsetField.RegisterValueChangedCallback(evt => {for(int i = 0; i < TargCount; i++) {(t1[i] as RayTracingLights).IESTexScaleOffset = new Vector4((t1[i] as RayTracingLights).IESTexScaleOffset.x, (t1[i] as RayTracingLights).IESTexScaleOffset.y, evt.newValue.x, evt.newValue.y); (t1[i] as RayTracingLights).NeedsToUpdate = true;}});
 
 
             return MainContainer;

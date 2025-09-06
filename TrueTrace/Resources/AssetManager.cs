@@ -50,7 +50,7 @@ namespace TrueTrace {
         [HideInInspector] public IntersectionMatData[] IntersectionMats;
         [HideInInspector] public ComputeBuffer BVH8AggregatedBuffer;
         [HideInInspector] public ComputeBuffer AggTriBufferA;
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
         [HideInInspector] public ComputeBuffer SkinnedMeshAggTriBufferPrev;
 #endif
         [HideInInspector] public ComputeBuffer AggTriBufferB;
@@ -85,7 +85,7 @@ namespace TrueTrace {
                 ThisShader.SetComputeBuffer(Kernel, "TLASBVH8Indices", TLASCWBVHIndexes);
             #endif
             ThisShader.SetComputeBuffer(Kernel, "AggTrisA", AggTriBufferA);
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
             ThisShader.SetComputeBuffer(Kernel, "SkinnedMeshTriBufferPrev", SkinnedMeshAggTriBufferPrev);
 #endif
             ThisShader.SetComputeBuffer(Kernel, "AggTrisB", AggTriBufferB);
@@ -215,7 +215,7 @@ namespace TrueTrace {
             LightTreeBufferB.ReleaseSafe();
             BVH8AggregatedBuffer.ReleaseSafe();
             AggTriBufferA.ReleaseSafe();
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
             SkinnedMeshAggTriBufferPrev.ReleaseSafe();
 #endif
             AggTriBufferB.ReleaseSafe();
@@ -855,7 +855,7 @@ namespace TrueTrace {
             LightTreeBufferB.ReleaseSafe();
             BVH8AggregatedBuffer.ReleaseSafe();
             AggTriBufferA.ReleaseSafe();
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
             SkinnedMeshAggTriBufferPrev.ReleaseSafe();
 #endif
             AggTriBufferB.ReleaseSafe();
@@ -994,7 +994,7 @@ namespace TrueTrace {
             LightTreeBufferB.ReleaseSafe();
             BVH8AggregatedBuffer.ReleaseSafe();
             AggTriBufferA.ReleaseSafe();
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
             SkinnedMeshAggTriBufferPrev.ReleaseSafe();
 #endif
             AggTriBufferB.ReleaseSafe();
@@ -1273,7 +1273,7 @@ namespace TrueTrace {
 #if StrictMemoryReduction
                     BVH8AggregatedBuffer.Release();
                     AggTriBufferA.Release();
-    #if TTCustomMotionVectors
+    #if !TTDisableCustomMotionVectors
                 SkinnedMeshAggTriBufferPrev.ReleaseSafe();
     #endif
                     AggTriBufferB.Release();
@@ -1320,7 +1320,7 @@ namespace TrueTrace {
 #if StrictMemoryReduction
                     CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80);
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBufferA, AggTriCount, CommonFunctions.GetStride<CudaTriangleA>());
-    #if TTCustomMotionVectors
+    #if !TTDisableCustomMotionVectors
                     CommonFunctions.CreateDynamicBuffer(ref SkinnedMeshAggTriBufferPrev, (int)Mathf.Max(SkinnedMeshTriCount,1), CommonFunctions.GetStride<CudaTriangleA>());
     #endif
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBufferB, AggTriCount, CommonFunctions.GetStride<CudaTriangleB>());
@@ -1335,7 +1335,7 @@ namespace TrueTrace {
 #else
                     if(BVH8AggregatedBuffer == null || !BVH8AggregatedBuffer.IsValid() || AggNodeCount > BVH8AggregatedBuffer.count) CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80);
                     if(AggTriBufferA == null || !AggTriBufferA.IsValid() || AggTriCount > AggTriBufferA.count) CommonFunctions.CreateDynamicBuffer(ref AggTriBufferA, AggTriCount, CommonFunctions.GetStride<CudaTriangleA>());
-    #if TTCustomMotionVectors
+    #if !TTDisableCustomMotionVectors
                     if(SkinnedMeshAggTriBufferPrev == null || !SkinnedMeshAggTriBufferPrev.IsValid() || (int)Mathf.Max(SkinnedMeshTriCount,1) > SkinnedMeshAggTriBufferPrev.count) CommonFunctions.CreateDynamicBuffer(ref SkinnedMeshAggTriBufferPrev, (int)Mathf.Max(SkinnedMeshTriCount,1), CommonFunctions.GetStride<CudaTriangleA>());
     #endif
                     if(AggTriBufferB == null || !AggTriBufferB.IsValid() || AggTriCount > AggTriBufferB.count) CommonFunctions.CreateDynamicBuffer(ref AggTriBufferB, AggTriCount, CommonFunctions.GetStride<CudaTriangleB>());
@@ -2081,7 +2081,7 @@ namespace TrueTrace {
                 for (int i = 0; i < MeshDataCount; i++) {//Refit BVH's of skinned meshes
                     TempParent = RenderQue[i];
                     if (TempParent.IsSkinnedGroup || TempParent.IsDeformable) {
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
                         TempParent.RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBufferA, ref AggTriBufferB, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, BoxesBuffer, i, SkinnedMeshAggTriBufferPrev, cmd);
 #else
                         TempParent.RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBufferA, ref AggTriBufferB, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, BoxesBuffer, i, cmd);
@@ -2299,7 +2299,7 @@ namespace TrueTrace {
                     TargetTransform = RenderTransforms[i];
                     if (TargetParent.IsSkinnedGroup || TargetParent.IsDeformable) {
                         if (UseSkinning && didstart) {
-    #if TTCustomMotionVectors
+    #if !TTDisableCustomMotionVectors
                             TargetParent.RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBufferA, ref AggTriBufferB, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, BoxesBuffer, i, SkinnedMeshAggTriBufferPrev, cmd);
     #else
                             TargetParent.RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBufferA, ref AggTriBufferB, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, BoxesBuffer, i, cmd);

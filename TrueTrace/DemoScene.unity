@@ -12704,7 +12704,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 1
+  NeedsToUpdate: 0
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -15220,6 +15220,7 @@ MonoBehaviour:
     ZAxisRotation: 0.066060774
     Softness: 0
     IESTex: {x: 0, y: 0}
+    IESTexScale: {x: 0, y: 0, z: 0, w: 0}
   ArrayIndex: 0
   IESIndex: 0
   ShadowSoftness: 0
@@ -15228,6 +15229,7 @@ MonoBehaviour:
   KelvinTemperature: 7734
   Intensity: 122
   Col: {x: 1, y: 1, z: 1}
+  IESTexScaleOffset: {x: 0, y: 0, z: 0, w: 0}
   SpotAngle: 30
   HasInitialized: 1
   IESProfile: {fileID: 0}
@@ -37453,6 +37455,7 @@ MonoBehaviour:
   RenderTransforms: []
   RenderQue: []
   BuildQue:
+  - {fileID: 0}
   - {fileID: 499686671}
   - {fileID: 1770588100}
   - {fileID: 1931085300}
@@ -54364,7 +54367,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 1
+  NeedsToUpdate: 0
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -60878,7 +60881,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 3
   InstanceReferences: 0
-  NeedsToUpdate: 1
+  NeedsToUpdate: 0
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0

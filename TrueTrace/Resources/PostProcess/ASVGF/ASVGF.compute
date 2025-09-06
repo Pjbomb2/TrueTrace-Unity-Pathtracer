@@ -619,8 +619,8 @@ void Gradient_Img(uint3 gl_GlobalInvocationID : SV_DispatchThreadID)
 
 		float3 curr_hf = TEX_PT_COLOR_HFWrite[grad_sample_pos_curr];
 		float3 curr_spec = unpackRGBE(TEX_PT_COLOR_SPECWrite[grad_sample_pos_curr]);
-		TEX_PT_COLOR_HFWrite[grad_sample_pos_curr] = 0;//TEX_PT_COLOR_HFWrite[grad_sample_pos_curr + 1];
-		TEX_PT_COLOR_SPECWrite[grad_sample_pos_curr] = 0;//TEX_PT_COLOR_SPECWrite[grad_sample_pos_curr + 1];
+		// TEX_PT_COLOR_HFWrite[grad_sample_pos_curr] = 0;//TEX_PT_COLOR_HFWrite[grad_sample_pos_curr + 1];
+		// TEX_PT_COLOR_SPECWrite[grad_sample_pos_curr] = 0;//TEX_PT_COLOR_SPECWrite[grad_sample_pos_curr + 1];
 
 		grad_hf = get_gradient(luminance(curr_hf), prev_hf_spec_lum.x);
 		grad_spec = get_gradient(luminance(curr_spec), prev_hf_spec_lum.y);

@@ -117,6 +117,7 @@ struct LightData {
 	float ZAxisRotation;
 	float Softness;
 	int2 IESTex;//16
+	float4 IESTexScaleOffset;
 
 };
 StructuredBuffer<LightData> _UnityLights;

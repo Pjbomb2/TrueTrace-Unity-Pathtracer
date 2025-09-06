@@ -17,8 +17,8 @@ namespace TrueTrace {
         int SaveIndex;
 
         string PreviousTargetFile = null;
-        // string TTPathFinder.CurrentTargetFile = null;
-
+        // string RayMaster.LocalTTSettings.CurrentTargetFile = null;
+        RayTracingMaster RayMaster;
         Vector2 FileSelectionScroll;
 
         void SelectMatFile() {
@@ -30,7 +30,7 @@ namespace TrueTrace {
                     GUILayout.BeginHorizontal();
                         if(!fileInfo[i].Name.Contains(".xml.meta"))
                             if(GUILayout.Button(fileInfo[i].Name.Replace(".xml", "")))
-                                TTPathFinder.CurrentTargetFile = TempFilePath + fileInfo[i].Name;
+                                RayMaster.LocalTTSettings.CurrentTargetFile = TempFilePath + fileInfo[i].Name;
                     GUILayout.EndHorizontal();
                 }
             GUILayout.EndScrollView();
@@ -39,6 +39,7 @@ namespace TrueTrace {
 
 
         public SavePopup(RayTracingObject ThisOBJ, int SaveIndex) {
+            if(RayMaster == null) RayMaster = GameObject.Find("Scene").GetComponent<RayTracingMaster>();
             this.ThisOBJ = ThisOBJ;
             this.SaveIndex = SaveIndex;
             UpdateList();
@@ -53,17 +54,19 @@ namespace TrueTrace {
         int FolderIndex;
         string Shorthand = null;
         void UpdateList() {
-            if(TTPathFinder.CurrentTargetFile == null) {
+            if(RayMaster == null) RayMaster = GameObject.Find("Scene").GetComponent<RayTracingMaster>();
+            if(RayMaster.LocalTTSettings.CurrentTargetFile == null || RayMaster.LocalTTSettings.CurrentTargetFile == "") {
                 SelectMatFile();
                 return;
             }
             UnityEditor.AssetDatabase.Refresh();   
-            using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets/" + TTPathFinder.CurrentTargetFile.Substring(TTPathFinder.CurrentTargetFile.LastIndexOf("/") + 1).Replace(".xml", "")).text)) {
+            using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets/" + RayMaster.LocalTTSettings.CurrentTargetFile.Substring(RayMaster.LocalTTSettings.CurrentTargetFile.LastIndexOf("/") + 1).Replace(".xml", "")).text)) {
                 var serializer = new XmlSerializer(typeof(RayObjFolderMaster));
                 PresetMaster = serializer.Deserialize(A) as RayObjFolderMaster;
             }
         }
         void Init(Rect rect) {
+            if(RayMaster == null) RayMaster = GameObject.Find("Scene").GetComponent<RayTracingMaster>();
             UpdateList();
             OnGUI(new Rect(0,0,100,10));
         }
@@ -72,17 +75,17 @@ namespace TrueTrace {
         Vector2 ScrollPosition2;
 
         public override void OnGUI(Rect rect) {
-            if(PreviousTargetFile == null && TTPathFinder.CurrentTargetFile != null) {
+            if(PreviousTargetFile == null && RayMaster.LocalTTSettings.CurrentTargetFile != null && RayMaster.LocalTTSettings.CurrentTargetFile != "") {
                 UpdateList();
             }
-            PreviousTargetFile = TTPathFinder.CurrentTargetFile;
+            PreviousTargetFile = RayMaster.LocalTTSettings.CurrentTargetFile;
             // Debug.Log("ONINSPECTORGUI");
-            if(TTPathFinder.CurrentTargetFile == null) {
+            if(RayMaster.LocalTTSettings.CurrentTargetFile == null || RayMaster.LocalTTSettings.CurrentTargetFile == "") {
                 SelectMatFile();
                 return;
             }
             if(Shorthand == null) {
-                Shorthand = "File: " + TTPathFinder.CurrentTargetFile.Substring(TTPathFinder.CurrentTargetFile.LastIndexOf("/") + 1).Replace(".xml", "");
+                Shorthand = "File: " + RayMaster.LocalTTSettings.CurrentTargetFile.Substring(RayMaster.LocalTTSettings.CurrentTargetFile.LastIndexOf("/") + 1).Replace(".xml", "");
             }
             GUILayout.Label(Shorthand);
             GUILayout.BeginHorizontal();
@@ -240,7 +243,7 @@ namespace TrueTrace {
                 };
                 if(CopyIndex != -1) PresetMaster.PresetFolders[FolderIndex].ContainedPresets[CopyIndex] = TempRay;
                 else PresetMaster.PresetFolders[FolderIndex].ContainedPresets.Add(TempRay);
-                string materialPresetsPath = TTPathFinder.CurrentTargetFile;
+                string materialPresetsPath = RayMaster.LocalTTSettings.CurrentTargetFile;
                 using(StreamWriter writer = new StreamWriter(materialPresetsPath)) {
                     var serializer = new XmlSerializer(typeof(RayObjFolderMaster));
                     serializer.Serialize(writer.BaseStream, PresetMaster);
@@ -248,7 +251,7 @@ namespace TrueTrace {
                 this.editorWindow.Close();
             }
             if(GUILayout.Button("Select New File")) {
-                TTPathFinder.CurrentTargetFile = null;
+                RayMaster.LocalTTSettings.CurrentTargetFile = null;
                 // SelectMatFile();
             }
 
@@ -258,7 +261,7 @@ namespace TrueTrace {
     public class LoadPopup : PopupWindowContent
     {
 
-        // string TTPathFinder.CurrentTargetFile = null;
+        // string RayMaster.LocalTTSettings.CurrentTargetFile = null;
         string PreviousTargetFile = null;
         Vector2 FileSelectionScroll;
         string Shorthand = null;
@@ -271,7 +274,7 @@ namespace TrueTrace {
                     GUILayout.BeginHorizontal();
                         if(!fileInfo[i].Name.Contains(".xml.meta"))
                             if(GUILayout.Button(fileInfo[i].Name.Replace(".xml", "")))
-                                TTPathFinder.CurrentTargetFile = TempFilePath + fileInfo[i].Name;
+                                RayMaster.LocalTTSettings.CurrentTargetFile = TempFilePath + fileInfo[i].Name;
                     GUILayout.EndHorizontal();
                 }
             GUILayout.EndScrollView();
@@ -281,7 +284,9 @@ namespace TrueTrace {
         Vector2 ScrollPosition;
         RayTracingObjectEditor SourceWindow;
         RayObjFolderMaster PresetMaster;
+        RayTracingMaster RayMaster;
         public LoadPopup(RayTracingObjectEditor editor) {
+            if(RayMaster == null) RayMaster = GameObject.Find("Scene").GetComponent<RayTracingMaster>();
             this.SourceWindow = editor;
             UpdateList();
         }
@@ -296,38 +301,39 @@ namespace TrueTrace {
         }
         bool[] FoldoutBool;
         void UpdateList() {
-            if(TTPathFinder.CurrentTargetFile == null) {
+            if(RayMaster.LocalTTSettings.CurrentTargetFile == null || RayMaster.LocalTTSettings.CurrentTargetFile == "") {
                 SelectMatFile();
                 return;
             }
             UnityEditor.AssetDatabase.Refresh();
-            using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets/" + TTPathFinder.CurrentTargetFile.Substring(TTPathFinder.CurrentTargetFile.LastIndexOf("/") + 1).Replace(".xml", "")).text)) {
+            using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets/" + RayMaster.LocalTTSettings.CurrentTargetFile.Substring(RayMaster.LocalTTSettings.CurrentTargetFile.LastIndexOf("/") + 1).Replace(".xml", "")).text)) {
                 var serializer = new XmlSerializer(typeof(RayObjFolderMaster));
                 PresetMaster = serializer.Deserialize(A) as RayObjFolderMaster;
             }
         }
         void Init(Rect rect) {
+            if(RayMaster == null) RayMaster = GameObject.Find("Scene").GetComponent<RayTracingMaster>();
             UpdateList();
             OnGUI(new Rect(0,0,100,10));
         }
         public override void OnGUI(Rect rect) {
-            if(PreviousTargetFile == null && TTPathFinder.CurrentTargetFile != null) {
+            if(PreviousTargetFile == null && RayMaster.LocalTTSettings.CurrentTargetFile != null) {
                 UpdateList();
             }
-            PreviousTargetFile = TTPathFinder.CurrentTargetFile;
+            PreviousTargetFile = RayMaster.LocalTTSettings.CurrentTargetFile;
             // Debug.Log("ONINSPECTORGUI");
-            if(TTPathFinder.CurrentTargetFile == null) {
+            if(RayMaster.LocalTTSettings.CurrentTargetFile == null || RayMaster.LocalTTSettings.CurrentTargetFile == "") {
                 SelectMatFile();
                 return;
             }
             if(Shorthand == null) {
-                Shorthand = "File: " + TTPathFinder.CurrentTargetFile.Substring(TTPathFinder.CurrentTargetFile.LastIndexOf("/") + 1).Replace(".xml", "");
+                Shorthand = "File: " + RayMaster.LocalTTSettings.CurrentTargetFile.Substring(RayMaster.LocalTTSettings.CurrentTargetFile.LastIndexOf("/") + 1).Replace(".xml", "");
             }
             GUILayout.Label(Shorthand);
             int FolderLength = PresetMaster.PresetFolders.Count;
             if(FoldoutBool == null) FoldoutBool = new bool[FolderLength];
             ScrollPosition = GUILayout.BeginScrollView(ScrollPosition, GUILayout.Width(460), GUILayout.Height(250));
-            string materialPresetsPath = TTPathFinder.CurrentTargetFile;
+            string materialPresetsPath = RayMaster.LocalTTSettings.CurrentTargetFile;
             for(int j = 0; j < FolderLength; j++) {
                 if(!PresetMaster.PresetFolders[j].FolderName.Equals("COPYPASTEBUFFER")) {
                     GUILayout.BeginHorizontal();
@@ -371,10 +377,11 @@ namespace TrueTrace {
     [CustomEditor(typeof(RayTracingObject))]
     public class RayTracingObjectEditor : Editor
     {
+        RayTracingMaster RayMaster;
 
         Vector2 FileSelectionScroll;
 
-        // string TTPathFinder.CurrentTargetFile = null;
+        // string RayMaster.LocalTTSettings.CurrentTargetFile = null;
 
         void SelectMatFile() {
             string TempFilePath = TTPathFinder.GetMaterialPresetsPath();
@@ -385,7 +392,7 @@ namespace TrueTrace {
                     GUILayout.BeginHorizontal();
                         if(!fileInfo[i].Name.Contains(".xml.meta"))
                             if(GUILayout.Button(fileInfo[i].Name.Replace(".xml", ""))) {
-                                TTPathFinder.CurrentTargetFile = TempFilePath + fileInfo[i].Name + ".xml";
+                                RayMaster.LocalTTSettings.CurrentTargetFile = TempFilePath + fileInfo[i].Name + ".xml";
                             }
                     GUILayout.EndHorizontal();
                 }
@@ -542,7 +549,7 @@ namespace TrueTrace {
                 string FolderName = "COPYPASTEBUFFER";
                 string PresetName = "COPYPASTEBUFFER";
                 UnityEditor.AssetDatabase.Refresh();
-                using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets/" + TTPathFinder.CurrentTargetFile.Substring(TTPathFinder.CurrentTargetFile.LastIndexOf("/") + 1).Replace(".xml", "")).text)) {
+                using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets/" + RayMaster.LocalTTSettings.CurrentTargetFile.Substring(RayMaster.LocalTTSettings.CurrentTargetFile.LastIndexOf("/") + 1).Replace(".xml", "")).text)) {
                     var serializer = new XmlSerializer(typeof(RayObjFolderMaster));
                     PresetMaster = serializer.Deserialize(A) as RayObjFolderMaster;
                     int RayReadCount = PresetMaster.PresetFolders.Count;
@@ -647,7 +654,7 @@ namespace TrueTrace {
                 };
                 if(CopyIndex != -1) PresetMaster.PresetFolders[FolderIndex].ContainedPresets[CopyIndex] = TempRay;
                 else PresetMaster.PresetFolders[FolderIndex].ContainedPresets.Add(TempRay);
-                string materialPresetsPath = TTPathFinder.CurrentTargetFile;
+                string materialPresetsPath = RayMaster.LocalTTSettings.CurrentTargetFile;
                 using(StreamWriter writer = new StreamWriter(materialPresetsPath)) {
                     var serializer = new XmlSerializer(typeof(RayObjFolderMaster));
                     serializer.Serialize(writer.BaseStream, PresetMaster);
@@ -657,7 +664,7 @@ namespace TrueTrace {
         public void PasteFunction() {
             RayObjFolderMaster PresetMaster;
             UnityEditor.AssetDatabase.Refresh();
-            using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets/" + TTPathFinder.CurrentTargetFile.Substring(TTPathFinder.CurrentTargetFile.LastIndexOf("/") + 1).Replace(".xml", "")).text)) {
+            using (var A = new StringReader(Resources.Load<TextAsset>("Utility/MaterialPresets/" + RayMaster.LocalTTSettings.CurrentTargetFile.Substring(RayMaster.LocalTTSettings.CurrentTargetFile.LastIndexOf("/") + 1).Replace(".xml", "")).text)) {
                 var serializer = new XmlSerializer(typeof(RayObjFolderMaster));
                 PresetMaster = serializer.Deserialize(A) as RayObjFolderMaster;
             }
@@ -717,6 +724,7 @@ namespace TrueTrace {
         }
 
         public override void OnInspectorGUI() {
+            if(RayMaster == null) RayMaster = GameObject.Find("Scene").GetComponent<RayTracingMaster>();
             if(DictionaryLinks == null) {
                 DictionaryLinks = new Dictionary<string, List<string>>();
                 DictionaryLinks.Add("BaseColor", new List<string> {

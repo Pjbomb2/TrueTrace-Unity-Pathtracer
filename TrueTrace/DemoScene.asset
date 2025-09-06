@@ -19,7 +19,7 @@ MonoBehaviour:
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 1
+  Accumulate: 0
   PPBloom: 0
   BloomStrength: 0.5
   PPDoF: 0
@@ -28,10 +28,10 @@ MonoBehaviour:
   DoFFocal: 5.2216897
   PPExposure: 0
   ExposureAuto: 0
-  PPToneMap: 1
+  PPToneMap: 0
   PPTAA: 0
   RenderScale: 1
-  DenoiserMethod: 0
+  DenoiserMethod: 1
   UpscalerMethod: 0
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 1
@@ -84,9 +84,9 @@ MonoBehaviour:
   PrimaryBackgroundTintColor: {x: 1, y: 1, z: 1}
   PrimaryBackgroundTint: 0
   PrimaryBackgroundContrast: 1
-  FogDensity: 0.008
+  FogDensity: 0.001
   FogHeight: 80
-  FogColor: {x: 1, y: 1, z: 1}
+  FogColor: {x: 0.36139196, y: 0.745283, z: 0.6961432}
   MaxSampCount: 9999999
   DoChromaAber: 0
   ChromaDistort: 0.14
@@ -101,3 +101,4 @@ MonoBehaviour:
   ColorVignette: {x: 0, y: 0, z: 0}
   aoStrength: 1
   aoRadius: 2
+  CurrentTargetFile: C:/Unity/Unity Raytracing V277/Assets/TrueTrace-Unity-Pathtracer/TrueTrace/Resources/Utility/MaterialPresets/MaterialPresets.xml
