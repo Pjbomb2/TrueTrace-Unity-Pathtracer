@@ -117,6 +117,7 @@ struct LightData {
 	float ZAxisRotation;
 	float Softness;
 	int2 IESTex;//16
+	float4 IESTexScaleOffset;
 
 };
 StructuredBuffer<LightData> _UnityLights;
@@ -169,6 +170,7 @@ struct MaterialData {//56
     int2 SecondaryAlbedoTex;
     int2 SecondaryAlbedoMask;
     int2 SecondaryNormalTex;
+    int2 DiffTransTex;
     float4 AlbedoTexScale;
     float4 SecondaryTexScaleOffset;
     float4 NormalTexScaleOffset;
@@ -214,6 +216,7 @@ struct MaterialData {//56
     float AlbedoBlendFactor;
     float SecondaryNormalTexBlend;
     float DetailNormalStrength;
+    float2 DiffTransRemap;
 };
 
 

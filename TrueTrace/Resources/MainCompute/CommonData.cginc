@@ -98,6 +98,9 @@ bool IsFocusing;
 float2 Segment;
 bool DoPanorama;
 
+float ClayMetalOverrideValue;
+float ClayRoughnessOverrideValue;
+
 RWStructuredBuffer<uint3> BufferData;
 
 #ifdef HardwareRT
@@ -105,6 +108,8 @@ RWStructuredBuffer<uint3> BufferData;
 	StructuredBuffer<float2> MeshOffsets;
 #endif
 
+float aoStrength;
+float aoRadius;
 
 struct BufferSizeData {
 	int tracerays;
@@ -356,6 +361,9 @@ inline float4 SampleTexture(float2 UV, const int TextureType, const MaterialData
 			case SampleDetailNormal:
 				FinalCol = _NormalAtlas.SampleLevel(sampler_NormalAtlas, AlignUV(UV, MatTex.SecondaryNormalTexScaleOffset, MatTex.SecondaryNormalTex, MatTex.RotationSecondaryNormal), 0).xyxy;
 			break;
+			case SampleDiffTrans:
+				FinalCol = SingleComponentAtlas.SampleLevel(my_linear_clamp_sampler, AlignUV(UV, MatTex.AlbedoTexScale, MatTex.DiffTransTex, MatTex.Rotation), 0);
+			break;
 		}
 	#else//BINDLESS
 		//AlbedoTexScale, AlbedoTex, and Rotation dont worry about, thats just for transforming to the atlas 
@@ -373,6 +381,7 @@ inline float4 SampleTexture(float2 UV, const int TextureType, const MaterialData
 			case SampleSecondaryAlbedo: TextureIndexAndChannel = MatTex.SecondaryAlbedoTex; HandleRotation(UV, MatTex.RotationSecondaryDiffuse);  UV = UV * MatTex.SecondaryAlbedoTexScaleOffset.xy + MatTex.SecondaryAlbedoTexScaleOffset.zw; break;
 			case SampleSecondaryAlbedoMask: TextureIndexAndChannel = MatTex.SecondaryAlbedoMask; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 			case SampleDetailNormal: TextureIndexAndChannel = MatTex.SecondaryNormalTex; HandleRotation(UV, MatTex.RotationSecondaryNormal); UV = UV * MatTex.SecondaryNormalTexScaleOffset.xy + MatTex.SecondaryNormalTexScaleOffset.zw; break;
+			case SampleDiffTrans: TextureIndexAndChannel = MatTex.DiffTransTex; HandleRotation(UV, MatTex.Rotation); UV = UV * MatTex.AlbedoTexScale.xy + MatTex.AlbedoTexScale.zw; break;
 		}
 		int TextureIndex = TextureIndexAndChannel.x - 1;
 		int TextureReadChannel = TextureIndexAndChannel.y;//0-3 is rgba, 4 is to just read all
@@ -810,13 +819,17 @@ inline bool triangle_intersect_shadow(int tri_id, const SmallerRay ray, const fl
         		[branch] if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex || _IntersectionMaterials[MaterialIndex].specTrans == 1 || _IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
 	                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
         
-                    if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex && _IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
-                        if( SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return false;
+                    if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex && _IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) {
+                    	float Alph = SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x;
+                        if((GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return false;
+                    }
 
 	                #ifdef FadeMapping
 	                    if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
-	                        if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
-	                            if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= 0.9f) return false;
+	                        if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) {
+	                        	float Alph = SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x;
+	                            if((GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= 0.9f) return false;
+	                        }
 	                    }
 	                #endif
 
@@ -874,8 +887,10 @@ inline void triangle_intersect_dist(int tri_id, const SmallerRay ray, inout floa
 				if(GetFlag(_IntersectionMaterials[MaterialIndex].Tag, IsBackground) || GetFlag(_IntersectionMaterials[MaterialIndex].Tag, ShadowCaster)) return; 
         		[branch] if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
 	                float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
-                    if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex && _IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
-                        if( SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return;
+                    if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex && _IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) {
+                    	float Alph = SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x;
+                        if((GetFlag(_IntersectionMaterials[MaterialIndex].Tag, InvertAlpha) ? (1.0f - Alph) : Alph) < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return;
+                    }
 
 		        }
             #endif
@@ -1436,6 +1451,24 @@ inline SGLobe sg_product ( float3 axis1 , float sharpness1 , float3 axis2 , floa
 
 static const float FLT_MAX = 3.402823466e+38f;
 
+inline float expm1_over_x(const float x)
+{
+	const float u = exp(x);
+
+	if (u == 1.0)
+	{
+		return 1.0;
+	}
+
+	const float y = u - 1.0;
+
+	if (abs(x) < 1.0)
+	{
+		return y * rcp(log(u));
+	}
+
+	return y * rcp(x);
+}
 
 // [Tokuyoshi et al. 2024 "Hierarchical Light Sampling with Accurate Spherical Gaussian Lighting (Supplementary Document)" Listing. 5]
 inline float UpperSGClampedCosineIntegralOverTwoPi(const float sharpness)
@@ -1447,7 +1480,8 @@ inline float UpperSGClampedCosineIntegralOverTwoPi(const float sharpness)
 		return (((((((-1.0 / 362880.0) * sharpness + 1.0 / 40320.0) * sharpness - 1.0 / 5040.0) * sharpness + 1.0 / 720.0) * sharpness - 1.0 / 120.0) * sharpness + 1.0 / 24.0) * sharpness - 1.0 / 6.0) * sharpness + 0.5;
 	}
 
-	return (expm1(-sharpness) + sharpness) * rcp(sharpness * sharpness);
+	// return (expm1(-sharpness) + sharpness) * rcp(sharpness * sharpness);
+	return (1.0f - expm1_over_x(-sharpness)) / sharpness;
 }
 
 // [Tokuyoshi et al. 2024 "Hierarchical Light Sampling with Accurate Spherical Gaussian Lighting (Supplementary Document)" Listing. 6]
@@ -1462,7 +1496,8 @@ inline float LowerSGClampedCosineIntegralOverTwoPi(const float sharpness)
 		return e * (((((((((1.0 / 403200.0) * sharpness - 1.0 / 45360.0) * sharpness + 1.0 / 5760.0) * sharpness - 1.0 / 840.0) * sharpness + 1.0 / 144.0) * sharpness - 1.0 / 30.0) * sharpness + 1.0 / 8.0) * sharpness - 1.0 / 3.0) * sharpness + 0.5);
 	}
 
-	return e * (-expm1(-sharpness) - sharpness * e) * rcp(sharpness * sharpness);
+	// return e * (-expm1(-sharpness) - sharpness * e) * rcp(sharpness * sharpness);
+	return e * (expm1_over_x(-sharpness) - e) / sharpness;
 }
 
 // Approximate product integral of an SG and clamped cosine / pi.
@@ -1557,24 +1592,6 @@ inline float SGGXReflectionPDF(const float3 wi, const float3 m, const float2x2 r
 }
 
 
-inline float expm1_over_x(const float x)
-{
-	const float u = exp(x);
-
-	if (u == 1.0)
-	{
-		return 1.0;
-	}
-
-	const float y = u - 1.0;
-
-	if (abs(x) < 1.0)
-	{
-		return y * rcp(log(u));
-	}
-
-	return y * rcp(x);
-}
 
 
 inline float SGIntegral(const float sharpness)
@@ -1638,9 +1655,6 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 	const float diffuseIllumination = amplitude * SGClampedCosineProductIntegralOverPi2024(cosine, LightLobe.sharpness);
 
 
-	const float3 prodVec = reflecVec + LightLobe.axis * LightLobe.sharpness; // Axis of the SG product lobe.
-	const float prodSharpness = length(prodVec);
-	const float3 prodDir = prodVec / prodSharpness;
 	const float LightLobeVariance = rcp(LightLobe.sharpness);
 	// if(id.y > screen_height / 2 + screen_height / 4) LightLobeVariance = LightLobeVariance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
 	
@@ -1661,6 +1675,10 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 	const float3 halfvecUnormalized = viewDirTS + mul(tangentFrame, LightLobe.axis);
 	const float3 halfvec = halfvecUnormalized * rsqrt(max(dot(halfvecUnormalized, halfvecUnormalized), EPSILON));
 	const float pdf = SGGXReflectionPDF(viewDirTS, halfvec, filteredRoughnessMat);
+
+	const float3 prodVec = reflecVec + LightLobe.axis * LightLobe.sharpness; // Axis of the SG product lobe.
+	const float prodSharpness = length(prodVec);
+	const float3 prodDir = prodVec / prodSharpness;
 
 	// Visibility of the SG light in the upper hemisphere.
 	const float visibility = VMFHemisphericalIntegral(dot(prodDir, n), prodSharpness);// * (dot(n, to_light) >= 0 || TargetNode.radius >= sqrt(squareddist));
@@ -1747,6 +1765,11 @@ int CalcInside(LightBVHData A, LightBVHData B, float3 p, int Index) {
 	} else if(Residency1) {
 		return 1;
 	} else return -1;
+}
+
+float3 DominantVisibleGGXNormal(const float3 wi, const float2 roughness)
+{
+	return normalize(float3(roughness * roughness * wi.xy, wi.z + length(float3(roughness * wi.xy, wi.z))));
 }
 
 #ifdef UseSGTree
@@ -2651,9 +2674,10 @@ float3 SampleDirectionSphere(float u1, float u2)
 #define BucketCount 4
 #define PropDepth 5
 #define CacheCapacity (BucketCount * 1024 * 1024)
+static const uint HashOffset = (4 * 1024 * 1024 * 16);
 
-RWStructuredBuffer<uint> HashEntriesBufferA;
-StructuredBuffer<uint> HashEntriesBufferB;
+
+
 RWByteAddressBuffer VoxelDataBufferA;
 ByteAddressBuffer VoxelDataBufferB;
 struct PropogatedCacheData {
@@ -2738,8 +2762,7 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 
     uint baseSlot = floor(HashIndex / (float)BucketCount) * BucketCount;
     [unroll]for (uint i = 0; i < BucketCount; i++) {
-        uint PrevHash = HashEntriesBufferB[baseSlot + i];//I am read and writing to the same hash buffer, this could be a problem
-
+        uint PrevHash = VoxelDataBufferB.Load(HashOffset + (baseSlot + i) * 4);//I am read and writing to the same hash buffer, this could be a problem
         if (PrevHash == HashValue) {
             cacheEntry = baseSlot + i;
             return true;
@@ -2762,7 +2785,7 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 	    	uint4 voxelDataPacked = VoxelDataBufferB.Load4(CacheEntry * 16);
 
 		    GridVoxel Voxel;
-			Voxel.radiance = voxelDataPacked.xyz / 1e3f;
+			Voxel.radiance = (float3)voxelDataPacked.xyz / 1e3f;
 		    Voxel.SampleNum = voxelDataPacked.w & 0x00FFFFFF;
 		    Voxel.FrameNum = (voxelDataPacked.w >> 24) & 0xFF;
 
@@ -2783,7 +2806,7 @@ inline bool FindHashEntry(const uint HashValue, inout uint cacheEntry) {
 	    uint baseSlot = floor(HashIndex / (float)BucketCount) * BucketCount;
 		if(baseSlot < CacheCapacity) {
 			[unroll]for(int i = 0; i < BucketCount; i++) {	
-				InterlockedCompareExchange(HashEntriesBufferA[baseSlot + i], 0, HashValue, BucketContents);
+				VoxelDataBufferA.InterlockedCompareExchange(HashOffset + (baseSlot + i) * 4, 0, HashValue, BucketContents);
 				if(BucketContents == 0 || BucketContents == HashValue) {
 					return baseSlot + i;
 				}
@@ -3230,4 +3253,57 @@ float3 waveLengthToRGB(float Wavelength) {
     }
 
     return pow(float3(Red, Green, Blue) * factor, Gamma);
+}
+
+#define DRAINE_G 0.65
+#define DRAINE_A 32.0
+
+
+float phase_draine_eval(const float u, const float g, const float a)
+{
+    return ((1 - g*g)*(1 + a*u*u))/(4.*(1 + (a*(1 + 2*g*g))/3.) * PI * pow(1 + g*g - 2*g*u,1.5));
+}
+
+// sample: (sample an exact deflection cosine)
+//   xi = a uniform random real in [0,1]
+float phase_draine_sample(const float xi, const float g, const float a)
+{
+    const float g2 = g * g;
+    const float g3 = g * g2;
+    const float g4 = g2 * g2;
+    const float g6 = g2 * g4;
+    const float pgp1_2 = (1 + g2) * (1 + g2);
+    const float T1 = (-1 + g2) * (4 * g2 + a * pgp1_2);
+    const float T1a = -a + a * g4;
+    const float T1a3 = T1a * T1a * T1a;
+    const float T2 = -1296 * (-1 + g2) * (a - a * g2) * (T1a) * (4 * g2 + a * pgp1_2);
+    const float T3 = 3 * g2 * (1 + g * (-1 + 2 * xi)) + a * (2 + g2 + g3 * (1 + 2 * g2) * (-1 + 2 * xi));
+    const float T4a = 432 * T1a3 + T2 + 432 * (a - a * g2) * T3 * T3;
+    const float T4b = -144 * a * g2 + 288 * a * g4 - 144 * a * g6;
+    const float T4b3 = T4b * T4b * T4b;
+    const float T4 = T4a + sqrt(-4 * T4b3 + T4a * T4a);
+    const float T4p3 = pow(T4, 1.0 / 3.0);
+    const float T6 = (2 * T1a + (48 * pow(2, 1.0 / 3.0) *
+        (-(a * g2) + 2 * a * g4 - a * g6)) / T4p3 + T4p3 / (3. * pow(2, 1.0 / 3.0))) / (a - a * g2);
+    const float T5 = 6 * (1 + g2) + T6;
+    return (1 + g2 - pow(-0.5 * sqrt(T5) + sqrt(6 * (1 + g2) - (8 * T3) / (a * (-1 + g2) * sqrt(T5)) - T6) / 2., 2)) / (2. * g);
+}
+
+float3x3 make_frame(const float3 z) {
+    const float sign = (z.z >= 0) ? 1 : -1;
+    const float a = -1.0 / (sign + z.z);
+    const float b = z.x * z.y * a;
+    float3 A = float3(1.0 + sign * z.x * z.x * a, sign * b, -sign * z.x);
+    float3 B = float3(b, sign + z.y * z.y * a, -z.y);
+    return float3x3(float3(A.x,B.x,z.x), float3(A.y,B.y,z.y), float3(A.z,B.z,z.z));
+    // return float3x3(float3(1.0 + sign * z.x * z.x * a, sign * b, -sign * z.x),
+                // float3(b, sign + z.y * z.y * a, -z.y),
+                // z);
+}
+
+
+float3 phase_draine_sample(const float2 xi, const float3 wi, const float g, const float a) {
+    const float deflection_cos = phase_draine_sample(xi.x, g, a);
+    const float z2 = sqrt(1.0 - deflection_cos * deflection_cos);
+    return mul(make_frame(wi), float3(z2 * cos(2.0f * PI * xi.y), z2 * sin(2.0f * PI * xi.y), deflection_cos));
 }

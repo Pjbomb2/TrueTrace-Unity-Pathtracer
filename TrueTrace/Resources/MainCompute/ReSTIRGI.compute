@@ -47,22 +47,22 @@ inline bool VisabilityCheck(SmallerRay ray, float dist) {
                         triangle_id += triangleOffset;
                         int mesh_id = MeshOffsets[Indexes.x].y;
                         int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTrisA[triangle_id].MatDat);
-                        if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster))  {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;} 
+                        if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster))  {myRay.TMin = q.CommittedRayT() + NormalOffset; continue;} 
                     #endif
                     #ifdef AdvancedAlphaMapped
                         if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                             float2 BaseUv = TOHALF(AggTrisA[triangle_id].tex0) * (1.0f - u - v) + TOHALF(AggTrisA[triangle_id].texedge1) * u + TOHALF(AggTrisA[triangle_id].texedge2) * v;
                             if(_Materials[MaterialIndex].AlphaTex.x > 0)
-                                if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;}
+                                if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + NormalOffset; continue;}
                         }
                     #endif
                     #ifdef IgnoreBackfacing
                         TrianglePos tri = triangle_get_positions(triangle_id);
-                        if(_Materials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)) <= 0) {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;}
+                        if(_Materials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)) <= 0) {myRay.TMin = q.CommittedRayT() + NormalOffset; continue;}
                     #endif
                     #ifdef IgnoreGlassShadow
                         if(_Materials[MaterialIndex].specTrans == 1) {
-                            myRay.TMin = q.CommittedRayT() + 0.0001f; 
+                            myRay.TMin = q.CommittedRayT() + NormalOffset; 
                             continue;
                         }
                     #endif
@@ -95,9 +95,7 @@ float IndirectBoost;
 bool UseReSTIRGITemporal;
 bool UseReSTIRGISpatial;
 bool DoReSTIRGIConnectionValidation;
-int ReSTIRGISpatialCount;
 int ReSTIRGITemporalMCap;
-float GISpatialRadius;
 
 struct RadianceData
 {
@@ -582,7 +580,9 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
             if(CellTapCoord.y < 0 || CellTapCoord.y >= screen_height) CellTapCoord.y = id.y - CellOffset.y;
             if(all(CellTapCoord == id.xy)) continue;
             if(asuint(ScreenSpaceInfoRead[CellTapCoord].w) == 0) continue;
-
+#ifdef ReSTIRReflectionRefinement
+            if(SurfaceMat.metallic > 0 && ((asuint(ScreenSpaceInfoRead[CellTapCoord].w) << 4) >> 4) != MatIndex) continue;
+#endif
             float3 SampleGeomNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].x));
             float NormDiff = max(abs(dot(GeomNorm, SampleGeomNorm)), 0);
             if(NormDiff < 0.9f) continue;
@@ -624,12 +624,8 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
                 
 
             float Dist = length(SampleRayDir - CenterRayDir);
-#ifdef ReSTIRRestrictSpatial
-        #ifdef SmartRestriction
-                RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((Case != 0) + SurfaceMat.roughness));
-        #else
-                RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((1.0f - SurfaceMat.metallic) + SurfaceMat.roughness));
-        #endif
+#ifdef ReSTIRReflectionRefinement
+            RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((Case != 0) + SurfaceMat.roughness));
 #endif
             [branch]if(Dist < 1.0f) {
                 RayDirWeight = lerp(1.0f - exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, SurfaceMat.roughness);
@@ -709,8 +705,8 @@ void ReSTIRGISpatial(uint3 id : SV_DispatchThreadID) {
     Valid2 = ReconstructBsdf2(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, TangSpace, pixel_index);
     Valid2 = EvaluateBsdf2(SurfaceMat, CameraRay.direction, normalize(NEEPos - PrimaryHitPosition), SurfNorm, pdf, NEEbsdf, pixel_index, TangSpace);
 
-    RunningReservoirB.Radiance.W = (luminance(RunningReservoirB.Radiance.Color * bsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirB.Radiance.Color * bsdf)) * (1.0f / (1.0f + K))) * RunningReservoirB.Radiance.Wsum);// / max((RunningReservoirB.Radiance.M) * luminance(RunningReservoirB.Radiance.Color * bsdf), 1e-7) ;
-    RunningReservoirC.W = (luminance(RunningReservoirC.Color * NEEbsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirC.Color * NEEbsdf)) * (1.0f / (1.0f + K))) * RunningReservoirC.Wsum);//RunningReservoirC.Radiance.Wsum / max((RunningReservoirC.Radiance.M) * luminance(RunningReservoirC.Radiance.Color * NEEbsdf), 1e-7) ;       
+    RunningReservoirB.Radiance.W = clamp((luminance(RunningReservoirB.Radiance.Color * bsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirB.Radiance.Color * bsdf)) * (1.0f / (1.0f + K))) * RunningReservoirB.Radiance.Wsum), 0, 10000.0f);// / max((RunningReservoirB.Radiance.M) * luminance(RunningReservoirB.Radiance.Color * bsdf), 1e-7) ;
+    RunningReservoirC.W = clamp((luminance(RunningReservoirC.Color * NEEbsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirC.Color * NEEbsdf)) * (1.0f / (1.0f + K))) * RunningReservoirC.Wsum), 0, 10000.0f);//RunningReservoirC.Radiance.Wsum / max((RunningReservoirC.Radiance.M) * luminance(RunningReservoirC.Radiance.Color * NEEbsdf), 1e-7) ;       
 
     WorldPosA[id.xy] = WorldPos;
     NEEPosA[id.xy] = NEEPos;
@@ -797,7 +793,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
     float Mc = 1;
     float McNEE = 1;
     float3 CenterNorm = UnpackDirection24bit(PackedCenterResA.z);
-    float3 SampleRayDir;
+    float3 SampleRayDir = 0;
     float3 SampleNorm;
     float3 bsdf2;
     float3 NEEbsdf2;
@@ -815,6 +811,9 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
             if(all(CellTapCoord == id.xy)) continue;
             if(asuint(ScreenSpaceInfoRead[CellTapCoord].w) == 0) continue;
 
+#ifdef ReSTIRReflectionRefinement
+            if(SurfaceMat.metallic > 0 && ((asuint(ScreenSpaceInfoRead[CellTapCoord].w) << 4) >> 4) != MatIndex) continue;
+#endif
             float3 SampleGeomNorm = i_octahedral_32(asuint(ScreenSpaceInfoRead[CellTapCoord].x));
             float NormDiff = max(abs(dot(GeomNorm, SampleGeomNorm)), 0);
             if(NormDiff < 0.9f) continue;
@@ -858,12 +857,8 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
                 
 
             float Dist = length(SampleRayDir - CenterRayDir);
-#ifdef ReSTIRRestrictSpatial
-        #ifdef SmartRestriction
-                RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((Case != 0) + SurfaceMat.roughness));
-        #else
-                RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((1.0f - SurfaceMat.metallic) + SurfaceMat.roughness));
-        #endif
+#ifdef ReSTIRReflectionRefinement
+            RayDirWeight = lerp(exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, saturate((Case != 0) + SurfaceMat.roughness));
 #endif
             [branch]if(Dist < 1.0f) {
                 RayDirWeight = lerp(1.0f - exp(-120.0f * abs(dot(SampleRayDir, CenterRayDir))), 1, SurfaceMat.roughness);
@@ -952,7 +947,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
     [branch]if (DoReSTIRGIConnectionValidation) {
         float2 DistDist = 1;
         if(SurfaceMat.specTrans == 0 && SurfaceMat.diffTrans == 0) {
-            PrimaryHitPosition += GeomNorm * 0.0001f;
+            PrimaryHitPosition += GeomNorm * NormalOffset;
             float Distance = length(PrimaryHitPosition - NEEPos.xyz) - 0.025f;
             SmallerRay ray = CreateRay(PrimaryHitPosition, normalize(NEEPos.xyz - PrimaryHitPosition));
             if (luminance(RunningReservoirC.Color) != 0) {
@@ -969,16 +964,20 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
 
                     } else if(Light.Type == AREALIGHTQUAD) {
                         RunningReservoirC.Color *= pow(saturate(dot(ray.direction, -Light.Direction)), MiscInfo.x);
-                    }
+                    } 
+                    // else if(Light.Softness == 0 && Light.Type == DIRECTIONALLIGHT) {
+                    //     Distance = 1000.0f;
+                    //     ray = CreateRay(PrimaryHitPosition, Light.Direction);
+                    // }
                 }
 
 
             #ifdef ReSTIRAdvancedValidation
                 float TargDist = VisabilityCheck(ray, Distance);
-                if (TargDist != Distance || dot(ray.direction, GeomNorm) < 0) {
+                if (TargDist != Distance || dot(ray.direction, GeomNorm) <= 0) {
                     DistDist.y = exp(-abs(Distance - TargDist));
             #else
-                if(!VisabilityCheck(ray, Distance) || dot(ray.direction, GeomNorm) < 0) {
+                if(!VisabilityCheck(ray, Distance) || dot(ray.direction, GeomNorm) <= 0) {
             #endif
                     RunningReservoirC.Wsum = 0;
                     RunningReservoirC.M = 0;
@@ -992,10 +991,10 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
                 if(luminance(RunningReservoirB.Radiance.Color) != 0) {
                 #ifdef ReSTIRAdvancedValidation
                     float TargDist = VisabilityCheck(ray, Distance);
-                    if (TargDist != Distance || dot(ray.direction, GeomNorm) < 0) {
+                    if (TargDist != Distance || dot(ray.direction, GeomNorm) <= 0) {
                         DistDist.x = exp(-abs(Distance - TargDist));
                 #else
-                    if(!VisabilityCheck(ray, Distance) || dot(ray.direction, GeomNorm) < 0) {
+                    if(!VisabilityCheck(ray, Distance) || dot(ray.direction, GeomNorm) <= 0) {
                 #endif
                         RunningReservoirB.Radiance.Wsum = 0; 
                         RunningReservoirB.Radiance.M = 0; 
@@ -1003,7 +1002,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
                     }
                 }
             #endif
-            PrimaryHitPosition -= GeomNorm * 0.0001f;
+            PrimaryHitPosition -= GeomNorm * NormalOffset;
         }
 
         #ifdef ReSTIRAdvancedValidation
@@ -1014,26 +1013,19 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
     Valid2 = ReconstructBsdf2(SurfaceMat, CameraRay.direction, normalize(CalcPos(WorldPos) - PrimaryHitPosition), SurfNorm, pdf, bsdf, TangSpace, pixel_index);
     Valid2 = EvaluateBsdf2(SurfaceMat, CameraRay.direction, normalize(NEEPos - PrimaryHitPosition), SurfNorm, pdf, NEEbsdf, pixel_index, TangSpace);
 
-    RunningReservoirB.Radiance.W = (luminance(RunningReservoirB.Radiance.Color * bsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirB.Radiance.Color * bsdf)) * (1.0f / (1.0f + K))) * RunningReservoirB.Radiance.Wsum);// / max((RunningReservoirB.Radiance.M) * luminance(RunningReservoirB.Radiance.Color * bsdf), 1e-7) ;
-    RunningReservoirC.W = (luminance(RunningReservoirC.Color * NEEbsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirC.Color * NEEbsdf)) * (1.0f / (1.0f + K))) * RunningReservoirC.Wsum);//RunningReservoirC.Radiance.Wsum / max((RunningReservoirC.Radiance.M) * luminance(RunningReservoirC.Radiance.Color * NEEbsdf), 1e-7) ;       
+    RunningReservoirB.Radiance.W = clamp((luminance(RunningReservoirB.Radiance.Color * bsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirB.Radiance.Color * bsdf)) * (1.0f / (1.0f + K))) * RunningReservoirB.Radiance.Wsum),0,1000.0f);// / max((RunningReservoirB.Radiance.M) * luminance(RunningReservoirB.Radiance.Color * bsdf), 1e-7) ;
+    RunningReservoirC.W = clamp((luminance(RunningReservoirC.Color * NEEbsdf) == 0 ? 0 : (1.0f / (luminance(RunningReservoirC.Color * NEEbsdf)) * (1.0f / (1.0f + K))) * RunningReservoirC.Wsum),0,1000.0f);//RunningReservoirC.Radiance.Wsum / max((RunningReservoirC.Radiance.M) * luminance(RunningReservoirC.Radiance.Color * NEEbsdf), 1e-7) ;       
     Valid2 = EvaluateBsdf(SurfaceMat, CameraRay.direction, normalize(NEEPos - PrimaryHitPosition), SurfNorm, pdf, NEEbsdf, pixel_index);
     RunningReservoirB.Radiance.W *= RunningReservoirB.Radiance.W < 100.0f;
     RunningReservoirC.W *= RunningReservoirC.W < 100.0f;
 
     GlobalColors[pixel_index].PrimaryNEERay = packRGBE(pow(RunningReservoirC.Color * RunningReservoirC.W * NEEbsdf,rcp(2.2f)));
 
-    GlobalColors[pixel_index].Direct = 0;
-#ifdef ReSTIRAdditionalAO
-    if(Case != 3) {
-        float Dist = length(SampleRayDir - CenterRayDir);
-        GlobalColors[pixel_index].Indirect = RunningReservoirB.Radiance.Color * RunningReservoirB.Radiance.W * (1.0f - exp(-(120.0f * (Dist + 0.01f) + 1.0f)));
-    } else {
-        GlobalColors[pixel_index].Indirect = RunningReservoirB.Radiance.Color * RunningReservoirB.Radiance.W;
-    }
-#else
-    GlobalColors[pixel_index].Indirect = RunningReservoirB.Radiance.Color * RunningReservoirB.Radiance.W;
-#endif
+    GlobalColors[pixel_index].Indirect = 0;
+    GlobalColors[pixel_index].Direct = RunningReservoirB.Radiance.Color * RunningReservoirB.Radiance.W;
     if(GetBounceData(GlobalColors[pixel_index].MetRoughIsSpec) != 1) {
+        SmallerRay ray = CreateRay(PrimaryHitPosition, normalize(CalcPos(WorldPos) - PrimaryHitPosition));
+        if(GetFlag(SurfaceMat.Tag, Thin) && dot(GeomNorm, ray.direction) < 0 && Case == 2) bsdf *= sqrt(exp(-CalculateExtinction(SurfaceMat.transmittanceColor, SurfaceMat.scatterDistance == 0.0f ? 1.0f : SurfaceMat.scatterDistance)));
         if(Case != 3) GlobalColors[pixel_index].Data.xyz = bsdf;
     }
 }

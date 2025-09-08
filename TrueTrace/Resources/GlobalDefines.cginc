@@ -3,6 +3,10 @@
 // #define DX11
 #define UseBindless
 #define UseSGTree
+#define TTCustomMotionVectors
+#define TTReflectionMotionVectors
+// #define MultiMapScreenshot
+// #define RasterizedDirect
 //Dont modify above, CPU code will do automatically
 #define AdvancedAlphaMapped
 #define ExtraSampleValidation
@@ -11,12 +15,12 @@
 // #define IgnoreGlassMain
 // #define FadeMapping
 // #define PointFiltering
-#define StainedGlassShadows
+// #define StainedGlassShadows
 // #define IgnoreBackfacing
 #define LBVH
 #define AccurateEmissionTex
 #define TrueBlack
-// #define UseTextureLOD
+#define UseTextureLOD
 #define EONDiffuse
 // #define AdvancedBackground
 #define UseBRDFLights
@@ -24,14 +28,14 @@
 // #define Fog
 // #define RadCache
 #define ClampRoughnessToBounce
-// #define TTCustomMotionVectors
 // #define ReSTIRSampleReduction
-// #define ReSTIRRestrictSpatial
-// #define SmartRestriction
-// #define ReSTIRAdditionalAO
+#define ReSTIRReflectionRefinement
 // #define ShadowGlassAttenuation
 // #define DisableNormalMaps
-
+// #define ClayMetalOverride
+// #define IgnoreBackfacingEmissive
+// #define AltFadeMapping
+// #define MoreAO
 
 
 //END OF DEFINES
@@ -87,6 +91,7 @@
 #define BackgrounBleed 8
 #define Thin 9
 #define VertexColors 10
+#define InvertAlpha 11
 
 #define SampleAlbedo 0
 #define SampleMetallic 1
@@ -101,6 +106,7 @@
 #define SampleSecondaryAlbedo 10
 #define SampleSecondaryAlbedoMask 11
 #define SampleDetailNormal 12
+#define SampleDiffTrans 13
 
 #define BlendModeLerp 0
 #define BlendModeAdd 1

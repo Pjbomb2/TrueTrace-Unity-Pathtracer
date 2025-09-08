@@ -1,4 +1,6 @@
 Hello and thank you for trying out my path tracer!
+For more in depth/full details, go to the Readme on the Truetrace Github(at least until I can get some half decent tutorial videos made): https://github.com/Pjbomb2/TrueTrace-Unity-Pathtracer
+
 
 To get started:
 1. After importing the unity package, for a new scene you want to open the PathTracer tab on the top bar, and click "Arrange Hierarchy"

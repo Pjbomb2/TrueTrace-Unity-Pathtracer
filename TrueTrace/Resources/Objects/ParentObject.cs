@@ -19,7 +19,9 @@ namespace TrueTrace {
     [System.Serializable]
     public class ParentObject : MonoBehaviour
     {
-
+    #if TTExtraVerbose && TTVerbose
+        TTStopWatch MainWatch;
+    #endif
         public float Distance(Vector3 a, Vector3 b)
         {
             a.x -= b.x;
@@ -54,7 +56,14 @@ namespace TrueTrace {
         }
 
 
-
+        private float AreaOfTriangle(Vector3 pt1, Vector3 pt2, Vector3 pt3)
+        {
+            float a = Distance(pt1, pt2);
+            float b = Distance(pt2, pt3);
+            float c = Distance(pt3, pt1);
+            float s = (a + b + c) / 2.0f;
+            return Mathf.Sqrt(s * (s - a) * (s - b) * (s - c));
+        }
         public PerInstanceData[] InstanceDatas;
         public int[] RTAccelHandle;
         public int[] RTAccelSubmeshOffsets;
@@ -339,6 +348,8 @@ namespace TrueTrace {
         public List<Texture> RoughnessTexs;
         public List<int> RoughnessTexChannelIndex;
         public List<Texture> EmissionTexs;
+        public List<Texture> DiffTransTexs;
+        public List<int> DiffTransTexChannelIndex;
         public List<Texture> AlphaTexs;
         public List<int> AlphaTexChannelIndex;
         public List<Texture> MatCapMasks;
@@ -442,6 +453,7 @@ namespace TrueTrace {
             MemorySafeClear<Texture>(ref RoughnessTexs);
             MemorySafeClear<Texture>(ref EmissionTexs);
             MemorySafeClear<Texture>(ref AlphaTexs);
+            MemorySafeClear<Texture>(ref DiffTransTexs);
             MemorySafeClear<Texture>(ref MatCapTexs);
             MemorySafeClear<Texture>(ref MatCapMasks);
             MemorySafeClear<Texture>(ref SecondaryAlbedoTexs);
@@ -449,6 +461,7 @@ namespace TrueTrace {
             MemorySafeClear<int>(ref RoughnessTexChannelIndex);
             MemorySafeClear<int>(ref MetallicTexChannelIndex);
             MemorySafeClear<int>(ref AlphaTexChannelIndex);
+            MemorySafeClear<int>(ref DiffTransTexChannelIndex);
             MemorySafeClear<int>(ref MatCapMaskChannelIndex);
             MemorySafeClear<int>(ref SecondaryAlbedoTexMaskChannelIndex);
             int CurMatIndex = 0;
@@ -463,8 +476,8 @@ namespace TrueTrace {
                 else if(obj.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin)) mesh = TempSkin.sharedMesh;
                 else mesh = null;
 
-                if(mesh == null) Debug.LogError("Missing Mesh: " + name);
                 obj.matfill();
+                if(mesh == null) Debug.LogError("Missing Mesh: " + name);
                 VertCount += mesh.vertexCount;
                 if(obj.TryGetComponent<Renderer>(out Renderer TempRend)) SharedMaterials = TempRend.sharedMaterials;
                 else if(obj.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkinRend)) SharedMaterials = TempSkinRend.sharedMaterials;
@@ -502,8 +515,13 @@ namespace TrueTrace {
                     else if(JustCreated) obj.LocalMaterials[i].MetallicRemap = new Vector2(0, 1);
                     if(RelevantMat.RoughnessRemapMin != null && !RelevantMat.RoughnessRemapMin.Equals("null") && JustCreated) obj.LocalMaterials[i].RoughnessRemap = new Vector2(SharedMaterials[i].GetFloat(RelevantMat.RoughnessRemapMin), SharedMaterials[i].GetFloat(RelevantMat.RoughnessRemapMax));
                     else if(JustCreated) obj.LocalMaterials[i].RoughnessRemap = new Vector2(0, 1);
+                    if(JustCreated || obj.LocalMaterials[i].DiffTransRemap.x == 0 && obj.LocalMaterials[i].DiffTransRemap.y == 0) obj.LocalMaterials[i].DiffTransRemap = new Vector2(0, 1);
                     if(!RelevantMat.BaseColorValue.Equals("null") && JustCreated) obj.LocalMaterials[i].BaseColor = (Vector3)((Vector4)SharedMaterials[i].GetColor(RelevantMat.BaseColorValue));
                     else if(JustCreated) obj.LocalMaterials[i].BaseColor = new Vector3(1,1,1);
+                    if(RelevantMat.EmissionColorValue != null && !RelevantMat.EmissionColorValue.Equals("null") && JustCreated) obj.LocalMaterials[i].EmissionColor = (Vector3)((Vector4)SharedMaterials[i].GetColor(RelevantMat.EmissionColorValue));
+                    else if(JustCreated) obj.LocalMaterials[i].EmissionColor = new Vector3(1,1,1);
+                    if(RelevantMat.EmissionIntensityValue != null && !RelevantMat.EmissionIntensityValue.Equals("null") && JustCreated) obj.LocalMaterials[i].emission = (SharedMaterials[i].GetFloat(RelevantMat.EmissionIntensityValue));
+                    else if(JustCreated) obj.LocalMaterials[i].emission = 0;
                     if(RelevantMat.IsGlass && JustCreated || (JustCreated && RelevantMat.Name.Equals("Standard") && SharedMaterials[i].GetFloat("_Mode") == 3)) obj.LocalMaterials[i].SpecTrans = 1f;
                     if(RelevantMat.IsCutout || (RelevantMat.Name.Equals("Standard") && SharedMaterials[i].GetFloat("_Mode") == 1)) obj.LocalMaterials[i].MatType = (int)RayTracingObject.Options.Cutout;
 
@@ -558,7 +576,7 @@ namespace TrueTrace {
                             case(TexturePurpose.Emission):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref EmissionTexs, ref TempIndex, true); 
                                 CurMat.Textures.EmissiveTex.x = TempIndex; 
-                                if(Result != 2 && JustCreated) obj.LocalMaterials[i].emission = 12.0f;
+                                if(Result != 2 && JustCreated && obj.LocalMaterials[i].emission == 0) obj.LocalMaterials[i].emission = 12.0f;
                             break;
                             case(TexturePurpose.Metallic):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref MetallicTexs, ref TempIndex); 
@@ -574,6 +592,11 @@ namespace TrueTrace {
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref AlphaTexs, ref TempIndex); 
                                 CurMat.Textures.AlphaTex.x = TempIndex; 
                                 if(Result == 1) AlphaTexChannelIndex.Add(ReadIndex);
+                            break;
+                            case(TexturePurpose.DiffTransTex):
+                                Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref DiffTransTexs, ref TempIndex); 
+                                CurMat.Textures.DiffTransTex.x = TempIndex; 
+                                if(Result == 1) DiffTransTexChannelIndex.Add(ReadIndex);
                             break;
                             case(TexturePurpose.MatCapMask):
                                 Result = TextureParse(ref TempScale, SharedMaterials[i], TexName, ref MatCapMasks, ref TempIndex); 
@@ -591,6 +614,12 @@ namespace TrueTrace {
 
                     if(JustCreated && obj.LocalMaterials[i].EmissionColor.x == 0 && obj.LocalMaterials[i].EmissionColor.y == 0 && obj.LocalMaterials[i].EmissionColor.z == 0) obj.LocalMaterials[i].EmissionColor = new Vector3(1,1,1);
                     if(JustCreated) obj.LocalMaterials[i].Tag = CommonFunctions.SetFlagVar(obj.LocalMaterials[i].Tag, CommonFunctions.Flags.UseSmoothness, RelevantMat.UsesSmoothness);
+                    if(obj.LocalMaterials[i].Hue == 0 && obj.LocalMaterials[i].Saturation == 0 && obj.LocalMaterials[i].Contrast == 0 && obj.LocalMaterials[i].Brightness == 0 && obj.LocalMaterials[i].BlendColor == Vector3.zero) {
+                        obj.LocalMaterials[i].Saturation = 1;
+                        obj.LocalMaterials[i].Contrast = 1;
+                        obj.LocalMaterials[i].Brightness = 1;
+                    }
+                    if(JustCreated || (obj.LocalMaterials[i].ColorBleed == 0.0f && obj.LocalMaterials[i].EmissionColor.x == 0 && obj.LocalMaterials[i].EmissionColor.y == 0 && obj.LocalMaterials[i].EmissionColor.z == 0)) obj.LocalMaterials[i].ColorBleed = 1.0f;
                     CurMat.MatData = obj.LocalMaterials[i];
                     CurMat.MatData.BaseColor = (!obj.UseKelvin[i]) ? obj.LocalMaterials[i].BaseColor : new Vector3(Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).r, Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).g, Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).b);
                     if(i == obj.LocalMaterials.Length - 1) obj.JustCreated = false;
@@ -615,8 +644,6 @@ namespace TrueTrace {
         }
         public List<Transform> ChildObjectTransforms;
         public unsafe void LoadData() {
-            // TTStopWatch TempWatch = new TTStopWatch("StopWatch For: " + gameObject.name);
-            // TempWatch.Start();
             HasLightTriangles = false;
             NeedsToResetBuffers = true;
             ClearAll();
@@ -891,7 +918,6 @@ namespace TrueTrace {
                 });
                 RepCount += Mathf.Min(submeshcount, CurrentObject.Names.Length);
             }
-            // TempWatch.Stop("Object Mesh Loading");
 
         }
 
@@ -936,23 +962,174 @@ namespace TrueTrace {
         NodePair[CurrentNode] = CurrentPair;
     }
 
+            int GetSplitCount(float priority, float totalPriority, int triangleCount)
+            {
+                float shareOfTris = priority / totalPriority * triangleCount;
+                int splitCount = 1 + (int)(shareOfTris * 0.4f);
+
+                return splitCount;
+            }
+
+            float Priority(AABB triBox, CudaTriangle triangle)
+            {
+                return Mathf.Pow(triBox.LargestExtent(triBox.LargestAxis()) * (triBox.HalfArea() * 2.0f - Vector3.Distance(Vector3.Cross(triangle.posedge1, triangle.posedge2),Vector3.zero) * 0.5f), 1f / 3f);
+            }
+            public struct SplitData {
+                public AABB box;
+                public int splitsLeft;
+            }
+
+
         unsafe public void Construct()
         {
+
+#if TTTriSplitting && !HardwareRT
+            if(!IsSkinnedGroup && !IsDeformable) {
+#if TTExtraVerbose && TTVerbose
+                MainWatch.Start();
+#endif
+                int Coun = AggTriangles.Length;
+                int Splits = 0;
+                Vector3 globalSize = aabb_untransformed.BBMax - aabb_untransformed.BBMin;
+
+                float totalPriority = 0.0f;
+                for (int i = 0; i < Coun; i++)
+                {
+                    CudaTriangle triangle = AggTriangles[i];
+                    totalPriority += Priority(new AABB(triangle), triangle);
+                }
+
+                int referenceCount = 0;
+                for (int i = 0; i < Coun; i++)
+                {
+                    CudaTriangle triangle = AggTriangles[i];
+                    float priority = Priority(new AABB(triangle), triangle);
+                    int splitCount = GetSplitCount(priority, totalPriority, Coun);
+
+                    referenceCount += splitCount;
+                }
+                Splits = referenceCount - Coun;
+
+                TrianglesArray = new NativeArray<AABB>(referenceCount, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+                Triangles = (AABB*)NativeArrayUnsafeUtility.GetUnsafePtr(TrianglesArray);
+
+                int[] originalTriIds = new int[referenceCount];
+                Vector3[] centers = new Vector3[referenceCount];
+                CudaTriangle[] NewTris = new CudaTriangle[referenceCount];
+                int[] ReverseIndexes = new int[Coun];
+                int counter = 0;
+
+                SplitData[] stack = new SplitData[64];
+                for (int i = 0; i < Coun; i++)
+                {
+                    CudaTriangle triangle = AggTriangles[i];
+                    AABB triBox = new AABB(triangle);
+
+                    float priority = Priority(triBox, triangle);
+                    int splitCount = GetSplitCount(priority, totalPriority, Coun);
+
+                    int stackPtr = 0;
+                    stack[stackPtr++] = new SplitData() {box = triBox, splitsLeft = splitCount};
+                    while (stackPtr > 0)
+                    {
+                        SplitData TempSplit = stack[--stackPtr];
+
+                        if (TempSplit.splitsLeft == 1)
+                        {
+                            Triangles[counter] = TempSplit.box;
+                            NewTris[counter] = triangle;
+                            ReverseIndexes[i] = counter;
+                            originalTriIds[counter] = i;
+                            centers[counter] = (TempSplit.box.BBMax + TempSplit.box.BBMin) * 0.5f; 
+                            counter++;
+                            continue;
+                        }
+
+                        int splitAxis = TempSplit.box.LargestAxis();
+                        float largestExtent = (TempSplit.box.BBMax - TempSplit.box.BBMin)[splitAxis];
+
+                        float depth = Mathf.Min(-1.0f, Mathf.Floor(Mathf.Log(largestExtent / globalSize[splitAxis], 2)));
+                        float cellSize = Mathf.Pow(2f, depth) * globalSize[splitAxis];
+                        
+                        // int floatBits = Unsafe.BitCast<float, int>(largestExtent / globalSize[splitAxis]);
+                        // floatBits &= 255 << 23;
+
+                        // float cellSize = Unsafe.BitCast<int, float>(floatBits);
+                        if (cellSize + 0.0001f >= largestExtent)
+                        {
+                            cellSize *= 0.5f;
+                        }
+
+                        float midPos = (TempSplit.box.BBMin[splitAxis] + TempSplit.box.BBMax[splitAxis]) * 0.5f;
+                        float splitPos = aabb_untransformed.BBMin[splitAxis] + Mathf.Round((midPos - aabb_untransformed.BBMin[splitAxis]) / cellSize) * cellSize;
+                        if (splitPos <= TempSplit.box.BBMin[splitAxis] || splitPos >= TempSplit.box.BBMax[splitAxis])
+                        {
+                            splitPos = midPos;
+                        }
+
+                        AABB[] lrBox = triangle.Split(splitAxis, splitPos);
+                        lrBox[0].ShrinkToFit(TempSplit.box);
+                        lrBox[1].ShrinkToFit(TempSplit.box);
+
+                        float leftExtent = lrBox[0].LargestExtent(lrBox[0].LargestAxis());
+                        float rightExtent = lrBox[1].LargestExtent(lrBox[1].LargestAxis());
+                        
+                        int leftCount = (int)Mathf.Round(TempSplit.splitsLeft * (leftExtent / (leftExtent + rightExtent)));
+                        leftCount = Mathf.Max(leftCount, 1);
+                        leftCount = Mathf.Min(TempSplit.splitsLeft - 1, leftCount);
+
+                        int rightCount = TempSplit.splitsLeft - leftCount;
+
+                        SplitData A = new SplitData();
+                        A.box = lrBox[0];
+                        A.splitsLeft = leftCount;
+                        SplitData B = new SplitData();
+                        B.box = lrBox[1];
+                        B.splitsLeft = rightCount;
+                        stack[stackPtr++] = A;
+                        stack[stackPtr++] = B;
+                    }
+                }
+
+                for(int i = 0; i < referenceCount; i++) {
+                    Triangles[i].Validate(ParentScale);
+                }
+                int Coun2 = LightTriangles.Count;
+                for(int i = 0; i < Coun2; i++) {
+                    LightTriData TempTri = LightTriangles[i];
+                    TempTri.TriTarget = (uint)ReverseIndexes[TempTri.TriTarget];
+                    LightTriangles[i] = TempTri;                
+                }
+
+
+
+                AggTriangles = NewTris;
+#if TTExtraVerbose && TTVerbose
+                MainWatch.Stop("Triangle Presplitting for " + Splits + " new triangles");
+#endif
+            }
+#endif
 
             tempAABB = new AABB();
             MaxRecur = 0;
             int PrevLength = TrianglesArray.Length;
             if(BVH2 != null) BVH2.Dispose();
-            // TTStopWatch BVH2Watch = new TTStopWatch("BVH2");
-            // BVH2Watch.Start();
+#if TTExtraVerbose && TTVerbose
+            MainWatch.Start();
+#endif
             BVH2 = new BVH2Builder(Triangles, TrianglesArray.Length);//Binary BVH Builder, and also the component that takes the longest to build
-            // BVH2Watch.Stop();
+#if TTExtraVerbose && TTVerbose
+            MainWatch.Stop("Binary BVH");
+#endif
             TrianglesArray.Dispose();
             if(this.BVH != null) this.BVH.Dispose();
-            // TTStopWatch BVH8Watch = new TTStopWatch("BVH8");
-            // BVH8Watch.Start();
+#if TTExtraVerbose && TTVerbose
+            MainWatch.Start();
+#endif
             this.BVH = new BVH8Builder(ref BVH2);
-            // BVH8Watch.Stop();
+#if TTExtraVerbose && TTVerbose
+            MainWatch.Stop("CWBVH Conversion");
+#endif
             CommonFunctions.DeepClean(ref BVH2.FinalIndices);
             BVH2.Dispose();
             BVH2 = null;
@@ -1011,10 +1188,13 @@ namespace TrueTrace {
 
 
             if(LightTriangles.Count > 0) {
-                // TTStopWatch LBVHWatch = new TTStopWatch("LBVH");
-                // LBVHWatch.Start();
+#if TTExtraVerbose && TTVerbose
+                MainWatch.Start();
+#endif
                 LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
-                // LBVHWatch.Stop();
+#if TTExtraVerbose && TTVerbose
+                MainWatch.Stop("Light BVH for " + LightTriangles.Count + " Emissive triangles");
+#endif
             }
 
 
@@ -1040,7 +1220,7 @@ namespace TrueTrace {
 
 
 
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
         public void RefitMesh(ref ComputeBuffer RealizedAggNodes, ref ComputeBuffer RealizedTriBufferA, ref ComputeBuffer RealizedTriBufferB, ref ComputeBuffer RealizedLightTriBuffer, ComputeBuffer RealizedLightNodeBuffer, ComputeBuffer BoxesBuffer, int BoxesIndex, ComputeBuffer SkinnedMeshAggTriBufferPrev, CommandBuffer cmd)
 #else
         public void RefitMesh(ref ComputeBuffer RealizedAggNodes, ref ComputeBuffer RealizedTriBufferA, ref ComputeBuffer RealizedTriBufferB, ref ComputeBuffer RealizedLightTriBuffer, ComputeBuffer RealizedLightNodeBuffer, ComputeBuffer BoxesBuffer, int BoxesIndex, CommandBuffer cmd)
@@ -1133,7 +1313,7 @@ namespace TrueTrace {
                 cmd.SetComputeBufferParam(MeshRefit, TransferKernel, "LightTrianglesOut", RealizedLightTriBuffer);
                 cmd.SetComputeBufferParam(MeshRefit, TransferKernel, "CudaTriArrayINA", RealizedTriBufferA);
                 cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "CudaTriArrayA", RealizedTriBufferA);
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
                 cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "SkinnedTriBuffer", SkinnedMeshAggTriBufferPrev);
 #endif
                 cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "CudaTriArrayB", RealizedTriBufferB);
@@ -1166,7 +1346,9 @@ namespace TrueTrace {
                     cmd.SetComputeIntParam(MeshRefit, "gVertexCount", IndexCount);
                     cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "bufVertices", VertexBuffers[i]);
                     cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "bufIndexes", IndexBuffers[i]);
+                    // if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Accum " + i + " : " + IndexCount);
                     cmd.DispatchCompute(MeshRefit, ConstructKernel, (int)Mathf.Ceil(IndexCount / (float)KernelRatio), 1, 1);
+                    // if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Accum " + i + " : " + IndexCount);
                     CurVertOffset += IndexCount;
                 }
 
@@ -1259,14 +1441,7 @@ namespace TrueTrace {
             #endif
         }
 
-        private float AreaOfTriangle(Vector3 pt1, Vector3 pt2, Vector3 pt3)
-        {
-            float a = Distance(pt1, pt2);
-            float b = Distance(pt2, pt3);
-            float c = Distance(pt3, pt1);
-            float s = (a + b + c) / 2.0f;
-            return Mathf.Sqrt(s * (s - a) * (s - b) * (s - c));
-        }
+
         private float luminance(float r, float g, float b) { return 0.299f * r + 0.587f * g + 0.114f * b; }
         private float luminance(Vector3 A) { return Vector3.Dot(new Vector3(0.299f, 0.587f, 0.114f), A);}
 
@@ -1282,18 +1457,32 @@ namespace TrueTrace {
 
 
         public unsafe async Task BuildTotal() {
+#if TTExtraVerbose && TTVerbose
+            MainWatch = new TTStopWatch(Name);
+#endif
             // if(HasCompleted) return;
             int IllumTriCount = 0;
             CudaTriangle TempTri = new CudaTriangle();
             Matrix4x4 ParentMatInv = CachedTransforms[0].WTL;
             Matrix4x4 ParentMat = CachedTransforms[0].WTL.inverse;
             Vector3 V1, V2, V3, Norm1, Tan1;
+#if TTTriSplitting
+    aabb_untransformed = new AABB();
+    aabb_untransformed.init();
+    if(IsSkinnedGroup || IsDeformable) {
+#endif
             TrianglesArray = new NativeArray<AABB>((TransformIndexes[TransformIndexes.Count - 1].VertexStart + TransformIndexes[TransformIndexes.Count - 1].VertexCount) / 3, Unity.Collections.Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             Triangles = (AABB*)NativeArrayUnsafeUtility.GetUnsafePtr(TrianglesArray);
+#if TTTriSplitting
+    }
+#endif
+#if TTExtraVerbose && TTVerbose
+            MainWatch.Start();
+#endif
             AggTriangles = new CudaTriangle[(TransformIndexes[TransformIndexes.Count - 1].VertexStart + TransformIndexes[TransformIndexes.Count - 1].VertexCount) / 3];
-            int OffsetReal;
-            // TTStopWatch AccumWatch = new TTStopWatch("Accum");
-            // AccumWatch.Start();
+            int OffsetReal = 0;
+            aabb_untransformed = new AABB();
+            aabb_untransformed.init();
             for (int i = 0; i < TotalObjects; i++) {//Transforming so all child objects are in the same object space
                 Matrix4x4 ChildMat = CachedTransforms[i + 1].WTL.inverse;
                 Matrix4x4 TransMat = ParentMatInv * ChildMat;
@@ -1365,10 +1554,20 @@ namespace TrueTrace {
                     TempTri.MatDat = (uint)CurMeshData.MatDat[OffsetReal];
                     TempTri.IsEmissive = 0;
                     AggTriangles[OffsetReal] = TempTri;
+#if TTTriSplitting
+    if(IsSkinnedGroup || IsDeformable) {
+#endif
                     Triangles[OffsetReal].Create(V1, V2);
                     Triangles[OffsetReal].Extend(V3);
                     Triangles[OffsetReal].Validate(ParentScale);
-
+                    aabb_untransformed.Extend(ref Triangles[OffsetReal]);
+#if TTTriSplitting
+    } else {
+                    aabb_untransformed.Extend(V1);
+                    aabb_untransformed.Extend(V2);
+                    aabb_untransformed.Extend(V3);
+    }
+#endif
                     if (_Materials[(int)TempTri.MatDat].MatData.emission > 0.0f) {
                         bool IsValid = true;
                         Vector3 SecondaryBaseCol = Vector3.one;
@@ -1432,7 +1631,9 @@ namespace TrueTrace {
                     OffsetReal++;
                 }
             }
-            // AccumWatch.Stop();
+#if TTExtraVerbose && TTVerbose
+          MainWatch.Stop("Format Conversion for " + OffsetReal + " triangles");
+#endif
             #if AccurateLightTris
                 int EmissTexLeng = EmissionTexPixels.Count;
                 for(int i = 0; i < EmissTexLeng; i++) {
@@ -1441,12 +1642,11 @@ namespace TrueTrace {
                 EmissionTexPixels = null;
             #endif
             CurMeshData.Clear();
+            aabb_untransformed.Validate(ParentScale);
+            center = 0.5f * (aabb_untransformed.BBMin + aabb_untransformed.BBMax);
+            extent = 0.5f * (aabb_untransformed.BBMax - aabb_untransformed.BBMin);
             #if !HardwareRT
-                ConstructAABB();
-                // TTStopWatch ConstructWatch = new TTStopWatch("Construct");
-                // ConstructWatch.Start();
                 Construct();
-                // ConstructWatch.Stop();
                 {//Compile Triangles
                     int TriLength = AggTriangles.Length;
                     NativeArray<CudaTriangle> Vector3Array = new NativeArray<CudaTriangle>(AggTriangles, Unity.Collections.Allocator.TempJob);
@@ -1459,7 +1659,6 @@ namespace TrueTrace {
                 BVH.BVH8NodesArray.Dispose();
             #else 
                 if(IsSkinnedGroup || IsDeformable) {
-                    ConstructAABB();
                     Construct();
                     AggNodes = new BVHNode8DataCompressed[BVH.cwbvhnode_count];
                     CommonFunctions.Aggregate(ref AggNodes, BVH);
@@ -1870,6 +2069,26 @@ namespace TrueTrace {
         //             Gizmos.DrawWireSphere(Pos, Radius);
 
         //         }
+        //     }
+        // }
+
+        // public unsafe void DrawRecursive(int Target, int depth) {
+        //     if(BVH2.BVH2Nodes[Target].count != 0 || depth > 50) return;
+        //     Gizmos.DrawWireCube((BVH2.BVH2Nodes[Target].aabb.BBMax + BVH2.BVH2Nodes[Target].aabb.BBMin) / 2.0f, BVH2.BVH2Nodes[Target].aabb.BBMax - BVH2.BVH2Nodes[Target].aabb.BBMin);
+        //     DrawRecursive(BVH2.BVH2Nodes[Target].left, depth + 1);
+        //     DrawRecursive(BVH2.BVH2Nodes[Target].left + 1, depth + 1);
+        // }
+
+        // public unsafe void DrawRecursive2(uint Target, int depth) {
+        //     if(BVH2.OptimizerNodes[Target].triCount != 0 || depth > 50) return;
+        //     Gizmos.DrawWireCube((BVH2.OptimizerNodes[Target].aabbMax + BVH2.OptimizerNodes[Target].aabbMin) / 2.0f, BVH2.OptimizerNodes[Target].aabbMax - BVH2.OptimizerNodes[Target].aabbMin);
+        //     DrawRecursive2(BVH2.OptimizerNodes[Target].left, depth + 1);
+        //     DrawRecursive2(BVH2.OptimizerNodes[Target].right, depth + 1);
+        // }
+
+        // public void OnDrawGizmos() {
+        //     if(BVH2 != null) {
+        //         DrawRecursive(0, 0);
         //     }
         // }
 

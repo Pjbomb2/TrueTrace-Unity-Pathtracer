@@ -44,7 +44,7 @@ namespace TrueTrace {
 
         AABB aabb_right;
         void partition_sah(int first_index, int index_count) {
-            split.cost = float.MaxValue;
+            split.cost = float.MaxValue;//SA * (float)index_count;
             split.index = -1;
             split.dimension = -1;
             split.aabb_left.init();
@@ -87,7 +87,16 @@ namespace TrueTrace {
                 }
             }
             Offset = split.dimension * PrimCount;
-            for(i = first_index; i < split.index; i++) split.aabb_left.Extend(ref Primitives[DimensionedIndices[Offset + i]]);
+            int Index;
+            int Index2 = split.index;
+            for(i = first_index; i < Index2; i++) {
+                Index = DimensionedIndices[Offset + i];
+                split.aabb_left.Extend(ref Primitives[Index]);
+                indices_going_left[Index] = true;
+            }
+
+
+
         }
         void BuildRecursive(int nodesi, ref int node_index, int first_index, int index_count) {
             if(index_count == 1) {
@@ -99,7 +108,8 @@ namespace TrueTrace {
             partition_sah(first_index, index_count);
             int Offset = split.dimension * PrimCount;
             int IndexEnd = first_index + index_count;
-            for(int i = first_index; i < IndexEnd; i++) indices_going_left[DimensionedIndices[Offset + i]] = i < split.index;
+            for(int i = split.index; i < IndexEnd; i++) indices_going_left[DimensionedIndices[Offset + i]] = false;
+
 
             for(int dim = 0; dim < 3; dim++) {
                 if(dim == split.dimension) continue;
@@ -130,19 +140,59 @@ namespace TrueTrace {
             return (d.x + d.y) * d.z + d.x * d.y; 
         }
 
-        // float TotalSAH = 0;
-        // private float TravDown(int Parent, int Depth) {
-        //     if(Depth > 30) return 0;
-        //     float TempSAH = 0;
-        //     if(BVH2Nodes[Parent].count == 0) {
-        //         TempSAH += TravDown(BVH2Nodes[Parent].left, Depth + 1) * surface_area(ref BVH2Nodes[BVH2Nodes[Parent].left].aabb) / surface_area(ref BVH2Nodes[Parent].aabb);
-        //         TempSAH += TravDown(BVH2Nodes[Parent].left + 1, Depth + 1) * surface_area(ref BVH2Nodes[BVH2Nodes[Parent].left  +1].aabb) / surface_area(ref BVH2Nodes[Parent].aabb);
-        //         TempSAH += 1;
-        //     } else {
-        //         TempSAH += 4.0f ;
-        //     }
-        //     return TempSAH;
-        // }
+        float SA(Vector3 BBMin, Vector3 BBMax) {
+            Vector3 d = new Vector3(BBMax.x - BBMin.x, BBMax.y - BBMin.y, BBMax.z - BBMin.z);
+            return (d.x + d.y) * d.z + d.x * d.y; 
+        }
+
+
+        float HalfArea(ref AABB aabb) {
+            Vector3 d = new Vector3(aabb.BBMax.x - aabb.BBMin.x, aabb.BBMax.y - aabb.BBMin.y, aabb.BBMax.z - aabb.BBMin.z);
+
+            float x = d.x + d.y;
+            float y = d.z;
+            float z = d.x * d.y;
+            float area = x * y + z;
+
+            return area;//d.x * d.y + d.y * d.z + d.z * d.x; 
+        }
+
+        float TotalSAH = 0;
+        private float TravDown(int Parent, int Depth) {
+            if(Depth > 30) return 0;
+            float TempSAH = 0;
+            if(BVH2Nodes[Parent].count == 0) {
+                TempSAH += TravDown(BVH2Nodes[Parent].left, Depth + 1) * surface_area(ref BVH2Nodes[BVH2Nodes[Parent].left].aabb) / surface_area(ref BVH2Nodes[Parent].aabb);
+                TempSAH += TravDown(BVH2Nodes[Parent].left + 1, Depth + 1) * surface_area(ref BVH2Nodes[BVH2Nodes[Parent].left  +1].aabb) / surface_area(ref BVH2Nodes[Parent].aabb);
+                TempSAH += 1;
+            } else {
+                TempSAH += 4.0f ;
+            }
+            return TempSAH;
+        }
+
+        public float ComputeGlobalCost(int NodeCount)
+        {
+            float cost = 0.0f;
+
+
+            float rootArea = HalfArea(ref BVH2Nodes[0].aabb);
+            for (int i = 2; i < NodeCount; i++)
+            {
+                float probHitNode = HalfArea(ref BVH2Nodes[i].aabb) / rootArea;
+
+                if (BVH2Nodes[i].count == 0)
+                {
+                    cost += 1.0f * probHitNode;
+                }
+                else
+                {
+                    cost += 1.0f * 1.0f * probHitNode;
+                }
+            }
+            return cost;
+        }
+
 
         public unsafe BVH2Builder(AABB* Triangles, int PrimCount) {//Bottom Level Acceleration Structure Builder
             this.PrimCount = PrimCount;
@@ -157,6 +207,7 @@ namespace TrueTrace {
             BVH2Nodes[0].aabb.init();
             for(int i = 0; i < PrimCount; i++) {
                 FinalIndices[i] = i;
+                // Centers[i] = (AggTriangles[i].pos0 + AggTriangles[i].pos0 + AggTriangles[i].posedge1 + AggTriangles[i].pos0 + AggTriangles[i].posedge2) / 3.0f;
                 SAH[i] = (Triangles[i].BBMax.x - Triangles[i].BBMin.x) / 2.0f + Triangles[i].BBMin.x;
                 BVH2Nodes[0].aabb.Extend(ref Triangles[i]);
             }
@@ -177,8 +228,12 @@ namespace TrueTrace {
             aabb_right = new AABB();
             int nodeIndex = 2;
             BuildRecursive(0, ref nodeIndex,0,PrimCount);
+
+            // ConvertFromOptimizer(0, 0, 0, ref usedNodes);
             // TotalSAH = TravDown(0, 0);
-            // Debug.LogError("SAH Cost: " + TotalSAH);
+            // Debug.Log("SAH Post-Opt: " + TotalSAH);
+            // float TotalSAH2 = ComputeGlobalCost(nodeIndex);
+            // Debug.LogError("SAH Cost: " + TotalSAH + " : Killers: " + TotalSAH2);
             indices_going_left_array.Dispose();
             tempArray.Dispose();
             SAHArray.Dispose();
@@ -220,13 +275,8 @@ namespace TrueTrace {
             aabb_right = new AABB();
             int nodeIndex = 2;
             BuildRecursive(0, ref nodeIndex,0,PrimCount);
-            // indices_going_left_array.Dispose();
-            // tempArray.Dispose();
-            // SAHArray.Dispose();
             int BVHNodeCount = BVH2NodesArray.Length;
             NativeArray<int>.Copy(DimensionedIndicesArray, 0, FinalIndices, 0, PrimCount);
-            // DimensionedIndicesArray.Dispose();
-            // PrimAABBs.Dispose();
 
         }
 
@@ -241,11 +291,7 @@ namespace TrueTrace {
 
         public unsafe void NoAllocRebuild(AABB[] MeshAABBs) {//Top Level Acceleration Structure
             PrimCount = MeshAABBs.Length;
-            // FinalIndices = new int[PrimCount];
-            // DimensionedIndicesArray = new NativeArray<int>(PrimCount * 3, Unity.Collections.Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-            // SAHArray = new NativeArray<float>(PrimCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             SAH = (float*)NativeArrayUnsafeUtility.GetUnsafePtr(SAHArray);
-            // BVH2NodesArray = new NativeArray<BVHNode2Data>(PrimCount * 2, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
             BVH2Nodes = (BVHNode2Data*)NativeArrayUnsafeUtility.GetUnsafePtr(BVH2NodesArray);
             DimensionedIndices = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(DimensionedIndicesArray);
             BVH2Nodes[0].aabb.init();
@@ -266,12 +312,9 @@ namespace TrueTrace {
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount * 2, PrimCount);
 
-            // indices_going_left_array = new NativeArray<bool>(PrimCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
             indices_going_left = (bool*)NativeArrayUnsafeUtility.GetUnsafePtr(indices_going_left_array);
             NativeArray<AABB>.Copy(MeshAABBs, 0, PrimAABBs, 0, PrimCount);
-            // NativeArray<AABB> PrimAABBs = new NativeArray<AABB>(MeshAABBs, Unity.Collections.Allocator.TempJob);
             Primitives = (AABB*)NativeArrayUnsafeUtility.GetUnsafePtr(PrimAABBs);
-            // tempArray = new NativeArray<int>(PrimCount, Unity.Collections.Allocator.TempJob, NativeArrayOptions.ClearMemory);
             temp = (int*)NativeArrayUnsafeUtility.GetUnsafePtr(tempArray);
             aabb_right = new AABB();
             int nodeIndex = 2;
@@ -279,8 +322,6 @@ namespace TrueTrace {
 
             int BVHNodeCount = BVH2NodesArray.Length;
             NativeArray<int>.Copy(DimensionedIndicesArray, 0, FinalIndices, 0, PrimCount);
-            // DimensionedIndicesArray.Dispose();
-            // PrimAABBs.Dispose();
 
         }
 

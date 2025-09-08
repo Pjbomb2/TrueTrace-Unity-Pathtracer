@@ -73,6 +73,8 @@ Texture2D<float4> WaveTexB;
 
 #pragma kernel ApplyWaves
 RWByteAddressBuffer bufVertices;
+ByteAddressBuffer bufVertices2;
+float3 CamPos;
 float GetFilteredHeight(float2 uv) {
     float HCount = 0;
     float H = 0;
@@ -101,11 +103,19 @@ void ApplyWaves (uint3 id : SV_DispatchThreadID)
     if (idx >= gVertexCount)
         return;
 
+    uint3 origpraw = bufVertices2.Load3((idx * 12) << 2);
+    float3 origp = asfloat(origpraw);
     uint3 praw = bufVertices.Load3((idx * 12) << 2);
     float3 p = asfloat(praw);
     uint2 uvraw = bufVertices.Load2((idx * 12 + 10) << 2);
     float2 uv = asfloat(uvraw);
-    p.y = PlaneDefaultY;
+    float3 dir = CamPos - origp;
+    origp.y = PlaneDefaultY;
+    float powval = 0.95f;
+    float powval2 = 2.0f;
+    float multval = 0.0001f;
+    // p = origp + float3(dir.x * clamp(exp(-multval * pow(length(dir.xyz), powval)),0.0f, 0.99f), 0, dir.z * clamp(exp(-multval * pow(length(dir.xyz),powval)), 0.0f, 0.99f));
+    p = origp + float3(dir.x * pow(smoothstep(0,1,exp(-multval * pow(length(dir.xyz), powval))),powval2), 0, dir.z * pow(smoothstep(0,1,exp(-multval * pow(length(dir.xyz),powval))),powval2));
     if(DoRealWater) p.y += GetFilteredHeight(uv);
 
     if(DoFakeWaves) p.y += getwaves(mul(LocalToWorld, float4(p, 1)).xz * FakeWaterTiling, ITERATIONS_RAYMARCH) - FakeWaterIntensity / 2.0f;
@@ -143,6 +153,7 @@ void CalcNorms (uint3 id : SV_DispatchThreadID)
 
 
     WaveTexA[asfloat(uvraw) * TextureDimensions] = float4(Normal, 1);
+    // bufVertices.Store3((id.x * 12 + 3) << 2, asuint(NormalA));
 }
 
 
@@ -177,10 +188,38 @@ void ApplyNorms (uint3 id : SV_DispatchThreadID)
     if (id.x >= gVertexCount)
         return;
 
-    uint2 uvraw = bufVertices.Load2((id.x * 12 + 10) << 2);
-    float2 uv = asfloat(uvraw);
 
-    bufVertices.Store3((id.x * 12 + 3) << 2, asuint(WaveTexB[uv * TextureDimensions].xyz));
+    int IndexA = IndexBuffer[id.x * 3];
+    int IndexB = IndexBuffer[id.x * 3 + 1];
+    int IndexC = IndexBuffer[id.x * 3 + 2];
+
+    uint3 praw = bufVertices.Load3((IndexA * 12) << 2);
+    float3 p = asfloat(praw);
+
+    float3 Normal = float3(0,1,0);
+    float3 NormalA = normalize(cross(normalize(asfloat(bufVertices.Load3((IndexB * 12) << 2)) - p), normalize(asfloat(bufVertices.Load3((IndexC * 12) << 2)) - p)));
+
+
+    // uint3 praw = bufVertices.Load3((id.x * 12) << 2);
+    // float3 p = asfloat(praw);
+
+    // uint3 Nraw = bufVertices.Load3((id.x * 12 + 3) << 2);
+    // float3 N = asfloat(Nraw);
+
+    if(dot(Normal, NormalA) <= 0) NormalA *= -1;
+    // // float3 NormalA = normalize(cross(normalize(asfloat(bufVertices.Load3((IndexB * 12) << 2)) - p), normalize(asfloat(bufVertices.Load3((IndexC * 12) << 2)) - p)));
+    float3 NormalB = normalize(normal(mul(LocalToWorld, float4(p, 1)).xz * FakeWaterTiling, 0.01f, p.y - PlaneDefaultY));
+    for(int i = -1; i <= 1; i++) {
+        for(int j = -1; j <= -1; j++) {
+            NormalB += normalize(normal(mul(LocalToWorld, float4(p + float3(i * 1.0f, 0, j * 1.0f), 1)).xz * FakeWaterTiling, 0.01f, p.y - PlaneDefaultY));
+        }
+    }
+    NormalB = normalize(NormalB);
+    if(dot(Normal, NormalB) <= 0) NormalB *= -1;
+
+    // bufVertices.Store3((id.x * 12 + 3) << 2, asuint(WaveTexB[uv * TextureDimensions].xyz));
+    // bufVertices.Store3((id.x * 12 + 3) << 2, asuint(normalize(NormalA)));
+    bufVertices.Store3((IndexA * 12 + 3) << 2, asuint(normalize(NormalB * 0.01f + NormalA)));
 }
 
 

@@ -7,8 +7,9 @@ using UnityEngine.Rendering.Universal;
 using System.Collections.Generic;
 using UnityEngine.Experimental.Rendering;
 
+namespace TrueTrace {
     public class URPTTPass : ScriptableRenderPass {
-        TrueTrace.RayTracingMaster RayMaster;
+        RayTracingMaster RayMaster;
         RenderTexture MainTex;
         #if UNITY_2021
             RenderTargetIdentifier m_CameraColorTarget;
@@ -34,15 +35,22 @@ using UnityEngine.Experimental.Rendering;
                 m_CameraColorTarget = renderer.cameraColorTargetHandle;
             #endif
 
-            if(MainTex == null) CreateRenderTexture(ref MainTex, renderingData.cameraData.camera);
-
+            if(MainTex == null || MainTex.width != renderingData.cameraData.camera.pixelWidth || MainTex.height != renderingData.cameraData.camera.pixelHeight) {
+                if(MainTex != null) {
+                    MainTex.Release();
+                    Object.DestroyImmediate(MainTex);
+                }
+                CreateRenderTexture(ref MainTex, renderingData.cameraData.camera);
+            }
             ConfigureTarget(m_CameraColorTarget);
 
         }
 
         public URPTTPass(RenderPassEvent rpEvent) {
-            RayMaster = GameObject.Find("Scene").GetComponent<TrueTrace.RayTracingMaster>();
-            RayMaster.Start2();
+            RayMaster = GameObject.Find("Scene").GetComponent<RayTracingMaster>();
+            if(Application.isPlaying) {
+                RayMaster.Start2();
+            }
             renderPassEvent = rpEvent;
         }
 
@@ -50,7 +58,7 @@ using UnityEngine.Experimental.Rendering;
             CommandBuffer cmd = new CommandBuffer();
             cmd.name = "TrueTrace";
             
-#if !TTCustomMotionVectors
+#if TTDisableCustomMotionVectors
             renderingData.cameraData.camera.depthTextureMode = DepthTextureMode.MotionVectors | DepthTextureMode.Depth;
             var motionVectors = Shader.GetGlobalTexture("_MotionVectorTexture");
             Shader.SetGlobalTexture("_CameraMotionVectorsTexture", motionVectors);
@@ -58,7 +66,7 @@ using UnityEngine.Experimental.Rendering;
             renderingData.cameraData.camera.depthTextureMode = DepthTextureMode.None;
 #endif
             RayMaster.TossCamera(renderingData.cameraData.camera);
-            if(TrueTrace.RayTracingMaster.RayMaster.LocalTTSettings.RenderScale != 1.0f && TrueTrace.RayTracingMaster.RayMaster.LocalTTSettings.UpscalerMethod != 0) {
+            if(RayTracingMaster.RayMaster.LocalTTSettings.RenderScale != 1.0f && RayTracingMaster.RayMaster.LocalTTSettings.UpscalerMethod != 0) {
                 Shader.SetGlobalTexture("_CameraGBufferTexture2", Shader.GetGlobalTexture("_GBuffer2"));
                 Shader.SetGlobalTexture("_CameraGBufferTexture0", Shader.GetGlobalTexture("_GBuffer0"));
                 Shader.SetGlobalTexture("_CameraGBufferTexture1", Shader.GetGlobalTexture("_GBuffer1"));
@@ -69,7 +77,16 @@ using UnityEngine.Experimental.Rendering;
             cmd.Clear();
             cmd.Release();
         }
+
+        public void Cleanup() {
+            if(MainTex != null) {
+                MainTex.Release();
+                Object.DestroyImmediate(MainTex);
+                MainTex = null;
+            }
+        }
     }   
+}
 
 
 
