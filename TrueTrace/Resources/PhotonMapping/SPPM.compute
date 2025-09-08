@@ -129,7 +129,7 @@ float3 SampleLIPhoton(int pixel_index, inout float pdf, inout float3 wi) {
         uv.x = ((float)offset + du) / (CDFWIDTH);
     }
     float2 uv2 = fmod(uv , 1.0f);
-    wi = -equirectUvToDirection(uv2);
+    wi = -equirectUvToDirection(uv2 + random(92, pixel_index).xy * 0.01f - 0.005f);
 
     return (int)VisTexA.SampleLevel(my_linear_clamp_sampler, uv / (float)ceil(sqrt((float)unitylightcount)), 0).w;
 }   
@@ -777,7 +777,7 @@ float3 photonContribution(float3 Norm, float3 Pos, uint hash, inout int TotPhotC
     //get caustic or global photon
     uint photonCount = gHashCounter[hash];
     TotPhotCount += photonCount;
-    float radius = gCausticRadius;// / ((float)max(min(photonCount-3,5),1));
+    float radius = gCausticRadius / ((float)max(min(photonCount-3,5),1));
     uint2 texIdx = uint2(hash / gBucketYExtent, hash % gBucketYExtent);
     float4 photonPos = gHashBucketPos[texIdx];
     float4 photonDir = gHashBucketDir[texIdx];
@@ -805,11 +805,11 @@ float3 photonContribution(float3 Norm, float3 Pos, uint hash, inout int TotPhotC
     if(NdotL > kMinCosTheta){
         // let bsdf = gScene.materials.getBSDF(sd, lod);
         // float3 f_r = bsdf.eval(sd, -photonDir.xyz,sg) / NdotL;
-#ifdef ACCURATECAUSTICS
-        radiance = rcp(NdotL) * photonFlux.xyz * photonCount * photonFlux.w * ((float)max(min(photonCount-3,5),1));
-#else
-        radiance = 4.0f * photonFlux.xyz * photonCount * photonFlux.w ;//* ((float)max(min(photonCount-3,5),1));
-#endif
+// #ifdef ACCURATECAUSTICS
+//         radiance = rcp(NdotL) * photonFlux.xyz * photonCount * photonFlux.w * ((float)max(min(photonCount-3,5),1));
+// #else
+        radiance = 4.0f * photonFlux.xyz * photonCount * photonFlux.w * (PI * ((float)max(min(photonCount-3,5),1)) * ((float)max(min(photonCount-3,5),1)));
+// #endif
     }
     return radiance;
 }
@@ -867,8 +867,8 @@ void kernel_collect(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     // _DebugTex[equirectDirectionToUv(LightDir) * float2(screen_width, screen_height)] = 1;
 
     GlobalColors[pixel_index].Direct = radiance;
-    GlobalColors[pixel_index].Indirect = 0;
-    GlobalColors[pixel_index].PrimaryNEERay = 0;
+    // GlobalColors[pixel_index].Indirect = 0;
+    // GlobalColors[pixel_index].PrimaryNEERay = 0;
     // float3 res = (GetBounceData(GlobalColors[pixel_index].MetRoughIsSpec) == 1) ? (GlobalColors[pixel_index].Data.xyz + pow(unpackRGBE(GlobalColors[pixel_index].PrimaryNEERay),2.2f)) : (((float)PartialRenderingFactor) * ((radiance * 3.0f + GlobalColors[pixel_index].Direct + GlobalColors[pixel_index].Indirect) * GlobalColors[pixel_index].Data.xyz) + pow(unpackRGBE(GlobalColors[pixel_index].PrimaryNEERay),2.2f));
 
     // Result[id.xy] = float4(res, 1);

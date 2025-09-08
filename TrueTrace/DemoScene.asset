@@ -36,8 +36,6 @@ MonoBehaviour:
   UseReSTIRGITemporal: 1
   UseReSTIRGISpatial: 0
   UseReSTIRGI: 0
-  ReSTIRGISpatialCount: 24
-  ReSTIRGISpatialRadius: 50
   ReSTIRGITemporalMCap: 4
   DoReSTIRGIConnectionValidation: 1
   Exposure: 50
@@ -49,6 +47,9 @@ MonoBehaviour:
   ToneMapper: 0
   SkyDesaturate: 0
   ClayColor: {x: 0.5, y: 0.5, z: 0.5}
+  ClayMetalOverride: 0
+  ClayRoughnessOverride: 0
+  DoClayMetalRoughOverride: 0
   GroundColor: {x: 0.11320752, y: 0.11320752, z: 0.11320752}
   FireflyFrameCount: 0
   FireflyFrameInterval: 1
@@ -98,3 +99,6 @@ MonoBehaviour:
   strengthVignette: 0.8
   curveVignette: 0.5
   ColorVignette: {x: 0, y: 0, z: 0}
+  aoStrength: 1
+  aoRadius: 2
+  CurrentTargetFile: 
