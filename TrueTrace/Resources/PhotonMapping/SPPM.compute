@@ -3,6 +3,8 @@
 #define gCausticRadius 0.005f
 #define PhotonMappingUsed
 // #include "UnityCG.cginc"
+groupshared uint PhotonBounce[32*32];
+
 #include "../GlobalDefines.cginc"
 
 #ifndef DX11
@@ -88,9 +90,6 @@ RWTexture2D<float> CDFYWRITE;
 void InitKernelC(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     float4 A = VisTexB[id.xy];
     VisTexB[id.xy] = float4(A.x / max(A.y, 1), A.y == 0 ? 0 : ((float)A.z / (float)max(AABBBuff[PhotonFrames % 2].PhotonCount, 1)), 0, A.w);
-    // VisTexB[id.xy] = float4(A.x > 0, A.y == 0 ? 0 : (1.0f / max(A.y, 1)), 0, A.w);
-    // VisTexB[id.xy] = float4(A.x / max(A.w, 1), A.w == 0 ? 0 : (1.0f / max(A.w, 1)), 0, 0);
-    // VisTexB[id.xy] = float4(A.x > 0, 0, 0, exp(-(A.w * 1200.0f + 1)));
     CDFXWRITE[id.xy] = 0;
     CDFYWRITE[int2(id.y,1)] = 0;
 }
@@ -99,12 +98,11 @@ void InitKernelC(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
 [numthreads(32, 32, 1)]
 void InitKernelD(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     VisTexB[id.xy] = 0;
-    // VisTexB[id.xy] *= 0.5f;//semi temporal mode
 }
 
 
 
-float3 SampleLIPhoton(int pixel_index, inout float pdf, inout float3 wi) {
+inline float3 SampleLIPhoton(const int pixel_index, inout float pdf, inout float3 wi) {
     float2 Rand = random(222, pixel_index);
     float2 uv;
     int v, offset;
@@ -136,7 +134,7 @@ float3 SampleLIPhoton(int pixel_index, inout float pdf, inout float3 wi) {
 
 
 
-void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inout RayHit ray_hit, const int MatOffset, const float RandNum) {
+inline void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inout RayHit ray_hit, const int MatOffset, const float RandNum) {
     TrianglePos tri = triangle_get_positions(tri_id);
 
     float3 h = cross(ray.direction, tri.posedge2);
@@ -155,17 +153,16 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
         [branch]if (t > 0 && t < ray_hit.t) {
             const TriangleUvs tri2 = triangle_get_positions2(tri_id);
             const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
+            float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
             //major slowdown
             #ifdef AdvancedAlphaMapped
                 [branch]if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
-                    float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
                     if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) 
                         if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return;
                 }
             #endif
             #ifdef FadeMapping
                 [branch]if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
-                    float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
                     if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
                         if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= RandNum) return;
                 }
@@ -189,7 +186,7 @@ inline RayHit IntersectBVH(SmallerRay GlobalRay, int pixel_index) {
     int MatOffset = 0;
     int mesh_id = -1;
 
-    float RandNum = random(43, pixel_index).x;
+    float RandNum = random(76, pixel_index).x;
 
 
 
@@ -481,8 +478,6 @@ inline void FullTrace(inout PhotonRayData GlobRay, inout RayHit bestHit, int pix
 
 
         TempMat.roughness = max(TempMat.roughness, 0.00001f);
-        float3 bsdf = 1;
-        float3 norm = 0;
         calcFinalColor(GlobRay, TempMat, bestHit, id.xy, pixel_index, MaterialIndex, BaseUv, surfCol, scatDist);
 }
 
@@ -595,18 +590,18 @@ float SphericalGaussianPDF(float3 dir, float3 sgaxis, float sharpness)
 void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     PhotonRayData CurrentRay = {float3(1,1,1), 0, float3(0,0,0), false, float3(0,1,0), false};
     int pixel_index = id.x + id.y * screen_width;
-    RandomNumsWrite[id.xy] = 12;
+    PhotonBounce[pixel_index % 1024] = 12;
     int Index = clamp(( random(11, pixel_index).x * unitylightcount), 0, unitylightcount - 1);
     float pdf = 0.0f;
         pdf = 1.0f / (4.0f * PI);
     float3 LightDir = 0;
     bool A = false;
-        if(AABBBuff[1 - (PhotonFrames % 2)].PhotonCount > 0 && id.x % 2 == 0 && id.y % 2 == 0) {
-            A = true;
-            float3 Dir2;
-            Index = (int)SampleLIPhoton(pixel_index, pdf, Dir2);
-            LightDir = normalize(Dir2);// * 122.0f + normalize(float3(random(200, pixel_index), random(201, pixel_index).x) * 0.5f - 0.5f));// * 122.0f + LightDir);
-        }
+    if(AABBBuff[1 - (PhotonFrames % 2)].PhotonCount > 0 && id.x % 2 == 0 && id.y % 2 == 0) {
+        A = true;
+        float3 Dir2;
+        Index = (int)SampleLIPhoton(pixel_index, pdf, Dir2);
+        LightDir = normalize(Dir2);// * 122.0f + normalize(float3(random(200, pixel_index), random(201, pixel_index).x) * 0.5f - 0.5f));// * 122.0f + LightDir);
+    }
     LightData SelectedLight = _UnityLights[Index];
     float3 LightPos = 0;
     float3 LightInten = 0;
@@ -643,13 +638,6 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
                     RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy) * RandVec.z * 100.f;
                     LightDir = normalize(ToWorld(GetTangentSpace2(-SelectedLight.Direction), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy) - LightPos);
                     }else pdf = 100.0f / pdf / (4.0f * PI);
-        // if(AABBBuff[1 - (PhotonFrames % 2)].PhotonCount > 0 && id.x % 2 == 0 && id.y % 2 == 0) {
-        //     float3 Dir2;
-        //     float3 A = SampleLIPhoton(pixel_index, pdf, Dir2);
-        //     LightDir = normalize(Dir2 * 122.0f + LightDir);
-        //     // LightDir = normalize(Dir2);// * 12.0f + LightDir);
-        // }
-
         LightInten = SelectedLight.Radiance;
     }
 
@@ -662,14 +650,14 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
 
     bool wasReflectedSpecular = false;
     bool reflectedDiffuse = false;
-int i;
+    int i;
 
 
     float3 surfCol = 1;
     float scatDist = 999999;
     bool WasLast = false;
     [loop]for(i = 0; i < 7; i++) {
-        RandomNumsWrite[id.xy] = i+1;
+        PhotonBounce[pixel_index % 1024] = i + 1;
         photon.Flux = lightFlux * CurrentRay.throughput;
         FullTrace(CurrentRay, bestHit, pixel_index, id, i, surfCol, scatDist);
 
@@ -680,7 +668,7 @@ int i;
             photon.Flux *= exp(-bestHit.t * CalculateExtinction(1.0f - (surfCol), scatDist == 0.0f ? 1.0f : scatDist));
         }
 #endif
-            WasLast = scatDist != 999999;
+        WasLast = scatDist != 999999;
 
 
         if(CurrentRay.terminated) break;
@@ -691,18 +679,8 @@ int i;
 
         [branch]if(reflectedDiffuse) {
 
-            // {
-            //     uint encTheta = (CurrentRay.Norm >> 16) & 0xFFFF;
-            //     uint encPhi = CurrentRay.Norm & 0xFFFF;
-            //     photon.faceNTheta = f16tof32(encTheta);
-            //     photon.faceNPhi = f16tof32(encPhi);
-            // }
-
             uint photonIndex = 0;
             uint photonBucketIndex = 0;
-
-            float rndRoulette = random(94 + i, pixel_index).x;
-            bool roulette = rndRoulette <= 0.05f;
 
             float cellScale = gCausticHashScaleFactor;
             int3 cell = int3(floor(photon.Pos.xyz * cellScale));
@@ -721,7 +699,6 @@ int i;
                 {
                     photon.InitialDirection = octahedral_32(LightDir);
                     gHashBucketPos[texIdx] = photon.Pos;
-                    // gHashBucketFlux[texIdx] = float4(( id.x % 2 == 0 && id.y % 2 == 0) ? photon.Flux : 0, 1);//(WSUM / max((photonIndex+1) * luminance(photon.Flux.xyz), 1e-7)));
                     gHashBucketFlux[texIdx] = float4(photon.Flux, (WSUM / max((photonIndex+1) * luminance(photon.Flux.xyz), 1e-7)));
                     gHashBucketDir[texIdx] = float4(photon.Dir, asfloat(bucketIdx));
 
@@ -738,12 +715,7 @@ int i;
             float3 a2 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge2, 1)).xyz;
 
             VisTexB[equirectDirectionToUv(LightDir) * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)] = float4(VisTexB[equirectDirectionToUv(LightDir) * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)].xyz + float3(bestHit.t, 1, luminance(lightFlux / (SelectedLight.Type == DIRECTIONALLIGHT ? 1.0f : (1)))), Index);
-            // for(int j = 0; j < 3; j++) {
-            //     InterlockedMax(AABBBuff[PhotonFrames % 2].BBMax[j], FloatToUint(CurrentRay.origin[j]));
-            //     InterlockedMin(AABBBuff[PhotonFrames % 2].BBMin[j], FloatToUint(CurrentRay.origin[j]));
-            //     InterlockedAdd(AABBBuff[PhotonFrames % 2].AveragedCenter[j], CurrentRay.origin[j] * 1e3f);
-            // }
-                InterlockedAdd(AABBBuff[PhotonFrames % 2].PhotonCount, 1);
+            InterlockedAdd(AABBBuff[PhotonFrames % 2].PhotonCount, 1);
         }
 
         const float rrVal = luminance(CurrentRay.throughput);
@@ -752,7 +724,6 @@ int i;
         if (rnd < prob) break;
         else CurrentRay.throughput /= (1.f - prob);
 
-        // if(i == 0) _DebugTex[id.xy] =  TempMat.specTrans == 1;//float4(photon.Flux, 1);//float4(CurrentRay.throughput, 1);
         if(i == 0) wasReflectedSpecular = !reflectedDiffuse;
         wasReflectedSpecular = wasReflectedSpecular && !reflectedDiffuse;
     }
@@ -801,8 +772,6 @@ float3 photonContribution(float3 Norm, float3 Pos, uint hash, inout int TotPhotC
     float NdotL = dot(Norm, -photonDir.xyz);
     float3 radiance = 0;
     if(NdotL > kMinCosTheta){
-        // let bsdf = gScene.materials.getBSDF(sd, lod);
-        // float3 f_r = bsdf.eval(sd, -photonDir.xyz,sg) / NdotL;
 // #ifdef ACCURATECAUSTICS
 //         radiance = rcp(NdotL) * photonFlux.xyz * photonCount * photonFlux.w * ((float)max(min(photonCount-3,5),1));
 // #else
@@ -857,17 +826,7 @@ void kernel_collect(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     
     radiance *= thp;
 
-    // float3 axis = equirectUvToDirection(float2(1.0f, 0.5f));//float3(0,1,0);
-    // float sharpness = 12.001f;
-    // float3 LightDir = SampleSphericalGaussian(axis, sharpness, random(12, pixel_index));
-
-    // _DebugTex[equirectDirectionToUv(LightDir) * float2(screen_width, screen_height)] = 1;
-
     GlobalColors[pixel_index].Direct = radiance;
     // GlobalColors[pixel_index].Indirect = 0;
     // GlobalColors[pixel_index].PrimaryNEERay = 0;
-    // float3 res = (GetBounceData(GlobalColors[pixel_index].MetRoughIsSpec) == 1) ? (GlobalColors[pixel_index].Data.xyz + pow(unpackRGBE(GlobalColors[pixel_index].PrimaryNEERay),2.2f)) : (((float)PartialRenderingFactor) * ((radiance * 3.0f + GlobalColors[pixel_index].Direct + GlobalColors[pixel_index].Indirect) * GlobalColors[pixel_index].Data.xyz) + pow(unpackRGBE(GlobalColors[pixel_index].PrimaryNEERay),2.2f));
-
-    // Result[id.xy] = float4(res, 1);
-
 }

@@ -508,11 +508,11 @@ float2 randomNEE(uint samdim, uint pixel_index) {
 
 	return float2(x, y);
 }
-int TEMPTESTA;
+
 float2 random(uint samdim, uint pixel_index) {
 #ifdef PhotonMappingUsed
 			uint2 pixid = uint2(pixel_index % screen_width, pixel_index / screen_width);
-			uint hash = pcg_hash((pixel_index * (uint)526 + samdim) * (MaxBounce + 1) + RandomNumsWrite[pixid].x);
+			uint hash = pcg_hash((pixel_index * (uint)526 + samdim) * (MaxBounce + 1) + PhotonBounce[pixel_index % 1024]);
 
 			const static float one_over_max_unsigned = asfloat(0x2f7fffff);
 
