@@ -202,7 +202,7 @@ SamplerState sampler_trilinear_clamp;
 SamplerState my_point_clamp_sampler;
 
 Texture2D<half> SingleComponentAtlas;
-RWTexture2D<float4> RandomNumsWrite;
+RWTexture2D<uint> RandomNumsWrite;
 Texture2D<float4> RandomNums;
 RWTexture2D<float4> _DebugTex;
 
@@ -510,31 +510,31 @@ float2 randomNEE(uint samdim, uint pixel_index) {
 }
 int TEMPTESTA;
 float2 random(uint samdim, uint pixel_index) {
-	// [branch] if (UseASVGF) {
-	// 	uint2 pixid = uint2(pixel_index % screen_width, pixel_index / screen_width);
-	// 	uint hash = pcg_hash(((uint)RandomNums[pixid].y * (uint)526 + samdim) * (MaxBounce + 1) + CurBounce);
+#ifdef PhotonMappingUsed
+			uint2 pixid = uint2(pixel_index % screen_width, pixel_index / screen_width);
+			uint hash = pcg_hash((pixel_index * (uint)526 + samdim) * (MaxBounce + 1) + RandomNumsWrite[pixid].x);
 
-	// 	const static float one_over_max_unsigned = asfloat(0x2f7fffff);
+			const static float one_over_max_unsigned = asfloat(0x2f7fffff);
 
 
-	// 	float x = hash_with((uint)RandomNums[pixid].x, hash) * one_over_max_unsigned;
-	// 	float y = hash_with((uint)RandomNums[pixid].x + 0xdeadbeef, hash) * one_over_max_unsigned;
+			float x = hash_with(frames_accumulated, hash) * one_over_max_unsigned;
+			float y = hash_with(frames_accumulated + 0xdeadbeef, hash) * one_over_max_unsigned;
 
-	// 	return float2(x, y);
-	// }
-	// else {
-		if(TEMPTESTA == 1) {
+			return float2(x, y);
+#else
+	[branch] if (UseASVGF) {
 		uint2 pixid = uint2(pixel_index % screen_width, pixel_index / screen_width);
-		uint hash = pcg_hash((pixel_index * (uint)526 + samdim) * (MaxBounce + 1) + RandomNumsWrite[pixid].x);
+		uint hash = pcg_hash(((uint)RandomNums[pixid].y * (uint)526 + samdim) * (MaxBounce + 1) + CurBounce);
 
 		const static float one_over_max_unsigned = asfloat(0x2f7fffff);
 
 
-		float x = hash_with(frames_accumulated, hash) * one_over_max_unsigned;
-		float y = hash_with(frames_accumulated + 0xdeadbeef, hash) * one_over_max_unsigned;
+		float x = hash_with((uint)RandomNums[pixid].x, hash) * one_over_max_unsigned;
+		float y = hash_with((uint)RandomNums[pixid].x + 0xdeadbeef, hash) * one_over_max_unsigned;
 
 		return float2(x, y);
-		} else {
+	} else {
+
 		uint hash = pcg_hash((pixel_index * (uint)526 + samdim) * (MaxBounce + 1) + CurBounce);
 
 		const static float one_over_max_unsigned = asfloat(0x2f7fffff);
@@ -545,6 +545,7 @@ float2 random(uint samdim, uint pixel_index) {
 
 		return float2(x, y);
 	}
+#endif
 }
 
 void set(int index, const RayHit ray_hit) {

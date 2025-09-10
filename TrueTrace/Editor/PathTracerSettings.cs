@@ -1699,7 +1699,7 @@ Toolbar toolbar;
       Toggle MaterialHelperToggle;
       Toggle DX11Toggle;
       Toggle TriangleSplittingToggle;
-
+      Toggle PhotonMappingToggle;
 
       private Toggle CustomToggle(string Label, string TargetDefine, string tooltip = "", VisualElement ToggleableContainer = null, VisualElement ParentContainer = null) {
             Toggle CustToggle = new Toggle() {value = GetGlobalDefine(TargetDefine), text = Label};
@@ -1718,11 +1718,14 @@ Toolbar toolbar;
 
       void ActiveDX11Overrides() {
          BindlessToggle.value = true; 
+         PhotonMappingToggle.value = false;
          HardwareRTToggle.value = false;
          OIDNToggle.value = false;
          RemoveDefine("UseOIDN"); 
+         RemoveDefine("EnablePhotonMapping"); 
          AddDefine("UseAtlas"); 
          AddDefine("DX11Only"); 
+         SetGlobalDefines("PhotonMapping", false); 
          SetGlobalDefines("DX11", true); 
          SetGlobalDefines("UseBindless", false);
          RemoveDefine("HardwareRT"); 
@@ -1731,6 +1734,7 @@ Toolbar toolbar;
 
       void InitializeGlob() {
             definesList = GetDefines();
+            SetGlobalDefines("PhotonMapping", definesList.Contains("EnablePhotonMapping"));
             SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
             SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
             SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
@@ -1754,6 +1758,7 @@ Toolbar toolbar;
          VisualElement NonPlayContainer = new VisualElement();
          NonPlayContainer.style.paddingLeft = 10;
             definesList = GetDefines();
+            SetGlobalDefines("PhotonMapping", definesList.Contains("EnablePhotonMapping"));
             SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
             SetGlobalDefines("TTCustomMotionVectors", !definesList.Contains("TTDisableCustomMotionVectors"));
             SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
@@ -1815,6 +1820,10 @@ Toolbar toolbar;
                MultiMapScreenshotToggle.tooltip = "Save Mat ID and Mesh ID when taking a screenshot";
             MultiMapScreenshotToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("MultiMapScreenshot"); SetGlobalDefines("MultiMapScreenshot", true);} else {RemoveDefine("MultiMapScreenshot"); SetGlobalDefines("MultiMapScreenshot", false);}});
 
+            PhotonMappingToggle = new Toggle() {value = (definesList.Contains("EnablePhotonMapping")), text = "Enable Photon Mapping"};
+               PhotonMappingToggle.tooltip = "Enable Photon Mapping(EXPERIMENTAL)";
+            PhotonMappingToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("EnablePhotonMapping"); SetGlobalDefines("PhotonMapping", true);} else {RemoveDefine("EnablePhotonMapping"); SetGlobalDefines("PhotonMapping", false);}});
+
             VisualElement ClayColorBox = new VisualElement();
 
 
@@ -1867,6 +1876,7 @@ Toolbar toolbar;
 
 
             if(Application.isPlaying) {
+               PhotonMappingToggle.SetEnabled(false);
                HardwareRTToggle.SetEnabled(false);
                CustomMotionVectorToggle.SetEnabled(false);
                // ReflectionMotionVectorToggle.SetEnabled(false);
@@ -1883,6 +1893,7 @@ Toolbar toolbar;
                StrictMemoryReductionToggle.SetEnabled(false);
                MultiMapScreenshotToggle.SetEnabled(false);
             } else {
+               PhotonMappingToggle.SetEnabled(true);
                HardwareRTToggle.SetEnabled(true);
                CustomMotionVectorToggle.SetEnabled(true);
                // ReflectionMotionVectorToggle.SetEnabled(true);
@@ -1914,6 +1925,7 @@ Toolbar toolbar;
                }
                BindlessToggle.SetEnabled(false);
                HardwareRTToggle.SetEnabled(false);
+               PhotonMappingToggle.SetEnabled(false);
                OIDNToggle.SetEnabled(false);
             }
 
@@ -1930,6 +1942,7 @@ Toolbar toolbar;
                   ActiveDX11Overrides(); 
                   BindlessToggle.SetEnabled(false);
                   HardwareRTToggle.SetEnabled(false);
+                  PhotonMappingToggle.SetEnabled(false);
                   OIDNToggle.SetEnabled(false);
                } else {
                   if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11) {
@@ -1938,6 +1951,7 @@ Toolbar toolbar;
                   } else {
                      OIDNToggle.SetEnabled(true);
                      HardwareRTToggle.SetEnabled(true);
+                     PhotonMappingToggle.SetEnabled(true);
                      BindlessToggle.SetEnabled(true);
                      RemoveDefine("DX11Only"); 
                      SetGlobalDefines("DX11", false); 
@@ -1963,6 +1977,7 @@ Toolbar toolbar;
          NonPlayContainer.Add(TriangleSplittingToggle);
          NonPlayContainer.Add(StrictMemoryReductionToggle);
          NonPlayContainer.Add(MultiMapScreenshotToggle);
+         NonPlayContainer.Add(PhotonMappingToggle);
          NonPlayContainer.Add(new Label("-------------"));
 
          Label PlayLabel = new Label("-- THESE CAN BE MODIFIED ON THE FLY/DURING PLAY --");

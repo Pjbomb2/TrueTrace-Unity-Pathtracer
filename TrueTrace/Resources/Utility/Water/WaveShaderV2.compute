@@ -109,7 +109,7 @@ void ApplyWaves (uint3 id : SV_DispatchThreadID)
     float3 p = asfloat(praw);
     uint2 uvraw = bufVertices.Load2((idx * 12 + 10) << 2);
     float2 uv = asfloat(uvraw);
-    float3 dir = CamPos - origp;
+    float3 dir = (CamPos - origp) / 2.0f;
     origp.y = PlaneDefaultY;
     float powval = 0.95f;
     float powval2 = 2.0f;

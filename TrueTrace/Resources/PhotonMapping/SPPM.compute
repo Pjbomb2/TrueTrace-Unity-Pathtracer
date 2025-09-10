@@ -1,7 +1,7 @@
 #define COLOREDGLASS
 #define ACCURATECAUSTICS
 #define gCausticRadius 0.005f
-
+#define PhotonMappingUsed
 // #include "UnityCG.cginc"
 #include "../GlobalDefines.cginc"
 
@@ -87,7 +87,7 @@ RWTexture2D<float> CDFYWRITE;
 [numthreads(32, 32, 1)]
 void InitKernelC(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     float4 A = VisTexB[id.xy];
-    VisTexB[id.xy] = float4((A.x > 0) * A.z, A.y == 0 ? 0 : ((float)A.z / (float)max(AABBBuff[PhotonFrames % 2].PhotonCount, 1)), 0, A.w);
+    VisTexB[id.xy] = float4(A.x / max(A.y, 1), A.y == 0 ? 0 : ((float)A.z / (float)max(AABBBuff[PhotonFrames % 2].PhotonCount, 1)), 0, A.w);
     // VisTexB[id.xy] = float4(A.x > 0, A.y == 0 ? 0 : (1.0f / max(A.y, 1)), 0, A.w);
     // VisTexB[id.xy] = float4(A.x / max(A.w, 1), A.w == 0 ? 0 : (1.0f / max(A.w, 1)), 0, 0);
     // VisTexB[id.xy] = float4(A.x > 0, 0, 0, exp(-(A.w * 1200.0f + 1)));
@@ -131,7 +131,7 @@ float3 SampleLIPhoton(int pixel_index, inout float pdf, inout float3 wi) {
     float2 uv2 = fmod(uv , 1.0f);
     wi = -equirectUvToDirection(uv2 + random(92, pixel_index).xy * 0.01f - 0.005f);
 
-    return (int)VisTexA.SampleLevel(my_linear_clamp_sampler, uv / (float)ceil(sqrt((float)unitylightcount)), 0).w;
+    return (int)VisTexA.SampleLevel(my_point_clamp_sampler, uv / (float)ceil(sqrt((float)unitylightcount)), 0).w;
 }   
 
 
@@ -425,7 +425,7 @@ inline void calcFinalColor(inout PhotonRayData ray, MaterialData hitDat, RayHit 
 
     ray.origin = USGNorm * NormalOffset + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
     throughput = max(throughput, 0);
-    ray.diffuseHit = !((MaterialLobe == 3) || (MaterialLobe == 0 && hitDat.roughness < 0.3f));
+    ray.diffuseHit = !((MaterialLobe == 3) || (MaterialLobe == 0 && hitDat.roughness < 0.8f));
     ray.Norm = octahedral_32(Geomnorm);
     ray.throughput = throughput;
     if (!validBSDFSample || any(throughput <= 0)) {
@@ -595,7 +595,7 @@ float SphericalGaussianPDF(float3 dir, float3 sgaxis, float sharpness)
 void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     PhotonRayData CurrentRay = {float3(1,1,1), 0, float3(0,0,0), false, float3(0,1,0), false};
     int pixel_index = id.x + id.y * screen_width;
-    RandomNumsWrite[id.xy] = uint4(12,0,0,0);
+    RandomNumsWrite[id.xy] = 12;
     int Index = clamp(( random(11, pixel_index).x * unitylightcount), 0, unitylightcount - 1);
     float pdf = 0.0f;
         pdf = 1.0f / (4.0f * PI);
@@ -631,13 +631,11 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
         LightInten = SelectedLight.Radiance;
     } else if(SelectedLight.Type = DIRECTIONALLIGHT) {
         LightPos = SelectedLight.Direction * 100.0f;
-        // LightDir = sample_cone(random(12, pixel_index), 42.0f * (PI / 180.0f));
         pdf = 100.0f / (4.0f * PI);
         if(!A) {
-        LightDir = -SelectedLight.Direction;//ToWorld(GetTangentSpace(SelectedLight.Direction), LightDir);
+        LightDir = -SelectedLight.Direction;
         
             float3 RandVec = float3(random(115, pixel_index), random(116, pixel_index).x);
-            // LightDir = ToWorld(GetTangentSpace(-SelectedLight.Direction), normalize(float3(RandVec.x - 0.5f,1,RandVec.y - 0.5f)));// * length(RandVec.xy);
 
                     float cosPhi = 1;
                     float sinPhi = 1;
@@ -671,7 +669,7 @@ int i;
     float scatDist = 999999;
     bool WasLast = false;
     [loop]for(i = 0; i < 7; i++) {
-        RandomNumsWrite[id.xy] = uint4(i+1,0,0,0);
+        RandomNumsWrite[id.xy] = i+1;
         photon.Flux = lightFlux * CurrentRay.throughput;
         FullTrace(CurrentRay, bestHit, pixel_index, id, i, surfCol, scatDist);
 
@@ -739,7 +737,7 @@ int i;
             float3 a1 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge1, 1)).xyz;
             float3 a2 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge2, 1)).xyz;
 
-            VisTexB[equirectDirectionToUv(LightDir) * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)] = float4(VisTexB[equirectDirectionToUv(LightDir) * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)].xyz + float3(bestHit.t / clamp(AreaOfTriangle(a0, a1, a2), 0.000001f, 1222.0f), 1, luminance(lightFlux / (SelectedLight.Type == DIRECTIONALLIGHT ? 1.0f : (1)))), Index);
+            VisTexB[equirectDirectionToUv(LightDir) * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)] = float4(VisTexB[equirectDirectionToUv(LightDir) * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)].xyz + float3(bestHit.t, 1, luminance(lightFlux / (SelectedLight.Type == DIRECTIONALLIGHT ? 1.0f : (1)))), Index);
             // for(int j = 0; j < 3; j++) {
             //     InterlockedMax(AABBBuff[PhotonFrames % 2].BBMax[j], FloatToUint(CurrentRay.origin[j]));
             //     InterlockedMin(AABBBuff[PhotonFrames % 2].BBMin[j], FloatToUint(CurrentRay.origin[j]));
@@ -846,7 +844,6 @@ void kernel_collect(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     if(id.x >= screen_width || id.y >= screen_height) return;
     int pixel_index = id.x + id.y * screen_width;
 
-     float3 viewVec = -ViewDirTex[id.xy].xyz;
     float4 thp = ThroughputTex[id.xy];
     float3 Pos;
     float3 Norm;

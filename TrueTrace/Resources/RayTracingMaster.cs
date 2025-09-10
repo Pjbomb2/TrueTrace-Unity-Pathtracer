@@ -62,11 +62,11 @@ namespace TrueTrace {
         private ComputeShader ReSTIRGI;
         private ComputeShader CDFCompute;
 
+#if EnablePhotonMapping
         public PhotonMapping PhotonMap;
-
         public RenderTexture FirstDiffuseThroughputTex;
         public RenderTexture FirstDiffusePosTex;
-        public RenderTexture FirstDiffuseViewDirTex;
+#endif
 
         private RenderTexture CorrectedDistanceTexA;
         private RenderTexture CorrectedDistanceTexB;
@@ -273,10 +273,12 @@ namespace TrueTrace {
             TargetWidth = 1;
             TargetHeight = 1;
             SourceWidth = 1;
+#if EnablePhotonMapping
             if(PhotonMap == null || !PhotonMap.Initialized) {
                 PhotonMap = new PhotonMapping();
                 PhotonMap.Init();
             }
+#endif
             SourceHeight = 1;
             PrevResFactor = LocalTTSettings.RenderScale;
             _meshObjectsNeedRebuilding = true;
@@ -453,10 +455,11 @@ namespace TrueTrace {
             GradientsB.ReleaseSafe();
             CorrectedDistanceTexA.ReleaseSafe();
             CorrectedDistanceTexB.ReleaseSafe();
+#if EnablePhotonMapping
             FirstDiffuseThroughputTex.ReleaseSafe();
             FirstDiffusePosTex.ReleaseSafe();
-            FirstDiffuseViewDirTex.ReleaseSafe();
             if(PhotonMap != null) PhotonMap.ClearAll();
+#endif
             #if UseOIDN
                 ColorBuffer.ReleaseSafe();
                 OutputBuffer.ReleaseSafe();
@@ -537,7 +540,9 @@ namespace TrueTrace {
             IntersectionShader.SetMatrix(Name, Mat);
             GenerateShader.SetMatrix(Name, Mat);
             ReSTIRGI.SetMatrix(Name, Mat);
+#if EnablePhotonMapping
             PhotonMap.SPPMShader.SetMatrix(Name, Mat);
+#endif
             if(HasSDFHandler) OptionalSDFHandler.GenShader.SetMatrix(Name, Mat);
         }
 
@@ -546,7 +551,9 @@ namespace TrueTrace {
             cmd.SetComputeVectorParam(IntersectionShader, Name, IN);
             cmd.SetComputeVectorParam(GenerateShader, Name, IN);
             cmd.SetComputeVectorParam(ReSTIRGI, Name, IN);
+#if EnablePhotonMapping
             cmd.SetComputeVectorParam(PhotonMap.SPPMShader, Name, IN);
+#endif
             if(HasSDFHandler) cmd.SetComputeVectorParam(OptionalSDFHandler.GenShader, Name, IN);
         }
 
@@ -555,7 +562,9 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(IntersectionShader, Name, IN);
             cmd.SetComputeIntParam(GenerateShader, Name, IN);
             cmd.SetComputeIntParam(ReSTIRGI, Name, IN);
+#if EnablePhotonMapping
             cmd.SetComputeIntParam(PhotonMap.SPPMShader, Name, IN);
+#endif
             if(HasSDFHandler) cmd.SetComputeIntParam(OptionalSDFHandler.GenShader, Name, IN);
         }
 
@@ -564,7 +573,9 @@ namespace TrueTrace {
             cmd.SetComputeFloatParam(IntersectionShader, Name, IN);
             cmd.SetComputeFloatParam(GenerateShader, Name, IN);
             cmd.SetComputeFloatParam(ReSTIRGI, Name, IN);
+#if EnablePhotonMapping
             cmd.SetComputeFloatParam(PhotonMap.SPPMShader, Name, IN);
+#endif
             if(HasSDFHandler) cmd.SetComputeFloatParam(OptionalSDFHandler.GenShader, Name, IN);
         }
 
@@ -573,7 +584,9 @@ namespace TrueTrace {
             IntersectionShader.SetBool(Name, IN);
             GenerateShader.SetBool(Name, IN);
             ReSTIRGI.SetBool(Name, IN);
+#if EnablePhotonMapping
             PhotonMap.SPPMShader.SetBool(Name, IN);
+#endif
             if(HasSDFHandler) OptionalSDFHandler.GenShader.SetBool(Name, IN);
         }
         Matrix4x4 CamInvProjPrev;
@@ -723,7 +736,6 @@ namespace TrueTrace {
             SetBool("UseASVGF", LocalTTSettings.DenoiserMethod == 1 && !LocalTTSettings.UseReSTIRGI);
             SetBool("UseASVGFAndReSTIR", LocalTTSettings.DenoiserMethod == 1 && LocalTTSettings.UseReSTIRGI);
             SetBool("TerrainExists", Assets.Terrains.Count != 0);
-            SetInt("TEMPTESTA", 0, cmd);
             SetBool("DoPartialRendering", LocalTTSettings.DoPartialRendering);
             SetBool("UseTransmittanceInNEE", LocalTTSettings.UseTransmittanceInNEE);
             OIDNGuideWrite = (FramesSinceStart == LocalTTSettings.OIDNFrameCount);
@@ -794,10 +806,8 @@ namespace TrueTrace {
 
 
             GenerateShader.SetTexture(GenKernel, "RandomNums", (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB);
-            GenerateShader.SetTexture(GenKernel, "RandomNumsWrite", (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB);
             GenerateShader.SetComputeBuffer(GenKernel, "GlobalRays", _RayBuffer);
             GenerateShader.SetTexture(GenPanoramaKernel, "RandomNums", (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB);
-            GenerateShader.SetTexture(GenPanoramaKernel, "RandomNumsWrite", (FramesSinceStart2 % 2 == 0) ? _RandomNums : _RandomNumsB);
             GenerateShader.SetComputeBuffer(GenPanoramaKernel, "GlobalRays", _RayBuffer);
 
             AssetManager.Assets.SetMeshTraceBuffers(IntersectionShader, TraceKernel);
@@ -817,7 +827,6 @@ namespace TrueTrace {
                 IntersectionShader.SetTexture(HeightmapShadowKernel, "NEEPosA", GINEEPosA);
             }
             IntersectionShader.SetTexture(TraceKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
-            IntersectionShader.SetTexture(TraceKernel, "RandomNumsWrite", FlipFrame ? _RandomNums : _RandomNumsB);
 
 
             AssetManager.Assets.SetHeightmapTraceBuffers(IntersectionShader, HeightmapKernel);
@@ -879,7 +888,6 @@ namespace TrueTrace {
             // ShadingShader.SetTexture(ShadeKernel, "CloudShapeDetailTex", Atmo.CloudShapeDetailTex);
             // ShadingShader.SetTexture(ShadeKernel, "localWeatherTexture", Atmo.WeatherTex);
             ShadingShader.SetTexture(ShadeKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
-            ShadingShader.SetTexture(ShadeKernel, "RandomNumsWrite", FlipFrame ? _RandomNums : _RandomNumsB);
             ShadingShader.SetTexture(ShadeKernel, "SingleComponentAtlas", Assets.SingleComponentAtlas);
             ShadingShader.SetTexture(ShadeKernel, "_EmissiveAtlas", Assets.EmissiveAtlas);
             ShadingShader.SetTexture(ShadeKernel, "_NormalAtlas", Assets.NormalAtlas);
@@ -893,11 +901,10 @@ namespace TrueTrace {
             ShadingShader.SetTexture(ShadeKernel, "MultiMapMatIDTexture", MultiMapMatIDTextureInitial);
             ShadingShader.SetTexture(ShadeKernel, "MultiMapMeshIDTexture", MultiMapMeshIDTextureInitial);
 #endif
-
+#if EnablePhotonMapping
             ShadingShader.SetTexture(ShadeKernel, "FirstDiffuseThroughputTex", FirstDiffuseThroughputTex);
             ShadingShader.SetTexture(ShadeKernel, "FirstDiffusePosTex", FirstDiffusePosTex);
-            ShadingShader.SetTexture(ShadeKernel, "FirstDiffuseViewDirTex", FirstDiffuseViewDirTex);
-
+#endif
 
 
 
@@ -930,7 +937,6 @@ namespace TrueTrace {
                 ReSTIRGI.SetTexture(ReSTIRGIKernel, "NEEPosB", !FlipFrame ? GINEEPosA : GINEEPosB);
                 ReSTIRGI.SetTexture(ReSTIRGIKernel, "PrevScreenSpaceInfo", FlipFrame ? ScreenSpaceInfoPrev : ScreenSpaceInfo);
                 ReSTIRGI.SetTexture(ReSTIRGIKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
-                ReSTIRGI.SetTexture(ReSTIRGIKernel, "RandomNumsWrite", FlipFrame ? _RandomNums : _RandomNumsB);
                 ReSTIRGI.SetTexture(ReSTIRGIKernel, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
                 ReSTIRGI.SetTexture(ReSTIRGIKernel, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
                 ReSTIRGI.SetTexture(ReSTIRGIKernel, "PrimaryTriDataPrev", (FramesSinceStart2 % 2 == 1) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
@@ -945,7 +951,6 @@ namespace TrueTrace {
                 ReSTIRGI.SetComputeBuffer(ReSTIRGISpatialKernel, "GlobalColors", LightingBuffer);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
-                ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "RandomNumsWrite", FlipFrame ? _RandomNums : _RandomNumsB);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "WorldPosA", GIWorldPosA);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel, "NEEPosA", GINEEPosC);
@@ -959,7 +964,6 @@ namespace TrueTrace {
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "ReservoirB", GIReservoirC);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "ScreenSpaceInfoRead", FlipFrame ? ScreenSpaceInfo : ScreenSpaceInfoPrev);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "RandomNums", FlipFrame ? _RandomNums : _RandomNumsB);
-                ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "RandomNumsWrite", FlipFrame ? _RandomNums : _RandomNumsB);
                 ReSTIRGI.SetTexture(ReSTIRGISpatialKernel+1, "PrimaryTriData", (FramesSinceStart2 % 2 == 0) ? _PrimaryTriangleInfoA : _PrimaryTriangleInfoB);
                 ReSTIRGI.SetComputeBuffer(ReSTIRGISpatialKernel+1, "GlobalColors", LightingBuffer);
 
@@ -1044,9 +1048,10 @@ namespace TrueTrace {
                     PSRGBuff.ReleaseSafe();
                     _PrimaryTriangleInfoA.ReleaseSafe();
                     _PrimaryTriangleInfoB.ReleaseSafe();
+#if EnablePhotonMapping
                     FirstDiffuseThroughputTex.ReleaseSafe();
                     FirstDiffusePosTex.ReleaseSafe();
-                    FirstDiffuseViewDirTex.ReleaseSafe();
+#endif
 #if !TTDisableCustomMotionVectors
                     MVTexture.ReleaseSafe();
 #endif
@@ -1098,11 +1103,10 @@ namespace TrueTrace {
                     AlbedoBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
                     NormalBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, SourceWidth * SourceHeight, 12);
                 #endif
-
+#if EnablePhotonMapping
                 CommonFunctions.CreateRenderTexture(ref FirstDiffuseThroughputTex, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref FirstDiffusePosTex, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-                CommonFunctions.CreateRenderTexture(ref FirstDiffuseViewDirTex, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
-
+#endif
                 CommonFunctions.CreateRenderTexture(ref _RandomNums, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref _RandomNumsB, SourceWidth, SourceHeight, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTexture(ref _DebugTex, SourceWidth, SourceHeight, CommonFunctions.RTFull4, RenderTextureReadWrite.sRGB);
@@ -1309,16 +1313,16 @@ namespace TrueTrace {
                 cmd.DispatchCompute(ShadingShader, MVKernel+2, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
             if(DoKernelProfiling) cmd.EndSample("TTMV2");
 #endif
-
+#if EnablePhotonMapping
                 PhotonMap.Generate(cmd);
                 PhotonMap.Collect(cmd, 
                     ref FirstDiffuseThroughputTex, 
-                    ref FirstDiffuseViewDirTex,
                     ref FirstDiffusePosTex,
                     ref _target,
                     ref LightingBuffer,
                     SourceWidth,
                     SourceHeight);
+#endif
                 if (LocalTTSettings.UseReSTIRGI) {
                     SetInt("CurBounce", 0, cmd);
                     if(DoKernelProfiling) cmd.BeginSample("ReSTIRGI Temporal Kernel");

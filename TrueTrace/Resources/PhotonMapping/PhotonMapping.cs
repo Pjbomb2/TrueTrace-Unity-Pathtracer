@@ -26,11 +26,11 @@ namespace TrueTrace {
         private ComputeShader CDFCompute;
         private ComputeBuffer CDFTotalBuffer;
         public int PerLightVisSize = 128;
-        public bool RunVis = false;
+        public bool ReInit = false;
 
         int FramesSinceStart = 0;
         uint NumPhotons = 2000000;
-        int analyticPhotons = 2000000;
+        public int analyticPhotons = 2000000;
         float mAnalyticInvPdf;
         uint blockSize = 16;
         uint mMaxDispatchY = 512;
@@ -64,7 +64,7 @@ namespace TrueTrace {
                 CDFCompute = Resources.Load<ComputeShader>("Utility/CDFCreator");
             if(AssetManager.Assets == null || AssetManager.Assets.UnityLightCount == 0) return;
             ClearAll();
-            RunVis = false;
+            ReInit = false;
             FramesSinceStart = 0;
             if (SPPMShader == null) {SPPMShader = Resources.Load<ComputeShader>("PhotonMapping/SPPM"); }
             GenKernel = SPPMShader.FindKernel("kernel_gen");
@@ -131,7 +131,7 @@ namespace TrueTrace {
             Height = mBucketFixedYExtend;
             CommonFunctions.CreateRenderTexture(ref mpCausticPosBucket, (int)Width, (int)Height, CommonFunctions.RTFull4);
             CommonFunctions.CreateRenderTexture(ref mpCausticDirBucket, (int)Width, (int)Height, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref RndNumWrt, (int)Width, (int)Height, CommonFunctions.RTFull4);
+            CommonFunctions.CreateRenderTexture(ref RndNumWrt, (int)Width, (int)Height, CommonFunctions.RTFull1);
             CommonFunctions.CreateRenderTexture(ref mpCausticFluxBucket, (int)Width, (int)Height, CommonFunctions.RTFull4);
             CommonFunctions.CreateDynamicBuffer(ref mpCausticHashPhotonCounter, (int)mNumBuckets, 4);
             CommonFunctions.CreateDynamicBuffer(ref AABBBuffA, 2, 40);
@@ -143,12 +143,11 @@ namespace TrueTrace {
             if (SPPMShader == null) {SPPMShader = Resources.Load<ComputeShader>("PhotonMapping/SPPM"); }
                 CDFCompute = Resources.Load<ComputeShader>("Utility/CDFCreator");
             if(AssetManager.Assets == null || AssetManager.Assets.UnityLightCount == 0) return;
-            if(PrevLightCount != AssetManager.Assets.UnityLightCount || RunVis || AABBBuffA == null || !AABBBuffA.IsValid() || mpCausticHashPhotonCounter == null || !mpCausticHashPhotonCounter.IsValid() || EquirectVisibilityTex == null || EquirectVisibilityTex[0] == null || EquirectVisibilityTex[1] == null) Init();
+            if(PrevLightCount != AssetManager.Assets.UnityLightCount || ReInit || AABBBuffA == null || !AABBBuffA.IsValid() || mpCausticHashPhotonCounter == null || !mpCausticHashPhotonCounter.IsValid() || EquirectVisibilityTex == null || EquirectVisibilityTex[0] == null || EquirectVisibilityTex[1] == null) Init();
             PrevLightCount = AssetManager.Assets.UnityLightCount;
             FramesSinceStart++;
             bool FlipFrame = (FramesSinceStart % 2) == 0;
             cmd.SetComputeIntParam(SPPMShader, "PhotonFrames", FramesSinceStart);
-            cmd.SetComputeIntParam(SPPMShader, "TEMPTESTA", 1);
             cmd.SetComputeIntParam(SPPMShader, "MaxBounce", (int)12);
             cmd.SetComputeIntParam(SPPMShader, "CurBounce", (int)1);
             cmd.SetComputeIntParam(SPPMShader, "screen_width", (int)Width);
@@ -247,7 +246,6 @@ namespace TrueTrace {
 
         public void Collect(CommandBuffer cmd, 
             ref RenderTexture Throughput, 
-            ref RenderTexture ViewDir, 
             ref RenderTexture PrimaryTriInfo, 
             ref RenderTexture Result, 
             ref ComputeBuffer ColBuffer, 
@@ -271,7 +269,6 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(SPPMShader, CollectKernel, "Result", Result);
             cmd.SetComputeTextureParam(SPPMShader, CollectKernel, "ThroughputTex", Throughput);
             cmd.SetComputeTextureParam(SPPMShader, CollectKernel, "PrimaryTriangleInfo", PrimaryTriInfo);
-            cmd.SetComputeTextureParam(SPPMShader, CollectKernel, "ViewDirTex", ViewDir);
             cmd.SetComputeBufferParam(SPPMShader, CollectKernel, "gHashCounter", mpCausticHashPhotonCounter);
             cmd.SetComputeBufferParam(SPPMShader, CollectKernel, "GlobalColors", ColBuffer);
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("SPPM Collect");
