@@ -486,6 +486,7 @@ namespace TrueTrace {
                   }               
                }
             } else {
+               if(ChildLength == 0 && Parent.This.root == Parent.This && Parent.This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj4) && !Parent.This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent5)) Parent.This.gameObject.AddComponent<ParentObject>();
                for(int i = 0; i < ChildLength; i++) {
                   if(Parent.Children[i].This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj2) && !Parent.Children[i].This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent3) && !Parent.This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent2)) Parent.This.gameObject.AddComponent<ParentObject>();
                }
@@ -521,9 +522,13 @@ namespace TrueTrace {
             // FlagsObjects RootFlag = Prepare(Assets.transform);
             // Prune(ref RootFlag);
 
-            ParentData SourceParent = GrabChildren2(Assets.transform);
+            GameObject[] RootObjs = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
+            int RootLength = RootObjs.Length;
+            for(int i = 0; i < RootLength; i++) {
+               ParentData SourceParent = GrabChildren2(RootObjs[i].transform);
 
-            SolveChildren(SourceParent);
+               SolveChildren(SourceParent);
+            }
 
 
                Terrain[] Terrains = GameObject.FindObjectsOfType<Terrain>();
@@ -549,11 +554,11 @@ namespace TrueTrace {
                   List<GameObject> Objects = new List<GameObject>();
                   UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects(Objects);
                   GameObject SceneObject = new GameObject("Scene", typeof(AssetManager));
-                  foreach(GameObject Obj in Objects) {
-                     if(Obj.GetComponent<Camera>() == null && !Obj.name.Equals("InstancedStorage")) {
-                        Obj.transform.SetParent(SceneObject.transform);
-                     }
-                  }
+                  // foreach(GameObject Obj in Objects) {
+                  //    if(Obj.GetComponent<Camera>() == null && !Obj.name.Equals("InstancedStorage")) {
+                  //       Obj.transform.SetParent(SceneObject.transform);
+                  //    }
+                  // }
                   Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
                   QuickStart();
                }
