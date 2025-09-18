@@ -18,6 +18,7 @@ namespace TrueTrace {
         public RenderTexture RndNumWrt;
         public RenderTexture mpCausticFluxBucket;
         public RenderTexture ValidDir;
+        public float DirectionalLightCoverageRadius = 8.0f;
 
         public RenderTexture CDFX;
         public RenderTexture CDFY;
@@ -156,6 +157,7 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(SPPMShader, "screen_height", (int)Height);
             cmd.SetComputeIntParam(SPPMShader, "mNumBuckets", (int)mNumBuckets);
             cmd.SetComputeFloatParam(SPPMShader, "CDFWIDTH", (float)PerLightVisSize);
+            cmd.SetComputeFloatParam(SPPMShader, "DirectionalLightCoverageRadius", DirectionalLightCoverageRadius);
 
             cmd.SetComputeTextureParam(SPPMShader, 0, "gHashBucketPos", mpCausticPosBucket);
             cmd.SetComputeTextureParam(SPPMShader, 0, "gHashBucketFlux", mpCausticFluxBucket);

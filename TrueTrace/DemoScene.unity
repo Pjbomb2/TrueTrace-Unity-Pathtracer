@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.12731749, g: 0.13414757, b: 0.1210787, a: 1}
+  m_IndirectSpecularColor: {r: 0.17355098, g: 0.21696189, b: 0.29906368, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -12793,7 +12793,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -15321,7 +15321,7 @@ MonoBehaviour:
     Radiance: {x: 32, y: 32, z: 32}
     Position: {x: -1.4816499, y: 5.724826, z: -1.1294421}
     Direction: {x: -0.40884805, y: 0.8689685, z: -0.2788136}
-    Type: 0
+    Type: 1
     SpotAngle: {x: 0, y: 0}
     ZAxisRotation: 0.066060774
     Softness: 0
@@ -15349,7 +15349,7 @@ Light:
   m_GameObject: {fileID: 610660757}
   m_Enabled: 1
   serializedVersion: 10
-  m_Type: 2
+  m_Type: 1
   m_Shape: 0
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Intensity: 32
@@ -15409,8 +15409,8 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 610660757}
-  m_LocalRotation: {x: 0.6371624, y: 0.23304948, z: -0.62614197, w: 0.38426334}
-  m_LocalPosition: {x: -3.053588, y: 3.277673, z: -0.6544927}
+  m_LocalRotation: {x: 0.451143, y: 0.5434095, z: -0.44576496, w: 0.5499725}
+  m_LocalPosition: {x: -3.0433476, y: 4.1838617, z: -1.1525825}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -27650,9 +27650,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 05a7c62fccbafd342991629222351294, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _scenePrefabInstances:
-  - _gameObject: {fileID: 1770588095}
-    _prefab: Assets/TrueTrace-Unity-Pathtracer/TrueTrace/Models/1sponza (2)/sponza.obj
 --- !u!4 &1116657446
 Transform:
   m_ObjectHideFlags: 11
@@ -37728,6 +37725,7 @@ MonoBehaviour:
   RenderTransforms: []
   RenderQue: []
   BuildQue:
+  - {fileID: 0}
   - {fileID: 499686671}
   - {fileID: 1770588100}
   - {fileID: 1931085300}
@@ -61230,7 +61228,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 3
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -61303,7 +61301,7 @@ MonoBehaviour:
     Roughness: 0
     MatType: 0
     TransmittanceColor: {x: 1, y: 1, z: 1}
-    IOR: 1
+    IOR: 1.16
     Metallic: 0
     Sheen: 0
     SheenTint: 0
@@ -61314,7 +61312,7 @@ MonoBehaviour:
     AnisotropicRotation: 0
     Flatness: 0
     DiffTrans: 0
-    SpecTrans: 0
+    SpecTrans: 1
     Specular: 0
     ScatterDist: 5
     MetallicRemap: {x: 0, y: 1}
@@ -61378,7 +61376,7 @@ MonoBehaviour:
   SecondaryNormalTexBlend: []
   DetailNormalStrength: []
   SecondaryNormalTexScaleOffset: []
-  DeleteObject: 1
+  DeleteObject: 0
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1

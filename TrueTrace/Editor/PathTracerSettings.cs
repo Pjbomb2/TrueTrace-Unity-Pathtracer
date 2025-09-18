@@ -3411,18 +3411,15 @@ public class DialogueGraphView : GraphView
     }
 }  
 
-
-// public static class AutoInit
-// {
-//     [RuntimeInitializeOnLoadMethod]
-//     static void Init() {
-//         SceneManager.sceneLoaded += (scene, mode) => {
-//             // Find all renderers in the scene
-//             EditorWindow.GetWindow<EditModeFunctions>().QuickStart();
-//         };
-//     }
-// }
-
+#if RemoveScriptsDuringSave
+[InitializeOnLoad]
+class AutoInit
+{
+    static AutoInit() {
+         EditorWindow.GetWindow<EditModeFunctions>().QuickStart();
+    }
+}
+#endif
 
 }
 

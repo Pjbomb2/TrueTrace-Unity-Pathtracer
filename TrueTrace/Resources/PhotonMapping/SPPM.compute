@@ -584,7 +584,7 @@ float SphericalGaussianPDF(float3 dir, float3 sgaxis, float sharpness)
 
     return normalization * exp(lambda * cosTheta);
 }
-
+float DirectionalLightCoverageRadius;
 #pragma kernel kernel_gen
 [numthreads(32, 32, 1)]
 void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
@@ -608,6 +608,7 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     float SpotAngle = 0;
     float LightArea = 1.0f;
     pdf *= (float)unitylightcount;
+    float2 RandVec = 0;
     if(SelectedLight.Type == POINTLIGHT) {
         LightPos = SelectedLight.Position;
         if(!A) {
@@ -625,19 +626,33 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
         pdf = (2.0f * PI * (1.0f - ConeAngle)) / (4.0f * PI);
         LightInten = SelectedLight.Radiance;
     } else if(SelectedLight.Type = DIRECTIONALLIGHT) {
-        LightPos = SelectedLight.Direction * 100.0f;
-        pdf = 100.0f / (4.0f * PI);
-        if(!A) {
-        LightDir = -SelectedLight.Direction;
-        
-            float3 RandVec = float3(random(115, pixel_index), random(116, pixel_index).x);
 
-                    float cosPhi = 1;
-                    float sinPhi = 1;
-                     sincos(RandVec.x * 2.0f * PI, RandVec.x, RandVec.y);
-                    RandVec.xy = mul(float2x2(cosPhi, -sinPhi, sinPhi, cosPhi), RandVec.xy) * RandVec.z * 100.f;
-                    LightDir = normalize(ToWorld(GetTangentSpace2(-SelectedLight.Direction), normalize(float3(RandVec.x,0,RandVec.y))) * length(RandVec.xy) - LightPos);
-                    }else pdf = 100.0f / pdf / (4.0f * PI);
+        float3 PlaneDir = -SelectedLight.Direction;
+        float3 PlaneOrigin = SelectedLight.Direction * 100.0f;
+
+        float3 HelperTan = float3(0,1,0);
+        if(abs(dot(HelperTan, PlaneDir)) > 0.99f) {
+            HelperTan = float3(1,0,0);
+        }
+        float3 TanBasis1 = normalize(cross(PlaneDir, HelperTan));
+        float3 TanBasis2 = cross(PlaneDir, TanBasis1);
+
+        float3 CalcedDir = LightDir;
+
+        LightPos = SelectedLight.Direction * 100.0f;
+        LightDir = PlaneDir;
+        RandVec = random(115, pixel_index);//(random(115, pixel_index) - 0.5f) * 3.0f;
+
+
+        pdf = 100.0f / (64.0f * PI);
+        if(A) {
+            RandVec = equirectDirectionToUv(CalcedDir) + (RandVec - 0.5f) * 0.001f;
+            pdf = 100.0f / pdf / (64.0f * PI);
+        }
+
+
+        float2 RandOffset = (RandVec - 0.5f) * DirectionalLightCoverageRadius;
+        LightPos += RandOffset.x * TanBasis1 + RandOffset.y * TanBasis2;
         LightInten = SelectedLight.Radiance;
     }
 
@@ -713,8 +728,9 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
             float3 a0 = mul(MeshTransformInverse, float4(CurTri.pos0, 1)).xyz;
             float3 a1 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge1, 1)).xyz;
             float3 a2 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge2, 1)).xyz;
-
-            VisTexB[equirectDirectionToUv(LightDir) * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)] = float4(VisTexB[equirectDirectionToUv(LightDir) * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)].xyz + float3(bestHit.t, 1, luminance(lightFlux / (SelectedLight.Type == DIRECTIONALLIGHT ? 1.0f : (1)))), Index);
+            float2 UV = equirectDirectionToUv(LightDir);
+            if(SelectedLight.Type = DIRECTIONALLIGHT) UV = RandVec;
+            VisTexB[UV * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)] = float4(VisTexB[UV * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)].xyz + float3(bestHit.t, 1, luminance(lightFlux / (SelectedLight.Type == DIRECTIONALLIGHT ? 1.0f : (1)))), Index);
             InterlockedAdd(AABBBuff[PhotonFrames % 2].PhotonCount, 1);
         }
 
