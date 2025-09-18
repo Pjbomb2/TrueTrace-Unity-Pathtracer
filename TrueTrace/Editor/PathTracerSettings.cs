@@ -197,6 +197,7 @@ namespace TrueTrace {
             EditorSceneManager.activeSceneChangedInEditMode += EvaluateScene;
             EditorSceneManager.sceneSaving += SaveScene;
             EditorSceneManager.activeSceneChanged += ChangedActiveScene;
+            EditorSceneManager.sceneSaved += SaveScenePost;
             if(EditorPrefs.GetString("EditModeFunctions", JsonUtility.ToJson(this, false)) != null) {
                var data = EditorPrefs.GetString("EditModeFunctions", JsonUtility.ToJson(this, false));
                JsonUtility.FromJsonOverwrite(data, this);
@@ -448,11 +449,15 @@ namespace TrueTrace {
             if((Fine0 || Fine1) && !Parent.This.gameObject.TryGetComponent<InstancedObject>(out InstancedObject InstObj)) {
                if(!Parent.This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempRayObj)) {
                      if(Parent.This.gameObject.TryGetComponent<MeshRenderer>(out MeshRenderer MeshRend)) {
-                        if(MeshRend.sharedMaterials != null && MeshRend.sharedMaterials.Length != 0)
-                          Parent.This.gameObject.AddComponent<RayTracingObject>();
+                        if(MeshRend.sharedMaterials != null && MeshRend.sharedMaterials.Length != 0) {
+                          var TempOBJ = Parent.This.gameObject.AddComponent<RayTracingObject>();
+                          // TempOBJ.hideFlags = HideFlags.DontSave;
+                       }
                      } else if(Parent.This.gameObject.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer SkinRend)) {
-                        if(SkinRend.sharedMaterials != null && SkinRend.sharedMaterials.Length != 0)
-                           Parent.This.gameObject.AddComponent<RayTracingObject>();
+                        if(SkinRend.sharedMaterials != null && SkinRend.sharedMaterials.Length != 0) {
+                           var TempOBJ = Parent.This.gameObject.AddComponent<RayTracingObject>();
+                           // TempOBJ.hideFlags = HideFlags.DontSave;
+                        }
                      }
 
                   }
@@ -477,24 +482,36 @@ namespace TrueTrace {
             if(RayTracingObjectChildCount > 0) {
                if(!Parent.This.gameObject.TryGetComponent<AssetManager>(out AssetManager TempAsset)) {
                   if(!Parent.This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent2)) {
-                     Parent.This.gameObject.AddComponent<ParentObject>();
+                     var TempOBJ = Parent.This.gameObject.AddComponent<ParentObject>();
+                     // TempOBJ.hideFlags = HideFlags.DontSave;
+                  
                   }
                }
                else {
                   for(int i = 0; i < ChildLength; i++) {
-                     if(Parent.Children[i].This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj2) && !Parent.Children[i].This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent2)) Parent.Children[i].This.gameObject.AddComponent<ParentObject>();
+                     if(Parent.Children[i].This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj2) && !Parent.Children[i].This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent2)) {
+                        var TempOBJ = Parent.Children[i].This.gameObject.AddComponent<ParentObject>();
+                        // TempOBJ.hideFlags = HideFlags.DontSave;
+                     }
                   }               
                }
             } else {
-               if(ChildLength == 0 && Parent.This.root == Parent.This && Parent.This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj4) && !Parent.This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent5)) Parent.This.gameObject.AddComponent<ParentObject>();
+               if(ChildLength == 0 && Parent.This.root == Parent.This && Parent.This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj4) && !Parent.This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent5)) {
+                  var TempOBJ = Parent.This.gameObject.AddComponent<ParentObject>();
+                  // TempOBJ.hideFlags = HideFlags.DontSave;
+               }
                for(int i = 0; i < ChildLength; i++) {
-                  if(Parent.Children[i].This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj2) && !Parent.Children[i].This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent3) && !Parent.This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent2)) Parent.This.gameObject.AddComponent<ParentObject>();
+                  if(Parent.Children[i].This.gameObject.TryGetComponent<RayTracingObject>(out RayTracingObject TempObj2) && !Parent.Children[i].This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent3) && !Parent.This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent2)) {
+                     var TempOBJ = Parent.This.gameObject.AddComponent<ParentObject>();
+                     // TempOBJ.hideFlags = HideFlags.DontSave;
+                  }
                }
             }
             if(HasNormalMeshAsChild && HasSkinnedMeshAsChild) {
                for(int i = 0; i < ChildLength; i++) {
                   if(!Parent.Children[i].This.gameObject.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer TempSkin3) && !Parent.Children[i].This.gameObject.TryGetComponent<ParentObject>(out ParentObject TempParent3)) {
-                     Parent.Children[i].This.gameObject.AddComponent<ParentObject>();
+                     var TempOBJ = Parent.Children[i].This.gameObject.AddComponent<ParentObject>();
+                     // TempOBJ.hideFlags = HideFlags.DontSave;
                   }
                }  
             }
@@ -502,7 +519,7 @@ namespace TrueTrace {
 
          }
 
-         private void QuickStart() {
+         public void QuickStart() {
             // ParentObject[] TempObjects2 = GameObject.FindObjectsOfType<ParentObject>();
             // foreach(var a in TempObjects2) {
             //    DestroyImmediate(a);
@@ -2558,15 +2575,22 @@ Toolbar toolbar;
             if(Assets != null) {
                EditorUtility.SetDirty(Assets);
                Assets.ClearAll();
+               AssetManager.Assets = null;
             }
             InstancedManager Instanced = GameObject.Find("InstancedStorage").GetComponent<InstancedManager>();
             if(Instanced != null) {
                EditorUtility.SetDirty(Instanced);
                Instanced.ClearAll();
             }
+            // QuickStart();
+            // GameObject.Find("Scene").GetComponent<AssetManager>().EditorBuild();
             Cleared = true;
          }
-
+         void SaveScenePost(Scene Current) {
+#if UNITY_PIPELINE_URP
+            GameObject.Find("Scene").GetComponent<AssetManager>().EditorBuild();
+#endif
+         }
          // [Shortcut("TrueTrace/ScreenShot", KeyCode.None, ShortcutModifiers.Action)]
          // private static void TakeScreenShotHotkey() {
          //    if(Application.isPlaying) {
@@ -2722,15 +2746,6 @@ Slider AperatureSlider;
                       var A = NewObject.GetComponent<UnityEngine.Rendering.HighDefinition.CustomPassVolume>();
                       A.injectionPoint = UnityEngine.Rendering.HighDefinition.CustomPassInjectionPoint.BeforePostProcess;
                       A.customPasses.Add(new HDRPCompatability());
-                  }
-               #endif
-               #if UNITY_PIPELINE_URP
-                  GameObject NewObject = GameObject.Find("URPTTINJECTOR");
-                  
-                  if(NewObject == null) {
-                      NewObject = new GameObject();
-                      NewObject.name = "URPTTINJECTOR";
-                      NewObject.AddComponent<InjectPathTracingPass>();
                   }
                #endif
             }
@@ -3371,5 +3386,21 @@ public class DialogueGraphView : GraphView
     }
 }  
 
+
+// public static class AutoInit
+// {
+//     [RuntimeInitializeOnLoadMethod]
+//     static void Init() {
+//         SceneManager.sceneLoaded += (scene, mode) => {
+//             // Find all renderers in the scene
+//             EditorWindow.GetWindow<EditModeFunctions>().QuickStart();
+//         };
+//     }
+// }
+
+
 }
+
+
+
 #endif

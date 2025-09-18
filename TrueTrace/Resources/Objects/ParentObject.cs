@@ -17,6 +17,9 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 namespace TrueTrace {
     [System.Serializable]
+#if UNITY_PIPELINE_URP
+    [ExecuteInEditMode]
+#endif
     public class ParentObject : MonoBehaviour
     {
     #if TTExtraVerbose && TTVerbose

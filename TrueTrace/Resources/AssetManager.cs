@@ -14,6 +14,9 @@ using UnityEngine.Rendering;
 #pragma warning disable 4014
 namespace TrueTrace {
     [System.Serializable]
+#if UNITY_PIPELINE_URP
+    [ExecuteInEditMode]
+#endif
     public class AssetManager : MonoBehaviour
     {//This handels all the data
 
@@ -182,9 +185,11 @@ namespace TrueTrace {
         public void ClearAll()
         {//My attempt at clearing memory
             // RunningTasks = 0;
-            ParentObject[] ChildrenObjects = this.GetComponentsInChildren<ParentObject>();
-            foreach (ParentObject obj in ChildrenObjects)
+            ParentObject[] ChildrenObjects = GameObject.FindObjectsOfType<ParentObject>();
+            foreach (ParentObject obj in ChildrenObjects) {
+                if(obj.gameObject.transform.root.name == "InstancedStorage") continue;
                 obj.ClearAll();
+            }
             CommonFunctions.DeepClean(ref _Materials);
             CommonFunctions.DeepClean(ref IntersectionMats);
             CommonFunctions.DeepClean(ref SGTreeNodes);
@@ -1197,6 +1202,7 @@ namespace TrueTrace {
         public void BuildCombined()
         {//Only has unbuilt be built
             Assets = this;
+            ClearAll();
             Terrains = new List<TerrainObject>(GetComponentsInChildren<TerrainObject>());
             init();
             List<ParentObject> TempQue = new List<ParentObject>(GameObject.FindObjectsOfType<ParentObject>());

@@ -101,6 +101,7 @@ namespace TrueTrace {
 		public void CallMaterialOverride() {
 			Material[] SharedMaterials = (GetComponent<Renderer>() != null) ? GetComponent<Renderer>().sharedMaterials : GetComponent<SkinnedMeshRenderer>().sharedMaterials;
 			int NamLen = Names.Length;
+			// this.hideFlags = HideFlags.None;
 			for(int i = 0; i < NamLen; i++) {
 				Names[i] = SharedMaterials[i].name;
 				 if(FollowMaterial[i]) {

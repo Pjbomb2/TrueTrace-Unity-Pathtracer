@@ -499,7 +499,7 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
                     if(!TerrainExists) {
                         uint PixelIndex = ShadowRay.PixelIndex & 0xFFFFFFF;
                         bool IsNotPrimaryNEERay = (ShadowRay.PixelIndex >> 30);
-                        if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray.origin + ray.direction * ShadowRayT,asfloat(ShadowRay.FIELD));
+                        if(UseReSTIRGI && CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray.origin + ray.direction * ShadowRayT,asfloat(ShadowRay.FIELD));
                         #ifdef RadCache
                             CacheBuffer[PixelIndex].RunningIlluminance = packRGBE(unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput + unpackRGBE(CacheBuffer[PixelIndex].RunningIlluminance));
                             AddHitToCachePartial(CacheBuffer[PixelIndex], ray.origin);
@@ -680,7 +680,7 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
                             if(!TerrainExists) {
                                 uint PixelIndex = ShadowRay.PixelIndex & 0xFFFFFFF;
                                 bool IsNotPrimaryNEERay = (ShadowRay.PixelIndex >> 30);
-                                if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray2.origin + ray2.direction * max_distance, asfloat(ShadowRay.FIELD));
+                                if(UseReSTIRGI && CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray2.origin + ray2.direction * max_distance, asfloat(ShadowRay.FIELD));
                                 #ifdef RadCache
                                     CacheBuffer[PixelIndex].RunningIlluminance = packRGBE(unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput + unpackRGBE(CacheBuffer[PixelIndex].RunningIlluminance));
                                     AddHitToCachePartial(CacheBuffer[PixelIndex], ray2.origin);
@@ -843,7 +843,7 @@ void IntersectShadowHeightmap(int ray_index) {
         if(!HitHeightmap) {
             uint PixelIndex = ShadowRaysBuffer[ray_index].PixelIndex & 0xFFFFFFF;
             bool IsNotPrimaryNEERay = (ShadowRaysBuffer[ray_index].PixelIndex >> 30);
-            if(CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ShadowRaysBuffer[ray_index].EndPoint, 0);
+            if(UseReSTIRGI && CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ShadowRaysBuffer[ray_index].EndPoint, 0);
             #ifdef RadCache
                 CacheBuffer[PixelIndex].RunningIlluminance = packRGBE(unpackRGBE(ShadowRaysBuffer[ray_index].DiffuseIlluminance) + unpackRGBE(CacheBuffer[PixelIndex].RunningIlluminance));
                 AddHitToCachePartial(CacheBuffer[PixelIndex], ShadowRaysBuffer[ray_index].origin);
