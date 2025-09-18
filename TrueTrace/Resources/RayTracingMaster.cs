@@ -14,7 +14,9 @@ using UnityEditor.UIElements;
 
 
 namespace TrueTrace {
+#if UNITY_PIPELINE_URP || UNITY_PIPELINE_HDRP
     [ExecuteInEditMode]
+#endif
     public class RayTracingMaster : MonoBehaviour
     {
         public static RayTracingMaster RayMaster;
