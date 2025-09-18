@@ -55,6 +55,7 @@ namespace TrueTrace {
 		[SerializeField] public float[] SecondaryNormalTexBlend;
 		[SerializeField] public float[] DetailNormalStrength;
 		[SerializeField] public Vector4[] SecondaryNormalTexScaleOffset;
+		[SerializeField] public bool DeleteObject = true;
 
 
 	
@@ -76,7 +77,8 @@ namespace TrueTrace {
 
 		public void UpdateParentChain() {
 			bool Fine = TryGetComponent<ParentObject>(out ParentObject ThisParent);
-			Fine = transform.parent.TryGetComponent<ParentObject>(out ParentObject ParParent) || Fine;
+			ParentObject ParParent = null;
+			if(transform.root != transform) Fine = transform.parent.TryGetComponent<ParentObject>(out ParParent) || Fine;
 	    	if(gameObject.scene.isLoaded && Fine) {
 	    		if(WasDeleted) return;
 		    	if(ThisParent != null) {
@@ -101,6 +103,7 @@ namespace TrueTrace {
 		public void CallMaterialOverride() {
 			Material[] SharedMaterials = (GetComponent<Renderer>() != null) ? GetComponent<Renderer>().sharedMaterials : GetComponent<SkinnedMeshRenderer>().sharedMaterials;
 			int NamLen = Names.Length;
+			DeleteObject = false;
 			// this.hideFlags = HideFlags.None;
 			for(int i = 0; i < NamLen; i++) {
 				Names[i] = SharedMaterials[i].name;

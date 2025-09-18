@@ -28,13 +28,13 @@ MonoBehaviour:
   DoFFocal: 5.2216897
   PPExposure: 0
   ExposureAuto: 0
-  PPToneMap: 0
+  PPToneMap: 1
   PPTAA: 0
   RenderScale: 1
   DenoiserMethod: 0
   UpscalerMethod: 0
   UseReSTIRGITemporal: 1
-  UseReSTIRGISpatial: 1
+  UseReSTIRGISpatial: 0
   UseReSTIRGI: 0
   ReSTIRGITemporalMCap: 4
   DoReSTIRGIConnectionValidation: 1

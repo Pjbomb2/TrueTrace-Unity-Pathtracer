@@ -1846,6 +1846,12 @@ Toolbar toolbar;
                PhotonMappingToggle.tooltip = "Enable Photon Mapping(EXPERIMENTAL)";
             PhotonMappingToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("EnablePhotonMapping"); SetGlobalDefines("PhotonMapping", true);} else {RemoveDefine("EnablePhotonMapping"); SetGlobalDefines("PhotonMapping", false);}});
 
+
+            Toggle RemoveScriptsDuringSaveToggle = new Toggle() {value = (definesList.Contains("RemoveScriptsDuringSave")), text = "Remove TT Scripts During Save"};
+               RemoveScriptsDuringSaveToggle.tooltip = "Removes all ParentObject and unmodified RayTracingObject scripts during scene save, and adds them back after(Helps with version control)";
+            RemoveScriptsDuringSaveToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {AddDefine("RemoveScriptsDuringSave");} else {RemoveDefine("RemoveScriptsDuringSave");}});
+
+
             VisualElement ClayColorBox = new VisualElement();
 
 
@@ -1914,6 +1920,7 @@ Toolbar toolbar;
                TriangleSplittingToggle.SetEnabled(false);
                StrictMemoryReductionToggle.SetEnabled(false);
                MultiMapScreenshotToggle.SetEnabled(false);
+               RemoveScriptsDuringSaveToggle.SetEnabled(false);
             } else {
                PhotonMappingToggle.SetEnabled(true);
                HardwareRTToggle.SetEnabled(true);
@@ -1931,6 +1938,7 @@ Toolbar toolbar;
                TriangleSplittingToggle.SetEnabled(true);
                StrictMemoryReductionToggle.SetEnabled(true);
                MultiMapScreenshotToggle.SetEnabled(true);
+               RemoveScriptsDuringSaveToggle.SetEnabled(true);
             }
 
             if(definesList.Contains("HardwareRT")) {
@@ -2000,6 +2008,7 @@ Toolbar toolbar;
          NonPlayContainer.Add(StrictMemoryReductionToggle);
          NonPlayContainer.Add(MultiMapScreenshotToggle);
          NonPlayContainer.Add(PhotonMappingToggle);
+         NonPlayContainer.Add(RemoveScriptsDuringSaveToggle);
          NonPlayContainer.Add(new Label("-------------"));
 
          Label PlayLabel = new Label("-- THESE CAN BE MODIFIED ON THE FLY/DURING PLAY --");
@@ -2572,6 +2581,19 @@ Toolbar toolbar;
          }
 
          void SaveScene(Scene Current, string ThrowawayString) {
+#if RemoveScriptsDuringSave
+            ParentObject[] TempParents = GameObject.FindObjectsOfType<ParentObject>();
+            foreach(var obj in TempParents) {
+               obj.BotherToUpdate = false;
+               DestroyImmediate(obj);
+            }
+            RayTracingObject[] TempRayObjs = GameObject.FindObjectsOfType<RayTracingObject>();
+            foreach(var obj in TempRayObjs) {
+               if(obj.DeleteObject) {
+                  DestroyImmediate(obj);
+               }
+            }
+#endif
             if(Assets != null) {
                EditorUtility.SetDirty(Assets);
                Assets.ClearAll();
@@ -2582,15 +2604,18 @@ Toolbar toolbar;
                EditorUtility.SetDirty(Instanced);
                Instanced.ClearAll();
             }
-            // QuickStart();
-            // GameObject.Find("Scene").GetComponent<AssetManager>().EditorBuild();
+
+
             Cleared = true;
          }
+
          void SaveScenePost(Scene Current) {
-#if UNITY_PIPELINE_URP
+#if RemoveScriptsDuringSave
+            QuickStart();
             GameObject.Find("Scene").GetComponent<AssetManager>().EditorBuild();
 #endif
          }
+
          // [Shortcut("TrueTrace/ScreenShot", KeyCode.None, ShortcutModifiers.Action)]
          // private static void TakeScreenShotHotkey() {
          //    if(Application.isPlaying) {

@@ -17,7 +17,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 namespace TrueTrace {
     [System.Serializable]
-#if UNITY_PIPELINE_URP
+#if UNITY_PIPELINE_URP || UNITY_PIPELINE_HDRP
     [ExecuteInEditMode]
 #endif
     public class ParentObject : MonoBehaviour
@@ -1718,7 +1718,7 @@ namespace TrueTrace {
             center = 0.5f * (aabb_untransformed.BBMin + aabb_untransformed.BBMax);
             extent = 0.5f * (aabb_untransformed.BBMax - aabb_untransformed.BBMin);
         }
-
+        public bool BotherToUpdate = true;
         private void OnEnable() {
             HasStarted = false;
             FailureCount = 0;
@@ -1758,7 +1758,7 @@ namespace TrueTrace {
             HasStarted = false;
             FailureCount = 0;
             ClearAll();
-            if (gameObject.scene.isLoaded) {
+            if (BotherToUpdate && gameObject.scene.isLoaded) {
                 if (this.GetComponentInParent<InstancedManager>() != null) {
                     this.GetComponentInParent<InstancedManager>().RemoveQue.Add(this);
                     this.GetComponentInParent<InstancedManager>().ParentCountHasChanged = true;
@@ -1769,11 +1769,13 @@ namespace TrueTrace {
                     }
                 }
                 else {
-                    if(!AssetManager.Assets.RemoveQue.Contains(this)) {
-                        QueInProgress = -1;
-                        AssetManager.Assets.RemoveQue.Add(this);
+                    if(AssetManager.Assets != null && AssetManager.Assets.RemoveQue != null) {
+                        if(!AssetManager.Assets.RemoveQue.Contains(this)) {
+                            QueInProgress = -1;
+                            AssetManager.Assets.RemoveQue.Add(this);
+                        }
+                        AssetManager.Assets.ParentCountHasChanged = true;
                     }
-                    AssetManager.Assets.ParentCountHasChanged = true;
                 }
                 HasCompleted = false;
             }

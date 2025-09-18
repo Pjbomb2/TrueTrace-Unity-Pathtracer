@@ -12,16 +12,16 @@
 #define AdvancedAlphaMapped
 #define ExtraSampleValidation
 #define ReSTIRAdvancedValidation
-// #define IgnoreGlassShadow
+#define IgnoreGlassShadow
 // #define IgnoreGlassMain
 // #define FadeMapping
 // #define PointFiltering
-#define StainedGlassShadows
+// #define StainedGlassShadows
 // #define IgnoreBackfacing
 #define LBVH
 #define AccurateEmissionTex
 #define TrueBlack
-#define UseTextureLOD
+// #define UseTextureLOD
 #define EONDiffuse
 // #define AdvancedBackground
 #define UseBRDFLights

@@ -14,7 +14,7 @@ using UnityEngine.Rendering;
 #pragma warning disable 4014
 namespace TrueTrace {
     [System.Serializable]
-#if UNITY_PIPELINE_URP
+#if UNITY_PIPELINE_URP || UNITY_PIPELINE_HDRP
     [ExecuteInEditMode]
 #endif
     public class AssetManager : MonoBehaviour
