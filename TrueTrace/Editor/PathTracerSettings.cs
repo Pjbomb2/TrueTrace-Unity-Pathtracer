@@ -3405,7 +3405,6 @@ public class DialogueGraphView : GraphView
         return compatablePorts;
     }
     public Port GeneratePort(DialogueNode node, Direction portDirection, System.Type T, Port.Capacity capacity = Port.Capacity.Single, string Name = "") {
-        {}
         var NodePort = node.InstantiatePort(Orientation.Horizontal, portDirection, capacity, T);
         NodePort.portName = Name;
         return NodePort;

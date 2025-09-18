@@ -1202,7 +1202,7 @@ namespace TrueTrace {
         public void BuildCombined()
         {//Only has unbuilt be built
             Assets = this;
-            ClearAll();
+            if(!Application.isPlaying) ClearAll();
             Terrains = new List<TerrainObject>(GetComponentsInChildren<TerrainObject>());
             init();
             List<ParentObject> TempQue = new List<ParentObject>(GameObject.FindObjectsOfType<ParentObject>());
