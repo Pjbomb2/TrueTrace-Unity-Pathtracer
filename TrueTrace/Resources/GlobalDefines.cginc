@@ -7,12 +7,12 @@
 #define TTReflectionMotionVectors
 // #define MultiMapScreenshot
 // #define RasterizedDirect
-// #define PhotonMapping
+#define PhotonMapping
 //Dont modify above, CPU code will do automatically
 #define AdvancedAlphaMapped
 #define ExtraSampleValidation
 #define ReSTIRAdvancedValidation
-#define IgnoreGlassShadow
+// #define IgnoreGlassShadow
 // #define IgnoreGlassMain
 // #define FadeMapping
 // #define PointFiltering

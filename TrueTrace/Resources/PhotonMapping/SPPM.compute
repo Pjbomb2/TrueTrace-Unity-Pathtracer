@@ -584,6 +584,7 @@ float SphericalGaussianPDF(float3 dir, float3 sgaxis, float sharpness)
 
     return normalization * exp(lambda * cosTheta);
 }
+float4x4 TTviewprojection;
 float DirectionalLightCoverageRadius;
 #pragma kernel kernel_gen
 [numthreads(32, 32, 1)]
@@ -671,6 +672,7 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     float3 surfCol = 1;
     float scatDist = 999999;
     bool WasLast = false;
+    float4 Val = 0;
     [loop]for(i = 0; i < 7; i++) {
         PhotonBounce[pixel_index % 1024] = i + 1;
         photon.Flux = lightFlux * CurrentRay.throughput;
@@ -691,7 +693,9 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
         photon.Pos = float4(CurrentRay.origin, 0);
         photon.Dir = CurrentRay.direction;
         reflectedDiffuse = CurrentRay.diffuseHit;
-
+        float4 curprojectedrefl = mul(TTviewprojection, float4(photon.Pos.xyz, 1));
+        float2 uv2 = curprojectedrefl.xy / curprojectedrefl.w;
+        // if(any(uv2 > 1 || uv2 < -1)) break;
         [branch]if(reflectedDiffuse) {
 
             uint photonIndex = 0;
@@ -729,7 +733,7 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
             float3 a1 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge1, 1)).xyz;
             float3 a2 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge2, 1)).xyz;
             float2 UV = equirectDirectionToUv(LightDir);
-            if(SelectedLight.Type = DIRECTIONALLIGHT) UV = RandVec;
+            if(SelectedLight.Type == DIRECTIONALLIGHT) UV = RandVec;
             VisTexB[UV * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)] = float4(VisTexB[UV * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)].xyz + float3(bestHit.t, 1, luminance(lightFlux / (SelectedLight.Type == DIRECTIONALLIGHT ? 1.0f : (1)))), Index);
             InterlockedAdd(AABBBuff[PhotonFrames % 2].PhotonCount, 1);
         }

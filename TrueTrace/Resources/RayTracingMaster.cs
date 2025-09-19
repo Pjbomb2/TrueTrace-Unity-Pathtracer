@@ -68,6 +68,7 @@ namespace TrueTrace {
         private ComputeShader CDFCompute;
 
 #if EnablePhotonMapping
+        public float DirectionalLightCoverageRadius = 8.0f;
         public PhotonMapping PhotonMap;
         public RenderTexture FirstDiffuseThroughputTex;
         public RenderTexture FirstDiffusePosTex;
@@ -661,6 +662,7 @@ namespace TrueTrace {
 
             CamInvProjPrev = ProjectionMatrix.inverse;
             CamToWorldPrev = _camera.cameraToWorldMatrix;
+            Shader.SetGlobalMatrix("TTviewprojection", ProjectionMatrix * _camera.worldToCameraMatrix);
             SetMatrix("viewprojection", ProjectionMatrix * _camera.worldToCameraMatrix);
             SetMatrix("prevviewprojection", EB.inverse * EA.inverse);
             SetMatrix("CamInvProj", ProjectionMatrix.inverse);
@@ -1340,7 +1342,7 @@ namespace TrueTrace {
             if(DoKernelProfiling) cmd.EndSample("TTMV2");
 #endif
 #if EnablePhotonMapping
-                PhotonMap.Generate(cmd);
+                PhotonMap.Generate(cmd, DirectionalLightCoverageRadius);
                 PhotonMap.Collect(cmd, 
                     ref FirstDiffuseThroughputTex, 
                     ref FirstDiffusePosTex,
@@ -1603,6 +1605,17 @@ namespace TrueTrace {
 //                 LocalTTSettingsField.RegisterValueChangedCallback(evt => {t.LocalTTSettings = evt.newValue as TTSettings;});
 //                 MainContainer.Add(LocalTTSettingsField);
                 
+//                 IntegerField SamplesPerFrameField = new IntegerField("Samples per Frame");
+//                 SamplesPerFrameField.value = t.SamplesPerFrame;
+//                 SamplesPerFrameField.RegisterValueChangedCallback(evt => {t.SamplesPerFrame = evt.newValue;});
+//                 MainContainer.Add(SamplesPerFrameField);
+
+// #if EnablePhotonMapping
+//                 FloatField DirectionalLightCoverageRadiusField = new FloatField("Photon Mapping Radius Coverage");
+//                 DirectionalLightCoverageRadiusField.value = t.DirectionalLightCoverageRadius;
+//                 DirectionalLightCoverageRadiusField.RegisterValueChangedCallback(evt => {t.DirectionalLightCoverageRadius = evt.newValue;});
+//                 MainContainer.Add(DirectionalLightCoverageRadiusField);
+// #endif
 
 //                 // if(t.LocalTTSettings.ToneMapper == 7) {
 //                     ObjectField OverrideAGX = new ObjectField("Custom AGX Tonemap Texture");

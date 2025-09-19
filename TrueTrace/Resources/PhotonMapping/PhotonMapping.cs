@@ -18,7 +18,6 @@ namespace TrueTrace {
         public RenderTexture RndNumWrt;
         public RenderTexture mpCausticFluxBucket;
         public RenderTexture ValidDir;
-        public float DirectionalLightCoverageRadius = 8.0f;
 
         public RenderTexture CDFX;
         public RenderTexture CDFY;
@@ -140,7 +139,7 @@ namespace TrueTrace {
 
         }
 
-        public void Generate(CommandBuffer cmd) {
+        public void Generate(CommandBuffer cmd, float DirectionalLightCoverageRadius) {
             if (SPPMShader == null) {SPPMShader = Resources.Load<ComputeShader>("PhotonMapping/SPPM"); }
                 CDFCompute = Resources.Load<ComputeShader>("Utility/CDFCreator");
             if(AssetManager.Assets == null || AssetManager.Assets.UnityLightCount == 0) return;
