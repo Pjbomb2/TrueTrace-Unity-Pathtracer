@@ -25,7 +25,6 @@ public class WaveV2 : MonoBehaviour
     [SerializeField] public int BlurPasses = 1;
     [SerializeField] public int SimulationPasses = 1;
     private GraphicsBuffer VertexBuffer;
-    private GraphicsBuffer OrigVertexBuffer;
     private ComputeBuffer IndexBuffer;
     private Camera VoxelizeCamera;
     public RenderTexture ComputeTextureA;
@@ -200,8 +199,6 @@ public class WaveV2 : MonoBehaviour
                 CommonFunctions.CreateComputeBuffer(ref IndexBuffer, RenderMesh.triangles);
                 RenderMesh.vertexBufferTarget |= GraphicsBuffer.Target.Raw;
                 VertexBuffer = RenderMesh.GetVertexBuffer(0);
-                OrigVertexBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Raw |  GraphicsBuffer.Target.CopyDestination, VertexBuffer.count, VertexBuffer.stride);
-                Graphics.CopyBuffer(VertexBuffer, OrigVertexBuffer);
                 VertexCount = RenderMesh.vertices.Length;
                 IntIter = 0;
                 TimeInterval = 0;
@@ -266,9 +263,7 @@ public class WaveV2 : MonoBehaviour
 
                 {//Apply Wave Heightmap
                     WaveShader.SetInt("gVertexCount", VertexCount); 
-                    WaveShader.SetVector("CamPos", RayTracingMaster._camera.transform.position); 
                     WaveShader.SetBuffer(ApplyWaveKernel, "bufVertices", VertexBuffer);
-                    WaveShader.SetBuffer(ApplyWaveKernel, "bufVertices2", OrigVertexBuffer);
                     WaveShader.SetTexture(ApplyWaveKernel, "WaveTexB", AA == 1 ? ComputeTextureA : ComputeTextureB);
                     WaveShader.Dispatch(ApplyWaveKernel, (int)Mathf.CeilToInt((float)VertexCount / (float)256), 1, 1);
                 }
@@ -292,12 +287,10 @@ public class WaveV2 : MonoBehaviour
                 }
 
                 {//Apply Normals
-                    WaveShader.SetInt("gVertexCount", IndexBuffer.count / 3); 
+                    WaveShader.SetInt("gVertexCount", VertexCount); 
                     WaveShader.SetBuffer(ApplyNormsKernel, "bufVertices", VertexBuffer);
-                    WaveShader.SetBuffer(ApplyNormsKernel, "IndexBuffer", IndexBuffer);
                     WaveShader.SetTexture(ApplyNormsKernel, "WaveTexB", ComputeTextureC);
-                    WaveShader.Dispatch(ApplyNormsKernel, (int)Mathf.CeilToInt((float)(IndexBuffer.count / 3) / (float)256), 1, 1);
-                    // WaveShader.Dispatch(ApplyNormsKernel, (int)Mathf.CeilToInt((float)VertexCount / (float)256), 1, 1);
+                    WaveShader.Dispatch(ApplyNormsKernel, (int)Mathf.CeilToInt((float)VertexCount / (float)256), 1, 1);
                 }
 
 

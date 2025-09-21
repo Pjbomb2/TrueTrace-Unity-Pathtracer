@@ -1111,7 +1111,11 @@ namespace TrueTrace {
                                 Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.IsBackground, EditorGUILayout.ToggleLeft("Is Background", Flag.GetFlag(CommonFunctions.Flags.IsBackground), GUILayout.MaxWidth(135)));
                                 Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.InvertAlpha, EditorGUILayout.ToggleLeft("Invert Alpha", Flag.GetFlag(CommonFunctions.Flags.InvertAlpha), GUILayout.MaxWidth(135)));
                             EditorGUILayout.EndHorizontal();
-
+#if EnablePhotonMapping
+                            EditorGUILayout.BeginHorizontal();
+                                Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.EnableCausticGeneration, EditorGUILayout.ToggleLeft("Enable Caustic Gen", Flag.GetFlag(CommonFunctions.Flags.EnableCausticGeneration), GUILayout.MaxWidth(135)));
+                            EditorGUILayout.EndHorizontal();
+#endif
                             EditorGUILayout.Space();
                             serializedObject.FindProperty("UseKelvin").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Use Kelvin: ", t.UseKelvin[Selected]);
                             if(t.UseKelvin[Selected]) serializedObject.FindProperty("KelvinTemp").GetArrayElementAtIndex(Selected).floatValue = EditorGUILayout.Slider("Kelvin Temperature: ", t.KelvinTemp[Selected], 0, 20000);

@@ -7,16 +7,16 @@
 #define TTReflectionMotionVectors
 // #define MultiMapScreenshot
 // #define RasterizedDirect
-#define PhotonMapping
+// #define PhotonMapping
 //Dont modify above, CPU code will do automatically
 #define AdvancedAlphaMapped
 #define ExtraSampleValidation
 #define ReSTIRAdvancedValidation
-// #define IgnoreGlassShadow
+#define IgnoreGlassShadow
 // #define IgnoreGlassMain
 // #define FadeMapping
 // #define PointFiltering
-// #define StainedGlassShadows
+#define StainedGlassShadows
 // #define IgnoreBackfacing
 #define LBVH
 #define AccurateEmissionTex
@@ -28,7 +28,7 @@
 #define DoubleBufferSGTree
 // #define Fog
 #define RadCache
-// #define ClampRoughnessToBounce
+#define ClampRoughnessToBounce
 // #define ReSTIRSampleReduction
 #define ReSTIRReflectionRefinement
 // #define ShadowGlassAttenuation
@@ -93,6 +93,7 @@
 #define Thin 9
 #define VertexColors 10
 #define InvertAlpha 11
+#define EnableCausticGeneration 12
 
 #define SampleAlbedo 0
 #define SampleMetallic 1

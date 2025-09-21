@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.17355098, g: 0.21696189, b: 0.29906368, a: 1}
+  m_IndirectSpecularColor: {r: 0.12731749, g: 0.13414757, b: 0.1210787, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -11916,7 +11916,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 3
+  m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &455776277 stripped
 MeshFilter:
@@ -12941,7 +12941,7 @@ MonoBehaviour:
   SecondaryNormalTexBlend: []
   DetailNormalStrength: []
   SecondaryNormalTexScaleOffset: []
-  DeleteObject: 1
+  DeleteObject: 0
   Indexes: 00000000
   NeedsToUpdate: 0
   IsReady: 1
@@ -15286,137 +15286,6 @@ MeshFilter:
     type: 3}
   m_PrefabInstance: {fileID: 1770587712}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &610660757
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 610660760}
-  - component: {fileID: 610660759}
-  - component: {fileID: 610660758}
-  m_Layer: 0
-  m_Name: Sun
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &610660758
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 610660757}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5316a6fd4d077f4ab8ce444f333d4fe, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ThisLight: {fileID: 610660759}
-  ThisLightData:
-    Radiance: {x: 32, y: 32, z: 32}
-    Position: {x: -1.4816499, y: 5.724826, z: -1.1294421}
-    Direction: {x: -0.40884805, y: 0.8689685, z: -0.2788136}
-    Type: 1
-    SpotAngle: {x: 0, y: 0}
-    ZAxisRotation: 0.066060774
-    Softness: 0
-    IESTex: {x: 0, y: 0}
-    IESTexScale: {x: 0, y: 0, z: 0, w: 0}
-  ArrayIndex: 0
-  IESIndex: 0
-  ShadowSoftness: 0
-  UseKelvin: 0
-  IsMainSun: 1
-  KelvinTemperature: 1000
-  Intensity: 32
-  Col: {x: 1, y: 1, z: 1}
-  IESTexScaleOffset: {x: 0, y: 0, z: 0, w: 0}
-  SpotAngle: 30
-  HasInitialized: 1
-  IESProfile: {fileID: 0}
-  NeedsToUpdate: 1
---- !u!108 &610660759
-Light:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 610660757}
-  m_Enabled: 1
-  serializedVersion: 10
-  m_Type: 1
-  m_Shape: 0
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 32
-  m_Range: 10
-  m_SpotAngle: 30
-  m_InnerSpotAngle: 21.80208
-  m_CookieSize: 10
-  m_Shadows:
-    m_Type: 0
-    m_Resolution: -1
-    m_CustomResolution: -1
-    m_Strength: 1
-    m_Bias: 0.05
-    m_NormalBias: 0.4
-    m_NearPlane: 0.2
-    m_CullingMatrixOverride:
-      e00: 1
-      e01: 0
-      e02: 0
-      e03: 0
-      e10: 0
-      e11: 1
-      e12: 0
-      e13: 0
-      e20: 0
-      e21: 0
-      e22: 1
-      e23: 0
-      e30: 0
-      e31: 0
-      e32: 0
-      e33: 1
-    m_UseCullingMatrixOverride: 0
-  m_Cookie: {fileID: 0}
-  m_DrawHalo: 0
-  m_Flare: {fileID: 0}
-  m_RenderMode: 0
-  m_CullingMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_RenderingLayerMask: 1
-  m_Lightmapping: 4
-  m_LightShadowCasterMode: 0
-  m_AreaSize: {x: 1, y: 1}
-  m_BounceIntensity: 1
-  m_ColorTemperature: 6570
-  m_UseColorTemperature: 1
-  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
-  m_UseBoundingSphereOverride: 0
-  m_UseViewFrustumForShadowCasterCull: 1
-  m_ShadowRadius: 0
-  m_ShadowAngle: 0
---- !u!4 &610660760
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 610660757}
-  m_LocalRotation: {x: 0.451143, y: 0.5434095, z: -0.44576496, w: 0.5499725}
-  m_LocalPosition: {x: -3.0433476, y: 4.1838617, z: -1.1525825}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_RootOrder: 1
-  m_LocalEulerAnglesHint: {x: 128.6, y: 97.314, z: 17.175}
 --- !u!4 &611049998 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -4090820614514019212, guid: 16500a523b718314091d7e9b83146c62,
@@ -27663,7 +27532,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 4
+  m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1124678509
 MonoBehaviour:
@@ -37589,7 +37458,7 @@ Transform:
   - {fileID: 499686670}
   - {fileID: 1931085298}
   m_Father: {fileID: 0}
-  m_RootOrder: 2
+  m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1568839225
 MonoBehaviour:
@@ -37728,7 +37597,6 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 499686671}
   - {fileID: 1770588100}
-  - {fileID: 1931085300}
   AddQue: []
   RemoveQue: []
   UpdateQue: []

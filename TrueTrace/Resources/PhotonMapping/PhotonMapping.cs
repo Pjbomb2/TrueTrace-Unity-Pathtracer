@@ -13,6 +13,8 @@ namespace TrueTrace {
         ComputeBuffer mpCausticHashPhotonCounter;
         ComputeBuffer AABBBuffA;
         ComputeBuffer AABBBuffB;
+        // private ComputeBuffer DebugBuffer;
+        // private ComputeBuffer DebugCounter;
         public RenderTexture mpCausticPosBucket;
         public RenderTexture mpCausticDirBucket;
         public RenderTexture RndNumWrt;
@@ -22,6 +24,8 @@ namespace TrueTrace {
         public RenderTexture CDFX;
         public RenderTexture CDFY;
         public RenderTexture[] EquirectVisibilityTex;
+
+        public float IntensityMultiplier = 1.0f;
 
         private ComputeShader CDFCompute;
         private ComputeBuffer CDFTotalBuffer;
@@ -52,6 +56,7 @@ namespace TrueTrace {
             RndNumWrt.ReleaseSafe();
             AABBBuffA.ReleaseSafe();
             AABBBuffB.ReleaseSafe();
+            // DebugBuffer.ReleaseSafe();
             mpCausticDirBucket.ReleaseSafe();
             mpCausticFluxBucket.ReleaseSafe();
             EquirectVisibilityTex.ReleaseSafe();
@@ -135,11 +140,13 @@ namespace TrueTrace {
             CommonFunctions.CreateRenderTexture(ref mpCausticFluxBucket, (int)Width, (int)Height, CommonFunctions.RTFull4);
             CommonFunctions.CreateDynamicBuffer(ref mpCausticHashPhotonCounter, (int)mNumBuckets, 4);
             CommonFunctions.CreateDynamicBuffer(ref AABBBuffA, 2, 40);
+            // CommonFunctions.CreateDynamicBuffer(ref DebugBuffer, 1000, 12);
+            // CommonFunctions.CreateDynamicBuffer(ref DebugCounter, 1, 4);
 
 
         }
 
-        public void Generate(CommandBuffer cmd, float DirectionalLightCoverageRadius) {
+        public void Generate(CommandBuffer cmd, float DirectionalLightCoverageRadius, Matrix4x4 TTviewprojection, Vector3 TTCamPos, Vector3 TTCamForward, RenderTexture DistanceTex) {
             if (SPPMShader == null) {SPPMShader = Resources.Load<ComputeShader>("PhotonMapping/SPPM"); }
                 CDFCompute = Resources.Load<ComputeShader>("Utility/CDFCreator");
             if(AssetManager.Assets == null || AssetManager.Assets.UnityLightCount == 0) return;
@@ -147,6 +154,11 @@ namespace TrueTrace {
             PrevLightCount = AssetManager.Assets.UnityLightCount;
             FramesSinceStart++;
             bool FlipFrame = (FramesSinceStart % 2) == 0;
+            // Vector3[] TempDat = new Vector3[1000];
+            // uint[] TempDat2 = new uint[1];
+
+            // cmd.SetBufferData(DebugBuffer, TempDat);
+            // cmd.SetBufferData(DebugCounter, TempDat2);
             cmd.SetComputeIntParam(SPPMShader, "PhotonFrames", FramesSinceStart);
             cmd.SetComputeIntParam(SPPMShader, "MaxBounce", (int)12);
             cmd.SetComputeIntParam(SPPMShader, "CurBounce", (int)1);
@@ -156,7 +168,11 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(SPPMShader, "screen_height", (int)Height);
             cmd.SetComputeIntParam(SPPMShader, "mNumBuckets", (int)mNumBuckets);
             cmd.SetComputeFloatParam(SPPMShader, "CDFWIDTH", (float)PerLightVisSize);
+            cmd.SetComputeVectorParam(SPPMShader, "TTCamPos", TTCamPos);
+            cmd.SetComputeVectorParam(SPPMShader, "TTForward", TTCamForward);
+            cmd.SetComputeMatrixParam(SPPMShader, "TTviewprojection", TTviewprojection);
             cmd.SetComputeFloatParam(SPPMShader, "DirectionalLightCoverageRadius", DirectionalLightCoverageRadius);
+            cmd.SetComputeFloatParam(SPPMShader, "IntensityMultiplier", IntensityMultiplier);
 
             cmd.SetComputeTextureParam(SPPMShader, 0, "gHashBucketPos", mpCausticPosBucket);
             cmd.SetComputeTextureParam(SPPMShader, 0, "gHashBucketFlux", mpCausticFluxBucket);
@@ -185,7 +201,10 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "VisTexB", !FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);//WRITE
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "gHashBucketDir", mpCausticDirBucket);
             cmd.SetComputeBufferParam(SPPMShader, GenKernel, "AABBBuff", AABBBuffA);
+            // cmd.SetComputeBufferParam(SPPMShader, GenKernel, "DebugBuffer", DebugBuffer);
+            // cmd.SetComputeBufferParam(SPPMShader, GenKernel, "DebugCounter", DebugCounter);
             cmd.SetComputeBufferParam(SPPMShader, GenKernel, "gHashCounter", mpCausticHashPhotonCounter);
+            cmd.SetComputeTextureParam(SPPMShader, GenKernel, "DistTex", DistanceTex);
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "CDFX", CDFX);
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "CDFY", CDFY);
             cmd.SetComputeBufferParam(SPPMShader, GenKernel, "TotSum", CDFTotalBuffer);
@@ -276,6 +295,13 @@ namespace TrueTrace {
             cmd.DispatchCompute(SPPMShader, CollectKernel, Mathf.CeilToInt((float)screen_width / 16.0f), Mathf.CeilToInt((float)screen_height / 16.0f), 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("SPPM Collect");
         }
+        // Vector3[] DebugData = new Vector3[1000];
+        // public void OnDrawGizmos() {
+        //     DebugBuffer.GetData(DebugData);
+        //     for(int i = 0; i < 1000; i++) {
+        //         if(DebugData[i] != Vector3.zero) Gizmos.DrawSphere(DebugData[i], 0.01f);
+        //     }
+        // }
 
     }
 }

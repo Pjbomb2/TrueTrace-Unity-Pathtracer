@@ -609,7 +609,7 @@ namespace TrueTrace {
             TempProj[1,1] = YFOV * projectionScale.y;
             return TempProj;
         }
-
+        Matrix4x4 TTviewprojection;
         private Vector2 HDRIParams = Vector2.zero;
         private void SetShaderParameters(CommandBuffer cmd) {
             HasSDFHandler = (OptionalSDFHandler != null) && OptionalSDFHandler.enabled && OptionalSDFHandler.gameObject.activeInHierarchy;
@@ -662,7 +662,7 @@ namespace TrueTrace {
 
             CamInvProjPrev = ProjectionMatrix.inverse;
             CamToWorldPrev = _camera.cameraToWorldMatrix;
-            Shader.SetGlobalMatrix("TTviewprojection", ProjectionMatrix * _camera.worldToCameraMatrix);
+            TTviewprojection = ProjectionMatrix * _camera.worldToCameraMatrix;
             SetMatrix("viewprojection", ProjectionMatrix * _camera.worldToCameraMatrix);
             SetMatrix("prevviewprojection", EB.inverse * EA.inverse);
             SetMatrix("CamInvProj", ProjectionMatrix.inverse);
@@ -1342,7 +1342,7 @@ namespace TrueTrace {
             if(DoKernelProfiling) cmd.EndSample("TTMV2");
 #endif
 #if EnablePhotonMapping
-                PhotonMap.Generate(cmd, DirectionalLightCoverageRadius);
+                PhotonMap.Generate(cmd, DirectionalLightCoverageRadius, TTviewprojection, _camera.transform.position, _camera.transform.forward, (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTexA : CorrectedDistanceTexB);
                 PhotonMap.Collect(cmd, 
                     ref FirstDiffuseThroughputTex, 
                     ref FirstDiffusePosTex,
@@ -1549,6 +1549,10 @@ namespace TrueTrace {
             }
             SceneIsRunning = true;
         }
+        // public void OnDrawGizmos() {
+        //     if(Application.isPlaying)
+        //         PhotonMap.OnDrawGizmos();
+        // }
 
     }
 

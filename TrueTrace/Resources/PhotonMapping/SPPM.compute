@@ -425,7 +425,7 @@ inline void calcFinalColor(inout PhotonRayData ray, MaterialData hitDat, RayHit 
     ray.diffuseHit = !((MaterialLobe == 3) || (MaterialLobe == 0 && hitDat.roughness < 0.8f));
     ray.Norm = octahedral_32(Geomnorm);
     ray.throughput = throughput;
-    if (!validBSDFSample || any(throughput <= 0)) {
+    if (!validBSDFSample || any(throughput <= 0) || (!GetFlag(hitDat.Tag, EnableCausticGeneration) && !ray.diffuseHit)) {
         ray.terminated = true;
         return;//If the ray failed, we have no choice but to terminate this path
     }
@@ -584,8 +584,13 @@ float SphericalGaussianPDF(float3 dir, float3 sgaxis, float sharpness)
 
     return normalization * exp(lambda * cosTheta);
 }
+// RWStructuredBuffer<float3> DebugBuffer;
+// RWStructuredBuffer<uint> DebugCounter;
+float3 TTCamPos;
+float3 TTForward;
 float4x4 TTviewprojection;
 float DirectionalLightCoverageRadius;
+Texture2D<float> DistTex;
 #pragma kernel kernel_gen
 [numthreads(32, 32, 1)]
 void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
@@ -645,10 +650,10 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
         RandVec = random(115, pixel_index);//(random(115, pixel_index) - 0.5f) * 3.0f;
 
 
-        pdf = 100.0f / (64.0f * PI);
+            pdf = 100.0f / (64.0f * PI);
         if(A) {
             RandVec = equirectDirectionToUv(CalcedDir) + (RandVec - 0.5f) * 0.001f;
-            pdf = 100.0f / pdf / (64.0f * PI);
+            // pdf = 100.0f / pdf / (64.0f * PI);
         }
 
 
@@ -668,19 +673,21 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     bool reflectedDiffuse = false;
     int i;
 
-
+float3 PrevPos = 0;
     float3 surfCol = 1;
     float scatDist = 999999;
     bool WasLast = false;
     float4 Val = 0;
+    float3 PosPos = 0;
     [loop]for(i = 0; i < 7; i++) {
         PhotonBounce[pixel_index % 1024] = i + 1;
         photon.Flux = lightFlux * CurrentRay.throughput;
         FullTrace(CurrentRay, bestHit, pixel_index, id, i, surfCol, scatDist);
+        PrevPos = CurrentRay.origin;
 
         // if(scatDist != 999999) photon.Flux *= exp(-bestHit.t * CalculateExtinction(1.0f - (surfCol), scatDist == 0.0f ? 1.0f : scatDist));
 #ifdef COLOREDGLASS
-        if(!CurrentRay.diffuseHit && i > 0 && (scatDist != 999999 || WasLast)) {
+        if(i > 0 && (scatDist != 999999 || WasLast)) {
             CurrentRay.throughput *= exp(-bestHit.t * CalculateExtinction(1.0f - (surfCol), scatDist == 0.0f ? 1.0f : scatDist));
             photon.Flux *= exp(-bestHit.t * CalculateExtinction(1.0f - (surfCol), scatDist == 0.0f ? 1.0f : scatDist));
         }
@@ -693,9 +700,7 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
         photon.Pos = float4(CurrentRay.origin, 0);
         photon.Dir = CurrentRay.direction;
         reflectedDiffuse = CurrentRay.diffuseHit;
-        float4 curprojectedrefl = mul(TTviewprojection, float4(photon.Pos.xyz, 1));
-        float2 uv2 = curprojectedrefl.xy / curprojectedrefl.w;
-        // if(any(uv2 > 1 || uv2 < -1)) break;
+
         [branch]if(reflectedDiffuse) {
 
             uint photonIndex = 0;
@@ -718,6 +723,7 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
                 {
                     photon.InitialDirection = octahedral_32(LightDir);
                     gHashBucketPos[texIdx] = photon.Pos;
+                    PosPos = photon.Pos;
                     gHashBucketFlux[texIdx] = float4(photon.Flux, (WSUM / max((photonIndex+1) * luminance(photon.Flux.xyz), 1e-7)));
                     gHashBucketDir[texIdx] = float4(photon.Dir, asfloat(bucketIdx));
 
@@ -732,9 +738,7 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
             float3 a0 = mul(MeshTransformInverse, float4(CurTri.pos0, 1)).xyz;
             float3 a1 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge1, 1)).xyz;
             float3 a2 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge2, 1)).xyz;
-            float2 UV = equirectDirectionToUv(LightDir);
-            if(SelectedLight.Type == DIRECTIONALLIGHT) UV = RandVec;
-            VisTexB[UV * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)] = float4(VisTexB[UV * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)].xyz + float3(bestHit.t, 1, luminance(lightFlux / (SelectedLight.Type == DIRECTIONALLIGHT ? 1.0f : (1)))), Index);
+            Val = float4(Val.xyz + float3(bestHit.t, SelectedLight.Type == DIRECTIONALLIGHT ? 12 : 1, luminance(lightFlux / (SelectedLight.Type == DIRECTIONALLIGHT ? 1.0f : (1)))), Index);
             InterlockedAdd(AABBBuff[PhotonFrames % 2].PhotonCount, 1);
         }
 
@@ -746,6 +750,18 @@ void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
 
         if(i == 0) wasReflectedSpecular = !reflectedDiffuse;
         wasReflectedSpecular = wasReflectedSpecular && !reflectedDiffuse;
+    }
+    if(any(Val != 0) && any(PosPos != 0)) {
+        float4 curprojectedrefl = mul(TTviewprojection, float4(PosPos, 1));
+        float2 uv2 = curprojectedrefl.xy / curprojectedrefl.w;
+        // if(A) {
+            if(any(uv2 > 1.1f || uv2 < -1.1f) || dot(normalize(PosPos - TTCamPos), TTForward) <= 0) return;
+            float LengthToCam = length(TTCamPos - PosPos);
+            // if(abs(DistTex.SampleLevel(my_point_clamp_sampler, uv2 * 0.5f + 0.5f, 0) - LengthToCam) > 10.0f) return;
+        // }
+        float2 UV = equirectDirectionToUv(LightDir);
+        if(SelectedLight.Type == DIRECTIONALLIGHT) UV = RandVec;
+        VisTexB[UV * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)] = float4(VisTexB[UV * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)].xyz + Val.xyz / float3(LengthToCam,1,1), Val.w);
     }
 }
 Texture2D<float4> ThroughputTex;
@@ -760,7 +776,7 @@ bool hitSphere(const float3 center, const float radius, const float3 p)
         return true;
     return false;
 }
-
+float IntensityMultiplier;
 float3 photonContribution(float3 Norm, float3 Pos, uint hash, inout int TotPhotCount)
 {
     //get caustic or global photon
@@ -795,7 +811,7 @@ float3 photonContribution(float3 Norm, float3 Pos, uint hash, inout int TotPhotC
 // #ifdef ACCURATECAUSTICS
 //         radiance = rcp(NdotL) * photonFlux.xyz * photonCount * photonFlux.w * ((float)max(min(photonCount-3,5),1));
 // #else
-        radiance = 4.0f * photonFlux.xyz * photonCount * photonFlux.w * (PI * ((float)max(min(photonCount-3,5),1)) * ((float)max(min(photonCount-3,5),1)));
+        radiance = IntensityMultiplier * 4.0f * photonFlux.xyz * photonCount * photonFlux.w * (PI * ((float)max(min(photonCount-3,5),1)) * ((float)max(min(photonCount-3,5),1)));
 // #endif
     }
     return radiance;

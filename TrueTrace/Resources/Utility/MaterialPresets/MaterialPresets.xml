@@ -56,15 +56,15 @@
             <y>1</y>
             <z>1</z>
           </EmissionColor>
-          <Tag>512</Tag>
+          <Tag>4096</Tag>
           <Roughness>0</Roughness>
-          <MatType>1</MatType>
+          <MatType>0</MatType>
           <TransmittanceColor>
-            <x>1</x>
-            <y>1</y>
-            <z>1</z>
+            <x>0</x>
+            <y>0</y>
+            <z>0</z>
           </TransmittanceColor>
-          <IOR>1</IOR>
+          <IOR>1.79</IOR>
           <Metallic>0</Metallic>
           <Sheen>0</Sheen>
           <SheenTint>0</SheenTint>
@@ -74,8 +74,8 @@
           <Anisotropic>0</Anisotropic>
           <AnisotropicRotation>0</AnisotropicRotation>
           <Flatness>0</Flatness>
-          <DiffTrans>0.641</DiffTrans>
-          <SpecTrans>0</SpecTrans>
+          <DiffTrans>0</DiffTrans>
+          <SpecTrans>1</SpecTrans>
           <Specular>0</Specular>
           <ScatterDist>5</ScatterDist>
           <MetallicRemap>
@@ -99,7 +99,7 @@
           </BlendColor>
           <BlendFactor>0</BlendFactor>
           <ColorBleed>1</ColorBleed>
-          <AlbedoBlendFactor>0</AlbedoBlendFactor>
+          <AlbedoBlendFactor>1</AlbedoBlendFactor>
           <SecondaryNormalTexBlend>0</SecondaryNormalTexBlend>
           <DetailNormalStrength>1</DetailNormalStrength>
           <DiffTransRemap>
@@ -109,18 +109,18 @@
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
-        <AlbedoGUID>aabaae871b7d0844abddd2587d873f07</AlbedoGUID>
+        <AlbedoGUID>64ec855af9265d74fa3d391fbf0516cd</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
         <EmissionGUID>null</EmissionGUID>
-        <AlphaGUID>aabaae871b7d0844abddd2587d873f07</AlphaGUID>
+        <AlphaGUID>64ec855af9265d74fa3d391fbf0516cd</AlphaGUID>
         <MatCapGUID>null</MatCapGUID>
         <MatcapMaskGUID>null</MatcapMaskGUID>
         <SecondaryAlbedoGUID>null</SecondaryAlbedoGUID>
         <SecondaryAlbedoMaskGUID>null</SecondaryAlbedoMaskGUID>
         <NormalGUID>null</NormalGUID>
         <DiffTransGUID>null</DiffTransGUID>
-        <ShaderName>Universal Render Pipeline/Lit(+PathTracing)</ShaderName>
+        <ShaderName>Standard</ShaderName>
       </RayObjectDatas>
     </ContainedPresets>
   </RayObjFolder>
