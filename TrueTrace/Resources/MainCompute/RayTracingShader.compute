@@ -401,21 +401,12 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     ray.origin = USGNorm * NormalOffset + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
     throughput = max(throughput, 0);
     [branch] if (CurBounce == 0 || GetBounceData(Color.MetRoughIsSpec) == 0) {//Setting textures for denosier to use
-        #ifdef TrueBlack
 #ifdef AltFadeMapping
             Color.Flags = packRGBE((unpackRGBE(Color.Flags) * hitDat.surfaceColor));
 #else
             Color.Flags = packRGBE((CurBounce == 0) ? hitDat.surfaceColor : (unpackRGBE(Color.Flags) * hitDat.surfaceColor));
 #endif
             Color.Data = float3((CurBounce == 0) ? throughput : (throughput * Color.Data.xyz));
-        #else
-#ifdef AltFadeMapping
-            Color.Flags = packRGBE((unpackRGBE(Color.Flags) * max(hitDat.surfaceColor, 0.005f)));
-#else
-            Color.Flags = packRGBE((CurBounce == 0) ? max(hitDat.surfaceColor, 0.005f) : (unpackRGBE(Color.Flags) * max(hitDat.surfaceColor, 0.005f)));
-#endif
-            Color.Data = float3((CurBounce == 0) ? max(throughput, 0.006f) : (max(throughput, 0.005f) * Color.Data.xyz));
-        #endif
         PrevScreenData = float4(asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -Geomnorm : Geomnorm)), asfloat(octahedral_32(((hitDat.diffTrans != 0 || (hitDat.diffTrans != 0 && CurBounce == 1)) && Refracted) ? -norm : norm)), PrevScreenData.z + hit.t, asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 4) >> 4) : ((asuint(PrevScreenData.w) << 4) >> 4)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
         Color.MetRoughIsSpec = ((Color.MetRoughIsSpec & ~(0x7C000000)) | (((CurBounce < 20 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.03f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
         throughput = 1;  
@@ -1276,9 +1267,6 @@ int MaterialIndex;
 
 
     TempMat.roughness = max(TempMat.roughness, 0.00001f);
-    #ifndef TrueBlack
-        TempMat.surfaceColor = max(TempMat.surfaceColor, 0.005f);
-    #endif
 #ifdef ClampRoughnessToBounce
     {
         const uint Case = (asuint(PrevScreenData.w) << 1) >> 30;

@@ -20,7 +20,6 @@
 // #define IgnoreBackfacing
 #define LBVH
 #define AccurateEmissionTex
-#define TrueBlack
 // #define UseTextureLOD
 #define EONDiffuse
 // #define AdvancedBackground
