@@ -12,20 +12,15 @@ namespace TrueTrace {
         public ComputeShader SPPMShader;
         ComputeBuffer mpCausticHashPhotonCounter;
         ComputeBuffer AABBBuffA;
-        ComputeBuffer AABBBuffB;
         // private ComputeBuffer DebugBuffer;
         // private ComputeBuffer DebugCounter;
         public RenderTexture mpCausticPosBucket;
         public RenderTexture mpCausticDirBucket;
-        public RenderTexture RndNumWrt;
         public RenderTexture mpCausticFluxBucket;
-        public RenderTexture ValidDir;
 
         public RenderTexture CDFX;
         public RenderTexture CDFY;
         public RenderTexture[] EquirectVisibilityTex;
-
-        public float IntensityMultiplier = 1.0f;
 
         private ComputeShader CDFCompute;
         private ComputeBuffer CDFTotalBuffer;
@@ -53,9 +48,7 @@ namespace TrueTrace {
         public void ClearAll() {
             mpCausticHashPhotonCounter.ReleaseSafe();
             mpCausticPosBucket.ReleaseSafe();
-            RndNumWrt.ReleaseSafe();
             AABBBuffA.ReleaseSafe();
-            AABBBuffB.ReleaseSafe();
             // DebugBuffer.ReleaseSafe();
             mpCausticDirBucket.ReleaseSafe();
             mpCausticFluxBucket.ReleaseSafe();
@@ -136,7 +129,6 @@ namespace TrueTrace {
             Height = mBucketFixedYExtend;
             CommonFunctions.CreateRenderTexture(ref mpCausticPosBucket, (int)Width, (int)Height, CommonFunctions.RTFull4);
             CommonFunctions.CreateRenderTexture(ref mpCausticDirBucket, (int)Width, (int)Height, CommonFunctions.RTFull4);
-            CommonFunctions.CreateRenderTexture(ref RndNumWrt, (int)Width, (int)Height, CommonFunctions.RTFull1);
             CommonFunctions.CreateRenderTexture(ref mpCausticFluxBucket, (int)Width, (int)Height, CommonFunctions.RTFull4);
             CommonFunctions.CreateDynamicBuffer(ref mpCausticHashPhotonCounter, (int)mNumBuckets, 4);
             CommonFunctions.CreateDynamicBuffer(ref AABBBuffA, 2, 40);
@@ -146,7 +138,7 @@ namespace TrueTrace {
 
         }
 
-        public void Generate(CommandBuffer cmd, float DirectionalLightCoverageRadius, Matrix4x4 TTviewprojection, Vector3 TTCamPos, Vector3 TTCamForward, RenderTexture DistanceTex) {
+        public void Generate(CommandBuffer cmd, float DirectionalLightCoverageRadius, Matrix4x4 TTviewprojection, Vector3 TTCamPos, Vector3 TTCamForward, RenderTexture DistanceTex, float IntensityMultiplier) {
             if (SPPMShader == null) {SPPMShader = Resources.Load<ComputeShader>("PhotonMapping/SPPM"); }
                 CDFCompute = Resources.Load<ComputeShader>("Utility/CDFCreator");
             if(AssetManager.Assets == null || AssetManager.Assets.UnityLightCount == 0) return;
@@ -177,7 +169,6 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(SPPMShader, 0, "gHashBucketPos", mpCausticPosBucket);
             cmd.SetComputeTextureParam(SPPMShader, 0, "gHashBucketFlux", mpCausticFluxBucket);
             cmd.SetComputeTextureParam(SPPMShader, 0, "gHashBucketDir", mpCausticDirBucket);
-            cmd.SetComputeTextureParam(SPPMShader, 0, "RandomNumsWrite", RndNumWrt);
             cmd.SetComputeBufferParam(SPPMShader, 0, "gHashCounter", mpCausticHashPhotonCounter);
             cmd.SetComputeBufferParam(SPPMShader, 0, "AABBBuff", AABBBuffA);
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("SPPM Init A");
@@ -196,7 +187,6 @@ namespace TrueTrace {
             AssetManager.Assets.SetHeightmapTraceBuffers(SPPMShader, GenKernel);
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "gHashBucketPos", mpCausticPosBucket);
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "gHashBucketFlux", mpCausticFluxBucket);
-            cmd.SetComputeTextureParam(SPPMShader, GenKernel, "RandomNumsWrite", RndNumWrt);
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "VisTexA", FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);//READ
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "VisTexB", !FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);//WRITE
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "gHashBucketDir", mpCausticDirBucket);
@@ -282,7 +272,6 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(SPPMShader, "screen_height", (int)screen_height);
             cmd.SetComputeIntParam(SPPMShader, "mNumBuckets", (int)mNumBuckets);
 
-            cmd.SetComputeTextureParam(SPPMShader, CollectKernel, "RandomNumsWrite", RndNumWrt);
             cmd.SetComputeTextureParam(SPPMShader, CollectKernel, "gHashBucketPos", mpCausticPosBucket);
             cmd.SetComputeTextureParam(SPPMShader, CollectKernel, "gHashBucketFlux", mpCausticFluxBucket);
             cmd.SetComputeTextureParam(SPPMShader, CollectKernel, "gHashBucketDir", mpCausticDirBucket);

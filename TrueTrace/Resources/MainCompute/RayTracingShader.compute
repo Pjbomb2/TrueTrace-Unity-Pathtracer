@@ -229,7 +229,12 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             UseBSDFLight = UseBSDFLight || GetBounceData(asuint(PSRScreenData.w)) == 0;
         #endif
         if (UseBSDFLight) {
-            if (CurBounce <= 1) Color.Direct += EmissCol;
+            #ifdef PhotonMapping
+                if (CurBounce == 0) Color.Direct += EmissCol;
+                else if (CurBounce == 1) Color.Indirect += EmissCol;
+            #else
+                if (CurBounce <= 1) Color.Direct += EmissCol;
+            #endif
             else if(CurBounce > 1) {
                 #ifdef RadCache
                     if(GetBounceData(CachePathLength) != 0) CacheBuffer[pixel_index].RunningIlluminance = packRGBE(unpackRGBE(CacheBuffer[pixel_index].RunningIlluminance) + EmissCol);
@@ -257,7 +262,11 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             float w = power_heuristic(max(last_pdf,0), light_pdf);
             if (CurBounce == 0) Color.Direct += EmissCol;
             #ifdef UseBRDFLights
-                else if (CurBounce == 1) Color.Direct += EmissCol * w;
+                #ifdef PhotonMapping
+                    else if (CurBounce == 1) Color.Indirect += EmissCol * w;
+                #else
+                    else if (CurBounce == 1) Color.Direct += EmissCol * w;
+                #endif
                 else {
                     #ifdef RadCache
                         if(GetBounceData(CachePathLength) != 0) CacheBuffer[pixel_index].RunningIlluminance = packRGBE(unpackRGBE(CacheBuffer[pixel_index].RunningIlluminance) + EmissCol * w);

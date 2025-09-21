@@ -68,6 +68,7 @@ namespace TrueTrace {
         private ComputeShader CDFCompute;
 
 #if EnablePhotonMapping
+        public float CausticIntensityMultiplier = 1.0f;
         public float DirectionalLightCoverageRadius = 8.0f;
         public PhotonMapping PhotonMap;
         public RenderTexture FirstDiffuseThroughputTex;
@@ -1342,7 +1343,7 @@ namespace TrueTrace {
             if(DoKernelProfiling) cmd.EndSample("TTMV2");
 #endif
 #if EnablePhotonMapping
-                PhotonMap.Generate(cmd, DirectionalLightCoverageRadius, TTviewprojection, _camera.transform.position, _camera.transform.forward, (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTexA : CorrectedDistanceTexB);
+                PhotonMap.Generate(cmd, DirectionalLightCoverageRadius, TTviewprojection, _camera.transform.position, _camera.transform.forward, (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTexA : CorrectedDistanceTexB, CausticIntensityMultiplier);
                 PhotonMap.Collect(cmd, 
                     ref FirstDiffuseThroughputTex, 
                     ref FirstDiffusePosTex,
@@ -1557,83 +1558,88 @@ namespace TrueTrace {
     }
 
 
-// #if UNITY_EDITOR
-//     [CustomEditor(typeof(RayTracingMaster))]
-//     public class RayTracingMasterEditor : Editor
-//     {
-//         private VisualElement CreateVerticalBox(string Name) {
-//             VisualElement VertBox = new VisualElement();
-//             // VertBox.style.flexDirection = FlexDirection.Row;
-//             return VertBox;
-//         }
+#if UNITY_EDITOR
+    [CustomEditor(typeof(RayTracingMaster))]
+    public class RayTracingMasterEditor : Editor
+    {
+        private VisualElement CreateVerticalBox(string Name) {
+            VisualElement VertBox = new VisualElement();
+            // VertBox.style.flexDirection = FlexDirection.Row;
+            return VertBox;
+        }
 
-//         private VisualElement CreateHorizontalBox(string Name) {
-//             VisualElement HorizBox = new VisualElement();
-//             HorizBox.style.flexDirection = FlexDirection.Row;
-//             return HorizBox;
-//         }
+        private VisualElement CreateHorizontalBox(string Name) {
+            VisualElement HorizBox = new VisualElement();
+            HorizBox.style.flexDirection = FlexDirection.Row;
+            return HorizBox;
+        }
 
 
-//         public class FloatSliderPair {
-//             public VisualElement DynamicContainer;
-//             public Label DynamicLabel;
-//             public Slider DynamicSlider;
-//             public FloatField DynamicField;
-//         }
-//         FloatSliderPair CreatePairedFloatSlider(string Name, float LowValue, float HighValue, ref float InitialValue, float SliderWidth = 200) {
-//             FloatSliderPair NewPair = new FloatSliderPair();
-//             NewPair.DynamicContainer = CreateHorizontalBox(Name + " Container");
-//             NewPair.DynamicLabel = new Label(Name);
-//             NewPair.DynamicSlider = new Slider() {value = InitialValue, highValue = HighValue, lowValue = LowValue};
-//             NewPair.DynamicField = new FloatField() {value = InitialValue};
-//             NewPair.DynamicSlider.style.width = SliderWidth;
-//             NewPair.DynamicContainer.Add(NewPair.DynamicLabel);
-//             NewPair.DynamicContainer.Add(NewPair.DynamicSlider);
-//             NewPair.DynamicContainer.Add(NewPair.DynamicField);
-//             return NewPair;
-//         }
+        public class FloatSliderPair {
+            public VisualElement DynamicContainer;
+            public Label DynamicLabel;
+            public Slider DynamicSlider;
+            public FloatField DynamicField;
+        }
+        FloatSliderPair CreatePairedFloatSlider(string Name, float LowValue, float HighValue, ref float InitialValue, float SliderWidth = 200) {
+            FloatSliderPair NewPair = new FloatSliderPair();
+            NewPair.DynamicContainer = CreateHorizontalBox(Name + " Container");
+            NewPair.DynamicLabel = new Label(Name);
+            NewPair.DynamicSlider = new Slider() {value = InitialValue, highValue = HighValue, lowValue = LowValue};
+            NewPair.DynamicField = new FloatField() {value = InitialValue};
+            NewPair.DynamicSlider.style.width = SliderWidth;
+            NewPair.DynamicContainer.Add(NewPair.DynamicLabel);
+            NewPair.DynamicContainer.Add(NewPair.DynamicSlider);
+            NewPair.DynamicContainer.Add(NewPair.DynamicField);
+            return NewPair;
+        }
 
-//         public override VisualElement CreateInspectorGUI()
-//         {
-//             var t1 = (targets);
-//             int TargCount = t1.Length;
-//             var t =  t1[0] as RayTracingMaster;
-//             VisualElement MainContainer = CreateVerticalBox("Main Container");
-//                 Toggle RenderInSceneToggle = new Toggle() {value = t.HDRPorURPRenderInScene, text = "Render in Scene View(HDRP/URP ONLY)"};
-//                 RenderInSceneToggle.RegisterValueChangedCallback(evt => {t.HDRPorURPRenderInScene = evt.newValue;});
-//                 MainContainer.Add(RenderInSceneToggle);
+        public override VisualElement CreateInspectorGUI()
+        {
+            var t1 = (targets);
+            int TargCount = t1.Length;
+            var t =  t1[0] as RayTracingMaster;
+            VisualElement MainContainer = CreateVerticalBox("Main Container");
+                Toggle RenderInSceneToggle = new Toggle() {value = t.HDRPorURPRenderInScene, text = "Render in Scene View(HDRP/URP ONLY)"};
+                RenderInSceneToggle.RegisterValueChangedCallback(evt => {t.HDRPorURPRenderInScene = evt.newValue;});
+                MainContainer.Add(RenderInSceneToggle);
 
-//                 ObjectField LocalTTSettingsField = new ObjectField("Local TT Settings Override");
-//                 LocalTTSettingsField.objectType = typeof(TTSettings);
-//                 LocalTTSettingsField.value = t.LocalTTSettings;
-//                 LocalTTSettingsField.RegisterValueChangedCallback(evt => {t.LocalTTSettings = evt.newValue as TTSettings;});
-//                 MainContainer.Add(LocalTTSettingsField);
+                ObjectField LocalTTSettingsField = new ObjectField("Local TT Settings Override");
+                LocalTTSettingsField.objectType = typeof(TTSettings);
+                LocalTTSettingsField.value = t.LocalTTSettings;
+                LocalTTSettingsField.RegisterValueChangedCallback(evt => {t.LocalTTSettings = evt.newValue as TTSettings;});
+                MainContainer.Add(LocalTTSettingsField);
                 
-//                 IntegerField SamplesPerFrameField = new IntegerField("Samples per Frame");
-//                 SamplesPerFrameField.value = t.SamplesPerFrame;
-//                 SamplesPerFrameField.RegisterValueChangedCallback(evt => {t.SamplesPerFrame = evt.newValue;});
-//                 MainContainer.Add(SamplesPerFrameField);
+                IntegerField SamplesPerFrameField = new IntegerField("Samples per Frame");
+                SamplesPerFrameField.value = t.SamplesPerFrame;
+                SamplesPerFrameField.RegisterValueChangedCallback(evt => {t.SamplesPerFrame = evt.newValue;});
+                MainContainer.Add(SamplesPerFrameField);
 
-// #if EnablePhotonMapping
-//                 FloatField DirectionalLightCoverageRadiusField = new FloatField("Photon Mapping Radius Coverage");
-//                 DirectionalLightCoverageRadiusField.value = t.DirectionalLightCoverageRadius;
-//                 DirectionalLightCoverageRadiusField.RegisterValueChangedCallback(evt => {t.DirectionalLightCoverageRadius = evt.newValue;});
-//                 MainContainer.Add(DirectionalLightCoverageRadiusField);
-// #endif
+#if EnablePhotonMapping
+                FloatField DirectionalLightCoverageRadiusField = new FloatField("Photon Mapping Radius Coverage");
+                DirectionalLightCoverageRadiusField.value = t.DirectionalLightCoverageRadius;
+                DirectionalLightCoverageRadiusField.RegisterValueChangedCallback(evt => {t.DirectionalLightCoverageRadius = evt.newValue;});
+                MainContainer.Add(DirectionalLightCoverageRadiusField);
 
-//                 // if(t.LocalTTSettings.ToneMapper == 7) {
-//                     ObjectField OverrideAGX = new ObjectField("Custom AGX Tonemap Texture");
-//                     OverrideAGX.objectType = typeof(Texture3D);
-//                     OverrideAGX.value = t.AGXCustomTex;
-//                     OverrideAGX.RegisterValueChangedCallback(evt => {t.AGXCustomTex = evt.newValue as Texture3D;});
-//                     MainContainer.Add(OverrideAGX);
-//                 // }
+                FloatField CausticIntensityMultiplierField = new FloatField("Caustic Intensity Multiplier");
+                CausticIntensityMultiplierField.value = t.CausticIntensityMultiplier;
+                CausticIntensityMultiplierField.RegisterValueChangedCallback(evt => {t.CausticIntensityMultiplier = evt.newValue;});
+                MainContainer.Add(CausticIntensityMultiplierField);
+#endif
 
-//             return MainContainer;
-//         }
+                // if(t.LocalTTSettings.ToneMapper == 7) {
+                    ObjectField OverrideAGX = new ObjectField("Custom AGX Tonemap Texture");
+                    OverrideAGX.objectType = typeof(Texture3D);
+                    OverrideAGX.value = t.AGXCustomTex;
+                    OverrideAGX.RegisterValueChangedCallback(evt => {t.AGXCustomTex = evt.newValue as Texture3D;});
+                    MainContainer.Add(OverrideAGX);
+                // }
 
-//     }
-// #endif
+            return MainContainer;
+        }
+
+    }
+#endif
 
 
 }
