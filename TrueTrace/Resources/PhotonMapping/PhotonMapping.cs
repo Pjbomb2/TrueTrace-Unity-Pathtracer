@@ -138,7 +138,7 @@ namespace TrueTrace {
 
         }
 
-        public void Generate(CommandBuffer cmd, float DirectionalLightCoverageRadius, Matrix4x4 TTviewprojection, Vector3 TTCamPos, Vector3 TTCamForward, RenderTexture DistanceTex, float IntensityMultiplier) {
+        public void Generate(CommandBuffer cmd, float DirectionalLightCoverageRadius, Matrix4x4 TTviewprojection, Vector3 TTCamPos, Vector3 TTCamForward, RenderTexture DistanceTex, float IntensityMultiplier, float PhotonGuidingRatio) {
             if (SPPMShader == null) {SPPMShader = Resources.Load<ComputeShader>("PhotonMapping/SPPM"); }
                 CDFCompute = Resources.Load<ComputeShader>("Utility/CDFCreator");
             if(AssetManager.Assets == null || AssetManager.Assets.UnityLightCount == 0) return;
@@ -159,7 +159,9 @@ namespace TrueTrace {
             cmd.SetComputeIntParam(SPPMShader, "mMaxDispatchY", (int)mMaxDispatchY);
             cmd.SetComputeIntParam(SPPMShader, "screen_height", (int)Height);
             cmd.SetComputeIntParam(SPPMShader, "mNumBuckets", (int)mNumBuckets);
+            cmd.SetComputeIntParam(SPPMShader, "analyticPhotons", analyticPhotons);
             cmd.SetComputeFloatParam(SPPMShader, "CDFWIDTH", (float)PerLightVisSize);
+            cmd.SetComputeFloatParam(SPPMShader, "PhotonGuidingRatio", PhotonGuidingRatio);
             cmd.SetComputeVectorParam(SPPMShader, "TTCamPos", TTCamPos);
             cmd.SetComputeVectorParam(SPPMShader, "TTForward", TTCamForward);
             cmd.SetComputeMatrixParam(SPPMShader, "TTviewprojection", TTviewprojection);

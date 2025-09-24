@@ -99,6 +99,10 @@ namespace TrueTrace {
         [SerializeField] public float aoStrength = 1.0f;
         [SerializeField] public float aoRadius = 2.0f;
         [SerializeField] public string CurrentTargetFile = null;
+        [SerializeField] public int SamplesPerFrame = 1;
+        [SerializeField] public float PhotonMapRadiusCoverage = 8;
+        [SerializeField] public float CausticIntensityMultiplier = 1;
+        [SerializeField] public float PhotonGuidingRatio = 0.15f;
 
     }
 

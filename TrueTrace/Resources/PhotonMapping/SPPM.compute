@@ -37,6 +37,8 @@ RWStructuredBuffer<uint> gHashCounter;
 float CDFWIDTH;
 
 #define CDFHEIGHT (CDFWIDTH / 2.0f)
+float PhotonGuidingRatio;
+int analyticPhotons;
 
 struct AABBBuffData {
     uint3 BBMax;
@@ -595,14 +597,15 @@ Texture2D<float> DistTex;
 [numthreads(32, 32, 1)]
 void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     PhotonRayData CurrentRay = {float3(1,1,1), 0, float3(0,0,0), false, float3(0,1,0), false};
-    int pixel_index = id.x + id.y * screen_width;
+    int pixel_index = id.x + id.y * mPGDDispatchX;
     PhotonBounce[pixel_index % 1024] = 12;
+    // GroupMemoryBarrierWithGroupSync();
     int Index = clamp(( random(11, pixel_index).x * unitylightcount), 0, unitylightcount - 1);
     float pdf = 0.0f;
         pdf = 1.0f / (4.0f * PI);
     float3 LightDir = 0;
     bool A = false;
-    if(AABBBuff[1 - (PhotonFrames % 2)].PhotonCount > 0 && id.x % 2 == 0 && id.y % 2 == 0) {
+    if(AABBBuff[1 - (PhotonFrames % 2)].PhotonCount > 0 && ((float)pixel_index / (float)(mPGDDispatchX * mMaxDispatchY)) > PhotonGuidingRatio) {
         A = true;
         float3 Dir2;
         Index = (int)SampleLIPhoton(pixel_index, pdf, Dir2);

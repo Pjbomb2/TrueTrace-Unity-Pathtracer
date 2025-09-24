@@ -68,8 +68,6 @@ namespace TrueTrace {
         private ComputeShader CDFCompute;
 
 #if EnablePhotonMapping
-        public float CausticIntensityMultiplier = 1.0f;
-        public float DirectionalLightCoverageRadius = 8.0f;
         public PhotonMapping PhotonMap;
         public RenderTexture FirstDiffuseThroughputTex;
         public RenderTexture FirstDiffusePosTex;
@@ -1343,7 +1341,7 @@ namespace TrueTrace {
             if(DoKernelProfiling) cmd.EndSample("TTMV2");
 #endif
 #if EnablePhotonMapping
-                PhotonMap.Generate(cmd, DirectionalLightCoverageRadius, TTviewprojection, _camera.transform.position, _camera.transform.forward, (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTexA : CorrectedDistanceTexB, CausticIntensityMultiplier);
+                PhotonMap.Generate(cmd, LocalTTSettings.PhotonMapRadiusCoverage, TTviewprojection, _camera.transform.position, _camera.transform.forward, (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTexA : CorrectedDistanceTexB, LocalTTSettings.CausticIntensityMultiplier, LocalTTSettings.PhotonGuidingRatio);
                 PhotonMap.Collect(cmd, 
                     ref FirstDiffuseThroughputTex, 
                     ref FirstDiffusePosTex,
@@ -1520,7 +1518,6 @@ namespace TrueTrace {
                 PrevReSTIRGI = LocalTTSettings.UseReSTIRGI;
             }
         }
-        public int SamplesPerFrame = 1;
         public void RenderImage(RenderTexture destination, CommandBuffer cmd)
         {
             if(HDRPorURPRenderInScene && TTPostProc == null) {
@@ -1536,7 +1533,7 @@ namespace TrueTrace {
 #if !TTDisableCustomMotionVectors
         Shader.SetGlobalTexture("TTMotionVectorTexture", MVTexture);
 #endif
-        for(int i = 0; i < SamplesPerFrame; i++) {
+        for(int i = 0; i < LocalTTSettings.SamplesPerFrame; i++) {
                     SetShaderParameters(cmd);
                     Render(destination, cmd);
                     // else cmd.Blit(_FinalTex, destination);
@@ -1611,20 +1608,25 @@ namespace TrueTrace {
                 MainContainer.Add(LocalTTSettingsField);
                 
                 IntegerField SamplesPerFrameField = new IntegerField("Samples per Frame");
-                SamplesPerFrameField.value = t.SamplesPerFrame;
-                SamplesPerFrameField.RegisterValueChangedCallback(evt => {t.SamplesPerFrame = evt.newValue;});
+                SamplesPerFrameField.value = t.LocalTTSettings.SamplesPerFrame;
+                SamplesPerFrameField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.SamplesPerFrame = evt.newValue;});
                 MainContainer.Add(SamplesPerFrameField);
 
 #if EnablePhotonMapping
                 FloatField DirectionalLightCoverageRadiusField = new FloatField("Photon Mapping Radius Coverage");
-                DirectionalLightCoverageRadiusField.value = t.DirectionalLightCoverageRadius;
-                DirectionalLightCoverageRadiusField.RegisterValueChangedCallback(evt => {t.DirectionalLightCoverageRadius = evt.newValue;});
+                DirectionalLightCoverageRadiusField.value = t.LocalTTSettings.PhotonMapRadiusCoverage;
+                DirectionalLightCoverageRadiusField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.PhotonMapRadiusCoverage = evt.newValue;});
                 MainContainer.Add(DirectionalLightCoverageRadiusField);
 
                 FloatField CausticIntensityMultiplierField = new FloatField("Caustic Intensity Multiplier");
-                CausticIntensityMultiplierField.value = t.CausticIntensityMultiplier;
-                CausticIntensityMultiplierField.RegisterValueChangedCallback(evt => {t.CausticIntensityMultiplier = evt.newValue;});
+                CausticIntensityMultiplierField.value = t.LocalTTSettings.CausticIntensityMultiplier;
+                CausticIntensityMultiplierField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.CausticIntensityMultiplier = evt.newValue;});
                 MainContainer.Add(CausticIntensityMultiplierField);
+
+                FloatField PhotonRatioField = new FloatField("Guiding vs Guided Photon Ratio");
+                PhotonRatioField.value = t.LocalTTSettings.PhotonGuidingRatio;
+                PhotonRatioField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.PhotonGuidingRatio = Mathf.Clamp(evt.newValue, 0.001f, 0.999f);});
+                MainContainer.Add(PhotonRatioField);
 #endif
 
                 // if(t.LocalTTSettings.ToneMapper == 7) {

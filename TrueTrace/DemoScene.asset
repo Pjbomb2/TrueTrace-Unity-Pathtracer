@@ -19,8 +19,8 @@ MonoBehaviour:
   UseRussianRoulette: 1
   UseNEE: 1
   DoTLASUpdates: 1
-  Accumulate: 1
-  PPBloom: 1
+  Accumulate: 0
+  PPBloom: 0
   BloomStrength: 0.5
   PPDoF: 0
   DoFAperature: 0.2
@@ -40,7 +40,7 @@ MonoBehaviour:
   DoReSTIRGIConnectionValidation: 1
   Exposure: 50
   DoPartialRendering: 0
-  PartialRenderingFactor: 1
+  PartialRenderingFactor: 2
   DoFirefly: 0
   ImprovedPrimaryHit: 1
   RISCount: 12
@@ -102,3 +102,7 @@ MonoBehaviour:
   aoStrength: 1
   aoRadius: 2
   CurrentTargetFile: C:/Unity/Unity Raytracing V277/Assets/TrueTrace-Unity-Pathtracer/TrueTrace/Resources/Utility/MaterialPresets/MaterialPresets.xml
+  SamplesPerFrame: 1
+  PhotonMapRadiusCoverage: 8
+  CausticIntensityMultiplier: 1
+  PhotonGuidingRatio: 0.15

@@ -51,7 +51,7 @@ namespace TrueTrace {
             LightDat = this.GetComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>();
             LightDat.includeForRayTracing = false;
 #endif
-            ThisLight.shadows = LightShadows.None;
+            // ThisLight.shadows = LightShadows.None;
             LocalTransform = transform;
             if(!HasInitialized) {
                 Init();  
