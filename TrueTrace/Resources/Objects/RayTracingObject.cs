@@ -100,40 +100,47 @@ namespace TrueTrace {
 	    	}			
 		}
 
-		public void CallMaterialOverride() {
-			Material[] SharedMaterials = (GetComponent<Renderer>() != null) ? GetComponent<Renderer>().sharedMaterials : GetComponent<SkinnedMeshRenderer>().sharedMaterials;
+		public void CallMaterialOverride(bool Save = true, bool CameFromEdit = false) {
+			Material[] SharedMaterials;
+			if(TryGetComponent<Renderer>(out Renderer TempRenderer)) {
+				SharedMaterials = TempRenderer.sharedMaterials;
+			} else SharedMaterials = GetComponent<SkinnedMeshRenderer>().sharedMaterials;
 			int NamLen = Names.Length;
 			DeleteObject = false;
 			// this.hideFlags = HideFlags.None;
-			for(int i = 0; i < NamLen; i++) {
-				Names[i] = SharedMaterials[i].name;
-				 if(FollowMaterial[i]) {
-					int Index = AssetManager.ShaderNames.IndexOf(SharedMaterials[i].shader.name);
-					 if (Index == -1) {
-					 	Debug.Log("Material Not Added");
-					 	return;
+			if(Save) {
+				for(int i = 0; i < NamLen; i++) {
+					Names[i] = SharedMaterials[i].name;
+					 if(FollowMaterial[i]) {
+						int Index = AssetManager.ShaderNames.IndexOf(SharedMaterials[i].shader.name);
+						 if (Index == -1) {
+						 	Debug.Log("Material Not Added");
+						 	return;
+						 }
+						 MaterialShader RelevantMat = AssetManager.data.Material[Index];
+						if(!RelevantMat.MetallicRange.Equals("null")) LocalMaterials[i].Metallic = SharedMaterials[i].GetFloat(RelevantMat.MetallicRange);
+	                    if(!RelevantMat.RoughnessRange.Equals("null")) LocalMaterials[i].Roughness = SharedMaterials[i].GetFloat(RelevantMat.RoughnessRange);
+	                    if(!RelevantMat.BaseColorValue.Equals("null")) LocalMaterials[i].BaseColor = new Vector3(SharedMaterials[i].GetColor(RelevantMat.BaseColorValue).r, SharedMaterials[i].GetColor(RelevantMat.BaseColorValue).g, SharedMaterials[i].GetColor(RelevantMat.BaseColorValue).b);
+	                    else LocalMaterials[i].BaseColor = Vector3.one;
 					 }
-					 MaterialShader RelevantMat = AssetManager.data.Material[Index];
-					if(!RelevantMat.MetallicRange.Equals("null")) LocalMaterials[i].Metallic = SharedMaterials[i].GetFloat(RelevantMat.MetallicRange);
-                    if(!RelevantMat.RoughnessRange.Equals("null")) LocalMaterials[i].Roughness = SharedMaterials[i].GetFloat(RelevantMat.RoughnessRange);
-                    if(!RelevantMat.BaseColorValue.Equals("null")) LocalMaterials[i].BaseColor = new Vector3(SharedMaterials[i].GetColor(RelevantMat.BaseColorValue).r, SharedMaterials[i].GetColor(RelevantMat.BaseColorValue).g, SharedMaterials[i].GetColor(RelevantMat.BaseColorValue).b);
-                    else LocalMaterials[i].BaseColor = Vector3.one;
-				 }
 
+				}
 			}
-			if(gameObject.activeInHierarchy && AssetManager.Assets != null) AssetManager.Assets.MaterialsChanged.Add(this);
+			if(!CameFromEdit && gameObject.activeInHierarchy && AssetManager.Assets != null) AssetManager.Assets.MaterialsChanged.Add(this);
 		}
 
 
-		public void CallMaterialEdited(bool Do = false) {
+		public void CallMaterialEdited(bool Do = false, bool DoSave = true) {
+			bool WasEdited = false;
 			if(Application.isPlaying) {
 				if(gameObject.activeInHierarchy && AssetManager.Assets != null) {
 					AssetManager.Assets.MaterialsChanged.Add(this);
 					UpdateParentChain();
+					WasEdited = true;
 				}
 			}
 			System.Array.Fill(FollowMaterial, false);
-			CallMaterialOverride();
+			CallMaterialOverride(DoSave, WasEdited);
 			#if UNITY_EDITOR
 				if(Application.isPlaying && Do) {
 					int NamLength = Names.Length;

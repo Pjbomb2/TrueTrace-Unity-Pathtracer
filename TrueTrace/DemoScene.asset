@@ -34,8 +34,8 @@ MonoBehaviour:
   DenoiserMethod: 0
   UpscalerMethod: 0
   UseReSTIRGITemporal: 1
-  UseReSTIRGISpatial: 0
-  UseReSTIRGI: 0
+  UseReSTIRGISpatial: 1
+  UseReSTIRGI: 1
   ReSTIRGITemporalMCap: 4
   DoReSTIRGIConnectionValidation: 1
   Exposure: 50

@@ -46,6 +46,7 @@
   <li>Full Multiscatter Fog(Not realtime)</li>
   <li>Orthographic Camera</li>
   <li>Optional Photon Mapping for fast(but not realtime) caustics</li>
+  <li>Animatable Material Properties</li> 
 </ul>
 
 MASSIVE thanks to 
@@ -109,6 +110,13 @@ for bringing bindless textures to unity!
   <li>To set up PBR with the DEFAULT BIRP material, all textures go into their proper names, but Roughness goes into the Occlusion texture(This can be changed in the MaterialPairing menu)</li>
   <li>If you are using blendshapes to change geometry of a skinned mesh, you may need to go to the import settings of it(in the inspector), turn off Legacy Blendshape Normals, and make sure all normals are imported, not calculated, otherwise the normals for blendshapes might be wrong</li>
   <li>If you use HDRIs, or CubeMaps for the skybox, you need to format as the texture to a Texture2D in the inspector of the image, unity will convert it automatically, then put it in the slot in "Scene Settings" in the TrueTrace settings menu</li>
+</ul>
+
+## Animating TT Materials
+<ul>
+  <li>To animate properties of a truetrace material, you need to add the script "MaterialAnimationView" to the same gameobject as the RayTracingObject</li>
+  <li>Next, you need to select the targeted submaterial in the dropdown of the newly added script</li>
+  <li>Finally, you can now animate any material property by animating the SelectedMaterial properties.</li> 
 </ul>
 
 ## URP Setup
