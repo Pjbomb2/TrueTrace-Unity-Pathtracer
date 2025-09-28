@@ -16,7 +16,7 @@
 // #define IgnoreGlassMain
 // #define FadeMapping
 // #define PointFiltering
-#define StainedGlassShadows
+// #define StainedGlassShadows
 // #define IgnoreBackfacing
 #define LBVH
 #define AccurateEmissionTex
@@ -93,6 +93,7 @@
 #define VertexColors 10
 #define InvertAlpha 11
 #define EnableCausticGeneration 12
+#define DisableCausticRecieving 13
 
 #define SampleAlbedo 0
 #define SampleMetallic 1

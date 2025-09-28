@@ -8619,28 +8619,18 @@
       </TexturePairs>
       <TexturePairs>
         <Purpose>1</Purpose>
-        <ReadIndex>3</ReadIndex>
-        <TextureName>_MainTex</TextureName>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_AlphaMask</TextureName>
       </TexturePairs>
       <TexturePairs>
         <Purpose>6</Purpose>
         <ReadIndex>-4</ReadIndex>
         <TextureName>_Matcap2</TextureName>
-        <Fallback>
-          <Purpose>6</Purpose>
-          <ReadIndex>-4</ReadIndex>
-          <TextureName>_Matcap</TextureName>
-        </Fallback>
       </TexturePairs>
       <TexturePairs>
         <Purpose>7</Purpose>
         <ReadIndex>0</ReadIndex>
         <TextureName>_Matcap2Mask</TextureName>
-        <Fallback>
-          <Purpose>7</Purpose>
-          <ReadIndex>0</ReadIndex>
-          <TextureName>_MatcapMask</TextureName>
-        </Fallback>
       </TexturePairs>
       <TexturePairs>
         <Purpose>9</Purpose>
@@ -8663,6 +8653,7 @@
     <MetallicRemapMax>null</MetallicRemapMax>
     <RoughnessRemapMin>null</RoughnessRemapMin>
     <RoughnessRemapMax>null</RoughnessRemapMax>
+    <EmissionColorValue>_EmissionColor</EmissionColorValue>
   </MaterialShader>
   <MaterialShader>
     <Name>Shader Graphs/SF_Base</Name>

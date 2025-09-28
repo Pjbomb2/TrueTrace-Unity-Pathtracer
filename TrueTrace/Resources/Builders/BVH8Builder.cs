@@ -12,21 +12,23 @@ namespace TrueTrace {
     unsafe public class BVH8Builder {
 
 
+
         float Dot(ref Vector3 A, ref Vector3 B) {return A.x * B.x + A.y * B.y + A.z * B.z;}
         float Dot(Vector3 A) {return A.x * A.x + A.y * A.y + A.z * A.z;}
-        float Length(Vector3 a) {return (float)Math.Sqrt(a.x * (double)a.x + a.y * (double)a.y + a.z * (double)a.z);}
+        float Length(Vector3 a) {return (float)Math.Sqrt((double)(a.x * a.x + a.y * a.y + a.z * a.z));}
+        float Length(ref Vector3 a) {return (float)Math.Sqrt((double)(a.x * a.x + a.y * a.y + a.z * a.z));}
 
         public float Distance(Vector3 a, Vector3 b)
         {
             a.x -= b.x;
             a.y -= b.y;
             a.z -= b.z;
-            return (float)Math.Sqrt(a.x * (double)a.x + a.y * (double)a.y + a.z * (double)a.z);
+            return Length(ref a);
         }
 
         public void Normalize(ref Vector3 a)
         {
-            float num = (float)Math.Sqrt(a.x * (double)a.x + a.y * (double)a.y + a.z * (double)a.z);
+            float num = Length(ref a);
             if (num > 9.99999974737875E-06)
             {
                 float inversed = 1 / num;
@@ -189,10 +191,10 @@ namespace TrueTrace {
             FillArrayFast(ref assignment);
             System.Array.Fill(slot_filled, false);  
             Vector3 Temp;
-
+            Vector3 direction;
             for(int c = 0; c < child_count; c++) {
                 for(int s = 0; s < 8; s++) {
-                    Vector3 direction = new Vector3(
+                    direction = new Vector3(
                         (((s >> 2) & 1) == 1) ? -1.0f : 1.0f,
                         (((s >> 1) & 1) == 1) ? -1.0f : 1.0f,
                         (((s >> 0) & 1) == 1) ? -1.0f : 1.0f);

@@ -82,6 +82,17 @@ void InitKernelB(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     gHashCounter[id.x] = 0;
 }
 
+struct PhotonDensityData {
+    uint x;
+    uint y;
+    uint z;
+    uint y2;
+    uint z2;
+};
+
+StructuredBuffer<PhotonDensityData> PhotonDensityMapA;
+RWStructuredBuffer<PhotonDensityData> PhotonDensityMapB;
+
 Texture2D<float4> VisTexA;
 RWTexture2D<float4> VisTexB;
 RWTexture2D<float> CDFXWRITE;
@@ -427,7 +438,7 @@ inline void calcFinalColor(inout PhotonRayData ray, MaterialData hitDat, RayHit 
     ray.diffuseHit = !((MaterialLobe == 3) || (MaterialLobe == 0 && hitDat.roughness < 0.8f));
     ray.Norm = octahedral_32(Geomnorm);
     ray.throughput = throughput;
-    if (!validBSDFSample || any(throughput <= 0) || (!GetFlag(hitDat.Tag, EnableCausticGeneration) && !ray.diffuseHit)) {
+    if (!validBSDFSample || any(throughput <= 0) || (!GetFlag(hitDat.Tag, EnableCausticGeneration) && !ray.diffuseHit) || (GetFlag(hitDat.Tag, DisableCausticRecieving) && ray.diffuseHit)) {
         ray.terminated = true;
         return;//If the ray failed, we have no choice but to terminate this path
     }
@@ -764,6 +775,12 @@ float3 PrevPos = 0;
         // }
         float2 UV = equirectDirectionToUv(LightDir);
         if(SelectedLight.Type == DIRECTIONALLIGHT) UV = RandVec;
+        // InterlockedAdd(PhotonDensityMapB[Index].x, 1);
+        // InterlockedMax(PhotonDensityMapB[Index].y, UV.x * CDFWIDTH);
+        // InterlockedMax(PhotonDensityMapB[Index].z, UV.y * CDFHEIGHT);
+        // InterlockedMin(PhotonDensityMapB[Index].y2, UV.x * CDFWIDTH);
+        // InterlockedMin(PhotonDensityMapB[Index].z2, UV.y * CDFHEIGHT);
+        InterlockedAdd(AABBBuff[PhotonFrames % 2].AveragedCenter.x, 1);
         VisTexB[UV * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)] = float4(VisTexB[UV * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)].xyz + Val.xyz / float3(LengthToCam,1,1), Val.w);
     }
 }
@@ -811,10 +828,11 @@ float3 photonContribution(float3 Norm, float3 Pos, uint hash, inout int TotPhotC
     float NdotL = dot(Norm, -photonDir.xyz);
     float3 radiance = 0;
     if(NdotL > kMinCosTheta){
+        float Val = ((float)AABBBuff[PhotonFrames % 2].PhotonCount - (float)AABBBuff[PhotonFrames % 2].AveragedCenter.x) / (float)AABBBuff[PhotonFrames % 2].PhotonCount;
 // #ifdef ACCURATECAUSTICS
 //         radiance = rcp(NdotL) * photonFlux.xyz * photonCount * photonFlux.w * ((float)max(min(photonCount-3,5),1));
 // #else
-        radiance = IntensityMultiplier * 4.0f * photonFlux.xyz * photonCount * photonFlux.w * (PI * ((float)max(min(photonCount-3,5),1)) * ((float)max(min(photonCount-3,5),1)));
+        radiance = IntensityMultiplier * 4.0f * photonFlux.xyz * photonCount * photonFlux.w / Val * (PI * ((float)max(min(photonCount-3,5),1)) * ((float)max(min(photonCount-3,5),1)));
 // #endif
     }
     return radiance;
@@ -868,4 +886,30 @@ void kernel_collect(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     GlobalColors[pixel_index].Direct = radiance;
     // GlobalColors[pixel_index].Indirect = 0;
     // GlobalColors[pixel_index].PrimaryNEERay = 0;
+}
+
+
+
+RWTexture2D<float4> DensityDebugTex;
+#pragma kernel kernel_PhotonDensityClear
+[numthreads(16, 1, 1)]
+void kernel_PhotonDensityClear(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
+    PhotonDensityData Tempdat =  {0,0,0,128,128};
+    PhotonDensityMapB[id.x] = Tempdat;
+    DensityDebugTex[id.xy] = 0;
+
+}
+
+// 8, 16, 32, 64, 128, 256, 512, 1024, 2048
+int Bins[10];
+#pragma kernel kernel_PhotonDensitySort
+[numthreads(512, 1, 1)]
+void kernel_PhotonDensitySort(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
+    PhotonDensityData PhotonData = PhotonDensityMapB[id.x];
+
+    float ProjectedBin = (float)((PhotonData.y - PhotonData.y2) * (PhotonData.z - PhotonData.z2)) / (float)PhotonData.x;
+    if(PhotonData.y2 > PhotonData.y || PhotonData.z2 > PhotonData.z) ProjectedBin = 0;
+    for(int i = 0; i < 32; i++) {
+        DensityDebugTex[int2(id.x, i)] = ProjectedBin > 0.5f;
+    }
 }

@@ -98,7 +98,7 @@ namespace TrueTrace {
         private RenderTexture GIReservoirC;
 
 
-        public RenderTexture PSRGBuff;
+        private RenderTexture PSRGBuff;
 
         private RenderTexture GIWorldPosA;
         private RenderTexture GIWorldPosB;
@@ -146,7 +146,7 @@ namespace TrueTrace {
         private Texture3D ToneMapTex;
         private Texture3D ToneMapTex2;
         private Texture3D ToneMapTex3;
-        public Texture3D AGXCustomTex;
+        [HideInInspector] public Texture3D AGXCustomTex;
         private Material _addMaterial;
         private Material _FireFlyMaterial;
         [HideInInspector] public int _currentSample = 0;
@@ -990,7 +990,7 @@ namespace TrueTrace {
             }
 
             if(EnableDebugTexture) {
-                if(!EnableDebugTexturePrev || _DebugTex == null) {
+                if(!EnableDebugTexturePrev || _DebugTex == null || _DebugTex.width != SourceWidth) {
                     CommonFunctions.CreateRenderTexture(ref _DebugTex, SourceWidth, SourceHeight, CommonFunctions.RTFull4, RenderTextureReadWrite.sRGB);
                 }
                 Shader.SetGlobalTexture("_DebugTex", _DebugTex);
@@ -1341,14 +1341,16 @@ namespace TrueTrace {
             if(DoKernelProfiling) cmd.EndSample("TTMV2");
 #endif
 #if EnablePhotonMapping
-                PhotonMap.Generate(cmd, LocalTTSettings.PhotonMapRadiusCoverage, TTviewprojection, _camera.transform.position, _camera.transform.forward, (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTexA : CorrectedDistanceTexB, LocalTTSettings.CausticIntensityMultiplier, LocalTTSettings.PhotonGuidingRatio);
-                PhotonMap.Collect(cmd, 
-                    ref FirstDiffuseThroughputTex, 
-                    ref FirstDiffusePosTex,
-                    ref _target,
-                    ref LightingBuffer,
-                    SourceWidth,
-                    SourceHeight);
+                if(Assets.UnityLightCount != 0) {
+                    PhotonMap.Generate(cmd, LocalTTSettings.PhotonMapRadiusCoverage, TTviewprojection, _camera.transform.position, _camera.transform.forward, (FramesSinceStart2 % 2 == 0) ? CorrectedDistanceTexA : CorrectedDistanceTexB, LocalTTSettings.CausticIntensityMultiplier, LocalTTSettings.PhotonGuidingRatio);
+                    PhotonMap.Collect(cmd, 
+                        ref FirstDiffuseThroughputTex, 
+                        ref FirstDiffusePosTex,
+                        ref _target,
+                        ref LightingBuffer,
+                        SourceWidth,
+                        SourceHeight);
+                }
 #endif
                 if (LocalTTSettings.UseReSTIRGI) {
                     SetInt("CurBounce", 0, cmd);
@@ -1628,6 +1630,10 @@ namespace TrueTrace {
                 PhotonRatioField.RegisterValueChangedCallback(evt => {t.LocalTTSettings.PhotonGuidingRatio = Mathf.Clamp(evt.newValue, 0.001f, 0.999f);});
                 MainContainer.Add(PhotonRatioField);
 #endif
+
+                Toggle DebugTexToggle = new Toggle() {value = t.EnableDebugTexture, text = "Enable Debug Texture"};
+                DebugTexToggle.RegisterValueChangedCallback(evt => {t.EnableDebugTexture = evt.newValue;});
+                MainContainer.Add(DebugTexToggle);
 
                 // if(t.LocalTTSettings.ToneMapper == 7) {
                     ObjectField OverrideAGX = new ObjectField("Custom AGX Tonemap Texture");

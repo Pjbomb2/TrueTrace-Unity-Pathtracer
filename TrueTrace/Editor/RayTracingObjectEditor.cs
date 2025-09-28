@@ -1114,6 +1114,7 @@ namespace TrueTrace {
 #if EnablePhotonMapping
                             EditorGUILayout.BeginHorizontal();
                                 Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.EnableCausticGeneration, EditorGUILayout.ToggleLeft("Enable Caustic Gen", Flag.GetFlag(CommonFunctions.Flags.EnableCausticGeneration), GUILayout.MaxWidth(135)));
+                                Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.DisableCausticRecieving, EditorGUILayout.ToggleLeft("Disable Caustics", Flag.GetFlag(CommonFunctions.Flags.DisableCausticRecieving), GUILayout.MaxWidth(135)));
                             EditorGUILayout.EndHorizontal();
 #endif
                             EditorGUILayout.Space();

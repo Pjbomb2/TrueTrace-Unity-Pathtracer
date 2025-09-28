@@ -670,8 +670,9 @@ void TLASLightBVHRefitKernel (uint3 id : SV_DispatchThreadID)
         float3 extent = transform_direction(TransfMat, (LightNodesWrite[StartIndex].BBMax - LightNodesWrite[StartIndex].BBMin) / 2.0f);
         LightNodesWrite[Index].BBMax = center + extent;
         LightNodesWrite[Index].BBMin = center - extent;
+        float Scale = 1.0f;//length((LightNodesWrite[StartIndex].BBMax - LightNodesWrite[StartIndex].BBMin) / 2.0f) / length(extent);
         LightNodesWrite[Index].w = octahedral_32(transform_direction(TransfMat, i_octahedral_32(LightNodesWrite[StartIndex].w)));
-        LightNodesWrite[Index].phi = max(LightNodesWrite[StartIndex].phi,0.000000f);
+        LightNodesWrite[Index].phi = max(LightNodesWrite[StartIndex].phi * Scale,0.000000f);
         LightNodesWrite[Index].cosTheta_oe = LightNodesWrite[StartIndex].cosTheta_oe;
         return;
     }

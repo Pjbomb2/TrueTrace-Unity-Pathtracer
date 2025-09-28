@@ -17,6 +17,8 @@ namespace TrueTrace {
         public RenderTexture mpCausticPosBucket;
         public RenderTexture mpCausticDirBucket;
         public RenderTexture mpCausticFluxBucket;
+        // public ComputeBuffer[] PhotonDensityMap;
+        // public RenderTexture DensityDebugTex;
 
         public RenderTexture CDFX;
         public RenderTexture CDFY;
@@ -44,11 +46,19 @@ namespace TrueTrace {
         int PrevLightCount;
         int GenKernel;
         int CollectKernel;
+        
+
+        int PhotonDensityMapClearKernel;
+        int PhotonDensityMapSortKernel;
 
         public void ClearAll() {
             mpCausticHashPhotonCounter.ReleaseSafe();
             mpCausticPosBucket.ReleaseSafe();
             AABBBuffA.ReleaseSafe();
+            // if(PhotonDensityMap != null) {
+            //     PhotonDensityMap[0].ReleaseSafe();
+            //     PhotonDensityMap[1].ReleaseSafe();
+            // }
             // DebugBuffer.ReleaseSafe();
             mpCausticDirBucket.ReleaseSafe();
             mpCausticFluxBucket.ReleaseSafe();
@@ -67,11 +77,18 @@ namespace TrueTrace {
             if (SPPMShader == null) {SPPMShader = Resources.Load<ComputeShader>("PhotonMapping/SPPM"); }
             GenKernel = SPPMShader.FindKernel("kernel_gen");
             CollectKernel = SPPMShader.FindKernel("kernel_collect");
+            PhotonDensityMapClearKernel = SPPMShader.FindKernel("kernel_PhotonDensityClear");
+            PhotonDensityMapSortKernel = SPPMShader.FindKernel("kernel_PhotonDensitySort");
             Initialized = true;
 
             if(CDFTotalBuffer == null || !CDFTotalBuffer.IsValid()) {
                 CDFTotalBuffer = new ComputeBuffer(1, 4);
             }
+                // PhotonDensityMap = new ComputeBuffer[2];
+                // PhotonDensityMap[0] = new ComputeBuffer(AssetManager.Assets.UnityLightCount, 20);
+                // PhotonDensityMap[1] = new ComputeBuffer(AssetManager.Assets.UnityLightCount, 20);
+                // CommonFunctions.CreateRenderTextureArray2(ref PhotonDensityMap, AssetManager.Assets.UnityLightCount, 1, 2, CommonFunctions.RTFull4);
+                // CommonFunctions.CreateRenderTexture(ref DensityDebugTex, AssetManager.Assets.UnityLightCount, 32, CommonFunctions.RTFull4);
                 CommonFunctions.CreateRenderTextureArray2(ref EquirectVisibilityTex, PerLightVisSize * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)), PerLightVisSize / 2 * Mathf.CeilToInt(Mathf.Sqrt((float)AssetManager.Assets.UnityLightCount)), 2, CommonFunctions.RTFull4);
                 CDFX.ReleaseSafe();
                 CDFY.ReleaseSafe();
@@ -182,6 +199,10 @@ namespace TrueTrace {
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("SPPM Init B");
 
 
+            // cmd.SetComputeBufferParam(SPPMShader, PhotonDensityMapClearKernel, "PhotonDensityMapB", !FlipFrame ? PhotonDensityMap[0] : PhotonDensityMap[1]);//WRITE
+            // cmd.SetComputeTextureParam(SPPMShader, PhotonDensityMapClearKernel, "DensityDebugTex", DensityDebugTex);//WRITE
+            // cmd.DispatchCompute(SPPMShader, PhotonDensityMapClearKernel, Mathf.CeilToInt(((float)AssetManager.Assets.UnityLightCount) / 16.0f), 1, 1);
+
 
 
             AssetManager.Assets.SetLightData(SPPMShader, GenKernel);
@@ -189,6 +210,8 @@ namespace TrueTrace {
             AssetManager.Assets.SetHeightmapTraceBuffers(SPPMShader, GenKernel);
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "gHashBucketPos", mpCausticPosBucket);
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "gHashBucketFlux", mpCausticFluxBucket);
+            // cmd.SetComputeBufferParam(SPPMShader, GenKernel, "PhotonDensityMapA", FlipFrame ? PhotonDensityMap[0] : PhotonDensityMap[1]);//READ
+            // cmd.SetComputeBufferParam(SPPMShader, GenKernel, "PhotonDensityMapB", !FlipFrame ? PhotonDensityMap[0] : PhotonDensityMap[1]);//READ
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "VisTexA", FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);//READ
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "VisTexB", !FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);//WRITE
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "gHashBucketDir", mpCausticDirBucket);
@@ -203,6 +226,11 @@ namespace TrueTrace {
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("SPPM Gen");
             cmd.DispatchCompute(SPPMShader, GenKernel, Mathf.CeilToInt((float)mPGDDispatchX / 32.0f), Mathf.CeilToInt((float)mMaxDispatchY / 32.0f), 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("SPPM Gen");
+
+
+            // cmd.SetComputeBufferParam(SPPMShader, PhotonDensityMapSortKernel, "PhotonDensityMapB", !FlipFrame ? PhotonDensityMap[0] : PhotonDensityMap[1]);//READ
+            // cmd.SetComputeTextureParam(SPPMShader, PhotonDensityMapSortKernel, "DensityDebugTex", DensityDebugTex);//WRITE
+            // cmd.DispatchCompute(SPPMShader, PhotonDensityMapSortKernel, 1, 1, 1);
 
 
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("SPPM Init C");
@@ -278,6 +306,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(SPPMShader, CollectKernel, "gHashBucketFlux", mpCausticFluxBucket);
             cmd.SetComputeTextureParam(SPPMShader, CollectKernel, "gHashBucketDir", mpCausticDirBucket);
             cmd.SetComputeTextureParam(SPPMShader, CollectKernel, "Result", Result);
+            cmd.SetComputeBufferParam(SPPMShader, CollectKernel, "AABBBuff", AABBBuffA);
             cmd.SetComputeTextureParam(SPPMShader, CollectKernel, "ThroughputTex", Throughput);
             cmd.SetComputeTextureParam(SPPMShader, CollectKernel, "PrimaryTriangleInfo", PrimaryTriInfo);
             cmd.SetComputeBufferParam(SPPMShader, CollectKernel, "gHashCounter", mpCausticHashPhotonCounter);

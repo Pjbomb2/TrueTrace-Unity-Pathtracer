@@ -194,7 +194,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             float3 worldViewUp = normalize(float3(0, 1, 0) - ray.direction * dot(ray.direction, float3(0, 1, 0)));
             float3 worldViewRight = normalize(cross(ray.direction, worldViewUp));
             
-            float2 matcapUV = float2(dot(worldViewRight, norm), dot(worldViewUp, norm)) * 0.5f + 0.5;
+            float2 matcapUV = float2(dot(worldViewRight, norm), dot(worldViewUp, norm)) * 0.5f + 0.5f;
 
             float4 matcap = SampleTexture(matcapUV, SampleMatCap, hitDat);
             if(hitDat.MatCapMask.x > 0) hitDat.surfaceColor = lerp(hitDat.surfaceColor, matcap.xyz, SampleTexture(BaseUv, SampleMatCapMask, hitDat).x);
@@ -1279,7 +1279,7 @@ int MaterialIndex;
             float3 EmissCol = lerp(TempMat.EmissionColor, TempMat.surfaceColor, GetFlag(TempMat.Tag, BaseIsMap));
             float4 EmissTex = SampleTexture(BaseUv, SampleEmission, TempMat);
             if(!GetFlag(TempMat.Tag, IsEmissionMask)) {//IS a mask
-                TempMat.emission *= luminance(EmissTex.xyz) * luminance(EmissTex.xyz) > 0.01f;
+                TempMat.emission *= EmissTex.x * (luminance(EmissTex.xyz) > 0.01f);
             } else EmissCol *= EmissTex.xyz;
             TempMat.surfaceColor = lerp(TempMat.surfaceColor, EmissCol, saturate(TempMat.emission) * GetFlag(TempMat.Tag, ReplaceBase));
         } else {

@@ -140,12 +140,6 @@ namespace TrueTrace {
             return (d.x + d.y) * d.z + d.x * d.y; 
         }
 
-        float SA(Vector3 BBMin, Vector3 BBMax) {
-            Vector3 d = new Vector3(BBMax.x - BBMin.x, BBMax.y - BBMin.y, BBMax.z - BBMin.z);
-            return (d.x + d.y) * d.z + d.x * d.y; 
-        }
-
-
         float HalfArea(ref AABB aabb) {
             Vector3 d = new Vector3(aabb.BBMax.x - aabb.BBMin.x, aabb.BBMax.y - aabb.BBMin.y, aabb.BBMax.z - aabb.BBMin.z);
 
@@ -207,16 +201,15 @@ namespace TrueTrace {
             BVH2Nodes[0].aabb.init();
             for(int i = 0; i < PrimCount; i++) {
                 FinalIndices[i] = i;
-                // Centers[i] = (AggTriangles[i].pos0 + AggTriangles[i].pos0 + AggTriangles[i].posedge1 + AggTriangles[i].pos0 + AggTriangles[i].posedge2) / 3.0f;
-                SAH[i] = (Triangles[i].BBMax.x - Triangles[i].BBMin.x) / 2.0f + Triangles[i].BBMin.x;
+                SAH[i] = (Triangles[i].BBMax.x + Triangles[i].BBMin.x) * 0.5f;
                 BVH2Nodes[0].aabb.Extend(ref Triangles[i]);
             }
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, 0, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (Triangles[i].BBMax.y - Triangles[i].BBMin.y) / 2.0f + Triangles[i].BBMin.y;}
+            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (Triangles[i].BBMax.y + Triangles[i].BBMin.y) * 0.5f;}
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (Triangles[i].BBMax.z - Triangles[i].BBMin.z) / 2.0f + Triangles[i].BBMin.z;}
+            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (Triangles[i].BBMax.z + Triangles[i].BBMin.z) * 0.5f;}
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount * 2, PrimCount);
 
@@ -254,15 +247,15 @@ namespace TrueTrace {
             BVH2Nodes[0].aabb.init();
             for(int i = 0; i < PrimCount; i++) {//Treat Bottom Level BVH Root Nodes as triangles
                 FinalIndices[i] = i;
-                SAH[i] = ((MeshAABBs[i].BBMax.x - MeshAABBs[i].BBMin.x)/2.0f + MeshAABBs[i].BBMin.x);
+                SAH[i] = (MeshAABBs[i].BBMax.x + MeshAABBs[i].BBMin.x) * 0.5f;
                 BVH2Nodes[0].aabb.Extend(ref MeshAABBs[i]);
             }
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, 0, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (MeshAABBs[i].BBMax.y - MeshAABBs[i].BBMin.y) / 2.0f + MeshAABBs[i].BBMin.y;}
+            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (MeshAABBs[i].BBMax.y + MeshAABBs[i].BBMin.y) * 0.5f;}
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (MeshAABBs[i].BBMax.z - MeshAABBs[i].BBMin.z) / 2.0f + MeshAABBs[i].BBMin.z;}
+            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (MeshAABBs[i].BBMax.z + MeshAABBs[i].BBMin.z) * 0.5f;}
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount * 2, PrimCount);
 
@@ -297,7 +290,7 @@ namespace TrueTrace {
             BVH2Nodes[0].aabb.init();
             for(int i = 0; i < PrimCount; i++) {//Treat Bottom Level BVH Root Nodes as triangles
                 FinalIndices[i] = i;
-                SAH[i] = ((MeshAABBs[i].BBMax.x - MeshAABBs[i].BBMin.x)/2.0f + MeshAABBs[i].BBMin.x);
+                SAH[i] = (MeshAABBs[i].BBMax.x + MeshAABBs[i].BBMin.x) * 0.5f;
                 BVH2Nodes[i] = new BVHNode2Data();
                 BVH2Nodes[i].aabb.init();
                 BVH2Nodes[i + PrimCount] = new BVHNode2Data();
@@ -305,10 +298,10 @@ namespace TrueTrace {
             }
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, 0, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (MeshAABBs[i].BBMax.y - MeshAABBs[i].BBMin.y) / 2.0f + MeshAABBs[i].BBMin.y;}
+            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (MeshAABBs[i].BBMax.y + MeshAABBs[i].BBMin.y) * 0.5f;}
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (MeshAABBs[i].BBMax.z - MeshAABBs[i].BBMin.z) / 2.0f + MeshAABBs[i].BBMin.z;}
+            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (MeshAABBs[i].BBMax.z + MeshAABBs[i].BBMin.z) * 0.5f;}
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount * 2, PrimCount);
 

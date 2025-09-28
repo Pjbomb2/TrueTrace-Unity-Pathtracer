@@ -1463,14 +1463,15 @@ inline void filter_image(
 		}
 		filtered_spec = clamp(filtered_spec, Min, Max);
 	}
-	[branch]if (hist_len_hf > 1) {
+	bool Secondary = (hist_len_hf > 1 && spec_iteration <= 4 && spec_iteration != 0);
+	[branch]if (hist_len_hf > 4 || Secondary) {
 		// Compute luminance variance from the statistical moments: Var(X) = E[X^2] - E[X]^2
 		// The `asvgf_temporal` shader computes a combination of temporal and spatial (3x3) moments,
 		// and stores these into a texture. This shader will combine moments of the surrounding 
 		// pixels using the same weights as for colors, and the combined moments are used on the next iteration.
 		lum_mean_hf = filtered_moments.x;
 		float lum_variance_hf = max(1e-8, filtered_moments.y - filtered_moments.x * filtered_moments.x);
-		sigma_l_hf = min(max(hist_len_hf, 1), 32) / (lum_variance_hf);
+		sigma_l_hf = min(max(hist_len_hf - Secondary ? 0 : 4, 1), 32) / (lum_variance_hf);
 	} else {
 	// // 	// If there is no history, treat all moments as invalid, because 3x3 spatial 
 	// // 	// is just not enough to get reasonable filtering. Ignore luminance in this case,
@@ -1812,9 +1813,13 @@ void Atrous(uint3 gl_GlobalInvocationID : SV_DispatchThreadID, uint3 gl_WorkGrou
 		projected_lf *= 1024.0f;
 		
 		float3 final_color = composite_color(base_color, projected_lf, filtered_hf, filtered_spec, (UpscalerMethod != 0 && DiffRes && base_color.w <= 2) ? 1 : unpackRGBE(AlbedoColorB[ipos].y), ipos);
-		// SH TempSH = irradiance_to_SH(final_color, i_octahedral_32(TEX_PT_NORMALS_A[ipos].x));
-		// final_color = project_SH_irradiance(TempSH, normal);
 		IMG_ASVGF_COLOR[ipos] = float4(final_color, (ReflRefracA[ipos] << 1) >> 30);
+		// if(ipos.x < ipos.y * (1920.0f / 1080.0f)) IMG_ASVGF_COLOR[ipos] = float4(final_color, (ReflRefracA[ipos] << 1) >> 30);
+		// else {
+		// 	int final_pixel_index = ipos.x + ipos.y * screen_width;
+    	// 	float3 res = (GetBounceData(GlobalColorsRead[final_pixel_index].MetRoughIsSpec) == 1) ? (GlobalColorsRead[final_pixel_index].Data.xyz + pow(unpackRGBE(GlobalColorsRead[final_pixel_index].PrimaryNEERay),2.2f)) : (((GlobalColorsRead[final_pixel_index].Direct + GlobalColorsRead[final_pixel_index].Indirect) * GlobalColorsRead[final_pixel_index].Data.xyz) + pow(unpackRGBE(GlobalColorsRead[final_pixel_index].PrimaryNEERay),2.2f));
+    	// 	IMG_ASVGF_COLOR[ipos] = float4(res,1);
+		// }
 	}
 } 
 

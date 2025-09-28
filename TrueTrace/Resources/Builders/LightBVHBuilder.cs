@@ -19,19 +19,20 @@ namespace TrueTrace {
 
         float Dot(ref Vector3 A, ref Vector3 B) {return A.x * B.x + A.y * B.y + A.z * B.z;}
         float Dot(Vector3 A) {return A.x * A.x + A.y * A.y + A.z * A.z;}
-        float Length(Vector3 a) {return (float)Math.Sqrt(a.x * (double)a.x + a.y * (double)a.y + a.z * (double)a.z);}
+        float Length(Vector3 a) {return (float)Math.Sqrt((double)(a.x * a.x + a.y * a.y + a.z * a.z));}
+        float Length(ref Vector3 a) {return (float)Math.Sqrt((double)(a.x * a.x + a.y * a.y + a.z * a.z));}
 
         public float Distance(Vector3 a, Vector3 b)
         {
             a.x -= b.x;
             a.y -= b.y;
             a.z -= b.z;
-            return (float)Math.Sqrt(a.x * (double)a.x + a.y * (double)a.y + a.z * (double)a.z);
+            return Length(ref a);
         }
 
         public void Normalize(ref Vector3 a)
         {
-            float num = (float)Math.Sqrt(a.x * (double)a.x + a.y * (double)a.y + a.z * (double)a.z);
+            float num = Length(ref a);
             if (num > 9.99999974737875E-06)
             {
                 float inversed = 1 / num;
@@ -53,15 +54,12 @@ namespace TrueTrace {
 
 
 
-        private void RotateRodrigues(ref Vector3 v, float angle, ref Vector3 axis) {
-            float axisLenSq = Dot(ref axis, ref axis);
-            if (axisLenSq == 0f) return;
-
-            float invLen = 1f / Mathf.Sqrt(axisLenSq);
+        private void RotateRodrigues(ref Vector3 v, float angle, ref Vector3 axis, float axisLenSq) {
+            float invLen = 1f / (float)System.Math.Sqrt((double)axisLenSq);
             axis = axis * invLen;
 
-            float cos = Mathf.Cos(angle);
-            float sin = Mathf.Sin(angle);
+            float cos = (float)System.Math.Cos((double)angle);
+            float sin = (float)System.Math.Sin((double)angle);
 
             float dot = Dot(ref axis, ref v);
             Vector3 cross = Vector3.Cross(axis, v);
@@ -76,8 +74,8 @@ namespace TrueTrace {
             if(A.w.x == 0 && A.w.y == 0 && A.w.z == 0) {A.w = B.w; A.cosTheta_o = B.cosTheta_o; return;}
             if(B.w.x == 0 && B.w.y == 0 && B.w.z == 0) return;
 
-            float theta_a = (float)System.Math.Acos(Mathf.Clamp(A.cosTheta_o,-1.0f, 1.0f));
-            float theta_b = (float)System.Math.Acos(Mathf.Clamp(B.cosTheta_o,-1.0f, 1.0f));
+            float theta_a = (float)System.Math.Acos((double)A.cosTheta_o);
+            float theta_b = (float)System.Math.Acos((double)B.cosTheta_o);
             float theta_d = AngleBetween(ref A.w, ref B.w);
             float TempVar = 3.14159f;
             if(theta_d + theta_b < TempVar) TempVar = theta_d + theta_b;
@@ -91,9 +89,12 @@ namespace TrueTrace {
 
             float theta_r = theta_o - theta_a;
             Vector3 wr = Vector3.Cross(A.w, B.w);
-            if(Dot(ref wr, ref wr) == 0) {A.w = Vector3.zero; A.cosTheta_o = -1; return;}
-            RotateRodrigues(ref A.w, theta_r, ref wr);
-            A.cosTheta_o =(float)System.Math.Cos(theta_o);
+            float AxisLength = Dot(ref wr, ref wr);
+            if(AxisLength == 0) {A.w = Vector3.zero; A.cosTheta_o = -1; return;}
+            RotateRodrigues(ref A.w, theta_r, ref wr, AxisLength);
+            A.cosTheta_o = (float)System.Math.Cos((double)theta_o);
+            // if(A.cosTheta_o > 1) A.cosTheta_o = 1;
+            // else if(A.cosTheta_o < -1) A.cosTheta_o = -1;
         }
 
 
@@ -110,11 +111,12 @@ namespace TrueTrace {
             A.LightCount += B.LightCount;
         }
 
-        private float surface_area(Vector3 sizes) {
-            return 2.0f * ((sizes.x * sizes.y) + (sizes.x * sizes.z) + (sizes.y * sizes.z)); 
+        float surface_area(ref AABB aabb) {
+            Vector3 d = new Vector3(aabb.BBMax.x - aabb.BBMin.x, aabb.BBMax.y - aabb.BBMin.y, aabb.BBMax.z - aabb.BBMin.z);
+            return (d.x + d.y) * d.z + d.x * d.y; 
         }
 
-        private float EvaluateCost(ref LightBounds b, float Kr, int dim) {
+        private float EvaluateCost(ref LightBounds b, float Kr) {
             float theta_o = (float)System.Math.Acos(b.cosTheta_o);
             float theta_e = (float)System.Math.Acos(b.cosTheta_e);
             float theta_w = 3.14159f;
@@ -128,8 +130,135 @@ namespace TrueTrace {
             
             int LightCoun = b.LightCount;
             if(LightCoun < 1) LightCoun = 1;
-            return b.phi * M_omega * Kr * surface_area(b.b.BBMax - b.b.BBMin) / (float)LightCoun;
+            return b.phi * M_omega * Kr * surface_area(ref b.b) / (float)LightCoun;
         }
+
+        // private float InlinedUnion()
+
+        // {
+        //     if(A.phi == 0) {A = B;}
+        //     else if(B.phi != 0) {
+        //         if(A.w.x == 0 && A.w.y == 0 && A.w.z == 0) {A.w = B.w; A.cosTheta_o = B.cosTheta_o;}
+        //         else if(!(B.w.x == 0 && B.w.y == 0 && B.w.z == 0)) {
+        //             float theta_a = (float)System.Math.Acos((double)A.cosTheta_o);
+        //             float theta_b = (float)System.Math.Acos((double)B.cosTheta_o);
+        //             float theta_d;
+        //             if(Dot(ref A.w, ref B.w) < 0) theta_d = 3.14159f - 2.0f * (float)System.Math.Asin(Length(A.w + B.w) * 0.5f);
+        //             else theta_d = 2.0f * (float)System.Math.Asin(Length(B.w - A.w) * 0.5f);
+
+        //             float TempVar = 3.14159f;
+        //             if(theta_d + theta_b < TempVar) TempVar = theta_d + theta_b;
+        //             if(TempVar > theta_a) {
+        //                 TempVar = 3.14159f;
+        //                 if(theta_d + theta_a < TempVar) TempVar = theta_d + theta_a;
+        //                 if(TempVar <= theta_b) {A.w = B.w; A.cosTheta_o = B.cosTheta_o;}
+        //                 else {
+        //                     float theta_o = (theta_a + theta_d + theta_b) * 0.5f;
+        //                     if(theta_o >= 3.14159f) {A.w = Vector3.zero; A.cosTheta_o = -1;}
+        //                     else {
+        //                         float theta_r = theta_o - theta_a;
+        //                         Vector3 wr = Vector3.Cross(A.w, B.w);
+        //                         float AxisLength = Dot(ref wr, ref wr);
+        //                         if(AxisLength == 0) {A.w = Vector3.zero; A.cosTheta_o = -1;}
+        //                         else {
+        //                             float invLen = 1f / (float)System.Math.Sqrt((double)AxisLength);
+        //                             wr = wr * invLen;
+
+        //                             float cos = (float)System.Math.Cos((double)theta_r);
+        //                             float sin = (float)System.Math.Sin((double)theta_r);
+
+        //                             float dot = Dot(ref wr, ref A.w);
+        //                             Vector3 cross = Vector3.Cross(wr, A.w);
+
+        //                             A.w = A.w * cos + cross * sin + axis * dot * (1f - cos);
+        //                             A.cosTheta_o = (float)System.Math.Cos((double)theta_o);
+        //                         }
+        //                     }
+        //                 }
+        //             }
+        //         }
+
+        //         if(B.cosTheta_e < A.cosTheta_e) A.cosTheta_e = B.cosTheta_e;
+        //         A.b.Extend(ref B.b);
+        //         A.phi += B.phi;
+        //         A.LightCount += B.LightCount;
+        //     }
+
+        // }
+        private float Dat = Mathf.PI;
+        float theta_o;
+        private float InlinedUnionCost(ref LightBounds A, ref LightBounds B, float Kr)
+
+        {
+            float Cos = Dat;
+            if(A.phi == 0) {A = B; Cos = (float)System.Math.Acos((double)A.cosTheta_o);}
+            else if(B.phi != 0) {
+                if(A.w.x == 0 && A.w.y == 0 && A.w.z == 0) {A.w = B.w; A.cosTheta_o = B.cosTheta_o; Cos = (float)System.Math.Acos((double)A.cosTheta_o);}
+                else if(B.w.x == 0 && B.w.y == 0 && B.w.z == 0) Cos = (float)System.Math.Acos((double)A.cosTheta_o);
+                else {
+                    float theta_a = (float)System.Math.Acos((double)A.cosTheta_o);
+                    float theta_b = (float)System.Math.Acos((double)B.cosTheta_o);
+                    float theta_d;
+                    if(Dot(ref A.w, ref B.w) < 0) theta_d = 3.14159f - 2.0f * (float)System.Math.Asin(Length(A.w + B.w) * 0.5f);
+                    else theta_d = 2.0f * (float)System.Math.Asin(Length(B.w - A.w) * 0.5f);
+
+                    float TempVar = 3.14159f;
+                    if(theta_d + theta_b < TempVar) TempVar = theta_d + theta_b;
+                    if(TempVar <= theta_a) Cos = theta_a;
+                    else {
+                        TempVar = 3.14159f;
+                        if(theta_d + theta_a < TempVar) TempVar = theta_d + theta_a;
+                        if(TempVar <= theta_b) {A.w = B.w; A.cosTheta_o = B.cosTheta_o; Cos = theta_b;}
+                        else {
+                            theta_o = (theta_a + theta_d + theta_b) * 0.5f;
+                            if(theta_o >= 3.14159f) {A.w = Vector3.zero; A.cosTheta_o = -1;}
+                            else {
+                                float theta_r = theta_o - theta_a;
+                                Vector3 wr = Vector3.Cross(A.w, B.w);
+                                float AxisLength = Dot(ref wr, ref wr);
+                                if(AxisLength == 0) {A.w = Vector3.zero; A.cosTheta_o = -1;}
+                                else {
+                                    float invLen = 1f / (float)System.Math.Sqrt((double)AxisLength);
+                                    wr = wr * invLen;
+
+                                    float cos = (float)System.Math.Cos((double)theta_r);
+                                    float sin = (float)System.Math.Sin((double)theta_r);
+
+                                    float dot = Dot(ref wr, ref A.w);
+                                    Vector3 cross = Vector3.Cross(wr, A.w);
+
+                                    A.w = A.w * cos + cross * sin + wr * dot * (1f - cos);
+                                    Cos = theta_o;
+                                    A.cosTheta_o = (float)System.Math.Cos((double)theta_o);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if(B.cosTheta_e < A.cosTheta_e) A.cosTheta_e = B.cosTheta_e;
+                A.b.Extend(ref B.b);
+                A.phi += B.phi;
+                A.LightCount += B.LightCount;
+            }
+
+            theta_o = Cos;
+            float theta_e = (float)System.Math.Acos(A.cosTheta_e);
+            float theta_w = 3.14159f;
+            if(theta_o + theta_e < theta_w) theta_w = theta_o + theta_e;
+            float sinTheta_o = (float)System.Math.Sqrt(1.0f - A.cosTheta_o * A.cosTheta_o);
+            float M_omega = 2.0f * 3.14159f * (1.0f - A.cosTheta_o) +
+                            3.14159f / 2.0f *
+                                (2.0f * theta_w * sinTheta_o -(float)System.Math.Cos(theta_o - 2.0f * theta_w) -
+                                 2.0f * theta_o * sinTheta_o + A.cosTheta_o);
+
+            
+            int LightCoun = A.LightCount;
+            if(LightCoun < 1) LightCoun = 1;
+            return A.phi * M_omega * Kr * surface_area(ref A.b) / (float)LightCoun;
+
+        }
+
 
         private LightBounds* LightTris;
         private NodeBounds* nodes2;
@@ -182,16 +311,17 @@ namespace TrueTrace {
                 float Kr = Kr1 / Diagonal[dimension];
                 Offset = PrimCount * dimension + first_index;
                 aabb_left = LightTris[DimensionedIndices[Offset]];
-                SAH[1] = EvaluateCost(ref aabb_left, Kr, dimension);
+                SAH[1] = EvaluateCost(ref aabb_left, Kr);
                 for(int i = 2; i < index_count; i++) {
-                    Union(ref aabb_left, ref LightTris[DimensionedIndices[Offset + i - 1]]);
+                    // Union(ref aabb_left, ref LightTris[DimensionedIndices[Offset + i - 1]]);
 
-                    SAH[i] = EvaluateCost(ref aabb_left, Kr, dimension) * (float)i;
+                    SAH[i] = InlinedUnionCost(ref aabb_left, ref LightTris[DimensionedIndices[Offset + i - 1]], Kr) * (float)i;
+                    // SAH[i] = EvaluateCost(ref aabb_left, Kr) * (float)i;
                 }
 
                 {
                     aabb_right = LightTris[DimensionedIndices[Offset + index_count - 1]];
-                    float cost = SAH[index_count - 1] + EvaluateCost(ref aabb_right, Kr, dimension) * (float)(index_count - (index_count - 1));
+                    float cost = SAH[index_count - 1] + EvaluateCost(ref aabb_right, Kr) * (float)(index_count - (index_count - 1));
 
                     if(cost != 0)
                     if(cost <= split.cost) {
@@ -204,9 +334,12 @@ namespace TrueTrace {
 
 
                 for(int i = index_count - 2; i > 0; i--) {
-                    Union(ref aabb_right, ref LightTris[DimensionedIndices[Offset + i]]);
+                    // Union(ref aabb_right, ref LightTris[DimensionedIndices[Offset + i]]);
 
-                    float cost = SAH[i] + EvaluateCost(ref aabb_right, Kr, dimension) * (float)(index_count - i);
+                    // float LeftCost = EvaluateCost(ref aabb_right, Kr) * (float)(index_count - i);
+                    float LeftCost = InlinedUnionCost(ref aabb_right, ref LightTris[DimensionedIndices[Offset + i]], Kr) * (float)(index_count - i);
+                    if(LeftCost >= split.cost) break;
+                    float cost = SAH[i] + LeftCost;
 
                     if(cost != 0)
                     if(cost <= split.cost) {
@@ -273,7 +406,7 @@ namespace TrueTrace {
             float b = Distance(pt2, pt3);
             float c = Distance(pt3, pt1);
             float s = (a + b + c) / 2.0f;
-            return Mathf.Sqrt(s * (s - a) * (s - b) * (s - c));
+            return (float)System.Math.Sqrt((double)(s * (s - a) * (s - b) * (s - c)));
         }
 
         public List<int>[] MainSet;
@@ -362,27 +495,29 @@ namespace TrueTrace {
             FinalIndices = new int[PrimCount];
 
             AABB TriAABB = new AABB();
+            Vector3 Scaler = new Vector3(0.0001f,0.0001f,0.0001f);
+            float Precomputed = (float)System.Math.Cos(3.14159f / 2.0f);
             for(int i = 0; i < PrimCount; i++) {
                 TriAABB.init();
                 TriAABB.Extend(Tris[i].pos0);
                 TriAABB.Extend(Tris[i].pos0 + Tris[i].posedge1);
                 TriAABB.Extend(Tris[i].pos0 + Tris[i].posedge2);
-                TriAABB.Validate(new Vector3(0.0001f,0.0001f,0.0001f));
+                TriAABB.Validate(Scaler);
                 DirectionCone tricone = new DirectionCone(-Norms[i], 1);
                 float ThisPhi = AreaOfTriangle(Tris[i].pos0, Tris[i].pos0 + Tris[i].posedge1, Tris[i].pos0 + Tris[i].posedge2) * LuminanceWeights[i];
-                LightBounds TempBound = new LightBounds(TriAABB, tricone.W, ThisPhi, tricone.cosTheta,(float)System.Math.Cos(3.14159f / 2.0f), 1, 0);
+                LightBounds TempBound = new LightBounds(TriAABB, tricone.W, ThisPhi, tricone.cosTheta,Precomputed, 1, 0);
                 LightTris[i] = TempBound;
                 FinalIndices[i] = i;
-                SAH[i] = (TriAABB.BBMax.x - TriAABB.BBMin.x) / 2.0f + TriAABB.BBMin.x;
+                SAH[i] = (TriAABB.BBMax.x + TriAABB.BBMin.x) * 0.5f;
                 Union(ref nodes2[0].aabb, ref TempBound);
             }
 
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, 0, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; TriAABB.Create(Tris[i].pos0, Tris[i].pos0 + Tris[i].posedge1); TriAABB.Extend(Tris[i].pos0 + Tris[i].posedge2); SAH[i] = (TriAABB.BBMax.y - TriAABB.BBMin.y) / 2.0f + TriAABB.BBMin.y;}
+            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (LightTris[i].b.BBMax.y + LightTris[i].b.BBMin.y) * 0.5f;}
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; TriAABB.Create(Tris[i].pos0, Tris[i].pos0 + Tris[i].posedge1); TriAABB.Extend(Tris[i].pos0 + Tris[i].posedge2); SAH[i] = (TriAABB.BBMax.z - TriAABB.BBMin.z) / 2.0f + TriAABB.BBMin.z;}
+            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (LightTris[i].b.BBMax.z + LightTris[i].b.BBMin.z) * 0.5f;}
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount * 2, PrimCount);
             CommonFunctions.DeepClean(ref FinalIndices);
@@ -520,16 +655,16 @@ namespace TrueTrace {
 
             for(int i = 0; i < PrimCount; i++) {
                 FinalIndices[i] = i;
-                SAH[i] = (Tris[i].b.BBMax.x - Tris[i].b.BBMin.x) / 2.0f + Tris[i].b.BBMin.x;
-                Union(ref nodes2[0].aabb, ref Tris[i]);
+                SAH[i] = (LightTris[i].b.BBMax.x + LightTris[i].b.BBMin.x) * 0.5f;
+                Union(ref nodes2[0].aabb, ref LightTris[i]);
             }
 
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, 0, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (Tris[i].b.BBMax.y - Tris[i].b.BBMin.y) / 2.0f + Tris[i].b.BBMin.y;}
+            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (LightTris[i].b.BBMax.y + LightTris[i].b.BBMin.y) * 0.5f;}
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (Tris[i].b.BBMax.z - Tris[i].b.BBMin.z) / 2.0f + Tris[i].b.BBMin.z;}
+            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (LightTris[i].b.BBMax.z + LightTris[i].b.BBMin.z) * 0.5f;}
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount * 2, PrimCount);
 
@@ -661,16 +796,16 @@ namespace TrueTrace {
                 nodes2[i] = ZeroBound;
                 nodes2[i + PrimCount] = ZeroBound;
                 FinalIndices[i] = i;
-                SAH[i] = (Tris[i].b.BBMax.x - Tris[i].b.BBMin.x) / 2.0f + Tris[i].b.BBMin.x;
-                Union(ref nodes2[0].aabb, ref Tris[i]);
+                SAH[i] = (LightTris[i].b.BBMax.x + LightTris[i].b.BBMin.x) * 0.5f;
+                Union(ref nodes2[0].aabb, ref LightTris[i]);
             }
 
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, 0, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (Tris[i].b.BBMax.y - Tris[i].b.BBMin.y) / 2.0f + Tris[i].b.BBMin.y;}
+            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (LightTris[i].b.BBMax.y + LightTris[i].b.BBMin.y) * 0.5f;}
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount, PrimCount);
-            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (Tris[i].b.BBMax.z - Tris[i].b.BBMin.z) / 2.0f + Tris[i].b.BBMin.z;}
+            for(int i = 0; i < PrimCount; i++) {FinalIndices[i] = i; SAH[i] = (LightTris[i].b.BBMax.z + LightTris[i].b.BBMin.z) * 0.5f;}
             System.Array.Sort(FinalIndices, (s1,s2) => {var sign = SAH[s1] - SAH[s2]; return sign < 0 ? -1 : (sign == 0 ? 0 : 1);});
             NativeArray<int>.Copy(FinalIndices, 0, DimensionedIndicesArray, PrimCount * 2, PrimCount);
 

@@ -841,8 +841,9 @@ namespace TrueTrace {
 
         public void ForceUpdateAtlas() {
             int throwaway = 0;
+            int throwaway2 = 0;
             CommandBuffer tempcmd = new CommandBuffer();
-            for(int i = 0; i < RenderQue.Count; i++) RenderQue[i].CreateAtlas(ref throwaway);
+            for(int i = 0; i < RenderQue.Count; i++) RenderQue[i].CreateAtlas(ref throwaway, ref throwaway2);
             CreateAtlas(throwaway, tempcmd);
             Graphics.ExecuteCommandBuffer(tempcmd);
             tempcmd.Clear();
