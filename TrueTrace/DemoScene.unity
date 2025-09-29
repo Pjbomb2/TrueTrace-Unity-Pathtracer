@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.17481455, g: 0.2186734, b: 0.30095077, a: 1}
+  m_IndirectSpecularColor: {r: 0.17832665, g: 0.22328278, b: 0.30531523, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -12665,10 +12665,10 @@ MonoBehaviour:
         b:
           BBMax: {x: 0.5, y: 0.5, z: 0.5}
           BBMin: {x: -0.5, y: -0.5, z: -0.5}
-        w: {x: -0.7714121, y: 0.39507377, z: 0.49883944}
+        w: {x: -0.7715811, y: 0.39488393, z: 0.49890316}
         phi: 378.83902
-        cosTheta_o: -0.9970375
-        cosTheta_e: 0.0000012675908
+        Theta_o: 3.0653932
+        Theta_e: 1.5707964
         LightCount: 768
         Pad1: 0
       left: 2
@@ -12684,8 +12684,8 @@ MonoBehaviour:
           BBMin: {x: 0, y: 0, z: 0}
         w: {x: 0, y: 0, z: 0}
         phi: 0
-        cosTheta_o: 0
-        cosTheta_e: 0
+        Theta_o: 0
+        Theta_e: 0
         LightCount: 0
         Pad1: 0
       left: 0
@@ -28332,8 +28332,8 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1144915669}
-  m_LocalRotation: {x: 0.2787763, y: -0.71321476, z: 0.5126444, w: 0.38833523}
-  m_LocalPosition: {x: 2.2112894, y: 4.297594, z: -0.35390413}
+  m_LocalRotation: {x: -0.33558017, y: -0.62620443, z: 0.34178415, w: -0.61517286}
+  m_LocalPosition: {x: -0.2576635, y: 5.152583, z: -0.18560554}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -37722,12 +37722,14 @@ MonoBehaviour:
   RenderTransforms: []
   RenderQue: []
   BuildQue:
+  - {fileID: 0}
   - {fileID: 499686671}
   - {fileID: 1770588100}
   - {fileID: 1931085300}
   AddQue: []
   RemoveQue: []
-  UpdateQue: []
+  UpdateQue:
+  - {fileID: 0}
   InstanceRenderQue: []
   InstanceUpdateQue: []
   InstanceRenderTransforms: []
@@ -46970,8 +46972,8 @@ MonoBehaviour:
           BBMin: {x: -82.3598, y: 0.13049984, z: -289.2569}
         w: {x: 0.83093804, y: 0.070501305, z: -0.5518798}
         phi: 808.8485
-        cosTheta_o: -0.99862635
-        cosTheta_e: 0.0000012675908
+        Theta_o: 0
+        Theta_e: 0
         LightCount: 4864
         Pad1: 0
       left: 2
@@ -46987,8 +46989,8 @@ MonoBehaviour:
           BBMin: {x: 0, y: 0, z: 0}
         w: {x: 0, y: 0, z: 0}
         phi: 0
-        cosTheta_o: 0
-        cosTheta_e: 0
+        Theta_o: 0
+        Theta_e: 0
         LightCount: 0
         Pad1: 0
       left: 0
@@ -61097,8 +61099,8 @@ MonoBehaviour:
           BBMin: {x: 0, y: 0, z: 0}
         w: {x: 0, y: 0, z: 0}
         phi: 0
-        cosTheta_o: 0
-        cosTheta_e: 0
+        Theta_o: 0
+        Theta_e: 0
         LightCount: 0
         Pad1: 0
       left: 0
@@ -61114,8 +61116,8 @@ MonoBehaviour:
           BBMin: {x: 0, y: 0, z: 0}
         w: {x: 0, y: 0, z: 0}
         phi: 0
-        cosTheta_o: 0
-        cosTheta_e: 0
+        Theta_o: 0
+        Theta_e: 0
         LightCount: 0
         Pad1: 0
       left: 0

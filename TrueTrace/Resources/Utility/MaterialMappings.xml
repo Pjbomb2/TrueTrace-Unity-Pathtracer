@@ -4289,8 +4289,18 @@
       </TexturePairs>
       <TexturePairs>
         <Purpose>1</Purpose>
-        <ReadIndex>3</ReadIndex>
-        <TextureName>_MainTex</TextureName>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_AlphaMask</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>6</Purpose>
+        <ReadIndex>-4</ReadIndex>
+        <TextureName>_Matcap2</TextureName>
+      </TexturePairs>
+      <TexturePairs>
+        <Purpose>7</Purpose>
+        <ReadIndex>0</ReadIndex>
+        <TextureName>_Matcap2Mask</TextureName>
       </TexturePairs>
     </AvailableTextures>
     <MetallicRange>null</MetallicRange>
@@ -4298,11 +4308,12 @@
     <IsGlass>false</IsGlass>
     <IsCutout>false</IsCutout>
     <UsesSmoothness>false</UsesSmoothness>
-    <BaseColorValue>null</BaseColorValue>
+    <BaseColorValue>_Color</BaseColorValue>
     <MetallicRemapMin>null</MetallicRemapMin>
     <MetallicRemapMax>null</MetallicRemapMax>
     <RoughnessRemapMin>null</RoughnessRemapMin>
     <RoughnessRemapMax>null</RoughnessRemapMax>
+    <EmissionColorValue>_EmissionColor1</EmissionColorValue>
   </MaterialShader>
   <MaterialShader>
     <Name>.poiyomi/Poiyomi 8.1/Poiyomi Toon</Name>

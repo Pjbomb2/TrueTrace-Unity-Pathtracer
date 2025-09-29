@@ -441,26 +441,26 @@ namespace CommonVars
         public AABB b;
         public Vector3 w;
         public float phi;
-        public float cosTheta_o;
-        public float cosTheta_e;
+        public float Theta_o;
+        public float Theta_e;
         public int LightCount;
         public float Pad1;
         public void Clear() {
             b.init();
             w = Vector3.zero;
             phi = 0;
-            cosTheta_e = 0;
-            cosTheta_o = 0;
+            Theta_e = 0;
+            Theta_o = 0;
             LightCount = 0;
             Pad1 = 0;
         }
 
-        public LightBounds(AABB aabb, Vector3 W, float Phi, float cosTheta_o, float cosTheta_e, int lc, int p1) {
+        public LightBounds(AABB aabb, Vector3 W, float Phi, float Theta_o, float Theta_e, int lc, int p1) {
             b = aabb;
             w = W;
             phi = Phi;
-            this.cosTheta_o = cosTheta_o;
-            this.cosTheta_e = cosTheta_e;
+            this.Theta_o = Theta_o;
+            this.Theta_e = Theta_e;
             LightCount = lc;
             Pad1 = p1;
         }

@@ -9,11 +9,7 @@ using Unity.Collections.LowLevel.Unsafe;
 namespace TrueTrace {
     [System.Serializable]
     public unsafe class LightBVHBuilder {
-        void OnDestroy() {
-            Debug.Log("EEE");
-        }
         public NodeBounds ParentBound;
-
 
         private float luminance(float r, float g, float b) { return 0.299f * r + 0.587f * g + 0.114f * b; }
 
@@ -49,66 +45,48 @@ namespace TrueTrace {
         }
 
 
-
-        public bool IsEmpty(ref LightBounds Cone) {return Cone.w == Vector3.zero;}
-
-
-
-        private void RotateRodrigues(ref Vector3 v, float angle, ref Vector3 axis, float axisLenSq) {
-            float invLen = 1f / (float)System.Math.Sqrt((double)axisLenSq);
-            axis = axis * invLen;
-
-            float cos = (float)System.Math.Cos((double)angle);
-            float sin = (float)System.Math.Sin((double)angle);
-
-            float dot = Dot(ref axis, ref v);
-            Vector3 cross = Vector3.Cross(axis, v);
-
-            v = v * cos + cross * sin + axis * dot * (1f - cos);
-        }
-        private float AngleBetween(ref Vector3 v1, ref Vector3 v2) {
-            if(Dot(ref v1, ref v2) < 0) return 3.14159f - 2.0f * (float)System.Math.Asin(Length(v1 + v2) * 0.5f);
-            else return 2.0f * (float)System.Math.Asin(Length(v2 - v1) * 0.5f);
-        }
-        public void UnionCone(ref LightBounds A, ref LightBounds B) {
-            if(A.w.x == 0 && A.w.y == 0 && A.w.z == 0) {A.w = B.w; A.cosTheta_o = B.cosTheta_o; return;}
-            if(B.w.x == 0 && B.w.y == 0 && B.w.z == 0) return;
-
-            float theta_a = (float)System.Math.Acos((double)A.cosTheta_o);
-            float theta_b = (float)System.Math.Acos((double)B.cosTheta_o);
-            float theta_d = AngleBetween(ref A.w, ref B.w);
-            float TempVar = 3.14159f;
-            if(theta_d + theta_b < TempVar) TempVar = theta_d + theta_b;
-            if(TempVar <= theta_a) return;
-            TempVar = 3.14159f;
-            if(theta_d + theta_a < TempVar) TempVar = theta_d + theta_a;
-            if(TempVar <= theta_b) {A.w = B.w; A.cosTheta_o = B.cosTheta_o; return;}
-
-            float theta_o = (theta_a + theta_d + theta_b) * 0.5f;
-            if(theta_o >= 3.14159f) {A.w = Vector3.zero; A.cosTheta_o = -1; return;}
-
-            float theta_r = theta_o - theta_a;
-            Vector3 wr = Vector3.Cross(A.w, B.w);
-            float AxisLength = Dot(ref wr, ref wr);
-            if(AxisLength == 0) {A.w = Vector3.zero; A.cosTheta_o = -1; return;}
-            RotateRodrigues(ref A.w, theta_r, ref wr, AxisLength);
-            A.cosTheta_o = (float)System.Math.Cos((double)theta_o);
-            // if(A.cosTheta_o > 1) A.cosTheta_o = 1;
-            // else if(A.cosTheta_o < -1) A.cosTheta_o = -1;
-        }
-
-
-
-    
-
+        LightBounds Temp;
         private void Union(ref LightBounds A, ref LightBounds B) {
-            if(A.phi == 0) {A = B; return;}
-            if(B.phi == 0) return;
-            UnionCone(ref A, ref B);
-            if(B.cosTheta_e < A.cosTheta_e) A.cosTheta_e = B.cosTheta_e;
+            if(A.phi == 0 || (A.w.x == 0 && A.w.y == 0 && A.w.z == 0)) {A = B; return;}
+            if(B.phi == 0 || (B.w.x == 0 && B.w.y == 0 && B.w.z == 0)) return;
             A.b.Extend(ref B.b);
-            A.phi += B.phi;
             A.LightCount += B.LightCount;
+            A.phi += B.phi;
+            if(B.Theta_o > A.Theta_o) {
+                Temp = A;
+                A.w = B.w;
+                A.Theta_o = B.Theta_o;
+                A.Theta_e = B.Theta_e;
+                B.w = Temp.w;
+                B.Theta_o = Temp.Theta_o;
+                B.Theta_e = Temp.Theta_e;
+            }
+            float cos_a_b = Dot(ref A.w, ref B.w);
+            if(cos_a_b > 1) cos_a_b = 1;
+            else if(cos_a_b < -1) cos_a_b = -1;
+            float theta_d = (float)System.Math.Acos((double)cos_a_b);
+            if(B.Theta_e > A.Theta_e) A.Theta_e = B.Theta_e;
+            float CompVal = theta_d + B.Theta_o;
+            if(Mathf.PI < CompVal) CompVal = Mathf.PI;
+            if(A.Theta_o + 5e-4f >= CompVal) {
+                return; 
+            }
+            float theta_o = (theta_d + A.Theta_o + B.Theta_o) * 0.5f;
+            if(theta_o >= Mathf.PI) {
+                A.Theta_o = Mathf.PI;
+                return;
+            }
+            if(cos_a_b < -0.9995f) {
+                if (A.w.x != A.w.y || A.w.x != A.w.z) A.w = new Vector3(A.w.z - A.w.y, A.w.x - A.w.z, A.w.y - A.w.x);  //(1,1,1)x N
+                else A.w = new Vector3(A.w.z - A.w.y, A.w.x + A.w.z, -A.w.y - A.w.x);  //(-1,1,1)x N
+                Normalize(ref A.w);
+            } else {
+                float theta_r = theta_o - A.Theta_o;
+                Vector3 new_axis = B.w - A.w * cos_a_b;
+                Normalize(ref new_axis);
+                A.w = A.w * (float)System.Math.Cos((double)theta_r) + new_axis * (float)System.Math.Sin((double)theta_r);
+            }
+            A.Theta_o = theta_o;
         }
 
         float surface_area(ref AABB aabb) {
@@ -116,148 +94,23 @@ namespace TrueTrace {
             return (d.x + d.y) * d.z + d.x * d.y; 
         }
 
-        private float EvaluateCost(ref LightBounds b, float Kr) {
-            float theta_o = (float)System.Math.Acos(b.cosTheta_o);
-            float theta_e = (float)System.Math.Acos(b.cosTheta_e);
-            float theta_w = 3.14159f;
-            if(theta_o + theta_e < theta_w) theta_w = theta_o + theta_e;
-            float sinTheta_o = (float)System.Math.Sqrt(1.0f - b.cosTheta_o * b.cosTheta_o);
-            float M_omega = 2.0f * 3.14159f * (1.0f - b.cosTheta_o) +
-                            3.14159f / 2.0f *
-                                (2.0f * theta_w * sinTheta_o -(float)System.Math.Cos(theta_o - 2.0f * theta_w) -
-                                 2.0f * theta_o * sinTheta_o + b.cosTheta_o);
+   
 
-            
+        private float EvaluateCost(ref LightBounds b, float Kr) {
+            // if(b.w == Vector3.zero) return 0;
+            float theta_o = b.Theta_o;
+            float theta_w = theta_o + b.Theta_e;
+            if(theta_w > Mathf.PI) theta_w = Mathf.PI;
+            float cos_theta_o = (float)System.Math.Cos((double)theta_o);
+            float sin_theta_o = (float)System.Math.Sin((double)theta_o);
+            float M_omega = 6.2831853071795864f * (1.0f - cos_theta_o) +
+                            1.5707963267948966f * (2.0f * theta_w * sin_theta_o - (float)System.Math.Cos((double)(theta_o - 2.0f * theta_w)) -
+                                                    2.0f * theta_o * sin_theta_o + cos_theta_o);
             int LightCoun = b.LightCount;
             if(LightCoun < 1) LightCoun = 1;
             return b.phi * M_omega * Kr * surface_area(ref b.b) / (float)LightCoun;
         }
 
-        // private float InlinedUnion()
-
-        // {
-        //     if(A.phi == 0) {A = B;}
-        //     else if(B.phi != 0) {
-        //         if(A.w.x == 0 && A.w.y == 0 && A.w.z == 0) {A.w = B.w; A.cosTheta_o = B.cosTheta_o;}
-        //         else if(!(B.w.x == 0 && B.w.y == 0 && B.w.z == 0)) {
-        //             float theta_a = (float)System.Math.Acos((double)A.cosTheta_o);
-        //             float theta_b = (float)System.Math.Acos((double)B.cosTheta_o);
-        //             float theta_d;
-        //             if(Dot(ref A.w, ref B.w) < 0) theta_d = 3.14159f - 2.0f * (float)System.Math.Asin(Length(A.w + B.w) * 0.5f);
-        //             else theta_d = 2.0f * (float)System.Math.Asin(Length(B.w - A.w) * 0.5f);
-
-        //             float TempVar = 3.14159f;
-        //             if(theta_d + theta_b < TempVar) TempVar = theta_d + theta_b;
-        //             if(TempVar > theta_a) {
-        //                 TempVar = 3.14159f;
-        //                 if(theta_d + theta_a < TempVar) TempVar = theta_d + theta_a;
-        //                 if(TempVar <= theta_b) {A.w = B.w; A.cosTheta_o = B.cosTheta_o;}
-        //                 else {
-        //                     float theta_o = (theta_a + theta_d + theta_b) * 0.5f;
-        //                     if(theta_o >= 3.14159f) {A.w = Vector3.zero; A.cosTheta_o = -1;}
-        //                     else {
-        //                         float theta_r = theta_o - theta_a;
-        //                         Vector3 wr = Vector3.Cross(A.w, B.w);
-        //                         float AxisLength = Dot(ref wr, ref wr);
-        //                         if(AxisLength == 0) {A.w = Vector3.zero; A.cosTheta_o = -1;}
-        //                         else {
-        //                             float invLen = 1f / (float)System.Math.Sqrt((double)AxisLength);
-        //                             wr = wr * invLen;
-
-        //                             float cos = (float)System.Math.Cos((double)theta_r);
-        //                             float sin = (float)System.Math.Sin((double)theta_r);
-
-        //                             float dot = Dot(ref wr, ref A.w);
-        //                             Vector3 cross = Vector3.Cross(wr, A.w);
-
-        //                             A.w = A.w * cos + cross * sin + axis * dot * (1f - cos);
-        //                             A.cosTheta_o = (float)System.Math.Cos((double)theta_o);
-        //                         }
-        //                     }
-        //                 }
-        //             }
-        //         }
-
-        //         if(B.cosTheta_e < A.cosTheta_e) A.cosTheta_e = B.cosTheta_e;
-        //         A.b.Extend(ref B.b);
-        //         A.phi += B.phi;
-        //         A.LightCount += B.LightCount;
-        //     }
-
-        // }
-        private float Dat = Mathf.PI;
-        float theta_o;
-        private float InlinedUnionCost(ref LightBounds A, ref LightBounds B, float Kr)
-
-        {
-            float Cos = Dat;
-            if(A.phi == 0) {A = B; Cos = (float)System.Math.Acos((double)A.cosTheta_o);}
-            else if(B.phi != 0) {
-                if(A.w.x == 0 && A.w.y == 0 && A.w.z == 0) {A.w = B.w; A.cosTheta_o = B.cosTheta_o; Cos = (float)System.Math.Acos((double)A.cosTheta_o);}
-                else if(B.w.x == 0 && B.w.y == 0 && B.w.z == 0) Cos = (float)System.Math.Acos((double)A.cosTheta_o);
-                else {
-                    float theta_a = (float)System.Math.Acos((double)A.cosTheta_o);
-                    float theta_b = (float)System.Math.Acos((double)B.cosTheta_o);
-                    float theta_d;
-                    if(Dot(ref A.w, ref B.w) < 0) theta_d = 3.14159f - 2.0f * (float)System.Math.Asin(Length(A.w + B.w) * 0.5f);
-                    else theta_d = 2.0f * (float)System.Math.Asin(Length(B.w - A.w) * 0.5f);
-
-                    float TempVar = 3.14159f;
-                    if(theta_d + theta_b < TempVar) TempVar = theta_d + theta_b;
-                    if(TempVar <= theta_a) Cos = theta_a;
-                    else {
-                        TempVar = 3.14159f;
-                        if(theta_d + theta_a < TempVar) TempVar = theta_d + theta_a;
-                        if(TempVar <= theta_b) {A.w = B.w; A.cosTheta_o = B.cosTheta_o; Cos = theta_b;}
-                        else {
-                            theta_o = (theta_a + theta_d + theta_b) * 0.5f;
-                            if(theta_o >= 3.14159f) {A.w = Vector3.zero; A.cosTheta_o = -1;}
-                            else {
-                                float theta_r = theta_o - theta_a;
-                                Vector3 wr = Vector3.Cross(A.w, B.w);
-                                float AxisLength = Dot(ref wr, ref wr);
-                                if(AxisLength == 0) {A.w = Vector3.zero; A.cosTheta_o = -1;}
-                                else {
-                                    float invLen = 1f / (float)System.Math.Sqrt((double)AxisLength);
-                                    wr = wr * invLen;
-
-                                    float cos = (float)System.Math.Cos((double)theta_r);
-                                    float sin = (float)System.Math.Sin((double)theta_r);
-
-                                    float dot = Dot(ref wr, ref A.w);
-                                    Vector3 cross = Vector3.Cross(wr, A.w);
-
-                                    A.w = A.w * cos + cross * sin + wr * dot * (1f - cos);
-                                    Cos = theta_o;
-                                    A.cosTheta_o = (float)System.Math.Cos((double)theta_o);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if(B.cosTheta_e < A.cosTheta_e) A.cosTheta_e = B.cosTheta_e;
-                A.b.Extend(ref B.b);
-                A.phi += B.phi;
-                A.LightCount += B.LightCount;
-            }
-
-            theta_o = Cos;
-            float theta_e = (float)System.Math.Acos(A.cosTheta_e);
-            float theta_w = 3.14159f;
-            if(theta_o + theta_e < theta_w) theta_w = theta_o + theta_e;
-            float sinTheta_o = (float)System.Math.Sqrt(1.0f - A.cosTheta_o * A.cosTheta_o);
-            float M_omega = 2.0f * 3.14159f * (1.0f - A.cosTheta_o) +
-                            3.14159f / 2.0f *
-                                (2.0f * theta_w * sinTheta_o -(float)System.Math.Cos(theta_o - 2.0f * theta_w) -
-                                 2.0f * theta_o * sinTheta_o + A.cosTheta_o);
-
-            
-            int LightCoun = A.LightCount;
-            if(LightCoun < 1) LightCoun = 1;
-            return A.phi * M_omega * Kr * surface_area(ref A.b) / (float)LightCoun;
-
-        }
 
 
         private LightBounds* LightTris;
@@ -291,7 +144,6 @@ namespace TrueTrace {
         }
         private ObjectSplit split = new ObjectSplit();
 
-
         LightBounds aabb_left;
         LightBounds aabb_right;
         void partition_sah(int first_index, int index_count, AABB parentBounds) {
@@ -313,10 +165,9 @@ namespace TrueTrace {
                 aabb_left = LightTris[DimensionedIndices[Offset]];
                 SAH[1] = EvaluateCost(ref aabb_left, Kr);
                 for(int i = 2; i < index_count; i++) {
-                    // Union(ref aabb_left, ref LightTris[DimensionedIndices[Offset + i - 1]]);
+                    Union(ref aabb_left, ref LightTris[DimensionedIndices[Offset + i - 1]]);
 
-                    SAH[i] = InlinedUnionCost(ref aabb_left, ref LightTris[DimensionedIndices[Offset + i - 1]], Kr) * (float)i;
-                    // SAH[i] = EvaluateCost(ref aabb_left, Kr) * (float)i;
+                    SAH[i] = EvaluateCost(ref aabb_left, Kr) * (float)i;
                 }
 
                 {
@@ -334,10 +185,9 @@ namespace TrueTrace {
 
 
                 for(int i = index_count - 2; i > 0; i--) {
-                    // Union(ref aabb_right, ref LightTris[DimensionedIndices[Offset + i]]);
+                    Union(ref aabb_right, ref LightTris[DimensionedIndices[Offset + i]]);
 
-                    // float LeftCost = EvaluateCost(ref aabb_right, Kr) * (float)(index_count - i);
-                    float LeftCost = InlinedUnionCost(ref aabb_right, ref LightTris[DimensionedIndices[Offset + i]], Kr) * (float)(index_count - i);
+                    float LeftCost = EvaluateCost(ref aabb_right, Kr) * (float)(index_count - i);
                     if(LeftCost >= split.cost) break;
                     float cost = SAH[i] + LeftCost;
 
@@ -366,7 +216,7 @@ namespace TrueTrace {
             if(index_count == 1) {
                 nodes2[nodesi].left = first_index;
                 nodes2[nodesi].isLeaf = 1;
-                MaxDepth = System.Math.Max(Depth, MaxDepth);
+                if(Depth > MaxDepth) MaxDepth = Depth;
                 return;
             }
             partition_sah(first_index, index_count, nodes2[nodesi].aabb.b);
@@ -412,7 +262,7 @@ namespace TrueTrace {
         public List<int>[] MainSet;
         public List<int>[] Set;
         void Refit(int Depth, int CurrentIndex) {
-            if(nodes2[CurrentIndex].aabb.cosTheta_e == 0) return;
+            if((float)System.Math.Cos((double)nodes2[CurrentIndex].aabb.Theta_e) == 0) return;
             MainSet[Depth].Add(CurrentIndex);
             if(nodes2[CurrentIndex].isLeaf == 1) return;
             Refit(Depth + 1, nodes2[CurrentIndex].left);
@@ -420,7 +270,7 @@ namespace TrueTrace {
         }
 
         private void Refit2(int Depth, int CurrentIndex) {
-            if((2.0f * ((float)(nodes[CurrentIndex].cosTheta_oe >> 16) / 32767.0f) - 1.0f) == 0) return;
+            if((float)System.Math.Cos((double)(2.0f * ((float)(nodes[CurrentIndex].cosTheta_oe >> 16) / 32767.0f) - 1.0f)) == 0) return;
             Set[Depth].Add(CurrentIndex);
             if(nodes[CurrentIndex].left < 0) return;
             Refit2(Depth + 1, nodes[CurrentIndex].left);
@@ -429,7 +279,7 @@ namespace TrueTrace {
 
         float expm1_over_x(float x)
         {
-            float u = Mathf.Exp(x);
+            float u =(float)System.Math.Exp((double)x);
 
             if (u == 1.0f)
             {
@@ -440,7 +290,7 @@ namespace TrueTrace {
 
             if (Mathf.Abs(x) < 1.0f)
             {
-                return y / Mathf.Log(u);
+                return y / (float)System.Math.Log((double)u);
             }
 
             return y / x;
@@ -468,10 +318,10 @@ namespace TrueTrace {
             // [Peters, C. 2016 "How to solve a cubic equation, revisited" https://momentsingraphics.de/CubicRoots.html]
             float a = sharpness / 3.0f;
             float b = a * a * a;
-            float c = Mathf.Sqrt(1.0f + 3.0f * (a * a) * (1.0f + a * a));
-            float theta = Mathf.Atan2(c, b) / 3.0f;
-            float d = -2.0f * Mathf.Sin(Mathf.PI / 6.0f - theta); // = sin(theta) * sqrt(3) - cos(theta).
-            return (sharpness > 33554432.0f) ? 1.0f : Mathf.Sqrt(1.0f + a * a) * d + a;
+            float c = (float)System.Math.Sqrt((double)(1.0f + 3.0f * (a * a) * (1.0f + a * a)));
+            float theta = (float)System.Math.Atan2(c, b) / 3.0f;
+            float d = -2.0f * (float)System.Math.Sin((double)(Mathf.PI / 6.0f - theta)); // = sin(theta) * sqrt(3) - cos(theta).
+            return (sharpness > 33554432.0f) ? 1.0f : (float)System.Math.Sqrt((double)(1.0f + a * a)) * d + a;
         }
 
 
@@ -496,16 +346,15 @@ namespace TrueTrace {
 
             AABB TriAABB = new AABB();
             Vector3 Scaler = new Vector3(0.0001f,0.0001f,0.0001f);
-            float Precomputed = (float)System.Math.Cos(3.14159f / 2.0f);
+            float Precomputed = Mathf.PI / 2.0f;//(float)System.Math.Cos(Mathf.PI / 2.0f);
             for(int i = 0; i < PrimCount; i++) {
                 TriAABB.init();
                 TriAABB.Extend(Tris[i].pos0);
                 TriAABB.Extend(Tris[i].pos0 + Tris[i].posedge1);
                 TriAABB.Extend(Tris[i].pos0 + Tris[i].posedge2);
                 TriAABB.Validate(Scaler);
-                DirectionCone tricone = new DirectionCone(-Norms[i], 1);
                 float ThisPhi = AreaOfTriangle(Tris[i].pos0, Tris[i].pos0 + Tris[i].posedge1, Tris[i].pos0 + Tris[i].posedge2) * LuminanceWeights[i];
-                LightBounds TempBound = new LightBounds(TriAABB, tricone.W, ThisPhi, tricone.cosTheta,Precomputed, 1, 0);
+                LightBounds TempBound = new LightBounds(TriAABB, -Norms[i], ThisPhi, 0,Precomputed, 1, 0);
                 LightTris[i] = TempBound;
                 FinalIndices[i] = i;
                 SAH[i] = (TriAABB.BBMax.x + TriAABB.BBMin.x) * 0.5f;
@@ -537,27 +386,23 @@ namespace TrueTrace {
             if(SAHArray.IsCreated) SAHArray.Dispose();
             if(LightTrisArray.IsCreated) LightTrisArray.Dispose();
 
-            for(int i = 0; i < PrimCount * 2; i++) {
-                if(nodes2[i].isLeaf == 1) {
-                    nodes2[i].left = DimensionedIndices[nodes2[i].left];
-                }
-            }
-            DimensionedIndicesArray.Dispose();
-            nodes = new CompactLightBVHData[PrimCount * 2];
-            for(int i = 0; i < PrimCount * 2; i++) {
+            int Count = PrimCount * 2;
+            nodes = new CompactLightBVHData[Count];
+            for(int i = 0; i < Count; i++) {
                 CompactLightBVHData TempNode = new CompactLightBVHData();
                 TempNode.BBMax = nodes2[i].aabb.b.BBMax;
                 TempNode.BBMin = nodes2[i].aabb.b.BBMin;
                 TempNode.w = CommonFunctions.PackOctahedral(nodes2[i].aabb.w);
                 TempNode.phi = nodes2[i].aabb.phi;
-                TempNode.cosTheta_oe = ((uint)Mathf.Floor(32767.0f * ((nodes2[i].aabb.cosTheta_o + 1.0f) / 2.0f))) | ((uint)Mathf.Floor(32767.0f * ((nodes2[i].aabb.cosTheta_e + 1.0f) / 2.0f)) << 16);
+                TempNode.cosTheta_oe = ((uint)Mathf.Floor(32767.0f * (((float)System.Math.Cos((double)nodes2[i].aabb.Theta_o) + 1.0f) / 2.0f))) | ((uint)Mathf.Floor(32767.0f * (((float)System.Math.Cos((double)nodes2[i].aabb.Theta_e) + 1.0f) / 2.0f)) << 16);
                 if(nodes2[i].isLeaf == 1) {
-                    TempNode.left = (-nodes2[i].left) - 1;
+                    TempNode.left = (-DimensionedIndices[nodes2[i].left]) - 1;
                 } else {
                     TempNode.left = nodes2[i].left;
                 }
                 nodes[i] = TempNode;
             }
+            DimensionedIndicesArray.Dispose();
             ParentBound = nodes2[0];
             nodes2Array.Dispose();
 #if !DontUseSGTree
@@ -585,7 +430,7 @@ namespace TrueTrace {
                             intensity = ThisLight.SourceEnergy * area;
                             V = 0.5f * -Norms[-(LBVHNode.left+1)];//(Vector3.Cross(ThisLight.posedge1.normalized, ThisLight.posedge2.normalized).normalized);
                             mean = (ThisLight.pos0 + (ThisLight.pos0 + ThisLight.posedge1) + (ThisLight.pos0 + ThisLight.posedge2)) / 3.0f;
-                            variance = (Vector3.Dot(ThisLight.posedge1, ThisLight.posedge1) + Vector3.Dot(ThisLight.posedge2, ThisLight.posedge2) - Vector3.Dot(ThisLight.posedge1, ThisLight.posedge2)) / 18.0f;
+                            variance = (Dot(ref ThisLight.posedge1, ref ThisLight.posedge1) + Dot(ref ThisLight.posedge2, ref ThisLight.posedge2) - Dot(ref ThisLight.posedge1, ref ThisLight.posedge2)) / 18.0f;
                             radius = Mathf.Max(Mathf.Max(Distance(mean, ThisLight.pos0), Distance(mean, ThisLight.pos0 + ThisLight.posedge1)), Distance(mean, ThisLight.pos0 + ThisLight.posedge2));
                         } else {
                             GaussianTreeNode LeftNode = SGTree[nodes[WriteIndex].left];    
@@ -604,10 +449,10 @@ namespace TrueTrace {
                             intensity = LeftNode.intensity + RightNode.intensity;
                             radius = Mathf.Max(Distance(mean, LeftNode.S.Center) + LeftNode.S.Radius, Distance(mean, RightNode.S.Center) + RightNode.S.Radius);
                         }
-                        float AxisLength = Distance(Vector3.zero, V);
+                        float AxisLength = Length(V);
                         if(AxisLength == 0) V = new Vector3(0,1,0);
                         else V /= AxisLength;
-                        TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness(Mathf.Clamp(AxisLength, 0.0f, 1.0f)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
+                        TempNode.sharpness = Mathf.Min(VMFAxisLengthToSharpness((float)System.Math.Clamp((double)AxisLength, 0.0d, 1.0d)), 2199023255552.0f);// ((3.0f * Distance(Vector3.zero, V) - Mathf.Pow(Distance(Vector3.zero, V), 3))) / (1.0f - Mathf.Pow(Distance(Vector3.zero, V), 2));
                         TempNode.axis = V;
                         TempNode.S.Center = mean;
                         TempNode.variance = variance;
@@ -695,7 +540,7 @@ namespace TrueTrace {
                 TempNode.BBMin = nodes2[i].aabb.b.BBMin;
                 TempNode.w = CommonFunctions.PackOctahedral(nodes2[i].aabb.w);
                 TempNode.phi = nodes2[i].aabb.phi;
-                TempNode.cosTheta_oe = ((uint)Mathf.Floor(32767.0f * ((nodes2[i].aabb.cosTheta_o + 1.0f) / 2.0f))) | ((uint)Mathf.Floor(32767.0f * ((nodes2[i].aabb.cosTheta_e + 1.0f) / 2.0f)) << 16);
+                TempNode.cosTheta_oe = ((uint)Mathf.Floor(32767.0f * (((float)System.Math.Cos((double)nodes2[i].aabb.Theta_o) + 1.0f) / 2.0f))) | ((uint)Mathf.Floor(32767.0f * (((float)System.Math.Cos((double)nodes2[i].aabb.Theta_e) + 1.0f) / 2.0f)) << 16);
                 if(nodes2[i].isLeaf == 1) {
                     TempNode.left = (-nodes2[i].left) - 1;
                 } else {
@@ -833,7 +678,7 @@ namespace TrueTrace {
                 TempNode.BBMin = nodes2[i].aabb.b.BBMin;
                 TempNode.w = CommonFunctions.PackOctahedral(nodes2[i].aabb.w);
                 TempNode.phi = nodes2[i].aabb.phi;
-                TempNode.cosTheta_oe = ((uint)Mathf.Floor(32767.0f * ((nodes2[i].aabb.cosTheta_o + 1.0f) / 2.0f))) | ((uint)Mathf.Floor(32767.0f * ((nodes2[i].aabb.cosTheta_e + 1.0f) / 2.0f)) << 16);
+                TempNode.cosTheta_oe = ((uint)Mathf.Floor(32767.0f * (((float)System.Math.Cos((double)nodes2[i].aabb.Theta_o) + 1.0f) / 2.0f))) | ((uint)Mathf.Floor(32767.0f * (((float)System.Math.Cos((double)nodes2[i].aabb.Theta_e) + 1.0f) / 2.0f)) << 16);
                 if(nodes2[i].isLeaf == 1) {
                     TempNode.left = (-nodes2[i].left) - 1;
                 } else {

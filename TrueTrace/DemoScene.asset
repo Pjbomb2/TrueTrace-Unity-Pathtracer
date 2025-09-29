@@ -20,7 +20,7 @@ MonoBehaviour:
   UseNEE: 1
   DoTLASUpdates: 1
   Accumulate: 1
-  PPBloom: 0
+  PPBloom: 1
   BloomStrength: 0.5
   PPDoF: 0
   DoFAperature: 0.2
