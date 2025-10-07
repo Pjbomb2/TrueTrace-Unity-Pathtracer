@@ -1275,11 +1275,7 @@ namespace TrueTrace {
                             #if DX11Only
                                 cmd.DispatchCompute(IntersectionShader, TraceKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
                             #else
-                                #if HardwareRT
-                                    cmd.DispatchCompute(IntersectionShader, TraceKernel, CurBounceInfoBuffer, 0);//784 is 28^2
-                                #else
-                                    cmd.DispatchCompute(IntersectionShader, TraceKernel, 64, 64, 1);
-                                #endif
+                                cmd.DispatchCompute(IntersectionShader, TraceKernel, CurBounceInfoBuffer, 0);//784 is 28^2
                             #endif
                             if(DoKernelProfiling) cmd.EndSample("Trace Kernel: " + i);
 
@@ -1313,11 +1309,7 @@ namespace TrueTrace {
                                 #if DX11Only
                                     cmd.DispatchCompute(IntersectionShader, ShadowKernel, Mathf.CeilToInt((SourceHeight * SourceWidth) / 64.0f), 1, 1);
                                 #else
-                                    #if HardwareRT
-                                        cmd.DispatchCompute(IntersectionShader, ShadowKernel, CurBounceInfoBuffer, 0);
-                                    #else
-                                        cmd.DispatchCompute(IntersectionShader, ShadowKernel, 64, 64, 1);
-                                    #endif
+                                    cmd.DispatchCompute(IntersectionShader, ShadowKernel, CurBounceInfoBuffer, 0);
                                 #endif
                                 if(DoKernelProfiling) cmd.EndSample("Shadow Kernel: " + i);
                             }

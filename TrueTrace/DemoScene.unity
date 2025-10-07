@@ -210,6 +210,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -332,6 +333,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -454,6 +456,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -576,6 +579,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -698,6 +702,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -832,6 +837,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -966,6 +972,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -1108,6 +1115,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -1230,6 +1238,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -1352,6 +1361,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -1399,6 +1409,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   - 0
@@ -1524,6 +1535,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -1652,6 +1664,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -1786,6 +1799,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -1934,6 +1948,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2088,6 +2103,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2224,6 +2240,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2372,6 +2389,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2494,6 +2512,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2640,6 +2659,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2776,6 +2796,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -2970,6 +2991,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3124,6 +3146,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3246,6 +3269,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3388,6 +3412,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3530,6 +3555,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3652,6 +3678,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3788,6 +3815,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -3924,6 +3952,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -3971,6 +4000,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   - 0
@@ -4128,6 +4158,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -4274,6 +4305,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -4396,6 +4428,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -4524,6 +4557,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -4658,6 +4692,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -4798,6 +4833,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -4932,6 +4968,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5104,6 +5141,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5286,6 +5324,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5434,6 +5473,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5562,6 +5602,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5690,6 +5731,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5826,6 +5868,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -5968,6 +6011,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6108,6 +6152,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6236,6 +6281,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6358,6 +6404,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6532,6 +6579,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6654,6 +6702,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6776,6 +6825,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -6904,6 +6954,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7032,6 +7083,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7154,6 +7206,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7328,6 +7381,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7450,6 +7504,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7598,6 +7653,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7726,6 +7782,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7848,6 +7905,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -7982,6 +8040,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8110,6 +8169,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8232,6 +8292,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8360,6 +8421,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8526,6 +8588,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8654,6 +8717,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8794,6 +8858,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -8956,6 +9021,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9078,6 +9144,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9224,6 +9291,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9374,6 +9442,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9530,6 +9599,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9688,6 +9758,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9816,6 +9887,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -9938,6 +10010,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10060,6 +10133,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10216,6 +10290,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10338,6 +10413,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10460,6 +10536,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10632,6 +10709,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10780,6 +10858,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -10914,6 +10993,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11042,6 +11122,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11184,6 +11265,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11334,6 +11416,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11476,6 +11559,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11626,6 +11710,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11748,6 +11833,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -11985,6 +12071,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -12131,6 +12218,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -12253,6 +12341,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -12425,6 +12514,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -12547,6 +12637,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -12792,7 +12883,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -12894,6 +12985,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13080,6 +13172,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13202,6 +13295,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13336,6 +13430,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13478,6 +13573,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13614,6 +13710,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13736,6 +13833,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -13872,6 +13970,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -14130,6 +14229,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -14278,6 +14378,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -14438,6 +14539,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -14566,6 +14668,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -14756,6 +14859,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -14878,6 +14982,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -15000,6 +15105,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -15150,6 +15256,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -15358,6 +15465,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -15514,6 +15622,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -15656,6 +15765,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -15790,6 +15900,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -15912,6 +16023,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16052,6 +16164,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16174,6 +16287,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16296,6 +16410,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16418,6 +16533,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16552,6 +16668,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16732,6 +16849,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -16912,6 +17030,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17034,6 +17153,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -17081,6 +17201,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   - 0
@@ -17212,6 +17333,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17334,6 +17456,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17456,6 +17579,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17598,6 +17722,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17772,6 +17897,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -17894,6 +18020,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18030,6 +18157,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18178,6 +18306,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18314,6 +18443,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18450,6 +18580,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18572,6 +18703,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18694,6 +18826,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18822,6 +18955,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -18956,6 +19090,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19084,6 +19219,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19212,6 +19348,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19334,6 +19471,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19456,6 +19594,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19578,6 +19717,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19700,6 +19840,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -19846,6 +19987,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -19893,6 +20035,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   - 0
@@ -20024,6 +20167,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20158,6 +20302,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20298,6 +20443,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20440,6 +20586,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20626,6 +20773,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20774,6 +20922,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -20922,6 +21071,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21050,6 +21200,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21190,6 +21341,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21356,6 +21508,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21478,6 +21631,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21600,6 +21754,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21736,6 +21891,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21864,6 +22020,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -21992,6 +22149,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22120,6 +22278,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22254,6 +22413,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22396,6 +22556,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22530,6 +22691,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22652,6 +22814,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22780,6 +22943,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -22920,6 +23084,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23104,6 +23269,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23226,6 +23392,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23404,6 +23571,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23602,6 +23770,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23724,6 +23893,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -23866,6 +24036,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24008,6 +24179,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24136,6 +24308,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24258,6 +24431,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24380,6 +24554,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24528,6 +24703,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24668,6 +24844,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24790,6 +24967,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -24938,6 +25116,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25060,6 +25239,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25182,6 +25362,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25304,6 +25485,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25432,6 +25614,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25554,6 +25737,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25676,6 +25860,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25798,6 +25983,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -25920,6 +26106,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26048,6 +26235,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26222,6 +26410,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26364,6 +26553,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26518,6 +26708,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26666,6 +26857,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -26860,6 +27052,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27022,6 +27215,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27150,6 +27344,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27272,6 +27467,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27400,6 +27596,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27594,6 +27791,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27730,6 +27928,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27872,6 +28071,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -27994,6 +28194,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28116,6 +28317,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28401,6 +28603,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28541,6 +28744,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28689,6 +28893,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28817,6 +29022,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -28939,6 +29145,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29095,6 +29302,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29235,6 +29443,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29357,6 +29566,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29491,6 +29701,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29613,6 +29824,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29741,6 +29953,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29869,6 +30082,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -29991,6 +30205,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30119,6 +30334,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -30166,6 +30382,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   - 0
@@ -30303,6 +30520,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30425,6 +30643,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30553,6 +30772,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30675,6 +30895,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30847,6 +31068,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -30995,6 +31217,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31129,6 +31352,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31279,6 +31503,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31407,6 +31632,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31579,6 +31805,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31701,6 +31928,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31835,6 +32063,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -31963,6 +32192,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -32085,6 +32315,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -32299,6 +32530,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -32427,6 +32659,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -32474,6 +32707,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   - 0
@@ -32643,6 +32877,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -32805,6 +33040,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -32927,6 +33163,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -33081,6 +33318,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -33203,6 +33441,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -33345,6 +33584,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -33467,6 +33707,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -33639,6 +33880,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -33761,6 +34003,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -33808,6 +34051,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   - 0
@@ -33933,6 +34177,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34055,6 +34300,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34197,6 +34443,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34319,6 +34566,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34473,6 +34721,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34595,6 +34844,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34717,6 +34967,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34839,6 +35090,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -34987,6 +35239,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35109,6 +35362,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35255,6 +35509,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35397,6 +35652,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35525,6 +35781,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35647,6 +35904,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35775,6 +36033,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -35909,6 +36168,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36031,6 +36291,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36171,6 +36432,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36293,6 +36555,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36415,6 +36678,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36537,6 +36801,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36671,6 +36936,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36831,6 +37097,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -36959,6 +37226,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37087,6 +37355,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37209,6 +37478,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37343,6 +37613,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37465,6 +37736,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37729,7 +38001,7 @@ MonoBehaviour:
   AddQue: []
   RemoveQue: []
   UpdateQue:
-  - {fileID: 0}
+  - {fileID: 1770588100}
   InstanceRenderQue: []
   InstanceUpdateQue: []
   InstanceRenderTransforms: []
@@ -37833,6 +38105,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -37967,6 +38240,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38121,6 +38395,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38281,6 +38556,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38427,6 +38703,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38549,6 +38826,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38677,6 +38955,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38843,6 +39122,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -38971,6 +39251,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -39093,6 +39374,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -39277,6 +39559,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -39324,6 +39607,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   - 0
@@ -39449,6 +39733,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -39571,6 +39856,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -39713,6 +39999,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -39835,6 +40122,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -39971,6 +40259,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40093,6 +40382,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40247,6 +40537,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40387,6 +40678,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40515,6 +40807,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40657,6 +40950,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40835,6 +41129,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -40969,6 +41264,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41091,6 +41387,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41233,6 +41530,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41393,6 +41691,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41515,6 +41814,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41651,6 +41951,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41779,6 +42080,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -41915,6 +42217,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42065,6 +42368,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42217,6 +42521,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42345,6 +42650,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42501,6 +42807,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42629,6 +42936,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42757,6 +43065,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -42879,6 +43188,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -43021,6 +43331,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -43143,6 +43454,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -43265,6 +43577,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -43387,6 +43700,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -43523,6 +43837,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -46594,6 +46909,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -46716,6 +47032,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -46838,6 +47155,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -46885,6 +47203,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   - 0
@@ -47003,7 +47322,7 @@ MonoBehaviour:
       cosTheta_oe: 0
       left: 0
   ExistsInQue: 1
-  QueInProgress: 1
+  QueInProgress: 2
   RenderImposters: 0
   IsDeformable: 0
   Name: sponza
@@ -47800,7 +48119,7 @@ MonoBehaviour:
   LightEndIndex: 0
   aabb_untransformed:
     BBMax: {x: 1920.9459, y: 1429.4332, z: 1105.426}
-    BBMin: {x: -1799.9081, y: -126.4425, z: -1182.8071}
+    BBMin: {x: -1799.9081, y: -126.542496, z: -1182.8071}
   aabb:
     BBMax: {x: 0, y: 0, z: 0}
     BBMin: {x: 0, y: 0, z: 0}
@@ -54679,7 +54998,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -55144,8 +55463,8 @@ MonoBehaviour:
   - {fileID: 407059350}
   - {fileID: 290148810}
   - {fileID: 582978298}
-  center: {x: 60.51892, y: 651.49536, z: -38.69055}
-  extent: {x: 1860.427, y: 777.93787, z: 1144.1166}
+  center: {x: 60.51892, y: 651.4454, z: -38.69055}
+  extent: {x: 1860.427, y: 777.98785, z: 1144.1166}
   HasTransformChanged: 0
   BotherToUpdate: 1
 --- !u!4 &1770588101 stripped
@@ -55281,6 +55600,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -55455,6 +55775,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -55603,6 +55924,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -55777,6 +56099,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -55945,6 +56268,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -56147,6 +56471,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -56295,6 +56620,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -56489,6 +56815,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -56703,6 +57030,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -56851,6 +57179,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -57085,6 +57414,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -57305,6 +57635,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -57597,6 +57928,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -57823,6 +58155,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -57971,6 +58304,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -58145,6 +58479,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -58307,6 +58642,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -58501,6 +58837,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -58649,6 +58986,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -58947,6 +59285,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -59115,6 +59454,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -59263,6 +59603,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -59411,6 +59752,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -59559,6 +59901,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -59721,6 +60064,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -59901,6 +60245,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -60069,6 +60414,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -60323,6 +60669,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -60471,6 +60818,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -60639,6 +60987,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -60953,6 +61302,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -61166,8 +61516,8 @@ MonoBehaviour:
   InstanceMeshIndex: 0
   LightEndIndex: 0
   aabb_untransformed:
-    BBMax: {x: 0.5, y: 0.5, z: 0.5}
-    BBMin: {x: -0.5, y: -0.5, z: -0.5}
+    BBMax: {x: 0.501, y: 0.501, z: 0.501}
+    BBMin: {x: -0.501, y: -0.501, z: -0.501}
   aabb:
     BBMax: {x: 3.074679, y: 2.031, z: 3.2144024}
     BBMin: {x: -3.074679, y: 1.029, z: -3.2144024}
@@ -61224,7 +61574,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 3
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
@@ -61262,7 +61612,7 @@ MonoBehaviour:
   ChildObjectTransforms:
   - {fileID: 1931085298}
   center: {x: 0, y: 0, z: 0}
-  extent: {x: 0.5, y: 0.5, z: 0.5}
+  extent: {x: 0.501, y: 0.501, z: 0.501}
   HasTransformChanged: 0
   BotherToUpdate: 1
 --- !u!114 &1931085301
@@ -61326,6 +61676,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -61511,6 +61862,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -61757,6 +62109,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -61957,6 +62310,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -62105,6 +62459,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -62287,6 +62642,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -62481,6 +62837,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -62643,6 +63000,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -63167,6 +63525,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -63315,6 +63674,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -63469,6 +63829,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -63637,6 +63998,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -63805,6 +64167,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -63993,6 +64356,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -64141,6 +64505,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -64289,6 +64654,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -64437,6 +64803,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -64637,6 +65004,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -64819,6 +65187,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -64967,6 +65336,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -65167,6 +65537,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -65375,6 +65746,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -65523,6 +65895,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -65841,6 +66214,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -65989,6 +66363,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -66151,6 +66526,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -66299,6 +66675,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -66346,6 +66723,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   - 0
@@ -66689,6 +67067,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -66837,6 +67216,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -66985,6 +67365,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -67173,6 +67554,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -67321,6 +67703,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -67469,6 +67852,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -67617,6 +68001,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -67791,6 +68176,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -67838,6 +68224,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   - 0
@@ -68115,6 +68502,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -68335,6 +68723,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -68595,6 +68984,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -68783,6 +69173,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -68983,6 +69374,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   UseKelvin: 00
@@ -69131,6 +69523,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   - TextureModifiers:
       MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
       SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
@@ -69178,6 +69571,7 @@ MonoBehaviour:
     SecondaryNormalTexBlend: 0
     DetailNormalStrength: 1
     DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 0, y: 0, z: 0}
   KelvinTemp:
   - 0
   - 0

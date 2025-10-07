@@ -196,7 +196,12 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             
             float2 matcapUV = float2(dot(worldViewRight, norm), dot(worldViewUp, norm)) * 0.5f + 0.5f;
 
-            float4 matcap = SampleTexture(matcapUV, SampleMatCap, hitDat);
+            float3 matcap = SampleTexture(matcapUV, SampleMatCap, hitDat) * hitDat.MatCapColor;
+            Unity_Hue_Degrees_float(matcap, hitDat.Hue * 500.0f, matcap);
+            matcap *= hitDat.Brightness;
+            // TempCol = TempMat.surfaceColor;
+            Unity_Saturation_float(matcap, hitDat.Saturation, matcap);
+            Unity_Contrast_float(matcap, hitDat.Contrast);
             if(hitDat.MatCapMask.x > 0) hitDat.surfaceColor = lerp(hitDat.surfaceColor, matcap.xyz, SampleTexture(BaseUv, SampleMatCapMask, hitDat).x);
             else hitDat.surfaceColor = matcap.xyz;
         }

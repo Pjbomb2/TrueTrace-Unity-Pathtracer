@@ -34,7 +34,6 @@ namespace TrueTrace {
         [HideInInspector] public RenderTexture HeightmapAtlas;
         [HideInInspector] public RenderTexture AlphaMapAtlas;
         private RenderTexture TempTex;
-        private RenderTexture s_Prop_EncodeBCn_Temp;
         private ComputeShader CopyShader;
         private ComputeShader Refitter;
         private int RefitLayer;

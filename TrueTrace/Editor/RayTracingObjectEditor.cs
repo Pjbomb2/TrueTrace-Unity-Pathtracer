@@ -946,6 +946,13 @@ namespace TrueTrace {
                                 ConnectionSourceNames.Add("DiffTransRemap");
 
                             EditorGUILayout.EndVertical();
+    
+                            EditorGUILayout.Space();
+                            EditorGUILayout.Space();
+                            EditorGUILayout.BeginVertical();
+                                Color EmissCol = EditorGUILayout.ColorField("MatCap Color", new Color(t.LocalMaterials[Selected].MatCapColor.x, t.LocalMaterials[Selected].MatCapColor.y, t.LocalMaterials[Selected].MatCapColor.z, 1));
+                                serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("MatCapColor").vector3Value = new Vector3(EmissCol.r, EmissCol.g, EmissCol.b);
+                            EditorGUILayout.EndVertical();
 
 
 

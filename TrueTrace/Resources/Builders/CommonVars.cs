@@ -240,6 +240,7 @@ namespace CommonVars
         public float SecondaryNormalTexBlend;
         public float DetailNormalStrength;
         public Vector2 DiffTransRemap;
+        public Vector3 MatCapColor;
     }
 
     [System.Serializable]
@@ -301,6 +302,7 @@ namespace CommonVars
         public string RoughnessRemapMax;
         public string EmissionColorValue;
         public string EmissionIntensityValue;
+        public string MatCapColorValue;
     }
     [System.Serializable]
     public class Materials
@@ -1269,6 +1271,7 @@ namespace CommonVars
             NewMat.SecondaryNormalTexBlend = 0;
             NewMat.DetailNormalStrength = 1;
             NewMat.DiffTransRemap = new Vector2(0,1);
+            NewMat.MatCapColor = Vector3.one;
             return NewMat;
         }
 

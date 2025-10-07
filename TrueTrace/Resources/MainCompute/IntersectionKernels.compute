@@ -72,9 +72,6 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
     }
 }
 
-#define YAmount 2
-groupshared int nextRayArray[YAmount];
-// groupshared uint2 KilledRays;
 void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
     #ifdef HardwareRT
         if(ray_index >= BufferSizes[CurBounce].tracerays) return;
@@ -190,51 +187,12 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
             if(CurBounce == 0 && bestHit.t == asfloat(GlobalRay.hits.z)) bestHit.t = FarPlane;
             set(ray_index, bestHit);
         #else
-            current_group.x = (uint)0;
-            current_group.y = 0;//(uint)0x80000000;
-            uint2 triangle_group = 0;
-#ifndef DX11
-            if(ray_index == 0) {
-                nextRayArray[threadIdxy] = BufferSizes[CurBounce].TracedRays;
-            }
-            GroupMemoryBarrier();
-            bool KilledNaturally = true;
-#endif
-            int rayidx = 0;
             const static int A = BufferSizes[CurBounce].tracerays;
-#ifndef DX11
-    int Coun3 = 0;
-        [loop]do{
-            Coun3++;
-            bool                terminated = KilledNaturally;//(stack_size == 0 && current_group.y <= 0x00FFFFFF && triangle_group.y == 0);
-            const uint  maskTerminated = WaveActiveBallot(terminated);
-            const int           numTerminated = countbits(maskTerminated);
-            const int           idxTerminated = countbits(maskTerminated & ((1u << GTx) - 1));
-            KilledNaturally = false;
-            if(terminated) {
-                Reps = 0;
-                current_group.y = 0b10000000000000000000000000000000;//(uint)0x80000000;
-#else
                 current_group.y = (uint)0x80000000;
-#endif
                 current_group.x = (uint)0;
-                triangle_group = 0;
-#ifndef DX11
-                if(idxTerminated == 0) {
-                    InterlockedAdd(BufferSizes[CurBounce].TracedRays, numTerminated, nextRayArray[threadIdxy]);
-                }
-                GroupMemoryBarrier();
-
-
-                rayidx = nextRayArray[threadIdxy] + idxTerminated;
-                if(rayidx >= A) {
-                    // InterlockedOr(KilledRays[threadIdxy], 1 << GTx);
-                    break;
-                }
-#else
-                rayidx = ray_index;
+                uint2 triangle_group = 0;
+                int rayidx = ray_index;
                 if(rayidx >= A) return;
-#endif
                 [branch]if(CurBounce % 2 == 1) rayidx += screen_width * screen_height;
                 GlobalRay = GlobalRays[rayidx];
                 RandNum = random(43, GlobalRay.PixelIndex).x;
@@ -261,11 +219,6 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                 node_traverse_counter = 0;
                 triangle_traverse_counter = 0;
     #endif
-#ifndef DX11
-            }
-
-                int lostLoopIterations = 0;
-#endif
 
             [loop]while (Reps < MaxTraversalSamples) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)          
 
@@ -361,9 +314,6 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                         }
                         if(CurBounce == 0 && bestHit.t == asfloat(GlobalRay.hits.z)) bestHit.t = FarPlane;
                         set(rayidx, bestHit);
-#ifndef DX11
-                        KilledNaturally = true;
-#endif
                         break;
                     }
 
@@ -379,35 +329,17 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
                     stack_memory_counter += 8;
     #endif
                 }
-#ifndef DX11
-                    const static int Nd = 4;
-                    const static int Nw = 16;
-                    lostLoopIterations += countbits(~WaveActiveBallot(true)) - Nd;// - countbits(KilledRays.x) - countbits(KilledRays.y);
-                    if(lostLoopIterations >= Nw) break;
-#endif
             }
-#ifndef DX11
-    } while(Coun3 < 1000);
-#endif
     #endif
-    // InterlockedOr(KilledRays[threadIdxy], 1 << GTx);
 }
 
 
 #ifdef DX11
 [numthreads(64, 1, 1)]
 #else
-#ifdef HardwareRT
 [numthreads(32, 1, 1)]
-#else
-[numthreads(32, YAmount, 1)]
-#endif
 #endif
 void kernel_trace(uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID) {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
-    // if(GT.x == 0 && GT.y == 0) {
-    //     KilledRays = 0;
-    // }
-    // GroupMemoryBarrierWithGroupSync();
     IntersectBVH(id.x, GT.y, GT.x);
 }
 
@@ -533,207 +465,144 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
         #else
 
 
-            current_group.x = (uint)0;
-            current_group.y = 0;//(uint)0x80000000;
             uint2 triangle_group = 0;
-#ifndef DX11
-            if(ray_index == 0) {
-                nextRayArray[threadIdxy] = BufferSizes[CurBounce].TracedRaysShadow;
-            }
-            GroupMemoryBarrier();
-            bool KilledNaturally = true;
-#endif
-            int rayidx = 0;
             const static int A = BufferSizes[CurBounce].shadow_rays;
-            float max_distance;
-#ifndef DX11
-    int Coun2 = 0;
-        [loop]do{
-            Coun2++;
+            int rayidx = ray_index;
+            if(rayidx >= A) return;
+            ShadowRay = ShadowRaysBuffer[rayidx];
+
+            float max_distance = length(ShadowRaysBuffer[rayidx].EndPoint - ShadowRay.origin);
+            ray.origin = ShadowRay.origin;
+            ray.direction = normalize(ShadowRaysBuffer[rayidx].EndPoint - ShadowRay.origin);
+            ray.direction = (ray.direction == 0 ? EPSILON : ray.direction);
+            ray2 = ray;
+            TriOffset = 0;
+            MatOffset = 0;
             Reps = 0;
-            bool                terminated = KilledNaturally;//(stack_size == 0 && current_group.y <= 0x00FFFFFF && triangle_group.y == 0);
-            const uint  maskTerminated = WaveActiveBallot(terminated);
-            const int           numTerminated = countbits(maskTerminated);
-            const int           idxTerminated = countbits(maskTerminated & ((1u << GTx) - 1));
-            KilledNaturally = false;
-            if(terminated) {
-                current_group.y = 0b10000000000000000000000000000000;//(uint)0x80000000;
-#else
-                current_group.y = (uint)0x80000000;
-#endif
-                current_group.x = (uint)0;
-                triangle_group = 0;
-#ifndef DX11
-                if(idxTerminated == 0) {
-                    InterlockedAdd(BufferSizes[CurBounce].TracedRaysShadow, numTerminated, nextRayArray[threadIdxy]);
+            NodeOffset = 0;
+            throughput = 1;
+            Hit = false;
+            stack_size = 0;
+            mesh_id = -1;
+
+            oct_inv4 = ray_get_octant_inv4(ray.direction);
+
+            current_group.x = (uint)0;
+            current_group.y = (uint)0x80000000;
+            tlas_stack_size = -1;
+            [loop] while (Reps < MaxTraversalSamples) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
+                [branch]if (current_group.y & 0xff000000) {
+                   uint child_index_offset = firstbithigh(current_group.y);
+
+                    uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
+                    uint relative_index = countbits(current_group.y & ~(0xffffffff << slot_index));
+                    uint child_node_index = current_group.x + relative_index;
+                    const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
+
+                    current_group.y &= ~(1 << child_index_offset);
+
+                    if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
+
+                    current_group.x = (TempNode.nodes[1].x) + NodeOffset;
+                    triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
+
+                    uint hitmask = cwbvh_node_intersect(ray, oct_inv4, max_distance, TempNode);
+
+                    current_group.y = (hitmask & 0xff000000) | ((TempNode.nodes[0].w >> 24) & 0xff);
+                    triangle_group.y = (hitmask & 0x00ffffff);
+
+
+                    Reps++;
+                } else {
+                    triangle_group = current_group;
+                    current_group = (uint)0;
                 }
-                GroupMemoryBarrier();
-                rayidx = nextRayArray[threadIdxy] + idxTerminated;
-                if(rayidx >= A) break;
-#else
-                rayidx = ray_index;
-                if(rayidx >= A) return;
-#endif
-                ShadowRay = ShadowRaysBuffer[rayidx];
 
-                max_distance = length(ShadowRaysBuffer[rayidx].EndPoint - ShadowRay.origin);
-                ray.origin = ShadowRay.origin;
-                ray.direction = normalize(ShadowRaysBuffer[rayidx].EndPoint - ShadowRay.origin);
-                ray.direction = (ray.direction == 0 ? EPSILON : ray.direction);
-                ray2 = ray;
-                TriOffset = 0;
-                MatOffset = 0;
-                Reps = 0;
-                NodeOffset = 0;
-                throughput = 1;
-                Hit = false;
-                stack_size = 0;
-                mesh_id = -1;
 
-                oct_inv4 = ray_get_octant_inv4(ray.direction);
+                if(triangle_group.y != 0) {
+                    [branch]if (tlas_stack_size == -1) {//Transfer from Top Level Accelleration Structure to Bottom Level Accelleration Structure
+                        uint mesh_offset = firstbithigh(triangle_group.y);
+                        triangle_group.y &= ~(1 << mesh_offset);
 
-                current_group.x = (uint)0;
-                current_group.y = (uint)0x80000000;
-                tlas_stack_size = -1;
-#ifndef DX11
-            }
-                int lostLoopIterations = 0;
-#endif
-                [loop] while (Reps < MaxTraversalSamples) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)            
-                    [branch]if (current_group.y & 0xff000000) {
-                       uint child_index_offset = firstbithigh(current_group.y);
+                        mesh_id = TLASBVH8Indices[triangle_group.x + mesh_offset];
+                        NodeOffset = _MeshData[mesh_id].NodeOffset;
+                        TriOffset = _MeshData[mesh_id].TriOffset;
 
-                        uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
-                        uint relative_index = countbits(current_group.y & ~(0xffffffff << slot_index));
-                        uint child_node_index = current_group.x + relative_index;
-                        const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
-
-                        current_group.y &= ~(1 << child_index_offset);
+                        if (triangle_group.y != 0) stack[stack_size++] = triangle_group;
 
                         if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
 
-                        current_group.x = (TempNode.nodes[1].x) + NodeOffset;
-                        triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
+                        tlas_stack_size = stack_size;
 
-                        uint hitmask = cwbvh_node_intersect(ray, oct_inv4, max_distance, TempNode);
+                        int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
 
-                        current_group.y = (hitmask & 0xff000000) | ((TempNode.nodes[0].w >> 24) & 0xff);
-                        triangle_group.y = (hitmask & 0x00ffffff);
+                        MatOffset = _MeshData[mesh_id].MaterialOffset;
+                        ray.direction = (mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)).xyz;
+                        ray.origin = (mul(_MeshData[mesh_id].W2L, float4(ray.origin, 1))).xyz;
 
+                        oct_inv4 = ray_get_octant_inv4(ray.direction);
 
-                        Reps++;
+                        current_group.x = (uint)root_index;
+                        current_group.y = (uint)0x80000000;
                     } else {
-                        triangle_group = current_group;
-                        current_group = (uint)0;
-                    }
+                        while (triangle_group.y != 0) {    
+                            uint triangle_index = firstbithigh(triangle_group.y);
+                            triangle_group.y &= ~(1 << triangle_index);
 
-
-                    if(triangle_group.y != 0) {
-                        [branch]if (tlas_stack_size == -1) {//Transfer from Top Level Accelleration Structure to Bottom Level Accelleration Structure
-                            uint mesh_offset = firstbithigh(triangle_group.y);
-                            triangle_group.y &= ~(1 << mesh_offset);
-
-                            mesh_id = TLASBVH8Indices[triangle_group.x + mesh_offset];
-                            NodeOffset = _MeshData[mesh_id].NodeOffset;
-                            TriOffset = _MeshData[mesh_id].TriOffset;
-
-                            if (triangle_group.y != 0) stack[stack_size++] = triangle_group;
-
-                            if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
-
-                            tlas_stack_size = stack_size;
-
-                            int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
-
-                            MatOffset = _MeshData[mesh_id].MaterialOffset;
-                            ray.direction = (mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)).xyz;
-                            ray.origin = (mul(_MeshData[mesh_id].W2L, float4(ray.origin, 1))).xyz;
-
-                            oct_inv4 = ray_get_octant_inv4(ray.direction);
-
-                            current_group.x = (uint)root_index;
-                            current_group.y = (uint)0x80000000;
-                        } else {
-                            while (triangle_group.y != 0) {    
-                                uint triangle_index = firstbithigh(triangle_group.y);
-                                triangle_group.y &= ~(1 << triangle_index);
-
-                                if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, max_distance, throughput, MatOffset)) {
-                                    ShadowRaysBuffer[rayidx].FIELD = -2;//WHY
-#ifndef DX11
-                                    KilledNaturally = true;
-                                    break;
-#else
-                                    return;
-#endif
-                                }
+                            if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, max_distance, throughput, MatOffset)) {
+                                ShadowRaysBuffer[rayidx].FIELD = -2;//WHY
+                                return;
                             }
                         }
                     }
-#ifndef DX11
-                    if(KilledNaturally) break;
-#endif
+                }
 
 
-                    if ((current_group.y & 0xff000000) == 0) {
-                        if (stack_size == 0) {//thread has finished traversing
-                            if(!TerrainExists) {
-                                uint PixelIndex = ShadowRay.PixelIndex & 0xFFFFFFF;
-                                bool IsNotPrimaryNEERay = (ShadowRay.PixelIndex >> 30);
-                                if(UseReSTIRGI && CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray2.origin + ray2.direction * max_distance, asfloat(ShadowRay.FIELD));
-                                #ifdef RadCache
-                                    CacheBuffer[PixelIndex].RunningIlluminance = packRGBE(unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput + unpackRGBE(CacheBuffer[PixelIndex].RunningIlluminance));
-                                    AddHitToCachePartial(CacheBuffer[PixelIndex], ray2.origin);
-                                #endif
-                                if (IsNotPrimaryNEERay) {
-                                    if (CurBounce == 0) {
-                                        #ifdef RadCache
-                                            GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)) * throughput);
-                                        #else
-                                            GlobalColors[PixelIndex].Direct += ShadowRay.illumination * throughput;
-                                        #endif
-                                    } else {
-                                        #ifdef RadCache
-                                            if(GetBounceData(CacheBuffer[PixelIndex].pathLength) == 0) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
-                                        #else
-                                            GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
-                                        #endif
-                                    }
+                if ((current_group.y & 0xff000000) == 0) {
+                    if (stack_size == 0) {//thread has finished traversing
+                        if(!TerrainExists) {
+                            uint PixelIndex = ShadowRay.PixelIndex & 0xFFFFFFF;
+                            bool IsNotPrimaryNEERay = (ShadowRay.PixelIndex >> 30);
+                            if(UseReSTIRGI && CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray2.origin + ray2.direction * max_distance, asfloat(ShadowRay.FIELD));
+                            #ifdef RadCache
+                                CacheBuffer[PixelIndex].RunningIlluminance = packRGBE(unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput + unpackRGBE(CacheBuffer[PixelIndex].RunningIlluminance));
+                                AddHitToCachePartial(CacheBuffer[PixelIndex], ray2.origin);
+                            #endif
+                            if (IsNotPrimaryNEERay) {
+                                if (CurBounce == 0) {
+                                    #ifdef RadCache
+                                        GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)) * throughput);
+                                    #else
+                                        GlobalColors[PixelIndex].Direct += ShadowRay.illumination * throughput;
+                                    #endif
                                 } else {
-                                    if(CurBounce != 0 && ((!UseReSTIRGI && GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == 0) || !UseASVGF)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;// * unpackRGBE(asuint(ShadowRay.DiffuseIlluminance));
-                                    else GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)) * throughput);
+                                    #ifdef RadCache
+                                        if(GetBounceData(CacheBuffer[PixelIndex].pathLength) == 0) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
+                                    #else
+                                        GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;
+                                    #endif
                                 }
                             } else {
-                                ShadowRaysBuffer[rayidx].illumination *= throughput;
-                                ShadowRaysBuffer[rayidx].DiffuseIlluminance = packRGBE(unpackRGBE(ShadowRaysBuffer[rayidx].DiffuseIlluminance) * throughput);
+                                if(CurBounce != 0 && ((!UseReSTIRGI && GetBounceData(GlobalColors[PixelIndex].MetRoughIsSpec) == 0) || !UseASVGF)) GlobalColors[PixelIndex].Indirect += ShadowRay.illumination * throughput;// * unpackRGBE(asuint(ShadowRay.DiffuseIlluminance));
+                                else GlobalColors[PixelIndex].PrimaryNEERay = packRGBE(pow(unpackRGBE(GlobalColors[PixelIndex].PrimaryNEERay),2.2f) + pow(ShadowRay.illumination,rcp(2.2f)) * throughput);
                             }
-#ifndef DX11
-                            KilledNaturally = true;
-                            break;
-#else
-                            return;
-#endif
+                        } else {
+                            ShadowRaysBuffer[rayidx].illumination *= throughput;
+                            ShadowRaysBuffer[rayidx].DiffuseIlluminance = packRGBE(unpackRGBE(ShadowRaysBuffer[rayidx].DiffuseIlluminance) * throughput);
                         }
-
-                        if (stack_size == tlas_stack_size) {
-                            NodeOffset = 0;
-                            TriOffset = 0;
-                            tlas_stack_size = -1;
-                            ray = ray2;
-                            oct_inv4 = ray_get_octant_inv4(ray.direction);
-                        }
-                        current_group = stack[--stack_size];
+                        return;
                     }
-#ifndef DX11
-                    const int Nd = 4;
-                    const int Nw = 16;
-                    lostLoopIterations += countbits(~WaveActiveBallot(true)) - Nd;
-                    if(lostLoopIterations >= Nw) break;
-#endif
+
+                    if (stack_size == tlas_stack_size) {
+                        NodeOffset = 0;
+                        TriOffset = 0;
+                        tlas_stack_size = -1;
+                        ray = ray2;
+                        oct_inv4 = ray_get_octant_inv4(ray.direction);
+                    }
+                    current_group = stack[--stack_size];
                 }
-#ifndef DX11
-        } while(Coun2 < 1000);
-#endif
+            }
         #endif
 }
 
@@ -741,11 +610,7 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
 #ifdef DX11
 [numthreads(64, 1, 1)]
 #else
-#ifdef HardwareRT
 [numthreads(32, 1, 1)]
-#else
-[numthreads(32, YAmount, 1)]
-#endif
 #endif
 void kernel_shadow(uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID) {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
     IntersectBVHShadow(id.x, GT.y, GT.x);

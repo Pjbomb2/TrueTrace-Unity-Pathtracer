@@ -217,6 +217,7 @@ struct MaterialData {//56
     float SecondaryNormalTexBlend;
     float DetailNormalStrength;
     float2 DiffTransRemap;
+    float3 MatCapColor;
 };
 
 

@@ -915,7 +915,8 @@ Toolbar toolbar;
                                        SecondaryNormalTexture,
                                        DiffTransTexture,
                                        EmissionColor,
-                                       EmissionIntensity
+                                       EmissionIntensity,
+                                       MatCapColor,
                                        };
 
       VisualElement MaterialPairingMenu;
@@ -965,7 +966,7 @@ Toolbar toolbar;
             int Prop = (int)AvailableIndexes[i].PropertyIndex;
             List<TexturePairs> FallbackNodes = new List<TexturePairs>();
             TexturePairs FallbackNode = null;
-            if(Prop != (int)Properties.EmissionColor && Prop != (int)Properties.EmissionIntensity && Prop != (int)Properties.AlbedoColor && Prop != (int)Properties.MetallicSlider && Prop != (int)Properties.MetallicMin && Prop != (int)Properties.MetallicMax && Prop != (int)Properties.RoughnessSlider && Prop != (int)Properties.RoughnessMin && Prop != (int)Properties.RoughnessMax) {
+            if(Prop != (int)Properties.MatCapColor && Prop != (int)Properties.EmissionColor && Prop != (int)Properties.EmissionIntensity && Prop != (int)Properties.AlbedoColor && Prop != (int)Properties.MetallicSlider && Prop != (int)Properties.MetallicMin && Prop != (int)Properties.MetallicMax && Prop != (int)Properties.RoughnessSlider && Prop != (int)Properties.RoughnessMin && Prop != (int)Properties.RoughnessMax) {
                if((AvailableIndexes[i].inputContainer[0] as Port).connections.ToList().Count != 0) {
                   int Purpose = 0;
                   int ReadIndex = 0;
@@ -1034,6 +1035,9 @@ Toolbar toolbar;
             }
 
             switch(Prop) {
+               case((int)Properties.MatCapColor):
+                  MatShader.MatCapColorValue = ColorProperties[VerboseColorProperties.IndexOf(AvailableIndexes[i].title)];
+               break;
                case((int)Properties.EmissionColor):
                   MatShader.EmissionColorValue = ColorProperties[VerboseColorProperties.IndexOf(AvailableIndexes[i].title)];
                break;
@@ -1396,6 +1400,7 @@ Toolbar toolbar;
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Texture), Port.Capacity.Single, "DiffTrans Texture"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(Color), Port.Capacity.Single, "Emission Color"));
          OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "Emission Intensity"));
+         OutputNode.inputContainer.Add(_graphView.GeneratePort(OutputNode, Direction.Input, typeof(float), Port.Capacity.Single, "MatCap Color"));
 
          _graphView.AddElement(OutputNode);
          Vector2 Pos = new Vector2(30, 10);
@@ -1551,6 +1556,14 @@ Toolbar toolbar;
                 ThisNode = CreateInputNode("Color", typeof(Color), Pos, MatShader.EmissionColorValue);
                _graphView.AddElement(ThisNode);
                _graphView.AddElement((ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.EmissionColor] as Port));
+            }
+            Index = ColorProperties.IndexOf(MatShader.MatCapColorValue);
+            if(Index > 0) {
+               DialogueNode ThisNode = new DialogueNode();
+                  Pos.y = 1700;
+                ThisNode = CreateInputNode("MatCap Color", typeof(Color), Pos, MatShader.MatCapColorValue);
+               _graphView.AddElement(ThisNode);
+               _graphView.AddElement((ThisNode.outputContainer[0] as Port).ConnectTo(OutputNode.inputContainer[(int)Properties.MatCapColor] as Port));
             }
             Index = FloatProperties.IndexOf(MatShader.EmissionIntensityValue);
             if(Index > 0) {

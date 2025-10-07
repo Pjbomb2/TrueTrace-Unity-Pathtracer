@@ -4314,6 +4314,7 @@
     <RoughnessRemapMin>null</RoughnessRemapMin>
     <RoughnessRemapMax>null</RoughnessRemapMax>
     <EmissionColorValue>_EmissionColor1</EmissionColorValue>
+    <MatCapColorValue>_Matcap2Color</MatCapColorValue>
   </MaterialShader>
   <MaterialShader>
     <Name>.poiyomi/Poiyomi 8.1/Poiyomi Toon</Name>
