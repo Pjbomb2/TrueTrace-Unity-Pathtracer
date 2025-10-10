@@ -241,6 +241,7 @@ namespace CommonVars
         public float DetailNormalStrength;
         public Vector2 DiffTransRemap;
         public Vector3 MatCapColor;
+        public float CausticStrength;
     }
 
     [System.Serializable]
@@ -1272,6 +1273,7 @@ namespace CommonVars
             NewMat.DetailNormalStrength = 1;
             NewMat.DiffTransRemap = new Vector2(0,1);
             NewMat.MatCapColor = Vector3.one;
+            NewMat.CausticStrength = 1;
             return NewMat;
         }
 

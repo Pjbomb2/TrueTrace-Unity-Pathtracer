@@ -12,8 +12,8 @@ namespace TrueTrace {
         public ComputeShader SPPMShader;
         ComputeBuffer mpCausticHashPhotonCounter;
         ComputeBuffer AABBBuffA;
-        // private ComputeBuffer DebugBuffer;
-        // private ComputeBuffer DebugCounter;
+        private ComputeBuffer DebugBuffer;
+        private ComputeBuffer DebugCounter;
         public RenderTexture mpCausticPosBucket;
         public RenderTexture mpCausticDirBucket;
         public RenderTexture mpCausticFluxBucket;
@@ -59,7 +59,7 @@ namespace TrueTrace {
             //     PhotonDensityMap[0].ReleaseSafe();
             //     PhotonDensityMap[1].ReleaseSafe();
             // }
-            // DebugBuffer.ReleaseSafe();
+            DebugBuffer.ReleaseSafe();
             mpCausticDirBucket.ReleaseSafe();
             mpCausticFluxBucket.ReleaseSafe();
             EquirectVisibilityTex.ReleaseSafe();
@@ -68,6 +68,7 @@ namespace TrueTrace {
         }
 
         public void Init() {
+            analyticPhotons = 2000000;
             if (SPPMShader == null) {SPPMShader = Resources.Load<ComputeShader>("PhotonMapping/SPPM"); }
                 CDFCompute = Resources.Load<ComputeShader>("Utility/CDFCreator");
             if(AssetManager.Assets == null || AssetManager.Assets.UnityLightCount == 0) return;
@@ -104,7 +105,7 @@ namespace TrueTrace {
                 CDFCompute.SetBuffer(0, "TotalBuff", CDFTotalBuffer);
 
 
-            analyticPhotons += AssetManager.Assets.UnityLightCount - (analyticPhotons % AssetManager.Assets.UnityLightCount);
+            analyticPhotons += (AssetManager.Assets.UnityLightCount) - (analyticPhotons % (AssetManager.Assets.UnityLightCount));
 
             NumPhotons = (uint)analyticPhotons;
 
@@ -116,7 +117,7 @@ namespace TrueTrace {
 
             if(AssetManager.Assets.UnityLightCount > 0) {
                 uint numCurrentLight = 0;
-                uint step = (uint)((float)analyticPhotons / (float)AssetManager.Assets.UnityLightCount);
+                uint step = (uint)((float)analyticPhotons / (float)(AssetManager.Assets.UnityLightCount));
                 bool stop = false;
                 for(uint i = 0; i <= analyticPhotons / blockSizeSq; i++) {
                     if(stop) break;
@@ -149,8 +150,8 @@ namespace TrueTrace {
             CommonFunctions.CreateRenderTexture(ref mpCausticFluxBucket, (int)Width, (int)Height, CommonFunctions.RTFull4);
             CommonFunctions.CreateDynamicBuffer(ref mpCausticHashPhotonCounter, (int)mNumBuckets, 4);
             CommonFunctions.CreateDynamicBuffer(ref AABBBuffA, 2, 40);
-            // CommonFunctions.CreateDynamicBuffer(ref DebugBuffer, 1000, 12);
-            // CommonFunctions.CreateDynamicBuffer(ref DebugCounter, 1, 4);
+            CommonFunctions.CreateDynamicBuffer(ref DebugBuffer, 1000, 12);
+            CommonFunctions.CreateDynamicBuffer(ref DebugCounter, 1, 4);
 
 
         }
@@ -216,8 +217,8 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "VisTexB", !FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);//WRITE
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "gHashBucketDir", mpCausticDirBucket);
             cmd.SetComputeBufferParam(SPPMShader, GenKernel, "AABBBuff", AABBBuffA);
-            // cmd.SetComputeBufferParam(SPPMShader, GenKernel, "DebugBuffer", DebugBuffer);
-            // cmd.SetComputeBufferParam(SPPMShader, GenKernel, "DebugCounter", DebugCounter);
+            cmd.SetComputeBufferParam(SPPMShader, GenKernel, "DebugBuffer", DebugBuffer);
+            cmd.SetComputeBufferParam(SPPMShader, GenKernel, "DebugCounter", DebugCounter);
             cmd.SetComputeBufferParam(SPPMShader, GenKernel, "gHashCounter", mpCausticHashPhotonCounter);
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "DistTex", DistanceTex);
             cmd.SetComputeTextureParam(SPPMShader, GenKernel, "CDFX", CDFX);
@@ -268,8 +269,9 @@ namespace TrueTrace {
                 CDFCompute.SetBuffer(0, "TotalBuff", CDFTotalBuffer);
 
 
+
             float[] CDFTotalInit = new float[1];
-            CDFTotalBuffer.SetData(CDFTotalInit);
+            cmd.SetBufferData(CDFTotalBuffer, CDFTotalInit);
             int[] CounterInit = new int[1];
             CounterBuffer.SetData(CounterInit);
             cmd.SetComputeTextureParam(CDFCompute, 0, "Tex", !FlipFrame ? EquirectVisibilityTex[0] : EquirectVisibilityTex[1]);
@@ -315,13 +317,16 @@ namespace TrueTrace {
             cmd.DispatchCompute(SPPMShader, CollectKernel, Mathf.CeilToInt((float)screen_width / 16.0f), Mathf.CeilToInt((float)screen_height / 16.0f), 1);
             if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("SPPM Collect");
         }
-        // Vector3[] DebugData = new Vector3[1000];
-        // public void OnDrawGizmos() {
-        //     DebugBuffer.GetData(DebugData);
-        //     for(int i = 0; i < 1000; i++) {
-        //         if(DebugData[i] != Vector3.zero) Gizmos.DrawSphere(DebugData[i], 0.01f);
-        //     }
-        // }
+        Vector3[] DebugData = new Vector3[1000];
+        int[] DebugData2 = new int[1];
+        public void OnDrawGizmos() {
+            DebugBuffer.GetData(DebugData);
+            DebugCounter.GetData(DebugData2);
+            DebugData2[0] = Mathf.Min(DebugData2[0], 1000);
+            for(int i = 0; i < DebugData2[0]; i++) {
+                if(DebugData[i] != Vector3.zero) Gizmos.DrawSphere(DebugData[i], 0.01f);
+            }
+        }
 
     }
 }

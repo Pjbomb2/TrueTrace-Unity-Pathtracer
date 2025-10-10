@@ -55,7 +55,7 @@ namespace TrueTrace {
         string Shorthand = null;
         void UpdateList() {
             if(RayMaster == null) RayMaster = GameObject.Find("Scene").GetComponent<RayTracingMaster>();
-            if(RayMaster.LocalTTSettings.CurrentTargetFile == null || RayMaster.LocalTTSettings.CurrentTargetFile == "") {
+            if(RayMaster.LocalTTSettings.CurrentTargetFile == null || RayMaster.LocalTTSettings.CurrentTargetFile == "" || !File.Exists(RayMaster.LocalTTSettings.CurrentTargetFile)) {
                 SelectMatFile();
                 return;
             }
@@ -80,7 +80,7 @@ namespace TrueTrace {
             }
             PreviousTargetFile = RayMaster.LocalTTSettings.CurrentTargetFile;
             // Debug.Log("ONINSPECTORGUI");
-            if(RayMaster.LocalTTSettings.CurrentTargetFile == null || RayMaster.LocalTTSettings.CurrentTargetFile == "") {
+            if(RayMaster.LocalTTSettings.CurrentTargetFile == null || RayMaster.LocalTTSettings.CurrentTargetFile == "" || !File.Exists(RayMaster.LocalTTSettings.CurrentTargetFile)) {
                 SelectMatFile();
                 return;
             }
@@ -301,7 +301,7 @@ namespace TrueTrace {
         }
         bool[] FoldoutBool;
         void UpdateList() {
-            if(RayMaster.LocalTTSettings.CurrentTargetFile == null || RayMaster.LocalTTSettings.CurrentTargetFile == "") {
+            if(RayMaster.LocalTTSettings.CurrentTargetFile == null || RayMaster.LocalTTSettings.CurrentTargetFile == "" || !File.Exists(RayMaster.LocalTTSettings.CurrentTargetFile)) {
                 SelectMatFile();
                 return;
             }
@@ -322,7 +322,7 @@ namespace TrueTrace {
             }
             PreviousTargetFile = RayMaster.LocalTTSettings.CurrentTargetFile;
             // Debug.Log("ONINSPECTORGUI");
-            if(RayMaster.LocalTTSettings.CurrentTargetFile == null || RayMaster.LocalTTSettings.CurrentTargetFile == "") {
+            if(RayMaster.LocalTTSettings.CurrentTargetFile == null || RayMaster.LocalTTSettings.CurrentTargetFile == "" || !File.Exists(RayMaster.LocalTTSettings.CurrentTargetFile)) {
                 SelectMatFile();
                 return;
             }
@@ -1123,6 +1123,7 @@ namespace TrueTrace {
                                 Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.EnableCausticGeneration, EditorGUILayout.ToggleLeft("Enable Caustic Gen", Flag.GetFlag(CommonFunctions.Flags.EnableCausticGeneration), GUILayout.MaxWidth(135)));
                                 Flag = CommonFunctions.SetFlagVar(Flag, CommonFunctions.Flags.DisableCausticRecieving, EditorGUILayout.ToggleLeft("Disable Caustics", Flag.GetFlag(CommonFunctions.Flags.DisableCausticRecieving), GUILayout.MaxWidth(135)));
                             EditorGUILayout.EndHorizontal();
+                            serializedObject.FindProperty("LocalMaterials").GetArrayElementAtIndex(Selected).FindPropertyRelative("CausticStrength").floatValue = EditorGUILayout.Slider("Caustic Strength: ", t.LocalMaterials[Selected].CausticStrength, 0.0f, 3.0f);
 #endif
                             EditorGUILayout.Space();
                             serializedObject.FindProperty("UseKelvin").GetArrayElementAtIndex(Selected).boolValue = EditorGUILayout.Toggle("Use Kelvin: ", t.UseKelvin[Selected]);

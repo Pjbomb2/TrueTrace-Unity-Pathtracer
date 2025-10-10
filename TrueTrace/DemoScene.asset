@@ -103,6 +103,6 @@ MonoBehaviour:
   aoRadius: 2
   CurrentTargetFile: C:/Unity/Unity Raytracing V277/Assets/TrueTrace-Unity-Pathtracer/TrueTrace/Resources/Utility/MaterialPresets/MaterialPresets.xml
   SamplesPerFrame: 1
-  PhotonMapRadiusCoverage: 8
+  PhotonMapRadiusCoverage: 12
   CausticIntensityMultiplier: 1
   PhotonGuidingRatio: 0.15

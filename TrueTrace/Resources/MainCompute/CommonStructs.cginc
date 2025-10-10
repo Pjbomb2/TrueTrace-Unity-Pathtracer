@@ -218,6 +218,7 @@ struct MaterialData {//56
     float DetailNormalStrength;
     float2 DiffTransRemap;
     float3 MatCapColor;
+    float CausticStrength;
 };
 
 
