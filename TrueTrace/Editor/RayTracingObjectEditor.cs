@@ -25,7 +25,7 @@ namespace TrueTrace {
             string TempFilePath = TTPathFinder.GetMaterialPresetsPath();
             var info = new DirectoryInfo(TempFilePath);
             var fileInfo = info.GetFiles();
-            FileSelectionScroll = GUILayout.BeginScrollView(FileSelectionScroll, GUILayout.Width(400), GUILayout.Height(200));
+            FileSelectionScroll = GUILayout.BeginScrollView(FileSelectionScroll, GUILayout.Width(400), GUILayout.Height(600));
                 for(int i = 0; i < fileInfo.Length; i++) {
                     GUILayout.BeginHorizontal();
                         if(!fileInfo[i].Name.Contains(".xml.meta"))
@@ -46,7 +46,7 @@ namespace TrueTrace {
         }
         public override Vector2 GetWindowSize()
         {
-            return new Vector2(460, 310);
+            return new Vector2(460, 710);
         }
         Vector2 ScrollPosition;
         string FolderName = "";
@@ -103,7 +103,7 @@ namespace TrueTrace {
             {
                 int FolderCount = PresetMaster.PresetFolders.Count;
                 if(FoldoutBool == null) FoldoutBool = new bool[FolderCount];
-                ScrollPosition = GUILayout.BeginScrollView(ScrollPosition, GUILayout.Width(400), GUILayout.Height(200));
+                ScrollPosition = GUILayout.BeginScrollView(ScrollPosition, GUILayout.Width(400), GUILayout.Height(600));
                 for(int j = 0; j < FolderCount; j++) {
                     if(!PresetMaster.PresetFolders[j].FolderName.Equals("COPYPASTEBUFFER")) {
                         GUILayout.BeginHorizontal();
@@ -115,7 +115,7 @@ namespace TrueTrace {
                              if (Selection.activeTransform) {
                                 int PresetLength = PresetMaster.PresetFolders[j].ContainedPresets.Count;
                                 GUILayout.BeginArea(new Rect(200,0,200,200));
-                                    ScrollPosition2 = GUILayout.BeginScrollView(ScrollPosition2, GUILayout.Width(200), GUILayout.Height(200));
+                                    ScrollPosition2 = GUILayout.BeginScrollView(ScrollPosition2, GUILayout.Width(200), GUILayout.Height(600));
                                         for(int i = 0; i < PresetLength; i++) {
                                             GUILayout.BeginHorizontal();
                                             if(GUILayout.Button(PresetMaster.PresetFolders[j].ContainedPresets[i].MatName)) {PresetName = PresetMaster.PresetFolders[j].ContainedPresets[i].MatName;}
