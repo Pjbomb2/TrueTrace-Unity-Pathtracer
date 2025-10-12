@@ -72,7 +72,7 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
     }
 }
 
-void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
+void IntersectBVH(const int ray_index, int threadIdxy, int GTx) {
     #ifdef HardwareRT
         if(ray_index >= BufferSizes[CurBounce].tracerays) return;
     #endif
@@ -334,11 +334,7 @@ void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
 }
 
 
-#ifdef DX11
 [numthreads(64, 1, 1)]
-#else
-[numthreads(32, 1, 1)]
-#endif
 void kernel_trace(uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID) {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
     IntersectBVH(id.x, GT.y, GT.x);
 }
@@ -362,7 +358,6 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
         int tlas_stack_size;
         SmallerRay ray2;
         int Reps = 0;
-        bool Hit = false;
     #endif
 
         int mesh_id = -1;
@@ -481,7 +476,6 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
             Reps = 0;
             NodeOffset = 0;
             throughput = 1;
-            Hit = false;
             stack_size = 0;
             mesh_id = -1;
 
@@ -503,8 +497,8 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
 
                     if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
 
-                    current_group.x = (TempNode.nodes[1].x) + NodeOffset;
-                    triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
+                    current_group.x = TempNode.nodes[1].x + NodeOffset;
+                    triangle_group.x = TempNode.nodes[1].y + TriOffset;
 
                     uint hitmask = cwbvh_node_intersect(ray, oct_inv4, max_distance, TempNode);
 
@@ -515,7 +509,7 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
                     Reps++;
                 } else {
                     triangle_group = current_group;
-                    current_group = (uint)0;
+                    current_group = 0;
                 }
 
 
@@ -537,19 +531,19 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
                         int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
 
                         MatOffset = _MeshData[mesh_id].MaterialOffset;
-                        ray.direction = (mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)).xyz;
-                        ray.origin = (mul(_MeshData[mesh_id].W2L, float4(ray.origin, 1))).xyz;
+                        ray.direction = mul((float3x3)_MeshData[mesh_id].W2L, ray.direction).xyz;
+                        ray.origin = mul(_MeshData[mesh_id].W2L, float4(ray.origin, 1)).xyz;
 
                         oct_inv4 = ray_get_octant_inv4(ray.direction);
 
-                        current_group.x = (uint)root_index;
-                        current_group.y = (uint)0x80000000;
+                        current_group.x = root_index;
+                        current_group.y = 0x80000000;
                     } else {
                         while (triangle_group.y != 0) {    
                             uint triangle_index = firstbithigh(triangle_group.y);
                             triangle_group.y &= ~(1 << triangle_index);
 
-                            if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, max_distance, throughput, MatOffset)) {
+                            [branch]if (triangle_intersect_shadow(triangle_group.x + triangle_index, ray, max_distance, throughput, MatOffset)) {
                                 ShadowRaysBuffer[rayidx].FIELD = -2;//WHY
                                 return;
                             }
@@ -559,10 +553,10 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
 
 
                 if ((current_group.y & 0xff000000) == 0) {
-                    if (stack_size == 0) {//thread has finished traversing
+                    [branch]if (stack_size == 0) {//thread has finished traversing
                         if(!TerrainExists) {
                             uint PixelIndex = ShadowRay.PixelIndex & 0xFFFFFFF;
-                            bool IsNotPrimaryNEERay = (ShadowRay.PixelIndex >> 30);
+                            bool IsNotPrimaryNEERay = (ShadowRay.PixelIndex >> 30) != 0;
                             if(UseReSTIRGI && CurBounce == 0) NEEPosA[uint2(PixelIndex % screen_width, PixelIndex / screen_width)] = float4(ray2.origin + ray2.direction * max_distance, asfloat(ShadowRay.FIELD));
                             #ifdef RadCache
                                 CacheBuffer[PixelIndex].RunningIlluminance = packRGBE(unpackRGBE(ShadowRay.DiffuseIlluminance) * throughput + unpackRGBE(CacheBuffer[PixelIndex].RunningIlluminance));
@@ -607,11 +601,7 @@ void IntersectBVHShadow(int ray_index, int threadIdxy, int GTx) {
 }
 
 
-#ifdef DX11
 [numthreads(64, 1, 1)]
-#else
-[numthreads(32, 1, 1)]
-#endif
 void kernel_shadow(uint3 id : SV_DispatchThreadID, uint3 GT : SV_GroupThreadID) {//If I move the function contents into here, unity yells at me, so for now its just gonna continue to live in its function
     IntersectBVHShadow(id.x, GT.y, GT.x);
 }

@@ -630,7 +630,7 @@ namespace TrueTrace {
                         obj.LocalMaterials[i].Contrast = 1;
                         obj.LocalMaterials[i].Brightness = 1;
                     }
-                    if(JustCreated) obj.LocalMaterials[i].CausticStrength = 1.0f;
+                    if(JustCreated || !CommonFunctions.GetFlag(obj.LocalMaterials[i].Tag, CommonFunctions.Flags.EnableCausticGeneration)) obj.LocalMaterials[i].CausticStrength = 1.0f;
                     if(JustCreated || (obj.LocalMaterials[i].ColorBleed == 0.0f && obj.LocalMaterials[i].EmissionColor.x == 0 && obj.LocalMaterials[i].EmissionColor.y == 0 && obj.LocalMaterials[i].EmissionColor.z == 0)) obj.LocalMaterials[i].ColorBleed = 1.0f;
                     CurMat.MatData = obj.LocalMaterials[i];
                     CurMat.MatData.BaseColor = (!obj.UseKelvin[i]) ? obj.LocalMaterials[i].BaseColor : new Vector3(Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).r, Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).g, Mathf.CorrelatedColorTemperatureToRGB(obj.KelvinTemp[i]).b);

@@ -2,6 +2,7 @@
 #define ACCURATECAUSTICS
 #define gCausticRadius 0.005f
 #define PhotonMappingUsed
+#define RespectCausticParameters
 // #include "UnityCG.cginc"
 groupshared uint PhotonBounce[32*32];
 
@@ -431,13 +432,19 @@ inline void calcFinalColor(inout PhotonRayData ray, MaterialData hitDat, RayHit 
         throughput *= bsdf;
     }
 
+#ifdef RespectCausticParameters
     TotalStrength *= hitDat.CausticStrength;
+#endif
     ray.origin = USGNorm * NormalOffset + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
     throughput = max(throughput, 0);
     ray.diffuseHit = !((MaterialLobe == 3) || (MaterialLobe == 0 && hitDat.roughness < 0.8f));
     ray.Norm = octahedral_32(Geomnorm);
     ray.throughput = throughput;
+#ifdef RespectCausticParameters
     if (!validBSDFSample || any(throughput <= 0) || (!GetFlag(hitDat.Tag, EnableCausticGeneration) && !ray.diffuseHit) || (GetFlag(hitDat.Tag, DisableCausticRecieving) && ray.diffuseHit)) {
+#else
+    if (!validBSDFSample || any(throughput <= 0)) {
+#endif
         ray.terminated = true;
         return;//If the ray failed, we have no choice but to terminate this path
     }

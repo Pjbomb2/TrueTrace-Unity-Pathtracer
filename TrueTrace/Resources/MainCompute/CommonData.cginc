@@ -286,19 +286,43 @@ float4 SampleTexture(float2 UV, const int TextureType, const IntersectionMat Mat
 
 		#ifdef UseTextureLOD
 			#ifdef PointFiltering
-				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce)[TextureReadChannel];
-				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
+				[branch]if(TextureReadChannel != 4) {
+					[branch]switch(TextureReadChannel) {
+						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).x; break;
+						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).y; break;
+						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).z; break;
+						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).w; break;
+					} 
+				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
 			#else
-				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce)[TextureReadChannel];
-				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
+				[branch]if(TextureReadChannel != 4) {
+					[branch]switch(TextureReadChannel) {
+						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).x; break;
+						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).y; break;
+						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).z; break;
+						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).w; break;
+					} 
+				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
 			#endif
 		#else
 			#ifdef PointFiltering
-				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0)[TextureReadChannel];
-				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+				[branch]if(TextureReadChannel != 4) {
+					[branch]switch(TextureReadChannel) {
+						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).x; break;
+						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).y; break;
+						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).z; break;
+						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).w; break;
+					} 
+				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
 			#else
-				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0)[TextureReadChannel];
-				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
+				[branch]if(TextureReadChannel != 4) {
+					[branch]switch(TextureReadChannel) {
+						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).x; break;
+						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).y; break;
+						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).z; break;
+						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).w; break;
+					} 
+				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
 			#endif
 		#endif
 
@@ -388,21 +412,46 @@ inline float4 SampleTexture(float2 UV, const int TextureType, const MaterialData
 
 		#ifdef UseTextureLOD
 			#ifdef PointFiltering
-				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0)[TextureReadChannel];
-				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+				[branch]if(TextureReadChannel != 4) {
+					[branch]switch(TextureReadChannel) {
+						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).x; break;
+						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).y; break;
+						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).z; break;
+						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).w; break;
+					} 
+				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
 			#else
-				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0)[TextureReadChannel];
-				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
+				[branch]if(TextureReadChannel != 4) {
+					[branch]switch(TextureReadChannel) {
+						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).x; break;
+						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).y; break;
+						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).z; break;
+						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).w; break;
+					} 
+				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
 			#endif
 		#else
 			#ifdef PointFiltering
-				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0)[TextureReadChannel];
-				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+				[branch]if(TextureReadChannel != 4) {
+					[branch]switch(TextureReadChannel) {
+						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).x; break;
+						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).y; break;
+						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).z; break;
+						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).w; break;
+					} 
+				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
 			#else
-				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0)[TextureReadChannel];
-				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
+				[branch]if(TextureReadChannel != 4) {
+					[branch]switch(TextureReadChannel) {
+						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).x; break;
+						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).y; break;
+						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).z; break;
+						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).w; break;
+					} 
+				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
 			#endif
 		#endif
+
 		[branch] if(TextureType == SampleNormal || TextureType == SampleDetailNormal) {
 			FinalCol.g = 1.0f - FinalCol.g;
 			FinalCol = (FinalCol.r >= 0.99f) ? FinalCol.agag : FinalCol.rgrg;
@@ -917,8 +966,8 @@ inline uint ray_get_octant_inv4(const float3 ray_direction) {
 
 inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_distance, const BVHNode8Data TempNode) {
     uint e_x = (TempNode.nodes[0].w) & 0xff;
-    uint e_y = (TempNode.nodes[0].w >> (8)) & 0xff;
-    uint e_z = (TempNode.nodes[0].w >> (16)) & 0xff;
+    uint e_y = (TempNode.nodes[0].w >> 8) & 0xff;
+    uint e_z = (TempNode.nodes[0].w >> 16) & 0xff;
 
     const float3 adjusted_ray_direction_inv = float3(
         asfloat(e_x << 23),
@@ -928,11 +977,11 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
     const float3 adjusted_ray_origin = (asfloat(TempNode.nodes[0].xyz) - ray.origin) / ray.direction;
             
     uint hit_mask = 0;
+    const bool3 RayDirBools = ray.direction < 0;
     float3 tmin3;
     float3 tmax3;
     uint child_bits;
     uint bit_index;
-    const bool3 RayDirBools = ray.direction < 0;
     uint x_min = TempNode.nodes[2].x;
     uint x_max = TempNode.nodes[2].y;
     uint y_min = TempNode.nodes[3].x;

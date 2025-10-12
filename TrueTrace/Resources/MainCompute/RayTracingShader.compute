@@ -749,11 +749,7 @@ float3 PrimaryBackgroundTintColor;
 float PrimaryBackgroundTint;
 float PrimaryBackgroundContrast;
 
-#ifdef DX11
 [numthreads(64, 1, 1)]
-#else
-[numthreads(32, 1, 1)]
-#endif
 void kernel_shade(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
 
     if (CurBounce != 0 && (id.x >= BufferSizes[CurBounce - 1].tracerays)) return;
@@ -1360,10 +1356,10 @@ int Type;
 [numthreads(1, 1, 1)]
 void TransferKernel(uint3 id : SV_DispatchThreadID) {
     if(Type == 0) {
-        BufferData[0] = uint3(ceil(BufferSizes[CurBounce].tracerays / 32.0f), 1, 1);
+        BufferData[0] = uint3(ceil(BufferSizes[CurBounce].tracerays / 64.0f), 1, 1);
         if(CurBounce != 0) BufferSizes[CurBounce - 1].tracerays = BufferSizes[CurBounce].tracerays;
     } else {
-        BufferData[0] = uint3(ceil(BufferSizes[CurBounce].shadow_rays / 32.0f), 1, 1);
+        BufferData[0] = uint3(ceil(BufferSizes[CurBounce].shadow_rays / 64.0f), 1, 1);
     }
 
 }
@@ -1383,20 +1379,6 @@ void OIDNtoTTKernel(uint3 id : SV_DispatchThreadID) {
 #pragma kernel TTtoOIDNKernel
 [numthreads(16, 16, 1)]
 void TTtoOIDNKernel(uint3 id : SV_DispatchThreadID) {
-    if(id.x > screen_width || id.y > screen_height) return;
-    int pixel_index = id.x + id.y * screen_width;
-    if(OIDNGuideWrite) {
-        NormalBuffer[pixel_index] = i_octahedral_32(ScreenSpaceInfo[id.xy].y);
-        AlbedoBuffer[pixel_index] = unpackRGBE(GlobalColors[pixel_index].Flags);
-    }
-    OutputBuffer[id.x + id.y * screen_width] = Result[id.xy].xyz;
-}
-
-
-
-#pragma kernel TTtoOIDNKernelPanorama
-[numthreads(16, 16, 1)]
-void TTtoOIDNKernelPanorama(uint3 id : SV_DispatchThreadID) {
     if(id.x >= screen_width || id.y >= screen_height) return;
     int pixel_index = id.x + id.y * screen_width;
     if(OIDNGuideWrite) {
@@ -1405,6 +1387,7 @@ void TTtoOIDNKernelPanorama(uint3 id : SV_DispatchThreadID) {
     }
     OutputBuffer[id.x + id.y * screen_width] = Result[id.xy].xyz;
 }
+
 RWTexture2D<half> CorrectedDistanceTex;
 
 

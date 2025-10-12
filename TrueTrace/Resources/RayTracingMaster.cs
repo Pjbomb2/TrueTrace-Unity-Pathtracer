@@ -198,7 +198,6 @@ namespace TrueTrace {
         private int ReSTIRGISpatialKernel;
         private int TTtoOIDNKernel;
         private int OIDNtoTTKernel;
-        private int TTtoOIDNKernelPanorama;
 #if !TTDisableCustomMotionVectors
         private int MVKernel;
 #endif
@@ -305,7 +304,6 @@ namespace TrueTrace {
             ReSTIRGISpatialKernel = ReSTIRGI.FindKernel("ReSTIRGISpatial");
             TTtoOIDNKernel = ShadingShader.FindKernel("TTtoOIDNKernel");
             OIDNtoTTKernel = ShadingShader.FindKernel("OIDNtoTTKernel");
-            TTtoOIDNKernelPanorama = ShadingShader.FindKernel("TTtoOIDNKernelPanorama");
 #if !TTDisableCustomMotionVectors
             MVKernel = ShadingShader.FindKernel("MVKernel");
 #endif
@@ -924,8 +922,6 @@ namespace TrueTrace {
 #endif
 
 
-
-
             ShadingShader.SetBuffer(FinalizeKernel, "GlobalColors", LightingBuffer);
             ShadingShader.SetTexture(FinalizeKernel, "Result", _target);
             
@@ -935,10 +931,6 @@ namespace TrueTrace {
                 ShadingShader.SetBuffer(TTtoOIDNKernel, "NormalBuffer", NormalBuffer);
                 ShadingShader.SetTexture(TTtoOIDNKernel, "ScreenSpaceInfo", ScreenSpaceInfo);
                 ShadingShader.SetComputeBuffer(TTtoOIDNKernel, "GlobalColors", LightingBuffer);
-                ShadingShader.SetBuffer(TTtoOIDNKernelPanorama, "AlbedoBuffer", AlbedoBuffer);
-                ShadingShader.SetBuffer(TTtoOIDNKernelPanorama, "NormalBuffer", NormalBuffer);
-                ShadingShader.SetTexture(TTtoOIDNKernelPanorama, "ScreenSpaceInfo", ScreenSpaceInfo);
-                ShadingShader.SetComputeBuffer(TTtoOIDNKernelPanorama, "GlobalColors", LightingBuffer);
             #endif
 
 
@@ -1471,15 +1463,9 @@ namespace TrueTrace {
 
             #if UseOIDN
                 if((LocalTTSettings.DenoiserMethod == 2 || LocalTTSettings.DenoiserMethod == 3) && SampleCount > LocalTTSettings.OIDNFrameCount) {
-                    if(DoChainedImages) {
-                        cmd.SetComputeBufferParam(ShadingShader, TTtoOIDNKernelPanorama, "OutputBuffer", ColorBuffer);
-                        ShadingShader.SetTexture(TTtoOIDNKernelPanorama, "Result", _FinalTex);
-                        cmd.DispatchCompute(ShadingShader, TTtoOIDNKernelPanorama, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
-                    } else {
-                        cmd.SetComputeBufferParam(ShadingShader, TTtoOIDNKernel, "OutputBuffer", ColorBuffer);
-                        ShadingShader.SetTexture(TTtoOIDNKernel, "Result", _FinalTex);
-                        cmd.DispatchCompute(ShadingShader, TTtoOIDNKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
-                    }
+                    cmd.SetComputeBufferParam(ShadingShader, TTtoOIDNKernel, "OutputBuffer", ColorBuffer);
+                    ShadingShader.SetTexture(TTtoOIDNKernel, "Result", _FinalTex);
+                    cmd.DispatchCompute(ShadingShader, TTtoOIDNKernel, Mathf.CeilToInt(SourceWidth / 16.0f), Mathf.CeilToInt(SourceHeight / 16.0f), 1);
 
                     OIDNDenoiser.Render(cmd, ColorBuffer, OutputBuffer, AlbedoBuffer, NormalBuffer);
 
