@@ -1447,7 +1447,7 @@ void RefineMVKernel(uint3 id : SV_DispatchThreadID) {
         float4 prevprojectedrefl = mul(prevviewprojection, float4(OldPos, 1));
         float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
         if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) {
-            CorrectedDistanceTex[id.xy] = length(NewPos2 - CamPos);// / 120.0f;
+            CorrectedDistanceTex[id.xy] = length(NewPos2 - CamPos) / 120.0f;
             MVTexture[id.xy] = (reflprojection);
         }
 }

@@ -198,60 +198,65 @@ StructuredBuffer<Layer> ReverseStack;
 uint NodeCount;
 int NodeOffset;
 
+RWStructuredBuffer<BoundingBox> NodeTotalBounds;
+
+inline uint GetNodeMeta(uint2 meta, int i) {
+	return (meta[i >= 4] >> ((i % 4) * 8)) & 0xFF;
+} 
+
+
 StructuredBuffer<int> WorkingBuffer;
-[numthreads(KernelRatio, 1, 1)]
+[numthreads(128, 1, 1)]
 void RefitLayer(uint3 id : SV_DispatchThreadID)
 {
 	if (id.x >= NodeCount)
 		return;
-		id.x = WorkingBuffer[id.x];
+	id.x = WorkingBuffer[id.x];
 	float3 RunningMax = -99999999.0f;//AllNodes[id.x].BBMax;
 	float3 RunningMin = 99999999.0f;//AllNodes[id.x].BBMin;
-	const Layer CurrentLayer = ReverseStack[id.x];
-	int Stack[8];
-	int stack_count = 0;
-	int i;
-	int i4;
 	float3 BBMax[8];
 	float3 BBMin[8];
 	uint PopulatedSlots = 0;
-	int ParentIndex = -1;
-	NodeIndexPairData CurrentNode;
-	[unroll]
-	for (i = 0; i < 8; i++) {
-		const int Leaf = CurrentLayer.Children[i];
-		if(Leaf == 0) continue;
-		[branch] if (Leaf < 0) {
-			CurrentNode = AllNodes[(-Leaf) - 1];
-			if(ParentIndex == -1) ParentIndex = CurrentNode.BVHNode;
-			const int NodeOff = CurrentNode.InNodeOffset;
-			PopulatedSlots |= 1 << NodeOff;
-			BBMax[NodeOff] = CurrentNode.BBMax;//Can I ignore the InNodeOffset please
-			BBMin[NodeOff] = CurrentNode.BBMin;
-			RunningMax = max(RunningMax, CurrentNode.BBMax);
-			RunningMin = min(RunningMin, CurrentNode.BBMin);
+
+	BVHNode8Data RootCWBVHNode = AggNodes[id.x + NodeOffset];
+	int i;
+	const uint4 NodeTotal = RootCWBVHNode.nodes[1];
+	[unroll]for(i = 0; i < 8; i++) {
+		BBMax[i] = -999999.0f;
+		BBMin[i] = 999999.0f;
+		uint NodeMeta = GetNodeMeta(NodeTotal.zw, i);
+		int NumBits = countbits(NodeMeta >> 5);
+		if(NumBits == 0) continue;
+		PopulatedSlots |= 1 << i;
+		int RelevantOffset = NodeMeta & 0x1F;
+		[branch]if(RelevantOffset < 24) {
+			int Start = (RelevantOffset + NodeTotal.y);
+			[unroll]for(int i2 = 0; i2 < NumBits; i2++) {
+				int Tri = Start + i2;
+				BBMax[i] = max(BBMax[i], Boxs[Tri].BBMax);
+				BBMin[i] = min(BBMin[i], Boxs[Tri].BBMin);
+			}
 		} else {
-			Stack[stack_count++] = Leaf-1;
-		}
-	}
-	for(i = 0; i < stack_count; i++) {
-		int Start = Stack[i] / 24;
-		int End = Start + Stack[i] % 24;
-		for (i4 = Start; i4 < End; i4++) {
-			RunningMax = max(RunningMax, Boxs[i4].BBMax);
-			RunningMin = min(RunningMin, Boxs[i4].BBMin);
+            int child_index = NodeTotal.x + RelevantOffset - 24;
+			BBMax[i] = NodeTotalBounds[child_index].BBMax;
+			BBMin[i] = NodeTotalBounds[child_index].BBMin;
 		}
 	}
 
-	AllNodes[id.x].BBMax = RunningMax;
-	AllNodes[id.x].BBMin = RunningMin;
+	[unroll]for(i = 0; i < 8; i++) {
+		if(!((PopulatedSlots >> i) & 0x1)) continue;
+		RunningMax = max(RunningMax, BBMax[i]);
+		RunningMin = min(RunningMin, BBMin[i]);
+	}
 
-	if(ParentIndex == -1) return;
 
+
+	NodeTotalBounds[id.x].BBMax = RunningMax;
+	NodeTotalBounds[id.x].BBMin = RunningMin;
+	
 	float3 e = pow(2, ceil(log2((RunningMax - RunningMin) * 0.003921569f)));
 	float3 p = RunningMin;
 
-	BVHNode8Data RootCWBVHNode = AggNodes[ParentIndex + NodeOffset];
 
 	RootCWBVHNode.nodes[0] = uint4(asuint(p.x),
 								asuint(p.y),
@@ -308,68 +313,65 @@ void RefitLayer(uint3 id : SV_DispatchThreadID)
 	RootCWBVHNode.nodes[4] = NodeC;
 
 
-	AggNodes[ParentIndex + NodeOffset] = RootCWBVHNode;
+	AggNodes[id.x + NodeOffset] = RootCWBVHNode;
 
 }
 #pragma kernel RefitBVHLayer
 StructuredBuffer<int> TLASCWBVHIndices;
-[numthreads(KernelRatio, 1, 1)]
+[numthreads(128, 1, 1)]
 void RefitBVHLayer(uint3 id : SV_DispatchThreadID)
 {
 	if (id.x >= NodeCount)
 		return;
-		id.x = WorkingBuffer[id.x];
+	id.x = WorkingBuffer[id.x];
 	float3 RunningMax = -99999999.0f;//AllNodes[id.x].BBMax;
 	float3 RunningMin = 99999999.0f;//AllNodes[id.x].BBMin;
-	const Layer CurrentLayer = ReverseStack[id.x];
-	int Stack[8];
-	int stack_count = 0;
-	int i;
-	int i4;
 	float3 BBMax[8];
 	float3 BBMin[8];
 	uint PopulatedSlots = 0;
-	int ParentIndex = -1;
-	NodeIndexPairData CurrentNode;
-	[unroll]
-	for (i = 0; i < 8; i++) {
-		const int Leaf = CurrentLayer.Children[i];
-		if(Leaf == 0) continue;
-		[branch] if (Leaf < 0) {
-			CurrentNode = AllNodes[(-Leaf) - 1];
-			if(ParentIndex == -1) ParentIndex = CurrentNode.BVHNode;
-			const int NodeOff = CurrentNode.InNodeOffset;
-			PopulatedSlots |= 1 << NodeOff;
-			BBMax[NodeOff] = CurrentNode.BBMax;//Can I ignore the InNodeOffset please
-			BBMin[NodeOff] = CurrentNode.BBMin;
-			RunningMax = max(RunningMax, CurrentNode.BBMax);
-			RunningMin = min(RunningMin, CurrentNode.BBMin);
+
+	BVHNode8Data RootCWBVHNode = AggNodes[id.x];
+	int i;
+	const uint4 NodeTotal = RootCWBVHNode.nodes[1];
+	[unroll]for(i = 0; i < 8; i++) {
+		BBMax[i] = -999999.0f;
+		BBMin[i] = 999999.0f;
+		uint NodeMeta = GetNodeMeta(NodeTotal.zw, i);
+		int NumBits = countbits(NodeMeta >> 5);
+		if(NumBits == 0) continue;
+		PopulatedSlots |= 1 << i;
+		int RelevantOffset = NodeMeta & 0x1F;
+		[branch]if(RelevantOffset < 24) {
+			int Start = (RelevantOffset + NodeTotal.y);
+			[unroll]for(int i2 = 0; i2 < NumBits; i2++) {
+				int Tri = Start + i2;
+		        float3 center = transform_position(inverse(_MeshData[TLASCWBVHIndices[Tri]].W2L), (Boxs[TLASCWBVHIndices[Tri]].BBMax + Boxs[TLASCWBVHIndices[Tri]].BBMin) / 2.0f);
+		        float3 extent = transform_direction(inverse(_MeshData[TLASCWBVHIndices[Tri]].W2L), (Boxs[TLASCWBVHIndices[Tri]].BBMax - Boxs[TLASCWBVHIndices[Tri]].BBMin) / 2.0f);
+
+				BBMax[i] = max(BBMax[i], center + extent);
+				BBMin[i] = min(BBMin[i], center - extent);
+			}
 		} else {
-			Stack[stack_count++] = Leaf-1;
-		}
-	}
-	for(i = 0; i < stack_count; i++) {
-		int Start = Stack[i] / 24;
-		int End = Start + Stack[i] % 24;
-		for (i4 = Start; i4 < End; i4++) {
-
-	        float3 center = transform_position(inverse(_MeshData[TLASCWBVHIndices[i4]].W2L), (Boxs[TLASCWBVHIndices[i4]].BBMax + Boxs[TLASCWBVHIndices[i4]].BBMin) / 2.0f);
-	        float3 extent = transform_direction(inverse(_MeshData[TLASCWBVHIndices[i4]].W2L), (Boxs[TLASCWBVHIndices[i4]].BBMax - Boxs[TLASCWBVHIndices[i4]].BBMin) / 2.0f);
-
-			RunningMax = max(RunningMax, center + extent);
-			RunningMin = min(RunningMin, center - extent);
+            int child_index = NodeTotal.x + RelevantOffset - 24;
+			BBMax[i] = NodeTotalBounds[child_index].BBMax;
+			BBMin[i] = NodeTotalBounds[child_index].BBMin;
 		}
 	}
 
-	AllNodes[id.x].BBMax = RunningMax;
-	AllNodes[id.x].BBMin = RunningMin;
+	[unroll]for(i = 0; i < 8; i++) {
+		if(!((PopulatedSlots >> i) & 0x1)) continue;
+		RunningMax = max(RunningMax, BBMax[i]);
+		RunningMin = min(RunningMin, BBMin[i]);
+	}
 
-	if(ParentIndex == -1) return;
+
+
+	NodeTotalBounds[id.x].BBMax = RunningMax;
+	NodeTotalBounds[id.x].BBMin = RunningMin;
 
 	float3 e = pow(2, ceil(log2((RunningMax - RunningMin) * 0.003921569f)));
 	float3 p = RunningMin;
 
-	BVHNode8Data RootCWBVHNode = AggNodes[ParentIndex];
 
 	RootCWBVHNode.nodes[0] = uint4(asuint(p.x),
 								asuint(p.y),
@@ -426,7 +428,7 @@ void RefitBVHLayer(uint3 id : SV_DispatchThreadID)
 	RootCWBVHNode.nodes[4] = NodeC;
 
 
-	AggNodes[ParentIndex] = RootCWBVHNode;
+	AggNodes[id.x] = RootCWBVHNode;
 
 
 
@@ -438,8 +440,8 @@ int TLASBoxesInput;
 [numthreads(1, 1, 1)]
 void UpdateGlobalBufferAABBKernel(uint3 id : SV_DispatchThreadID)
 {
-	Boxs[TLASBoxesInput].BBMax = AllNodes[0].BBMax;
-	Boxs[TLASBoxesInput].BBMin = AllNodes[0].BBMin;
+	Boxs[TLASBoxesInput].BBMax = NodeTotalBounds[0].BBMax;
+	Boxs[TLASBoxesInput].BBMin = NodeTotalBounds[0].BBMin;
 }
 
 // ---------------------------------------------------------------------- //
