@@ -187,7 +187,7 @@ namespace TrueTrace {
             shader.SetFloat("NearPlane", camera.nearClipPlane);
             shader.SetMatrix("CamToWorld", camera.cameraToWorldMatrix);
             shader.SetMatrix("CamInvProj", camera.projectionMatrix.inverse);
-#if !TTCustomMotionVectors
+#if TTDisableCustomMotionVectors
             shader.SetTextureFromGlobal(DistanceCorrection, "Depth", "_CameraDepthTexture");
             cmd.SetComputeTextureParam(shader, DistanceCorrection, "TEX_PT_VIEW_DEPTH_AWRITE", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
             cmd.DispatchCompute(shader, DistanceCorrection, Mathf.CeilToInt((ScreenWidth) / 32.0f), Mathf.CeilToInt((ScreenHeight) / 32.0f), 1);
@@ -215,7 +215,7 @@ namespace TrueTrace {
             cmd.SetComputeTextureParam(shader, CopyData, "TEX_PT_NORMALS_B", (!EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
             cmd.SetComputeTextureParam(shader, CopyData, "SecondaryTriData", SecondaryTriData);
             cmd.SetComputeTextureParam(shader, CopyData, "PrimaryTriData", PrimaryTriData);
-#if !TTCustomMotionVectors
+#if TTDisableCustomMotionVectors
             shader.SetTextureFromGlobal(CopyData, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
 #else
             shader.SetTextureFromGlobal(CopyData, "TEX_PT_MOTION", "TTMotionVectorTexture");
@@ -241,7 +241,7 @@ namespace TrueTrace {
 
 
 //             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Grad Compute Kernel");
-// #if !TTCustomMotionVectors
+//#if TTDisableCustomMotionVectors
 //             shader.SetTextureFromGlobal(Gradient_Img, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
 // #else
 //             shader.SetTextureFromGlobal(Gradient_Img, "TEX_PT_MOTION", "TTMotionVectorTexture");
@@ -276,7 +276,7 @@ namespace TrueTrace {
             // if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ASVGF Grad Atrous Kernels");
 
             if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ASVGF Temporal Kernel");
-#if !TTCustomMotionVectors
+#if TTDisableCustomMotionVectors
             shader.SetTextureFromGlobal(Temporal, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
 #else
             shader.SetTextureFromGlobal(Temporal, "TEX_PT_MOTION", "TTMotionVectorTexture");
@@ -325,7 +325,7 @@ namespace TrueTrace {
                 cmd.SetComputeIntParam(shader, "spec_iteration", 0);
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_PT_NORMALS_A", (EvenFrame ? TEX_PT_NORMALS_A : TEX_PT_NORMALS_B));
                 cmd.SetComputeTextureParam(shader, Atrous, "TEX_PT_VIEW_DEPTH_A", EvenFrame ? CorrectedDistanceTexA : CorrectedDistanceTexB);
-#if !TTCustomMotionVectors
+#if TTDisableCustomMotionVectors
             shader.SetTextureFromGlobal(Atrous, "TEX_PT_MOTION", "_CameraMotionVectorsTexture");
 #else
             shader.SetTextureFromGlobal(Atrous, "TEX_PT_MOTION", "TTMotionVectorTexture");

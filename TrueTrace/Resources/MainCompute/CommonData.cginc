@@ -202,7 +202,7 @@ SamplerState sampler_trilinear_clamp;
 SamplerState my_point_clamp_sampler;
 
 Texture2D<half> SingleComponentAtlas;
-RWTexture2D<float4> RandomNumsWrite;
+RWTexture2D<uint> RandomNumsWrite;
 Texture2D<float4> RandomNums;
 RWTexture2D<float4> _DebugTex;
 
@@ -286,19 +286,43 @@ float4 SampleTexture(float2 UV, const int TextureType, const IntersectionMat Mat
 
 		#ifdef UseTextureLOD
 			#ifdef PointFiltering
-				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce)[TextureReadChannel];
-				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
+				[branch]if(TextureReadChannel != 4) {
+					[branch]switch(TextureReadChannel) {
+						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).x; break;
+						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).y; break;
+						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).z; break;
+						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).w; break;
+					} 
+				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
 			#else
-				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce)[TextureReadChannel];
-				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
+				[branch]if(TextureReadChannel != 4) {
+					[branch]switch(TextureReadChannel) {
+						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).x; break;
+						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).y; break;
+						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).z; break;
+						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).w; break;
+					} 
+				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
 			#endif
 		#else
 			#ifdef PointFiltering
-				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0)[TextureReadChannel];
-				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+				[branch]if(TextureReadChannel != 4) {
+					[branch]switch(TextureReadChannel) {
+						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).x; break;
+						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).y; break;
+						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).z; break;
+						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).w; break;
+					} 
+				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
 			#else
-				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0)[TextureReadChannel];
-				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
+				[branch]if(TextureReadChannel != 4) {
+					[branch]switch(TextureReadChannel) {
+						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).x; break;
+						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).y; break;
+						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).z; break;
+						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).w; break;
+					} 
+				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
 			#endif
 		#endif
 
@@ -388,21 +412,46 @@ inline float4 SampleTexture(float2 UV, const int TextureType, const MaterialData
 
 		#ifdef UseTextureLOD
 			#ifdef PointFiltering
-				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0)[TextureReadChannel];
-				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+				[branch]if(TextureReadChannel != 4) {
+					[branch]switch(TextureReadChannel) {
+						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).x; break;
+						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).y; break;
+						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).z; break;
+						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce).w; break;
+					} 
+				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, CurBounce);
 			#else
-				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0)[TextureReadChannel];
-				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
+				[branch]if(TextureReadChannel != 4) {
+					[branch]switch(TextureReadChannel) {
+						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).x; break;
+						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).y; break;
+						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).z; break;
+						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce).w; break;
+					} 
+				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, CurBounce);
 			#endif
 		#else
 			#ifdef PointFiltering
-				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0)[TextureReadChannel];
-				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
+				[branch]if(TextureReadChannel != 4) {
+					[branch]switch(TextureReadChannel) {
+						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).x; break;
+						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).y; break;
+						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).z; break;
+						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0).w; break;
+					} 
+				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_point_repeat_sampler, UV, 0);
 			#else
-				[flatten]if(TextureReadChannel != 4) FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0)[TextureReadChannel];
-				else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
+				[branch]if(TextureReadChannel != 4) {
+					[branch]switch(TextureReadChannel) {
+						case 0: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).x; break;
+						case 1: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).y; break;
+						case 2: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).z; break;
+						case 3: FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0).w; break;
+					} 
+				} else FinalCol = _BindlessTextures[TextureIndex].SampleLevel(my_trilinear_repeat_sampler, UV, 0);
 			#endif
 		#endif
+
 		[branch] if(TextureType == SampleNormal || TextureType == SampleDetailNormal) {
 			FinalCol.g = 1.0f - FinalCol.g;
 			FinalCol = (FinalCol.r >= 0.99f) ? FinalCol.agag : FinalCol.rgrg;
@@ -510,6 +559,18 @@ float2 randomNEE(uint samdim, uint pixel_index) {
 }
 
 float2 random(uint samdim, uint pixel_index) {
+#ifdef PhotonMappingUsed
+			uint2 pixid = uint2(pixel_index % screen_width, pixel_index / screen_width);
+			uint hash = pcg_hash((pixel_index * (uint)526 + samdim) * (MaxBounce + 1) + PhotonBounce[pixel_index % 1024]);
+
+			const static float one_over_max_unsigned = asfloat(0x2f7fffff);
+
+
+			float x = hash_with(frames_accumulated, hash) * one_over_max_unsigned;
+			float y = hash_with(frames_accumulated + 0xdeadbeef, hash) * one_over_max_unsigned;
+
+			return float2(x, y);
+#else
 	[branch] if (UseASVGF) {
 		uint2 pixid = uint2(pixel_index % screen_width, pixel_index / screen_width);
 		uint hash = pcg_hash(((uint)RandomNums[pixid].y * (uint)526 + samdim) * (MaxBounce + 1) + CurBounce);
@@ -521,8 +582,8 @@ float2 random(uint samdim, uint pixel_index) {
 		float y = hash_with((uint)RandomNums[pixid].x + 0xdeadbeef, hash) * one_over_max_unsigned;
 
 		return float2(x, y);
-	}
-	else {
+	} else {
+
 		uint hash = pcg_hash((pixel_index * (uint)526 + samdim) * (MaxBounce + 1) + CurBounce);
 
 		const static float one_over_max_unsigned = asfloat(0x2f7fffff);
@@ -533,6 +594,7 @@ float2 random(uint samdim, uint pixel_index) {
 
 		return float2(x, y);
 	}
+#endif
 }
 
 void set(int index, const RayHit ray_hit) {
@@ -904,8 +966,8 @@ inline uint ray_get_octant_inv4(const float3 ray_direction) {
 
 inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_distance, const BVHNode8Data TempNode) {
     uint e_x = (TempNode.nodes[0].w) & 0xff;
-    uint e_y = (TempNode.nodes[0].w >> (8)) & 0xff;
-    uint e_z = (TempNode.nodes[0].w >> (16)) & 0xff;
+    uint e_y = (TempNode.nodes[0].w >> 8) & 0xff;
+    uint e_z = (TempNode.nodes[0].w >> 16) & 0xff;
 
     const float3 adjusted_ray_direction_inv = float3(
         asfloat(e_x << 23),
@@ -915,11 +977,11 @@ inline uint cwbvh_node_intersect(const SmallerRay ray, int oct_inv4, float max_d
     const float3 adjusted_ray_origin = (asfloat(TempNode.nodes[0].xyz) - ray.origin) / ray.direction;
             
     uint hit_mask = 0;
+    const bool3 RayDirBools = ray.direction < 0;
     float3 tmin3;
     float3 tmax3;
     uint child_bits;
     uint bit_index;
-    const bool3 RayDirBools = ray.direction < 0;
     uint x_min = TempNode.nodes[2].x;
     uint x_max = TempNode.nodes[2].y;
     uint y_min = TempNode.nodes[3].x;
@@ -1439,6 +1501,24 @@ inline SGLobe sg_product ( float3 axis1 , float sharpness1 , float3 axis2 , floa
 
 static const float FLT_MAX = 3.402823466e+38f;
 
+inline float expm1_over_x(const float x)
+{
+	const float u = exp(x);
+
+	if (u == 1.0)
+	{
+		return 1.0;
+	}
+
+	const float y = u - 1.0;
+
+	if (abs(x) < 1.0)
+	{
+		return y * rcp(log(u));
+	}
+
+	return y * rcp(x);
+}
 
 // [Tokuyoshi et al. 2024 "Hierarchical Light Sampling with Accurate Spherical Gaussian Lighting (Supplementary Document)" Listing. 5]
 inline float UpperSGClampedCosineIntegralOverTwoPi(const float sharpness)
@@ -1450,7 +1530,8 @@ inline float UpperSGClampedCosineIntegralOverTwoPi(const float sharpness)
 		return (((((((-1.0 / 362880.0) * sharpness + 1.0 / 40320.0) * sharpness - 1.0 / 5040.0) * sharpness + 1.0 / 720.0) * sharpness - 1.0 / 120.0) * sharpness + 1.0 / 24.0) * sharpness - 1.0 / 6.0) * sharpness + 0.5;
 	}
 
-	return (expm1(-sharpness) + sharpness) * rcp(sharpness * sharpness);
+	// return (expm1(-sharpness) + sharpness) * rcp(sharpness * sharpness);
+	return (1.0f - expm1_over_x(-sharpness)) / sharpness;
 }
 
 // [Tokuyoshi et al. 2024 "Hierarchical Light Sampling with Accurate Spherical Gaussian Lighting (Supplementary Document)" Listing. 6]
@@ -1465,7 +1546,8 @@ inline float LowerSGClampedCosineIntegralOverTwoPi(const float sharpness)
 		return e * (((((((((1.0 / 403200.0) * sharpness - 1.0 / 45360.0) * sharpness + 1.0 / 5760.0) * sharpness - 1.0 / 840.0) * sharpness + 1.0 / 144.0) * sharpness - 1.0 / 30.0) * sharpness + 1.0 / 8.0) * sharpness - 1.0 / 3.0) * sharpness + 0.5);
 	}
 
-	return e * (-expm1(-sharpness) - sharpness * e) * rcp(sharpness * sharpness);
+	// return e * (-expm1(-sharpness) - sharpness * e) * rcp(sharpness * sharpness);
+	return e * (expm1_over_x(-sharpness) - e) / sharpness;
 }
 
 // Approximate product integral of an SG and clamped cosine / pi.
@@ -1560,24 +1642,6 @@ inline float SGGXReflectionPDF(const float3 wi, const float3 m, const float2x2 r
 }
 
 
-inline float expm1_over_x(const float x)
-{
-	const float u = exp(x);
-
-	if (u == 1.0)
-	{
-		return 1.0;
-	}
-
-	const float y = u - 1.0;
-
-	if (abs(x) < 1.0)
-	{
-		return y * rcp(log(u));
-	}
-
-	return y * rcp(x);
-}
 
 
 inline float SGIntegral(const float sharpness)
@@ -1641,9 +1705,6 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 	const float diffuseIllumination = amplitude * SGClampedCosineProductIntegralOverPi2024(cosine, LightLobe.sharpness);
 
 
-	const float3 prodVec = reflecVec + LightLobe.axis * LightLobe.sharpness; // Axis of the SG product lobe.
-	const float prodSharpness = length(prodVec);
-	const float3 prodDir = prodVec / prodSharpness;
 	const float LightLobeVariance = rcp(LightLobe.sharpness);
 	// if(id.y > screen_height / 2 + screen_height / 4) LightLobeVariance = LightLobeVariance * (1.0f - c) + 0.5f * (TargetNode.radius * TargetNode.radius) * c;
 	
@@ -1664,6 +1725,10 @@ inline float SGImportance(const GaussianTreeNode TargetNode, const float3 viewDi
 	const float3 halfvecUnormalized = viewDirTS + mul(tangentFrame, LightLobe.axis);
 	const float3 halfvec = halfvecUnormalized * rsqrt(max(dot(halfvecUnormalized, halfvecUnormalized), EPSILON));
 	const float pdf = SGGXReflectionPDF(viewDirTS, halfvec, filteredRoughnessMat);
+
+	const float3 prodVec = reflecVec + LightLobe.axis * LightLobe.sharpness; // Axis of the SG product lobe.
+	const float prodSharpness = length(prodVec);
+	const float3 prodDir = prodVec / prodSharpness;
 
 	// Visibility of the SG light in the upper hemisphere.
 	const float visibility = VMFHemisphericalIntegral(dot(prodDir, n), prodSharpness);// * (dot(n, to_light) >= 0 || TargetNode.radius >= sqrt(squareddist));
@@ -1750,6 +1815,11 @@ int CalcInside(LightBVHData A, LightBVHData B, float3 p, int Index) {
 	} else if(Residency1) {
 		return 1;
 	} else return -1;
+}
+
+float3 DominantVisibleGGXNormal(const float3 wi, const float2 roughness)
+{
+	return normalize(float3(roughness * roughness * wi.xy, wi.z + length(float3(roughness * wi.xy, wi.z))));
 }
 
 #ifdef UseSGTree
@@ -2572,16 +2642,17 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
     Unity_Contrast_float(MatDat.surfaceColor, MatDat.Contrast);
     MatDat.surfaceColor = saturate(MatDat.surfaceColor);
 
-    if ((MatDat.EmissiveTex.x > 0 && MatDat.emission >= 0)) {
-        float3 EmissCol = lerp(MatDat.EmissionColor, MatDat.surfaceColor, GetFlag(MatDat.Tag, BaseIsMap));
-		float4 EmissTex = SampleTexture(BaseUv, SampleEmission, MatDat);
-        if(!GetFlag(MatDat.Tag, IsEmissionMask)) {//IS a mask
-            MatDat.emission *= luminance(EmissTex.xyz);
-            
+    if(MatDat.emission > 0) {
+        if (MatDat.EmissiveTex.x > 0) {
+            float3 EmissCol = lerp(MatDat.EmissionColor, MatDat.surfaceColor, GetFlag(MatDat.Tag, BaseIsMap));
+            float4 EmissTex = SampleTexture(BaseUv, SampleEmission, MatDat);
+            if(!GetFlag(MatDat.Tag, IsEmissionMask)) {//IS a mask
+                MatDat.emission *= EmissTex.x * (luminance(EmissTex.xyz) > 0.01f);
+            } else EmissCol *= EmissTex.xyz;
             MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissCol, saturate(MatDat.emission) * GetFlag(MatDat.Tag, ReplaceBase));
-        } else {//is NOT a mask
-            MatDat.surfaceColor = lerp(MatDat.surfaceColor, EmissTex.xyz * EmissCol, saturate(MatDat.emission) * GetFlag(MatDat.Tag, ReplaceBase));
-        }            
+        } else {
+            MatDat.surfaceColor *= MatDat.EmissionColor;
+        }
     }
     Radiance = MatDat.emission * MatDat.surfaceColor;
     return AggTriIndex;

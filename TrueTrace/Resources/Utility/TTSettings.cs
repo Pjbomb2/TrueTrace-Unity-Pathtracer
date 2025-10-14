@@ -33,9 +33,7 @@ namespace TrueTrace {
         [SerializeField] public bool UseReSTIRGITemporal = true;
         [SerializeField] public bool UseReSTIRGISpatial = true;
         [SerializeField] public bool UseReSTIRGI = false;
-        [SerializeField] public int ReSTIRGISpatialCount = 24;
-        [SerializeField] public float ReSTIRGISpatialRadius = 50.0f;
-        [SerializeField] public int ReSTIRGITemporalMCap = 20;
+        [SerializeField] public int ReSTIRGITemporalMCap = 4;
         [SerializeField] public bool DoReSTIRGIConnectionValidation = true;
         [SerializeField] public float Exposure = 1.0f;
         [SerializeField] public bool DoPartialRendering = false;
@@ -100,6 +98,11 @@ namespace TrueTrace {
         [SerializeField] public Vector3 ColorVignette = Vector3.zero;
         [SerializeField] public float aoStrength = 1.0f;
         [SerializeField] public float aoRadius = 2.0f;
+        [SerializeField] public string CurrentTargetFile = null;
+        [SerializeField] public int SamplesPerFrame = 1;
+        [SerializeField] public float PhotonMapRadiusCoverage = 8;
+        [SerializeField] public float CausticIntensityMultiplier = 1;
+        [SerializeField] public float PhotonGuidingRatio = 0.15f;
 
     }
 

@@ -270,10 +270,10 @@ namespace TrueTrace {
                     if (!CameraList[CurrentCamera].ActivateCam || RayTracingMaster.RayMaster.FramesSinceStart >= MaxSamples || waitedTime >= TimeBetweenSegments) {
                         if(CameraList[CurrentCamera].ActivateCam) {
                             waitedTime = 0;
-                            if(!System.IO.Directory.Exists(Application.dataPath.Replace("/Assets", "") + "/TempPanoramas")) {
-                                System.IO.Directory.CreateDirectory(Application.dataPath.Replace("/Assets", "") + "/TempPanoramas");
+                            if(!System.IO.Directory.Exists(Application.dataPath.Replace("/Assets", "") + "/TrueTrace/TempPanoramas")) {
+                                System.IO.Directory.CreateDirectory(Application.dataPath.Replace("/Assets", "") + "/TrueTrace/TempPanoramas");
                             }
-                            ScreenCapture.CaptureScreenshot(Application.dataPath.Replace("/Assets", "") + "/TempPanoramas/" + CurrentSegment + ".png");
+                            ScreenCapture.CaptureScreenshot(Application.dataPath.Replace("/Assets", "") + "/TrueTrace/TempPanoramas/" + CurrentSegment + ".png");
                             TexArray[CurrentSegment] = ScreenCapture.CaptureScreenshotAsTexture();
                             #if MultiMapScreenshot
                                 if(CameraList[CurrentCamera].SaveImgMap) {
@@ -689,7 +689,7 @@ namespace TrueTrace {
         private void DisplayCameraList() {
             GUIStyle TempStyle = new GUIStyle();
             TempStyle.fixedWidth = 120;
-            scrollPosition = GUILayout.BeginScrollView(scrollPosition, GUILayout.Width(450), GUILayout.Height(100));
+            scrollPosition = GUILayout.BeginScrollView(scrollPosition, GUILayout.Width(450), GUILayout.Height(300));
                 for(int i = 0; i < t.CameraList.Count; i++) {
                     var A = i;
                     GUILayout.BeginHorizontal();

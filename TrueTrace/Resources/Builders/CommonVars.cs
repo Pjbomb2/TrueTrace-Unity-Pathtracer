@@ -52,6 +52,7 @@ namespace CommonVars
         public float ZAxisRotation;
         public float Softness;
         public Vector2Int IESTex;
+        public Vector4 IESTexScale;
     }
 
     [System.Serializable]
@@ -85,13 +86,15 @@ namespace CommonVars
         public Vector4* Tangents;
         public Vector2* UVs;
         public Color* Colors;
+        public int* Indices;
         public Unity.Collections.NativeArray<Vector3> VerticiesArray;
         public Unity.Collections.NativeArray<Vector3> NormalsArray;
         public Unity.Collections.NativeArray<Vector4> TangentsArray;
         public Unity.Collections.NativeArray<Vector2> UVsArray;
         public Unity.Collections.NativeArray<Color> ColorsArray;
         public List<int> MatDat;
-        public List<int> Indices;
+        public Unity.Collections.NativeArray<int> IndicesArray;
+        public int CurIndexOffset;
 
         public void SetUvZero(int Count) {
             // for (int i = 0; i < Count; i++) UVs.Add(new Vector2(0.0f, 0.0f));
@@ -103,8 +106,7 @@ namespace CommonVars
         public void SetTansZero(int Count) {
             // for (int i = 0; i < Count; i++) Tangents.Add(new Vector4(0.0f, 0.0f, 0.0f, 0.0f));
         }
-        public void init(int StartingSize) {
-
+        public void init(int StartingSize, int StartingIndexSize) {
             UVsArray = new Unity.Collections.NativeArray<Vector2>(StartingSize, Unity.Collections.Allocator.Persistent, Unity.Collections.NativeArrayOptions.ClearMemory);
             UVs = (Vector2*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(UVsArray);
             VerticiesArray = new Unity.Collections.NativeArray<Vector3>(StartingSize, Unity.Collections.Allocator.Persistent, Unity.Collections.NativeArrayOptions.UninitializedMemory);
@@ -115,9 +117,11 @@ namespace CommonVars
             Tangents = (Vector4*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(TangentsArray);
             ColorsArray = new Unity.Collections.NativeArray<Color>(StartingSize, Unity.Collections.Allocator.Persistent, Unity.Collections.NativeArrayOptions.ClearMemory);
             Colors = (Color*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(ColorsArray);
-            Indices = new List<int>(StartingSize);
+            IndicesArray = new Unity.Collections.NativeArray<int>(StartingIndexSize, Unity.Collections.Allocator.Persistent, Unity.Collections.NativeArrayOptions.ClearMemory);
+            Indices = (int*)Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(IndicesArray);
             MatDat = new List<int>(StartingSize / 3);
             CurVertexOffset = 0;
+            CurIndexOffset = 0;
         }
         public void Clear() {
             if (TangentsArray != null) {
@@ -126,7 +130,7 @@ namespace CommonVars
                 if(UVsArray.IsCreated) UVsArray.Dispose();
                 if(VerticiesArray.IsCreated) VerticiesArray.Dispose();
                 if(TangentsArray.IsCreated) TangentsArray.Dispose();
-                CommonFunctions.DeepClean(ref Indices);
+                if(IndicesArray.IsCreated) IndicesArray.Dispose();
                 CommonFunctions.DeepClean(ref MatDat);
             }
         }
@@ -236,6 +240,8 @@ namespace CommonVars
         public float SecondaryNormalTexBlend;
         public float DetailNormalStrength;
         public Vector2 DiffTransRemap;
+        public Vector3 MatCapColor;
+        public float CausticStrength;
     }
 
     [System.Serializable]
@@ -297,6 +303,7 @@ namespace CommonVars
         public string RoughnessRemapMax;
         public string EmissionColorValue;
         public string EmissionIntensityValue;
+        public string MatCapColorValue;
     }
     [System.Serializable]
     public class Materials
@@ -437,26 +444,26 @@ namespace CommonVars
         public AABB b;
         public Vector3 w;
         public float phi;
-        public float cosTheta_o;
-        public float cosTheta_e;
+        public float Theta_o;
+        public float Theta_e;
         public int LightCount;
         public float Pad1;
         public void Clear() {
             b.init();
-            w = new Vector3(0,0,0);
+            w = Vector3.zero;
             phi = 0;
-            cosTheta_e = 0;
-            cosTheta_o = 0;
+            Theta_e = 0;
+            Theta_o = 0;
             LightCount = 0;
             Pad1 = 0;
         }
 
-        public LightBounds(AABB aabb, Vector3 W, float Phi, float cosTheta_o, float cosTheta_e, int lc, int p1) {
+        public LightBounds(AABB aabb, Vector3 W, float Phi, float Theta_o, float Theta_e, int lc, int p1) {
             b = aabb;
             w = W;
             phi = Phi;
-            this.cosTheta_o = cosTheta_o;
-            this.cosTheta_e = cosTheta_e;
+            this.Theta_o = Theta_o;
+            this.Theta_e = Theta_e;
             LightCount = lc;
             Pad1 = p1;
         }
@@ -1170,8 +1177,8 @@ namespace CommonVars
         }
 
 
-        public enum Flags {IsEmissionMask, BaseIsMap, ReplaceBase, UseSmoothness, InvertSmoothnessTexture, IsBackground, ShadowCaster, Invisible, BackgroundBleed, Thin, UseVertexColors, InvertAlpha};
-        //0-10 Flags
+        public enum Flags {IsEmissionMask, BaseIsMap, ReplaceBase, UseSmoothness, InvertSmoothnessTexture, IsBackground, ShadowCaster, Invisible, BackgroundBleed, Thin, UseVertexColors, InvertAlpha, EnableCausticGeneration, DisableCausticRecieving};
+        //0-13 Flags
         //28-30 SecondaryAlbedoStride
 
         public static int SetFlagStretch(this int FlagVar, int LeftOffset, int Stride, int Setter) {
@@ -1265,6 +1272,8 @@ namespace CommonVars
             NewMat.SecondaryNormalTexBlend = 0;
             NewMat.DetailNormalStrength = 1;
             NewMat.DiffTransRemap = new Vector2(0,1);
+            NewMat.MatCapColor = Vector3.one;
+            NewMat.CausticStrength = 1;
             return NewMat;
         }
 

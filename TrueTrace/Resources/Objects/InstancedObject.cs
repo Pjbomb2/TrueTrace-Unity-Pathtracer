@@ -35,6 +35,10 @@ namespace TrueTrace {
         }
         private void OnEnable()
         {
+            if(GetComponentInParent<InstancedManager>() != null) {
+                DestroyImmediate(this);
+                return;
+            }
             InstancedManager.NeedsToReinit = true;
             // GameObject.Find("InstancedStorage").GetComponent<InstancedManager>().InitRelationships();
             if (gameObject.scene.isLoaded && Application.isPlaying)

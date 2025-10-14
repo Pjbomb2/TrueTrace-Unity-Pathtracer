@@ -162,5 +162,5 @@ namespace TrueTrace {
             PlayerSettings.SetScriptingDefineSymbolsForGroup(buildTargetGroup, defines);
         }
     }
-    #endif
 }
+#endif

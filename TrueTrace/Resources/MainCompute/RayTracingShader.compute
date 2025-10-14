@@ -24,6 +24,11 @@
 RWTexture2D<float4> PSRGBuff;
 #pragma kernel kernel_shade
 
+#ifdef PhotonMapping
+RWTexture2D<float4> FirstDiffuseThroughputTex;
+RWTexture2D<uint4> FirstDiffusePosTex;
+#endif
+
 int BackgroundType;
 int SecondaryBackgroundType;
 float3 BackgroundColor;
@@ -119,13 +124,6 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         float3 SigmaS = SigmaT * FogColor;
         float3 SigmaA = SigmaT - SigmaS;
     #endif
-    bool CB = true;
-    if(DoPartialRendering && CurBounce == 0) {
-        CB = (int(id.x)/PartialRenderingFactor + int(id.y)/PartialRenderingFactor + curframe)%2==0;
-        if(UseASVGF) {
-            if(hitDat.metallic == 1 || hitDat.specTrans == 1 || RandomNums[id].z != 0 || RandomNums[id].w != 0) CB = true;
-        }
-    }
     float3 PrevOrigin = ray.origin;
     float3 pos = ray.direction * hit.t + ray.origin;
     float3 PrevDirection = ray.direction;
@@ -196,9 +194,14 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             float3 worldViewUp = normalize(float3(0, 1, 0) - ray.direction * dot(ray.direction, float3(0, 1, 0)));
             float3 worldViewRight = normalize(cross(ray.direction, worldViewUp));
             
-            float2 matcapUV = float2(dot(worldViewRight, norm), dot(worldViewUp, norm)) * 0.5f + 0.5;
+            float2 matcapUV = float2(dot(worldViewRight, norm), dot(worldViewUp, norm)) * 0.5f + 0.5f;
 
-            float4 matcap = SampleTexture(matcapUV, SampleMatCap, hitDat);
+            float3 matcap = SampleTexture(matcapUV, SampleMatCap, hitDat) * hitDat.MatCapColor;
+            Unity_Hue_Degrees_float(matcap, hitDat.Hue * 500.0f, matcap);
+            matcap *= hitDat.Brightness;
+            // TempCol = TempMat.surfaceColor;
+            Unity_Saturation_float(matcap, hitDat.Saturation, matcap);
+            Unity_Contrast_float(matcap, hitDat.Contrast);
             if(hitDat.MatCapMask.x > 0) hitDat.surfaceColor = lerp(hitDat.surfaceColor, matcap.xyz, SampleTexture(BaseUv, SampleMatCapMask, hitDat).x);
             else hitDat.surfaceColor = matcap.xyz;
         }
@@ -226,8 +229,17 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
         hitDat.emission *= Tr;// / pdf3;// / pdf;
 #endif
         float3 EmissCol = hitDat.surfaceColor * hitDat.emission * LEMEnergyScale;
-        if (!UseNEE || AggTrisB[hit.triangle_id].IsEmissive == 0) {
-            if (CurBounce <= 1) Color.Direct += EmissCol;
+        bool UseBSDFLight = !UseNEE || AggTrisB[hit.triangle_id].IsEmissive == 0;
+        #ifndef UseBRDFLights
+            UseBSDFLight = UseBSDFLight || GetBounceData(asuint(PSRScreenData.w)) == 0;
+        #endif
+        if (UseBSDFLight) {
+            #ifdef PhotonMapping
+                if (CurBounce == 0) Color.Direct += EmissCol;
+                else if (CurBounce == 1) Color.Indirect += EmissCol;
+            #else
+                if (CurBounce <= 1) Color.Direct += EmissCol;
+            #endif
             else if(CurBounce > 1) {
                 #ifdef RadCache
                     if(GetBounceData(CachePathLength) != 0) CacheBuffer[pixel_index].RunningIlluminance = packRGBE(unpackRGBE(CacheBuffer[pixel_index].RunningIlluminance) + EmissCol);
@@ -255,7 +267,11 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
             float w = power_heuristic(max(last_pdf,0), light_pdf);
             if (CurBounce == 0) Color.Direct += EmissCol;
             #ifdef UseBRDFLights
-                else if (CurBounce == 1) Color.Direct += EmissCol * w;
+                #ifdef PhotonMapping
+                    else if (CurBounce == 1) Color.Indirect += EmissCol * w;
+                #else
+                    else if (CurBounce == 1) Color.Direct += EmissCol * w;
+                #endif
                 else {
                     #ifdef RadCache
                         if(GetBounceData(CachePathLength) != 0) CacheBuffer[pixel_index].RunningIlluminance = packRGBE(unpackRGBE(CacheBuffer[pixel_index].RunningIlluminance) + EmissCol * w);
@@ -279,6 +295,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
                 Color.Data = EmissCol;
                 Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((1) << 26);  
                 PSRScreenData.w = asfloat((asuint(PSRScreenData.w) & ~(0x7C000000)) |  ((1) << 26));  
+                PSRScreenData.y = asfloat(packRGBE(EmissCol));  
                 Color.Flags = packRGBE(EmissCol);
             }
             return;
@@ -389,25 +406,24 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
     ray.origin = USGNorm * NormalOffset + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
     throughput = max(throughput, 0);
     [branch] if (CurBounce == 0 || GetBounceData(Color.MetRoughIsSpec) == 0) {//Setting textures for denosier to use
-        #ifdef TrueBlack
 #ifdef AltFadeMapping
             Color.Flags = packRGBE((unpackRGBE(Color.Flags) * hitDat.surfaceColor));
 #else
             Color.Flags = packRGBE((CurBounce == 0) ? hitDat.surfaceColor : (unpackRGBE(Color.Flags) * hitDat.surfaceColor));
 #endif
             Color.Data = float3((CurBounce == 0) ? throughput : (throughput * Color.Data.xyz));
-        #else
-#ifdef AltFadeMapping
-            Color.Flags = packRGBE((unpackRGBE(Color.Flags) * max(hitDat.surfaceColor, 0.005f)));
-#else
-            Color.Flags = packRGBE((CurBounce == 0) ? max(hitDat.surfaceColor, 0.005f) : (unpackRGBE(Color.Flags) * max(hitDat.surfaceColor, 0.005f)));
-#endif
-            Color.Data = float3((CurBounce == 0) ? max(throughput, 0.006f) : (max(throughput, 0.005f) * Color.Data.xyz));
-        #endif
         PrevScreenData = float4(asfloat(octahedral_32(((hitDat.diffTrans != 0 || CurBounce == 0) && Refracted) ? -Geomnorm : Geomnorm)), asfloat(octahedral_32(((hitDat.diffTrans != 0 || (hitDat.diffTrans != 0 && CurBounce == 1)) && Refracted) ? -norm : norm)), PrevScreenData.z + hit.t, asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 4) >> 4) : ((asuint(PrevScreenData.w) << 4) >> 4)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
         Color.MetRoughIsSpec = ((Color.MetRoughIsSpec & ~(0x7C000000)) | (((CurBounce < 20 && UseASVGF && ((MaterialLobe == 3 && hitDat.roughness < 0.25f) || (hitDat.metallic == 1 && MaterialLobe == 0 && hitDat.roughness < 0.03f && CurBounce == 0))) ? 0 : (CurBounce + 2)) << 26)) | (Refracted << 22);  
         throughput = 1;  
     }
+#ifdef PhotonMapping
+    if(MaterialLobe == 2) {
+        if(FirstDiffuseThroughputTex[id.xy].w == 0) {
+            FirstDiffuseThroughputTex[id.xy] = float4(throughput, 1);
+            FirstDiffusePosTex[id.xy] = uint4(hit.mesh_id, hit.triangle_id - _MeshData[hit.mesh_id].TriOffset, asuint(hit.u), asuint(hit.v));
+        }
+    }
+#endif
     #ifdef RadCache
         #if DebugView == DVRadCache
             if(CurBounce == 0) _DebugTex[id.xy] = float4(ray.origin, asfloat(octahedral_32(Geomnorm)));
@@ -570,7 +586,7 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
             if(LightFormat == SPOTLIGHT) {
                 float3 LocalLight = ToLocal(GetTangentSpace(LightNorm), -to_light) * 0.5f + 0.5f;
-                float2 AlignedUV = AlignUV(LocalLight.xz, float4(1,1,0,0), _UnityLights[AggTriIndex].IESTex);
+                float2 AlignedUV = AlignUV(LocalLight.xz, _UnityLights[AggTriIndex].IESTexScaleOffset, _UnityLights[AggTriIndex].IESTex);
                 if(AlignedUV.x != -1) Radiance *= _IESAtlas.SampleLevel(my_point_clamp_sampler, AlignedUV, 0);
             }
             
@@ -704,6 +720,14 @@ inline void calcFinalColor(SmallerRay ray, inout ColData Color, MaterialData hit
 
     Color.throughput = throughput;
 
+    bool CB = true;
+    if(MaterialLobe == 2 && DoPartialRendering && CurBounce == 0) {
+        CB = (int(id.x)/PartialRenderingFactor + int(id.y)/PartialRenderingFactor + curframe)%2==0;
+        if(UseASVGF) {
+            if(hitDat.metallic == 1 || hitDat.specTrans == 1 || RandomNums[id].z != 0 || RandomNums[id].w != 0) CB = true;
+        }
+    }
+
     if(CB) {
 #ifdef ReSTIRSampleReduction
         if(UseReSTIRGI && CurBounce == 0) {
@@ -725,11 +749,7 @@ float3 PrimaryBackgroundTintColor;
 float PrimaryBackgroundTint;
 float PrimaryBackgroundContrast;
 
-#ifdef DX11
 [numthreads(64, 1, 1)]
-#else
-[numthreads(32, 1, 1)]
-#endif
 void kernel_shade(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
 
     if (CurBounce != 0 && (id.x >= BufferSizes[CurBounce - 1].tracerays)) return;
@@ -753,6 +773,10 @@ void kernel_shade(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
     #endif
     ColData Color = InitCol;
     bool BSDFWRITTEN = false;
+#ifdef PhotonMapping
+    if(CurBounce == 0)
+        FirstDiffuseThroughputTex[id.xy] = 0;
+#endif
     if(CurBounce > 0) {
         Color = GlobalColors[pixel_index];
     } 
@@ -1094,15 +1118,18 @@ int MaterialIndex;
             Color.Data = float3(Color.Direct);
             Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((1) << 26);  
             Color.Flags = packRGBE(Color.Direct);
+            PSRGBuff[id.xy].y = asfloat(packRGBE(Color.Direct));  
+
         }
         if(GetBounceData(Color.MetRoughIsSpec) == 0) {
             ScreenSpaceInfo[id.xy] = float4(ScreenSpaceInfo[id.xy].xyz, asfloat((asuint(ScreenSpaceInfo[id.xy].w) << 1) >> 1));//PrevScreenData.z + hit.t, asfloat((CurBounce == 0 ? ((uint)(MaterialIndex << 2) >> 2) : ((asuint(PrevScreenData.w) << 3) >> 3)) | ((CurBounce != 0 ? ((asuint(PrevScreenData.w) << 1) >> 30) :  (uint)MaterialLobe) << 29) | (Refracted << 31))); 
             Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((2) << 26);  
 
         }
-        // if(GetBounceData(asuint(PSRGBuff[id.xy].w)) == 0) {
-        //     PSRGBuff[id.xy].w = asfloat(((asuint(PSRGBuff[id.xy].w) & ~(0x7C000000))) |  ((2) << 26));
-        // }  
+        if(GetBounceData(asuint(PSRGBuff[id.xy].w)) == 0) {
+            // PSRGBuff[id.xy].w = asfloat(((asuint(PSRGBuff[id.xy].w) & ~(0x7C000000))) |  ((2) << 26));
+            PSRGBuff[id.xy].z += 100.0f;//;
+        }  
 
         GlobalColors[pixel_index] = Color;
         if(UseReSTIRGI && CurBounce == 1 && GetBounceData(Color.MetRoughIsSpec) == 0) {
@@ -1229,7 +1256,7 @@ int MaterialIndex;
 
 
 #ifdef MoreAO
-    if(GetBounceData(asuint(PSRScreenData.w)) == CurBounce + 1) {
+    if(GetBounceData(asuint(PSRScreenData.w)) == 2 && TempMat.diffTrans == 0) {
         if(FromColorSpecPacked(asuint(PSRScreenData.w)).z == 2 || FromColorSpecPacked(asuint(PSRScreenData.w)).z == 1)
         if(bestHit.t < aoRadius) {
             float ao = bestHit.t / aoRadius;
@@ -1241,9 +1268,6 @@ int MaterialIndex;
 
 
     TempMat.roughness = max(TempMat.roughness, 0.00001f);
-    #ifndef TrueBlack
-        TempMat.surfaceColor = max(TempMat.surfaceColor, 0.005f);
-    #endif
 #ifdef ClampRoughnessToBounce
     {
         const uint Case = (asuint(PrevScreenData.w) << 1) >> 30;
@@ -1256,7 +1280,7 @@ int MaterialIndex;
             float3 EmissCol = lerp(TempMat.EmissionColor, TempMat.surfaceColor, GetFlag(TempMat.Tag, BaseIsMap));
             float4 EmissTex = SampleTexture(BaseUv, SampleEmission, TempMat);
             if(!GetFlag(TempMat.Tag, IsEmissionMask)) {//IS a mask
-                TempMat.emission *= luminance(EmissTex.xyz) * luminance(EmissTex.xyz) > 0.01f;
+                TempMat.emission *= EmissTex.x * (luminance(EmissTex.xyz) > 0.01f);
             } else EmissCol *= EmissTex.xyz;
             TempMat.surfaceColor = lerp(TempMat.surfaceColor, EmissCol, saturate(TempMat.emission) * GetFlag(TempMat.Tag, ReplaceBase));
         } else {
@@ -1296,16 +1320,6 @@ int MaterialIndex;
 
 
 
-#ifdef HDRP
-    Texture2DArray<float4> DiffuseGBuffer;
-    Texture2DArray<float4> SpecularGBuffer;
-    Texture2DArray<float4> NormalTexture;
-#else
-    Texture2D<float4> DiffuseGBuffer;
-    Texture2D<float4> SpecularGBuffer;
-    Texture2D<float4> NormalTexture;
-#endif
-
 #pragma kernel kernel_finalize
 int UpscalerMethod;
 [numthreads(16, 16, 1)]
@@ -1313,22 +1327,16 @@ void kernel_finalize(uint3 id : SV_DispatchThreadID) {//Moved final accumulation
     if (id.x >= screen_width || id.y >= screen_height) return;
     int final_pixel_index = id.y * screen_width + id.x;
 
-    float3 GBufferCol = 1;
-    [branch]if(DiffRes && UpscalerMethod != 0) {
-        float2 UV = id.xy / float2(screen_width, screen_height);
-        #ifdef HDRP
-            float3 SpecularAlbedo = 0;
-            // GBufferCol = ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, float3(UV, 0), 0).xyz + SpecularAlbedo) == 0) ? 1 : (DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, float3(UV, 0), 0).xyz + SpecularAlbedo);
-        #else
-            // float3 SpecularAlbedo = SpecularGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0);
-            // GBufferCol = ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo) == 0) ? 1 : ((DiffuseGBuffer.SampleLevel(my_linear_clamp_sampler, UV, 0).xyz + SpecularAlbedo));
-        #endif
+    int LocalRenderingFactor = PartialRenderingFactor;
+    if(FromColorSpecPacked(GlobalColors[final_pixel_index].MetRoughIsSpec).z != 2) {
+        LocalRenderingFactor = 1;
     }
-    float3 res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? (GlobalColors[final_pixel_index].Data.xyz + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f)) : (((float)PartialRenderingFactor) * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * (UseReSTIRGI ? 1.0f : IndirectBoost)) * GlobalColors[final_pixel_index].Data.xyz) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f) / GBufferCol);
+
+    float3 res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? (GlobalColors[final_pixel_index].Data.xyz + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f)) : (((float)LocalRenderingFactor) * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * (UseReSTIRGI ? 1.0f : IndirectBoost)) * GlobalColors[final_pixel_index].Data.xyz) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f));
     if (!all(res < 10000000)) res = 0;
     #if DebugView != -1
         #if DebugView == DVGIView
-            res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? GlobalColors[final_pixel_index].Data.xyz : (((float)PartialRenderingFactor) * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f)));
+            res = (GetBounceData(GlobalColors[final_pixel_index].MetRoughIsSpec) == 1) ? GlobalColors[final_pixel_index].Data.xyz : (((float)LocalRenderingFactor) * ((GlobalColors[final_pixel_index].Direct + GlobalColors[final_pixel_index].Indirect * IndirectBoost) + pow(unpackRGBE(GlobalColors[final_pixel_index].PrimaryNEERay),2.2f)));
         #elif defined(RadCache) && DebugView == DVRadCache
             res = 0;
             float4 Dat = _DebugTex[id.xy];
@@ -1348,10 +1356,10 @@ int Type;
 [numthreads(1, 1, 1)]
 void TransferKernel(uint3 id : SV_DispatchThreadID) {
     if(Type == 0) {
-        BufferData[0] = uint3(ceil(BufferSizes[CurBounce].tracerays / 32.0f), 1, 1);
+        BufferData[0] = uint3(ceil(BufferSizes[CurBounce].tracerays / 64.0f), 1, 1);
         if(CurBounce != 0) BufferSizes[CurBounce - 1].tracerays = BufferSizes[CurBounce].tracerays;
     } else {
-        BufferData[0] = uint3(ceil(BufferSizes[CurBounce].shadow_rays / 32.0f), 1, 1);
+        BufferData[0] = uint3(ceil(BufferSizes[CurBounce].shadow_rays / 64.0f), 1, 1);
     }
 
 }
@@ -1371,20 +1379,6 @@ void OIDNtoTTKernel(uint3 id : SV_DispatchThreadID) {
 #pragma kernel TTtoOIDNKernel
 [numthreads(16, 16, 1)]
 void TTtoOIDNKernel(uint3 id : SV_DispatchThreadID) {
-    if(id.x > screen_width || id.y > screen_height) return;
-    int pixel_index = id.x + id.y * screen_width;
-    if(OIDNGuideWrite) {
-        NormalBuffer[pixel_index] = i_octahedral_32(ScreenSpaceInfo[id.xy].y);
-        AlbedoBuffer[pixel_index] = unpackRGBE(GlobalColors[pixel_index].Flags);
-    }
-    OutputBuffer[id.x + id.y * screen_width] = Result[id.xy].xyz;
-}
-
-
-
-#pragma kernel TTtoOIDNKernelPanorama
-[numthreads(16, 16, 1)]
-void TTtoOIDNKernelPanorama(uint3 id : SV_DispatchThreadID) {
     if(id.x >= screen_width || id.y >= screen_height) return;
     int pixel_index = id.x + id.y * screen_width;
     if(OIDNGuideWrite) {
@@ -1393,6 +1387,7 @@ void TTtoOIDNKernelPanorama(uint3 id : SV_DispatchThreadID) {
     }
     OutputBuffer[id.x + id.y * screen_width] = Result[id.xy].xyz;
 }
+
 RWTexture2D<half> CorrectedDistanceTex;
 
 
@@ -1452,7 +1447,7 @@ void RefineMVKernel(uint3 id : SV_DispatchThreadID) {
         float4 prevprojectedrefl = mul(prevviewprojection, float4(OldPos, 1));
         float2 reflprojection = ((curprojectedrefl.xy / curprojectedrefl.w) - (prevprojectedrefl.xy / prevprojectedrefl.w)) * 0.5f;
         if(GetBounceData(GlobalColors[id.x + id.y * screen_width].MetRoughIsSpec) > 1) {
-            CorrectedDistanceTex[id.xy] = length(NewPos2 - CamPos);// / 120.0f;
+            CorrectedDistanceTex[id.xy] = length(NewPos2 - CamPos) / 120.0f;
             MVTexture[id.xy] = (reflprojection);
         }
 }

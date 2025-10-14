@@ -1,0 +1,869 @@
+#define COLOREDGLASS
+#define ACCURATECAUSTICS
+#define gCausticRadius 0.005f
+#define PhotonMappingUsed
+#define RespectCausticParameters
+// #include "UnityCG.cginc"
+groupshared uint PhotonBounce[32*32];
+
+#include "../GlobalDefines.cginc"
+
+#ifndef DX11
+    #pragma use_dxc
+    // #pragma enable_d3d11_debug_symbols
+#endif
+#include "../MainCompute/CommonData.cginc"
+#include "../MainCompute/Materials.cginc"
+#include "../Utility/Atmosphere/AtmosphereSampling.cginc"
+
+#ifdef HardwareRT
+    #include "UnityRayQuery.cginc"
+    #pragma require inlineraytracing
+    RaytracingAccelerationStructure myAccelerationStructure;
+#endif
+
+RWTexture2D<float4> gHashBucketPos;
+RWTexture2D<float4> gHashBucketFlux;
+RWTexture2D<float4> gHashBucketDir;
+RWStructuredBuffer<uint> gHashCounter;
+
+#define gCausticHashScaleFactor (1.0f / gCausticRadius)
+
+#define gBucketYExtent 512
+#define kMinCosTheta 1e-6
+#define LaunchDimsX 16
+#define LaunchDimsY 16
+
+float CDFWIDTH;
+
+#define CDFHEIGHT (CDFWIDTH / 2.0f)
+float PhotonGuidingRatio;
+int analyticPhotons;
+
+struct AABBBuffData {
+    uint3 BBMax;
+    uint3 BBMin;
+    int3 AveragedCenter;
+    uint PhotonCount;
+};
+RWStructuredBuffer<AABBBuffData> AABBBuff;
+int PhotonFrames;
+
+int mNumBuckets;
+
+int2 GetLightOffset(int Index) {
+    return int2(floor(Index % ceil(sqrt((float)(unitylightcount)))) * CDFWIDTH, floor((float)Index / ceil(sqrt((float)(unitylightcount)))) * CDFHEIGHT);
+}
+
+inline uint FloatToUint(float f) {
+    uint mask = -((int) (asuint(f) >> 31)) | 0x80000000;
+    return asuint(f) ^ mask;
+}
+
+inline float UintToFloat(uint u) {
+    uint mask = ((u >> 31) - 1) | 0x80000000;
+    return asfloat(u ^ mask);
+}
+#pragma kernel InitKernelA
+[numthreads(LaunchDimsX, LaunchDimsY, 1)]
+void InitKernelA(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
+    if(id.x > screen_width || id.y > screen_height) return;
+    AABBBuffData ZeroedBuff = {uint3(FloatToUint(-999999),FloatToUint(-999999), FloatToUint(-999999)), uint3(FloatToUint(999999),FloatToUint(999999), FloatToUint(999999)), int3(0,0,0), 0};
+    // AABBBuffData ZeroedBuff = {uint3(FloatToUint(6.42),FloatToUint(0.598), FloatToUint(-14.93)), uint3(FloatToUint(6.42),FloatToUint(0.598), FloatToUint(-14.93)), 0};
+    AABBBuff[PhotonFrames % 2] = ZeroedBuff;
+    gHashBucketPos[id.xy] = 0;
+    gHashBucketFlux[id.xy] = 0;
+    gHashBucketDir[id.xy] = 0;
+}
+#pragma kernel InitKernelB
+[numthreads(1024, 1, 1)]
+void InitKernelB(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
+    if(id.x > mNumBuckets) return;
+    gHashCounter[id.x] = 0;
+}
+
+struct PhotonDensityData {
+    uint x;
+    uint y;
+    uint z;
+    uint y2;
+    uint z2;
+};
+
+StructuredBuffer<PhotonDensityData> PhotonDensityMapA;
+RWStructuredBuffer<PhotonDensityData> PhotonDensityMapB;
+
+Texture2D<float4> VisTexA;
+RWTexture2D<float4> VisTexB;
+RWTexture2D<float> CDFXWRITE;
+RWTexture2D<float> CDFYWRITE;
+
+#pragma kernel InitKernelC
+[numthreads(32, 32, 1)]
+void InitKernelC(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
+    float4 A = VisTexB[id.xy];
+    VisTexB[id.xy] = float4(A.x / max(A.y, 1), A.y == 0 ? 0 : ((float)A.z / (float)max(AABBBuff[PhotonFrames % 2].PhotonCount, 1)), 0, A.w);
+    CDFXWRITE[id.xy] = 0;
+    CDFYWRITE[int2(id.y,1)] = 0;
+}
+
+#pragma kernel InitKernelD
+[numthreads(32, 32, 1)]
+void InitKernelD(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
+    VisTexB[id.xy] = 0;
+}
+
+
+
+inline int SampleLIPhoton(const int pixel_index, inout float pdf, inout float3 wi) {
+    float2 Rand = random(222, pixel_index);
+    float2 uv;
+    int v, offset;
+    {
+        v = FindInterval(CDFHEIGHT * ceil(sqrt((float)(unitylightcount))), Rand.x, CDFY);
+
+        float du = Rand.x - CDFY[int2(v, 0)];
+        float diff = (CDFY[int2(v + 1, 0)] - CDFY[int2(v, 0)]);
+        if(diff > 0)
+            du /= diff;
+
+        uv.y = ((float)v + du) / (CDFHEIGHT);
+    }
+
+    {
+        offset = FindInterval(CDFWIDTH * ceil(sqrt((float)(unitylightcount))), Rand.y, CDFX, v);
+        float du = Rand.y - CDFX[int2(offset, v)];
+        float diff = (CDFX[int2(offset + 1, v)] - CDFX[int2(offset, v)]);
+        if(diff > 0)
+            du /= diff;
+
+        uv.x = ((float)offset + du) / (CDFWIDTH);
+    }
+    float2 uv2 = fmod(uv , 1.0f);
+    wi = -equirectUvToDirection(uv2 + random(92, pixel_index).xy * 0.01f - 0.005f);
+    pdf =  (float)CDFWIDTH * (float)CDFHEIGHT * equirectDirectionPdf(wi) * (luminance(VisTexA.SampleLevel(my_point_clamp_sampler, uv / (float)ceil(sqrt((float)(unitylightcount))), 0).xyz) / TotSum[0]);
+    return (int)VisTexA.SampleLevel(my_point_clamp_sampler, uv / (float)ceil(sqrt((float)(unitylightcount))), 0).w;
+}   
+
+
+
+inline void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inout RayHit ray_hit, const int MatOffset, const float RandNum) {
+    TrianglePos tri = triangle_get_positions(tri_id);
+
+    float3 h = cross(ray.direction, tri.posedge2);
+    float  a = dot(tri.posedge1, h);
+
+    float  f = rcp(a);
+    float3 s = ray.origin - tri.pos0;
+    float  u = f * dot(s, h);
+
+    float3 q = cross(s, tri.posedge1);
+    float  v = f * dot(ray.direction, q);
+
+    [branch]if (u >= 0 && v >= 0.0f && u + v <= 1.0f) {
+        float t = f * dot(tri.posedge2, q);
+
+        [branch]if (t > 0 && t < ray_hit.t) {
+            const TriangleUvs tri2 = triangle_get_positions2(tri_id);
+            const int MaterialIndex = (MatOffset + AggTrisA[tri_id].MatDat);
+            float2 BaseUv = tri2.pos0 * (1.0f - u - v) + tri2.posedge1 * u + tri2.posedge2 * v;
+            //major slowdown
+            #ifdef AdvancedAlphaMapped
+                [branch]if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
+                    if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0) 
+                        if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) return;
+                }
+            #endif
+            #ifdef FadeMapping
+                [branch]if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
+                    if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
+                        if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= RandNum) return;
+                }
+            #endif
+            if(CurBounce == 0 && GetFlag(_IntersectionMaterials[MaterialIndex].Tag, Invisible)) return;
+            ray_hit.t = t;
+            ray_hit.u = u;
+            ray_hit.v = v;
+            ray_hit.mesh_id = mesh_id;
+            ray_hit.triangle_id = tri_id;
+        }
+    }
+}
+
+inline RayHit IntersectBVH(SmallerRay GlobalRay, int pixel_index) {
+    RayHit bestHit = CreateRayHit();
+    GlobalRay.direction = (GlobalRay.direction == 0 ? EPSILON : GlobalRay.direction);
+    SmallerRay ray = GlobalRay;
+    int NodeOffset = 0;
+    int TriOffset = 0;
+    int MatOffset = 0;
+    int mesh_id = -1;
+
+    float RandNum = random(76, pixel_index).x;
+
+
+
+  #ifdef HardwareRT
+            const uint rayFlags = RAY_FLAG_FORCE_OPAQUE  ;
+            UnityRayQuery<rayFlags> q;
+            RayDesc myRay;
+            myRay.Origin = GlobalRay.origin;
+            myRay.Direction = GlobalRay.direction;
+            myRay.TMin = 0;
+            myRay.TMax = bestHit.t;
+            // bestHit.t = FarPlane;
+            while(true) {
+               q.TraceRayInline(myAccelerationStructure, rayFlags, 0xff, myRay);
+                while(q.Proceed()){}
+
+                if(q.CommittedStatus() == COMMITTED_TRIANGLE_HIT) {
+                    bestHit.t = q.CommittedRayT();
+                    bestHit.u = q.CommittedTriangleBarycentrics().y;
+                    bestHit.v = q.CommittedTriangleBarycentrics().x;
+                    bestHit.mesh_id = uint(q.CommittedInstanceID() | (q.CommittedGeometryIndex() << 25));
+                    bestHit.triangle_id = q.CommittedPrimitiveIndex();
+                    #if defined(AdvancedAlphaMapped) || defined(IgnoreBackfacing) || defined(FadeMapping) || defined(IgnoreGlassMain)
+                        int2 Indexes = int2(bestHit.mesh_id & 0x1FFFFFF, bestHit.mesh_id >> 25);
+                        int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
+                        int tri_id = bestHit.triangle_id + triangleOffset;
+                        int mesh_id = MeshOffsets[Indexes.x].y;
+                        int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTrisA[tri_id].MatDat);
+                    #endif
+                    #ifdef AdvancedAlphaMapped
+                        if(CurBounce == 0 && GetFlag(_IntersectionMaterials[MaterialIndex].Tag, Invisible)) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
+                        if(_IntersectionMaterials[MaterialIndex].MatType == CutoutIndex) {
+                            float2 BaseUv = TOHALF(AggTrisA[tri_id].tex0) * (1.0f - bestHit.u - bestHit.v) + TOHALF(AggTrisA[tri_id].texedge1) * bestHit.u + TOHALF(AggTrisA[tri_id].texedge2) * bestHit.v;
+                            if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
+                                if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x < _IntersectionMaterials[MaterialIndex].AlphaCutoff) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
+                        }
+                    #endif
+                    #ifdef IgnoreGlassMain
+                        if(_IntersectionMaterials[MaterialIndex].specTrans == 1) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
+                    #endif
+                    #ifdef IgnoreBackfacing
+                        TrianglePos tri = triangle_get_positions(tri_id);
+                        if(_IntersectionMaterials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)) <= 0) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
+                    #endif
+                    #ifdef FadeMapping
+                        if(_IntersectionMaterials[MaterialIndex].MatType == FadeIndex) {
+                            float2 BaseUv = TOHALF(AggTrisA[tri_id].tex0) * (1.0f - bestHit.u - bestHit.v) + TOHALF(AggTrisA[tri_id].texedge1) * bestHit.u + TOHALF(AggTrisA[tri_id].texedge2) * bestHit.v;
+                            if(_IntersectionMaterials[MaterialIndex].AlphaTex.x > 0)
+                                if(SampleTexture(BaseUv, SampleAlpha, _IntersectionMaterials[MaterialIndex]).x - _IntersectionMaterials[MaterialIndex].AlphaCutoff <= RandNum) {myRay.TMin = bestHit.t + 0.0001f; bestHit.t = FarPlane; continue;}
+                        }
+                    #endif
+                }
+                break;
+            }
+
+            if(bestHit.mesh_id != 9999999) {
+                int2 Indexes = int2(bestHit.mesh_id & 0x1FFFFFF, bestHit.mesh_id >> 25);
+                int triangleOffset = SubMeshOffsets[MeshOffsets[Indexes.x].x + Indexes.y];
+                bestHit.triangle_id += triangleOffset;
+                bestHit.mesh_id = MeshOffsets[Indexes.x].y;
+            }
+        #else
+
+    int Reps = 0;
+    uint2 stack[16];
+    int stack_size = 0;
+    uint2 current_group = 0;
+    uint oct_inv4 = ray_get_octant_inv4(ray.direction);
+    int tlas_stack_size = -1;
+                current_group.y = 0b10000000000000000000000000000000;//(uint)0x80000000;
+    uint2 triangle_group = 0;
+
+
+
+    [loop]while (Reps < MaxTraversalSamples) {//Traverse Accelleration Structure(Compressed Wide Bounding Volume Hierarchy)          
+
+        [branch]if (current_group.y > 0x00FFFFFF) {
+            uint child_index_offset = firstbithigh(current_group.y);
+
+            uint slot_index = (child_index_offset - 24) ^ (oct_inv4 & 0xff);
+            uint relative_index = countbits(current_group.y & ~(0xffffffff << slot_index));
+            uint child_node_index = current_group.x + relative_index;
+            const BVHNode8Data TempNode = cwbvh_nodes[child_node_index];
+
+            current_group.y &= ~(1 << child_index_offset);
+
+            if (current_group.y > 0x00FFFFFF) stack[stack_size++] = current_group;
+
+            current_group.x = (TempNode.nodes[1].x) + NodeOffset;
+            triangle_group.x = (TempNode.nodes[1].y) + TriOffset;
+
+            uint hitmask = cwbvh_node_intersect(ray, oct_inv4, bestHit.t, TempNode);
+
+            current_group.y = (hitmask & 0xff000000) | ((TempNode.nodes[0].w >> 24) & 0xff);
+            triangle_group.y = (hitmask & 0x00ffffff);
+
+            Reps++;
+        } else {
+            triangle_group = current_group;
+            current_group = (uint)0;
+        }
+
+        if(triangle_group.y != 0) {
+            [branch]if(tlas_stack_size == -1) {
+                uint mesh_offset = firstbithigh(triangle_group.y);
+                triangle_group.y &= ~(1 << mesh_offset);
+                mesh_id = TLASBVH8Indices[triangle_group.x + mesh_offset];
+                NodeOffset = _MeshData[mesh_id].NodeOffset;
+                TriOffset = _MeshData[mesh_id].TriOffset;
+
+                if (triangle_group.y != 0) stack[stack_size++] = triangle_group;
+                if (current_group.y & 0xff000000) stack[stack_size++] = current_group;
+
+                tlas_stack_size = stack_size;
+
+                int root_index = (_MeshData[mesh_id].mesh_data_bvh_offsets & 0x7fffffff);
+
+                MatOffset = _MeshData[mesh_id].MaterialOffset;
+                ray.direction = (mul((float3x3)_MeshData[mesh_id].W2L, ray.direction));
+                ray.origin = (mul(_MeshData[mesh_id].W2L, float4(ray.origin, 1))).xyz;
+
+                oct_inv4 = ray_get_octant_inv4(ray.direction);
+
+                current_group.x = (uint)root_index;
+                current_group.y = (uint)0x80000000;
+            } else {
+                while (triangle_group.y != 0) {
+                    uint triangle_index = firstbithigh(triangle_group.y);
+                    triangle_group.y &= ~(1 << triangle_index);
+                    IntersectTriangle(mesh_id, triangle_group.x + triangle_index, ray, bestHit, MatOffset, RandNum);//Intersect Mesh Triangles
+                }
+            }
+        }
+      
+        if ((current_group.y & 0xff000000) == 0) {
+            if (stack_size == 0) {//thread has finished traversing
+                break;
+            }
+
+            if (stack_size == tlas_stack_size) {
+                NodeOffset = 0;
+                TriOffset = 0;
+                tlas_stack_size = -1;
+                ray = GlobalRay;
+                oct_inv4 = ray_get_octant_inv4(ray.direction);
+            }
+            current_group = stack[--stack_size];
+        }
+    }
+    #endif
+    return bestHit;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+inline void calcFinalColor(inout PhotonRayData ray, MaterialData hitDat, RayHit hit, uint2 id, const uint pixel_index, int MaterialIndex, float2 BaseUv, inout float3 surfCol, inout float scatDist, inout float TotalStrength) {//main function
+    float3 PrevOrigin = ray.origin;
+    float3 pos = ray.direction * hit.t + ray.origin;
+    float3 PrevDirection = ray.direction;
+    float3 USGNorm;//Unsmoothed geometric normal
+    float3 norm;
+    float3 Geomnorm;
+    float3x3 Inverse = transpose((float3x3)_MeshData[hit.mesh_id].W2L);
+    bool validBSDFSample;
+
+    float3 throughput = ray.throughput;
+    Geomnorm = GetTriangleNormal(hit.triangle_id, float2(hit.u, hit.v), Inverse);
+    USGNorm = mul(Inverse, cross(normalize(AggTrisA[hit.triangle_id].posedge1), normalize(AggTrisA[hit.triangle_id].posedge2)));
+    float wldScale = rsqrt(dot(USGNorm, USGNorm));
+    USGNorm = -mul(wldScale, USGNorm);
+    if(dot(USGNorm, Geomnorm) < 0) USGNorm *= -1;
+    if(hitDat.MatType == CutoutIndex) USGNorm = Geomnorm;
+
+    bool GotFlipped = dot(ray.direction, USGNorm) > 0.0f;
+    if (GotFlipped) {USGNorm *= -1.0f; Geomnorm *= -1.0f;}//Backfacing surface
+
+    norm = Geomnorm;
+
+    if ((hitDat.NormalTex.x > 0 || hitDat.SecondaryNormalTex.x > 0)) {//Handle Normal Maps
+        float3 LocalTan = GetTriangleTangent(hit.triangle_id, float2(hit.u, hit.v), Inverse);
+        float3 LocalBinorm = normalize(cross(Geomnorm, LocalTan));
+        float2 Norm = SampleTexture(BaseUv, SampleNormal, hitDat);
+
+        float3 LocalNormIN = float3((hitDat.NormalStrength * Norm - (hitDat.NormalStrength / 2.0f)), 0.0f);
+        LocalNormIN.z = 1.0 - 0.5 * dot(LocalNormIN, LocalNormIN);
+
+        if(hitDat.SecondaryNormalTex.x > 0) {
+            float2 DetailNorm = SampleTexture(BaseUv, SampleDetailNormal, hitDat);
+            float3 DetailLocalNormIN = float3((hitDat.DetailNormalStrength * DetailNorm - (hitDat.DetailNormalStrength / 2.0f)), 0.0f);
+            DetailLocalNormIN.z = 1.0 - 0.5 * dot(DetailLocalNormIN, DetailLocalNormIN);
+            LocalNormIN = lerp(LocalNormIN, DetailLocalNormIN, hitDat.SecondaryNormalTexBlend);
+        }
+
+        norm = clamp(normalize(mul(normalize(LocalNormIN), float3x3(LocalTan, LocalBinorm, Geomnorm)).xyz),-1,1);
+        if (abs(norm.x) == abs(norm.y) == abs(norm.z)) norm = Geomnorm;
+        norm = i_octahedral_32(octahedral_32(norm));
+    }
+
+
+    int MaterialLobe = 2;
+    float3 bsdfmodifier = 1;
+    bool Refracted = false;
+    float3 bsdf = 1;
+    float pdf = 1;
+    [branch] if (hitDat.emission > 0.0f) {
+        ray.terminated = true;
+        return;
+    }
+   
+    validBSDFSample = SampleDisney(hitDat, ray.direction, GetFlag(hitDat.Tag, Thin), pdf, bsdf, norm, MaterialLobe, pixel_index, Refracted, GotFlipped);
+    {
+        if (Refracted) {
+            Geomnorm *= -1;
+            norm *= -1;
+            USGNorm *= -1;
+            surfCol = hitDat.surfaceColor;
+            if(!GotFlipped) scatDist = hitDat.scatterDistance;
+        }
+        bsdf *= bsdfmodifier;
+        throughput *= bsdf;
+    }
+
+#ifdef RespectCausticParameters
+    TotalStrength *= hitDat.CausticStrength;
+#endif
+    ray.origin = USGNorm * NormalOffset + pos;//Offset the ray origin so we dont self intersect with the triangle we just bounced off of
+    throughput = max(throughput, 0);
+    ray.diffuseHit = !((MaterialLobe == 3) || (MaterialLobe == 0 && hitDat.roughness < 0.8f));
+    ray.Norm = octahedral_32(Geomnorm);
+    ray.throughput = throughput;
+#ifdef RespectCausticParameters
+    if (!validBSDFSample || any(throughput <= 0) || (!GetFlag(hitDat.Tag, EnableCausticGeneration) && !ray.diffuseHit) || (GetFlag(hitDat.Tag, DisableCausticRecieving) && ray.diffuseHit)) {
+#else
+    if (!validBSDFSample || any(throughput <= 0)) {
+#endif
+        ray.terminated = true;
+        return;//If the ray failed, we have no choice but to terminate this path
+    }
+
+
+
+}
+static const ColData InitCol = { 1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0};
+
+
+
+inline void FullTrace(inout PhotonRayData GlobRay, inout RayHit bestHit, int pixel_index, int2 id, int i, inout float3 surfCol, inout float scatDist, inout float TotalStrength) {
+        bestHit = IntersectBVH(CreateRay(GlobRay.origin, GlobRay.direction), pixel_index);
+        int MaterialIndex;
+        MaterialIndex = _MeshData[bestHit.mesh_id].MaterialOffset + AggTrisA[bestHit.triangle_id].MatDat;
+        if (bestHit.t == FarPlane) {
+            GlobRay.terminated = true;
+            return;
+        }
+
+        float2 BaseUv;
+        MaterialData TempMat;
+        BaseUv = TOHALF(AggTrisA[bestHit.triangle_id].tex0) * (1.0f - bestHit.u - bestHit.v) + TOHALF(AggTrisA[bestHit.triangle_id].texedge1) * bestHit.u + TOHALF(AggTrisA[bestHit.triangle_id].texedge2) * bestHit.v;
+        TempMat = _Materials[MaterialIndex];
+
+        float3 TempCol = 1;
+        if(TempMat.AlbedoTex.x > 0) TempCol = SampleTexture(BaseUv, SampleAlbedo, TempMat);
+        TempMat.surfaceColor *= TempCol;
+
+        TempCol = TempMat.surfaceColor;
+        Unity_Hue_Degrees_float(TempCol, TempMat.Hue * 500.0f, TempMat.surfaceColor);
+        TempMat.surfaceColor *= TempMat.Brightness;
+        TempCol = TempMat.surfaceColor;
+        Unity_Saturation_float(TempCol, TempMat.Saturation, TempMat.surfaceColor);
+        Unity_Contrast_float(TempMat.surfaceColor, TempMat.Contrast);
+        TempMat.surfaceColor = saturate(TempMat.surfaceColor);
+        TempMat.surfaceColor = lerp(TempMat.surfaceColor, TempMat.BlendColor, TempMat.BlendFactor);
+
+        if (TempMat.specTrans != 1 && TempMat.MetallicTex.x > 0) TempMat.metallic = pow(SampleTexture(BaseUv, SampleMetallic, TempMat), rcp(2.2f));
+        if (TempMat.RoughnessTex.x > 0) {
+            TempMat.roughness = saturate(pow(SampleTexture(BaseUv, SampleRoughness, TempMat), rcp(2.2f)));
+            TempMat.roughness = (GetFlag(TempMat.Tag, InvertSmoothnessTexture) ? (1.0f - TempMat.roughness) : TempMat.roughness);
+        }
+        TempMat.metallic = saturate(TempMat.metallic);
+        if(!all(TempMat.MetallicRemap == float2(0,1))) TempMat.metallic = (TempMat.metallic * (TempMat.MetallicRemap.y - TempMat.MetallicRemap.x)) + TempMat.MetallicRemap.x;
+        if(!all(TempMat.RoughnessRemap == float2(0,1))) {
+            if(GetFlag(TempMat.Tag, UseSmoothness)) TempMat.roughness = (TempMat.roughness * ((1.0f - TempMat.RoughnessRemap.x) - (1.0f - TempMat.RoughnessRemap.y))) + (1.0f - TempMat.RoughnessRemap.y);
+            else TempMat.roughness = (TempMat.roughness * (TempMat.RoughnessRemap.y - TempMat.RoughnessRemap.x)) + TempMat.RoughnessRemap.x;
+        }
+
+
+        TempMat.roughness = max(TempMat.roughness, 0.00001f);
+        calcFinalColor(GlobRay, TempMat, bestHit, id.xy, pixel_index, MaterialIndex, BaseUv, surfCol, scatDist, TotalStrength);
+}
+
+
+
+
+inline uint Photonhash(int3 cell)
+{
+    //convert to uint64
+    uint64_t key = 0;
+    uint64_t cells = cell.x;
+    cells &= 0x1FFFFF;
+    key |= cells << 42;
+    cells = cell.y;
+    cells &= 0x1FFFFF;
+    key |= cells << 21;
+    cells = cell.z;
+    cells &= 0x1FFFFF;
+    key |= cells;
+
+    key = (~key) + (key << 18);
+    key = key ^ (key >> 31);
+    key *= 21;
+    key = key ^ (key >> 11);
+    key = key + (key << 6);
+    uint res = uint(key) ^ uint(key >> 22);
+    return res;
+}
+
+int mPGDDispatchX;
+int mMaxDispatchY;
+
+float3 sample_cone(float2 u, float cosTheta)
+{
+    float z = u.x * (1.f - cosTheta) + cosTheta;
+    float r = sqrt(1.f - z*z);
+    float phi = 2.0f * PI * u.y;
+    return float3(r * cos(phi), z, r * sin(phi));
+}
+
+
+RWStructuredBuffer<float3> DebugBuffer;
+RWStructuredBuffer<uint> DebugCounter;
+float3 TTCamPos;
+float3 TTForward;
+float4x4 TTviewprojection;
+float DirectionalLightCoverageRadius;
+Texture2D<float> DistTex;
+#pragma kernel kernel_gen
+[numthreads(32, 32, 1)]
+void kernel_gen(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
+    PhotonRayData CurrentRay = {float3(1,1,1), 0, float3(0,0,0), false, float3(0,1,0), false};
+    int pixel_index = id.x + id.y * mPGDDispatchX;
+    PhotonBounce[pixel_index % 1024] = 12;
+    // GroupMemoryBarrierWithGroupSync();
+    int Index = clamp(( random(11, pixel_index).x * (unitylightcount)), 0, (unitylightcount) - 1);
+    float pdf = 0.0f;
+        pdf = 1.0f;
+    float3 LightDir = 0;
+    bool A = false;
+    if(AABBBuff[1 - (PhotonFrames % 2)].PhotonCount > 0 && ((float)pixel_index / (float)(mPGDDispatchX * mMaxDispatchY)) > PhotonGuidingRatio) {
+        float3 Dir2;
+        int Index2 = (int)SampleLIPhoton(pixel_index, pdf, Dir2);
+        if(pdf != 0) {
+            Index = Index2;
+            A = true;
+            LightDir = normalize(Dir2);// * 122.0f + normalize(float3(random(200, pixel_index), random(201, pixel_index).x) * 0.5f - 0.5f));// * 122.0f + LightDir);
+        }
+    }
+    float3 LightPos = 0;
+    float3 LightInten = 0;
+    float SpotAngle = 0;
+    float LightArea = 1.0f;
+    float2 RandVec = 0;
+    LightData SelectedLight;
+    bool IsDifferent = false;
+        SelectedLight = _UnityLights[Index];
+        IsDifferent = SelectedLight.Type == DIRECTIONALLIGHT;
+        if(SelectedLight.Type == POINTLIGHT) {
+            LightPos = SelectedLight.Position;
+            if(!A) {
+                LightDir = SampleDirectionSphere(random(12, pixel_index).x, random(12, pixel_index).y);
+                if(pdf != 0) pdf = pdf / (PI * 4.0f);
+            }else {
+                if(pdf != 0) pdf = (1.0f / (PI * PI * 4.0f * PI)) / pdf;
+            }
+            LightInten = SelectedLight.Radiance;// * 2.0f * PI;
+        } else if(SelectedLight.Type == SPOTLIGHT) {
+            LightPos = SelectedLight.Position;
+            float ConeAngle = -SelectedLight.SpotAngle.y / SelectedLight.SpotAngle.x;
+            if(!A) {
+                LightDir = sample_cone(random(12, pixel_index), ConeAngle);
+                LightDir = ToWorld(GetTangentSpace(SelectedLight.Direction), LightDir);
+                pdf = ((1.0f - ConeAngle)) / (4.0f * PI * PI);
+            } else {
+                pdf = ((1.0f - ConeAngle) / (PI * PI * 4.0f)) / pdf;
+            }
+
+            LightInten = SelectedLight.Radiance;
+        } else if(SelectedLight.Type = DIRECTIONALLIGHT) {
+            float3 PlaneDir = -SelectedLight.Direction;
+            float3 PlaneOrigin = SelectedLight.Direction * 100.0f;
+
+            float3 HelperTan = float3(0,1,0);
+            if(abs(dot(HelperTan, PlaneDir)) > 0.99f) {
+                HelperTan = float3(1,0,0);
+            }
+            float3 TanBasis1 = normalize(cross(PlaneDir, HelperTan));
+            float3 TanBasis2 = cross(PlaneDir, TanBasis1);
+
+            float3 CalcedDir = LightDir;
+
+            LightPos = SelectedLight.Direction * 100.0f;
+            LightDir = PlaneDir;
+            RandVec = random(115, pixel_index);//(random(115, pixel_index) - 0.5f) * 3.0f;
+
+            if(A) {
+                // pdf *= DirectionalLightCoverageRadius * DirectionalLightCoverageRadius;
+                RandVec = equirectDirectionToUv(CalcedDir) + (RandVec - 0.5f) * 0.001f;
+                if(pdf != 0) pdf = (1.0f) / (pdf * PI * PI * 4.0f) * ((DirectionalLightCoverageRadius * DirectionalLightCoverageRadius) / 64.0f);
+            }
+
+            float2 RandOffset = (RandVec - 0.5f) * DirectionalLightCoverageRadius;
+            LightPos += RandOffset.x * TanBasis1 + RandOffset.y * TanBasis2;
+            LightInten = SelectedLight.Radiance;
+        }
+   
+
+    Photon photon = {float4(0,0,0,0), float3(0,0,0), 1.0f, float3(0,0,0), 1.0f};
+    float3 lightFlux = LightInten / float(mPGDDispatchX * mMaxDispatchY) * pdf;
+
+    CurrentRay.origin = LightPos + 0.01f * LightDir;
+    CurrentRay.direction = LightDir;
+    RayHit bestHit;
+
+    bool wasReflectedSpecular = false;
+    bool reflectedDiffuse = false;
+    int i;
+
+    float3 PrevPos = 0;
+    float3 surfCol = 1;
+    float scatDist = 999999;
+    bool WasLast = false;
+    float4 Val = 0;
+    float3 PosPos = 0;
+    float TotalStrength = 1;
+    [loop]for(i = 0; i < 7; i++) {
+        PhotonBounce[pixel_index % 1024] = i + 1;
+        photon.Flux = lightFlux * CurrentRay.throughput;
+        FullTrace(CurrentRay, bestHit, pixel_index, id, i, surfCol, scatDist, TotalStrength);
+        PrevPos = CurrentRay.origin;
+
+#ifdef COLOREDGLASS
+        if(i > 0 && (scatDist != 999999 || WasLast)) {
+            CurrentRay.throughput *= exp(-bestHit.t * CalculateExtinction(1.0f - (surfCol), scatDist == 0.0f ? 1.0f : scatDist));
+            photon.Flux *= exp(-bestHit.t * CalculateExtinction(1.0f - (surfCol), scatDist == 0.0f ? 1.0f : scatDist));
+        }
+#endif
+        WasLast = scatDist != 999999;
+
+
+        if(CurrentRay.terminated) break;
+
+        photon.Pos = float4(CurrentRay.origin, 0);
+        photon.Dir = CurrentRay.direction;
+        reflectedDiffuse = CurrentRay.diffuseHit;
+
+        [branch]if(reflectedDiffuse) {
+
+            uint photonIndex = 0;
+            uint photonBucketIndex = 0;
+
+            float cellScale = gCausticHashScaleFactor;
+            int3 cell = int3(floor(photon.Pos.xyz * cellScale));
+            uint bucketIdx = Photonhash(cell) & (mNumBuckets - 1);
+
+            if (wasReflectedSpecular) {
+                InterlockedAdd(gHashCounter[bucketIdx], 1u, photonIndex);
+                //Insert photon
+                float rnd = random(43 + i, pixel_index).x;
+                float probability = 1.f / (photonIndex + 1);
+                uint2 texIdx = uint2(bucketIdx / gBucketYExtent, bucketIdx % gBucketYExtent);
+                float WSUM = luminance(gHashBucketFlux[texIdx].xyz) * (photonIndex+1) + luminance(photon.Flux.xyz);
+
+                if (rnd * WSUM <= luminance(photon.Flux.xyz))
+                // if (rnd <= probability)
+                {
+                    PosPos = photon.Pos;
+                    if(A) {
+                        photon.InitialDirection = octahedral_32(LightDir);
+                        gHashBucketPos[texIdx] = photon.Pos;
+                        gHashBucketFlux[texIdx] = float4(photon.Flux * TotalStrength, (WSUM / max((photonIndex+1) * luminance(photon.Flux.xyz), 1e-7)));
+                        gHashBucketDir[texIdx] = float4(photon.Dir, asfloat(bucketIdx));
+                    }
+
+                }
+            }      
+            break;
+
+        } else if(i == 0) {
+            float4x4 MeshTransformInverse = _MeshData[bestHit.mesh_id].W2L;
+            TrianglePos CurTri = triangle_get_positions(bestHit.triangle_id);
+            MeshTransformInverse = inverse(MeshTransformInverse);
+            float3 a0 = mul(MeshTransformInverse, float4(CurTri.pos0, 1)).xyz;
+            float3 a1 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge1, 1)).xyz;
+            float3 a2 = mul(MeshTransformInverse, float4(CurTri.pos0 + CurTri.posedge2, 1)).xyz;
+            Val = float4(Val.xyz + float3(bestHit.t, SelectedLight.Type == DIRECTIONALLIGHT ? 12 : 1, luminance(lightFlux / (SelectedLight.Type == DIRECTIONALLIGHT ? 1.0f : (1)))), Index);
+            InterlockedAdd(AABBBuff[PhotonFrames % 2].PhotonCount, 1);
+        }
+
+        const float rrVal = luminance(CurrentRay.throughput);
+        const float prob = max(0.f, 1.f - rrVal);
+        float rnd = random(43 + i, pixel_index).y;
+        if (rnd < prob) break;
+        else CurrentRay.throughput /= (1.f - prob);
+
+        if(i == 0) wasReflectedSpecular = !reflectedDiffuse;
+        wasReflectedSpecular = wasReflectedSpecular && !reflectedDiffuse;
+    }
+    if(any(Val != 0) && any(PosPos != 0)) {
+        float4 curprojectedrefl = mul(TTviewprojection, float4(PosPos, 1));
+        float2 uv2 = curprojectedrefl.xy / curprojectedrefl.w;
+        // if(A) {
+            if(any(uv2 > 1.1f || uv2 < -1.1f) || dot(normalize(PosPos - TTCamPos), TTForward) <= 0) return;
+            // if(Val.z < 0.0001f) return;
+            float LengthToCam = length(TTCamPos - PosPos);
+            // if(abs(DistTex.SampleLevel(my_point_clamp_sampler, uv2 * 0.5f + 0.5f, 0) - LengthToCam) > 10.0f) return;
+        // }
+        float2 UV = equirectDirectionToUv(LightDir);
+        if(IsDifferent) UV = RandVec;
+        // InterlockedAdd(PhotonDensityMapB[Index].x, 1);
+        // InterlockedMax(PhotonDensityMapB[Index].y, UV.x * CDFWIDTH);
+        // InterlockedMax(PhotonDensityMapB[Index].z, UV.y * CDFHEIGHT);
+        // InterlockedMin(PhotonDensityMapB[Index].y2, UV.x * CDFWIDTH);
+        // InterlockedMin(PhotonDensityMapB[Index].z2, UV.y * CDFHEIGHT);
+        // if(!A) {
+        InterlockedAdd(AABBBuff[PhotonFrames % 2].AveragedCenter.x, 1);
+        VisTexB[UV * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)] = float4(VisTexB[UV * float2(CDFWIDTH,CDFHEIGHT) + 0.5f + GetLightOffset(Index)].xyz + Val.xyz / float3(LengthToCam,1,1), Val.w);
+        // }
+    }
+}
+Texture2D<float4> ThroughputTex;
+Texture2D<float4> ViewDirTex;
+
+bool hitSphere(const float3 center, const float radius, const float3 p)
+{
+    float3 radiusTest = p - center;
+    radiusTest = radiusTest * radiusTest;
+    float radiusTestF = radiusTest.x + radiusTest.y + radiusTest.z;
+    if (radiusTestF < radius * radius)
+        return true;
+    return false;
+}
+float IntensityMultiplier;
+float3 photonContribution(float3 Norm, float3 Pos, uint hash, inout int TotPhotCount)
+{
+    //get caustic or global photon
+    uint photonCount = gHashCounter[hash];
+    TotPhotCount += photonCount;
+    float radius = gCausticRadius / ((float)max(min(photonCount-3,5),1));
+    uint2 texIdx = uint2(hash / gBucketYExtent, hash % gBucketYExtent);
+    float4 photonPos = gHashBucketPos[texIdx];
+    float4 photonDir = gHashBucketDir[texIdx];
+    float4 photonFlux = gHashBucketFlux[texIdx];
+
+    //Do face normal test if enabled
+    // if(kUsePhotonFaceNormal){
+    //     //Sperical to cartesian
+    //     float sinTheta = sin(photonFlux.w);
+    //     float3 photonFaceN = float3(cos(photonDir.w) * sinTheta, cos(photonFlux.w), sin(photonDir.w) * sinTheta);
+    //     photonFaceN = normalize(photonFaceN);
+    //     float3 faceN = dot(sd.V, sd.faceN) > 0 ? sd.faceN : -sd.faceN;
+    //     //Dot product has to be negative (View dir points to surface)
+    //     if(dot(faceN, photonFaceN) < 0.9f)
+    //         return float3(0);
+    // }
+    
+    //Radius test
+    if (!hitSphere(photonPos.xyz, radius, Pos) || photonCount == 0)
+        return 0;
+    
+    
+    float NdotL = dot(Norm, -photonDir.xyz);
+    float3 radiance = 0;
+    if(NdotL > kMinCosTheta){
+        float Val = ((float)AABBBuff[PhotonFrames % 2].PhotonCount - (float)AABBBuff[PhotonFrames % 2].AveragedCenter.x) / (float)AABBBuff[PhotonFrames % 2].PhotonCount;
+// #ifdef ACCURATECAUSTICS
+//         radiance = rcp(NdotL) * photonFlux.xyz * photonCount * photonFlux.w * ((float)max(min(photonCount-3,5),1));
+// #else
+        radiance = IntensityMultiplier * 4.0f * photonFlux.xyz * photonCount * photonFlux.w / Val * (PI * ((float)max(min(photonCount-3,5),1)) * ((float)max(min(photonCount-3,5),1)));
+// #endif
+    }
+    return radiance;
+}
+
+
+float3 collectPhotons(float3 Norm, float3 Pos, inout int TotPhotCount)
+{
+    float3 radiance = 0;
+    
+    
+    float radius = gCausticRadius;
+    float scale = gCausticHashScaleFactor;
+    int3 gridCenter = int3(floor(Pos * scale));
+    int gridRadius = int(ceil(radius * scale));
+    //Loop over whole hash grid
+
+    for (int z = gridCenter.z - gridRadius; z <= gridCenter.z + gridRadius; z++){
+        for (int y = gridCenter.y - gridRadius; y <= gridCenter.y + gridRadius; y++){
+            for (int x = gridCenter.x - gridRadius; x <= gridCenter.x + gridRadius; x++)
+            {
+                uint b = Photonhash(int3(x, y, z)) & (mNumBuckets - 1);
+                radiance += photonContribution(Norm, Pos, b, TotPhotCount);        
+            }
+        }
+    }
+    return radiance;
+}
+
+
+Texture2D<uint4> PrimaryTriangleInfo;
+#pragma kernel kernel_collect
+[numthreads(16, 16, 1)]
+void kernel_collect(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
+    if(id.x >= screen_width || id.y >= screen_height) return;
+    int pixel_index = id.x + id.y * screen_width;
+
+    float4 thp = ThroughputTex[id.xy];
+    float3 Pos;
+    float3 Norm;
+    CalcPosNorm(PrimaryTriangleInfo[id.xy], Pos, Norm);
+    float3 radiance = 0;
+
+    int PhotCount = 0;
+    float3 causticRadiance = collectPhotons(-Norm, Pos, PhotCount);
+    float w = 1.0f / (PI * gCausticRadius * gCausticRadius); //make this a constant
+    radiance += w * causticRadiance;
+    
+    radiance *= thp;
+
+    GlobalColors[pixel_index].Direct = radiance;
+    // GlobalColors[pixel_index].Indirect = 0;
+    // GlobalColors[pixel_index].PrimaryNEERay = 0;
+}
+
+
+
+RWTexture2D<float4> DensityDebugTex;
+#pragma kernel kernel_PhotonDensityClear
+[numthreads(16, 1, 1)]
+void kernel_PhotonDensityClear(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
+    PhotonDensityData Tempdat =  {0,0,0,128,128};
+    PhotonDensityMapB[id.x] = Tempdat;
+    DensityDebugTex[id.xy] = 0;
+
+}
+
+// 8, 16, 32, 64, 128, 256, 512, 1024, 2048
+int Bins[10];
+#pragma kernel kernel_PhotonDensitySort
+[numthreads(512, 1, 1)]
+void kernel_PhotonDensitySort(uint3 id : SV_DispatchThreadID, int3 GT : SV_GroupID) {
+    PhotonDensityData PhotonData = PhotonDensityMapB[id.x];
+
+    float ProjectedBin = (float)((PhotonData.y - PhotonData.y2) * (PhotonData.z - PhotonData.z2)) / (float)PhotonData.x;
+    if(PhotonData.y2 > PhotonData.y || PhotonData.z2 > PhotonData.z) ProjectedBin = 0;
+    for(int i = 0; i < 32; i++) {
+        DensityDebugTex[int2(id.x, i)] = ProjectedBin > 0.5f;
+    }
+}

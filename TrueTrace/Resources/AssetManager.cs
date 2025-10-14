@@ -14,14 +14,16 @@ using UnityEngine.Rendering;
 #pragma warning disable 4014
 namespace TrueTrace {
     [System.Serializable]
+#if UNITY_PIPELINE_URP || UNITY_PIPELINE_HDRP
+    [ExecuteInEditMode]
+#endif
     public class AssetManager : MonoBehaviour
     {//This handels all the data
 
         private BindlessArray bindlessTextures;
+        public int BindlessTextureCount;
         public static AssetManager Assets;
         public int TotalParentObjectSize;
-        //emissive, alpha, metallic, roughness
-        public int BindlessTextureCount;
         [HideInInspector] public Texture2D IESAtlas;
         [HideInInspector] public Texture2D AlbedoAtlas;
         [HideInInspector] public Texture2D NormalAtlas;
@@ -31,16 +33,18 @@ namespace TrueTrace {
         [HideInInspector] public RenderTexture HeightmapAtlas;
         [HideInInspector] public RenderTexture AlphaMapAtlas;
         private RenderTexture TempTex;
-        private RenderTexture s_Prop_EncodeBCn_Temp;
         private ComputeShader CopyShader;
         private ComputeShader Refitter;
+        private ComputeShader MeshFunctions;
         private int RefitLayer;
         private int LightTLASRefitKernel;
 
-        private float luminance(float r, float g, float b) { return 0.299f * r + 0.587f * g + 0.114f * b; }
+        private int TriangleBufferKernel;
+        private int NodeBufferKernel;
+        private int LightBufferKernel;
+        private int LightTreeNodeBufferKernel;
 
-        [HideInInspector] public int AlbedoAtlasSize;
-        [HideInInspector] public int IESAtlasSize;
+
         [HideInInspector] public LightBVHTransform[] LightBVHTransforms;
         [HideInInspector] public GaussianTreeNode[] SGTree;
 
@@ -50,7 +54,7 @@ namespace TrueTrace {
         [HideInInspector] public IntersectionMatData[] IntersectionMats;
         [HideInInspector] public ComputeBuffer BVH8AggregatedBuffer;
         [HideInInspector] public ComputeBuffer AggTriBufferA;
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
         [HideInInspector] public ComputeBuffer SkinnedMeshAggTriBufferPrev;
 #endif
         [HideInInspector] public ComputeBuffer AggTriBufferB;
@@ -62,11 +66,11 @@ namespace TrueTrace {
         [HideInInspector] public InstancedManager InstanceData;
         [HideInInspector] public List<InstancedObject> Instances;
         [HideInInspector] public ComputeBuffer TLASCWBVHIndexes;
-
+        [HideInInspector] private ComputeBuffer[] WorkingBuffer;
+        [HideInInspector] private ComputeBuffer[] LBVHWorkingSet;
         [HideInInspector] public List<TerrainObject> Terrains;
         [HideInInspector] public List<TerrainDat> TerrainInfos;
         [HideInInspector] public ComputeBuffer TerrainBuffer;
-        [HideInInspector] public bool DoHeightmap;
 
         [HideInInspector] private ComputeBuffer MaterialBuffer;
         [HideInInspector] private ComputeBuffer IntersectionMaterialBuffer;
@@ -85,7 +89,7 @@ namespace TrueTrace {
                 ThisShader.SetComputeBuffer(Kernel, "TLASBVH8Indices", TLASCWBVHIndexes);
             #endif
             ThisShader.SetComputeBuffer(Kernel, "AggTrisA", AggTriBufferA);
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
             ThisShader.SetComputeBuffer(Kernel, "SkinnedMeshTriBufferPrev", SkinnedMeshAggTriBufferPrev);
 #endif
             ThisShader.SetComputeBuffer(Kernel, "AggTrisB", AggTriBufferB);
@@ -122,11 +126,6 @@ namespace TrueTrace {
             ThisShader.SetTexture(Kernel, "Heightmap", HeightmapAtlas);
         }
 
-        private ComputeShader MeshFunctions;
-        private int TriangleBufferKernel;
-        private int NodeBufferKernel;
-        private int LightBufferKernel;
-        private int LightTreeNodeBufferKernel;
 
         [HideInInspector] public List<Transform> RenderTransforms;
         [HideInInspector] public List<ParentObject> RenderQue;
@@ -142,11 +141,8 @@ namespace TrueTrace {
         [HideInInspector] public List<InstancedObject> InstanceAddQue;
         [HideInInspector] public List<InstancedObject> InstanceRemoveQue;
 
-        private bool OnlyInstanceUpdated;
         [HideInInspector] public List<Transform> LightTransforms;
-        [HideInInspector] public int MainDesiredRes = 16384;
 
-        [HideInInspector] public int MatCount;
 
         [HideInInspector] public List<LightMeshData> LightMeshes;
 
@@ -155,36 +151,46 @@ namespace TrueTrace {
         [HideInInspector] public LightBounds[] LightAABBs;
         [HideInInspector] public GaussianTreeNode[] SGTreeNodes;
 
-        [HideInInspector] public bool ParentCountHasChanged;
 
-        [HideInInspector] public int LightMeshCount;
-        [HideInInspector] public int UnityLightCount;
 
-        private int PrevLightCount;
         [HideInInspector] public BVH2Builder BVH2;
+        [HideInInspector] public BVH8Builder TLASBVH8;
+        private BVHNode8DataCompressed[] TempBVHArray;
 
+        [HideInInspector] public bool ParentCountHasChanged;
         [HideInInspector] public bool UseSkinning = true;
         [HideInInspector] public bool HasStart = false;
         [HideInInspector] public bool didstart = false;
         [HideInInspector] public bool ChildrenUpdated;
+        private bool OnlyInstanceUpdated;
 
         [HideInInspector] public Vector3 SunDirection;
 
-        private BVHNode8DataCompressed[] TempBVHArray;
-        [HideInInspector] public BVH8Builder TLASBVH8;
+        [HideInInspector] public int LightMeshCount;
+        [HideInInspector] public int UnityLightCount;
+        [HideInInspector] public int MainDesiredRes = 16384;
+        [HideInInspector] public int MatCount;
+        [HideInInspector] public int AlbedoAtlasSize;
+        [HideInInspector] public int IESAtlasSize;
+
+
+
+        private int PrevLightCount;
 
         [SerializeField] public int RunningTasks;
         #if HardwareRT
-            public List<Vector2> MeshOffsets;
-            public List<int> SubMeshOffsets;
-            public UnityEngine.Rendering.RayTracingAccelerationStructure AccelStruct;
+            [HideInInspector] public List<Vector2> MeshOffsets;
+            [HideInInspector] public List<int> SubMeshOffsets;
+            [HideInInspector] public UnityEngine.Rendering.RayTracingAccelerationStructure AccelStruct;
         #endif
         public void ClearAll()
         {//My attempt at clearing memory
             // RunningTasks = 0;
-            ParentObject[] ChildrenObjects = this.GetComponentsInChildren<ParentObject>();
-            foreach (ParentObject obj in ChildrenObjects)
+            ParentObject[] ChildrenObjects = GameObject.FindObjectsOfType<ParentObject>();
+            foreach (ParentObject obj in ChildrenObjects) {
+                if(obj.gameObject.transform.root.name == "InstancedStorage") continue;
                 obj.ClearAll();
+            }
             CommonFunctions.DeepClean(ref _Materials);
             CommonFunctions.DeepClean(ref IntersectionMats);
             CommonFunctions.DeepClean(ref SGTreeNodes);
@@ -215,10 +221,16 @@ namespace TrueTrace {
             LightTreeBufferB.ReleaseSafe();
             BVH8AggregatedBuffer.ReleaseSafe();
             AggTriBufferA.ReleaseSafe();
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
             SkinnedMeshAggTriBufferPrev.ReleaseSafe();
 #endif
             AggTriBufferB.ReleaseSafe();
+            if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
+            if(LBVHWorkingSet != null) for(int i = 0; i < LBVHWorkingSet.Length; i++) LBVHWorkingSet[i]?.Release();
+            BoxesBuffer.ReleaseSafe();
+            NodeParentAABBBuffer.ReleaseSafe();
+            TerrainBuffer.ReleaseSafe();
+            TLASCWBVHIndexes.ReleaseSafe();
 
             MaterialBuffer.ReleaseSafe();
             IntersectionMaterialBuffer.ReleaseSafe();
@@ -231,8 +243,20 @@ namespace TrueTrace {
 
             #if HardwareRT
                 MeshIndexOffsets?.Release();
+                AccelStruct?.Release();
                 SubMeshOffsetsBuffer?.Release();
             #endif
+
+
+
+            if(BVH != null) {
+                BVH.ClearAll();
+                BVH = null;
+            }
+            if(LBVH != null) {
+                LBVH.Dispose();
+                LBVH = null;
+            }
 
             Resources.UnloadUnusedAssets();
             System.GC.Collect();
@@ -580,7 +604,6 @@ namespace TrueTrace {
 
             MatCount = 0;
             TerrainInfos = new List<TerrainDat>();
-            DoHeightmap = false;
 
 
 
@@ -836,8 +859,9 @@ namespace TrueTrace {
 
         public void ForceUpdateAtlas() {
             int throwaway = 0;
+            int throwaway2 = 0;
             CommandBuffer tempcmd = new CommandBuffer();
-            for(int i = 0; i < RenderQue.Count; i++) RenderQue[i].CreateAtlas(ref throwaway);
+            for(int i = 0; i < RenderQue.Count; i++) RenderQue[i].CreateAtlas(ref throwaway, ref throwaway2);
             CreateAtlas(throwaway, tempcmd);
             Graphics.ExecuteCommandBuffer(tempcmd);
             tempcmd.Clear();
@@ -846,36 +870,6 @@ namespace TrueTrace {
 
         public void OnApplicationQuit() {
             RunningTasks = 0;
-            #if HardwareRT
-                AccelStruct.Release();
-            #endif
-
-            LightTriBuffer.ReleaseSafe();
-            LightTreeBufferA.ReleaseSafe();
-            LightTreeBufferB.ReleaseSafe();
-            BVH8AggregatedBuffer.ReleaseSafe();
-            AggTriBufferA.ReleaseSafe();
-#if TTCustomMotionVectors
-            SkinnedMeshAggTriBufferPrev.ReleaseSafe();
-#endif
-            AggTriBufferB.ReleaseSafe();
-
-            if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
-            if(LBVHWorkingSet != null) for(int i = 0; i < LBVHWorkingSet.Length; i++) LBVHWorkingSet[i]?.Release();
-            NodeBuffer.ReleaseSafe();
-            StackBuffer.ReleaseSafe();
-            BoxesBuffer.ReleaseSafe();
-            TerrainBuffer.ReleaseSafe();
-            TLASCWBVHIndexes.ReleaseSafe();
-            TerrainBuffer.ReleaseSafe();
-            if(BVH != null) {
-                BVH.ClearAll();
-                BVH = null;
-            }
-            if(LBVH != null) {
-                LBVH.Dispose();
-                LBVH = null;
-            }
             ClearAll();
         }
 
@@ -994,7 +988,7 @@ namespace TrueTrace {
             LightTreeBufferB.ReleaseSafe();
             BVH8AggregatedBuffer.ReleaseSafe();
             AggTriBufferA.ReleaseSafe();
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
             SkinnedMeshAggTriBufferPrev.ReleaseSafe();
 #endif
             AggTriBufferB.ReleaseSafe();
@@ -1197,6 +1191,7 @@ namespace TrueTrace {
         public void BuildCombined()
         {//Only has unbuilt be built
             Assets = this;
+            if(!Application.isPlaying) ClearAll();
             Terrains = new List<TerrainObject>(GetComponentsInChildren<TerrainObject>());
             init();
             List<ParentObject> TempQue = new List<ParentObject>(GameObject.FindObjectsOfType<ParentObject>());
@@ -1273,7 +1268,7 @@ namespace TrueTrace {
 #if StrictMemoryReduction
                     BVH8AggregatedBuffer.Release();
                     AggTriBufferA.Release();
-    #if TTCustomMotionVectors
+    #if !TTDisableCustomMotionVectors
                 SkinnedMeshAggTriBufferPrev.ReleaseSafe();
     #endif
                     AggTriBufferB.Release();
@@ -1320,7 +1315,7 @@ namespace TrueTrace {
 #if StrictMemoryReduction
                     CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80);
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBufferA, AggTriCount, CommonFunctions.GetStride<CudaTriangleA>());
-    #if TTCustomMotionVectors
+    #if !TTDisableCustomMotionVectors
                     CommonFunctions.CreateDynamicBuffer(ref SkinnedMeshAggTriBufferPrev, (int)Mathf.Max(SkinnedMeshTriCount,1), CommonFunctions.GetStride<CudaTriangleA>());
     #endif
                     CommonFunctions.CreateDynamicBuffer(ref AggTriBufferB, AggTriCount, CommonFunctions.GetStride<CudaTriangleB>());
@@ -1335,7 +1330,7 @@ namespace TrueTrace {
 #else
                     if(BVH8AggregatedBuffer == null || !BVH8AggregatedBuffer.IsValid() || AggNodeCount > BVH8AggregatedBuffer.count) CommonFunctions.CreateDynamicBuffer(ref BVH8AggregatedBuffer, AggNodeCount, 80);
                     if(AggTriBufferA == null || !AggTriBufferA.IsValid() || AggTriCount > AggTriBufferA.count) CommonFunctions.CreateDynamicBuffer(ref AggTriBufferA, AggTriCount, CommonFunctions.GetStride<CudaTriangleA>());
-    #if TTCustomMotionVectors
+    #if !TTDisableCustomMotionVectors
                     if(SkinnedMeshAggTriBufferPrev == null || !SkinnedMeshAggTriBufferPrev.IsValid() || (int)Mathf.Max(SkinnedMeshTriCount,1) > SkinnedMeshAggTriBufferPrev.count) CommonFunctions.CreateDynamicBuffer(ref SkinnedMeshAggTriBufferPrev, (int)Mathf.Max(SkinnedMeshTriCount,1), CommonFunctions.GetStride<CudaTriangleA>());
     #endif
                     if(AggTriBufferB == null || !AggTriBufferB.IsValid() || AggTriCount > AggTriBufferB.count) CommonFunctions.CreateDynamicBuffer(ref AggTriBufferB, AggTriCount, CommonFunctions.GetStride<CudaTriangleB>());
@@ -1582,54 +1577,30 @@ namespace TrueTrace {
 
         int MaxRecur = 0;
         int TempRecur = 0;
-        private List<Vector3Int> IsLeafList;
-        unsafe public void DocumentNodes(int CurrentNode, int ParentNode, int NextNode, int NextBVH8Node, bool IsLeafRecur, int CurRecur) {//builds the data needed for TLAS refitting
-            NodeIndexPairData CurrentPair = NodePair[CurrentNode];
+        [HideInInspector] public int TotalCounter = 0;
+        [HideInInspector] public List<Layer2> WorkingSetCWBVH;
+        unsafe public void DocumentNodes(int CurrentNode, int CurRecur) {
             TempRecur = Mathf.Max(TempRecur, CurRecur);
-            IsLeafList[CurrentNode] = new Vector3Int(IsLeafList[CurrentNode].x, CurRecur, ParentNode);
-            if (!IsLeafRecur) {
-                IsLeafList[CurrentNode] = new Vector3Int(0, IsLeafList[CurrentNode].y, IsLeafList[CurrentNode].z);
-                BVHNode8Data node = TLASBVH8.BVH8Nodes[NextBVH8Node];
-                NodeIndexPairData IndexPair = new NodeIndexPairData();
-                IndexPair.AABB = new AABB();
-
-                Vector3 e = Vector3.zero;
-                for(int i = 0; i < 3; i++) e[i] = (float)(System.Convert.ToSingle((int)(System.Convert.ToUInt32(node.e[i]) << 23)));
-                for (int i = 0; i < 8; i++) {
-                    IndexPair.InNodeOffset = i;
-                    float maxFactorX = node.quantized_max_x[i] * e.x;
-                    float maxFactorY = node.quantized_max_y[i] * e.y;
-                    float maxFactorZ = node.quantized_max_z[i] * e.z;
-                    float minFactorX = node.quantized_min_x[i] * e.x;
-                    float minFactorY = node.quantized_min_y[i] * e.y;
-                    float minFactorZ = node.quantized_min_z[i] * e.z;
-
-                    IndexPair.AABB.Create(new Vector3(maxFactorX, maxFactorY, maxFactorZ) + node.p, new Vector3(minFactorX, minFactorY, minFactorZ) + node.p);
-
-                    NextNode++;
-                    IndexPair.BVHNode = NextBVH8Node;
-                    NodePair.Add(IndexPair);
-                    IsLeafList.Add(new Vector3Int(0,0,0));
-                    if ((node.meta[i] & 0b11111) < 24) {
-                        DocumentNodes(NodePair.Count - 1, CurrentNode, NextNode, -1, true, CurRecur + 1);
-                    } else {
-                        int child_offset = (byte)node.meta[i] & 0b11111;
-                        int child_index = (int)node.base_index_child + child_offset - 24;
-                        DocumentNodes(NodePair.Count - 1, CurrentNode, NextNode, child_index, false, CurRecur + 1);
-                    }
+            BVHNode8Data node = TLASBVH8.BVH8Nodes[CurrentNode];
+            if(WorkingSetCWBVH.Count <= CurRecur) {
+                Layer2 TempLayer = new Layer2();
+                TempLayer.Slab = new List<int>();
+                WorkingSetCWBVH.Add(TempLayer);
+            }
+            WorkingSetCWBVH[CurRecur].Slab.Add(CurrentNode);
+            TotalCounter++;
+            for (int i = 0; i < 8; i++) {
+                if(CommonFunctions.NumberOfSetBits(node.meta[i] >> 5) == 0) continue;
+                if ((node.meta[i] & 0b11111) < 24) {
+                    continue;
+                } else {
+                    int child_offset = (byte)node.meta[i] & 0b11111;
+                    int child_index = (int)node.base_index_child + child_offset - 24;
+                    DocumentNodes(child_index, CurRecur + 1);
                 }
-            } else IsLeafList[CurrentNode] = new Vector3Int(1, IsLeafList[CurrentNode].y, IsLeafList[CurrentNode].z);
-
-            NodePair[CurrentNode] = CurrentPair;
+            }
         }
-        List<NodeIndexPairData> NodePair;
-        Layer[] ForwardStack;
-        Layer2[] LayerStack;
-        int[] CWBVHIndicesBufferInverted;
-        ComputeBuffer[] WorkingBuffer;
-        ComputeBuffer[] LBVHWorkingSet;
-        ComputeBuffer NodeBuffer;
-        ComputeBuffer StackBuffer;
+
 
 
         public int NonInstanceCount = 0;
@@ -1733,53 +1704,22 @@ namespace TrueTrace {
                 TempBVHArray = new BVHNode8DataCompressed[TLASBVH8.BVH8NodesArray.Length];
                 CommonFunctions.Aggregate(ref TempBVHArray, TLASBVH8);
                 BVHNodeCount = TLASBVH8.cwbvhnode_count;
-                NodePair = new List<NodeIndexPairData>(BVHNodeCount * 2 + 1);
-                NodePair.Add(new NodeIndexPairData());
-                IsLeafList = new List<Vector3Int>(BVHNodeCount * 2 + 1);
-                IsLeafList.Add(new Vector3Int(0,0,0));
-                DocumentNodes(0, 0, 1, 0, false, 0);
-                TempRecur++;
+                WorkingSetCWBVH = new List<Layer2>();
+                TotalCounter = 0;
+                DocumentNodes(0, 0);
                 MaxRecur = TempRecur;
-                int NodeCount = NodePair.Count;
-                ForwardStack = new Layer[NodeCount];
-                LayerStack = new Layer2[MaxRecur];
-                Layer PresetLayer = new Layer();
-
-                for (int i = 0; i < MaxRecur; i++) {LayerStack[i] = new Layer2(); LayerStack[i].Slab = new List<int>();}
-                for(int i = 0; i < 8; i++) PresetLayer.Children[i] = 0;
-                for (int i = 0; i < NodeCount; i++) {
-                    ForwardStack[i] = PresetLayer;
-                    if (IsLeafList[i].x == 1) {
-                        int first_triangle = (byte)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] & 0b11111;
-                        int NumBits = CommonFunctions.NumberOfSetBits((byte)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] >> 5);
-                        ForwardStack[i].Children[NodePair[i].InNodeOffset] = NumBits + ((int)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].base_index_triangle + first_triangle) * 24 + 1;
-                    } 
-                    else ForwardStack[i].Children[NodePair[i].InNodeOffset] = (-i) - 1;
-                    ForwardStack[IsLeafList[i].z].Children[NodePair[i].InNodeOffset] = (-i) - 1;
-                    
-                    var TempLayer = LayerStack[IsLeafList[i].y];
-                    TempLayer.Slab.Add(i);
-                    LayerStack[IsLeafList[i].y] = TempLayer;
-                }
-                List<Layer2> TempStack = new List<Layer2>();
-                int StackCount = LayerStack.Length;
-                for (int i = 0; i < StackCount; i++) if(LayerStack[i].Slab.Count != 0) TempStack.Add(LayerStack[i]);
-                MaxRecur = TempStack.Count;
 
                 if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i].ReleaseSafe();
-                NodeBuffer.ReleaseSafe();
-                StackBuffer.ReleaseSafe();
                 BoxesBuffer.ReleaseSafe();
+                NodeParentAABBBuffer.ReleaseSafe();
                 TLASCWBVHIndexes.ReleaseSafe();
-                WorkingBuffer = new ComputeBuffer[LayerStack.Length];
-                for (int i = 0; i < MaxRecur; i++) {
-                    WorkingBuffer[i] = new ComputeBuffer(LayerStack[i].Slab.Count, 4);
-                    WorkingBuffer[i].SetData(LayerStack[i].Slab);
+                int LayerLength = WorkingSetCWBVH.Count;
+                WorkingBuffer = new ComputeBuffer[LayerLength];
+                for (int i = 0; i < LayerLength; i++) {
+                    WorkingBuffer[i] = new ComputeBuffer(WorkingSetCWBVH[i].Slab.Count, 4);
+                    WorkingBuffer[i].SetData(WorkingSetCWBVH[i].Slab);
                 }
-                NodeBuffer = new ComputeBuffer(NodePair.Count, 32);
-                NodeBuffer.SetData(NodePair);
-                StackBuffer = new ComputeBuffer(ForwardStack.Length, 32);
-                StackBuffer.SetData(ForwardStack);
+                NodeParentAABBBuffer = new ComputeBuffer(TotalCounter, 24);
                 BoxesBuffer = new ComputeBuffer(MeshAABBs.Length, 24);
                 BoxesBuffer.SetData(MeshAABBs);
                 TLASCWBVHIndexes = new ComputeBuffer(MeshAABBs.Length, 4);
@@ -1796,45 +1736,12 @@ namespace TrueTrace {
             TempRecur = 0;
             BVH.NoAllocRebuild(Boxes);
             TLASBVH8.NoAllocRebuild(BVH);
-                // System.Array.Resize(ref TLASBVH8.BVH8Nodes, TLASBVH8.cwbvhnode_count);
-                // if (TempBVHArray == null || TLASBVH8.cwbvhnode_count != TempBVHArray.Length) TempBVHArray = new BVHNode8DataCompressed[TLASBVH8.cwbvhnode_count];
-                CommonFunctions.Aggregate(ref TempBVHArray, TLASBVH8);
-
-                if(NodePair == null) NodePair = new List<NodeIndexPairData>();
-                else NodePair.Clear();
-                NodePair.Add(new NodeIndexPairData());
-                if(IsLeafList == null) IsLeafList = new List<Vector3Int>();
-                else IsLeafList.Clear();
-                IsLeafList.Add(new Vector3Int(0,0,0));
-                DocumentNodes(0, 0, 1, 0, false, 0);
-                TempRecur++;
-                int NodeCount = NodePair.Count;
-                if(ForwardStack == null || ForwardStack.Length != NodeCount) ForwardStack = new Layer[NodeCount];
-                if(LayerStack == null || LayerStack.Length != TempRecur) LayerStack = new Layer2[TempRecur];
-                Layer PresetLayer = new Layer();
-
-                for (int i = 0; i < TempRecur; i++) {LayerStack[i] = new Layer2(); LayerStack[i].Slab = new List<int>();}
-                for(int i = 0; i < 8; i++) PresetLayer.Children[i] = 0;
-                for (int i = 0; i < NodeCount; i++) {
-                    ForwardStack[i] = PresetLayer;
-                    if (IsLeafList[i].x == 1) {
-                        int first_triangle = (byte)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] & 0b11111;
-                        int NumBits = CommonFunctions.NumberOfSetBits((byte)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].meta[NodePair[i].InNodeOffset] >> 5);
-                        ForwardStack[i].Children[NodePair[i].InNodeOffset] = NumBits + ((int)TLASBVH8.BVH8Nodes[NodePair[i].BVHNode].base_index_triangle + first_triangle) * 24 + 1;
-                    } 
-                    else ForwardStack[i].Children[NodePair[i].InNodeOffset] = (-i) - 1;
-                    ForwardStack[IsLeafList[i].z].Children[NodePair[i].InNodeOffset] = (-i) - 1;
-                    
-                    var TempLayer = LayerStack[IsLeafList[i].y];
-                    TempLayer.Slab.Add(i);
-                    LayerStack[IsLeafList[i].y] = TempLayer;
-                }
-                int StackLength = LayerStack.Length;
-                List<Layer2> TempStack = new List<Layer2>(StackLength);
-                for (int i = 0; i < StackLength; i++) if(LayerStack[i].Slab.Count != 0) TempStack.Add(LayerStack[i]);
-
-                TempRecur = TempStack.Count;
-                LayerStack = TempStack.ToArray();
+            // System.Array.Resize(ref TLASBVH8.BVH8Nodes, TLASBVH8.cwbvhnode_count);
+            // if (TempBVHArray == null || TLASBVH8.cwbvhnode_count != TempBVHArray.Length) TempBVHArray = new BVHNode8DataCompressed[TLASBVH8.cwbvhnode_count];
+            CommonFunctions.Aggregate(ref TempBVHArray, TLASBVH8);
+            WorkingSetCWBVH = new List<Layer2>();
+            TotalCounter = 0;
+            DocumentNodes(0, 0);
             return;
         }
 
@@ -1845,6 +1752,7 @@ namespace TrueTrace {
             return;
         }
         ComputeBuffer BoxesBuffer;
+        ComputeBuffer NodeParentAABBBuffer;
         int CurFrame = 0;
         int BVHNodeCount = 0;
 
@@ -1859,21 +1767,16 @@ namespace TrueTrace {
                 MaxRecur = TempRecur; 
 
                 if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
-                if (NodeBuffer != null) NodeBuffer.Release();
-                if (StackBuffer != null) StackBuffer.Release();
+                if (NodeParentAABBBuffer != null) NodeParentAABBBuffer.Release();
                 if (BoxesBuffer != null) BoxesBuffer.Release();
-                if (TLASCWBVHIndexes != null) TLASCWBVHIndexes.Release();
-                WorkingBuffer = new ComputeBuffer[LayerStack.Length];
-                for (int i = 0; i < MaxRecur; i++) {
-                    WorkingBuffer[i] = new ComputeBuffer(LayerStack[i].Slab.Count, 4);
-                    WorkingBuffer[i].SetData(LayerStack[i].Slab);
+                WorkingBuffer = new ComputeBuffer[WorkingSetCWBVH.Count];
+                for (int i = 0; i <= MaxRecur; i++) {
+                    WorkingBuffer[i] = new ComputeBuffer(WorkingSetCWBVH[i].Slab.Count, 4);
+                    WorkingBuffer[i].SetData(WorkingSetCWBVH[i].Slab);
                 }
                 BVHNodeCount = TLASBVH8.cwbvhnode_count;
-                NodeBuffer = new ComputeBuffer(NodePair.Count, 32);
-                NodeBuffer.SetData(NodePair);
-                StackBuffer = new ComputeBuffer(ForwardStack.Length, 32);
-                StackBuffer.SetData(ForwardStack);
                 BoxesBuffer = new ComputeBuffer(MeshAABBs.Length, 24);
+                NodeParentAABBBuffer = new ComputeBuffer(TotalCounter, 24);
                 TLASCWBVHIndexes = new ComputeBuffer(MeshAABBs.Length, 4);
                 TLASCWBVHIndexes.SetData(TLASBVH8.cwbvh_indices);
                 int RendCount = RenderQue.Count;
@@ -1898,13 +1801,12 @@ namespace TrueTrace {
                 cmd.SetComputeBufferParam(Refitter, RefitLayer, "AggNodes", BVH8AggregatedBuffer);
                 cmd.SetComputeBufferParam(Refitter, RefitLayer, "TLASCWBVHIndices", TLASCWBVHIndexes);
                 cmd.SetComputeBufferParam(Refitter, RefitLayer, "Boxs", BoxesBuffer);
-                cmd.SetComputeBufferParam(Refitter, RefitLayer, "ReverseStack", StackBuffer);
-                cmd.SetComputeBufferParam(Refitter, RefitLayer, "AllNodes", NodeBuffer);
-                for (int i = MaxRecur - 1; i >= 0; i--) {
+                cmd.SetComputeBufferParam(Refitter, RefitLayer, "NodeTotalBounds", NodeParentAABBBuffer);
+                for (int i = MaxRecur; i >= 0; i--) {
                     var NodeCount2 = WorkingBuffer[i].count;
                     cmd.SetComputeIntParam(Refitter, "NodeCount", NodeCount2);
                     cmd.SetComputeBufferParam(Refitter, RefitLayer, "WorkingBuffer", WorkingBuffer[i]);
-                    cmd.DispatchCompute(Refitter, RefitLayer, (int)Mathf.Ceil(NodeCount2 / (float)256), 1, 1);
+                    cmd.DispatchCompute(Refitter, RefitLayer, (int)Mathf.Ceil(NodeCount2 / (float)128), 1, 1);
                 }
                 if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("TLAS Refit Refit");
             }
@@ -2081,7 +1983,7 @@ namespace TrueTrace {
                 for (int i = 0; i < MeshDataCount; i++) {//Refit BVH's of skinned meshes
                     TempParent = RenderQue[i];
                     if (TempParent.IsSkinnedGroup || TempParent.IsDeformable) {
-#if TTCustomMotionVectors
+#if !TTDisableCustomMotionVectors
                         TempParent.RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBufferA, ref AggTriBufferB, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, BoxesBuffer, i, SkinnedMeshAggTriBufferPrev, cmd);
 #else
                         TempParent.RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBufferA, ref AggTriBufferB, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, BoxesBuffer, i, cmd);
@@ -2299,7 +2201,7 @@ namespace TrueTrace {
                     TargetTransform = RenderTransforms[i];
                     if (TargetParent.IsSkinnedGroup || TargetParent.IsDeformable) {
                         if (UseSkinning && didstart) {
-    #if TTCustomMotionVectors
+    #if !TTDisableCustomMotionVectors
                             TargetParent.RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBufferA, ref AggTriBufferB, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, BoxesBuffer, i, SkinnedMeshAggTriBufferPrev, cmd);
     #else
                             TargetParent.RefitMesh(ref BVH8AggregatedBuffer, ref AggTriBufferA, ref AggTriBufferB, ref LightTriBuffer, RayMaster.FramesSinceStart2 % 2 == 0 ? LightTreeBufferA : LightTreeBufferB, BoxesBuffer, i, cmd);

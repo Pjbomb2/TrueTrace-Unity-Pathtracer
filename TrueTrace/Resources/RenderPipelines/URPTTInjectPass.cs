@@ -5,32 +5,49 @@ using UnityEngine.Rendering.Universal;
 
 namespace TrueTrace
 {
-    [ExecuteInEditMode]
-    public class InjectPathTracingPass : MonoBehaviour
+    public class InjectPathTracingPass : ScriptableRendererFeature
     {
-        public URPTTPass m_PathTracingPass = null;
-        RayTracingMaster RayMaster;
-        private void OnEnable() {
-            RenderPipelineManager.beginCameraRendering += InjectPass;
+        [SerializeField] private RenderPassEvent renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
+        private URPTTPass m_PathTracingPass;
+        private RayTracingMaster RayMaster;
+
+        public override void Create()
+        {
+            RayMaster = GameObject.Find("Scene")?.GetComponent<RayTracingMaster>();
+            m_PathTracingPass = new URPTTPass(renderPassEvent);
         }
 
-        private void OnDisable() {
-            RenderPipelineManager.beginCameraRendering -= InjectPass;
-        }
+        public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
+        {
+            if (m_PathTracingPass == null) {
+                return;
+            }
 
-        private void CreateRenderPass() {
-            m_PathTracingPass = new URPTTPass(RenderPassEvent.BeforeRenderingPostProcessing);
-        }
-        private void InjectPass(ScriptableRenderContext renderContext, Camera currCamera) {
-            if (m_PathTracingPass == null) CreateRenderPass();
-            if(RayMaster == null) RayMaster = GameObject.Find("Scene").GetComponent<RayTracingMaster>();
-             
+            if (RayMaster == null) {
+                RayMaster = GameObject.Find("Scene")?.GetComponent<RayTracingMaster>();
+                if (RayMaster == null) {
+                    return;
+                }
+            }
+
             if (Application.isPlaying || RayMaster.HDRPorURPRenderInScene) {
-                currCamera.depthTextureMode |= (DepthTextureMode.MotionVectors | DepthTextureMode.Depth);
-                var data = currCamera.GetUniversalAdditionalCameraData();
-                m_PathTracingPass.SetTarget(data.scriptableRenderer);
-                data.scriptableRenderer.EnqueuePass(m_PathTracingPass);
-                currCamera.forceIntoRenderTexture = true;
+                var camera = renderingData.cameraData.camera;
+                camera.forceIntoRenderTexture = true;
+                camera.depthTextureMode |= DepthTextureMode.Depth;
+
+#if TTDisableCustomMotionVectors
+                camera.depthTextureMode |= DepthTextureMode.MotionVectors;
+#endif
+
+                renderer.EnqueuePass(m_PathTracingPass);
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (m_PathTracingPass != null) {
+                m_PathTracingPass.Cleanup();
+                m_PathTracingPass = null;
             }
         }
     }

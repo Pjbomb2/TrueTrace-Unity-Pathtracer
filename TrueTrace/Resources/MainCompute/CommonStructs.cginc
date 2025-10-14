@@ -117,6 +117,7 @@ struct LightData {
 	float ZAxisRotation;
 	float Softness;
 	int2 IESTex;//16
+	float4 IESTexScaleOffset;
 
 };
 StructuredBuffer<LightData> _UnityLights;
@@ -216,6 +217,8 @@ struct MaterialData {//56
     float SecondaryNormalTexBlend;
     float DetailNormalStrength;
     float2 DiffTransRemap;
+    float3 MatCapColor;
+    float CausticStrength;
 };
 
 
@@ -286,3 +289,23 @@ struct SDFData {
 };
 
 StructuredBuffer<SDFData> SDFs;
+
+struct Photon {
+	float4 Pos;
+	float3 Flux;
+	uint InitialDirection;
+	float3 Dir;
+	float faceNPhi;
+};
+
+
+struct PhotonRayData {
+	float3 throughput;
+	uint Norm;
+	float3 origin;
+	bool terminated;
+	float3 direction;
+	bool diffuseHit;
+};
+
+RWStructuredBuffer<PhotonRayData> PhotonRays;

@@ -38,7 +38,7 @@ namespace TrueTrace {
                 Start();
             }
             if(RayMaster == null) return;
-    #if !TTCustomMotionVectors
+    #if TTDisableCustomMotionVectors
             RayTracingMaster._camera.depthTextureMode |= DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
     #else
             RayTracingMaster._camera.depthTextureMode = DepthTextureMode.None;

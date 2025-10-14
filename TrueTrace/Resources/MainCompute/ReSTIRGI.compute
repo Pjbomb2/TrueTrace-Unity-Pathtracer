@@ -47,22 +47,22 @@ inline bool VisabilityCheck(SmallerRay ray, float dist) {
                         triangle_id += triangleOffset;
                         int mesh_id = MeshOffsets[Indexes.x].y;
                         int MaterialIndex = (_MeshData[mesh_id].MaterialOffset + AggTrisA[triangle_id].MatDat);
-                        if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster))  {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;} 
+                        if(GetFlag(_Materials[MaterialIndex].Tag, IsBackground) || GetFlag(_Materials[MaterialIndex].Tag, ShadowCaster))  {myRay.TMin = q.CommittedRayT() + NormalOffset; continue;} 
                     #endif
                     #ifdef AdvancedAlphaMapped
                         if(_Materials[MaterialIndex].MatType == CutoutIndex) {
                             float2 BaseUv = TOHALF(AggTrisA[triangle_id].tex0) * (1.0f - u - v) + TOHALF(AggTrisA[triangle_id].texedge1) * u + TOHALF(AggTrisA[triangle_id].texedge2) * v;
                             if(_Materials[MaterialIndex].AlphaTex.x > 0)
-                                if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;}
+                                if(SampleTexture(BaseUv, SampleAlpha, _Materials[MaterialIndex]).x < _Materials[MaterialIndex].AlphaCutoff) {myRay.TMin = q.CommittedRayT() + NormalOffset; continue;}
                         }
                     #endif
                     #ifdef IgnoreBackfacing
                         TrianglePos tri = triangle_get_positions(triangle_id);
-                        if(_Materials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)) <= 0) {myRay.TMin = q.CommittedRayT() + 0.0001f; continue;}
+                        if(_Materials[MaterialIndex].specTrans != 1 && dot(normalize(cross(normalize(tri.posedge1), normalize(tri.posedge2))), mul((float3x3)_MeshData[mesh_id].W2L, ray.direction)) <= 0) {myRay.TMin = q.CommittedRayT() + NormalOffset; continue;}
                     #endif
                     #ifdef IgnoreGlassShadow
                         if(_Materials[MaterialIndex].specTrans == 1) {
-                            myRay.TMin = q.CommittedRayT() + 0.0001f; 
+                            myRay.TMin = q.CommittedRayT() + NormalOffset; 
                             continue;
                         }
                     #endif
@@ -95,9 +95,7 @@ float IndirectBoost;
 bool UseReSTIRGITemporal;
 bool UseReSTIRGISpatial;
 bool DoReSTIRGIConnectionValidation;
-int ReSTIRGISpatialCount;
 int ReSTIRGITemporalMCap;
-float GISpatialRadius;
 
 struct RadianceData
 {
@@ -957,7 +955,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
     [branch]if (DoReSTIRGIConnectionValidation) {
         float2 DistDist = 1;
         if(SurfaceMat.specTrans == 0 && SurfaceMat.diffTrans == 0) {
-            PrimaryHitPosition += GeomNorm * 0.0001f;
+            PrimaryHitPosition += GeomNorm * NormalOffset;
             float Distance = length(PrimaryHitPosition - NEEPos.xyz) - 0.025f;
             SmallerRay ray = CreateRay(PrimaryHitPosition, normalize(NEEPos.xyz - PrimaryHitPosition));
             if (luminance(RunningReservoirC.Color) != 0) {
@@ -970,7 +968,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
                         RunningReservoirC.Color *= saturate(saturate(dot(ray.direction, -Light.Direction)) * MiscInfo.y + MiscInfo.z);
                             float3 LocalLight = ToLocal(GetTangentSpace(Light.Direction), -ray.direction) * 0.5f + 0.5f;
                             float2 AlignedUV = AlignUV(LocalLight.xz, float4(1,1,0,0), _UnityLights[AggTriIndex].IESTex);
-                            if(AlignedUV.x != -1) RunningReservoirC.Color *= _IESAtlas.SampleLevel(my_trilinear_repeat_sampler, AlignedUV, 0);
+                            if(AlignedUV.x != -1) RunningReservoirC.Color *= _IESAtlas.SampleLevel(my_linear_clamp_sampler, AlignedUV, 0);
 
                     } else if(Light.Type == AREALIGHTQUAD) {
                         RunningReservoirC.Color *= pow(saturate(dot(ray.direction, -Light.Direction)), MiscInfo.x);
@@ -1012,7 +1010,7 @@ void ReSTIRGISpatial2(uint3 id : SV_DispatchThreadID) {
                     }
                 }
             #endif
-            PrimaryHitPosition -= GeomNorm * 0.0001f;
+            PrimaryHitPosition -= GeomNorm * NormalOffset;
         }
 
         #ifdef ReSTIRAdvancedValidation
