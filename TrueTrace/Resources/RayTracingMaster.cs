@@ -625,8 +625,8 @@ namespace TrueTrace {
             }
             if(TTPostProc.Initialized == false) TTPostProc.init(SourceWidth, SourceHeight);
 
-            if(BufferSizes == null || BufferSizes.Length != LocalTTSettings.bouncecount + 1) BufferSizes = new BufferSizeData[LocalTTSettings.bouncecount + 1];
-            for(int i = 0; i < LocalTTSettings.bouncecount + 1; i++) {
+            if(BufferSizes == null || BufferSizes.Length != LocalTTSettings.bouncecount + 2) BufferSizes = new BufferSizeData[LocalTTSettings.bouncecount + 2];
+            for(int i = 0; i < LocalTTSettings.bouncecount + 2; i++) {
                 BufferSizes[i].tracerays = 0;
                 BufferSizes[i].shadow_rays = 0;
                 BufferSizes[i].heightmap_rays = 0;
@@ -637,11 +637,11 @@ namespace TrueTrace {
             BufferSizes[0].tracerays = SourceWidth * SourceHeight;
             BufferSizes[0].heightmap_rays = SourceWidth * SourceHeight;
             if(_BufferSizes == null || !_BufferSizes.IsValid()) {
-                _BufferSizes = new ComputeBuffer(LocalTTSettings.bouncecount + 1, 24);
+                _BufferSizes = new ComputeBuffer(LocalTTSettings.bouncecount + 2, 24);
             }
-            if(_BufferSizes.count != LocalTTSettings.bouncecount + 1) {
+            if(_BufferSizes.count != LocalTTSettings.bouncecount + 2) {
                 _BufferSizes.ReleaseSafe();
-                _BufferSizes = new ComputeBuffer(LocalTTSettings.bouncecount + 1, 24);
+                _BufferSizes = new ComputeBuffer(LocalTTSettings.bouncecount + 2, 24);
             }
             cmd.SetBufferData(_BufferSizes, BufferSizes);
             ShadingShader.SetBuffer(ShadeKernel, "BufferSizes", _BufferSizes);
@@ -718,7 +718,7 @@ namespace TrueTrace {
             SetInt("unitylightcount", Assets.UnityLightCount, cmd);
             SetInt("screen_width", SourceWidth, cmd);
             SetInt("screen_height", SourceHeight, cmd);
-            SetInt("MaxBounce", LocalTTSettings.bouncecount - 1, cmd);
+            SetInt("MaxBounce", LocalTTSettings.bouncecount, cmd);
             SetInt("frames_accumulated", _currentSample, cmd);
             SetInt("ReSTIRGITemporalMCap", LocalTTSettings.ReSTIRGITemporalMCap, cmd);
             SetInt("curframe", FramesSinceStart2, cmd);
@@ -1250,7 +1250,7 @@ namespace TrueTrace {
 
                     if(DoKernelProfiling) cmd.BeginSample("Pathtracing Kernels");
 
-                    for (int i = 0; i < LocalTTSettings.bouncecount; i++) {
+                    for (int i = 0; i <= LocalTTSettings.bouncecount; i++) {
                         if(DoKernelProfiling) cmd.BeginSample("Bounce: " + i);
                             var bouncebounce = i;
                             if(bouncebounce == 1) {

@@ -179,9 +179,9 @@ namespace TrueTrace {
 
         [SerializeField] public int RunningTasks;
         #if HardwareRT
-            public List<Vector2> MeshOffsets;
-            public List<int> SubMeshOffsets;
-            public UnityEngine.Rendering.RayTracingAccelerationStructure AccelStruct;
+            [HideInInspector] public List<Vector2> MeshOffsets;
+            [HideInInspector] public List<int> SubMeshOffsets;
+            [HideInInspector] public UnityEngine.Rendering.RayTracingAccelerationStructure AccelStruct;
         #endif
         public void ClearAll()
         {//My attempt at clearing memory
@@ -1577,8 +1577,8 @@ namespace TrueTrace {
 
         int MaxRecur = 0;
         int TempRecur = 0;
-        public int TotalCounter = 0;
-        public List<Layer2> WorkingSetCWBVH;
+        [HideInInspector] public int TotalCounter = 0;
+        [HideInInspector] public List<Layer2> WorkingSetCWBVH;
         unsafe public void DocumentNodes(int CurrentNode, int CurRecur) {
             TempRecur = Mathf.Max(TempRecur, CurRecur);
             BVHNode8Data node = TLASBVH8.BVH8Nodes[CurrentNode];
