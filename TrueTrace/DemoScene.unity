@@ -2605,6 +2605,186 @@ MeshFilter:
     type: 3}
   m_PrefabInstance: {fileID: 1770587712}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &64241663
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 64241665}
+  - component: {fileID: 64241664}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &64241664
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 64241663}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3edaff1cd4be25f4eb0921104c840289, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  InstanceDatas: []
+  LBVH:
+    ParentBound:
+      aabb:
+        b:
+          BBMax: {x: 0, y: 0, z: 0}
+          BBMin: {x: 0, y: 0, z: 0}
+        w: {x: 0, y: 0, z: 0}
+        phi: 0
+        Theta_o: 0
+        Theta_e: 0
+        LightCount: 0
+        Pad1: 0
+      left: 0
+      isLeaf: 0
+    SGTree: []
+    PrimCount: 0
+    FinalIndices: 
+    MaxDepth: 0
+    ZeroBound:
+      aabb:
+        b:
+          BBMax: {x: 0, y: 0, z: 0}
+          BBMin: {x: 0, y: 0, z: 0}
+        w: {x: 0, y: 0, z: 0}
+        phi: 0
+        Theta_o: 0
+        Theta_e: 0
+        LightCount: 0
+        Pad1: 0
+      left: 0
+      isLeaf: 0
+    ZeroBound2:
+      BBMax: {x: 0, y: 0, z: 0}
+      BBMin: {x: 0, y: 0, z: 0}
+      w: 0
+      phi: 0
+      cosTheta_oe: 0
+      left: 0
+  ExistsInQue: -1
+  QueInProgress: -1
+  RenderImposters: 0
+  IsDeformable: 0
+  Name: 
+  ChildObjects: []
+  AggTriangles: []
+  ParentScale: {x: 0, y: 0, z: 0}
+  LightTriangles: []
+  BVH:
+    cwbvh_indices: 
+    cwbvhindex_count: 0
+    cwbvhnode_count: 0
+    ZeroedData:
+      e: 000000000000000000000000
+      imask: 0
+      base_index_child: 0
+      base_index_triangle: 0
+      meta: 0000000000000000
+      quantized_min_x: 0000000000000000
+      quantized_max_x: 0000000000000000
+      quantized_min_y: 0000000000000000
+      quantized_max_y: 0000000000000000
+      quantized_min_z: 0000000000000000
+      quantized_max_z: 0000000000000000
+      p: {x: 0, y: 0, z: 0}
+  SkinnedMeshes: []
+  DeformableMeshes: []
+  IndexCounts: 
+  MeshRefit: {fileID: 0}
+  HasStarted: 0
+  AggNodes: []
+  InstanceMeshIndex: 0
+  LightEndIndex: 0
+  aabb_untransformed:
+    BBMax: {x: 0, y: 0, z: 0}
+    BBMin: {x: 0, y: 0, z: 0}
+  aabb:
+    BBMax: {x: 0, y: 0, z: 0}
+    BBMin: {x: 0, y: 0, z: 0}
+  AllFull: 0
+  AggIndexCount: 0
+  AggBVHNodeCount: 0
+  _Materials: []
+  MatOffset: 0
+  CachedTransforms: []
+  TotalObjects: 0
+  TransformIndexes: []
+  HasCompleted: 0
+  ThisTransform: {fileID: 0}
+  ConstructKernel: 0
+  TransferKernel: 0
+  RefitLayerKernel: 0
+  UpdateGlobalBufferAABBKernel: 0
+  LightBLASRefitKernel: 0
+  CompactedMeshData: 0
+  InstanceReferences: 0
+  NeedsToUpdate: 0
+  FailureCount: 0
+  TotalTriangles: 0
+  IsSkinnedGroup: 0
+  HasLightTriangles: 0
+  MaxRecur: 0
+  tempAABB:
+    BBMax: {x: 0, y: 0, z: 0}
+    BBMin: {x: 0, y: 0, z: 0}
+  NodeOffset: 0
+  TriOffset: 0
+  SkinnedOffset: 0
+  LightTriOffset: 0
+  LightNodeOffset: 0
+  AlbedoTexs: []
+  NormalTexs: []
+  SecondaryNormalTexs: []
+  MetallicTexs: []
+  MetallicTexChannelIndex: 
+  RoughnessTexs: []
+  RoughnessTexChannelIndex: 
+  EmissionTexs: []
+  DiffTransTexs: []
+  DiffTransTexChannelIndex: 
+  AlphaTexs: []
+  AlphaTexChannelIndex: 
+  MatCapMasks: []
+  MatCapMaskChannelIndex: 
+  MatCapTexs: []
+  SecondaryAlbedoTexMasks: []
+  SecondaryAlbedoTexMaskChannelIndex: 
+  SecondaryAlbedoTexs: []
+  ChildObjectTransforms: []
+  TotalCounter: 0
+  WorkingSetCWBVH: []
+  center: {x: 0, y: 0, z: 0}
+  extent: {x: 0, y: 0, z: 0}
+  HasTransformChanged: 0
+  BotherToUpdate: 1
+--- !u!4 &64241665
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 64241663}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.34, y: 0.538, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 772064646}
+  m_Father: {fileID: 0}
+  m_RootOrder: 5
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &66647417 stripped
 MeshFilter:
   m_CorrespondingSourceObject: {fileID: -6385121788245618737, guid: 16500a523b718314091d7e9b83146c62,
@@ -19375,6 +19555,214 @@ MonoBehaviour:
   MaterialIndex: 3f000000
   LocalMaterialIndex: 3f000000
   JustCreated: 0
+  TilingChanged: 0
+  MatOffset: 0
+--- !u!1 &772064643
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 772064646}
+  - component: {fileID: 772064645}
+  - component: {fileID: 772064644}
+  - component: {fileID: 772064647}
+  m_Layer: 0
+  m_Name: dragon
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!23 &772064644
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 772064643}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 542cb7c500668f5428a060abe810067a, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &772064645
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 772064643}
+  m_Mesh: {fileID: -3325053396650211315, guid: a2e4490631d8e8043820bed93e398b2b, type: 3}
+--- !u!4 &772064646
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 772064643}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 1.665, y: 0.455, z: -0.186}
+  m_LocalScale: {x: 3, y: 3, z: 3}
+  m_ConstrainProportionsScale: 1
+  m_Children: []
+  m_Father: {fileID: 64241665}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &772064647
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 772064643}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c103227aee5e4584a96e35173641b818, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  MaterialOptions: 
+  LocalMaterials:
+  - TextureModifiers:
+      MainTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
+      SecondaryTextureScaleOffset: {x: 1, y: 1, z: 0, w: 0}
+      NormalTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
+      SecondaryAlbedoTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
+      SecondaryNormalTexScaleOffset: {x: 1, y: 1, z: 0, w: 0}
+      Rotation: 0
+      RotationNormal: 0
+      RotationSecondary: 0
+      RotationSecondaryDiffuse: 0
+      RotationSecondaryNormal: 0
+    BaseColor: {x: 1, y: 1, z: 1}
+    emission: 0
+    EmissionColor: {x: 1, y: 1, z: 1}
+    Tag: 4096
+    Roughness: 0
+    MatType: 0
+    TransmittanceColor: {x: 1, y: 1, z: 1}
+    IOR: 1.29
+    Metallic: 0
+    Sheen: 0
+    SheenTint: 0
+    SpecularTint: 0
+    Clearcoat: 0
+    ClearcoatGloss: 0
+    Anisotropic: 0
+    AnisotropicRotation: 0
+    Flatness: 0
+    DiffTrans: 0
+    SpecTrans: 1
+    Specular: 0
+    ScatterDist: 5
+    MetallicRemap: {x: 0, y: 1}
+    RoughnessRemap: {x: 0, y: 1}
+    AlphaCutoff: 0.1
+    NormalStrength: 1
+    Hue: 0
+    Saturation: 1
+    Contrast: 1
+    Brightness: 1
+    BlendColor: {x: 1, y: 1, z: 1}
+    BlendFactor: 0
+    ColorBleed: 1
+    AlbedoBlendFactor: 0
+    SecondaryNormalTexBlend: 0
+    DetailNormalStrength: 1
+    DiffTransRemap: {x: 0, y: 1}
+    MatCapColor: {x: 1, y: 1, z: 1}
+    CausticStrength: 1
+  KelvinTemp:
+  - 0
+  UseKelvin: 00
+  TransmissionColor: []
+  BaseColor: []
+  MetallicRemap: []
+  RoughnessRemap: []
+  emission: []
+  EmissionColor: []
+  Roughness: []
+  IOR: []
+  Metallic: []
+  SpecularTint: []
+  Sheen: []
+  SheenTint: []
+  ClearCoat: []
+  ClearCoatGloss: []
+  Anisotropic: []
+  Flatness: []
+  DiffTrans: []
+  SpecTrans: []
+  ScatterDist: []
+  Specular: []
+  AlphaCutoff: []
+  NormalStrength: []
+  Hue: []
+  Saturation: []
+  Brightness: []
+  Contrast: []
+  BlendColor: []
+  BlendFactor: []
+  MainTexScaleOffset: []
+  SecondaryAlbedoTexScaleOffset: []
+  SecondaryTextureScaleOffset: []
+  NormalTexScaleOffset: []
+  RotationNormal: []
+  RotationSecondary: []
+  RotationSecondaryDiffuse: []
+  RotationSecondaryNormal: []
+  Rotation: []
+  Flags: 
+  ColorBleed: []
+  AlbedoBlendFactor: []
+  SecondaryNormalTexBlend: []
+  DetailNormalStrength: []
+  SecondaryNormalTexScaleOffset: []
+  DeleteObject: 0
+  Indexes: 00000000
+  NeedsToUpdate: 0
+  IsReady: 1
+  InvisibleOverride: 0
+  FollowMaterial: 00
+  SharedMaterials:
+  - {fileID: 2100000, guid: 542cb7c500668f5428a060abe810067a, type: 2}
+  Names:
+  - New Material 12
+  MaterialIndex: 00000000
+  LocalMaterialIndex: 00000000
+  JustCreated: 1
   TilingChanged: 0
   MatOffset: 0
 --- !u!33 &776254349 stripped
@@ -38170,6 +38558,25 @@ MonoBehaviour:
     Gradient_Img: 0
     iter: 0
   ShadingShader: {fileID: 0}
+  PhotonMap:
+    SPPMShader: {fileID: 0}
+    mpCausticPosBucket: {fileID: 0}
+    mpCausticDirBucket: {fileID: 0}
+    mpCausticFluxBucket: {fileID: 0}
+    CDFX: {fileID: 0}
+    CDFY: {fileID: 0}
+    EquirectVisibilityTex: []
+    PerLightVisSize: 128
+    ReInit: 0
+    analyticPhotons: 2000000
+    Initialized: 0
+  FirstDiffuseThroughputTex: {fileID: 0}
+  FirstDiffusePosTex: {fileID: 0}
+  RRDiffAlbedoTex: {fileID: 0}
+  RRSpecAlbedoTex: {fileID: 0}
+  RRNormTex: {fileID: 0}
+  RRRoughTex: {fileID: 0}
+  RRDistTex: {fileID: 0}
   ScreenSpaceInfo: {fileID: 0}
   IsFocusing: 0
   IsFocusingDelta: 0
@@ -48415,7 +48822,7 @@ MonoBehaviour:
   LightBLASRefitKernel: 7
   CompactedMeshData: 0
   InstanceReferences: 0
-  NeedsToUpdate: 0
+  NeedsToUpdate: 1
   FailureCount: 0
   TotalTriangles: 0
   IsSkinnedGroup: 0
