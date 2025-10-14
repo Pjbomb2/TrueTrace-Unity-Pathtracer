@@ -1318,7 +1318,7 @@ namespace TrueTrace {
                         var SetCount = WorkingBufferLightBVH[i].count;
                         cmd.SetComputeIntParam(MeshRefit, "SetCount", SetCount);
                         cmd.SetComputeIntParam(MeshRefit, "ObjectOffset", ObjOffVar);
-                        cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "WorkingBufferLightBVH", WorkingBufferLightBVH[i]);
+                        cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "WorkingSet", WorkingBufferLightBVH[i]);
                         cmd.DispatchCompute(MeshRefit, LightBLASRefitKernel, (int)Mathf.Ceil(SetCount / (float)256.0f), 1, 1);
 
                         ObjectOffset += SetCount;
@@ -1333,7 +1333,7 @@ namespace TrueTrace {
                         if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Refit: " + i);
                         var NodeCount2 = WorkingBufferCWBVH[i].count;
                         cmd.SetComputeIntParam(MeshRefit, "NodeCount", NodeCount2);
-                        cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "WorkingBufferCWBVH", WorkingBufferCWBVH[i]);
+                        cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "WorkingBuffer", WorkingBufferCWBVH[i]);
                         cmd.DispatchCompute(MeshRefit, RefitLayerKernel, (int)Mathf.Ceil(NodeCount2 / (float)128), 1, 1);
                         if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Refit: " + i);
                     }
