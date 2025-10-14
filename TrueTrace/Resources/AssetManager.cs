@@ -243,7 +243,7 @@ namespace TrueTrace {
 
             #if HardwareRT
                 MeshIndexOffsets?.Release();
-                AccelStruct.Release();
+                AccelStruct?.Release();
                 SubMeshOffsetsBuffer?.Release();
             #endif
 

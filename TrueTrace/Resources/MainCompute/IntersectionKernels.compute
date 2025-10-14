@@ -72,7 +72,7 @@ void IntersectTriangle(int mesh_id, const int tri_id, const SmallerRay ray, inou
     }
 }
 
-void IntersectBVH(const int ray_index, int threadIdxy, int GTx) {
+void IntersectBVH(int ray_index, int threadIdxy, int GTx) {
     #ifdef HardwareRT
         if(ray_index >= BufferSizes[CurBounce].tracerays) return;
     #endif

@@ -130,8 +130,8 @@ namespace TrueTrace {
         private ComputeBuffer NodeParentAABBBuffer;
 
         private ComputeBuffer CWBVHIndicesBuffer;
-        private ComputeBuffer[] WorkingBuffer;
-        private ComputeBuffer[] WorkingSet;
+        private ComputeBuffer[] WorkingBufferCWBVH;
+        private ComputeBuffer[] WorkingBufferLightBVH;
         private BVH2Builder BVH2;
 
         [HideInInspector] private List<float> LuminanceWeights;
@@ -176,28 +176,22 @@ namespace TrueTrace {
             CommonFunctions.DeepClean(ref LightTriNorms);
             CommonFunctions.DeepClean(ref LuminanceWeights);
             if(TrianglesArray.IsCreated) TrianglesArray.Dispose();
-            if(BVH2 != null) {
-                BVH2.Dispose();
-            }
+            if(BVH2 != null) BVH2.Dispose();
             BVH2 = null;
-            if(BVH != null) {
-                BVH.Dispose();
-            }
+            if(BVH != null) BVH.Dispose();
             BVH = null;
             CurMeshData.Clear();
             HasCompleted = false;
-            if (VertexBuffers != null)
-            {
-                for (int i = 0; i < VertexBuffers.Length; i++)
-                {
+            if (VertexBuffers != null) {
+                for (int i = 0; i < VertexBuffers.Length; i++) {
                     VertexBuffers[i]?.Release();
                     IndexBuffers[i]?.Release();
                 }
                 AABBBuffer?.Release();
                 NodeParentAABBBuffer?.Release();
                 CWBVHIndicesBuffer?.Release();
-                if(WorkingBuffer != null) for(int i2 = 0; i2 < WorkingBuffer.Length; i2++) WorkingBuffer[i2]?.Release();
-                if(WorkingSet != null) for(int i2 = 0; i2 < WorkingSet.Length; i2++) WorkingSet[i2]?.Release();
+                if(WorkingBufferCWBVH != null) for(int i2 = 0; i2 < WorkingBufferCWBVH.Length; i2++) WorkingBufferCWBVH[i2]?.Release();
+                if(WorkingBufferLightBVH != null) for(int i2 = 0; i2 < WorkingBufferLightBVH.Length; i2++) WorkingBufferLightBVH[i2]?.Release();
             }
             if (TriBuffer != null)
             {
@@ -209,6 +203,18 @@ namespace TrueTrace {
             if(LBVH != null) {
                 LBVH.ClearAll();
             }
+
+
+            #if AccurateLightTris
+                if(EmissionTexPixels != null) {
+                    int EmissTexLeng = EmissionTexPixels.Count;
+                    for(int i = 0; i < EmissTexLeng; i++) {
+                        EmissionTexPixels[i].pixels.Dispose();
+                    }
+                    EmissionTexPixels = null;
+                }
+            #endif
+
         }
 
         public void Reset(int Que) {
@@ -220,35 +226,7 @@ namespace TrueTrace {
 
         public void OnApplicationQuit()
         {
-            if (VertexBuffers != null) {
-                int Leng = 0;
-                if(SkinnedMeshes != null) Leng = SkinnedMeshes.Length;
-                if(DeformableMeshes != null) Leng = Mathf.Max(Leng, DeformableMeshes.Length);
-                for (int i = 0; i < Leng; i++) {
-                    if(VertexBuffers != null && VertexBuffers[i] != null) VertexBuffers[i].Release();
-                    IndexBuffers[i].Release();
-                    NodeParentAABBBuffer?.Release();
-                    AABBBuffer.Release();
-                    CWBVHIndicesBuffer.Release();
-                    if(WorkingBuffer != null) for(int i2 = 0; i2 < WorkingBuffer.Length; i2++) WorkingBuffer[i2].Release();
-                    if(WorkingSet != null) for(int i2 = 0; i2 < WorkingSet.Length; i2++) WorkingSet[i2]?.Release();
-                }
-            }
-            if (TriBuffer != null) {
-                LightTriBuffer.Release();
-                LightTreeBuffer.ReleaseSafe();
-                TriBuffer.Release();
-                BVHBuffer.Release();
-            }
-            #if AccurateLightTris
-                if(EmissionTexPixels != null) {
-                    int EmissTexLeng = EmissionTexPixels.Count;
-                    for(int i = 0; i < EmissTexLeng; i++) {
-                        EmissionTexPixels[i].pixels.Dispose();
-                    }
-                    EmissionTexPixels = null;
-                }
-            #endif
+
             ClearAll();
         }
 
@@ -1229,24 +1207,24 @@ namespace TrueTrace {
                 CWBVHIndicesBuffer = new ComputeBuffer(BVH.cwbvh_indices.Length, 4);
                 CWBVHIndicesBuffer.SetData(BVH.cwbvh_indices);
                 HasStarted = true;
-                int LayerLength = WorkingSetCWBVH.Count;
-                int VertLength = VertexBuffers.Length;
-                WorkingBuffer = new ComputeBuffer[LayerLength];
                 if(HasLightTriangles) {
                     Set = new List<int>[LBVH.MaxDepth];
-                    WorkingSet = new ComputeBuffer[LBVH.MaxDepth];
+                    WorkingBufferLightBVH = new ComputeBuffer[LBVH.MaxDepth];
                     for(int i = 0; i < LBVH.MaxDepth; i++) Set[i] = new List<int>();
                     Refit(0, 0);
                     for(int i = 0; i < LBVH.MaxDepth; i++) {
-                        WorkingSet[i] = new ComputeBuffer(Set[i].Count, 4);
-                        WorkingSet[i].SetData(Set[i]);
+                        WorkingBufferLightBVH[i] = new ComputeBuffer(Set[i].Count, 4);
+                        WorkingBufferLightBVH[i].SetData(Set[i]);
                     }
                 }
-                for (int i = 0; i < LayerLength; i++) {
-                    WorkingBuffer[i] = new ComputeBuffer(WorkingSetCWBVH[i].Slab.Count, 4);
-                    WorkingBuffer[i].SetData(WorkingSetCWBVH[i].Slab);
+                int WorkingLayerCount = WorkingSetCWBVH.Count;
+                WorkingBufferCWBVH = new ComputeBuffer[WorkingLayerCount];
+                for (int i = 0; i < WorkingLayerCount; i++) {
+                    WorkingBufferCWBVH[i] = new ComputeBuffer(WorkingSetCWBVH[i].Slab.Count, 4);
+                    WorkingBufferCWBVH[i].SetData(WorkingSetCWBVH[i].Slab);
                 }
-                for (int i = 0; i < VertLength; i++) {
+                int VertexBufferCount = VertexBuffers.Length;
+                for (int i = 0; i < VertexBufferCount; i++) {
                     if (IndexBuffers[i] != null) IndexBuffers[i].Release();
                     int[] IndexBuffer = IsSkinnedGroup ? SkinnedMeshes[i].sharedMesh.triangles : DeformableMeshes[i].sharedMesh.triangles;
                     IndexBuffers[i] = new ComputeBuffer(IndexBuffer.Length, 4, ComputeBufferType.Raw);
@@ -1335,12 +1313,12 @@ namespace TrueTrace {
 #endif
                     cmd.SetComputeFloatParam(MeshRefit, "FloatMax", float.MaxValue);
                     int ObjectOffset = LightNodeOffset;
-                    for(int i = WorkingSet.Length - 1; i >= 0; i--) {
+                    for(int i = WorkingBufferLightBVH.Length - 1; i >= 0; i--) {
                         var ObjOffVar = ObjectOffset;
-                        var SetCount = WorkingSet[i].count;
+                        var SetCount = WorkingBufferLightBVH[i].count;
                         cmd.SetComputeIntParam(MeshRefit, "SetCount", SetCount);
                         cmd.SetComputeIntParam(MeshRefit, "ObjectOffset", ObjOffVar);
-                        cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "WorkingSet", WorkingSet[i]);
+                        cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "WorkingBufferLightBVH", WorkingBufferLightBVH[i]);
                         cmd.DispatchCompute(MeshRefit, LightBLASRefitKernel, (int)Mathf.Ceil(SetCount / (float)256.0f), 1, 1);
 
                         ObjectOffset += SetCount;
@@ -1353,9 +1331,9 @@ namespace TrueTrace {
                     cmd.SetComputeIntParam(MeshRefit, "NodeOffset", NodeOffset);
                     for (int i = MaxRecur; i >= 0; i--) {
                         if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Refit: " + i);
-                        var NodeCount2 = WorkingBuffer[i].count;
+                        var NodeCount2 = WorkingBufferCWBVH[i].count;
                         cmd.SetComputeIntParam(MeshRefit, "NodeCount", NodeCount2);
-                        cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "WorkingBuffer", WorkingBuffer[i]);
+                        cmd.SetComputeBufferParam(MeshRefit, RefitLayerKernel, "WorkingBufferCWBVH", WorkingBufferCWBVH[i]);
                         cmd.DispatchCompute(MeshRefit, RefitLayerKernel, (int)Mathf.Ceil(NodeCount2 / (float)128), 1, 1);
                         if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Refit: " + i);
                     }
