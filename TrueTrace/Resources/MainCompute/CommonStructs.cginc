@@ -86,9 +86,6 @@ struct TerrainData {
 StructuredBuffer<TerrainData> Terrains;
 
 struct LightTriData {
-	float3 pos0;
-	float3 posedge1;
-	float3 posedge2;
 	uint TriTarget;
 	float SourceEnergy;
 	// uint NormalizedColor;

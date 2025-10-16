@@ -432,9 +432,6 @@ namespace CommonVars
     [System.Serializable]
     public struct LightTriData
     {
-        public Vector3 pos0;
-        public Vector3 posedge1;
-        public Vector3 posedge2;
         public uint TriTarget;
         public float SourceEnergy;
     }

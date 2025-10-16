@@ -46,9 +46,9 @@
             <RotationSecondaryNormal>0</RotationSecondaryNormal>
           </TextureModifiers>
           <BaseColor>
-            <x>1</x>
-            <y>1</y>
-            <z>1</z>
+            <x>0</x>
+            <y>0</y>
+            <z>0</z>
           </BaseColor>
           <emission>0</emission>
           <EmissionColor>
@@ -57,26 +57,26 @@
             <z>1</z>
           </EmissionColor>
           <Tag>0</Tag>
-          <Roughness>0</Roughness>
+          <Roughness>0.122</Roughness>
           <MatType>0</MatType>
           <TransmittanceColor>
             <x>1</x>
             <y>1</y>
             <z>1</z>
           </TransmittanceColor>
-          <IOR>1</IOR>
+          <IOR>1.93</IOR>
           <Metallic>0</Metallic>
-          <Sheen>5.5</Sheen>
+          <Sheen>1.9</Sheen>
           <SheenTint>0</SheenTint>
           <SpecularTint>0</SpecularTint>
-          <Clearcoat>0.196</Clearcoat>
-          <ClearcoatGloss>0.246</ClearcoatGloss>
+          <Clearcoat>1</Clearcoat>
+          <ClearcoatGloss>0</ClearcoatGloss>
           <Anisotropic>0</Anisotropic>
           <AnisotropicRotation>0</AnisotropicRotation>
           <Flatness>0</Flatness>
           <DiffTrans>0</DiffTrans>
           <SpecTrans>0</SpecTrans>
-          <Specular>0</Specular>
+          <Specular>1</Specular>
           <ScatterDist>1</ScatterDist>
           <MetallicRemap>
             <x>0</x>
@@ -88,7 +88,7 @@
           </RoughnessRemap>
           <AlphaCutoff>0.1</AlphaCutoff>
           <NormalStrength>1</NormalStrength>
-          <Hue>0.227</Hue>
+          <Hue>0</Hue>
           <Saturation>1</Saturation>
           <Contrast>1</Contrast>
           <Brightness>1</Brightness>
@@ -106,21 +106,27 @@
             <x>0</x>
             <y>1</y>
           </DiffTransRemap>
+          <MatCapColor>
+            <x>1</x>
+            <y>1</y>
+            <z>1</z>
+          </MatCapColor>
+          <CausticStrength>1</CausticStrength>
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
-        <AlbedoGUID>5695f74ae6bae154abd2f6d3bdcb2a95</AlbedoGUID>
+        <AlbedoGUID>null</AlbedoGUID>
         <MetallicGUID>null</MetallicGUID>
         <RoughnessGUID>null</RoughnessGUID>
         <EmissionGUID>null</EmissionGUID>
         <AlphaGUID>null</AlphaGUID>
-        <MatCapGUID>3eac3478dda6e6d42860167a61d0c39e</MatCapGUID>
-        <MatcapMaskGUID>1569a2067865cf74e8d1159a80111db1</MatcapMaskGUID>
+        <MatCapGUID>null</MatCapGUID>
+        <MatcapMaskGUID>null</MatcapMaskGUID>
         <SecondaryAlbedoGUID>null</SecondaryAlbedoGUID>
         <SecondaryAlbedoMaskGUID>null</SecondaryAlbedoMaskGUID>
-        <NormalGUID>null</NormalGUID>
+        <NormalGUID>ed3986805d60eda499042ce23b1be705</NormalGUID>
         <DiffTransGUID>null</DiffTransGUID>
-        <ShaderName>.poiyomi/Poiyomi Toon</ShaderName>
+        <ShaderName>.poiyomi/Old Versions/8.0/Poiyomi Toon</ShaderName>
       </RayObjectDatas>
     </ContainedPresets>
   </RayObjFolder>
@@ -230,6 +236,12 @@
             <x>0</x>
             <y>0</y>
           </DiffTransRemap>
+          <MatCapColor>
+            <x>0</x>
+            <y>0</y>
+            <z>0</z>
+          </MatCapColor>
+          <CausticStrength>0</CausticStrength>
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
@@ -348,6 +360,12 @@
             <x>0</x>
             <y>0</y>
           </DiffTransRemap>
+          <MatCapColor>
+            <x>0</x>
+            <y>0</y>
+            <z>0</z>
+          </MatCapColor>
+          <CausticStrength>0</CausticStrength>
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
@@ -471,6 +489,12 @@
             <x>0</x>
             <y>0</y>
           </DiffTransRemap>
+          <MatCapColor>
+            <x>0</x>
+            <y>0</y>
+            <z>0</z>
+          </MatCapColor>
+          <CausticStrength>0</CausticStrength>
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
@@ -589,6 +613,12 @@
             <x>0</x>
             <y>0</y>
           </DiffTransRemap>
+          <MatCapColor>
+            <x>0</x>
+            <y>0</y>
+            <z>0</z>
+          </MatCapColor>
+          <CausticStrength>0</CausticStrength>
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
@@ -712,6 +742,12 @@
             <x>0</x>
             <y>1</y>
           </DiffTransRemap>
+          <MatCapColor>
+            <x>0</x>
+            <y>0</y>
+            <z>0</z>
+          </MatCapColor>
+          <CausticStrength>0</CausticStrength>
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>
@@ -831,6 +867,12 @@
             <x>0</x>
             <y>1</y>
           </DiffTransRemap>
+          <MatCapColor>
+            <x>0</x>
+            <y>0</y>
+            <z>0</z>
+          </MatCapColor>
+          <CausticStrength>0</CausticStrength>
         </MatData>
         <UseKelvin>false</UseKelvin>
         <KelvinTemp>0</KelvinTemp>

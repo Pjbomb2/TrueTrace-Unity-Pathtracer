@@ -109,7 +109,6 @@ namespace TrueTrace {
         [HideInInspector] public Transform ThisTransform;
 
         [HideInInspector] public int ConstructKernel;
-        [HideInInspector] public int TransferKernel;
         [HideInInspector] public int RefitLayerKernel;
         [HideInInspector] public int UpdateGlobalBufferAABBKernel;
         [HideInInspector] public int LightBLASRefitKernel;
@@ -252,7 +251,6 @@ namespace TrueTrace {
             HasCompleted = false;
             MeshRefit = Resources.Load<ComputeShader>("Utility/BVHRefitter");
             ConstructKernel = MeshRefit.FindKernel("Construct");
-            TransferKernel = MeshRefit.FindKernel("TransferKernel");
             RefitLayerKernel = MeshRefit.FindKernel("RefitLayer");
             UpdateGlobalBufferAABBKernel = MeshRefit.FindKernel("UpdateGlobalBufferAABBKernel");
 #if !DontUseSGTree
@@ -1138,7 +1136,7 @@ namespace TrueTrace {
 #if TTExtraVerbose && TTVerbose
                 MainWatch.Start();
 #endif
-                LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
+                LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights, ref AggTriangles);
 #if TTExtraVerbose && TTVerbose
                 MainWatch.Stop("Light BVH for " + LightTriangles.Count + " Emissive triangles");
 #endif
@@ -1249,10 +1247,11 @@ namespace TrueTrace {
                 cmd.SetComputeIntParam(MeshRefit, "LightTriBuffOffset", LightTriOffset);
                 cmd.SetComputeIntParam(MeshRefit, "SkinnedOffset", SkinnedOffset);
                 if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh");
-                if(HasLightTriangles) cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "LightTriangles", RealizedLightTriBuffer);
+                if(HasLightTriangles) {
+                    cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "LightTriangles", RealizedLightTriBuffer);
+                    cmd.SetComputeBufferParam(MeshRefit, LightBLASRefitKernel, "CudaTriArrayINA", RealizedTriBufferA);
+                }
                 cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "Boxs", AABBBuffer);
-                cmd.SetComputeBufferParam(MeshRefit, TransferKernel, "LightTrianglesOut", RealizedLightTriBuffer);
-                cmd.SetComputeBufferParam(MeshRefit, TransferKernel, "CudaTriArrayINA", RealizedTriBufferA);
                 cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "CudaTriArrayA", RealizedTriBufferA);
 #if !TTDisableCustomMotionVectors
                 cmd.SetComputeBufferParam(MeshRefit, ConstructKernel, "SkinnedTriBuffer", SkinnedMeshAggTriBufferPrev);
@@ -1272,14 +1271,16 @@ namespace TrueTrace {
                         return;
                     }
                     var SkinnedRootBone = IsSkinnedGroup ? SkinnedMeshes[i].rootBone : this.transform;
-                    if(SkinnedRootBone == null) SkinnedRootBone = SkinnedMeshes[i].gameObject.transform;
+                    // if(SkinnedRootBone == null) SkinnedRootBone = SkinnedMeshes[i].gameObject.transform;
                     int IndexCount = IndexCounts[i];
 
                     cmd.SetComputeIntParam(MeshRefit, "Stride", VertexBuffers[i].stride / 4);
-                    if(IsSkinnedGroup) {
+                    if(IsSkinnedGroup && SkinnedRootBone != null) {
                         cmd.SetComputeMatrixParam(MeshRefit, "Transform", transform.worldToLocalMatrix * Matrix4x4.TRS(SkinnedRootBone.position, SkinnedRootBone.rotation, Vector3.one ));
+                        cmd.SetComputeVectorParam(MeshRefit, "Offset", SkinnedRootBone.localPosition);
                     } else {
-                        cmd.SetComputeMatrixParam(MeshRefit, "Transform", Matrix4x4.identity);
+                        cmd.SetComputeMatrixParam(MeshRefit, "Transform", transform.worldToLocalMatrix * Matrix4x4.TRS(SkinnedMeshes[i].gameObject.transform.position, SkinnedMeshes[i].gameObject.transform.rotation, SkinnedMeshes[i].gameObject.transform.lossyScale ));
+                        cmd.SetComputeVectorParam(MeshRefit, "Offset", SkinnedMeshes[i].gameObject.transform.localPosition);
                     }
                     cmd.SetComputeVectorParam(MeshRefit, "Offset", SkinnedRootBone.localPosition);
     
@@ -1295,12 +1296,6 @@ namespace TrueTrace {
 
                 if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Accum");
 
-                if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Light Transfer");
-                if(LightTriangles.Count != 0) {
-                    cmd.SetComputeIntParam(MeshRefit, "gVertexCount", LightTriangles.Count);
-                    cmd.DispatchCompute(MeshRefit, TransferKernel, (int)Mathf.Ceil(LightTriangles.Count / (float)KernelRatio), 1, 1);
-                }
-                if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Light Transfer");
 
                 if(LightTriangles.Count != 0) {
                     if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("LightRefitter");
@@ -1376,6 +1371,7 @@ namespace TrueTrace {
                 if(RayTracingMaster.DoKernelProfiling) cmd.BeginSample("ReMesh Global AABB Update");
                     cmd.SetComputeIntParam(MeshRefit, "TLASBoxesInput", BoxesIndex);
                     cmd.SetComputeBufferParam(MeshRefit, UpdateGlobalBufferAABBKernel, "Boxs", BoxesBuffer);
+                    cmd.SetComputeBufferParam(MeshRefit, UpdateGlobalBufferAABBKernel, "NodeTotalBounds", NodeParentAABBBuffer);
                     cmd.DispatchCompute(MeshRefit, UpdateGlobalBufferAABBKernel, 1, 1, 1);
                 if(RayTracingMaster.DoKernelProfiling) cmd.EndSample("ReMesh Global AABB Update");
             #endif
@@ -1545,9 +1541,6 @@ namespace TrueTrace {
                                 // float e = radiance * area;
                                 LightTriNorms.Add(((CommonFunctions.UnpackOctahedral(TempTri.norm0) + CommonFunctions.UnpackOctahedral(TempTri.norm1) + CommonFunctions.UnpackOctahedral(TempTri.norm2)) / 3.0f).normalized);
                                 LightTriangles.Add(new LightTriData() {
-                                    pos0 = TempTri.pos0,
-                                    posedge1 = TempTri.posedge1,
-                                    posedge2 = TempTri.posedge2,
                                     TriTarget = (uint)(OffsetReal),
                                     SourceEnergy = Length(Radiance)
                                     });
@@ -1594,7 +1587,7 @@ namespace TrueTrace {
                     BVH.BVH8NodesArray.Dispose();
                 } else {
                     AggNodes = new BVHNode8DataCompressed[1];
-                    if(LightTriangles.Count > 0) LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights);
+                    if(LightTriangles.Count > 0) LBVH = new LightBVHBuilder(LightTriangles, LightTriNorms, 0.1f, LuminanceWeights, ref AggTriangles);
                 }
                 if(TrianglesArray.IsCreated) TrianglesArray.Dispose();
             #endif

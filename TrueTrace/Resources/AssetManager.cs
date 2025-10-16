@@ -1706,6 +1706,7 @@ namespace TrueTrace {
                 BVHNodeCount = TLASBVH8.cwbvhnode_count;
                 WorkingSetCWBVH = new List<Layer2>();
                 TotalCounter = 0;
+                TempRecur = 0;
                 DocumentNodes(0, 0);
                 MaxRecur = TempRecur;
 
@@ -1739,7 +1740,8 @@ namespace TrueTrace {
             // System.Array.Resize(ref TLASBVH8.BVH8Nodes, TLASBVH8.cwbvhnode_count);
             // if (TempBVHArray == null || TLASBVH8.cwbvhnode_count != TempBVHArray.Length) TempBVHArray = new BVHNode8DataCompressed[TLASBVH8.cwbvhnode_count];
             CommonFunctions.Aggregate(ref TempBVHArray, TLASBVH8);
-            WorkingSetCWBVH = new List<Layer2>();
+            if(WorkingSetCWBVH == null) WorkingSetCWBVH = new List<Layer2>();
+            else WorkingSetCWBVH.Clear();
             TotalCounter = 0;
             DocumentNodes(0, 0);
             return;
@@ -1769,8 +1771,10 @@ namespace TrueTrace {
                 if(WorkingBuffer != null) for(int i = 0; i < WorkingBuffer.Length; i++) WorkingBuffer[i]?.Release();
                 if (NodeParentAABBBuffer != null) NodeParentAABBBuffer.Release();
                 if (BoxesBuffer != null) BoxesBuffer.Release();
-                WorkingBuffer = new ComputeBuffer[WorkingSetCWBVH.Count];
-                for (int i = 0; i <= MaxRecur; i++) {
+                if (TLASCWBVHIndexes != null) TLASCWBVHIndexes.Release();
+                int WorkingLayerCount = WorkingSetCWBVH.Count;
+                WorkingBuffer = new ComputeBuffer[WorkingLayerCount];
+                for (int i = 0; i < WorkingLayerCount; i++) {
                     WorkingBuffer[i] = new ComputeBuffer(WorkingSetCWBVH[i].Slab.Count, 4);
                     WorkingBuffer[i].SetData(WorkingSetCWBVH[i].Slab);
                 }

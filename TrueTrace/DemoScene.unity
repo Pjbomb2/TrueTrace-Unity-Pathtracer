@@ -12929,7 +12929,6 @@ MonoBehaviour:
   HasCompleted: 0
   ThisTransform: {fileID: 499686670}
   ConstructKernel: 0
-  TransferKernel: 1
   RefitLayerKernel: 2
   UpdateGlobalBufferAABBKernel: 4
   LightBLASRefitKernel: 7
@@ -48410,7 +48409,6 @@ MonoBehaviour:
   HasCompleted: 0
   ThisTransform: {fileID: 1770587713}
   ConstructKernel: 0
-  TransferKernel: 1
   RefitLayerKernel: 2
   UpdateGlobalBufferAABBKernel: 4
   LightBLASRefitKernel: 7
@@ -54977,7 +54975,6 @@ MonoBehaviour:
   HasCompleted: 0
   ThisTransform: {fileID: 1931085298}
   ConstructKernel: 0
-  TransferKernel: 1
   RefitLayerKernel: 2
   UpdateGlobalBufferAABBKernel: 4
   LightBLASRefitKernel: 7

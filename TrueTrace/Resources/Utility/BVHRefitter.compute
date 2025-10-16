@@ -152,27 +152,7 @@ void Construct(uint3 id : SV_DispatchThreadID, uint3 gt : SV_GroupThreadID)
 
 
 }
-
-#pragma kernel TransferKernel
-
-RWStructuredBuffer<LightTriData> LightTrianglesOut;
 int LightTriBuffOffset;
-[numthreads(KernelRatio, 1, 1)]
-void TransferKernel(uint3 id : SV_DispatchThreadID)
-{
-	if (id.x >= gVertexCount)
-		return;
-
-	CudaTriangleA TempTri = CudaTriArrayINA[LightTrianglesOut[id.x + LightTriBuffOffset].TriTarget + TriBuffOffset];
-
-	LightTrianglesOut[id.x + LightTriBuffOffset].pos0 = TempTri.pos0;
-	LightTrianglesOut[id.x + LightTriBuffOffset].posedge1 = TempTri.posedge1;
-	LightTrianglesOut[id.x + LightTriBuffOffset].posedge2 = TempTri.posedge2;
-
-}
-
-
-
 
 
 struct NodeIndexPairData {
@@ -722,16 +702,16 @@ void BLASSGTreeRefitKernel (uint3 id : SV_DispatchThreadID)
     GaussianTreeNode Node = SGTreeWrite[Index];
     if(Node.left < 0) {
         LightTriData LightTri = LightTriangles[-(Node.left+1) + LightTriBuffOffset];
-        float3 mean = (LightTri.pos0 + (LightTri.pos0 + LightTri.posedge1) + (LightTri.pos0 + LightTri.posedge2)) / 3.0f;
-        float radius = max(max(distance(mean, LightTri.pos0), distance(mean, LightTri.pos0 + LightTri.posedge1)), distance(mean, LightTri.pos0 + LightTri.posedge2));
+        CudaTriangleA TriPositions = CudaTriArrayINA[LightTri.TriTarget + TriBuffOffset];
+        float3 mean = (TriPositions.pos0 + (TriPositions.pos0 + TriPositions.posedge1) + (TriPositions.pos0 + TriPositions.posedge2)) / 3.0f;
+        float radius = max(max(distance(mean, TriPositions.pos0), distance(mean, TriPositions.pos0 + TriPositions.posedge1)), distance(mean, TriPositions.pos0 + TriPositions.posedge2));
 
 
-        float area = AreaOfTriangle(LightTri.pos0, LightTri.pos0 + LightTri.posedge1, LightTri.pos0 + LightTri.posedge2);
+        float area = AreaOfTriangle(TriPositions.pos0, TriPositions.pos0 + TriPositions.posedge1, TriPositions.pos0 + TriPositions.posedge2);
 
-        // if(area == 0) area = 0.000000001f;
         float intensity = LightTri.SourceEnergy * area;
-        float3 V = 0.5f * normalize(cross(normalize(LightTri.posedge1), normalize(LightTri.posedge2)));
-        float variance = (dot(LightTri.posedge1, LightTri.posedge1) + dot(LightTri.posedge2, LightTri.posedge2) - dot(LightTri.posedge1, LightTri.posedge2)) / 18.0f;
+        float3 V = 0.5f * normalize(cross(normalize(TriPositions.posedge1), normalize(TriPositions.posedge2)));
+        float variance = (dot(TriPositions.posedge1, TriPositions.posedge1) + dot(TriPositions.posedge2, TriPositions.posedge2) - dot(TriPositions.posedge1, TriPositions.posedge2)) / 18.0f;
 
         float AxisLength = length(V);
         if(AxisLength == 0) V = float3(0,1,0);
@@ -761,8 +741,9 @@ void BLASLightRefitKernel (uint3 id : SV_DispatchThreadID)
     LightBVHData Node = LightNodesWrite[Index];
     if(Node.left < 0) {
         LightTriData LightTri = LightTriangles[-(Node.left+1) + LightTriBuffOffset];
-        float3 BBMax = max(max(LightTri.pos0, LightTri.pos0 + LightTri.posedge1), LightTri.pos0 + LightTri.posedge2);
-        float3 BBMin = min(min(LightTri.pos0, LightTri.pos0 + LightTri.posedge1), LightTri.pos0 + LightTri.posedge2);
+        CudaTriangleA TriPositions = CudaTriArrayINA[LightTri.TriTarget + TriBuffOffset];
+        float3 BBMax = max(max(TriPositions.pos0, TriPositions.pos0 + TriPositions.posedge1), TriPositions.pos0 + TriPositions.posedge2);
+        float3 BBMin = min(min(TriPositions.pos0, TriPositions.pos0 + TriPositions.posedge1), TriPositions.pos0 + TriPositions.posedge2);
         [unroll]for(int i = 0; i < 3; i++) {
             if(abs(BBMax[i] - BBMin[i]) < 0.0001f) {
                 BBMax[i] += 0.0001f;
@@ -771,12 +752,12 @@ void BLASLightRefitKernel (uint3 id : SV_DispatchThreadID)
         }
         LightNodesWrite[Index].BBMax = BBMax;
         LightNodesWrite[Index].BBMin = BBMin;
-        LightNodesWrite[Index].w = octahedral_32(-normalize(cross(normalize(LightTri.posedge1), normalize(LightTri.posedge2))));
-        float area = AreaOfTriangle(mul(ToWorld, float4(LightTri.pos0,1)).xyz, mul(ToWorld, float4(LightTri.pos0 + LightTri.posedge1,1)).xyz, mul(ToWorld, float4(LightTri.pos0 + LightTri.posedge2,1)).xyz);
+        LightNodesWrite[Index].w = octahedral_32(-normalize(cross(normalize(TriPositions.posedge1), normalize(TriPositions.posedge2))));
+        float area = AreaOfTriangle(mul(ToWorld, float4(TriPositions.pos0,1)).xyz, mul(ToWorld, float4(TriPositions.pos0 + TriPositions.posedge1,1)).xyz, mul(ToWorld, float4(TriPositions.pos0 + TriPositions.posedge2,1)).xyz);
         if(area == 0) area = 0.000000001f;
 
         LightNodesWrite[Index].phi = LightTri.SourceEnergy * area;   
-        // LightNodesWrite[Index].phi = max(AreaOfTriangle(LightTri.pos0, LightTri.pos0 + LightTri.posedge1, LightTri.pos0 + LightTri.posedge2),0.00000001f);   
+        // LightNodesWrite[Index].phi = max(AreaOfTriangle(TriPositions.pos0, TriPositions.pos0 + TriPositions.posedge1, TriPositions.pos0 + TriPositions.posedge2),0.00000001f);   
         return;
     }
     LightBVHData LeftNode = LightNodesWrite[Node.left + TotalNodeOffset];

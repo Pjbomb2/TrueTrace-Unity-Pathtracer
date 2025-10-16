@@ -1086,7 +1086,7 @@ int MaterialIndex;
                 Radiance *= Intensity;
                 if (CurBounce == 0) Color.Direct = Radiance;
 #ifdef RadCache
-                else if(luminance(Color.Indirect) == 0) Color.Indirect += Color.throughput * Radiance;
+                else if(luminance(Color.Indirect) == 0) Color.Indirect += Color.throughput * Radiance * mis;
 #else
                 else if (CurBounce == 1) Color.Direct += Radiance * mis;
                 else Color.Indirect += Color.throughput * Radiance * mis;
@@ -1118,7 +1118,7 @@ int MaterialIndex;
             Color.Data = float3(Color.Direct);
             Color.MetRoughIsSpec = (Color.MetRoughIsSpec & ~(0x7C000000)) |  ((1) << 26);  
             Color.Flags = packRGBE(Color.Direct);
-            PSRGBuff[id.xy].y = asfloat(packRGBE(Color.Direct));  
+            PSRGBuff[id.xy] = float4(PSRGBuff[id.xy].x, asfloat(packRGBE(Color.Direct)), PSRGBuff[id.xy].zw);  
 
         }
         if(GetBounceData(Color.MetRoughIsSpec) == 0) {
@@ -1127,8 +1127,7 @@ int MaterialIndex;
 
         }
         if(GetBounceData(asuint(PSRGBuff[id.xy].w)) == 0) {
-            // PSRGBuff[id.xy].w = asfloat(((asuint(PSRGBuff[id.xy].w) & ~(0x7C000000))) |  ((2) << 26));
-            PSRGBuff[id.xy].z += 100.0f;//;
+            PSRGBuff[id.xy] = float4(PSRGBuff[id.xy].xy, PSRGBuff[id.xy].z + 100.0f, PSRGBuff[id.xy].w);//;
         }  
 
         GlobalColors[pixel_index] = Color;

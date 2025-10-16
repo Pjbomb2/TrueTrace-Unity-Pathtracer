@@ -41,6 +41,34 @@ namespace TrueTrace {
       }
 
 
+      public static void IncrementRenderCounter() {
+         // string Path = Application.persistentDataPath + "/TTStats.txt";
+         // Debug.Log(Path);
+         // List<string> RenderStatData = new List<string>();
+         // DateTime CurrentDate = DateTime.Now;
+         // string FormattedDate = CurrentDate.ToString("yyyy-MM-dd");
+         // if(System.IO.File.Exists(Path)) {
+         //    using (System.IO.StreamReader sr = new System.IO.StreamReader(Path)) {
+         //        string Line;
+         //        while((Line = sr.ReadLine()) != null) {
+         //          RenderStatData.Add(Line);
+         //        }
+         //    }            
+         // }
+         // int DateIndex = RenderStatData.IndexOf("Renders For: " + FormattedDate);
+         // if(DateIndex == -1) {
+         //    RenderStatData.Add("Renders For: " + FormattedDate);
+         //    RenderStatData.Add("1");
+         // } else {
+         //    RenderStatData[DateIndex + 1] = "" + (int.Parse(RenderStatData[DateIndex + 1]) + 1);
+         // }
+         // using (System.IO.StreamWriter sw = new System.IO.StreamWriter(Path)) {
+         //    int Coun = RenderStatData.Count;
+         //    for(int i = 0; i < Coun; i++) {
+         //       sw.WriteLine(RenderStatData[i]);
+         //    }
+         // }
+      }
         public enum ImageGenType {NULL, Panorama, LargeScreenShot, TurnTable, TimedScreenShot, TimelineShooter};
         [SerializeField] public ImageGenType SelectedFunctionality = ImageGenType.NULL;
         private int CurrentResIndex;
@@ -118,6 +146,7 @@ namespace TrueTrace {
                             }
                             string Path = PlayerPrefs.GetString("TurnTablePath") + "/" + CameraList[CurrentCamera].TargCam.gameObject.name.Replace(" ", "") + "/" + CameraList[CurrentCamera].TargCam.gameObject.name + "." + SegmentNumber + ".png";
                             ScreenCapture.CaptureScreenshot(Path);
+                            IncrementRenderCounter();
                             #if MultiMapScreenshot
                                 if(CameraList[CurrentCamera].SaveImgMap) {
                                    SaveTexture(RayTracingMaster.RayMaster.MultiMapMatIDTexture, Path.Replace(".png", "") + "_MatID.png");
@@ -197,6 +226,7 @@ namespace TrueTrace {
                 if((RayTracingMaster.SampleCount >= CamSettings[CurrentCamera].SamplesPerShot)) {
                     string Path = PlayerPrefs.GetString("TimelinePath") + "/" + RayTracingMaster._camera.name + "_" + CurrentFrame + ".png";
                     ScreenCapture.CaptureScreenshot(Path);
+                    IncrementRenderCounter();
                     #if MultiMapScreenshot
                         if(CameraList[CurrentCamera].SaveImgMap) {
                            SaveTexture(RayTracingMaster.RayMaster.MultiMapMatIDTexture, Path.Replace(".png", "") + "_MatID.png");
@@ -338,6 +368,7 @@ namespace TrueTrace {
         #else
             public void StitchSlices(Camera cam) {
         #endif 
+                IncrementRenderCounter();
                 Color[] FinalAtlasData = new Color[FinalAtlasSize.x * FinalAtlasSize.y];
                 #if MultiMapScreenshot
                     Color[] FinalAtlasMatData = new Color[1];
@@ -651,6 +682,7 @@ namespace TrueTrace {
                 break;
                 case(ImageGenType.TimedScreenShot):
                     if(((RayTracingMaster.SampleCount % SamplesBetweenShots) == SamplesBetweenShots - 1 && !ResetSampCountAfterShot) || (RayTracingMaster.SampleCount >= SamplesBetweenShots && ResetSampCountAfterShot)) {
+                        IncrementRenderCounter();
                         ScreenCapture.CaptureScreenshot(PlayerPrefs.GetString("ScreenShotPath") + "/" + System.DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ", " + RayTracingMaster.SampleCount + " Samples.png");
                         UnityEditor.AssetDatabase.Refresh();
                         if(ResetSampCountAfterShot) {

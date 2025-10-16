@@ -2659,7 +2659,37 @@ Toolbar toolbar;
          System.IO.File.WriteAllBytes(Path, bytes);
       }
 
+      public static void IncrementRenderCounter() {
+         // string Path = Application.persistentDataPath + "/TTStats.txt";
+         // Debug.Log(Path);
+         // List<string> RenderStatData = new List<string>();
+         // DateTime CurrentDate = DateTime.Now;
+         // string FormattedDate = CurrentDate.ToString("yyyy-MM-dd");
+         // if(File.Exists(Path)) {
+         //    using (StreamReader sr = new StreamReader(Path)) {
+         //        string Line;
+         //        while((Line = sr.ReadLine()) != null) {
+         //          RenderStatData.Add(Line);
+         //        }
+         //    }            
+         // }
+         // int DateIndex = RenderStatData.IndexOf("Renders For: " + FormattedDate);
+         // if(DateIndex == -1) {
+         //    RenderStatData.Add("Renders For: " + FormattedDate);
+         //    RenderStatData.Add("1");
+         // } else {
+         //    RenderStatData[DateIndex + 1] = "" + (int.Parse(RenderStatData[DateIndex + 1]) + 1);
+         // }
+         // using (StreamWriter sw = new StreamWriter(Path)) {
+         //    int Coun = RenderStatData.Count;
+         //    for(int i = 0; i < Coun; i++) {
+         //       sw.WriteLine(RenderStatData[i]);
+         //    }
+         // }
+      }
+
          public static void TakeScreenshot() {
+            IncrementRenderCounter();
            string SegmentNumber = "";
            string FilePath = "";
            int TempSeg = 1;

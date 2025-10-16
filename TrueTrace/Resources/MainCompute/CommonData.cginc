@@ -2592,8 +2592,9 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
             Index = (Rand.x * LightCount) + StartIndex;
             Rand2 = random(79 + i, pixel_index);
 
+            int TriTarget = LightTriangles[Index].TriTarget + MeshTriOffset;
             TriangleUV = sample_triangle(Rand2.x, Rand2.y);
-            LightPosition = (LightTriangles[Index].pos0 + LightTriangles[Index].posedge1 * TriangleUV.x + LightTriangles[Index].posedge2 * TriangleUV.y - Position);
+            LightPosition = (AggTrisA[TriTarget].pos0 + AggTrisA[TriTarget].posedge1 * TriangleUV.x + AggTrisA[TriTarget].posedge2 * TriangleUV.y - Position);
             p_hat = rcp(dot(LightPosition, LightPosition));
             if(dot(normalize(LightPosition), Norm) < 0) continue;
             wsum += p_hat;
@@ -2607,6 +2608,7 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
 
         }
         if(CounCoun == 0) return -1;
+    	int AggTriIndex = LightTriangles[Index].TriTarget + MeshTriOffset;
         FinalPos += Position;
         lightWeight *= (wsum / max((CounCoun) * MinP_Hat, 0.000001f) * LightCount);
     #else
@@ -2619,12 +2621,12 @@ inline int SelectLight(const uint pixel_index, inout uint MeshIndex, inout float
         if(MinIndex == -1) return -1;
         MeshTriOffset = _MeshData[MeshIndex].TriOffset;
         MatOffset =_MeshData[MeshIndex].MaterialOffset;
+    	int AggTriIndex = LightTriangles[MinIndex].TriTarget + MeshTriOffset;
 
         float2 Rand2 = random(79, pixel_index);
         FinalUV = sample_triangle(Rand2.x, Rand2.y);
-        FinalPos = (LightTriangles[MinIndex].pos0 + LightTriangles[MinIndex].posedge1 * FinalUV.x + LightTriangles[MinIndex].posedge2 * FinalUV.y);
+        FinalPos = (AggTrisA[AggTriIndex].pos0 + AggTrisA[AggTriIndex].posedge1 * FinalUV.x + AggTrisA[AggTriIndex].posedge2 * FinalUV.y);
     #endif
-    int AggTriIndex = LightTriangles[MinIndex].TriTarget + MeshTriOffset;
     int MaterialIndex = AggTrisA[AggTriIndex].MatDat + MatOffset;
     MaterialData MatDat = _Materials[MaterialIndex];
     #ifdef AdvancedBackground

@@ -326,7 +326,7 @@ namespace TrueTrace {
 
 
 
-        public unsafe LightBVHBuilder(List<LightTriData> Tris, List<Vector3> Norms, float phi, List<float> LuminanceWeights) {//need to make sure incomming is transformed to world space already
+        public unsafe LightBVHBuilder(List<LightTriData> Tris, List<Vector3> Norms, float phi, List<float> LuminanceWeights, ref CudaTriangle[] AggTriangles) {//need to make sure incomming is transformed to world space already
             PrimCount = Tris.Count;          
             MaxDepth = 0;
             DimensionedIndicesArray = new NativeArray<int>(PrimCount * 3, Unity.Collections.Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
@@ -349,11 +349,12 @@ namespace TrueTrace {
             float Precomputed = Mathf.PI / 2.0f;//(float)System.Math.Cos(Mathf.PI / 2.0f);
             for(int i = 0; i < PrimCount; i++) {
                 TriAABB.init();
-                TriAABB.Extend(Tris[i].pos0);
-                TriAABB.Extend(Tris[i].pos0 + Tris[i].posedge1);
-                TriAABB.Extend(Tris[i].pos0 + Tris[i].posedge2);
+                uint Target = Tris[i].TriTarget;
+                TriAABB.Extend(AggTriangles[Target].pos0);
+                TriAABB.Extend(AggTriangles[Target].pos0 + AggTriangles[Target].posedge1);
+                TriAABB.Extend(AggTriangles[Target].pos0 + AggTriangles[Target].posedge2);
                 TriAABB.Validate(Scaler);
-                float ThisPhi = AreaOfTriangle(Tris[i].pos0, Tris[i].pos0 + Tris[i].posedge1, Tris[i].pos0 + Tris[i].posedge2) * LuminanceWeights[i];
+                float ThisPhi = AreaOfTriangle(AggTriangles[Target].pos0, AggTriangles[Target].pos0 + AggTriangles[Target].posedge1, AggTriangles[Target].pos0 + AggTriangles[Target].posedge2) * LuminanceWeights[i];
                 LightBounds TempBound = new LightBounds(TriAABB, -Norms[i], ThisPhi, 0,Precomputed, 1, 0);
                 LightTris[i] = TempBound;
                 FinalIndices[i] = i;
@@ -424,14 +425,14 @@ namespace TrueTrace {
                         float radius;
                         if(LBVHNode.left < 0) {
                             LightTriData ThisLight = Tris[-(LBVHNode.left+1)];
-
-                            float area = AreaOfTriangle(ThisLight.pos0, ThisLight.pos0 + ThisLight.posedge1, ThisLight.pos0 + ThisLight.posedge2);
+                            CudaTriangle TempTri = AggTriangles[ThisLight.TriTarget];
+                            float area = AreaOfTriangle(TempTri.pos0, TempTri.pos0 + TempTri.posedge1, TempTri.pos0 + TempTri.posedge2);
 
                             intensity = ThisLight.SourceEnergy * area;
-                            V = 0.5f * -Norms[-(LBVHNode.left+1)];//(Vector3.Cross(ThisLight.posedge1.normalized, ThisLight.posedge2.normalized).normalized);
-                            mean = (ThisLight.pos0 + (ThisLight.pos0 + ThisLight.posedge1) + (ThisLight.pos0 + ThisLight.posedge2)) / 3.0f;
-                            variance = (Dot(ref ThisLight.posedge1, ref ThisLight.posedge1) + Dot(ref ThisLight.posedge2, ref ThisLight.posedge2) - Dot(ref ThisLight.posedge1, ref ThisLight.posedge2)) / 18.0f;
-                            radius = Mathf.Max(Mathf.Max(Distance(mean, ThisLight.pos0), Distance(mean, ThisLight.pos0 + ThisLight.posedge1)), Distance(mean, ThisLight.pos0 + ThisLight.posedge2));
+                            V = 0.5f * -Norms[-(LBVHNode.left+1)];//(Vector3.Cross(TempTri.posedge1.normalized, TempTri.posedge2.normalized).normalized);
+                            mean = (TempTri.pos0 + (TempTri.pos0 + TempTri.posedge1) + (TempTri.pos0 + TempTri.posedge2)) / 3.0f;
+                            variance = (Dot(ref TempTri.posedge1, ref TempTri.posedge1) + Dot(ref TempTri.posedge2, ref TempTri.posedge2) - Dot(ref TempTri.posedge1, ref TempTri.posedge2)) / 18.0f;
+                            radius = Mathf.Max(Mathf.Max(Distance(mean, TempTri.pos0), Distance(mean, TempTri.pos0 + TempTri.posedge1)), Distance(mean, TempTri.pos0 + TempTri.posedge2));
                         } else {
                             GaussianTreeNode LeftNode = SGTree[nodes[WriteIndex].left];    
                             GaussianTreeNode RightNode = SGTree[nodes[WriteIndex].left + 1];
