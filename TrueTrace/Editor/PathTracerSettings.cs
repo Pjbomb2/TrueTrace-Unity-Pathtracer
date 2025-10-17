@@ -589,7 +589,7 @@ namespace TrueTrace {
          public void OnFocus() {
            if(Assets == null) {
                if( GameObject.Find("Scene") != null) {
-                  InitializeGlob();
+                  EnsureInitializedGlobalDefines();
                   Assets = GameObject.Find("Scene").GetComponent<AssetManager>();
                   if(Assets == null) {
                      Assets = GameObject.Find("Scene").AddComponent<AssetManager>();
@@ -1636,12 +1636,10 @@ Toolbar toolbar;
 
 
         var TextureNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Texture", typeof(Texture), new Vector2(0,0), "null"));}) {text = "Texture"};
-        // var PartialTextureNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Texture", typeof(Texture), new Vector2(0,0), "null", 0));}) {text = "Texture"};
         var FloatNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Float", typeof(float), new Vector2(0,0), "null"));}) {text = "Float"};
         var ColorNodeButton = new Button(() => {_graphView.AddElement(CreateInputNode("Color", typeof(Color), new Vector2(0,0), "null"));}) {text = "Color"};
 
         toolbar.Add(TextureNodeButton);//partial textures will be defined as according to the output they are connected to 
-        // toolbar.Add(PartialTextureNodeButton);//partial textures will be defined as according to the output they are connected to 
         toolbar.Add(FloatNodeButton);
         toolbar.Add(ColorNodeButton);
         MaterialPairingMenu.Add(toolbar);
@@ -1749,6 +1747,27 @@ Toolbar toolbar;
          return CustToggle;
       }
 
+      void EnsureInitializedGlobalDefines() {
+         definesList = GetDefines();
+         if(SystemInfo.graphicsDeviceType != GraphicsDeviceType.Direct3D12 || definesList.Contains("DX11Only")) {
+            if(!definesList.Contains("DX11Only")) {
+               ActiveDX11Overrides(); 
+               definesList = GetDefines();
+            }
+         }
+
+
+
+         SetGlobalDefines("PhotonMapping", definesList.Contains("EnablePhotonMapping"));
+         SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
+         SetGlobalDefines("TTCustomMotionVectors", !definesList.Contains("TTDisableCustomMotionVectors"));
+         SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
+         SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
+         SetGlobalDefines("MultiMapScreenshot", definesList.Contains("MultiMapScreenshot"));
+         if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
+         SetGlobalDefines("DX11", definesList.Contains("DX11Only"));
+         SetGlobalDefines("RasterizedDirect", definesList.Contains("RasterizedDirect"));
+      }
 
 
       void ActiveDX11Overrides() {
@@ -1767,24 +1786,6 @@ Toolbar toolbar;
          SetGlobalDefines("HardwareRT", false);
       }
 
-      void InitializeGlob() {
-            definesList = GetDefines();
-            SetGlobalDefines("PhotonMapping", definesList.Contains("EnablePhotonMapping"));
-            SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
-            SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
-            SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
-            // SetGlobalDefines("TTReflectionMotionVectors", definesList.Contains("TTReflectionMotionVectors"));
-            if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
-            SetGlobalDefines("DX11", definesList.Contains("DX11Only"));         
-            SetGlobalDefines("TTCustomMotionVectors", !definesList.Contains("TTDisableCustomMotionVectors"));
-
-            if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 || definesList.Contains("DX11Only")) {
-               if(!definesList.Contains("DX11Only")) {
-                  // ActiveDX11Overrides(); 
-               }
-            }
-      }
-
       void AddHardSettingsToMenu() {
          Button RemoveTrueTraceButton = new Button(() => RemoveTrueTrace()) {text = "Remove TrueTrace Scripts From Scene"};
          
@@ -1792,18 +1793,7 @@ Toolbar toolbar;
          
          VisualElement NonPlayContainer = new VisualElement();
          NonPlayContainer.style.paddingLeft = 10;
-            definesList = GetDefines();
-            SetGlobalDefines("PhotonMapping", definesList.Contains("EnablePhotonMapping"));
-            SetGlobalDefines("HardwareRT", definesList.Contains("HardwareRT"));
-            SetGlobalDefines("TTCustomMotionVectors", !definesList.Contains("TTDisableCustomMotionVectors"));
-            SetGlobalDefines("UseSGTree", !(definesList.Contains("DontUseSGTree")));
-            SetGlobalDefines("UseBindless", !(definesList.Contains("UseAtlas")));
-            // SetGlobalDefines("TTReflectionMotionVectors", definesList.Contains("TTReflectionMotionVectors"));
-            SetGlobalDefines("MultiMapScreenshot", definesList.Contains("MultiMapScreenshot"));
-            if(definesList.Contains("DisableRadianceCache")) SetGlobalDefines("RadCache", false);
-            SetGlobalDefines("DX11", definesList.Contains("DX11Only"));
-            SetGlobalDefines("RasterizedDirect", definesList.Contains("RasterizedDirect"));
-
+         EnsureInitializedGlobalDefines();
 
             HardwareRTToggle = new Toggle() {value = (definesList.Contains("HardwareRT")), text = "Enable RT Cores (Requires Unity 2023+)"};
             HardwareRTToggle.RegisterValueChangedCallback(evt => {if(evt.newValue) {RemoveDefine("TTTriSplitting"); TriangleSplittingToggle.SetEnabled(false); AddDefine("HardwareRT"); SetGlobalDefines("HardwareRT", true);} else {TriangleSplittingToggle.SetEnabled(true); RemoveDefine("HardwareRT"); SetGlobalDefines("HardwareRT", false);}});
@@ -1916,6 +1906,7 @@ Toolbar toolbar;
 
 
 
+            DX11Toggle = new Toggle() {value = (definesList.Contains("DX11Only")), text = "Use DX11"};
             if(Application.isPlaying) {
                PhotonMappingToggle.SetEnabled(false);
                HardwareRTToggle.SetEnabled(false);
@@ -1934,6 +1925,7 @@ Toolbar toolbar;
                StrictMemoryReductionToggle.SetEnabled(false);
                MultiMapScreenshotToggle.SetEnabled(false);
                RemoveScriptsDuringSaveToggle.SetEnabled(false);
+               DX11Toggle.SetEnabled(false);
             } else {
                PhotonMappingToggle.SetEnabled(true);
                HardwareRTToggle.SetEnabled(true);
@@ -1952,6 +1944,7 @@ Toolbar toolbar;
                StrictMemoryReductionToggle.SetEnabled(true);
                MultiMapScreenshotToggle.SetEnabled(true);
                RemoveScriptsDuringSaveToggle.SetEnabled(true);
+               DX11Toggle.SetEnabled(true);
             }
 
             if(definesList.Contains("HardwareRT")) {
@@ -1962,7 +1955,7 @@ Toolbar toolbar;
             } else if(!Application.isPlaying) {
                TriangleSplittingToggle.SetEnabled(true);
             }
-            if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 || definesList.Contains("DX11Only")) {
+            if(SystemInfo.graphicsDeviceType != GraphicsDeviceType.Direct3D12 || definesList.Contains("DX11Only")) {
                if(!definesList.Contains("DX11Only")) {
                   ActiveDX11Overrides(); 
                }
@@ -1972,13 +1965,6 @@ Toolbar toolbar;
                OIDNToggle.SetEnabled(false);
             }
 
-            DX11Toggle = new Toggle() {value = (definesList.Contains("DX11Only")), text = "Use DX11"};
-
-            if(Application.isPlaying) {
-               DX11Toggle.SetEnabled(false);
-            } else {
-               DX11Toggle.SetEnabled(true);
-            }
 
             DX11Toggle.RegisterValueChangedCallback(evt => {
                if(evt.newValue) {
@@ -1988,7 +1974,7 @@ Toolbar toolbar;
                   PhotonMappingToggle.SetEnabled(false);
                   OIDNToggle.SetEnabled(false);
                } else {
-                  if(SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11) {
+                  if(SystemInfo.graphicsDeviceType != GraphicsDeviceType.Direct3D12) {
                      Debug.LogError("DX12 Not Found, Forcing DX11"); 
                      DX11Toggle.value = true;
                   } else {
@@ -2725,6 +2711,8 @@ Slider AperatureSlider;
 
 
         public void CreateGUI() {
+            EnsureInitializedGlobalDefines();
+
             HasNoMore = false;
             string BasePath = Application.dataPath.Replace("/Assets", "");
             if(!System.IO.Directory.Exists(BasePath + "/TrueTrace")) {

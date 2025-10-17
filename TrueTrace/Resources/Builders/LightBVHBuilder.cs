@@ -429,7 +429,7 @@ namespace TrueTrace {
                             float area = AreaOfTriangle(TempTri.pos0, TempTri.pos0 + TempTri.posedge1, TempTri.pos0 + TempTri.posedge2);
 
                             intensity = ThisLight.SourceEnergy * area;
-                            V = 0.5f * -Norms[-(LBVHNode.left+1)];//(Vector3.Cross(TempTri.posedge1.normalized, TempTri.posedge2.normalized).normalized);
+                            V = 0.5749255543539332f * -Norms[-(LBVHNode.left+1)];//(Vector3.Cross(TempTri.posedge1.normalized, TempTri.posedge2.normalized).normalized);
                             mean = (TempTri.pos0 + (TempTri.pos0 + TempTri.posedge1) + (TempTri.pos0 + TempTri.posedge2)) / 3.0f;
                             variance = (Dot(ref TempTri.posedge1, ref TempTri.posedge1) + Dot(ref TempTri.posedge2, ref TempTri.posedge2) - Dot(ref TempTri.posedge1, ref TempTri.posedge2)) / 18.0f;
                             radius = Mathf.Max(Mathf.Max(Distance(mean, TempTri.pos0), Distance(mean, TempTri.pos0 + TempTri.posedge1)), Distance(mean, TempTri.pos0 + TempTri.posedge2));

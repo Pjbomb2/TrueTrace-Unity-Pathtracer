@@ -1124,12 +1124,6 @@ namespace TrueTrace {
                 TotalCounter = 0;
                 DocumentNodes(0, 0);
             }
-            int LightTriLength = LightTriangles.Count;
-            for(int i = 0; i < LightTriLength; i++) {
-                LightTriData LT = LightTriangles[i];
-                LT.TriTarget = (uint)BVH.cwbvh_indices[LT.TriTarget];
-                LightTriangles[i] = LT;
-            }
 
 
             if(LightTriangles.Count > 0) {
@@ -1142,6 +1136,12 @@ namespace TrueTrace {
 #endif
             }
 
+            int LightTriLength = LightTriangles.Count;
+            for(int i = 0; i < LightTriLength; i++) {
+                LightTriData LT = LightTriangles[i];
+                LT.TriTarget = (uint)BVH.cwbvh_indices[LT.TriTarget];
+                LightTriangles[i] = LT;
+            }
 
         }
 
