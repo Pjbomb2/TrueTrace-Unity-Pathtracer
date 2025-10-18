@@ -39,7 +39,7 @@ namespace TrueTrace {
         [SerializeField] public bool DoPartialRendering = false;
         [SerializeField] public int PartialRenderingFactor = 1;
         [SerializeField] public bool DoFirefly = false;
-        [SerializeField] public bool ImprovedPrimaryHit = false;
+        [SerializeField] public bool ImprovedPrimaryHit = true;
         [SerializeField] public int RISCount = 12;
         [SerializeField] public int ToneMapper = 0;
         [SerializeField] public float SkyDesaturate = 0.0f;
