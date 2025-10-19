@@ -851,8 +851,8 @@ namespace TrueTrace {
                             DatCoun += (int)mesh.GetIndexCount(i2);
                         }
                         for(int i2 = 0; i2 < DatCoun; i2++) {
-                            if(mesh.indexFormat == IndexFormat.UInt32) CurMeshData.Indices[i2] = ((int)BitConverter.ToUInt32(Data, (i2 * 4)));
-                            else CurMeshData.Indices[i2] = ((int)BitConverter.ToUInt16(Data, (i2 * 2)));
+                            if(mesh.indexFormat == IndexFormat.UInt32) CurMeshData.Indices[CurMeshData.CurIndexOffset + i2] = ((int)BitConverter.ToUInt32(Data, (i2 * 4)));
+                            else CurMeshData.Indices[CurMeshData.CurIndexOffset + i2] = ((int)BitConverter.ToUInt16(Data, (i2 * 2)));
                         }
                         CurMeshData.CurIndexOffset += DatCoun;
                         indexesData.Dispose();
